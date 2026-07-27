@@ -28,6 +28,24 @@ void RenderMeshPS(
 )
 {
     OutColor = LexUIRenderMeshMainTexUB._MainTex.Sample(LexUIRenderMeshMainTexUB._MainTexSampler, input.uv);
+    // Tint the captured background. Alpha is left alone here — clip, mask and depth blend below own it.
+    // Strength 0 is a no-op in every mode, so the default (Multiply, white) leaves the source untouched.
+    {
+        float4 Tint = LexUIRenderMeshMainTexUB._TintColor;
+        int TintMode = LexUIRenderMeshMainTexUB._TintMode;
+        if (TintMode == 1)// Blend
+        {
+            OutColor.rgb = lerp(OutColor.rgb, Tint.rgb, Tint.a);
+        }
+        else if (TintMode == 2)// Additive
+        {
+            OutColor.rgb += Tint.rgb * Tint.a;
+        }
+        else// Multiply
+        {
+            OutColor.rgb *= lerp(float3(1, 1, 1), Tint.rgb, Tint.a);
+        }
+    }
 #if LEXUI_MASK
     OutColor.a *= LexUIRenderMeshMaskTexUB._MaskTex.Sample(LexUIRenderMeshMaskTexUB._MaskTexSampler, input.uv).r;
 #endif

@@ -18,7 +18,19 @@ enum class ELexBackgroundBlurRenderType:uint8
 	RenderTarget,
 };
 
-/** 
+/** How a post-process visual's Color is combined with the background it captured. */
+UENUM(BlueprintType)
+enum class ELexPostProcessTintMode :uint8
+{
+	/** result = background * Color. Can only darken or colourise; white leaves it untouched. */
+	Multiply,
+	/** result = lerp(background, Color, Strength). Washes the background towards Color, and can lighten it. */
+	Blend,
+	/** result = background + Color * Strength. Glow-like brightening. */
+	Additive,
+};
+
+/**
  * UI element that can do post-processing effect on screen space.
  * Only valid on LexUIRenderer (ScreenSpaceUI or WorldSpace-LexUIRenderer).
  */
@@ -69,8 +81,27 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="RenderType==ELexBackgroundBlurRenderType::RenderTarget&&!bUseFullSize"))
 	TObjectPtr<UTextureRenderTarget2D> OutputRenderTarget = nullptr;
+	/**
+	 * How this visual's Color tints the captured background.
+	 * Only the RGB of Color is used — its alpha keeps whatever meaning the effect gives it (background blur
+	 * reads alpha as blur strength), so TintStrength controls how strongly the tint applies.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI|Tint")
+	ELexPostProcessTintMode TintMode = ELexPostProcessTintMode::Multiply;
+	/** 0 leaves the background untouched in every mode; 1 applies the tint fully. */
+	UPROPERTY(EditAnywhere, Category = "LGUI|Tint", meta = (ClampMin = 0.0, ClampMax = 1.0))
+	float TintStrength = 1.0f;
 	FRenderTargetChangedEvent OnRenderTargetChanged;
 public:
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ELexPostProcessTintMode GetTintMode()const { return TintMode; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	float GetTintStrength()const { return TintStrength; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetTintMode(ELexPostProcessTintMode Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetTintStrength(float Value);
+
 	FRenderTargetChangedEvent& GetRenderTargetChangedEvent(){return OnRenderTargetChanged;}
 	
 	FLexUIGeometry* GetGeometry()const { return Geometry.Get(); }

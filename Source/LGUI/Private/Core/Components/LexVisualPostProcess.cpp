@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexVisualPostProcess.h"
 #include "LGUI.h"
@@ -254,6 +254,8 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 			FTexture2DDynamicResource* ClipDataTexture = nullptr;
 			bool bUseFullSize;
 			FBox BoundingBox;
+			FVector4f TintColor;
+			int32 TintMode;
 		};
 		auto updateData = new FUIPostProcess_SendRegionVertexDataToRenderProxy();
 		updateData->renderMeshRegionToScreenVertexArray = this->RenderMeshRegionToScreenVertexArray;
@@ -261,6 +263,14 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 		updateData->RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
 		updateData->objectToWorldMatrix = FMatrix44f(RenderCanvas->GetWidget()->GetWorldTransform().ToMatrixWithScale());
 		updateData->bUseFullSize = bUseFullSize;
+		// RGB tints the captured background; the visual's own alpha is left to the effect (background blur reads
+		// it as blur strength), so TintStrength travels in the alpha slot instead.
+		{
+			const FLinearColor LinearTint = FLinearColor(this->GetColor());
+			updateData->TintColor = FVector4f(LinearTint.R, LinearTint.G, LinearTint.B,
+				FMath::Clamp(this->TintStrength, 0.0f, 1.0f));
+			updateData->TintMode = (int32)this->TintMode;
+		}
 		{
 			updateData->BoundingBox = FBox(EForceInit::ForceInit);
 			FVector2D Min, Max;
@@ -285,6 +295,8 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 					TempRenderProxy->ClipDataTexture = updateData->ClipDataTexture;
 					TempRenderProxy->bUseFullSize = updateData->bUseFullSize;
 					TempRenderProxy->BoundingBox = updateData->BoundingBox;
+					TempRenderProxy->TintColor = updateData->TintColor;
+					TempRenderProxy->TintMode = updateData->TintMode;
 					delete updateData;
 				});
 	}
@@ -311,6 +323,27 @@ void ULexVisualPostProcess::SetMaskTextureUVRect(const FVector4& Value)
 
 		bUVChanged = true;
 		GetWidget()->MarkCanvasUpdate(false);
+	}
+}
+
+void ULexVisualPostProcess::SetTintMode(ELexPostProcessTintMode Value)
+{
+	if (TintMode != Value)
+	{
+		TintMode = Value;
+		GetWidget()->MarkCanvasUpdate(false);
+		SendRegionVertexDataToRenderProxy();
+	}
+}
+
+void ULexVisualPostProcess::SetTintStrength(float Value)
+{
+	Value = FMath::Clamp(Value, 0.0f, 1.0f);
+	if (!FMath::IsNearlyEqual(TintStrength, Value))
+	{
+		TintStrength = Value;
+		GetWidget()->MarkCanvasUpdate(false);
+		SendRegionVertexDataToRenderProxy();
 	}
 }
 

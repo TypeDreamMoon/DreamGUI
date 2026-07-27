@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -21,6 +21,10 @@ END_GLOBAL_SHADER_PARAMETER_STRUCT()
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FLexUIRenderMeshMainTexUB, )
 	SHADER_PARAMETER_TEXTURE(Texture2D, _MainTex)
 	SHADER_PARAMETER_SAMPLER(SamplerState, _MainTexSampler)
+	/** RGB is the tint colour, A is its strength. Strength 0 leaves the source untouched in every mode. */
+	SHADER_PARAMETER(FVector4f, _TintColor)
+	/** ELexPostProcessTintMode: 0 Multiply, 1 Blend, 2 Additive. */
+	SHADER_PARAMETER(int, _TintMode)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
 
 BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FLexUIRenderMeshMaskTexUB, )
@@ -308,16 +312,19 @@ public:
 		OutEnvironment.SetDefine(TEXT("LEXUI_MASK"), 0);
 		FLexUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
-	void SetParameters(FRHICommandListImmediate& RHICmdList, FTextureRHIRef MainTexture, FRHISamplerState* MainTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
+	void SetParameters(FRHICommandListImmediate& RHICmdList, FTextureRHIRef MainTexture, FRHISamplerState* MainTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
+		, const FVector4f& TintColor = FVector4f(1, 1, 1, 1), int TintMode = 0)
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		
+
 		FLexUIRenderMeshMainTexUB UB;
 		UB._MainTex = MainTexture;
 		UB._MainTexSampler = MainTextureSampler;
+		UB._TintColor = TintColor;
+		UB._TintMode = TintMode;
 		auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshMainTexUB>(), UniformBuffer);
-		
+
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
 	}
 private:
@@ -343,6 +350,8 @@ public:
 		, FTextureRHIRef MaskTexture
 		, FRHISamplerState* MainTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
 		, FRHISamplerState* MaskTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
+		, const FVector4f& TintColor = FVector4f(1, 1, 1, 1)
+		, int TintMode = 0
 	)
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
@@ -351,6 +360,8 @@ public:
 			FLexUIRenderMeshMainTexUB UB;
 			UB._MainTex = MainTexture;
 			UB._MainTexSampler = MainTextureSampler;
+			UB._TintColor = TintColor;
+			UB._TintMode = TintMode;
 			auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 			SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshMainTexUB>(), UniformBuffer);
 		}

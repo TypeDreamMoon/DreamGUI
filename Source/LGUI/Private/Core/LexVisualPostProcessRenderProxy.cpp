@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "Core/LexUIRender/LexUIPostProcessShaders.h"
@@ -79,6 +79,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
 							, ResultTextureSamplerState
 							, MaskTexture->SamplerStateRHI
+, TintColor, TintMode
 						);
 						if (ClipDataTexture != nullptr)
 						{
@@ -95,6 +96,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
 							, ResultTextureSamplerState
 							, MaskTexture->SamplerStateRHI
+, TintColor, TintMode
 						);
 						if (ClipDataTexture != nullptr)
 						{
@@ -113,6 +115,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
 						, ResultTextureSamplerState
 						, MaskTexture->SamplerStateRHI
+, TintColor, TintMode
 					);
 					if (ClipDataTexture != nullptr)
 					{
@@ -131,7 +134,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FLexUIRenderMeshWorldPS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState);
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
 						if (ClipDataTexture != nullptr)
 						{
 							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
@@ -144,7 +147,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FLexUIRenderMeshWorldDepthFadePS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState);
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
 						if (ClipDataTexture != nullptr)
 						{
 							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
@@ -159,7 +162,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 					TShaderMapRef<FLexUIRenderMeshPS_Clip> PixelShader(GlobalShaderMap);
 					SET_PIPELINE_STATE_FOR_CLIP();
 					VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState);
+					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
 					if (ClipDataTexture != nullptr)
 					{
 						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);

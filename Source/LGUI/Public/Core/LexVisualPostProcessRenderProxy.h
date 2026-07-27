@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -25,6 +25,14 @@ private:
 	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LexRenderer;
 	bool bIsWorld = false;//is world space or screen space
 public:
+	/**
+	 * Multiplied onto the captured background when the effect is composited back onto the screen.
+	 * Comes from the visual's Color (RGB only — alpha keeps whatever meaning the effect gives it, e.g. background
+	 * blur uses it for blur strength). White is the default and leaves the background untouched.
+	 */
+	FVector4f TintColor = FVector4f(1, 1, 1, 1);
+	/** ELexPostProcessTintMode as an int, to keep this render-thread struct free of UObject headers. */
+	int32 TintMode = 0;
 	virtual bool CanRender() const = 0;
 	/**
 	 * render thread function that will do the post process draw
