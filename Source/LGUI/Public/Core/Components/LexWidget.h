@@ -214,6 +214,44 @@ private:
 	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
 	FVector RelativeScale = FVector::OneVector;
 
+	/*
+	 * RENDER TRANSFORM -- UMG's FWidgetTransform, adapted.
+	 *
+	 * Moves where a widget is DRAWN without telling layout anything. Layout still measures and
+	 * arranges it exactly as before, siblings do not shift, and nothing here is ever written back to
+	 * AnchorData. That is the whole difference from RelativeLocation, whose setter recomputes the
+	 * anchors and asks the parent layout to rebuild -- which is why animating it inside a panel can
+	 * never work, the animation and the layout just take turns.
+	 *
+	 * Axes match AnchoredPosition: X is local +Y (right), Y is local +Z (up).
+	 *
+	 * No shear, unlike UMG. FTransform is translation/rotation/scale only, and Slate can offer shear
+	 * because it composes a 2x2 matrix instead. Adding it here would mean changing how every widget
+	 * transform is represented, which is a different piece of work entirely.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Translation"))
+	FVector2D RenderTranslation = FVector2D::ZeroVector;
+	/** Render-only scale about RenderTransformPivot. */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Scale", AllowPreserveRatio))
+	FVector2D RenderScale = FVector2D::UnitVector;
+	/**
+	 * Render-only rotation in degrees about RenderTransformPivot, in the canvas plane.
+	 *
+	 * In-plane only, on purpose. ULexCanvas::Is2DUITransform decides whether a widget can stay in the
+	 * batched 2D path by checking depth, yaw and pitch -- it never looks at roll or scale. Offering
+	 * only the rotation that keeps that guarantee means an animator cannot quietly cost a draw call.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Angle", UIMin = "-180", UIMax = "180"))
+	float RenderAngle = 0.0f;
+	/**
+	 * What RenderScale and RenderAngle turn about, normalized within the widget's own rect.
+	 * (0,0) is bottom-left and (1,1) top-right, matching AnchorData.Pivot rather than UMG's
+	 * top-left origin -- consistency inside this fork beats consistency with the other engine.
+	 * Independent of AnchorData.Pivot, which belongs to layout.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Pivot"))
+	FVector2D RenderTransformPivot = FVector2D(0.5, 0.5);
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FVector& GetRelativeLocation()const { return RelativeLocation; }
@@ -224,6 +262,40 @@ public:
 	const FRotator& GetRelativeRotationEuler()const { return RelativeRotationEuler; }
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FVector& GetRelativeScale()const { return RelativeScale; }
+
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	const FVector2D& GetRenderTranslation()const { return RenderTranslation; }
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	const FVector2D& GetRenderScale()const { return RenderScale; }
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	float GetRenderAngle()const { return RenderAngle; }
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	const FVector2D& GetRenderTransformPivot()const { return RenderTransformPivot; }
+	/** True while any render channel is off its default, i.e. while drawing differs from layout. */
+	UFUNCTION(BlueprintPure, Category = "Render Transform")
+	bool HasRenderTransform()const { return bHasRenderTransform; }
+
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderTranslation(const FVector2D& Value);
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderScale(const FVector2D& Value);
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderAngle(float Value);
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderTransformPivot(const FVector2D& Value);
+	/** Back to drawing exactly where layout put it, in one invalidation. */
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void ClearRenderTransform();
+
+	/** This widget's render transform alone, in its own local space. Identity when unset. */
+	FTransform GetRenderTransform()const;
+	/**
+	 * Widget-to-world with every render transform on the way up removed -- where layout believes the
+	 * widget is. Needed by the two places that convert a world transform back into authored local
+	 * data (SetWorldTransform and a keep-world-position reparent); using the drawn transform there
+	 * would bake an animation offset into RelativeLocation and leak it into the saved prefab.
+	 */
+	FTransform GetLayoutWorldTransform()const;
 
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	FVector GetWorldLocation()const;
@@ -261,6 +333,10 @@ public:
 	void SetWorldLocationAndRotation(const FVector& InLocation, const FQuat& InRotation);
 
 	FTransform GetLocalTransform()const;
+	/** GetLocalTransform with this widget's render transform applied. What the world transform is built from. */
+	FTransform GetRenderLocalTransform()const;
+	/** Recompute the cached has-a-render-transform bit and push the new transform down the subtree. */
+	void ApplyRenderTransformChange();
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FTransform& GetWorldTransform()const;
 
@@ -1087,6 +1163,8 @@ private:
 	uint32 bLayoutVisibilitySuppressed : 1 = false;
 	uint32 bHasLayoutClippingOverride : 1 = false;
 	FVector2f LayoutScale = FVector2f::UnitVector;
+	/** Cached "any render channel is off its default", so the common case costs one bit test. */
+	uint32 bHasRenderTransform : 1 = false;
 	ELexWidgetClipping LayoutClippingOverride = ELexWidgetClipping::Inherit;
 
 	uint32 bHasBegunPlay : 1 = false;

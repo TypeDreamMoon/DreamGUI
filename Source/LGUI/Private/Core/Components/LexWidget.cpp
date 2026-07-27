@@ -1249,6 +1249,116 @@ FTransform ULexWidget::GetLocalTransform()const
 	return FTransform(RelativeRotation, RelativeLocation,
 		RelativeScale * FVector(1.0, LayoutScale.X, LayoutScale.Y));
 }
+
+FTransform ULexWidget::GetRenderTransform()const
+{
+	if (!bHasRenderTransform)
+	{
+		return FTransform::Identity;
+	}
+	// The pivot is normalized inside the widget's own rect, so it has to be resolved against the
+	// current size -- a widget stretched by its layout must still turn about its own middle.
+	const FVector PivotPoint(0.0,
+		GetLocalSpaceLeft() + GetWidth() * RenderTransformPivot.X,
+		GetLocalSpaceBottom() + GetHeight() * RenderTransformPivot.Y);
+	// Rotation is roll: the UI plane is YZ, so the canvas normal is local X.
+	const FTransform ScaleAndRotate(
+		FQuat(FVector::XAxisVector, FMath::DegreesToRadians(RenderAngle)),
+		FVector::ZeroVector,
+		FVector(1.0, RenderScale.X, RenderScale.Y));
+	// Bracket by the pivot, then translate. FTransform composes left-to-right as "apply A, then B".
+	return FTransform(-PivotPoint) * ScaleAndRotate * FTransform(PivotPoint)
+		* FTransform(FVector(0.0, RenderTranslation.X, RenderTranslation.Y));
+}
+
+FTransform ULexWidget::GetRenderLocalTransform()const
+{
+	// One bit test on the overwhelmingly common path: nothing is animating, so nothing is composed.
+	return bHasRenderTransform ? GetRenderTransform() * GetLocalTransform() : GetLocalTransform();
+}
+
+FTransform ULexWidget::GetLayoutWorldTransform()const
+{
+	// Deliberately recomputed by walking up rather than cached: this is only asked for when a world
+	// transform is being converted back into authored data, which is rare, and a second cached chain
+	// would be a second thing to keep in step on every move.
+	const FTransform LocalTransform = GetLocalTransform();
+	if (Parent.IsValid())
+	{
+		return LocalTransform * Parent->GetLayoutWorldTransform();
+	}
+	if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
+	{
+		return LocalTransform * WidgetPresenterComponent->GetComponentTransform();
+	}
+	return LocalTransform;
+}
+
+namespace LexRenderTransformLocal
+{
+	bool IsIdentity(const FVector2D& InTranslation, const FVector2D& InScale, float InAngle)
+	{
+		return InTranslation.IsNearlyZero()
+			&& InScale.Equals(FVector2D::UnitVector)
+			&& FMath::IsNearlyZero(InAngle);
+	}
+}
+
+void ULexWidget::SetRenderTranslation(const FVector2D& Value)
+{
+	if (this->RenderTranslation != Value)
+	{
+		this->RenderTranslation = Value;
+		this->ApplyRenderTransformChange();
+	}
+}
+
+void ULexWidget::SetRenderScale(const FVector2D& Value)
+{
+	if (this->RenderScale != Value)
+	{
+		this->RenderScale = Value;
+		this->ApplyRenderTransformChange();
+	}
+}
+
+void ULexWidget::SetRenderAngle(float Value)
+{
+	if (this->RenderAngle != Value)
+	{
+		this->RenderAngle = Value;
+		this->ApplyRenderTransformChange();
+	}
+}
+
+void ULexWidget::SetRenderTransformPivot(const FVector2D& Value)
+{
+	if (this->RenderTransformPivot != Value)
+	{
+		this->RenderTransformPivot = Value;
+		this->ApplyRenderTransformChange();
+	}
+}
+
+void ULexWidget::ClearRenderTransform()
+{
+	if (bHasRenderTransform)
+	{
+		RenderTranslation = FVector2D::ZeroVector;
+		RenderScale = FVector2D::UnitVector;
+		RenderAngle = 0.0f;
+		ApplyRenderTransformChange();
+	}
+}
+
+void ULexWidget::ApplyRenderTransformChange()
+{
+	bHasRenderTransform = !LexRenderTransformLocal::IsIdentity(RenderTranslation, RenderScale, RenderAngle);
+	// Exactly what SetLayoutScale does, and pointedly NOT what SetRelativeLocation does: no
+	// CalculateAnchorFromTransform, no MarkLayoutForRebuild. Those two lines are the reason
+	// animating a laid-out widget's position fights the layout instead of moving it.
+	CalculateObjectToWorldTransform(true);
+}
 const FTransform& ULexWidget::GetWorldTransform()const
 {
 	return ObjectToWorldTransform;
@@ -1267,7 +1377,9 @@ void ULexWidget::SetWorldTransform(const FTransform& InWorldTransform)
 	FTransform LocalTransform = InWorldTransform;
 	if (Parent.IsValid())
 	{
-		LocalTransform = InWorldTransform.GetRelativeTransform(Parent->GetWorldTransform());
+		// Layout's basis, not the drawn one: if an ancestor is mid-animation, dividing by the drawn
+		// transform would fold that offset into this widget's authored RelativeLocation.
+		LocalTransform = InWorldTransform.GetRelativeTransform(Parent->GetLayoutWorldTransform());
 	}
 	else if (const USceneComponent* WidgetPresenterComponent = GetAttachedRootSceneComponent())
 	{
@@ -1420,7 +1532,7 @@ void ULexWidget::MoveComponentToIndex(ULexUIBehaviour* Component, int32 NewIndex
 
 void ULexWidget::UpdateObjectToWorldTransform()
 {
-	auto LocalTransform = GetLocalTransform();
+	auto LocalTransform = GetRenderLocalTransform();
 	if (Parent.IsValid())
 	{
 		ObjectToWorldTransform = LocalTransform * Parent->GetWorldTransform();
@@ -1571,7 +1683,7 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 		if (InParent->IsChildOf(this))return false;
 		if (InParent->Children.Contains(this))return false;
 		if (bEnforceCapacity && !InParent->CanAcceptChild(this))return false;
-		const FTransform OldObjectToWorldTransform = this->GetWorldTransform();
+		const FTransform OldObjectToWorldTransform = this->GetLayoutWorldTransform();
 		const FVector PreviousAuthoredScale = RelativeScale;
 		const FVector2f PreviousLayoutScale = LayoutScale;
 		bIsAttaching = true;
@@ -1607,7 +1719,7 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 		this->Parent = InParent;
 		if (InKeepWorldPosition)
 		{
-			const FTransform LocalTransform = OldObjectToWorldTransform.GetRelativeTransform(InParent->GetWorldTransform());
+			const FTransform LocalTransform = OldObjectToWorldTransform.GetRelativeTransform(InParent->GetLayoutWorldTransform());
 			this->RelativeLocation = LocalTransform.GetLocation();
 			this->RelativeRotation = LocalTransform.GetRotation();
 			this->RelativeRotationEuler = this->RelativeRotation.Rotator();
@@ -1625,7 +1737,9 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 	{
 		if (this->Parent == nullptr)return true;
 		auto OldParent = this->Parent;
-		const FTransform OldObjectToWorldTransform = this->GetWorldTransform();
+		// Layout's basis again -- detaching with keep-world-position writes straight into
+		// RelativeLocation, so the drawn transform must not be what gets written.
+		const FTransform OldObjectToWorldTransform = this->GetLayoutWorldTransform();
 		const FVector PreviousAuthoredScale = RelativeScale;
 		const FVector2f PreviousLayoutScale = LayoutScale;
 		RemovePanelSlotFromChild(this);
