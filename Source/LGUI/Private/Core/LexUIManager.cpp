@@ -1085,16 +1085,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	}
 
 #if WITH_EDITOR
-	int ScreenSpaceOverlayCanvasCount = 0;
-	for (auto& Canvas : AllCanvasArray)
-	{
-		if (!Canvas.IsValid())continue;
-		if (!Canvas->IsRootCanvas())continue;
-		if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
-		{
-			ScreenSpaceOverlayCanvasCount++;
-		}
-	}
+	const int32 ScreenSpaceOverlayCanvasCount = CountCompetingScreenSpaceOverlayCanvases();
 	if (ScreenSpaceOverlayCanvasCount > 1)
 	{
 		if (PrevScreenSpaceOverlayCanvasCount != ScreenSpaceOverlayCanvasCount)//only show message when change
@@ -1468,6 +1459,26 @@ void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 #endif
 	this->AllCanvasArray.RemoveSingle(InCanvas);
 }
+
+#if WITH_EDITOR
+int32 ULexUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()const
+{
+	int32 Count = 0;
+	for (auto& Canvas : AllCanvasArray)
+	{
+		if (!Canvas.IsValid())continue;
+		if (!Canvas->IsRootCanvas())continue;
+		if (Canvas->GetRenderMode() != ELexRenderMode::ScreenSpaceOverlay)continue;
+		// A canvas on an inactive widget is not on screen and is not fighting anyone for it. This
+		// is the ordinary state of a widget that has been created but not yet added, so counting it
+		// would fire the "only one ScreenSpace UI" error on a page prefab merely being prepared.
+		const ULexWidget* CanvasWidget = Canvas->GetWidget();
+		if (CanvasWidget != nullptr && !CanvasWidget->GetWidgetActiveInHierarchy())continue;
+		Count++;
+	}
+	return Count;
+}
+#endif
 
 void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 {

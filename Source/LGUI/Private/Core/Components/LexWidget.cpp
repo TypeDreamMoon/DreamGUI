@@ -1885,6 +1885,13 @@ void ULexWidget::OnDetachedFromParent()
 
 void ULexWidget::OnRegister()
 {
+	// Idempotent: ULexUIManagerWorldSubsystem::AddWidget treats a duplicate as a bug worth an error
+	// and a stack dump, and every step below is either a set-to-true or an AddUnique, so a second
+	// call can only do redundant work. Registering a widget you did not create is now safe to ask for.
+	if (bIsRegistered)
+	{
+		return;
+	}
 	bIsRegistered = true;
 	const bool bPanelSlotRegisteredByEnsure = Parent.IsValid()
 		&& EnsurePanelSlotForChild(Parent.Get(), this);

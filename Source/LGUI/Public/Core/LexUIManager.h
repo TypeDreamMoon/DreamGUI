@@ -202,6 +202,15 @@ public:
 	void AddCanvas(ULexCanvas* InCanvas);
 	void RemoveCanvas(ULexCanvas* InCanvas);
 	TArray<ULexCanvas*> GetCanvasArrayByRenderMode(ELexRenderMode RenderMode)const;
+#if WITH_EDITOR
+	/**
+	 * Root canvases in ScreenSpaceOverlay mode that are actually competing for the screen. Inactive
+	 * ones are excluded: a parked widget draws nothing (LexCanvas gates UpdateVisual on
+	 * GetRenderVisibleInHierarchy), so counting it would report a conflict that does not exist.
+	 * Extracted from the per-frame check so the rule can be asserted directly.
+	 */
+	int32 CountCompetingScreenSpaceOverlayCanvases()const;
+#endif
 
 	const TArray<TObjectPtr<ULexWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
 	void AddWidget(ULexWidget* InWidget);
