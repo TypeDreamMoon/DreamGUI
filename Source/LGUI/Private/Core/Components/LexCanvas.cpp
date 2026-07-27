@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexCanvas.h"
+#include "Engine/UserInterfaceSettings.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Utils/LexUIUtils.h"
@@ -2687,6 +2688,18 @@ void ULexCanvas::CalculateCanvasSizeAndScale(FIntPoint InViewportSize, FVector2D
 				}
 				break;
 			}
+		}
+		break;
+	case ELexCanvasScaleMode::ScaleWithEngineDPI:
+		{
+			// Ask the engine for the same number UMG uses rather than reimplementing the curve, so
+			// the two cannot disagree and a project that retunes its DPI curve moves both at once.
+			const float DPIScale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(InViewportSize);
+			OutScale = DPIScale > UE_KINDA_SMALL_NUMBER ? DPIScale : 1.0f;
+			// SDPIScaler's arrangement, verbatim: lay out in viewport/scale units and render at
+			// scale. That is what keeps the layout rect at the curve's design size instead of
+			// shrinking it with the window, which is the whole difference from ScaleWithScreenSize.
+			OutCanvasSize = FVector2D(InViewportSize.X / OutScale, InViewportSize.Y / OutScale);
 		}
 		break;
 	case ELexCanvasScaleMode::Custom:

@@ -83,6 +83,16 @@ enum class ELexCanvasScaleMode:uint8
 	 * Assign CustomScale parameter to use a custom class calculate resolution and scale.
 	 */
 	Custom,
+	/**
+	 * UMG's rule: take the scale from the engine's UI Scale Rule and curve
+	 * (Project Settings > User Interface), then lay out in "viewport / scale" units -- the same
+	 * thing SGameLayerManager feeds its SDPIScaler. Unlike ScaleWithScreenSize, the layout rect
+	 * keeps the curve's design size at every resolution, so a layout authored for it never runs
+	 * out of room and gets clipped; it only renders smaller. ReferenceResolution, ScreenMatchMode
+	 * and Match are unused in this mode -- the engine settings are the single source of truth,
+	 * which also means a project that tunes its DPI curve moves UMG and LexUI together.
+	 */
+	ScaleWithEngineDPI,
 };
 
 UENUM(BlueprintType, Category = LGUI)

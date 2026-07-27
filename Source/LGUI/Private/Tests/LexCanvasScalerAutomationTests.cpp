@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
+#include "Engine/UserInterfaceSettings.h"
 #include "Engine/World.h"
 
 // CalculateCanvasSizeAndScale is the canvas-scaler rule, shared by the runtime (which applies it to
@@ -270,6 +271,87 @@ bool FLexCanvasScalerCustomFallbackTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Custom without a handler uses the viewport width"), (float)CanvasSize.X, 1920.0f, Tolerance);
 	TestEqual(TEXT("Custom without a handler uses the viewport height"), (float)CanvasSize.Y, 1080.0f, Tolerance);
 	TestEqual(TEXT("Custom without a handler reports unit scale"), Scale, 1.0f, Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexCanvasScalerEngineDPIMatchesEngineTest,
+	"LGUI.Canvas.Scaler.EngineDPITakesItsScaleFromEngineSettings",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexCanvasScalerEngineDPIMatchesEngineTest::RunTest(const FString& Parameters)
+{
+	using namespace LexCanvasScalerTestLocal;
+	FScopedCanvas Fixture;
+	Fixture.Canvas->SetScaleMode(ELexCanvasScaleMode::ScaleWithEngineDPI);
+	// Deliberately hostile values: this mode must ignore the ScaleWithScreenSize knobs entirely.
+	Fixture.Canvas->SetReferenceResolution(FVector2D(640, 480));
+	Fixture.Canvas->SetMatchFromWidthToHeight(0.0f);
+
+	const UUserInterfaceSettings* UISettings = GetDefault<UUserInterfaceSettings>();
+	const FIntPoint Viewports[] = { FIntPoint(1920, 1080), FIntPoint(1280, 720), FIntPoint(2560, 1440), FIntPoint(1387, 780) };
+	for (const FIntPoint& Viewport : Viewports)
+	{
+		FVector2D CanvasSize;
+		float Scale = -1.0f;
+		Fixture.Canvas->CalculateCanvasSizeAndScale(Viewport, CanvasSize, Scale);
+
+		// The specification for this mode is "whatever UMG would do", so the assertion is equality
+		// with the engine's own answer rather than a re-derivation of its curve here.
+		const float EngineScale = UISettings->GetDPIScaleBasedOnSize(Viewport);
+		TestEqual(FString::Printf(TEXT("%dx%d takes its scale from the engine DPI settings"), Viewport.X, Viewport.Y),
+			Scale, EngineScale, 0.0001f);
+		// SDPIScaler's contract: lay out in viewport/scale units, render at scale. Multiplying back
+		// must return the viewport, which is what catches an inverted or dropped division.
+		TestEqual(FString::Printf(TEXT("%dx%d canvas width times scale returns the viewport"), Viewport.X, Viewport.Y),
+			(float)(CanvasSize.X * Scale), (float)Viewport.X, 0.01f);
+		TestEqual(FString::Printf(TEXT("%dx%d canvas height times scale returns the viewport"), Viewport.X, Viewport.Y),
+			(float)(CanvasSize.Y * Scale), (float)Viewport.Y, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexCanvasScalerEngineDPIKeepsDesignHeightTest,
+	"LGUI.Canvas.Scaler.EngineDPIKeepsTheLayoutRectStableAcrossResolutions",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexCanvasScalerEngineDPIKeepsDesignHeightTest::RunTest(const FString& Parameters)
+{
+	using namespace LexCanvasScalerTestLocal;
+	FScopedCanvas Fixture;
+
+	// This is the property the mode exists for, and the one ScaleWithScreenSize does not have: the
+	// rect a designer lays out in must not shrink with the window, or content authored to fill it
+	// runs out of room and gets clipped instead of merely rendering smaller. Numbers below come
+	// from the engine's shipped ShortestSide curve; a project that retunes its own DPI curve is
+	// expected to update them.
+	Fixture.Canvas->SetScaleMode(ELexCanvasScaleMode::ScaleWithEngineDPI);
+	FVector2D At1080, At720, At1440;
+	float Scale1080 = -1.0f, Scale720 = -1.0f, Scale1440 = -1.0f;
+	Fixture.Canvas->CalculateCanvasSizeAndScale(FIntPoint(1920, 1080), At1080, Scale1080);
+	Fixture.Canvas->CalculateCanvasSizeAndScale(FIntPoint(1280, 720), At720, Scale720);
+	Fixture.Canvas->CalculateCanvasSizeAndScale(FIntPoint(2560, 1440), At1440, Scale1440);
+
+	TestEqual(TEXT("1080p renders at unit scale"), Scale1080, 1.0f, 0.005f);
+	TestEqual(TEXT("1080p lays out at the design size"), (float)At1080.Y, 1080.0f, 1.0f);
+	TestEqual(TEXT("720p lays out at very nearly the same height"), (float)At720.Y, 1080.0f, 2.0f);
+	TestEqual(TEXT("1440p lays out at the same height"), (float)At1440.Y, 1080.0f, 1.0f);
+	TestTrue(TEXT("720p renders smaller than 1080p rather than laying out smaller"), Scale720 < Scale1080);
+	TestTrue(TEXT("1440p renders larger"), Scale1440 > Scale1080);
+
+	// Contrast with the mode that produced the reported clipping: a reference of 1280x720 with a
+	// blended match gives a rect that is both smaller than the design size and aspect-dependent,
+	// so content authored against a taller rect has nowhere to go.
+	Fixture.Canvas->SetScaleMode(ELexCanvasScaleMode::ScaleWithScreenSize);
+	Fixture.Canvas->SetScreenMatchMode(ELexCanvasScreenMatchMode::MatchWidthOrHeight);
+	Fixture.Canvas->SetReferenceResolution(FVector2D(1280, 720));
+	Fixture.Canvas->SetMatchFromWidthToHeight(0.5f);
+	FVector2D Wide;
+	float WideScale = -1.0f;
+	Fixture.Canvas->CalculateCanvasSizeAndScale(FIntPoint(1268, 662), Wide, WideScale);
+	TestTrue(TEXT("A blended match on a wider-than-reference viewport drops below the reference height"),
+		Wide.Y < 720.0f);
 	return true;
 }
 
