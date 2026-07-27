@@ -21,6 +21,25 @@ class ULexBaseInputModule;
 DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIEditorTickMulticastDelegate, float);
 
 /**
+ * A widget that has been created but not yet added to anything -- the state a UMG-style
+ * CreateWidget hands back. The manager holds it for two reasons: it is the GC anchor (nothing
+ * else references a parentless widget), and holding it in a named, countable place is what makes
+ * "created and then forgotten" a visible leak rather than a silent one.
+ */
+USTRUCT()
+struct FLexParkedWidgetEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<ULexWidget> Widget = nullptr;
+
+	/** Seconds on the world clock, for the optional never-attached diagnostic. */
+	UPROPERTY()
+	double ParkedAtSeconds = 0.0;
+};
+
+/**
  * This manager is a single instance, mainly for manage LexUI in Editor
  */
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
@@ -156,6 +175,8 @@ private:
 	TArray<TWeakObjectPtr<ULexCanvas>> AllCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TObjectPtr<ULexWidget>> AllWidgetArray;
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	TArray<FLexParkedWidgetEntry> ParkedWidgets;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexBaseRaycaster>> AllRaycasterArray;
@@ -213,6 +234,21 @@ public:
 #endif
 
 	const TArray<TObjectPtr<ULexWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
+	/**
+	 * Hold a freshly created widget in the not-yet-added state: set its parked bit so it draws
+	 * nothing and its behaviours stay disabled, and keep a reference so the caller is not the only
+	 * thing standing between it and GC. The widget's own active flag is left alone, so a caller can
+	 * still switch it off while configuring and have that stick once it is added.
+	 */
+	void ParkWidget(ULexWidget* InWidget);
+	/**
+	 * Take a widget out of the parked set, which lets its own active flag take effect. Returns false
+	 * for a widget that was never parked, which is the common case -- this runs on every attach,
+	 * including every child restored by the prefab loader.
+	 */
+	bool UnparkWidget(ULexWidget* InWidget);
+	bool IsWidgetParked(const ULexWidget* InWidget)const;
+	const TArray<FLexParkedWidgetEntry>& GetParkedWidgets()const{return ParkedWidgets;}
 	void AddWidget(ULexWidget* InWidget);
 	void RemoveWidget(ULexWidget* InWidget);
 	/** Tears down registered widgets once per hierarchy root. Safe to call repeatedly during world shutdown. */

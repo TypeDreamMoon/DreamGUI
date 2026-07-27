@@ -33,6 +33,32 @@ class LGUI_API ULexUIBPLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	/**
+	 * Make a widget that exists but is not on screen -- the counterpart of UMG's
+	 * WidgetTree::ConstructWidget<T>(). It draws nothing and its behaviours do not run until you
+	 * hand it to AddChild or AddToViewport; until then it is held by the LexUI manager, so it will
+	 * not be collected out from under you while you configure it.
+	 *
+	 * VisualClass is what the widget looks like (LexImage, LexText, ...). Leave it null for a bare
+	 * widget, which is what a pure container is. Give it a layout container afterwards to make it a
+	 * panel -- in this fork "panel" is a subobject, not a separate class.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", AdvancedDisplay = "VisualClass"), Category = "LGUI|Create")
+	static ULexWidget* ConstructWidget(UObject* WorldContextObject, const FString& DisplayName,
+		TSubclassOf<class ULexVisual> VisualClass);
+
+	/**
+	 * Instantiate a prefab without putting it anywhere -- the counterpart of UMG's
+	 * CreateWidget(WidgetBlueprintClass). Same not-on-screen state as ConstructWidget, including a
+	 * prefab whose root carries its own ULexCanvas, which would otherwise start rendering the
+	 * moment it existed.
+	 *
+	 * The prefab's own logic lives on the root widget's behaviour components, so reach it with
+	 * GetComponent rather than by casting the returned pointer.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"), Category = "LGUI|Create")
+	static ULexWidget* CreateWidgetFromPrefab(UObject* WorldContextObject, ULexUIPrefab* InPrefab);
+
 	/** Return the world's shared ScreenSpaceOverlay root, creating it on demand. */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "LGUI|Screen")
 	static ULexWidget* GetOrCreateScreenSpaceUIRoot(UObject* WorldContextObject);

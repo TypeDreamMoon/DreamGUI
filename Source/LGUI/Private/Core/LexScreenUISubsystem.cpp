@@ -1,4 +1,4 @@
-// Copyright 2026-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2026-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexScreenUISubsystem.h"
 
@@ -218,6 +218,10 @@ void ULexScreenUISubsystem::ConfigurePage(ULexWidget* InRoot, int32 InSortOrder)
 	{
 		return;
 	}
+	// A widget arriving here parked was created to be shown, so switching it on is right -- but ask
+	// before attaching, because attaching is what un-parks it.
+	auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld());
+	const bool bWasParked = LexUIManager != nullptr && LexUIManager->IsWidgetParked(InRoot);
 	if (InRoot->GetParent() != Root)
 	{
 		InRoot->SetParent(Root, false);
@@ -226,7 +230,13 @@ void ULexScreenUISubsystem::ConfigurePage(ULexWidget* InRoot, int32 InSortOrder)
 	InRoot->SetHorizontalAndVerticalAnchorMinMax(FVector2D::ZeroVector, FVector2D(1.0, 1.0), false, false);
 	InRoot->SetAnchoredPosition(FVector2D::ZeroVector);
 	InRoot->SetSizeDelta(FVector2D::ZeroVector);
-	InRoot->SetWidgetActive(true);
+	if (!bWasParked || InRoot->GetWidgetActive())
+	{
+		// AddToViewport means "show this", so a page that was merely parked gets switched on. What
+		// it must not do is override a caller who explicitly switched the page off while preparing
+		// it -- parking no longer touches that flag, so the caller's intent is readable here.
+		InRoot->SetWidgetActive(true);
+	}
 
 	ULexCanvas* PageCanvas = InRoot->GetComponent<ULexCanvas>();
 	if (!PageCanvas)

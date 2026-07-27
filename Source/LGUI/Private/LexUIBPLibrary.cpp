@@ -7,10 +7,95 @@
 #include "LGUI.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexScreenUISubsystem.h"
+#include "Core/LexUIManager.h"
+#include "Core/Components/LexVisual.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
+
+namespace LexUICreateLocal
+{
+	/**
+	 * The half of creation that both verbs share. Registration is not optional and is not deferred:
+	 * it is the widget's only GC anchor, ULexWidget::OnAttachedToParent gates anchor recomputation
+	 * on it, and the screen subsystem refuses unregistered widgets. Not being on screen comes from
+	 * the active flag instead, which is what both the render path and the behaviour lifecycle read.
+	 */
+	ULexWidget* RegisterAndPark(UWorld* World, ULexWidget* Widget)
+	{
+		if (!IsValid(Widget))
+		{
+			return nullptr;
+		}
+		Widget->OnRegister();
+		if (World && World->HasBegunPlay() && !Widget->HasBegunPlay())
+		{
+			// Awake runs, OnEnable does not -- ULexUIBehaviour::BeginPlay gates the latter on the
+			// active flag. That is the same division UMG draws between NativeOnInitialized at
+			// CreateWidget time and Construct on add.
+			Widget->BeginPlay();
+		}
+		if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
+		{
+			LexUIManager->ParkWidget(Widget);
+		}
+		else
+		{
+			// No manager means no anchor and no teardown; the widget would work until it silently
+			// vanished. Better to say so than to hand back something that dies unpredictably.
+			UE_LOG(LGUI, Error, TEXT("[%s].%d No LexUI manager for this world, so the widget cannot be created. World: %s")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, World ? *World->GetPathName() : TEXT("null"));
+			Widget->DestroyWidget();
+			return nullptr;
+		}
+		return Widget;
+	}
+}
+
+ULexWidget* ULexUIBPLibrary::ConstructWidget(UObject* WorldContextObject, const FString& DisplayName,
+	TSubclassOf<ULexVisual> VisualClass)
+{
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (World == nullptr)
+	{
+		return nullptr;
+	}
+	// Outer is the world, not the caller: GetTypedOuter<UWorld>() has to resolve or the widget never
+	// finds a manager. Outering to a GameInstance -- the habit UMG teaches -- would fail that test.
+	ULexWidget* Widget = NewObject<ULexWidget>(World, NAME_None, RF_Public | RF_Transactional);
+	Widget->SetDisplayName(DisplayName.IsEmpty() ? TEXT("Widget") : DisplayName);
+	if (UClass* ResolvedVisualClass = VisualClass.Get();
+		ResolvedVisualClass != nullptr && !ResolvedVisualClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		Widget->CreateNewVisual(ResolvedVisualClass);
+	}
+	return LexUICreateLocal::RegisterAndPark(World, Widget);
+}
+
+ULexWidget* ULexUIBPLibrary::CreateWidgetFromPrefab(UObject* WorldContextObject, ULexUIPrefab* InPrefab)
+{
+	if (!IsValid(InPrefab))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab is not valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return nullptr;
+	}
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (World == nullptr)
+	{
+		return nullptr;
+	}
+	// A null parent is what makes this "create" rather than "load into"; LoadPrefab only requires a
+	// world. The loader registers and begins play on the tree itself, so parking is all that is left
+	// -- and it has to happen before the caller ever sees the pointer, because a prefab root with a
+	// canvas is a render root from the instant it exists.
+	ULexWidget* Root = InPrefab->LoadPrefab(World, nullptr, [](ULexWidget*) {}, false);
+	if (!IsValid(Root))
+	{
+		return nullptr;
+	}
+	return LexUICreateLocal::RegisterAndPark(World, Root);
+}
 
 ULexWidget* ULexUIBPLibrary::GetOrCreateScreenSpaceUIRoot(UObject* WorldContextObject)
 {

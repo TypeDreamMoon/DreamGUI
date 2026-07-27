@@ -312,6 +312,22 @@ public:
 	}
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	int GetChildrenCount()const { return Children.Num(); }
+
+	/**
+	 * UMG's UPanelWidget::AddChild, adapted. UMG needs eight typed variants because each panel has
+	 * its own slot class; here there is one ULexPanelSlot, so one verb returns it and you can set
+	 * padding straight off the result.
+	 *
+	 * Returns the child's slot, or null -- which means one of two very different things, so check
+	 * the child's parent if you need to tell them apart: a parent with no layout container takes
+	 * children happily and simply has no slots to give (UMG cannot even express this), whereas a
+	 * refusal leaves the child exactly where it was. Refusals are a full panel, a cycle, or null.
+	 *
+	 * Passing a child this widget already owns is a reorder: the slot and everything on it survive,
+	 * matching what dragging a widget within one panel in the editor does.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Transform", meta = (AdvancedDisplay = "InSiblingIndex"))
+	ULexPanelSlot* AddChild(ULexWidget* InChild, int32 InSiblingIndex = -1);
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	const TArray<ULexUIBehaviour*>& GetAllComponents()const{return Components;}
@@ -736,6 +752,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetWidgetActive()const { return bWidgetActive; }
 	/**
+	 * True between creation and being added to something. Suppresses the widget exactly the way an
+	 * inactive flag would -- nothing draws, no behaviour is enabled -- but it is a separate bit on
+	 * purpose: borrowing bWidgetActive would make SetWidgetActive silently useless during the very
+	 * window in which callers configure a widget. Managed by the creation verbs; not serialized.
+	 */
+	bool IsParked()const { return bParked; }
+	void SetParked(bool Value);
+	/**
 	 * Get widget active in hierarchy
 	 * @return Is widget active in hierarchy
 	 */
@@ -1021,6 +1045,7 @@ private:
 
 	uint32 bHasBegunPlay : 1 = false;
 	uint32 bIsRegistered : 1 = false;
+	uint32 bParked : 1 = false;
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;

@@ -1814,8 +1814,44 @@ void ULexWidget::OnChildAttached(ULexWidget* ChildWidget)
 	MarkCanvasUpdate(false);
 }
 
+ULexPanelSlot* ULexWidget::AddChild(ULexWidget* InChild, int32 InSiblingIndex)
+{
+	if (!IsValid(InChild) || InChild == this)
+	{
+		return nullptr;
+	}
+	if (InChild->GetParent() == this)
+	{
+		// A reorder, not a move. Deliberately NOT routed through TrySetParent: its same-parent branch
+		// forces CaptureAuthoredGeometry(true), which would promote whatever the last layout pass
+		// arranged into the authored geometry -- silently, and then into the saved prefab. The
+		// unforced call below still creates a slot if the parent has since become a panel, and is a
+		// no-op on a slot that already has its geometry.
+		if (InSiblingIndex >= 0)
+		{
+			InChild->SetSiblingIndex(InSiblingIndex);
+		}
+		SynchronizePanelSlotForParent(this, InChild, /*bRecaptureDesiredSize*/false);
+		return InChild->GetPanelSlot();
+	}
+	// KeepWorldPosition false: a widget being added to a panel is being handed over to that panel's
+	// arrangement, so preserving its old screen position would only fight the first layout pass.
+	if (!InChild->TrySetParent(this, /*InKeepWorldPosition*/false, InSiblingIndex))
+	{
+		return nullptr;
+	}
+	return InChild->GetPanelSlot();
+}
+
 void ULexWidget::OnAttachedToParent()
 {
+	// Getting a parent is what ends the not-yet-added state, whichever verb did it -- AddChild,
+	// TrySetParent, or the screen subsystem. Widgets the prefab loader attaches were never parked,
+	// so this is a lookup miss for all of them.
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+	{
+		LexUIManager->UnparkWidget(this);
+	}
 	if (this->bIsRegistered)//registered means not during prefab process
 	{
 		Call_TransformChanged();
@@ -3074,7 +3110,7 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 		static void CalculateWidgetActive(ULexWidget* Widget)
 		{
 			bool bResultActive = true;
-			if (!Widget->bWidgetActive)
+			if (!Widget->bWidgetActive || Widget->bParked)
 				bResultActive = false;
 			else if (Widget->Parent.IsValid())
 				bResultActive = Widget->Parent->GetWidgetActiveInHierarchy();
@@ -3845,6 +3881,16 @@ void ULexWidget::SetHiddenInDesigner(bool bHidden)
 	}
 }
 #endif
+
+void ULexWidget::SetParked(bool Value)
+{
+	if (bParked != Value)
+	{
+		bParked = Value;
+		CalculateWidgetActive_Recursive();
+		CalculateVisibility_Recursive();
+	}
+}
 
 void ULexWidget::SetWidgetActive(bool Value)
 {

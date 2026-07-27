@@ -1480,6 +1480,41 @@ int32 ULexUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()con
 }
 #endif
 
+void ULexUIManagerWorldSubsystem::ParkWidget(ULexWidget* InWidget)
+{
+	if (!IsValid(InWidget) || IsWidgetParked(InWidget))
+	{
+		return;
+	}
+	FLexParkedWidgetEntry& Entry = ParkedWidgets.AddDefaulted_GetRef();
+	Entry.Widget = InWidget;
+	Entry.ParkedAtSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	InWidget->SetParked(true);
+}
+
+bool ULexUIManagerWorldSubsystem::UnparkWidget(ULexWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return false;
+	}
+	const int32 Index = ParkedWidgets.IndexOfByPredicate(
+		[InWidget](const FLexParkedWidgetEntry& Entry) { return Entry.Widget == InWidget; });
+	if (Index == INDEX_NONE)
+	{
+		return false;
+	}
+	ParkedWidgets.RemoveAt(Index);
+	InWidget->SetParked(false);
+	return true;
+}
+
+bool ULexUIManagerWorldSubsystem::IsWidgetParked(const ULexWidget* InWidget)const
+{
+	return ParkedWidgets.ContainsByPredicate(
+		[InWidget](const FLexParkedWidgetEntry& Entry) { return Entry.Widget == InWidget; });
+}
+
 void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 {
 #if !UE_BUILD_SHIPPING && ENABLED_LGUI_DEBUG_DUMP
@@ -1494,6 +1529,8 @@ void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 
 void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
 {
+	ParkedWidgets.RemoveAll(
+		[InWidget](const FLexParkedWidgetEntry& Entry) { return Entry.Widget == nullptr || Entry.Widget == InWidget; });
 #if !UE_BUILD_SHIPPING && ENABLED_LGUI_DEBUG_DUMP
 	if (!AllWidgetArray.Contains(InWidget))
 	{
