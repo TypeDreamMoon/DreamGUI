@@ -47,12 +47,14 @@ bool ULexScrollBoxInputHandler::OnPointerDrag_Implementation(ULexPointerEventDat
 		EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
 	PrevPointerPosition = CurrentPointerPosition;
 
-	// LGUI local space: Y is horizontal, Z is vertical. Content should follow the finger, so dragging towards
-	// positive axis reduces the offset.
+	// LGUI local space: Y is horizontal, Z is vertical (up). The content follows the pointer, so
+	// dragging down moves the content down and reveals what is above -- which means the offset moves
+	// WITH the drag, not against it. The signs used to be inverted and the comment above them
+	// described the intended behaviour rather than the actual one, so dragging down scrolled up.
 	const bool bHorizontal = Layout->Orientation == ELexPanelOrientation::Horizontal;
 	const float PrimaryDelta = bHorizontal
-		? static_cast<float>(LocalMoveDelta.Y)
-		: static_cast<float>(-LocalMoveDelta.Z);
+		? static_cast<float>(-LocalMoveDelta.Y)
+		: static_cast<float>(LocalMoveDelta.Z);
 
 	const UWorld* World = GetWorld();
 	const float DeltaTime = FMath::Max(World ? World->GetDeltaSeconds() : 0.0f, KINDA_SMALL_NUMBER);
