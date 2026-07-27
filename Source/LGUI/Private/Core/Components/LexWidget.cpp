@@ -1843,6 +1843,83 @@ ULexPanelSlot* ULexWidget::AddChild(ULexWidget* InChild, int32 InSiblingIndex)
 	return InChild->GetPanelSlot();
 }
 
+bool ULexWidget::RemoveChild(ULexWidget* InChild)
+{
+	if (!IsValid(InChild) || InChild->GetParent() != this)
+	{
+		return false;
+	}
+	if (!InChild->TrySetParent(nullptr, /*InKeepWorldPosition*/false))
+	{
+		return false;
+	}
+	// Back to the state a freshly created widget is in. Deliberately done here and not in the
+	// general detach path: a move between parents detaches on its way through, and parking there
+	// would disable the widget's behaviours for the width of an operation that is not a removal.
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+	{
+		LexUIManager->ParkWidget(InChild);
+	}
+	return true;
+}
+
+bool ULexWidget::RemoveChildAt(int32 InIndex)
+{
+	const TArray<ULexWidget*>& CurrentChildren = GetChildren();
+	return CurrentChildren.IsValidIndex(InIndex) ? RemoveChild(CurrentChildren[InIndex]) : false;
+}
+
+bool ULexWidget::DestroyChild(ULexWidget* InChild)
+{
+	if (!IsValid(InChild) || InChild->GetParent() != this)
+	{
+		return false;
+	}
+	InChild->DestroyWidget();//detaches itself on the way down
+	return true;
+}
+
+void ULexWidget::DestroyAllChildren()
+{
+	// A copy, not the live array: each teardown removes its widget from Children, so iterating the
+	// original would skip every other child and read off the end.
+	const TArray<ULexWidget*> ChildrenSnapshot = GetChildren();
+	for (ULexWidget* Child : ChildrenSnapshot)
+	{
+		if (IsValid(Child))
+		{
+			Child->DestroyWidget();
+		}
+	}
+}
+
+int32 ULexWidget::GetChildIndex(const ULexWidget* InChild)const
+{
+	return InChild != nullptr ? GetChildren().IndexOfByKey(InChild) : INDEX_NONE;
+}
+
+bool ULexWidget::HasChild(const ULexWidget* InChild)const
+{
+	return InChild != nullptr && InChild->GetParent() == this;
+}
+
+bool ULexWidget::HasAnyChildren()const
+{
+	for (const ULexWidget* Child : Children)
+	{
+		if (IsValid(Child))
+		{
+			return true;//Children can hold nulls between a teardown and the next tidy-up
+		}
+	}
+	return false;
+}
+
+bool ULexWidget::HasPanelSlots()const
+{
+	return IsValid(Cast<ULexPanelLayoutBase>(LayoutContainer));
+}
+
 void ULexWidget::OnAttachedToParent()
 {
 	// Getting a parent is what ends the not-yet-added state, whichever verb did it -- AddChild,

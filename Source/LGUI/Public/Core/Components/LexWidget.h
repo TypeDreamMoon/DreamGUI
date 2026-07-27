@@ -293,7 +293,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	bool TrySetParent(ULexWidget* InParent, bool InKeepWorldPosition = true, int InSiblingIndex = -1);
 	/** Minimum child capacity imposed by the current LayoutContainer and Behaviours. INDEX_NONE is unlimited. */
+	UFUNCTION(BlueprintPure, Category = "Transform")
 	int32 GetMaxChildrenCapacity() const;
+	UFUNCTION(BlueprintPure, Category = "Transform")
 	bool CanAcceptAdditionalChildren(int32 AdditionalChildCount = 1) const;
 	bool CanAcceptChildren(TConstArrayView<ULexWidget*> InChildren) const;
 	UFUNCTION(BlueprintPure, Category = "Transform")
@@ -328,6 +330,50 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Transform", meta = (AdvancedDisplay = "InSiblingIndex"))
 	ULexPanelSlot* AddChild(ULexWidget* InChild, int32 InSiblingIndex = -1);
+
+	/**
+	 * Detach a child and leave it alive: still registered, subtree intact, ready to be added
+	 * somewhere else. It goes back to the not-yet-added state a freshly created widget is in, so it
+	 * draws nothing and its behaviours are disabled in the meantime -- which is what makes this the
+	 * verb to pool with, and why a pooled widget still shows up as held rather than leaked.
+	 *
+	 * Ownership passes to you. Nothing else refers to the widget afterwards, so either add it
+	 * somewhere or DestroyChild it; dropping the last reference to a live widget is a leak the
+	 * engine cannot clean up quietly.
+	 *
+	 * The slot does not survive, matching UMG and matching what any other move between parents
+	 * does. Set padding and friends again after re-adding.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	bool RemoveChild(ULexWidget* InChild);
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	bool RemoveChildAt(int32 InIndex);
+	/** Detach and destroy a child, and everything below it. Use this when you are finished with it. */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	bool DestroyChild(ULexWidget* InChild);
+	/**
+	 * Destroy every child and their subtrees. Named for what it does: UMG's ClearChildren merely
+	 * detaches and lets GC take the pieces, which here would leave live registered widgets behind
+	 * with nobody holding them.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void DestroyAllChildren();
+
+	/** Position of InChild among this widget's children, or INDEX_NONE if it is not one. */
+	UFUNCTION(BlueprintPure, Category = "Transform")
+	int32 GetChildIndex(const ULexWidget* InChild)const;
+	UFUNCTION(BlueprintPure, Category = "Transform")
+	bool HasChild(const ULexWidget* InChild)const;
+	UFUNCTION(BlueprintPure, Category = "Transform")
+	bool HasAnyChildren()const;
+	/**
+	 * Whether this widget's layout container hands its children a ULexPanelSlot. This is the
+	 * question behind AddChild returning null: a widget can take children with no container at all,
+	 * and the Lex flex box and grid arrange children without slots, so "arranges children" and
+	 * "has slots" are not the same thing.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Transform")
+	bool HasPanelSlots()const;
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	const TArray<ULexUIBehaviour*>& GetAllComponents()const{return Components;}
