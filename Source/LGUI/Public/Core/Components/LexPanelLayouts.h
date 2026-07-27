@@ -502,10 +502,11 @@ private:
 	/** Close enough to the target to stop interpolating and land exactly on it. */
 	static constexpr float ScrollAnimationSnapThreshold = 0.05f;
 	/**
-	 * Undamped excess past an end. The damped value returned by GetOverscroll is derived from this
-	 * rather than stored, so dragging out and back retraces the same path instead of drifting.
+	 * Signed displacement past an end, already damped. Stored directly rather than derived from an
+	 * undamped pull: with a saturating map the raw figure runs far ahead of what is on screen, so
+	 * dragging back had to unwind hundreds of units before the content responded at all.
 	 */
-	float OverscrollRaw = 0.0f;
+	float Overscroll = 0.0f;
 	/** Opposing impulse per unit of overscroll, ported from the legacy view's dragForceMulitply. */
 	static constexpr float OverscrollSpringStiffness = 500.0f;
 	/** Positional lerp rate once the spring has killed the outward velocity. */

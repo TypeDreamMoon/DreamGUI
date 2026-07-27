@@ -288,18 +288,33 @@ bool FLexScrollBoxOverscrollTest::RunTest(const FString& Parameters)
 	// in range -- only the displayed content is pulled out.
 	Fixture.ScrollBox->ApplyDragDelta(-50.0f);
 	TestEqual(TEXT("The scroll position stays at the start"), Fixture.ScrollBox->GetScrollOffset(), 0.0f);
-	// Damped = Limit * Excess / (Limit + Excess) = 100 * 50 / 150 = 33.333, signed negative.
-	TestEqual(TEXT("The pull is damped, not one-to-one"), Fixture.ScrollBox->GetOverscroll(), -33.333f, 0.01f);
+	// The first move past the end answers one-for-one: at an empty band the headroom is full, and a
+	// finger that has just crossed the edge should not feel it stick. Resistance appears from there.
+	TestEqual(TEXT("Crossing the end answers one-for-one"), Fixture.ScrollBox->GetOverscroll(), -50.0f, 0.01f);
+	const float AfterFirst = FMath::Abs(Fixture.ScrollBox->GetOverscroll());
+	Fixture.ScrollBox->ApplyDragDelta(-50.0f);
+	TestTrue(TEXT("Pulling the same distance again moves the band less"),
+		FMath::Abs(Fixture.ScrollBox->GetOverscroll()) - AfterFirst < 50.0f);
 
 	// The band saturates: ten times the raw pull is nowhere near ten times the displacement, and it
 	// can never exceed the limit. The legacy view's flat damping had no bound here at all.
 	Fixture.ScrollBox->StopScrolling();
-	Fixture.ScrollBox->ApplyDragDelta(-10000.0f);
+	for (int32 i = 0; i < 40; i++)
+	{
+		Fixture.ScrollBox->ApplyDragDelta(-60.0f);//keep pulling out against rising resistance
+	}
 	const float FarPull = Fixture.ScrollBox->GetOverscroll();
-	TestTrue(TEXT("A huge pull stays inside the limit"), FMath::Abs(FarPull) < 100.0f);
-	TestTrue(TEXT("...and is close to it, so resistance rises rather than stopping"), FMath::Abs(FarPull) > 98.0f);
+	TestTrue(TEXT("A sustained pull never exceeds the limit"), FMath::Abs(FarPull) <= 100.0f);
+	TestTrue(TEXT("...and does approach it, so resistance rises rather than stopping dead"), FMath::Abs(FarPull) > 90.0f);
+	// Coming back answers one-for-one: a pull of the band's own size closes it and reaches content.
+	Fixture.ScrollBox->ApplyDragDelta(FMath::Abs(FarPull) + 20.0f);
+	TestTrue(TEXT("Dragging back closes the band immediately rather than spending a backlog"),
+		FMath::IsNearlyZero(Fixture.ScrollBox->GetOverscroll()));
 
 	// Releasing springs back to exactly the end and settles.
+	Fixture.ScrollBox->StopScrolling();
+	Fixture.ScrollBox->ScrollToStart();
+	Fixture.ScrollBox->ApplyDragDelta(-60.0f);
 	const float Step = 1.0f / 60.0f;
 	for (int32 i = 0; i < 300; i++)
 	{
@@ -343,7 +358,14 @@ bool FLexScrollBoxOverscrollTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Ticking while the pointer is down does not close the band"),
 		Fixture.ScrollBox->GetOverscroll(), HeldBand, 0.001f);
 
+	// Dragging back out of the band has to respond straight away. The undamped pull used to be
+	// unbounded, so a long drag banked thousands of units that the return drag had to unwind before
+	// the content moved at all -- with physics suspended under the drag, that read as the gesture
+	// having died. Bounding the raw keeps the two directions symmetric.
 	// Letting go hands it back to the spring.
+	Fixture.ScrollBox->StopScrolling();
+	Fixture.ScrollBox->SetDragging(true);
+	Fixture.ScrollBox->ApplyDragDelta(-40.0f);
 	Fixture.ScrollBox->SetDragging(false);
 	for (int32 i = 0; i < 300; i++)
 	{

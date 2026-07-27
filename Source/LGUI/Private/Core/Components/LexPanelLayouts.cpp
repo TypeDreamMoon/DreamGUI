@@ -1969,16 +1969,7 @@ float ULexLayoutContainerScrollBox::GetViewOffsetFraction() const
 
 float ULexLayoutContainerScrollBox::GetOverscroll() const
 {
-	if (FMath::IsNearlyZero(OverscrollRaw) || OverscrollLimit <= KINDA_SMALL_NUMBER)
-	{
-		return 0.0f;
-	}
-	// Saturating rubber band: the damped displacement approaches OverscrollLimit as the raw pull
-	// grows without ever reaching it, so resistance rises the further out you drag. The legacy view
-	// instead scaled every frame's delta by a flat 0.5, which meant no bound at all -- drag long
-	// enough and the content simply left the screen at half speed.
-	const float Excess = FMath::Abs(OverscrollRaw);
-	return FMath::Sign(OverscrollRaw) * (OverscrollLimit * Excess / (OverscrollLimit + Excess));
+	return Overscroll;
 }
 
 void ULexLayoutContainerScrollBox::SetScrollVelocity(float Value)
@@ -1988,7 +1979,7 @@ void ULexLayoutContainerScrollBox::SetScrollVelocity(float Value)
 
 bool ULexLayoutContainerScrollBox::IsScrolling() const
 {
-	return bAnimatingScroll || !FMath::IsNearlyZero(ScrollVelocity) || !FMath::IsNearlyZero(OverscrollRaw);
+	return bAnimatingScroll || !FMath::IsNearlyZero(ScrollVelocity) || !FMath::IsNearlyZero(Overscroll);
 }
 
 void ULexLayoutContainerScrollBox::SetScrollOffsetAnimated(float Value)
@@ -2013,9 +2004,9 @@ void ULexLayoutContainerScrollBox::SetScrollOffsetAnimated(float Value)
 
 void ULexLayoutContainerScrollBox::StopScrolling()
 {
-	const bool bWasDisplaced = !FMath::IsNearlyZero(OverscrollRaw);
+	const bool bWasDisplaced = !FMath::IsNearlyZero(Overscroll);
 	ScrollVelocity = 0.0f;
-	OverscrollRaw = 0.0f;
+	Overscroll = 0.0f;
 	bAnimatingScroll = false;
 	if (bWasDisplaced)
 	{
@@ -2041,20 +2032,25 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 		ScrollByFromUser(Delta);
 		return;
 	}
-	if (!FMath::IsNearlyZero(OverscrollRaw))
+	if (!FMath::IsNearlyZero(Overscroll))
 	{
-		// Already past an end: the drag works against the accumulated excess first. Only once it
-		// crosses back through zero does the remainder move the real offset again, so there is no
-		// dead zone where the finger moves and nothing does.
-		const float NewRaw = OverscrollRaw + Delta;
-		if (!FMath::IsNearlyZero(NewRaw) && FMath::Sign(NewRaw) != FMath::Sign(OverscrollRaw))
+		// Pulling further out meets rising resistance; pulling back answers one-for-one. Damping the
+		// return as well is what made a long pull feel dead -- the finger moved and nothing did,
+		// because the band still had a backlog to spend.
+		const float Limit = FMath::Max(OverscrollLimit, KINDA_SMALL_NUMBER);
+		const bool bPushingOut = FMath::Sign(Delta) == FMath::Sign(Overscroll);
+		const float Headroom = FMath::Clamp(1.0f - FMath::Abs(Overscroll) / Limit, 0.0f, 1.0f);
+		const float Applied = bPushingOut ? Delta * Headroom : Delta;
+		const float NewBand = Overscroll + Applied;
+		if (!FMath::IsNearlyZero(NewBand) && FMath::Sign(NewBand) != FMath::Sign(Overscroll))
 		{
-			OverscrollRaw = 0.0f;
-			ScrollByFromUser(NewRaw);
+			// Crossed back inside: the remainder belongs to the offset again.
+			Overscroll = 0.0f;
+			ScrollByFromUser(NewBand);
 		}
 		else
 		{
-			OverscrollRaw = NewRaw;
+			Overscroll = FMath::Clamp(NewBand, -Limit, Limit);
 		}
 		MarkLayoutDirty();
 		if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
@@ -2069,7 +2065,7 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 	const float Remainder = Delta - (ScrollOffset - Before);
 	if (!FMath::IsNearlyZero(Remainder))
 	{
-		OverscrollRaw = Remainder;
+		Overscroll = FMath::Clamp(Remainder, -FMath::Max(OverscrollLimit, KINDA_SMALL_NUMBER), FMath::Max(OverscrollLimit, KINDA_SMALL_NUMBER));
 		MarkLayoutDirty();
 		if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
 		{
@@ -2128,7 +2124,7 @@ void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 		}
 		return;
 	}
-	const bool bDisplaced = !FMath::IsNearlyZero(OverscrollRaw);
+	const bool bDisplaced = !FMath::IsNearlyZero(Overscroll);
 	if (!bDisplaced && (!bEnableInertia || FMath::IsNearlyZero(ScrollVelocity)))
 	{
 		ScrollVelocity = bEnableInertia ? ScrollVelocity : 0.0f;
@@ -2142,20 +2138,20 @@ void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 		// the velocity is dropped and the return becomes a plain positional lerp. Critically damped
 		// by construction -- it cannot overshoot back through the end and oscillate.
 		const bool bMovingOutward = !FMath::IsNearlyZero(ScrollVelocity)
-			&& FMath::Sign(ScrollVelocity) == FMath::Sign(OverscrollRaw);
+			&& FMath::Sign(ScrollVelocity) == FMath::Sign(Overscroll);
 		if (bMovingOutward)
 		{
-			const float SpringImpulse = FMath::Abs(GetOverscroll()) * OverscrollSpringStiffness;
+			const float SpringImpulse = FMath::Abs(Overscroll) * OverscrollSpringStiffness;
 			ScrollVelocity -= FMath::Sign(ScrollVelocity) * SpringImpulse * DeltaTime;
-			OverscrollRaw += ScrollVelocity * DeltaTime;
+			Overscroll += ScrollVelocity * DeltaTime;
 		}
 		else
 		{
 			ScrollVelocity = 0.0f;
-			OverscrollRaw = FMath::Lerp(OverscrollRaw, 0.0f, FMath::Clamp(OverscrollReturnRate * DeltaTime, 0.0f, 1.0f));
-			if (FMath::Abs(OverscrollRaw) < OverscrollSnapThreshold)
+			Overscroll = FMath::Lerp(Overscroll, 0.0f, FMath::Clamp(OverscrollReturnRate * DeltaTime, 0.0f, 1.0f));
+			if (FMath::Abs(Overscroll) < OverscrollSnapThreshold)
 			{
-				OverscrollRaw = 0.0f;
+				Overscroll = 0.0f;
 			}
 		}
 	}
@@ -2181,7 +2177,7 @@ void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 			// and the box would look frozen while still "scrolling".
 			if (bAllowOverscroll && OverscrollLimit > KINDA_SMALL_NUMBER)
 			{
-				OverscrollRaw = Remainder;
+				Overscroll = Remainder;
 			}
 			else
 			{
