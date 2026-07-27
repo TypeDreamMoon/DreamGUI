@@ -2078,10 +2078,23 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 	}
 }
 
+void ULexLayoutContainerScrollBox::SetDragging(bool bInDragging)
+{
+	bDragging = bInDragging;
+}
+
 void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 {
 	if (DeltaTime <= 0.0f)
 	{
+		return;
+	}
+	if (bDragging)
+	{
+		// The pointer owns the offset until it lets go. Running the spring here would shut the
+		// rubber band in the very frames the drag is opening it, and because any non-zero band
+		// routes the whole drag delta into itself, the content stops advancing at the same time --
+		// the gesture reads as "moves a little, then snaps back" while the finger is still down.
 		return;
 	}
 	if (bAnimatingScroll)

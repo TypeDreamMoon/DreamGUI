@@ -27,10 +27,12 @@ bool ULexScrollBoxInputHandler::OnPointerBeginDrag_Implementation(ULexPointerEve
 		PrevPointerPosition = EventData->GetWorldPointInPlane();
 	}
 	DragVelocity = 0.0f;
-	// Grabbing the content stops whatever it was doing, including a spring-back in progress.
+	// Grabbing the content stops whatever it was doing, including a spring-back in progress, and
+	// keeps the physics out of the way until the pointer lets go.
 	if (ULexLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout))
 	{
 		Layout->SetScrollVelocity(0.0f);
+		Layout->SetDragging(true);
 	}
 	return false;
 }
@@ -72,9 +74,15 @@ bool ULexScrollBoxInputHandler::OnPointerDrag_Implementation(ULexPointerEventDat
 
 bool ULexScrollBoxInputHandler::OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)
 {
-	if (ULexLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout) && Layout->bEnableInertia)
+	if (ULexLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout))
 	{
-		Layout->SetScrollVelocity(DragVelocity);
+		// Release the physics first, then hand it the speed: the spring and any momentum only start
+		// once the content is actually let go.
+		Layout->SetDragging(false);
+		if (Layout->bEnableInertia)
+		{
+			Layout->SetScrollVelocity(DragVelocity);
+		}
 	}
 	DragVelocity = 0.0f;
 	return false;

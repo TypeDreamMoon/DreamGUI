@@ -420,6 +420,14 @@ public:
 	void TickScrollPhysics(float DeltaTime);
 	/** Apply a drag delta, rubber-banding whatever part of it would push past an end. */
 	void ApplyDragDelta(float Delta);
+	/**
+	 * Tell the box a pointer is holding its content. While it is, momentum and the spring-back stay
+	 * out of the way: a hand on the content owns the offset, and letting the spring run underneath
+	 * means the band is pulled shut in the same frames the drag is stretching it -- which stops the
+	 * content advancing and looks like it snapped back mid-gesture.
+	 */
+	void SetDragging(bool bInDragging);
+	bool IsDragging() const { return bDragging; }
 
 	/** Distance scrolled from the start, in local units. Always within [0, GetMaxScrollOffset()]. */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
@@ -483,6 +491,8 @@ private:
 
 	/** Local units per second the content is still travelling under momentum. */
 	float ScrollVelocity = 0.0f;
+	/** A pointer is currently holding the content; momentum and spring-back are suspended. */
+	bool bDragging = false;
 	/** An eased scroll is in flight; mutually exclusive with momentum, which it cancels. */
 	bool bAnimatingScroll = false;
 	float AnimatedTargetOffset = 0.0f;

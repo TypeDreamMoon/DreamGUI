@@ -327,6 +327,30 @@ bool FLexScrollBoxOverscrollTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("The spring-back never overshoots into an oscillation"), bMonotonic);
 
+	// A held pointer owns the offset: the spring must not run underneath a drag in progress. It did,
+	// and because any non-zero band swallows the whole drag delta, the content stopped advancing
+	// while the band was pulled shut -- the gesture read as "moves a little, then snaps back" with
+	// the button still down.
+	Fixture.ScrollBox->StopScrolling();
+	Fixture.ScrollBox->SetDragging(true);
+	Fixture.ScrollBox->ApplyDragDelta(-40.0f);
+	const float HeldBand = Fixture.ScrollBox->GetOverscroll();
+	TestTrue(TEXT("Dragging past the end opens the band"), FMath::Abs(HeldBand) > 1.0f);
+	for (int32 i = 0; i < 30; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("Ticking while the pointer is down does not close the band"),
+		Fixture.ScrollBox->GetOverscroll(), HeldBand, 0.001f);
+
+	// Letting go hands it back to the spring.
+	Fixture.ScrollBox->SetDragging(false);
+	for (int32 i = 0; i < 300; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("Releasing lets the band close"), Fixture.ScrollBox->GetOverscroll(), 0.0f);
+
 	// With overscroll switched off the drag simply stops at the end.
 	Fixture.ScrollBox->StopScrolling();
 	Fixture.ScrollBox->bAllowOverscroll = false;
