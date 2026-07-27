@@ -671,4 +671,73 @@ bool FLexUIPrefabSchemaMigrationTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabMoveSkipsRootNameSyncTest,
+	"LGUI.Prefab.MovingBetweenFoldersDoesNotRewriteThePrefab",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexUIPrefabMoveSkipsRootNameSyncTest::RunTest(const FString& Parameters)
+{
+	using namespace LexUIPrefabSystem;
+
+	// PostRename syncs the root widget's display name from the asset name, and that sync is
+	// expensive: it builds an editor world, deserializes the prefab, rewrites the asset and tears
+	// the world down. A MOVE is a rename into another package under the same name, so there is
+	// nothing to sync -- and paying it anyway is what made dragging prefabs between folders look
+	// like a hang, while silently rewriting bytes in an asset the user only meant to relocate.
+	UWorld* World = UWorld::CreateWorld(EWorldType::None, false);
+	TestNotNull(TEXT("Author world created"), World);
+	if (!World)
+	{
+		return false;
+	}
+	UPackage* SourcePackage = CreatePackage(TEXT("/Temp/LexUIPrefabMoveTest/Source"));
+	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>(SourcePackage, TEXT("MoveProbePrefab"), RF_Public | RF_Standalone);
+	ULexWidget* SourceRoot = NewObject<ULexWidget>(World, NAME_None, RF_Public | RF_Transactional);
+	SourceRoot->SetDisplayName(TEXT("HandNamedRoot"));
+	TMap<UObject*, FGuid> ObjectToGuid;
+	ObjectToGuid.Add(SourceRoot, FGuid::NewGuid());
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
+	TestTrue(TEXT("Probe prefab is serialized"),
+		WidgetSerializer::SavePrefab(SourceRoot, Prefab, ObjectToGuid, EmptySubPrefabs, true));
+
+	// Move: same object name, different package.
+	UPackage* DestPackage = CreatePackage(TEXT("/Temp/LexUIPrefabMoveTest/Destination"));
+	const bool bMoved = Prefab->Rename(TEXT("MoveProbePrefab"), DestPackage, REN_DontCreateRedirectors | REN_NonTransactional);
+	TestTrue(TEXT("The prefab moves to another package"), bMoved);
+
+	UWorld* VerifyWorld = UWorld::CreateWorld(EWorldType::None, false);
+	if (VerifyWorld)
+	{
+		ULexWidget* Loaded = WidgetSerializer::LoadPrefab(VerifyWorld, VerifyWorld, Prefab, nullptr, false);
+		TestNotNull(TEXT("The moved prefab still loads"), Loaded);
+		// The observable consequence of skipping the sync: a hand-given root name survives a move.
+		// Before the fix the move rewrote it to the asset name, which is a content change the user
+		// never asked for and the reason the asset's bytes were touched at all.
+		TestEqual(TEXT("A move leaves the root widget's name alone"),
+			Loaded ? Loaded->GetDisplayName() : FString(), FString(TEXT("HandNamedRoot")));
+		VerifyWorld->DestroyWorld(false);
+	}
+
+	// A real rename still syncs, so the feature itself is intact rather than merely disabled.
+	const bool bRenamed = Prefab->Rename(TEXT("RenamedProbePrefab"), DestPackage, REN_DontCreateRedirectors | REN_NonTransactional);
+	TestTrue(TEXT("The prefab renames"), bRenamed);
+	UWorld* RenameVerifyWorld = UWorld::CreateWorld(EWorldType::None, false);
+	if (RenameVerifyWorld)
+	{
+		ULexWidget* Loaded = WidgetSerializer::LoadPrefab(RenameVerifyWorld, RenameVerifyWorld, Prefab, nullptr, false);
+		TestEqual(TEXT("A rename does sync the root widget's name"),
+			Loaded ? Loaded->GetDisplayName() : FString(), FString(TEXT("RenamedProbePrefab")));
+		RenameVerifyWorld->DestroyWorld(false);
+	}
+
+	if (ULexUIPrefabHelperObject* Helper = Prefab->GetPrefabHelperObject())
+	{
+		Helper->ClearLoadedPrefab();
+	}
+	Prefab->ClearPrefabInstanceScene();
+	World->DestroyWorld(false);
+	return true;
+}
+
 #endif

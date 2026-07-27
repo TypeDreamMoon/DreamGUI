@@ -533,7 +533,17 @@ void ULexUIPrefab::PostRename(UObject* OldOuter, const FName OldName)
 		return;
 	if (OldOuter->IsA(UPackage::StaticClass()))//is asset
 	{
-		SetRootWidgetNameFromPrefab();
+		// Moving to another folder is a rename into a new package under the SAME name, and the root
+		// widget's display name is derived from the asset name alone -- so a move has nothing to
+		// sync. Skipping it matters because the sync is anything but cheap: it builds an editor
+		// world, deserializes the whole prefab and every sub-prefab, rewrites the asset, then tears
+		// the world down. Paid once per moved asset, that is what makes dragging prefabs between
+		// folders look like the Content Browser has hung, and it rewrote the asset's bytes for a
+		// change nobody asked for.
+		if (OldName != GetFName())
+		{
+			SetRootWidgetNameFromPrefab();
+		}
 	}
 	if (IsValid(PrefabHelperObject))
 	{
