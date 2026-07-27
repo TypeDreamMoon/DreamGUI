@@ -12,6 +12,7 @@
 #include "Core/Components/LexVisual.h"
 #include "Core/LexUIBehaviour.h"
 #include "LexUIPrefabBehaviourUtils.h"
+#include "LexUIControlRegistry.h"
 #include "SLexUIPrefabPalette.h"//FLexUIPaletteDragDropOp
 #include "Styling/SlateIconFinder.h"
 #include "Widgets/Layout/SScrollBorder.h"
@@ -479,6 +480,13 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Delete);
 			}
 			MenuBuilder.PopCommandList();
+			// UMG sits Find References between Delete and Rename.
+			MenuBuilder.AddMenuEntry(LOCTEXT("FindReferences", "Find References"),
+				LOCTEXT("FindReferencesTooltip", "Search the prefab's companion behaviour blueprint for the variable this widget binds to."),
+				FSlateIcon(FAppStyle::GetAppStyleSetName(), "Kismet.Tabs.FindResults"),
+				FUIAction(
+					FExecuteAction::CreateLambda([WeakEditor = Manager]() { if (auto E = WeakEditor.Pin())E->FindReferencesForSelectedWidget(); }),
+					FCanExecuteAction::CreateLambda([WeakEditor = Manager]() { auto E = WeakEditor.Pin(); return E.IsValid() && E->CanFindReferencesForSelectedWidget(); })));
 			MenuBuilder.PushCommandList(CommandList.ToSharedRef());
 			{
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Rename);
@@ -639,6 +647,68 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 				}
 			}
 
+			// UMG "Replace With": swap the panel that arranges this widget's children.
+			if (auto Editor = Manager.Pin())
+			{
+				const TArray<TWeakObjectPtr<ULexWidget>>& Selection = Editor->GetSelectedWidgets();
+				ULexWidget* Target = Selection.Num() == 1 ? Selection[0].Get() : nullptr;
+				if (IsValid(Target) && IsValid(Target->GetLayoutContainer()))
+				{
+					MenuBuilder.BeginSection("Replace", LOCTEXT("Replace", "Replace"));
+					{
+						MenuBuilder.AddSubMenu(
+							LOCTEXT("ReplaceWithSubMenu", "Replace With..."),
+							LOCTEXT("ReplaceWithSubMenuTooltip", "Swap the panel arranging this widget's children. Unlike UMG, the widget itself is untouched -- its name, place, slot, components and children all stay put; only the layout container changes."),
+							FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
+							{
+								UClass* Current = nullptr;
+								if (auto E = WeakEditor.Pin())
+								{
+									const TArray<TWeakObjectPtr<ULexWidget>>& Sel = E->GetSelectedWidgets();
+									if (Sel.Num() == 1 && Sel[0].IsValid() && IsValid(Sel[0]->GetLayoutContainer()))
+									{
+										Current = Sel[0]->GetLayoutContainer()->GetClass();
+									}
+								}
+								// Offer whatever the palette registers as a panel, which is the same
+								// set the designer can create in the first place -- no second list to
+								// drift out of step. UMG filters to multi-child panels; here every
+								// registered layout container takes children, so the equivalent
+								// filter is simply "has a layout container class".
+								TArray<const FLexUIControlDescriptor*> Panels;
+								for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
+								{
+									UClass* PanelClass = Descriptor.LayoutContainerClass.Get();
+									if (PanelClass == nullptr || PanelClass == Current)
+									{
+										continue;//no point offering what it already is
+									}
+									if (Descriptor.VisualClass.IsValid() || Descriptor.BehaviourClass.IsValid())
+									{
+										continue;//a control that happens to use a panel, not a panel
+									}
+									Panels.Add(&Descriptor);
+								}
+								Panels.Sort([](const FLexUIControlDescriptor& A, const FLexUIControlDescriptor& B)
+								{
+									return A.DisplayName.CompareTo(B.DisplayName) < 0;
+								});
+								for (const FLexUIControlDescriptor* Descriptor : Panels)
+								{
+									UClass* PanelClass = Descriptor->LayoutContainerClass.Get();
+									SubMenu.AddMenuEntry(Descriptor->DisplayName,
+										FText::FromString(PanelClass->GetPathName()), Descriptor->Icon,
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor, PanelClass]()
+										{
+											if (auto E = WeakEditor.Pin())E->ReplaceSelectedWidgetLayout(PanelClass);
+										})));
+								}
+							}));
+					}
+					MenuBuilder.EndSection();
+				}
+			}
+
 			// UMG-toolbar-style Align / Distribute for a multi-widget selection
 			if (auto Editor = Manager.Pin())
 			{
@@ -685,6 +755,19 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 					MenuBuilder.EndSection();
 				}
 			}
+
+			// UMG's Hierarchy closes with an Expansion section; it is tree-view state, so it
+			// applies whatever is selected.
+			MenuBuilder.BeginSection("Expansion", LOCTEXT("Expansion", "Expansion"));
+			{
+				MenuBuilder.AddMenuEntry(LOCTEXT("CollapseAll", "Collapse All"),
+					LOCTEXT("CollapseAllTooltip", "Collapse every widget in the tree."), FSlateIcon(),
+					FUIAction(FExecuteAction::CreateSP(this, &SLexWidgetEditorHierarchyView::SetAllExpansion, false)));
+				MenuBuilder.AddMenuEntry(LOCTEXT("ExpandAll", "Expand All"),
+					LOCTEXT("ExpandAllTooltip", "Expand every widget in the tree."), FSlateIcon(),
+					FUIAction(FExecuteAction::CreateSP(this, &SLexWidgetEditorHierarchyView::SetAllExpansion, true)));
+			}
+			MenuBuilder.EndSection();
 	});
 }
 
@@ -785,6 +868,20 @@ void SLexWidgetEditorHierarchyView::SetItemExpansionRecursive(TWeakObjectPtr<ULe
 	if (Model.IsValid())
 	{
 		RecursiveExpand(Model.Get(), bInExpansionState ? EExpandBehavior::AlwaysExpand : EExpandBehavior::NeverExpand);
+	}
+}
+
+void SLexWidgetEditorHierarchyView::SetAllExpansion(bool bExpand)
+{
+	// The recursion writes through SetItemExpansion, so ExpansionMap follows via OnExpansionChanged
+	// and the state survives into PrefabDataForPrefabEditor.UnexpandedWidgetSet on save.
+	const EExpandBehavior Behavior = bExpand ? EExpandBehavior::AlwaysExpand : EExpandBehavior::NeverExpand;
+	for (auto& Widget : RootWidgets)
+	{
+		if (Widget.IsValid())
+		{
+			RecursiveExpand(Widget.Get(), Behavior);
+		}
 	}
 }
 

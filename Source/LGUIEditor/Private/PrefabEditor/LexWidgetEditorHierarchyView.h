@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -71,6 +71,8 @@ protected:
 	void RecursiveExpand(ULexWidget* Widget, EExpandBehavior ExpandBehavior);
 	void OnExpansionChanged(TWeakObjectPtr<ULexWidget> Item, bool bExpanded);
 	void SetItemExpansionRecursive(TWeakObjectPtr<ULexWidget> Model, bool bInExpansionState);
+	/** UMG Hierarchy's Expansion section: apply one expansion state to the whole tree. */
+	void SetAllExpansion(bool bExpand);
 	void OnSelectionChanged(TWeakObjectPtr<ULexWidget> SelectedItem, ESelectInfo::Type SelectInfo);
 	TSharedPtr<SWidget> OnContextMenuOpening();
 

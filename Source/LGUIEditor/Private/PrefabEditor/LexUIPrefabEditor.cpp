@@ -27,6 +27,7 @@
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "BlueprintEditor.h"//SummonSearchUI (Find References)
 #include "EdGraph/EdGraph.h"
 #include "K2Node_CustomEvent.h"
 #include "UMGStyle.h"
@@ -421,7 +422,7 @@ void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTa
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Details"));
 
 	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::OutlinerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_Outliner))
-		.SetDisplayName(LOCTEXT("OutlinerTabLabel", "Outliner"))
+		.SetDisplayName(LOCTEXT("OutlinerTabLabel", "Hierarchy"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Outliner"));
 
@@ -1601,6 +1602,82 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 
 	SelectWidgets(TSet<ULexWidget*>{ Wrapper }, false);
 
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
+}
+
+bool FLexUIPrefabEditor::CanFindReferencesForSelectedWidget() const
+{
+	return SelectedWidgets.Num() == 1 && SelectedWidgets[0].IsValid();
+}
+
+void FLexUIPrefabEditor::FindReferencesForSelectedWidget()
+{
+	if (!CanFindReferencesForSelectedWidget())return;
+	ULexWidget* Target = SelectedWidgets[0].Get();
+	UBlueprint* Blueprint = LexUIPrefabBehaviourUtils::FindBehaviourBlueprint(GetLoadedRootWidget(), PrefabBeingEdited);
+	if (!IsValid(Blueprint))
+	{
+		FNotificationInfo Info(LOCTEXT("FindReferencesNoBehaviour", "This prefab has no companion behaviour blueprint to search."));
+		Info.ExpireDuration = 5.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
+
+	auto AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+	AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+	IAssetEditorInstance* OpenedEditor = AssetEditorSubsystem->FindEditorForAsset(Blueprint, /*bFocusIfOpen*/true);
+	if (OpenedEditor == nullptr)return;
+	// Quoted, like UMG: an unquoted name matches every node whose text merely contains it.
+	const FString SearchTerm = FString::Printf(TEXT("\"%s\""), *LexUIPrefabBehaviourUtils::MakeVariableNameForTarget(Target));
+	static_cast<FBlueprintEditor*>(OpenedEditor)->SummonSearchUI(/*bSetFindWithinBlueprint*/true, SearchTerm);
+}
+
+void FLexUIPrefabEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass)
+{
+	if (!IsValid(PanelClass) || !PanelClass->IsChildOf(ULexLayoutContainer::StaticClass()))return;
+	const TArray<TWeakObjectPtr<ULexWidget>>& Selection = GetSelectedWidgets();
+	if (Selection.Num() != 1)return;
+	ULexWidget* Target = Selection[0].Get();
+	if (!IsValid(Target))return;
+	ULexLayoutContainer* Existing = Target->GetLayoutContainer();
+	// "Replace" means replace; offering it on a widget with no panel would be an "add", which is
+	// what the palette and the details panel are for.
+	if (!IsValid(Existing) || Existing->GetClass() == PanelClass)return;
+	if (WidgetBelongsToSubPrefab(Target))
+	{
+		// The container belongs to the sub prefab asset, so a swap here would be reverted the next
+		// time the sub prefab is applied.
+		FNotificationInfo Info(LOCTEXT("ReplaceLayoutInsideSubPrefab", "Open the sub prefab to change the panel of a widget it owns."));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 6.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
+
+	FScopedTransaction Transaction(NSLOCTEXT("LexUIPrefabEditor", "ReplaceWidgetLayout", "Replace Widget Layout"));
+	Target->Modify();
+	// CreateNewLayoutContainer carries the whole swap: it unregisters the old container, registers
+	// the new one, and converts the children's slots to match. Undo is handled by
+	// ULexWidget::PostEditUndo, which re-registers whatever container the pointer lands back on.
+	if (Target->CreateNewLayoutContainer(PanelClass) == nullptr)
+	{
+		// The one refusal a designer can hit: single-child panels reject a widget that has several.
+		Transaction.Cancel();
+		FNotificationInfo Info(FText::Format(
+			LOCTEXT("ReplaceLayoutRefused", "{0} cannot hold {1} children."),
+			PanelClass->GetDisplayNameText(), FText::AsNumber(Target->GetChildren().Num())));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 6.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
+
+	if (auto Helper = GetPrefabHelperObject())
+	{
+		Helper->Modify();
+		Helper->SetAnythingDirty();
+	}
+	if (OutlinerPtr.IsValid())OutlinerPtr->RequestRefresh();
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
 }
 
@@ -2984,7 +3061,7 @@ TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Details(const FSpawnTabArgs& A
 TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Outliner(const FSpawnTabArgs& Args)
 {
 	return SNew(SDockTab)
-		.Label(LOCTEXT("OutlinerTab_Title", "Outliner"))
+		.Label(LOCTEXT("OutlinerTab_Title", "Hierarchy"))
 		[
 			OutlinerPtr.ToSharedRef()
 		];

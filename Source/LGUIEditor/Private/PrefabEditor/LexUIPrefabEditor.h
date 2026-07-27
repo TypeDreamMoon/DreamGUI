@@ -275,6 +275,24 @@ public:
 	 * FlexBox/Grid container then arranges them). Needs 1+ selected widgets that share a parent.
 	 */
 	void WrapSelectedWidgets(ELexUIWrapType WrapType);
+	/**
+	 * UMG "Replace With", adapted to this fork's shape. UMG swaps one panel *widget* for another
+	 * and has to carry the children across; here the panel is an instanced ULexLayoutContainer
+	 * hanging off the widget, so the swap touches nothing else -- name, parent, sibling index,
+	 * anchors, visual, components, slot and children all stay as they are. Needs exactly one
+	 * selected widget that already has a layout container, and refuses widgets owned by a
+	 * sub prefab. Returns quietly when the target panel cannot hold that many children.
+	 */
+	void ReplaceSelectedWidgetLayout(UClass* PanelClass);
+	/**
+	 * UMG "Find References": search the prefab's companion behaviour blueprint for the variable
+	 * the selected widget binds to. UMG can search by widget name because there the variable is
+	 * the widget; here the link is the same sanitized-display-name convention auto-bind uses, so
+	 * that is what gets searched. Does nothing (with a note) when the prefab has no companion
+	 * blueprint -- searching should never be the thing that creates one.
+	 */
+	void FindReferencesForSelectedWidget();
+	bool CanFindReferencesForSelectedWidget() const;
 	void SaveEditorState();
 private:
 	FGuid FindOrAddWidgetGuid(ULexWidget* Widget);

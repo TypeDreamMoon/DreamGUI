@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "SLexUIPrefabPalette.h"
 #include "LexUIPrefabEditor.h"
@@ -232,7 +232,7 @@ TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const 
 		? InItem->ValidationError
 		: InItem->Kind == EItemKind::Prefab
 		? FText::Format(LOCTEXT("PrefabRowTooltip", "{0}\nDouble-click to add under the selected widget."), FText::FromString(InItem->PrefabPath))
-		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click, or drag onto an Outliner widget, to add it under that widget."), FText::FromString(InItem->DisplayName));
+		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click, or drag onto a Hierarchy widget, to add it under that widget."), FText::FromString(InItem->DisplayName));
 	return SNew(STableRow<FItemPtr>, OwnerTable)
 		.IsEnabled(InItem->bValid)
 		.Padding(FMargin(2, 2))
