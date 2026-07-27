@@ -2006,6 +2006,8 @@ void ULexLayoutContainerScrollBox::SetScrollOffsetAnimated(float Value)
 	// velocity is dropped rather than being quietly added on top.
 	ScrollVelocity = 0.0f;
 	AnimatedTargetOffset = Target;
+	AnimatedStartOffset = ScrollOffset;
+	AnimatedElapsed = 0.0f;
 	bAnimatingScroll = true;
 }
 
@@ -2086,6 +2088,25 @@ void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 	{
 		// Eased scrolling takes the whole frame: it already cancelled the velocity when it started,
 		// and letting momentum run underneath would make the two disagree about where to land.
+		if (ScrollAnimationMode == ELexScrollAnimationMode::EaseCurve)
+		{
+			AnimatedElapsed += DeltaTime;
+			const float Duration = FMath::Max(ScrollAnimationDuration, KINDA_SMALL_NUMBER);
+			const float Elapsed = FMath::Min(AnimatedElapsed, Duration);
+			// The curve mapping comes from LTween rather than a private copy, so a curve named
+			// OutBack here is the same shape as one named OutBack on any tween in the project.
+			const FLTweenFunction Ease = ULTweener::GetEaseFunction(ScrollAnimationEase);
+			const float Next = Ease.IsBound()
+				? Ease.Execute(AnimatedTargetOffset - AnimatedStartOffset, AnimatedStartOffset, Elapsed, Duration)
+				: FMath::Lerp(AnimatedStartOffset, AnimatedTargetOffset, Elapsed / Duration);
+			SetScrollOffset(Next);
+			if (AnimatedElapsed >= Duration)
+			{
+				SetScrollOffset(AnimatedTargetOffset);
+				bAnimatingScroll = false;
+			}
+			return;
+		}
 		SetScrollOffset(FMath::FInterpTo(ScrollOffset, AnimatedTargetOffset, DeltaTime, ScrollAnimationInterpolationSpeed));
 		if (FMath::IsNearlyEqual(ScrollOffset, AnimatedTargetOffset, ScrollAnimationSnapThreshold))
 		{

@@ -381,4 +381,66 @@ bool FLexScrollBoxAnimatedScrollTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxEaseCurveScrollTest,
+	"LGUI.Layout.ScrollBox.EaseCurveScrollFollowsTheCurveOverItsDuration",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxEaseCurveScrollTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	const float Step = 1.0f / 60.0f;
+
+	// Linear is the one curve whose position at any moment can be stated without reproducing the
+	// easing maths here, which is what makes it the right probe: halfway through the duration the
+	// offset must be exactly halfway to the target, whatever LTween does internally.
+	Fixture.ScrollBox->ScrollAnimationMode = ELexScrollAnimationMode::EaseCurve;
+	Fixture.ScrollBox->ScrollAnimationEase = ELTweenEase::Linear;
+	Fixture.ScrollBox->ScrollAnimationDuration = 0.5f;
+	Fixture.ScrollBox->SetScrollOffsetAnimated(120.0f);
+	TestEqual(TEXT("An eased scroll still does not move on the frame it is asked for"),
+		Fixture.ScrollBox->GetScrollOffset(), 0.0f);
+
+	for (int32 i = 0; i < 15; i++)//0.25s of a 0.5s duration
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("Halfway through the duration it is halfway to the target"),
+		Fixture.ScrollBox->GetScrollOffset(), 60.0f, 0.5f);
+	TestTrue(TEXT("...and is still animating"), Fixture.ScrollBox->IsAnimatingScroll());
+
+	for (int32 i = 0; i < 16; i++)//past the end of the duration
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("At the duration it lands exactly on the target"), Fixture.ScrollBox->GetScrollOffset(), 120.0f, 0.001f);
+	TestFalse(TEXT("...and stops"), Fixture.ScrollBox->IsAnimatingScroll());
+
+	// Duration is what decides arrival, not distance -- the difference from InterpToSpeed, where a
+	// longer distance simply takes longer.
+	Fixture.ScrollBox->SetScrollOffsetAnimated(0.0f);
+	int32 StepsToArrive = 0;
+	while (Fixture.ScrollBox->IsAnimatingScroll() && StepsToArrive < 600)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+		StepsToArrive++;
+	}
+	// 0.5s at 1/60 is 30 steps; allow one for the frame the duration is crossed on.
+	TestTrue(TEXT("A different distance takes the same number of frames"), FMath::Abs(StepsToArrive - 30) <= 1);
+
+	// A curve that is not bound must still arrive rather than freezing the box forever.
+	Fixture.ScrollBox->ScrollAnimationEase = ELTweenEase::CurveFloat;//carries its curve elsewhere; unbound here
+	Fixture.ScrollBox->SetScrollOffsetAnimated(90.0f);
+	for (int32 i = 0; i < 40; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("An unbound curve falls back to a linear blend and still arrives"),
+		Fixture.ScrollBox->GetScrollOffset(), 90.0f, 0.001f);
+	TestFalse(TEXT("...without leaving the box animating"), Fixture.ScrollBox->IsAnimatingScroll());
+	return true;
+}
+
 #endif

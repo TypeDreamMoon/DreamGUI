@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "LexLayout.h"
 #include "LexPanelSlot.h"
+#include "LTweener.h"
 #include "LexPanelLayouts.generated.h"
 
 UENUM(BlueprintType)
@@ -315,6 +316,23 @@ enum class ELexScrollBoxConsumeMouseWheel : uint8
 /** Broadcast when the USER scrolls the box; code-driven SetScrollOffset does not fire it. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLexScrollBoxUserScrolledEvent, float, CurrentOffset);
 
+/** How an eased scroll gets from where it is to where it was asked to go. */
+UENUM(BlueprintType)
+enum class ELexScrollAnimationMode : uint8
+{
+	/**
+	 * UMG's own: FInterpTo towards the target at a fixed speed. Never overshoots and has no fixed
+	 * arrival time -- a longer distance simply takes longer.
+	 */
+	InterpToSpeed,
+	/**
+	 * An LTween easing curve evaluated over a fixed duration, so the scroll always arrives on time
+	 * whatever the distance. Overshooting curves (Back, Elastic, Bounce) are available, but note the
+	 * offset still clamps to the scrollable range, so an overshoot at either END is flattened.
+	 */
+	EaseCurve,
+};
+
 UCLASS(BlueprintType, DisplayName = "UMG Scroll Box")
 class LGUI_API ULexLayoutContainerScrollBox : public ULexLayoutContainerStackBox
 {
@@ -347,9 +365,18 @@ public:
 	/** Ease to the wheel's new position over a few frames instead of jumping there. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
 	bool bAnimateWheelScrolling = false;
-	/** FInterpTo speed for any eased scroll. Larger arrives sooner; UMG's default is 15. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0"))
+	/** Which curve an eased scroll follows. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
+	ELexScrollAnimationMode ScrollAnimationMode = ELexScrollAnimationMode::InterpToSpeed;
+	/** FInterpTo speed, used by InterpToSpeed only. Larger arrives sooner; UMG's default is 15. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0", EditCondition = "ScrollAnimationMode == ELexScrollAnimationMode::InterpToSpeed"))
 	float ScrollAnimationInterpolationSpeed = 15.0f;
+	/** Curve shape, used by EaseCurve only. Any of LTween's easings, overshooting ones included. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (EditCondition = "ScrollAnimationMode == ELexScrollAnimationMode::EaseCurve"))
+	ELTweenEase ScrollAnimationEase = ELTweenEase::OutCubic;
+	/** Seconds an eased scroll takes, used by EaseCurve only. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0", EditCondition = "ScrollAnimationMode == ELexScrollAnimationMode::EaseCurve"))
+	float ScrollAnimationDuration = 0.25f;
 
 	/** Keep moving under momentum after the finger or mouse lets go. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
@@ -459,6 +486,9 @@ private:
 	/** An eased scroll is in flight; mutually exclusive with momentum, which it cancels. */
 	bool bAnimatingScroll = false;
 	float AnimatedTargetOffset = 0.0f;
+	/** Where an EaseCurve scroll started and how far through its duration it is. */
+	float AnimatedStartOffset = 0.0f;
+	float AnimatedElapsed = 0.0f;
 	/** Close enough to the target to stop interpolating and land exactly on it. */
 	static constexpr float ScrollAnimationSnapThreshold = 0.05f;
 	/**
