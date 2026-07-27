@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/WidgetSerializer.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
@@ -448,6 +448,45 @@ namespace LexUIPrefabSystem
 
 
 
+#if WITH_EDITOR
+	bool WidgetSerializer::ReleaseNameFromExistingObject(UObject* InExistingObject)
+	{
+		if (!IsValid(InExistingObject))
+		{
+			return true;//nothing is holding the name
+		}
+		if (InExistingObject->HasAnyFlags(RF_BeginDestroyed) || InExistingObject->IsUnreachable())
+		{
+			// Already on its way out. Renaming here is the case that fatals: Rename ends in
+			// UnhashObject, and an object past BeginDestroy is no longer in the hash table it would
+			// be removed from. Leave it; the caller falls back to a different name.
+			return false;
+		}
+
+		// Rename BEFORE tearing down, not after. Freeing the name is the point of this call, and the
+		// engine's own ReleaseUniquelyNamedObject does exactly and only this. Doing it second means
+		// renaming an object that has already begun destruction.
+		// The flags matter: this is scratch work in a throwaway world, so it must not leave a
+		// redirector, dirty a package, or record an undo step for an object about to be destroyed.
+		InExistingObject->Rename(nullptr, GetTransientPackage(),
+			REN_DontCreateRedirectors | REN_DoNotDirty | REN_NonTransactional);
+
+		if (auto Widget = Cast<ULexWidget>(InExistingObject))
+		{
+			Widget->DestroyWidget();
+		}
+		else if (auto WidgetComponent = Cast<ULexUIBehaviour>(InExistingObject))
+		{
+			WidgetComponent->DestroyComponent();
+		}
+		else
+		{
+			InExistingObject->ConditionalBeginDestroy();
+		}
+		return true;
+	}
+#endif
+
 	void WidgetSerializer::GenerateObjectArray(TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent)
 	{
 		auto CollectDefaultSubobjects = [&](UObject* Target, const FGuid& TargetGuid, FLexUICommonObjectSaveData& ObjectData) {
@@ -533,23 +572,8 @@ namespace LexUIPrefabSystem
 #if WITH_EDITOR
 				if (auto ExistingObject = FindObjectWithOuter(*OuterObjectPtr, nullptr, ObjectData->ObjectName))
 				{
-					if (auto Obj = Cast<UObject>(ExistingObject))
-					{
-						if (auto Widget = Cast<ULexWidget>(Obj))
-						{
-							Widget->DestroyWidget();
-						}
-						else if (auto WidgetComponent = Cast<ULexUIBehaviour>(Obj))
-						{
-							WidgetComponent->DestroyComponent();
-						}
-						else
-						{
-							Obj->ConditionalBeginDestroy();
-						}
-						Obj->Rename(nullptr, GetTransientPackage());
-					}
-					UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData->ObjectName.ToString()), *(*OuterObjectPtr)->GetPathName(), *PrefabAssetPath);
+					const bool bNameIsFree = WidgetSerializer::ReleaseNameFromExistingObject(Cast<UObject>(ExistingObject));
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one%s. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData->ObjectName.ToString()), *(*OuterObjectPtr)->GetPathName(), bNameIsFree ? TEXT("") : TEXT(" (FAILED, the new object will be given a different name)"), *PrefabAssetPath);
 				}
 #endif
 				CreatedNewObject = NewObject<UObject>(*OuterObjectPtr, ObjectClass, ObjectData->ObjectName, (EObjectFlags)ObjectData->ObjectFlags);

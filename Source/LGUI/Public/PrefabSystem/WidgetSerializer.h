@@ -208,6 +208,17 @@ namespace LexUIPrefabSystem
 	class LGUI_API WidgetSerializer : public LexUIPrefabSystem::WidgetSerializerBase
 	{
 	public:
+#if WITH_EDITOR
+		/**
+		 * Move an object that is squatting on a name the deserializer needs out of the way, and tear
+		 * it down. Renaming is the part that matters and therefore goes first: it is what frees the
+		 * name, and it is not safe once an object has begun destruction -- UObject::Rename ends in
+		 * UnhashObject, which fatals with a hash consistency failure on an object that is no longer
+		 * hashed. Objects already on their way out are left alone entirely.
+		 * @return true if the name is free afterwards.
+		 */
+		static bool ReleaseNameFromExistingObject(UObject* InExistingObject);
+#endif
 		/**
 		 * @param CallbackBeforeAwake	This callback function will execute before Awake event, parameter "LexWidget" is the loaded root widget.
 		 */
