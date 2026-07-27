@@ -2612,6 +2612,103 @@ void ULexCanvas::UnregisterCanvasScaler()
 	}
 }
 
+void ULexCanvas::CalculateCanvasSizeAndScale(FIntPoint InViewportSize, FVector2D& OutCanvasSize, float& OutScale)
+{
+	OutCanvasSize = FVector2D(InViewportSize.X, InViewportSize.Y);
+	OutScale = 1.0f;
+	if (InViewportSize.X <= 0 || InViewportSize.Y <= 0)return;
+
+	switch (ScaleMode)
+	{
+	case ELexCanvasScaleMode::ConstantPixelSize:
+		{
+			OutCanvasSize = FVector2D(InViewportSize.X, InViewportSize.Y);
+			OutScale = 1.0f;
+		}
+		break;
+	case ELexCanvasScaleMode::ScaleWithScreenSize:
+		{
+			switch (ScreenMatchMode)
+			{
+			case ELexCanvasScreenMatchMode::MatchWidthOrHeight:
+				{
+					float matchWidth_PreferredWidth = ReferenceResolution.X;
+					float matchWidth_PreferredHeight = ReferenceResolution.X * InViewportSize.Y / InViewportSize.X;
+					float matchWidth_ScaleRatio = InViewportSize.X / ReferenceResolution.X;
+
+					float matchHeight_PreferredHeight = ReferenceResolution.Y;
+					float matchHeight_PreferredWidth = ReferenceResolution.Y * InViewportSize.X / InViewportSize.Y;
+					float matchHeight_ScaleRatio = InViewportSize.Y / ReferenceResolution.Y;
+
+					OutCanvasSize.X = FMath::Lerp(matchWidth_PreferredWidth, matchHeight_PreferredWidth, MatchFromWidthToHeight);
+					OutCanvasSize.Y = FMath::Lerp(matchWidth_PreferredHeight, matchHeight_PreferredHeight, MatchFromWidthToHeight);
+
+					OutScale = FMath::Lerp(matchWidth_ScaleRatio, matchHeight_ScaleRatio, MatchFromWidthToHeight);
+				}
+				break;
+			case ELexCanvasScreenMatchMode::Expand:
+			case ELexCanvasScreenMatchMode::Shrink:
+				{
+					float resultWidth = InViewportSize.X, resultHeight = InViewportSize.Y;
+
+					float screenAspect = (float)InViewportSize.X / InViewportSize.Y;
+					float referenceAspect = ReferenceResolution.X / ReferenceResolution.Y;
+					if (screenAspect > referenceAspect)//screen width > reference width
+					{
+						if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
+						{
+							resultHeight = ReferenceResolution.Y;
+							resultWidth = resultHeight * screenAspect;
+							OutScale = (float)InViewportSize.Y / resultHeight;
+						}
+						else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
+						{
+							resultWidth = ReferenceResolution.X;
+							resultHeight = resultWidth / screenAspect;
+							OutScale = (float)InViewportSize.X / resultWidth;
+						}
+					}
+					else//screen height > reference height
+					{
+						if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
+						{
+							resultWidth = ReferenceResolution.X;
+							resultHeight = resultWidth / screenAspect;
+							OutScale = (float)InViewportSize.X / resultWidth;
+						}
+						else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
+						{
+							resultHeight = ReferenceResolution.Y;
+							resultWidth = resultHeight * screenAspect;
+							OutScale = (float)InViewportSize.Y / resultHeight;
+						}
+					}
+					OutCanvasSize = FVector2D(resultWidth, resultHeight);
+				}
+				break;
+			}
+		}
+		break;
+	case ELexCanvasScaleMode::Custom:
+		{
+			if (IsValid(CustomScale))
+			{
+				OutScale = 1.0f;
+				auto ScaledViewportSize = InViewportSize;
+				CustomScale->CalculateSizeAndScale(this, InViewportSize, ScaledViewportSize, OutScale);
+				OutCanvasSize = FVector2D(ScaledViewportSize.X, ScaledViewportSize.Y);
+			}
+			else
+			{
+				//default is constant pixel
+				OutCanvasSize = FVector2D(InViewportSize.X, InViewportSize.Y);
+				OutScale = 1.0f;
+			}
+		}
+		break;
+	}
+}
+
 void ULexCanvas::OnViewportParameterChanged()
 {
 	if (ViewportSize.X <= 0 || ViewportSize.Y <= 0)return;
@@ -2623,101 +2720,11 @@ void ULexCanvas::OnViewportParameterChanged()
 		{
 			if (auto LexWidget = GetWidget())
 			{
+				FVector2D NewCanvasSize;
 				float TempCanvasScale = 1.0f;
-				//adjust size
-				switch (ScaleMode)
-				{
-				case ELexCanvasScaleMode::ConstantPixelSize:
-					{
-						LexWidget->SetWidth(ViewportSize.X);
-						LexWidget->SetHeight(ViewportSize.Y);
-						TempCanvasScale = 1.0f;
-					}
-					break;
-				case ELexCanvasScaleMode::ScaleWithScreenSize:
-					{
-						switch (ScreenMatchMode)
-						{
-						case ELexCanvasScreenMatchMode::MatchWidthOrHeight:
-							{
-								float matchWidth_PreferredWidth = ReferenceResolution.X;
-								float matchWidth_PreferredHeight = ReferenceResolution.X * ViewportSize.Y / ViewportSize.X;
-								float matchWidth_ScaleRatio = ViewportSize.X / ReferenceResolution.X;
-
-								float matchHeight_PreferredHeight = ReferenceResolution.Y;
-								float matchHeight_PreferredWidth = ReferenceResolution.Y * ViewportSize.X / ViewportSize.Y;
-								float matchHeight_ScaleRatio = ViewportSize.Y / ReferenceResolution.Y;
-
-								LexWidget->SetWidth(FMath::Lerp(matchWidth_PreferredWidth, matchHeight_PreferredWidth, MatchFromWidthToHeight));
-								LexWidget->SetHeight(FMath::Lerp(matchWidth_PreferredHeight, matchHeight_PreferredHeight, MatchFromWidthToHeight));
-
-								TempCanvasScale = FMath::Lerp(matchWidth_ScaleRatio, matchHeight_ScaleRatio, MatchFromWidthToHeight);
-							}
-							break;
-						case ELexCanvasScreenMatchMode::Expand:
-						case ELexCanvasScreenMatchMode::Shrink:
-							{
-								float resultWidth = ViewportSize.X, resultHeight = ViewportSize.Y;
-
-								float screenAspect = (float)ViewportSize.X / ViewportSize.Y;
-								float referenceAspect = ReferenceResolution.X / ReferenceResolution.Y;
-								if (screenAspect > referenceAspect)//screen width > reference width
-								{
-									if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
-									{
-										resultHeight = ReferenceResolution.Y;
-										resultWidth = resultHeight * screenAspect;
-										TempCanvasScale = (float)ViewportSize.Y / resultHeight;
-									}
-									else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
-									{
-										resultWidth = ReferenceResolution.X;
-										resultHeight = resultWidth / screenAspect;
-										TempCanvasScale = (float)ViewportSize.X / resultWidth;
-									}
-								}
-								else//screen height > reference height
-								{
-									if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
-									{
-										resultWidth = ReferenceResolution.X;
-										resultHeight = resultWidth / screenAspect;
-										TempCanvasScale = (float)ViewportSize.X / resultWidth;
-									}
-									else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
-									{
-										resultHeight = ReferenceResolution.Y;
-										resultWidth = resultHeight * screenAspect;
-										TempCanvasScale = (float)ViewportSize.Y / resultHeight;
-									}
-								}
-								LexWidget->SetWidth(resultWidth);
-								LexWidget->SetHeight(resultHeight);
-							}
-							break;
-						}
-					}
-					break;
-				case ELexCanvasScaleMode::Custom:
-					{
-						if (IsValid(CustomScale))
-						{
-							TempCanvasScale = 1.0f;
-							auto ScaledViewportSize = ViewportSize;
-							CustomScale->CalculateSizeAndScale(this, ViewportSize, ScaledViewportSize, TempCanvasScale);
-							LexWidget->SetWidth(ScaledViewportSize.X);
-							LexWidget->SetHeight(ScaledViewportSize.Y);
-						}
-						else
-						{
-							//default is constant pixel
-							LexWidget->SetWidth(ViewportSize.X);
-							LexWidget->SetHeight(ViewportSize.Y);
-							TempCanvasScale = 1.0f;
-						}
-					}
-					break;
-				}
+				CalculateCanvasSizeAndScale(ViewportSize, NewCanvasSize, TempCanvasScale);
+				LexWidget->SetWidth(NewCanvasSize.X);
+				LexWidget->SetHeight(NewCanvasSize.Y);
 				this->CanvasScale = TempCanvasScale;
 
 				LexWidget->MarkAllDirtyRecursive();

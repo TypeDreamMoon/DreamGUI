@@ -393,6 +393,16 @@ protected:
 	float MatchFromWidthToHeight = 1;
 	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler")
 	ELexCanvasScreenMatchMode ScreenMatchMode = ELexCanvasScreenMatchMode::MatchWidthOrHeight;
+public:
+	/**
+	 * The canvas-scaler rule as a pure calculation: for a given viewport size, the size this canvas
+	 * would give its root widget and the scale it would report. OnViewportParameterChanged applies
+	 * this to the live widget; the prefab designer calls it to preview a device resolution that has
+	 * no viewport behind it, so preview and runtime cannot drift apart.
+	 * Note the returned scale is the canvas's own reported CanvasScale. The scale actually seen on
+	 * screen is ViewportSize / OutCanvasSize, which differs at intermediate Match values.
+	 */
+	void CalculateCanvasSizeAndScale(FIntPoint InViewportSize, FVector2D& OutCanvasSize, float& OutScale);
 #if WITH_EDITORONLY_DATA
 public:
 	/** When Canvas use ScreenSpaceOverlay, in edit mode it will try to match editor viewport's size. So make this true to use a fixed size. */
