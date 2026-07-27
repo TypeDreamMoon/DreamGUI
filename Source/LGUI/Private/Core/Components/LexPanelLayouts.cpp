@@ -3,11 +3,22 @@
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexScrollBoxInputHandler.h"
+#include "Interaction/UIScrollbar.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexVisual.h"
 #include "Framework/Application/SlateApplication.h"
+#include "HAL/IConsoleManager.h"
 #include "Misc/CoreDelegates.h"
+
+/**
+ * Frame-by-frame scroll box trace, for the class of bug a console command cannot catch: the state
+ * mid-gesture, while the pointer is held and the console is unreachable. Off by default; costs one
+ * integer read per call site when off.
+ */
+static TAutoConsoleVariable<int32> CVarLexScrollBoxTrace(
+	TEXT("lgui.ScrollBoxTrace"), 0,
+	TEXT("1 = log every scroll box drag delta and physics tick that changes state."));
 #include "Widgets/Layout/SSafeZone.h"
 
 namespace LexPanelLayoutLocal
@@ -1920,6 +1931,7 @@ void ULexLayoutContainerScrollBox::SetScrollOffset(float Value)
 	{
 		ULexWidget::MarkLayoutForRebuild(Widget);
 	}
+	SyncScrollbar();
 }
 
 bool ULexLayoutContainerScrollBox::ScrollBy(float Delta)
@@ -1970,6 +1982,63 @@ float ULexLayoutContainerScrollBox::GetViewOffsetFraction() const
 float ULexLayoutContainerScrollBox::GetOverscroll() const
 {
 	return Overscroll;
+}
+
+void ULexLayoutContainerScrollBox::EnsureScrollbarBound()
+{
+	UUIScrollbar* Bar = Scrollbar.Get();
+	if (!IsValid(Bar) || ScrollbarChangedHandle.IsValid())
+	{
+		return;
+	}
+	// Bound lazily rather than in OnRegister: the reference is a serialized pointer to another
+	// component, which need not have been loaded yet when this one registers.
+	ScrollbarChangedHandle = Bar->GetOnValueChangedEvent().AddUObject(
+		this, &ULexLayoutContainerScrollBox::HandleScrollbarValueChanged);
+}
+
+void ULexLayoutContainerScrollBox::SyncScrollbar()
+{
+	if (bSyncingFromScrollbar)
+	{
+		return;//the bar told us; telling it back is the loop
+	}
+	EnsureScrollbarBound();
+	UUIScrollbar* Bar = Scrollbar.Get();
+	if (!IsValid(Bar))
+	{
+		return;
+	}
+	const float Fraction = GetViewFraction();
+	const bool bEverythingFits = MaxScrollOffset <= KINDA_SMALL_NUMBER;
+	if (ScrollbarVisibility == ELexScrollBoxScrollbarVisibility::AutoHide)
+	{
+		if (ULexWidget* BarWidget = Bar->GetWidget(); IsValid(BarWidget))
+		{
+			BarWidget->SetWidgetActive(!bEverythingFits);
+		}
+	}
+	// A Size of exactly 1 leaves the bar's own slide area at zero width, and its drag maths then
+	// divides by it. Keep the handle a hair short of the track even when the bar stays visible.
+	const float SafeSize = FMath::Clamp(Fraction, 0.0f, 1.0f - KINDA_SMALL_NUMBER);
+	// Non-notifying on purpose: this is the push direction, and letting it fire would arrive back
+	// as a pull. The parity box needs no axis inversion -- its offset grows the same way on both
+	// axes, so the raw fraction is fed and the bar's DirectionType decides which end is zero.
+	Bar->SetValueAndSize(GetViewOffsetFraction(), SafeSize, false);
+}
+
+void ULexLayoutContainerScrollBox::HandleScrollbarValueChanged(float InValue)
+{
+	if (bSyncingFromScrollbar || MaxScrollOffset <= KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+	TGuardValue<bool> SyncGuard(bSyncingFromScrollbar, true);
+	// Grabbing the bar owns the position the same way grabbing the content does: momentum and any
+	// spring-back in flight are dropped rather than fighting the handle.
+	StopScrolling();
+	SetScrollOffset(FMath::Clamp(InValue, 0.0f, 1.0f) * MaxScrollOffset);
+	OnUserScrolled.Broadcast(ScrollOffset);
 }
 
 void ULexLayoutContainerScrollBox::SetScrollVelocity(float Value)
@@ -2025,6 +2094,11 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 	{
 		return;
 	}
+	if (CVarLexScrollBoxTrace.GetValueOnGameThread() != 0)
+	{
+		UE_LOG(LGUI, Log, TEXT("[ScrollTrace] drag  delta=%+8.2f | offset=%8.2f max=%8.2f band=%+8.2f dragging=%d"),
+			Delta, ScrollOffset, MaxScrollOffset, Overscroll, bDragging ? 1 : 0);
+	}
 	// A hand on the content beats an eased scroll heading somewhere else.
 	bAnimatingScroll = false;
 	if (!bAllowOverscroll || OverscrollLimit <= KINDA_SMALL_NUMBER)
@@ -2032,7 +2106,18 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 		ScrollByFromUser(Delta);
 		return;
 	}
-	if (!FMath::IsNearlyZero(Overscroll))
+	// A band is only a band while the offset is pinned at the end it points past. Anything else is
+	// residue -- spring-back decay the grab interrupted, or float dust from the remainder
+	// arithmetic below -- and a same-signed drag against residue used to read as "pushing out",
+	// swallowing the whole gesture while the offset sat frozen mid-range.
+	const bool bBandOpen = FMath::Abs(Overscroll) > OverscrollResidueThreshold
+		&& ((Overscroll > 0.0f && ScrollOffset >= MaxScrollOffset - KINDA_SMALL_NUMBER)
+			|| (Overscroll < 0.0f && ScrollOffset <= KINDA_SMALL_NUMBER));
+	if (!bBandOpen && !FMath::IsNearlyZero(Overscroll))
+	{
+		Overscroll = 0.0f;
+	}
+	if (bBandOpen)
 	{
 		// Pulling further out meets rising resistance; pulling back answers one-for-one. Damping the
 		// return as well is what made a long pull feel dead -- the finger moved and nothing did,
@@ -2063,7 +2148,9 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 	ScrollByFromUser(Delta);
 	// Whatever the clamp refused to spend becomes rubber band rather than being thrown away.
 	const float Remainder = Delta - (ScrollOffset - Before);
-	if (!FMath::IsNearlyZero(Remainder))
+	// Dust-sized remainders are float rounding, not an end being hit; opening a band for them is
+	// what seeded the frozen-gesture bug in the first place.
+	if (FMath::Abs(Remainder) > OverscrollResidueThreshold)
 	{
 		Overscroll = FMath::Clamp(Remainder, -FMath::Max(OverscrollLimit, KINDA_SMALL_NUMBER), FMath::Max(OverscrollLimit, KINDA_SMALL_NUMBER));
 		MarkLayoutDirty();
@@ -2076,6 +2163,11 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 
 void ULexLayoutContainerScrollBox::SetDragging(bool bInDragging)
 {
+	if (CVarLexScrollBoxTrace.GetValueOnGameThread() != 0 && bDragging != bInDragging)
+	{
+		UE_LOG(LGUI, Log, TEXT("[ScrollTrace] %s | offset=%8.2f band=%+8.2f vel=%+8.1f"),
+			bInDragging ? TEXT("GRAB ") : TEXT("LETGO"), ScrollOffset, Overscroll, ScrollVelocity);
+	}
 	bDragging = bInDragging;
 }
 
@@ -2092,6 +2184,11 @@ void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 		// routes the whole drag delta into itself, the content stops advancing at the same time --
 		// the gesture reads as "moves a little, then snaps back" while the finger is still down.
 		return;
+	}
+	if (CVarLexScrollBoxTrace.GetValueOnGameThread() != 0 && IsScrolling())
+	{
+		UE_LOG(LGUI, Log, TEXT("[ScrollTrace] tick  dt=%.4f     | offset=%8.2f max=%8.2f band=%+8.2f vel=%+8.1f animating=%d"),
+			DeltaTime, ScrollOffset, MaxScrollOffset, Overscroll, ScrollVelocity, bAnimatingScroll ? 1 : 0);
 	}
 	if (bAnimatingScroll)
 	{
@@ -2170,7 +2267,7 @@ void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 		const float Step = ScrollVelocity * DeltaTime;
 		ScrollBy(Step);
 		const float Remainder = Step - (ScrollOffset - Before);
-		if (!FMath::IsNearlyZero(Remainder))
+		if (FMath::Abs(Remainder) > OverscrollResidueThreshold)
 		{
 			// Ran into an end: carry the leftover into the rubber band, or stop dead when overscroll
 			// is switched off. Without this the momentum would keep being spent against the clamp
@@ -2313,6 +2410,9 @@ void ULexLayoutContainerScrollBox::CalculateLayout()
 	MeasuredContentPrimary = ContentPrimary;
 	MeasuredViewportPrimary = AvailablePrimary;
 	bLayoutMetricsValid = true;
+	// The range only becomes real here, so this is the first moment the bar can be told anything
+	// truthful about handle size.
+	SyncScrollbar();
 	ScrollOffset = FMath::Clamp(ScrollOffset, 0.0f, MaxScrollOffset);
 
 	// The rubber band displaces the content without moving the scroll position: GetScrollOffset stays

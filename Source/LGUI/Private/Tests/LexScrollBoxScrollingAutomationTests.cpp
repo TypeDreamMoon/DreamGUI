@@ -382,6 +382,79 @@ bool FLexScrollBoxOverscrollTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxBarFractionsTest,
+	"LGUI.Layout.ScrollBox.BarFractionsStaySafeWhenEverythingFits",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxBarFractionsTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	// A viewport taller than its content: nothing to scroll, and the pair of numbers a scrollbar
+	// consumes has to stay usable anyway. A Size of exactly 1 leaves UUIScrollbar's slide area at
+	// zero and its drag maths divides by it, so the clamp the sync applies is worth pinning here
+	// where it can be checked without a bar, a handle hierarchy or a pointer.
+	FScopedGameWorld TestWorld;
+	ULexWidget* ScrollWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Scroll"), 200.0f, 400.0f);
+	ULexLayoutContainerScrollBox* ScrollBox = ScrollWidget->CreateNewLayoutContainer<ULexLayoutContainerScrollBox>();
+	MakeWidget(TestWorld.World, ScrollWidget, TEXT("Small"), 180.0f, 100.0f);
+	ScrollWidget->OnRegister();
+	ULexWidget::MarkLayoutForRebuild(ScrollWidget);
+	ULexWidget::RebuildLayoutImmediately(ScrollWidget);
+
+	TestEqual(TEXT("Nothing can scroll"), ScrollBox->GetMaxScrollOffset(), 0.0f);
+	TestEqual(TEXT("The whole content is in view"), ScrollBox->GetViewFraction(), 1.0f, 0.001f);
+	TestEqual(TEXT("There is nowhere to be, so the offset fraction is zero"),
+		ScrollBox->GetViewOffsetFraction(), 0.0f, 0.001f);
+	// Both are finite and inside [0,1]; a bar fed these can compute a slide area without dividing
+	// by zero once the sync's clamp trims the size.
+	TestTrue(TEXT("Both fractions are finite"),
+		FMath::IsFinite(ScrollBox->GetViewFraction()) && FMath::IsFinite(ScrollBox->GetViewOffsetFraction()));
+	TestTrue(TEXT("A trimmed size leaves a usable slide area"),
+		1.0f - FMath::Min(ScrollBox->GetViewFraction(), 1.0f - KINDA_SMALL_NUMBER) > 0.0f);
+
+	ScrollWidget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxStaleBandTest,
+	"LGUI.Layout.ScrollBox.ABandStrandedMidRangeDoesNotEatTheDrag",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxStaleBandTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	Fixture.ScrollBox->OverscrollLimit = 100.0f;
+
+	// The live frame trace's exact shape: a band left over from an earlier gesture while the offset
+	// sits mid-range. Same-signed drags then read as "pushing out" and the whole gesture vanished
+	// into the band with the offset frozen -- at offset 74 of 4198 in the reported session.
+	Fixture.ScrollBox->SetDragging(true);
+	Fixture.ScrollBox->ApplyDragDelta(99999.0f);//pin to the end and open the band
+	TestEqual(TEXT("Fixture: offset pinned at the end"), Fixture.ScrollBox->GetScrollOffset(), 180.0f);
+	TestTrue(TEXT("Fixture: the band is open"), FMath::Abs(Fixture.ScrollBox->GetOverscroll()) > 1.0f);
+	// Strand the band: a code-driven move puts the offset mid-range without touching the band,
+	// standing in for the spring residue a fresh grab interrupts.
+	Fixture.ScrollBox->SetScrollOffset(50.0f);
+
+	const float Before = Fixture.ScrollBox->GetScrollOffset();
+	Fixture.ScrollBox->ApplyDragDelta(10.0f);//same sign as the stranded band
+	TestEqual(TEXT("A drag against a stranded band moves the offset"), Fixture.ScrollBox->GetScrollOffset(), Before + 10.0f);
+	TestEqual(TEXT("...and the stranded band is folded away"), Fixture.ScrollBox->GetOverscroll(), 0.0f);
+
+	// The genuine article still works: at the actual end, the same drag rubber-bands.
+	Fixture.ScrollBox->StopScrolling();
+	Fixture.ScrollBox->SetScrollOffset(180.0f);
+	Fixture.ScrollBox->ApplyDragDelta(50.0f);
+	TestTrue(TEXT("At the real end the same drag still opens the band"),
+		Fixture.ScrollBox->GetOverscroll() > 1.0f);
+	TestEqual(TEXT("...with the offset still pinned there"), Fixture.ScrollBox->GetScrollOffset(), 180.0f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FLexScrollBoxAnimatedScrollTest,
 	"LGUI.Layout.ScrollBox.AnimatedScrollEasesToItsTarget",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

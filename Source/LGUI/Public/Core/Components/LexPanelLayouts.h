@@ -316,6 +316,16 @@ enum class ELexScrollBoxConsumeMouseWheel : uint8
 /** Broadcast when the USER scrolls the box; code-driven SetScrollOffset does not fire it. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLexScrollBoxUserScrolledEvent, float, CurrentOffset);
 
+/** Whether a linked scrollbar stays put or disappears when everything already fits. */
+UENUM(BlueprintType)
+enum class ELexScrollBoxScrollbarVisibility : uint8
+{
+	/** Always shown, even with nothing to scroll. */
+	Permanent,
+	/** Hidden while the content fits the viewport, which is what UMG's default does. */
+	AutoHide,
+};
+
 /** How an eased scroll gets from where it is to where it was asked to go. */
 UENUM(BlueprintType)
 enum class ELexScrollAnimationMode : uint8
@@ -361,6 +371,19 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "ScrollBox")
 	FLexScrollBoxUserScrolledEvent OnUserScrolled;
+
+	/**
+	 * A UUIScrollbar to keep in step with this box, both ways. Assign the component from a
+	 * scrollbar prefab (/LGUI/Prefabs/VerticalScrollbar or HorizontalScrollbar) placed anywhere in
+	 * the hierarchy -- it does not have to be a child of this box. Which end of the bar means zero
+	 * is the BAR's business: this box always feeds the raw 0..1 fraction and the bar's own
+	 * DirectionType decides the mapping.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
+	TWeakObjectPtr<class UUIScrollbar> Scrollbar;
+	/** Whether that bar hides itself when the content already fits. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
+	ELexScrollBoxScrollbarVisibility ScrollbarVisibility = ELexScrollBoxScrollbarVisibility::AutoHide;
 
 	/** Ease to the wheel's new position over a few frames instead of jumping there. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
@@ -491,6 +514,16 @@ private:
 
 	/** Local units per second the content is still travelling under momentum. */
 	float ScrollVelocity = 0.0f;
+	/** Push this box's position into the linked bar, and hide the bar when nothing can scroll. */
+	void SyncScrollbar();
+	/** Bind to the bar's value changes. Lazy and idempotent: the reference may not resolve until the prefab has finished loading. */
+	void EnsureScrollbarBound();
+	UFUNCTION()
+	void HandleScrollbarValueChanged(float InValue);
+	/** Set while a bar-driven change is being applied, so the push side does not answer its own pull. */
+	bool bSyncingFromScrollbar = false;
+	FDelegateHandle ScrollbarChangedHandle;
+
 	/** A pointer is currently holding the content; momentum and spring-back are suspended. */
 	bool bDragging = false;
 	/** An eased scroll is in flight; mutually exclusive with momentum, which it cancels. */
@@ -512,7 +545,14 @@ private:
 	/** Positional lerp rate once the spring has killed the outward velocity. */
 	static constexpr float OverscrollReturnRate = 10.0f;
 	/** Below this the rubber band is snapped shut, so it does not creep towards zero forever. */
-	static constexpr float OverscrollSnapThreshold = 0.001f;
+	static constexpr float OverscrollSnapThreshold = 0.1f;
+	/**
+	 * Below this a band value is residue, not a band: spring-back decay a grab interrupted, or
+	 * float dust from the remainder arithmetic. Treating residue as "at an end" routed whole
+	 * mid-range gestures into the band with the offset frozen -- caught by the live frame trace,
+	 * a drag stuck at offset 74 of 4198 feeding a +0.02 leftover.
+	 */
+	static constexpr float OverscrollResidueThreshold = 0.5f;
 	/**
 	 * Distance scrolled from the start. Editable so the designer can scroll the content in the prefab
 	 * editor (where no pointer input exists) to reach and edit off-screen children; the authored value
