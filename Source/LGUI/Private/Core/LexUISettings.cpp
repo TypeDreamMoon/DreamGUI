@@ -75,6 +75,11 @@ ELexUILayoutMode ULexUISettings::GetLayoutMode()
 {
 	return GetDefault<ULexUISettings>()->LayoutMode;
 }
+
+float ULexUISettings::GetParkedWidgetLifetimeSeconds()
+{
+	return GetDefault<ULexUISettings>()->ParkedWidgetLifetimeSeconds;
+}
 int32 ULexUISettings::ConvertAtlasTextureSizeTypeToSize(const ELexUIAtlasTextureSizeType& InType)
 {
 	return 1 << ((int32)InType + 8);

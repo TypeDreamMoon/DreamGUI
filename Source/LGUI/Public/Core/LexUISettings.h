@@ -97,6 +97,19 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Prefab", meta = (EditCondition = "bVerifyPrefabSaveRoundTrip"))
 	bool bBlockPrefabSaveOnPropertyDrift = false;
 
+	/**
+	 * Seconds a widget may sit created-but-never-added before it is reported and destroyed. Zero
+	 * turns the check off, which is the default.
+	 *
+	 * This is a development-time leak detector, not a lifetime policy. A created widget is held by
+	 * the LexUI manager, so forgetting to add one is invisible until the world tears down -- but a
+	 * legitimately slow path (waiting on an async load, say) looks exactly the same from here, and
+	 * destroying that caller's widget would be a fault of our own making. Turn it on to find leaks,
+	 * leave it off in shipping.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Runtime", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float ParkedWidgetLifetimeSeconds = 0.0f;
+
 	/** default atlas setting */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
 		FLexUIAtlasSettings DefaultAtlasSetting;
@@ -164,6 +177,7 @@ public:
 	static const TMap<FName, FLexUIAtlasSettings>& GetAllAtlasSettings();
 	static float GetAutoBatchThreshold();
 	static ELexUILayoutMode GetLayoutMode();
+	static float GetParkedWidgetLifetimeSeconds();
 	static int32 ConvertAtlasTextureSizeTypeToSize(const ELexUIAtlasTextureSizeType& InType);
 	static int32 GetPriorityInSceneViewExtension();
 private:

@@ -249,6 +249,13 @@ public:
 	bool UnparkWidget(ULexWidget* InWidget);
 	bool IsWidgetParked(const ULexWidget* InWidget)const;
 	const TArray<FLexParkedWidgetEntry>& GetParkedWidgets()const{return ParkedWidgets;}
+	/**
+	 * Report and destroy widgets that were created and never added, once they are older than
+	 * ULexUISettings::GetParkedWidgetLifetimeSeconds. Destroying is the point: merely dropping the
+	 * reference would leave GC to collect a still-registered widget, and that path logs the
+	 * "not destroyed by its owner" error from an unrelated stack. Returns how many it took.
+	 */
+	int32 SweepExpiredParkedWidgets();
 	void AddWidget(ULexWidget* InWidget);
 	void RemoveWidget(ULexWidget* InWidget);
 	/** Tears down registered widgets once per hierarchy root. Safe to call repeatedly during world shutdown. */

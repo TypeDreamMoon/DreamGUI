@@ -949,6 +949,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 
 void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 {
+	SweepExpiredParkedWidgets();
 	//Update culture
 	{
 		if (bShouldUpdateOnCultureChanged)
@@ -1507,6 +1508,80 @@ bool ULexUIManagerWorldSubsystem::UnparkWidget(ULexWidget* InWidget)
 	ParkedWidgets.RemoveAt(Index);
 	InWidget->SetParked(false);
 	return true;
+}
+
+namespace LexParkedWidgetConsole
+{
+	/**
+	 * The other half of "held, not lost". Holding created widgets in a named array is what stops
+	 * them being collected; being able to list them is what stops that becoming a place things
+	 * quietly accumulate.
+	 */
+	static FAutoConsoleCommandWithWorldAndArgs ListParkedWidgetsCommand(
+		TEXT("lgui.ListPendingWidgets"),
+		TEXT("List widgets created but not yet added to anything, with how long they have been waiting."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+			[](const TArray<FString>& Args, UWorld* World)
+			{
+				auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World);
+				if (LexUIManager == nullptr)
+				{
+					UE_LOG(LGUI, Log, TEXT("No LexUI manager for this world."));
+					return;
+				}
+				const TArray<FLexParkedWidgetEntry>& Parked = LexUIManager->GetParkedWidgets();
+				if (Parked.IsEmpty())
+				{
+					UE_LOG(LGUI, Log, TEXT("No pending widgets."));
+					return;
+				}
+				const double Now = World ? World->GetTimeSeconds() : 0.0;
+				UE_LOG(LGUI, Log, TEXT("%d pending widget(s):"), Parked.Num());
+				for (const FLexParkedWidgetEntry& Entry : Parked)
+				{
+					UE_LOG(LGUI, Log, TEXT("  %s   waiting %.1fs")
+						, Entry.Widget != nullptr ? *Entry.Widget->GetPathDisplayName() : TEXT("<stale>")
+						, Now - Entry.ParkedAtSeconds);
+				}
+			}));
+}
+
+int32 ULexUIManagerWorldSubsystem::SweepExpiredParkedWidgets()
+{
+	const float LifetimeSeconds = ULexUISettings::GetParkedWidgetLifetimeSeconds();
+	if (LifetimeSeconds <= 0.0f || ParkedWidgets.IsEmpty())
+	{
+		return 0;//off by default: a slow-but-legitimate caller must not have its widget taken away
+	}
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return 0;
+	}
+	const double Now = World->GetTimeSeconds();
+
+	TArray<TObjectPtr<ULexWidget>> Expired;
+	for (const FLexParkedWidgetEntry& Entry : ParkedWidgets)
+	{
+		if (Entry.Widget != nullptr && (Now - Entry.ParkedAtSeconds) >= (double)LifetimeSeconds)
+		{
+			Expired.Add(Entry.Widget);
+		}
+	}
+	for (const TObjectPtr<ULexWidget>& Widget : Expired)
+	{
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		UE_LOG(LGUI, Warning, TEXT("Widget %s was created %.1fs ago and never added to anything; destroying it. Add it with AddChild or AddToViewport, or destroy it yourself. (LexUI setting: Parked Widget Lifetime Seconds)")
+			, *Widget->GetPathDisplayName(), LifetimeSeconds);
+		// DestroyWidget rather than letting go: it unregisters and ends play in the right order, so
+		// the widget never reaches BeginDestroy still registered, which is the state that logs an
+		// error and an on-screen banner from a stack that says nothing about where it came from.
+		Widget->DestroyWidget();
+	}
+	return Expired.Num();
 }
 
 bool ULexUIManagerWorldSubsystem::IsWidgetParked(const ULexWidget* InWidget)const
