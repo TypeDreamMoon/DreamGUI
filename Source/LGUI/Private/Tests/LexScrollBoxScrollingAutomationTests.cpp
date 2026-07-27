@@ -231,4 +231,108 @@ bool FLexScrollBoxScrollIntoViewTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxInertiaTest,
+	"LGUI.Layout.ScrollBox.MomentumDecaysAndStops",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxInertiaTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	Fixture.ScrollBox->bAllowOverscroll = false;//isolate momentum from the rubber band
+
+	// One step by hand: alpha = DecelerationRate * 50 * dt = 0.135 * 50 / 60 = 0.1125, so a velocity
+	// of 300 decays to 300 * (1 - 0.1125) = 266.25 and the content moves 266.25/60 = 4.4375 units.
+	const float Step = 1.0f / 60.0f;
+	Fixture.ScrollBox->SetScrollVelocity(300.0f);
+	Fixture.ScrollBox->TickScrollPhysics(Step);
+	TestEqual(TEXT("Velocity decays by the deceleration rate"), Fixture.ScrollBox->GetScrollVelocity(), 266.25f, 0.01f);
+	TestEqual(TEXT("The decayed velocity is what moves the content"), Fixture.ScrollBox->GetScrollOffset(), 4.4375f, 0.01f);
+	TestTrue(TEXT("The box reports itself as scrolling"), Fixture.ScrollBox->IsScrolling());
+
+	// Left alone it must come to rest rather than creeping forever.
+	for (int32 i = 0; i < 600; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestFalse(TEXT("Momentum eventually stops"), Fixture.ScrollBox->IsScrolling());
+	TestEqual(TEXT("...with no velocity left"), Fixture.ScrollBox->GetScrollVelocity(), 0.0f);
+
+	// Deceleration of zero is documented as never slowing down; it must still respect the end.
+	Fixture.ScrollBox->DecelerationRate = 0.0f;
+	Fixture.ScrollBox->SetScrollVelocity(10000.0f);
+	for (int32 i = 0; i < 120; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("Momentum never scrolls past the end"), Fixture.ScrollBox->GetScrollOffset(), 180.0f);
+	TestFalse(TEXT("Hitting the end with overscroll off kills the momentum"), Fixture.ScrollBox->IsScrolling());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxOverscrollTest,
+	"LGUI.Layout.ScrollBox.OverscrollIsBoundedAndSpringsBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxOverscrollTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	Fixture.ScrollBox->OverscrollLimit = 100.0f;
+
+	// Dragging past the start rubber-bands instead of stopping dead, and the scroll POSITION stays
+	// in range -- only the displayed content is pulled out.
+	Fixture.ScrollBox->ApplyDragDelta(-50.0f);
+	TestEqual(TEXT("The scroll position stays at the start"), Fixture.ScrollBox->GetScrollOffset(), 0.0f);
+	// Damped = Limit * Excess / (Limit + Excess) = 100 * 50 / 150 = 33.333, signed negative.
+	TestEqual(TEXT("The pull is damped, not one-to-one"), Fixture.ScrollBox->GetOverscroll(), -33.333f, 0.01f);
+
+	// The band saturates: ten times the raw pull is nowhere near ten times the displacement, and it
+	// can never exceed the limit. The legacy view's flat damping had no bound here at all.
+	Fixture.ScrollBox->StopScrolling();
+	Fixture.ScrollBox->ApplyDragDelta(-10000.0f);
+	const float FarPull = Fixture.ScrollBox->GetOverscroll();
+	TestTrue(TEXT("A huge pull stays inside the limit"), FMath::Abs(FarPull) < 100.0f);
+	TestTrue(TEXT("...and is close to it, so resistance rises rather than stopping"), FMath::Abs(FarPull) > 98.0f);
+
+	// Releasing springs back to exactly the end and settles.
+	const float Step = 1.0f / 60.0f;
+	for (int32 i = 0; i < 300; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("The band closes completely"), Fixture.ScrollBox->GetOverscroll(), 0.0f);
+	TestFalse(TEXT("...and the box comes to rest"), Fixture.ScrollBox->IsScrolling());
+	TestEqual(TEXT("...back at the start it was pulled from"), Fixture.ScrollBox->GetScrollOffset(), 0.0f);
+
+	// The spring must not overshoot back through the end on the way home: sampling every step, the
+	// displacement may only shrink in magnitude, never flip sign.
+	Fixture.ScrollBox->ApplyDragDelta(-60.0f);
+	float Previous = FMath::Abs(Fixture.ScrollBox->GetOverscroll());
+	bool bMonotonic = true;
+	for (int32 i = 0; i < 200; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+		const float Current = Fixture.ScrollBox->GetOverscroll();
+		if (Current > KINDA_SMALL_NUMBER || FMath::Abs(Current) > Previous + 0.001f)
+		{
+			bMonotonic = false;
+			break;
+		}
+		Previous = FMath::Abs(Current);
+	}
+	TestTrue(TEXT("The spring-back never overshoots into an oscillation"), bMonotonic);
+
+	// With overscroll switched off the drag simply stops at the end.
+	Fixture.ScrollBox->StopScrolling();
+	Fixture.ScrollBox->bAllowOverscroll = false;
+	Fixture.ScrollBox->ApplyDragDelta(-50.0f);
+	TestEqual(TEXT("With overscroll off nothing is pulled past the end"), Fixture.ScrollBox->GetOverscroll(), 0.0f);
+	return true;
+}
+
 #endif

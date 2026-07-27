@@ -11,11 +11,26 @@ bool ULexScrollBoxInputHandler::ApplyScroll(float PrimaryDelta) const
 	return IsValid(Layout) && Layout->ScrollByFromUser(PrimaryDelta);
 }
 
+void ULexScrollBoxInputHandler::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	if (ULexLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout))
+	{
+		Layout->TickScrollPhysics(DeltaTime);
+	}
+}
+
 bool ULexScrollBoxInputHandler::OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)
 {
 	if (EventData)
 	{
 		PrevPointerPosition = EventData->GetWorldPointInPlane();
+	}
+	DragVelocity = 0.0f;
+	// Grabbing the content stops whatever it was doing, including a spring-back in progress.
+	if (ULexLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout))
+	{
+		Layout->SetScrollVelocity(0.0f);
 	}
 	return false;
 }
@@ -35,15 +50,31 @@ bool ULexScrollBoxInputHandler::OnPointerDrag_Implementation(ULexPointerEventDat
 	// LGUI local space: Y is horizontal, Z is vertical. Content should follow the finger, so dragging towards
 	// positive axis reduces the offset.
 	const bool bHorizontal = Layout->Orientation == ELexPanelOrientation::Horizontal;
-	const bool bMoved = ApplyScroll(bHorizontal
+	const float PrimaryDelta = bHorizontal
 		? static_cast<float>(LocalMoveDelta.Y)
-		: static_cast<float>(-LocalMoveDelta.Z));
-	// Bubble up once this box has nothing left to give, so a nested scroll box hands over to its parent.
-	return !bMoved;
+		: static_cast<float>(-LocalMoveDelta.Z);
+
+	const UWorld* World = GetWorld();
+	const float DeltaTime = FMath::Max(World ? World->GetDeltaSeconds() : 0.0f, KINDA_SMALL_NUMBER);
+	DragVelocity = FMath::Lerp(DragVelocity, PrimaryDelta / DeltaTime, DragVelocitySmoothing);
+
+	const bool bWasInRange = FMath::IsNearlyZero(Layout->GetOverscroll());
+	Layout->ApplyDragDelta(PrimaryDelta);
+	// Bubble up once this box has nothing left to give, so a nested scroll box hands over to its
+	// parent. With overscroll on, the rubber band IS somewhere left to give, so the box keeps the
+	// event until it is already stretched -- otherwise an outer box would steal the gesture the
+	// moment an inner one reached its end.
+	const bool bConsumed = !FMath::IsNearlyZero(Layout->GetOverscroll()) || bWasInRange;
+	return !bConsumed;
 }
 
 bool ULexScrollBoxInputHandler::OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)
 {
+	if (ULexLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout) && Layout->bEnableInertia)
+	{
+		Layout->SetScrollVelocity(DragVelocity);
+	}
+	DragVelocity = 0.0f;
 	return false;
 }
 

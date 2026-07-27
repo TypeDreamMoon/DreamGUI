@@ -344,6 +344,49 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "ScrollBox")
 	FLexScrollBoxUserScrolledEvent OnUserScrolled;
 
+	/** Keep moving under momentum after the finger or mouse lets go. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
+	bool bEnableInertia = true;
+	/**
+	 * How quickly momentum dies. 0 never slows down; larger values stop sooner. Same units and
+	 * default as the legacy scroll view, so a value tuned there carries over.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0"))
+	float DecelerationRate = 0.135f;
+	/** Let the content rubber-band past an end while dragging, then spring back on release. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
+	bool bAllowOverscroll = true;
+	/**
+	 * How far past an end the content can be pulled, in local units. The pull saturates towards this
+	 * rather than stopping at it, so the resistance grows the further out you drag and the content
+	 * can never be dragged away indefinitely -- which the legacy view's flat damping allowed.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0"))
+	float OverscrollLimit = 120.0f;
+
+	/** Signed displacement past an end, damped; zero while in range. Layout adds it to the offset. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetOverscroll() const;
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetScrollVelocity() const { return ScrollVelocity; }
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void SetScrollVelocity(float Value);
+	/** True while momentum or a spring-back is still moving the content. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	bool IsScrolling() const;
+	/** Drop momentum and any rubber-band displacement immediately. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void StopScrolling();
+	/**
+	 * Advance momentum and spring-back by DeltaTime. Deliberately free of input plumbing: the physics
+	 * can then be stepped directly by a test, which is the only way any of this gets verified without
+	 * a real pointer.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void TickScrollPhysics(float DeltaTime);
+	/** Apply a drag delta, rubber-banding whatever part of it would push past an end. */
+	void ApplyDragDelta(float Delta);
+
 	/** Distance scrolled from the start, in local units. Always within [0, GetMaxScrollOffset()]. */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
 	float GetScrollOffset() const { return ScrollOffset; }
@@ -393,6 +436,20 @@ private:
 	bool bLayoutMetricsValid = false;
 	/** Content-space start and extent of the direct child that contains InWidget. */
 	bool GetChildContentExtent(ULexWidget* InWidget, float& OutStart, float& OutExtent);
+
+	/** Local units per second the content is still travelling under momentum. */
+	float ScrollVelocity = 0.0f;
+	/**
+	 * Undamped excess past an end. The damped value returned by GetOverscroll is derived from this
+	 * rather than stored, so dragging out and back retraces the same path instead of drifting.
+	 */
+	float OverscrollRaw = 0.0f;
+	/** Opposing impulse per unit of overscroll, ported from the legacy view's dragForceMulitply. */
+	static constexpr float OverscrollSpringStiffness = 500.0f;
+	/** Positional lerp rate once the spring has killed the outward velocity. */
+	static constexpr float OverscrollReturnRate = 10.0f;
+	/** Below this the rubber band is snapped shut, so it does not creep towards zero forever. */
+	static constexpr float OverscrollSnapThreshold = 0.001f;
 	/**
 	 * Distance scrolled from the start. Editable so the designer can scroll the content in the prefab
 	 * editor (where no pointer input exists) to reach and edit off-screen children; the authored value

@@ -1967,6 +1967,168 @@ float ULexLayoutContainerScrollBox::GetViewOffsetFraction() const
 	return FMath::Clamp(ScrollOffset / MaxScrollOffset, 0.0f, 1.0f);
 }
 
+float ULexLayoutContainerScrollBox::GetOverscroll() const
+{
+	if (FMath::IsNearlyZero(OverscrollRaw) || OverscrollLimit <= KINDA_SMALL_NUMBER)
+	{
+		return 0.0f;
+	}
+	// Saturating rubber band: the damped displacement approaches OverscrollLimit as the raw pull
+	// grows without ever reaching it, so resistance rises the further out you drag. The legacy view
+	// instead scaled every frame's delta by a flat 0.5, which meant no bound at all -- drag long
+	// enough and the content simply left the screen at half speed.
+	const float Excess = FMath::Abs(OverscrollRaw);
+	return FMath::Sign(OverscrollRaw) * (OverscrollLimit * Excess / (OverscrollLimit + Excess));
+}
+
+void ULexLayoutContainerScrollBox::SetScrollVelocity(float Value)
+{
+	ScrollVelocity = LexPanelLayoutLocal::FiniteOrZero(Value);
+}
+
+bool ULexLayoutContainerScrollBox::IsScrolling() const
+{
+	return !FMath::IsNearlyZero(ScrollVelocity) || !FMath::IsNearlyZero(OverscrollRaw);
+}
+
+void ULexLayoutContainerScrollBox::StopScrolling()
+{
+	const bool bWasDisplaced = !FMath::IsNearlyZero(OverscrollRaw);
+	ScrollVelocity = 0.0f;
+	OverscrollRaw = 0.0f;
+	if (bWasDisplaced)
+	{
+		MarkLayoutDirty();
+		if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
+		{
+			ULexWidget::MarkLayoutForRebuild(Widget);
+		}
+	}
+}
+
+void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
+{
+	Delta = LexPanelLayoutLocal::FiniteOrZero(Delta);
+	if (FMath::IsNearlyZero(Delta))
+	{
+		return;
+	}
+	if (!bAllowOverscroll || OverscrollLimit <= KINDA_SMALL_NUMBER)
+	{
+		ScrollByFromUser(Delta);
+		return;
+	}
+	if (!FMath::IsNearlyZero(OverscrollRaw))
+	{
+		// Already past an end: the drag works against the accumulated excess first. Only once it
+		// crosses back through zero does the remainder move the real offset again, so there is no
+		// dead zone where the finger moves and nothing does.
+		const float NewRaw = OverscrollRaw + Delta;
+		if (!FMath::IsNearlyZero(NewRaw) && FMath::Sign(NewRaw) != FMath::Sign(OverscrollRaw))
+		{
+			OverscrollRaw = 0.0f;
+			ScrollByFromUser(NewRaw);
+		}
+		else
+		{
+			OverscrollRaw = NewRaw;
+		}
+		MarkLayoutDirty();
+		if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
+		{
+			ULexWidget::MarkLayoutForRebuild(Widget);
+		}
+		return;
+	}
+	const float Before = ScrollOffset;
+	ScrollByFromUser(Delta);
+	// Whatever the clamp refused to spend becomes rubber band rather than being thrown away.
+	const float Remainder = Delta - (ScrollOffset - Before);
+	if (!FMath::IsNearlyZero(Remainder))
+	{
+		OverscrollRaw = Remainder;
+		MarkLayoutDirty();
+		if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
+		{
+			ULexWidget::MarkLayoutForRebuild(Widget);
+		}
+	}
+}
+
+void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
+{
+	if (DeltaTime <= 0.0f)
+	{
+		return;
+	}
+	const bool bDisplaced = !FMath::IsNearlyZero(OverscrollRaw);
+	if (!bDisplaced && (!bEnableInertia || FMath::IsNearlyZero(ScrollVelocity)))
+	{
+		ScrollVelocity = bEnableInertia ? ScrollVelocity : 0.0f;
+		return;
+	}
+
+	if (bDisplaced)
+	{
+		// The legacy spring, kept because its shape is right: while the velocity still points
+		// outward it takes an opposing impulse proportional to the excess, and the instant it flips
+		// the velocity is dropped and the return becomes a plain positional lerp. Critically damped
+		// by construction -- it cannot overshoot back through the end and oscillate.
+		const bool bMovingOutward = !FMath::IsNearlyZero(ScrollVelocity)
+			&& FMath::Sign(ScrollVelocity) == FMath::Sign(OverscrollRaw);
+		if (bMovingOutward)
+		{
+			const float SpringImpulse = FMath::Abs(GetOverscroll()) * OverscrollSpringStiffness;
+			ScrollVelocity -= FMath::Sign(ScrollVelocity) * SpringImpulse * DeltaTime;
+			OverscrollRaw += ScrollVelocity * DeltaTime;
+		}
+		else
+		{
+			ScrollVelocity = 0.0f;
+			OverscrollRaw = FMath::Lerp(OverscrollRaw, 0.0f, FMath::Clamp(OverscrollReturnRate * DeltaTime, 0.0f, 1.0f));
+			if (FMath::Abs(OverscrollRaw) < OverscrollSnapThreshold)
+			{
+				OverscrollRaw = 0.0f;
+			}
+		}
+	}
+	else
+	{
+		// Exponential decay with the legacy's rate scaling, so DecelerationRate means the same thing
+		// in both classes.
+		ScrollVelocity = FMath::Lerp(ScrollVelocity, 0.0f,
+			FMath::Clamp(DecelerationRate * 50.0f * DeltaTime, 0.0f, 1.0f));
+		if (FMath::IsNearlyZero(ScrollVelocity))
+		{
+			ScrollVelocity = 0.0f;
+			return;
+		}
+		const float Before = ScrollOffset;
+		const float Step = ScrollVelocity * DeltaTime;
+		ScrollBy(Step);
+		const float Remainder = Step - (ScrollOffset - Before);
+		if (!FMath::IsNearlyZero(Remainder))
+		{
+			// Ran into an end: carry the leftover into the rubber band, or stop dead when overscroll
+			// is switched off. Without this the momentum would keep being spent against the clamp
+			// and the box would look frozen while still "scrolling".
+			if (bAllowOverscroll && OverscrollLimit > KINDA_SMALL_NUMBER)
+			{
+				OverscrollRaw = Remainder;
+			}
+			else
+			{
+				ScrollVelocity = 0.0f;
+			}
+		}
+	}
+	MarkLayoutDirty();
+	if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		ULexWidget::MarkLayoutForRebuild(Widget);
+	}
+}
+
 bool ULexLayoutContainerScrollBox::GetChildContentExtent(ULexWidget* InWidget, float& OutStart, float& OutExtent)
 {
 	OutStart = 0.0f;
@@ -2083,9 +2245,11 @@ void ULexLayoutContainerScrollBox::CalculateLayout()
 	bLayoutMetricsValid = true;
 	ScrollOffset = FMath::Clamp(ScrollOffset, 0.0f, MaxScrollOffset);
 
+	// The rubber band displaces the content without moving the scroll position: GetScrollOffset stays
+	// inside the range at all times, and only what the user sees is pulled past the end.
 	float Cursor = (bHorizontal
 		? LexPanelLayoutLocal::FiniteOrZero(Padding.Left)
-		: LexPanelLayoutLocal::FiniteOrZero(Padding.Top)) - ScrollOffset;
+		: LexPanelLayoutLocal::FiniteOrZero(Padding.Top)) - ScrollOffset - GetOverscroll();
 	for (ULexWidget* Child : LayoutChildren)
 	{
 		const float SlotPrimary = PrimaryExtentOf(Child);
