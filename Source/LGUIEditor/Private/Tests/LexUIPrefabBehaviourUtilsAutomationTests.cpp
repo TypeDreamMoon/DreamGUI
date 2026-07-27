@@ -86,6 +86,9 @@ bool FLexUIAutoBindByDisplayNameTest::RunTest(const FString& Parameters)
 	using namespace LexUIPrefabBehaviourUtilsTestLocal;
 	FAutoBindFixture Fixture;
 	Fixture.AddStandardChildren();
+	// Canary for the whole file: a rejected attach would surface as a pile of "did not bind"
+	// failures across every test, pointing at the pass instead of at the fixture.
+	TestEqual(TEXT("Every fixture child attached to the root"), Fixture.Root->GetChildren().Num(), 7);
 
 	TArray<FString> BoundDetails, Problems;
 	LexUIPrefabBehaviourUtils::AutoBindAndValidate(Fixture.Root, Fixture.Prefab, BoundDetails, Problems, true);
@@ -133,14 +136,23 @@ bool FLexUIAutoBindUnsavablePropertiesTest::RunTest(const FString& Parameters)
 	TArray<FString> BoundDetails, Problems;
 	LexUIPrefabBehaviourUtils::AutoBindAndValidate(Fixture.Root, Fixture.Prefab, BoundDetails, Problems, true);
 
+	// Positive control first: every assertion below is negative, so without proof that the pass
+	// actually ran and bound something, a no-op AutoBindAndValidate would satisfy all of them.
+	TestNotNull(TEXT("The pass ran and bound the property it should have"), Fixture.Companion->PlayButton.Get());
+	// Exactly two: the widget bind and the behaviour bind. The base class contributes no editable
+	// object properties, so this count is a real ceiling, not a floor.
+	TestEqual(TEXT("Exactly the two bindable properties were bound"), BoundDetails.Num(), 2);
+
 	// All three have a same-named widget waiting; none may be touched, and none is a problem
 	// while null -- they are the designer's business, not a broken binding.
 	TestNull(TEXT("A transient property is never auto-bound"), Fixture.Companion->RuntimeCache.Get());
 	TestNull(TEXT("A non-Instance-Editable property is never auto-bound"), Fixture.Companion->NotInstanceEditable.Get());
 	TestNull(TEXT("A property of an unbindable type is never auto-bound"), Fixture.Companion->Unrelated.Get());
-	TestNull(TEXT("A name with no widget stays unbound"), Fixture.Companion->Absent.Get());
-	TestFalse(TEXT("An unbound property with no widget raises no problem"),
-		HasProblemContaining(Problems, TEXT("Absent")));
+	// Problems quote property names, so the quoted form is the collision-free needle -- a bare
+	// "Absent" would also match prose, and matches nothing at all on an empty problem list.
+	TestFalse(TEXT("A name with no widget of its own raises no problem"),
+		HasProblemContaining(Problems, TEXT("'Absent'")));
+	TestTrue(TEXT("...while the fixture's real problems were still reported"), Problems.Num() > 0);
 	return true;
 }
 
@@ -221,13 +233,23 @@ bool FLexUIAutoBindAmbiguousCompanionTest::RunTest(const FString& Parameters)
 	Fixture.AddStandardChildren();
 	// A second component of the companion class makes the companion ambiguous. Rewriting either
 	// one's references would be a guess, so the pass must decline to act at all.
-	Fixture.Root->AddComponent<ULexUIAutoBindTestBehaviour>();
+	ULexUIAutoBindTestBehaviour* Duplicate = Fixture.Root->AddComponent<ULexUIAutoBindTestBehaviour>();
+	// Pin the fixture shape: without this, a companion that failed to attach at all would produce
+	// the same empty result and the test would pass for entirely the wrong reason.
+	TestEqual(TEXT("The root carries exactly two companion-class components"),
+		Fixture.Root->GetAllComponents().Num(), 2);
 
 	TArray<FString> BoundDetails, Problems;
 	LexUIPrefabBehaviourUtils::AutoBindAndValidate(Fixture.Root, Fixture.Prefab, BoundDetails, Problems, true);
 
 	TestNull(TEXT("An ambiguous companion binds nothing"), Fixture.Companion->PlayButton.Get());
 	TestEqual(TEXT("An ambiguous companion reports no binds"), BoundDetails.Num(), 0);
+
+	// Control: an asserted absence proves nothing by itself, because a pass that does nothing at
+	// all produces the same empty result. Removing the ambiguity must make this fixture bind.
+	Duplicate->DestroyComponent();
+	LexUIPrefabBehaviourUtils::AutoBindAndValidate(Fixture.Root, Fixture.Prefab, BoundDetails, Problems, true);
+	TestNotNull(TEXT("The same fixture binds once the companion is unambiguous"), Fixture.Companion->PlayButton.Get());
 	return true;
 }
 
@@ -291,7 +313,10 @@ bool FLexUIAutoBindExistingSubPrefabReferenceTest::RunTest(const FString& Parame
 	using namespace LexUIPrefabBehaviourUtilsTestLocal;
 	FAutoBindFixture Fixture;
 	Fixture.AddStandardChildren();
-	ULexWidget* NestedWidget = Fixture.AddChild(TEXT("InsideSubPrefab"));
+	// Deliberately named after NO property: a widget named "InsideSubPrefab" would also trip the
+	// unbound-name branch, whose message shares the "inside a sub-prefab instance" wording and
+	// would keep this test green even with the branch it targets deleted.
+	ULexWidget* NestedWidget = Fixture.AddChild(TEXT("NestedOnly"));
 
 	TMap<UObject*, FGuid> ObjectToGuid;
 	ObjectToGuid.Add(Fixture.Root, FGuid::NewGuid());
@@ -314,11 +339,12 @@ bool FLexUIAutoBindExistingSubPrefabReferenceTest::RunTest(const FString& Parame
 	TArray<FString> BoundDetails, Problems;
 	LexUIPrefabBehaviourUtils::AutoBindAndValidate(Fixture.Root, Fixture.Prefab, BoundDetails, Problems, true);
 
-	// Name the bound property and its target: the same fixture also trips the unbound-name branch
-	// (the InsideSubPrefab property matches that widget too), so only this wording proves the
-	// existing-reference branch fired.
+	// Name both the property and its target, so only the existing-reference branch can satisfy it.
 	TestTrue(TEXT("An existing reference into a sub-prefab is reported as unsavable"),
-		HasProblemContaining(Problems, TEXT("'PlayButton' points to 'InsideSubPrefab' inside a sub-prefab instance")));
+		HasProblemContaining(Problems, TEXT("'PlayButton' points to 'NestedOnly' inside a sub-prefab instance")));
+	// Pinning the count keeps the isolation honest: if the unbound-name branch ever fires here
+	// again, this fixture is no longer testing only the branch it claims to.
+	TestEqual(TEXT("Only the name clash and this reference are reported"), Problems.Num(), 2);
 
 	Helper->ClearLoadedPrefab();
 	Fixture.Prefab->ClearPrefabInstanceScene();
