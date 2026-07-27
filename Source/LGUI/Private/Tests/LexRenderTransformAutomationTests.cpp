@@ -69,13 +69,13 @@ bool FLexRenderTransformIsInvisibleToLayoutTest::RunTest(const FString& Paramete
 	TestFalse(TEXT("Nothing is transformed to begin with"), Sliding->HasRenderTransform());
 
 	// Slide it 500 units to the right of wherever the layout put it -- the entrance offset.
-	Sliding->SetRenderTranslation(FVector2D(500.0, 0.0));
+	Sliding->SetRenderTranslation(FVector(0.0, 500.0, 0.0));
 	// And let the layout run again, which is the step that used to undo everything.
 	ULexWidget::MarkLayoutForRebuild(Panel);
 	ULexWidget::RebuildLayoutImmediately(Panel);
 
 	TestTrue(TEXT("The widget reports a render transform"), Sliding->HasRenderTransform());
-	// It is drawn 500 to the right. Local +Y is right in this fork's UI plane.
+	// It is drawn 500 to the right. Local +Y is right, +Z is up, +X is the canvas normal.
 	TestTrue(TEXT("It is drawn 500 to the right"),
 		FMath::IsNearlyEqual(Sliding->GetWorldTransform().GetLocation().Y,
 			LayoutWorldBefore.GetLocation().Y + 500.0, 0.01));
@@ -116,7 +116,7 @@ bool FLexRenderTransformPropagatesTest::RunTest(const FString& Parameters)
 	const FVector GrandchildBefore = Grandchild->GetWorldTransform().GetLocation();
 
 	// A card sliding in carries its label with it; anything else would be useless for animation.
-	Root->SetRenderTranslation(FVector2D(120.0, 0.0));
+	Root->SetRenderTranslation(FVector(0.0, 120.0, 0.0));
 
 	TestTrue(TEXT("The child came along"),
 		FMath::IsNearlyEqual(Child->GetWorldTransform().GetLocation().Y, ChildBefore.Y + 120.0, 0.01));
@@ -149,7 +149,7 @@ bool FLexRenderTransformPivotTest::RunTest(const FString& Parameters)
 	const FVector EdgeBefore = Edge->GetWorldTransform().GetLocation();
 
 	// Default pivot is the middle, so a pop-in scale must leave the widget's own centre put.
-	Popping->SetRenderScale(FVector2D(2.0, 2.0));
+	Popping->SetRenderScale(FVector(1.0, 2.0, 2.0));
 	TestTrue(TEXT("Scaling about the centre does not move the centre"),
 		Popping->GetWorldTransform().GetLocation().Equals(PoppingCentre, 0.001));
 	TestTrue(TEXT("But it does move what sits at the edge"),
@@ -164,12 +164,18 @@ bool FLexRenderTransformPivotTest::RunTest(const FString& Parameters)
 			PoppingCentre.Y + (EdgeBefore.Y - PoppingCentre.Y) * 2.0, 0.01));
 
 	// Rotation is roll about the canvas normal, the only rotation that stays on the batched 2D path.
-	Popping->SetRenderScale(FVector2D::UnitVector);
+	Popping->SetRenderScale(FVector::OneVector);
 	Popping->SetRenderTransformPivot(FVector2D(0.5, 0.5));
-	Popping->SetRenderAngle(90.0f);
-	TestTrue(TEXT("A right angle turns the edge child a quarter turn"),
-		FMath::IsNearlyEqual(Edge->GetWorldTransform().GetLocation().Z,
-			PoppingCentre.Z + (EdgeBefore.Y - PoppingCentre.Y), 0.01));
+	// Roll is the in-plane rotation, about the canvas normal: a child sitting to the right ends up
+	// directly above or below, depending on which way round the convention goes. Asserted without a
+	// sign so the test is about the rotation happening, not about UE's rotator handedness.
+	const double EdgeArm = EdgeBefore.Y - PoppingCentre.Y;
+	Popping->SetRenderRotation(FRotator(0.0, 0.0, 90.0));
+	TestTrue(TEXT("A quarter roll takes the edge child off the horizontal"),
+		FMath::IsNearlyZero(Edge->GetWorldTransform().GetLocation().Y - PoppingCentre.Y, 0.01));
+	TestTrue(TEXT("...and puts it the same distance away vertically"),
+		FMath::IsNearlyEqual(FMath::Abs(Edge->GetWorldTransform().GetLocation().Z - PoppingCentre.Z),
+			FMath::Abs(EdgeArm), 0.01));
 	TestTrue(TEXT("Layout is still oblivious"),
 		Popping->GetLayoutWorldTransform().GetLocation().Equals(PoppingCentre, 0.001));
 	return true;
@@ -191,7 +197,7 @@ bool FLexRenderTransformDoesNotLeakOnReparentTest::RunTest(const FString& Parame
 
 	// An ancestor is part-way through a slide-in. Anything that converts a world transform back into
 	// authored data now has two candidate answers, and only one of them is layout's.
-	Animating->SetRenderTranslation(FVector2D(300.0, 0.0));
+	Animating->SetRenderTranslation(FVector(0.0, 300.0, 0.0));
 	const FVector PassengerAuthoredBefore = Passenger->GetRelativeLocation();
 
 	TestTrue(TEXT("Reparenting keeping world position succeeds"),
@@ -234,20 +240,80 @@ bool FLexRenderTransformIsKeyableTest::RunTest(const FString& Parameters)
 
 	TestTrue(TEXT("Translation can be keyed"), HasInterp(TEXT("RenderTranslation")));
 	TestTrue(TEXT("Scale can be keyed"), HasInterp(TEXT("RenderScale")));
-	TestTrue(TEXT("Angle can be keyed"), HasInterp(TEXT("RenderAngle")));
+	TestTrue(TEXT("Rotation can be keyed"), HasInterp(TEXT("RenderRotation")));
 	// The pivot is a setting, not a channel -- UMG does not animate it either, and a keyable pivot
 	// invites animations that drift because two curves are fighting over the same visual result.
 	TestFalse(TEXT("The pivot is deliberately not keyable"), HasInterp(TEXT("RenderTransformPivot")));
 
-	// FVector2D reaches UMovieSceneDoubleVectorTrack, which gives it two channels. A type with no
-	// registered track would ensure at track-creation time rather than fail here, so pin the type.
-	const FProperty* Translation = ULexWidget::StaticClass()->FindPropertyByName(TEXT("RenderTranslation"));
-	const FStructProperty* AsStruct = CastField<const FStructProperty>(Translation);
-	if (TestNotNull(TEXT("Translation is a struct property"), AsStruct))
+	// The types have to be ones Sequencer has tracks for. FVector reaches
+	// UMovieSceneDoubleVectorTrack as three channels; FRotator has its own track, which is the
+	// entire reason RelativeRotationEuler exists alongside the FQuat it mirrors.
+	auto StructNameOf = [](const TCHAR* PropertyName)
 	{
-		TestEqual(TEXT("...specifically an FVector2D, which Sequencer has a track for"),
-			AsStruct->Struct->GetFName(), NAME_Vector2D);
-	}
+		const FStructProperty* AsStruct = CastField<const FStructProperty>(
+			ULexWidget::StaticClass()->FindPropertyByName(FName(PropertyName)));
+		return AsStruct ? AsStruct->Struct->GetFName() : NAME_None;
+	};
+	TestEqual(TEXT("Translation is an FVector"), StructNameOf(TEXT("RenderTranslation")), NAME_Vector);
+	TestEqual(TEXT("Scale is an FVector"), StructNameOf(TEXT("RenderScale")), NAME_Vector);
+	TestEqual(TEXT("Rotation is an FRotator, not the FQuat Sequencer cannot key"),
+		StructNameOf(TEXT("RenderRotation")), NAME_Rotator);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexRenderTransformFlipTest,
+	"LGUI.Widget.RenderTransform.AWidgetCanBeFlippedInThreeDimensions",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexRenderTransformFlipTest::RunTest(const FString& Parameters)
+{
+	using namespace LexRenderTransformTestLocal;
+	FScopedGameWorld TestWorld;
+	ULexWidget* Panel = MakeWidget(TestWorld.World, nullptr, TEXT("Panel"), 400.0f, 400.0f);
+	ULexWidget* Card = MakeWidget(TestWorld.World, Panel, TEXT("Card"), 100.0f, 140.0f);
+	ULexWidget* Corner = MakeWidget(TestWorld.World, Card, TEXT("Corner"), 10.0f, 10.0f);
+	Corner->SetRelativeLocation(FVector(0.0, 40.0, 0.0));
+	Panel->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
+	ULexWidget::MarkLayoutForRebuild(Panel);
+	ULexWidget::RebuildLayoutImmediately(Panel);
+
+	const FVector CardCentre = Card->GetWorldTransform().GetLocation();
+	const FTransform CardLayoutWorld = Card->GetLayoutWorldTransform();
+	const double CornerArm = Corner->GetWorldTransform().GetLocation().Y - CardCentre.Y;
+
+	// A card turning over about its vertical axis. This is the case a two-dimensional render
+	// transform cannot express at all, and the reason this one is not two-dimensional: the authored
+	// transform on the same widget is already an FVector and an FQuat, so a render transform that
+	// only did roll would have been narrower than the thing it mirrors.
+	Card->SetRenderRotation(FRotator(0.0, 180.0, 0.0));
+
+	TestTrue(TEXT("The card is flipped"), Card->HasRenderTransform());
+	// Half a turn about the vertical mirrors everything across the card's own centre.
+	TestTrue(TEXT("What was on the right is now the same distance to the left"),
+		FMath::IsNearlyEqual(Corner->GetWorldTransform().GetLocation().Y - CardCentre.Y, -CornerArm, 0.01));
+	TestTrue(TEXT("The card's own centre did not move"),
+		Card->GetWorldTransform().GetLocation().Equals(CardCentre, 0.01));
+
+	// And the point of all of it: the layout has no idea any of this happened.
+	ULexWidget::MarkLayoutForRebuild(Panel);
+	ULexWidget::RebuildLayoutImmediately(Panel);
+	TestTrue(TEXT("Layout still places the card where it always did"),
+		Card->GetLayoutWorldTransform().GetLocation().Equals(CardLayoutWorld.GetLocation(), 0.001));
+	TestTrue(TEXT("And the flip survived the layout pass"),
+		FMath::IsNearlyEqual(Corner->GetWorldTransform().GetLocation().Y - CardCentre.Y, -CornerArm, 0.01));
+
+	// The third axis. Depth is meaningless on a screen-space overlay but not on a world-space
+	// canvas, where lifting a card towards the viewer is an ordinary effect -- and it is the
+	// component a translation modelled on UMG's two-dimensional one would silently drop.
+	Card->SetRenderRotation(FRotator::ZeroRotator);
+	Card->SetRenderTranslation(FVector(25.0, 0.0, 0.0));
+	TestTrue(TEXT("A depth translation lifts the card off the canvas plane"),
+		FMath::IsNearlyEqual(Card->GetWorldTransform().GetLocation().X, CardCentre.X + 25.0, 0.01));
+	TestTrue(TEXT("...carrying its children with it"),
+		FMath::IsNearlyEqual(Corner->GetWorldTransform().GetLocation().X, CardCentre.X + 25.0, 0.01));
+	TestTrue(TEXT("...and layout still does not care"),
+		Card->GetLayoutWorldTransform().GetLocation().Equals(CardLayoutWorld.GetLocation(), 0.001));
 	return true;
 }
 

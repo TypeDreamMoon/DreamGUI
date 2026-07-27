@@ -1257,18 +1257,14 @@ FTransform ULexWidget::GetRenderTransform()const
 		return FTransform::Identity;
 	}
 	// The pivot is normalized inside the widget's own rect, so it has to be resolved against the
-	// current size -- a widget stretched by its layout must still turn about its own middle.
+	// current size -- a widget stretched by its layout must still turn about its own middle. It sits
+	// on the widget's plane, which is local X = 0.
 	const FVector PivotPoint(0.0,
 		GetLocalSpaceLeft() + GetWidth() * RenderTransformPivot.X,
 		GetLocalSpaceBottom() + GetHeight() * RenderTransformPivot.Y);
-	// Rotation is roll: the UI plane is YZ, so the canvas normal is local X.
-	const FTransform ScaleAndRotate(
-		FQuat(FVector::XAxisVector, FMath::DegreesToRadians(RenderAngle)),
-		FVector::ZeroVector,
-		FVector(1.0, RenderScale.X, RenderScale.Y));
+	const FTransform ScaleAndRotate(RenderRotation.Quaternion(), FVector::ZeroVector, RenderScale);
 	// Bracket by the pivot, then translate. FTransform composes left-to-right as "apply A, then B".
-	return FTransform(-PivotPoint) * ScaleAndRotate * FTransform(PivotPoint)
-		* FTransform(FVector(0.0, RenderTranslation.X, RenderTranslation.Y));
+	return FTransform(-PivotPoint) * ScaleAndRotate * FTransform(PivotPoint) * FTransform(RenderTranslation);
 }
 
 FTransform ULexWidget::GetRenderLocalTransform()const
@@ -1294,17 +1290,7 @@ FTransform ULexWidget::GetLayoutWorldTransform()const
 	return LocalTransform;
 }
 
-namespace LexRenderTransformLocal
-{
-	bool IsIdentity(const FVector2D& InTranslation, const FVector2D& InScale, float InAngle)
-	{
-		return InTranslation.IsNearlyZero()
-			&& InScale.Equals(FVector2D::UnitVector)
-			&& FMath::IsNearlyZero(InAngle);
-	}
-}
-
-void ULexWidget::SetRenderTranslation(const FVector2D& Value)
+void ULexWidget::SetRenderTranslation(const FVector& Value)
 {
 	if (this->RenderTranslation != Value)
 	{
@@ -1313,20 +1299,20 @@ void ULexWidget::SetRenderTranslation(const FVector2D& Value)
 	}
 }
 
-void ULexWidget::SetRenderScale(const FVector2D& Value)
+void ULexWidget::SetRenderRotation(const FRotator& Value)
 {
-	if (this->RenderScale != Value)
+	if (this->RenderRotation != Value)
 	{
-		this->RenderScale = Value;
+		this->RenderRotation = Value;
 		this->ApplyRenderTransformChange();
 	}
 }
 
-void ULexWidget::SetRenderAngle(float Value)
+void ULexWidget::SetRenderScale(const FVector& Value)
 {
-	if (this->RenderAngle != Value)
+	if (this->RenderScale != Value)
 	{
-		this->RenderAngle = Value;
+		this->RenderScale = Value;
 		this->ApplyRenderTransformChange();
 	}
 }
@@ -1344,16 +1330,18 @@ void ULexWidget::ClearRenderTransform()
 {
 	if (bHasRenderTransform)
 	{
-		RenderTranslation = FVector2D::ZeroVector;
-		RenderScale = FVector2D::UnitVector;
-		RenderAngle = 0.0f;
+		RenderTranslation = FVector::ZeroVector;
+		RenderRotation = FRotator::ZeroRotator;
+		RenderScale = FVector::OneVector;
 		ApplyRenderTransformChange();
 	}
 }
 
 void ULexWidget::ApplyRenderTransformChange()
 {
-	bHasRenderTransform = !LexRenderTransformLocal::IsIdentity(RenderTranslation, RenderScale, RenderAngle);
+	bHasRenderTransform = !RenderTranslation.IsNearlyZero()
+		|| !RenderRotation.IsNearlyZero()
+		|| !RenderScale.Equals(FVector::OneVector);
 	// Exactly what SetLayoutScale does, and pointedly NOT what SetRelativeLocation does: no
 	// CalculateAnchorFromTransform, no MarkLayoutForRebuild. Those two lines are the reason
 	// animating a laid-out widget's position fights the layout instead of moving it.

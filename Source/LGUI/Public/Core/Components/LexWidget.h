@@ -215,7 +215,7 @@ private:
 	FVector RelativeScale = FVector::OneVector;
 
 	/*
-	 * RENDER TRANSFORM -- UMG's FWidgetTransform, adapted.
+	 * RENDER TRANSFORM.
 	 *
 	 * Moves where a widget is DRAWN without telling layout anything. Layout still measures and
 	 * arranges it exactly as before, siblings do not shift, and nothing here is ever written back to
@@ -223,30 +223,35 @@ private:
 	 * anchors and asks the parent layout to rebuild -- which is why animating it inside a panel can
 	 * never work, the animation and the layout just take turns.
 	 *
-	 * Axes match AnchoredPosition: X is local +Y (right), Y is local +Z (up).
+	 * Full 3D, deliberately. The obvious model is UMG's FWidgetTransform, but UMG is a 2D framework
+	 * and this one is not: RelativeLocation, RelativeRotation and RelativeScale are already a
+	 * FVector/FQuat/FVector, world-space canvases exist, and a card flipping about its vertical axis
+	 * is an ordinary thing to want. A 2D render transform would have been narrower than the authored
+	 * transform it mirrors, and would have forbidden effects the framework otherwise allows.
 	 *
-	 * No shear, unlike UMG. FTransform is translation/rotation/scale only, and Slate can offer shear
-	 * because it composes a 2x2 matrix instead. Adding it here would mean changing how every widget
-	 * transform is represented, which is a different piece of work entirely.
+	 * The batching caveat is the one that already applies to the authored transform, not a new one:
+	 * ULexCanvas::Is2DUITransform drops a widget out of the batched 2D path when it gains depth, yaw
+	 * or pitch. Rolling, scaling and sliding in the canvas plane stay batched; a flip costs a draw
+	 * call, exactly as it would if you had authored the rotation.
 	 */
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Translation"))
-	FVector2D RenderTranslation = FVector2D::ZeroVector;
+	FVector RenderTranslation = FVector::ZeroVector;
+	/**
+	 * Render-only rotation about RenderTransformPivot, in degrees.
+	 * FRotator rather than FQuat for the same reason RelativeRotationEuler exists: Sequencer has a
+	 * property track for one and not the other. No transient mirror is needed here because this is
+	 * itself the serialized source of truth.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Rotation"))
+	FRotator RenderRotation = FRotator::ZeroRotator;
 	/** Render-only scale about RenderTransformPivot. */
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Scale", AllowPreserveRatio))
-	FVector2D RenderScale = FVector2D::UnitVector;
+	FVector RenderScale = FVector::OneVector;
 	/**
-	 * Render-only rotation in degrees about RenderTransformPivot, in the canvas plane.
-	 *
-	 * In-plane only, on purpose. ULexCanvas::Is2DUITransform decides whether a widget can stay in the
-	 * batched 2D path by checking depth, yaw and pitch -- it never looks at roll or scale. Offering
-	 * only the rotation that keeps that guarantee means an animator cannot quietly cost a draw call.
-	 */
-	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Angle", UIMin = "-180", UIMax = "180"))
-	float RenderAngle = 0.0f;
-	/**
-	 * What RenderScale and RenderAngle turn about, normalized within the widget's own rect.
+	 * What RenderRotation and RenderScale turn about, normalized within the widget's own rect.
 	 * (0,0) is bottom-left and (1,1) top-right, matching AnchorData.Pivot rather than UMG's
 	 * top-left origin -- consistency inside this fork beats consistency with the other engine.
+	 * Two-dimensional because the rect is: it resolves to a point on the widget's own plane.
 	 * Independent of AnchorData.Pivot, which belongs to layout.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Pivot"))
@@ -264,11 +269,11 @@ public:
 	const FVector& GetRelativeScale()const { return RelativeScale; }
 
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
-	const FVector2D& GetRenderTranslation()const { return RenderTranslation; }
+	const FVector& GetRenderTranslation()const { return RenderTranslation; }
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
-	const FVector2D& GetRenderScale()const { return RenderScale; }
+	const FVector& GetRenderScale()const { return RenderScale; }
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
-	float GetRenderAngle()const { return RenderAngle; }
+	const FRotator& GetRenderRotation()const { return RenderRotation; }
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	const FVector2D& GetRenderTransformPivot()const { return RenderTransformPivot; }
 	/** True while any render channel is off its default, i.e. while drawing differs from layout. */
@@ -276,11 +281,11 @@ public:
 	bool HasRenderTransform()const { return bHasRenderTransform; }
 
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
-	void SetRenderTranslation(const FVector2D& Value);
+	void SetRenderTranslation(const FVector& Value);
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
-	void SetRenderScale(const FVector2D& Value);
+	void SetRenderScale(const FVector& Value);
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
-	void SetRenderAngle(float Value);
+	void SetRenderRotation(const FRotator& Value);
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	void SetRenderTransformPivot(const FVector2D& Value);
 	/** Back to drawing exactly where layout put it, in one invalidation. */
