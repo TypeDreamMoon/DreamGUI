@@ -30,7 +30,8 @@
 #define LOCTEXT_NAMESPACE "LexUIManager"
 
 
-#define LGUI_DEBUG_DUMP_ENABLED 0
+#define ENABLED_LGUI_DEBUG_DUMP				0
+#define ENABLED_LGUI_DEBUG_LAYOUT_FRAME		0
 
 
 ULexUIManagerObject* ULexUIManagerObject::Instance = nullptr;
@@ -1036,7 +1037,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		bIsExecutingLayout = true;
 		constexpr int32 MaxLayoutPassesPerFrame = 32;
 		int32 LayoutPassCount = 0;
-#if WITH_EDITOR
+#if WITH_EDITOR && ENABLED_LGUI_DEBUG_LAYOUT_FRAME
 		auto Time = FDateTime::Now();
 		UE_LOG(LGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
 #endif
@@ -1068,7 +1069,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 				SnapshotLayout->ApplyLayoutResult();
 			}
 		}
-#if WITH_EDITOR
+#if WITH_EDITOR && ENABLED_LGUI_DEBUG_LAYOUT_FRAME
 		for (auto& CalcCountKeyValue : LayoutCalculationCounterMap)
 		{
 			if (CalcCountKeyValue.Value >= 2)
@@ -1446,7 +1447,7 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 
 void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas)
 {
-#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
+#if !UE_BUILD_SHIPPING && ENABLED_LGUI_DEBUG_DUMP
 	if (this->AllCanvasArray.Contains(InCanvas))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1458,7 +1459,7 @@ void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas)
 
 void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 {
-#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
+#if !UE_BUILD_SHIPPING && ENABLED_LGUI_DEBUG_DUMP
 	if (!this->AllCanvasArray.Contains(InCanvas))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1470,7 +1471,7 @@ void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 
 void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 {
-#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
+#if !UE_BUILD_SHIPPING && ENABLED_LGUI_DEBUG_DUMP
 	if (AllWidgetArray.Contains(InWidget))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1482,7 +1483,7 @@ void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 
 void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
 {
-#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
+#if !UE_BUILD_SHIPPING && ENABLED_LGUI_DEBUG_DUMP
 	if (!AllWidgetArray.Contains(InWidget))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1715,7 +1716,7 @@ void ULexUIManagerWorldSubsystem::AddSelectable(UUISelectable* InSelectable)
 	if (auto Instance = GetInstance(InSelectable->GetWorld()))
 	{
 		auto& AllSelectableArray = Instance->AllSelectableArray;
-#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
+#if !UE_BUILD_SHIPPING && ENABLED_LGUI_DEBUG_DUMP
 		if (AllSelectableArray.Contains(InSelectable))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
