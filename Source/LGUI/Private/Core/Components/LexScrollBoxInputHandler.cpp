@@ -93,7 +93,24 @@ bool ULexScrollBoxInputHandler::OnPointerScroll_Implementation(ULexPointerEventD
 	const float Axis = static_cast<float>(bHorizontal
 		? EventData->ScrollAxisValue.X
 		: EventData->ScrollAxisValue.Y);
-	const bool bMoved = ApplyScroll(-Axis * Layout->ScrollSensitivity);
+	const float WheelDelta = -Axis * Layout->ScrollSensitivity;
+	bool bMoved = false;
+	if (Layout->bAnimateWheelScrolling)
+	{
+		// Accumulate onto wherever the ease is already heading, so spinning the wheel several
+		// notches covers several notches instead of restarting the same short glide each time.
+		const float Before = Layout->GetAnimatedScrollTarget();
+		Layout->SetScrollOffsetAnimated(Before + WheelDelta);
+		bMoved = !FMath::IsNearlyEqual(Before, Layout->GetAnimatedScrollTarget());
+		if (bMoved)
+		{
+			Layout->OnUserScrolled.Broadcast(Layout->GetScrollOffset());
+		}
+	}
+	else
+	{
+		bMoved = ApplyScroll(WheelDelta);
+	}
 	if (Layout->ConsumeMouseWheel == ELexScrollBoxConsumeMouseWheel::Always)
 	{
 		return false;//swallow it even at a limit, so an outer box never takes over

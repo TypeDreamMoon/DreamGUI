@@ -1988,7 +1988,25 @@ void ULexLayoutContainerScrollBox::SetScrollVelocity(float Value)
 
 bool ULexLayoutContainerScrollBox::IsScrolling() const
 {
-	return !FMath::IsNearlyZero(ScrollVelocity) || !FMath::IsNearlyZero(OverscrollRaw);
+	return bAnimatingScroll || !FMath::IsNearlyZero(ScrollVelocity) || !FMath::IsNearlyZero(OverscrollRaw);
+}
+
+void ULexLayoutContainerScrollBox::SetScrollOffsetAnimated(float Value)
+{
+	const float Upper = bLayoutMetricsValid ? MaxScrollOffset : TNumericLimits<float>::Max();
+	const float Target = FMath::Clamp(LexPanelLayoutLocal::FiniteOrZero(Value), 0.0f, Upper);
+	if (FMath::IsNearlyEqual(Target, ScrollOffset, ScrollAnimationSnapThreshold))
+	{
+		// Already there: land exactly rather than starting an animation that has nothing to do.
+		bAnimatingScroll = false;
+		SetScrollOffset(Target);
+		return;
+	}
+	// Momentum and an eased scroll would fight over the same offset, so the animation wins and the
+	// velocity is dropped rather than being quietly added on top.
+	ScrollVelocity = 0.0f;
+	AnimatedTargetOffset = Target;
+	bAnimatingScroll = true;
 }
 
 void ULexLayoutContainerScrollBox::StopScrolling()
@@ -1996,6 +2014,7 @@ void ULexLayoutContainerScrollBox::StopScrolling()
 	const bool bWasDisplaced = !FMath::IsNearlyZero(OverscrollRaw);
 	ScrollVelocity = 0.0f;
 	OverscrollRaw = 0.0f;
+	bAnimatingScroll = false;
 	if (bWasDisplaced)
 	{
 		MarkLayoutDirty();
@@ -2013,6 +2032,8 @@ void ULexLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 	{
 		return;
 	}
+	// A hand on the content beats an eased scroll heading somewhere else.
+	bAnimatingScroll = false;
 	if (!bAllowOverscroll || OverscrollLimit <= KINDA_SMALL_NUMBER)
 	{
 		ScrollByFromUser(Delta);
@@ -2059,6 +2080,18 @@ void ULexLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 {
 	if (DeltaTime <= 0.0f)
 	{
+		return;
+	}
+	if (bAnimatingScroll)
+	{
+		// Eased scrolling takes the whole frame: it already cancelled the velocity when it started,
+		// and letting momentum run underneath would make the two disagree about where to land.
+		SetScrollOffset(FMath::FInterpTo(ScrollOffset, AnimatedTargetOffset, DeltaTime, ScrollAnimationInterpolationSpeed));
+		if (FMath::IsNearlyEqual(ScrollOffset, AnimatedTargetOffset, ScrollAnimationSnapThreshold))
+		{
+			SetScrollOffset(AnimatedTargetOffset);
+			bAnimatingScroll = false;
+		}
 		return;
 	}
 	const bool bDisplaced = !FMath::IsNearlyZero(OverscrollRaw);
@@ -2176,7 +2209,7 @@ bool ULexLayoutContainerScrollBox::GetChildContentExtent(ULexWidget* InWidget, f
 	return false;
 }
 
-bool ULexLayoutContainerScrollBox::ScrollWidgetIntoView(ULexWidget* InWidget)
+bool ULexLayoutContainerScrollBox::ScrollWidgetIntoView(ULexWidget* InWidget, bool bAnimateScroll)
 {
 	float Start = 0.0f;
 	float Extent = 0.0f;
@@ -2201,7 +2234,14 @@ bool ULexLayoutContainerScrollBox::ScrollWidgetIntoView(ULexWidget* InWidget)
 	{
 		return false;//already fully visible
 	}
+	if (bAnimateScroll)
+	{
+		const float Before = GetAnimatedScrollTarget();
+		SetScrollOffsetAnimated(Target);
+		return !FMath::IsNearlyEqual(Before, GetAnimatedScrollTarget());
+	}
 	const float Before = ScrollOffset;
+	bAnimatingScroll = false;//an explicit instant scroll overrides an eased one in flight
 	SetScrollOffset(Target);
 	return !FMath::IsNearlyEqual(Before, ScrollOffset);
 }

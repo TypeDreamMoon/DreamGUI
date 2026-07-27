@@ -344,6 +344,13 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "ScrollBox")
 	FLexScrollBoxUserScrolledEvent OnUserScrolled;
 
+	/** Ease to the wheel's new position over a few frames instead of jumping there. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
+	bool bAnimateWheelScrolling = false;
+	/** FInterpTo speed for any eased scroll. Larger arrives sooner; UMG's default is 15. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0"))
+	float ScrollAnimationInterpolationSpeed = 15.0f;
+
 	/** Keep moving under momentum after the finger or mouse lets go. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
 	bool bEnableInertia = true;
@@ -419,9 +426,19 @@ public:
 	/**
 	 * Scroll the minimum distance that brings InWidget into view. Accepts any descendant, not just a
 	 * direct child. Returns false when the widget is not inside this box or nothing needed to move.
+	 * Eased by default, as UMG's is -- a jump loses the reader's place on a long list.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
-	bool ScrollWidgetIntoView(ULexWidget* InWidget);
+	bool ScrollWidgetIntoView(ULexWidget* InWidget, bool bAnimateScroll = true);
+	/** Ease towards Value over the coming frames instead of moving now. Cancels any momentum. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void SetScrollOffsetAnimated(float Value);
+	/** True while an eased scroll is still running. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	bool IsAnimatingScroll() const { return bAnimatingScroll; }
+	/** Where an eased scroll is heading; the current offset when nothing is animating. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetAnimatedScrollTarget() const { return bAnimatingScroll ? AnimatedTargetOffset : ScrollOffset; }
 
 private:
 	/** Content extent along the scroll axis, measured by the last layout pass. */
@@ -439,6 +456,11 @@ private:
 
 	/** Local units per second the content is still travelling under momentum. */
 	float ScrollVelocity = 0.0f;
+	/** An eased scroll is in flight; mutually exclusive with momentum, which it cancels. */
+	bool bAnimatingScroll = false;
+	float AnimatedTargetOffset = 0.0f;
+	/** Close enough to the target to stop interpolating and land exactly on it. */
+	static constexpr float ScrollAnimationSnapThreshold = 0.05f;
 	/**
 	 * Undamped excess past an end. The damped value returned by GetOverscroll is derived from this
 	 * rather than stored, so dragging out and back retraces the same path instead of drifting.

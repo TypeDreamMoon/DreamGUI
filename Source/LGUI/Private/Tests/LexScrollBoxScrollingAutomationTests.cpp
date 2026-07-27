@@ -201,14 +201,14 @@ bool FLexScrollBoxScrollIntoViewTest::RunTest(const FString& Parameters)
 	Fixture.Arrange();
 
 	// Block0 occupies content 0..100 and the view is 0..120, so it is already whole on screen.
-	TestFalse(TEXT("A fully visible widget does not scroll"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[0]));
+	TestFalse(TEXT("A fully visible widget does not scroll"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[0], false));
 
 	// Block2 occupies 200..300. Bringing its trailing edge to the bottom of a 120 view means 180.
-	TestTrue(TEXT("A widget below the view scrolls into it"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[2]));
+	TestTrue(TEXT("A widget below the view scrolls into it"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[2], false));
 	TestEqual(TEXT("...by the minimum distance, not by centring it"), Fixture.ScrollBox->GetScrollOffset(), 180.0f);
 
 	// Block0 is now above the view; its leading edge comes back to the top.
-	TestTrue(TEXT("A widget above the view scrolls back to it"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[0]));
+	TestTrue(TEXT("A widget above the view scrolls back to it"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[0], false));
 	TestEqual(TEXT("...landing on its leading edge"), Fixture.ScrollBox->GetScrollOffset(), 0.0f);
 
 	// A descendant resolves to the child that owns the slot, so callers need not know the nesting.
@@ -219,15 +219,15 @@ bool FLexScrollBoxScrollIntoViewTest::RunTest(const FString& Parameters)
 	ULexWidget* Nested = MakeWidget(Fixture.TestWorld.World, Fixture.Blocks[2], TEXT("Nested"), 40.0f, 20.0f);
 	Fixture.Arrange();
 	Fixture.ScrollBox->ScrollToStart();
-	Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[2]);
+	Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[2], false);
 	const float OffsetViaChild = Fixture.ScrollBox->GetScrollOffset();
 	Fixture.ScrollBox->ScrollToStart();
-	TestTrue(TEXT("A descendant scrolls its owning child into view"), Fixture.ScrollBox->ScrollWidgetIntoView(Nested));
+	TestTrue(TEXT("A descendant scrolls its owning child into view"), Fixture.ScrollBox->ScrollWidgetIntoView(Nested, false));
 	TestEqual(TEXT("...to the same place as its owning child"), Fixture.ScrollBox->GetScrollOffset(), OffsetViaChild);
 	TestTrue(TEXT("...and that was a real scroll, not a coincidental no-op"), OffsetViaChild > 0.0f);
 
 	TestFalse(TEXT("A widget outside this box reports no scroll"),
-		Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.ScrollWidget));
+		Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.ScrollWidget, false));
 	return true;
 }
 
@@ -332,6 +332,52 @@ bool FLexScrollBoxOverscrollTest::RunTest(const FString& Parameters)
 	Fixture.ScrollBox->bAllowOverscroll = false;
 	Fixture.ScrollBox->ApplyDragDelta(-50.0f);
 	TestEqual(TEXT("With overscroll off nothing is pulled past the end"), Fixture.ScrollBox->GetOverscroll(), 0.0f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxAnimatedScrollTest,
+	"LGUI.Layout.ScrollBox.AnimatedScrollEasesToItsTarget",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxAnimatedScrollTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	const float Step = 1.0f / 60.0f;
+
+	// Asking for an eased scroll must not move anything this instant -- that is the whole difference
+	// from SetScrollOffset, and the thing a caller relies on when it wants the reader to keep place.
+	Fixture.ScrollBox->SetScrollOffsetAnimated(100.0f);
+	TestEqual(TEXT("An eased scroll does not move the offset immediately"), Fixture.ScrollBox->GetScrollOffset(), 0.0f);
+	TestTrue(TEXT("...and reports itself as animating"), Fixture.ScrollBox->IsAnimatingScroll());
+	TestEqual(TEXT("...towards the requested target"), Fixture.ScrollBox->GetAnimatedScrollTarget(), 100.0f);
+
+	// FInterpTo covers Dist * clamp(dt * speed, 0, 1) each step: 100 * (15/60) = 25 on the first.
+	Fixture.ScrollBox->TickScrollPhysics(Step);
+	TestEqual(TEXT("The first step covers the interpolation speed's share"), Fixture.ScrollBox->GetScrollOffset(), 25.0f, 0.01f);
+
+	for (int32 i = 0; i < 240; i++)
+	{
+		Fixture.ScrollBox->TickScrollPhysics(Step);
+	}
+	TestEqual(TEXT("It lands exactly on the target"), Fixture.ScrollBox->GetScrollOffset(), 100.0f, 0.001f);
+	TestFalse(TEXT("...and stops animating"), Fixture.ScrollBox->IsAnimatingScroll());
+	TestFalse(TEXT("...leaving the box at rest"), Fixture.ScrollBox->IsScrolling());
+
+	// The target is clamped like any other offset, so an eased scroll cannot park past the end.
+	Fixture.ScrollBox->SetScrollOffsetAnimated(9999.0f);
+	TestEqual(TEXT("An eased target clamps to the range"), Fixture.ScrollBox->GetAnimatedScrollTarget(), 180.0f);
+
+	// A drag beats an animation: grabbing the content must not leave it drifting to an old target.
+	Fixture.ScrollBox->ApplyDragDelta(-10.0f);
+	TestFalse(TEXT("A drag cancels an eased scroll in flight"), Fixture.ScrollBox->IsAnimatingScroll());
+
+	// Momentum and easing must not both drive the offset; starting an ease drops the velocity.
+	Fixture.ScrollBox->SetScrollVelocity(500.0f);
+	Fixture.ScrollBox->SetScrollOffsetAnimated(0.0f);
+	TestEqual(TEXT("Starting an eased scroll drops any momentum"), Fixture.ScrollBox->GetScrollVelocity(), 0.0f);
 	return true;
 }
 
