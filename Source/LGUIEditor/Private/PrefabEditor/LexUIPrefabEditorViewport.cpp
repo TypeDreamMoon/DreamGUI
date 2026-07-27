@@ -118,7 +118,9 @@ FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDr
 		if (!Parent)Parent = Editor->GetLoadedRootWidget();
 		FVector DropWorldPosition = FVector::ZeroVector;
 		const bool bHasPosition = EditorViewportClient->GetDropWorldPosition(Pixel.X, Pixel.Y, Parent, DropWorldPosition);
-		ULexWidget* Created = PaletteOp->CreateUnder(Parent, [bHasPosition, DropWorldPosition](ULexWidget* Widget)
+		// A viewport drop names a parent and a position, never a sibling order -- append.
+		ULexWidget* Created = PaletteOp->CreateUnder(Parent, TOptional<int32>(),
+			[bHasPosition, DropWorldPosition](ULexWidget* Widget)
 		{
 			if (Widget && bHasPosition)Widget->SetWorldLocation(DropWorldPosition);
 		});

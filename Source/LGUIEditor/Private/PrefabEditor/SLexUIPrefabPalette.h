@@ -31,8 +31,13 @@ public:
 	FString PrefabPath;
 	FString DisplayName;
 
-	/** Create this element under InParentWidget (no-op if null / incompatible, like the menu). */
-	ULexWidget* CreateUnder(ULexWidget* InParentWidget, TFunction<void(ULexWidget*)> AfterCreate = nullptr)const;
+	/**
+	 * Create this element under InParentWidget (no-op if null / incompatible, like the menu).
+	 * InSiblingIndex places it between existing children, which is what an above/below drop in the
+	 * outliner asks for; unset appends, which is what a drop onto a row or into the viewport means.
+	 */
+	ULexWidget* CreateUnder(ULexWidget* InParentWidget, TOptional<int32> InSiblingIndex = TOptional<int32>(),
+		TFunction<void(ULexWidget*)> AfterCreate = nullptr)const;
 };
 
 /**

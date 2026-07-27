@@ -308,11 +308,28 @@ namespace SLexUIPrefabPaletteLocal
 	}
 }
 
-ULexWidget* FLexUIPaletteDragDropOp::CreateUnder(ULexWidget* InParentWidget, TFunction<void(ULexWidget*)> AfterCreate)const
+ULexWidget* FLexUIPaletteDragDropOp::CreateUnder(ULexWidget* InParentWidget, TOptional<int32> InSiblingIndex,
+	TFunction<void(ULexWidget*)> AfterCreate)const
 {
 	if (InParentWidget == nullptr)return nullptr;
+	// Place inside the creation callback rather than after the call returns: the create primitives
+	// run it while their own transaction is still open, so creating and positioning collapse into
+	// one undo step instead of leaving a half-placed widget behind on Ctrl+Z.
+	TFunction<void(ULexWidget*)> PlaceThenForward =
+		[InSiblingIndex, AfterCreate = MoveTemp(AfterCreate)](ULexWidget* InWidget)
+		{
+			if (InWidget != nullptr && InSiblingIndex.IsSet())
+			{
+				InWidget->SetSiblingIndex(InSiblingIndex.GetValue());
+			}
+			if (AfterCreate)
+			{
+				AfterCreate(InWidget);
+			}
+		};
 	return SLexUIPrefabPaletteLocal::CreateElement(bIsBasicWidget, VisualClass.Get(), bSetDefaultSprite,
-		NativeDescriptor, PrefabPath, DisplayName, [InParentWidget]() -> ULexWidget* { return InParentWidget; }, AfterCreate);
+		NativeDescriptor, PrefabPath, DisplayName, [InParentWidget]() -> ULexWidget* { return InParentWidget; },
+		MoveTemp(PlaceThenForward));
 }
 
 void SLexUIPrefabPalette::CreateItem(FItemPtr InItem)

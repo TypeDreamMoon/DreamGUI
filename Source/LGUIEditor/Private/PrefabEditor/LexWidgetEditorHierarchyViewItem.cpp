@@ -149,10 +149,12 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			{
 				Manager->TryHandleAssetDragDropOperation(DragDropEvent, TargetItem);
 			}
-			// Palette element dropped onto an Outliner row -> create it under the target widget
+			// Palette element dropped onto an Outliner row -> create it under the target widget.
+			// Index is set when an above/below drop was rewritten into "under this row's parent",
+			// so honouring it is what lets the palette insert between siblings and not only append.
 			else if (auto PaletteOp = DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>())
 			{
-				PaletteOp->CreateUnder(TargetItem);
+				PaletteOp->CreateUnder(TargetItem, Index);
 			}
 		}
 		return EItemDropZone::OntoItem;
@@ -572,9 +574,14 @@ TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(
 	}
 	if (DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>().IsValid())
 	{
-		return Widget.IsValid() && Widget->CanAcceptAdditionalChildren()
-			? TOptional<EItemDropZone>(EItemDropZone::OntoItem)
-			: TOptional<EItemDropZone>();
+		// Hard-coding OntoItem here discarded the zone the row had already computed, so a palette
+		// element could only ever be appended under whatever row it landed on -- no insertion
+		// indicator, and OnAcceptDrop could never see Above/Below because the engine feeds it back
+		// whatever this function returns. Routing it through the same processing as an internal
+		// drag is what rewrites an above/below drop into "under this row's parent, at this index",
+		// and it keeps the two drag sources from drifting apart again.
+		const bool bIsDrop = false;
+		return ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 	}
 
 	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())
