@@ -171,6 +171,13 @@ public:
 	FVector ViewOrbitLocation = FVector::ZeroVector;
 	UPROPERTY()
 	FIntPoint CanvasSize = FIntPoint(1920, 1080);
+	/**
+	 * Device resolution the designer picked. The prefab's own canvas-scaler rule turns it into
+	 * CanvasSize, which is why the two differ for anything but ConstantPixelSize. Zero means an
+	 * asset authored before the picker knew about the rule, where CanvasSize WAS the picked size.
+	 */
+	UPROPERTY()
+	FIntPoint DesignViewportSize = FIntPoint::ZeroValue;
 	UPROPERTY()
 	uint8 CanvasRenderMode = 3;//default LexCanvas's render mode is ELexUIRenderMode::WorldSpace_LexUI
 	UPROPERTY()

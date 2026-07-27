@@ -2546,16 +2546,66 @@ FIntPoint FLexUIPrefabEditor::GetDesignerCanvasSize()
 	return PrefabBeingEdited ? PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize : FIntPoint(1920, 1080);
 }
 
-void FLexUIPrefabEditor::SetDesignerCanvasSize(FIntPoint NewSize)
+FIntPoint FLexUIPrefabEditor::GetDesignerViewportSize()
+{
+	if (PrefabBeingEdited)
+	{
+		const FIntPoint Stored = PrefabBeingEdited->PrefabDataForPrefabEditor.DesignViewportSize;
+		if (Stored.X > 0 && Stored.Y > 0)
+		{
+			return Stored;
+		}
+	}
+	// Assets authored before the picker consulted the scale rule stored only CanvasSize, which
+	// back then WAS the picked resolution.
+	return GetDesignerCanvasSize();
+}
+
+bool FLexUIPrefabEditor::CalculateDesignerCanvasFor(FIntPoint InViewportSize, FIntPoint& OutCanvasSize, float& OutScale)
+{
+	OutCanvasSize = InViewportSize;
+	OutScale = 1.0f;
+	if (InViewportSize.X <= 0 || InViewportSize.Y <= 0)
+	{
+		return false;
+	}
+	// The prefab's OWN root canvas is the one that governs once this prefab is the top-level UI at
+	// runtime. The preview agent's canvas outranks it inside the editor only because the agent sits
+	// above it, so asking the agent would just report the editor's own scaffolding back.
+	ULexWidget* Root = GetLoadedRootWidget();
+	ULexCanvas* Canvas = IsValid(Root) ? Root->GetComponent<ULexCanvas>() : nullptr;
+	if (!IsValid(Canvas))
+	{
+		return false;
+	}
+	FVector2D CanvasSize;
+	Canvas->CalculateCanvasSizeAndScale(InViewportSize, CanvasSize, OutScale);
+	if (CanvasSize.X <= 0.0f || CanvasSize.Y <= 0.0f)
+	{
+		OutCanvasSize = InViewportSize;
+		OutScale = 1.0f;
+		return false;
+	}
+	OutCanvasSize = FIntPoint(FMath::RoundToInt(CanvasSize.X), FMath::RoundToInt(CanvasSize.Y));
+	return true;
+}
+
+void FLexUIPrefabEditor::SetDesignerViewportSize(FIntPoint NewViewportSize)
 {
 	ULexWidget* RootAgent = GetRootAgentWidget();
-	if (!IsValid(RootAgent) || !PrefabBeingEdited || NewSize.X <= 0 || NewSize.Y <= 0)
+	if (!IsValid(RootAgent) || !PrefabBeingEdited || NewViewportSize.X <= 0 || NewViewportSize.Y <= 0)
 	{
 		return;
 	}
+	// The picked resolution is the VIEWPORT size; the canvas the designer lays out on is whatever
+	// the prefab's own scaler rule makes of it. Sizing the agent to the raw device resolution is
+	// what made the picker lie for every mode except ConstantPixelSize.
+	FIntPoint NewCanvasSize;
+	float NewScale = 1.0f;
+	CalculateDesignerCanvasFor(NewViewportSize, NewCanvasSize, NewScale);
 	// Re-clicking the checked preset (or flipping a square canvas) must not dirty the asset or
 	// push an empty undo entry.
-	if (NewSize == GetDesignerCanvasSize())
+	if (NewViewportSize == GetDesignerViewportSize() && NewCanvasSize == GetDesignerCanvasSize())
 	{
 		return;
 	}
@@ -2565,9 +2615,18 @@ void FLexUIPrefabEditor::SetDesignerCanvasSize(FIntPoint NewSize)
 	RootAgent->SetFlags(RF_Transactional);
 	RootAgent->Modify();
 	// SetSizeDelta, matching how the instance scene and thumbnail scene size the root canvas.
-	RootAgent->SetSizeDelta(FVector2D(NewSize.X, NewSize.Y));
+	RootAgent->SetSizeDelta(FVector2D(NewCanvasSize.X, NewCanvasSize.Y));
+	// Keep the agent canvas's edit-mode viewport in step: it is forced to a fixed size, and if the
+	// preview ever runs a screen-space render mode its editor tick would otherwise resize the agent
+	// to the stale default and stomp this.
+	if (ULexCanvas* AgentCanvas = RootAgent->GetComponent<ULexCanvas>())
+	{
+		AgentCanvas->Modify();
+		AgentCanvas->SizeInEditMode = NewViewportSize;
+	}
 	PrefabBeingEdited->Modify();
-	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = NewSize;
+	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = NewCanvasSize;
+	PrefabBeingEdited->PrefabDataForPrefabEditor.DesignViewportSize = NewViewportSize;
 	ULexWidget::MarkLayoutForRebuild(RootAgent);
 	ULexWidget::RebuildLayoutImmediately(RootAgent);
 }

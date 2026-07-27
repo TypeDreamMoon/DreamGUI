@@ -1260,10 +1260,21 @@ void FLexUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewpor
 	const FTransform& Transform = RootAgent->GetWorldTransform();
 	const float DpiScale = Canvas.GetDPIScale();
 	UFont* Font = GEngine->GetSmallFont();
-	const TArrayView<const FLexUIDesignScreenSize> ScreenSizes = GetLexUIDesignScreenSizes();
-	for (int32 Index = 0; Index < ScreenSizes.Num(); Index++)
+	// Draw the canvas rect each device resolution actually produces, not the raw resolution: with a
+	// scale rule in play those are different rectangles, and the raw one is a shape this prefab will
+	// never be laid out at. Resolutions sharing an aspect collapse onto one canvas rect, so dedupe
+	// instead of stacking identical outlines and labels on top of each other.
+	TArray<FIntPoint> GuideSizes;
+	for (const FLexUIDesignScreenSize& ScreenSize : GetLexUIDesignScreenSizes())
 	{
-		const FIntPoint Size = ScreenSizes[Index].Size;
+		FIntPoint GuideSize = ScreenSize.Size;
+		float GuideScale = 1.0f;
+		Editor->CalculateDesignerCanvasFor(ScreenSize.Size, GuideSize, GuideScale);
+		GuideSizes.AddUnique(GuideSize);
+	}
+	for (int32 Index = 0; Index < GuideSizes.Num(); Index++)
+	{
+		const FIntPoint Size = GuideSizes[Index];
 		const FVector LocalCorners[4] = {
 			FVector(0, Left, Top),
 			FVector(0, Left + Size.X, Top),
@@ -1287,7 +1298,7 @@ void FLexUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewpor
 		{
 			continue;
 		}
-		const float Fade = ScreenSizes.Num() > 1 ? (float)Index / (ScreenSizes.Num() - 1) : 0.0f;
+		const float Fade = GuideSizes.Num() > 1 ? (float)Index / (GuideSizes.Num() - 1) : 0.0f;
 		const FLinearColor GuideColor = FMath::Lerp(
 			FLinearColor(0.05f, 0.45f, 0.95f, 0.85f), FLinearColor(0.65f, 0.85f, 1.0f, 0.85f), Fade);
 		for (int32 Corner = 0; Corner < 4; Corner++)

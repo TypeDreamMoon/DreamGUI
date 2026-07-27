@@ -137,8 +137,16 @@ public:
 	void ToggleResolutionGuides();
 	/** Current design canvas size (the root agent widget's rect; falls back to the stored value). */
 	FIntPoint GetDesignerCanvasSize();
-	/** Resize the design canvas to a preset resolution, with undo, and re-arrange the hierarchy. */
-	void SetDesignerCanvasSize(FIntPoint NewSize);
+	/** Device resolution being previewed; assets predating the scale rule fall back to the canvas size. */
+	FIntPoint GetDesignerViewportSize();
+	/**
+	 * Run the prefab's own canvas-scaler rule over a device resolution: the canvas size that rule
+	 * produces, and the scale the canvas would report. Returns false when the prefab's root carries
+	 * no canvas of its own, leaving the canvas size equal to the device resolution.
+	 */
+	bool CalculateDesignerCanvasFor(FIntPoint InViewportSize, FIntPoint& OutCanvasSize, float& OutScale);
+	/** Preview a device resolution: sizes the design canvas by the prefab's own rule, with undo. */
+	void SetDesignerViewportSize(FIntPoint NewViewportSize);
 	void ToggleDesignerGuides();
 	bool GetShowLayoutDebug() const;
 	void ToggleLayoutDebug();

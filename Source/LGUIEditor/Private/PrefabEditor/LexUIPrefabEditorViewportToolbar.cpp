@@ -223,7 +223,21 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 			[
 				SNew(SComboButton)
 				.HasDownArrow(true)
-				.ToolTipText(LOCTEXT("ScreenSizeTooltip", "Design screen size: resize the design canvas to a common device resolution, flip its orientation, or overlay resolution guides."))
+				.ToolTipText_Lambda([WeakEditor]()
+				{
+					TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+					if (!Editor.IsValid())return FText::GetEmpty();
+					const FIntPoint Viewport = Editor->GetDesignerViewportSize();
+					FIntPoint CanvasSize;
+					float Scale = 1.0f;
+					if (!Editor->CalculateDesignerCanvasFor(Viewport, CanvasSize, Scale))
+					{
+						return LOCTEXT("ScreenSizeTooltip_NoCanvas", "Design screen size: the device resolution to preview.\n\nThis prefab's root carries no LexCanvas, so nothing scales it and the design canvas simply equals the device resolution. Add a canvas to the root to preview a scale rule.");
+					}
+					return FText::FromString(FString::Printf(
+						TEXT("Design screen size: the device resolution to preview.\n\nDevice %d x %d, and this prefab's canvas rule turns that into a %d x %d design canvas at %.3f scale.\nThe rule (Scale Mode / Reference Resolution / Screen Match Mode) lives on the LexCanvas of the prefab's root widget."),
+						Viewport.X, Viewport.Y, CanvasSize.X, CanvasSize.Y, Scale));
+				})
 				.OnGetMenuContent_Lambda([WeakEditor]() -> TSharedRef<SWidget>
 				{
 					FMenuBuilder MenuBuilder(true, nullptr);
@@ -231,26 +245,39 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 					for (const FLexUIDesignScreenSize& ScreenSize : GetLexUIDesignScreenSizes())
 					{
 						const FIntPoint Size = ScreenSize.Size;
-						MenuBuilder.AddMenuEntry(FText::FromString(ScreenSize.Label), FText::GetEmpty(), FSlateIcon(),
+						// Show what each device resolution actually becomes, so the rule is visible
+						// at the point of choosing rather than only after the canvas jumps.
+						FText Label = FText::FromString(ScreenSize.Label);
+						if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())
+						{
+							FIntPoint CanvasSize;
+							float Scale = 1.0f;
+							if (Editor->CalculateDesignerCanvasFor(Size, CanvasSize, Scale) && CanvasSize != Size)
+							{
+								Label = FText::FromString(FString::Printf(TEXT("%s  ->  canvas %d x %d"),
+									ScreenSize.Label, CanvasSize.X, CanvasSize.Y));
+							}
+						}
+						MenuBuilder.AddMenuEntry(Label, FText::GetEmpty(), FSlateIcon(),
 							FUIAction(FExecuteAction::CreateLambda([WeakEditor, Size]()
 							{
-								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerCanvasSize(Size);
+								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerViewportSize(Size);
 							}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor, Size]()
 							{
-								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerCanvasSize() == Size;
+								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerViewportSize() == Size;
 								return false;
 							})), NAME_None, EUserInterfaceActionType::RadioButton);
 					}
 					MenuBuilder.EndSection();
 					MenuBuilder.BeginSection(NAME_None, LOCTEXT("ScreenSizeToolsSection", "Tools"));
 					MenuBuilder.AddMenuEntry(LOCTEXT("FlipOrientation", "Flip Orientation"),
-						LOCTEXT("FlipOrientationTip", "Swap the design canvas width and height."), FSlateIcon(),
+						LOCTEXT("FlipOrientationTip", "Swap the previewed device resolution's width and height."), FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 						{
 							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())
 							{
-								const FIntPoint Size = Editor->GetDesignerCanvasSize();
-								Editor->SetDesignerCanvasSize(FIntPoint(Size.Y, Size.X));
+								const FIntPoint Size = Editor->GetDesignerViewportSize();
+								Editor->SetDesignerViewportSize(FIntPoint(Size.Y, Size.X));
 							}
 						})));
 					MenuBuilder.AddMenuEntry(LOCTEXT("ShowResolutionGuides", "Show Resolution Guides"),
@@ -270,12 +297,19 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 				[
 					SNew(STextBlock).Text_Lambda([WeakEditor]()
 					{
-						if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())
+						TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+						if (!Editor.IsValid())return FText::GetEmpty();
+						const FIntPoint Viewport = Editor->GetDesignerViewportSize();
+						FIntPoint CanvasSize;
+						float Scale = 1.0f;
+						// Naming only one number would hide exactly the discrepancy this picker exists
+						// to expose, so show the device resolution and the canvas it really produces.
+						if (Editor->CalculateDesignerCanvasFor(Viewport, CanvasSize, Scale) && CanvasSize != Viewport)
 						{
-							const FIntPoint Size = Editor->GetDesignerCanvasSize();
-							return FText::FromString(FString::Printf(TEXT("%d x %d"), Size.X, Size.Y));
+							return FText::FromString(FString::Printf(TEXT("%d x %d  ->  %d x %d"),
+								Viewport.X, Viewport.Y, CanvasSize.X, CanvasSize.Y));
 						}
-						return FText::GetEmpty();
+						return FText::FromString(FString::Printf(TEXT("%d x %d"), Viewport.X, Viewport.Y));
 					})
 				]
 			]

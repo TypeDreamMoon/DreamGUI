@@ -126,6 +126,13 @@ ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPr
 	auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
 	Canvas->SetRenderMode(RenderMode);
 	Canvas->bFixedSizeInEditMode = true;
+	// The design viewport size is what the editor is simulating, so the edit-mode fixed size must
+	// be it and not the 1920x1080 class default -- otherwise a screen-space preview would resize
+	// the agent to the default on its first editor tick.
+	{
+		const FIntPoint DesignViewportSize = InPrefab->PrefabDataForPrefabEditor.DesignViewportSize;
+		Canvas->SizeInEditMode = (DesignViewportSize.X > 0 && DesignViewportSize.Y > 0) ? DesignViewportSize : CanvasSize;
+	}
 	return RootWidget;
 }
 
