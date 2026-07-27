@@ -144,6 +144,14 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		HelperObject->LoadedRootWidget = NewObject<ULexWidget>(World);
 		HelperObject->LoadedRootWidget->SetParent(PrefabScene->GetParentForLoadPrefab(NewAsset));
 		HelperObject->LoadedRootWidget->SetDisplayName(NewAsset->GetName());
+		// Stretch to the design canvas, the way a new UMG widget fills its designer surface and the
+		// way ULexScreenUISubsystem::ConfigurePage stretches a page at runtime. Left at the widget
+		// default the root is a small fixed rect in the corner, which every full-screen prefab then
+		// has to fix by hand, and which silently stays wrong for one used as a page.
+		HelperObject->LoadedRootWidget->SetHorizontalAndVerticalAnchorMinMax(
+			FVector2D::ZeroVector, FVector2D(1.0, 1.0), false, false);
+		HelperObject->LoadedRootWidget->SetAnchoredPosition(FVector2D::ZeroVector);
+		HelperObject->LoadedRootWidget->SetSizeDelta(FVector2D::ZeroVector);
 		if (RootLayoutClass != nullptr)
 		{
 			check(RootLayoutClass->IsChildOf(ULexLayoutContainer::StaticClass()));
