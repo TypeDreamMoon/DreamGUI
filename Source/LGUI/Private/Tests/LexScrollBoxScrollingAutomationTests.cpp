@@ -108,4 +108,127 @@ bool FLexScrollBoxScrollRangeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace LexScrollBoxScrollingTestLocal
+{
+	/** Viewport 120 tall over 3 x 100 of content: scrollable range 180, view fraction 120/300. */
+	struct FScrollFixture
+	{
+		FScopedGameWorld TestWorld;
+		ULexWidget* ScrollWidget = nullptr;
+		ULexLayoutContainerScrollBox* ScrollBox = nullptr;
+		TArray<ULexWidget*> Blocks;
+
+		FScrollFixture()
+		{
+			ScrollWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Scroll"), 200.0f, 120.0f);
+			ScrollBox = ScrollWidget->CreateNewLayoutContainer<ULexLayoutContainerScrollBox>();
+			for (int32 i = 0; i < 3; i++)
+			{
+				Blocks.Add(MakeWidget(TestWorld.World, ScrollWidget, *FString::Printf(TEXT("Block%d"), i), 180.0f, 100.0f));
+			}
+		}
+		void Arrange()
+		{
+			ScrollWidget->OnRegister();
+			ULexWidget::MarkLayoutForRebuild(ScrollWidget);
+			ULexWidget::RebuildLayoutImmediately(ScrollWidget);
+		}
+		~FScrollFixture() { if (ScrollWidget) { ScrollWidget->DestroyWidget(); } }
+	};
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxOffsetBeforeLayoutTest,
+	"LGUI.Layout.ScrollBox.OffsetRequestedBeforeLayoutSurvives",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxOffsetBeforeLayoutTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+
+	// MaxScrollOffset is only computed by a layout pass, so clamping a request against it before
+	// that pass silently turns every offset into 0 -- the trap UMG sidesteps by deferring its clamp.
+	// Anything setting a scroll position from BeginPlay or a constructor hits exactly this.
+	Fixture.ScrollBox->SetScrollOffset(90.0f);
+	TestEqual(TEXT("An offset requested before layout is not swallowed"), Fixture.ScrollBox->GetScrollOffset(), 90.0f);
+
+	Fixture.Arrange();
+	TestEqual(TEXT("...and survives the first layout pass"), Fixture.ScrollBox->GetScrollOffset(), 90.0f);
+	TestEqual(TEXT("Range is content minus viewport"), Fixture.ScrollBox->GetMaxScrollOffset(), 180.0f);
+
+	// Once the metrics exist the clamp is real again, which is what lets a nested box hand over.
+	Fixture.ScrollBox->SetScrollOffset(9999.0f);
+	TestEqual(TEXT("After layout an over-large offset clamps to the end"), Fixture.ScrollBox->GetScrollOffset(), 180.0f);
+	TestFalse(TEXT("Scrolling past the end reports no movement"), Fixture.ScrollBox->ScrollBy(50.0f));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxViewFractionsTest,
+	"LGUI.Layout.ScrollBox.ViewFractionsDescribeTheVisibleWindow",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxViewFractionsTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+
+	// 120 of 300 visible. These two are what a scrollbar thumb needs: how big it is, and where.
+	TestEqual(TEXT("View fraction is viewport over content"), Fixture.ScrollBox->GetViewFraction(), 0.4f, 0.001f);
+	TestEqual(TEXT("At the start the offset fraction is 0"), Fixture.ScrollBox->GetViewOffsetFraction(), 0.0f, 0.001f);
+
+	Fixture.ScrollBox->ScrollToEnd();
+	TestEqual(TEXT("ScrollToEnd lands on the end offset"), Fixture.ScrollBox->GetScrollOffset(), 180.0f);
+	TestEqual(TEXT("GetScrollOffsetOfEnd agrees with the range"), Fixture.ScrollBox->GetScrollOffsetOfEnd(), 180.0f);
+	TestEqual(TEXT("At the end the offset fraction is 1"), Fixture.ScrollBox->GetViewOffsetFraction(), 1.0f, 0.001f);
+
+	Fixture.ScrollBox->ScrollToStart();
+	TestEqual(TEXT("ScrollToStart returns to zero"), Fixture.ScrollBox->GetScrollOffset(), 0.0f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexScrollBoxScrollIntoViewTest,
+	"LGUI.Layout.ScrollBox.ScrollWidgetIntoViewMovesTheMinimumDistance",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexScrollBoxScrollIntoViewTest::RunTest(const FString& Parameters)
+{
+	using namespace LexScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+
+	// Block0 occupies content 0..100 and the view is 0..120, so it is already whole on screen.
+	TestFalse(TEXT("A fully visible widget does not scroll"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[0]));
+
+	// Block2 occupies 200..300. Bringing its trailing edge to the bottom of a 120 view means 180.
+	TestTrue(TEXT("A widget below the view scrolls into it"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[2]));
+	TestEqual(TEXT("...by the minimum distance, not by centring it"), Fixture.ScrollBox->GetScrollOffset(), 180.0f);
+
+	// Block0 is now above the view; its leading edge comes back to the top.
+	TestTrue(TEXT("A widget above the view scrolls back to it"), Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[0]));
+	TestEqual(TEXT("...landing on its leading edge"), Fixture.ScrollBox->GetScrollOffset(), 0.0f);
+
+	// A descendant resolves to the child that owns the slot, so callers need not know the nesting.
+	// Giving Block2 a child also changes what Block2 measures as -- a widget with no layout container
+	// falls back to measuring its content -- so the content extent, and with it the target offset, is
+	// no longer 180. Pinning that number would be asserting the fixture rather than the behaviour, so
+	// what is checked is the invariant: descendant and owning child scroll to the same place.
+	ULexWidget* Nested = MakeWidget(Fixture.TestWorld.World, Fixture.Blocks[2], TEXT("Nested"), 40.0f, 20.0f);
+	Fixture.Arrange();
+	Fixture.ScrollBox->ScrollToStart();
+	Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.Blocks[2]);
+	const float OffsetViaChild = Fixture.ScrollBox->GetScrollOffset();
+	Fixture.ScrollBox->ScrollToStart();
+	TestTrue(TEXT("A descendant scrolls its owning child into view"), Fixture.ScrollBox->ScrollWidgetIntoView(Nested));
+	TestEqual(TEXT("...to the same place as its owning child"), Fixture.ScrollBox->GetScrollOffset(), OffsetViaChild);
+	TestTrue(TEXT("...and that was a real scroll, not a coincidental no-op"), OffsetViaChild > 0.0f);
+
+	TestFalse(TEXT("A widget outside this box reports no scroll"),
+		Fixture.ScrollBox->ScrollWidgetIntoView(Fixture.ScrollWidget));
+	return true;
+}
+
 #endif

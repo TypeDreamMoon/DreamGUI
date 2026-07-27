@@ -300,6 +300,21 @@ public:
  * precisely because content may exceed the viewport), the scrollable extent is derived from that arrangement,
  * and clipping is applied automatically. Drop one in, add children, done.
  */
+/** When a wheel event is swallowed by the box instead of being handed to whatever is behind it. */
+UENUM(BlueprintType)
+enum class ELexScrollBoxConsumeMouseWheel : uint8
+{
+	/** Never scroll on the wheel; the event always passes through. */
+	Never,
+	/** Scroll and consume only while there is somewhere left to scroll -- the nesting-friendly default. */
+	WhenScrollingPossible,
+	/** Always consume, even at a limit, so the wheel never reaches an outer box. */
+	Always,
+};
+
+/** Broadcast when the USER scrolls the box; code-driven SetScrollOffset does not fire it. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLexScrollBoxUserScrolledEvent, float, CurrentOffset);
+
 UCLASS(BlueprintType, DisplayName = "UMG Scroll Box")
 class LGUI_API ULexLayoutContainerScrollBox : public ULexLayoutContainerStackBox
 {
@@ -322,6 +337,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0"))
 	float ScrollSensitivity = 40.0f;
 
+	/** Whether the wheel is swallowed here or handed to an outer scroll box once this one is at a limit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
+	ELexScrollBoxConsumeMouseWheel ConsumeMouseWheel = ELexScrollBoxConsumeMouseWheel::WhenScrollingPossible;
+
+	UPROPERTY(BlueprintAssignable, Category = "ScrollBox")
+	FLexScrollBoxUserScrolledEvent OnUserScrolled;
+
 	/** Distance scrolled from the start, in local units. Always within [0, GetMaxScrollOffset()]. */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
 	float GetScrollOffset() const { return ScrollOffset; }
@@ -333,8 +355,44 @@ public:
 	/** Scroll by a signed delta. Returns true when the offset actually changed, false when already at a limit. */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
 	bool ScrollBy(float Delta);
+	/** As ScrollBy, but reports the move as user-driven so OnUserScrolled fires. */
+	bool ScrollByFromUser(float Delta);
+
+	/** Jump to the start of the content. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void ScrollToStart();
+	/** Jump to the end of the content. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void ScrollToEnd();
+	/** The offset at which the end of the content is in view -- UMG's name for GetMaxScrollOffset. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetScrollOffsetOfEnd() const { return MaxScrollOffset; }
+	/** Fraction of the content currently visible, 0..1. 1 when everything fits. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetViewFraction() const;
+	/** How far through the scrollable range the view sits, 0..1. 0 when nothing can scroll. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetViewOffsetFraction() const;
+	/**
+	 * Scroll the minimum distance that brings InWidget into view. Accepts any descendant, not just a
+	 * direct child. Returns false when the widget is not inside this box or nothing needed to move.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	bool ScrollWidgetIntoView(ULexWidget* InWidget);
 
 private:
+	/** Content extent along the scroll axis, measured by the last layout pass. */
+	float MeasuredContentPrimary = 0.0f;
+	/** Viewport extent along the scroll axis, measured by the last layout pass. */
+	float MeasuredViewportPrimary = 0.0f;
+	/**
+	 * False until CalculateLayout has run once. MaxScrollOffset is zero before that, so clamping a
+	 * requested offset against it would silently swallow every SetScrollOffset issued during
+	 * construction or BeginPlay; UMG dodges the same trap by deferring its clamp to Slate.
+	 */
+	bool bLayoutMetricsValid = false;
+	/** Content-space start and extent of the direct child that contains InWidget. */
+	bool GetChildContentExtent(ULexWidget* InWidget, float& OutStart, float& OutExtent);
 	/**
 	 * Distance scrolled from the start. Editable so the designer can scroll the content in the prefab
 	 * editor (where no pointer input exists) to reach and edit off-screen children; the authored value

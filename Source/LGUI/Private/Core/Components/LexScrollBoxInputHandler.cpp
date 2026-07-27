@@ -8,7 +8,7 @@
 bool ULexScrollBoxInputHandler::ApplyScroll(float PrimaryDelta) const
 {
 	ULexLayoutContainerScrollBox* Layout = TargetLayout.Get();
-	return IsValid(Layout) && Layout->ScrollBy(PrimaryDelta);
+	return IsValid(Layout) && Layout->ScrollByFromUser(PrimaryDelta);
 }
 
 bool ULexScrollBoxInputHandler::OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)
@@ -54,10 +54,18 @@ bool ULexScrollBoxInputHandler::OnPointerScroll_Implementation(ULexPointerEventD
 	{
 		return true;
 	}
+	if (Layout->ConsumeMouseWheel == ELexScrollBoxConsumeMouseWheel::Never)
+	{
+		return true;//hand the wheel straight on without scrolling
+	}
 	const bool bHorizontal = Layout->Orientation == ELexPanelOrientation::Horizontal;
 	const float Axis = static_cast<float>(bHorizontal
 		? EventData->ScrollAxisValue.X
 		: EventData->ScrollAxisValue.Y);
 	const bool bMoved = ApplyScroll(-Axis * Layout->ScrollSensitivity);
+	if (Layout->ConsumeMouseWheel == ELexScrollBoxConsumeMouseWheel::Always)
+	{
+		return false;//swallow it even at a limit, so an outer box never takes over
+	}
 	return !bMoved;
 }

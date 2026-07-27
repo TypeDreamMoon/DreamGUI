@@ -1905,7 +1905,11 @@ void ULexLayoutContainerScrollBox::PostEditChangeProperty(FPropertyChangedEvent&
 
 void ULexLayoutContainerScrollBox::SetScrollOffset(float Value)
 {
-	const float Clamped = FMath::Clamp(LexPanelLayoutLocal::FiniteOrZero(Value), 0.0f, MaxScrollOffset);
+	// Before the first layout pass MaxScrollOffset is still zero, so clamping against it would turn
+	// every offset requested during construction or BeginPlay into 0 with no way to tell. Until the
+	// metrics exist the request is kept as asked and CalculateLayout clamps it on the way through.
+	const float Upper = bLayoutMetricsValid ? MaxScrollOffset : TNumericLimits<float>::Max();
+	const float Clamped = FMath::Clamp(LexPanelLayoutLocal::FiniteOrZero(Value), 0.0f, Upper);
 	if (FMath::IsNearlyEqual(ScrollOffset, Clamped))
 	{
 		return;
@@ -1922,6 +1926,121 @@ bool ULexLayoutContainerScrollBox::ScrollBy(float Delta)
 {
 	const float Before = ScrollOffset;
 	SetScrollOffset(ScrollOffset + Delta);
+	return !FMath::IsNearlyEqual(Before, ScrollOffset);
+}
+
+bool ULexLayoutContainerScrollBox::ScrollByFromUser(float Delta)
+{
+	const bool bMoved = ScrollBy(Delta);
+	if (bMoved)
+	{
+		OnUserScrolled.Broadcast(ScrollOffset);
+	}
+	return bMoved;
+}
+
+void ULexLayoutContainerScrollBox::ScrollToStart()
+{
+	SetScrollOffset(0.0f);
+}
+
+void ULexLayoutContainerScrollBox::ScrollToEnd()
+{
+	SetScrollOffset(MaxScrollOffset);
+}
+
+float ULexLayoutContainerScrollBox::GetViewFraction() const
+{
+	if (MeasuredContentPrimary <= KINDA_SMALL_NUMBER)
+	{
+		return 1.0f;
+	}
+	return FMath::Clamp(MeasuredViewportPrimary / MeasuredContentPrimary, 0.0f, 1.0f);
+}
+
+float ULexLayoutContainerScrollBox::GetViewOffsetFraction() const
+{
+	if (MaxScrollOffset <= KINDA_SMALL_NUMBER)
+	{
+		return 0.0f;
+	}
+	return FMath::Clamp(ScrollOffset / MaxScrollOffset, 0.0f, 1.0f);
+}
+
+bool ULexLayoutContainerScrollBox::GetChildContentExtent(ULexWidget* InWidget, float& OutStart, float& OutExtent)
+{
+	OutStart = 0.0f;
+	OutExtent = 0.0f;
+	ULexWidget* Panel = GetWidget();
+	if (!IsValid(Panel) || !IsValid(InWidget))
+	{
+		return false;
+	}
+	// Accept any descendant: walk up until the parent is this panel, which is the child that actually
+	// occupies a slot and therefore the one with a position in content space.
+	ULexWidget* DirectChild = InWidget;
+	while (IsValid(DirectChild) && DirectChild->GetParent() != Panel)
+	{
+		DirectChild = DirectChild->GetParent();
+	}
+	if (!IsValid(DirectChild))
+	{
+		return false;
+	}
+
+	const bool bHorizontal = Orientation == ELexPanelOrientation::Horizontal;
+	const float Gap = LexPanelLayoutLocal::NonNegative(Spacing);
+	// Mirrors CalculateLayout's cursor walk, minus the scroll offset: the result is the child's place
+	// in CONTENT space, which is what a scroll target has to be expressed in.
+	float Cursor = bHorizontal
+		? LexPanelLayoutLocal::FiniteOrZero(Padding.Left)
+		: LexPanelLayoutLocal::FiniteOrZero(Padding.Top);
+	for (ULexWidget* Child : CollectLayoutChildren())
+	{
+		const ULexPanelSlot* Slot = GetSlot(Child);
+		const FVector2D Desired = GetDesiredSize(Child);
+		const float SlotPadding = bHorizontal
+			? LexPanelLayoutLocal::HorizontalPadding(Slot->Padding)
+			: LexPanelLayoutLocal::VerticalPadding(Slot->Padding);
+		const float Extent = FMath::Max(0.0f, static_cast<float>(bHorizontal ? Desired.X : Desired.Y) + SlotPadding);
+		if (Child == DirectChild)
+		{
+			OutStart = Cursor;
+			OutExtent = Extent;
+			return true;
+		}
+		Cursor += Extent + Gap;
+	}
+	return false;
+}
+
+bool ULexLayoutContainerScrollBox::ScrollWidgetIntoView(ULexWidget* InWidget)
+{
+	float Start = 0.0f;
+	float Extent = 0.0f;
+	if (!GetChildContentExtent(InWidget, Start, Extent))
+	{
+		return false;
+	}
+	const float ViewStart = ScrollOffset;
+	const float ViewEnd = ScrollOffset + MeasuredViewportPrimary;
+	float Target = ScrollOffset;
+	if (Start < ViewStart)
+	{
+		Target = Start;//above the view: bring its leading edge to the top
+	}
+	else if (Start + Extent > ViewEnd)
+	{
+		// Below the view: bring its trailing edge to the bottom, unless it is taller than the view,
+		// in which case showing its start is the only useful answer.
+		Target = Extent > MeasuredViewportPrimary ? Start : Start + Extent - MeasuredViewportPrimary;
+	}
+	else
+	{
+		return false;//already fully visible
+	}
+	const float Before = ScrollOffset;
+	SetScrollOffset(Target);
 	return !FMath::IsNearlyEqual(Before, ScrollOffset);
 }
 
@@ -1957,6 +2076,11 @@ void ULexLayoutContainerScrollBox::CalculateLayout()
 		ContentPrimary += PrimaryExtentOf(Child);
 	}
 	MaxScrollOffset = FMath::Max(0.0f, ContentPrimary - AvailablePrimary);
+	// Published for GetViewFraction / ScrollWidgetIntoView, and the flag that tells SetScrollOffset
+	// its clamp bound is real now.
+	MeasuredContentPrimary = ContentPrimary;
+	MeasuredViewportPrimary = AvailablePrimary;
+	bLayoutMetricsValid = true;
 	ScrollOffset = FMath::Clamp(ScrollOffset, 0.0f, MaxScrollOffset);
 
 	float Cursor = (bHorizontal
