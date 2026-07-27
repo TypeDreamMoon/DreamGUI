@@ -3227,9 +3227,38 @@ void FLexUIGeometry::TransformVertices(ULexCanvas* canvas, ULexVisual* item, FLe
 	uiGeo->BoundsMin2DInCanvasSpace = itemMin;
 	uiGeo->BoundsMax2DInCanvasSpace = itemMax;
 
-	for (int i = 0; i < vertexCount; i++)
+	if (item->GetWidget()->HasInheritedPerspective())
 	{
-		vertices[i].Position = FVector3f(itemToCanvasTf.TransformPosition(FVector(originVertices[i].Position)));
+		// Inside a perspective scope the widget is drawn somewhere its FTransform does not describe,
+		// so the positions and the bounds both have to come from the remapped geometry. The bounds
+		// matter as much as the vertices: they drive batching overlap and culling, and bounds that
+		// still described the un-foreshortened rect would cull widgets that are plainly on screen.
+		const FMatrix ItemToCanvasMatrix = item->GetWidget()->GetWorldMatrix() * inverseCanvasTf.ToMatrixWithScale();
+		FVector2D RemappedMin(TNumericLimits<double>::Max(), TNumericLimits<double>::Max());
+		FVector2D RemappedMax(TNumericLimits<double>::Lowest(), TNumericLimits<double>::Lowest());
+		for (int i = 0; i < vertexCount; i++)
+		{
+			const FVector Remapped = ItemToCanvasMatrix.TransformPosition(FVector(originVertices[i].Position));
+			vertices[i].Position = FVector3f(Remapped);
+			RemappedMin.X = FMath::Min(RemappedMin.X, Remapped.Y);
+			RemappedMin.Y = FMath::Min(RemappedMin.Y, Remapped.Z);
+			RemappedMax.X = FMath::Max(RemappedMax.X, Remapped.Y);
+			RemappedMax.Y = FMath::Max(RemappedMax.Y, Remapped.Z);
+		}
+		if (vertexCount > 0)
+		{
+			uiGeo->BoundsMin2DInCanvasSpace = RemappedMin;
+			uiGeo->BoundsMax2DInCanvasSpace = RemappedMax;
+		}
+	}
+	else
+	{
+		// Untouched: FMatrix and FTransform do not agree bit for bit, and every existing expectation
+		// about geometry -- pixel snapping above all -- was formed against this line.
+		for (int i = 0; i < vertexCount; i++)
+		{
+			vertices[i].Position = FVector3f(itemToCanvasTf.TransformPosition(FVector(originVertices[i].Position)));
+		}
 	}
 
 	if (canvas->GetActualRequireNormalAndTangent())

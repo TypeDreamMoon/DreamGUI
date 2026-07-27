@@ -17,6 +17,7 @@ class FLexUIClipData;
 class ULexUIDataAsTexture;
 class ULexCanvas;
 enum class ELexRenderMode : uint8;
+namespace LexPerspective { struct FScope; }
 
 /** Matches UMG/Slate visibility while keeping WidgetActive as the behaviour lifecycle switch. */
 UENUM(BlueprintType)
@@ -257,6 +258,42 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Pivot"))
 	FVector2D RenderTransformPivot = FVector2D(0.5, 0.5);
 
+	/*
+	 * PERSPECTIVE, in the shape CSS uses.
+	 *
+	 * Turning this on establishes a perspective for this widget's DESCENDANTS: children with depth
+	 * are foreshortened toward an eye standing PerspectiveDistance in front of this widget's plane.
+	 * The declaring widget itself is not moved -- the remap fixes its plane pointwise -- so switching
+	 * it on never disturbs an interface that has no depth in it yet.
+	 *
+	 * There is no "inherit" setting because inheritance is what happens by default: everything below
+	 * a scope is inside it. A descendant that declares its own perspective NESTS rather than
+	 * overriding, exactly as nested CSS perspectives do.
+	 *
+	 * It costs nothing when off, and nothing for a subtree whose widgets have no depth: the remap
+	 * only touches the depth direction, so a flat widget comes back bit for bit.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter = "GetPerspective", Setter = "SetPerspective", meta = (AllowPrivateAccess = true, DisplayName = "Perspective"))
+	bool bPerspective = false;
+	/**
+	 * How far in front of this widget's plane the subtree is viewed from. Smaller is a stronger
+	 * effect -- it is the CSS `perspective` length.
+	 *
+	 * A distance and not a field of view, even though a field of view reads more naturally next to
+	 * the canvas's: a distance derived from an FOV depends on the widget's width, so a widget that
+	 * resized would silently change how deep its children look. Use SetPerspectiveFromHorizontalFOV
+	 * if you want to think in degrees; it converts once, with the same formula the canvas uses.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bPerspective", ClampMin = "1.0", UIMin = "50.0", UIMax = "5000.0", DisplayName = "Distance"))
+	float PerspectiveDistance = 600.0f;
+	/**
+	 * Where the eye stands over this widget's own rect, normalized: (0,0) bottom-left, (1,1)
+	 * top-right, matching RenderTransformPivot. The CSS `perspective-origin`, and the vanishing point
+	 * a subtree converges toward.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bPerspective", DisplayName = "Origin"))
+	FVector2D PerspectiveOrigin = FVector2D(0.5, 0.5);
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FVector& GetRelativeLocation()const { return RelativeLocation; }
@@ -291,6 +328,47 @@ public:
 	/** Back to drawing exactly where layout put it, in one invalidation. */
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	void ClearRenderTransform();
+
+	UFUNCTION(BlueprintCallable, Category = "Perspective")
+	bool GetPerspective()const { return bPerspective; }
+	UFUNCTION(BlueprintCallable, Category = "Perspective")
+	float GetPerspectiveDistance()const { return PerspectiveDistance; }
+	UFUNCTION(BlueprintCallable, Category = "Perspective")
+	const FVector2D& GetPerspectiveOrigin()const { return PerspectiveOrigin; }
+	UFUNCTION(BlueprintCallable, Category = "Perspective")
+	void SetPerspective(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "Perspective")
+	void SetPerspectiveDistance(float Value);
+	UFUNCTION(BlueprintCallable, Category = "Perspective")
+	void SetPerspectiveOrigin(const FVector2D& Value);
+	/**
+	 * Set the distance from a horizontal field of view, using the same formula the canvas uses for
+	 * its own. Converted once, against the width the widget has right now -- resizing later will not
+	 * re-derive it, which is exactly why the stored value is a distance.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Perspective")
+	void SetPerspectiveFromHorizontalFOV(float FOVDegrees);
+
+	/** True when this widget or any ancestor declares a perspective. One bit, kept up to date with the transform. */
+	UFUNCTION(BlueprintPure, Category = "Perspective")
+	bool HasPerspectiveInHierarchy()const { return bHasPerspectiveInHierarchy; }
+	/** True when an ANCESTOR declares one, i.e. when this widget's own geometry is foreshortened. */
+	UFUNCTION(BlueprintPure, Category = "Perspective")
+	bool HasInheritedPerspective()const { return Parent.IsValid() && Parent->bHasPerspectiveInHierarchy; }
+	/**
+	 * Widget-to-world with any inherited perspective folded in -- where this widget is actually drawn.
+	 *
+	 * An FMatrix and not an FTransform because perspective contributes a shear whenever the scope is
+	 * tilted, and FTransform::SetFromMatrix does not refuse a sheared matrix: it orthonormalizes it
+	 * and hands back something plausible and wrong. Exactly GetWorldTransform().ToMatrixWithScale()
+	 * when no perspective applies, which is almost always.
+	 */
+	FMatrix GetWorldMatrix()const;
+	FMatrix GetInverseWorldMatrix()const;
+	/** The composed remap from every perspective scope above this widget. Identity when there is none. */
+	FMatrix GetInheritedPerspectiveRemap()const;
+	/** This widget's own declared scope in world space; false when it declares none. */
+	bool GetPerspectiveScope(LexPerspective::FScope& OutScope)const;
 
 	/** This widget's render transform alone, in its own local space. Identity when unset. */
 	FTransform GetRenderTransform()const;
@@ -342,6 +420,9 @@ public:
 	FTransform GetRenderLocalTransform()const;
 	/** Recompute the cached has-a-render-transform bit and push the new transform down the subtree. */
 	void ApplyRenderTransformChange();
+	void ApplyPerspectiveChange();
+	/** Recompute the cached bit for this widget and, when it changes, everything below it. */
+	void RefreshPerspectiveInHierarchy();
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FTransform& GetWorldTransform()const;
 
@@ -1175,6 +1256,8 @@ private:
 	uint32 bHasBegunPlay : 1 = false;
 	uint32 bIsRegistered : 1 = false;
 	uint32 bParked : 1 = false;
+	/** Cached "this widget or an ancestor declares a perspective", so the usual case is one bit test. */
+	uint32 bHasPerspectiveInHierarchy : 1 = false;
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;

@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexWidget.h"
+#include "Core/LexPerspective.h"
 #include "LGUI.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUISettings.h"
@@ -1337,6 +1338,126 @@ void ULexWidget::ClearRenderTransform()
 	}
 }
 
+bool ULexWidget::GetPerspectiveScope(LexPerspective::FScope& OutScope)const
+{
+	if (!bPerspective)
+	{
+		return false;
+	}
+	const FTransform& World = GetWorldTransform();
+	// The origin sits on this widget's own rect, like RenderTransformPivot, so it tracks a widget
+	// that gets stretched by its layout rather than drifting off it.
+	const FVector LocalOrigin(0.0,
+		GetLocalSpaceLeft() + GetWidth() * PerspectiveOrigin.X,
+		GetLocalSpaceBottom() + GetHeight() * PerspectiveOrigin.Y);
+	OutScope.PlanePoint = World.TransformPosition(LocalOrigin);
+	OutScope.PlaneNormal = World.TransformVector(FVector::XAxisVector).GetSafeNormal();
+	OutScope.EyePosition = OutScope.PlanePoint + OutScope.PlaneNormal * PerspectiveDistance;
+	return true;
+}
+
+FMatrix ULexWidget::GetInheritedPerspectiveRemap()const
+{
+	if (!HasInheritedPerspective())
+	{
+		return FMatrix::Identity;
+	}
+	// Walking up gathers the scopes innermost first, which is the order the composition wants.
+	// Deliberately not cached per widget: caching would be two matrices on every widget in the
+	// project to speed up a subtree that usually does not exist, and this is asked for once per
+	// geometry rebuild rather than per vertex.
+	TArray<LexPerspective::FScope, TInlineAllocator<4>> Scopes;
+	for (const ULexWidget* Ancestor = Parent.Get(); Ancestor != nullptr; Ancestor = Ancestor->Parent.Get())
+	{
+		LexPerspective::FScope Scope;
+		if (Ancestor->GetPerspectiveScope(Scope))
+		{
+			Scopes.Add(Scope);
+		}
+	}
+	FVector CanvasEye = FVector::ZeroVector;
+	if (ULexCanvas* Canvas = GetRenderCanvas())
+	{
+		if (ULexCanvas* Root = Canvas->GetRootCanvas())
+		{
+			CanvasEye = Root->GetViewLocation();
+		}
+	}
+	return LexPerspective::ComposeRemap(Scopes, CanvasEye);
+}
+
+FMatrix ULexWidget::GetWorldMatrix()const
+{
+	const FMatrix Base = ObjectToWorldTransform.ToMatrixWithScale();
+	return HasInheritedPerspective() ? Base * GetInheritedPerspectiveRemap() : Base;
+}
+
+FMatrix ULexWidget::GetInverseWorldMatrix()const
+{
+	return GetWorldMatrix().Inverse();
+}
+
+void ULexWidget::SetPerspective(bool Value)
+{
+	if (bPerspective != Value)
+	{
+		bPerspective = Value;
+		ApplyPerspectiveChange();
+	}
+}
+
+void ULexWidget::SetPerspectiveDistance(float Value)
+{
+	const float Sanitized = FMath::Max(1.0f, Value);//an eye on or behind the plane has no view
+	if (PerspectiveDistance != Sanitized)
+	{
+		PerspectiveDistance = Sanitized;
+		ApplyPerspectiveChange();
+	}
+}
+
+void ULexWidget::SetPerspectiveOrigin(const FVector2D& Value)
+{
+	if (PerspectiveOrigin != Value)
+	{
+		PerspectiveOrigin = Value;
+		ApplyPerspectiveChange();
+	}
+}
+
+void ULexWidget::SetPerspectiveFromHorizontalFOV(float FOVDegrees)
+{
+	const float Clamped = FMath::Clamp(FOVDegrees, 1.0f, 179.0f);
+	// The same formula ULexCanvas::CalculateDistanceToCamera uses, so a widget's field of view means
+	// what the canvas's field of view means.
+	SetPerspectiveDistance(GetWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(Clamped * 0.5f)));
+}
+
+void ULexWidget::ApplyPerspectiveChange()
+{
+	// Same shape as a render transform change and pointedly not a layout one: a perspective moves
+	// where things are drawn, never where the layout believes they are.
+	RefreshPerspectiveInHierarchy();
+	CalculateObjectToWorldTransform(true);
+	MarkCanvasUpdate(true);
+}
+
+void ULexWidget::RefreshPerspectiveInHierarchy()
+{
+	const bool bNew = bPerspective || (Parent.IsValid() && Parent->bHasPerspectiveInHierarchy);
+	if (bHasPerspectiveInHierarchy != bNew)
+	{
+		bHasPerspectiveInHierarchy = bNew;
+		for (ULexWidget* Child : Children)
+		{
+			if (IsValid(Child))
+			{
+				Child->RefreshPerspectiveInHierarchy();
+			}
+		}
+	}
+}
+
 void ULexWidget::ApplyRenderTransformChange()
 {
 	bHasRenderTransform = !RenderTranslation.IsNearlyZero()
@@ -2031,6 +2152,7 @@ void ULexWidget::OnAttachedToParent()
 	{
 		LexUIManager->UnparkWidget(this);
 	}
+	RefreshPerspectiveInHierarchy();//a new parent can put this subtree inside a perspective scope
 	if (this->bIsRegistered)//registered means not during prefab process
 	{
 		Call_TransformChanged();
