@@ -191,6 +191,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LTween")
 		ULTweener* SetEase(ELTweenEase easetype);
 	/**
+	 * The curve for an ease type as a callable, so code that only needs to EVALUATE a curve can do
+	 * so without constructing a tweener. SetEase uses the same mapping, which is the point: a second
+	 * copy of the switch would drift, and a curve that means one thing to a tween and another to its
+	 * caller is worse than having no curve choice at all.
+	 * Returns an unbound delegate for CurveFloat, which carries its curve elsewhere.
+	 */
+	static FLTweenFunction GetEaseFunction(ELTweenEase easetype);
+	/**
 	 * Set delay time before start animation.
 	 * Has no effect if the Tween has already started.
 	 */

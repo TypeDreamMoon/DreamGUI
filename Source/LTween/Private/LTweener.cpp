@@ -9,95 +9,107 @@ ULTweener::ULTweener()
 {
 	tweenFunc.BindStatic(&ULTweener::OutCubic);//OutCubic default animation curve function
 }
-ULTweener* ULTweener::SetEase(ELTweenEase easetype)
+FLTweenFunction ULTweener::GetEaseFunction(ELTweenEase easetype)
 {
-	if (elapseTime > 0 || startToTween)return this;
+	FLTweenFunction Result;
 	switch (easetype)
 	{
 	case ELTweenEase::Linear:
-		tweenFunc.BindStatic(&ULTweener::Linear);
+		Result.BindStatic(&ULTweener::Linear);
 		break;
 	case ELTweenEase::InQuad:
-		tweenFunc.BindStatic(&ULTweener::InQuad);
+		Result.BindStatic(&ULTweener::InQuad);
 		break;
 	case ELTweenEase::OutQuad:
-		tweenFunc.BindStatic(&ULTweener::OutQuad);
+		Result.BindStatic(&ULTweener::OutQuad);
 		break;
 	case ELTweenEase::InOutQuad:
-		tweenFunc.BindStatic(&ULTweener::InOutQuad);
+		Result.BindStatic(&ULTweener::InOutQuad);
 		break;
 	case ELTweenEase::InCubic:
-		tweenFunc.BindStatic(&ULTweener::InCubic);
+		Result.BindStatic(&ULTweener::InCubic);
 		break;
 	case ELTweenEase::OutCubic:
-		tweenFunc.BindStatic(&ULTweener::OutCubic);
+		Result.BindStatic(&ULTweener::OutCubic);
 		break;
 	case ELTweenEase::InOutCubic:
-		tweenFunc.BindStatic(&ULTweener::InOutCubic);
+		Result.BindStatic(&ULTweener::InOutCubic);
 		break;
 	case ELTweenEase::InQuart:
-		tweenFunc.BindStatic(&ULTweener::InQuart);
+		Result.BindStatic(&ULTweener::InQuart);
 		break;
 	case ELTweenEase::OutQuart:
-		tweenFunc.BindStatic(&ULTweener::OutQuart);
+		Result.BindStatic(&ULTweener::OutQuart);
 		break;
 	case ELTweenEase::InOutQuart:
-		tweenFunc.BindStatic(&ULTweener::InOutQuart);
+		Result.BindStatic(&ULTweener::InOutQuart);
 		break;
 	case ELTweenEase::InSine:
-		tweenFunc.BindStatic(&ULTweener::InSine);
+		Result.BindStatic(&ULTweener::InSine);
 		break;
 	case ELTweenEase::OutSine:
-		tweenFunc.BindStatic(&ULTweener::OutSine);
+		Result.BindStatic(&ULTweener::OutSine);
 		break;
 	case ELTweenEase::InOutSine:
-		tweenFunc.BindStatic(&ULTweener::InOutSine);
+		Result.BindStatic(&ULTweener::InOutSine);
 		break;
 	case ELTweenEase::InExpo:
-		tweenFunc.BindStatic(&ULTweener::InExpo);
+		Result.BindStatic(&ULTweener::InExpo);
 		break;
 	case ELTweenEase::OutExpo:
-		tweenFunc.BindStatic(&ULTweener::OutExpo);
+		Result.BindStatic(&ULTweener::OutExpo);
 		break;
 	case ELTweenEase::InOutExpo:
-		tweenFunc.BindStatic(&ULTweener::InOutExpo);
+		Result.BindStatic(&ULTweener::InOutExpo);
 		break;
 	case ELTweenEase::InCirc:
-		tweenFunc.BindStatic(&ULTweener::InCirc);
+		Result.BindStatic(&ULTweener::InCirc);
 		break;
 	case ELTweenEase::OutCirc:
-		tweenFunc.BindStatic(&ULTweener::OutCirc);
+		Result.BindStatic(&ULTweener::OutCirc);
 		break;
 	case ELTweenEase::InOutCirc:
-		tweenFunc.BindStatic(&ULTweener::InOutCirc);
+		Result.BindStatic(&ULTweener::InOutCirc);
 		break;
 	case ELTweenEase::InElastic:
-		tweenFunc.BindStatic(&ULTweener::InElastic);
+		Result.BindStatic(&ULTweener::InElastic);
 		break;
 	case ELTweenEase::OutElastic:
-		tweenFunc.BindStatic(&ULTweener::OutElastic);
+		Result.BindStatic(&ULTweener::OutElastic);
 		break;
 	case ELTweenEase::InOutElastic:
-		tweenFunc.BindStatic(&ULTweener::InOutElastic);
+		Result.BindStatic(&ULTweener::InOutElastic);
 		break;
 	case ELTweenEase::InBack:
-		tweenFunc.BindStatic(&ULTweener::InBack);
+		Result.BindStatic(&ULTweener::InBack);
 		break;
 	case ELTweenEase::OutBack:
-		tweenFunc.BindStatic(&ULTweener::OutBack);
+		Result.BindStatic(&ULTweener::OutBack);
 		break;
 	case ELTweenEase::InOutBack:
-		tweenFunc.BindStatic(&ULTweener::InOutBack);
+		Result.BindStatic(&ULTweener::InOutBack);
 		break;
 	case ELTweenEase::InBounce:
-		tweenFunc.BindStatic(&ULTweener::InBounce);
+		Result.BindStatic(&ULTweener::InBounce);
 		break;
 	case ELTweenEase::OutBounce:
-		tweenFunc.BindStatic(&ULTweener::OutBounce);
+		Result.BindStatic(&ULTweener::OutBounce);
 		break;
 	case ELTweenEase::InOutBounce:
-		tweenFunc.BindStatic(&ULTweener::InOutBounce);
+		Result.BindStatic(&ULTweener::InOutBounce);
 		break;
+	}
+	return Result;
+}
+ULTweener* ULTweener::SetEase(ELTweenEase easetype)
+{
+	if (elapseTime > 0 || startToTween)return this;
+	// CurveFloat has no static curve of its own -- SetCurveFloat binds that -- so an unbound result
+	// must leave whatever is already bound alone, exactly as the original switch did by omitting it.
+	FLTweenFunction Func = GetEaseFunction(easetype);
+	if (Func.IsBound())
+	{
+		tweenFunc = Func;
 	}
 	return this;
 }
