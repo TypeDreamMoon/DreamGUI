@@ -329,9 +329,14 @@ void ULexVisualBatchMesh::MarkMeshModifierOrderChanged()
 bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = this->GetWidget();
+	// Same shadowing problem as ULexRectBlock::LineTraceUIRect: this is the opt-in VisiblePixel
+	// raycast type and it does its own world-to-local conversion, so it needs the drawn matrix too.
+	const bool bPerspective = Widget->HasPerspectiveApplied();
+	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
+	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	const auto InverseTf = Widget->GetWorldTransform().Inverse();
-	const auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
-	const auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
+	const FVector LocalSpaceRayOrigin = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(Start)) : InverseTf.TransformPosition(Start);
+	const FVector LocalSpaceRayEnd = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(End)) : InverseTf.TransformPosition(End);
 
 	//DrawDebugLine(this->GetWorld(), Start, End, FColor::Red, false, 5.0f);//just for test
 	//check Line-Plane intersection first, then check Line-Triangle
@@ -359,8 +364,12 @@ bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FLexUIHi
 				OutHit.TraceStart = Start;
 				OutHit.TraceEnd = End;
 				OutHit.Widget = Widget;
-				OutHit.Location = Widget->GetWorldTransform().TransformPosition(OutHitPoint);
-				OutHit.Normal = Widget->GetWorldTransform().TransformVector(OutHitNormal);
+				OutHit.Location = bPerspective
+					? FVector(WidgetToWorldMatrix.TransformPosition(OutHitPoint))
+					: Widget->GetWorldTransform().TransformPosition(OutHitPoint);
+				OutHit.Normal = bPerspective
+					? FVector(WidgetToWorldMatrix.TransformVector(OutHitNormal))
+					: Widget->GetWorldTransform().TransformVector(OutHitNormal);
 				OutHit.Normal.Normalize();
 				OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 				OutHit.ImpactPoint = OutHit.Location;

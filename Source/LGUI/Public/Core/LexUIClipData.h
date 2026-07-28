@@ -29,6 +29,20 @@ public:
 	 */
 	LGUI_API void UpdateData();
 	LGUI_API bool IsPointVisible(const FVector& WorldPoint)const;
+	/**
+	 * The frame a clipper masks in. Inside a live Perspective scope the clipper is DRAWN somewhere
+	 * other than where layout put it -- and possibly sheared -- while the pixels it must mask were
+	 * baked through that same drawn matrix, so the mask has to be built from it too.
+	 *
+	 * Both halves of clipping go through here on purpose. The GPU builds a canvas-to-clipper matrix
+	 * from it and the CPU inverts it to test a hit point, and those two agreeing is the whole
+	 * contract: if one followed the drawn clipper and the other did not, content would become
+	 * visible but unclickable, or clickable where nothing is drawn. They were previously wrong
+	 * together, which is far less harmful than being wrong apart.
+	 */
+	static LGUI_API FMatrix44d GetClipperToWorldMatrix(const ULexWidget* InWidget);
+	/** World point in the clipper's own local frame, through the same derivation the GPU uses. */
+	static LGUI_API FVector WorldPointToClipperLocal(const ULexWidget* InWidget, const FVector& InWorldPoint);
 private:
 	static void Add2DTranslationToMatrix(FMatrix44d& Matrix, const FVector2d& Translation);
 	bool IsPointVisible_CheckCornerRadius(const FVector2D& InLocalHitPoint, ULexWidget* InWidget)const;

@@ -37,6 +37,25 @@ void FLexUIClipData::Add2DTranslationToMatrix(FMatrix44d& Matrix, const FVector2
 	M[13] += Translation.X;
 	M[14] += Translation.Y;
 }
+FMatrix44d FLexUIClipData::GetClipperToWorldMatrix(const ULexWidget* InWidget)
+{
+	// Outside a perspective scope this is the call it always was. FMatrix and FTransform inversion
+	// do not agree bit for bit, and a clip edge should not start moving by a fraction of a pixel to
+	// support a feature the widget is not using.
+	return InWidget->HasPerspectiveApplied()
+		? FMatrix44d(InWidget->GetWorldMatrix())
+		: InWidget->GetWorldTransform().ToMatrixWithScale();
+}
+
+FVector FLexUIClipData::WorldPointToClipperLocal(const ULexWidget* InWidget, const FVector& InWorldPoint)
+{
+	if (!InWidget->HasPerspectiveApplied())
+	{
+		return InWidget->GetWorldTransform().InverseTransformPosition(InWorldPoint);
+	}
+	return FVector(GetClipperToWorldMatrix(InWidget).Inverse().TransformPosition(InWorldPoint));
+}
+
 void FLexUIClipData::UpdateData()
 {
 	if (!IsValid(this->GetWidget()) || !this->GetWidget()->GetRenderCanvas())
@@ -55,7 +74,7 @@ void FLexUIClipData::UpdateData()
 	FLexUIClipData* TargetClip = this;
 	for (int i = 0; i < InheritClipDepth; i++)
 	{
-		auto WidgetToWorldMatrix = TargetClip->Widget->GetWorldTransform().ToMatrixWithScale();
+		auto WidgetToWorldMatrix = GetClipperToWorldMatrix(TargetClip->Widget.Get());
 		auto WidgetLocalSpaceCenter = TargetClip->Widget->GetLocalSpaceCenter();
 		auto ClippingMargin = TargetClip->Widget->GetClippingMargin();
 		auto CenterOffsetByMargin = FVector2D(ClippingMargin.Right - ClippingMargin.Left, ClippingMargin.Top - ClippingMargin.Bottom) * 0.5f;
@@ -98,7 +117,7 @@ bool FLexUIClipData::IsPointVisible(const FVector& WorldPoint) const
 	for (int i = 0; i < InheritClipDepth; i++)
 	{
 		auto TargetWidget = TargetClip->Widget;
-		auto LocalPoint = TargetWidget->GetWorldTransform().InverseTransformPosition(WorldPoint);
+		auto LocalPoint = WorldPointToClipperLocal(TargetWidget.Get(), WorldPoint);
 		auto ClippingMargin = TargetWidget->GetClippingMargin();
 		if (LocalPoint.Y < TargetWidget->GetLocalSpaceLeft() - ClippingMargin.Left)return false;
 		if (LocalPoint.Y > TargetWidget->GetLocalSpaceRight() + ClippingMargin.Right)return false;

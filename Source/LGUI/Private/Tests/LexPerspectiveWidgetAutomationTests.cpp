@@ -7,7 +7,9 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexVisual.h"
+#include "Core/Components/LexRectBlock.h"
 #include "Core/Components/LexVisualEmpty.h"
+#include "Core/LexUIClipData.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexPerspective.h"
 #include "Engine/World.h"
@@ -680,6 +682,120 @@ bool FLexPerspectiveLayoutIsTheWriteBackSpaceTest::RunTest(const FString& Parame
 	const FVector RecoveredLocal(Card->GetWorldMatrix().Inverse().TransformPosition(PickedOnDrawnSurface));
 	TestTrue(TEXT("Inverting the drawn matrix recovers layout-local coordinates"),
 		RecoveredLocal.Equals(FVector(0.0, 40.0, -25.0), 0.01));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveClipFollowsTheDrawnClipperTest,
+	"LGUI.Perspective.Widget.AClipRectFollowsTheClipperItIsDrawnAs",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveClipFollowsTheDrawnClipperTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPerspectiveWidgetTestLocal;
+	// Clipping has two halves that must agree: the GPU builds a canvas-to-clipper matrix, and the
+	// CPU inverts the same frame to decide whether a raycast hit is masked. Both were built from
+	// the LAYOUT transform while the pixels and hit points they judge are DRAWN, so a clipper with
+	// depth inside a perspective scope masked along a rectangle nowhere near its visible border.
+	//
+	// They were wrong TOGETHER, which is why nothing looked visible-but-unclickable -- and which is
+	// exactly why fixing one alone would have been worse than fixing neither. That is the property
+	// this test exists to hold, more than the individual correctness of either half.
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 1600.0f, 900.0f);
+	Root->AddComponent<ULexCanvas>()->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 900.0f, 600.0f);
+	ULexWidget* Clipper = MakeWidget(TestWorld.World, Table, TEXT("Clipper"), 300.0f, 200.0f);
+	Table->SetPerspective(true);
+	Table->SetPerspectiveFieldOfView(80.0f);
+	// Off the scope's axis AND off its plane, so the remap displaces it rather than leaving it be.
+	Clipper->SetRelativeLocation(FVector(0.0, 260.0, 0.0));
+	Clipper->SetRenderTranslation(FVector(-180.0, 0.0, 0.0));
+	if (!TestTrue(TEXT("The clipper is inside the scope"), Clipper->HasPerspectiveApplied()))return false;
+
+	const FVector LayoutCentre = Clipper->GetWorldTransform().GetLocation();
+	const FVector DrawnCentre(Clipper->GetWorldMatrix().TransformPosition(FVector::ZeroVector));
+	if (!TestFalse(TEXT("The clipper really is drawn away from its layout position"),
+		DrawnCentre.Equals(LayoutCentre, 1.0)))return false;
+
+	// The frame the mask is built in must be the drawn one.
+	const FMatrix44d Frame = FLexUIClipData::GetClipperToWorldMatrix(Clipper);
+	TestTrue(TEXT("The clip frame is the drawn frame"),
+		FVector(Frame.TransformPosition(FVector::ZeroVector)).Equals(DrawnCentre, 0.01));
+
+	// And the CPU test must invert that same frame, not a different one. Asserted by composition
+	// rather than by repeating the arithmetic, so the two cannot drift apart without this failing.
+	for (const FVector& Local : { FVector(0.0, 0.0, 0.0), FVector(0.0, 120.0, -70.0), FVector(0.0, -140.0, 90.0) })
+	{
+		const FVector OnDrawnSurface(Clipper->GetWorldMatrix().TransformPosition(Local));
+		const FVector Recovered = FLexUIClipData::WorldPointToClipperLocal(Clipper, OnDrawnSurface);
+		TestTrue(*FString::Printf(TEXT("The CPU test inverts the same frame the GPU builds (%.0f,%.0f)"), Local.Y, Local.Z),
+			Recovered.Equals(Local, 0.01));
+	}
+
+	// The consequence an author would see: a point on the clipper's drawn surface is inside the
+	// mask, and the layout position it used to be judged against is now outside it.
+	TestTrue(TEXT("A point on the drawn surface is inside the mask"),
+		Clipper->IsPointVisibleOnClip(DrawnCentre));
+
+	// A widget with no perspective must take the untouched path, bit for bit.
+	ULexWidget* Plain = MakeWidget(TestWorld.World, Root, TEXT("Plain"), 300.0f, 200.0f);
+	TestFalse(TEXT("The plain widget has no perspective"), Plain->HasPerspectiveApplied());
+	const FVector PlainPoint = Plain->GetWorldTransform().TransformPosition(FVector(0.0, 40.0, 20.0));
+	TestTrue(TEXT("Without perspective the conversion is the transform's own"),
+		FLexUIClipData::WorldPointToClipperLocal(Plain, PlainPoint)
+			.Equals(Plain->GetWorldTransform().InverseTransformPosition(PlainPoint), 0.0));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveRectBlockHitTest,
+	"LGUI.Perspective.Widget.ClicksLandWhereARectBlockIsDrawn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveRectBlockHitTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPerspectiveWidgetTestLocal;
+	// The sibling of ClicksLandWhereTheWidgetIsDrawn, which used ULexVisualEmpty and so exercised
+	// the perspective-aware ULexVisual::LineTraceUIRect. ULexRectBlock OVERRIDES that function with
+	// a copy of the pre-perspective version, so the shipped default drawable never ran any of it --
+	// and the existing test was structurally incapable of noticing, because it tested a class that
+	// does not override. Whatever else this asserts, it asserts that the override exists.
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 1600.0f, 900.0f);
+	Root->AddComponent<ULexCanvas>()->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 900.0f, 600.0f);
+	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 160.0f, 220.0f);
+	ULexVisual* Visual = Card->CreateNewVisual<ULexRectBlock>();
+	if (!TestNotNull(TEXT("The card has a RectBlock to hit"), Visual))return false;
+	Table->SetPerspective(true);
+	Table->SetPerspectiveFieldOfView(80.0f);
+	Card->SetRelativeLocation(FVector(0.0, 240.0, 0.0));
+	// The origin is pushed to the scope's edge on purpose. Centred, the remap displaces along the
+	// plane NORMAL only -- pure depth -- and a ray fired down that same normal cannot tell the two
+	// positions apart, so the test would pass whether or not the override was fixed. Off to the
+	// side, the displacement gains a lateral component a perpendicular ray can actually miss.
+	Table->SetPerspectiveOrigin(FVector2D(0.0, 0.5));
+	Card->SetRenderTranslation(FVector(-200.0, 0.0, 0.0));
+	if (!TestTrue(TEXT("The card is inside the scope"), Card->HasPerspectiveApplied()))return false;
+
+	const FVector Authored = Card->GetWorldTransform().GetLocation();
+	const FVector Drawn(Card->GetWorldMatrix().TransformPosition(FVector::ZeroVector));
+	// It has to move SIDEWAYS by more than half the card, or the drawn card still covers the
+	// authored point and the miss assertion below is unfalsifiable.
+	if (!TestTrue(TEXT("The card is drawn clear of where it is authored, laterally"),
+		FMath::Abs(Drawn.Y - Authored.Y) > Card->GetWidth() * 0.5f))return false;
+
+	// Rays along the canvas normal, from well in front, at each of the two candidate positions.
+	auto TraceAt = [&](const FVector& Target)
+	{
+		FLexUIHitResult Hit;
+		const FVector Start = Target - FVector(2000.0, 0.0, 0.0);
+		const FVector End = Target + FVector(2000.0, 0.0, 0.0);
+		return Visual->LineTraceUI(Hit, Start, End);
+	};
+	TestTrue(TEXT("A ray through where the RectBlock is drawn hits it"), TraceAt(Drawn));
+	TestFalse(TEXT("A ray through where it is no longer drawn misses"), TraceAt(Authored));
 	return true;
 }
 

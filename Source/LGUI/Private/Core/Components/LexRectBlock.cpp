@@ -531,9 +531,15 @@ bool ULexRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoi
 bool ULexRectBlock::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = GetWidget();
+	// This function OVERRIDES ULexVisual::LineTraceUIRect, so the perspective handling added there
+	// never reaches a RectBlock unless it is repeated here. Kept as a copy rather than a call to
+	// the base because the two differ further down, at the corner-radius test.
+	const bool bPerspective = Widget->HasPerspectiveApplied();
+	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
+	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	auto InverseTf = Widget->GetWorldTransform().Inverse();
-	auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
-	auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
+	auto LocalSpaceRayOrigin = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(Start)) : InverseTf.TransformPosition(Start);
+	auto LocalSpaceRayEnd = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(End)) : InverseTf.TransformPosition(End);
 
 	//DrawDebugLine(this->GetWorld(), Start, End, FColor::Red, false);//just for test
 	//start and end point must be different side of X plane
@@ -546,8 +552,12 @@ bool ULexRectBlock::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Star
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
 			OutHit.Widget = Widget;
-			OutHit.Location = Widget->GetWorldTransform().TransformPosition(result);
-			OutHit.Normal = Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
+			OutHit.Location = bPerspective
+				? FVector(WidgetToWorldMatrix.TransformPosition(result))
+				: Widget->GetWorldTransform().TransformPosition(result);
+			OutHit.Normal = bPerspective
+				? FVector(WidgetToWorldMatrix.TransformVector(FVector(1, 0, 0)))
+				: Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
 			OutHit.Normal.Normalize();
 			OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 			OutHit.ImpactPoint = OutHit.Location;
