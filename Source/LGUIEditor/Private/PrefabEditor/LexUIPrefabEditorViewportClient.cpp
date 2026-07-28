@@ -30,6 +30,7 @@
 #include "LexUIPrefabViewportClickHandlers.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
+#include "Core/LexCanvasViewFit.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
@@ -717,6 +718,9 @@ FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLex
 	SetViewRotation(InitialViewRotation);
 	SetLookAtLocation(InitialViewOrbitLocation);
 	GetPrefabBeingEdited()->GetPrefabInstanceScene()->SetSkyCubeVisibility(IsPerspective());
+	// Assigning ViewportType above deliberately bypasses SetViewportType, so its side effects have
+	// to be repeated here or they never fire on opening a prefab.
+	DrawHelper.bDrawGrid = !ShouldUseCanvasView();
 
 	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectionChanged.AddLambda([=, this]()
 	{
@@ -1038,6 +1042,24 @@ void FLexUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<ULe
 	if (bScale)KeyPropertyNamed(TEXT("RelativeScale"));
 }
 
+namespace
+{
+	/**
+	 * WorldToPixel, but refusing points at or behind the eye instead of mirroring them.
+	 * FSceneView::ScreenToPixel flips a negative W on purpose -- so a manipulator stays grabbable
+	 * when the camera is right on top of it -- and returns true. Under the orthographic view W was
+	 * always positive, so every "if (!WorldToPixel) return" in this file was unreachable. Once the
+	 * 2D view projects through the canvas it is reachable, and without this an outline behind the
+	 * canvas eye folds inside out and its handles stay clickable at pixels nothing occupies.
+	 */
+	bool LexWorldToPixelInFront(const FSceneView& InView, const FVector& InWorldPoint, FVector2D& OutPixel)
+	{
+		const FVector4 Screen = InView.WorldToScreen(InWorldPoint);
+		if (Screen.W <= UE_KINDA_SMALL_NUMBER)return false;
+		return InView.ScreenToPixel(Screen, OutPixel);
+	}
+}
+
 bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& View)
 {
 	DesignerScreenCorners.Reset();
@@ -1064,7 +1086,7 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 		for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
 		{
 			FVector2D Pixel;
-			if (!View.WorldToPixel(Transform.TransformPosition(Local), Pixel))return false;
+			if (!LexWorldToPixelInFront(View, Transform.TransformPosition(Local), Pixel))return false;
 			OutCorners.Add(Pixel);
 		}
 		return true;
@@ -1097,7 +1119,7 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 			DesignerHandlePositions.Add(EDesignerHandle::Left, (SingleCorners[3] + SingleCorners[0]) * 0.5f);
 		}
 		FVector2D PivotPixel;
-		if (View.WorldToPixel(SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
+		if (LexWorldToPixelInFront(View, SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
 	}
 	else
 	{
@@ -1158,7 +1180,7 @@ void FLexUIPrefabEditorViewportClient::DrawWidgetScreenOutline(ULexWidget* InWid
 	for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
 	{
 		FVector2D Pixel;
-		if (!View.WorldToPixel(Transform.TransformPosition(Local), Pixel))return;
+		if (!LexWorldToPixelInFront(View, Transform.TransformPosition(Local), Pixel))return;
 		Corners.Add(Pixel / Canvas.GetDPIScale());
 	}
 	for (int32 Index = 0; Index < 4; ++Index)
@@ -1191,7 +1213,7 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerCanvasBoundary(FViewport& InV
 	for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
 	{
 		FVector2D Pixel;
-		if (!View.WorldToPixel(Transform.TransformPosition(Local), Pixel))
+		if (!LexWorldToPixelInFront(View, Transform.TransformPosition(Local), Pixel))
 		{
 			return;
 		}
@@ -1286,7 +1308,7 @@ void FLexUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewpor
 		bool bProjected = true;
 		for (int32 Corner = 0; Corner < 4; Corner++)
 		{
-			if (!View.WorldToPixel(Transform.TransformPosition(LocalCorners[Corner]), Pixels[Corner]))
+			if (!LexWorldToPixelInFront(View, Transform.TransformPosition(LocalCorners[Corner]), Pixels[Corner]))
 			{
 				bProjected = false;
 				break;
@@ -1350,8 +1372,8 @@ void FLexUIPrefabEditorViewportClient::DrawShippedImageOutline(ULexWidget* InWid
 		FVector OnPlane;
 		if (!RootCanvas->ProjectWorldPointOntoCanvasPlane(FVector(InWidget->GetWorldMatrix().TransformPosition(Local)), OnPlane))return;
 		FVector2D Pixel, LayoutPixel;
-		if (!View.WorldToPixel(OnPlane, Pixel))return;
-		if (!View.WorldToPixel(LayoutTransform.TransformPosition(Local), LayoutPixel))return;
+		if (!LexWorldToPixelInFront(View, OnPlane, Pixel))return;
+		if (!LexWorldToPixelInFront(View, LayoutTransform.TransformPosition(Local), LayoutPixel))return;
 		MaxDeviation = FMath::Max(MaxDeviation, FVector2D::Distance(Pixel, LayoutPixel));
 		Shipped.Add(Pixel / DpiScale);
 	}
@@ -1729,7 +1751,7 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 	{
 		ULexWidget* GuideWidget = DesignerSnapshots[0].Widget.Get();
 		FVector2D GuidePixel;
-		if (GuideWidget && View->WorldToPixel(GuideWidget->GetWorldTransform().GetLocation(), GuidePixel))
+		if (GuideWidget && LexWorldToPixelInFront(*View, GuideWidget->GetWorldTransform().GetLocation(), GuidePixel))
 		{
 			DesignerGuideX = GuidePixel.X;
 			DesignerGuideY = GuidePixel.Y;
@@ -2195,10 +2217,88 @@ void FLexUIPrefabEditorViewportClient::FrameFromCanvasEye()
 	Invalidate();
 }
 
+bool FLexUIPrefabEditorViewportClient::ShouldUseCanvasView()const
+{
+	// Only the 2D view. The 3D view has a camera the author is actually steering, and Canvas Eye is
+	// how they align it with the canvas there.
+	if (GetViewportType() != LVT_OrthoYZ)return false;
+	if (!CanFrameFromCanvasEye())return false;
+	ULexCanvas* RootCanvas = GetPreviewRootCanvas();
+	ULexWidget* RootAgent = RootCanvas ? RootCanvas->GetWidget() : nullptr;
+	if (!IsValid(RootAgent))return false;
+	// Measured rather than recomputed from Width and FieldOfView: GetViewLocation honours
+	// bOverrideViewLocation, and the near and far planes apply to where the eye actually is.
+	const FTransform& RootTransform = RootAgent->GetWorldTransform();
+	const FVector Normal = RootTransform.TransformVector(FVector::XAxisVector).GetSafeNormal();
+	const double EyeToPlane = FVector::DotProduct(RootTransform.GetLocation() - RootCanvas->GetViewLocation(), Normal);
+	return LexCanvasViewFit::IsCanvasViewUsable(EyeToPlane, RootCanvas->GetNearClipPlane(), RootCanvas->GetFarClipPlane());
+}
+
+FSceneView* FLexUIPrefabEditorViewportClient::CalcSceneView(FSceneViewFamily* ViewFamily, const int32 StereoViewIndex)
+{
+	FSceneView* View = FEditorViewportClient::CalcSceneView(ViewFamily, StereoViewIndex);
+	if (View == nullptr || !ShouldUseCanvasView())return View;
+	ULexCanvas* RootCanvas = GetPreviewRootCanvas();
+	ULexWidget* RootAgent = RootCanvas ? RootCanvas->GetWidget() : nullptr;
+	if (!IsValid(RootAgent) || RootAgent->GetWidth() <= 0.0f || RootAgent->GetHeight() <= 0.0f)return View;
+
+	// Captured BEFORE anything is replaced: this is the framing the orthographic view was about to
+	// produce, and it is what zoom and pan currently mean. The correction below reproduces it for
+	// everything in the canvas plane, so switching the projection does not move the design surface.
+	// Read from the matrices rather than from SceneViewInitOptions.ViewOrigin, which for an ortho
+	// view has been pushed roughly two million units backwards by FSceneViewInitOptions::
+	// UpdateOrthoPlanes -- and only in some view modes, so trusting it would work in Lit and fail
+	// in Unlit.
+	const FMatrix ReferenceWorldToClip = View->ViewMatrices.GetWorldToClip();
+	const FTransform& RootTransform = RootAgent->GetWorldTransform();
+	FMatrix Correction;
+	if (!LexCanvasViewFit::BuildClipCorrection(
+		RootCanvas->GetViewProjectionMatrix(),
+		ReferenceWorldToClip,
+		RootTransform.GetLocation(),
+		RootTransform.TransformVector(FVector::YAxisVector),
+		RootTransform.TransformVector(FVector::ZAxisVector),
+		RootAgent->GetWidth() * 0.5f,
+		Correction))
+	{
+		return View;//no correction of that shape exists; keep the orthographic view rather than ship a wrong one
+	}
+
+	View->SceneViewInitOptions.ViewOrigin = RootCanvas->GetViewLocation();
+	View->SceneViewInitOptions.ViewRotationMatrix = FInverseRotationMatrix(RootCanvas->GetViewRotator())
+		* FMatrix(
+			FPlane(0, 0, 1, 0),
+			FPlane(1, 0, 0, 0),
+			FPlane(0, 1, 0, 0),
+			FPlane(0, 0, 0, 1));
+	// UpdateProjectionMatrix, not a direct assignment to ViewMatrices: it rebuilds the whole
+	// FViewMatrices from the init options just edited, and refreshes the unadjusted projection, the
+	// device-Z transform and the frustum with it. The correction goes on the RIGHT because UE
+	// composes row vectors, so it must act on clip coordinates rather than on view space.
+	View->UpdateProjectionMatrix(RootCanvas->GetProjectionMatrix() * Correction);
+
+	// ViewLocation and ViewRotation are set by the base from the editor transform and are what any
+	// later UpdateViewMatrix would re-derive everything from, so they have to agree.
+	View->ViewLocation = RootCanvas->GetViewLocation();
+	View->ViewRotation = RootCanvas->GetViewRotator();
+	// FSceneView zeroes these in its orthographic branch at construction and UpdateProjectionMatrix
+	// does not revisit them, so without this the view renders perspective while reporting no field
+	// of view at all.
+	const float CanvasFOV = RootCanvas->GetFieldOfView();
+	View->FOV = CanvasFOV;
+	View->DesiredFOV = CanvasFOV;
+	View->bUseFieldOfViewForLOD = true;
+	return View;
+}
+
 void FLexUIPrefabEditorViewportClient::SetViewportType(ELevelViewportType InViewportType)
 {
 	FEditorViewportClient::SetViewportType(InViewportType);
 	GetPrefabBeingEdited()->GetPrefabInstanceScene()->SetSkyCubeVisibility(IsPerspective());
+	// The editor's grid branches on the PROJECTION MATRIX, not on the viewport type, so once the 2D
+	// view projects through the canvas it would swap the flat design grid for the world-space
+	// perspective one -- seen edge-on from the canvas eye, i.e. a single stray horizontal line.
+	DrawHelper.bDrawGrid = !ShouldUseCanvasView();
 }
 
 /**

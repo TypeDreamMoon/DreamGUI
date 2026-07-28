@@ -47,7 +47,15 @@ public:
 	virtual FMatrix GetWidgetCoordSystem() const override;
  
 	virtual void SetViewportType(ELevelViewportType InViewportType) override;
+	virtual FSceneView* CalcSceneView(FSceneViewFamily* ViewFamily, const int32 StereoViewIndex = INDEX_NONE) override;
 	// End of FEditorViewportClient interface
+
+	/**
+	 * Whether the 2D view should project through the canvas's own virtual camera instead of its
+	 * orthographic one. False for the 3D view (which has a real camera the author is steering), for
+	 * canvases with no virtual camera to borrow, and for canvases that cannot see their own plane.
+	 */
+	bool ShouldUseCanvasView()const;
 
 	/**
 	 * Stand the editor camera exactly where the canvas's own virtual camera stands, with its lens.
