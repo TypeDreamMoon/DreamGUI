@@ -555,4 +555,35 @@ bool FLexPerspectiveEyeSideTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveIsAuthorableTest,
+	"LGUI.Perspective.Widget.EveryChannelIsReachableFromTheEditor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveIsAuthorableTest::RunTest(const FString& Parameters)
+{
+	// A perspective channel that is not a UPROPERTY still compiles, still has a working setter, and
+	// still passes every behaviour test -- it simply never appears in the Details panel, never
+	// serializes, and never animates. PerspectiveOrigin shipped that way for exactly one commit,
+	// lost when an edit to the property above it swallowed its UPROPERTY line, and nothing caught
+	// it because everything that exercises it goes through C++.
+	auto CheckProperty = [this](const TCHAR* PropertyName, bool bExpectInterp)
+	{
+		const FProperty* Property = ULexWidget::StaticClass()->FindPropertyByName(FName(PropertyName));
+		if (!TestNotNull(*FString::Printf(TEXT("%s is a reflected property"), PropertyName), Property))
+		{
+			return;
+		}
+		TestTrue(*FString::Printf(TEXT("%s is editable in the panel"), PropertyName),
+			Property->HasAnyPropertyFlags(CPF_Edit));
+		TestEqual(*FString::Printf(TEXT("%s animatability"), PropertyName),
+			Property->HasAnyPropertyFlags(CPF_Interp), bExpectInterp);
+	};
+
+	CheckProperty(TEXT("bPerspective"), false);
+	CheckProperty(TEXT("PerspectiveFieldOfView"), true);
+	CheckProperty(TEXT("PerspectiveOrigin"), true);
+	return true;
+}
+
 #endif

@@ -291,6 +291,12 @@ private:
 	 */
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bPerspective", ClampMin = "1.0", ClampMax = "179.0", UIMin = "10.0", UIMax = "120.0", DisplayName = "Field Of View"))
 	float PerspectiveFieldOfView = 60.0f;
+	/**
+	 * Where the eye stands over this widget's own rect, normalized: (0,0) bottom-left, (1,1)
+	 * top-right, matching RenderTransformPivot. The CSS `perspective-origin`, and the vanishing
+	 * point a subtree converges toward.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bPerspective", DisplayName = "Origin"))
 	FVector2D PerspectiveOrigin = FVector2D(0.5, 0.5);
 
 public:
