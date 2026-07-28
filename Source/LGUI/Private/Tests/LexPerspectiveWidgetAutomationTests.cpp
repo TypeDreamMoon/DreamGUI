@@ -6,6 +6,8 @@
 
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexVisual.h"
+#include "Core/Components/LexVisualEmpty.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexPerspective.h"
 #include "Engine/World.h"
@@ -282,6 +284,71 @@ bool FLexPerspectiveDeclarerNotInOwnScopeTest::RunTest(const FString& Parameters
 		.TransformPosition(FVector::ZeroVector);
 	TestTrue(TEXT("The inner declarer is drawn where the outer scope alone puts it"),
 		InnerDrawn.Equals(InnerByOuterOnly, 0.01));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveHitTestFollowsTheDrawingTest,
+	"LGUI.Perspective.Widget.ClicksLandWhereTheWidgetIsDrawn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveHitTestFollowsTheDrawingTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPerspectiveWidgetTestLocal;
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	Root->AddComponent<ULexCanvas>();
+	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 400.0f, 300.0f);
+	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 100.0f, 140.0f);
+	Card->SetRelativeLocation(FVector(0.0, 150.0, 0.0));
+	ULexVisual* Visual = Card->CreateNewVisual<ULexVisualEmpty>();
+	if (!TestNotNull(TEXT("The card has a visual to hit"), Visual))return false;
+
+	Table->SetPerspective(true);
+	Table->SetPerspectiveDistance(300.0f);
+	// The origin is deliberately off to one side. With it directly in front of the card the remap
+	// would move the card only along its own normal, and a ray fired down that normal cannot tell a
+	// plane from the same plane shifted along it -- the test would pass whatever the hit test did.
+	// Off to the side, depth turns into sideways displacement, which a ray can actually miss.
+	Table->SetPerspectiveOrigin(FVector2D(0.0, 0.5));
+	Card->SetRenderTranslation(FVector(120.0, 0.0, 0.0));//pulled toward the viewer
+	if (!TestTrue(TEXT("The card is inside the scope"), Card->HasInheritedPerspective()))return false;
+
+	// A ray at the card's DRAWN centre must hit it. Before this commit the hit test inverted the
+	// widget's FTransform and intersected the un-foreshortened rect, so a foreshortened card was
+	// clickable where it used to be and not where it is -- which is the kind of bug that gets
+	// blamed on the artist.
+	const FVector Drawn = FVector(Card->GetWorldMatrix().TransformPosition(FVector::ZeroVector));
+	const FVector Along = FVector(Card->GetWorldMatrix().TransformVector(FVector(1, 0, 0))).GetSafeNormal();
+	{
+		FLexUIHitResult Hit;
+		TestTrue(TEXT("A ray through where it is drawn hits it"),
+			Visual->LineTraceUI(Hit, Drawn + Along * 500.0, Drawn - Along * 500.0));
+	}
+
+	// And a ray at where it merely used to be must miss, or the test would pass for a hit area that
+	// simply got bigger rather than one that moved.
+	const FVector Authored = Card->GetWorldTransform().GetLocation();
+	// Sideways, specifically: the card is 100 wide, so the drawn centre has to be more than half of
+	// that away from the authored one before a ray through the old place can be expected to miss.
+	if (TestTrue(TEXT("The card is drawn more than half its width to the side"),
+		FMath::Abs(Drawn.Y - Authored.Y) > 50.0))
+	{
+		FLexUIHitResult Hit;
+		const FVector AuthoredAlong = Card->GetWorldTransform().TransformVector(FVector(1, 0, 0)).GetSafeNormal();
+		TestFalse(TEXT("A ray through where it is no longer drawn misses"),
+			Visual->LineTraceUI(Hit, Authored + AuthoredAlong * 500.0, Authored - AuthoredAlong * 500.0));
+	}
+
+	// With no scope the two agree again, which is the case every existing interaction depends on.
+	Table->SetPerspective(false);
+	{
+		FLexUIHitResult Hit;
+		const FVector Centre = Card->GetWorldTransform().GetLocation();
+		const FVector Normal = Card->GetWorldTransform().TransformVector(FVector(1, 0, 0)).GetSafeNormal();
+		TestTrue(TEXT("Without a scope the ordinary hit test still works"),
+			Visual->LineTraceUI(Hit, Centre + Normal * 500.0, Centre - Normal * 500.0));
+	}
 	return true;
 }
 

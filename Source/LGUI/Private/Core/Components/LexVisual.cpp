@@ -261,9 +261,17 @@ void ULexVisual::SetWidgetPropertyDataStartPosition(int InPosition)
 bool ULexVisual::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = GetWidget();
+	// Inside a perspective scope the widget is drawn somewhere its FTransform does not describe, so
+	// the ray has to be brought into the space it is actually drawn in or clicks land on the
+	// un-foreshortened rect. Outside one this is the same call it always was: FMatrix and FTransform
+	// inversion do not agree bit for bit, and the ordinary path should not start moving by a
+	// fraction of a pixel to support a feature it is not using.
+	const bool bPerspective = Widget->HasInheritedPerspective();
+	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
+	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	auto InverseTf = Widget->GetWorldTransform().Inverse();
-	auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
-	auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
+	auto LocalSpaceRayOrigin = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(Start)) : InverseTf.TransformPosition(Start);
+	auto LocalSpaceRayEnd = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(End)) : InverseTf.TransformPosition(End);
 
 	//DrawDebugLine(this->GetWorld(), Start, End, FColor::Red, false);//just for test
 	//start and end point must be different side of X plane
@@ -276,8 +284,12 @@ bool ULexVisual::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, 
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
 			OutHit.Widget = Widget;
-			OutHit.Location = Widget->GetWorldTransform().TransformPosition(Result);
-			OutHit.Normal = Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
+			OutHit.Location = bPerspective
+				? FVector(WidgetToWorldMatrix.TransformPosition(Result))
+				: Widget->GetWorldTransform().TransformPosition(Result);
+			OutHit.Normal = bPerspective
+				? FVector(WidgetToWorldMatrix.TransformVector(FVector(1, 0, 0)))
+				: Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
 			OutHit.Normal.Normalize();
 			OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 			OutHit.ImpactPoint = OutHit.Location;
@@ -289,9 +301,12 @@ bool ULexVisual::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, 
 bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = GetWidget();
+	const bool bPerspective = Widget->HasInheritedPerspective();
+	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
+	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	const auto InverseTf = Widget->GetWorldTransform().Inverse();
-	const auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
-	const auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
+	const auto LocalSpaceRayOrigin = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(Start)) : InverseTf.TransformPosition(Start);
+	const auto LocalSpaceRayEnd = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(End)) : InverseTf.TransformPosition(End);
 
 	//DrawDebugLine(this->GetWorld(), Start, End, FColor::Red, false, 5.0f);//just for test
 	//check Line-Plane intersection first, then check Line-Triangle
@@ -314,8 +329,8 @@ bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FLexUIHitResult& Out
 				OutHit.TraceStart = Start;
 				OutHit.TraceEnd = End;
 				OutHit.Widget = Widget;//actually this convert is incorrect, but I need this pointer
-				OutHit.Location = Widget->GetWorldTransform().TransformPosition(HitPoint);
-				OutHit.Normal = Widget->GetWorldTransform().TransformVector(HitNormal);
+				OutHit.Location = bPerspective ? FVector(WidgetToWorldMatrix.TransformPosition(HitPoint)) : Widget->GetWorldTransform().TransformPosition(HitPoint);
+				OutHit.Normal = bPerspective ? FVector(WidgetToWorldMatrix.TransformVector(HitNormal)) : Widget->GetWorldTransform().TransformVector(HitNormal);
 				OutHit.Normal.Normalize();
 				OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 				OutHit.ImpactPoint = OutHit.Location;
@@ -335,9 +350,12 @@ bool ULexVisual::LineTraceUICustom(FLexUIHitResult& OutHit, const FVector& Start
 		return false;
 	}
 	auto Widget = GetWidget();
+	const bool bPerspective = Widget->HasInheritedPerspective();
+	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
+	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	const auto InverseTf = Widget->GetWorldTransform().Inverse();
-	const auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
-	const auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
+	const auto LocalSpaceRayOrigin = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(Start)) : InverseTf.TransformPosition(Start);
+	const auto LocalSpaceRayEnd = bPerspective ? FVector(WorldToWidgetMatrix.TransformPosition(End)) : InverseTf.TransformPosition(End);
 
 	if (FMath::Sign(LocalSpaceRayOrigin.X) != FMath::Sign(LocalSpaceRayEnd.X))
 	{
@@ -347,8 +365,8 @@ bool ULexVisual::LineTraceUICustom(FLexUIHitResult& OutHit, const FVector& Start
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
 			OutHit.Widget = Widget;//actually this convert is incorrect, but I need this pointer
-			OutHit.Location = Widget->GetWorldTransform().TransformPosition(HitPoint);
-			OutHit.Normal = Widget->GetWorldTransform().TransformVector(HitNormal);
+			OutHit.Location = bPerspective ? FVector(WidgetToWorldMatrix.TransformPosition(HitPoint)) : Widget->GetWorldTransform().TransformPosition(HitPoint);
+			OutHit.Normal = bPerspective ? FVector(WidgetToWorldMatrix.TransformVector(HitNormal)) : Widget->GetWorldTransform().TransformVector(HitNormal);
 			OutHit.Normal.Normalize();
 			OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 			OutHit.ImpactPoint = OutHit.Location;
