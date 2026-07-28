@@ -384,11 +384,20 @@ protected:
 		TSubclassOf<ULexUIMeshComponent> DefaultMeshType;
 
 #pragma region CanvasScaler
-	/** Virtual Camera Projection Type.*/
-	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", AdvancedDisplay, meta = (DisplayName = "Projection Type"))
+	/**
+	 * Virtual Camera Projection Type. Deliberately NOT AdvancedDisplay: together with FieldOfView
+	 * this defines the projection every widget Perspective scope is calibrated against, and an
+	 * orthographic canvas disables Perspective outright (its eye is at infinity, which no affine
+	 * remap can reach). An author who cannot find these two cannot calibrate the feature.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", meta = (DisplayName = "Projection Type"))
 	TEnumAsByte<ECameraProjectionMode::Type> ProjectionType = ECameraProjectionMode::Perspective;
-	/** Virtual Camera field of view (in degrees). */
-	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", AdvancedDisplay, meta = (UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0"))
+	/**
+	 * Virtual Camera field of view (in degrees), horizontal. Sets how far back the canvas's eye
+	 * stands: distance = Width * 0.5 / tan(FOV/2), the standoff at which the canvas rect exactly
+	 * fills the frame. Widening it brings the eye closer and deepens every Perspective scope below.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", meta = (UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0"))
 	float FieldOfView = 60;
 	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", AdvancedDisplay)
 	float NearClipPlane = 1;
