@@ -34,6 +34,7 @@
 #include "Core/LexUIManager.h"
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexCanvas.h"
+#include "LexUIPrefabEditorViewportClient.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexLayoutContainerGrid.h"
@@ -1702,6 +1703,23 @@ void FLexUIPrefabEditor::TogglePreviewRenderMode()
 	}
 }
 
+void FLexUIPrefabEditor::FrameViewportFromCanvasEye()
+{
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid())
+	{
+		StaticCastSharedPtr<FLexUIPrefabEditorViewportClient>(ViewportPtr->GetViewportClient())->FrameFromCanvasEye();
+	}
+}
+
+bool FLexUIPrefabEditor::CanFrameViewportFromCanvasEye()const
+{
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid())
+	{
+		return StaticCastSharedPtr<FLexUIPrefabEditorViewportClient>(ViewportPtr->GetViewportClient())->CanFrameFromCanvasEye();
+	}
+	return false;
+}
+
 bool FLexUIPrefabEditor::IsPreviewingScreenSpace()const
 {
 	FLexUIPrefabInstanceScene* PreviewScene = const_cast<FLexUIPrefabEditor*>(this)->GetPreviewScene();
@@ -2822,6 +2840,11 @@ void FLexUIPrefabEditor::BindCommands()
 		FCanExecuteAction(),
 		FIsActionChecked::CreateSP(this, &FLexUIPrefabEditor::IsPreviewingScreenSpace)
 	);
+	ToolkitCommands->MapAction(
+		PrefabEditorCommands.FrameFromCanvasEye,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::FrameViewportFromCanvasEye),
+		FCanExecuteAction::CreateSP(this, &FLexUIPrefabEditor::CanFrameViewportFromCanvasEye)
+	);
 
 	TFunction<ULexWidget*()> GetSelectedWidget = [this]()
 	{
@@ -2950,6 +2973,9 @@ void FLexUIPrefabEditor::ExtendToolbar()
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().ToggleScreenSpacePreview
 			, TAttribute<FText>(), TAttribute<FText>()
 			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports")));
+		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().FrameFromCanvasEye
+			, TAttribute<FText>(), TAttribute<FText>()
+			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "EditorViewport.ToggleRealTime")));
 	}
 }
 

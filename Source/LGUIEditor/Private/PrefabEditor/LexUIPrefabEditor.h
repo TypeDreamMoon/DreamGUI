@@ -301,6 +301,9 @@ public:
 	 */
 	void TogglePreviewRenderMode();
 	bool IsPreviewingScreenSpace()const;
+	/** Stand the viewport camera at the canvas's own virtual camera. See the viewport client. */
+	void FrameViewportFromCanvasEye();
+	bool CanFrameViewportFromCanvasEye()const;
 private:
 	FGuid FindOrAddWidgetGuid(ULexWidget* Widget);
 	FGuid FindWidgetGuid(const ULexWidget* Widget) const;

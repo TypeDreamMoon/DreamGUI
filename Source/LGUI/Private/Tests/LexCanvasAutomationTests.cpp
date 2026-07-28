@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
+#include "Engine/World.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FLexCanvasHierarchyOrderTest,
@@ -85,6 +86,113 @@ bool FLexCanvasProjectionIsFindableTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(TEXT("NearClipPlane stays behind Advanced"),
 			NearClip->HasAnyPropertyFlags(CPF_AdvancedDisplay));
+	}
+	return true;
+}
+
+namespace LexCanvasProjectionTestLocal
+{
+	struct FScopedGameWorld
+	{
+		UWorld* World = nullptr;
+		FScopedGameWorld() { World = UWorld::CreateWorld(EWorldType::Editor, false); }
+		~FScopedGameWorld() { if (World) { World->DestroyWorld(false); } }
+	};
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexCanvasExactFitTest,
+	"LGUI.Canvas.TheCanvasRectExactlyFillsItsOwnCameraFrame",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexCanvasExactFitTest::RunTest(const FString& Parameters)
+{
+	using namespace LexCanvasProjectionTestLocal;
+	// The invariant the editor preview rests on. CalculateDistanceToCamera pulls the eye back to
+	// exactly (Width/2) / tan(FOV/2), which is the standoff at which the canvas rect maps to the
+	// NDC square on BOTH axes -- the vertical falling out of the aspect multiplier rather than
+	// being arranged. Two consequences depend on it, and neither is obvious enough to leave
+	// unasserted. Standing the editor camera at this eye reproduces the shipped framing exactly.
+	// And a point IN the canvas plane lands on the same NDC an orthographic view of the same rect
+	// would give it -- both reduce to 2Y/Width -- which is why a perspective preview can be offered
+	// without moving where flat widgets sit, and so without disturbing alignment work.
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = NewObject<ULexWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Root->SetDisplayName(TEXT("Root"));
+	Root->SetWidth(1600.0f);
+	Root->SetHeight(900.0f);
+	Root->OnRegister();
+	ULexCanvas* Canvas = Root->AddComponent<ULexCanvas>();
+	if (!TestNotNull(TEXT("Canvas created"), Canvas))return false;
+	Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	Canvas->SetProjectionType(ECameraProjectionMode::Perspective);
+
+	// Size AFTER the render mode, and then check it stuck. Setting ScreenSpaceOverlay runs
+	// CheckAndApplyViewportParameter, which asks GetViewportSize() -- and in a game world with no
+	// player controller, as here, that returns its FIntPoint(2, 2) fallback and resizes the root
+	// widget to 2x2. Every relationship below is scale-invariant, so a 2-unit canvas would satisfy
+	// all of them while putting the eye 1.7 units off the plane and any realistic depth offset
+	// behind it. This assertion is what makes the fixture's scale a claim rather than an accident.
+
+	const FTransform& World = Root->GetWorldTransform();
+	auto NDCOf = [&](const FVector& LocalPoint, FVector2D& OutNDC) -> bool
+	{
+		const FVector4 Clip = Canvas->GetViewProjectionMatrix()
+			.TransformFVector4(FVector4(World.TransformPosition(LocalPoint), 1.0));
+		if (Clip.W <= UE_KINDA_SMALL_NUMBER)return false;//at or behind the eye
+		OutNDC = FVector2D(Clip.X / Clip.W, Clip.Y / Clip.W);
+		return true;
+	};
+
+	// Two angles, because one cannot tell "the frame is derived from the field of view" apart from
+	// "the frame happens to fit at 60 degrees".
+	for (const float FOV : { 60.0f, 100.0f })
+	{
+		Canvas->SetFieldOfView(FOV);
+		// Checked here rather than once up front, because the projection setters re-apply the
+		// canvas's cached ViewportSize and can resize the root mid-test. Every relationship below
+		// is scale-invariant and would pass just as well on the 2x2 fallback -- with the eye 1.7
+		// units off the plane, where the depth offsets further down land behind it.
+		if (!TestEqual(TEXT("The canvas keeps the fixture's authored width"), Root->GetWidth(), 1600.0f))return false;
+		const double Expected = (Root->GetWidth() * 0.5) / FMath::Tan(FMath::DegreesToRadians(FOV * 0.5));
+		TestEqual(*FString::Printf(TEXT("At %.0f degrees the eye stands back by width/2 over tan(FOV/2)"), FOV),
+			Canvas->GetViewLocation().X, -Expected, 0.01);
+
+		const float Left = -Root->GetPivot().X * Root->GetWidth();
+		const float Right = (1.0f - Root->GetPivot().X) * Root->GetWidth();
+		const float Bottom = -Root->GetPivot().Y * Root->GetHeight();
+		const float Top = (1.0f - Root->GetPivot().Y) * Root->GetHeight();
+		for (const FVector& Corner : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
+		{
+			FVector2D NDC;
+			if (!TestTrue(*FString::Printf(TEXT("At %.0f degrees the corner is in front of the eye"), FOV), NDCOf(Corner, NDC)))continue;
+			TestEqual(*FString::Printf(TEXT("At %.0f degrees corner (%.0f,%.0f) sits on the horizontal frame edge"), FOV, Corner.Y, Corner.Z),
+				FMath::Abs(NDC.X), 1.0, 0.001);
+			TestEqual(*FString::Printf(TEXT("At %.0f degrees corner (%.0f,%.0f) sits on the vertical frame edge"), FOV, Corner.Y, Corner.Z),
+				FMath::Abs(NDC.Y), 1.0, 0.001);
+		}
+	}
+
+	Canvas->SetFieldOfView(60.0f);
+	// A point in the plane lands where an orthographic view of the same rect would put it.
+	const FVector InPlane(0.0, 300.0, -180.0);
+	FVector2D Flat;
+	if (TestTrue(TEXT("The in-plane point is visible"), NDCOf(InPlane, Flat)))
+	{
+		TestEqual(TEXT("An in-plane point lands on the orthographic fraction horizontally"),
+			Flat.X, 2.0 * InPlane.Y / Root->GetWidth(), 0.0005);
+		TestEqual(TEXT("An in-plane point lands on the orthographic fraction vertically"),
+			Flat.Y, 2.0 * InPlane.Z / Root->GetHeight(), 0.0005);
+	}
+
+	// And the thing an author is actually looking for. Local +X is depth away from the eye, so
+	// pushing the point back must shrink its offset and pulling it forward must grow it.
+	FVector2D Pulled, Pushed;
+	if (TestTrue(TEXT("The pulled-forward point is visible"), NDCOf(InPlane - FVector(200.0, 0.0, 0.0), Pulled))
+		&& TestTrue(TEXT("The pushed-back point is visible"), NDCOf(InPlane + FVector(200.0, 0.0, 0.0), Pushed)))
+	{
+		TestTrue(TEXT("Nearer reads further from the centre"), FMath::Abs(Pulled.X) > FMath::Abs(Flat.X) + 0.01);
+		TestTrue(TEXT("Further reads nearer to the centre"), FMath::Abs(Pushed.X) < FMath::Abs(Flat.X) - 0.01);
 	}
 	return true;
 }

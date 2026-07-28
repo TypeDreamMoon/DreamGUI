@@ -1487,7 +1487,7 @@ void ULexWidget::WarnIfPerspectiveCannotApply()const
 	{
 		// The prefab editor previews in world space by default, so this is the message an author is
 		// most likely to need: the field they are adjusting is genuinely inert in front of them.
-		Reason = TEXT("its canvas renders in world space, where the scene camera does the projecting and already supplies perspective of its own. Perspective applies to canvases that project through their own virtual camera -- ScreenSpaceOverlay, as in play -- so set the preview canvas to that, or check the result in play");
+		Reason = TEXT("its canvas renders in world space, where the scene camera does the projecting and already supplies perspective of its own. Perspective is defined against a canvas's own virtual camera, so switch the preview canvas to ScreenSpaceOverlay (the Screen Space button on the toolbar). The remap is baked into the geometry, so it then shows in the editor viewport too -- use Canvas Eye to view it from the projection it was built for");
 	}
 	else if (Root->GetProjectionType() != ECameraProjectionMode::Perspective)
 	{

@@ -50,6 +50,18 @@ public:
 	// End of FEditorViewportClient interface
 
 	/**
+	 * Stand the editor camera exactly where the canvas's own virtual camera stands, with its lens.
+	 * Perspective bakes geometry for that eye, so this is the only pose from which the editor shows
+	 * the foreshortening play shows. Switches to the 3D view first -- an ortho view has no eye.
+	 */
+	void FrameFromCanvasEye();
+	bool CanFrameFromCanvasEye()const;
+	/** The preview's root canvas, or null if it or its widget is not in a state safe to ask. */
+	class ULexCanvas* GetPreviewRootCanvas()const;
+	/** Keep the editor lens equal to the canvas lens, so the 3D view is at least calibrated. */
+	void SyncViewFOVToCanvas();
+
+	/**
 	 * Get the elements (from the current selection set) that this viewport can manipulate (eg, via the transform gizmo).
 	 */
 	FTypedElementListConstRef GetElementsToManipulate(const bool bForceRefresh = false);

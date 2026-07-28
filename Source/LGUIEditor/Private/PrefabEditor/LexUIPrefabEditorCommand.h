@@ -34,4 +34,5 @@ public:
 	TSharedPtr<FUICommandInfo> OpenPrefabHelperObject;
 	TSharedPtr<FUICommandInfo> OpenBehaviourBlueprint;
 	TSharedPtr<FUICommandInfo> ToggleScreenSpacePreview;
+	TSharedPtr<FUICommandInfo> FrameFromCanvasEye;
 };

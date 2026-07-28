@@ -1496,6 +1496,8 @@ void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 
 	TickWorld(DeltaSeconds);
 
+	SyncViewFOVToCanvas();
+
 	if (bDesignerDragging)UpdateDesignerDrag();
 	if (TransformWidget.IsValid() && IsPerspective())
 	{
@@ -2068,6 +2070,62 @@ FMatrix FLexUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
 	}
 
 	return FEditorViewportClient::GetWidgetCoordSystem();
+}
+
+ULexCanvas* FLexUIPrefabEditorViewportClient::GetPreviewRootCanvas()const
+{
+	if (!PrefabEditorPtr.IsValid())return nullptr;
+	ULexWidget* RootAgent = PrefabEditorPtr.Pin()->GetRootAgentWidget();
+	if (!IsValid(RootAgent))return nullptr;
+	ULexCanvas* Canvas = RootAgent->GetComponent<ULexCanvas>();
+	// GetViewLocation and GetProjectionMatrix dereference GetWidget() with no null check of their
+	// own. The runtime only ever called them mid-frame with everything alive; this runs on editor
+	// ticks and across prefab close and world teardown, so the guard belongs here.
+	if (!IsValid(Canvas) || !IsValid(Canvas->GetWidget()))return nullptr;
+	return Canvas;
+}
+
+void FLexUIPrefabEditorViewportClient::SyncViewFOVToCanvas()
+{
+	// The editor camera ships with a 90 degree lens; the canvas's is FieldOfView, 60 by default.
+	// A Perspective scope bakes its geometry for the canvas's eye, so looking at that geometry
+	// through a different lens shows a foreshortening that is nobody's -- not the authored intent
+	// and not what ships. Matching the lens is half of making the 3D view honest. The other half is
+	// standing in the right place, which is FrameFromCanvasEye; this half is unconditional because
+	// there is no reading of this viewport for which a mismatched lens is the right answer.
+	if (!IsPerspective())return;//an ortho view has no field of view to match
+	ULexCanvas* RootCanvas = GetPreviewRootCanvas();
+	if (RootCanvas == nullptr || RootCanvas->GetProjectionType() != ECameraProjectionMode::Perspective)return;
+	const float CanvasFOV = RootCanvas->GetFieldOfView();
+	if (CanvasFOV > 0.0f && !FMath::IsNearlyEqual(ViewFOV, CanvasFOV))
+	{
+		ViewFOV = CanvasFOV;
+		Invalidate();
+	}
+}
+
+bool FLexUIPrefabEditorViewportClient::CanFrameFromCanvasEye()const
+{
+	ULexCanvas* RootCanvas = GetPreviewRootCanvas();
+	// A world-space canvas does not project through its own camera, and an orthographic one has its
+	// eye at infinity. In both cases there is no eye to stand at, and Perspective is inert anyway.
+	return RootCanvas != nullptr
+		&& !RootCanvas->IsRenderToWorldSpace()
+		&& RootCanvas->GetProjectionType() == ECameraProjectionMode::Perspective;
+}
+
+void FLexUIPrefabEditorViewportClient::FrameFromCanvasEye()
+{
+	ULexCanvas* RootCanvas = GetPreviewRootCanvas();
+	if (RootCanvas == nullptr)return;
+	if (!IsPerspective())
+	{
+		SetViewportType(LVT_Perspective);
+	}
+	SetViewLocation(RootCanvas->GetViewLocation());
+	SetViewRotation(RootCanvas->GetViewRotator());
+	SyncViewFOVToCanvas();
+	Invalidate();
 }
 
 void FLexUIPrefabEditorViewportClient::SetViewportType(ELevelViewportType InViewportType)
