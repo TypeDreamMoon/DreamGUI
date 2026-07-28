@@ -566,6 +566,13 @@ void ULexUIPrefab::PostDuplicate(bool bDuplicateForPIE)
 	if (GetOuter()->IsA(UPackage::StaticClass()))//is asset
 	{
 		SetRootWidgetNameFromPrefab();
+		// A duplicate must not keep pointing at the original's behaviour Blueprint. Variants are made
+		// by duplicating -- card faces, seat plates, panel variants -- so sharing the class means
+		// editing the copy's script silently edits the original's, and nothing about the copy looks
+		// shared. Cleared rather than duplicated so the existing on-demand BP_<PrefabName> path
+		// creates a fresh one when the author first opens the behaviour, instead of inventing an
+		// asset for every copy that never needed a script.
+		BehaviourClass = nullptr;
 	}
 }
 
