@@ -958,6 +958,9 @@ void ULexWidget::PostEditUndo()
 	// Undo restores RelativeRotation straight into the property, bypassing the setter that keeps
 	// the transient euler mirror in step.
 	this->RelativeRotationEuler = this->RelativeRotation.Rotator();
+	// Same silence for the bits derived from the render transform and perspective properties.
+	RefreshRenderTransformFlag();
+	RefreshPerspectiveInHierarchy();
 	if (Parent.IsValid())
 	{
 		//restore SiblingIndex
@@ -1516,11 +1519,16 @@ void ULexWidget::RefreshPerspectiveInHierarchy()
 	}
 }
 
-void ULexWidget::ApplyRenderTransformChange()
+void ULexWidget::RefreshRenderTransformFlag()
 {
 	bHasRenderTransform = !RenderTranslation.IsNearlyZero()
 		|| !RenderRotation.IsNearlyZero()
 		|| !RenderScale.Equals(FVector::OneVector);
+}
+
+void ULexWidget::ApplyRenderTransformChange()
+{
+	RefreshRenderTransformFlag();
 	// Exactly what SetLayoutScale does, and pointedly NOT what SetRelativeLocation does: no
 	// CalculateAnchorFromTransform, no MarkLayoutForRebuild. Those two lines are the reason
 	// animating a laid-out widget's position fights the layout instead of moving it.
@@ -2288,6 +2296,14 @@ void ULexWidget::OnRegister()
 		return;
 	}
 	bIsRegistered = true;
+	// The prefab loader writes properties straight into memory -- no setter, no
+	// PostEditChangeProperty -- and restores the hierarchy through SetParentBeforeRegister, which
+	// fires no attach events. So registration is the first moment the transient bits derived from
+	// serialized properties can be recomputed. Without this, a saved render transform (or a saved
+	// perspective declared anywhere but the root) works in the session that authored it and
+	// silently does nothing after a load -- which reads as "only works in the prefab editor".
+	RefreshRenderTransformFlag();
+	RefreshPerspectiveInHierarchy();
 	const bool bPanelSlotRegisteredByEnsure = Parent.IsValid()
 		&& EnsurePanelSlotForChild(Parent.Get(), this);
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))

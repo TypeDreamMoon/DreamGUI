@@ -411,6 +411,8 @@ public:
 	FTransform GetRenderLocalTransform()const;
 	/** Recompute the cached has-a-render-transform bit and push the new transform down the subtree. */
 	void ApplyRenderTransformChange();
+	/** Recompute the cached has-a-render-transform bit from the serialized channels. */
+	void RefreshRenderTransformFlag();
 	void ApplyPerspectiveChange();
 #if WITH_EDITOR
 	/** Say plainly when a declared perspective is inert, rather than leaving the author to guess. */

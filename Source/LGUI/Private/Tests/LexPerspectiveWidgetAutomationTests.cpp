@@ -402,4 +402,55 @@ bool FLexPerspectiveRefusesWhereItCannotApplyTest::RunTest(const FString& Parame
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveSurvivesLoadTest,
+	"LGUI.Perspective.Widget.AScopeDeclaredOffTheRootSurvivesALoad",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveSurvivesLoadTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPerspectiveWidgetTestLocal;
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	Root->AddComponent<ULexCanvas>()->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+
+	// Assembled the way WidgetSerializer assembles a prefab: objects, then raw property writes,
+	// then hierarchy through SetParentBeforeRegister -- which fires no attach events -- then
+	// registration. Only the ROOT of the loaded tree ever gets a real attach, and its refresh
+	// stops recursing the moment a widget's bit does not change. So a declarer at the root happens
+	// to work, and a declarer one level down silently loses its scope: the case pinned here.
+	auto MakeBare = [&](const TCHAR* Name, float W, float H)
+	{
+		ULexWidget* Widget = NewObject<ULexWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+		Widget->SetDisplayName(Name);
+		Widget->SetWidth(W);
+		Widget->SetHeight(H);
+		return Widget;
+	};
+	ULexWidget* Sub = MakeBare(TEXT("Sub"), 600.0f, 400.0f);
+	ULexWidget* Table = MakeBare(TEXT("Table"), 400.0f, 300.0f);
+	ULexWidget* Card = MakeBare(TEXT("Card"), 100.0f, 140.0f);
+
+	FProperty* Property = ULexWidget::StaticClass()->FindPropertyByName(TEXT("bPerspective"));
+	if (!TestNotNull(TEXT("bPerspective exists"), Property))return false;
+	*Property->ContainerPtrToValuePtr<bool>(Table) = true;
+
+	Card->SetParentBeforeRegister(Table);
+	Table->SetParentBeforeRegister(Sub);
+	Sub->OnRegister();
+	Table->OnRegister();
+	Card->OnRegister();
+
+	TestTrue(TEXT("The declarer knows its own scope after registration"), Table->HasPerspectiveInHierarchy());
+	TestTrue(TEXT("...and the subtree inherited it"), Card->HasInheritedPerspective());
+
+	// The one real attach a loaded tree gets. Sub's own bit does not change here, so without the
+	// registration-time refresh the recursion never reaches Table and the scope stays lost.
+	Sub->TrySetParent(Root, false);
+	TestTrue(TEXT("Still inside the scope after the real attach"), Card->HasInheritedPerspective());
+	TestFalse(TEXT("And the scope genuinely shapes geometry under the screen-space canvas"),
+		Card->GetInheritedPerspectiveRemap().Equals(FMatrix::Identity, 0.0001));
+	return true;
+}
+
 #endif

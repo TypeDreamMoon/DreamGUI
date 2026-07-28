@@ -317,4 +317,36 @@ bool FLexRenderTransformFlipTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexRenderTransformSurvivesLoadTest,
+	"LGUI.Widget.RenderTransform.ASavedTransformTakesEffectAfterALoad",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexRenderTransformSurvivesLoadTest::RunTest(const FString& Parameters)
+{
+	using namespace LexRenderTransformTestLocal;
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	Root->OnRegister();
+
+	// The exact sequence the prefab loader runs: create the object, write the property into memory
+	// with no setter and no notification, then register. Every behaviour test that calls the setter
+	// is blind to this path, which is how "works in the prefab editor, dead in PIE" shipped.
+	ULexWidget* Loaded = NewObject<ULexWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Loaded->SetDisplayName(TEXT("Loaded"));
+	Loaded->SetWidth(100.0f);
+	Loaded->SetHeight(100.0f);
+	FProperty* Property = ULexWidget::StaticClass()->FindPropertyByName(TEXT("RenderTranslation"));
+	if (!TestNotNull(TEXT("RenderTranslation exists"), Property))return false;
+	*Property->ContainerPtrToValuePtr<FVector>(Loaded) = FVector(0.0, 300.0, 0.0);
+
+	Loaded->OnRegister();
+	TestTrue(TEXT("Registration notices the deserialized value"), Loaded->HasRenderTransform());
+
+	Root->AddChild(Loaded);
+	TestTrue(TEXT("...and the widget is drawn where the saved transform says"),
+		FMath::IsNearlyEqual(Loaded->GetWorldTransform().GetLocation().Y, 300.0, 0.01));
+	return true;
+}
+
 #endif
