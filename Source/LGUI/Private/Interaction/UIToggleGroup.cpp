@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Interaction/UIToggleGroup.h"
@@ -25,6 +25,15 @@ void UUIToggleGroup::AddToggleComponent(UUIToggle* InComp)
 		return;
 	}
 	ToggleCollection.Add(InComp);
+	// Reconcile on join. UUIToggle defaults bIsOn to true and SetValue is a no-op when the value is
+	// unchanged, so several toggles added to a group are all on and nothing ever tells the group --
+	// LastSelect stays null, and SetSelection has nothing to switch off. The group's whole promise is
+	// that at most one member is on, so it is enforced when membership changes and not only when a
+	// value does.
+	if (InComp->GetValue())
+	{
+		SetSelection(InComp);
+	}
 }
 void UUIToggleGroup::RemoveToggleComponent(UUIToggle* InComp)
 {
