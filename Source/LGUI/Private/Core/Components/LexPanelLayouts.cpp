@@ -697,7 +697,7 @@ bool ULexPanelLayoutBase::GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLe
 			return false;
 		}
 		OutInfo.DesiredSize = FVector2D(MeasureLayout());
-		OutInfo.Algorithm = FString::Printf(TEXT("UMG Compatible / %s"), *GetClass()->GetDisplayNameText().ToString());
+		OutInfo.Algorithm = FString::Printf(TEXT("UMG Compatible / %s"), *LexLayoutDebugClassLabel(GetClass()));
 		OutInfo.SlotRule = TEXT("Panel root");
 		return true;
 	}
@@ -715,7 +715,7 @@ bool ULexPanelLayoutBase::GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLe
 	OutInfo.AuthoredSize = Slot->HasAuthoredGeometry()
 		? FVector2D(Slot->GetAuthoredDesiredSizeFallback()) : OutInfo.ArrangedSize;
 	OutInfo.ContentBounds = Panel->GetSize();
-	OutInfo.Algorithm = FString::Printf(TEXT("UMG Compatible / %s"), *GetClass()->GetDisplayNameText().ToString());
+	OutInfo.Algorithm = FString::Printf(TEXT("UMG Compatible / %s"), *LexLayoutDebugClassLabel(GetClass()));
 
 	auto EnumDisplayName = [](const UEnum* Enum, int64 Value)
 	{

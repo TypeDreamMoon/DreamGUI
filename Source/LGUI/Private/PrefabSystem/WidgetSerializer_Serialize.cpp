@@ -132,7 +132,10 @@ namespace LexUIPrefabSystem
 		// The asset stores authored geometry only: panel-arranged rects are swapped out for the duration
 		// of serialization (see FLexUIAuthoredGeometrySaveScope) and re-derived by layout after load.
 		// A no-op when an outer scope (e.g. the helper's save+verify span) already swapped.
+		// The scope is editor-only, matching where prefab assets are authored.
+#if WITH_EDITOR
 		FLexUIAuthoredGeometrySaveScope AuthoredGeometryScope(OriginRootWidget);
+#endif
 		bool saveResult = serializer.SerializeWidget(OriginRootWidget, InPrefab);
 		InOutMapObjectToGuid = serializer.MapObjectToGuid;
 		return saveResult;

@@ -83,6 +83,13 @@ struct LGUI_API FLexLayoutDebugInfo
 	FString Clipping;
 };
 
+/**
+ * Class label for the snapshot above. The diagnostics are editor-facing but the code that fills them
+ * lives in the runtime module, and UClass::GetDisplayNameText only exists with the editor, so outside
+ * it the raw class name stands in.
+ */
+LGUI_API FString LexLayoutDebugClassLabel(const UClass* InClass);
+
 UCLASS(Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
 {

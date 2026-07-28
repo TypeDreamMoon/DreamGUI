@@ -12,6 +12,19 @@ void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 }
 #endif
 
+FString LexLayoutDebugClassLabel(const UClass* InClass)
+{
+	if (InClass == nullptr)
+	{
+		return FString();
+	}
+#if WITH_EDITOR
+	return InClass->GetDisplayNameText().ToString();
+#else
+	return InClass->GetName();
+#endif
+}
+
 
 ULexLayoutAnimation::ULexLayoutAnimation()
 {
@@ -224,9 +237,9 @@ bool ULexLayoutContainer::GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLe
 	OutInfo.ArrangedSize = TargetWidget->GetSize();
 	OutInfo.AuthoredSize = OutInfo.ArrangedSize;
 	OutInfo.ContentBounds = LayoutOwnerWidget->GetSize();
-	OutInfo.Algorithm = FString::Printf(TEXT("Legacy LGUI / %s"), *GetClass()->GetDisplayNameText().ToString());
+	OutInfo.Algorithm = FString::Printf(TEXT("Legacy LGUI / %s"), *LexLayoutDebugClassLabel(GetClass()));
 	OutInfo.SlotRule = IsValid(TargetWidget->GetLayoutSelf())
-		? FString::Printf(TEXT("LayoutSelf: %s"), *TargetWidget->GetLayoutSelf()->GetClass()->GetDisplayNameText().ToString())
+		? FString::Printf(TEXT("LayoutSelf: %s"), *LexLayoutDebugClassLabel(TargetWidget->GetLayoutSelf()->GetClass()))
 		: TEXT("Authored size");
 
 	OutInfo.DesiredSize = OutInfo.ArrangedSize;
