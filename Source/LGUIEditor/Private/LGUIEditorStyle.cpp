@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "LGUIEditorStyle.h"
@@ -99,6 +99,7 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexBackgroundBlur", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexBackgroundPixelate", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexPixelSort", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIMLBehaviour", new IMAGE_BRUSH(TEXT("Xaml_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexRectBlock", new UMG_ICON(TEXT("Border"), Icon16x16));

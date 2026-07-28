@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "LexUIControlRegistry.h"
 
@@ -7,6 +7,7 @@
 #include "Core/Components/LexCustomMesh.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexPixelSort.h"
 #include "Core/Components/LexLayoutContainerGrid.h"
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "Core/Components/LexLayoutSelfFlexBox.h"
@@ -547,6 +548,7 @@ void FLexUIControlRegistry::RegisterDefaults()
 
 	Register(MakeVisual(TEXT("BackgroundBlur"), TEXT("Background Blur"), TEXT("Post Process"), ULexBackgroundBlur::StaticClass()));
 	Register(MakeVisual(TEXT("BackgroundPixelate"), TEXT("Background Pixelate"), TEXT("Post Process"), ULexBackgroundPixelate::StaticClass()));
+	Register(MakeVisual(TEXT("PixelSort"), TEXT("Pixel Sort"), TEXT("Post Process"), ULexPixelSort::StaticClass()));
 
 	Register(MakeVisual(TEXT("VisualEmpty"), TEXT("Empty Visual"), TEXT("Advanced Visuals"), ULexVisualEmpty::StaticClass()));
 	Register(MakeVisual(TEXT("Texture"), TEXT("Texture"), TEXT("Advanced Visuals"), ULexTexture::StaticClass()));

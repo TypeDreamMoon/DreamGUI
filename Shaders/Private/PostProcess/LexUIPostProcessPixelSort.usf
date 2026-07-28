@@ -1,0 +1,101 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+#include "LexUIPostProcessVertexShader.usf"
+#include "/Engine/Public/Platform.ush"
+#include "/Engine/Generated/UniformBuffers/LexUIPostProcessMainTexUB.ush"
+
+// One compare-exchange phase of an odd-even transposition sort, along rows or columns.
+//
+// A full sort would need one phase per texel of the line. Running a BOUNDED number instead is the
+// whole design: after P phases a texel has moved at most P places, so P is the "how far does the
+// smear reach" control, and it falls off to nothing smoothly instead of popping.
+//
+// This file mirrors namespace LexPixelSort in LexPixelSort.cpp. The two cannot share code -- one is
+// HLSL -- so they are kept in step by hand and anything added here belongs there too.
+
+float2 _RegionSize;     // texels along x and y
+float  _PhaseParity;    // 0 or 1: which member of each pair is the anchor this phase
+float2 _Band;           // threshold band, already ordered low then high
+float  _SortAxis;       // 0 = horizontal (sort along x), 1 = vertical (sort along y)
+float  _SortKey;        // matches ELexPixelSortKey
+float  _Descending;
+
+// Mirrors LexPixelSort::ComputeKey.
+float ComputeKey(float4 color)
+{
+    if (_SortKey < 0.5)         // Luminance
+    {
+        return dot(color.rgb, float3(0.2126, 0.7152, 0.0722));
+    }
+    else if (_SortKey < 1.5)    // Brightness
+    {
+        return max(color.r, max(color.g, color.b));
+    }
+    else if (_SortKey < 2.5)    // Saturation
+    {
+        float maxChannel = max(color.r, max(color.g, color.b));
+        float minChannel = min(color.r, min(color.g, color.b));
+        return maxChannel > 0.00001 ? (maxChannel - minChannel) / maxChannel : 0.0;
+    }
+    return color.a;             // Alpha
+}
+
+// Mirrors LexPixelSort::IsInBand. Saturated for the band test ONLY -- the band is authored in 0..1
+// but the key comes from whatever format the backbuffer is, and on a float target values above 1 are
+// ordinary. Clamping the comparison itself would freeze every highlight out of the sort.
+bool IsInBand(float key)
+{
+    float clamped = saturate(key);
+    return clamped >= _Band.x && clamped <= _Band.y;
+}
+
+// Mirrors LexPixelSort::ShouldExchange. ONE expression, evaluated identically by both members of a
+// pair. Writing the mirrored form for the other side is the natural thing to do and it duplicates a
+// texel on every tie -- and flat UI backgrounds are nothing but ties.
+bool ShouldExchange(float lowerKey, float upperKey)
+{
+    return _Descending > 0.5 ? (lowerKey < upperKey) : (lowerKey > upperKey);
+}
+
+float4 PixelSortPS(SimpleVSToPS input) : SV_Target0
+{
+    bool bVertical = _SortAxis > 0.5;
+    float lineLength = bVertical ? _RegionSize.y : _RegionSize.x;
+
+    // Exact texel recovery: the full-screen quad's UVs run 0..1 across the region, so floor() lands
+    // on the texel index and texelCenter samples that texel's middle rather than an edge.
+    float2 texel = floor(input.uv * _RegionSize);
+    float index = bVertical ? texel.y : texel.x;
+
+    float4 self = LexUIPostProcessMainTexUB._MainTex.Sample(LexUIPostProcessMainTexUB._MainTexSampler, input.uv);
+
+    // Which side of its pair this texel is on. Alternating the parity each phase is what lets values
+    // travel; a parity that never alternates stalls the line half-sorted.
+    bool bIsLower = fmod(index + _PhaseParity, 2.0) < 0.5;
+    float partnerIndex = bIsLower ? index + 1.0 : index - 1.0;
+
+    // The line's ends have no partner and simply stay put.
+    if (partnerIndex < 0.0 || partnerIndex > lineLength - 1.0)
+    {
+        return self;
+    }
+
+    float2 partnerTexel = bVertical ? float2(texel.x, partnerIndex) : float2(partnerIndex, texel.y);
+    float2 partnerUV = (partnerTexel + 0.5) / _RegionSize;
+    float4 partner = LexUIPostProcessMainTexUB._MainTex.Sample(LexUIPostProcessMainTexUB._MainTexSampler, partnerUV);
+
+    float selfKey = ComputeKey(self);
+    float partnerKey = ComputeKey(partner);
+
+    // BOTH must be in band. Dropping the partner's test still looks like a pixel sort, but runs
+    // bleed through their own boundaries and the threshold stops meaning anything -- out-of-band
+    // texels are precisely the walls that make a run a run.
+    if (!IsInBand(selfKey) || !IsInBand(partnerKey))
+    {
+        return self;
+    }
+
+    // Both sides ask the same question about the same ordered pair and therefore agree.
+    float lowerKey = bIsLower ? selfKey : partnerKey;
+    float upperKey = bIsLower ? partnerKey : selfKey;
+    return ShouldExchange(lowerKey, upperKey) ? partner : self;
+}

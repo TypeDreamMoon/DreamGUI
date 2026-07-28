@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #pragma once
@@ -177,6 +177,73 @@ public:
 	}
 private:
 	LAYOUT_FIELD(FShaderParameter, BlurStrengthParameter);
+};
+
+/**
+ * One compare-exchange phase of an odd-even transposition pixel sort.
+ *
+ * Every parameter is pushed in a single call on purpose: they are all consumed by the same pass, and
+ * splitting them into separate setters is how one of them ends up silently unbound after a later
+ * edit. The .usf mirrors namespace LexPixelSort on the C++ side.
+ */
+class FLexUIPostProcessPixelSortPS :public FLexUIPostProcessShader
+{
+	DECLARE_SHADER_TYPE(FLexUIPostProcessPixelSortPS, Global);
+public:
+	FLexUIPostProcessPixelSortPS() {}
+	FLexUIPostProcessPixelSortPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
+	{
+		RegionSizeParameter.Bind(Initializer.ParameterMap, TEXT("_RegionSize"));
+		PhaseParityParameter.Bind(Initializer.ParameterMap, TEXT("_PhaseParity"));
+		BandParameter.Bind(Initializer.ParameterMap, TEXT("_Band"));
+		SortAxisParameter.Bind(Initializer.ParameterMap, TEXT("_SortAxis"));
+		SortKeyParameter.Bind(Initializer.ParameterMap, TEXT("_SortKey"));
+		DescendingParameter.Bind(Initializer.ParameterMap, TEXT("_Descending"));
+	}
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FLexUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	}
+	/**
+	 * @param MainTextureSampler MUST be a POINT sampler. With bilinear, the two halves of a pair read
+	 * slightly different values, disagree about the exchange, and one texel is duplicated while its
+	 * partner is erased -- every pass, compounding into mush that still looks vaguely sorted.
+	 */
+	void SetParameters(FRHICommandListImmediate& RHICmdList
+		, FTextureRHIRef MainTexture
+		, FRHISamplerState* MainTextureSampler
+		, const FVector2f& InRegionSize
+		, float InPhaseParity
+		, const FVector2f& InBand
+		, float InSortAxis
+		, float InSortKey
+		, float InDescending)
+	{
+		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
+
+		FLexUIPostProcessMainTexUB UB;
+		UB._MainTex = MainTexture;
+		UB._MainTexSampler = MainTextureSampler;
+		auto UniformBuffer = TUniformBufferRef<FLexUIPostProcessMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIPostProcessMainTexUB>(), UniformBuffer);
+
+		SetShaderValue(BatchedParameters, RegionSizeParameter, InRegionSize);
+		SetShaderValue(BatchedParameters, PhaseParityParameter, InPhaseParity);
+		SetShaderValue(BatchedParameters, BandParameter, InBand);
+		SetShaderValue(BatchedParameters, SortAxisParameter, InSortAxis);
+		SetShaderValue(BatchedParameters, SortKeyParameter, InSortKey);
+		SetShaderValue(BatchedParameters, DescendingParameter, InDescending);
+
+		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
+	}
+private:
+	LAYOUT_FIELD(FShaderParameter, RegionSizeParameter);
+	LAYOUT_FIELD(FShaderParameter, PhaseParityParameter);
+	LAYOUT_FIELD(FShaderParameter, BandParameter);
+	LAYOUT_FIELD(FShaderParameter, SortAxisParameter);
+	LAYOUT_FIELD(FShaderParameter, SortKeyParameter);
+	LAYOUT_FIELD(FShaderParameter, DescendingParameter);
 };
 
 
