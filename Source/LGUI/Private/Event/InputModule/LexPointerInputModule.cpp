@@ -3,6 +3,7 @@
 #include "Event/InputModule/LexPointerInputModule.h"
 #include "Event/LexPointerEventData.h"
 #include "Core/LexUIManager.h"
+#include "Event/LexPointerPolicy.h"
 #include "Core/Components/LexWidget.h"
 #include "Event/LexEventSystem.h"
 #include "Event/LexBaseRaycaster.h"
@@ -31,6 +32,17 @@ bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData,
 			
 			TArray<FLexUIHitResult> HitResultArray;
 			RaycasterItem->Raycast(InPointerEventData, RayOrigin, RayDir, RayEnd, HitResultArray);
+			// A dragged widget is still raycastable and sits directly under the cursor, so without
+			// this it wins its own hit test every frame and the pointer never reaches what is
+			// underneath. That is what made OnPointerDragDrop unreachable in the ordinary case --
+			// the drop is dispatched to EnterWidget only when EnterWidget is not the drag source,
+			// and the drag source was always what the ray found. Removing it here rather than
+			// clearing its raycastable flag keeps authored state out of it, so a drag that ends
+			// abnormally cannot leave a widget permanently unclickable.
+			HitResultArray.RemoveAll([InPointerEventData](const FLexUIHitResult& InHit) {
+				return LexPointerPolicy::ShouldIgnoreHitWhileDragging(
+					InHit.Widget.Get(), InPointerEventData->DragWidget, InPointerEventData->bIsDragging);
+				});
 			if (HitResultArray.Num() > 0)
 			{
 				if (!HitResultArray[0].Widget->GetInteractableInHierarchy())
@@ -94,8 +106,35 @@ bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData,
 
 //@todo: these logs is just for editor testing, remove them when ready
 #define LOG_ENTER_EXIT 0
+void ULexPointerInputModule::ApplyHoverCursor(ULexPointerEventData* EventData)
+{
+	// ULexWidget::Cursor has been editable in the details panel and inert since it was added -- its
+	// getter had no caller anywhere in the plugin. In a pointer-driven UI the cursor is not
+	// decoration; it is how a player learns what is grabbable and what will accept a drop.
+	if (EventData == nullptr)return;
+	UWorld* World = nullptr;
+	for (const auto& Entry : EventData->EnterWidgetStack)
+	{
+		if (IsValid(Entry.Get())) { World = Entry->GetWorld(); break; }
+	}
+	auto PC = World ? World->GetFirstPlayerController() : nullptr;
+	if (PC == nullptr)return;
+	EMouseCursor::Type Resolved = EMouseCursor::Default;
+	// EnterWidgetStack runs outermost-first, and the innermost claim should win.
+	TArray<ULexWidget*, TInlineAllocator<8>> InnermostFirst;
+	for (int32 Index = EventData->EnterWidgetStack.Num() - 1; Index >= 0; --Index)
+	{
+		InnermostFirst.Add(EventData->EnterWidgetStack[Index].Get());
+	}
+	// Written unconditionally so that leaving a widget restores the default rather than stranding
+	// whatever the last hovered thing asked for.
+	LexPointerPolicy::ResolveCursor(InnermostFirst, Resolved);
+	PC->CurrentMouseCursor = Resolved;
+}
+
 void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* EventData, ULexWidget* oldObj, ULexWidget* newObj)
 {
+	ON_SCOPE_EXIT{ ApplyHoverCursor(EventData); };
 	if (oldObj == newObj)return;
 	if (IsValid(oldObj) && IsValid(newObj))
 	{

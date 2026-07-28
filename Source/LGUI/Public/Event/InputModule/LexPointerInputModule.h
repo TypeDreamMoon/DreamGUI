@@ -21,6 +21,8 @@ protected:
 	
 	bool LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResultContainer& OutLexHitResult);
 	TArray<FLexUIHitResultContainer> MultiHitResult;//temp array for hit result
+	/** Push the hovered widget's Cursor to the player controller. See LexPointerPolicy. */
+	static void ApplyHoverCursor(class ULexPointerEventData* EventData);
 	static void ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, ULexWidget* oldObj, ULexWidget* newObj);
 	/** find a common root actor of two actors. return nullptr if no common root */
 	static ULexWidget* FindCommonRoot(ULexWidget* A, ULexWidget* B);
