@@ -134,44 +134,24 @@ namespace LexPixelSort
 	LGUI_API bool ShouldExchange(float InLowerKey, float InUpperKey, bool bInDescending);
 
 	/**
-	 * One compare-exchange phase over a line of keys, in place, for the test harness and as the
-	 * readable statement of what the shader does per pass.
+	 * Where the texel at InIndex ends up: the head of its run, plus how many of its neighbours
+	 * belong before it. Mirrors RankPS.
 	 *
-	 * InPhase alternates which element of each pair is the anchor; without alternating parity the
-	 * array stalls half-sorted.
+	 * This replaced an odd-even transposition that needed one pass per texel of travel. Counting the
+	 * rank directly is two passes for an exact result instead of many for an approximate one.
+	 *
+	 * The scan is bounded by InSearchRadius, which is what makes the cost predictable and is also
+	 * the effect's reach control -- a texel cannot move further than it can see.
+	 *
+	 * THE TIE-BREAK IS THE WHOLE TRICK, and it is one character on each side: walking backward a
+	 * neighbour counts when its key is <= this one, walking forward only when it is < . That
+	 * asymmetry orders equal-valued texels by position, so no two can compute the same destination.
+	 * Make both comparisons the same and every tie collides -- one destination claimed twice and
+	 * another never at all, which on flat colour is most of the image.
 	 */
-	LGUI_API void ApplyPhase(TArray<float>& InOutKeys, int32 InPhase, const FLexPixelSortRunRules& InRules, bool bInDescending);
+	LGUI_API int32 ComputeDestination(const TArray<float>& InKeys, int32 InIndex,
+		const FLexPixelSortRunRules& InRules, bool bInDescending, int32 InSearchRadius);
 
-	/**
-	 * The index one texel gathers from, decided WITHOUT seeing what any other texel decided.
-	 *
-	 * This is the shader's formulation, and it exists here so the correspondence can be asserted
-	 * rather than merely intended. A pixel shader has no way to swap two texels: each invocation can
-	 * only choose which source texel to read. The pair therefore gets TWO independent decisions, and
-	 * they must agree -- if the two sides disagree, one texel is duplicated and its partner erased,
-	 * which on a flat background (all ties) is every pair, every pass.
-	 *
-	 * Agreement is guaranteed here by both sides asking the same question about the same ORDERED
-	 * pair rather than about "me and my partner". Writing it the second way is the natural thing to
-	 * do and it is the bug. The test pins that running this over a whole line reproduces ApplyPhase
-	 * exactly, so a shader written from this function is checkable against the sort.
-	 */
-	LGUI_API int32 GatherIndex(const TArray<float>& InKeys, int32 InIndex, int32 InPhase, const FLexPixelSortRunRules& InRules, bool bInDescending);
-
-	/**
-	 * The size of the buffer the sort runs in, and whether the whole screen is the subject.
-	 *
-	 * Pulled out because getting it wrong is invisible in code review and obvious on screen. The
-	 * first version inferred "full screen" by testing whether the widget rect happened to equal the
-	 * screen size, instead of reading the flag that says so. Those coincide almost never -- a canvas
-	 * authored at 1920x1080 shown in an editor viewport of any other size takes the widget-rect path
-	 * while the author has asked for the screen -- and the result is that the sort runs in a buffer
-	 * whose texels do not correspond to screen pixels, sampling past the edges of what is actually
-	 * on screen.
-	 *
-	 * When the whole screen is the subject the buffer must BE the screen, so a texel is a pixel and
-	 * nothing is sampled from outside it.
-	 */
 	LGUI_API FIntPoint ResolveRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize);
 }
 

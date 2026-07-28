@@ -19,6 +19,14 @@ BEGIN_SHADER_PARAMETER_STRUCT(FLexUIPixelSortPassParameters, )
 	RENDER_TARGET_BINDING_SLOTS()
 END_SHADER_PARAMETER_STRUCT()
 
+// The gather reads TWO textures, and both accesses must be declared or RDG inserts no barrier
+// between the rank pass writing the destinations and this pass reading them.
+BEGIN_SHADER_PARAMETER_STRUCT(FLexUIPixelSortGatherParameters, )
+	RDG_TEXTURE_ACCESS(SourceTexture, ERHIAccess::SRVGraphics)
+	RDG_TEXTURE_ACCESS(DestinationTexture, ERHIAccess::SRVGraphics)
+	RENDER_TARGET_BINDING_SLOTS()
+END_SHADER_PARAMETER_STRUCT()
+
 //------------------------------------------------------------------------------------------------
 // The arithmetic. Mirrored by LexUIPostProcessPixelSort.usf -- keep the two in step.
 //------------------------------------------------------------------------------------------------
@@ -168,46 +176,44 @@ namespace LexPixelSort
 		return bInDescending ? (InLowerKey < InUpperKey) : (InLowerKey > InUpperKey);
 	}
 
-	int32 GatherIndex(const TArray<float>& InKeys, int32 InIndex, int32 InPhase, const FLexPixelSortRunRules& InRules, bool bInDescending)
+	int32 ComputeDestination(const TArray<float>& InKeys, int32 InIndex,
+		const FLexPixelSortRunRules& InRules, bool bInDescending, int32 InSearchRadius)
 	{
 		const int32 Count = InKeys.Num();
-		const bool bIsLower = ((InIndex + (InPhase & 1)) % 2) == 0;
-		const int32 PartnerIndex = bIsLower ? InIndex + 1 : InIndex - 1;
-		if (PartnerIndex < 0 || PartnerIndex >= Count)
-		{
-			return InIndex;//the ends of the line have no partner
-		}
-		const float SelfKey = InKeys[InIndex];
-		const float PartnerKey = InKeys[PartnerIndex];
-		if (!IsSortable(SelfKey, InIndex, InRules) || !IsSortable(PartnerKey, PartnerIndex, InRules))
+		if (InIndex < 0 || InIndex >= Count)
 		{
 			return InIndex;
 		}
-		// The same question about the same ORDERED pair, whichever side is asking. This is what makes
-		// two independent invocations agree.
-		const float LowerKey = bIsLower ? SelfKey : PartnerKey;
-		const float UpperKey = bIsLower ? PartnerKey : SelfKey;
-		return ShouldExchange(LowerKey, UpperKey, bInDescending) ? PartnerIndex : InIndex;
-	}
-
-	void ApplyPhase(TArray<float>& InOutKeys, int32 InPhase, const FLexPixelSortRunRules& InRules, bool bInDescending)
-	{
-		const int32 Count = InOutKeys.Num();
-		const int32 Parity = InPhase & 1;
-		for (int32 Index = Parity; Index + 1 < Count; Index += 2)
+		const float SelfKey = InKeys[InIndex];
+		if (!IsSortable(SelfKey, InIndex, InRules))
 		{
-			// Both members must be in band. Dropping the partner's test still looks like a pixel
-			// sort, but runs bleed through their own boundaries and the threshold stops meaning
-			// anything at all.
-			if (!IsSortable(InOutKeys[Index], Index, InRules) || !IsSortable(InOutKeys[Index + 1], Index + 1, InRules))
-			{
-				continue;
-			}
-			if (ShouldExchange(InOutKeys[Index], InOutKeys[Index + 1], bInDescending))
-			{
-				Swap(InOutKeys[Index], InOutKeys[Index + 1]);
-			}
+			return InIndex;//a wall never moves
 		}
+
+		const int32 Radius = FMath::Max(InSearchRadius, 1);
+		int32 Head = InIndex;
+		int32 Tail = InIndex;
+		int32 Rank = 0;
+
+		for (int32 Step = 0; Step < Radius; ++Step)
+		{
+			const int32 Probe = InIndex - Step - 1;
+			if (Probe < 0) { Head = Probe + 1; break; }
+			if (!IsSortable(InKeys[Probe], Probe, InRules)) { Head = Probe + 1; break; }
+			// <= going back, < going forward. See the header: this asymmetry is what stops two
+			// equal-valued texels claiming the same destination.
+			if (InKeys[Probe] <= SelfKey) { ++Rank; }
+			Head = Probe;
+		}
+		for (int32 Step = 0; Step < Radius; ++Step)
+		{
+			const int32 Probe = InIndex + Step + 1;
+			if (Probe > Count - 1) { Tail = Probe - 1; break; }
+			if (!IsSortable(InKeys[Probe], Probe, InRules)) { Tail = Probe - 1; break; }
+			if (InKeys[Probe] < SelfKey) { ++Rank; }
+			Tail = Probe;
+		}
+		return bInDescending ? (Tail - Rank) : (Head + Rank);
 	}
 }
 
@@ -238,6 +244,7 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	TRefCountPtr<IPooledRenderTarget> ScreenResolvedTexture;
 	TRefCountPtr<IPooledRenderTarget> SortTargetA;
 	TRefCountPtr<IPooledRenderTarget> SortTargetB;
+	TRefCountPtr<IPooledRenderTarget> IndexTarget;
 	// Held for the whole function and released only at the end, as blur does. The pool keeps the RHI
 	// texture alive past a SafeRelease, but with two targets and many passes in flight there is no
 	// reason to lean on that.
@@ -245,6 +252,7 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		if (ScreenResolvedTexture.IsValid())ScreenResolvedTexture.SafeRelease();
 		if (SortTargetA.IsValid())SortTargetA.SafeRelease();
 		if (SortTargetB.IsValid())SortTargetB.SafeRelease();
+		if (IndexTarget.IsValid())IndexTarget.SafeRelease();
 	};
 
 	const uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
@@ -279,7 +287,14 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 			FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
 		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, SortTargetA, TEXT("LexUIPixelSortTargetA"));
 		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, SortTargetB, TEXT("LexUIPixelSortTargetB"));
-		if (!SortTargetA.IsValid() || !SortTargetB.IsValid())
+		// One float channel for the destination index. R32F holds every integer up to 2^24 exactly,
+		// far past any line length -- packing an index into 8-bit RGB, as the reference shader has to
+		// on Shadertoy, is unnecessary here and would only add rounding to something that must be
+		// compared for equality.
+		FPooledRenderTargetDesc IndexDesc(FPooledRenderTargetDesc::Create2DDesc(RegionSize, PF_R32_FLOAT,
+			FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable | TexCreate_ShaderResource, false));
+		GRenderTargetPool.FindFreeElement(RHICmdList, IndexDesc, IndexTarget, TEXT("LexUIPixelSortIndexTarget"));
+		if (!SortTargetA.IsValid() || !SortTargetB.IsValid() || !IndexTarget.IsValid())
 		{
 			ReleaseRenderTargets();
 			return;
@@ -287,6 +302,7 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	}
 	auto SortTextureA = SortTargetA->GetRHI();
 	auto SortTextureB = SortTargetB->GetRHI();
+	auto IndexTexture = IndexTarget->GetRHI();
 
 	// Grab the widget's region out of the screen.
 	const auto ModelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
@@ -309,75 +325,89 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, SourceScreenTexture, SortTextureA);
 	}
 
-	// Registered ONCE per pooled target, outside the loop. Registering the same RHI texture twice
-	// gives RDG two handles onto one resource, so it cannot see the dependency between passes and
-	// they race -- which shows up as per-frame flicker that disappears under r.RDG.ImmediateMode.
-	FRDGTextureRef TextureA = RegisterExternalTexture(GraphBuilder, SortTextureA, TEXT("LexUIPixelSortA"));
-	FRDGTextureRef TextureB = RegisterExternalTexture(GraphBuilder, SortTextureB, TEXT("LexUIPixelSortB"));
-
-	FRDGTextureRef ReadTexture = TextureA;
-	FRDGTextureRef WriteTexture = TextureB;
+	// Registered once per pooled target. Registering the same RHI texture twice gives RDG two
+	// handles onto one resource, so it cannot see the dependency between passes and they race.
+	FRDGTextureRef SourceTexture = RegisterExternalTexture(GraphBuilder, SortTextureA, TEXT("LexUIPixelSortSource"));
+	FRDGTextureRef DestinationTexture = RegisterExternalTexture(GraphBuilder, IndexTexture, TEXT("LexUIPixelSortDestinations"));
+	FRDGTextureRef ResultRDGTexture = RegisterExternalTexture(GraphBuilder, SortTextureB, TEXT("LexUIPixelSortResult"));
 
 	TShaderMapRef<FLexUISimplePostProcessVS> VertexShader(GlobalShaderMap);
-	TShaderMapRef<FLexUIPostProcessPixelSortPS> PixelShader(GlobalShaderMap);
+	TShaderMapRef<FLexUIPostProcessPixelSortRankPS> RankShader(GlobalShaderMap);
+	TShaderMapRef<FLexUIPostProcessPixelSortGatherPS> GatherShader(GlobalShaderMap);
 
 	const FVector2f RegionSizeFloat((float)RegionSize.X, (float)RegionSize.Y);
 	const float AxisFlag = SortAxis == ELexPixelSortAxis::Horizontal ? 0.0f : 1.0f;
 	const float KeyFlag = (float)(uint8)SortKey;
 	const float DescendingFlag = bDescending ? 1.0f : 0.0f;
+	const float RadiusFloat = (float)SearchRadius;
 	const FVector4f IntervalParams((float)(uint8)IntervalMode, (float)IntervalLength, Randomness, 0.0f);
+	// POINT sampling is mandatory, not a preference: the rank counts exact texels, and a blended
+	// sample belongs to no texel at all -- it would make neighbouring invocations disagree about
+	// which of them comes first and two texels would claim one destination.
+	const auto SortSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 
-	for (int32 Phase = 0; Phase < SortPassCount; ++Phase)
+	// Pass 1: every texel scans its own run and writes where it is going.
 	{
-		// Fresh parameters per pass: the struct is owned by the graph and outlives this iteration.
 		auto* PassParameters = GraphBuilder.AllocParameters<FLexUIPixelSortPassParameters>();
-		PassParameters->SourceTexture = ReadTexture;
-		PassParameters->RenderTargets[0] = FRenderTargetBinding(WriteTexture, ERenderTargetLoadAction::ENoAction);
-
-		// Captured BY VALUE. The lambda runs after this function returns, so reading members off
-		// `this` inside it would race the game thread's parameter pushes.
-		const int32 PhaseParity = Phase & 1;
-		GraphBuilder.AddPass(
-			RDG_EVENT_NAME("LexUIPixelSort_Phase_%d", Phase),
-			PassParameters,
-			ERDGPassFlags::Raster,
-			[PassParameters, VertexShader, PixelShader, Renderer, ReadTexture, WriteTexture, RegionSizeFloat,
-			PhaseParity, Band = this->Band, AxisFlag, KeyFlag, DescendingFlag, IntervalParams](FRHICommandListImmediate& RHICmdList)
+		PassParameters->SourceTexture = SourceTexture;
+		PassParameters->RenderTargets[0] = FRenderTargetBinding(DestinationTexture, ERenderTargetLoadAction::ENoAction);
+		GraphBuilder.AddPass(RDG_EVENT_NAME("LexUIPixelSort_Rank"), PassParameters, ERDGPassFlags::Raster,
+			[VertexShader, RankShader, Renderer, SourceTexture, DestinationTexture, SortSampler,
+			RegionSizeFloat, Band = this->Band, AxisFlag, KeyFlag, DescendingFlag, RadiusFloat, IntervalParams]
+			(FRHICommandListImmediate& RHICmdList)
 			{
-				ReadTexture->MarkResourceAsUsed();
-				FGraphicsPipelineStateInitializer GraphicsPSOInit;
-				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-				GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIPostProcessVertexDeclaration();
-				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+				SourceTexture->MarkResourceAsUsed();
+				FGraphicsPipelineStateInitializer PSOInit;
+				RHICmdList.ApplyCachedRenderTargets(PSOInit);
+				PSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
+				PSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+				PSOInit.BlendState = TStaticBlendState<>::GetRHI();
+				PSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIPostProcessVertexDeclaration();
+				PSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+				PSOInit.BoundShaderState.PixelShaderRHI = RankShader.GetPixelShader();
+				PSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+				SetGraphicsPipelineState(RHICmdList, PSOInit, 0, EApplyRendertargetOption::CheckApply);
 				VertexShader->SetParameters(RHICmdList);
-				RHICmdList.SetViewport(0, 0, 0.0f, WriteTexture->Desc.Extent.X, WriteTexture->Desc.Extent.Y, 1.0f);
-
-				// POINT sampling, and this is not a preference. With a bilinear sampler the two
-				// halves of a pair read slightly different values, disagree about the exchange, and
-				// one texel is duplicated while its partner is erased -- every pass, compounding.
-				// The result still looks plausibly sorted, just progressively muddier.
-				PixelShader->SetParameters(RHICmdList, ReadTexture->GetRHI(),
-					TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI(),
-					RegionSizeFloat, (float)PhaseParity, Band, AxisFlag, KeyFlag, DescendingFlag, IntervalParams);
-
+				RHICmdList.SetViewport(0, 0, 0.0f, DestinationTexture->Desc.Extent.X, DestinationTexture->Desc.Extent.Y, 1.0f);
+				RankShader->SetParameters(RHICmdList, SourceTexture->GetRHI(), SortSampler,
+					RegionSizeFloat, Band, AxisFlag, KeyFlag, DescendingFlag, RadiusFloat, IntervalParams);
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
-
-		Swap(ReadTexture, WriteTexture);
 	}
 
-	// The result is in whichever texture the last swap left as the READ target. Getting this wrong
-	// shows either the raw grab, which reads as "the effect is off", or the second-to-last phase,
-	// which reads as working and is subtly wrong.
-	auto ResultTexture = (ReadTexture == TextureA) ? SortTextureA : SortTextureB;
+	// Pass 2: invert that into who comes here, because a pixel shader can only gather.
+	{
+		auto* PassParameters = GraphBuilder.AllocParameters<FLexUIPixelSortGatherParameters>();
+		PassParameters->SourceTexture = SourceTexture;
+		PassParameters->DestinationTexture = DestinationTexture;
+		PassParameters->RenderTargets[0] = FRenderTargetBinding(ResultRDGTexture, ERenderTargetLoadAction::ENoAction);
+		GraphBuilder.AddPass(RDG_EVENT_NAME("LexUIPixelSort_Gather"), PassParameters, ERDGPassFlags::Raster,
+			[VertexShader, GatherShader, Renderer, SourceTexture, DestinationTexture, ResultRDGTexture,
+			SortSampler, RegionSizeFloat, AxisFlag, RadiusFloat](FRHICommandListImmediate& RHICmdList)
+			{
+				SourceTexture->MarkResourceAsUsed();
+				DestinationTexture->MarkResourceAsUsed();
+				FGraphicsPipelineStateInitializer PSOInit;
+				RHICmdList.ApplyCachedRenderTargets(PSOInit);
+				PSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
+				PSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+				PSOInit.BlendState = TStaticBlendState<>::GetRHI();
+				PSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIPostProcessVertexDeclaration();
+				PSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+				PSOInit.BoundShaderState.PixelShaderRHI = GatherShader.GetPixelShader();
+				PSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+				SetGraphicsPipelineState(RHICmdList, PSOInit, 0, EApplyRendertargetOption::CheckApply);
+				VertexShader->SetParameters(RHICmdList);
+				RHICmdList.SetViewport(0, 0, 0.0f, ResultRDGTexture->Desc.Extent.X, ResultRDGTexture->Desc.Extent.Y, 1.0f);
+				GatherShader->SetParameters(RHICmdList, SourceTexture->GetRHI(), SortSampler,
+					DestinationTexture->GetRHI(), RegionSizeFloat, AxisFlag, RadiusFloat);
+				Renderer->DrawFullScreenQuad(RHICmdList);
+			});
+	}
 
-	const auto PointSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	auto ResultTexture = SortTextureB;
+
+	const auto PointSampler = SortSampler;
 	if (RenderTargetResource == nullptr)
 	{
 		if (!bFullScreen)
@@ -482,7 +512,7 @@ void ULexPixelSort::SendOthersDataToRenderProxy()
 	ENQUEUE_RENDER_COMMAND(FLexPixelSort_UpdateData)
 		([TempRenderProxy, PassCount, ResolvedBand, Axis, Key, Interval, Length, RandomAmount, bDesc](FRHICommandListImmediate& RHICmdList)
 			{
-				TempRenderProxy->SortPassCount = PassCount;
+				TempRenderProxy->SearchRadius = PassCount;
 				TempRenderProxy->Band = ResolvedBand;
 				TempRenderProxy->SortAxis = Axis;
 				TempRenderProxy->SortKey = Key;

@@ -18,8 +18,8 @@
 class FLexPixelSortRenderProxy : public FLexVisualPostProcessRenderProxy
 {
 public:
-	/** Compare-exchange phases to run. Zero means the effect does nothing. */
-	int32 SortPassCount = 0;
+	/** How far a texel may look along its run, and therefore how far it may travel. */
+	int32 SearchRadius = 0;
 	/** Threshold band, already ordered low-then-high by LexPixelSort::ResolveBand. */
 	FVector2f Band = FVector2f(0.25f, 0.8f);
 	ELexPixelSortAxis SortAxis = ELexPixelSortAxis::Vertical;
@@ -41,7 +41,7 @@ public:
 		// Returning true for them would still cost a full region grab and composite every frame, for
 		// a result identical to the untouched background -- and it would not show up as anything
 		// suspicious in a profile, just twenty widgets that are each slightly too expensive.
-		return SortPassCount > 0 && Band.X < Band.Y;
+		return SearchRadius > 0 && Band.X < Band.Y;
 	}
 
 	virtual void OnRenderPostProcess_RenderThread(

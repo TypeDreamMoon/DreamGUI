@@ -32,144 +32,120 @@ using LexPixelSortTestLocal::MakeRules;
  */
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexPixelSortConservationTest,
-	"LGUI.PixelSort.Phase.NoPixelIsLostOrDuplicated",
+	FLexPixelSortDestinationTest,
+	"LGUI.PixelSort.Rank.EveryTexelGetsItsOwnDestination",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FLexPixelSortConservationTest::RunTest(const FString& Parameters)
+bool FLexPixelSortDestinationTest::RunTest(const FString& Parameters)
 {
-	// The property that separates a sort from a smear: a sort is a PERMUTATION, so every value that
-	// went in comes out exactly once. The classic failure is a comparator that answers differently
-	// for the two members of a pair, which duplicates one texel and erases its partner on every tie.
-	// Flat UI backgrounds are nothing but ties, so it shows as a spreading stain of one colour.
-	TArray<float> Keys;
-	FRandomStream Stream(20260728);
-	for (int32 Index = 0; Index < 200; ++Index)
-	{
-		Keys.Add(Stream.FRand());
-	}
-	TArray<float> Expected = Keys;
-	Expected.Sort();
+	using namespace LexPixelSort;
+	// The property the whole algorithm rests on: the destinations must be a PERMUTATION. Each texel
+	// works out where it goes without seeing what anyone else decided, so if two of them land on the
+	// same index, one colour is duplicated and another erased -- and the second pass, which searches
+	// for whoever claimed its position, would find the wrong one.
+	//
+	// It holds because of the asymmetric tie-break, one character different on each side of the
+	// scan. That makes ties order by position. The fixture is therefore mostly ties, since that is
+	// the only case where it can fail, and flat UI colour is nothing but ties.
+	TArray<float> Keys = { 0.4f, 0.4f, 0.4f, 0.9f, 0.4f, 0.1f, 0.1f, 0.7f, 0.4f, 0.55f, 0.55f, 0.2f };
+	FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
 
-	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
-	for (int32 Phase = 0; Phase < 64; ++Phase)
+	for (int32 Descending = 0; Descending < 2; ++Descending)
 	{
-		LexPixelSort::ApplyPhase(Keys, Phase, Rules, false);
-	}
-
-	TArray<float> Actual = Keys;
-	Actual.Sort();
-	if (TestEqual(TEXT("The line is still the same length"), Actual.Num(), Expected.Num()))
-	{
-		bool bSameMultiset = true;
-		for (int32 Index = 0; Index < Actual.Num(); ++Index)
+		TArray<int32> Claims;
+		Claims.Init(0, Keys.Num());
+		for (int32 Index = 0; Index < Keys.Num(); ++Index)
 		{
-			bSameMultiset &= FMath::IsNearlyEqual(Actual[Index], Expected[Index]);
+			const int32 Destination = ComputeDestination(Keys, Index, Rules, Descending != 0, Keys.Num());
+			if (TestTrue(TEXT("A destination lands inside the line"), Destination >= 0 && Destination < Keys.Num()))
+			{
+				Claims[Destination]++;
+			}
 		}
-		TestTrue(TEXT("Every value that went in comes out exactly once"), bSameMultiset);
+		bool bPermutation = true;
+		for (int32 Count : Claims)
+		{
+			bPermutation &= Count == 1;
+		}
+		TestTrue(*FString::Printf(TEXT("Every index is claimed exactly once, descending=%d"), Descending), bPermutation);
 	}
+
+	// And it really sorts: gathering by destination gives an ordered line.
+	TArray<float> Sorted;
+	Sorted.Init(0.0f, Keys.Num());
+	for (int32 Index = 0; Index < Keys.Num(); ++Index)
+	{
+		Sorted[ComputeDestination(Keys, Index, Rules, false, Keys.Num())] = Keys[Index];
+	}
+	bool bOrdered = true;
+	for (int32 Index = 0; Index + 1 < Sorted.Num(); ++Index)
+	{
+		bOrdered &= Sorted[Index] <= Sorted[Index + 1];
+	}
+	TestTrue(TEXT("A full-radius scan sorts the run exactly"), bOrdered);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexPixelSortBandTest,
-	"LGUI.PixelSort.Phase.OutOfBandPixelsNeverMove",
+	FLexPixelSortWallsTest,
+	"LGUI.PixelSort.Rank.WallsStayPutAndBoundTheirRuns",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FLexPixelSortBandTest::RunTest(const FString& Parameters)
+bool FLexPixelSortWallsTest::RunTest(const FString& Parameters)
 {
-	// Out-of-band pixels are the walls that make a run a run. If only the anchor's band is checked --
-	// the natural half to write -- the effect still looks like a pixel sort, but runs bleed through
-	// their own boundaries and the threshold stops meaning anything.
+	using namespace LexPixelSort;
+	// Out-of-band texels are what makes a run a run. They must not move, and crucially the scan must
+	// STOP at them -- a rank counted past a wall would place a texel outside its own run, dragging
+	// colour across a boundary the author drew deliberately.
 	TArray<float> Keys = { 0.9f, 0.55f, 0.30f, 0.45f, 0.05f, 0.70f, 0.60f, 0.95f };
-	const TArray<float> Original = Keys;
 	const FLexPixelSortRunRules Rules = MakeRules(0.25f, 0.8f);
 
-	for (int32 Phase = 0; Phase < 16; ++Phase)
+	for (int32 Index = 0; Index < Keys.Num(); ++Index)
 	{
-		LexPixelSort::ApplyPhase(Keys, Phase, Rules, false);
-	}
-
-	for (int32 Index = 0; Index < Original.Num(); ++Index)
-	{
-		if (!LexPixelSort::IsSortable(Original[Index], Index, Rules))
+		const int32 Destination = ComputeDestination(Keys, Index, Rules, false, Keys.Num());
+		if (!IsSortable(Keys[Index], Index, Rules))
 		{
-			TestEqual(*FString::Printf(TEXT("Out-of-band value at %d stayed put"), Index), Keys[Index], Original[Index]);
+			TestEqual(*FString::Printf(TEXT("Wall at %d stays put"), Index), Destination, Index);
+		}
+		else
+		{
+			// 0.9 and 0.05 and 0.95 are walls, so the runs are [1..3] and [5..6].
+			const bool bFirstRun = Index >= 1 && Index <= 3;
+			const bool bLanded = bFirstRun ? (Destination >= 1 && Destination <= 3) : (Destination >= 5 && Destination <= 6);
+			TestTrue(*FString::Printf(TEXT("Texel %d stays inside its own run"), Index), bLanded);
 		}
 	}
-	// And the in-band run between the walls really did sort, or the assertions above are vacuous.
-	TestTrue(TEXT("The run between the walls is ordered"), Keys[1] <= Keys[2] && Keys[2] <= Keys[3]);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexPixelSortOrderingTest,
-	"LGUI.PixelSort.Phase.EnoughPhasesFullySortARun",
+	FLexPixelSortRadiusTest,
+	"LGUI.PixelSort.Rank.TravelIsBoundedByTheSearchRadius",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FLexPixelSortOrderingTest::RunTest(const FString& Parameters)
+bool FLexPixelSortRadiusTest::RunTest(const FString& Parameters)
 {
-	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
-	auto RunAndCheck = [this, &Rules](bool bDescending)
-	{
-		TArray<float> Keys = { 0.7f, 0.1f, 0.9f, 0.35f, 0.5f, 0.05f, 0.8f, 0.2f };
-		// N phases is sufficient for an N-element odd-even transposition sort.
-		for (int32 Phase = 0; Phase < Keys.Num(); ++Phase)
-		{
-			LexPixelSort::ApplyPhase(Keys, Phase, Rules, bDescending);
-		}
-		bool bOrdered = true;
-		for (int32 Index = 0; Index + 1 < Keys.Num(); ++Index)
-		{
-			bOrdered &= bDescending ? (Keys[Index] >= Keys[Index + 1]) : (Keys[Index] <= Keys[Index + 1]);
-		}
-		TestTrue(*FString::Printf(TEXT("Fully sorted, descending=%d"), bDescending ? 1 : 0), bOrdered);
-	};
-	RunAndCheck(false);
-	RunAndCheck(true);
-
-	// The parity must alternate. A phase index that never changes parity stalls the line half-sorted,
-	// which reads to an author as "the strength slider tops out early".
-	TArray<float> Stalled = { 0.7f, 0.1f, 0.9f, 0.35f, 0.5f, 0.05f, 0.8f, 0.2f };
-	for (int32 Repeat = 0; Repeat < 16; ++Repeat)
-	{
-		LexPixelSort::ApplyPhase(Stalled, 0, Rules, false);
-	}
-	bool bFullyOrdered = true;
-	for (int32 Index = 0; Index + 1 < Stalled.Num(); ++Index)
-	{
-		bFullyOrdered &= Stalled[Index] <= Stalled[Index + 1];
-	}
-	TestFalse(TEXT("A never-alternating parity cannot finish the sort"), bFullyOrdered);
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexPixelSortTravelTest,
-	"LGUI.PixelSort.Phase.TravelIsBoundedByThePassCount",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FLexPixelSortTravelTest::RunTest(const FString& Parameters)
-{
-	// This bound is what SortStrength MEANS -- how far a pixel may smear. Any clever optimisation
-	// that moves a value more than one place per phase breaks the definition of the control, even if
-	// the finished image still looks sorted.
-	const int32 Count = 32;
+	using namespace LexPixelSort;
+	// The radius is both the cost bound and the reach control, and the second pass searches the same
+	// distance to find whoever claimed a position -- so a texel travelling further than the radius
+	// would simply be lost.
 	TArray<float> Keys;
-	for (int32 Index = 0; Index < Count; ++Index)
+	for (int32 Index = 0; Index < 64; ++Index)
 	{
-		Keys.Add(1.0f - Index / (float)Count);//worst case: exactly reversed
+		Keys.Add(1.0f - Index / 64.0f);//exactly reversed: every texel wants to travel as far as it can
 	}
 	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
-	const int32 Phases = 4;
-	const float Lowest = Keys.Last();
-	for (int32 Phase = 0; Phase < Phases; ++Phase)
+	for (const int32 Radius : { 1, 4, 16 })
 	{
-		LexPixelSort::ApplyPhase(Keys, Phase, Rules, false);
+		int32 Furthest = 0;
+		for (int32 Index = 0; Index < Keys.Num(); ++Index)
+		{
+			Furthest = FMath::Max(Furthest, FMath::Abs(ComputeDestination(Keys, Index, Rules, false, Radius) - Index));
+		}
+		TestTrue(*FString::Printf(TEXT("At radius %d nothing travels further than %d"), Radius, Radius),
+			Furthest <= Radius);
+		TestTrue(*FString::Printf(TEXT("At radius %d something actually moves"), Radius), Furthest > 0);
 	}
-	const int32 LandedAt = Keys.IndexOfByPredicate([Lowest](float V) { return FMath::IsNearlyEqual(V, Lowest); });
-	TestTrue(TEXT("The value that must travel furthest moved at most one place per phase"),
-		LandedAt != INDEX_NONE && (Count - 1 - LandedAt) <= Phases);
 	return true;
 }
 
@@ -248,75 +224,6 @@ bool FLexPixelSortKeyTest::RunTest(const FString& Parameters)
 	// but the ORDERING still uses the raw key.
 	const FVector2f Band = ResolveBand(0.0f, 1.0f);
 	TestTrue(TEXT("An over-bright key is still inside a full band"), IsInBand(4.0f, Band));
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexPixelSortGatherAgreementTest,
-	"LGUI.PixelSort.Phase.TwoIndependentDecisionsAlwaysAgree",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FLexPixelSortGatherAgreementTest::RunTest(const FString& Parameters)
-{
-	// The closest this codebase can get to testing the shader.
-	//
-	// A pixel shader cannot swap two texels -- each invocation only chooses which source texel to
-	// read. So every pair gets TWO independent decisions, and the sort is correct only if they agree.
-	// Disagreement duplicates one texel and erases its partner, and on a flat background, where every
-	// pair is a tie, that happens to every pair on every pass. Running the gather formulation over a
-	// whole line and requiring it to reproduce ApplyPhase exactly is what pins that.
-	//
-	// Ties are the case that matters, so the fixture is built to be full of them.
-	TArray<float> Base = { 0.4f, 0.4f, 0.9f, 0.4f, 0.1f, 0.1f, 0.7f, 0.4f, 0.55f, 0.55f, 0.2f, 0.95f };
-	const TArray<FLexPixelSortRunRules> RuleSets = { MakeRules(0.0f, 1.0f), MakeRules(0.25f, 0.8f) };
-
-	for (const FLexPixelSortRunRules& Rules : RuleSets)
-	{
-		for (int32 Descending = 0; Descending < 2; ++Descending)
-		{
-			TArray<float> ByApply = Base;
-			for (int32 Phase = 0; Phase < 8; ++Phase)
-			{
-				// One phase, both ways.
-				TArray<float> Before = ByApply;
-				LexPixelSort::ApplyPhase(ByApply, Phase, Rules, Descending != 0);
-
-				TArray<float> ByGather;
-				ByGather.SetNum(Before.Num());
-				for (int32 Index = 0; Index < Before.Num(); ++Index)
-				{
-					ByGather[Index] = Before[LexPixelSort::GatherIndex(Before, Index, Phase, Rules, Descending != 0)];
-				}
-
-				bool bAgree = ByGather.Num() == ByApply.Num();
-				for (int32 Index = 0; bAgree && Index < ByApply.Num(); ++Index)
-				{
-					bAgree = FMath::IsNearlyEqual(ByGather[Index], ByApply[Index]);
-				}
-				TestTrue(*FString::Printf(TEXT("Gather matches swap at phase %d, band %.2f-%.2f, descending=%d"),
-					Phase, Rules.Band.X, Rules.Band.Y, Descending), bAgree);
-			}
-		}
-	}
-
-	// And that the gather really is a permutation on its own terms -- a texel is never gathered by
-	// two different outputs, which is the shape the duplication bug takes.
-	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
-	for (int32 Phase = 0; Phase < 2; ++Phase)
-	{
-		TArray<int32> GatherCount;
-		GatherCount.Init(0, Base.Num());
-		for (int32 Index = 0; Index < Base.Num(); ++Index)
-		{
-			GatherCount[LexPixelSort::GatherIndex(Base, Index, Phase, Rules, false)]++;
-		}
-		bool bPermutation = true;
-		for (int32 Count : GatherCount)
-		{
-			bPermutation &= Count == 1;
-		}
-		TestTrue(*FString::Printf(TEXT("Every source texel is read exactly once at phase %d"), Phase), bPermutation);
-	}
 	return true;
 }
 
