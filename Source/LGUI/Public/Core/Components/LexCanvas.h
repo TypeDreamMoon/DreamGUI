@@ -659,6 +659,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "LGUI-CanvasScaler")
 	bool Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const;
 	/**
+	 * Where a world point lands in the shipped image, given back as a world point lying ON this
+	 * canvas's own plane. Projecting through the canvas's view-projection and then placing the
+	 * result back on the plane turns "where will this appear" into an ordinary scene point, which
+	 * any camera -- including an orthographic editor viewport that has no perspective divide of its
+	 * own -- can then draw. A point already in the plane maps to itself, so this is silent for flat
+	 * content and only says something where there is depth. False if the point is at or behind the
+	 * canvas's eye, or the canvas has no sized widget.
+	 */
+	bool ProjectWorldPointOntoCanvasPlane(const FVector& InWorldPoint, FVector& OutWorldOnPlane)const;
+	/**
 	 * Project 3D world position to 2D screen-space-UI position with specific player's camera.
 	 * This function need player pawn contains a camera component, and use this camera to do projection, so it can be used for world space UI.
 	 * @param Player 

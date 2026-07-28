@@ -152,6 +152,12 @@ private:
 	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;
 	void DrawWidgetScreenOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas, const FLinearColor& Color, float Thickness = 1.0f) const;
 	void DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
+	/**
+	 * Draw where the selection actually lands in the shipped image, computed with the canvas's own
+	 * view-projection, without moving the camera or leaving the layout surface. Silent for anything
+	 * that ships where it was laid out, which is most things.
+	 */
+	void DrawShippedImageOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
 	/** Overlay common device resolutions anchored at the design canvas top-left, like UMG's designer. */
 	void DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	void DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const;

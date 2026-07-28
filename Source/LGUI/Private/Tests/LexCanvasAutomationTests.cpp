@@ -197,4 +197,70 @@ bool FLexCanvasExactFitTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexCanvasShippedPlaneTest,
+	"LGUI.Canvas.DepthBecomesVisibleWhenFoldedBackOntoTheCanvasPlane",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexCanvasShippedPlaneTest::RunTest(const FString& Parameters)
+{
+	using namespace LexCanvasProjectionTestLocal;
+	// ProjectWorldPointOntoCanvasPlane exists so an ORTHOGRAPHIC editor viewport can show
+	// foreshortening. Ortho has no perspective divide, so depth alone never changes anything on
+	// screen; folding the point back onto the canvas plane converts the divide into a position,
+	// which ortho can then draw. Two properties make it usable: it must be the identity on flat
+	// content, so a design surface is not disturbed, and it must move things the right way.
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = NewObject<ULexWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Root->SetDisplayName(TEXT("Root"));
+	Root->SetWidth(1600.0f);
+	Root->SetHeight(900.0f);
+	Root->OnRegister();
+	ULexCanvas* Canvas = Root->AddComponent<ULexCanvas>();
+	if (!TestNotNull(TEXT("Canvas created"), Canvas))return false;
+	Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	Canvas->SetProjectionType(ECameraProjectionMode::Perspective);
+	Canvas->SetFieldOfView(60.0f);
+	if (!TestEqual(TEXT("The canvas keeps the fixture's authored width"), Root->GetWidth(), 1600.0f))return false;
+
+	const FTransform& World = Root->GetWorldTransform();
+	const FVector InPlane = World.TransformPosition(FVector(0.0, 300.0, -180.0));
+
+	// Identity on the plane. This is what lets the outline stay silent for flat content, and so
+	// what keeps it from becoming a permanent second outline that authors learn to ignore.
+	FVector Folded;
+	if (TestTrue(TEXT("An in-plane point projects"), Canvas->ProjectWorldPointOntoCanvasPlane(InPlane, Folded)))
+	{
+		TestTrue(TEXT("An in-plane point folds back onto itself"), Folded.Equals(InPlane, 0.01));
+	}
+
+	// Depth turns into lateral position, in the direction an author expects: local +X is away from
+	// the eye, so pushing back pulls the point toward the vanishing centre and pulling forward
+	// throws it outward. Under ortho this is the entire visible signal.
+	const FVector Away = InPlane + World.TransformVector(FVector(400.0, 0.0, 0.0));
+	const FVector Toward = InPlane - World.TransformVector(FVector(400.0, 0.0, 0.0));
+	FVector FoldedAway, FoldedToward;
+	if (TestTrue(TEXT("A pushed-back point projects"), Canvas->ProjectWorldPointOntoCanvasPlane(Away, FoldedAway))
+		&& TestTrue(TEXT("A pulled-forward point projects"), Canvas->ProjectWorldPointOntoCanvasPlane(Toward, FoldedToward)))
+	{
+		const FVector Centre = World.GetLocation();
+		TestTrue(TEXT("Everything lands on the canvas plane"),
+			FMath::IsNearlyEqual(World.InverseTransformPosition(FoldedAway).X, 0.0, 0.01)
+			&& FMath::IsNearlyEqual(World.InverseTransformPosition(FoldedToward).X, 0.0, 0.01));
+		TestTrue(TEXT("Pushing back moves it toward the centre"),
+			FVector::Dist(FoldedAway, Centre) < FVector::Dist(InPlane, Centre) - 1.0);
+		TestTrue(TEXT("Pulling forward throws it outward"),
+			FVector::Dist(FoldedToward, Centre) > FVector::Dist(InPlane, Centre) + 1.0);
+	}
+
+	// A point at or behind the eye has no image at all, and must be refused rather than mirrored:
+	// FSceneView::ScreenToPixel flips a negative W instead of rejecting it, so an unguarded caller
+	// would draw a plausible-looking outline folded inside out.
+	FVector Unused;
+	const FVector BehindTheEye = World.TransformPosition(FVector(-2000.0, 0.0, 0.0));
+	TestFalse(TEXT("A point behind the eye is refused, not mirrored"),
+		Canvas->ProjectWorldPointOntoCanvasPlane(BehindTheEye, Unused));
+	return true;
+}
+
 #endif

@@ -1317,6 +1317,66 @@ void FLexUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewpor
 	}
 }
 
+void FLexUIPrefabEditorViewportClient::DrawShippedImageOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas) const
+{
+	// The 2D view is orthographic, and an orthographic projection has no perspective divide: a
+	// widget pushed away in depth keeps exactly its laid-out size on screen. Perspective is
+	// therefore invisible here however the camera is calibrated -- not because the remap did not
+	// run, but because the last step discards what it did. Trading the design surface for a
+	// perspective projection would cost the handles, the ruler, the grid and arrow-key nudging,
+	// all of which key off IsOrtho or off the projection matrix itself. So instead the shipped
+	// position is computed with the canvas's own matrices and drawn alongside: the author sees
+	// layout and shipped image at once, rather than having one replace the other.
+	if (!IsValid(InWidget))return;
+	ULexCanvas* RootCanvas = GetPreviewRootCanvas();
+	if (RootCanvas == nullptr
+		|| RootCanvas->IsRenderToWorldSpace()
+		|| RootCanvas->GetProjectionType() != ECameraProjectionMode::Perspective)
+	{
+		return;//no virtual camera to ship through, so the shipped image IS the layout
+	}
+
+	const float Left = -InWidget->GetPivot().X * InWidget->GetWidth();
+	const float Right = (1.0f - InWidget->GetPivot().X) * InWidget->GetWidth();
+	const float Bottom = -InWidget->GetPivot().Y * InWidget->GetHeight();
+	const float Top = (1.0f - InWidget->GetPivot().Y) * InWidget->GetHeight();
+	const FTransform& LayoutTransform = InWidget->GetWorldTransform();
+	const float DpiScale = Canvas.GetDPIScale();
+
+	TArray<FVector2D> Shipped;
+	double MaxDeviation = 0.0;
+	for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
+	{
+		FVector OnPlane;
+		if (!RootCanvas->ProjectWorldPointOntoCanvasPlane(FVector(InWidget->GetWorldMatrix().TransformPosition(Local)), OnPlane))return;
+		FVector2D Pixel, LayoutPixel;
+		if (!View.WorldToPixel(OnPlane, Pixel))return;
+		if (!View.WorldToPixel(LayoutTransform.TransformPosition(Local), LayoutPixel))return;
+		MaxDeviation = FMath::Max(MaxDeviation, FVector2D::Distance(Pixel, LayoutPixel));
+		Shipped.Add(Pixel / DpiScale);
+	}
+	// Silent when the two coincide. Flat content ships where it is laid out, so drawing this
+	// unconditionally would put a second outline on every selection forever and train authors to
+	// ignore it -- costing exactly the cases it exists to show.
+	if (MaxDeviation <= 1.0)return;
+
+	const FLinearColor ShippedColor(1.0f, 0.35f, 0.75f);
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		FCanvasLineItem Line(Shipped[Index], Shipped[(Index + 1) % 4]);
+		Line.SetColor(ShippedColor);
+		Line.LineThickness = 1.5f;
+		Canvas.DrawItem(Line);
+	}
+	FBox2D ShippedBounds(EForceInit::ForceInit);
+	for (const FVector2D& Corner : Shipped)ShippedBounds += Corner;
+	FCanvasTextItem Label(FVector2D(ShippedBounds.Min.X, ShippedBounds.Max.Y + 2.0f),
+		NSLOCTEXT("LexUIPrefabEditor", "ShippedImageOutline", "shipped"),
+		GEngine->GetSmallFont(), ShippedColor);
+	Label.EnableShadow(FLinearColor::Black);
+	Canvas.DrawItem(Label);
+}
+
 void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
 {
 	if (!IsOrtho())return;
@@ -1329,6 +1389,13 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 	if (PaletteDropPreviewWidget.IsValid())
 	{
 		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
+	}
+	if (PrefabEditorPtr.IsValid())
+	{
+		for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+		{
+			DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
+		}
 	}
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();

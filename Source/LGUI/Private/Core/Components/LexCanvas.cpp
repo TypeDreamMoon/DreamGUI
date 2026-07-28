@@ -3073,6 +3073,21 @@ bool ULexCanvas::ConvertPositionFromCanvasToViewport(const FVector2D& InPosition
 	}
 	return false;
 }
+bool ULexCanvas::ProjectWorldPointOntoCanvasPlane(const FVector& InWorldPoint, FVector& OutWorldOnPlane)const
+{
+	auto LexWidget = GetWidget();
+	if (!IsValid(LexWidget) || LexWidget->GetWidth() <= 0.0f || LexWidget->GetHeight() <= 0.0f)return false;
+	const FVector4 Clip = GetViewProjectionMatrix().TransformFVector4(FVector4(InWorldPoint, 1.0));
+	if (Clip.W <= UE_KINDA_SMALL_NUMBER)return false;//at or behind the eye
+	// NDC is a direct fraction of the canvas rect: at CalculateDistanceToCamera the rect maps to
+	// the NDC square on both axes, which is what makes this a plain remap rather than a fit.
+	const FVector2D NDC(Clip.X / Clip.W, Clip.Y / Clip.W);
+	const FVector Local(0.0,
+		(NDC.X * 0.5 + 0.5 - LexWidget->GetPivot().X) * LexWidget->GetWidth(),
+		(NDC.Y * 0.5 + 0.5 - LexWidget->GetPivot().Y) * LexWidget->GetHeight());
+	OutWorldOnPlane = LexWidget->GetWorldTransform().TransformPosition(Local);
+	return true;
+}
 bool ULexCanvas::Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const
 {
 	if (RootCanvas != this)return false;
