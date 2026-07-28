@@ -586,4 +586,72 @@ bool FLexPerspectiveIsAuthorableTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveLayoutIsTheWriteBackSpaceTest,
+	"LGUI.Perspective.Widget.MovingAWidgetIsMeasuredInLayoutSpaceNotDrawnSpace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveLayoutIsTheWriteBackSpaceTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPerspectiveWidgetTestLocal;
+	// A guard against a plausible future "fix" rather than against today's code.
+	//
+	// Once the editor viewport projects through the canvas, a widget inside a Perspective scope is
+	// DRAWN somewhere other than where it is LAID OUT, and the designer outline and its handles have
+	// to pick one. The properties that decide what such a change may and may not do are recorded
+	// here, because nothing else in the suite states them: every other perspective test asks where
+	// a widget is drawn, not what a setter did or what a picked point means.
+	//
+	// The short version: moving the DRAW side is safe, and moving the WRITE-BACK is unnecessary --
+	// but only because the remap happens to be rigid sideways. What is not safe is deprojecting
+	// against the layout plane while drawing on the drawn one, since they are at different depths
+	// and one screen pixel is then worth different world distances on each.
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 1600.0f, 900.0f);
+	Root->AddComponent<ULexCanvas>()->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 800.0f, 600.0f);
+	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 120.0f, 160.0f);
+	Table->SetPerspective(true);
+	Table->SetPerspectiveFieldOfView(70.0f);
+	Card->SetRelativeLocation(FVector(0.0, 200.0, 0.0));
+	Card->SetRenderTranslation(FVector(-140.0, 0.0, 0.0));//pulled toward the viewer, so it magnifies
+	if (!TestTrue(TEXT("The card is inside the scope"), Card->HasInheritedPerspective()))return false;
+
+	const FVector LayoutBefore = Card->GetWorldTransform().GetLocation();
+	const FVector DrawnBefore(Card->GetWorldMatrix().TransformPosition(FVector::ZeroVector));
+	if (!TestFalse(TEXT("The card really is drawn away from where it is laid out"),
+		DrawnBefore.Equals(LayoutBefore, 1.0)))return false;
+
+	// A setter moves the widget by exactly what it was told, measured in LAYOUT space.
+	const double Requested = 90.0;
+	Card->SetRelativeLocation(FVector(0.0, 200.0 + Requested, 0.0));
+	const FVector LayoutAfter = Card->GetWorldTransform().GetLocation();
+	TestEqual(TEXT("A setter moves the layout position by exactly what it asked for"),
+		LayoutAfter.Y - LayoutBefore.Y, Requested, 0.01);
+
+	// And so does the drawn position -- which is the non-obvious part, and the reason a drag can
+	// write its delta straight back through a setter. The remap is rank-one along the plane normal:
+	// it displaces by an amount that depends ONLY on depth, so it translates each depth-plane
+	// rigidly and a sideways move passes through it unchanged. Were it a lateral scale instead, a
+	// delta measured on the drawn surface would have to be divided before being written back.
+	const FVector DrawnAfter(Card->GetWorldMatrix().TransformPosition(FVector::ZeroVector));
+	TestEqual(TEXT("Sideways motion passes through the remap one for one"),
+		DrawnAfter.Y - DrawnBefore.Y, Requested, 0.01);
+	// Depth is the direction it is NOT rigid in, which is what makes the two surfaces different
+	// things to deproject against: they sit at different depths from the eye, so one screen pixel
+	// is worth a different number of world units on each.
+	TestFalse(TEXT("Depth is displaced, so the two surfaces are not the same plane"),
+		FMath::IsNearlyEqual(DrawnAfter.X, LayoutAfter.X, 1.0));
+
+	// The inverse of the drawn matrix is what converts a picked point back into the space setters
+	// speak, which is why a deproject that intersects the DRAWN surface can still write back
+	// correctly: local coordinates recovered through GetWorldMatrix are layout-local by
+	// construction. Stated as a test so the conversion is not re-derived by guesswork.
+	const FVector PickedOnDrawnSurface(Card->GetWorldMatrix().TransformPosition(FVector(0.0, 40.0, -25.0)));
+	const FVector RecoveredLocal(Card->GetWorldMatrix().Inverse().TransformPosition(PickedOnDrawnSurface));
+	TestTrue(TEXT("Inverting the drawn matrix recovers layout-local coordinates"),
+		RecoveredLocal.Equals(FVector(0.0, 40.0, -25.0), 0.01));
+	return true;
+}
+
 #endif

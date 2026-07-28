@@ -271,13 +271,17 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 		auto DrawWidget = [=](ULexWidget* InWidget, const FColor& Color)
 		{
-			auto WorldTransform = InWidget->GetWorldTransform();
+			// The DRAWN matrix, not the layout one. These frames exist to say "this is the widget",
+			// so inside a Perspective scope they have to follow the widget's foreshortened geometry
+			// rather than sit where layout would have put it. Nothing is dragged by them, which is
+			// what makes this safe here and not safe for the designer handles.
+			auto WorldTransform = InWidget->GetWorldMatrix();
 			FVector RelativeOffset(0, 0, 0);
 			RelativeOffset.Y = (0.5f - InWidget->GetPivot().X) * InWidget->GetWidth();
 			RelativeOffset.Z = (0.5f - InWidget->GetPivot().Y) * InWidget->GetHeight();
 			auto Extends = FVector2D(InWidget->GetWidth(), InWidget->GetHeight()) * 0.5f;
 			ULexUIManagerWorldSubsystem::DrawDebugRect(InWidget->GetWorld()
-				, RelativeOffset, WorldTransform.ToMatrixWithScale()
+				, RelativeOffset, WorldTransform
 				, Extends, Color
 				, InWidget, InWidget->GetDisplayName(), ScreenOrWorld);
 		};
@@ -312,13 +316,13 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		//self
 		{
 			RectDrawColor = FColor(0, 255, 0, 255);//green means selected object
-			auto WorldTransform = Widget->GetWorldTransform();
+			auto WorldTransform = Widget->GetWorldMatrix();
 			FVector RelativeOffset(0, 0, 0);
 			RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetWidth();
 			RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetHeight();
 			auto Extends = FVector2D(Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
 			ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld()
-				, RelativeOffset, WorldTransform.ToMatrixWithScale()
+				, RelativeOffset, WorldTransform
 				, Extends, RectDrawColor
 				, Widget, Widget->GetDisplayName(), ScreenOrWorld);
 
@@ -333,7 +337,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 				if (WidgetExtends3D != GeometryBoundsExtends || RelativeOffset != GeometryRelativeOffset)
 				{
 					ULexUIManagerWorldSubsystem::DrawDebugBox(Widget->GetWorld()
-						, GeometryRelativeOffset, WorldTransform.ToMatrixWithScale()
+						, GeometryRelativeOffset, WorldTransform
 						, GeometryBoundsExtends, GeometryBoundsDrawColor
 						, Widget->GetVisual() , FString::Printf(TEXT("%s.Visual"), *Widget->GetDisplayName()), ScreenOrWorld);
 				}

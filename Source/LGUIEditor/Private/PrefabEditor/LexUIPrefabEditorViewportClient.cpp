@@ -1341,14 +1341,22 @@ void FLexUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewpor
 
 void FLexUIPrefabEditorViewportClient::DrawShippedImageOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas) const
 {
-	// The 2D view is orthographic, and an orthographic projection has no perspective divide: a
-	// widget pushed away in depth keeps exactly its laid-out size on screen. Perspective is
-	// therefore invisible here however the camera is calibrated -- not because the remap did not
-	// run, but because the last step discards what it did. Trading the design surface for a
-	// perspective projection would cost the handles, the ruler, the grid and arrow-key nudging,
-	// all of which key off IsOrtho or off the projection matrix itself. So instead the shipped
-	// position is computed with the canvas's own matrices and drawn alongside: the author sees
-	// layout and shipped image at once, rather than having one replace the other.
+	// Where the widget actually draws, marked on a surface whose handles deliberately stay where it
+	// is LAID OUT.
+	//
+	// The 2D view now projects through the canvas, so a widget inside a Perspective scope is drawn
+	// away from its layout rect. The selection outline and its eight handles could have followed it
+	// there, and were not, on purpose: the drag path deprojects onto the layout plane, and the drawn
+	// surface sits at a different depth, so a handle drawn on one and dragged against the other
+	// stops tracking the cursor by the ratio of those depths. Handles that do not stick to the
+	// cursor are the worst thing that can happen to a design surface, and the layout rect is also
+	// what the numbers in the panel mean. So the blue outline says where it is laid out, and this
+	// one says where it lands.
+	//
+	// Still computed by folding onto the canvas plane rather than by projecting the drawn corners
+	// directly, because both paths have to work: under the canvas view the two agree exactly, and
+	// under the orthographic fallback -- a world-space canvas, or a canvas that cannot see its own
+	// plane -- folding is the only thing that makes the foreshortening visible at all.
 	if (!IsValid(InWidget))return;
 	ULexCanvas* RootCanvas = GetPreviewRootCanvas();
 	if (RootCanvas == nullptr
