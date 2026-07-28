@@ -13,6 +13,7 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/LexPerspective.h"
 #include "Engine/World.h"
+#include "Event/LexPointerEventData.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 /*
