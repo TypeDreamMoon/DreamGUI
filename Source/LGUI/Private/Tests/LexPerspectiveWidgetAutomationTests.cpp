@@ -25,12 +25,34 @@
 
 namespace LexPerspectiveWidgetTestLocal
 {
+	/**
+	 * An EDITOR world, not a game world, and that is load-bearing rather than incidental.
+	 *
+	 * Setting a canvas to ScreenSpaceOverlay runs CheckAndApplyViewportParameter, which asks
+	 * GetViewportSize() and then RESIZES the root widget to the answer. In a game world with no
+	 * player controller -- every headless test -- that answer is its FIntPoint(2, 2) fallback, so
+	 * every canvas in this file used to be two units wide with its eye 1.7 units off the plane,
+	 * while the widgets under it were hundreds of units across. Everything asserted here is a
+	 * relationship rather than a magnitude, so it all passed; it was simply passing about a
+	 * configuration no author will ever have. In an editor world GetViewportSize() derives from the
+	 * widget itself, so the authored size survives every later projection setter.
+	 *
+	 * ULexUIManagerWorldSubsystem is still present -- UWorldSubsystem::DoesSupportWorldType admits
+	 * Editor by default and it does not override that -- so layout still rebuilds. Only
+	 * ULexScreenUISubsystem opts out of editor worlds, and nothing here goes through the viewport.
+	 */
 	struct FScopedGameWorld
 	{
 		UWorld* World = nullptr;
-		FScopedGameWorld() { World = UWorld::CreateWorld(EWorldType::Game, false); }
+		FScopedGameWorld() { World = UWorld::CreateWorld(EWorldType::Editor, false); }
 		~FScopedGameWorld() { if (World) { World->DestroyWorld(false); } }
 	};
+
+	/** The scale the whole file assumes. Asserted, not hoped for -- see FScopedGameWorld. */
+	bool CanvasKeptItsSize(const ULexWidget* InRoot, float InExpectedWidth)
+	{
+		return InRoot != nullptr && FMath::IsNearlyEqual(InRoot->GetWidth(), InExpectedWidth, 0.01f);
+	}
 
 	ULexWidget* MakeWidget(UWorld* World, ULexWidget* Parent, const TCHAR* Name, float W, float H)
 	{
@@ -58,6 +80,13 @@ bool FLexPerspectiveInheritanceTest::RunTest(const FString& Parameters)
 	FScopedGameWorld TestWorld;
 	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
 	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 400.0f, 300.0f);
+	// One assertion for the whole file: the canvas must not have resized the root out from under
+	// the fixture. Everything here is a relationship rather than a magnitude, so all of it passed
+	// for a long time on a 2x2 canvas whose eye stood 1.7 units off the plane -- a configuration no
+	// author will ever have. See FScopedGameWorld for why the world type is what prevents it.
+	Root->AddComponent<ULexCanvas>()->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	if (!TestTrue(TEXT("The canvas leaves the fixture's authored size alone"),
+		CanvasKeptItsSize(Root, 800.0f)))return false;
 	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 100.0f, 140.0f);
 	ULexWidget* Pip = MakeWidget(TestWorld.World, Card, TEXT("Pip"), 10.0f, 10.0f);
 	ULexWidget* Hud = MakeWidget(TestWorld.World, Root, TEXT("Hud"), 200.0f, 50.0f);
