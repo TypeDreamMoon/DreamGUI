@@ -6,6 +6,19 @@
 
 #include "Core/Components/LexPixelSort.h"
 
+namespace LexPixelSortTestLocal
+{
+	/** Threshold-mode rules, which is what every test below was written against. */
+	FLexPixelSortRunRules MakeRules(float InLow, float InHigh)
+	{
+		FLexPixelSortRunRules Rules;
+		Rules.Interval = ELexPixelSortInterval::Threshold;
+		Rules.Band = LexPixelSort::ResolveBand(InLow, InHigh);
+		return Rules;
+	}
+}
+using LexPixelSortTestLocal::MakeRules;
+
 /*
  * The pixel sort's arithmetic.
  *
@@ -38,10 +51,10 @@ bool FLexPixelSortConservationTest::RunTest(const FString& Parameters)
 	TArray<float> Expected = Keys;
 	Expected.Sort();
 
-	const FVector2f Band = LexPixelSort::ResolveBand(0.0f, 1.0f);
+	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
 	for (int32 Phase = 0; Phase < 64; ++Phase)
 	{
-		LexPixelSort::ApplyPhase(Keys, Phase, Band, false);
+		LexPixelSort::ApplyPhase(Keys, Phase, Rules, false);
 	}
 
 	TArray<float> Actual = Keys;
@@ -70,16 +83,16 @@ bool FLexPixelSortBandTest::RunTest(const FString& Parameters)
 	// their own boundaries and the threshold stops meaning anything.
 	TArray<float> Keys = { 0.9f, 0.55f, 0.30f, 0.45f, 0.05f, 0.70f, 0.60f, 0.95f };
 	const TArray<float> Original = Keys;
-	const FVector2f Band = LexPixelSort::ResolveBand(0.25f, 0.8f);
+	const FLexPixelSortRunRules Rules = MakeRules(0.25f, 0.8f);
 
 	for (int32 Phase = 0; Phase < 16; ++Phase)
 	{
-		LexPixelSort::ApplyPhase(Keys, Phase, Band, false);
+		LexPixelSort::ApplyPhase(Keys, Phase, Rules, false);
 	}
 
 	for (int32 Index = 0; Index < Original.Num(); ++Index)
 	{
-		if (!LexPixelSort::IsInBand(Original[Index], Band))
+		if (!LexPixelSort::IsSortable(Original[Index], Index, Rules))
 		{
 			TestEqual(*FString::Printf(TEXT("Out-of-band value at %d stayed put"), Index), Keys[Index], Original[Index]);
 		}
@@ -96,14 +109,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FLexPixelSortOrderingTest::RunTest(const FString& Parameters)
 {
-	const FVector2f Band = LexPixelSort::ResolveBand(0.0f, 1.0f);
-	auto RunAndCheck = [this, &Band](bool bDescending)
+	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
+	auto RunAndCheck = [this, &Rules](bool bDescending)
 	{
 		TArray<float> Keys = { 0.7f, 0.1f, 0.9f, 0.35f, 0.5f, 0.05f, 0.8f, 0.2f };
 		// N phases is sufficient for an N-element odd-even transposition sort.
 		for (int32 Phase = 0; Phase < Keys.Num(); ++Phase)
 		{
-			LexPixelSort::ApplyPhase(Keys, Phase, Band, bDescending);
+			LexPixelSort::ApplyPhase(Keys, Phase, Rules, bDescending);
 		}
 		bool bOrdered = true;
 		for (int32 Index = 0; Index + 1 < Keys.Num(); ++Index)
@@ -120,7 +133,7 @@ bool FLexPixelSortOrderingTest::RunTest(const FString& Parameters)
 	TArray<float> Stalled = { 0.7f, 0.1f, 0.9f, 0.35f, 0.5f, 0.05f, 0.8f, 0.2f };
 	for (int32 Repeat = 0; Repeat < 16; ++Repeat)
 	{
-		LexPixelSort::ApplyPhase(Stalled, 0, Band, false);
+		LexPixelSort::ApplyPhase(Stalled, 0, Rules, false);
 	}
 	bool bFullyOrdered = true;
 	for (int32 Index = 0; Index + 1 < Stalled.Num(); ++Index)
@@ -147,12 +160,12 @@ bool FLexPixelSortTravelTest::RunTest(const FString& Parameters)
 	{
 		Keys.Add(1.0f - Index / (float)Count);//worst case: exactly reversed
 	}
-	const FVector2f Band = LexPixelSort::ResolveBand(0.0f, 1.0f);
+	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
 	const int32 Phases = 4;
 	const float Lowest = Keys.Last();
 	for (int32 Phase = 0; Phase < Phases; ++Phase)
 	{
-		LexPixelSort::ApplyPhase(Keys, Phase, Band, false);
+		LexPixelSort::ApplyPhase(Keys, Phase, Rules, false);
 	}
 	const int32 LandedAt = Keys.IndexOfByPredicate([Lowest](float V) { return FMath::IsNearlyEqual(V, Lowest); });
 	TestTrue(TEXT("The value that must travel furthest moved at most one place per phase"),
@@ -255,9 +268,9 @@ bool FLexPixelSortGatherAgreementTest::RunTest(const FString& Parameters)
 	//
 	// Ties are the case that matters, so the fixture is built to be full of them.
 	TArray<float> Base = { 0.4f, 0.4f, 0.9f, 0.4f, 0.1f, 0.1f, 0.7f, 0.4f, 0.55f, 0.55f, 0.2f, 0.95f };
-	const TArray<FVector2f> Bands = { LexPixelSort::ResolveBand(0.0f, 1.0f), LexPixelSort::ResolveBand(0.25f, 0.8f) };
+	const TArray<FLexPixelSortRunRules> RuleSets = { MakeRules(0.0f, 1.0f), MakeRules(0.25f, 0.8f) };
 
-	for (const FVector2f& Band : Bands)
+	for (const FLexPixelSortRunRules& Rules : RuleSets)
 	{
 		for (int32 Descending = 0; Descending < 2; ++Descending)
 		{
@@ -266,13 +279,13 @@ bool FLexPixelSortGatherAgreementTest::RunTest(const FString& Parameters)
 			{
 				// One phase, both ways.
 				TArray<float> Before = ByApply;
-				LexPixelSort::ApplyPhase(ByApply, Phase, Band, Descending != 0);
+				LexPixelSort::ApplyPhase(ByApply, Phase, Rules, Descending != 0);
 
 				TArray<float> ByGather;
 				ByGather.SetNum(Before.Num());
 				for (int32 Index = 0; Index < Before.Num(); ++Index)
 				{
-					ByGather[Index] = Before[LexPixelSort::GatherIndex(Before, Index, Phase, Band, Descending != 0)];
+					ByGather[Index] = Before[LexPixelSort::GatherIndex(Before, Index, Phase, Rules, Descending != 0)];
 				}
 
 				bool bAgree = ByGather.Num() == ByApply.Num();
@@ -281,21 +294,21 @@ bool FLexPixelSortGatherAgreementTest::RunTest(const FString& Parameters)
 					bAgree = FMath::IsNearlyEqual(ByGather[Index], ByApply[Index]);
 				}
 				TestTrue(*FString::Printf(TEXT("Gather matches swap at phase %d, band %.2f-%.2f, descending=%d"),
-					Phase, Band.X, Band.Y, Descending), bAgree);
+					Phase, Rules.Band.X, Rules.Band.Y, Descending), bAgree);
 			}
 		}
 	}
 
 	// And that the gather really is a permutation on its own terms -- a texel is never gathered by
 	// two different outputs, which is the shape the duplication bug takes.
-	const FVector2f Band = LexPixelSort::ResolveBand(0.0f, 1.0f);
+	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
 	for (int32 Phase = 0; Phase < 2; ++Phase)
 	{
 		TArray<int32> GatherCount;
 		GatherCount.Init(0, Base.Num());
 		for (int32 Index = 0; Index < Base.Num(); ++Index)
 		{
-			GatherCount[LexPixelSort::GatherIndex(Base, Index, Phase, Band, false)]++;
+			GatherCount[LexPixelSort::GatherIndex(Base, Index, Phase, Rules, false)]++;
 		}
 		bool bPermutation = true;
 		for (int32 Count : GatherCount)
@@ -304,6 +317,93 @@ bool FLexPixelSortGatherAgreementTest::RunTest(const FString& Parameters)
 		}
 		TestTrue(*FString::Printf(TEXT("Every source texel is read exactly once at phase %d"), Phase), bPermutation);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPixelSortIntervalTest,
+	"LGUI.PixelSort.Interval.SpatialModesIgnoreTheImageAndThresholdDoesNot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPixelSortIntervalTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPixelSort;
+	// The distinction the interval axis exists for, and the one that is easy to collapse by accident:
+	// Threshold follows the picture, so the runs move when the picture changes. Random and Waves are
+	// position-only, so the SAME runs are cut out of any image at all -- which is why they read as an
+	// imposed pattern rather than as something draped over the content.
+	auto CutsFor = [](const FLexPixelSortRunRules& InRules, const TArray<float>& InKeys)
+	{
+		TArray<bool> Cuts;
+		for (int32 Index = 0; Index < InKeys.Num(); ++Index)
+		{
+			Cuts.Add(IsSortable(InKeys[Index], Index, InRules));
+		}
+		return Cuts;
+	};
+
+	TArray<float> ImageA, ImageB;
+	FRandomStream Stream(4242);
+	for (int32 Index = 0; Index < 128; ++Index)
+	{
+		ImageA.Add(Stream.FRand());
+		ImageB.Add(Stream.FRand());
+	}
+
+	for (ELexPixelSortInterval Mode : { ELexPixelSortInterval::Waves, ELexPixelSortInterval::Random, ELexPixelSortInterval::None })
+	{
+		FLexPixelSortRunRules Rules;
+		Rules.Interval = Mode;
+		Rules.IntervalLength = 8;
+		TestEqual(*FString::Printf(TEXT("Mode %d cuts the same runs from any image"), (int32)Mode),
+			CutsFor(Rules, ImageA), CutsFor(Rules, ImageB));
+	}
+
+	// Threshold must NOT have that property, or the mode has silently collapsed into a spatial one.
+	FLexPixelSortRunRules ThresholdRules = MakeRules(0.25f, 0.8f);
+	TestNotEqual(TEXT("Threshold follows the image rather than the position"),
+		CutsFor(ThresholdRules, ImageA), CutsFor(ThresholdRules, ImageB));
+
+	// None sorts the whole line end to end -- nothing is a wall.
+	FLexPixelSortRunRules NoneRules;
+	NoneRules.Interval = ELexPixelSortInterval::None;
+	bool bAllSortable = true;
+	for (int32 Index = 0; Index < ImageA.Num(); ++Index)
+	{
+		bAllSortable &= IsSortable(ImageA[Index], Index, NoneRules);
+	}
+	TestTrue(TEXT("None leaves no walls at all"), bAllSortable);
+
+	// Waves puts its walls at a fixed spacing, so the count is predictable; Random averages the same
+	// spacing without the regularity. Both must actually cut SOMETHING, or the mode does nothing.
+	for (ELexPixelSortInterval Mode : { ELexPixelSortInterval::Waves, ELexPixelSortInterval::Random })
+	{
+		FLexPixelSortRunRules Rules;
+		Rules.Interval = Mode;
+		Rules.IntervalLength = 8;
+		int32 Walls = 0;
+		for (int32 Index = 0; Index < ImageA.Num(); ++Index)
+		{
+			Walls += IsSortable(ImageA[Index], Index, Rules) ? 0 : 1;
+		}
+		TestTrue(*FString::Printf(TEXT("Mode %d actually cuts the line"), (int32)Mode), Walls > 0 && Walls < ImageA.Num());
+	}
+
+	// Randomness drops whole runs, not scattered pixels. With a length of 8 and everything dropped,
+	// nothing survives; with nothing dropped, the run structure is untouched.
+	FLexPixelSortRunRules AllDropped = MakeRules(0.0f, 1.0f);
+	AllDropped.Randomness = 1.0f;
+	bool bAnySurvives = false;
+	for (int32 Index = 0; Index < ImageA.Num(); ++Index)
+	{
+		bAnySurvives |= IsSortable(ImageA[Index], Index, AllDropped);
+	}
+	TestFalse(TEXT("Full randomness leaves nothing sorted"), bAnySurvives);
+
+	// Different lines must differ, or every row cuts identically and the result is a column grid.
+	FLexPixelSortRunRules LineZero;  LineZero.Interval = ELexPixelSortInterval::Waves;  LineZero.IntervalLength = 8;  LineZero.LineIndex = 0;
+	FLexPixelSortRunRules LineOne = LineZero;  LineOne.LineIndex = 1;
+	TestNotEqual(TEXT("Neighbouring lines cut differently"), CutsFor(LineZero, ImageA), CutsFor(LineOne, ImageA));
 	return true;
 }
 

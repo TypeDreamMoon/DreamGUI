@@ -50,6 +50,29 @@ namespace LexPixelSort
 			const float MinChannel = FMath::Min3(InColor.R, InColor.G, InColor.B);
 			return MaxChannel > UE_SMALL_NUMBER ? (MaxChannel - MinChannel) / MaxChannel : 0.0f;
 		}
+		case ELexPixelSortKey::Hue:
+		{
+			// 0..1 around the wheel. This WRAPS, so a run spanning red splits rather than sorting
+			// smoothly -- inherent to ordering an angle, and the reason hue reads as bands of colour
+			// rather than as a gradient.
+			const float MaxChannel = FMath::Max3(InColor.R, InColor.G, InColor.B);
+			const float MinChannel = FMath::Min3(InColor.R, InColor.G, InColor.B);
+			const float Chroma = MaxChannel - MinChannel;
+			if (Chroma <= UE_SMALL_NUMBER)
+			{
+				return 0.0f;//grey has no hue
+			}
+			float Hue;
+			if (MaxChannel == InColor.R)      Hue = (InColor.G - InColor.B) / Chroma;
+			else if (MaxChannel == InColor.G) Hue = 2.0f + (InColor.B - InColor.R) / Chroma;
+			else                              Hue = 4.0f + (InColor.R - InColor.G) / Chroma;
+			Hue /= 6.0f;
+			return Hue < 0.0f ? Hue + 1.0f : Hue;
+		}
+		case ELexPixelSortKey::Intensity:
+			return (InColor.R + InColor.G + InColor.B) / 3.0f;
+		case ELexPixelSortKey::Minimum:
+			return FMath::Min3(InColor.R, InColor.G, InColor.B);
 		case ELexPixelSortKey::Alpha:
 			return InColor.A;
 		case ELexPixelSortKey::Luminance:
@@ -67,6 +90,67 @@ namespace LexPixelSort
 		return Clamped >= InBand.X && Clamped <= InBand.Y;
 	}
 
+	uint32 Hash(uint32 InValue)
+	{
+		// A stable 32-bit mixer, chosen because it is trivially reproducible in HLSL. The runs must
+		// be identical on both sides or the tests describe a different image from the one drawn.
+		InValue ^= InValue >> 16;
+		InValue *= 0x7feb352du;
+		InValue ^= InValue >> 15;
+		InValue *= 0x846ca68bu;
+		InValue ^= InValue >> 16;
+		return InValue;
+	}
+
+	bool IsSortable(float InKey, int32 InIndex, const FLexPixelSortRunRules& InRules)
+	{
+		const uint32 LineSeed = Hash((uint32)InRules.LineIndex * 0x9e3779b9u);
+		const int32 Length = FMath::Max(InRules.IntervalLength, 2);
+
+		// Which run this texel belongs to, and whether it is a wall. Threshold asks the image; the
+		// other two ask only the position, which is exactly why they impose a pattern rather than
+		// following one.
+		int32 RunIndex = 0;
+		switch (InRules.Interval)
+		{
+		case ELexPixelSortInterval::Threshold:
+			if (!IsInBand(InKey, InRules.Band))return false;
+			// Runs are delimited by the image, so there is no index to speak of. Randomness falls
+			// back to a coarse spatial block, which breaks the line up without needing a scan the
+			// shader could not do anyway.
+			RunIndex = InIndex / Length;
+			break;
+		case ELexPixelSortInterval::Waves:
+			RunIndex = InIndex / Length;
+			// A wall every Length texels, jittered per line so rows do not align into a grid.
+			if ((InIndex % Length) == (int32)(LineSeed % (uint32)Length))return false;
+			break;
+		case ELexPixelSortInterval::Random:
+		{
+			// Walls scattered at an average spacing of Length. Position-only, like Waves, but
+			// without the regularity.
+			RunIndex = InIndex / Length;
+			const uint32 Roll = Hash(LineSeed ^ ((uint32)InIndex * 0x85ebca6bu));
+			if ((Roll % (uint32)Length) == 0u)return false;
+			break;
+		}
+		case ELexPixelSortInterval::None:
+		default:
+			RunIndex = 0;
+			break;
+		}
+
+		if (InRules.Randomness > 0.0f)
+		{
+			// Dropped a RUN at a time rather than a pixel at a time -- per-pixel would dissolve into
+			// noise instead of leaving recognisable stretches untouched, which is the look this is
+			// borrowed from.
+			const uint32 Roll = Hash(LineSeed ^ ((uint32)RunIndex * 0xc2b2ae35u));
+			if ((Roll & 0xffffffu) < (uint32)(InRules.Randomness * (float)0xffffff))return false;
+		}
+		return true;
+	}
+
 	bool ShouldExchange(float InLowerKey, float InUpperKey, bool bInDescending)
 	{
 		// ONE expression, evaluated identically by both members of a pair. Writing the mirrored form
@@ -75,7 +159,7 @@ namespace LexPixelSort
 		return bInDescending ? (InLowerKey < InUpperKey) : (InLowerKey > InUpperKey);
 	}
 
-	int32 GatherIndex(const TArray<float>& InKeys, int32 InIndex, int32 InPhase, const FVector2f& InBand, bool bInDescending)
+	int32 GatherIndex(const TArray<float>& InKeys, int32 InIndex, int32 InPhase, const FLexPixelSortRunRules& InRules, bool bInDescending)
 	{
 		const int32 Count = InKeys.Num();
 		const bool bIsLower = ((InIndex + (InPhase & 1)) % 2) == 0;
@@ -86,7 +170,7 @@ namespace LexPixelSort
 		}
 		const float SelfKey = InKeys[InIndex];
 		const float PartnerKey = InKeys[PartnerIndex];
-		if (!IsInBand(SelfKey, InBand) || !IsInBand(PartnerKey, InBand))
+		if (!IsSortable(SelfKey, InIndex, InRules) || !IsSortable(PartnerKey, PartnerIndex, InRules))
 		{
 			return InIndex;
 		}
@@ -97,7 +181,7 @@ namespace LexPixelSort
 		return ShouldExchange(LowerKey, UpperKey, bInDescending) ? PartnerIndex : InIndex;
 	}
 
-	void ApplyPhase(TArray<float>& InOutKeys, int32 InPhase, const FVector2f& InBand, bool bInDescending)
+	void ApplyPhase(TArray<float>& InOutKeys, int32 InPhase, const FLexPixelSortRunRules& InRules, bool bInDescending)
 	{
 		const int32 Count = InOutKeys.Num();
 		const int32 Parity = InPhase & 1;
@@ -106,7 +190,7 @@ namespace LexPixelSort
 			// Both members must be in band. Dropping the partner's test still looks like a pixel
 			// sort, but runs bleed through their own boundaries and the threshold stops meaning
 			// anything at all.
-			if (!IsInBand(InOutKeys[Index], InBand) || !IsInBand(InOutKeys[Index + 1], InBand))
+			if (!IsSortable(InOutKeys[Index], Index, InRules) || !IsSortable(InOutKeys[Index + 1], Index + 1, InRules))
 			{
 				continue;
 			}
@@ -230,6 +314,7 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	const float AxisFlag = SortAxis == ELexPixelSortAxis::Horizontal ? 0.0f : 1.0f;
 	const float KeyFlag = (float)(uint8)SortKey;
 	const float DescendingFlag = bDescending ? 1.0f : 0.0f;
+	const FVector4f IntervalParams((float)(uint8)IntervalMode, (float)IntervalLength, Randomness, 0.0f);
 
 	for (int32 Phase = 0; Phase < SortPassCount; ++Phase)
 	{
@@ -246,7 +331,7 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 			PassParameters,
 			ERDGPassFlags::Raster,
 			[PassParameters, VertexShader, PixelShader, Renderer, ReadTexture, WriteTexture, RegionSizeFloat,
-			PhaseParity, Band = this->Band, AxisFlag, KeyFlag, DescendingFlag](FRHICommandListImmediate& RHICmdList)
+			PhaseParity, Band = this->Band, AxisFlag, KeyFlag, DescendingFlag, IntervalParams](FRHICommandListImmediate& RHICmdList)
 			{
 				ReadTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
@@ -268,7 +353,7 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 				// The result still looks plausibly sorted, just progressively muddier.
 				PixelShader->SetParameters(RHICmdList, ReadTexture->GetRHI(),
 					TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI(),
-					RegionSizeFloat, (float)PhaseParity, Band, AxisFlag, KeyFlag, DescendingFlag);
+					RegionSizeFloat, (float)PhaseParity, Band, AxisFlag, KeyFlag, DescendingFlag, IntervalParams);
 
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
@@ -337,6 +422,18 @@ void ULexPixelSort::SetSortKey(ELexPixelSortKey Value)
 {
 	if (SortKey != Value) { SortKey = Value; SendOthersDataToRenderProxy(); }
 }
+void ULexPixelSort::SetIntervalMode(ELexPixelSortInterval Value)
+{
+	if (IntervalMode != Value) { IntervalMode = Value; SendOthersDataToRenderProxy(); }
+}
+void ULexPixelSort::SetIntervalLength(int32 Value)
+{
+	if (IntervalLength != Value) { IntervalLength = Value; SendOthersDataToRenderProxy(); }
+}
+void ULexPixelSort::SetRandomness(float Value)
+{
+	if (Randomness != Value) { Randomness = Value; SendOthersDataToRenderProxy(); }
+}
 void ULexPixelSort::SetSortStrength(float Value)
 {
 	if (SortStrength != Value) { SortStrength = Value; SendOthersDataToRenderProxy(); }
@@ -367,14 +464,20 @@ void ULexPixelSort::SendOthersDataToRenderProxy()
 	const FVector2f ResolvedBand = LexPixelSort::ResolveBand(ThresholdMin, ThresholdMax);
 	const ELexPixelSortAxis Axis = SortAxis;
 	const ELexPixelSortKey Key = SortKey;
+	const ELexPixelSortInterval Interval = IntervalMode;
+	const int32 Length = FMath::Max(IntervalLength, 2);
+	const float RandomAmount = FMath::Clamp(Randomness, 0.0f, 1.0f);
 	const bool bDesc = bDescending;
 	ENQUEUE_RENDER_COMMAND(FLexPixelSort_UpdateData)
-		([TempRenderProxy, PassCount, ResolvedBand, Axis, Key, bDesc](FRHICommandListImmediate& RHICmdList)
+		([TempRenderProxy, PassCount, ResolvedBand, Axis, Key, Interval, Length, RandomAmount, bDesc](FRHICommandListImmediate& RHICmdList)
 			{
 				TempRenderProxy->SortPassCount = PassCount;
 				TempRenderProxy->Band = ResolvedBand;
 				TempRenderProxy->SortAxis = Axis;
 				TempRenderProxy->SortKey = Key;
+				TempRenderProxy->IntervalMode = Interval;
+				TempRenderProxy->IntervalLength = Length;
+				TempRenderProxy->Randomness = RandomAmount;
 				TempRenderProxy->bDescending = bDesc;
 			});
 }

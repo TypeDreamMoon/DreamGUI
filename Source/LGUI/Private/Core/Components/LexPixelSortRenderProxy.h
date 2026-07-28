@@ -24,6 +24,9 @@ public:
 	FVector2f Band = FVector2f(0.25f, 0.8f);
 	ELexPixelSortAxis SortAxis = ELexPixelSortAxis::Vertical;
 	ELexPixelSortKey SortKey = ELexPixelSortKey::Luminance;
+	ELexPixelSortInterval IntervalMode = ELexPixelSortInterval::Threshold;
+	int32 IntervalLength = 32;
+	float Randomness = 0.0f;
 	bool bDescending = false;
 
 public:

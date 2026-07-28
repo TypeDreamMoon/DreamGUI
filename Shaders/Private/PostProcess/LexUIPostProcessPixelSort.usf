@@ -18,25 +18,61 @@ float2 _Band;           // threshold band, already ordered low then high
 float  _SortAxis;       // 0 = horizontal (sort along x), 1 = vertical (sort along y)
 float  _SortKey;        // matches ELexPixelSortKey
 float  _Descending;
+float4 _IntervalParams; // x = ELexPixelSortInterval, y = interval length, z = randomness, w unused
 
-// Mirrors LexPixelSort::ComputeKey.
+// Mirrors LexPixelSort::ComputeKey. Order matches ELexPixelSortKey exactly.
 float ComputeKey(float4 color)
 {
+    float maxChannel = max(color.r, max(color.g, color.b));
+    float minChannel = min(color.r, min(color.g, color.b));
+
     if (_SortKey < 0.5)         // Luminance
     {
         return dot(color.rgb, float3(0.2126, 0.7152, 0.0722));
     }
     else if (_SortKey < 1.5)    // Brightness
     {
-        return max(color.r, max(color.g, color.b));
+        return maxChannel;
     }
     else if (_SortKey < 2.5)    // Saturation
     {
-        float maxChannel = max(color.r, max(color.g, color.b));
-        float minChannel = min(color.r, min(color.g, color.b));
         return maxChannel > 0.00001 ? (maxChannel - minChannel) / maxChannel : 0.0;
     }
+    else if (_SortKey < 3.5)    // Hue -- wraps, so a run spanning red splits rather than sorting
+    {
+        float chroma = maxChannel - minChannel;
+        if (chroma <= 0.00001)
+        {
+            return 0.0;
+        }
+        float hue;
+        if (maxChannel == color.r)      hue = (color.g - color.b) / chroma;
+        else if (maxChannel == color.g) hue = 2.0 + (color.b - color.r) / chroma;
+        else                            hue = 4.0 + (color.r - color.g) / chroma;
+        hue /= 6.0;
+        return hue < 0.0 ? hue + 1.0 : hue;
+    }
+    else if (_SortKey < 4.5)    // Intensity
+    {
+        return (color.r + color.g + color.b) / 3.0;
+    }
+    else if (_SortKey < 5.5)    // Minimum
+    {
+        return minChannel;
+    }
     return color.a;             // Alpha
+}
+
+// Mirrors LexPixelSort::Hash. The runs must come out identical on both sides, or the tests describe
+// a different image from the one drawn.
+uint LexHash(uint value)
+{
+    value ^= value >> 16;
+    value *= 0x7feb352du;
+    value ^= value >> 15;
+    value *= 0x846ca68bu;
+    value ^= value >> 16;
+    return value;
 }
 
 // Mirrors LexPixelSort::IsInBand. Saturated for the band test ONLY -- the band is authored in 0..1
@@ -54,6 +90,55 @@ bool IsInBand(float key)
 bool ShouldExchange(float lowerKey, float upperKey)
 {
     return _Descending > 0.5 ? (lowerKey < upperKey) : (lowerKey > upperKey);
+}
+
+// Mirrors LexPixelSort::IsSortable. Threshold asks the image; Random and Waves ask only the
+// position, which is why they impose a pattern instead of following one.
+bool IsSortable(float key, int index, int lineIndex)
+{
+    uint lineSeed = LexHash((uint)lineIndex * 0x9e3779b9u);
+    int length = max((int)_IntervalParams.y, 2);
+    int mode = (int)(_IntervalParams.x + 0.5);
+    int runIndex = 0;
+
+    if (mode == 0)          // Threshold
+    {
+        if (!IsInBand(key))
+        {
+            return false;
+        }
+        runIndex = index / length;
+    }
+    else if (mode == 2)     // Waves
+    {
+        runIndex = index / length;
+        if ((uint)(index % length) == (lineSeed % (uint)length))
+        {
+            return false;
+        }
+    }
+    else if (mode == 1)     // Random
+    {
+        runIndex = index / length;
+        uint roll = LexHash(lineSeed ^ ((uint)index * 0x85ebca6bu));
+        if ((roll % (uint)length) == 0u)
+        {
+            return false;
+        }
+    }
+    // mode == 3 (None): everything takes part, runIndex stays 0
+
+    if (_IntervalParams.z > 0.0)
+    {
+        // Dropped a RUN at a time, not a pixel at a time -- per-pixel randomness dissolves into
+        // noise instead of leaving recognisable stretches untouched.
+        uint roll = LexHash(lineSeed ^ ((uint)runIndex * 0xc2b2ae35u));
+        if ((roll & 0xffffffu) < (uint)(_IntervalParams.z * 16777215.0))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 float4 PixelSortPS(SimpleVSToPS input) : SV_Target0
@@ -86,10 +171,11 @@ float4 PixelSortPS(SimpleVSToPS input) : SV_Target0
     float selfKey = ComputeKey(self);
     float partnerKey = ComputeKey(partner);
 
-    // BOTH must be in band. Dropping the partner's test still looks like a pixel sort, but runs
-    // bleed through their own boundaries and the threshold stops meaning anything -- out-of-band
-    // texels are precisely the walls that make a run a run.
-    if (!IsInBand(selfKey) || !IsInBand(partnerKey))
+    // BOTH must take part. Dropping the partner's test still looks like a pixel sort, but runs
+    // bleed through their own boundaries and the interval mode stops meaning anything -- the
+    // excluded texels are precisely the walls that make a run a run.
+    int lineIndex = (int)(bVertical ? texel.x : texel.y);
+    if (!IsSortable(selfKey, (int)index, lineIndex) || !IsSortable(partnerKey, (int)partnerIndex, lineIndex))
     {
         return self;
     }

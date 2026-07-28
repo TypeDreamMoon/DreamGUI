@@ -200,6 +200,7 @@ public:
 		SortAxisParameter.Bind(Initializer.ParameterMap, TEXT("_SortAxis"));
 		SortKeyParameter.Bind(Initializer.ParameterMap, TEXT("_SortKey"));
 		DescendingParameter.Bind(Initializer.ParameterMap, TEXT("_Descending"));
+		IntervalParamsParameter.Bind(Initializer.ParameterMap, TEXT("_IntervalParams"));
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
@@ -218,7 +219,8 @@ public:
 		, const FVector2f& InBand
 		, float InSortAxis
 		, float InSortKey
-		, float InDescending)
+		, float InDescending
+		, const FVector4f& InIntervalParams)
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
 
@@ -234,6 +236,7 @@ public:
 		SetShaderValue(BatchedParameters, SortAxisParameter, InSortAxis);
 		SetShaderValue(BatchedParameters, SortKeyParameter, InSortKey);
 		SetShaderValue(BatchedParameters, DescendingParameter, InDescending);
+		SetShaderValue(BatchedParameters, IntervalParamsParameter, InIntervalParams);
 
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
 	}
@@ -244,6 +247,7 @@ private:
 	LAYOUT_FIELD(FShaderParameter, SortAxisParameter);
 	LAYOUT_FIELD(FShaderParameter, SortKeyParameter);
 	LAYOUT_FIELD(FShaderParameter, DescendingParameter);
+	LAYOUT_FIELD(FShaderParameter, IntervalParamsParameter);
 };
 
 
