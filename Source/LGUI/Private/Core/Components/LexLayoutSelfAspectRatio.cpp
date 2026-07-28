@@ -1,4 +1,5 @@
 // Copyright 2025-Present LexLiu. All Rights Reserved.
+// Modified by TypeDreamMoon.
 
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "LGUI.h"

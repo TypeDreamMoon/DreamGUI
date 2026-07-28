@@ -1,3 +1,5 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
 #include "Tests/LexWidgetLifecycleTestTypes.h"
 
 #include "Core/Components/LexWidget.h"

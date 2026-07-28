@@ -1,3 +1,5 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/LexWidget.h"

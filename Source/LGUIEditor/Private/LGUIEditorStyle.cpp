@@ -1,4 +1,5 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
+// Modified by TypeDreamMoon.
 
 #include "LGUIEditorStyle.h"
 #include "Interfaces/IPluginManager.h"

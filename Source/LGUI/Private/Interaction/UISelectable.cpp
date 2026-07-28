@@ -1,4 +1,5 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Modified by TypeDreamMoon.
 
 #include "Interaction/UISelectable.h"
 #include "LGUI.h"

@@ -1,4 +1,5 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Modified by TypeDreamMoon.
 
 #pragma once
 #include "CoreMinimal.h"

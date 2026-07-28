@@ -1,3 +1,5 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
 #pragma once
 
 #include "Core/Components/LexText.h"

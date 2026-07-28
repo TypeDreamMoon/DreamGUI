@@ -1,4 +1,5 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
+// Modified by TypeDreamMoon.
 
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceObjectReference.h"
 #include "Engine/SCS_Node.h"

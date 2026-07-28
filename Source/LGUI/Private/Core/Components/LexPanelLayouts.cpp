@@ -1,4 +1,5 @@
-// Copyright 2026-Present LexLiu. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Portions derived from LGUI, Copyright 2026-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexImage.h"

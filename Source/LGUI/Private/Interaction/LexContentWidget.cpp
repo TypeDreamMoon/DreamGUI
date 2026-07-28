@@ -1,4 +1,4 @@
-// Copyright 2026-Present LexLiu. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/LexContentWidget.h"
 #include "Core/Components/LexWidget.h"

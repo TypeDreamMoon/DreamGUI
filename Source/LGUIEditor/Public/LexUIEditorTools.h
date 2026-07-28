@@ -1,4 +1,5 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Modified by TypeDreamMoon.
 
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Docking/SDockTab.h"
