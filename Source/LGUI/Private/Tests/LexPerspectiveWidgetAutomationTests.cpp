@@ -113,7 +113,7 @@ bool FLexPerspectiveLayoutUntouchedTest::RunTest(const FString& Parameters)
 	const FVector SecondWorldBefore = Second->GetWorldTransform().GetLocation();
 
 	Table->SetPerspective(true);
-	Table->SetPerspectiveDistance(400.0f);
+	Table->SetPerspectiveFieldOfView(53.0f);
 	ULexWidget::MarkLayoutForRebuild(Panel);
 	ULexWidget::RebuildLayoutImmediately(Panel);
 
@@ -149,12 +149,15 @@ bool FLexPerspectiveForeshortensDepthTest::RunTest(const FString& Parameters)
 	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
 	ULexCanvas* Canvas = Root->AddComponent<ULexCanvas>();
 	if (!TestNotNull(TEXT("The root has a canvas"), Canvas))return false;
+	// A fresh canvas is WorldSpace, where the scene camera does the projecting; perspective only
+	// applies where the canvas projects through its own virtual camera.
+	Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
 	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 400.0f, 300.0f);
 	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 100.0f, 140.0f);
 	Card->SetRelativeLocation(FVector(0.0, 150.0, 0.0));//off to one side, so foreshortening has a direction
 
 	Table->SetPerspective(true);
-	Table->SetPerspectiveDistance(300.0f);
+	Table->SetPerspectiveFieldOfView(67.0f);
 	if (!TestTrue(TEXT("The card is inside the scope"), Card->HasInheritedPerspective()))return false;
 	if (!TestNotNull(TEXT("The card renders through the canvas"), Card->GetRenderCanvas()))return false;
 
@@ -245,15 +248,18 @@ bool FLexPerspectiveDeclarerNotInOwnScopeTest::RunTest(const FString& Parameters
 	using namespace LexPerspectiveWidgetTestLocal;
 	FScopedGameWorld TestWorld;
 	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
-	Root->AddComponent<ULexCanvas>();
+	Root->AddComponent<ULexCanvas>()->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
 	ULexWidget* Outer = MakeWidget(TestWorld.World, Root, TEXT("Outer"), 500.0f, 400.0f);
 	ULexWidget* Inner = MakeWidget(TestWorld.World, Outer, TEXT("Inner"), 300.0f, 200.0f);
 	ULexWidget* Leaf = MakeWidget(TestWorld.World, Inner, TEXT("Leaf"), 60.0f, 60.0f);
 
 	Outer->SetPerspective(true);
-	Outer->SetPerspectiveDistance(700.0f);
+	// The angles matter here. A 40 degree scope on a 500-wide widget puts its eye at ~687, and the
+	// 800-wide canvas puts its own at ~693 -- near enough that the outer remap collapses to identity
+	// and every assertion below passes for the wrong reason. Chosen so all three eyes are far apart.
+	Outer->SetPerspectiveFieldOfView(100.0f);
 	Inner->SetPerspective(true);
-	Inner->SetPerspectiveDistance(250.0f);
+	Inner->SetPerspectiveFieldOfView(120.0f);
 
 	const FVector CanvasEye = Root->GetComponent<ULexCanvas>()->GetRootCanvas()->GetViewLocation();
 
@@ -265,6 +271,8 @@ bool FLexPerspectiveDeclarerNotInOwnScopeTest::RunTest(const FString& Parameters
 	if (!TestTrue(TEXT("The outer widget declares a scope"), Outer->GetPerspectiveScope(OuterScope)))return false;
 	const FMatrix OuterOnly = LexPerspective::MakeRemap(OuterScope, CanvasEye);
 
+	// Guard against the assertions below being satisfied by everything collapsing to identity.
+	TestFalse(TEXT("The outer scope actually does something"), OuterOnly.Equals(FMatrix::Identity, 0.01));
 	TestTrue(TEXT("The inner declarer is shaped by the outer scope alone"),
 		Inner->GetInheritedPerspectiveRemap().Equals(OuterOnly, 0.0001));
 	// The outermost declarer has nothing above it at all.
@@ -297,7 +305,7 @@ bool FLexPerspectiveHitTestFollowsTheDrawingTest::RunTest(const FString& Paramet
 	using namespace LexPerspectiveWidgetTestLocal;
 	FScopedGameWorld TestWorld;
 	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
-	Root->AddComponent<ULexCanvas>();
+	Root->AddComponent<ULexCanvas>()->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
 	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 400.0f, 300.0f);
 	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 100.0f, 140.0f);
 	Card->SetRelativeLocation(FVector(0.0, 150.0, 0.0));
@@ -305,7 +313,7 @@ bool FLexPerspectiveHitTestFollowsTheDrawingTest::RunTest(const FString& Paramet
 	if (!TestNotNull(TEXT("The card has a visual to hit"), Visual))return false;
 
 	Table->SetPerspective(true);
-	Table->SetPerspectiveDistance(300.0f);
+	Table->SetPerspectiveFieldOfView(67.0f);
 	// The origin is deliberately off to one side. With it directly in front of the card the remap
 	// would move the card only along its own normal, and a ray fired down that normal cannot tell a
 	// plane from the same plane shifted along it -- the test would pass whatever the hit test did.
@@ -349,6 +357,48 @@ bool FLexPerspectiveHitTestFollowsTheDrawingTest::RunTest(const FString& Paramet
 		TestTrue(TEXT("Without a scope the ordinary hit test still works"),
 			Visual->LineTraceUI(Hit, Centre + Normal * 500.0, Centre - Normal * 500.0));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveRefusesWhereItCannotApplyTest,
+	"LGUI.Perspective.Widget.InertWhereTheCanvasIsNotTheOneProjecting",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveRefusesWhereItCannotApplyTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPerspectiveWidgetTestLocal;
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	ULexCanvas* Canvas = Root->AddComponent<ULexCanvas>();
+	if (!TestNotNull(TEXT("The root has a canvas"), Canvas))return false;
+	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 400.0f, 300.0f);
+	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 100.0f, 140.0f);
+	Table->SetPerspective(true);
+	Card->SetRenderTranslation(FVector(90.0, 0.0, 0.0));//real depth, so there is something to foreshorten
+
+	// The feature re-aims geometry at the eye the CANVAS projects from. In a world-space mode the
+	// scene camera does the projecting and the canvas's eye is nobody, so re-aiming at it would
+	// displace everything for a viewer that does not exist. This is what the prefab editor previews
+	// through by default, which is why the answer has to be "inert" and not "approximately right".
+	Canvas->SetRenderMode(ELexRenderMode::WorldSpace);
+	TestTrue(TEXT("World space leaves the geometry alone"),
+		Card->GetInheritedPerspectiveRemap().Equals(FMatrix::Identity, 0.0));
+	Canvas->SetRenderMode(ELexRenderMode::WorldSpace_LexUI);
+	TestTrue(TEXT("So does world space through the LexUI renderer"),
+		Card->GetInheritedPerspectiveRemap().Equals(FMatrix::Identity, 0.0));
+
+	// An orthographic canvas has its eye at infinity, and no affine map sends a finite point there.
+	Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	Canvas->SetProjectionType(ECameraProjectionMode::Orthographic);
+	TestTrue(TEXT("An orthographic canvas has no perspective to share"),
+		Card->GetInheritedPerspectiveRemap().Equals(FMatrix::Identity, 0.0));
+
+	// And where the canvas really is the one projecting, it applies -- otherwise the assertions
+	// above would pass for a feature that never worked at all.
+	Canvas->SetProjectionType(ECameraProjectionMode::Perspective);
+	TestFalse(TEXT("A perspective screen-space canvas does apply it"),
+		Card->GetInheritedPerspectiveRemap().Equals(FMatrix::Identity, 0.0001));
 	return true;
 }
 

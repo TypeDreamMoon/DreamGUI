@@ -741,6 +741,22 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			MarkTransformChanged();
 			MarkLayoutForRebuild(this);
 		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RenderTranslation)
+			|| MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RenderRotation)
+			|| MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RenderScale)
+			|| MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RenderTransformPivot))
+		{
+			// The details panel writes the property memory and then tells us; it does not call the
+			// setter. Without this the value lands in the field and the widget never moves, which
+			// looks exactly like the feature not working.
+			ApplyRenderTransformChange();
+		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, bPerspective)
+			|| MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, PerspectiveFieldOfView)
+			|| MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, PerspectiveOrigin))
+		{
+			ApplyPerspectiveChange();
+		}
 		else if (MemberName == VisualName)
 		{
 			if (IsValid(Visual))
@@ -1352,7 +1368,7 @@ bool ULexWidget::GetPerspectiveScope(LexPerspective::FScope& OutScope)const
 		GetLocalSpaceBottom() + GetHeight() * PerspectiveOrigin.Y);
 	OutScope.PlanePoint = World.TransformPosition(LocalOrigin);
 	OutScope.PlaneNormal = World.TransformVector(FVector::XAxisVector).GetSafeNormal();
-	OutScope.EyePosition = OutScope.PlanePoint + OutScope.PlaneNormal * PerspectiveDistance;
+	OutScope.EyePosition = OutScope.PlanePoint + OutScope.PlaneNormal * GetPerspectiveDistance();
 	return true;
 }
 
@@ -1375,15 +1391,20 @@ FMatrix ULexWidget::GetInheritedPerspectiveRemap()const
 			Scopes.Add(Scope);
 		}
 	}
-	FVector CanvasEye = FVector::ZeroVector;
-	if (ULexCanvas* Canvas = GetRenderCanvas())
+	// The whole feature works by re-aiming geometry at the eye the canvas projects from, so it only
+	// means anything where that eye is what is actually looking. In a world-space mode the scene
+	// camera does the projecting and the canvas's eye is nobody; re-aiming at it would displace the
+	// geometry for a viewer that does not exist. And an orthographic canvas has its eye at infinity,
+	// which no affine map can reach -- CalculateDistanceToCamera even returns a hard 1000 there,
+	// a number that means "not applicable" rather than a distance.
+	ULexCanvas* Canvas = GetRenderCanvas();
+	ULexCanvas* Root = Canvas ? Canvas->GetRootCanvas() : nullptr;
+	if (Root == nullptr || Root->IsRenderToWorldSpace()
+		|| Root->GetProjectionType() != ECameraProjectionMode::Perspective)
 	{
-		if (ULexCanvas* Root = Canvas->GetRootCanvas())
-		{
-			CanvasEye = Root->GetViewLocation();
-		}
+		return FMatrix::Identity;
 	}
-	return LexPerspective::ComposeRemap(Scopes, CanvasEye);
+	return LexPerspective::ComposeRemap(Scopes, Root->GetViewLocation());
 }
 
 FMatrix ULexWidget::GetWorldMatrix()const
@@ -1406,12 +1427,21 @@ void ULexWidget::SetPerspective(bool Value)
 	}
 }
 
-void ULexWidget::SetPerspectiveDistance(float Value)
+float ULexWidget::GetPerspectiveDistance()const
 {
-	const float Sanitized = FMath::Max(1.0f, Value);//an eye on or behind the plane has no view
-	if (PerspectiveDistance != Sanitized)
+	// The same formula ULexCanvas::CalculateDistanceToCamera uses, so a widget's field of view means
+	// what the canvas's field of view means. Derived rather than stored: the widget's width is what
+	// makes the angle scale-invariant, and that width changes.
+	const float Clamped = FMath::Clamp(PerspectiveFieldOfView, 1.0f, 179.0f);
+	return GetWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(Clamped * 0.5f));
+}
+
+void ULexWidget::SetPerspectiveFieldOfView(float Value)
+{
+	const float Sanitized = FMath::Clamp(Value, 1.0f, 179.0f);
+	if (PerspectiveFieldOfView != Sanitized)
 	{
-		PerspectiveDistance = Sanitized;
+		PerspectiveFieldOfView = Sanitized;
 		ApplyPerspectiveChange();
 	}
 }
@@ -1425,13 +1455,37 @@ void ULexWidget::SetPerspectiveOrigin(const FVector2D& Value)
 	}
 }
 
-void ULexWidget::SetPerspectiveFromHorizontalFOV(float FOVDegrees)
+#if WITH_EDITOR
+void ULexWidget::WarnIfPerspectiveCannotApply()const
 {
-	const float Clamped = FMath::Clamp(FOVDegrees, 1.0f, 179.0f);
-	// The same formula ULexCanvas::CalculateDistanceToCamera uses, so a widget's field of view means
-	// what the canvas's field of view means.
-	SetPerspectiveDistance(GetWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(Clamped * 0.5f)));
+	if (!bPerspective)
+	{
+		return;
+	}
+	ULexCanvas* Canvas = GetRenderCanvas();
+	ULexCanvas* Root = Canvas ? Canvas->GetRootCanvas() : nullptr;
+	const TCHAR* Reason = nullptr;
+	if (Root == nullptr)
+	{
+		Reason = TEXT("this widget is not under a canvas");
+	}
+	else if (Root->IsRenderToWorldSpace())
+	{
+		// The prefab editor previews in world space by default, so this is the message an author is
+		// most likely to need: the field they are adjusting is genuinely inert in front of them.
+		Reason = TEXT("its canvas renders in world space, where the scene camera does the projecting and already supplies perspective of its own. Perspective applies to canvases that project through their own virtual camera -- ScreenSpaceOverlay, as in play -- so set the preview canvas to that, or check the result in play");
+	}
+	else if (Root->GetProjectionType() != ECameraProjectionMode::Perspective)
+	{
+		Reason = TEXT("its canvas is orthographic, which has its eye at infinity and no perspective to share");
+	}
+	if (Reason != nullptr)
+	{
+		UE_LOG(LGUI, Warning, TEXT("Perspective on '%s' has no effect here, because %s."),
+			*GetPathDisplayName(), Reason);
+	}
 }
+#endif
 
 void ULexWidget::ApplyPerspectiveChange()
 {
@@ -1440,6 +1494,10 @@ void ULexWidget::ApplyPerspectiveChange()
 	RefreshPerspectiveInHierarchy();
 	CalculateObjectToWorldTransform(true);
 	MarkCanvasUpdate(true);
+#if WITH_EDITOR
+	// Said at the moment the author touches it, which is the moment they are wondering.
+	WarnIfPerspectiveCannotApply();
+#endif
 }
 
 void ULexWidget::RefreshPerspectiveInHierarchy()

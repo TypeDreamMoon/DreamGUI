@@ -262,7 +262,8 @@ private:
 	 * PERSPECTIVE, in the shape CSS uses.
 	 *
 	 * Turning this on establishes a perspective for this widget's DESCENDANTS: children with depth
-	 * are foreshortened toward an eye standing PerspectiveDistance in front of this widget's plane.
+	 * are foreshortened toward an eye standing in front of this widget's plane, at whatever distance
+	 * PerspectiveFieldOfView works out to.
 	 * The declaring widget itself is not moved -- the remap fixes its plane pointwise -- so switching
 	 * it on never disturbs an interface that has no depth in it yet.
 	 *
@@ -276,22 +277,16 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter = "GetPerspective", Setter = "SetPerspective", meta = (AllowPrivateAccess = true, DisplayName = "Perspective"))
 	bool bPerspective = false;
 	/**
-	 * How far in front of this widget's plane the subtree is viewed from. Smaller is a stronger
-	 * effect -- it is the CSS `perspective` length.
+	 * The angle the subtree is viewed through, in degrees. Wider is a stronger effect, and it means
+	 * exactly what ULexCanvas::FieldOfView means -- the eye distance is derived from it with the
+	 * same formula, against this widget's own width.
 	 *
-	 * A distance and not a field of view, even though a field of view reads more naturally next to
-	 * the canvas's: a distance derived from an FOV depends on the widget's width, so a widget that
-	 * resized would silently change how deep its children look. Use SetPerspectiveFromHorizontalFOV
-	 * if you want to think in degrees; it converts once, with the same formula the canvas uses.
+	 * An angle and not a distance, because a widget gets stretched: a distance stays put while the
+	 * widget grows around it, so the same prefab would look half as deep at twice the size. An angle
+	 * is scale-invariant, the way a lens is -- filling more of the frame does not change the lens.
 	 */
-	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bPerspective", ClampMin = "1.0", UIMin = "50.0", UIMax = "5000.0", DisplayName = "Distance"))
-	float PerspectiveDistance = 600.0f;
-	/**
-	 * Where the eye stands over this widget's own rect, normalized: (0,0) bottom-left, (1,1)
-	 * top-right, matching RenderTransformPivot. The CSS `perspective-origin`, and the vanishing point
-	 * a subtree converges toward.
-	 */
-	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bPerspective", DisplayName = "Origin"))
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category = "Perspective", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bPerspective", ClampMin = "1.0", ClampMax = "179.0", UIMin = "10.0", UIMax = "120.0", DisplayName = "Field Of View"))
+	float PerspectiveFieldOfView = 60.0f;
 	FVector2D PerspectiveOrigin = FVector2D(0.5, 0.5);
 
 public:
@@ -332,22 +327,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Perspective")
 	bool GetPerspective()const { return bPerspective; }
 	UFUNCTION(BlueprintCallable, Category = "Perspective")
-	float GetPerspectiveDistance()const { return PerspectiveDistance; }
+	float GetPerspectiveFieldOfView()const { return PerspectiveFieldOfView; }
+	/** The eye distance the field of view works out to against the current width. */
+	UFUNCTION(BlueprintPure, Category = "Perspective")
+	float GetPerspectiveDistance()const;
 	UFUNCTION(BlueprintCallable, Category = "Perspective")
 	const FVector2D& GetPerspectiveOrigin()const { return PerspectiveOrigin; }
 	UFUNCTION(BlueprintCallable, Category = "Perspective")
 	void SetPerspective(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "Perspective")
-	void SetPerspectiveDistance(float Value);
+	void SetPerspectiveFieldOfView(float Value);
 	UFUNCTION(BlueprintCallable, Category = "Perspective")
 	void SetPerspectiveOrigin(const FVector2D& Value);
-	/**
-	 * Set the distance from a horizontal field of view, using the same formula the canvas uses for
-	 * its own. Converted once, against the width the widget has right now -- resizing later will not
-	 * re-derive it, which is exactly why the stored value is a distance.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Perspective")
-	void SetPerspectiveFromHorizontalFOV(float FOVDegrees);
 
 	/** True when this widget or any ancestor declares a perspective. One bit, kept up to date with the transform. */
 	UFUNCTION(BlueprintPure, Category = "Perspective")
@@ -421,6 +412,10 @@ public:
 	/** Recompute the cached has-a-render-transform bit and push the new transform down the subtree. */
 	void ApplyRenderTransformChange();
 	void ApplyPerspectiveChange();
+#if WITH_EDITOR
+	/** Say plainly when a declared perspective is inert, rather than leaving the author to guess. */
+	void WarnIfPerspectiveCannotApply()const;
+#endif
 	/** Recompute the cached bit for this widget and, when it changes, everything below it. */
 	void RefreshPerspectiveInHierarchy();
 	UFUNCTION(BlueprintCallable, Category = "Transform")
