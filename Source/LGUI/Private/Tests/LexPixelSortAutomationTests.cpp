@@ -407,4 +407,40 @@ bool FLexPixelSortIntervalTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPixelSortRegionTest,
+	"LGUI.PixelSort.Region.FullSizeMeansTheScreenAndNotAnAuthoredResolution",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPixelSortRegionTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPixelSort;
+	// The bug this exists to prevent, which shipped and was caught on screen rather than in review:
+	// inferring "the whole screen is the subject" by testing whether the widget rect HAPPENS to equal
+	// the screen size, instead of reading the flag that says so.
+	//
+	// With Use Full Size on, RectSize becomes the root canvas's AUTHORED resolution -- 1920x1080 --
+	// which equals the actual screen only by coincidence. Take the widget-rect path in that state and
+	// the sort runs in a buffer whose texels are not screen pixels and whose edges sample past what
+	// is on screen, so the effect's apparent strength changes with the viewport and flat bands of
+	// clamped edge colour get sorted into view.
+	const FVector2f AuthoredRect(1920.0f, 1080.0f);
+	const FIntPoint OddScreen(1274, 719);
+
+	TestEqual(TEXT("Full size uses the screen even when the authored rect differs"),
+		ResolveRegionSize(true, AuthoredRect, OddScreen), OddScreen);
+	// The coincidence that made the old test appear to work.
+	TestEqual(TEXT("Full size still uses the screen when the two happen to match"),
+		ResolveRegionSize(true, AuthoredRect, FIntPoint(1920, 1080)), FIntPoint(1920, 1080));
+	// And without the flag, the widget's own rect is the subject regardless of the screen.
+	TestEqual(TEXT("Without the flag the widget rect is the subject"),
+		ResolveRegionSize(false, FVector2f(400.0f, 260.0f), OddScreen), FIntPoint(400, 260));
+	TestEqual(TEXT("A widget rect equal to the screen is still the widget rect"),
+		ResolveRegionSize(false, FVector2f(1274.0f, 719.0f), OddScreen), OddScreen);
+	// A collapsed widget must not produce a zero-sized buffer.
+	TestEqual(TEXT("A degenerate rect still yields at least one texel"),
+		ResolveRegionSize(false, FVector2f(0.0f, 0.0f), OddScreen), FIntPoint(1, 1));
+	return true;
+}
+
 #endif

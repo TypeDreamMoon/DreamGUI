@@ -90,6 +90,15 @@ namespace LexPixelSort
 		return Clamped >= InBand.X && Clamped <= InBand.Y;
 	}
 
+	FIntPoint ResolveRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize)
+	{
+		if (bInUseFullSize)
+		{
+			return InScreenSize;
+		}
+		return FIntPoint(FMath::Max((int32)InRectSize.X, 1), FMath::Max((int32)InRectSize.Y, 1));
+	}
+
 	uint32 Hash(uint32 InValue)
 	{
 		// A stable 32-bit mixer, chosen because it is trivially reproducible in HLSL. The runs must
@@ -255,13 +264,15 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, ScreenTargetTexture.GetReference(), ScreenResolvedTexture->GetRHI());
 	}
 
-	const int32 RegionWidth = FMath::Max((int32)RectSize.X, 1);
-	const int32 RegionHeight = FMath::Max((int32)RectSize.Y, 1);
-	const FIntPoint RegionSize(RegionWidth, RegionHeight);
-	// NOTE: deliberately no bUseFullSize in-place shortcut. Blur can write straight into the
-	// backbuffer because its own passes ping-pong internally; a sort pass reading and writing the
-	// same texture produces per-tile garbage that varies by GPU and looks almost right locally.
-	const bool bFullScreen = RegionSize == ScreenSize;
+	// Read the FLAG, not a coincidence of sizes. bUseFullSize makes RectSize the root canvas's
+	// authored resolution, which almost never equals the screen -- so testing sizes takes the
+	// widget-rect path while the author has asked for the screen, and the sort then runs in a buffer
+	// whose texels are not pixels and whose edges sample past what is on screen.
+	const bool bFullScreen = bUseFullSize;
+	const FIntPoint RegionSize = LexPixelSort::ResolveRegionSize(bUseFullSize, RectSize, ScreenSize);
+	// Still no in-place shortcut, unlike blur: blur can write straight into the backbuffer because
+	// its own passes ping-pong internally, but a sort pass reading and writing one texture produces
+	// per-tile garbage that varies by GPU. Full screen here means a screen-sized SCRATCH buffer.
 
 	{
 		FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(RegionSize, ScreenTargetTexture->GetFormat(),

@@ -157,6 +157,22 @@ namespace LexPixelSort
 	 * exactly, so a shader written from this function is checkable against the sort.
 	 */
 	LGUI_API int32 GatherIndex(const TArray<float>& InKeys, int32 InIndex, int32 InPhase, const FLexPixelSortRunRules& InRules, bool bInDescending);
+
+	/**
+	 * The size of the buffer the sort runs in, and whether the whole screen is the subject.
+	 *
+	 * Pulled out because getting it wrong is invisible in code review and obvious on screen. The
+	 * first version inferred "full screen" by testing whether the widget rect happened to equal the
+	 * screen size, instead of reading the flag that says so. Those coincide almost never -- a canvas
+	 * authored at 1920x1080 shown in an editor viewport of any other size takes the widget-rect path
+	 * while the author has asked for the screen -- and the result is that the sort runs in a buffer
+	 * whose texels do not correspond to screen pixels, sampling past the edges of what is actually
+	 * on screen.
+	 *
+	 * When the whole screen is the subject the buffer must BE the screen, so a texel is a pixel and
+	 * nothing is sampled from outside it.
+	 */
+	LGUI_API FIntPoint ResolveRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize);
 }
 
 /**
