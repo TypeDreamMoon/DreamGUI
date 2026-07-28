@@ -1363,7 +1363,12 @@ bool ULexWidget::GetPerspectiveScope(LexPerspective::FScope& OutScope)const
 	{
 		return false;
 	}
-	const FTransform& World = GetWorldTransform();
+	// Layout's transform, not the drawn one. The scope's plane has to be where LAYOUT put this
+	// widget: measured against its own drawn transform the declarer is flat in its own plane by
+	// construction, and no perspective of its own could ever reach it. Taken from layout, the
+	// widget's own render rotation is a departure from that plane and foreshortens like anything
+	// else -- while a widget with no render transform still lies in the plane and is left alone.
+	const FTransform World = GetLayoutWorldTransform();
 	// The origin sits on this widget's own rect, like RenderTransformPivot, so it tracks a widget
 	// that gets stretched by its layout rather than drifting off it.
 	const FVector LocalOrigin(0.0,
@@ -1371,13 +1376,19 @@ bool ULexWidget::GetPerspectiveScope(LexPerspective::FScope& OutScope)const
 		GetLocalSpaceBottom() + GetHeight() * PerspectiveOrigin.Y);
 	OutScope.PlanePoint = World.TransformPosition(LocalOrigin);
 	OutScope.PlaneNormal = World.TransformVector(FVector::XAxisVector).GetSafeNormal();
-	OutScope.EyePosition = OutScope.PlanePoint + OutScope.PlaneNormal * GetPerspectiveDistance();
+	// MINUS the normal. A widget's local +X points INTO the screen, not out of it:
+	// ULexCanvas::GetViewLocation puts the viewer at "world location - forward * distance", so the
+	// eye is on the -X side and +X is depth away from it. Placing the scope's eye on +X would put
+	// it behind the plane, opposite the canvas's own eye, and the remap would then re-aim from a
+	// viewer in front to a viewer behind -- foreshortening inverted and overstated. The eye has to
+	// sit on the same side of the plane as the one that is actually looking.
+	OutScope.EyePosition = OutScope.PlanePoint - OutScope.PlaneNormal * GetPerspectiveDistance();
 	return true;
 }
 
 FMatrix ULexWidget::GetInheritedPerspectiveRemap()const
 {
-	if (!HasInheritedPerspective())
+	if (!HasPerspectiveApplied())
 	{
 		return FMatrix::Identity;
 	}
@@ -1386,7 +1397,7 @@ FMatrix ULexWidget::GetInheritedPerspectiveRemap()const
 	// project to speed up a subtree that usually does not exist, and this is asked for once per
 	// geometry rebuild rather than per vertex.
 	TArray<LexPerspective::FScope, TInlineAllocator<4>> Scopes;
-	for (const ULexWidget* Ancestor = Parent.Get(); Ancestor != nullptr; Ancestor = Ancestor->Parent.Get())
+	for (const ULexWidget* Ancestor = this; Ancestor != nullptr; Ancestor = Ancestor->Parent.Get())
 	{
 		LexPerspective::FScope Scope;
 		if (Ancestor->GetPerspectiveScope(Scope))
@@ -1413,7 +1424,7 @@ FMatrix ULexWidget::GetInheritedPerspectiveRemap()const
 FMatrix ULexWidget::GetWorldMatrix()const
 {
 	const FMatrix Base = ObjectToWorldTransform.ToMatrixWithScale();
-	return HasInheritedPerspective() ? Base * GetInheritedPerspectiveRemap() : Base;
+	return HasPerspectiveApplied() ? Base * GetInheritedPerspectiveRemap() : Base;
 }
 
 FMatrix ULexWidget::GetInverseWorldMatrix()const

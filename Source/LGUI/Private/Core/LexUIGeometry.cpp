@@ -3227,7 +3227,7 @@ void FLexUIGeometry::TransformVertices(ULexCanvas* canvas, ULexVisual* item, FLe
 	uiGeo->BoundsMin2DInCanvasSpace = itemMin;
 	uiGeo->BoundsMax2DInCanvasSpace = itemMax;
 
-	if (item->GetWidget()->HasInheritedPerspective())
+	if (item->GetWidget()->HasPerspectiveApplied())
 	{
 		// Inside a perspective scope the widget is drawn somewhere its FTransform does not describe,
 		// so the positions and the bounds both have to come from the remapped geometry. The bounds

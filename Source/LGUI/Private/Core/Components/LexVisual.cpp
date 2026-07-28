@@ -266,7 +266,7 @@ bool ULexVisual::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, 
 	// un-foreshortened rect. Outside one this is the same call it always was: FMatrix and FTransform
 	// inversion do not agree bit for bit, and the ordinary path should not start moving by a
 	// fraction of a pixel to support a feature it is not using.
-	const bool bPerspective = Widget->HasInheritedPerspective();
+	const bool bPerspective = Widget->HasPerspectiveApplied();
 	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
 	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	auto InverseTf = Widget->GetWorldTransform().Inverse();
@@ -301,7 +301,7 @@ bool ULexVisual::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, 
 bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = GetWidget();
-	const bool bPerspective = Widget->HasInheritedPerspective();
+	const bool bPerspective = Widget->HasPerspectiveApplied();
 	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
 	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	const auto InverseTf = Widget->GetWorldTransform().Inverse();
@@ -350,7 +350,7 @@ bool ULexVisual::LineTraceUICustom(FLexUIHitResult& OutHit, const FVector& Start
 		return false;
 	}
 	auto Widget = GetWidget();
-	const bool bPerspective = Widget->HasInheritedPerspective();
+	const bool bPerspective = Widget->HasPerspectiveApplied();
 	const FMatrix WidgetToWorldMatrix = bPerspective ? Widget->GetWorldMatrix() : FMatrix::Identity;
 	const FMatrix WorldToWidgetMatrix = bPerspective ? WidgetToWorldMatrix.Inverse() : FMatrix::Identity;
 	const auto InverseTf = Widget->GetWorldTransform().Inverse();

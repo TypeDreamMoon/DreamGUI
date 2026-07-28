@@ -224,6 +224,10 @@ private:
 	 * anchors and asks the parent layout to rebuild -- which is why animating it inside a panel can
 	 * never work, the animation and the layout just take turns.
 	 *
+	 * Depth runs along local X, and it points AWAY from the viewer: ULexCanvas::GetViewLocation
+	 * puts the eye at "location - forward * distance", so a NEGATIVE X translation brings a widget
+	 * toward the screen and a positive one pushes it back.
+	 *
 	 * Full 3D, deliberately. The obvious model is UMG's FWidgetTransform, but UMG is a 2D framework
 	 * and this one is not: RelativeLocation, RelativeRotation and RelativeScale are already a
 	 * FVector/FQuat/FVector, world-space canvases exist, and a card flipping about its vertical axis
@@ -343,7 +347,16 @@ public:
 	/** True when this widget or any ancestor declares a perspective. One bit, kept up to date with the transform. */
 	UFUNCTION(BlueprintPure, Category = "Perspective")
 	bool HasPerspectiveInHierarchy()const { return bHasPerspectiveInHierarchy; }
-	/** True when an ANCESTOR declares one, i.e. when this widget's own geometry is foreshortened. */
+	/**
+	 * True when a scope shapes THIS widget's own geometry -- its own declaration or an ancestor's.
+	 * A widget is inside its own perspective: the scope's plane is taken from where layout put the
+	 * widget, so its own render rotation is measured against that plane and foreshortens like
+	 * anything else. A widget with no render transform is flat in that plane and comes back
+	 * untouched, so switching Perspective on still changes nothing until something gains depth.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Perspective")
+	bool HasPerspectiveApplied()const { return bHasPerspectiveInHierarchy; }
+	/** True when an ANCESTOR declares one. Distinct from HasPerspectiveApplied, which includes this widget's own. */
 	UFUNCTION(BlueprintPure, Category = "Perspective")
 	bool HasInheritedPerspective()const { return Parent.IsValid() && Parent->bHasPerspectiveInHierarchy; }
 	/**
@@ -356,7 +369,7 @@ public:
 	 */
 	FMatrix GetWorldMatrix()const;
 	FMatrix GetInverseWorldMatrix()const;
-	/** The composed remap from every perspective scope above this widget. Identity when there is none. */
+	/** The composed remap from this widget's own scope and every one above it. Identity when there is none. */
 	FMatrix GetInheritedPerspectiveRemap()const;
 	/** This widget's own declared scope in world space; false when it declares none. */
 	bool GetPerspectiveScope(LexPerspective::FScope& OutScope)const;

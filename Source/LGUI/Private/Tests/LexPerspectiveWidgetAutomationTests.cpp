@@ -74,8 +74,10 @@ bool FLexPerspectiveInheritanceTest::RunTest(const FString& Parameters)
 	// ...and nothing outside it does. A perspective on the card table must not tilt the HUD.
 	TestFalse(TEXT("A sibling subtree does not"), Hud->HasInheritedPerspective());
 	TestFalse(TEXT("Nor does the ancestor above it"), Root->HasInheritedPerspective());
-	// The declaring widget is not inside its own scope: CSS perspective applies to descendants.
-	TestFalse(TEXT("The declaring widget is not inside its own scope"), Table->HasInheritedPerspective());
+	// The declarer is inside its own scope -- unlike CSS, and on purpose, so that flipping one card
+	// does not require wrapping it in a parent that exists for no other reason.
+	TestTrue(TEXT("The declaring widget is inside its own scope"), Table->HasPerspectiveApplied());
+	TestFalse(TEXT("...though no ANCESTOR declares one for it"), Table->HasInheritedPerspective());
 
 	// The bit has to follow the hierarchy, not just the moment it was set.
 	Card->TrySetParent(Root, false);
@@ -196,9 +198,12 @@ bool FLexPerspectiveForeshortensDepthTest::RunTest(const FString& Parameters)
 		ImageOnScopePlane(Scope.EyePosition, Card->GetWorldTransform().GetLocation(), Seen);
 		return FMath::Abs(Seen.Y - Scope.PlanePoint.Y);
 	};
+	// +X points INTO the screen and the eye stands at -X, so a POSITIVE render translation moves the
+	// card AWAY. The pinhole pins the magnitudes too, not just the ordering: at eye distance D an
+	// offset scales by D/(D + Depth), so 150 at the plane reads 118.6 at +80 and 204.0 at -80.
 	const double Flat = ImageOffsetAtDepth(0.0);
-	TestTrue(TEXT("Coming closer looks further from the origin"), ImageOffsetAtDepth(80.0) > Flat + 0.5);
-	TestTrue(TEXT("Going away looks nearer to it"), ImageOffsetAtDepth(-80.0) < Flat - 0.5);
+	TestTrue(TEXT("Going away looks nearer to the origin"), ImageOffsetAtDepth(80.0) < Flat - 0.5);
+	TestTrue(TEXT("Coming closer looks further from it"), ImageOffsetAtDepth(-80.0) > Flat + 0.5);
 
 	// The origin decides what it converges on, so moving it must change the answer -- otherwise a
 	// scope that ignored PerspectiveOrigin entirely would pass everything above.
@@ -240,11 +245,11 @@ bool FLexPerspectiveDisabledIsExactTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexPerspectiveDeclarerNotInOwnScopeTest,
-	"LGUI.Perspective.Widget.ADeclarerIsShapedByTheScopesAboveItOnly",
+	FLexPerspectiveDeclarerIsInOwnScopeTest,
+	"LGUI.Perspective.Widget.ADeclarerIsShapedByItsOwnScopeAndThoseAboveIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FLexPerspectiveDeclarerNotInOwnScopeTest::RunTest(const FString& Parameters)
+bool FLexPerspectiveDeclarerIsInOwnScopeTest::RunTest(const FString& Parameters)
 {
 	using namespace LexPerspectiveWidgetTestLocal;
 	FScopedGameWorld TestWorld;
@@ -264,35 +269,47 @@ bool FLexPerspectiveDeclarerNotInOwnScopeTest::RunTest(const FString& Parameters
 
 	const FVector CanvasEye = Root->GetComponent<ULexCanvas>()->GetRootCanvas()->GetViewLocation();
 
-	// A widget that declares a perspective is shaped by the scopes ABOVE it and not by its own --
-	// CSS perspective applies to descendants. Getting this wrong is invisible on a single scope,
-	// because a lone declarer has nothing above it to disagree with; it only shows once one
-	// declarer sits inside another.
+	// A declarer is shaped by its OWN scope and by every one above it. That is a deliberate
+	// departure from CSS, where perspective applies only to descendants: there, flipping a single
+	// card with perspective means wrapping it in a parent that exists for no other reason. Here the
+	// scope's plane comes from where layout put the declarer, so the declarer's own rotation is a
+	// departure from that plane and foreshortens, while a declarer with no render transform lies in
+	// the plane and is untouched -- so turning Perspective on still changes nothing by itself.
 	LexPerspective::FScope OuterScope;
 	if (!TestTrue(TEXT("The outer widget declares a scope"), Outer->GetPerspectiveScope(OuterScope)))return false;
 	const FMatrix OuterOnly = LexPerspective::MakeRemap(OuterScope, CanvasEye);
 
 	// Guard against the assertions below being satisfied by everything collapsing to identity.
 	TestFalse(TEXT("The outer scope actually does something"), OuterOnly.Equals(FMatrix::Identity, 0.01));
-	TestTrue(TEXT("The inner declarer is shaped by the outer scope alone"),
-		Inner->GetInheritedPerspectiveRemap().Equals(OuterOnly, 0.0001));
-	// The outermost declarer has nothing above it at all.
-	TestTrue(TEXT("The outer declarer is shaped by nothing"),
-		Outer->GetInheritedPerspectiveRemap().Equals(FMatrix::Identity, 0.0));
+	// The inner declarer carries its own scope on top of the outer one, so it is NOT the outer
+	// scope alone -- that was the old rule and is what this test was written to catch changing.
+	TestFalse(TEXT("The inner declarer is not shaped by the outer scope alone"),
+		Inner->GetInheritedPerspectiveRemap().Equals(OuterOnly, 0.01));
+	// The outermost declarer has only its own.
+	LexPerspective::FScope OuterOwn;
+	Outer->GetPerspectiveScope(OuterOwn);
+	TestTrue(TEXT("The outer declarer is shaped by its own scope"),
+		Outer->GetInheritedPerspectiveRemap().Equals(LexPerspective::MakeRemap(OuterOwn, CanvasEye), 0.0001));
+	// But a declarer with nothing off its layout plane is still left exactly alone, which is what
+	// keeps switching the checkbox on from moving a flat interface.
+	TestTrue(TEXT("A declarer with no render transform is not moved by its own scope"),
+		Outer->GetWorldMatrix().TransformPosition(FVector::ZeroVector)
+			.Equals(Outer->GetWorldTransform().GetLocation(), 0.01));
 
 	// A leaf below both is shaped by both, and that has to differ from being shaped by one.
 	const FMatrix LeafRemap = Leaf->GetInheritedPerspectiveRemap();
 	TestFalse(TEXT("A leaf inside both is shaped differently from one inside only the outer"),
 		LeafRemap.Equals(OuterOnly, 0.01));
 
-	// Same thing said through a point with depth, so the claim is about what gets drawn and not
-	// only about matrix contents.
-	Inner->SetRenderTranslation(FVector(50.0, 0.0, 0.0));
-	const FVector InnerDrawn = Inner->GetWorldMatrix().TransformPosition(FVector::ZeroVector);
-	const FVector InnerByOuterOnly = (Inner->GetWorldTransform().ToMatrixWithScale() * OuterOnly)
-		.TransformPosition(FVector::ZeroVector);
-	TestTrue(TEXT("The inner declarer is drawn where the outer scope alone puts it"),
-		InnerDrawn.Equals(InnerByOuterOnly, 0.01));
+	// And the point of self-inclusion, said through geometry: a declarer that rotates itself is
+	// foreshortened by its own perspective, with no wrapper widget in sight.
+	Inner->SetRenderRotation(FRotator(0.0, 50.0, 0.0));
+	ULexWidget* Corner = MakeWidget(TestWorld.World, Inner, TEXT("Corner"), 10.0f, 10.0f);
+	Corner->SetRelativeLocation(FVector(0.0, 120.0, 0.0));
+	const FVector WithOwnScope = Corner->GetWorldMatrix().TransformPosition(FVector::ZeroVector);
+	const FVector WithoutAnyScope = Corner->GetWorldTransform().GetLocation();
+	TestFalse(TEXT("A declarer's own rotation is foreshortened by its own scope"),
+		WithOwnScope.Equals(WithoutAnyScope, 0.5));
 	return true;
 }
 
@@ -468,6 +485,73 @@ bool FLexPerspectivePreviewDefaultTest::RunTest(const FString& Parameters)
 	FLexUIPrefabDataForPrefabEditor Defaults;
 	TestEqual(TEXT("A fresh prefab previews through the canvas camera"),
 		Defaults.CanvasRenderMode, (uint8)ELexRenderMode::ScreenSpaceOverlay);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectiveEyeSideTest,
+	"LGUI.Perspective.Widget.TheScopeEyeIsOnTheSameSideAsTheCanvasEye",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectiveEyeSideTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPerspectiveWidgetTestLocal;
+	FScopedGameWorld TestWorld;
+	ULexWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	ULexCanvas* Canvas = Root->AddComponent<ULexCanvas>();
+	if (!TestNotNull(TEXT("The root has a canvas"), Canvas))return false;
+	Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	ULexWidget* Table = MakeWidget(TestWorld.World, Root, TEXT("Table"), 400.0f, 300.0f);
+	Table->SetPerspective(true);
+
+	LexPerspective::FScope Scope;
+	if (!TestTrue(TEXT("The table declares a scope"), Table->GetPerspectiveScope(Scope)))return false;
+
+	// A widget's local +X points INTO the screen: ULexCanvas::GetViewLocation places the viewer at
+	// "location - forward * distance". So a scope eye placed along +Normal would sit behind the
+	// plane, on the opposite side from the eye that is actually looking, and the remap would invert
+	// the foreshortening -- near reading as far. Rather than hard-coding a sign that a later reader
+	// could "correct", this asserts the relationship: both eyes stand off the plane the same way.
+	const FVector PlaneToCanvasEye = Canvas->GetViewLocation() - Scope.PlanePoint;
+	const FVector PlaneToScopeEye = Scope.EyePosition - Scope.PlanePoint;
+	const double CanvasSide = FVector::DotProduct(Scope.PlaneNormal, PlaneToCanvasEye);
+	const double ScopeSide = FVector::DotProduct(Scope.PlaneNormal, PlaneToScopeEye);
+
+	TestTrue(TEXT("The canvas eye is off the plane at all"), FMath::Abs(CanvasSide) > 1.0);
+	TestTrue(TEXT("The scope eye is off the plane at all"), FMath::Abs(ScopeSide) > 1.0);
+	TestTrue(TEXT("Both eyes are on the same side of the plane"),
+		FMath::Sign(CanvasSide) == FMath::Sign(ScopeSide));
+
+	// And the consequence an author would notice. Measuring it takes care, because the obvious
+	// measure is unfalsifiable: the remap is rank-one along the plane normal, so with the origin on
+	// the scope axis it moves a child in DEPTH only and its drawn world Y never budges however deep
+	// it goes. This test used to assert on exactly that Y and could not have failed. So pin the
+	// invariance as its own claim, then measure the thing that does move -- the projected image.
+	ULexWidget* Card = MakeWidget(TestWorld.World, Table, TEXT("Card"), 100.0f, 140.0f);
+	Card->SetRelativeLocation(FVector(0.0, 150.0, 0.0));
+	auto DrawnAtDepth = [&](double Depth)
+	{
+		Card->SetRenderTranslation(FVector(Depth, 0.0, 0.0));
+		return FVector(Card->GetWorldMatrix().TransformPosition(FVector::ZeroVector));
+	};
+	TestEqual(TEXT("On the axis the remap changes depth and not lateral position"),
+		DrawnAtDepth(-80.0).Y, DrawnAtDepth(80.0).Y, 0.01);
+
+	// Projected from the SCOPE eye, which is what this test is about: were that eye placed on the
+	// far side of the plane, every ordering below would come out reversed.
+	auto ImageOffsetAtDepth = [&](double Depth) -> double
+	{
+		Card->SetRenderTranslation(FVector(Depth, 0.0, 0.0));
+		FVector Seen;
+		const bool bVisible = LexPerspective::ProjectOntoPlane(Scope.EyePosition,
+			Card->GetWorldTransform().GetLocation(), Scope.PlanePoint, Scope.PlaneNormal, Seen);
+		TestTrue(*FString::Printf(TEXT("The scope eye sees the card at depth %.0f"), Depth), bVisible);
+		return bVisible ? FMath::Abs(Seen.Y - Scope.PlanePoint.Y) : 0.0;
+	};
+	const double Flat = ImageOffsetAtDepth(0.0);
+	// Toward the viewer is NEGATIVE X, for the same reason the eye is.
+	TestTrue(TEXT("Coming toward the viewer pushes it outward"), ImageOffsetAtDepth(-80.0) > Flat + 0.5);
+	TestTrue(TEXT("Going away pulls it inward"), ImageOffsetAtDepth(80.0) < Flat - 0.5);
 	return true;
 }
 
