@@ -178,8 +178,16 @@ public:
 	 */
 	UPROPERTY()
 	FIntPoint DesignViewportSize = FIntPoint::ZeroValue;
+	/**
+	 * Preview render mode for the prefab editor (an ELexRenderMode value). ScreenSpaceOverlay by
+	 * default, so a fresh prefab previews through the canvas's OWN virtual camera -- the projection
+	 * play actually uses, and the only one where a declared Perspective can show itself; a
+	 * world-space preview is projected by the editor camera, where Perspective is correctly inert.
+	 * Note that delta serialization makes prefabs saved while matching the old WorldSpace default
+	 * inherit this one, which is the intended direction; the toolbar toggle switches per asset.
+	 */
 	UPROPERTY()
-	uint8 CanvasRenderMode = 3;//default LexCanvas's render mode is ELexUIRenderMode::WorldSpace_LexUI
+	uint8 CanvasRenderMode = 0;
 	UPROPERTY()
 	TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's view-mode
 	UPROPERTY()

@@ -11,6 +11,7 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/LexPerspective.h"
 #include "Engine/World.h"
+#include "PrefabSystem/LexUIPrefab.h"
 
 /*
  * Perspective as it appears on a widget: declared by an ancestor, inherited by the subtree.
@@ -450,6 +451,23 @@ bool FLexPerspectiveSurvivesLoadTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Still inside the scope after the real attach"), Card->HasInheritedPerspective());
 	TestFalse(TEXT("And the scope genuinely shapes geometry under the screen-space canvas"),
 		Card->GetInheritedPerspectiveRemap().Equals(FMatrix::Identity, 0.0001));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPerspectivePreviewDefaultTest,
+	"LGUI.Perspective.Widget.NewPrefabsPreviewThroughTheCanvasCamera",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPerspectivePreviewDefaultTest::RunTest(const FString& Parameters)
+{
+	// The prefab editor previews through whatever PrefabDataForPrefabEditor.CanvasRenderMode says.
+	// A world-space preview is projected by the editor camera, where a declared Perspective is
+	// correctly inert -- so if the default were world space, the feature would look broken in the
+	// first place anyone tries it, which is exactly how it was reported.
+	FLexUIPrefabDataForPrefabEditor Defaults;
+	TestEqual(TEXT("A fresh prefab previews through the canvas camera"),
+		Defaults.CanvasRenderMode, (uint8)ELexRenderMode::ScreenSpaceOverlay);
 	return true;
 }
 

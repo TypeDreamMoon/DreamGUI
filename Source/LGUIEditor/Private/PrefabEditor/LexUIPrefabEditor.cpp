@@ -1681,6 +1681,35 @@ void FLexUIPrefabEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass)
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
 }
 
+void FLexUIPrefabEditor::TogglePreviewRenderMode()
+{
+	FLexUIPrefabInstanceScene* PreviewScene = GetPreviewScene();
+	ULexWidget* RootAgent = PreviewScene ? PreviewScene->GetRootAgent() : nullptr;
+	ULexCanvas* RootCanvas = IsValid(RootAgent) ? RootAgent->GetComponent<ULexCanvas>() : nullptr;
+	if (!IsValid(RootCanvas))
+	{
+		return;
+	}
+	// Between the two modes the designer actually lives in. Screen space is the projection play
+	// uses -- the only one where a declared Perspective can show itself; world space is the editor
+	// camera's, better for orbiting geometry. RenderTarget and the UE-renderer world space are
+	// deliberate authoring choices, not preview states, so the toggle does not cycle through them.
+	const bool bScreenSpace = RootCanvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay;
+	RootCanvas->SetRenderMode(bScreenSpace ? ELexRenderMode::WorldSpace_LexUI : ELexRenderMode::ScreenSpaceOverlay);
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid())
+	{
+		ViewportPtr->GetViewportClient()->Invalidate();
+	}
+}
+
+bool FLexUIPrefabEditor::IsPreviewingScreenSpace()const
+{
+	FLexUIPrefabInstanceScene* PreviewScene = const_cast<FLexUIPrefabEditor*>(this)->GetPreviewScene();
+	ULexWidget* RootAgent = PreviewScene ? PreviewScene->GetRootAgent() : nullptr;
+	ULexCanvas* RootCanvas = IsValid(RootAgent) ? RootAgent->GetComponent<ULexCanvas>() : nullptr;
+	return IsValid(RootCanvas) && RootCanvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay;
+}
+
 void FLexUIPrefabEditor::SaveEditorState()
 {
 	//save view location and rotation
@@ -2787,6 +2816,12 @@ void FLexUIPrefabEditor::BindCommands()
 		FCanExecuteAction(),
 		FIsActionChecked()
 	);
+	ToolkitCommands->MapAction(
+		PrefabEditorCommands.ToggleScreenSpacePreview,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::TogglePreviewRenderMode),
+		FCanExecuteAction(),
+		FIsActionChecked::CreateSP(this, &FLexUIPrefabEditor::IsPreviewingScreenSpace)
+	);
 
 	TFunction<ULexWidget*()> GetSelectedWidget = [this]()
 	{
@@ -2912,6 +2947,9 @@ void FLexUIPrefabEditor::ExtendToolbar()
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().RawDataViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OverridesViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
+		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().ToggleScreenSpacePreview
+			, TAttribute<FText>(), TAttribute<FText>()
+			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports")));
 	}
 }
 

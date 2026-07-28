@@ -294,6 +294,13 @@ public:
 	void FindReferencesForSelectedWidget();
 	bool CanFindReferencesForSelectedWidget() const;
 	void SaveEditorState();
+	/**
+	 * Flip the preview between the canvas's own virtual camera (ScreenSpaceOverlay -- what play
+	 * shows, where Perspective reads true) and the editor camera (world space -- what you orbit).
+	 * Only preview state until the asset is saved; SaveEditorState records the current mode.
+	 */
+	void TogglePreviewRenderMode();
+	bool IsPreviewingScreenSpace()const;
 private:
 	FGuid FindOrAddWidgetGuid(ULexWidget* Widget);
 	FGuid FindWidgetGuid(const ULexWidget* Widget) const;

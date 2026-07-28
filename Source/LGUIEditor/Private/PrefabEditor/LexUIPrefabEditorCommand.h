@@ -33,4 +33,5 @@ public:
 	TSharedPtr<FUICommandInfo> OverridesViewer;
 	TSharedPtr<FUICommandInfo> OpenPrefabHelperObject;
 	TSharedPtr<FUICommandInfo> OpenBehaviourBlueprint;
+	TSharedPtr<FUICommandInfo> ToggleScreenSpacePreview;
 };
