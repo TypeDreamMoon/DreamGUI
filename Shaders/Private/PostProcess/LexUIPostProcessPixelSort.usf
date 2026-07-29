@@ -141,8 +141,8 @@ float4 SampleAt(float2 uv, float alongIndex, bool bVertical)
 {
     float2 texel = floor(uv * _RegionSize);
     float2 target = bVertical ? float2(texel.x, alongIndex) : float2(alongIndex, texel.y);
-    return LexUIPostProcessMainTexUB._MainTex.Sample(LexUIPostProcessMainTexUB._MainTexSampler,
-        (target + 0.5) / _RegionSize);
+    return LexUIPostProcessMainTexUB._MainTex.SampleLevel(LexUIPostProcessMainTexUB._MainTexSampler,
+        (target + 0.5) / _RegionSize, 0.0);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -172,6 +172,7 @@ float4 RankPS(SimpleVSToPS input) : SV_Target0
 
     // Backward to the run's head, counting everything that belongs before this texel.
     float probe = index;
+    [loop]
     for (int i = 0; i < radius; i++)
     {
         probe -= 1.0;
@@ -189,6 +190,7 @@ float4 RankPS(SimpleVSToPS input) : SV_Target0
     // Forward to the run's tail. Only the head and the rank are needed for an ascending sort, but
     // the tail is what a descending one measures from.
     probe = index;
+    [loop]
     for (int i = 0; i < radius; i++)
     {
         probe += 1.0;
@@ -220,18 +222,21 @@ float4 GatherPS(SimpleVSToPS input) : SV_Target0
     // Searching outward from this position finds the nearest claimant first, and a texel can only
     // have travelled as far as the radius allowed, so the search is bounded by the same number.
     int radius = max((int)_SearchRadius, 1);
+    [loop]
     for (int i = 0; i <= radius; i++)
     {
+        [unroll]
         for (int side = 0; side < 2; side++)
         {
             float probe = side == 0 ? index + (float)i : index - (float)i;
             if (probe < 0.0 || probe > lineLength - 1.0) { continue; }
             float2 target = bVertical ? float2(texel.x, probe) : float2(probe, texel.y);
             float2 targetUV = (target + 0.5) / _RegionSize;
-            float destination = _DestinationTex.Sample(_DestinationTexSampler, targetUV).x;
+            float destination = _DestinationTex.SampleLevel(_DestinationTexSampler, targetUV, 0.0).x;
             if (abs(destination - index) < 0.5)
             {
-                return LexUIPostProcessMainTexUB._MainTex.Sample(LexUIPostProcessMainTexUB._MainTexSampler, targetUV);
+                return LexUIPostProcessMainTexUB._MainTex.SampleLevel(
+                    LexUIPostProcessMainTexUB._MainTexSampler, targetUV, 0.0);
             }
             if (i == 0) { break; }//both sides are the same texel at distance zero
         }
