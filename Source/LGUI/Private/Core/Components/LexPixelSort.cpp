@@ -259,8 +259,13 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	const auto ScreenSize = ScreenTargetTexture->GetSizeXY();
 	if (NumSamples > 1)
 	{
-		// A multisampled screen texture cannot be sampled directly; resolve first, exactly as blur
-		// and pixelate do.
+		// A multisampled screen texture cannot be sampled directly; resolve first. This MUST be
+		// AddResolvePass and not CopyRenderTarget: the copy shader declares its source as a plain
+		// Texture2D, and binding an MSAA texture to a Texture2D slot is a dimension mismatch that
+		// reads as zero on D3D12 -- the resolve silently comes back black and every grab downstream
+		// is a grab of nothing. The resolve shader is the one place in the plugin that declares
+		// Texture2DMS and loads each sample. Getting this wrong cost a day; see blur and pixelate,
+		// which have always done it this way.
 		FPooledRenderTargetDesc ResolveDesc(FPooledRenderTargetDesc::Create2DDesc(ScreenSize, ScreenTargetTexture->GetFormat(),
 			FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
 		GRenderTargetPool.FindFreeElement(RHICmdList, ResolveDesc, ScreenResolvedTexture, TEXT("LexUIPixelSortResolveTarget"));
@@ -269,7 +274,9 @@ void FLexPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 			ReleaseRenderTargets();
 			return;
 		}
-		Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, ScreenTargetTexture.GetReference(), ScreenResolvedTexture->GetRHI());
+		auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("LexUIPixelSortResolveSource"));
+		auto ResolveDst = RegisterExternalTexture(GraphBuilder, ScreenResolvedTexture->GetRHI(), TEXT("LexUIPixelSortResolveTarget"));
+		Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
 	}
 
 	// Read the FLAG, not a coincidence of sizes. bUseFullSize makes RectSize the root canvas's
