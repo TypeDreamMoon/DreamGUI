@@ -119,6 +119,82 @@ bool FLexPixelSortWallsTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPixelSortReachTest,
+	"LGUI.PixelSort.Rank.APermutationNeedsTheRadiusToCoverTheRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPixelSortReachTest::RunTest(const FString& Parameters)
+{
+	using namespace LexPixelSort;
+	// THIS IS THE SETTING THAT DECIDES WHETHER THE EFFECT LOOKS LIKE STREAKS OR LIKE NOISE, and
+	// until now it lived nowhere but in the argument for why the algorithm works.
+	//
+	// Each texel works out its own destination without seeing what anyone else decided. That only
+	// adds up to a permutation when every texel in a run scans the WHOLE run: they must all agree
+	// on where the run starts, and a scan cut short by the radius does not reach the start. Two
+	// texels with different windows can then compute the same destination -- one colour is written
+	// twice and another index is claimed by nobody. The gather leaves unclaimed positions alone, so
+	// the result is a mix of sorted and untouched pixels, which on screen reads as speckle rather
+	// than as a weaker sort. The knob does not degrade gracefully; it degrades into noise.
+	//
+	// Hence the property clamps: MaxSortPasses must be able to reach IntervalLength, or the details
+	// panel can express a combination that cannot produce a correct image.
+	// NOISY keys, not a clean ramp. On a monotonic run the interior survives truncation by
+	// coincidence -- every texel sees the same number of smaller values on one side and larger on the
+	// other, so it maps back to itself and only the two ends collide. Real image luminance is nothing
+	// like that, and the speckle on screen comes from the MIDDLE. A ramp fixture would make this test
+	// pass while demonstrating the wrong thing.
+	//
+	// The generator is deliberately self-contained rather than LexPixelSort::Hash: a fixture drawn
+	// from the code under test cannot witness against it.
+	const int32 Length = 512;//long enough that the interior window below is not empty
+	TArray<float> Keys;
+	uint32 Seed = 0x9e3779b9u;
+	for (int32 Index = 0; Index < Length; ++Index)
+	{
+		Seed = Seed * 1664525u + 1013904223u;
+		Keys.Add(((Seed >> 8) & 0xffffu) / 65535.0f);
+	}
+	const FLexPixelSortRunRules Rules = MakeRules(0.0f, 1.0f);
+
+	// Counts positions nobody lands on, optionally only within a window well away from both ends.
+	auto CountUnclaimed = [&Keys, &Rules, Length](int32 InRadius, int32 InFrom, int32 InTo)
+		{
+			TArray<int32> Claims;
+			Claims.Init(0, Length);
+			for (int32 Index = 0; Index < Length; ++Index)
+			{
+				const int32 Destination = ComputeDestination(Keys, Index, Rules, false, InRadius);
+				if (Destination >= 0 && Destination < Length)
+				{
+					Claims[Destination]++;
+				}
+			}
+			int32 Unclaimed = 0;
+			for (int32 Index = InFrom; Index < InTo; ++Index)
+			{
+				Unclaimed += Claims[Index] == 0 ? 1 : 0;
+			}
+			return Unclaimed;
+		};
+
+	// Radius at or beyond the run length: exact, every position claimed exactly once.
+	for (const int32 Radius : { Length, Length * 2 })
+	{
+		TestEqual(*FString::Printf(TEXT("Radius %d covers the %d-long run, so nothing is left unclaimed"), Radius, Length),
+			CountUnclaimed(Radius, 0, Length), 0);
+	}
+	// Radius short of the run: NOT a permutation, and not merely at the edges. The interior window
+	// starts four radii in, so nothing counted here can be blamed on running off the end of the line
+	// -- these are texels that disagreed with their neighbours about where their run began. That
+	// disagreement is what puts speckle on screen, so it is asserted rather than merely admitted.
+	const int32 ShortRadius = 32;
+	TestTrue(TEXT("A radius shorter than the run leaves positions unclaimed in the interior, not just at the ends"),
+		CountUnclaimed(ShortRadius, ShortRadius * 4, Length - ShortRadius * 4) > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FLexPixelSortRadiusTest,
 	"LGUI.PixelSort.Rank.TravelIsBoundedByTheSearchRadius",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

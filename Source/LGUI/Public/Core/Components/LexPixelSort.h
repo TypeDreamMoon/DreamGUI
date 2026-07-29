@@ -209,11 +209,18 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float SortStrength = 0.5f;
 	/**
-	 * The ceiling on travel, in passes -- and one pass is one texel of movement, measured in the
-	 * widget's own UI units rather than screen pixels. Each pass is a full read and write of the
-	 * region, so this is the effect's cost dial as much as its quality dial.
+	 * The ceiling on how far a pixel may travel, in texels of the widget's own UI units rather than
+	 * screen pixels. It is the effect's cost dial as much as its reach dial: each pixel scans this
+	 * far in both directions, so cost is linear in it.
+	 *
+	 * KEEP THIS AT OR ABOVE THE RUN LENGTH YOU ARE SORTING, or the result is speckle rather than a
+	 * milder version of the effect. A pixel that cannot scan to the start of its own run disagrees
+	 * with its neighbours about where the run begins, their destinations collide, and the pixels
+	 * nobody claims are left where they are. Hence the ceiling of 512: it matches IntervalLength's,
+	 * so Random and Waves runs can always be covered. Threshold runs follow the image and can be
+	 * longer than any clamp, which is the one case where this still has to be judged by eye.
 	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "1", ClampMax = "128"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "1", ClampMax = "512"))
 		int32 MaxSortPasses = 32;
 	/**
 	 * Pixels whose key is below this are left alone and act as run boundaries. The default of 0.25
