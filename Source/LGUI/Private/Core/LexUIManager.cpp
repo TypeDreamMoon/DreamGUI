@@ -11,6 +11,7 @@
 #include "Engine/World.h"
 #include "Interaction/UISelectable.h"
 #include "Core/LexUISettings.h"
+#include "Core/LexUIFontData_FreeTypeRender.h"
 #include "Core/Components/LexVisual.h"
 #include "Engine/Engine.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
@@ -1148,6 +1149,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		UpdateCanvas(ELexRenderMode::WorldSpace_LexUI);
 		UpdateCanvas(ELexRenderMode::RenderTarget);
 	}
+	ULexUIFontData_FreeTypeRender::FlushPendingFontTextures();
 
 	// Consume render-priority sort requests at their owner. A request raised outside the owner's own
 	// draw-call rebuild (runtime SetSortOrder, a child canvas rebuilding alone) used to sit in the flag
@@ -1242,6 +1244,7 @@ void ULexUIManagerWorldSubsystem::DrawHelperGizmo()
 
 void ULexUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 {
+	ULexUIFontData_FreeTypeRender::FlushPendingFontTextures();
 	//update draw-call
 	{
 		auto UpdateCanvas = [this](ELexRenderMode RenderMode) {

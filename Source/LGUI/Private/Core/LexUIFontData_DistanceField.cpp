@@ -136,56 +136,21 @@ UTexture2DArray* ULexUIFontData_DistanceField::CreateFontTexture(int InTextureSi
 	PlatformData->Mips.Add(Mip);
 	auto DataSize = (int64)GPixelFormats[PixelFormat].BlockBytes * NumBlocksX * NumBlocksY * InSliceCount;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	Mip->BulkData.Realloc(DataSize);
 	void* DataPtr = Mip->BulkData.Realloc(DataSize);
-	FMemory::Memzero(DataPtr, DataSize);
+	if (!CopyFontTextureAtlasData(DataPtr, DataSize))
+	{
+		FMemory::Memzero(DataPtr, DataSize);
+	}
 	Mip->BulkData.Unlock();
 	
 	NewTexture->CompressionSettings = TextureCompressionSettings::TC_DistanceFieldFont;
 	NewTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
+	NewTexture->NeverStream = true;
 	NewTexture->SRGB = false;
 	NewTexture->Filter = TextureFilter::TF_Bilinear;
 	NewTexture->UpdateResource();
 
 	return NewTexture;
-}
-
-UTexture2D* ULexUIFontData_DistanceField::CreateIntermediateTexture(int InTextureSize)
-{
-	static int TextureNameSuffix = 0;
-	auto ResultTexture = NewObject<UTexture2D>(
-		GetTransientPackage(),
-		FName(*FString::Printf(TEXT("LexUIFontData_DistanceField_Intermediate_%d"), TextureNameSuffix++)),
-		RF_Transient
-	);
-	auto PixelFormat = PF_R8;
-	
-	auto PlatformData = new FTexturePlatformData();
-	PlatformData->SizeX = InTextureSize;
-	PlatformData->SizeY = InTextureSize;
-	PlatformData->PixelFormat = PixelFormat;
-	ResultTexture->SetPlatformData(PlatformData);
-	
-	// Allocate first mipmap.
-	int32 NumBlocksX = InTextureSize / GPixelFormats[PixelFormat].BlockSizeX;
-	int32 NumBlocksY = InTextureSize / GPixelFormats[PixelFormat].BlockSizeY;
-	FTexture2DMipMap* Mip = new FTexture2DMipMap();
-	PlatformData->Mips.Add(Mip);
-	Mip->SizeX = InTextureSize;
-	Mip->SizeY = InTextureSize;
-	int DataSize = NumBlocksX * NumBlocksY * GPixelFormats[PixelFormat].BlockBytes;
-	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* DataPtr = Mip->BulkData.Realloc(DataSize);
-	FMemory::Memzero(DataPtr, DataSize);
-	Mip->BulkData.Unlock();
-
-	ResultTexture->CompressionSettings = TextureCompressionSettings::TC_DistanceFieldFont;
-	ResultTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
-	ResultTexture->SRGB = false;
-	ResultTexture->Filter = TextureFilter::TF_Bilinear;
-	ResultTexture->UpdateResource();
-
-	return ResultTexture;
 }
 
 void ULexUIFontData_DistanceField::ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)

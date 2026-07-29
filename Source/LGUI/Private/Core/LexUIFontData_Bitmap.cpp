@@ -318,16 +318,16 @@ UTexture2DArray* ULexUIFontData_Bitmap::CreateFontTexture(int InTextureSize, int
 	NewTexture->GetPlatformData()->Mips.Add(Mip);
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
 	void* MipData = Mip->BulkData.Realloc((int64)GPixelFormats[PixelFormat].BlockBytes * NumBlocksX * NumBlocksY * InSliceCount);
-	FColor* PixelPtr = static_cast<FColor*>(MipData);
-	constexpr FColor DefaultColor = FColor(255, 255, 255, 0);
-	for (int i = 0, count = InTextureSize * InTextureSize * InSliceCount; i < count; i++)
+	const int64 DataSize = static_cast<int64>(GPixelFormats[PixelFormat].BlockBytes) * NumBlocksX * NumBlocksY * InSliceCount;
+	if (!CopyFontTextureAtlasData(MipData, DataSize))
 	{
-		PixelPtr[i] = DefaultColor;
+		InitializeFontTextureAtlasSlice(static_cast<uint8*>(MipData), DataSize);
 	}
 	Mip->BulkData.Unlock();
 
 	NewTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
 	NewTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
+	NewTexture->NeverStream = true;
 	NewTexture->SRGB = false;
 	NewTexture->Filter = TextureFilter::TF_Trilinear;
 	NewTexture->UpdateResource();
@@ -335,40 +335,16 @@ UTexture2DArray* ULexUIFontData_Bitmap::CreateFontTexture(int InTextureSize, int
 	return NewTexture;
 }
 
-UTexture2D* ULexUIFontData_Bitmap::CreateIntermediateTexture(int InTextureSize)
+void ULexUIFontData_Bitmap::InitializeFontTextureAtlasSlice(uint8* SliceData, int64 SliceDataSize) const
 {
-	static int TextureNameSuffix = 0;
-	auto ResultTexture = NewObject<UTexture2D>(
-		GetTransientPackage(),
-		FName(*FString::Printf(TEXT("LexUIFontData_Bitmap_Intermediate_%d"), TextureNameSuffix++)),
-		RF_Transient
-	);
-	auto PixelFormat = PF_B8G8R8A8;
-	auto PlatformData = new FTexturePlatformData();
-	PlatformData->SizeX = InTextureSize;
-	PlatformData->SizeY = InTextureSize;
-	PlatformData->PixelFormat = PixelFormat;
-	// Allocate first mipmap.
-	int32 NumBlocksX = InTextureSize / GPixelFormats[PixelFormat].BlockSizeX;
-	int32 NumBlocksY = InTextureSize / GPixelFormats[PixelFormat].BlockSizeY;
-	FTexture2DMipMap* Mip = new FTexture2DMipMap();
-	PlatformData->Mips.Add(Mip);
-	Mip->SizeX = InTextureSize;
-	Mip->SizeY = InTextureSize;
-	int DataSize = NumBlocksX * NumBlocksY * GPixelFormats[PixelFormat].BlockBytes;
-	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* DataPtr = Mip->BulkData.Realloc(DataSize);
-	FMemory::Memzero(DataPtr, DataSize);
-	Mip->BulkData.Unlock();
-	ResultTexture->SetPlatformData(PlatformData);
-
-	ResultTexture->CompressionSettings = TextureCompressionSettings::TC_DistanceFieldFont;
-	ResultTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
-	ResultTexture->SRGB = false;
-	ResultTexture->Filter = TextureFilter::TF_Bilinear;
-	ResultTexture->UpdateResource();
-
-	return ResultTexture;
+	check(SliceDataSize % sizeof(FColor) == 0);
+	FColor* PixelData = reinterpret_cast<FColor*>(SliceData);
+	const int64 PixelCount = SliceDataSize / sizeof(FColor);
+	constexpr FColor DefaultColor(255, 255, 255, 0);
+	for (int64 PixelIndex = 0; PixelIndex < PixelCount; ++PixelIndex)
+	{
+		PixelData[PixelIndex] = DefaultColor;
+	}
 }
 
 void ULexUIFontData_Bitmap::ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)

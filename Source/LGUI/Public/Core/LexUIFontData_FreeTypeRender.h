@@ -94,9 +94,6 @@ protected:
 	/** Texture of this font */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TObjectPtr<UTexture2DArray> Texture;
-	/** IntermediateTexture for Updating Texture2DArray. */ 
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	TObjectPtr<UTexture2D> IntermediateTexture;
 	int32 CurrentTextureSlice = 0;
 
 	/** if not find char in current font, LexUI will search the char in this font array until find it. */
@@ -129,6 +126,9 @@ public:
 	virtual void AddUIText(ULexText* InText)override;
 	virtual void RemoveUIText(ULexText* InText)override;
 	//End ULexUIFontData_BaseObject interface
+
+	/** Upload every font atlas slice dirtied while UI geometry was generated this frame. */
+	static void FlushPendingFontTextures();
 
 	void SetFontType(ELexUIDynamicFontDataType Value);
 	void SetEngineFont(UFontFace* Value);
@@ -171,7 +171,6 @@ protected:
 	struct FGlyphBitmap
 	{
 		float width, height, hOffset, vOffset, hAdvance;
-		/** memory will be passed to render thread and delete there too */
 		TArray<unsigned char> buffer;
 		/** single pixel data size in byte, eg: RGBA8-4 A8-1 */
 		int pixelSize;
@@ -180,18 +179,27 @@ protected:
 	 * Insert rect into area, assign pixel if succeed
 	 * return: if glyph can fit in rect area return true, else false
 	 */
-	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult);
-	void UpdateFontTextureRegion(uint32 PosX, uint32 PosY, uint32 Slice, FUpdateTextureRegion2D Region, uint32 SrcPitch, uint32 SrcBpp, TArray<uint8> SrcData);
+	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, FLexUICharData& OutResult);
+	bool UpdateFontTextureRegion(uint32 PosX, uint32 PosY, uint32 Slice, uint32 Width, uint32 Height, uint32 SrcPitch, uint32 SrcBpp, const TArray<uint8>& SrcData);
+	bool FlushFontTexture();
+	bool EnsureFontTextureAtlasData(int32 SliceCount, int32 BytesPerPixel);
+	void ReleaseFontTexture();
 	void RenewFontTexture();
+	bool CopyFontTextureAtlasData(void* DestData, int64 DataSize) const;
+	virtual void InitializeFontTextureAtlasSlice(uint8* SliceData, int64 SliceDataSize) const;
 
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)PURE_VIRTUAL(ULexUIFontData_FreeTypeRender::CreateFontTexture, return nullptr;);
-	virtual UTexture2D* CreateIntermediateTexture(int InTextureSize)PURE_VIRTUAL(ULexUIFontData_FreeTypeRender::CreateIntermediateTexture, return nullptr;);
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize);
 
 	virtual bool GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& OutResult) { return false; };
 	virtual void AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& CharData) {};
 	virtual bool RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult) { return false; };
 	virtual void ClearCharDataCache() {};
+
+	/** CPU source of truth used both for deferred uploads and texture-array expansion. */
+	TArray<uint8> FontTextureAtlasData;
+	TSet<int32> DirtyFontTextureSlices;
+	int32 FontTextureBytesPerPixel = 0;
 public:
 #if WITH_EDITOR
 	void ReloadFont();
