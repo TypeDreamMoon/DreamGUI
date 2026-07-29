@@ -206,7 +206,20 @@ float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, f
     float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
     float dOuter = LexUI_sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
     float dOuterSharp = dOuter / fwidth(dOuter);
-    float dOuter01 = saturate(-dOuterSharp);
+    // COVERAGE IS CENTRED ON THE BOUNDARY: half a pixel of ramp inside, half outside. dOuterSharp is
+    // the signed distance in pixels, negative inside, so a pixel sitting exactly on the edge is HALF
+    // covered -- which saturate(0.5 - s) gives and saturate(-s) does not. The latter ramps over
+    // [-1,0], putting the 50% point a full half pixel inside the shape, so everything drawn this way
+    // came out fractionally small and fractionally dark along every edge.
+    //
+    // Slate spends the same half pixel the same way -- SlateElementPixelShader.usf's
+    // GetFontSignedDistanceOpacity is saturate(ScreenSpaceDistance + 0.5), the sign flipped only
+    // because its distance is positive inside.
+    //
+    // The outer half of the ramp needs somewhere to live, and bSoftEdge provides it by expanding the
+    // quad one unit a side (LexUIGeometry.cpp:263-269). One unit covers half a pixel of ramp until
+    // the widget is minified past 2:1, beyond which the outer half clips against the geometry.
+    float dOuter01 = saturate(0.5f - dOuterSharp);
     
     //inner body
     if (_EnableBody)
@@ -271,7 +284,9 @@ float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, f
         }
         float dInner = LexUI_sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
         float dInnerSharp = dInner / fwidth(dInner);
-        float dInner01 = saturate(-dInnerSharp);
+        // Centred, as above. This boundary is interior -- the border ring surrounds it -- so unlike
+        // the outer edge it never needed a skirt to ramp into.
+        float dInner01 = saturate(0.5f - dInnerSharp);
         float innerMask = saturate(1 - dInner01);
         borderColor.a *= innerMask;
         borderColor.rgb *= innerMask;
@@ -315,7 +330,11 @@ float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, f
         radialFillMask += _RadialFillAngle * INV_360 - 1.0f;
                     
         radialFillMask /= fwidth(radialFillMask);
-        radialFillMask = saturate(radialFillMask);
+        // Centred, as above -- but NOTE THE SIGN IS THE OTHER WAY ROUND HERE. This mask is positive
+        // INSIDE the wedge, where the two SDFs above are negative inside, so centring adds the half
+        // pixel instead of subtracting it. Copying the form from either of them would move this edge
+        // a whole pixel the wrong way.
+        radialFillMask = saturate(radialFillMask + 0.5f);
         
         color.a *= radialFillMask;
         color.rgb *= radialFillMask;

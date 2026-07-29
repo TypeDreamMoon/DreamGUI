@@ -47,7 +47,10 @@ float LexUI_CalculateClipData(Texture2D DataTex, float CoordinateInDataTex, floa
 		float4 CornerRadius = DataTex.Load(Position);Position.x += 1;
 		float Alpha = LexUIClip_sdRoundRect(PixelPosition.yz, float2(HalfWidth, HalfHeight), CornerRadius);
 		Alpha = Alpha / fwidth(Alpha);
-		Alpha = saturate(0 - Alpha);
+		// Centred on the boundary; see the long note in LexUIRectBlock.ush. Distance is negative
+		// inside, so the half pixel is subtracted. A clip rect needs no skirt of its own -- it ramps
+		// across whatever geometry is being clipped, which by definition extends past the edge.
+		Alpha = saturate(0.5f - Alpha);
 		finalAlpha *= Alpha;
 #else
 		float2 Alpha2 = abs(PixelPosition.yz) - float2(HalfWidth, HalfHeight);
