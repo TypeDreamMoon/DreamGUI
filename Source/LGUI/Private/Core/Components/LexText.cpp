@@ -451,6 +451,7 @@ void ULexText::SetFont(ULexUIFontData_BaseObject* Value) {
 		{
 			RegisterFont();
 		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetText(const FText& Value) {
@@ -458,10 +459,7 @@ void ULexText::SetText(const FText& Value) {
 	{
 		Text = Value;
 		MarkVerticesDirty(true, true, true, false);
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 		ConditionalUpdateCacheTextGeometry();
 	}
 }
@@ -472,10 +470,7 @@ void ULexText::SetFontSize(float Value) {
 	{
 		FontSize = Value;
 		MarkVertexPositionDirty();
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetUseKerning(bool Value)
@@ -484,10 +479,7 @@ void ULexText::SetUseKerning(bool Value)
 	{
 		bUseKerning = Value;
 		MarkVertexPositionDirty();
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetFontSpace(FVector2D Value) {
@@ -495,10 +487,7 @@ void ULexText::SetFontSpace(FVector2D Value) {
 	{
 		MarkVertexPositionDirty();
 		FontSpace = Value;
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlign Value) {
@@ -506,10 +495,7 @@ void ULexText::SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlig
 	{
 		MarkVertexPositionDirty();
 		HAlign = Value;
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Value) {
@@ -517,10 +503,7 @@ void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Va
 	{
 		MarkVertexPositionDirty();
 		VAlign = Value;
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetOverflowType(ELexUITextOverflowType Value) {
@@ -533,10 +516,7 @@ void ULexText::SetOverflowType(ELexUITextOverflowType Value) {
 		else
 			MarkVertexPositionDirty();
 		OverflowType = Value;
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 
@@ -546,10 +526,7 @@ void ULexText::SetWrappingPolicy(ETextWrappingPolicy Value)
 	{
 		WrappingPolicy = Value;
 		MarkVertexPositionDirty();
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 
@@ -566,10 +543,7 @@ void ULexText::SetFontStyle(ELexUITextFontStyle Value) {
 			MarkVerticesDirty(true, true, true, true);
 		}
 		FontStyle = Value;
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichText(bool Value)
@@ -582,10 +556,7 @@ void ULexText::SetRichText(bool Value)
 		{
 			ClearCreatedRichTextImageObject();
 		}
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichTextTagFilterFlags(int32 Value)
@@ -598,10 +569,7 @@ void ULexText::SetRichTextTagFilterFlags(int32 Value)
 		{
 			ClearCreatedRichTextImageObject();
 		}
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichTextImageData(ULexUIRichTextImageData_BaseObject* Value)
@@ -614,10 +582,7 @@ void ULexText::SetRichTextImageData(ULexUIRichTextImageData_BaseObject* Value)
 		{
 			ClearCreatedRichTextImageObject();
 		}
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value)
@@ -626,10 +591,7 @@ void ULexText::SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
 		RichTextCustomStyleData = Value;
-		if (GetWidget()->GetLayoutSelf())//text size may change by LayoutSelf
-		{
-			ULexWidget::MarkLayoutForRebuild(GetWidget());
-		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 
