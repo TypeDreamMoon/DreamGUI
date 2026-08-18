@@ -824,7 +824,8 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		else if (MemberName == IgnoreLayoutName)
 		{
 			MarkDimensionChanged(false, true, true);//change LayoutSelf could cause size change
-			MarkLayoutForRebuild(this);
+			//from the parent: the ancestor walk stops at an IgnoreLayout widget, see SetIgnoreLayout
+			MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
 		}
 		if (MemberName == AnchorDataName)
 		{
@@ -4439,7 +4440,11 @@ void ULexWidget::SetIgnoreLayout(bool Value)
 	if (bIgnoreLayout != Value)
 	{
 		bIgnoreLayout = Value;
-		MarkLayoutForRebuild(this);
+		// Mark from the parent, not from here. MarkLayoutForRebuild breaks its ancestor walk on the first
+		// widget with IgnoreLayout set - and we just set it - so starting at `this` stopped immediately and
+		// the container that has to close the gap never heard about it. Turning the flag off happened to
+		// work, because by then the flag reads false, which made this look like a one-way switch.
+		MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
 		if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
 			LexUIManager->MarkRebuildAllLayoutTree();
