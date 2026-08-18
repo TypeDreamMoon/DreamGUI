@@ -370,46 +370,57 @@ void ULexLayoutContainerFlexBox::DoCalculate(bool bApplyResult)
 
     FVector2f PosOffset(0,0);//default position use left top as origin
     PosOffset[SecondaryAxis] = SecondaryAxis == 0 ? SafePadding.Left : SafePadding.Top;
-    if (SecondarySurplusSpace > 0)
+    // Start, Center and End are well defined when the lines overflow the container - the block just moves
+    // the other way, exactly as the primary axis already does further down with -Deficit - so they are not
+    // gated on surplus. The distributing modes genuinely have nothing to distribute below zero, and CSS
+    // stretch only ever grows, so those stay gated. Before this, an overflowing cross axis silently
+    // collapsed Center and End to Start: "it was centred until I added one more row".
+    switch (SecondaryAlignment)
     {
-        switch (SecondaryAlignment)
+	case ELexLayoutFlexBoxSecondaryAxisAlignment::Start:
+		if (Wrap == ELexLayoutFlexBoxWrapType::WrapReverse)
+		{
+			PosOffset[SecondaryAxis] += SecondarySurplusSpace;
+		}
+		break;
+    case ELexLayoutFlexBoxSecondaryAxisAlignment::Center:
+        PosOffset[SecondaryAxis] += SecondarySurplusSpace * 0.5f;
+        break;
+	case ELexLayoutFlexBoxSecondaryAxisAlignment::End:
+		if (Wrap != ELexLayoutFlexBoxWrapType::WrapReverse)
+		{
+			PosOffset[SecondaryAxis] += SecondarySurplusSpace;
+		}
+        break;
+    case ELexLayoutFlexBoxSecondaryAxisAlignment::SpaceBetween:
+        //no offset needed
+        if (SecondarySurplusSpace > 0 && LineDataArray.Num() > 1)
         {
-		case ELexLayoutFlexBoxSecondaryAxisAlignment::Start:
-			if (Wrap == ELexLayoutFlexBoxWrapType::WrapReverse)
-			{
-				PosOffset[SecondaryAxis] += SecondarySurplusSpace;
-			}
-			break;
-        case ELexLayoutFlexBoxSecondaryAxisAlignment::Center:
-            PosOffset[SecondaryAxis] += SecondarySurplusSpace * 0.5f;
-            break;
-		case ELexLayoutFlexBoxSecondaryAxisAlignment::End:
-			if (Wrap != ELexLayoutFlexBoxWrapType::WrapReverse)
-			{
-				PosOffset[SecondaryAxis] += SecondarySurplusSpace;
-			}
-            break;
-        case ELexLayoutFlexBoxSecondaryAxisAlignment::SpaceBetween:
-            //no offset needed
-            if (LineDataArray.Num() > 1)
-            {
-                SecondarySpaceGap = SecondarySurplusSpace / (LineDataArray.Num() - 1);
-            }
-            break;
-        case ELexLayoutFlexBoxSecondaryAxisAlignment::SpaceAround:
-            //half space offset
+            SecondarySpaceGap = SecondarySurplusSpace / (LineDataArray.Num() - 1);
+        }
+        break;
+    case ELexLayoutFlexBoxSecondaryAxisAlignment::SpaceAround:
+        //half space offset
+        if (SecondarySurplusSpace > 0)
+        {
             SecondarySpaceGap = SecondarySurplusSpace / FMath::Max(1, LineDataArray.Num());
             PosOffset[SecondaryAxis] += SecondarySpaceGap * 0.5f;
-            break;
-        case ELexLayoutFlexBoxSecondaryAxisAlignment::SpaceEvenly:
-            //space offset
+        }
+        break;
+    case ELexLayoutFlexBoxSecondaryAxisAlignment::SpaceEvenly:
+        //space offset
+        if (SecondarySurplusSpace > 0)
+        {
             SecondarySpaceGap = SecondarySurplusSpace / (LineDataArray.Num() + 1);
             PosOffset[SecondaryAxis] += SecondarySpaceGap;
-            break;
-        case ELexLayoutFlexBoxSecondaryAxisAlignment::Stretch:
-            SecondaryStretchedExtraSize = SecondarySurplusSpace / FMath::Max(1, LineDataArray.Num());
-            break;
         }
+        break;
+    case ELexLayoutFlexBoxSecondaryAxisAlignment::Stretch:
+        if (SecondarySurplusSpace > 0)
+        {
+            SecondaryStretchedExtraSize = SecondarySurplusSpace / FMath::Max(1, LineDataArray.Num());
+        }
+        break;
     }
     
     for (int LineIndex = 0; LineIndex < LineDataArray.Num(); LineIndex++)
