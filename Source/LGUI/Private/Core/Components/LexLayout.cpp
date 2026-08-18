@@ -151,7 +151,13 @@ void ULexLayoutContainer::OnRegister()
 
 void ULexLayoutContainer::SnapshotLayout()
 {
-	RefreshChildren();
+	// No RefreshChildren() here any more. It was non-virtual and so was ULexLayoutContainerFlexBox's
+	// same-named function, which meant this call always bound to the *base* version - for FlexBox, for
+	// Grid and for every panel alike. It filled a Children array that only FlexBox reads and that FlexBox
+	// repopulates itself in DoCalculate, so the result was never observed; what did survive was its side
+	// effect, rewriting child anchors under a rule the container had not asked for, on every container in
+	// the tree on every pass, dirty or not. Each container handles its own children and its own anchors:
+	// FlexBox in its RefreshChildren, Grid in ApplyCell, panels in ApplyChildRect.
 	if (!bUseAnimation || !AnimationHandler)return;//snapshot just for animation
 	if (LayoutAnimTweenerArray.Num() > 0)
 	{
@@ -275,30 +281,6 @@ bool ULexLayoutContainer::GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLe
 		OutInfo.Clipping = ClippingEnum->GetDisplayNameTextByValue(static_cast<int64>(TargetWidget->GetClipping())).ToString();
 	}
 	return true;
-}
-
-void ULexLayoutContainer::RefreshChildren()
-{
-	auto Widget = GetWidget();
-	Children.Empty();
-	for (auto& ChildWidget : Widget->GetChildren())
-	{
-		if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
-		if (ChildWidget->GetIgnoreLayout())continue;
-		Children.Add(ChildWidget);
-
-		auto AnchorMin = ChildWidget->GetAnchorMin();
-		auto AnchorMax = ChildWidget->GetAnchorMax();
-		const FLexLayoutControlAnchorData LayoutControl = GetLayoutControlAnchor(ChildWidget);
-		if (AnchorMin.X != AnchorMax.X && LayoutControl.bCanControlHorizontalPosition)//custom anchor not support
-		{
-			ChildWidget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-		}
-		if (AnchorMin.Y != AnchorMax.Y && LayoutControl.bCanControlVerticalPosition)
-		{
-			ChildWidget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-		}
-	}
 }
 
 #if WITH_EDITOR

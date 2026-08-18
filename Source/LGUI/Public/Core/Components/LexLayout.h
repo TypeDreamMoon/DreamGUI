@@ -202,7 +202,7 @@ protected:
 	TArray<FLayoutAnimationSnapshotData> LayoutAnimSnapshotDataArray;
 	TArray<TWeakObjectPtr<ULTweener>> LayoutAnimTweenerArray;
 
-	void RefreshChildren();
+	/** Scratch list of participating children. Each container fills this itself, on its own filter rules. */
 	UPROPERTY(Transient)TArray<ULexWidget*> Children;
 public:
 #if WITH_EDITOR
