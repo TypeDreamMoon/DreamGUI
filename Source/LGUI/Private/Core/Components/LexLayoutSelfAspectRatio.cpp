@@ -1,4 +1,4 @@
-// Copyright 2025-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2025-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
@@ -36,27 +36,34 @@ namespace LexAspectRatioLocal
 			Value, static_cast<double>(MinAspectRatio), static_cast<double>(UE_MAX_FLT)));
 	}
 
-	static bool IsGeometryManagedByParentPanel(const ULexWidget* Widget)
+	/**
+	 * What the parent layout has claimed for this widget, per axis; all-false when there is no parent layout.
+	 *
+	 * This used to be a single "is the parent panel in charge" bool that required all four bits at once,
+	 * and additionally required a panel slot. Nothing satisfied it outside a full panel: a legacy FlexBox
+	 * declares only the two *position* bits (LexLayoutContainerFlexBox.cpp) and hands out no panel slot at
+	 * all, so under FlexBox or Grid the suppression never engaged, and AspectRatio overwrote the position
+	 * the container had just written. Both then rewrote the same axis every pass with different values,
+	 * which is a layout that cannot converge - the manager ran its full 32 passes and logged the
+	 * non-convergence error every frame.
+	 *
+	 * Asking per axis lets the two cooperate the way they always should have: the container places the
+	 * child, AspectRatio sizes it.
+	 */
+	static FLexLayoutControlAnchorData GetParentLayoutControl(const ULexWidget* Widget)
 	{
-		if (!IsValid(Widget) || !IsValid(Widget->GetPanelSlot()))
+		if (!IsValid(Widget))
 		{
-			return false;
+			return FLexLayoutControlAnchorData();
 		}
 		const ULexWidget* ParentWidget = Widget->GetParent();
 		const ULexLayoutContainer* ParentLayout = IsValid(ParentWidget)
 			? ParentWidget->GetLayoutContainer() : nullptr;
 		if (!IsValid(ParentLayout))
 		{
-			return false;
+			return FLexLayoutControlAnchorData();
 		}
-
-		// Panel slots own the allotted rect. LayoutSelf remains the desired-size
-		// provider, but must not overwrite that rect after the parent layout pass.
-		const FLexLayoutControlAnchorData ParentControl = ParentLayout->GetLayoutControlAnchor(Widget);
-		return ParentControl.bCanControlHorizontalPosition
-			&& ParentControl.bCanControlVerticalPosition
-			&& ParentControl.bCanControlHorizontalSize
-			&& ParentControl.bCanControlVerticalSize;
+		return ParentLayout->GetLayoutControlAnchor(Widget);
 	}
 }
 
@@ -68,7 +75,15 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 	TGuardValue<bool> CalculatingGuard(bIsCalculatingSize, true);
 	const float SafeAspectRatio = LexAspectRatioLocal::SanitizeAspectRatio(AspectRatio);
 	AspectRatio = SafeAspectRatio;
-	const bool bParentPanelOwnsGeometry = LexAspectRatioLocal::IsGeometryManagedByParentPanel(Widget);
+	const FLexLayoutControlAnchorData ParentControl = LexAspectRatioLocal::GetParentLayoutControl(Widget);
+	// The single-axis modes only ever write their own axis, so they consult exactly that bit. The coupled
+	// modes below write both axes at once - an aspect ratio cannot be expressed one axis at a time - so
+	// they yield as soon as the parent claims *either* axis: a fight the parent is going to win every
+	// frame is worse than a ratio that is simply not applied.
+	const bool bParentOwnsPosition = ParentControl.bCanControlHorizontalPosition
+		|| ParentControl.bCanControlVerticalPosition;
+	const bool bParentOwnsSize = ParentControl.bCanControlHorizontalSize
+		|| ParentControl.bCanControlVerticalSize;
 	FVector2f PreferredSize(
 		LexAspectRatioLocal::NonNegativeFinite(Widget->GetWidth()),
 		LexAspectRatioLocal::NonNegativeFinite(Widget->GetHeight()));
@@ -92,7 +107,7 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 			const float Width = LexAspectRatioLocal::NonNegativeFloat(
 				static_cast<double>(LexAspectRatioLocal::NonNegativeFinite(Widget->GetHeight())) * SafeAspectRatio);
 			PreferredSize.X = Width;
-			if (!bParentPanelOwnsGeometry)
+			if (!ParentControl.bCanControlHorizontalSize)
 			{
 				Widget->SetWidth(Width);
 			}
@@ -103,7 +118,7 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 			const float Height = LexAspectRatioLocal::NonNegativeFloat(
 				static_cast<double>(LexAspectRatioLocal::NonNegativeFinite(Widget->GetWidth())) / SafeAspectRatio);
 			PreferredSize.Y = Height;
-			if (!bParentPanelOwnsGeometry)
+			if (!ParentControl.bCanControlVerticalSize)
 			{
 				Widget->SetHeight(Height);
 			}
@@ -133,11 +148,14 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 				AnchoredPosition.Y = LexAspectRatioLocal::FiniteFloat(
 					ThisSize.Y * (FMath::IsFinite(Pivot.Y) ? Pivot.Y - 0.5 : 0.0));
 				PreferredSize = FVector2f(ThisSize);
-				if (!bParentPanelOwnsGeometry)
+				if (!bParentOwnsPosition)
 				{
 					Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5));
 					Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5));
 					Widget->SetAnchoredPosition(AnchoredPosition);
+				}
+				if (!bParentOwnsSize)
+				{
 					Widget->SetSizeDelta(ThisSize);
 				}
 			}
@@ -167,11 +185,14 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 				AnchoredPosition.Y = LexAspectRatioLocal::FiniteFloat(
 					ThisSize.Y * (FMath::IsFinite(Pivot.Y) ? Pivot.Y - 0.5 : 0.0));
 				PreferredSize = FVector2f(ThisSize);
-				if (!bParentPanelOwnsGeometry)
+				if (!bParentOwnsPosition)
 				{
 					Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5));
 					Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5));
 					Widget->SetAnchoredPosition(AnchoredPosition);
+				}
+				if (!bParentOwnsSize)
+				{
 					Widget->SetSizeDelta(ThisSize);
 				}
 			}

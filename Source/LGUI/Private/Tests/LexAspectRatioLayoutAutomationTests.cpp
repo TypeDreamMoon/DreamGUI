@@ -1,0 +1,208 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
+#if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
+
+#include "Misc/AutomationTest.h"
+
+#include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexLayoutSelfAspectRatio.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/LexUIManager.h"
+#include "Engine/World.h"
+
+/*
+ * ULexLayoutSelfAspectRatio used to ask one all-or-nothing question - "does the parent panel own this
+ * widget's geometry?" - which required a panel slot plus all four control bits at once. A legacy FlexBox
+ * declares only the two *position* bits and hands out no panel slot, so under FlexBox or Grid the answer
+ * was always no, and AspectRatio's FitInParent/EnvelopeParent overwrote the anchored position the
+ * container had just written.
+ *
+ * Both then wrote the same axis every pass with different values, so the layout could not converge: the
+ * manager burned all 32 passes and logged the non-convergence error every single frame, and the child
+ * ended up parked at the aspect-centred position (0,0 for a default pivot) on top of its siblings.
+ *
+ * The control data is now consulted per axis, so the container places the child and AspectRatio sizes it.
+ */
+
+namespace LexAspectRatioLayoutTestLocal
+{
+	struct FScopedTestWorld
+	{
+		UWorld* World = nullptr;
+		FScopedTestWorld() { World = UWorld::CreateWorld(EWorldType::Game, false); }
+		~FScopedTestWorld() { if (World) { World->DestroyWorld(false); } }
+	};
+
+	/** Horizontal FlexBox root with a plain child followed by a square-aspect child. */
+	struct FFlexBoxWithAspectChildFixture
+	{
+		ULexWidget* Root = nullptr;
+		ULexWidget* Plain = nullptr;
+		ULexWidget* Aspect = nullptr;
+		ULexLayoutSelfAspectRatio* AspectSelf = nullptr;
+
+		bool Build(UWorld* World, ELexLayoutAspectRatioType Type)
+		{
+			Root = NewObject<ULexWidget>(World);
+			Plain = NewObject<ULexWidget>(Root);
+			Aspect = NewObject<ULexWidget>(Root);
+			Root->SetWidth(400.0f);
+			Root->SetHeight(200.0f);
+			Plain->SetWidth(50.0f);
+			Plain->SetHeight(50.0f);
+			Aspect->SetWidth(30.0f);
+			Aspect->SetHeight(90.0f);
+			if (!Plain->TrySetParent(Root, false) || !Aspect->TrySetParent(Root, false))
+			{
+				return false;
+			}
+			if (!Root->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
+			{
+				return false;
+			}
+			AspectSelf = Aspect->CreateNewLayoutSelf<ULexLayoutSelfAspectRatio>();
+			if (!AspectSelf)
+			{
+				return false;
+			}
+			AspectSelf->SetAspectRatio(1.0f);
+			AspectSelf->SetAspectRatioType(Type);
+			Root->OnRegister();
+			Plain->OnRegister();
+			Aspect->OnRegister();
+			return true;
+		}
+	};
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexAspectRatioUnderFlexBoxConvergesTest,
+	"LGUI.Layout.AspectRatio.FitInParentUnderFlexBoxConverges",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexAspectRatioUnderFlexBoxConvergesTest::RunTest(const FString& Parameters)
+{
+	using namespace LexAspectRatioLayoutTestLocal;
+	FScopedTestWorld TestWorld;
+	ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	FFlexBoxWithAspectChildFixture Fixture;
+	if (!TestNotNull(TEXT("LexUI manager subsystem exists"), Manager)
+		|| !Fixture.Build(TestWorld.World, ELexLayoutAspectRatioType::FitInParent))
+	{
+		return false;
+	}
+
+	ULexWidget::MarkLayoutForRebuild(Fixture.Root);
+	Manager->TickLexUI(0.016f);
+	const FVector2D AfterFirst = Fixture.Aspect->GetAnchoredPosition();
+
+	// Convergence: once settled, further ticks must not move anything. Two layouts fighting over the same
+	// axis produce a different answer on every pass, so this is the assertion that actually catches it.
+	for (int32 I = 0; I < 4; ++I)
+	{
+		Manager->TickLexUI(0.016f);
+	}
+	TestEqual(TEXT("Aspect child position is stable across ticks"),
+		Fixture.Aspect->GetAnchoredPosition(), AfterFirst);
+
+	// The container places the child. Before the fix AspectRatio stamped the aspect-centred position,
+	// which is exactly (0,0) for the default pivot, dropping it on top of its sibling.
+	TestNotEqual(TEXT("FlexBox owns the horizontal position, not AspectRatio"),
+		Fixture.Aspect->GetAnchoredPosition().X, 0.0);
+	TestTrue(TEXT("The two children are laid out apart, not stacked"),
+		!FMath::IsNearlyEqual(Fixture.Aspect->GetAnchoredPosition().X, Fixture.Plain->GetAnchoredPosition().X));
+
+	// AspectRatio still does its own job: the size is square, from a 30x90 start.
+	TestTrue(TEXT("AspectRatio still sized the child to its ratio"),
+		FMath::IsNearlyEqual(Fixture.Aspect->GetWidth(), Fixture.Aspect->GetHeight(), 0.01f));
+
+	Fixture.Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexAspectRatioEnvelopeUnderFlexBoxConvergesTest,
+	"LGUI.Layout.AspectRatio.EnvelopeParentUnderFlexBoxConverges",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexAspectRatioEnvelopeUnderFlexBoxConvergesTest::RunTest(const FString& Parameters)
+{
+	using namespace LexAspectRatioLayoutTestLocal;
+	FScopedTestWorld TestWorld;
+	ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	FFlexBoxWithAspectChildFixture Fixture;
+	if (!TestNotNull(TEXT("LexUI manager subsystem exists"), Manager)
+		|| !Fixture.Build(TestWorld.World, ELexLayoutAspectRatioType::EnvelopeParent))
+	{
+		return false;
+	}
+
+	ULexWidget::MarkLayoutForRebuild(Fixture.Root);
+	Manager->TickLexUI(0.016f);
+	const FVector2D AfterFirst = Fixture.Aspect->GetAnchoredPosition();
+	for (int32 I = 0; I < 4; ++I)
+	{
+		Manager->TickLexUI(0.016f);
+	}
+
+	TestEqual(TEXT("Aspect child position is stable across ticks"),
+		Fixture.Aspect->GetAnchoredPosition(), AfterFirst);
+	TestNotEqual(TEXT("FlexBox owns the horizontal position, not AspectRatio"),
+		Fixture.Aspect->GetAnchoredPosition().X, 0.0);
+	TestTrue(TEXT("AspectRatio still sized the child to its ratio"),
+		FMath::IsNearlyEqual(Fixture.Aspect->GetWidth(), Fixture.Aspect->GetHeight(), 0.01f));
+
+	Fixture.Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexAspectRatioWithoutParentLayoutStillOwnsGeometryTest,
+	"LGUI.Layout.AspectRatio.WithoutParentLayoutStillOwnsGeometry",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexAspectRatioWithoutParentLayoutStillOwnsGeometryTest::RunTest(const FString& Parameters)
+{
+	using namespace LexAspectRatioLayoutTestLocal;
+	FScopedTestWorld TestWorld;
+	ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("LexUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+
+	// No parent layout at all: nothing claims any axis, so AspectRatio must keep full control. This is the
+	// half of the change that must NOT regress - per-axis yielding is only meant to defer to a real claim.
+	ULexWidget* Root = NewObject<ULexWidget>(TestWorld.World);
+	ULexWidget* Child = NewObject<ULexWidget>(Root);
+	Root->SetWidth(400.0f);
+	Root->SetHeight(200.0f);
+	Child->SetWidth(30.0f);
+	Child->SetHeight(90.0f);
+	if (!TestTrue(TEXT("Child parented"), Child->TrySetParent(Root, false)))
+	{
+		return false;
+	}
+	ULexLayoutSelfAspectRatio* AspectSelf = Child->CreateNewLayoutSelf<ULexLayoutSelfAspectRatio>();
+	if (!TestNotNull(TEXT("AspectRatio LayoutSelf created"), AspectSelf))
+	{
+		return false;
+	}
+	AspectSelf->SetAspectRatio(2.0f);
+	AspectSelf->SetAspectRatioType(ELexLayoutAspectRatioType::FitInParent);
+	Root->OnRegister();
+	Child->OnRegister();
+
+	ULexWidget::MarkLayoutForRebuild(Root);
+	Manager->TickLexUI(0.016f);
+
+	// FitInParent with ratio 2 inside 400x200 is width-limited: 400x200 exactly.
+	TestTrue(TEXT("AspectRatio fitted the child to the parent"),
+		FMath::IsNearlyEqual(Child->GetWidth(), 400.0f, 0.01f)
+		&& FMath::IsNearlyEqual(Child->GetHeight(), 200.0f, 0.01f));
+
+	Root->DestroyWidget();
+	return true;
+}
+
+#endif
