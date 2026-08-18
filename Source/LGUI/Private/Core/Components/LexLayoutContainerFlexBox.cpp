@@ -539,7 +539,21 @@ void ULexLayoutContainerFlexBox::DoCalculate(bool bApplyResult)
 
         auto CurrentLinePosOffset = PosOffset;
         float SecondaryAxisLineSize = LineData.TotalPreferred[SecondaryAxis];
-        SecondaryAxisLineSize += SecondaryStretchedExtraSize;
+        if (LineDataArray.Num() == 1)
+        {
+            // A single-line flex container's line cross size IS the container's inner cross size, and
+            // does not depend on align-content - that property distributes *lines*, and one line has
+            // nothing to distribute. Without this the line was only as deep as its tallest child, so
+            // SecondaryLineAlignment (align-items) Stretch stretched children to their tallest sibling
+            // instead of to the container, and appeared to do nothing at all until the unrelated
+            // SecondaryAlignment (align-content) was also set to Stretch. ContainerSize already has
+            // padding removed.
+            SecondaryAxisLineSize = ContainerSize[SecondaryAxis];
+        }
+        else
+        {
+            SecondaryAxisLineSize += SecondaryStretchedExtraSize;
+        }
 
         for (int ChildIndex = 0; ChildIndex < LineData.Children.Num(); ChildIndex++)
         {
