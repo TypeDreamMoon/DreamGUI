@@ -143,6 +143,20 @@ FLexUIAnchorData ULexPanelSlot::ComposeAuthoredAnchorData(const FLexUIAnchorData
 	return Composed;
 }
 
+void ULexPanelSlot::SyncAuthoredDesiredSizeFromWidget()
+{
+	const ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return;
+	}
+	const FVector2D Size = Widget->GetSize();
+	AuthoredDesiredSizeFallback = FVector2f(
+		FMath::IsFinite(Size.X) ? FMath::Max(0.0, Size.X) : 0.0,
+		FMath::IsFinite(Size.Y) ? FMath::Max(0.0, Size.Y) : 0.0);
+	bHasAuthoredGeometry = true;
+}
+
 void ULexPanelSlot::InvalidateAuthoredGeometry()
 {
 	bHasAuthoredGeometry = false;

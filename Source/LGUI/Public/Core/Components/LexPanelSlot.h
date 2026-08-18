@@ -110,6 +110,12 @@ public:
 	bool HasAuthoredGeometry() const { return bHasAuthoredGeometry; }
 	bool HasLayoutGeometryApplied() const { return bLayoutGeometryApplied; }
 	FVector2f GetAuthoredDesiredSizeFallback() const { return AuthoredDesiredSizeFallback; }
+	/**
+	 * The widget's size just changed outside a layout pass, so that size is the new authored intent and
+	 * measurement has to follow it. Updates only the desired-size fallback: AuthoredAnchorData is the
+	 * restore target, and the widget's current anchors may still be holding layout output.
+	 */
+	void SyncAuthoredDesiredSizeFromWidget();
 	uint8 GetLayoutGeometryControlMask() const { return LayoutGeometryControlMask; }
 	/**
 	 * Merge the authored values over Current on every axis the active layout pass controls (all axes when

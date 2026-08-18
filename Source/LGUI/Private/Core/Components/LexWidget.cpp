@@ -3306,6 +3306,10 @@ void ULexWidget::UnregisterRenderCanvas()
 
 void ULexWidget::UpdateLayout()
 {
+	// Everything written from here down is layout output, not something anybody asked for; see
+	// IsLayoutWriting.
+	++LayoutPassDepth;
+	ON_SCOPE_EXIT{ --LayoutPassDepth; };
 	if (IsValid(LayoutSelf))
 	{
 		LayoutSelf->CalculateSize();
@@ -3800,6 +3804,18 @@ void ULexWidget::MarkAnchorDataChanged_Recursive(bool InPivotChanged, bool InWid
 	}
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 
+	// A size change that did not come out of a layout pass is a new authored intent, so the panel slot's
+	// measurement snapshot has to follow it. Without this the snapshot froze at whatever the widget
+	// measured when its slot was first registered - nothing outside the editor and prefab paths ever
+	// re-captured it - so the next pass measured the child from that stale value and wrote the old size
+	// straight back. A runtime SetWidth, or ULexSpriteBase::SetSprite swapping in art of a different size,
+	// visibly flashed and snapped back. This funnel only ever runs on the widget the setter was called on:
+	// the recursion below hands children to the by-layout-container twin instead.
+	if ((InWidthChanged || InHeightChanged) && !IsLayoutWriting() && IsValid(PanelSlot))
+	{
+		PanelSlot->SyncAuthoredDesiredSizeFromWidget();
+	}
+
 	if (!InPropagateToChildren)return;
 	for (auto& Child : GetChildren())
 	{
@@ -4010,6 +4026,7 @@ bool ULexWidget::IsWorldSpaceUI()const
 }
 
 TArray<ULexWidget*> ULexWidget::LayoutWriterStack;
+int32 ULexWidget::LayoutPassDepth = 0;
 
 ULexWidget::FLayoutWriteScope::FLayoutWriteScope(ULexWidget* InLayoutWidget)
 {

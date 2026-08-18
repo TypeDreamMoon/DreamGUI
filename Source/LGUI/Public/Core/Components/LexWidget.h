@@ -1260,9 +1260,24 @@ public:
 		bool bPushed = false;
 	};
 
+	/**
+	 * True while any layout is computing and writing results, i.e. inside UpdateLayout.
+	 *
+	 * Distinguishes a size that is layout OUTPUT from a size somebody actually asked for. The two have to
+	 * be told apart, because a panel measures an Auto child from the authored snapshot rather than from its
+	 * current extent - feeding layout output back into measurement is what makes a squeezed widget measure
+	 * as squeezed forever - so the snapshot must follow a real edit and ignore an arranged result.
+	 *
+	 * Broader than FLayoutWriteScope on purpose: that one covers the container write-back only, because it
+	 * governs how far a dirty mark propagates. This covers a LayoutSelf sizing its own widget too.
+	 */
+	static bool IsLayoutWriting() { return LayoutPassDepth > 0; }
+
 private:
 	/** Stack of widgets whose layout containers are applying results; see FLayoutWriteScope. Game thread only. */
 	static TArray<ULexWidget*> LayoutWriterStack;
+	/** Nesting depth of UpdateLayout; see IsLayoutWriting. Game thread only. */
+	static int32 LayoutPassDepth;
 
 private:
 	friend class FLexWidgetCustomization;
