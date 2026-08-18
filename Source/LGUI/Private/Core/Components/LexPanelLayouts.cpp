@@ -639,6 +639,11 @@ void ULexPanelLayoutBase::ApplyChildRect(ULexWidget* Child, const FVector2D& Pos
 	}
 
 	const FVector2f FinalSize(static_cast<float>(FMath::Max(0.0, Width)), static_cast<float>(FMath::Max(0.0, Height)));
+	// Everything below is this panel's own result being written back through the ordinary setters, which
+	// dirty the whole ancestor chain - including this panel, which has already consumed its dirty flag.
+	// Scope it so the write only reaches Child and below. Deliberately starts *after* GetDesiredSize above:
+	// measurement can legitimately dirty things, and so can anything a subclass does in CalculateLayout.
+	ULexWidget::FLayoutWriteScope WriteScope(Panel);
 	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
 	if (ULexLayoutSelfFlexBox* FlexSelf = Cast<ULexLayoutSelfFlexBox>(Child->GetLayoutSelf()))
 	{

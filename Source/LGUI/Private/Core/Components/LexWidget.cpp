@@ -4008,6 +4008,25 @@ bool ULexWidget::IsWorldSpaceUI()const
 	return RenderCanvas->IsRenderToWorldSpace();
 }
 
+TArray<ULexWidget*> ULexWidget::LayoutWriterStack;
+
+ULexWidget::FLayoutWriteScope::FLayoutWriteScope(ULexWidget* InLayoutWidget)
+{
+	if (IsValid(InLayoutWidget))
+	{
+		LayoutWriterStack.Push(InLayoutWidget);
+		bPushed = true;
+	}
+}
+
+ULexWidget::FLayoutWriteScope::~FLayoutWriteScope()
+{
+	if (bPushed)
+	{
+		LayoutWriterStack.Pop(EAllowShrinking::No);
+	}
+}
+
 void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 {
 	if (!IsValid(InWidget))
@@ -4017,10 +4036,20 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 
 	ULexWidget* TargetWidget = InWidget;
 	ULexWidget* RebuildRoot = nullptr;
+	bool bStoppedAtLayoutWriter = false;
 	TSet<const ULexWidget*> VisitedWidgets;
 	// Desired-size dependencies may cross plain wrapper widgets, so dirty every layout on the ancestor chain.
 	while (IsValid(TargetWidget) && !VisitedWidgets.Contains(TargetWidget))
 	{
+		// A layout that is applying its own results must not be re-dirtied by them. Stop the walk at the
+		// writer: everything below it still gets dirtied, because a nested container does have to react to
+		// the size it was just handed, but the writer and its ancestors keep the dirty state they already
+		// consumed. Widgets outside the writer's subtree never reach this branch and behave as before.
+		if (LayoutWriterStack.Contains(TargetWidget))
+		{
+			bStoppedAtLayoutWriter = true;
+			break;
+		}
 		VisitedWidgets.Add(TargetWidget);
 		if (ULexLayoutContainer* LayoutContainer = TargetWidget->GetLayoutContainer(); IsValid(LayoutContainer))
 		{
@@ -4036,8 +4065,14 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 		{
 			break;
 		}
-		
+
 		TargetWidget = TargetWidget->GetParent();
+	}
+	if (bStoppedAtLayoutWriter)
+	{
+		// The pass that is running collected the writer's whole subtree and visits it in pre-order, so any
+		// descendant dirtied above is still ahead of the cursor. Enqueuing it would only buy a second pass.
+		return;
 	}
 	if (!IsValid(RebuildRoot))
 	{

@@ -28,6 +28,25 @@ public:
 };
 
 /**
+ * Overlay that counts how many times it is actually asked to lay out.
+ *
+ * An overlay writes its children's geometry through the ordinary setters, so before FLayoutWriteScope
+ * existed every write re-dirtied the container that produced it and a single geometry change always cost
+ * two passes. Counting the calls is the only way to observe that from a test: the arranged result is the
+ * same either way, only the amount of work differs.
+ */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class ULexLayoutPassCountingOverlay : public ULexLayoutContainerOverlay
+{
+	GENERATED_BODY()
+public:
+	/** Times CalculateLayout ran past its own dirty gate, i.e. genuinely recomputed. */
+	int32 PassCount = 0;
+
+	virtual void CalculateLayout() override;
+};
+
+/**
  * Overlay that immediately rebuilds a batch of unrelated layout roots from inside its own layout pass,
  * one-shot. Each nested rebuild inserts into the manager's layout tree map, forcing it to rehash while an
  * outer CalculateLayoutTree is still iterating — the re-entrancy that must not dangle.

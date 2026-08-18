@@ -16,6 +16,18 @@ void ULexLayoutVisibilityFlipOverlay::CalculateLayout()
 	}
 }
 
+void ULexLayoutPassCountingOverlay::CalculateLayout()
+{
+	// Read the dirty flag before Super consumes it, so the count is of real recomputes and not of the
+	// cheap early-out that every clean container takes on every tree walk.
+	const bool bWasDirty = bIsLayoutDirty;
+	Super::CalculateLayout();
+	if (bWasDirty)
+	{
+		++PassCount;
+	}
+}
+
 void ULexLayoutReentrantRebuildOverlay::CalculateLayout()
 {
 	Super::CalculateLayout();

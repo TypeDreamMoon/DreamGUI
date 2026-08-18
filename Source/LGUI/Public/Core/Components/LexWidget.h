@@ -1241,6 +1241,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RebuildLayoutImmediately(ULexWidget* InWidget);
 
+	/**
+	 * Marks the widget whose layout container is currently writing its results back onto its children.
+	 *
+	 * The write-back uses the ordinary setters, and those call MarkLayoutForRebuild, which walks the whole
+	 * ancestor chain - so without this the first ancestor it reaches is the container that just consumed its
+	 * own dirty flag, and every real geometry change costs two full CalculateLayoutTree passes. While the
+	 * scope is alive, MarkLayoutForRebuild still dirties everything *below* the writer (a nested container
+	 * has to react to the size it was just given) but stops before the writer itself.
+	 */
+	struct LGUI_API FLayoutWriteScope
+	{
+		explicit FLayoutWriteScope(ULexWidget* InLayoutWidget);
+		~FLayoutWriteScope();
+		FLayoutWriteScope(const FLayoutWriteScope&) = delete;
+		FLayoutWriteScope& operator=(const FLayoutWriteScope&) = delete;
+	private:
+		bool bPushed = false;
+	};
+
+private:
+	/** Stack of widgets whose layout containers are applying results; see FLayoutWriteScope. Game thread only. */
+	static TArray<ULexWidget*> LayoutWriterStack;
+
 private:
 	friend class FLexWidgetCustomization;
 	friend class ULexCanvas;

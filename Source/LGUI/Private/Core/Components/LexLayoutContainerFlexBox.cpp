@@ -59,18 +59,23 @@ void ULexLayoutContainerFlexBox::CalculateLayout()
     DoCalculate(true);
 
     //apply result
-    for (auto& LayoutResult : CalculatedLayoutResultArray)
     {
-		if (!IsValid(LayoutResult.Widget)) continue;
-		if (IsValid(LayoutResult.LayoutSelf))
-		{
-			LayoutResult.LayoutSelf->SetFinalSizeByLayoutContainer(LayoutResult.Size);
-			LayoutResult.Widget->SetAnchoredPositionAndSizeDelta(LayoutResult.AnchoredPos, FVector2D(LayoutResult.Size));
-		}
-		else
-		{
-			LayoutResult.Widget->SetAnchoredPosition(LayoutResult.AnchoredPos);
-		}
+        // These setters dirty the whole ancestor chain, starting with this container, which has already
+        // consumed its dirty flag above. Scope the write-back so it only reaches the children and below.
+        ULexWidget::FLayoutWriteScope WriteScope(GetWidget());
+        for (auto& LayoutResult : CalculatedLayoutResultArray)
+        {
+            if (!IsValid(LayoutResult.Widget)) continue;
+            if (IsValid(LayoutResult.LayoutSelf))
+            {
+                LayoutResult.LayoutSelf->SetFinalSizeByLayoutContainer(LayoutResult.Size);
+                LayoutResult.Widget->SetAnchoredPositionAndSizeDelta(LayoutResult.AnchoredPos, FVector2D(LayoutResult.Size));
+            }
+            else
+            {
+                LayoutResult.Widget->SetAnchoredPosition(LayoutResult.AnchoredPos);
+            }
+        }
     }
     CalculatedLayoutResultArray.Reset();
 }

@@ -178,6 +178,9 @@ void ULexLayoutContainerGrid::CalculateLayout()
 	auto ApplyCell = [&](ULexWidget* Child, int32 Column, int32 Row, int32 ColumnSpan, int32 RowSpan, ULexLayoutSelfGrid* GridSelf)
 	{
 		if (!IsValid(Child)) return;
+		// The anchor/position/size writes below dirty the whole ancestor chain, starting with this grid,
+		// which already consumed its dirty flag. Scope them so they only reach Child and below.
+		ULexWidget::FLayoutWriteScope WriteScope(Widget);
 		Column = FMath::Clamp(Column, 0, Columns.Num() - 1);
 		Row = FMath::Clamp(Row, 0, Rows.Num() - 1);
 		ColumnSpan = FMath::Clamp(ColumnSpan, 1, Columns.Num() - Column);
