@@ -1057,10 +1057,52 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 			TArray<TWeakObjectPtr<ULexWidget>> CopiedLayoutDirtyWidgetArray;
 			Swap(CopiedLayoutDirtyWidgetArray, LayoutDirtyWidgetArray);
 
-			for (int i = CopiedLayoutDirtyWidgetArray.Num() - 1; i >= 0; i--)
+			// Collect the live roots up front so ancestry can be tested against the whole batch.
+			TSet<ULexWidget*> BatchRoots;
+			TArray<ULexWidget*> OrderedRoots;
+			BatchRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
+			OrderedRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
+			for (const TWeakObjectPtr<ULexWidget>& WeakWidget : CopiedLayoutDirtyWidgetArray)
 			{
-				auto& Widget = CopiedLayoutDirtyWidgetArray[i];
-				CalculateLayoutTree(Widget.Get());
+				if (ULexWidget* Widget = WeakWidget.Get(); IsValid(Widget))
+				{
+					bool bAlreadyPresent = false;
+					BatchRoots.Add(Widget, &bAlreadyPresent);
+					if (!bAlreadyPresent)
+					{
+						OrderedRoots.Add(Widget);
+					}
+				}
+			}
+
+			// CalculateLayoutTree walks an entire subtree, so a root sitting under another root in the same
+			// batch is redundant - the ancestor's walk already covers it. It was worse than redundant: this
+			// batch used to be iterated back-to-front, so the descendant usually ran FIRST, laying its
+			// subtree out against the ancestor's stale size and then being laid out a second time when the
+			// ancestor's walk reached it. Both roots are easy to enqueue at once, because
+			// ULexWidget::MarkLayoutForRebuild falls back to the widget itself when no layout exists yet on
+			// its ancestor chain - sizing a widget before parenting it is enough.
+			// The survivors are pairwise unrelated, so their relative order no longer matters; keep enqueue
+			// order for determinism.
+			constexpr int32 MaxHierarchyDepthGuard = 1024;
+			for (ULexWidget* Widget : OrderedRoots)
+			{
+				bool bCoveredByAncestor = false;
+				int32 DepthGuard = 0;
+				for (ULexWidget* Ancestor = Widget->GetParent();
+					IsValid(Ancestor) && DepthGuard < MaxHierarchyDepthGuard;
+					Ancestor = Ancestor->GetParent(), ++DepthGuard)
+				{
+					if (BatchRoots.Contains(Ancestor))
+					{
+						bCoveredByAncestor = true;
+						break;
+					}
+				}
+				if (!bCoveredByAncestor)
+				{
+					CalculateLayoutTree(Widget);
+				}
 			}
 		}
 		if (LayoutDirtyWidgetArray.Num() > 0)
