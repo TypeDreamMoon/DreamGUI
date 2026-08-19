@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexText.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIManager.h"
 #include "Tests/LexLayoutInvalidationTestTypes.h"
@@ -182,6 +183,61 @@ bool FLexInvalidationSlotAlignmentStopsAtTheParentTest::RunTest(const FString& P
 	TestEqual(TEXT("...and the grandparent too"), Fixture.RootOverlay->PassCount, 1);
 
 	Fixture.Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexInvalidationParagraphAlignmentCostsNoLayoutTest,
+	"LGUI.Layout.InvalidationReason.ParagraphAlignmentCostsNoLayout",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexInvalidationParagraphAlignmentCostsNoLayoutTest::RunTest(const FString& Parameters)
+{
+	using namespace LexInvalidationReasonTestLocal;
+	FScopedTestWorld TestWorld;
+	ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("LexUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+
+	ULexWidget* Root = NewObject<ULexWidget>(TestWorld.World);
+	Root->SetWidth(320.0f);
+	Root->SetHeight(180.0f);
+	ULexWidget* Child = MakeChild(TestWorld.World, Root, 40.0f, 20.0f);
+	ULexLayoutPassCountingOverlay* Overlay = Cast<ULexLayoutPassCountingOverlay>(
+		Root->CreateNewLayoutContainer(ULexLayoutPassCountingOverlay::StaticClass()));
+	ULexText* Text = Cast<ULexText>(Child->CreateNewVisual(ULexText::StaticClass()));
+	if (!Overlay || !Text)
+	{
+		return false;
+	}
+	Root->OnRegister();
+	Child->OnRegister();
+	ULexWidget::MarkLayoutForRebuild(Root);
+	Manager->TickLexUI(0.016f);
+	Manager->TickLexUI(0.016f);
+	Overlay->PassCount = 0;
+	const FVector2D SizeBefore = Child->GetSize();
+
+	// UpdateUITextGeometry fills textPreferredSize from glyph advances and line heights, then uses the
+	// paragraph alignment only to offset vertices inside the rect that size describes. Nothing layout
+	// reads can move, so a re-alignment should not enter the layout loop at all - the canvas update
+	// MarkVertexPositionDirty raises is the entire cost.
+	Text->SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlign::Right);
+	Text->SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign::Bottom);
+	Manager->TickLexUI(0.016f);
+
+	TestEqual(TEXT("Re-aligning a paragraph costs no layout pass"), Overlay->PassCount, 0);
+	TestEqual(TEXT("...and does not move the widget"), Child->GetSize(), SizeBefore);
+
+	// The neighbouring setter that does change the measurement must still reflow, so this cannot be
+	// read as "text setters stopped invalidating".
+	Text->SetFontSize(37.0f);
+	Manager->TickLexUI(0.016f);
+	TestEqual(TEXT("Font size still reflows the parent"), Overlay->PassCount, 1);
+
+	Root->DestroyWidget();
 	return true;
 }
 

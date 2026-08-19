@@ -490,12 +490,17 @@ void ULexText::SetFontSpace(FVector2D Value) {
 		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
+// Paragraph alignment reaches nothing that layout reads. UpdateUITextGeometry fills textPreferredSize
+// from glyph advances and line heights, and only *afterwards* uses paragraphHAlign/paragraphVAlign to
+// offset the vertices inside the rect that size describes. So the desired size does not move, the
+// widget does not move inside its parent, and there is nothing for a layout pass to recompute -
+// MarkVertexPositionDirty already reaches the canvas through MarkVerticesDirty -> MarkCanvasUpdate,
+// which is the whole of what a re-alignment needs.
 void ULexText::SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlign Value) {
 	if (HAlign != Value)
 	{
 		MarkVertexPositionDirty();
 		HAlign = Value;
-		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Value) {
@@ -503,7 +508,6 @@ void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Va
 	{
 		MarkVertexPositionDirty();
 		VAlign = Value;
-		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetOverflowType(ELexUITextOverflowType Value) {
