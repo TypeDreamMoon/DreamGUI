@@ -19,6 +19,16 @@
 static TAutoConsoleVariable<int32> CVarLexScrollBoxTrace(
 	TEXT("lgui.ScrollBoxTrace"), 0,
 	TEXT("1 = log every scroll box drag delta and physics tick that changes state."));
+
+/**
+ * Traces the layout pass itself: which panels were asked, which got past their dirty gate, what size
+ * they were working from, and what rect each child came out with. Reading a screenshot only ever says
+ * "this is not where I expected it"; the difference between "never arranged", "arranged against a stale
+ * size" and "arranged correctly against a size you did not expect" is not visible from outside.
+ */
+static TAutoConsoleVariable<int32> CVarLexLayoutTrace(
+	TEXT("lgui.LayoutTrace"), 0,
+	TEXT("1 = log every panel arrange and every rect it commits."));
 #include "Widgets/Layout/SSafeZone.h"
 
 namespace LexPanelLayoutLocal
@@ -754,8 +764,34 @@ void ULexPanelLayoutBase::CommitFragment(const FLexFragment& Fragment) const
 
 void ULexPanelLayoutBase::CalculateLayout()
 {
-	if (!BeginLayoutPass()) return;
+	const bool bTrace = CVarLexLayoutTrace.GetValueOnAnyThread() != 0;
+	if (!BeginLayoutPass())
+	{
+		if (bTrace)
+		{
+			UE_LOG(LGUI, Log, TEXT("[LayoutTrace] %s (%s): gate closed, not dirty"),
+				*GetNameSafe(GetWidget()), *GetClass()->GetName());
+		}
+		return;
+	}
+	if (bTrace)
+	{
+		ULexWidget* Panel = GetWidget();
+		UE_LOG(LGUI, Log, TEXT("[LayoutTrace] %s (%s): arranging, panel size %s, %d children"),
+			*GetNameSafe(Panel), *GetClass()->GetName(),
+			*(IsValid(Panel) ? Panel->GetSize().ToString() : FString(TEXT("<none>"))),
+			IsValid(Panel) ? Panel->GetChildrenCount() : 0);
+	}
 	const FLexFragment Fragment = Arrange();
+	if (bTrace)
+	{
+		UE_LOG(LGUI, Log, TEXT("[LayoutTrace]   fragment has %d child rects"), Fragment.Children.Num());
+		for (const FLexPanelChildRect& Rect : Fragment.Children)
+		{
+			UE_LOG(LGUI, Log, TEXT("[LayoutTrace]     %s -> size %s pos %s"),
+				*GetNameSafe(Rect.Child), *Rect.Size.ToString(), *Rect.AnchoredPosition.ToString());
+		}
+	}
 	CommitFragment(Fragment);
 }
 

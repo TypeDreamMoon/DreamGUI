@@ -4056,6 +4056,14 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget, ELexLayoutInvalidati
 	{
 		return;
 	}
+	static IConsoleVariable* LayoutTraceCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("lgui.LayoutTrace"));
+	if (LayoutTraceCVar && LayoutTraceCVar->GetInt() != 0)
+	{
+		UE_LOG(LGUI, Log, TEXT("[LayoutTrace] invalidate %s reason=%s registered=%d"),
+			*GetNameSafe(InWidget),
+			Reason == ELexLayoutInvalidation::Arrange ? TEXT("Arrange") : TEXT("Measure"),
+			InWidget->HasRegistered() ? 1 : 0);
+	}
 
 	if (Reason == ELexLayoutInvalidation::Arrange)
 	{
