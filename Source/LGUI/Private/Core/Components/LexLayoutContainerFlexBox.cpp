@@ -170,11 +170,40 @@ void ULexLayoutContainerFlexBox::DoCalculate(bool bApplyResult)
                     Value.Shrink = FVector2f(0, LexFlexBoxLocal::NonNegativeFinite(ChildLayoutSelf->GetShrinkForLayoutContainer(1)));
                 }
             }
-            else// child does not have LayoutSelf, so use its current arranged size
+            else
             {
+                // No *FlexBox* LayoutSelf. The comment here used to read "child does not have LayoutSelf",
+                // but the cast is to ULexLayoutSelfFlexBox specifically, so every other kind of LayoutSelf
+                // landed here too and had its declared size thrown away - ULexLayoutSelfSpacer, whose entire
+                // purpose is to report one, along with AspectRatio and Grid. A nested container was
+                // discarded the same way, so adding rows to a VerticalBox inside a FlexBox row never
+                // re-flowed the row. Measurement now asks the same three sources, in the same order, that
+                // ULexPanelLayoutBase::GetDesiredSize does; only the reverse direction was ever wired up.
+                FVector2f Intrinsic(-1.0f, -1.0f);
+                auto TakeIfPositive = [&Intrinsic](const FVector2f& Candidate)
+                {
+                    if (Intrinsic.X < 0.0f && Candidate.X > 0.0f) Intrinsic.X = Candidate.X;
+                    if (Intrinsic.Y < 0.0f && Candidate.Y > 0.0f) Intrinsic.Y = Candidate.Y;
+                };
+                if (ULexLayoutSelf* OtherSelf = ChildWidget->GetLayoutSelf(); IsValid(OtherSelf)
+                    && OtherSelf->GetClass() != ULexLayoutSelf::StaticClass())
+                {
+                    TakeIfPositive(OtherSelf->GetLayoutPreferredSize());
+                }
+                if (ULexLayoutContainer* ChildContainer = ChildWidget->GetLayoutContainer(); IsValid(ChildContainer))
+                {
+                    TakeIfPositive(ChildContainer->GetLayoutPreferredSize());
+                }
+                if (ULexVisual* Visual = ChildWidget->GetVisual(); IsValid(Visual))
+                {
+                    TakeIfPositive(FVector2f(Visual->GetPreferredWidth(), Visual->GetPreferredHeight()));
+                }
+                // Whatever is still unresolved falls back to the current arranged size, as before.
+                if (Intrinsic.X < 0.0f) Intrinsic.X = LexFlexBoxLocal::NonNegativeFinite(ChildWidget->GetWidth());
+                if (Intrinsic.Y < 0.0f) Intrinsic.Y = LexFlexBoxLocal::NonNegativeFinite(ChildWidget->GetHeight());
                 Value.Min = Value.Max = Value.Preferred = FVector2f(
-					LexFlexBoxLocal::NonNegativeFinite(ChildWidget->GetWidth()),
-					LexFlexBoxLocal::NonNegativeFinite(ChildWidget->GetHeight()));
+                    LexFlexBoxLocal::NonNegativeFinite(Intrinsic.X),
+                    LexFlexBoxLocal::NonNegativeFinite(Intrinsic.Y));
                 Value.Grow = Value.Shrink = FVector2f(0, 0);
             }
             ChildSizePtr = &MapWidgetToChildSizes.Add(ChildWidget, Value);
