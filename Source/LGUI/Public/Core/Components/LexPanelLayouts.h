@@ -510,6 +510,16 @@ private:
 	 * construction or BeginPlay; UMG dodges the same trap by deferring its clamp to Slate.
 	 */
 	bool bLayoutMetricsValid = false;
+	/**
+	 * The offset last asked for, before any clamp. Seeded from the serialized ScrollOffset on the first pass.
+	 *
+	 * Clamping ScrollOffset in place against MaxScrollOffset is destructive, and MaxScrollOffset is only as
+	 * good as the measurement behind it. A pass that measures the content too small - narrowing a vertical
+	 * box re-measures wrapping text at its pre-arrangement width, for one - then permanently truncated the
+	 * user's position, and the corrected larger range on the pass right after could not give it back.
+	 * Re-deriving the clamp from the request each pass makes a transient underestimate transient too.
+	 */
+	float RequestedScrollOffset = 0.0f;
 	/** Content-space start and extent of the direct child that contains InWidget. */
 	bool GetChildContentExtent(ULexWidget* InWidget, float& OutStart, float& OutExtent);
 

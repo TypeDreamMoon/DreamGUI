@@ -1916,6 +1916,7 @@ void ULexLayoutContainerScrollBox::PostEditChangeProperty(FPropertyChangedEvent&
 	// Details-panel edits bypass SetScrollOffset; sanitize and re-arrange so the designer sees the
 	// scrolled content immediately (layout clamps against MaxScrollOffset).
 	ScrollOffset = FMath::Max(0.0f, LexPanelLayoutLocal::FiniteOrZero(ScrollOffset));
+	RequestedScrollOffset = ScrollOffset;
 	RequestLayoutRefresh();
 }
 #endif
@@ -1926,7 +1927,11 @@ void ULexLayoutContainerScrollBox::SetScrollOffset(float Value)
 	// every offset requested during construction or BeginPlay into 0 with no way to tell. Until the
 	// metrics exist the request is kept as asked and CalculateLayout clamps it on the way through.
 	const float Upper = bLayoutMetricsValid ? MaxScrollOffset : TNumericLimits<float>::Max();
-	const float Clamped = FMath::Clamp(LexPanelLayoutLocal::FiniteOrZero(Value), 0.0f, Upper);
+	const float Sanitized = FMath::Max(0.0f, LexPanelLayoutLocal::FiniteOrZero(Value));
+	const float Clamped = FMath::Min(Sanitized, Upper);
+	// Record the intent even when the clamped value is unchanged: the range may grow later, and this is
+	// what the next layout pass re-derives the offset from.
+	RequestedScrollOffset = Sanitized;
 	if (FMath::IsNearlyEqual(ScrollOffset, Clamped))
 	{
 		return;
@@ -2415,11 +2420,18 @@ void ULexLayoutContainerScrollBox::CalculateLayout()
 	// its clamp bound is real now.
 	MeasuredContentPrimary = ContentPrimary;
 	MeasuredViewportPrimary = AvailablePrimary;
+	if (!bLayoutMetricsValid)
+	{
+		// First pass: whatever ScrollOffset was serialized or set before any range existed is the request.
+		RequestedScrollOffset = FMath::Max(0.0f, LexPanelLayoutLocal::FiniteOrZero(ScrollOffset));
+	}
 	bLayoutMetricsValid = true;
 	// The range only becomes real here, so this is the first moment the bar can be told anything
 	// truthful about handle size.
 	SyncScrollbar();
-	ScrollOffset = FMath::Clamp(ScrollOffset, 0.0f, MaxScrollOffset);
+	// Re-derived from the request rather than clamped in place, so a pass that measures the content too
+	// small moves the view without destroying the position it moved away from.
+	ScrollOffset = FMath::Clamp(RequestedScrollOffset, 0.0f, MaxScrollOffset);
 
 	// The rubber band displaces the content without moving the scroll position: GetScrollOffset stays
 	// inside the range at all times, and only what the user sees is pulled past the end.
