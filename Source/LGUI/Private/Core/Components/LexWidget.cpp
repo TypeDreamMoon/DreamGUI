@@ -1182,7 +1182,7 @@ void ULexWidget::SetRelativeLocation(const FVector& Value)
 			CalculateAnchorFromTransform();
 			if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
 			{
-				MarkLayoutForRebuild(this);
+				MarkLayoutForRebuild(this, ELexLayoutInvalidation::Arrange);
 			}
 		}
 	}
@@ -1242,7 +1242,7 @@ void ULexWidget::SetRelativeLocationAndRotation(const FVector& InLocation, const
 			CalculateAnchorFromTransform();
 			if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
 			{
-				MarkLayoutForRebuild(this);
+				MarkLayoutForRebuild(this, ELexLayoutInvalidation::Arrange);
 			}
 		}
 	}
@@ -2613,7 +2613,7 @@ void ULexWidget::SetPivot(FVector2D Value)
 		MarkAnchorDataChanged_Recursive(true, false, false, false);
 		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
 		{
-			MarkLayoutForRebuild(this);
+			MarkLayoutForRebuild(this, ELexLayoutInvalidation::Arrange);
 		}
 	}
 }
@@ -2863,7 +2863,7 @@ void ULexWidget::SetAnchoredPosition(FVector2D Value)
 		MarkAnchorDataChanged_Recursive(false, false, false, false);
 		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
 		{
-			MarkLayoutForRebuild(this);
+			MarkLayoutForRebuild(this, ELexLayoutInvalidation::Arrange);
 		}
 	}
 }
@@ -2878,7 +2878,7 @@ void ULexWidget::SetHorizontalAnchoredPosition(float Value)
 		MarkAnchorDataChanged_Recursive(false, false, false, false);
 		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
 		{
-			MarkLayoutForRebuild(this);
+			MarkLayoutForRebuild(this, ELexLayoutInvalidation::Arrange);
 		}
 	}
 }
@@ -2892,7 +2892,7 @@ void ULexWidget::SetVerticalAnchoredPosition(float Value)
 		MarkAnchorDataChanged_Recursive(false, false, false, false);
 		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
 		{
-			MarkLayoutForRebuild(this);
+			MarkLayoutForRebuild(this, ELexLayoutInvalidation::Arrange);
 		}
 	}
 }
@@ -4047,8 +4047,43 @@ ULexWidget::FLayoutWriteScope::~FLayoutWriteScope()
 
 void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 {
+	MarkLayoutForRebuild(InWidget, ELexLayoutInvalidation::Measure);
+}
+
+void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget, ELexLayoutInvalidation Reason)
+{
 	if (!IsValid(InWidget))
 	{
+		return;
+	}
+
+	if (Reason == ELexLayoutInvalidation::Arrange)
+	{
+		// Nothing above the parent can come out differently: a panel measures its children by desired
+		// size and never by where they sit, so a widget that only moved leaves every preferred size on
+		// the chain exactly as it was. The parent still re-arranges, which is what keeps a panel-managed
+		// child from staying where it was put - the visible behaviour is unchanged, only the reach is.
+		ULexWidget* ParentWidget = InWidget->GetParent();
+		if (!IsValid(ParentWidget))
+		{
+			return;
+		}
+		ULexLayoutContainer* ParentLayout = ParentWidget->GetLayoutContainer();
+		if (!IsValid(ParentLayout))
+		{
+			return;
+		}
+		// A writer applying its own arrangement must not be re-dirtied by it, same as the walk below.
+		if (LayoutWriterStack.Contains(ParentWidget))
+		{
+			return;
+		}
+		ParentLayout->MarkLayoutDirty();
+		if (ULexLayoutSelf* LayoutSelf = InWidget->GetLayoutSelf(); IsValid(LayoutSelf))
+		{
+			LayoutSelf->MarkLayoutDirty();
+		}
+		ParentWidget->MarkWidgetLayoutDirty();
 		return;
 	}
 

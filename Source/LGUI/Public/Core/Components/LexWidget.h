@@ -20,6 +20,31 @@ class ULexCanvas;
 enum class ELexRenderMode : uint8;
 namespace LexPerspective { struct FScope; }
 
+/**
+ * What kind of change a layout invalidation is reporting.
+ *
+ * Blink's StyleDifference in miniature. There the decision is made once, by diffing the old and new
+ * ComputedStyle, rather than by asking every setter to remember what it affects; the shape here is the
+ * same even though the diff is not, and the point is identical - "something changed" and "the desired
+ * size changed" are different facts and cost very different amounts of work.
+ *
+ * Measure is the safe answer and the default, so a site that says nothing keeps the old behaviour.
+ */
+enum class ELexLayoutInvalidation : uint8
+{
+	/**
+	 * This widget's desired size may have changed. Every ancestor that measures it has to re-run, so
+	 * the whole chain is dirtied. Text, sprites, child count, anything authored about size.
+	 */
+	Measure,
+	/**
+	 * Only where this widget sits inside its parent changed. Panels measure their children by desired
+	 * size and never by position, so nothing above the parent can produce a different answer - the
+	 * parent re-arranges and the walk stops there.
+	 */
+	Arrange,
+};
+
 /** Matches UMG/Slate visibility while keeping WidgetActive as the behaviour lifecycle switch. */
 UENUM(BlueprintType)
 enum class ELexWidgetVisibility : uint8
@@ -1238,6 +1263,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void MarkLayoutForRebuild(ULexWidget* InWidget);
+
+	/**
+	 * Same, but saying which kind of change it was. See ELexLayoutInvalidation.
+	 *
+	 * The distinction was already in the code as a comment - several position setters read "only
+	 * position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not"
+	 * - but with one bool to invalidate through, the only choices were the whole ancestor chain or
+	 * nothing. This lets a site say what actually changed instead.
+	 */
+	static void MarkLayoutForRebuild(ULexWidget* InWidget, ELexLayoutInvalidation Reason);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RebuildLayoutImmediately(ULexWidget* InWidget);
 
