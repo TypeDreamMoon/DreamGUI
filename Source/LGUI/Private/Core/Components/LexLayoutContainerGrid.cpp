@@ -252,7 +252,40 @@ void ULexLayoutContainerGrid::CalculateLayout()
 
 FVector2f ULexLayoutContainerGrid::GetLayoutPreferredSize()
 {
-	return FVector2f::ZeroVector;
+	// An axis made only of Ratio tracks has no intrinsic size - a ratio is a share of something the parent
+	// has not decided yet - so zero is the honest answer there, and callers read zero as "I do not
+	// contribute a desired size". An axis made only of Fixed tracks is the opposite: it is entirely known
+	// up front. Reporting zero for it meant FLexLayoutSize::Calculate's Auto branch, which only accepts a
+	// positive value, fell through to the 100 unit Fixed default and a grid that should shrink-wrap became
+	// a 100x100 box.
+	//
+	// Mixed axes stay at zero. A Ratio track's contribution is undefined until the outer size exists, so
+	// there is no total to report, and inventing one from the fixed part alone would be a smaller lie
+	// rather than a truth. Content-driven track types are deliberately not implemented on this
+	// Experimental component; if they arrive, this is where they get measured.
+	auto AxisTotal = [](const TArray<FLexLayoutGridSize>& Tracks, float Spacing, float PaddingStart, float PaddingEnd)
+	{
+		if (Tracks.IsEmpty())
+		{
+			return 0.0f;
+		}
+		double Total = 0.0;
+		for (const FLexLayoutGridSize& Track : Tracks)
+		{
+			if (Track.Type == ELexLayoutGridSizeType::Ratio)
+			{
+				return 0.0f;
+			}
+			Total += LexResponsiveGridLocal::NonNegative(Track.FixedValue);
+		}
+		Total += static_cast<double>(LexResponsiveGridLocal::NonNegative(Spacing)) * (Tracks.Num() - 1);
+		Total += LexResponsiveGridLocal::FiniteOrZero(PaddingStart);
+		Total += LexResponsiveGridLocal::FiniteOrZero(PaddingEnd);
+		return static_cast<float>(FMath::Clamp(Total, 0.0, static_cast<double>(UE_MAX_FLT)));
+	};
+	return FVector2f(
+		AxisTotal(Columns, Spacing.X, Padding.Left, Padding.Right),
+		AxisTotal(Rows, Spacing.Y, Padding.Top, Padding.Bottom));
 }
 
 FLexLayoutControlAnchorData ULexLayoutContainerGrid::GetLayoutControlAnchor(const ULexWidget* TargetWidget) const
