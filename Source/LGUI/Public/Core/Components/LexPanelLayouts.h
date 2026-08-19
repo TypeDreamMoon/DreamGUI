@@ -43,6 +43,36 @@ public:
 	 */
 	FVector2D GetDesiredSize(ULexWidget* Child) const;
 
+	/**
+	 * Memoises GetDesiredSize for the duration of one arrange or measure.
+	 *
+	 * Measuring a panel asks its container for a preferred size, which measures every child, each of
+	 * which may be a panel - so one question costs O(children^depth). A StackBox then asks it four times
+	 * per child in a single pass: once to total the fixed extent, once to place, once inside
+	 * ApplyChildRect, and once more from MeasureLayout. Nothing pruned any of that.
+	 *
+	 * The memo is only sound because an arrange pass no longer writes: a child's desired size cannot
+	 * change while the pass that would change it is still recording into a fragment. Entries are dropped
+	 * explicitly on the two paths that do write mid-arrange (authored-geometry restore, and layout
+	 * visibility suppression), and the whole memo dies when the outermost scope closes.
+	 */
+	struct LGUI_API FDesiredSizeMemoScope
+	{
+		FDesiredSizeMemoScope();
+		~FDesiredSizeMemoScope();
+		FDesiredSizeMemoScope(const FDesiredSizeMemoScope&) = delete;
+		FDesiredSizeMemoScope& operator=(const FDesiredSizeMemoScope&) = delete;
+	};
+
+	/** Drop one entry, for a caller that is about to write the widget's geometry mid-pass. */
+	static void ForgetDesiredSize(const ULexWidget* Widget);
+	/** Drop everything, for a change that alters which widgets participate at all. */
+	static void ForgetAllDesiredSizes();
+
+	/** Times GetDesiredSize walked the tree instead of answering from the memo. Test instrumentation. */
+	static int64 GetDesiredSizeComputeCount() { return DesiredSizeComputeCount; }
+	static void ResetDesiredSizeComputeCount() { DesiredSizeComputeCount = 0; }
+
 protected:
 	FVector2f PreferredSize = FVector2f::ZeroVector;
 	virtual void OnUnregister() override;
@@ -64,6 +94,14 @@ protected:
 
 	/** Where the current arrange pass is recording. Null outside a pass. */
 	mutable FLexFragment* RecordingFragment = nullptr;
+
+private:
+	/** One pass is single-threaded, so the memo is shared across every panel taking part in it. */
+	static TMap<const ULexWidget*, FVector2D> DesiredSizeMemo;
+	static int32 DesiredSizeMemoDepth;
+	static int64 DesiredSizeComputeCount;
+
+protected:
 
 	/** Write a recorded fragment onto the widgets. The one place a panel's result reaches the tree. */
 	void CommitFragment(const FLexFragment& Fragment) const;

@@ -485,8 +485,43 @@ TArray<ULexWidget*> ULexPanelLayoutBase::CollectLayoutChildren(bool bEnsureSlots
 	return Result;
 }
 
+TMap<const ULexWidget*, FVector2D> ULexPanelLayoutBase::DesiredSizeMemo;
+int32 ULexPanelLayoutBase::DesiredSizeMemoDepth = 0;
+int64 ULexPanelLayoutBase::DesiredSizeComputeCount = 0;
+
+ULexPanelLayoutBase::FDesiredSizeMemoScope::FDesiredSizeMemoScope()
+{
+	++DesiredSizeMemoDepth;
+}
+
+ULexPanelLayoutBase::FDesiredSizeMemoScope::~FDesiredSizeMemoScope()
+{
+	if (--DesiredSizeMemoDepth <= 0)
+	{
+		DesiredSizeMemoDepth = 0;
+		DesiredSizeMemo.Reset();
+	}
+}
+
+void ULexPanelLayoutBase::ForgetDesiredSize(const ULexWidget* Widget)
+{
+	DesiredSizeMemo.Remove(Widget);
+}
+
+void ULexPanelLayoutBase::ForgetAllDesiredSizes()
+{
+	DesiredSizeMemo.Reset();
+}
+
 FVector2D ULexPanelLayoutBase::GetDesiredSize(ULexWidget* Child) const
 {
+	if (DesiredSizeMemoDepth > 0)
+	{
+		if (const FVector2D* Cached = DesiredSizeMemo.Find(Child))
+		{
+			return *Cached;
+		}
+	}
 	TFunction<FVector2D(ULexWidget*, TSet<const ULexWidget*>&)> GetIntrinsicSize;
 	GetIntrinsicSize = [&GetIntrinsicSize](ULexWidget* Widget, TSet<const ULexWidget*>& Visited) -> FVector2D
 	{
@@ -585,7 +620,13 @@ FVector2D ULexPanelLayoutBase::GetDesiredSize(ULexWidget* Child) const
 	};
 
 	TSet<const ULexWidget*> Visited;
-	return GetIntrinsicSize(Child, Visited);
+	++DesiredSizeComputeCount;
+	const FVector2D Result = GetIntrinsicSize(Child, Visited);
+	if (DesiredSizeMemoDepth > 0)
+	{
+		DesiredSizeMemo.Add(Child, Result);
+	}
+	return Result;
 }
 
 void ULexPanelLayoutBase::ApplyChildRect(ULexWidget* Child, const FVector2D& Position, const FVector2D& Size, bool bForceFill) const
@@ -722,6 +763,9 @@ FLexFragment ULexPanelLayoutBase::Arrange()
 {
 	FLexFragment Fragment;
 	{
+		// One arrange asks for the same child's desired size four times over, and each ask re-measures the
+		// whole subtree beneath it. Safe to memoise precisely because the pass writes nothing.
+		FDesiredSizeMemoScope Memo;
 		TGuardValue<FLexFragment*> Recording(RecordingFragment, &Fragment);
 		ArrangeChildren();
 	}
@@ -751,6 +795,7 @@ FVector2f ULexPanelLayoutBase::MeasureLayout() const
 
 FVector2f ULexPanelLayoutBase::GetLayoutPreferredSize() const
 {
+	FDesiredSizeMemoScope Memo;
 	const FVector2f Result = MeasureLayout();
 	return FVector2f(LexPanelLayoutLocal::NonNegative(Result.X), LexPanelLayoutLocal::NonNegative(Result.Y));
 }
@@ -1015,6 +1060,8 @@ void ULexLayoutContainerCanvasPanel::ArrangeChildren()
 		}
 		else if (ULexPanelSlot* MutableSlot = Child->GetPanelSlot(); IsValid(MutableSlot))
 		{
+			// Both branches write the child's rect from inside the arrange, so whatever the memo holds for
+			// it is stale from here on. This is the one panel that writes outside the fragment.
 			if (MutableSlot->HasLayoutGeometryApplied())
 			{
 				MutableSlot->RestoreAuthoredGeometry();
@@ -1023,6 +1070,7 @@ void ULexLayoutContainerCanvasPanel::ArrangeChildren()
 			{
 				MutableSlot->CaptureAuthoredGeometry(true);
 			}
+			ForgetDesiredSize(Child);
 		}
 	}
 	if (bSortChildrenByZOrder)

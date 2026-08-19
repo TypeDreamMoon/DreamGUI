@@ -4357,6 +4357,10 @@ void ULexWidget::SetLayoutVisibilitySuppressed(bool bSuppressed)
 	if (bLayoutVisibilitySuppressed != bSuppressed)
 	{
 		bLayoutVisibilitySuppressed = bSuppressed;
+		// SizeBox, ScaleBox and WidgetSwitcher all flip this from inside their own arrange. It changes
+		// which widgets a measurement is allowed to include, so every memoised desired size in the pass
+		// may now be wrong - not just this widget's. Outside a pass the memo is empty and this is free.
+		ULexPanelLayoutBase::ForgetAllDesiredSizes();
 		CalculateVisibility_Recursive();
 	}
 }
