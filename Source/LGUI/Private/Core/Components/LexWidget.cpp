@@ -4084,6 +4084,20 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 			break;
 		}
 
+		// No relayout boundary here, and it is not an oversight. Blink stops this walk at a box whose
+		// size cannot be affected from inside it, and the obvious translation - stop where the parent
+		// panel sizes the child by Fill - was written, measured and reverted.
+		//
+		// It does not hold. A panel's MeasureLayout sums its children's desired sizes even for children
+		// it sizes by Fill, so the panel's preferred size still moves when their content does. The
+		// tempting rescue is that GetLayoutPreferredSize recomputes on every call and caches nothing, so
+		// there is no stale value anywhere - true, and irrelevant: the ancestor still has to RUN to
+		// consume the new one, and stopping the walk is precisely what stops it running. Three text
+		// invalidation tests went to zero reflows and the convergence test went from one pass to two.
+		//
+		// A sound version has to establish that no ancestor's size derives from this subtree at all,
+		// which is a walk to the root - the walk being avoided. Cacheable per widget, invalidated on
+		// slot and hierarchy changes; that is a design, not a condition.
 		TargetWidget = TargetWidget->GetParent();
 	}
 	if (bStoppedAtLayoutWriter)
