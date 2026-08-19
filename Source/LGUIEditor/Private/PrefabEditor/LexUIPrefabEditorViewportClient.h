@@ -112,7 +112,11 @@ public:
 
 	bool FocusViewportToTargets();
 	TSharedPtr<FLexUIPrefabEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
+	/** World-space pick ray through a viewport pixel. */
+	bool ComputePickRay(int32 PixelX, int32 PixelY, FVector& OutLineStart, FVector& OutLineEnd);
 	ULexWidget* GetWidgetUnderCursor(int32 PixelX, int32 PixelY, bool bRespectDesignerLock = true);
+	/** Where a drop at this pixel should be parented: nearest container under it, else the prefab root. */
+	ULexWidget* GetDropContainerUnderCursor(int32 PixelX, int32 PixelY);
 	bool GetDropWorldPosition(int32 PixelX, int32 PixelY, ULexWidget* ParentWidget, FVector& OutWorldPosition);
 	void SetPaletteDropPreview(ULexWidget* Widget);
 	void ClearPaletteDropPreview();
@@ -152,6 +156,14 @@ private:
 	};
 	bool HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs);
 	void TrackRightMouseMovement(int32 MouseX, int32 MouseY);
+	/** Would this handle drag anything? Checked at press time so a dead press is not swallowed. */
+	bool CanBeginDesignerDrag(EDesignerHandle InHandle) const;
+	/** Snapshot the selection and enter the drag, anchored at the pixel the button went down on. */
+	void BeginDesignerDrag(EDesignerHandle InHandle, const FVector2D& InPressPixel);
+	/** A held press becomes a drag only once it has travelled; until then it is still a click. */
+	void TryPromoteDesignerDrag();
+	/** Pick and select whatever is at this pixel, the way ProcessClick would have. */
+	void SelectWidgetAtPixel(const FVector2D& InPixel, bool bIsControlDown);
 	void UpdateDesignerDrag();
 	void FinishDesignerDrag(bool bCancel);
 	void DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas);
@@ -178,6 +190,10 @@ private:
 	EDesignerHandle ActiveDesignerHandle = EDesignerHandle::None;
 	bool bDesignerDragging = false;
 	bool bDesignerChanged = false;
+	/** A left press that landed on a handle but has not travelled far enough to be a drag yet. */
+	bool bDesignerDragPending = false;
+	EDesignerHandle PendingDesignerHandle = EDesignerHandle::None;
+	FVector2D DesignerPressPixel = FVector2D::ZeroVector;
 	FVector2D DesignerDragStartPixel = FVector2D::ZeroVector;
 	TArray<FDesignerWidgetSnapshot> DesignerSnapshots;
 	TUniquePtr<class FScopedTransaction> DesignerTransaction;

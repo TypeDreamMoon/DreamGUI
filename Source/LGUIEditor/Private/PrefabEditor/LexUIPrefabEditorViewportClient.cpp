@@ -17,6 +17,7 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
 #include "LexUIPrefabEditor.h"
+#include "LexUIWidgetPicking.h"
 #include "MouseDeltaTracker.h"
 #include "Misc/ITransaction.h"
 #include "UnrealEdGlobals.h"
@@ -1596,6 +1597,7 @@ void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 
 	SyncViewFOVToCanvas();
 
+	if (bDesignerDragPending)TryPromoteDesignerDrag();
 	if (bDesignerDragging)UpdateDesignerDrag();
 	if (TransformWidget.IsValid() && IsPerspective())
 	{
@@ -1607,18 +1609,39 @@ void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
 {
 	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
-	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && bDesignerDragging)
+	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending))
 	{
-		FinishDesignerDrag(true);
+		bDesignerDragPending = false;
+		PendingDesignerHandle = EDesignerHandle::None;
+		if (bDesignerDragging)FinishDesignerDrag(true);
 		return true;
 	}
 	if (EventArgs.Key != EKeys::LeftMouseButton)return false;
-	if (EventArgs.Event == IE_Released && bDesignerDragging)
+	if (EventArgs.Event == IE_Released)
 	{
-		FinishDesignerDrag(false);
-		return true;
+		if (bDesignerDragging)
+		{
+			FinishDesignerDrag(false);
+			return true;
+		}
+		if (bDesignerDragPending)
+		{
+			// The press never travelled, so it was a click. The Move "handle" is the whole selection
+			// rectangle, and a click inside it has to be able to select the child sitting there --
+			// otherwise nothing inside a selected panel is ever reachable with the mouse. The edge,
+			// corner and pivot handles keep swallowing it: there is nothing under them to select.
+			const bool bWasMove = PendingDesignerHandle == EDesignerHandle::Move;
+			bDesignerDragPending = false;
+			PendingDesignerHandle = EDesignerHandle::None;
+			if (bWasMove && EventArgs.Viewport)
+			{
+				SelectWidgetAtPixel(FVector2D(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY()), IsCtrlPressed());
+			}
+			return true;
+		}
+		return false;
 	}
-	if (EventArgs.Event != IE_Pressed || bDesignerDragging || !Viewport)return false;
+	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || !Viewport)return false;
 
 	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
 	FSceneView* View = CalcSceneView(&ViewFamily);
@@ -1626,6 +1649,60 @@ bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEve
 	const FVector2D MousePixel(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY());
 	const EDesignerHandle HitHandle = HitTestDesignerHandle(MousePixel);
 	if (HitHandle == EDesignerHandle::None)return false;
+	if (!CanBeginDesignerDrag(HitHandle))return false;
+
+	// Consume the press, but stay a click until the mouse actually travels. Opening the transaction
+	// here instead would put an empty "Transform Widgets" entry on the undo stack for every click.
+	PendingDesignerHandle = HitHandle;
+	bDesignerDragPending = true;
+	DesignerPressPixel = MousePixel;
+	return true;
+}
+
+bool FLexUIPrefabEditorViewportClient::CanBeginDesignerDrag(EDesignerHandle InHandle) const
+{
+	if (!PrefabEditorPtr.IsValid())return false;
+	int32 DraggableCount = 0;
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+	{
+		if (ULexWidget* SelectedWidget = WeakWidget.Get())
+		{
+			if (!PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))DraggableCount++;
+		}
+	}
+	if (DraggableCount == 0)return false;
+	return InHandle == EDesignerHandle::Move || DraggableCount == 1;
+}
+
+void FLexUIPrefabEditorViewportClient::TryPromoteDesignerDrag()
+{
+	if (!bDesignerDragPending || !Viewport)return;
+	const FVector2D MousePixel(Viewport->GetMouseX(), Viewport->GetMouseY());
+	const FVector2D Travel = MousePixel - DesignerPressPixel;
+	if (FMath::Square(Travel.X) + FMath::Square(Travel.Y) < MOUSE_CLICK_DRAG_DELTA)return;
+	const EDesignerHandle Handle = PendingDesignerHandle;
+	bDesignerDragPending = false;
+	PendingDesignerHandle = EDesignerHandle::None;
+	BeginDesignerDrag(Handle, DesignerPressPixel);
+}
+
+void FLexUIPrefabEditorViewportClient::SelectWidgetAtPixel(const FVector2D& InPixel, bool bIsControlDown)
+{
+	if (!PrefabEditorPtr.IsValid())return;
+	FVector LineStart, LineEnd;
+	if (!ComputePickRay(FMath::RoundToInt(InPixel.X), FMath::RoundToInt(InPixel.Y), LineStart, LineEnd))return;
+	TArray<ULexWidget*> Widgets;
+	LexUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+	ULexWidget* Hit = LexUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, IndexOfClickSelectUI);
+	if (Hit != nullptr && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Hit))Hit = nullptr;
+	if (Hit != nullptr)PrefabEditorPtr.Pin()->SelectWidgets({Hit}, bIsControlDown);
+}
+
+void FLexUIPrefabEditorViewportClient::BeginDesignerDrag(EDesignerHandle InHandle, const FVector2D& InPressPixel)
+{
+	if (!PrefabEditorPtr.IsValid())return;
+	const EDesignerHandle HitHandle = InHandle;
+	const FVector2D MousePixel = InPressPixel;
 
 	TArray<ULexWidget*> Widgets;
 	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
@@ -1635,8 +1712,8 @@ bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEve
 			if (!PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))Widgets.Add(SelectedWidget);
 		}
 	}
-	if (Widgets.IsEmpty())return false;
-	if (HitHandle != EDesignerHandle::Move && Widgets.Num() != 1)return false;
+	if (Widgets.IsEmpty())return;
+	if (HitHandle != EDesignerHandle::Move && Widgets.Num() != 1)return;
 
 	DesignerSnapshots.Reset();
 	DesignerTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("DesignerTransformWidgets", "Transform Widgets"));
@@ -1664,7 +1741,6 @@ bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEve
 	bDesignerChanged = false;
 	DesignerGuideX.Reset();
 	DesignerGuideY.Reset();
-	return true;
 }
 
 void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
@@ -1896,28 +1972,11 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 
 	FVector RayOrigin, RayDirection;
 	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
-	ULexWidget* ClickHitWidget = nullptr;
-	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
-	{
-		float LineTraceLength = 100000000;
-		//find hit LexVisualBatchMesh
-		auto LineStart = RayOrigin;
-		auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
-		ULexWidget* ClickHitUI = nullptr;
-		TArray<ULexWidget*> AllWidgetArray;
-		{
-			for (auto& Canvas : LexUIManager->GetAllCanvasArray())
-			{
-				if (!Canvas->IsRootCanvas())continue;;
-				auto RootWidget = Canvas->GetWidget();
-				ULexWidget::CollectChildrenWidgets(RootWidget, AllWidgetArray);
-			}
-		}
-		if (ULexUIManagerWorldSubsystem::RaycastHitUI(this->GetWorld(), AllWidgetArray, LineStart, LineEnd, ClickHitUI, IndexOfClickSelectUI))
-		{
-			ClickHitWidget = ClickHitUI;
-		}
-	}
+	const FVector LineStart = RayOrigin;
+	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0f;
+	TArray<ULexWidget*> AllWidgetArray;
+	LexUIWidgetPicking::CollectPickableWidgets(this->GetWorld(), AllWidgetArray);
+	ULexWidget* ClickHitWidget = LexUIWidgetPicking::PickTopmostWidget(this->GetWorld(), AllWidgetArray, LineStart, LineEnd, IndexOfClickSelectUI);
 	if (ClickHitWidget != nullptr && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(ClickHitWidget))
 	{
 		ClickHitWidget = nullptr;
@@ -2584,34 +2643,45 @@ bool FLexUIPrefabEditorViewportClient::FocusViewportToTargets()
 	return false;
 }
 
-ULexWidget* FLexUIPrefabEditorViewportClient::GetWidgetUnderCursor(int32 PixelX, int32 PixelY, bool bRespectDesignerLock)
+bool FLexUIPrefabEditorViewportClient::ComputePickRay(int32 PixelX, int32 PixelY, FVector& OutLineStart, FVector& OutLineEnd)
 {
-	if (!Viewport || !GetWorld())return nullptr;
+	if (!Viewport || !GetWorld())return false;
 	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
 	FSceneView* View = CalcSceneView(&ViewFamily);
-	if (!View)return nullptr;
+	if (!View)return false;
 	FVector RayOrigin, RayDirection;
 	FSceneView::DeprojectScreenToWorld(FVector2D(PixelX, PixelY), View->UnscaledViewRect,
 		View->ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+	OutLineStart = RayOrigin;
+	OutLineEnd = RayOrigin + RayDirection * 100000000.0f;
+	return true;
+}
+
+ULexWidget* FLexUIPrefabEditorViewportClient::GetWidgetUnderCursor(int32 PixelX, int32 PixelY, bool bRespectDesignerLock)
+{
+	FVector LineStart, LineEnd;
+	if (!ComputePickRay(PixelX, PixelY, LineStart, LineEnd))return nullptr;
 	TArray<ULexWidget*> Widgets;
-	if (ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	LexUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+	int32 CycleIndex = INDEX_NONE;
+	ULexWidget* Result = LexUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, CycleIndex);
+	if (Result == nullptr)return nullptr;
+	if (bRespectDesignerLock && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Result))return nullptr;
+	return Result;
+}
+
+ULexWidget* FLexUIPrefabEditorViewportClient::GetDropContainerUnderCursor(int32 PixelX, int32 PixelY)
+{
+	// The widget under the cursor is rarely the widget a drop belongs in: point at a Text and you
+	// mean the box holding it. Resolve up to the nearest container that will actually arrange the
+	// new child, and fall back to the prefab root, which is the container-less prefab's answer.
+	ULexWidget* Hit = GetWidgetUnderCursor(PixelX, PixelY);
+	if (ULexWidget* Container = LexUIWidgetPicking::ResolveDropContainer(Hit))return Container;
+	if (PrefabEditorPtr.IsValid())
 	{
-		for (const TWeakObjectPtr<ULexCanvas>& WeakCanvas : Manager->GetAllCanvasArray())
+		if (ULexWidget* Root = PrefabEditorPtr.Pin()->GetLoadedRootWidget())
 		{
-			ULexCanvas* Canvas = WeakCanvas.Get();
-			if (!Canvas || !Canvas->IsRootCanvas())continue;
-			ULexWidget* Root = Canvas->GetWidget();
-			if (!Root)continue;
-			Widgets.Add(Root);
-			ULexWidget::CollectChildrenWidgets(Root, Widgets);
-		}
-		ULexWidget* Result = nullptr;
-		int32 HitIndex = INDEX_NONE;
-		if (ULexUIManagerWorldSubsystem::RaycastHitUI(GetWorld(), Widgets, RayOrigin,
-			RayOrigin + RayDirection * 100000000.0f, Result, HitIndex))
-		{
-			if (bRespectDesignerLock && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Result))return nullptr;
-			return Result;
+			return Root->CanAcceptAdditionalChildren() ? Root : nullptr;
 		}
 	}
 	return nullptr;
@@ -2989,6 +3059,15 @@ void FLexUIPrefabEditorViewportClient::MouseEnter(FViewport* InViewport, int32 x
 void FLexUIPrefabEditorViewportClient::MouseMove(FViewport* InViewport, int32 x, int32 y)
 {
 	TrackRightMouseMovement(x, y);
+	// Click-through only makes sense while the ray stays put. CapturedMouseMove resets this too,
+	// but that one fires only while the mouse is captured -- an uncaptured move between two clicks
+	// used to carry the previous stack's depth over to an unrelated pixel.
+	if (x != PrevMouseX || y != PrevMouseY)
+	{
+		IndexOfClickSelectUI = INDEX_NONE;
+		PrevMouseX = x;
+		PrevMouseY = y;
+	}
 	FEditorViewportClient::MouseMove(InViewport, x, y);
 }
 void FLexUIPrefabEditorViewportClient::MouseLeave(FViewport* InViewport)

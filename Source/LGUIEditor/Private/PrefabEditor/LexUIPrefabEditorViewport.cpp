@@ -96,12 +96,7 @@ FReply SLexUIPrefabEditorViewport::OnDragOver(const FGeometry& MyGeometry, const
 	if (DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>().IsValid() && EditorViewportClient.IsValid())
 	{
 		const FIntPoint Pixel = LexUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
-		ULexWidget* Target = EditorViewportClient->GetWidgetUnderCursor(Pixel.X, Pixel.Y);
-		if (!Target)
-		{
-			if (TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin())Target = Editor->GetLoadedRootWidget();
-		}
-		if (Target && !Target->CanAcceptAdditionalChildren())Target = nullptr;
+		ULexWidget* Target = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		EditorViewportClient->SetPaletteDropPreview(Target);
 		return Target ? FReply::Handled() : FReply::Unhandled();
 	}
@@ -115,8 +110,8 @@ FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDr
 		TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
 		const FIntPoint Pixel = LexUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
-		ULexWidget* Parent = EditorViewportClient->GetWidgetUnderCursor(Pixel.X, Pixel.Y);
-		if (!Parent)Parent = Editor->GetLoadedRootWidget();
+		ULexWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
+		if (!Parent)return FReply::Unhandled();
 		FVector DropWorldPosition = FVector::ZeroVector;
 		const bool bHasPosition = EditorViewportClient->GetDropWorldPosition(Pixel.X, Pixel.Y, Parent, DropWorldPosition);
 		// A viewport drop names a parent and a position, never a sibling order -- append.
