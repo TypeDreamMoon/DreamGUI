@@ -8,6 +8,9 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #pragma once
 
+#include "Engine/DeveloperSettings.h"
+#include "LexUIPrefabEditor.generated.h"
+
 class SLexUIPrefabSequenceEditor;
 class ULexUIPrefabSequence;
 class SLexWidgetEditorHierarchyView;
@@ -70,6 +73,41 @@ enum class ELexUIWrapType : uint8
 	HorizontalBox,
 	VerticalBox,
 	Grid,
+};
+
+/** How the design canvas gets its size: a resolution the author picked, or what the content measures. */
+enum class ELexUIDesignerSizeRule : uint8
+{
+	Custom,
+	Desired,
+};
+
+/**
+ * How this author's designer behaves, as opposed to what the prefab is. Grid snapping, the grid size
+ * and the overlays are preferences: kept on the prefab asset they dirtied prefabs whose content
+ * nobody had touched, and travelled to teammates in the diff; kept in DefaultEditor.ini they were
+ * still one shared project-wide value. Per-project-per-user is the same home UMG's designer uses.
+ * The canvas size and the lock set stay on the asset, because those describe the prefab itself.
+ */
+UCLASS(config = EditorPerProjectUserSettings, meta = (DisplayName = "LexUI Designer"))
+class ULexUIDesignerSettings : public UDeveloperSettings
+{
+	GENERATED_BODY()
+public:
+	/** Snap designer moves and resizes to GridSize. */
+	UPROPERTY(EditAnywhere, config, Category = "Grid Snapping")
+	bool bGridSnapEnabled = true;
+	UPROPERTY(EditAnywhere, config, Category = "Grid Snapping", meta = (ClampMin = "1.0"))
+	float GridSize = 10.0f;
+	/** Show alignment guides while dragging in the designer. */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bShowDesignerGuides = true;
+	/** Overlay common device resolutions on the design canvas, like UMG's designer surface. */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bShowResolutionGuides = false;
+	/** Show the selected widget's measurement, arrangement, slot, ownership and clipping diagnostics. */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bShowLayoutDebug = false;
 };
 
 /**
@@ -152,6 +190,22 @@ public:
 	bool GetShowLayoutDebug() const;
 	void ToggleLayoutDebug();
 	float SnapDesignerValue(float Value) const;
+	/** The whole design canvas, which is what "fit" means here -- not whatever happens to be selected. */
+	FBox GetDesignerFramingBox();
+	void ZoomDesignerToFit();
+	/** One design unit per screen pixel: the size the UI is really going to be. */
+	void ZoomDesignerToActualSize();
+	/** Screen pixels one design unit covers, or 0 when the view has no single scale (the 3D camera). */
+	float GetDesignerPixelsPerUnit() const;
+	/** Ortho zoom that puts InDesiredPixelsPerUnit pixels on a design unit, given where the view is now. */
+	static float DesignerOrthoZoomFor(float InCurrentOrthoZoom, float InCurrentUnitsPerPixel, float InDesiredPixelsPerUnit);
+	ELexUIDesignerSizeRule GetDesignerSizeRule() const { return DesignerSizeRule; }
+	/** Choosing Desired sizes the canvas to the content once; it does not keep following it. */
+	void SetDesignerSizeRule(ELexUIDesignerSizeRule InRule);
+	/** What the prefab's content measures, or false when nothing in it can be measured. */
+	bool GetDesignerDesiredSize(FVector2D& OutSize);
+	/** A canvas size for a measured content size, keeping InFallback on any axis that measured nothing. */
+	static FIntPoint DesignerViewportSizeFromDesired(const FVector2D& InDesiredSize, FIntPoint InFallback);
 	TSharedPtr<SWidget> BuildWidgetContextMenu();
 
 	void InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab);
@@ -170,7 +224,18 @@ public:
 	static void IterateAllPrefabEditor(const TFunction<void(FLexUIPrefabEditor*)>& InFunction);
 	bool RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab);
 
+	/** One widget's own extent in world space: its drawn geometry when it has any, its rect otherwise. */
+	static FBox GetWidgetWorldBox(const ULexWidget* InWidget);
+	/**
+	 * Union of the active widgets among InWidgets. False when none of them contributed, in which
+	 * case OutResult is zeroed -- never left as it was found.
+	 */
+	static bool AccumulateWidgetsBounds(const TArray<ULexWidget*>& InWidgets, FBoxSphereBounds& OutResult);
+	/** Where the design canvas is, for framing a prefab that has nothing active to frame. */
+	static FBoxSphereBounds MakeCanvasFramingBounds(FIntPoint InCanvasSize);
 	bool GetSelectedObjectsBounds(FBoxSphereBounds& OutResult);
+	bool GetAllObjectsBounds(FBoxSphereBounds& OutResult);
+	/** The same union, already fallen back to the canvas, for callers with no way to say "nothing". */
 	FBoxSphereBounds GetAllObjectsBounds();
 	bool WidgetBelongsToSubPrefab(ULexWidget* InSubPrefabActor);
 	bool WidgetIsSubPrefabRoot(ULexWidget* InSubPrefabRootWidget);
@@ -213,6 +278,8 @@ private:
 	TSharedPtr<IMessageLogListing> CompilerResultsListing;
 
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
+	/** Session state: the rule decided a canvas size, the size itself is what got stored. */
+	ELexUIDesignerSizeRule DesignerSizeRule = ELexUIDesignerSizeRule::Custom;
 private:
 
 	void BindCommands();

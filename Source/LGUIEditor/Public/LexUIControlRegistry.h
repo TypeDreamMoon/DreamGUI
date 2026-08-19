@@ -36,6 +36,13 @@ class LGUIEDITOR_API FLexUIControlRegistry
 {
 public:
 	static FLexUIControlRegistry& Get();
+	/**
+	 * Add a descriptor. The return value is meaningful and worth checking: false means the entry was
+	 * refused -- Name is None, or another descriptor already holds it -- and will never appear in the
+	 * Palette. Both refusals are logged with the descriptor they collided with.
+	 * A descriptor that merely fails Validate is still registered; the Palette shows it disabled with
+	 * the reason, which is how a mistyped prefab path stays visible instead of silently going missing.
+	 */
 	bool Register(const FLexUIControlDescriptor& Descriptor);
 	bool Unregister(FName Name);
 	const TArray<FLexUIControlDescriptor>& GetDescriptors()const { return Descriptors; }

@@ -5,6 +5,7 @@
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequencePlayer.h"
 #include "LGUI.h"
+#include "Core/Components/LexWidget.h"
 
 #include "MovieSceneSequencePlaybackSettings.h"
 
@@ -201,15 +202,29 @@ void ULexUIPrefabSequenceComponent::PostLoad()
 {
 	Super::PostLoad();
 }
+/**
+ * Re-derive every binding's editor-only widget path from the object it currently resolves to.
+ *
+ * That path is spelled out of widget display names, so a rename leaves it pointing at a widget that
+ * no longer exists -- and it is the only thing "Try fix object reference" has to match on once the
+ * direct pointer stops resolving. Rebuilding it here, while the pointer still works, is what makes a
+ * later repair possible at all; leave it until the reference has already broken and there is nothing
+ * to rebuild it from.
+ */
 void ULexUIPrefabSequenceComponent::FixEditorHelpers()
 {
-	// for (auto& Sequence : SequenceArray)
-	// {
-	// 	if (Sequence->IsObjectReferencesGood(GetOwner()) && !Sequence->IsEditorHelpersGood(this->GetOwner()))
-	// 	{
-	// 		Sequence->FixEditorHelpers(this->GetOwner());
-	// 	}
-	// }
+	ULexWidget* ContextWidget = GetWidget();
+	if (!IsValid(ContextWidget))
+	{
+		return;
+	}
+	for (ULexUIPrefabSequence* Sequence : SequenceArray)
+	{
+		if (IsValid(Sequence))
+		{
+			Sequence->FixEditorHelpers(ContextWidget);
+		}
+	}
 }
 
 #endif

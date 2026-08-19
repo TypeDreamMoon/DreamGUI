@@ -5,6 +5,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Components/LexSpriteBase.h"
 #include "Core/Components/LexWidget.h"
@@ -50,7 +51,9 @@ void FLexSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexSpriteBase, Sprite));
 	auto spriteHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSpriteBase, Sprite));
-	spriteHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this, &DetailBuilder] {
+	// The refresh this asks for destroys the layout builder, so the delegate keeps the utilities instead.
+	TWeakPtr<IPropertyUtilities> propertyUtilities = DetailBuilder.GetPropertyUtilities();
+	spriteHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 		for (auto item : TargetScriptArray)
 		{
 			if (item.IsValid())
@@ -58,7 +61,10 @@ void FLexSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 				item->OnPostChangeSpriteProperty();
 			}
 		}
-		DetailBuilder.ForceRefreshDetails();
+		if (auto Utilities = propertyUtilities.Pin())
+		{
+			Utilities->ForceRefresh();
+		}
 	}));
 	spriteHandle->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
 		for (auto item : TargetScriptArray)

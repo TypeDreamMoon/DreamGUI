@@ -27,6 +27,26 @@
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabSequenceEditorWidget"
 
+/**
+ * Whether a track may be bound to InWidget at all.
+ *
+ * A widget instanced by a sub-prefab is not serialized into this prefab, so the only persistent half
+ * of a binding -- the direct HelperWidget pointer -- is dropped when the prefab is saved. The track
+ * animates correctly right up until the next load, then silently binds nothing; a cooked build does
+ * not even carry the editor-only HelperWidgetPath that "Try fix object reference" repairs from. The
+ * animation host search in LexUIPrefabSequenceEditor.cpp skips sub-prefab widgets for the same
+ * reason.
+ *
+ * Declared here rather than in the widget's header because that header describes the Slate class,
+ * which no headless test can construct; LexPrefabPanelsAutomationTests declares this prototype.
+ */
+bool LexUIPrefabSequence_CanBindWidgetToSequencer(ULexUIPrefabHelperObject* InPrefabHelper, const ULexWidget* InWidget)
+{
+	if (!IsValid(InWidget))return false;
+	if (!IsValid(InPrefabHelper))return true;//outside a prefab editor there is no sub-prefab to be part of
+	return !InPrefabHelper->IsWidgetBelongsToSubPrefab(InWidget);
+}
+
 class SLexUIPrefabSequenceEditorWidgetImpl : public SCompoundWidget, public FEditorUndoClient
 {
 public:
@@ -371,6 +391,18 @@ public:
 							SNew(SLexWidgetHierarchyPickerView, Widget->GetWorld(), ULexWidget::StaticClass(), Widget)
 							.OnSelectItem_Lambda([=, this](UObject* InItem)
 							{
+								ULexWidget* TargetWidget = Cast<ULexWidget>(InItem);
+								if (TargetWidget == nullptr && IsValid(InItem))
+								{
+									TargetWidget = InItem->GetTypedOuter<ULexWidget>();
+								}
+								if (!LexUIPrefabSequence_CanBindWidgetToSequencer(
+									ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget), TargetWidget))
+								{
+									FLexUIUtils::EditorNotification(LOCTEXT("SubPrefabWidgetNotBindable"
+										, "This widget belongs to a sub-prefab, so a track bound to it would be lost the next time the prefab loads. Animate it inside its own prefab instead."), false, 8);
+									return;
+								}
 								const FScopedTransaction Transaction(LOCTEXT("AddWidgetToSequencer", "Add Widget to Sequencer"));
 								Sequencer->GetHandleToObject(InItem, true);
 							})

@@ -43,7 +43,6 @@
 #include "DetailCustomization/LexTextCustomization.h"
 #include "DetailCustomization/LexTextureBaseCustomization.h"
 #include "DetailCustomization/LexRectBlockCustomization.h"
-#include "DetailCustomization/LexPanelSlotCustomization.h"
 #include "DetailCustomization/LexUISpriteDataCustomization.h"
 #include "DetailCustomization/LexUIStaticSpriteAtlasDataCustomization.h"
 #include "DetailCustomization/LexUIFontData_FreeTypeRenderCustomization.h"
@@ -171,7 +170,6 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULexRectBlock::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexRectBlockCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexTexture::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexTextureCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexVisualPostProcess::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexVisualPostProcessCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexPanelSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexPanelSlotCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUISpriteDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIStaticSpriteAtlasDataCustomization::MakeInstance));
@@ -385,7 +383,6 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(ULexTextureBase::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexRectBlock::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexVisualPostProcess::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexPanelSlot::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName());

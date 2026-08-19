@@ -499,6 +499,9 @@ void SLexUIPrefabSequenceEditor::OnBeforeApplyPrefab(ULexUIPrefabHelperObject* I
 		{
 			if (InObject->IsWidgetBelongsToThis(Widget))
 			{
+				// Last point at which a binding's object pointer is still live: apply serializes the
+				// tree and drops it, leaving only the display-name path behind to repair from.
+				WeakSequenceComponent->FixEditorHelpers();
 				this->AnimationListView->ClearSelection();
 			}
 		}
@@ -628,7 +631,38 @@ TSharedPtr<SWidget> SLexUIPrefabSequenceEditor::OnContextMenuOpening()const
 											   "so if Widget's DisplayName and Widget's hierarchy is same as before, it is possible to fix the bad tracks."),
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([=, this]() {
-							SelectedItem->Animation->FixObjectReferences(WeakSequenceComponent->GetWidget());
+							ULexUIPrefabSequenceComponent* SequenceComponent = WeakSequenceComponent.Get();
+							ULexUIPrefabSequence* Animation = SelectedItem->Animation;
+							ULexWidget* ContextWidget = IsValid(SequenceComponent) ? SequenceComponent->GetWidget() : nullptr;
+							if (!IsValid(Animation) || !IsValid(ContextWidget))
+							{
+								return;
+							}
+
+							// A repair rewrites bindings the prefab has already saved, so it has to be
+							// both recorded and announced: RefreshOpenedPrefabEditor closes and reopens
+							// this editor without prompting, and a prefab that still looks clean takes
+							// the repair down with it.
+							TArray<FGuid> BrokenBindingsBefore;
+							Animation->GetInvalidObjectBindingIds(ContextWidget, BrokenBindingsBefore);
+
+							FScopedTransaction Transaction(LOCTEXT("FixObjectReference_Transaction", "Fix Animation Object References"));
+							Animation->FixObjectReferences(ContextWidget);
+
+							TArray<FGuid> BrokenBindingsAfter;
+							Animation->GetInvalidObjectBindingIds(ContextWidget, BrokenBindingsAfter);
+							const int32 RepairedCount = BrokenBindingsBefore.Num() - BrokenBindingsAfter.Num();
+							if (RepairedCount <= 0)
+							{
+								Transaction.Cancel();
+								FLexUIUtils::EditorNotification(LOCTEXT("FixObjectReferenceFailed"
+									, "No animation binding could be repaired. A binding is only recoverable while the widget it was made against still sits at the same path under the animation's owner widget."), false, 8);
+								return;
+							}
+
+							const_cast<SLexUIPrefabSequenceEditor*>(this)->MarkAnimationDataDirty();
+							FLexUIUtils::EditorNotification(FText::Format(
+								LOCTEXT("FixObjectReferenceSucceeded", "Repaired {0} animation binding(s)."), FText::AsNumber(RepairedCount)), true);
 							}))
 					);
 				}

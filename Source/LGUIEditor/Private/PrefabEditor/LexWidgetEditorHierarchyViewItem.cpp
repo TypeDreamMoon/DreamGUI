@@ -83,6 +83,12 @@ void FHierarchyLexWidgetDragDropOp::OnDrop(bool bDropWasHandled, const FPointerE
 
 
 
+const ULexWidget* LexWidgetHierarchyDrop::GetLockOwnerForDropZone(const ULexWidget* TargetItem, EItemDropZone DropZone)
+{
+	if (TargetItem == nullptr)return nullptr;
+	return DropZone == EItemDropZone::OntoItem ? TargetItem : TargetItem->GetParent();
+}
+
 TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem, TOptional<int32> Index)
 {
 	auto TargetTemplate = TargetItem;
@@ -359,6 +365,7 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				SAssignNew(EditBox, SInlineEditableTextBlock)
 				//.Font(this, &SHierarchyViewItem::GetItemFont)
 				.Text(this, &SLexWidgetEditorHierarchyViewItem::GetItemText)
+				.HighlightText(InArgs._HighlightText)
 				.ToolTipText(this, &SLexWidgetEditorHierarchyViewItem::GetItemTooltipText)
 				.ColorAndOpacity(this, &SLexWidgetEditorHierarchyViewItem::GetNameTextColorAndOpacity)
 				.IsReadOnly(this, &SLexWidgetEditorHierarchyViewItem::IsReadOnly)
@@ -366,7 +373,20 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				.OnExitEditingMode(this, &SLexWidgetEditorHierarchyViewItem::OnEndNameTextEdit)
 				.OnVerifyTextChanged(this, &SLexWidgetEditorHierarchyViewItem::OnVerifyNameTextChanged)
 				.OnTextCommitted(this, &SLexWidgetEditorHierarchyViewItem::OnNameTextCommited)
-				.IsSelected(this, &SLexWidgetEditorHierarchyViewItem::IsSelectedExclusively)				
+				.IsSelected(this, &SLexWidgetEditorHierarchyViewItem::IsSelectedExclusively)
+			]
+
+			// What the widget is made of. Every row here is a ULexWidget, so the name is the only
+			// thing telling a text block from a horizontal box unless the type is printed as well.
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(6, 0, 2, 0)
+			[
+				SNew(STextBlock)
+				.Text(this, &SLexWidgetEditorHierarchyViewItem::GetItemTypeText)
+				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+				.Font(IDetailLayoutBuilder::GetDetailFont())
 			]
 
 			// SubPrefab
@@ -524,7 +544,8 @@ bool SLexWidgetEditorHierarchyViewItem::CanRename() const
 
 TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
-	if (Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get()))return TOptional<EItemDropZone>();
+	const ULexWidget* LockOwner = LexWidgetHierarchyDrop::GetLockOwnerForDropZone(Widget.Get(), DropZone);
+	if (LockOwner != nullptr && Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(LockOwner))return TOptional<EItemDropZone>();
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
 	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FAssetDragDropOp>())
 	{
@@ -660,6 +681,12 @@ void SLexWidgetEditorHierarchyViewItem::HandleDragLeave(const FDragDropEvent& Dr
 FText SLexWidgetEditorHierarchyViewItem::GetItemText() const
 {
 	return Widget.IsValid() ? FText::FromString(Widget->GetDisplayName()) : FText::GetEmpty();
+}
+
+FText SLexWidgetEditorHierarchyViewItem::GetItemTypeText() const
+{
+	const FString TypeLabel = LexWidgetHierarchyType::GetTypeLabel(Widget.Get());
+	return TypeLabel.IsEmpty() ? FText::GetEmpty() : FText::FromString(TypeLabel);
 }
 
 FText SLexWidgetEditorHierarchyViewItem::GetItemTooltipText() const

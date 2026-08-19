@@ -912,7 +912,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	//pivot
 	auto Pivot_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.Pivot));
 	auto& PivotPropertyRow = TransformCategory.AddProperty(Pivot_PH);
-	PivotPropertyRow.IsEnabled(this->IsAnchorEditable());
+	// A one-shot read freezes at whatever was true when the panel was built, and the render mode that
+	// decides this can change while the panel is up.
+	PivotPropertyRow.IsEnabled(TAttribute<bool>::Create(
+		TAttribute<bool>::FGetter::CreateSP(this, &FLexWidgetCustomization::IsAnchorEditable)));
 	Pivot_PH->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
 		this->OnPrePivotChange(Pivot_PH);
 		}));
@@ -938,47 +941,9 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		SiblingIndex_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 			ForceUpdateUI();
 			}));
-		auto SiblingIndexWidget =
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.Padding(2, 0)
-			[
-				SiblingIndex_PH->CreatePropertyValueWidget()
-			]
-			+ SHorizontalBox::Slot()
-			.Padding(2, 0)
-			.AutoWidth()
-			[
-				SNew(SButton)
-				.ToolTipText(LOCTEXT("IncreaseHierarchyOrder_Tooltip", "Move order up"))
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.VAlign(EVerticalAlignment::VAlign_Center)
-				.IsEnabled_Static(FLexUIEditorUtils::IsEnabledOnProperty, SiblingIndex_PH)
-				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, true, SiblingIndex_PH)
-				[
-					SNew(STextBlock)
-					.Text(LOCTEXT("IncreaseHierarchyOrder", "+"))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				]
-			]
-			+ SHorizontalBox::Slot()
-			.Padding(2, 0)
-			.AutoWidth()
-			[
-				SNew(SButton)
-				.ToolTipText(LOCTEXT("DecreaseHierarchyOrder_Tooltip", "Move order down"))
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.VAlign(EVerticalAlignment::VAlign_Center)
-				.IsEnabled_Static(FLexUIEditorUtils::IsEnabledOnProperty, SiblingIndex_PH)
-				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, false, SiblingIndex_PH)
-				[
-					SNew(STextBlock)
-					.Text(LOCTEXT("DecreaseHierarchyOrder", "-"))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				]
-			];
-		
-		TransformCategory.AddProperty(SiblingIndex_PH, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
+		// Sibling order is authored by dragging in the hierarchy, so this stays a read-out. Any editable
+		// control here would need its own transaction over every sibling of every selected widget.
+		TransformCategory.AddProperty(SiblingIndex_PH, EPropertyLocation::Advanced).IsEnabled(false);
 		TransformCategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, FlattenHierarchyIndex)), EPropertyLocation::Advanced);
 	}
 
@@ -1147,43 +1112,6 @@ void FLexWidgetCustomization::OnPivotChanged(TSharedPtr<IPropertyHandle> PivotPH
 	RestoreAnchorOffsets(TargetScriptArray, AnchorOffsetArray);
 }
 
-FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle)
-{
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FReply::Handled();
-
-	//hierarchy index could affect other items
-	GEditor->BeginTransaction(LOCTEXT("ChangeHierarchyIndex_Transaction", "Change LexUI Hierarchy Index"));
-	for (auto& Item : TargetScriptArray)
-	{
-		Item->Modify();
-		if (auto Parent = Item->GetParent())
-		{
-			for (auto Child : Parent->Children)
-			{
-				Child->Modify();
-			}
-		}
-	}
-
-	for (auto& Item : TargetScriptArray)
-	{
-		HierarchyIndexHandle->SetValue(Item->SiblingIndex + (IncreaseOrDecrease ? 1 : -1));
-		//notify others
-		if (auto Parent = Item->GetParent())
-		{
-			for (auto Child : Parent->Children)
-			{
-				auto HierarchyIndexProperty = FindFProperty<FIntProperty>(ULexWidget::StaticClass(), GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
-				check(HierarchyIndexProperty != nullptr);
-				FLexUIUtils::NotifyPropertyChanged(Child, HierarchyIndexProperty);
-			}
-		}
-	}
-	GEditor->EndTransaction();
-
-	return FReply::Handled();
-}
-
 EVisibility FLexWidgetCustomization::GetAnchorPresetButtonVisibility()const
 {
 	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
@@ -1270,27 +1198,6 @@ void FLexWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilder)
 	}
 }
 
-void FLexWidgetCustomization::OnCopyHierarchyIndex()
-{
-	if (TargetScriptArray.Num() > 0)
-	{
-		if (TargetScriptArray[0].IsValid())
-		{
-			FPlatformApplicationMisc::ClipboardCopy(*FString::Printf(TEXT("%d"), TargetScriptArray[0]->GetSiblingIndex()));
-		}
-	}
-}
-void FLexWidgetCustomization::OnPasteHierarchyIndex(TSharedRef<IPropertyHandle> PropertyHandle)
-{
-	FString PastedText;
-	FPlatformApplicationMisc::ClipboardPaste(PastedText);
-	if (PastedText.IsNumeric())
-	{
-		int value = FCString::Atoi(*PastedText);
-		PropertyHandle->SetValue(value);
-	}
-}
-
 bool FLexWidgetCustomization::IsAnyGeometryAxisArranged()const
 {
 	const FLexLayoutControlAnchorData Control = GetLayoutControlAnchorValue();
@@ -1330,30 +1237,10 @@ EVisibility FLexWidgetCustomization::GetArrangedByBannerVisibility()const
 
 FText FLexWidgetCustomization::GetArrangedByBannerText()const
 {
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())
+	const TArray<FString> Arrangers = CollectArrangerNames(TargetScriptArray);
+	if (Arrangers.Num() == 0)
 	{
 		return FText::GetEmpty();
-	}
-	ULexWidget* Widget = TargetScriptArray[0].Get();
-	const auto ControlsAnything = [](const FLexLayoutControlAnchorData& Control)
-	{
-		return Control.bCanControlHorizontalPosition || Control.bCanControlVerticalPosition
-			|| Control.bCanControlHorizontalSize || Control.bCanControlVerticalSize;
-	};
-	TArray<FString> Arrangers;
-	if (ULexLayoutSelf* LayoutSelf = Widget->GetLayoutSelf();
-		IsValid(LayoutSelf) && ControlsAnything(LayoutSelf->GetLayoutControlAnchor(Widget)))
-	{
-		Arrangers.Add(LayoutSelf->GetClass()->GetDisplayNameText().ToString());
-	}
-	if (ULexWidget* Parent = Widget->GetParent(); IsValid(Parent))
-	{
-		if (ULexLayoutContainer* ParentLayout = Parent->GetLayoutContainer();
-			IsValid(ParentLayout) && ControlsAnything(ParentLayout->GetLayoutControlAnchor(Widget)))
-		{
-			Arrangers.Add(FString::Printf(TEXT("%s on '%s'"),
-				*ParentLayout->GetClass()->GetDisplayNameText().ToString(), *Parent->GetDisplayName()));
-		}
 	}
 	return FText::Format(
 		LOCTEXT("ArrangedByBannerFormat", "Arranged by {0} — the greyed-out values below are layout results, not yours to edit. Edit the Panel Slot or the layout's own properties instead."),
@@ -1362,16 +1249,7 @@ FText FLexWidgetCustomization::GetArrangedByBannerText()const
 
 bool FLexWidgetCustomization::IsAnchorEditable()const
 {
-	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
-	{
-		auto Widget = TargetScriptArray[0];
-		if (Widget->GetParent() != nullptr)return true;//not root
-		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != nullptr && Widget->GetRenderCanvas()->IsRenderToScreenSpace())//is root canvas, and is render to screen space
-		{
-			return false;
-		}
-	}
-	return true;
+	return IsAnchorEditableForSelection(TargetScriptArray);
 }
 
 TSharedPtr<IPropertyHandle> FLexWidgetCustomization::GetAnchorPropertyHandle(IDetailLayoutBuilder* DetailBuilder, 
@@ -1812,10 +1690,7 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 			Widget->SetAnchorOffsetTop(PrevAnchorAsMargin.Top);
 		}
 
-		if (ULexPanelSlot* PanelSlot = Widget->GetPanelSlot(); IsValid(PanelSlot))
-		{
-			PanelSlot->CaptureAuthoredGeometry(true);
-		}
+		SyncPanelSlotAfterAnchorEdit(Widget.Get());
 		FLexUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 	}
 	TargetScriptArray[0]->MarkCanvasUpdate(true);
@@ -1823,35 +1698,89 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 	GEditor->EndTransaction();
 }
 
-FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue()const
+void FLexWidgetCustomization::SyncPanelSlotAfterAnchorEdit(ULexWidget* Widget)
+{
+	if (!IsValid(Widget))return;
+	if (ULexPanelSlot* PanelSlot = Widget->GetPanelSlot(); IsValid(PanelSlot))
+	{
+		PanelSlot->SyncAuthoredGeometryAfterUserEdit();
+	}
+}
+
+FLexLayoutControlAnchorData FLexWidgetCustomization::FoldLayoutControlAcrossSelection(const TArray<TWeakObjectPtr<ULexWidget>>& Widgets)
 {
 	FLexLayoutControlAnchorData Result;
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return Result;
-
-	auto Widget = TargetScriptArray[0];
-	if (Widget.IsValid())
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : Widgets)
 	{
+		ULexWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
 		if (auto LayoutSelf = Widget->GetLayoutSelf())
 		{
-			auto LayoutSelfResult = LayoutSelf->GetLayoutControlAnchor(Widget.Get());
-			Result.Or(LayoutSelfResult);
+			Result.Or(LayoutSelf->GetLayoutControlAnchor(Widget));
 		}
 		if (auto Parent = Widget->GetParent())
 		{
 			if (auto ParentLayout = Parent->GetLayoutContainer())
 			{
-				auto ParentResult = ParentLayout->GetLayoutControlAnchor(Widget.Get());
-				Result.Or(ParentResult);
+				Result.Or(ParentLayout->GetLayoutControlAnchor(Widget));
 			}
 		}
 	}
 	return Result;
 }
 
-bool FLexWidgetCustomization::IsAnchorControlledByMultipleLayout(TMap<EAnchorControlledByLayoutType, TArray<UObject*>>& Result)const
+TArray<FString> FLexWidgetCustomization::CollectArrangerNames(const TArray<TWeakObjectPtr<ULexWidget>>& Widgets)
 {
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return false;
-	return false;
+	TArray<FString> Arrangers;
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : Widgets)
+	{
+		ULexWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		if (ULexLayoutSelf* LayoutSelf = Widget->GetLayoutSelf();
+			IsValid(LayoutSelf) && LayoutSelf->GetLayoutControlAnchor(Widget).AnyControl())
+		{
+			Arrangers.AddUnique(LayoutSelf->GetClass()->GetDisplayNameText().ToString());
+		}
+		if (ULexWidget* Parent = Widget->GetParent(); IsValid(Parent))
+		{
+			if (ULexLayoutContainer* ParentLayout = Parent->GetLayoutContainer();
+				IsValid(ParentLayout) && ParentLayout->GetLayoutControlAnchor(Widget).AnyControl())
+			{
+				// Named with the panel it lives on: a selection can span several panels of the same class.
+				Arrangers.AddUnique(FString::Printf(TEXT("%s on '%s'"),
+					*ParentLayout->GetClass()->GetDisplayNameText().ToString(), *Parent->GetDisplayName()));
+			}
+		}
+	}
+	return Arrangers;
+}
+
+bool FLexWidgetCustomization::IsAnchorEditableForSelection(const TArray<TWeakObjectPtr<ULexWidget>>& Widgets)
+{
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : Widgets)
+	{
+		ULexWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget) || Widget->GetParent() != nullptr)//anything with a parent has a rect to anchor against
+		{
+			continue;
+		}
+		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != nullptr && Widget->GetRenderCanvas()->IsRenderToScreenSpace())//is root canvas, and is render to screen space
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue()const
+{
+	return FoldLayoutControlAcrossSelection(TargetScriptArray);
 }
 
 bool FLexWidgetCustomization::GetLayoutControlHorizontalAnchoredPosition()const

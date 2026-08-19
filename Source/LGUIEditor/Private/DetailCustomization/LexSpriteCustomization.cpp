@@ -26,14 +26,11 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<ULexSprite>(targetObjects[0].Get());
-	if (TargetScriptPtr != nullptr)
-	{
-		
-	}
-	else
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<ULexSprite>(targetObjects[0].Get()) : nullptr;
+	if (!TargetScriptPtr.IsValid())
 	{
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
 	}
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI");
@@ -76,6 +73,20 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial90));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial180));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial360));
+		// The three radial rows are transient editor-only mirrors of the one stored FillOrigin, which
+		// PostEditChangeProperty folds back whenever the user picks one; they come out of load at zero,
+		// so the row about to be added has to be refreshed from FillOrigin first - on every object the
+		// row will edit, not only the first, or the row reads as multiple values. A property handle is
+		// the wrong tool here: it opens a transaction and dirties the package for state never saved.
+		for (auto& targetObject : targetObjects)
+		{
+			if (auto sprite = Cast<ULexSprite>(targetObject.Get()))
+			{
+				sprite->FillOriginType_Radial90 = (ELexUISpriteFillOriginType_Radial90)sprite->FillOrigin;
+				sprite->FillOriginType_Radial180 = (ELexUISpriteFillOriginType_Radial180)sprite->FillOrigin;
+				sprite->FillOriginType_Radial360 = (ELexUISpriteFillOriginType_Radial360)sprite->FillOrigin;
+			}
+		}
 		switch (fillMethod)
 		{
 		case ELexUISpriteFillMethod::Horizontal:
@@ -83,7 +94,6 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			break;
 		case ELexUISpriteFillMethod::Radial90:
 		{
-			TargetScriptPtr->FillOriginType_Radial90 = (ELexUISpriteFillOriginType_Radial90)TargetScriptPtr->FillOrigin;
 			auto originTypeRadialProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial90));
 			originTypeRadialProperty->SetPropertyDisplayName(LOCTEXT("FillOrigin", "    Fill Origin"));
 			category.AddProperty(originTypeRadialProperty);
@@ -91,7 +101,6 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			break;
 		case ELexUISpriteFillMethod::Radial180:
 		{
-			TargetScriptPtr->FillOriginType_Radial180 = (ELexUISpriteFillOriginType_Radial180)TargetScriptPtr->FillOrigin;
 			auto originTypeRadialProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial180));
 			originTypeRadialProperty->SetPropertyDisplayName(LOCTEXT("FillOrigin", "    Fill Origin"));
 			category.AddProperty(originTypeRadialProperty);
@@ -99,7 +108,6 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			break;
 		case ELexUISpriteFillMethod::Radial360:
 		{
-			TargetScriptPtr->FillOriginType_Radial360 = (ELexUISpriteFillOriginType_Radial360)TargetScriptPtr->FillOrigin;
 			auto originTypeRadialProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial360));
 			originTypeRadialProperty->SetPropertyDisplayName(LOCTEXT("FillOrigin", "    Fill Origin"));
 			category.AddProperty(originTypeRadialProperty);

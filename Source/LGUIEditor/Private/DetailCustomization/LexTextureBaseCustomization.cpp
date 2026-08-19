@@ -7,6 +7,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 #include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "UITextureBaseCustomization"
@@ -77,17 +78,31 @@ void FLexTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 			{
 				if (texture->CompressionSettings != TextureCompressionSettings::TC_EditorIcon)
 				{
+					// The button outlives the layout that built it, so it may hold neither the builder
+					// nor the texture: the refresh it asks for is what destroys the builder.
+					TWeakObjectPtr<UTexture> weakTexture = texture;
+					TWeakPtr<IPropertyUtilities> propertyUtilities = DetailBuilder.GetPropertyUtilities();
 					category.AddCustomRow(LOCTEXT("FixTextureSettingForHitTest_Row", "FixTextureSettingForHitTest"))
 						.ValueContent()
 						[
 							SNew(SButton)
 							.HAlign(EHorizontalAlignment::HAlign_Center)
 							.VAlign(EVerticalAlignment::VAlign_Center)
-							.OnClicked_Lambda([=, &DetailBuilder] {
-								texture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
-								texture->UpdateResource();
-								texture->MarkPackageDirty();
-								DetailBuilder.ForceRefreshDetails();
+							.OnClicked_Lambda([weakTexture, propertyUtilities] {
+								UTexture* targetTexture = weakTexture.Get();
+								if (targetTexture == nullptr)return FReply::Handled();
+								GEditor->BeginTransaction(LOCTEXT("FixTextureForHitTest_Transaction", "Fix texture for hit test"));
+								targetTexture->Modify();
+								targetTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
+								// Recompresses, refreshes the resource and notifies the materials using it;
+								// a bare UpdateResource() leaves those materials sampling the old format.
+								FPropertyChangedEvent PropertyChangedEvent(UTexture::StaticClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UTexture, CompressionSettings)));
+								targetTexture->PostEditChangeProperty(PropertyChangedEvent);
+								GEditor->EndTransaction();
+								if (auto Utilities = propertyUtilities.Pin())
+								{
+									Utilities->ForceRefresh();
+								}
 								return FReply::Handled();
 								})
 							.ToolTipText(LOCTEXT("FixTextureSettingForHitTest_Tooltip", "\

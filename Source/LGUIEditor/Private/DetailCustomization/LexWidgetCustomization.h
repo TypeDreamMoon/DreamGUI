@@ -33,6 +33,22 @@ public:
 	 * former and a position/size for the latter, so the reading is taken per widget rather than once for all.
 	 */
 	static void ApplyAnchorValueToWidgets(const TArray<TWeakObjectPtr<class ULexWidget>>& Widgets, float Value, int AnchorValueIndex);
+	/**
+	 * The anchors of this widget were just rewritten by hand, so the slot's authored rect has to follow.
+	 * Only on the axes the widget still owns: on a layout-owned axis the widget currently holds arranged
+	 * output, and recording that as authored intent loses the authored value with nothing left to restore.
+	 */
+	static void SyncPanelSlotAfterAnchorEdit(class ULexWidget* Widget);
+	/**
+	 * Every write helper reaches the whole selection, so a control flag holds for the selection as soon as
+	 * it holds for any member - otherwise a layout-owned widget is edited through a row that was enabled
+	 * on some other widget's behalf.
+	 */
+	static FLexLayoutControlAnchorData FoldLayoutControlAcrossSelection(const TArray<TWeakObjectPtr<class ULexWidget>>& Widgets);
+	/** Every layout arranging any selected widget, in selection order and without repeats. */
+	static TArray<FString> CollectArrangerNames(const TArray<TWeakObjectPtr<class ULexWidget>>& Widgets);
+	/** Anchors mean nothing on a screen-space root canvas, and one such widget in the selection is enough. */
+	static bool IsAnchorEditableForSelection(const TArray<TWeakObjectPtr<class ULexWidget>>& Widgets);
 private:
 	TArray<TWeakObjectPtr<class ULexWidget>> TargetScriptArray;
 	static TArray<float> ValueRangeArray;
@@ -45,9 +61,6 @@ private:
 	bool OnCanPasteAnchor()const;
 	void OnCopyAnchor();
 	void OnPasteAnchor(IDetailLayoutBuilder* DetailBuilder);
-	void OnCopyHierarchyIndex();
-	void OnPasteHierarchyIndex(TSharedRef<IPropertyHandle> PropertyHandle);
-	FReply OnClickIncreaseOrDecreaseSiblingIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle);
 	EVisibility GetAnchorPresetButtonVisibility()const;
 
 	/** One entry per entry of TargetScriptArray, filled by OnPrePivotChange. */
@@ -84,16 +97,6 @@ private:
 	FText GetVAlignText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const;
 
 	FLexLayoutControlAnchorData GetLayoutControlAnchorValue()const;
-	enum class EAnchorControlledByLayoutType
-	{
-		HorizontalAnchor,
-		HorizontalAnchoredPosition,
-		HorizontalSizeDelta,
-		VerticalAnchor,
-		VerticalAnchoredPosition,
-		VerticalSizeDelta,
-	};
-	bool IsAnchorControlledByMultipleLayout(TMap<EAnchorControlledByLayoutType, TArray<UObject*>>& Result)const;
 	bool GetLayoutControlHorizontalAnchoredPosition()const;
 	bool GetLayoutControlVerticalAnchoredPosition()const;
 	bool GetLayoutControlHorizontalSizeDelta()const;

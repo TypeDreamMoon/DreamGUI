@@ -124,6 +124,55 @@ public:
 	 * decided for the child there is nothing left for one to say.
 	 */
 	static void GetAnchorEditableAxes(const ULexWidget* InWidget, bool& bOutHorizontal, bool& bOutVertical);
+	/**
+	 * Whether a Move gesture over this selection can write anything the next arrange will keep. A
+	 * position an arranger owns is re-decided immediately -- SetAnchoredPosition re-dirties the
+	 * parent -- so a gesture that can only touch owned axes buys an undo step, a dirty asset and
+	 * possibly an animation key for a move that never appears on screen.
+	 */
+	static bool CanMoveSelection(TConstArrayView<ULexWidget*> InWidgets);
+	/** The part of a move that survives the next arrange: zeroed on every axis an arranger decides. */
+	static FVector2D FilterMoveDelta(const FVector2D& InDelta, const FLexLayoutControlAnchorData& InControl);
+
+	/** One widget under a Move drag, with the pointer ray already intersected against its own plane. */
+	struct FMoveDragTarget
+	{
+		FTransform PlaneTransform = FTransform::Identity;
+		FVector StartPlanePoint = FVector::ZeroVector;
+		FVector CurrentPlanePoint = FVector::ZeroVector;
+		FVector2D StartPosition = FVector2D::ZeroVector;
+		bool bHorizontalFree = true;
+		bool bVerticalFree = true;
+	};
+	struct FMoveDragResult
+	{
+		FVector2D Position = FVector2D::ZeroVector;
+		/** The grid moved this axis, which is the only thing a guide line has to say. */
+		bool bSnappedHorizontal = false;
+		bool bSnappedVertical = false;
+	};
+	/**
+	 * Where a Move drag puts each target. Every target is measured and snapped in its own parent's
+	 * space: one widget's snapped delta reused for the rest deforms a selection spanning parents of
+	 * differing scale or rotation, because the same numbers are a different distance in each parent.
+	 * InGridSize <= 0 means no snapping.
+	 */
+	static void ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize, TArray<FMoveDragResult>& OutResults);
+
+	/**
+	 * The cycle index a click at this pixel should walk from. Click-through only means anything while
+	 * the pick ray stays put, so a click anywhere else starts its own stack at the top. The
+	 * mouse-move reset cannot stand alone: it fires on moves, and a click can land on a pixel no move
+	 * event was delivered for.
+	 */
+	static int32 ResolveClickCycleIndex(const FIntPoint& InLastClickPixel, const FIntPoint& InClickPixel, int32 InCurrentIndex);
+
+	/**
+	 * The rect a device's title-safe area leaves inside a canvas this size, in the canvas's own local
+	 * space (origin at its pivot, X right, Y up). InSafePadding is (Left, Top, Right, Bottom) in
+	 * design units -- the order FMargin and FDisplayMetrics::TitleSafePaddingSize both use.
+	 */
+	static FBox2D GetSafeZoneLocalRect(const FVector2D& InCanvasSize, const FVector2D& InCanvasPivot, const FVector4& InSafePadding);
 	/** An anchor fraction pulled onto the quarter gridline it is within InTolerance of. */
 	static double SnapAnchorFraction(double InFraction, double InTolerance);
 	/**
@@ -193,6 +242,9 @@ private:
 		FTransform WorldTransform = FTransform::Identity;
 		FTransform PlaneTransform = FTransform::Identity;
 		FVector StartPlanePoint = FVector::ZeroVector;
+		/** Read once at press: what arranges a widget cannot change while the pointer is down. */
+		bool bHorizontalPositionFree = true;
+		bool bVerticalPositionFree = true;
 	};
 	bool HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs);
 	void TrackRightMouseMovement(int32 MouseX, int32 MouseY);
@@ -235,6 +287,10 @@ private:
 	void DrawShippedImageOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas) const;
 	/** Overlay common device resolutions anchored at the design canvas top-left, like UMG's designer. */
 	void DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
+	/** The title-safe rect of the design canvas. Silent on platforms that declare no safe area. */
+	void DrawSafeZoneGuide(FSceneView& View, FCanvas& Canvas) const;
+	/** The cursor's place on the design canvas, in the units the details panel is written in. */
+	void DrawCursorReadout(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	void DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const;
 	/** Key the given widgets' transform into the animation being edited, if there is one. */
 	void AutoKeyAnimatedTransform(const TArray<ULexWidget*>& InWidgets, bool bLocation, bool bRotation, bool bScale) const;
@@ -244,6 +300,8 @@ private:
 	TArray<FVector2D> DesignerAnchorSpaceCorners;
 	TMap<EDesignerHandle, FVector2D> DesignerAnchorHandlePositions;
 	FBox2D DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
+	/** Refreshed with the handle positions, because it is an answer about the same selection. */
+	bool bDesignerMoveAvailable = false;
 	EDesignerHandle ActiveDesignerHandle = EDesignerHandle::None;
 	bool bDesignerDragging = false;
 	bool bDesignerChanged = false;
@@ -264,11 +322,14 @@ private:
 
 	int PrevMouseX = 0, PrevMouseY = 0;
 	int IndexOfClickSelectUI = INDEX_NONE;
+	FIntPoint LastClickPixel = FIntPoint(-1, -1);
 	TUniquePtr<class FLexUITransformWidget> TransformWidget = nullptr;
 	TWeakObjectPtr<ULexWidget> PaletteDropPreviewWidget;
 	TWeakObjectPtr<ULexWidget> HoveredWidget;
 	FIntPoint HoverPixel = FIntPoint::ZeroValue;
 	bool bHoverPixelDirty = false;
+	/** The cursor readout has to go quiet when the cursor is not over this viewport at all. */
+	bool bCursorInViewport = false;
 	FDelegateHandle OnSelectionChangedDelegateHandle;
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;

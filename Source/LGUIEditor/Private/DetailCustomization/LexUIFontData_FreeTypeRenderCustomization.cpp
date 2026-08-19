@@ -9,8 +9,33 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
+#include "IPropertyUtilities.h"
+#include "PropertyHandle.h"
+#include "Styling/SlateTypes.h"
 
 #define LOCTEXT_NAMESPACE "LGUIFreeTypeRenderFontDataCustomization"
+
+// The checkbox below is the one row of this panel that is written from a lambda instead of by a
+// property row, so the write lives here where a test can reach it: writing the UPROPERTY directly
+// leaves the package clean, and the toggle is then gone the next time the asset is loaded.
+// LexSmallCustomizationAutomationTests.cpp declares both of these again - this customization has no
+// shared header to hang them on.
+namespace LexUIFontDataCustomization
+{
+	ECheckBoxState GetUseRelativeFilePathState(TSharedPtr<IPropertyHandle> InHandle)
+	{
+		bool bValue = false;
+		// A mixed selection has no single answer, and the checkbox has a state for exactly that.
+		if (!InHandle.IsValid() || InHandle->GetValue(bValue) != FPropertyAccess::Success)return ECheckBoxState::Undetermined;
+		return bValue ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+	}
+
+	bool SetUseRelativeFilePath(TSharedPtr<IPropertyHandle> InHandle, bool bInUseRelativeFilePath)
+	{
+		if (!InHandle.IsValid())return false;
+		return InHandle->SetValue(bInUseRelativeFilePath) == FPropertyAccess::Success;
+	}
+}
 
 TSharedRef<IDetailCustomization> FLexUIFontData_FreeTypeRenderCustomization::MakeInstance()
 {
@@ -21,8 +46,8 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<ULexUIFontData_FreeTypeRender>(targetObjects[0].Get());
-	if (TargetScriptPtr == nullptr)
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<ULexUIFontData_FreeTypeRender>(targetObjects[0].Get()) : nullptr;
+	if (!TargetScriptPtr.IsValid())
 	{
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
@@ -69,6 +94,11 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 
 		auto fontFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFilePath));
+		auto useRelativeFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseRelativeFilePath));
+		// The layout builder is rebuilt by the refresh the checkbox itself asks for, so the checkbox
+		// must not hold on to it; the utilities outlive the layout and are how a row asks for a refresh.
+		TWeakPtr<IPropertyUtilities> propertyUtilities = DetailBuilder.GetPropertyUtilities();
+		TWeakObjectPtr<ULexUIFontData_FreeTypeRender> weakTarget = TargetScriptPtr;
 		lguiCategory.AddCustomRow(LOCTEXT("FontSourceFileCategory","FontSourceFile"))
 		.NameContent()
 		[
@@ -96,12 +126,18 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 			.Padding(FMargin(5, 0, 0, 0))
 			[
 				SNew(SCheckBox)
-				.IsChecked_Lambda([&]() {return TargetScriptPtr->bUseRelativeFilePath ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
-				.OnCheckStateChanged_Lambda([&](ECheckBoxState State) 
+				.IsChecked_Lambda([useRelativeFilePathHandle]() {return LexUIFontDataCustomization::GetUseRelativeFilePathState(useRelativeFilePathHandle); })
+				.OnCheckStateChanged_Lambda([useRelativeFilePathHandle, weakTarget, propertyUtilities](ECheckBoxState State)
 					{
-						TargetScriptPtr->bUseRelativeFilePath = State == ECheckBoxState::Checked ? true : false; 
-						TargetScriptPtr->ReloadFont();
-						DetailBuilder.ForceRefreshDetails();
+						if (!LexUIFontDataCustomization::SetUseRelativeFilePath(useRelativeFilePathHandle, State == ECheckBoxState::Checked))return;
+						if (auto Target = weakTarget.Get())
+						{
+							Target->ReloadFont();
+						}
+						if (auto Utilities = propertyUtilities.Pin())
+						{
+							Utilities->ForceRefresh();
+						}
 					})
 				[
 					SNew(STextBlock)
@@ -177,6 +213,8 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 
 FText FLexUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GetCurrentFace()const
 {
+	// Slate keeps asking after the asset is gone: this attribute outlives the object it reads.
+	if (!TargetScriptPtr.IsValid())return LOCTEXT("NoFontFace", "(No Valid Face)");
 	if (TargetScriptPtr->SubFaces.Num() == 0 || TargetScriptPtr->FontFace >= TargetScriptPtr->SubFaces.Num())
 	{
 		return LOCTEXT("NoFontFace", "(No Valid Face)");
@@ -211,6 +249,8 @@ void FLexUIFontData_FreeTypeRenderCustomization::FontFaceOptions_OnComboChanged(
 FText FLexUIFontData_FreeTypeRenderCustomization::OnGetFontFilePath()const
 {
 	auto& fileManager = IFileManager::Get();
+	// Same as the face name above: the browser row can outlive the asset it was built for.
+	if (!TargetScriptPtr.IsValid())return FText::FromString(fileManager.GetFilenameOnDisk(*FPaths::ProjectDir()));
 	return FText::FromString(TargetScriptPtr->FontFilePath.IsEmpty() ? fileManager.GetFilenameOnDisk(*FPaths::ProjectDir()) : TargetScriptPtr->FontFilePath);
 }
 
@@ -238,6 +278,8 @@ void FLexUIFontData_FreeTypeRenderCustomization::OnPathTextChanged(const FString
 }
 void FLexUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted(const FString& InString, TSharedRef<IPropertyHandle> InPathProperty, IDetailLayoutBuilder* DetailBuilderPtr)
 {
+	// The row survives the asset being deleted out from under the open panel.
+	if (!TargetScriptPtr.IsValid())return;
 	FString pathString = InString;
 	if (TargetScriptPtr->bUseRelativeFilePath)
 	{
@@ -252,6 +294,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted(const FStri
 }
 FReply FLexUIFontData_FreeTypeRenderCustomization::OnReloadButtonClicked(IDetailLayoutBuilder* DetailBuilderPtr)
 {
+	if (!TargetScriptPtr.IsValid())return FReply::Handled();
 	TargetScriptPtr->ReloadFont();
 	DetailBuilderPtr->ForceRefreshDetails();
 	return FReply::Handled();

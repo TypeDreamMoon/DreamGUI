@@ -11,6 +11,7 @@
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexVisual.h"
+#include "Core/Components/LexLayout.h"
 #include "Core/LexUIBehaviour.h"
 #include "LexUIPrefabBehaviourUtils.h"
 #include "LexUIControlRegistry.h"
@@ -82,7 +83,7 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld* 
 
 		auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject();
 		auto UnexpandWidgetGuidSet = Manager.Pin()->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandedWidgetSet;
-		TSet<ULexWidget*> UnexpendWidgetSet;
+		TSet<TWeakObjectPtr<ULexWidget>> UnexpendWidgetSet;
 		for (auto& ItemActorGuid : UnexpandWidgetGuidSet)
 		{
 			if (auto ObjectPtr = PrefabHelperObject->MapGuidToObject.Find(ItemActorGuid))
@@ -94,15 +95,21 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld* 
 			}
 		}
 
-		ULexUIManagerObject::AddOneShotTickFunction([=, this]()
+		// The tick runs a frame later and the manager holds the lambda meanwhile, so nothing in it may
+		// be captured raw: closing the prefab editor within that frame leaves this panel destroyed and
+		// the widgets it named collected. Weak on both sides, and the whole body is skipped if either
+		// is already gone.
+		ULexUIManagerObject::AddOneShotTickFunction([WeakSelf = TWeakPtr<SLexWidgetEditorHierarchyView>(SharedThis(this)), UnexpendWidgetSet]()
 		{
+			auto Self = WeakSelf.Pin();
+			if (!Self.IsValid())return;
 			TSet<TWeakObjectPtr<ULexWidget>> VisitingItems;
-			WidgetTreeView->GetExpandedItems(VisitingItems);
+			Self->WidgetTreeView->GetExpandedItems(VisitingItems);
 			for (auto& Item : VisitingItems)
 			{
-				if (UnexpendWidgetSet.Contains(Item.Get()))
+				if (UnexpendWidgetSet.Contains(Item))
 				{
-					WidgetTreeView->SetItemExpansion(Item, false);
+					Self->WidgetTreeView->SetItemExpansion(Item, false);
 				}
 			}
 		},1);
@@ -406,6 +413,7 @@ void SLexWidgetEditorHierarchyView::OnObjectsReplaced(const TMap<UObject*, UObje
 TSharedRef< ITableRow > SLexWidgetEditorHierarchyView::OnGenerateRow(TWeakObjectPtr<ULexWidget> InItem, const TSharedRef<STableViewBase>& OwnerTable)
 {
 	return SNew(SLexWidgetEditorHierarchyViewItem, OwnerTable, InItem, SharedThis(this), Manager.Pin())
+	.HighlightText(this, &SLexWidgetEditorHierarchyView::GetSearchText)
 	.MouseEnter_Lambda([=, this] {
 		})
 	.MouseExit_Lambda([=, this] {
@@ -451,9 +459,52 @@ void SLexWidgetEditorHierarchyView::OnGetChildren(TWeakObjectPtr<ULexWidget> InP
 	auto& Children = InParent->GetChildren();
 	OutChildren.Append(Children);
 }
+namespace LexWidgetHierarchyType
+{
+	static void AddClassTerms(const UObject* Object, TArray<FString>& OutTerms)
+	{
+		if (Object == nullptr)return;
+		const UClass* Class = Object->GetClass();
+		OutTerms.Add(Class->GetName());
+		// The class name and its display name differ wherever it counts -- "LexImage" against the
+		// "Lex Image" the Palette labels it with -- and the Palette label is the one the user learned.
+		const FString DisplayName = Class->GetDisplayNameText().ToString();
+		if (!DisplayName.IsEmpty())
+		{
+			OutTerms.Add(DisplayName);
+		}
+	}
+
+	void CollectSearchTerms(const ULexWidget* Widget, TArray<FString>& OutTerms)
+	{
+		if (Widget == nullptr)return;
+		OutTerms.Add(Widget->GetDisplayName());
+		AddClassTerms(Widget->GetVisual(), OutTerms);
+		AddClassTerms(Widget->GetLayoutContainer(), OutTerms);
+		for (const ULexUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			AddClassTerms(Component, OutTerms);
+		}
+	}
+
+	FString GetTypeLabel(const ULexWidget* Widget)
+	{
+		if (Widget == nullptr)return FString();
+		// One label only, in the order a reader identifies an element by: what it draws, then what
+		// arranges its children, then what it does. A plain widget gets none rather than a redundant
+		// "Widget" printed down half the tree.
+		if (const ULexVisual* Visual = Widget->GetVisual())return Visual->GetClass()->GetDisplayNameText().ToString();
+		if (const ULexLayoutContainer* Container = Widget->GetLayoutContainer())return Container->GetClass()->GetDisplayNameText().ToString();
+		for (const ULexUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			if (Component != nullptr)return Component->GetClass()->GetDisplayNameText().ToString();
+		}
+		return FString();
+	}
+}
 void SLexWidgetEditorHierarchyView::GetWidgetFilterStrings(TWeakObjectPtr<ULexWidget> Item, TArray<FString>& OutStrings)
 {
-	OutStrings.Add(Item->GetDisplayName());
+	LexWidgetHierarchyType::CollectSearchTerms(Item.Get(), OutStrings);
 }
 void SLexWidgetEditorHierarchyView::OnSearchChanged(const FText& InFilterText)
 {
@@ -473,6 +524,11 @@ void SLexWidgetEditorHierarchyView::OnSearchChanged(const FText& InFilterText)
 	}
 	SearchBoxWidgetFilter->SetRawFilterText(InFilterText);
 	SearchBoxPtr->SetError(SearchBoxWidgetFilter->GetFilterErrorText());
+}
+
+FText SLexWidgetEditorHierarchyView::GetSearchText()const
+{
+	return SearchBoxWidgetFilter.IsValid() ? SearchBoxWidgetFilter->GetRawFilterText() : FText::GetEmpty();
 }
 
 void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget> Item, bool bExpanded)

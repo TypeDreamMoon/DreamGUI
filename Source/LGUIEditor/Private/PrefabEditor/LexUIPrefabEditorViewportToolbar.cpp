@@ -15,6 +15,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SComboButton.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/SNullWidget.h"
 #include "Widgets/Text/STextBlock.h"
@@ -224,6 +225,45 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 			[
 				SNew(SComboButton)
 				.HasDownArrow(true)
+				.ToolTipText(LOCTEXT("DesignerZoomTooltip", "How much of a screen pixel one design unit covers, and how to reset it."))
+				.OnGetMenuContent_Lambda([WeakEditor]() -> TSharedRef<SWidget>
+				{
+					FMenuBuilder MenuBuilder(true, nullptr);
+					MenuBuilder.AddMenuEntry(LOCTEXT("ZoomToFit", "Zoom to Fit"),
+						LOCTEXT("ZoomToFitTip", "Frame the whole design canvas. F frames the selection instead."), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ZoomDesignerToFit();
+						})));
+					MenuBuilder.AddMenuEntry(LOCTEXT("ZoomActualSize", "Zoom 1:1"),
+						LOCTEXT("ZoomActualSizeTip", "One design unit per screen pixel: the size the UI will really be."), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ZoomDesignerToActualSize();
+						})));
+					return MenuBuilder.MakeWidget();
+				})
+				.ButtonContent()
+				[
+					SNew(STextBlock).Text_Lambda([WeakEditor]()
+					{
+						TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+						if (!Editor.IsValid())return FText::GetEmpty();
+						const float PixelsPerUnit = Editor->GetDesignerPixelsPerUnit();
+						// A perspective view has a different scale at every depth, so there is no one
+						// number to print; naming a wrong one is worse than naming none.
+						if (PixelsPerUnit <= 0.0f)return LOCTEXT("ZoomReadout3D", "Zoom 3D");
+						return FText::FromString(FString::Printf(TEXT("Zoom %.0f%%"), PixelsPerUnit * 100.0f));
+					})
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(4, 0, 0, 0)
+			[
+				SNew(SComboButton)
+				.HasDownArrow(true)
 				.ToolTipText_Lambda([WeakEditor]()
 				{
 					TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
@@ -262,12 +302,70 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 						MenuBuilder.AddMenuEntry(Label, FText::GetEmpty(), FSlateIcon(),
 							FUIAction(FExecuteAction::CreateLambda([WeakEditor, Size]()
 							{
-								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerViewportSize(Size);
+								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())
+								{
+									Editor->SetDesignerSizeRule(ELexUIDesignerSizeRule::Custom);
+									Editor->SetDesignerViewportSize(Size);
+								}
 							}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor, Size]()
 							{
 								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerViewportSize() == Size;
 								return false;
 							})), NAME_None, EUserInterfaceActionType::RadioButton);
+					}
+					MenuBuilder.EndSection();
+					MenuBuilder.BeginSection(NAME_None, LOCTEXT("ScreenSizeRuleSection", "Size Rule"));
+					MenuBuilder.AddMenuEntry(LOCTEXT("SizeRuleCustom", "Custom"),
+						LOCTEXT("SizeRuleCustomTip", "The canvas is the resolution picked above, or typed below."), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(ELexUIDesignerSizeRule::Custom);
+						}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == ELexUIDesignerSizeRule::Custom;
+							return false;
+						})), NAME_None, EUserInterfaceActionType::RadioButton);
+					MenuBuilder.AddMenuEntry(LOCTEXT("SizeRuleDesired", "Desired"),
+						LOCTEXT("SizeRuleDesiredTip", "Size the canvas to what the content measures, so a tooltip-sized prefab can be authored at its own size. Applied once, when chosen."), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(ELexUIDesignerSizeRule::Desired);
+						}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == ELexUIDesignerSizeRule::Desired;
+							return false;
+						})), NAME_None, EUserInterfaceActionType::RadioButton);
+					MenuBuilder.EndSection();
+					MenuBuilder.BeginSection(NAME_None, LOCTEXT("ScreenSizeCustomSection", "Custom Size"));
+					{
+						auto MakeAxisEntry = [WeakEditor](bool bHorizontal) -> TSharedRef<SWidget>
+						{
+							return SNew(SBox).WidthOverride(84.0f)
+							[
+								SNew(SNumericEntryBox<int32>)
+								.MinValue(1)
+								.MinDesiredValueWidth(60.0f)
+								.Value_Lambda([WeakEditor, bHorizontal]() -> TOptional<int32>
+								{
+									TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+									if (!Editor.IsValid())return TOptional<int32>();
+									const FIntPoint Size = Editor->GetDesignerViewportSize();
+									return bHorizontal ? Size.X : Size.Y;
+								})
+								.OnValueCommitted_Lambda([WeakEditor, bHorizontal](int32 NewValue, ETextCommit::Type)
+								{
+									TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+									if (!Editor.IsValid() || NewValue <= 0)return;
+									FIntPoint Size = Editor->GetDesignerViewportSize();
+									if (bHorizontal)Size.X = NewValue;
+									else Size.Y = NewValue;
+									Editor->SetDesignerSizeRule(ELexUIDesignerSizeRule::Custom);
+									Editor->SetDesignerViewportSize(Size);
+								})
+							];
+						};
+						MenuBuilder.AddWidget(MakeAxisEntry(true), LOCTEXT("CustomSizeWidth", "Width"));
+						MenuBuilder.AddWidget(MakeAxisEntry(false), LOCTEXT("CustomSizeHeight", "Height"));
 					}
 					MenuBuilder.EndSection();
 					MenuBuilder.BeginSection(NAME_None, LOCTEXT("ScreenSizeToolsSection", "Tools"));

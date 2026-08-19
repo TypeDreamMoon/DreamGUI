@@ -26,6 +26,22 @@ namespace LexWidgetHierarchyRename
 	bool CanRename(const ULexWidget* Widget, bool bLockedInDesigner);
 }
 
+/**
+ * What a widget IS, for the search box and for the row's label.
+ *
+ * Every element in this tree is a ULexWidget; what makes one a text block and another a horizontal
+ * box lives on its Visual, its layout container and its behaviours. A tree keyed on the display name
+ * alone therefore shows nothing about type and cannot find it either -- searching "Text" answers
+ * nothing unless whoever placed the element happened to type that into its name.
+ */
+namespace LexWidgetHierarchyType
+{
+	/** Everything the search box may match this widget by: its name, and the classes it is made of. */
+	void CollectSearchTerms(const ULexWidget* Widget, TArray<FString>& OutTerms);
+	/** The subdued suffix the row prints after the name; empty for a plain widget, which needs none. */
+	FString GetTypeLabel(const ULexWidget* Widget);
+}
+
 class SLexWidgetEditorHierarchyView : public SCompoundWidget
 {
 public:
@@ -68,6 +84,8 @@ protected:
 	void OnGetChildren(TWeakObjectPtr<ULexWidget> InParent, TArray<TWeakObjectPtr<ULexWidget>>& OutChildren);
 	void GetWidgetFilterStrings(TWeakObjectPtr<ULexWidget> Item, TArray<FString>& OutStrings);
 	void OnSearchChanged(const FText& InFilterText);
+	/** What the rows highlight -- the live search text, so a match is visible in a name that is longer than it. */
+	FText GetSearchText()const;
 
 	/** Sets the expansion state of hierarchy view items based on their model. */
 	void UpdateItemsExpansionFromModel();

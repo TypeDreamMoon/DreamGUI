@@ -57,12 +57,28 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 	bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem,
 	TOptional<int32> Index = TOptional<int32>());
 
+namespace LexWidgetHierarchyDrop
+{
+	/**
+	 * Whose designer lock has a say over a drop in this zone, or null if no widget does.
+	 *
+	 * A lock protects what is inside a widget, and Above/Below never go inside it: those two zones are
+	 * rewritten into an insert in the PARENT's child list, so it is the parent that must consent.
+	 * Asking the hovered row instead is what made a locked widget un-neighbourable -- no sibling could
+	 * be placed next to it at all -- while still letting an insert land in a locked parent whose
+	 * children happened to be unlocked.
+	 */
+	const ULexWidget* GetLockOwnerForDropZone(const ULexWidget* TargetItem, EItemDropZone DropZone);
+}
+
 class SLexWidgetEditorHierarchyViewItem : public STableRow<TWeakObjectPtr<ULexWidget>>
 {
 public:
 	SLATE_BEGIN_ARGS(SLexWidgetEditorHierarchyViewItem) {}
 		SLATE_EVENT(FSimpleDelegate, MouseEnter)
 		SLATE_EVENT(FSimpleDelegate, MouseExit)
+		/** The tree's live search text, so the row can show which part of the name matched. */
+		SLATE_ATTRIBUTE(FText, HighlightText)
 	SLATE_END_ARGS()
 	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<ULexWidget> InModel
 		, TSharedPtr<SLexWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FLexUIPrefabEditor> InManager);
@@ -80,6 +96,7 @@ private:
 	void HandleDragEnter(FDragDropEvent const& DragDropEvent);
 	void HandleDragLeave(const FDragDropEvent& DragDropEvent);
 	FText GetItemText() const;
+	FText GetItemTypeText() const;
 	FText GetItemTooltipText() const;
 	FSlateColor GetNameTextColorAndOpacity() const;
 	FSlateColor GetVisibilityIconColorAndOpacity() const;

@@ -12,15 +12,79 @@
 #include "PrefabSystem/LexUIPrefab.h"
 
 #include "AssetRegistry/IAssetRegistry.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Styling/AppStyle.h"
 #include "Styling/SlateIconFinder.h"
 #include "Widgets/Images/SImage.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Views/STableRow.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabPalette"
+
+namespace LexUIPalette
+{
+	const TCHAR* FavoritesGroupName = TEXT("Favorites");
+
+	FString MakeFavoriteKey(const FPaletteItem& Item)
+	{
+		switch (Item.Kind)
+		{
+		case EItemKind::Category:
+			return FString();
+		case EItemKind::BasicWidget:
+			return FString::Printf(TEXT("Basic:%s"), *Item.DisplayName);
+		case EItemKind::ProjectPrefab:
+			return FString::Printf(TEXT("Asset:%s"), *Item.PrefabPath);
+		default:
+			// Registry entries are keyed by the registry's Name, not by the label they show: relabeling
+			// a control, or moving it to another category, must not drop the star off it.
+			return FString::Printf(TEXT("Control:%s"), Item.NativeDescriptor.IsValid()
+				? *Item.NativeDescriptor->Name.ToString() : *Item.DisplayName);
+		}
+	}
+
+	bool ShouldExpandGroup(bool bFilterActive, bool bWasCollapsed)
+	{
+		return bFilterActive || !bWasCollapsed;
+	}
+
+	void BuildRootItems(const TArray<FItemPtr>& InAllGroups, const TSet<FString>& InFavorites,
+		bool bFilterActive, TFunctionRef<bool(const FPaletteItem&)> InMatchesFilter, TArray<FItemPtr>& OutRootItems)
+	{
+		OutRootItems.Reset();
+		FItemPtr FavoritesGroup = MakeShared<FPaletteItem>();
+		FavoritesGroup->Kind = EItemKind::Category;
+		FavoritesGroup->DisplayName = FavoritesGroupName;
+		for (const FItemPtr& Group : InAllGroups)
+		{
+			if (!Group.IsValid())continue;
+			FItemPtr Shown = MakeShared<FPaletteItem>();
+			Shown->Kind = EItemKind::Category;
+			Shown->DisplayName = Group->DisplayName;
+			for (const FItemPtr& Child : Group->Children)
+			{
+				if (!Child.IsValid())continue;
+				if (bFilterActive && !InMatchesFilter(*Child))continue;
+				Shown->Children.Add(Child);
+				if (!Child->FavoriteKey.IsEmpty() && InFavorites.Contains(Child->FavoriteKey))
+				{
+					FavoritesGroup->Children.Add(MakeShared<FPaletteItem>(*Child));
+				}
+			}
+			if (Shown->Children.Num() > 0)
+			{
+				OutRootItems.Add(Shown);
+			}
+		}
+		if (FavoritesGroup->Children.Num() > 0)
+		{
+			OutRootItems.Insert(FavoritesGroup, 0);
+		}
+	}
+}
 
 SLexUIPrefabPalette::~SLexUIPrefabPalette()
 {
@@ -47,6 +111,7 @@ void SLexUIPrefabPalette::Construct(const FArguments& InArgs, TSharedPtr<FLexUIP
 	AssetRemovedHandle = AssetRegistry.OnAssetRemoved().AddSP(SharedThis(this), &SLexUIPrefabPalette::HandlePrefabAssetChanged);
 	AssetRenamedHandle = AssetRegistry.OnAssetRenamed().AddSP(SharedThis(this), &SLexUIPrefabPalette::HandlePrefabAssetRenamed);
 	FilesLoadedHandle = AssetRegistry.OnFilesLoaded().AddSP(SharedThis(this), &SLexUIPrefabPalette::HandleAssetRegistryFilesLoaded);
+	LoadPreferences();
 
 	ChildSlot
 	[
@@ -67,6 +132,7 @@ void SLexUIPrefabPalette::Construct(const FArguments& InArgs, TSharedPtr<FLexUIP
 			.TreeItemsSource(&RootItems)
 			.OnGenerateRow(this, &SLexUIPrefabPalette::OnGenerateRow)
 			.OnGetChildren(this, &SLexUIPrefabPalette::OnGetChildren)
+			.OnExpansionChanged(this, &SLexUIPrefabPalette::OnGroupExpansionChanged)
 			.OnMouseButtonDoubleClick(this, &SLexUIPrefabPalette::OnItemDoubleClick)
 		]
 	];
@@ -136,6 +202,7 @@ void SLexUIPrefabPalette::CollectBasics(TArray<FItemPtr>& Out)
 		Item->DisplayName = Name;
 		Item->VisualClass = VisualClass;
 		Item->bSetDefaultSprite = bDefaultSprite;
+		Item->FavoriteKey = LexUIPalette::MakeFavoriteKey(*Item);
 		return Item;
 	};
 	Header->Children.Add(MakeBasic(TEXT("Widget"), nullptr));
@@ -165,6 +232,7 @@ void SLexUIPrefabPalette::CollectControls(TArray<FItemPtr>& Out)
 		Item->PrefabPath = Descriptor.PrefabPath;
 		Item->NativeDescriptor = MakeShared<FLexUIControlDescriptor>(Descriptor);
 		Item->bValid = FLexUIControlRegistry::Get().Validate(Descriptor, Item->ValidationError);
+		Item->FavoriteKey = LexUIPalette::MakeFavoriteKey(*Item);
 		Header->Children.Add(Item);
 	}
 	for (FName Category : CategoryOrder)
@@ -228,6 +296,7 @@ void SLexUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
 		Item->DisplayName = AssetData.AssetName.ToString();
 		Item->PrefabPath = AssetData.GetSoftObjectPath().ToString();
 		Item->PrefabAsset = AssetData;
+		Item->FavoriteKey = LexUIPalette::MakeFavoriteKey(*Item);
 		// Only prefabs already in memory can be version-checked for free; the rest are rejected by
 		// FLexUIEditorTools::CanNestPrefabUnderWidget at create time, which is the guard that counts.
 		if (auto Loaded = Cast<ULexUIPrefab>(AssetData.FastGetAsset(false)))
@@ -249,48 +318,59 @@ void SLexUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
 
 void SLexUIPrefabPalette::RebuildList()
 {
-	RootItems.Reset();
-
-	const bool bFilterActive = !SearchFilter.GetFilterText().IsEmpty();
-	TArray<FItemPtr> AllGroups;
+	AllGroups.Reset();
 	CollectBasics(AllGroups);
 	CollectControls(AllGroups);
 	CollectPrefabs(AllGroups);
+	RefreshRootItems();
+}
 
-	if (!bFilterActive)
-	{
-		RootItems = MoveTemp(AllGroups);
-	}
-	else
-	{
-		// keep only children matching the search; drop empty groups
-		for (auto& Group : AllGroups)
+void SLexUIPrefabPalette::RefreshRootItems()
+{
+	const bool bFilterActive = !SearchFilter.GetFilterText().IsEmpty();
+	LexUIPalette::BuildRootItems(AllGroups, Favorites, bFilterActive,
+		[this](const FPaletteItem& Item)
 		{
-			FItemPtr Filtered = MakeShared<FPaletteItem>();
-			Filtered->Kind = EItemKind::Category;
-			Filtered->DisplayName = Group->DisplayName;
-			for (auto& Child : Group->Children)
-			{
-				if (SearchFilter.TestTextFilter(FBasicStringFilterExpressionContext(Child->DisplayName)))
-				{
-					Filtered->Children.Add(Child);
-				}
-			}
-			if (Filtered->Children.Num() > 0)
-			{
-				RootItems.Add(Filtered);
-			}
-		}
-	}
+			return SearchFilter.TestTextFilter(FBasicStringFilterExpressionContext(Item.DisplayName));
+		}, RootItems);
 
 	if (TreeView.IsValid())
 	{
 		TreeView->RequestTreeRefresh();
-		for (auto& Group : RootItems)
-		{
-			TreeView->SetItemExpansion(Group, true);
-		}
+		ApplyGroupExpansion();
 	}
+}
+
+void SLexUIPrefabPalette::ApplyGroupExpansion()
+{
+	const bool bFilterActive = !SearchFilter.GetFilterText().IsEmpty();
+	// The tree reports every one of these back through OnGroupExpansionChanged, and a rebuild is not
+	// the user speaking.
+	bApplyingGroupExpansion = true;
+	for (auto& Group : RootItems)
+	{
+		TreeView->SetItemExpansion(Group, LexUIPalette::ShouldExpandGroup(bFilterActive, CollapsedGroups.Contains(Group->DisplayName)));
+	}
+	bApplyingGroupExpansion = false;
+}
+
+void SLexUIPrefabPalette::OnGroupExpansionChanged(FItemPtr InItem, bool bExpanded)
+{
+	if (bApplyingGroupExpansion || !InItem.IsValid() || InItem->Kind != EItemKind::Category)return;
+	// While a filter is active every group is forced open, so what the tree reports then says nothing
+	// about which groups this user wants closed.
+	if (!SearchFilter.GetFilterText().IsEmpty())return;
+	if (bExpanded)
+	{
+		if (CollapsedGroups.Remove(InItem->DisplayName) == 0)return;
+	}
+	else
+	{
+		bool bAlreadyCollapsed = false;
+		CollapsedGroups.Add(InItem->DisplayName, &bAlreadyCollapsed);
+		if (bAlreadyCollapsed)return;
+	}
+	SavePreferences();
 }
 
 TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const TSharedRef<STableViewBase>& OwnerTable)
@@ -307,6 +387,8 @@ TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const 
 				.ColorAndOpacity(FSlateColor::UseSubduedForeground())
 			];
 	}
+
+	const FText FavoriteTooltip = LOCTEXT("FavoriteToggleTooltip", "Keep this element in the Favorites group at the top of the palette.");
 
 	// Registry entries carry an explicit semantic icon. Basics and project prefabs
 	// still resolve through their native class, matching UMG's palette behavior.
@@ -330,31 +412,52 @@ TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const 
 		: InItem->Kind == EItemKind::Prefab
 		? FText::Format(LOCTEXT("PrefabRowTooltip", "{0}\nDouble-click to add a copy under the selected widget."), FText::FromString(InItem->PrefabPath))
 		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click, or drag onto a Hierarchy widget, to add it under that widget."), FText::FromString(InItem->DisplayName));
-	return SNew(STableRow<FItemPtr>, OwnerTable)
+	TSharedRef<STableRow<FItemPtr>> Row = SNew(STableRow<FItemPtr>, OwnerTable)
 		.IsEnabled(InItem->bValid)
 		.Padding(FMargin(2, 2))
 		.ToolTipText(Tooltip)
-		.OnDragDetected(FOnDragDetected::CreateSP(this, &SLexUIPrefabPalette::OnItemDragDetected, InItem))
+		.OnDragDetected(FOnDragDetected::CreateSP(this, &SLexUIPrefabPalette::OnItemDragDetected, InItem));
+	// The star shows on a favourite and under the pointer, UMG-palette style. Hover has to be asked of
+	// the row: a check box only ever knows the pointer is over the check box. Hence content after
+	// construction -- the row has to exist before anything inside it can ask it anything.
+	const TWeakPtr<SWidget> WeakRow = Row;
+	Row->SetContent(
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
 		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(2, 0, 6, 0)
-			[
-				SNew(SImage)
-				.Image(IconBrush)
-				.ColorAndOpacity(FSlateColor::UseForeground())
-				.DesiredSizeOverride(FVector2D(16, 16))
-			]
-			+ SHorizontalBox::Slot()
-			.FillWidth(1.0f)
-			.VAlign(VAlign_Center)
-			[
-				SNew(STextBlock)
-				.Text(FText::FromString(InItem->DisplayName))
-			]
-		];
+			SNew(SCheckBox)
+			.Style(FAppStyle::Get(), "UMGEditor.Palette.FavoriteToggleStyle")
+			.ToolTipText(FavoriteTooltip)
+			.IsChecked(this, &SLexUIPrefabPalette::GetFavoriteState, InItem)
+			.OnCheckStateChanged(this, &SLexUIPrefabPalette::OnFavoriteToggled, InItem)
+			.Visibility_Lambda([this, InItem, WeakRow]()
+			{
+				const TSharedPtr<SWidget> HoverTarget = WeakRow.Pin();
+				return GetFavoriteState(InItem) == ECheckBoxState::Checked || (HoverTarget.IsValid() && HoverTarget->IsHovered())
+					? EVisibility::Visible : EVisibility::Hidden;
+			})
+		]
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.VAlign(VAlign_Center)
+		.Padding(2, 0, 6, 0)
+		[
+			SNew(SImage)
+			.Image(IconBrush)
+			.ColorAndOpacity(FSlateColor::UseForeground())
+			.DesiredSizeOverride(FVector2D(16, 16))
+		]
+		+ SHorizontalBox::Slot()
+		.FillWidth(1.0f)
+		.VAlign(VAlign_Center)
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(InItem->DisplayName))
+			.HighlightText(this, &SLexUIPrefabPalette::GetSearchText)
+		]);
+	return Row;
 }
 
 void SLexUIPrefabPalette::OnGetChildren(FItemPtr InItem, TArray<FItemPtr>& OutChildren)
@@ -375,6 +478,12 @@ void SLexUIPrefabPalette::OnItemDoubleClick(FItemPtr InItem)
 
 namespace SLexUIPrefabPaletteLocal
 {
+	// Favourites and collapsed groups are per user and per project, and neither is worth a settings
+	// object: nothing outside this panel reads them.
+	static const TCHAR* PreferencesSection = TEXT("LexUIPrefabPalette.Preferences");
+	static const TCHAR* FavoritesKey = TEXT("Favorites");
+	static const TCHAR* CollapsedGroupsKey = TEXT("CollapsedGroups");
+
 	// shared create path: the create primitives take a "get parent" function, so double-click
 	// (parent = selection) and drop (parent = drop-target widget) reuse the same logic
 	ULexWidget* CreateElement(bool bIsBasicWidget, UClass* VisualClass, bool bSetDefaultSprite,
@@ -472,7 +581,53 @@ FReply SLexUIPrefabPalette::OnItemDragDetected(const FGeometry& MyGeometry, cons
 void SLexUIPrefabPalette::OnSearchTextChanged(const FText& InText)
 {
 	SearchFilter.SetFilterText(InText);
-	RebuildList();
+	RefreshRootItems();
+}
+
+FText SLexUIPrefabPalette::GetSearchText()const
+{
+	return SearchFilter.GetFilterText();
+}
+
+void SLexUIPrefabPalette::LoadPreferences()
+{
+	if (GConfig == nullptr)return;
+	TArray<FString> Values;
+	GConfig->GetArray(SLexUIPrefabPaletteLocal::PreferencesSection, SLexUIPrefabPaletteLocal::FavoritesKey, Values, GEditorPerProjectIni);
+	Favorites.Append(Values);
+	Values.Reset();
+	GConfig->GetArray(SLexUIPrefabPaletteLocal::PreferencesSection, SLexUIPrefabPaletteLocal::CollapsedGroupsKey, Values, GEditorPerProjectIni);
+	CollapsedGroups.Append(Values);
+}
+
+void SLexUIPrefabPalette::SavePreferences()const
+{
+	if (GConfig == nullptr)return;
+	GConfig->SetArray(SLexUIPrefabPaletteLocal::PreferencesSection, SLexUIPrefabPaletteLocal::FavoritesKey, Favorites.Array(), GEditorPerProjectIni);
+	GConfig->SetArray(SLexUIPrefabPaletteLocal::PreferencesSection, SLexUIPrefabPaletteLocal::CollapsedGroupsKey, CollapsedGroups.Array(), GEditorPerProjectIni);
+	GConfig->Flush(false, GEditorPerProjectIni);
+}
+
+ECheckBoxState SLexUIPrefabPalette::GetFavoriteState(FItemPtr InItem)const
+{
+	return InItem.IsValid() && !InItem->FavoriteKey.IsEmpty() && Favorites.Contains(InItem->FavoriteKey)
+		? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+}
+
+void SLexUIPrefabPalette::OnFavoriteToggled(ECheckBoxState InState, FItemPtr InItem)
+{
+	if (!InItem.IsValid() || InItem->FavoriteKey.IsEmpty())return;
+	if (InState == ECheckBoxState::Checked)
+	{
+		Favorites.Add(InItem->FavoriteKey);
+	}
+	else
+	{
+		Favorites.Remove(InItem->FavoriteKey);
+	}
+	SavePreferences();
+	// The Favorites group is derived, not stored, so it only gains or loses the entry on a re-derive.
+	RefreshRootItems();
 }
 
 #undef LOCTEXT_NAMESPACE

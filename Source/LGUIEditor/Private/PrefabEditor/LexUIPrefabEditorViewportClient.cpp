@@ -47,6 +47,7 @@
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Engine/Canvas.h"
 #include "CanvasItem.h"
+#include "Framework/Application/SlateApplication.h"
 #include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewportClient"
@@ -103,9 +104,41 @@ private:
 	bool bIsMousePressedAtThisFrame = false;
 	bool bIsMouseReleasedAtThisFrame = false;
 	bool bIsDragging = false;
-	TWeakObjectPtr<ULexWidget> SelectedWidget;
+	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
+	/** Parallel to SelectedWidgets, taken at press: a drag has to read where it started, not where it is. */
+	TArray<FTransform> WidgetTransformsWhenPress;
 	FLexUIPrefabEditorViewportClient* ViewportClient = nullptr;
 	TUniquePtr<FSceneViewFamilyContext> ViewFamily = nullptr;
+	bool HasAnyWidget()const
+	{
+		for (const TWeakObjectPtr<ULexWidget>& Weak : SelectedWidgets)
+		{
+			if (Weak.IsValid())return true;
+		}
+		return false;
+	}
+	/**
+	 * Where the gizmo itself stands: the selection's centre, in the first widget's frame. Its scale
+	 * is dropped -- the gizmo is drawn at a screen-constant size and a scaled widget must not skew
+	 * the axes the drag is measured along.
+	 */
+	FTransform ComputeSelectionTransform()const
+	{
+		FVector Centre = FVector::ZeroVector;
+		FQuat Rotation = FQuat::Identity;
+		int32 Count = 0;
+		for (const TWeakObjectPtr<ULexWidget>& Weak : SelectedWidgets)
+		{
+			if (ULexWidget* Widget = Weak.Get())
+			{
+				if (Count == 0)Rotation = Widget->GetWorldTransform().GetRotation();
+				Centre += Widget->GetWorldTransform().GetLocation();
+				Count++;
+			}
+		}
+		if (Count == 0)return ThisTransform;
+		return FTransform(Rotation, Centre / (double)Count);
+	}
 	void UpdateAxis()
 	{
 		auto SceneView = ViewportClient->CalcSceneView( ViewFamily.Get() );
@@ -138,7 +171,7 @@ private:
 		
 		if (bIsDragging)
 		{
-			if (SelectedWidget.IsValid())
+			if (HasAnyWidget())
 			{
 				FVector RayOrigin, RayDirection;
 				FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
@@ -191,10 +224,18 @@ private:
 						break;
 					}
 					ThisTransform.SetTranslation(ThisTransformWhenPress.GetTranslation() + Diff);
-					FLexUIUtils::ChangePropertyWithNotify(SelectedWidget.Get(), USceneComponent::GetRelativeLocationPropertyName(), [=, this]
+					for (int32 Index = 0; Index < SelectedWidgets.Num(); ++Index)
 					{
-						SelectedWidget->SetWorldLocation(ThisTransform.GetLocation());
-					});
+						ULexWidget* Widget = SelectedWidgets[Index].Get();
+						if (!Widget)continue;
+						// Each from its own press pose, so the selection keeps its shape; reading the
+						// gizmo's location instead would pile every widget onto the one point.
+						const FVector NewLocation = WidgetTransformsWhenPress[Index].GetTranslation() + Diff;
+						FLexUIUtils::ChangePropertyWithNotify(Widget, USceneComponent::GetRelativeLocationPropertyName(), [=]
+						{
+							Widget->SetWorldLocation(NewLocation);
+						});
+					}
 				}
 				else if (TransformType == ETransformType::Rotate)
 				{
@@ -239,18 +280,44 @@ private:
 						break;
 					}
 					ThisTransform.SetRotation(ThisTransformWhenPress.GetRotation() * Diff.Quaternion());
-					FLexUIUtils::ChangePropertyWithNotify(SelectedWidget.Get(), USceneComponent::GetRelativeRotationPropertyName(), [=, this]
+					// The gizmo's own turn expressed in world space. Handing each widget the local
+					// Diff instead would turn every widget about its own axes, so a selection whose
+					// members are rotated differently would come apart as it turned.
+					const FQuat WorldDelta = ThisTransform.GetRotation() * ThisTransformWhenPress.GetRotation().Inverse();
+					const FVector RotationCentre = ThisTransformWhenPress.GetTranslation();
+					// One widget turns where it stands; a group turns about the shared centre, which
+					// carries its members around as well as turning them.
+					const bool bCarriesLocation = SelectedWidgets.Num() > 1;
+					for (int32 Index = 0; Index < SelectedWidgets.Num(); ++Index)
 					{
-						SelectedWidget->SetWorldRotation(ThisTransform.GetRotation());
-					});
+						ULexWidget* Widget = SelectedWidgets[Index].Get();
+						if (!Widget)continue;
+						const FTransform& Press = WidgetTransformsWhenPress[Index];
+						const FQuat NewRotation = WorldDelta * Press.GetRotation();
+						const FVector NewLocation = RotationCentre + WorldDelta.RotateVector(Press.GetTranslation() - RotationCentre);
+						FLexUIUtils::ChangePropertyWithNotify(Widget, USceneComponent::GetRelativeRotationPropertyName(), [=]
+						{
+							if (bCarriesLocation)
+							{
+								FLexUIUtils::ChangePropertyWithNotify(Widget, USceneComponent::GetRelativeLocationPropertyName(), [=]
+								{
+									Widget->SetWorldLocationAndRotation(NewLocation, NewRotation);
+								});
+							}
+							else
+							{
+								Widget->SetWorldRotation(NewRotation);
+							}
+						});
+					}
 				}
 			}
 		}
 		else
 		{
-			if (SelectedWidget.IsValid())
+			if (HasAnyWidget())
 			{
-				ThisTransform = SelectedWidget->GetWorldTransform();
+				ThisTransform = ComputeSelectionTransform();
 			}
 			constexpr uint8 AxisAlpha = 255;
 			constexpr uint8 PlaneAlpha = 50;
@@ -419,11 +486,15 @@ private:
 	}
 	TUniquePtr<FScopedTransaction> Transaction = nullptr;
 public:
-	FLexUITransformWidget(UWorld* InWorld, ULexWidget* InWidget, FLexUIPrefabEditorViewportClient* InViewportClient)
+	FLexUITransformWidget(UWorld* InWorld, TConstArrayView<ULexWidget*> InWidgets, FLexUIPrefabEditorViewportClient* InViewportClient)
 	{
 		World = InWorld;
-		SelectedWidget = InWidget;
-		ThisTransform = SelectedWidget->GetWorldTransform();
+		for (ULexWidget* Widget : InWidgets)
+		{
+			SelectedWidgets.Add(Widget);
+		}
+		WidgetTransformsWhenPress.SetNum(SelectedWidgets.Num());
+		ThisTransform = ComputeSelectionTransform();
 		LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(InWorld);
 		DebugName = TEXT("LexUITransformWidget");
 		
@@ -632,7 +703,14 @@ public:
 					PressMouseY = EventArgs.Viewport->GetMouseY();
 					ThisTransformWhenPress = ThisTransform;
 					Transaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveWidget", "Move Widget"));
-					SelectedWidget->Modify();
+					for (int32 Index = 0; Index < SelectedWidgets.Num(); ++Index)
+					{
+						if (ULexWidget* Widget = SelectedWidgets[Index].Get())
+						{
+							Widget->Modify();
+							WidgetTransformsWhenPress[Index] = Widget->GetWorldTransform();
+						}
+					}
 					return true;
 				}
 			}
@@ -726,16 +804,22 @@ FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLex
 
 	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectionChanged.AddLambda([=, this]()
 	{
-		auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
-		if (SelectedWidgets.Num() == 1 && SelectedWidgets[0].IsValid()
-			&& !PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidgets[0].Get())
-			&& !PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidgets[0].Get()))
+		TArray<ULexWidget*> GizmoWidgets;
+		for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 		{
-			TransformWidget = MakeUnique<FLexUITransformWidget>(GetWorld(), SelectedWidgets[0].Get(), this);
+			ULexWidget* SelectedWidget = WeakWidget.Get();
+			if (!SelectedWidget)continue;
+			if (PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))continue;
+			if (PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidget))continue;
+			GizmoWidgets.Add(SelectedWidget);
+		}
+		if (GizmoWidgets.IsEmpty())
+		{
+			TransformWidget.Reset();
 		}
 		else
 		{
-			TransformWidget.Reset();
+			TransformWidget = MakeUnique<FLexUITransformWidget>(GetWorld(), GizmoWidgets, this);
 		}
 	});
 }
@@ -1095,6 +1179,7 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 	DesignerAnchorSpaceCorners.Reset();
 	DesignerAnchorHandlePositions.Reset();
 	DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
+	bDesignerMoveAvailable = false;
 	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
 	TArray<ULexWidget*> Selected;
 	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
@@ -1105,6 +1190,7 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 		}
 	}
 	if (Selected.IsEmpty())return false;
+	bDesignerMoveAvailable = CanMoveSelection(Selected);
 
 	auto ProjectWidgetCorners = [&View](ULexWidget* InWidget, TArray<FVector2D>& OutCorners) -> bool
 	{
@@ -1240,7 +1326,11 @@ FLexUIPrefabEditorViewportClient::EDesignerHandle FLexUIPrefabEditorViewportClie
 	{
 		if (FVector2D::Distance(Pair.Value, PixelPosition) <= HandleRadius)return Pair.Key;
 	}
-	if (DesignerScreenBounds.bIsValid
+	// The rectangle is only a Move handle while a move can land. With every position axis arranged,
+	// answering Move here would swallow the press and hand back a discarded write; answering None
+	// lets it fall through to the click that selects whatever is inside the panel instead.
+	if (bDesignerMoveAvailable
+		&& DesignerScreenBounds.bIsValid
 		&& PixelPosition.X >= DesignerScreenBounds.Min.X && PixelPosition.X <= DesignerScreenBounds.Max.X
 		&& PixelPosition.Y >= DesignerScreenBounds.Min.Y && PixelPosition.Y <= DesignerScreenBounds.Max.Y)
 	{
@@ -1435,6 +1525,82 @@ void FLexUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewpor
 	}
 }
 
+void FLexUIPrefabEditorViewportClient::DrawSafeZoneGuide(FSceneView& View, FCanvas& Canvas) const
+{
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	ULexWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
+	if (!IsValid(RootAgent) || RootAgent->GetWidth() <= 0.0f || RootAgent->GetHeight() <= 0.0f)return;
+	if (!FSlateApplication::IsInitialized())return;
+
+	// Whatever the platform declares, so a desktop that declares no safe area draws nothing rather
+	// than an invented inset. r.DebugSafeZone.TitleRatio is what makes one appear here, and it is the
+	// same knob UMG's designer reads.
+	FMargin SafeZonePadding;
+	FSlateApplication::Get().GetSafeZoneSize(SafeZonePadding, FVector2f(RootAgent->GetWidth(), RootAgent->GetHeight()));
+	if (SafeZonePadding.Left <= 0.0f && SafeZonePadding.Right <= 0.0f && SafeZonePadding.Top <= 0.0f && SafeZonePadding.Bottom <= 0.0f)return;
+
+	const FBox2D SafeRect = GetSafeZoneLocalRect(
+		FVector2D(RootAgent->GetWidth(), RootAgent->GetHeight()), RootAgent->GetPivot(),
+		FVector4(SafeZonePadding.Left, SafeZonePadding.Top, SafeZonePadding.Right, SafeZonePadding.Bottom));
+	if (!SafeRect.bIsValid)return;
+
+	const FTransform& Transform = RootAgent->GetWorldTransform();
+	const float DpiScale = Canvas.GetDPIScale();
+	const FVector LocalCorners[4] = {
+		FVector(0, SafeRect.Min.X, SafeRect.Min.Y),
+		FVector(0, SafeRect.Max.X, SafeRect.Min.Y),
+		FVector(0, SafeRect.Max.X, SafeRect.Max.Y),
+		FVector(0, SafeRect.Min.X, SafeRect.Max.Y),
+	};
+	FVector2D Pixels[4];
+	for (int32 Corner = 0; Corner < 4; Corner++)
+	{
+		if (!LexWorldToPixelInFront(View, Transform.TransformPosition(LocalCorners[Corner]), Pixels[Corner]))return;
+		Pixels[Corner] /= DpiScale;
+	}
+	const FLinearColor SafeColor(1.0f, 0.78f, 0.2f, 0.85f);
+	for (int32 Corner = 0; Corner < 4; Corner++)
+	{
+		FCanvasLineItem Line(Pixels[Corner], Pixels[(Corner + 1) % 4]);
+		Line.SetColor(SafeColor);
+		Line.LineThickness = 1.0f;
+		Canvas.DrawItem(Line);
+	}
+	if (UFont* Font = GEngine->GetSmallFont())
+	{
+		FCanvasTextItem Label(Pixels[3] + FVector2D(4.0f, 2.0f), LOCTEXT("SafeZoneGuide", "safe area"), Font, SafeColor);
+		Label.EnableShadow(FLinearColor::Black);
+		Canvas.DrawItem(Label);
+	}
+}
+
+void FLexUIPrefabEditorViewportClient::DrawCursorReadout(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
+{
+	if (!bCursorInViewport)return;
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	ULexWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
+	UFont* Font = GEngine->GetSmallFont();
+	if (!IsValid(RootAgent) || Font == nullptr)return;
+
+	const FTransform& Transform = RootAgent->GetWorldTransform();
+	FVector RayOrigin, RayDirection;
+	FSceneView::DeprojectScreenToWorld(FVector2D(HoverPixel.X, HoverPixel.Y), View.UnscaledViewRect,
+		View.ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+	const FVector OnPlane = FMath::LinePlaneIntersection(RayOrigin, RayOrigin + RayDirection * 100000000.0,
+		Transform.GetLocation(), Transform.GetUnitAxis(EAxis::X));
+	// The canvas's own rect space -- X right, Y up, measured from its pivot -- which is the space the
+	// details panel's numbers are written in. Reporting screen-style top-left units instead would
+	// read as a position nothing in this editor can be set to.
+	const FVector Local = Transform.InverseTransformPosition(OnPlane);
+
+	const float DpiScale = Canvas.GetDPIScale();
+	const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
+	FCanvasTextItem Readout(FVector2D(8.0f, ViewSize.Y - 18.0f),
+		FText::FromString(FString::Printf(TEXT("%.0f, %.0f"), Local.Y, Local.Z)), Font, FLinearColor(0.72f, 0.78f, 0.85f));
+	Readout.EnableShadow(FLinearColor::Black);
+	Canvas.DrawItem(Readout);
+}
+
 void FLexUIPrefabEditorViewportClient::DrawShippedImageOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas) const
 {
 	// Where the widget actually draws, marked on a surface whose handles deliberately stay where it
@@ -1505,18 +1671,23 @@ void FLexUIPrefabEditorViewportClient::DrawShippedImageOutline(ULexWidget* InWid
 
 void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
 {
+	// Drop feedback and hover answer "what is under the cursor", and the cursor is over the 3D view
+	// as often as the 2D one. Only the chrome below is tied to the layout plane; both of these
+	// project through whatever camera is in use, so neither belongs behind the ortho gate.
+	if (PaletteDropPreviewWidget.IsValid())
+	{
+		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
+	}
+	DrawHoverOutline(View, Canvas);
 	if (!IsOrtho())return;
 	DrawDesignerCanvasBoundary(InViewport, View, Canvas);
 	if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowResolutionGuides())
 	{
 		DrawResolutionGuides(InViewport, View, Canvas);
+		DrawSafeZoneGuide(View, Canvas);
 	}
 	DrawLayoutDebugOverlay(InViewport, Canvas);
-	DrawHoverOutline(View, Canvas);
-	if (PaletteDropPreviewWidget.IsValid())
-	{
-		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
-	}
+	DrawCursorReadout(InViewport, View, Canvas);
 	if (PrefabEditorPtr.IsValid())
 	{
 		for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
@@ -1908,10 +2079,15 @@ void FLexUIPrefabEditorViewportClient::FinishDesignerMarquee()
 void FLexUIPrefabEditorViewportClient::SelectWidgetAtPixel(const FVector2D& InPixel, bool bIsControlDown)
 {
 	if (!PrefabEditorPtr.IsValid())return;
+	const FIntPoint ClickPixel(FMath::RoundToInt(InPixel.X), FMath::RoundToInt(InPixel.Y));
 	FVector LineStart, LineEnd;
-	if (!ComputePickRay(FMath::RoundToInt(InPixel.X), FMath::RoundToInt(InPixel.Y), LineStart, LineEnd))return;
+	if (!ComputePickRay(ClickPixel.X, ClickPixel.Y, LineStart, LineEnd))return;
 	TArray<ULexWidget*> Widgets;
 	LexUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+	// This path and ProcessClick share the one cycle index, so they have to share the rule that
+	// resets it -- a click here after a cycle there would otherwise resume that stack's depth.
+	IndexOfClickSelectUI = ResolveClickCycleIndex(LastClickPixel, ClickPixel, IndexOfClickSelectUI);
+	LastClickPixel = ClickPixel;
 	ULexWidget* Hit = LexUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, IndexOfClickSelectUI);
 	if (Hit != nullptr && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Hit))Hit = nullptr;
 	if (Hit != nullptr)PrefabEditorPtr.Pin()->SelectWidgets({Hit}, bIsControlDown);
@@ -1957,6 +2133,9 @@ void FLexUIPrefabEditorViewportClient::BeginDesignerDrag(EDesignerHandle InHandl
 		// move does; everything else is measured in the widget's own.
 		Snapshot.PlaneTransform = (HitHandle == EDesignerHandle::Move || IsAnchorHandle(HitHandle)) && SelectedWidget->GetParent()
 			? SelectedWidget->GetParent()->GetWorldTransform() : SelectedWidget->GetWorldTransform();
+		const FLexLayoutControlAnchorData Control = GetEffectiveLayoutControl(SelectedWidget);
+		Snapshot.bHorizontalPositionFree = !Control.bCanControlHorizontalPosition;
+		Snapshot.bVerticalPositionFree = !Control.bCanControlVerticalPosition;
 		IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, Snapshot.StartPlanePoint);
 	}
 	ActiveDesignerHandle = HitHandle;
@@ -1973,28 +2152,45 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 	const FVector2D MousePixel(Viewport->GetMouseX(), Viewport->GetMouseY());
 	DesignerGuideX.Reset();
 	DesignerGuideY.Reset();
+	// A guide line is only worth drawing where the grid actually took over: a line through the
+	// dragged widget's own pivot is drawn wherever the widget is and so says nothing at all.
+	bool bGuideSnappedHorizontal = false, bGuideSnappedVertical = false;
+	FVector GuideWorldPoint = FVector::ZeroVector;
 
 	if (ActiveDesignerHandle == EDesignerHandle::Move)
 	{
-		FVector2D SnappedDelta = FVector2D::ZeroVector;
-		bool bHasSnappedDelta = false;
-		for (FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
+		TArray<ULexWidget*> Moving;
+		TArray<FMoveDragTarget> Targets;
+		for (const FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
 		{
 			ULexWidget* SelectedWidget = Snapshot.Widget.Get();
 			if (!SelectedWidget)continue;
-			FVector CurrentPoint;
-			if (!IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, CurrentPoint))continue;
-			const FVector StartLocal = Snapshot.PlaneTransform.InverseTransformPosition(Snapshot.StartPlanePoint);
-			const FVector CurrentLocal = Snapshot.PlaneTransform.InverseTransformPosition(CurrentPoint);
-			const FVector2D Delta(CurrentLocal.Y - StartLocal.Y, CurrentLocal.Z - StartLocal.Z);
-			if (!bHasSnappedDelta)
-			{
-				const FVector2D FirstPosition = Snapshot.AnchoredPosition + Delta;
-				SnappedDelta.X = PrefabEditorPtr.Pin()->SnapDesignerValue(FirstPosition.X) - Snapshot.AnchoredPosition.X;
-				SnappedDelta.Y = PrefabEditorPtr.Pin()->SnapDesignerValue(FirstPosition.Y) - Snapshot.AnchoredPosition.Y;
-				bHasSnappedDelta = true;
-			}
-			SelectedWidget->SetAnchoredPosition(Snapshot.AnchoredPosition + SnappedDelta);
+			// Nothing to write on either axis, so skip the widget entirely: SetAnchoredPosition
+			// re-dirties the parent whether or not the value changed, and the arrange that follows
+			// puts it straight back.
+			if (!Snapshot.bHorizontalPositionFree && !Snapshot.bVerticalPositionFree)continue;
+			FMoveDragTarget Target;
+			if (!IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, Target.CurrentPlanePoint))continue;
+			Target.PlaneTransform = Snapshot.PlaneTransform;
+			Target.StartPlanePoint = Snapshot.StartPlanePoint;
+			Target.StartPosition = Snapshot.AnchoredPosition;
+			Target.bHorizontalFree = Snapshot.bHorizontalPositionFree;
+			Target.bVerticalFree = Snapshot.bVerticalPositionFree;
+			Moving.Add(SelectedWidget);
+			Targets.Add(Target);
+		}
+		const float GridSize = PrefabEditorPtr.Pin()->IsDesignerGridSnapEnabled() ? PrefabEditorPtr.Pin()->GetDesignerGridSize() : 0.0f;
+		TArray<FMoveDragResult> Results;
+		ResolveMoveDrag(Targets, GridSize, Results);
+		for (int32 Index = 0; Index < Moving.Num(); ++Index)
+		{
+			Moving[Index]->SetAnchoredPosition(Results[Index].Position);
+		}
+		if (!Results.IsEmpty())
+		{
+			bGuideSnappedHorizontal = Results[0].bSnappedHorizontal;
+			bGuideSnappedVertical = Results[0].bSnappedVertical;
+			GuideWorldPoint = Moving[0]->GetWorldTransform().GetLocation();
 		}
 	}
 	else if (IsAnchorHandle(ActiveDesignerHandle))
@@ -2068,16 +2264,23 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 			float Right = OriginalRight;
 			float Bottom = OriginalBottom;
 			float Top = OriginalTop;
-			if (bChangeLeft)Left = FMath::Min(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Y), Right - 1.0f);
-			if (bChangeRight)Right = FMath::Max(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Y), Left + 1.0f);
-			if (bChangeBottom)Bottom = FMath::Min(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Z), Top - 1.0f);
-			if (bChangeTop)Top = FMath::Max(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Z), Bottom + 1.0f);
+			const float SnappedY = PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Y);
+			const float SnappedZ = PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Z);
+			if (bChangeLeft)Left = FMath::Min(SnappedY, Right - 1.0f);
+			if (bChangeRight)Right = FMath::Max(SnappedY, Left + 1.0f);
+			if (bChangeBottom)Bottom = FMath::Min(SnappedZ, Top - 1.0f);
+			if (bChangeTop)Top = FMath::Max(SnappedZ, Bottom + 1.0f);
 			const float NewWidth = Right - Left;
 			const float NewHeight = Top - Bottom;
 			const FVector NewOriginLocal(0, Left + Snapshot.Pivot.X * NewWidth, Bottom + Snapshot.Pivot.Y * NewHeight);
 			SelectedWidget->SetWidth(NewWidth);
 			SelectedWidget->SetHeight(NewHeight);
 			SelectedWidget->SetWorldLocation(Snapshot.WorldTransform.TransformPosition(NewOriginLocal));
+			// The guide belongs on the edge the grid caught, not on the widget's pivot.
+			bGuideSnappedHorizontal = (bChangeLeft || bChangeRight) && !FMath::IsNearlyEqual(SnappedY, (float)LocalPoint.Y);
+			bGuideSnappedVertical = (bChangeBottom || bChangeTop) && !FMath::IsNearlyEqual(SnappedZ, (float)LocalPoint.Z);
+			GuideWorldPoint = Snapshot.WorldTransform.TransformPosition(
+				FVector(0, bChangeLeft ? Left : (bChangeRight ? Right : LocalPoint.Y), bChangeBottom ? Bottom : (bChangeTop ? Top : LocalPoint.Z)));
 		}
 	}
 	bDesignerChanged = false;
@@ -2096,15 +2299,14 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 		}
 	}
 
-	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
-	if (FSceneView* View = CalcSceneView(&ViewFamily))
+	if (bGuideSnappedHorizontal || bGuideSnappedVertical)
 	{
-		ULexWidget* GuideWidget = DesignerSnapshots[0].Widget.Get();
+		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
 		FVector2D GuidePixel;
-		if (GuideWidget && LexWorldToPixelInFront(*View, GuideWidget->GetWorldTransform().GetLocation(), GuidePixel))
+		if (FSceneView* View = CalcSceneView(&ViewFamily); View && LexWorldToPixelInFront(*View, GuideWorldPoint, GuidePixel))
 		{
-			DesignerGuideX = GuidePixel.X;
-			DesignerGuideY = GuidePixel.Y;
+			if (bGuideSnappedHorizontal)DesignerGuideX = GuidePixel.X;
+			if (bGuideSnappedVertical)DesignerGuideY = GuidePixel.Y;
 		}
 	}
 	Invalidate();
@@ -2247,6 +2449,9 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0f;
 	TArray<ULexWidget*> AllWidgetArray;
 	LexUIWidgetPicking::CollectPickableWidgets(this->GetWorld(), AllWidgetArray);
+	const FIntPoint ClickPixel((int32)HitX, (int32)HitY);
+	IndexOfClickSelectUI = ResolveClickCycleIndex(LastClickPixel, ClickPixel, IndexOfClickSelectUI);
+	LastClickPixel = ClickPixel;
 	ULexWidget* ClickHitWidget = LexUIWidgetPicking::PickTopmostWidget(this->GetWorld(), AllWidgetArray, LineStart, LineEnd, IndexOfClickSelectUI);
 	if (ClickHitWidget != nullptr && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(ClickHitWidget))
 	{
@@ -2692,15 +2897,31 @@ EAxisList::Type FLexUIPrefabEditorViewportClient::GetVertAxis() const
 void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputEventState& InputState)
 {
 	if (!PrefabEditorPtr.IsValid())return;
-	const bool bHasMovableSelection = PrefabEditorPtr.Pin()->GetSelectedWidgets().ContainsByPredicate([this](const TWeakObjectPtr<ULexWidget>& SelectedWidget)
-	{
-		return SelectedWidget.IsValid() && !PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget.Get());
-	});
-	if (!bHasMovableSelection)return;
-
 	FViewport* InViewport = InputState.GetViewport();
 	EInputEvent Event = InputState.GetInputEvent();
 	FKey Key = InputState.GetKey();
+
+	FVector2D KeyDelta(0, 0);
+	if (Key == EKeys::Left) KeyDelta.X = -1;
+	else if (Key == EKeys::Right) KeyDelta.X = 1;
+	else if (Key == EKeys::Up) KeyDelta.Y = 1;
+	else if (Key == EKeys::Down) KeyDelta.Y = -1;
+
+	TArray<ULexWidget*> Movable;
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+	{
+		if (ULexWidget* SelectedWidget = WeakWidget.Get())
+		{
+			// An axis someone else arranges is dropped rather than the widget: nudging a widget whose
+			// X is decided and whose Y is free still has to move it in Y.
+			if (PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))continue;
+			if (FilterMoveDelta(KeyDelta, GetEffectiveLayoutControl(SelectedWidget)).IsZero())continue;
+			Movable.Add(SelectedWidget);
+		}
+	}
+	// Before the transaction, not after: an opened-and-closed transaction is an undo step, and the
+	// prefab is dirtied by opening it, for a nudge whose every write the next arrange discards.
+	if (Movable.IsEmpty())return;
 
 	const int32 MouseX = InViewport->GetMouseX();
 	const int32 MouseY = InViewport->GetMouseY();
@@ -2716,34 +2937,27 @@ void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputE
 				Helper->SetAnythingDirty();
 			}
 		}
-		for (auto LexWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+		for (ULexWidget* LexWidget : Movable)
 		{
-			if (LexWidget.IsValid() && !PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(LexWidget.Get()))LexWidget->Modify();
+			LexWidget->Modify();
 		}
 	}
 	else if (Event == IE_Released)
 	{
 		GEditor->EndTransaction();
 	}
-	
+
 	if (Event == IE_Pressed || Event == IE_Repeat)
 	{
-		FVector2D MouseDelta(0,0);
-		if (Key == EKeys::Left) MouseDelta.X = -1;
-		else if (Key == EKeys::Right) MouseDelta.X = 1;
-		else if (Key == EKeys::Up) MouseDelta.Y = 1;
-		else if (Key == EKeys::Down) MouseDelta.Y = -1;
-		if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsDesignerGridSnapEnabled())
+		FVector2D MouseDelta = KeyDelta;
+		if (PrefabEditorPtr.Pin()->IsDesignerGridSnapEnabled())
 		{
 			MouseDelta *= PrefabEditorPtr.Pin()->GetDesignerGridSize();
 		}
-		
-		for (auto LexWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+
+		for (ULexWidget* LexWidget : Movable)
 		{
-			if (!LexWidget.IsValid() || PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(LexWidget.Get()))continue;
-			auto AnchoredPos = LexWidget->GetAnchoredPosition();
-			AnchoredPos += MouseDelta;
-			LexWidget->SetAnchoredPosition(AnchoredPos);
+			LexWidget->SetAnchoredPosition(LexWidget->GetAnchoredPosition() + FilterMoveDelta(MouseDelta, GetEffectiveLayoutControl(LexWidget)));
 		}
 	}
 
@@ -2943,6 +3157,61 @@ void FLexUIPrefabEditorViewportClient::GetAnchorEditableAxes(const ULexWidget* I
 	const FLexLayoutControlAnchorData Control = GetEffectiveLayoutControl(InWidget);
 	bOutHorizontal = !Control.bCanControlHorizontalPosition && !Control.bCanControlHorizontalSize;
 	bOutVertical = !Control.bCanControlVerticalPosition && !Control.bCanControlVerticalSize;
+}
+
+bool FLexUIPrefabEditorViewportClient::CanMoveSelection(TConstArrayView<ULexWidget*> InWidgets)
+{
+	for (const ULexWidget* Widget : InWidgets)
+	{
+		if (!IsValid(Widget))continue;
+		const FLexLayoutControlAnchorData Control = GetEffectiveLayoutControl(Widget);
+		if (!Control.bCanControlHorizontalPosition || !Control.bCanControlVerticalPosition)return true;
+	}
+	return false;
+}
+
+FVector2D FLexUIPrefabEditorViewportClient::FilterMoveDelta(const FVector2D& InDelta, const FLexLayoutControlAnchorData& InControl)
+{
+	return FVector2D(InControl.bCanControlHorizontalPosition ? 0.0 : InDelta.X, InControl.bCanControlVerticalPosition ? 0.0 : InDelta.Y);
+}
+
+void FLexUIPrefabEditorViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize, TArray<FMoveDragResult>& OutResults)
+{
+	OutResults.Reset();
+	OutResults.Reserve(InTargets.Num());
+	for (const FMoveDragTarget& Target : InTargets)
+	{
+		const FVector StartLocal = Target.PlaneTransform.InverseTransformPosition(Target.StartPlanePoint);
+		const FVector CurrentLocal = Target.PlaneTransform.InverseTransformPosition(Target.CurrentPlanePoint);
+		const FVector2D Raw = Target.StartPosition + FVector2D(CurrentLocal.Y - StartLocal.Y, CurrentLocal.Z - StartLocal.Z);
+		const FVector2D Snapped = InGridSize > 0.0f
+			? FVector2D(FMath::GridSnap(Raw.X, (double)InGridSize), FMath::GridSnap(Raw.Y, (double)InGridSize))
+			: Raw;
+		FLexLayoutControlAnchorData Control;
+		Control.bCanControlHorizontalPosition = !Target.bHorizontalFree;
+		Control.bCanControlVerticalPosition = !Target.bVerticalFree;
+		FMoveDragResult& Result = OutResults.AddDefaulted_GetRef();
+		Result.Position = Target.StartPosition + FilterMoveDelta(Snapped - Target.StartPosition, Control);
+		Result.bSnappedHorizontal = Target.bHorizontalFree && !FMath::IsNearlyEqual(Snapped.X, Raw.X);
+		Result.bSnappedVertical = Target.bVerticalFree && !FMath::IsNearlyEqual(Snapped.Y, Raw.Y);
+	}
+}
+
+int32 FLexUIPrefabEditorViewportClient::ResolveClickCycleIndex(const FIntPoint& InLastClickPixel, const FIntPoint& InClickPixel, int32 InCurrentIndex)
+{
+	return InClickPixel == InLastClickPixel ? InCurrentIndex : INDEX_NONE;
+}
+
+FBox2D FLexUIPrefabEditorViewportClient::GetSafeZoneLocalRect(const FVector2D& InCanvasSize, const FVector2D& InCanvasPivot, const FVector4& InSafeZonePadding)
+{
+	const double Left = -InCanvasPivot.X * InCanvasSize.X;
+	const double Bottom = -InCanvasPivot.Y * InCanvasSize.Y;
+	const FVector2D Min(Left + InSafeZonePadding.X, Bottom + InSafeZonePadding.W);
+	const FVector2D Max(Left + InCanvasSize.X - InSafeZonePadding.Z, Bottom + InCanvasSize.Y - InSafeZonePadding.Y);
+	// Padding wider than the canvas leaves no safe area at all. Answering with the turned-inside-out
+	// rect would draw a shape an author could read as one.
+	if (Min.X >= Max.X || Min.Y >= Max.Y)return FBox2D(EForceInit::ForceInit);
+	return FBox2D(Min, Max);
 }
 
 double FLexUIPrefabEditorViewportClient::SnapAnchorFraction(double InFraction, double InTolerance)
@@ -3438,6 +3707,8 @@ void FLexUIPrefabEditorViewportClient::CapturedMouseMove(FViewport* InViewport, 
 
 void FLexUIPrefabEditorViewportClient::MouseEnter(FViewport* InViewport, int32 x, int32 y)
 {
+	bCursorInViewport = true;
+	HoverPixel = FIntPoint(x, y);
 	FEditorViewportClient::MouseEnter(InViewport, x, y);
 }
 void FLexUIPrefabEditorViewportClient::MouseMove(FViewport* InViewport, int32 x, int32 y)
@@ -3456,6 +3727,7 @@ void FLexUIPrefabEditorViewportClient::MouseMove(FViewport* InViewport, int32 x,
 	// resolve builds a scene view, so answering here would pay for hover several times a frame.
 	HoverPixel = FIntPoint(x, y);
 	bHoverPixelDirty = true;
+	bCursorInViewport = true;
 	FEditorViewportClient::MouseMove(InViewport, x, y);
 }
 
@@ -3503,6 +3775,7 @@ void FLexUIPrefabEditorViewportClient::MouseLeave(FViewport* InViewport)
 {
 	HoveredWidget.Reset();
 	bHoverPixelDirty = false;
+	bCursorInViewport = false;
 	FEditorViewportClient::MouseLeave(InViewport);
 }
 

@@ -49,6 +49,7 @@
 #include "MeshModifier/LexMeshModifierTextAnimation.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "AssetRegistry/IAssetRegistry.h"
+#include "LGUIEditorModule.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
 #include "Misc/PackageName.h"
@@ -360,12 +361,38 @@ void FLexUIControlRegistry::RefreshDynamicClasses()
 
 bool FLexUIControlRegistry::Register(const FLexUIControlDescriptor& Descriptor)
 {
-	if (Descriptor.Name.IsNone() || Descriptors.ContainsByPredicate([&Descriptor](const FLexUIControlDescriptor& Existing)
+	// A refusal used to be a discarded bool, so an extension registering a name the defaults already
+	// take simply never appeared in the Palette and nothing anywhere said why. Name it, and name what
+	// it collided with -- that pair is the whole diagnosis.
+	if (Descriptor.Name.IsNone())
 	{
-		return Existing.Name == Descriptor.Name;
+		UE_LOG(LGUIEditor, Warning, TEXT("[%s].%d Refused a control descriptor with no Name (display name \"%s\"): the registry keys entries by Name.")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Descriptor.DisplayName.ToString());
+		return false;
+	}
+	if (const FLexUIControlDescriptor* Existing = Descriptors.FindByPredicate([&Descriptor](const FLexUIControlDescriptor& Item)
+	{
+		return Item.Name == Descriptor.Name;
 	}))
 	{
+		UE_LOG(LGUIEditor, Warning, TEXT("[%s].%d Refused control \"%s\": that name is already registered by \"%s\". Unregister it first, or register under another name.")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Descriptor.Name.ToString(), *Existing->DisplayName.ToString());
 		return false;
+	}
+	// Validated here as well as in the Palette so a broken recipe is reported where the call stack
+	// still names whoever registered it. Not a rejection: an invalid entry appears disabled carrying
+	// this same reason, which beats vanishing. A prefab recipe is a question for the asset registry,
+	// and asking it mid-scan -- which is where the defaults register from the constructor -- answers
+	// "missing" about every one of them.
+	IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+	if (Descriptor.CreationKind != ELexUIControlCreationKind::Prefab || (AssetRegistry != nullptr && !AssetRegistry->IsLoadingAssets()))
+	{
+		FText ValidationError;
+		if (!Validate(Descriptor, ValidationError))
+		{
+			UE_LOG(LGUIEditor, Warning, TEXT("[%s].%d Control \"%s\" will appear disabled in the Palette: %s")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Descriptor.Name.ToString(), *ValidationError.ToString());
+		}
 	}
 	Descriptors.Add(Descriptor);
 	RegistryChanged.Broadcast();

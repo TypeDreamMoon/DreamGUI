@@ -36,6 +36,7 @@
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexCanvas.h"
 #include "LexUIPrefabEditorViewportClient.h"
+#include "EngineDefines.h"//MIN_ORTHOZOOM
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelSlot.h"
@@ -235,85 +236,85 @@ bool FLexUIPrefabEditor::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab)
 	return GetPrefabHelperObject()->RefreshOnSubPrefabDirty(InSubPrefab);
 }
 
-bool FLexUIPrefabEditor::GetSelectedObjectsBounds(FBoxSphereBounds& OutResult)
+FBox FLexUIPrefabEditor::GetWidgetWorldBox(const ULexWidget* InWidget)
 {
-	FBoxSphereBounds Bounds = FBoxSphereBounds(EForceInit::ForceInitToZero);
-	bool IsFirstBounds = true;
-	for (auto& Widget : SelectedWidgets)
+	FBox LocalBounds;
+	if (auto Visual = InWidget->GetVisual())
 	{
-		if (!Widget->GetWidgetActiveInHierarchy())
+		FVector Min, Max;
+		Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
+		LocalBounds = FBox(Min, Max);
+	}
+	else
+	{
+		// A layout-only panel draws nothing, so its rect is the only extent it has.
+		auto Min2D = InWidget->GetLocalSpaceLeftBottomPoint();
+		auto Max2D = InWidget->GetLocalSpaceRightTopPoint();
+		LocalBounds = FBox(FVector(0, Min2D.X, Min2D.Y), FVector(0, Max2D.X, Max2D.Y));
+	}
+	return LocalBounds.TransformBy(InWidget->GetWorldTransform());
+}
+
+bool FLexUIPrefabEditor::AccumulateWidgetsBounds(const TArray<ULexWidget*>& InWidgets, FBoxSphereBounds& OutResult)
+{
+	// Zeroed rather than left alone: callers that ignore the return value must still get a box the
+	// camera can be pointed at instead of whatever was on the stack.
+	OutResult = FBoxSphereBounds(EForceInit::ForceInitToZero);
+	bool bAnyBounds = false;
+	for (const ULexWidget* Widget : InWidgets)
+	{
+		if (!IsValid(Widget) || !Widget->GetWidgetActiveInHierarchy())
 		{
 			continue;
 		}
-		FBox LocalBounds;
-		if (auto Visual = Widget->GetVisual())
+		const FBoxSphereBounds Box = FBoxSphereBounds(GetWidgetWorldBox(Widget));
+		OutResult = bAnyBounds ? OutResult + Box : Box;
+		bAnyBounds = true;
+	}
+	return bAnyBounds;
+}
+
+FBoxSphereBounds FLexUIPrefabEditor::MakeCanvasFramingBounds(FIntPoint InCanvasSize)
+{
+	// UI lives on the YZ plane at X = 0, centred on the canvas, which is where the design canvas
+	// sits even when every widget in the prefab is inactive.
+	const FVector Extent(0.0, FMath::Max(1, InCanvasSize.X) * 0.5, FMath::Max(1, InCanvasSize.Y) * 0.5);
+	return FBoxSphereBounds(FBox(-Extent, Extent));
+}
+
+bool FLexUIPrefabEditor::GetSelectedObjectsBounds(FBoxSphereBounds& OutResult)
+{
+	TArray<ULexWidget*> Widgets;
+	Widgets.Reserve(SelectedWidgets.Num());
+	for (auto& Widget : SelectedWidgets)
+	{
+		Widgets.Add(Widget.Get());
+	}
+	return AccumulateWidgetsBounds(Widgets, OutResult);
+}
+
+bool FLexUIPrefabEditor::GetAllObjectsBounds(FBoxSphereBounds& OutResult)
+{
+	TArray<ULexWidget*> Widgets;
+	Widgets.Reserve(GetPrefabHelperObject()->MapGuidToObject.Num());
+	for (auto& KeyValue : GetPrefabHelperObject()->MapGuidToObject)
+	{
+		if (auto Widget = Cast<ULexWidget>(KeyValue.Value))
 		{
-			FVector Min, Max;
-			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
-			LocalBounds = FBox(Min, Max);
-		}
-		else
-		{
-			auto Min2D = Widget->GetLocalSpaceLeftBottomPoint();
-			auto Max2D = Widget->GetLocalSpaceRightTopPoint();
-			LocalBounds = FBox(FVector(0, Min2D.X, Min2D.Y), FVector(0, Max2D.X, Max2D.Y));
-		}
-		auto Box = LocalBounds.TransformBy(Widget->GetWorldTransform());
-		if (IsFirstBounds)
-		{
-			IsFirstBounds = false;
-			Bounds = Box;
-		}
-		else
-		{
-			Bounds = Bounds + Box;
+			Widgets.Add(Widget);
 		}
 	}
-	OutResult = Bounds;
-	return IsFirstBounds == false;
+	return AccumulateWidgetsBounds(Widgets, OutResult);
 }
 
 FBoxSphereBounds FLexUIPrefabEditor::GetAllObjectsBounds()
 {
-	FBoxSphereBounds Bounds;
-	bool IsFirstBounds = true;
-	for (auto& KeyValue : GetPrefabHelperObject()->MapGuidToObject)
+	FBoxSphereBounds Bounds = FBoxSphereBounds(EForceInit::ForceInitToZero);
+	if (!GetAllObjectsBounds(Bounds))
 	{
-		FBox Box; bool bIsValidBox = false;
-		if (auto Widget = Cast<ULexWidget>(KeyValue.Value))
-		{
-			if (Widget->GetWidgetActiveInHierarchy())
-			{
-				FBox LocalBounds;
-				if (auto Visual = Widget->GetVisual())
-				{
-					FVector Min, Max;
-					Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
-					LocalBounds = FBox(Min, Max);
-				}
-				else
-				{
-					auto Min2D = Widget->GetLocalSpaceLeftBottomPoint();
-					auto Max2D = Widget->GetLocalSpaceRightTopPoint();
-					LocalBounds = FBox(FVector(0, Min2D.X, Min2D.Y), FVector(0, Max2D.X, Max2D.Y));
-				}
-				Box = LocalBounds.TransformBy(Widget->GetWorldTransform());
-				bIsValidBox = true;
-			}
-		}
-
-		if (bIsValidBox)
-		{
-			if (IsFirstBounds)
-			{
-				IsFirstBounds = false;
-				Bounds = Box;
-			}
-			else
-			{
-				Bounds = Bounds + Box;
-			}
-		}
+		// GetInitialViewSetting feeds Origin to the orbit point even when the saved view wins, so
+		// "nothing is active" has to produce a real place, not an unanswered question.
+		Bounds = MakeCanvasFramingBounds(GetDesignerCanvasSize());
 	}
 	return Bounds;
 }
@@ -399,6 +400,9 @@ namespace
 
 void FLexUIPrefabEditor::SyncSelection()
 {
+	// Every widget SelectWidgets hands to the selection broadcasts back into here, so without this
+	// the set being built is copied back over itself once per widget, mid-loop and half finished.
+	if (bIsSelecting)return;
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
 	OnSelectionChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
@@ -2401,6 +2405,10 @@ bool FLexUIPrefabEditor::ApplyPrefabChanges()
 	});
 	if (!bHasStructuralError)
 	{
+		// The camera and the expanded rows are written into the asset, so they have to be recorded
+		// before it is serialized: saving from the Content Browser never runs the in-editor save
+		// path, and Save-on-Apply defaults to Never.
+		SaveEditorState();
 		bLastApplySerializationSucceeded = Helper->SavePrefab();
 	}
 	if (!bLastApplySerializationSucceeded)
@@ -2493,7 +2501,8 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 
 	for ( const auto& Widget : TempSelection )
 	{
-		if ( bAppendOrToggle && SelectedWidgets.Contains(Widget) )
+		const bool bToggleOff = bAppendOrToggle && SelectedWidgets.Contains(Widget);
+		if (bToggleOff)
 		{
 			SelectedWidgets.Remove(Widget);
 		}
@@ -2503,7 +2512,14 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 		}
 		if (bNotifyGEditor)
 		{
-			ULexUISelection::GetInstance(GetWorld())->SelectWidget(Widget);
+			if (bToggleOff)
+			{
+				ULexUISelection::GetInstance(GetWorld())->DeselectWidget(Widget);
+			}
+			else
+			{
+				ULexUISelection::GetInstance(GetWorld())->SelectWidget(Widget);
+			}
 		}
 	}
 	
@@ -2602,57 +2618,54 @@ void FLexUIPrefabEditor::SetWidgetLockedInDesigner(ULexWidget* Widget, bool bLoc
 
 bool FLexUIPrefabEditor::IsDesignerGridSnapEnabled() const
 {
-	return PrefabBeingEdited && PrefabBeingEdited->PrefabDataForPrefabEditor.bDesignerGridSnapEnabled;
+	return GetDefault<ULexUIDesignerSettings>()->bGridSnapEnabled;
 }
 
 void FLexUIPrefabEditor::ToggleDesignerGridSnap()
 {
-	if (!PrefabBeingEdited)return;
-	PrefabBeingEdited->Modify();
-	PrefabBeingEdited->PrefabDataForPrefabEditor.bDesignerGridSnapEnabled = !IsDesignerGridSnapEnabled();
-	PrefabBeingEdited->MarkPackageDirty();
+	ULexUIDesignerSettings* Settings = GetMutableDefault<ULexUIDesignerSettings>();
+	Settings->bGridSnapEnabled = !Settings->bGridSnapEnabled;
+	Settings->SaveConfig();
 }
 
 float FLexUIPrefabEditor::GetDesignerGridSize() const
 {
-	return PrefabBeingEdited ? FMath::Max(1.0f, PrefabBeingEdited->PrefabDataForPrefabEditor.DesignerGridSize) : 10.0f;
+	return FMath::Max(1.0f, GetDefault<ULexUIDesignerSettings>()->GridSize);
 }
 
 void FLexUIPrefabEditor::SetDesignerGridSize(float GridSize)
 {
-	if (!PrefabBeingEdited)return;
-	PrefabBeingEdited->Modify();
-	PrefabBeingEdited->PrefabDataForPrefabEditor.DesignerGridSize = FMath::Max(1.0f, GridSize);
-	PrefabBeingEdited->MarkPackageDirty();
+	ULexUIDesignerSettings* Settings = GetMutableDefault<ULexUIDesignerSettings>();
+	Settings->GridSize = FMath::Max(1.0f, GridSize);
+	Settings->SaveConfig();
 }
 
 bool FLexUIPrefabEditor::GetShowDesignerGuides() const
 {
-	return PrefabBeingEdited && PrefabBeingEdited->PrefabDataForPrefabEditor.bShowDesignerGuides;
+	return GetDefault<ULexUIDesignerSettings>()->bShowDesignerGuides;
 }
 
 void FLexUIPrefabEditor::ToggleDesignerGuides()
 {
-	if (!PrefabBeingEdited)return;
-	PrefabBeingEdited->Modify();
-	PrefabBeingEdited->PrefabDataForPrefabEditor.bShowDesignerGuides = !GetShowDesignerGuides();
-	PrefabBeingEdited->MarkPackageDirty();
+	ULexUIDesignerSettings* Settings = GetMutableDefault<ULexUIDesignerSettings>();
+	Settings->bShowDesignerGuides = !Settings->bShowDesignerGuides;
+	Settings->SaveConfig();
 }
 
 bool FLexUIPrefabEditor::GetShowLayoutDebug() const
 {
-	return GetDefault<ULexUIEditorSettings>()->bShowLayoutDebugVisualization;
+	return GetDefault<ULexUIDesignerSettings>()->bShowLayoutDebug;
 }
 
 bool FLexUIPrefabEditor::GetShowResolutionGuides() const
 {
-	return GetDefault<ULexUIEditorSettings>()->bShowDesignResolutionGuides;
+	return GetDefault<ULexUIDesignerSettings>()->bShowResolutionGuides;
 }
 
 void FLexUIPrefabEditor::ToggleResolutionGuides()
 {
-	ULexUIEditorSettings* Settings = GetMutableDefault<ULexUIEditorSettings>();
-	Settings->bShowDesignResolutionGuides = !Settings->bShowDesignResolutionGuides;
+	ULexUIDesignerSettings* Settings = GetMutableDefault<ULexUIDesignerSettings>();
+	Settings->bShowResolutionGuides = !Settings->bShowResolutionGuides;
 	Settings->SaveConfig();
 }
 
@@ -2752,8 +2765,8 @@ void FLexUIPrefabEditor::SetDesignerViewportSize(FIntPoint NewViewportSize)
 
 void FLexUIPrefabEditor::ToggleLayoutDebug()
 {
-	ULexUIEditorSettings* Settings = GetMutableDefault<ULexUIEditorSettings>();
-	Settings->bShowLayoutDebugVisualization = !Settings->bShowLayoutDebugVisualization;
+	ULexUIDesignerSettings* Settings = GetMutableDefault<ULexUIDesignerSettings>();
+	Settings->bShowLayoutDebug = !Settings->bShowLayoutDebug;
 	Settings->SaveConfig();
 }
 
@@ -2761,6 +2774,93 @@ float FLexUIPrefabEditor::SnapDesignerValue(float Value) const
 {
 	if (!IsDesignerGridSnapEnabled())return Value;
 	return FMath::GridSnap(Value, GetDesignerGridSize());
+}
+
+FBox FLexUIPrefabEditor::GetDesignerFramingBox()
+{
+	// The agent carries the design canvas rect, which is the page the author is laying out on; the
+	// prefab root only covers the content that happens to exist on it.
+	if (ULexWidget* RootAgent = GetRootAgentWidget(); IsValid(RootAgent))
+	{
+		return GetWidgetWorldBox(RootAgent);
+	}
+	if (ULexWidget* Root = GetLoadedRootWidget(); IsValid(Root))
+	{
+		return GetWidgetWorldBox(Root);
+	}
+	return MakeCanvasFramingBounds(GetDesignerCanvasSize()).GetBox();
+}
+
+void FLexUIPrefabEditor::ZoomDesignerToFit()
+{
+	if (!ViewportPtr.IsValid() || !ViewportPtr->GetViewportClient().IsValid())return;
+	ViewportPtr->GetViewportClient()->FocusViewportOnBox(GetDesignerFramingBox());
+}
+
+void FLexUIPrefabEditor::ZoomDesignerToActualSize()
+{
+	TSharedPtr<FEditorViewportClient> Client = ViewportPtr.IsValid() ? ViewportPtr->GetViewportClient() : nullptr;
+	if (!Client.IsValid() || !Client->IsOrtho() || Client->Viewport == nullptr)return;
+	Client->SetOrthoZoom(DesignerOrthoZoomFor(Client->GetOrthoZoom(), Client->GetOrthoUnitsPerPixel(Client->Viewport), 1.0f));
+	Client->Invalidate();
+}
+
+float FLexUIPrefabEditor::GetDesignerPixelsPerUnit() const
+{
+	TSharedPtr<FEditorViewportClient> Client = ViewportPtr.IsValid() ? ViewportPtr->GetViewportClient() : nullptr;
+	// A perspective view has a different scale at every depth, so there is no one number to report.
+	if (!Client.IsValid() || !Client->IsOrtho() || Client->Viewport == nullptr)return 0.0f;
+	const float UnitsPerPixel = Client->GetOrthoUnitsPerPixel(Client->Viewport);
+	return UnitsPerPixel > UE_SMALL_NUMBER ? 1.0f / UnitsPerPixel : 0.0f;
+}
+
+float FLexUIPrefabEditor::DesignerOrthoZoomFor(float InCurrentOrthoZoom, float InCurrentUnitsPerPixel, float InDesiredPixelsPerUnit)
+{
+	if (InCurrentUnitsPerPixel <= UE_SMALL_NUMBER || InDesiredPixelsPerUnit <= UE_SMALL_NUMBER)return InCurrentOrthoZoom;
+	// Ortho zoom is proportional to units-per-pixel, so the new zoom is the old one scaled by the
+	// ratio between them -- and more pixels per unit is a SMALLER zoom, not a larger one.
+	const float DesiredUnitsPerPixel = 1.0f / InDesiredPixelsPerUnit;
+	return FMath::Clamp(InCurrentOrthoZoom * (DesiredUnitsPerPixel / InCurrentUnitsPerPixel),
+		(float)MIN_ORTHOZOOM, (float)MAX_ORTHOZOOM);
+}
+
+void FLexUIPrefabEditor::SetDesignerSizeRule(ELexUIDesignerSizeRule InRule)
+{
+	DesignerSizeRule = InRule;
+	if (InRule != ELexUIDesignerSizeRule::Desired)return;
+	FVector2D DesiredSize;
+	if (!GetDesignerDesiredSize(DesiredSize))return;
+	SetDesignerViewportSize(DesignerViewportSizeFromDesired(DesiredSize, GetDesignerViewportSize()));
+}
+
+bool FLexUIPrefabEditor::GetDesignerDesiredSize(FVector2D& OutSize)
+{
+	OutSize = FVector2D::ZeroVector;
+	ULexWidget* Root = GetLoadedRootWidget();
+	if (!IsValid(Root))return false;
+	// Same measurement the layout debug overlay prints: the root's own container measures its content.
+	if (ULexLayoutContainer* Layout = Root->GetLayoutContainer(); IsValid(Layout))
+	{
+		FLexLayoutDebugInfo Info;
+		if (Layout->GetLayoutDebugInfo(Root, Info) && Info.DesiredSize.X > 0.0 && Info.DesiredSize.Y > 0.0)
+		{
+			OutSize = Info.DesiredSize;
+			return true;
+		}
+	}
+	// A root with no container measures nothing, so its authored rect is the only content size there is.
+	OutSize = Root->GetSize();
+	return OutSize.X > 0.0 && OutSize.Y > 0.0;
+}
+
+FIntPoint FLexUIPrefabEditor::DesignerViewportSizeFromDesired(const FVector2D& InDesiredSize, FIntPoint InFallback)
+{
+	// Zero or non-finite means the measurement failed, not that the author wants a collapsed canvas.
+	auto AxisOr = [](double InDesired, int32 InFallbackAxis)
+	{
+		return (FMath::IsFinite(InDesired) && InDesired >= 1.0) ? FMath::RoundToInt32(InDesired) : InFallbackAxis;
+	};
+	return FIntPoint(FMath::Max(1, AxisOr(InDesiredSize.X, InFallback.X)), FMath::Max(1, AxisOr(InDesiredSize.Y, InFallback.Y)));
 }
 
 TSharedPtr<SWidget> FLexUIPrefabEditor::BuildWidgetContextMenu()

@@ -100,6 +100,8 @@ public:
 	static ULexUISelection* GetInstance(UWorld* InWorld);
 	virtual bool IsEditorOnly() const override{return true;}
 	void SelectWidget(ULexWidget* Widget);
+	/** Counterpart of SelectWidget: without one, a Ctrl+click can only ever add. */
+	void DeselectWidget(ULexWidget* Widget);
 	void SelectComponent(ULexUIBehaviour* Component);
 	void ClearComponentSelection();
 	void SelectNone();

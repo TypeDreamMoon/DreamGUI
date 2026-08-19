@@ -85,7 +85,10 @@ public class LGUIEditor : ModuleRules
 			new string[]
 			{
                 "EditorStyle",
-				// ... add private dependencies that you statically link with here ...	
+				// ULexUIDesignerSettings: the designer's view preferences live in
+				// EditorPerProjectUserSettings, not in the prefab asset.
+				"DeveloperSettings",
+				// ... add private dependencies that you statically link with here ...
 
             }
 			);

@@ -33,11 +33,70 @@
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
+#include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
 #include "Widgets/Views/SListView.h"
 #include "Widgets/Views/STableRow.h"
+#include "EditorClassUtils.h"
+#include "UObject/StrongObjectPtr.h"
+#include "UObject/UnrealType.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorDetailTab"
+
+namespace
+{
+	/**
+	 * Transient state belongs to an instance, never to a copy of one. ULexUIBehaviour caches the
+	 * widget it was registered against, and GetWidget() trusts that cache ahead of its own outer, so
+	 * a component whose properties were copied wholesale would keep reporting -- and keep listening
+	 * to -- whichever widget the source lived on. A freshly constructed component has these null.
+	 */
+	void LexUIClearTransientObjectReferences(UObject* InObject)
+	{
+		for (TFieldIterator<FObjectPropertyBase> PropertyIt(InObject->GetClass()); PropertyIt; ++PropertyIt)
+		{
+			if (!PropertyIt->HasAnyPropertyFlags(CPF_Transient))continue;
+			for (int32 ArrayIndex = 0; ArrayIndex < PropertyIt->ArrayDim; ArrayIndex++)
+			{
+				PropertyIt->SetObjectPropertyValue_InContainer(InObject, nullptr, ArrayIndex);
+			}
+		}
+	}
+}
+
+/**
+ * A clipboard-safe stand-alone copy of InSource, so that cutting -- which deletes the component the
+ * copy came from -- still leaves something to paste.
+ *
+ * Declared here rather than in the panel's header because the panel is a Slate widget no headless
+ * test can construct; LexPrefabPanelsAutomationTests declares these two prototypes itself.
+ */
+ULexUIBehaviour* LexUIWidgetComponentClipboard_Snapshot(ULexUIBehaviour* InSource)
+{
+	if (!IsValid(InSource))return nullptr;
+	auto Snapshot = NewObject<ULexUIBehaviour>(GetTransientPackage(), InSource->GetClass(), NAME_None, RF_Transient);
+	UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
+	UEditorEngine::CopyPropertiesForUnrelatedObjects(InSource, Snapshot, Options);
+	LexUIClearTransientObjectReferences(Snapshot);
+	return Snapshot;
+}
+
+/**
+ * Recreate InSource on InTargetWidget. The component is added empty first so that the registration
+ * ULexWidget::AddComponent performs binds against the target widget's events, and only then are the
+ * authored values copied over the top.
+ */
+ULexUIBehaviour* LexUIWidgetComponentClipboard_PasteOnto(ULexWidget* InTargetWidget, ULexUIBehaviour* InSource)
+{
+	if (!IsValid(InTargetWidget) || !IsValid(InSource))return nullptr;
+	auto NewComponent = InTargetWidget->AddComponent(InSource->GetClass());
+	if (!IsValid(NewComponent))return nullptr;
+	UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
+	UEditorEngine::CopyPropertiesForUnrelatedObjects(InSource, NewComponent, Options);
+	LexUIClearTransientObjectReferences(NewComponent);
+	return NewComponent;
+}
 
 using FLexWidgetComponentItem = TWeakObjectPtr<ULexUIBehaviour>;
 
@@ -110,7 +169,27 @@ public:
 			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleRemoveSelectedComponents),
 			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanRemoveSelectedComponents)
 		);
-		
+		CommandList->MapAction(
+			FGenericCommands::Get().Copy,
+			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleCopySelectedComponent),
+			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanCopySelectedComponent)
+		);
+		CommandList->MapAction(
+			FGenericCommands::Get().Cut,
+			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleCutSelectedComponent),
+			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanModifySelectedComponent)
+		);
+		CommandList->MapAction(
+			FGenericCommands::Get().Paste,
+			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandlePasteComponent),
+			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanPasteComponent)
+		);
+		CommandList->MapAction(
+			FGenericCommands::Get().Duplicate,
+			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleDuplicateSelectedComponent),
+			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanModifySelectedComponent)
+		);
+
 		GetWidgetContext = InArgs._GetWidgetContext;
 		CanEdit = InArgs._CanEdit;
 		OnSelectionChanged = InArgs._OnSelectionChanged;
@@ -281,6 +360,125 @@ private:
 		TArray<FLexWidgetComponentItem> SelectedItems;
 		ComponentListView->GetSelectedItems(SelectedItems);
 		return SelectedItems.Num() > 0;
+	}
+
+	ULexUIBehaviour* GetSelectedComponent() const
+	{
+		if (!ComponentListView.IsValid())
+		{
+			return nullptr;
+		}
+
+		TArray<FLexWidgetComponentItem> SelectedItems;
+		ComponentListView->GetSelectedItems(SelectedItems);
+		return (SelectedItems.Num() > 0 && SelectedItems[0].IsValid()) ? SelectedItems[0].Get() : nullptr;
+	}
+
+	/** The widget and whatever holds it both change when its component list does, so both are recorded. */
+	void ModifyWidgetForComponentEdit(ULexWidget* Widget)
+	{
+		if (UObject* WidgetOuter = Widget->GetOuter())
+		{
+			WidgetOuter->SetFlags(RF_Transactional);
+			WidgetOuter->Modify();
+		}
+		Widget->SetFlags(RF_Transactional);
+		Widget->Modify();
+	}
+
+	/** Record and announce a newly added component. Call inside the caller's transaction, not after it. */
+	void FinishComponentAdd(ULexWidget* Widget, ULexUIBehaviour* NewComponent)
+	{
+		NewComponent->SetFlags(RF_Transactional);
+		NewComponent->Modify();
+		FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_Components());
+
+		RefreshComponents();
+		SelectComponent(NewComponent);
+	}
+
+	bool CanCopySelectedComponent() const
+	{
+		return IsValid(GetSelectedComponent());
+	}
+
+	bool CanModifySelectedComponent() const
+	{
+		return CanAddOrRemoveComponent() && IsValid(GetSelectedComponent());
+	}
+
+	bool CanPasteComponent() const
+	{
+		return CanAddOrRemoveComponent() && ClipboardComponent.IsValid();
+	}
+
+	void HandleCopySelectedComponent()
+	{
+		if (ULexUIBehaviour* Component = GetSelectedComponent())
+		{
+			ClipboardComponent.Reset(LexUIWidgetComponentClipboard_Snapshot(Component));
+		}
+	}
+
+	void HandleCutSelectedComponent()
+	{
+		ULexWidget* Widget = GetCurrentWidget();
+		ULexUIBehaviour* Component = GetSelectedComponent();
+		if (!CanModifySelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
+		{
+			return;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("CutLexWidgetComponent_Transaction", "Cut LexUI Component"));
+		ModifyWidgetForComponentEdit(Widget);
+
+		ClipboardComponent.Reset(LexUIWidgetComponentClipboard_Snapshot(Component));
+		Component->SetFlags(RF_Transactional);
+		Component->Modify();
+		Widget->RemoveComponent(Component);
+		FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_Components());
+
+		RefreshComponents();
+		ClearSelection();
+	}
+
+	void HandlePasteComponent()
+	{
+		ULexWidget* Widget = GetCurrentWidget();
+		if (!CanPasteComponent() || !IsValid(Widget))
+		{
+			return;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("PasteLexWidgetComponent_Transaction", "Paste LexUI Component"));
+		ModifyWidgetForComponentEdit(Widget);
+
+		ULexUIBehaviour* NewComponent = LexUIWidgetComponentClipboard_PasteOnto(Widget, ClipboardComponent.Get());
+		if (!IsValid(NewComponent))
+		{
+			return;
+		}
+		FinishComponentAdd(Widget, NewComponent);
+	}
+
+	void HandleDuplicateSelectedComponent()
+	{
+		ULexWidget* Widget = GetCurrentWidget();
+		ULexUIBehaviour* Component = GetSelectedComponent();
+		if (!CanModifySelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
+		{
+			return;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("DuplicateLexWidgetComponent_Transaction", "Duplicate LexUI Component"));
+		ModifyWidgetForComponentEdit(Widget);
+
+		ULexUIBehaviour* NewComponent = LexUIWidgetComponentClipboard_PasteOnto(Widget, Component);
+		if (!IsValid(NewComponent))
+		{
+			return;
+		}
+		FinishComponentAdd(Widget, NewComponent);
 	}
 
 	FReply HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, FLexWidgetComponentItem InItem)
@@ -557,10 +755,10 @@ private:
 		MenuBuilder.BeginSection(NAME_None, LOCTEXT("EditComponent", "EDIT"));
 		MenuBuilder.PushCommandList(CommandList.ToSharedRef());
 		{
-			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Copy);
-			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Paste);
-			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Cut);
-			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Duplicate);
+			MenuBuilder.AddMenuEntry(FGenericCommands::Get().Copy);
+			MenuBuilder.AddMenuEntry(FGenericCommands::Get().Paste);
+			MenuBuilder.AddMenuEntry(FGenericCommands::Get().Cut);
+			MenuBuilder.AddMenuEntry(FGenericCommands::Get().Duplicate);
 			MenuBuilder.AddMenuEntry(FGenericCommands::Get().Delete);
 		}
 		MenuBuilder.PopCommandList();
@@ -796,6 +994,168 @@ private:
 	TSharedPtr<SWidget> ToolbarWidget;
 	TSharedPtr<SListView<FLexWidgetComponentItem>> ComponentListView;
 	TSharedPtr<FUICommandList> CommandList;
+	/** One clipboard for every panel in the editor, so a component can be pasted onto another prefab. */
+	static TStrongObjectPtr<ULexUIBehaviour> ClipboardComponent;
+};
+TStrongObjectPtr<ULexUIBehaviour> SLexWidgetComponentEditor::ClipboardComponent;
+
+/**
+ * The name and class strip above the details view.
+ *
+ * The stock name area only fills itself in for actors and actor components -- a ULexWidget is
+ * neither -- and the editable box it would offer renames the UObject rather than the DisplayName
+ * that every other panel shows, so only its icon and lock button are reused here. The class link is
+ * rebuilt from Tick because FEditorClassUtils::GetSourceLink builds against a fixed class, while the
+ * panel moves between widgets and behaviours as the selection changes.
+ */
+class SLexWidgetDetailsHeader : public SCompoundWidget
+{
+public:
+	DECLARE_DELEGATE_RetVal(UObject*, FOnGetEditedObject);
+	DECLARE_DELEGATE_RetVal(bool, FOnCanEdit);
+
+	SLATE_BEGIN_ARGS(SLexWidgetDetailsHeader)
+	{
+	}
+		SLATE_EVENT(FOnGetEditedObject, GetEditedObject)
+		SLATE_EVENT(FOnCanEdit, CanEdit)
+		SLATE_ARGUMENT(TSharedPtr<SWidget>, NameAreaWidget)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& InArgs)
+	{
+		GetEditedObject = InArgs._GetEditedObject;
+		CanEdit = InArgs._CanEdit;
+
+		ChildSlot
+		[
+			SNew(SHorizontalBox)
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				InArgs._NameAreaWidget.IsValid() ? InArgs._NameAreaWidget.ToSharedRef() : SNullWidget::NullWidget
+			]
+			+SHorizontalBox::Slot()
+			.FillWidth(1.0f)
+			.VAlign(VAlign_Center)
+			.Padding(FMargin(4, 0))
+			[
+				SNew(SEditableTextBox)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.HintText(LOCTEXT("WidgetNameHint", "Name"))
+				.Text(this, &SLexWidgetDetailsHeader::GetEditedObjectText)
+				.IsEnabled(this, &SLexWidgetDetailsHeader::CanRename)
+				.SelectAllTextWhenFocused(true)
+				.RevertTextOnEscape(true)
+				.OnVerifyTextChanged(this, &SLexWidgetDetailsHeader::VerifyDisplayName)
+				.OnTextCommitted(this, &SLexWidgetDetailsHeader::OnDisplayNameCommitted)
+			]
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SAssignNew(SourceLinkBox, SBox)
+			]
+		];
+
+		RebuildSourceLink();
+	}
+
+	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override
+	{
+		UObject* EditedObject = GetCurrentObject();
+		if (EditedObject != CachedObject.Get(true))
+		{
+			CachedObject = EditedObject;
+			RebuildSourceLink();
+		}
+	}
+
+private:
+	UObject* GetCurrentObject() const
+	{
+		return GetEditedObject.IsBound() ? GetEditedObject.Execute() : nullptr;
+	}
+
+	ULexWidget* GetCurrentWidget() const
+	{
+		return Cast<ULexWidget>(GetCurrentObject());
+	}
+
+	FText GetEditedObjectText() const
+	{
+		UObject* EditedObject = GetCurrentObject();
+		if (!IsValid(EditedObject))
+		{
+			return FText::GetEmpty();
+		}
+		if (auto Widget = Cast<ULexWidget>(EditedObject))
+		{
+			return FText::FromString(Widget->GetDisplayName());
+		}
+		return FText::FromString(EditedObject->GetName());
+	}
+
+	bool CanRename() const
+	{
+		return IsValid(GetCurrentWidget()) && (!CanEdit.IsBound() || CanEdit.Execute());
+	}
+
+	bool VerifyDisplayName(const FText& InText, FText& OutErrorMessage) const
+	{
+		const FString ProposedName = InText.ToString().TrimStartAndEnd();
+		if (ProposedName.IsEmpty())
+		{
+			OutErrorMessage = LOCTEXT("EmptyWidgetName", "Widget name cannot be empty.");
+			return false;
+		}
+		return FName::IsValidXName(ProposedName, FString(INVALID_OBJECTNAME_CHARACTERS) + TEXT("/"), &OutErrorMessage);
+	}
+
+	void OnDisplayNameCommitted(const FText& InText, ETextCommit::Type CommitInfo)
+	{
+		ULexWidget* Widget = GetCurrentWidget();
+		if (!CanRename() || !IsValid(Widget))
+		{
+			return;
+		}
+		const FString ProposedName = InText.ToString().TrimStartAndEnd();
+		if (ProposedName.IsEmpty() || ProposedName == Widget->GetDisplayName())
+		{
+			return;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
+		Widget->SetFlags(RF_Transactional);
+		Widget->Modify();
+		const FString UniqueName = FLexUIEditorTools::MakeUniqueWidgetDisplayName(Widget, ProposedName, Widget);
+		FLexUIUtils::ChangePropertyWithNotify(Widget, ULexWidget::GetPropertyName_DisplayName(), [Widget, UniqueName]()
+		{
+			Widget->SetDisplayName(UniqueName);
+		});
+	}
+
+	void RebuildSourceLink()
+	{
+		UObject* EditedObject = GetCurrentObject();
+		if (!IsValid(EditedObject))
+		{
+			SourceLinkBox->SetContent(SNullWidget::NullWidget);
+			return;
+		}
+
+		FEditorClassUtils::FSourceLinkParams Params;
+		Params.Object = EditedObject;
+		Params.bUseDefaultFormat = true;
+		Params.bEmptyIfNoLink = true;
+		SourceLinkBox->SetContent(FEditorClassUtils::GetSourceLink(EditedObject->GetClass(), Params));
+	}
+
+	FOnGetEditedObject GetEditedObject;
+	FOnCanEdit CanEdit;
+	TWeakObjectPtr<UObject> CachedObject;
+	TSharedPtr<SBox> SourceLinkBox;
 };
 
 void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorld)
@@ -822,10 +1182,13 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorl
     DetailsViewArgs.bCustomNameAreaLocation = true;
     DetailsViewArgs.bCustomFilterAreaLocation = false;
     DetailsViewArgs.DefaultsOnlyVisibility = EEditDefaultsOnlyNodeVisibility::Hide;
-    DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::ComponentsAndActorsUseNameArea;
+    // A ULexWidget is a plain UObject: under the actor/component filters the name area resolves to
+    // nothing at all and the header comes up blank whatever it is docked into.
+    DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::ObjectsUseNameArea;
     DetailsViewArgs.bShowOptions = true;
 	DetailsViewArgs.bAllowSearch = true;
-	DetailsViewArgs.bShowObjectLabel = true;
+	//the stock label renames the UObject; SLexWidgetDetailsHeader edits DisplayName instead
+	DetailsViewArgs.bShowObjectLabel = false;
     //DetailsViewArgs.HostCommandList = InCommandList;
 
     DetailsView = PropPlugin.CreateDetailView(DetailsViewArgs);
@@ -997,6 +1360,19 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorl
 				+ SSplitter::Slot()
 				[
 					SNew(SVerticalBox)
+					+SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(FMargin(0, 2))
+					[
+						SNew(SLexWidgetDetailsHeader)
+						.NameAreaWidget(DetailsView->GetNameAreaWidget())
+						.CanEdit(this, &SLexUIPrefabEditorDetails::IsEditorAllowEditing)
+						.GetEditedObject_Lambda([=, this]() -> UObject*
+						{
+							const TArray<TWeakObjectPtr<UObject>>& EditedObjects = DetailsView->GetSelectedObjects();
+							return EditedObjects.Num() == 1 ? EditedObjects[0].Get() : nullptr;
+						})
+					]
 					+SVerticalBox::Slot()
 					.Padding(FMargin(0, 2))
 					[

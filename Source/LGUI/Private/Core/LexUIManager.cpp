@@ -239,9 +239,20 @@ ULexUISelection* ULexUISelection::GetInstance(UWorld* InWorld)
 
 void ULexUISelection::SelectWidget(ULexWidget* Widget)
 {
-	SelectedWidgetArray.Add(Widget);
+	// A widget listed twice takes every per-selection delta twice: Align and Distribute walk the
+	// array, so a duplicate entry moves that widget by double the offset the others get.
+	SelectedWidgetArray.AddUnique(Widget);
 	OnSelectionChanged.Broadcast();
 }
+
+void ULexUISelection::DeselectWidget(ULexWidget* Widget)
+{
+	if (SelectedWidgetArray.Remove(Widget) > 0)
+	{
+		OnSelectionChanged.Broadcast();
+	}
+}
+
 void ULexUISelection::SelectComponent(ULexUIBehaviour* Component)
 {
 	SelectedComponentArray.Add(Component);
