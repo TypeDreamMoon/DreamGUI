@@ -144,6 +144,48 @@ bool FLexInvalidationResizingAChildStillReachesTheTopTest::RunTest(const FString
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexInvalidationSlotAlignmentStopsAtTheParentTest,
+	"LGUI.Layout.InvalidationReason.SlotAlignmentStopsAtTheParent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexInvalidationSlotAlignmentStopsAtTheParentTest::RunTest(const FString& Parameters)
+{
+	using namespace LexInvalidationReasonTestLocal;
+	FScopedTestWorld TestWorld;
+	ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	FCountedChainFixture Fixture;
+	if (!TestNotNull(TEXT("LexUI manager subsystem exists"), Manager) || !Fixture.Build(TestWorld.World))
+	{
+		return false;
+	}
+	Fixture.Settle(Manager);
+	ULexPanelSlot* Slot = Fixture.Leaf->GetPanelSlot();
+	if (!TestNotNull(TEXT("The leaf has a panel slot"), Slot))
+	{
+		Fixture.Root->DestroyWidget();
+		return false;
+	}
+
+	// Alignment is read by ApplyChildRect and by nothing that measures, so it cannot move a preferred
+	// size anywhere on the chain.
+	Slot->SetHorizontalAlignment(ELexPanelHorizontalAlignment::Right);
+	Manager->TickLexUI(0.016f);
+	TestEqual(TEXT("Alignment re-arranges the parent"), Fixture.MidOverlay->PassCount, 1);
+	TestEqual(TEXT("...and leaves the grandparent alone"), Fixture.RootOverlay->PassCount, 0);
+
+	// Padding is added by every MeasureLayout there is, so it has to keep reaching the whole chain.
+	Fixture.MidOverlay->PassCount = 0;
+	Fixture.RootOverlay->PassCount = 0;
+	Slot->SetPadding(FMargin(7.0f));
+	Manager->TickLexUI(0.016f);
+	TestEqual(TEXT("Padding re-arranges the parent"), Fixture.MidOverlay->PassCount, 1);
+	TestEqual(TEXT("...and the grandparent too"), Fixture.RootOverlay->PassCount, 1);
+
+	Fixture.Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FLexInvalidationPanelStillOverridesAMovedChildTest,
 	"LGUI.Layout.InvalidationReason.PanelStillOverridesAMovedChild",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

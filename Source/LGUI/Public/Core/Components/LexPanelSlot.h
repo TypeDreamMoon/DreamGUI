@@ -7,6 +7,9 @@
 #include "LexWidgetSubObjectBehaviour.h"
 #include "LexPanelSlot.generated.h"
 
+// Defined with the widget; forward declared here so this header stays off the big one.
+enum class ELexLayoutInvalidation : uint8;
+
 UENUM(BlueprintType)
 enum class ELexPanelHorizontalAlignment : uint8
 {
@@ -100,7 +103,13 @@ public:
 	UFUNCTION(BlueprintSetter) void SetZOrder(int32 Value);
 	UFUNCTION(BlueprintSetter) void SetAutoSize(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "Slot")
-	void NotifySlotChanged();
+	/**
+	 * Reason defaults to Measure, the safe answer. Alignment, size rule, fill weight and z-order pass
+	 * Arrange instead: none of them appear in any panel's MeasureLayout - checked one by one - so they
+	 * cannot move a preferred size, only where this slot's widget ends up inside its own parent.
+	 * Padding, the grid coordinates and bAutoSize all do appear there, and keep the default.
+	 */
+	void NotifySlotChanged(ELexLayoutInvalidation Reason);
 
 	void CaptureAuthoredGeometry(bool bForce = false);
 	bool RestoreAuthoredGeometry(bool bForce = false);

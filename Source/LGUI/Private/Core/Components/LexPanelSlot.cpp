@@ -33,28 +33,33 @@ namespace LexPanelSlotLocal
 	}
 }
 
-#define LEX_SLOT_SETTER(MethodName, FieldName, Type, Transform) \
+// Reason is per property, decided by whether the field is read by any panel's MeasureLayout.
+// Padding is added by every one of them; the grid coordinates size GridPanel's and
+// UniformGridPanel's tracks; bAutoSize is what CanvasPanel's measures with. Alignment, size rule,
+// fill weight and z-order appear in no MeasureLayout at all - only in ApplyChildRect and the
+// arrange loops - so they cannot move a preferred size and the invalidation stops at the parent.
+#define LEX_SLOT_SETTER(MethodName, FieldName, Type, Transform, Reason) \
 	void ULexPanelSlot::MethodName(Type Value) \
 	{ \
 		Value = Transform; \
 		if (FieldName != Value) \
 		{ \
 			FieldName = Value; \
-			NotifySlotChanged(); \
+			NotifySlotChanged(ELexLayoutInvalidation::Reason); \
 		} \
 	}
 
-LEX_SLOT_SETTER(SetPadding, Padding, FMargin, LexPanelSlotLocal::SanitizeMargin(Value))
-LEX_SLOT_SETTER(SetHorizontalAlignment, HorizontalAlignment, ELexPanelHorizontalAlignment, Value)
-LEX_SLOT_SETTER(SetVerticalAlignment, VerticalAlignment, ELexPanelVerticalAlignment, Value)
-LEX_SLOT_SETTER(SetSizeRule, SizeRule, ELexPanelSizeRule, Value)
-LEX_SLOT_SETTER(SetFillWeight, FillWeight, float, LexPanelSlotLocal::NonNegative(Value))
-LEX_SLOT_SETTER(SetRow, Row, int32, FMath::Clamp(Value, 0, LexPanelSlotLocal::MaxGridIndex))
-LEX_SLOT_SETTER(SetColumn, Column, int32, FMath::Clamp(Value, 0, LexPanelSlotLocal::MaxGridIndex))
-LEX_SLOT_SETTER(SetRowSpan, RowSpan, int32, FMath::Clamp(Value, 1, LexPanelSlotLocal::MaxGridSpan))
-LEX_SLOT_SETTER(SetColumnSpan, ColumnSpan, int32, FMath::Clamp(Value, 1, LexPanelSlotLocal::MaxGridSpan))
-LEX_SLOT_SETTER(SetZOrder, ZOrder, int32, Value)
-LEX_SLOT_SETTER(SetAutoSize, bAutoSize, bool, Value)
+LEX_SLOT_SETTER(SetPadding, Padding, FMargin, LexPanelSlotLocal::SanitizeMargin(Value), Measure)
+LEX_SLOT_SETTER(SetHorizontalAlignment, HorizontalAlignment, ELexPanelHorizontalAlignment, Value, Arrange)
+LEX_SLOT_SETTER(SetVerticalAlignment, VerticalAlignment, ELexPanelVerticalAlignment, Value, Arrange)
+LEX_SLOT_SETTER(SetSizeRule, SizeRule, ELexPanelSizeRule, Value, Arrange)
+LEX_SLOT_SETTER(SetFillWeight, FillWeight, float, LexPanelSlotLocal::NonNegative(Value), Arrange)
+LEX_SLOT_SETTER(SetRow, Row, int32, FMath::Clamp(Value, 0, LexPanelSlotLocal::MaxGridIndex), Measure)
+LEX_SLOT_SETTER(SetColumn, Column, int32, FMath::Clamp(Value, 0, LexPanelSlotLocal::MaxGridIndex), Measure)
+LEX_SLOT_SETTER(SetRowSpan, RowSpan, int32, FMath::Clamp(Value, 1, LexPanelSlotLocal::MaxGridSpan), Measure)
+LEX_SLOT_SETTER(SetColumnSpan, ColumnSpan, int32, FMath::Clamp(Value, 1, LexPanelSlotLocal::MaxGridSpan), Measure)
+LEX_SLOT_SETTER(SetZOrder, ZOrder, int32, Value, Arrange)
+LEX_SLOT_SETTER(SetAutoSize, bAutoSize, bool, Value, Measure)
 
 #undef LEX_SLOT_SETTER
 
@@ -177,12 +182,15 @@ void ULexPanelSlot::MarkLayoutGeometryApplied(bool bHorizontalPosition, bool bVe
 		| (bVerticalSize ? LexPanelSlotLocal::VerticalSizeMask : 0);
 }
 
-void ULexPanelSlot::NotifySlotChanged()
+void ULexPanelSlot::NotifySlotChanged(ELexLayoutInvalidation Reason)
 {
 	if (ULexWidget* Widget = GetWidget())
 	{
 		ULexWidget* LayoutWidget = Widget->GetParent() ? Widget->GetParent() : Widget;
-		ULexWidget::MarkLayoutForRebuild(LayoutWidget);
+		// Arrange is stated about the widget whose placement changed, and the walk then dirties its
+		// parent - the same widget this used to reach for directly, just arrived at by saying why.
+		ULexWidget::MarkLayoutForRebuild(
+			Reason == ELexLayoutInvalidation::Arrange ? Widget : LayoutWidget, Reason);
 #if WITH_EDITOR
 		if (const UWorld* World = LayoutWidget->GetWorld(); World && !World->IsGameWorld())
 		{
@@ -274,13 +282,14 @@ void ULexPanelSlot::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	SanitizePanelSlot(*this);
-	NotifySlotChanged();
+	// A property edit can be any of them, including padding, so take the safe reason.
+	NotifySlotChanged(ELexLayoutInvalidation::Measure);
 }
 
 void ULexPanelSlot::PostEditUndo()
 {
 	Super::PostEditUndo();
 	SanitizePanelSlot(*this);
-	NotifySlotChanged();
+	NotifySlotChanged(ELexLayoutInvalidation::Measure);
 }
 #endif

@@ -30,6 +30,7 @@ namespace LexPerspective { struct FScope; }
  *
  * Measure is the safe answer and the default, so a site that says nothing keeps the old behaviour.
  */
+UENUM(BlueprintType)
 enum class ELexLayoutInvalidation : uint8
 {
 	/**
