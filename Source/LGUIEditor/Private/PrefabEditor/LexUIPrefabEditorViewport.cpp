@@ -9,6 +9,7 @@
 #include "Core/LexUIManager.h"
 #include "Framework/Application/SlateApplication.h"
 #include "DragAndDrop/AssetDragDropOp.h"
+#include "LexWidgetEditorHierarchyViewItem.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewport"
 
@@ -103,13 +104,22 @@ FReply SLexUIPrefabEditorViewport::OnDragOver(const FGeometry& MyGeometry, const
 	}
 	// A prefab dragged from the Content Browser used to fall straight through to SEditorViewport,
 	// which knows nothing about widgets -- no preview, no cursor feedback, no refusal. The
-	// hierarchy tree accepted the same drag, so the design surface was the odd one out.
-	if (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid() && EditorViewportClient.IsValid())
+	// hierarchy tree accepted the same drag, so the design surface was the odd one out. A widget
+	// dragged out of the hierarchy tree was the same story: the tree could reparent it, the canvas
+	// it is drawn on could not.
+	if (EditorViewportClient.IsValid()
+		&& (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid()
+			|| DragDropEvent.GetOperationAs<FHierarchyLexWidgetDragDropOp>().IsValid()))
 	{
 		const FIntPoint Pixel = LexUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		ULexWidget* Target = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
-		EditorViewportClient->SetPaletteDropPreview(Target);
-		return Target ? FReply::Handled() : FReply::Unhandled();
+		// ProcessHierarchyDragDrop is the tree's own validator: it refuses a cycle, a full parent
+		// and a drop onto the dragged widget itself, and writes the reason onto the cursor. Asking
+		// it here is what keeps the two surfaces on one set of rules.
+		const TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, EItemDropZone::OntoItem,
+			/*bIsDrop*/false, PrefabEditorPtr.Pin(), Target);
+		EditorViewportClient->SetPaletteDropPreview(Zone.IsSet() ? Target : nullptr);
+		return Zone.IsSet() ? FReply::Handled() : FReply::Unhandled();
 	}
 	return SEditorViewport::OnDragOver(MyGeometry, DragDropEvent);
 }
@@ -139,7 +149,8 @@ FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDr
 			return FReply::Handled();
 		}
 	}
-	if (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid())
+	if (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid()
+		|| DragDropEvent.GetOperationAs<FHierarchyLexWidgetDragDropOp>().IsValid())
 	{
 		TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
@@ -147,11 +158,16 @@ FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDr
 		ULexWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		EditorViewportClient->ClearPaletteDropPreview();
 		if (!Parent)return FReply::Unhandled();
-		// The same entry point the hierarchy row uses, so a Content-Browser prefab becomes a linked
-		// sub-prefab here too -- with its cyclic, self-nesting and version guards intact.
-		const FReply Reply = Editor->TryHandleAssetDragDropOperation(DragDropEvent, Parent);
-		if (Reply.IsEventHandled())EditorViewportClient->Invalidate();
-		return Reply;
+		// One validator, both surfaces. For an asset it reaches TryHandleAssetDragDropOperation --
+		// the same entry point the hierarchy row uses, so a Content-Browser prefab becomes a linked
+		// sub-prefab here too, guards intact. For a hierarchy drag it reparents, having already
+		// refused the cycles and the full parents.
+		const TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, EItemDropZone::OntoItem,
+			/*bIsDrop*/true, Editor, Parent);
+		if (!Zone.IsSet())return FReply::Unhandled();
+		ULexUIManagerWorldSubsystem::GetInstance(Editor->GetWorld())->MarkLexUIWidgetOutlinerChanged();
+		EditorViewportClient->Invalidate();
+		return FReply::Handled();
 	}
 	return SEditorViewport::OnDrop(MyGeometry, DragDropEvent);
 }

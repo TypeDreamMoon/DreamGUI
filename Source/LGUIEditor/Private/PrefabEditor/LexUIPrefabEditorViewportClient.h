@@ -118,6 +118,32 @@ public:
 	 * layout-self. Free of any viewport state so the handle policy can be tested directly.
 	 */
 	static FLexLayoutControlAnchorData GetEffectiveLayoutControl(const ULexWidget* InWidget);
+	/**
+	 * Whether the author may still set this widget's anchors, per axis. An anchor only says where in
+	 * the parent a rect is measured from, so on an axis whose position or size is already being
+	 * decided for the child there is nothing left for one to say.
+	 */
+	static void GetAnchorEditableAxes(const ULexWidget* InWidget, bool& bOutHorizontal, bool& bOutVertical);
+	/** An anchor fraction pulled onto the quarter gridline it is within InTolerance of. */
+	static double SnapAnchorFraction(double InFraction, double InTolerance);
+	/**
+	 * Write new anchors while the widget's rect stays exactly where it is. Anchors and the offsets
+	 * describe that one rect between them, so moving an anchor line without re-measuring the offsets
+	 * against it drags the rect along by however far the line travelled.
+	 */
+	static void SetAnchorsPreservingRect(ULexWidget* InWidget, const FVector2D& InAnchorMin, const FVector2D& InAnchorMax);
+
+	/** What a finished marquee does to the selection it was dragged over. */
+	enum class EMarqueeMode : uint8
+	{
+		Replace,
+		Add,
+		Remove,
+	};
+	/** Does a widget's projected rect meet the marquee box? InQuad is the four corners, in ring order. */
+	static bool DoesMarqueeMeetQuad(const FBox2D& InMarquee, TConstArrayView<FVector2D> InQuad);
+	/** Fold what a marquee caught into what was already selected. */
+	static void CombineMarqueeSelection(EMarqueeMode InMode, TConstArrayView<ULexWidget*> InCurrent, TConstArrayView<ULexWidget*> InCaught, TSet<ULexWidget*>& OutSelection);
 
 	/** World-space pick ray through a viewport pixel. */
 	bool ComputePickRay(int32 PixelX, int32 PixelY, FVector& OutLineStart, FVector& OutLineEnd);
@@ -149,11 +175,18 @@ private:
 		BottomLeft,
 		BottomRight,
 		Pivot,
+		AnchorBottomLeft,
+		AnchorBottomRight,
+		AnchorTopRight,
+		AnchorTopLeft,
 	};
 	struct FDesignerWidgetSnapshot
 	{
 		TWeakObjectPtr<ULexWidget> Widget;
 		FVector2D AnchoredPosition = FVector2D::ZeroVector;
+		FVector2D AnchorMin = FVector2D(0.5f);
+		FVector2D AnchorMax = FVector2D(0.5f);
+		FVector2D SizeDelta = FVector2D::ZeroVector;
 		FVector2D Pivot = FVector2D(0.5f);
 		float Width = 0.0f;
 		float Height = 0.0f;
@@ -176,6 +209,16 @@ private:
 	void DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas);
 	void DrawLayoutDebugOverlay(FViewport& InViewport, FCanvas& Canvas) const;
 	bool UpdateDesignerScreenGeometry(FSceneView& View);
+	/** An anchor handle rides the parent's rect rather than the selection's, and writes anchors. */
+	static bool IsAnchorHandle(EDesignerHandle InHandle);
+	/** Project the anchor space -- the parent's rect -- and place the four anchor markers on it. */
+	void UpdateAnchorScreenGeometry(FSceneView& View, ULexWidget* InWidget);
+	void DrawAnchorMedallion(FCanvas& Canvas) const;
+	/** A press on empty space is still the backdrop click until it travels; then it is a marquee. */
+	void TryPromoteDesignerMarquee();
+	void FinishDesignerMarquee();
+	void DrawDesignerMarquee(FCanvas& Canvas) const;
+	FBox2D GetDesignerMarqueeBox() const;
 	EDesignerHandle HitTestDesignerHandle(const FVector2D& PixelPosition) const;
 	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;
 	void DrawWidgetScreenOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas, const FLinearColor& Color, float Thickness = 1.0f) const;
@@ -197,6 +240,9 @@ private:
 	void AutoKeyAnimatedTransform(const TArray<ULexWidget*>& InWidgets, bool bLocation, bool bRotation, bool bScale) const;
 	TArray<FVector2D> DesignerScreenCorners;
 	TMap<EDesignerHandle, FVector2D> DesignerHandlePositions;
+	/** Kept apart from the selection's own handles so a resize handle still wins an overlapping pixel. */
+	TArray<FVector2D> DesignerAnchorSpaceCorners;
+	TMap<EDesignerHandle, FVector2D> DesignerAnchorHandlePositions;
 	FBox2D DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
 	EDesignerHandle ActiveDesignerHandle = EDesignerHandle::None;
 	bool bDesignerDragging = false;
@@ -206,6 +252,11 @@ private:
 	EDesignerHandle PendingDesignerHandle = EDesignerHandle::None;
 	FVector2D DesignerPressPixel = FVector2D::ZeroVector;
 	FVector2D DesignerDragStartPixel = FVector2D::ZeroVector;
+	/** A left press that landed on empty space; a marquee only once it has travelled. */
+	bool bDesignerMarqueePending = false;
+	bool bDesignerMarqueeActive = false;
+	FVector2D DesignerMarqueePressPixel = FVector2D::ZeroVector;
+	FVector2D DesignerMarqueeCurrentPixel = FVector2D::ZeroVector;
 	TArray<FDesignerWidgetSnapshot> DesignerSnapshots;
 	TUniquePtr<class FScopedTransaction> DesignerTransaction;
 	TOptional<float> DesignerGuideX;

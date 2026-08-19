@@ -7,10 +7,55 @@
 #include "Core/Components/LexWidget.h"
 #include "Widgets/Views/STreeView.h"
 #include "Widgets/Views/STableRow.h"
+#include "DragAndDrop/DecoratedDragDropOp.h"
 
 class SLexWidgetEditorHierarchyView;
 class ULexWidget;
 class FLexUIPrefabEditor;
+class FScopedTransaction;
+
+/**
+ * A widget (or several) being dragged to a new parent.
+ *
+ * Declared here rather than in the .cpp because the design surface accepts the same drag: a
+ * hierarchy drag dropped onto the canvas has to mean what it means in the tree, and reusing the op
+ * and the validator below is what keeps the two surfaces from drifting into two sets of rules.
+ */
+class FHierarchyLexWidgetDragDropOp : public FDecoratedDragDropOp
+{
+public:
+	DRAG_DROP_OPERATOR_TYPE(FHierarchyLexWidgetDragDropOp, FDecoratedDragDropOp)
+
+		virtual ~FHierarchyLexWidgetDragDropOp();
+
+	virtual void OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent) override;
+
+	struct FItem
+	{
+		/** The widget being dragged and dropped */
+		ULexWidget* Widget = nullptr;
+
+		/** The original parent of the widget. */
+		ULexWidget* WidgetParent = nullptr;
+	};
+
+	TArray<FItem> DraggedWidgets;
+
+	/** The widget being dragged and dropped */
+	FScopedTransaction* Transaction;
+
+	/** Constructs a new drag/drop operation */
+	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(const TArray<ULexWidget*>& InWidgets);
+};
+
+/**
+ * Validate (bIsDrop false) or perform (bIsDrop true) a drop of any of the editor's drag operations
+ * onto TargetItem: a hierarchy move, a palette element, or a Content-Browser asset. Unset return
+ * means refused, and the op's hover text and icon carry the reason.
+ */
+TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone,
+	bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem,
+	TOptional<int32> Index = TOptional<int32>());
 
 class SLexWidgetEditorHierarchyViewItem : public STableRow<TWeakObjectPtr<ULexWidget>>
 {

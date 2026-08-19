@@ -1060,12 +1060,40 @@ namespace
 		if (Screen.W <= UE_KINDA_SMALL_NUMBER)return false;
 		return InView.ScreenToPixel(Screen, OutPixel);
 	}
+
+	/** A widget's four rect corners in pixels, bottom-left first, or false if any is behind the eye. */
+	bool LexProjectWidgetCorners(const FSceneView& InView, const ULexWidget* InWidget, TArray<FVector2D>& OutCorners)
+	{
+		OutCorners.Reset();
+		if (!IsValid(InWidget))return false;
+		const float Left = -InWidget->GetPivot().X * InWidget->GetWidth();
+		const float Right = (1.0f - InWidget->GetPivot().X) * InWidget->GetWidth();
+		const float Bottom = -InWidget->GetPivot().Y * InWidget->GetHeight();
+		const float Top = (1.0f - InWidget->GetPivot().Y) * InWidget->GetHeight();
+		const FTransform& Transform = InWidget->GetWorldTransform();
+		for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
+		{
+			FVector2D Pixel;
+			if (!LexWorldToPixelInFront(InView, Transform.TransformPosition(Local), Pixel))return false;
+			OutCorners.Add(Pixel);
+		}
+		return true;
+	}
+
+	/**
+	 * How close to a quarter gridline the cursor has to be for an anchor to land on it, as a fraction
+	 * of the anchor space rather than in pixels, so the gesture behaves the same at every zoom. It is
+	 * well under half the 0.25 gap, so two gridlines can never both claim the cursor.
+	 */
+	constexpr double LexAnchorSnapTolerance = 0.02;
 }
 
 bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& View)
 {
 	DesignerScreenCorners.Reset();
 	DesignerHandlePositions.Reset();
+	DesignerAnchorSpaceCorners.Reset();
+	DesignerAnchorHandlePositions.Reset();
 	DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
 	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
 	TArray<ULexWidget*> Selected;
@@ -1135,6 +1163,7 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 		}
 		FVector2D PivotPixel;
 		if (LexWorldToPixelInFront(View, SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
+		UpdateAnchorScreenGeometry(View, SelectedWidget);
 	}
 	else
 	{
@@ -1148,6 +1177,52 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 	return DesignerScreenCorners.Num() == 4;
 }
 
+bool FLexUIPrefabEditorViewportClient::IsAnchorHandle(EDesignerHandle InHandle)
+{
+	return InHandle == EDesignerHandle::AnchorBottomLeft || InHandle == EDesignerHandle::AnchorBottomRight
+		|| InHandle == EDesignerHandle::AnchorTopRight || InHandle == EDesignerHandle::AnchorTopLeft;
+}
+
+void FLexUIPrefabEditorViewportClient::UpdateAnchorScreenGeometry(FSceneView& View, ULexWidget* InWidget)
+{
+	bool bHorizontal = false, bVertical = false;
+	GetAnchorEditableAxes(InWidget, bHorizontal, bVertical);
+	if (!bHorizontal && !bVertical)return;
+	ULexWidget* ParentWidget = InWidget->GetParent();
+	const float ParentWidth = ParentWidget->GetWidth();
+	const float ParentHeight = ParentWidget->GetHeight();
+	if (ParentWidth <= UE_KINDA_SMALL_NUMBER || ParentHeight <= UE_KINDA_SMALL_NUMBER)return;
+	if (!LexProjectWidgetCorners(View, ParentWidget, DesignerAnchorSpaceCorners))
+	{
+		DesignerAnchorSpaceCorners.Reset();
+		return;
+	}
+
+	// Unstretched anchors put all four corners on one point, which is the common case, so each marker
+	// is pushed out along its own diagonal to stay separately grabbable. The diagonals come from the
+	// projected parent rather than from screen axes so they still point outwards under a rotated or
+	// mirrored parent; the drag reads travel from the press pixel, so the offset costs it nothing.
+	const FVector2D RightDir = (DesignerAnchorSpaceCorners[1] - DesignerAnchorSpaceCorners[0]).GetSafeNormal();
+	const FVector2D UpDir = (DesignerAnchorSpaceCorners[3] - DesignerAnchorSpaceCorners[0]).GetSafeNormal();
+	const FTransform& ParentTransform = ParentWidget->GetWorldTransform();
+	const float ParentLeft = ParentWidget->GetLocalSpaceLeft();
+	const float ParentBottom = ParentWidget->GetLocalSpaceBottom();
+	const FVector2D AnchorMin = InWidget->GetAnchorMin();
+	const FVector2D AnchorMax = InWidget->GetAnchorMax();
+	constexpr float MarkerOffset = 11.0f;
+	auto PlaceMarker = [&](EDesignerHandle InHandle, double InFractionX, double InFractionY, float InSignX, float InSignY)
+	{
+		const FVector Local(0, ParentLeft + ParentWidth * InFractionX, ParentBottom + ParentHeight * InFractionY);
+		FVector2D Pixel;
+		if (!LexWorldToPixelInFront(View, ParentTransform.TransformPosition(Local), Pixel))return;
+		DesignerAnchorHandlePositions.Add(InHandle, Pixel + (RightDir * InSignX + UpDir * InSignY) * MarkerOffset);
+	};
+	PlaceMarker(EDesignerHandle::AnchorBottomLeft, AnchorMin.X, AnchorMin.Y, -1.0f, -1.0f);
+	PlaceMarker(EDesignerHandle::AnchorBottomRight, AnchorMax.X, AnchorMin.Y, 1.0f, -1.0f);
+	PlaceMarker(EDesignerHandle::AnchorTopRight, AnchorMax.X, AnchorMax.Y, 1.0f, 1.0f);
+	PlaceMarker(EDesignerHandle::AnchorTopLeft, AnchorMin.X, AnchorMax.Y, -1.0f, 1.0f);
+}
+
 FLexUIPrefabEditorViewportClient::EDesignerHandle FLexUIPrefabEditorViewportClient::HitTestDesignerHandle(const FVector2D& PixelPosition) const
 {
 	constexpr float HandleRadius = 9.0f;
@@ -1158,6 +1233,12 @@ FLexUIPrefabEditorViewportClient::EDesignerHandle FLexUIPrefabEditorViewportClie
 	for (const auto& Pair : DesignerHandlePositions)
 	{
 		if (Pair.Key != EDesignerHandle::Pivot && FVector2D::Distance(Pair.Value, PixelPosition) <= HandleRadius)return Pair.Key;
+	}
+	// After the selection's own handles: an anchor marker sitting on top of a resize handle would be
+	// stealing the more common gesture, and it is the one that can be reached from the details panel.
+	for (const auto& Pair : DesignerAnchorHandlePositions)
+	{
+		if (FVector2D::Distance(Pair.Value, PixelPosition) <= HandleRadius)return Pair.Key;
 	}
 	if (DesignerScreenBounds.bIsValid
 		&& PixelPosition.X >= DesignerScreenBounds.Min.X && PixelPosition.X <= DesignerScreenBounds.Max.X
@@ -1443,6 +1524,7 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 			DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
 		}
 	}
+	DrawDesignerMarquee(Canvas);
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();
 	const FLinearColor OutlineColor(0.1f, 0.65f, 1.0f);
@@ -1462,6 +1544,7 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 		Tile.BlendMode = SE_BLEND_Translucent;
 		Canvas.DrawItem(Tile);
 	}
+	DrawAnchorMedallion(Canvas);
 	if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetSelectedWidgets().Num() == 1)
 	{
 		if (ULexWidget* SelectedWidget = PrefabEditorPtr.Pin()->GetSelectedWidgets()[0].Get())
@@ -1490,6 +1573,52 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 			Guide.SetColor(FLinearColor(1.0f, 0.25f, 0.65f, 0.9f));
 			Canvas.DrawItem(Guide);
 		}
+	}
+}
+
+void FLexUIPrefabEditorViewportClient::DrawAnchorMedallion(FCanvas& Canvas) const
+{
+	if (DesignerAnchorSpaceCorners.Num() != 4 || DesignerAnchorHandlePositions.IsEmpty())return;
+	const float DpiScale = Canvas.GetDPIScale();
+	// The parent's rect is the anchor space, and the whole point of drawing it is that a fraction
+	// means nothing without the thing it is a fraction of.
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		FCanvasLineItem Line(DesignerAnchorSpaceCorners[Index] / DpiScale, DesignerAnchorSpaceCorners[(Index + 1) % 4] / DpiScale);
+		Line.SetColor(FLinearColor(0.08f, 0.4f, 0.22f));
+		Canvas.DrawItem(Line);
+	}
+	for (const auto& Pair : DesignerAnchorHandlePositions)
+	{
+		constexpr float Size = 8.0f;
+		FCanvasTileItem Tile(Pair.Value / DpiScale - FVector2D(Size * 0.5f), FVector2D(Size), FLinearColor(0.15f, 0.9f, 0.5f));
+		Tile.BlendMode = SE_BLEND_Translucent;
+		Canvas.DrawItem(Tile);
+	}
+}
+
+FBox2D FLexUIPrefabEditorViewportClient::GetDesignerMarqueeBox() const
+{
+	FBox2D Box(EForceInit::ForceInit);
+	Box += DesignerMarqueePressPixel;
+	Box += DesignerMarqueeCurrentPixel;
+	return Box;
+}
+
+void FLexUIPrefabEditorViewportClient::DrawDesignerMarquee(FCanvas& Canvas) const
+{
+	if (!bDesignerMarqueeActive)return;
+	const float DpiScale = Canvas.GetDPIScale();
+	const FBox2D Box = GetDesignerMarqueeBox();
+	FCanvasTileItem Fill(Box.Min / DpiScale, Box.GetSize() / DpiScale, FLinearColor(0.1f, 0.65f, 1.0f, 0.12f));
+	Fill.BlendMode = SE_BLEND_Translucent;
+	Canvas.DrawItem(Fill);
+	const FVector2D Corners[4] = { Box.Min, FVector2D(Box.Max.X, Box.Min.Y), Box.Max, FVector2D(Box.Min.X, Box.Max.Y) };
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		FCanvasLineItem Line(Corners[Index] / DpiScale, Corners[(Index + 1) % 4] / DpiScale);
+		Line.SetColor(FLinearColor(0.1f, 0.65f, 1.0f));
+		Canvas.DrawItem(Line);
 	}
 }
 
@@ -1595,6 +1724,8 @@ void FLexUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
 void FLexUIPrefabEditorViewportClient::LostFocus(FViewport* InViewport)
 {
 	if (bDesignerDragging)FinishDesignerDrag(true);
+	bDesignerMarqueePending = false;
+	bDesignerMarqueeActive = false;
 	bRightMouseButtonDown = false;
 	bRightMouseMoved = false;
 	RightMouseDownPosition = FIntPoint::ZeroValue;
@@ -1613,6 +1744,7 @@ void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 
 	if (bDesignerDragPending)TryPromoteDesignerDrag();
 	if (bDesignerDragging)UpdateDesignerDrag();
+	if (bDesignerMarqueePending)TryPromoteDesignerMarquee();
 	UpdateHoveredWidget();
 	if (TransformWidget.IsValid() && IsPerspective())
 	{
@@ -1624,10 +1756,12 @@ void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
 {
 	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
-	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending))
+	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending || bDesignerMarqueePending))
 	{
 		bDesignerDragPending = false;
 		PendingDesignerHandle = EDesignerHandle::None;
+		bDesignerMarqueePending = false;
+		bDesignerMarqueeActive = false;
 		if (bDesignerDragging)FinishDesignerDrag(true);
 		return true;
 	}
@@ -1645,7 +1779,9 @@ bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEve
 			// rectangle, and a click inside it has to be able to select the child sitting there --
 			// otherwise nothing inside a selected panel is ever reachable with the mouse. The edge,
 			// corner and pivot handles keep swallowing it: there is nothing under them to select.
-			const bool bWasMove = PendingDesignerHandle == EDesignerHandle::Move;
+			// Anchor markers land in the middle of a centre-anchored widget, so swallowing their
+			// click would put four dead discs over exactly the place you click to reach a child.
+			const bool bWasMove = PendingDesignerHandle == EDesignerHandle::Move || IsAnchorHandle(PendingDesignerHandle);
 			bDesignerDragPending = false;
 			PendingDesignerHandle = EDesignerHandle::None;
 			if (bWasMove && EventArgs.Viewport)
@@ -1654,16 +1790,32 @@ bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEve
 			}
 			return true;
 		}
+		// A marquee is never consumed on release. One that never travelled has to reach the backdrop
+		// click that clears the selection; one that did is already past the engine's own click
+		// threshold, so ProcessClick will not fire behind it and undo what the marquee just selected.
+		if (bDesignerMarqueePending)FinishDesignerMarquee();
 		return false;
 	}
 	if (EventArgs.Event != IE_Pressed || bDesignerDragging || bDesignerDragPending || !Viewport)return false;
 
 	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
 	FSceneView* View = CalcSceneView(&ViewFamily);
-	if (!View || !UpdateDesignerScreenGeometry(*View))return false;
 	const FVector2D MousePixel(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY());
-	const EDesignerHandle HitHandle = HitTestDesignerHandle(MousePixel);
-	if (HitHandle == EDesignerHandle::None)return false;
+	// No selection means no handles, but it is also the state a marquee is most often started from,
+	// so a press that finds no geometry has to fall through to the empty-space case, not bail out.
+	const EDesignerHandle HitHandle = View && UpdateDesignerScreenGeometry(*View) ? HitTestDesignerHandle(MousePixel) : EDesignerHandle::None;
+	if (HitHandle == EDesignerHandle::None)
+	{
+		// Any press that missed every handle arms a marquee, and consumes nothing: until it travels
+		// it is still the plain click, which goes on selecting or clearing exactly as it did.
+		// Asking for nothing under the cursor first would arm nowhere -- the prefab root's own rect
+		// covers the canvas, so a pick always answers something.
+		bDesignerMarqueePending = true;
+		bDesignerMarqueeActive = false;
+		DesignerMarqueePressPixel = MousePixel;
+		DesignerMarqueeCurrentPixel = MousePixel;
+		return false;
+	}
 	if (!CanBeginDesignerDrag(HitHandle))return false;
 
 	// Consume the press, but stay a click until the mouse actually travels. Opening the transaction
@@ -1699,6 +1851,58 @@ void FLexUIPrefabEditorViewportClient::TryPromoteDesignerDrag()
 	bDesignerDragPending = false;
 	PendingDesignerHandle = EDesignerHandle::None;
 	BeginDesignerDrag(Handle, DesignerPressPixel);
+}
+
+void FLexUIPrefabEditorViewportClient::TryPromoteDesignerMarquee()
+{
+	if (!bDesignerMarqueePending || !Viewport)return;
+	DesignerMarqueeCurrentPixel = FVector2D(Viewport->GetMouseX(), Viewport->GetMouseY());
+	if (!bDesignerMarqueeActive)
+	{
+		const FVector2D Travel = DesignerMarqueeCurrentPixel - DesignerMarqueePressPixel;
+		if (FMath::Square(Travel.X) + FMath::Square(Travel.Y) < MOUSE_CLICK_DRAG_DELTA)return;
+		bDesignerMarqueeActive = true;
+	}
+	Invalidate();
+}
+
+void FLexUIPrefabEditorViewportClient::FinishDesignerMarquee()
+{
+	const bool bWasActive = bDesignerMarqueeActive;
+	const FBox2D Box = GetDesignerMarqueeBox();
+	bDesignerMarqueePending = false;
+	bDesignerMarqueeActive = false;
+	if (!bWasActive || !PrefabEditorPtr.IsValid() || !Viewport)return;
+	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+	FSceneView* View = CalcSceneView(&ViewFamily);
+	if (!View)return;
+
+	TArray<ULexWidget*> Widgets;
+	LexUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+	TArray<ULexWidget*> Caught;
+	TArray<FVector2D> Corners;
+	for (ULexWidget* Candidate : Widgets)
+	{
+		// The gates picking applies, for the same reasons: the render-visible flag already folds in
+		// hidden-in-designer, and a locked widget is not selectable by any gesture.
+		if (!IsValid(Candidate) || !Candidate->GetRenderVisibleInHierarchy())continue;
+		if (PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Candidate))continue;
+		if (!LexProjectWidgetCorners(*View, Candidate, Corners))continue;
+		if (DoesMarqueeMeetQuad(Box, Corners))Caught.Add(Candidate);
+	}
+
+	TArray<ULexWidget*> Current;
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+	{
+		if (ULexWidget* SelectedWidget = WeakWidget.Get())Current.Add(SelectedWidget);
+	}
+	const EMarqueeMode Mode = IsCtrlPressed() ? EMarqueeMode::Add : (IsAltPressed() ? EMarqueeMode::Remove : EMarqueeMode::Replace);
+	TSet<ULexWidget*> NewSelection;
+	CombineMarqueeSelection(Mode, Current, Caught, NewSelection);
+	// SelectWidgets' append mode toggles rather than adds, so the finished set is handed over whole
+	// instead: add and remove then mean what they say whatever happened to be selected already.
+	PrefabEditorPtr.Pin()->SelectWidgets(NewSelection, false);
+	Invalidate();
 }
 
 void FLexUIPrefabEditorViewportClient::SelectWidgetAtPixel(const FVector2D& InPixel, bool bIsControlDown)
@@ -1742,11 +1946,16 @@ void FLexUIPrefabEditorViewportClient::BeginDesignerDrag(EDesignerHandle InHandl
 		FDesignerWidgetSnapshot& Snapshot = DesignerSnapshots.AddDefaulted_GetRef();
 		Snapshot.Widget = SelectedWidget;
 		Snapshot.AnchoredPosition = SelectedWidget->GetAnchoredPosition();
+		Snapshot.AnchorMin = SelectedWidget->GetAnchorMin();
+		Snapshot.AnchorMax = SelectedWidget->GetAnchorMax();
+		Snapshot.SizeDelta = SelectedWidget->GetSizeDelta();
 		Snapshot.Pivot = SelectedWidget->GetPivot();
 		Snapshot.Width = SelectedWidget->GetWidth();
 		Snapshot.Height = SelectedWidget->GetHeight();
 		Snapshot.WorldTransform = SelectedWidget->GetWorldTransform();
-		Snapshot.PlaneTransform = HitHandle == EDesignerHandle::Move && SelectedWidget->GetParent()
+		// An anchor lives in the parent's rect, so an anchor drag reads the parent's plane just as a
+		// move does; everything else is measured in the widget's own.
+		Snapshot.PlaneTransform = (HitHandle == EDesignerHandle::Move || IsAnchorHandle(HitHandle)) && SelectedWidget->GetParent()
 			? SelectedWidget->GetParent()->GetWorldTransform() : SelectedWidget->GetWorldTransform();
 		IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, Snapshot.StartPlanePoint);
 	}
@@ -1787,6 +1996,45 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 			}
 			SelectedWidget->SetAnchoredPosition(Snapshot.AnchoredPosition + SnappedDelta);
 		}
+	}
+	else if (IsAnchorHandle(ActiveDesignerHandle))
+	{
+		FDesignerWidgetSnapshot& Snapshot = DesignerSnapshots[0];
+		ULexWidget* SelectedWidget = Snapshot.Widget.Get();
+		ULexWidget* ParentWidget = SelectedWidget ? SelectedWidget->GetParent() : nullptr;
+		if (!ParentWidget)return;
+		const float ParentWidth = ParentWidget->GetWidth();
+		const float ParentHeight = ParentWidget->GetHeight();
+		if (ParentWidth <= UE_KINDA_SMALL_NUMBER || ParentHeight <= UE_KINDA_SMALL_NUMBER)return;
+		FVector CurrentPoint;
+		if (!IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, CurrentPoint))return;
+		// Travel from the press, not the cursor's absolute place in the parent: the markers are drawn
+		// a few pixels off their own anchor points so four coincident ones stay separately grabbable,
+		// and reading the cursor absolutely would snap the anchor onto the marker the instant it was
+		// grabbed -- which is exactly the teleport the rest of this branch exists to avoid.
+		const FVector StartLocal = Snapshot.PlaneTransform.InverseTransformPosition(Snapshot.StartPlanePoint);
+		const FVector CurrentLocal = Snapshot.PlaneTransform.InverseTransformPosition(CurrentPoint);
+		const FVector2D FractionDelta((CurrentLocal.Y - StartLocal.Y) / ParentWidth, (CurrentLocal.Z - StartLocal.Z) / ParentHeight);
+		bool bHorizontal = false, bVertical = false;
+		GetAnchorEditableAxes(SelectedWidget, bHorizontal, bVertical);
+		const bool bMovesMinX = ActiveDesignerHandle == EDesignerHandle::AnchorBottomLeft || ActiveDesignerHandle == EDesignerHandle::AnchorTopLeft;
+		const bool bMovesMinY = ActiveDesignerHandle == EDesignerHandle::AnchorBottomLeft || ActiveDesignerHandle == EDesignerHandle::AnchorBottomRight;
+		FVector2D NewMin = Snapshot.AnchorMin;
+		FVector2D NewMax = Snapshot.AnchorMax;
+		if (bHorizontal)
+		{
+			const double Moved = SnapAnchorFraction(FMath::Clamp((bMovesMinX ? Snapshot.AnchorMin.X : Snapshot.AnchorMax.X) + FractionDelta.X, 0.0, 1.0), LexAnchorSnapTolerance);
+			// The min line may not cross the max line, or the pair describes a rect turned inside out.
+			if (bMovesMinX)NewMin.X = FMath::Min(Moved, NewMax.X);
+			else NewMax.X = FMath::Max(Moved, NewMin.X);
+		}
+		if (bVertical)
+		{
+			const double Moved = SnapAnchorFraction(FMath::Clamp((bMovesMinY ? Snapshot.AnchorMin.Y : Snapshot.AnchorMax.Y) + FractionDelta.Y, 0.0, 1.0), LexAnchorSnapTolerance);
+			if (bMovesMinY)NewMin.Y = FMath::Min(Moved, NewMax.Y);
+			else NewMax.Y = FMath::Max(Moved, NewMin.Y);
+		}
+		SetAnchorsPreservingRect(SelectedWidget, NewMin, NewMax);
 	}
 	else
 	{
@@ -1838,6 +2086,8 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 		if (const ULexWidget* SelectedWidget = Snapshot.Widget.Get())
 		{
 			bDesignerChanged = !SelectedWidget->GetAnchoredPosition().Equals(Snapshot.AnchoredPosition)
+				|| !SelectedWidget->GetAnchorMin().Equals(Snapshot.AnchorMin)
+				|| !SelectedWidget->GetAnchorMax().Equals(Snapshot.AnchorMax)
 				|| !SelectedWidget->GetPivot().Equals(Snapshot.Pivot)
 				|| !FMath::IsNearlyEqual(SelectedWidget->GetWidth(), Snapshot.Width)
 				|| !FMath::IsNearlyEqual(SelectedWidget->GetHeight(), Snapshot.Height)
@@ -1869,10 +2119,16 @@ void FLexUIPrefabEditorViewportClient::FinishDesignerDrag(bool bCancel)
 		{
 			if (ULexWidget* SelectedWidget = Snapshot.Widget.Get())
 			{
-				SelectedWidget->SetPivot(Snapshot.Pivot);
-				SelectedWidget->SetWidth(Snapshot.Width);
-				SelectedWidget->SetHeight(Snapshot.Height);
-				SelectedWidget->SetAnchoredPosition(Snapshot.AnchoredPosition);
+				// One write, because the anchors and the offsets only mean anything together: putting
+				// the size back before the anchors it was measured against would restore a different
+				// rect than the one that was snapshotted.
+				FLexUIAnchorData Restored;
+				Restored.Pivot = Snapshot.Pivot;
+				Restored.AnchorMin = Snapshot.AnchorMin;
+				Restored.AnchorMax = Snapshot.AnchorMax;
+				Restored.AnchoredPosition = Snapshot.AnchoredPosition;
+				Restored.SizeDelta = Snapshot.SizeDelta;
+				SelectedWidget->SetAnchorData(Restored);
 				SelectedWidget->SetWorldTransform(Snapshot.WorldTransform);
 			}
 		}
@@ -2676,6 +2932,99 @@ FLexLayoutControlAnchorData FLexUIPrefabEditorViewportClient::GetEffectiveLayout
 		Control.Or(SelfLayout->GetLayoutControlAnchor(InWidget));
 	}
 	return Control;
+}
+
+void FLexUIPrefabEditorViewportClient::GetAnchorEditableAxes(const ULexWidget* InWidget, bool& bOutHorizontal, bool& bOutVertical)
+{
+	bOutHorizontal = false;
+	bOutVertical = false;
+	// No parent, no anchor space: an anchor is a fraction of the rect a widget is placed inside.
+	if (!IsValid(InWidget) || !IsValid(InWidget->GetParent()))return;
+	const FLexLayoutControlAnchorData Control = GetEffectiveLayoutControl(InWidget);
+	bOutHorizontal = !Control.bCanControlHorizontalPosition && !Control.bCanControlHorizontalSize;
+	bOutVertical = !Control.bCanControlVerticalPosition && !Control.bCanControlVerticalSize;
+}
+
+double FLexUIPrefabEditorViewportClient::SnapAnchorFraction(double InFraction, double InTolerance)
+{
+	// The five stops the details panel's preset grid offers, so the surface gesture can land on a
+	// value that grid will recognise instead of on 0.2487.
+	for (const double Gridline : { 0.0, 0.25, 0.5, 0.75, 1.0 })
+	{
+		if (FMath::Abs(InFraction - Gridline) <= InTolerance)return Gridline;
+	}
+	return InFraction;
+}
+
+void FLexUIPrefabEditorViewportClient::SetAnchorsPreservingRect(ULexWidget* InWidget, const FVector2D& InAnchorMin, const FVector2D& InAnchorMax)
+{
+	if (!IsValid(InWidget))return;
+	ULexWidget* ParentWidget = InWidget->GetParent();
+	if (!IsValid(ParentWidget))return;
+	const FVector2D ParentSize(ParentWidget->GetWidth(), ParentWidget->GetHeight());
+	const FVector2D Size(InWidget->GetWidth(), InWidget->GetHeight());
+	// The offsets are measured from the anchor lines, so a line that travels by D leaves the rect
+	// sitting D further from it than it was. Hand the offsets that D back and nothing has moved.
+	const FVector2D OffsetMin(InWidget->GetAnchorOffsetLeft(), InWidget->GetAnchorOffsetBottom());
+	const FVector2D NewOffsetMin = OffsetMin + ParentSize * (InWidget->GetAnchorMin() - InAnchorMin);
+	FLexUIAnchorData NewData = InWidget->GetAnchorData();
+	NewData.AnchorMin = InAnchorMin;
+	NewData.AnchorMax = InAnchorMax;
+	// The stretched span is parent-driven, so SizeDelta is what is left of the size after it.
+	NewData.SizeDelta = Size - ParentSize * (InAnchorMax - InAnchorMin);
+	NewData.AnchoredPosition = NewOffsetMin + NewData.SizeDelta * NewData.Pivot;
+	InWidget->SetAnchorData(NewData);
+}
+
+bool FLexUIPrefabEditorViewportClient::DoesMarqueeMeetQuad(const FBox2D& InMarquee, TConstArrayView<FVector2D> InQuad)
+{
+	if (!InMarquee.bIsValid || InQuad.Num() != 4)return false;
+	const FVector2D BoxCorners[4] = { InMarquee.Min, FVector2D(InMarquee.Max.X, InMarquee.Min.Y), InMarquee.Max, FVector2D(InMarquee.Min.X, InMarquee.Max.Y) };
+	// Separating axes: the box's own two, plus the quad's edge normals. A projected widget rect is
+	// only axis-aligned while the widget is unrotated, and judging a rotated one by its bounding box
+	// would hand it to a marquee that passed through a corner it does not occupy.
+	TArray<FVector2D, TInlineAllocator<6>> Axes;
+	Axes.Add(FVector2D(1.0, 0.0));
+	Axes.Add(FVector2D(0.0, 1.0));
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		const FVector2D Edge = InQuad[(Index + 1) % 4] - InQuad[Index];
+		if (Edge.IsNearlyZero())continue;
+		Axes.Add(FVector2D(-Edge.Y, Edge.X));
+	}
+	for (const FVector2D& Axis : Axes)
+	{
+		double BoxMin = TNumericLimits<double>::Max(), BoxMax = TNumericLimits<double>::Lowest();
+		for (const FVector2D& Corner : BoxCorners)
+		{
+			const double Projected = FVector2D::DotProduct(Corner, Axis);
+			BoxMin = FMath::Min(BoxMin, Projected);
+			BoxMax = FMath::Max(BoxMax, Projected);
+		}
+		double QuadMin = TNumericLimits<double>::Max(), QuadMax = TNumericLimits<double>::Lowest();
+		for (const FVector2D& Corner : InQuad)
+		{
+			const double Projected = FVector2D::DotProduct(Corner, Axis);
+			QuadMin = FMath::Min(QuadMin, Projected);
+			QuadMax = FMath::Max(QuadMax, Projected);
+		}
+		if (BoxMax < QuadMin || QuadMax < BoxMin)return false;
+	}
+	return true;
+}
+
+void FLexUIPrefabEditorViewportClient::CombineMarqueeSelection(EMarqueeMode InMode, TConstArrayView<ULexWidget*> InCurrent, TConstArrayView<ULexWidget*> InCaught, TSet<ULexWidget*>& OutSelection)
+{
+	OutSelection.Reset();
+	if (InMode != EMarqueeMode::Replace)
+	{
+		for (ULexWidget* Widget : InCurrent)OutSelection.Add(Widget);
+	}
+	for (ULexWidget* Widget : InCaught)
+	{
+		if (InMode == EMarqueeMode::Remove)OutSelection.Remove(Widget);
+		else OutSelection.Add(Widget);
+	}
 }
 
 bool FLexUIPrefabEditorViewportClient::ComputePickRay(int32 PixelX, int32 PixelY, FVector& OutLineStart, FVector& OutLineEnd)

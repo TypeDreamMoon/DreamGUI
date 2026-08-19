@@ -26,32 +26,6 @@
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyViewItem"
 
-class FHierarchyLexWidgetDragDropOp : public FDecoratedDragDropOp
-{
-public:
-	DRAG_DROP_OPERATOR_TYPE(FHierarchyLexWidgetDragDropOp, FDecoratedDragDropOp)
-
-		virtual ~FHierarchyLexWidgetDragDropOp();
-
-	virtual void OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent) override;
-
-	struct FItem
-	{
-		/** The widget being dragged and dropped */
-		ULexWidget* Widget = nullptr;
-
-		/** The original parent of the widget. */
-		ULexWidget* WidgetParent = nullptr;
-	};
-
-	TArray<FItem> DraggedWidgets;
-
-	/** The widget being dragged and dropped */
-	FScopedTransaction* Transaction;
-
-	/** Constructs a new drag/drop operation */
-	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(const TArray<ULexWidget*>& InWidgets);
-};
 
 TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(const TArray<ULexWidget*>& InWidgets)
 {
@@ -109,7 +83,7 @@ void FHierarchyLexWidgetDragDropOp::OnDrop(bool bDropWasHandled, const FPointerE
 
 
 
-TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem, TOptional<int32> Index = TOptional<int32>())
+TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem, TOptional<int32> Index)
 {
 	auto TargetTemplate = TargetItem;
 	if (TargetTemplate && (DropZone == EItemDropZone::AboveItem || DropZone == EItemDropZone::BelowItem))
