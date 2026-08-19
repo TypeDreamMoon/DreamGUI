@@ -28,6 +28,8 @@ void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFuncti
 
 void SLexUIPrefabOverrideDataViewer::RefreshDataContent()
 {
+	//drop the old rows before any early-out: a row left behind still carries a live Apply button, and pressing it writes the source prefab for a selection that is no longer there
+	RootContentVerticalBox->ClearChildren();
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (!SelectedWidget)return;
 	PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
@@ -139,7 +141,12 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 					PropertyCustomizationHelpers::MakeResetButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
 							PrefabHelperObject->RevertPrefabOverride(DataItem.Object.Get(), FilteredMemeberPropertyNames);
-							AfterRevertPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
+							// Resolve the asset first: RefreshDataContent() re-derives PrefabHelperObject
+							// from the current selection and can leave it null, and the delegate argument
+							// below reads through it.
+							ULexUIPrefab* Asset = PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get());
+							RefreshDataContent();
+							AfterRevertPrefab.ExecuteIfBound(Asset);
 						})
 						, LOCTEXT("RevertObjectAllParameterSet", "Click to revert all parameters of this object to prefab's default value.")
 					)
@@ -157,7 +164,12 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 					PropertyCustomizationHelpers::MakeUseSelectedButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
 							PrefabHelperObject->ApplyPrefabOverride(DataItem.Object.Get(), FilteredMemeberPropertyNames);
-							AfterApplyPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
+							// Resolve the asset first: RefreshDataContent() re-derives PrefabHelperObject
+							// from the current selection and can leave it null, and the delegate argument
+							// below reads through it.
+							ULexUIPrefab* Asset = PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get());
+							RefreshDataContent();
+							AfterApplyPrefab.ExecuteIfBound(Asset);
 						})
 						, LOCTEXT("ApplyObjectParameterSet", "Click to apply all parameters of this object to prefab's default value.")
 					)
@@ -252,7 +264,7 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 				[
 					SNew(SButton)
 					.Text(LOCTEXT("RevertAll", "Revert All"))
-					.ToolTipText(LOCTEXT("RevertAll_Tooltip", "Revert all overrides"))
+					.ToolTipText(LOCTEXT("RevertAll_Tooltip", "Revert all overrides of this instance, including the root widget's transform - unlike Apply All, this one does move the instance"))
 					.OnClicked_Lambda([=, this](){
 						PrefabHelperObject->RevertAllPrefabOverride(RootObject);
 						AfterRevertPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(RootObject));

@@ -178,24 +178,49 @@ FReply SLexWidgetEditorHierarchyView::OnDrop(const FGeometry& MyGeometry, const 
 	}
 	return FReply::Unhandled();
 }
+bool LexWidgetHierarchyRename::CanRename(const ULexWidget* Widget, bool bLockedInDesigner)
+{
+	return IsValid(Widget) && !bLockedInDesigner;
+}
 bool SLexWidgetEditorHierarchyView::CanRename() const
 {
 	auto SelectedItems = WidgetTreeView->GetSelectedItems();
 	if (SelectedItems.Num() == 1)
 	{
-		auto ItemWidget = StaticCastSharedPtr<SLexWidgetEditorHierarchyViewItem>(WidgetTreeView->WidgetFromItem(SelectedItems[0]));
-		return ItemWidget->CanRename();
+		auto Widget = SelectedItems[0].Get();
+		return LexWidgetHierarchyRename::CanRename(Widget, Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget));
 	}
 	return false;
 }
 void SLexWidgetEditorHierarchyView::BeginRename()
 {
 	auto SelectedItems = WidgetTreeView->GetSelectedItems();
-	if (SelectedItems.Num() == 1)
+	if (SelectedItems.Num() != 1)return;
+	if (!CanRename())return;
+	auto Item = SelectedItems[0];
+	if (auto ItemWidget = StaticCastSharedPtr<SLexWidgetEditorHierarchyViewItem>(WidgetTreeView->WidgetFromItem(Item)))
 	{
-		auto ItemWidget = StaticCastSharedPtr<SLexWidgetEditorHierarchyViewItem>(WidgetTreeView->WidgetFromItem(SelectedItems[0]));
 		ItemWidget->RequestEditName();
+		return;
 	}
+	// The row is virtualized away, so there is no edit box to enter yet. Scrolling to it builds one,
+	// but not before this tick is over -- which is the case F2 on a selection applied from the
+	// viewport lands in. Expand first: a row under a collapsed parent is not in the tree's item
+	// list at all, so the scroll request is dropped and the retry finds nothing either.
+	for (ULexWidget* Ancestor = Item.IsValid() ? Item->GetParent() : nullptr; Ancestor != nullptr; Ancestor = Ancestor->GetParent())
+	{
+		WidgetTreeView->SetItemExpansion(Ancestor, true);
+	}
+	WidgetTreeView->RequestScrollIntoView(Item);
+	ULexUIManagerObject::AddOneShotTickFunction([WeakSelf = TWeakPtr<SLexWidgetEditorHierarchyView>(SharedThis(this)), Item]()
+	{
+		auto Self = WeakSelf.Pin();
+		if (!Self.IsValid() || !Item.IsValid())return;
+		if (auto ItemWidget = StaticCastSharedPtr<SLexWidgetEditorHierarchyViewItem>(Self->WidgetTreeView->WidgetFromItem(Item)))
+		{
+			ItemWidget->RequestEditName();
+		}
+	}, 1);
 }
 TWeakObjectPtr<ULexWidget> SLexWidgetEditorHierarchyView::SetSelectionByNodeObject(ULexWidget* Element)
 {
@@ -221,10 +246,23 @@ TWeakObjectPtr<ULexWidget> SLexWidgetEditorHierarchyView::SetSelectionByNodeObje
 		}
 	};
 	
-	if (auto FoundItem = LOCAL::RecursiveSearch(Element, RootWidgets[0].Get()))
+	// Every root hierarchy, not just the first -- and there may be none at all, which used to index
+	// past the end of an empty array.
+	for (auto& RootWidget : RootWidgets)
 	{
-		WidgetTreeView->SetSelection(FoundItem);
-		return FoundItem;
+		if (!RootWidget.IsValid())continue;
+		// RecursiveSearch only ever descends into children, so a root could never match itself --
+		// selecting the prefab root from anywhere outside the tree silently did nothing.
+		if (RootWidget.Get() == Element)
+		{
+			WidgetTreeView->SetSelection(Element);
+			return Element;
+		}
+		if (auto FoundItem = LOCAL::RecursiveSearch(Element, RootWidget.Get()))
+		{
+			WidgetTreeView->SetSelection(FoundItem);
+			return FoundItem;
+		}
 	}
 	return nullptr;
 }
@@ -340,6 +378,12 @@ void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
 						Widget = Widget->GetParent();
 					}
 				}
+
+				// This selection came from somewhere else -- a viewport click, Find References, undo
+				// -- so the tree is still scrolled wherever the user left it. Expanding the ancestors
+				// only makes the row exist; it does not bring it on screen, and a row off screen is
+				// not generated at all.
+				WidgetTreeView->RequestScrollIntoView(SelectedItems[0]);
 			}
 		}
 	}

@@ -22,6 +22,7 @@
 #include "LexUIBehaviourEditorBackend.h"
 #include "Misc/PackageName.h"
 #include "UObject/Package.h"
+#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabBehaviourUtils"
 
@@ -436,6 +437,12 @@ FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const F
 	// parameterless fallback stores ParamType=Empty so IsStillSupported accepts it at runtime
 	const ELexUIEventDelegateParameterType BindingParamType = bUseNativeParameter ? ParamType : ELexUIEventDelegateParameterType::Empty;
 	LiveEvent->AddFunctionBinding(InRootWidget, BehaviourComp, HandlerName, BindingParamType, bUseNativeParameter);
+	// Modify() records the value for undo, not for the writer. An object inside a sub-prefab
+	// instance serializes nothing but its collected overrides, and the helper collects one only
+	// from a property-changed notification -- the same one the details panel raises when a
+	// designer wires this event by hand. Without it the node survives the save and the binding
+	// does not.
+	FLexUIUtils::NotifyPropertyChanged(InEvent.Component, InEvent.EventProperty);
 
 	OutMessage = FText::Format(LOCTEXT("AddEventSuccess", "{0}.{1} -> {2}.{3} ({4})")
 		, FText::FromString(InEvent.Component->GetName()), FText::FromString(InEvent.DisplayName)
@@ -455,6 +462,24 @@ static ULexWidget* OwnerWidgetOfBoundValue(UObject* InValue)
 	return nullptr;
 }
 
+void CollectSubPrefabWidgets(ULexUIPrefab* InPrefab, TSet<const ULexWidget*>& OutSubPrefabWidgets)
+{
+	OutSubPrefabWidgets.Reset();
+	if (!IsValid(InPrefab)) return;
+	ULexUIPrefabHelperObject* Helper = InPrefab->GetPrefabHelperObject();
+	if (Helper == nullptr) return;
+	for (const auto& SubPrefabPair : Helper->SubPrefabMap)
+	{
+		for (const auto& GuidToObjectPair : SubPrefabPair.Value.MapGuidToObject)
+		{
+			if (const ULexWidget* SubPrefabWidget = Cast<ULexWidget>(GuidToObjectPair.Value))
+			{
+				OutSubPrefabWidgets.Add(SubPrefabWidget);
+			}
+		}
+	}
+}
+
 void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArray<FString>& OutBoundDetails,
 	TArray<FString>& OutProblems, bool bPerformAutoBind)
 {
@@ -465,29 +490,10 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 	// Flatten the subtree and index widgets by their sanitized display name (the same key
 	// PromoteToVariable / MakeVariableNameForTarget mint variables from). Names collect into
 	// arrays so duplicates surface as ambiguity instead of an arbitrary silent pick.
-	// Widgets living inside a sub-prefab instance are NOT referenceable from this prefab: the
-	// writer only emits a reference when the target is in WillSerializeWidgetArray, which excludes
-	// every sub-prefab widget -- the sub-prefab root included (WidgetSerializer_Serialize.cpp
-	// CollectWidgetRecursive, FLexUIObjectWriter::SerializeObject). Binding one would report
-	// success here and then come back null after save, exactly the failure this pass exists to
-	// prevent, so they are kept out of the candidate index and reported instead.
+	// Sub-prefab widgets are kept out of the candidate index and reported instead: the writer
+	// cannot reference them, so binding one would report success and come back null after save.
 	TSet<const ULexWidget*> SubPrefabWidgets;
-	if (IsValid(InPrefab))
-	{
-		if (ULexUIPrefabHelperObject* Helper = InPrefab->GetPrefabHelperObject())
-		{
-			for (const auto& SubPrefabPair : Helper->SubPrefabMap)
-			{
-				for (const auto& GuidToObjectPair : SubPrefabPair.Value.MapGuidToObject)
-				{
-					if (const ULexWidget* SubPrefabWidget = Cast<ULexWidget>(GuidToObjectPair.Value))
-					{
-						SubPrefabWidgets.Add(SubPrefabWidget);
-					}
-				}
-			}
-		}
-	}
+	CollectSubPrefabWidgets(InPrefab, SubPrefabWidgets);
 
 	TArray<ULexWidget*> Subtree;
 	TMap<FString, TArray<ULexWidget*>> NameToWidgets;

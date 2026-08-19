@@ -27,7 +27,7 @@ public:
 	virtual void OnMouseLeave(const FPointerEvent& MouseEvent) override;
 	// End SWidget
 	void RequestEditName();
-	bool CanRename();
+	bool CanRename() const;
 private:
 	TOptional<EItemDropZone> HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem);
 	FReply HandleAcceptDrop(FDragDropEvent const& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem);

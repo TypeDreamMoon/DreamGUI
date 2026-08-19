@@ -44,8 +44,12 @@ private:
 	void BuildWidgetReferenceSection(UClass* BehaviourClass, ULexUIBehaviour* Primary);
 	void BuildProvidesSection(UClass* BehaviourClass);
 	void BuildSelectedWidgetSection();
-	/** Type-compatible bind targets under the loaded root for a widget/visual/behaviour property. */
-	void CollectBindCandidates(FObjectProperty* Property, TArray<TPair<UObject*, FString>>& OutCandidates) const;
+	/**
+	 * Type-compatible bind targets under the loaded root for a widget/visual/behaviour property.
+	 * Sub-prefab widgets are counted into OutSubPrefabSkipped rather than offered: the prefab
+	 * writer cannot reference them, so the automatic pass refuses them too.
+	 */
+	void CollectBindCandidates(FObjectProperty* Property, TArray<TPair<UObject*, FString>>& OutCandidates, int32& OutSubPrefabSkipped) const;
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 	TWeakObjectPtr<ULexUIPrefab> PrefabWeak;

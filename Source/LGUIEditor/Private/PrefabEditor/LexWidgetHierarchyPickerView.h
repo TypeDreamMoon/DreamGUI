@@ -34,6 +34,17 @@ struct FLexWidgetHierarchyPickerView_DataItem
 	}
 };
 
+/**
+ * One data item per root hierarchy, each carrying the objects of InObjectClass that can be picked
+ * under it.
+ *
+ * Every root gets walked, not only the first. A root whose ValidObjectArray stayed empty is drawn as
+ * a disabled leaf with no expander, so before this took a list, nothing living in a second hierarchy
+ * could be bound at all.
+ */
+void LexWidgetHierarchyPicker_BuildRoots(const TArray<ULexWidget*>& InRootWidgets, UClass* InObjectClass
+	, TArray<TSharedPtr<FLexWidgetHierarchyPickerView_DataItem>>& OutRoots);
+
 DECLARE_DELEGATE_OneParam(FOnSelectItem, UObject*);
 
 class SLexWidgetHierarchyPickerView : public SCompoundWidget
@@ -56,7 +67,7 @@ public:
 
 	void RefreshImmediately();
 
-	void RecursiveExpand(DataType Model);
+	void RecursiveExpand(DataType Model, bool bInExpansionState);
 	void SetItemExpansionRecursive(DataType Model, bool bInExpansionState);
 private:
 	/** Rebuilds the tree structure based on the current filter options */

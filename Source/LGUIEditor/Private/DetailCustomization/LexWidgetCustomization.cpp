@@ -1111,19 +1111,40 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	}
 }
 
+void FLexWidgetCustomization::CaptureAnchorOffsets(const TArray<TWeakObjectPtr<ULexWidget>>& Widgets, TArray<FMargin>& OutAnchorOffsets)
+{
+	OutAnchorOffsets.Reset();
+	OutAnchorOffsets.AddDefaulted(Widgets.Num());
+	for (int i = 0; i < Widgets.Num(); i++)
+	{
+		if (!Widgets[i].IsValid())continue;
+		OutAnchorOffsets[i].Left = Widgets[i]->GetAnchorOffsetLeft();
+		OutAnchorOffsets[i].Top = Widgets[i]->GetAnchorOffsetTop();
+		OutAnchorOffsets[i].Right = Widgets[i]->GetAnchorOffsetRight();
+		OutAnchorOffsets[i].Bottom = Widgets[i]->GetAnchorOffsetBottom();
+	}
+}
+void FLexWidgetCustomization::RestoreAnchorOffsets(const TArray<TWeakObjectPtr<ULexWidget>>& Widgets, const TArray<FMargin>& AnchorOffsets)
+{
+	//nothing was captured for this selection, and replaying another selection's rects would move them
+	if (AnchorOffsets.Num() != Widgets.Num())return;
+	for (int i = 0; i < Widgets.Num(); i++)
+	{
+		if (!Widgets[i].IsValid())continue;
+		Widgets[i]->SetAnchorOffsetLeft(AnchorOffsets[i].Left);
+		Widgets[i]->SetAnchorOffsetTop(AnchorOffsets[i].Top);
+		Widgets[i]->SetAnchorOffsetRight(AnchorOffsets[i].Right);
+		Widgets[i]->SetAnchorOffsetBottom(AnchorOffsets[i].Bottom);
+	}
+}
 void FLexWidgetCustomization::OnPrePivotChange(TSharedPtr<IPropertyHandle> PivotPH)
 {
-	AnchorOffset.Left = TargetScriptArray[0]->GetAnchorOffsetLeft();
-	AnchorOffset.Top = TargetScriptArray[0]->GetAnchorOffsetTop();
-	AnchorOffset.Right = TargetScriptArray[0]->GetAnchorOffsetRight();
-	AnchorOffset.Bottom = TargetScriptArray[0]->GetAnchorOffsetBottom();
+	//the pivot write lands on the whole selection, so every widget needs its own rect remembered
+	CaptureAnchorOffsets(TargetScriptArray, AnchorOffsetArray);
 }
 void FLexWidgetCustomization::OnPivotChanged(TSharedPtr<IPropertyHandle> PivotPH)
 {
-	TargetScriptArray[0]->SetAnchorOffsetLeft(AnchorOffset.Left);
-	TargetScriptArray[0]->SetAnchorOffsetTop(AnchorOffset.Top);
-	TargetScriptArray[0]->SetAnchorOffsetRight(AnchorOffset.Right);
-	TargetScriptArray[0]->SetAnchorOffsetBottom(AnchorOffset.Bottom);
+	RestoreAnchorOffsets(TargetScriptArray, AnchorOffsetArray);
 }
 
 FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle)
@@ -1386,14 +1407,22 @@ TSharedPtr<IPropertyHandle> FLexWidgetCustomization::GetAnchorPropertyHandle(IDe
 	return nullptr;
 }
 
+void FLexWidgetCustomization::GetAnchorMinMaxForDisplay(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, FVector2D& OutAnchorMin, FVector2D& OutAnchorMax)const
+{
+	//GetValue leaves a component it cannot agree on untouched, so seed it with the primary selection's own anchors
+	const auto& PrimaryAnchorData = TargetScriptArray[0]->GetAnchorData();
+	OutAnchorMin = PrimaryAnchorData.AnchorMin;
+	OutAnchorMax = PrimaryAnchorData.AnchorMax;
+	AnchorMinHandle->GetValue(OutAnchorMin);
+	AnchorMaxHandle->GetValue(OutAnchorMax);
+}
+
 FText FLexWidgetCustomization::GetHAlignText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FText();
 
-	FVector2D AnchorMinValue;
-	AnchorMinHandle->GetValue(AnchorMinValue);
-	FVector2D AnchorMaxValue;
-	AnchorMaxHandle->GetValue(AnchorMaxValue);
+	FVector2D AnchorMinValue, AnchorMaxValue;
+	GetAnchorMinMaxForDisplay(AnchorMinHandle, AnchorMaxHandle, AnchorMinValue, AnchorMaxValue);
 
 	if (AnchorMinValue.X == AnchorMaxValue.X)
 	{
@@ -1427,10 +1456,8 @@ FText FLexWidgetCustomization::GetVAlignText(TSharedRef<IPropertyHandle> AnchorM
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FText();
 
-	FVector2D AnchorMinValue;
-	AnchorMinHandle->GetValue(AnchorMinValue);
-	FVector2D AnchorMaxValue;
-	AnchorMaxHandle->GetValue(AnchorMaxValue);
+	FVector2D AnchorMinValue, AnchorMaxValue;
+	GetAnchorMinMaxForDisplay(AnchorMinHandle, AnchorMaxHandle, AnchorMinValue, AnchorMaxValue);
 
 	if (AnchorMinValue.Y == AnchorMaxValue.Y)
 	{
@@ -1465,10 +1492,8 @@ FText FLexWidgetCustomization::GetAnchorLabelText(TSharedRef<IPropertyHandle> An
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FText();
 
-	FVector2D AnchorMinValue;
-	AnchorMinHandle->GetValue(AnchorMinValue);
-	FVector2D AnchorMaxValue;
-	AnchorMaxHandle->GetValue(AnchorMaxValue);
+	FVector2D AnchorMinValue, AnchorMaxValue;
+	GetAnchorMinMaxForDisplay(AnchorMinHandle, AnchorMaxHandle, AnchorMinValue, AnchorMaxValue);
 
 	switch (LabelIndex)
 	{
@@ -1528,10 +1553,8 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FText();
 
-	FVector2D AnchorMinValue;
-	AnchorMinHandle->GetValue(AnchorMinValue);
-	FVector2D AnchorMaxValue;
-	AnchorMaxHandle->GetValue(AnchorMaxValue);
+	FVector2D AnchorMinValue, AnchorMaxValue;
+	GetAnchorMinMaxForDisplay(AnchorMinHandle, AnchorMaxHandle, AnchorMinValue, AnchorMaxValue);
 
 	switch (LabelTooltipIndex)
 	{
@@ -1587,10 +1610,8 @@ LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FLexWidgetCustomization::GetAnc
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign::None;
 
-	FVector2D AnchorMinValue;
-	AnchorMinHandle->GetValue(AnchorMinValue);
-	FVector2D AnchorMaxValue;
-	AnchorMaxHandle->GetValue(AnchorMaxValue);
+	FVector2D AnchorMinValue, AnchorMaxValue;
+	GetAnchorMinMaxForDisplay(AnchorMinHandle, AnchorMaxHandle, AnchorMinValue, AnchorMaxValue);
 
 	LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign AnchorHAlign = LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign::None;
 	if (AnchorMinValue.X == AnchorMaxValue.X)
@@ -1618,10 +1639,8 @@ LGUIAnchorPreviewWidget::UIAnchorVerticalAlign FLexWidgetCustomization::GetAncho
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return LGUIAnchorPreviewWidget::UIAnchorVerticalAlign::None;
 
-	FVector2D AnchorMinValue;
-	AnchorMinHandle->GetValue(AnchorMinValue);
-	FVector2D AnchorMaxValue;
-	AnchorMaxHandle->GetValue(AnchorMaxValue);
+	FVector2D AnchorMinValue, AnchorMaxValue;
+	GetAnchorMinMaxForDisplay(AnchorMinHandle, AnchorMaxHandle, AnchorMinValue, AnchorMaxValue);
 
 	LGUIAnchorPreviewWidget::UIAnchorVerticalAlign AnchorVAlign = LGUIAnchorPreviewWidget::UIAnchorVerticalAlign::None;
 	if (AnchorMinValue.Y == AnchorMaxValue.Y)
@@ -2093,95 +2112,70 @@ TOptional<float> FLexWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHan
 	break;
 	}
 }
-void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex, bool Commited)
+void FLexWidgetCustomization::ApplyAnchorValueToWidgets(const TArray<TWeakObjectPtr<ULexWidget>>& Widgets, float Value, int AnchorValueIndex)
 {
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return;
-
-	auto AnchorMinHandle = AnchorHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIAnchorData, AnchorMin));
-	auto AnchorMaxHandle = AnchorHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIAnchorData, AnchorMax));
-	auto AnchoredPositionHandle = AnchorHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIAnchorData, AnchoredPosition));
-	auto SizeDeltaHandle = AnchorHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIAnchorData, SizeDelta));
-
-	FVector2D AnchorMinValue;
-	AnchorMinHandle->GetValue(AnchorMinValue);
-	FVector2D AnchorMaxValue;
-	AnchorMaxHandle->GetValue(AnchorMaxValue);
-	
-	switch (AnchorValueIndex)
+	for (auto& Item : Widgets)
 	{
-	case 0://anchored position x, stretch left
-	{
-		if (AnchorMinValue.X == AnchorMaxValue.X)
+		if (!Item.IsValid())continue;
+		//the property handle answers MultipleValues for a mixed selection, so the stretched-or-not question is asked of each widget
+		switch (AnchorValueIndex)
 		{
-			for (auto& Item : TargetScriptArray)
+		case 0://anchored position x, stretch left
+		{
+			if (Item->GetAnchorData().IsHorizontalStretched())
+			{
+				Item->SetAnchorOffsetLeft(Value);
+			}
+			else
 			{
 				Item->SetHorizontalAnchoredPosition(Value);
 			}
 		}
-		else
+		break;
+		case 1://anchored position y, stretch top
 		{
-			for (auto& Item : TargetScriptArray)
+			if (Item->GetAnchorData().IsVerticalStretched())
 			{
-				Item->SetAnchorOffsetLeft(Value);
+				Item->SetAnchorOffsetTop(Value);
 			}
-		}
-	}
-	break;
-	case 1://anchored position y, stretch top
-	{
-		if (AnchorMinValue.Y == AnchorMaxValue.Y)
-		{
-			for (auto& Item : TargetScriptArray)
+			else
 			{
 				Item->SetVerticalAnchoredPosition(Value);
 			}
 		}
-		else
+		break;
+		case 2://width, stretch right
 		{
-			for (auto& Item : TargetScriptArray)
+			if (Item->GetAnchorData().IsHorizontalStretched())
 			{
-				Item->SetAnchorOffsetTop(Value);
+				Item->SetAnchorOffsetRight(Value);
 			}
-		}
-	}
-	break;
-	case 2://width, stretch right
-	{
-		if (AnchorMinValue.X == AnchorMaxValue.X)
-		{
-			for (auto& Item : TargetScriptArray)
+			else
 			{
 				Item->SetWidth(Value);
 			}
 		}
-		else
+		break;
+		case 3://height, stretch bottom
 		{
-			for (auto& Item : TargetScriptArray)
+			if (Item->GetAnchorData().IsVerticalStretched())
 			{
-				Item->SetAnchorOffsetRight(Value);
+				Item->SetAnchorOffsetBottom(Value);
 			}
-		}
-	}
-	break;
-	case 3://height, stretch bottom
-	{
-		if (AnchorMinValue.Y == AnchorMaxValue.Y)
-		{
-			for (auto& Item : TargetScriptArray)
+			else
 			{
 				Item->SetHeight(Value);
 			}
 		}
-		else
-		{
-			for (auto& Item : TargetScriptArray)
-			{
-				Item->SetAnchorOffsetBottom(Value);
-			}
+		break;
 		}
 	}
-	break;
-	}
+}
+void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex, bool Commited)
+{
+	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return;
+
+	ApplyAnchorValueToWidgets(TargetScriptArray, Value, AnchorValueIndex);
 
 	GUnrealEd->UpdatePivotLocationForSelection();
 	GUnrealEd->SetPivotMovedIndependently(false);

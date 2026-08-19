@@ -13,6 +13,7 @@ class ULexVisual;
 class ULexWidget;
 class FLexUIPrefabEditor;
 class ULexUIPrefab;
+struct FLexLayoutControlAnchorData;
 
 /** Viewport client for editor viewports. Contains common functionality for camera movement, rendering debug information, etc. */
 class FLexUIPrefabEditorViewportClient : public FEditorViewportClient
@@ -112,6 +113,12 @@ public:
 
 	bool FocusViewportToTargets();
 	TSharedPtr<FLexUIPrefabEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
+	/**
+	 * Which of a widget's own axes something else is deciding: its parent's container, plus its own
+	 * layout-self. Free of any viewport state so the handle policy can be tested directly.
+	 */
+	static FLexLayoutControlAnchorData GetEffectiveLayoutControl(const ULexWidget* InWidget);
+
 	/** World-space pick ray through a viewport pixel. */
 	bool ComputePickRay(int32 PixelX, int32 PixelY, FVector& OutLineStart, FVector& OutLineEnd);
 	ULexWidget* GetWidgetUnderCursor(int32 PixelX, int32 PixelY, bool bRespectDesignerLock = true);
@@ -172,6 +179,10 @@ private:
 	EDesignerHandle HitTestDesignerHandle(const FVector2D& PixelPosition) const;
 	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;
 	void DrawWidgetScreenOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas, const FLinearColor& Color, float Thickness = 1.0f) const;
+	/** Outline + name of whatever the cursor is over, so a click's target is knowable before it happens. */
+	void DrawHoverOutline(FSceneView& View, FCanvas& Canvas) const;
+	/** Resolve the hovered widget from the last mouse pixel. Once per frame, not once per move event. */
+	void UpdateHoveredWidget();
 	void DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	/**
 	 * Draw where the selection actually lands in the shipped image, computed with the canvas's own
@@ -204,6 +215,9 @@ private:
 	int IndexOfClickSelectUI = INDEX_NONE;
 	TUniquePtr<class FLexUITransformWidget> TransformWidget = nullptr;
 	TWeakObjectPtr<ULexWidget> PaletteDropPreviewWidget;
+	TWeakObjectPtr<ULexWidget> HoveredWidget;
+	FIntPoint HoverPixel = FIntPoint::ZeroValue;
+	bool bHoverPixelDirty = false;
 	FDelegateHandle OnSelectionChangedDelegateHandle;
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;

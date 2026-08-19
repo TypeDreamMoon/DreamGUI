@@ -34,6 +34,8 @@ class FComponentTransformDetails : public TSharedFromThis<FComponentTransformDet
 {
 public:
 	FComponentTransformDetails( const TArray< TWeakObjectPtr<ULexWidget> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, IDetailLayoutBuilder& DetailBuilder );
+	/** The layout builder is only ever asked for the notify hook, so callers that have no details panel can pass one straight in. */
+	FComponentTransformDetails( const TArray< TWeakObjectPtr<ULexWidget> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, FNotifyHook* InNotifyHook );
 
 	/**
 	 * Caches the representation of the actor transform for the user input boxes                   
@@ -248,4 +250,10 @@ private:
 	bool bEditingRotationInUI;
 	/** Flag to indicate we are currently performing a slider transaction */
 	bool bIsSliderTransaction;
+
+#if WITH_DEV_AUTOMATION_TESTS
+	// What a multi-select edit writes to each object is decided inside OnSetTransform, and nothing
+	// outside a live details panel can reach it.
+	friend struct FLexTransformDetailsTestAccess;
+#endif
 };

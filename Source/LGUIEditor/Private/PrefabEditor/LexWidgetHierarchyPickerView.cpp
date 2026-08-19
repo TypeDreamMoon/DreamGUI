@@ -69,12 +69,60 @@ void SLexWidgetHierarchyPickerView::RefreshImmediately()
 	RefreshTree();
 	UpdateItemsExpansionFromModel();
 }
+namespace
+{
+	void CollectValidObjectsRecursive(TSharedPtr<FLexWidgetHierarchyPickerView_DataItem> InParent, UClass* InObjectClass)
+	{
+		if (InParent->Widget->IsA(InObjectClass))
+		{
+			InParent->ValidObjectArray.Add(InParent->Widget);
+			InParent->bContainsValidObject = true;
+		}
+
+		ForEachObjectWithOuter(InParent->Widget.Get(), [=](UObject* SubObject)
+		{
+			if (SubObject->IsA(InObjectClass))
+			{
+				InParent->ValidObjectArray.Add(SubObject);
+				InParent->bContainsValidObject = true;
+			}
+		});
+
+		auto WidgetChildren = InParent->Widget->GetChildren();
+		for (int i = 0; i < WidgetChildren.Num(); i++)
+		{
+			auto ChildWidget = WidgetChildren[i];
+			auto ChildData = MakeShared<FLexWidgetHierarchyPickerView_DataItem>(ChildWidget->GetDisplayName(), ChildWidget);
+			CollectValidObjectsRecursive(ChildData, InObjectClass);
+			if (ChildData->bContainsValidObject)
+			{
+				InParent->bContainsValidObject = true;
+				InParent->Children.Add(ChildData);
+			}
+		}
+	}
+}
+
+void LexWidgetHierarchyPicker_BuildRoots(const TArray<ULexWidget*>& InRootWidgets, UClass* InObjectClass
+	, TArray<TSharedPtr<FLexWidgetHierarchyPickerView_DataItem>>& OutRoots)
+{
+	OutRoots.Reset();
+	if (InObjectClass == nullptr)return;
+	for (ULexWidget* RootWidget : InRootWidgets)
+	{
+		if (!IsValid(RootWidget))continue;
+		auto RootData = MakeShared<FLexWidgetHierarchyPickerView_DataItem>(RootWidget->GetDisplayName(), RootWidget);
+		CollectValidObjectsRecursive(RootData, InObjectClass);
+		OutRoots.Add(RootData);
+	}
+}
+
 void SLexWidgetHierarchyPickerView::RefreshTree()
 {
-	RootWidgets.Empty();
+	TArray<ULexWidget*> Roots;
 	if (SpecificRootWidget)
 	{
-		RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(SpecificRootWidget->GetDisplayName(), SpecificRootWidget));
+		Roots.Add(SpecificRootWidget);
 	}
 	else
 	{
@@ -84,46 +132,17 @@ void SLexWidgetHierarchyPickerView::RefreshTree()
 			{
 				if (Widget->IsRootWidgetInHierarchy())
 				{
-					RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Widget->GetDisplayName(), Widget));
+					Roots.Add(Widget);
 				}
 			}
 		}
 	}
 
-	struct LOCAL
-	{
-		static void CollectChildren(DataType InParent, UClass* InObjectClass)
-		{
-			if (InParent->Widget->IsA(InObjectClass))
-			{
-				InParent->ValidObjectArray.Add(InParent->Widget);
-				InParent->bContainsValidObject = true;
-			}
-			
-			ForEachObjectWithOuter(InParent->Widget.Get(), [=](UObject* SubObject)
-			{
-				if (SubObject->IsA(InObjectClass))
-				{
-					InParent->ValidObjectArray.Add(SubObject);
-					InParent->bContainsValidObject = true;
-				}
-			});
-
-			auto WidgetChildren = InParent->Widget->GetChildren();
-			for (int i = 0; i < WidgetChildren.Num(); i++)
-			{
-				auto ChildWidget = WidgetChildren[i];
-				auto ChildData = MakeShared<FLexWidgetHierarchyPickerView_DataItem>(ChildWidget->GetDisplayName(), ChildWidget);
-				CollectChildren(ChildData, InObjectClass);
-				if (ChildData->bContainsValidObject)
-				{
-					InParent->bContainsValidObject = true;
-					InParent->Children.Add(ChildData);
-				}
-			}
-		}
-	};
-	LOCAL::CollectChildren(RootWidgets[0], ObjectClass);
+	// A picker opened on a world holding no LexUI root is a legitimate state -- the first Tick used
+	// to reach for RootWidgets[0] and assert instead of showing an empty tree. BuildRoots resets
+	// the output and is a no-op on an empty input, so that case needs no branch of its own; giving
+	// it one only put the empty path somewhere the helper's tests could not reach.
+	LexWidgetHierarchyPicker_BuildRoots(Roots, ObjectClass, RootWidgets);
 
 	FilterHandler->RefreshAndFilterTree();
 }
@@ -193,23 +212,25 @@ void SLexWidgetHierarchyPickerView::UpdateItemsExpansionFromModel()
 {
 	for (auto Widget: RootWidgets)
 	{
-		RecursiveExpand(Widget);
+		RecursiveExpand(Widget, true);
 	}
 }
-void SLexWidgetHierarchyPickerView::RecursiveExpand(DataType Model)
+void SLexWidgetHierarchyPickerView::RecursiveExpand(DataType Model, bool bInExpansionState)
 {
-	WidgetTreeView->SetItemExpansion(Model, true);
+	WidgetTreeView->SetItemExpansion(Model, bInExpansionState);
 
 	for (auto Child: Model->Children)
 	{
-		RecursiveExpand(Child);
+		RecursiveExpand(Child, bInExpansionState);
 	}
 }
 void SLexWidgetHierarchyPickerView::SetItemExpansionRecursive(DataType Model, bool bInExpansionState)
 {
 	if (Model.IsValid())
 	{
-		RecursiveExpand(Model);
+		// Shift-click asks for a state, not for "expand": ignoring it left a deep subtree here with
+		// no way to collapse again, which is the behaviour the main outliner already gets right.
+		RecursiveExpand(Model, bInExpansionState);
 	}
 }
 #undef LOCTEXT_NAMESPACE

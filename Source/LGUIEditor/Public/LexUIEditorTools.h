@@ -32,6 +32,15 @@ public:
 	static void CreateUIControls(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath);
 	static ULexWidget* CreateWidgetAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
 	static ULexWidget* CreateUIControlsAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(class ULexWidget*)> Callback = nullptr);
+	/**
+	 * Instantiate a prefab under the selection and keep it linked to its source asset, the way a
+	 * Content Browser drop does. CreateUIControls flattens instead, which is only what the plugin's
+	 * own preset recipes want -- a project asset dropped that way loses every override and every
+	 * route back to the thing it came from.
+	 */
+	static ULexWidget* CreateSubPrefabAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(class ULexWidget*)> Callback = nullptr);
+	/** Reject self-nesting, cyclic nesting and prefab versions too old to deserialize. */
+	static bool CanNestPrefabUnderWidget(ULexUIPrefab* InPrefab, ULexWidget* InParentWidget, FText& OutError);
 	static void CreateRegisteredControl(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FName ControlName);
 	static ULexWidget* CreateRegisteredControlAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FName ControlName, TFunction<void(class ULexWidget*)> Callback = nullptr);
 	static void DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
@@ -61,6 +70,19 @@ public:
 	static void CleanupPrefabs();
 	static bool IsWidgetCompatibleWithLexUIToolsMenu(ULexWidget* InWidget);
 
-	static TMap<FString, TWeakObjectPtr<ULexUIPrefab>> CopiedWidgetPrefabMap;//map ActorLabel to prefab
+	/**
+	 * One entry per copied widget, in selection order.
+	 *
+	 * This used to be keyed by display name, so two copied widgets sharing a name collapsed into one
+	 * and pasted as one, silently. Sub-prefab children collide by construction --
+	 * EnsureUniqueWidgetDisplayNames deliberately skips them -- so the name is a naming hint for
+	 * paste and nothing more; it must never decide how many widgets there are.
+	 */
+	struct FCopiedWidgetPrefab
+	{
+		FString DisplayName;
+		TWeakObjectPtr<ULexUIPrefab> Prefab;
+	};
+	static TArray<FCopiedWidgetPrefab> CopiedWidgetPrefabList;
 	static bool HaveValidCopiedWidgets();
 };

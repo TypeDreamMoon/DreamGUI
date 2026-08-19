@@ -7,6 +7,7 @@
 #include "Misc/MessageDialog.h"
 #include "DesktopPlatformModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetRegistry/IAssetRegistry.h"
 #include "Widgets/SViewport.h"
 #include "Engine/Selection.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -87,7 +88,7 @@ struct FLexUIEditorToolsHelperFunctionHolder
 	}
 };
 
-TMap<FString, TWeakObjectPtr<ULexUIPrefab>> FLexUIEditorTools::CopiedWidgetPrefabMap;
+TArray<FLexUIEditorTools::FCopiedWidgetPrefab> FLexUIEditorTools::CopiedWidgetPrefabList;
 
 FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 
@@ -116,6 +117,41 @@ namespace
 			InChild->SetFlags(RF_Public | RF_Transactional);
 			InChild->Modify();
 		}
+	}
+
+	/**
+	 * Could InCandidatePackage reach InTargetPackage on disk?
+	 *
+	 * Asking the loaded prefab whether it nests another one is not free -- ULexUIPrefab answers it by
+	 * building a preview scene for itself -- and every palette click would pay that. Nesting implies
+	 * a package reference, so walk the target's referencers, which number in the handful, rather than
+	 * the candidate's dependency closure, which does not. A registry that cannot answer says yes, so
+	 * the authoritative check still runs.
+	 */
+	bool MayReferencePackage(FName InCandidatePackage, FName InTargetPackage)
+	{
+		if (InCandidatePackage == InTargetPackage)return true;
+		IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+		// A registry still scanning returns partial or empty referencers, which reads exactly like
+		// "no path exists" -- and this prefilter's whole contract is that a registry which cannot
+		// answer says yes, so the authoritative check downstream still runs.
+		if (AssetRegistry == nullptr || AssetRegistry->IsLoadingAssets())return true;
+		TSet<FName> Visited;
+		TArray<FName> Pending;
+		Pending.Add(InTargetPackage);
+		while (Pending.Num() > 0)
+		{
+			TArray<FName> Referencers;
+			AssetRegistry->GetReferencers(Pending.Pop(), Referencers, UE::AssetRegistry::EDependencyCategory::Package);
+			for (FName Referencer : Referencers)
+			{
+				if (Referencer == InCandidatePackage)return true;
+				bool bAlreadyKnown = false;
+				Visited.Add(Referencer, &bAlreadyKnown);
+				if (!bAlreadyKnown)Pending.Add(Referencer);
+			}
+		}
+		return false;
 	}
 }
 
@@ -231,8 +267,18 @@ void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetF
 ULexWidget* FLexUIEditorTools::CreateWidgetAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
 {
 	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return nullptr;
-	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return nullptr;
+	// Every one of these refusals used to be silent, so a palette double-click with nothing selected
+	// looked like a broken panel rather than a missing parent.
+	if (SelectedWidget == nullptr)
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Cannot create widget '%s': no parent widget is selected."), *Name);
+		return nullptr;
+	}
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Cannot create widget '%s': widget '%s' is not a valid parent."), *Name, *SelectedWidget->GetDisplayName());
+		return nullptr;
+	}
 	if (!SelectedWidget->CanAcceptAdditionalChildren())
 	{
 		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot accept another child."), *SelectedWidget->GetDisplayName());
@@ -280,36 +326,144 @@ void FLexUIEditorTools::CreateUIControls(TFunction<ULexWidget*()> GetSelectedWid
 ULexWidget* FLexUIEditorTools::CreateUIControlsAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(ULexWidget*)> Callback)
 {
 	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return nullptr;
-	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return nullptr;
+	if (SelectedWidget == nullptr)
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Cannot create prefab '%s': no parent widget is selected."), *InPrefabPath);
+		return nullptr;
+	}
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Cannot create prefab '%s': widget '%s' is not a valid parent."), *InPrefabPath, *SelectedWidget->GetDisplayName());
+		return nullptr;
+	}
 	if (!SelectedWidget->CanAcceptAdditionalChildren())
 	{
 		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot accept another child prefab."), *SelectedWidget->GetDisplayName());
 		return nullptr;
 	}
+	auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath);
+	if (Prefab == nullptr)
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InPrefabPath);
+		return nullptr;
+	}
+	// Flattening happens before anything can look at the result, so the nesting guard has to run
+	// ahead of the transaction rather than as a dialog on the way out.
+	FText NestError;
+	if (!CanNestPrefabUnderWidget(Prefab, SelectedWidget, NestError))
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("Cannot create prefab '%s': %s"), *InPrefabPath, *NestError.ToString());
+		return nullptr;
+	}
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	ModifyForHierarchyChange(SelectedWidget);
-	ULexWidget* CreatedWidget = nullptr;
-	if (auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath))
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
-		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-		{
-			PrefabHelperObject->Modify();
-			PrefabHelperObject->SetAnythingDirty();
-		}
-		CreatedWidget = Prefab->LoadPrefabInEditor(SelectedWidget->GetWorld()
-			, SelectedWidget->GetOuter()
-			, SelectedWidget);
-		if (Callback)Callback(CreatedWidget);
-		EnsureUniqueWidgetDisplayNames(FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(CreatedWidget));
-		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
-		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(CreatedWidget);
+		PrefabHelperObject->Modify();
+		PrefabHelperObject->SetAnythingDirty();
 	}
-	else
+	auto CreatedWidget = Prefab->LoadPrefabInEditor(SelectedWidget->GetWorld()
+		, SelectedWidget->GetOuter()
+		, SelectedWidget);
+	if (Callback)Callback(CreatedWidget);
+	EnsureUniqueWidgetDisplayNames(FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(CreatedWidget));
+	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
+	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(CreatedWidget);
+	return CreatedWidget;
+}
+
+bool FLexUIEditorTools::CanNestPrefabUnderWidget(ULexUIPrefab* InPrefab, ULexWidget* InParentWidget, FText& OutError)
+{
+	if (!IsValid(InPrefab))
 	{
-		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InPrefabPath);
+		OutError = LOCTEXT("Nest_MissingPrefab", "The prefab asset could not be loaded.");
+		return false;
 	}
+	if (InPrefab->PrefabVersion <= (uint16)ELexUIPrefabVersion::OldVersion)
+	{
+		OutError = LOCTEXT("Nest_UnsupportOldPrefabVersion", "Target prefab's version is too old! Please make it newer: open the prefab and hit \"Save\" button.");
+		return false;
+	}
+	// The prefab the parent belongs to is the one being edited. Putting it inside itself -- directly,
+	// or through a prefab that already contains it -- is what makes Apply bake a second copy in, so
+	// every repeat doubles the asset.
+	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(InParentWidget);
+	if (!IsValid(PrefabHelperObject) || !IsValid(PrefabHelperObject->PrefabAsset))return true;
+	if (PrefabHelperObject->PrefabAsset == InPrefab)
+	{
+		OutError = LOCTEXT("Nest_SelfPrefabAsSubPrefab", "Target prefab is the one being edited; self cannot be self's child!");
+		return false;
+	}
+	if (MayReferencePackage(InPrefab->GetOutermost()->GetFName(), PrefabHelperObject->PrefabAsset->GetOutermost()->GetFName())
+		&& InPrefab->IsPrefabBelongsToThisSubPrefab(PrefabHelperObject->PrefabAsset, true))
+	{
+		OutError = LOCTEXT("Nest_EndlessNestedPrefab", "Target prefab has this prefab as a child prefab, which will result in cyclic nested prefab!");
+		return false;
+	}
+	return true;
+}
+
+ULexWidget* FLexUIEditorTools::CreateSubPrefabAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(ULexWidget*)> Callback)
+{
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Cannot add sub prefab '%s': no parent widget is selected."), *InPrefabPath);
+		return nullptr;
+	}
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Cannot add sub prefab '%s': widget '%s' is not a valid parent."), *InPrefabPath, *SelectedWidget->GetDisplayName());
+		return nullptr;
+	}
+	if (!SelectedWidget->CanAcceptAdditionalChildren())
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot accept another child prefab."), *SelectedWidget->GetDisplayName());
+		return nullptr;
+	}
+	auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath);
+	if (Prefab == nullptr)
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load prefab error! Path:%s"), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InPrefabPath);
+		return nullptr;
+	}
+	FText NestError;
+	if (!CanNestPrefabUnderWidget(Prefab, SelectedWidget, NestError))
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("Cannot add sub prefab '%s': %s"), *InPrefabPath, *NestError.ToString());
+		return nullptr;
+	}
+	// Without a helper object there is nowhere to record the link, and recording it is the entire
+	// difference between this and CreateUIControlsAndReturn.
+	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
+	if (!IsValid(PrefabHelperObject))
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("Cannot add sub prefab '%s': widget '%s' does not belong to a prefab."), *InPrefabPath, *SelectedWidget->GetDisplayName());
+		return nullptr;
+	}
+	const FScopedTransaction Transaction(LOCTEXT("CreateSubPrefab_Transaction", "LexUI Create Sub Prefab"));
+	auto World = SelectedWidget->GetWorld();
+	ULexUISelection::GetInstance(World)->Modify();
+	ModifyForHierarchyChange(SelectedWidget);
+	PrefabHelperObject->Modify();
+	PrefabHelperObject->SetAnythingDirty();
+	TMap<FGuid, TObjectPtr<UObject>> SubPrefabMapGuidToObject;
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubSubPrefabMap;
+	auto CreatedWidget = Prefab->LoadPrefabWithExistingObjects(World
+		, SelectedWidget->GetOuter()
+		, SelectedWidget
+		, SubPrefabMapGuidToObject, SubSubPrefabMap);
+	if (!IsValid(CreatedWidget))
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("Sub prefab '%s' produced no root widget."), *InPrefabPath);
+		return nullptr;
+	}
+	PrefabHelperObject->MakePrefabAsSubPrefab(Prefab, CreatedWidget, SubPrefabMapGuidToObject, {});
+	if (Callback)Callback(CreatedWidget);
+	EnsureUniqueWidgetDisplayNames(FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(CreatedWidget));
+	ULexUISelection::GetInstance(World)->SelectNone();
+	ULexUISelection::GetInstance(World)->SelectWidget(CreatedWidget);
 	return CreatedWidget;
 }
 
@@ -500,13 +654,16 @@ void FLexUIEditorTools::CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelected
 		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
 		return;
 	}
-	for (auto KeyValuePair : CopiedWidgetPrefabMap)
+	for (auto& CopiedItem : CopiedWidgetPrefabList)
 	{
-		KeyValuePair.Value->RemoveFromRoot();
-		KeyValuePair.Value->ConditionalBeginDestroy();
+		if (CopiedItem.Prefab.IsValid())
+		{
+			CopiedItem.Prefab->RemoveFromRoot();
+			CopiedItem.Prefab->ConditionalBeginDestroy();
+		}
 	}
 	auto CopyWidgetList = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
-	CopiedWidgetPrefabMap.Reset();
+	CopiedWidgetPrefabList.Reset();
 	for (auto Widget : CopyWidgetList)
 	{
 		auto Prefab = NewObject<ULexUIPrefab>();
@@ -576,7 +733,7 @@ void FLexUIEditorTools::CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelected
 			}
 		}
 		Prefab->SavePrefab(Widget, MapObjectToGuid, TempSubPrefabMap);
-		CopiedWidgetPrefabMap.Add(Widget->GetDisplayName(), Prefab);
+		CopiedWidgetPrefabList.Add({ Widget->GetDisplayName(), Prefab });
 	}
 }
 void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
@@ -591,9 +748,9 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ParentWidget);
 	if (PrefabHelperObject == nullptr)return;
 	int32 PasteCount = 0;
-	for (const TPair<FString, TWeakObjectPtr<ULexUIPrefab>>& Pair : CopiedWidgetPrefabMap)
+	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
 	{
-		PasteCount += Pair.Value.IsValid() ? 1 : 0;
+		PasteCount += CopiedItem.Prefab.IsValid() ? 1 : 0;
 	}
 	if (!ParentWidget->CanAcceptAdditionalChildren(PasteCount))
 	{
@@ -608,14 +765,14 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 	ModifyForHierarchyChange(ParentWidget);
 	if (IsValid(PrefabHelperObject))PrefabHelperObject->Modify();
 	ULexUISelection::GetInstance(World)->SelectNone();
-	for (auto KeyValuePair : CopiedWidgetPrefabMap)
+	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
 	{
-		if (KeyValuePair.Value.IsValid())
+		if (CopiedItem.Prefab.IsValid())
 		{
 			TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
 			TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> LoadedSubPrefabMap;
-			auto CopiedWidgetName = MakeUniqueWidgetDisplayName(ParentWidget, KeyValuePair.Key);
-			auto CopiedWidget = KeyValuePair.Value->LoadPrefabInEditor(ParentWidget->GetWorld(), ParentWidget->GetOuter(), ParentWidget, LoadedSubPrefabMap, OutMapGuidToObject, false);
+			auto CopiedWidgetName = MakeUniqueWidgetDisplayName(ParentWidget, CopiedItem.DisplayName);
+			auto CopiedWidget = CopiedItem.Prefab->LoadPrefabInEditor(ParentWidget->GetWorld(), ParentWidget->GetOuter(), ParentWidget, LoadedSubPrefabMap, OutMapGuidToObject, false);
 			for (auto& KeyValue : LoadedSubPrefabMap)
 			{
 				TMap<FGuid, TObjectPtr<UObject>> SubMapGuidToObject;
@@ -705,14 +862,14 @@ bool FLexUIEditorTools::CanCopyWidget(TFunction<TArray<ULexWidget*>()> GetSelect
 }
 bool FLexUIEditorTools::CanPasteWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	if (FLexUIEditorTools::CopiedWidgetPrefabMap.Num() == 0)return false;
+	if (FLexUIEditorTools::CopiedWidgetPrefabList.Num() == 0)return false;
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return false;
 	if (!FLexUIEditorTools::IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
 	int32 PasteCount = 0;
-	for (const TPair<FString, TWeakObjectPtr<ULexUIPrefab>>& Pair : CopiedWidgetPrefabMap)
+	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
 	{
-		PasteCount += Pair.Value.IsValid() ? 1 : 0;
+		PasteCount += CopiedItem.Prefab.IsValid() ? 1 : 0;
 	}
 	if (!SelectedWidget->CanAcceptAdditionalChildren(PasteCount))return false;
 	return true;
@@ -741,10 +898,10 @@ bool FLexUIEditorTools::CanDeleteWidget(TFunction<TArray<ULexWidget*>()> GetSele
 
 bool FLexUIEditorTools::HaveValidCopiedWidgets()
 {
-	if (CopiedWidgetPrefabMap.Num() == 0)return false;
-	for (auto KeyValuePair : CopiedWidgetPrefabMap)
+	if (CopiedWidgetPrefabList.Num() == 0)return false;
+	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
 	{
-		if (!KeyValuePair.Value.IsValid())
+		if (!CopiedItem.Prefab.IsValid())
 		{
 			return false;
 		}

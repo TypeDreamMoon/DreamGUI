@@ -12,6 +12,20 @@
 class FLexUIPrefabEditor;
 class ULexWidget;
 
+/**
+ * Whether the hierarchy may rename a widget, asked of the model rather than of the row showing it.
+ *
+ * The row is the wrong place to ask: STableViewBase::WidgetFromItem hands back a null TSharedPtr for
+ * a row the tree has not generated, and the Rename command polls its FCanExecuteAction whenever the
+ * command state is evaluated -- long before the user has scrolled that row into view. Keeping the
+ * policy on the model is also what stops the row's inline edit box and the command from disagreeing
+ * about the designer lock.
+ */
+namespace LexWidgetHierarchyRename
+{
+	bool CanRename(const ULexWidget* Widget, bool bLockedInDesigner);
+}
+
 class SLexWidgetEditorHierarchyView : public SCompoundWidget
 {
 public:

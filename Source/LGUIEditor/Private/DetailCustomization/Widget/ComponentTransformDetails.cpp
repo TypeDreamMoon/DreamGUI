@@ -84,10 +84,15 @@ static USceneComponent* GetSceneComponentFromDetailsObject(UObject* InObject)
 }
 
 FComponentTransformDetails::FComponentTransformDetails( const TArray< TWeakObjectPtr<ULexWidget> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, IDetailLayoutBuilder& DetailBuilder )
+	: FComponentTransformDetails( InSelectedObjects, InSelectedActorInfo, DetailBuilder.GetPropertyUtilities()->GetNotifyHook() )
+{
+}
+
+FComponentTransformDetails::FComponentTransformDetails( const TArray< TWeakObjectPtr<ULexWidget> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, FNotifyHook* InNotifyHook )
 	: TNumericUnitTypeInterface(GetDefault<UEditorProjectAppearanceSettings>()->bDisplayUnitsOnComponentTransforms ? EUnit::Centimeters : EUnit::Unspecified)
 	, SelectedActorInfo( InSelectedActorInfo )
 	, SelectedObjects( InSelectedObjects )
-	, NotifyHook( DetailBuilder.GetPropertyUtilities()->GetNotifyHook() )
+	, NotifyHook( InNotifyHook )
 	, bPreserveScaleRatio( false )
 	, bEditingRotationInUI( false )
 {
@@ -766,8 +771,11 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 					break;
 				}
 
-				//NewComponentValue = GetAxisFilteredVector(Axis, NewValue, OldComponentValue);
-				NewComponentValue = NewValue;
+				// NewValue is one whole vector, recomposed once from SelectedObjects[0] with the edited axis
+				// substituted, so only the edited axes may be taken from it. Writing it wholesale stamps the
+				// first selection's other two axes onto every other widget, and for a parented widget that
+				// lands in serialized anchor data via CalculateAnchorFromTransform.
+				NewComponentValue = GetAxisFilteredVector(Axis, NewValue, OldComponentValue);
 
 				// If we're committing during a rotation edit then we need to force it
 				if (OldComponentValue != NewComponentValue || (bCommitted && bEditingRotationInUI))

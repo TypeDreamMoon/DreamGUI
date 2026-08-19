@@ -541,9 +541,11 @@ void SLexWidgetEditorHierarchyViewItem::RequestEditName()
 {
 	EditBox->EnterEditingMode();
 }
-bool SLexWidgetEditorHierarchyViewItem::CanRename()
+bool SLexWidgetEditorHierarchyViewItem::CanRename() const
 {
-	return true;
+	// The same policy the Rename command asks, so a lock the drag and the drop already honour cannot
+	// be walked around by typing over the name instead.
+	return LexWidgetHierarchyRename::CanRename(Widget.Get(), Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get()));
 }
 
 TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
@@ -737,7 +739,7 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetVisibilityIconColorAndOpacity(
 
 bool SLexWidgetEditorHierarchyViewItem::IsReadOnly() const
 {
-	return false;
+	return !CanRename();
 }
 void SLexWidgetEditorHierarchyViewItem::OnBeginNameTextEdit()
 {

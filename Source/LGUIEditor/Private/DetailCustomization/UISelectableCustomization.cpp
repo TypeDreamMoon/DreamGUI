@@ -12,6 +12,17 @@
 
 #define LOCTEXT_NAMESPACE "UISelectableCustomization"
 
+namespace UISelectableCustomizationLocal
+{
+	/** Explicit is the mode that reveals extra rows, so a selection whose modes disagree must not be read as Explicit. */
+	EUISelectableNavigationMode ReadNavigationMode(TSharedRef<IPropertyHandle> NavigationHandle)
+	{
+		EUISelectableNavigationMode Value = EUISelectableNavigationMode::None;
+		if (NavigationHandle->GetValue(*(uint8*)&Value) != FPropertyAccess::Success)return EUISelectableNavigationMode::None;
+		return Value;
+	}
+}
+
 TSharedRef<IDetailCustomization> FUISelectableCustomization::MakeInstance()
 {
 	return MakeShareable(new FUISelectableCustomization);
@@ -49,12 +60,13 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition));
 	CustomTransition_PH->GetValue(*(UObject**)&TargetTweenComp);
 
-	uint8 TransitionType;
-	Transition_PH->GetValue(TransitionType);
+	uint8 TransitionType = (uint8)(EUISelectableTransitionType::None);
+	//a selection that mixes transition types has no rows to agree on, so it falls into the branch that leaves only the header
+	bool bIsSingleTransitionType = Transition_PH->GetValue(TransitionType) == FPropertyAccess::Success;
 	TArray<FName> NeedToHidePropertyNamesForTransition;
 	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), Transition_PH->GetPropertyDisplayName());
 	TransitionGroup.HeaderProperty(Transition_PH);
-	if (TransitionType == (uint8)(EUISelectableTransitionType::None))
+	if (!bIsSingleTransitionType || TransitionType == (uint8)(EUISelectableTransitionType::None))
 	{
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, TransitionTarget));
 
@@ -144,19 +156,14 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	auto navigationPrevHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationPrev));
 	auto navigationNextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationNext));
 	
-	EUISelectableNavigationMode tempEnumValue;
-	navigationLeftHandle->GetValue(*(uint8*)&tempEnumValue);
+	auto navigationLeftValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationLeftHandle);
 	navigationLeftHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationLeftValue = tempEnumValue;
-	navigationRightHandle->GetValue(*(uint8*)&tempEnumValue);
+	auto navigationRightValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationRightHandle);
 	navigationRightHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationRightValue = tempEnumValue;
-	navigationUpHandle->GetValue(*(uint8*)&tempEnumValue);
+	auto navigationUpValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationUpHandle);
 	navigationUpHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationUpValue = tempEnumValue;
-	navigationDownHandle->GetValue(*(uint8*)&tempEnumValue);
+	auto navigationDownValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationDownHandle);
 	navigationDownHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationDownValue = tempEnumValue;
 
 	NavigationCategory.AddProperty(navigationLeftHandle);
 	if (navigationLeftValue == EUISelectableNavigationMode::Explicit)
@@ -179,12 +186,10 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		FLexUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationDownSpecific)));
 	}
 
-	navigationNextHandle->GetValue(*(uint8*)&tempEnumValue);
+	auto navigationNextValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationNextHandle);
 	navigationNextHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationNextValue = (EUISelectableNavigationMode)tempEnumValue;
-	navigationPrevHandle->GetValue(*(uint8*)&tempEnumValue);
+	auto navigationPrevValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationPrevHandle);
 	navigationPrevHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationPrevValue = (EUISelectableNavigationMode)tempEnumValue;
 	NavigationCategory.AddProperty(navigationPrevHandle);
 	if (navigationPrevValue == EUISelectableNavigationMode::Explicit)
 	{

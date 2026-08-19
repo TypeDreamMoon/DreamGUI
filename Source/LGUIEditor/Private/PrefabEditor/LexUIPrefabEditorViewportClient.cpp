@@ -1108,16 +1108,29 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 	{
 		DesignerScreenCorners = SingleCorners;
 		ULexWidget* SelectedWidget = Selected[0];
-		const bool bLayoutControlled = SelectedWidget->GetParent() && SelectedWidget->GetParent()->GetLayoutContainer();
-		if (!bLayoutControlled)
+		// "The parent has a layout container" is not the same as "the parent owns this child's
+		// size". A CanvasPanel arranges its children and writes their size only when the slot says
+		// Auto Size, so suppressing every handle for every child of every panel took the handles
+		// away from the one panel whose children you resize by hand. Ask per axis instead; UMG's
+		// rule is the same shape (STransformHandle::CanResize is a per-slot question).
+		const FLexLayoutControlAnchorData Control = GetEffectiveLayoutControl(SelectedWidget);
+		const bool bWidthFree = !Control.bCanControlHorizontalSize;
+		const bool bHeightFree = !Control.bCanControlVerticalSize;
+		if (bWidthFree && bHeightFree)
 		{
 			DesignerHandlePositions.Add(EDesignerHandle::BottomLeft, SingleCorners[0]);
 			DesignerHandlePositions.Add(EDesignerHandle::BottomRight, SingleCorners[1]);
 			DesignerHandlePositions.Add(EDesignerHandle::TopRight, SingleCorners[2]);
 			DesignerHandlePositions.Add(EDesignerHandle::TopLeft, SingleCorners[3]);
+		}
+		if (bHeightFree)
+		{
 			DesignerHandlePositions.Add(EDesignerHandle::Bottom, (SingleCorners[0] + SingleCorners[1]) * 0.5f);
-			DesignerHandlePositions.Add(EDesignerHandle::Right, (SingleCorners[1] + SingleCorners[2]) * 0.5f);
 			DesignerHandlePositions.Add(EDesignerHandle::Top, (SingleCorners[2] + SingleCorners[3]) * 0.5f);
+		}
+		if (bWidthFree)
+		{
+			DesignerHandlePositions.Add(EDesignerHandle::Right, (SingleCorners[1] + SingleCorners[2]) * 0.5f);
 			DesignerHandlePositions.Add(EDesignerHandle::Left, (SingleCorners[3] + SingleCorners[0]) * 0.5f);
 		}
 		FVector2D PivotPixel;
@@ -1418,6 +1431,7 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 		DrawResolutionGuides(InViewport, View, Canvas);
 	}
 	DrawLayoutDebugOverlay(InViewport, Canvas);
+	DrawHoverOutline(View, Canvas);
 	if (PaletteDropPreviewWidget.IsValid())
 	{
 		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
@@ -1599,6 +1613,7 @@ void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 
 	if (bDesignerDragPending)TryPromoteDesignerDrag();
 	if (bDesignerDragging)UpdateDesignerDrag();
+	UpdateHoveredWidget();
 	if (TransformWidget.IsValid() && IsPerspective())
 	{
 		TransformWidget->Tick();
@@ -2643,6 +2658,26 @@ bool FLexUIPrefabEditorViewportClient::FocusViewportToTargets()
 	return false;
 }
 
+FLexLayoutControlAnchorData FLexUIPrefabEditorViewportClient::GetEffectiveLayoutControl(const ULexWidget* InWidget)
+{
+	FLexLayoutControlAnchorData Control;
+	if (!IsValid(InWidget))return Control;
+	if (ULexWidget* ParentWidget = InWidget->GetParent(); IsValid(ParentWidget))
+	{
+		if (ULexLayoutContainer* ParentLayout = ParentWidget->GetLayoutContainer(); IsValid(ParentLayout))
+		{
+			Control.Or(ParentLayout->GetLayoutControlAnchor(InWidget));
+		}
+	}
+	// A layout-self can claim an axis its parent left alone -- an aspect-ratio widget owns its own
+	// size whether or not anything is arranging it.
+	if (ULexLayoutSelf* SelfLayout = InWidget->GetLayoutSelf(); IsValid(SelfLayout))
+	{
+		Control.Or(SelfLayout->GetLayoutControlAnchor(InWidget));
+	}
+	return Control;
+}
+
 bool FLexUIPrefabEditorViewportClient::ComputePickRay(int32 PixelX, int32 PixelY, FVector& OutLineStart, FVector& OutLineEnd)
 {
 	if (!Viewport || !GetWorld())return false;
@@ -3068,10 +3103,57 @@ void FLexUIPrefabEditorViewportClient::MouseMove(FViewport* InViewport, int32 x,
 		PrevMouseX = x;
 		PrevMouseY = y;
 	}
+	// Record the pixel and resolve it in Tick. Several move events can arrive per frame and each
+	// resolve builds a scene view, so answering here would pay for hover several times a frame.
+	HoverPixel = FIntPoint(x, y);
+	bHoverPixelDirty = true;
 	FEditorViewportClient::MouseMove(InViewport, x, y);
+}
+
+void FLexUIPrefabEditorViewportClient::UpdateHoveredWidget()
+{
+	if (!bHoverPixelDirty)return;
+	bHoverPixelDirty = false;
+	// Nothing is "under the cursor" while the cursor is dragging something; the drag owns it.
+	if (bDesignerDragging || bDesignerDragPending)
+	{
+		HoveredWidget.Reset();
+		return;
+	}
+	HoveredWidget = GetWidgetUnderCursor(HoverPixel.X, HoverPixel.Y);
+}
+
+void FLexUIPrefabEditorViewportClient::DrawHoverOutline(FSceneView& View, FCanvas& Canvas) const
+{
+	ULexWidget* HoverTarget = HoveredWidget.Get();
+	if (!IsValid(HoverTarget))return;
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	if (!Editor.IsValid())return;
+	// A selected widget already has an outline; a second one over it would only say "still here".
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : Editor->GetSelectedWidgets())
+	{
+		if (WeakWidget.Get() == HoverTarget)return;
+	}
+
+	const FLinearColor HoverColor(0.35f, 0.75f, 1.0f, 0.9f);
+	DrawWidgetScreenOutline(HoverTarget, View, Canvas, HoverColor, 1.0f);
+
+	// The name matters more here than anywhere else in this editor: every widget is a ULexWidget,
+	// so the tree cannot tell you what you are pointing at and neither can the drawing.
+	const float Left = -HoverTarget->GetPivot().X * HoverTarget->GetWidth();
+	const float Top = (1.0f - HoverTarget->GetPivot().Y) * HoverTarget->GetHeight();
+	FVector2D LabelPixel;
+	if (!LexWorldToPixelInFront(View, HoverTarget->GetWorldTransform().TransformPosition(FVector(0, Left, Top)), LabelPixel))return;
+	LabelPixel /= Canvas.GetDPIScale();
+	FCanvasTextItem Label(FVector2D(LabelPixel.X, LabelPixel.Y - 14.0f),
+		FText::FromString(HoverTarget->GetDisplayName()), GEngine->GetSmallFont(), HoverColor);
+	Label.EnableShadow(FLinearColor::Black);
+	Canvas.DrawItem(Label);
 }
 void FLexUIPrefabEditorViewportClient::MouseLeave(FViewport* InViewport)
 {
+	HoveredWidget.Reset();
+	bHoverPixelDirty = false;
 	FEditorViewportClient::MouseLeave(InViewport);
 }
 

@@ -392,12 +392,17 @@ bool FLexUIControlRegistry::Validate(const FLexUIControlDescriptor& Descriptor, 
 			return false;
 		}
 		TArray<FAssetData> PackageAssets;
-		IAssetRegistry::GetChecked().GetAssetsByPackageName(FName(Descriptor.PrefabPath), PackageAssets, true);
+		IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
+		AssetRegistry.GetAssetsByPackageName(FName(Descriptor.PrefabPath), PackageAssets, true);
 		const bool bContainsPrefab = PackageAssets.ContainsByPredicate([](const FAssetData& Asset)
 		{
 			return Asset.AssetClassPath == ULexUIPrefab::StaticClass()->GetClassPathName();
 		});
-		if (!bContainsPrefab)
+		// A registry that has not finished scanning knows nothing about the package's contents, and
+		// answering "wrong type" to a question it cannot answer yet disabled every prefab-backed
+		// control for the rest of the session. The package exists on disk; that is all we can say
+		// until OnFilesLoaded, which the Palette re-validates on.
+		if (!bContainsPrefab && !AssetRegistry.IsLoadingAssets())
 		{
 			OutError = FText::Format(LOCTEXT("WrongPrefabType", "Control resource is not a LexUI Prefab: {0}"), FText::FromString(Descriptor.PrefabPath));
 			return false;

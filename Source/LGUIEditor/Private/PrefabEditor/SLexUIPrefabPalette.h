@@ -29,6 +29,8 @@ public:
 	bool bSetDefaultSprite = false;
 	TSharedPtr<FLexUIControlDescriptor> NativeDescriptor;
 	FString PrefabPath;
+	/** Project assets stay linked to their source; only the plugin's own recipes are flattened. */
+	bool bLinkedSubPrefab = false;
 	FString DisplayName;
 
 	/**
@@ -57,15 +59,17 @@ public:
 
 	virtual ~SLexUIPrefabPalette() override;
 	void Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor);
+	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
 private:
 	/** How a palette item creates its element. */
 	enum class EItemKind : uint8
 	{
-		Category,   // header
-		BasicWidget,// ULexWidget + optional Visual class (VisualClass, may be null)
-		Prefab,     // instantiate a prefab by path (built-in control OR project asset)
-		Native,     // registry recipe (layout/behaviour/optional factory)
+		Category,     // header
+		BasicWidget,  // ULexWidget + optional Visual class (VisualClass, may be null)
+		Prefab,       // flatten a built-in /LGUI/Prefabs/ recipe by path
+		ProjectPrefab,// instantiate a project asset and keep it linked as a sub-prefab
+		Native,       // registry recipe (layout/behaviour/optional factory)
 	};
 
 	struct FPaletteItem
@@ -96,6 +100,19 @@ private:
 	FReply OnItemDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, FItemPtr InItem);
 	void OnSearchTextChanged(const FText& InText);
 
+	/**
+	 * Coalesce asset-registry churn into one rebuild.
+	 *
+	 * The list used to be built once per editor instance, so a prefab created after the panel opened
+	 * never showed up and a deleted one stayed until it was clicked. A cold registry was worse: every
+	 * prefab-backed control failed validation and stayed greyed out for the whole session, because
+	 * nothing ever asked again.
+	 */
+	void RequestRebuild();
+	void HandlePrefabAssetChanged(const FAssetData& InAssetData);
+	void HandlePrefabAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath);
+	void HandleAssetRegistryFilesLoaded();
+
 	/** Create InItem's element under the editor's selected widget (no-op if nothing selected). */
 	void CreateItem(FItemPtr InItem);
 	/** The editor's first selected widget, or null -- the parent for created elements. */
@@ -106,4 +123,10 @@ private:
 	TArray<FItemPtr> RootItems;
 	FTextFilterExpressionEvaluator SearchFilter{ ETextFilterExpressionEvaluatorMode::BasicString };
 	FDelegateHandle RegistryChangedHandle;
+	FDelegateHandle AssetAddedHandle;
+	FDelegateHandle AssetRemovedHandle;
+	FDelegateHandle AssetRenamedHandle;
+	FDelegateHandle FilesLoadedHandle;
+	bool bRebuildRequested = false;
+	double NextRebuildTime = 0.0;
 };

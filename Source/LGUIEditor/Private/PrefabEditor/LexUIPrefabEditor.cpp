@@ -1109,6 +1109,19 @@ void FLexUIPrefabEditor::RemovePrimaryBehaviour()
 void FLexUIPrefabEditor::PromoteToBehaviourVariable(UObject* InTarget)
 {
 	if (InTarget == nullptr)return;
+	// The refusal belongs here rather than on the panel: the behaviour viewer's button is one of two
+	// ways in, and the hierarchy's "Promote to Behaviour Variable" context entry reaches this
+	// function without passing any sub-prefab check. This prefab serializes references only to
+	// widgets it owns, so a variable promoted onto a borrowed one comes back null after a save --
+	// which is also why AutoBindAndValidate refuses these targets on its own pass.
+	if (ULexWidget* TargetWidget = Cast<ULexWidget>(InTarget); TargetWidget != nullptr && WidgetBelongsToSubPrefab(TargetWidget))
+	{
+		FNotificationInfo Info(LOCTEXT("PromoteInsideSubPrefab", "Open the sub prefab to promote a widget it owns; a variable bound here would be empty after a save."));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 7.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
 	if (GetEffectiveBehaviourClass() == nullptr && GetOrCreateBehaviourBlueprint() == nullptr)return;
 	ULexUIBehaviour* PrimaryBehaviour = GetPrimaryBehaviour();
 	TSharedPtr<ILexUIBehaviourEditorBackend> Backend = GetBehaviourEditorBackend();

@@ -8,6 +8,7 @@
 #include "SLexUIPrefabPalette.h"
 #include "Core/LexUIManager.h"
 #include "Framework/Application/SlateApplication.h"
+#include "DragAndDrop/AssetDragDropOp.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewport"
 
@@ -100,6 +101,16 @@ FReply SLexUIPrefabEditorViewport::OnDragOver(const FGeometry& MyGeometry, const
 		EditorViewportClient->SetPaletteDropPreview(Target);
 		return Target ? FReply::Handled() : FReply::Unhandled();
 	}
+	// A prefab dragged from the Content Browser used to fall straight through to SEditorViewport,
+	// which knows nothing about widgets -- no preview, no cursor feedback, no refusal. The
+	// hierarchy tree accepted the same drag, so the design surface was the odd one out.
+	if (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid() && EditorViewportClient.IsValid())
+	{
+		const FIntPoint Pixel = LexUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		ULexWidget* Target = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
+		EditorViewportClient->SetPaletteDropPreview(Target);
+		return Target ? FReply::Handled() : FReply::Unhandled();
+	}
 	return SEditorViewport::OnDragOver(MyGeometry, DragDropEvent);
 }
 
@@ -127,6 +138,20 @@ FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDr
 			EditorViewportClient->Invalidate();
 			return FReply::Handled();
 		}
+	}
+	if (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid())
+	{
+		TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
+		const FIntPoint Pixel = LexUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		ULexWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
+		EditorViewportClient->ClearPaletteDropPreview();
+		if (!Parent)return FReply::Unhandled();
+		// The same entry point the hierarchy row uses, so a Content-Browser prefab becomes a linked
+		// sub-prefab here too -- with its cyclic, self-nesting and version guards intact.
+		const FReply Reply = Editor->TryHandleAssetDragDropOperation(DragDropEvent, Parent);
+		if (Reply.IsEventHandled())EditorViewportClient->Invalidate();
+		return Reply;
 	}
 	return SEditorViewport::OnDrop(MyGeometry, DragDropEvent);
 }

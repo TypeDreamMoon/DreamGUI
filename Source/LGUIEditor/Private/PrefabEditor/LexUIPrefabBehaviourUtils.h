@@ -28,6 +28,16 @@ namespace LexUIPrefabBehaviourUtils
 	/** BP asset name convention identifying a prefab's companion behaviour ("BP_<PrefabName>"). */
 	FString GetCompanionBlueprintName(ULexUIPrefab* InPrefab);
 
+	/**
+	 * Every widget the loaded prefab hosts on behalf of a sub-prefab instance, its root included.
+	 * The writer emits a reference only when the target is in WillSerializeWidgetArray, which
+	 * excludes exactly this set (WidgetSerializer_Serialize.cpp CollectWidgetRecursive), so a
+	 * binding to one reports success and comes back null after save. Every path that offers bind
+	 * targets -- the save-time pass and the interactive menus alike -- must exclude the same set,
+	 * which is why it is collected here instead of at each of them.
+	 */
+	void CollectSubPrefabWidgets(ULexUIPrefab* InPrefab, TSet<const ULexWidget*>& OutSubPrefabWidgets);
+
 	/** The companion behaviour instance on the root widget (blueprint ULexUIBehaviour named per convention), or null. */
 	ULexUIBehaviour* FindBehaviourComponent(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab);
 	/** The blueprint asset behind FindBehaviourComponent, or null. */

@@ -204,6 +204,15 @@ void SLexUIPrefabOverridesViewer::SelectOverrideObject(UObject* Object)
 	}
 }
 
+void SLexUIPrefabOverridesViewer::RevertOverridesOnObject(ULexUIPrefabHelperObject* InHelper, UObject* InObject, const TArray<FName>& InPropertyNames)
+{
+	if (!IsValid(InHelper) || !IsValid(InObject))
+	{
+		return;
+	}
+	InHelper->RevertPrefabOverride(InObject, InPropertyNames);
+}
+
 void SLexUIPrefabOverridesViewer::Rebuild()
 {
 	using namespace LexUIPrefabOverridesViewerLocal;
@@ -269,7 +278,7 @@ void SLexUIPrefabOverridesViewer::Rebuild()
 	int32 ShownInstances = 0;
 	for (const TPair<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& Pair : Helper->SubPrefabMap)
 	{
-		const ULexWidget* InstanceRoot = Pair.Key.Get();
+		ULexWidget* InstanceRoot = Pair.Key.Get();
 		const FLexUISubPrefabData& Data = Pair.Value;
 		const FString RootName = InstanceRoot ? InstanceRoot->GetDisplayName() : TEXT("<missing root>");
 		const FString AssetName = GetNameSafe(Data.PrefabAsset);
@@ -374,11 +383,7 @@ void SLexUIPrefabOverridesViewer::Rebuild()
 									FUIAction(FExecuteAction::CreateLambda([this, ObjectWeak, PropertyName]()
 									{
 										ULexUIPrefab* LocalPrefab = PrefabWeak.Get();
-										ULexUIPrefabHelperObject* LocalHelper = IsValid(LocalPrefab) ? LocalPrefab->GetPrefabHelperObject() : nullptr;
-										if (LocalHelper && ObjectWeak.IsValid())
-										{
-											LocalHelper->RevertPrefabOverride(ObjectWeak.Get(), { PropertyName });
-										}
+										RevertOverridesOnObject(IsValid(LocalPrefab) ? LocalPrefab->GetPrefabHelperObject() : nullptr, ObjectWeak.Get(), { PropertyName });
 										Rebuild();
 									})));
 							}
@@ -386,16 +391,12 @@ void SLexUIPrefabOverridesViewer::Rebuild()
 							MenuBuilder.BeginSection(NAME_None, LOCTEXT("RevertAllSection", "Whole object"));
 							MenuBuilder.AddMenuEntry(
 								LOCTEXT("RevertAllOnObject", "Revert all on this object"),
-								LOCTEXT("RevertAllOnObjectTip", "Un-pin every property recorded on this object."),
+								LOCTEXT("RevertAllOnObjectTip", "Un-pin every property recorded on this object, and only this object. No other object of the instance is touched."),
 								FSlateIcon(),
-								FUIAction(FExecuteAction::CreateLambda([this, ObjectWeak]()
+								FUIAction(FExecuteAction::CreateLambda([this, ObjectWeak, Names]()
 								{
 									ULexUIPrefab* LocalPrefab = PrefabWeak.Get();
-									ULexUIPrefabHelperObject* LocalHelper = IsValid(LocalPrefab) ? LocalPrefab->GetPrefabHelperObject() : nullptr;
-									if (LocalHelper && ObjectWeak.IsValid())
-									{
-										LocalHelper->RevertAllPrefabOverride(ObjectWeak.Get());
-									}
+									RevertOverridesOnObject(IsValid(LocalPrefab) ? LocalPrefab->GetPrefabHelperObject() : nullptr, ObjectWeak.Get(), Names);
 									Rebuild();
 								})));
 							MenuBuilder.EndSection();
@@ -438,10 +439,39 @@ void SLexUIPrefabOverridesViewer::Rebuild()
 			.Padding(FMargin(8, 4))
 			.HeaderContent()
 			[
-				SNew(STextBlock)
-				.Text(FText::FromString(Header))
-				.Font(IDetailLayoutBuilder::GetDetailFontBold())
-				.ColorAndOpacity(FSlateColor(AccentColor))
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Header))
+					.Font(IDetailLayoutBuilder::GetDetailFontBold())
+					.ColorAndOpacity(FSlateColor(AccentColor))
+				]
+				// The instance-wide revert lives here and nowhere else: it is the only action that
+				// can move the instance, so it has to be named for the whole instance.
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(8, 0, 4, 0)
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("RevertWholeInstance", "Revert whole instance"))
+					.ToolTipText(LOCTEXT("RevertWholeInstanceTip", "Un-pin every property on every object of this instance, INCLUDING the instance root's Relative Location / Rotation / Scale — the instance snaps back to where the sub-prefab asset puts it."))
+					.IsEnabled(InstanceRoot != nullptr)
+					.OnClicked_Lambda([this, RootWeak = TWeakObjectPtr<ULexWidget>(InstanceRoot)]()
+					{
+						ULexUIPrefab* LocalPrefab = PrefabWeak.Get();
+						ULexUIPrefabHelperObject* LocalHelper = IsValid(LocalPrefab) ? LocalPrefab->GetPrefabHelperObject() : nullptr;
+						if (LocalHelper && RootWeak.IsValid())
+						{
+							LocalHelper->RevertAllPrefabOverride(RootWeak.Get());
+						}
+						Rebuild();
+						return FReply::Handled();
+					})
+				]
 			]
 			.BodyContent()
 			[

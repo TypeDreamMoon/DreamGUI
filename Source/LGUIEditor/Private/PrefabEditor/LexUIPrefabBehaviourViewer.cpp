@@ -245,14 +245,19 @@ void SLexUIPrefabBehaviourViewer::RunAutoBind()
 	Rebuild();
 }
 
-void SLexUIPrefabBehaviourViewer::CollectBindCandidates(FObjectProperty* Property, TArray<TPair<UObject*, FString>>& OutCandidates) const
+void SLexUIPrefabBehaviourViewer::CollectBindCandidates(FObjectProperty* Property, TArray<TPair<UObject*, FString>>& OutCandidates, int32& OutSubPrefabSkipped) const
 {
+	OutSubPrefabSkipped = 0;
 	TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
 	ULexWidget* RootWidget = Editor.IsValid() ? Editor->GetLoadedRootWidget() : nullptr;
 	if (!IsValid(RootWidget) || !Property)
 	{
 		return;
 	}
+	// The same set AutoBindAndValidate keeps out of its candidate index: offering these here would
+	// hand the designer exactly the targets the save-time pass refuses, and report success.
+	TSet<const ULexWidget*> SubPrefabWidgets;
+	LexUIPrefabBehaviourUtils::CollectSubPrefabWidgets(PrefabWeak.Get(), SubPrefabWidgets);
 	UClass* TargetClass = Property->PropertyClass;
 	TArray<ULexWidget*> Stack{ RootWidget };
 	while (Stack.Num() > 0)
@@ -262,31 +267,50 @@ void SLexUIPrefabBehaviourViewer::CollectBindCandidates(FObjectProperty* Propert
 		{
 			continue;
 		}
+		// A widget the parent added under a sub-prefab root is its own, so the descent continues
+		// past an excluded widget and every widget is judged on its own membership.
 		for (ULexWidget* Child : Widget->GetChildren())
 		{
 			Stack.Push(Child);
 		}
+		UObject* Candidate = nullptr;
+		FString Label;
 		if (TargetClass->IsChildOf(ULexWidget::StaticClass()))
 		{
 			if (Widget->IsA(TargetClass))
 			{
-				OutCandidates.Emplace(Widget, Widget->GetDisplayName());
+				Candidate = Widget;
+				Label = Widget->GetDisplayName();
 			}
 		}
 		else if (TargetClass->IsChildOf(ULexVisual::StaticClass()))
 		{
 			if (ULexVisual* Visual = Widget->GetVisual(); IsValid(Visual) && Visual->IsA(TargetClass))
 			{
-				OutCandidates.Emplace(Visual, FString::Printf(TEXT("%s · %s"), *Widget->GetDisplayName(), *Visual->GetClass()->GetName()));
+				Candidate = Visual;
+				Label = FString::Printf(TEXT("%s · %s"), *Widget->GetDisplayName(), *Visual->GetClass()->GetName());
 			}
 		}
 		else if (TargetClass->IsChildOf(ULexUIBehaviour::StaticClass()))
 		{
 			if (ULexUIBehaviour* Behaviour = Widget->GetComponent(TargetClass))
 			{
-				OutCandidates.Emplace(Behaviour, FString::Printf(TEXT("%s · %s"), *Widget->GetDisplayName(), *Behaviour->GetClass()->GetName()));
+				Candidate = Behaviour;
+				Label = FString::Printf(TEXT("%s · %s"), *Widget->GetDisplayName(), *Behaviour->GetClass()->GetName());
 			}
 		}
+		if (Candidate == nullptr)
+		{
+			continue;
+		}
+		// Counted, not offered: the menu says how many compatible targets the sub-prefabs hold so
+		// that a missing widget reads as a rule rather than as the panel failing to find it.
+		if (SubPrefabWidgets.Contains(Widget))
+		{
+			OutSubPrefabSkipped++;
+			continue;
+		}
+		OutCandidates.Emplace(Candidate, Label);
 	}
 	// Stable, readable menu order.
 	OutCandidates.Sort([](const TPair<UObject*, FString>& A, const TPair<UObject*, FString>& B) { return A.Value < B.Value; });
@@ -414,7 +438,8 @@ void SLexUIPrefabBehaviourViewer::BuildWidgetReferenceSection(UClass* BehaviourC
 				{
 					FMenuBuilder MenuBuilder(true, nullptr);
 					TArray<TPair<UObject*, FString>> Candidates;
-					CollectBindCandidates(Property, Candidates);
+					int32 SubPrefabSkipped = 0;
+					CollectBindCandidates(Property, Candidates, SubPrefabSkipped);
 					auto AssignValue = [this, Property, PrimaryWeak](UObject* NewValue)
 					{
 						ULexUIBehaviour* LocalPrimary = PrimaryWeak.Get();
@@ -444,10 +469,20 @@ void SLexUIPrefabBehaviourViewer::BuildWidgetReferenceSection(UClass* BehaviourC
 						MenuBuilder.AddMenuEntry(FText::FromString(Candidate.Value), FText::GetEmpty(), FSlateIcon(),
 							FUIAction(FExecuteAction::CreateLambda([AssignValue, Target]() { AssignValue(Target); })));
 					}
-					if (Candidates.Num() == 0)
+					// Only "none at all" when there really are none: with sub-prefab candidates present
+					// this line and the next contradicted each other, and "more" had nothing to be
+					// more than.
+					if (Candidates.Num() == 0 && SubPrefabSkipped == 0)
 					{
 						MenuBuilder.AddMenuEntry(LOCTEXT("NoCandidates", "(no type-compatible widget in this prefab)"),
 							FText::GetEmpty(), FSlateIcon(), FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([]() { return false; })));
+					}
+					if (SubPrefabSkipped > 0)
+					{
+						MenuBuilder.AddMenuEntry(
+							FText::Format(LOCTEXT("SubPrefabCandidatesExcluded", "({0} inside a sub-prefab, not bindable)"), FText::AsNumber(SubPrefabSkipped)),
+							LOCTEXT("SubPrefabCandidatesExcludedTip", "This prefab only serializes references to widgets it owns, so the binding would come back empty after a save. Bind it from the sub-prefab's own behaviour instead."),
+							FSlateIcon(), FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([]() { return false; })));
 					}
 					MenuBuilder.EndSection();
 					MenuBuilder.BeginSection(NAME_None, LOCTEXT("BindClearSection", "Clear"));
@@ -615,6 +650,9 @@ void SLexUIPrefabBehaviourViewer::BuildSelectedWidgetSection()
 	}
 
 	const TWeakObjectPtr<ULexWidget> SelectedWeak = SelectedWidget;
+	// A variable pointing into a sub-prefab is the binding the writer drops and the save-time pass
+	// reports: promoting one would compile a variable that is null in every instance.
+	const bool bSelectionInsideSubPrefab = Editor->WidgetBelongsToSubPrefab(SelectedWidget);
 	Rows->AddSlot().AutoHeight().Padding(4, 2)
 	[
 		SNew(SHorizontalBox)
@@ -624,8 +662,10 @@ void SLexUIPrefabBehaviourViewer::BuildSelectedWidgetSection()
 		[
 			SNew(SButton)
 			.Text(LOCTEXT("PromoteToVariable", "Promote To Variable"))
-			.ToolTipText(LOCTEXT("PromoteToVariableTip", "Add an Instance-Editable variable on the companion behaviour typed to this widget and bind it (UMG \"Is Variable\")."))
-			.IsEnabled(Editor->CanAuthorBehaviour())
+			.ToolTipText(bSelectionInsideSubPrefab
+				? LOCTEXT("PromoteToVariableSubPrefabTip", "This widget belongs to a sub-prefab instance, and this prefab only serializes references to widgets it owns. Open the sub-prefab and promote it on that prefab's own behaviour.")
+				: LOCTEXT("PromoteToVariableTip", "Add an Instance-Editable variable on the companion behaviour typed to this widget and bind it (UMG \"Is Variable\")."))
+			.IsEnabled(Editor->CanAuthorBehaviour() && !bSelectionInsideSubPrefab)
 			.OnClicked_Lambda([this, SelectedWeak]()
 			{
 				if (TSharedPtr<FLexUIPrefabEditor> LocalEditor = PrefabEditorPtr.Pin(); LocalEditor.IsValid() && SelectedWeak.IsValid())

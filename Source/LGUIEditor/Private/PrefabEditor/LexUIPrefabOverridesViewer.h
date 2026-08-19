@@ -34,6 +34,15 @@ public:
 	/** Repopulate from the asset's current SubPrefabMap. */
 	void Rebuild();
 
+	/**
+	 * What a row's Revert menu does: un-pin exactly the properties that row lists, on that row's
+	 * object alone. Deliberately not RevertAllPrefabOverride — that one walks the whole instance
+	 * and ends with RemoveAllMemberPropertyFromSubPrefab(Root, InIncludeRootTransform = true), so
+	 * it also throws away where the user placed the instance. Nothing in a per-object menu should
+	 * be able to do that.
+	 */
+	static void RevertOverridesOnObject(class ULexUIPrefabHelperObject* InHelper, UObject* InObject, const TArray<FName>& InPropertyNames);
+
 private:
 	bool MatchesFilter(const FString& Haystack) const;
 	/** Select the override object in the prefab editor and load it into the embedded details view. */
