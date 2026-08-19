@@ -59,7 +59,7 @@ protected:
 #endif
 
 public:
-	virtual FVector2f GetLayoutPreferredSize() override;
+	virtual FVector2f GetLayoutPreferredSize() const override;
 	virtual bool GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLexLayoutDebugInfo& OutInfo) const override;
 	UFUNCTION(BlueprintCallable, Category = "Panel")
 	void RequestLayoutRefresh();

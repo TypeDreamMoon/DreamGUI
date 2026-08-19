@@ -8,6 +8,7 @@
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIManager.h"
+#include "Tests/LexLayoutInvalidationTestTypes.h"
 #include "Engine/World.h"
 
 /*
@@ -17,9 +18,10 @@
  * was always no, and AspectRatio's FitInParent/EnvelopeParent overwrote the anchored position the
  * container had just written.
  *
- * Both then wrote the same axis every pass with different values, so the layout could not converge: the
- * manager burned all 32 passes and logged the non-convergence error every single frame, and the child
- * ended up parked at the aspect-centred position (0,0 for a default pivot) on top of its siblings.
+ * Measured, not assumed: this does *not* fail to converge. AspectRatio recomputes from the parent's size,
+ * which the pass does not change, so it writes the same value every time and the setter's equality check
+ * absorbs it. It settles - at the wrong answer. The child ends up parked at the aspect-centred position
+ * (0,0 for a default pivot), on top of its siblings, and stays there quietly.
  *
  * The control data is now consulted per axis, so the container places the child and AspectRatio sizes it.
  */
@@ -160,6 +162,68 @@ bool FLexAspectRatioEnvelopeUnderPanelConvergesTest::RunTest(const FString& Para
 		Preferred.X >= Fixture.Root->GetWidth() - 0.01f);
 
 	Fixture.Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexAspectRatioMeasurementDoesNotWriteTest,
+	"LGUI.Layout.AspectRatio.MeasurementDoesNotWriteTheWidget",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexAspectRatioMeasurementDoesNotWriteTest::RunTest(const FString& Parameters)
+{
+	using namespace LexAspectRatioLayoutTestLocal;
+	FScopedTestWorld TestWorld;
+
+	// The parent has no layout container, so nothing else claims an axis. This is exactly the case where
+	// CalculateSize writes both the anchored position and the size - which is what makes it a usable probe
+	// for whether measurement is still secretly running that write pass.
+	ULexWidget* Root = NewObject<ULexWidget>(TestWorld.World);
+	ULexWidget* Child = NewObject<ULexWidget>(Root);
+	Root->SetWidth(400.0f);
+	Root->SetHeight(200.0f);
+	Child->SetWidth(30.0f);
+	Child->SetHeight(90.0f);
+	if (!TestTrue(TEXT("Child parented"), Child->TrySetParent(Root, false)))
+	{
+		return false;
+	}
+	ULexApplyCountingAspectRatio* AspectSelf = Child->CreateNewLayoutSelf<ULexApplyCountingAspectRatio>();
+	if (!TestNotNull(TEXT("AspectRatio created"), AspectSelf))
+	{
+		return false;
+	}
+	AspectSelf->SetAspectRatio(1.0f);
+	AspectSelf->SetAspectRatioType(ELexLayoutAspectRatioType::FitInParent);
+	Root->OnRegister();
+	Child->OnRegister();
+
+	// Looking at the widget cannot tell the two halves apart. AspectRatio re-solves eagerly from
+	// OnDimensionChanged, so it always already sits on its own answer - a redundant write lands on an
+	// equal value and the setter swallows it. Even resizing the parent does not open a gap: that
+	// propagates down and re-solves the child before anything can observe the stale state. So count the
+	// apply pass instead, which is the property in question stated directly.
+	const int32 AppliesBefore = AspectSelf->ApplyCount;
+	const FVector2f Preferred = AspectSelf->GetLayoutPreferredSize();
+
+	// 400x200 parent, ratio 1, fit inside => 200x200. Measuring still has to answer correctly.
+	TestTrue(TEXT("Measurement reports the fitted square"),
+		FMath::IsNearlyEqual(Preferred.X, 200.0f, 0.01f) && FMath::IsNearlyEqual(Preferred.Y, 200.0f, 0.01f));
+
+	// ...and it has to answer without running the write pass. This is the whole point of the split:
+	// GetLayoutPreferredSize used to be CalculateSize() plus a read of the cache it filled.
+	TestEqual(TEXT("Measuring does not run the apply pass"), AspectSelf->ApplyCount, AppliesBefore);
+
+	// The apply half still applies - the split must not have quietly disabled the layout.
+	Child->SetWidth(17.0f);
+	Child->SetHeight(19.0f);
+	AspectSelf->CalculateSize();
+	TestTrue(TEXT("Applying still sizes the widget to the fitted square"),
+		FMath::IsNearlyEqual(static_cast<float>(Child->GetWidth()), 200.0f, 0.01f)
+		&& FMath::IsNearlyEqual(static_cast<float>(Child->GetHeight()), 200.0f, 0.01f));
+	TestTrue(TEXT("...and that did count as an apply"), AspectSelf->ApplyCount > AppliesBefore);
+
+	Root->DestroyWidget();
 	return true;
 }
 

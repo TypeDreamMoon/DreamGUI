@@ -674,7 +674,7 @@ FVector2f ULexPanelLayoutBase::MeasureLayout() const
 	return FVector2f::ZeroVector;
 }
 
-FVector2f ULexPanelLayoutBase::GetLayoutPreferredSize()
+FVector2f ULexPanelLayoutBase::GetLayoutPreferredSize() const
 {
 	const FVector2f Result = MeasureLayout();
 	return FVector2f(LexPanelLayoutLocal::NonNegative(Result.X), LexPanelLayoutLocal::NonNegative(Result.Y));

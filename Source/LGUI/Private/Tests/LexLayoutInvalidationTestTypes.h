@@ -3,7 +3,27 @@
 #pragma once
 
 #include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "LexLayoutInvalidationTestTypes.generated.h"
+
+/**
+ * AspectRatio that counts how many times its apply pass runs.
+ *
+ * Measuring and applying cannot be told apart by looking at the widget: AspectRatio re-solves eagerly from
+ * OnDimensionChanged, so the widget is always already sitting on its own answer and a redundant write is
+ * absorbed by the setters' equality checks. The call count is the observable - GetLayoutPreferredSize used
+ * to reach CalculateSize to produce its number, and that is exactly what must no longer happen.
+ */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class ULexApplyCountingAspectRatio : public ULexLayoutSelfAspectRatio
+{
+	GENERATED_BODY()
+public:
+	/** Times the apply pass ran. */
+	int32 ApplyCount = 0;
+
+	virtual void CalculateSize() override;
+};
 
 /**
  * Overlay that reveals a collapsed widget from inside its own layout pass, one-shot.

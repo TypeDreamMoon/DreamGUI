@@ -4,6 +4,12 @@
 
 #include "Core/Components/LexWidget.h"
 
+void ULexApplyCountingAspectRatio::CalculateSize()
+{
+	++ApplyCount;
+	Super::CalculateSize();
+}
+
 void ULexLayoutVisibilityFlipOverlay::CalculateLayout()
 {
 	Super::CalculateLayout();

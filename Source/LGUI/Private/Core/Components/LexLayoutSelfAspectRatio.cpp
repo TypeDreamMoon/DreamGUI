@@ -39,12 +39,10 @@ namespace LexAspectRatioLocal
 	 * What the parent layout has claimed for this widget, per axis; all-false when there is no parent layout.
 	 *
 	 * This used to be a single "is the parent panel in charge" bool that required all four bits at once,
-	 * and additionally required a panel slot. Nothing satisfied it outside a full panel: a legacy FlexBox
-	 * declares only the two *position* bits (LexLayoutContainerFlexBox.cpp) and hands out no panel slot at
-	 * all, so under FlexBox or Grid the suppression never engaged, and AspectRatio overwrote the position
-	 * the container had just written. Both then rewrote the same axis every pass with different values,
-	 * which is a layout that cannot converge - the manager ran its full 32 passes and logged the
-	 * non-convergence error every frame.
+	 * plus a panel slot. A container that declares only the two *position* bits cannot satisfy that, so the
+	 * suppression never engaged under one and AspectRatio overwrote the position the container had just
+	 * written. It does not oscillate - AspectRatio recomputes from the parent's size, which the pass does
+	 * not change, so it settles quietly on the wrong answer, with the child parked on top of its siblings.
 	 *
 	 * Asking per axis lets the two cooperate the way they always should have: the container places the
 	 * child, AspectRatio sizes it.
@@ -66,14 +64,13 @@ namespace LexAspectRatioLocal
 	}
 }
 
-void ULexLayoutSelfAspectRatio::CalculateSize()
+FLexAspectRatioSolution ULexLayoutSelfAspectRatio::Solve() const
 {
 	SCOPE_CYCLE_COUNTER(STAT_LexLayoutSelfAspectRatio);
-	ULexWidget* Widget = GetWidget();
-	if (!IsValid(Widget) || bIsCalculatingSize) return;
-	TGuardValue<bool> CalculatingGuard(bIsCalculatingSize, true);
+	FLexAspectRatioSolution Out;
+	const ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget)) return Out;
 	const float SafeAspectRatio = LexAspectRatioLocal::SanitizeAspectRatio(AspectRatio);
-	AspectRatio = SafeAspectRatio;
 	const FLexLayoutControlAnchorData ParentControl = LexAspectRatioLocal::GetParentLayoutControl(Widget);
 	// The single-axis modes only ever write their own axis, so they consult exactly that bit. The coupled
 	// modes below write both axes at once - an aspect ratio cannot be expressed one axis at a time - so
@@ -83,7 +80,7 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 		|| ParentControl.bCanControlVerticalPosition;
 	const bool bParentOwnsSize = ParentControl.bCanControlHorizontalSize
 		|| ParentControl.bCanControlVerticalSize;
-	FVector2f PreferredSize(
+	Out.PreferredSize = FVector2f(
 		LexAspectRatioLocal::NonNegativeFinite(Widget->GetWidth()),
 		LexAspectRatioLocal::NonNegativeFinite(Widget->GetHeight()));
 	switch (AspectRatioType)
@@ -95,7 +92,8 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 			if (FMath::Abs(Widget->GetHeight()) >= LexAspectRatioLocal::MinAspectRatio
 				&& FMath::IsFinite(Widget->GetWidth()) && FMath::IsFinite(Widget->GetHeight()))
 			{
-				AspectRatio = LexAspectRatioLocal::SanitizeAspectRatio(
+				Out.bAdoptRatioFromWidget = true;
+				Out.AdoptedRatio = LexAspectRatioLocal::SanitizeAspectRatio(
 					static_cast<double>(Widget->GetWidth()) / Widget->GetHeight());
 			}
 		}
@@ -105,10 +103,11 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 		{
 			const float Width = LexAspectRatioLocal::NonNegativeFloat(
 				static_cast<double>(LexAspectRatioLocal::NonNegativeFinite(Widget->GetHeight())) * SafeAspectRatio);
-			PreferredSize.X = Width;
+			Out.PreferredSize.X = Width;
 			if (!ParentControl.bCanControlHorizontalSize)
 			{
-				Widget->SetWidth(Width);
+				Out.bApplyWidth = true;
+				Out.Width = Width;
 			}
 		}
 		break;
@@ -116,16 +115,17 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 		{
 			const float Height = LexAspectRatioLocal::NonNegativeFloat(
 				static_cast<double>(LexAspectRatioLocal::NonNegativeFinite(Widget->GetWidth())) / SafeAspectRatio);
-			PreferredSize.Y = Height;
+			Out.PreferredSize.Y = Height;
 			if (!ParentControl.bCanControlVerticalSize)
 			{
-				Widget->SetHeight(Height);
+				Out.bApplyHeight = true;
+				Out.Height = Height;
 			}
 		}
 		break;
 	case ELexLayoutAspectRatioType::FitInParent:
 		{
-			if (ULexWidget* ParentWidget = Widget->GetParent(); IsValid(ParentWidget))
+			if (const ULexWidget* ParentWidget = Widget->GetParent(); IsValid(ParentWidget))
 			{
 				const float ParentWidth = LexAspectRatioLocal::NonNegativeFinite(ParentWidget->GetWidth());
 				const float ParentHeight = LexAspectRatioLocal::NonNegativeFinite(ParentWidget->GetHeight());
@@ -146,23 +146,23 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 					ThisSize.X * (FMath::IsFinite(Pivot.X) ? Pivot.X - 0.5 : 0.0));
 				AnchoredPosition.Y = LexAspectRatioLocal::FiniteFloat(
 					ThisSize.Y * (FMath::IsFinite(Pivot.Y) ? Pivot.Y - 0.5 : 0.0));
-				PreferredSize = FVector2f(ThisSize);
+				Out.PreferredSize = FVector2f(ThisSize);
 				if (!bParentOwnsPosition)
 				{
-					Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5));
-					Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5));
-					Widget->SetAnchoredPosition(AnchoredPosition);
+					Out.bApplyPosition = true;
+					Out.AnchoredPosition = AnchoredPosition;
 				}
 				if (!bParentOwnsSize)
 				{
-					Widget->SetSizeDelta(ThisSize);
+					Out.bApplySizeDelta = true;
+					Out.SizeDelta = ThisSize;
 				}
 			}
 		}
 		break;
 	case ELexLayoutAspectRatioType::EnvelopeParent:
 		{
-			if (ULexWidget* ParentWidget = Widget->GetParent(); IsValid(ParentWidget))
+			if (const ULexWidget* ParentWidget = Widget->GetParent(); IsValid(ParentWidget))
 			{
 				const float ParentWidth = LexAspectRatioLocal::NonNegativeFinite(ParentWidget->GetWidth());
 				const float ParentHeight = LexAspectRatioLocal::NonNegativeFinite(ParentWidget->GetHeight());
@@ -183,22 +183,57 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
 					ThisSize.X * (FMath::IsFinite(Pivot.X) ? Pivot.X - 0.5 : 0.0));
 				AnchoredPosition.Y = LexAspectRatioLocal::FiniteFloat(
 					ThisSize.Y * (FMath::IsFinite(Pivot.Y) ? Pivot.Y - 0.5 : 0.0));
-				PreferredSize = FVector2f(ThisSize);
+				Out.PreferredSize = FVector2f(ThisSize);
 				if (!bParentOwnsPosition)
 				{
-					Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5));
-					Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5));
-					Widget->SetAnchoredPosition(AnchoredPosition);
+					Out.bApplyPosition = true;
+					Out.AnchoredPosition = AnchoredPosition;
 				}
 				if (!bParentOwnsSize)
 				{
-					Widget->SetSizeDelta(ThisSize);
+					Out.bApplySizeDelta = true;
+					Out.SizeDelta = ThisSize;
 				}
 			}
 		}
 		break;
 	}
-	CalculatedPreferred = PreferredSize;
+	return Out;
+}
+
+void ULexLayoutSelfAspectRatio::CalculateSize()
+{
+	ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget) || bIsCalculatingSize) return;
+	TGuardValue<bool> CalculatingGuard(bIsCalculatingSize, true);
+
+	const FLexAspectRatioSolution Solution = Solve();
+	AspectRatio = LexAspectRatioLocal::SanitizeAspectRatio(AspectRatio);
+#if WITH_EDITOR
+	if (Solution.bAdoptRatioFromWidget)
+	{
+		AspectRatio = Solution.AdoptedRatio;
+	}
+#endif
+	if (Solution.bApplyWidth)
+	{
+		Widget->SetWidth(Solution.Width);
+	}
+	if (Solution.bApplyHeight)
+	{
+		Widget->SetHeight(Solution.Height);
+	}
+	if (Solution.bApplyPosition)
+	{
+		Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5));
+		Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5));
+		Widget->SetAnchoredPosition(Solution.AnchoredPosition);
+	}
+	if (Solution.bApplySizeDelta)
+	{
+		Widget->SetSizeDelta(Solution.SizeDelta);
+	}
+	CalculatedPreferred = Solution.PreferredSize;
 }
 
 void ULexLayoutSelfAspectRatio::OnTransformChanged()
@@ -252,10 +287,12 @@ FLexLayoutControlAnchorData ULexLayoutSelfAspectRatio::GetLayoutControlAnchor(co
 	return Result;
 }
 
-FVector2f ULexLayoutSelfAspectRatio::GetLayoutPreferredSize()
+FVector2f ULexLayoutSelfAspectRatio::GetLayoutPreferredSize() const
 {
-	CalculateSize();
-	return CalculatedPreferred;
+	// Used to be CalculateSize() + read the cache, so a parent panel asking a child how big it wanted to
+	// be moved and resized that child as a side effect - the measurement half of ApplyChildRect ran a
+	// full write pass before the arrangement half had decided anything.
+	return Solve().PreferredSize;
 }
 
 void ULexLayoutSelfAspectRatio::SetAspectRatioType(const ELexLayoutAspectRatioType& Value)

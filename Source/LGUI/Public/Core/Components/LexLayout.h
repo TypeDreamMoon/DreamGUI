@@ -106,7 +106,7 @@ public:
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const PURE_VIRTUAL(ULexLayout::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
 
 	/** Zero means this layout does not contribute an intrinsic desired size. */
-	virtual FVector2f GetLayoutPreferredSize() { return FVector2f::ZeroVector; }
+	virtual FVector2f GetLayoutPreferredSize() const { return FVector2f::ZeroVector; }
 	virtual void MarkLayoutDirty();
 protected:
 	bool bIsLayoutDirty = false;
