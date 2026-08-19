@@ -10,9 +10,25 @@ void ULexApplyCountingAspectRatio::CalculateSize()
 	Super::CalculateSize();
 }
 
-void ULexLayoutVisibilityFlipOverlay::CalculateLayout()
+void ULexArrangeObservingOverlay::ArrangeChildren()
 {
-	Super::CalculateLayout();
+	Super::ArrangeChildren();
+	SizesDuringArrange.Reset();
+	if (const ULexWidget* Panel = GetWidget())
+	{
+		for (const ULexWidget* Child : Panel->GetChildren())
+		{
+			if (IsValid(Child))
+			{
+				SizesDuringArrange.Add(Child->GetSize());
+			}
+		}
+	}
+}
+
+void ULexLayoutVisibilityFlipOverlay::ArrangeChildren()
+{
+	Super::ArrangeChildren();
 	if (IsValid(WidgetToReveal))
 	{
 		ULexWidget* Target = WidgetToReveal;
@@ -22,21 +38,17 @@ void ULexLayoutVisibilityFlipOverlay::CalculateLayout()
 	}
 }
 
-void ULexLayoutPassCountingOverlay::CalculateLayout()
+void ULexLayoutPassCountingOverlay::ArrangeChildren()
 {
-	// Read the dirty flag before Super consumes it, so the count is of real recomputes and not of the
-	// cheap early-out that every clean container takes on every tree walk.
-	const bool bWasDirty = bIsLayoutDirty;
-	Super::CalculateLayout();
-	if (bWasDirty)
-	{
-		++PassCount;
-	}
+	// ArrangeChildren only runs past the base class's dirty gate, so every call here is a real recompute -
+	// no need to read bIsLayoutDirty before Super consumes it the way this used to.
+	++PassCount;
+	Super::ArrangeChildren();
 }
 
-void ULexLayoutReentrantRebuildOverlay::CalculateLayout()
+void ULexLayoutReentrantRebuildOverlay::ArrangeChildren()
 {
-	Super::CalculateLayout();
+	Super::ArrangeChildren();
 	if (RootsToRebuild.Num() > 0)
 	{
 		const TArray<TObjectPtr<ULexWidget>> Roots = MoveTemp(RootsToRebuild);

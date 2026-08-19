@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "LexLayout.h"
+#include "LexLayoutFragment.h"
 #include "LexPanelSlot.h"
 #include "LTweener.h"
 #include "LexPanelLayouts.generated.h"
@@ -49,9 +50,23 @@ protected:
 	const ULexPanelSlot* GetSlot(const ULexWidget* Child) const;
 	TArray<ULexWidget*> CollectLayoutChildren(bool bEnsureSlots = true) const;
 	void ApplyChildRect(ULexWidget* Child, const FVector2D& Position, const FVector2D& Size, bool bForceFill = false) const;
+	/** Record a rect a panel computed itself, for the paths that do not go through ApplyChildRect. */
+	void RecordChildRect(const FLexPanelChildRect& Rect) const;
 	bool BeginLayoutPass();
 	virtual FVector2f MeasureLayout() const;
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget) const override;
+
+	/**
+	 * Each panel's arrangement algorithm. Calls ApplyChildRect / RecordChildRect and writes no child
+	 * geometry itself - the base class commits the recorded fragment afterwards, in one pass.
+	 */
+	virtual void ArrangeChildren() {}
+
+	/** Where the current arrange pass is recording. Null outside a pass. */
+	mutable FLexFragment* RecordingFragment = nullptr;
+
+	/** Write a recorded fragment onto the widgets. The one place a panel's result reaches the tree. */
+	void CommitFragment(const FLexFragment& Fragment) const;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -59,6 +74,15 @@ protected:
 #endif
 
 public:
+	/**
+	 * Gate, arrange into a fragment, commit the fragment. Panels override ArrangeChildren, not this:
+	 * the split is the whole point, so it is not a per-panel choice.
+	 */
+	virtual void CalculateLayout() override final;
+
+	/** Run the arrangement and hand back what it decided, writing nothing. */
+	FLexFragment Arrange();
+
 	virtual FVector2f GetLayoutPreferredSize() const override;
 	virtual bool GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLexLayoutDebugInfo& OutInfo) const override;
 	UFUNCTION(BlueprintCallable, Category = "Panel")
@@ -76,7 +100,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetSortChildrenByZOrder, Category = "CanvasPanel")
 	bool bSortChildrenByZOrder = true;
 	UFUNCTION(BlueprintSetter) void SetSortChildrenByZOrder(bool Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Overlay")
@@ -89,7 +113,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "Overlay")
 	FMargin Padding;
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Stack Box")
@@ -108,7 +132,7 @@ public:
 	UFUNCTION(BlueprintSetter) void SetOrientation(ELexPanelOrientation Value);
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
 	UFUNCTION(BlueprintSetter) void SetSpacing(float Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Horizontal Box")
@@ -146,7 +170,7 @@ public:
 	UFUNCTION(BlueprintSetter) void SetSpacing(FVector2D Value);
 	UFUNCTION(BlueprintSetter) void SetWrapSize(float Value);
 	UFUNCTION(BlueprintSetter) void SetExplicitWrapSize(bool Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Grid Panel")
@@ -168,7 +192,7 @@ public:
 	UFUNCTION(BlueprintSetter) void SetSpacing(FVector2D Value);
 	UFUNCTION(BlueprintSetter) void SetColumnFill(const TArray<float>& Value);
 	UFUNCTION(BlueprintSetter) void SetRowFill(const TArray<float>& Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Uniform Grid Panel")
@@ -190,7 +214,7 @@ public:
 	UFUNCTION(BlueprintSetter) void SetSpacing(FVector2D Value);
 	UFUNCTION(BlueprintSetter) void SetMinDesiredSlotWidth(float Value);
 	UFUNCTION(BlueprintSetter) void SetMinDesiredSlotHeight(float Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Size Box")
@@ -223,7 +247,7 @@ public:
 	UFUNCTION(BlueprintSetter) void SetHeightOverride(float Value);
 	UFUNCTION(BlueprintSetter) void SetMinDesiredSize(FVector2D Value);
 	UFUNCTION(BlueprintSetter) void SetMaxDesiredSize(FVector2D Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Scale Box")
@@ -252,7 +276,7 @@ public:
 	UFUNCTION(BlueprintSetter) void SetStretch(ELexScaleBoxStretch Value);
 	UFUNCTION(BlueprintSetter) void SetUserSpecifiedScale(float Value);
 	UFUNCTION(BlueprintSetter) void SetIgnoreInheritedScale(bool Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Safe Zone")
@@ -291,7 +315,7 @@ public:
 	UFUNCTION(BlueprintSetter) void SetPadBottom(bool Value);
 	UFUNCTION(BlueprintSetter) void SetSafePadding(FMargin Value);
 	UFUNCTION(BlueprintSetter) void SetNormalizedSafePadding(FMargin Value);
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 /**
@@ -350,7 +374,7 @@ class LGUI_API ULexLayoutContainerScrollBox : public ULexLayoutContainerStackBox
 	GENERATED_BODY()
 protected:
 	bool bAppliedDefaultClipping = false;
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 	virtual FVector2f MeasureLayout() const override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -590,7 +614,7 @@ public:
 	int32 ActiveWidgetIndex = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "WidgetSwitcher")
 	FMargin Padding;
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 	UFUNCTION(BlueprintSetter, BlueprintCallable, Category = "WidgetSwitcher")
 	void SetActiveWidgetIndex(int32 Value);
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);

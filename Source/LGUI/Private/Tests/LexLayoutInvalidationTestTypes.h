@@ -26,6 +26,25 @@ public:
 };
 
 /**
+ * Overlay that photographs its children's geometry at the end of its own arrange pass.
+ *
+ * This is the observable for the arrange/commit split. A panel used to write each child's rect the
+ * moment it decided it, so by the end of a pass the tree already carried the result and anything that
+ * measured mid-pass was reading layout output back in as input. Now the pass records into a fragment
+ * and the base commits afterwards, so at this point the children must still be exactly as authored.
+ */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class ULexArrangeObservingOverlay : public ULexLayoutContainerOverlay
+{
+	GENERATED_BODY()
+public:
+	/** Child sizes as seen at the end of the arrange pass, before anything is committed. */
+	TArray<FVector2D> SizesDuringArrange;
+
+	virtual void ArrangeChildren() override;
+};
+
+/**
  * Overlay that reveals a collapsed widget from inside its own layout pass, one-shot.
  *
  * This reproduces the interesting invalidation timing: SetVisibility during a layout pass reaches
@@ -44,7 +63,7 @@ public:
 	/** How many times the one-shot reveal actually fired. */
 	int32 FlipCount = 0;
 
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 /**
@@ -63,7 +82,7 @@ public:
 	/** Times CalculateLayout ran past its own dirty gate, i.e. genuinely recomputed. */
 	int32 PassCount = 0;
 
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };
 
 /**
@@ -82,5 +101,5 @@ public:
 	/** How many times the one-shot re-entrant rebuild actually fired. */
 	int32 ReentryCount = 0;
 
-	virtual void CalculateLayout() override;
+	virtual void ArrangeChildren() override;
 };

@@ -638,20 +638,89 @@ void ULexPanelLayoutBase::ApplyChildRect(ULexWidget* Child, const FVector2D& Pos
 	}
 
 	const FVector2f FinalSize(static_cast<float>(FMath::Max(0.0, Width)), static_cast<float>(FMath::Max(0.0, Height)));
-	// Everything below is this panel's own result being written back through the ordinary setters, which
-	// dirty the whole ancestor chain - including this panel, which has already consumed its dirty flag.
-	// Scope it so the write only reaches Child and below. Deliberately starts *after* GetDesiredSize above:
-	// measurement can legitimately dirty things, and so can anything a subclass does in CalculateLayout.
-	ULexWidget::FLayoutWriteScope WriteScope(Panel);
-	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
-	Child->SetWidth(FinalSize.X);
-	Child->SetHeight(FinalSize.Y);
 	const FVector2D Pivot = Child->GetPivot();
 	const float PanelWidth = LexPanelLayoutLocal::NonNegative(Panel->GetWidth());
 	const float PanelHeight = LexPanelLayoutLocal::NonNegative(Panel->GetHeight());
-	Child->SetAnchoredPosition(FVector2D(
+
+	FLexPanelChildRect Rect;
+	Rect.Child = Child;
+	Rect.Size = FinalSize;
+	Rect.AnchoredPosition = FVector2D(
 		-PanelWidth * 0.5 + Left + FinalSize.X * Pivot.X,
-		PanelHeight * 0.5 - Top - FinalSize.Y * (1.0 - Pivot.Y)));
+		PanelHeight * 0.5 - Top - FinalSize.Y * (1.0 - Pivot.Y));
+	RecordChildRect(Rect);
+}
+
+void ULexPanelLayoutBase::RecordChildRect(const FLexPanelChildRect& Rect) const
+{
+	if (!IsValid(Rect.Child))
+	{
+		return;
+	}
+	// Inside an arrange pass nothing is written yet; the base commits the whole fragment afterwards.
+	if (RecordingFragment)
+	{
+		RecordingFragment->Children.Add(Rect);
+		return;
+	}
+	// Outside one - a panel driven directly, or a subclass reaching in - keep the old immediate write so
+	// the two paths cannot disagree about what a recorded rect means.
+	FLexFragment Immediate;
+	Immediate.Children.Add(Rect);
+	CommitFragment(Immediate);
+}
+
+void ULexPanelLayoutBase::CommitFragment(const FLexFragment& Fragment) const
+{
+	ULexWidget* Panel = GetWidget();
+	if (!IsValid(Panel) || Fragment.Children.IsEmpty())
+	{
+		return;
+	}
+	// The panel's whole result reaches the tree here, once, under a single scope. Writing through the
+	// ordinary setters dirties the entire ancestor chain including this panel, which has already consumed
+	// its dirty flag; the scope stops the walk at the writer so a pass cannot re-dirty itself.
+	ULexWidget::FLayoutWriteScope WriteScope(Panel);
+	for (const FLexPanelChildRect& Rect : Fragment.Children)
+	{
+		ULexWidget* Child = Rect.Child;
+		if (!IsValid(Child))
+		{
+			continue;
+		}
+		if (Rect.bCollapseAnchors)
+		{
+			Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
+		}
+		Child->SetWidth(Rect.Size.X);
+		Child->SetHeight(Rect.Size.Y);
+		if (Rect.bApplyScale)
+		{
+			Child->SetLayoutScale(Rect.LayoutScale);
+		}
+		if (!Rect.bSizeOnly)
+		{
+			Child->SetAnchoredPosition(Rect.AnchoredPosition);
+		}
+	}
+}
+
+void ULexPanelLayoutBase::CalculateLayout()
+{
+	if (!BeginLayoutPass()) return;
+	const FLexFragment Fragment = Arrange();
+	CommitFragment(Fragment);
+}
+
+FLexFragment ULexPanelLayoutBase::Arrange()
+{
+	FLexFragment Fragment;
+	{
+		TGuardValue<FLexFragment*> Recording(RecordingFragment, &Fragment);
+		ArrangeChildren();
+	}
+	Fragment.Size = PreferredSize;
+	return Fragment;
 }
 
 bool ULexPanelLayoutBase::BeginLayoutPass()
@@ -914,9 +983,8 @@ FLexLayoutControlAnchorData ULexLayoutContainerCanvasPanel::GetLayoutControlAnch
 	return Result;
 }
 
-void ULexLayoutContainerCanvasPanel::CalculateLayout()
+void ULexLayoutContainerCanvasPanel::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	for (ULexWidget* Child : LayoutChildren)
 	{
@@ -929,8 +997,15 @@ void ULexLayoutContainerCanvasPanel::CalculateLayout()
 				MutableSlot->MarkLayoutGeometryApplied(false, false, true, true);
 			}
 			const FVector2D Desired = GetDesiredSize(Child);
-			Child->SetWidth(static_cast<float>(Desired.X));
-			Child->SetHeight(static_cast<float>(Desired.Y));
+			// A canvas child keeps the anchored position its own anchor data produced; only the size is
+			// the panel's to decide, so this records a size-only rect rather than going through
+			// ApplyChildRect, which would also collapse the anchors and place it.
+			FLexPanelChildRect Rect;
+			Rect.Child = Child;
+			Rect.Size = FVector2f(Desired);
+			Rect.bCollapseAnchors = false;
+			Rect.bSizeOnly = true;
+			RecordChildRect(Rect);
 		}
 		else if (ULexPanelSlot* MutableSlot = Child->GetPanelSlot(); IsValid(MutableSlot))
 		{
@@ -966,9 +1041,8 @@ FVector2f ULexLayoutContainerOverlay::MeasureLayout() const
 	return Result;
 }
 
-void ULexLayoutContainerOverlay::CalculateLayout()
+void ULexLayoutContainerOverlay::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	ULexWidget* Panel = GetWidget();
 	const FVector2D AreaPosition(LexPanelLayoutLocal::FiniteOrZero(Padding.Left), LexPanelLayoutLocal::FiniteOrZero(Padding.Top));
 	const FVector2D AreaSize(
@@ -1008,9 +1082,8 @@ FVector2f ULexLayoutContainerStackBox::MeasureLayout() const
 		: FVector2f(Secondary + LexPanelLayoutLocal::HorizontalPadding(Padding), Primary + LexPanelLayoutLocal::VerticalPadding(Padding));
 }
 
-void ULexLayoutContainerStackBox::CalculateLayout()
+void ULexLayoutContainerStackBox::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	ULexWidget* Panel = GetWidget();
 	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	const bool bHorizontal = Orientation == ELexPanelOrientation::Horizontal;
@@ -1109,9 +1182,8 @@ FVector2f ULexLayoutContainerWrapBox::MeasureLayout() const
 		Y + LineHeight + LexPanelLayoutLocal::VerticalPadding(Padding));
 }
 
-void ULexLayoutContainerWrapBox::CalculateLayout()
+void ULexLayoutContainerWrapBox::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	struct FWrapItem
 	{
 		ULexWidget* Widget = nullptr;
@@ -1197,9 +1269,8 @@ FVector2f ULexLayoutContainerGridPanel::MeasureLayout() const
 		LexPanelLayoutLocal::Sum(Rows) + LexPanelLayoutLocal::NonNegative(Spacing.Y) * FMath::Max(0, RowCount - 1) + LexPanelLayoutLocal::VerticalPadding(Padding));
 }
 
-void ULexLayoutContainerGridPanel::CalculateLayout()
+void ULexLayoutContainerGridPanel::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	int32 ColumnCount = FMath::Min(ColumnFill.Num(), LexPanelLayoutLocal::MaxGridTrackCount);
 	int32 RowCount = FMath::Min(RowFill.Num(), LexPanelLayoutLocal::MaxGridTrackCount);
@@ -1276,9 +1347,8 @@ FVector2f ULexLayoutContainerUniformGridPanel::MeasureLayout() const
 		CellHeight * RowCount + GapY * FMath::Max(0, RowCount - 1) + LexPanelLayoutLocal::VerticalPadding(Padding));
 }
 
-void ULexLayoutContainerUniformGridPanel::CalculateLayout()
+void ULexLayoutContainerUniformGridPanel::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	int32 ColumnCount = 0;
 	int32 RowCount = 0;
@@ -1355,9 +1425,8 @@ FLexLayoutControlAnchorData ULexLayoutContainerSizeBox::GetLayoutControlAnchor(c
 		: FLexLayoutControlAnchorData();
 }
 
-void ULexLayoutContainerSizeBox::CalculateLayout()
+void ULexLayoutContainerSizeBox::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	ULexWidget* Content = nullptr;
 	for (ULexWidget* Child : GetWidget()->GetChildren())
 	{
@@ -1455,10 +1524,9 @@ FLexLayoutControlAnchorData ULexLayoutContainerScaleBox::GetLayoutControlAnchor(
 		: FLexLayoutControlAnchorData();
 }
 
-void ULexLayoutContainerScaleBox::CalculateLayout()
+void ULexLayoutContainerScaleBox::ArrangeChildren()
 {
 	UpdateClippingOverride();
-	if (!BeginLayoutPass()) return;
 	ULexWidget* Child = nullptr;
 	for (ULexWidget* Candidate : GetWidget()->GetChildren())
 	{
@@ -1569,14 +1637,18 @@ void ULexLayoutContainerScaleBox::CalculateLayout()
 	default: break;
 	}
 
-	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
-	Child->SetWidth(static_cast<float>(UnscaledSize.X));
-	Child->SetHeight(static_cast<float>(UnscaledSize.Y));
-	Child->SetLayoutScale(Scale);
+	// ScaleBox is the only panel whose result includes a scale, so it builds its rect by hand instead of
+	// going through ApplyChildRect - the size it writes is unscaled and the position is in scaled space.
 	const FVector2D Pivot = Child->GetPivot();
-	Child->SetAnchoredPosition(FVector2D(
+	FLexPanelChildRect Rect;
+	Rect.Child = Child;
+	Rect.Size = FVector2f(UnscaledSize);
+	Rect.bApplyScale = true;
+	Rect.LayoutScale = Scale;
+	Rect.AnchoredPosition = FVector2D(
 		-GetWidget()->GetWidth() * 0.5 + Left + ScaledSize.X * Pivot.X,
-		GetWidget()->GetHeight() * 0.5 - Top - ScaledSize.Y * (1.0 - Pivot.Y)));
+		GetWidget()->GetHeight() * 0.5 - Top - ScaledSize.Y * (1.0 - Pivot.Y));
+	RecordChildRect(Rect);
 	PreferredSize = MeasureLayout();
 }
 
@@ -1739,9 +1811,8 @@ FLexLayoutControlAnchorData ULexLayoutContainerSafeZone::GetLayoutControlAnchor(
 		: FLexLayoutControlAnchorData();
 }
 
-void ULexLayoutContainerSafeZone::CalculateLayout()
+void ULexLayoutContainerSafeZone::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	const FMargin Combined = GetCombinedSafePadding();
 	ULexWidget* Content = nullptr;
 	for (ULexWidget* Child : GetWidget()->GetChildren())
@@ -2359,9 +2430,8 @@ bool ULexLayoutContainerScrollBox::ScrollWidgetIntoView(ULexWidget* InWidget, bo
 	return !FMath::IsNearlyEqual(Before, ScrollOffset);
 }
 
-void ULexLayoutContainerScrollBox::CalculateLayout()
+void ULexLayoutContainerScrollBox::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	ULexWidget* Panel = GetWidget();
 	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	const bool bHorizontal = Orientation == ELexPanelOrientation::Horizontal;
@@ -2460,9 +2530,8 @@ FVector2f ULexLayoutContainerWidgetSwitcher::MeasureLayout() const
 		Desired.Y + LexPanelLayoutLocal::VerticalPadding(Slot->Padding) + LexPanelLayoutLocal::VerticalPadding(Padding));
 }
 
-void ULexLayoutContainerWidgetSwitcher::CalculateLayout()
+void ULexLayoutContainerWidgetSwitcher::ArrangeChildren()
 {
-	if (!BeginLayoutPass()) return;
 	ULexWidget* Panel = GetWidget();
 	// Index-authoritative (UMG-aligned): resolve the displayed child by clamping for THIS pass only,
 	// keeping the stored request intact so pages attached later can still satisfy it. ActiveWidget is a

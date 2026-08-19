@@ -143,6 +143,9 @@ bool FLexLayoutRevealDuringImmediateRebuildTest::RunTest(const FString& Paramete
 	// change empties the layout tree map while CalculateLayoutTree is iterating it. Iterating the map
 	// entry by reference dies right here; the copy must survive the wipe.
 	Fixture.FlipOverlay->WidgetToReveal = Fixture.NestedPanel;
+	// The previous rebuild consumed the dirty flag, and an arrange pass only runs when there is one - so
+	// re-dirty first, or the overlay is asked to reveal from inside a pass that never happens.
+	ULexWidget::MarkLayoutForRebuild(Fixture.Root);
 	ULexWidget::RebuildLayoutImmediately(Fixture.Root);
 	TestEqual(TEXT("Reveal fired exactly once, from inside the immediate rebuild"), Fixture.FlipOverlay->FlipCount, 1);
 	TestTrue(TEXT("Revealed panel is layout-visible after the rebuild that revealed it"),
@@ -264,6 +267,9 @@ bool FLexLayoutReentrantRebuildSurvivesRehashTest::RunTest(const FString& Parame
 	ULexWidget::MarkLayoutForRebuild(OuterRoot);
 	ULexWidget::RebuildLayoutImmediately(OuterRoot);
 	ReentrantOverlay->RootsToRebuild.Append(SideRoots);
+	// Same reason as above: the priming rebuild consumed the dirty flag, so the storm needs a real pass
+	// to be launched from.
+	ULexWidget::MarkLayoutForRebuild(OuterRoot);
 	ULexWidget::RebuildLayoutImmediately(OuterRoot);
 
 	TestEqual(TEXT("Re-entrant rebuild fired exactly once"), ReentrantOverlay->ReentryCount, 1);
