@@ -4,7 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
@@ -198,13 +198,11 @@ bool FLexChildQueriesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("HasAnyChildren is true here"), Panel->HasAnyChildren());
 	TestFalse(TEXT("...and false at a leaf"), B->HasAnyChildren());
 
-	// "Arranges children" and "gives them slots" are different questions in this fork, and only the
-	// second one explains why AddChild returned null.
+	// Having children and having slots are different questions, and only the second one explains why
+	// AddChild returns null on a widget with no layout container.
 	TestFalse(TEXT("A plain widget has no slots"), Panel->HasPanelSlots());
-	Panel->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>();
-	TestFalse(TEXT("Nor does the Lex flex box, which arranges without slots"), Panel->HasPanelSlots());
 	Panel->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
-	TestTrue(TEXT("A UMG-family panel does"), Panel->HasPanelSlots());
+	TestTrue(TEXT("A panel layout does"), Panel->HasPanelSlots());
 	TestNotNull(TEXT("...which is exactly when AddChild returns one"), Panel->AddChild(A, 0));
 	return true;
 }

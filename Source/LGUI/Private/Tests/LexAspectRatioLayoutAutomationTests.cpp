@@ -4,7 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIManager.h"
@@ -12,8 +12,8 @@
 
 /*
  * ULexLayoutSelfAspectRatio used to ask one all-or-nothing question - "does the parent panel own this
- * widget's geometry?" - which required a panel slot plus all four control bits at once. A legacy FlexBox
- * declares only the two *position* bits and hands out no panel slot, so under FlexBox or Grid the answer
+ * widget's geometry?" - which required a panel slot plus all four control bits at once. A container that
+ * owns only the two *position* bits cannot satisfy that, so under such a parent the answer
  * was always no, and AspectRatio's FitInParent/EnvelopeParent overwrote the anchored position the
  * container had just written.
  *
@@ -33,8 +33,8 @@ namespace LexAspectRatioLayoutTestLocal
 		~FScopedTestWorld() { if (World) { World->DestroyWorld(false); } }
 	};
 
-	/** Horizontal FlexBox root with a plain child followed by a square-aspect child. */
-	struct FFlexBoxWithAspectChildFixture
+	/** Horizontal box root with a plain child followed by a square-aspect child. */
+	struct FPanelWithAspectChildFixture
 	{
 		ULexWidget* Root = nullptr;
 		ULexWidget* Plain = nullptr;
@@ -56,7 +56,7 @@ namespace LexAspectRatioLayoutTestLocal
 			{
 				return false;
 			}
-			if (!Root->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
+			if (!Root->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>())
 			{
 				return false;
 			}
@@ -76,16 +76,16 @@ namespace LexAspectRatioLayoutTestLocal
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexAspectRatioUnderFlexBoxConvergesTest,
-	"LGUI.Layout.AspectRatio.FitInParentUnderFlexBoxConverges",
+	FLexAspectRatioUnderPanelConvergesTest,
+	"LGUI.Layout.AspectRatio.FitInParentUnderPanelConverges",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FLexAspectRatioUnderFlexBoxConvergesTest::RunTest(const FString& Parameters)
+bool FLexAspectRatioUnderPanelConvergesTest::RunTest(const FString& Parameters)
 {
 	using namespace LexAspectRatioLayoutTestLocal;
 	FScopedTestWorld TestWorld;
 	ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(TestWorld.World);
-	FFlexBoxWithAspectChildFixture Fixture;
+	FPanelWithAspectChildFixture Fixture;
 	if (!TestNotNull(TEXT("LexUI manager subsystem exists"), Manager)
 		|| !Fixture.Build(TestWorld.World, ELexLayoutAspectRatioType::FitInParent))
 	{
@@ -107,7 +107,7 @@ bool FLexAspectRatioUnderFlexBoxConvergesTest::RunTest(const FString& Parameters
 
 	// The container places the child. Before the fix AspectRatio stamped the aspect-centred position,
 	// which is exactly (0,0) for the default pivot, dropping it on top of its sibling.
-	TestNotEqual(TEXT("FlexBox owns the horizontal position, not AspectRatio"),
+	TestNotEqual(TEXT("The container owns the horizontal position, not AspectRatio"),
 		Fixture.Aspect->GetAnchoredPosition().X, 0.0);
 	TestTrue(TEXT("The two children are laid out apart, not stacked"),
 		!FMath::IsNearlyEqual(Fixture.Aspect->GetAnchoredPosition().X, Fixture.Plain->GetAnchoredPosition().X));
@@ -121,16 +121,16 @@ bool FLexAspectRatioUnderFlexBoxConvergesTest::RunTest(const FString& Parameters
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexAspectRatioEnvelopeUnderFlexBoxConvergesTest,
-	"LGUI.Layout.AspectRatio.EnvelopeParentUnderFlexBoxConverges",
+	FLexAspectRatioEnvelopeUnderPanelConvergesTest,
+	"LGUI.Layout.AspectRatio.EnvelopeParentUnderPanelConverges",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FLexAspectRatioEnvelopeUnderFlexBoxConvergesTest::RunTest(const FString& Parameters)
+bool FLexAspectRatioEnvelopeUnderPanelConvergesTest::RunTest(const FString& Parameters)
 {
 	using namespace LexAspectRatioLayoutTestLocal;
 	FScopedTestWorld TestWorld;
 	ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(TestWorld.World);
-	FFlexBoxWithAspectChildFixture Fixture;
+	FPanelWithAspectChildFixture Fixture;
 	if (!TestNotNull(TEXT("LexUI manager subsystem exists"), Manager)
 		|| !Fixture.Build(TestWorld.World, ELexLayoutAspectRatioType::EnvelopeParent))
 	{
@@ -147,10 +147,17 @@ bool FLexAspectRatioEnvelopeUnderFlexBoxConvergesTest::RunTest(const FString& Pa
 
 	TestEqual(TEXT("Aspect child position is stable across ticks"),
 		Fixture.Aspect->GetAnchoredPosition(), AfterFirst);
-	TestNotEqual(TEXT("FlexBox owns the horizontal position, not AspectRatio"),
+	TestNotEqual(TEXT("The container owns the horizontal position, not AspectRatio"),
 		Fixture.Aspect->GetAnchoredPosition().X, 0.0);
-	TestTrue(TEXT("AspectRatio still sized the child to its ratio"),
-		FMath::IsNearlyEqual(Fixture.Aspect->GetWidth(), Fixture.Aspect->GetHeight(), 0.01f));
+
+	// Envelope covers the parent, so a 400x200 parent asks for a 400x400 child; with a 50-wide sibling
+	// that never fits a 400-wide row, and the box shrinks it. The final size is the container's call -
+	// what AspectRatio still owes is a square *desired* size, which is what the container then works from.
+	const FVector2f Preferred = Fixture.AspectSelf->GetLayoutPreferredSize();
+	TestTrue(TEXT("AspectRatio still reports a square desired size"),
+		FMath::IsNearlyEqual(Preferred.X, Preferred.Y, 0.01f));
+	TestTrue(TEXT("...and it envelopes rather than fits the parent"),
+		Preferred.X >= Fixture.Root->GetWidth() - 0.01f);
 
 	Fixture.Root->DestroyWidget();
 	return true;

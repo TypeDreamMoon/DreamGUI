@@ -15,7 +15,7 @@
  * Every ULexText content setter used to wrap its MarkLayoutForRebuild in
  * `if (GetWidget()->GetLayoutSelf())`, and SetFont did not mark at all.
  *
- * That premise was true when ULexLayoutSelfFlexBox was the only thing that read
+ * That premise was true when the legacy FlexBox LayoutSelf was the only thing that read
  * ULexVisual::GetPreferredWidth/Height. The panel layouts added a second reader -
  * ULexPanelLayoutBase::GetDesiredSize measures *any* child that has a Visual, with no LayoutSelf
  * anywhere in the picture - and from that point the gate silently dropped every text reflow. A plain

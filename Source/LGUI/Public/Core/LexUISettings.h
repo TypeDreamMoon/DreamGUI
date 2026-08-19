@@ -41,14 +41,6 @@ enum class ELexUIRendererMSAASampleCount :uint8
 	Eight = 8		UMETA(DisplayName = "8x MSAA"),
 };
 
-/** Selects which layout family the editor presents as the project's primary workflow. */
-UENUM(BlueprintType)
-enum class ELexUILayoutMode : uint8
-{
-	LegacyLGUI UMETA(DisplayName = "Legacy LGUI"),
-	UMGCompatible UMETA(DisplayName = "UMG Compatible"),
-};
-
 USTRUCT(BlueprintType)
 struct LGUI_API FLexUIAtlasSettings
 {
@@ -75,14 +67,6 @@ class LGUI_API ULexUISettings :public UObject
 {
 	GENERATED_BODY()
 public:
-	/**
-	 * Legacy LGUI uses the original Lex-family components (Lex Flex Box / Lex Responsive Grid).
-	 * UMG Compatible uses the UMG-prefixed Panel/PanelSlot family and follows UE's Slate/UMG
-	 * measure and arrange rules.
-	 */
-	UPROPERTY(EditAnywhere, config, Category = "Layout", meta = (ConfigRestartRequired = true))
-	ELexUILayoutMode LayoutMode = ELexUILayoutMode::LegacyLGUI;
-
 	/**
 	 * After every editor prefab save, immediately deserialize the just-written payload into a throwaway
 	 * world and compare it with the edited hierarchy. A structural mismatch (an object lost, gained or
@@ -177,7 +161,6 @@ public:
 	static TextureFilter GetAtlasTextureFilter(const FName& InPackingTag);
 	static const TMap<FName, FLexUIAtlasSettings>& GetAllAtlasSettings();
 	static float GetAutoBatchThreshold();
-	static ELexUILayoutMode GetLayoutMode();
 	static float GetParkedWidgetLifetimeSeconds();
 	static int32 ConvertAtlasTextureSizeTypeToSize(const ELexUIAtlasTextureSizeType& InType);
 	static int32 GetPriorityInSceneViewExtension();

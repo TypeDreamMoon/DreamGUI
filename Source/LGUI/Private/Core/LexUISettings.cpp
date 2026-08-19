@@ -72,11 +72,6 @@ float ULexUISettings::GetAutoBatchThreshold()
 	return GetDefault<ULexUISettings>()->AutoBatchThreshold;
 #endif
 }
-ELexUILayoutMode ULexUISettings::GetLayoutMode()
-{
-	return GetDefault<ULexUISettings>()->LayoutMode;
-}
-
 float ULexUISettings::GetParkedWidgetLifetimeSeconds()
 {
 	return GetDefault<ULexUISettings>()->ParkedWidgetLifetimeSeconds;

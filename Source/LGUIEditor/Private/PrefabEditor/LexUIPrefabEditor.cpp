@@ -37,8 +37,6 @@
 #include "Core/Components/LexCanvas.h"
 #include "LexUIPrefabEditorViewportClient.h"
 #include "Core/Components/LexWidget.h"
-#include "Core/Components/LexLayoutContainerFlexBox.h"
-#include "Core/Components/LexLayoutContainerGrid.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelSlot.h"
 #include "Interaction/LexContentWidget.h"
@@ -1564,33 +1562,16 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 		W->SetHeight(State.Height);
 	}
 
-	// Box wraps follow the project layout mode, like ConfigureScrollBox and the prefab factory:
-	// UMG-compatible projects get the UMG box family, legacy projects keep the Lex flex box.
-	const bool bWrapUMGLayout = ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible;
 	switch (WrapType)
 	{
 	case ELexUIWrapType::HorizontalBox:
-		if (bWrapUMGLayout)
-		{
-			Wrapper->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>();
-		}
-		else if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
-		{
-			FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Horizontal);
-		}
+		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>();
 		break;
 	case ELexUIWrapType::VerticalBox:
-		if (bWrapUMGLayout)
-		{
-			Wrapper->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
-		}
-		else if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
-		{
-			FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Vertical);
-		}
+		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
 		break;
 	case ELexUIWrapType::Grid:
-		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerGrid>();
+		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerGridPanel>();
 		break;
 	default:
 		break;//plain widget container

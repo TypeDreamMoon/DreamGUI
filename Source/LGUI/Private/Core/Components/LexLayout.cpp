@@ -151,7 +151,7 @@ void ULexLayoutContainer::OnRegister()
 
 void ULexLayoutContainer::SnapshotLayout()
 {
-	// No RefreshChildren() here any more. It was non-virtual and so was ULexLayoutContainerFlexBox's
+	// No RefreshChildren() here any more. It was non-virtual and so was the legacy FlexBox container's
 	// same-named function, which meant this call always bound to the *base* version - for FlexBox, for
 	// Grid and for every panel alike. It filled a Children array that only FlexBox reads and that FlexBox
 	// repopulates itself in DoCalculate, so the result was never observed; what did survive was its side

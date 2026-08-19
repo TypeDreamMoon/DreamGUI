@@ -19,10 +19,7 @@
 #include "PrefabSystem/WidgetSerializer.h"
 #include "UObject/UObjectGlobals.h"
 #include "XMLSupport/LexUIMLBehaviour.h"
-#include "Core/Components/LexLayoutContainerFlexBox.h"
-#include "Core/Components/LexLayoutContainerGrid.h"
-#include "Core/Components/LexLayoutSelfFlexBox.h"
-#include "Core/Components/LexLayoutSelfGrid.h"
+#include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "Core/Components/LexLayout.h"
 #include "Interaction/UIButton.h"
@@ -505,8 +502,19 @@ bool FLexUIMLUtils::ValidateString(const FString& XmlString, UClass* ScriptClass
 /** Resolve a LayoutContainer class name to its UClass. */
 static UClass* ResolveLayoutContainerClass(const FString& Name)
 {
-	if (Name == TEXT("FlexBox"))        return ULexLayoutContainerFlexBox::StaticClass();
-	if (Name == TEXT("Grid"))           return ULexLayoutContainerGrid::StaticClass();
+	if (Name == TEXT("CanvasPanel"))       return ULexLayoutContainerCanvasPanel::StaticClass();
+	if (Name == TEXT("Overlay"))           return ULexLayoutContainerOverlay::StaticClass();
+	if (Name == TEXT("StackBox"))          return ULexLayoutContainerStackBox::StaticClass();
+	if (Name == TEXT("HorizontalBox"))     return ULexLayoutContainerHorizontalBox::StaticClass();
+	if (Name == TEXT("VerticalBox"))       return ULexLayoutContainerVerticalBox::StaticClass();
+	if (Name == TEXT("WrapBox"))           return ULexLayoutContainerWrapBox::StaticClass();
+	if (Name == TEXT("GridPanel"))         return ULexLayoutContainerGridPanel::StaticClass();
+	if (Name == TEXT("UniformGridPanel"))  return ULexLayoutContainerUniformGridPanel::StaticClass();
+	if (Name == TEXT("SizeBox"))           return ULexLayoutContainerSizeBox::StaticClass();
+	if (Name == TEXT("ScaleBox"))          return ULexLayoutContainerScaleBox::StaticClass();
+	if (Name == TEXT("SafeZone"))          return ULexLayoutContainerSafeZone::StaticClass();
+	if (Name == TEXT("ScrollBox"))         return ULexLayoutContainerScrollBox::StaticClass();
+	if (Name == TEXT("WidgetSwitcher"))    return ULexLayoutContainerWidgetSwitcher::StaticClass();
 	return nullptr;
 }
 
@@ -514,8 +522,6 @@ static UClass* ResolveLayoutContainerClass(const FString& Name)
 static UClass* ResolveLayoutSelfClass(const FString& Name)
 {
 	if (Name == TEXT("IgnoreLayoutContainer")) return ULexLayoutSelf::StaticClass();
-	if (Name == TEXT("FlexBox"))               return ULexLayoutSelfFlexBox::StaticClass();
-	if (Name == TEXT("Grid"))                  return ULexLayoutSelfGrid::StaticClass();
 	if (Name == TEXT("AspectRatio"))           return ULexLayoutSelfAspectRatio::StaticClass();
 	return nullptr;
 }

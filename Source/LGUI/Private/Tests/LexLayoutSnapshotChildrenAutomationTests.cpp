@@ -4,7 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIManager.h"
 #include "Engine/World.h"
@@ -12,7 +12,7 @@
 /*
  * ULexLayoutContainer::SnapshotLayout used to open with RefreshChildren().
  *
- * That call was non-virtual, and so was ULexLayoutContainerFlexBox's same-named function, so it always
+ * That call was non-virtual, and so was the legacy FlexBox container's same-named function, so it always
  * bound to the *base* version - for FlexBox, for Grid and for every panel alike. The Children array it
  * filled is read only by FlexBox, which repopulates it itself in DoCalculate, so its output was never
  * observed. Its side effect was: it rewrote child anchors to 0.5/0.5, on every container in the tree, on
@@ -63,7 +63,7 @@ bool FLexLayoutCollapsedChildKeepsAuthoredAnchorsTest::RunTest(const FString& Pa
 	{
 		return false;
 	}
-	if (!TestNotNull(TEXT("FlexBox created"), Root->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>()))
+	if (!TestNotNull(TEXT("FlexBox created"), Root->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>()))
 	{
 		return false;
 	}
@@ -115,7 +115,7 @@ bool FLexLayoutParticipatingChildStillNormalizedTest::RunTest(const FString& Par
 	Child->SetWidth(50.0f);
 	Child->SetHeight(50.0f);
 	if (!TestTrue(TEXT("Child parented"), Child->TrySetParent(Root, false))
-		|| !TestNotNull(TEXT("FlexBox created"), Root->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>()))
+		|| !TestNotNull(TEXT("FlexBox created"), Root->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>()))
 	{
 		return false;
 	}

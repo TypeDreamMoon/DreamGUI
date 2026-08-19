@@ -6,12 +6,8 @@
 #include "Core/Components/LexBackgroundPixelate.h"
 #include "Core/Components/LexCustomMesh.h"
 #include "Core/Components/LexImage.h"
-#include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexPixelSort.h"
-#include "Core/Components/LexLayoutContainerGrid.h"
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
-#include "Core/Components/LexLayoutSelfFlexBox.h"
-#include "Core/Components/LexLayoutSelfGrid.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexSprite.h"
 #include "Core/Components/LexText.h"
@@ -137,14 +133,7 @@ namespace LexUIControlRegistryLocal
 		Content->SetHorizontalAnchorMinMax(FVector2D(0.0, 1.0), false, false);
 		Content->SetVerticalAnchorMinMax(FVector2D(1.0, 1.0), false, false);
 		Content->SetHeight(500.0f);
-		if (ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible)
-		{
-			Content->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
-		}
-		else if (ULexLayoutContainerFlexBox* FlexBox = Content->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
-		{
-			FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Vertical);
-		}
+		Content->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
 		ScrollView->SetContent(Content);
 		ScrollView->SetHorizontal(false);
 		ScrollView->SetVertical(true);
@@ -459,20 +448,15 @@ bool FLexUIControlRegistry::Validate(const FLexUIControlDescriptor& Descriptor, 
 void FLexUIControlRegistry::RegisterDefaults()
 {
 	using namespace LexUIControlRegistryLocal;
-	const bool bUseUMGLayout = ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible;
-	auto MakeFrameworkPanel = [bUseUMGLayout](const TCHAR* Name, UClass* LayoutClass, const TCHAR* IconStyleName,
-		bool bUMGPanel, const TCHAR* DisplayName = nullptr)
+	auto MakeFrameworkPanel = [](const TCHAR* Name, UClass* LayoutClass, const TCHAR* IconStyleName,
+		bool /*bUMGPanel*/ = true, const TCHAR* DisplayName = nullptr)
 	{
 		FLexUIControlDescriptor Descriptor = MakePanel(Name, LayoutClass, IconStyleName, DisplayName);
 		if (!DisplayName)
 		{
-			// The class DisplayName carries the family prefix ("UMG Vertical Box" / "Lex Flex Box"),
-			// so the palette label follows it instead of the spaceless registry name.
+			// The class DisplayName carries the family prefix, so the palette label follows it
+			// instead of the spaceless registry name.
 			Descriptor.DisplayName = LayoutClass->GetDisplayNameText();
-		}
-		if (bUMGPanel != bUseUMGLayout)
-		{
-			Descriptor.Category = bUMGPanel ? TEXT("UMG Panels") : TEXT("Legacy LGUI Panels");
 		}
 		return Descriptor;
 	};
@@ -507,17 +491,14 @@ void FLexUIControlRegistry::RegisterDefaults()
 	SizeBox.BehaviourClass = ULexContentWidget::StaticClass();
 	Register(SizeBox);
 	Register(MakeFrameworkPanel(TEXT("WidgetSwitcher"), ULexLayoutContainerWidgetSwitcher::StaticClass(), TEXT("ClassIcon.WidgetSwitcher"), true));
-	Register(MakeFrameworkPanel(TEXT("FlexBox"), ULexLayoutContainerFlexBox::StaticClass(), TEXT("ClassIcon.WrapBox"), false));
 	Register(MakeFrameworkPanel(TEXT("LayoutScrollBox"), ULexLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), true));
-	Register(MakeFrameworkPanel(TEXT("ResponsiveGrid"), ULexLayoutContainerGrid::StaticClass(), TEXT("ClassIcon.GridPanel"), false));
 
 	FLexUIControlDescriptor ScrollBox = MakeBehaviour(TEXT("ScrollBox"), UUIScrollView::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBox);
 	ScrollBox.DisplayName = FText::FromString(TEXT("Lex Scroll Box"));
-	// Same category rule as the other Lex-family panels: sidelined when the project runs UMG layout.
-	ScrollBox.Category = bUseUMGLayout ? TEXT("Legacy LGUI Panels") : TEXT("Panels");
+	// The Lex scroll view is a behaviour, not a panel layout; keep it out of the panel list.
+	ScrollBox.Category = TEXT("Legacy LGUI Panels");
 	Register(ScrollBox);
 	FLexUIControlDescriptor Border = MakePanel(TEXT("Border"), ULexLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Border"));
-	if (!bUseUMGLayout) Border.Category = TEXT("UMG Panels");
 	Border.VisualClass = ULexImage::StaticClass();
 	Border.BehaviourClass = ULexContentWidget::StaticClass();
 	Border.NativeConfigure = ConfigureImage;
@@ -570,8 +551,6 @@ void FLexUIControlRegistry::RegisterDefaults()
 	Register(MakeComponent(TEXT("UMGWidgetInteraction"), TEXT("UMG Widget Interaction"), ULexUMGWidgetInteraction::StaticClass(), ULexUMGWidget::StaticClass()));
 
 	Register(MakeLayoutSelf(TEXT("AspectRatioLayout"), TEXT("Aspect Ratio"), ULexLayoutSelfAspectRatio::StaticClass()));
-	Register(MakeLayoutSelf(TEXT("FlexBoxItemLayout"), TEXT("Flex Box Item"), ULexLayoutSelfFlexBox::StaticClass()));
-	Register(MakeLayoutSelf(TEXT("GridItemLayout"), TEXT("Grid Item (Experimental)"), ULexLayoutSelfGrid::StaticClass()));
 
 	Register(MakeMeshModifier(TEXT("GradientColorModifier"), TEXT("Gradient Color"), ULexMeshModifierGradientColor::StaticClass(), ULexImage::StaticClass(), ConfigureImage));
 	Register(MakeMeshModifier(TEXT("LongShadowModifier"), TEXT("Long Shadow"), ULexMeshModifierLongShadow::StaticClass(), ULexImage::StaticClass(), ConfigureImage));

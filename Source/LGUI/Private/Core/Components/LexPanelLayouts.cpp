@@ -6,7 +6,6 @@
 #include "Core/Components/LexScrollBoxInputHandler.h"
 #include "Interaction/UIScrollbar.h"
 #include "Core/Components/LexWidget.h"
-#include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexVisual.h"
 #include "Framework/Application/SlateApplication.h"
 #include "HAL/IConsoleManager.h"
@@ -645,16 +644,8 @@ void ULexPanelLayoutBase::ApplyChildRect(ULexWidget* Child, const FVector2D& Pos
 	// measurement can legitimately dirty things, and so can anything a subclass does in CalculateLayout.
 	ULexWidget::FLayoutWriteScope WriteScope(Panel);
 	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
-	if (ULexLayoutSelfFlexBox* FlexSelf = Cast<ULexLayoutSelfFlexBox>(Child->GetLayoutSelf()))
-	{
-		FlexSelf->SetFinalSizeByLayoutContainer(FinalSize);
-		Child->SetSizeDelta(FVector2D(FinalSize));
-	}
-	else
-	{
-		Child->SetWidth(FinalSize.X);
-		Child->SetHeight(FinalSize.Y);
-	}
+	Child->SetWidth(FinalSize.X);
+	Child->SetHeight(FinalSize.Y);
 	const FVector2D Pivot = Child->GetPivot();
 	const float PanelWidth = LexPanelLayoutLocal::NonNegative(Panel->GetWidth());
 	const float PanelHeight = LexPanelLayoutLocal::NonNegative(Panel->GetHeight());
@@ -938,16 +929,8 @@ void ULexLayoutContainerCanvasPanel::CalculateLayout()
 				MutableSlot->MarkLayoutGeometryApplied(false, false, true, true);
 			}
 			const FVector2D Desired = GetDesiredSize(Child);
-			if (ULexLayoutSelfFlexBox* FlexSelf = Cast<ULexLayoutSelfFlexBox>(Child->GetLayoutSelf()))
-			{
-				FlexSelf->SetFinalSizeByLayoutContainer(FVector2f(Desired));
-				Child->SetSizeDelta(Desired);
-			}
-			else
-			{
-				Child->SetWidth(static_cast<float>(Desired.X));
-				Child->SetHeight(static_cast<float>(Desired.Y));
-			}
+			Child->SetWidth(static_cast<float>(Desired.X));
+			Child->SetHeight(static_cast<float>(Desired.Y));
 		}
 		else if (ULexPanelSlot* MutableSlot = Child->GetPanelSlot(); IsValid(MutableSlot))
 		{
@@ -1587,16 +1570,8 @@ void ULexLayoutContainerScaleBox::CalculateLayout()
 	}
 
 	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
-	if (ULexLayoutSelfFlexBox* FlexSelf = Cast<ULexLayoutSelfFlexBox>(Child->GetLayoutSelf()))
-	{
-		FlexSelf->SetFinalSizeByLayoutContainer(FVector2f(UnscaledSize));
-		Child->SetSizeDelta(UnscaledSize);
-	}
-	else
-	{
-		Child->SetWidth(static_cast<float>(UnscaledSize.X));
-		Child->SetHeight(static_cast<float>(UnscaledSize.Y));
-	}
+	Child->SetWidth(static_cast<float>(UnscaledSize.X));
+	Child->SetHeight(static_cast<float>(UnscaledSize.Y));
 	Child->SetLayoutScale(Scale);
 	const FVector2D Pivot = Child->GetPivot();
 	Child->SetAnchoredPosition(FVector2D(

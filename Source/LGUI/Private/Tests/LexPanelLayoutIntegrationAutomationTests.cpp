@@ -4,7 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
@@ -159,15 +159,12 @@ bool FLexPanelModeTransitionContractsTest::RunTest(const FString& Parameters)
 
 	CastChecked<ULexPanelLayoutBase>(Root->GetLayoutContainer())->SnapshotLayout();
 	Root->GetLayoutContainer()->CalculateLayout();
-	TestNotNull(TEXT("Panel-to-legacy transition succeeds"),
-		Root->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>());
-	TestNull(TEXT("Panel-to-legacy transition removes the panel slot immediately"), Child->GetPanelSlot());
-	TestEqual(TEXT("Panel-to-legacy transition restores the authored position"), Child->GetAnchoredPosition(), AuthoredPosition);
-	TestEqual(TEXT("Panel-to-legacy transition restores the authored size"), Child->GetSize(), AuthoredSize);
-
-	TestNotNull(TEXT("A panel can be created again after legacy layout"),
+	// With the legacy family gone, the only container transition left is panel-to-panel. Swapping to a
+	// different panel class must still leave the child holding a slot; the authored-geometry restore
+	// contract is exercised by RemoveLayoutContainer below, which is now its only trigger.
+	TestNotNull(TEXT("Cross-panel transition succeeds"),
 		Root->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>());
-	TestNotNull(TEXT("Returning to a panel creates a fresh slot"), Child->GetPanelSlot());
+	TestNotNull(TEXT("Cross-panel transition leaves the child with a slot"), Child->GetPanelSlot());
 	CastChecked<ULexPanelLayoutBase>(Root->GetLayoutContainer())->SnapshotLayout();
 	Root->GetLayoutContainer()->CalculateLayout();
 	Root->RemoveLayoutContainer();

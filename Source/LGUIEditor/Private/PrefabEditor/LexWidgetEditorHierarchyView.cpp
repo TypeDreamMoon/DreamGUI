@@ -629,19 +629,9 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 								};
 								AddWrap(LOCTEXT("WrapWidget", "Widget"), ELexUIWrapType::Widget);
 								SubMenu.AddSeparator();
-								// The wrap implementation branches on the layout mode; the labels must
-								// name the family that will actually be created.
-								const bool bWrapUMGLayout =
-									ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible;
-								AddWrap(bWrapUMGLayout
-									? LOCTEXT("WrapHBoxUMG", "UMG Horizontal Box")
-									: LOCTEXT("WrapHBoxLex", "Lex Flex Box (Horizontal)"),
-									ELexUIWrapType::HorizontalBox);
-								AddWrap(bWrapUMGLayout
-									? LOCTEXT("WrapVBoxUMG", "UMG Vertical Box")
-									: LOCTEXT("WrapVBoxLex", "Lex Flex Box (Vertical)"),
-									ELexUIWrapType::VerticalBox);
-								AddWrap(LOCTEXT("WrapGrid", "Lex Responsive Grid (Experimental)"), ELexUIWrapType::Grid);
+								AddWrap(LOCTEXT("WrapHBoxUMG", "UMG Horizontal Box"), ELexUIWrapType::HorizontalBox);
+								AddWrap(LOCTEXT("WrapVBoxUMG", "UMG Vertical Box"), ELexUIWrapType::VerticalBox);
+								AddWrap(LOCTEXT("WrapGrid", "UMG Grid Panel"), ELexUIWrapType::Grid);
 							}));
 					}
 					MenuBuilder.EndSection();

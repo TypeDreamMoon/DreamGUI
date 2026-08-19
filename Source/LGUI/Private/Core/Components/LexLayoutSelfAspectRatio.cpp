@@ -1,9 +1,8 @@
-﻿// Copyright 2025-Present LexLiu. All Rights Reserved.
+// Copyright 2025-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "LGUI.h"
-#include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexPanelSlot.h"
 
 DECLARE_CYCLE_STAT(TEXT("LexLayoutSelf AspectRatio"), STAT_LexLayoutSelfAspectRatio, STATGROUP_LGUI);
