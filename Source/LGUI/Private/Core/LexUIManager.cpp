@@ -1044,6 +1044,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		bIsExecutingLayout = true;
 		constexpr int32 MaxLayoutPassesPerFrame = 32;
 		int32 LayoutPassCount = 0;
+		LastLayoutPassCount = 0;
 #if WITH_EDITOR && ENABLED_LGUI_DEBUG_LAYOUT_FRAME
 		auto Time = FDateTime::Now();
 		UE_LOG(LGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
@@ -1053,6 +1054,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
 			++LayoutPassCount;
+			LastLayoutPassCount = LayoutPassCount;
 
 			TArray<TWeakObjectPtr<ULexWidget>> CopiedLayoutDirtyWidgetArray;
 			Swap(CopiedLayoutDirtyWidgetArray, LayoutDirtyWidgetArray);

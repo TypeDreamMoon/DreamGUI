@@ -677,9 +677,15 @@ void ULexPanelLayoutBase::CommitFragment(const FLexFragment& Fragment) const
 	{
 		return;
 	}
-	// The panel's whole result reaches the tree here, once, under a single scope. Writing through the
-	// ordinary setters dirties the entire ancestor chain including this panel, which has already consumed
-	// its dirty flag; the scope stops the walk at the writer so a pass cannot re-dirty itself.
+	// The panel's whole result reaches the tree here, once, under a single scope.
+	//
+	// Deferring the write does NOT make the scope unnecessary, which was worth measuring rather than
+	// assuming: removing it takes every pass-count test in the suite from 1 to 2. The setters early-out
+	// when the value is unchanged, so the invalidation they raise is always a real change - the commit
+	// genuinely is one. What the scope encodes is that this particular real change is layout output
+	// rather than authored intent. Blink needs no equivalent only because its LayoutObject does not hold
+	// the geometry, so there is no setter to fire; here the geometry lives on the widget and the
+	// distinction has to be made explicitly.
 	ULexWidget::FLayoutWriteScope WriteScope(Panel);
 	for (const FLexPanelChildRect& Rect : Fragment.Children)
 	{

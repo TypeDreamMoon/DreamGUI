@@ -149,6 +149,9 @@ public:
 	virtual bool IsTickableWhenPaused() const override;
 	bool HasBegunPlay()const{return bHasCalledBeginPlay;}
 
+	/** See LastLayoutPassCount. One is the only healthy value. */
+	int32 GetLastLayoutPassCount()const{return LastLayoutPassCount;}
+
 	static ULexUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
 	bool bShouldTickInEditor = false;
@@ -203,6 +206,15 @@ private:
 	bool bIsExecutingStart = false;
 	bool bIsExecutingTick = false;
 	bool bIsExecutingLayout = false;
+	/**
+	 * Passes the layout loop needed on the most recent tick that had anything to do.
+	 *
+	 * One means the frame settled without re-dirtying itself, which is the only healthy number: every
+	 * pass beyond the first is work caused by the previous pass rather than by anything the user did.
+	 * It used to be visible only under a debug macro, so the difference between "converged" and "ran
+	 * eight times and happened to agree" was unobservable in a normal build.
+	 */
+	int32 LastLayoutPassCount = 0;
 	int32 CurrentExecutingTickIndex = -1;
 	UPROPERTY(Transient) TArray<ULexUIBehaviour*> LexUIBehavioursNeedToRemoveFromTick;
 #if WITH_EDITORONLY_DATA
