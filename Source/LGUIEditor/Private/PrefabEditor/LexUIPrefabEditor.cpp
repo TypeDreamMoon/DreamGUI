@@ -3355,6 +3355,19 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 			}
 
 			GEditor->BeginTransaction(LOCTEXT("CreateFromAssetDrop_Transaction", "LexUI Create from asset drop"));
+			// The drop writes the parent's Children array and both of the helper's maps
+			// (SubPrefabMap, MapGuidToObject). None of that was snapshotted, so Ctrl+Z after a
+			// Content-Browser prefab drop did nothing at all.
+			if (ULexWidget* DropParent = CurrentSelectedWidget.Get())
+			{
+				if (UObject* Outer = DropParent->GetOuter())Outer->Modify();
+				DropParent->SetFlags(RF_Public | RF_Transactional);
+				DropParent->Modify();
+			}
+			if (ULexUIPrefabHelperObject* Helper = GetPrefabHelperObject())
+			{
+				Helper->Modify();
+			}
 			TArray<ULexWidget*> CreatedWidgetArray;
 			if (PrefabsToLoad.Num() > 0)
 			{

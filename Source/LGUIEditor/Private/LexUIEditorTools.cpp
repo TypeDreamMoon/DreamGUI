@@ -91,6 +91,34 @@ TMap<FString, TWeakObjectPtr<ULexUIPrefab>> FLexUIEditorTools::CopiedWidgetPrefa
 
 FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 
+namespace
+{
+	/**
+	 * Snapshot everything a hierarchy change writes, before it is written.
+	 *
+	 * Attaching a widget writes the parent's Children array, so the parent is what undo has to
+	 * restore. DeleteWidgets has always done this; the create and paste paths opened a transaction
+	 * and only Modify()'d the selection object and the prefab helper, so the transaction held
+	 * nothing that describes the new widget being there. Ctrl+Z then popped an entry that restored
+	 * nothing, and the next Ctrl+Z undid the user's *previous* edit -- so the visible effect of
+	 * undoing a create was losing the change before it.
+	 */
+	void ModifyForHierarchyChange(ULexWidget* InParent, ULexWidget* InChild = nullptr)
+	{
+		if (IsValid(InParent))
+		{
+			if (UObject* Outer = InParent->GetOuter())Outer->Modify();
+			InParent->SetFlags(RF_Public | RF_Transactional);
+			InParent->Modify();
+		}
+		if (IsValid(InChild))
+		{
+			InChild->SetFlags(RF_Public | RF_Transactional);
+			InChild->Modify();
+		}
+	}
+}
+
 FString FLexUIEditorTools::MakeUniqueWidgetDisplayName(
 	ULexWidget* ContextWidget,
 	const FString& DesiredName,
@@ -212,9 +240,11 @@ ULexWidget* FLexUIEditorTools::CreateWidgetAndReturn(TFunction<ULexWidget*()> Ge
 	}
 	const FScopedTransaction Transaction(LOCTEXT("CreateChildWidget_Transaction", "LexUI Child Widget"));
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
+	ModifyForHierarchyChange(SelectedWidget);
 	auto NewWidget = NewObject<ULexWidget>(SelectedWidget->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
 	if (IsValid(NewWidget))
 	{
+		NewWidget->Modify();
 		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 		{
 			PrefabHelperObject->Modify();
@@ -259,6 +289,7 @@ ULexWidget* FLexUIEditorTools::CreateUIControlsAndReturn(TFunction<ULexWidget*()
 	}
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
+	ModifyForHierarchyChange(SelectedWidget);
 	ULexWidget* CreatedWidget = nullptr;
 	if (auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath))
 	{
@@ -574,6 +605,8 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 	const FScopedTransaction Transaction(LOCTEXT("PasteWidget_Transaction", "LexUI Paste Widgets"));
 	auto World = ParentWidget->GetWorld();
 	ULexUISelection::GetInstance(World)->Modify();
+	ModifyForHierarchyChange(ParentWidget);
+	if (IsValid(PrefabHelperObject))PrefabHelperObject->Modify();
 	ULexUISelection::GetInstance(World)->SelectNone();
 	for (auto KeyValuePair : CopiedWidgetPrefabMap)
 	{

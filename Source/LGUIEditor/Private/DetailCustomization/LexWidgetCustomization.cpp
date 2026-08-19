@@ -1228,16 +1228,22 @@ void FLexWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilder)
 		FParse::Value(*PastedText, TEXT("AnchoredPositionY="), AnchorData.AnchoredPosition.Y);
 		FParse::Value(*PastedText, TEXT("SizeDeltaX="), AnchorData.SizeDelta.X);
 		FParse::Value(*PastedText, TEXT("SizeDeltaY="), AnchorData.SizeDelta.Y);
+		// Pasting an anchor rewrites pivot, both anchors, position and size at once -- the single
+		// biggest thing this panel can do to a widget -- and it used to do it outside any
+		// transaction, so Ctrl+Z rolled back whatever came before it instead. Same shape as
+		// OnSelectAnchor below.
+		GEditor->BeginTransaction(LOCTEXT("PasteAnchor_Transaction", "Paste LGUI Anchor"));
 		for (auto item : TargetScriptArray)
 		{
 			if (item.IsValid())
 			{
-				auto itemWidget = item->GetAnchorData();
+				item->Modify();
 				item->SetAnchorData(AnchorData);
 				FLexUIUtils::NotifyPropertyChanged(item.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 				item->MarkPackageDirty();
 			}
 		}
+		GEditor->EndTransaction();
 		ForceUpdateUI();
 		DetailBuilder->ForceRefreshDetails();
 	}
