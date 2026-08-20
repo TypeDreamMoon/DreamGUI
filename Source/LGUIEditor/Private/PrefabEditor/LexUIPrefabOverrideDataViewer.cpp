@@ -8,8 +8,34 @@
 #include "Core/LexUIBehaviour.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
+#include "Editor.h"
+#include "TimerManager.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabOverrideDataViewer"
+
+namespace LexUIOverrideDataViewerLocal
+{
+	/**
+	 * Run InAction once the current Slate pass is over.
+	 *
+	 * These buttons live inside the tree RefreshDataContent() clears, and the AfterApplyPrefab /
+	 * AfterRevertPrefab delegates can close the whole prefab editor -- which takes the popup this
+	 * viewer sits in with it. Doing either from the click handler mutates a widget tree Slate is
+	 * still walking, and FChildren::ForEachWidget reads the child count ONCE before the walk, so a
+	 * slot removed underneath it is read back as an out-of-bounds index several frames of engine
+	 * code away from the code that removed it.
+	 */
+	void RunAfterThisFrame(TFunction<void()> InAction)
+	{
+		if (GEditor == nullptr)
+		{
+			InAction();
+			return;
+		}
+		GEditor->GetTimerManager()->SetTimerForNextTick(FTimerDelegate::CreateLambda(
+			[Action = MoveTemp(InAction)]() { Action(); }));
+	}
+}
 
 void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFunction<ULexWidget*()> InGetSelectedWidgetFunction)
 {
@@ -145,8 +171,12 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 							// from the current selection and can leave it null, and the delegate argument
 							// below reads through it.
 							ULexUIPrefab* Asset = PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get());
-							RefreshDataContent();
-							AfterRevertPrefab.ExecuteIfBound(Asset);
+							LexUIOverrideDataViewerLocal::RunAfterThisFrame(
+								[WeakSelf = TWeakPtr<SLexUIPrefabOverrideDataViewer>(SharedThis(this)), Asset, Delegate = AfterRevertPrefab]()
+								{
+									if (TSharedPtr<SLexUIPrefabOverrideDataViewer> Self = WeakSelf.Pin())Self->RefreshDataContent();
+									Delegate.ExecuteIfBound(Asset);
+								});
 						})
 						, LOCTEXT("RevertObjectAllParameterSet", "Click to revert all parameters of this object to prefab's default value.")
 					)
@@ -168,8 +198,12 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 							// from the current selection and can leave it null, and the delegate argument
 							// below reads through it.
 							ULexUIPrefab* Asset = PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get());
-							RefreshDataContent();
-							AfterApplyPrefab.ExecuteIfBound(Asset);
+							LexUIOverrideDataViewerLocal::RunAfterThisFrame(
+								[WeakSelf = TWeakPtr<SLexUIPrefabOverrideDataViewer>(SharedThis(this)), Asset, Delegate = AfterApplyPrefab]()
+								{
+									if (TSharedPtr<SLexUIPrefabOverrideDataViewer> Self = WeakSelf.Pin())Self->RefreshDataContent();
+									Delegate.ExecuteIfBound(Asset);
+								});
 						})
 						, LOCTEXT("ApplyObjectParameterSet", "Click to apply all parameters of this object to prefab's default value.")
 					)
@@ -210,8 +244,15 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 					PropertyCustomizationHelpers::MakeResetButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
 							PrefabHelperObject->RevertPrefabOverride(DataItem.Object.Get(), {PropertyName});
-							RefreshDataContent();
-							AfterRevertPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
+							// Asset first: RefreshDataContent() re-derives PrefabHelperObject from the
+							// current selection and can leave it null, and the delegate reads through it.
+							ULexUIPrefab* Asset = PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get());
+							LexUIOverrideDataViewerLocal::RunAfterThisFrame(
+								[WeakSelf = TWeakPtr<SLexUIPrefabOverrideDataViewer>(SharedThis(this)), Asset, Delegate = AfterRevertPrefab]()
+								{
+									if (TSharedPtr<SLexUIPrefabOverrideDataViewer> Self = WeakSelf.Pin())Self->RefreshDataContent();
+									Delegate.ExecuteIfBound(Asset);
+								});
 						})
 						, LOCTEXT("ResetThisParameter", "Click to revert this parameter to prefab's default value.")
 					)
@@ -231,8 +272,15 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 					PropertyCustomizationHelpers::MakeUseSelectedButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
 							PrefabHelperObject->ApplyPrefabOverride(DataItem.Object.Get(), {PropertyName});
-							RefreshDataContent();
-							AfterApplyPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
+							// Asset first: RefreshDataContent() re-derives PrefabHelperObject from the
+							// current selection and can leave it null, and the delegate reads through it.
+							ULexUIPrefab* Asset = PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get());
+							LexUIOverrideDataViewerLocal::RunAfterThisFrame(
+								[WeakSelf = TWeakPtr<SLexUIPrefabOverrideDataViewer>(SharedThis(this)), Asset, Delegate = AfterApplyPrefab]()
+								{
+									if (TSharedPtr<SLexUIPrefabOverrideDataViewer> Self = WeakSelf.Pin())Self->RefreshDataContent();
+									Delegate.ExecuteIfBound(Asset);
+								});
 						})
 						, LOCTEXT("ApplyThisParameter", "Click to apply this parameter to origin prefab.")
 					)
