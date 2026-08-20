@@ -1,17 +1,18 @@
 <p align="center">
-  <img width="112" src="./Resources/Icon128.png" alt="LGUI logo">
+  <img width="112" src="./Resources/Icon128.png" alt="DreamGUI logo">
 </p>
 
-<h1 align="center">LGUI</h1>
+<h1 align="center">DreamGUI</h1>
 
 <p align="center">
-  <strong>3D UI System for Unreal Engine</strong><br>
+  <strong>3D UI System for Unreal Engine 5.8</strong><br>
   Event Framework · Prefab Workflow · Tween Animation<br>
   事件框架 · 预制体工作流 · 补间动画
 </p>
 
 <p align="center">
-  <a href="https://github.com/liufei2008/LGUI"><strong>Upstream Repository / 上游仓库</strong></a>
+  A fork of <a href="https://github.com/liufei2008/LGUI"><strong>LGUI / LexUI</strong></a> by Lex Liu, MIT licensed.<br>
+  基于 Lex Liu 的 <a href="https://github.com/liufei2008/LGUI">LGUI / LexUI</a>，MIT 许可。
 </p>
 
 ---
@@ -66,8 +67,91 @@ Prefab upgrade and migration tools must follow this checklist:
 
 ---
 
+---
+
+## Divergence from Upstream / 与上游的差异
+
+> [!IMPORTANT]
+> This fork has diverged substantially and **is not a drop-in replacement for upstream LGUI/LexUI**.
+> Do not expect upstream patches to apply, or upstream documentation to describe this behaviour.<br>
+> 本分支与上游差异较大，**不能直接替换上游 LGUI/LexUI**。上游的补丁通常无法套用，上游文档也不能用来描述这里的行为。
+
+Forked from upstream `LexUI/5.7` at `765efeaf1` (2026-07-13). 214 commits since,
+2026-07-18 to 2026-08-20.
+
+从上游 `LexUI/5.7` 的 `765efeaf1`（2026-07-13）分出，此后 214 个提交。
+
+### Why the branches cannot easily merge / 为什么两边已经很难合并
+
+| | Upstream / 上游 | Here / 本分支 |
+| --- | --- | --- |
+| Engine / 引擎 | UE 5.7 (`LexUI/5.7`); no 5.8 branch on this line | **UE 5.8** |
+| Layout / 布局 | FlexBox + Grid layout family, still actively developed | **Family deleted**; UMG-shaped panels only |
+| Widget base / 控件基类 | — | Unchanged, but invalidation and geometry write-back are rebuilt |
+
+The layout divergence is the sharpest: upstream's 2026-08-08 fix for an infinite loop in
+`ULexLayoutContainerFlexBox` has no meaning here, because that class no longer exists.
+
+布局这一条分歧最深：上游 2026-08-08 修的 `ULexLayoutContainerFlexBox` 死循环，在这里没有意义
+—— 那个类已经不存在了。
+
+### What changed / 改了什么
+
+**Layout / 布局** — rebuilt along the lines Blink and Yoga use. The legacy Lex layout family
+(`ULexLayoutContainerFlexBox`, `ULexLayoutContainerGrid`, `ULexLayoutSelfFlexBox`,
+`ULexLayoutSelfGrid`, and the `ELexUILayoutMode` switch) was deleted; the UMG-shaped panel
+family is the only layout path. Measurement is `const` and separated from application; panels
+arrange into an immutable fragment which is then committed in one write; desired size is
+memoised for the duration of a pass; invalidation carries a reason, so a move no longer
+re-measures the whole ancestor chain.
+
+按 Blink / Yoga 的形状重建。legacy 布局家族整体删除，UMG 家族成为唯一路径。测量变 const 并与
+应用拆开；面板排布进不可变的 fragment 再一次性提交；每遍 pass 内缓存 desired size；失效带原因，
+移动不再触发整条祖先链重新测量。
+
+**Text / 文字** — `Margin`, `LineHeightPercentage`, `WrapTextAt` (a wrap width independent of
+the box) and Best Fit (shrink the font until it fits). The first three match UMG's text
+controls; Best Fit matches uGUI's, and neither UMG nor Slate has an equivalent.
+
+**Perspective / 透视** — a per-widget perspective inherited by its subtree, in the shape CSS
+uses. Requires a screen-space canvas with a perspective projection; inert otherwise.
+
+**Render transform / 渲染变换** — widened to three dimensions, so a widget can be animated
+inside a layout without the layout fighting it.
+
+**Prefab editor / 预制体编辑器** — reviewed against UMG's widget designer and largely rebuilt.
+Viewport picking is by widget **rect** rather than by rendered triangles, because layout-only
+panels have no mesh and were unhittable. Added: hover feedback, per-axis resize handles, an
+anchor medallion, marquee selection, drag-to-reparent on the canvas, Content-Browser drops onto
+the design surface, palette favourites, and type-aware search. Create, paste and drop now enter
+the undo stack.
+
+视口命中改为按控件**矩形**判定 —— 布局面板没有网格，射线永远打不中。新增 hover 反馈、逐轴缩放
+手柄、锚点 medallion、框选、画布内改父级、Content Browser 拖入、调色板收藏、按类型搜索。新建 /
+粘贴 / 拖入进入撤销栈。
+
+**Tests / 测试** — 279 automation tests, from none. Run with
+`Automation RunTests LGUI`.
+
+### Known gaps / 已知缺口
+
+- `LineHeightPercentage` and `WrapTextAt` are exercised only through a real font asset and are
+  not covered by tests.<br>
+  这两项需要真实字体资产才能跑到，没有测试覆盖。
+- The plugin, its modules and its symbols are still named `LGUI` / `LexUI` / `ULex*`. The rename
+  to DreamGUI is not done.<br>
+  插件、模块与符号仍叫 `LGUI` / `LexUI` / `ULex*`，尚未改名。
+
 ## License / 许可
 
-MIT
+MIT. See [LICENSE](./LICENSE).
 
-Copyright (c) 2019-present, Lex Liu
+Copyright (c) 2026-present TypeDreamMoon<br>
+Copyright (c) 2019-present Lex Liu
+
+Substantial portions of this software remain the work of Lex Liu and are used under
+the MIT terms of the [original project](https://github.com/liufei2008/LGUI). The MIT
+notice must travel with any copy or substantial portion of this code, including yours.
+
+本项目大量代码仍属 Lex Liu 的原创工作，依据[原项目](https://github.com/liufei2008/LGUI)的
+MIT 条款使用。任何拷贝或实质性部分都必须随附 MIT 声明，你的分发也一样。
