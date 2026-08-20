@@ -1115,10 +1115,15 @@ public:
 			.VAlign(VAlign_Center)
 			.Padding(FMargin(4, 0))
 			[
-				SNew(SEditableTextBox)
+				// The name is pushed from Tick, deliberately NOT bound. An SEditableTextBox
+				// re-runs OnVerifyTextChanged every time its text changes -- including a change the
+				// binding pushes -- and a passing verification calls SetError(""), which destroys
+				// the error popup's window then and there. Bindings are updated during Slate's
+				// child walk, so that destroy removes a slot from the window overlay while the walk
+				// is iterating it, and the walk reads the count it took before the slot went away.
+				SAssignNew(NameBox, SEditableTextBox)
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 				.HintText(LOCTEXT("WidgetNameHint", "Name"))
-				.Text(this, &SLexWidgetDetailsHeader::GetEditedObjectText)
 				.IsEnabled(this, &SLexWidgetDetailsHeader::CanRename)
 				.SelectAllTextWhenFocused(true)
 				.RevertTextOnEscape(true)
@@ -1143,6 +1148,15 @@ public:
 		{
 			CachedObject = EditedObject;
 			RebuildSourceLink();
+		}
+		// Never while the user is in the box: this would overwrite what they are typing.
+		if (NameBox.IsValid() && !NameBox->HasAnyUserFocusOrFocusedDescendants())
+		{
+			const FText Current = GetEditedObjectText();
+			if (!NameBox->GetText().EqualTo(Current))
+			{
+				NameBox->SetText(Current);
+			}
 		}
 	}
 
@@ -1229,6 +1243,7 @@ private:
 	FOnGetEditedObject GetEditedObject;
 	FOnCanEdit CanEdit;
 	TWeakObjectPtr<UObject> CachedObject;
+	TSharedPtr<SEditableTextBox> NameBox;
 	TSharedPtr<SBox> SourceLinkBox;
 };
 
