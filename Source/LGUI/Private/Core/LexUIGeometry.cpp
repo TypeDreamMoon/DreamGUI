@@ -2380,6 +2380,14 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 	int contentLength = Content.Len();
 	FVector2f currentLineOffset(0, 0);
 	float originLineHeight = font->GetLineHeight(fontSize);
+	// Scales the gap between lines without touching glyph size. FontSpace.Y stays outside it: that
+	// one is a flat distance the author asked for, not something that should follow the font.
+	const float lineHeightScale = FMath::Max(0.0f, LexText->GetLineHeightPercentage());
+	// Wrapping and the box are separable: an author can ask for a narrow column that still centres
+	// over the full widget. Truncate and Ellipsis deliberately keep measuring against the box below,
+	// because those are about what fits on screen rather than where lines break.
+	const float authoredWrapAt = LexText->GetWrapTextAt();
+	const float wrapWidth = authoredWrapAt > 0.0f ? authoredWrapAt : width;
 	float currentLineWidth = 0, currentLineHeight = originLineHeight, paragraphHeight = 0;//single line width, height, all line height
 	float firstLineHeight = currentLineHeight;//first line height
 	float maxLineWidth = 0;//if have multiple line
@@ -2460,8 +2468,9 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 
 		currentLineWidth = 0;
 		currentLineOffset.X = 0;
-		currentLineOffset.Y -= (bRichText ? currentLineHeight : originLineHeight) + fontSpace.Y;
-		paragraphHeight += (bRichText ? currentLineHeight : originLineHeight) + fontSpace.Y;
+		const float lineAdvance = (bRichText ? currentLineHeight : originLineHeight) * lineHeightScale + fontSpace.Y;
+		currentLineOffset.Y -= lineAdvance;
+		paragraphHeight += lineAdvance;
 		if (hasClampContent && shouldSetParagraphHeightForClampContent)
 		{
 			shouldSetParagraphHeightForClampContent = false;
@@ -2808,7 +2817,7 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 				{
 					spaceNeeded -= fontSpace.X;
 				}
-				if (currentLineOffset.X + spaceNeeded > width + UE_KINDA_SMALL_NUMBER)
+				if (currentLineOffset.X + spaceNeeded > wrapWidth + UE_KINDA_SMALL_NUMBER)
 				{
 					NewLine(caretCharIndex, false, NewLineMode::Space,
 						charGeo.XAdvance
@@ -2934,7 +2943,7 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 				{
 					nextCharXAdv += GetCharGeoXAdv(TextProcessingArray[charIndex+1].Unicode, TextProcessingArray[charIndex+2]
 						, bRichText ? richTextPropertyArray[charIndex+2] : richTextParseResult);
-					if (currentLineOffset.X + nextCharXAdv > width + UE_KINDA_SMALL_NUMBER)//if next char cannot fit this line, then add new line
+					if (currentLineOffset.X + nextCharXAdv > wrapWidth + UE_KINDA_SMALL_NUMBER)//if next char cannot fit this line, then add new line
 					{
 						auto nextChar = TextProcessingArray[charIndex + 1].Unicode;
 						if (nextChar == '\r' || nextChar == '\n')
@@ -2950,7 +2959,7 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 				}
 				else
 				{
-					if (currentLineOffset.X + nextCharXAdv > width + UE_KINDA_SMALL_NUMBER && wrappingPolicy == ETextWrappingPolicy::AllowPerCharacterWrapping)//if next char cannot fit this line, then add new line
+					if (currentLineOffset.X + nextCharXAdv > wrapWidth + UE_KINDA_SMALL_NUMBER && wrappingPolicy == ETextWrappingPolicy::AllowPerCharacterWrapping)//if next char cannot fit this line, then add new line
 					{
 						auto nextChar = TextProcessingArray[charIndex + 1].Unicode;
 						if (nextChar == '\r' || nextChar == '\n')

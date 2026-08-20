@@ -81,6 +81,51 @@ protected:
 		ELexUITextOverflowType OverflowType = ELexUITextOverflowType::VerticalOverflow;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
+	/**
+	 * Padding between the widget's rect and the text laid out inside it, the way UMG's text Margin
+	 * works. The text is wrapped, aligned and overflow-tested against the rect MINUS this, so a
+	 * margin narrows the wrap width rather than just shifting the result.
+	 *
+	 * It also grows what this text reports as its preferred size, so a parent that sizes itself to
+	 * its content leaves room for the padding instead of squeezing it back out.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FMargin Margin = FMargin(0.0f);
+	/**
+	 * Scales the distance from one line to the next, 1 being the font's own line height -- UMG's
+	 * LineHeightPercentage. Only the gap between lines moves; the glyphs keep their size, so this
+	 * tightens or opens up a paragraph without changing how big the letters are.
+	 *
+	 * FontSpace.Y is added on top and is a flat distance, which is the difference between the two:
+	 * one scales with the font, the other does not.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, ClampMin = "0.0", UIMin = "0.5", UIMax = "3.0"))
+	float LineHeightPercentage = 1.0f;
+	/**
+	 * Wrap the text at this width instead of at the content box's, UMG's WrapTextAt. Zero or less
+	 * keeps the content box, which is the usual case.
+	 *
+	 * Worth having separately because the box is also what the text is ALIGNED in: a narrower wrap
+	 * width gives a narrow column of text that still centres over the full widget, which the box
+	 * alone cannot express. It does not truncate -- Truncate and Ellipsis still measure against the
+	 * box, since what they are about is what fits on screen.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+	float WrapTextAt = 0.0f;
+	/**
+	 * Shrink the font until the text fits the content box, uGUI's Best Fit. FontSize becomes the
+	 * size the text is allowed to reach rather than the size it is drawn at, and BestFitMinSize is
+	 * how small it may go before the text is simply allowed to overflow.
+	 *
+	 * Neither UMG nor Slate has an equivalent: their text is content-sized, so the box grows to the
+	 * text instead. Here the box is authored, which is exactly the case that needs this.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI", Getter = "GetBestFit", Setter = "SetBestFit", meta = (AllowPrivateAccess = true))
+	bool bBestFit = false;
+	UPROPERTY(EditAnywhere, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bBestFit", ClampMin = "1.0"))
+	float BestFitMinSize = 8.0f;
+	/** What Best Fit settled on last layout. Not authored, so not a UPROPERTY the user can edit. */
+	mutable float RenderedFontSize = 0.0f;
 	/** Use a custom material to render this text */
     UPROPERTY(EditAnywhere, Category = "LexUI")
     UMaterialInterface* OverrideMaterial = nullptr;
@@ -198,6 +243,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetUseKerning()const { return bUseKerning; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetFontSpace()const { return FontSpace; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextOverflowType GetOverflowType()const { return OverflowType; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") const FMargin& GetMargin()const { return Margin; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetLineHeightPercentage()const { return LineHeightPercentage; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetWrapTextAt()const { return WrapTextAt; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetBestFit()const { return bBestFit; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetBestFitMinSize()const { return BestFitMinSize; }
+	/** The size Best Fit actually drew at, which is GetFontSize() when Best Fit is off. */
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetRenderedFontSize()const { return RenderedFontSize; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ETextWrappingPolicy GetWrappingPolicy()const{return WrappingPolicy;}
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextFontStyle GetFontStyle()const { return FontStyle; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetRichText()const { return bRichText; }
@@ -231,6 +283,30 @@ public:
 		void SetOverflowType(ELexUITextOverflowType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetWrappingPolicy(ETextWrappingPolicy Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetMargin(const FMargin& Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetLineHeightPercentage(float Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetWrapTextAt(float Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetBestFit(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetBestFitMinSize(float Value);
+	/**
+	 * The largest whole size in [InMinSize, InMaxSize] whose measurement fits InBox, or InMinSize
+	 * when even that does not. InMeasure returns the text size a given font size produces.
+	 * Bisects, so it costs about eight measurements rather than one per size.
+	 */
+	static float FindBestFitFontSize(const FVector2f& InBox, float InMinSize, float InMaxSize,
+		TFunctionRef<FVector2f(float)> InMeasure);
+	/**
+	 * The rect the text is actually laid out in: the widget's own, inset by Margin. Never negative
+	 * on either axis -- a margin wider than the widget leaves no room rather than an inside-out box.
+	 * Static so the arithmetic can be tested without a widget.
+	 */
+	static void GetContentBox(const FVector2f& InWidgetSize, const FVector2f& InPivot, const FMargin& InMargin,
+		FVector2f& OutSize, FVector2f& OutPivot);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetFontStyle(ELexUITextFontStyle Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

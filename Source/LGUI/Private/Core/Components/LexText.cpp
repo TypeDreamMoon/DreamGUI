@@ -496,6 +496,121 @@ void ULexText::SetFontSpace(FVector2D Value) {
 // widget does not move inside its parent, and there is nothing for a layout pass to recompute -
 // MarkVertexPositionDirty already reaches the canvas through MarkVerticesDirty -> MarkCanvasUpdate,
 // which is the whole of what a re-alignment needs.
+void ULexText::SetMargin(const FMargin& Value)
+{
+	if (!(Margin == Value))
+	{
+		Margin = Value;
+		MarkVertexPositionDirty();
+		// Unlike paragraph alignment, a margin narrows the wrap width, so the text itself comes out
+		// a different size and whatever is sizing itself to this text has to hear about it.
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void ULexText::SetLineHeightPercentage(float Value)
+{
+	Value = FMath::Max(0.0f, Value);
+	if (LineHeightPercentage != Value)
+	{
+		LineHeightPercentage = Value;
+		MarkVertexPositionDirty();
+		// Changes how tall the paragraph comes out, so a content-sized parent has to re-measure.
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void ULexText::SetWrapTextAt(float Value)
+{
+	Value = FMath::Max(0.0f, Value);
+	if (WrapTextAt != Value)
+	{
+		WrapTextAt = Value;
+		MarkVertexPositionDirty();
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void ULexText::SetBestFit(bool Value)
+{
+	if (bBestFit != Value)
+	{
+		bBestFit = Value;
+		MarkVertexPositionDirty();
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void ULexText::SetBestFitMinSize(float Value)
+{
+	Value = FMath::Max(1.0f, Value);
+	if (BestFitMinSize != Value)
+	{
+		BestFitMinSize = Value;
+		if (bBestFit)
+		{
+			MarkVertexPositionDirty();
+			ULexWidget::MarkLayoutForRebuild(GetWidget());
+		}
+	}
+}
+
+float ULexText::FindBestFitFontSize(const FVector2f& InBox, float InMinSize, float InMaxSize,
+	TFunctionRef<FVector2f(float)> InMeasure)
+{
+	const int32 MinSize = FMath::Max(1, FMath::FloorToInt(InMinSize));
+	const int32 MaxSize = FMath::FloorToInt(InMaxSize);
+	if (MaxSize <= MinSize)return (float)MinSize;
+	auto Fits = [&InBox, &InMeasure](int32 InSize)
+	{
+		const FVector2f Measured = InMeasure((float)InSize);
+		// Both axes: with wrapping on, width is respected for us and only height can fail, but
+		// without it a long single line overflows sideways and nothing else would catch that.
+		return Measured.X <= InBox.X + UE_KINDA_SMALL_NUMBER
+			&& Measured.Y <= InBox.Y + UE_KINDA_SMALL_NUMBER;
+	};
+	// Asking for the biggest size first means the common case -- the text already fits -- costs one
+	// measurement rather than a whole bisection.
+	if (Fits(MaxSize))return (float)MaxSize;
+	int32 Low = MinSize;
+	int32 High = MaxSize;
+	int32 Best = MinSize;
+	// Fits() is monotonic in size for a fixed box, so bisection lands on the largest that fits.
+	while (Low <= High)
+	{
+		const int32 Mid = Low + (High - Low) / 2;
+		if (Fits(Mid))
+		{
+			Best = Mid;
+			Low = Mid + 1;
+		}
+		else
+		{
+			High = Mid - 1;
+		}
+	}
+	return (float)Best;
+}
+
+void ULexText::GetContentBox(const FVector2f& InWidgetSize, const FVector2f& InPivot, const FMargin& InMargin,
+	FVector2f& OutSize, FVector2f& OutPivot)
+{
+	OutSize.X = FMath::Max(0.0f, InWidgetSize.X - InMargin.Left - InMargin.Right);
+	OutSize.Y = FMath::Max(0.0f, InWidgetSize.Y - InMargin.Top - InMargin.Bottom);
+	// The layout reads the box as a centre offset from the pivot: centre = Size * (0.5 - Pivot).
+	// Solving that for the inset box's centre is what keeps an asymmetric margin asymmetric --
+	// simply shrinking Size around the same pivot would inset both edges by the average instead.
+	// Y counts upward here, so it is the BOTTOM margin that pushes the centre up.
+	auto SolvePivot = [](float InSize, float InNewSize, float InPivotOnAxis, float InShift)
+	{
+		if (InNewSize <= UE_SMALL_NUMBER)return InPivotOnAxis;
+		const float Centre = InSize * (0.5f - InPivotOnAxis) + InShift * 0.5f;
+		return 0.5f - Centre / InNewSize;
+	};
+	OutPivot.X = SolvePivot(InWidgetSize.X, OutSize.X, InPivot.X, InMargin.Left - InMargin.Right);
+	OutPivot.Y = SolvePivot(InWidgetSize.Y, OutSize.Y, InPivot.Y, InMargin.Bottom - InMargin.Top);
+}
+
 void ULexText::SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlign Value) {
 	if (HAlign != Value)
 	{
@@ -680,30 +795,49 @@ void ULexText::UpdateCacheTextGeometry()const
 	auto Widget = GetWidget();
 	
 	auto RenderOpacityForRichText = this->GetRichText() ? Widget->GetFinalRenderOpacity() : 1.0f;
-	CacheTextGeometryData.SetInputParameters(
-		this->Text.ToString()
-		, Widget->GetWidth()
-		, Widget->GetHeight()
-		, FVector2f(Widget->GetPivot())
-		, this->GetFinalColor()
-		, RenderOpacityForRichText
-		, FVector2f(this->GetFontSpace())
-		, this->GetFontSize()
-		, this->GetParagraphHorizontalAlignment()
-		, this->GetParagraphVerticalAlignment()
-		, this->GetOverflowType()
-		, this->GetWrappingPolicy()
-		, this->GetUseKerning()
-		, this->GetFontStyle()
-		, this->GetRichText()
-		, this->GetRichTextTagFilterFlags()
-		, this->GetFont()
-	);
+	FVector2f ContentSize, ContentPivot;
+	GetContentBox(FVector2f(Widget->GetWidth(), Widget->GetHeight()), FVector2f(Widget->GetPivot()), Margin,
+		ContentSize, ContentPivot);
+
+	auto LayOutAt = [&](float InFontSize)
+	{
+		CacheTextGeometryData.SetInputParameters(
+			this->Text.ToString()
+			, ContentSize.X
+			, ContentSize.Y
+			, ContentPivot
+			, this->GetFinalColor()
+			, RenderOpacityForRichText
+			, FVector2f(this->GetFontSpace())
+			, InFontSize
+			, this->GetParagraphHorizontalAlignment()
+			, this->GetParagraphVerticalAlignment()
+			, this->GetOverflowType()
+			, this->GetWrappingPolicy()
+			, this->GetUseKerning()
+			, this->GetFontStyle()
+			, this->GetRichText()
+			, this->GetRichTextTagFilterFlags()
+			, this->GetFont()
+		);
+		CacheTextGeometryData.ConditionalCalculateGeometry();
+		return CacheTextGeometryData.textPreferredSize;
+	};
+
+	RenderedFontSize = this->GetFontSize();
+	if (bBestFit && ContentSize.X > 0.0f && ContentSize.Y > 0.0f)
+	{
+		// FontSize is the ceiling here, not the size drawn: Best Fit looks for the largest that
+		// fits and only then lays out at it. The search leaves the cache holding some other size's
+		// geometry, so the chosen size is always laid out again below rather than reused.
+		RenderedFontSize = FindBestFitFontSize(ContentSize, BestFitMinSize, this->GetFontSize(), LayOutAt);
+	}
+	LayOutAt(RenderedFontSize);
 	if (UIGeometry->Vertices.Num() == 0)//@todo: geometry is cleared before OnUpdateGeometry, consider use a cached UIGeometry
 	{
 		CacheTextGeometryData.MarkDirty();
+		LayOutAt(RenderedFontSize);
 	}
-	CacheTextGeometryData.ConditionalCalculateGeometry();
 }
 
 void ULexText::ConditionalUpdateCacheTextGeometry() const
@@ -789,13 +923,15 @@ void ULexText::GenerateEmojiObject()
 float ULexText::GetPreferredWidth() const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.textPreferredSize.X;
+	// textPreferredSize measures the glyphs, which were laid out inside the inset box, so the
+	// padding has to be added back or a content-sized parent would squeeze it straight out again.
+	return CacheTextGeometryData.textPreferredSize.X + Margin.Left + Margin.Right;
 }
 
 float ULexText::GetPreferredHeight() const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.textPreferredSize.Y;
+	return CacheTextGeometryData.textPreferredSize.Y + Margin.Top + Margin.Bottom;
 }
 
 
