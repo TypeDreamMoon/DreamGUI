@@ -1,0 +1,31 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+#include "DreamUIPostProcessVertexShader.usf"
+#include "/Engine/Public/Platform.ush"
+#include "/Engine/Generated/UniformBuffers/DreamUIPostProcessMainTexUB.ush"
+
+static float _Offset[3] =
+{
+    0.0,
+	1.3846153846,
+	3.2307692308
+};
+
+static float _Weight[3] =
+{
+    0.2270270270,
+	0.3162162162,
+	0.0702702703
+};
+float2 _BlurStrength;
+
+float4 GaussianBlurPS(SimpleVSToPS input) : SV_Target0
+{
+    float4 color = DreamUIPostProcessMainTexUB._MainTex.Sample(DreamUIPostProcessMainTexUB._MainTexSampler, input.uv) * _Weight[0];
+    for (int i = 1; i < 3; i++)
+    {
+        float2 uvOffset = _Offset[i] * _BlurStrength;
+        color += DreamUIPostProcessMainTexUB._MainTex.Sample(DreamUIPostProcessMainTexUB._MainTexSampler, input.uv + uvOffset) * _Weight[i];
+        color += DreamUIPostProcessMainTexUB._MainTex.Sample(DreamUIPostProcessMainTexUB._MainTexSampler, input.uv - uvOffset) * _Weight[i];
+    }
+    return color;
+}

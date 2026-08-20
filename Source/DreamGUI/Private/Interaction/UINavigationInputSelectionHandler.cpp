@@ -1,0 +1,94 @@
+// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#include "Interaction/UINavigationInputSelectionHandler.h"
+#include "DreamTweenBPLibrary.h"
+#include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamWidget.h"
+
+UUINavigationInputSelectionHandler::UUINavigationInputSelectionHandler()
+{
+}
+
+void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveSelectWidget(InSelected);
+		return;
+	}
+	auto Widget = GetWidget();
+	if (!Widget)return;
+
+	for (auto& Tweener : TweenerCollection)
+	{
+		UDreamTweenBPLibrary::KillIfIsTweening(this, Tweener.Get());
+	}
+	TweenerCollection.Reset();
+	
+	auto PrevSelected = CurrentSelected;
+	CurrentSelected = InSelected;
+	if (InSelected != nullptr && PrevSelected.IsValid())
+	{
+		Widget->SetParent(InSelected, true);
+		auto Pos2D = InSelected->GetLocalSpaceCenter();
+		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
+		// auto Tweener = UDreamTweenBPLibrary::LocalPositionTo(Widget, Pos3D, AnimDuration, 0, EDreamTweenEase::InOutSine);
+		// TweenerCollection.Add(Tweener);
+		// Tweener = Widget->SizeDeltaTo(InSelected->GetSize(), AnimDuration, 0, EDreamTweenEase::InOutSine);
+		// TweenerCollection.Add(Tweener);
+		// Tweener = UDreamTweenBPLibrary::LocalRotationQuaternionTo(Widget, FQuat::Identity, AnimDuration, 0, EDreamTweenEase::InOutSine);
+		// TweenerCollection.Add(Tweener);
+
+		if (ThisCanvas.IsValid())
+		{
+			ThisCanvas->SetSortOrderToHighestOfHierarchy(false);
+		}
+	}
+	else if (InSelected != nullptr)
+	{
+		auto Tweener = Widget->RenderOpacityTo(1.0f, AnimDuration, 0, EDreamTweenEase::Linear);
+		TweenerCollection.Add(Tweener);
+		Widget->SetParent(InSelected, true);
+		auto Pos2D = InSelected->GetLocalSpaceCenter();
+		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
+		Widget->SetRelativeLocation(Pos3D);
+		Widget->SetSizeDelta(InSelected->GetSize());
+		Widget->SetRelativeRotation(FQuat::Identity);
+
+		if (ThisCanvas.IsValid())
+		{
+			ThisCanvas->SetSortOrderToHighestOfHierarchy(false);
+		}
+	}
+	else if (PrevSelected.IsValid())
+	{
+		auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, EDreamTweenEase::Linear);
+		TweenerCollection.Add(Tweener);
+	}
+}
+
+void UUINavigationInputSelectionHandler::SelectNone()
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveSelectNone();
+		return;
+	}
+	auto Widget = GetWidget();
+	if (!Widget)return;
+	if (!CurrentSelected.IsValid())return;
+
+	for (auto& Tweener : TweenerCollection)
+	{
+		UDreamTweenBPLibrary::KillIfIsTweening(this, Tweener.Get());
+	}
+	TweenerCollection.Reset();
+	
+	auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, EDreamTweenEase::Linear)
+	->OnComplete([=, this]()
+	{
+		this->GetWidget()->DestroyWidget();
+	});
+	TweenerCollection.Add(Tweener);
+	CurrentSelected = nullptr;
+}

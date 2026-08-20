@@ -1,0 +1,40 @@
+#include "/Engine/Private/GammaCorrectionCommon.ush"
+
+void DreamUI_ReadWidgetProperty(float CoordinateInDataTex, Texture2D DataTex
+    , inout half FontMark
+    , inout float ClipDataCoordinate
+    , inout half2 WidgetSize, inout half2 WidgetCenterPosition
+    )
+{
+    //read data from texture
+    int Coordinate = round(CoordinateInDataTex);
+    int3 Position = int3(0, Coordinate, 0);
+
+    float PixelData = DataTex.Load(Position).x;Position.x += 1;
+    uint MarksUint = asuint(PixelData);
+    uint FontMarkUint = (MarksUint >> 24) & 0x000000ff;
+    uint ExtraMarkUint = (MarksUint >> 16) & 0x000000ff;
+    // IsRenderByDreamUIRenderer = (ExtraMarkUint >> 7) & 1;    
+    FontMark = FontMarkUint;
+
+    PixelData = DataTex.Load(Position).x;Position.x += 1;
+    ClipDataCoordinate = asuint(PixelData);
+
+    PixelData = DataTex.Load(Position).x;Position.x += 1;
+    {
+        uint PixelDataUint = asuint(PixelData);
+        uint WidthUint = (PixelDataUint >> 16) & 0x0000ffff;
+        uint HeightUint = PixelDataUint & 0x0000ffff;
+        WidgetSize.x = f16tof32(WidthUint);
+        WidgetSize.y = f16tof32(HeightUint);
+    }
+    
+    PixelData = DataTex.Load(Position).x;Position.x += 1;
+    {
+        uint PixelDataUint = asuint(PixelData);
+        uint CenterXUint = (PixelDataUint >> 16) & 0x0000ffff;
+        uint CenterYUint = PixelDataUint & 0x0000ffff;
+        WidgetCenterPosition.x = f16tof32(CenterXUint);
+        WidgetCenterPosition.y = f16tof32(CenterYUint);
+    }
+}

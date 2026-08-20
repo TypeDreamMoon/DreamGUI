@@ -1,0 +1,290 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#include "/Engine/Private/Common.ush"
+#include "/Engine/Private/GammaCorrectionCommon.ush"
+#include "/Engine/Generated/Material.ush"
+#include "DreamUIShaderCommon.ush"
+
+
+struct FDreamUIBasePassInterpolants
+{
+	float4 PixelPosition	: TEXCOORD8; // xyz = world position, w = clip z
+
+#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+	float3 PixelPositionExcludingWPO	: TEXCOORD9;
+#endif
+};
+
+struct FDreamUIBasePassVSToPS
+{
+    FDreamUIVertexFactoryInterpolantsVSToPS FactoryInterpolants;
+	FDreamUIBasePassInterpolants BasePassInterpolants;
+	float4 Position : SV_POSITION;
+};
+
+FDreamUIVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(float2 TexCoord0, float2 TexCoord1
+, FMaterialVertexParameters VertexParameters
+, HALF4_TYPE VertexColor
+, half3x3 TangentToWorld
+, float TangentToWorldSign
+)
+{
+    FDreamUIVertexFactoryInterpolantsVSToPS Interpolants;
+
+	// Initialize the whole struct to 0
+	// Really only the last two components of the packed UVs have the opportunity to be uninitialized
+    Interpolants = (FDreamUIVertexFactoryInterpolantsVSToPS) 0;
+
+#if NUM_TEX_COORD_INTERPOLATORS
+	float2 CustomizedUVs[NUM_TEX_COORD_INTERPOLATORS];
+	GetMaterialCustomizedUVs(VertexParameters, CustomizedUVs);
+	GetCustomInterpolators(VertexParameters, CustomizedUVs);
+	
+	UNROLL
+	for (int CoordinateIndex = 0; CoordinateIndex < NUM_TEX_COORD_INTERPOLATORS; CoordinateIndex++)
+	{
+		SetUV(Interpolants, CoordinateIndex, CustomizedUVs[CoordinateIndex]);
+	}
+#endif
+
+#if COMPILER_GLSL_ES3_1 && !MOBILE_EMULATION
+	VertexColor.rgba = VertexColor.bgra;
+#endif
+	
+    SetTangents(Interpolants, TangentToWorld[0], TangentToWorld[2], TangentToWorldSign);
+	SetColor(Interpolants, VertexColor);
+
+	return Interpolants;
+}
+
+/** Converts from vertex factory specific input to a FMaterialVertexParameters, which is used by vertex shader material inputs. */
+FMaterialVertexParameters GetMaterialVertexParameters(HALF4_TYPE VertexColor, float3 WorldPosition, float2 UVs[4], half3x3 TangentToWorld)
+{
+    FMaterialVertexParameters Result = (FMaterialVertexParameters) 0;
+    Result.WorldPosition = WorldPosition;
+    Result.VertexColor = VertexColor;
+	
+    Result.TangentToWorld = TangentToWorld;
+	
+#if NUM_MATERIAL_TEXCOORDS_VERTEX
+	int MaxCount = min(NUM_MATERIAL_TEXCOORDS_VERTEX, 4);
+    UNROLL
+    for (int CoordinateIndex = 0; CoordinateIndex < MaxCount; CoordinateIndex++)
+    {
+        Result.TexCoords[CoordinateIndex] = UVs[CoordinateIndex].xy;
+    }
+#endif
+	
+    return Result;
+}
+
+float4 TransformLocalToTranslatedWorld(float3 LocalPosition, FDFMatrix LocalToWorld)
+{	
+    return DFTransformLocalToTranslatedWorld(LocalPosition, LocalToWorld, ResolvedView.PreViewTranslation);
+}
+
+void MainVS(
+    in float3 Position : ATTRIBUTE0,
+    in HALF4_TYPE Color : ATTRIBUTE1,
+    in float2 TextureCoord0 : ATTRIBUTE2,
+    in float2 TextureCoord1 : ATTRIBUTE3,
+    in float2 TextureCoord2 : ATTRIBUTE4,
+    in float2 TextureCoord3 : ATTRIBUTE5,
+	in HALF3_TYPE TangentX : ATTRIBUTE6,
+	// TangentZ.w contains sign of tangent basis determinant
+	in HALF4_TYPE TangentZ : ATTRIBUTE7,
+	out FDreamUIBasePassVSToPS Output
+)
+{
+	ResolvedView = ResolveView();
+
+    FPrimitiveSceneData Primitive = GetPrimitiveDataFromUniformBuffer();
+	//float4 WorldPosition = mul(float4(Position, 1.0), GetPrimitiveData(Parameters.PrimitiveId).LocalToWorld);
+    float4 WorldPosition = TransformLocalToTranslatedWorld(Position, Primitive.LocalToWorld);
+	//float4 WorldPosition = float4(Position.xyz + ResolvedView.PreViewTranslation.xyz, 1.0);
+	
+    float TangentSign;
+    half3x3 TangentToLocal = CalcTangentToLocal(TangentX, TangentZ, TangentSign);
+    half3x3 TangentToWorld = CalcTangentToWorld(TangentToLocal, DFDemote(Primitive.LocalToWorld), Primitive.InvNonUniformScale);
+    float TangentToWorldSign = TangentSign * GetPrimitive_DeterminantSign_FromFlags(Primitive.Flags);
+
+    float2 UVs[4];
+    UVs[0] = TextureCoord0;
+    UVs[1] = TextureCoord1;
+    UVs[2] = TextureCoord2;
+    UVs[3] = TextureCoord3;
+
+    FMaterialVertexParameters VertexParameters = GetMaterialVertexParameters(Color, WorldPosition.xyz, UVs, TangentToWorld);
+    HALF3_TYPE WorldPositionOffset = GetMaterialWorldPositionOffset(VertexParameters);
+    WorldPosition.xyz += WorldPositionOffset;
+
+	Output.Position = mul(WorldPosition, ResolvedView.TranslatedWorldToClip);
+	Output.BasePassInterpolants.PixelPosition = WorldPosition;
+
+#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+	Output.BasePassInterpolants.PixelPositionExcludingWPO = WorldPosition.xyz;
+#endif
+
+	Output.FactoryInterpolants = VertexFactoryGetInterpolantsVSToPS(TextureCoord0, TextureCoord1
+	, VertexParameters
+	, Color
+	, TangentToWorld, TangentToWorldSign
+	);
+
+	Output.BasePassInterpolants.PixelPosition.w = Output.Position.w;
+}
+
+
+
+FMaterialPixelParameters GetMaterialPixelParameters(FDreamUIVertexFactoryInterpolantsVSToPS Interpolants, float4 SvPosition)
+{
+	// GetMaterialPixelParameters is responsible for fully initializing the result
+	FMaterialPixelParameters Result = MakeInitializedMaterialPixelParameters();
+
+#if NUM_TEX_COORD_INTERPOLATORS
+	UNROLL
+	for( int CoordinateIndex = 0; CoordinateIndex < NUM_TEX_COORD_INTERPOLATORS; CoordinateIndex++ )
+	{
+		Result.TexCoords[CoordinateIndex] = GetUV(Interpolants, CoordinateIndex);
+	}
+#endif
+	
+    HALF3_TYPE TangentToWorld0 = GetTangentToWorld0(Interpolants).xyz;
+    HALF4_TYPE TangentToWorld2 = GetTangentToWorld2(Interpolants);
+    Result.UnMirrored = TangentToWorld2.w;
+
+	Result.VertexColor = GetColor(Interpolants);
+
+    Result.TangentToWorld = AssembleTangentToWorld(TangentToWorld0, TangentToWorld2);
+	
+    return Result;
+}
+
+void ApplyPixelDepthOffsetForDreamUIBasePass(inout FMaterialPixelParameters MaterialParameters, FPixelMaterialInputs PixelMaterialInputs, out float OutDepth)
+{
+    float PixelDepthOffset = ApplyPixelDepthOffsetToMaterialParameters(MaterialParameters, PixelMaterialInputs, OutDepth);
+}
+
+/** Reference from Engine/Shader/Private/SlateElementPixelShader.usf */
+/** Display gamma x:gamma curve adjustment, y:inverse gamma (1/GEngine->DisplayGamma), z:InvertAlpha, w:Contrast */
+#define SOURCE_IN_LINEAR_SPACE  1 
+half3 GammaCorrect(half3 InColor, half4 GammaValues)
+{
+    half3 CorrectedColor = InColor;
+
+#if SOURCE_IN_LINEAR_SPACE
+    FLATTEN if (GammaValues.y != 1.0f)
+    {
+        CorrectedColor = ApplyGammaCorrection(CorrectedColor, GammaValues.x);
+    }
+#endif
+
+    return CorrectedColor;
+}
+
+#if LEXUI_BLEND_DEPTH
+#include "/Engine/Generated/UniformBuffers/DreamUIWorldRenderDepthTexUB.ush"
+float4 _SceneDepthTextureScaleOffset;
+float _SceneDepthBlend;
+#if LEXUI_DEPTH_FADE
+int _SceneDepthFade;
+#endif
+#endif
+HALF4_TYPE _DreamUIGammaValues;
+
+void MainPS(
+	FDreamUIVertexFactoryInterpolantsVSToPS Interpolants
+	, FDreamUIBasePassInterpolants BasePassInterpolants
+	, in float4 SvPosition : SV_Position
+	OPTIONAL_IsFrontFace
+	, out HALF4_TYPE OutColor : SV_Target0
+#if OUTPUT_PIXEL_DEPTH_OFFSET
+    , out float OutDepth : SV_Depth
+#endif
+)
+{
+	ResolvedView = ResolveView();
+
+	FMaterialPixelParameters MaterialParameters = GetMaterialPixelParameters(Interpolants, SvPosition);
+	FPixelMaterialInputs PixelMaterialInputs;
+	{
+		float4 ScreenPosition = SvPositionToResolvedScreenPosition(SvPosition);
+		float3 WorldPosition = BasePassInterpolants.PixelPosition.xyz;
+		float3 WorldPositionExcludingWPO = BasePassInterpolants.PixelPosition.xyz;
+		#if USE_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS
+			WorldPositionExcludingWPO = BasePassInterpolants.PixelPositionExcludingWPO;
+		#endif
+		CalcMaterialParametersEx(MaterialParameters, PixelMaterialInputs, SvPosition, ScreenPosition, bIsFrontFace, WorldPosition, WorldPositionExcludingWPO);
+	}
+
+#if OUTPUT_PIXEL_DEPTH_OFFSET
+	ApplyPixelDepthOffsetForDreamUIBasePass(MaterialParameters, PixelMaterialInputs, OutDepth);
+#endif
+
+
+#if SUBSTRATE_ENABLED && TEMPLATE_USES_SUBSTRATE
+
+	FSubstratePixelHeader SubstratePixelHeader = MaterialParameters.GetFrontSubstrateHeader();
+	FSubstrateBSDF UnlitBSDF = SubstratePixelHeader.SubstrateTree.BSDFs[0];
+	UnlitBSDF.SubstrateSanitizeBSDF();
+
+	HALF3_TYPE Color = BSDF_GETEMISSIVE(UnlitBSDF);
+	HALF_TYPE Coverage;
+
+#if SUBSTRATE_OPAQUE_DEFERRED || (SUBSTRATE_OPAQUE_MATERIAL && SUBSTRATE_FORWARD_SHADING)
+	Coverage = 1.0f;
+#elif SUBSTRATE_USE_PREMULTALPHA_OVERRIDE // AlphaComposite - Premultiplied alpha blending
+	Coverage = GetMaterialOpacity(PixelMaterialInputs);
+#else
+	Coverage = saturate(1.0f - UNLIT_TRANSMITTANCE(UnlitBSDF).x);
+	// Substrate's unlit emissive is premultiplied by coverage.
+	Color = Coverage > 0.0f ? Color / Coverage : 0.0f;
+#endif
+
+	OutColor = HALF4_TYPE(Color, Coverage);
+
+#else // SUBSTRATE_ENABLED && TEMPLATE_USES_SUBSTRATE
+	
+    OutColor = HALF4_TYPE(GetMaterialEmissive(PixelMaterialInputs), GetMaterialOpacity(PixelMaterialInputs));
+	
+#endif // SUBSTRATE_ENABLED && TEMPLATE_USES_SUBSTRATE
+	
+	// Gamma Correct
+    OutColor.rgb = GammaCorrect(OutColor.rgb, _DreamUIGammaValues);
+	
+#if MATERIALBLENDING_MASKED
+    clip(GetMaterialMask(PixelMaterialInputs));
+#endif
+	
+#if LEXUI_BLEND_DEPTH
+    float PixelDepth = min(MaterialParameters.ScreenPosition.z / MaterialParameters.ScreenPosition.w, MaterialParameters.SvPosition.z);
+	float2 ScreenUV = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
+	ScreenUV = ScreenUV * 0.5f + float2(0.5f, 0.5f);
+	ScreenUV.y = 1.0f - ScreenUV.y;
+#if LEXUI_DEPTH_FADE
+	float DepthFadeValue = 0;
+	int SampleCount = 0;
+	int SampleSize = _SceneDepthFade;
+	ScreenUV = ScreenUV * _SceneDepthTextureScaleOffset.xy + _SceneDepthTextureScaleOffset.zw;
+	for (int w = -SampleSize; w <= SampleSize; w++)
+	{
+		for (int h = -SampleSize; h <= SampleSize; h++)
+		{
+			float ExistDepth = DreamUIWorldRenderDepthTexUB._SceneDepthTex.Sample(DreamUIWorldRenderDepthTexUB._SceneDepthTexSampler, ScreenUV + float2(w, h) * ResolvedView.ViewSizeAndInvSize.zw).x;
+			DepthFadeValue += step(ExistDepth, PixelDepth);
+			SampleCount++;
+		}
+	}
+	DepthFadeValue /= SampleCount;
+	DepthFadeValue = smoothstep(0, 1, DepthFadeValue);
+#else
+    float ExistDepth = DreamUIWorldRenderDepthTexUB._SceneDepthTex.Sample(DreamUIWorldRenderDepthTexUB._SceneDepthTexSampler, ScreenUV * _SceneDepthTextureScaleOffset.xy + _SceneDepthTextureScaleOffset.zw).x;
+	float DepthFadeValue = step(ExistDepth, PixelDepth);
+#endif
+	OutColor.a = lerp(_SceneDepthBlend * OutColor.a, OutColor.a, DepthFadeValue);
+#endif
+
+#if MATERIALBLENDING_ALPHACOMPOSITE
+	OutColor.rgb *= OutColor.a;
+#endif
+}

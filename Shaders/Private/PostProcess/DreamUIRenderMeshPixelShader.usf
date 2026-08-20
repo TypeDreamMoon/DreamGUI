@@ -1,0 +1,84 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+#include "DreamUIRenderMeshVertexShader.usf"
+#include "/Engine/Generated/UniformBuffers/DreamUIRenderMeshMainTexUB.ush"
+
+#if LEXUI_CLIP
+#include "../DreamUIClip.ush"
+#include "/Engine/Generated/UniformBuffers/DreamUIRenderMeshClipDataTexUB.ush"
+float4x4 _Inv_M;
+#endif
+
+#if LEXUI_BLEND_DEPTH
+#include "/Engine/Generated/UniformBuffers/DreamUIRenderMeshDepthTexUB.ush"
+float4 _SceneDepthTextureScaleOffset;
+float _SceneDepthBlend;
+#if LEXUI_DEPTH_FADE
+int _SceneDepthFade;
+float2 _ViewSizeInv;
+#endif
+#endif
+
+#if LEXUI_MASK
+#include "/Engine/Generated/UniformBuffers/DreamUIRenderMeshMaskTexUB.ush"
+#endif
+
+void RenderMeshPS(
+    RenderMeshVSToPS input,
+    out float4 OutColor : SV_Target0
+)
+{
+    OutColor = DreamUIRenderMeshMainTexUB._MainTex.Sample(DreamUIRenderMeshMainTexUB._MainTexSampler, input.uv);
+    // Tint the captured background. Alpha is left alone here — clip, mask and depth blend below own it.
+    // Strength 0 is a no-op in every mode, so the default (Multiply, white) leaves the source untouched.
+    {
+        float4 Tint = DreamUIRenderMeshMainTexUB._TintColor;
+        int TintMode = DreamUIRenderMeshMainTexUB._TintMode;
+        if (TintMode == 1)// Blend
+        {
+            OutColor.rgb = lerp(OutColor.rgb, Tint.rgb, Tint.a);
+        }
+        else if (TintMode == 2)// Additive
+        {
+            OutColor.rgb += Tint.rgb * Tint.a;
+        }
+        else// Multiply
+        {
+            OutColor.rgb *= lerp(float3(1, 1, 1), Tint.rgb, Tint.a);
+        }
+    }
+#if LEXUI_MASK
+    OutColor.a *= DreamUIRenderMeshMaskTexUB._MaskTex.Sample(DreamUIRenderMeshMaskTexUB._MaskTexSampler, input.uv).r;
+#endif
+#if LEXUI_CLIP
+	float3 localPosition = mul(float4(input.worldPosition, 1.0), _Inv_M).xyz;
+	OutColor.a *= DreamUI_CalculateClipData(DreamUIRenderMeshClipDataTexUB._ClipDataTex, input.uv1.x, input.localPosition);
+#endif
+#if LEXUI_BLEND_DEPTH
+    float PixelDepth = input.screenPosition.z / input.screenPosition.w;
+	float2 ScreenUV = input.screenPosition.xy / input.screenPosition.w;
+	ScreenUV = ScreenUV * 0.5f + float2(0.5f, 0.5f);
+	ScreenUV.y = 1.0f - ScreenUV.y;
+#if LEXUI_DEPTH_FADE
+	float DepthFadeValue = 0;
+	int SampleCount = 0;
+	int SampleSize = _SceneDepthFade;
+	ScreenUV = ScreenUV * _SceneDepthTextureScaleOffset.xy + _SceneDepthTextureScaleOffset.zw;
+	for (int w = -SampleSize; w <= SampleSize; w++)
+	{
+		for (int h = -SampleSize; h <= SampleSize; h++)
+		{
+			float ExistDepth = DreamUIRenderMeshDepthTexUB._SceneDepthTex.Sample(DreamUIRenderMeshDepthTexUB._SceneDepthTexSampler, ScreenUV + float2(w, h) * _ViewSizeInv.xy).x;
+			DepthFadeValue += step(ExistDepth, PixelDepth);
+			SampleCount++;
+		}
+	}
+	DepthFadeValue /= SampleCount;
+	DepthFadeValue = smoothstep(0, 1, DepthFadeValue);
+#else
+    float ExistDepth = DreamUIRenderMeshDepthTexUB._SceneDepthTex.Sample(DreamUIRenderMeshDepthTexUB._SceneDepthTexSampler, ScreenUV * _SceneDepthTextureScaleOffset.xy + _SceneDepthTextureScaleOffset.zw).x;
+	float DepthFadeValue = step(ExistDepth, PixelDepth);
+#endif
+	OutColor.a = lerp(_SceneDepthBlend * OutColor.a, OutColor.a, DepthFadeValue);
+#endif
+}
+

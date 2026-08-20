@@ -1,0 +1,100 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+#include "/Engine/Private/Common.ush"
+#include "/Engine/Public/Platform.ush"
+
+struct FDreamUIVertexFactoryInterpolantsVSToPS
+{
+    //TangentToWorld0 && TangentToWorld2
+	TANGENTTOWORLD_INTERPOLATOR_BLOCK
+    //float4 TangentToWorld0 : TEXCOORD3;
+    //float4 TangentToWorld2 : TEXCOORD4;
+	
+    HALF4_TYPE Color : COLOR0;
+
+#if NUM_TEX_COORD_INTERPOLATORS
+	float4	TexCoords[(NUM_TEX_COORD_INTERPOLATORS + 1) / 2]	: TEXCOORD0;
+#endif
+};
+
+#if NUM_TEX_COORD_INTERPOLATORS
+float2 GetUV(FDreamUIVertexFactoryInterpolantsVSToPS Interpolants, int UVIndex)
+{
+	float4 UVVector = Interpolants.TexCoords[UVIndex / 2];
+	return UVIndex % 2 ? UVVector.zw : UVVector.xy;
+}
+
+void SetUV(inout FDreamUIVertexFactoryInterpolantsVSToPS Interpolants, int UVIndex, float2 InValue)
+{
+	FLATTEN
+	if (UVIndex % 2)
+	{
+		Interpolants.TexCoords[UVIndex / 2].zw = InValue;
+	}
+	else
+	{
+		Interpolants.TexCoords[UVIndex / 2].xy = InValue;
+	}
+}
+#endif
+
+HALF4_TYPE GetColor(FDreamUIVertexFactoryInterpolantsVSToPS Interpolants)
+{
+	return Interpolants.Color;
+}
+
+void SetColor(inout FDreamUIVertexFactoryInterpolantsVSToPS Interpolants, HALF4_TYPE InValue)
+{
+	Interpolants.Color = InValue;
+}
+
+HALF4_TYPE GetTangentToWorld2(FDreamUIVertexFactoryInterpolantsVSToPS Interpolants)
+{
+    return Interpolants.TangentToWorld2;
+}
+
+HALF4_TYPE GetTangentToWorld0(FDreamUIVertexFactoryInterpolantsVSToPS Interpolants)
+{
+    return Interpolants.TangentToWorld0;
+}
+
+void SetTangents(inout FDreamUIVertexFactoryInterpolantsVSToPS Interpolants, float3 InTangentToWorld0, float3 InTangentToWorld2, float InTangentToWorldSign)
+{
+    Interpolants.TangentToWorld0 = HALF4_TYPE(InTangentToWorld0, 0);
+    Interpolants.TangentToWorld2 = HALF4_TYPE(InTangentToWorld2, InTangentToWorldSign);
+}
+
+half3x3 CalcTangentToLocal(HALF3_TYPE TangentInputX, HALF4_TYPE TangentInputZ, out float TangentSign)
+{
+    half3x3 Result;
+
+    HALF3_TYPE TangentX = TangentBias(TangentInputX);
+    HALF4_TYPE TangentZ = TangentBias(TangentInputZ);
+
+    TangentSign = TangentZ.w;
+
+	// derive the binormal by getting the cross product of the normal and tangent
+    HALF3_TYPE TangentY = cross(TangentZ.xyz, TangentX) * TangentZ.w;
+	
+	// Recalculate TangentX off of the other two vectors
+	// This corrects quantization error since TangentX was passed in as a quantized vertex input
+	// The error shows up most in specular off of a mesh with a smoothed UV seam (normal is smooth, but tangents vary across the seam)
+    Result[0] = cross(TangentY, TangentZ.xyz) * TangentZ.w;
+    Result[1] = TangentY;
+    Result[2] = TangentZ.xyz;
+
+    return Result;
+}
+
+half3x3 CalcTangentToWorldNoScale(half3x3 TangentToLocal, half3x3 LocalToWorld, HALF3_TYPE InvScale)
+{
+    LocalToWorld[0] *= InvScale.x;
+    LocalToWorld[1] *= InvScale.y;
+    LocalToWorld[2] *= InvScale.z;
+    return mul(TangentToLocal, LocalToWorld);
+}
+
+half3x3 CalcTangentToWorld(half3x3 TangentToLocal, half3x3 LocalToWorld, HALF3_TYPE InvScale)
+{
+    half3x3 TangentToWorld = CalcTangentToWorldNoScale(TangentToLocal, LocalToWorld, InvScale);
+    return TangentToWorld;
+}

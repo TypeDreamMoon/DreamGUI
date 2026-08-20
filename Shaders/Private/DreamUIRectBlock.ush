@@ -1,0 +1,350 @@
+#include "/Engine/Private/GammaCorrectionCommon.ush"
+#include "/Engine/Public/Platform.ush"
+
+#ifndef PI
+#define PI 3.14159265359f
+#endif
+
+#ifndef INV_PI
+#define INV_PI 0.31830988618379f
+#endif
+
+#ifndef HALF_PI
+#define HALF_PI 1.57079632679f
+#endif
+
+#ifndef INV_255
+#define INV_255 0.00392156862745f
+#endif
+
+#ifndef INV_360
+#define INV_360 0.00277777777777f
+#endif
+
+HALF4_TYPE DreamUI_UnpackUintColor(uint colorUint)
+{
+    HALF4_TYPE ResultColor;
+    ResultColor.r = ((colorUint >> 24) & 0x000000ff) * INV_255;
+    ResultColor.g = ((colorUint >> 16) & 0x000000ff) * INV_255;
+    ResultColor.b = ((colorUint >> 8) & 0x000000ff) * INV_255;
+    ResultColor.a = ((colorUint >> 0) & 0x000000ff) * INV_255;
+    return ResultColor;
+}
+HALF4_TYPE DreamUI_ReadColor(float Data)
+{
+    uint ColorUint = asuint(Data);
+    HALF4_TYPE Color = DreamUI_UnpackUintColor(ColorUint);
+    Color.rgb = sRGBToLinear(Color.rgb);
+    return Color;
+}
+
+// reference from https://www.shadertoy.com/view/4tGGRm
+float DreamUI_sdRoundRect(float2 p, float2 b, float4 r)
+{
+    r.xyzw = min(r.xyzw, min(b.x, b.y));
+    r.xy = (p.x > 0.0) ? r.xy : r.wz;
+    r.x = (p.y > 0.0) ? r.x : r.y;
+    float2 q = abs(p) - b + r.x;
+    float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
+    return d;
+}
+float DreamUI_sdRoundRectInnerShadow(float2 p, float2 b, float4 r, float shadowSize)
+{
+    r.xyzw = min(r.xyzw, min(b.x, b.y));
+    r.xy = (p.x > 0.0) ? r.xy : r.wz;
+    r.x = (p.y > 0.0) ? r.x : r.y;
+    float2 q = abs(p) - b + r.x;
+    float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
+
+    d = saturate((0.0 - d) / shadowSize);
+    d = 1 - d;
+    d = smoothstep(0, 1, d);
+    return d;
+}
+float DreamUI_sdRoundRectOuterShadow(float2 p, float2 b, float4 r, float shadowSize)
+{
+    r.xyzw = min(r.xyzw, min(b.x, b.y));
+    r.xy = (p.x > 0.0) ? r.xy : r.wz;
+    r.x = (p.y > 0.0) ? r.x : r.y;
+    float2 q = abs(p) - b + r.x;
+    float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
+
+    d /= shadowSize;
+    d = saturate(1.0 - d);
+    d = smoothstep(0, 1, d);
+    return d;
+}
+
+float DreamUI_RadialGradient(float2 uv, float2 quadSize, float2 center, float2 radius, float rotation)
+{
+    float2 fragCoord = uv * quadSize;
+    rotation = radians(rotation);
+    float cosAngle = cos(rotation);
+    float sinAngle = sin(rotation);
+    float2x2 rotationMatrix = float2x2(cosAngle, sinAngle, -sinAngle, cosAngle);
+    fragCoord = mul(rotationMatrix, fragCoord - center) + center;
+
+    fragCoord.x = (fragCoord.x - center.x) * radius.y / radius.x + center.x;
+    float distToCenter = distance(fragCoord, center);
+    distToCenter /= radius.y;
+    distToCenter = saturate(distToCenter);
+    return distToCenter;
+}
+
+float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
+{
+    half _TextureScaleMode;
+    float4 _CornerRadius;
+    float2 _QuadSize;
+    
+    half _EnableBody;
+    HALF4_TYPE _BodyColor;
+    float2 _TextureUVCenter;
+    half _EnableGradient;
+    HALF4_TYPE _GradientColor;
+    float2 _GradientCenter;
+    float2 _GradientRadius;
+    float _GradientRotation;
+    
+    half _EnableBorder;
+    float _BorderWidth;
+    half _EnableBorderGradient;
+    HALF4_TYPE _BorderColor;
+    HALF4_TYPE _BorderGradientColor;
+    float2 _BorderGradientCenter;
+    float2 _BorderGradientRadius;
+    float _BorderGradientRotation;
+
+    half _EnableInnerShadow;
+    HALF4_TYPE _InnerShadowColor;
+    float _InnerShadowSize;
+    float _InnerShadowBlur;
+    float2 _InnerShadowOffset;
+
+    half _EnableOuterShadow;
+    HALF4_TYPE _OuterShadowColor;
+    float _OuterShadowSize;
+    float _OuterShadowBlur;
+    float2 _OuterShadowOffset;
+
+    half _EnableRadialFill;
+    float2 _RadialFillCenter;
+    float _RadialFillAngle;
+    float _RadialFillRotation;
+    
+    //read data from texture
+    {
+        int Coordinate = round(UV3.x);
+        int3 Position = int3(0, Coordinate, 0);
+
+        float4 PixelData = DataTex.Load(Position);Position.x += 1;
+        uint ByteUint = asuint(PixelData.r);
+        uint BoolValues = (ByteUint >> 24) & 0x000000ff;
+        _TextureScaleMode = (ByteUint >> 16) & 0x000000ff;
+        
+        _EnableBody = (BoolValues >> 7) & 1;
+        _EnableOuterShadow = (BoolValues >> 6) & 1;
+        _EnableGradient = (BoolValues >> 5) & 1;
+        _EnableBorder = (BoolValues >> 4) & 1;
+        _EnableBorderGradient = (BoolValues >> 3) & 1;
+        _EnableInnerShadow = (BoolValues >> 2) & 1;
+        _EnableRadialFill = (BoolValues >> 1) & 1;
+        
+        _QuadSize = PixelData.ba;
+
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _CornerRadius = PixelData;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _BodyColor = DreamUI_ReadColor(PixelData.r);
+        _TextureUVCenter = PixelData.gb;
+        
+        _GradientColor = DreamUI_ReadColor(PixelData.a);
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _GradientCenter = PixelData.xy;
+        _GradientRadius = PixelData.zw;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _GradientRotation = PixelData.x;
+
+        _BorderWidth = PixelData.y;
+        _BorderColor = DreamUI_ReadColor(PixelData.z);
+        _BorderGradientColor = DreamUI_ReadColor(PixelData.w);
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _BorderGradientCenter = PixelData.xy;
+        _BorderGradientRadius = PixelData.zw;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _BorderGradientRotation = PixelData.x;
+        
+        _InnerShadowColor = DreamUI_ReadColor(PixelData.y);
+        _InnerShadowSize = PixelData.z;
+        _InnerShadowBlur = PixelData.w;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _InnerShadowOffset = PixelData.xy;
+        
+        _RadialFillCenter = PixelData.zw;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _RadialFillRotation = PixelData.x;
+        _RadialFillAngle = PixelData.y;
+        
+        _OuterShadowColor = DreamUI_ReadColor(PixelData.z);
+        _OuterShadowSize = PixelData.w;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _OuterShadowBlur = PixelData.x;
+        _OuterShadowOffset = PixelData.yz;
+
+    }
+    
+    
+    _GradientCenter.y = _QuadSize.y - _GradientCenter.y;
+    _BorderGradientCenter.y = _QuadSize.y - _BorderGradientCenter.y;
+    _InnerShadowOffset.y = -_InnerShadowOffset.y;
+    _OuterShadowOffset.y = -_OuterShadowOffset.y;
+    _RadialFillCenter.y = _QuadSize.y - _RadialFillCenter.y;
+
+    HALF4_TYPE color = HALF4_TYPE(0,0,0,0);
+
+    float2 sdQuadSize = _QuadSize * 0.5f;
+    float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
+    float dOuter = DreamUI_sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
+    float dOuterSharp = dOuter / fwidth(dOuter);
+    // COVERAGE IS CENTRED ON THE BOUNDARY: half a pixel of ramp inside, half outside. dOuterSharp is
+    // the signed distance in pixels, negative inside, so a pixel sitting exactly on the edge is HALF
+    // covered -- which saturate(0.5 - s) gives and saturate(-s) does not. The latter ramps over
+    // [-1,0], putting the 50% point a full half pixel inside the shape, so everything drawn this way
+    // came out fractionally small and fractionally dark along every edge.
+    //
+    // Slate spends the same half pixel the same way -- SlateElementPixelShader.usf's
+    // GetFontSignedDistanceOpacity is saturate(ScreenSpaceDistance + 0.5), the sign flipped only
+    // because its distance is positive inside.
+    //
+    // The outer half of the ramp needs somewhere to live, and bSoftEdge provides it by expanding the
+    // quad one unit a side (DreamUIGeometry.cpp:263-269). One unit covers half a pixel of ramp until
+    // the widget is minified past 2:1, beyond which the outer half clips against the geometry.
+    float dOuter01 = saturate(0.5f - dOuterSharp);
+    
+    //inner body
+    if (_EnableBody)
+    {
+        float2 stretchUV = UV2;
+        float2 fitUV = UV2;
+        float2 envelopUV = UV2;
+        {
+            float fitUVX = (UV2.x - _TextureUVCenter.x) * _QuadSize.x / _QuadSize.y + _TextureUVCenter.x;
+            float fitUVY = (UV2.y - _TextureUVCenter.y) * _QuadSize.y / _QuadSize.x + _TextureUVCenter.y;
+            half lerpAlpha = saturate(sign(_QuadSize.x - _QuadSize.y));
+            fitUV = lerp(float2(UV2.x, fitUVY), float2(fitUVX, UV2.y), lerpAlpha);
+            envelopUV = lerp(float2(fitUVX, UV2.y), float2(UV2.x, fitUVY), lerpAlpha);
+        }
+        
+        float2 texUV = lerp(lerp(stretchUV, fitUV, _TextureScaleMode), envelopUV, max(0, _TextureScaleMode - 1));
+        float4 MainTexColor = Texture2DSample(MainTex, MainTexSampler, texUV);
+        float4 bodyColor = MainTexColor * _BodyColor;
+        bodyColor.rgb *= bodyColor.a;
+
+        if (_EnableGradient)
+        {
+            float gradientLerpAlpha = 1 - DreamUI_RadialGradient(UV0, _QuadSize, _GradientCenter.xy, _GradientRadius.xy, _GradientRotation);
+            HALF4_TYPE gradientColor = _GradientColor * MainTexColor;
+            gradientColor.a *= gradientLerpAlpha;
+            gradientColor.rgb *= gradientColor.a;
+            bodyColor = bodyColor * (1 - gradientColor.a) + gradientColor;
+        }
+        
+        bodyColor.a *= dOuter01;
+        bodyColor.rgb *= dOuter01;
+        
+        color = bodyColor;
+    }
+    
+    if (_EnableInnerShadow)
+    {
+        float2 quadSize = sdQuadSize - _InnerShadowSize + _InnerShadowBlur * 0.5f;
+        float4 cornerRadius = _CornerRadius + _InnerShadowBlur * 0.5f - _InnerShadowSize;
+        cornerRadius = max(cornerRadius, _InnerShadowBlur);
+        float sdInnerShadow = DreamUI_sdRoundRectInnerShadow(sdFragCoord - _InnerShadowOffset.xy, quadSize, cornerRadius, _InnerShadowBlur);
+        sdInnerShadow = pow(sdInnerShadow, 2.2);
+        HALF4_TYPE innerShadowColor = _InnerShadowColor;
+        innerShadowColor.a *= sdInnerShadow;
+        innerShadowColor.rgb *= innerShadowColor.a;
+        color = color * (1 - innerShadowColor.a) + innerShadowColor;
+        color.a *= dOuter01;
+        color.rgb *= dOuter01;
+    }
+
+    if (_EnableBorder * sign(abs(_BorderWidth)))
+    {
+        HALF4_TYPE borderColor = _BorderColor;
+        borderColor.rgb *= borderColor.a;
+        if (_EnableBorderGradient)
+        {
+            float borderGradientLerpAlpha = 1 - DreamUI_RadialGradient(UV0, _QuadSize, _BorderGradientCenter.xy, _BorderGradientRadius.xy, _BorderGradientRotation);
+            HALF4_TYPE borderGradientColor = _BorderGradientColor;
+            borderGradientColor.a *= borderGradientLerpAlpha;
+            borderGradientColor.rgb *= borderGradientColor.a;
+            borderColor = borderColor * (1 - borderGradientColor.a) + borderGradientColor;
+        }
+        float dInner = DreamUI_sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
+        float dInnerSharp = dInner / fwidth(dInner);
+        // Centred, as above. This boundary is interior -- the border ring surrounds it -- so unlike
+        // the outer edge it never needed a skirt to ramp into.
+        float dInner01 = saturate(0.5f - dInnerSharp);
+        float innerMask = saturate(1 - dInner01);
+        borderColor.a *= innerMask;
+        borderColor.rgb *= innerMask;
+        
+        color = color * (1 - borderColor.a) + borderColor;
+        color.a *= dOuter01;
+        color.rgb *= dOuter01;
+    }
+
+    //outer shadow
+    if (_EnableOuterShadow)
+    {
+        HALF4_TYPE outerShadowColor = _OuterShadowColor;
+        float4 cornerRadius = _CornerRadius + _OuterShadowSize;
+        float sdOuterShadow = DreamUI_sdRoundRectOuterShadow(sdFragCoord - _OuterShadowOffset, sdQuadSize + _OuterShadowSize, cornerRadius, _OuterShadowBlur * 0.5f);
+        sdOuterShadow = pow(sdOuterShadow, 2.2);
+        outerShadowColor.a *= sdOuterShadow;
+        float outerMask = 1.0f - dOuter01;
+        half bodyVisible = sign(_EnableBody + _EnableBorder + _EnableInnerShadow); //is body visible?
+        outerShadowColor.a *= lerp(
+        outerMask // if body not visible, make it smooth
+        , sign(outerMask) //if body is visible, make it no smooth, because smooth can show a thin transparent line between body and outshadow
+        , bodyVisible);
+        outerShadowColor.rgb *= outerShadowColor.a;
+        color = outerShadowColor * (1.0 - color.a) + color;
+    }
+
+    if (_EnableRadialFill * sign(max(0, 360.0f - _RadialFillAngle)))
+    {
+        float2 fragCoord = UV0 * _QuadSize;
+        float2 centerToPixelDiff = fragCoord - _RadialFillCenter;
+        float2 centerToPixelVector = normalize(centerToPixelDiff);
+
+        float rotation = radians(_RadialFillRotation + _RadialFillAngle * 0.5f + 180.0f);
+        float cosAngle = cos(rotation);
+        float sinAngle = sin(rotation);
+        float2x2 rotationMatrix = float2x2(cosAngle, sinAngle, -sinAngle, cosAngle);
+        centerToPixelVector = mul(rotationMatrix, centerToPixelVector);
+        float angle = atan2(centerToPixelVector.y, centerToPixelVector.x);
+        float radialFillMask = abs(angle * INV_PI);
+        radialFillMask += _RadialFillAngle * INV_360 - 1.0f;
+                    
+        radialFillMask /= fwidth(radialFillMask);
+        // Centred, as above -- but NOTE THE SIGN IS THE OTHER WAY ROUND HERE. This mask is positive
+        // INSIDE the wedge, where the two SDFs above are negative inside, so centring adds the half
+        // pixel instead of subtracting it. Copying the form from either of them would move this edge
+        // a whole pixel the wrong way.
+        radialFillMask = saturate(radialFillMask + 0.5f);
+        
+        color.a *= radialFillMask;
+        color.rgb *= radialFillMask;
+    }
+    //color.a *= sign(abs(_QuadSize.x)) * sign(abs(_QuadSize.y));//if size is 0
+
+    //we do PremultiplyAlpha for color blending inside RectBlock.
+    //because AlphaComposite(PremultiplyAlpha) do "color.rgb * color.a" at last step (DreamUIShader.usf), so we invert that operation here "color.rgb / color.a".
+    Color = color.rgb / color.a;
+    Alpha = color.a;
+    
+    return 1;
+}
