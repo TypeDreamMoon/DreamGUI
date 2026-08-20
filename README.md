@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-  A fork of <a href="https://github.com/liufei2008/DreamGUI"><strong>DreamGUI / DreamUI</strong></a> by Dream Liu, MIT licensed.<br>
-  基于 Dream Liu 的 <a href="https://github.com/liufei2008/DreamGUI">DreamGUI / DreamUI</a>，MIT 许可。
+  A fork of <a href="https://github.com/liufei2008/LGUI"><strong>LGUI / LexUI</strong></a> by Lex Liu, MIT licensed.<br>
+  基于 Lex Liu 的 <a href="https://github.com/liufei2008/LGUI">LGUI / LexUI</a>，MIT 许可。
 </p>
 
 ---
@@ -72,34 +72,34 @@ Prefab upgrade and migration tools must follow this checklist:
 ## Divergence from Upstream / 与上游的差异
 
 > [!IMPORTANT]
-> This fork has diverged substantially and **is not a drop-in replacement for upstream DreamGUI/DreamUI**.
+> This fork has diverged substantially and **is not a drop-in replacement for upstream LGUI/LexUI**.
 > Do not expect upstream patches to apply, or upstream documentation to describe this behaviour.<br>
-> 本分支与上游差异较大，**不能直接替换上游 DreamGUI/DreamUI**。上游的补丁通常无法套用，上游文档也不能用来描述这里的行为。
+> 本分支与上游差异较大，**不能直接替换上游 LGUI/LexUI**。上游的补丁通常无法套用，上游文档也不能用来描述这里的行为。
 
-Forked from upstream `DreamUI/5.7` at `765efeaf1` (2026-07-13). 214 commits since,
+Forked from upstream `LexUI/5.7` at `765efeaf1` (2026-07-13). 214 commits since,
 2026-07-18 to 2026-08-20.
 
-从上游 `DreamUI/5.7` 的 `765efeaf1`（2026-07-13）分出，此后 214 个提交。
+从上游 `LexUI/5.7` 的 `765efeaf1`（2026-07-13）分出，此后 214 个提交。
 
 ### Why the branches cannot easily merge / 为什么两边已经很难合并
 
 | | Upstream / 上游 | Here / 本分支 |
 | --- | --- | --- |
-| Engine / 引擎 | UE 5.7 (`DreamUI/5.7`); no 5.8 branch on this line | **UE 5.8** |
+| Engine / 引擎 | UE 5.7 (`LexUI/5.7`); no 5.8 branch on this line | **UE 5.8** |
 | Layout / 布局 | FlexBox + Grid layout family, still actively developed | **Family deleted**; UMG-shaped panels only |
 | Widget base / 控件基类 | — | Unchanged, but invalidation and geometry write-back are rebuilt |
 
 The layout divergence is the sharpest: upstream's 2026-08-08 fix for an infinite loop in
-`UDreamLayoutContainerFlexBox` has no meaning here, because that class no longer exists.
+`ULexLayoutContainerFlexBox` has no meaning here, because that class no longer exists.
 
-布局这一条分歧最深：上游 2026-08-08 修的 `UDreamLayoutContainerFlexBox` 死循环，在这里没有意义
+布局这一条分歧最深：上游 2026-08-08 修的 `ULexLayoutContainerFlexBox` 死循环，在这里没有意义
 —— 那个类已经不存在了。
 
 ### What changed / 改了什么
 
-**Layout / 布局** — rebuilt along the lines Blink and Yoga use. The legacy Dream layout family
-(`UDreamLayoutContainerFlexBox`, `UDreamLayoutContainerGrid`, `UDreamLayoutSelfFlexBox`,
-`UDreamLayoutSelfGrid`, and the `EDreamUILayoutMode` switch) was deleted; the UMG-shaped panel
+**Layout / 布局** — rebuilt along the lines Blink and Yoga use. The legacy Lex layout family
+(`ULexLayoutContainerFlexBox`, `ULexLayoutContainerGrid`, `ULexLayoutSelfFlexBox`,
+`ULexLayoutSelfGrid`, and the `ELexUILayoutMode` switch) was deleted; the UMG-shaped panel
 family is the only layout path. Measurement is `const` and separated from application; panels
 arrange into an immutable fragment which is then committed in one write; desired size is
 memoised for the duration of a pass; invalidation carries a reason, so a move no longer
@@ -138,20 +138,39 @@ the undo stack.
 - `LineHeightPercentage` and `WrapTextAt` are exercised only through a real font asset and are
   not covered by tests.<br>
   这两项需要真实字体资产才能跑到，没有测试覆盖。
-- The plugin, its modules and its symbols are still named `DreamGUI` / `DreamUI` / `UDream*`. The rename
-  to DreamGUI is not done.<br>
-  插件、模块与符号仍叫 `DreamGUI` / `DreamUI` / `UDream*`，尚未改名。
+- 25 content assets still carry `Lex` in their names. Renaming a `.uasset` file does not rename the
+  object inside it, so only an editor-side rename can change those; the code points at what is
+  actually on disk.<br>
+  25 个内容资产名字里仍有 `Lex`。改 `.uasset` 文件名不会改包内对象名，只有在编辑器里改才行；代码指向的
+  是磁盘上真实存在的名字。
+
+## Installing / 安装
+
+> [!IMPORTANT]
+> This plugin was renamed from LGUI/LexUI. Assets saved against the old names need CoreRedirects,
+> and **the engine reads those from the project's config only** -- a plugin's own
+> `Config/DefaultEngine.ini` is not consulted for them. Copy the `[CoreRedirects]` block from
+> [`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini) into your project's
+> `Config/DefaultEngine.ini`.<br>
+> 本插件由 LGUI/LexUI 改名而来。按旧名字保存的资产需要 CoreRedirects，而**引擎只从工程的 config 读取**
+> —— 插件自己的 `Config/DefaultEngine.ini` 不会被读。请把
+> [`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini) 里的 `[CoreRedirects]` 段落复制到你工程的
+> `Config/DefaultEngine.ini`。
+
+Only needed if you have assets authored against LGUI/LexUI. A fresh project does not.
+
+只有当你已有基于 LGUI/LexUI 制作的资产时才需要；全新工程不需要。
 
 ## License / 许可
 
 MIT. See [LICENSE](./LICENSE).
 
 Copyright (c) 2026-present TypeDreamMoon<br>
-Copyright (c) 2019-present Dream Liu
+Copyright (c) 2019-present Lex Liu
 
-Substantial portions of this software remain the work of Dream Liu and are used under
-the MIT terms of the [original project](https://github.com/liufei2008/DreamGUI). The MIT
+Substantial portions of this software remain the work of Lex Liu and are used under
+the MIT terms of the [original project](https://github.com/liufei2008/LGUI). The MIT
 notice must travel with any copy or substantial portion of this code, including yours.
 
-本项目大量代码仍属 Dream Liu 的原创工作，依据[原项目](https://github.com/liufei2008/DreamGUI)的
+本项目大量代码仍属 Lex Liu 的原创工作，依据[原项目](https://github.com/liufei2008/LGUI)的
 MIT 条款使用。任何拷贝或实质性部分都必须随附 MIT 声明，你的分发也一样。
