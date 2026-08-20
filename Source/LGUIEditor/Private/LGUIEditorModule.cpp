@@ -346,6 +346,9 @@ void FLGUIEditorModule::OnInitializeSequence(ULexUIPrefabSequence* Sequence)
 	MovieScene->SetPlaybackRange(StartFrame, Duration);
 }
 
+/** Defined in PrefabEditor/LexUIPrefabEditorDetails.cpp, next to the clipboard it clears. */
+void LexUIWidgetComponentClipboard_Reset();
+
 void FLGUIEditorModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
@@ -353,6 +356,9 @@ void FLGUIEditorModule::ShutdownModule()
 	FLexUIControlRegistry::Get().ShutdownDynamicDiscovery();
 	FLexUIBehaviourEditorBackendRegistry::Get().UnregisterBuiltInBackends();
 	FLGUIEditorStyle::Shutdown();
+	// The component clipboard parks a UObject in a static. Releasing it at static-teardown time
+	// touches an object system that is already gone, so it is released here instead.
+	LexUIWidgetComponentClipboard_Reset();
 
 	FLexUIEditorCommands::Unregister();
 

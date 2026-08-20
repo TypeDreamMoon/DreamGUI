@@ -94,15 +94,15 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	// reach a target by hierarchy path, so it has to survive the menu closing itself: the button is
 	// held by a box the OnSelectItem lambda shares, not by the handler, which serves every row at once
 	// and would otherwise close whichever row happened to be built last.
+	//
+	// Nothing sets the enabled state here: SDetailSingleItemRow assigns the row's own enabled
+	// attribute onto whatever this returns, so any attribute set on it is overwritten before it is
+	// ever read.
 	TSharedRef<TSharedPtr<SComboButton>> PickerButton = MakeShared<TSharedPtr<SComboButton>>();
 	InWidgetRow.ExtensionContent()
 	[
 		SNew(SBox)
 		.VAlign(VAlign_Center)
-		.IsEnabled_Lambda([=]()
-		{
-			return InPropertyHandle->IsEditable();
-		})
 		[
 			SAssignNew(*PickerButton, SComboButton)
 			.HasDownArrow(false)

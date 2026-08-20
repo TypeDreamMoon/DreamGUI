@@ -152,12 +152,32 @@ public:
 		bool bSnappedVertical = false;
 	};
 	/**
-	 * Where a Move drag puts each target. Every target is measured and snapped in its own parent's
-	 * space: one widget's snapped delta reused for the rest deforms a selection spanning parents of
-	 * differing scale or rotation, because the same numbers are a different distance in each parent.
-	 * InGridSize <= 0 means no snapping.
+	 * Where a Move drag puts each target. Every target is MEASURED in its own parent's space, because
+	 * the same numbers are a different distance in parents of differing scale or rotation; the grid's
+	 * correction is SNAPPED once per axis, off the first target free to be written on that axis,
+	 * because a selection is dragged as one shape. A target an arranger owns on an axis never
+	 * receives that axis, so a correction read off it would bend the rest of the selection towards a
+	 * number nothing was ever going to land on. InGridSize <= 0 means no snapping.
 	 */
 	static void ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize, TArray<FMoveDragResult>& OutResults);
+
+	/**
+	 * Whether dropping this selection into InNewParent is a reparent the hierarchy would accept. The
+	 * refusals are the tree's: a widget onto itself, onto its own descendant, or into a parent with
+	 * no room. A widget already sitting in InNewParent is not a reparent at all, so it refuses that
+	 * too and the drag stays the plain move it has always been.
+	 */
+	static bool CanReparentSelectionUnder(TConstArrayView<ULexWidget*> InWidgets, const ULexWidget* InNewParent);
+
+	/**
+	 * Where a drag hovering over InHit would drop InDragged, or null when nothing there would take
+	 * it. The resolve walks up from the hit to the nearest ancestor holding a container, so the lock
+	 * is asked of that ancestor as well as of the hit -- otherwise a locked panel is reachable
+	 * through any unlocked child it happens to hold. A lock refuses the drop where it is rather than
+	 * sending the selection somewhere else; only a chain with no container at all falls back to
+	 * InRoot, which is the container-less prefab's answer and the one the palette drop already gives.
+	 */
+	static ULexWidget* ResolveDragDropContainer(ULexWidget* InHit, ULexWidget* InRoot, TConstArrayView<ULexWidget*> InDragged, TFunctionRef<bool(const ULexWidget*)> InIsLocked);
 
 	/**
 	 * The cycle index a click at this pixel should walk from. Click-through only means anything while
@@ -257,6 +277,17 @@ private:
 	/** Pick and select whatever is at this pixel, the way ProcessClick would have. */
 	void SelectWidgetAtPixel(const FVector2D& InPixel, bool bIsControlDown);
 	void UpdateDesignerDrag();
+	/**
+	 * Where a Move drag is currently hovering, when dropping there would move the selection: the
+	 * container under the cursor, or the prefab root when nothing above the cursor holds one. Held as
+	 * pending state and shown as the drop preview, because a reparent that happened mid-drag would
+	 * fight the arrange the new parent runs on every pointer move.
+	 */
+	void UpdateDesignerReparentTarget(const FVector2D& InPixel);
+	/** Carry out the pending reparent, inside the transaction the move already opened. */
+	bool ApplyPendingReparent();
+	/** Every widget the running drag snapshotted, arranged axes included: a reparent moves them all. */
+	void GetDraggedWidgets(TArray<ULexWidget*>& OutWidgets) const;
 	void FinishDesignerDrag(bool bCancel);
 	void DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas);
 	void DrawLayoutDebugOverlay(FViewport& InViewport, FCanvas& Canvas) const;
@@ -316,9 +347,18 @@ private:
 	FVector2D DesignerMarqueePressPixel = FVector2D::ZeroVector;
 	FVector2D DesignerMarqueeCurrentPixel = FVector2D::ZeroVector;
 	TArray<FDesignerWidgetSnapshot> DesignerSnapshots;
+	/** Where a Move drag would drop the selection, when that is somewhere other than where it is. */
+	TWeakObjectPtr<ULexWidget> PendingReparentTarget;
 	TUniquePtr<class FScopedTransaction> DesignerTransaction;
 	TOptional<float> DesignerGuideX;
 	TOptional<float> DesignerGuideY;
+
+	/**
+	 * Whether the arrow-key nudge has a transaction of its own open. The editor's transaction stack
+	 * is global, so a release that ends one it never began finalises whatever else is running -- the
+	 * designer drag's own transaction, which can then no longer be cancelled.
+	 */
+	bool bNudgeTransactionOpen = false;
 
 	int PrevMouseX = 0, PrevMouseY = 0;
 	int IndexOfClickSelectUI = INDEX_NONE;

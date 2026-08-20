@@ -179,16 +179,15 @@ bool ULexUIPrefabSequence::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 }
 void ULexUIPrefabSequence::FixObjectReferences(ULexWidget* InContextWidget)
 {
-	if (ObjectReferences.FixObjectReferences(InContextWidget))
-	{
-		this->Modify();
-	}
+	// Modify() snapshots what the object holds right now, so it has to run before the repair.
+	// Recording afterwards stores the already-repaired value as the thing to undo back to, which
+	// is why the transaction around this used to come out empty.
+	this->Modify();
+	ObjectReferences.FixObjectReferences(InContextWidget);
 }
 void ULexUIPrefabSequence::FixEditorHelpers(ULexWidget* InContextWidget)
 {
-	if (ObjectReferences.FixEditorHelpers(InContextWidget))
-	{
-		this->Modify();
-	}
+	this->Modify();
+	ObjectReferences.FixEditorHelpers(InContextWidget);
 }
 #endif

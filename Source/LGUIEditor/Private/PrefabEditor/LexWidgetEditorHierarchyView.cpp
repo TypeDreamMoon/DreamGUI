@@ -195,7 +195,7 @@ bool SLexWidgetEditorHierarchyView::CanRename() const
 	if (SelectedItems.Num() == 1)
 	{
 		auto Widget = SelectedItems[0].Get();
-		return LexWidgetHierarchyRename::CanRename(Widget, Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget));
+		return LexWidgetHierarchyRename::CanRename(Widget, Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(Widget));
 	}
 	return false;
 }
@@ -719,19 +719,30 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 							LOCTEXT("WrapWithSubMenuTooltip", "Group the selected widgets under a new container widget inserted at their position; they keep their layout. The chosen panel then arranges them."),
 							FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
 							{
-								auto AddWrap = [&SubMenu, WeakEditor](const FText& Label, ELexUIWrapType Type)
-								{
-									SubMenu.AddMenuEntry(Label, FText::GetEmpty(), FSlateIcon(),
-										FUIAction(FExecuteAction::CreateLambda([WeakEditor, Type]()
-										{
-											if (auto E = WeakEditor.Pin())E->WrapSelectedWidgets(Type);
-										})));
-								};
-								AddWrap(LOCTEXT("WrapWidget", "Widget"), ELexUIWrapType::Widget);
+								// The plain widget is the only choice with no descriptor behind it: it is
+								// the absence of a panel, so a null class is what it spells.
+								SubMenu.AddMenuEntry(LOCTEXT("WrapWidget", "Widget"),
+									LOCTEXT("WrapWidgetTip", "A wrapper with no panel at all: the children keep the places they are in."),
+									FSlateIcon(), FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+									{
+										if (auto E = WeakEditor.Pin())E->WrapSelectedWidgets(nullptr);
+									})));
 								SubMenu.AddSeparator();
-								AddWrap(LOCTEXT("WrapHBoxUMG", "UMG Horizontal Box"), ELexUIWrapType::HorizontalBox);
-								AddWrap(LOCTEXT("WrapVBoxUMG", "UMG Vertical Box"), ELexUIWrapType::VerticalBox);
-								AddWrap(LOCTEXT("WrapGrid", "UMG Grid Panel"), ELexUIWrapType::Grid);
+								// Everything the palette registers as a panel, which is the same set
+								// Replace With offers: a menu naming its containers by hand is a
+								// second list, and the day one is extended the two disagree.
+								TArray<const FLexUIControlDescriptor*> Panels;
+								FLexUIPrefabEditor::CollectLayoutPanelDescriptors(nullptr, Panels);
+								for (const FLexUIControlDescriptor* Descriptor : Panels)
+								{
+									UClass* PanelClass = Descriptor->LayoutContainerClass.Get();
+									SubMenu.AddMenuEntry(Descriptor->DisplayName,
+										FText::FromString(PanelClass->GetPathName()), Descriptor->Icon,
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor, PanelClass]()
+										{
+											if (auto E = WeakEditor.Pin())E->WrapSelectedWidgets(PanelClass);
+										})));
+								}
 							}));
 					}
 					MenuBuilder.EndSection();
@@ -767,23 +778,7 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 								// registered layout container takes children, so the equivalent
 								// filter is simply "has a layout container class".
 								TArray<const FLexUIControlDescriptor*> Panels;
-								for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
-								{
-									UClass* PanelClass = Descriptor.LayoutContainerClass.Get();
-									if (PanelClass == nullptr || PanelClass == Current)
-									{
-										continue;//no point offering what it already is
-									}
-									if (Descriptor.VisualClass.IsValid() || Descriptor.BehaviourClass.IsValid())
-									{
-										continue;//a control that happens to use a panel, not a panel
-									}
-									Panels.Add(&Descriptor);
-								}
-								Panels.Sort([](const FLexUIControlDescriptor& A, const FLexUIControlDescriptor& B)
-								{
-									return A.DisplayName.CompareTo(B.DisplayName) < 0;
-								});
+								FLexUIPrefabEditor::CollectLayoutPanelDescriptors(Current, Panels);
 								for (const FLexUIControlDescriptor* Descriptor : Panels)
 								{
 									UClass* PanelClass = Descriptor->LayoutContainerClass.Get();
@@ -859,6 +854,8 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 					FUIAction(FExecuteAction::CreateSP(this, &SLexWidgetEditorHierarchyView::SetAllExpansion, true)));
 			}
 			MenuBuilder.EndSection();
+			// Last, so a project's entries read as additions rather than interleaving with ours.
+			if (auto Editor = Manager.Pin())FLGUIEditorModule::Get().ExtendWidgetContextMenu(MenuBuilder, Editor.ToSharedRef());
 	});
 }
 

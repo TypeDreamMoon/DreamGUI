@@ -51,72 +51,28 @@ namespace
 	 * widget it was registered against, and GetWidget() trusts that cache ahead of its own outer, so
 	 * a component whose properties were copied wholesale would keep reporting -- and keep listening
 	 * to -- whichever widget the source lived on. A freshly constructed component has these null.
+	 *
+	 * The whole property is reset rather than its references nulled one by one: transient references
+	 * live inside containers as well as in properties of their own (UUIDropdown's created-item array
+	 * is one property), and an array of nulls is not safer than an array of foreign pointers -- the
+	 * dropdown walks that array without a validity check. Nothing here has to be preserved; every
+	 * one of these is derived again on demand.
 	 */
 	void LexUIClearTransientObjectReferences(UObject* InObject)
 	{
-		for (TFieldIterator<FObjectPropertyBase> PropertyIt(InObject->GetClass()); PropertyIt; ++PropertyIt)
+		TArray<const FStructProperty*> EncounteredStructProperties;
+		for (TFieldIterator<FProperty> PropertyIt(InObject->GetClass()); PropertyIt; ++PropertyIt)
 		{
 			if (!PropertyIt->HasAnyPropertyFlags(CPF_Transient))continue;
+			EncounteredStructProperties.Reset();
+			if (!PropertyIt->ContainsObjectReference(EncounteredStructProperties, EPropertyObjectReferenceType::Strong | EPropertyObjectReferenceType::Weak))continue;
 			for (int32 ArrayIndex = 0; ArrayIndex < PropertyIt->ArrayDim; ArrayIndex++)
 			{
-				PropertyIt->SetObjectPropertyValue_InContainer(InObject, nullptr, ArrayIndex);
+				PropertyIt->ClearValue_InContainer(InObject, ArrayIndex);
 			}
 		}
 	}
 }
-
-/**
- * A clipboard-safe stand-alone copy of InSource, so that cutting -- which deletes the component the
- * copy came from -- still leaves something to paste.
- *
- * Declared here rather than in the panel's header because the panel is a Slate widget no headless
- * test can construct; LexPrefabPanelsAutomationTests declares these two prototypes itself.
- */
-ULexUIBehaviour* LexUIWidgetComponentClipboard_Snapshot(ULexUIBehaviour* InSource)
-{
-	if (!IsValid(InSource))return nullptr;
-	auto Snapshot = NewObject<ULexUIBehaviour>(GetTransientPackage(), InSource->GetClass(), NAME_None, RF_Transient);
-	UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
-	UEditorEngine::CopyPropertiesForUnrelatedObjects(InSource, Snapshot, Options);
-	LexUIClearTransientObjectReferences(Snapshot);
-	return Snapshot;
-}
-
-/**
- * Recreate InSource on InTargetWidget. The component is added empty first so that the registration
- * ULexWidget::AddComponent performs binds against the target widget's events, and only then are the
- * authored values copied over the top.
- */
-ULexUIBehaviour* LexUIWidgetComponentClipboard_PasteOnto(ULexWidget* InTargetWidget, ULexUIBehaviour* InSource)
-{
-	if (!IsValid(InTargetWidget) || !IsValid(InSource))return nullptr;
-	auto NewComponent = InTargetWidget->AddComponent(InSource->GetClass());
-	if (!IsValid(NewComponent))return nullptr;
-	UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
-	UEditorEngine::CopyPropertiesForUnrelatedObjects(InSource, NewComponent, Options);
-	LexUIClearTransientObjectReferences(NewComponent);
-	return NewComponent;
-}
-
-using FLexWidgetComponentItem = TWeakObjectPtr<ULexUIBehaviour>;
-
-class FLexWidgetComponentDragDropOp : public FDecoratedDragDropOp
-{
-public:
-	DRAG_DROP_OPERATOR_TYPE(FLexWidgetComponentDragDropOp, FDecoratedDragDropOp)
-
-	static TSharedRef<FLexWidgetComponentDragDropOp> New(const FLexWidgetComponentItem& InDraggedItem)
-	{
-		TSharedRef<FLexWidgetComponentDragDropOp> Operation = MakeShared<FLexWidgetComponentDragDropOp>();
-		Operation->DraggedItem = InDraggedItem;
-		Operation->SetToolTip(LOCTEXT("ReorderComponent", "Reorder component"), nullptr);
-		Operation->SetupDefaults();
-		Operation->Construct();
-		return Operation;
-	}
-
-	FLexWidgetComponentItem DraggedItem;
-};
 
 class FLexWidgetComponentClassFilter : public IClassViewerFilter
 {
@@ -144,6 +100,112 @@ public:
 		if (!InClass->HasMetaData("BlueprintSpawnableComponent"))return false;
 		return true;
 	}
+};
+
+/**
+ * Whether a component of this class may be put on a widget at all. The clipboard is the one add path
+ * that starts from an existing component rather than from the class picker, so without asking here a
+ * class the picker refuses arrives on a widget by way of somewhere it was once allowed.
+ *
+ * Declared here rather than in the panel's header because the panel is a Slate widget no headless
+ * test can construct; LexPrefabPanelsAutomationTests declares these prototypes itself.
+ */
+bool LexUIWidgetComponentClipboard_CanPasteClass(const UClass* InComponentClass)
+{
+	// The class picker's own filter, deliberately. It looks like a menu-presentation rule, but the
+	// eight native behaviours it hides are the framework's own -- ULexPanelSlot, ULexVisual,
+	// ULexLayout, and the helpers a control creates for itself. Those are placed by whatever owns
+	// them, so a hand-pasted second one is something the owner will fight with. A component being
+	// present on a widget is not evidence a user may put another one somewhere else.
+	return FLexWidgetComponentClassFilter::IsComponentClassAllowed(InComponentClass);
+}
+
+/**
+ * Whether a component may be taken off a widget to be put back down elsewhere -- what Copy, Cut and
+ * Duplicate each end in. Asked here as well as at the paste, because a refusal that arrives only at
+ * the paste arrives too late: Cut has already deleted the component by then, and the clipboard is one
+ * static shared by every panel, so an item no paste will ever accept leaves Paste greyed out for
+ * everything until something else is copied over the top.
+ */
+bool LexUIWidgetComponentClipboard_CanTakeComponent(const ULexUIBehaviour* InComponent)
+{
+	if (!IsValid(InComponent))return false;
+	return LexUIWidgetComponentClipboard_CanPasteClass(InComponent->GetClass());
+}
+
+/**
+ * A clipboard-safe stand-alone copy of InSource, so that cutting -- which deletes the component the
+ * copy came from -- still leaves something to paste.
+ */
+ULexUIBehaviour* LexUIWidgetComponentClipboard_Snapshot(ULexUIBehaviour* InSource)
+{
+	if (!IsValid(InSource))return nullptr;
+	auto Snapshot = NewObject<ULexUIBehaviour>(GetTransientPackage(), InSource->GetClass(), NAME_None, RF_Transient);
+	UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
+	UEditorEngine::CopyPropertiesForUnrelatedObjects(InSource, Snapshot, Options);
+	LexUIClearTransientObjectReferences(Snapshot);
+	return Snapshot;
+}
+
+/**
+ * Recreate InSource on InTargetWidget. The component is added empty first so that the registration
+ * ULexWidget::AddComponent performs binds against the target widget's events, and only then are the
+ * authored values copied over the top.
+ */
+ULexUIBehaviour* LexUIWidgetComponentClipboard_PasteOnto(ULexWidget* InTargetWidget, ULexUIBehaviour* InSource)
+{
+	if (!IsValid(InTargetWidget) || !IsValid(InSource))return nullptr;
+	if (!LexUIWidgetComponentClipboard_CanPasteClass(InSource->GetClass()))return nullptr;
+	auto NewComponent = InTargetWidget->AddComponent(InSource->GetClass());
+	if (!IsValid(NewComponent))return nullptr;
+	UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
+	UEditorEngine::CopyPropertiesForUnrelatedObjects(InSource, NewComponent, Options);
+	LexUIClearTransientObjectReferences(NewComponent);
+	// Registration already happened, and ULexUIBehaviour::OnUnregister unsubscribes through the cache
+	// rather than through GetWidget(): left empty by the clear above, the component would still be
+	// listening to this widget long after it was removed from it.
+	NewComponent->GetWidget();
+	return NewComponent;
+}
+
+/**
+ * One clipboard for every panel in the editor, so a component can be pasted onto another prefab.
+ *
+ * Reached through an accessor rather than named directly so that emptying it is a single call the
+ * module can make: a strong pointer left holding a component releases it during static teardown,
+ * after the object system it releases into has gone, and only in the sessions that happened to end
+ * with something on the clipboard. LexUIWidgetComponentClipboard_Reset below is that call.
+ */
+TStrongObjectPtr<ULexUIBehaviour>& LexUIWidgetComponentClipboard()
+{
+	static TStrongObjectPtr<ULexUIBehaviour> Clipboard;
+	return Clipboard;
+}
+
+/** Drop the clipboard while the editor is still up. Call from module shutdown. */
+void LexUIWidgetComponentClipboard_Reset()
+{
+	LexUIWidgetComponentClipboard().Reset();
+}
+
+using FLexWidgetComponentItem = TWeakObjectPtr<ULexUIBehaviour>;
+
+class FLexWidgetComponentDragDropOp : public FDecoratedDragDropOp
+{
+public:
+	DRAG_DROP_OPERATOR_TYPE(FLexWidgetComponentDragDropOp, FDecoratedDragDropOp)
+
+	static TSharedRef<FLexWidgetComponentDragDropOp> New(const FLexWidgetComponentItem& InDraggedItem)
+	{
+		TSharedRef<FLexWidgetComponentDragDropOp> Operation = MakeShared<FLexWidgetComponentDragDropOp>();
+		Operation->DraggedItem = InDraggedItem;
+		Operation->SetToolTip(LOCTEXT("ReorderComponent", "Reorder component"), nullptr);
+		Operation->SetupDefaults();
+		Operation->Construct();
+		return Operation;
+	}
+
+	FLexWidgetComponentItem DraggedItem;
 };
 
 class SLexWidgetComponentEditor : public SCompoundWidget
@@ -177,7 +239,7 @@ public:
 		CommandList->MapAction(
 			FGenericCommands::Get().Cut,
 			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleCutSelectedComponent),
-			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanModifySelectedComponent)
+			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanCutOrDuplicateSelectedComponent)
 		);
 		CommandList->MapAction(
 			FGenericCommands::Get().Paste,
@@ -187,7 +249,7 @@ public:
 		CommandList->MapAction(
 			FGenericCommands::Get().Duplicate,
 			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleDuplicateSelectedComponent),
-			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanModifySelectedComponent)
+			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanCutOrDuplicateSelectedComponent)
 		);
 
 		GetWidgetContext = InArgs._GetWidgetContext;
@@ -399,7 +461,7 @@ private:
 
 	bool CanCopySelectedComponent() const
 	{
-		return IsValid(GetSelectedComponent());
+		return LexUIWidgetComponentClipboard_CanTakeComponent(GetSelectedComponent());
 	}
 
 	bool CanModifySelectedComponent() const
@@ -407,24 +469,35 @@ private:
 		return CanAddOrRemoveComponent() && IsValid(GetSelectedComponent());
 	}
 
+	/** Both recreate the selected component through the paste, so both answer for its class as well. */
+	bool CanCutOrDuplicateSelectedComponent() const
+	{
+		return CanModifySelectedComponent() && LexUIWidgetComponentClipboard_CanTakeComponent(GetSelectedComponent());
+	}
+
 	bool CanPasteComponent() const
 	{
-		return CanAddOrRemoveComponent() && ClipboardComponent.IsValid();
+		if (!CanAddOrRemoveComponent() || !LexUIWidgetComponentClipboard().IsValid())
+		{
+			return false;
+		}
+		return LexUIWidgetComponentClipboard_CanPasteClass(LexUIWidgetComponentClipboard()->GetClass());
 	}
 
 	void HandleCopySelectedComponent()
 	{
-		if (ULexUIBehaviour* Component = GetSelectedComponent())
+		if (!CanCopySelectedComponent())
 		{
-			ClipboardComponent.Reset(LexUIWidgetComponentClipboard_Snapshot(Component));
+			return;
 		}
+		LexUIWidgetComponentClipboard().Reset(LexUIWidgetComponentClipboard_Snapshot(GetSelectedComponent()));
 	}
 
 	void HandleCutSelectedComponent()
 	{
 		ULexWidget* Widget = GetCurrentWidget();
 		ULexUIBehaviour* Component = GetSelectedComponent();
-		if (!CanModifySelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
+		if (!CanCutOrDuplicateSelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
 		{
 			return;
 		}
@@ -432,7 +505,7 @@ private:
 		const FScopedTransaction Transaction(LOCTEXT("CutLexWidgetComponent_Transaction", "Cut LexUI Component"));
 		ModifyWidgetForComponentEdit(Widget);
 
-		ClipboardComponent.Reset(LexUIWidgetComponentClipboard_Snapshot(Component));
+		LexUIWidgetComponentClipboard().Reset(LexUIWidgetComponentClipboard_Snapshot(Component));
 		Component->SetFlags(RF_Transactional);
 		Component->Modify();
 		Widget->RemoveComponent(Component);
@@ -450,12 +523,15 @@ private:
 			return;
 		}
 
-		const FScopedTransaction Transaction(LOCTEXT("PasteLexWidgetComponent_Transaction", "Paste LexUI Component"));
+		//ModifyWidgetForComponentEdit has already recorded the widget, so a transaction left to commit
+		//on the failure branch is an undo step that undoes nothing
+		FScopedTransaction Transaction(LOCTEXT("PasteLexWidgetComponent_Transaction", "Paste LexUI Component"));
 		ModifyWidgetForComponentEdit(Widget);
 
-		ULexUIBehaviour* NewComponent = LexUIWidgetComponentClipboard_PasteOnto(Widget, ClipboardComponent.Get());
+		ULexUIBehaviour* NewComponent = LexUIWidgetComponentClipboard_PasteOnto(Widget, LexUIWidgetComponentClipboard().Get());
 		if (!IsValid(NewComponent))
 		{
+			Transaction.Cancel();
 			return;
 		}
 		FinishComponentAdd(Widget, NewComponent);
@@ -465,17 +541,18 @@ private:
 	{
 		ULexWidget* Widget = GetCurrentWidget();
 		ULexUIBehaviour* Component = GetSelectedComponent();
-		if (!CanModifySelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
+		if (!CanCutOrDuplicateSelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
 		{
 			return;
 		}
 
-		const FScopedTransaction Transaction(LOCTEXT("DuplicateLexWidgetComponent_Transaction", "Duplicate LexUI Component"));
+		FScopedTransaction Transaction(LOCTEXT("DuplicateLexWidgetComponent_Transaction", "Duplicate LexUI Component"));
 		ModifyWidgetForComponentEdit(Widget);
 
 		ULexUIBehaviour* NewComponent = LexUIWidgetComponentClipboard_PasteOnto(Widget, Component);
 		if (!IsValid(NewComponent))
 		{
+			Transaction.Cancel();
 			return;
 		}
 		FinishComponentAdd(Widget, NewComponent);
@@ -994,10 +1071,7 @@ private:
 	TSharedPtr<SWidget> ToolbarWidget;
 	TSharedPtr<SListView<FLexWidgetComponentItem>> ComponentListView;
 	TSharedPtr<FUICommandList> CommandList;
-	/** One clipboard for every panel in the editor, so a component can be pasted onto another prefab. */
-	static TStrongObjectPtr<ULexUIBehaviour> ClipboardComponent;
 };
-TStrongObjectPtr<ULexUIBehaviour> SLexWidgetComponentEditor::ClipboardComponent;
 
 /**
  * The name and class strip above the details view.

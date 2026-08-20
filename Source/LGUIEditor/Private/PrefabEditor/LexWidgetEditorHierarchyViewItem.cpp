@@ -86,7 +86,11 @@ void FHierarchyLexWidgetDragDropOp::OnDrop(bool bDropWasHandled, const FPointerE
 const ULexWidget* LexWidgetHierarchyDrop::GetLockOwnerForDropZone(const ULexWidget* TargetItem, EItemDropZone DropZone)
 {
 	if (TargetItem == nullptr)return nullptr;
-	return DropZone == EItemDropZone::OntoItem ? TargetItem : TargetItem->GetParent();
+	if (DropZone == EItemDropZone::OntoItem)return TargetItem;
+	// A row with no parent has no sibling list to insert into, so the drop path turns Above/Below on
+	// it into a drop INSIDE it -- which is the row's own lock to refuse, not a parent's it lacks.
+	const ULexWidget* Parent = TargetItem->GetParent();
+	return Parent != nullptr ? Parent : TargetItem;
 }
 
 TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem, TOptional<int32> Index)
@@ -110,10 +114,22 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				DropZone = EItemDropZone::OntoItem;
 			}
 		}
+		else
+		{
+			DropZone = EItemDropZone::OntoItem;
+		}
 	}
 	else
 	{
 		DropZone = EItemDropZone::OntoItem;
+	}
+	// Every branch above can turn a sibling insert into a drop inside the hovered row, and the row
+	// the caller asked the lock about was the parent. Ask again against the row it now lands in,
+	// which is also what makes the design surface honour the same lock the tree does. Through the
+	// interaction gate, so the toolbar's respect-locks switch still reaches the canvas.
+	if (const ULexWidget* LockOwner = LexWidgetHierarchyDrop::GetLockOwnerForDropZone(TargetItem, DropZone))
+	{
+		if (Manager.IsValid() && Manager->IsWidgetLockedForInteraction(LockOwner))return TOptional<EItemDropZone>();
 	}
 
 	//drag/drop from content to create new widget
@@ -539,13 +555,13 @@ bool SLexWidgetEditorHierarchyViewItem::CanRename() const
 {
 	// The same policy the Rename command asks, so a lock the drag and the drop already honour cannot
 	// be walked around by typing over the name instead.
-	return LexWidgetHierarchyRename::CanRename(Widget.Get(), Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get()));
+	return LexWidgetHierarchyRename::CanRename(Widget.Get(), Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(Widget.Get()));
 }
 
 TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
 	const ULexWidget* LockOwner = LexWidgetHierarchyDrop::GetLockOwnerForDropZone(Widget.Get(), DropZone);
-	if (LockOwner != nullptr && Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(LockOwner))return TOptional<EItemDropZone>();
+	if (LockOwner != nullptr && Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(LockOwner))return TOptional<EItemDropZone>();
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
 	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FAssetDragDropOp>())
 	{
@@ -624,7 +640,7 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent const&
 }
 FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	if (Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get()))return FReply::Handled();
+	if (Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(Widget.Get()))return FReply::Handled();
 	TArray<ULexWidget*> DraggedItems;
 
 	// Dragging multiple items?
@@ -634,7 +650,7 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& My
 		{
 			for (auto Selected : Selection->GetSelectedWidgets())
 			{
-				if (Selected.IsValid() && (!Manager.IsValid() || !Manager.Pin()->IsWidgetLockedInDesigner(Selected.Get())))
+				if (Selected.IsValid() && (!Manager.IsValid() || !Manager.Pin()->IsWidgetLockedForInteraction(Selected.Get())))
 				{
 					DraggedItems.Add(Selected.Get());
 				}

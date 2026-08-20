@@ -134,30 +134,40 @@ bool FLexViewportMoveDragMeasuresEachParentTest::RunTest(const FString& Paramete
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FLexViewportMoveDragSnapsPerSpaceTest,
-	"LGUI.Editor.ViewportInteraction.MoveDragSnapsInEachWidgetsOwnSpace",
+	FLexViewportSnapCrossesParentScaleTest,
+	"LGUI.Editor.ViewportInteraction.SnapKeepsItsMeaningAcrossParentScales",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FLexViewportMoveDragSnapsPerSpaceTest::RunTest(const FString& Parameters)
+bool FLexViewportSnapCrossesParentScaleTest::RunTest(const FString& Parameters)
 {
 	using namespace LexViewportInteractionTestLocal;
 
+	// Two widgets under parents of different scale, dragged together. The grid is consulted once so
+	// the pair stays rigid, but "once" is a distance on screen, not a number: 2 units of correction
+	// inside a parent scaled by 2 is 1 unit inside an unscaled one. Handing the same number to both
+	// moves them different distances on screen, which is the deformation snapping once exists to
+	// avoid -- the bug hides completely whenever every parent happens to share a scale.
 	const FVector Travel(0.0, 10.0, 0.0);
 	TArray<FLexUIPrefabEditorViewportClient::FMoveDragTarget> Targets;
 	Targets.Add(MakeTarget(FTransform::Identity, Travel));
-	Targets.Add(MakeTarget(FTransform(FQuat::Identity, FVector::ZeroVector, FVector(4.0)), Travel));
+	Targets.Add(MakeTarget(FTransform(FQuat::Identity, FVector::ZeroVector, FVector(2.0)), Travel));
 
 	TArray<FLexUIPrefabEditorViewportClient::FMoveDragResult> Results;
 	FLexUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
 	if (!TestEqual(TEXT("one result per target"), Results.Num(), 2))return false;
-	// 10 in its own space rounds to 8; 2.5 in its own space rounds to 0. Snapping once and sharing
-	// the answer would put both on the same number and pull the two widgets together.
-	TestTrue(TEXT("the unscaled parent lands on its own gridline"), Results[0].Position.Equals(FVector2D(8.0, 0.0)));
-	TestTrue(TEXT("the scaled parent lands on its own"), Results[1].Position.Equals(FVector2D(0.0, 0.0)));
 
-	// The guide line exists to say "the grid took this over", so it may only light up where it did.
-	TestTrue(TEXT("the grid moved X, so X has something to show"), Results[0].bSnappedHorizontal);
-	TestFalse(TEXT("Y never left the gridline it started on"), Results[0].bSnappedVertical);
+	// The leader travels 10 in its own space and the grid pulls it back to 8: a correction of -2,
+	// which is -2 on screen. The doubled parent measured 5 for the same travel and must give up the
+	// same -2 of SCREEN distance, which is 1 of its own units: 5 - 1 = 4.
+	TestTrue(TEXT("the leader lands on its gridline"), Results[0].Position.Equals(FVector2D(8.0, 0.0)));
+	TestTrue(TEXT("and the scaled parent gives up the same screen distance, not the same number"),
+		Results[1].Position.Equals(FVector2D(4.0, 0.0), 0.001));
+
+	// What rigidity actually means: convert both back to screen distance and the gap is unchanged.
+	const double LeaderScreen = Results[0].Position.X;
+	const double ScaledScreen = Results[1].Position.X * 2.0;
+	TestEqual(TEXT("the pair covers the same screen distance it did before the grid spoke"),
+		ScaledScreen, LeaderScreen, 0.001);
 	return true;
 }
 
@@ -176,11 +186,14 @@ bool FLexViewportMoveDragLeavesArrangedAxisTest::RunTest(const FString& Paramete
 	TArray<FLexUIPrefabEditorViewportClient::FMoveDragTarget> Targets = { Target };
 
 	TArray<FLexUIPrefabEditorViewportClient::FMoveDragResult> Results;
-	FLexUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 0.0f, Results);
+	FLexUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
 	if (!TestEqual(TEXT("one result"), Results.Num(), 1))return false;
-	TestTrue(TEXT("the arranged axis is untouched and the free one moves"),
-		Results[0].Position.Equals(FVector2D(100.0, 207.0)));
+	// A real grid, because with no grid the snap branch never runs and the guard below is
+	// unreachable -- the assertion then holds whether or not the axis is honoured.
+	TestTrue(TEXT("the arranged axis is untouched and the free one moves to its gridline"),
+		Results[0].Position.Equals(FVector2D(100.0, 208.0)));
 	TestFalse(TEXT("an axis nothing may write cannot claim a guide"), Results[0].bSnappedHorizontal);
+	TestTrue(TEXT("the axis that did move to a gridline claims one"), Results[0].bSnappedVertical);
 	return true;
 }
 

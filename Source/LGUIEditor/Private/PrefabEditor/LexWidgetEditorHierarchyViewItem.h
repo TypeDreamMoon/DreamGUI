@@ -67,6 +67,9 @@ namespace LexWidgetHierarchyDrop
 	 * Asking the hovered row instead is what made a locked widget un-neighbourable -- no sibling could
 	 * be placed next to it at all -- while still letting an insert land in a locked parent whose
 	 * children happened to be unlocked.
+	 *
+	 * The exception is a row with no parent: there is no sibling list, so the drop path rewrites the
+	 * zone into a drop inside that row, and it is the row itself that has the say.
 	 */
 	const ULexWidget* GetLockOwnerForDropZone(const ULexWidget* TargetItem, EItemDropZone DropZone);
 }

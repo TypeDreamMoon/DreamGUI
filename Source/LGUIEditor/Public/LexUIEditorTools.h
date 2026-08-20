@@ -8,6 +8,7 @@
 
 #pragma once
 class ULexWidget;
+class ULexUIBehaviour;
 class ULexUIPrefabHelperObject;
 class ULexUIPrefab;
 
@@ -46,7 +47,29 @@ public:
 	static void DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	static void CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	static void PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetFunction);
-	static void DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	enum class EDeleteWidgetWarningType
+	{
+		/** Delete even when a behaviour variable points at the widget. */
+		DeleteSilently,
+		/** Name the bindings the delete would break and let the user call it off. */
+		WarnAndAskUser,
+	};
+	/**
+	 * Companion-behaviour variables that point at these widgets, or at anything under them, as
+	 * "Variable -> Widget". This is the same link "Find References" searches for, so the two
+	 * agree on what counts as a binding.
+	 */
+	static TArray<FText> CollectBehaviourBindingsToWidgets(ULexUIBehaviour* InCompanionBehaviour, const TArray<ULexWidget*>& InWidgets);
+	/** The companion behaviour of the prefab these widgets belong to, whose variables the delete would strand. */
+	static ULexUIBehaviour* FindCompanionForWidgets(const TArray<ULexWidget*>& InWidgets);
+	/**
+	 * UMG's ShouldContinueDeleteOperation. A deleted widget takes its bound variable's target with
+	 * it: the variable is authored on the companion, not generated from the widget, so it stays on
+	 * the blueprint holding nothing and everything still compiles -- the loss surfaces at runtime,
+	 * with nothing left to name the widget that went away.
+	 */
+	static bool ShouldContinueDeleteOperation(const TArray<ULexWidget*>& InWidgets);
+	static void DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction, EDeleteWidgetWarningType WarningType = EDeleteWidgetWarningType::DeleteSilently);
 	static void CutWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	static bool CanDuplicateWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	static bool CanCopyWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);

@@ -326,7 +326,7 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 							return false;
 						})), NAME_None, EUserInterfaceActionType::RadioButton);
 					MenuBuilder.AddMenuEntry(LOCTEXT("SizeRuleDesired", "Desired"),
-						LOCTEXT("SizeRuleDesiredTip", "Size the canvas to what the content measures, so a tooltip-sized prefab can be authored at its own size. Applied once, when chosen."), FSlateIcon(),
+						LOCTEXT("SizeRuleDesiredTip", "Size the canvas to what the root widget's UMG-compatible panel measures, so a tooltip-sized prefab can be authored at its own size. Applied once, when chosen. A root with no such panel measures nothing, and a canvas sized by a scaler rule is not this menu's to set."), FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 						{
 							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(ELexUIDesignerSizeRule::Desired);
@@ -380,11 +380,17 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 							}
 						})));
 					MenuBuilder.AddMenuEntry(LOCTEXT("ShowResolutionGuides", "Show Resolution Guides"),
-						LOCTEXT("ShowResolutionGuidesTip", "Overlay common device resolutions on the design canvas, like UMG's designer surface."), FSlateIcon(),
+						LOCTEXT("ShowResolutionGuidesTip", "Overlay common device resolutions on the design canvas, like UMG's designer surface. Needs the designer overlay switched on."), FSlateIcon(),
+						// Greyed rather than dead: the overlay switch draws these guides or nothing does,
+						// so with it off this entry could only report a state the viewport contradicts.
 						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 						{
 							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleResolutionGuides();
-						}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor]()
+						}), FCanExecuteAction::CreateLambda([WeakEditor]()
+						{
+							TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+							return Editor.IsValid() && Editor->GetShowDesignerChrome();
+						}), FIsActionChecked::CreateLambda([WeakEditor]()
 						{
 							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetShowResolutionGuides();
 							return false;
@@ -441,7 +447,14 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 			[
 				SNew(SCheckBox)
 				.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-				.ToolTipText(LOCTEXT("LayoutDebugTooltip", "Show layout measurement, arrangement, slot, ownership, and clipping diagnostics for the selected widget."))
+				.ToolTipText(LOCTEXT("LayoutDebugTooltip", "Show layout measurement, arrangement, slot, ownership, and clipping diagnostics for the selected widget. Needs the designer overlay switched on."))
+				// The overlay switch draws this readout or nothing does, so with it off the checkbox
+				// would sit Checked over a viewport showing none of it.
+				.IsEnabled_Lambda([WeakEditor]()
+				{
+					TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+					return Editor.IsValid() && Editor->GetShowDesignerChrome();
+				})
 				.IsChecked_Lambda([WeakEditor]()
 				{
 					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetShowLayoutDebug() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
@@ -455,6 +468,52 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 					SNew(SBox).WidthOverride(22).HeightOverride(22).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					[
 						SNew(SImage).Image(FAppStyle::GetBrush("Icons.Info"))
+					]
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SCheckBox)
+				.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
+				.ToolTipText(LOCTEXT("RespectLocksTooltip", "Honour the designer locks. Switch it off to select and drag a locked widget without unlocking it; the locks themselves are left as they are."))
+				.IsChecked_Lambda([WeakEditor]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetRespectDesignerLocks() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+					return ECheckBoxState::Unchecked;
+				})
+				.OnCheckStateChanged_Lambda([WeakEditor](ECheckBoxState)
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleRespectDesignerLocks();
+				})
+				[
+					SNew(SBox).WidthOverride(22).HeightOverride(22).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					[
+						SNew(SImage).Image(FAppStyle::GetBrush("Icons.Lock"))
+					]
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SCheckBox)
+				.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
+				.ToolTipText(LOCTEXT("DesignerChromeTooltip", "Draw everything the editor puts over the prefab: the canvas boundary, selection outlines, handles, guides, layout diagnostics and readouts. Switch it off to see the prefab on its own; the gestures all still work."))
+				.IsChecked_Lambda([WeakEditor]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetShowDesignerChrome() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+					return ECheckBoxState::Unchecked;
+				})
+				.OnCheckStateChanged_Lambda([WeakEditor](ECheckBoxState)
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleShowDesignerChrome();
+				})
+				[
+					SNew(SBox).WidthOverride(22).HeightOverride(22).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					[
+						SNew(SImage).Image(FAppStyle::GetBrush("Icons.Visibility"))
 					]
 				]
 			]

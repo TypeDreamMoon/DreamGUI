@@ -809,7 +809,7 @@ FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLex
 		{
 			ULexWidget* SelectedWidget = WeakWidget.Get();
 			if (!SelectedWidget)continue;
-			if (PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))continue;
+			if (PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(SelectedWidget))continue;
 			if (PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidget))continue;
 			GizmoWidgets.Add(SelectedWidget);
 		}
@@ -1186,7 +1186,7 @@ bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& 
 	{
 		if (ULexWidget* SelectedWidget = WeakWidget.Get())
 		{
-			if (!PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget) && !PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidget))Selected.Add(SelectedWidget);
+			if (!PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(SelectedWidget) && !PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidget))Selected.Add(SelectedWidget);
 		}
 	}
 	if (Selected.IsEmpty())return false;
@@ -1671,14 +1671,20 @@ void FLexUIPrefabEditorViewportClient::DrawShippedImageOutline(ULexWidget* InWid
 
 void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
 {
-	// Drop feedback and hover answer "what is under the cursor", and the cursor is over the 3D view
-	// as often as the 2D one. Only the chrome below is tied to the layout plane; both of these
-	// project through whatever camera is in use, so neither belongs behind the ortho gate.
+	// Drop feedback, hover and the marquee answer "what is this gesture about to do", so they are
+	// not what the chrome switch is for -- turning them off mid-drag would leave a gesture running
+	// with nothing on screen saying so. They also project through whatever camera is in use, so
+	// unlike the plane-bound chrome below they do not belong behind the ortho gate either.
 	if (PaletteDropPreviewWidget.IsValid())
 	{
 		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
 	}
 	DrawHoverOutline(View, Canvas);
+	DrawDesignerMarquee(Canvas);
+	// What remains is the editor talking about the prefab rather than the prefab itself, so one
+	// switch turns the lot off and leaves the art on its own. Only the drawing goes: the handles
+	// stay where they were and stay grabbable, because hiding a gesture is not taking it away.
+	if (PrefabEditorPtr.IsValid() && !PrefabEditorPtr.Pin()->GetShowDesignerChrome())return;
 	if (!IsOrtho())return;
 	DrawDesignerCanvasBoundary(InViewport, View, Canvas);
 	if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowResolutionGuides())
@@ -1695,7 +1701,6 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 			DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
 		}
 	}
-	DrawDesignerMarquee(Canvas);
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();
 	const FLinearColor OutlineColor(0.1f, 0.65f, 1.0f);
@@ -2005,7 +2010,7 @@ bool FLexUIPrefabEditorViewportClient::CanBeginDesignerDrag(EDesignerHandle InHa
 	{
 		if (ULexWidget* SelectedWidget = WeakWidget.Get())
 		{
-			if (!PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))DraggableCount++;
+			if (!PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(SelectedWidget))DraggableCount++;
 		}
 	}
 	if (DraggableCount == 0)return false;
@@ -2057,7 +2062,7 @@ void FLexUIPrefabEditorViewportClient::FinishDesignerMarquee()
 		// The gates picking applies, for the same reasons: the render-visible flag already folds in
 		// hidden-in-designer, and a locked widget is not selectable by any gesture.
 		if (!IsValid(Candidate) || !Candidate->GetRenderVisibleInHierarchy())continue;
-		if (PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Candidate))continue;
+		if (PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(Candidate))continue;
 		if (!LexProjectWidgetCorners(*View, Candidate, Corners))continue;
 		if (DoesMarqueeMeetQuad(Box, Corners))Caught.Add(Candidate);
 	}
@@ -2089,7 +2094,7 @@ void FLexUIPrefabEditorViewportClient::SelectWidgetAtPixel(const FVector2D& InPi
 	IndexOfClickSelectUI = ResolveClickCycleIndex(LastClickPixel, ClickPixel, IndexOfClickSelectUI);
 	LastClickPixel = ClickPixel;
 	ULexWidget* Hit = LexUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, IndexOfClickSelectUI);
-	if (Hit != nullptr && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Hit))Hit = nullptr;
+	if (Hit != nullptr && PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(Hit))Hit = nullptr;
 	if (Hit != nullptr)PrefabEditorPtr.Pin()->SelectWidgets({Hit}, bIsControlDown);
 }
 
@@ -2104,7 +2109,7 @@ void FLexUIPrefabEditorViewportClient::BeginDesignerDrag(EDesignerHandle InHandl
 	{
 		if (ULexWidget* SelectedWidget = WeakWidget.Get())
 		{
-			if (!PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))Widgets.Add(SelectedWidget);
+			if (!PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(SelectedWidget))Widgets.Add(SelectedWidget);
 		}
 	}
 	if (Widgets.IsEmpty())return;
@@ -2152,8 +2157,10 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 	const FVector2D MousePixel(Viewport->GetMouseX(), Viewport->GetMouseY());
 	DesignerGuideX.Reset();
 	DesignerGuideY.Reset();
-	// A guide line is only worth drawing where the grid actually took over: a line through the
-	// dragged widget's own pivot is drawn wherever the widget is and so says nothing at all.
+	// A guide line is only worth drawing where the grid actually took over, and it belongs on the
+	// value the grid caught: the anchored position for a move -- which is where the pivot sits --
+	// the dragged edge for a resize, and the anchor line for an anchor. A pivot drag is clamped
+	// rather than snapped, so there is nothing for it to show and it draws none.
 	bool bGuideSnappedHorizontal = false, bGuideSnappedVertical = false;
 	FVector GuideWorldPoint = FVector::ZeroVector;
 
@@ -2192,6 +2199,7 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 			bGuideSnappedVertical = Results[0].bSnappedVertical;
 			GuideWorldPoint = Moving[0]->GetWorldTransform().GetLocation();
 		}
+		UpdateDesignerReparentTarget(MousePixel);
 	}
 	else if (IsAnchorHandle(ActiveDesignerHandle))
 	{
@@ -2219,18 +2227,28 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 		FVector2D NewMax = Snapshot.AnchorMax;
 		if (bHorizontal)
 		{
-			const double Moved = SnapAnchorFraction(FMath::Clamp((bMovesMinX ? Snapshot.AnchorMin.X : Snapshot.AnchorMax.X) + FractionDelta.X, 0.0, 1.0), LexAnchorSnapTolerance);
+			const double Raw = FMath::Clamp((bMovesMinX ? Snapshot.AnchorMin.X : Snapshot.AnchorMax.X) + FractionDelta.X, 0.0, 1.0);
+			const double Moved = SnapAnchorFraction(Raw, LexAnchorSnapTolerance);
+			bGuideSnappedHorizontal = !FMath::IsNearlyEqual(Moved, Raw);
 			// The min line may not cross the max line, or the pair describes a rect turned inside out.
 			if (bMovesMinX)NewMin.X = FMath::Min(Moved, NewMax.X);
 			else NewMax.X = FMath::Max(Moved, NewMin.X);
 		}
 		if (bVertical)
 		{
-			const double Moved = SnapAnchorFraction(FMath::Clamp((bMovesMinY ? Snapshot.AnchorMin.Y : Snapshot.AnchorMax.Y) + FractionDelta.Y, 0.0, 1.0), LexAnchorSnapTolerance);
+			const double Raw = FMath::Clamp((bMovesMinY ? Snapshot.AnchorMin.Y : Snapshot.AnchorMax.Y) + FractionDelta.Y, 0.0, 1.0);
+			const double Moved = SnapAnchorFraction(Raw, LexAnchorSnapTolerance);
+			bGuideSnappedVertical = !FMath::IsNearlyEqual(Moved, Raw);
 			if (bMovesMinY)NewMin.Y = FMath::Min(Moved, NewMax.Y);
 			else NewMax.Y = FMath::Max(Moved, NewMin.Y);
 		}
 		SetAnchorsPreservingRect(SelectedWidget, NewMin, NewMax);
+		// The anchor line the gridline caught, in the parent's rect: an anchor fraction is measured
+		// from the parent's own left/bottom edge, which sits at -Pivot of its size.
+		const FVector2D ParentPivot = ParentWidget->GetPivot();
+		GuideWorldPoint = Snapshot.PlaneTransform.TransformPosition(FVector(0,
+			((bMovesMinX ? NewMin.X : NewMax.X) - ParentPivot.X) * ParentWidth,
+			((bMovesMinY ? NewMin.Y : NewMax.Y) - ParentPivot.Y) * ParentHeight));
 	}
 	else
 	{
@@ -2312,6 +2330,126 @@ void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
 	Invalidate();
 }
 
+void FLexUIPrefabEditorViewportClient::GetDraggedWidgets(TArray<ULexWidget*>& OutWidgets) const
+{
+	OutWidgets.Reset();
+	for (const FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
+	{
+		if (ULexWidget* DraggedWidget = Snapshot.Widget.Get())OutWidgets.Add(DraggedWidget);
+	}
+}
+
+void FLexUIPrefabEditorViewportClient::UpdateDesignerReparentTarget(const FVector2D& InPixel)
+{
+	ULexWidget* Previous = PendingReparentTarget.Get();
+	PendingReparentTarget.Reset();
+	// The whole selection, not only the widgets whose position the move could write: a reparent is
+	// asked about the same set the drop will move, or the hover promises something else than lands.
+	TArray<ULexWidget*> Dragged;
+	GetDraggedWidgets(Dragged);
+	ULexWidget* Container = nullptr;
+	FVector LineStart, LineEnd;
+	if (!Dragged.IsEmpty() && ComputePickRay(FMath::RoundToInt(InPixel.X), FMath::RoundToInt(InPixel.Y), LineStart, LineEnd))
+	{
+		TArray<ULexWidget*> Widgets;
+		LexUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+		// What is being dragged sits under the cursor for the whole gesture, so a pick that can see
+		// it answers "the thing in your hand" every frame and never the container you are holding it
+		// over. Its descendants go with it: they travel with the widget and are equally in the way.
+		Widgets.RemoveAll([&Dragged](ULexWidget* Candidate)
+		{
+			if (!IsValid(Candidate))return true;
+			for (const ULexWidget* DraggedWidget : Dragged)
+			{
+				if (Candidate == DraggedWidget || Candidate->IsChildOf(DraggedWidget))return true;
+			}
+			return false;
+		});
+		int32 CycleIndex = INDEX_NONE;
+		ULexWidget* Hit = LexUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, CycleIndex);
+		TSharedPtr<FLexUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin();
+		Container = ResolveDragDropContainer(Hit, PrefabEditor.IsValid() ? PrefabEditor->GetLoadedRootWidget() : nullptr, Dragged,
+			[&PrefabEditor](const ULexWidget* InWidget){ return PrefabEditor.IsValid() && PrefabEditor->IsWidgetLockedForInteraction(InWidget); });
+	}
+	PendingReparentTarget = Container;
+	// The palette's drop outline already says "this is where it would land", and a drag can only be
+	// one of the two, so a second colour for the same answer would only invite reading a difference.
+	if (Container != Previous)
+	{
+		if (Container != nullptr)SetPaletteDropPreview(Container);
+		else ClearPaletteDropPreview();
+	}
+}
+
+ULexWidget* FLexUIPrefabEditorViewportClient::ResolveDragDropContainer(ULexWidget* InHit, ULexWidget* InRoot, TConstArrayView<ULexWidget*> InDragged, TFunctionRef<bool(const ULexWidget*)> InIsLocked)
+{
+	// A lock refuses the drop where it is rather than sending the selection somewhere else, so the
+	// walk stops here instead of falling through to the root: dropping a widget out of its parent
+	// and onto the page because the panel under the cursor was locked is not what the lock asked for.
+	if (InHit != nullptr && InIsLocked(InHit))return nullptr;
+	ULexWidget* Container = LexUIWidgetPicking::ResolveDropContainer(InHit);
+	// The container answers for itself, not only for the pixel: the resolve walks up to the nearest
+	// ancestor holding one, and that ancestor is what receives the children.
+	if (Container != nullptr && InIsLocked(Container))return nullptr;
+	// Nothing above the cursor holds a container at all -- the container-less prefab -- whose answer
+	// is its own root, the same answer a palette drop on this pixel already gives.
+	if (Container == nullptr && InRoot != nullptr && !InIsLocked(InRoot))Container = InRoot;
+	return CanReparentSelectionUnder(InDragged, Container) ? Container : nullptr;
+}
+
+bool FLexUIPrefabEditorViewportClient::CanReparentSelectionUnder(TConstArrayView<ULexWidget*> InWidgets, const ULexWidget* InNewParent)
+{
+	if (!IsValid(InNewParent) || InWidgets.IsEmpty())return false;
+	TArray<ULexWidget*> Candidates;
+	Candidates.Reserve(InWidgets.Num());
+	for (ULexWidget* Widget : InWidgets)
+	{
+		if (!IsValid(Widget))return false;
+		// Already there, so there is nothing to reparent and the gesture stays the move it was.
+		if (Widget->GetParent() == InNewParent)return false;
+		Candidates.Add(Widget);
+	}
+	// CanAcceptChildren carries the cycle refusals as well as the capacity one: a widget onto itself,
+	// and a parent that is one of the dragged widgets' own descendants.
+	return InNewParent->CanAcceptChildren(Candidates);
+}
+
+bool FLexUIPrefabEditorViewportClient::ApplyPendingReparent()
+{
+	ULexWidget* NewParent = PendingReparentTarget.Get();
+	if (!IsValid(NewParent))return false;
+	TArray<ULexWidget*> Dragged;
+	GetDraggedWidgets(Dragged);
+	// Asked again at the drop rather than trusted from the hover: a pointer stays down for as long
+	// as the author holds it, and anything else in the editor may have moved the hierarchy meanwhile.
+	if (!CanReparentSelectionUnder(Dragged, NewParent))return false;
+	NewParent->SetFlags(RF_Transactional);
+	NewParent->Modify();
+	bool bReparented = false;
+	for (ULexWidget* DraggedWidget : Dragged)
+	{
+		if (ULexWidget* OldParent = DraggedWidget->GetParent(); IsValid(OldParent))
+		{
+			OldParent->SetFlags(RF_Transactional);
+			OldParent->Modify();
+		}
+		// Keeping the world transform is what leaves the widget where it was dropped. It does not
+		// carry the rect a stretch-anchored widget resolves from its anchors, though: those are
+		// fractions of a parent that is now a different size, so the extent is put back by hand.
+		const float Width = DraggedWidget->GetWidth();
+		const float Height = DraggedWidget->GetHeight();
+		if (!DraggedWidget->TrySetParent(NewParent, true))continue;
+		DraggedWidget->SetWidth(Width);
+		DraggedWidget->SetHeight(Height);
+		bReparented = true;
+	}
+	if (bReparented && PrefabEditorPtr.IsValid())
+	{
+		PrefabEditorPtr.Pin()->RefreshOutliner();
+	}
+	return bReparented;
+}
+
 void FLexUIPrefabEditorViewportClient::FinishDesignerDrag(bool bCancel)
 {
 	if (!bDesignerDragging)return;
@@ -2335,27 +2473,29 @@ void FLexUIPrefabEditorViewportClient::FinishDesignerDrag(bool bCancel)
 			}
 		}
 	}
-	else if (bDesignerChanged && PrefabEditorPtr.IsValid())
+	else
 	{
-		if (ULexUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
+		// The drop into a new container is part of the gesture that positioned the widget, so it goes
+		// into the transaction that gesture already opened: one drag, one undo step.
+		if (ApplyPendingReparent())bDesignerChanged = true;
+		if (bDesignerChanged && PrefabEditorPtr.IsValid())
 		{
-			Helper->SetAnythingDirty();
-		}
-		// Dragging in the designer moves the widget by its anchored position, which the widget
-		// resolves into RelativeLocation; that is the property the animation keys.
-		TArray<ULexWidget*> DraggedWidgets;
-		for (const FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
-		{
-			if (ULexWidget* DraggedWidget = Snapshot.Widget.Get())
+			if (ULexUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
 			{
-				DraggedWidgets.Add(DraggedWidget);
+				Helper->SetAnythingDirty();
 			}
+			// Dragging in the designer moves the widget by its anchored position, which the widget
+			// resolves into RelativeLocation; that is the property the animation keys.
+			TArray<ULexWidget*> DraggedWidgets;
+			GetDraggedWidgets(DraggedWidgets);
+			AutoKeyAnimatedTransform(DraggedWidgets, true, false, false);
 		}
-		AutoKeyAnimatedTransform(DraggedWidgets, true, false, false);
 	}
 	if (DesignerTransaction.IsValid() && (bCancel || !bDesignerChanged))DesignerTransaction->Cancel();
 	DesignerTransaction.Reset();
 	DesignerSnapshots.Reset();
+	PendingReparentTarget.Reset();
+	ClearPaletteDropPreview();
 	ActiveDesignerHandle = EDesignerHandle::None;
 	bDesignerDragging = false;
 	bDesignerChanged = false;
@@ -2453,7 +2593,7 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 	IndexOfClickSelectUI = ResolveClickCycleIndex(LastClickPixel, ClickPixel, IndexOfClickSelectUI);
 	LastClickPixel = ClickPixel;
 	ULexWidget* ClickHitWidget = LexUIWidgetPicking::PickTopmostWidget(this->GetWorld(), AllWidgetArray, LineStart, LineEnd, IndexOfClickSelectUI);
-	if (ClickHitWidget != nullptr && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(ClickHitWidget))
+	if (ClickHitWidget != nullptr && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(ClickHitWidget))
 	{
 		ClickHitWidget = nullptr;
 	}
@@ -2907,6 +3047,23 @@ void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputE
 	else if (Key == EKeys::Up) KeyDelta.Y = 1;
 	else if (Key == EKeys::Down) KeyDelta.Y = -1;
 
+	// The release closes whatever the press opened, so it cannot stand behind a predicate that may
+	// answer differently than it did at the press. Between the two an arranger can claim the axes --
+	// a layout container added by another panel, an aspect-ratio layout-self switched on, the widget
+	// reparented -- and the transaction would then stay open for every later edit to join. What it
+	// may not do is end a transaction it never opened: the stack is the editor's, and the one
+	// underneath is as likely to be the designer drag's, which would lose the ability to cancel.
+	if (Event == IE_Released)
+	{
+		if (bNudgeTransactionOpen)
+		{
+			bNudgeTransactionOpen = false;
+			GEditor->EndTransaction();
+		}
+		RedrawAllViewportsIntoThisScene();
+		return;
+	}
+
 	TArray<ULexWidget*> Movable;
 	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 	{
@@ -2914,7 +3071,7 @@ void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputE
 		{
 			// An axis someone else arranges is dropped rather than the widget: nudging a widget whose
 			// X is decided and whose Y is free still has to move it in Y.
-			if (PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))continue;
+			if (PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(SelectedWidget))continue;
 			if (FilterMoveDelta(KeyDelta, GetEffectiveLayoutControl(SelectedWidget)).IsZero())continue;
 			Movable.Add(SelectedWidget);
 		}
@@ -2929,6 +3086,7 @@ void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputE
 	if (Event == IE_Pressed)
 	{
 		GEditor->BeginTransaction(LOCTEXT("MoveWidget", "Move Widget"));
+		bNudgeTransactionOpen = true;
 		if (PrefabEditorPtr.IsValid())
 		{
 			if (ULexUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
@@ -2941,10 +3099,6 @@ void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputE
 		{
 			LexWidget->Modify();
 		}
-	}
-	else if (Event == IE_Released)
-	{
-		GEditor->EndTransaction();
 	}
 
 	if (Event == IE_Pressed || Event == IE_Repeat)
@@ -3179,21 +3333,61 @@ void FLexUIPrefabEditorViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDrag
 {
 	OutResults.Reset();
 	OutResults.Reserve(InTargets.Num());
+	auto RawPositionOf = [](const FMoveDragTarget& InTarget)
+	{
+		const FVector StartLocal = InTarget.PlaneTransform.InverseTransformPosition(InTarget.StartPlanePoint);
+		const FVector CurrentLocal = InTarget.PlaneTransform.InverseTransformPosition(InTarget.CurrentPlanePoint);
+		return InTarget.StartPosition + FVector2D(CurrentLocal.Y - StartLocal.Y, CurrentLocal.Z - StartLocal.Z);
+	};
+	// Snapping every target onto its own nearest gridline collapses the gaps between widgets that
+	// started at different sub-grid offsets: the selection deforms as it is dragged and two of them
+	// can land on top of each other. So the grid is consulted once and everyone rides the same
+	// correction.
+	//
+	// That correction has to travel through WORLD space, not as a bare pair of numbers. Each target
+	// is measured in its own parent's frame, so parents at different scales or rotations give the
+	// same on-screen distance different local values -- adding one parent's number to another
+	// parent's position is the very deformation this is here to prevent.
+	//
+	// Per axis, too, and off the first target free on that axis: a target whose X an arranger owns
+	// is never given the X measured for it, so a correction read from that X bends everyone else
+	// towards a gridline nothing was going to sit on.
+	FVector CorrectionWorld = FVector::ZeroVector;
+	bool bSnappedX = false;
+	bool bSnappedY = false;
+	if (InGridSize > 0.0f)
+	{
+		auto AccumulateAxis = [&](bool bHorizontal)
+		{
+			const FMoveDragTarget* Leader = InTargets.FindByPredicate([bHorizontal](const FMoveDragTarget& InTarget)
+			{
+				return bHorizontal ? InTarget.bHorizontalFree : InTarget.bVerticalFree;
+			});
+			if (Leader == nullptr)return false;
+			const FVector2D Raw = RawPositionOf(*Leader);
+			const double Axis = bHorizontal ? Raw.X : Raw.Y;
+			const double Delta = FMath::GridSnap(Axis, (double)InGridSize) - Axis;
+			if (FMath::IsNearlyZero(Delta))return false;
+			// Local Y is the horizontal axis of a widget's plane and local Z the vertical one,
+			// which is the same mapping RawPositionOf reads back out.
+			CorrectionWorld += Leader->PlaneTransform.TransformVector(
+				bHorizontal ? FVector(0.0, Delta, 0.0) : FVector(0.0, 0.0, Delta));
+			return true;
+		};
+		bSnappedX = AccumulateAxis(true);
+		bSnappedY = AccumulateAxis(false);
+	}
 	for (const FMoveDragTarget& Target : InTargets)
 	{
-		const FVector StartLocal = Target.PlaneTransform.InverseTransformPosition(Target.StartPlanePoint);
-		const FVector CurrentLocal = Target.PlaneTransform.InverseTransformPosition(Target.CurrentPlanePoint);
-		const FVector2D Raw = Target.StartPosition + FVector2D(CurrentLocal.Y - StartLocal.Y, CurrentLocal.Z - StartLocal.Z);
-		const FVector2D Snapped = InGridSize > 0.0f
-			? FVector2D(FMath::GridSnap(Raw.X, (double)InGridSize), FMath::GridSnap(Raw.Y, (double)InGridSize))
-			: Raw;
+		const FVector Local = Target.PlaneTransform.InverseTransformVector(CorrectionWorld);
+		const FVector2D Snapped = RawPositionOf(Target) + FVector2D(Local.Y, Local.Z);
 		FLexLayoutControlAnchorData Control;
 		Control.bCanControlHorizontalPosition = !Target.bHorizontalFree;
 		Control.bCanControlVerticalPosition = !Target.bVerticalFree;
 		FMoveDragResult& Result = OutResults.AddDefaulted_GetRef();
 		Result.Position = Target.StartPosition + FilterMoveDelta(Snapped - Target.StartPosition, Control);
-		Result.bSnappedHorizontal = Target.bHorizontalFree && !FMath::IsNearlyEqual(Snapped.X, Raw.X);
-		Result.bSnappedVertical = Target.bVerticalFree && !FMath::IsNearlyEqual(Snapped.Y, Raw.Y);
+		Result.bSnappedHorizontal = Target.bHorizontalFree && bSnappedX;
+		Result.bSnappedVertical = Target.bVerticalFree && bSnappedY;
 	}
 }
 
@@ -3319,7 +3513,7 @@ ULexWidget* FLexUIPrefabEditorViewportClient::GetWidgetUnderCursor(int32 PixelX,
 	int32 CycleIndex = INDEX_NONE;
 	ULexWidget* Result = LexUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, CycleIndex);
 	if (Result == nullptr)return nullptr;
-	if (bRespectDesignerLock && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Result))return nullptr;
+	if (bRespectDesignerLock && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(Result))return nullptr;
 	return Result;
 }
 
@@ -3703,6 +3897,10 @@ void FLexUIPrefabEditorViewportClient::CapturedMouseMove(FViewport* InViewport, 
 	}
 	PrevMouseX = InMouseX;
 	PrevMouseY = InMouseY;
+	// The only move events delivered once the viewport has captured the mouse arrive here, which is
+	// the whole of every designer drag -- exactly when the coordinate readout is worth reading. The
+	// dirty flag is deliberately left alone: hover is not resolved while something is being dragged.
+	HoverPixel = FIntPoint(InMouseX, InMouseY);
 }
 
 void FLexUIPrefabEditorViewportClient::MouseEnter(FViewport* InViewport, int32 x, int32 y)

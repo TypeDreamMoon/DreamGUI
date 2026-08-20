@@ -136,8 +136,10 @@ bool FLexHierarchyDropLockOwnerTest::RunTest(const FString& Parameters)
 	// made a locked widget un-neighbourable.
 	TestTrue(TEXT("a drop above a widget is governed by its parent"), GetLockOwnerForDropZone(Child, EItemDropZone::AboveItem) == Root.Get());
 	TestTrue(TEXT("a drop below a widget is governed by its parent"), GetLockOwnerForDropZone(Child, EItemDropZone::BelowItem) == Root.Get());
-	// A root has no parent to ask; the drop is then nobody's to refuse here.
-	TestNull(TEXT("a drop above a root widget has no lock owner"), GetLockOwnerForDropZone(Root.Get(), EItemDropZone::AboveItem));
+	// A root has no sibling list, so an above/below drop on it is rewritten into a drop INSIDE it --
+	// answering "nobody" here let a drag land inside a locked root by hovering its edge.
+	TestTrue(TEXT("a drop above a root widget is governed by the root itself"), GetLockOwnerForDropZone(Root.Get(), EItemDropZone::AboveItem) == Root.Get());
+	TestTrue(TEXT("a drop below a root widget is governed by the root itself"), GetLockOwnerForDropZone(Root.Get(), EItemDropZone::BelowItem) == Root.Get());
 	TestNull(TEXT("a drop with no target has no lock owner"), GetLockOwnerForDropZone(nullptr, EItemDropZone::OntoItem));
 	return true;
 }

@@ -14,6 +14,7 @@
 #include "Misc/FeedbackContext.h"
 #include "LexUIPrefabEditorCommand.h"
 #include "LexUIEditorTools.h"
+#include "LexUIControlRegistry.h"
 #include "ToolMenus.h"
 #include "Editor.h"
 #include "LexWidgetEditorHierarchyView.h"
@@ -402,10 +403,15 @@ void FLexUIPrefabEditor::SyncSelection()
 {
 	// Every widget SelectWidgets hands to the selection broadcasts back into here, so without this
 	// the set being built is copied back over itself once per widget, mid-loop and half finished.
-	if (bIsSelecting)return;
-	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
-	OnSelectionChanged.Broadcast();
-	OutlinerPtr->RequestRefresh();
+	if (!bIsSelecting)
+	{
+		SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
+		OnSelectionChanged.Broadcast();
+	}
+	// The tree rebuild is not part of that copy and must not be guarded with it: an operation that
+	// creates a widget and then selects it needs the row to exist, and this is the refresh that
+	// used to make it appear.
+	RefreshOutliner();
 }
 
 void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
@@ -591,6 +597,11 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	
 	BindCommands();
 	ExtendToolbar();
+	// InitAssetEditor below builds the menus, so a project's extenders have to be registered first.
+	AddMenuExtender(FLGUIEditorModule::Get().GetMenuExtensibilityManager()->GetAllExtenders(
+		GetToolkitCommands(), TArray<UObject*>{ GetPrefabBeingEdited() }));
+	AddToolbarExtender(FLGUIEditorModule::Get().GetToolBarExtensibilityManager()->GetAllExtenders(
+		GetToolkitCommands(), TArray<UObject*>{ GetPrefabBeingEdited() }));
 
 	// Default layout
 	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_LexUIPrefabEditor_Layout_v3")
@@ -1426,8 +1437,31 @@ void FLexUIPrefabEditor::DistributeSelectedWidgets(bool bHorizontal)
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
 }
 
-void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
+void FLexUIPrefabEditor::CollectLayoutPanelDescriptors(const UClass* InExcludeClass, TArray<const FLexUIControlDescriptor*>& OutDescriptors)
 {
+	OutDescriptors.Reset();
+	for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
+	{
+		UClass* PanelClass = Descriptor.LayoutContainerClass.Get();
+		if (PanelClass == nullptr || PanelClass == InExcludeClass)
+		{
+			continue;
+		}
+		if (Descriptor.VisualClass.IsValid() || Descriptor.BehaviourClass.IsValid())
+		{
+			continue;//a control that happens to use a panel, not a panel
+		}
+		OutDescriptors.Add(&Descriptor);
+	}
+	OutDescriptors.Sort([](const FLexUIControlDescriptor& A, const FLexUIControlDescriptor& B)
+	{
+		return A.DisplayName.CompareTo(B.DisplayName) < 0;
+	});
+}
+
+void FLexUIPrefabEditor::WrapSelectedWidgets(UClass* InLayoutContainerClass)
+{
+	if (InLayoutContainerClass != nullptr && !InLayoutContainerClass->IsChildOf(ULexLayoutContainer::StaticClass()))return;
 	TArray<ULexWidget*> Widgets;
 	ULexWidget* CommonParent = nullptr;
 	// wrapping is fine under a layout parent (the wrapper just becomes a layout child), so don't refuse it
@@ -1499,14 +1533,23 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 		return A.SiblingIndex < B.SiblingIndex;
 	});
 
-	// New container, inserted where the selection was, sized to enclose it.
-	FString WrapperName;
-	switch (WrapType)
+	// New container, inserted where the selection was, sized to enclose it. Named after the palette's
+	// own label for the panel, so the wrapper reads as the thing that was picked rather than as the
+	// C++ class that happens to implement it.
+	FString WrapperName = TEXT("Widget");
+	if (InLayoutContainerClass != nullptr)
 	{
-	case ELexUIWrapType::HorizontalBox: WrapperName = TEXT("HorizontalBox"); break;
-	case ELexUIWrapType::VerticalBox:   WrapperName = TEXT("VerticalBox"); break;
-	case ELexUIWrapType::Grid:          WrapperName = TEXT("Grid"); break;
-	default:                            WrapperName = TEXT("Widget"); break;
+		WrapperName = InLayoutContainerClass->GetName();
+		TArray<const FLexUIControlDescriptor*> Panels;
+		CollectLayoutPanelDescriptors(nullptr, Panels);
+		for (const FLexUIControlDescriptor* Descriptor : Panels)
+		{
+			if (Descriptor->LayoutContainerClass.Get() == InLayoutContainerClass)
+			{
+				WrapperName = Descriptor->DisplayName.ToString();
+				break;
+			}
+		}
 	}
 	ULexWidget* Wrapper = NewObject<ULexWidget>(CommonParent->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
 	Wrapper->Modify();//enroll the new widget in the transaction so undo/redo restores it (and re-registers it), like DeleteWidgets
@@ -1579,19 +1622,18 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 		W->SetHeight(State.Height);
 	}
 
-	switch (WrapType)
+	// Null is the plain-widget choice, which is a wrapper with no panel rather than a default panel.
+	if (InLayoutContainerClass != nullptr && Wrapper->CreateNewLayoutContainer(InLayoutContainerClass) == nullptr)
 	{
-	case ELexUIWrapType::HorizontalBox:
-		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>();
-		break;
-	case ELexUIWrapType::VerticalBox:
-		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
-		break;
-	case ELexUIWrapType::Grid:
-		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerGridPanel>();
-		break;
-	default:
-		break;//plain widget container
+		// The one refusal a designer can hit: single-child panels reject a selection of several.
+		RestoreOriginalHierarchy();
+		FNotificationInfo Info(FText::Format(
+			LOCTEXT("WrapLayoutRefused", "{0} cannot hold {1} children."),
+			InLayoutContainerClass->GetDisplayNameText(), FText::AsNumber(WidgetStates.Num())));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 6.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
 	}
 
 	if (auto Helper = GetPrefabHelperObject())
@@ -2616,6 +2658,51 @@ void FLexUIPrefabEditor::SetWidgetLockedInDesigner(ULexWidget* Widget, bool bLoc
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid())ViewportPtr->GetViewportClient()->Invalidate();
 }
 
+bool FLexUIPrefabEditor::IsWidgetLockedForInteraction(const ULexWidget* Widget) const
+{
+	return GetRespectDesignerLocks() && IsWidgetLockedInDesigner(Widget);
+}
+
+bool FLexUIPrefabEditor::GetRespectDesignerLocks() const
+{
+	return GetDefault<ULexUIDesignerSettings>()->bRespectDesignerLocks;
+}
+
+void FLexUIPrefabEditor::ToggleRespectDesignerLocks()
+{
+	ULexUIDesignerSettings* Settings = GetMutableDefault<ULexUIDesignerSettings>();
+	Settings->bRespectDesignerLocks = !Settings->bRespectDesignerLocks;
+	Settings->SaveConfig();
+	// What is selectable just changed for every open prefab editor, and the padlock column reads
+	// the same switch, so both surfaces have to be told rather than waiting for the next click.
+	IterateAllPrefabEditor([](FLexUIPrefabEditor* Editor)
+	{
+		Editor->RefreshOutliner();
+		if (Editor->ViewportPtr.IsValid() && Editor->ViewportPtr->GetViewportClient().IsValid())Editor->ViewportPtr->GetViewportClient()->Invalidate();
+	});
+}
+
+bool FLexUIPrefabEditor::GetShowDesignerChrome() const
+{
+	return GetDefault<ULexUIDesignerSettings>()->bShowDesignerChrome;
+}
+
+void FLexUIPrefabEditor::ToggleShowDesignerChrome()
+{
+	ULexUIDesignerSettings* Settings = GetMutableDefault<ULexUIDesignerSettings>();
+	Settings->bShowDesignerChrome = !Settings->bShowDesignerChrome;
+	Settings->SaveConfig();
+	IterateAllPrefabEditor([](FLexUIPrefabEditor* Editor)
+	{
+		if (Editor->ViewportPtr.IsValid() && Editor->ViewportPtr->GetViewportClient().IsValid())Editor->ViewportPtr->GetViewportClient()->Invalidate();
+	});
+}
+
+void FLexUIPrefabEditor::RefreshOutliner()
+{
+	if (OutlinerPtr.IsValid())OutlinerPtr->RequestRefresh();
+}
+
 bool FLexUIPrefabEditor::IsDesignerGridSnapEnabled() const
 {
 	return GetDefault<ULexUIDesignerSettings>()->bGridSnapEnabled;
@@ -2654,12 +2741,15 @@ void FLexUIPrefabEditor::ToggleDesignerGuides()
 
 bool FLexUIPrefabEditor::GetShowLayoutDebug() const
 {
-	return GetDefault<ULexUIDesignerSettings>()->bShowLayoutDebug;
+	// The chrome switch takes the whole overlay down, this diagnostic included, and the toolbar reads
+	// the same answer the drawing does -- a checkbox reporting Checked over a viewport that is
+	// showing none of it is the toggle lying about the state of the screen.
+	return GetShowDesignerChrome() && GetDefault<ULexUIDesignerSettings>()->bShowLayoutDebug;
 }
 
 bool FLexUIPrefabEditor::GetShowResolutionGuides() const
 {
-	return GetDefault<ULexUIDesignerSettings>()->bShowResolutionGuides;
+	return GetShowDesignerChrome() && GetDefault<ULexUIDesignerSettings>()->bShowResolutionGuides;
 }
 
 void FLexUIPrefabEditor::ToggleResolutionGuides()
@@ -2826,11 +2916,43 @@ float FLexUIPrefabEditor::DesignerOrthoZoomFor(float InCurrentOrthoZoom, float I
 
 void FLexUIPrefabEditor::SetDesignerSizeRule(ELexUIDesignerSizeRule InRule)
 {
-	DesignerSizeRule = InRule;
-	if (InRule != ELexUIDesignerSizeRule::Desired)return;
+	if (InRule != ELexUIDesignerSizeRule::Desired)
+	{
+		DesignerSizeRule = InRule;
+		return;
+	}
+	auto Refuse = [](const FText& InMessage)
+	{
+		FNotificationInfo Info(InMessage);
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 6.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+	};
 	FVector2D DesiredSize;
-	if (!GetDesignerDesiredSize(DesiredSize))return;
-	SetDesignerViewportSize(DesignerViewportSizeFromDesired(DesiredSize, GetDesignerViewportSize()));
+	if (!GetDesignerDesiredSize(DesiredSize))
+	{
+		Refuse(LOCTEXT("SizeRuleDesiredNoMeasurement", "Nothing in this prefab measures itself. Give the root widget a UMG-compatible panel and the canvas can be sized to what it contains, or choose Custom and type the root's current size."));
+		return;
+	}
+	// The measurement is a CANVAS size, and SetDesignerViewportSize takes a DEVICE resolution that it
+	// then runs the prefab's own scaler rule over. Under anything but Constant Pixel Size the canvas
+	// is pinned by the reference resolution whatever device is named, so no resolution reaches the
+	// measured canvas -- and handing the measurement over regardless divides the canvas by the scale
+	// once per click. Ask the rule what the proposal would really produce, and refuse if it is not it.
+	const FIntPoint Proposed = DesignerViewportSizeFromDesired(DesiredSize, GetDesignerViewportSize());
+	FIntPoint ProposedCanvasSize;
+	float ProposedScale = 1.0f;
+	if (CalculateDesignerCanvasFor(Proposed, ProposedCanvasSize, ProposedScale) && ProposedCanvasSize != Proposed)
+	{
+		Refuse(FText::Format(
+			LOCTEXT("SizeRuleDesiredScaled", "This prefab's canvas rule turns a {0} x {1} device into a {2} x {3} canvas, so the canvas cannot be sized to the content. Set the root LexCanvas to Constant Pixel Size first."),
+			Proposed.X, Proposed.Y, ProposedCanvasSize.X, ProposedCanvasSize.Y));
+		return;
+	}
+	// Recorded only once it has been carried out. A refusal leaves the canvas exactly where it was,
+	// and a radio button sitting on a rule nothing enforced says the canvas is something it is not.
+	DesignerSizeRule = InRule;
+	SetDesignerViewportSize(Proposed);
 }
 
 bool FLexUIPrefabEditor::GetDesignerDesiredSize(FVector2D& OutSize)
@@ -2838,19 +2960,15 @@ bool FLexUIPrefabEditor::GetDesignerDesiredSize(FVector2D& OutSize)
 	OutSize = FVector2D::ZeroVector;
 	ULexWidget* Root = GetLoadedRootWidget();
 	if (!IsValid(Root))return false;
-	// Same measurement the layout debug overlay prints: the root's own container measures its content.
-	if (ULexLayoutContainer* Layout = Root->GetLayoutContainer(); IsValid(Layout))
-	{
-		FLexLayoutDebugInfo Info;
-		if (Layout->GetLayoutDebugInfo(Root, Info) && Info.DesiredSize.X > 0.0 && Info.DesiredSize.Y > 0.0)
-		{
-			OutSize = Info.DesiredSize;
-			return true;
-		}
-	}
-	// A root with no container measures nothing, so its authored rect is the only content size there is.
-	OutSize = Root->GetSize();
-	return OutSize.X > 0.0 && OutSize.Y > 0.0;
+	// Only a UMG-compatible panel measures anything. A legacy LGUI container reports the widget's own
+	// rect back as its desired size, and a root with no container has nothing but that rect either,
+	// so both would answer "the size it already is" and have that read as a measurement.
+	ULexPanelLayoutBase* Panel = Cast<ULexPanelLayoutBase>(Root->GetLayoutContainer());
+	if (!IsValid(Panel))return false;
+	const FVector2f Preferred = Panel->GetLayoutPreferredSize();
+	if (!(Preferred.X > 0.0f && Preferred.Y > 0.0f))return false;
+	OutSize = FVector2D(Preferred);
+	return true;
 }
 
 FIntPoint FLexUIPrefabEditor::DesignerViewportSizeFromDesired(const FVector2D& InDesiredSize, FIntPoint InFallback)
@@ -3013,7 +3131,7 @@ void FLexUIPrefabEditor::BindCommands()
 		FGenericCommands::Get().Delete,
 		FExecuteAction::CreateSPLambda(this, [=, this]()
 		{
-			FLexUIEditorTools::DeleteWidgets(GetSelectedWidgetArray);
+			FLexUIEditorTools::DeleteWidgets(GetSelectedWidgetArray, FLexUIEditorTools::EDeleteWidgetWarningType::WarnAndAskUser);
 			OutlinerPtr->RequestRefresh();
 		}),
 		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteWidget, GetSelectedWidgetArray),

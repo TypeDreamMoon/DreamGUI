@@ -31,10 +31,30 @@ FDelegateHandle ContentBrowserExtenderDelegateHandle;
 //////////////////////////////////////////////////////////////////////////
 // FLexUIContentBrowserExtensions_Impl
 
+/**
+ * Load the picked assets, and not one asset earlier. The menu is built on every right-click in the
+ * Content Browser, so resolving the selection there means a folder of a hundred meshes is loaded
+ * synchronously just to discover that none of them is ours.
+ */
+template<typename T>
+static TArray<T*> LexUIResolveSelectedAssets(const TArray<FAssetData>& InSelectedAssets)
+{
+	TArray<T*> Result;
+	Result.Reserve(InSelectedAssets.Num());
+	for (const FAssetData& AssetData : InSelectedAssets)
+	{
+		if (T* Asset = Cast<T>(AssetData.GetAsset()))
+		{
+			Result.Add(Asset);
+		}
+	}
+	return Result;
+}
+
 class FLGUIContentBrowserExtensions_Impl
 {
 public:
-	static void CreateSpriteActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<UTexture2D*> SelectedAssets)
+	static void CreateSpriteActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
 	{
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("SpriteActionsSubMenuLabel", "LexUISprite"),
@@ -44,7 +64,7 @@ public:
 			FSlateIcon(FLGUIEditorStyle::GetStyleSetName(), "LGUIEditor.SpriteDataAction")
 		);
 	}
-	static void CreatePrefabActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<ULexUIPrefab*> SelectedAssets)
+	static void CreatePrefabActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
 	{
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("PrefabActionsSubMenuLabel", "LexUIPrefab"),
@@ -54,7 +74,7 @@ public:
 			FSlateIcon(FLGUIEditorStyle::GetStyleSetName(), "LGUIEditor.PrefabDataAction")
 		);
 	}
-	static void CreateFontActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<UFontFace*> SelectedAssets)
+	static void CreateFontActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
 	{
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("FontActionsSubMenuLabel", "LexUIFont"),
@@ -65,19 +85,19 @@ public:
 		);
 	}
 
-	static void PopulateSpriteActionsMenu(FMenuBuilder& MenuBuilder, TArray<UTexture2D*> SelectedAssets)
+	static void PopulateSpriteActionsMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
 	{
 		// Create sprites
 		struct LOCAL
 		{
-			static void CreateSpritesFromTextures(TArray<UTexture2D*> Textures)
+			static void CreateSpritesFromTextures(TArray<FAssetData> InTextures)
 			{
 				FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
 				FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
 
 				TArray<UObject*> ObjectsToSync;
 
-				for (auto Texture : Textures)
+				for (UTexture2D* Texture : LexUIResolveSelectedAssets<UTexture2D>(InTextures))
 				{
 					// Create the factory used to generate the sprite
 					ULexUISpriteDataFactory* SpriteFactory = NewObject<ULexUISpriteDataFactory>();
@@ -103,10 +123,10 @@ public:
 					ContentBrowserModule.Get().SyncBrowserToAssets(ObjectsToSync);
 				}
 			}
-			static void ConfigureTextureSettingsForSprites(TArray<UTexture2D*> InTextures)
+			static void ConfigureTextureSettingsForSprites(TArray<FAssetData> InTextures)
 			{
 				// Change the compression settings and trigger a recompress
-				for (auto Texture : InTextures)
+				for (UTexture2D* Texture : LexUIResolveSelectedAssets<UTexture2D>(InTextures))
 				{
 					ULexUISpriteData::CheckAndApplySpriteTextureSetting(Texture);
 				}
@@ -131,18 +151,18 @@ public:
 			EUserInterfaceActionType::Button);
 	}
 
-	static void PopulatePrefabActionMenu(FMenuBuilder& MenuBuilder, TArray<ULexUIPrefab*> SelectedAssets)
+	static void PopulatePrefabActionMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
 	{
 		struct LOCAL
 		{
-			static void CreatePrefabVariant(TArray<ULexUIPrefab*> Prefabs)
+			static void CreatePrefabVariant(TArray<FAssetData> InPrefabs)
 			{
 				FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
 				FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
 
 				TArray<UObject*> ObjectsToSync;
 
-				for (auto Prefab : Prefabs)
+				for (ULexUIPrefab* Prefab : LexUIResolveSelectedAssets<ULexUIPrefab>(InPrefabs))
 				{
 					// Create the factory used to generate the prefab
 					auto PrefabFactory = NewObject<ULexUIPrefabFactory>();
@@ -179,18 +199,18 @@ public:
 			NAME_None,
 			EUserInterfaceActionType::Button);
 	}
-	static void PopulateFontActionMenu(FMenuBuilder& MenuBuilder, TArray<UFontFace*> SelectedAssets)
+	static void PopulateFontActionMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
 	{
 		struct LOCAL
 		{
-			static void CreateLexUIFontFromUnrealFontAsset(TArray<UFontFace*> Fonts)
+			static void CreateLexUIFontFromUnrealFontAsset(TArray<FAssetData> InFonts)
 			{
 				FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
 				FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
 
 				TArray<UObject*> ObjectsToSync;
 
-				for (auto Font : Fonts)
+				for (UFontFace* Font : LexUIResolveSelectedAssets<UFontFace>(InFonts))
 				{
 					// Create the factory used to generate LexUIFont
 					auto FontFactory = NewObject<ULexUIFontDataDistanceFieldFactory>();
@@ -231,25 +251,26 @@ public:
 	{
 		TSharedRef<FExtender> Extender(new FExtender());
 
-		// Run thru the assets to determine if any meet our criteria
-		TArray<UTexture2D*> Textures;
-		TArray<ULexUIPrefab*> Prefabs;
-		TArray<UFontFace*> Fonts;
+		// Run thru the assets to determine if any meet our criteria. The registry's recorded class
+		// answers that without touching the package: all three classes are native and therefore
+		// always loaded, so IsInstanceOf resolves them without loading anything either.
+		TArray<FAssetData> Textures;
+		TArray<FAssetData> Prefabs;
+		TArray<FAssetData> Fonts;
 		for (auto AssetIt = SelectedAssets.CreateConstIterator(); AssetIt; ++AssetIt)
 		{
 			const FAssetData& Asset = *AssetIt;
-			auto AssetObject = Asset.GetAsset();
-			if (auto Texture = Cast<UTexture2D>(AssetObject))
+			if (Asset.IsInstanceOf<UTexture2D>())
 			{
-				Textures.Add(Texture);
+				Textures.Add(Asset);
 			}
-			else if (auto Prefab = Cast<ULexUIPrefab>(AssetObject))
+			else if (Asset.IsInstanceOf<ULexUIPrefab>())
 			{
-				Prefabs.Add(Prefab);
+				Prefabs.Add(Asset);
 			}
-			else if (auto Font = Cast<UFontFace>(AssetObject))
+			else if (Asset.IsInstanceOf<UFontFace>())
 			{
-				Fonts.Add(Font);
+				Fonts.Add(Asset);
 			}
 		}
 

@@ -14,6 +14,9 @@
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIEditorModule.h"
 #include "PrefabEditor/LexUIPrefabEditor.h"
+#include "PrefabEditor/LexUIPrefabBehaviourUtils.h"
+#include "Core/LexUIBehaviour.h"
+#include "UObject/UnrealType.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "PrefabSystem/LexUIPrefabPresenterComponent.h"
@@ -798,10 +801,81 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 	}
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
-void FLexUIEditorTools::DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
+TArray<FText> FLexUIEditorTools::CollectBehaviourBindingsToWidgets(ULexUIBehaviour* InCompanionBehaviour, const TArray<ULexWidget*>& InWidgets)
+{
+	TArray<FText> Result;
+	if (!IsValid(InCompanionBehaviour))return Result;
+
+	// Everything the delete takes with it, mapped back to the widget whose name the designer will
+	// recognize. Descendants count: deleting a parent deletes them, and a variable bound to one
+	// dangles exactly the same. A variable may hold the widget, its visual, or one of its
+	// behaviours, so all three are keys.
+	TMap<const UObject*, const ULexWidget*> DoomedObjects;
+	for (ULexWidget* Widget : InWidgets)
+	{
+		if (!IsValid(Widget))continue;
+		TArray<ULexWidget*> Subtree;
+		ULexWidget::CollectChildrenWidgets(Widget, Subtree);
+		for (const ULexWidget* Member : Subtree)
+		{
+			if (!IsValid(Member))continue;
+			DoomedObjects.Add(Member, Member);
+			if (auto Visual = Member->GetVisual())DoomedObjects.Add(Visual, Member);
+			for (auto Behaviour : Member->GetAllComponents())
+			{
+				if (IsValid(Behaviour))DoomedObjects.Add(Behaviour, Member);
+			}
+		}
+	}
+
+	// Only references the prefab writer actually persists are worth naming. It skips transient and
+	// CPF_DisableEditOnInstance properties alike (LexUIObjectReaderAndWriter.cpp), so a binding on
+	// one of those already comes back empty after a save -- the delete is not what breaks it.
+	for (TFieldIterator<FObjectProperty> It(InCompanionBehaviour->GetClass()); It; ++It)
+	{
+		FObjectProperty* Prop = *It;
+		if (!Prop->HasAnyPropertyFlags(CPF_Edit) || Prop->HasAnyPropertyFlags(CPF_Transient | CPF_DisableEditOnInstance))continue;
+		UObject* Value = Prop->GetObjectPropertyValue_InContainer(InCompanionBehaviour);
+		if (Value == nullptr)continue;
+		if (const ULexWidget* const* BoundWidget = DoomedObjects.Find(Value))
+		{
+			Result.Add(FText::Format(LOCTEXT("BehaviourBinding", "{0} -> {1}")
+				, FText::FromString(Prop->GetName()), FText::FromString((*BoundWidget)->GetDisplayName())));
+		}
+	}
+	return Result;
+}
+ULexUIBehaviour* FLexUIEditorTools::FindCompanionForWidgets(const TArray<ULexWidget*>& InWidgets)
+{
+	// The companion is per prefab and a selection cannot span two prefabs, so the first widget
+	// that reports a helper names the prefab whose bindings are at stake.
+	for (ULexWidget* Widget : InWidgets)
+	{
+		if (!IsValid(Widget))continue;
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
+		{
+			return LexUIPrefabBehaviourUtils::FindBehaviourComponent(PrefabHelperObject->LoadedRootWidget, PrefabHelperObject->PrefabAsset);
+		}
+	}
+	return nullptr;
+}
+bool FLexUIEditorTools::ShouldContinueDeleteOperation(const TArray<ULexWidget*>& InWidgets)
+{
+	const TArray<FText> Bindings = CollectBehaviourBindingsToWidgets(FindCompanionForWidgets(InWidgets), InWidgets);
+	if (Bindings.Num() == 0)return true;
+	const FText Message = FText::Format(
+		LOCTEXT("ConfirmDeleteBoundWidgets", "One or more widgets are bound to variables on this prefab's behaviour blueprint. Deleting them leaves those variables holding nothing. The blueprint still compiles, so the loss only shows up at runtime. Delete anyway?\n\n{0}")
+		, FText::Join(FText::FromString(TEXT("\n")), Bindings));
+	// A run with nobody to ask must not be answered with the YesNo default, which is No: that would
+	// silently cancel the delete and log the unanswered prompt at Error verbosity (MessageDialog.cpp).
+	return FMessageDialog::Open(EAppMsgType::YesNo, EAppReturnType::Yes, Message
+		, LOCTEXT("ConfirmDeleteBoundWidgetsTitle", "Delete Widgets")) == EAppReturnType::Yes;
+}
+void FLexUIEditorTools::DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction, EDeleteWidgetWarningType WarningType)
 {
 	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
 	auto RootWidgetList = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
+	if (WarningType == EDeleteWidgetWarningType::WarnAndAskUser && !ShouldContinueDeleteOperation(RootWidgetList))return;
 	const FScopedTransaction Transaction(LOCTEXT("DestroyWidget_Transaction", "LexUI Destroy Widgets"));
 	for (auto Widget : RootWidgetList)
 	{
@@ -832,8 +906,14 @@ void FLexUIEditorTools::DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelect
 }
 void FLexUIEditorTools::CutWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
+	// Cut is a delete as far as the behaviour blueprint is concerned -- the pasted widget is a new
+	// object, so the variable is left pointing at nothing either way. Asked before the copy, because
+	// the copy overwrites the clipboard: declining afterwards leaves Ctrl+X having thrown away
+	// whatever was staged there and deleted nothing.
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	if (!ShouldContinueDeleteOperation(GetRootWidgetListFromSelection(SelectedWidgets)))return;
 	CopyWidgets(GetSelectedWidgetArrayFunction);
-	DeleteWidgets(GetSelectedWidgetArrayFunction);
+	DeleteWidgets(GetSelectedWidgetArrayFunction, EDeleteWidgetWarningType::DeleteSilently);
 }
 
 bool FLexUIEditorTools::CanDuplicateWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)

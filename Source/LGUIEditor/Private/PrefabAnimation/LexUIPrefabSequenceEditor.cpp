@@ -647,6 +647,13 @@ TSharedPtr<SWidget> SLexUIPrefabSequenceEditor::OnContextMenuOpening()const
 							Animation->GetInvalidObjectBindingIds(ContextWidget, BrokenBindingsBefore);
 
 							FScopedTransaction Transaction(LOCTEXT("FixObjectReference_Transaction", "Fix Animation Object References"));
+							// Recorded here rather than left to ULexUIPrefabSequence::FixObjectReferences,
+							// which calls Modify() once the references have already been rewritten: the
+							// snapshot a transaction restores is taken when Modify() runs, so from in
+							// there it is a snapshot of the repair, and Cancel() below would keep a
+							// partial repair instead of undoing it.
+							Animation->SetFlags(RF_Transactional);
+							Animation->Modify();
 							Animation->FixObjectReferences(ContextWidget);
 
 							TArray<FGuid> BrokenBindingsAfter;

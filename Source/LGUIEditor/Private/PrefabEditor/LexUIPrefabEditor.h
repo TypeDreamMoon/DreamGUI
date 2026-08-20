@@ -29,6 +29,7 @@ enum class ELexUIBehaviourHandlerType : uint8;
 class IMessageLogListing;
 class UToolMenu;
 struct FLexUISubPrefabData;
+struct FLexUIControlDescriptor;
 namespace LexUIPrefabBehaviourUtils { struct FDiscoveredEvent; }
 
 enum class ELexUIPrefabApplyStatus : uint8
@@ -66,15 +67,6 @@ enum class ELexUIWidgetAlignType : uint8
 	BottomEdge,
 };
 
-/** UMG "Wrap With" container choices: a plain widget, a horizontal/vertical FlexBox, or a Grid. */
-enum class ELexUIWrapType : uint8
-{
-	Widget,
-	HorizontalBox,
-	VerticalBox,
-	Grid,
-};
-
 /** How the design canvas gets its size: a resolution the author picked, or what the content measures. */
 enum class ELexUIDesignerSizeRule : uint8
 {
@@ -108,6 +100,16 @@ public:
 	/** Show the selected widget's measurement, arrangement, slot, ownership and clipping diagnostics. */
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowLayoutDebug = false;
+	/**
+	 * Honour the designer locks recorded on the prefab. Turning it off reaches a locked background
+	 * for one edit without unlocking it, which is the only way back from a lock that would otherwise
+	 * have to be undone and redone. The locks themselves are untouched: this decides who reads them.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Designer Locks")
+	bool bRespectDesignerLocks = true;
+	/** Draw the selection outlines, handles, guides and readouts over the design surface. */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bShowDesignerChrome = true;
 };
 
 /**
@@ -165,8 +167,21 @@ public:
 	const TArray<TWeakObjectPtr<ULexWidget>>& GetSelectedWidgets(){return SelectedWidgets;}
 	bool IsWidgetHiddenInDesigner(const ULexWidget* Widget) const;
 	void SetWidgetHiddenInDesigner(ULexWidget* Widget, bool bHidden);
+	/** Whether the prefab records this widget as locked, which is what the padlock column reports. */
 	bool IsWidgetLockedInDesigner(const ULexWidget* Widget) const;
+	/**
+	 * Whether a gesture must refuse this widget: locked AND locks are being honoured. Every picking,
+	 * selection and drag gate asks this one rather than the record, so the toolbar's respect-locks
+	 * switch reaches all of them and the padlock still shows what the prefab says.
+	 */
+	bool IsWidgetLockedForInteraction(const ULexWidget* Widget) const;
 	void SetWidgetLockedInDesigner(ULexWidget* Widget, bool bLocked, bool bRecursive = true);
+	bool GetRespectDesignerLocks() const;
+	void ToggleRespectDesignerLocks();
+	bool GetShowDesignerChrome() const;
+	void ToggleShowDesignerChrome();
+	/** Rebuild the hierarchy tree, for operations that change what rows there are. */
+	void RefreshOutliner();
 	bool IsDesignerGridSnapEnabled() const;
 	void ToggleDesignerGridSnap();
 	float GetDesignerGridSize() const;
@@ -339,10 +354,12 @@ public:
 	void DistributeSelectedWidgets(bool bHorizontal);
 	/**
 	 * UMG "Wrap With": group the selected sibling widgets under a newly created container widget
-	 * inserted at their position, sized to enclose them. Children keep their world position (a
-	 * FlexBox/Grid container then arranges them). Needs 1+ selected widgets that share a parent.
+	 * inserted at their position, sized to enclose them. Children keep their world position (the
+	 * chosen panel then arranges them). Needs 1+ selected widgets that share a parent.
+	 * InLayoutContainerClass is any registered layout container, or null for a plain widget with no
+	 * panel at all -- which is the one choice the registry has no descriptor for.
 	 */
-	void WrapSelectedWidgets(ELexUIWrapType WrapType);
+	void WrapSelectedWidgets(UClass* InLayoutContainerClass);
 	/**
 	 * UMG "Replace With", adapted to this fork's shape. UMG swaps one panel *widget* for another
 	 * and has to carry the children across; here the panel is an instanced ULexLayoutContainer
@@ -352,6 +369,13 @@ public:
 	 * sub prefab. Returns quietly when the target panel cannot hold that many children.
 	 */
 	void ReplaceSelectedWidgetLayout(UClass* PanelClass);
+	/**
+	 * The registered layout containers, sorted by display name -- the panels the palette can create,
+	 * which is the only list a menu offering panels should ever build. A descriptor that also names
+	 * a visual or a behaviour is a control that happens to use a panel, not a panel, and is left out.
+	 * InExcludeClass drops the one a widget already has, for menus where offering it does nothing.
+	 */
+	static void CollectLayoutPanelDescriptors(const UClass* InExcludeClass, TArray<const FLexUIControlDescriptor*>& OutDescriptors);
 	/**
 	 * UMG "Find References": search the prefab's companion behaviour blueprint for the variable
 	 * the selected widget binds to. UMG can search by widget name because there the variable is
