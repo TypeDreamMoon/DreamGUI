@@ -10,7 +10,10 @@ class UUINavigationInputSelectionHandler;
 class UDreamCanvas;
 class UDreamUIPrefab;
 
-UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+// Abstract: LoadWidget is PURE_VIRTUAL, so an instance of this class asserts the moment it
+// registers. Without this the Add Component list offers it, and picking it there is a crash
+// rather than an error. Add DreamUIPrefabPresenterComponent or DreamUIMLPresenterComponent.
+UCLASS(Abstract, ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UDreamWidgetPresenterComponentBase : public USceneComponent
 {
 	GENERATED_BODY()
