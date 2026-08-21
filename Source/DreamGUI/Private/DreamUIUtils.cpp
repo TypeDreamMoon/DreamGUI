@@ -183,7 +183,7 @@ FColor FDreamUIUtils::MultiplyColor(FColor A, FColor B)
 
 UTexture2D* FDreamUIUtils::GetDefaultWhiteTexture()
 {
-	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/DreamGUI/Textures/LexUIPreset_WhiteSolid"));
+	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/DreamGUI/Textures/DreamUIPreset_WhiteSolid"));
 	if (!IsValid(defaultWhiteSolid))
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default texture error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue.")

@@ -26,7 +26,7 @@ UMaterialInterface* UDreamRectBlockData::GetMaterial()
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/LexUI_RectBlock"));;
+		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/DreamUI_RectBlock"));;
 	}
 	return DefaultMaterial;
 }

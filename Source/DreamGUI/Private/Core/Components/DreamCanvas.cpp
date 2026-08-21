@@ -34,7 +34,7 @@
 UDreamCanvas::UDreamCanvas()
 {
 	DefaultMeshType = UDreamUIMeshComponent::StaticClass();
-	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/LexUI_ImageAndFont"));
+	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont"));
 	bStartWithTickEnabled = false;
 }
 
@@ -1940,7 +1940,7 @@ UMaterialInterface* UDreamCanvas::GetDefaultMaterial()const
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/Materials/LexUI_ImageAndFont"));
+		DefaultMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont"));
 		if (!DefaultMaterial)
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Load DefaultMaterial error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

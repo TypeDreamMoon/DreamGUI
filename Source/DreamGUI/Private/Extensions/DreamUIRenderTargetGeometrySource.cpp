@@ -1215,7 +1215,7 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
 }
 UMaterialInterface* UDreamUIRenderTargetGeometrySource::GetPresetMaterial()const
 {
-	auto MatPath = TEXT("/DreamGUI/Materials/LexUI_RenderTargetMaterial");
+	auto MatPath = TEXT("/DreamGUI/Materials/DreamUI_RenderTargetMaterial");
 	return LoadObject<UMaterialInterface>(NULL, MatPath);
 }
 
