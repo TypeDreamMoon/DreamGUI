@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -36,6 +36,7 @@ struct DREAMGUI_API FDreamTextLayoutInput
 	EDreamUITextParagraphVerticalAlign ParagraphVAlign = EDreamUITextParagraphVerticalAlign::Bottom;
 	EDreamUITextOverflowType OverflowType = EDreamUITextOverflowType::HorizontalOverflow;
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
+	EDreamTextPhraseWrap PhraseWrap = EDreamTextPhraseWrap::Off;
 	bool bUseKerning = false;
 	EDreamUITextFontStyle FontStyle = EDreamUITextFontStyle::None;
 	bool bRichText = false;

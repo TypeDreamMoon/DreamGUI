@@ -8,6 +8,7 @@
 class UDreamWidget;
 class UDreamCanvas;
 class UTexture2D;
+class UStaticMesh;
 
 #if !UE_BUILD_SHIPPING
 //Check UObject valid, if not then return, to prevent crash.

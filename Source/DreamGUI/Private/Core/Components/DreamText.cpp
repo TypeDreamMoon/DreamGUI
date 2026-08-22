@@ -42,6 +42,7 @@ FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float 
 	Input.ParagraphVAlign = Text->GetParagraphVerticalAlignment();
 	Input.OverflowType = Text->GetOverflowType();
 	Input.WrappingPolicy = Text->GetWrappingPolicy();
+	Input.PhraseWrap = Text->GetPhraseWrap();
 	Input.bUseKerning = Text->GetUseKerning();
 	Input.FontStyle = Text->GetFontStyle();
 	Input.bRichText = Text->GetRichText();
@@ -713,6 +714,16 @@ void UDreamText::SetWrappingPolicy(ETextWrappingPolicy Value)
 	if (WrappingPolicy != Value)
 	{
 		WrappingPolicy = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetPhraseWrap(EDreamTextPhraseWrap Value)
+{
+	if (PhraseWrap != Value)
+	{
+		PhraseWrap = Value;
 		MarkVertexPositionDirty();
 		UDreamWidget::MarkLayoutForRebuild(GetWidget());
 	}

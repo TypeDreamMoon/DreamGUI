@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/Text/DreamTextLayout.h"
 #include "Core/DreamUIFontData_BaseObject.h"
@@ -6,6 +6,7 @@
 #include "Core/DreamUIRichTextCustomStyleData.h"
 #include "Core/DreamUIFontEmojiData.h"
 #include "Core/FRichTextParser.h"
+#include "Core/Text/DreamTextBreaker.h"
 
 bool FDreamTextLayoutInput::operator==(const FDreamTextLayoutInput& Other) const
 {
@@ -21,6 +22,7 @@ bool FDreamTextLayoutInput::operator==(const FDreamTextLayoutInput& Other) const
 		&& ParagraphVAlign == Other.ParagraphVAlign
 		&& OverflowType == Other.OverflowType
 		&& WrappingPolicy == Other.WrappingPolicy
+		&& PhraseWrap == Other.PhraseWrap
 		&& bUseKerning == Other.bUseKerning
 		&& FontStyle == Other.FontStyle
 		&& bRichText == Other.bRichText
@@ -42,8 +44,10 @@ namespace DreamTextLayoutLocal
 	using namespace DreamUIRichTextParser;
 
 	/**
-	 * One layout pass. A class rather than a function so the state the old 900-line function kept in
-	 * forty captured locals has names and a scope; the algorithm itself is unchanged.
+	 * One layout pass, in the order a browser's inline formatting context does it: measure every
+	 * element, decide where the lines break, place the lines, then align the paragraph. Measuring
+	 * first is what makes the breaker a pure function over widths, and what will let shaping slot in
+	 * before it.
 	 */
 	class FLayoutRun
 	{
@@ -56,12 +60,32 @@ namespace DreamTextLayoutLocal
 		void Run();
 
 	private:
-		enum class ENewLineMode
+		/** What measuring an element found out. */
+		struct FMeasured
 		{
-			None,//not new line
-			LineBreak,//this new line come from line break
-			Space,//this new line come from space char
-			Overflow,//this new line come from overflow
+			FDreamUICharData Glyph;
+			FRichTextParseResult Style;
+			/** XAdvance plus the horizontal font space: how far the pen moves. */
+			float Advance = 0.0f;
+			/** A newline: ends the paragraph, never placed. */
+			bool bHardBreak = false;
+			/** The second half of a CR LF pair: nothing at all. */
+			bool bSkipped = false;
+			/** Space or tab (not an image placeholder): advances, hangs past the wrap width, never emits. */
+			bool bWhitespace = false;
+			bool bImageSpace = false;
+			bool bEmoji = false;
+			/** A glyph the painter will draw. */
+			bool bVisibleGlyph = false;
+		};
+
+		/** A line as the breaker decided it: a half-open element range and what ended it. */
+		struct FLineRange
+		{
+			int32 Start = 0;
+			int32 End = 0;
+			/** The newline element that ended this line, or -1 for a soft break / the end of the text. */
+			int32 HardBreakElement = -1;
 		};
 
 		const FDreamTextLayoutInput& In;
@@ -93,32 +117,29 @@ namespace DreamTextLayoutLocal
 		TArray<FRichTextParseResult> RichTextPropertyArray;
 		TArray<FDreamUIText_TextProcessingElement> TextProcessingArray;
 
-		// Running state of the main loop.
-		FVector2f CurrentLineOffset = FVector2f::ZeroVector;
-		float CurrentLineWidth = 0.0f;
+		TArray<FMeasured> Measured;
+		TArray<uint32> ElementCodepoints;
+		TBitArray<> CanBreakBefore;
+		TArray<FLineRange> LineRanges;
+
+		// Running state of placement.
 		float CurrentLineHeight = 0.0f;
 		float ParagraphHeight = 0.0f;
 		float FirstLineHeight = 0.0f;
-		float MaxLineWidth = 0.0f;
-		float CurrentPreferredWidth = 0.0f;
-		float MaxPreferredWidth = 0.0f;
-		int32 LineItemStart = 0;//first item of the current line
 		int32 CurrentVisibleCharCount = 0;
-		int32 ImageStartIndexInCurrentLine = 0;
-		int32 EmojiStartIndexInCurrentLine = 0;
-		FDreamUITextLineProperty LineProperty;
-		FVector2f CaretPosition = FVector2f::ZeroVector;
-		int32 LinesCount = 0;
 		bool bHasClampContent = false;
-		float CurrentLineWidth_ForClampContent = 0.0f;
+		float ClampedLineWidth = 0.0f;
 		float ParagraphHeight_ForClampContent = 0.0f;
 		bool bShouldSetParagraphHeightForClampContent = false;
-		ENewLineMode NewLineMode = ENewLineMode::None;
 
 		void Prepare();
 		void Preprocess();
-		void NewLine(int32 CharIndex, bool bWithCaret, ENewLineMode InNewLineMode, float ExtraSizeForPreferredWidth);
-		void AlignLine(float LineWidthWithClamp);
+		void Measure();
+		void ComputeBreakOpportunities();
+		void BreakLines();
+		void Place();
+		void PlaceLine(int32 LineIndex, float LineY);
+		void AlignLine(int32 LineItemStart, int32 ImageStart, int32 EmojiStart, FDreamUITextLineProperty& LineProperty, float LineWidth);
 		void Finish();
 
 		bool IsRichTextImageSpace(uint32 CharCode, const FRichTextParseResult& RichTextResult) const;
@@ -130,7 +151,8 @@ namespace DreamTextLayoutLocal
 		FDreamUICharData GetUnderlineOrStrikethroughCharGeo(uint32 CharCode, float OverrideFontSize, bool bBold) const;
 		static FDreamTextItemStyle MakeStyle(const FRichTextParseResult& Result);
 		float ItemMaxX(const FDreamTextGlyphItem& Item) const;
-		void ApplyEllipsis(int32 CharIndex);
+		int32 CaretIndexOf(int32 ElementIndex) const;
+		void ApplyEllipsis(int32 ElementIndex, int32 LineItemStart, float& InOutPenX, float LineY);
 	};
 
 	void FLayoutRun::Prepare()
@@ -442,118 +464,214 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
-	void FLayoutRun::AlignLine(float LineWidthWithClamp)
+	int32 FLayoutRun::CaretIndexOf(int32 ElementIndex) const
+	{
+		// The caret contract: non-rich carets name the element (the code point), rich carets name the
+		// source index, so UITextInput can walk the markup it was given.
+		return In.bRichText ? RichTextPropertyArray[ElementIndex].CharIndex : ElementIndex;
+	}
+
+	void FLayoutRun::Measure()
+	{
+		const int32 Count = TextProcessingArray.Num();
+		Measured.SetNum(Count);
+		uint32 PrevCharCode = 0;
+		bool bParagraphStart = true;
+		for (int32 i = 0; i < Count; i++)
+		{
+			const auto& Element = TextProcessingArray[i];
+			FMeasured& M = Measured[i];
+			if (In.bRichText)
+			{
+				RichTextParseResult = RichTextPropertyArray[i];
+			}
+			M.Style = RichTextParseResult;
+
+			const uint32 Code = Element.Unicode;
+			if (Code == '\n' || Code == '\r')
+			{
+				M.bHardBreak = true;
+				if (i + 1 < Count)
+				{
+					const uint32 Next = TextProcessingArray[i + 1].Unicode;
+					if ((Code == '\r' && Next == '\n') || (Code == '\n' && Next == '\r'))
+					{
+						Measured[i + 1].bSkipped = true;
+						Measured[i + 1].bHardBreak = true;
+						if (In.bRichText)
+						{
+							Measured[i + 1].Style = RichTextPropertyArray[i + 1];
+						}
+						i++;
+					}
+				}
+				bParagraphStart = true;
+				continue;
+			}
+
+			// Kerning is against the previous character of the paragraph; nothing kerns across a hard
+			// break. The first character of a paragraph is paired with itself, which the font treats
+			// as "no pair".
+			M.Glyph = GetCharGeo(bParagraphStart ? Code : PrevCharCode, Element, RichTextParseResult.Size, RichTextParseResult.Bold, RichTextParseResult);
+			M.Advance = M.Glyph.XAdvance + In.FontSpace.X;
+			M.bImageSpace = IsRichTextImageSpace(Code, RichTextParseResult);
+			M.bEmoji = Element.Type == EDreamUIText_CodeType::Emoji;
+			M.bWhitespace = !M.bImageSpace && (Code == ' ' || Code == '\t');
+			M.bVisibleGlyph = !M.bImageSpace && !M.bEmoji && !M.bWhitespace;
+			PrevCharCode = Code;
+			bParagraphStart = false;
+		}
+	}
+
+	void FLayoutRun::ComputeBreakOpportunities()
+	{
+		const int32 Count = TextProcessingArray.Num();
+		// The breaker sees the text as laid out: markup stripped, placeholders as spaces.
+		FString PlainText;
+		PlainText.Reserve(Count + 4);
+		TArray<int32> PlainStart;
+		TArray<uint32> Codepoints;
+		PlainStart.SetNumUninitialized(Count);
+		Codepoints.SetNumUninitialized(Count);
+		for (int32 i = 0; i < Count; i++)
+		{
+			const auto& Element = TextProcessingArray[i];
+			PlainStart[i] = PlainText.Len();
+			Codepoints[i] = Element.Unicode;
+			if (Measured[i].bImageSpace)
+			{
+				PlainText.AppendChar(TEXT(' '));
+			}
+			else
+			{
+				PlainText.Append(*In.Content + Element.StringIndex, Element.Length);
+			}
+		}
+		FDreamTextBreaker::ComputeBreakOpportunities(PlainText, PlainStart, Codepoints, In.PhraseWrap, CanBreakBefore);
+		ElementCodepoints = MoveTemp(Codepoints);
+	}
+
+	void FLayoutRun::BreakLines()
+	{
+		const int32 Count = TextProcessingArray.Num();
+		const bool bWrap = In.OverflowType == EDreamUITextOverflowType::VerticalOverflow;
+		const bool bPerCharacter = In.WrappingPolicy == ETextWrappingPolicy::AllowPerCharacterWrapping;
+		LineRanges.Reset();
+
+		int32 LineStart = 0;
+		float X = 0.0f;
+		int32 LastOpportunity = -1;
+		float XAtLastOpportunity = 0.0f;
+		for (int32 i = 0; i < Count; i++)
+		{
+			const FMeasured& M = Measured[i];
+			if (M.bSkipped)continue;
+			if (M.bHardBreak)
+			{
+				FLineRange Range;
+				Range.Start = LineStart;
+				Range.End = i;
+				Range.HardBreakElement = i;
+				LineRanges.Add(Range);
+				LineStart = i + 1;
+				if (LineStart < Count && Measured[LineStart].bSkipped)
+				{
+					LineStart++;
+				}
+				X = 0.0f;
+				LastOpportunity = -1;
+				continue;
+			}
+
+			if (bWrap)
+			{
+				if (i > LineStart && CanBreakBefore[i])
+				{
+					LastOpportunity = i;
+					XAtLastOpportunity = X;
+				}
+				// Whitespace hangs: it may run past the wrap width and never forces a break itself.
+				if (!M.bWhitespace && X + M.Glyph.XAdvance > WrapWidth + UE_KINDA_SMALL_NUMBER)
+				{
+					if (LastOpportunity > LineStart)
+					{
+						FLineRange Range;
+						Range.Start = LineStart;
+						Range.End = LastOpportunity;
+						LineRanges.Add(Range);
+						LineStart = LastOpportunity;
+						X -= XAtLastOpportunity;
+						LastOpportunity = -1;
+					}
+					// Still too wide on a line of its own start: a word longer than the box. Break
+					// inside it if the policy allows, otherwise let it overflow. The cut avoids
+					// stranding closing punctuation at a line start, as a browser's break-all does.
+					if (bPerCharacter && i > LineStart && X + M.Glyph.XAdvance > WrapWidth + UE_KINDA_SMALL_NUMBER)
+					{
+						const int32 Cut = FDreamTextBreaker::FindKinsokuSafeFallback(ElementCodepoints, LineStart, i);
+						if (Cut != INDEX_NONE)
+						{
+							FLineRange Range;
+							Range.Start = LineStart;
+							Range.End = Cut;
+							LineRanges.Add(Range);
+							float XAtCut = 0.0f;
+							for (int32 k = Cut; k < i; k++)
+							{
+								if (!Measured[k].bSkipped)XAtCut += Measured[k].Advance;
+							}
+							LineStart = Cut;
+							X = XAtCut;
+							LastOpportunity = -1;
+						}
+					}
+				}
+			}
+			X += M.Advance;
+		}
+		FLineRange Last;
+		Last.Start = LineStart;
+		Last.End = Count;
+		LineRanges.Add(Last);
+	}
+
+	void FLayoutRun::AlignLine(int32 LineItemStart, int32 ImageStart, int32 EmojiStart, FDreamUITextLineProperty& LineProperty, float LineWidth)
 	{
 		float XOffset = 0.0f;
 		switch (In.ParagraphHAlign)
 		{
 		case EDreamUITextParagraphHorizontalAlign::Center:
-			XOffset = -LineWidthWithClamp * 0.5f;
+			XOffset = -LineWidth * 0.5f;
 			break;
 		case EDreamUITextParagraphHorizontalAlign::Right:
-			XOffset = -LineWidthWithClamp;
+			XOffset = -LineWidth;
 			break;
 		default:
 			break;
 		}
+		// Rich text centres a line of mixed sizes on its tallest glyph. The baseline model replaces
+		// this; until then every line-bound thing, carets included, moves together.
+		const float YOffset = In.bRichText ? -(CurrentLineHeight - FontSize) * 0.5f : 0.0f;
 
-		if (In.bRichText)
+		for (int32 i = LineItemStart; i < Out.Items.Num(); i++)
 		{
-			// Rich text centres a line of mixed sizes on its tallest glyph. Carets are deliberately not
-			// shifted here: that is how the old pipeline behaved, and caret placement is UITextInput's
-			// contract, so it moves with the baseline model in a later phase rather than here.
-			const float YOffset = -(CurrentLineHeight - FontSize) * 0.5f;
-			for (int32 i = LineItemStart; i < Out.Items.Num(); i++)
-			{
-				Out.Items[i].Pen.X += XOffset;
-				Out.Items[i].Pen.Y += YOffset;
-			}
-			for (int32 i = ImageStartIndexInCurrentLine; i < Out.Images.Num(); i++)
-			{
-				Out.Images[i].Position.X += XOffset;
-				Out.Images[i].Position.Y += YOffset;
-			}
-			for (int32 i = EmojiStartIndexInCurrentLine; i < Out.Emojis.Num(); i++)
-			{
-				Out.Emojis[i].Position.X += XOffset;
-				Out.Emojis[i].Position.Y += YOffset;
-			}
-			ImageStartIndexInCurrentLine = Out.Images.Num();
-			EmojiStartIndexInCurrentLine = Out.Emojis.Num();
+			Out.Items[i].Pen.X += XOffset;
+			Out.Items[i].Pen.Y += YOffset;
 		}
-		else
+		for (auto& Caret : LineProperty.CaretPropertyList)
 		{
-			for (int32 i = LineItemStart; i < Out.Items.Num(); i++)
-			{
-				Out.Items[i].Pen.X += XOffset;
-			}
-			for (auto& Caret : LineProperty.CaretPropertyList)
-			{
-				Caret.CaretPosition.X += XOffset;
-			}
-			for (int32 i = EmojiStartIndexInCurrentLine; i < Out.Emojis.Num(); i++)
-			{
-				Out.Emojis[i].Position.X += XOffset;
-			}
-			EmojiStartIndexInCurrentLine = Out.Emojis.Num();
+			Caret.CaretPosition.X += XOffset;
 		}
-	}
-
-	void FLayoutRun::NewLine(int32 CharIndex, bool bWithCaret, ENewLineMode InNewLineMode, float ExtraSizeForPreferredWidth)
-	{
-		//add end caret position
-		CurrentLineWidth -= In.FontSpace.X;//last char of a line don't need space
-		const float CurrentLineWidthWithClamp = bHasClampContent ? CurrentLineWidth_ForClampContent : CurrentLineWidth;
-		MaxLineWidth = FMath::Max(MaxLineWidth, CurrentLineWidth);
-		if (InNewLineMode != ENewLineMode::None)
+		for (int32 i = ImageStart; i < Out.Images.Num(); i++)
 		{
-			if (InNewLineMode == ENewLineMode::LineBreak)//if lineBreak then we should start a new preferredWidth
-			{
-				CurrentPreferredWidth += CurrentLineWidth;
-				MaxPreferredWidth = FMath::Max(MaxPreferredWidth, CurrentPreferredWidth);
-				CurrentPreferredWidth = 0;//lineBreak cause a newline and recalculation of preferredWidth
-			}
-			else
-			{
-				CurrentPreferredWidth += CurrentLineWidth + ExtraSizeForPreferredWidth;
-			}
+			Out.Images[i].Position.X += XOffset;
+			Out.Images[i].Position.Y += YOffset;
 		}
-
-		FDreamUITextCaretProperty CaretProperty;
-		CaretProperty.CaretPosition = CaretPosition;
-		CaretProperty.CharIndex = bWithCaret ? CharIndex : -1;
-		LineProperty.CaretPropertyList.Add(CaretProperty);
-
-		AlignLine(CurrentLineWidthWithClamp);
-
-		Out.Lines.Add(LineProperty);
-		LineProperty = FDreamUITextLineProperty();
-		LineItemStart = Out.Items.Num();
-
-		CurrentLineWidth = 0;
-		CurrentLineOffset.X = 0;
-		const float LineAdvance = (In.bRichText ? CurrentLineHeight : OriginLineHeight) * LineHeightScale + In.FontSpace.Y;
-		CurrentLineOffset.Y -= LineAdvance;
-		ParagraphHeight += LineAdvance;
-		if (bHasClampContent && bShouldSetParagraphHeightForClampContent)
+		for (int32 i = EmojiStart; i < Out.Emojis.Num(); i++)
 		{
-			bShouldSetParagraphHeightForClampContent = false;
-			ParagraphHeight_ForClampContent = ParagraphHeight;
+			Out.Emojis[i].Position.X += XOffset;
+			Out.Emojis[i].Position.Y += YOffset;
 		}
-		LinesCount++;
-
-		//set caret position for empty newline
-		CaretPosition.X = CurrentLineOffset.X - HalfFontSpaceX;
-		CaretPosition.Y = CurrentLineOffset.Y;
-		//store first line height for paragraph align
-		if (LinesCount == 1)
-		{
-			FirstLineHeight = In.bRichText ? CurrentLineHeight : OriginLineHeight;
-		}
-		//set line height to origin
-		CurrentLineHeight = OriginLineHeight;
-
-		NewLineMode = InNewLineMode;
 	}
 
 	float FLayoutRun::ItemMaxX(const FDreamTextGlyphItem& Item) const
@@ -583,24 +701,25 @@ namespace DreamTextLayoutLocal
 		return MaxX;
 	}
 
-	void FLayoutRun::ApplyEllipsis(int32 CharIndex)
+	void FLayoutRun::ApplyEllipsis(int32 ElementIndex, int32 LineItemStart, float& InOutPenX, float LineY)
 	{
 		//move back and replace chars by ...
 		const uint32 CharCodeOfDots = 0x2026;//'…'
-		const auto CharElementOfDots = FDreamUIText_TextProcessingElement{ CharCodeOfDots, CharIndex, 1, EDreamUIText_CodeType::Text };
+		const auto CharElementOfDots = FDreamUIText_TextProcessingElement{ CharCodeOfDots, ElementIndex, 1, EDreamUIText_CodeType::Text };
 		const auto CharGeoOfDots = GetCharGeo(CharCodeOfDots, CharElementOfDots, FontSize, false, RichTextParseResult);
-		if (CurrentLineOffset.X < CharGeoOfDots.XAdvance)//remove all if it can't fit the char-of-dots
+		if (InOutPenX < CharGeoOfDots.XAdvance)//remove all if it can't fit the char-of-dots
 		{
-			for (auto& Item : Out.Items)
+			for (int32 i = LineItemStart; i < Out.Items.Num(); i++)
 			{
-				Item.bEmit = false;
+				Out.Items[i].bEmit = false;
+				Out.Items[i].bCountsAsVisible = false;
 			}
 			return;
 		}
 
-		const float LineOffsetPointToStripOff = CurrentLineOffset.X - CharGeoOfDots.XAdvance - HalfFontSpaceX;
-		//remove char geometry on tail of data, if the char's vertex position greater than dots
-		for (int32 ItemIndex = Out.Items.Num() - 1; ItemIndex >= 0; ItemIndex--)
+		const float LineOffsetPointToStripOff = InOutPenX - CharGeoOfDots.XAdvance - HalfFontSpaceX;
+		//remove char geometry on tail of the line, if the char's vertex position greater than dots
+		for (int32 ItemIndex = Out.Items.Num() - 1; ItemIndex >= LineItemStart; ItemIndex--)
 		{
 			auto& Item = Out.Items[ItemIndex];
 			if (!Item.bEmit)continue;
@@ -615,15 +734,13 @@ namespace DreamTextLayoutLocal
 			}
 		}
 
-		CurrentLineOffset.X = LineOffsetPointToStripOff;
-		//push dots geometry to tail
 		FDreamTextGlyphItem Dots;
 		Dots.Kind = EDreamTextItemKind::Glyph;
 		Dots.Codepoint = CharCodeOfDots;
-		Dots.ElementIndex = CharIndex;
-		Dots.SourceIndex = CharIndex;
-		Dots.LineIndex = LinesCount;
-		Dots.Pen = CurrentLineOffset;
+		Dots.ElementIndex = ElementIndex;
+		Dots.SourceIndex = TextProcessingArray[ElementIndex].StringIndex;
+		Dots.LineIndex = Out.Lines.Num();
+		Dots.Pen = FVector2f(LineOffsetPointToStripOff, LineY);
 		Dots.Glyph = CharGeoOfDots;
 		Dots.AdvanceWithSpace = CharGeoOfDots.XAdvance + In.FontSpace.X;
 		Dots.Style = MakeStyle(RichTextParseResult);
@@ -638,223 +755,111 @@ namespace DreamTextLayoutLocal
 		Dots.bEmit = true;
 		Dots.bCountsAsVisible = false;
 		Out.Items.Add(Dots);
+		InOutPenX = LineOffsetPointToStripOff + Dots.AdvanceWithSpace;
 	}
 
-	void FLayoutRun::Run()
+	void FLayoutRun::PlaceLine(int32 LineIndex, float LineY)
 	{
-		Out.Reset();
-		Prepare();
-		Preprocess();
+		const FLineRange& Range = LineRanges[LineIndex];
+		const int32 LineItemStart = Out.Items.Num();
+		const int32 ImageStart = Out.Images.Num();
+		const int32 EmojiStart = Out.Emojis.Num();
+		FDreamUITextLineProperty LineProperty;
+		const bool bClampMode = In.OverflowType == EDreamUITextOverflowType::Truncate || In.OverflowType == EDreamUITextOverflowType::Ellipsis;
 
-		const int32 ContentLength = TextProcessingArray.Num();
-
-		uint32 PrevCharCode = '\0';//prev char code (not space or tab)
-		for (int32 CharIndex = 0; CharIndex < ContentLength; CharIndex++)
+		float PenX = 0.0f;
+		float ContentRight = 0.0f;//pen after the last non-whitespace element: trailing spaces hang outside the line's width
+		bool bAnyContent = false;
+		CurrentLineHeight = OriginLineHeight;
+		for (int32 i = Range.Start; i < Range.End; i++)
 		{
-			const auto CharElement = TextProcessingArray[CharIndex];
-			const auto CharCode = CharElement.Unicode;
-			int32 CaretCharIndex = CharIndex;
-			if (In.bRichText)
-			{
-				RichTextParseResult = RichTextPropertyArray[CharIndex];
-				CaretCharIndex = RichTextParseResult.CharIndex;
-			}
+			const FMeasured& M = Measured[i];
+			if (M.bSkipped)continue;
+			const auto& Element = TextProcessingArray[i];
+			RichTextParseResult = M.Style;
 
-			if (CharCode == '\n' || CharCode == '\r')//10 -- \n, 13 -- \r
-			{
-				NewLine(In.bRichText ? RichTextParseResult.CharIndex : CharIndex, true, ENewLineMode::LineBreak, 0);
-				if (CharIndex + 1 < ContentLength)
-				{
-					const auto NextCharCode = TextProcessingArray[CharIndex + 1].Unicode;
-					if ((CharCode == '\r' && NextCharCode == '\n') || (CharCode == '\n' && NextCharCode == '\r'))
-					{
-						CharIndex++;//\n\r or \r\n
-					}
-				}
-				continue;
-			}
-
-			if (NewLineMode == ENewLineMode::Space || NewLineMode == ENewLineMode::Overflow)
-			{
-				if (IsSpace(CharCode, RichTextParseResult))//skip empty space at start of newline
-				{
-					if (NewLineMode == ENewLineMode::Overflow)
-					{
-						const auto TempCharGeo = GetCharGeo(CharIndex == 0 ? CharCode : PrevCharCode, CharElement
-							, RichTextParseResult.Size, RichTextParseResult.Bold, RichTextParseResult);
-						CurrentPreferredWidth += TempCharGeo.XAdvance;//newline is caused by space, so the space size should add to preferredWidth, because preferredWidth should ignore auto wrapping
-						NewLineMode = ENewLineMode::None;
-					}
-					continue;
-				}
-				else
-				{
-					NewLineMode = ENewLineMode::None;
-				}
-			}
-
-			const auto CharGeo = GetCharGeo(CharIndex == 0 ? CharCode : PrevCharCode, CharElement
-				, RichTextParseResult.Size, RichTextParseResult.Bold, RichTextParseResult);
-			//caret property
-			CaretPosition.X = CurrentLineOffset.X - HalfFontSpaceX;
-			CaretPosition.Y = CurrentLineOffset.Y;
+			//caret property: the caret sits on the left of its char
 			FDreamUITextCaretProperty CaretProperty;
-			CaretProperty.CaretPosition = CaretPosition;
-			CaretProperty.CharIndex = CaretCharIndex;
+			CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineY);
+			CaretProperty.CharIndex = CaretIndexOf(i);
 			LineProperty.CaretPropertyList.Add(CaretProperty);
 
-			CaretPosition.X += In.FontSpace.X + CharGeo.XAdvance;//for line's last char's caret position
+			FDreamTextGlyphItem Item;
+			Item.Codepoint = Element.Unicode;
+			Item.ElementIndex = i;
+			Item.SourceIndex = Element.StringIndex;
+			Item.LineIndex = LineIndex;
+			Item.Pen = FVector2f(PenX, LineY);
+			Item.Glyph = M.Glyph;
+			Item.AdvanceWithSpace = M.Advance;
+			Item.Style = MakeStyle(M.Style);
 
-			if (IsSpace(CharCode, RichTextParseResult))//char is space
+			if (M.bImageSpace)
 			{
-				//char is space and text can have overflow line, then we need to calculate if the following words can fit the rest space, if not means new line
-				if (In.OverflowType == EDreamUITextOverflowType::VerticalOverflow)
-				{
-					auto PrevCharCodeOfForwardChar = PrevCharCode;
-					float SpaceNeeded = GetCharGeoXAdv(PrevCharCodeOfForwardChar, CharElement, RichTextParseResult);
-					PrevCharCodeOfForwardChar = CharCode;
-					SpaceNeeded += In.FontSpace.X;
-					bool bNeedToRemoveLastFontSpace = false;
-					for (int32 ForwardCharIndex = CharIndex + 1, ForwardVisibleCharIndex = CurrentVisibleCharCount; ForwardCharIndex < ContentLength && ForwardVisibleCharIndex < ContentLength; ForwardCharIndex++)
-					{
-						bNeedToRemoveLastFontSpace = false;
-						const auto CharElementOfForwardChar = TextProcessingArray[ForwardCharIndex];
-						const auto CharCodeOfForwardChar = CharElementOfForwardChar.Unicode;
-						const auto& RichTextParseResultOfForwardChar = In.bRichText ? RichTextPropertyArray[ForwardCharIndex] : RichTextParseResult;
-						if (IsSpace(CharCodeOfForwardChar, RichTextParseResultOfForwardChar))//space
-						{
-							break;
-						}
-						if (CharCodeOfForwardChar == '\n' || CharCodeOfForwardChar == '\r' || CharCodeOfForwardChar == '\t')//\n\r\t
-						{
-							break;
-						}
-						SpaceNeeded += GetCharGeoXAdv(PrevCharCodeOfForwardChar, CharElementOfForwardChar, RichTextParseResultOfForwardChar);
-						SpaceNeeded += In.FontSpace.X;
-						bNeedToRemoveLastFontSpace = true;
-						ForwardVisibleCharIndex++;
-						PrevCharCodeOfForwardChar = CharCodeOfForwardChar;
-					}
-					if (bNeedToRemoveLastFontSpace)
-					{
-						SpaceNeeded -= In.FontSpace.X;
-					}
-					if (CurrentLineOffset.X + SpaceNeeded > WrapWidth + UE_KINDA_SMALL_NUMBER)
-					{
-						NewLine(CaretCharIndex, false, ENewLineMode::Space,
-							CharGeo.XAdvance
-							+ In.FontSpace.X//this font-space is related to char
-							+ In.FontSpace.X//because NewLine function remove font-space (currentLineWidth -= fontSpace.X to remove font-space), so we need add it back
-						);
-						continue;
-					}
-				}
-			}
-
-			PrevCharCode = CharCode;
-			//char geometry
-			if (IsRichTextImageSpace(CharCode, RichTextParseResult))
-			{
-				FDreamUIText_RichTextImageTag ImageTagData;
-				ImageTagData.TagName = RichTextParseResult.ImageTag;
-				ImageTagData.Position = FVector2D(CurrentLineOffset.X + CharGeo.XAdvance * 0.5f, CurrentLineOffset.Y);
-				ImageTagData.Size = FVector2D(CharGeo.Width, CharGeo.Height);
-				ImageTagData.TintColor = RichTextParseResult.HasColor ? RichTextParseResult.Color : FColor::White;
-				Out.Images.Add(ImageTagData);
-				CurrentLineHeight = FMath::Max(CurrentLineHeight, RichTextParseResult.Size);
-
-				FDreamTextGlyphItem Item;
 				Item.Kind = EDreamTextItemKind::Image;
-				Item.Codepoint = CharCode;
-				Item.ElementIndex = CharIndex;
-				Item.SourceIndex = CharElement.StringIndex;
-				Item.LineIndex = LinesCount;
-				Item.Pen = CurrentLineOffset;
-				Item.Glyph = CharGeo;
-				Item.AdvanceWithSpace = CharGeo.XAdvance + In.FontSpace.X;
-				Item.Style = MakeStyle(RichTextParseResult);
-				Out.Items.Add(Item);
+				FDreamUIText_RichTextImageTag ImageTagData;
+				ImageTagData.TagName = M.Style.ImageTag;
+				ImageTagData.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineY);
+				ImageTagData.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
+				ImageTagData.TintColor = M.Style.HasColor ? M.Style.Color : FColor::White;
+				Out.Images.Add(ImageTagData);
+				CurrentLineHeight = FMath::Max(CurrentLineHeight, M.Style.Size);
 			}
-			else if (CharElement.Type == EDreamUIText_CodeType::Emoji)
+			else if (M.bEmoji)
 			{
-				FDreamUIText_Emoji Emoji;
-				Emoji.EmojiCode = CharElement.Unicode;
-				Emoji.Position = FVector2D(CurrentLineOffset.X + CharGeo.XAdvance * 0.5f, CurrentLineOffset.Y);
-				Emoji.Size = FVector2D(CharGeo.Width, CharGeo.Height);
-				Out.Emojis.Add(Emoji);
-				CurrentLineHeight = FMath::Max(CurrentLineHeight, RichTextParseResult.Size);
-
-				FDreamTextGlyphItem Item;
 				Item.Kind = EDreamTextItemKind::Emoji;
-				Item.Codepoint = CharCode;
-				Item.ElementIndex = CharIndex;
-				Item.SourceIndex = CharElement.StringIndex;
-				Item.LineIndex = LinesCount;
-				Item.Pen = CurrentLineOffset;
-				Item.Glyph = CharGeo;
-				Item.AdvanceWithSpace = CharGeo.XAdvance + In.FontSpace.X;
-				Item.Style = MakeStyle(RichTextParseResult);
-				Out.Items.Add(Item);
+				FDreamUIText_Emoji Emoji;
+				Emoji.EmojiCode = Element.Unicode;
+				Emoji.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineY);
+				Emoji.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
+				Out.Emojis.Add(Emoji);
+				CurrentLineHeight = FMath::Max(CurrentLineHeight, M.Style.Size);
+			}
+			else if (M.bWhitespace)
+			{
+				Item.Kind = EDreamTextItemKind::Space;
 			}
 			else
 			{
-				FDreamTextGlyphItem Item;
-				Item.Codepoint = CharCode;
-				Item.ElementIndex = CharIndex;
-				Item.SourceIndex = CharElement.StringIndex;
-				Item.LineIndex = LinesCount;
-				Item.Pen = CurrentLineOffset;
-				Item.Glyph = CharGeo;
-				Item.AdvanceWithSpace = CharGeo.XAdvance + In.FontSpace.X;
-				Item.Style = MakeStyle(RichTextParseResult);
-				if (CharCode != ' ' && CharCode != '\t')//skip invisible char
+				Item.Kind = EDreamTextItemKind::Glyph;
+				if (In.bRichText)
 				{
-					if (In.bRichText)
-					{
-						CurrentLineHeight = FMath::Max(CurrentLineHeight, RichTextParseResult.Size);
-					}
-
-					Item.Kind = EDreamTextItemKind::Glyph;
-					if (!bHasClampContent)
-					{
-						Item.bEmit = true;
-						Item.bCountsAsVisible = true;
-						if (Item.Style.bUnderline)
-						{
-							Item.UnderlineGlyph = GetUnderlineOrStrikethroughCharGeo('_', RichTextParseResult.Size, RichTextParseResult.Bold);
-						}
-						if (Item.Style.bStrikethrough)
-						{
-							Item.StrikethroughGlyph = GetUnderlineOrStrikethroughCharGeo('-', RichTextParseResult.Size, RichTextParseResult.Bold);
-						}
-					}
-					CurrentVisibleCharCount++;
+					CurrentLineHeight = FMath::Max(CurrentLineHeight, M.Style.Size);
 				}
-				else
+				if (!bHasClampContent)
 				{
-					Item.Kind = EDreamTextItemKind::Space;
+					Item.bEmit = true;
+					Item.bCountsAsVisible = true;
+					if (Item.Style.bUnderline)
+					{
+						Item.UnderlineGlyph = GetUnderlineOrStrikethroughCharGeo('_', M.Style.Size, M.Style.Bold);
+					}
+					if (Item.Style.bStrikethrough)
+					{
+						Item.StrikethroughGlyph = GetUnderlineOrStrikethroughCharGeo('-', M.Style.Size, M.Style.Bold);
+					}
 				}
-				Out.Items.Add(Item);
+				CurrentVisibleCharCount++;
 			}
+			Out.Items.Add(Item);
 
 			//collect rich text custom tag. custom tag use start/end mark, so put these code outside of visible-char-check.
 			if (In.bRichText)
 			{
-				switch (RichTextParseResult.CustomTagMode)
+				switch (M.Style.CustomTagMode)
 				{
 				case ECustomTagMode::Start:
 				{
 					FDreamUIText_RichTextCustomTag CustomTag;
-					CustomTag.TagName = RichTextParseResult.CustomTag;
-					CustomTag.CharIndexStart = CurrentVisibleCharCount - 1;//-1 as index
-					CustomTag.CharIndexStart = FMath::Max(0, CustomTag.CharIndexStart);//incase first char is invisible char, that makes index == -1
+					CustomTag.TagName = M.Style.CustomTag;
+					CustomTag.CharIndexStart = FMath::Max(0, CurrentVisibleCharCount - 1);//-1 as index; incase first char is invisible char
 					CustomTag.CharIndexEnd = -1;
 					Out.CustomTags.Add(CustomTag);
 				}
 				break;
 				case ECustomTagMode::End:
 				{
-					const FName TagName = RichTextParseResult.CustomTag;
+					const FName TagName = M.Style.CustomTag;
 					const int32 FoundIndex = Out.CustomTags.IndexOfByPredicate([TagName](const FDreamUIText_RichTextCustomTag& A) {
 						return A.TagName == TagName;
 						});
@@ -869,86 +874,91 @@ namespace DreamTextLayoutLocal
 				}
 			}
 
-			CurrentLineOffset.X += CharGeo.XAdvance + In.FontSpace.X;
-			CurrentLineWidth += CharGeo.XAdvance + In.FontSpace.X;
-
-			//overflow
-			switch (In.OverflowType)
+			PenX += M.Advance;
+			if (!M.bWhitespace)
 			{
-			case EDreamUITextOverflowType::HorizontalOverflow:
-			{
-				//no need to do anything
+				ContentRight = PenX;
+				bAnyContent = true;
 			}
-			break;
-			case EDreamUITextOverflowType::VerticalOverflow:
-			{
-				if (CharIndex + 1 == ContentLength)continue;//last char
-				float NextCharXAdv = GetCharGeoXAdv(TextProcessingArray[CharIndex].Unicode, TextProcessingArray[CharIndex + 1]
-					, In.bRichText ? RichTextPropertyArray[CharIndex + 1] : RichTextParseResult);
 
-				if (CharIndex + 2 < ContentLength//check size
-					&& FChar::IsPunct(TextProcessingArray[CharIndex + 2].Unicode)//newline with punctuation
-					&& CharIndex + 2 != ContentLength - 1//not last char
-					)
-				{
-					NextCharXAdv += GetCharGeoXAdv(TextProcessingArray[CharIndex + 1].Unicode, TextProcessingArray[CharIndex + 2]
-						, In.bRichText ? RichTextPropertyArray[CharIndex + 2] : RichTextParseResult);
-					if (CurrentLineOffset.X + NextCharXAdv > WrapWidth + UE_KINDA_SMALL_NUMBER)//if next char cannot fit this line, then add new line
-					{
-						const auto NextChar = TextProcessingArray[CharIndex + 1].Unicode;
-						if (NextChar == '\r' || NextChar == '\n')
-						{
-							//next char is new line, no need to add new line
-						}
-						else
-						{
-							NewLine(CaretCharIndex + 2, false, ENewLineMode::Overflow, 0);
-							continue;
-						}
-					}
-				}
-				else
-				{
-					if (CurrentLineOffset.X + NextCharXAdv > WrapWidth + UE_KINDA_SMALL_NUMBER && In.WrappingPolicy == ETextWrappingPolicy::AllowPerCharacterWrapping)//if next char cannot fit this line, then add new line
-					{
-						const auto NextChar = TextProcessingArray[CharIndex + 1].Unicode;
-						if (NextChar == '\r' || NextChar == '\n')
-						{
-							//next char is new line, no need to add new line
-						}
-						else
-						{
-							NewLine(CaretCharIndex + 1, false, ENewLineMode::Overflow, 0);
-							continue;
-						}
-					}
-				}
-			}
-			break;
-			case EDreamUITextOverflowType::Truncate:
-			case EDreamUITextOverflowType::Ellipsis:
+			// Truncate and Ellipsis measure against the box, not the wrap width: they are about what
+			// fits on screen. The cut is decided by whether the NEXT element on this line would fit.
+			if (bClampMode && !bHasClampContent && i + 1 < Range.End)
 			{
-				if (CharIndex + 1 == ContentLength)continue;//last char
-				if (bHasClampContent)continue;
-
-				const float NextCharXAdv = GetCharGeoXAdv(TextProcessingArray[CharIndex].Unicode, TextProcessingArray[CharIndex + 1]
-					, In.bRichText ? RichTextPropertyArray[CharIndex + 1] : RichTextParseResult);
-				if (CurrentLineOffset.X + NextCharXAdv > In.Width)//horizontal cannot fit next char
+				const FMeasured& Next = Measured[i + 1];
+				if (!Next.bSkipped && PenX + Next.Glyph.XAdvance > In.Width)
 				{
 					bHasClampContent = true;
 					Out.bTruncated = true;
-					CurrentLineWidth_ForClampContent = CurrentLineWidth;
-					bShouldSetParagraphHeightForClampContent = true;//paragraphHeight is set after NewLine, so we mark it and get clamp_ParagraphHeight later
+					ClampedLineWidth = bAnyContent ? ContentRight - In.FontSpace.X : 0.0f;
+					bShouldSetParagraphHeightForClampContent = true;//paragraphHeight is set after the line, so we mark it and read it later
 					if (In.OverflowType == EDreamUITextOverflowType::Ellipsis)
 					{
-						ApplyEllipsis(CharIndex);
+						ApplyEllipsis(i, LineItemStart, PenX, LineY);
+						ContentRight = PenX;
+						ClampedLineWidth = ContentRight - In.FontSpace.X;
 					}
 				}
 			}
-			break;
-			}
 		}
 
+		//end caret: the newline's own for a hard break, the string's end for the last line, nameless for a soft wrap
+		{
+			FDreamUITextCaretProperty CaretProperty;
+			CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineY);
+			if (Range.HardBreakElement != -1)
+			{
+				CaretProperty.CharIndex = CaretIndexOf(Range.HardBreakElement);
+			}
+			else if (LineIndex == LineRanges.Num() - 1)
+			{
+				CaretProperty.CharIndex = In.bRichText ? In.Content.Len() : TextProcessingArray.Num();
+			}
+			else
+			{
+				CaretProperty.CharIndex = -1;
+			}
+			LineProperty.CaretPropertyList.Add(CaretProperty);
+		}
+
+		const float LineWidth = bAnyContent ? ContentRight - In.FontSpace.X : 0.0f;
+		AlignLine(LineItemStart, ImageStart, EmojiStart, LineProperty, bHasClampContent ? ClampedLineWidth : LineWidth);
+		Out.Lines.Add(LineProperty);
+	}
+
+	void FLayoutRun::Place()
+	{
+		float LineY = 0.0f;
+		for (int32 LineIndex = 0; LineIndex < LineRanges.Num(); LineIndex++)
+		{
+			PlaceLine(LineIndex, LineY);
+			const float LineAdvance = (In.bRichText ? CurrentLineHeight : OriginLineHeight) * LineHeightScale + In.FontSpace.Y;
+			LineY -= LineAdvance;
+			ParagraphHeight += LineAdvance;
+			if (bHasClampContent && bShouldSetParagraphHeightForClampContent)
+			{
+				bShouldSetParagraphHeightForClampContent = false;
+				ParagraphHeight_ForClampContent = ParagraphHeight;
+			}
+			if (LineIndex == 0)
+			{
+				FirstLineHeight = In.bRichText ? CurrentLineHeight : OriginLineHeight;
+			}
+		}
+	}
+
+	void FLayoutRun::Run()
+	{
+		Out.Reset();
+		Prepare();
+		Preprocess();
+		Measure();
+		if (In.OverflowType == EDreamUITextOverflowType::VerticalOverflow)
+		{
+			ComputeBreakOpportunities();
+		}
+		BreakLines();
+		Place();
 		Finish();
 	}
 
@@ -966,14 +976,33 @@ namespace DreamTextLayoutLocal
 			}
 		}
 
-		//last line
-		NewLine(In.bRichText ? In.Content.Len() : TextProcessingArray.Num(), true, ENewLineMode::Overflow, 0);
 		//remove last line's space Y
 		ParagraphHeight -= In.FontSpace.Y;
 		ParagraphHeight_ForClampContent -= In.FontSpace.Y;
 		const float ParagraphHeightWithClamp = bHasClampContent ? ParagraphHeight_ForClampContent : ParagraphHeight;
 
-		Out.PreferredSize.X = FMath::Max(CurrentPreferredWidth, MaxPreferredWidth);
+		// Preferred width is the unwrapped width: the widest paragraph as it would be on one line.
+		float PreferredWidth = 0.0f;
+		{
+			float Width = 0.0f;
+			bool bAny = false;
+			for (int32 i = 0; i < Measured.Num(); i++)
+			{
+				const FMeasured& M = Measured[i];
+				if (M.bSkipped)continue;
+				if (M.bHardBreak)
+				{
+					PreferredWidth = FMath::Max(PreferredWidth, bAny ? Width - In.FontSpace.X : 0.0f);
+					Width = 0.0f;
+					bAny = false;
+					continue;
+				}
+				Width += M.Advance;
+				bAny = true;
+			}
+			PreferredWidth = FMath::Max(PreferredWidth, bAny ? Width - In.FontSpace.X : 0.0f);
+		}
+		Out.PreferredSize.X = PreferredWidth;
 		Out.PreferredSize.Y = ParagraphHeight;
 
 		const float PivotOffsetX = In.Width * (0.5f - In.Pivot.X);
@@ -1003,7 +1032,6 @@ namespace DreamTextLayoutLocal
 			YOffset += ParagraphHeightWithClamp - In.Height * 0.5f;
 			break;
 		}
-		//caret property
 		for (auto& LinePropertyItem : Out.Lines)
 		{
 			for (auto& CharItem : LinePropertyItem.CaretPropertyList)
@@ -1012,22 +1040,16 @@ namespace DreamTextLayoutLocal
 				CharItem.CaretPosition.Y += YOffset;
 			}
 		}
-		//image
-		if (In.bRichText)
+		for (auto& ImageItem : Out.Images)
 		{
-			for (auto& ImageItem : Out.Images)
-			{
-				ImageItem.Position.X += XOffset;
-				ImageItem.Position.Y += YOffset;
-			}
+			ImageItem.Position.X += XOffset;
+			ImageItem.Position.Y += YOffset;
 		}
-		//emoji
 		for (auto& EmojiItem : Out.Emojis)
 		{
 			EmojiItem.Position.X += XOffset;
 			EmojiItem.Position.Y += YOffset;
 		}
-		//items
 		for (auto& Item : Out.Items)
 		{
 			Item.Pen.X += XOffset;

@@ -37,6 +37,23 @@ enum class EDreamUITextFontStyle :uint8
 	BoldAndItalic,
 };
 
+/**
+ * Whether CJK text wraps between words rather than between any two characters.
+ *
+ * The line-break rules (UAX #14) let a line end between any two ideographs, which is what every
+ * browser does by default. CSS Text 4 added `word-break: auto-phrase` to keep words together instead;
+ * this is the same idea, using the dictionary ICU ships for Chinese and Japanese. A word that does not
+ * fit on a line still breaks inside under AllowPerCharacterWrapping, so it never makes text overflow.
+ */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamTextPhraseWrap : uint8
+{
+	/** Break between any two CJK characters, as the line-break rules allow. */
+	Off,
+	/** Break only between dictionary words inside CJK runs. */
+	CJKDictionary,
+};
+
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUITextOverflowType :uint8
 {

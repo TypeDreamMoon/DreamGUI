@@ -84,6 +84,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
 	/**
+	 * Keep CJK words together when wrapping, using ICU's dictionary -- CSS's `word-break: auto-phrase`.
+	 * Only matters with VerticalOverflow. Needs the packaged ICU data to include the CJK dictionary
+	 * (Project Settings > Packaging > Internationalization Support: CJK, EFIGSCJK or All); without it
+	 * this quietly falls back to per-character breaks.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamTextPhraseWrap PhraseWrap = EDreamTextPhraseWrap::Off;
+	/**
 	 * Padding between the widget's rect and the text laid out inside it, the way UMG's text Margin
 	 * works. The text is wrapped, aligned and overflow-tested against the rect MINUS this, so a
 	 * margin narrows the wrap width rather than just shifting the result.
@@ -253,6 +261,7 @@ public:
 	/** The size Best Fit actually drew at, which is GetFontSize() when Best Fit is off. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetRenderedFontSize()const { return RenderedFontSize; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") ETextWrappingPolicy GetWrappingPolicy()const{return WrappingPolicy;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextPhraseWrap GetPhraseWrap()const{return PhraseWrap;}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamUITextFontStyle GetFontStyle()const { return FontStyle; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetRichText()const { return bRichText; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") int32 GetRichTextTagFilterFlags()const { return RichTextTagFilterFlags; }
@@ -285,6 +294,8 @@ public:
 		void SetOverflowType(EDreamUITextOverflowType Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetWrappingPolicy(ETextWrappingPolicy Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetPhraseWrap(EDreamTextPhraseWrap Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetMargin(const FMargin& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")

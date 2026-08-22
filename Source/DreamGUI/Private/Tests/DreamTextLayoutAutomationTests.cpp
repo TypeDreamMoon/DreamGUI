@@ -374,4 +374,261 @@ bool FDreamTextBestFitMemoTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace DreamTextLayoutTestLocal
+{
+	/** The code points on a line, in order, emitted or not. */
+	FString LineText(const FDreamTextDisplayList& DL, int32 LineIndex)
+	{
+		FString Result;
+		for (const auto& Item : DL.Items)
+		{
+			if (Item.LineIndex != LineIndex)continue;
+			if (Item.Codepoint < 0x10000)
+			{
+				Result.AppendChar((TCHAR)Item.Codepoint);
+			}
+			else
+			{
+				Result.AppendChar(TEXT('?'));
+			}
+		}
+		return Result;
+	}
+
+	float LineRight(const FDreamTextDisplayList& DL, int32 LineIndex)
+	{
+		float Right = -FLT_MAX;
+		for (const auto& Item : DL.Items)
+		{
+			if (Item.LineIndex == LineIndex && Item.bEmit)Right = FMath::Max(Right, ItemRight(Item));
+		}
+		return Right;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBreakerWordWrapTest,
+	"DreamGUI.Text.Breaker.EnglishWrapsBetweenWordsAndSpacesHang",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextBreakerWordWrapTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("The quick brown fox jumps over the lazy dog and keeps running"), 180.0f, 400.0f);
+	In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+	In.WrappingPolicy = ETextWrappingPolicy::DefaultWrapping;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+
+	if (!TestTrue(TEXT("the text wrapped"), DL.Lines.Num() > 2))return false;
+	for (int32 l = 0; l < DL.Lines.Num(); l++)
+	{
+		const FString Text = LineText(DL, l);
+		if (Text.IsEmpty())continue;
+		TestFalse(*FString::Printf(TEXT("line %d '%s' does not start with a space"), l, *Text), Text[0] == TEXT(' '));
+		if (l + 1 < DL.Lines.Num())
+		{
+			// A soft break lands between words: the line ends with the space that separated them.
+			TestTrue(*FString::Printf(TEXT("line %d '%s' ends at a word boundary"), l, *Text), Text[Text.Len() - 1] == TEXT(' '));
+		}
+		// Hanging spaces are not counted: the end caret is past the last glyph but the glyphs fit.
+		TestTrue(*FString::Printf(TEXT("line %d glyphs fit the box"), l), LineRight(DL, l) <= BoxRight(In) + 0.5f);
+	}
+	// Every element still has a caret somewhere, spaces included.
+	int32 Carets = 0;
+	for (const auto& Line : DL.Lines)Carets += Line.CaretPropertyList.Num();
+	TestEqual(TEXT("one caret per code unit plus one per line end"), Carets, In.Content.Len() + DL.Lines.Num());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBreakerLongWordPolicyTest,
+	"DreamGUI.Text.Breaker.ALongWordOverflowsOrBreaksPerPolicy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextBreakerLongWordPolicyTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("a Supercalifragilisticexpialidocious word"), 150.0f, 400.0f);
+	In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+
+	In.WrappingPolicy = ETextWrappingPolicy::DefaultWrapping;
+	FDreamTextDisplayList Whole;
+	FDreamTextLayoutEngine::Layout(In, Whole);
+	bool bOverflows = false;
+	for (int32 l = 0; l < Whole.Lines.Num(); l++)
+	{
+		if (LineRight(Whole, l) > BoxRight(In) + 0.5f)bOverflows = true;
+	}
+	TestTrue(TEXT("DefaultWrapping never breaks inside a word, so the long one overflows"), bOverflows);
+	TestTrue(TEXT("but the words around it still wrap"), Whole.Lines.Num() >= 2);
+
+	In.WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
+	FDreamTextDisplayList Split;
+	FDreamTextLayoutEngine::Layout(In, Split);
+	for (int32 l = 0; l < Split.Lines.Num(); l++)
+	{
+		TestTrue(*FString::Printf(TEXT("AllowPerCharacterWrapping keeps line %d inside the box"), l), LineRight(Split, l) <= BoxRight(In) + 0.5f);
+	}
+	TestTrue(TEXT("so the long word was split"), Split.Lines.Num() > Whole.Lines.Num());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBreakerKinsokuTest,
+	"DreamGUI.Text.Breaker.CJKPunctuationNeverStartsALine",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextBreakerKinsokuTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+
+	// Every width from "one glyph" up to the whole string: whatever the break, closing punctuation
+	// stays glued to the character before it, and an opening bracket to the one after.
+	const FString Content = TEXT("你好，世界。再见！「引用」结束");
+	bool bSawMultipleLines = false;
+	for (float Width = 20.0f; Width <= 400.0f; Width += 7.0f)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, Width, 600.0f);
+		In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		if (DL.Lines.Num() > 1)bSawMultipleLines = true;
+		for (int32 l = 0; l < DL.Lines.Num(); l++)
+		{
+			const FString Text = LineText(DL, l);
+			if (Text.IsEmpty())continue;
+			const TCHAR First = Text[0];
+			const TCHAR Last = Text[Text.Len() - 1];
+			if (First == TEXT('，') || First == TEXT('。') || First == TEXT('！') || First == TEXT('」'))
+			{
+				AddError(FString::Printf(TEXT("width %.0f: line %d '%s' starts with closing punctuation"), Width, l, *Text));
+			}
+			if (Last == TEXT('「') && l + 1 < DL.Lines.Num())
+			{
+				AddError(FString::Printf(TEXT("width %.0f: line %d '%s' ends with an opening bracket"), Width, l, *Text));
+			}
+		}
+	}
+	TestTrue(TEXT("the sweep produced wrapped layouts"), bSawMultipleLines);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBreakerPhraseWrapTest,
+	"DreamGUI.Text.Breaker.CJKDictionaryKeepsWordsTogether",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextBreakerPhraseWrapTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+
+	// 我 爱 北京 天安门: the dictionary knows 北京 and 天安门 as words.
+	const FString Content = TEXT("我爱北京天安门");
+	struct FWord { int32 Start; int32 End; };
+	const FWord Words[] = { {2, 4}, {4, 7} };
+
+	// Word widths, from the unwrapped layout: a word wider than the box may legitimately be cut.
+	FDreamTextDisplayList Unwrapped;
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, 1000.0f, 600.0f);
+		FDreamTextLayoutEngine::Layout(In, Unwrapped);
+	}
+	auto WordWidth = [&](const FWord& W)
+	{
+		const auto& First = Unwrapped.Items[W.Start];
+		const auto& Last = Unwrapped.Items[W.End - 1];
+		return (Last.Pen.X + Last.Glyph.XAdvance) - First.Pen.X;
+	};
+
+	int32 MidWordBreaksOff = 0;
+	int32 MidWordBreaksDict = 0;
+	bool bSawWrapsDict = false;
+	for (float Width = 30.0f; Width <= 200.0f; Width += 5.0f)
+	{
+		for (int32 Mode = 0; Mode < 2; Mode++)
+		{
+			FDreamTextLayoutInput In = MakeInput(Font, Content, Width, 600.0f);
+			In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+			In.PhraseWrap = Mode == 0 ? EDreamTextPhraseWrap::Off : EDreamTextPhraseWrap::CJKDictionary;
+			FDreamTextDisplayList DL;
+			FDreamTextLayoutEngine::Layout(In, DL);
+			if (Mode == 1 && DL.Lines.Num() > 1)bSawWrapsDict = true;
+			// A break "inside a word" is a line whose first element is strictly inside a word's range.
+			for (int32 l = 1; l < DL.Lines.Num(); l++)
+			{
+				int32 FirstElement = -1;
+				for (const auto& Item : DL.Items)
+				{
+					if (Item.LineIndex == l) { FirstElement = Item.ElementIndex; break; }
+				}
+				if (FirstElement < 0)continue;
+				for (const FWord& W : Words)
+				{
+					if (FirstElement > W.Start && FirstElement < W.End)
+					{
+						if (Mode == 0)
+						{
+							MidWordBreaksOff++;
+						}
+						else if (WordWidth(W) <= Width + 0.5f)
+						{
+							MidWordBreaksDict++;
+							AddInfo(FString::Printf(TEXT("width %.0f: dictionary mode broke '%s' | '%s' though the word is %.1f wide"), Width, *LineText(DL, l - 1), *LineText(DL, l), WordWidth(W)));
+						}
+					}
+				}
+			}
+		}
+	}
+	TestTrue(TEXT("without the dictionary some widths break inside 北京 or 天安门"), MidWordBreaksOff > 0);
+	TestTrue(TEXT("the dictionary sweep wrapped"), bSawWrapsDict);
+	TestEqual(TEXT("with the dictionary no break lands inside a word unless the word cannot fit"), MidWordBreaksDict, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBreakerCaretsOnSoftBreakTest,
+	"DreamGUI.Text.Breaker.TrailingSpaceBelongsToTheLineItEnds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextBreakerCaretsOnSoftBreakTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+
+	// Find a width where "ab cd" wraps after the space.
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("ab cd"), 100.0f, 200.0f);
+	In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+	FDreamTextDisplayList Whole;
+	FDreamTextLayoutEngine::Layout(In, Whole);
+	const float WholeWidth = Whole.PreferredSize.X;
+	In.Width = WholeWidth * 0.7f;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+
+	if (!TestEqual(TEXT("two lines"), DL.Lines.Num(), 2))return false;
+	TestEqual(TEXT("first line keeps its trailing space"), LineText(DL, 0), FString(TEXT("ab ")));
+	TestEqual(TEXT("second line starts on the word"), LineText(DL, 1), FString(TEXT("cd")));
+	TestEqual(TEXT("first line carets: a b space end"), DL.Lines[0].CaretPropertyList.Num(), 4);
+	TestEqual(TEXT("soft break end caret is nameless"), DL.Lines[0].CaretPropertyList[3].CharIndex, -1);
+	TestEqual(TEXT("second line carets: c d end"), DL.Lines[1].CaretPropertyList.Num(), 3);
+	TestEqual(TEXT("the last caret names the end of the string"), DL.Lines[1].CaretPropertyList[2].CharIndex, 5);
+	return true;
+}
+
 #endif
