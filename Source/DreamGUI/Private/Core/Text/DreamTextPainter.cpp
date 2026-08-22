@@ -139,13 +139,25 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 
 		if (Item.bCountsAsVisible)
 		{
-			FDreamUITextCharProperty CharProperty;
-			CharProperty.CharIndex = Item.ElementIndex;
-			CharProperty.StartVertIndex = StartVertIndex;
-			CharProperty.VertCount = Writer.VertexCursor - StartVertIndex;
-			CharProperty.StartTriangleIndex = StartTriangleIndex;
-			CharProperty.IndicesCount = Writer.IndexCursor - StartTriangleIndex;
-			OutCharProperties.Add(CharProperty);
+			// A character is one entry however many glyphs the shaper gave it; its glyphs are
+			// contiguous, so the entry just grows while the element index repeats.
+			if (OutCharProperties.Num() > 0 && OutCharProperties.Last().CharIndex == Item.ElementIndex
+				&& OutCharProperties.Last().StartVertIndex + OutCharProperties.Last().VertCount == StartVertIndex)
+			{
+				FDreamUITextCharProperty& Last = OutCharProperties.Last();
+				Last.VertCount = Writer.VertexCursor - Last.StartVertIndex;
+				Last.IndicesCount = Writer.IndexCursor - Last.StartTriangleIndex;
+			}
+			else
+			{
+				FDreamUITextCharProperty CharProperty;
+				CharProperty.CharIndex = Item.ElementIndex;
+				CharProperty.StartVertIndex = StartVertIndex;
+				CharProperty.VertCount = Writer.VertexCursor - StartVertIndex;
+				CharProperty.StartTriangleIndex = StartTriangleIndex;
+				CharProperty.IndicesCount = Writer.IndexCursor - StartTriangleIndex;
+				OutCharProperties.Add(CharProperty);
+			}
 		}
 	}
 

@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 using UnrealBuildTool;
@@ -43,6 +43,8 @@ public class DreamGUI : ModuleRules
                 "RHI","RenderCore","Renderer",
                 "DreamTween",
                 "InputCore",//UITextInput
+                "EnhancedInput",//DreamEnhancedInputEventSystemActor
+                "DeveloperSettings",//UDreamGUISettings
                 //"FreeType2",
                 "UElibPNG",
                 "zlib",
@@ -66,6 +68,21 @@ public class DreamGUI : ModuleRules
             {
                 PublicDefinitions.Add("WITH_FREETYPE=0");
             }
+            // Text shaping. The HarfBuzz module defines WITH_HARFBUZZ privately for our own TUs; our
+            // public headers key off DREAMGUI_WITH_HARFBUZZ so dependent modules see the same class layout.
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "HarfBuzz");
+            // The engine's HarfBuzz takes its Unicode functions from ICU, so the static lib needs it too.
+            if (Target.bCompileICU)
+            {
+                AddEngineThirdPartyPrivateStaticDependencies(Target, "ICU");
+            }
+            PublicDefinitions.Add("DREAMGUI_WITH_HARFBUZZ=" + (Target.bCompileFreeType ? "1" : "0"));
+        }
+        else
+        {
+            PublicDefinitions.Add("WITH_FREETYPE=0");
+            PublicDefinitions.Add("WITH_HARFBUZZ=0");
+            PublicDefinitions.Add("DREAMGUI_WITH_HARFBUZZ=0");
         }
 		
 		PrivateDependencyModuleNames.AddRange(

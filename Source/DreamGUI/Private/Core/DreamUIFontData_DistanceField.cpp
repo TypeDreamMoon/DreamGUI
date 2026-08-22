@@ -31,9 +31,9 @@ UDreamUIFontData_DistanceField::UDreamUIFontData_DistanceField()
 	}
 }
 
-bool UDreamUIFontData_DistanceField::GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult)
+bool UDreamUIFontData_DistanceField::GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)
 {
-	auto CharKey = FDreamUIDistanceFieldCharKey(CharCode, IsBold);
+	auto CharKey = FDreamUIDistanceFieldCharKey(Glyph, IsBold);
 	if (auto charData = CharDataMap.Find(CharKey))
 	{
 		OutResult = FDreamUICharData(*charData);
@@ -66,15 +66,15 @@ bool UDreamUIFontData_DistanceField::GetCharDataFromCache(uint32 CharCode, float
 	}
 	return false;
 }
-void UDreamUIFontData_DistanceField::AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& CharData)
+void UDreamUIFontData_DistanceField::AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)
 {
-	CharDataMap.Add(FDreamUIDistanceFieldCharKey(CharCode, IsBold), CharData);
+	CharDataMap.Add(FDreamUIDistanceFieldCharKey(Glyph, IsBold), CharData);
 }
 
-bool UDreamUIFontData_DistanceField::RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
+bool UDreamUIFontData_DistanceField::RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
-	auto slot = RenderGlyphOnFreeType(CharCode, SampleFontSize, IsBold ? SampleFontSize * BoldRatio : 0);
+	auto slot = RenderGlyphOnFreeType(GetFreeTypeFace(Glyph.FaceIndex), Glyph.GlyphIndex, SampleFontSize, IsBold ? SampleFontSize * BoldRatio : 0);
 	if (slot == nullptr)
 	{
 		return false;

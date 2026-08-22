@@ -7,6 +7,8 @@
 #include "Core/DreamUIFontEmojiData.h"
 #include "Core/FRichTextParser.h"
 #include "Core/Text/DreamTextBreaker.h"
+#include "Core/Text/DreamTextShaper.h"
+#include "Algo/Reverse.h"
 
 bool FDreamTextLayoutInput::operator==(const FDreamTextLayoutInput& Other) const
 {
@@ -67,6 +69,15 @@ namespace DreamTextLayoutLocal
 			FRichTextParseResult Style;
 			/** XAdvance plus the horizontal font space: how far the pen moves. */
 			float Advance = 0.0f;
+			/** The element's glyph advances without the font space: what the breaker fits against. */
+			float ClusterAdvance = 0.0f;
+			/** Its glyphs, as a range of the run's glyph array; none for a cluster continuation. */
+			int32 GlyphStart = 0;
+			int32 GlyphCount = 0;
+			/** Shaped run this element belongs to, or -1 when measured per code point. */
+			int32 RunIndex = -1;
+			/** Paragraph base direction: runs of a right-to-left paragraph are placed right to left. */
+			bool bBaseRightToLeft = false;
 			/** A newline: ends the paragraph, never placed. */
 			bool bHardBreak = false;
 			/** The second half of a CR LF pair: nothing at all. */
@@ -126,6 +137,27 @@ namespace DreamTextLayoutLocal
 		TMap<float, FSizeMetrics> MetricsBySize;
 		const FSizeMetrics& MetricsFor(float Size);
 
+		/** A glyph ready to place: its atlas quad and how the shaper positioned it. */
+		struct FGlyphSource
+		{
+			FDreamUICharData Quad;
+			float XAdvance = 0.0f;
+			float XOffset = 0.0f;
+			float YOffset = 0.0f;
+			int32 ElementIndex = 0;
+		};
+		/** A shaped run: a range of Glyphs in visual order, and the elements it covers. */
+		struct FRunInfo
+		{
+			int32 GlyphStart = 0;
+			int32 GlyphEnd = 0;
+			int32 ElementStart = 0;
+			int32 ElementEnd = 0;
+			bool bRightToLeft = false;
+		};
+		TArray<FGlyphSource> Glyphs;
+		TArray<FRunInfo> Runs;
+
 		TArray<FMeasured> Measured;
 		TArray<uint32> ElementCodepoints;
 		TBitArray<> CanBreakBefore;
@@ -143,6 +175,11 @@ namespace DreamTextLayoutLocal
 		void Prepare();
 		void Preprocess();
 		void Measure();
+		void MeasureParagraphByCodepoint(int32 Start, int32 End);
+		bool MeasureParagraphByShaping(int32 Start, int32 End);
+		FDreamUICharData FetchGlyphQuad(int32 FaceIndex, uint32 GlyphIndex, float InFontSize, bool bInBold) const;
+		void PlaceElement(int32 ElementIndex, int32 LineIndex, float& PenX, float Baseline, float LineCentre, FDreamUITextLineProperty& LineProperty, float& ContentRight, bool& bAnyContent);
+		void PlaceRightToLeftSegment(int32 Start, int32 End, int32 LineIndex, float& PenX, float Baseline, float LineCentre, FDreamUITextLineProperty& LineProperty, float& ContentRight, bool& bAnyContent);
 		void ComputeBreakOpportunities();
 		void BreakLines();
 		void Place();
@@ -490,8 +527,10 @@ namespace DreamTextLayoutLocal
 	{
 		const int32 Count = TextProcessingArray.Num();
 		Measured.SetNum(Count);
-		uint32 PrevCharCode = 0;
-		bool bParagraphStart = true;
+		Glyphs.Reset();
+		Runs.Reset();
+		// Classification first, then metrics paragraph by paragraph: a paragraph is the unit the
+		// shaper sees, so nothing kerns or forms across a hard break.
 		for (int32 i = 0; i < Count; i++)
 		{
 			const auto& Element = TextProcessingArray[i];
@@ -501,7 +540,6 @@ namespace DreamTextLayoutLocal
 				RichTextParseResult = RichTextPropertyArray[i];
 			}
 			M.Style = RichTextParseResult;
-
 			const uint32 Code = Element.Unicode;
 			if (Code == '\n' || Code == '\r')
 			{
@@ -520,22 +558,179 @@ namespace DreamTextLayoutLocal
 						i++;
 					}
 				}
-				bParagraphStart = true;
 				continue;
 			}
-
-			// Kerning is against the previous character of the paragraph; nothing kerns across a hard
-			// break. The first character of a paragraph is paired with itself, which the font treats
-			// as "no pair".
-			M.Glyph = GetCharGeo(bParagraphStart ? Code : PrevCharCode, Element, RichTextParseResult.Size, RichTextParseResult.Bold, RichTextParseResult);
-			M.Advance = M.Glyph.XAdvance + In.FontSpace.X;
 			M.bImageSpace = IsRichTextImageSpace(Code, RichTextParseResult);
 			M.bEmoji = Element.Type == EDreamUIText_CodeType::Emoji;
 			M.bWhitespace = !M.bImageSpace && (Code == ' ' || Code == '\t');
 			M.bVisibleGlyph = !M.bImageSpace && !M.bEmoji && !M.bWhitespace;
-			PrevCharCode = Code;
-			bParagraphStart = false;
 		}
+
+		const bool bCanShape = FDreamTextShaper::CanShape(Font);
+		int32 ParagraphStart = 0;
+		for (int32 i = 0; i <= Count; i++)
+		{
+			if (i == Count || Measured[i].bHardBreak)
+			{
+				if (i > ParagraphStart)
+				{
+					if (!bCanShape || !MeasureParagraphByShaping(ParagraphStart, i))
+					{
+						MeasureParagraphByCodepoint(ParagraphStart, i);
+					}
+				}
+				ParagraphStart = i + 1;
+			}
+		}
+	}
+
+	void FLayoutRun::MeasureParagraphByCodepoint(int32 Start, int32 End)
+	{
+		// One glyph per code point, metrics straight from the font: the path for fonts that cannot
+		// shape. Kerning pairs with the previous character of the paragraph; the first is paired with
+		// itself, which the font treats as "no pair".
+		uint32 PrevCharCode = 0;
+		bool bFirst = true;
+		for (int32 i = Start; i < End; i++)
+		{
+			FMeasured& M = Measured[i];
+			if (M.bSkipped || M.bHardBreak)continue;
+			const auto& Element = TextProcessingArray[i];
+			RichTextParseResult = M.Style;
+			M.Glyph = GetCharGeo(bFirst ? Element.Unicode : PrevCharCode, Element, M.Style.Size, M.Style.Bold, M.Style);
+			M.ClusterAdvance = M.Glyph.XAdvance;
+			M.Advance = M.ClusterAdvance + In.FontSpace.X;
+			M.RunIndex = -1;
+			M.GlyphStart = Glyphs.Num();
+			M.GlyphCount = 1;
+			FGlyphSource& G = Glyphs.AddDefaulted_GetRef();
+			G.Quad = M.Glyph;
+			G.XAdvance = M.Glyph.XAdvance;
+			G.ElementIndex = i;
+			PrevCharCode = Element.Unicode;
+			bFirst = false;
+		}
+	}
+
+	FDreamUICharData FLayoutRun::FetchGlyphQuad(int32 FaceIndex, uint32 GlyphIndex, float InFontSize, bool bInBold) const
+	{
+		// The same canvas-scale dance GetCharGeo does for code points: rasterize at the device size and
+		// measure back in text units, so a bitmap font stays crisp under a scaled canvas.
+		if (bShouldScaleFontSizeWithRootCanvas)
+		{
+			float Scale, OneDivideScale;
+			if (bPixelPerfect || DynamicPixelsPerUnit == 1.0f)
+			{
+				Scale = RootCanvasScale;
+				OneDivideScale = OneDivideRootCanvasScale;
+			}
+			else
+			{
+				Scale = DynamicPixelsPerUnit;
+				OneDivideScale = OneDivideDynamicPixelsPerUnit;
+			}
+			const float ScaledSize = FMath::Clamp(InFontSize * Scale, 0.0f, MaxFontSize);
+			FDreamUICharData Data = Font->GetGlyphData(FaceIndex, GlyphIndex, ScaledSize, bInBold);
+			Data.Width *= OneDivideScale;
+			Data.Height *= OneDivideScale;
+			Data.XAdvance *= OneDivideScale;
+			Data.XOffset *= OneDivideScale;
+			Data.YOffset *= OneDivideScale;
+			return Data;
+		}
+		return Font->GetGlyphData(FaceIndex, GlyphIndex, InFontSize, bInBold);
+	}
+
+	bool FLayoutRun::MeasureParagraphByShaping(int32 Start, int32 End)
+	{
+		TArray<FDreamShapeElement> ShapeElements;
+		ShapeElements.Reserve(End - Start);
+		for (int32 i = Start; i < End; i++)
+		{
+			const FMeasured& M = Measured[i];
+			FDreamShapeElement E;
+			E.Codepoint = TextProcessingArray[i].Unicode;
+			E.Size = M.Style.Size;
+			E.bBold = M.Style.Bold;
+			E.bUnshaped = M.bSkipped || M.bHardBreak || M.bImageSpace || M.bEmoji;
+			ShapeElements.Add(E);
+		}
+		TArray<FDreamShapedRun> ShapedRuns;
+		bool bBaseRightToLeft = false;
+		if (!FDreamTextShaper::ShapeParagraph(ShapeElements, Font, bUseKerning, ShapedRuns, bBaseRightToLeft))
+		{
+			return false;
+		}
+
+		for (int32 i = Start; i < End; i++)
+		{
+			FMeasured& M = Measured[i];
+			M.bBaseRightToLeft = bBaseRightToLeft;
+			M.RunIndex = -1;
+			M.GlyphStart = Glyphs.Num();
+			M.GlyphCount = 0;
+			M.ClusterAdvance = 0.0f;
+			M.Advance = 0.0f;
+			if (M.bImageSpace || M.bEmoji)
+			{
+				// Inline objects are measured by the layout, the way they always were.
+				RichTextParseResult = M.Style;
+				M.Glyph = GetCharGeo(TextProcessingArray[i].Unicode, TextProcessingArray[i], M.Style.Size, M.Style.Bold, M.Style);
+				M.ClusterAdvance = M.Glyph.XAdvance;
+				M.Advance = M.ClusterAdvance + In.FontSpace.X;
+			}
+		}
+
+		for (const FDreamShapedRun& ShapedRun : ShapedRuns)
+		{
+			FRunInfo Run;
+			Run.GlyphStart = Glyphs.Num();
+			Run.ElementStart = Start + ShapedRun.ElementStart;
+			Run.ElementEnd = Start + ShapedRun.ElementEnd;
+			Run.bRightToLeft = ShapedRun.bRightToLeft;
+			const int32 RunIndex = Runs.Num();
+			// Glyphs stay in the shaper's visual order; an element's glyphs are contiguous within it.
+			int32 CurrentElement = -1;
+			for (const FDreamShapedGlyph& Shaped : ShapedRun.Glyphs)
+			{
+				const int32 ElementIndex = Start + Shaped.ElementIndex;
+				FMeasured& M = Measured[ElementIndex];
+				if (ElementIndex != CurrentElement)
+				{
+					M.GlyphStart = Glyphs.Num();
+					M.GlyphCount = 0;
+					CurrentElement = ElementIndex;
+				}
+				FGlyphSource& G = Glyphs.AddDefaulted_GetRef();
+				G.Quad = FetchGlyphQuad(Shaped.FaceIndex, Shaped.GlyphIndex, ShapedRun.Size, ShapedRun.bBold);
+				G.XAdvance = Shaped.XAdvance;
+				G.XOffset = Shaped.XOffset;
+				G.YOffset = Shaped.YOffset;
+				G.ElementIndex = ElementIndex;
+				M.GlyphCount++;
+				M.ClusterAdvance += Shaped.XAdvance;
+				M.RunIndex = RunIndex;
+			}
+			Run.GlyphEnd = Glyphs.Num();
+			Runs.Add(Run);
+			for (int32 i = Run.ElementStart; i < Run.ElementEnd; i++)
+			{
+				FMeasured& M = Measured[i];
+				if (M.RunIndex != RunIndex)
+				{
+					// A cluster continuation: no glyph of its own, so no advance and no run of its own,
+					// but it still belongs to the run for placement.
+					M.RunIndex = RunIndex;
+				}
+				if (M.GlyphCount > 0)
+				{
+					M.Advance = M.ClusterAdvance + In.FontSpace.X;
+					M.Glyph = Glyphs[M.GlyphStart].Quad;
+					M.Glyph.XAdvance = M.ClusterAdvance;
+				}
+			}
+		}
+		return true;
 	}
 
 	void FLayoutRun::ComputeBreakOpportunities()
@@ -606,7 +801,7 @@ namespace DreamTextLayoutLocal
 					XAtLastOpportunity = X;
 				}
 				// Whitespace hangs: it may run past the wrap width and never forces a break itself.
-				if (!M.bWhitespace && X + M.Glyph.XAdvance > WrapWidth + UE_KINDA_SMALL_NUMBER)
+				if (!M.bWhitespace && X + M.ClusterAdvance > WrapWidth + UE_KINDA_SMALL_NUMBER)
 				{
 					if (LastOpportunity > LineStart)
 					{
@@ -621,7 +816,7 @@ namespace DreamTextLayoutLocal
 					// Still too wide on a line of its own start: a word longer than the box. Break
 					// inside it if the policy allows, otherwise let it overflow. The cut avoids
 					// stranding closing punctuation at a line start, as a browser's break-all does.
-					if (bPerCharacter && i > LineStart && X + M.Glyph.XAdvance > WrapWidth + UE_KINDA_SMALL_NUMBER)
+					if (bPerCharacter && i > LineStart && X + M.ClusterAdvance > WrapWidth + UE_KINDA_SMALL_NUMBER)
 					{
 						const int32 Cut = FDreamTextBreaker::FindKinsokuSafeFallback(ElementCodepoints, LineStart, i);
 						if (Cut != INDEX_NONE)
@@ -766,6 +961,213 @@ namespace DreamTextLayoutLocal
 		InOutPenX = LineOffsetPointToStripOff + Dots.AdvanceWithSpace;
 	}
 
+	void FLayoutRun::PlaceElement(int32 i, int32 LineIndex, float& PenX, float Baseline, float LineCentre, FDreamUITextLineProperty& LineProperty, float& ContentRight, bool& bAnyContent)
+	{
+		const FMeasured& M = Measured[i];
+		const auto& Element = TextProcessingArray[i];
+		RichTextParseResult = M.Style;
+
+		//caret property: the caret sits on the left of its char
+		FDreamUITextCaretProperty CaretProperty;
+		CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineCentre);
+		CaretProperty.CharIndex = CaretIndexOf(i);
+		LineProperty.CaretPropertyList.Add(CaretProperty);
+
+		FDreamTextGlyphItem Item;
+		Item.Codepoint = Element.Unicode;
+		Item.ElementIndex = i;
+		Item.SourceIndex = Element.StringIndex;
+		Item.LineIndex = LineIndex;
+		Item.Pen = FVector2f(PenX, Baseline);
+		Item.Glyph = M.Glyph;
+		Item.AdvanceWithSpace = M.Advance;
+		Item.Style = MakeStyle(M.Style);
+
+		if (M.bImageSpace)
+		{
+			Item.Kind = EDreamTextItemKind::Image;
+			FDreamUIText_RichTextImageTag ImageTagData;
+			ImageTagData.TagName = M.Style.ImageTag;
+			ImageTagData.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineCentre);
+			ImageTagData.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
+			ImageTagData.TintColor = M.Style.HasColor ? M.Style.Color : FColor::White;
+			Out.Images.Add(ImageTagData);
+			Out.Items.Add(Item);
+		}
+		else if (M.bEmoji)
+		{
+			Item.Kind = EDreamTextItemKind::Emoji;
+			FDreamUIText_Emoji Emoji;
+			Emoji.EmojiCode = Element.Unicode;
+			Emoji.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineCentre);
+			Emoji.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
+			Out.Emojis.Add(Emoji);
+			Out.Items.Add(Item);
+		}
+		else if (M.bWhitespace)
+		{
+			Item.Kind = EDreamTextItemKind::Space;
+			Out.Items.Add(Item);
+		}
+		else
+		{
+			// One item per glyph. A cluster continuation has no glyphs and adds nothing, but it
+			// still counted as a visible character for the tag and animation indices.
+			Item.Kind = EDreamTextItemKind::Glyph;
+			const bool bEmit = !bHasClampContent;
+			float GlyphPenX = PenX;
+			for (int32 g = 0; g < M.GlyphCount; g++)
+			{
+				const FGlyphSource& G = Glyphs[M.GlyphStart + g];
+				FDreamTextGlyphItem GlyphItem = Item;
+				GlyphItem.Pen = FVector2f(GlyphPenX + G.XOffset, Baseline + G.YOffset);
+				GlyphItem.Glyph = G.Quad;
+				GlyphItem.AdvanceWithSpace = G.XAdvance + (g == M.GlyphCount - 1 ? In.FontSpace.X : 0.0f);
+				if (bEmit)
+				{
+					GlyphItem.bEmit = true;
+					GlyphItem.bCountsAsVisible = true;
+					if (GlyphItem.Style.bUnderline)
+					{
+						GlyphItem.UnderlineGlyph = GetUnderlineOrStrikethroughCharGeo('_', M.Style.Size, M.Style.Bold);
+					}
+					if (GlyphItem.Style.bStrikethrough)
+					{
+						GlyphItem.StrikethroughGlyph = GetUnderlineOrStrikethroughCharGeo('-', M.Style.Size, M.Style.Bold);
+					}
+				}
+				Out.Items.Add(GlyphItem);
+				GlyphPenX += G.XAdvance;
+			}
+			CurrentVisibleCharCount++;
+		}
+
+		//collect rich text custom tag. custom tag use start/end mark, so put these code outside of visible-char-check.
+		if (In.bRichText)
+		{
+			switch (M.Style.CustomTagMode)
+			{
+			case ECustomTagMode::Start:
+			{
+				FDreamUIText_RichTextCustomTag CustomTag;
+				CustomTag.TagName = M.Style.CustomTag;
+				CustomTag.CharIndexStart = FMath::Max(0, CurrentVisibleCharCount - 1);//-1 as index; incase first char is invisible char
+				CustomTag.CharIndexEnd = -1;
+				Out.CustomTags.Add(CustomTag);
+			}
+			break;
+			case ECustomTagMode::End:
+			{
+				const FName TagName = M.Style.CustomTag;
+				const int32 FoundIndex = Out.CustomTags.IndexOfByPredicate([TagName](const FDreamUIText_RichTextCustomTag& A) {
+					return A.TagName == TagName;
+					});
+				if (FoundIndex != -1)
+				{
+					Out.CustomTags[FoundIndex].CharIndexEnd = CurrentVisibleCharCount - 1;//-1 as index
+				}
+			}
+			break;
+			default:
+				break;
+			}
+		}
+
+		PenX += M.Advance;
+		if (!M.bWhitespace && M.Advance > 0.0f)
+		{
+			ContentRight = PenX;
+			bAnyContent = true;
+		}
+	}
+
+	void FLayoutRun::PlaceRightToLeftSegment(int32 Start, int32 End, int32 LineIndex, float& PenX, float Baseline, float LineCentre, FDreamUITextLineProperty& LineProperty, float& ContentRight, bool& bAnyContent)
+	{
+		// The run's glyphs are already in visual order; take the ones on this line and lay them out
+		// left to right from the pen. Carets and per-character bookkeeping then follow in logical
+		// order, each caret at the left edge of its element's glyphs.
+		const int32 RunIndex = Measured[Start].RunIndex;
+		const FRunInfo& Run = Runs[RunIndex];
+		TMap<int32, float> ElementLeft;
+		float X = PenX;
+		for (int32 g = Run.GlyphStart; g < Run.GlyphEnd; g++)
+		{
+			const FGlyphSource& G = Glyphs[g];
+			if (G.ElementIndex < Start || G.ElementIndex >= End)continue;
+			const FMeasured& M = Measured[G.ElementIndex];
+			if (!ElementLeft.Contains(G.ElementIndex))
+			{
+				ElementLeft.Add(G.ElementIndex, X);
+			}
+			if (!M.bWhitespace)
+			{
+				FDreamTextGlyphItem Item;
+				Item.Kind = EDreamTextItemKind::Glyph;
+				Item.Codepoint = TextProcessingArray[G.ElementIndex].Unicode;
+				Item.ElementIndex = G.ElementIndex;
+				Item.SourceIndex = TextProcessingArray[G.ElementIndex].StringIndex;
+				Item.LineIndex = LineIndex;
+				Item.Pen = FVector2f(X + G.XOffset, Baseline + G.YOffset);
+				Item.Glyph = G.Quad;
+				Item.AdvanceWithSpace = G.XAdvance;
+				Item.Style = MakeStyle(M.Style);
+				if (!bHasClampContent)
+				{
+					Item.bEmit = true;
+					Item.bCountsAsVisible = true;
+					if (Item.Style.bUnderline)
+					{
+						Item.UnderlineGlyph = GetUnderlineOrStrikethroughCharGeo('_', M.Style.Size, M.Style.Bold);
+					}
+					if (Item.Style.bStrikethrough)
+					{
+						Item.StrikethroughGlyph = GetUnderlineOrStrikethroughCharGeo('-', M.Style.Size, M.Style.Bold);
+					}
+				}
+				Out.Items.Add(Item);
+			}
+			else
+			{
+				FDreamTextGlyphItem Item;
+				Item.Kind = EDreamTextItemKind::Space;
+				Item.Codepoint = TextProcessingArray[G.ElementIndex].Unicode;
+				Item.ElementIndex = G.ElementIndex;
+				Item.SourceIndex = TextProcessingArray[G.ElementIndex].StringIndex;
+				Item.LineIndex = LineIndex;
+				Item.Pen = FVector2f(X, Baseline);
+				Item.Glyph = G.Quad;
+				Item.AdvanceWithSpace = G.XAdvance;
+				Item.Style = MakeStyle(M.Style);
+				Out.Items.Add(Item);
+			}
+			X += G.XAdvance + (M.GlyphCount > 0 && g == M.GlyphStart + M.GlyphCount - 1 ? In.FontSpace.X : 0.0f);
+		}
+		const float SegmentEnd = X;
+		for (int32 i = Start; i < End; i++)
+		{
+			const FMeasured& M = Measured[i];
+			if (M.bSkipped)continue;
+			FDreamUITextCaretProperty CaretProperty;
+			const float* Left = ElementLeft.Find(i);
+			CaretProperty.CaretPosition = FVector2f((Left ? *Left : SegmentEnd) - HalfFontSpaceX, LineCentre);
+			CaretProperty.CharIndex = CaretIndexOf(i);
+			LineProperty.CaretPropertyList.Add(CaretProperty);
+			if (M.bVisibleGlyph)
+			{
+				CurrentVisibleCharCount++;
+			}
+			if (!M.bWhitespace && M.Advance > 0.0f)
+			{
+				bAnyContent = true;
+			}
+		}
+		PenX = SegmentEnd;
+		if (bAnyContent)
+		{
+			ContentRight = FMath::Max(ContentRight, SegmentEnd);
+		}
+	}
+
 	void FLayoutRun::PlaceLine(int32 LineIndex, float LineTop)
 	{
 		const FLineRange& Range = LineRanges[LineIndex];
@@ -801,126 +1203,66 @@ namespace DreamTextLayoutLocal
 		float PenX = 0.0f;
 		float ContentRight = 0.0f;//pen after the last non-whitespace element: trailing spaces hang outside the line's width
 		bool bAnyContent = false;
+
+		// Segments: maximal stretches of one run (or of unshaped elements). A left-to-right paragraph
+		// places them in logical order with right-to-left ones reversed inside; a right-to-left
+		// paragraph places the segments themselves from right to left.
+		struct FSegment { int32 Start; int32 End; bool bRightToLeft; };
+		TArray<FSegment> Segments;
+		bool bBaseRightToLeft = false;
 		for (int32 i = Range.Start; i < Range.End; i++)
 		{
 			const FMeasured& M = Measured[i];
 			if (M.bSkipped)continue;
-			const auto& Element = TextProcessingArray[i];
-			RichTextParseResult = M.Style;
-
-			//caret property: the caret sits on the left of its char
-			FDreamUITextCaretProperty CaretProperty;
-			CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineCentre);
-			CaretProperty.CharIndex = CaretIndexOf(i);
-			LineProperty.CaretPropertyList.Add(CaretProperty);
-
-			FDreamTextGlyphItem Item;
-			Item.Codepoint = Element.Unicode;
-			Item.ElementIndex = i;
-			Item.SourceIndex = Element.StringIndex;
-			Item.LineIndex = LineIndex;
-			Item.Pen = FVector2f(PenX, Baseline);
-			Item.Glyph = M.Glyph;
-			Item.AdvanceWithSpace = M.Advance;
-			Item.Style = MakeStyle(M.Style);
-
-			if (M.bImageSpace)
+			bBaseRightToLeft |= M.bBaseRightToLeft;
+			const bool bRTL = M.RunIndex >= 0 && Runs[M.RunIndex].bRightToLeft;
+			const int32 RunIndex = M.RunIndex;
+			if (Segments.Num() > 0 && Segments.Last().bRightToLeft == bRTL
+				&& (RunIndex < 0 || Measured[Segments.Last().End - 1].RunIndex == RunIndex || !bRTL))
 			{
-				Item.Kind = EDreamTextItemKind::Image;
-				FDreamUIText_RichTextImageTag ImageTagData;
-				ImageTagData.TagName = M.Style.ImageTag;
-				ImageTagData.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineCentre);
-				ImageTagData.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
-				ImageTagData.TintColor = M.Style.HasColor ? M.Style.Color : FColor::White;
-				Out.Images.Add(ImageTagData);
-			}
-			else if (M.bEmoji)
-			{
-				Item.Kind = EDreamTextItemKind::Emoji;
-				FDreamUIText_Emoji Emoji;
-				Emoji.EmojiCode = Element.Unicode;
-				Emoji.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineCentre);
-				Emoji.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
-				Out.Emojis.Add(Emoji);
-			}
-			else if (M.bWhitespace)
-			{
-				Item.Kind = EDreamTextItemKind::Space;
+				Segments.Last().End = i + 1;
 			}
 			else
 			{
-				Item.Kind = EDreamTextItemKind::Glyph;
-				if (!bHasClampContent)
-				{
-					Item.bEmit = true;
-					Item.bCountsAsVisible = true;
-					if (Item.Style.bUnderline)
-					{
-						Item.UnderlineGlyph = GetUnderlineOrStrikethroughCharGeo('_', M.Style.Size, M.Style.Bold);
-					}
-					if (Item.Style.bStrikethrough)
-					{
-						Item.StrikethroughGlyph = GetUnderlineOrStrikethroughCharGeo('-', M.Style.Size, M.Style.Bold);
-					}
-				}
-				CurrentVisibleCharCount++;
+				Segments.Add({ i, i + 1, bRTL });
 			}
-			Out.Items.Add(Item);
-
-			//collect rich text custom tag. custom tag use start/end mark, so put these code outside of visible-char-check.
-			if (In.bRichText)
+		}
+		if (bBaseRightToLeft)
+		{
+			Algo::Reverse(Segments);
+		}
+		for (const FSegment& Segment : Segments)
+		{
+			if (Segment.bRightToLeft)
 			{
-				switch (M.Style.CustomTagMode)
-				{
-				case ECustomTagMode::Start:
-				{
-					FDreamUIText_RichTextCustomTag CustomTag;
-					CustomTag.TagName = M.Style.CustomTag;
-					CustomTag.CharIndexStart = FMath::Max(0, CurrentVisibleCharCount - 1);//-1 as index; incase first char is invisible char
-					CustomTag.CharIndexEnd = -1;
-					Out.CustomTags.Add(CustomTag);
-				}
-				break;
-				case ECustomTagMode::End:
-				{
-					const FName TagName = M.Style.CustomTag;
-					const int32 FoundIndex = Out.CustomTags.IndexOfByPredicate([TagName](const FDreamUIText_RichTextCustomTag& A) {
-						return A.TagName == TagName;
-						});
-					if (FoundIndex != -1)
-					{
-						Out.CustomTags[FoundIndex].CharIndexEnd = CurrentVisibleCharCount - 1;//-1 as index
-					}
-				}
-				break;
-				default:
-					break;
-				}
+				PlaceRightToLeftSegment(Segment.Start, Segment.End, LineIndex, PenX, Baseline, LineCentre, LineProperty, ContentRight, bAnyContent);
 			}
-
-			PenX += M.Advance;
-			if (!M.bWhitespace)
+			else
 			{
-				ContentRight = PenX;
-				bAnyContent = true;
-			}
-
-			// Truncate and Ellipsis measure against the box, not the wrap width: they are about what
-			// fits on screen. The cut is decided by whether the NEXT element on this line would fit.
-			if (bClampMode && !bHasClampContent && i + 1 < Range.End)
-			{
-				const FMeasured& Next = Measured[i + 1];
-				if (!Next.bSkipped && PenX + Next.Glyph.XAdvance > In.Width)
+				for (int32 i = Segment.Start; i < Segment.End; i++)
 				{
-					bHasClampContent = true;
-					Out.bTruncated = true;
-					ClampedLineWidth = bAnyContent ? ContentRight - In.FontSpace.X : 0.0f;
-					bShouldSetParagraphHeightForClampContent = true;//paragraphHeight is set after the line, so we mark it and read it later
-					if (In.OverflowType == EDreamUITextOverflowType::Ellipsis)
+					if (Measured[i].bSkipped)continue;
+					PlaceElement(i, LineIndex, PenX, Baseline, LineCentre, LineProperty, ContentRight, bAnyContent);
+
+					// Truncate and Ellipsis measure against the box, not the wrap width: they are about
+					// what fits on screen. The cut is decided by whether the NEXT element would fit.
+					if (bClampMode && !bHasClampContent && i + 1 < Range.End)
 					{
-						ApplyEllipsis(i, LineItemStart, PenX, Baseline);
-						ContentRight = PenX;
-						ClampedLineWidth = ContentRight - In.FontSpace.X;
+						const FMeasured& Next = Measured[i + 1];
+						if (!Next.bSkipped && PenX + Next.ClusterAdvance > In.Width)
+						{
+							bHasClampContent = true;
+							Out.bTruncated = true;
+							ClampedLineWidth = bAnyContent ? ContentRight - In.FontSpace.X : 0.0f;
+							bShouldSetParagraphHeightForClampContent = true;//paragraphHeight is set after the line, so we mark it and read it later
+							if (In.OverflowType == EDreamUITextOverflowType::Ellipsis)
+							{
+								RichTextParseResult = Measured[i].Style;
+								ApplyEllipsis(i, LineItemStart, PenX, Baseline);
+								ContentRight = PenX;
+								ClampedLineWidth = ContentRight - In.FontSpace.X;
+							}
+						}
 					}
 				}
 			}

@@ -11,9 +11,9 @@
 #endif
 
 
-bool UDreamUIFontData_Bitmap::GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult)
+bool UDreamUIFontData_Bitmap::GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)
 {
-	auto fontKey = FDreamUIBitmapCharKey(CharCode, CharSize, IsBold);
+	auto fontKey = FDreamUIBitmapCharKey(Glyph, CharSize, IsBold);
 	if (auto charData = CharDataMap.Find(fontKey))
 	{
 		OutResult = *charData;
@@ -21,15 +21,15 @@ bool UDreamUIFontData_Bitmap::GetCharDataFromCache(uint32 CharCode, float CharSi
 	}
 	return false;
 }
-void UDreamUIFontData_Bitmap::AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& CharData)
+void UDreamUIFontData_Bitmap::AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)
 {
-	CharDataMap.Add(FDreamUIBitmapCharKey(CharCode, CharSize, IsBold), CharData);
+	CharDataMap.Add(FDreamUIBitmapCharKey(Glyph, CharSize, IsBold), CharData);
 }
 
-bool UDreamUIFontData_Bitmap::RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
+bool UDreamUIFontData_Bitmap::RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
-	auto slot = RenderGlyphOnFreeType(CharCode, CharSize, IsBold ? CharSize * BoldRatio : 0);
+	auto slot = RenderGlyphOnFreeType(GetFreeTypeFace(Glyph.FaceIndex), Glyph.GlyphIndex, CharSize, IsBold ? CharSize * BoldRatio : 0);
 	if (slot == nullptr)
 	{
 		return false;

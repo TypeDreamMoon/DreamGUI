@@ -33,4 +33,8 @@ public:
 	virtual bool GetShouldAffectByPixelPerfect() override { return false; }
 	virtual void AddUIText(UDreamText* InText) override {}
 	virtual void RemoveUIText(UDreamText* InText) override {}
+	/** No FreeType face, so no shaping: layout takes the one-glyph-per-code-point path. */
+	virtual int32 GetFaceCount() override { return 1; }
+	virtual bool FaceHasCodepoint(int32 FaceIndex, uint32 Codepoint) override { return true; }
+	virtual void* GetShapingFont(int32 FaceIndex, float FontSize) override { return nullptr; }
 };

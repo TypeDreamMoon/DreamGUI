@@ -10,20 +10,20 @@ struct FDreamUIDistanceFieldCharKey
 {
 public:
 	FDreamUIDistanceFieldCharKey() {}
-	FDreamUIDistanceFieldCharKey(uint32 InCharCode, bool InBold)
+	FDreamUIDistanceFieldCharKey(const FDreamUIGlyphKey& InGlyph, bool InBold)
 	{
-		this->CharCode = InCharCode;
+		this->Glyph = InGlyph;
 		this->bBold = InBold;
 	}
-	uint32 CharCode = 0;
+	FDreamUIGlyphKey Glyph;
 	bool bBold = false;
 	bool operator==(const FDreamUIDistanceFieldCharKey& other)const
 	{
-		return this->CharCode == other.CharCode && this->bBold == other.bBold;
+		return this->Glyph == other.Glyph && this->bBold == other.bBold;
 	}
 	friend FORCEINLINE uint32 GetTypeHash(const FDreamUIDistanceFieldCharKey& other)
 	{
-		return HashCombine(GetTypeHash(other.CharCode), GetTypeHash(other.bBold));
+		return HashCombine(GetTypeHash(other.Glyph), GetTypeHash(other.bBold));
 	}
 };
 struct FDreamUIDistanceFieldFontKerningPair
@@ -105,9 +105,9 @@ protected:
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
-	virtual bool GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
-	virtual void AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
-	virtual bool RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
+	virtual bool GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
+	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
+	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 
 	//SDF font already have space between glyphs

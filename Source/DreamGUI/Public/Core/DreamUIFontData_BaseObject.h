@@ -79,6 +79,20 @@ public:
 	virtual UTexture2DArray* GetFontTexture()PURE_VIRTUAL(UDreamUIFontData_BaseObject::GetFontTexture, return nullptr;);
 	virtual FDreamUICharData GetCharData(uint32 CharCode, float CharSize, bool IsBold) PURE_VIRTUAL(UDreamUIFontData::GetCharData, return FDreamUICharData(););
 	virtual bool HasKerning() { return false; }
+
+	/**
+	 * Shaping interface. A font is a list of faces -- its own first, then its fallbacks in lookup
+	 * order -- and a shaped glyph names a face and a glyph index rather than a code point. A font
+	 * that cannot shape returns null from GetShapingFont, and layout falls back to one glyph per
+	 * code point through GetCharData.
+	 */
+	virtual int32 GetFaceCount() { return 1; }
+	/** Whether the face has a glyph for the code point: what decides which face a run is shaped with. */
+	virtual bool FaceHasCodepoint(int32 FaceIndex, uint32 Codepoint) { return true; }
+	/** An hb_font_t* scaled to FontSize (26.6 units), or null. Opaque so HarfBuzz stays out of public headers. */
+	virtual void* GetShapingFont(int32 FaceIndex, float FontSize) { return nullptr; }
+	/** Atlas entry for a glyph of a face, rasterizing it on first use. */
+	virtual FDreamUICharData GetGlyphData(int32 FaceIndex, uint32 GlyphIndex, float CharSize, bool bBold) { return FDreamUICharData(); }
 	virtual float GetKerning(uint32 LeftCharIndex, uint32 RightCharIndex, float CharSize) { return 0; }
 	virtual float GetLineHeight(float FontSize) { return FontSize; }
 	/**
