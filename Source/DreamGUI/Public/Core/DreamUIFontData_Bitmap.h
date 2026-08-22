@@ -55,6 +55,7 @@ public:
 		TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
 	)override;
 	virtual void PrepareForPushCharData(UDreamText* InText)override;
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
 	//End UDreamUIFontData_FreeTypeRender interface
 protected:
 	float BoldSize; float ItalicSlop;

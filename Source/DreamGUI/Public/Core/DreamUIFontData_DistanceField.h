@@ -89,6 +89,8 @@ public:
 		TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
 	)override;
 	virtual void PrepareForPushCharData(UDreamText* InText)override;
+	virtual void PrepareForLayout(float InExpandMeshSize)override;
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
 	virtual bool GetRequireNormalAndTangent()override;
 	virtual float GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize) override;
 	virtual float GetLineHeight(float fontSize) override;

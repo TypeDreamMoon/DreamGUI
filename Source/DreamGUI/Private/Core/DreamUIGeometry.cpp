@@ -83,7 +83,7 @@ void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FDreamUIOriginVertexDa
 		originVertices[vertIndex].Position = FVector3f(canvasToComponentTransform.TransformPosition(canvasSpaceLocation));
 	}
 }
-void AdjustPixelPerfectPos_For_UIText(TArray<FDreamUIOriginVertexData>& originVertices, const TArray<FDreamUITextCharProperty>& cacheCharPropertyArray, UDreamCanvas* RenderCanvas, UDreamVisual* Visual)
+void FDreamUIGeometry::AdjustPixelPerfectPos_For_UIText(TArray<FDreamUIOriginVertexData>& originVertices, const TArray<FDreamUITextCharProperty>& cacheCharPropertyArray, UDreamCanvas* RenderCanvas, UDreamVisual* Visual)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
 	if (cacheCharPropertyArray.Num() <= 0)return;

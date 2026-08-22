@@ -251,6 +251,8 @@ public:
 		float width, float height, const FVector2f& pivot, const FDreamUISpriteInfo& spriteInfo
 		, float& pivotOffsetX, float& pivotOffsetY, float& halfWidth, float& halfHeight
 	);
+	/** Snaps emitted glyph quads to the canvas pixel grid; what a pixel-perfect text runs after painting. */
+	static void AdjustPixelPerfectPos_For_UIText(TArray<FDreamUIOriginVertexData>& originVertices, const TArray<FDreamUITextCharProperty>& cacheCharPropertyArray, UDreamCanvas* RenderCanvas, UDreamVisual* Visual);
 	static void AdjustPixelPerfectPos(
 		TArray<FDreamUIOriginVertexData>& originVertices, int startIndex, int count
 		, UDreamCanvas* RenderCanvas, UDreamVisual* Visual

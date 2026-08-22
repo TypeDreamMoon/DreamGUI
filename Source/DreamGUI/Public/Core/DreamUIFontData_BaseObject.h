@@ -51,7 +51,19 @@ enum class EDreamUIFontTextureMark : uint8
 	None = 0, Bitmap = 1, DistanceField = 2,
 };
 
+/** How a font wants its glyph quads built: the part of "rendering" that is the font's business, not the painter's. */
+struct FDreamTextGlyphPaintStyle
+{
+	/** tan(italic angle): how far the top edge of an italic quad leans right. */
+	float ItalicSlope = 0.0f;
+	/** SDF fonts store fontSize * objectScale in UV2.x for the material's anti-aliasing. */
+	bool bWriteFontScaleToUV2 = false;
+	float FontScaleMultiplier = 0.0f;
+};
+
 class UTexture2D;
+class UTexture2DArray;
+class UMaterialInterface;
 class UDreamText;
 class UDreamUIFontEmojiData;
 
@@ -79,6 +91,14 @@ public:
 	virtual bool GetSupportDynamicPixelsPerUnit() { return false; }
 	virtual EDreamUIFontTextureMark GetFontTextureMark() { return EDreamUIFontTextureMark::None; }
 	virtual float GetBoldRatio() { return 0; }
+
+	/**
+	 * Called once before a layout asks for glyphs. The expand size is the one knob a layout has that
+	 * changes what a glyph measures (SDF fonts grow their quads by it).
+	 */
+	virtual void PrepareForLayout(float InExpandMeshSize) {}
+	/** How the painter should build this font's quads. InWorldScale is the text widget's world scale. */
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const { return FDreamTextGlyphPaintStyle(); }
 
 	/** this is called every time before create a string of char geometry */
 	virtual void PrepareForPushCharData(UDreamText* InText) {};

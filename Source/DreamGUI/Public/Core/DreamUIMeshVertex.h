@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RenderResource.h"
+#include "RHIResources.h"
 #include "PackedNormal.h"
 #include "RenderMath.h"
 

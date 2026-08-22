@@ -230,73 +230,57 @@ namespace FDreamUIText_CodePoint
 	}
 };
 
+struct FDreamTextLayoutInput;
+struct FDreamTextDisplayList;
+struct FDreamTextPaintParams;
+
+/**
+ * The text component's layout cache: the last layout input, the display list it produced, and the
+ * char properties the last paint wrote. Layout and paint are separate steps. A layout is re-run only
+ * when its input changes (or the font says its glyphs did); a paint runs every time the geometry is
+ * rebuilt, from the cached display list, which is cheap.
+ */
 struct DREAMGUI_API FDreamUITextGeometryCache
 {
 public:
-	FDreamUITextGeometryCache() {}
-	FDreamUITextGeometryCache(UDreamText* InUIText);
-	/**
-	 * @return true - anything change
-	 */
-	bool SetInputParameters(
-		const FString& InContent,
-		float InWidth,
-		float InHeight,
-		FVector2f InPivot,
-		FColor InColor,
-		float InRenderOpacityForRichText,
-		FVector2f InFontSpace,
-		float InFontSize,
-		EDreamUITextParagraphHorizontalAlign InParagraphHAlign,
-		EDreamUITextParagraphVerticalAlign InParagraphVAlign,
-		EDreamUITextOverflowType InOverflowType,
-		ETextWrappingPolicy InWrappingPolicy,
-		bool InUseKerning,
-		EDreamUITextFontStyle InFontStyle,
-		bool InRichText,
-		int32 InRichTextFilterFlags,
-		UDreamUIFontData_BaseObject* InFont
-	);
-private:
-#pragma region InputParameters
-	TArray<FDreamUIText_TextProcessingElement> TextProcessingArray;
-	FString Content = TEXT("");
-	float Width = 0;
-	float Height = 0;
-	FVector2f Pivot = FVector2f::ZeroVector;
-	FColor Color = FColor::White;
-	float RenderOpacityForRichText = 1.0f;
-	FVector2f FontSpace = FVector2f::ZeroVector;
-	float FontSize = 0;
-	EDreamUITextParagraphHorizontalAlign ParagraphHAlign = EDreamUITextParagraphHorizontalAlign::Left;
-	EDreamUITextParagraphVerticalAlign ParagraphVAlign = EDreamUITextParagraphVerticalAlign::Bottom;
-	EDreamUITextOverflowType OverflowType = EDreamUITextOverflowType::HorizontalOverflow;
-	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
-	bool bUseKerning = false;
-	EDreamUITextFontStyle FontStyle = EDreamUITextFontStyle::None;
-	bool bRichText = false;
-	int32 RichTextFilterFlags = 0xffffffff;
-	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
-#pragma endregion InputParameters
+	FDreamUITextGeometryCache();
+	~FDreamUITextGeometryCache();
+	FDreamUITextGeometryCache(const FDreamUITextGeometryCache&) = delete;
+	FDreamUITextGeometryCache& operator=(const FDreamUITextGeometryCache&) = delete;
 
-	bool bIsDirty = true;//vertex or triangle data is dirty
-	bool bIsColorDirty = true;//only color data is dirty (no include rich text's color)
-	TWeakObjectPtr<UDreamText> TextComp = nullptr;
-
-public:
-#pragma region OutputResults
-	/** indicating whether the text is Truncated or using Ellipsis */
-	bool textTruncated = false;
-	FVector2f textPreferredSize = FVector2f::ZeroVector;
-	/** line properties, from first line to last one in array */
-	TArray<FDreamUITextLineProperty> cacheLinePropertyArray;
-	/** char properties, from first char to last one in array */
-	TArray<FDreamUITextCharProperty> cacheCharPropertyArray;
-	TArray<FDreamUIText_RichTextCustomTag> cacheRichTextCustomTagArray;
-	TArray<FDreamUIText_RichTextImageTag> cacheRichTextImageTagArray;
-	TArray<FDreamUIText_Emoji> cacheEmojiArray;
-#pragma endregion OutputResults
+	/** Replace the layout input. Returns true when the layout is now stale. */
+	bool SetLayoutInput(const FDreamTextLayoutInput& InInput);
+	const FDreamTextLayoutInput& GetLayoutInput() const;
+	/** Force the next EnsureLayout to run, for when the glyphs changed underneath an unchanged input. */
 	void MarkDirty();
-	/** check if dirty before calculate geometry */
-	void ConditionalCalculateGeometry();
+	bool IsLayoutDirty() const { return bIsDirty; }
+	/** Lays out if stale. Measures only -- no geometry is touched. Returns true if a layout ran. */
+	bool EnsureLayout();
+	/** Paints the display list into the geometry, laying out first if stale. */
+	void Paint(FDreamUIGeometry& Geometry, const FDreamTextPaintParams& Params);
+
+	const FDreamTextDisplayList& GetDisplayList() const;
+	/** Emitted glyphs in order, as written by the last Paint. */
+	const TArray<FDreamUITextCharProperty>& GetCharPropertyArray() const { return CharPropertyArray; }
+	bool IsTextTruncated() const;
+	FVector2f GetPreferredSize() const;
+	const TArray<FDreamUITextLineProperty>& GetLines() const;
+	const TArray<FDreamUIText_RichTextCustomTag>& GetCustomTags() const;
+	const TArray<FDreamUIText_RichTextImageTag>& GetImageTags() const;
+	const TArray<FDreamUIText_Emoji>& GetEmojis() const;
+
+	/**
+	 * Best Fit memo. The search probes several sizes, each a layout; remembering the answer for the
+	 * input it was found against (with FontSize at the ceiling) makes the common call -- nothing
+	 * changed -- free. MarkDirty forgets it, since a glyph change can move the answer.
+	 */
+	bool TryGetBestFit(const FDreamTextLayoutInput& InCeilingInput, float& OutSize) const;
+	void SetBestFit(const FDreamTextLayoutInput& InCeilingInput, float InSize);
+private:
+	TUniquePtr<FDreamTextLayoutInput> Input;
+	TUniquePtr<FDreamTextDisplayList> DisplayList;
+	TArray<FDreamUITextCharProperty> CharPropertyArray;
+	TUniquePtr<FDreamTextLayoutInput> BestFitKey;
+	float BestFitSize = 0.0f;
+	bool bIsDirty = true;
 };

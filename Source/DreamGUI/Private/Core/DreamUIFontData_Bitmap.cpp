@@ -367,6 +367,13 @@ void UDreamUIFontData_Bitmap::PrepareForPushCharData(UDreamText* InText)
 	ItalicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
 }
 
+FDreamTextGlyphPaintStyle UDreamUIFontData_Bitmap::GetGlyphPaintStyle(const FVector2f& InWorldScale) const
+{
+	FDreamTextGlyphPaintStyle Style;
+	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
+	return Style;
+}
+
 #if WITH_EDITOR
 void UDreamUIFontData_Bitmap::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {

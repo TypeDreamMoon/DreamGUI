@@ -5,10 +5,13 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
+#include "Containers/Ticker.h"
 #include "DreamUIManager.generated.h"
 
 struct FDreamUIHelperGizmoRenderParameter;
 struct FDreamUIHelperGizmoVertex;
+class UMaterialInterface;
+class FEditorViewportClient;
 class UDreamEventSystem;
 class UDreamWidget;
 class UDreamVisualBatchMesh;

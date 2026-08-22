@@ -1,6 +1,8 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
+#include "CoreMinimal.h"
+#include "HAL/Runnable.h"
 #include "DreamCanvasProcessingDrawCallData.h"
 
 class FDreamCanvasDrawCallProcessingRunnable : public FRunnable

@@ -12,6 +12,8 @@
 class UDreamUIFontData_BaseObject;
 class UDreamUIRichTextImageData_BaseObject;
 class UDreamUIRichTextCustomStyleData;
+struct FDreamTextLayoutInput;
+struct FDreamTextPaintParams;
 
 /**
  * UV channels-
@@ -307,6 +309,14 @@ public:
 	 */
 	static void GetContentBox(const FVector2f& InWidgetSize, const FVector2f& InPivot, const FMargin& InMargin,
 		FVector2f& OutSize, FVector2f& OutPivot);
+	/**
+	 * The layout input this text would lay out with at the given font size: its own properties plus
+	 * what the widget and canvas contribute. Public so the pipeline can be driven from outside the
+	 * component -- tests, tools -- against the same numbers the component uses.
+	 */
+	static FDreamTextLayoutInput MakeLayoutInput(const UDreamText* Text, float InFontSize);
+	/** The paint parameters this text would paint with: the font's quad style, the canvas's needs, the final colour. */
+	static FDreamTextPaintParams MakePaintParams(const UDreamText* Text);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetFontStyle(EDreamUITextFontStyle Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")

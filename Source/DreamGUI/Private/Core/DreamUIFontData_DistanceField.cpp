@@ -1,6 +1,7 @@
-// Copyright 2019-present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIFontData_DistanceField.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/Components/DreamText.h"
 #include "Materials/MaterialInterface.h"
 #include "TextureResource.h"
@@ -20,10 +21,14 @@ UDreamUIFontData_DistanceField::UDreamUIFontData_DistanceField()
 {
 	RectPackCellSizeType = EDreamUIAtlasTextureSizeType::SIZE_512x512;
 
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_DropShadowSoft")));
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_DropShadowHard")));
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_Outline")));
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_OutlineOnly")));
+	// Whatever the project lists, in the order it lists them -- the picker shows this array as-is.
+	for (const TSoftObjectPtr<UMaterialInterface>& Preset : UDreamGUISettings::Get()->TextEffectPresetMaterials)
+	{
+		if (UMaterialInterface* Material = UDreamGUISettings::LoadSetting(Preset, TEXT("TextEffectPresetMaterials")))
+		{
+			PresetMaterials.Add(Material);
+		}
+	}
 }
 
 bool UDreamUIFontData_DistanceField::GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult)
@@ -176,6 +181,21 @@ void UDreamUIFontData_DistanceField::PrepareForPushCharData(UDreamText* InText)
 	ObjectScale = FMath::Max(CompScale.X, CompScale.Y)
 		* SampleFontSize / SDFRadius
 		;
+}
+
+void UDreamUIFontData_DistanceField::PrepareForLayout(float InExpandMeshSize)
+{
+	OneDivideFontSize = 1.0f / SampleFontSize;
+	ExpandMeshSize = InExpandMeshSize;
+}
+
+FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(const FVector2f& InWorldScale) const
+{
+	FDreamTextGlyphPaintStyle Style;
+	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
+	Style.bWriteFontScaleToUV2 = true;//sdf font need scale value in material
+	Style.FontScaleMultiplier = FMath::Max(InWorldScale.X, InWorldScale.Y) * SampleFontSize / SDFRadius;
+	return Style;
 }
 
 bool UDreamUIFontData_DistanceField::GetRequireNormalAndTangent()

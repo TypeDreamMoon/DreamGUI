@@ -11,6 +11,7 @@
 struct FDreamUIHitResult;
 class FDreamUIGeometry;
 class UMaterialInterface;
+class UTexture;
 class UDreamCanvas;
 class UDreamVisualCustomRaycast;
 class UDreamVisual;
