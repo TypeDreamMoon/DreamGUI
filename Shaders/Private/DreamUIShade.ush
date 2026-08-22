@@ -1,0 +1,70 @@
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// One pixel of DreamGUI UI, whoever draws it. The built-in global shader (DreamUIBase.usf) and the
+// thin material host (MF_DreamUI_Shade, for the UE-renderer world-space mode and OverrideMaterial)
+// both call DreamUI_ShadePixel, so sprites, bitmap glyphs, SDF and MTSDF glyphs, the text style
+// record and the clip look the same on every path and can only change in one place.
+//
+// What stays with the host: the vertex transform, depth blend / fade against the scene, gamma, and
+// whether the output is premultiplied. The function returns straight (non-premultiplied) colour.
+//
+// Vertex layout it reads (FDreamUIMeshVertex):
+//   UV0    texture / atlas coordinate
+//   UV1.x  widget property record index, UV1.y atlas slice
+//   UV2    MTSDF: DilateEm + 16 * Layer, position across the fill run (see DreamUIText.ush)
+//   UV3    MTSDF: fill progress, glow boost
+//   Colour authored in sRGB
+
+#ifndef DREAMUI_SHADE_USH
+#define DREAMUI_SHADE_USH
+
+#include "/Engine/Private/GammaCorrectionCommon.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIWidgetProperty.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIText.ush"
+
+/**
+ * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), w texels per em
+ * at the atlas's sample size. Only MTSDF glyphs read it.
+ */
+float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4 RawVertexColor, float3 LocalPosition,
+	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo)
+{
+	half FontMark;
+	float ClipDataCoordinate;
+	half2 WidgetSize, WidgetCenterPosition;
+	DreamUI_ReadWidgetProperty(UV1.x, WidgetDataTex, FontMark, ClipDataCoordinate, WidgetSize, WidgetCenterPosition);
+
+	// Vertex colour is authored in sRGB; the pipeline works in linear.
+	float4 VertexColor = float4(sRGBToLinear(RawVertexColor.rgb), RawVertexColor.a);
+	float4 Color;
+	if (FontMark < 0.5)
+	{
+		float4 Texel = DREAMUI_SAMPLE(MainTex, MainSampler, UV0);
+		Color = Texel * VertexColor;
+	}
+	else if (FontMark < 1.5)
+	{
+		float4 Texel = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV0, UV1.y));
+		Color = Texel * VertexColor;
+	}
+	else if (FontMark < 2.5)
+	{
+		Color = DreamUIText_ShadeSdf(FontTex, FontSampler, UV0, UV1.y, VertexColor);
+	}
+	else
+	{
+		FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
+		float Layer, GlyphDilateEm;
+		DreamUIText_UnpackGlyphChannel(UV2.x, Layer, GlyphDilateEm);
+		Color = DreamUIText_ShadeMtsdf(FontTex, FontSampler, UV0, UV1.y,
+			FontAtlasInfo.xy, FontAtlasInfo.z, FontAtlasInfo.w, VertexColor, Style,
+			UV3.x, UV2.y, UV3.y, GlyphDilateEm, Layer);
+	}
+
+	Color.a *= DreamUI_CalculateClipData(ClipDataTex, ClipDataCoordinate, LocalPosition);
+	return Color;
+}
+
+#endif // DREAMUI_SHADE_USH

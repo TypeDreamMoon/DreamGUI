@@ -59,9 +59,6 @@ struct FDreamTextGlyphPaintStyle
 {
 	/** tan(italic angle): how far the top edge of an italic quad leans right. */
 	float ItalicSlope = 0.0f;
-	/** SDF fonts store fontSize * objectScale in UV2.x for the material's anti-aliasing. */
-	bool bWriteFontScaleToUV2 = false;
-	float FontScaleMultiplier = 0.0f;
 	/**
 	 * Multi-channel field (MTSDF) fonts: the painter packs layer + dilate into UV2.x, may grow quads
 	 * into the field for effects, and draws synthetic bold as a dilation instead of an atlas variant.
@@ -129,9 +126,7 @@ public:
 	/** Baseline to the bottom of the font's box, at this size, as a positive distance. */
 	virtual float GetDescent(float FontSize) { return GetLineHeight(FontSize) * 0.5f + GetVerticalOffset(FontSize); }
 	virtual float GetFontSizeLimit() { return MAX_FLT; }
-	virtual bool GetRequireNormalAndTangent() { return false; }
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }
-	virtual bool GetNeedObjectScale() { return false; }
 	virtual bool GetSupportDynamicPixelsPerUnit() { return false; }
 	virtual EDreamUIFontTextureMark GetFontTextureMark() { return EDreamUIFontTextureMark::None; }
 	virtual float GetBoldRatio() { return 0; }

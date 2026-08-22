@@ -251,7 +251,8 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			Pen.Y -= Item.Style.Size * 0.5f;
 		}
 		const FColor Color = Item.Style.bHasColor ? Item.Style.Color : Params.BaseColor;
-		const float LegacyUV2X = Params.bWriteFontScaleToUV2 ? Item.Style.Size * Params.FontScaleMultiplier : 0.0f;
+		// Fonts without a multi-channel field leave UV2.x at zero.
+		const float LegacyUV2X = 0.0f;
 		// Shader-side bold dilates the regular glyph by BoldDilateEm per side. The layout already gave
 		// the glyph twice that much extra advance; shifting the quad right by one side's worth keeps
 		// the left bearing where it was and spends the whole extra advance on the right.

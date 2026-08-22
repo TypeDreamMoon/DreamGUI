@@ -26,6 +26,17 @@
 #ifndef DREAMUI_TEXT_USH
 #define DREAMUI_TEXT_USH
 
+// Only a pixel shader has screen derivatives and implicit-LOD sampling. The other place this code is
+// compiled is a material's ray-tracing hit shader (a world-space canvas hit by a shadow or reflection
+// ray): there, sample level 0 and treat the field as one texel per pixel.
+#if PIXELSHADER
+	#define DREAMUI_SAMPLE(Tex, Sampler, Coord) Tex.Sample(Sampler, Coord)
+	#define DREAMUI_HAS_DERIVATIVES 1
+#else
+	#define DREAMUI_SAMPLE(Tex, Sampler, Coord) Tex.SampleLevel(Sampler, Coord, 0)
+	#define DREAMUI_HAS_DERIVATIVES 0
+#endif
+
 struct FDreamUITextStyle
 {
 	float FaceSoftness;     // em: extra edge width (blur). 0 = crisp
@@ -101,9 +112,13 @@ void DreamUIText_UnpackGlyphChannel(float Packed, out float Layer, out float Dil
 // Returns screen px per field unit; the edge's anti-aliasing band is one screen pixel wide.
 float DreamUIText_ScreenPxRange(float2 UV, float2 AtlasSize, float FieldRangeTexels)
 {
+#if DREAMUI_HAS_DERIVATIVES
 	float2 UnitRange = FieldRangeTexels / AtlasSize;
 	float2 ScreenTexSize = 1.0 / fwidth(UV);
 	return max(0.5 * dot(UnitRange, ScreenTexSize), 1.0);
+#else
+	return max(FieldRangeTexels, 1.0);
+#endif
 }
 
 // Coverage of "distance >= Threshold" with a one-pixel anti-aliasing band, widened by Softness
@@ -128,7 +143,7 @@ struct FDreamUIGlyphSample
 
 FDreamUIGlyphSample DreamUIText_SampleMtsdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice)
 {
-	float4 Texel = FontTex.Sample(FontSampler, float3(UV, Slice));
+	float4 Texel = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV, Slice));
 	FDreamUIGlyphSample S;
 	S.Distance = Texel.a;
 	S.MedianDistance = DreamUIText_Median(Texel.rgb);
@@ -236,8 +251,12 @@ float4 DreamUIText_ShadeMtsdf(Texture2DArray FontTex, SamplerState FontSampler, 
 /** Single-channel field from a rasterized bitmap: the original SDF fonts. Only the face. */
 float4 DreamUIText_ShadeSdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice, float4 VertexColor)
 {
-	float Distance = FontTex.Sample(FontSampler, float3(UV, Slice)).r;
+	float Distance = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV, Slice)).r;
+#if DREAMUI_HAS_DERIVATIVES
 	float Width = fwidth(Distance);
+#else
+	float Width = 0.05;
+#endif
 	float Face = smoothstep(0.5 - Width, 0.5 + Width, Distance);
 	return float4(VertexColor.rgb, VertexColor.a * Face);
 }

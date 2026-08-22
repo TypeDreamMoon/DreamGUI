@@ -210,17 +210,7 @@ FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(con
 		Style.TexelToUV = OneDivideTextureSize;
 		Style.BoldDilateEm = BoldRatio * 0.5f;
 	}
-	else
-	{
-		Style.bWriteFontScaleToUV2 = true;//the single-channel material anti-aliases from the font scale in UV2.x
-		Style.FontScaleMultiplier = FMath::Max(InWorldScale.X, InWorldScale.Y) * SampleFontSize / SDFRadius;
-	}
 	return Style;
-}
-
-bool UDreamUIFontData_DistanceField::GetRequireNormalAndTangent()
-{
-	return true;//for tilt look
 }
 
 float UDreamUIFontData_DistanceField::GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize)

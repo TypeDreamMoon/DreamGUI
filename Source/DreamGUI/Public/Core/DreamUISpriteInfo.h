@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Layout/Margin.h"
 #include "DreamUISpriteInfo.generated.h"
 
 

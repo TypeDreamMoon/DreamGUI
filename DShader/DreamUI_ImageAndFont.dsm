@@ -1,89 +1,43 @@
-// DreamGUI material, generated from the decompiled graph and kept as the source of truth.
+// DreamGUI's default UI material: the thin host.
 // Edit this file, then rebuild -- the .uasset is an output.
-// Decompiled from /DreamGUI/Materials/DreamUI_ImageAndFont.DreamUI_ImageAndFont
-// Warning: Exported 'MaterialExpressionStaticBool' as UE.Expression; review reflected literal properties if the node has editor-only state.
+//
+// DreamGUI's own renderer draws canvases with a built-in global shader and needs no material. This
+// material exists for the two places a UMaterial is unavoidable: world-space canvases rendered by
+// UE's own renderer (the translucent pass needs an FMaterial) and OverrideMaterial. It is a host,
+// not a shader: every pixel decision -- sprite / bitmap / SDF / MTSDF by the widget's FontMark
+// record, the text style record, the clip -- is MF_DreamUI_Shade, which runs DreamUI_ShadePixel
+// from DreamUIShade.ush, the same function the built-in shader runs. Change the look there and both
+// paths move together.
+//
+// What stays in the material: the one thing that depends on who renders. DreamGUI's renderer
+// premultiplies in its own shader, UE's does not, so EmissiveColor is lerped between rgb*opacity and
+// plain rgb on DreamUI_IsRenderByDreamUIRenderer, which the canvas sets per draw.
+//
+// Surface domain, Unlit, AlphaComposite, two-sided: what the DreamUI renderer's material shaders
+// compile for (FDreamUIScreenRenderPS::ShouldCompilePermutation wants Surface + Unlit, or UI domain)
+// and what the UE translucent pass expects. Not a Substrate shading model: with r.Substrate off the
+// engine reports it as Substrate rather than Unlit and the DreamUI renderer skips the material;
+// with r.Substrate on, an Unlit legacy material is converted to an Unlit slab automatically.
 
-VirtualFunction(Name="MF_DreamUI_Clip")
+VirtualFunction(Name="MF_DreamUI_Shade")
 {
 	Options = {
-		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_Clip");
-		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_Clip.MF_DreamUI_Clip";
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_Shade");
 	}
-
 	Inputs = {
-		opt float CoordinateInDataTex = 0.0;
-		opt float Opacity = 1.0;
+		opt float4 Tint = float4(1.0, 1.0, 1.0, 1.0);
 	}
-
 	Outputs = {
-		float Result;
+		float4 Result;
 	}
 }
-VirtualFunction(Name="MF_DreamWidgetProperty")
-{
-	Options = {
-		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamWidgetProperty");
-		Description = "Generated from /DreamGUI/Materials/MF_DreamWidgetProperty.MF_DreamWidgetProperty";
-	}
 
-	Inputs = {
-		opt float CoordinateInDataTex = 0.0;
-	}
-
-	Outputs = {
-		float FontMark;
-		float ClipDataCoordinate;
-		float2 WidgetSize;
-		float2 WidgetCenterPosition;
-	}
-}
-VirtualFunction(Name="MF_DreamUI_ConvertVertexColor")
-{
-	Options = {
-		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_ConvertVertexColor");
-		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_ConvertVertexColor.MF_DreamUI_ConvertVertexColor";
-	}
-
-	Inputs = {
-		float3 Color;
-	}
-
-	Outputs = {
-		float3 Result;
-	}
-}
-VirtualFunction(Name="SMF_UE4Unlit")
-{
-	Options = {
-		Asset = Path(Engine, "Functions/Substrate/SMF_UE4Unlit");
-		Description = "Generated from /Engine/Functions/Substrate/SMF_UE4Unlit.SMF_UE4Unlit";
-	}
-
-	Inputs = {
-		opt float3 Color = float3(0, 0, 0) [
-			Description="Emissive color added to the scene.";
-		];
-		opt float Opacity = 0.5 [
-			Description="Represent the coverage of the material. 0 means 100% see through, 1 means fully opaque.";
-		];
-	}
-
-	Outputs = {
-		Substrate Result;
-	}
-}
 Shader(Name="Materials/DreamUI_ImageAndFont", Root="Plugin.DreamGUI")
 {
 	Properties = {
-		TextureObjectParameter DreamUI_MainTexture = Path(Engine, "EngineResources/DefaultTexture") [
+		ScalarParameter DreamUI_IsRenderByDreamUIRenderer = 0.0 [
 			Group="DreamUI";
-			SamplerType="SAMPLERTYPE_Color";
 		];
-		TextureObjectParameter DreamUI_FontTexture = Path(Plugins.DreamGUI, "Textures/DreamUIPreset_2DArray") [
-			Group="DreamUI";
-			SamplerType="SAMPLERTYPE_Color";
-		];
-		ScalarParameter DreamUI_IsRenderByDreamUIRenderer = 0.0;
 	}
 
 	Settings = {
@@ -91,7 +45,7 @@ Shader(Name="Materials/DreamUI_ImageAndFont", Root="Plugin.DreamGUI")
 		// which would make DreamGUI fail to load its own materials wherever DreamShader is absent.
 		Backend = "Graph";
 		Domain = "Surface";
-		ShadingModel = "Substrate";
+		ShadingModel = "Unlit";
 		BlendMode = "AlphaComposite";
 		TwoSided = true;
 	}
@@ -99,94 +53,31 @@ Shader(Name="Materials/DreamUI_ImageAndFont", Root="Plugin.DreamGUI")
 	Outputs = {
 		float3 EmissiveColor;
 		float Opacity;
-		Substrate FrontMaterial;
 
 		Base.EmissiveColor = EmissiveColor;
 		Base.Opacity = Opacity;
-		Base.FrontMaterial = FrontMaterial;
 	}
 
 	Graph = {
-		float MF_DreamWidgetProperty = MF_DreamWidgetProperty(default, OutputIndex=1);
-		float MF_DreamWidgetProperty_1 = MF_DreamWidgetProperty(default, OutputIndex=0);
-		float2 MaterialExpressionTextureCoordinate_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
-		float2 MaterialExpressionTextureCoordinate_0 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=1);
-		float3 MF_DreamUI_ConvertVertexColor = MF_DreamUI_ConvertVertexColor((UE.Expression(Class="VertexColor", OutputType="float4")).rgb);
-		float4 ColorSelector =
-			UE.Expression(
-				Class="Custom",
-				OutputType="float4",
-				Code="float4 ResultColor;\r\nif (Value > 1.5)//sdf font\r\n{\r\n\tfloat4 TexColor = Texture2DArraySample(FontTex, FontTexSampler, float3(UV0, SliceIndex));\r\n\tFontSdfValue = TexColor.r;\r\n\tResultColor = VertexColor;\r\n}\r\nelse if (Value > 0.5)//bitmap font\r\n{\r\n\tfloat4 TexColor = Texture2DArraySample(FontTex, FontTexSampler, float3(UV0, SliceIndex));\r\n\tResultColor = TexColor * VertexColor;\r\n}\r\nelse//texture\r\n{\r\n\tfloat4 TexColor = Texture2DSample(MainTex, MainTexSampler, UV0);\r\n\tResultColor = TexColor * VertexColor;\r\n}\r\nreturn ResultColor;",
-				Description="ColorSelector",
-				AdditionalOutputs="((OutputName=\"FontSdfValue\",OutputType=CMOT_Float1))",
-				Value=MF_DreamWidgetProperty_1,
-				UV0=MaterialExpressionTextureCoordinate_1,
-				SliceIndex=MaterialExpressionTextureCoordinate_0.g,
-				MainTex=DreamUI_MainTexture,
-				FontTex=DreamUI_FontTexture,
-				VertexColor=float4(MF_DreamUI_ConvertVertexColor, (UE.Expression(Class="VertexColor", OutputType="float4")).a)
-			);
-		float2 MaterialExpressionTextureCoordinate_1_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
-		float2 MaterialExpressionTextureCoordinate_0_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=1);
-		float ColorSelector_1 =
-			UE.Expression(
-				Class="Custom",
-				OutputType="float4",
-				Code="float4 ResultColor;\r\nif (Value > 1.5)//sdf font\r\n{\r\n\tfloat4 TexColor = Texture2DArraySample(FontTex, FontTexSampler, float3(UV0, SliceIndex));\r\n\tFontSdfValue = TexColor.r;\r\n\tResultColor = VertexColor;\r\n}\r\nelse if (Value > 0.5)//bitmap font\r\n{\r\n\tfloat4 TexColor = Texture2DArraySample(FontTex, FontTexSampler, float3(UV0, SliceIndex));\r\n\tResultColor = TexColor * VertexColor;\r\n}\r\nelse//texture\r\n{\r\n\tfloat4 TexColor = Texture2DSample(MainTex, MainTexSampler, UV0);\r\n\tResultColor = TexColor * VertexColor;\r\n}\r\nreturn ResultColor;",
-				Description="ColorSelector",
-				Output="FontSdfValue",
-				AdditionalOutputs="((OutputName=\"FontSdfValue\",OutputType=CMOT_Float1))",
-				Value=MF_DreamWidgetProperty_1,
-				UV0=MaterialExpressionTextureCoordinate_1_1,
-				SliceIndex=MaterialExpressionTextureCoordinate_0_1.g,
-				MainTex=DreamUI_MainTexture,
-				FontTex=DreamUI_FontTexture,
-				VertexColor=float4(MF_DreamUI_ConvertVertexColor, (UE.Expression(Class="VertexColor", OutputType="float4")).a)
-			);
-		bool StaticBool = UE.Expression(Class="StaticBool", OutputType="bool", Value=true);
-		// SDF coverage: one screen pixel of anti-aliasing around the 0.5 edge, the same fwidth recipe the built-in shader uses.
-		float SdfWidth = (fwidth(ColorSelector_1) + 0.00001);
-		float MF_DreamUI_SDF_Font = saturate((((ColorSelector_1 - 0.5) / SdfWidth) + 0.5));
-		float Multiply = (MF_DreamUI_SDF_Font * ColorSelector.a);
-		float AlphaSelector =
-			UE.Expression(
-				Class="Custom",
-				OutputType="float",
-				Code="if (Value > 1.5)//sdf font\r\n{\r\n\treturn FontSdfAlpha;\r\n}\r\nif (Value > 0.5)//bitmap font\r\n{\r\n\treturn Alpha;\r\n}\r\n//texture\r\nreturn Alpha;",
-				Description="AlphaSelector",
-				Value=MF_DreamWidgetProperty_1,
-				Alpha=ColorSelector.a,
-				FontSdfAlpha=Multiply
-			);
-		float MF_DreamUI_Clip = MF_DreamUI_Clip(MF_DreamWidgetProperty, AlphaSelector);
+		// rgb straight colour, a opacity with the clip applied.
+		float4 Shaded = MF_DreamUI_Shade();
+
 		#Region "DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha"
-		float3 Multiply_1 = (ColorSelector.rgb * MF_DreamUI_Clip);
-		float3 LinearInterpolate = lerp(Multiply_1, ColorSelector.rgb, DreamUI_IsRenderByDreamUIRenderer);
+		float3 Premultiplied = (Shaded.rgb * Shaded.a);
+		float3 Emissive = lerp(Premultiplied, Shaded.rgb, DreamUI_IsRenderByDreamUIRenderer);
 		#EndRegion
 
-		Substrate SMF_UE4Unlit = SMF_UE4Unlit(ColorSelector.rgb, MF_DreamUI_Clip);
-
-		EmissiveColor = LinearInterpolate;
-		Opacity = MF_DreamUI_Clip;
-		FrontMaterial = SMF_UE4Unlit;
+		EmissiveColor = Emissive;
+		Opacity = Shaded.a;
 	}
 
 	Layout = {
-		Comment(Name="DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha", X=592, Y=32, W=400, H=220, Color=float4(1.0, 1.0, 1.0, 1.0));
-		Node(Var="MF_DreamWidgetProperty_1", X=-2064, Y=720);
-		Node(Var="MF_DreamUI_ConvertVertexColor", X=-1984, Y=-112);
-		Node(Var="DreamUI_MainTexture", X=-1984, Y=272);
-		Node(Var="DreamUI_FontTexture", X=-1984, Y=480);
-		Node(Var="ColorSelector_1", X=-1504, Y=208);
-		Node(Var="StaticBool", X=-784, Y=336);
-		Node(Var="MF_DreamUI_SDF_Font", X=-576, Y=288);
-		Node(Var="Multiply", X=-272, Y=304);
-		Node(Var="AlphaSelector", X=-112, Y=320);
-		Node(Var="MF_DreamUI_Clip", X=304, Y=240);
-		Node(Var="DreamUI_IsRenderByDreamUIRenderer", X=464, Y=384);
-		Node(Var="SMF_UE4Unlit", X=576, Y=-80);
-		Node(Var="Multiply_1", X=688, Y=112);
-		Node(Var="LinearInterpolate", X=816, Y=112);
+		Node(Var="Shaded", X=-640, Y=128);
+		Comment(Name="DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha", X=-352, Y=48, W=560, H=256, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Node(Var="Premultiplied", X=-320, Y=112);
+		Node(Var="DreamUI_IsRenderByDreamUIRenderer", X=-320, Y=224);
+		Node(Var="Emissive", X=-80, Y=112);
+		Node(Var="EmissiveColor", X=256, Y=96);
+		Node(Var="Opacity", X=256, Y=224);
 	}
-
 }

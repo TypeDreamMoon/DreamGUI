@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -45,8 +45,6 @@ namespace DreamTextLayoutTestLocal
 	{
 		FDreamTextPaintParams P;
 		P.ItalicSlope = 0.26f;
-		P.bWriteFontScaleToUV2 = true;
-		P.FontScaleMultiplier = 4.0f;
 		P.BaseColor = Base;
 		return P;
 	}

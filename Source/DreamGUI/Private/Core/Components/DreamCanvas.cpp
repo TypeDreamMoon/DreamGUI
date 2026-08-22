@@ -1611,9 +1611,28 @@ void UDreamCanvas::SortDrawCall()
 
 FName UDreamCanvas::DreamUI_MainTextureMaterialParameterName = FName(TEXT("DreamUI_MainTexture"));
 FName UDreamCanvas::DreamUI_FontTextureMaterialParameterName = FName(TEXT("DreamUI_FontTexture"));
+FName UDreamCanvas::DreamUI_FontAtlasInfoMaterialParameterName = FName(TEXT("DreamUI_FontAtlasInfo"));
 FName UDreamCanvas::DreamUI_ClipDataTexture_MaterialParameterName = FName(TEXT("DreamUI_ClipDataTexture"));
 FName UDreamCanvas::DreamUI_WidgetPropertyDataTexture_MaterialParameterName = FName(TEXT("DreamUI_WidgetPropertyDataTexture"));
 FName UDreamCanvas::DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName = FName(TEXT("DreamUI_IsRenderByDreamUIRenderer"));
+
+FVector4f UDreamCanvas::MakeFontAtlasInfo(const FDreamUIDrawCall& DrawCallItem)
+{
+	// What the MTSDF decode needs from the atlas, for the built-in shader and MF_DreamUI_Shade alike:
+	// xy the slice size in texels, z the field range in texels (twice the spread), w texels per em.
+	FVector4f Info(1.0f, 1.0f, 0.0f, 0.0f);
+	if (DrawCallItem.FontTexture.IsValid())
+	{
+		Info.X = DrawCallItem.FontTexture->GetSurfaceWidth();
+		Info.Y = DrawCallItem.FontTexture->GetSurfaceHeight();
+	}
+	if (DrawCallItem.Font.IsValid())
+	{
+		Info.Z = DrawCallItem.Font->GetAtlasFieldRangeTexels();
+		Info.W = DrawCallItem.Font->GetAtlasEmTexels();
+	}
+	return Info;
+}
 
 bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* InMaterial)
 {
@@ -1750,15 +1769,10 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 					BuiltIn.FontTexture = DrawCallItem.FontTexture.IsValid() ? DrawCallItem.FontTexture->GetResource() : nullptr;
 					BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture() ? WidgetPropertyDataAsTexture->GetDataTexture()->GetResource() : nullptr;
 					BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture() ? RootCanvas->ClipDataAsTexture->GetDataTexture()->GetResource() : nullptr;
-					if (DrawCallItem.FontTexture.IsValid())
-					{
-						BuiltIn.FontAtlasSize = FVector2f(DrawCallItem.FontTexture->GetSurfaceWidth(), DrawCallItem.FontTexture->GetSurfaceHeight());
-					}
-					if (DrawCallItem.Font.IsValid())
-					{
-						BuiltIn.FontFieldRangeTexels = DrawCallItem.Font->GetAtlasFieldRangeTexels();
-						BuiltIn.FontEmTexels = DrawCallItem.Font->GetAtlasEmTexels();
-					}
+					const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+					BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
+					BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
+					BuiltIn.FontEmTexels = AtlasInfo.W;
 					UIMesh->SetMeshSectionBuiltIn(i, BuiltIn);
 					UIMesh->SetMeshSectionMaterial(i, nullptr);
 					break;
@@ -1797,6 +1811,9 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 					{
 						RenderMat_MID->SetTextureParameterValue(DreamUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
 						RenderMat_MID->SetTextureParameterValue(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
+						// The atlas geometry travels with the atlas: a new font texture means new values.
+						const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+						RenderMat_MID->SetVectorParameterValue(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
 						ParamCache.Texture = DrawCallItem.Texture;
 						ParamCache.FontTexture = DrawCallItem.FontTexture;
 					}

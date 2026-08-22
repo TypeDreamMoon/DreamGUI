@@ -70,8 +70,6 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 	const FVector WorldScale = Widget->GetWorldScale();
 	const FDreamTextGlyphPaintStyle Style = Text->GetFont()->GetGlyphPaintStyle(FVector2f((float)WorldScale.X, (float)WorldScale.Y));
 	Params.ItalicSlope = Style.ItalicSlope;
-	Params.bWriteFontScaleToUV2 = Style.bWriteFontScaleToUV2;
-	Params.FontScaleMultiplier = Style.FontScaleMultiplier;
 	Params.bRequireNormalAndTangent = RenderCanvas ? RenderCanvas->GetActualRequireNormalAndTangent() : false;
 	Params.BaseColor = Text->GetFinalColor();
 	Params.FillSegments = &Text->GetFillSegments();
@@ -274,18 +272,6 @@ void UDreamText::BeginDestroy()
 	UnregisterFont();
 }
 
-void UDreamText::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
-{
-	Super::OnTransformChanged(InPositionChanged, InScaleChanged);
-	if (IsValid(Font) && Font->GetNeedObjectScale())//some font need object scale (SDF font), so detect scale change and mark update
-	{
-		if (InScaleChanged)
-		{
-			MarkVertexUVDirty();//object scale value is stored in uv2. @todo: font should tell
-		}
-	}
-}
-
 void UDreamText::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
 	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
@@ -353,7 +339,6 @@ void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChange
 {
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
-		CheckRequireNormalAndTangent();
 		UpdateCacheTextGeometry();
 		if (!IsValid(Font))return;
 		auto Widget = GetWidget();
@@ -388,20 +373,6 @@ void UDreamText::OnCultureChanged_Implementation()
 	auto originText = Text;
 	Text = FText::GetEmpty();//just make it work, because SetText will compare text value
 	SetText(originText);
-}
-
-void UDreamText::CheckRequireNormalAndTangent()
-{
-	if (IsValid(Font) && Font->GetRequireNormalAndTangent())
-	{
-		if (auto Canvas = GetWidget()->GetRenderCanvas())
-		{
-			if (auto RootCanvas = Canvas->GetRootCanvas())
-			{
-				RootCanvas->SetRequireNormalAndTangent(true);
-			}
-		}
-	}
 }
 
 

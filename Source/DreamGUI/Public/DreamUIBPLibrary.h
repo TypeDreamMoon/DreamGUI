@@ -78,6 +78,15 @@ public:
 
 	UFUNCTION(BlueprintPure, meta = (WorldContext = "WorldContextObject"), Category = "DreamGUI|Screen")
 	static bool IsInViewport(UObject* WorldContextObject, UDreamWidget* InRoot);
+	/**
+	 * Put a root widget made with ConstructWidget into the world: the counterpart of AddToViewport
+	 * for world-space UI, and what a prefab presenter does for the tree it loads. The root must carry
+	 * a DreamCanvas (the canvas decides the render mode and owns the meshes); it is attached to
+	 * InSceneComponent, which gives it its world transform, and leaves the not-yet-added state.
+	 * Returns false, and changes nothing, when InRoot has a parent or no canvas.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|World")
+	static bool AttachWidgetToSceneComponent(UDreamWidget* InRoot, USceneComponent* InSceneComponent);
 
 	/**
 	 * Duplicate actor and all it's children actors

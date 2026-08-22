@@ -12,9 +12,6 @@ struct FDreamTextPaintParams
 {
 	/** tan(italic angle): how far the top edge of an italic quad leans right. */
 	float ItalicSlope = 0.0f;
-	/** SDF fonts store fontSize * objectScale in UV2.x for the material's anti-aliasing. Bitmap fonts leave UV2 alone. */
-	bool bWriteFontScaleToUV2 = false;
-	float FontScaleMultiplier = 0.0f;
 	/** The canvas asks for normals and tangents (SDF fonts do, for the tilt-aware smoothing). */
 	bool bRequireNormalAndTangent = false;
 	/** Colour of every glyph that did not get one from a <color> tag. */

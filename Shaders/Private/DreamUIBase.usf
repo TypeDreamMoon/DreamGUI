@@ -7,9 +7,7 @@
 
 #include "/Engine/Public/Platform.ush"
 #include "/Engine/Private/GammaCorrectionCommon.ush"
-#include "DreamUIWidgetProperty.ush"
-#include "DreamUIClip.ush"
-#include "DreamUIText.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
 
 float4x4 DreamUI_MVP;
 float4x4 DreamUI_M;
@@ -88,41 +86,10 @@ void MainPS(
 	out float4 OutColor : SV_Target0
 )
 {
-	half FontMark;
-	float ClipDataCoordinate;
-	half2 WidgetSize, WidgetCenterPosition;
-	DreamUI_ReadWidgetProperty(In.UV1.x, DreamUI_WidgetDataTex, FontMark, ClipDataCoordinate, WidgetSize, WidgetCenterPosition);
-
-	// Vertex colour is authored in sRGB; the pipeline works in linear.
-	float4 VertexColor = float4(sRGBToLinear(In.Color.rgb), In.Color.a);
-	float4 Color;
-	if (FontMark < 0.5)
-	{
-		float4 Texel = DreamUI_MainTex.Sample(DreamUI_MainTexSampler, In.UV0);
-		Color = Texel * VertexColor;
-	}
-	else if (FontMark < 1.5)
-	{
-		float4 Texel = DreamUI_FontTex.Sample(DreamUI_FontTexSampler, float3(In.UV0, In.UV1.y));
-		Color = Texel * VertexColor;
-	}
-	else if (FontMark < 2.5)
-	{
-		Color = DreamUIText_ShadeSdf(DreamUI_FontTex, DreamUI_FontTexSampler, In.UV0, In.UV1.y, VertexColor);
-	}
-	else
-	{
-		FDreamUITextStyle Style = DreamUIText_ReadStyle(DreamUI_WidgetDataTex, In.UV1.x);
-		// Per-glyph channels (see DreamUIText.ush): UV2.x layer + dilate, UV2.y the glyph's position
-		// inside its run, UV3.x the run's fill progress, UV3.y a glow boost.
-		float Layer, GlyphDilateEm;
-		DreamUIText_UnpackGlyphChannel(In.UV2.x, Layer, GlyphDilateEm);
-		Color = DreamUIText_ShadeMtsdf(DreamUI_FontTex, DreamUI_FontTexSampler, In.UV0, In.UV1.y,
-			DreamUI_FontAtlasInfo.xy, DreamUI_FontAtlasInfo.z, DreamUI_FontAtlasInfo.w, VertexColor, Style,
-			In.UV3.x, In.UV2.y, In.UV3.y, GlyphDilateEm, Layer);
-	}
-
-	Color.a *= DreamUI_CalculateClipData(DreamUI_ClipDataTex, ClipDataCoordinate, In.LocalPosition);
+	// Everything a UI pixel is comes from the shared function; this shader adds depth, gamma, premultiply.
+	float4 Color = DreamUI_ShadePixel(In.UV0, In.UV1, In.UV2, In.UV3, In.Color, In.LocalPosition,
+		DreamUI_MainTex, DreamUI_MainTexSampler, DreamUI_FontTex, DreamUI_FontTexSampler,
+		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo);
 
 #if LEXUI_BLEND_DEPTH
 	float PixelDepth = In.ScreenPosition.z / In.ScreenPosition.w;

@@ -35,7 +35,6 @@ protected:
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 	virtual void BeginDestroy() override;
-	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged)override;
 public:
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
@@ -229,7 +228,6 @@ public:
 	virtual void FillWidgetPropertyDataForMaterial_Extra(class UDreamUIDataAsTexture* DataAsTexture) override;
 	virtual void OnCultureChanged_Implementation()override;
 
-	void CheckRequireNormalAndTangent();
 public:
 	void ApplyFontTextureChange();
 	void ApplyFontMaterialChange();

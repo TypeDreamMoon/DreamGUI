@@ -1,3 +1,5 @@
+﻿#ifndef DREAMUI_WIDGET_PROPERTY_USH
+#define DREAMUI_WIDGET_PROPERTY_USH
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 
 void DreamUI_ReadWidgetProperty(float CoordinateInDataTex, Texture2D DataTex
@@ -38,3 +40,5 @@ void DreamUI_ReadWidgetProperty(float CoordinateInDataTex, Texture2D DataTex
         WidgetCenterPosition.y = f16tof32(CenterYUint);
     }
 }
+
+#endif // DREAMUI_WIDGET_PROPERTY_USH

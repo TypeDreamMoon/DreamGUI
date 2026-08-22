@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIBPLibrary.h"
+#include "Engine/Engine.h"
 
 #include "DreamUIDelegateHandleWrapper.h"
 #include "Framework/Application/SlateApplication.h"
@@ -10,6 +11,7 @@
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamVisual.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "PrefabSystem/DreamUIPrefab.h"
 
@@ -141,6 +143,33 @@ void UDreamUIBPLibrary::RemoveFromViewport(UObject* WorldContextObject, UDreamWi
 	{
 		ScreenUI->RemoveFromViewport(InRoot);
 	}
+}
+
+bool UDreamUIBPLibrary::AttachWidgetToSceneComponent(UDreamWidget* InRoot, USceneComponent* InSceneComponent)
+{
+	if (!IsValid(InRoot) || !IsValid(InSceneComponent))
+	{
+		return false;
+	}
+	if (InRoot->GetParent() != nullptr)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' has a parent; only a root widget can be attached to a scene component."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InRoot->GetName());
+		return false;
+	}
+	auto Canvas = InRoot->GetComponent<UDreamCanvas>();
+	if (!Canvas)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' has no DreamCanvas; add one before attaching it to a scene component."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InRoot->GetName());
+		return false;
+	}
+	// The same sequence a prefab presenter runs for the tree it loads.
+	Canvas->AttachToSceneComponent(InSceneComponent);
+	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
+	{
+		DreamUIManager->UnparkWidget(InRoot);
+	}
+	InRoot->CalculateObjectToWorldTransform(true);
+	return true;
 }
 
 bool UDreamUIBPLibrary::IsInViewport(UObject* WorldContextObject, UDreamWidget* InRoot)

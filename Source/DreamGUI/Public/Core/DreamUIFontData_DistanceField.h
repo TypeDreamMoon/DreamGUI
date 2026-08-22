@@ -106,14 +106,12 @@ public:
 	virtual UMaterialInterface* GetFontMaterial()override;
 	virtual void PrepareForLayout(float InExpandMeshSize)override;
 	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
-	virtual bool GetRequireNormalAndTangent()override;
 	virtual float GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize) override;
 	virtual float GetLineHeight(float fontSize) override;
 	virtual float GetVerticalOffset(float fontSize) override;
 	virtual float GetAscent(float fontSize) override;
 	virtual float GetDescent(float fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
-	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
 	virtual EDreamUIFontTextureMark GetFontTextureMark() override{ return SdfSource == EDreamUISdfSource::OutlineMultiChannel ? EDreamUIFontTextureMark::Mtsdf : EDreamUIFontTextureMark::DistanceField; }
 	EDreamUISdfSource GetSdfSource() const { return SdfSource; }
 	/** The distance range on each side of the edge, in pixels at SampleFontSize. */
