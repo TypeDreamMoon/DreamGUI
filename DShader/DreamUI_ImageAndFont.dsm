@@ -52,23 +52,6 @@ VirtualFunction(Name="MF_DreamUI_ConvertVertexColor")
 		float3 Result;
 	}
 }
-VirtualFunction(Name="MF_DreamUI_SDF_Font")
-{
-	Options = {
-		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_SDF_Font");
-		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_SDF_Font.MF_DreamUI_SDF_Font";
-	}
-
-	Inputs = {
-		float SDFValue;
-		opt StaticBool UseVertexInterpolator = false;
-		opt float EdgeValue = 0.5;
-	}
-
-	Outputs = {
-		float Result;
-	}
-}
 VirtualFunction(Name="SMF_UE4Unlit")
 {
 	Options = {
@@ -161,7 +144,9 @@ Shader(Name="Materials/DreamUI_ImageAndFont", Root="Plugin.DreamGUI")
 				VertexColor=float4(MF_DreamUI_ConvertVertexColor, (UE.Expression(Class="VertexColor", OutputType="float4")).a)
 			);
 		bool StaticBool = UE.Expression(Class="StaticBool", OutputType="bool", Value=true);
-		float MF_DreamUI_SDF_Font = MF_DreamUI_SDF_Font(ColorSelector_1, StaticBool, default);
+		// SDF coverage: one screen pixel of anti-aliasing around the 0.5 edge, the same fwidth recipe the built-in shader uses.
+		float SdfWidth = (fwidth(ColorSelector_1) + 0.00001);
+		float MF_DreamUI_SDF_Font = saturate((((ColorSelector_1 - 0.5) / SdfWidth) + 0.5));
 		float Multiply = (MF_DreamUI_SDF_Font * ColorSelector.a);
 		float AlphaSelector =
 			UE.Expression(

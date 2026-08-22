@@ -6,6 +6,39 @@
 #include "Core/Text/DreamTextPainter.h"
 #include "Math/Float16.h"
 
+bool FDreamTextStyle::HasEffects() const
+{
+	return (OutlineColor.A > 0 && OutlineWidth > 0.0f)
+		|| (GlowColor.A > 0 && GlowWidth > 0.0f)
+		|| UnderlayColor.A > 0;
+}
+
+float FDreamTextStyle::GetFaceReachEm(float ExtraDilateEm) const
+{
+	return FMath::Max(0.0f, FaceDilate + ExtraDilateEm + FaceSoftness * 0.5f);
+}
+
+float FDreamTextStyle::GetEffectReachEm(float ExtraDilateEm, float MaxGlowBoost) const
+{
+	// Mirrors DreamUIText_ShadeMtsdf: the outline sits on the dilated edge, the glow and the underlay's
+	// edge sit outside the outline, the underlay is also shifted by its offset.
+	const float Dilate = FaceDilate + ExtraDilateEm;
+	float Reach = 0.0f;
+	if (OutlineColor.A > 0 && OutlineWidth > 0.0f)
+	{
+		Reach = FMath::Max(Reach, Dilate + OutlineWidth + OutlineSoftness * 0.5f);
+	}
+	if (GlowColor.A > 0 && GlowWidth > 0.0f)
+	{
+		Reach = FMath::Max(Reach, Dilate + GlowWidth * (1.0f + FMath::Max(MaxGlowBoost, 0.0f)));
+	}
+	if (UnderlayColor.A > 0)
+	{
+		Reach = FMath::Max(Reach, UnderlayOffset.Size() + Dilate + OutlineWidth + UnderlayDilate + UnderlaySoftness * 0.5f);
+	}
+	return FMath::Max(Reach, 0.0f);
+}
+
 bool FDreamTextStyle::operator==(const FDreamTextStyle& Other) const
 {
 	return FaceSoftness == Other.FaceSoftness

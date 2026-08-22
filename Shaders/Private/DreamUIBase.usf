@@ -113,11 +113,13 @@ void MainPS(
 	else
 	{
 		FDreamUITextStyle Style = DreamUIText_ReadStyle(DreamUI_WidgetDataTex, In.UV1.x);
-		// Per-glyph channels: UV2.y the glyph's position inside its segment, UV3.x the segment's fill
-		// progress, UV3.y a glow boost. Untouched glyphs carry (0, 1, 0): fully lit, no boost.
+		// Per-glyph channels (see DreamUIText.ush): UV2.x layer + dilate, UV2.y the glyph's position
+		// inside its run, UV3.x the run's fill progress, UV3.y a glow boost.
+		float Layer, GlyphDilateEm;
+		DreamUIText_UnpackGlyphChannel(In.UV2.x, Layer, GlyphDilateEm);
 		Color = DreamUIText_ShadeMtsdf(DreamUI_FontTex, DreamUI_FontTexSampler, In.UV0, In.UV1.y,
 			DreamUI_FontAtlasInfo.xy, DreamUI_FontAtlasInfo.z, DreamUI_FontAtlasInfo.w, VertexColor, Style,
-			In.UV3.x, In.UV2.y, In.UV3.y);
+			In.UV3.x, In.UV2.y, In.UV3.y, GlyphDilateEm, Layer);
 	}
 
 	Color.a *= DreamUI_CalculateClipData(DreamUI_ClipDataTex, ClipDataCoordinate, In.LocalPosition);

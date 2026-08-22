@@ -77,6 +77,27 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 	Params.FillSegments = &Text->GetFillSegments();
 	Params.FillProgress = Text->GetFillProgress();
 	Params.GlowBoost = Text->GetGlowBoost();
+	if (Style.bMultiChannelField)
+	{
+		const FDreamTextStyle& TextStyle = Text->GetTextStyle();
+		// Bold may show up anywhere in rich text; size the quads for it rather than re-layout on a tag.
+		const bool bMayBold = Text->GetRichText() || Text->GetFontStyle() == EDreamUITextFontStyle::Bold || Text->GetFontStyle() == EDreamUITextFontStyle::BoldAndItalic;
+		const float ExtraDilateEm = bMayBold ? Style.BoldDilateEm : 0.0f;
+		float MaxGlowBoost = Text->GetGlowBoost();
+		for (const auto& Segment : Text->GetFillSegments())
+		{
+			MaxGlowBoost = FMath::Max(MaxGlowBoost, Segment.GlowBoost);
+		}
+		Params.bMultiChannelField = true;
+		Params.bSeparateEffectLayer = TextStyle.HasEffects();
+		Params.BoldDilateEm = Style.BoldDilateEm;
+		Params.FaceReachEm = TextStyle.GetFaceReachEm(ExtraDilateEm);
+		Params.EffectReachEm = Params.bSeparateEffectLayer ? TextStyle.GetEffectReachEm(ExtraDilateEm, MaxGlowBoost) : 0.0f;
+		Params.EmTexels = Style.EmTexels;
+		Params.FieldSpreadTexels = Style.FieldSpreadTexels;
+		Params.QuadMarginTexels = Style.QuadMarginTexels;
+		Params.TexelToUV = Style.TexelToUV;
+	}
 	return Params;
 }
 
@@ -756,12 +777,10 @@ void UDreamText::SetTextStyle(const FDreamTextStyle& Value)
 	if (TextStyle != Value)
 	{
 		TextStyle = Value;
-		// The style lives in the widget property record; rewriting the record is all this needs.
+		// The style lives in the widget property record, and it also decides how far the glyph quads
+		// reach and whether the effects get quads of their own.
 		bWidgetPropertyDataFontMarkDirty = true;
-		if (auto Widget = GetWidget())
-		{
-			Widget->MarkCanvasUpdate(false);
-		}
+		MarkVerticesDirty(true, true, true, false);
 	}
 }
 
@@ -781,14 +800,15 @@ void UDreamText::SetGlowBoost(float Value)
 	if (GlowBoost != Value)
 	{
 		GlowBoost = Value;
-		MarkVertexUVDirty();
+		// The boost widens the glow, which can widen the quads.
+		MarkVerticesDirty(false, true, true, false);
 	}
 }
 
 void UDreamText::SetFillSegments(const TArray<FDreamTextFillSegment>& Value)
 {
 	FillSegments = Value;
-	MarkVertexUVDirty();
+	MarkVerticesDirty(false, true, true, false);
 }
 
 void UDreamText::ClearFillSegments()
@@ -796,7 +816,7 @@ void UDreamText::ClearFillSegments()
 	if (FillSegments.Num() > 0)
 	{
 		FillSegments.Reset();
-		MarkVertexUVDirty();
+		MarkVerticesDirty(false, true, true, false);
 	}
 }
 

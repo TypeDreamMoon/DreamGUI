@@ -81,7 +81,11 @@ struct DREAMGUI_API FDreamTextStyle
 {
 	GENERATED_BODY()
 
-	/** Extra edge softness (blur) in em. 0 draws a crisp edge. */
+	/**
+	 * Extra edge softness (blur) in em. 0 draws a crisp edge. Each glyph softens on its own, so past
+	 * about 0.05 em the halos of neighbouring glyphs visibly merge; a real blur of a whole line is a
+	 * post-process job, not a style.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face", meta = (ClampMin = "0", UIMax = "0.5"))
 	float FaceSoftness = 0.0f;
 	/** Grow (positive) or shrink (negative) the face, in em. */
@@ -114,7 +118,10 @@ struct DREAMGUI_API FDreamTextStyle
 	/** Glow colour; alpha scales the glow's strength, 0 means no glow. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow")
 	FColor GlowColor = FColor(255, 255, 255, 0);
-	/** How far the glow reaches outside the face, in em. */
+	/**
+	 * How far the glow reaches outside the face, in em. Every reach is clamped to what the font's
+	 * field holds (SDFRadius / SampleFontSize em), so a wider glow needs a font with a wider spread.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow", meta = (ClampMin = "0", UIMax = "1"))
 	float GlowWidth = 0.0f;
 	/** Glow falloff exponent; higher keeps the glow tight to the face. */
@@ -130,6 +137,13 @@ struct DREAMGUI_API FDreamTextStyle
 
 	bool operator==(const FDreamTextStyle& Other) const;
 	bool operator!=(const FDreamTextStyle& Other) const { return !(*this == Other); }
+
+	/** Whether anything besides the face is drawn (outline, glow or underlay with a visible colour). */
+	bool HasEffects() const;
+	/** How far outside the glyph's edge the face reaches, in em: dilation (plus ExtraDilateEm, e.g. bold) and half the softness band. */
+	float GetFaceReachEm(float ExtraDilateEm) const;
+	/** How far outside the glyph's edge the effects reach, in em, with the glow at its widest boost. */
+	float GetEffectReachEm(float ExtraDilateEm, float MaxGlowBoost) const;
 
 	/** Number of R32 pixels the packed style takes in the widget property record. */
 	static constexpr int32 PackedPixelCount = 9;

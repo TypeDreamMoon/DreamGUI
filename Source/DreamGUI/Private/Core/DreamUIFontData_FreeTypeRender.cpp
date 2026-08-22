@@ -676,16 +676,19 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 	auto Result = FDreamUICharData();
 	if (CharSize <= 0.0f)return Result;
 	const FDreamUIGlyphKey Key(FaceIndex, GlyphIndex);
-	if (!GetCharDataFromCache(Key, CharSize, IsBold, Result))//if charData not cached, then create it and add to cache
+	// Shader-side bold keeps one atlas glyph per face; only the advance knows about the weight.
+	const bool bShaderBold = IsBold && IsBoldSynthesizedInShader();
+	const bool bAtlasBold = IsBold && !bShaderBold;
+	if (!GetCharDataFromCache(Key, CharSize, bAtlasBold, Result))//if charData not cached, then create it and add to cache
 	{
 		// Off-thread when the font can and the frame's synchronous budget is spent.
 		float PixelsPerEm = 0.0f, SpreadPixels = 0.0f, BoldPixels = 0.0f;
-		if (UDreamUISettings::GetAsyncGlyphRasterization() && GetAsyncRasterParams(CharSize, IsBold, PixelsPerEm, SpreadPixels, BoldPixels))
+		if (UDreamUISettings::GetAsyncGlyphRasterization() && GetAsyncRasterParams(CharSize, bAtlasBold, PixelsPerEm, SpreadPixels, BoldPixels))
 		{
 			FAsyncGlyphRequest Request;
 			Request.Glyph = Key;
 			Request.CharSize = IsGlyphCacheSizeIndependent() ? 0.0f : CharSize;
-			Request.bBold = IsBold;
+			Request.bBold = bAtlasBold;
 			if (PendingAsyncGlyphs.Contains(Request))
 			{
 				return MakePendingCharData(Key, CharSize, IsBold);
@@ -697,7 +700,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 					FDreamGlyphRasterizer::FJob Job;
 					Job.Key = Key;
 					Job.CharSize = CharSize;
-					Job.bBold = IsBold;
+					Job.bBold = bAtlasBold;
 					Job.PixelsPerEm = PixelsPerEm;
 					Job.SpreadPixels = SpreadPixels;
 					Job.BoldPixels = BoldPixels;
@@ -710,7 +713,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 		}
 
 		FGlyphBitmap glyphBitmap;
-		if (!RenderGlyph(Key, CharSize, IsBold, glyphBitmap))//no valid glyph
+		if (!RenderGlyph(Key, CharSize, bAtlasBold, glyphBitmap))//no valid glyph
 		{
 			return Result;
 		}
@@ -720,8 +723,12 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 		{
 			return Result;
 		}
-		AddCharDataToCache(Key, CharSize, IsBold, uiCharData);
-		GetCharDataFromCache(Key, CharSize, IsBold, Result);
+		AddCharDataToCache(Key, CharSize, bAtlasBold, uiCharData);
+		GetCharDataFromCache(Key, CharSize, bAtlasBold, Result);
+	}
+	if (bShaderBold)
+	{
+		Result.XAdvance += CharSize * GetBoldRatio();
 	}
 	return Result;
 }

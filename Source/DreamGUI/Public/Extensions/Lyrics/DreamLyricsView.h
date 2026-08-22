@@ -47,7 +47,7 @@ public:
 	FDreamTextStyle TextStyle;
 	/** Extra glow (as a fraction of the style's glow width) for a word while it is being sung long enough to matter. */
 	UPROPERTY(EditAnywhere, Category = "Lyrics|Text", meta = (ClampMin = "0"))
-	float EmphasisGlowBoost = 1.0f;
+	float EmphasisGlowBoost = 3.0f;
 	/** Words at least this long (seconds) get the emphasis glow as they are sung. */
 	UPROPERTY(EditAnywhere, Category = "Lyrics|Text", meta = (ClampMin = "0"))
 	float EmphasisMinDuration = 1.0f;

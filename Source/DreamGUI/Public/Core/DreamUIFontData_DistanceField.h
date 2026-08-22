@@ -74,7 +74,11 @@ private:
 	/** Font size when render glyph. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "16", UIMax = "100"))
 		int SampleFontSize = 64;
-	/** The radius of the distance field in pixels. Normally just use 1/4 of FontSize */
+	/**
+	 * The radius of the distance field in pixels at SampleFontSize. Normally 1/4 to 1/3 of SampleFontSize.
+	 * It is also as far as any text effect can reach: outline, glow and underlay are clamped to
+	 * SDFRadius / SampleFontSize em outside the glyph, and the atlas cells grow with it.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "1"))
 		int SDFRadius = 16;
 	/** Angle of italic style in degree */
@@ -125,6 +129,9 @@ public:
 		return true;
 	}
 	virtual bool IsGlyphCacheSizeIndependent() const override { return true; }
+	virtual bool IsBoldSynthesizedInShader() const override { return SdfSource == EDreamUISdfSource::OutlineMultiChannel; }
+	/** How far the layout's glyph quads sit inside the field's spread, in texels at SampleFontSize (see GetCharDataFromCache). */
+	float GetQuadShrinkTexels() const;
 	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}

@@ -62,6 +62,21 @@ struct FDreamTextGlyphPaintStyle
 	/** SDF fonts store fontSize * objectScale in UV2.x for the material's anti-aliasing. */
 	bool bWriteFontScaleToUV2 = false;
 	float FontScaleMultiplier = 0.0f;
+	/**
+	 * Multi-channel field (MTSDF) fonts: the painter packs layer + dilate into UV2.x, may grow quads
+	 * into the field for effects, and draws synthetic bold as a dilation instead of an atlas variant.
+	 */
+	bool bMultiChannelField = false;
+	/** Texels per em at the atlas's sample size. */
+	float EmTexels = 0.0f;
+	/** How far from the glyph the field is valid, in texels (the spread). */
+	float FieldSpreadTexels = 0.0f;
+	/** How much of that spread the layout's glyph quads already include, in texels. */
+	float QuadMarginTexels = 0.0f;
+	/** One atlas texel in UV units. */
+	float TexelToUV = 0.0f;
+	/** Synthetic bold as a face dilation, in em per side; 0 when bold is baked into the atlas. */
+	float BoldDilateEm = 0.0f;
 };
 
 class UTexture2D;

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -204,6 +204,136 @@ bool FDreamTextPainterFillChannelsTest::RunTest(const FString& Parameters)
 		// run would start, because the line run only spans the glyphs outside every segment.
 		TestEqual(TEXT("line-run sweep starts at 0"), WorldMin, 0.0f, 0.001f);
 		TestEqual(TEXT("line-run sweep ends at 1"), WorldMax, 1.0f, 0.001f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextPainterEffectLayerTest,
+	"DreamGUI.Text.Painter.EffectLayerDrawsBeforeFaces",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextPainterEffectLayerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextStyleTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<b>ab</b>c"));
+	In.bRichText = true;
+	FDreamTextLayoutEngine::Layout(In, DL);
+
+	// A multi-channel font at 48 texels per em with a 16 texel spread; the layout's quads keep 1 texel of it.
+	FDreamTextPaintParams Params;
+	Params.bMultiChannelField = true;
+	Params.EmTexels = 48.0f;
+	Params.FieldSpreadTexels = 16.0f;
+	Params.QuadMarginTexels = 1.0f;
+	Params.TexelToUV = 1.0f / 2048.0f;
+	Params.BoldDilateEm = 0.04f;
+	Params.FaceReachEm = 0.04f;
+
+	// Reference: the same text painted as one layer with no growth.
+	FDreamUIGeometry Plain;
+	TArray<FDreamUITextCharProperty> PlainChars;
+	{
+		FDreamTextPaintParams PlainParams = Params;
+		PlainParams.bMultiChannelField = false;
+		PlainParams.BoldDilateEm = 0.0f;
+		FDreamTextPainter::Paint(DL, PlainParams, Plain, PlainChars);
+	}
+	const int32 GlyphCount = Plain.Vertices.Num() / 4;
+	if (!TestEqual(TEXT("three glyphs"), GlyphCount, 3))return false;
+
+	// With effects: every glyph gets an effect quad and a face quad; the effect indices all come first.
+	Params.bSeparateEffectLayer = true;
+	Params.EffectReachEm = 0.25f;// 0.25 em = 12 texels + 1.5 margin = 13.5 > the 16 - 1 available? no: 13.5 - 1 margin = 12.5 grown
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+	TestEqual(TEXT("two quads per glyph"), Geometry.Vertices.Num(), GlyphCount * 8);
+	TestEqual(TEXT("two quads' indices per glyph"), Geometry.Triangles.Num(), GlyphCount * 12);
+	if (Geometry.Vertices.Num() != GlyphCount * 8)return false;
+
+	// Layer codes: vertex quads alternate effect / face per glyph, written in that order.
+	bool bLayersOk = true;
+	for (int32 Glyph = 0; Glyph < GlyphCount; Glyph++)
+	{
+		const float EffectUV2 = Geometry.Vertices[Glyph * 8].TextureCoordinate[2].X;
+		const float FaceUV2 = Geometry.Vertices[Glyph * 8 + 4].TextureCoordinate[2].X;
+		const int32 EffectLayer = FMath::FloorToInt((EffectUV2 + 8.0f) / 16.0f);
+		const int32 FaceLayer = FMath::FloorToInt((FaceUV2 + 8.0f) / 16.0f);
+		bLayersOk &= EffectLayer == 1 && FaceLayer == 0;
+	}
+	TestTrue(TEXT("effect quads are layer 1, face quads layer 0"), bLayersOk);
+
+	// Index order: the first half of the index buffer only references effect quads, the second only faces.
+	bool bOrderOk = true;
+	const int32 Half = Geometry.Triangles.Num() / 2;
+	for (int32 i = 0; i < Geometry.Triangles.Num(); i++)
+	{
+		const int32 QuadOfVertex = Geometry.Triangles[i] / 4;// quads alternate: even = effect, odd = face
+		const bool bEffectQuad = (QuadOfVertex % 2) == 0;
+		bOrderOk &= (i < Half) ? bEffectQuad : !bEffectQuad;
+	}
+	TestTrue(TEXT("all effect triangles precede all face triangles"), bOrderOk);
+
+	// Characters stay contiguous in vertices (both quads) and their triangle range is the face block's.
+	TestEqual(TEXT("three characters"), Chars.Num(), 3);
+	bool bCharsOk = Chars.Num() == 3;
+	for (int32 i = 0; i < Chars.Num() && bCharsOk; i++)
+	{
+		bCharsOk &= Chars[i].StartVertIndex == i * 8 && Chars[i].VertCount == 8;
+		bCharsOk &= Chars[i].StartTriangleIndex == Half + i * 6 && Chars[i].IndicesCount == 6;
+	}
+	TestTrue(TEXT("char properties span both quads and point at the face triangles"), bCharsOk);
+
+	// Growth: the effect quad of 'c' (plain, not bold) is wider than the reference quad by the clamped
+	// reach on each side: need 0.25 em * 48 + 1.5 = 13.5 texels, 1 already there, 15 available -> 12.5 texels.
+	{
+		const float Size = 24.0f;
+		const float Expected = 12.5f * Size / 48.0f;
+		const FVector3f& RefLeft = Plain.OriginVertices[2 * 4].Position;
+		const FVector3f& RefRight = Plain.OriginVertices[2 * 4 + 1].Position;
+		const FVector3f& GrownLeft = Geometry.OriginVertices[2 * 8].Position;
+		const FVector3f& GrownRight = Geometry.OriginVertices[2 * 8 + 1].Position;
+		TestEqual(TEXT("effect quad grows left by the reach"), RefLeft.Y - GrownLeft.Y, Expected, 0.01f);
+		TestEqual(TEXT("effect quad grows right by the reach"), GrownRight.Y - RefRight.Y, Expected, 0.01f);
+		// UVs grow by the same number of texels.
+		const float RefU = Plain.Vertices[2 * 4].TextureCoordinate[0].X;
+		const float GrownU = Geometry.Vertices[2 * 8].TextureCoordinate[0].X;
+		TestEqual(TEXT("effect quad UV grows with it"), RefU - GrownU, 12.5f / 2048.0f, 0.00001f);
+	}
+	// Clamp: a reach the field cannot hold stops at the spread.
+	{
+		FDreamTextPaintParams Wide = Params;
+		Wide.EffectReachEm = 2.0f;
+		FDreamUIGeometry WideGeometry;
+		TArray<FDreamUITextCharProperty> WideChars;
+		FDreamTextPainter::Paint(DL, Wide, WideGeometry, WideChars);
+		const float Expected = 15.0f * 24.0f / 48.0f;
+		const float RefLeft = Plain.OriginVertices[2 * 4].Position.Y;
+		const float GrownLeft = WideGeometry.OriginVertices[2 * 8].Position.Y;
+		TestEqual(TEXT("growth is clamped to the spread"), RefLeft - GrownLeft, Expected, 0.01f);
+	}
+
+	// Shader bold: 'a' is bold, so its quads carry the dilate and sit BoldDilateEm * size further right;
+	// 'c' is not, so its dilate is zero and it sits where the plain paint put it.
+	{
+		const float BoldUV2 = Geometry.Vertices[0 * 8 + 4].TextureCoordinate[2].X;
+		const float PlainUV2 = Geometry.Vertices[2 * 8 + 4].TextureCoordinate[2].X;
+		const float BoldDilate = BoldUV2 - 16.0f * FMath::FloorToInt((BoldUV2 + 8.0f) / 16.0f);
+		const float PlainDilate = PlainUV2 - 16.0f * FMath::FloorToInt((PlainUV2 + 8.0f) / 16.0f);
+		TestEqual(TEXT("bold glyph packs its dilate"), BoldDilate, 0.04f, 0.0001f);
+		TestEqual(TEXT("plain glyph packs no dilate"), PlainDilate, 0.0f, 0.0001f);
+		// Face quads of 'a': grown by FaceReachEm (0.04 em * 48 + 1.5 - 1 = 2.42 texels) and shifted by 0.04 em.
+		const float Size = 24.0f;
+		const float Grow = 2.42f * Size / 48.0f;
+		const float Shift = 0.04f * Size;
+		const float RefLeft = Plain.OriginVertices[0].Position.Y;
+		const float FaceLeft = Geometry.OriginVertices[4].Position.Y;
+		TestEqual(TEXT("bold glyph shifts right by one side's dilation"), FaceLeft - RefLeft, Shift - Grow, 0.01f);
 	}
 	return true;
 }

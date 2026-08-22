@@ -27,6 +27,28 @@ struct FDreamTextPaintParams
 	const TArray<struct FDreamTextFillSegment>* FillSegments = nullptr;
 	float FillProgress = 1.0f;
 	float GlowBoost = 0.0f;
+
+	/**
+	 * Multi-channel field (MTSDF) fonts. UV2.x carries DilateEm + 16 * Layer per glyph; quads grow into
+	 * the field as far as the face / the effects reach; bold is a dilation of the regular glyph.
+	 */
+	bool bMultiChannelField = false;
+	/**
+	 * Draw the effects (underlay, glow, outline) of every glyph in a first set of quads and the faces
+	 * in a second, so a glyph's glow never lands on top of its neighbour's face. Doubles the quads, so
+	 * only for texts whose style has effects.
+	 */
+	bool bSeparateEffectLayer = false;
+	/** Synthetic bold as a dilation of the face, in em per side; 0 when the atlas bakes bold. */
+	float BoldDilateEm = 0.0f;
+	/** How far beyond the glyph's edge the face and the effects reach, in em (see FDreamTextStyle). */
+	float FaceReachEm = 0.0f;
+	float EffectReachEm = 0.0f;
+	/** Field geometry for sizing the quads: texels per em, the spread, what the quads already include, a texel in UV. */
+	float EmTexels = 0.0f;
+	float FieldSpreadTexels = 0.0f;
+	float QuadMarginTexels = 0.0f;
+	float TexelToUV = 0.0f;
 };
 
 /**

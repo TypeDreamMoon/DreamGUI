@@ -39,15 +39,7 @@ bool UDreamUIFontData_DistanceField::GetCharDataFromCache(const FDreamUIGlyphKey
 	if (auto charData = CharDataMap.Find(CharKey))
 	{
 		OutResult = FDreamUICharData(*charData);
-		float vertexOffset;
-		if (ExpandMeshSize <= 0)//shrink mesh to reduce empty area of SDFRadius
-		{
-			vertexOffset = SDFRadius - SampleFontSize * 0.02f;//0.02: slightly expand it in-case too sharp edge
-		}
-		else
-		{
-			vertexOffset = (SDFRadius - ExpandMeshSize) - SampleFontSize * 0.02f;//0.02: slightly expand it in-case too sharp edge
-		}
+		const float vertexOffset = GetQuadShrinkTexels();
 		OutResult.Width -= vertexOffset + vertexOffset;
 		OutResult.Height -= vertexOffset + vertexOffset;
 		OutResult.XOffset += vertexOffset;
@@ -197,12 +189,32 @@ void UDreamUIFontData_DistanceField::PrepareForLayout(float InExpandMeshSize)
 	ExpandMeshSize = InExpandMeshSize;
 }
 
+float UDreamUIFontData_DistanceField::GetQuadShrinkTexels() const
+{
+	// Shrink the quad to the glyph to cut the empty area of the spread; 0.02 em stays so an edge
+	// right at the bounds still has its anti-aliasing band. ExpandMeshSize keeps that much of the spread.
+	const float Keep = ExpandMeshSize > 0 ? ExpandMeshSize : 0.0f;
+	return (SDFRadius - Keep) - SampleFontSize * 0.02f;
+}
+
 FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(const FVector2f& InWorldScale) const
 {
 	FDreamTextGlyphPaintStyle Style;
 	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
-	Style.bWriteFontScaleToUV2 = true;//sdf font need scale value in material
-	Style.FontScaleMultiplier = FMath::Max(InWorldScale.X, InWorldScale.Y) * SampleFontSize / SDFRadius;
+	if (SdfSource == EDreamUISdfSource::OutlineMultiChannel)
+	{
+		Style.bMultiChannelField = true;
+		Style.EmTexels = (float)SampleFontSize;
+		Style.FieldSpreadTexels = (float)SDFRadius;
+		Style.QuadMarginTexels = SDFRadius - GetQuadShrinkTexels();
+		Style.TexelToUV = OneDivideTextureSize;
+		Style.BoldDilateEm = BoldRatio * 0.5f;
+	}
+	else
+	{
+		Style.bWriteFontScaleToUV2 = true;//the single-channel material anti-aliases from the font scale in UV2.x
+		Style.FontScaleMultiplier = FMath::Max(InWorldScale.X, InWorldScale.Y) * SampleFontSize / SDFRadius;
+	}
 	return Style;
 }
 

@@ -11,6 +11,17 @@
 //
 // The text style lives in the widget property record after the four pixels every widget has, so
 // texts with different styles still batch: the shader reads the style by the record index in UV1.x.
+//
+// Per-glyph channels of an MTSDF glyph (written by FDreamTextPainter):
+//   UV2.x  DilateEm + 16 * Layer. Layer 0 = face only, 1 = effects only (underlay, glow, outline),
+//          2 = everything in one quad. A text with effects emits its effect quads first and its face
+//          quads after, so a neighbour's glow never lands on top of a face.
+//   UV2.y  the glyph's position across its fill run, 0..1
+//   UV3.x  fill progress of the run, UV3.y glow boost
+//
+// Every effect reach is clamped to the atlas's field: what the field cannot represent is not drawn,
+// instead of saturating into a visible rectangle at the quad's edge. The painter sizes the quads to
+// the same clamped reach.
 
 #ifndef DREAMUI_TEXT_USH
 #define DREAMUI_TEXT_USH
@@ -77,6 +88,13 @@ float DreamUIText_Median(float3 V)
 	return max(min(V.r, V.g), min(max(V.r, V.g), V.b));
 }
 
+// UV2.x of an MTSDF glyph: dilate in em plus 16 * layer (see the header).
+void DreamUIText_UnpackGlyphChannel(float Packed, out float Layer, out float DilateEm)
+{
+	Layer = floor((Packed + 8.0) / 16.0);
+	DilateEm = Packed - Layer * 16.0;
+}
+
 // How many screen pixels one unit of distance (0..1 across the field's range) spans. The standard
 // msdfgen recipe: the field's pixel range scaled by texels-per-screen-pixel, read off the UV
 // derivatives -- so perspective, tilt and minification all fall out of it with no special cases.
@@ -120,42 +138,70 @@ FDreamUIGlyphSample DreamUIText_SampleMtsdf(Texture2DArray FontTex, SamplerState
 /**
  * The whole text look for one pixel: underlay behind, glow outside, outline around, face on top.
  * Returns straight (non-premultiplied) colour and alpha; VertexColor is the text's own colour.
+ * Layer selects what this quad draws (0 face, 1 effects, 2 both); GlyphDilateEm is the glyph's own
+ * dilation (synthetic bold) on top of the style's.
  */
 float4 DreamUIText_ShadeMtsdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice,
 	float2 AtlasSize, float FieldRangeTexels, float FontEmTexels, float4 VertexColor, FDreamUITextStyle Style,
-	float FillProgress, float SegmentX, float GlyphGlowBoost)
+	float FillProgress, float SegmentX, float GlyphGlowBoost, float GlyphDilateEm, float Layer)
 {
 	float PxRange = DreamUIText_ScreenPxRange(UV, AtlasSize, FieldRangeTexels);
 	FDreamUIGlyphSample S = DreamUIText_SampleMtsdf(FontTex, FontSampler, UV, Slice);
+	const bool bDrawFace = Layer != 1.0;
+	const bool bDrawEffects = Layer != 0.0;
 
-	float FaceSoft = DreamUIText_EmToField(Style.FaceSoftness, FontEmTexels, FieldRangeTexels);
-	float FaceEdge = 0.5 - DreamUIText_EmToField(Style.FaceDilate, FontEmTexels, FieldRangeTexels);
-	float Face = DreamUIText_Coverage(S.MedianDistance, FaceEdge, PxRange, FaceSoft);
+	// The field is valid out to the spread; every reach stops 1.5 texels short of it so the
+	// anti-aliasing band and the bilinear footprint still land on real data.
+	float SpreadEm = 0.5 * FieldRangeTexels / FontEmTexels;
+	float MaxReachEm = max(SpreadEm - 1.5 / FontEmTexels, 0.0);
+
+	// Face: the style's dilate plus the glyph's own (bold), softness shared both sides of the edge.
+	float DilateEm = clamp(Style.FaceDilate + GlyphDilateEm, -SpreadEm, MaxReachEm);
+	float FaceEdge = 0.5 - DreamUIText_EmToField(DilateEm, FontEmTexels, FieldRangeTexels);
+	float FaceSoftEm = clamp(Style.FaceSoftness, 0.0, 2.0 * (MaxReachEm - DilateEm));
+	float Face = DreamUIText_Coverage(S.MedianDistance, FaceEdge, PxRange, DreamUIText_EmToField(FaceSoftEm, FontEmTexels, FieldRangeTexels));
 
 	// Outline: the band between the face edge and OutlineWidth further out, on the true distance.
-	float OutlineWidth = DreamUIText_EmToField(Style.OutlineWidth, FontEmTexels, FieldRangeTexels);
-	float OutlineSoft = DreamUIText_EmToField(Style.OutlineSoftness, FontEmTexels, FieldRangeTexels);
-	float Outline = OutlineWidth > 0.0 ? DreamUIText_Coverage(S.Distance, FaceEdge - OutlineWidth, PxRange, OutlineSoft) : 0.0;
-
-	// Glow: soft falloff outside the face, on the true distance. A glyph's boost widens the glow and
-	// lifts its strength, but never past fully opaque: the composite below assumes 0..1 coverages.
-	float GlowWidth = DreamUIText_EmToField(Style.GlowWidth, FontEmTexels, FieldRangeTexels) * (1.0 + GlyphGlowBoost);
-	float Glow = 0.0;
-	if (GlowWidth > 0.0)
+	float OutlineWidthEm = clamp(Style.OutlineWidth, 0.0, MaxReachEm - DilateEm);
+	float OutlineReachEm = DilateEm + OutlineWidthEm;
+	float OutlineSoftEm = clamp(Style.OutlineSoftness, 0.0, 2.0 * (MaxReachEm - OutlineReachEm));
+	float Outline = 0.0;
+	if (bDrawEffects && OutlineWidthEm > 0.0 && Style.OutlineColor.a > 0.0)
 	{
-		float T = saturate((S.Distance - (FaceEdge - GlowWidth)) / GlowWidth);
-		Glow = saturate(pow(T, max(Style.GlowPower, 0.01)) * Style.GlowColor.a * (1.0 + GlyphGlowBoost));
+		Outline = DreamUIText_Coverage(S.Distance, 0.5 - DreamUIText_EmToField(OutlineReachEm, FontEmTexels, FieldRangeTexels), PxRange,
+			DreamUIText_EmToField(OutlineSoftEm, FontEmTexels, FieldRangeTexels));
 	}
 
-	// Underlay: the glyph again, offset and usually softer, behind everything.
-	float Underlay = 0.0;
-	if (Style.UnderlayColor.a > 0.0)
+	// Glow: falloff from the face edge out to GlowWidth, on the true distance. It reaches exactly zero
+	// at its clamped width, which the painter keeps inside the quad. A glyph's boost widens the glow
+	// (1 = twice as wide); its strength stays the colour's alpha, so a boost never saturates into a blob.
+	float GlowWidthEm = clamp(Style.GlowWidth * (1.0 + GlyphGlowBoost), 0.0, MaxReachEm - DilateEm);
+	float Glow = 0.0;
+	if (bDrawEffects && GlowWidthEm > 0.0 && Style.GlowColor.a > 0.0)
 	{
-		float2 OffsetUV = Style.UnderlayOffset * FontEmTexels / AtlasSize;
+		float GlowWidth = DreamUIText_EmToField(GlowWidthEm, FontEmTexels, FieldRangeTexels);
+		float T = saturate((S.Distance - (FaceEdge - GlowWidth)) / GlowWidth);
+		Glow = pow(T, max(Style.GlowPower, 0.01)) * Style.GlowColor.a;
+	}
+
+	// Underlay: the glyph again, offset and usually softer, behind everything. The offset sample may
+	// leave this glyph's atlas cell near the quad's edge and read a neighbour; it is only trusted where
+	// the unshifted distance proves the shifted sample is still inside the cell (distance to the glyph
+	// is never more than the distance to the cell's edge minus the spread).
+	float Underlay = 0.0;
+	if (bDrawEffects && Style.UnderlayColor.a > 0.0)
+	{
+		float OffsetLenEm = length(Style.UnderlayOffset);
+		float MaxOffsetEm = 0.5 * SpreadEm;
+		float2 OffsetEm = OffsetLenEm > MaxOffsetEm ? Style.UnderlayOffset * (MaxOffsetEm / OffsetLenEm) : Style.UnderlayOffset;
+		OffsetLenEm = min(OffsetLenEm, MaxOffsetEm);
+		float UnderlayReachEm = clamp(OutlineReachEm + Style.UnderlayDilate, -SpreadEm, MaxReachEm - 2.0 * OffsetLenEm);
+		float UnderlaySoftEm = clamp(Style.UnderlaySoftness, 0.0, 2.0 * (MaxReachEm - 2.0 * OffsetLenEm - UnderlayReachEm));
+		float2 OffsetUV = OffsetEm * FontEmTexels / AtlasSize;
 		FDreamUIGlyphSample U = DreamUIText_SampleMtsdf(FontTex, FontSampler, UV - OffsetUV, Slice);
-		float UnderlaySoft = DreamUIText_EmToField(Style.UnderlaySoftness, FontEmTexels, FieldRangeTexels);
-		float UnderlayEdge = FaceEdge - DreamUIText_EmToField(Style.UnderlayDilate, FontEmTexels, FieldRangeTexels) - OutlineWidth;
-		Underlay = DreamUIText_Coverage(U.Distance, UnderlayEdge, PxRange, UnderlaySoft) * Style.UnderlayColor.a;
+		float Valid = step(DreamUIText_EmToField(OffsetLenEm, FontEmTexels, FieldRangeTexels), S.Distance);
+		Underlay = DreamUIText_Coverage(U.Distance, 0.5 - DreamUIText_EmToField(UnderlayReachEm, FontEmTexels, FieldRangeTexels), PxRange,
+			DreamUIText_EmToField(UnderlaySoftEm, FontEmTexels, FieldRangeTexels)) * Style.UnderlayColor.a * Valid;
 	}
 
 	// Fill progress (lyrics): the part of the run past FillProgress is dimmed, with a ramp FillFadeWidth
@@ -180,7 +226,7 @@ float4 DreamUIText_ShadeMtsdf(Texture2DArray FontTex, SamplerState FontSampler, 
 	float OutlineA = Outline * Style.OutlineColor.a;
 	Color = lerp(Color, Style.OutlineColor.rgb, OutlineA);
 	Alpha = Alpha + OutlineA * (1.0 - Alpha);
-	float FaceA = Face * FaceAlpha;
+	float FaceA = bDrawFace ? Face * FaceAlpha : 0.0;
 	Color = lerp(Color, VertexColor.rgb, FaceA);
 	Alpha = Alpha + FaceA * (1.0 - Alpha);
 	// The dim applies to the whole glyph, effects included, so an unlit lyric fades as one.

@@ -12,8 +12,10 @@ UDreamLyricsView::UDreamLyricsView()
 	bStartWithTickEnabled = true;
 	TextStyle.FillDimAlpha = 0.35f;
 	TextStyle.FillFadeWidth = 0.25f;
-	TextStyle.GlowColor = FColor(255, 255, 255, 160);
-	TextStyle.GlowWidth = 0.0f;
+	// A faint glow on every line; the emphasis boost widens it on the word being sung.
+	TextStyle.GlowColor = FColor(255, 255, 255, 110);
+	TextStyle.GlowWidth = 0.05f;
+	TextStyle.GlowPower = 2.0f;
 }
 
 void UDreamLyricsView::Awake()

@@ -6,6 +6,39 @@
 
 namespace DreamTextPainterLocal
 {
+	/** UV2.x of an MTSDF glyph: DilateEm + 16 * Layer, matching DreamUIText_UnpackGlyphChannel. */
+	enum class EGlyphLayer : int32 { Face = 0, Effects = 1, Both = 2 };
+	static float PackGlyphChannel(EGlyphLayer Layer, float DilateEm)
+	{
+		return DilateEm + 16.0f * static_cast<float>(static_cast<int32>(Layer));
+	}
+
+	/**
+	 * Grows a glyph quad into the atlas's distance field so an effect that reaches ReachEm outside the
+	 * glyph's edge has room to be drawn. The layout's quads sit QuadMarginTexels into the spread; the
+	 * growth stops at the spread, which is where the field stops being true. The shader clamps its
+	 * reaches to the same limit, so whatever the field cannot hold is dropped rather than cut.
+	 */
+	static FDreamUICharData GrowIntoField(const FDreamUICharData& Glyph, float ReachEm, float Size, const FDreamTextPaintParams& Params)
+	{
+		if (!Params.bMultiChannelField || Params.EmTexels <= 0.0f || ReachEm <= 0.0f)return Glyph;
+		// 1.5 texels: the anti-aliasing band plus the bilinear footprint, same margin the shader keeps.
+		const float NeedTexels = ReachEm * Params.EmTexels + 1.5f;
+		const float AvailableTexels = FMath::Max(Params.FieldSpreadTexels - Params.QuadMarginTexels, 0.0f);
+		const float GrowTexels = FMath::Clamp(NeedTexels - Params.QuadMarginTexels, 0.0f, AvailableTexels);
+		if (GrowTexels <= 0.0f)return Glyph;
+		const float GrowPx = GrowTexels * Size / Params.EmTexels;
+		const float GrowUV = GrowTexels * Params.TexelToUV;
+		FDreamUICharData Grown = Glyph;
+		Grown.Width += GrowPx + GrowPx;
+		Grown.Height += GrowPx + GrowPx;
+		Grown.XOffset -= GrowPx;
+		Grown.YOffset += GrowPx;
+		Grown.MinUV -= FVector2f(GrowUV, GrowUV);
+		Grown.MaxUV += FVector2f(GrowUV, GrowUV);
+		return Grown;
+	}
+
 	/** Writes one axis-aligned quad: positions as (0, x, y) in the text's local plane, 0/3/2 + 0/1/3 winding. */
 	struct FQuadWriter
 	{
@@ -13,7 +46,9 @@ namespace DreamTextPainterLocal
 		TArray<FDreamUIMeshVertex>& Vertices;
 		TArray<FDreamUIMeshIndex>& Triangles;
 		int32 VertexCursor = 0;
-		int32 IndexCursor = 0;
+		/** Effect quads index into the first block of the index buffer, face quads into the second. */
+		int32 EffectIndexCursor = 0;
+		int32 FaceIndexCursor = 0;
 
 		FQuadWriter(FDreamUIGeometry& Geometry)
 			: OriginVertices(Geometry.OriginVertices)
@@ -32,7 +67,7 @@ namespace DreamTextPainterLocal
 		};
 
 		void WriteQuad(float Left, float Right, float Bottom, float Top, const FDreamUICharData& Glyph,
-			const FColor& Color, bool bWriteUV2, float UV2X, const FFill& Fill)
+			const FColor& Color, float UV2X, const FFill& Fill, int32& IndexCursor)
 		{
 			const int32 Start = VertexCursor;
 			OriginVertices[Start].Position = FVector3f(0, Left, Bottom);
@@ -50,7 +85,7 @@ namespace DreamTextPainterLocal
 				Vertex.TextureCoordinate[1].Y = Glyph.SliceIndex;
 				// Vertices 0 and 2 are the quad's left edge, 1 and 3 its right.
 				const float RunX = (i == 0 || i == 2) ? Fill.RunX0 : Fill.RunX1;
-				Vertex.TextureCoordinate[2] = FVector2f(bWriteUV2 ? UV2X : 0.0f, RunX);
+				Vertex.TextureCoordinate[2] = FVector2f(UV2X, RunX);
 				Vertex.TextureCoordinate[3] = FVector2f(Fill.Progress, Fill.GlowBoost);
 				Vertex.Color = Color;
 			}
@@ -65,6 +100,15 @@ namespace DreamTextPainterLocal
 			VertexCursor += 4;
 			IndexCursor += 6;
 		}
+
+		/** Leans the quad written at Start: its top edge right, its bottom edge left, like an italic glyph. */
+		void ShearQuad(int32 Start, float BottomOffset, float TopOffset)
+		{
+			OriginVertices[Start].Position.Y -= BottomOffset;
+			OriginVertices[Start + 1].Position.Y -= BottomOffset;
+			OriginVertices[Start + 2].Position.Y += TopOffset;
+			OriginVertices[Start + 3].Position.Y += TopOffset;
+		}
 	};
 }
 
@@ -77,20 +121,21 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 
 	// Size once. The geometry helper zeroes only memory it has not handed out before, which is the
 	// convention the rest of the plugin relies on for the channels nobody writes (UV1.x, tangents).
-	int32 TotalVertices = 0;
-	int32 TotalIndices = 0;
+	// With a separate effect layer every quad is written twice: the effect copy indexes into the first
+	// half of the index buffer, the face copy into the second, so all effects draw before any face.
+	int32 FaceQuads = 0;
 	for (const auto& Item : DisplayList.Items)
 	{
 		if (!Item.bEmit)continue;
-		int32 Quads = 1;
-		if (Item.Style.bUnderline)Quads++;
-		if (Item.Style.bStrikethrough)Quads++;
-		TotalVertices += Quads * 4;
-		TotalIndices += Quads * 6;
+		FaceQuads++;
+		if (Item.Style.bUnderline)FaceQuads++;
+		if (Item.Style.bStrikethrough)FaceQuads++;
 	}
-	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.OriginVertices, TotalVertices, false);
-	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Vertices, TotalVertices, false);
-	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Triangles, TotalIndices, false);
+	const bool bSeparateEffectLayer = Params.bMultiChannelField && Params.bSeparateEffectLayer;
+	const int32 TotalQuads = bSeparateEffectLayer ? FaceQuads * 2 : FaceQuads;
+	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.OriginVertices, TotalQuads * 4, false);
+	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Vertices, TotalQuads * 4, false);
+	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Triangles, TotalQuads * 6, false);
 
 	// Fill runs. A glyph belongs to the first segment covering its character, else to its line;
 	// each run's horizontal extent comes from the glyph quads in it, so UV2.y spans exactly the ink.
@@ -154,13 +199,47 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	};
 
 	FQuadWriter Writer(OutGeometry);
+	Writer.FaceIndexCursor = bSeparateEffectLayer ? FaceQuads * 6 : 0;
+
+	// One glyph quad, as the face copy and, when the effects draw separately, the effect copy first.
+	// Both copies share the run channels; the effect copy may be grown further into the field.
+	auto WriteGlyphQuads = [&](int32 ItemIndex, const FDreamUICharData& Glyph, float Left, float Right, float Bottom, float Top,
+		const FColor& Color, float DilateEm, bool bItalic, float BaselineY, float LegacyUV2X)
+	{
+		const auto& Item = DisplayList.Items[ItemIndex];
+		const FQuadWriter::FFill Fill = MakeFill(ItemIndex, Left, Right);
+		const float Size = Item.Style.Size;
+		auto WriteOne = [&](EGlyphLayer Layer, float ReachEm, int32& IndexCursor)
+		{
+			const FDreamUICharData Grown = GrowIntoField(Glyph, ReachEm, Size, Params);
+			const float Grow = Grown.XOffset - Glyph.XOffset;// negative or zero: how far each edge moved out
+			const int32 Start = Writer.VertexCursor;
+			const float UV2X = Params.bMultiChannelField ? PackGlyphChannel(Layer, DilateEm) : LegacyUV2X;
+			Writer.WriteQuad(Left + Grow, Right - Grow, Bottom + Grow, Top - Grow, Grown, Color, UV2X, Fill, IndexCursor);
+			if (bItalic)
+			{
+				// Shear about the baseline: an edge moves right by its height above the baseline times the slope.
+				Writer.ShearQuad(Start, (BaselineY - (Bottom + Grow)) * Params.ItalicSlope, ((Top - Grow) - BaselineY) * Params.ItalicSlope);
+			}
+		};
+		if (bSeparateEffectLayer)
+		{
+			WriteOne(EGlyphLayer::Effects, FMath::Max(Params.EffectReachEm, Params.FaceReachEm), Writer.EffectIndexCursor);
+			WriteOne(EGlyphLayer::Face, Params.FaceReachEm, Writer.FaceIndexCursor);
+		}
+		else
+		{
+			WriteOne(EGlyphLayer::Both, FMath::Max(Params.EffectReachEm, Params.FaceReachEm), Writer.FaceIndexCursor);
+		}
+	};
+
 	for (int32 ItemIndex = 0; ItemIndex < DisplayList.Items.Num(); ItemIndex++)
 	{
 		const auto& Item = DisplayList.Items[ItemIndex];
 		if (!Item.bEmit)continue;
 
 		const int32 StartVertIndex = Writer.VertexCursor;
-		const int32 StartTriangleIndex = Writer.IndexCursor;
+		const int32 StartFaceIndex = Writer.FaceIndexCursor;
 
 		FVector2f Pen = Item.Pen;
 		if (Item.Style.SupOrSub == 1)
@@ -172,53 +251,49 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			Pen.Y -= Item.Style.Size * 0.5f;
 		}
 		const FColor Color = Item.Style.bHasColor ? Item.Style.Color : Params.BaseColor;
-		const float UV2X = Item.Style.Size * Params.FontScaleMultiplier;
+		const float LegacyUV2X = Params.bWriteFontScaleToUV2 ? Item.Style.Size * Params.FontScaleMultiplier : 0.0f;
+		// Shader-side bold dilates the regular glyph by BoldDilateEm per side. The layout already gave
+		// the glyph twice that much extra advance; shifting the quad right by one side's worth keeps
+		// the left bearing where it was and spends the whole extra advance on the right.
+		const bool bShaderBold = Item.Style.bBold && Params.bMultiChannelField && Params.BoldDilateEm > 0.0f;
+		const float DilateEm = bShaderBold ? Params.BoldDilateEm : 0.0f;
+		const float BoldShift = bShaderBold ? Params.BoldDilateEm * Item.Style.Size : 0.0f;
 
 		//glyph
 		{
-			const float OffsetX = Pen.X + Item.Glyph.XOffset;
+			const float OffsetX = Pen.X + Item.Glyph.XOffset + BoldShift;
 			const float OffsetY = Pen.Y + Item.Glyph.YOffset;
-			const int32 Start = Writer.VertexCursor;
-			Writer.WriteQuad(OffsetX, OffsetX + Item.Glyph.Width, OffsetY - Item.Glyph.Height, OffsetY,
-				Item.Glyph, Color, Params.bWriteFontScaleToUV2, UV2X, MakeFill(ItemIndex, OffsetX, OffsetX + Item.Glyph.Width));
-			if (Item.Style.bItalic)
-			{
-				auto& OriginVertices = OutGeometry.OriginVertices;
-				const float Vert01ItalicOffset = (Item.Glyph.Height - Item.Glyph.YOffset) * Params.ItalicSlope;
-				OriginVertices[Start].Position.Y -= Vert01ItalicOffset;
-				OriginVertices[Start + 1].Position.Y -= Vert01ItalicOffset;
-				const float Vert23ItalicOffset = Item.Glyph.YOffset * Params.ItalicSlope;
-				OriginVertices[Start + 2].Position.Y += Vert23ItalicOffset;
-				OriginVertices[Start + 3].Position.Y += Vert23ItalicOffset;
-			}
+			WriteGlyphQuads(ItemIndex, Item.Glyph, OffsetX, OffsetX + Item.Glyph.Width, OffsetY - Item.Glyph.Height, OffsetY,
+				Color, DilateEm, Item.Style.bItalic, Pen.Y, LegacyUV2X);
 		}
 		//underline
 		if (Item.Style.bUnderline)
 		{
 			const float OffsetX = Pen.X;
 			const float OffsetY = Pen.Y + Item.UnderlineGlyph.YOffset;
-			Writer.WriteQuad(OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.UnderlineGlyph.Height, OffsetY,
-				Item.UnderlineGlyph, Color, Params.bWriteFontScaleToUV2, UV2X, MakeFill(ItemIndex, OffsetX, OffsetX + Item.AdvanceWithSpace));
+			WriteGlyphQuads(ItemIndex, Item.UnderlineGlyph, OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.UnderlineGlyph.Height, OffsetY,
+				Color, DilateEm, false, Pen.Y, LegacyUV2X);
 		}
 		//strikethrough
 		if (Item.Style.bStrikethrough)
 		{
 			const float OffsetX = Pen.X;
 			const float OffsetY = Pen.Y + Item.StrikethroughGlyph.YOffset;
-			Writer.WriteQuad(OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.StrikethroughGlyph.Height, OffsetY,
-				Item.StrikethroughGlyph, Color, Params.bWriteFontScaleToUV2, UV2X, MakeFill(ItemIndex, OffsetX, OffsetX + Item.AdvanceWithSpace));
+			WriteGlyphQuads(ItemIndex, Item.StrikethroughGlyph, OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.StrikethroughGlyph.Height, OffsetY,
+				Color, DilateEm, false, Pen.Y, LegacyUV2X);
 		}
 
 		if (Item.bCountsAsVisible)
 		{
 			// A character is one entry however many glyphs the shaper gave it; its glyphs are
-			// contiguous, so the entry just grows while the element index repeats.
+			// contiguous, so the entry just grows while the element index repeats. The vertex range
+			// covers both layers' quads; the triangle range is the face layer's.
 			if (OutCharProperties.Num() > 0 && OutCharProperties.Last().CharIndex == Item.ElementIndex
 				&& OutCharProperties.Last().StartVertIndex + OutCharProperties.Last().VertCount == StartVertIndex)
 			{
 				FDreamUITextCharProperty& Last = OutCharProperties.Last();
 				Last.VertCount = Writer.VertexCursor - Last.StartVertIndex;
-				Last.IndicesCount = Writer.IndexCursor - Last.StartTriangleIndex;
+				Last.IndicesCount = Writer.FaceIndexCursor - Last.StartTriangleIndex;
 			}
 			else
 			{
@@ -226,8 +301,8 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 				CharProperty.CharIndex = Item.ElementIndex;
 				CharProperty.StartVertIndex = StartVertIndex;
 				CharProperty.VertCount = Writer.VertexCursor - StartVertIndex;
-				CharProperty.StartTriangleIndex = StartTriangleIndex;
-				CharProperty.IndicesCount = Writer.IndexCursor - StartTriangleIndex;
+				CharProperty.StartTriangleIndex = StartFaceIndex;
+				CharProperty.IndicesCount = Writer.FaceIndexCursor - StartFaceIndex;
 				OutCharProperties.Add(CharProperty);
 			}
 		}

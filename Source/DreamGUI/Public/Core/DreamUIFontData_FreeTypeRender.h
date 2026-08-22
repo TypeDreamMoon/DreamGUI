@@ -241,6 +241,8 @@ protected:
 	 */
 	virtual bool GetAsyncRasterParams(float CharSize, bool IsBold, float& OutPixelsPerEm, float& OutSpreadPixels, float& OutBoldPixels) const { return false; }
 	virtual bool IsGlyphCacheSizeIndependent() const { return false; }
+	/** True when bold is a shader-side dilation of the regular glyph: the atlas then holds no bold variant, only the advance changes. */
+	virtual bool IsBoldSynthesizedInShader() const { return false; }
 	/** Pack a rasterized glyph into the atlas (growing it as needed) and describe its quad. */
 	bool InsertGlyphBitmap(const FGlyphBitmap& InGlyphBitmap, FDreamUICharData& OutResult);
 	/** A quad-less stand-in with the glyph's real advance, for a glyph still on the worker. */
