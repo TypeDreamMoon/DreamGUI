@@ -26,7 +26,9 @@ public:
 	virtual bool HasKerning() override { return bMockHasKerning; }
 	virtual float GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize) override;
 	virtual float GetLineHeight(float FontSize) override { return FontSize * 1.25f; }
-	virtual float GetVerticalOffset(float FontSize) override { return -FontSize * 0.125f; }
+	virtual float GetVerticalOffset(float FontSize) override { return -FontSize * 0.325f; }
+	virtual float GetAscent(float FontSize) override { return FontSize * 0.95f; }
+	virtual float GetDescent(float FontSize) override { return FontSize * 0.3f; }
 	virtual float GetFontSizeLimit() override { return 200.0f; }
 	virtual bool GetShouldAffectByPixelPerfect() override { return false; }
 	virtual void AddUIText(UDreamText* InText) override {}

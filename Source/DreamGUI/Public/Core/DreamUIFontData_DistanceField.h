@@ -75,6 +75,9 @@ private:
 	/** -1 means not set yet. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI", Transient)
 		int VerticalOffset = -1;
+	/** Ascent and descent at SampleFontSize; negative means not cached yet. */
+	float CachedAscent = -1.0f;
+	float CachedDescent = -1.0f;
 	UPROPERTY(EditAnywhere, Transient, Category = "DreamGUI", Transient)
 	float AdditionalVerticalOffset = 0.0f;
 
@@ -87,6 +90,8 @@ public:
 	virtual float GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize) override;
 	virtual float GetLineHeight(float fontSize) override;
 	virtual float GetVerticalOffset(float fontSize) override;
+	virtual float GetAscent(float fontSize) override;
+	virtual float GetDescent(float fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
 	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
 	virtual EDreamUIFontTextureMark GetFontTextureMark() override{ return EDreamUIFontTextureMark::DistanceField; }

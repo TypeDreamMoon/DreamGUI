@@ -81,7 +81,15 @@ public:
 	virtual bool HasKerning() { return false; }
 	virtual float GetKerning(uint32 LeftCharIndex, uint32 RightCharIndex, float CharSize) { return 0; }
 	virtual float GetLineHeight(float FontSize) { return FontSize; }
+	/**
+	 * Legacy centre correction: -(ascender + descender) / 2. Layout no longer reads it -- glyphs sit
+	 * on a baseline -- but fonts that only know this still yield an ascent and descent through it.
+	 */
 	virtual float GetVerticalOffset(float FontSize) { return 0; }
+	/** Baseline to the top of the font's box, at this size. Lines are stacked from these. */
+	virtual float GetAscent(float FontSize) { return GetLineHeight(FontSize) * 0.5f - GetVerticalOffset(FontSize); }
+	/** Baseline to the bottom of the font's box, at this size, as a positive distance. */
+	virtual float GetDescent(float FontSize) { return GetLineHeight(FontSize) * 0.5f + GetVerticalOffset(FontSize); }
 	virtual float GetFontSizeLimit() { return MAX_FLT; }
 	virtual bool GetRequireNormalAndTangent() { return false; }
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }

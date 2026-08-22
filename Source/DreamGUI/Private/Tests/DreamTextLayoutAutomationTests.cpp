@@ -631,4 +631,49 @@ bool FDreamTextBreakerCaretsOnSoftBreakTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBaselineTest,
+	"DreamGUI.Text.Pipeline.MixedSizesShareABaseline",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextBaselineTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("small <size=48>BIG</size> small"), 600.0f, 200.0f);
+	In.bRichText = true;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+
+	// Every glyph on the line sits on the same baseline, whatever its size.
+	TOptional<float> Baseline;
+	for (const auto& Item : DL.Items)
+	{
+		if (!Item.bEmit)continue;
+		if (!Baseline.IsSet())Baseline = Item.Pen.Y;
+		else if (!FMath::IsNearlyEqual(Item.Pen.Y, Baseline.GetValue(), 0.001f))
+		{
+			AddError(FString::Printf(TEXT("glyph U+%04X at size %.0f sits at %.2f, baseline is %.2f"), Item.Codepoint, Item.Style.Size, Item.Pen.Y, Baseline.GetValue()));
+			break;
+		}
+	}
+
+	// The line is as tall as the biggest font box, and its baseline is the biggest ascent down from
+	// the paragraph top (the box the mock describes has no leading: ascent + descent = line height).
+	TestEqual(TEXT("one line"), DL.Lines.Num(), 1);
+	TestEqual(TEXT("the paragraph is as tall as the 48pt box"), DL.PreferredSize.Y, 48.0f * 1.25f, 0.01f);
+	const float Top = In.Height * (0.5f - In.Pivot.Y) + In.Height * 0.5f;//Top alignment: paragraph top on the box top
+	TestEqual(TEXT("baseline sits one 48pt ascent below the top"), Baseline.Get(0.0f), Top - 48.0f * 0.95f, 0.01f);
+	TestEqual(TEXT("carets anchor on the line centre"), DL.Lines[0].CaretPropertyList[0].CaretPosition.Y, Top - 48.0f * 1.25f * 0.5f, 0.01f);
+
+	// Plain text, for comparison: the baseline is the font's ascent below the top.
+	FDreamTextLayoutInput Plain = MakeInput(Font, TEXT("plain"), 600.0f, 200.0f);
+	FDreamTextDisplayList PlainDL;
+	FDreamTextLayoutEngine::Layout(Plain, PlainDL);
+	TestEqual(TEXT("plain baseline"), PlainDL.Items[0].Pen.Y, Top - 24.0f * 0.95f, 0.01f);
+	return true;
+}
+
 #endif

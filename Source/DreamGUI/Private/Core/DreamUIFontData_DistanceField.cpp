@@ -116,6 +116,7 @@ void UDreamUIFontData_DistanceField::ClearCharDataCache()
 {
 	CharDataMap.Empty();
 	LineHeight = VerticalOffset = -1;
+	CachedAscent = CachedDescent = -1.0f;
 }
 
 UTexture2DArray* UDreamUIFontData_DistanceField::CreateFontTexture(int InTextureSize, int InSliceCount)
@@ -221,6 +222,23 @@ float UDreamUIFontData_DistanceField::GetVerticalOffset(float fontSize)
 		VerticalOffset = Super::GetVerticalOffset(SampleFontSize);
 	}
 	return (VerticalOffset + AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
+}
+float UDreamUIFontData_DistanceField::GetAscent(float fontSize)
+{
+	if (CachedAscent < 0.0f)
+	{
+		CachedAscent = Super::GetAscent(SampleFontSize);
+	}
+	// A positive AdditionalVerticalOffset lifts the glyphs: the baseline moves up inside the same box.
+	return (CachedAscent - AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
+}
+float UDreamUIFontData_DistanceField::GetDescent(float fontSize)
+{
+	if (CachedDescent < 0.0f)
+	{
+		CachedDescent = Super::GetDescent(SampleFontSize);
+	}
+	return (CachedDescent + AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
 }
 UMaterialInterface* UDreamUIFontData_DistanceField::GetFontMaterial()
 {

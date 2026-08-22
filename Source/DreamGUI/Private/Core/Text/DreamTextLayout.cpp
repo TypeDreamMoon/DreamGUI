@@ -105,7 +105,6 @@ namespace DreamTextLayoutLocal
 		float OneDivideDynamicPixelsPerUnit = 1.0f;
 		bool bShouldScaleFontSizeWithRootCanvas = false;
 		bool bUseKerning = false;
-		float VerticalOffset = 0.0f;
 		float OriginLineHeight = 0.0f;
 		float LineHeightScale = 1.0f;
 		float WrapWidth = 0.0f;
@@ -117,6 +116,16 @@ namespace DreamTextLayoutLocal
 		TArray<FRichTextParseResult> RichTextPropertyArray;
 		TArray<FDreamUIText_TextProcessingElement> TextProcessingArray;
 
+		/** Font box at one size: what a line's height and baseline are built from. */
+		struct FSizeMetrics
+		{
+			float Ascent = 0.0f;
+			float Descent = 0.0f;
+			float LineHeight = 0.0f;
+		};
+		TMap<float, FSizeMetrics> MetricsBySize;
+		const FSizeMetrics& MetricsFor(float Size);
+
 		TArray<FMeasured> Measured;
 		TArray<uint32> ElementCodepoints;
 		TBitArray<> CanBreakBefore;
@@ -125,7 +134,6 @@ namespace DreamTextLayoutLocal
 		// Running state of placement.
 		float CurrentLineHeight = 0.0f;
 		float ParagraphHeight = 0.0f;
-		float FirstLineHeight = 0.0f;
 		int32 CurrentVisibleCharCount = 0;
 		bool bHasClampContent = false;
 		float ClampedLineWidth = 0.0f;
@@ -138,7 +146,7 @@ namespace DreamTextLayoutLocal
 		void ComputeBreakOpportunities();
 		void BreakLines();
 		void Place();
-		void PlaceLine(int32 LineIndex, float LineY);
+		void PlaceLine(int32 LineIndex, float LineTop);
 		void AlignLine(int32 LineItemStart, int32 ImageStart, int32 EmojiStart, FDreamUITextLineProperty& LineProperty, float LineWidth);
 		void Finish();
 
@@ -152,7 +160,7 @@ namespace DreamTextLayoutLocal
 		static FDreamTextItemStyle MakeStyle(const FRichTextParseResult& Result);
 		float ItemMaxX(const FDreamTextGlyphItem& Item) const;
 		int32 CaretIndexOf(int32 ElementIndex) const;
-		void ApplyEllipsis(int32 ElementIndex, int32 LineItemStart, float& InOutPenX, float LineY);
+		void ApplyEllipsis(int32 ElementIndex, int32 LineItemStart, float& InOutPenX, float Baseline);
 	};
 
 	void FLayoutRun::Prepare()
@@ -213,8 +221,6 @@ namespace DreamTextLayoutLocal
 			RichTextParseResult.Size = FontSize;
 		}
 
-		//some font may not render at vertical center, use this to modify it
-		VerticalOffset = Font->GetVerticalOffset(FontSize);
 		OriginLineHeight = Font->GetLineHeight(FontSize);
 		// Scales the gap between lines without touching glyph size. FontSpace.Y stays outside it: that
 		// one is a flat distance the author asked for, not something that should follow the font.
@@ -226,7 +232,19 @@ namespace DreamTextLayoutLocal
 		HalfFontSpaceX = In.FontSpace.X * 0.5f;
 
 		CurrentLineHeight = OriginLineHeight;
-		FirstLineHeight = CurrentLineHeight;
+	}
+
+	const FLayoutRun::FSizeMetrics& FLayoutRun::MetricsFor(float Size)
+	{
+		if (const FSizeMetrics* Found = MetricsBySize.Find(Size))
+		{
+			return *Found;
+		}
+		FSizeMetrics M;
+		M.Ascent = Font->GetAscent(Size);
+		M.Descent = Font->GetDescent(Size);
+		M.LineHeight = Font->GetLineHeight(Size);
+		return MetricsBySize.Add(Size, M);
 	}
 
 	bool FLayoutRun::IsRichTextImageSpace(uint32 CharCode, const FRichTextParseResult& RichTextResult) const
@@ -280,7 +298,6 @@ namespace DreamTextLayoutLocal
 	FDreamUICharData FLayoutRun::GetCharGeo(uint32 PrevCharCode, const FDreamUIText_TextProcessingElement& CharElement, float InFontSize, bool bInBold, const FRichTextParseResult& RichTextResult) const
 	{
 		auto CharData = Font->GetCharData(CharElement.Unicode, InFontSize, bInBold);
-		const float CalculatedCharFixedOffset = In.bRichText ? Font->GetVerticalOffset(InFontSize) : VerticalOffset;
 
 		auto OverrideCharData = CharData;
 		if (bShouldScaleFontSizeWithRootCanvas)
@@ -322,7 +339,7 @@ namespace DreamTextLayoutLocal
 				OverrideCharData.XAdvance = OverrideCharData.XAdvance * OneDivideScale;
 			}
 			OverrideCharData.XOffset = OverrideCharData.XOffset * OneDivideScale;
-			OverrideCharData.YOffset = OverrideCharData.YOffset * OneDivideScale + CalculatedCharFixedOffset;
+			OverrideCharData.YOffset = OverrideCharData.YOffset * OneDivideScale;
 		}
 		else
 		{
@@ -334,7 +351,6 @@ namespace DreamTextLayoutLocal
 			{
 				GetEmojiCharData(OverrideCharData, InFontSize, CharElement.Unicode);
 			}
-			OverrideCharData.YOffset += CalculatedCharFixedOffset;
 		}
 		if (bUseKerning && PrevCharCode != CharElement.Unicode)
 		{
@@ -375,7 +391,6 @@ namespace DreamTextLayoutLocal
 	FDreamUICharData FLayoutRun::GetUnderlineOrStrikethroughCharGeo(uint32 CharCode, float OverrideFontSize, bool bBold) const
 	{
 		auto CharData = Font->GetCharData(CharCode, OverrideFontSize, bBold);
-		CharData.YOffset += Font->GetVerticalOffset(OverrideFontSize);
 
 		const float UVX = (CharData.MaxUV.X - CharData.MinUV.X) * 0.5f + CharData.MinUV.X;
 		CharData.MinUV.X = CharData.MaxUV.X = UVX;
@@ -649,14 +664,9 @@ namespace DreamTextLayoutLocal
 		default:
 			break;
 		}
-		// Rich text centres a line of mixed sizes on its tallest glyph. The baseline model replaces
-		// this; until then every line-bound thing, carets included, moves together.
-		const float YOffset = In.bRichText ? -(CurrentLineHeight - FontSize) * 0.5f : 0.0f;
-
 		for (int32 i = LineItemStart; i < Out.Items.Num(); i++)
 		{
 			Out.Items[i].Pen.X += XOffset;
-			Out.Items[i].Pen.Y += YOffset;
 		}
 		for (auto& Caret : LineProperty.CaretPropertyList)
 		{
@@ -665,12 +675,10 @@ namespace DreamTextLayoutLocal
 		for (int32 i = ImageStart; i < Out.Images.Num(); i++)
 		{
 			Out.Images[i].Position.X += XOffset;
-			Out.Images[i].Position.Y += YOffset;
 		}
 		for (int32 i = EmojiStart; i < Out.Emojis.Num(); i++)
 		{
 			Out.Emojis[i].Position.X += XOffset;
-			Out.Emojis[i].Position.Y += YOffset;
 		}
 	}
 
@@ -701,7 +709,7 @@ namespace DreamTextLayoutLocal
 		return MaxX;
 	}
 
-	void FLayoutRun::ApplyEllipsis(int32 ElementIndex, int32 LineItemStart, float& InOutPenX, float LineY)
+	void FLayoutRun::ApplyEllipsis(int32 ElementIndex, int32 LineItemStart, float& InOutPenX, float Baseline)
 	{
 		//move back and replace chars by ...
 		const uint32 CharCodeOfDots = 0x2026;//'…'
@@ -740,7 +748,7 @@ namespace DreamTextLayoutLocal
 		Dots.ElementIndex = ElementIndex;
 		Dots.SourceIndex = TextProcessingArray[ElementIndex].StringIndex;
 		Dots.LineIndex = Out.Lines.Num();
-		Dots.Pen = FVector2f(LineOffsetPointToStripOff, LineY);
+		Dots.Pen = FVector2f(LineOffsetPointToStripOff, Baseline);
 		Dots.Glyph = CharGeoOfDots;
 		Dots.AdvanceWithSpace = CharGeoOfDots.XAdvance + In.FontSpace.X;
 		Dots.Style = MakeStyle(RichTextParseResult);
@@ -758,7 +766,7 @@ namespace DreamTextLayoutLocal
 		InOutPenX = LineOffsetPointToStripOff + Dots.AdvanceWithSpace;
 	}
 
-	void FLayoutRun::PlaceLine(int32 LineIndex, float LineY)
+	void FLayoutRun::PlaceLine(int32 LineIndex, float LineTop)
 	{
 		const FLineRange& Range = LineRanges[LineIndex];
 		const int32 LineItemStart = Out.Items.Num();
@@ -767,10 +775,32 @@ namespace DreamTextLayoutLocal
 		FDreamUITextLineProperty LineProperty;
 		const bool bClampMode = In.OverflowType == EDreamUITextOverflowType::Truncate || In.OverflowType == EDreamUITextOverflowType::Ellipsis;
 
+		// The line box: as tall as the tallest font box on the line, every glyph sitting on one
+		// baseline. Extra height beyond ascent + descent is split above and below (CSS half-leading).
+		// Carets and inline objects anchor on the line's centre, which is the contract they had.
+		const FSizeMetrics& Base = MetricsFor(FontSize);
+		float Ascent = Base.Ascent;
+		float Descent = Base.Descent;
+		float LineHeight = OriginLineHeight;
+		if (In.bRichText)
+		{
+			for (int32 i = Range.Start; i < Range.End; i++)
+			{
+				const FMeasured& M = Measured[i];
+				if (M.bSkipped || M.bHardBreak)continue;
+				const FSizeMetrics& Metrics = MetricsFor(M.Style.Size);
+				Ascent = FMath::Max(Ascent, Metrics.Ascent);
+				Descent = FMath::Max(Descent, Metrics.Descent);
+				LineHeight = FMath::Max(LineHeight, Metrics.LineHeight);
+			}
+		}
+		CurrentLineHeight = LineHeight;
+		const float Baseline = LineTop - (LineHeight - (Ascent + Descent)) * 0.5f - Ascent;
+		const float LineCentre = LineTop - LineHeight * 0.5f;
+
 		float PenX = 0.0f;
 		float ContentRight = 0.0f;//pen after the last non-whitespace element: trailing spaces hang outside the line's width
 		bool bAnyContent = false;
-		CurrentLineHeight = OriginLineHeight;
 		for (int32 i = Range.Start; i < Range.End; i++)
 		{
 			const FMeasured& M = Measured[i];
@@ -780,7 +810,7 @@ namespace DreamTextLayoutLocal
 
 			//caret property: the caret sits on the left of its char
 			FDreamUITextCaretProperty CaretProperty;
-			CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineY);
+			CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineCentre);
 			CaretProperty.CharIndex = CaretIndexOf(i);
 			LineProperty.CaretPropertyList.Add(CaretProperty);
 
@@ -789,7 +819,7 @@ namespace DreamTextLayoutLocal
 			Item.ElementIndex = i;
 			Item.SourceIndex = Element.StringIndex;
 			Item.LineIndex = LineIndex;
-			Item.Pen = FVector2f(PenX, LineY);
+			Item.Pen = FVector2f(PenX, Baseline);
 			Item.Glyph = M.Glyph;
 			Item.AdvanceWithSpace = M.Advance;
 			Item.Style = MakeStyle(M.Style);
@@ -799,21 +829,19 @@ namespace DreamTextLayoutLocal
 				Item.Kind = EDreamTextItemKind::Image;
 				FDreamUIText_RichTextImageTag ImageTagData;
 				ImageTagData.TagName = M.Style.ImageTag;
-				ImageTagData.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineY);
+				ImageTagData.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineCentre);
 				ImageTagData.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
 				ImageTagData.TintColor = M.Style.HasColor ? M.Style.Color : FColor::White;
 				Out.Images.Add(ImageTagData);
-				CurrentLineHeight = FMath::Max(CurrentLineHeight, M.Style.Size);
 			}
 			else if (M.bEmoji)
 			{
 				Item.Kind = EDreamTextItemKind::Emoji;
 				FDreamUIText_Emoji Emoji;
 				Emoji.EmojiCode = Element.Unicode;
-				Emoji.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineY);
+				Emoji.Position = FVector2D(PenX + M.Glyph.XAdvance * 0.5f, LineCentre);
 				Emoji.Size = FVector2D(M.Glyph.Width, M.Glyph.Height);
 				Out.Emojis.Add(Emoji);
-				CurrentLineHeight = FMath::Max(CurrentLineHeight, M.Style.Size);
 			}
 			else if (M.bWhitespace)
 			{
@@ -822,10 +850,6 @@ namespace DreamTextLayoutLocal
 			else
 			{
 				Item.Kind = EDreamTextItemKind::Glyph;
-				if (In.bRichText)
-				{
-					CurrentLineHeight = FMath::Max(CurrentLineHeight, M.Style.Size);
-				}
 				if (!bHasClampContent)
 				{
 					Item.bEmit = true;
@@ -894,7 +918,7 @@ namespace DreamTextLayoutLocal
 					bShouldSetParagraphHeightForClampContent = true;//paragraphHeight is set after the line, so we mark it and read it later
 					if (In.OverflowType == EDreamUITextOverflowType::Ellipsis)
 					{
-						ApplyEllipsis(i, LineItemStart, PenX, LineY);
+						ApplyEllipsis(i, LineItemStart, PenX, Baseline);
 						ContentRight = PenX;
 						ClampedLineWidth = ContentRight - In.FontSpace.X;
 					}
@@ -905,7 +929,7 @@ namespace DreamTextLayoutLocal
 		//end caret: the newline's own for a hard break, the string's end for the last line, nameless for a soft wrap
 		{
 			FDreamUITextCaretProperty CaretProperty;
-			CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineY);
+			CaretProperty.CaretPosition = FVector2f(PenX - HalfFontSpaceX, LineCentre);
 			if (Range.HardBreakElement != -1)
 			{
 				CaretProperty.CharIndex = CaretIndexOf(Range.HardBreakElement);
@@ -928,21 +952,19 @@ namespace DreamTextLayoutLocal
 
 	void FLayoutRun::Place()
 	{
-		float LineY = 0.0f;
+		// Lines stack down from the paragraph's top edge at y = 0. The line-height scale stretches
+		// the gap below each line, as it always has; the glyphs keep their place inside the box.
+		float LineTop = 0.0f;
 		for (int32 LineIndex = 0; LineIndex < LineRanges.Num(); LineIndex++)
 		{
-			PlaceLine(LineIndex, LineY);
-			const float LineAdvance = (In.bRichText ? CurrentLineHeight : OriginLineHeight) * LineHeightScale + In.FontSpace.Y;
-			LineY -= LineAdvance;
+			PlaceLine(LineIndex, LineTop);
+			const float LineAdvance = CurrentLineHeight * LineHeightScale + In.FontSpace.Y;
+			LineTop -= LineAdvance;
 			ParagraphHeight += LineAdvance;
 			if (bHasClampContent && bShouldSetParagraphHeightForClampContent)
 			{
 				bShouldSetParagraphHeightForClampContent = false;
 				ParagraphHeight_ForClampContent = ParagraphHeight;
-			}
-			if (LineIndex == 0)
-			{
-				FirstLineHeight = In.bRichText ? CurrentLineHeight : OriginLineHeight;
 			}
 		}
 	}
@@ -1019,7 +1041,7 @@ namespace DreamTextLayoutLocal
 			XOffset += In.Width * 0.5f;
 			break;
 		}
-		float YOffset = PivotOffsetY - FirstLineHeight * 0.5f;
+		float YOffset = PivotOffsetY;
 		switch (In.ParagraphVAlign)
 		{
 		case EDreamUITextParagraphVerticalAlign::Top:

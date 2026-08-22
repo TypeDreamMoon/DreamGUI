@@ -398,6 +398,53 @@ float UDreamUIFontData_FreeTypeRender::GetLineHeight(float FontSize)
 	return fontSize;
 #endif
 }
+float UDreamUIFontData_FreeTypeRender::GetAscent(float FontSize)
+{
+#if WITH_FREETYPE
+	if (Face == nullptr)return Super::GetAscent(FontSize);
+	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
+	if (error)
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
+		return Super::GetAscent(FontSize);
+	}
+	// FontSizeAsLineHeight keeps the font's own proportions inside the smaller box.
+	const float Ascender = Face->size->metrics.ascender * ONE_DIVIDE_64;
+	if (LineHeightType == EDreamUIDynamicFontLineHeightType::FontSizeAsLineHeight)
+	{
+		const float Descender = -Face->size->metrics.descender * ONE_DIVIDE_64;
+		const float Sum = Ascender + Descender;
+		return Sum > 0.0f ? FontSize * (Ascender / Sum) : FontSize * 0.8f;
+	}
+	return Ascender;
+#else
+	return Super::GetAscent(FontSize);
+#endif
+}
+
+float UDreamUIFontData_FreeTypeRender::GetDescent(float FontSize)
+{
+#if WITH_FREETYPE
+	if (Face == nullptr)return Super::GetDescent(FontSize);
+	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
+	if (error)
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
+		return Super::GetDescent(FontSize);
+	}
+	const float Descender = -Face->size->metrics.descender * ONE_DIVIDE_64;
+	if (LineHeightType == EDreamUIDynamicFontLineHeightType::FontSizeAsLineHeight)
+	{
+		const float Ascender = Face->size->metrics.ascender * ONE_DIVIDE_64;
+		const float Sum = Ascender + Descender;
+		return Sum > 0.0f ? FontSize * (Descender / Sum) : FontSize * 0.2f;
+	}
+	return Descender;
+#else
+	return Super::GetDescent(FontSize);
+#endif
+}
+
 float UDreamUIFontData_FreeTypeRender::GetVerticalOffset(float FontSize)
 {
 #if WITH_FREETYPE

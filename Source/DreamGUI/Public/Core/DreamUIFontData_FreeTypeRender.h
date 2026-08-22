@@ -121,6 +121,8 @@ public:
 	virtual float GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)override;
 	virtual float GetLineHeight(float FontSize)override;
 	virtual float GetVerticalOffset(float FontSize)override;
+	virtual float GetAscent(float FontSize)override;
+	virtual float GetDescent(float FontSize)override;
 	virtual float GetFontSizeLimit()override { return 200.0f; }//limit font size to 200. too large font size will result in extreme large texture
 
 	virtual void AddUIText(UDreamText* InText)override;
