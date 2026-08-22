@@ -1,7 +1,8 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/Text/DreamTextPainter.h"
 #include "Core/DreamUIGeometry.h"
+#include "Core/DreamUITextData.h"
 
 namespace DreamTextPainterLocal
 {
@@ -21,8 +22,17 @@ namespace DreamTextPainterLocal
 		{
 		}
 
+		/** Per-quad fill channels: UV2.y sweeps RunX0..RunX1 across the quad, UV3 = (progress, glow boost). */
+		struct FFill
+		{
+			float RunX0 = 0.0f;
+			float RunX1 = 1.0f;
+			float Progress = 1.0f;
+			float GlowBoost = 0.0f;
+		};
+
 		void WriteQuad(float Left, float Right, float Bottom, float Top, const FDreamUICharData& Glyph,
-			const FColor& Color, bool bWriteUV2, float UV2X)
+			const FColor& Color, bool bWriteUV2, float UV2X, const FFill& Fill)
 		{
 			const int32 Start = VertexCursor;
 			OriginVertices[Start].Position = FVector3f(0, Left, Bottom);
@@ -38,10 +48,10 @@ namespace DreamTextPainterLocal
 			{
 				auto& Vertex = Vertices[Start + i];
 				Vertex.TextureCoordinate[1].Y = Glyph.SliceIndex;
-				if (bWriteUV2)
-				{
-					Vertex.TextureCoordinate[2] = FVector2f(UV2X, 0);
-				}
+				// Vertices 0 and 2 are the quad's left edge, 1 and 3 its right.
+				const float RunX = (i == 0 || i == 2) ? Fill.RunX0 : Fill.RunX1;
+				Vertex.TextureCoordinate[2] = FVector2f(bWriteUV2 ? UV2X : 0.0f, RunX);
+				Vertex.TextureCoordinate[3] = FVector2f(Fill.Progress, Fill.GlowBoost);
 				Vertex.Color = Color;
 			}
 
@@ -82,9 +92,71 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Vertices, TotalVertices, false);
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Triangles, TotalIndices, false);
 
-	FQuadWriter Writer(OutGeometry);
-	for (const auto& Item : DisplayList.Items)
+	// Fill runs. A glyph belongs to the first segment covering its character, else to its line;
+	// each run's horizontal extent comes from the glyph quads in it, so UV2.y spans exactly the ink.
+	struct FRunBounds { float MinX = FLT_MAX; float MaxX = -FLT_MAX; };
+	const int32 SegmentCount = Params.FillSegments ? Params.FillSegments->Num() : 0;
+	TArray<FRunBounds> SegmentBounds;
+	SegmentBounds.SetNum(SegmentCount);
+	TArray<FRunBounds> LineBounds;
+	LineBounds.SetNum(DisplayList.Lines.Num());
+	TArray<int32> ItemSegment;
+	ItemSegment.SetNumUninitialized(DisplayList.Items.Num());
+	for (int32 ItemIndex = 0; ItemIndex < DisplayList.Items.Num(); ItemIndex++)
 	{
+		const auto& Item = DisplayList.Items[ItemIndex];
+		ItemSegment[ItemIndex] = INDEX_NONE;
+		if (!Item.bEmit)continue;
+		for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; SegmentIndex++)
+		{
+			const auto& Segment = (*Params.FillSegments)[SegmentIndex];
+			if (Item.ElementIndex >= Segment.StartCharIndex && Item.ElementIndex <= Segment.EndCharIndex)
+			{
+				ItemSegment[ItemIndex] = SegmentIndex;
+				break;
+			}
+		}
+		const float GlyphLeft = Item.Pen.X + Item.Glyph.XOffset;
+		const float GlyphRight = GlyphLeft + Item.Glyph.Width;
+		FRunBounds* Bounds = ItemSegment[ItemIndex] != INDEX_NONE ? &SegmentBounds[ItemSegment[ItemIndex]]
+			: (LineBounds.IsValidIndex(Item.LineIndex) ? &LineBounds[Item.LineIndex] : nullptr);
+		if (Bounds)
+		{
+			Bounds->MinX = FMath::Min(Bounds->MinX, GlyphLeft);
+			Bounds->MaxX = FMath::Max(Bounds->MaxX, GlyphRight);
+		}
+	}
+	auto MakeFill = [&](int32 ItemIndex, float Left, float Right)
+	{
+		const auto& Item = DisplayList.Items[ItemIndex];
+		FQuadWriter::FFill Fill;
+		const FRunBounds* Bounds = nullptr;
+		if (ItemSegment[ItemIndex] != INDEX_NONE)
+		{
+			const auto& Segment = (*Params.FillSegments)[ItemSegment[ItemIndex]];
+			Fill.Progress = Segment.Progress;
+			Fill.GlowBoost = Segment.GlowBoost;
+			Bounds = &SegmentBounds[ItemSegment[ItemIndex]];
+		}
+		else
+		{
+			Fill.Progress = Params.FillProgress;
+			Fill.GlowBoost = Params.GlowBoost;
+			Bounds = LineBounds.IsValidIndex(Item.LineIndex) ? &LineBounds[Item.LineIndex] : nullptr;
+		}
+		if (Bounds && Bounds->MaxX > Bounds->MinX)
+		{
+			const float InvWidth = 1.0f / (Bounds->MaxX - Bounds->MinX);
+			Fill.RunX0 = (Left - Bounds->MinX) * InvWidth;
+			Fill.RunX1 = (Right - Bounds->MinX) * InvWidth;
+		}
+		return Fill;
+	};
+
+	FQuadWriter Writer(OutGeometry);
+	for (int32 ItemIndex = 0; ItemIndex < DisplayList.Items.Num(); ItemIndex++)
+	{
+		const auto& Item = DisplayList.Items[ItemIndex];
 		if (!Item.bEmit)continue;
 
 		const int32 StartVertIndex = Writer.VertexCursor;
@@ -108,7 +180,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			const float OffsetY = Pen.Y + Item.Glyph.YOffset;
 			const int32 Start = Writer.VertexCursor;
 			Writer.WriteQuad(OffsetX, OffsetX + Item.Glyph.Width, OffsetY - Item.Glyph.Height, OffsetY,
-				Item.Glyph, Color, Params.bWriteFontScaleToUV2, UV2X);
+				Item.Glyph, Color, Params.bWriteFontScaleToUV2, UV2X, MakeFill(ItemIndex, OffsetX, OffsetX + Item.Glyph.Width));
 			if (Item.Style.bItalic)
 			{
 				auto& OriginVertices = OutGeometry.OriginVertices;
@@ -126,7 +198,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			const float OffsetX = Pen.X;
 			const float OffsetY = Pen.Y + Item.UnderlineGlyph.YOffset;
 			Writer.WriteQuad(OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.UnderlineGlyph.Height, OffsetY,
-				Item.UnderlineGlyph, Color, Params.bWriteFontScaleToUV2, UV2X);
+				Item.UnderlineGlyph, Color, Params.bWriteFontScaleToUV2, UV2X, MakeFill(ItemIndex, OffsetX, OffsetX + Item.AdvanceWithSpace));
 		}
 		//strikethrough
 		if (Item.Style.bStrikethrough)
@@ -134,7 +206,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			const float OffsetX = Pen.X;
 			const float OffsetY = Pen.Y + Item.StrikethroughGlyph.YOffset;
 			Writer.WriteQuad(OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.StrikethroughGlyph.Height, OffsetY,
-				Item.StrikethroughGlyph, Color, Params.bWriteFontScaleToUV2, UV2X);
+				Item.StrikethroughGlyph, Color, Params.bWriteFontScaleToUV2, UV2X, MakeFill(ItemIndex, OffsetX, OffsetX + Item.AdvanceWithSpace));
 		}
 
 		if (Item.bCountsAsVisible)

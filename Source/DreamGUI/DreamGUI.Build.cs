@@ -30,6 +30,7 @@ public class DreamGUI : ModuleRules
                 new string[] {
                     EnginSourceFolder + "/Runtime/Renderer/Private",//#include "SceneRendering.h", #include "ScenePrivate.h"
 					EnginSourceFolder + "/Runtime/Renderer/Internal",//#include "SceneTextures.h"
+                    EnginSourceFolder,//#include "ThirdParty/msdfgen/msdfgen.cpp" (single-file msdfgen, as SlateCore includes it)
                 });
 
         PublicDependencyModuleNames.AddRange(

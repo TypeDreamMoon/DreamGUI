@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #pragma once
@@ -7,6 +7,7 @@
 #include "DreamUIRender/DreamUIPostProcessVertex.h"
 #include "RHIStaticStates.h"
 #include "SceneTextures.h"
+#include "TextureResource.h"
 
 class UDreamCanvas;
 class UDreamVisualPostProcess;

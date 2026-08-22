@@ -47,6 +47,19 @@ public:
 	}
 };
 
+/** How the distance field is produced. */
+UENUM(BlueprintType)
+enum class EDreamUISdfSource : uint8
+{
+	/**
+	 * Multi-channel field from the glyph outline (msdfgen): sharp corners from the median of three
+	 * channels, and a true distance in alpha that effects -- blur, glow, shadows, outlines -- widen into.
+	 */
+	OutlineMultiChannel,
+	/** Single-channel field derived from a rasterized bitmap (the original method). Corners round off. */
+	BitmapSingleChannel,
+};
+
 /** SDF(Signed Distance Field) Font asset for render smooth scaled sdf text. */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamUIFontData_DistanceField : public UDreamUIFontData_FreeTypeRender
@@ -55,6 +68,9 @@ class DREAMGUI_API UDreamUIFontData_DistanceField : public UDreamUIFontData_Free
 public:
 	UDreamUIFontData_DistanceField();
 private:
+	/** Outline multi-channel is the default; bitmap single-channel is what assets made before it get. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	EDreamUISdfSource SdfSource = EDreamUISdfSource::OutlineMultiChannel;
 	/** Font size when render glyph. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "16", UIMax = "100"))
 		int SampleFontSize = 64;
@@ -94,7 +110,12 @@ public:
 	virtual float GetDescent(float fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
 	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
-	virtual EDreamUIFontTextureMark GetFontTextureMark() override{ return EDreamUIFontTextureMark::DistanceField; }
+	virtual EDreamUIFontTextureMark GetFontTextureMark() override{ return SdfSource == EDreamUISdfSource::OutlineMultiChannel ? EDreamUIFontTextureMark::Mtsdf : EDreamUIFontTextureMark::DistanceField; }
+	EDreamUISdfSource GetSdfSource() const { return SdfSource; }
+	/** The distance range on each side of the edge, in pixels at SampleFontSize. */
+	int32 GetSdfRadius() const { return SDFRadius; }
+	virtual float GetAtlasFieldRangeTexels() const override { return 2.0f * SDFRadius; }
+	virtual float GetAtlasEmTexels() const override { return (float)SampleFontSize; }
 	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}
@@ -117,4 +138,5 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	virtual void PostInitProperties()override;
+	virtual void Serialize(FArchive& Ar)override;
 };

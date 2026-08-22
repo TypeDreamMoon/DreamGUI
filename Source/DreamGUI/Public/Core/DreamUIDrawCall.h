@@ -9,6 +9,7 @@
 #include "Core/DreamUIQuadTree.h"
 
 class UDreamVisualPostProcess;
+class UDreamUIFontData_BaseObject;
 struct FDreamUIMeshVertex;
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
@@ -65,6 +66,7 @@ public:
 
 	TWeakObjectPtr<UTexture> Texture = nullptr;//draw-call use this texture to render
 	TWeakObjectPtr<UTexture> FontTexture = nullptr;//draw-call use this texture to render font
+	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;//the font FontTexture belongs to
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//draw-call use this material to render, can be null to use default material
 	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//actual material that render this draw-call
 

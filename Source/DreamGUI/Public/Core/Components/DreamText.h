@@ -92,6 +92,21 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EDreamTextPhraseWrap PhraseWrap = EDreamTextPhraseWrap::Off;
 	/**
+	 * Outline, underlay, glow and fill look, drawn by the built-in shader. Needs a distance-field font
+	 * (OutlineMultiChannel source) and "Use Built-in UI Shader" on; has no effect with a custom material.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FDreamTextStyle TextStyle;
+	/** Fill progress of the whole text (per line), 0..1, for lyric-style reveals. Segments override it. */
+	UPROPERTY(Transient)
+	float FillProgress = 1.0f;
+	/** Glow boost of the whole text; segments override it. */
+	UPROPERTY(Transient)
+	float GlowBoost = 0.0f;
+	/** Character runs with their own fill progress; see FDreamTextFillSegment. */
+	UPROPERTY(Transient)
+	TArray<FDreamTextFillSegment> FillSegments;
+	/**
 	 * Padding between the widget's rect and the text laid out inside it, the way UMG's text Margin
 	 * works. The text is wrapped, aligned and overflow-tested against the rect MINUS this, so a
 	 * margin narrows the wrap width rather than just shifting the result.
@@ -211,6 +226,7 @@ public:
 	virtual bool GetShouldAffectByPixelSnapping()const override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial() override;
+	virtual void FillWidgetPropertyDataForMaterial_Extra(class UDreamUIDataAsTexture* DataAsTexture) override;
 	virtual void OnCultureChanged_Implementation()override;
 
 	void CheckRequireNormalAndTangent();
@@ -262,6 +278,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetRenderedFontSize()const { return RenderedFontSize; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") ETextWrappingPolicy GetWrappingPolicy()const{return WrappingPolicy;}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextPhraseWrap GetPhraseWrap()const{return PhraseWrap;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") const FDreamTextStyle& GetTextStyle()const{return TextStyle;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetFillProgress()const{return FillProgress;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetGlowBoost()const{return GlowBoost;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") const TArray<FDreamTextFillSegment>& GetFillSegments()const{return FillSegments;}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamUITextFontStyle GetFontStyle()const { return FontStyle; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetRichText()const { return bRichText; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") int32 GetRichTextTagFilterFlags()const { return RichTextTagFilterFlags; }
@@ -296,6 +316,18 @@ public:
 	void SetWrappingPolicy(ETextWrappingPolicy Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetPhraseWrap(EDreamTextPhraseWrap Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetTextStyle(const FDreamTextStyle& Value);
+	/** Fill progress of every line, 0..1; glyphs inside a fill segment keep the segment's own value. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFillProgress(float Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetGlowBoost(float Value);
+	/** Character runs that fill independently (a lyric line's words or syllables). Replaces the previous set. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFillSegments(const TArray<FDreamTextFillSegment>& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void ClearFillSegments();
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetMargin(const FMargin& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")

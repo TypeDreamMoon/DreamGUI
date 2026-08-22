@@ -125,6 +125,15 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Rendering")
 		bool bFrustumCulling = false;
 
+	/**
+	 * Draw widgets that have no custom material with DreamGUI's built-in shader instead of the default UI material.
+	 * Only applies to canvases rendered by the DreamUI renderer (ScreenSpaceOverlay, RenderTarget, WorldSpace-DreamUI);
+	 * UE-rendered world-space canvases always use a material. Text effects (outline, underlay, glow, MTSDF fonts)
+	 * need this on.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName = "Use Built-in UI Shader"))
+		bool bUseBuiltInUIShader = true;
+
 	/** If false, ScreenSpaceUI can still do interaction and animation when GamePause */
 	UPROPERTY(EditAnywhere, config, Category = "Game", meta = (DisplayName="ScreenSpaceUI Affect by GamePause"))
 		bool bScreenSpaceUIAffectByGamePause = false;
@@ -164,6 +173,7 @@ public:
 	static float GetParkedWidgetLifetimeSeconds();
 	static int32 ConvertAtlasTextureSizeTypeToSize(const EDreamUIAtlasTextureSizeType& InType);
 	static int32 GetPriorityInSceneViewExtension();
+	static bool GetUseBuiltInUIShader();
 private:
 	static const FDreamUIAtlasSettings& GetAtlasSettings(const FName& InPackingTag);
 };

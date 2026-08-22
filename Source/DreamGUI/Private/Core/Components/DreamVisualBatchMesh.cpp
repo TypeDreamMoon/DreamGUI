@@ -232,6 +232,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	{
 		bWidgetPropertyDataFontMarkDirty = false;
 		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), GetFontMark_WidgetPropertyDataForMaterial());
+		FillWidgetPropertyDataForMaterial_Extra(Canvas->GetWidgetPropertyDataAsTexture());
 	}
 	if (bClipDataPositionChanged)
 	{

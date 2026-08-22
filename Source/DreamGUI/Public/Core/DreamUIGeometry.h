@@ -52,6 +52,7 @@ public:
 		  Vertices(Other.Vertices),
 		  Triangles(Other.Triangles),
 		  Texture(Other.Texture),
+		  Font(Other.Font),
 		  Material(Other.Material),
 		  bIsFont(Other.bIsFont),
 		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
@@ -71,6 +72,7 @@ public:
 			Vertices = Other.Vertices;
 			Triangles = Other.Triangles;
 			Texture = Other.Texture;
+			Font = Other.Font;
 			Material = Other.Material;
 			bIsFont = Other.bIsFont;
 			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
@@ -91,6 +93,8 @@ public:
 	TArray<FDreamUIMeshIndex> Triangles;
 
 	TWeakObjectPtr<UTexture> Texture = nullptr;
+	/** The font Texture belongs to when bIsFont; the draw call reads the atlas's field geometry from it. */
+	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
 	bool bIsFont = false;
 	bool bSupportDrawcallBatching = true;
@@ -107,6 +111,7 @@ public:
 		FMemory::Memcpy(Triangles.GetData(), Other.Triangles.GetData(), Other.Triangles.Num() * sizeof(FDreamUIMeshIndex));
 		
 		Texture = Other.Texture;
+		Font = Other.Font;
 		Material = Other.Material;
 		bIsFont = Other.bIsFont;
 		bSupportDrawcallBatching = Other.bSupportDrawcallBatching;

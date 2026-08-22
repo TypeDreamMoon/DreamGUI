@@ -67,6 +67,100 @@ enum class EDreamUITextOverflowType :uint8
 	Ellipsis = 3,
 };
 
+/**
+ * How the built-in shader draws a text's glyphs beyond the plain face: outline, underlay (drop
+ * shadow), glow, and how the unfilled part of a lyric line looks. Lengths are in em, so a style
+ * reads the same at every font size. Only distance-field fonts (MTSDF) render these; bitmap fonts
+ * draw the face alone.
+ *
+ * The style is stored per widget in the canvas's widget property texture, so texts with different
+ * styles still batch into one draw.
+ */
+USTRUCT(BlueprintType, Category = DreamGUI)
+struct DREAMGUI_API FDreamTextStyle
+{
+	GENERATED_BODY()
+
+	/** Extra edge softness (blur) in em. 0 draws a crisp edge. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face", meta = (ClampMin = "0", UIMax = "0.5"))
+	float FaceSoftness = 0.0f;
+	/** Grow (positive) or shrink (negative) the face, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face", meta = (UIMin = "-0.2", UIMax = "0.2"))
+	float FaceDilate = 0.0f;
+
+	/** Outline colour; alpha 0 means no outline. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Outline")
+	FColor OutlineColor = FColor(0, 0, 0, 0);
+	/** Outline width outside the face, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Outline", meta = (ClampMin = "0", UIMax = "0.5"))
+	float OutlineWidth = 0.0f;
+	/** Outline edge softness, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Outline", meta = (ClampMin = "0", UIMax = "0.5"))
+	float OutlineSoftness = 0.0f;
+
+	/** Underlay (drop shadow) colour; alpha 0 means no underlay. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay")
+	FColor UnderlayColor = FColor(0, 0, 0, 0);
+	/** Underlay offset in em; +Y is down. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay", meta = (UIMin = "-0.5", UIMax = "0.5"))
+	FVector2f UnderlayOffset = FVector2f(0.05f, 0.05f);
+	/** Underlay edge softness, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay", meta = (ClampMin = "0", UIMax = "0.5"))
+	float UnderlaySoftness = 0.0f;
+	/** Grow the underlay beyond the face, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay", meta = (UIMin = "-0.2", UIMax = "0.5"))
+	float UnderlayDilate = 0.0f;
+
+	/** Glow colour; alpha scales the glow's strength, 0 means no glow. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow")
+	FColor GlowColor = FColor(255, 255, 255, 0);
+	/** How far the glow reaches outside the face, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow", meta = (ClampMin = "0", UIMax = "1"))
+	float GlowWidth = 0.0f;
+	/** Glow falloff exponent; higher keeps the glow tight to the face. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow", meta = (ClampMin = "0.01", UIMax = "8"))
+	float GlowPower = 1.0f;
+
+	/** Alpha of the part of a glyph run that the fill progress has not reached yet (lyrics). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fill", meta = (ClampMin = "0", ClampMax = "1"))
+	float FillDimAlpha = 0.35f;
+	/** Width of the lit/unlit transition as a fraction of the run, 0..1. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fill", meta = (ClampMin = "0.001", ClampMax = "1"))
+	float FillFadeWidth = 0.15f;
+
+	bool operator==(const FDreamTextStyle& Other) const;
+	bool operator!=(const FDreamTextStyle& Other) const { return !(*this == Other); }
+
+	/** Number of R32 pixels the packed style takes in the widget property record. */
+	static constexpr int32 PackedPixelCount = 9;
+	/** Pixel index of the first style pixel in the record (after the four every widget has). */
+	static constexpr int32 PackedPixelStart = 4;
+	/** Packs the style the way DreamUIText.ush's DreamUIText_ReadStyle reads it: PackedPixelCount * 4 bytes. */
+	void Pack(TArray<uint8>& OutBytes) const;
+};
+
+/**
+ * A run of characters that fills together, for lyric-style progress: the characters from
+ * StartCharIndex to EndCharIndex (inclusive, indices into the text) sweep from unlit to lit as
+ * Progress goes 0..1, left to right across the run's glyphs.
+ */
+USTRUCT(BlueprintType, Category = DreamGUI)
+struct DREAMGUI_API FDreamTextFillSegment
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI)
+	int32 StartCharIndex = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI)
+	int32 EndCharIndex = 0;
+	/** 0 = none of the run is lit, 1 = all of it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI, meta = (ClampMin = "0", ClampMax = "1"))
+	float Progress = 1.0f;
+	/** Extra glow for this run, added to the style's GlowWidth as a fraction (1 = twice as wide). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI, meta = (ClampMin = "0"))
+	float GlowBoost = 0.0f;
+};
+
 /** single char property */
 struct FDreamUITextCaretProperty
 {

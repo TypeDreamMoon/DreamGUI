@@ -10,6 +10,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/Texture2DArray.h"
 #include "Utils/sdf/sdf.h"
+#include "Core/Text/DreamGlyphSdf.h"
+#include "UObject/DreamGUIObjectVersion.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -74,6 +76,22 @@ void UDreamUIFontData_DistanceField::AddCharDataToCache(const FDreamUIGlyphKey& 
 bool UDreamUIFontData_DistanceField::RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
+	if (SdfSource == EDreamUISdfSource::OutlineMultiChannel)
+	{
+		FDreamGlyphSdfResult Sdf;
+		if (!FDreamGlyphSdf::GenerateMTSDF(GetFreeTypeFace(Glyph.FaceIndex), Glyph.GlyphIndex, (float)SampleFontSize, (float)SDFRadius, IsBold ? SampleFontSize * BoldRatio : 0.0f, Sdf))
+		{
+			return false;
+		}
+		OutResult.width = Sdf.Width;
+		OutResult.height = Sdf.Height;
+		OutResult.hOffset = Sdf.Left;
+		OutResult.vOffset = Sdf.Top;
+		OutResult.hAdvance = Sdf.Advance;
+		OutResult.buffer = MoveTemp(Sdf.Pixels);
+		OutResult.pixelSize = 4;
+		return true;
+	}
 	auto slot = RenderGlyphOnFreeType(GetFreeTypeFace(Glyph.FaceIndex), Glyph.GlyphIndex, SampleFontSize, IsBold ? SampleFontSize * BoldRatio : 0);
 	if (slot == nullptr)
 	{
@@ -126,7 +144,7 @@ UTexture2DArray* UDreamUIFontData_DistanceField::CreateFontTexture(int InTexture
 		GetTransientPackage()
 		, FName(*FString::Printf(TEXT("DreamUIFontData_DistanceField_Texture_%d"), TextureNameSuffix++))
 		, RF_Transient);
-	auto PixelFormat = PF_R8;
+	const auto PixelFormat = SdfSource == EDreamUISdfSource::OutlineMultiChannel ? PF_B8G8R8A8 : PF_R8;
 
 	auto PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = InTextureSize;
@@ -256,5 +274,17 @@ void UDreamUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEven
 void UDreamUIFontData_DistanceField::PostInitProperties()
 {
 	Super::PostInitProperties();
+}
+
+void UDreamUIFontData_DistanceField::Serialize(FArchive& Ar)
+{
+	Ar.UsingCustomVersion(FDreamGUIObjectVersion::GUID);
+	Super::Serialize(Ar);
+	// Assets saved before the outline field existed were authored against the bitmap one -- and
+	// against a material that samples one channel -- so they keep it until someone switches them.
+	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::SdfSourceOnFont)
+	{
+		SdfSource = EDreamUISdfSource::BitmapSingleChannel;
+	}
 }
 #undef LOCTEXT_NAMESPACE

@@ -5,6 +5,11 @@
 
 #include "DreamTweener.h"
 #include "InputCoreTypes.h"
+// These three arrive transitively under a unity build and vanish the moment this header is
+// compiled on its own -- FMargin, EMouseCursor and EWidgetPixelSnapping are all used below.
+#include "Layout/Margin.h"
+#include "GenericPlatform/ICursor.h"
+#include "Widgets/WidgetPixelSnapping.h"
 #include "Core/DreamUIAnchorData.h"
 #include "DreamWidget.generated.h"
 

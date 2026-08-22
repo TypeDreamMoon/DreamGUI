@@ -184,8 +184,10 @@ protected:
 	void DeinitFreeType();
 	/** Loads and rasterizes one glyph of a face at CharSize, synthetic bold by BoldSize pixels. */
 	FT_GlyphSlotRec_* RenderGlyphOnFreeType(FT_FaceRec_* InFace, uint32 GlyphIndex, float CharSize, float BoldSize);
+public:
 	/** The FreeType face behind a face index (this font or a fallback), initializing it on demand; null when missing. */
 	FT_FaceRec_* GetFreeTypeFace(int32 FaceIndex);
+protected:
 #endif
 	/** The shaping font over Face; null when HarfBuzz is not compiled in or the face failed to load. */
 	hb_font_t* HarfBuzzFont = nullptr;

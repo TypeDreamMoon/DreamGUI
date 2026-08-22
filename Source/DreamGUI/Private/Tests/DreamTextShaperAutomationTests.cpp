@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -9,7 +9,15 @@
 #include "Core/Text/DreamTextLayout.h"
 #include "Core/Text/DreamTextPainter.h"
 #include "Core/DreamUIGeometry.h"
+#include "Core/Text/DreamGlyphSdf.h"
+#include "Engine/Texture2DArray.h"
 #include "Engine/World.h"
+#if WITH_FREETYPE
+THIRD_PARTY_INCLUDES_START
+#include <ft2build.h>
+#include FT_FREETYPE_H
+THIRD_PARTY_INCLUDES_END
+#endif
 
 /*
  * Shaping against real fonts the engine ships. Roboto has GPOS kerning and no 'kern' table, which
@@ -157,6 +165,20 @@ bool FDreamTextShaperFallbackTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(TEXT("fallback glyphs are real glyphs, not .notdef"), G.GlyphIndex != 0);
 	}
+#if WITH_FREETYPE
+	// The glyph ids the shaper hands back must be the fallback face's own, or the atlas draws the wrong glyph.
+	if (Runs[1].Glyphs.Num() >= 2)
+	{
+		FT_FaceRec_* DroidFace = Roboto->GetFreeTypeFace(1);
+		TestEqual(TEXT("first CJK glyph id is Droid's id for U+4E16"), Runs[1].Glyphs[0].GlyphIndex, (uint32)FT_Get_Char_Index(DroidFace, 0x4E16));
+		TestEqual(TEXT("second CJK glyph id is Droid's id for U+754C"), Runs[1].Glyphs[1].GlyphIndex, (uint32)FT_Get_Char_Index(DroidFace, 0x754C));
+		// And the outline rasterizer must see the same glyph: a CJK glyph at 48px is a few dozen pixels, not hundreds.
+		FDreamGlyphSdfResult Sdf;
+		TestTrue(TEXT("the fallback glyph rasterizes"), FDreamGlyphSdf::GenerateMTSDF(DroidFace, Runs[1].Glyphs[0].GlyphIndex, 48.0f, 8.0f, 0.0f, Sdf));
+		TestTrue(TEXT("with a plausible size"), Sdf.Width > 20 && Sdf.Width < 90 && Sdf.Height > 20 && Sdf.Height < 90);
+		TestTrue(TEXT("and a plausible advance"), Sdf.Advance > 30.0f && Sdf.Advance < 60.0f);
+	}
+#endif
 
 	// The atlas owner renders the fallback glyph through its own cache, keyed by face and glyph.
 	const FDreamUICharData Data = Roboto->GetGlyphData(1, Runs[1].Glyphs[0].GlyphIndex, 32.0f, false);
@@ -232,6 +254,93 @@ bool FDreamTextShaperLayoutTest::RunTest(const FString& Parameters)
 	}
 	AddInfo(FString::Printf(TEXT("line 1 items: %s"), *Dump));
 	TestTrue(TEXT("meem is right of alef"), MeemX > AlefX);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMtsdfGlyphTest,
+	"DreamGUI.Text.Atlas.OutlineFieldHasInsideAndOutside",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextMtsdfGlyphTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	TestEqual(TEXT("a new font is an outline field"), (int32)Font->GetSdfSource(), (int32)EDreamUISdfSource::OutlineMultiChannel);
+	TestEqual(TEXT("and says so through its mark"), (int32)Font->GetFontTextureMark(), (int32)EDreamUIFontTextureMark::Mtsdf);
+
+	// 'H' at 64px: the field must have a clear inside (the stems) and outside (the spread), and the
+	// three colour channels must agree with the true distance about where the edge is.
+	const FDreamUICharData Data = Font->GetCharData('H', 64.0f, false);
+	TestTrue(TEXT("the glyph has a quad"), Data.IsValid() && Data.Width > 10.0f && Data.Height > 10.0f);
+	TestTrue(TEXT("and an advance"), Data.XAdvance > 10.0f);
+
+	UTexture2DArray* Atlas = Font->GetFontTexture();
+	if (!TestNotNull(TEXT("atlas texture"), Atlas))return false;
+	TestEqual(TEXT("the atlas is four channels"), (int32)Atlas->GetPixelFormat(), (int32)PF_B8G8R8A8);
+
+	// Rasterize the glyph once more through the generator and inspect the field directly.
+	FDreamGlyphSdfResult Sdf;
+	FDreamUIGlyphKey Key;
+	if (!TestTrue(TEXT("H resolves to a glyph"), Font->ResolveCodepoint('H', Key)))return false;
+	const bool bGenerated = FDreamGlyphSdf::GenerateMTSDF(Font->GetFreeTypeFace(Key.FaceIndex), Key.GlyphIndex, 64.0f, 16.0f, 0.0f, Sdf);
+	if (!TestTrue(TEXT("the field generates"), bGenerated))return false;
+	int32 Inside = 0, Outside = 0, Disagree = 0;
+	for (int32 i = 0; i < Sdf.Width * Sdf.Height; i++)
+	{
+		const uint8* Px = Sdf.Pixels.GetData() + i * 4;
+		const int32 B = Px[0], G = Px[1], R = Px[2], A = Px[3];
+		const int32 Median = FMath::Max(FMath::Min(R, G), FMath::Min(FMath::Max(R, G), B));
+		// With a 16px spread at 64px, a Roboto H stem (~6px) never gets further than ~3px inside: 0.5 + 3/32.
+		if (A > 140)Inside++;
+		if (A < 100)Outside++;
+		if ((Median > 128) != (A > 128) && FMath::Abs(A - 128) > 24)Disagree++;
+	}
+	TestTrue(TEXT("some pixels are well inside"), Inside > 50);
+	TestTrue(TEXT("some pixels are well outside"), Outside > 50);
+	TestTrue(TEXT("the median of the colour field agrees with the true distance about the edge"), Disagree < (Sdf.Width * Sdf.Height) / 100);
+	TestTrue(TEXT("the bitmap top sits above the baseline"), Sdf.Top > 0.0f);
+
+	// Bold is a few pixels of emboldening, not a different glyph: at 64px with 3px of bold the
+	// bitmap grows by a handful of pixels on each side and the advance by the bold amount.
+	FDreamGlyphSdfResult Bold;
+	if (TestTrue(TEXT("the bold field generates"), FDreamGlyphSdf::GenerateMTSDF(Font->GetFreeTypeFace(Key.FaceIndex), Key.GlyphIndex, 64.0f, 16.0f, 3.0f, Bold)))
+	{
+		TestTrue(TEXT("bold is only a little wider"), Bold.Width >= Sdf.Width && Bold.Width <= Sdf.Width + 8);
+		TestTrue(TEXT("bold is only a little taller"), Bold.Height >= Sdf.Height && Bold.Height <= Sdf.Height + 8);
+		TestEqual(TEXT("bold advance grows by the bold amount"), Bold.Advance, Sdf.Advance + 3.0f, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMtsdfCjkBoundsTest,
+	"DreamGUI.Text.Atlas.FallbackGlyphsHavePlausibleBounds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextMtsdfCjkBoundsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Droid = MakeFileFont(TestWorld.World, TEXT("DroidSansFallback.ttf"));
+	if (!TestTrue(TEXT("Droid loads"), Droid->FaceHasCodepoint(0, 0x4E16)))return false;
+	// Glyphs seen on screen with wildly wrong quads; every one must rasterize to a few dozen pixels at 48px.
+	const TCHAR* Sample = TEXT("逐字渐变填充辉光描边投影模糊你好世界");
+	for (int32 i = 0; Sample[i] != 0; i++)
+	{
+		FDreamUIGlyphKey Key;
+		if (!Droid->ResolveCodepoint(Sample[i], Key))continue;
+		FDreamGlyphSdfResult Sdf;
+		if (!FDreamGlyphSdf::GenerateMTSDF(Droid->GetFreeTypeFace(0), Key.GlyphIndex, 48.0f, 8.0f, 0.0f, Sdf))continue;
+		const bool bPlausible = Sdf.Width > 16 && Sdf.Width < 96 && Sdf.Height > 16 && Sdf.Height < 96 && Sdf.Left > -40.0f && Sdf.Left < 40.0f && Sdf.Top > -10.0f && Sdf.Top < 70.0f;
+		TestTrue(FString::Printf(TEXT("U+%04X glyph %u: %dx%d at (%.1f, %.1f) advance %.1f"), (uint32)Sample[i], Key.GlyphIndex, Sdf.Width, Sdf.Height, Sdf.Left, Sdf.Top, Sdf.Advance), bPlausible);
+		if (!bPlausible)
+		{
+			AddInfo(FString::Printf(TEXT("U+%04X glyph %u: %dx%d at (%.1f, %.1f) advance %.1f"), (uint32)Sample[i], Key.GlyphIndex, Sdf.Width, Sdf.Height, Sdf.Left, Sdf.Top, Sdf.Advance));
+		}
+	}
 	return true;
 }
 

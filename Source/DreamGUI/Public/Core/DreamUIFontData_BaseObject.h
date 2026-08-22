@@ -44,9 +44,12 @@ struct FDreamUICharData
 	}
 };
 
+/** What the font atlas holds, which is what the shader switches on per widget (the FontMark record). */
 enum class EDreamUIFontTextureMark : uint8
 {
 	None = 0, Bitmap = 1, DistanceField = 2,
+	/** Multi-channel (RGB) plus true (A) signed distance field, from the glyph outline. */
+	Mtsdf = 3,
 };
 
 /** How a font wants its glyph quads built: the part of "rendering" that is the font's business, not the painter's. */
@@ -79,6 +82,10 @@ public:
 	virtual UTexture2DArray* GetFontTexture()PURE_VIRTUAL(UDreamUIFontData_BaseObject::GetFontTexture, return nullptr;);
 	virtual FDreamUICharData GetCharData(uint32 CharCode, float CharSize, bool IsBold) PURE_VIRTUAL(UDreamUIFontData::GetCharData, return FDreamUICharData(););
 	virtual bool HasKerning() { return false; }
+	/** Distance-field range of the atlas in texels (twice the spread); 0 for atlases that are not fields. */
+	virtual float GetAtlasFieldRangeTexels() const { return 0.0f; }
+	/** Texels per em at the size the atlas was rasterized at; 0 when not applicable. */
+	virtual float GetAtlasEmTexels() const { return 0.0f; }
 
 	/**
 	 * Shaping interface. A font is a list of faces -- its own first, then its fallbacks in lookup

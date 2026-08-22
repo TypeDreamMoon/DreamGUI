@@ -4,6 +4,56 @@
 #include "Core/DreamUIGeometry.h"
 #include "Core/Text/DreamTextLayout.h"
 #include "Core/Text/DreamTextPainter.h"
+#include "Math/Float16.h"
+
+bool FDreamTextStyle::operator==(const FDreamTextStyle& Other) const
+{
+	return FaceSoftness == Other.FaceSoftness
+		&& FaceDilate == Other.FaceDilate
+		&& OutlineColor == Other.OutlineColor
+		&& OutlineWidth == Other.OutlineWidth
+		&& OutlineSoftness == Other.OutlineSoftness
+		&& UnderlayColor == Other.UnderlayColor
+		&& UnderlayOffset == Other.UnderlayOffset
+		&& UnderlaySoftness == Other.UnderlaySoftness
+		&& UnderlayDilate == Other.UnderlayDilate
+		&& GlowColor == Other.GlowColor
+		&& GlowWidth == Other.GlowWidth
+		&& GlowPower == Other.GlowPower
+		&& FillDimAlpha == Other.FillDimAlpha
+		&& FillFadeWidth == Other.FillFadeWidth;
+}
+
+namespace DreamTextStyleLocal
+{
+	// The shader decodes x from the high 16 bits and y from the low 16.
+	static uint32 PackHalf2(float X, float Y)
+	{
+		return (uint32(FFloat16(X).Encoded) << 16) | uint32(FFloat16(Y).Encoded);
+	}
+	// r = bits 16..23, g = 8..15, b = 0..7, a = 24..31
+	static uint32 PackColor(const FColor& C)
+	{
+		return (uint32(C.A) << 24) | (uint32(C.R) << 16) | (uint32(C.G) << 8) | uint32(C.B);
+	}
+}
+
+void FDreamTextStyle::Pack(TArray<uint8>& OutBytes) const
+{
+	using namespace DreamTextStyleLocal;
+	uint32 Pixels[PackedPixelCount];
+	Pixels[0] = PackHalf2(FaceSoftness, FaceDilate);
+	Pixels[1] = PackColor(OutlineColor);
+	Pixels[2] = PackHalf2(OutlineWidth, OutlineSoftness);
+	Pixels[3] = PackColor(UnderlayColor);
+	Pixels[4] = PackHalf2(UnderlayOffset.X, UnderlayOffset.Y);
+	Pixels[5] = PackHalf2(UnderlaySoftness, UnderlayDilate);
+	Pixels[6] = PackColor(GlowColor);
+	Pixels[7] = PackHalf2(GlowWidth, GlowPower);
+	Pixels[8] = PackHalf2(FillDimAlpha, FillFadeWidth);
+	OutBytes.SetNumUninitialized(sizeof(Pixels));
+	FMemory::Memcpy(OutBytes.GetData(), Pixels, sizeof(Pixels));
+}
 
 FDreamUITextGeometryCache::FDreamUITextGeometryCache()
 	: Input(MakeUnique<FDreamTextLayoutInput>())

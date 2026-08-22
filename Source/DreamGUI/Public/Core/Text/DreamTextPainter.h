@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -19,6 +19,14 @@ struct FDreamTextPaintParams
 	bool bRequireNormalAndTangent = false;
 	/** Colour of every glyph that did not get one from a <color> tag. */
 	FColor BaseColor = FColor::White;
+	/**
+	 * Lyric-style fill. Glyphs inside a segment carry that segment's progress and glow boost and
+	 * their position across it (UV2.y 0..1, UV3.x progress, UV3.y glow boost); glyphs outside any
+	 * segment are one run per line with FillProgress / GlowBoost.
+	 */
+	const TArray<struct FDreamTextFillSegment>* FillSegments = nullptr;
+	float FillProgress = 1.0f;
+	float GlowBoost = 0.0f;
 };
 
 /**

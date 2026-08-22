@@ -85,6 +85,11 @@ int32 UDreamUISettings::GetPriorityInSceneViewExtension()
 	return GetDefault<UDreamUISettings>()->PriorityInSceneViewExtension;
 }
 
+bool UDreamUISettings::GetUseBuiltInUIShader()
+{
+	return GetDefault<UDreamUISettings>()->bUseBuiltInUIShader;
+}
+
 
 #if WITH_EDITOR
 void UDreamUIEditorSettings::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)

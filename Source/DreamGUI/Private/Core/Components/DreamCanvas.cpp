@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamGUISettings.h"
 #include "Engine/UserInterfaceSettings.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
@@ -11,6 +12,13 @@
 #include "Core/DreamUIRender/DreamUIRenderer.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/DreamUIDrawCall.h"
+#include "Core/DreamUIFontData_BaseObject.h"
+#include "Engine/GameViewportClient.h"
+#include "SceneView.h"
+#if WITH_EDITOR
+#include "Editor.h"
+#include "EditorViewportClient.h"
+#endif
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamVisualDirectMesh.h"
@@ -34,7 +42,7 @@
 UDreamCanvas::UDreamCanvas()
 {
 	DefaultMeshType = UDreamUIMeshComponent::StaticClass();
-	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont"));
+	DefaultMaterial = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
 	bStartWithTickEnabled = false;
 }
 
@@ -1099,6 +1107,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				if (InItemGeo.bIsFont)
 				{
 					DrawCallItem.FontTexture = InItemGeo.Texture;
+					DrawCallItem.Font = InItemGeo.Font;
 				}
 				else
 				{
@@ -1164,6 +1173,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 						{
 							DrawCallItem.FontTexture = ItemGeo.Texture;
 						}
+						DrawCallItem.Font = ItemGeo.Font;
 					}
 					else
 					{
@@ -1641,6 +1651,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		}
 	}
 
+	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
 	auto SetParameterForNewlyCreatedMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
 	{
 		InMaterialInstanceDynamic->SetScalarParameterValue(DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName, this->IsRenderByDreamUIRendererOrUERenderer());
@@ -1730,6 +1741,28 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 						}
 					}
 				}
+				else if (bUseBuiltInShader)
+				{
+					// No material at all: the renderer draws this section with the built-in UI shader.
+					FDreamUIBuiltInDrawParams BuiltIn;
+					BuiltIn.bEnabled = true;
+					BuiltIn.MainTexture = DrawCallItem.Texture.IsValid() ? DrawCallItem.Texture->GetResource() : nullptr;
+					BuiltIn.FontTexture = DrawCallItem.FontTexture.IsValid() ? DrawCallItem.FontTexture->GetResource() : nullptr;
+					BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture() ? WidgetPropertyDataAsTexture->GetDataTexture()->GetResource() : nullptr;
+					BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture() ? RootCanvas->ClipDataAsTexture->GetDataTexture()->GetResource() : nullptr;
+					if (DrawCallItem.FontTexture.IsValid())
+					{
+						BuiltIn.FontAtlasSize = FVector2f(DrawCallItem.FontTexture->GetSurfaceWidth(), DrawCallItem.FontTexture->GetSurfaceHeight());
+					}
+					if (DrawCallItem.Font.IsValid())
+					{
+						BuiltIn.FontFieldRangeTexels = DrawCallItem.Font->GetAtlasFieldRangeTexels();
+						BuiltIn.FontEmTexels = DrawCallItem.Font->GetAtlasEmTexels();
+					}
+					UIMesh->SetMeshSectionBuiltIn(i, BuiltIn);
+					UIMesh->SetMeshSectionMaterial(i, nullptr);
+					break;
+				}
 				else
 				{
 					auto GetUIMaterialFromPool = [&]()
@@ -1771,6 +1804,10 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 					{
 						RenderMat_MID->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
 					}
+				}
+				if (UIMesh->IsMeshSectionBuiltIn(i))
+				{
+					UIMesh->SetMeshSectionBuiltIn(i, FDreamUIBuiltInDrawParams());
 				}
 				UIMesh->SetMeshSectionMaterial(i, RenderMat);
 			}
@@ -1940,7 +1977,7 @@ UMaterialInterface* UDreamCanvas::GetDefaultMaterial()const
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont"));
+		DefaultMaterial = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
 		if (!DefaultMaterial)
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Load DefaultMaterial error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

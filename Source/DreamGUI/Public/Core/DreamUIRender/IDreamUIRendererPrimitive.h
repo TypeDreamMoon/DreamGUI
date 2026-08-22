@@ -7,6 +7,7 @@
 #include "MeshBatch.h"
 #include "RHIResources.h"
 #include "GlobalShader.h"
+#include "Core/DreamUIRender/DreamUIBaseShaders.h"
 
 class FDreamUIRenderer;
 class FSceneViewFamily;
@@ -17,6 +18,10 @@ struct FDreamUIMeshBatchContainer
 	FMeshBatch Mesh;
 	FBufferRHIRef VertexBufferRHI;
 	int32 NumVerts = 0;
+	/** When enabled, the renderer draws this batch with the built-in UI shader instead of Mesh.MaterialRenderProxy. */
+	FDreamUIBuiltInDrawParams BuiltIn;
+	/** Primitive transform, for the built-in path (the material path reads it from the primitive uniform buffer). */
+	FMatrix LocalToWorld = FMatrix::Identity;
 
 	FDreamUIMeshBatchContainer() {}
 };

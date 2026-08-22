@@ -163,6 +163,8 @@ protected:
 	/** fill and update ui geometry */
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial(){return 0;}
+	/** Write anything this visual keeps in its widget property record beyond the common pixels; runs whenever the record is (re)written. */
+	virtual void FillWidgetPropertyDataForMaterial_Extra(class UDreamUIDataAsTexture* DataAsTexture) {}
 	virtual void OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas) override;
 	/** return true means any data dirty, then update geometry (go OnUpdateGeometry), otherwise return false. */
 	virtual bool GetAnythingDirty()const;

@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/DreamText.h"
+#include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/Text/DreamTextLayout.h"
 #include "Core/Text/DreamTextPainter.h"
@@ -73,6 +74,9 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 	Params.FontScaleMultiplier = Style.FontScaleMultiplier;
 	Params.bRequireNormalAndTangent = RenderCanvas ? RenderCanvas->GetActualRequireNormalAndTangent() : false;
 	Params.BaseColor = Text->GetFinalColor();
+	Params.FillSegments = &Text->GetFillSegments();
+	Params.FillProgress = Text->GetFillProgress();
+	Params.GlowBoost = Text->GetGlowBoost();
 	return Params;
 }
 
@@ -275,6 +279,7 @@ UTexture* UDreamText::GetTextureToCreateGeometry()
 		Font = UDreamUIFontData_BaseObject::GetDefaultFont();
 	}
 	Font->InitFont();
+	UIGeometry->Font = Font;
 	return Font->GetFontTexture();
 }
 
@@ -346,6 +351,15 @@ void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChange
 uint8 UDreamText::GetFontMark_WidgetPropertyDataForMaterial()
 {
 	return static_cast<uint8>(this->Font->GetFontTextureMark());
+}
+
+void UDreamText::FillWidgetPropertyDataForMaterial_Extra(UDreamUIDataAsTexture* DataAsTexture)
+{
+	const int32 StartPosition = GetWidgetPropertyDataStartPosition();
+	if (StartPosition == INDEX_NONE || !DataAsTexture)return;
+	TArray<uint8> Packed;
+	TextStyle.Pack(Packed);
+	DataAsTexture->UpdateBlock(FDreamTextStyle::PackedPixelStart, StartPosition, MoveTemp(Packed), FDreamTextStyle::PackedPixelCount);
 }
 
 void UDreamText::OnCultureChanged_Implementation()
@@ -424,6 +438,14 @@ void UDreamText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			{
 				MarkVertexPositionDirty();
 				CacheTextGeometryData.MarkDirty();
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, TextStyle))
+			{
+				bWidgetPropertyDataFontMarkDirty = true;
+				if (auto Widget = GetWidget())
+				{
+					Widget->MarkCanvasUpdate(false);
+				}
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, bRichText))
 			{
@@ -726,6 +748,55 @@ void UDreamText::SetPhraseWrap(EDreamTextPhraseWrap Value)
 		PhraseWrap = Value;
 		MarkVertexPositionDirty();
 		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetTextStyle(const FDreamTextStyle& Value)
+{
+	if (TextStyle != Value)
+	{
+		TextStyle = Value;
+		// The style lives in the widget property record; rewriting the record is all this needs.
+		bWidgetPropertyDataFontMarkDirty = true;
+		if (auto Widget = GetWidget())
+		{
+			Widget->MarkCanvasUpdate(false);
+		}
+	}
+}
+
+void UDreamText::SetFillProgress(float Value)
+{
+	Value = FMath::Clamp(Value, 0.0f, 1.0f);
+	if (FillProgress != Value)
+	{
+		FillProgress = Value;
+		MarkVertexUVDirty();
+	}
+}
+
+void UDreamText::SetGlowBoost(float Value)
+{
+	Value = FMath::Max(Value, 0.0f);
+	if (GlowBoost != Value)
+	{
+		GlowBoost = Value;
+		MarkVertexUVDirty();
+	}
+}
+
+void UDreamText::SetFillSegments(const TArray<FDreamTextFillSegment>& Value)
+{
+	FillSegments = Value;
+	MarkVertexUVDirty();
+}
+
+void UDreamText::ClearFillSegments()
+{
+	if (FillSegments.Num() > 0)
+	{
+		FillSegments.Reset();
+		MarkVertexUVDirty();
 	}
 }
 

@@ -1,0 +1,199 @@
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// Glyph decoding and text effects for DreamGUI's built-in UI shader. One HLSL source for every host:
+// the global shader includes it directly; a material that has to draw text through UE's own
+// renderer can include it from a Custom node and call the same functions.
+//
+// Atlas kinds (the FontMark record):
+//   1  bitmap        coverage straight from the texture
+//   2  sdf           one channel, 0.5 at the edge, from a rasterized bitmap (the original method)
+//   3  mtsdf         rgb = multi-channel field (median gives sharp corners), a = true distance
+//
+// The text style lives in the widget property record after the four pixels every widget has, so
+// texts with different styles still batch: the shader reads the style by the record index in UV1.x.
+
+#ifndef DREAMUI_TEXT_USH
+#define DREAMUI_TEXT_USH
+
+struct FDreamUITextStyle
+{
+	float FaceSoftness;     // em: extra edge width (blur). 0 = crisp
+	float FaceDilate;       // em: grow (+) / shrink (-) the face
+	float4 OutlineColor;
+	float OutlineWidth;     // em
+	float OutlineSoftness;  // em
+	float4 UnderlayColor;
+	float2 UnderlayOffset;  // em, +y down
+	float UnderlaySoftness; // em
+	float UnderlayDilate;   // em
+	float4 GlowColor;
+	float GlowWidth;        // em: how far the glow reaches outside the face
+	float GlowPower;        // falloff exponent
+	float FillDimAlpha;     // alpha of the not-yet-filled part when a glyph carries a fill progress
+	float FillFadeWidth;    // fraction of the segment the fill ramps over
+};
+
+float4 DreamUIText_UnpackColor(float PixelData)
+{
+	uint Packed = asuint(PixelData);
+	return float4((Packed >> 16) & 0xff, (Packed >> 8) & 0xff, Packed & 0xff, (Packed >> 24) & 0xff) / 255.0;
+}
+
+float2 DreamUIText_UnpackHalf2(float PixelData)
+{
+	uint Packed = asuint(PixelData);
+	return float2(f16tof32((Packed >> 16) & 0xffff), f16tof32(Packed & 0xffff));
+}
+
+// Record layout, pixels 4..12 of the widget property row (0..3 are the common ones).
+FDreamUITextStyle DreamUIText_ReadStyle(Texture2D DataTex, float CoordinateInDataTex)
+{
+	int Row = round(CoordinateInDataTex);
+	FDreamUITextStyle S;
+	float2 Face = DreamUIText_UnpackHalf2(DataTex.Load(int3(4, Row, 0)).x);
+	S.FaceSoftness = Face.x;
+	S.FaceDilate = Face.y;
+	S.OutlineColor = DreamUIText_UnpackColor(DataTex.Load(int3(5, Row, 0)).x);
+	float2 Outline = DreamUIText_UnpackHalf2(DataTex.Load(int3(6, Row, 0)).x);
+	S.OutlineWidth = Outline.x;
+	S.OutlineSoftness = Outline.y;
+	S.UnderlayColor = DreamUIText_UnpackColor(DataTex.Load(int3(7, Row, 0)).x);
+	S.UnderlayOffset = DreamUIText_UnpackHalf2(DataTex.Load(int3(8, Row, 0)).x);
+	float2 Underlay = DreamUIText_UnpackHalf2(DataTex.Load(int3(9, Row, 0)).x);
+	S.UnderlaySoftness = Underlay.x;
+	S.UnderlayDilate = Underlay.y;
+	S.GlowColor = DreamUIText_UnpackColor(DataTex.Load(int3(10, Row, 0)).x);
+	float2 Glow = DreamUIText_UnpackHalf2(DataTex.Load(int3(11, Row, 0)).x);
+	S.GlowWidth = Glow.x;
+	S.GlowPower = Glow.y;
+	float2 Fill = DreamUIText_UnpackHalf2(DataTex.Load(int3(12, Row, 0)).x);
+	S.FillDimAlpha = Fill.x;
+	S.FillFadeWidth = Fill.y;
+	return S;
+}
+
+float DreamUIText_Median(float3 V)
+{
+	return max(min(V.r, V.g), min(max(V.r, V.g), V.b));
+}
+
+// How many screen pixels one unit of distance (0..1 across the field's range) spans. The standard
+// msdfgen recipe: the field's pixel range scaled by texels-per-screen-pixel, read off the UV
+// derivatives -- so perspective, tilt and minification all fall out of it with no special cases.
+// Returns screen px per field unit; the edge's anti-aliasing band is one screen pixel wide.
+float DreamUIText_ScreenPxRange(float2 UV, float2 AtlasSize, float FieldRangeTexels)
+{
+	float2 UnitRange = FieldRangeTexels / AtlasSize;
+	float2 ScreenTexSize = 1.0 / fwidth(UV);
+	return max(0.5 * dot(UnitRange, ScreenTexSize), 1.0);
+}
+
+// Coverage of "distance >= Threshold" with a one-pixel anti-aliasing band, widened by Softness
+// (in field units).
+float DreamUIText_Coverage(float Distance, float Threshold, float ScreenPxRange, float Softness)
+{
+	float Band = 1.0 / ScreenPxRange + Softness;
+	return saturate((Distance - Threshold) / Band + 0.5);
+}
+
+// Distance in field units (0..1 across the whole range) for a length given in em.
+float DreamUIText_EmToField(float Em, float FontEmTexels, float FieldRangeTexels)
+{
+	return Em * FontEmTexels / FieldRangeTexels;
+}
+
+struct FDreamUIGlyphSample
+{
+	float Distance;       // true signed distance, 0.5 at the edge
+	float MedianDistance; // multi-channel distance for the face edge (sharp corners)
+};
+
+FDreamUIGlyphSample DreamUIText_SampleMtsdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice)
+{
+	float4 Texel = FontTex.Sample(FontSampler, float3(UV, Slice));
+	FDreamUIGlyphSample S;
+	S.Distance = Texel.a;
+	S.MedianDistance = DreamUIText_Median(Texel.rgb);
+	return S;
+}
+
+/**
+ * The whole text look for one pixel: underlay behind, glow outside, outline around, face on top.
+ * Returns straight (non-premultiplied) colour and alpha; VertexColor is the text's own colour.
+ */
+float4 DreamUIText_ShadeMtsdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice,
+	float2 AtlasSize, float FieldRangeTexels, float FontEmTexels, float4 VertexColor, FDreamUITextStyle Style,
+	float FillProgress, float SegmentX, float GlyphGlowBoost)
+{
+	float PxRange = DreamUIText_ScreenPxRange(UV, AtlasSize, FieldRangeTexels);
+	FDreamUIGlyphSample S = DreamUIText_SampleMtsdf(FontTex, FontSampler, UV, Slice);
+
+	float FaceSoft = DreamUIText_EmToField(Style.FaceSoftness, FontEmTexels, FieldRangeTexels);
+	float FaceEdge = 0.5 - DreamUIText_EmToField(Style.FaceDilate, FontEmTexels, FieldRangeTexels);
+	float Face = DreamUIText_Coverage(S.MedianDistance, FaceEdge, PxRange, FaceSoft);
+
+	// Outline: the band between the face edge and OutlineWidth further out, on the true distance.
+	float OutlineWidth = DreamUIText_EmToField(Style.OutlineWidth, FontEmTexels, FieldRangeTexels);
+	float OutlineSoft = DreamUIText_EmToField(Style.OutlineSoftness, FontEmTexels, FieldRangeTexels);
+	float Outline = OutlineWidth > 0.0 ? DreamUIText_Coverage(S.Distance, FaceEdge - OutlineWidth, PxRange, OutlineSoft) : 0.0;
+
+	// Glow: soft falloff outside the face, on the true distance. A glyph's boost widens the glow and
+	// lifts its strength, but never past fully opaque: the composite below assumes 0..1 coverages.
+	float GlowWidth = DreamUIText_EmToField(Style.GlowWidth, FontEmTexels, FieldRangeTexels) * (1.0 + GlyphGlowBoost);
+	float Glow = 0.0;
+	if (GlowWidth > 0.0)
+	{
+		float T = saturate((S.Distance - (FaceEdge - GlowWidth)) / GlowWidth);
+		Glow = saturate(pow(T, max(Style.GlowPower, 0.01)) * Style.GlowColor.a * (1.0 + GlyphGlowBoost));
+	}
+
+	// Underlay: the glyph again, offset and usually softer, behind everything.
+	float Underlay = 0.0;
+	if (Style.UnderlayColor.a > 0.0)
+	{
+		float2 OffsetUV = Style.UnderlayOffset * FontEmTexels / AtlasSize;
+		FDreamUIGlyphSample U = DreamUIText_SampleMtsdf(FontTex, FontSampler, UV - OffsetUV, Slice);
+		float UnderlaySoft = DreamUIText_EmToField(Style.UnderlaySoftness, FontEmTexels, FieldRangeTexels);
+		float UnderlayEdge = FaceEdge - DreamUIText_EmToField(Style.UnderlayDilate, FontEmTexels, FieldRangeTexels) - OutlineWidth;
+		Underlay = DreamUIText_Coverage(U.Distance, UnderlayEdge, PxRange, UnderlaySoft) * Style.UnderlayColor.a;
+	}
+
+	// Fill progress (lyrics): the part of the run past FillProgress is dimmed, with a ramp FillFadeWidth
+	// wide. The ramp is placed so that progress 0 leaves the whole run dim and progress 1 lights all of
+	// it, ramp included.
+	float FaceAlpha = VertexColor.a;
+	float Dim = 1.0;
+	if (FillProgress < 0.9995)
+	{
+		float Fade = max(Style.FillFadeWidth, 0.0001);
+		float Edge = FillProgress * (1.0 + Fade);
+		float Lit = saturate((Edge - SegmentX) / Fade);
+		Dim = lerp(Style.FillDimAlpha, 1.0, Lit);
+	}
+
+	// Composite back to front.
+	float3 Color = Style.UnderlayColor.rgb;
+	float Alpha = Underlay;
+	float3 GlowRgb = Style.GlowColor.rgb;
+	Color = lerp(Color, GlowRgb, Glow);
+	Alpha = Alpha + Glow * (1.0 - Alpha);
+	float OutlineA = Outline * Style.OutlineColor.a;
+	Color = lerp(Color, Style.OutlineColor.rgb, OutlineA);
+	Alpha = Alpha + OutlineA * (1.0 - Alpha);
+	float FaceA = Face * FaceAlpha;
+	Color = lerp(Color, VertexColor.rgb, FaceA);
+	Alpha = Alpha + FaceA * (1.0 - Alpha);
+	// The dim applies to the whole glyph, effects included, so an unlit lyric fades as one.
+	return float4(Color, Alpha * Dim);
+}
+
+/** Single-channel field from a rasterized bitmap: the original SDF fonts. Only the face. */
+float4 DreamUIText_ShadeSdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice, float4 VertexColor)
+{
+	float Distance = FontTex.Sample(FontSampler, float3(UV, Slice)).r;
+	float Width = fwidth(Distance);
+	float Face = smoothstep(0.5 - Width, 0.5 + Width, Distance);
+	return float4(VertexColor.rgb, VertexColor.a * Face);
+}
+
+#endif // DREAMUI_TEXT_USH
