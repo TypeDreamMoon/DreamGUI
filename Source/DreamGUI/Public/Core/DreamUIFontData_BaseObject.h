@@ -3,8 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Core/DreamUIGeometry.h"
-#include "Core/FRichTextParser.h"
 #include "DreamUIFontData_BaseObject.generated.h"
 
 
@@ -100,16 +98,6 @@ public:
 	/** How the painter should build this font's quads. InWorldScale is the text widget's world scale. */
 	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const { return FDreamTextGlyphPaintStyle(); }
 
-	/** this is called every time before create a string of char geometry */
-	virtual void PrepareForPushCharData(UDreamText* InText) {};
-	/** create char geometry and push to vertices & triangleIndices array */
-	virtual void PushCharData(
-		uint32 charCode, FVector2f lineOffset, FVector2f fontSpace, const FDreamUICharData& charData,
-		const DreamUIRichTextParser::FRichTextParseResult& richTextProperty,
-		int verticesStartIndex, int indicesStartIndex,
-		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-		TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
-	) {};
 
 	virtual void AddUIText(UDreamText* InText) {}
 	virtual void RemoveUIText(UDreamText* InText) {}

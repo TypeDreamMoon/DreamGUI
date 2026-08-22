@@ -1,4 +1,4 @@
-// Copyright 2019-present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -81,14 +81,6 @@ private:
 public:
 	//Begin UDreamUIFontData_BaseObject interface
 	virtual UMaterialInterface* GetFontMaterial()override;
-	virtual void PushCharData(
-		uint32 charCode, FVector2f lineOffset, FVector2f fontSpace, const FDreamUICharData& charData,
-		const DreamUIRichTextParser::FRichTextParseResult& richTextProperty,
-		int verticesStartIndex, int indicesStartIndex,
-		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-		TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
-	)override;
-	virtual void PrepareForPushCharData(UDreamText* InText)override;
 	virtual void PrepareForLayout(float InExpandMeshSize)override;
 	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
 	virtual bool GetRequireNormalAndTangent()override;
@@ -102,7 +94,7 @@ public:
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}
 protected:
-	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0; float ObjectScale = 0;
+	float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0;
 	TMap<FDreamUIDistanceFieldCharKey, FDreamUICharData> CharDataMap;
 	TMap<FDreamUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;

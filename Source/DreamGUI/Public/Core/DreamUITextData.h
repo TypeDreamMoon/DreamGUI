@@ -254,6 +254,8 @@ public:
 	/** Force the next EnsureLayout to run, for when the glyphs changed underneath an unchanged input. */
 	void MarkDirty();
 	bool IsLayoutDirty() const { return bIsDirty; }
+	/** How many layouts have run on this cache; what a test reads to prove a query was free. */
+	int32 GetLayoutRunCount() const { return LayoutRunCount; }
 	/** Lays out if stale. Measures only -- no geometry is touched. Returns true if a layout ran. */
 	bool EnsureLayout();
 	/** Paints the display list into the geometry, laying out first if stale. */
@@ -282,5 +284,6 @@ private:
 	TArray<FDreamUITextCharProperty> CharPropertyArray;
 	TUniquePtr<FDreamTextLayoutInput> BestFitKey;
 	float BestFitSize = 0.0f;
+	int32 LayoutRunCount = 0;
 	bool bIsDirty = true;
 };

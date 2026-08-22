@@ -47,18 +47,9 @@ protected:
 		float BoldRatio = 0.06f;
 public:
 	//Begin UDreamUIFontData_FreeTypeRender interface
-	virtual void PushCharData(
-		uint32 charCode, FVector2f lineOffset, FVector2f fontSpace, const FDreamUICharData& charData,
-		const DreamUIRichTextParser::FRichTextParseResult& richTextProperty,
-		int verticesStartIndex, int indicesStartIndex,
-		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-		TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
-	)override;
-	virtual void PrepareForPushCharData(UDreamText* InText)override;
 	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
 	//End UDreamUIFontData_FreeTypeRender interface
 protected:
-	float BoldSize; float ItalicSlop;
 	TMap<FDreamUIBitmapCharKey, FDreamUICharData> CharDataMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
 	virtual void InitializeFontTextureAtlasSlice(uint8* SliceData, int64 SliceDataSize) const override;

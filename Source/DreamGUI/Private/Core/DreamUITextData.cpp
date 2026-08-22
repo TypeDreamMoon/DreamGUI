@@ -59,6 +59,7 @@ bool FDreamUITextGeometryCache::EnsureLayout()
 	if (!bIsDirty)return false;
 	if (!Input->Font.IsValid())return false;
 	bIsDirty = false;
+	LayoutRunCount++;
 	FDreamTextLayoutEngine::Layout(*Input, *DisplayList);
 	return true;
 }

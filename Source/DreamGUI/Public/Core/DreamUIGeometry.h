@@ -224,21 +224,7 @@ public:
 		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 	);
 #pragma endregion
-#pragma region UIText
-public:
-	static void UpdateUIText(const FString& Content
-		, TArray<FDreamUIText_TextProcessingElement>& TextProcessingArray
-		, float width, float height, FVector2f pivot
-		, FColor color, uint8 RenderOpacityForRichText, FVector2f fontSpace, FDreamUIGeometry* uiGeo, float fontSize
-		, EDreamUITextParagraphHorizontalAlign paragraphHAlign, EDreamUITextParagraphVerticalAlign paragraphVAlign, EDreamUITextOverflowType overflowType
-		, ETextWrappingPolicy wrappingPolicy, bool bUseKerning
-		, EDreamUITextFontStyle fontStyle, FVector2f& textPreferredSize, bool& outTruncated
-		, UDreamCanvas* renderCanvas, class UDreamText* lexText
-		, TArray<FDreamUITextLineProperty>& cacheLinePropertyArray, TArray<FDreamUITextCharProperty>& cacheCharPropertyArray, TArray<FDreamUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
-		, TArray<FDreamUIText_RichTextImageTag>& cacheRichTextImageTagArray
-		, TArray<FDreamUIText_Emoji>& cacheEmojiArray
-		, UDreamUIFontData_BaseObject* font, bool bRichText, int32 richTextFilterFlags);
-#pragma endregion
+
 
 public:
 	static void UpdateUIColor(FDreamUIGeometry* uiGeo, FColor color);
