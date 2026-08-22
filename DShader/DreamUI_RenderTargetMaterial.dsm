@@ -1,0 +1,120 @@
+// DreamGUI material, generated from the decompiled graph and kept as the source of truth.
+// Edit this file, then rebuild -- the .uasset is an output.
+// Decompiled from /DreamGUI/Materials/DreamUI_RenderTargetMaterial.DreamUI_RenderTargetMaterial
+
+VirtualFunction(Name="MakeFloat2")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions02/Utility/MakeFloat2");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions02/Utility/MakeFloat2.MakeFloat2";
+	}
+
+	Inputs = {
+		opt float X = 0.0;
+		opt float Y = 0.0;
+	}
+
+	Outputs = {
+		float2 Result;
+	}
+}
+VirtualFunction(Name="BreakOutFloat2Components")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions02/Utility/BreakOutFloat2Components");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions02/Utility/BreakOutFloat2Components.BreakOutFloat2Components";
+	}
+
+	Inputs = {
+		opt float2 Float2 = float2(0, 0);
+	}
+
+	Outputs = {
+		float R;
+		float G;
+	}
+}
+VirtualFunction(Name="SMF_UE4Unlit")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Substrate/SMF_UE4Unlit");
+		Description = "Generated from /Engine/Functions/Substrate/SMF_UE4Unlit.SMF_UE4Unlit";
+	}
+
+	Inputs = {
+		opt float3 Color = float3(0, 0, 0) [
+			Description="Emissive color added to the scene.";
+		];
+		opt float Opacity = 0.5 [
+			Description="Represent the coverage of the material. 0 means 100% see through, 1 means fully opaque.";
+		];
+	}
+
+	Outputs = {
+		Substrate Result;
+	}
+}
+Shader(Name="Materials/DreamUI_RenderTargetMaterial", Root="Plugin.DreamGUI")
+{
+	Properties = {
+		ScalarParameter FlipY = 0.0;
+		TextureObjectParameter MainTexture [
+			SamplerType="SAMPLERTYPE_Color";
+		];
+	}
+
+	Settings = {
+		// Graph, not the project default ThinCustom: ThinCustom emits a UDreamShaderMaterialInstance,
+		// which would make DreamGUI fail to load its own materials wherever DreamShader is absent.
+		Backend = "Graph";
+		Domain = "Surface";
+		ShadingModel = "Substrate";
+		BlendMode = "Translucent";
+	}
+
+	Outputs = {
+		float3 EmissiveColor;
+		float Opacity;
+		Substrate FrontMaterial;
+
+		Base.EmissiveColor = EmissiveColor;
+		Base.Opacity = Opacity;
+		Base.FrontMaterial = FrontMaterial;
+	}
+
+	Graph = {
+		float2 MaterialExpressionTextureCoordinate_0 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		float BreakOutFloat2Components = BreakOutFloat2Components(MaterialExpressionTextureCoordinate_0, OutputIndex=0);
+		float2 MaterialExpressionTextureCoordinate_0_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		float BreakOutFloat2Components_1 = BreakOutFloat2Components(MaterialExpressionTextureCoordinate_0_1, OutputIndex=1);
+		float Subtract = (1.0 - BreakOutFloat2Components_1);
+		float LinearInterpolate = lerp(BreakOutFloat2Components_1, Subtract, FlipY);
+		float2 MakeFloat2 = MakeFloat2(BreakOutFloat2Components, LinearInterpolate);
+		float4 TextureSample =
+			UE.Expression(
+				Class="TextureSample",
+				OutputType="float4",
+				OutputIndex=5,
+				Coordinates=MakeFloat2,
+				TextureObject=MainTexture,
+				SamplerType="SAMPLERTYPE_Color"
+			);
+		Substrate SMF_UE4Unlit = SMF_UE4Unlit(TextureSample.rgb, TextureSample.a);
+
+		EmissiveColor = TextureSample.rgb;
+		Opacity = TextureSample.a;
+		FrontMaterial = SMF_UE4Unlit;
+	}
+
+	Layout = {
+		Node(Var="BreakOutFloat2Components_1", X=-1056, Y=32);
+		Node(Var="FlipY", X=-784, Y=144);
+		Node(Var="Subtract", X=-656, Y=112);
+		Node(Var="LinearInterpolate", X=-512, Y=96);
+		Node(Var="MainTexture", X=-400, Y=192);
+		Node(Var="MakeFloat2", X=-368, Y=32);
+		Node(Var="TextureSample", X=-192, Y=128);
+		Node(Var="SMF_UE4Unlit", X=16, Y=496);
+	}
+
+}

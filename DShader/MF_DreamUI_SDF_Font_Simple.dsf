@@ -1,0 +1,45 @@
+// DreamGUI material, generated from the decompiled graph and kept as the source of truth.
+// Edit this file, then rebuild -- the .uasset is an output.
+// Decompiled from /DreamGUI/Materials/MF_DreamUI_SDF_Font_Simple.MF_DreamUI_SDF_Font_Simple
+ShaderFunction(Name="Materials/MF_DreamUI_SDF_Font_Simple", Root="Plugin.DreamGUI")
+{
+	Properties = {
+	}
+
+	Inputs = {
+		opt float EdgeValue = 0.5;
+		float SDFValue [
+			SortPriority=0;
+		];
+	}
+
+	Outputs = {
+		float Result;
+	}
+
+	Graph = {
+		float2 MaterialExpressionTextureCoordinate_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=2);
+		float Custom =
+			UE.Expression(
+				Class="Custom",
+				OutputType="float",
+				Code="float delta = fwidth(sdfValue);\r\nfloat a = edgeValue - delta;\r\nfloat b = edgeValue + delta;\r\nfloat alpha = smoothstep(a, b, sdfValue + boldSize);\r\nreturn alpha;",
+				Description="Custom",
+				sdfValue=SDFValue,
+				boldSize=MaterialExpressionTextureCoordinate_1.r,
+				edgeValue=EdgeValue
+			);
+
+		Result = saturate(Custom);
+	}
+
+	Layout = {
+		Comment(Name="UV2.x as bold-size", X=-544, Y=432, W=384, H=192, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Comment(Name="This simple version can perform good visual for sdf font in most case, except in small size", X=-976, Y=256, W=544, H=80, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Node(Var="SDFValue", X=-384, Y=240);
+		Node(Var="EdgeValue", X=-355, Y=672);
+		Node(Var="Custom", X=-64, Y=336);
+		Node(Var="Result", X=536, Y=300);
+	}
+
+}

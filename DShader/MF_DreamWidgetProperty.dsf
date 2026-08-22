@@ -1,0 +1,68 @@
+// DreamGUI material, hand-written from the decompiled graph.
+// Edit this file, then rebuild -- the .uasset is an output.
+//
+// The HLSL lives in DreamUIWidgetProperty.ush and is reached through a Function rather than a bare
+// Custom node. UE.Expression cannot carry IncludeFilePaths: it is an array property, which
+// DreamShader rejects as a literal and the decompiler drops without a warning, so a Custom node
+// written that way compiles against a function nothing declares.
+//
+// The decompiler emitted the same four-output Custom node four times, once per output pin, with
+// the whole argument list repeated each time. A Function with `out` parameters reads it once.
+
+Function DreamUIWidgetProperty(in float CoordinateInDataTex, in Texture2D DataTex,
+	out float FontMark, out float ClipDataCoordinate,
+	out float2 WidgetSize, out float2 WidgetCenterPosition)
+{
+	#include "/Plugin/DreamGUI/Private/DreamUIWidgetProperty.ush"
+	FontMark = 0;
+	ClipDataCoordinate = 0;
+	WidgetSize = float2(0, 0);
+	WidgetCenterPosition = float2(0, 0);
+	DreamUI_ReadWidgetProperty(CoordinateInDataTex, DataTex, FontMark, ClipDataCoordinate,
+		WidgetSize, WidgetCenterPosition);
+}
+
+ShaderFunction(Name="Materials/MF_DreamWidgetProperty", Root="Plugin.DreamGUI")
+{
+	Properties = {
+		TextureObjectParameter DreamUI_WidgetPropertyDataTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Data";
+		];
+	}
+
+	Inputs = {
+		opt float CoordinateInDataTex = 0.0;
+	}
+
+	Outputs = {
+		float FontMark;
+		float ClipDataCoordinate;
+		float2 WidgetSize;
+		float2 WidgetCenterPosition;
+	}
+
+	Graph = {
+		float OutFontMark;
+		float OutClipDataCoordinate;
+		float2 OutWidgetSize;
+		float2 OutWidgetCenterPosition;
+		DreamUIWidgetProperty(CoordinateInDataTex, DreamUI_WidgetPropertyDataTexture,
+			OutFontMark, OutClipDataCoordinate, OutWidgetSize, OutWidgetCenterPosition);
+
+		FontMark = OutFontMark;
+		ClipDataCoordinate = OutClipDataCoordinate;
+		WidgetSize = OutWidgetSize;
+		WidgetCenterPosition = OutWidgetCenterPosition;
+	}
+
+	Layout = {
+		Node(Var="CoordinateInDataTex", X=-784, Y=304);
+		Node(Var="DreamUI_WidgetPropertyDataTexture", X=-784, Y=416);
+		Node(Var="WidgetSize", X=208, Y=304);
+		Node(Var="ClipDataCoordinate", X=208, Y=688);
+		Node(Var="WidgetCenterPosition", X=208, Y=864);
+		Node(Var="FontMark", X=224, Y=512);
+	}
+
+}

@@ -1,0 +1,53 @@
+// DreamGUI material, migrated from the decompiled graph.
+// Edit this file rather than the asset: the .uasset is generated from it.
+//
+// The HLSL lives in DreamUIClip.ush and is reached through a Function, not a bare Custom node.
+// UE.Expression cannot carry IncludeFilePaths -- it is an array property, which DreamShader rejects
+// as a literal and the decompiler drops silently -- so a Custom node written that way compiles
+// against a function nothing declares.
+
+Function float DreamUIClip(in Texture2D DataTex, in float CoordinateInDataTex, in float3 PixelLocalPosition)
+{
+    #include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
+    return DreamUI_CalculateClipData(DataTex, CoordinateInDataTex, PixelLocalPosition);
+}
+
+ShaderFunction(Name="Materials/MF_DreamUI_Clip", Root="Plugin.DreamGUI")
+{
+	Properties = {
+		TextureObjectParameter DreamUI_ClipDataTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+	}
+
+	Inputs = {
+		opt float CoordinateInDataTex = 0.0;
+		opt float Opacity = 1.0 [
+			SortPriority=0;
+		];
+	}
+
+	Outputs = {
+		float Result;
+	}
+
+	Graph = {
+		float3 LocalPosition = UE.Expression(Class="LocalPosition", OutputType="float3");
+		float Calculate = DreamUIClip(DreamUI_ClipDataTexture, CoordinateInDataTex, LocalPosition);
+		float Multiply = (Opacity * Calculate);
+
+		Result = Multiply;
+	}
+
+	Layout = {
+		Node(Var="DreamUI_ClipDataTexture", X=-816, Y=272);
+		Node(Var="CoordinateInDataTex", X=-816, Y=480);
+		Node(Var="LocalPosition", X=-688, Y=656);
+		Node(Var="Calculate", X=-368, Y=336);
+		Node(Var="Opacity", X=-64, Y=80);
+		Node(Var="Multiply", X=432, Y=208);
+		Node(Var="Result", X=560, Y=176);
+	}
+
+}

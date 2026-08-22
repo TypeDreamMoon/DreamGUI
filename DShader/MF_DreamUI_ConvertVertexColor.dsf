@@ -1,0 +1,67 @@
+// DreamGUI material, hand-corrected from the decompiled graph.
+// Edit this file, then rebuild -- the .uasset is an output.
+//
+// sRGBToLinear lives in GammaCorrectionCommon.ush and is reached through a Function rather than a
+// bare Custom node. UE.Expression cannot carry IncludeFilePaths: it is an array property, which
+// DreamShader rejects as a literal and the decompiler drops without a warning, so the Custom node
+// this was decompiled into compiled against a function nothing declares -- it failed only in the
+// vertex-shader permutations (FLumenCardVS), which is why it looked fine at a glance.
+// Decompiled from /DreamGUI/Materials/MF_DreamUI_ConvertVertexColor.MF_DreamUI_ConvertVertexColor
+// Warning: 已导出 'MaterialExpressionFeatureLevelSwitch' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+// Warning: 已导出 'MaterialExpressionVertexInterpolator' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+Function float3 DreamUISRGBToLinear(in float3 Color)
+{
+	#include "/Engine/Private/GammaCorrectionCommon.ush"
+	return sRGBToLinear(Color);
+}
+
+ShaderFunction(Name="Materials/MF_DreamUI_ConvertVertexColor", Root="Plugin.DreamGUI")
+{
+	Properties = {
+	}
+
+	Inputs = {
+		float3 Color;
+	}
+
+	Outputs = {
+		float3 Result;
+	}
+
+	Graph = {
+		float3 GammaCorrection = DreamUISRGBToLinear(Color);
+		#Region "VertexInterpolator with andoird ES3_1 get wrong color (rgba/bgra)"
+		float3 VertexInterpolator = UE.Expression(Class="VertexInterpolator", OutputType="float3", VS=GammaCorrection);
+		float3 FeatureLevelSwitch =
+			UE.Expression(
+				Class="FeatureLevelSwitch",
+				OutputType="float3",
+				Default=VertexInterpolator,
+				ES3_1=GammaCorrection
+			);
+		#EndRegion
+
+		float3 StaticSwitchParameter =
+			UE.Expression(
+				Class="StaticSwitchParameter",
+				OutputType="float3",
+				True=FeatureLevelSwitch,
+				False=Color,
+				ParameterName="VertexColorUseGammaCorrection",
+				DefaultValue=true
+			);
+
+		Result = StaticSwitchParameter;
+	}
+
+	Layout = {
+		Comment(Name="VertexInterpolator with andoird ES3_1 get wrong color (rgba/bgra)", X=112, Y=112, W=480, H=320, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Node(Var="Color", X=-272, Y=304);
+		Node(Var="GammaCorrection", X=-64, Y=208);
+		Node(Var="VertexInterpolator", X=128, Y=208);
+		Node(Var="FeatureLevelSwitch", X=336, Y=208);
+		Node(Var="StaticSwitchParameter", X=736, Y=288);
+		Node(Var="Result", X=1024, Y=272);
+	}
+
+}

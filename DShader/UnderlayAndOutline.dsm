@@ -1,0 +1,398 @@
+// DreamGUI material, generated from the decompiled graph and kept as the source of truth.
+// Edit this file, then rebuild -- the .uasset is an output.
+// Decompiled from /DreamGUI/Materials/TextEffects/UnderlayAndOutline.UnderlayAndOutline
+// Warning: Exported 'MaterialExpressionSmoothStep' as UE.Expression; review reflected literal properties if the node has editor-only state.
+// Warning: Exported 'MaterialExpressionTextureProperty' as UE.Expression; review reflected literal properties if the node has editor-only state.
+// Warning: Exported 'MaterialExpressionStaticBool' as UE.Expression; review reflected literal properties if the node has editor-only state.
+
+VirtualFunction(Name="MF_DreamUI_Clip")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_Clip");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_Clip.MF_DreamUI_Clip";
+	}
+
+	Inputs = {
+		opt float CoordinateInDataTex = 0.0;
+		opt float Opacity = 1.0;
+	}
+
+	Outputs = {
+		float Result;
+	}
+}
+VirtualFunction(Name="MF_DreamWidgetProperty")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamWidgetProperty");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamWidgetProperty.MF_DreamWidgetProperty";
+	}
+
+	Inputs = {
+		opt float CoordinateInDataTex = 0.0;
+	}
+
+	Outputs = {
+		float FontMark;
+		float ClipDataCoordinate;
+		float2 WidgetSize;
+		float2 WidgetCenterPosition;
+	}
+}
+VirtualFunction(Name="RemapValueRange")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions03/Math/RemapValueRange");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions03/Math/RemapValueRange.RemapValueRange";
+	}
+
+	Inputs = {
+		float Input;
+		opt float Input_Low = 0.0;
+		opt float Input_High = 1.0;
+		opt float Target_Low = 0.0;
+		opt float Target_High = 1.0;
+	}
+
+	Outputs = {
+		float Result;
+	}
+}
+VirtualFunction(Name="MakeFloat2")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions02/Utility/MakeFloat2");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions02/Utility/MakeFloat2.MakeFloat2";
+	}
+
+	Inputs = {
+		opt float X = 0.0;
+		opt float Y = 0.0;
+	}
+
+	Outputs = {
+		float2 Result;
+	}
+}
+VirtualFunction(Name="MF_DreamUI_SDF_Font")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_SDF_Font");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_SDF_Font.MF_DreamUI_SDF_Font";
+	}
+
+	Inputs = {
+		float SDFValue;
+		opt StaticBool UseVertexInterpolator = false;
+		opt float EdgeValue = 0.5;
+	}
+
+	Outputs = {
+		float Result;
+	}
+}
+VirtualFunction(Name="MF_DreamUI_ConvertVertexColor")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_ConvertVertexColor");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_ConvertVertexColor.MF_DreamUI_ConvertVertexColor";
+	}
+
+	Inputs = {
+		float3 Color;
+	}
+
+	Outputs = {
+		float3 Result;
+	}
+}
+VirtualFunction(Name="SMF_UE4Unlit")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Substrate/SMF_UE4Unlit");
+		Description = "Generated from /Engine/Functions/Substrate/SMF_UE4Unlit.SMF_UE4Unlit";
+	}
+
+	Inputs = {
+		opt float3 Color = float3(0, 0, 0) [
+			Description="Emissive color added to the scene.";
+		];
+		opt float Opacity = 0.5 [
+			Description="Represent the coverage of the material. 0 means 100% see through, 1 means fully opaque.";
+		];
+	}
+
+	Outputs = {
+		Substrate Result;
+	}
+}
+Shader(Name="Materials/TextEffects/UnderlayAndOutline", Root="Plugin.DreamGUI")
+{
+	Properties = {
+		VectorParameter DreamUI_Underlay_Color = float4(0.0, 0.0, 0.0, 0.5) [
+			Group="DreamUI_Underlay";
+		];
+		ScalarParameter DreamUI_Underlay_OffsetX = 1.5 [
+			Group="DreamUI_Underlay";
+		];
+		ScalarParameter DreamUI_Underlay_OffsetY = -1.5 [
+			Group="DreamUI_Underlay";
+		];
+		TextureObjectParameter DreamUI_FontTexture = Path(Plugins.DreamGUI, "Textures/DreamUIPreset_2DArray") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		ScalarParameter DreamUI_Underlay_Softness = 0.0 [
+			Group="DreamUI_Underlay";
+			SliderMin=0.0;
+			SliderMax=0.5;
+		];
+		ScalarParameter DreamUI_Underlay_Dilate = 0.0 [
+			Group="DreamUI_Underlay";
+			SliderMin=-0.5;
+			SliderMax=0.5;
+		];
+		VectorParameter DreamUI_Outline_Color = float4(0.0, 0.0, 1.0, 1.0) [
+			Group="DreamUI_Outline";
+		];
+		ScalarParameter DreamUI_Outline_Size = 0.0 [
+			Group="DreamUI_Outline";
+			SliderMin=0.0;
+			SliderMax=1.0;
+		];
+		ScalarParameter DreamUI_Outline_Offset = 0.0 [
+			Group="DreamUI_Outline";
+			SliderMin=-1.0;
+			SliderMax=1.0;
+		];
+		ScalarParameter DreamUI_IsRenderByDreamUIRenderer = 0.0;
+	}
+
+	Settings = {
+		// Graph, not the project default ThinCustom: ThinCustom emits a UDreamShaderMaterialInstance,
+		// which would make DreamGUI fail to load its own materials wherever DreamShader is absent.
+		Backend = "Graph";
+		Domain = "Surface";
+		ShadingModel = "Substrate";
+		BlendMode = "AlphaComposite";
+		TwoSided = true;
+	}
+
+	Outputs = {
+		float3 EmissiveColor;
+		float Opacity;
+		Substrate FrontMaterial;
+
+		Base.EmissiveColor = EmissiveColor;
+		Base.Opacity = Opacity;
+		Base.FrontMaterial = FrontMaterial;
+	}
+
+	Graph = {
+		float MF_DreamWidgetProperty = MF_DreamWidgetProperty(default, OutputIndex=1);
+		#Region "SoftUnderlay"
+		float Subtract = (0.0 - DreamUI_Underlay_OffsetX);
+		float2 MakeFloat2 = MakeFloat2(Subtract, DreamUI_Underlay_OffsetY);
+		float TextureProperty =
+			UE.Expression(
+				Class="TextureProperty",
+				OutputType="float",
+				TextureObject=DreamUI_FontTexture,
+				Property="TMTM_TexelSize"
+			);
+		float2 Multiply = (float2(TextureProperty, TextureProperty) * MakeFloat2);
+		#EndRegion
+
+		float2 MaterialExpressionTextureCoordinate_0 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		#Region "SoftUnderlay"
+		float2 Add = (MaterialExpressionTextureCoordinate_0 + Multiply);
+		#EndRegion
+
+		float2 MaterialExpressionTextureCoordinate_3 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=1);
+		#Region "SoftUnderlay"
+		float4 TextureSample =
+			UE.Expression(
+				Class="TextureSample",
+				OutputType="float4",
+				OutputIndex=5,
+				Coordinates=float3(Add, MaterialExpressionTextureCoordinate_3.g),
+				TextureObject=DreamUI_FontTexture,
+				SamplerType="SAMPLERTYPE_Color"
+			);
+		float Multiply_1 = (DreamUI_Underlay_Softness * 0.5);
+		float Subtract_1 = (0.5 - DreamUI_Underlay_Dilate);
+		float Subtract_2 = (Subtract_1 - Multiply_1);
+		float Add_1 = (Subtract_1 + Multiply_1);
+		float RemapValueRange = RemapValueRange(TextureSample.r, Subtract_2, Add_1, 0.0, 1.0);
+		float SmoothStep = UE.Expression(Class="SmoothStep", OutputType="float", Value=RemapValueRange);
+		#EndRegion
+
+		float2 MaterialExpressionTextureCoordinate_3_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=1);
+		#Region "HardUnderlay"
+		bool StaticBool = UE.Expression(Class="StaticBool", OutputType="bool");
+		float MF_DreamUI_SDF_Font = MF_DreamUI_SDF_Font(TextureSample.r, StaticBool, default);
+		#EndRegion
+
+		#Region "SoftUnderlay"
+		float StaticSwitchParameter =
+			UE.Expression(
+				Class="StaticSwitchParameter",
+				OutputType="float",
+				True=SmoothStep,
+				False=MF_DreamUI_SDF_Font,
+				ParameterName="SoftUnderlay"
+			);
+		float Multiply_2 = (StaticSwitchParameter * DreamUI_Underlay_Color.a);
+		float3 Multiply_3 = (DreamUI_Underlay_Color.rgb * Multiply_2);
+		#EndRegion
+
+		float3 MF_DreamUI_ConvertVertexColor = MF_DreamUI_ConvertVertexColor((UE.Expression(Class="VertexColor", OutputType="float4")).rgb);
+		float2 MaterialExpressionTextureCoordinate_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		float2 MaterialExpressionTextureCoordinate_2 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=1);
+		float4 TextureSample_1 =
+			UE.Expression(
+				Class="TextureSample",
+				OutputType="float4",
+				OutputIndex=5,
+				Coordinates=float3(MaterialExpressionTextureCoordinate_1, MaterialExpressionTextureCoordinate_2.g),
+				TextureObject=DreamUI_FontTexture,
+				SamplerType="SAMPLERTYPE_Color"
+			);
+		bool StaticBool_1 = UE.Expression(Class="StaticBool", OutputType="bool");
+		float MF_DreamUI_SDF_Font_1 = MF_DreamUI_SDF_Font(TextureSample_1.r, StaticBool_1, default);
+		float4 StaticSwitchParameter_1 =
+			UE.Expression(
+				Class="StaticSwitchParameter",
+				OutputType="float4",
+				True=float4(MF_DreamUI_ConvertVertexColor, MF_DreamUI_SDF_Font_1),
+				False=(float4(0.0, 0.0, 0.0, 0.0)).rgba,
+				ParameterName="EnableBase",
+				DefaultValue=true
+			);
+		float4 PreMultiplyAlpha =
+			UE.Expression(
+				Class="Custom",
+				OutputType="float4",
+				Code="Overlay.rgb *= Overlay.a;\r\nreturn Base * (1 - Overlay.a) + Overlay;",
+				Description="PreMultiplyAlpha",
+				Base=float4(Multiply_3, Multiply_2),
+				Overlay=StaticSwitchParameter_1
+			);
+		float4 StaticSwitchParameter_2 =
+			UE.Expression(
+				Class="StaticSwitchParameter",
+				OutputType="float4",
+				True=PreMultiplyAlpha,
+				False=StaticSwitchParameter_1,
+				ParameterName="Underlay",
+				DefaultValue=true
+			);
+		float2 MaterialExpressionTextureCoordinate_1_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		float2 MaterialExpressionTextureCoordinate_2_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=1);
+		#Region "Outline"
+		bool StaticBool_2 = UE.Expression(Class="StaticBool", OutputType="bool");
+		float Multiply_4 = (DreamUI_Outline_Size * 0.1);
+		float Add_2 = (0.5 + DreamUI_Outline_Offset);
+		float Subtract_3 = (Add_2 - Multiply_4);
+		float MF_DreamUI_SDF_Font_2 = MF_DreamUI_SDF_Font(TextureSample_1.r, StaticBool_2, Subtract_3);
+		#EndRegion
+
+		float2 MaterialExpressionTextureCoordinate_1_2 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		float2 MaterialExpressionTextureCoordinate_2_2 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=1);
+		#Region "Outline"
+		float Add_3 = (Add_2 + Multiply_4);
+		float MF_DreamUI_SDF_Font_3 = MF_DreamUI_SDF_Font(TextureSample_1.r, StaticBool_2, Add_3);
+		float Subtract_4 = (1.0 - MF_DreamUI_SDF_Font_3);
+		float Multiply_5 = (min(MF_DreamUI_SDF_Font_2, Subtract_4) * DreamUI_Outline_Color.a);
+		#EndRegion
+
+		float4 PreMultiplyAlpha_1 =
+			UE.Expression(
+				Class="Custom",
+				OutputType="float4",
+				Code="Overlay.rgb *= Overlay.a;\r\nreturn Base * (1 - Overlay.a) + Overlay;",
+				Description="PreMultiplyAlpha",
+				Base=StaticSwitchParameter_2,
+				Overlay=float4(DreamUI_Outline_Color.rgb, Multiply_5)
+			);
+		float4 StaticSwitchParameter_3 =
+			UE.Expression(
+				Class="StaticSwitchParameter",
+				OutputType="float4",
+				True=PreMultiplyAlpha_1,
+				False=StaticSwitchParameter_2,
+				ParameterName="Outline"
+			);
+		float Multiply_6 = ((UE.Expression(Class="VertexColor", OutputType="float4")).a * StaticSwitchParameter_3.a);
+		float MF_DreamUI_Clip = MF_DreamUI_Clip(MF_DreamWidgetProperty, Multiply_6);
+		#Region "DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha"
+		float3 Multiply_7 = (StaticSwitchParameter_3.rgb * MF_DreamUI_Clip);
+		float3 LinearInterpolate = lerp(Multiply_7, StaticSwitchParameter_3.rgb, DreamUI_IsRenderByDreamUIRenderer);
+		#EndRegion
+
+		Substrate SMF_UE4Unlit = SMF_UE4Unlit(StaticSwitchParameter_3.rgb, MF_DreamUI_Clip);
+
+		EmissiveColor = LinearInterpolate;
+		Opacity = MF_DreamUI_Clip;
+		FrontMaterial = SMF_UE4Unlit;
+	}
+
+	Layout = {
+		Comment(Name="SoftUnderlay", X=-3344, Y=736, W=2592, H=1040, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Comment(Name="Outline", X=-640, Y=1296, W=1584, H=608, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Comment(Name="DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha", X=1232, Y=272, W=400, H=220, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Comment(Name="HardUnderlay", X=-2144, Y=816, W=520, H=220, Color=float4(0.15, 0.15, 0.15, 0.5));
+		Node(Var="DreamUI_Underlay_OffsetX", X=-3296, Y=1279);
+		Node(Var="DreamUI_Underlay_OffsetY", X=-3296, Y=1359);
+		Node(Var="DreamUI_Underlay_Dilate", X=-3296, Y=1440);
+		Node(Var="DreamUI_Underlay_Softness", X=-3296, Y=1520);
+		Node(Var="TextureProperty", X=-3264, Y=1136);
+		Node(Var="Subtract", X=-3072, Y=1263);
+		Node(Var="Subtract_1", X=-3024, Y=1424);
+		Node(Var="Multiply_1", X=-3024, Y=1552);
+		Node(Var="MakeFloat2", X=-2912, Y=1263);
+		Node(Var="Subtract_2", X=-2784, Y=1424);
+		Node(Var="Add_1", X=-2784, Y=1520);
+		Node(Var="Multiply", X=-2752, Y=1199);
+		Node(Var="Add", X=-2576, Y=944);
+		Node(Var="TextureSample", X=-2304, Y=1056);
+		Node(Var="DreamUI_Underlay_Color", X=-2304, Y=1440);
+		Node(Var="DreamUI_FontTexture", X=-2192, Y=176);
+		Node(Var="StaticBool", X=-2080, Y=896);
+		Node(Var="RemapValueRange", X=-2000, Y=1088);
+		Node(Var="MF_DreamUI_SDF_Font", X=-1920, Y=880);
+		Node(Var="SmoothStep", X=-1760, Y=1088);
+		Node(Var="TextureSample_1", X=-1744, Y=0);
+		Node(Var="MF_DreamUI_ConvertVertexColor", X=-1664, Y=-320);
+		Node(Var="StaticSwitchParameter", X=-1568, Y=1072);
+		Node(Var="StaticBool_1", X=-1440, Y=176);
+		Node(Var="MF_DreamUI_SDF_Font_1", X=-1360, Y=0);
+		Node(Var="Multiply_2", X=-1328, Y=1088);
+		Node(Var="Multiply_3", X=-1136, Y=1136);
+		Node(Var="StaticSwitchParameter_1", X=-800, Y=-112);
+		Node(Var="PreMultiplyAlpha", X=-736, Y=336);
+		Node(Var="DreamUI_Outline_Offset", X=-576, Y=1440);
+		Node(Var="DreamUI_Outline_Size", X=-576, Y=1536);
+		Node(Var="StaticSwitchParameter_2", X=-288, Y=320);
+		Node(Var="Add_2", X=-272, Y=1392);
+		Node(Var="Multiply_4", X=-272, Y=1504);
+		Node(Var="PreMultiplyAlpha_1", X=-224, Y=560);
+		Node(Var="StaticBool_2", X=-176, Y=1632);
+		Node(Var="Subtract_3", X=-80, Y=1376);
+		Node(Var="Add_3", X=-80, Y=1520);
+		Node(Var="MF_DreamUI_SDF_Font_2", X=96, Y=1376);
+		Node(Var="MF_DreamUI_SDF_Font_3", X=96, Y=1536);
+		Node(Var="DreamUI_Outline_Color", X=96, Y=1696);
+		Node(Var="StaticSwitchParameter_3", X=160, Y=432);
+		Node(Var="Subtract_4", X=368, Y=1504);
+		Node(Var="MF_DreamWidgetProperty", X=480, Y=752);
+		Node(Var="Multiply_6", X=576, Y=544);
+		Node(Var="Multiply_5", X=672, Y=1392);
+		Node(Var="MF_DreamUI_Clip", X=724, Y=464);
+		Node(Var="SMF_UE4Unlit", X=1044, Y=192);
+		Node(Var="DreamUI_IsRenderByDreamUIRenderer", X=1168, Y=560);
+		Node(Var="Multiply_7", X=1328, Y=368);
+		Node(Var="LinearInterpolate", X=1456, Y=368);
+	}
+
+}

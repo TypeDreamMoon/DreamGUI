@@ -1,0 +1,193 @@
+// DreamGUI material, generated from the decompiled graph and kept as the source of truth.
+// Edit this file, then rebuild -- the .uasset is an output.
+// Decompiled from /DreamGUI/Materials/MF_DreamUI_SDF_Font.MF_DreamUI_SDF_Font
+// Warning: 已导出 'MaterialExpressionStaticSwitch' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+// Warning: 已导出 'MaterialExpressionVertexInterpolator' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+// Warning: 已导出 'MaterialExpressionLength' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+// Warning: 已导出 'MaterialExpressionViewSize' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+// Warning: 已导出 'MaterialExpressionIsOrthographic' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+// Warning: 已导出 'MaterialExpressionVertexNormalWS' 为 UE.Expression;若节点具有仅编辑器可见的状态,请检查反射的字面属性。
+
+VirtualFunction(Name="RemapValueRange")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions03/Math/RemapValueRange");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions03/Math/RemapValueRange.RemapValueRange";
+	}
+
+	Inputs = {
+		float Input;
+		opt float Input_Low = 0.0;
+		opt float Input_High = 1.0;
+		opt float Target_Low = 0.0;
+		opt float Target_High = 1.0;
+	}
+
+	Outputs = {
+		float Result;
+	}
+}
+VirtualFunction(Name="BreakOutFloat2Components")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions02/Utility/BreakOutFloat2Components");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions02/Utility/BreakOutFloat2Components.BreakOutFloat2Components";
+	}
+
+	Inputs = {
+		opt float2 Float2 = float2(0, 0);
+	}
+
+	Outputs = {
+		float R;
+		float G;
+	}
+}
+VirtualFunction(Name="MakeFloat2")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions02/Utility/MakeFloat2");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions02/Utility/MakeFloat2.MakeFloat2";
+	}
+
+	Inputs = {
+		opt float X = 0.0;
+		opt float Y = 0.0;
+	}
+
+	Outputs = {
+		float2 Result;
+	}
+}
+VirtualFunction(Name="MF_OrthoWidth")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Engine_MaterialFunctions03/Viewport/MF_OrthoWidth");
+		Description = "Generated from /Engine/Functions/Engine_MaterialFunctions03/Viewport/MF_OrthoWidth.MF_OrthoWidth";
+	}
+
+	Inputs = {
+		opt bool Half_Width = false;
+	}
+
+	Outputs = {
+		float Result;
+	}
+}
+ShaderFunction(Name="Materials/MF_DreamUI_SDF_Font", Root="Plugin.DreamGUI")
+{
+	Properties = {
+	}
+
+	Inputs = {
+		float SDFValue [
+			SortPriority=-1;
+		];
+		opt StaticBool UseVertexInterpolator = false [
+			SortPriority=0;
+		];
+		opt float EdgeValue = 0.5 [
+			SortPriority=0;
+		];
+	}
+
+	Outputs = {
+		float Result;
+	}
+
+	Graph = {
+		float2 MaterialExpressionTextureCoordinate_1 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=2);
+		#Region "UV2.x- text-size * object-scale\r\nUV2.y- empty"
+		float BreakOutFloat2Components = BreakOutFloat2Components(MaterialExpressionTextureCoordinate_1, OutputIndex=0);
+		#EndRegion
+
+		#Region "Smooth & AntiAliasing due to camera distance and pixel size."
+		float PixelSize =
+			UE.Expression(
+				Class="Custom",
+				OutputType="float",
+				Code="float2 pixelSize = abs(mul(ResolvedView.ViewSizeAndInvSize.xy, (float2x2)ResolvedView.ViewToClip));\r\nfloat scale = rsqrt(dot(pixelSize, pixelSize));\r\nreturn scale;",
+				Description="PixelSize"
+			);
+		#EndRegion
+
+		float3 MaterialExpressionWorldPosition_3 = UE.Expression(Class="WorldPosition", OutputType="float3", WorldPositionShaderOffset="WPT_CameraRelative");
+		#Region "Smooth & AntiAliasing due to camera distance and pixel size."
+		float Length = UE.Expression(Class="Length", OutputType="float", Input=MaterialExpressionWorldPosition_3);
+		float Multiply = (Length * PixelSize);
+		float Multiply_1 = (Multiply * 16.0);
+		#EndRegion
+
+		#Region "Smooth & AntiAliasing for orthograpic"
+		float ViewSize = UE.Expression(Class="ViewSize", OutputType="float");
+		float MF_OrthoWidth = MF_OrthoWidth(default);
+		float Divide = (MF_OrthoWidth / ViewSize);
+		float Multiply_2 = (Divide * 5.0);
+		#EndRegion
+
+		float IsOrthographic = UE.Expression(Class="IsOrthographic", OutputType="float");
+		float LinearInterpolate = lerp(Multiply_1, Multiply_2, IsOrthographic);
+		float Divide_1 = (LinearInterpolate / BreakOutFloat2Components);
+		#Region "Need more smooth when look at tilt view"
+		float Multiply_3 = (2.0 * Divide_1);
+		#EndRegion
+
+		float3 MaterialExpressionWorldPosition_1 = UE.Expression(Class="WorldPosition", OutputType="float3", WorldPositionShaderOffset="WPT_CameraRelative");
+		#Region "Need more smooth when look at tilt view"
+		float3 VertexNormalWS = UE.Expression(Class="VertexNormalWS", OutputType="float3");
+		float LinearInterpolate_1 = lerp(Multiply_3, Divide_1, abs(dot(normalize(MaterialExpressionWorldPosition_1), VertexNormalWS)));
+		#EndRegion
+
+		float Subtract = (EdgeValue - LinearInterpolate_1);
+		float Add = (EdgeValue + LinearInterpolate_1);
+		float2 MakeFloat2 = MakeFloat2(Subtract, Add);
+		float2 VertexInterpolator = UE.Expression(Class="VertexInterpolator", OutputType="float2", VS=MakeFloat2);
+		float2 StaticSwitch =
+			UE.Expression(
+				Class="StaticSwitch",
+				OutputType="float2",
+				True=VertexInterpolator,
+				False=MakeFloat2,
+				Value=UseVertexInterpolator
+			);
+		float BreakOutFloat2Components_1 = BreakOutFloat2Components(StaticSwitch, OutputIndex=0);
+		float BreakOutFloat2Components_2 = BreakOutFloat2Components(StaticSwitch, OutputIndex=1);
+		float RemapValueRange = RemapValueRange(SDFValue, BreakOutFloat2Components_1, BreakOutFloat2Components_2, 0.0, 1.0);
+
+		Result = saturate(RemapValueRange);
+	}
+
+	Layout = {
+		Comment(Name="UV2.x- text-size * object-scale\r\nUV2.y- empty", X=-1568, Y=80, W=480, H=192, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Comment(Name="Smooth & AntiAliasing due to camera distance and pixel size.", X=-2656, Y=368, W=1104, H=528, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Comment(Name="Smooth & AntiAliasing for orthograpic", X=-2336, Y=1008, W=800, H=336, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Comment(Name="Need more smooth when look at tilt view", X=-1682, Y=1390, W=975, H=399, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Node(Var="Length", X=-2304, Y=464);
+		Node(Var="PixelSize", X=-2304, Y=576);
+		Node(Var="ViewSize", X=-2288, Y=1136);
+		Node(Var="Multiply", X=-2176, Y=464);
+		Node(Var="MF_OrthoWidth", X=-2176, Y=1072);
+		Node(Var="Multiply_1", X=-2048, Y=464);
+		Node(Var="Divide", X=-1984, Y=1072);
+		Node(Var="Multiply_2", X=-1808, Y=1072);
+		Node(Var="LinearInterpolate", X=-1392, Y=768);
+		Node(Var="IsOrthographic", X=-1392, Y=960);
+		Node(Var="VertexNormalWS", X=-1360, Y=1664);
+		Node(Var="BreakOutFloat2Components", X=-1344, Y=176);
+		Node(Var="Divide_1", X=-1248, Y=768);
+		Node(Var="Multiply_3", X=-1024, Y=1456);
+		Node(Var="LinearInterpolate_1", X=-864, Y=1456);
+		Node(Var="EdgeValue", X=-832, Y=640);
+		Node(Var="Subtract", X=-528, Y=656);
+		Node(Var="Add", X=-528, Y=752);
+		Node(Var="UseVertexInterpolator", X=-368, Y=448);
+		Node(Var="MakeFloat2", X=-368, Y=656);
+		Node(Var="VertexInterpolator", X=-240, Y=368);
+		Node(Var="StaticSwitch", X=0, Y=368);
+		Node(Var="SDFValue", X=112, Y=112);
+		Node(Var="BreakOutFloat2Components_2", X=192, Y=368);
+		Node(Var="RemapValueRange", X=432, Y=336);
+		Node(Var="Result", X=776, Y=300);
+	}
+
+}

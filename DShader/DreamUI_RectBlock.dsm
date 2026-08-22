@@ -1,0 +1,153 @@
+// DreamGUI material, generated from the decompiled graph and kept as the source of truth.
+// Edit this file, then rebuild -- the .uasset is an output.
+// Decompiled from /DreamGUI/Materials/DreamUI_RectBlock.DreamUI_RectBlock
+
+VirtualFunction(Name="MF_DreamUI_Clip")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_Clip");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_Clip.MF_DreamUI_Clip";
+	}
+
+	Inputs = {
+		opt float CoordinateInDataTex = 0.0;
+		opt float Opacity = 1.0;
+	}
+
+	Outputs = {
+		float Result;
+	}
+}
+VirtualFunction(Name="MF_DreamWidgetProperty")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamWidgetProperty");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamWidgetProperty.MF_DreamWidgetProperty";
+	}
+
+	Inputs = {
+		opt float CoordinateInDataTex = 0.0;
+	}
+
+	Outputs = {
+		float FontMark;
+		float ClipDataCoordinate;
+		float2 WidgetSize;
+		float2 WidgetCenterPosition;
+	}
+}
+VirtualFunction(Name="MF_DreamUI_RectBlock")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_RectBlock");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_RectBlock.MF_DreamUI_RectBlock";
+	}
+
+	Inputs = {
+		Texture2D MainTexture;
+	}
+
+	Outputs = {
+		float3 Color;
+		float Alpha;
+	}
+}
+VirtualFunction(Name="MF_DreamUI_ConvertVertexColor")
+{
+	Options = {
+		Asset = Path(Plugins.DreamGUI, "Materials/MF_DreamUI_ConvertVertexColor");
+		Description = "Generated from /DreamGUI/Materials/MF_DreamUI_ConvertVertexColor.MF_DreamUI_ConvertVertexColor";
+	}
+
+	Inputs = {
+		float3 Color;
+	}
+
+	Outputs = {
+		float3 Result;
+	}
+}
+VirtualFunction(Name="SMF_UE4Unlit")
+{
+	Options = {
+		Asset = Path(Engine, "Functions/Substrate/SMF_UE4Unlit");
+		Description = "Generated from /Engine/Functions/Substrate/SMF_UE4Unlit.SMF_UE4Unlit";
+	}
+
+	Inputs = {
+		opt float3 Color = float3(0, 0, 0) [
+			Description="Emissive color added to the scene.";
+		];
+		opt float Opacity = 0.5 [
+			Description="Represent the coverage of the material. 0 means 100% see through, 1 means fully opaque.";
+		];
+	}
+
+	Outputs = {
+		Substrate Result;
+	}
+}
+Shader(Name="Materials/DreamUI_RectBlock", Root="Plugin.DreamGUI")
+{
+	Properties = {
+		TextureObjectParameter DreamUI_MainTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		ScalarParameter DreamUI_IsRenderByDreamUIRenderer = 0.0;
+	}
+
+	Settings = {
+		// Graph, not the project default ThinCustom: ThinCustom emits a UDreamShaderMaterialInstance,
+		// which would make DreamGUI fail to load its own materials wherever DreamShader is absent.
+		Backend = "Graph";
+		Domain = "Surface";
+		ShadingModel = "Substrate";
+		BlendMode = "AlphaComposite";
+		TwoSided = true;
+	}
+
+	Outputs = {
+		float3 EmissiveColor;
+		float Opacity;
+		Substrate FrontMaterial;
+
+		Base.EmissiveColor = EmissiveColor;
+		Base.Opacity = Opacity;
+		Base.FrontMaterial = FrontMaterial;
+	}
+
+	Graph = {
+		float MF_DreamWidgetProperty = MF_DreamWidgetProperty(default, OutputIndex=1);
+		float3 MF_DreamUI_RectBlock = MF_DreamUI_RectBlock(DreamUI_MainTexture, OutputIndex=0);
+		float MF_DreamUI_RectBlock_1 = MF_DreamUI_RectBlock(DreamUI_MainTexture, OutputIndex=1);
+		float3 MF_DreamUI_ConvertVertexColor = MF_DreamUI_ConvertVertexColor((UE.Expression(Class="VertexColor", OutputType="float4")).rgb);
+		float4 Multiply = (float4(MF_DreamUI_ConvertVertexColor, (UE.Expression(Class="VertexColor", OutputType="float4")).a) * float4(MF_DreamUI_RectBlock, MF_DreamUI_RectBlock_1));
+		float MF_DreamUI_Clip = MF_DreamUI_Clip(MF_DreamWidgetProperty, Multiply.a);
+		#Region "DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha"
+		float4 Multiply_1 = (Multiply * MF_DreamUI_Clip);
+		float4 LinearInterpolate = lerp(Multiply_1, Multiply, DreamUI_IsRenderByDreamUIRenderer);
+		#EndRegion
+
+		Substrate SMF_UE4Unlit = SMF_UE4Unlit(Multiply, MF_DreamUI_Clip);
+
+		EmissiveColor = LinearInterpolate;
+		Opacity = MF_DreamUI_Clip;
+		FrontMaterial = SMF_UE4Unlit;
+	}
+
+	Layout = {
+		Comment(Name="DreamUIRenderer will do color.rgb * color.a for PremultiplyAlpha", X=1200, Y=-16, W=400, H=220, Color=float4(1.0, 1.0, 1.0, 1.0));
+		Node(Var="DreamUI_MainTexture", X=0, Y=144);
+		Node(Var="MF_DreamUI_ConvertVertexColor", X=176, Y=-128);
+		Node(Var="MF_DreamUI_RectBlock_1", X=288, Y=160);
+		Node(Var="MF_DreamWidgetProperty", X=512, Y=336);
+		Node(Var="Multiply", X=688, Y=-80);
+		Node(Var="MF_DreamUI_Clip", X=896, Y=192);
+		Node(Var="SMF_UE4Unlit", X=1152, Y=-128);
+		Node(Var="DreamUI_IsRenderByDreamUIRenderer", X=1200, Y=288);
+		Node(Var="Multiply_1", X=1298, Y=66);
+		Node(Var="LinearInterpolate", X=1426, Y=66);
+	}
+
+}

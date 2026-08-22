@@ -1,0 +1,64 @@
+// DreamGUI material, hand-written from the decompiled graph.
+// Edit this file, then rebuild -- the .uasset is an output.
+//
+// The HLSL lives in DreamUIRectBlock.ush and is reached through a Function rather than a bare
+// Custom node. UE.Expression cannot carry IncludeFilePaths: it is an array property, which
+// DreamShader rejects as a literal and the decompiler drops without a warning, so a Custom node
+// written that way compiles against a function nothing declares.
+//
+// The decompiler emitted the multi-output Custom node once per output pin, with the whole
+// argument list repeated. A Function with `out` parameters says the same thing once.
+// MainTexSampler is not declared: DreamShader adds a SamplerState after every texture parameter,
+// which is exactly what DreamUI_CalculateRectBlock expects.
+
+Function DreamUIRectBlock(in Texture2D MainTex, in float2 UV0, in float2 UV2, in float2 UV3,
+	in Texture2D DataTex, out float3 Color, out float Alpha)
+{
+	#include "/Plugin/DreamGUI/Private/DreamUIRectBlock.ush"
+	Color = float3(0, 0, 0);
+	Alpha = 0;
+	DreamUI_CalculateRectBlock(MainTex, MainTexSampler, UV0, UV2, UV3, DataTex, Color, Alpha);
+}
+
+ShaderFunction(Name="Materials/MF_DreamUI_RectBlock", Root="Plugin.DreamGUI")
+{
+	Properties = {
+		TextureObjectParameter DreamUI_RectBlockDataTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+	}
+
+	Inputs = {
+		Texture2D MainTexture;
+	}
+
+	Outputs = {
+		float3 Color;
+		float Alpha;
+	}
+
+	Graph = {
+		float2 UV0 = UE.Expression(Class="TextureCoordinate", OutputType="float2");
+		float2 UV2 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=2);
+		float2 UV3 = UE.Expression(Class="TextureCoordinate", OutputType="float2", CoordinateIndex=3);
+
+		float3 OutColor;
+		float OutAlpha;
+		DreamUIRectBlock(MainTexture, UV0, UV2, UV3, DreamUI_RectBlockDataTexture, OutColor, OutAlpha);
+
+		Color = OutColor;
+		Alpha = OutAlpha;
+	}
+
+	Layout = {
+		Node(Var="MainTexture", X=-512, Y=224);
+		Node(Var="DreamUI_RectBlockDataTexture", X=-512, Y=704);
+		Node(Var="UV0", X=-512, Y=352);
+		Node(Var="UV2", X=-512, Y=448);
+		Node(Var="UV3", X=-512, Y=544);
+		Node(Var="Color", X=208, Y=288);
+		Node(Var="Alpha", X=208, Y=496);
+	}
+
+}
