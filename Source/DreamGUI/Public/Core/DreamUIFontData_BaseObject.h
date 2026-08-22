@@ -16,6 +16,8 @@ struct FDreamUICharData
 	FVector2f MinUV;
 	FVector2f MaxUV;
 	int32 SliceIndex = 0;//texture index in Texture2DArray
+	/** The glyph is being rasterized off-thread: advance is right, the quad is empty until the font's OnGlyphsReady. */
+	bool bPending = false;
 
 	bool IsValid()const
 	{
@@ -146,6 +148,9 @@ public:
 	DECLARE_EVENT(UDreamUIFontData_BaseObject, FDreamUIFontEmojiDataRefreshEvent);
 	/** Called when emoji data changed, and need DreamText to refresh. */
 	FDreamUIFontEmojiDataRefreshEvent OnEmojiDataChanged;
+	DECLARE_EVENT(UDreamUIFontData_BaseObject, FDreamUIFontGlyphsReadyEvent);
+	/** Called on the game thread when glyphs that were handed out as pending have landed in the atlas. */
+	FDreamUIFontGlyphsReadyEvent OnGlyphsReady;
 protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	TObjectPtr<UDreamUIFontEmojiData> EmojiData;

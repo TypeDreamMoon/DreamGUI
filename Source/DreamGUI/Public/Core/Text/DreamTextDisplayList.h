@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -85,6 +85,8 @@ struct DREAMGUI_API FDreamTextDisplayList
 	FVector2f PreferredSize = FVector2f::ZeroVector;
 	/** True when Truncate or Ellipsis cut something off. */
 	bool bTruncated = false;
+	/** Some glyphs were still on the font's worker: their quads are missing until the font's OnGlyphsReady. */
+	bool bHasPendingGlyphs = false;
 	/** Number of items that count as visible characters. */
 	int32 VisibleCharCount = 0;
 
@@ -97,6 +99,7 @@ struct DREAMGUI_API FDreamTextDisplayList
 		Emojis.Reset();
 		PreferredSize = FVector2f::ZeroVector;
 		bTruncated = false;
+		bHasPendingGlyphs = false;
 		VisibleCharCount = 0;
 	}
 };

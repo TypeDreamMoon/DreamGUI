@@ -134,6 +134,18 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName = "Use Built-in UI Shader"))
 		bool bUseBuiltInUIShader = true;
 
+	/**
+	 * Rasterize outline (MTSDF) glyphs on a worker thread. A glyph that is not in the atlas yet is laid
+	 * out with its real advance and drawn once it lands, instead of stalling the frame while every new
+	 * glyph is generated. The first few glyphs of a frame are still generated synchronously so short
+	 * labels appear whole; see AsyncGlyphSyncBudgetPerFrame.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (DisplayName = "Async Glyph Rasterization"))
+		bool bAsyncGlyphRasterization = true;
+	/** How many new glyphs a frame may generate on the game thread before the rest go to the worker. */
+	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization"))
+		int32 AsyncGlyphSyncBudgetPerFrame = 24;
+
 	/** If false, ScreenSpaceUI can still do interaction and animation when GamePause */
 	UPROPERTY(EditAnywhere, config, Category = "Game", meta = (DisplayName="ScreenSpaceUI Affect by GamePause"))
 		bool bScreenSpaceUIAffectByGamePause = false;
@@ -174,6 +186,8 @@ public:
 	static int32 ConvertAtlasTextureSizeTypeToSize(const EDreamUIAtlasTextureSizeType& InType);
 	static int32 GetPriorityInSceneViewExtension();
 	static bool GetUseBuiltInUIShader();
+	static bool GetAsyncGlyphRasterization();
+	static int32 GetAsyncGlyphSyncBudgetPerFrame();
 private:
 	static const FDreamUIAtlasSettings& GetAtlasSettings(const FName& InPackingTag);
 };

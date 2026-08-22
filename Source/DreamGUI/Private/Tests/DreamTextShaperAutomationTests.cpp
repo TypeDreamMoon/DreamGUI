@@ -40,6 +40,8 @@ namespace DreamTextShaperTestLocal
 
 	UDreamUIFontData_DistanceField* MakeFileFont(UWorld* World, const TCHAR* Name)
 	{
+		// Tests read glyphs back right away, so rasterize them on the spot whatever the frame budget says.
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
 		UDreamUIFontData_DistanceField* Font = NewObject<UDreamUIFontData_DistanceField>(World);
 		Font->SetFontFilePath(EngineFont(Name), false);
 		Font->InitFont();
@@ -341,6 +343,76 @@ bool FDreamTextMtsdfCjkBoundsTest::RunTest(const FString& Parameters)
 			AddInfo(FString::Printf(TEXT("U+%04X glyph %u: %dx%d at (%.1f, %.1f) advance %.1f"), (uint32)Sample[i], Key.GlyphIndex, Sdf.Width, Sdf.Height, Sdf.Left, Sdf.Top, Sdf.Advance));
 		}
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextAsyncGlyphsTest,
+	"DreamGUI.Text.Atlas.AsyncGlyphsLandAndNotify",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextAsyncGlyphsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'W')))return false;
+	// No synchronous budget from here on: every new glyph goes to the worker.
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(0);
+	ON_SCOPE_EXIT { UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1); };
+
+	// A glyph that is not in the atlas comes back pending, with its advance but no quad.
+	const FDreamUICharData Pending = Font->GetCharData('W', 32.0f, false);
+	TestTrue(TEXT("first request is pending"), Pending.bPending);
+	TestTrue(TEXT("pending glyph has its advance"), Pending.XAdvance > 15.0f && Pending.XAdvance < 45.0f);
+	TestEqual(TEXT("pending glyph has no quad"), Pending.Width, 0.0f);
+	TestEqual(TEXT("one glyph on the worker"), Font->GetPendingAsyncGlyphCount(), 1);
+	// Asking again does not queue it twice.
+	Font->GetCharData('W', 32.0f, false);
+	TestEqual(TEXT("still one glyph on the worker"), Font->GetPendingAsyncGlyphCount(), 1);
+
+	// The layout sees the pending quad and says so; the glyph is not emitted yet.
+	FDreamTextLayoutInput In;
+	In.Content = TEXT("W");
+	In.Width = 200.0f;
+	In.Height = 100.0f;
+	In.Pivot = FVector2f(0.5f, 0.5f);
+	In.FontSize = 32.0f;
+	In.ParagraphHAlign = EDreamUITextParagraphHorizontalAlign::Left;
+	In.ParagraphVAlign = EDreamUITextParagraphVerticalAlign::Top;
+	In.Font = Font;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	TestTrue(TEXT("layout reports pending glyphs"), DL.bHasPendingGlyphs);
+	int32 Emitted = 0;
+	for (const auto& Item : DL.Items) if (Item.bEmit)Emitted++;
+	TestEqual(TEXT("nothing emitted while pending"), Emitted, 0);
+	TestTrue(TEXT("but the line still has its width"), DL.PreferredSize.X > 15.0f);
+
+	// When the worker is done, the font says so and the glyph has a real quad.
+	bool bNotified = false;
+	Font->OnGlyphsReady.AddLambda([&bNotified]() { bNotified = true; });
+	Font->WaitForAsyncGlyphs();
+	TestTrue(TEXT("the font announced the landing"), bNotified);
+	TestEqual(TEXT("nothing left on the worker"), Font->GetPendingAsyncGlyphCount(), 0);
+	const FDreamUICharData Ready = Font->GetCharData('W', 32.0f, false);
+	TestFalse(TEXT("the glyph is no longer pending"), Ready.bPending);
+	TestTrue(TEXT("and has a quad"), Ready.Width > 15.0f && Ready.Height > 15.0f);
+	TestEqual(TEXT("with the advance the placeholder promised"), Ready.XAdvance, Pending.XAdvance, 0.05f);
+
+	FDreamTextDisplayList DL2;
+	FDreamTextLayoutEngine::Layout(In, DL2);
+	TestFalse(TEXT("relayout has no pending glyphs"), DL2.bHasPendingGlyphs);
+	Emitted = 0;
+	for (const auto& Item : DL2.Items) if (Item.bEmit)Emitted++;
+	TestEqual(TEXT("the glyph is emitted now"), Emitted, 1);
+	TestEqual(TEXT("same width as the pending layout"), DL2.PreferredSize.X, DL.PreferredSize.X, 0.05f);
+
+	// With the budget back, a new glyph is synchronous again.
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
+	const FDreamUICharData Sync = Font->GetCharData('M', 32.0f, false);
+	TestFalse(TEXT("budgeted glyph is synchronous"), Sync.bPending);
+	TestTrue(TEXT("and complete"), Sync.Width > 15.0f);
 	return true;
 }
 

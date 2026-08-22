@@ -1023,7 +1023,11 @@ namespace DreamTextLayoutLocal
 				GlyphItem.Pen = FVector2f(GlyphPenX + G.XOffset, Baseline + G.YOffset);
 				GlyphItem.Glyph = G.Quad;
 				GlyphItem.AdvanceWithSpace = G.XAdvance + (g == M.GlyphCount - 1 ? In.FontSpace.X : 0.0f);
-				if (bEmit)
+				if (G.Quad.bPending)
+				{
+					Out.bHasPendingGlyphs = true;
+				}
+				if (bEmit && !G.Quad.bPending)
 				{
 					GlyphItem.bEmit = true;
 					GlyphItem.bCountsAsVisible = true;
@@ -1111,7 +1115,11 @@ namespace DreamTextLayoutLocal
 				Item.Glyph = G.Quad;
 				Item.AdvanceWithSpace = G.XAdvance;
 				Item.Style = MakeStyle(M.Style);
-				if (!bHasClampContent)
+				if (G.Quad.bPending)
+				{
+					Out.bHasPendingGlyphs = true;
+				}
+				if (!bHasClampContent && !G.Quad.bPending)
 				{
 					Item.bEmit = true;
 					Item.bCountsAsVisible = true;

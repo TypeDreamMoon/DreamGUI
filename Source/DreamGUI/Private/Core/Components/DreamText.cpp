@@ -926,6 +926,17 @@ void UDreamText::RegisterFont()
 			ClearEmojiObject();
 			MarkVerticesDirty(true, true, true, true);
 		});
+		GlyphsReadyDelegateHandle = Font->OnGlyphsReady.AddWeakLambda(this, [this]()
+		{
+			// Only texts that were laid out with missing quads care; the advances were already right,
+			// so this is a repaint with the quads filled in, not a size change.
+			if (bWaitingForGlyphs)
+			{
+				bWaitingForGlyphs = false;
+				CacheTextGeometryData.MarkDirty();
+				MarkVerticesDirty(true, true, true, true);
+			}
+		});
 	}
 }
 
@@ -937,6 +948,9 @@ void UDreamText::UnregisterFont()
 		Font->RemoveUIText(this);
 		Font->OnEmojiDataChanged.Remove(EmojiDataChangedDelegateHandle);
 		EmojiDataChangedDelegateHandle.Reset();
+		Font->OnGlyphsReady.Remove(GlyphsReadyDelegateHandle);
+		GlyphsReadyDelegateHandle.Reset();
+		bWaitingForGlyphs = false;
 	}
 }
 
@@ -976,6 +990,10 @@ void UDreamText::UpdateCacheTextGeometry()const
 		}
 	}
 	LayOutAt(RenderedFontSize);
+	if (bAnyLayoutRan)
+	{
+		bWaitingForGlyphs = CacheTextGeometryData.GetDisplayList().bHasPendingGlyphs;
+	}
 
 	if (bAnyLayoutRan)
 	{

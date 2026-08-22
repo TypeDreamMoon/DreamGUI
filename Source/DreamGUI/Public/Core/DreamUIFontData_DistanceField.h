@@ -116,6 +116,15 @@ public:
 	int32 GetSdfRadius() const { return SDFRadius; }
 	virtual float GetAtlasFieldRangeTexels() const override { return 2.0f * SDFRadius; }
 	virtual float GetAtlasEmTexels() const override { return (float)SampleFontSize; }
+	virtual bool GetAsyncRasterParams(float CharSize, bool IsBold, float& OutPixelsPerEm, float& OutSpreadPixels, float& OutBoldPixels) const override
+	{
+		if (SdfSource != EDreamUISdfSource::OutlineMultiChannel)return false;
+		OutPixelsPerEm = (float)SampleFontSize;
+		OutSpreadPixels = (float)SDFRadius;
+		OutBoldPixels = IsBold ? SampleFontSize * BoldRatio : 0.0f;
+		return true;
+	}
+	virtual bool IsGlyphCacheSizeIndependent() const override { return true; }
 	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}

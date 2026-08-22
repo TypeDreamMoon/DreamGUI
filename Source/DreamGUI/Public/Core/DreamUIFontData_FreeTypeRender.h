@@ -11,6 +11,7 @@
 #include "DreamUIFontData_FreeTypeRender.generated.h"
 
 class UDreamText;
+class FDreamGlyphRasterizer;
 
 #if WITH_FREETYPE
 struct FT_GlyphSlotRec_;
@@ -232,6 +233,41 @@ protected:
 	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData) {};
 	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult) { return false; };
 	virtual void ClearCharDataCache() {};
+
+	/**
+	 * Asynchronous rasterization. A font that can generate its glyphs on a worker (outline fields)
+	 * fills in the generator's parameters; a font whose cache does not depend on CharSize says so, so
+	 * one request covers every size.
+	 */
+	virtual bool GetAsyncRasterParams(float CharSize, bool IsBold, float& OutPixelsPerEm, float& OutSpreadPixels, float& OutBoldPixels) const { return false; }
+	virtual bool IsGlyphCacheSizeIndependent() const { return false; }
+	/** Pack a rasterized glyph into the atlas (growing it as needed) and describe its quad. */
+	bool InsertGlyphBitmap(const FGlyphBitmap& InGlyphBitmap, FDreamUICharData& OutResult);
+	/** A quad-less stand-in with the glyph's real advance, for a glyph still on the worker. */
+	FDreamUICharData MakePendingCharData(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold);
+	struct FAsyncGlyphRequest
+	{
+		FDreamUIGlyphKey Glyph;
+		float CharSize = 0.0f;
+		bool bBold = false;
+		bool operator==(const FAsyncGlyphRequest& Other) const { return Glyph == Other.Glyph && CharSize == Other.CharSize && bBold == Other.bBold; }
+		friend FORCEINLINE uint32 GetTypeHash(const FAsyncGlyphRequest& R) { return HashCombine(HashCombine(GetTypeHash(R.Glyph), GetTypeHash(R.CharSize)), GetTypeHash(R.bBold)); }
+	};
+	TSet<FAsyncGlyphRequest> PendingAsyncGlyphs;
+	TSharedPtr<FDreamGlyphRasterizer, ESPMode::ThreadSafe> Rasterizer;
+	/** The worker over this font's faces, created on first use. Null when a face has no bytes to share. */
+	FDreamGlyphRasterizer* GetOrCreateRasterizer();
+	/** Collect finished worker glyphs into the atlas; fires OnGlyphsReady when any landed. */
+	void DrainAsyncGlyphs();
+	/** Whether a glyph request this frame may still be rasterized synchronously. */
+	static bool TakeSyncGlyphBudget();
+public:
+	/** Block until the worker has finished every queued glyph and put them in the atlas. Tests and teardown. */
+	void WaitForAsyncGlyphs();
+	int32 GetPendingAsyncGlyphCount() const { return PendingAsyncGlyphs.Num(); }
+	/** Override the per-frame synchronous budget (negative restores the setting). Tests. */
+	static void SetAsyncGlyphSyncBudgetOverride(int32 Budget);
+protected:
 
 	/** CPU source of truth used both for deferred uploads and texture-array expansion. */
 	TArray<uint8> FontTextureAtlasData;

@@ -382,6 +382,9 @@ private:
 	void RegisterFont();
 	void UnregisterFont();
 	FDelegateHandle EmojiDataChangedDelegateHandle;
+	FDelegateHandle GlyphsReadyDelegateHandle;
+	/** The last layout had glyphs still on the font's worker; relayout when the font says they landed. */
+	mutable bool bWaitingForGlyphs = false;
 protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
