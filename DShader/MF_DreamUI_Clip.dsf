@@ -6,7 +6,13 @@
 // as a literal and the decompiler drops silently -- so a Custom node written that way compiles
 // against a function nothing declares.
 
-Function float DreamUIClip(in Texture2D DataTex, in float CoordinateInDataTex, in float3 PixelLocalPosition)
+// SelfContained: the body is embedded in the Custom node and the #include below is attached to that
+// node directly. Without it DreamShader wraps the function in a generated .ush under
+// Intermediate/DreamShader/GeneratedShaders and the material caches *that* path -- which is a build
+// artifact directory. Cleaning Intermediate, a hash change racing asset load, or simply not having
+// DreamShader installed all leave the include unresolvable, and UE drops it with only a warning, so
+// the material still "compiles" while the Custom node calls a function nothing declares.
+Function SelfContained float DreamUIClip(in Texture2D DataTex, in float CoordinateInDataTex, in float3 PixelLocalPosition)
 {
     #include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
     return DreamUI_CalculateClipData(DataTex, CoordinateInDataTex, PixelLocalPosition);
