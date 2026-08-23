@@ -61,6 +61,24 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category=DreamWidgetPresenter, AdvancedDisplay)
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 
+	/**
+	 * Presenter-level animation forwards. These exist so a Level Sequence possessing this component
+	 * can fade, slide, and show/hide the whole widget tree without binding any widget: each setter
+	 * writes through to the root widget, and a fresh load replays the stored values. Opacity rides
+	 * RenderOpacity (children inherit it multiplicatively) and the offset rides the render-only
+	 * translation, so neither touches layout.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category=DreamWidgetPresenter, Getter, Setter, meta = (UIMin = "0", UIMax = "1"))
+	float WidgetOpacity = 1.0f;
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category=DreamWidgetPresenter, Getter, Setter)
+	FVector WidgetOffset = FVector::ZeroVector;
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadOnly, Category=DreamWidgetPresenter, Getter = "GetWidgetVisible", Setter = "SetWidgetVisible")
+	bool bWidgetVisible = true;
+
+protected:
+	/** Replays the presenter-level forwards onto a freshly loaded widget tree; default values are left alone. */
+	void ApplyWidgetOverridesToLoadedWidget();
+
 public:
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)
 	UUINavigationInputSelectionHandler* GetNavigationSelection();
@@ -68,4 +86,11 @@ public:
 	UDreamCanvas* GetLoadedCanvas()const{return RootCanvas.Get();}
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)
 	UDreamWidget* GetLoadedWidget()const{return LoadedWidget.Get();}
+
+	float GetWidgetOpacity()const{return WidgetOpacity;}
+	void SetWidgetOpacity(float Value);
+	FVector GetWidgetOffset()const{return WidgetOffset;}
+	void SetWidgetOffset(const FVector& Value);
+	bool GetWidgetVisible()const{return bWidgetVisible;}
+	void SetWidgetVisible(bool Value);
 };

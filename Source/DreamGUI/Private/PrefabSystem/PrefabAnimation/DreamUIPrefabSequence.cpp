@@ -8,6 +8,7 @@
 #include "Tracks/MovieSceneAudioTrack.h"
 #include "Tracks/MovieSceneEventTrack.h"
 #include "Tracks/MovieSceneMaterialParameterCollectionTrack.h"
+#include "Tracks/MovieSceneTimeWarpTrack.h"
 
 #if WITH_EDITOR
 UDreamUIPrefabSequence::FOnInitialize UDreamUIPrefabSequence::OnInitializeSequenceEvent;
@@ -153,12 +154,30 @@ ETrackSupport UDreamUIPrefabSequence::IsTrackSupportedImpl(TSubclassOf<class UMo
 {
 	if (InTrackClass == UMovieSceneAudioTrack::StaticClass() ||
 		// InTrackClass == UMovieSceneEventTrack::StaticClass() ||
-		InTrackClass == UMovieSceneMaterialParameterCollectionTrack::StaticClass())
+		InTrackClass == UMovieSceneMaterialParameterCollectionTrack::StaticClass() ||
+		InTrackClass == UMovieSceneTimeWarpTrack::StaticClass())
 	{
 		return ETrackSupport::Supported;
 	}
 
 	return Super::IsTrackSupportedImpl(InTrackClass);
+}
+
+bool UDreamUIPrefabSequence::IsFilterSupportedImpl(const FString& InFilterName) const
+{
+	// The default answer of "every filter" fills the dropdown with Camera Cuts and Skeletal Mesh
+	// entries nothing here can ever produce; this is UWidgetAnimation's list minus Event (the event
+	// track is DreamUI's own broadcast track when it lands).
+	static const TArray<FString> SupportedFilters = {
+		TEXT("Audio"),
+		TEXT("Keyed"),
+		TEXT("Folder"),
+		TEXT("Group"),
+		TEXT("TimeDilation"),
+		TEXT("TimeWarp"),
+		TEXT("Unbound")
+	};
+	return SupportedFilters.Contains(InFilterName);
 }
 
 bool UDreamUIPrefabSequence::IsObjectReferencesGood(UDreamWidget* InContextWidget)const

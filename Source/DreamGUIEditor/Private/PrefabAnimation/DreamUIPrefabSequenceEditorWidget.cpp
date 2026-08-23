@@ -564,6 +564,24 @@ private:
 	void ExtendSequencerAddTrackMenu(FMenuBuilder& AddTrackMenuBuilder, const TArray<UObject*> ContextObjects)
 	{
 		if (ContextObjects.Num() != 1)return;
+		// This extender is registered with the process-wide manager, so it fires for every sequencer
+		// in the editor -- another prefab editor's, the level editor's, anyone's. The entries below
+		// write into *this* editor's sequencer, so only the widgets of this editor's own prefab may
+		// see them; anything else got duplicate menu items whose click landed in the wrong sequence
+		// (or dereferenced a null sequencer).
+		{
+			UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+			UDreamWidget* TargetWidget = Cast<UDreamWidget>(ContextObjects[0]);
+			if (TargetWidget == nullptr && ContextObjects[0] != nullptr)
+			{
+				TargetWidget = ContextObjects[0]->GetTypedOuter<UDreamWidget>();
+			}
+			if (!Sequencer.IsValid() || ContextWidget == nullptr || TargetWidget == nullptr
+				|| !(TargetWidget == ContextWidget || TargetWidget->IsChildOf(ContextWidget)))
+			{
+				return;
+			}
+		}
 
 		if (auto Widget = Cast<UDreamWidget>(ContextObjects[0]))
 		{

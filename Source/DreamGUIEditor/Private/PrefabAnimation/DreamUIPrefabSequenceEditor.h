@@ -25,6 +25,9 @@ public:
 	SLATE_BEGIN_ARGS(SDreamUIPrefabSequenceEditor) {}
 	SLATE_END_ARGS();
 	void Construct(const FArguments& InArgs);
+	//route F2 / Delete / Ctrl+D to the animation-list commands
+	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
+	virtual bool SupportsKeyboardFocus() const override { return true; }
 
 	/** See SDreamUIPrefabSequenceEditorWidget::SetToolkitHost. */
 	void SetToolkitHost(TSharedPtr<class IToolkitHost> InToolkitHost);

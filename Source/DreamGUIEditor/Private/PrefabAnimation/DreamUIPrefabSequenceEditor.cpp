@@ -263,6 +263,15 @@ UDreamUIPrefabSequence* SDreamUIPrefabSequenceEditor::GetPrefabSequence() const
 	return GetSelectedAnimation();
 }
 
+FReply SDreamUIPrefabSequenceEditor::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
+{
+	if (CommandList.IsValid() && CommandList->ProcessCommandBindings(InKeyEvent))
+	{
+		return FReply::Handled();
+	}
+	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
+}
+
 void SDreamUIPrefabSequenceEditor::SetToolkitHost(TSharedPtr<IToolkitHost> InToolkitHost)
 {
 	if (PrefabSequenceEditor.IsValid())

@@ -717,7 +717,27 @@ protected:
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = "DreamGUI-AnchorData")
 	FDreamUIAnchorData AnchorData;
 
-	//UPROPERTY(EditAnywhere, Transient, Getter="GetWidth", Setter="SetWidth", Category = "DreamGUI-AnchorData", DisplayName="Width")
+	/**
+	 * Animatable mirrors of the resolved geometry, one per channel Sequencer can key. Sequencer
+	 * reads property memory directly while writing through the setter (the RelativeRotationEuler
+	 * story), so each must be a real stored field; SyncAnimatableGeometryMirrors keeps them equal
+	 * to the caches below. A stale cache and its mirror go stale together, which is exactly what
+	 * the details panel shows too.
+	 */
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetWidth", Setter = "SetWidth", Category = "DreamGUI-AnchorData", DisplayName = "Width", meta = (AllowPrivateAccess = true))
+	float AnimatableWidth = 0;
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetHeight", Setter = "SetHeight", Category = "DreamGUI-AnchorData", DisplayName = "Height", meta = (AllowPrivateAccess = true))
+	float AnimatableHeight = 0;
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetLeft", Setter = "SetAnchorOffsetLeft", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Left", meta = (AllowPrivateAccess = true))
+	float AnimatableAnchorLeft = 0;
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetRight", Setter = "SetAnchorOffsetRight", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Right", meta = (AllowPrivateAccess = true))
+	float AnimatableAnchorRight = 0;
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetTop", Setter = "SetAnchorOffsetTop", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Top", meta = (AllowPrivateAccess = true))
+	float AnimatableAnchorTop = 0;
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetBottom", Setter = "SetAnchorOffsetBottom", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Bottom", meta = (AllowPrivateAccess = true))
+	float AnimatableAnchorBottom = 0;
+	void SyncAnimatableGeometryMirrors() const;
+
 	mutable float CacheWidth = 0;
 	//UPROPERTY(EditAnywhere, Transient, Getter="GetHeight", Setter="SetHeight", Category = "DreamGUI-AnchorData", DisplayName="Height")
 	mutable float CacheHeight = 0;

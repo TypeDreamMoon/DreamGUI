@@ -2661,11 +2661,23 @@ void UDreamWidget::CalculateTransformFromAnchor(bool& OutHorizontalPositionChang
 
 #pragma region AnchorData
 
+void UDreamWidget::SyncAnimatableGeometryMirrors() const
+{
+	auto* MutableThis = const_cast<UDreamWidget*>(this);
+	MutableThis->AnimatableWidth = CacheWidth;
+	MutableThis->AnimatableHeight = CacheHeight;
+	MutableThis->AnimatableAnchorLeft = CacheAnchorOffsetLeft;
+	MutableThis->AnimatableAnchorRight = CacheAnchorOffsetRight;
+	MutableThis->AnimatableAnchorTop = CacheAnchorOffsetTop;
+	MutableThis->AnimatableAnchorBottom = CacheAnchorOffsetBottom;
+}
+
 float UDreamWidget::GetWidth() const
 {
 	if (bCacheWidthDirty)
 	{
 		bCacheWidthDirty = false;
+		SyncAnimatableGeometryMirrors();
 		if (Parent.IsValid())
 		{
 			if (AnchorData.IsHorizontalStretched())
@@ -2689,6 +2701,7 @@ float UDreamWidget::GetHeight() const
 	if (bCacheHeightDirty)
 	{
 		bCacheHeightDirty = false;
+		SyncAnimatableGeometryMirrors();
 		if (Parent.IsValid())
 		{
 			if (AnchorData.IsVerticalStretched())
@@ -2829,9 +2842,13 @@ void UDreamWidget::SetAnchorOffset(FMargin Value)
 		if (bCacheAnchorOffsetLeftDirty || bCacheAnchorOffsetRightDirty || bWidthChange || bHeightChange)
 		{
 			bCacheAnchorOffsetLeftDirty = false;
+			SyncAnimatableGeometryMirrors();
 			bCacheAnchorOffsetRightDirty = false;
+			SyncAnimatableGeometryMirrors();
 			bCacheAnchorOffsetBottomDirty = false;
+			SyncAnimatableGeometryMirrors();
 			bCacheAnchorOffsetTopDirty = false;
+			SyncAnimatableGeometryMirrors();
 			CacheAnchorOffsetLeft = Value.Left;
 			CacheAnchorOffsetRight = Value.Right;
 			CacheAnchorOffsetBottom = Value.Bottom;
@@ -2851,6 +2868,7 @@ void UDreamWidget::SetAnchorOffset(FMargin Value)
 			MarkLayoutForRebuild(this);
 		}
 		bCacheAnchorOffsetLeftDirty = false;
+		SyncAnimatableGeometryMirrors();
 	}
 	else
 	{
@@ -3070,6 +3088,7 @@ float UDreamWidget::GetAnchorOffsetLeft()const
 	if (bCacheAnchorOffsetLeftDirty)
 	{
 		bCacheAnchorOffsetLeftDirty = false;
+		SyncAnimatableGeometryMirrors();
 		if (this->Parent.IsValid())
 		{
 			CacheAnchorOffsetLeft = this->AnchorData.AnchoredPosition.X - this->AnchorData.SizeDelta.X * this->AnchorData.Pivot.X;
@@ -3086,6 +3105,7 @@ float UDreamWidget::GetAnchorOffsetTop()const
 	if (bCacheAnchorOffsetTopDirty)
 	{
 		bCacheAnchorOffsetTopDirty = false;
+		SyncAnimatableGeometryMirrors();
 		if (this->Parent.IsValid())
 		{
 			CacheAnchorOffsetTop = -(this->AnchorData.AnchoredPosition.Y + this->AnchorData.SizeDelta.Y * (1.0f - this->AnchorData.Pivot.Y));
@@ -3102,6 +3122,7 @@ float UDreamWidget::GetAnchorOffsetRight()const
 	if (bCacheAnchorOffsetRightDirty)
 	{
 		bCacheAnchorOffsetRightDirty = false;
+		SyncAnimatableGeometryMirrors();
 		if (this->Parent.IsValid())
 		{
 			CacheAnchorOffsetRight = -(this->AnchorData.AnchoredPosition.X + this->AnchorData.SizeDelta.X * (1.0f - this->AnchorData.Pivot.X));
@@ -3118,6 +3139,7 @@ float UDreamWidget::GetAnchorOffsetBottom()const
 	if (bCacheAnchorOffsetBottomDirty)
 	{
 		bCacheAnchorOffsetBottomDirty = false;
+		SyncAnimatableGeometryMirrors();
 		if (this->Parent.IsValid())
 		{
 			CacheAnchorOffsetBottom = this->AnchorData.AnchoredPosition.Y - this->AnchorData.SizeDelta.Y * this->AnchorData.Pivot.Y;
@@ -3147,6 +3169,7 @@ void UDreamWidget::SetAnchorOffsetLeft(float Value)
 		if (CacheAnchorOffsetLeft != Value || bCacheAnchorOffsetLeftDirty)
 		{
 			bCacheAnchorOffsetLeftDirty = false;
+			SyncAnimatableGeometryMirrors();
 			CacheAnchorOffsetLeft = Value;
 			auto CurrentRight = this->GetAnchorOffsetRight();
 			CacheWidth = this->Parent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - Value;
@@ -3167,6 +3190,7 @@ void UDreamWidget::SetAnchorOffsetLeft(float Value)
 			MarkLayoutForRebuild(this);
 		}
 		bCacheAnchorOffsetLeftDirty = false;
+		SyncAnimatableGeometryMirrors();
 	}
 	else
 	{
@@ -3180,6 +3204,7 @@ void UDreamWidget::SetAnchorOffsetTop(float Value)
 		if (CacheAnchorOffsetTop != Value || bCacheAnchorOffsetTopDirty)
 		{
 			bCacheAnchorOffsetTopDirty = false;
+			SyncAnimatableGeometryMirrors();
 			CacheAnchorOffsetTop = Value;
 			auto CurrentBottom = this->GetAnchorOffsetBottom();
 			CacheHeight = this->Parent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - Value - CurrentBottom;
@@ -3200,6 +3225,7 @@ void UDreamWidget::SetAnchorOffsetTop(float Value)
 			MarkLayoutForRebuild(this);
 		}
 		bCacheAnchorOffsetTopDirty = false;
+		SyncAnimatableGeometryMirrors();
 	}
 	else
 	{
@@ -3213,6 +3239,7 @@ void UDreamWidget::SetAnchorOffsetRight(float Value)
 		if (CacheAnchorOffsetRight != Value || bCacheAnchorOffsetRightDirty)
 		{
 			bCacheAnchorOffsetRightDirty = false;
+			SyncAnimatableGeometryMirrors();
 			CacheAnchorOffsetRight = Value;
 			auto CurrentLeft = this->GetAnchorOffsetLeft();
 			CacheWidth = this->Parent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - Value - CurrentLeft;
@@ -3233,6 +3260,7 @@ void UDreamWidget::SetAnchorOffsetRight(float Value)
 			MarkLayoutForRebuild(this);
 		}
 		bCacheAnchorOffsetRightDirty = false;
+		SyncAnimatableGeometryMirrors();
 	}
 	else
 	{
@@ -3246,6 +3274,7 @@ void UDreamWidget::SetAnchorOffsetBottom(float Value)
 		if (CacheAnchorOffsetBottom != Value || bCacheAnchorOffsetBottomDirty)
 		{
 			bCacheAnchorOffsetBottomDirty = false;
+			SyncAnimatableGeometryMirrors();
 			CacheAnchorOffsetBottom = Value;
 			auto CurrentTop = this->GetAnchorOffsetTop();
 			CacheHeight = this->Parent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - Value;
@@ -3266,6 +3295,7 @@ void UDreamWidget::SetAnchorOffsetBottom(float Value)
 			MarkLayoutForRebuild(this);
 		}
 		bCacheAnchorOffsetBottomDirty = false;
+		SyncAnimatableGeometryMirrors();
 	}
 	else
 	{
@@ -3278,6 +3308,7 @@ void UDreamWidget::SetWidth(float Value)
 	if (CacheWidth != Value || bCacheWidthDirty)
 	{
 		bCacheWidthDirty = false;
+		SyncAnimatableGeometryMirrors();
 		CacheWidth = Value;
 		if (Parent.IsValid())
 		{
@@ -3317,6 +3348,7 @@ void UDreamWidget::SetHeight(float Value)
 	if (CacheHeight != Value || bCacheHeightDirty)
 	{
 		bCacheHeightDirty = false;
+		SyncAnimatableGeometryMirrors();
 		CacheHeight = Value;
 		if (Parent.IsValid())
 		{

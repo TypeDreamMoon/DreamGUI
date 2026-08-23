@@ -54,7 +54,7 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 		return;
 	}
 
-	DetailBuilder.HideProperty("Sequence");
+	DetailBuilder.HideProperty("SequenceArray");
 
 	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Animation", LOCTEXT("AnimationCategory", "Animation"), ECategoryPriority::Important);
 

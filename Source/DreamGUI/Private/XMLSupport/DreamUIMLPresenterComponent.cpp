@@ -69,6 +69,7 @@ void UDreamUIMLPresenterComponent::LoadWidget()
 		return;
 	}
 	LoadedWidget = Behaviour->GetWidget();
+	ApplyWidgetOverridesToLoadedWidget();
 
 	// Swap canvas: remove built-in canvas from loaded widget, replace with CanvasTemplate
 	if (auto Canvas = LoadedWidget->GetComponent<UDreamCanvas>())

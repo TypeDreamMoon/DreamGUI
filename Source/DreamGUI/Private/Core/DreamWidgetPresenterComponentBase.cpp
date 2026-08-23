@@ -324,6 +324,56 @@ UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::GetNavig
 	return NavigationSelection.Get();
 }
 
+void UDreamWidgetPresenterComponentBase::SetWidgetOpacity(float Value)
+{
+	WidgetOpacity = Value;
+	if (UDreamWidget* Widget = LoadedWidget.Get())
+	{
+		Widget->SetRenderOpacity(Value);
+	}
+}
+
+void UDreamWidgetPresenterComponentBase::SetWidgetOffset(const FVector& Value)
+{
+	WidgetOffset = Value;
+	if (UDreamWidget* Widget = LoadedWidget.Get())
+	{
+		Widget->SetRenderTranslation(Value);
+	}
+}
+
+void UDreamWidgetPresenterComponentBase::SetWidgetVisible(bool Value)
+{
+	bWidgetVisible = Value;
+	if (UDreamWidget* Widget = LoadedWidget.Get())
+	{
+		Widget->SetWidgetActive(Value);
+	}
+}
+
+void UDreamWidgetPresenterComponentBase::ApplyWidgetOverridesToLoadedWidget()
+{
+	UDreamWidget* Widget = LoadedWidget.Get();
+	if (Widget == nullptr)
+	{
+		return;
+	}
+	// Only values someone actually set: pushing the defaults would stomp what the prefab authored
+	// (a root the author deliberately hid, most importantly).
+	if (WidgetOpacity != 1.0f)
+	{
+		Widget->SetRenderOpacity(WidgetOpacity);
+	}
+	if (!WidgetOffset.IsZero())
+	{
+		Widget->SetRenderTranslation(WidgetOffset);
+	}
+	if (!bWidgetVisible)
+	{
+		Widget->SetWidgetActive(false);
+	}
+}
+
 #if WITH_EDITOR
 
 void UDreamWidgetPresenterComponentBase::ReloadWidget()
