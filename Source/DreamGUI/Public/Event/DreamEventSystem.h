@@ -283,6 +283,10 @@ class DREAMGUI_API ADreamEventSystemActor : public AActor
 
 public:
 	ADreamEventSystemActor();
+
+	/** The component subclasses register their input module with. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI")
+	class UDreamEventSystem* GetEventSystem() const { return EventSystem; }
 private:
 	UPROPERTY(Category = "DreamGUI", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UDreamEventSystem> EventSystem;
