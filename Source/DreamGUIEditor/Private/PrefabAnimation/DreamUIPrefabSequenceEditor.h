@@ -26,6 +26,10 @@ public:
 	SLATE_END_ARGS();
 	void Construct(const FArguments& InArgs);
 
+	/** See SDreamUIPrefabSequenceEditorWidget::SetToolkitHost. */
+	void SetToolkitHost(TSharedPtr<class IToolkitHost> InToolkitHost);
+	/** Warn about companion-blueprint calls that still play the old display name. */
+	void NotifyAnimationRenamed(const FString& OldName, const FString& NewName);
 	void AssignDreamUIPrefabSequenceComponent(TWeakObjectPtr<UDreamUIPrefabSequenceComponent> InSequenceComponent);
 	UDreamUIPrefabSequence* GetPrefabSequence() const;
 	void SelectAnimation(UDreamUIPrefabSequence* InAnimation);

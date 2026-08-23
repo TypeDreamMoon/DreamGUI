@@ -81,16 +81,12 @@ public:
 			});
 	}
 	
-	TSharedRef<SDockTab> SpawnCurveEditorTab(const FSpawnTabArgs&)
+	void SetToolkitHost(TSharedPtr<IToolkitHost> InToolkitHost)
 	{
-		const FSlateIcon SequencerGraphIcon = FSlateIcon(FAppStyle::GetAppStyleSetName(), "GenericCurveEditor.TabIcon");
-		auto Tab = SNew(SDockTab)
-			.Label(NSLOCTEXT("Sequencer", "SequencerMainGraphEditorTitle", "Sequencer Curves"))
-			[
-				SNullWidget::NullWidget
-			];
-		Tab->SetTabIcon(SequencerGraphIcon.GetIcon());
-		return Tab;
+		if (InToolkitHost.IsValid())
+		{
+			ToolkitHost = InToolkitHost;
+		}
 	}
 
 	void Construct(const FArguments&)
@@ -117,6 +113,8 @@ public:
 		];
 
 		GEditor->RegisterForUndo(this);
+		// A fallback only: the prefab editor injects its own host via SetToolkitHost so side panels
+		// (the curve editor) open in its window rather than the level editor's.
 		ToolkitHost = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor").GetFirstLevelEditor();
 
 		// Register sequencer menu extenders.
@@ -229,6 +227,7 @@ public:
 		{
 			if (Sequencer.IsValid())
 			{
+				StopObservingWidgetSelection();
 				Sequencer->SetShowCurveEditor(false);
 				FLevelEditorSequencerIntegration::Get().RemoveSequencer(Sequencer.ToSharedRef());
 				Sequencer->Close();
@@ -259,6 +258,7 @@ public:
 			SequencerInitParams.ViewParams.UniqueName = "EmbeddedDreamUIPrefabSequenceEditor";
 			SequencerInitParams.ViewParams.ScrubberStyle = ESequencerScrubberStyle::FrameBlock;
 			SequencerInitParams.ViewParams.OnReceivedFocus.BindRaw(this, &SDreamUIPrefabSequenceEditorWidgetImpl::OnSequencerReceivedFocus);
+			SequencerInitParams.ViewParams.OnBuildCustomContextMenuForGuid = FOnBuildCustomContextMenuForGuid::CreateSP(this, &SDreamUIPrefabSequenceEditorWidgetImpl::BuildBindingContextMenu);
 			SequencerInitParams.bEditWithinLevelEditor = false;
 			SequencerInitParams.ToolkitHost = ToolkitHost;
 			SequencerInitParams.HostCapabilities.bSupportsCurveEditor = true;
@@ -267,6 +267,7 @@ public:
 		Sequencer = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer").CreateSequencer(SequencerInitParams);
 		Content->SetContent(Sequencer->GetSequencerWidget());
 		Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &SDreamUIPrefabSequenceEditorWidgetImpl::SyncSelectedWidgetsWithSequencerSelection);
+		ObserveWidgetSelection();
 		Sequencer->OnMovieSceneBindingsChanged().AddLambda([=, this]() {
 			if (!WeakSequence.IsValid())return;
 			auto MovieScene = WeakSequence->GetMovieScene();
@@ -344,6 +345,125 @@ public:
 				}
 			}
 		}
+	}
+
+	// ------------------------------------------------------------------ widget selection -> sequencer
+
+	void ObserveWidgetSelection()
+	{
+		StopObservingWidgetSelection();
+		UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		UDreamUISelection* Selection = ContextWidget ? UDreamUISelection::GetInstance(ContextWidget->GetWorld()) : nullptr;
+		if (Selection)
+		{
+			ObservedSelection = Selection;
+			WidgetSelectionChangedHandle = Selection->OnSelectionChanged.AddSP(this, &SDreamUIPrefabSequenceEditorWidgetImpl::SyncSequencerSelectionWithSelectedWidgets);
+		}
+	}
+
+	void StopObservingWidgetSelection()
+	{
+		if (UDreamUISelection* Selection = ObservedSelection.Get())
+		{
+			Selection->OnSelectionChanged.Remove(WidgetSelectionChangedHandle);
+		}
+		ObservedSelection.Reset();
+		WidgetSelectionChangedHandle.Reset();
+	}
+
+	/** The other half of SyncSelectedWidgetsWithSequencerSelection: picking a widget highlights its tracks. */
+	void SyncSequencerSelectionWithSelectedWidgets()
+	{
+		if (!Sequencer.IsValid() || bUpdatingSequencerSelection)
+		{
+			return;
+		}
+		UDreamUISelection* Selection = ObservedSelection.Get();
+		if (Selection == nullptr)
+		{
+			return;
+		}
+		TGuardValue<bool> Guard(bUpdatingSequencerSelection, true);
+		Sequencer->EmptySelection();
+		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : Selection->GetSelectedWidgets())
+		{
+			if (UDreamWidget* Widget = WeakWidget.Get())
+			{
+				const FGuid Existing = Sequencer->GetHandleToObject(Widget, /*bCreateHandleIfMissing*/false);
+				if (Existing.IsValid())
+				{
+					Sequencer->SelectObject(Existing);
+				}
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------ binding right-click menu
+
+	/** The designer-selected widget, if it may be bound into this sequence at all. */
+	UDreamWidget* GetBindableSelectedWidget() const
+	{
+		UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		if (ContextWidget == nullptr)
+		{
+			return nullptr;
+		}
+		UDreamUISelection* Selection = UDreamUISelection::GetInstance(ContextWidget->GetWorld());
+		if (Selection == nullptr || Selection->GetSelectedWidgets().Num() != 1)
+		{
+			return nullptr;
+		}
+		UDreamWidget* Widget = Selection->GetSelectedWidgets()[0].Get();
+		if (Widget == nullptr || (Widget != ContextWidget && !Widget->IsChildOf(ContextWidget)))
+		{
+			return nullptr;
+		}
+		UDreamUIPrefabHelperObject* Helper = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ContextWidget);
+		return DreamUIPrefabSequence_CanBindWidgetToSequencer(Helper, Widget) ? Widget : nullptr;
+	}
+
+	void BuildBindingContextMenu(FMenuBuilder& MenuBuilder, FGuid ObjectBinding)
+	{
+		UDreamWidget* SelectedWidget = GetBindableSelectedWidget();
+		if (SelectedWidget == nullptr || !Sequencer.IsValid())
+		{
+			return;
+		}
+		// Already bound elsewhere in this animation: replacing would silently merge two bindings.
+		const FGuid ExistingId = Sequencer->GetHandleToObject(SelectedWidget, /*bCreateHandleIfMissing*/false);
+		if (ExistingId.IsValid() && ExistingId != ObjectBinding)
+		{
+			return;
+		}
+		MenuBuilder.AddMenuSeparator();
+		MenuBuilder.AddMenuEntry(
+			FText::Format(LOCTEXT("ReplaceBindingWithWidget", "Replace with {0}"), FText::FromString(SelectedWidget->GetDisplayName())),
+			LOCTEXT("ReplaceBindingWithWidgetTooltip", "Rebind this track to the widget selected in the designer, keeping every section and key."),
+			FSlateIcon(),
+			FExecuteAction::CreateSP(this, &SDreamUIPrefabSequenceEditorWidgetImpl::ReplaceBindingWithWidget, MakeWeakObjectPtr(SelectedWidget), ObjectBinding));
+	}
+
+	void ReplaceBindingWithWidget(TWeakObjectPtr<UDreamWidget> InWidget, FGuid ObjectBinding)
+	{
+		UDreamWidget* Widget = InWidget.Get();
+		UDreamUIPrefabSequence* Sequence = WeakSequence.Get();
+		if (Widget == nullptr || Sequence == nullptr || !Sequencer.IsValid())
+		{
+			return;
+		}
+		UMovieScene* MovieScene = Sequence->GetMovieScene();
+		const FScopedTransaction Transaction(LOCTEXT("ReplaceBinding_Transaction", "Replace Animation Binding"));
+		Sequence->Modify();
+		MovieScene->Modify();
+		const FGuid NewGuid = Sequencer->GetHandleToObject(Widget, /*bCreateHandleIfMissing*/true);
+		if (!NewGuid.IsValid() || NewGuid == ObjectBinding)
+		{
+			return;
+		}
+		MovieScene->MoveBindingContents(ObjectBinding, NewGuid);
+		MovieScene->RemovePossessable(ObjectBinding);
+		Sequence->UnbindPossessableObjects(ObjectBinding);
+		Sequencer->NotifyMovieSceneDataChanged(EMovieSceneDataChangeType::MovieSceneStructureItemsChanged);
 	}
 
 
@@ -578,6 +698,8 @@ private:
 	}
 private:
 	TWeakObjectPtr<UDreamUIPrefabSequence> WeakSequence;
+	TWeakObjectPtr<UDreamUISelection> ObservedSelection;
+	FDelegateHandle WidgetSelectionChangedHandle;
 
 	TSharedPtr<SBox> Content;
 	TSharedPtr<ISequencer> Sequencer;
@@ -608,6 +730,14 @@ FText SDreamUIPrefabSequenceEditorWidget::GetDisplayLabel() const
 TSharedPtr<ISequencer> SDreamUIPrefabSequenceEditorWidget::GetSequencer() const
 {
 	return Impl.Pin()->GetSequencer();
+}
+
+void SDreamUIPrefabSequenceEditorWidget::SetToolkitHost(TSharedPtr<IToolkitHost> InToolkitHost)
+{
+	if (TSharedPtr<SDreamUIPrefabSequenceEditorWidgetImpl> PinnedImpl = Impl.Pin())
+	{
+		PinnedImpl->SetToolkitHost(InToolkitHost);
+	}
 }
 
 void SDreamUIPrefabSequenceEditorWidget::AssignSequence(UDreamUIPrefabSequence* NewDreamUIPrefabSequence)

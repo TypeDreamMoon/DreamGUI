@@ -2,6 +2,10 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabSequenceEditor.h"
+#include "PrefabEditor/DreamUIPrefabBehaviourUtils.h"
+#include "K2Node_CallFunction.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
 
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
@@ -136,6 +140,10 @@ private:
 
 				Animation->SetDisplayNameString(NewName);
 				Editor->MarkAnimationDataDirty();
+				if (!bNewAnimation)
+				{
+					Editor->NotifyAnimationRenamed(OldName, NewName);
+				}
 
 				if (bNewAnimation)
 				{
@@ -253,6 +261,56 @@ void SDreamUIPrefabSequenceEditor::AssignDreamUIPrefabSequenceComponent(TWeakObj
 UDreamUIPrefabSequence* SDreamUIPrefabSequenceEditor::GetPrefabSequence() const
 {
 	return GetSelectedAnimation();
+}
+
+void SDreamUIPrefabSequenceEditor::SetToolkitHost(TSharedPtr<IToolkitHost> InToolkitHost)
+{
+	if (PrefabSequenceEditor.IsValid())
+	{
+		PrefabSequenceEditor->SetToolkitHost(InToolkitHost);
+	}
+}
+
+void SDreamUIPrefabSequenceEditor::NotifyAnimationRenamed(const FString& OldName, const FString& NewName)
+{
+	// Runtime code addresses an animation by its display name (PlayAnimationByDisplayName), and a
+	// rename edits only the sequence -- so list the companion-blueprint calls that still say the old
+	// name. A warning, not an auto-fix: a literal pin may be assembled for a different prefab.
+	UDreamWidget* RootWidget = WeakRootWidget.Get();
+	UDreamUIPrefabHelperObject* Helper = RootWidget ? UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget) : nullptr;
+	UDreamUIPrefab* Prefab = Helper ? Helper->PrefabAsset.Get() : nullptr;
+	UBlueprint* Blueprint = Prefab ? DreamUIPrefabBehaviourUtils::FindBehaviourBlueprint(RootWidget, Prefab) : nullptr;
+	if (Blueprint == nullptr)
+	{
+		return;
+	}
+	int32 StaleCallCount = 0;
+	TArray<UEdGraph*> Graphs;
+	Blueprint->GetAllGraphs(Graphs);
+	for (const UEdGraph* Graph : Graphs)
+	{
+		for (const UEdGraphNode* Node : Graph->Nodes)
+		{
+			const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
+			if (Call == nullptr || Call->FunctionReference.GetMemberName() != GET_FUNCTION_NAME_CHECKED(UDreamUIPrefabSequenceComponent, PlayAnimationByDisplayName))
+			{
+				continue;
+			}
+			const UEdGraphPin* NamePin = Call->FindPin(TEXT("Name"));
+			if (NamePin != nullptr && NamePin->LinkedTo.Num() == 0 && NamePin->DefaultValue == OldName)
+			{
+				++StaleCallCount;
+			}
+		}
+	}
+	if (StaleCallCount > 0)
+	{
+		FNotificationInfo Info(FText::Format(
+			LOCTEXT("RenameBreaksBlueprintCalls", "{0} call(s) in {1} still play \"{2}\". Update them to \"{3}\" or the animation will not be found."),
+			FText::AsNumber(StaleCallCount), FText::FromString(Blueprint->GetName()), FText::FromString(OldName), FText::FromString(NewName)));
+		Info.ExpireDuration = 8.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+	}
 }
 
 void SDreamUIPrefabSequenceEditor::ClearAnimationSelection()

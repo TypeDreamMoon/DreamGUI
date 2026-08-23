@@ -451,6 +451,12 @@ void FDreamUIPrefabEditor::BuildTabDescriptors()
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Advanced"), Content(PrefabRawDataViewer) };
 	RawData.bListedInWindowMenu = false;
 	TabDescriptors.Add(MoveTemp(RawData));
+	// The sequencer invokes this tab by its engine-wide id and then fills it with the curve editor;
+	// spawning it empty here just gives it a home in this window.
+	FTabDescriptor CurveEditor{ FName("SequencerGraphEditor"), NSLOCTEXT("Sequencer", "SequencerMainGraphEditorTitle", "Sequencer Curves"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "GenericCurveEditor.TabIcon"), []() { return SNullWidget::NullWidget; } };
+	CurveEditor.bListedInWindowMenu = false;
+	TabDescriptors.Add(MoveTemp(CurveEditor));
 }
 
 const FDreamUIPrefabEditor::FTabDescriptor* FDreamUIPrefabEditor::FindTabDescriptor(FName TabId) const
@@ -525,7 +531,7 @@ TSharedRef<FTabManager::FLayout> FDreamUIPrefabEditor::CreateDefaultLayout()
 	constexpr float LeftColumnWidth = 0.15f;
 	constexpr float ViewportWidth = 0.75f;
 	constexpr float BottomDrawerHeight = 0.3f;
-	return FTabManager::NewLayout("Standalone_DreamUIPrefabEditor_Layout_v4")
+	return FTabManager::NewLayout("Standalone_DreamUIPrefabEditor_Layout_v5")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()
@@ -584,6 +590,7 @@ TSharedRef<FTabManager::FLayout> FDreamUIPrefabEditor::CreateDefaultLayout()
 					->AddTab(FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID, ETabState::ClosedTab)
 					->AddTab(FDreamUIPrefabEditorTabs::PrefabOverridesViewerID, ETabState::ClosedTab)
 					->AddTab(FDreamUIPrefabEditorTabs::PrefabRawDataViewerID, ETabState::ClosedTab)
+					->AddTab(FName("SequencerGraphEditor"), ETabState::ClosedTab)
 				)
 			)
 		);
@@ -702,6 +709,8 @@ void FDreamUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const
 	ApplyDesignerState();
 
 	SequencerPtr = SNew(SDreamUIPrefabSequenceEditor);
+	// The sequencer's side panels (the curve editor) must dock into this window, not the level editor.
+	SequencerPtr->SetToolkitHost(GetToolkitHost());
 	
 	BindCommands();
 	ExtendToolbar();
