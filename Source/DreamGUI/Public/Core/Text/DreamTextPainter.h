@@ -26,10 +26,11 @@ struct FDreamTextPaintParams
 	float GlowBoost = 0.0f;
 
 	/**
-	 * Multi-channel field (MTSDF) fonts. UV2.x carries DilateEm + 16 * Layer per glyph; quads grow into
-	 * the field as far as the face / the effects reach; bold is a dilation of the regular glyph.
+	 * Distance-field fonts (either kind). UV2.x carries DilateEm + 16 * Layer per glyph; quads grow into
+	 * the field as far as the face / the effects reach; bold is a dilation of the regular glyph when
+	 * BoldDilateEm is set.
 	 */
-	bool bMultiChannelField = false;
+	bool bDistanceField = false;
 	/**
 	 * Draw the effects (underlay, glow, outline) of every glyph in a first set of quads and the faces
 	 * in a second, so a glyph's glow never lands on top of its neighbour's face. Doubles the quads, so

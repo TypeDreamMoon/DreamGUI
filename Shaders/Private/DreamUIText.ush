@@ -8,11 +8,14 @@
 //   1  bitmap        coverage straight from the texture
 //   2  sdf           one channel, 0.5 at the edge, from a rasterized bitmap (the original method)
 //   3  mtsdf         rgb = multi-channel field (median gives sharp corners), a = true distance
+// 2 and 3 share one convention -- 0 at +spread outside, 0.5 on the edge, 1 at -spread inside -- so
+// the whole style (outline, underlay, glow, fill, dilation) applies to both; an MTSDF only adds
+// sharp corners. The sample just reads the single channel twice for a kind-2 atlas.
 //
 // The text style lives in the widget property record after the four pixels every widget has, so
 // texts with different styles still batch: the shader reads the style by the record index in UV1.x.
 //
-// Per-glyph channels of an MTSDF glyph (written by FDreamTextPainter):
+// Per-glyph channels of a field glyph (written by FDreamTextPainter):
 //   UV2.x  DilateEm + 16 * Layer. Layer 0 = face only, 1 = effects only (underlay, glow, outline),
 //          2 = everything in one quad. A text with effects emits its effect quads first and its face
 //          quads after, so a neighbour's glow never lands on top of a face.
@@ -141,12 +144,20 @@ struct FDreamUIGlyphSample
 	float MedianDistance; // multi-channel distance for the face edge (sharp corners)
 };
 
-FDreamUIGlyphSample DreamUIText_SampleMtsdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice)
+FDreamUIGlyphSample DreamUIText_SampleField(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice, bool bMultiChannel)
 {
 	float4 Texel = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV, Slice));
 	FDreamUIGlyphSample S;
-	S.Distance = Texel.a;
-	S.MedianDistance = DreamUIText_Median(Texel.rgb);
+	if (bMultiChannel)
+	{
+		S.Distance = Texel.a;
+		S.MedianDistance = DreamUIText_Median(Texel.rgb);
+	}
+	else
+	{
+		S.Distance = Texel.r;
+		S.MedianDistance = Texel.r;
+	}
 	return S;
 }
 
@@ -156,12 +167,12 @@ FDreamUIGlyphSample DreamUIText_SampleMtsdf(Texture2DArray FontTex, SamplerState
  * Layer selects what this quad draws (0 face, 1 effects, 2 both); GlyphDilateEm is the glyph's own
  * dilation (synthetic bold) on top of the style's.
  */
-float4 DreamUIText_ShadeMtsdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice,
+float4 DreamUIText_ShadeField(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice, bool bMultiChannel,
 	float2 AtlasSize, float FieldRangeTexels, float FontEmTexels, float4 VertexColor, FDreamUITextStyle Style,
 	float FillProgress, float SegmentX, float GlyphGlowBoost, float GlyphDilateEm, float Layer)
 {
 	float PxRange = DreamUIText_ScreenPxRange(UV, AtlasSize, FieldRangeTexels);
-	FDreamUIGlyphSample S = DreamUIText_SampleMtsdf(FontTex, FontSampler, UV, Slice);
+	FDreamUIGlyphSample S = DreamUIText_SampleField(FontTex, FontSampler, UV, Slice, bMultiChannel);
 	const bool bDrawFace = Layer != 1.0;
 	const bool bDrawEffects = Layer != 0.0;
 
@@ -213,7 +224,7 @@ float4 DreamUIText_ShadeMtsdf(Texture2DArray FontTex, SamplerState FontSampler, 
 		float UnderlayReachEm = clamp(OutlineReachEm + Style.UnderlayDilate, -SpreadEm, MaxReachEm - 2.0 * OffsetLenEm);
 		float UnderlaySoftEm = clamp(Style.UnderlaySoftness, 0.0, 2.0 * (MaxReachEm - 2.0 * OffsetLenEm - UnderlayReachEm));
 		float2 OffsetUV = OffsetEm * FontEmTexels / AtlasSize;
-		FDreamUIGlyphSample U = DreamUIText_SampleMtsdf(FontTex, FontSampler, UV - OffsetUV, Slice);
+		FDreamUIGlyphSample U = DreamUIText_SampleField(FontTex, FontSampler, UV - OffsetUV, Slice, bMultiChannel);
 		float Valid = step(DreamUIText_EmToField(OffsetLenEm, FontEmTexels, FieldRangeTexels), S.Distance);
 		Underlay = DreamUIText_Coverage(U.Distance, 0.5 - DreamUIText_EmToField(UnderlayReachEm, FontEmTexels, FieldRangeTexels), PxRange,
 			DreamUIText_EmToField(UnderlaySoftEm, FontEmTexels, FieldRangeTexels)) * Style.UnderlayColor.a * Valid;
@@ -248,17 +259,5 @@ float4 DreamUIText_ShadeMtsdf(Texture2DArray FontTex, SamplerState FontSampler, 
 	return float4(Color, Alpha * Dim);
 }
 
-/** Single-channel field from a rasterized bitmap: the original SDF fonts. Only the face. */
-float4 DreamUIText_ShadeSdf(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice, float4 VertexColor)
-{
-	float Distance = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV, Slice)).r;
-#if DREAMUI_HAS_DERIVATIVES
-	float Width = fwidth(Distance);
-#else
-	float Width = 0.05;
-#endif
-	float Face = smoothstep(0.5 - Width, 0.5 + Width, Distance);
-	return float4(VertexColor.rgb, VertexColor.a * Face);
-}
 
 #endif // DREAMUI_TEXT_USH

@@ -21,7 +21,7 @@ namespace DreamTextPainterLocal
 	 */
 	static FDreamUICharData GrowIntoField(const FDreamUICharData& Glyph, float ReachEm, float Size, const FDreamTextPaintParams& Params)
 	{
-		if (!Params.bMultiChannelField || Params.EmTexels <= 0.0f || ReachEm <= 0.0f)return Glyph;
+		if (!Params.bDistanceField || Params.EmTexels <= 0.0f || ReachEm <= 0.0f)return Glyph;
 		// 1.5 texels: the anti-aliasing band plus the bilinear footprint, same margin the shader keeps.
 		const float NeedTexels = ReachEm * Params.EmTexels + 1.5f;
 		const float AvailableTexels = FMath::Max(Params.FieldSpreadTexels - Params.QuadMarginTexels, 0.0f);
@@ -131,7 +131,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		if (Item.Style.bUnderline)FaceQuads++;
 		if (Item.Style.bStrikethrough)FaceQuads++;
 	}
-	const bool bSeparateEffectLayer = Params.bMultiChannelField && Params.bSeparateEffectLayer;
+	const bool bSeparateEffectLayer = Params.bDistanceField && Params.bSeparateEffectLayer;
 	const int32 TotalQuads = bSeparateEffectLayer ? FaceQuads * 2 : FaceQuads;
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.OriginVertices, TotalQuads * 4, false);
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Vertices, TotalQuads * 4, false);
@@ -214,7 +214,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			const FDreamUICharData Grown = GrowIntoField(Glyph, ReachEm, Size, Params);
 			const float Grow = Grown.XOffset - Glyph.XOffset;// negative or zero: how far each edge moved out
 			const int32 Start = Writer.VertexCursor;
-			const float UV2X = Params.bMultiChannelField ? PackGlyphChannel(Layer, DilateEm) : LegacyUV2X;
+			const float UV2X = Params.bDistanceField ? PackGlyphChannel(Layer, DilateEm) : LegacyUV2X;
 			Writer.WriteQuad(Left + Grow, Right - Grow, Bottom + Grow, Top - Grow, Grown, Color, UV2X, Fill, IndexCursor);
 			if (bItalic)
 			{
@@ -256,7 +256,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		// Shader-side bold dilates the regular glyph by BoldDilateEm per side. The layout already gave
 		// the glyph twice that much extra advance; shifting the quad right by one side's worth keeps
 		// the left bearing where it was and spends the whole extra advance on the right.
-		const bool bShaderBold = Item.Style.bBold && Params.bMultiChannelField && Params.BoldDilateEm > 0.0f;
+		const bool bShaderBold = Item.Style.bBold && Params.bDistanceField && Params.BoldDilateEm > 0.0f;
 		const float DilateEm = bShaderBold ? Params.BoldDilateEm : 0.0f;
 		const float BoldShift = bShaderBold ? Params.BoldDilateEm * Item.Style.Size : 0.0f;
 

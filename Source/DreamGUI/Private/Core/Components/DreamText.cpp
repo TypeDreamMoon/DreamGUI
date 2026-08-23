@@ -75,7 +75,7 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 	Params.FillSegments = &Text->GetFillSegments();
 	Params.FillProgress = Text->GetFillProgress();
 	Params.GlowBoost = Text->GetGlowBoost();
-	if (Style.bMultiChannelField)
+	if (Style.bDistanceField)
 	{
 		const FDreamTextStyle& TextStyle = Text->GetTextStyle();
 		// Bold may show up anywhere in rich text; size the quads for it rather than re-layout on a tag.
@@ -86,7 +86,7 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 		{
 			MaxGlowBoost = FMath::Max(MaxGlowBoost, Segment.GlowBoost);
 		}
-		Params.bMultiChannelField = true;
+		Params.bDistanceField = true;
 		Params.bSeparateEffectLayer = TextStyle.HasEffects();
 		Params.BoldDilateEm = Style.BoldDilateEm;
 		Params.FaceReachEm = TextStyle.GetFaceReachEm(ExtraDilateEm);
@@ -433,11 +433,9 @@ void UDreamText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, TextStyle))
 			{
+				// Same road as SetTextStyle: the record, and the quads, whose reach the style decides.
 				bWidgetPropertyDataFontMarkDirty = true;
-				if (auto Widget = GetWidget())
-				{
-					Widget->MarkCanvasUpdate(false);
-				}
+				MarkVerticesDirty(true, true, true, false);
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, bRichText))
 			{

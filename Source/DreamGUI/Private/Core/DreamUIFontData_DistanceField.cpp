@@ -201,15 +201,15 @@ FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(con
 {
 	FDreamTextGlyphPaintStyle Style;
 	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
-	if (SdfSource == EDreamUISdfSource::OutlineMultiChannel)
-	{
-		Style.bMultiChannelField = true;
-		Style.EmTexels = (float)SampleFontSize;
-		Style.FieldSpreadTexels = (float)SDFRadius;
-		Style.QuadMarginTexels = SDFRadius - GetQuadShrinkTexels();
-		Style.TexelToUV = OneDivideTextureSize;
-		Style.BoldDilateEm = BoldRatio * 0.5f;
-	}
+	// Both sources are a field with the same convention (0.5 on the edge, +-SDFRadius texels of range),
+	// so both take the text style. Only the outline field renders bold as a dilation; the bitmap
+	// field keeps its baked bold glyphs (dilating a bitmap-derived field rounds the corners too far).
+	Style.bDistanceField = true;
+	Style.EmTexels = (float)SampleFontSize;
+	Style.FieldSpreadTexels = (float)SDFRadius;
+	Style.QuadMarginTexels = SDFRadius - GetQuadShrinkTexels();
+	Style.TexelToUV = OneDivideTextureSize;
+	Style.BoldDilateEm = SdfSource == EDreamUISdfSource::OutlineMultiChannel ? BoldRatio * 0.5f : 0.0f;
 	return Style;
 }
 

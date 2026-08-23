@@ -60,10 +60,11 @@ struct FDreamTextGlyphPaintStyle
 	/** tan(italic angle): how far the top edge of an italic quad leans right. */
 	float ItalicSlope = 0.0f;
 	/**
-	 * Multi-channel field (MTSDF) fonts: the painter packs layer + dilate into UV2.x, may grow quads
-	 * into the field for effects, and draws synthetic bold as a dilation instead of an atlas variant.
+	 * Distance-field fonts (single-channel from a bitmap, or multi-channel from the outline): the
+	 * painter packs layer + dilate into UV2.x and may grow quads into the field for the text style's
+	 * effects. Synthetic bold is a dilation too when BoldDilateEm is set; otherwise the atlas bakes it.
 	 */
-	bool bMultiChannelField = false;
+	bool bDistanceField = false;
 	/** Texels per em at the atlas's sample size. */
 	float EmTexels = 0.0f;
 	/** How far from the glyph the field is valid, in texels (the spread). */

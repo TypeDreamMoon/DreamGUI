@@ -20,7 +20,7 @@ float FDreamTextStyle::GetFaceReachEm(float ExtraDilateEm) const
 
 float FDreamTextStyle::GetEffectReachEm(float ExtraDilateEm, float MaxGlowBoost) const
 {
-	// Mirrors DreamUIText_ShadeMtsdf: the outline sits on the dilated edge, the glow and the underlay's
+	// Mirrors DreamUIText_ShadeField: the outline sits on the dilated edge, the glow and the underlay's
 	// edge sit outside the outline, the underlay is also shifted by its offset.
 	const float Dilate = FaceDilate + ExtraDilateEm;
 	float Reach = 0.0f;

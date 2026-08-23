@@ -226,7 +226,7 @@ bool FDreamTextPainterEffectLayerTest::RunTest(const FString& Parameters)
 
 	// A multi-channel font at 48 texels per em with a 16 texel spread; the layout's quads keep 1 texel of it.
 	FDreamTextPaintParams Params;
-	Params.bMultiChannelField = true;
+	Params.bDistanceField = true;
 	Params.EmTexels = 48.0f;
 	Params.FieldSpreadTexels = 16.0f;
 	Params.QuadMarginTexels = 1.0f;
@@ -239,7 +239,7 @@ bool FDreamTextPainterEffectLayerTest::RunTest(const FString& Parameters)
 	TArray<FDreamUITextCharProperty> PlainChars;
 	{
 		FDreamTextPaintParams PlainParams = Params;
-		PlainParams.bMultiChannelField = false;
+		PlainParams.bDistanceField = false;
 		PlainParams.BoldDilateEm = 0.0f;
 		FDreamTextPainter::Paint(DL, PlainParams, Plain, PlainChars);
 	}
