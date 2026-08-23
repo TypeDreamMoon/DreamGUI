@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIControlRegistry.h"
+#include "Core/DreamGUISettings.h"
 
 #include "Core/Components/DreamBackgroundBlur.h"
 #include "Core/Components/DreamBackgroundPixelate.h"
@@ -165,7 +166,7 @@ namespace DreamUIControlRegistryLocal
 		Result.DisplayName = FText::FromString(DisplayName);
 		Result.Category = TEXT("Controls");
 		Result.CreationKind = EDreamUIControlCreationKind::Prefab;
-		Result.PrefabPath = FString::Printf(TEXT("/DreamGUI/Prefabs/%s"), AssetName);
+		Result.PrefabPath = UDreamGUISettings::Get()->PresetPrefabFolder + AssetName;
 		Result.Icon = MakeUMGIcon(IconStyleName);
 		return Result;
 	}
@@ -513,15 +514,11 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Register(MakeFrameworkPanel(TEXT("WrapBox"), UDreamLayoutContainerWrapBox::StaticClass(), TEXT("ClassIcon.WrapBox"), true));
 	Register(MakeFrameworkPanel(TEXT("GridPanel"), UDreamLayoutContainerGridPanel::StaticClass(), TEXT("ClassIcon.GridPanel"), true));
 	Register(MakeFrameworkPanel(TEXT("UniformGridPanel"), UDreamLayoutContainerUniformGridPanel::StaticClass(), TEXT("ClassIcon.UniformGridPanel"), true));
-	FDreamUIControlDescriptor SafeZone = MakeFrameworkPanel(TEXT("SafeZone"), UDreamLayoutContainerSafeZone::StaticClass(), TEXT("ClassIcon.SafeZone"), true);
-	SafeZone.BehaviourClass = UDreamContentWidget::StaticClass();
-	Register(SafeZone);
-	FDreamUIControlDescriptor ScaleBox = MakeFrameworkPanel(TEXT("ScaleBox"), UDreamLayoutContainerScaleBox::StaticClass(), TEXT("ClassIcon.ScaleBox"), true);
-	ScaleBox.BehaviourClass = UDreamContentWidget::StaticClass();
-	Register(ScaleBox);
-	FDreamUIControlDescriptor SizeBox = MakeFrameworkPanel(TEXT("SizeBox"), UDreamLayoutContainerSizeBox::StaticClass(), TEXT("ClassIcon.Sizebox"), true);
-	SizeBox.BehaviourClass = UDreamContentWidget::StaticClass();
-	Register(SizeBox);
+	// SafeZone / ScaleBox / SizeBox get their ContentWidget from UDreamLayoutContainer::GetRequiredBehaviourClasses
+	// when CreateNewLayoutContainer runs; listing it here too would add a second one.
+	Register(MakeFrameworkPanel(TEXT("SafeZone"), UDreamLayoutContainerSafeZone::StaticClass(), TEXT("ClassIcon.SafeZone"), true));
+	Register(MakeFrameworkPanel(TEXT("ScaleBox"), UDreamLayoutContainerScaleBox::StaticClass(), TEXT("ClassIcon.ScaleBox"), true));
+	Register(MakeFrameworkPanel(TEXT("SizeBox"), UDreamLayoutContainerSizeBox::StaticClass(), TEXT("ClassIcon.Sizebox"), true));
 	Register(MakeFrameworkPanel(TEXT("WidgetSwitcher"), UDreamLayoutContainerWidgetSwitcher::StaticClass(), TEXT("ClassIcon.WidgetSwitcher"), true));
 	Register(MakeFrameworkPanel(TEXT("LayoutScrollBox"), UDreamLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), true));
 

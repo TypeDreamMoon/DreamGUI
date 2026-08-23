@@ -1,6 +1,7 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DataFactory/DreamUIMLActorFactory.h"
+#include "Core/DreamGUISettings.h"
 #include "AssetRegistry/AssetData.h"
 #include "Core/DreamUIManager.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
@@ -106,21 +107,10 @@ UClass* UDreamUIMLActorFactory::GetDefaultActorClass(const FAssetData& AssetData
 	auto DreamUIML = GetDefault<UDreamUIMLBehaviour>(DreamUIMLClass);
 	if (DreamUIML)
 	{
-		FString ClassName;
-		auto RenderMode = DreamUIML->DefaultRenderMode;
-		switch (RenderMode)
-		{
-		case EDreamRenderMode::WorldSpace:
-			ClassName = TEXT("WorldSpaceRoot_UERenderer");
-			break;
-		case EDreamRenderMode::WorldSpace_DreamUI:
-			ClassName = TEXT("WorldSpaceRoot_DreamRenderer");
-			break;
-		case EDreamRenderMode::ScreenSpaceOverlay:
-			ClassName = TEXT("ScreenSpaceRoot");
-		}
-		
-		NewActorClass = LoadClass<AActor>(NULL, *FString::Printf(TEXT("/DreamGUI/Blueprints/XMLSupport/%s.%s_C"), *ClassName, *ClassName));
+		const auto RenderMode = DreamUIML->DefaultRenderMode;
+		NewActorClass = UDreamGUISettings::LoadSettingClass(
+			UDreamGUISettings::Get()->GetRootClassForRenderMode(RenderMode, true),
+			TEXT("markup root actor class for this render mode"));
 		if (!NewActorClass)
 		{
 			NewActorClass = AActor::StaticClass();

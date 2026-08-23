@@ -1,7 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/DreamText.h"
+#include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIGeometry.h"
+#include "Core/Text/DreamTextLayout.h"
+#include "Core/Text/DreamTextPainter.h"
 #include "Materials/MaterialInterface.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Core/DreamUIRichTextImageData_BaseObject.h"
@@ -13,9 +16,89 @@
 #include "Utils/DreamUIUtils.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Texture2DArray.h"
+#include "Engine/World.h"
 
 
 #define LOCTEXT_NAMESPACE "UIText"
+
+FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float InFontSize)
+{
+	auto Widget = Text->GetWidget();
+	auto RenderCanvas = Widget->GetRenderCanvas();
+	auto RootCanvas = RenderCanvas ? RenderCanvas->GetRootCanvas() : nullptr;
+
+	FDreamTextLayoutInput Input;
+	Input.Content = Text->GetText().ToString();
+	FVector2f ContentSize, ContentPivot;
+	UDreamText::GetContentBox(FVector2f(Widget->GetWidth(), Widget->GetHeight()), FVector2f(Widget->GetPivot()), Text->GetMargin(),
+		ContentSize, ContentPivot);
+	Input.Width = ContentSize.X;
+	Input.Height = ContentSize.Y;
+	Input.Pivot = ContentPivot;
+	Input.Color = Text->GetFinalColor();
+	Input.RenderOpacityForRichText = (uint8)((Text->GetRichText() ? Widget->GetFinalRenderOpacity() : 1.0f) * 255);
+	Input.FontSpace = FVector2f(Text->GetFontSpace());
+	Input.FontSize = InFontSize;
+	Input.ParagraphHAlign = Text->GetParagraphHorizontalAlignment();
+	Input.ParagraphVAlign = Text->GetParagraphVerticalAlignment();
+	Input.OverflowType = Text->GetOverflowType();
+	Input.WrappingPolicy = Text->GetWrappingPolicy();
+	Input.PhraseWrap = Text->GetPhraseWrap();
+	Input.bUseKerning = Text->GetUseKerning();
+	Input.FontStyle = Text->GetFontStyle();
+	Input.bRichText = Text->GetRichText();
+	Input.RichTextFilterFlags = Text->GetRichTextTagFilterFlags();
+	Input.LineHeightPercentage = Text->GetLineHeightPercentage();
+	Input.WrapTextAt = Text->GetWrapTextAt();
+	Input.ExpandMeshSize = Text->GetExpandMeshSize();
+	Input.DynamicPixelsPerUnit = Text->GetDynamicPixelsPerUnit();
+	Input.RootCanvasScale = RootCanvas ? RootCanvas->GetCanvasScale() : 1.0f;
+	Input.bRenderToWorldSpace = RootCanvas ? RootCanvas->IsRenderToWorldSpace() : false;
+	Input.bPixelPerfect = Text->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
+	Input.Font = Text->GetFont();
+	Input.RichTextImageData = Text->GetRichTextImageData();
+	Input.RichTextCustomStyleData = Text->GetRichTextCustomStyleData();
+	return Input;
+}
+
+FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
+{
+	auto Widget = Text->GetWidget();
+	auto RenderCanvas = Widget->GetRenderCanvas();
+
+	FDreamTextPaintParams Params;
+	const FVector WorldScale = Widget->GetWorldScale();
+	const FDreamTextGlyphPaintStyle Style = Text->GetFont()->GetGlyphPaintStyle(FVector2f((float)WorldScale.X, (float)WorldScale.Y));
+	Params.ItalicSlope = Style.ItalicSlope;
+	Params.bRequireNormalAndTangent = RenderCanvas ? RenderCanvas->GetActualRequireNormalAndTangent() : false;
+	Params.BaseColor = Text->GetFinalColor();
+	Params.FillSegments = &Text->GetFillSegments();
+	Params.FillProgress = Text->GetFillProgress();
+	Params.GlowBoost = Text->GetGlowBoost();
+	if (Style.bDistanceField)
+	{
+		const FDreamTextStyle& TextStyle = Text->GetTextStyle();
+		// Bold may show up anywhere in rich text; size the quads for it rather than re-layout on a tag.
+		const bool bMayBold = Text->GetRichText() || Text->GetFontStyle() == EDreamUITextFontStyle::Bold || Text->GetFontStyle() == EDreamUITextFontStyle::BoldAndItalic;
+		const float ExtraDilateEm = bMayBold ? Style.BoldDilateEm : 0.0f;
+		float MaxGlowBoost = Text->GetGlowBoost();
+		for (const auto& Segment : Text->GetFillSegments())
+		{
+			MaxGlowBoost = FMath::Max(MaxGlowBoost, Segment.GlowBoost);
+		}
+		Params.bDistanceField = true;
+		Params.bSeparateEffectLayer = TextStyle.HasEffects();
+		Params.BoldDilateEm = Style.BoldDilateEm;
+		Params.FaceReachEm = TextStyle.GetFaceReachEm(ExtraDilateEm);
+		Params.EffectReachEm = Params.bSeparateEffectLayer ? TextStyle.GetEffectReachEm(ExtraDilateEm, MaxGlowBoost) : 0.0f;
+		Params.EmTexels = Style.EmTexels;
+		Params.FieldSpreadTexels = Style.FieldSpreadTexels;
+		Params.QuadMarginTexels = Style.QuadMarginTexels;
+		Params.TexelToUV = Style.TexelToUV;
+	}
+	return Params;
+}
+
 
 #if WITH_EDITORONLY_DATA
 TWeakObjectPtr<UDreamUIFontData_BaseObject> UDreamText::CurrentUsingFontData = nullptr;
@@ -32,7 +115,6 @@ UDreamText::UDreamText(const FObjectInitializer& ObjectInitializer):Super(Object
 	{
 		Font = UDreamUIFontData_BaseObject::GetDefaultFont();
 	}
-	CacheTextGeometryData = FDreamUITextGeometryCache(this);
 	UIGeometry->bIsFont = true;
 }
 
@@ -190,18 +272,6 @@ void UDreamText::BeginDestroy()
 	UnregisterFont();
 }
 
-void UDreamText::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
-{
-	Super::OnTransformChanged(InPositionChanged, InScaleChanged);
-	if (IsValid(Font) && Font->GetNeedObjectScale())//some font need object scale (SDF font), so detect scale change and mark update
-	{
-		if (InScaleChanged)
-		{
-			MarkVertexUVDirty();//object scale value is stored in uv2. @todo: font should tell
-		}
-	}
-}
-
 void UDreamText::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
 	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
@@ -216,6 +286,7 @@ UTexture* UDreamText::GetTextureToCreateGeometry()
 		Font = UDreamUIFontData_BaseObject::GetDefaultFont();
 	}
 	Font->InitFont();
+	UIGeometry->Font = Font;
 	return Font->GetFontTexture();
 }
 
@@ -268,8 +339,18 @@ void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChange
 {
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
-		CheckRequireNormalAndTangent();
 		UpdateCacheTextGeometry();
+		if (!IsValid(Font))return;
+		auto Widget = GetWidget();
+		auto RenderCanvas = Widget->GetRenderCanvas();
+		if (!RenderCanvas)return;
+		// The geometry was cleared before this call; painting from the cached display list is what
+		// fills it again, whether or not the layout itself had to run.
+		CacheTextGeometryData.Paint(InGeo, MakePaintParams(this));
+		if (CacheTextGeometryData.GetLayoutInput().bPixelPerfect)
+		{
+			FDreamUIGeometry::AdjustPixelPerfectPos_For_UIText(InGeo.OriginVertices, CacheTextGeometryData.GetCharPropertyArray(), RenderCanvas, this);
+		}
 	}
 }
 
@@ -278,25 +359,20 @@ uint8 UDreamText::GetFontMark_WidgetPropertyDataForMaterial()
 	return static_cast<uint8>(this->Font->GetFontTextureMark());
 }
 
+void UDreamText::FillWidgetPropertyDataForMaterial_Extra(UDreamUIDataAsTexture* DataAsTexture)
+{
+	const int32 StartPosition = GetWidgetPropertyDataStartPosition();
+	if (StartPosition == INDEX_NONE || !DataAsTexture)return;
+	TArray<uint8> Packed;
+	TextStyle.Pack(Packed);
+	DataAsTexture->UpdateBlock(FDreamTextStyle::PackedPixelStart, StartPosition, MoveTemp(Packed), FDreamTextStyle::PackedPixelCount);
+}
+
 void UDreamText::OnCultureChanged_Implementation()
 {
 	auto originText = Text;
 	Text = FText::GetEmpty();//just make it work, because SetText will compare text value
 	SetText(originText);
-}
-
-void UDreamText::CheckRequireNormalAndTangent()
-{
-	if (IsValid(Font) && Font->GetRequireNormalAndTangent())
-	{
-		if (auto Canvas = GetWidget()->GetRenderCanvas())
-		{
-			if (auto RootCanvas = Canvas->GetRootCanvas())
-			{
-				RootCanvas->SetRequireNormalAndTangent(true);
-			}
-		}
-	}
 }
 
 
@@ -354,6 +430,12 @@ void UDreamText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			{
 				MarkVertexPositionDirty();
 				CacheTextGeometryData.MarkDirty();
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, TextStyle))
+			{
+				// Same road as SetTextStyle: the record, and the quads, whose reach the style decides.
+				bWidgetPropertyDataFontMarkDirty = true;
+				MarkVerticesDirty(true, true, true, false);
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, bRichText))
 			{
@@ -430,7 +512,7 @@ void UDreamText::UnregisterOnRichTextCustomStyleDataChange()
 bool UDreamText::IsTextTruncated()const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.textTruncated;
+	return CacheTextGeometryData.IsTextTruncated();
 }
 
 
@@ -649,6 +731,64 @@ void UDreamText::SetWrappingPolicy(ETextWrappingPolicy Value)
 	}
 }
 
+void UDreamText::SetPhraseWrap(EDreamTextPhraseWrap Value)
+{
+	if (PhraseWrap != Value)
+	{
+		PhraseWrap = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetTextStyle(const FDreamTextStyle& Value)
+{
+	if (TextStyle != Value)
+	{
+		TextStyle = Value;
+		// The style lives in the widget property record, and it also decides how far the glyph quads
+		// reach and whether the effects get quads of their own.
+		bWidgetPropertyDataFontMarkDirty = true;
+		MarkVerticesDirty(true, true, true, false);
+	}
+}
+
+void UDreamText::SetFillProgress(float Value)
+{
+	Value = FMath::Clamp(Value, 0.0f, 1.0f);
+	if (FillProgress != Value)
+	{
+		FillProgress = Value;
+		MarkVertexUVDirty();
+	}
+}
+
+void UDreamText::SetGlowBoost(float Value)
+{
+	Value = FMath::Max(Value, 0.0f);
+	if (GlowBoost != Value)
+	{
+		GlowBoost = Value;
+		// The boost widens the glow, which can widen the quads.
+		MarkVerticesDirty(false, true, true, false);
+	}
+}
+
+void UDreamText::SetFillSegments(const TArray<FDreamTextFillSegment>& Value)
+{
+	FillSegments = Value;
+	MarkVerticesDirty(false, true, true, false);
+}
+
+void UDreamText::ClearFillSegments()
+{
+	if (FillSegments.Num() > 0)
+	{
+		FillSegments.Reset();
+		MarkVerticesDirty(false, true, true, false);
+	}
+}
+
 void UDreamText::SetFontStyle(EDreamUITextFontStyle Value) {
 	if (FontStyle != Value)
 	{
@@ -775,6 +915,17 @@ void UDreamText::RegisterFont()
 			ClearEmojiObject();
 			MarkVerticesDirty(true, true, true, true);
 		});
+		GlyphsReadyDelegateHandle = Font->OnGlyphsReady.AddWeakLambda(this, [this]()
+		{
+			// Only texts that were laid out with missing quads care; the advances were already right,
+			// so this is a repaint with the quads filled in, not a size change.
+			if (bWaitingForGlyphs)
+			{
+				bWaitingForGlyphs = false;
+				CacheTextGeometryData.MarkDirty();
+				MarkVerticesDirty(true, true, true, true);
+			}
+		});
 	}
 }
 
@@ -786,6 +937,9 @@ void UDreamText::UnregisterFont()
 		Font->RemoveUIText(this);
 		Font->OnEmojiDataChanged.Remove(EmojiDataChangedDelegateHandle);
 		EmojiDataChangedDelegateHandle.Reset();
+		Font->OnGlyphsReady.Remove(GlyphsReadyDelegateHandle);
+		GlyphsReadyDelegateHandle.Reset();
+		bWaitingForGlyphs = false;
 	}
 }
 
@@ -793,50 +947,49 @@ void UDreamText::UpdateCacheTextGeometry()const
 {
 	if (!IsValid(this->GetFont()))return;
 	auto Widget = GetWidget();
-	
-	auto RenderOpacityForRichText = this->GetRichText() ? Widget->GetFinalRenderOpacity() : 1.0f;
+	// Layout used to be skipped entirely without a render canvas; the canvas supplied the root scale
+	// and the world-space flag. Those are inputs now, so keep the same gate rather than laying out
+	// against guessed values and caching the result.
+	if (!Widget->GetRenderCanvas())return;
+
 	FVector2f ContentSize, ContentPivot;
 	GetContentBox(FVector2f(Widget->GetWidth(), Widget->GetHeight()), FVector2f(Widget->GetPivot()), Margin,
 		ContentSize, ContentPivot);
 
+	bool bAnyLayoutRan = false;
 	auto LayOutAt = [&](float InFontSize)
 	{
-		CacheTextGeometryData.SetInputParameters(
-			this->Text.ToString()
-			, ContentSize.X
-			, ContentSize.Y
-			, ContentPivot
-			, this->GetFinalColor()
-			, RenderOpacityForRichText
-			, FVector2f(this->GetFontSpace())
-			, InFontSize
-			, this->GetParagraphHorizontalAlignment()
-			, this->GetParagraphVerticalAlignment()
-			, this->GetOverflowType()
-			, this->GetWrappingPolicy()
-			, this->GetUseKerning()
-			, this->GetFontStyle()
-			, this->GetRichText()
-			, this->GetRichTextTagFilterFlags()
-			, this->GetFont()
-		);
-		CacheTextGeometryData.ConditionalCalculateGeometry();
-		return CacheTextGeometryData.textPreferredSize;
+		CacheTextGeometryData.SetLayoutInput(MakeLayoutInput(this, InFontSize));
+		bAnyLayoutRan |= CacheTextGeometryData.EnsureLayout();
+		return CacheTextGeometryData.GetPreferredSize();
 	};
 
 	RenderedFontSize = this->GetFontSize();
 	if (bBestFit && ContentSize.X > 0.0f && ContentSize.Y > 0.0f)
 	{
 		// FontSize is the ceiling here, not the size drawn: Best Fit looks for the largest that
-		// fits and only then lays out at it. The search leaves the cache holding some other size's
-		// geometry, so the chosen size is always laid out again below rather than reused.
-		RenderedFontSize = FindBestFitFontSize(ContentSize, BestFitMinSize, this->GetFontSize(), LayOutAt);
+		// fits and only then lays out at it. Each probe is a measure-only layout, so the search
+		// costs no geometry, and its answer is remembered against the ceiling input so a repeat
+		// query with nothing changed costs no layout at all.
+		const FDreamTextLayoutInput CeilingInput = MakeLayoutInput(this, this->GetFontSize());
+		if (!CacheTextGeometryData.TryGetBestFit(CeilingInput, RenderedFontSize))
+		{
+			RenderedFontSize = FindBestFitFontSize(ContentSize, BestFitMinSize, this->GetFontSize(), LayOutAt);
+			CacheTextGeometryData.SetBestFit(CeilingInput, RenderedFontSize);
+		}
 	}
 	LayOutAt(RenderedFontSize);
-	if (UIGeometry->Vertices.Num() == 0)//@todo: geometry is cleared before OnUpdateGeometry, consider use a cached UIGeometry
+	if (bAnyLayoutRan)
 	{
-		CacheTextGeometryData.MarkDirty();
-		LayOutAt(RenderedFontSize);
+		bWaitingForGlyphs = CacheTextGeometryData.GetDisplayList().bHasPendingGlyphs;
+	}
+
+	if (bAnyLayoutRan)
+	{
+		// Inline objects are widgets; they follow the layout, not the paint.
+		auto MutableThis = const_cast<UDreamText*>(this);
+		MutableThis->GenerateRichTextImageObject();
+		MutableThis->GenerateEmojiObject();
 	}
 }
 
@@ -854,7 +1007,11 @@ void UDreamText::ConditionalUpdateCacheTextGeometry() const
 
 void UDreamText::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)
 {
-	CacheTextGeometryData.MarkDirty();
+	// Colour is a paint input, not a layout input: the painter reads it off the text every time.
+	if (InTriangleDirty || InVertexPositionDirty || InVertexUVDirty)
+	{
+		CacheTextGeometryData.MarkDirty();
+	}
 	Super::MarkVerticesDirty(InTriangleDirty, InVertexPositionDirty, InVertexUVDirty, InVertexColorDirty);
 }
 void UDreamText::MarkTextureDirty()
@@ -888,35 +1045,35 @@ int UDreamText::VisibleCharCountInString(const FString& srcStr)
 const TArray<FDreamUITextCharProperty>& UDreamText::GetCharPropertyArray()const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.cacheCharPropertyArray;
+	return CacheTextGeometryData.GetCharPropertyArray();
 }
 int32 UDreamText::GetVisibleCharCount()const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.cacheCharPropertyArray.Num();
+	return CacheTextGeometryData.GetCharPropertyArray().Num();
 }
 const TArray<FDreamUIText_RichTextCustomTag>& UDreamText::GetRichTextCustomTagArray()const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.cacheRichTextCustomTagArray;
+	return CacheTextGeometryData.GetCustomTags();
 }
 const TArray<FDreamUIText_RichTextImageTag>& UDreamText::GetRichTextImageTagArray()const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.cacheRichTextImageTagArray;
+	return CacheTextGeometryData.GetImageTags();
 }
 
 void UDreamText::GenerateRichTextImageObject()
 {
 	if (!IsValid(RichTextImageData))return;
-	RichTextImageData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheRichTextImageTagArray, CreatedRichTextImageObjectArray);
+	RichTextImageData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.GetImageTags(), CreatedRichTextImageObjectArray);
 }
 
 void UDreamText::GenerateEmojiObject()
 {
 	if (auto EmojiData = Font->GetEmojiData())
 	{
-		EmojiData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheEmojiArray, CreatedEmojiObjectArray);
+		EmojiData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.GetEmojis(), CreatedEmojiObjectArray);
 	}
 }
 
@@ -925,13 +1082,13 @@ float UDreamText::GetPreferredWidth() const
 	UpdateCacheTextGeometry();
 	// textPreferredSize measures the glyphs, which were laid out inside the inset box, so the
 	// padding has to be added back or a content-sized parent would squeeze it straight out again.
-	return CacheTextGeometryData.textPreferredSize.X + Margin.Left + Margin.Right;
+	return CacheTextGeometryData.GetPreferredSize().X + Margin.Left + Margin.Right;
 }
 
 float UDreamText::GetPreferredHeight() const
 {
 	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.textPreferredSize.Y + Margin.Top + Margin.Bottom;
+	return CacheTextGeometryData.GetPreferredSize().Y + Margin.Top + Margin.Bottom;
 }
 
 
@@ -941,7 +1098,7 @@ bool UDreamText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32
 	auto originCaretPositionLineIndex = inOutCaretPositionLineIndex;
 
 	UpdateCacheTextGeometry();
-	auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 	//moveType 0-left, 1-right, 2-up, 3-down, 4-start, 5-end
 	switch (moveType)
 	{
@@ -1065,7 +1222,7 @@ bool UDreamText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32
 int UDreamText::GetCharIndexByCaretIndex(int32 inCaretPositionIndex)
 {
 	UpdateCacheTextGeometry();
-	auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 	int accumulatedCaretIndex = 0;
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
@@ -1086,7 +1243,7 @@ int UDreamText::GetCharIndexByCaretIndex(int32 inCaretPositionIndex)
 int UDreamText::GetLastCaret()
 {
 	UpdateCacheTextGeometry();
-	auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 	int totalCaretIndex = 0;
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
@@ -1099,7 +1256,7 @@ int UDreamText::GetLastCaret()
 void UDreamText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCaretPosition, int32& outCaretPositionLineIndex, int32& outVisibleCaretStartIndex)
 {
 	UpdateCacheTextGeometry();
-	auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 
 	auto Widget = GetWidget();
 	if (inOutCaretPositionIndex < 0)inOutCaretPositionIndex = 0;
@@ -1196,7 +1353,7 @@ void UDreamText::FindCaret(FVector2f& inOutCaretPosition, int32 inCaretPositionL
 	if (Text.ToString().Len() == 0)//no text
 		return;
 	UpdateCacheTextGeometry();
-	auto& cacheTextPropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheTextPropertyArray = CacheTextGeometryData.GetLines();
 	auto lineCount = cacheTextPropertyArray.Num();//line count
 	outCaretPositionIndex = 0;
 
@@ -1230,7 +1387,7 @@ void UDreamText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& ou
 	else
 	{
 		UpdateCacheTextGeometry();
-		auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+		auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 
 		auto localPosition = GetWidget()->GetWorldTransform().InverseTransformPosition(inWorldPosition);
 		auto localPosition2D = FVector2f(localPosition.Y, localPosition.Z);
@@ -1285,7 +1442,7 @@ int UDreamText::GetCaretIndexByCharIndex(int32 inCharIndex)
 {
 	UpdateCacheTextGeometry();
 	int accumulatedCaretIndex = 0;
-	auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
@@ -1307,7 +1464,7 @@ int UDreamText::GetCaretIndexByCharIndex(int32 inCharIndex)
 bool UDreamText::GetVisibleCharRangeForMultiLine(int32& inOutCaretPositionIndex, int32& inOutCaretPositionLineIndex, int32& inOutVisibleCaretStartLineIndex, int32& inOutVisibleCaretStartIndex, int inMaxLineCount, int32& outVisibleCharStartIndex, int32& outVisibleCharCount)
 {
 	UpdateCacheTextGeometry();
-	auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 	int accumulatedCaretIndex = 0;
 	bool foundCaret = false;
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
@@ -1413,7 +1570,7 @@ void UDreamText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 In
 {
 	OutSelectionProeprtyArray.Reset();
 	UpdateCacheTextGeometry();
-	auto& cacheTextPropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
+	auto& cacheTextPropertyArray = CacheTextGeometryData.GetLines();
 	//start
 	FVector2f startCaretPosition;
 	int32 startCaretPositionLineIndex;

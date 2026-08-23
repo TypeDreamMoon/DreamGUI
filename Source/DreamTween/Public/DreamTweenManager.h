@@ -8,6 +8,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "DreamTweener.h"
+#include "DreamSpring.h"
 #include "DreamTweenManager.generated.h"
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient)
@@ -148,6 +149,11 @@ public:
 	static UDreamTweener* To(UObject* WorldContextObject, const FDreamTweenMaterialVectorGetterFunction& getter, const FDreamTweenMaterialVectorSetterFunction& setter, const FLinearColor& endValue, float duration, int32 parameterIndex);
 
 	static UDreamTweener* VirtualTo(UObject* WorldContextObject, float duration);
+	/**
+	 * Drive a float with a damped spring (see FDreamSpringParams): no duration, completes at rest,
+	 * and the returned tweener's SetTarget moves the goal at any time without losing velocity.
+	 */
+	static class UDreamTweenerSpring* SpringTo(UObject* WorldContextObject, const FDreamTweenFloatGetterFunction& getter, const FDreamTweenFloatSetterFunction& setter, float target, const FDreamSpringParams& params);
 	static UDreamTweener* DelayFrameCall(UObject* WorldContextObject, int delayFrame);
 	static UDreamTweener* UpdateCall(UObject* WorldContextObject);
 

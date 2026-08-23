@@ -11,7 +11,13 @@
 // MainTexSampler is not declared: DreamShader adds a SamplerState after every texture parameter,
 // which is exactly what DreamUI_CalculateRectBlock expects.
 
-Function DreamUIRectBlock(in Texture2D MainTex, in float2 UV0, in float2 UV2, in float2 UV3,
+// SelfContained: the body is embedded in the Custom node and the #include below is attached to that
+// node directly. Without it DreamShader wraps the function in a generated .ush under
+// Intermediate/DreamShader/GeneratedShaders and the material caches *that* path -- which is a build
+// artifact directory. Cleaning Intermediate, a hash change racing asset load, or simply not having
+// DreamShader installed all leave the include unresolvable, and UE drops it with only a warning, so
+// the material still "compiles" while the Custom node calls a function nothing declares.
+Function SelfContained DreamUIRectBlock(in Texture2D MainTex, in float2 UV0, in float2 UV2, in float2 UV3,
 	in Texture2D DataTex, out float3 Color, out float Alpha)
 {
 	#include "/Plugin/DreamGUI/Private/DreamUIRectBlock.ush"

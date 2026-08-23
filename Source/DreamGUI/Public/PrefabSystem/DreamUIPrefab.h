@@ -292,6 +292,15 @@ public:
 	UPROPERTY()uint32 ArEngineNetVer_ForBuild = (uint32)FEngineNetworkCustomVersion::ReplayDormancy;
 	UPROPERTY()uint32 ArGameNetVer_ForBuild = 0;
 
+	/**
+	 * Size of the design canvas this prefab was authored on -- the surface the prefab editor shows.
+	 * A prefab loaded with no parent widget (a world-space presenter, LoadPrefab with a null parent)
+	 * sizes its root to this, since a stretched root has nothing else to stretch to. A prefab placed
+	 * under another widget, or shown as a screen-space page, fills its parent and ignores it.
+	 * The editor's screen-size picker writes it; it can also be edited here directly.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Canvas", meta = (ClampMin = "1"))
+	FIntPoint CanvasSize = FIntPoint(1920, 1080);
 	/** build version for ReferenceAssetList */
 	UPROPERTY()
 		TArray<TObjectPtr<UObject>> ReferenceAssetListForBuild;
@@ -379,6 +388,8 @@ public:
 #endif
 private:
 	FDreamUIPrefabSchemaMigrationReport EvaluateSchemaMigration(UDreamWidget* RootWidget, bool bApplyChanges);
+public:
+	virtual void Serialize(FArchive& Ar) override;
 #if WITH_EDITOR
 	void SetRootWidgetNameFromPrefab();
 public:

@@ -11,12 +11,25 @@
 #include "DreamUIFontData_FreeTypeRender.generated.h"
 
 class UDreamText;
+class FDreamGlyphRasterizer;
 
 #if WITH_FREETYPE
 struct FT_GlyphSlotRec_;
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
 #endif
+struct hb_font_t;
+
+/** A glyph of one of a font's faces: the unit the atlas caches and the shaper produces. */
+struct FDreamUIGlyphKey
+{
+	int32 FaceIndex = 0;
+	uint32 GlyphIndex = 0;
+	FDreamUIGlyphKey() {}
+	FDreamUIGlyphKey(int32 InFaceIndex, uint32 InGlyphIndex) : FaceIndex(InFaceIndex), GlyphIndex(InGlyphIndex) {}
+	bool operator==(const FDreamUIGlyphKey& Other) const { return FaceIndex == Other.FaceIndex && GlyphIndex == Other.GlyphIndex; }
+	friend FORCEINLINE uint32 GetTypeHash(const FDreamUIGlyphKey& Key) { return HashCombine(GetTypeHash(Key.FaceIndex), GetTypeHash(Key.GlyphIndex)); }
+};
 
 UENUM(BlueprintType)
 enum class EDreamUIDynamicFontDataType :uint8
@@ -117,10 +130,18 @@ public:
 	virtual UMaterialInterface* GetFontMaterial()override { return nullptr; }
 	virtual UTexture2DArray* GetFontTexture()override;
 	virtual FDreamUICharData GetCharData(uint32 CharCode, float CharSize, bool IsBold)override;
-	virtual bool HasKerning()override { return bHasKerning; }
+	virtual bool HasKerning()override;
+	virtual int32 GetFaceCount()override;
+	virtual bool FaceHasCodepoint(int32 FaceIndex, uint32 Codepoint)override;
+	virtual void* GetShapingFont(int32 FaceIndex, float FontSize)override;
+	virtual FDreamUICharData GetGlyphData(int32 FaceIndex, uint32 GlyphIndex, float CharSize, bool bBold)override;
+	/** Face and glyph index a code point resolves to, searching this font then its fallbacks; false when no face has it. */
+	bool ResolveCodepoint(uint32 Codepoint, FDreamUIGlyphKey& OutKey);
 	virtual float GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)override;
 	virtual float GetLineHeight(float FontSize)override;
 	virtual float GetVerticalOffset(float FontSize)override;
+	virtual float GetAscent(float FontSize)override;
+	virtual float GetDescent(float FontSize)override;
 	virtual float GetFontSizeLimit()override { return 200.0f; }//limit font size to 200. too large font size will result in extreme large texture
 
 	virtual void AddUIText(UDreamText* InText)override;
@@ -132,6 +153,12 @@ public:
 
 	void SetFontType(EDreamUIDynamicFontDataType Value);
 	void SetEngineFont(UFontFace* Value);
+	/** Point the font at a file -- absolute, or relative to the project directory -- and reload it on next use. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFontFilePath(const FString& InPath, bool bInRelativeToProjectDir);
+	/** Replace the fallback list: the faces tried, in order, for code points this font lacks. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFallbackFonts(const TArray<UDreamUIFontData_FreeTypeRender*>& InFallbacks);
 protected:
 	/** Collection of UIText which use this font to render. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI")
@@ -156,7 +183,18 @@ protected:
 	FT_FaceRec_* Face = nullptr;
 	void InitFreeType();
 	void DeinitFreeType();
-	FT_GlyphSlotRec_* RenderGlyphOnFreeType(uint32 CharCode, float CharSize, float BoldSize);
+	/** Loads and rasterizes one glyph of a face at CharSize, synthetic bold by BoldSize pixels. */
+	FT_GlyphSlotRec_* RenderGlyphOnFreeType(FT_FaceRec_* InFace, uint32 GlyphIndex, float CharSize, float BoldSize);
+public:
+	/** The FreeType face behind a face index (this font or a fallback), initializing it on demand; null when missing. */
+	FT_FaceRec_* GetFreeTypeFace(int32 FaceIndex);
+protected:
+#endif
+	/** The shaping font over Face; null when HarfBuzz is not compiled in or the face failed to load. */
+	hb_font_t* HarfBuzzFont = nullptr;
+	void InitHarfBuzz();
+	void DeinitHarfBuzz();
+#if WITH_FREETYPE
 
 #if WITH_EDITOR
 	TArray<FString> CacheSubFaces(FT_LibraryRec_* InFTLibrary, const TArray<uint8>& InMemory);
@@ -191,10 +229,47 @@ protected:
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)PURE_VIRTUAL(UDreamUIFontData_FreeTypeRender::CreateFontTexture, return nullptr;);
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize);
 
-	virtual bool GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult) { return false; };
-	virtual void AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& CharData) {};
-	virtual bool RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult) { return false; };
+	virtual bool GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult) { return false; };
+	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData) {};
+	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult) { return false; };
 	virtual void ClearCharDataCache() {};
+
+	/**
+	 * Asynchronous rasterization. A font that can generate its glyphs on a worker (outline fields)
+	 * fills in the generator's parameters; a font whose cache does not depend on CharSize says so, so
+	 * one request covers every size.
+	 */
+	virtual bool GetAsyncRasterParams(float CharSize, bool IsBold, float& OutPixelsPerEm, float& OutSpreadPixels, float& OutBoldPixels) const { return false; }
+	virtual bool IsGlyphCacheSizeIndependent() const { return false; }
+	/** True when bold is a shader-side dilation of the regular glyph: the atlas then holds no bold variant, only the advance changes. */
+	virtual bool IsBoldSynthesizedInShader() const { return false; }
+	/** Pack a rasterized glyph into the atlas (growing it as needed) and describe its quad. */
+	bool InsertGlyphBitmap(const FGlyphBitmap& InGlyphBitmap, FDreamUICharData& OutResult);
+	/** A quad-less stand-in with the glyph's real advance, for a glyph still on the worker. */
+	FDreamUICharData MakePendingCharData(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold);
+	struct FAsyncGlyphRequest
+	{
+		FDreamUIGlyphKey Glyph;
+		float CharSize = 0.0f;
+		bool bBold = false;
+		bool operator==(const FAsyncGlyphRequest& Other) const { return Glyph == Other.Glyph && CharSize == Other.CharSize && bBold == Other.bBold; }
+		friend FORCEINLINE uint32 GetTypeHash(const FAsyncGlyphRequest& R) { return HashCombine(HashCombine(GetTypeHash(R.Glyph), GetTypeHash(R.CharSize)), GetTypeHash(R.bBold)); }
+	};
+	TSet<FAsyncGlyphRequest> PendingAsyncGlyphs;
+	TSharedPtr<FDreamGlyphRasterizer, ESPMode::ThreadSafe> Rasterizer;
+	/** The worker over this font's faces, created on first use. Null when a face has no bytes to share. */
+	FDreamGlyphRasterizer* GetOrCreateRasterizer();
+	/** Collect finished worker glyphs into the atlas; fires OnGlyphsReady when any landed. */
+	void DrainAsyncGlyphs();
+	/** Whether a glyph request this frame may still be rasterized synchronously. */
+	static bool TakeSyncGlyphBudget();
+public:
+	/** Block until the worker has finished every queued glyph and put them in the atlas. Tests and teardown. */
+	void WaitForAsyncGlyphs();
+	int32 GetPendingAsyncGlyphCount() const { return PendingAsyncGlyphs.Num(); }
+	/** Override the per-frame synchronous budget (negative restores the setting). Tests. */
+	static void SetAsyncGlyphSyncBudgetOverride(int32 Budget);
+protected:
 
 	/** CPU source of truth used both for deferred uploads and texture-array expansion. */
 	TArray<uint8> FontTextureAtlasData;

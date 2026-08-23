@@ -264,6 +264,7 @@ protected:
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 public:
 	virtual int32 GetMaxChildren() const override { return 1; }
+	virtual void GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "SizeBox")
 	FMargin Padding;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetOverrideWidth, Category = "SizeBox")
@@ -302,6 +303,7 @@ protected:
 	bool bAppliedDefaultClipping = false;
 public:
 	virtual int32 GetMaxChildren() const override { return 1; }
+	virtual void GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "ScaleBox")
 	FMargin Padding;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetStretch, Category = "ScaleBox")
@@ -331,6 +333,7 @@ protected:
 	FDelegateHandle SafeFrameChangedHandle;
 public:
 	virtual int32 GetMaxChildren() const override { return 1; }
+	virtual void GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetUsePlatformSafeZone, Category = "SafeZone")
 	bool bUsePlatformSafeZone = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadLeft, Category = "SafeZone")

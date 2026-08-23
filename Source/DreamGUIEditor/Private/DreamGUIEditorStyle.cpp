@@ -39,6 +39,7 @@ FString UMG_Brush_RootToContentDir(const FString& RelativePath, const TCHAR* Ext
 #define BORDER_BRUSH( RelativePath, ... ) FSlateBorderBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
 #define UMG_IMAGE( RelativePath, ... ) FSlateImageBrush( UMG_Brush_RootToContentDir( RelativePath, TEXT(".png")), __VA_ARGS__ )
 #define UMG_ICON( RelativePath, ... ) FSlateVectorImageBrush( UMG_Brush_RootToContentDir( RelativePath, TEXT(".svg")), __VA_ARGS__ )
+#define STARSHIP_ICON( RelativePath, ... ) FSlateVectorImageBrush( (FPaths::EngineContentDir() / TEXT("Editor/Slate/Starship/Common") / RelativePath) + TEXT(".svg"), __VA_ARGS__ )
 #define TTF_FONT( RelativePath, ... ) FSlateFontInfo( Style->RootToContentDir( RelativePath, TEXT(".ttf") ), __VA_ARGS__ )
 #define OTF_FONT( RelativePath, ... ) FSlateFontInfo( Style->RootToContentDir( RelativePath, TEXT(".otf") ), __VA_ARGS__ )
 
@@ -153,6 +154,28 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassIcon.DreamLayoutSelfFlexBox", new UMG_ICON(TEXT("WrapBox"), Icon16x16));
 	Style->Set("ClassIcon.DreamLayoutSelfGrid", new UMG_ICON(TEXT("GridPanel"), Icon16x16));
 	Style->Set("ClassIcon.DreamMeshModifierBase", new UMG_ICON(TEXT("Border"), Icon16x16));
+
+	// Behaviour classes that previously fell through to the DreamUIBehaviour icon. Subclasses
+	// (UISelectableTransition, UISpriteSequencePlayer, ...) inherit through FSlateIconFinder's
+	// parent-class walk, so only the family roots are listed.
+	Style->Set("ClassIcon.DreamDataBinding", new UMG_ICON(TEXT("DetailsView"), Icon16x16));
+	Style->Set("ClassIcon.DreamResponsiveBehaviour", new UMG_ICON(TEXT("ExpandableArea"), Icon16x16));
+	Style->Set("ClassIcon.UIEventTrigger", new STARSHIP_ICON(TEXT("Event"), Icon16x16));
+	Style->Set("ClassIcon.UIEventBlocker", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
+	Style->Set("ClassIcon.UISelectable", new UMG_ICON(TEXT("Button"), Icon16x16));
+	Style->Set("ClassIcon.UITransition", new UMG_ICON(TEXT("Slider"), Icon16x16));
+	Style->Set("ClassIcon.DreamImageSequencePlayer", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
+	Style->Set("ClassIcon.DreamLyricsView", new UMG_ICON(TEXT("Text"), Icon16x16));
+	Style->Set("ClassIcon.UIListEntry", new UMG_ICON(TEXT("ListView"), Icon16x16));
+	Style->Set("ClassIcon.UIDropdownItemComponent", new UMG_ICON(TEXT("ComboBox"), Icon16x16));
+	Style->Set("ClassIcon.UIScrollViewHelper", new UMG_ICON(TEXT("ScrollBox"), Icon16x16));
+	Style->Set("ClassIcon.DreamScrollBoxInputHandler", new UMG_ICON(TEXT("ScrollBox"), Icon16x16));
+	Style->Set("ClassIcon.UINavigationInputSelectionHandler", new STARSHIP_ICON(TEXT("Navigation"), Icon16x16));
+	Style->Set("ClassIcon.DreamUIPlayTweenComponent", new STARSHIP_ICON(TEXT("Animation"), Icon16x16));
+	Style->Set("ClassIcon.DreamUIPlayTweenSequenceComponent", new STARSHIP_ICON(TEXT("Timeline"), Icon16x16));
+	Style->Set("ClassIcon.DreamUIPrefabSequenceComponent", new UMG_IMAGE(TEXT("Animations_16x"), Icon16x16));
+	Style->Set("ClassIcon.DreamUIMLBindingBehaviour", new IMAGE_BRUSH(TEXT("Xaml_16x"), Icon16x16));
+	Style->Set("ClassIcon.DreamUMGWidgetInteraction", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 
 	Style->Set("ClassThumbnail.DreamUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.DreamUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));

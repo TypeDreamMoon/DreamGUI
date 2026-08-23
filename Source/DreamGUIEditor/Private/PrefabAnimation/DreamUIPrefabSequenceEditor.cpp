@@ -480,13 +480,16 @@ void SDreamUIPrefabSequenceEditor::RefreshAnimationList()
 		{
 			AnimationListView->SetSelection(*ItemToSelect);
 		}
-		else if (Animations.Num() > 0)
+		else
 		{
-			AnimationListView->SetSelection(Animations[0]);
-		}
-		else if (PrefabSequenceEditor.IsValid())
-		{
-			PrefabSequenceEditor->AssignSequence(nullptr);
+			// No animation is selected until the designer picks one. Selecting the first on every
+			// refresh put the viewport into animation mode the moment a prefab with any animation was
+			// opened, which is invisible as a cause while the Animations tab is closed.
+			AnimationListView->ClearSelection();
+			if (PrefabSequenceEditor.IsValid())
+			{
+				PrefabSequenceEditor->AssignSequence(nullptr);
+			}
 		}
 	}
 }

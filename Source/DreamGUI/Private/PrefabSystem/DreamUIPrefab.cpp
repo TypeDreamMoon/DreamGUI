@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "PrefabSystem/DreamUIPrefab.h"
+#include "UObject/DreamGUIObjectVersion.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
@@ -314,6 +315,23 @@ FDreamUIPrefabSchemaMigrationReport UDreamUIPrefab::EvaluateSchemaMigration(UDre
 		}
 	}
 	return Report;
+}
+
+void UDreamUIPrefab::Serialize(FArchive& Ar)
+{
+	Ar.UsingCustomVersion(FDreamGUIObjectVersion::GUID);
+	Super::Serialize(Ar);
+#if WITH_EDITORONLY_DATA
+	// Before CanvasSize lived on the asset the designer's copy was the only record of the authored
+	// surface, so an older asset starts from it rather than from the class default.
+	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::PrefabCanvasSizeOnAsset)
+	{
+		if (PrefabDataForPrefabEditor.CanvasSize.X > 0 && PrefabDataForPrefabEditor.CanvasSize.Y > 0)
+		{
+			CanvasSize = PrefabDataForPrefabEditor.CanvasSize;
+		}
+	}
+#endif
 }
 
 #if WITH_EDITOR

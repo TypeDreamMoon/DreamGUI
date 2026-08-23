@@ -187,15 +187,23 @@ bool FDreamSurfacePanelMenuOffersEveryRegisteredPanelTest::RunTest(const FString
 		UDreamLayoutContainerUniformGridPanel::StaticClass(),
 		UDreamLayoutContainerWidgetSwitcher::StaticClass(),
 		UDreamLayoutContainerScrollBox::StaticClass(),
+		// Single-child panels are panels too (UMG's Wrap With offers Size Box); the ContentWidget they
+		// need comes from the container's own required-behaviour rule, not from the recipe, so they no
+		// longer read as "a control that uses a panel". Wrapping several widgets in one is refused
+		// with a notification, not hidden from the menu.
+		UDreamLayoutContainerSizeBox::StaticClass(),
+		UDreamLayoutContainerScaleBox::StaticClass(),
+		UDreamLayoutContainerSafeZone::StaticClass(),
 	};
 	for (UClass* PanelClass : Registered)
 	{
 		TestTrue(FString::Printf(TEXT("%s is offered"), *PanelClass->GetName()), Contains(PanelClass));
 	}
 	TestEqual(TEXT("and nothing else is"), Panels.Num(), Registered.Num());
-	// A control that merely uses a panel is not one: SizeBox carries a behaviour and stays out.
+	// A control that merely uses a panel is not one: Border is an Overlay with an image and a
+	// ContentWidget in its recipe and stays out, even though the plain Overlay is offered.
 	TestFalse(TEXT("a control that happens to hang off a panel is not offered as a panel"),
-		Contains(UDreamLayoutContainerSizeBox::StaticClass()));
+		Panels.ContainsByPredicate([](const FDreamUIControlDescriptor* Descriptor) { return Descriptor->Name == TEXT("Border"); }));
 
 	for (int32 Index = 1; Index < Panels.Num(); ++Index)
 	{

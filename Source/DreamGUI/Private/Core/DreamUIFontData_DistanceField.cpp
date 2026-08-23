@@ -1,6 +1,7 @@
-// Copyright 2019-present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIFontData_DistanceField.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/Components/DreamText.h"
 #include "Materials/MaterialInterface.h"
 #include "TextureResource.h"
@@ -9,6 +10,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/Texture2DArray.h"
 #include "Utils/sdf/sdf.h"
+#include "Core/Text/DreamGlyphSdf.h"
+#include "UObject/DreamGUIObjectVersion.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -20,27 +23,23 @@ UDreamUIFontData_DistanceField::UDreamUIFontData_DistanceField()
 {
 	RectPackCellSizeType = EDreamUIAtlasTextureSizeType::SIZE_512x512;
 
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_DropShadowSoft")));
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_DropShadowHard")));
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_Outline")));
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/TextEffects/MI_OutlineOnly")));
+	// Whatever the project lists, in the order it lists them -- the picker shows this array as-is.
+	for (const TSoftObjectPtr<UMaterialInterface>& Preset : UDreamGUISettings::Get()->TextEffectPresetMaterials)
+	{
+		if (UMaterialInterface* Material = UDreamGUISettings::LoadSetting(Preset, TEXT("TextEffectPresetMaterials")))
+		{
+			PresetMaterials.Add(Material);
+		}
+	}
 }
 
-bool UDreamUIFontData_DistanceField::GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult)
+bool UDreamUIFontData_DistanceField::GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)
 {
-	auto CharKey = FDreamUIDistanceFieldCharKey(CharCode, IsBold);
+	auto CharKey = FDreamUIDistanceFieldCharKey(Glyph, IsBold);
 	if (auto charData = CharDataMap.Find(CharKey))
 	{
 		OutResult = FDreamUICharData(*charData);
-		float vertexOffset;
-		if (ExpandMeshSize <= 0)//shrink mesh to reduce empty area of SDFRadius
-		{
-			vertexOffset = SDFRadius - SampleFontSize * 0.02f;//0.02: slightly expand it in-case too sharp edge
-		}
-		else
-		{
-			vertexOffset = (SDFRadius - ExpandMeshSize) - SampleFontSize * 0.02f;//0.02: slightly expand it in-case too sharp edge
-		}
+		const float vertexOffset = GetQuadShrinkTexels();
 		OutResult.Width -= vertexOffset + vertexOffset;
 		OutResult.Height -= vertexOffset + vertexOffset;
 		OutResult.XOffset += vertexOffset;
@@ -61,15 +60,31 @@ bool UDreamUIFontData_DistanceField::GetCharDataFromCache(uint32 CharCode, float
 	}
 	return false;
 }
-void UDreamUIFontData_DistanceField::AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& CharData)
+void UDreamUIFontData_DistanceField::AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)
 {
-	CharDataMap.Add(FDreamUIDistanceFieldCharKey(CharCode, IsBold), CharData);
+	CharDataMap.Add(FDreamUIDistanceFieldCharKey(Glyph, IsBold), CharData);
 }
 
-bool UDreamUIFontData_DistanceField::RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
+bool UDreamUIFontData_DistanceField::RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
-	auto slot = RenderGlyphOnFreeType(CharCode, SampleFontSize, IsBold ? SampleFontSize * BoldRatio : 0);
+	if (SdfSource == EDreamUISdfSource::OutlineMultiChannel)
+	{
+		FDreamGlyphSdfResult Sdf;
+		if (!FDreamGlyphSdf::GenerateMTSDF(GetFreeTypeFace(Glyph.FaceIndex), Glyph.GlyphIndex, (float)SampleFontSize, (float)SDFRadius, IsBold ? SampleFontSize * BoldRatio : 0.0f, Sdf))
+		{
+			return false;
+		}
+		OutResult.width = Sdf.Width;
+		OutResult.height = Sdf.Height;
+		OutResult.hOffset = Sdf.Left;
+		OutResult.vOffset = Sdf.Top;
+		OutResult.hAdvance = Sdf.Advance;
+		OutResult.buffer = MoveTemp(Sdf.Pixels);
+		OutResult.pixelSize = 4;
+		return true;
+	}
+	auto slot = RenderGlyphOnFreeType(GetFreeTypeFace(Glyph.FaceIndex), Glyph.GlyphIndex, SampleFontSize, IsBold ? SampleFontSize * BoldRatio : 0);
 	if (slot == nullptr)
 	{
 		return false;
@@ -111,6 +126,7 @@ void UDreamUIFontData_DistanceField::ClearCharDataCache()
 {
 	CharDataMap.Empty();
 	LineHeight = VerticalOffset = -1;
+	CachedAscent = CachedDescent = -1.0f;
 }
 
 UTexture2DArray* UDreamUIFontData_DistanceField::CreateFontTexture(int InTextureSize, int InSliceCount)
@@ -120,7 +136,7 @@ UTexture2DArray* UDreamUIFontData_DistanceField::CreateFontTexture(int InTexture
 		GetTransientPackage()
 		, FName(*FString::Printf(TEXT("DreamUIFontData_DistanceField_Texture_%d"), TextureNameSuffix++))
 		, RF_Transient);
-	auto PixelFormat = PF_R8;
+	const auto PixelFormat = SdfSource == EDreamUISdfSource::OutlineMultiChannel ? PF_B8G8R8A8 : PF_R8;
 
 	auto PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = InTextureSize;
@@ -167,20 +183,34 @@ void UDreamUIFontData_DistanceField::ApplyPackingAtlasTextureExpand(UTexture2D* 
 	}
 }
 
-void UDreamUIFontData_DistanceField::PrepareForPushCharData(UDreamText* InText)
+void UDreamUIFontData_DistanceField::PrepareForLayout(float InExpandMeshSize)
 {
-	ItalicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
 	OneDivideFontSize = 1.0f / SampleFontSize;
-	ExpandMeshSize = InText->GetExpandMeshSize();
-	auto CompScale = InText->GetWidget()->GetWorldScale();
-	ObjectScale = FMath::Max(CompScale.X, CompScale.Y)
-		* SampleFontSize / SDFRadius
-		;
+	ExpandMeshSize = InExpandMeshSize;
 }
 
-bool UDreamUIFontData_DistanceField::GetRequireNormalAndTangent()
+float UDreamUIFontData_DistanceField::GetQuadShrinkTexels() const
 {
-	return true;//for tilt look
+	// Shrink the quad to the glyph to cut the empty area of the spread; 0.02 em stays so an edge
+	// right at the bounds still has its anti-aliasing band. ExpandMeshSize keeps that much of the spread.
+	const float Keep = ExpandMeshSize > 0 ? ExpandMeshSize : 0.0f;
+	return (SDFRadius - Keep) - SampleFontSize * 0.02f;
+}
+
+FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(const FVector2f& InWorldScale) const
+{
+	FDreamTextGlyphPaintStyle Style;
+	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
+	// Both sources are a field with the same convention (0.5 on the edge, +-SDFRadius texels of range),
+	// so both take the text style, and both render bold as a dilation of the regular glyph: the same
+	// growth FreeType's embolden gives, without its self-intersections, and tunable per text.
+	Style.bDistanceField = true;
+	Style.EmTexels = (float)SampleFontSize;
+	Style.FieldSpreadTexels = (float)SDFRadius;
+	Style.QuadMarginTexels = SDFRadius - GetQuadShrinkTexels();
+	Style.TexelToUV = OneDivideTextureSize;
+	Style.BoldDilateEm = BoldRatio * 0.5f;
+	return Style;
 }
 
 float UDreamUIFontData_DistanceField::GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize)
@@ -213,284 +243,26 @@ float UDreamUIFontData_DistanceField::GetVerticalOffset(float fontSize)
 	}
 	return (VerticalOffset + AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
 }
+float UDreamUIFontData_DistanceField::GetAscent(float fontSize)
+{
+	if (CachedAscent < 0.0f)
+	{
+		CachedAscent = Super::GetAscent(SampleFontSize);
+	}
+	// A positive AdditionalVerticalOffset lifts the glyphs: the baseline moves up inside the same box.
+	return (CachedAscent - AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
+}
+float UDreamUIFontData_DistanceField::GetDescent(float fontSize)
+{
+	if (CachedDescent < 0.0f)
+	{
+		CachedDescent = Super::GetDescent(SampleFontSize);
+	}
+	return (CachedDescent + AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
+}
 UMaterialInterface* UDreamUIFontData_DistanceField::GetFontMaterial()
 {
 	return nullptr;
-}
-
-void UDreamUIFontData_DistanceField::PushCharData(
-	uint32 charCode, FVector2f inLineOffset, FVector2f fontSpace, const FDreamUICharData& charData,
-	const DreamUIRichTextParser::FRichTextParseResult& richTextProperty,
-	int verticesStartIndex, int indicesStartIndex,
-	int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-	TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
-)
-{
-	auto GetUnderlineOrStrikethroughCharGeo = [&](uint32 charCode, float overrideFontSize, bool bold)
-	{
-		auto charData = this->GetCharData(charCode, overrideFontSize, bold);
-		charData.YOffset += this->GetVerticalOffset(overrideFontSize);
-
-		float uvX = (charData.MaxUV.X - charData.MinUV.X) * 0.5f + charData.MinUV.X;
-		charData.MinUV.X = charData.MaxUV.X = uvX;
-		return charData;
-	};
-
-	outAdditionalVerticesCount = 4;
-	outAdditionalIndicesCount = 6;
-
-	FDreamUICharData underlineCharGeo;
-	FDreamUICharData strikethroughCharGeo;
-	//underline and strikethrough should not exist at same char
-	if (richTextProperty.Underline)
-	{
-		outAdditionalVerticesCount += 4;
-		outAdditionalIndicesCount += 6;
-		underlineCharGeo = GetUnderlineOrStrikethroughCharGeo('_', richTextProperty.Size, richTextProperty.Bold);
-	}
-	if (richTextProperty.Strikethrough)
-	{
-		outAdditionalVerticesCount += 4;
-		outAdditionalIndicesCount += 6;
-		strikethroughCharGeo = GetUnderlineOrStrikethroughCharGeo('-', richTextProperty.Size, richTextProperty.Bold);
-	}
-	int32 newVerticesCount = verticesStartIndex + outAdditionalVerticesCount;
-	FDreamUIGeometry::DreamUIGeometrySetArrayNum(originVertices, newVerticesCount, false);
-	FDreamUIGeometry::DreamUIGeometrySetArrayNum(vertices, newVerticesCount, false);
-
-	int32 newIndicesCount = indicesStartIndex + outAdditionalIndicesCount;
-	FDreamUIGeometry::DreamUIGeometrySetArrayNum(triangleIndices, newIndicesCount, false);
-
-	auto lineOffset = inLineOffset;
-	if (richTextProperty.SupOrSubMode == DreamUIRichTextParser::ESupOrSubMode::Sup)
-	{
-		lineOffset.Y += richTextProperty.Size * 0.5f;
-	}
-	else if (richTextProperty.SupOrSubMode == DreamUIRichTextParser::ESupOrSubMode::Sub)
-	{
-		lineOffset.Y -= richTextProperty.Size * 0.5f;
-	}
-	
-	//position
-	{
-		float offsetX = lineOffset.X + charData.XOffset;
-		float offsetY = lineOffset.Y + charData.YOffset;
-		float charAdvanceWidth = charData.XAdvance + fontSpace.X;
-		float x, y;
-
-		int addVertCount = 0;
-		{
-			float charWidth = charData.Width;
-			float charHeight = charData.Height;
-			x = offsetX;
-			y = offsetY - charHeight;
-			auto& vert0 = originVertices[verticesStartIndex].Position;
-			vert0 = FVector3f(0, x, y);
-			x = charWidth + offsetX;
-			auto& vert1 = originVertices[verticesStartIndex + 1].Position;
-			vert1 = FVector3f(0, x, y);
-			x = offsetX;
-			y = offsetY;
-			auto& vert2 = originVertices[verticesStartIndex + 2].Position;
-			vert2 = FVector3f(0, x, y);
-			x = charWidth + offsetX;
-			auto& vert3 = originVertices[verticesStartIndex + 3].Position;
-			vert3 = FVector3f(0, x, y);
-			if (richTextProperty.Italic)
-			{
-				auto vert01ItalicOffset = (charHeight - charData.YOffset) * ItalicSlop;
-				vert0.Y -= vert01ItalicOffset;
-				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.YOffset * ItalicSlop;
-				vert2.Y += vert23ItalicOffset;
-				vert3.Y += vert23ItalicOffset;
-			}
-
-			addVertCount = 4;
-		}
-		if (richTextProperty.Underline)
-		{
-			offsetX = lineOffset.X;
-			offsetY = lineOffset.Y + underlineCharGeo.YOffset;
-			x = offsetX;
-			y = offsetY - underlineCharGeo.Height;
-			originVertices[verticesStartIndex + addVertCount].Position = FVector3f(0, x, y);
-			x = charAdvanceWidth + offsetX;
-			originVertices[verticesStartIndex + addVertCount + 1].Position = FVector3f(0, x, y);
-			x = offsetX;
-			y = offsetY;
-			originVertices[verticesStartIndex + addVertCount + 2].Position = FVector3f(0, x, y);
-			x = charAdvanceWidth + offsetX;
-			originVertices[verticesStartIndex + addVertCount + 3].Position = FVector3f(0, x, y);
-
-			addVertCount += 4;
-		}
-		if (richTextProperty.Strikethrough)
-		{
-			offsetX = lineOffset.X;
-			offsetY = lineOffset.Y + strikethroughCharGeo.YOffset;
-			x = offsetX;
-			y = offsetY - strikethroughCharGeo.Height;
-			originVertices[verticesStartIndex + addVertCount].Position = FVector3f(0, x, y);
-			x = charAdvanceWidth + offsetX;
-			originVertices[verticesStartIndex + addVertCount + 1].Position = FVector3f(0, x, y);
-			x = offsetX;
-			y = offsetY;
-			originVertices[verticesStartIndex + addVertCount + 2].Position = FVector3f(0, x, y);
-			x = charAdvanceWidth + offsetX;
-			originVertices[verticesStartIndex + addVertCount + 3].Position = FVector3f(0, x, y);
-
-			addVertCount += 4;
-		}
-	}
-	//uv
-	{
-		int addVertCount = 0;
-		auto tempFontScale = richTextProperty.Size * ObjectScale;
-		{
-			{
-				vertices[verticesStartIndex].TextureCoordinate[0] = charData.GetUV0();
-				vertices[verticesStartIndex + 1].TextureCoordinate[0] = charData.GetUV1();
-				vertices[verticesStartIndex + 2].TextureCoordinate[0] = charData.GetUV2();
-				vertices[verticesStartIndex + 3].TextureCoordinate[0] = charData.GetUV3();
-			}
-
-			//text-scale
-			{
-				vertices[verticesStartIndex].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + 1].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + 3].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-			}
-			//slice of texture array
-			{
-				vertices[verticesStartIndex].TextureCoordinate[1].Y = charData.SliceIndex;
-				vertices[verticesStartIndex + 1].TextureCoordinate[1].Y = charData.SliceIndex;
-				vertices[verticesStartIndex + 2].TextureCoordinate[1].Y = charData.SliceIndex;
-				vertices[verticesStartIndex + 3].TextureCoordinate[1].Y = charData.SliceIndex;
-			}
-
-			addVertCount = 4;
-		}
-		if (richTextProperty.Underline)
-		{
-			vertices[verticesStartIndex + addVertCount].TextureCoordinate[0] = underlineCharGeo.GetUV0();
-			vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[0] = underlineCharGeo.GetUV1();
-			vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[0] = underlineCharGeo.GetUV2();
-			vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[0] = underlineCharGeo.GetUV3();
-
-			//font scale
-			{
-				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-			}
-			//slice of texture array
-			{
-				vertices[verticesStartIndex].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
-				vertices[verticesStartIndex + 1].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
-				vertices[verticesStartIndex + 2].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
-				vertices[verticesStartIndex + 3].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
-			}
-
-			addVertCount += 4;
-		}
-		if (richTextProperty.Strikethrough)
-		{
-			vertices[verticesStartIndex + addVertCount].TextureCoordinate[0] = strikethroughCharGeo.GetUV0();
-			vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[0] = strikethroughCharGeo.GetUV1();
-			vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[0] = strikethroughCharGeo.GetUV2();
-			vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[0] = strikethroughCharGeo.GetUV3();
-
-			//font scale
-			{
-				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
-			}
-			//slice of texture array
-			{
-				vertices[verticesStartIndex].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
-				vertices[verticesStartIndex + 1].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
-				vertices[verticesStartIndex + 2].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
-				vertices[verticesStartIndex + 3].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
-			}
-
-			addVertCount += 4;
-		}
-	}
-	//color
-	{
-		int addVertCount = 0;
-		{
-			vertices[verticesStartIndex].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 1].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 2].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 3].Color = richTextProperty.Color;
-
-			addVertCount = 4;
-		}
-		if (richTextProperty.Underline)
-		{
-			vertices[verticesStartIndex + addVertCount].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + addVertCount + 1].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + addVertCount + 2].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + addVertCount + 3].Color = richTextProperty.Color;
-
-			addVertCount += 4;
-		}
-		if (richTextProperty.Strikethrough)
-		{
-			vertices[verticesStartIndex + addVertCount].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + addVertCount + 1].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + addVertCount + 2].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + addVertCount + 3].Color = richTextProperty.Color;
-
-			addVertCount += 4;
-		}
-	}
-	//triangle
-	{
-		int addVertCount = 0;
-		int addIndCount = 0;
-
-		triangleIndices[indicesStartIndex] = verticesStartIndex;
-		triangleIndices[indicesStartIndex + 1] = verticesStartIndex + 3;
-		triangleIndices[indicesStartIndex + 2] = verticesStartIndex + 2;
-		triangleIndices[indicesStartIndex + 3] = verticesStartIndex;
-		triangleIndices[indicesStartIndex + 4] = verticesStartIndex + 1;
-		triangleIndices[indicesStartIndex + 5] = verticesStartIndex + 3;
-
-		addVertCount = 4;
-		addIndCount = 6;
-
-		if (richTextProperty.Underline)
-		{
-			triangleIndices[indicesStartIndex + addIndCount] = verticesStartIndex + addVertCount;
-			triangleIndices[indicesStartIndex + addIndCount + 1] = verticesStartIndex + addVertCount + 3;
-			triangleIndices[indicesStartIndex + addIndCount + 2] = verticesStartIndex + addVertCount + 2;
-			triangleIndices[indicesStartIndex + addIndCount + 3] = verticesStartIndex + addVertCount;
-			triangleIndices[indicesStartIndex + addIndCount + 4] = verticesStartIndex + addVertCount + 1;
-			triangleIndices[indicesStartIndex + addIndCount + 5] = verticesStartIndex + addVertCount + 3;
-
-			addVertCount += 4;
-			addIndCount += 6;
-		}
-		if (richTextProperty.Strikethrough)
-		{
-			triangleIndices[indicesStartIndex + addIndCount] = verticesStartIndex + addVertCount;
-			triangleIndices[indicesStartIndex + addIndCount + 1] = verticesStartIndex + addVertCount + 3;
-			triangleIndices[indicesStartIndex + addIndCount + 2] = verticesStartIndex + addVertCount + 2;
-			triangleIndices[indicesStartIndex + addIndCount + 3] = verticesStartIndex + addVertCount;
-			triangleIndices[indicesStartIndex + addIndCount + 4] = verticesStartIndex + addVertCount + 1;
-			triangleIndices[indicesStartIndex + addIndCount + 5] = verticesStartIndex + addVertCount + 3;
-
-			addVertCount += 4;
-			addIndCount += 6;
-		}
-	}
 }
 
 #if WITH_EDITOR
@@ -504,5 +276,27 @@ void UDreamUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEven
 void UDreamUIFontData_DistanceField::PostInitProperties()
 {
 	Super::PostInitProperties();
+}
+
+void UDreamUIFontData_DistanceField::Serialize(FArchive& Ar)
+{
+	Ar.UsingCustomVersion(FDreamGUIObjectVersion::GUID);
+	Super::Serialize(Ar);
+	// Assets saved before the outline field existed were authored against the bitmap one -- and
+	// against a material that samples one channel -- so they keep it until someone switches them.
+	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::SdfSourceOnFont)
+	{
+		SdfSource = EDreamUISdfSource::BitmapSingleChannel;
+	}
+	// Bold used to be FreeType's embolden at 0.08 em, chosen when the atlas baked it. As a field
+	// dilation the same growth is a blob on CJK glyphs, so a font still on that old default moves to
+	// the new one; a value someone set on purpose is kept.
+	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::BoldAsDilation)
+	{
+		if (FMath::IsNearlyEqual(BoldRatio, 0.08f, 1e-4f))
+		{
+			BoldRatio = 0.04f;
+		}
+	}
 }
 #undef LOCTEXT_NAMESPACE

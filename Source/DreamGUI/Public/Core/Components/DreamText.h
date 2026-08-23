@@ -12,6 +12,8 @@
 class UDreamUIFontData_BaseObject;
 class UDreamUIRichTextImageData_BaseObject;
 class UDreamUIRichTextCustomStyleData;
+struct FDreamTextLayoutInput;
+struct FDreamTextPaintParams;
 
 /**
  * UV channels-
@@ -33,7 +35,6 @@ protected:
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 	virtual void BeginDestroy() override;
-	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged)override;
 public:
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
@@ -81,6 +82,29 @@ protected:
 		EDreamUITextOverflowType OverflowType = EDreamUITextOverflowType::VerticalOverflow;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
+	/**
+	 * Keep CJK words together when wrapping, using ICU's dictionary -- CSS's `word-break: auto-phrase`.
+	 * Only matters with VerticalOverflow. Needs the packaged ICU data to include the CJK dictionary
+	 * (Project Settings > Packaging > Internationalization Support: CJK, EFIGSCJK or All); without it
+	 * this quietly falls back to per-character breaks.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamTextPhraseWrap PhraseWrap = EDreamTextPhraseWrap::Off;
+	/**
+	 * Outline, underlay, glow and fill look, drawn by the built-in shader. Needs a distance-field font
+	 * (OutlineMultiChannel source) and "Use Built-in UI Shader" on; has no effect with a custom material.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FDreamTextStyle TextStyle;
+	/** Fill progress of the whole text (per line), 0..1, for lyric-style reveals. Segments override it. */
+	UPROPERTY(Transient)
+	float FillProgress = 1.0f;
+	/** Glow boost of the whole text; segments override it. */
+	UPROPERTY(Transient)
+	float GlowBoost = 0.0f;
+	/** Character runs with their own fill progress; see FDreamTextFillSegment. */
+	UPROPERTY(Transient)
+	TArray<FDreamTextFillSegment> FillSegments;
 	/**
 	 * Padding between the widget's rect and the text laid out inside it, the way UMG's text Margin
 	 * works. The text is wrapped, aligned and overflow-tested against the rect MINUS this, so a
@@ -201,9 +225,9 @@ public:
 	virtual bool GetShouldAffectByPixelSnapping()const override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial() override;
+	virtual void FillWidgetPropertyDataForMaterial_Extra(class UDreamUIDataAsTexture* DataAsTexture) override;
 	virtual void OnCultureChanged_Implementation()override;
 
-	void CheckRequireNormalAndTangent();
 public:
 	void ApplyFontTextureChange();
 	void ApplyFontMaterialChange();
@@ -251,6 +275,11 @@ public:
 	/** The size Best Fit actually drew at, which is GetFontSize() when Best Fit is off. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetRenderedFontSize()const { return RenderedFontSize; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") ETextWrappingPolicy GetWrappingPolicy()const{return WrappingPolicy;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextPhraseWrap GetPhraseWrap()const{return PhraseWrap;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") const FDreamTextStyle& GetTextStyle()const{return TextStyle;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetFillProgress()const{return FillProgress;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetGlowBoost()const{return GlowBoost;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") const TArray<FDreamTextFillSegment>& GetFillSegments()const{return FillSegments;}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamUITextFontStyle GetFontStyle()const { return FontStyle; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetRichText()const { return bRichText; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") int32 GetRichTextTagFilterFlags()const { return RichTextTagFilterFlags; }
@@ -284,6 +313,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetWrappingPolicy(ETextWrappingPolicy Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetPhraseWrap(EDreamTextPhraseWrap Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetTextStyle(const FDreamTextStyle& Value);
+	/** Fill progress of every line, 0..1; glyphs inside a fill segment keep the segment's own value. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFillProgress(float Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetGlowBoost(float Value);
+	/** Character runs that fill independently (a lyric line's words or syllables). Replaces the previous set. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFillSegments(const TArray<FDreamTextFillSegment>& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void ClearFillSegments();
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetMargin(const FMargin& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetLineHeightPercentage(float Value);
@@ -307,6 +350,14 @@ public:
 	 */
 	static void GetContentBox(const FVector2f& InWidgetSize, const FVector2f& InPivot, const FMargin& InMargin,
 		FVector2f& OutSize, FVector2f& OutPivot);
+	/**
+	 * The layout input this text would lay out with at the given font size: its own properties plus
+	 * what the widget and canvas contribute. Public so the pipeline can be driven from outside the
+	 * component -- tests, tools -- against the same numbers the component uses.
+	 */
+	static FDreamTextLayoutInput MakeLayoutInput(const UDreamText* Text, float InFontSize);
+	/** The paint parameters this text would paint with: the font's quad style, the canvas's needs, the final colour. */
+	static FDreamTextPaintParams MakePaintParams(const UDreamText* Text);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetFontStyle(EDreamUITextFontStyle Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -329,6 +380,9 @@ private:
 	void RegisterFont();
 	void UnregisterFont();
 	FDelegateHandle EmojiDataChangedDelegateHandle;
+	FDelegateHandle GlyphsReadyDelegateHandle;
+	/** The last layout had glyphs still on the font's worker; relayout when the font says they landed. */
+	mutable bool bWaitingForGlyphs = false;
 protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:

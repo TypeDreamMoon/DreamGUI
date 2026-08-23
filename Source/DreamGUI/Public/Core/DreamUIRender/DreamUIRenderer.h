@@ -121,6 +121,15 @@ private:
 	static void SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
 		, bool bIsWireFrame, bool bIsTwoSided, bool bDisableDepthTestForTransparent, bool bIsDepthValid, bool bReverseCulling
 	);
+	/**
+	 * Draw one batch with the built-in UI shader (no material). Used for both screen-space and world-space
+	 * canvases; bBlendDepth selects the world-space depth blend / fade permutation.
+	 */
+	static void DrawBuiltInBatch(FRHICommandListImmediate& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
+		, const FSceneView& View, const FIntRect& ViewRect, const struct FDreamUIMeshBatchContainer& Batch
+		, uint8 NumSamples, float GammaValue, bool bIsDepthValid
+		, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
+	);
 	struct FWorldSpaceRenderParameter
 	{
 		/*

@@ -1,6 +1,7 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DataFactory/DreamUIPrefabActorFactory.h"
+#include "Core/DreamGUISettings.h"
 #include "PrefabSystem/DreamUIPrefab.h"
 #include "AssetRegistry/AssetData.h"
 #include "Core/DreamUIManager.h"
@@ -63,7 +64,6 @@ void UDreamUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewAct
 	auto Prefab = CastChecked<UDreamUIPrefab>(Asset);
 
 	auto WidgetPresenterComponent = InNewActor->FindComponentByClass<UDreamUIPrefabPresenterComponent>();
-	// WidgetPresenterComponent->GetLoadedWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
 	WidgetPresenterComponent->SetPrefab(Prefab);
 
 	auto World = InNewActor->GetWorld();
@@ -96,21 +96,10 @@ UClass* UDreamUIPrefabActorFactory::GetDefaultActorClass(const FAssetData& Asset
 {
 	if (auto Prefab = Cast<UDreamUIPrefab>(AssetData.GetAsset()))
 	{
-		FString ClassName;
-		auto RenderMode = (EDreamRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-		switch (RenderMode)
-		{
-		case EDreamRenderMode::WorldSpace:
-			ClassName = TEXT("WorldSpaceRoot_UERenderer");
-			break;
-		case EDreamRenderMode::WorldSpace_DreamUI:
-			ClassName = TEXT("WorldSpaceRoot_DreamRenderer");
-			break;
-		case EDreamRenderMode::ScreenSpaceOverlay:
-			ClassName = TEXT("ScreenSpaceRoot");
-		}
-		
-		NewActorClass = LoadClass<AActor>(NULL, *FString::Printf(TEXT("/DreamGUI/Blueprints/%s.%s_C"), *ClassName, *ClassName));
+		const auto RenderMode = (EDreamRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+		NewActorClass = UDreamGUISettings::LoadSettingClass(
+			UDreamGUISettings::Get()->GetRootClassForRenderMode(RenderMode, false),
+			TEXT("root actor class for this render mode"));
 		if (!NewActorClass)
 		{
 			NewActorClass = AActor::StaticClass();

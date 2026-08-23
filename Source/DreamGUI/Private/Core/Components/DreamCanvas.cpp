@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamGUISettings.h"
 #include "Engine/UserInterfaceSettings.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
@@ -11,6 +12,13 @@
 #include "Core/DreamUIRender/DreamUIRenderer.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/DreamUIDrawCall.h"
+#include "Core/DreamUIFontData_BaseObject.h"
+#include "Engine/GameViewportClient.h"
+#include "SceneView.h"
+#if WITH_EDITOR
+#include "Editor.h"
+#include "EditorViewportClient.h"
+#endif
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamVisualDirectMesh.h"
@@ -34,7 +42,7 @@
 UDreamCanvas::UDreamCanvas()
 {
 	DefaultMeshType = UDreamUIMeshComponent::StaticClass();
-	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont"));
+	DefaultMaterial = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
 	bStartWithTickEnabled = false;
 }
 
@@ -760,9 +768,44 @@ USceneComponent* UDreamCanvas::GetAttachedRootSceneComponent() const
 	return AttachedRootSceneComponent.Get();
 }
 
-void UDreamCanvas::AttachToSceneComponent(USceneComponent* InSceneComp) const
+void UDreamCanvas::AttachToSceneComponent(USceneComponent* InSceneComp)
 {
+	if (AttachedRootSceneComponent.Get() == InSceneComp)
+	{
+		return;
+	}
+	if (USceneComponent* Previous = AttachedRootSceneComponent.Get())
+	{
+		if (AttachedRootSceneComponentTransformHandle.IsValid())
+		{
+			Previous->TransformUpdated.Remove(AttachedRootSceneComponentTransformHandle);
+		}
+	}
+	AttachedRootSceneComponentTransformHandle.Reset();
 	AttachedRootSceneComponent = InSceneComp;
+	if (InSceneComp)
+	{
+		AttachedRootSceneComponentTransformHandle = InSceneComp->TransformUpdated.AddUObject(this, &UDreamCanvas::OnAttachedRootSceneComponentTransformUpdated);
+		// Place the tree at the new host now; the binding keeps it there afterwards.
+		if (auto Widget = GetWidget())
+		{
+			Widget->CalculateObjectToWorldTransform(true);
+		}
+	}
+}
+
+void UDreamCanvas::OnAttachedRootSceneComponentTransformUpdated(USceneComponent* UpdatedComponent, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+{
+	if (auto Widget = GetWidget())
+	{
+		Widget->CalculateObjectToWorldTransform(true);
+	}
+}
+
+void UDreamCanvas::BeginDestroy()
+{
+	AttachToSceneComponent(nullptr);
+	Super::BeginDestroy();
 }
 
 void UDreamCanvas::MarkVisualWillChange(UDreamVisual* InOldVisual)
@@ -1099,6 +1142,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				if (InItemGeo.bIsFont)
 				{
 					DrawCallItem.FontTexture = InItemGeo.Texture;
+					DrawCallItem.Font = InItemGeo.Font;
 				}
 				else
 				{
@@ -1164,6 +1208,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 						{
 							DrawCallItem.FontTexture = ItemGeo.Texture;
 						}
+						DrawCallItem.Font = ItemGeo.Font;
 					}
 					else
 					{
@@ -1601,9 +1646,28 @@ void UDreamCanvas::SortDrawCall()
 
 FName UDreamCanvas::DreamUI_MainTextureMaterialParameterName = FName(TEXT("DreamUI_MainTexture"));
 FName UDreamCanvas::DreamUI_FontTextureMaterialParameterName = FName(TEXT("DreamUI_FontTexture"));
+FName UDreamCanvas::DreamUI_FontAtlasInfoMaterialParameterName = FName(TEXT("DreamUI_FontAtlasInfo"));
 FName UDreamCanvas::DreamUI_ClipDataTexture_MaterialParameterName = FName(TEXT("DreamUI_ClipDataTexture"));
 FName UDreamCanvas::DreamUI_WidgetPropertyDataTexture_MaterialParameterName = FName(TEXT("DreamUI_WidgetPropertyDataTexture"));
 FName UDreamCanvas::DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName = FName(TEXT("DreamUI_IsRenderByDreamUIRenderer"));
+
+FVector4f UDreamCanvas::MakeFontAtlasInfo(const FDreamUIDrawCall& DrawCallItem)
+{
+	// What the MTSDF decode needs from the atlas, for the built-in shader and MF_DreamUI_Shade alike:
+	// xy the slice size in texels, z the field range in texels (twice the spread), w texels per em.
+	FVector4f Info(1.0f, 1.0f, 0.0f, 0.0f);
+	if (DrawCallItem.FontTexture.IsValid())
+	{
+		Info.X = DrawCallItem.FontTexture->GetSurfaceWidth();
+		Info.Y = DrawCallItem.FontTexture->GetSurfaceHeight();
+	}
+	if (DrawCallItem.Font.IsValid())
+	{
+		Info.Z = DrawCallItem.Font->GetAtlasFieldRangeTexels();
+		Info.W = DrawCallItem.Font->GetAtlasEmTexels();
+	}
+	return Info;
+}
 
 bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* InMaterial)
 {
@@ -1641,6 +1705,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		}
 	}
 
+	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
 	auto SetParameterForNewlyCreatedMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
 	{
 		InMaterialInstanceDynamic->SetScalarParameterValue(DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName, this->IsRenderByDreamUIRendererOrUERenderer());
@@ -1730,6 +1795,23 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 						}
 					}
 				}
+				else if (bUseBuiltInShader)
+				{
+					// No material at all: the renderer draws this section with the built-in UI shader.
+					FDreamUIBuiltInDrawParams BuiltIn;
+					BuiltIn.bEnabled = true;
+					BuiltIn.MainTexture = DrawCallItem.Texture.IsValid() ? DrawCallItem.Texture->GetResource() : nullptr;
+					BuiltIn.FontTexture = DrawCallItem.FontTexture.IsValid() ? DrawCallItem.FontTexture->GetResource() : nullptr;
+					BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture() ? WidgetPropertyDataAsTexture->GetDataTexture()->GetResource() : nullptr;
+					BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture() ? RootCanvas->ClipDataAsTexture->GetDataTexture()->GetResource() : nullptr;
+					const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+					BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
+					BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
+					BuiltIn.FontEmTexels = AtlasInfo.W;
+					UIMesh->SetMeshSectionBuiltIn(i, BuiltIn);
+					UIMesh->SetMeshSectionMaterial(i, nullptr);
+					break;
+				}
 				else
 				{
 					auto GetUIMaterialFromPool = [&]()
@@ -1764,6 +1846,9 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 					{
 						RenderMat_MID->SetTextureParameterValue(DreamUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
 						RenderMat_MID->SetTextureParameterValue(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
+						// The atlas geometry travels with the atlas: a new font texture means new values.
+						const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+						RenderMat_MID->SetVectorParameterValue(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
 						ParamCache.Texture = DrawCallItem.Texture;
 						ParamCache.FontTexture = DrawCallItem.FontTexture;
 					}
@@ -1771,6 +1856,10 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 					{
 						RenderMat_MID->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
 					}
+				}
+				if (UIMesh->IsMeshSectionBuiltIn(i))
+				{
+					UIMesh->SetMeshSectionBuiltIn(i, FDreamUIBuiltInDrawParams());
 				}
 				UIMesh->SetMeshSectionMaterial(i, RenderMat);
 			}
@@ -1940,7 +2029,7 @@ UMaterialInterface* UDreamCanvas::GetDefaultMaterial()const
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont"));
+		DefaultMaterial = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
 		if (!DefaultMaterial)
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Load DefaultMaterial error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

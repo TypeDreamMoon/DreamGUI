@@ -20,6 +20,7 @@
 #endif
 #include "Components/SceneComponent.h"
 #include "Core/DreamUIBehaviour.h"
+#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #if WITH_EDITOR
 #include "UObject/UnrealType.h"
 #endif
@@ -777,6 +778,35 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		}
 		else if (MemberName == LayoutContainerName)
 		{
+			UDreamLayoutContainer* PreviousLayout = LayoutContainerBeforeEdit.Get();
+			LayoutContainerBeforeEdit.Reset();
+			// The dropdown assigns the instance directly, so the checks CreateNewLayoutContainer makes
+			// before accepting a class are repeated here: a container that caps its child count is
+			// refused when the widget already has more, and the previous container is put back.
+			if (!IsValid(Cast<UDreamPanelLayoutBase>(LayoutContainer)))
+			{
+				for (UDreamWidget* Child : Children)
+				{
+					RemovePanelSlotFromChild(Child);
+				}
+			}
+			if (IsValid(LayoutContainer) && LayoutContainer != PreviousLayout)
+			{
+				const int32 MaxChildren = LayoutContainer->GetMaxChildren();
+				int32 ValidChildCount = 0;
+				for (const UDreamWidget* Child : Children)
+				{
+					ValidChildCount += IsValid(Child) ? 1 : 0;
+				}
+				if (MaxChildren >= 0 && ValidChildCount > MaxChildren)
+				{
+					UE_LOG(DreamGUI, Warning, TEXT("[%s].%d %s accepts at most %d children but '%s' has %d; keeping the previous panel."),
+						ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *LayoutContainer->GetClass()->GetName(), MaxChildren, *GetDisplayName(), ValidChildCount);
+					LayoutContainer = PreviousLayout;
+				}
+			}
+			const bool bInitializeScaleBoxSlots = IsValid(LayoutContainer) && LayoutContainer->IsA<UDreamLayoutContainerScaleBox>()
+				&& (!IsValid(PreviousLayout) || !PreviousLayout->IsA<UDreamLayoutContainerScaleBox>());
 			if (IsValid(LayoutContainer))
 			{
 				if (bHasBegunPlay)
@@ -788,10 +818,29 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 				{
 					for (UDreamWidget* Child : Children)
 					{
+						if (bInitializeScaleBoxSlots && IsValid(Child))
+						{
+							// Same transition CreateNewLayoutContainer handles: UMG gives a ScaleBox child a fresh
+							// Center/Center slot, Dream reuses the generic slot so the defaults are set here.
+							if (UDreamPanelSlot* ExistingSlot = Child->GetPanelSlot(); IsValid(ExistingSlot))
+							{
+								ExistingSlot->Modify();
+								ExistingSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
+								ExistingSlot->SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
+							}
+						}
 						EnsurePanelSlotForChild(this, Child, true);
 					}
 				}
 				LayoutContainer->CalculateLayout();
+			}
+			// The details dropdown assigns the container without going through CreateNewLayoutContainer,
+			// so the behaviour dependencies are reconciled here. A widget inside a sub-prefab instance is
+			// left alone: the override system records property values, not added components, and the
+			// dropdown is disabled there anyway.
+			if (!UDreamUIPrefabHelperObject::IsWidgetInsideSubPrefabInstance(this))
+			{
+				SyncRequiredBehavioursForLayoutContainer(PreviousLayout, LayoutContainer);
 			}
 			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 			MarkLayoutForRebuild(this);
@@ -909,6 +958,7 @@ void UDreamWidget::PreEditChange(FProperty* PropertyAboutToChange)
 	}
 	else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, LayoutContainer))
 	{
+		LayoutContainerBeforeEdit = LayoutContainer;
 		if (IsValid(LayoutContainer))
 		{
 			if (bHasBegunPlay)
@@ -2039,6 +2089,82 @@ UDreamUIBehaviour* UDreamWidget::GetComponent(TSubclassOf<UDreamUIBehaviour> Com
 		}
 	}
 	return nullptr;
+}
+
+bool UDreamWidget::SyncRequiredBehavioursForLayoutContainer(const UDreamLayoutContainer* OldLayout, const UDreamLayoutContainer* NewLayout)
+{
+	if (HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
+	{
+		return false;
+	}
+	TArray<TSubclassOf<UDreamUIBehaviour>> RequiredClasses;
+	TArray<TSubclassOf<UDreamUIBehaviour>> PreviouslyRequiredClasses;
+	if (IsValid(NewLayout))
+	{
+		NewLayout->GetRequiredBehaviourClasses(RequiredClasses);
+	}
+	if (IsValid(OldLayout))
+	{
+		OldLayout->GetRequiredBehaviourClasses(PreviouslyRequiredClasses);
+	}
+
+	TArray<UDreamUIBehaviour*> ComponentsToRemove;
+	for (const TSubclassOf<UDreamUIBehaviour>& PreviousClass : PreviouslyRequiredClasses)
+	{
+		UClass* Class = *PreviousClass;
+		const bool bStillRequired = IsValid(Class) && RequiredClasses.ContainsByPredicate([Class](const TSubclassOf<UDreamUIBehaviour>& Required)
+		{
+			return IsValid(*Required) && (Class->IsChildOf(*Required) || (*Required)->IsChildOf(Class));
+		});
+		if (!IsValid(Class) || bStillRequired)
+		{
+			continue;
+		}
+		// Every instance goes, not only the one the old container added: a leftover ContentWidget would
+		// keep capping the new container at one child.
+		ComponentsToRemove.Append(GetComponents(PreviousClass));
+	}
+	TArray<UClass*> ClassesToAdd;
+	for (const TSubclassOf<UDreamUIBehaviour>& RequiredClass : RequiredClasses)
+	{
+		UClass* Class = *RequiredClass;
+		if (IsValid(Class) && !Class->HasAnyClassFlags(CLASS_Abstract) && !IsValid(GetComponent(RequiredClass)))
+		{
+			ClassesToAdd.AddUnique(Class);
+		}
+	}
+	if (ComponentsToRemove.Num() == 0 && ClassesToAdd.Num() == 0)
+	{
+		return false;
+	}
+
+#if WITH_EDITOR
+	if (UObject* WidgetOuter = GetOuter())
+	{
+		WidgetOuter->SetFlags(RF_Transactional);
+		WidgetOuter->Modify();
+	}
+	SetFlags(RF_Transactional);
+	Modify();
+#endif
+	for (UDreamUIBehaviour* Component : ComponentsToRemove)
+	{
+#if WITH_EDITOR
+		Component->Modify();
+#endif
+		RemoveComponent(Component);
+	}
+	for (UClass* Class : ClassesToAdd)
+	{
+		if (UDreamUIBehaviour* NewComponent = AddComponent(Class))
+		{
+#if WITH_EDITOR
+			NewComponent->SetFlags(RF_Transactional);
+			NewComponent->Modify();
+#endif
+		}
+	}
+	return true;
 }
 
 UDreamUIBehaviour* UDreamWidget::GetComponentByInterface(UClass* InterfaceClass)const
@@ -4684,6 +4810,7 @@ UDreamLayoutContainer* UDreamWidget::CreateNewLayoutContainer(TSubclassOf<UDream
 			RemovePanelSlotFromChild(Child);
 		}
 	}
+	SyncRequiredBehavioursForLayoutContainer(OldLayout, NewLayout);
 	MarkLayoutForRebuild(this);
 	MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
@@ -4710,6 +4837,7 @@ void UDreamWidget::RemoveLayoutContainer()
 	{
 		RemovePanelSlotFromChild(Child);
 	}
+	SyncRequiredBehavioursForLayoutContainer(OldLayout, nullptr);
 	MarkLayoutForRebuild(this);
 	MarkDimensionChanged(false, true, true);
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))

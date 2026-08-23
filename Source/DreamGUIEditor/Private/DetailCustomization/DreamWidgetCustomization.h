@@ -101,4 +101,11 @@ private:
 	bool GetLayoutControlVerticalAnchoredPosition()const;
 	bool GetLayoutControlHorizontalSizeDelta()const;
 	bool GetLayoutControlVerticalSizeDelta()const;
+
+	/** Prefab root only: the design canvas rows, backed by the owning prefab editor. */
+	void AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuilder& DetailBuilder);
+	TOptional<int32> GetDesignScreenSizeAxis(int32 AxisIndex) const;
+	void OnDesignScreenSizeAxisCommitted(int32 NewValue, ETextCommit::Type CommitType, int32 AxisIndex);
+	FText GetCanvasSizeText() const;
+	TWeakPtr<class FDreamUIPrefabEditor> PrefabEditorForCanvasSize;
 };

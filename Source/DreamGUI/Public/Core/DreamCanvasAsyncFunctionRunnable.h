@@ -1,4 +1,10 @@
-#pragma once
+﻿#pragma once
+
+#include "CoreMinimal.h"
+#include "HAL/Runnable.h"
+#include "HAL/RunnableThread.h"
+#include "HAL/Event.h"
+#include "Containers/Queue.h"
 
 class FDreamCanvasAsyncFunctionRunnable : FRunnable
 {

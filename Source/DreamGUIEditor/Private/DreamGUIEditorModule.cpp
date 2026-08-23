@@ -282,21 +282,22 @@ void FDreamGUIEditorModule::StartupModule()
 	}
 	//register setting
 	{
+#define DREAM_PLUGIN "DreamPlugin"
 		if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 		{
-			SettingsModule->RegisterSettings("Project", "Plugins", "DreamUI",
+			SettingsModule->RegisterSettings("Project", DREAM_PLUGIN, "DreamGUI",
 				LOCTEXT("DreamUISettingsName", "DreamUI"),
-				LOCTEXT("DreamUISettingsDescription", "DreamUI Settings"),
+				LOCTEXT("DreamUISettingsDescription", "DreamGUI Settings"),
 				GetMutableDefault<UDreamUISettings>());
-			SettingsModule->RegisterSettings("Project", "Plugins", "DreamUI Editor",
-				LOCTEXT("DreamUIEditorSettingsName", "DreamUI Editor"),
-				LOCTEXT("DreamUIEditorSettingsDescription", "DreamUI Editor Settings"),
+			SettingsModule->RegisterSettings("Project", DREAM_PLUGIN, "DreamGUI Editor",
+				LOCTEXT("DreamUIEditorSettingsName", "DreamGUI Editor"),
+				LOCTEXT("DreamUIEditorSettingsDescription", "DreamGUI Editor Settings"),
 				GetMutableDefault<UDreamUIEditorSettings>());
 
 			DreamUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<UDreamUIPrefabSequencerSettings>(TEXT("EmbeddedDreamUIPrefabSequenceEditor"));
 			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedDreamUIPrefabSequenceEditor",
-				LOCTEXT("DreamUIPrefabSequencerSettingsName", "DreamUI Prefab Sequence Editor"),
-				LOCTEXT("DreamUIPrefabSequencerSettingsDescription", "Configure the look and feel of the DreamUI Prefab Sequence Editor."),
+				LOCTEXT("DreamUIPrefabSequencerSettingsName", "DreamGUI Prefab Sequence Editor"),
+				LOCTEXT("DreamUIPrefabSequencerSettingsDescription", "Configure the look and feel of the DreamGUI Prefab Sequence Editor."),
 				DreamUIPrefabSequencerSettings);
 		}
 	}

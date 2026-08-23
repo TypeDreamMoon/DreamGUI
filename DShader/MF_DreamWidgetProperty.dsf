@@ -1,15 +1,17 @@
-// DreamGUI material, hand-written from the decompiled graph.
+// DreamGUI material function, written by hand from the original LGUI graph.
 // Edit this file, then rebuild -- the .uasset is an output.
 //
-// The HLSL lives in DreamUIWidgetProperty.ush and is reached through a Function rather than a bare
-// Custom node. UE.Expression cannot carry IncludeFilePaths: it is an array property, which
-// DreamShader rejects as a literal and the decompiler drops without a warning, so a Custom node
-// written that way compiles against a function nothing declares.
+// Reads the per-widget record the canvas packs into DreamUI_WidgetPropertyDataTexture: which kind of
+// surface this is (FontMark: 0 texture, 1 bitmap font, 2 SDF font), where its clip record lives, and
+// its size and centre. Every UI material starts here.
 //
-// The decompiler emitted the same four-output Custom node four times, once per output pin, with
-// the whole argument list repeated each time. A Function with `out` parameters reads it once.
+// The one thing the decompiler lost, and the reason text stopped rendering: CoordinateInDataTex's
+// default is not a number. The canvas writes each widget's record index into TexCoord[1], so the
+// original graph wires TexCoord[1] to this input's Preview pin and the material never connects the
+// input at all. Decompiled as `= 0.0`, every widget read record 0 -- wrong FontMark, wrong clip
+// coordinate, no glyphs. A graph expression as the default is what puts TexCoord[1] back on Preview.
 
-Function DreamUIWidgetProperty(in float CoordinateInDataTex, in Texture2D DataTex,
+Function Inline DreamUIWidgetProperty(in float CoordinateInDataTex, in Texture2D DataTex,
 	out float FontMark, out float ClipDataCoordinate,
 	out float2 WidgetSize, out float2 WidgetCenterPosition)
 {
@@ -32,9 +34,11 @@ ShaderFunction(Name="Materials/MF_DreamWidgetProperty", Root="Plugin.DreamGUI")
 	}
 
 	Inputs = {
-		opt float CoordinateInDataTex = 0.0;
+		// Default is the record index the canvas wrote, not a constant. See the header comment.
+		opt float CoordinateInDataTex = UE.TexCoord(Index=1).r;
 	}
 
+	// Declaration order is the pin order callers see; it matches the original's SortPriority 0..3.
 	Outputs = {
 		float FontMark;
 		float ClipDataCoordinate;
@@ -59,10 +63,9 @@ ShaderFunction(Name="Materials/MF_DreamWidgetProperty", Root="Plugin.DreamGUI")
 	Layout = {
 		Node(Var="CoordinateInDataTex", X=-784, Y=304);
 		Node(Var="DreamUI_WidgetPropertyDataTexture", X=-784, Y=416);
-		Node(Var="WidgetSize", X=208, Y=304);
-		Node(Var="ClipDataCoordinate", X=208, Y=688);
-		Node(Var="WidgetCenterPosition", X=208, Y=864);
-		Node(Var="FontMark", X=224, Y=512);
+		Node(Var="FontMark", X=224, Y=304);
+		Node(Var="ClipDataCoordinate", X=224, Y=480);
+		Node(Var="WidgetSize", X=224, Y=656);
+		Node(Var="WidgetCenterPosition", X=224, Y=832);
 	}
-
 }

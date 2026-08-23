@@ -23,6 +23,7 @@
 #include "DetailCustomization/DreamPanelSlotCustomization.h"
 #include "Editor/UnrealEdEngine.h"
 #include "PrefabSystem/DreamUIPrefabHelperObject.h"
+#include "PrefabEditor/DreamUIPrefabEditor.h"
 #include "Utils/DreamUIUtils.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
@@ -154,6 +155,105 @@ void FDreamWidgetCustomization::ForceUpdateUI()
 	}
 }
 
+/**
+ * The prefab's design canvas, on the root widget's details. The toolbar's screen-size menu edits the
+ * same numbers; this row is the explicit, always-visible place for them. "Design Screen Size" is the
+ * resolution the designer picked; "Canvas Size" is what the root canvas's scale rule makes of it and
+ * is what a parentless load sizes the root to (UDreamUIPrefab::CanvasSize).
+ */
+void FDreamWidgetCustomization::AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuilder& DetailBuilder)
+{
+	if (TargetScriptArray.Num() != 1 || !TargetScriptArray[0].IsValid())
+	{
+		return;
+	}
+	UDreamWidget* Widget = TargetScriptArray[0].Get();
+	const TWeakPtr<FDreamUIPrefabEditor> EditorPtr = FDreamUIPrefabEditor::GetEditorByWorld(Widget->GetWorld());
+	FDreamUIPrefabEditor* Editor = EditorPtr.IsValid() ? EditorPtr.Pin().Get() : nullptr;
+	if (Editor == nullptr || Editor->GetLoadedRootWidget() != Widget)
+	{
+		return;
+	}
+	PrefabEditorForCanvasSize = EditorPtr;
+
+	IDetailCategoryBuilder& CanvasCategory = DetailBuilder.EditCategory(
+		"DreamCanvasSize", LOCTEXT("CanvasSizeCategory", "Canvas"), ECategoryPriority::Important);
+	CanvasCategory.SetSortOrder(-95);
+
+	auto MakeAxisBox = [this](int32 AxisIndex)
+	{
+		return SNew(SNumericEntryBox<int32>)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.MinValue(1)
+			.MinSliderValue(1)
+			.Value(this, &FDreamWidgetCustomization::GetDesignScreenSizeAxis, AxisIndex)
+			.OnValueCommitted(this, &FDreamWidgetCustomization::OnDesignScreenSizeAxisCommitted, AxisIndex)
+			.Label()
+			[
+				SNumericEntryBox<int32>::BuildNarrowColorLabel(AxisIndex == 0 ? FLinearColor(0.8f, 0.3f, 0.3f) : FLinearColor(0.3f, 0.8f, 0.3f))
+			];
+	};
+	CanvasCategory.AddCustomRow(LOCTEXT("DesignScreenSizeRow", "Design Screen Size"))
+	.NameContent()
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("DesignScreenSize", "Design Screen Size"))
+		.ToolTipText(LOCTEXT("DesignScreenSizeTooltip", "The screen resolution this prefab is designed for. Same as the toolbar's screen-size menu."))
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+	]
+	.ValueContent()
+	.MinDesiredWidth(200.0f)
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(0, 0, 4, 0)[ MakeAxisBox(0) ]
+		+ SHorizontalBox::Slot().FillWidth(1.0f)[ MakeAxisBox(1) ]
+	];
+	CanvasCategory.AddCustomRow(LOCTEXT("CanvasSizeRow", "Canvas Size"))
+	.NameContent()
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("CanvasSize", "Canvas Size"))
+		.ToolTipText(LOCTEXT("CanvasSizeTooltip", "The design canvas after the root canvas's scale rule. A prefab loaded without a parent widget (a world-space presenter) sizes its root to this."))
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+	]
+	.ValueContent()
+	[
+		SNew(STextBlock)
+		.Text(this, &FDreamWidgetCustomization::GetCanvasSizeText)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+	];
+}
+
+TOptional<int32> FDreamWidgetCustomization::GetDesignScreenSizeAxis(int32 AxisIndex) const
+{
+	if (const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	{
+		const FIntPoint Size = Editor->GetDesignerViewportSize();
+		return AxisIndex == 0 ? Size.X : Size.Y;
+	}
+	return TOptional<int32>();
+}
+
+void FDreamWidgetCustomization::OnDesignScreenSizeAxisCommitted(int32 NewValue, ETextCommit::Type CommitType, int32 AxisIndex)
+{
+	if (const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	{
+		FIntPoint Size = Editor->GetDesignerViewportSize();
+		(AxisIndex == 0 ? Size.X : Size.Y) = FMath::Max(1, NewValue);
+		Editor->SetDesignerViewportSize(Size);
+	}
+}
+
+FText FDreamWidgetCustomization::GetCanvasSizeText() const
+{
+	if (const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	{
+		const FIntPoint Size = Editor->GetDesignerCanvasSize();
+		return FText::FromString(FString::Printf(TEXT("%d x %d"), Size.X, Size.Y));
+	}
+	return FText::GetEmpty();
+}
+
 void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> TargetObjects;
@@ -204,6 +304,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	AppearanceCategory.SetSortOrder(-70);
 	AccessibilityCategory.SetSortOrder(-30);
 	AccessibilityCategory.InitiallyCollapsed(true);
+	AddCanvasSizeRowsForPrefabRoot(DetailBuilder);
 
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData));
 

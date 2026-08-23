@@ -20,7 +20,6 @@ class DREAMGUIEDITOR_API FDreamUIEditorTools
 private:
 	static FString PrevSavePrefabFolder;
 public:
-	static FString DreamUIPresetPrefabPath;
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
 	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
 	static TArray<UDreamWidget*> GetRootWidgetListFromSelection(const TArray<UDreamWidget*>& InSelectedWidgets);

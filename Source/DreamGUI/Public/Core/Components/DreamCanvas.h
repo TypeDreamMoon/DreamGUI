@@ -213,6 +213,7 @@ public:
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 	virtual void PostInitProperties() override;
+	virtual void BeginDestroy() override;
 
 	static FName GetPropertyName_TraceChannel()
 	{
@@ -265,8 +266,12 @@ public:
 	/** return root SceneComponent if the root canvas is attached to a SceneComponent */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	USceneComponent* GetAttachedRootSceneComponent() const;
-	/** Only set on root canvas */
-	void AttachToSceneComponent(USceneComponent* InSceneComp) const;
+	/**
+	 * Only set on root canvas. From then on the widget tree follows the component: whenever it
+	 * moves, the tree is re-placed (the component's TransformUpdated is the trigger, so any host
+	 * works -- a presenter, a plain actor's root, a socket). Passing null detaches.
+	 */
+	void AttachToSceneComponent(USceneComponent* InSceneComp);
 
 	bool IsRenderToScreenSpace()const;
 	bool IsRenderToRenderTarget()const;
@@ -713,6 +718,10 @@ public:
 public:
 	static FName DreamUI_MainTextureMaterialParameterName;
 	static FName DreamUI_FontTextureMaterialParameterName;
+	/** xy: atlas slice size in texels, z: field range in texels, w: texels per em (MF_DreamUI_Shade). */
+	static FName DreamUI_FontAtlasInfoMaterialParameterName;
+	/** The font atlas geometry a draw call's glyphs decode with (see DreamUIShade.ush's FontAtlasInfo). */
+	static FVector4f MakeFontAtlasInfo(const class FDreamUIDrawCall& DrawCallItem);
 	static FName DreamUI_ClipDataTexture_MaterialParameterName;
 	static FName DreamUI_WidgetPropertyDataTexture_MaterialParameterName;
 	static FName DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName;
@@ -794,7 +803,10 @@ private:
 	TSharedPtr<FDreamUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 
 	UPROPERTY(Transient)
-	mutable TWeakObjectPtr<USceneComponent> AttachedRootSceneComponent = nullptr;
+	TWeakObjectPtr<USceneComponent> AttachedRootSceneComponent = nullptr;
+	/** Binding on AttachedRootSceneComponent->TransformUpdated while attached. */
+	FDelegateHandle AttachedRootSceneComponentTransformHandle;
+	void OnAttachedRootSceneComponentTransformUpdated(USceneComponent* UpdatedComponent, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport);
 	
 	//clip data is stored in root canvas
 	TArray<TSharedPtr<FDreamUIClipData>> ClipDataList;

@@ -2,177 +2,188 @@
 
 #include "Core/DreamUITextData.h"
 #include "Core/DreamUIGeometry.h"
-#include "Core/Components/DreamText.h"
-#include "Core/DreamUIFontData_BaseObject.h"
-#include "Core/Components/DreamWidget.h"
+#include "Core/Text/DreamTextLayout.h"
+#include "Core/Text/DreamTextPainter.h"
+#include "Math/Float16.h"
 
-FDreamUITextGeometryCache::FDreamUITextGeometryCache(UDreamText* InUIText)
+bool FDreamTextStyle::HasEffects() const
 {
-	this->TextComp = InUIText;
+	return (OutlineColor.A > 0 && OutlineWidth > 0.0f)
+		|| (GlowColor.A > 0 && GlowWidth > 0.0f)
+		|| UnderlayColor.A > 0;
 }
-bool FDreamUITextGeometryCache::SetInputParameters(
-	const FString& InContent,
-	float InWidth,
-	float InHeight,
-	FVector2f InPivot,
-	FColor InColor,
-	float InRenderOpacityForRichText,
-	FVector2f InFontSpace,
-	float InFontSize,
-	EDreamUITextParagraphHorizontalAlign InParagraphHAlign,
-	EDreamUITextParagraphVerticalAlign InParagraphVAlign,
-	EDreamUITextOverflowType InOverflowType,
-	ETextWrappingPolicy InWrappingPolicy,
-	bool InUseKerning,
-	EDreamUITextFontStyle InFontStyle,
-	bool InRichText,
-	int32 InRichTextFilterFlags,
-	UDreamUIFontData_BaseObject* InFont
-)
+
+float FDreamTextStyle::GetFaceReachEm(float ExtraDilateEm) const
 {
-	if (!this->Content.Equals(InContent))
+	return FMath::Max(0.0f, FaceDilate + ExtraDilateEm + FaceSoftness * 0.5f);
+}
+
+float FDreamTextStyle::GetEffectReachEm(float ExtraDilateEm, float MaxGlowBoost) const
+{
+	// Mirrors DreamUIText_ShadeField: the outline sits on the dilated edge, the glow and the underlay's
+	// edge sit outside the outline, the underlay is also shifted by its offset.
+	const float Dilate = FaceDilate + ExtraDilateEm;
+	float Reach = 0.0f;
+	if (OutlineColor.A > 0 && OutlineWidth > 0.0f)
 	{
-		this->Content = InContent;
-		bIsDirty = true;
+		Reach = FMath::Max(Reach, Dilate + OutlineWidth + OutlineSoftness * 0.5f);
 	}
-	if (this->Width != InWidth)
+	if (GlowColor.A > 0 && GlowWidth > 0.0f)
 	{
-		this->Width = InWidth;
-		bIsDirty = true;
+		Reach = FMath::Max(Reach, Dilate + GlowWidth * (1.0f + FMath::Max(MaxGlowBoost, 0.0f)));
 	}
-	if (this->Height != InHeight)
+	if (UnderlayColor.A > 0)
 	{
-		this->Height = InHeight;
-		bIsDirty = true;
+		Reach = FMath::Max(Reach, UnderlayOffset.Size() + Dilate + OutlineWidth + UnderlayDilate + UnderlaySoftness * 0.5f);
 	}
-	if (this->Pivot != InPivot)
+	return FMath::Max(Reach, 0.0f);
+}
+
+bool FDreamTextStyle::operator==(const FDreamTextStyle& Other) const
+{
+	return FaceSoftness == Other.FaceSoftness
+		&& FaceDilate == Other.FaceDilate
+		&& OutlineColor == Other.OutlineColor
+		&& OutlineWidth == Other.OutlineWidth
+		&& OutlineSoftness == Other.OutlineSoftness
+		&& UnderlayColor == Other.UnderlayColor
+		&& UnderlayOffset == Other.UnderlayOffset
+		&& UnderlaySoftness == Other.UnderlaySoftness
+		&& UnderlayDilate == Other.UnderlayDilate
+		&& GlowColor == Other.GlowColor
+		&& GlowWidth == Other.GlowWidth
+		&& GlowPower == Other.GlowPower
+		&& FillDimAlpha == Other.FillDimAlpha
+		&& FillFadeWidth == Other.FillFadeWidth;
+}
+
+namespace DreamTextStyleLocal
+{
+	// The shader decodes x from the high 16 bits and y from the low 16.
+	static uint32 PackHalf2(float X, float Y)
 	{
-		this->Pivot = InPivot;
-		bIsDirty = true;
+		return (uint32(FFloat16(X).Encoded) << 16) | uint32(FFloat16(Y).Encoded);
 	}
-	if (this->Color != InColor)
+	// r = bits 16..23, g = 8..15, b = 0..7, a = 24..31
+	static uint32 PackColor(const FColor& C)
 	{
-		this->Color = InColor;
-		bIsColorDirty = true;
+		return (uint32(C.A) << 24) | (uint32(C.R) << 16) | (uint32(C.G) << 8) | uint32(C.B);
 	}
-	if (this->bRichText != InRichText)
+}
+
+void FDreamTextStyle::Pack(TArray<uint8>& OutBytes) const
+{
+	using namespace DreamTextStyleLocal;
+	uint32 Pixels[PackedPixelCount];
+	Pixels[0] = PackHalf2(FaceSoftness, FaceDilate);
+	Pixels[1] = PackColor(OutlineColor);
+	Pixels[2] = PackHalf2(OutlineWidth, OutlineSoftness);
+	Pixels[3] = PackColor(UnderlayColor);
+	Pixels[4] = PackHalf2(UnderlayOffset.X, UnderlayOffset.Y);
+	Pixels[5] = PackHalf2(UnderlaySoftness, UnderlayDilate);
+	Pixels[6] = PackColor(GlowColor);
+	Pixels[7] = PackHalf2(GlowWidth, GlowPower);
+	Pixels[8] = PackHalf2(FillDimAlpha, FillFadeWidth);
+	OutBytes.SetNumUninitialized(sizeof(Pixels));
+	FMemory::Memcpy(OutBytes.GetData(), Pixels, sizeof(Pixels));
+}
+
+FDreamUITextGeometryCache::FDreamUITextGeometryCache()
+	: Input(MakeUnique<FDreamTextLayoutInput>())
+	, DisplayList(MakeUnique<FDreamTextDisplayList>())
+{
+}
+
+FDreamUITextGeometryCache::~FDreamUITextGeometryCache() = default;
+
+bool FDreamUITextGeometryCache::SetLayoutInput(const FDreamTextLayoutInput& InInput)
+{
+	if (*Input != InInput)
 	{
-		this->bRichText = InRichText;
-		bIsDirty = true;
-	}
-	if (this->RichTextFilterFlags != InRichTextFilterFlags)
-	{
-		this->RichTextFilterFlags = InRichTextFilterFlags;
-		bIsDirty = true;
-	}
-	if (this->RenderOpacityForRichText != InRenderOpacityForRichText)
-	{
-		this->RenderOpacityForRichText = InRenderOpacityForRichText;
-		if (this->bRichText)
-		{
-			bIsColorDirty = true;
-		}
-	}
-	if (this->FontSpace != InFontSpace)
-	{
-		this->FontSpace = InFontSpace;
-		bIsDirty = true;
-	}
-	if (this->FontSize != InFontSize)
-	{
-		this->FontSize = InFontSize;
-		bIsDirty = true;
-	}
-	if (this->ParagraphHAlign != InParagraphHAlign)
-	{
-		this->ParagraphHAlign = InParagraphHAlign;
-		bIsDirty = true;
-	}
-	if (this->ParagraphVAlign != InParagraphVAlign)
-	{
-		this->ParagraphVAlign = InParagraphVAlign;
-		bIsDirty = true;
-	}
-	if (this->OverflowType != InOverflowType)
-	{
-		this->OverflowType = InOverflowType;
-		bIsDirty = true;
-	}
-	if (this->WrappingPolicy != InWrappingPolicy)
-	{
-		this->WrappingPolicy = InWrappingPolicy;
-		bIsDirty = true;
-	}
-	if (this->bUseKerning != InUseKerning)
-	{
-		this->bUseKerning = InUseKerning;
-		bIsDirty = true;
-	}
-	if (this->FontStyle != InFontStyle)
-	{
-		this->FontStyle = InFontStyle;
-		bIsDirty = true;
-	}
-	if (this->Font != InFont)
-	{
-		this->Font = InFont;
+		*Input = InInput;
 		bIsDirty = true;
 	}
 	return bIsDirty;
 }
 
+const FDreamTextLayoutInput& FDreamUITextGeometryCache::GetLayoutInput() const
+{
+	return *Input;
+}
+
 void FDreamUITextGeometryCache::MarkDirty()
 {
 	bIsDirty = true;
+	BestFitKey.Reset();
 }
 
-void FDreamUITextGeometryCache::ConditionalCalculateGeometry()
+bool FDreamUITextGeometryCache::TryGetBestFit(const FDreamTextLayoutInput& InCeilingInput, float& OutSize) const
 {
-	if (bIsColorDirty && !bIsDirty)
+	if (BestFitKey.IsValid() && *BestFitKey == InCeilingInput)
 	{
-		bIsColorDirty = false;
-		FDreamUIGeometry::UpdateUIColor(this->TextComp->GetGeometry(), this->Color);
+		OutSize = BestFitSize;
+		return true;
 	}
-	else if (bIsDirty)
-	{
-		auto RenderCanvas = this->TextComp->GetWidget()->GetRenderCanvas();
-		if (!RenderCanvas)return;
-		
-		bIsDirty = false;
-		bIsColorDirty = false;
-		FDreamUIGeometry::UpdateUIText(
-			this->Content
-			, this->TextProcessingArray
-			, this->Width
-			, this->Height
-			, this->Pivot
-			, this->Color
-			, (uint8)(this->RenderOpacityForRichText * 255)
-			, this->FontSpace
-			, this->TextComp->GetGeometry()
-			, this->FontSize
-			, this->ParagraphHAlign
-			, this->ParagraphVAlign
-			, this->OverflowType
-			, this->WrappingPolicy
-			, this->bUseKerning
-			, this->FontStyle
-			, this->textPreferredSize
-			, this->textTruncated
-			, RenderCanvas
-			, this->TextComp.Get()
-			, this->cacheLinePropertyArray
-			, this->cacheCharPropertyArray
-			, this->cacheRichTextCustomTagArray
-			, this->cacheRichTextImageTagArray
-			, this->cacheEmojiArray
-			, this->Font.Get()
-			, this->bRichText
-			, this->RichTextFilterFlags
-			);
-		
-		this->TextComp->GenerateRichTextImageObject();
-		this->TextComp->GenerateEmojiObject();
-	}
+	return false;
 }
 
+void FDreamUITextGeometryCache::SetBestFit(const FDreamTextLayoutInput& InCeilingInput, float InSize)
+{
+	if (!BestFitKey.IsValid())
+	{
+		BestFitKey = MakeUnique<FDreamTextLayoutInput>();
+	}
+	*BestFitKey = InCeilingInput;
+	BestFitSize = InSize;
+}
+
+bool FDreamUITextGeometryCache::EnsureLayout()
+{
+	if (!bIsDirty)return false;
+	if (!Input->Font.IsValid())return false;
+	bIsDirty = false;
+	LayoutRunCount++;
+	FDreamTextLayoutEngine::Layout(*Input, *DisplayList);
+	return true;
+}
+
+void FDreamUITextGeometryCache::Paint(FDreamUIGeometry& Geometry, const FDreamTextPaintParams& Params)
+{
+	EnsureLayout();
+	FDreamTextPainter::Paint(*DisplayList, Params, Geometry, CharPropertyArray);
+}
+
+const FDreamTextDisplayList& FDreamUITextGeometryCache::GetDisplayList() const
+{
+	return *DisplayList;
+}
+
+bool FDreamUITextGeometryCache::IsTextTruncated() const
+{
+	return DisplayList->bTruncated;
+}
+
+FVector2f FDreamUITextGeometryCache::GetPreferredSize() const
+{
+	return DisplayList->PreferredSize;
+}
+
+const TArray<FDreamUITextLineProperty>& FDreamUITextGeometryCache::GetLines() const
+{
+	return DisplayList->Lines;
+}
+
+const TArray<FDreamUIText_RichTextCustomTag>& FDreamUITextGeometryCache::GetCustomTags() const
+{
+	return DisplayList->CustomTags;
+}
+
+const TArray<FDreamUIText_RichTextImageTag>& FDreamUITextGeometryCache::GetImageTags() const
+{
+	return DisplayList->Images;
+}
+
+const TArray<FDreamUIText_Emoji>& FDreamUITextGeometryCache::GetEmojis() const
+{
+	return DisplayList->Emojis;
+}

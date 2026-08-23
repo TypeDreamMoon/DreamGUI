@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUISpriteData.h"
+#include "Core/DreamGUISettings.h"
 #include "DreamGUI.h"
 #include "Core/DreamUISettings.h"
 #include "Core/Components/DreamSpriteBase.h"
@@ -475,7 +476,7 @@ bool UDreamUISpriteData::SupportReadPixel()const
 
 UDreamUISpriteData* UDreamUISpriteData::GetDefaultWhiteSolid()
 {
-	static auto defaultWhiteSolid = LoadObject<UDreamUISpriteData>(NULL, TEXT("/DreamGUI/DreamUIPreset_WhiteSolid"));
+	static auto defaultWhiteSolid = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultWhiteSolidSprite, TEXT("DefaultWhiteSolidSprite"));
 	if (defaultWhiteSolid == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default Sprite error! Missing some content of DreamGUI plugin, reinstall this plugin may fix the issue.")
@@ -490,7 +491,7 @@ UDreamUISpriteData* UDreamUISpriteData::GetDefaultWhiteSolid()
 }
 UDreamUISpriteData* UDreamUISpriteData::GetDefaultFrameRect()
 {
-	static auto defaultFrameRect = LoadObject<UDreamUISpriteData>(NULL, TEXT("/DreamGUI/DreamUIPreset_Rect_Sprite"));
+	static auto defaultFrameRect = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultFrameRectSprite, TEXT("DefaultFrameRectSprite"));
 	if (defaultFrameRect == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default sprite error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue.")

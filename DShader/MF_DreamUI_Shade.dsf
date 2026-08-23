@@ -1,0 +1,97 @@
+// DreamGUI material function, written by hand.
+// Edit this file, then rebuild -- the .uasset is an output.
+//
+// The whole UI pixel for a material host: sprite, bitmap glyph, SDF glyph, MTSDF glyph with its
+// style record (outline / underlay / glow / fill), and the clip. The HLSL is not here: it is
+// DreamUI_ShadePixel in DreamUIShade.ush, the same function DreamGUI's built-in global shader runs,
+// so a material drawn by the UE renderer (world-space canvases) or set as an OverrideMaterial looks
+// exactly like the built-in path. An OverrideMaterial that wants more calls this function and works
+// on its Result; it never needs to know the vertex layout or the record format.
+//
+// Result is straight (non-premultiplied) colour in rgb and opacity in a. The host decides whether
+// to premultiply: DreamUI_ImageAndFont does, except when DreamGUI's own renderer is drawing it.
+//
+// SelfContained: the body is embedded in the Custom node and the #include is attached to that node
+// directly (see MF_DreamUI_Clip.dsf for why the Inline form would cache a build-artifact path).
+// FontTexSampler / MainTexSampler are the samplers DreamShader adds after every texture input.
+Function SelfContained float4 DreamUIShade(in float2 UV0, in float2 UV1, in float2 UV2, in float2 UV3,
+	in float4 RawVertexColor, in float3 LocalPosition,
+	in Texture2D MainTex, in Texture2DArray FontTex, in Texture2D WidgetDataTex, in Texture2D ClipDataTex,
+	in float4 FontAtlasInfo)
+{
+	#include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
+	return DreamUI_ShadePixel(UV0, UV1, UV2, UV3, RawVertexColor, LocalPosition,
+		MainTex, MainTexSampler, FontTex, FontTexSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo);
+}
+
+ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
+{
+	// The parameters the canvas drives on every UI material instance; the names are the contract
+	// (UDreamCanvas::DreamUI_*MaterialParameterName).
+	Properties = {
+		TextureObjectParameter DreamUI_MainTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		TextureObjectParameter DreamUI_FontTexture = Path(Plugins.DreamGUI, "Textures/DreamUIPreset_2DArray") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		TextureObjectParameter DreamUI_WidgetPropertyDataTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Data";
+		];
+		TextureObjectParameter DreamUI_ClipDataTexture = Path(Engine, "EngineResources/DefaultTexture") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Data";
+		];
+		// xy: atlas slice size in texels, z: field range in texels (2 * spread), w: texels per em.
+		VectorParameter DreamUI_FontAtlasInfo = float4(1.0, 1.0, 0.0, 0.0) [
+			Group="DreamUI";
+		];
+	}
+
+	Inputs = {
+		// Lets a host tint or fade the whole pixel without touching the record; defaults to no-op.
+		opt float4 Tint = float4(1.0, 1.0, 1.0, 1.0);
+	}
+
+	Outputs = {
+		float4 Result;
+	}
+
+	Graph = {
+		float2 UV0 = UE.TexCoord(Index=0);
+		float2 UV1 = UE.TexCoord(Index=1);
+		float2 UV2 = UE.TexCoord(Index=2);
+		float2 UV3 = UE.TexCoord(Index=3);
+		// The VertexColor node's main pin is rgb; its alpha is a separate pin. Rebuild the float4 so the
+		// Custom input gets all four channels (a bare float4-typed read only carries the rgb pin).
+		float4 VertexColorNode = UE.Expression(Class="VertexColor", OutputType="float4");
+		float4 RawVertexColor = float4(VertexColorNode.rgb, VertexColorNode.a);
+		float3 LocalPosition = UE.Expression(Class="LocalPosition", OutputType="float3");
+		float4 Shaded = DreamUIShade(UV0, UV1, UV2, UV3, RawVertexColor, LocalPosition,
+			DreamUI_MainTexture, DreamUI_FontTexture, DreamUI_WidgetPropertyDataTexture, DreamUI_ClipDataTexture,
+			DreamUI_FontAtlasInfo);
+
+		Result = (Shaded * Tint);
+	}
+
+	Layout = {
+		Node(Var="UV0", X=-1104, Y=-176);
+		Node(Var="UV1", X=-1104, Y=-64);
+		Node(Var="UV2", X=-1104, Y=48);
+		Node(Var="UV3", X=-1104, Y=160);
+		Node(Var="VertexColorNode", X=-1360, Y=272);
+		Node(Var="RawVertexColor", X=-1104, Y=272);
+		Node(Var="LocalPosition", X=-1104, Y=384);
+		Node(Var="DreamUI_MainTexture", X=-1104, Y=496);
+		Node(Var="DreamUI_FontTexture", X=-1104, Y=672);
+		Node(Var="DreamUI_WidgetPropertyDataTexture", X=-1104, Y=848);
+		Node(Var="DreamUI_ClipDataTexture", X=-1104, Y=1024);
+		Node(Var="DreamUI_FontAtlasInfo", X=-1104, Y=1200);
+		Node(Var="Shaded", X=-560, Y=160);
+		Node(Var="Tint", X=-560, Y=480);
+		Node(Var="Result", X=-128, Y=208);
+	}
+}

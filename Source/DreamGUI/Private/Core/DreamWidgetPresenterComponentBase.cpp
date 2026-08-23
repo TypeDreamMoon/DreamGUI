@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Core/DreamGUISettings.h"
 
 #include "EngineUtils.h"
 #include "DreamGUI.h"
@@ -17,11 +18,10 @@ UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
-	bWantsOnUpdateTransform = true;
 
 	CanvasTemplate = CreateDefaultSubobject<UDreamCanvas>(TEXT("CanvasTemplate"));
 	
-	NavigationSelectionPrefab = LoadObject<UDreamUIPrefab>(NULL, TEXT("/DreamGUI/Prefabs/NavigationSelectionInputHandler"));
+	NavigationSelectionPrefab = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->NavigationSelectionPrefab, TEXT("NavigationSelectionPrefab"));
 }
 
 void UDreamWidgetPresenterComponentBase::BeginPlay()
@@ -137,15 +137,6 @@ void UDreamWidgetPresenterComponentBase::PostInitProperties()
 	Super::PostInitProperties();
 }
 
-void UDreamWidgetPresenterComponentBase::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
-{
-	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-	if (LoadedWidget.IsValid())
-	{
-		LoadedWidget->CalculateObjectToWorldTransform(true);
-	}
-}
-
 #if WITH_EDITOR
 void UDreamWidgetPresenterComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -157,6 +148,8 @@ void UDreamWidgetPresenterComponentBase::PostEditChangeProperty(FPropertyChanged
 }
 
 #include "Dialog/SCustomDialog.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Text/STextBlock.h"
 bool UDreamWidgetPresenterComponentBase::bNeedCheckEventSystem = true;
 bool UDreamWidgetPresenterComponentBase::bNeverCheckEventSystem = false;
 bool UDreamWidgetPresenterComponentBase::bNeedCheckRaycasterSource = true;
@@ -199,8 +192,9 @@ void UDreamWidgetPresenterComponentBase::CheckNecessaryObjects()
 						FSimpleDelegate::CreateLambda([=, WeakThis = MakeWeakObjectPtr(this)]()
 						{
 							if (!WeakThis.IsValid())return;
-							auto ClassName = TEXT("DreamEventSystemActor_EnhancedInput");
-							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/DreamGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+							auto ClassName = TEXT("EventSystemActorClass");
+							if (auto ActorClass = UDreamGUISettings::LoadSettingClass(
+								UDreamGUISettings::Get()->EventSystemActorClass, ClassName))
 							{
 								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
 								Actor->SetActorLabel(ClassName);
@@ -266,8 +260,9 @@ void UDreamWidgetPresenterComponentBase::CheckNecessaryObjects()
 						FSimpleDelegate::CreateLambda([=, &ExistWorldSpaceRaycasterSource, WeakThis = MakeWeakObjectPtr(this)]()
 						{
 							if (!WeakThis.IsValid())return;
-							auto ClassName = TEXT("DreamWorldSpaceRaycasterSource_Mouse");
-							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/DreamGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+							auto ClassName = TEXT("WorldSpaceRaycasterSourceClass");
+							if (auto ActorClass = UDreamGUISettings::LoadSettingClass(
+								UDreamGUISettings::Get()->WorldSpaceRaycasterSourceClass, ClassName))
 							{
 								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
 								Actor->SetActorLabel(ClassName);

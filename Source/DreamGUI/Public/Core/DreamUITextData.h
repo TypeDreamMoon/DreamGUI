@@ -37,6 +37,23 @@ enum class EDreamUITextFontStyle :uint8
 	BoldAndItalic,
 };
 
+/**
+ * Whether CJK text wraps between words rather than between any two characters.
+ *
+ * The line-break rules (UAX #14) let a line end between any two ideographs, which is what every
+ * browser does by default. CSS Text 4 added `word-break: auto-phrase` to keep words together instead;
+ * this is the same idea, using the dictionary ICU ships for Chinese and Japanese. A word that does not
+ * fit on a line still breaks inside under AllowPerCharacterWrapping, so it never makes text overflow.
+ */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamTextPhraseWrap : uint8
+{
+	/** Break between any two CJK characters, as the line-break rules allow. */
+	Off,
+	/** Break only between dictionary words inside CJK runs. */
+	CJKDictionary,
+};
+
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUITextOverflowType :uint8
 {
@@ -48,6 +65,114 @@ enum class EDreamUITextOverflowType :uint8
 	Truncate = 2,
 	/** replace chars with ... if out of range */
 	Ellipsis = 3,
+};
+
+/**
+ * How the built-in shader draws a text's glyphs beyond the plain face: outline, underlay (drop
+ * shadow), glow, and how the unfilled part of a lyric line looks. Lengths are in em, so a style
+ * reads the same at every font size. Only distance-field fonts (MTSDF) render these; bitmap fonts
+ * draw the face alone.
+ *
+ * The style is stored per widget in the canvas's widget property texture, so texts with different
+ * styles still batch into one draw.
+ */
+USTRUCT(BlueprintType, Category = DreamGUI)
+struct DREAMGUI_API FDreamTextStyle
+{
+	GENERATED_BODY()
+
+	/**
+	 * Extra edge softness (blur) in em. 0 draws a crisp edge. Each glyph softens on its own, so past
+	 * about 0.05 em the halos of neighbouring glyphs visibly merge; a real blur of a whole line is a
+	 * post-process job, not a style.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face", meta = (ClampMin = "0", UIMax = "0.5"))
+	float FaceSoftness = 0.0f;
+	/** Grow (positive) or shrink (negative) the face, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face", meta = (UIMin = "-0.2", UIMax = "0.2"))
+	float FaceDilate = 0.0f;
+
+	/** Outline colour; alpha 0 means no outline. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Outline")
+	FColor OutlineColor = FColor(0, 0, 0, 0);
+	/** Outline width outside the face, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Outline", meta = (ClampMin = "0", UIMax = "0.5"))
+	float OutlineWidth = 0.0f;
+	/** Outline edge softness, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Outline", meta = (ClampMin = "0", UIMax = "0.5"))
+	float OutlineSoftness = 0.0f;
+
+	/** Underlay (drop shadow) colour; alpha 0 means no underlay. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay")
+	FColor UnderlayColor = FColor(0, 0, 0, 0);
+	/** Underlay offset in em; +Y is down. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay", meta = (UIMin = "-0.5", UIMax = "0.5"))
+	FVector2f UnderlayOffset = FVector2f(0.05f, 0.05f);
+	/** Underlay edge softness, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay", meta = (ClampMin = "0", UIMax = "0.5"))
+	float UnderlaySoftness = 0.0f;
+	/** Grow the underlay beyond the face, in em. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Underlay", meta = (UIMin = "-0.2", UIMax = "0.5"))
+	float UnderlayDilate = 0.0f;
+
+	/** Glow colour; alpha scales the glow's strength, 0 means no glow. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow")
+	FColor GlowColor = FColor(255, 255, 255, 0);
+	/**
+	 * How far the glow reaches outside the face, in em. Every reach is clamped to what the font's
+	 * field holds (SDFRadius / SampleFontSize em), so a wider glow needs a font with a wider spread.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow", meta = (ClampMin = "0", UIMax = "1"))
+	float GlowWidth = 0.0f;
+	/** Glow falloff exponent; higher keeps the glow tight to the face. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Glow", meta = (ClampMin = "0.01", UIMax = "8"))
+	float GlowPower = 1.0f;
+
+	/** Alpha of the part of a glyph run that the fill progress has not reached yet (lyrics). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fill", meta = (ClampMin = "0", ClampMax = "1"))
+	float FillDimAlpha = 0.35f;
+	/** Width of the lit/unlit transition as a fraction of the run, 0..1. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fill", meta = (ClampMin = "0.001", ClampMax = "1"))
+	float FillFadeWidth = 0.15f;
+
+	bool operator==(const FDreamTextStyle& Other) const;
+	bool operator!=(const FDreamTextStyle& Other) const { return !(*this == Other); }
+
+	/** Whether anything besides the face is drawn (outline, glow or underlay with a visible colour). */
+	bool HasEffects() const;
+	/** How far outside the glyph's edge the face reaches, in em: dilation (plus ExtraDilateEm, e.g. bold) and half the softness band. */
+	float GetFaceReachEm(float ExtraDilateEm) const;
+	/** How far outside the glyph's edge the effects reach, in em, with the glow at its widest boost. */
+	float GetEffectReachEm(float ExtraDilateEm, float MaxGlowBoost) const;
+
+	/** Number of R32 pixels the packed style takes in the widget property record. */
+	static constexpr int32 PackedPixelCount = 9;
+	/** Pixel index of the first style pixel in the record (after the four every widget has). */
+	static constexpr int32 PackedPixelStart = 4;
+	/** Packs the style the way DreamUIText.ush's DreamUIText_ReadStyle reads it: PackedPixelCount * 4 bytes. */
+	void Pack(TArray<uint8>& OutBytes) const;
+};
+
+/**
+ * A run of characters that fills together, for lyric-style progress: the characters from
+ * StartCharIndex to EndCharIndex (inclusive, indices into the text) sweep from unlit to lit as
+ * Progress goes 0..1, left to right across the run's glyphs.
+ */
+USTRUCT(BlueprintType, Category = DreamGUI)
+struct DREAMGUI_API FDreamTextFillSegment
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI)
+	int32 StartCharIndex = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI)
+	int32 EndCharIndex = 0;
+	/** 0 = none of the run is lit, 1 = all of it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI, meta = (ClampMin = "0", ClampMax = "1"))
+	float Progress = 1.0f;
+	/** Extra glow for this run, added to the style's GlowWidth as a fraction (1 = twice as wide). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI, meta = (ClampMin = "0"))
+	float GlowBoost = 0.0f;
 };
 
 /** single char property */
@@ -230,73 +355,60 @@ namespace FDreamUIText_CodePoint
 	}
 };
 
+struct FDreamTextLayoutInput;
+struct FDreamTextDisplayList;
+struct FDreamTextPaintParams;
+
+/**
+ * The text component's layout cache: the last layout input, the display list it produced, and the
+ * char properties the last paint wrote. Layout and paint are separate steps. A layout is re-run only
+ * when its input changes (or the font says its glyphs did); a paint runs every time the geometry is
+ * rebuilt, from the cached display list, which is cheap.
+ */
 struct DREAMGUI_API FDreamUITextGeometryCache
 {
 public:
-	FDreamUITextGeometryCache() {}
-	FDreamUITextGeometryCache(UDreamText* InUIText);
-	/**
-	 * @return true - anything change
-	 */
-	bool SetInputParameters(
-		const FString& InContent,
-		float InWidth,
-		float InHeight,
-		FVector2f InPivot,
-		FColor InColor,
-		float InRenderOpacityForRichText,
-		FVector2f InFontSpace,
-		float InFontSize,
-		EDreamUITextParagraphHorizontalAlign InParagraphHAlign,
-		EDreamUITextParagraphVerticalAlign InParagraphVAlign,
-		EDreamUITextOverflowType InOverflowType,
-		ETextWrappingPolicy InWrappingPolicy,
-		bool InUseKerning,
-		EDreamUITextFontStyle InFontStyle,
-		bool InRichText,
-		int32 InRichTextFilterFlags,
-		UDreamUIFontData_BaseObject* InFont
-	);
-private:
-#pragma region InputParameters
-	TArray<FDreamUIText_TextProcessingElement> TextProcessingArray;
-	FString Content = TEXT("");
-	float Width = 0;
-	float Height = 0;
-	FVector2f Pivot = FVector2f::ZeroVector;
-	FColor Color = FColor::White;
-	float RenderOpacityForRichText = 1.0f;
-	FVector2f FontSpace = FVector2f::ZeroVector;
-	float FontSize = 0;
-	EDreamUITextParagraphHorizontalAlign ParagraphHAlign = EDreamUITextParagraphHorizontalAlign::Left;
-	EDreamUITextParagraphVerticalAlign ParagraphVAlign = EDreamUITextParagraphVerticalAlign::Bottom;
-	EDreamUITextOverflowType OverflowType = EDreamUITextOverflowType::HorizontalOverflow;
-	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
-	bool bUseKerning = false;
-	EDreamUITextFontStyle FontStyle = EDreamUITextFontStyle::None;
-	bool bRichText = false;
-	int32 RichTextFilterFlags = 0xffffffff;
-	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
-#pragma endregion InputParameters
+	FDreamUITextGeometryCache();
+	~FDreamUITextGeometryCache();
+	FDreamUITextGeometryCache(const FDreamUITextGeometryCache&) = delete;
+	FDreamUITextGeometryCache& operator=(const FDreamUITextGeometryCache&) = delete;
 
-	bool bIsDirty = true;//vertex or triangle data is dirty
-	bool bIsColorDirty = true;//only color data is dirty (no include rich text's color)
-	TWeakObjectPtr<UDreamText> TextComp = nullptr;
-
-public:
-#pragma region OutputResults
-	/** indicating whether the text is Truncated or using Ellipsis */
-	bool textTruncated = false;
-	FVector2f textPreferredSize = FVector2f::ZeroVector;
-	/** line properties, from first line to last one in array */
-	TArray<FDreamUITextLineProperty> cacheLinePropertyArray;
-	/** char properties, from first char to last one in array */
-	TArray<FDreamUITextCharProperty> cacheCharPropertyArray;
-	TArray<FDreamUIText_RichTextCustomTag> cacheRichTextCustomTagArray;
-	TArray<FDreamUIText_RichTextImageTag> cacheRichTextImageTagArray;
-	TArray<FDreamUIText_Emoji> cacheEmojiArray;
-#pragma endregion OutputResults
+	/** Replace the layout input. Returns true when the layout is now stale. */
+	bool SetLayoutInput(const FDreamTextLayoutInput& InInput);
+	const FDreamTextLayoutInput& GetLayoutInput() const;
+	/** Force the next EnsureLayout to run, for when the glyphs changed underneath an unchanged input. */
 	void MarkDirty();
-	/** check if dirty before calculate geometry */
-	void ConditionalCalculateGeometry();
+	bool IsLayoutDirty() const { return bIsDirty; }
+	/** How many layouts have run on this cache; what a test reads to prove a query was free. */
+	int32 GetLayoutRunCount() const { return LayoutRunCount; }
+	/** Lays out if stale. Measures only -- no geometry is touched. Returns true if a layout ran. */
+	bool EnsureLayout();
+	/** Paints the display list into the geometry, laying out first if stale. */
+	void Paint(FDreamUIGeometry& Geometry, const FDreamTextPaintParams& Params);
+
+	const FDreamTextDisplayList& GetDisplayList() const;
+	/** Emitted glyphs in order, as written by the last Paint. */
+	const TArray<FDreamUITextCharProperty>& GetCharPropertyArray() const { return CharPropertyArray; }
+	bool IsTextTruncated() const;
+	FVector2f GetPreferredSize() const;
+	const TArray<FDreamUITextLineProperty>& GetLines() const;
+	const TArray<FDreamUIText_RichTextCustomTag>& GetCustomTags() const;
+	const TArray<FDreamUIText_RichTextImageTag>& GetImageTags() const;
+	const TArray<FDreamUIText_Emoji>& GetEmojis() const;
+
+	/**
+	 * Best Fit memo. The search probes several sizes, each a layout; remembering the answer for the
+	 * input it was found against (with FontSize at the ceiling) makes the common call -- nothing
+	 * changed -- free. MarkDirty forgets it, since a glyph change can move the answer.
+	 */
+	bool TryGetBestFit(const FDreamTextLayoutInput& InCeilingInput, float& OutSize) const;
+	void SetBestFit(const FDreamTextLayoutInput& InCeilingInput, float InSize);
+private:
+	TUniquePtr<FDreamTextLayoutInput> Input;
+	TUniquePtr<FDreamTextDisplayList> DisplayList;
+	TArray<FDreamUITextCharProperty> CharPropertyArray;
+	TUniquePtr<FDreamTextLayoutInput> BestFitKey;
+	float BestFitSize = 0.0f;
+	int32 LayoutRunCount = 0;
+	bool bIsDirty = true;
 };

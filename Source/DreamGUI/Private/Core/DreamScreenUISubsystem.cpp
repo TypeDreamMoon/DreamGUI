@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamScreenUISubsystem.h"
+#include "Core/DreamGUISettings.h"
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
@@ -195,8 +196,8 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 	}
 	if (!bHasEventSystem && !IsValid(CreatedEventSystemActor))
 	{
-		static const TCHAR* EventSystemPath = TEXT("/DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput.DreamEventSystemActor_EnhancedInput_C");
-		if (UClass* EventSystemClass = LoadClass<AActor>(nullptr, EventSystemPath))
+		if (UClass* EventSystemClass = UDreamGUISettings::LoadSettingClass(
+			UDreamGUISettings::Get()->EventSystemActorClass, TEXT("EventSystemActorClass")))
 		{
 			FActorSpawnParameters SpawnParameters;
 			SpawnParameters.Name = MakeUniqueObjectName(GetWorld(), EventSystemClass, TEXT("DreamEventSystem"));
@@ -206,7 +207,8 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 		}
 		else
 		{
-			UE_LOG(DreamGUI, Error, TEXT("Cannot create screen UI input: missing %s"), EventSystemPath);
+			UE_LOG(DreamGUI, Error, TEXT("Cannot create screen UI input: Project Settings > Plugins > Dream GUI > ")
+				TEXT("EventSystemActorClass is not set or failed to load."));
 		}
 	}
 }

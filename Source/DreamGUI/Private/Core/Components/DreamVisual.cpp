@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamVisual.h"
+#include "Core/DreamUITextData.h"
+#include "Engine/World.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Utils/DreamUIUtils.h"
@@ -434,6 +436,7 @@ int UDreamVisual::WidgetPropertyDataLength =
 	+ sizeof(float)//2nd pixel, clip data coordinate
 	+ sizeof(float)//3rd pixel, widget width & height, half precision float
 	+ sizeof(float)//4th pixel, widget rect center position in canvas space, half precision float
+	+ sizeof(float) * FDreamTextStyle::PackedPixelCount//5th..13th pixel, text style (FDreamTextStyle::Pack), texts only
 ;
 void UDreamVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCenterPosition)const
 {

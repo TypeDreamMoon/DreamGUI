@@ -85,6 +85,21 @@ int32 UDreamUISettings::GetPriorityInSceneViewExtension()
 	return GetDefault<UDreamUISettings>()->PriorityInSceneViewExtension;
 }
 
+bool UDreamUISettings::GetUseBuiltInUIShader()
+{
+	return GetDefault<UDreamUISettings>()->bUseBuiltInUIShader;
+}
+
+bool UDreamUISettings::GetAsyncGlyphRasterization()
+{
+	return GetDefault<UDreamUISettings>()->bAsyncGlyphRasterization;
+}
+
+int32 UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame()
+{
+	return GetDefault<UDreamUISettings>()->AsyncGlyphSyncBudgetPerFrame;
+}
+
 
 #if WITH_EDITOR
 void UDreamUIEditorSettings::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)

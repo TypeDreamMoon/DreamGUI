@@ -415,6 +415,60 @@ void FDreamUIPrefabEditor::SyncSelection()
 	RefreshOutliner();
 }
 
+void FDreamUIPrefabEditor::BuildTabDescriptors()
+{
+	TabDescriptors.Reset();
+	auto Content = [](TSharedPtr<SWidget> Widget) { return [Widget]() { return Widget.ToSharedRef(); }; };
+
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::ViewportID, LOCTEXT("ViewportTab", "Viewport"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports"), Content(ViewportPtr) });
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::DetailsID, LOCTEXT("DetailsTabLabel", "Details"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Details"), Content(DetailsPtr) });
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::OutlinerID, LOCTEXT("OutlinerTabLabel", "Hierarchy"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Outliner"), Content(OutlinerPtr) });
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::PaletteID, LOCTEXT("PaletteTabLabel", "Palette"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Kismet.Tabs.Palette"), Content(PalettePtr) });
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::SequencerID, LOCTEXT("SequencerTabLabel", "Animations"),
+		FSlateIcon(FUMGStyle::GetStyleSetName(), "Animations.TabIcon"), Content(SequencerPtr) });
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::CompilerResultsID, LOCTEXT("CompilerResultsTabLabel", "Compiler Results"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Message"),
+		[this]()
+		{
+			check(CompilerResultsListing.IsValid());
+			return FModuleManager::LoadModuleChecked<FMessageLogModule>("MessageLog").CreateLogListingWidget(CompilerResultsListing.ToSharedRef());
+		} });
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID, LOCTEXT("PrefabBehaviourViewerTabLabel", "Behaviour"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Event"), Content(PrefabBehaviourViewer),
+		[this]() { if (PrefabBehaviourViewer.IsValid()) { PrefabBehaviourViewer->Rebuild(); } } });
+	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::PrefabOverridesViewerID, LOCTEXT("PrefabOverridesViewerTabLabel", "Overrides"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Adjust"), Content(PrefabOverridesViewer),
+		[this]() { if (PrefabOverridesViewer.IsValid()) { PrefabOverridesViewer->Rebuild(); } } });
+	FTabDescriptor RawData{ FDreamUIPrefabEditorTabs::PrefabRawDataViewerID, LOCTEXT("PrefabRawDataViewerTabLabel", "Raw Data"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Advanced"), Content(PrefabRawDataViewer) };
+	RawData.bListedInWindowMenu = false;
+	TabDescriptors.Add(MoveTemp(RawData));
+}
+
+const FDreamUIPrefabEditor::FTabDescriptor* FDreamUIPrefabEditor::FindTabDescriptor(FName TabId) const
+{
+	return TabDescriptors.FindByPredicate([TabId](const FTabDescriptor& Desc) { return Desc.Id == TabId; });
+}
+
+TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTabFromDescriptor(const FSpawnTabArgs& Args, FName TabId)
+{
+	const FTabDescriptor* Desc = FindTabDescriptor(TabId);
+	checkf(Desc, TEXT("No tab descriptor for %s"), *TabId.ToString());
+	if (Desc->OnSpawn)
+	{
+		Desc->OnSpawn();
+	}
+	return SNew(SDockTab)
+		.Label(Desc->Label)
+		[
+			Desc->MakeContent()
+		];
+}
+
 void FDreamUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
 	WorkspaceMenuCategory = InTabManager->AddLocalWorkspaceMenuCategory(LOCTEXT("WorkspaceMenu_DreamUIPrefabEditor", "DreamUIPrefab Editor"));
@@ -422,64 +476,107 @@ void FDreamUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& In
 
 	FAssetEditorToolkit::RegisterTabSpawners(InTabManager);
 
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::ViewportID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_Viewport))
-		.SetDisplayName(LOCTEXT("ViewportTab", "Viewport"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports"));
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::DetailsID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_Details))
-		.SetDisplayName(LOCTEXT("DetailsTabLabel", "Details"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Details"));
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::OutlinerID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_Outliner))
-		.SetDisplayName(LOCTEXT("OutlinerTabLabel", "Hierarchy"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Outliner"));
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::PaletteID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_Palette))
-		.SetDisplayName(LOCTEXT("PaletteTabLabel", "Palette"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "Kismet.Tabs.Palette"));
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::SequencerID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_Sequencer))
-		.SetDisplayName(LOCTEXT("SequencerTabLabel", "Animations"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		.SetIcon(FSlateIcon(FUMGStyle::GetStyleSetName(), "Animations.TabIcon"));
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::PrefabRawDataViewerID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_PrefabRawDataViewer))
-		.SetDisplayName(LOCTEXT("PrefabRawDataViewerTabLabel", "PrefabRawDataViewer"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		;
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::PrefabOverridesViewerID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_PrefabOverridesViewer))
-		.SetDisplayName(LOCTEXT("PrefabOverridesViewerTabLabel", "Overrides"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		;
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_PrefabBehaviourViewer))
-		.SetDisplayName(LOCTEXT("PrefabBehaviourViewerTabLabel", "Behaviour"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		;
-
-	InTabManager->RegisterTabSpawner(FDreamUIPrefabEditorTabs::CompilerResultsID, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTab_CompilerResults))
-		.SetDisplayName(LOCTEXT("CompilerResultsTabLabel", "Compiler Results"))
-		.SetGroup(WorkspaceMenuCategoryRef)
-		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Message"));
+	if (TabDescriptors.Num() == 0)
+	{
+		BuildTabDescriptors();
+	}
+	for (const FTabDescriptor& Desc : TabDescriptors)
+	{
+		InTabManager->RegisterTabSpawner(Desc.Id, FOnSpawnTab::CreateSP(this, &FDreamUIPrefabEditor::SpawnTabFromDescriptor, Desc.Id))
+			.SetDisplayName(Desc.Label)
+			.SetGroup(WorkspaceMenuCategoryRef)
+			.SetIcon(Desc.Icon)
+			.SetMenuType(Desc.bListedInWindowMenu ? ETabSpawnerMenuType::Enabled : ETabSpawnerMenuType::Hidden);
+	}
 }
 void FDreamUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
 	FAssetEditorToolkit::UnregisterTabSpawners(InTabManager);
 
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::ViewportID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::DetailsID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::OutlinerID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::PaletteID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::SequencerID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::PrefabRawDataViewerID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::PrefabOverridesViewerID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID);
-	InTabManager->UnregisterTabSpawner(FDreamUIPrefabEditorTabs::CompilerResultsID);
+	for (const FTabDescriptor& Desc : TabDescriptors)
+	{
+		InTabManager->UnregisterTabSpawner(Desc.Id);
+	}
+}
+
+TSharedRef<FTabManager::FLayout> FDreamUIPrefabEditor::CreateDefaultLayout()
+{
+	// Bump the version whenever the tab set or the arrangement changes: the tab manager restores a
+	// user's saved layout by this name, so an unchanged name means an edit here never reaches anyone
+	// who has opened the editor before.
+	//
+	//   +-----------+--------------------------------+-----------+
+	//   | Palette   |                                |           |
+	//   +-----------+           Viewport             |  Details  |
+	//   | Hierarchy |                                |           |
+	//   |           +--------------------------------+-----------+
+	//   |           | Animations | Compiler Results | Behaviour | Overrides | Raw Data   (all closed)
+	//   +-----------+--------------------------------------------+
+	constexpr float LeftColumnWidth = 0.15f;
+	constexpr float ViewportWidth = 0.75f;
+	constexpr float BottomDrawerHeight = 0.3f;
+	return FTabManager::NewLayout("Standalone_DreamUIPrefabEditor_Layout_v4")
+		->AddArea
+		(
+			FTabManager::NewPrimaryArea()
+			->SetOrientation(Orient_Horizontal)
+			->Split
+			(
+				FTabManager::NewSplitter()
+				->SetOrientation(Orient_Vertical)
+				->SetSizeCoefficient(LeftColumnWidth)
+				->Split
+				(
+					FTabManager::NewStack()
+					->SetSizeCoefficient(0.5f)
+					->AddTab(FDreamUIPrefabEditorTabs::PaletteID, ETabState::OpenedTab)
+				)
+				->Split
+				(
+					FTabManager::NewStack()
+					->SetSizeCoefficient(0.5f)
+					->AddTab(FDreamUIPrefabEditorTabs::OutlinerID, ETabState::OpenedTab)
+				)
+			)
+			->Split
+			(
+				FTabManager::NewSplitter()
+				->SetOrientation(Orient_Vertical)
+				->SetSizeCoefficient(1.0f - LeftColumnWidth)
+				->Split
+				(
+					FTabManager::NewSplitter()
+					->SetOrientation(Orient_Horizontal)
+					->SetSizeCoefficient(1.0f - BottomDrawerHeight)
+					->Split
+					(
+						FTabManager::NewStack()
+						->SetSizeCoefficient(ViewportWidth)
+						->SetHideTabWell(true)
+						->AddTab(FDreamUIPrefabEditorTabs::ViewportID, ETabState::OpenedTab)
+					)
+					->Split
+					(
+						FTabManager::NewStack()
+						->SetSizeCoefficient(1.0f - ViewportWidth)
+						->AddTab(FDreamUIPrefabEditorTabs::DetailsID, ETabState::OpenedTab)
+					)
+				)
+				->Split
+				(
+					// Every secondary panel has a home here, so InvokeTab lands it in a known place
+					// instead of wherever the tab manager guesses.
+					FTabManager::NewStack()
+					->SetSizeCoefficient(BottomDrawerHeight)
+					->SetForegroundTab(FDreamUIPrefabEditorTabs::SequencerID)
+					->AddTab(FDreamUIPrefabEditorTabs::SequencerID, ETabState::ClosedTab)
+					->AddTab(FDreamUIPrefabEditorTabs::CompilerResultsID, ETabState::ClosedTab)
+					->AddTab(FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID, ETabState::ClosedTab)
+					->AddTab(FDreamUIPrefabEditorTabs::PrefabOverridesViewerID, ETabState::ClosedTab)
+					->AddTab(FDreamUIPrefabEditorTabs::PrefabRawDataViewerID, ETabState::ClosedTab)
+				)
+			)
+		);
 }
 
 void FDreamUIPrefabEditor::PostUndo(bool bSuccess)
@@ -604,53 +701,7 @@ void FDreamUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const
 	AddToolbarExtender(FDreamGUIEditorModule::Get().GetToolBarExtensibilityManager()->GetAllExtenders(
 		GetToolkitCommands(), TArray<UObject*>{ GetPrefabBeingEdited() }));
 
-	// Default layout
-	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_DreamUIPrefabEditor_Layout_v3")
-		->AddArea
-		(
-			FTabManager::NewPrimaryArea()
-			->SetOrientation(Orient_Vertical)
-			->Split
-			(
-				FTabManager::NewSplitter()
-				->SetOrientation(Orient_Vertical)
-				->SetSizeCoefficient(0.85f)
-				->Split
-				(
-					FTabManager::NewSplitter()
-					->SetOrientation(Orient_Horizontal)
-					->SetSizeCoefficient(0.9f)
-					->Split
-					(
-						FTabManager::NewStack()
-						->SetSizeCoefficient(0.2f)
-						->AddTab(FDreamUIPrefabEditorTabs::OutlinerID, ETabState::OpenedTab)
-						->AddTab(FDreamUIPrefabEditorTabs::PaletteID, ETabState::OpenedTab)
-						->SetForegroundTab(FDreamUIPrefabEditorTabs::OutlinerID)
-					)
-					->Split
-					(
-						FTabManager::NewStack()
-						->SetSizeCoefficient(0.6f)
-						->AddTab(FDreamUIPrefabEditorTabs::ViewportID, ETabState::OpenedTab)
-					)
-					->Split
-					(
-						FTabManager::NewStack()
-						->SetSizeCoefficient(0.2f)
-						->AddTab(FDreamUIPrefabEditorTabs::DetailsID, ETabState::OpenedTab)
-					)
-				)
-				->Split
-				(
-					FTabManager::NewStack()
-					->SetSizeCoefficient(0.3f)
-					->SetForegroundTab(FDreamUIPrefabEditorTabs::SequencerID)
-					->AddTab(FDreamUIPrefabEditorTabs::SequencerID, ETabState::OpenedTab)
-					->AddTab(FDreamUIPrefabEditorTabs::CompilerResultsID, ETabState::OpenedTab)
-				)
-			)
-		);
+	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = CreateDefaultLayout();
 
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
 	if (!bRegisteredForUndo && GEditor)
@@ -1780,6 +1831,7 @@ void FDreamUIPrefabEditor::SaveEditorState()
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewportType = ViewportPtr->GetViewportClient()->GetViewportType();
 	auto RootAgentWidget = GetPreviewScene()->GetRootAgent();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
+	PrefabBeingEdited->CanvasSize = PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize;
 	auto RootCanvas = RootAgentWidget->GetComponent<UDreamCanvas>();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
@@ -1924,18 +1976,21 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		{
 			ContentWidgetCount += IsValid(Cast<UDreamContentWidget>(Component)) ? 1 : 0;
 		}
-		const UDreamLayoutContainer* LayoutContainer = Widget->GetLayoutContainer();
-		const bool bRequiresContentWidget = IsValid(LayoutContainer)
-			&& (LayoutContainer->IsA<UDreamLayoutContainerSizeBox>()
-				|| LayoutContainer->IsA<UDreamLayoutContainerScaleBox>()
-				|| LayoutContainer->IsA<UDreamLayoutContainerSafeZone>());
-		if (bRequiresContentWidget && ContentWidgetCount == 0)
+		if (const UDreamLayoutContainer* LayoutContainer = Widget->GetLayoutContainer(); IsValid(LayoutContainer))
 		{
-			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
-				FString::Printf(TEXT("Widget '%s' uses a single-child layout but has no ContentWidget behaviour."),
-					*Widget->GetDisplayName()), Widget);
+			TArray<TSubclassOf<UDreamUIBehaviour>> RequiredClasses;
+			LayoutContainer->GetRequiredBehaviourClasses(RequiredClasses);
+			for (const TSubclassOf<UDreamUIBehaviour>& RequiredClass : RequiredClasses)
+			{
+				if (IsValid(*RequiredClass) && !IsValid(Widget->GetComponent(RequiredClass)))
+				{
+					AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
+						FString::Printf(TEXT("Widget '%s' uses %s but has no %s behaviour. Re-select the panel type to add it."),
+							*Widget->GetDisplayName(), *LayoutContainer->GetClass()->GetName(), *(*RequiredClass)->GetName()), Widget);
+				}
+			}
 		}
-		else if (ContentWidgetCount > 1)
+		if (ContentWidgetCount > 1)
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 				FString::Printf(TEXT("Widget '%s' has %d ContentWidget behaviours; only one is allowed."),
@@ -2766,7 +2821,7 @@ FIntPoint FDreamUIPrefabEditor::GetDesignerCanvasSize()
 	{
 		return FIntPoint(FMath::RoundToInt(RootAgent->GetWidth()), FMath::RoundToInt(RootAgent->GetHeight()));
 	}
-	return PrefabBeingEdited ? PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize : FIntPoint(1920, 1080);
+	return PrefabBeingEdited ? PrefabBeingEdited->CanvasSize : FIntPoint(1920, 1080);
 }
 
 FIntPoint FDreamUIPrefabEditor::GetDesignerViewportSize()
@@ -2850,6 +2905,7 @@ void FDreamUIPrefabEditor::SetDesignerViewportSize(FIntPoint NewViewportSize)
 	PrefabBeingEdited->Modify();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = NewCanvasSize;
 	PrefabBeingEdited->PrefabDataForPrefabEditor.DesignViewportSize = NewViewportSize;
+	PrefabBeingEdited->CanvasSize = NewCanvasSize;
 	UDreamWidget::MarkLayoutForRebuild(RootAgent);
 	UDreamWidget::RebuildLayoutImmediately(RootAgent);
 }
@@ -3033,6 +3089,12 @@ void FDreamUIPrefabEditor::BindCommands()
 	ToolkitCommands->MapAction(
 		PrefabEditorCommands.OverridesViewer,
 		FExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::OnOpenOverridesViewerPanel),
+		FCanExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::HasAnySubPrefab),
+		FIsActionChecked()
+	);
+	ToolkitCommands->MapAction(
+		PrefabEditorCommands.BehaviourViewer,
+		FExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::OnOpenBehaviourViewerPanel),
 		FCanExecuteAction(),
 		FIsActionChecked()
 	);
@@ -3149,15 +3211,19 @@ void FDreamUIPrefabEditor::ExtendToolbar()
 	}
 
 	UToolMenu* ToolBar = UToolMenus::Get()->FindMenu(MenuName);
+	const FDreamUIPrefabEditorCommand& Commands = FDreamUIPrefabEditorCommand::Get();
+	const FName AppStyle = FAppStyle::GetAppStyleSetName();
 
-	FToolMenuInsert InsertAfterAssetSection("Asset", EToolMenuInsertType::After);
+	// Sections, left to right: Apply | Behaviour | Panels | View | Debug. Each one is a named section
+	// so a project extender can insert relative to it, and the chain anchors on "Asset" so anything
+	// the engine injects after Asset (the screenshot tool, for one) lands after ours.
+	FToolMenuSection& ApplySection = ToolBar->AddSection("DreamUIPrefabApply", TAttribute<FText>(), FToolMenuInsert("Asset", EToolMenuInsertType::After));
 	{
-		auto ApplyButtonMenuEntry = FToolMenuEntry::InitToolBarButton(FDreamUIPrefabEditorCommand::Get().Apply
+		auto ApplyButtonMenuEntry = FToolMenuEntry::InitToolBarButton(Commands.Apply
 			, LOCTEXT("Apply", "Apply")
 			, TAttribute<FText>(this, &FDreamUIPrefabEditor::GetApplyButtonStatusTooltip)
 			, TAttribute<FSlateIcon>(this, &FDreamUIPrefabEditor::GetApplyButtonStatusImage));
 		ApplyButtonMenuEntry.StyleNameOverride = "CalloutToolbar";
-
 		auto ApplyOptionsMenuEntry = FToolMenuEntry::InitComboButton(
 			"ApplyOptions",
 			FUIAction(),
@@ -3165,43 +3231,76 @@ void FDreamUIPrefabEditor::ExtendToolbar()
 			LOCTEXT("ApplyOptionsTooltip", "Options to customize how DreamUI prefabs are applied"));
 		ApplyOptionsMenuEntry.StyleNameOverride = "CalloutToolbar";
 		ApplyOptionsMenuEntry.ToolBarData.bSimpleComboBox = true;
-		
-		auto BehaviourButton = FToolMenuEntry::InitToolBarButton(FDreamUIPrefabEditorCommand::Get().OpenBehaviourBlueprint
+		ApplySection.AddEntry(ApplyButtonMenuEntry);
+		ApplySection.AddEntry(ApplyOptionsMenuEntry);
+	}
+
+	// The script host. "Behaviour BP" opens the blueprint; the combo manages which class is the
+	// primary behaviour. The Behaviour *panel* is a dock tab and lives in the Panels section below --
+	// one word used for two things was the source of most confusion with the old flat toolbar.
+	FToolMenuSection& BehaviourSection = ToolBar->AddSection("DreamUIPrefabBehaviour", TAttribute<FText>(), FToolMenuInsert("DreamUIPrefabApply", EToolMenuInsertType::After));
+	{
+		BehaviourSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.OpenBehaviourBlueprint
 			, TAttribute<FText>(), TAttribute<FText>()
-			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Blueprints"));
+			, FSlateIcon(AppStyle, "Icons.Blueprints")));
 		auto BehaviourOptionsMenuEntry = FToolMenuEntry::InitComboButton(
 			"BehaviourOptions",
 			FUIAction(),
 			FNewToolMenuDelegate::CreateSP(this, &FDreamUIPrefabEditor::GenerateBehaviourOptionsMenu),
 			LOCTEXT("BehaviourOptionsTooltip", "Create, select, replace, or remove this prefab's primary Behaviour."));
 		BehaviourOptionsMenuEntry.ToolBarData.bSimpleComboBox = true;
-
-		FToolMenuSection& Section = ToolBar->AddSection("DreamUIPrefabCommands", TAttribute<FText>(), InsertAfterAssetSection);
-		Section.AddEntry(ApplyButtonMenuEntry);
-		Section.AddEntry(ApplyOptionsMenuEntry);
-		Section.AddEntry(BehaviourButton);
-		Section.AddEntry(BehaviourOptionsMenuEntry);
-		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FDreamUIPrefabEditorCommand::Get().RawDataViewer));
-		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FDreamUIPrefabEditorCommand::Get().OverridesViewer));
-		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FDreamUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
-		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FDreamUIPrefabEditorCommand::Get().ToggleScreenSpacePreview
-			, TAttribute<FText>(), TAttribute<FText>()
-			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports")));
-		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FDreamUIPrefabEditorCommand::Get().FrameFromCanvasEye
-			, TAttribute<FText>(), TAttribute<FText>()
-			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "EditorViewport.ToggleRealTime")));
+		BehaviourSection.AddEntry(BehaviourOptionsMenuEntry);
 	}
+
+	FToolMenuSection& PanelsSection = ToolBar->AddSection("DreamUIPrefabPanels", TAttribute<FText>(), FToolMenuInsert("DreamUIPrefabBehaviour", EToolMenuInsertType::After));
+	{
+		PanelsSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.BehaviourViewer
+			, TAttribute<FText>(), TAttribute<FText>()
+			, FSlateIcon(AppStyle, "Icons.Event")));
+		PanelsSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.OverridesViewer
+			, TAttribute<FText>(), TAttribute<FText>()
+			, FSlateIcon(AppStyle, "Icons.Adjust")));
+	}
+
+	FToolMenuSection& ViewSection = ToolBar->AddSection("DreamUIPrefabView", TAttribute<FText>(), FToolMenuInsert("DreamUIPrefabPanels", EToolMenuInsertType::After));
+	{
+		ViewSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.ToggleScreenSpacePreview
+			, TAttribute<FText>(), TAttribute<FText>()
+			, FSlateIcon(AppStyle, "LevelEditor.Tabs.Viewports")));
+		ViewSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.FrameFromCanvasEye
+			, TAttribute<FText>(), TAttribute<FText>()
+			, FSlateIcon(AppStyle, "EditorViewport.ToggleRealTime")));
+	}
+
+	FToolMenuSection& DebugSection = ToolBar->AddSection("DreamUIPrefabDebug", TAttribute<FText>(), FToolMenuInsert("DreamUIPrefabView", EToolMenuInsertType::After));
+	{
+		DebugSection.AddEntry(FToolMenuEntry::InitComboButton(
+			"Debug",
+			FUIAction(),
+			FNewToolMenuDelegate::CreateSP(this, &FDreamUIPrefabEditor::GenerateDebugMenu),
+			LOCTEXT("DebugMenu", "Debug"),
+			LOCTEXT("DebugMenuTooltip", "Inspection panels for the prefab's stored data."),
+			FSlateIcon(AppStyle, "Icons.Advanced")));
+	}
+}
+
+void FDreamUIPrefabEditor::GenerateDebugMenu(UToolMenu* InMenu)
+{
+	FToolMenuSection& Section = InMenu->AddSection("Debug", LOCTEXT("DebugMenuSection", "Inspect"));
+	const FDreamUIPrefabEditorCommand& Commands = FDreamUIPrefabEditorCommand::Get();
+	Section.AddMenuEntry(Commands.RawDataViewer, TAttribute<FText>(), TAttribute<FText>(), FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Advanced"));
+	Section.AddMenuEntry(Commands.OpenPrefabHelperObject, TAttribute<FText>(), TAttribute<FText>(), FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Details"));
+}
+
+bool FDreamUIPrefabEditor::HasAnySubPrefab() const
+{
+	const UDreamUIPrefabHelperObject* Helper = GetPrefabHelperObject();
+	return IsValid(Helper) && Helper->SubPrefabMap.Num() > 0;
 }
 
 void FDreamUIPrefabEditor::GenerateBehaviourOptionsMenu(UToolMenu* InMenu)
 {
 	FToolMenuSection& Section = InMenu->AddSection("Behaviour", LOCTEXT("BehaviourMenuSection", "Behaviour"));
-	Section.AddMenuEntry(
-		"OpenBehaviourPanel",
-		LOCTEXT("OpenBehaviourPanel", "Behaviour Panel"),
-		LOCTEXT("OpenBehaviourPanelTooltip", "Open the behaviour panel: widget references with quick bind, provided events and functions, and per-widget event handler shortcuts."),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Details"),
-		FUIAction(FExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::OnOpenBehaviourViewerPanel)));
 	Section.AddMenuEntry(
 		"OpenCurrentBehaviour",
 		LOCTEXT("OpenCurrentBehaviour", "Open Current Behaviour"),
@@ -3318,96 +3417,6 @@ FSlateIcon FDreamUIPrefabEditor::GetApplyButtonStatusImage()const
 		}
 	}
 	return FSlateIcon(FAppStyle::GetAppStyleSetName(), CompileStatusBackground, NAME_None, Overlay);
-}
-
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_Viewport(const FSpawnTabArgs& Args)
-{
-	return SNew(SDockTab)
-		.Label(LOCTEXT("ViewportTab_Title", "Viewport"))
-		[
-			ViewportPtr.ToSharedRef()
-		];
-}
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_Details(const FSpawnTabArgs& Args)
-{
-	return SNew(SDockTab)
-		.Label(LOCTEXT("DetailsTab_Title", "Details"))
-		[
-			DetailsPtr.ToSharedRef()
-		];
-}
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_Outliner(const FSpawnTabArgs& Args)
-{
-	return SNew(SDockTab)
-		.Label(LOCTEXT("OutlinerTab_Title", "Hierarchy"))
-		[
-			OutlinerPtr.ToSharedRef()
-		];
-}
-
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_Palette(const FSpawnTabArgs& Args)
-{
-	return SNew(SDockTab)
-		.Label(LOCTEXT("PaletteTab_Title", "Palette"))
-		[
-			PalettePtr.ToSharedRef()
-		];
-}
-
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_Sequencer(const FSpawnTabArgs& Args)
-{
-	return SNew(SDockTab)
-		.Label(LOCTEXT("SequencerTab_Title", "Animations"))
-		[
-			SequencerPtr.ToSharedRef()
-		];
-}
-
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args)
-{
-	// Spawn the tab
-	return SNew(SDockTab)
-		.Label(LOCTEXT("OverrideParameterTab_Title", "PrefabRawData"))
-		[
-			PrefabRawDataViewer.ToSharedRef()
-		];
-}
-
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_PrefabOverridesViewer(const FSpawnTabArgs& Args)
-{
-	if (PrefabOverridesViewer.IsValid())
-	{
-		PrefabOverridesViewer->Rebuild();
-	}
-	return SNew(SDockTab)
-		.Label(LOCTEXT("PrefabOverridesTab_Title", "Overrides"))
-		[
-			PrefabOverridesViewer.ToSharedRef()
-		];
-}
-
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_PrefabBehaviourViewer(const FSpawnTabArgs& Args)
-{
-	if (PrefabBehaviourViewer.IsValid())
-	{
-		PrefabBehaviourViewer->Rebuild();
-	}
-	return SNew(SDockTab)
-		.Label(LOCTEXT("PrefabBehaviourTab_Title", "Behaviour"))
-		[
-			PrefabBehaviourViewer.ToSharedRef()
-		];
-}
-
-TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTab_CompilerResults(const FSpawnTabArgs& Args)
-{
-	check(CompilerResultsListing.IsValid());
-	return SNew(SDockTab)
-		.Label(LOCTEXT("CompilerResultsTab_Title", "Compiler Results"))
-		[
-			FModuleManager::LoadModuleChecked<FMessageLogModule>("MessageLog")
-				.CreateLogListingWidget(CompilerResultsListing.ToSharedRef())
-		];
 }
 
 bool FDreamUIPrefabEditor::IsFilteredActor(const AActor* Actor)

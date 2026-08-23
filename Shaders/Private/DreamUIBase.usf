@@ -1,0 +1,131 @@
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// DreamGUI's built-in UI shader: everything a canvas batches -- sprites, bitmap glyphs, SDF and
+// MTSDF glyphs -- drawn by one global shader with no UMaterial. Which kind a pixel is comes from
+// the widget property record (FontMark), read by the record index in UV1.x, so one draw can mix
+// all of them, exactly as the material it replaces did.
+
+#include "/Engine/Public/Platform.ush"
+#include "/Engine/Private/GammaCorrectionCommon.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
+
+float4x4 DreamUI_MVP;
+float4x4 DreamUI_M;
+float4x4 DreamUI_InvM;
+/** x: gamma curve adjustment, y: inverse display gamma, z: unused, w: unused */
+float4 DreamUI_GammaValues;
+/** xy: atlas slice size in texels, z: field range in texels (2 * spread), w: texels per em at the sample size */
+float4 DreamUI_FontAtlasInfo;
+Texture2D DreamUI_MainTex;
+SamplerState DreamUI_MainTexSampler;
+Texture2DArray DreamUI_FontTex;
+SamplerState DreamUI_FontTexSampler;
+Texture2D DreamUI_WidgetDataTex;
+Texture2D DreamUI_ClipDataTex;
+
+#if LEXUI_BLEND_DEPTH
+Texture2D DreamUI_SceneDepthTex;
+SamplerState DreamUI_SceneDepthTexSampler;
+float4 DreamUI_SceneDepthTextureScaleOffset;
+float DreamUI_SceneDepthBlend;
+#if LEXUI_DEPTH_FADE
+int DreamUI_SceneDepthFade;
+float2 DreamUI_ViewSizeInv;
+#endif
+#endif
+
+struct FDreamUIBaseVSToPS
+{
+	float4 Position : SV_POSITION;
+	half4 Color : COLOR0;
+	float2 UV0 : TEXCOORD0;
+	float2 UV1 : TEXCOORD1;
+	float2 UV2 : TEXCOORD2;
+	float2 UV3 : TEXCOORD3;
+	float3 LocalPosition : TEXCOORD4;
+	float4 ScreenPosition : TEXCOORD5;
+};
+
+void MainVS(
+	in float3 Position : ATTRIBUTE0,
+	in half4 Color : ATTRIBUTE1,
+	in float2 TextureCoord0 : ATTRIBUTE2,
+	in float2 TextureCoord1 : ATTRIBUTE3,
+	in float2 TextureCoord2 : ATTRIBUTE4,
+	in float2 TextureCoord3 : ATTRIBUTE5,
+	in half3 TangentX : ATTRIBUTE6,
+	in half4 TangentZ : ATTRIBUTE7,
+	out FDreamUIBaseVSToPS Out
+)
+{
+	Out.Position = mul(float4(Position, 1.0), DreamUI_MVP);
+	Out.ScreenPosition = Out.Position;
+	Out.LocalPosition = Position;
+#if COMPILER_GLSL_ES3_1 && !MOBILE_EMULATION
+	Color.rgba = Color.bgra;
+#endif
+	Out.Color = Color;
+	Out.UV0 = TextureCoord0;
+	Out.UV1 = TextureCoord1;
+	Out.UV2 = TextureCoord2;
+	Out.UV3 = TextureCoord3;
+}
+
+half3 DreamUIBase_GammaCorrect(half3 InColor, half4 GammaValues)
+{
+	half3 CorrectedColor = InColor;
+	FLATTEN if (GammaValues.y != 1.0f)
+	{
+		CorrectedColor = ApplyGammaCorrection(CorrectedColor, GammaValues.x);
+	}
+	return CorrectedColor;
+}
+
+void MainPS(
+	FDreamUIBaseVSToPS In,
+	out float4 OutColor : SV_Target0
+)
+{
+#if DREAMUI_PLAIN_COLOR
+	// Editor helper geometry (the widget outline frames): no widget record, no atlas, no clip -- the
+	// vertex colour is the whole answer. It shares this shader only for the transform and the blend.
+	float4 Color = float4(sRGBToLinear(In.Color.rgb), In.Color.a);
+#else
+	// Everything a UI pixel is comes from the shared function; this shader adds depth, gamma, premultiply.
+	float4 Color = DreamUI_ShadePixel(In.UV0, In.UV1, In.UV2, In.UV3, In.Color, In.LocalPosition,
+		DreamUI_MainTex, DreamUI_MainTexSampler, DreamUI_FontTex, DreamUI_FontTexSampler,
+		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo);
+#endif
+
+#if LEXUI_BLEND_DEPTH
+	float PixelDepth = In.ScreenPosition.z / In.ScreenPosition.w;
+	float2 ScreenUV = In.ScreenPosition.xy / In.ScreenPosition.w;
+	ScreenUV = ScreenUV * 0.5f + float2(0.5f, 0.5f);
+	ScreenUV.y = 1.0f - ScreenUV.y;
+	ScreenUV = ScreenUV * DreamUI_SceneDepthTextureScaleOffset.xy + DreamUI_SceneDepthTextureScaleOffset.zw;
+#if LEXUI_DEPTH_FADE
+	float DepthFadeValue = 0;
+	int SampleCount = 0;
+	int SampleSize = DreamUI_SceneDepthFade;
+	for (int w = -SampleSize; w <= SampleSize; w++)
+	{
+		for (int h = -SampleSize; h <= SampleSize; h++)
+		{
+			float ExistDepth = DreamUI_SceneDepthTex.Sample(DreamUI_SceneDepthTexSampler, ScreenUV + float2(w, h) * DreamUI_ViewSizeInv).x;
+			DepthFadeValue += step(ExistDepth, PixelDepth);
+			SampleCount++;
+		}
+	}
+	DepthFadeValue /= SampleCount;
+	DepthFadeValue = smoothstep(0, 1, DepthFadeValue);
+#else
+	float ExistDepth = DreamUI_SceneDepthTex.Sample(DreamUI_SceneDepthTexSampler, ScreenUV).x;
+	float DepthFadeValue = step(ExistDepth, PixelDepth);
+#endif
+	Color.a = lerp(DreamUI_SceneDepthBlend * Color.a, Color.a, DepthFadeValue);
+#endif
+
+	Color.rgb = DreamUIBase_GammaCorrect(Color.rgb, DreamUI_GammaValues);
+	// Premultiplied: the blend state is One / InverseSourceAlpha.
+	OutColor = float4(Color.rgb * Color.a, Color.a);
+}

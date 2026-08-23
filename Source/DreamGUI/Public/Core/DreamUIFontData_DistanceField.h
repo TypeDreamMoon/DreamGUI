@@ -1,4 +1,4 @@
-// Copyright 2019-present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -10,20 +10,20 @@ struct FDreamUIDistanceFieldCharKey
 {
 public:
 	FDreamUIDistanceFieldCharKey() {}
-	FDreamUIDistanceFieldCharKey(uint32 InCharCode, bool InBold)
+	FDreamUIDistanceFieldCharKey(const FDreamUIGlyphKey& InGlyph, bool InBold)
 	{
-		this->CharCode = InCharCode;
+		this->Glyph = InGlyph;
 		this->bBold = InBold;
 	}
-	uint32 CharCode = 0;
+	FDreamUIGlyphKey Glyph;
 	bool bBold = false;
 	bool operator==(const FDreamUIDistanceFieldCharKey& other)const
 	{
-		return this->CharCode == other.CharCode && this->bBold == other.bBold;
+		return this->Glyph == other.Glyph && this->bBold == other.bBold;
 	}
 	friend FORCEINLINE uint32 GetTypeHash(const FDreamUIDistanceFieldCharKey& other)
 	{
-		return HashCombine(GetTypeHash(other.CharCode), GetTypeHash(other.bBold));
+		return HashCombine(GetTypeHash(other.Glyph), GetTypeHash(other.bBold));
 	}
 };
 struct FDreamUIDistanceFieldFontKerningPair
@@ -47,6 +47,19 @@ public:
 	}
 };
 
+/** How the distance field is produced. */
+UENUM(BlueprintType)
+enum class EDreamUISdfSource : uint8
+{
+	/**
+	 * Multi-channel field from the glyph outline (msdfgen): sharp corners from the median of three
+	 * channels, and a true distance in alpha that effects -- blur, glow, shadows, outlines -- widen into.
+	 */
+	OutlineMultiChannel,
+	/** Single-channel field derived from a rasterized bitmap (the original method). Corners round off. */
+	BitmapSingleChannel,
+};
+
 /** SDF(Signed Distance Field) Font asset for render smooth scaled sdf text. */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamUIFontData_DistanceField : public UDreamUIFontData_FreeTypeRender
@@ -55,60 +68,85 @@ class DREAMGUI_API UDreamUIFontData_DistanceField : public UDreamUIFontData_Free
 public:
 	UDreamUIFontData_DistanceField();
 private:
+	/** Outline multi-channel is the default; bitmap single-channel is what assets made before it get. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	EDreamUISdfSource SdfSource = EDreamUISdfSource::OutlineMultiChannel;
 	/** Font size when render glyph. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "16", UIMax = "100"))
 		int SampleFontSize = 64;
-	/** The radius of the distance field in pixels. Normally just use 1/4 of FontSize */
+	/**
+	 * The radius of the distance field in pixels at SampleFontSize. Normally 1/4 to 1/3 of SampleFontSize.
+	 * It is also as far as any text effect can reach: outline, glow and underlay are clamped to
+	 * SDFRadius / SampleFontSize em outside the glyph, and the atlas cells grow with it.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "1"))
 		int SDFRadius = 16;
 	/** Angle of italic style in degree */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		float ItalicAngle = 15.0f;
 	/**
-	 * bold size radio for bold style, large number create more bold effect.
+	 * How much bolder a bold glyph is, in em of total stroke growth (half on each side). Applied as a
+	 * dilation of the distance field, so it is continuous and costs no atlas space; the advance grows
+	 * by the same amount. 0.04 is FreeType's own synthetic bold (1/24 em); the old 0.08 closed the
+	 * counters of CJK glyphs. A text can shift its weight on top of this with FDreamTextStyle::FaceDilate.
 	 */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "0.0", UIMax = "1.0"))
-		float BoldRatio = 0.08f;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "0.0", UIMax = "0.2"))
+		float BoldRatio = 0.04f;
 	/** -1 means not set yet. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI", Transient)
 		int LineHeight = -1;
 	/** -1 means not set yet. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI", Transient)
 		int VerticalOffset = -1;
+	/** Ascent and descent at SampleFontSize; negative means not cached yet. */
+	float CachedAscent = -1.0f;
+	float CachedDescent = -1.0f;
 	UPROPERTY(EditAnywhere, Transient, Category = "DreamGUI", Transient)
 	float AdditionalVerticalOffset = 0.0f;
 
 public:
 	//Begin UDreamUIFontData_BaseObject interface
 	virtual UMaterialInterface* GetFontMaterial()override;
-	virtual void PushCharData(
-		uint32 charCode, FVector2f lineOffset, FVector2f fontSpace, const FDreamUICharData& charData,
-		const DreamUIRichTextParser::FRichTextParseResult& richTextProperty,
-		int verticesStartIndex, int indicesStartIndex,
-		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-		TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
-	)override;
-	virtual void PrepareForPushCharData(UDreamText* InText)override;
-	virtual bool GetRequireNormalAndTangent()override;
+	virtual void PrepareForLayout(float InExpandMeshSize)override;
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
 	virtual float GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize) override;
 	virtual float GetLineHeight(float fontSize) override;
 	virtual float GetVerticalOffset(float fontSize) override;
+	virtual float GetAscent(float fontSize) override;
+	virtual float GetDescent(float fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
-	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
-	virtual EDreamUIFontTextureMark GetFontTextureMark() override{ return EDreamUIFontTextureMark::DistanceField; }
+	virtual EDreamUIFontTextureMark GetFontTextureMark() override{ return SdfSource == EDreamUISdfSource::OutlineMultiChannel ? EDreamUIFontTextureMark::Mtsdf : EDreamUIFontTextureMark::DistanceField; }
+	EDreamUISdfSource GetSdfSource() const { return SdfSource; }
+	/** The distance range on each side of the edge, in pixels at SampleFontSize. */
+	int32 GetSdfRadius() const { return SDFRadius; }
+	virtual float GetAtlasFieldRangeTexels() const override { return 2.0f * SDFRadius; }
+	virtual float GetAtlasEmTexels() const override { return (float)SampleFontSize; }
+	virtual bool GetAsyncRasterParams(float CharSize, bool IsBold, float& OutPixelsPerEm, float& OutSpreadPixels, float& OutBoldPixels) const override
+	{
+		if (SdfSource != EDreamUISdfSource::OutlineMultiChannel)return false;
+		OutPixelsPerEm = (float)SampleFontSize;
+		OutSpreadPixels = (float)SDFRadius;
+		OutBoldPixels = IsBold ? SampleFontSize * BoldRatio : 0.0f;
+		return true;
+	}
+	virtual bool IsGlyphCacheSizeIndependent() const override { return true; }
+	/** Both fields render bold as a dilation; the atlas holds one glyph per face. */
+	virtual bool IsBoldSynthesizedInShader() const override { return true; }
+	/** How far the layout's glyph quads sit inside the field's spread, in texels at SampleFontSize (see GetCharDataFromCache). */
+	float GetQuadShrinkTexels() const;
 	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}
 protected:
-	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0; float ObjectScale = 0;
+	float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0;
 	TMap<FDreamUIDistanceFieldCharKey, FDreamUICharData> CharDataMap;
 	TMap<FDreamUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
-	virtual bool GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
-	virtual void AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
-	virtual bool RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
+	virtual bool GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
+	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
+	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 
 	//SDF font already have space between glyphs
@@ -118,4 +156,5 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	virtual void PostInitProperties()override;
+	virtual void Serialize(FArchive& Ar)override;
 };

@@ -321,6 +321,36 @@ namespace DreamUIPrefabSystem
 		{
 			CreatedRootWidget->SetParent(Parent, false);
 		}
+		else if (!bIsSubPrefab && RootCanvasSize.X > 0 && RootCanvasSize.Y > 0)
+		{
+			// A root authored to stretch across its parent has nothing to stretch across out here, and
+			// would otherwise collapse to its SizeDelta (zero for a prefab made by the factory). The
+			// prefab's design canvas stands in for the missing parent, the way the prefab editor's root
+			// agent does while authoring: each stretched axis takes the size it would have had under a
+			// parent of that size and its anchors collapse to the centre, so the number is the widget's
+			// own from here on and a later re-parent does not add a parent width on top of it. An axis
+			// the author fixed keeps its value.
+			FDreamUIAnchorData RootAnchor = CreatedRootWidget->GetAnchorData();
+			bool bChanged = false;
+			if (RootAnchor.IsHorizontalStretched())
+			{
+				RootAnchor.SizeDelta.X += RootCanvasSize.X * (RootAnchor.AnchorMax.X - RootAnchor.AnchorMin.X);
+				RootAnchor.AnchorMin.X = RootAnchor.AnchorMax.X = 0.5f;
+				RootAnchor.AnchoredPosition.X = 0.0f;
+				bChanged = true;
+			}
+			if (RootAnchor.IsVerticalStretched())
+			{
+				RootAnchor.SizeDelta.Y += RootCanvasSize.Y * (RootAnchor.AnchorMax.Y - RootAnchor.AnchorMin.Y);
+				RootAnchor.AnchorMin.Y = RootAnchor.AnchorMax.Y = 0.5f;
+				RootAnchor.AnchoredPosition.Y = 0.0f;
+				bChanged = true;
+			}
+			if (bChanged)
+			{
+				CreatedRootWidget->SetAnchorData(RootAnchor);
+			}
+		}
 
 #if DreamGUIPREFAB_LOG_DETAIL_TIME
 		Time = FDateTime::Now();
@@ -412,6 +442,7 @@ namespace DreamUIPrefabSystem
 		}
 		this->PrefabVersion = InPrefab->PrefabVersion;
 		this->ArEngineVer = FEngineVersionBase(InPrefab->EngineMajorVersion, InPrefab->EngineMinorVersion, InPrefab->EnginePatchVersion);
+		this->RootCanvasSize = InPrefab->CanvasSize;
 
 		FDreamUIPrefabSaveData SaveData;
 		{

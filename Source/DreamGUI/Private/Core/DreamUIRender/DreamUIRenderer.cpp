@@ -3,6 +3,10 @@
 
 #include "Core/DreamUIRender/DreamUIRenderer.h"
 #include "Core/DreamUIRender/DreamUIShaders.h"
+#include "Core/DreamUIRender/DreamUIBaseShaders.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialRenderProxy.h"
 #include "Core/DreamUIRender/DreamUIPostProcessShaders.h"
 #include "Core/DreamUIRender/DreamUIResolveShaders.h"
 #include "DreamGUI.h"
@@ -330,6 +334,73 @@ void FDreamUIRenderer::DrawFullScreenQuad(FRHICommandListImmediate& RHICmdList)
 	RHICmdList.SetStreamSource(0, GDreamUIFullScreenQuadVertexBuffer.VertexBufferRHI, 0);
 	RHICmdList.DrawIndexedPrimitive(GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI, 0, 0, 4, 0, 2, 1);
 }
+void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandListImmediate& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
+	, const FSceneView& View, const FIntRect& ViewRect, const FDreamUIMeshBatchContainer& Batch
+	, uint8 NumSamples, float GammaValue, bool bIsDepthValid
+	, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
+)
+{
+	const FDreamUIBuiltInDrawParams& Params = Batch.BuiltIn;
+	const FMeshBatch& Mesh = Batch.Mesh;
+	const ERHIFeatureLevel::Type FeatureLevel = View.GetFeatureLevel();
+	auto GlobalShaderMap = GetGlobalShaderMap(FeatureLevel);
+
+	const bool bDepthFade = bBlendDepth && DepthFade > 0;
+	TShaderMapRef<FDreamUIBaseVS> VertexShader(GlobalShaderMap);
+	FDreamUIBasePS::FPermutationDomain PermutationVector;
+	PermutationVector.Set<FDreamUIBasePS::FBlendDepth>(bBlendDepth);
+	PermutationVector.Set<FDreamUIBasePS::FDepthFade>(bDepthFade);
+	TShaderMapRef<FDreamUIBasePS> PixelShader(GlobalShaderMap, PermutationVector);
+
+	// The shader outputs premultiplied colour; two-sided like the UI materials it replaces.
+	SetGraphicPipelineState_BlendDepthStencilRasterize(FeatureLevel, GraphicsPSOInit, BLEND_AlphaComposite
+		, false, true, false, bIsDepthValid, Mesh.ReverseCulling
+	);
+	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
+	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+	GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+	GraphicsPSOInit.NumSamples = NumSamples;
+	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+
+	// Model-view-projection in double precision, demoted once.
+	const FMatrix ViewProjection = View.ViewMatrices.GetWorldToClip();
+	FDreamUIBaseVS::FParameters VSParameters;
+	VSParameters.DreamUI_MVP = FMatrix44f(Batch.LocalToWorld * ViewProjection);
+	VSParameters.DreamUI_M = FMatrix44f(Batch.LocalToWorld);
+	SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VSParameters);
+
+	auto TextureOrFallback = [](FTextureResource* Resource, FTexture* Fallback) -> FRHITexture*
+	{
+		if (Resource && Resource->TextureRHI.IsValid())
+		{
+			return Resource->TextureRHI.GetReference();
+		}
+		return Fallback->TextureRHI.GetReference();
+	};
+	FDreamUIBasePS::FParameters PSParameters;
+	PSParameters.DreamUI_InvM = FMatrix44f(Batch.LocalToWorld.Inverse());
+	PSParameters.DreamUI_GammaValues = FVector4f(2.2f / GammaValue, 1.0f / GammaValue, 0.0f, 0.0f);
+	PSParameters.DreamUI_FontAtlasInfo = FVector4f(Params.FontAtlasSize.X, Params.FontAtlasSize.Y, Params.FontFieldRangeTexels, Params.FontEmTexels);
+	PSParameters.DreamUI_MainTex = TextureOrFallback(Params.MainTexture, GWhiteTexture);
+	PSParameters.DreamUI_MainTexSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	PSParameters.DreamUI_FontTex = TextureOrFallback(Params.FontTexture, GBlackArrayTexture);
+	PSParameters.DreamUI_FontTexSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	PSParameters.DreamUI_WidgetDataTex = TextureOrFallback(Params.WidgetDataTexture, GBlackTexture);
+	PSParameters.DreamUI_ClipDataTex = TextureOrFallback(Params.ClipDataTexture, GBlackTexture);
+	PSParameters.DreamUI_SceneDepthTex = SceneDepthTexture ? SceneDepthTexture : GBlackTexture->TextureRHI.GetReference();
+	PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	PSParameters.DreamUI_SceneDepthTextureScaleOffset = SceneDepthTexST;
+	PSParameters.DreamUI_SceneDepthBlend = BlendDepth;
+	PSParameters.DreamUI_SceneDepthFade = DepthFade;
+	const FIntPoint ViewSize = ViewRect.Size();
+	PSParameters.DreamUI_ViewSizeInv = FVector2f(1.0f / FMath::Max(ViewSize.X, 1), 1.0f / FMath::Max(ViewSize.Y, 1));
+	SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), PSParameters);
+
+	RHICmdList.SetStreamSource(0, Batch.VertexBufferRHI, 0);
+	RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, Batch.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+}
+
 void FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
 	, bool bIsWireFrame, bool bIsTwoSided, bool bDisableDepthTestForTransparent, bool bIsDepthValid, bool bReverseCulling
 ) 
@@ -772,7 +843,15 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 										auto DoRender = [&](bool bWireframe)
 										{
+											if (!bWireframe && MeshBatchContainer.BuiltIn.bEnabled)
+											{
+												DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
+													, NumSamples, GammaValue, false
+													, true, BlendDepth, DepthFade, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
+												return;
+											}
 											auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
+											if (!MaterialRenderProxy)return;
 											auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material can't render with DreamUIRenderer
 											if (!Material)return;
 											
@@ -1049,7 +1128,15 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 							auto DoRender = [&](bool bWireframe)
 							{
+								if (!bWireframe && MeshBatchContainer.BuiltIn.bEnabled)
+								{
+									DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
+										, NumSamples, GammaValue, ValidDepth
+										, false, 0.0f, 0, SceneDepthTexST, nullptr);
+									return;
+								}
 								auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
+								if (!MaterialRenderProxy)return;
 								auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with DreamUIRenderer
 								if (!Material)return;
 								
@@ -1389,74 +1476,81 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 		{
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-			FSceneRenderingBulkObjectAllocator Allocator;
-			FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-			
+			auto GlobalShaderMap = GetGlobalShaderMap(RenderView->GetFeatureLevel());
+			TShaderMapRef<FDreamUIBaseVS> VertexShader(GlobalShaderMap);
+			FDreamUIBasePS::FPermutationDomain PermutationVector;
+			PermutationVector.Set<FDreamUIBasePS::FPlainColor>(true);
+			TShaderMapRef<FDreamUIBasePS> PixelShader(GlobalShaderMap, PermutationVector);
+			const FMatrix ViewProjection = RenderView->ViewMatrices.GetViewProjectionMatrix();
+
 			for (auto& RenderParameter : HelperGizmoDataMap)
 			{
-				if (!RenderParameter->Material.IsValid())continue;
 				auto& LocalBounds = RenderParameter->LocalBounds;
 				auto& LocalToWorldMatrix = RenderParameter->LocalToWorldMatrix;
 				auto WorldBounds = LocalBounds.TransformBy(LocalToWorldMatrix);
 				if (bFrustumCulling)
 				{
-					if (!RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;//commit this because not working correctly
+					if (!RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;
 				}
-				
-				auto MaterialRenderProxy = RenderParameter->Material->GetRenderProxy();
-				auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());
-				FMaterialShaderTypes ShaderTypes;
-				ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
-				ShaderTypes.AddShaderType<FDreamUIScreenRenderPS>();
-				FMaterialShaders Shaders;
-				if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+
+				uint32 NumPrimitives = 0;
+				EPrimitiveType PrimitiveType = EPrimitiveType::PT_TriangleList;
+				switch (RenderParameter->GetPrimitiveType())
 				{
-					uint32 NumPrimitives = 0;
-					EPrimitiveType PrimitiveType = EPrimitiveType::PT_TriangleList;
-					
-					switch (RenderParameter->GetPrimitiveType())
+				case EDreamUIGizmoMeshPrimitiveType::Line:
 					{
-					case EDreamUIGizmoMeshPrimitiveType::Line:
-						{
-							NumPrimitives = RenderParameter->GetIndexBuffer().Indices.Num() / 2;
-							PrimitiveType = EPrimitiveType::PT_LineList;
-						}
-						break;
-					case EDreamUIGizmoMeshPrimitiveType::Triangle:
-						{
-							NumPrimitives = RenderParameter->GetIndexBuffer().Indices.Num() / 3;
-							PrimitiveType = EPrimitiveType::PT_TriangleList;
-						}
-					break;
+						NumPrimitives = RenderParameter->GetIndexBuffer().Indices.Num() / 2;
+						PrimitiveType = EPrimitiveType::PT_LineList;
 					}
-
-					TShaderRef<FDreamUIScreenRenderVS> VertexShader;
-					TShaderRef<FDreamUIScreenRenderPS> PixelShader;
-					Shaders.TryGetVertexShader(VertexShader);
-					Shaders.TryGetPixelShader(PixelShader);
-					
-					FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = MeshCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-					DynamicPrimitiveUniformBuffer.Set(RHICmdList, LocalToWorldMatrix, LocalToWorldMatrix
-						, WorldBounds, LocalBounds, false, false, false);
-
-					FGraphicsPipelineStateInitializer GraphicsPSOInit;
-					RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-					FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-						, false, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, false);
-
-					GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
-					GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-					GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-					GraphicsPSOInit.NumSamples = NumSamples;
-					GraphicsPSOInit.PrimitiveType = PrimitiveType;
-					SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-							
-					VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
-					PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
-						
-					RHICmdList.SetStreamSource(0, RenderParameter->GetVertexBuffer().GetRHI(), 0);
-					RHICmdList.DrawIndexedPrimitive(RenderParameter->GetIndexBuffer().GetRHI(), 0, 0, RenderParameter->GetNumVertices(), 0, NumPrimitives, 1);
+					break;
+				case EDreamUIGizmoMeshPrimitiveType::Triangle:
+					{
+						NumPrimitives = RenderParameter->GetIndexBuffer().Indices.Num() / 3;
+						PrimitiveType = EPrimitiveType::PT_TriangleList;
+					}
+					break;
 				}
+				if (NumPrimitives == 0)continue;
+
+				FGraphicsPipelineStateInitializer GraphicsPSOInit;
+				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+				// Straight alpha over the scene, two-sided, no depth: helper geometry is an overlay.
+				FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, BLEND_AlphaComposite
+					, false, true, true, false, false);
+				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
+				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+				GraphicsPSOInit.NumSamples = NumSamples;
+				GraphicsPSOInit.PrimitiveType = PrimitiveType;
+				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+
+				FDreamUIBaseVS::FParameters VSParameters;
+				VSParameters.DreamUI_MVP = FMatrix44f(LocalToWorldMatrix * ViewProjection);
+				VSParameters.DreamUI_M = FMatrix44f(LocalToWorldMatrix);
+				SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VSParameters);
+
+				// The plain-colour permutation reads none of the textures, but the parameter struct is
+				// shared, so they still need something bound.
+				FDreamUIBasePS::FParameters PSParameters;
+				PSParameters.DreamUI_InvM = FMatrix44f(LocalToWorldMatrix.Inverse());
+				PSParameters.DreamUI_GammaValues = FVector4f(2.2f, 1.0f, 0.0f, 0.0f);
+				PSParameters.DreamUI_FontAtlasInfo = FVector4f(1.0f, 1.0f, 0.0f, 0.0f);
+				PSParameters.DreamUI_MainTex = GWhiteTexture->TextureRHI;
+				PSParameters.DreamUI_MainTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+				PSParameters.DreamUI_FontTex = GBlackArrayTexture->TextureRHI;
+				PSParameters.DreamUI_FontTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+				PSParameters.DreamUI_WidgetDataTex = GBlackTexture->TextureRHI;
+				PSParameters.DreamUI_ClipDataTex = GBlackTexture->TextureRHI;
+				PSParameters.DreamUI_SceneDepthTex = GBlackTexture->TextureRHI;
+				PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+				PSParameters.DreamUI_SceneDepthTextureScaleOffset = FVector4f(1.0f, 1.0f, 0.0f, 0.0f);
+				PSParameters.DreamUI_SceneDepthBlend = 0.0f;
+				PSParameters.DreamUI_SceneDepthFade = 0;
+				PSParameters.DreamUI_ViewSizeInv = FVector2f(1.0f / FMath::Max(ViewRect.Size().X, 1), 1.0f / FMath::Max(ViewRect.Size().Y, 1));
+				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), PSParameters);
+
+				RHICmdList.SetStreamSource(0, RenderParameter->GetVertexBuffer().GetRHI(), 0);
+				RHICmdList.DrawIndexedPrimitive(RenderParameter->GetIndexBuffer().GetRHI(), 0, 0, RenderParameter->GetNumVertices(), 0, NumPrimitives, 1);
 			}
 			HelperGizmoDataMap.Reset();
 		});

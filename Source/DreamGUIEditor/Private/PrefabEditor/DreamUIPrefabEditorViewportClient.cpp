@@ -1,7 +1,10 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabEditorViewportClient.h"
+#include "DreamUIPrefabEdMode.h"
+#include "Settings/LevelEditorViewportSettings.h"
+#include "Core/DreamGUISettings.h"
 #include "DreamUIDesignScreenSizes.h"
 #include "DreamUIPrefabEditorViewport.h"
 #include "Components/DirectionalLightComponent.h"
@@ -40,7 +43,6 @@
 #include "ISequencer.h"
 #include "KeyPropertyParams.h"
 #include "PropertyPath.h"
-#include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
 #include "Core/DreamUIRender/DreamUIRenderer.h"
 #include "PrefabSystem/DreamUIPrefabInstanceScene.h"
 #include "Utils/DreamUIUtils.h"
@@ -55,697 +57,6 @@
 // UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
 // (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).
 
-class FDreamUITransformWidget
-{
-private:		
-	int PressMouseX = 0, PressMouseY = 0; FVector PressAxisHitPoint = FVector::Zero();
-	FVector PressAxisVector = FVector::ZeroVector;
-	FTransform ThisTransformWhenPress = FTransform::Identity;
-	FTransform ThisTransform = FTransform::Identity;
-	FTransform RenderTransform = FTransform::Identity;
-	float PressRenderScale = 1.0f;
-	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> DreamUIManager;
-	TWeakObjectPtr<UWorld> World;
-	TSharedPtr<FDreamUIGizmoMesh> MoveAxisX;
-	TSharedPtr<FDreamUIGizmoMesh> MoveAxisY;
-	TSharedPtr<FDreamUIGizmoMesh> MoveAxisZ;
-	TSharedPtr<FDreamUIGizmoMesh> MovePlaneYZ;
-	TSharedPtr<FDreamUIGizmoMesh> MovePlaneZX;
-	TSharedPtr<FDreamUIGizmoMesh> MovePlaneXY;
-	TSharedPtr<FDreamUIGizmoMesh> RotateAxisX;
-	TSharedPtr<FDreamUIGizmoMesh> RotateAxisY;
-	TSharedPtr<FDreamUIGizmoMesh> RotateAxisZ;
-	TWeakObjectPtr<UMaterialInterface> GizmoMaterial;
-	FVector MovePlaneYZCenter;
-	FVector MovePlaneZXCenter;
-	FVector MovePlaneXYCenter;
-	const float AxisLength = 100.0f;
-	const float AxisPlaneSize = 30.0f;
-	const float RotateAxisRadius = 100.0f;
-	FColor ColorAxisX = FColor::Red, ColorAxisY = FColor::Green, ColorAxisZ = FColor::Blue;
-	FColor HighlightColor = FColor::Yellow;
-	FString DebugName;
-	bool bCanTick = false;
-	enum class EMoveAxisType
-	{
-		None, X, Y, Z, YZ, ZX, XY, 
-	};
-	EMoveAxisType MoveAxisType = EMoveAxisType::None;
-	enum class ERotateAxisType
-	{
-		None, X, Y, Z,
-	};
-	ERotateAxisType RotateAxisType = ERotateAxisType::None;
-	enum class ETransformType
-	{
-		None, Move, Rotate,
-	};
-	ETransformType TransformType = ETransformType::Move;
-	bool bIsMousePressedAtThisFrame = false;
-	bool bIsMouseReleasedAtThisFrame = false;
-	bool bIsDragging = false;
-	TArray<TWeakObjectPtr<UDreamWidget>> SelectedWidgets;
-	/** Parallel to SelectedWidgets, taken at press: a drag has to read where it started, not where it is. */
-	TArray<FTransform> WidgetTransformsWhenPress;
-	FDreamUIPrefabEditorViewportClient* ViewportClient = nullptr;
-	TUniquePtr<FSceneViewFamilyContext> ViewFamily = nullptr;
-	bool HasAnyWidget()const
-	{
-		for (const TWeakObjectPtr<UDreamWidget>& Weak : SelectedWidgets)
-		{
-			if (Weak.IsValid())return true;
-		}
-		return false;
-	}
-	/**
-	 * Where the gizmo itself stands: the selection's centre, in the first widget's frame. Its scale
-	 * is dropped -- the gizmo is drawn at a screen-constant size and a scaled widget must not skew
-	 * the axes the drag is measured along.
-	 */
-	FTransform ComputeSelectionTransform()const
-	{
-		FVector Centre = FVector::ZeroVector;
-		FQuat Rotation = FQuat::Identity;
-		int32 Count = 0;
-		for (const TWeakObjectPtr<UDreamWidget>& Weak : SelectedWidgets)
-		{
-			if (UDreamWidget* Widget = Weak.Get())
-			{
-				if (Count == 0)Rotation = Widget->GetWorldTransform().GetRotation();
-				Centre += Widget->GetWorldTransform().GetLocation();
-				Count++;
-			}
-		}
-		if (Count == 0)return ThisTransform;
-		return FTransform(Rotation, Centre / (double)Count);
-	}
-	void UpdateAxis()
-	{
-		auto SceneView = ViewportClient->CalcSceneView( ViewFamily.Get() );
-		auto MouseX = ViewportClient->Viewport->GetMouseX();
-		auto MouseY = ViewportClient->Viewport->GetMouseY();
-
-		RenderTransform = ThisTransform;
-		float RenderScale = 1;
-		if (bIsDragging)
-		{
-			RenderScale = PressRenderScale;
-			RenderTransform.SetScale3D(FVector(RenderScale, RenderScale, RenderScale));
-		}
-		else
-		{
-			if (ViewportClient->GetViewportType() != LVT_Perspective)
-			{
-				RenderScale = ViewportClient->GetViewTransform().GetOrthoZoom() * 0.0001f;
-			}
-			else
-			{
-				RenderScale = FVector::Dist(ViewportClient->GetViewLocation(), ThisTransform.GetTranslation()) * 1.5f / ViewportClient->Viewport->GetSizeXY().X;
-			}
-			if (bIsMousePressedAtThisFrame)
-			{
-				PressRenderScale = RenderScale; 
-			}
-		}
-		RenderTransform.SetScale3D(FVector(RenderScale, RenderScale, RenderScale));
-		
-		if (bIsDragging)
-		{
-			if (HasAnyWidget())
-			{
-				FVector RayOrigin, RayDirection;
-				FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
-
-				auto Center = ThisTransform.GetTranslation();
-				constexpr float Far = 1e6f;
-				auto LineStartOfMouse = RayOrigin - RayDirection * Far;
-				auto LineEndOfMouse = RayOrigin + RayDirection * Far;
-				if (TransformType == ETransformType::Move)
-				{
-					FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
-					FVector Diff = FVector::ZeroVector;
-					switch (MoveAxisType)
-					{
-					case EMoveAxisType::YZ:
-						{
-							auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::X));
-							Diff = HitPoint - PressAxisHitPoint;
-						}
-						break;
-					case EMoveAxisType::ZX:
-						{
-							auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Y));
-							Diff = HitPoint - PressAxisHitPoint;
-						}
-						break;
-					case EMoveAxisType::XY:
-						{
-							auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Z));
-							Diff = HitPoint - PressAxisHitPoint;
-						}
-						break;
-					case EMoveAxisType::X:
-						{
-							FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(-Far, 0, 0)), ThisTransform.TransformPosition(FVector(Far, 0, 0)), A, B);
-							Diff = B - PressAxisHitPoint;
-						}
-						break;
-					case EMoveAxisType::Y:
-						{
-							FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, -Far, 0)), ThisTransform.TransformPosition(FVector(0, Far, 0)), A, B);
-							Diff = B - PressAxisHitPoint;
-						}
-						break;
-					case EMoveAxisType::Z:
-						{
-							FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, 0, -Far)), ThisTransform.TransformPosition(FVector(0, 0, Far)), A, B);
-							Diff = B - PressAxisHitPoint;
-						}
-						break;
-					}
-					ThisTransform.SetTranslation(ThisTransformWhenPress.GetTranslation() + Diff);
-					for (int32 Index = 0; Index < SelectedWidgets.Num(); ++Index)
-					{
-						UDreamWidget* Widget = SelectedWidgets[Index].Get();
-						if (!Widget)continue;
-						// Each from its own press pose, so the selection keeps its shape; reading the
-						// gizmo's location instead would pile every widget onto the one point.
-						const FVector NewLocation = WidgetTransformsWhenPress[Index].GetTranslation() + Diff;
-						FDreamUIUtils::ChangePropertyWithNotify(Widget, USceneComponent::GetRelativeLocationPropertyName(), [=]
-						{
-							Widget->SetWorldLocation(NewLocation);
-						});
-					}
-				}
-				else if (TransformType == ETransformType::Rotate)
-				{
-					FRotator Diff = FRotator();
-					switch (RotateAxisType)
-					{
-					case ERotateAxisType::X:
-						{
-							auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, RenderTransform.GetUnitAxis(EAxis::X));
-							auto AxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
-							auto DotValue = FVector::DotProduct(PressAxisVector, AxisVector);
-							auto AngleInDegree = FMath::RadiansToDegrees(FMath::Acos(DotValue));
-							auto CrossVector = FVector::CrossProduct(PressAxisVector, AxisVector).GetSafeNormal();
-							auto AngleSign = -FMath::Sign(FVector::DotProduct(CrossVector, FVector(1, 0, 0)));
-							AngleInDegree *= AngleSign;
-							Diff.Roll = AngleInDegree;
-						}
-						break;
-					case ERotateAxisType::Y:
-						{
-							auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, RenderTransform.GetUnitAxis(EAxis::Y));
-							auto AxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
-							auto DotValue = FVector::DotProduct(PressAxisVector, AxisVector);
-							auto AngleInDegree = FMath::RadiansToDegrees(FMath::Acos(DotValue));
-							auto CrossVector = FVector::CrossProduct(PressAxisVector, AxisVector).GetSafeNormal();
-							auto AngleSign = -FMath::Sign(FVector::DotProduct(CrossVector, FVector(0, 1, 0)));
-							AngleInDegree *= AngleSign;
-							Diff.Pitch = AngleInDegree;
-						}
-						break;
-					case ERotateAxisType::Z:
-						{
-							auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, RenderTransform.GetUnitAxis(EAxis::Z));
-							auto AxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
-							auto DotValue = FVector::DotProduct(PressAxisVector, AxisVector);
-							auto AngleInDegree = FMath::RadiansToDegrees(FMath::Acos(DotValue));
-							auto CrossVector = FVector::CrossProduct(PressAxisVector, AxisVector).GetSafeNormal();
-							auto AngleSign = FMath::Sign(FVector::DotProduct(CrossVector, FVector(0, 0, 1)));
-							AngleInDegree *= AngleSign;
-							Diff.Yaw = AngleInDegree;
-						}
-						break;
-					}
-					ThisTransform.SetRotation(ThisTransformWhenPress.GetRotation() * Diff.Quaternion());
-					// The gizmo's own turn expressed in world space. Handing each widget the local
-					// Diff instead would turn every widget about its own axes, so a selection whose
-					// members are rotated differently would come apart as it turned.
-					const FQuat WorldDelta = ThisTransform.GetRotation() * ThisTransformWhenPress.GetRotation().Inverse();
-					const FVector RotationCentre = ThisTransformWhenPress.GetTranslation();
-					// One widget turns where it stands; a group turns about the shared centre, which
-					// carries its members around as well as turning them.
-					const bool bCarriesLocation = SelectedWidgets.Num() > 1;
-					for (int32 Index = 0; Index < SelectedWidgets.Num(); ++Index)
-					{
-						UDreamWidget* Widget = SelectedWidgets[Index].Get();
-						if (!Widget)continue;
-						const FTransform& Press = WidgetTransformsWhenPress[Index];
-						const FQuat NewRotation = WorldDelta * Press.GetRotation();
-						const FVector NewLocation = RotationCentre + WorldDelta.RotateVector(Press.GetTranslation() - RotationCentre);
-						FDreamUIUtils::ChangePropertyWithNotify(Widget, USceneComponent::GetRelativeRotationPropertyName(), [=]
-						{
-							if (bCarriesLocation)
-							{
-								FDreamUIUtils::ChangePropertyWithNotify(Widget, USceneComponent::GetRelativeLocationPropertyName(), [=]
-								{
-									Widget->SetWorldLocationAndRotation(NewLocation, NewRotation);
-								});
-							}
-							else
-							{
-								Widget->SetWorldRotation(NewRotation);
-							}
-						});
-					}
-				}
-			}
-		}
-		else
-		{
-			if (HasAnyWidget())
-			{
-				ThisTransform = ComputeSelectionTransform();
-			}
-			constexpr uint8 AxisAlpha = 255;
-			constexpr uint8 PlaneAlpha = 50;
-			//reset color
-			{
-				MoveAxisX->SetColor(ColorAxisX.WithAlpha(AxisAlpha));
-				MoveAxisY->SetColor(ColorAxisY.WithAlpha(AxisAlpha));
-				MoveAxisZ->SetColor(ColorAxisZ.WithAlpha(AxisAlpha));
-				MovePlaneYZ->SetColor(ColorAxisX.WithAlpha(PlaneAlpha));
-				MovePlaneZX->SetColor(ColorAxisY.WithAlpha(PlaneAlpha));
-				MovePlaneXY->SetColor(ColorAxisZ.WithAlpha(PlaneAlpha));
-				RotateAxisX->SetColor(ColorAxisX.WithAlpha(AxisAlpha));
-				RotateAxisY->SetColor(ColorAxisY.WithAlpha(AxisAlpha));
-				RotateAxisZ->SetColor(ColorAxisZ.WithAlpha(AxisAlpha));
-			}
-			MoveAxisType = EMoveAxisType::None;
-			RotateAxisType = ERotateAxisType::None;
-			
-			constexpr float Far = 100000000;
-			FVector RayOrigin, RayDirection;
-			FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
-			FVector LineEnd = RayOrigin + RayDirection * Far;
-
-			auto Center = ThisTransform.GetTranslation();
-			if (TransformType == ETransformType::Move)
-			{
-				//yz plane
-				{
-					auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::X));
-					auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
-					bool bIsHit = IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize;
-					MovePlaneYZ->SetColor((bIsHit ? HighlightColor : ColorAxisX).WithAlpha(PlaneAlpha));
-					if (bIsHit)
-					{
-						MoveAxisType = EMoveAxisType::YZ;
-						if (bIsMousePressedAtThisFrame)
-						{
-							PressAxisHitPoint = IntersectPoint;
-						}
-						return;
-					}
-				}
-				//zx plane
-				{
-					auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Y));
-					auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
-					bool bIsHit = IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize;
-					MovePlaneZX->SetColor((bIsHit ? HighlightColor : ColorAxisY).WithAlpha(PlaneAlpha));
-					if (bIsHit)
-					{
-						MoveAxisType = EMoveAxisType::ZX;
-						if (bIsMousePressedAtThisFrame)
-						{
-							PressAxisHitPoint = IntersectPoint;
-						}
-						return;
-					}
-				}
-				//xy plane
-				{
-					auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
-					auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
-					bool bIsHit = IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize;
-					MovePlaneXY->SetColor((bIsHit ? HighlightColor : ColorAxisZ).WithAlpha(PlaneAlpha));
-					if (bIsHit)
-					{
-						MoveAxisType = EMoveAxisType::XY;
-						if (bIsMousePressedAtThisFrame)
-						{
-							PressAxisHitPoint = IntersectPoint;
-						}
-						return;
-					}
-				}
-			
-				FVector A = FVector::Zero(), DistanceXHitPoint = FVector(BIG_NUMBER), DistanceYHitPoint = FVector(BIG_NUMBER), DistanceZHitPoint = FVector(BIG_NUMBER);
-
-				const float HitThreshold = 10.0f * RenderScale;
-				FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(AxisLength, 0, 0)), A, DistanceXHitPoint);
-				auto DistanceToX = FVector::Dist(A, DistanceXHitPoint);
-
-				FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, AxisLength, 0)), A, DistanceYHitPoint);
-				auto DistanceToY = FVector::Dist(A, DistanceYHitPoint);
-
-				FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, 0, AxisLength)), A, DistanceZHitPoint);
-				auto DistanceToZ = FVector::Dist(A, DistanceZHitPoint);
-
-				if (DistanceToX < DistanceToY && DistanceToX < DistanceToZ && DistanceToX < HitThreshold)
-				{
-					MoveAxisType = EMoveAxisType::X;
-					MoveAxisX->SetColor(HighlightColor.WithAlpha(AxisAlpha));
-					if (bIsMousePressedAtThisFrame)
-					{
-						PressAxisHitPoint = DistanceXHitPoint;
-					}
-				}
-
-				if (DistanceToY < DistanceToX && DistanceToY < DistanceToZ && DistanceToY < HitThreshold)
-				{
-					MoveAxisType = EMoveAxisType::Y;
-					MoveAxisY->SetColor(HighlightColor.WithAlpha(AxisAlpha));
-					if (bIsMousePressedAtThisFrame)
-					{
-						PressAxisHitPoint = DistanceYHitPoint;
-					}
-				}
-
-				if (DistanceToZ < DistanceToX && DistanceToZ < DistanceToY && DistanceToZ < HitThreshold)
-				{
-					MoveAxisType = EMoveAxisType::Z;
-					MoveAxisZ->SetColor(HighlightColor.WithAlpha(AxisAlpha));
-					if (bIsMousePressedAtThisFrame)
-					{
-						PressAxisHitPoint = DistanceZHitPoint;
-					}
-				}
-			}
-			else if (TransformType == ETransformType::Rotate)
-			{
-				const float HitThreshold = 10.0f * RenderScale;
-				FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
-
-				auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::X));
-				auto DistToCenter = FVector::Dist(LinePlaneIntersectPointX, Center);
-				auto DistanceToX = FMath::Abs(DistToCenter - RotateAxisRadius * RenderScale);
-
-				auto LinePlaneIntersectPointY = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Y));
-				DistToCenter = FVector::Dist(LinePlaneIntersectPointY, Center);
-				auto DistanceToY = FMath::Abs(DistToCenter - RotateAxisRadius * RenderScale);
-
-				auto LinePlaneIntersectPointZ = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
-				DistToCenter = FVector::Dist(LinePlaneIntersectPointZ, Center);
-				auto DistanceToZ = FMath::Abs(DistToCenter - RotateAxisRadius * RenderScale);
-
-				if (DistanceToX < DistanceToY && DistanceToX < DistanceToZ && DistanceToX < HitThreshold)
-				{
-					RotateAxisType = ERotateAxisType::X;
-					RotateAxisX->SetColor(HighlightColor.WithAlpha(AxisAlpha));
-					if (bIsMousePressedAtThisFrame)
-					{
-						PressAxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
-					}
-				}
-
-				if (DistanceToY < DistanceToX && DistanceToY < DistanceToZ && DistanceToY < HitThreshold)
-				{
-					RotateAxisType = ERotateAxisType::Y;
-					RotateAxisY->SetColor(HighlightColor.WithAlpha(AxisAlpha));
-					if (bIsMousePressedAtThisFrame)
-					{
-						PressAxisVector = (LinePlaneIntersectPointY - Center).GetSafeNormal();
-					}
-				}
-
-				if (DistanceToZ < DistanceToX && DistanceToZ < DistanceToY && DistanceToZ < HitThreshold)
-				{
-					RotateAxisType = ERotateAxisType::Z;
-					RotateAxisZ->SetColor(HighlightColor.WithAlpha(AxisAlpha));
-					if (bIsMousePressedAtThisFrame)
-					{
-						PressAxisVector = (LinePlaneIntersectPointZ - Center).GetSafeNormal();
-					}
-				}
-			}
-		}
-	}
-	TUniquePtr<FScopedTransaction> Transaction = nullptr;
-public:
-	FDreamUITransformWidget(UWorld* InWorld, TConstArrayView<UDreamWidget*> InWidgets, FDreamUIPrefabEditorViewportClient* InViewportClient)
-	{
-		World = InWorld;
-		for (UDreamWidget* Widget : InWidgets)
-		{
-			SelectedWidgets.Add(Widget);
-		}
-		WidgetTransformsWhenPress.SetNum(SelectedWidgets.Num());
-		ThisTransform = ComputeSelectionTransform();
-		DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(InWorld);
-		DebugName = TEXT("DreamUITransformWidget");
-		
-		auto MoveAxisMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/DreamGUI/EditorGizmo/MoveAxis"));
-		if (!MoveAxisMesh)return;
-		TArray<FDreamUIMeshVertex> SrcMeshVertexArray; TArray<FDreamUIMeshIndex> SrcMeshIndexArray;
-		FDreamUIUtils::StaticMeshToDreamUIMeshRenderData(MoveAxisMesh, SrcMeshVertexArray, SrcMeshIndexArray);
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			FRotator3f MoveAxisXRot = FRotator3f(-90, 0, 0);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Position = MoveAxisXRot.RotateVector(Vertex.Position);
-				Vertex.Color = ColorAxisX;
-			}
-			MoveAxisX = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			MoveAxisX->UpdateLocalBounds();
-		}
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			FRotator3f MoveAxisYRot = FRotator3f(0, 0, 90);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Position = MoveAxisYRot.RotateVector(Vertex.Position);
-				Vertex.Color = ColorAxisY;
-			}
-			MoveAxisY = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			MoveAxisY->UpdateLocalBounds();
-		}
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Color = ColorAxisZ;
-			}
-			MoveAxisZ = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			MoveAxisZ->UpdateLocalBounds();
-		}
-		
-		auto MovePlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/DreamGUI/EditorGizmo/MovePlane"));
-		FDreamUIUtils::StaticMeshToDreamUIMeshRenderData(MovePlaneMesh, SrcMeshVertexArray, SrcMeshIndexArray);
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			MovePlaneYZCenter = FVector(0, 0.15f, 0.15f);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Color = ColorAxisX;
-			}
-			MovePlaneYZ = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			MovePlaneYZ->UpdateLocalBounds();
-		}
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			MovePlaneZXCenter = FVector(0.15f, 0, 0.15f);
-			FRotator3f MovePlaneZXRot = FRotator3f(0, -90, 0);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Position = MovePlaneZXRot.RotateVector(Vertex.Position);
-				Vertex.Color = ColorAxisY;
-			}
-			MovePlaneZX = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			MovePlaneZX->UpdateLocalBounds();
-		}
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			MovePlaneXYCenter = FVector(0.15f, 0.15f, 0);
-			FRotator3f MovePlaneXYRot = FRotator3f(-90, 0, 0);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Position = MovePlaneXYRot.RotateVector(Vertex.Position);
-				Vertex.Color = ColorAxisZ;
-			}
-			MovePlaneXY = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			MovePlaneXY->UpdateLocalBounds();
-		}
-
-		auto RotateAxisMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/DreamGUI/EditorGizmo/RotateAxis"));
-		FDreamUIUtils::StaticMeshToDreamUIMeshRenderData(RotateAxisMesh, SrcMeshVertexArray, SrcMeshIndexArray);
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			FRotator3f AxisRot = FRotator3f(90, 0, 0);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Position = AxisRot.RotateVector(Vertex.Position);
-				Vertex.Color = ColorAxisX;
-			}
-			RotateAxisX = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			RotateAxisX->UpdateLocalBounds();
-		}
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			FRotator3f AxisRot = FRotator3f(0, 0, 90);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Position = AxisRot.RotateVector(Vertex.Position);
-				Vertex.Color = ColorAxisY;
-			}
-			RotateAxisY = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			RotateAxisY->UpdateLocalBounds();
-		}
-		{
-			auto VertexArray = SrcMeshVertexArray;
-			FRotator3f AxisRot = FRotator3f(0, 0, 0);
-			for (auto& Vertex : VertexArray)
-			{
-				Vertex.Position = AxisRot.RotateVector(Vertex.Position);
-				Vertex.Color = ColorAxisY;
-			}
-			RotateAxisZ = MakeShared<FDreamUIGizmoMesh>(VertexArray, SrcMeshIndexArray, EDreamUIGizmoMeshPrimitiveType::Triangle);
-			RotateAxisZ->UpdateLocalBounds();
-		}
-		
-		ViewportClient = InViewportClient;
-		ViewFamily = MakeUnique<FSceneViewFamilyContext>(FSceneViewFamily::ConstructionValues(
-			InViewportClient->Viewport,
-			InViewportClient->GetScene(),
-			InViewportClient->EngineShowFlags)
-			.SetRealtimeUpdate( true ) );
-
-		if (!GizmoMaterial.IsValid())
-		{
-			GizmoMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/EditorGizmo/GizmoMaterial"));
-		}
-		if (GizmoMaterial.IsValid())
-		{
-			MoveAxisX->Material
-			= MoveAxisY->Material
-			= MoveAxisZ->Material
-			= MovePlaneYZ->Material
-			= MovePlaneZX->Material
-			= MovePlaneXY->Material
-			= RotateAxisX->Material
-			= RotateAxisY->Material
-			= RotateAxisZ->Material
-			= TStrongObjectPtr(GizmoMaterial.Get());
-		}
-
-		bCanTick = true;
-	}
-	~FDreamUITransformWidget()
-	{
-	}
-	void Tick()
-	{
-		if (!bCanTick)return;
-		UpdateAxis();
-
-		auto ViewExtension = UDreamUIManagerWorldSubsystem::GetViewExtension(World.Get(), true);
-		if (!ViewExtension)return;
-		
-		auto LocalToWorld = RenderTransform.ToMatrixWithScale();
-		if (TransformType == ETransformType::Move)
-		{
-			auto ViewLocation = ViewportClient->GetViewLocation();
-			struct FMovePlaneInfo
-			{
-				double DistanceToCamera;
-				TSharedPtr<FDreamUIGizmoMesh> RenderData;
-			};
-			TArray<FMovePlaneInfo> MovePlanes;
-			MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneYZCenter)), MovePlaneYZ});
-			MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneZXCenter)), MovePlaneZX});
-			MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneXYCenter)), MovePlaneXY});
-			//simple sort on distance
-			MovePlanes.Sort([](const FMovePlaneInfo& A, const FMovePlaneInfo& B)
-			{			
-				return A.DistanceToCamera > B.DistanceToCamera;
-			});
-			for (auto& MovePlane : MovePlanes)
-			{
-				MovePlane.RenderData->LocalToWorldMatrix = LocalToWorld;
-				MovePlane.RenderData->Render(ViewExtension, false);
-			}
-
-			MoveAxisX->LocalToWorldMatrix = LocalToWorld;
-			MoveAxisX->Render(ViewExtension, false);
-			MoveAxisY->LocalToWorldMatrix = LocalToWorld;
-			MoveAxisY->Render(ViewExtension, false);
-			MoveAxisZ->LocalToWorldMatrix = LocalToWorld;
-			MoveAxisZ->Render(ViewExtension, false);
-		}
-		else if (TransformType == ETransformType::Rotate)
-		{
-			RotateAxisX->LocalToWorldMatrix = LocalToWorld;
-			RotateAxisX->Render(ViewExtension, false);
-			RotateAxisY->LocalToWorldMatrix = LocalToWorld;
-			RotateAxisY->Render(ViewExtension, false);
-			RotateAxisZ->LocalToWorldMatrix = LocalToWorld;
-			RotateAxisZ->Render(ViewExtension, false);
-		}
-	}
-	bool IsDragging()const{return bIsDragging;}
-	bool HandleInputKey(const FInputKeyEventArgs& EventArgs)
-	{
-		if (EventArgs.Key == EKeys::LeftMouseButton)
-		{
-			if (EventArgs.Event == IE_Pressed)
-			{
-				bIsMousePressedAtThisFrame = true;
-				UpdateAxis();
-				bIsMousePressedAtThisFrame = false;
-				if (MoveAxisType != EMoveAxisType::None || RotateAxisType != ERotateAxisType::None)
-				{
-					bIsDragging = true;
-					PressMouseX = EventArgs.Viewport->GetMouseX();
-					PressMouseY = EventArgs.Viewport->GetMouseY();
-					ThisTransformWhenPress = ThisTransform;
-					Transaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveWidget", "Move Widget"));
-					for (int32 Index = 0; Index < SelectedWidgets.Num(); ++Index)
-					{
-						if (UDreamWidget* Widget = SelectedWidgets[Index].Get())
-						{
-							Widget->Modify();
-							WidgetTransformsWhenPress[Index] = Widget->GetWorldTransform();
-						}
-					}
-					return true;
-				}
-			}
-			else if (EventArgs.Event == IE_Released)
-			{
-				bIsMouseReleasedAtThisFrame = true;
-				MoveAxisType = EMoveAxisType::None;
-				RotateAxisType = ERotateAxisType::None;
-				if (bIsDragging)
-				{
-					bIsDragging = false;
-					Transaction.Reset();
-					return true;
-				}
-			}
-		}
-		else if (EventArgs.Key == EKeys::W)
-		{
-			if (EventArgs.Event == IE_Pressed)
-			{
-				TransformType = ETransformType::Move;
-				return true;
-			}
-		}
-		else if (EventArgs.Key == EKeys::E)
-		{
-			if (EventArgs.Event == IE_Pressed)
-			{
-				TransformType = ETransformType::Rotate;
-				return true;
-			}
-		}
-		return false;
-	}
-};
 
 FDreamUIPrefabEditorViewportClient::FDreamUIPrefabEditorViewportClient(TWeakPtr<FDreamUIPrefabEditor> InPrefabEditorPtr
 	, const TSharedRef<SDreamUIPrefabEditorViewport>& InEditorViewportPtr)
@@ -763,7 +74,15 @@ FDreamUIPrefabEditorViewportClient::FDreamUIPrefabEditorViewportClient(TWeakPtr<
 	EditorViewportPtr = InEditorViewportPtr;
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
-	bShowWidget = false;
+	// Without an active mode that says ShouldDrawWidget, FWidget::Render draws nothing: the stock
+	// answer is "only when actors or components are selected", and a prefab holds neither.
+	ModeTools->SetDefaultMode(UDreamUIPrefabEdMode::EM_DreamUIPrefab);
+	ModeTools->ActivateDefaultMode();
+	// The classic widget, not the Interactive Tools one. Whether FWidget draws itself or defers to
+	// the ITF gizmo comes from AreEditorGizmosAllowed(ModeTools), which is on by default and follows
+	// an editor-wide setting; the ITF has no valid context in a custom asset-editor viewport (see the
+	// note on the base constructor call), so deferring to it would draw no gizmo at all.
+	ModeTools->SetSupportsViewportITF(false);
 
 	// GEditorModeTools serves as our draw helper
 	bUsesDrawHelper = true;
@@ -802,31 +121,11 @@ FDreamUIPrefabEditorViewportClient::FDreamUIPrefabEditorViewportClient(TWeakPtr<
 	// to be repeated here or they never fire on opening a prefab.
 	DrawHelper.bDrawGrid = !ShouldUseCanvasView();
 
-	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectionChanged.AddLambda([=, this]()
-	{
-		TArray<UDreamWidget*> GizmoWidgets;
-		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
-		{
-			UDreamWidget* SelectedWidget = WeakWidget.Get();
-			if (!SelectedWidget)continue;
-			if (PrefabEditorPtr.Pin()->IsWidgetLockedForInteraction(SelectedWidget))continue;
-			if (PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidget))continue;
-			GizmoWidgets.Add(SelectedWidget);
-		}
-		if (GizmoWidgets.IsEmpty())
-		{
-			TransformWidget.Reset();
-		}
-		else
-		{
-			TransformWidget = MakeUnique<FDreamUITransformWidget>(GetWorld(), GizmoWidgets, this);
-		}
-	});
 }
 
 FDreamUIPrefabEditorViewportClient::~FDreamUIPrefabEditorViewportClient()
 {
-	if (PrefabEditorPtr.IsValid())
+	if (PrefabEditorPtr.IsValid() && OnSelectionChangedDelegateHandle.IsValid())
 	{
 		PrefabEditorPtr.Pin()->OnSelectionChanged.Remove(OnSelectionChangedDelegateHandle);
 	}
@@ -1180,7 +479,13 @@ bool FDreamUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView
 	DesignerAnchorHandlePositions.Reset();
 	DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
 	bDesignerMoveAvailable = false;
-	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
+	if (!PrefabEditorPtr.IsValid())return false;
+	// Everything below projects through the view and drags against the widget's own plane, so it
+	// is as true in the perspective view as in the designer's. What differs is who owns which
+	// gesture there: the engine's gizmo moves the selection, so the rectangle is not a Move handle
+	// and stays click-through; and the pivot and anchor markers stay out, because on a centred
+	// widget all of them land exactly where the gizmo's axes start.
+	const bool bResizeHandlesOnly = !IsOrtho();
 	TArray<UDreamWidget*> Selected;
 	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 	{
@@ -1190,7 +495,7 @@ bool FDreamUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView
 		}
 	}
 	if (Selected.IsEmpty())return false;
-	bDesignerMoveAvailable = CanMoveSelection(Selected);
+	bDesignerMoveAvailable = !bResizeHandlesOnly && CanMoveSelection(Selected);
 
 	auto ProjectWidgetCorners = [&View](UDreamWidget* InWidget, TArray<FVector2D>& OutCorners) -> bool
 	{
@@ -1247,9 +552,12 @@ bool FDreamUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView
 			DesignerHandlePositions.Add(EDesignerHandle::Right, (SingleCorners[1] + SingleCorners[2]) * 0.5f);
 			DesignerHandlePositions.Add(EDesignerHandle::Left, (SingleCorners[3] + SingleCorners[0]) * 0.5f);
 		}
-		FVector2D PivotPixel;
-		if (DreamWorldToPixelInFront(View, SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
-		UpdateAnchorScreenGeometry(View, SelectedWidget);
+		if (!bResizeHandlesOnly)
+		{
+			FVector2D PivotPixel;
+			if (DreamWorldToPixelInFront(View, SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
+			UpdateAnchorScreenGeometry(View, SelectedWidget);
+		}
 	}
 	else
 	{
@@ -1685,22 +993,27 @@ void FDreamUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 	// switch turns the lot off and leaves the art on its own. Only the drawing goes: the handles
 	// stay where they were and stay grabbable, because hiding a gesture is not taking it away.
 	if (PrefabEditorPtr.IsValid() && !PrefabEditorPtr.Pin()->GetShowDesignerChrome())return;
-	if (!IsOrtho())return;
-	DrawDesignerCanvasBoundary(InViewport, View, Canvas);
-	if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowResolutionGuides())
+	// The canvas boundary, the guides, the readout and the shipped outline all talk about the
+	// canvas plane, which only the designer view looks at square-on.
+	if (IsOrtho())
 	{
-		DrawResolutionGuides(InViewport, View, Canvas);
-		DrawSafeZoneGuide(View, Canvas);
-	}
-	DrawLayoutDebugOverlay(InViewport, Canvas);
-	DrawCursorReadout(InViewport, View, Canvas);
-	if (PrefabEditorPtr.IsValid())
-	{
-		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+		DrawDesignerCanvasBoundary(InViewport, View, Canvas);
+		if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowResolutionGuides())
 		{
-			DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
+			DrawResolutionGuides(InViewport, View, Canvas);
+			DrawSafeZoneGuide(View, Canvas);
+		}
+		DrawLayoutDebugOverlay(InViewport, Canvas);
+		DrawCursorReadout(InViewport, View, Canvas);
+		if (PrefabEditorPtr.IsValid())
+		{
+			for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+			{
+				DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
+			}
 		}
 	}
+	// The selection outline and its handles follow the widget wherever the camera is.
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();
 	const FLinearColor OutlineColor(0.1f, 0.65f, 1.0f);
@@ -1922,16 +1235,12 @@ void FDreamUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 	if (bDesignerDragging)UpdateDesignerDrag();
 	if (bDesignerMarqueePending)TryPromoteDesignerMarquee();
 	UpdateHoveredWidget();
-	if (TransformWidget.IsValid() && IsPerspective())
-	{
-		TransformWidget->Tick();
-	}
 }
 
 
 bool FDreamUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
 {
-	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
+	if (!PrefabEditorPtr.IsValid())return false;
 	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending || bDesignerMarqueePending))
 	{
 		bDesignerDragPending = false;
@@ -1982,6 +1291,9 @@ bool FDreamUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyE
 	const EDesignerHandle HitHandle = View && UpdateDesignerScreenGeometry(*View) ? HitTestDesignerHandle(MousePixel) : EDesignerHandle::None;
 	if (HitHandle == EDesignerHandle::None)
 	{
+		// In the perspective view a left drag on empty space is the camera's, and a click is the
+		// engine's to resolve against the gizmo and the hit proxies. Only the designer marquees.
+		if (!IsOrtho())return false;
 		// Any press that missed every handle arms a marquee, and consumes nothing: until it travels
 		// it is still the plain click, which goes on selecting or clearing exactly as it did.
 		// Asking for nothing under the cursor first would arm nowhere -- the prefab root's own rect
@@ -2522,29 +1834,8 @@ bool FDreamUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& Even
 		}
 	}
 
-	bool bHandled = false;
-	if (IsOrtho())
-	{
-		bHandled = HandleDesignerInputKey(EventArgs);
-	}
-	if (!bHandled && TransformWidget.IsValid() && IsPerspective())
-	{
-		const bool bWasDraggingGizmo = TransformWidget->IsDragging();
-		bHandled = TransformWidget->HandleInputKey(EventArgs);
-		if (bWasDraggingGizmo && !TransformWidget->IsDragging() && PrefabEditorPtr.IsValid())
-		{
-			// The gizmo drag just ended. It writes location and rotation, so key both.
-			TArray<UDreamWidget*> MovedWidgets;
-			for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
-			{
-				if (UDreamWidget* MovedWidget = WeakWidget.Get())
-				{
-					MovedWidgets.Add(MovedWidget);
-				}
-			}
-			AutoKeyAnimatedTransform(MovedWidgets, true, true, false);
-		}
-	}
+	// The resize handles are live in both views; what else the designer owns is decided inside.
+	bool bHandled = HandleDesignerInputKey(EventArgs);
 	if (!bHandled)
 	{
 		bHandled = GUnrealEd->ComponentVisManager.HandleInputKey(this, EventArgs.Viewport, EventArgs.Key, EventArgs.Event);
@@ -2751,16 +2042,98 @@ void FDreamUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProx
 	}
 }
 
+void FDreamUIPrefabEditorViewportClient::GetGizmoWidgets(TArray<UDreamWidget*>& OutWidgets) const
+{
+	OutWidgets.Reset();
+	if (!PrefabEditorPtr.IsValid())return;
+	auto PrefabEditor = PrefabEditorPtr.Pin();
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditor->GetSelectedWidgets())
+	{
+		UDreamWidget* SelectedWidget = WeakWidget.Get();
+		if (!SelectedWidget)continue;
+		if (PrefabEditor->IsWidgetLockedForInteraction(SelectedWidget))continue;
+		if (PrefabEditor->IsWidgetHiddenInDesigner(SelectedWidget))continue;
+		OutWidgets.Add(SelectedWidget);
+	}
+}
+
+void FDreamUIPrefabEditorViewportClient::ApplyDeltaToSelectedWidgets(const FVector& Drag, const FRotator& Rot, const FVector& Scale)
+{
+	TArray<UDreamWidget*> Widgets;
+	GetGizmoWidgets(Widgets);
+	if (Widgets.IsEmpty())return;
+	const bool bHasDrag = !Drag.IsNearlyZero();
+	const bool bHasRot = !Rot.IsNearlyZero();
+	const bool bHasScale = !Scale.IsNearlyZero();
+	if (!bHasDrag && !bHasRot && !bHasScale)return;
+
+	// Rotation and scale pivot on the gizmo, which sits at the selection's centre; with one widget
+	// selected that centre is its own origin, so both cases fall out of the same code.
+	const FVector Pivot = GetWidgetLocation();
+	const FQuat DeltaRotation = Rot.Quaternion();
+	for (UDreamWidget* TargetWidget : Widgets)
+	{
+		TargetWidget->Modify();
+		const FTransform WorldTransform = TargetWidget->GetWorldTransform();
+		FVector NewLocation = WorldTransform.GetLocation();
+		FQuat NewRotation = WorldTransform.GetRotation();
+		if (bHasDrag)
+		{
+			NewLocation += Drag;
+		}
+		if (bHasRot)
+		{
+			NewRotation = DeltaRotation * NewRotation;
+			NewLocation = Pivot + DeltaRotation.RotateVector(NewLocation - Pivot);
+		}
+		if (bHasScale)
+		{
+			// The widget's delta is additive on the relative scale, which is what the level editor does.
+			const FVector NewScale = TargetWidget->GetRelativeScale() + Scale;
+			FDreamUIUtils::ChangePropertyWithNotify(TargetWidget, UDreamWidget::GetPropertyName_RelativeScale(), [=]
+			{
+				TargetWidget->SetRelativeScale(NewScale);
+			});
+		}
+		if (bHasRot)
+		{
+			FDreamUIUtils::ChangePropertyWithNotify(TargetWidget, UDreamWidget::GetPropertyName_RelativeRotation(), [=]
+			{
+				FDreamUIUtils::ChangePropertyWithNotify(TargetWidget, UDreamWidget::GetPropertyName_RelativeLocation(), [=]
+				{
+					TargetWidget->SetWorldLocationAndRotation(NewLocation, NewRotation);
+				});
+			});
+		}
+		else if (bHasDrag)
+		{
+			FDreamUIUtils::ChangePropertyWithNotify(TargetWidget, UDreamWidget::GetPropertyName_RelativeLocation(), [=]
+			{
+				TargetWidget->SetWorldLocation(NewLocation);
+			});
+		}
+	}
+}
+
 bool FDreamUIPrefabEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisList::Type InCurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale)
 {
-	if (TransformWidget.IsValid() && TransformWidget->IsDragging())
-	{
-		return true;
-	}
-	
 	if (GUnrealEd->ComponentVisManager.IsActive() && GUnrealEd->ComponentVisManager.HandleInputDelta(this, InViewport, Drag, Rot, Scale))
 	{
 		return true;
+	}
+
+	// A prefab's contents are DreamWidgets, not actors, so the engine's widget hands its delta here
+	// instead of to ApplyDeltaToActors. Everything else about the gizmo -- drawing, axis picking,
+	// snapping, the coordinate space, the W/E/R modes -- stays the engine's.
+	if (InCurrentAxis != EAxisList::None)
+	{
+		TArray<UDreamWidget*> Widgets;
+		GetGizmoWidgets(Widgets);
+		if (!Widgets.IsEmpty())
+		{
+			ApplyDeltaToSelectedWidgets(Drag, Rot, Scale);
+			return true;
+		}
 	}
 
 	bool bHandled = false;
@@ -2821,6 +2194,19 @@ UE::Widget::EWidgetMode FDreamUIPrefabEditorViewportClient::GetWidgetMode() cons
 	{
 		return UE::Widget::WM_None;
 	}
+	// The designer view has its own rect handles; the gizmo belongs to the perspective view.
+	if (!IsPerspective())
+	{
+		return UE::Widget::WM_None;
+	}
+	// Nothing to act on, nothing to draw. This is the one place that decides whether a gizmo appears:
+	// UDreamUIPrefabEdMode answers ShouldDrawWidget unconditionally.
+	TArray<UDreamWidget*> Widgets;
+	GetGizmoWidgets(Widgets);
+	if (Widgets.IsEmpty())
+	{
+		return UE::Widget::WM_None;
+	}
 
 	return FEditorViewportClient::GetWidgetMode();
 }
@@ -2832,6 +2218,18 @@ FVector FDreamUIPrefabEditorViewportClient::GetWidgetLocation() const
 		return ComponentVisWidgetLocation;
 	}
 
+	TArray<UDreamWidget*> Widgets;
+	GetGizmoWidgets(Widgets);
+	if (!Widgets.IsEmpty())
+	{
+		FVector Centre = FVector::ZeroVector;
+		for (const UDreamWidget* SelectedWidget : Widgets)
+		{
+			Centre += SelectedWidget->GetWorldTransform().GetLocation();
+		}
+		return Centre / (double)Widgets.Num();
+	}
+
 	return FEditorViewportClient::GetWidgetLocation();
 }
 FMatrix FDreamUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
@@ -2840,6 +2238,17 @@ FMatrix FDreamUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
 	if (GUnrealEd->ComponentVisManager.GetCustomInputCoordinateSystem(this, ComponentVisWidgetCoordSystem))
 	{
 		return ComponentVisWidgetCoordSystem;
+	}
+
+	if (GetWidgetCoordSystemSpace() == COORD_Local)
+	{
+		TArray<UDreamWidget*> Widgets;
+		GetGizmoWidgets(Widgets);
+		if (!Widgets.IsEmpty())
+		{
+			// The first of the selection, the same one whose rotation the old gizmo took.
+			return FRotationMatrix::Make(Widgets[0]->GetWorldTransform().GetRotation());
+		}
 	}
 
 	return FEditorViewportClient::GetWidgetCoordSystem();
@@ -4169,6 +3578,17 @@ void FDreamUIPrefabEditorViewportClient::TrackingStopped()
 	}
 
 	ModeTools->ActorMoveNotify();
+
+	// The gizmo writes location, rotation and scale, so key all three.
+	if (MouseDeltaTracker->HasReceivedDelta())
+	{
+		TArray<UDreamWidget*> MovedWidgets;
+		GetGizmoWidgets(MovedWidgets);
+		if (!MovedWidgets.IsEmpty())
+		{
+			AutoKeyAnimatedTransform(MovedWidgets, true, true, true);
+		}
+	}
 
 	if (bDidAnythingActuallyChange)
 	{

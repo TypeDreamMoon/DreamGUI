@@ -49,6 +49,8 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 {
 	/** Material applied to this section */
 	UMaterialInterface* Material = nullptr;
+	/** Built-in shader parameters; when enabled the material is not used by DreamGUI's renderer. */
+	FDreamUIBuiltInDrawParams BuiltIn;
 	/** Vertex buffer for this section */
 	FStaticMeshVertexBuffers VertexBuffers;
 	FDreamUIMeshVertexBuffer DreamUIVertexBuffers;
@@ -151,6 +153,7 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 		if (!bShouldKeepDataWhenDisable)
 		{
 			Material = nullptr;
+			BuiltIn = FDreamUIBuiltInDrawParams();
 			bCanRender = false;
 		}
 	}
@@ -351,6 +354,7 @@ public:
 
 				// Grab material
 				NewSectionProxy->Material = SrcSection->Material;
+				NewSectionProxy->BuiltIn = SrcSection->BuiltIn;
 				if (NewSectionProxy->Material == nullptr)
 				{
 					NewSectionProxy->Material = UMaterial::GetDefaultMaterial(MD_Surface);
@@ -450,6 +454,10 @@ public:
 	void SetMeshSectionMaterial_RenderThread(FDreamUIRenderSectionProxy* Section, UMaterialInterface* Material)
 	{
 		(static_cast<FDreamUISectionProxy_Mesh*>(Section))->Material = Material;
+	}
+	void SetMeshSectionBuiltIn_RenderThread(FDreamUIRenderSectionProxy* Section, const FDreamUIBuiltInDrawParams& Params)
+	{
+		(static_cast<FDreamUISectionProxy_Mesh*>(Section))->BuiltIn = Params;
 	}
 
 	void SetRenderSectionRenderPriority_RenderThread(FDreamUIRenderSectionProxy* Section, int32 NewPriority)
@@ -654,6 +662,10 @@ public:
 			case EDreamUIRenderSectionProxyType::Mesh:
 			{
 				auto Section = static_cast<FDreamUISectionProxy_Mesh*>(RenderSection);
+				if (!bWireframe && Section->Material == nullptr)
+				{
+					break;//built-in sections are drawn by the DreamUI renderer only
+				}
 				FMaterialRenderProxy* MaterialProxy = bWireframe ? WireframeMaterialInstance : Section->Material->GetRenderProxy();
 
 				// For each view..
@@ -738,7 +750,11 @@ public:
 			auto RenderSection = SectionData.SectionPointer;
 
 			auto Section = static_cast<FDreamUISectionProxy_Mesh*>(RenderSection);
-			FMaterialRenderProxy* MaterialProxy = bWireframe ? WireframeMaterialInstance : Section->Material->GetRenderProxy();
+			FMaterialRenderProxy* MaterialProxy = bWireframe ? WireframeMaterialInstance : (Section->Material ? Section->Material->GetRenderProxy() : nullptr);
+			if (MaterialProxy == nullptr && !Section->BuiltIn.bEnabled)
+			{
+				continue;//nothing to draw it with
+			}
 
 			// Draw the mesh.
 			FMeshBatch Mesh;
@@ -766,6 +782,8 @@ public:
 			MeshBatchContainer.Mesh = Mesh;
 			MeshBatchContainer.VertexBufferRHI = Section->DreamUIVertexBuffers.VertexBufferRHI;
 			MeshBatchContainer.NumVerts = Section->ValidVerticesCount;
+			MeshBatchContainer.BuiltIn = bWireframe ? FDreamUIBuiltInDrawParams() : Section->BuiltIn;
+			MeshBatchContainer.LocalToWorld = GetLocalToWorld();
 			ResultArray.Add(MeshBatchContainer);
 		}
 	}
@@ -922,6 +940,7 @@ private:
 void FDreamUIRenderSection_Mesh::ClearBeforePool()
 {
 	Material = nullptr;
+	BuiltIn = FDreamUIBuiltInDrawParams();
 }
 
 void FDreamUIRenderSection_PostProcess::ClearBeforePool()
@@ -1369,6 +1388,38 @@ void UDreamUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMateri
 	}
 }
 
+void UDreamUIMeshComponent::SetMeshSectionBuiltIn(int32 InSectionIndex, const FDreamUIBuiltInDrawParams& InParams)
+{
+	auto RenderSection = RenderSectionArray[InSectionIndex];
+	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh);
+	(static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->BuiltIn = InParams;
+	if (SceneProxy)
+	{
+		if (RenderSection->RenderProxy)
+		{
+			UpdateMeshSectionBuiltInDataStruct UpdateData;
+			UpdateData.SectionProxy = RenderSection->RenderProxy;
+			UpdateData.Params = InParams;
+#if LATE_FLUSH_RENDER_CMD
+			PendingUpdateMeshSectionBuiltInDataArray.Add(MoveTemp(UpdateData));
+#else
+			auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
+			ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_SetMeshSectionBuiltIn)(
+				[DreamUIMeshSceneProxy, UpdateData = MoveTemp(UpdateData)](FRHICommandListImmediate& RHICmdList) {
+					DreamUIMeshSceneProxy->SetMeshSectionBuiltIn_RenderThread(UpdateData.SectionProxy, UpdateData.Params);
+				});
+#endif
+		}
+	}
+}
+
+bool UDreamUIMeshComponent::IsMeshSectionBuiltIn(int32 InSectionIndex) const
+{
+	auto RenderSection = RenderSectionArray[InSectionIndex];
+	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh);
+	return (static_cast<const FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->BuiltIn.bEnabled;
+}
+
 void UDreamUIMeshComponent::VerifyMaterials()
 {
 #if 1
@@ -1719,6 +1770,17 @@ void UDreamUIMeshComponent::FlushRenderCommand()
 				for (auto& UpdateData : PendingUpdateMeshSectionMaterialDataArray)
 				{
 					DreamUIMeshSceneProxy->SetMeshSectionMaterial_RenderThread(UpdateData.SectionProxy, UpdateData.Material);
+				}
+			});
+	}
+	if (PendingUpdateMeshSectionBuiltInDataArray.Num() > 0)
+	{
+		auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
+		ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_SetMeshSectionBuiltIn)(
+			[DreamUIMeshSceneProxy, PendingUpdateMeshSectionBuiltInDataArray = MoveTemp(PendingUpdateMeshSectionBuiltInDataArray)](FRHICommandListImmediate& RHICmdList) {
+				for (auto& UpdateData : PendingUpdateMeshSectionBuiltInDataArray)
+				{
+					DreamUIMeshSceneProxy->SetMeshSectionBuiltIn_RenderThread(UpdateData.SectionProxy, UpdateData.Params);
 				}
 			});
 	}

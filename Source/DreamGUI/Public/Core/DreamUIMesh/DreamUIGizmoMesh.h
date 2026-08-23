@@ -23,7 +23,6 @@ public:
 	void UpdateLocalBounds();
 	void Render(TSharedPtr<class FDreamUIRenderer> DreamUIRenderer, bool ScreenSpaceOrWorldSpace);
 	
-	TStrongObjectPtr<UMaterialInterface> Material = nullptr;
 	FMatrix LocalToWorldMatrix = FMatrix::Identity;
 	FBoxSphereBounds LocalBounds = FBoxSphereBounds(EForceInit::ForceInit);
 	EDreamUIGizmoMeshPrimitiveType GetPrimitiveType()const { return PrimitiveType; }

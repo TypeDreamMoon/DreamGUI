@@ -52,6 +52,7 @@ public:
 		  Vertices(Other.Vertices),
 		  Triangles(Other.Triangles),
 		  Texture(Other.Texture),
+		  Font(Other.Font),
 		  Material(Other.Material),
 		  bIsFont(Other.bIsFont),
 		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
@@ -71,6 +72,7 @@ public:
 			Vertices = Other.Vertices;
 			Triangles = Other.Triangles;
 			Texture = Other.Texture;
+			Font = Other.Font;
 			Material = Other.Material;
 			bIsFont = Other.bIsFont;
 			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
@@ -91,6 +93,8 @@ public:
 	TArray<FDreamUIMeshIndex> Triangles;
 
 	TWeakObjectPtr<UTexture> Texture = nullptr;
+	/** The font Texture belongs to when bIsFont; the draw call reads the atlas's field geometry from it. */
+	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
 	bool bIsFont = false;
 	bool bSupportDrawcallBatching = true;
@@ -107,6 +111,7 @@ public:
 		FMemory::Memcpy(Triangles.GetData(), Other.Triangles.GetData(), Other.Triangles.Num() * sizeof(FDreamUIMeshIndex));
 		
 		Texture = Other.Texture;
+		Font = Other.Font;
 		Material = Other.Material;
 		bIsFont = Other.bIsFont;
 		bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
@@ -224,21 +229,7 @@ public:
 		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 	);
 #pragma endregion
-#pragma region UIText
-public:
-	static void UpdateUIText(const FString& Content
-		, TArray<FDreamUIText_TextProcessingElement>& TextProcessingArray
-		, float width, float height, FVector2f pivot
-		, FColor color, uint8 RenderOpacityForRichText, FVector2f fontSpace, FDreamUIGeometry* uiGeo, float fontSize
-		, EDreamUITextParagraphHorizontalAlign paragraphHAlign, EDreamUITextParagraphVerticalAlign paragraphVAlign, EDreamUITextOverflowType overflowType
-		, ETextWrappingPolicy wrappingPolicy, bool bUseKerning
-		, EDreamUITextFontStyle fontStyle, FVector2f& textPreferredSize, bool& outTruncated
-		, UDreamCanvas* renderCanvas, class UDreamText* lexText
-		, TArray<FDreamUITextLineProperty>& cacheLinePropertyArray, TArray<FDreamUITextCharProperty>& cacheCharPropertyArray, TArray<FDreamUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
-		, TArray<FDreamUIText_RichTextImageTag>& cacheRichTextImageTagArray
-		, TArray<FDreamUIText_Emoji>& cacheEmojiArray
-		, UDreamUIFontData_BaseObject* font, bool bRichText, int32 richTextFilterFlags);
-#pragma endregion
+
 
 public:
 	static void UpdateUIColor(FDreamUIGeometry* uiGeo, FColor color);
@@ -251,6 +242,8 @@ public:
 		float width, float height, const FVector2f& pivot, const FDreamUISpriteInfo& spriteInfo
 		, float& pivotOffsetX, float& pivotOffsetY, float& halfWidth, float& halfHeight
 	);
+	/** Snaps emitted glyph quads to the canvas pixel grid; what a pixel-perfect text runs after painting. */
+	static void AdjustPixelPerfectPos_For_UIText(TArray<FDreamUIOriginVertexData>& originVertices, const TArray<FDreamUITextCharProperty>& cacheCharPropertyArray, UDreamCanvas* RenderCanvas, UDreamVisual* Visual);
 	static void AdjustPixelPerfectPos(
 		TArray<FDreamUIOriginVertexData>& originVertices, int startIndex, int count
 		, UDreamCanvas* RenderCanvas, UDreamVisual* Visual

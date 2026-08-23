@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIFontData_FreeTypeRender.h"
+#include "Core/Text/DreamGlyphRasterizer.h"
 #include "DreamGUI.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -12,12 +13,24 @@
 #if WITH_FREETYPE
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#endif
+#if WITH_HARFBUZZ
+#include "hb.h"
+#include "hb-ft.h"
+#include "hb-ot.h"
+#endif
+#if WITH_FREETYPE
 #include FT_OUTLINE_H
 #endif
 
 namespace
 {
 	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> PendingFontTextureUploads;
+	/** Fonts with glyphs on a worker, drained every frame with the texture uploads. */
+	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsWithAsyncGlyphs;
+	int32 AsyncGlyphSyncBudgetOverride = -1;
+	uint64 SyncGlyphBudgetFrame = 0;
+	int32 SyncGlyphsThisFrame = 0;
 }
 
 void UDreamUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
@@ -214,6 +227,7 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 		UE_LOG(DreamGUI, Log, TEXT("[%s].%d Success, font:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()));
 		bAlreadyInitialized = true;
 		bHasKerning = FT_HAS_KERNING(Face) != 0;
+		InitHarfBuzz();
 
 		ReleaseFontTexture();
 		CurrentTextureSlice = 0;
@@ -231,6 +245,12 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 {
 	bAlreadyInitialized = false;
+	// The worker keeps itself (and the font bytes it reads) alive until its task ends; results for
+	// this font are simply dropped with it.
+	Rasterizer.Reset();
+	PendingAsyncGlyphs.Reset();
+	FontsWithAsyncGlyphs.Remove(this);
+	DeinitHarfBuzz();
 	ReleaseFontTexture();
 	if (Library != nullptr)
 	{
@@ -258,42 +278,20 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 #endif
 
 #if WITH_FREETYPE
-FT_GlyphSlot UDreamUIFontData_FreeTypeRender::RenderGlyphOnFreeType(uint32 CharCode, float CharSize, float BoldSize)
+FT_GlyphSlot UDreamUIFontData_FreeTypeRender::RenderGlyphOnFreeType(FT_FaceRec_* InFace, uint32 GlyphIndex, float CharSize, float BoldSize)
 {
-	InitFreeType();
-	if (bAlreadyInitialized == false)
+	if (InFace == nullptr)
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font '%s' is not initialized"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 		return nullptr;
 	}
-
-	auto error = FT_Set_Pixel_Sizes(Face, 0, CharSize);
+	auto error = FT_Set_Pixel_Sizes(InFace, 0, CharSize);
 	if (error)
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font '%s' FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return nullptr;
 	}
-	FT_GlyphSlot slot = Face->glyph;
-	error = FT_Load_Glyph(Face, FT_Get_Char_Index(Face, CharCode), FT_LOAD_DEFAULT);
-	if (slot->glyph_index == 0//missing char in this font
-		&& slot->metrics.width == 0 && slot->metrics.height == 0//some chars (/r, /n, space) only have width and height, no pixels
-		)
-	{
-		if (FallbackFontArray.Num() > 0)
-		{
-			UE_LOG(DreamGUI, Log, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d), will search in fallbacks"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)CharCode);
-			for (int i = 0; i < FallbackFontArray.Num(); i++)
-			{
-				if (FallbackFontArray[i] == nullptr)continue;
-				if (auto fallbackSlot = FallbackFontArray[i]->RenderGlyphOnFreeType(CharCode, CharSize, BoldSize))
-				{
-					return fallbackSlot;
-				}
-			}
-		}
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d) in fallbacks too"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)CharCode);
-		return nullptr;
-	}
+	FT_GlyphSlot slot = InFace->glyph;
+	error = FT_Load_Glyph(InFace, GlyphIndex, FT_LOAD_DEFAULT);
 	if (error)
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font '%s' FT_Load_Glyph error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -307,7 +305,7 @@ FT_GlyphSlot UDreamUIFontData_FreeTypeRender::RenderGlyphOnFreeType(uint32 CharC
 			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font '%s' FT_Outline_Embolden error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
 		}
 	}
-	error = FT_Render_Glyph(Face->glyph, FT_Render_Mode::FT_RENDER_MODE_NORMAL);
+	error = FT_Render_Glyph(slot, FT_Render_Mode::FT_RENDER_MODE_NORMAL);
 	if (error)
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font '%s' FT_Render_Glyph error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -319,7 +317,162 @@ FT_GlyphSlot UDreamUIFontData_FreeTypeRender::RenderGlyphOnFreeType(uint32 CharC
 	}
 	return slot;
 }
+
+FT_FaceRec_* UDreamUIFontData_FreeTypeRender::GetFreeTypeFace(int32 FaceIndex)
+{
+	if (FaceIndex == 0)
+	{
+		InitFreeType();
+		return bAlreadyInitialized ? Face : nullptr;
+	}
+	const int32 FallbackIndex = FaceIndex - 1;
+	if (FallbackIndex < 0 || FallbackIndex >= FallbackFontArray.Num())
+	{
+		return nullptr;
+	}
+	UDreamUIFontData_FreeTypeRender* Fallback = FallbackFontArray[FallbackIndex];
+	if (Fallback == nullptr || Fallback == this)
+	{
+		return nullptr;
+	}
+	return Fallback->GetFreeTypeFace(0);
+}
 #endif
+
+#if WITH_HARFBUZZ
+// The engine's HarfBuzz is built to allocate through these hooks. SlateCore defines its own copy
+// inside its DLL; a module that links the static library needs one of its own.
+extern "C"
+{
+	void* HarfBuzzMalloc(size_t InSizeBytes)
+	{
+		return FMemory::Malloc(InSizeBytes);
+	}
+	void* HarfBuzzCalloc(size_t InNumItems, size_t InItemSizeBytes)
+	{
+		const size_t AllocSizeBytes = InNumItems * InItemSizeBytes;
+		if (AllocSizeBytes > 0)
+		{
+			void* Ptr = FMemory::Malloc(AllocSizeBytes);
+			FMemory::Memzero(Ptr, AllocSizeBytes);
+			return Ptr;
+		}
+		return nullptr;
+	}
+	void* HarfBuzzRealloc(void* InPtr, size_t InSizeBytes)
+	{
+		return FMemory::Realloc(InPtr, InSizeBytes);
+	}
+	void HarfBuzzFree(void* InPtr)
+	{
+		FMemory::Free(InPtr);
+	}
+}
+#endif
+
+void UDreamUIFontData_FreeTypeRender::InitHarfBuzz()
+{
+	DeinitHarfBuzz();
+#if WITH_HARFBUZZ && WITH_FREETYPE
+	if (Face == nullptr)
+	{
+		return;
+	}
+	// The face reads its tables through FreeType; the font does its own OpenType metrics, so its
+	// scale is independent of whatever pixel size the FreeType face was last set to for rendering.
+	hb_face_t* HarfBuzzFace = hb_ft_face_create_referenced(Face);
+	HarfBuzzFont = hb_font_create(HarfBuzzFace);
+	hb_face_destroy(HarfBuzzFace);
+	hb_ot_font_set_funcs(HarfBuzzFont);
+#endif
+}
+
+void UDreamUIFontData_FreeTypeRender::DeinitHarfBuzz()
+{
+#if WITH_HARFBUZZ
+	if (HarfBuzzFont != nullptr)
+	{
+		hb_font_destroy(HarfBuzzFont);
+		HarfBuzzFont = nullptr;
+	}
+#endif
+}
+
+bool UDreamUIFontData_FreeTypeRender::HasKerning()
+{
+#if WITH_HARFBUZZ
+	// GPOS kerning is applied by the shaper whenever the font has it; the old flag only saw 'kern'.
+	if (HarfBuzzFont != nullptr)
+	{
+		return true;
+	}
+#endif
+	return bHasKerning;
+}
+
+int32 UDreamUIFontData_FreeTypeRender::GetFaceCount()
+{
+	return 1 + FallbackFontArray.Num();
+}
+
+bool UDreamUIFontData_FreeTypeRender::FaceHasCodepoint(int32 FaceIndex, uint32 Codepoint)
+{
+#if WITH_FREETYPE
+	if (FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex))
+	{
+		return FT_Get_Char_Index(TargetFace, Codepoint) != 0;
+	}
+#endif
+	return false;
+}
+
+void* UDreamUIFontData_FreeTypeRender::GetShapingFont(int32 FaceIndex, float FontSize)
+{
+#if WITH_HARFBUZZ && WITH_FREETYPE
+	if (FaceIndex != 0)
+	{
+		const int32 FallbackIndex = FaceIndex - 1;
+		if (FallbackIndex < 0 || FallbackIndex >= FallbackFontArray.Num())return nullptr;
+		UDreamUIFontData_FreeTypeRender* Fallback = FallbackFontArray[FallbackIndex];
+		return (Fallback != nullptr && Fallback != this) ? Fallback->GetShapingFont(0, FontSize) : nullptr;
+	}
+	InitFreeType();
+	if (HarfBuzzFont == nullptr)
+	{
+		return nullptr;
+	}
+	const int32 Scale = FMath::RoundToInt(FontSize * 64.0f);
+	hb_font_set_scale(HarfBuzzFont, Scale, Scale);
+	return HarfBuzzFont;
+#else
+	return nullptr;
+#endif
+}
+
+bool UDreamUIFontData_FreeTypeRender::ResolveCodepoint(uint32 Codepoint, FDreamUIGlyphKey& OutKey)
+{
+#if WITH_FREETYPE
+	const int32 FaceCount = GetFaceCount();
+	for (int32 FaceIndex = 0; FaceIndex < FaceCount; FaceIndex++)
+	{
+		FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+		if (TargetFace == nullptr)continue;
+		const uint32 GlyphIndex = FT_Get_Char_Index(TargetFace, Codepoint);
+		if (GlyphIndex != 0)
+		{
+			OutKey = FDreamUIGlyphKey(FaceIndex, GlyphIndex);
+			return true;
+		}
+	}
+	// Nothing has it: the primary face's .notdef, so the text still takes up room.
+	if (GetFreeTypeFace(0) != nullptr)
+	{
+		OutKey = FDreamUIGlyphKey(0, 0);
+		return true;
+	}
+#endif
+	return false;
+}
 
 UTexture2DArray* UDreamUIFontData_FreeTypeRender::GetFontTexture()
 {
@@ -398,6 +551,53 @@ float UDreamUIFontData_FreeTypeRender::GetLineHeight(float FontSize)
 	return fontSize;
 #endif
 }
+float UDreamUIFontData_FreeTypeRender::GetAscent(float FontSize)
+{
+#if WITH_FREETYPE
+	if (Face == nullptr)return Super::GetAscent(FontSize);
+	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
+	if (error)
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
+		return Super::GetAscent(FontSize);
+	}
+	// FontSizeAsLineHeight keeps the font's own proportions inside the smaller box.
+	const float Ascender = Face->size->metrics.ascender * ONE_DIVIDE_64;
+	if (LineHeightType == EDreamUIDynamicFontLineHeightType::FontSizeAsLineHeight)
+	{
+		const float Descender = -Face->size->metrics.descender * ONE_DIVIDE_64;
+		const float Sum = Ascender + Descender;
+		return Sum > 0.0f ? FontSize * (Ascender / Sum) : FontSize * 0.8f;
+	}
+	return Ascender;
+#else
+	return Super::GetAscent(FontSize);
+#endif
+}
+
+float UDreamUIFontData_FreeTypeRender::GetDescent(float FontSize)
+{
+#if WITH_FREETYPE
+	if (Face == nullptr)return Super::GetDescent(FontSize);
+	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
+	if (error)
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
+		return Super::GetDescent(FontSize);
+	}
+	const float Descender = -Face->size->metrics.descender * ONE_DIVIDE_64;
+	if (LineHeightType == EDreamUIDynamicFontLineHeightType::FontSizeAsLineHeight)
+	{
+		const float Ascender = Face->size->metrics.ascender * ONE_DIVIDE_64;
+		const float Sum = Ascender + Descender;
+		return Sum > 0.0f ? FontSize * (Descender / Sum) : FontSize * 0.2f;
+	}
+	return Descender;
+#else
+	return Super::GetDescent(FontSize);
+#endif
+}
+
 float UDreamUIFontData_FreeTypeRender::GetVerticalOffset(float FontSize)
 {
 #if WITH_FREETYPE
@@ -428,6 +628,33 @@ void UDreamUIFontData_FreeTypeRender::SetFontType(EDreamUIDynamicFontDataType Va
 	FontType = Value;
 }
 
+void UDreamUIFontData_FreeTypeRender::SetFontFilePath(const FString& InPath, bool bInRelativeToProjectDir)
+{
+	FontType = EDreamUIDynamicFontDataType::CustomFontFile;
+	FontFilePath = InPath;
+	bUseRelativeFilePath = bInRelativeToProjectDir;
+	bUseExternalFileOrEmbedInToUAsset = true;
+#if WITH_FREETYPE
+	if (bAlreadyInitialized)
+	{
+		DeinitFreeType();
+	}
+#endif
+}
+
+void UDreamUIFontData_FreeTypeRender::SetFallbackFonts(const TArray<UDreamUIFontData_FreeTypeRender*>& InFallbacks)
+{
+	FallbackFontArray.Reset();
+	for (UDreamUIFontData_FreeTypeRender* Fallback : InFallbacks)
+	{
+		if (Fallback != nullptr && Fallback != this)
+		{
+			FallbackFontArray.Add(Fallback);
+		}
+	}
+	ClearCharDataCache();
+}
+
 void UDreamUIFontData_FreeTypeRender::SetEngineFont(UFontFace* Value)
 {
 	EngineFont = Value;
@@ -435,49 +662,249 @@ void UDreamUIFontData_FreeTypeRender::SetEngineFont(UFontFace* Value)
 
 FDreamUICharData UDreamUIFontData_FreeTypeRender::GetCharData(uint32 CharCode, float CharSize, bool IsBold)
 {
+	FDreamUIGlyphKey Key;
+	if (!ResolveCodepoint(CharCode, Key))
+	{
+		return FDreamUICharData();
+	}
+	return GetGlyphData(Key.FaceIndex, Key.GlyphIndex, CharSize, IsBold);
+}
+
+FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, uint32 GlyphIndex, float CharSize, bool IsBold)
+{
 	checkf(IsInGameThread(), TEXT("DreamGUI dynamic font glyphs must be generated on the game thread."));
 	auto Result = FDreamUICharData();
 	if (CharSize <= 0.0f)return Result;
-	if (!GetCharDataFromCache(CharCode, CharSize, IsBold, Result))//if charData not cached, then create it and add to cache
+	const FDreamUIGlyphKey Key(FaceIndex, GlyphIndex);
+	// Shader-side bold keeps one atlas glyph per face; only the advance knows about the weight.
+	const bool bShaderBold = IsBold && IsBoldSynthesizedInShader();
+	const bool bAtlasBold = IsBold && !bShaderBold;
+	if (!GetCharDataFromCache(Key, CharSize, bAtlasBold, Result))//if charData not cached, then create it and add to cache
 	{
-		FGlyphBitmap glyphBitmap;
-		if (!RenderGlyph(CharCode, CharSize, IsBold, glyphBitmap))//no valid glyph
+		// Off-thread when the font can and the frame's synchronous budget is spent.
+		float PixelsPerEm = 0.0f, SpreadPixels = 0.0f, BoldPixels = 0.0f;
+		if (UDreamUISettings::GetAsyncGlyphRasterization() && GetAsyncRasterParams(CharSize, bAtlasBold, PixelsPerEm, SpreadPixels, BoldPixels))
 		{
-			return Result;//@todo: use an error char to display
+			FAsyncGlyphRequest Request;
+			Request.Glyph = Key;
+			Request.CharSize = IsGlyphCacheSizeIndependent() ? 0.0f : CharSize;
+			Request.bBold = bAtlasBold;
+			if (PendingAsyncGlyphs.Contains(Request))
+			{
+				return MakePendingCharData(Key, CharSize, IsBold);
+			}
+			if (!TakeSyncGlyphBudget())
+			{
+				if (FDreamGlyphRasterizer* Worker = GetOrCreateRasterizer())
+				{
+					FDreamGlyphRasterizer::FJob Job;
+					Job.Key = Key;
+					Job.CharSize = CharSize;
+					Job.bBold = bAtlasBold;
+					Job.PixelsPerEm = PixelsPerEm;
+					Job.SpreadPixels = SpreadPixels;
+					Job.BoldPixels = BoldPixels;
+					Worker->Enqueue(Job);
+					PendingAsyncGlyphs.Add(Request);
+					FontsWithAsyncGlyphs.Add(this);
+					return MakePendingCharData(Key, CharSize, IsBold);
+				}
+			}
+		}
+
+		FGlyphBitmap glyphBitmap;
+		if (!RenderGlyph(Key, CharSize, bAtlasBold, glyphBitmap))//no valid glyph
+		{
+			return Result;
 		}
 
 		FDreamUICharData uiCharData;
-	PACK_AND_INSERT:
-		if (!PackRectAndInsertChar(glyphBitmap, BinPack, uiCharData))
+		if (!InsertGlyphBitmap(glyphBitmap, uiCharData))
 		{
-			if (FreeRectCells.Num() > 0)//use free cells
-			{
-				BinPack.DoRectCellsForText(FreeRectCells[FreeRectCells.Num() - 1]);
-				FreeRectCells.RemoveAt(FreeRectCells.Num() - 1, 1, EAllowShrinking::No);
-			}
-			else//no free cells, move to next slice of Texture2DArray
-			{
-				CurrentTextureSlice++;
-				UE_LOG(DreamGUI, Log, TEXT("[%s].%d Expend Texture2DArray slice to: %d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Texture->GetArraySize() + 1);
-				//add new slice to Texture2DArray
-				auto RectPackCellSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType);
-				BinPack = rbp::MaxRectsBinPack(RectPackCellSize, RectPackCellSize);
-				auto TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
-				BinPack.PrepareRectCellsForText(TextureSize, TextureSize, FreeRectCells, RectPackCellSize, false);
-				
-				FreeRectCells.RemoveAt(FreeRectCells.Num() - 1, 1, EAllowShrinking::No);
-
-				RenewFontTexture();
-				OneDivideTextureSize = 1.0f / TextureSize;
-			}
-
-			goto PACK_AND_INSERT;
+			return Result;
 		}
-
-		AddCharDataToCache(CharCode, CharSize, IsBold, uiCharData);
-		GetCharDataFromCache(CharCode, CharSize, IsBold, Result);
+		AddCharDataToCache(Key, CharSize, bAtlasBold, uiCharData);
+		GetCharDataFromCache(Key, CharSize, bAtlasBold, Result);
+	}
+	if (bShaderBold)
+	{
+		Result.XAdvance += CharSize * GetBoldRatio();
 	}
 	return Result;
+}
+
+bool UDreamUIFontData_FreeTypeRender::InsertGlyphBitmap(const FGlyphBitmap& InGlyphBitmap, FDreamUICharData& OutResult)
+{
+	for (int32 Attempt = 0; Attempt < 64; Attempt++)
+	{
+		if (PackRectAndInsertChar(InGlyphBitmap, BinPack, OutResult))
+		{
+			return true;
+		}
+		if (FreeRectCells.Num() > 0)//use free cells
+		{
+			BinPack.DoRectCellsForText(FreeRectCells[FreeRectCells.Num() - 1]);
+			FreeRectCells.RemoveAt(FreeRectCells.Num() - 1, 1, EAllowShrinking::No);
+		}
+		else//no free cells, move to next slice of Texture2DArray
+		{
+			CurrentTextureSlice++;
+			UE_LOG(DreamGUI, Log, TEXT("[%s].%d Expend Texture2DArray slice to: %d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Texture->GetArraySize() + 1);
+			//add new slice to Texture2DArray
+			auto RectPackCellSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType);
+			BinPack = rbp::MaxRectsBinPack(RectPackCellSize, RectPackCellSize);
+			auto TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
+			BinPack.PrepareRectCellsForText(TextureSize, TextureSize, FreeRectCells, RectPackCellSize, false);
+
+			FreeRectCells.RemoveAt(FreeRectCells.Num() - 1, 1, EAllowShrinking::No);
+
+			RenewFontTexture();
+			OneDivideTextureSize = 1.0f / TextureSize;
+		}
+	}
+	UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, a %dx%d glyph never fit the atlas."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), (int32)InGlyphBitmap.width, (int32)InGlyphBitmap.height);
+	return false;
+}
+
+FDreamUICharData UDreamUIFontData_FreeTypeRender::MakePendingCharData(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold)
+{
+	FDreamUICharData Result;
+	Result.bPending = true;
+#if WITH_FREETYPE
+	// The advance alone, unscaled, so the line lays out where it will end up once the quad lands.
+	if (FT_FaceRec_* TargetFace = GetFreeTypeFace(Glyph.FaceIndex))
+	{
+		if (FT_Load_Glyph(TargetFace, Glyph.GlyphIndex, FT_LOAD_NO_SCALE | FT_LOAD_IGNORE_TRANSFORM | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) == 0 && TargetFace->units_per_EM != 0)
+		{
+			Result.XAdvance = (float)(TargetFace->glyph->metrics.horiAdvance * ((double)CharSize / (double)TargetFace->units_per_EM));
+			if (IsBold)
+			{
+				Result.XAdvance += CharSize * GetBoldRatio();
+			}
+		}
+	}
+#endif
+	return Result;
+}
+
+bool UDreamUIFontData_FreeTypeRender::TakeSyncGlyphBudget()
+{
+	if (SyncGlyphBudgetFrame != GFrameCounter)
+	{
+		SyncGlyphBudgetFrame = GFrameCounter;
+		SyncGlyphsThisFrame = 0;
+	}
+	const int32 Budget = AsyncGlyphSyncBudgetOverride >= 0 ? AsyncGlyphSyncBudgetOverride : UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame();
+	if (SyncGlyphsThisFrame >= Budget)
+	{
+		return false;
+	}
+	SyncGlyphsThisFrame++;
+	return true;
+}
+
+void UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(int32 Budget)
+{
+	AsyncGlyphSyncBudgetOverride = Budget;
+	SyncGlyphBudgetFrame = 0;
+}
+
+FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
+{
+#if WITH_FREETYPE
+	if (!Rasterizer.IsValid())
+	{
+		InitFreeType();
+		if (!bAlreadyInitialized)
+		{
+			return nullptr;
+		}
+		TSharedRef<FDreamGlyphRasterizer, ESPMode::ThreadSafe> NewRasterizer = MakeShared<FDreamGlyphRasterizer, ESPMode::ThreadSafe>();
+		// The worker reads its own copies of the font files; fallbacks contribute theirs by face index.
+		const int32 FaceCount = GetFaceCount();
+		for (int32 FaceIndex = 0; FaceIndex < FaceCount; FaceIndex++)
+		{
+			UDreamUIFontData_FreeTypeRender* Owner = this;
+			if (FaceIndex > 0)
+			{
+				const int32 FallbackIndex = FaceIndex - 1;
+				Owner = FallbackFontArray.IsValidIndex(FallbackIndex) ? FallbackFontArray[FallbackIndex] : nullptr;
+				if (Owner == nullptr || Owner == this)continue;
+				Owner->InitFreeType();
+			}
+			const TArray<uint8>& Bytes = Owner->TempFontBinaryArray.Num() > 0 ? Owner->TempFontBinaryArray : Owner->FontBinaryArray;
+			if (Bytes.Num() == 0)continue;
+			NewRasterizer->SetFaceSource(FaceIndex, MakeShared<const TArray<uint8>, ESPMode::ThreadSafe>(Bytes), Owner->FontFace);
+		}
+		Rasterizer = NewRasterizer;
+	}
+	return Rasterizer.Get();
+#else
+	return nullptr;
+#endif
+}
+
+void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
+{
+	check(IsInGameThread());
+	if (!Rasterizer.IsValid())
+	{
+		PendingAsyncGlyphs.Reset();
+		return;
+	}
+	TArray<FDreamGlyphRasterizer::FResult> Results;
+	Rasterizer->Drain(Results);
+	if (Results.Num() == 0)
+	{
+		return;
+	}
+	bool bAnyLanded = false;
+	for (FDreamGlyphRasterizer::FResult& Result : Results)
+	{
+		FAsyncGlyphRequest Request;
+		Request.Glyph = Result.Job.Key;
+		Request.CharSize = IsGlyphCacheSizeIndependent() ? 0.0f : Result.Job.CharSize;
+		Request.bBold = Result.Job.bBold;
+		PendingAsyncGlyphs.Remove(Request);
+		if (!Result.bSucceeded)
+		{
+			continue;
+		}
+		FDreamUICharData Existing;
+		if (GetCharDataFromCache(Result.Job.Key, Result.Job.CharSize, Result.Job.bBold, Existing))
+		{
+			continue;//a synchronous request beat the worker to it
+		}
+		FGlyphBitmap Bitmap;
+		Bitmap.width = Result.Sdf.Width;
+		Bitmap.height = Result.Sdf.Height;
+		Bitmap.hOffset = Result.Sdf.Left;
+		Bitmap.vOffset = Result.Sdf.Top;
+		Bitmap.hAdvance = Result.Sdf.Advance;
+		Bitmap.buffer = MoveTemp(Result.Sdf.Pixels);
+		Bitmap.pixelSize = 4;
+		FDreamUICharData CharData;
+		if (InsertGlyphBitmap(Bitmap, CharData))
+		{
+			AddCharDataToCache(Result.Job.Key, Result.Job.CharSize, Result.Job.bBold, CharData);
+			bAnyLanded = true;
+		}
+	}
+	if (bAnyLanded)
+	{
+		OnGlyphsReady.Broadcast();
+	}
+}
+
+void UDreamUIFontData_FreeTypeRender::WaitForAsyncGlyphs()
+{
+	check(IsInGameThread());
+	if (Rasterizer.IsValid())
+	{
+		Rasterizer->WaitForAll();
+		DrainAsyncGlyphs();
+	}
+	FontsWithAsyncGlyphs.Remove(this);
 }
 
 bool UDreamUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, FDreamUICharData& OutResult)
@@ -685,6 +1112,24 @@ bool UDreamUIFontData_FreeTypeRender::FlushFontTexture()
 void UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures()
 {
 	check(IsInGameThread());
+	// Worker glyphs first, so their atlas writes ride this frame's upload.
+	if (FontsWithAsyncGlyphs.Num() > 0)
+	{
+		TArray<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsToDrain = FontsWithAsyncGlyphs.Array();
+		for (const auto& Font : FontsToDrain)
+		{
+			if (!Font.IsValid())
+			{
+				FontsWithAsyncGlyphs.Remove(Font);
+				continue;
+			}
+			Font->DrainAsyncGlyphs();
+			if (Font->PendingAsyncGlyphs.Num() == 0)
+			{
+				FontsWithAsyncGlyphs.Remove(Font);
+			}
+		}
+	}
 	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsToFlush;
 	Swap(FontsToFlush, PendingFontTextureUploads);
 	for (const auto& Font : FontsToFlush)

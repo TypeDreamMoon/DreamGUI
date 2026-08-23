@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DreamTweenManager.h"
+#include "DreamTweenerSpring.h"
 #include "Tweener/DreamTweenerFloat.h"
 #include "Tweener/DreamTweenerDouble.h"
 #include "Tweener/DreamTweenerInteger.h"
@@ -485,6 +486,17 @@ UDreamTweener* UDreamTweenManager::DelayFrameCall(UObject* WorldContextObject, i
 
 	auto tweener = NewObject<UDreamTweenerFrame>(WorldContextObject);
 	tweener->SetInitialValue(delayFrame);
+	Instance->tweenerList.Add(tweener);
+	return tweener;
+}
+
+UDreamTweenerSpring* UDreamTweenManager::SpringTo(UObject* WorldContextObject, const FDreamTweenFloatGetterFunction& getter, const FDreamTweenFloatSetterFunction& setter, float target, const FDreamSpringParams& params)
+{
+	auto Instance = GetDreamTweenInstance(WorldContextObject);
+	if (!IsValid(Instance))return nullptr;
+
+	auto tweener = NewObject<UDreamTweenerSpring>(WorldContextObject);
+	tweener->SetInitialValue(getter, setter, target, params);
 	Instance->tweenerList.Add(tweener);
 	return tweener;
 }

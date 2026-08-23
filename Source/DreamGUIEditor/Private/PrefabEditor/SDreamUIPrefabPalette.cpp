@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "SDreamUIPrefabPalette.h"
+#include "Core/DreamGUISettings.h"
 #include "DreamUIPrefabEditor.h"
 #include "DreamUIEditorTools.h"
 #include "Core/Components/DreamWidget.h"
@@ -277,7 +278,7 @@ void SDreamUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
 	for (auto& AssetData : PrefabAssets)
 	{
 		// the plugin's built-in preset prefabs already live in the Controls section
-		if (AssetData.PackageName.ToString().StartsWith(TEXT("/DreamGUI/Prefabs/")))continue;
+		if (AssetData.PackageName.ToString().StartsWith(UDreamGUISettings::Get()->PresetPrefabFolder))continue;
 		if (AssetData.PackageName == EditingPackage)continue;
 		if (ReferencingPackages.Contains(AssetData.PackageName))
 		{

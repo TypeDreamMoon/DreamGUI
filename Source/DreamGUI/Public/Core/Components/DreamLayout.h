@@ -3,6 +3,7 @@
 
 #pragma once
 #include "CoreMinimal.h"
+#include "Curves/CurveFloat.h"
 #include "DreamWidget.h"
 #include "DreamWidgetSubObjectBehaviour.h"
 #include "DreamLayout.generated.h"
@@ -214,6 +215,13 @@ public:
 	virtual void OnRegister() override;
 	/** INDEX_NONE means this container does not impose a child-count limit. */
 	virtual int32 GetMaxChildren() const { return INDEX_NONE; }
+	/**
+	 * Behaviours the owning widget must carry for this container to match the UMG panel it mirrors
+	 * (a Size Box needs the ContentWidget, for example). UDreamWidget::SyncRequiredBehavioursForLayoutContainer
+	 * adds the missing ones whenever the container is assigned and removes the ones only the previous
+	 * container asked for, so this is the single place such a dependency is declared.
+	 */
+	virtual void GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const {}
 
 	virtual void SnapshotLayout();
 	virtual void ApplyLayoutResult();

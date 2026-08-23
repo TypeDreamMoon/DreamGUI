@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #pragma once
@@ -6,6 +6,7 @@
 #include "Components/MeshComponent.h"
 #include "Core/DreamUIMeshIndex.h"
 #include "Core/DreamUIMeshVertex.h"
+#include "Core/DreamUIRender/DreamUIBaseShaders.h"
 #include "DreamUIMeshComponent.generated.h"
 
 class FDreamUIDrawCall;
@@ -45,6 +46,8 @@ struct FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
 	int32 ValidTriangleIndicesNum = 0;
 
 	UMaterialInterface* Material = nullptr;
+	/** Set instead of a material when DreamGUI's own renderer draws this section with its built-in shader. */
+	FDreamUIBuiltInDrawParams BuiltIn;
 
 	void Reset()
 	{
@@ -115,6 +118,9 @@ public:
 	void PoolAllRenderSection();
 	void SetRenderSectionRenderPriority(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, int32 InSortPriority);
 	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial);
+	/** Draw the section with the built-in UI shader (no material). Pass a disabled params struct to go back to the material. */
+	void SetMeshSectionBuiltIn(int32 InSectionIndex, const FDreamUIBuiltInDrawParams& InParams);
+	bool IsMeshSectionBuiltIn(int32 InSectionIndex) const;
 
 	void Init(UDreamCanvas* InCanvas);
 	void SetSupportDreamUIRenderer(bool InSupportOrNot, TWeakPtr<FDreamUIRenderer, ESPMode::ThreadSafe> InDreamUIRenderer, bool InIsRenderToWorld);
@@ -181,6 +187,12 @@ private:
 		UMaterialInterface* Material;
 	};
 	TArray<UpdateMeshSectionMaterialDataStruct> PendingUpdateMeshSectionMaterialDataArray;
+	struct UpdateMeshSectionBuiltInDataStruct
+	{
+		FDreamUIRenderSectionProxy* SectionProxy;
+		FDreamUIBuiltInDrawParams Params;
+	};
+	TArray<UpdateMeshSectionBuiltInDataStruct> PendingUpdateMeshSectionBuiltInDataArray;
 
 	friend class FDreamUIRenderSceneProxy;
 

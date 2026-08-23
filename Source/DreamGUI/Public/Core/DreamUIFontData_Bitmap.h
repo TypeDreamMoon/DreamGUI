@@ -11,22 +11,22 @@ struct FDreamUIBitmapCharKey
 {
 public:
 	FDreamUIBitmapCharKey() {}
-	FDreamUIBitmapCharKey(uint32 InCharCode, uint16 InCharSize, bool InIsBold)
+	FDreamUIBitmapCharKey(const FDreamUIGlyphKey& InGlyph, uint16 InCharSize, bool InIsBold)
 	{
-		this->CharCode = InCharCode;
+		this->Glyph = InGlyph;
 		this->CharSize = InCharSize;
 		this->bBold = InIsBold;
 	}
-	uint32 CharCode = 0;
+	FDreamUIGlyphKey Glyph;
 	uint16 CharSize = 0;
 	bool bBold = false;
 	bool operator==(const FDreamUIBitmapCharKey& other)const
 	{
-		return this->CharCode == other.CharCode && this->CharSize == other.CharSize && this->bBold == other.bBold;
+		return this->Glyph == other.Glyph && this->CharSize == other.CharSize && this->bBold == other.bBold;
 	}
 	friend FORCEINLINE uint32 GetTypeHash(const FDreamUIBitmapCharKey& other)
 	{
-		return HashCombine(GetTypeHash(other.CharCode), GetTypeHash(other.CharSize), GetTypeHash(other.bBold));
+		return HashCombine(GetTypeHash(other.Glyph), GetTypeHash(other.CharSize), GetTypeHash(other.bBold));
 	}
 };
 
@@ -47,25 +47,17 @@ protected:
 		float BoldRatio = 0.06f;
 public:
 	//Begin UDreamUIFontData_FreeTypeRender interface
-	virtual void PushCharData(
-		uint32 charCode, FVector2f lineOffset, FVector2f fontSpace, const FDreamUICharData& charData,
-		const DreamUIRichTextParser::FRichTextParseResult& richTextProperty,
-		int verticesStartIndex, int indicesStartIndex,
-		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-		TArray<FDreamUIOriginVertexData>& originVertices, TArray<FDreamUIMeshVertex>& vertices, TArray<FDreamUIMeshIndex>& triangleIndices
-	)override;
-	virtual void PrepareForPushCharData(UDreamText* InText)override;
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
 	//End UDreamUIFontData_FreeTypeRender interface
 protected:
-	float BoldSize; float ItalicSlop;
 	TMap<FDreamUIBitmapCharKey, FDreamUICharData> CharDataMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
 	virtual void InitializeFontTextureAtlasSlice(uint8* SliceData, int64 SliceDataSize) const override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
-	virtual bool GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
-	virtual void AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
-	virtual bool RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
+	virtual bool GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
+	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
+	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 
 	virtual bool GetSupportDynamicPixelsPerUnit()override { return true; }

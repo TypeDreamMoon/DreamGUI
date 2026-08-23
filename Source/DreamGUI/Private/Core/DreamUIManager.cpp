@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIManager.h"
+#include "Core/DreamGUISettings.h"
 
 #include "DreamGUI.h"
 #include "Utils/DreamUIUtils.h"
@@ -339,6 +340,13 @@ void UDreamUIManagerWorldSubsystem::DrawFrameOnWidget(UDreamWidget* Widget, bool
 				, Extends, RectDrawColor
 				, Widget, Widget->GetDisplayName(), ScreenOrWorld);
 
+			// The pivot, at the widget's origin. Sized off the widget so it stays readable on a
+			// 20-pixel icon and does not swallow a full-screen panel, and clamped so it does neither.
+			const float PivotSize = FMath::Clamp(FMath::Min(Widget->GetWidth(), Widget->GetHeight()) * 0.12f, 3.0f, 12.0f);
+			UDreamUIManagerWorldSubsystem::DrawDebugPivot(Widget->GetWorld()
+				, WorldTransform, PivotSize, RectDrawColor
+				, Widget, Widget->GetDisplayName(), ScreenOrWorld);
+
 			if (auto Visual = Cast<UDreamVisual>(Widget->GetVisual()))
 			{
 				FVector Min, Max;
@@ -407,7 +415,6 @@ void UDreamUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const T
 		new(VertexArray) FDreamUIMeshVertex(FVector3f(InArrowPointB), InColor);
 
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = FMatrix::Identity;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -591,15 +598,6 @@ FEditorViewportClient* UDreamUIManagerWorldSubsystem::GetEditorViewportClient()
 	return CacheViewportClient;
 }
 
-UMaterialInterface* UDreamUIManagerWorldSubsystem::GetDefaultGizmoMaterial()
-{
-	static TWeakObjectPtr<UMaterialInterface> GizmoMaterial;
-	if (!GizmoMaterial.IsValid())
-	{
-		GizmoMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/EditorGizmo/GizmoMaterial"));
-	}
-	return GizmoMaterial.Get();
-}
 
 void UDreamUIManagerWorldSubsystem::OnEndOfFrame()
 {
@@ -613,6 +611,30 @@ void UDreamUIManagerWorldSubsystem::OnEnginePreExit()
 	// 	auto Prefab = *Itr;
 	// 	Prefab->ClearPrefabInstanceScene();
 	// }
+}
+
+void UDreamUIManagerWorldSubsystem::DrawDebugPivot(UWorld* InWorld, const FMatrix& LocalToWorld, float Size, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
+{
+	// The widget's origin is its pivot: the rect is drawn offset from here by the pivot fractions, so
+	// this marker is what tells you which corner of that rect the numbers are measured from.
+	TArray<FVector3f> LinePoints;
+	const float Arm = Size;
+	const float Diamond = Size * 0.45f;
+	// A cross...
+	LinePoints.Add(FVector3f(0, -Arm, 0));
+	LinePoints.Add(FVector3f(0, Arm, 0));
+	LinePoints.Add(FVector3f(0, 0, -Arm));
+	LinePoints.Add(FVector3f(0, 0, Arm));
+	// ...inside a diamond, so it reads as a point rather than as two more frame edges.
+	LinePoints.Add(FVector3f(0, -Diamond, 0));
+	LinePoints.Add(FVector3f(0, 0, Diamond));
+	LinePoints.Add(FVector3f(0, 0, Diamond));
+	LinePoints.Add(FVector3f(0, Diamond, 0));
+	LinePoints.Add(FVector3f(0, Diamond, 0));
+	LinePoints.Add(FVector3f(0, 0, -Diamond));
+	LinePoints.Add(FVector3f(0, 0, -Diamond));
+	LinePoints.Add(FVector3f(0, -Diamond, 0));
+	UDreamUIManagerWorldSubsystem::DrawDebugLine(InWorld, LocalToWorld, LinePoints, Color, Object, DebugName, ScreenOrWorld);
 }
 
 void UDreamUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
@@ -647,7 +669,6 @@ void UDreamUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector
 		PushNewLine(Start, End);
 
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -720,7 +741,6 @@ void UDreamUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector&
 		PushNewLine(Start, End);
 
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -745,7 +765,6 @@ void UDreamUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix
 			new(VertexArray) FDreamUIMeshVertex(LinePoints[i + 1], Color);
 		}
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
