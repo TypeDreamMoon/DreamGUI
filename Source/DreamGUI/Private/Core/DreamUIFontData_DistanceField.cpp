@@ -202,14 +202,14 @@ FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(con
 	FDreamTextGlyphPaintStyle Style;
 	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
 	// Both sources are a field with the same convention (0.5 on the edge, +-SDFRadius texels of range),
-	// so both take the text style. Only the outline field renders bold as a dilation; the bitmap
-	// field keeps its baked bold glyphs (dilating a bitmap-derived field rounds the corners too far).
+	// so both take the text style, and both render bold as a dilation of the regular glyph: the same
+	// growth FreeType's embolden gives, without its self-intersections, and tunable per text.
 	Style.bDistanceField = true;
 	Style.EmTexels = (float)SampleFontSize;
 	Style.FieldSpreadTexels = (float)SDFRadius;
 	Style.QuadMarginTexels = SDFRadius - GetQuadShrinkTexels();
 	Style.TexelToUV = OneDivideTextureSize;
-	Style.BoldDilateEm = SdfSource == EDreamUISdfSource::OutlineMultiChannel ? BoldRatio * 0.5f : 0.0f;
+	Style.BoldDilateEm = BoldRatio * 0.5f;
 	return Style;
 }
 
@@ -287,6 +287,16 @@ void UDreamUIFontData_DistanceField::Serialize(FArchive& Ar)
 	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::SdfSourceOnFont)
 	{
 		SdfSource = EDreamUISdfSource::BitmapSingleChannel;
+	}
+	// Bold used to be FreeType's embolden at 0.08 em, chosen when the atlas baked it. As a field
+	// dilation the same growth is a blob on CJK glyphs, so a font still on that old default moves to
+	// the new one; a value someone set on purpose is kept.
+	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::BoldAsDilation)
+	{
+		if (FMath::IsNearlyEqual(BoldRatio, 0.08f, 1e-4f))
+		{
+			BoldRatio = 0.04f;
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

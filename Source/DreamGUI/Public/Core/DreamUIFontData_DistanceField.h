@@ -85,10 +85,13 @@ private:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		float ItalicAngle = 15.0f;
 	/**
-	 * bold size radio for bold style, large number create more bold effect.
+	 * How much bolder a bold glyph is, in em of total stroke growth (half on each side). Applied as a
+	 * dilation of the distance field, so it is continuous and costs no atlas space; the advance grows
+	 * by the same amount. 0.04 is FreeType's own synthetic bold (1/24 em); the old 0.08 closed the
+	 * counters of CJK glyphs. A text can shift its weight on top of this with FDreamTextStyle::FaceDilate.
 	 */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "0.0", UIMax = "1.0"))
-		float BoldRatio = 0.08f;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "0.0", UIMax = "0.2"))
+		float BoldRatio = 0.04f;
 	/** -1 means not set yet. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI", Transient)
 		int LineHeight = -1;
@@ -127,7 +130,8 @@ public:
 		return true;
 	}
 	virtual bool IsGlyphCacheSizeIndependent() const override { return true; }
-	virtual bool IsBoldSynthesizedInShader() const override { return SdfSource == EDreamUISdfSource::OutlineMultiChannel; }
+	/** Both fields render bold as a dilation; the atlas holds one glyph per face. */
+	virtual bool IsBoldSynthesizedInShader() const override { return true; }
 	/** How far the layout's glyph quads sit inside the field's spread, in texels at SampleFontSize (see GetCharDataFromCache). */
 	float GetQuadShrinkTexels() const;
 	virtual float GetBoldRatio() override{ return BoldRatio; }

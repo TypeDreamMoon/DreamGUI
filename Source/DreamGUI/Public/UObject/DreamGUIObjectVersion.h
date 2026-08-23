@@ -13,6 +13,8 @@ struct DREAMGUI_API FDreamGUIObjectVersion
 		BeforeCustomVersionWasAdded = 0,
 		/** SDF fonts carry SdfSource; assets from before it keep the bitmap-derived field. */
 		SdfSourceOnFont,
+		/** Bold is a field dilation; fonts still on the embolden-era BoldRatio default (0.08) move to 0.04. */
+		BoldAsDilation,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
