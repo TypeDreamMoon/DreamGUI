@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/SceneComponent.h"
 #include "DreamWidgetPresenterComponentBase.generated.h"
 
 class UDreamWidget;
@@ -29,7 +30,6 @@ protected:
 	virtual void PostLoad() override;
 	virtual void Serialize(FArchive& Ar) override;
 	virtual void PostInitProperties() override;
-	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 	virtual void LoadWidget()PURE_VIRTUAL(UDreamWidgetPresenterComponentBase::LoadWidget, );
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

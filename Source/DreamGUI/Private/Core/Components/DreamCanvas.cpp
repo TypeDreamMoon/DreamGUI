@@ -768,9 +768,44 @@ USceneComponent* UDreamCanvas::GetAttachedRootSceneComponent() const
 	return AttachedRootSceneComponent.Get();
 }
 
-void UDreamCanvas::AttachToSceneComponent(USceneComponent* InSceneComp) const
+void UDreamCanvas::AttachToSceneComponent(USceneComponent* InSceneComp)
 {
+	if (AttachedRootSceneComponent.Get() == InSceneComp)
+	{
+		return;
+	}
+	if (USceneComponent* Previous = AttachedRootSceneComponent.Get())
+	{
+		if (AttachedRootSceneComponentTransformHandle.IsValid())
+		{
+			Previous->TransformUpdated.Remove(AttachedRootSceneComponentTransformHandle);
+		}
+	}
+	AttachedRootSceneComponentTransformHandle.Reset();
 	AttachedRootSceneComponent = InSceneComp;
+	if (InSceneComp)
+	{
+		AttachedRootSceneComponentTransformHandle = InSceneComp->TransformUpdated.AddUObject(this, &UDreamCanvas::OnAttachedRootSceneComponentTransformUpdated);
+		// Place the tree at the new host now; the binding keeps it there afterwards.
+		if (auto Widget = GetWidget())
+		{
+			Widget->CalculateObjectToWorldTransform(true);
+		}
+	}
+}
+
+void UDreamCanvas::OnAttachedRootSceneComponentTransformUpdated(USceneComponent* UpdatedComponent, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+{
+	if (auto Widget = GetWidget())
+	{
+		Widget->CalculateObjectToWorldTransform(true);
+	}
+}
+
+void UDreamCanvas::BeginDestroy()
+{
+	AttachToSceneComponent(nullptr);
+	Super::BeginDestroy();
 }
 
 void UDreamCanvas::MarkVisualWillChange(UDreamVisual* InOldVisual)

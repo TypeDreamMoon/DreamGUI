@@ -162,13 +162,13 @@ bool UDreamUIBPLibrary::AttachWidgetToSceneComponent(UDreamWidget* InRoot, UScen
 		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' has no DreamCanvas; add one before attaching it to a scene component."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InRoot->GetName());
 		return false;
 	}
-	// The same sequence a prefab presenter runs for the tree it loads.
+	// The same sequence a prefab presenter runs for the tree it loads: the canvas places the tree at
+	// the host and keeps it following; leaving the parked state is what lets it draw.
 	Canvas->AttachToSceneComponent(InSceneComponent);
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
 	{
 		DreamUIManager->UnparkWidget(InRoot);
 	}
-	InRoot->CalculateObjectToWorldTransform(true);
 	return true;
 }
 

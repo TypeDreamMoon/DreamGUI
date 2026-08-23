@@ -17,7 +17,6 @@ UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
-	bWantsOnUpdateTransform = true;
 
 	CanvasTemplate = CreateDefaultSubobject<UDreamCanvas>(TEXT("CanvasTemplate"));
 	
@@ -137,15 +136,6 @@ void UDreamWidgetPresenterComponentBase::PostInitProperties()
 	Super::PostInitProperties();
 }
 
-void UDreamWidgetPresenterComponentBase::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
-{
-	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-	if (LoadedWidget.IsValid())
-	{
-		LoadedWidget->CalculateObjectToWorldTransform(true);
-	}
-}
-
 #if WITH_EDITOR
 void UDreamWidgetPresenterComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -157,6 +147,8 @@ void UDreamWidgetPresenterComponentBase::PostEditChangeProperty(FPropertyChanged
 }
 
 #include "Dialog/SCustomDialog.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Text/STextBlock.h"
 bool UDreamWidgetPresenterComponentBase::bNeedCheckEventSystem = true;
 bool UDreamWidgetPresenterComponentBase::bNeverCheckEventSystem = false;
 bool UDreamWidgetPresenterComponentBase::bNeedCheckRaycasterSource = true;

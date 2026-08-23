@@ -1,4 +1,4 @@
-﻿#ifndef DREAMUI_CLIP_USH
+#ifndef DREAMUI_CLIP_USH
 #define DREAMUI_CLIP_USH
 
 void DreamUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 CanvasToClipMatrix, out float HalfWidth, out float HalfHeight, out float Softness, out float IsValid)

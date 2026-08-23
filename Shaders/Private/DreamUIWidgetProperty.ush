@@ -1,4 +1,4 @@
-﻿#ifndef DREAMUI_WIDGET_PROPERTY_USH
+#ifndef DREAMUI_WIDGET_PROPERTY_USH
 #define DREAMUI_WIDGET_PROPERTY_USH
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 

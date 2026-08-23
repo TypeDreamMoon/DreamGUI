@@ -1,4 +1,4 @@
-﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 //
 // One pixel of DreamGUI UI, whoever draws it. The built-in global shader (DreamUIBase.usf) and the
 // thin material host (MF_DreamUI_Shade, for the UE-renderer world-space mode and OverrideMaterial)
