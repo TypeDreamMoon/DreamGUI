@@ -597,6 +597,13 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const UDreamUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from UDreamUIBehaviour");
 		return Cast<T>(GetComponent(T::StaticClass()));
 	}
+	/**
+	 * Adds every behaviour NewLayout requires (UDreamLayoutContainer::GetRequiredBehaviourClasses) that is
+	 * not already present, and removes the behaviours only OldLayout required. Idempotent; a second call with
+	 * the same arguments is a no-op. Calls Modify() on the touched objects but opens no transaction of its
+	 * own, so an editor caller must already be inside one. Returns true when a component was added or removed.
+	 */
+	bool SyncRequiredBehavioursForLayoutContainer(const UDreamLayoutContainer* OldLayout, const UDreamLayoutContainer* NewLayout);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (DeterminesOutputType = "InterfaceClass"))
 	UDreamUIBehaviour* GetComponentByInterface(UClass* InterfaceClass)const;
 	template<class T>
@@ -906,6 +913,8 @@ protected:
 #if WITH_EDITORONLY_DATA
 	/** Transient preview state restored from the owning prefab editor data. */
 	bool bHiddenInDesigner = false;
+	/** LayoutContainer captured in PreEditChange so PostEditChangeProperty can diff required behaviours. */
+	TWeakObjectPtr<UDreamLayoutContainer> LayoutContainerBeforeEdit;
 #endif
 	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))

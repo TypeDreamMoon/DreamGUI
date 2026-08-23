@@ -119,5 +119,7 @@ private:
 
 public:
 	static UDreamUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisWidget(UDreamWidget* InWidget);
+	/** True when some helper object manages InWidget as part of a sub-prefab instance (not the prefab's own widgets). */
+	static bool IsWidgetInsideSubPrefabInstance(const UDreamWidget* InWidget);
 #endif
 };

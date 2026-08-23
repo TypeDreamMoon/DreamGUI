@@ -144,13 +144,9 @@ UObject* UDreamUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParen
 		{
 			check(RootLayoutClass->IsChildOf(UDreamLayoutContainer::StaticClass()));
 			check(!RootLayoutClass->HasAnyClassFlags(CLASS_Abstract));
-			if (HelperObject->LoadedRootWidget->CreateNewLayoutContainer(RootLayoutClass.Get())
-				&& (RootLayoutClass->IsChildOf(UDreamLayoutContainerSizeBox::StaticClass())
-					|| RootLayoutClass->IsChildOf(UDreamLayoutContainerScaleBox::StaticClass())
-					|| RootLayoutClass->IsChildOf(UDreamLayoutContainerSafeZone::StaticClass())))
-			{
-				HelperObject->LoadedRootWidget->AddComponent<UDreamContentWidget>();
-			}
+			// CreateNewLayoutContainer adds whatever behaviours the container declares it needs (ContentWidget for
+			// the single-child panels), so nothing is added by hand here.
+			HelperObject->LoadedRootWidget->CreateNewLayoutContainer(RootLayoutClass.Get());
 		}
 		HelperObject->SavePrefab();
 		return NewAsset;

@@ -1925,18 +1925,21 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		{
 			ContentWidgetCount += IsValid(Cast<UDreamContentWidget>(Component)) ? 1 : 0;
 		}
-		const UDreamLayoutContainer* LayoutContainer = Widget->GetLayoutContainer();
-		const bool bRequiresContentWidget = IsValid(LayoutContainer)
-			&& (LayoutContainer->IsA<UDreamLayoutContainerSizeBox>()
-				|| LayoutContainer->IsA<UDreamLayoutContainerScaleBox>()
-				|| LayoutContainer->IsA<UDreamLayoutContainerSafeZone>());
-		if (bRequiresContentWidget && ContentWidgetCount == 0)
+		if (const UDreamLayoutContainer* LayoutContainer = Widget->GetLayoutContainer(); IsValid(LayoutContainer))
 		{
-			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
-				FString::Printf(TEXT("Widget '%s' uses a single-child layout but has no ContentWidget behaviour."),
-					*Widget->GetDisplayName()), Widget);
+			TArray<TSubclassOf<UDreamUIBehaviour>> RequiredClasses;
+			LayoutContainer->GetRequiredBehaviourClasses(RequiredClasses);
+			for (const TSubclassOf<UDreamUIBehaviour>& RequiredClass : RequiredClasses)
+			{
+				if (IsValid(*RequiredClass) && !IsValid(Widget->GetComponent(RequiredClass)))
+				{
+					AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
+						FString::Printf(TEXT("Widget '%s' uses %s but has no %s behaviour. Re-select the panel type to add it."),
+							*Widget->GetDisplayName(), *LayoutContainer->GetClass()->GetName(), *(*RequiredClass)->GetName()), Widget);
+				}
+			}
 		}
-		else if (ContentWidgetCount > 1)
+		if (ContentWidgetCount > 1)
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 				FString::Printf(TEXT("Widget '%s' has %d ContentWidget behaviours; only one is allowed."),

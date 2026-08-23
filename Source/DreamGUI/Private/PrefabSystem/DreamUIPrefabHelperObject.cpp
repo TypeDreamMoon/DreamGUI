@@ -1910,6 +1910,19 @@ UDreamUIPrefabHelperObject* UDreamUIPrefabHelperObject::GetPrefabHelperObject_Wh
 	return nullptr;
 }
 
+bool UDreamUIPrefabHelperObject::IsWidgetInsideSubPrefabInstance(const UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))return false;
+	for (TObjectIterator<UDreamUIPrefabHelperObject> Itr; Itr; ++Itr)
+	{
+		if (Itr->IsWidgetBelongsToThis(InWidget))
+		{
+			return Itr->IsWidgetBelongsToSubPrefab(InWidget);
+		}
+	}
+	return false;
+}
+
 #endif
 
 

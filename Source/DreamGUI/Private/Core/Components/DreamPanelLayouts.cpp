@@ -4,6 +4,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamScrollBoxInputHandler.h"
+#include "Interaction/DreamContentWidget.h"
 #include "Interaction/UIScrollbar.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamVisual.h"
@@ -1472,6 +1473,11 @@ void UDreamLayoutContainerUniformGridPanel::ArrangeChildren()
 	PreferredSize = MeasureLayout();
 }
 
+void UDreamLayoutContainerSizeBox::GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const
+{
+	OutClasses.AddUnique(UDreamContentWidget::StaticClass());
+}
+
 FVector2f UDreamLayoutContainerSizeBox::MeasureLayout() const
 {
 	UDreamWidget* Content = DreamPanelLayoutLocal::GetFirstValidChild(GetWidget());
@@ -1550,6 +1556,11 @@ void UDreamLayoutContainerSizeBox::ArrangeChildren()
 		}
 	}
 	PreferredSize = MeasureLayout();
+}
+
+void UDreamLayoutContainerScaleBox::GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const
+{
+	OutClasses.AddUnique(UDreamContentWidget::StaticClass());
 }
 
 FVector2f UDreamLayoutContainerScaleBox::MeasureLayout() const
@@ -1784,6 +1795,11 @@ void UDreamLayoutContainerScaleBox::OnUnregister()
 	}
 	bAppliedDefaultClipping = false;
 	Super::OnUnregister();
+}
+
+void UDreamLayoutContainerSafeZone::GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const
+{
+	OutClasses.AddUnique(UDreamContentWidget::StaticClass());
 }
 
 FMargin UDreamLayoutContainerSafeZone::GetCombinedSafePadding() const
