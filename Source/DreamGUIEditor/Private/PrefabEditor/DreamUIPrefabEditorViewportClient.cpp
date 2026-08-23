@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabEditorViewportClient.h"
+#include "DreamUIPrefabEdMode.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIDesignScreenSizes.h"
 #include "DreamUIPrefabEditorViewport.h"
@@ -72,6 +73,15 @@ FDreamUIPrefabEditorViewportClient::FDreamUIPrefabEditorViewportClient(TWeakPtr<
 	EditorViewportPtr = InEditorViewportPtr;
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
+	// Without an active mode that says ShouldDrawWidget, FWidget::Render draws nothing: the stock
+	// answer is "only when actors or components are selected", and a prefab holds neither.
+	ModeTools->SetDefaultMode(UDreamUIPrefabEdMode::EM_DreamUIPrefab);
+	ModeTools->ActivateDefaultMode();
+	// The classic widget, not the Interactive Tools one. Whether FWidget draws itself or defers to
+	// the ITF gizmo comes from AreEditorGizmosAllowed(ModeTools), which is on by default and follows
+	// an editor-wide setting; the ITF has no valid context in a custom asset-editor viewport (see the
+	// note on the base constructor call), so deferring to it would draw no gizmo at all.
+	ModeTools->SetSupportsViewportITF(false);
 
 	// GEditorModeTools serves as our draw helper
 	bUsesDrawHelper = true;
@@ -2171,6 +2181,14 @@ UE::Widget::EWidgetMode FDreamUIPrefabEditorViewportClient::GetWidgetMode() cons
 	}
 	// The designer view has its own rect handles; the gizmo belongs to the perspective view.
 	if (!IsPerspective())
+	{
+		return UE::Widget::WM_None;
+	}
+	// Nothing to act on, nothing to draw. This is the one place that decides whether a gizmo appears:
+	// UDreamUIPrefabEdMode answers ShouldDrawWidget unconditionally.
+	TArray<UDreamWidget*> Widgets;
+	GetGizmoWidgets(Widgets);
+	if (Widgets.IsEmpty())
 	{
 		return UE::Widget::WM_None;
 	}

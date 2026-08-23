@@ -100,13 +100,18 @@ class DREAMGUI_API UDreamUISelection : public UObject
 	GENERATED_BODY()
 
 public:
+	/** Scriptable so editor automation (the unreal-bridge) can drive the prefab editor's selection. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Editor")
 	static UDreamUISelection* GetInstance(UWorld* InWorld);
 	virtual bool IsEditorOnly() const override{return true;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Editor")
 	void SelectWidget(UDreamWidget* Widget);
 	/** Counterpart of SelectWidget: without one, a Ctrl+click can only ever add. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Editor")
 	void DeselectWidget(UDreamWidget* Widget);
 	void SelectComponent(UDreamUIBehaviour* Component);
 	void ClearComponentSelection();
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Editor")
 	void SelectNone();
 	bool IsSelected(UDreamWidget* Widget)const;
 	TArray<TWeakObjectPtr<UDreamWidget>> GetSelectedWidgets()const{return SelectedWidgetArray;}
@@ -328,6 +333,8 @@ public:
 	FEditorViewportClient* GetEditorViewportClient();
 	
 	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	/** A cross with a small diamond at the widget's own origin: where its pivot actually sits. */
+	static void DrawDebugPivot(UWorld* InWorld, const FMatrix& LocalToWorld, float Size, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugLine(UWorld* InWorld, const FMatrix& LocalToWorld, const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 private:
