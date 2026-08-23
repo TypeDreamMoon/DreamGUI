@@ -414,15 +414,31 @@ private:
 	void NavigateToAnimation(TWeakObjectPtr<UDreamUIPrefabSequence> InAnimation);
 public:
 
-	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_Outliner(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_Palette(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_PrefabOverridesViewer(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_PrefabBehaviourViewer(const FSpawnTabArgs& Args);
-	TSharedRef<SDockTab> SpawnTab_CompilerResults(const FSpawnTabArgs& Args);
+	/**
+	 * One row per dockable panel. Registration, un-registration, the Window menu entry and the
+	 * SDockTab label all read the same row, so a new panel is one entry here plus a slot in
+	 * CreateDefaultLayout -- nothing to keep in step by hand.
+	 */
+	struct FTabDescriptor
+	{
+		FName Id;
+		FText Label;
+		FSlateIcon Icon;
+		/** Builds the content for a freshly spawned dock tab. */
+		TFunction<TSharedRef<SWidget>()> MakeContent;
+		/** Runs before MakeContent so a panel can refresh against the current prefab. */
+		TFunction<void()> OnSpawn;
+		/** Debug panels stay out of the Window menu; the toolbar's Debug menu opens them. */
+		bool bListedInWindowMenu = true;
+	};
+	TArray<FTabDescriptor> TabDescriptors;
+	void BuildTabDescriptors();
+	const FTabDescriptor* FindTabDescriptor(FName TabId) const;
+	TSharedRef<SDockTab> SpawnTabFromDescriptor(const FSpawnTabArgs& Args, FName TabId);
+	/** The layout a fresh install gets; the name carries a version so a change here wins over saved layouts. */
+	static TSharedRef<FTabManager::FLayout> CreateDefaultLayout();
+	bool HasAnySubPrefab() const;
+	void GenerateDebugMenu(UToolMenu* InMenu);
 
 	bool IsFilteredActor(const AActor* Actor);
 	void OnOutlinerActorDoubleClick(AActor* Actor);
