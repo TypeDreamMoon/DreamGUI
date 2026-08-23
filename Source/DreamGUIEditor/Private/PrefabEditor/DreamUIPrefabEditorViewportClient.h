@@ -43,6 +43,10 @@ public:
 	virtual void MouseLeave(FViewport* Viewport) override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual bool InputWidgetDelta(FViewport* InViewport, EAxisList::Type InCurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale) override;
+	/** The selection the transform gizmo acts on: selected, not locked, not hidden in the designer. */
+	void GetGizmoWidgets(TArray<UDreamWidget*>& OutWidgets) const;
+	/** Apply one frame of the engine widget's delta to that selection. */
+	void ApplyDeltaToSelectedWidgets(const FVector& Drag, const FRotator& Rot, const FVector& Scale);
 
 	virtual UE::Widget::EWidgetMode GetWidgetMode() const override;
 	virtual FVector GetWidgetLocation() const override;
@@ -363,7 +367,6 @@ private:
 	int PrevMouseX = 0, PrevMouseY = 0;
 	int IndexOfClickSelectUI = INDEX_NONE;
 	FIntPoint LastClickPixel = FIntPoint(-1, -1);
-	TUniquePtr<class FDreamUITransformWidget> TransformWidget = nullptr;
 	TWeakObjectPtr<UDreamWidget> PaletteDropPreviewWidget;
 	TWeakObjectPtr<UDreamWidget> HoveredWidget;
 	FIntPoint HoverPixel = FIntPoint::ZeroValue;

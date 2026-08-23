@@ -54,7 +54,9 @@ public:
 
 	class FBlendDepth : SHADER_PERMUTATION_BOOL("LEXUI_BLEND_DEPTH");
 	class FDepthFade : SHADER_PERMUTATION_BOOL("LEXUI_DEPTH_FADE");
-	using FPermutationDomain = TShaderPermutationDomain<FBlendDepth, FDepthFade>;
+	/** Vertex colour only: the editor's widget outline frames, which have no widget record to read. */
+	class FPlainColor : SHADER_PERMUTATION_BOOL("DREAMUI_PLAIN_COLOR");
+	using FPermutationDomain = TShaderPermutationDomain<FBlendDepth, FDepthFade, FPlainColor>;
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(FMatrix44f, DreamUI_InvM)
@@ -79,6 +81,11 @@ public:
 		FPermutationDomain PermutationVector(Parameters.PermutationId);
 		// Depth fade only means something when blending against depth.
 		if (PermutationVector.Get<FDepthFade>() && !PermutationVector.Get<FBlendDepth>())
+		{
+			return false;
+		}
+		// The plain-colour variant is editor helper geometry, which is never depth-blended.
+		if (PermutationVector.Get<FPlainColor>() && PermutationVector.Get<FBlendDepth>())
 		{
 			return false;
 		}

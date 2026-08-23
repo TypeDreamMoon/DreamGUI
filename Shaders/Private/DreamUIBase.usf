@@ -86,10 +86,16 @@ void MainPS(
 	out float4 OutColor : SV_Target0
 )
 {
+#if DREAMUI_PLAIN_COLOR
+	// Editor helper geometry (the widget outline frames): no widget record, no atlas, no clip -- the
+	// vertex colour is the whole answer. It shares this shader only for the transform and the blend.
+	float4 Color = float4(sRGBToLinear(In.Color.rgb), In.Color.a);
+#else
 	// Everything a UI pixel is comes from the shared function; this shader adds depth, gamma, premultiply.
 	float4 Color = DreamUI_ShadePixel(In.UV0, In.UV1, In.UV2, In.UV3, In.Color, In.LocalPosition,
 		DreamUI_MainTex, DreamUI_MainTexSampler, DreamUI_FontTex, DreamUI_FontTexSampler,
 		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo);
+#endif
 
 #if LEXUI_BLEND_DEPTH
 	float PixelDepth = In.ScreenPosition.z / In.ScreenPosition.w;

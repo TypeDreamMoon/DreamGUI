@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIManager.h"
+#include "Core/DreamGUISettings.h"
 
 #include "DreamGUI.h"
 #include "Utils/DreamUIUtils.h"
@@ -407,7 +408,6 @@ void UDreamUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const T
 		new(VertexArray) FDreamUIMeshVertex(FVector3f(InArrowPointB), InColor);
 
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = FMatrix::Identity;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -591,15 +591,6 @@ FEditorViewportClient* UDreamUIManagerWorldSubsystem::GetEditorViewportClient()
 	return CacheViewportClient;
 }
 
-UMaterialInterface* UDreamUIManagerWorldSubsystem::GetDefaultGizmoMaterial()
-{
-	static TWeakObjectPtr<UMaterialInterface> GizmoMaterial;
-	if (!GizmoMaterial.IsValid())
-	{
-		GizmoMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/EditorGizmo/GizmoMaterial"));
-	}
-	return GizmoMaterial.Get();
-}
 
 void UDreamUIManagerWorldSubsystem::OnEndOfFrame()
 {
@@ -647,7 +638,6 @@ void UDreamUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector
 		PushNewLine(Start, End);
 
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -720,7 +710,6 @@ void UDreamUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector&
 		PushNewLine(Start, End);
 
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -745,7 +734,6 @@ void UDreamUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix
 			new(VertexArray) FDreamUIMeshVertex(LinePoints[i + 1], Color);
 		}
 		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
-		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
