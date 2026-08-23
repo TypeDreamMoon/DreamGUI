@@ -29,6 +29,8 @@ public:
 	void AssignDreamUIPrefabSequenceComponent(TWeakObjectPtr<UDreamUIPrefabSequenceComponent> InSequenceComponent);
 	UDreamUIPrefabSequence* GetPrefabSequence() const;
 	void SelectAnimation(UDreamUIPrefabSequence* InAnimation);
+	/** Leave animation mode: deselect, hand the sequencer a null sequence, restore the pre-animated pose. */
+	void ClearAnimationSelection();
 	UDreamUIPrefabSequenceComponent* GetSequenceComponent()const { return WeakSequenceComponent.Get(); }
 	void RefreshAnimationList();
 	void MarkAnimationDataDirty();

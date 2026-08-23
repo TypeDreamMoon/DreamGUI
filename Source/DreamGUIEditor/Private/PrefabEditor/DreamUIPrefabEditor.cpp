@@ -428,8 +428,12 @@ void FDreamUIPrefabEditor::BuildTabDescriptors()
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Outliner"), Content(OutlinerPtr) });
 	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::PaletteID, LOCTEXT("PaletteTabLabel", "Palette"),
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Kismet.Tabs.Palette"), Content(PalettePtr) });
-	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::SequencerID, LOCTEXT("SequencerTabLabel", "Animations"),
-		FSlateIcon(FUMGStyle::GetStyleSetName(), "Animations.TabIcon"), Content(SequencerPtr) });
+	FTabDescriptor SequencerTab{ FDreamUIPrefabEditorTabs::SequencerID, LOCTEXT("SequencerTabLabel", "Animations"),
+		FSlateIcon(FUMGStyle::GetStyleSetName(), "Animations.TabIcon"), Content(SequencerPtr) };
+	// Closing the panel must also leave animation mode; the sequencer would otherwise keep driving
+	// the viewport (and auto-keying) with nothing visible to say so.
+	SequencerTab.OnClosed = [this]() { if (SequencerPtr.IsValid()) { SequencerPtr->ClearAnimationSelection(); } };
+	TabDescriptors.Add(MoveTemp(SequencerTab));
 	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::CompilerResultsID, LOCTEXT("CompilerResultsTabLabel", "Compiler Results"),
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Message"),
 		[this]()
@@ -462,11 +466,17 @@ TSharedRef<SDockTab> FDreamUIPrefabEditor::SpawnTabFromDescriptor(const FSpawnTa
 	{
 		Desc->OnSpawn();
 	}
-	return SNew(SDockTab)
+	TSharedRef<SDockTab> NewTab = SNew(SDockTab)
 		.Label(Desc->Label)
 		[
 			Desc->MakeContent()
 		];
+	if (Desc->OnClosed)
+	{
+		NewTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateLambda(
+			[OnClosed = Desc->OnClosed](TSharedRef<SDockTab>) { OnClosed(); }));
+	}
+	return NewTab;
 }
 
 void FDreamUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)

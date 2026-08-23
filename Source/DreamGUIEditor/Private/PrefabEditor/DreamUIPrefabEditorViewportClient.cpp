@@ -41,6 +41,9 @@
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
 #include "PrefabAnimation/DreamUIPrefabSequenceEditor.h"
 #include "ISequencer.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Core/Components/DreamPanelLayouts.h"
 #include "KeyPropertyParams.h"
 #include "PropertyPath.h"
 #include "Core/DreamUIRender/DreamUIRenderer.h"
@@ -53,6 +56,9 @@
 #include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorViewportClient"
+
+//declared in DreamUIPrefabSequenceEditorWidget.cpp; the comment there says why it is a bare prototype
+bool DreamUIPrefabSequence_CanBindWidgetToSequencer(class UDreamUIPrefabHelperObject* InPrefabHelper, const UDreamWidget* InWidget);
 
 // UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
 // (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).
@@ -342,6 +348,7 @@ void FDreamUIPrefabEditorViewportClient::DrawAnimationModeIndicator(FViewport& I
 	UDreamUIPrefabSequence* Animation = Editor.IsValid() ? Editor->GetAnimationBeingEdited() : nullptr;
 	if (Animation == nullptr)
 	{
+		AnimationChipCloseRect = FBox2D(ForceInit);
 		return;
 	}
 
@@ -382,6 +389,19 @@ void FDreamUIPrefabEditorViewportClient::DrawAnimationModeIndicator(FViewport& I
 
 	FCanvasTextItem Text(ChipPos + Padding, FText::FromString(Label), Font, AccentColor);
 	Canvas.DrawItem(Text);
+
+	// A small [X] beside the chip: the one visible way out of animation mode from the viewport.
+	// The rect is remembered in raw viewport pixels so the click test needs no DPI conversion.
+	const FVector2D CloseSize(ChipSize.Y, ChipSize.Y);
+	const FVector2D ClosePos(ChipPos.X + ChipSize.X + 4.0f, ChipPos.Y);
+	FCanvasTileItem CloseChip(ClosePos, CloseSize, FLinearColor(0.0f, 0.0f, 0.0f, 0.65f));
+	CloseChip.BlendMode = SE_BLEND_Translucent;
+	Canvas.DrawItem(CloseChip);
+	const FString CloseGlyph(TEXT("X"));
+	const FVector2D GlyphSize(Font->GetStringSize(*CloseGlyph), Font->GetMaxCharHeight());
+	FCanvasTextItem CloseText(ClosePos + (CloseSize - GlyphSize) * 0.5f, FText::FromString(CloseGlyph), Font, AccentColor);
+	Canvas.DrawItem(CloseText);
+	AnimationChipCloseRect = FBox2D(ClosePos * DpiScale, (ClosePos + CloseSize) * DpiScale);
 }
 
 void FDreamUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<UDreamWidget*>& InWidgets, bool bLocation, bool bRotation, bool bScale) const
@@ -398,10 +418,22 @@ void FDreamUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<U
 		return;
 	}
 
+	// Key the way the level editor does: only when auto-key is switched on, and only for channels
+	// whose value actually changed. ManualKeyForced here turned every nudge of a widget into three
+	// tracks regardless of the toolbar's auto-key toggle, which made "select an animation, then
+	// adjust a design value" impossible.
+	if (Sequencer->GetAutoChangeMode() == EAutoChangeMode::None)
+	{
+		return;
+	}
+
+	UDreamUIPrefabHelperObject* Helper = Editor->GetPrefabHelperObject();
 	TArray<UObject*> ObjectsToKey;
 	for (UDreamWidget* KeyedWidget : InWidgets)
 	{
-		if (IsValid(KeyedWidget))
+		// A sub-prefab widget's binding does not survive a save; keying one would author a track
+		// that silently binds nothing on the next load.
+		if (IsValid(KeyedWidget) && DreamUIPrefabSequence_CanBindWidgetToSequencer(Helper, KeyedWidget))
 		{
 			ObjectsToKey.Add(KeyedWidget);
 		}
@@ -411,20 +443,52 @@ void FDreamUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<U
 		return;
 	}
 
-	auto KeyPropertyNamed = [&Sequencer, &ObjectsToKey](const TCHAR* InPropertyName)
+	// A widget placed by its parent's layout panel gets its RelativeLocation rewritten every arrange
+	// pass, so a position key plays back as a one-frame flicker at best. Drop those and say so.
+	TArray<UObject*> LocationObjects;
+	bool bDroppedLayoutDriven = false;
+	for (UObject* Object : ObjectsToKey)
 	{
+		const UDreamWidget* KeyedTarget = CastChecked<UDreamWidget>(Object);
+		const UDreamWidget* Parent = KeyedTarget->GetParent();
+		const bool bLayoutDriven = !KeyedTarget->GetIgnoreLayout()
+			&& Parent != nullptr && IsValid(Cast<UDreamPanelLayoutBase>(Parent->GetLayoutContainer()));
+		if (bLayoutDriven)
+		{
+			bDroppedLayoutDriven = true;
+		}
+		else
+		{
+			LocationObjects.Add(Object);
+		}
+	}
+
+	auto KeyPropertyNamed = [&Sequencer](const TArray<UObject*>& InObjects, const TCHAR* InPropertyName)
+	{
+		if (InObjects.IsEmpty())
+		{
+			return;
+		}
 		if (FProperty* Property = UDreamWidget::StaticClass()->FindPropertyByName(InPropertyName))
 		{
 			FPropertyPath PropertyPath;
 			PropertyPath.AddProperty(FPropertyInfo(Property));
-			Sequencer->KeyProperty(FKeyPropertyParams(ObjectsToKey, PropertyPath, ESequencerKeyMode::ManualKeyForced));
+			Sequencer->KeyProperty(FKeyPropertyParams(InObjects, PropertyPath, ESequencerKeyMode::AutoKey));
 		}
 	};
 
-	if (bLocation)KeyPropertyNamed(TEXT("RelativeLocation"));
+	if (bLocation)KeyPropertyNamed(LocationObjects, TEXT("RelativeLocation"));
 	// Rotation is keyed through the euler mirror; Sequencer has no track for the FQuat itself.
-	if (bRotation)KeyPropertyNamed(TEXT("RelativeRotationEuler"));
-	if (bScale)KeyPropertyNamed(TEXT("RelativeScale"));
+	if (bRotation)KeyPropertyNamed(ObjectsToKey, TEXT("RelativeRotationEuler"));
+	if (bScale)KeyPropertyNamed(ObjectsToKey, TEXT("RelativeScale"));
+
+	if (bDroppedLayoutDriven)
+	{
+		FNotificationInfo Info(LOCTEXT("AutoKeyLayoutDriven",
+			"Position not keyed: the widget is placed by its parent's layout panel. Animate Render Translation instead."));
+		Info.ExpireDuration = 4.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+	}
 }
 
 namespace
@@ -1251,6 +1315,20 @@ bool FDreamUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyE
 		return true;
 	}
 	if (EventArgs.Key != EKeys::LeftMouseButton)return false;
+	// The animation-mode chip's close button beats every designer gesture.
+	if (EventArgs.Event == IE_Pressed && AnimationChipCloseRect.bIsValid && EventArgs.Viewport != nullptr)
+	{
+		FIntPoint MousePos;
+		EventArgs.Viewport->GetMousePos(MousePos);
+		if (AnimationChipCloseRect.IsInside(FVector2D(MousePos)))
+		{
+			if (const TSharedPtr<SDreamUIPrefabSequenceEditor> SequencerEditor = PrefabEditorPtr.Pin()->GetSequencerEditor())
+			{
+				SequencerEditor->ClearAnimationSelection();
+			}
+			return true;
+		}
+	}
 	if (EventArgs.Event == IE_Released)
 	{
 		if (bDesignerDragging)

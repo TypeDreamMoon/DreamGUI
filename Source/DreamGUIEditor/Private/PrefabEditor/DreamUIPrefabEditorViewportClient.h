@@ -327,6 +327,8 @@ private:
 	/** The cursor's place on the design canvas, in the units the details panel is written in. */
 	void DrawCursorReadout(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	void DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const;
+	/** Where the animation chip's close button was last drawn, in raw viewport pixels; invalid outside animation mode. */
+	mutable FBox2D AnimationChipCloseRect = FBox2D(ForceInit);
 	/** Key the given widgets' transform into the animation being edited, if there is one. */
 	void AutoKeyAnimatedTransform(const TArray<UDreamWidget*>& InWidgets, bool bLocation, bool bRotation, bool bScale) const;
 	TArray<FVector2D> DesignerScreenCorners;

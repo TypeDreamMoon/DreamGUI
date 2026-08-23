@@ -169,7 +169,7 @@ SDreamUIPrefabSequenceEditor::~SDreamUIPrefabSequenceEditor()
 void SDreamUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 {
 	SAssignNew(AnimationListView, SWidgetAnimationListView)
-		.SelectionMode(ESelectionMode::Single)
+		.SelectionMode(ESelectionMode::SingleToggle)//clicking the selected row again leaves animation mode
 		.ListItemsSource(&Animations)
 		.OnGenerateRow(this, &SDreamUIPrefabSequenceEditor::OnGenerateRowForAnimationListView)
 		.OnItemScrolledIntoView(this, &SDreamUIPrefabSequenceEditor::OnItemScrolledIntoView)
@@ -253,6 +253,19 @@ void SDreamUIPrefabSequenceEditor::AssignDreamUIPrefabSequenceComponent(TWeakObj
 UDreamUIPrefabSequence* SDreamUIPrefabSequenceEditor::GetPrefabSequence() const
 {
 	return GetSelectedAnimation();
+}
+
+void SDreamUIPrefabSequenceEditor::ClearAnimationSelection()
+{
+	if (AnimationListView.IsValid())
+	{
+		//the selection-changed callback assigns the null sequence, which restores the pre-animated state
+		AnimationListView->ClearSelection();
+	}
+	else if (PrefabSequenceEditor.IsValid())
+	{
+		PrefabSequenceEditor->AssignSequence(nullptr);
+	}
 }
 
 void SDreamUIPrefabSequenceEditor::SelectAnimation(UDreamUIPrefabSequence* InAnimation)

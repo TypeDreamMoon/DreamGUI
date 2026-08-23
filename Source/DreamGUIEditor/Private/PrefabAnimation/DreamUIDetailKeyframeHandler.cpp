@@ -5,8 +5,12 @@
 #include "ISequencer.h"
 #include "DreamUIPrefabSequenceEditor.h"
 #include "MovieScene.h"
-#include "Animation/WidgetAnimation.h"
 #include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabSystem/DreamUIPrefabHelperObject.h"
+#include "Core/Components/DreamWidget.h"
+
+//declared in DreamUIPrefabSequenceEditorWidget.cpp; the comment there says why it is a bare prototype
+bool DreamUIPrefabSequence_CanBindWidgetToSequencer(UDreamUIPrefabHelperObject* InPrefabHelper, const UDreamWidget* InWidget);
 
 
 FDreamUIDetailKeyframeHandler::FDreamUIDetailKeyframeHandler(TSharedPtr<FDreamUIPrefabEditor> InSequenceEditor)
@@ -26,8 +30,8 @@ bool FDreamUIDetailKeyframeHandler::IsPropertyKeyingEnabled() const
 {
 	if (auto Sequencer = GetSequencer())
 	{
-		UMovieSceneSequence* Sequence = Sequencer->GetRootMovieSceneSequence();
-		return Sequence != nullptr && Sequence != UWidgetAnimation::GetNullAnimation();
+		//no animation selected leaves the sequencer itself null, so a live sequencer means keying is on
+		return Sequencer->GetRootMovieSceneSequence() != nullptr;
 	}
 	return false;
 }
@@ -69,6 +73,23 @@ void FDreamUIDetailKeyframeHandler::OnKeyPropertyClicked(const IPropertyHandle& 
 	{
 		TArray<UObject*> Objects;
 		KeyedPropertyHandle.GetOuterObjects( Objects );
+
+		// A sub-prefab widget's binding does not survive a save, so the key button must not author
+		// one; the picker in the sequencer refuses these widgets and this path has to match it.
+		UDreamUIPrefabHelperObject* Helper = PrefabEditor.IsValid() ? PrefabEditor.Pin()->GetPrefabHelperObject() : nullptr;
+		Objects.RemoveAll([Helper](UObject* Object)
+		{
+			const UDreamWidget* Widget = Cast<UDreamWidget>(Object);
+			if (Widget == nullptr && Object != nullptr)
+			{
+				Widget = Object->GetTypedOuter<UDreamWidget>();
+			}
+			return Widget != nullptr && !DreamUIPrefabSequence_CanBindWidgetToSequencer(Helper, Widget);
+		});
+		if (Objects.IsEmpty())
+		{
+			return;
+		}
 
 		FKeyPropertyParams KeyPropertyParams(Objects, KeyedPropertyHandle, ESequencerKeyMode::ManualKeyForced);
 

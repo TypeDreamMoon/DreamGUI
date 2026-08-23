@@ -428,6 +428,8 @@ public:
 		TFunction<TSharedRef<SWidget>()> MakeContent;
 		/** Runs before MakeContent so a panel can refresh against the current prefab. */
 		TFunction<void()> OnSpawn;
+		/** Runs when the user closes the tab, so a panel can drop editor-wide state it was driving. */
+		TFunction<void()> OnClosed;
 		/** Debug panels stay out of the Window menu; the toolbar's Debug menu opens them. */
 		bool bListedInWindowMenu = true;
 	};
