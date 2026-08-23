@@ -54,7 +54,7 @@ void FDreamUIPrefabThumbnailScene::SpawnPreviewActor()
 {
 	if (!CurrentPrefab.IsValid())return;
 	if (RootAgentWidget != nullptr)return;
-	auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
+	auto CanvasSize = CurrentPrefab->CanvasSize;
 
 	//create Canvas for UI
 	auto RootWidget = NewObject<UDreamWidget>(this->GetWorld(), FName("[RootAgent]"));

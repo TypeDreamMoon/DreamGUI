@@ -115,7 +115,7 @@ UDreamWidget* FDreamUIPrefabInstanceScene::GetParentForLoadPrefab(UDreamUIPrefab
 	// The design canvas size belongs to the asset being edited: a variant saves its own
 	// CanvasSize (SetDesignerCanvasSize / SaveEditorState), so reading the walked base's value
 	// here would snap the canvas back to the base size on every reopen.
-	auto CanvasSize = InPrefab->PrefabDataForPrefabEditor.CanvasSize;
+	auto CanvasSize = InPrefab->CanvasSize;
 	//create Canvas for UI
 	auto RootWidget = NewObject<UDreamWidget>(this->GetWorld(), FName("[RootAgent]"));
 	RootWidget->SetSizeDelta(CanvasSize);

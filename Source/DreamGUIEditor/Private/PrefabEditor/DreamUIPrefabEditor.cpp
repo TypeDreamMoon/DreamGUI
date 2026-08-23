@@ -1780,6 +1780,7 @@ void FDreamUIPrefabEditor::SaveEditorState()
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewportType = ViewportPtr->GetViewportClient()->GetViewportType();
 	auto RootAgentWidget = GetPreviewScene()->GetRootAgent();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
+	PrefabBeingEdited->CanvasSize = PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize;
 	auto RootCanvas = RootAgentWidget->GetComponent<UDreamCanvas>();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
@@ -2766,7 +2767,7 @@ FIntPoint FDreamUIPrefabEditor::GetDesignerCanvasSize()
 	{
 		return FIntPoint(FMath::RoundToInt(RootAgent->GetWidth()), FMath::RoundToInt(RootAgent->GetHeight()));
 	}
-	return PrefabBeingEdited ? PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize : FIntPoint(1920, 1080);
+	return PrefabBeingEdited ? PrefabBeingEdited->CanvasSize : FIntPoint(1920, 1080);
 }
 
 FIntPoint FDreamUIPrefabEditor::GetDesignerViewportSize()
@@ -2850,6 +2851,7 @@ void FDreamUIPrefabEditor::SetDesignerViewportSize(FIntPoint NewViewportSize)
 	PrefabBeingEdited->Modify();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = NewCanvasSize;
 	PrefabBeingEdited->PrefabDataForPrefabEditor.DesignViewportSize = NewViewportSize;
+	PrefabBeingEdited->CanvasSize = NewCanvasSize;
 	UDreamWidget::MarkLayoutForRebuild(RootAgent);
 	UDreamWidget::RebuildLayoutImmediately(RootAgent);
 }

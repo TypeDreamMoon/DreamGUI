@@ -315,6 +315,8 @@ namespace DreamUIPrefabSystem
 		void GenerateObjectArray(TMap<FGuid, FDreamUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent);
 
 		bool bIsSubPrefab = false;
+		/** UDreamUIPrefab::CanvasSize of the prefab being loaded; a root loaded with no parent is sized to it. Zero leaves the root alone. */
+		FIntPoint RootCanvasSize = FIntPoint::ZeroValue;
 		/** A temporary string for log if loading or saving prefab (not duplicate). */
 		FString PrefabAssetPath;
 		
