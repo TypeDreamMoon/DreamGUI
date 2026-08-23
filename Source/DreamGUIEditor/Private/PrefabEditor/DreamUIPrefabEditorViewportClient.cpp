@@ -3,6 +3,7 @@
 
 #include "DreamUIPrefabEditorViewportClient.h"
 #include "DreamUIPrefabEdMode.h"
+#include "Settings/LevelEditorViewportSettings.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIDesignScreenSizes.h"
 #include "DreamUIPrefabEditorViewport.h"
@@ -478,7 +479,13 @@ bool FDreamUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView
 	DesignerAnchorHandlePositions.Reset();
 	DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
 	bDesignerMoveAvailable = false;
-	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
+	if (!PrefabEditorPtr.IsValid())return false;
+	// Everything below projects through the view and drags against the widget's own plane, so it
+	// is as true in the perspective view as in the designer's. What differs is who owns which
+	// gesture there: the engine's gizmo moves the selection, so the rectangle is not a Move handle
+	// and stays click-through; and the pivot and anchor markers stay out, because on a centred
+	// widget all of them land exactly where the gizmo's axes start.
+	const bool bResizeHandlesOnly = !IsOrtho();
 	TArray<UDreamWidget*> Selected;
 	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 	{
@@ -488,7 +495,7 @@ bool FDreamUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView
 		}
 	}
 	if (Selected.IsEmpty())return false;
-	bDesignerMoveAvailable = CanMoveSelection(Selected);
+	bDesignerMoveAvailable = !bResizeHandlesOnly && CanMoveSelection(Selected);
 
 	auto ProjectWidgetCorners = [&View](UDreamWidget* InWidget, TArray<FVector2D>& OutCorners) -> bool
 	{
@@ -545,9 +552,12 @@ bool FDreamUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView
 			DesignerHandlePositions.Add(EDesignerHandle::Right, (SingleCorners[1] + SingleCorners[2]) * 0.5f);
 			DesignerHandlePositions.Add(EDesignerHandle::Left, (SingleCorners[3] + SingleCorners[0]) * 0.5f);
 		}
-		FVector2D PivotPixel;
-		if (DreamWorldToPixelInFront(View, SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
-		UpdateAnchorScreenGeometry(View, SelectedWidget);
+		if (!bResizeHandlesOnly)
+		{
+			FVector2D PivotPixel;
+			if (DreamWorldToPixelInFront(View, SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
+			UpdateAnchorScreenGeometry(View, SelectedWidget);
+		}
 	}
 	else
 	{
@@ -983,22 +993,27 @@ void FDreamUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 	// switch turns the lot off and leaves the art on its own. Only the drawing goes: the handles
 	// stay where they were and stay grabbable, because hiding a gesture is not taking it away.
 	if (PrefabEditorPtr.IsValid() && !PrefabEditorPtr.Pin()->GetShowDesignerChrome())return;
-	if (!IsOrtho())return;
-	DrawDesignerCanvasBoundary(InViewport, View, Canvas);
-	if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowResolutionGuides())
+	// The canvas boundary, the guides, the readout and the shipped outline all talk about the
+	// canvas plane, which only the designer view looks at square-on.
+	if (IsOrtho())
 	{
-		DrawResolutionGuides(InViewport, View, Canvas);
-		DrawSafeZoneGuide(View, Canvas);
-	}
-	DrawLayoutDebugOverlay(InViewport, Canvas);
-	DrawCursorReadout(InViewport, View, Canvas);
-	if (PrefabEditorPtr.IsValid())
-	{
-		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+		DrawDesignerCanvasBoundary(InViewport, View, Canvas);
+		if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowResolutionGuides())
 		{
-			DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
+			DrawResolutionGuides(InViewport, View, Canvas);
+			DrawSafeZoneGuide(View, Canvas);
+		}
+		DrawLayoutDebugOverlay(InViewport, Canvas);
+		DrawCursorReadout(InViewport, View, Canvas);
+		if (PrefabEditorPtr.IsValid())
+		{
+			for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+			{
+				DrawShippedImageOutline(WeakWidget.Get(), View, Canvas);
+			}
 		}
 	}
+	// The selection outline and its handles follow the widget wherever the camera is.
 	if (!UpdateDesignerScreenGeometry(View))return;
 	const float DpiScale = Canvas.GetDPIScale();
 	const FLinearColor OutlineColor(0.1f, 0.65f, 1.0f);
@@ -1225,7 +1240,7 @@ void FDreamUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 
 bool FDreamUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
 {
-	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
+	if (!PrefabEditorPtr.IsValid())return false;
 	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && (bDesignerDragging || bDesignerDragPending || bDesignerMarqueePending))
 	{
 		bDesignerDragPending = false;
@@ -1276,6 +1291,9 @@ bool FDreamUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyE
 	const EDesignerHandle HitHandle = View && UpdateDesignerScreenGeometry(*View) ? HitTestDesignerHandle(MousePixel) : EDesignerHandle::None;
 	if (HitHandle == EDesignerHandle::None)
 	{
+		// In the perspective view a left drag on empty space is the camera's, and a click is the
+		// engine's to resolve against the gizmo and the hit proxies. Only the designer marquees.
+		if (!IsOrtho())return false;
 		// Any press that missed every handle arms a marquee, and consumes nothing: until it travels
 		// it is still the plain click, which goes on selecting or clearing exactly as it did.
 		// Asking for nothing under the cursor first would arm nowhere -- the prefab root's own rect
@@ -1816,11 +1834,8 @@ bool FDreamUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& Even
 		}
 	}
 
-	bool bHandled = false;
-	if (IsOrtho())
-	{
-		bHandled = HandleDesignerInputKey(EventArgs);
-	}
+	// The resize handles are live in both views; what else the designer owns is decided inside.
+	bool bHandled = HandleDesignerInputKey(EventArgs);
 	if (!bHandled)
 	{
 		bHandled = GUnrealEd->ComponentVisManager.HandleInputKey(this, EventArgs.Viewport, EventArgs.Key, EventArgs.Event);

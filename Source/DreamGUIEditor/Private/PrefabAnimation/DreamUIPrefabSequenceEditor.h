@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Widgets/Views/SListView.h"
 #include "Input/Reply.h"
 #include "Framework/Docking/TabManager.h"
 #include "Widgets/SCompoundWidget.h"
