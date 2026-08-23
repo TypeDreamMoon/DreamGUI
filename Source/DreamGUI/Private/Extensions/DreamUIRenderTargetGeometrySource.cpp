@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamCanvas.h"
 #include "DreamGUI.h"
@@ -1215,8 +1216,7 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
 }
 UMaterialInterface* UDreamUIRenderTargetGeometrySource::GetPresetMaterial()const
 {
-	auto MatPath = TEXT("/DreamGUI/Materials/DreamUI_RenderTargetMaterial");
-	return LoadObject<UMaterialInterface>(NULL, MatPath);
+	return UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->RenderTargetMaterial, TEXT("RenderTargetMaterial"));
 }
 
 UMaterialInstanceDynamic* UDreamUIRenderTargetGeometrySource::GetMaterialInstance()const

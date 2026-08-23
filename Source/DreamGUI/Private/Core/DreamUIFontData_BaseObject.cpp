@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIFontData_BaseObject.h"
+#include "Core/DreamGUISettings.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIFontEmojiData.h"
 #include "Utils/DreamUIUtils.h"
@@ -9,7 +10,7 @@
 
 UDreamUIFontData_BaseObject* UDreamUIFontData_BaseObject::GetDefaultFont()
 {
-	static auto defaultFont = LoadObject<UDreamUIFontData_BaseObject>(NULL, TEXT("/DreamGUI/DefaultFont_DistanceField"));
+	static auto defaultFont = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultFont, TEXT("DefaultFont"));
 	if (defaultFont == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default font error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue.")

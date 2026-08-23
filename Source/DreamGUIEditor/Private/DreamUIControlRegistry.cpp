@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIControlRegistry.h"
+#include "Core/DreamGUISettings.h"
 
 #include "Core/Components/DreamBackgroundBlur.h"
 #include "Core/Components/DreamBackgroundPixelate.h"
@@ -165,7 +166,7 @@ namespace DreamUIControlRegistryLocal
 		Result.DisplayName = FText::FromString(DisplayName);
 		Result.Category = TEXT("Controls");
 		Result.CreationKind = EDreamUIControlCreationKind::Prefab;
-		Result.PrefabPath = FString::Printf(TEXT("/DreamGUI/Prefabs/%s"), AssetName);
+		Result.PrefabPath = UDreamGUISettings::Get()->PresetPrefabFolder + AssetName;
 		Result.Icon = MakeUMGIcon(IconStyleName);
 		return Result;
 	}

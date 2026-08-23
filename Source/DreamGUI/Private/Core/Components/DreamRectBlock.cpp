@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamRectBlock.h"
+#include "Core/DreamGUISettings.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUISpriteInfo.h"
@@ -26,7 +27,7 @@ UMaterialInterface* UDreamRectBlockData::GetMaterial()
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/DreamGUI/Materials/DreamUI_RectBlock"));;
+		DefaultMaterial = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockMaterial, TEXT("DefaultRectBlockMaterial"));
 	}
 	return DefaultMaterial;
 }
@@ -263,7 +264,7 @@ void UDreamRectBlock::OnRegister()
 	Super::OnRegister();
 	if (RectBlockData == nullptr)
 	{
-		RectBlockData = LoadObject<UDreamRectBlockData>(NULL, TEXT("/DreamGUI/DefaultRectBlockData"));
+		RectBlockData = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockData, TEXT("DefaultRectBlockData"));
 		check(RectBlockData != nullptr);
 	}
 	RectBlockData->Init(DataCountInBytes(), EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 32);

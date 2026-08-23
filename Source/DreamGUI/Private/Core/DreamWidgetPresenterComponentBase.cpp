@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Core/DreamGUISettings.h"
 
 #include "EngineUtils.h"
 #include "DreamGUI.h"
@@ -20,7 +21,7 @@ UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
 
 	CanvasTemplate = CreateDefaultSubobject<UDreamCanvas>(TEXT("CanvasTemplate"));
 	
-	NavigationSelectionPrefab = LoadObject<UDreamUIPrefab>(NULL, TEXT("/DreamGUI/Prefabs/NavigationSelectionInputHandler"));
+	NavigationSelectionPrefab = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->NavigationSelectionPrefab, TEXT("NavigationSelectionPrefab"));
 }
 
 void UDreamWidgetPresenterComponentBase::BeginPlay()
@@ -191,8 +192,9 @@ void UDreamWidgetPresenterComponentBase::CheckNecessaryObjects()
 						FSimpleDelegate::CreateLambda([=, WeakThis = MakeWeakObjectPtr(this)]()
 						{
 							if (!WeakThis.IsValid())return;
-							auto ClassName = TEXT("DreamEventSystemActor_EnhancedInput");
-							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/DreamGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+							auto ClassName = TEXT("EventSystemActorClass");
+							if (auto ActorClass = UDreamGUISettings::LoadSettingClass(
+								UDreamGUISettings::Get()->EventSystemActorClass, ClassName))
 							{
 								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
 								Actor->SetActorLabel(ClassName);
@@ -258,8 +260,9 @@ void UDreamWidgetPresenterComponentBase::CheckNecessaryObjects()
 						FSimpleDelegate::CreateLambda([=, &ExistWorldSpaceRaycasterSource, WeakThis = MakeWeakObjectPtr(this)]()
 						{
 							if (!WeakThis.IsValid())return;
-							auto ClassName = TEXT("DreamWorldSpaceRaycasterSource_Mouse");
-							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/DreamGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+							auto ClassName = TEXT("WorldSpaceRaycasterSourceClass");
+							if (auto ActorClass = UDreamGUISettings::LoadSettingClass(
+								UDreamGUISettings::Get()->WorldSpaceRaycasterSourceClass, ClassName))
 							{
 								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
 								Actor->SetActorLabel(ClassName);

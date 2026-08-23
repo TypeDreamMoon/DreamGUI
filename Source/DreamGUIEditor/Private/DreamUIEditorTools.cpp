@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIEditorTools.h"
+#include "Core/DreamGUISettings.h"
 #include "DreamUIControlRegistry.h"
 #include "Core/DreamUIManager.h"
 #include "Misc/MessageDialog.h"
@@ -93,7 +94,6 @@ struct FDreamUIEditorToolsHelperFunctionHolder
 
 TArray<FDreamUIEditorTools::FCopiedWidgetPrefab> FDreamUIEditorTools::CopiedWidgetPrefabList;
 
-FString FDreamUIEditorTools::DreamUIPresetPrefabPath = TEXT("/DreamGUI/Prefabs/");
 
 namespace
 {
