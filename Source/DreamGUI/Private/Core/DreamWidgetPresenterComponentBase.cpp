@@ -46,7 +46,15 @@ void UDreamWidgetPresenterComponentBase::EndPlay(const EEndPlayReason::Type EndP
 void UDreamWidgetPresenterComponentBase::OnRegister()
 {
 	Super::OnRegister();
-	if (!GetWorld()->IsGameWorld())
+	UWorld* World = GetWorld();
+	// An Inactive (or typeless) world is a package being preloaded -- double-clicking a map asset
+	// loads it before the map command runs. A tree built there answers to no manager and is reaped
+	// by the next GC through the BeginDestroy fallback, mid-purge; building it is pure liability.
+	if (World == nullptr || World->WorldType == EWorldType::Inactive || World->WorldType == EWorldType::None)
+	{
+		return;
+	}
+	if (!World->IsGameWorld())
 	{
 		LoadWidget();//load when OnRegister in edit mode
 	}

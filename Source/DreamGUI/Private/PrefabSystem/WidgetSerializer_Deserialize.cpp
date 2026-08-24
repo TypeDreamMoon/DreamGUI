@@ -602,9 +602,28 @@ namespace DreamUIPrefabSystem
 				}
 #endif
 #if WITH_EDITOR
-				if (auto ExistingObject = FindObjectWithOuter(*OuterObjectPtr, nullptr, ObjectData->ObjectName))
+				if (auto ExistingObject = Cast<UObject>(FindObjectWithOuter(*OuterObjectPtr, nullptr, ObjectData->ObjectName)))
 				{
-					const bool bNameIsFree = WidgetSerializer::ReleaseNameFromExistingObject(Cast<UObject>(ExistingObject));
+					// A default subobject the outer's constructor just built (UMovieScene's
+					// NodeGroupCollection, canvases' meshes...). It can end up serialized as an
+					// ordinary entry when a save catches it without its default-subobject identity,
+					// and the old answer -- rename it away, ConditionalBeginDestroy it, construct a
+					// same-named replacement over it -- leaves the outer's C++ member pointing at a
+					// half-destroyed object. That is the double-free that froze the editor on map
+					// load (2026-08-24). Adopt the constructed instance instead: deserialization
+					// then writes the saved properties into it, which is what the entry meant.
+					if (ExistingObject->HasAnyFlags(RF_DefaultSubObject) && ExistingObject->GetClass() == ObjectClass)
+					{
+						UE_LOG(DreamGUI, Log, TEXT("[%s].%d Adopting constructed default subobject '%s' on outer '%s' for a serialized entry. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData->ObjectName.ToString()), *(*OuterObjectPtr)->GetPathName(), *PrefabAssetPath);
+						CreatedNewObject = ExistingObject;
+						MapGuidToObject.Add(ObjectGuid, CreatedNewObject);
+						MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);
+						CollectDefaultSubobjects(CreatedNewObject, ObjectGuid, *ObjectData);
+						PendingObjectGuids.RemoveAtSwap(PendingIndex);
+						bMadeProgress = true;
+						continue;
+					}
+					const bool bNameIsFree = WidgetSerializer::ReleaseNameFromExistingObject(ExistingObject);
 					UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one%s. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData->ObjectName.ToString()), *(*OuterObjectPtr)->GetPathName(), bNameIsFree ? TEXT("") : TEXT(" (FAILED, the new object will be given a different name)"), *PrefabAssetPath);
 				}
 #endif
