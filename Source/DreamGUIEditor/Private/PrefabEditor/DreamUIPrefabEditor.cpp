@@ -709,8 +709,6 @@ void FDreamUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const
 	ApplyDesignerState();
 
 	SequencerPtr = SNew(SDreamUIPrefabSequenceEditor);
-	// The sequencer's side panels (the curve editor) must dock into this window, not the level editor.
-	SequencerPtr->SetToolkitHost(GetToolkitHost());
 	
 	BindCommands();
 	ExtendToolbar();
@@ -723,6 +721,12 @@ void FDreamUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const
 	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = CreateDefaultLayout();
 
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
+	// Only now does this toolkit have a host; the sequencer's side panels (the curve editor) must
+	// dock into this window rather than the level editor's.
+	if (SequencerPtr.IsValid())
+	{
+		SequencerPtr->SetToolkitHost(GetToolkitHost());
+	}
 	if (!bRegisteredForUndo && GEditor)
 	{
 		GEditor->RegisterForUndo(this);
