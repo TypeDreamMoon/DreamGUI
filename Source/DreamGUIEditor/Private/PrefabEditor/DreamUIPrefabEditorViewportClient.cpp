@@ -2749,7 +2749,10 @@ UTypedElementSelectionSet* FDreamUIPrefabEditorViewportClient::GetMutableSelecti
 
 void FDreamUIPrefabEditorViewportClient::TickWorld(float DeltaSeconds)
 {
-	GetWorld()->Tick(LEVELTICK_All, DeltaSeconds);
+	if (UWorld* World = GetWorld())
+	{
+		World->Tick(LEVELTICK_All, DeltaSeconds);
+	}
 }
 
 bool FDreamUIPrefabEditorViewportClient::FocusViewportToTargets()
@@ -3060,12 +3063,21 @@ void FDreamUIPrefabEditorViewportClient::ClearPaletteDropPreview()
 // These implementation are copied from FEditorViewportClient
 UWorld* FDreamUIPrefabEditorViewportClient::GetWorld()const
 {
-	return PrefabEditorPtr.Pin()->GetWorld();
+	// The engine polls every registered viewport client each tick (UEditorEngine::Tick's
+	// GetScene sweep) and on every GC (AddReferencedObjects below). A closing tab releases the
+	// toolkit before Slate lets go of the viewport widget holding this client, so for a frame or
+	// two these get called with the editor already gone -- answer null instead of asserting.
+	const TSharedPtr<FDreamUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin();
+	return PrefabEditor.IsValid() ? PrefabEditor->GetWorld() : nullptr;
 }
 void FDreamUIPrefabEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	FEditorViewportClient::AddReferencedObjects(Collector);
-	PrefabEditorPtr.Pin()->GetPreviewScene()->AddReferencedObjects(Collector);
+	const TSharedPtr<FDreamUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin();
+	if (PrefabEditor.IsValid())
+	{
+		PrefabEditor->GetPreviewScene()->AddReferencedObjects(Collector);
+	}
 }
 namespace PreviewLightConstants
 {
