@@ -2,6 +2,7 @@
 // Portions derived from DreamGUI, Copyright 2026-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/DreamPanelLayouts.h"
+#include "DreamGUI.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamScrollBoxInputHandler.h"
 #include "Interaction/DreamContentWidget.h"

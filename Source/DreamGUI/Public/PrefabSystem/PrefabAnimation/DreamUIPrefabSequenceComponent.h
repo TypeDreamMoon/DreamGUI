@@ -10,6 +10,7 @@
 
 
 class UDreamUIPrefabSequence;
+class UDreamUISequence;
 class UDreamUIPrefabSequencePlayer;
 
 UENUM(BlueprintType)
@@ -124,6 +125,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category= Playback)
 		TArray<TObjectPtr<UDreamUIPrefabSequence>> SequenceArray;
+	/** Standalone animation assets this component can also play, addressed by asset name. */
+	UPROPERTY(EditAnywhere, Category = Playback)
+		TArray<TObjectPtr<UDreamUISequence>> SequenceAssets;
 	UPROPERTY(EditAnywhere, Category = Playback)
 		int32 CurrentSequenceIndex = 0;
 

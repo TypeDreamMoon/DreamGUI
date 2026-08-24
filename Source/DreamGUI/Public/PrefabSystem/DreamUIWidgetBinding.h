@@ -57,6 +57,14 @@ public:
 	UPROPERTY(EditAnywhere, Category = "DreamUI")
 	TSoftObjectPtr<AActor> PresenterActor;
 
+	/**
+	 * Optional: a sub-object of the widget (a behaviour, visual, or layout), as its path name
+	 * relative to the widget. Empty binds the widget itself. This is how an exported animation
+	 * keeps its component and visual bindings.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamUI")
+	FString SubObjectPathRelativeToWidget;
+
 	static FString BuildWidgetPathFromRoot(const UDreamWidget* Root, const UDreamWidget* Widget);
 	static UDreamWidget* ResolveWidgetPath(UDreamWidget* Root, const FString& InPath);
 

@@ -69,6 +69,7 @@ private:
 	TSharedPtr<FUICommandList> CommandList;
 	void CreateCommandList();
 	void OnDuplicateAnimation();
+	void OnExportAnimationToAsset();
 	void OnDeleteAnimation();
 	void OnRenameAnimation();
 	UDreamUIPrefabSequence* GetSelectedAnimation() const;

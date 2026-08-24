@@ -3,6 +3,7 @@
 
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequencePlayer.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
@@ -50,7 +51,19 @@ FDreamUIAnimationHandle UDreamUIPrefabSequenceComponent::PlayAnimationByDisplayN
 	bool bRestoreState)
 {
 	FDreamUIAnimationHandle Handle;
-	UDreamUIPrefabSequence* Sequence = GetSequenceByDisplayName(Name);
+	UMovieSceneSequence* Sequence = GetSequenceByDisplayName(Name);
+	if (!IsValid(Sequence))
+	{
+		// Fall back to the standalone assets; their address is the asset name.
+		for (UDreamUISequence* Asset : SequenceAssets)
+		{
+			if (IsValid(Asset) && Asset->GetName() == Name)
+			{
+				Sequence = Asset;
+				break;
+			}
+		}
+	}
 	if (!IsValid(Sequence))
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("Animation '%s' was not found on '%s'."), *Name, *GetPathName());

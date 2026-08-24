@@ -4,6 +4,14 @@
 #include "DreamUIPrefabSequenceEditor.h"
 #include "PrefabEditor/DreamUIPrefabBehaviourUtils.h"
 #include "K2Node_CallFunction.h"
+#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
+#include "PrefabSystem/DreamUIWidgetBinding.h"
+#include "DataFactory/DreamUISequenceFactory.h"
+#include "AssetToolsModule.h"
+#include "ObjectTools.h"
+#include "MovieScene.h"
+#include "MovieScenePossessable.h"
+#include "MovieSceneCommonHelpers.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
@@ -697,6 +705,13 @@ TSharedPtr<SWidget> SDreamUIPrefabSequenceEditor::OnContextMenuOpening()const
 	{
 		MenuBuilder.AddMenuEntry(FGenericCommands::Get().Rename);
 		MenuBuilder.AddMenuEntry(FGenericCommands::Get().Duplicate);
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("ExportAnimationToAsset", "Export to Asset..."),
+			LOCTEXT("ExportAnimationToAssetTooltip", "Copy this animation into a standalone DreamUI Animation asset, with bindings converted to widget paths, so a Level Sequence can play it as a subsequence."),
+			FSlateIcon(),
+			FUIAction(
+				FExecuteAction::CreateSP(const_cast<SDreamUIPrefabSequenceEditor*>(this), &SDreamUIPrefabSequenceEditor::OnExportAnimationToAsset),
+				FCanExecuteAction::CreateSP(const_cast<SDreamUIPrefabSequenceEditor*>(this), &SDreamUIPrefabSequenceEditor::CanExecuteAnimationListAction)));
 		MenuBuilder.AddMenuSeparator();
 		MenuBuilder.AddMenuEntry(FGenericCommands::Get().Delete);
 		//create fix button
@@ -856,6 +871,101 @@ void SDreamUIPrefabSequenceEditor::OnDeleteAnimation()
 		}
 	}
 }
+void SDreamUIPrefabSequenceEditor::OnExportAnimationToAsset()
+{
+	UDreamUIPrefabSequence* Source = GetSelectedAnimation();
+	UDreamWidget* RootWidget = WeakRootWidget.Get();
+	if (Source == nullptr || RootWidget == nullptr)
+	{
+		return;
+	}
+
+	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+	UDreamUISequenceFactory* Factory = NewObject<UDreamUISequenceFactory>();
+	UDreamUISequence* Asset = Cast<UDreamUISequence>(AssetToolsModule.Get().CreateAssetWithDialog(
+		ObjectTools::SanitizeObjectName(Source->GetDisplayNameString()), TEXT("/Game"), UDreamUISequence::StaticClass(), Factory));
+	if (Asset == nullptr)
+	{
+		return;
+	}
+
+	// The movie scene is copied whole; the bindings are rebuilt as widget paths, because the
+	// embedded form's direct HelperWidget pointers mean nothing outside this prefab instance.
+	Asset->Modify();
+	UMovieScene* CopiedScene = DuplicateObject<UMovieScene>(Source->GetMovieScene(), Asset);
+	Asset->MovieScene = CopiedScene;
+	Asset->BindingReferences = FMovieSceneBindingReferences();
+
+	const TSharedRef<UE::MovieScene::FSharedPlaybackState> TransientState =
+		MovieSceneHelpers::CreateTransientSharedPlaybackState(RootWidget->GetWorld(), Source);
+	FGuid RootGuid;
+	struct FExportedBinding { FGuid Guid; FString WidgetPath; FString SubObjectPath; };
+	TArray<FExportedBinding> Exported;
+	TArray<FGuid> Unresolved;
+	for (int32 Index = 0; Index < CopiedScene->GetPossessableCount(); ++Index)
+	{
+		const FGuid Guid = CopiedScene->GetPossessable(Index).GetGuid();
+		TArray<UObject*, TInlineAllocator<1>> BoundObjects;
+		Source->LocateBoundObjects(Guid, RootWidget, TransientState, BoundObjects);
+		if (BoundObjects.Num() == 0 || !IsValid(BoundObjects[0]))
+		{
+			Unresolved.Add(Guid);
+			continue;
+		}
+		FExportedBinding& Entry = Exported.AddDefaulted_GetRef();
+		Entry.Guid = Guid;
+		if (UDreamWidget* Widget = Cast<UDreamWidget>(BoundObjects[0]))
+		{
+			Entry.WidgetPath = UDreamUIWidgetBinding::BuildWidgetPathFromRoot(RootWidget, Widget);
+			if (Widget == RootWidget)
+			{
+				RootGuid = Guid;
+			}
+		}
+		else
+		{
+			UDreamWidget* OwnerWidget = BoundObjects[0]->GetTypedOuter<UDreamWidget>();
+			Entry.WidgetPath = UDreamUIWidgetBinding::BuildWidgetPathFromRoot(RootWidget, OwnerWidget);
+			Entry.SubObjectPath = BoundObjects[0]->GetPathName(OwnerWidget);
+		}
+	}
+	// Every exported animation gets a root binding, present in the source or not: the subsequence
+	// override re-roots the whole tree through it.
+	if (!RootGuid.IsValid())
+	{
+		RootGuid = CopiedScene->AddPossessable(TEXT("Root"), UDreamWidget::StaticClass());
+		UDreamUIWidgetBinding* RootBinding = NewObject<UDreamUIWidgetBinding>(CopiedScene, NAME_None, RF_Transactional);
+		Asset->BindingReferences.AddBinding(RootGuid, RootBinding);
+	}
+	for (const FExportedBinding& Entry : Exported)
+	{
+		UDreamUIWidgetBinding* Binding = NewObject<UDreamUIWidgetBinding>(CopiedScene, NAME_None, RF_Transactional);
+		Binding->WidgetPath = Entry.WidgetPath;
+		Binding->SubObjectPathRelativeToWidget = Entry.SubObjectPath;
+		Asset->BindingReferences.AddBinding(Entry.Guid, Binding);
+		if (Entry.Guid != RootGuid)
+		{
+			if (FMovieScenePossessable* Possessable = CopiedScene->FindPossessable(Entry.Guid))
+			{
+				Possessable->SetParent(RootGuid, CopiedScene);
+			}
+		}
+	}
+	Asset->SetRootBindingGuidForExport(RootGuid);
+	for (const FGuid& Guid : Unresolved)
+	{
+		CopiedScene->RemovePossessable(Guid);
+	}
+	Asset->MarkPackageDirty();
+
+	FNotificationInfo Info(FText::Format(
+		LOCTEXT("ExportedAnimation", "Exported '{0}' to {1} ({2} bindings kept, {3} unresolved dropped)."),
+		FText::FromString(Source->GetDisplayNameString()), FText::FromString(Asset->GetName()),
+		FText::AsNumber(Exported.Num()), FText::AsNumber(Unresolved.Num())));
+	Info.ExpireDuration = 6.0f;
+	FSlateNotificationManager::Get().AddNotification(Info);
+}
+
 void SDreamUIPrefabSequenceEditor::OnRenameAnimation()
 {
 	TArray< TSharedPtr<FWidgetAnimationListItem> > SelectedAnimations = AnimationListView->GetSelectedItems();

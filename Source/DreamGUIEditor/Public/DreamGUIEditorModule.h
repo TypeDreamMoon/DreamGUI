@@ -100,6 +100,7 @@ private:
 	static void OnInitializeSequence(class UDreamUIPrefabSequence* Sequence);
 	FDelegateHandle DreamUIMaterialTrackEditorCreateTrackEditorHandle;
 	FDelegateHandle DreamUIAnimEventTrackEditorCreateTrackEditorHandle;
+	FDelegateHandle DreamUISequenceTrackEditorCreateTrackEditorHandle;
 	TObjectPtr<class USequencerSettings> DreamUIPrefabSequencerSettings = nullptr;
 
 	/** FGCObject interface */

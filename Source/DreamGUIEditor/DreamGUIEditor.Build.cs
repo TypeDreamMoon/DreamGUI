@@ -66,6 +66,7 @@ public class DreamGUIEditor : ModuleRules
                 "SubobjectEditor",//PrefabEditor, Actor component panel
                 "UMG",//UMGStyle
                 "Sequencer",
+                "UniversalObjectLocator",
 				"MovieScene",
 				"MovieSceneTracks",
 				"MovieSceneTools",

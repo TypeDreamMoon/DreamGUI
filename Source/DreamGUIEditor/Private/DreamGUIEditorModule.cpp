@@ -68,6 +68,8 @@
 #include "MovieSceneToolsProjectSettings.h"
 #include "PrefabAnimation/DreamUIMaterialTrackEditor.h"
 #include "PrefabAnimation/DreamUIAnimEventTrackEditor.h"
+#include "PrefabAnimation/DreamUISequenceTrackEditor.h"
+#include "DataFactory/DreamUISequenceFactory.h"
 #include "PrefabAnimation/DreamUIPrefabSequencerSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -142,6 +144,7 @@ void FDreamGUIEditorModule::StartupModule()
 	SequenceEditorHandle = SequencerModule.RegisterSequenceEditor(UDreamUIPrefabSequence::StaticClass(), MakeUnique<FMovieSceneSequenceEditor_DreamUIPrefabSequence>());
 	DreamUIMaterialTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUIMaterialTrackEditor::CreateTrackEditor));
 	DreamUIAnimEventTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUIAnimEventTrackEditor::CreateTrackEditor));
+	DreamUISequenceTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUISequenceTrackEditor::CreateTrackEditor));
 
 	FDreamUIEditorCommands::Register();
 	
@@ -242,6 +245,7 @@ void FDreamGUIEditorModule::StartupModule()
 		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_DreamUIStaticSpriteAtlasData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> BitmapFontDataAction = MakeShareable(new FAssetTypeActions_DreamUIFontData_Bitmap(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_DreamUIPrefab(DreamUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> SequenceAssetAction = MakeShareable(new FAssetTypeActions_DreamUISequence(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_DreamUIStaticMeshCache(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextCustomStyleDataAction = MakeShareable(new FAssetTypeActions_DreamUIRichTextCustomStyleData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_DreamUIRichTextImageData(DreamUIAssetCategoryBit));
@@ -252,6 +256,7 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(BitmapFontDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(PrefabDataAction.ToSharedRef());
+		AssetTools.RegisterAssetTypeActions(SequenceAssetAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(UIStaticMeshCacheDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(RichTextCustomStyleDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(RichTextImageDataAction.ToSharedRef());
@@ -372,6 +377,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 		SequencerModule->UnregisterSequenceEditor(SequenceEditorHandle);
 		SequencerModule->UnRegisterTrackEditor(DreamUIMaterialTrackEditorCreateTrackEditorHandle);
 		SequencerModule->UnRegisterTrackEditor(DreamUIAnimEventTrackEditorCreateTrackEditorHandle);
+		SequencerModule->UnRegisterTrackEditor(DreamUISequenceTrackEditorCreateTrackEditorHandle);
 	}
 	
 	//unregister window

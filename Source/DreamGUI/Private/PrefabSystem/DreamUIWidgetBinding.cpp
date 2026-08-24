@@ -84,11 +84,28 @@ UDreamWidgetPresenterComponentBase* UDreamUIWidgetBinding::ResolvePresenter(UObj
 FMovieSceneBindingResolveResult UDreamUIWidgetBinding::ResolveBinding(const FMovieSceneBindingResolveParams& ResolveParams, int32 BindingIndex, TSharedRef<const UE::MovieScene::FSharedPlaybackState> SharedPlaybackState) const
 {
 	FMovieSceneBindingResolveResult Result;
-	if (const UDreamWidgetPresenterComponentBase* Presenter = ResolvePresenter(ResolveParams.Context))
+	// A widget as the context re-roots the whole binding: this is how a child binding resolves
+	// against its parent's object (parent contexts are significant on UDreamUISequence), and how a
+	// component-played sequence asset resolves against the widget hosting the player -- both
+	// without any PresenterActor being set on the asset.
+	UDreamWidget* Root = nullptr;
+	if (UDreamWidget* ContextWidget = Cast<UDreamWidget>(ResolveParams.Context))
 	{
-		if (UDreamWidget* Widget = ResolveWidgetPath(Presenter->GetLoadedWidget(), WidgetPath))
+		Root = ContextWidget;
+	}
+	else if (const UDreamWidgetPresenterComponentBase* Presenter = ResolvePresenter(ResolveParams.Context))
+	{
+		Root = Presenter->GetLoadedWidget();
+	}
+	if (UDreamWidget* Widget = ResolveWidgetPath(Root, WidgetPath))
+	{
+		if (SubObjectPathRelativeToWidget.IsEmpty())
 		{
 			Result.Objects.Add(Widget);
+		}
+		else if (UObject* SubObject = StaticFindObject(UObject::StaticClass(), Widget, *SubObjectPathRelativeToWidget))
+		{
+			Result.Objects.Add(SubObject);
 		}
 	}
 	return Result;
@@ -151,7 +168,7 @@ UMovieSceneCustomBinding* UDreamUIWidgetBinding::CreateNewCustomBinding(UObject*
 
 UClass* UDreamUIWidgetBinding::GetBoundObjectClass() const
 {
-	return UDreamWidget::StaticClass();
+	return SubObjectPathRelativeToWidget.IsEmpty() ? UDreamWidget::StaticClass() : UObject::StaticClass();
 }
 
 FString UDreamUIWidgetBinding::GetDesiredBindingName() const
