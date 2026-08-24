@@ -33,6 +33,8 @@ struct DREAMGUI_API FDreamUIAnimationHandle
 /**
  * Movie scene animation embedded within DreamUIPrefab.
  */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamUIAnimEventDelegate, FName, EventName);
+
 UCLASS(Blueprintable, ClassGroup=DreamGUI, meta=(BlueprintSpawnableComponent), DisplayName="DreamUI Prefab Sequence Component")
 class DREAMGUI_API UDreamUIPrefabSequenceComponent
 	: public UDreamUIBehaviour
@@ -92,6 +94,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
 	void StopAllAnimations();
+
+	/** Fired by a DreamUI Event track key while an animation of this component plays. */
+	UPROPERTY(BlueprintAssignable, Category = "DreamUI|Animation")
+	FDreamUIAnimEventDelegate OnAnimationEvent;
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
+	void BroadcastAnimationEvent(FName EventName) { OnAnimationEvent.Broadcast(EventName); }
 
 	UDreamUIPrefabSequence* AddNewAnimation();
 	bool DeleteAnimationByIndex(int32 InIndex);

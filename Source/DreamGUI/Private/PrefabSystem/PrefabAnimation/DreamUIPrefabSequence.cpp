@@ -9,6 +9,7 @@
 #include "Tracks/MovieSceneEventTrack.h"
 #include "Tracks/MovieSceneMaterialParameterCollectionTrack.h"
 #include "Tracks/MovieSceneTimeWarpTrack.h"
+#include "PrefabSystem/PrefabAnimation/DreamUIAnimEventTrack.h"
 
 #if WITH_EDITOR
 UDreamUIPrefabSequence::FOnInitialize UDreamUIPrefabSequence::OnInitializeSequenceEvent;
@@ -155,7 +156,8 @@ ETrackSupport UDreamUIPrefabSequence::IsTrackSupportedImpl(TSubclassOf<class UMo
 	if (InTrackClass == UMovieSceneAudioTrack::StaticClass() ||
 		// InTrackClass == UMovieSceneEventTrack::StaticClass() ||
 		InTrackClass == UMovieSceneMaterialParameterCollectionTrack::StaticClass() ||
-		InTrackClass == UMovieSceneTimeWarpTrack::StaticClass())
+		InTrackClass == UMovieSceneTimeWarpTrack::StaticClass() ||
+		InTrackClass == UDreamUIAnimEventTrack::StaticClass())
 	{
 		return ETrackSupport::Supported;
 	}

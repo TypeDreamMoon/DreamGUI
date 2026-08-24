@@ -67,6 +67,7 @@
 #include "DreamUIComponentReference.h"
 #include "MovieSceneToolsProjectSettings.h"
 #include "PrefabAnimation/DreamUIMaterialTrackEditor.h"
+#include "PrefabAnimation/DreamUIAnimEventTrackEditor.h"
 #include "PrefabAnimation/DreamUIPrefabSequencerSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -140,6 +141,7 @@ void FDreamGUIEditorModule::StartupModule()
 	ISequencerModule& SequencerModule = FModuleManager::Get().LoadModuleChecked<ISequencerModule>("Sequencer");
 	SequenceEditorHandle = SequencerModule.RegisterSequenceEditor(UDreamUIPrefabSequence::StaticClass(), MakeUnique<FMovieSceneSequenceEditor_DreamUIPrefabSequence>());
 	DreamUIMaterialTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUIMaterialTrackEditor::CreateTrackEditor));
+	DreamUIAnimEventTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUIAnimEventTrackEditor::CreateTrackEditor));
 
 	FDreamUIEditorCommands::Register();
 	
@@ -369,6 +371,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 	{
 		SequencerModule->UnregisterSequenceEditor(SequenceEditorHandle);
 		SequencerModule->UnRegisterTrackEditor(DreamUIMaterialTrackEditorCreateTrackEditorHandle);
+		SequencerModule->UnRegisterTrackEditor(DreamUIAnimEventTrackEditorCreateTrackEditorHandle);
 	}
 	
 	//unregister window
