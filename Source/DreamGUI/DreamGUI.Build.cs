@@ -52,6 +52,7 @@ public class DreamGUI : ModuleRules
                 "ApplicationCore",//UITextInput/RequiresVirtualKeyboard, debug
                 "Projects",
                 "MovieScene",
+                "LevelSequence",
                 "MovieSceneTracks",
                 "UMG",
 				// ... add other public dependencies that you statically link with here ...

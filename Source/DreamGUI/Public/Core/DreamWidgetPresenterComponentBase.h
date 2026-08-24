@@ -78,6 +78,12 @@ protected:
 protected:
 	/** Replays the presenter-level forwards onto a freshly loaded widget tree; default values are left alone. */
 	void ApplyWidgetOverridesToLoadedWidget();
+	/**
+	 * Tells every level-sequence player in the world to re-resolve its bindings. A custom widget
+	 * binding that evaluated before this tree existed stays failed otherwise: the ECS re-runs
+	 * resolution only on explicit invalidation.
+	 */
+	void NotifyWidgetLoaded();
 
 public:
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)

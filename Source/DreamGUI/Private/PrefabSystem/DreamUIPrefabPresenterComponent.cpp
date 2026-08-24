@@ -57,6 +57,7 @@ void UDreamUIPrefabPresenterComponent::LoadWidget()
 			});
 			LoadedWidget->CalculateObjectToWorldTransform(true);
 			ApplyWidgetOverridesToLoadedWidget();
+			NotifyWidgetLoaded();
 #if WITH_EDITOR
 			TArray<UDreamWidget*> AllLoadedWidgets;
 			UDreamWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);

@@ -11,6 +11,11 @@
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "PrefabSystem/DreamUIPrefab.h"
 
+#include "LevelSequenceActor.h"
+#include "LevelSequencePlayer.h"
+#include "MovieScene.h"
+#include "MovieSceneObjectBindingID.h"
+#include "EngineUtils.h"
 #define LOCTEXT_NAMESPACE "DreamWidgetPresenterComponentBase"
 
 UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
@@ -371,6 +376,32 @@ void UDreamWidgetPresenterComponentBase::ApplyWidgetOverridesToLoadedWidget()
 	if (!bWidgetVisible)
 	{
 		Widget->SetWidgetActive(false);
+	}
+}
+
+void UDreamWidgetPresenterComponentBase::NotifyWidgetLoaded()
+{
+	UWorld* World = GetWorld();
+	// Game worlds only: the editor's sequencer is not a UMovieSceneSequencePlayer, and it re-resolves
+	// through its own refresh paths anyway.
+	if (World == nullptr || !World->IsGameWorld())
+	{
+		return;
+	}
+	for (TActorIterator<ALevelSequenceActor> It(World); It; ++It)
+	{
+		ULevelSequencePlayer* Player = It->GetSequencePlayer();
+		UMovieSceneSequence* Sequence = Player != nullptr ? Player->GetSequence() : nullptr;
+		UMovieScene* MovieScene = Sequence != nullptr ? Sequence->GetMovieScene() : nullptr;
+		if (MovieScene == nullptr)
+		{
+			continue;
+		}
+		// Root-level bindings only; a widget binding inside a subsequence still needs its own poke.
+		for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
+		{
+			Player->RequestInvalidateBinding(UE::MovieScene::FFixedObjectBindingID(Binding.GetObjectGuid(), MovieSceneSequenceID::Root));
+		}
 	}
 }
 
