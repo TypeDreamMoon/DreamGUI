@@ -26,6 +26,7 @@ public:
 	virtual FColor GetTypeColor() const override { return FColor(41, 98, 255); }
 	virtual UClass* GetSupportedClass() const override;
 	virtual uint32 GetCategories() override { return AssetCategory; }
+	virtual void OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor = TSharedPtr<class IToolkitHost>()) override;
 
 private:
 	EAssetTypeCategories::Type AssetCategory;

@@ -4,6 +4,7 @@
 #include "DreamUISequenceFactory.h"
 #include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
 #include "MovieScene.h"
+#include "PrefabAnimation/DreamUISequenceEditorToolkit.h"
 
 UDreamUISequenceFactory::UDreamUISequenceFactory()
 {
@@ -25,4 +26,17 @@ UObject* UDreamUISequenceFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 UClass* FAssetTypeActions_DreamUISequence::GetSupportedClass() const
 {
 	return UDreamUISequence::StaticClass();
+}
+
+void FAssetTypeActions_DreamUISequence::OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<IToolkitHost> EditWithinLevelEditor)
+{
+	const EToolkitMode::Type Mode = EditWithinLevelEditor.IsValid() ? EToolkitMode::WorldCentric : EToolkitMode::Standalone;
+	for (UObject* Object : InObjects)
+	{
+		if (UDreamUISequence* Sequence = Cast<UDreamUISequence>(Object))
+		{
+			const TSharedRef<FDreamUISequenceEditorToolkit> Toolkit = MakeShared<FDreamUISequenceEditorToolkit>();
+			Toolkit->Initialize(Mode, EditWithinLevelEditor, Sequence);
+		}
+	}
 }
