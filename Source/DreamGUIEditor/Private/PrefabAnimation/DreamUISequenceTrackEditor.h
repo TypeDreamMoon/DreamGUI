@@ -27,4 +27,6 @@ public:
 private:
 	void AddAssetSubMenu(FMenuBuilder& MenuBuilder, TArray<FGuid> ObjectBindings);
 	void HandleAssetSelected(const FAssetData& AssetData, TArray<FGuid> ObjectBindings);
+	void AddWidgetPickerSubMenu(FMenuBuilder& MenuBuilder, TArray<FGuid> ObjectBindings);
+	void HandleWidgetPicked(TWeakObjectPtr<class UDreamWidget> InWidget);
 };

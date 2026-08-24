@@ -39,6 +39,8 @@ public:
 	//~ UMovieSceneCustomBinding interface
 	virtual FMovieSceneBindingResolveResult ResolveBinding(const FMovieSceneBindingResolveParams& ResolveParams, int32 BindingIndex, TSharedRef<const UE::MovieScene::FSharedPlaybackState> SharedPlaybackState) const override;
 	virtual bool SupportsBindingCreationFromObject(const UObject* SourceObject) const override;
+	/** Wider than creation: conversion may start from a presenter component or its actor. */
+	bool SupportsSourceObjectForConversion(const UObject* SourceObject) const;
 	virtual UMovieSceneCustomBinding* CreateNewCustomBinding(UObject* SourceObject, UMovieScene& OwnerMovieScene) override;
 	virtual UClass* GetBoundObjectClass() const override;
 	virtual int32 GetCustomBindingPriority() const override { return BaseCustomPriority; }

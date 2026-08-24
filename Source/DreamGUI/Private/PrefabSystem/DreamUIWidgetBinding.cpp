@@ -113,6 +113,15 @@ FMovieSceneBindingResolveResult UDreamUIWidgetBinding::ResolveBinding(const FMov
 
 bool UDreamUIWidgetBinding::SupportsBindingCreationFromObject(const UObject* SourceObject) const
 {
+	// Widgets only. The sequencer consults every custom binding type whenever any object is
+	// possessed, and answering yes for a presenter-carrying actor would hijack a plain actor
+	// possession into a widget binding. Actors and presenters stay supported for explicit
+	// conversion (SupportsConversionFromBinding below).
+	return SourceObject != nullptr && SourceObject->IsA<UDreamWidget>();
+}
+
+bool UDreamUIWidgetBinding::SupportsSourceObjectForConversion(const UObject* SourceObject) const
+{
 	if (SourceObject == nullptr)
 	{
 		return false;
@@ -192,7 +201,7 @@ FText UDreamUIWidgetBinding::GetBindingTypePrettyName() const
 
 bool UDreamUIWidgetBinding::SupportsConversionFromBinding(const FMovieSceneBindingReference& BindingReference, const UObject* SourceObject) const
 {
-	return SupportsBindingCreationFromObject(SourceObject);
+	return SupportsSourceObjectForConversion(SourceObject);
 }
 
 UMovieSceneCustomBinding* UDreamUIWidgetBinding::CreateCustomBindingFromBinding(const FMovieSceneBindingReference& BindingReference, UObject* SourceObject, UMovieScene& OwnerMovieScene)
