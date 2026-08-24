@@ -94,6 +94,12 @@ FMovieSceneBindingResolveResult UDreamUIWidgetBinding::ResolveBinding(const FMov
 	{
 		Root = ContextWidget;
 	}
+	else if (const UDreamWidgetPresenterComponentBase* ContextPresenter = Cast<UDreamWidgetPresenterComponentBase>(ResolveParams.Context))
+	{
+		// A parent binding that resolved to a presenter (the usual outer for a subsequence
+		// override) roots its children at the presenter's loaded tree.
+		Root = ContextPresenter->GetLoadedWidget();
+	}
 	else if (const UDreamWidgetPresenterComponentBase* Presenter = ResolvePresenter(ResolveParams.Context))
 	{
 		Root = Presenter->GetLoadedWidget();

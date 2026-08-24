@@ -13,6 +13,8 @@
 #include "PrefabSystem/DreamUIPrefab.h"
 #include "Core/Components/DreamWidget.h"
 #include "PropertyEditorModule.h"
+#include "MovieScene.h"
+#include "MovieScenePossessable.h"
 #include "IDetailsView.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -142,6 +144,22 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 	if (const TSharedPtr<SDockTab> Tab = TabManager->FindExistingLiveTab(SequencerMainTabId))
 	{
 		Tab->SetContent(Sequencer->GetSequencerWidget());
+	}
+
+	// Bindings created before the parenting fix (or by other tools) float free; the re-rooting
+	// scheme needs every widget binding under the root, so adopt strays on open.
+	if (Sequence != nullptr)
+	{
+		UMovieScene* MovieScene = Sequence->GetMovieScene();
+		const FGuid RootGuid = Sequence->EnsureRootBinding();
+		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)
+		{
+			FMovieScenePossessable& Possessable = MovieScene->GetPossessable(Index);
+			if (Possessable.GetGuid() != RootGuid && !Possessable.GetParent().IsValid())
+			{
+				Possessable.SetParent(RootGuid, MovieScene);
+			}
+		}
 	}
 
 	// The preview tree makes the bindings real while editing; rebuild it when the prefab changes.

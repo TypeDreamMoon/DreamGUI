@@ -7,6 +7,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "MovieScene.h"
+#include "MovieScenePossessable.h"
 #include "ScopedTransaction.h"
 #include "TrackEditors/SubTrackEditorBase.h"
 #include "SequencerUtilities.h"
@@ -164,12 +165,36 @@ void FDreamUISequenceTrackEditor::HandleWidgetPicked(TWeakObjectPtr<UDreamWidget
 	{
 		return;
 	}
+	UDreamUISequence* Asset = Cast<UDreamUISequence>(SequencerPtr->GetFocusedMovieSceneSequence());
+
+	// Picking the tree root inside an animation asset means the root binding, which already exists.
+	if (Asset != nullptr && Widget->GetParent() == nullptr && Asset->GetRootBindingGuid().IsValid())
+	{
+		SequencerPtr->SelectObject(Asset->GetRootBindingGuid());
+		return;
+	}
+
 	const FScopedTransaction Transaction(LOCTEXT("BindPrefabWidget_Transaction", "Bind Prefab Widget"));
 	// The custom-binding machinery picks UDreamUIWidgetBinding by itself: it is the only binding
 	// type that supports creation from a widget, and it derives the presenter and path from it.
 	const FGuid NewGuid = FSequencerUtilities::CreateBinding(SequencerPtr.ToSharedRef(), *Widget);
 	if (NewGuid.IsValid())
 	{
+		if (Asset != nullptr)
+		{
+			// The whole re-rooting scheme -- one override on the root retargets the tree -- rests
+			// on children being parented under the root binding; the engine's create path leaves
+			// the parent unset.
+			UMovieScene* MovieScene = Asset->GetMovieScene();
+			const FGuid RootGuid = Asset->EnsureRootBinding();
+			if (NewGuid != RootGuid)
+			{
+				if (FMovieScenePossessable* Possessable = MovieScene->FindPossessable(NewGuid))
+				{
+					Possessable->SetParent(RootGuid, MovieScene);
+				}
+			}
+		}
 		SequencerPtr->NotifyMovieSceneDataChanged(EMovieSceneDataChangeType::MovieSceneStructureItemAdded);
 	}
 }
