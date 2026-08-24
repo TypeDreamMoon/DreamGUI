@@ -16,6 +16,10 @@
 #include "Widgets/Input/SButton.h"
 #include "DreamUIPrefabSequenceEditor.h"
 #include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
+#include "Subsystems/AssetEditorSubsystem.h"
+#include "Editor.h"
+#include "UObject/UObjectIterator.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIPrefabSequenceComponentCustomization"
 
@@ -49,14 +53,64 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 	}
 
 	auto PrefabEditor = FDreamUIPrefabEditor::GetEditorByWorld(World);
-	if (!PrefabEditor.IsValid())
-	{
-		return;
-	}
 
 	DetailBuilder.HideProperty("SequenceArray");
 
 	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Animation", LOCTEXT("AnimationCategory", "Animation"), ECategoryPriority::Important);
+
+	if (!PrefabEditor.IsValid())
+	{
+		// A level instance: its widget tree is transient and owns no prefab helper, so nothing
+		// edited here could ever be saved. The honest offer is the prefab editor, whose Apply
+		// flows back into this instance through the presenter's version check.
+		Category.AddCustomRow(FText())
+			.NameContent()
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("AnimationsValueText", "Animations"))
+				.Font(DetailBuilder.GetDetailFont())
+			]
+			.ValueContent()
+			[
+				SNew(SButton)
+				.ToolTipText(LOCTEXT("EditInPrefabTooltip", "Open this widget's prefab and edit its animations there. Apply in the prefab editor reloads this instance."))
+				.OnClicked_Lambda([WeakComponent = WeakSequenceComponent]()
+				{
+					UDreamUIPrefabSequenceComponent* Component = WeakComponent.Get();
+					UDreamWidget* Root = Component ? Component->GetWidget() : nullptr;
+					while (Root != nullptr && Root->GetParent() != nullptr)
+					{
+						Root = Root->GetParent();
+					}
+					UDreamUIPrefab* Prefab = nullptr;
+					for (TObjectIterator<UDreamUIPrefabPresenterComponent> It; It && Prefab == nullptr; ++It)
+					{
+						if (It->GetLoadedWidget() == Root)
+						{
+							Prefab = It->GetPrefab();
+						}
+					}
+					if (Prefab == nullptr || GEditor == nullptr)
+					{
+						return FReply::Handled();
+					}
+					const FString CurrentName = Component->GetCurrentSequence() ? Component->GetCurrentSequence()->GetDisplayName().ToString() : FString();
+					UAssetEditorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+					Subsystem->OpenEditorForAsset(Prefab);
+					if (IAssetEditorInstance* Instance = Subsystem->FindEditorForAsset(Prefab, /*bFocusIfOpen*/true))
+					{
+						static_cast<FDreamUIPrefabEditor*>(Instance)->FocusAnimationByDisplayName(CurrentName);
+					}
+					return FReply::Handled();
+				})
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("EditInPrefabButtonText", "Edit Animations in Prefab"))
+					.Font(DetailBuilder.GetDetailFont())
+				]
+			];
+		return;
+	}
 
 	bool bIsExternalTabAlreadyOpened = false;
 

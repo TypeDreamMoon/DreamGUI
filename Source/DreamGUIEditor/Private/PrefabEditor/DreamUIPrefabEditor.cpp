@@ -2421,6 +2421,22 @@ void FDreamUIPrefabEditor::NavigateToAnimation(TWeakObjectPtr<UDreamUIPrefabSequ
 	SequencerPtr->SelectAnimation(InAnimation.Get());
 }
 
+void FDreamUIPrefabEditor::FocusAnimationByDisplayName(const FString& InDisplayName)
+{
+	InvokeTab(FDreamUIPrefabEditorTabs::SequencerID);
+	if (!SequencerPtr.IsValid() || InDisplayName.IsEmpty())
+	{
+		return;
+	}
+	if (UDreamUIPrefabSequenceComponent* Host = SequencerPtr->GetSequenceComponent())
+	{
+		if (UDreamUIPrefabSequence* Sequence = Host->GetSequenceByDisplayName(InDisplayName))
+		{
+			SequencerPtr->SelectAnimation(Sequence);
+		}
+	}
+}
+
 bool FDreamUIPrefabEditor::ApplyPrefabChanges()
 {
 	UDreamUIPrefab* Prefab = GetPrefabBeingEdited();

@@ -267,6 +267,8 @@ public:
 
 	TSharedPtr<SDreamUIPrefabSequenceEditor> GetSequencerEditor()const{return SequencerPtr;}
 	static FName GetSequencerTabID();
+	/** Opens the Animations tab and selects the animation with this display name, if it exists. */
+	void FocusAnimationByDisplayName(const FString& InDisplayName);
 
 	/**
 	 * The animation currently selected in the animation list, or nullptr when none is.
