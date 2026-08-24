@@ -47,7 +47,9 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 	{
 		SequencerInitParams.RootSequence = Sequence;
 		SequencerInitParams.bEditWithinLevelEditor = false;
-		SequencerInitParams.ToolkitHost = InitToolkitHost;
+		// Standalone opens hand in a null InitToolkitHost; InitAssetEditor above has created this
+		// toolkit's own host by now, and CreateSequencer asserts on a null one.
+		SequencerInitParams.ToolkitHost = InitToolkitHost.IsValid() ? InitToolkitHost : GetToolkitHost();
 		SequencerInitParams.HostCapabilities.bSupportsCurveEditor = true;
 		// The editor world: a level holding the matching presenter resolves the widget bindings
 		// live, so scrubbing here previews in the level viewport.
