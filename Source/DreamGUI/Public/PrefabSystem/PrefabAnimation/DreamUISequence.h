@@ -41,6 +41,8 @@ public:
 	virtual void UnbindObjects(const FGuid& ObjectId, const TArray<UObject*>& InObjects, UObject* Context) override;
 	virtual void UnbindInvalidObjects(const FGuid& ObjectId, UObject* Context) override;
 	virtual UObject* GetParentObject(UObject* Object) const override;
+	//without this the sequencer's create-binding path never consults custom binding types at all
+	virtual bool AllowsCustomBindings() const override { return true; }
 #if WITH_EDITOR
 	virtual FText GetDisplayName() const override;
 	virtual ETrackSupport IsTrackSupportedImpl(TSubclassOf<class UMovieSceneTrack> InTrackClass) const override;
