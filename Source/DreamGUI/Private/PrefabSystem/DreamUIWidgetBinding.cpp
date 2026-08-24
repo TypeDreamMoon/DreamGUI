@@ -10,6 +10,7 @@
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "UObject/UObjectIterator.h"
+#include "UObject/Package.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIWidgetBinding"
 
@@ -99,6 +100,15 @@ FMovieSceneBindingResolveResult UDreamUIWidgetBinding::ResolveBinding(const FMov
 		// A parent binding that resolved to a presenter (the usual outer for a subsequence
 		// override) roots its children at the presenter's loaded tree.
 		Root = ContextPresenter->GetLoadedWidget();
+	}
+	else if (const AActor* ContextActor = Cast<AActor>(ResolveParams.Context))
+	{
+		// The subsequence track can also sit on the actor binding rather than the presenter
+		// component's; the override then hands the actor itself down as the context.
+		if (const UDreamWidgetPresenterComponentBase* ActorPresenter = ContextActor->FindComponentByClass<UDreamWidgetPresenterComponentBase>())
+		{
+			Root = ActorPresenter->GetLoadedWidget();
+		}
 	}
 	else if (const UDreamWidgetPresenterComponentBase* Presenter = ResolvePresenter(ResolveParams.Context))
 	{
