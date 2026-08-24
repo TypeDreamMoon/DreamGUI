@@ -33,9 +33,18 @@ public:
 
 private:
 	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
+	/** (Re)instantiates PreviewPrefab in the editor world so the bindings resolve while editing. */
+	void RebuildPreviewTree();
+	void DestroyPreviewTree();
+	void OnObjectPropertyChanged(UObject* InObject, struct FPropertyChangedEvent& InEvent);
 
 	static const FName SequencerMainTabId;
+	static const FName DetailsTabId;
 
 	UDreamUISequence* Sequence = nullptr;
 	TSharedPtr<ISequencer> Sequencer;
+	TSharedPtr<class IDetailsView> DetailsView;
+	TWeakObjectPtr<class UDreamWidget> PreviewRoot;
+	FDelegateHandle PropertyChangedHandle;
 };

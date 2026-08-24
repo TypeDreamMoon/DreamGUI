@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "PrefabSystem/DreamUIWidgetBinding.h"
+#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "MovieScene.h"
@@ -96,6 +97,15 @@ FMovieSceneBindingResolveResult UDreamUIWidgetBinding::ResolveBinding(const FMov
 	else if (const UDreamWidgetPresenterComponentBase* Presenter = ResolvePresenter(ResolveParams.Context))
 	{
 		Root = Presenter->GetLoadedWidget();
+	}
+	if (Root == nullptr)
+	{
+		// The standalone asset editor: no presenter, no widget context, but the asset put up a
+		// preview tree of its own prefab.
+		if (const UDreamUISequence* OwningSequence = Cast<UDreamUISequence>(ResolveParams.Sequence.Get()))
+		{
+			Root = OwningSequence->GetPreviewRoot();
+		}
 	}
 	if (UDreamWidget* Widget = ResolveWidgetPath(Root, WidgetPath))
 	{

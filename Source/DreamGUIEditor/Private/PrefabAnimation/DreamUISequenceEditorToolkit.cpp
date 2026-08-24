@@ -10,13 +10,24 @@
 #include "Engine/World.h"
 #include "Modules/ModuleManager.h"
 #include "Widgets/Docking/SDockTab.h"
+#include "PrefabSystem/DreamUIPrefab.h"
+#include "Core/Components/DreamWidget.h"
+#include "PropertyEditorModule.h"
+#include "IDetailsView.h"
+#include "UObject/UObjectGlobals.h"
 
 #define LOCTEXT_NAMESPACE "DreamUISequenceEditorToolkit"
 
 const FName FDreamUISequenceEditorToolkit::SequencerMainTabId(TEXT("DreamUISequenceEditor_Sequencer"));
+const FName FDreamUISequenceEditorToolkit::DetailsTabId(TEXT("DreamUISequenceEditor_Details"));
 
 FDreamUISequenceEditorToolkit::~FDreamUISequenceEditorToolkit()
 {
+	if (PropertyChangedHandle.IsValid())
+	{
+		FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangedHandle);
+	}
+	DestroyPreviewTree();
 	if (Sequencer.IsValid())
 	{
 		FLevelEditorSequencerIntegration::Get().RemoveSequencer(Sequencer.ToSharedRef());
@@ -24,19 +35,78 @@ FDreamUISequenceEditorToolkit::~FDreamUISequenceEditorToolkit()
 	}
 }
 
+void FDreamUISequenceEditorToolkit::DestroyPreviewTree()
+{
+	if (Sequence != nullptr && Sequence->GetPreviewRoot() == PreviewRoot.Get())
+	{
+		Sequence->SetPreviewRoot(nullptr);
+	}
+	if (UDreamWidget* Root = PreviewRoot.Get())
+	{
+		Root->DestroyWidget();
+	}
+	PreviewRoot.Reset();
+}
+
+void FDreamUISequenceEditorToolkit::RebuildPreviewTree()
+{
+	DestroyPreviewTree();
+	UDreamUIPrefab* Prefab = Sequence != nullptr ? Sequence->PreviewPrefab.LoadSynchronous() : nullptr;
+	UWorld* World = GEditor != nullptr ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (Prefab == nullptr || World == nullptr)
+	{
+		return;
+	}
+	UDreamWidget* Root = Prefab->LoadPrefab(World, nullptr);
+	if (Root == nullptr)
+	{
+		return;
+	}
+	// Scratch objects: they must never be saved into whatever map happens to be open.
+	TArray<UDreamWidget*> AllWidgets;
+	UDreamWidget::CollectChildrenWidgets(Root, AllWidgets, true);
+	for (UDreamWidget* Widget : AllWidgets)
+	{
+		Widget->SetFlags(RF_Transient);
+	}
+	PreviewRoot = Root;
+	Sequence->SetPreviewRoot(Root);
+	if (Sequencer.IsValid())
+	{
+		Sequencer->NotifyMovieSceneDataChanged(EMovieSceneDataChangeType::MovieSceneStructureItemsChanged);
+	}
+}
+
+void FDreamUISequenceEditorToolkit::OnObjectPropertyChanged(UObject* InObject, FPropertyChangedEvent& InEvent)
+{
+	if (InObject == Sequence
+		&& InEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UDreamUISequence, PreviewPrefab))
+	{
+		RebuildPreviewTree();
+	}
+}
+
 void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost>& InitToolkitHost, UDreamUISequence* InSequence)
 {
 	Sequence = InSequence;
 
-	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_DreamUISequenceEditor_Layout_v1")
+	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_DreamUISequenceEditor_Layout_v2")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()
+			->SetOrientation(Orient_Horizontal)
 			->Split
 			(
 				FTabManager::NewStack()
+				->SetSizeCoefficient(0.75f)
 				->SetHideTabWell(true)
 				->AddTab(SequencerMainTabId, ETabState::OpenedTab)
+			)
+			->Split
+			(
+				FTabManager::NewStack()
+				->SetSizeCoefficient(0.25f)
+				->AddTab(DetailsTabId, ETabState::OpenedTab)
 			)
 		);
 
@@ -73,6 +143,10 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 	{
 		Tab->SetContent(Sequencer->GetSequencerWidget());
 	}
+
+	// The preview tree makes the bindings real while editing; rebuild it when the prefab changes.
+	RebuildPreviewTree();
+	PropertyChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FDreamUISequenceEditorToolkit::OnObjectPropertyChanged);
 }
 
 FText FDreamUISequenceEditorToolkit::GetBaseToolkitName() const
@@ -95,12 +169,32 @@ void FDreamUISequenceEditorToolkit::RegisterTabSpawners(const TSharedRef<FTabMan
 	FAssetEditorToolkit::RegisterTabSpawners(InTabManager);
 	InTabManager->RegisterTabSpawner(SequencerMainTabId, FOnSpawnTab::CreateSP(this, &FDreamUISequenceEditorToolkit::SpawnTab_Sequencer))
 		.SetDisplayName(LOCTEXT("SequencerTab", "Sequencer"));
+	InTabManager->RegisterTabSpawner(DetailsTabId, FOnSpawnTab::CreateSP(this, &FDreamUISequenceEditorToolkit::SpawnTab_Details))
+		.SetDisplayName(LOCTEXT("DetailsTab", "Details"));
 }
 
 void FDreamUISequenceEditorToolkit::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
+	InTabManager->UnregisterTabSpawner(DetailsTabId);
 	InTabManager->UnregisterTabSpawner(SequencerMainTabId);
 	FAssetEditorToolkit::UnregisterTabSpawners(InTabManager);
+}
+
+TSharedRef<SDockTab> FDreamUISequenceEditorToolkit::SpawnTab_Details(const FSpawnTabArgs& Args)
+{
+	if (!DetailsView.IsValid())
+	{
+		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+		FDetailsViewArgs DetailsViewArgs;
+		DetailsViewArgs.bHideSelectionTip = true;
+		DetailsView = PropertyModule.CreateDetailView(DetailsViewArgs);
+		DetailsView->SetObject(Sequence);
+	}
+	return SNew(SDockTab)
+		.Label(LOCTEXT("DetailsTabLabel", "Details"))
+		[
+			DetailsView.ToSharedRef()
+		];
 }
 
 TSharedRef<SDockTab> FDreamUISequenceEditorToolkit::SpawnTab_Sequencer(const FSpawnTabArgs& Args)

@@ -892,6 +892,12 @@ void SDreamUIPrefabSequenceEditor::OnExportAnimationToAsset()
 	// The movie scene is copied whole; the bindings are rebuilt as widget paths, because the
 	// embedded form's direct HelperWidget pointers mean nothing outside this prefab instance.
 	Asset->Modify();
+	if (UDreamUIPrefabHelperObject* SourceHelper = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget))
+	{
+		// The asset remembers which prefab it was authored against, so its own editor can put up
+		// a live preview tree.
+		Asset->PreviewPrefab = SourceHelper->PrefabAsset.Get();
+	}
 	UMovieScene* CopiedScene = DuplicateObject<UMovieScene>(Source->GetMovieScene(), Asset);
 	Asset->MovieScene = CopiedScene;
 	Asset->BindingReferences = FMovieSceneBindingReferences();

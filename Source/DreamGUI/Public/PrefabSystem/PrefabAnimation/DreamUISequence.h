@@ -46,6 +46,18 @@ public:
 	virtual ETrackSupport IsTrackSupportedImpl(TSubclassOf<class UMovieSceneTrack> InTrackClass) const override;
 #endif
 
+	/**
+	 * The prefab this animation is authored against. The standalone editor instantiates it as a
+	 * preview tree so the bindings resolve and scrubbing shows the real thing; playback through a
+	 * component or a subsequence override ignores it entirely.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamUI")
+	TSoftObjectPtr<class UDreamUIPrefab> PreviewPrefab;
+
+	/** The standalone editor's live preview tree, if one is up. Not serialized, not owned here. */
+	UDreamWidget* GetPreviewRoot() const { return PreviewRootWidget.Get(); }
+	void SetPreviewRoot(UDreamWidget* InRoot) { PreviewRootWidget = InRoot; }
+
 	/** The root binding (empty widget path), created on demand; the subsequence override retargets it. */
 	FGuid EnsureRootBinding();
 	FGuid GetRootBindingGuid() const { return RootBindingGuid; }
@@ -66,4 +78,6 @@ public:
 private:
 	UPROPERTY()
 	FGuid RootBindingGuid;
+
+	TWeakObjectPtr<UDreamWidget> PreviewRootWidget;
 };
