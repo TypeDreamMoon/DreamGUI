@@ -7,7 +7,6 @@
 #include "Core/Components/DreamCanvas.h"
 #include "DreamGUIEditorModule.h"
 #include "Core/Components/DreamWidget.h"
-#include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "PrefabSystem/DreamUIPrefab.h"
 
 
@@ -64,42 +63,14 @@ void FDreamUIPrefabThumbnailScene::SpawnPreviewActor()
 	RootWidget->OnRegister();
 	RootAgentWidget = TStrongObjectPtr(RootWidget);
 
-	// The canvas must exist before the tree loads under the root: widgets adopt their render canvas
-	// as they register, and in this never-ticked world nothing revisits that later, so a
-	// load-then-add-canvas order leaves every child canvas-less and the draw-call batch empty.
-	auto Canvas = RootWidget->AddComponent<UDreamCanvas>();
-
-	// Not the asset's own render mode: ScreenSpaceOverlay (edit mode remaps it) and WorldSpace_DreamUI
-	// both draw through the DreamUI view extension, and the thumbnail's view family carries no view
-	// extensions, so those modes can never reach this render. The UE-renderer path draws plain
-	// primitive components, which a thumbnail scene render does see.
-	Canvas->SetRenderMode(EDreamRenderMode::WorldSpace);
-	Canvas->bFixedSizeInEditMode = true;
-	Canvas->SizeInEditMode = CanvasSize;
-
 	CurrentPrefab->LoadPrefab(this->GetWorld(), RootWidget);
+	auto Canvas = RootWidget->AddComponent<UDreamCanvas>();
+	
+	auto RenderMode = (EDreamRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+	Canvas->SetRenderMode(RenderMode);
+	Canvas->bFixedSizeInEditMode = true;
 
-	Canvas->UpdateRootCanvas();//builds the geometry inline and pushes the draw-call batch to the async batcher
-	// A preview world has no UDreamUIManagerWorldSubsystem -- the world-subsystem world-type filter
-	// excludes EditorPreview -- so the manager-driven pipeline that normally uploads clip data and
-	// consumes the async batch never runs here. Drive the canvas directly. The consume side races
-	// the batcher thread (a just-pushed batch is not "batching" yet), and this world never gets
-	// another frame to catch up on, hence the bounded retry; the cap only bites for a prefab with
-	// nothing visible, which has no materials to wait for.
-	Canvas->RefreshAllClipData();
-	for (int32 Attempt = 0; Attempt < 50; ++Attempt)
-	{
-		Canvas->UpdateDrawCallBatchData();
-		UDreamUIMeshComponent* UIMesh = Canvas->GetUIMesh();
-		if (IsValid(UIMesh) && UIMesh->GetNumMaterials() > 0)
-		{
-			break;
-		}
-		FPlatformProcess::Sleep(0.001f);
-	}
-	// The proxies for the freshly filled mesh ride the deferred render-state flush, which this
-	// world also never reaches on its own.
-	GetWorld()->SendAllEndOfFrameUpdates();
+	Canvas->UpdateRootCanvas();//for update draw-call immediately
 	GetBoundsRecursive(RootWidget, PreviewBounds);
 	if (PreviewBounds.SphereRadius < KINDA_SMALL_NUMBER)//if bounds is too small, set to 1x1 box
 	{
