@@ -15,9 +15,12 @@ public:
 
 	virtual bool CanVisualizeAsset(UObject* Object)override;
 	virtual void Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, bool bAdditionalViewFamily)override;
+	virtual EThumbnailRenderFrequency GetThumbnailRenderFrequency(UObject* Object) const override;
 
 	virtual void BeginDestroy()override;
 
 private:
-	FDreamUIPrefabInstanceThumbnailScene ThumbnailScenes;
+	// One empty preview world, reused across draws; the widget tree inside it lives only for the
+	// duration of a single Draw call (see FDreamUIPrefabThumbnailScene::ClearPrefab).
+	TUniquePtr<FDreamUIPrefabThumbnailScene> ThumbnailScene;
 };

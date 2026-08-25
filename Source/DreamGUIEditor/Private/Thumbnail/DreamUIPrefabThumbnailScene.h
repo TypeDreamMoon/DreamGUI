@@ -15,6 +15,11 @@ public:
 	virtual ~FDreamUIPrefabThumbnailScene() override;
 	bool IsValidForVisualization();
 	void SetPrefab(UDreamUIPrefab* Prefab);
+	// The widget tree only exists between SetPrefab and ClearPrefab. The mesh materials bind raw
+	// texture resource pointers, so a tree kept alive across frames re-renders with dangling
+	// pointers once anything else frees those resources; every render must tear down before
+	// returning to the caller.
+	void ClearPrefab();
 protected:
 	virtual void GetViewMatrixParameters(const float InFOVDegrees, FVector& OutOrigin, float& OutOrbitPitch, float& OutOrbitYaw, float& OutOrbitZoom)const override;
 	virtual USceneThumbnailInfo* GetSceneThumbnailInfo(const float TargetDistance)const;
@@ -26,20 +31,5 @@ private:
 	int32 NumStartingActors;
 	TStrongObjectPtr<UDreamWidget> RootAgentWidget;
 	TWeakObjectPtr<UDreamUIPrefab> CurrentPrefab;
-	FText CachedPrefabContent;
 	FBoxSphereBounds PreviewBounds;
-};
-
-class FDreamUIPrefabInstanceThumbnailScene
-{
-public:
-	FDreamUIPrefabInstanceThumbnailScene();
-
-	TSharedPtr<FDreamUIPrefabThumbnailScene> FindThumbnailScene(const FString& InPrefabPath) const;
-	TSharedRef<FDreamUIPrefabThumbnailScene> EnsureThumbnailScene(const FString& InPrefabPath);
-	void Clear();
-
-private:
-	TMap<FString, TSharedPtr<FDreamUIPrefabThumbnailScene>> InstancedThumbnailScenes;
-	const int32 MAX_NUM_SCENES = 400;
 };

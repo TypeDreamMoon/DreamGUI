@@ -345,6 +345,18 @@ namespace DreamUIPrefabSystem
 		InPrefab->EnginePatchVersion = ENGINE_PATCH_VERSION;
 		InPrefab->PrefabVersion = LEXUI_CURRENT_PREFAB_VERSION;
 
+#if WITH_EDITOR
+		if (bIsEditorOrRuntime && GIsEditor && !IsRunningCommandlet())
+		{
+			// The package save path only re-renders a cached thumbnail that is missing or marked
+			// dirty, and nothing on this path goes through PostEditChange -- without this broadcast
+			// (UThumbnailManager listens and marks the cached thumbnail dirty) the second save of a
+			// session would keep the first save's image forever.
+			FPropertyChangedEvent ThumbnailStaleEvent(nullptr);
+			FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(InPrefab, ThumbnailStaleEvent);
+		}
+#endif
+
 		auto TimeSpan = FDateTime::Now() - StartTime;
 		UE_LOG(DreamGUI, Log, TEXT("Take %fs saving prefab: %s"), TimeSpan.GetTotalSeconds(), *InPrefab->GetName());
 		

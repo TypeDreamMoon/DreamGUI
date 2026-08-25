@@ -7,36 +7,8 @@
 #include "Core/Components/DreamCanvas.h"
 #include "DreamGUIEditorModule.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "PrefabSystem/DreamUIPrefab.h"
-
-
-FDreamUIPrefabInstanceThumbnailScene::FDreamUIPrefabInstanceThumbnailScene()
-{
-	InstancedThumbnailScenes.Reserve(MAX_NUM_SCENES);
-}
-TSharedPtr<FDreamUIPrefabThumbnailScene> FDreamUIPrefabInstanceThumbnailScene::FindThumbnailScene(const FString& InPrefabPath)const
-{
-	return InstancedThumbnailScenes.FindRef(InPrefabPath);
-}
-TSharedRef<FDreamUIPrefabThumbnailScene> FDreamUIPrefabInstanceThumbnailScene::EnsureThumbnailScene(const FString& InPrefabPath)
-{
-	TSharedPtr<FDreamUIPrefabThumbnailScene> ExistingThumbnailScene = InstancedThumbnailScenes.FindRef(InPrefabPath);
-	if (!ExistingThumbnailScene.IsValid())
-	{
-		if (InstancedThumbnailScenes.Num() >= MAX_NUM_SCENES)
-		{
-			InstancedThumbnailScenes.Reset();
-		}
-		ExistingThumbnailScene = MakeShareable(new FDreamUIPrefabThumbnailScene());
-		InstancedThumbnailScenes.Add(InPrefabPath, ExistingThumbnailScene);
-	}
-	return ExistingThumbnailScene.ToSharedRef();
-}
-void FDreamUIPrefabInstanceThumbnailScene::Clear()
-{
-	InstancedThumbnailScenes.Reset();
-}
-
 
 
 FDreamUIPrefabThumbnailScene::FDreamUIPrefabThumbnailScene()
@@ -63,14 +35,42 @@ void FDreamUIPrefabThumbnailScene::SpawnPreviewActor()
 	RootWidget->OnRegister();
 	RootAgentWidget = TStrongObjectPtr(RootWidget);
 
-	CurrentPrefab->LoadPrefab(this->GetWorld(), RootWidget);
+	// The canvas must exist before the tree loads under the root: widgets adopt their render canvas
+	// as they register, and in this never-ticked world nothing revisits that later, so a
+	// load-then-add-canvas order leaves every child canvas-less and the draw-call batch empty.
 	auto Canvas = RootWidget->AddComponent<UDreamCanvas>();
-	
-	auto RenderMode = (EDreamRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-	Canvas->SetRenderMode(RenderMode);
-	Canvas->bFixedSizeInEditMode = true;
 
-	Canvas->UpdateRootCanvas();//for update draw-call immediately
+	// Not the asset's own render mode: ScreenSpaceOverlay (edit mode remaps it) and WorldSpace_DreamUI
+	// both draw through the DreamUI view extension, and the thumbnail's view family carries no view
+	// extensions, so those modes can never reach this render. The UE-renderer path draws plain
+	// primitive components, which a thumbnail scene render does see.
+	Canvas->SetRenderMode(EDreamRenderMode::WorldSpace);
+	Canvas->bFixedSizeInEditMode = true;
+	Canvas->SizeInEditMode = CanvasSize;
+
+	CurrentPrefab->LoadPrefab(this->GetWorld(), RootWidget);
+
+	Canvas->UpdateRootCanvas();//builds the geometry inline and pushes the draw-call batch to the async batcher
+	// A preview world has no UDreamUIManagerWorldSubsystem -- the world-subsystem world-type filter
+	// excludes EditorPreview -- so the manager-driven pipeline that normally uploads clip data and
+	// consumes the async batch never runs here. Drive the canvas directly. The consume side races
+	// the batcher thread (a just-pushed batch is not "batching" yet), and this world never gets
+	// another frame to catch up on, hence the bounded retry; the cap only bites for a prefab with
+	// nothing visible, which has no materials to wait for.
+	Canvas->RefreshAllClipData();
+	for (int32 Attempt = 0; Attempt < 50; ++Attempt)
+	{
+		Canvas->UpdateDrawCallBatchData();
+		UDreamUIMeshComponent* UIMesh = Canvas->GetUIMesh();
+		if (IsValid(UIMesh) && UIMesh->GetNumMaterials() > 0)
+		{
+			break;
+		}
+		FPlatformProcess::Sleep(0.001f);
+	}
+	// The proxies for the freshly filled mesh ride the deferred render-state flush, which this
+	// world also never reaches on its own.
+	GetWorld()->SendAllEndOfFrameUpdates();
 	GetBoundsRecursive(RootWidget, PreviewBounds);
 	if (PreviewBounds.SphereRadius < KINDA_SMALL_NUMBER)//if bounds is too small, set to 1x1 box
 	{
@@ -110,7 +110,7 @@ void FDreamUIPrefabThumbnailScene::GetBoundsRecursive(UDreamWidget* RootWidget, 
 			}
 		}
 	};
-	
+
 	bool bIsFirstBounds = true;
 	FBox BoxBounds;
 	LOCAL::GetBounds(RootWidget, bIsFirstBounds, BoxBounds);
@@ -126,10 +126,13 @@ void FDreamUIPrefabThumbnailScene::ClearOldWidgets()
 }
 bool FDreamUIPrefabThumbnailScene::IsValidForVisualization()
 {
-	if (CurrentPrefab.Get())
+	if (!CurrentPrefab.IsValid())
 	{
-		if (CurrentPrefab->BinaryData.Num() == 0)
-			return false;
+		return false;
+	}
+	if (CurrentPrefab->BinaryData.Num() == 0)
+	{
+		return false;
 	}
 	if (PreviewBounds.ContainsNaN())
 	{
@@ -156,25 +159,17 @@ void FDreamUIPrefabThumbnailScene::GetViewMatrixParameters(const float InFOVDegr
 }
 void FDreamUIPrefabThumbnailScene::SetPrefab(class UDreamUIPrefab* Prefab)
 {
-	if (!CurrentPrefab.IsValid())
-	{
-		CurrentPrefab = nullptr;
-		ClearOldWidgets();
-	}
-	if (CurrentPrefab.IsValid() && IsValid(Prefab))
-	{
-		if (CurrentPrefab == Prefab && !CurrentPrefab->bThumbnailDirty)
-		{
-			return;
-		}
-		ClearOldWidgets();
-	}
+	ClearOldWidgets();
 	CurrentPrefab = Prefab;
-	CurrentPrefab->bThumbnailDirty = false;
 	if (IsValid(Prefab))
 	{
 		SpawnPreviewActor();
 	}
+}
+void FDreamUIPrefabThumbnailScene::ClearPrefab()
+{
+	ClearOldWidgets();
+	CurrentPrefab = nullptr;
 }
 USceneThumbnailInfo* FDreamUIPrefabThumbnailScene::GetSceneThumbnailInfo(const float TargetDistance)const
 {
