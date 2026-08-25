@@ -1713,9 +1713,18 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		InMaterialInstanceDynamic->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
 	};
 
+	// UpdateDrawCallMesh does not create a section for every draw-call (the WorldSpace path skips
+	// PostProcess ones), so the section index must be counted from the draw-calls that own one --
+	// indexing sections by the loop index walks past the end of the section array as soon as
+	// anything was skipped.
+	int32 SectionIndex = -1;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 	{
 		auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
+		if (DrawCallItem.RenderSection.IsValid())
+		{
+			++SectionIndex;
+		}
 		switch (DrawCallItem.Type)
 		{
 		case EDreamUIDrawCallType::BatchMesh:
@@ -1808,8 +1817,8 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 					BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 					BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
 					BuiltIn.FontEmTexels = AtlasInfo.W;
-					UIMesh->SetMeshSectionBuiltIn(i, BuiltIn);
-					UIMesh->SetMeshSectionMaterial(i, nullptr);
+					UIMesh->SetMeshSectionBuiltIn(SectionIndex, BuiltIn);
+					UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
 					break;
 				}
 				else
@@ -1857,11 +1866,11 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 						RenderMat_MID->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
 					}
 				}
-				if (UIMesh->IsMeshSectionBuiltIn(i))
+				if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
 				{
-					UIMesh->SetMeshSectionBuiltIn(i, FDreamUIBuiltInDrawParams());
+					UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
 				}
-				UIMesh->SetMeshSectionMaterial(i, RenderMat);
+				UIMesh->SetMeshSectionMaterial(SectionIndex, RenderMat);
 			}
 			break;
 		case EDreamUIDrawCallType::PostProcess:
