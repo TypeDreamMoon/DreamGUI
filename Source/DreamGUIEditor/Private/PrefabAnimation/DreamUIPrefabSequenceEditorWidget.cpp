@@ -23,6 +23,7 @@
 #include "Core/Components/DreamText.h"
 #include "PrefabEditor/DreamWidgetHierarchyPickerView.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
+#include "Materials/MaterialInterface.h"
 #include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIMaterialTrack.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIPrefabSequenceEditorWidget"
@@ -260,7 +261,7 @@ public:
 			SequencerInitParams.ViewParams.OnReceivedFocus.BindRaw(this, &SDreamUIPrefabSequenceEditorWidgetImpl::OnSequencerReceivedFocus);
 			SequencerInitParams.ViewParams.OnBuildCustomContextMenuForGuid = FOnBuildCustomContextMenuForGuid::CreateSP(this, &SDreamUIPrefabSequenceEditorWidgetImpl::BuildBindingContextMenu);
 			SequencerInitParams.bEditWithinLevelEditor = false;
-			SequencerInitParams.ToolkitHost = ToolkitHost;
+			SequencerInitParams.ToolkitHost = ToolkitHost.Pin();
 			SequencerInitParams.HostCapabilities.bSupportsCurveEditor = true;
 		}
 
@@ -726,8 +727,10 @@ private:
 
 	TSharedPtr<STextBlock> NoAnimationTextBlock;
 
-	/** The asset editor that created this Sequencer if any */
-	TSharedPtr<IToolkitHost> ToolkitHost;
+	/** The asset editor that created this Sequencer if any. Weak on purpose: the prefab editor's host
+	 *  strong-owns its toolkit, which strong-owns this widget -- a strong pointer here closes that loop
+	 *  and the toolkit never destructs, leaving the asset registered as open after its window is gone. */
+	TWeakPtr<IToolkitHost> ToolkitHost;
 
 	FDelegateHandle SequencerAddTrackExtenderHandle;
 };
