@@ -9,12 +9,22 @@
 
 namespace DreamUIPrefabSystem
 {
+	bool DreamUIPrefab_IsHierarchyProperty(const FProperty* InProperty)
+	{
+		static const FName ChildrenPropertyName = UDreamWidget::GetPropertyName_Children();
+		return InProperty != nullptr
+			&& InProperty->GetFName() == ChildrenPropertyName
+			&& InProperty->GetOwnerClass() != nullptr
+			&& InProperty->GetOwnerClass()->IsChildOf(UDreamWidget::StaticClass());
+	}
+
 	bool DreamUIPrefab_ShouldSkipProperty(const FProperty* InProperty)
 	{
 		return
 			InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_NonPIEDuplicateTransient | CPF_DisableEditOnInstance)
 			|| InProperty->IsA<FMulticastDelegateProperty>()
 			|| InProperty->IsA<FDelegateProperty>()
+			|| DreamUIPrefab_IsHierarchyProperty(InProperty)
 			;
 	}
 

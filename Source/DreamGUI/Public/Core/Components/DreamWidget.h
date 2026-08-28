@@ -195,6 +195,10 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, SiblingIndex);
 	}
+	static FName GetPropertyName_Children()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Children);
+	}
 	static FName GetPropertyName_WidgetActive()
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, bWidgetActive);
@@ -507,6 +511,16 @@ public:
 	 * index, deferring the reorder to the parent's lazy sort.
 	 */
 	void RestoreSiblingIndexFromPrefab(int32 InSiblingIndex);
+	/**
+	 * Rebuild the transient Parent back-pointers across this subtree from the persistent Children arrays.
+	 *
+	 * Children is the structural truth and survives serialization and object instancing; Parent does not,
+	 * so every path that produces a tree without going through the attach functions -- loading a package,
+	 * instancing a class template, duplicating a subtree -- has to run this before the tree is registered.
+	 * Registration itself does not do it: OnRegister already reads Parent (EnsurePanelSlotForChild).
+	 * Idempotent, and it renumbers nothing -- SiblingIndex is persistent and the lazy sort still owns order.
+	 */
+	void RestoreParentLinksRecursive();
 
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	UDreamWidget* GetParent()const { return Parent.Get(); }
@@ -721,12 +735,28 @@ public:
 	FRaycastableChangedEvent& GetRaycastableChangedEvent(){return OnRaycastableChangedEvent;}
 	FComponentsChangedEvent& GetComponentsChangedEvent(){return OnComponentsChangedEvent;}
 protected:
-	/** parent in hierarchy */
-	UPROPERTY(Transient) mutable TWeakObjectPtr<UDreamWidget> Parent = nullptr;
+	/**
+	 * Parent in hierarchy -- a back-pointer derived from the owning widget's Children, never a record
+	 * of its own. DuplicateTransient as well as Transient: copying it would point a duplicated subtree
+	 * at the ORIGINAL's parent, and the copy is rebuilt from Children anyway
+	 * (RestoreParentLinksRecursive), which is the same pass a package load and class-template
+	 * instancing already have to run.
+	 */
+	UPROPERTY(Transient, DuplicateTransient) mutable TWeakObjectPtr<UDreamWidget> Parent = nullptr;
 	/** root in hierarchy */
 	mutable TWeakObjectPtr<UDreamWidget> RootWidget = nullptr;//don't mark this Transactional, because undo or redo will call register/unregister, which will trigger check RootUIItem
-	/** UI children array, sorted by hierarchy index */
-	UPROPERTY(Transient) mutable TArray<TObjectPtr<UDreamWidget>> Children;
+	/**
+	 * UI children array, sorted by hierarchy index -- and the one persistent record of the hierarchy.
+	 *
+	 * Instanced, so FObjectInstancingGraph walks the whole tree when a widget tree is instanced from a
+	 * class template (UDreamWidgetTree). Parent stays transient and is derived from this on load, so
+	 * this array is the single structural truth; nothing else may claim to own the hierarchy.
+	 *
+	 * Note that widgets are outered flat to their UDreamWidgetTree, NOT nested under their parent --
+	 * matching UMG, where UWidgetTree::ConstructWidget outers every widget to the tree and the parent
+	 * links are expressed purely by Instanced properties. Reparenting therefore never moves an outer.
+	 */
+	UPROPERTY(Instanced) mutable TArray<TObjectPtr<UDreamWidget>> Children;
 	/** check valid, incase un-normally deleting actor, like undo */
 	void EnsureUIChildrenValid();
 	void EnsureUIChildrenSorted()const;

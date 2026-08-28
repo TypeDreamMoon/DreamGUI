@@ -18,6 +18,7 @@ namespace DreamUIPrefabSystem
 		if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient | CPF_NonPIEDuplicateTransient | CPF_DisableEditOnInstance)
 			|| InProperty->IsA<FMulticastDelegateProperty>()
 			|| InProperty->IsA<FDelegateProperty>()
+			|| DreamUIPrefab_IsHierarchyProperty(InProperty)
 			)
 		{
 			return true;
@@ -91,6 +92,7 @@ namespace DreamUIPrefabSystem
 		if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient | CPF_NonPIEDuplicateTransient | CPF_DisableEditOnInstance)
 			|| InProperty->IsA<FMulticastDelegateProperty>()
 			|| InProperty->IsA<FDelegateProperty>()
+			|| DreamUIPrefab_IsHierarchyProperty(InProperty)
 			)
 		{
 			return true;

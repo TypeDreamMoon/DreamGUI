@@ -300,6 +300,9 @@ void UDreamWidget::ApplySiblingIndex()
 {
 	if (Parent.IsValid())
 	{
+		// Reordering rewrites the parent's persistent Children, so the parent is what has to be
+		// snapshotted -- the moved child alone would leave undo with half the change.
+		Parent->Modify();
 		if (Parent->Children.Num() == 0)
 		{
 			Parent->Children.Add(this);
@@ -1930,6 +1933,12 @@ bool UDreamWidget::TrySetParentInternal(UDreamWidget* InParent, bool InKeepWorld
 			TrySetParent(nullptr, false);
 		}
 		bIsAttaching = false;
+		// Children is the persistent hierarchy now, so the parent has to be snapshotted before it is
+		// written or undo restores a tree the parent never agreed to. It was already wrong to omit this
+		// (the 2026-08-19 editor review, B3); while Children was Transient the transaction buffer simply
+		// never saw the damage.
+		InParent->Modify();
+		this->Modify();
 		if (InSiblingIndex == -1 || !InParent->Children.IsValidIndex(InSiblingIndex))
 		{
 			InParent->Children.Add(this);
@@ -1975,6 +1984,9 @@ bool UDreamWidget::TrySetParentInternal(UDreamWidget* InParent, bool InKeepWorld
 	{
 		if (this->Parent == nullptr)return true;
 		auto OldParent = this->Parent;
+		// Same reason as the attach branch: the removal below edits the parent's persistent Children.
+		OldParent->Modify();
+		this->Modify();
 		// Layout's basis again -- detaching with keep-world-position writes straight into
 		// RelativeLocation, so the drawn transform must not be what gets written.
 		const FTransform OldObjectToWorldTransform = this->GetLayoutWorldTransform();
@@ -2547,6 +2559,41 @@ void UDreamWidget::EnsureUIChildrenValid()
 			Children.RemoveAt(i);
 		}
 	}
+}
+
+void UDreamWidget::RestoreParentLinksRecursive()
+{
+	// A cycle here would hang the walk rather than assert somewhere useful later, and a persisted
+	// Children array is exactly the kind of data that can arrive malformed (hand-edited asset, a
+	// partial migration). Bail on revisit and report, rather than spin.
+	TSet<UDreamWidget*> Visited;
+	struct LOCAL
+	{
+		static void Walk(UDreamWidget* Widget, TSet<UDreamWidget*>& InVisited)
+		{
+			bool bAlreadyVisited = false;
+			InVisited.Add(Widget, &bAlreadyVisited);
+			if (bAlreadyVisited)
+			{
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cycle in Children reached widget '%s'; hierarchy is malformed."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Widget->GetPathDisplayName());
+				return;
+			}
+			for (int32 i = Widget->Children.Num() - 1; i >= 0; i--)
+			{
+				UDreamWidget* Child = Widget->Children[i];
+				if (!IsValid(Child))
+				{
+					Widget->Children.RemoveAt(i);
+					continue;
+				}
+				Child->Parent = Widget;
+				Walk(Child, InVisited);
+			}
+			Widget->bNeedSortUIChildren = true;
+		}
+	};
+	LOCAL::Walk(this, Visited);
 }
 
 void UDreamWidget::EnsureUIChildrenSorted()const

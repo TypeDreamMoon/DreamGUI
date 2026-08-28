@@ -1,0 +1,74 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
+#include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamWidget.h"
+#include "DreamGUI.h"
+
+UWorld* UDreamWidgetTree::GetWorld() const
+{
+	// Null for a tree held as a class template, which is outered to the class rather than a world.
+	// Callers must tolerate that: it is the signal that this tree is a template, not an instance.
+	return GetTypedOuter<UWorld>();
+}
+
+UDreamWidget* UDreamWidgetTree::ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass, FName InName)
+{
+	if (!IsValid(InWidgetClass))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot construct a widget from a null class in tree '%s'."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName());
+		return nullptr;
+	}
+	// RF_Transactional so widget creation participates in undo the same way the attach path does.
+	return NewObject<UDreamWidget>(this, InWidgetClass, InName, RF_Transactional);
+}
+
+void UDreamWidgetTree::RebuildParentLinks()
+{
+	if (IsValid(RootWidget))
+	{
+		RootWidget->RestoreParentLinksRecursive();
+	}
+}
+
+void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredicate) const
+{
+	if (!IsValid(RootWidget))
+	{
+		return;
+	}
+	// Iterative rather than recursive: a malformed Children array would blow the stack, and this runs
+	// over trees that arrive from disk. RestoreParentLinksRecursive is the pass that reports cycles;
+	// here a revisit is simply skipped so a caller can still walk a damaged tree without hanging.
+	TSet<UDreamWidget*> Visited;
+	TArray<UDreamWidget*> Pending;
+	Pending.Push(RootWidget);
+	while (Pending.Num() > 0)
+	{
+		UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		bool bAlreadyVisited = false;
+		Visited.Add(Widget, &bAlreadyVisited);
+		if (bAlreadyVisited)
+		{
+			continue;
+		}
+		InPredicate(Widget);
+		const TArray<UDreamWidget*>& Children = Widget->GetChildren();
+		// Push in reverse so siblings are visited in their sibling order.
+		for (int32 i = Children.Num() - 1; i >= 0; i--)
+		{
+			Pending.Push(Children[i]);
+		}
+	}
+}
+
+int32 UDreamWidgetTree::CountWidgets() const
+{
+	int32 Count = 0;
+	ForEachWidget([&Count](UDreamWidget*) { Count++; });
+	return Count;
+}

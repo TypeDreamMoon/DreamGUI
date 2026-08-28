@@ -38,6 +38,17 @@ namespace DreamUIPrefabSystem
 		}
 		return false;
 	}
+	/**
+	 * UDreamWidget::Children: the hierarchy itself, which every prefab path carries separately (as
+	 * FDreamUIPrefabSaveData::MapWidgetToParent) and replays through SetParentBeforeRegister.
+	 *
+	 * It used to be excluded for free by being Transient. It stopped being Transient when it became the
+	 * persistent, Instanced record of the hierarchy for the class model -- so every archive that walks a
+	 * widget's properties has to exclude it deliberately now, or load attaches every child twice: once
+	 * from the restored array, once from the attach pass. Shared rather than repeated because the
+	 * duplicate and override archives each roll their own filter.
+	 */
+	bool DreamUIPrefab_IsHierarchyProperty(const FProperty* InProperty);
 	bool DreamUIPrefab_ShouldSkipProperty(const FProperty* InProperty);
 
 	class DREAMGUI_API FDreamUIObjectWriter : public FObjectWriter
