@@ -5,6 +5,7 @@
 #include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamWidgetTree.h"
 
 #include "Core/Components/DreamVisual.h"
 #include "Event/DreamUIEventDelegate.h"
@@ -128,16 +129,11 @@ FString MakeVariableNameForTarget(UObject* InTarget)
 		Raw = InTarget->GetName();
 	}
 
-	// sanitize to an identifier: alnum/underscore, non-ASCII kept (CJK display names are common)
-	FString Result;
-	Result.Reserve(Raw.Len());
-	for (TCHAR Char : Raw)
-	{
-		Result.AppendChar(FChar::IsAlnum(Char) || Char == TEXT('_') || Char > 0x7F ? Char : TEXT('_'));
-	}
-	if (Result.IsEmpty())Result = TEXT("Element");
-	if (FChar::IsDigit(Result[0]))Result.InsertAt(0, TEXT('_'));
-	return Result;
+	// Delegated, not reimplemented. The class model's compiler declares variables from this same rule
+	// and its runtime resolves bindings with it, so a second copy here -- even one that starts out
+	// identical, as this did -- is a naming rule waiting to drift. Which target a name is read off is
+	// this function's business; what a name becomes is not.
+	return UDreamWidgetTree::SanitizeIdentifier(Raw);
 }
 
 namespace
