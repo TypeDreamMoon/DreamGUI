@@ -202,8 +202,23 @@ void FDreamWidgetBlueprintCompilerContext::UpdateGeneratedClassWidgetTree(UDream
 
 void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClass)
 {
-	UDreamWidgetGeneratedClass* DreamClass = Cast<UDreamWidgetGeneratedClass>(InClass);
-	UDreamWidgetTree* Archetype = DreamClass != nullptr ? UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(DreamClass) : nullptr;
+	// The AUTHORING tree, not the class's copy of it. They are the same thing on a full compile -- the
+	// copy was made a few lines ago -- but a skeleton-only compile deliberately does not make one, and
+	// reading the class there would report every binding as broken on every keystroke in the designer.
+	UDreamWidgetTree* Archetype = nullptr;
+	if (UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint())
+	{
+		if (IsValid(DreamBlueprint->WidgetTree) && IsValid(DreamBlueprint->WidgetTree->RootWidget))
+		{
+			Archetype = DreamBlueprint->WidgetTree;
+		}
+	}
+	if (Archetype == nullptr && InClass != nullptr)
+	{
+		// Nothing authored here: a subclass that only adds logic inherits its parent's hierarchy, and
+		// its bindings have to be checked against that.
+		Archetype = UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(InClass->GetSuperClass());
+	}
 	if (Archetype == nullptr)
 	{
 		// No hierarchy at all is a legitimate state (logic-only class, or nothing authored yet).
@@ -252,11 +267,20 @@ void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClas
 
 void FDreamWidgetBlueprintCompilerContext::FinishCompilingClass(UClass* Class)
 {
-	if (UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint())
+	// A skeleton compile exists to give the graph its members back as fast as possible, and the
+	// designer triggers one on every structural edit -- every drag, every delete. Duplicating the
+	// whole hierarchy onto a class nobody instantiates would put that cost on each of them, and would
+	// leave an archetype on the skeleton class that only invites something to read the wrong one.
+	// UMG skips the same work for the same reason.
+	const bool bIsSkeletonOnly = CompileOptions.CompileType == EKismetCompileType::SkeletonOnly;
+	if (!bIsSkeletonOnly)
 	{
-		if (UDreamWidgetGeneratedClass* DreamClass = Cast<UDreamWidgetGeneratedClass>(Class))
+		if (UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint())
 		{
-			UpdateGeneratedClassWidgetTree(DreamBlueprint, DreamClass);
+			if (UDreamWidgetGeneratedClass* DreamClass = Cast<UDreamWidgetGeneratedClass>(Class))
+			{
+				UpdateGeneratedClassWidgetTree(DreamBlueprint, DreamClass);
+			}
 		}
 	}
 

@@ -115,25 +115,32 @@ UDreamWidget* FDreamUIPrefabInstanceScene::GetParentForLoadPrefab(UDreamUIPrefab
 	// The design canvas size belongs to the asset being edited: a variant saves its own
 	// CanvasSize (SetDesignerCanvasSize / SaveEditorState), so reading the walked base's value
 	// here would snap the canvas back to the base size on every reopen.
-	auto CanvasSize = InPrefab->CanvasSize;
+	return EnsureRootAgent(
+		InPrefab->CanvasSize,
+		(EDreamRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode,
+		InPrefab->PrefabDataForPrefabEditor.DesignViewportSize);
+}
+
+UDreamWidget* FDreamUIPrefabInstanceScene::EnsureRootAgent(FIntPoint InCanvasSize, EDreamRenderMode InRenderMode, FIntPoint InSizeInEditMode)
+{
+	if (RootAgentWidget != nullptr)
+	{
+		return RootAgentWidget.Get();
+	}
 	//create Canvas for UI
 	auto RootWidget = NewObject<UDreamWidget>(this->GetWorld(), FName("[RootAgent]"));
-	RootWidget->SetSizeDelta(CanvasSize);
+	RootWidget->SetSizeDelta(InCanvasSize);
 	RootWidget->SetDisplayName(RootAgentActorName);
 	RootWidget->OnRegister();
 	RootAgentWidget = TStrongObjectPtr(RootWidget);
 	auto Canvas = RootWidget->AddComponent<UDreamCanvas>();
-	
-	auto RenderMode = (EDreamRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-	Canvas->SetRenderMode(RenderMode);
+
+	Canvas->SetRenderMode(InRenderMode);
 	Canvas->bFixedSizeInEditMode = true;
 	// The design viewport size is what the editor is simulating, so the edit-mode fixed size must
 	// be it and not the 1920x1080 class default -- otherwise a screen-space preview would resize
 	// the agent to the default on its first editor tick.
-	{
-		const FIntPoint DesignViewportSize = InPrefab->PrefabDataForPrefabEditor.DesignViewportSize;
-		Canvas->SizeInEditMode = (DesignViewportSize.X > 0 && DesignViewportSize.Y > 0) ? DesignViewportSize : CanvasSize;
-	}
+	Canvas->SizeInEditMode = (InSizeInEditMode.X > 0 && InSizeInEditMode.Y > 0) ? InSizeInEditMode : InCanvasSize;
 	return RootWidget;
 }
 

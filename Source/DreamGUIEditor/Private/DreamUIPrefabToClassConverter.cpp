@@ -210,6 +210,27 @@ namespace DreamUIPrefabToClass
 		Blueprint->WidgetTree = AuthoringTree;
 		Result.WidgetCount = AuthoringTree->CountWidgets();
 
+		// The design canvas is not decoration: every anchored position in the hierarchy was authored
+		// against it, so a converted asset that opened at the 1920x1080 default would show a layout
+		// nobody laid out. The view transform comes along for the same reason -- reopening a converted
+		// control somewhere else in space is a small papercut repeated once per asset.
+		{
+			const FDreamUIPrefabDataForPrefabEditor& SourceData = InPrefab->PrefabDataForPrefabEditor;
+			FDreamWidgetDesignerData& DesignerData = Blueprint->DesignerData;
+			DesignerData.CanvasSize = InPrefab->CanvasSize;
+			DesignerData.DesignViewportSize = SourceData.DesignViewportSize;
+			DesignerData.CanvasRenderMode = SourceData.CanvasRenderMode;
+			DesignerData.ViewLocation = SourceData.ViewLocation;
+			DesignerData.ViewRotation = SourceData.ViewRotation;
+			DesignerData.ViewOrbitLocation = SourceData.ViewOrbitLocation;
+			DesignerData.ViewMode = SourceData.ViewMode;
+			DesignerData.ViewportType = SourceData.ViewportType;
+			// The hidden / locked / collapsed sets are deliberately NOT carried. The prefab keys them by
+			// the GUIDs its helper object minted, and there are none here -- reconstructing that mapping
+			// to preserve three per-author view preferences would be the most fragile part of the whole
+			// migration, in exchange for nothing anyone would notice losing.
+		}
+
 		// Display names are the variable names, so a collision is a variable that silently binds to
 		// whichever widget came first. Worth reporting on the way in rather than as a compiler warning
 		// on an asset the user did not author by hand.

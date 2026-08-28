@@ -7,48 +7,41 @@
 #include "DreamGUI.h"
 #include "Engine/World.h"
 
-namespace
+/**
+ * Bring a freshly built hierarchy to life, exactly as the prefab loader does at the end of a load.
+ *
+ * BeginPlay is gated on the MANAGER having begun play, not the world. The prefab loader learned
+ * that the hard way and left a note: World->HasBegunPlay() returns false even when called from
+ * BeginPlay. When it has not, the manager's own OnWorldBeginPlay picks these up later.
+ */
+void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 {
-	/**
-	 * Bring a freshly built hierarchy to life, exactly as the prefab loader does at the end of a load.
-	 *
-	 * Building the tree is not enough on its own: an unregistered widget is inert -- no layout, no
-	 * rendering, no behaviour lifecycle -- so a class that only instanced its template would produce a
-	 * hierarchy that is structurally perfect and completely dead. Structure tests do not notice.
-	 *
-	 * BeginPlay is gated on the MANAGER having begun play, not the world. The prefab loader learned
-	 * that the hard way and left a note: World->HasBegunPlay() returns false even when called from
-	 * BeginPlay. When it has not, the manager's own OnWorldBeginPlay picks these up later.
-	 */
-	void BringHierarchyToLife(UDreamWidget* InRoot)
+	if (!IsValid(InRoot))
 	{
-		if (!IsValid(InRoot))
-		{
-			return;
-		}
-		TArray<UDreamWidget*> AllWidgets;
-		UDreamWidget::CollectChildrenWidgets(InRoot, AllWidgets, true);
+		return;
+	}
+	TArray<UDreamWidget*> AllWidgets;
+	UDreamWidget::CollectChildrenWidgets(InRoot, AllWidgets, true);
 
-		// Parents before children, which CollectChildrenWidgets already gives us: OnRegister reads the
-		// parent link to reconcile panel slots.
-		for (UDreamWidget* Widget : AllWidgets)
+	// Parents before children, which CollectChildrenWidgets already gives us: OnRegister reads the
+	// parent link to reconcile panel slots.
+	for (UDreamWidget* Widget : AllWidgets)
+	{
+		if (IsValid(Widget))
 		{
-			if (IsValid(Widget))
-			{
-				Widget->OnRegister();
-			}
+			Widget->OnRegister();
 		}
+	}
 
-		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
+	{
+		if (Manager->HasBegunPlay())
 		{
-			if (Manager->HasBegunPlay())
+			for (UDreamWidget* Widget : AllWidgets)
 			{
-				for (UDreamWidget* Widget : AllWidgets)
+				if (IsValid(Widget))
 				{
-					if (IsValid(Widget))
-					{
-						Widget->BeginPlay();
-					}
+					Widget->BeginPlay();
 				}
 			}
 		}
@@ -57,17 +50,21 @@ namespace
 
 void UDreamUserWidget::Initialize()
 {
+	// Walk up for the tree: a subclass that only adds logic declares none of its own, and has to
+	// instance its parent's. Resolving this on the class rather than here keeps a native subclass
+	// (which never gets a generated class at all) working the same way.
+	InitializeFromArchetype(UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(GetClass()));
+}
+
+void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
+{
 	if (bInitialized || IsTemplate())
 	{
 		return;
 	}
 	bInitialized = true;
 
-	// Walk up for the tree: a subclass that only adds logic declares none of its own, and has to
-	// instance its parent's. Resolving this on the class rather than here keeps a native subclass
-	// (which never gets a generated class at all) working the same way.
-	UDreamWidgetTree* Archetype = UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(GetClass());
-	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), Archetype);
+	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
 }
 
 UDreamWidget* UDreamUserWidget::GetContentRoot() const
@@ -120,6 +117,6 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 	{
 		InCallbackBeforeAlive(UserWidget);
 	}
-	BringHierarchyToLife(UserWidget);
+	RegisterDreamWidgetHierarchy(UserWidget);
 	return UserWidget;
 }

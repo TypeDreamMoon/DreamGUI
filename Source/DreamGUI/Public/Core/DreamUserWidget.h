@@ -52,6 +52,20 @@ public:
 	 */
 	void Initialize();
 
+	/**
+	 * Build the contents from InArchetype rather than from this widget's own class.
+	 *
+	 * This is why InitializeWidgetStatic takes an archetype at all, and it is the designer's entry
+	 * point. A designer preview has to show the hierarchy AS IT IS BEING AUTHORED, which is not what
+	 * the class holds until the next compile -- so the preview is an instance of the class (for its
+	 * logic, its bindings and its identity) whose contents are instanced from the Blueprint's
+	 * authoring tree instead. UMG's preview does exactly this, for exactly this reason; see
+	 * UUserWidget::DuplicateAndInitializeFromWidgetTree.
+	 *
+	 * Like Initialize, it runs once and does nothing on a class template.
+	 */
+	void InitializeFromArchetype(UDreamWidgetTree* InArchetype);
+
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	bool IsInitialized() const { return bInitialized; }
 
@@ -65,6 +79,19 @@ public:
 private:
 	uint8 bInitialized : 1 = false;
 };
+
+/**
+ * Register a freshly built hierarchy, and begin play on it when the world's UI manager already has.
+ *
+ * Building a hierarchy is not enough on its own: an unregistered widget is inert -- no layout, no
+ * rendering, no behaviour lifecycle -- so a caller that only instanced a template would produce a
+ * hierarchy that is structurally perfect and completely dead. Structure tests do not notice.
+ *
+ * CreateDreamWidget calls this for you. It is exposed for the one other caller that builds a
+ * hierarchy by hand rather than from a class: the designer, whose preview comes from an authoring
+ * tree. Bringing it to life through a second, parallel copy of these rules is how the two drift.
+ */
+DREAMGUI_API void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot);
 
 /**
  * Create and initialize a user widget of InClass.
