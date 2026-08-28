@@ -14,6 +14,8 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIBehaviour.h"
+#include "UObject/UObjectIterator.h"
 
 #include "Editor.h"
 #include "Framework/Application/SlateApplication.h"
@@ -232,6 +234,131 @@ bool FDreamDesignerRenameReachesTheAssetTest::RunTest(const FString&)
 	TestNull(TEXT("And none of the old one"),
 		Scoped.Blueprint->GeneratedClass->FindPropertyByName(FName(TEXT("Before"))));
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerComponentsAndPropertiesReachTheAssetTest,
+	"DreamGUI.Designer.ComponentsAndDetailsEditsReachTheAsset",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerComponentsAndPropertiesReachTheAssetTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerComponentsAndProperties"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	UDreamWidget* Created = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("Subject"), nullptr, nullptr);
+	if (!TestNotNull(TEXT("A widget to work on"), Created))
+	{
+		return false;
+	}
+
+	// ---- a behaviour is an instanced sub-object, so adding one to a preview builds it into the copy
+	UClass* BehaviourClass = UDreamUIBehaviour::StaticClass();
+	TArray<UClass*> ToAdd;
+	// Any concrete behaviour will do; the claim is about where it lands, not what it does.
+	for (TObjectIterator<UClass> It; It; ++It)
+	{
+		if (It->IsChildOf(BehaviourClass) && *It != BehaviourClass
+			&& !It->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+		{
+			ToAdd.Add(*It);
+			break;
+		}
+	}
+	if (ToAdd.Num() > 0)
+	{
+		UDreamUIBehaviour* Added = Scoped.Designer->DesignerAddComponents(Created, ToAdd);
+		TestNotNull(TEXT("A behaviour was added and has a preview"), Added);
+		UDreamWidget* SubjectTemplate = Scoped.FindTemplate(TEXT("Subject"));
+		if (TestNotNull(TEXT("The subject is in the asset"), SubjectTemplate))
+		{
+			TestEqual(TEXT("The TEMPLATE carries the behaviour"), SubjectTemplate->GetAllComponents().Num(), 1);
+		}
+		Scoped.Rebuild();
+		SubjectTemplate = Scoped.FindTemplate(TEXT("Subject"));
+		TestEqual(TEXT("And still does after a rebuild"), SubjectTemplate->GetAllComponents().Num(), 1);
+	}
+
+	// ---- a details-panel edit, through the same call the panel's notify hook makes
+	UDreamWidget* SubjectTemplate = Scoped.FindTemplate(TEXT("Subject"));
+	UDreamWidget* SubjectPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate);
+	if (TestNotNull(TEXT("The subject has a preview"), SubjectPreview))
+	{
+		Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ SubjectPreview }, false, false);
+		SubjectPreview->SetSizeDelta(FVector2D(77.0, 88.0));
+
+		FProperty* AnchorDataProperty = UDreamWidget::StaticClass()->FindPropertyByName(UDreamWidget::GetPropertyName_AnchorData());
+		FEditPropertyChain Chain;
+		Chain.AddHead(AnchorDataProperty);
+		Scoped.Designer->MigrateDetailsChangeToTemplate(Chain, /*bIsModify*/false);
+
+		TestEqual(TEXT("The asset took the edited width"), (float)SubjectTemplate->GetSizeDelta().X, 77.0f, 0.001f);
+		Scoped.Rebuild();
+		UDreamWidget* Rebuilt = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Subject")));
+		if (TestNotNull(TEXT("Still previewed after a rebuild"), Rebuilt))
+		{
+			TestEqual(TEXT("And the rebuilt preview shows it"), (float)Rebuilt->GetSizeDelta().X, 77.0f, 0.001f);
+		}
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerWrapReachesTheAssetTest,
+	"DreamGUI.Designer.WrapWithReachesTheAsset",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerWrapReachesTheAssetTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerWrap"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	FDreamUIEditorTools::CreateWidgetAndReturn([PreviewRoot]() { return PreviewRoot; }, TEXT("A"), nullptr, nullptr);
+	// PreviewRoot is re-read: creating A rebuilt the preview, so the pointer above is stale. Every
+	// structural edit does this, and it is the same contract FDreamWidgetReference documents --
+	// resolve a preview when you need it, never keep one across an edit.
+	PreviewRoot = Scoped.PreviewRoot();
+	FDreamUIEditorTools::CreateWidgetAndReturn([PreviewRoot]() { return PreviewRoot; }, TEXT("B"), nullptr, nullptr);
+
+	UDreamWidget* A = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("A")));
+	UDreamWidget* B = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("B")));
+	if (!TestNotNull(TEXT("Two widgets to wrap"), A) || B == nullptr)
+	{
+		return false;
+	}
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	// Wrap runs on the preview first because enclosing a selection needs real geometry; this is the
+	// mirroring half, which is the part that reaches the asset.
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ A, B }, false, false);
+	Scoped.Designer->WrapSelectedWidgets(UDreamLayoutContainerVerticalBox::StaticClass());
+
+	TestEqual(TEXT("The asset gained exactly the wrapper"), Scoped.TemplateCount(), CountBefore + 1);
+	Scoped.Rebuild();
+	TestEqual(TEXT("And still has it after a rebuild"), Scoped.TemplateCount(), CountBefore + 1);
+
+	UDreamWidget* TemplateA = Scoped.FindTemplate(TEXT("A"));
+	UDreamWidget* TemplateB = Scoped.FindTemplate(TEXT("B"));
+	if (TestNotNull(TEXT("A survived"), TemplateA) && TemplateB != nullptr)
+	{
+		TestNotEqual(TEXT("A is no longer under the root"), (void*)TemplateA->GetParent(), (void*)Scoped.TemplateRoot());
+		TestEqual(TEXT("A and B share their new parent"), TemplateA->GetParent(), TemplateB->GetParent());
+		TestNotNull(TEXT("And that parent is the wrapper, with the panel it was asked for"),
+			TemplateA->GetParent()->GetLayoutContainer());
+	}
 	return true;
 }
 

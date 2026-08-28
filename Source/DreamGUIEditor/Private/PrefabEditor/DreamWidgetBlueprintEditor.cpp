@@ -1958,7 +1958,10 @@ void FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate(TConstArrayView
 			PreviewHost->CopyPreviewValuesToTemplate(PreviewWidget, GeometryProperties);
 		}
 	}
-	CommitSelectedWidgetGeometryToTemplate();
+	// Modified, not rebuilt, and NOT routed back through the selection: a drag calls this on
+	// every mouse move, so a rebuild here would pull the widget out from under the handle
+	// moving it -- and CommitSelectedWidgetGeometryToTemplate calls THIS, which is a loop.
+	MarkDesignChanged();
 }
 
 void FDreamWidgetBlueprintEditor::CommitSelectedWidgetGeometryToTemplate()
@@ -2046,6 +2049,10 @@ void FDreamWidgetBlueprintEditor::RepublishPreviewAndSelect(TConstArrayView<UDre
 	}
 	// Now, not on the next tick: the caller is about to select what it just made, and a selection of
 	// widgets that do not exist yet is a selection of nothing.
+	//
+	// This invalidates every preview pointer anyone was holding, including ones handed out by an
+	// earlier call in the same gesture. That is the contract FDreamWidgetReference exists to state:
+	// resolve a preview when you need it, never keep one across a structural edit.
 	PreviewHost->RebuildPreview();
 	for (const UDreamWidget* Template : InTemplates)
 	{
@@ -2111,6 +2118,70 @@ bool FDreamWidgetBlueprintEditor::DesignerDeleteWidgets(TConstArrayView<UDreamWi
 		RepublishPreviewAndSelect({}, Unused);
 	}
 	return bDeleted;
+}
+
+UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponents(UDreamWidget* InPreviewWidget, TConstArrayView<UClass*> InComponentClasses)
+{
+	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
+	if (Template == nullptr || !IsValid(BlueprintBeingEdited))
+	{
+		return nullptr;
+	}
+	BlueprintBeingEdited->Modify();
+	Template->SetFlags(RF_Transactional);
+	Template->Modify();
+
+	int32 LastIndex = INDEX_NONE;
+	for (UClass* ComponentClass : InComponentClasses)
+	{
+		if (UDreamUIBehaviour* Added = Template->AddComponent(ComponentClass))
+		{
+			Added->SetFlags(RF_Transactional);
+			LastIndex = Template->GetAllComponents().Find(Added);
+		}
+	}
+	if (LastIndex == INDEX_NONE)
+	{
+		return nullptr;
+	}
+	// Structurally: a behaviour can bring a required panel with it, which changes the hierarchy.
+	DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
+
+	TArray<UDreamWidget*> Previews;
+	RepublishPreviewAndSelect({ Template }, Previews);
+	if (Previews.Num() > 0)
+	{
+		// By position, because an instanced sub-object has no name the two halves share.
+		const TArray<UDreamUIBehaviour*>& Components = Previews[0]->GetAllComponents();
+		if (Components.IsValidIndex(LastIndex))
+		{
+			return Components[LastIndex];
+		}
+	}
+	return nullptr;
+}
+
+bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPreviewWidget, UDreamUIBehaviour* InPreviewComponent)
+{
+	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
+	if (Template == nullptr || !IsValid(InPreviewComponent) || !IsValid(BlueprintBeingEdited))
+	{
+		return false;
+	}
+	const int32 Index = InPreviewWidget->GetAllComponents().Find(InPreviewComponent);
+	if (!Template->GetAllComponents().IsValidIndex(Index))
+	{
+		return false;
+	}
+	BlueprintBeingEdited->Modify();
+	Template->SetFlags(RF_Transactional);
+	Template->Modify();
+	Template->RemoveComponent(Template->GetAllComponents()[Index]);
+	DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
+
+	TArray<UDreamWidget*> Previews;
+	RepublishPreviewAndSelect({ Template }, Previews);
+	return true;
 }
 
 TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerDuplicateWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets)

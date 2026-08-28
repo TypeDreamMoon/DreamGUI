@@ -438,7 +438,16 @@ private:
 		DreamUIWidgetComponentClipboard().Reset(DreamUIWidgetComponentClipboard_Snapshot(Component));
 		Component->SetFlags(RF_Transactional);
 		Component->Modify();
-		Widget->RemoveComponent(Component);
+		// On the template when a designer owns this widget; the preview's copy goes with the rebuild.
+		if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()).Pin();
+			Designer.IsValid() && Designer->GetTemplateWidget(Widget) != nullptr)
+		{
+			Designer->DesignerRemoveComponent(Widget, Component);
+		}
+		else
+		{
+			Widget->RemoveComponent(Component);
+		}
 		FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
 
 		RefreshComponents();
@@ -602,6 +611,20 @@ private:
 		if (PrefabEditor.IsValid())
 		{
 			PrefabEditor.Pin()->MarkDesignChanged();
+		}
+
+		// A behaviour is an instanced sub-object of the widget, so adding one to a preview builds it
+		// into the copy the next rebuild throws away.
+		if (PrefabEditor.IsValid() && PrefabEditor.Pin()->GetTemplateWidget(Widget) != nullptr)
+		{
+			UDreamUIBehaviour* Added = PrefabEditor.Pin()->DesignerAddComponents(Widget, ComponentClassesToAdd);
+			if (!IsValid(Added))
+			{
+				return false;
+			}
+			RefreshComponents();
+			SelectComponent(Added);
+			return true;
 		}
 
 		UDreamUIBehaviour* LastAddedComponent = nullptr;
@@ -968,7 +991,16 @@ private:
 
 			Component->SetFlags(RF_Transactional);
 			Component->Modify();
-			Widget->RemoveComponent(Component);
+			// See the cut path: a designer's widget keeps its behaviours on the template.
+			if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()).Pin();
+				Designer.IsValid() && Designer->GetTemplateWidget(Widget) != nullptr)
+			{
+				Designer->DesignerRemoveComponent(Widget, Component);
+			}
+			else
+			{
+				Widget->RemoveComponent(Component);
+			}
 			FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
 		}
 

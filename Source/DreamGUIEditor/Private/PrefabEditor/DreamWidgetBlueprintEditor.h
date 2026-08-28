@@ -374,6 +374,13 @@ public:
 	UDreamWidget* DesignerCreateWidget(UDreamWidget* InPreviewParent, TSubclassOf<UDreamWidget> InWidgetClass,
 		const FString& InDesiredName, TFunction<void(UDreamWidget*)> InConfigureTemplate = nullptr);
 	bool DesignerDeleteWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
+	/**
+	 * Behaviours are instanced sub-objects of a widget, so adding one to a preview builds it into a
+	 * copy that is about to be rebuilt away. These put it on the template and hand back the preview's
+	 * counterpart, matched by position, for the panel to select.
+	 */
+	class UDreamUIBehaviour* DesignerAddComponents(UDreamWidget* InPreviewWidget, TConstArrayView<UClass*> InComponentClasses);
+	bool DesignerRemoveComponent(UDreamWidget* InPreviewWidget, class UDreamUIBehaviour* InPreviewComponent);
 	TArray<UDreamWidget*> DesignerDuplicateWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
 	void DesignerCopyWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
 	TArray<UDreamWidget*> DesignerPasteWidgets(UDreamWidget* InPreviewParent);
