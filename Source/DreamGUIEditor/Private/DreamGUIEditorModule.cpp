@@ -10,6 +10,9 @@
 #include "AssetToolsModule.h"
 #include "DetailLayoutBuilder.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "KismetCompiler.h"
+#include "DreamWidgetBlueprint.h"
+#include "DreamWidgetBlueprintCompiler.h"
 
 #include "DreamGUIEditorStyle.h"
 #include "DreamUIEditorCommands.h"
@@ -137,6 +140,16 @@ void FDreamGUIEditorModule::StartupModule()
 	FDreamGUIEditorStyle::ReloadTextures();
 	FDreamUIControlRegistry::Get().InitializeDynamicDiscovery();
 	FDreamUIBehaviourEditorBackendRegistry::Get().RegisterBuiltInBackends();
+
+	// Teaches Kismet how to compile a DreamUI hierarchy into a class. Registering the compiler is
+	// independent of having an editor for the asset -- the stock Blueprint editor opens it and the
+	// stock compile button drives this -- so a DreamUI designer surface can come later on its own.
+	FKismetCompilerContext::RegisterCompilerForBP(UDreamWidgetBlueprint::StaticClass(),
+		[](UBlueprint* InBlueprint, FCompilerResultsLog& InMessageLog, const FKismetCompilerOptions& InCompileOptions)
+		{
+			return TSharedPtr<FKismetCompilerContext>(new FDreamWidgetBlueprintCompilerContext(
+				CastChecked<UDreamWidgetBlueprint>(InBlueprint), InMessageLog, InCompileOptions));
+		});
 
 	OnInitializeSequenceHandle = UDreamUIPrefabSequence::OnInitializeSequence().AddStatic(FDreamGUIEditorModule::OnInitializeSequence);
 
