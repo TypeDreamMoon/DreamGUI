@@ -363,6 +363,22 @@ public:
 	 * Find UISelectable component inside InParent on specific direction.
 	 */
 	virtual UUISelectable* FindSelectable(FVector InDirection, UDreamWidget* InParent);
+protected:
+	/** How many nested areas a single Escape move may climb out of before it gives up. */
+	static constexpr int32 MaxNavigationEscapeDepth = 8;
+	/**
+	 * The plain directional scan: the nearest interactable selectable in InDirection, restricted to
+	 * children of InParent and of RestrictNavNode. Returns this when there is nothing that way.
+	 *
+	 * Split out from FindSelectable so the boundary rules can re-run the identical scan against a
+	 * different area, or from a different selectable, without the rules leaking into the scoring.
+	 */
+	UUISelectable* ScanForSelectable(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* RestrictNavNode);
+	/** Scan, and when it finds nothing let InRestrictNode's boundary rule decide what happens next. */
+	UUISelectable* FindSelectableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth);
+	/** The selectable at the far side of InRestrictNode along InDirection, for the Wrap rule. */
+	UUISelectable* FindWrapTarget(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode);
+public:
 	/**
      * Default selectable is the most "Prev" one (left top most).
 	 */

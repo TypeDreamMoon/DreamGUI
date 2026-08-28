@@ -556,6 +556,78 @@ UUISelectable* UUISelectable::FindSelectable(FVector InDirection)
 
 UUISelectable* UUISelectable::FindSelectable(FVector InDirection, UDreamWidget* InParent)
 {
+	const UDreamWidget* RestrictNavNode = nullptr;
+	if (auto Widget = GetWidget())
+	{
+		RestrictNavNode = Widget->GetRestrictNavigationAreaWidget();
+	}
+	return FindSelectableWithin(InDirection, InParent, RestrictNavNode, 0);
+}
+
+UUISelectable* UUISelectable::FindSelectableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth)
+{
+	UUISelectable* Found = ScanForSelectable(InDirection, InParent, InRestrictNode);
+	if (Found != this)
+	{
+		return Found;//the scan moved, so the edge was never reached
+	}
+	// Nothing that way. Whether that is the end of the story is the area's decision, and with no area
+	// around us there is nobody to ask -- stopping is the only thing "the edge of everything" can mean.
+	if (!IsValid(InRestrictNode))
+	{
+		return this;
+	}
+	switch (InRestrictNode->GetNavigationBoundaryRule())
+	{
+	case EDreamUINavigationBoundaryRule::Wrap:
+		return FindWrapTarget(InDirection, InParent, InRestrictNode);
+	case EDreamUINavigationBoundaryRule::Escape:
+		{
+			// One area out, and only if there is one: past the outermost area the move has genuinely
+			// left everything that could restrict it, and the plain scan already covered that ground.
+			if (InEscapeDepth >= MaxNavigationEscapeDepth)
+			{
+				return this;
+			}
+			const UDreamWidget* AreaParent = InRestrictNode->GetParent();
+			const UDreamWidget* Enclosing = IsValid(AreaParent) ? AreaParent->GetRestrictNavigationAreaWidget() : nullptr;
+			if (Enclosing == nullptr)
+			{
+				return ScanForSelectable(InDirection, InParent, nullptr);
+			}
+			return FindSelectableWithin(InDirection, InParent, Enclosing, InEscapeDepth + 1);
+		}
+	case EDreamUINavigationBoundaryRule::Stop:
+	default:
+		return this;
+	}
+}
+
+UUISelectable* UUISelectable::FindWrapTarget(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode)
+{
+	// Walk backwards with the very same scan until it stops. Wrapping then lands exactly where holding
+	// the opposite direction would have left the player, which no standalone "pick the far one" scoring
+	// can promise -- and it needs no weighting between how far back a candidate is and how well it
+	// lines up, the two quantities such a scoring would have had to trade off against each other.
+	UUISelectable* Walker = this;
+	TSet<UUISelectable*> Visited;
+	Visited.Add(this);
+	const FVector Backwards = -InDirection;
+	for (;;)
+	{
+		UUISelectable* Back = Walker->ScanForSelectable(Backwards, InParent, InRestrictNode);
+		if (Back == nullptr || Back == Walker || Visited.Contains(Back))
+		{
+			break;//at the far edge, or round a cycle a strange layout built
+		}
+		Visited.Add(Back);
+		Walker = Back;
+	}
+	return Walker;
+}
+
+UUISelectable* UUISelectable::ScanForSelectable(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* RestrictNavNode)
+{
 	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld());
 	if (DreamUIManager == nullptr)return nullptr;
 	const auto& SelectableArray = DreamUIManager->GetAllSelectableArray();
@@ -570,15 +642,10 @@ UUISelectable* UUISelectable::FindSelectable(FVector InDirection, UDreamWidget* 
 	};
 
 	auto LocalPos = FVector::ZeroVector;
-	const UDreamWidget* RestrictNavNode = nullptr;
 	if (auto Widget = GetWidget())
 	{
 		auto localDir = Widget->GetWorldTransform().InverseTransformVectorNoScale(InDirection);
 		LocalPos = GetPointOnRectEdge(Widget, FVector2D(localDir.Y, localDir.Z));
-		if (auto RestrictNavWidget = Widget->GetRestrictNavigationAreaWidget())
-		{
-			RestrictNavNode = RestrictNavWidget;
-		}
 	}
 	auto pos = this->GetWidget()->GetWorldTransform().TransformPosition(LocalPos);
 	auto thisWidget = this->GetWidget();

@@ -96,6 +96,24 @@ enum class EDreamWidgetClipping : uint8
 	Disabled UMETA(DisplayName = "No Clip"),
 };
 
+/** What a directional move does when it runs out of candidates inside a restricted navigation area. */
+UENUM(BlueprintType)
+enum class EDreamUINavigationBoundaryRule : uint8
+{
+	/** Nothing happens. Focus stays where it is. */
+	Stop,
+	/**
+	 * Continue from the far side of the same area, as though the edges were joined. The landing spot
+	 * is wherever holding the opposite direction would have ended up, so wrapping and walking agree.
+	 */
+	Wrap,
+	/**
+	 * Leave the area and let whatever encloses it answer instead -- the way a list inside a page hands
+	 * the move back to the page once the list has nothing more in that direction.
+	 */
+	Escape,
+};
+
 UENUM(BlueprintType)
 enum class EDreamWidgetRaycastableType : uint8
 {
@@ -950,6 +968,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetRestrictNavigationArea", Setter = "SetRestrictNavigationArea", meta = (AllowPrivateAccess = true))
 	uint8 bRestrictNavigationArea : 1 = false;
 	/**
+	 * What happens when a directional move reaches the edge of this area. Only read on a widget that
+	 * is itself a restricted area; Stop keeps the behaviour every existing prefab already has.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition = "bRestrictNavigationArea"))
+	EDreamUINavigationBoundaryRule NavigationBoundaryRule = EDreamUINavigationBoundaryRule::Stop;
+	/**
 	 * Ignore parent layout container
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetIgnoreLayout", Setter = "SetIgnoreLayout", meta = (AllowPrivateAccess = true))
@@ -1147,6 +1171,11 @@ public:
 	const UDreamWidget* GetRestrictNavigationAreaWidget()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetRestrictNavigationArea(bool Value);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	EDreamUINavigationBoundaryRule GetNavigationBoundaryRule()const{return NavigationBoundaryRule;}
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetNavigationBoundaryRule(EDreamUINavigationBoundaryRule Value);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	UDreamVisual* GetVisual()const { return Visual; }

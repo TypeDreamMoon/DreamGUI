@@ -4706,6 +4706,11 @@ void UDreamWidget::SetRestrictNavigationArea(bool Value)
 	bRestrictNavigationArea = Value;
 }
 
+void UDreamWidget::SetNavigationBoundaryRule(EDreamUINavigationBoundaryRule Value)
+{
+	NavigationBoundaryRule = Value;
+}
+
 UDreamVisual* UDreamWidget::CreateNewVisual(TSubclassOf<UDreamVisual> VisualClass)
 {
 	auto OldVisual = Visual;
