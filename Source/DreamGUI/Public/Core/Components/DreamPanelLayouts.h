@@ -554,6 +554,12 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
 	bool ScrollWidgetIntoView(UDreamWidget* InWidget, bool bAnimateScroll = true);
+	/**
+	 * True when InWidget lives in this box and a scroll would bring more of it into sight. The question
+	 * directional navigation has to answer before it commits to a candidate it cannot currently see.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	bool CanScrollWidgetIntoView(UDreamWidget* InWidget);
 	/** Ease towards Value over the coming frames instead of moving now. Cancels any momentum. */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
 	void SetScrollOffsetAnimated(float Value);
@@ -587,6 +593,12 @@ private:
 	float RequestedScrollOffset = 0.0f;
 	/** Content-space start and extent of the direct child that contains InWidget. */
 	bool GetChildContentExtent(UDreamWidget* InWidget, float& OutStart, float& OutExtent);
+	/**
+	 * Offset that brings InWidget into view with the least movement. False when InWidget is not in this
+	 * box or is already fully visible, so the query and the scroll answer from the same arithmetic
+	 * rather than from two copies of it that can drift apart.
+	 */
+	bool CalculateOffsetToReveal(UDreamWidget* InWidget, float& OutTarget);
 
 	/** Local units per second the content is still travelling under momentum. */
 	float ScrollVelocity = 0.0f;

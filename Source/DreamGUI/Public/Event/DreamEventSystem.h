@@ -164,7 +164,16 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI)
 	float NavigateInputInterval = 0.2f;
-	
+	/**
+	 * Scroll the containers around a navigated-to widget until it is on screen. Off, navigation can
+	 * only reach what is already visible, which turns any list longer than its viewport into a wall.
+	 */
+	UPROPERTY(EditAnywhere, Getter = "GetScrollNavigationTargetIntoView", Setter = "SetScrollNavigationTargetIntoView", Category = DreamGUI)
+	bool bScrollNavigationTargetIntoView = true;
+	/** Ease that reveal scroll instead of jumping to it. */
+	UPROPERTY(EditAnywhere, Getter = "GetAnimateNavigationScroll", Setter = "SetAnimateNavigationScroll", Category = DreamGUI, meta = (EditCondition = "bScrollNavigationTargetIntoView"))
+	bool bAnimateNavigationScroll = true;
+
 public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	EDreamUIPointerInputType GetDefaultInputType()const{return DefaultInputType;}
@@ -172,6 +181,10 @@ public:
 	float GetNavigateInputIntervalForFirstTime()const{return NavigateInputIntervalForFirstTime;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	float GetNavigateInputInterval()const{return NavigateInputInterval;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool GetScrollNavigationTargetIntoView()const{return bScrollNavigationTargetIntoView;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool GetAnimateNavigationScroll()const{return bAnimateNavigationScroll;}
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetDefaultInputType(EDreamUIPointerInputType Value){ DefaultInputType = Value;}
@@ -179,6 +192,10 @@ public:
 	void SetNavigateInputIntervalForFirstTime(float Value){ NavigateInputIntervalForFirstTime = Value;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetNavigateInputInterval(float Value){ NavigateInputInterval = Value;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetScrollNavigationTargetIntoView(bool Value){ bScrollNavigationTargetIntoView = Value;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetAnimateNavigationScroll(bool Value){ bAnimateNavigationScroll = Value;}
 public:
 	template<class UEventData, class UInterfaceFunction>
 	static void ExecuteDreamUIInterface(UDreamWidget* Widget,

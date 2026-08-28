@@ -2500,8 +2500,9 @@ bool UDreamLayoutContainerScrollBox::GetChildContentExtent(UDreamWidget* InWidge
 	return false;
 }
 
-bool UDreamLayoutContainerScrollBox::ScrollWidgetIntoView(UDreamWidget* InWidget, bool bAnimateScroll)
+bool UDreamLayoutContainerScrollBox::CalculateOffsetToReveal(UDreamWidget* InWidget, float& OutTarget)
 {
+	OutTarget = ScrollOffset;
 	float Start = 0.0f;
 	float Extent = 0.0f;
 	if (!GetChildContentExtent(InWidget, Start, Extent))
@@ -2510,20 +2511,41 @@ bool UDreamLayoutContainerScrollBox::ScrollWidgetIntoView(UDreamWidget* InWidget
 	}
 	const float ViewStart = ScrollOffset;
 	const float ViewEnd = ScrollOffset + MeasuredViewportPrimary;
-	float Target = ScrollOffset;
 	if (Start < ViewStart)
 	{
-		Target = Start;//above the view: bring its leading edge to the top
+		OutTarget = Start;//above the view: bring its leading edge to the top
 	}
 	else if (Start + Extent > ViewEnd)
 	{
 		// Below the view: bring its trailing edge to the bottom, unless it is taller than the view,
 		// in which case showing its start is the only useful answer.
-		Target = Extent > MeasuredViewportPrimary ? Start : Start + Extent - MeasuredViewportPrimary;
+		OutTarget = Extent > MeasuredViewportPrimary ? Start : Start + Extent - MeasuredViewportPrimary;
 	}
 	else
 	{
 		return false;//already fully visible
+	}
+	if (bLayoutMetricsValid)
+	{
+		// Only once a pass has measured the box: before that MaxScrollOffset is zero, and clamping
+		// against it would report every target as unreachable.
+		OutTarget = FMath::Clamp(OutTarget, 0.0f, MaxScrollOffset);
+	}
+	return !FMath::IsNearlyEqual(OutTarget, ScrollOffset);
+}
+
+bool UDreamLayoutContainerScrollBox::CanScrollWidgetIntoView(UDreamWidget* InWidget)
+{
+	float Unused = 0.0f;
+	return CalculateOffsetToReveal(InWidget, Unused);
+}
+
+bool UDreamLayoutContainerScrollBox::ScrollWidgetIntoView(UDreamWidget* InWidget, bool bAnimateScroll)
+{
+	float Target = ScrollOffset;
+	if (!CalculateOffsetToReveal(InWidget, Target))
+	{
+		return false;
 	}
 	if (bAnimateScroll)
 	{

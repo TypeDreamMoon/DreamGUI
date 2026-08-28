@@ -223,6 +223,25 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		void ScrollTo(UDreamWidget* InChild, bool InEaseAnimation = true, float InAnimationDuration = 0.5f);
+
+	/**
+	 * Scroll the least distance that brings InChild fully inside the viewport, and nothing at all when
+	 * it is already there. ScrollTo always centres, which reads badly under directional navigation:
+	 * stepping one row down would heave the whole list to put that row in the middle.
+	 * @return true when the content position actually moved.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool ScrollWidgetIntoView(UDreamWidget* InChild, bool InEaseAnimation = true, float InAnimationDuration = 0.25f);
+	/** True when InChild sits inside this view and a scroll would bring more of it into sight. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool CanScrollWidgetIntoView(UDreamWidget* InChild);
+protected:
+	/**
+	 * Content position that reveals InChild with the least movement, clamped to the scroll range and
+	 * restricted to the axes this view scrolls on. Returns false when nothing needs to move -- either
+	 * the child is already visible, or the clamp leaves the position where it was.
+	 */
+	bool CalculateRevealContentPosition(UDreamWidget* InChild, FVector2D& OutPosition);
 };
 
 

@@ -13,6 +13,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "Interaction/DreamSelectableStyle.h"
+#include "Interaction/DreamUINavigationScroll.h"
 
 
 UUITransition::UUITransition()
@@ -638,9 +639,14 @@ UUISelectable* UUISelectable::FindSelectable(FVector InDirection, UDreamWidget* 
 		auto selCenterInWorld = sel->GetWidget()->GetWorldTransform().TransformPosition(selCenter);
 		if (selWidget)
 		{
-			if (!selWidget->IsPointVisibleOnClip(selCenterInWorld))
+			// Clipped away is not the same as out of reach. A row scrolled off the end of a list is
+			// one scroll from being on screen, and refusing it here is what used to pin a gamepad to
+			// the rows that happened to be visible; anything else hidden -- behind a mask, under a
+			// closed panel -- has no way back and stays skipped.
+			if (!selWidget->IsPointVisibleOnClip(selCenterInWorld)
+				&& !FDreamUINavigationScroll::IsReachableByScrolling(selWidget))
 			{
-				continue;//if not visible then skip it
+				continue;
 			}
 		}
 		FVector myVector = selCenterInWorld - pos;

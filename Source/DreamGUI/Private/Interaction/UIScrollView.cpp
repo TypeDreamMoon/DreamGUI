@@ -579,6 +579,113 @@ void UUIScrollView::ScrollTo(UDreamWidget* InChild, bool InEaseAnimation, float 
     }
 }
 
+bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVector2D& OutPosition)
+{
+    OutPosition = GetContentPosition();
+    if (!IsValid(InChild))return false;
+    if (!CheckParameters())return false;
+    RecalculateRange();
+
+    auto Viewport = ContentParent.Get();
+    if (!IsValid(Viewport))return false;
+    if (InChild == Viewport || !InChild->IsChildOf(Viewport))return false;
+
+    // The child's box in the viewport's own space, which is also the space the content position lives
+    // in -- Content is a direct child of the viewport, so moving the content by D moves the child by D.
+    // All four corners are transformed rather than just two: a rotated item would otherwise report a
+    // box narrower than it draws, and the reveal would stop one edge short.
+    const FTransform ChildToViewport = InChild->GetWorldTransform() * Viewport->GetWorldTransform().Inverse();
+    const FVector2D ChildLeftBottom = InChild->GetLocalSpaceLeftBottomPoint();
+    const FVector2D ChildRightTop = InChild->GetLocalSpaceRightTopPoint();
+    const FVector2D LocalCorners[4] = {
+        ChildLeftBottom,
+        FVector2D(ChildRightTop.X, ChildLeftBottom.Y),
+        ChildRightTop,
+        FVector2D(ChildLeftBottom.X, ChildRightTop.Y),
+    };
+    float ChildLeft = MAX_flt, ChildRight = -MAX_flt, ChildBottom = MAX_flt, ChildTop = -MAX_flt;
+    for (const FVector2D& Corner : LocalCorners)
+    {
+        const FVector InViewport = ChildToViewport.TransformPosition(FVector(0, Corner.X, Corner.Y));
+        ChildLeft = FMath::Min(ChildLeft, (float)InViewport.Y);
+        ChildRight = FMath::Max(ChildRight, (float)InViewport.Y);
+        ChildBottom = FMath::Min(ChildBottom, (float)InViewport.Z);
+        ChildTop = FMath::Max(ChildTop, (float)InViewport.Z);
+    }
+
+    const float ViewLeft = Viewport->GetLocalSpaceLeft();
+    const float ViewRight = Viewport->GetLocalSpaceRight();
+    const float ViewBottom = Viewport->GetLocalSpaceBottom();
+    const float ViewTop = Viewport->GetLocalSpaceTop();
+
+    // An item larger than the viewport can never be framed, so show its leading edge -- the same
+    // answer the scroll box layout gives, and the only one that does not look like an arbitrary crop.
+    auto DeltaAlongAxis = [](float ItemMin, float ItemMax, float ViewMin, float ViewMax)
+    {
+        if (ItemMin < ViewMin)
+        {
+            return ViewMin - ItemMin;
+        }
+        if (ItemMax > ViewMax)
+        {
+            return (ItemMax - ItemMin) > (ViewMax - ViewMin) ? ViewMin - ItemMin : ViewMax - ItemMax;
+        }
+        return 0.0f;
+    };
+
+    FVector2D Position = OutPosition;
+    if (Horizontal)
+    {
+        const float Delta = DeltaAlongAxis(ChildLeft, ChildRight, ViewLeft, ViewRight);
+        Position.X = FMath::Clamp(Position.X + Delta, HorizontalRange.X, HorizontalRange.Y);
+    }
+    if (Vertical)
+    {
+        const float Delta = DeltaAlongAxis(ChildBottom, ChildTop, ViewBottom, ViewTop);
+        Position.Y = FMath::Clamp(Position.Y + Delta, VerticalRange.X, VerticalRange.Y);
+    }
+    if (Position.Equals(OutPosition))
+    {
+        return false;
+    }
+    OutPosition = Position;
+    return true;
+}
+
+bool UUIScrollView::CanScrollWidgetIntoView(UDreamWidget* InChild)
+{
+    FVector2D Unused;
+    return CalculateRevealContentPosition(InChild, Unused);
+}
+
+bool UUIScrollView::ScrollWidgetIntoView(UDreamWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
+{
+    FVector2D TargetContentPos;
+    if (!CalculateRevealContentPosition(InChild, TargetContentPos))
+    {
+        return false;
+    }
+    if (InEaseAnimation)
+    {
+        auto Tweener = UDreamTweenManager::To(this, FDreamTweenVector2DGetterFunction::CreateWeakLambda(this
+            , [this] {
+                return GetContentPosition();
+            })
+            , FDreamTweenVector2DSetterFunction::CreateWeakLambda(this, [this](FVector2D value) {
+                this->SetScrollValue(value);
+                }), TargetContentPos, InAnimationDuration);
+        if (Tweener)
+        {
+            UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
+        }
+    }
+    else
+    {
+        SetScrollValue(TargetContentPos);
+    }
+    return true;
+}
+
 #define POSITION_THRESHOLD 0.001f
 void UUIScrollView::UpdateAfterDrag(float deltaTime)
 {

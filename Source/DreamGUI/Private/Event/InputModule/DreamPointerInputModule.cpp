@@ -10,6 +10,7 @@
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/Interface/DreamNavigationInterface.h"
 #include "Interaction/UISelectable.h"
+#include "Interaction/DreamUINavigationScroll.h"
 
 bool UDreamPointerInputModule::LineTrace(UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& OutDreamHitResult)
 {
@@ -574,6 +575,12 @@ bool UDreamPointerInputModule::Navigate(EDreamUINavigationDirection InDirection,
 		OutDreamUIHitResult.HoverArray.Reset();
 
 		InPointerEventData->HighlightWidgetForNavigation = CurrentNavigateObject->GetWidget();
+		// Whatever the navigation policy picked, put it on screen. Done here rather than inside
+		// UISelectable so a custom IDreamNavigationInterface gets the same treatment for free.
+		if (EventSystem.IsValid() && EventSystem->GetScrollNavigationTargetIntoView())
+		{
+			FDreamUINavigationScroll::RevealWidget(CurrentNavigateObject->GetWidget(), EventSystem->GetAnimateNavigationScroll());
+		}
 		return true;
 	}
 	return false;
