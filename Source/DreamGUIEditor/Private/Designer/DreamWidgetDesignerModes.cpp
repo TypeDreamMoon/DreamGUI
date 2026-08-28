@@ -12,6 +12,10 @@
 
 #include "BlueprintEditorTabs.h"
 #include "SBlueprintEditorToolbar.h"
+#include "BlueprintEditorModes.h"
+#include "WorkflowOrientedApp/SModeWidget.h"
+#include "Widgets/Layout/SSpacer.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "ToolMenus.h"
 #include "UMGStyle.h"
 #include "Styling/AppStyle.h"
@@ -33,6 +37,36 @@ FText FDreamWidgetBlueprintApplicationModes::GetLocalizedMode(FName InMode)
 		return LOCTEXT("GraphMode", "Graph");
 	}
 	return FText::GetEmpty();
+}
+
+void FDreamWidgetBlueprintApplicationModes::AddModeSwitcher(TSharedPtr<FDreamWidgetBlueprintEditor> InEditor,
+	TSharedPtr<FExtender> InExtender)
+{
+	if (!InEditor.IsValid() || !InExtender.IsValid())
+	{
+		return;
+	}
+	InExtender->AddToolBarExtension("Asset", EExtensionHook::After, InEditor->GetToolkitCommands(),
+		FToolBarExtensionDelegate::CreateLambda([InEditor](FToolBarBuilder&)
+		{
+			TAttribute<FName> GetActiveMode(InEditor.ToSharedRef(), &FBlueprintEditor::GetCurrentMode);
+			FOnModeChangeRequested SetActiveMode = FOnModeChangeRequested::CreateSP(
+				InEditor.ToSharedRef(), &FBlueprintEditor::SetCurrentMode);
+
+			InEditor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(4.0f, 1.0f)));
+			InEditor->AddToolbarWidget(
+				SNew(SModeWidget, GetLocalizedMode(DesignerMode), DesignerMode)
+				.OnGetActiveMode(GetActiveMode)
+				.OnSetActiveMode(SetActiveMode)
+				.IconImage(FAppStyle::GetBrush("UMGEditor.SwitchToDesigner")));
+			InEditor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(10.0f, 1.0f)));
+			InEditor->AddToolbarWidget(
+				SNew(SModeWidget, GetLocalizedMode(GraphMode), GraphMode)
+				.OnGetActiveMode(GetActiveMode)
+				.OnSetActiveMode(SetActiveMode)
+				.IconImage(FAppStyle::GetBrush("FullBlueprintEditor.SwitchToScriptingMode")));
+			InEditor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(10.0f, 1.0f)));
+		}));
 }
 
 FDreamWidgetBlueprintApplicationMode::FDreamWidgetBlueprintApplicationMode(
@@ -201,6 +235,8 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 	// authoring edit onto the class, so it belongs here and not only in the graph.
 	if (InEditor.IsValid())
 	{
+		ToolbarExtender = MakeShared<FExtender>();
+		FDreamWidgetBlueprintApplicationModes::AddModeSwitcher(InEditor, ToolbarExtender);
 		InEditor->RegisterModeToolbarIfUnregistered(GetModeName());
 		FName OutParentToolbarName;
 		const FName ToolbarName = InEditor->GetToolMenuToolbarNameForMode(GetModeName(), OutParentToolbarName);
@@ -290,6 +326,8 @@ FDreamWidgetGraphApplicationMode::FDreamWidgetGraphApplicationMode(TSharedPtr<FD
 
 	if (InEditor.IsValid())
 	{
+		ToolbarExtender = MakeShared<FExtender>();
+		FDreamWidgetBlueprintApplicationModes::AddModeSwitcher(InEditor, ToolbarExtender);
 		InEditor->RegisterModeToolbarIfUnregistered(GetModeName());
 		FName OutParentToolbarName;
 		const FName ToolbarName = InEditor->GetToolMenuToolbarNameForMode(GetModeName(), OutParentToolbarName);

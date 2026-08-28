@@ -7,6 +7,7 @@
 #include "WorkflowOrientedApp/WorkflowTabManager.h"
 
 class FDreamWidgetBlueprintEditor;
+class FExtender;
 class UDreamWidgetBlueprint;
 
 /**
@@ -22,6 +23,14 @@ struct FDreamWidgetBlueprintApplicationModes
 	static const FName GraphMode;
 
 	static FText GetLocalizedMode(FName InMode);
+
+	/**
+	 * Put the Designer|Graph switcher on a mode's toolbar.
+	 *
+	 * Not optional decoration: AddApplicationMode gives an editor two modes and no way to reach the
+	 * second one. Nothing in a headless test notices, because a test calls SetCurrentMode directly.
+	 */
+	static void AddModeSwitcher(TSharedPtr<class FDreamWidgetBlueprintEditor> InEditor, TSharedPtr<FExtender> InExtender);
 };
 
 /** Shared base: holds the designer editor and the mode's own tab factories. UMG's shape. */
