@@ -5,7 +5,7 @@
 #include "ISequencer.h"
 #include "DreamUIPrefabSequenceEditor.h"
 #include "MovieScene.h"
-#include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Core/Components/DreamWidget.h"
 
@@ -13,7 +13,7 @@
 bool DreamUIPrefabSequence_CanBindWidgetToSequencer(UDreamUIPrefabHelperObject* InPrefabHelper, const UDreamWidget* InWidget);
 
 
-FDreamUIDetailKeyframeHandler::FDreamUIDetailKeyframeHandler(TSharedPtr<FDreamUIPrefabEditor> InSequenceEditor)
+FDreamUIDetailKeyframeHandler::FDreamUIDetailKeyframeHandler(TSharedPtr<FDreamWidgetBlueprintEditor> InSequenceEditor)
 	: PrefabEditor( InSequenceEditor )
 {}
 
@@ -76,7 +76,8 @@ void FDreamUIDetailKeyframeHandler::OnKeyPropertyClicked(const IPropertyHandle& 
 
 		// A sub-prefab widget's binding does not survive a save, so the key button must not author
 		// one; the picker in the sequencer refuses these widgets and this path has to match it.
-		UDreamUIPrefabHelperObject* Helper = PrefabEditor.IsValid() ? PrefabEditor.Pin()->GetPrefabHelperObject() : nullptr;
+		// No sub prefabs; the gate treats null as "not owned by one".
+		UDreamUIPrefabHelperObject* Helper = nullptr;
 		Objects.RemoveAll([Helper](UObject* Object)
 		{
 			const UDreamWidget* Widget = Cast<UDreamWidget>(Object);

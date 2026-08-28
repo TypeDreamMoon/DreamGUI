@@ -107,5 +107,5 @@ private:
 	TOptional<int32> GetDesignScreenSizeAxis(int32 AxisIndex) const;
 	void OnDesignScreenSizeAxisCommitted(int32 NewValue, ETextCommit::Type CommitType, int32 AxisIndex);
 	FText GetCanvasSizeText() const;
-	TWeakPtr<class FDreamUIPrefabEditor> PrefabEditorForCanvasSize;
+	TWeakPtr<class FDreamWidgetBlueprintEditor> PrefabEditorForCanvasSize;
 };

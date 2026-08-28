@@ -11,7 +11,7 @@
 
 class SDreamWidgetEditorHierarchyView;
 class UDreamWidget;
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 class FScopedTransaction;
 
 /**
@@ -54,7 +54,7 @@ public:
  * means refused, and the op's hover text and icon carry the reason.
  */
 TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone,
-	bool bIsDrop, TSharedPtr<FDreamUIPrefabEditor> Manager, UDreamWidget* TargetItem,
+	bool bIsDrop, TSharedPtr<FDreamWidgetBlueprintEditor> Manager, UDreamWidget* TargetItem,
 	TOptional<int32> Index = TOptional<int32>());
 
 namespace DreamWidgetHierarchyDrop
@@ -84,7 +84,7 @@ public:
 		SLATE_ATTRIBUTE(FText, HighlightText)
 	SLATE_END_ARGS()
 	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<UDreamWidget> InModel
-		, TSharedPtr<SDreamWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FDreamUIPrefabEditor> InManager);
+		, TSharedPtr<SDreamWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FDreamWidgetBlueprintEditor> InManager);
 
 	// Begin SWidget
 	virtual void OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
@@ -118,7 +118,7 @@ private:
 
 private:
 	TWeakPtr<SDreamWidgetEditorHierarchyView> HierarchyView;
-	TWeakPtr<FDreamUIPrefabEditor> Manager;
+	TWeakPtr<FDreamWidgetBlueprintEditor> Manager;
 	FSimpleDelegate MouseEnter;
 	FSimpleDelegate MouseExit;
 	/** Edit box for the name. */

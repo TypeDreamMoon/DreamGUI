@@ -9,7 +9,7 @@
 #include "Framework/Views/TreeFilterHandler.h"
 #include "Misc/TextFilter.h"
 
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 class UDreamWidget;
 
 /**
@@ -113,7 +113,7 @@ protected:
 	void BeginRename();
 
 	TWeakObjectPtr<UWorld> World;
-	TWeakPtr<FDreamUIPrefabEditor> Manager;
+	TWeakPtr<FDreamWidgetBlueprintEditor> Manager;
 	TSharedPtr<FUICommandList> CommandList;
 	TSharedPtr< TreeFilterHandler< TWeakObjectPtr<UDreamWidget> > > FilterHandler;
 	TArray< TWeakObjectPtr<UDreamWidget> > RootWidgets;

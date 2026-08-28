@@ -30,7 +30,7 @@
 #include "Elements/Framework/TypedElementSelectionSet.h"
 #include "AssetSelection.h"
 #include "DreamUIPrefabEditorViewportClient.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "DreamGUIEditorModule.h"
 
 #define LOCTEXT_NAMESPACE "ClickHandlers"
@@ -897,7 +897,7 @@ namespace DreamUIPrefabViewportClickHandlers
 		{
 			if( !Click.IsControlDown() )
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = ViewportClient->GetPrefabEditor())
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = ViewportClient->GetPrefabEditor())
 				{
 					Editor->SelectWidgets({}, false);
 				}

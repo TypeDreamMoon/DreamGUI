@@ -224,7 +224,7 @@ public:
 	UDreamUIPrefab();
 	friend class FDreamUIPrefabCustomization;
 	friend class UDreamUIPrefabFactory;
-	friend class FDreamUIPrefabEditor;
+	friend class FDreamWidgetBlueprintEditor;
 
 private:
 	/** The single root behaviour used as this prefab's logic host. The component instance remains part of BinaryData. */

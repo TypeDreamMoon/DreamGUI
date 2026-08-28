@@ -23,7 +23,7 @@
 #include "DetailCustomization/DreamPanelSlotCustomization.h"
 #include "Editor/UnrealEdEngine.h"
 #include "PrefabSystem/DreamUIPrefabHelperObject.h"
-#include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "Utils/DreamUIUtils.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
@@ -168,9 +168,9 @@ void FDreamWidgetCustomization::AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuil
 		return;
 	}
 	UDreamWidget* Widget = TargetScriptArray[0].Get();
-	const TWeakPtr<FDreamUIPrefabEditor> EditorPtr = FDreamUIPrefabEditor::GetEditorByWorld(Widget->GetWorld());
-	FDreamUIPrefabEditor* Editor = EditorPtr.IsValid() ? EditorPtr.Pin().Get() : nullptr;
-	if (Editor == nullptr || Editor->GetLoadedRootWidget() != Widget)
+	const TWeakPtr<FDreamWidgetBlueprintEditor> EditorPtr = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld());
+	FDreamWidgetBlueprintEditor* Editor = EditorPtr.IsValid() ? EditorPtr.Pin().Get() : nullptr;
+	if (Editor == nullptr || Editor->GetPreviewRootWidget() != Widget)
 	{
 		return;
 	}
@@ -226,7 +226,7 @@ void FDreamWidgetCustomization::AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuil
 
 TOptional<int32> FDreamWidgetCustomization::GetDesignScreenSizeAxis(int32 AxisIndex) const
 {
-	if (const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorForCanvasSize.Pin())
 	{
 		const FIntPoint Size = Editor->GetDesignerViewportSize();
 		return AxisIndex == 0 ? Size.X : Size.Y;
@@ -236,7 +236,7 @@ TOptional<int32> FDreamWidgetCustomization::GetDesignScreenSizeAxis(int32 AxisIn
 
 void FDreamWidgetCustomization::OnDesignScreenSizeAxisCommitted(int32 NewValue, ETextCommit::Type CommitType, int32 AxisIndex)
 {
-	if (const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorForCanvasSize.Pin())
 	{
 		FIntPoint Size = Editor->GetDesignerViewportSize();
 		(AxisIndex == 0 ? Size.X : Size.Y) = FMath::Max(1, NewValue);
@@ -246,7 +246,7 @@ void FDreamWidgetCustomization::OnDesignScreenSizeAxisCommitted(int32 NewValue, 
 
 FText FDreamWidgetCustomization::GetCanvasSizeText() const
 {
-	if (const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorForCanvasSize.Pin())
 	{
 		const FIntPoint Size = Editor->GetDesignerCanvasSize();
 		return FText::FromString(FString::Printf(TEXT("%d x %d"), Size.X, Size.Y));

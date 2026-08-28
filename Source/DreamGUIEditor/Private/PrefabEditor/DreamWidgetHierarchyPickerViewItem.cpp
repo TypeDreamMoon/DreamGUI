@@ -3,7 +3,7 @@
 
 #include "DreamWidgetHierarchyPickerViewItem.h"
 #include "Styling/CoreStyle.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "ScopedTransaction.h"
 #include "Editor.h"
 #include "DreamGUIEditorModule.h"

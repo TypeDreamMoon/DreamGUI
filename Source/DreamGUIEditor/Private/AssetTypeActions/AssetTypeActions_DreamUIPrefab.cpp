@@ -4,7 +4,10 @@
 #include "Misc/PackageName.h"
 #include "Algo/Transform.h"
 #include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Styling/AppStyle.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_DreamUIPrefab"
 
@@ -28,15 +31,14 @@ void FAssetTypeActions_DreamUIPrefab::OpenAssetEditor( const TArray<UObject*>& I
 {
 	//FAssetTypeActions_Base::OpenAssetEditor(InObjects, EditWithinLevelEditor);
 
-	const EToolkitMode::Type Mode = EditWithinLevelEditor.IsValid() ? EToolkitMode::WorldCentric : EToolkitMode::Standalone;
-	for (auto ObjIt = InObjects.CreateConstIterator(); ObjIt; ++ObjIt)
-	{
-		if (auto DreamGUIPrefab = Cast<UDreamUIPrefab>(*ObjIt))
-		{
-			TSharedRef<FDreamUIPrefabEditor> NewPrefabEditor(new FDreamUIPrefabEditor());
-			NewPrefabEditor->InitPrefabEditor(Mode, EditWithinLevelEditor, DreamGUIPrefab);
-		}
-	}
+	// A prefab has no editor any more. The designer edits a UDreamWidgetBlueprint, and the way to
+	// get one from a prefab is to convert it -- which is a real, verified operation, unlike keeping
+	// a second authoring surface alive for a format nothing produces.
+	FNotificationInfo Info(NSLOCTEXT("DreamUIPrefab", "PrefabEditorRetired",
+		"DreamUI prefabs are no longer edited directly. Right-click the asset and choose \"Convert to Widget Blueprint\"."));
+	Info.Image = FAppStyle::GetBrush(TEXT("Icons.InfoWithColor"));
+	Info.ExpireDuration = 8.0f;
+	FSlateNotificationManager::Get().AddNotification(Info);
 }
 
 uint32 FAssetTypeActions_DreamUIPrefab::GetCategories()

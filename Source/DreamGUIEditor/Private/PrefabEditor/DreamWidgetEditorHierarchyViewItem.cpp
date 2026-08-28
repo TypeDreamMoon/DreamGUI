@@ -9,7 +9,7 @@
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Styling/CoreStyle.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "ScopedTransaction.h"
 #include "EditorFontGlyphs.h"
 #include "Editor.h"
@@ -93,7 +93,7 @@ const UDreamWidget* DreamWidgetHierarchyDrop::GetLockOwnerForDropZone(const UDre
 	return Parent != nullptr ? Parent : TargetItem;
 }
 
-TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FDreamUIPrefabEditor> Manager, UDreamWidget* TargetItem, TOptional<int32> Index)
+TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FDreamWidgetBlueprintEditor> Manager, UDreamWidget* TargetItem, TOptional<int32> Index)
 {
 	auto TargetTemplate = TargetItem;
 	if (TargetTemplate && (DropZone == EItemDropZone::AboveItem || DropZone == EItemDropZone::BelowItem))
@@ -198,7 +198,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			{
 				if (Manager.IsValid())
 				{
-					Manager->GetPrefabHelperObject()->SetAnythingDirty();
+					Manager->MarkDesignChanged();
 				}
 				NewParent->SetFlags(RF_Transactional);
 				NewParent->Modify();
@@ -259,14 +259,15 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 }
 
 
-void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<UDreamWidget> InModel, TSharedPtr<SDreamWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FDreamUIPrefabEditor> InManager)
+void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<UDreamWidget> InModel, TSharedPtr<SDreamWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FDreamWidgetBlueprintEditor> InManager)
 {
 	Widget = InModel;
 	MouseEnter = InArgs._MouseEnter;
 	MouseExit = InArgs._MouseExit;
 	HierarchyView = InHierarchyView;
 	Manager = InManager;
-	auto PrefabHelperObject = InManager.IsValid() ? InManager->GetPrefabHelperObject() : nullptr;
+	// No sub prefabs: every gate below that asked the helper now has one answer.
+	UDreamUIPrefabHelperObject* PrefabHelperObject = nullptr;
 
 	STableRow::Construct(
 		STableRow::FArguments()
@@ -568,7 +569,7 @@ TOptional<EItemDropZone> SDreamWidgetEditorHierarchyViewItem::HandleCanAcceptDro
 		auto AssetDragDropOp = StaticCastSharedPtr<FAssetDragDropOp>(DragDropOp);
 		if (AssetDragDropOp->GetAssets().Num() > 0)
 		{
-			auto EditingPrefab = Manager.Pin()->GetPrefabBeingEdited();
+			auto EditingPrefab = Manager.Pin()->GetWidgetBlueprint();
 			TOptional<EItemDropZone> ValidDropZone;
 			for (auto AssetData : AssetDragDropOp->GetAssets())
 			{

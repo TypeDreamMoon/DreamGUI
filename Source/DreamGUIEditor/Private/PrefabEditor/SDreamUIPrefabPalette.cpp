@@ -2,7 +2,7 @@
 
 #include "SDreamUIPrefabPalette.h"
 #include "Core/DreamGUISettings.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "DreamUIEditorTools.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
@@ -103,7 +103,7 @@ SDreamUIPrefabPalette::~SDreamUIPrefabPalette()
 	}
 }
 
-void SDreamUIPrefabPalette::Construct(const FArguments& InArgs, TSharedPtr<FDreamUIPrefabEditor> InPrefabEditor)
+void SDreamUIPrefabPalette::Construct(const FArguments& InArgs, TSharedPtr<FDreamWidgetBlueprintEditor> InPrefabEditor)
 {
 	PrefabEditorPtr = InPrefabEditor;
 	RegistryChangedHandle = FDreamUIControlRegistry::Get().OnChanged().AddSP(SharedThis(this), &SDreamUIPrefabPalette::RebuildList);
@@ -245,12 +245,15 @@ void SDreamUIPrefabPalette::CollectControls(TArray<FItemPtr>& Out)
 void SDreamUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
 {
 	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
+	// Deliberately empty. This section listed prefab assets the palette could drop in as
+	// sub-prefabs; the palette places CLASSES now, and a prefab is not one. Listing them would
+	// offer entries nothing can place. The replacement -- listing the project's Widget Blueprints
+	// here -- belongs with the palette rework, not with retargeting the toolkit.
 	TArray<FAssetData> PrefabAssets;
-	AssetRegistry.GetAssetsByClass(UDreamUIPrefab::StaticClass()->GetClassPathName(), PrefabAssets, true);
 
-	UDreamUIPrefab* EditingPrefab = nullptr;
-	if (auto Editor = PrefabEditorPtr.Pin())EditingPrefab = Editor->GetPrefabBeingEdited();
-	const FName EditingPackage = IsValid(EditingPrefab) ? EditingPrefab->GetOutermost()->GetFName() : NAME_None;
+	UObject* EditingAsset = nullptr;
+	if (auto Editor = PrefabEditorPtr.Pin())EditingAsset = Editor->GetWidgetBlueprint();
+	const FName EditingPackage = IsValid(EditingAsset) ? EditingAsset->GetOutermost()->GetFName() : NAME_None;
 
 	// Whether a candidate already nests the prefab being edited is a question only the loaded asset
 	// can answer, and loading every prefab in the project to ask it would stall the panel. Nesting
@@ -283,7 +286,7 @@ void SDreamUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
 		if (ReferencingPackages.Contains(AssetData.PackageName))
 		{
 			auto Candidate = Cast<UDreamUIPrefab>(AssetData.GetAsset());
-			if (Candidate == nullptr || Candidate->IsPrefabBelongsToThisSubPrefab(EditingPrefab, true))continue;
+			if (Candidate == nullptr)continue;
 		}
 
 		if (!Header.IsValid())
@@ -555,7 +558,7 @@ void SDreamUIPrefabPalette::CreateItem(FItemPtr InItem)
 		[this]() -> UDreamWidget*
 		{
 			if (UDreamWidget* Selected = GetSelectedWidget())return Selected;
-			if (auto Editor = PrefabEditorPtr.Pin())return Editor->GetLoadedRootWidget();
+			if (auto Editor = PrefabEditorPtr.Pin())return Editor->GetPreviewRootWidget();
 			return nullptr;
 		});
 }

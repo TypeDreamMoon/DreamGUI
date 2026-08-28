@@ -5,7 +5,7 @@
 #include "Widgets/SCompoundWidget.h"
 #pragma once
 
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 class UDreamWidget;
 class SDreamWidgetComponentEditor;
 
@@ -31,7 +31,7 @@ private:
 	void OnEditorSelectionChanged();
 	void OnComponentSelectionChanged(const TArray<TWeakObjectPtr<class UDreamUIBehaviour>>& SelectedComponents);
 
-	TWeakPtr<FDreamUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FDreamWidgetBlueprintEditor> PrefabEditorPtr;
 	TWeakObjectPtr<UWorld> World;
 
 	bool IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent);

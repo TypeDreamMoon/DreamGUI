@@ -3,7 +3,7 @@
 
 #include "DreamUIPrefabEditorViewport.h"
 #include "DreamUIPrefabEditorViewportClient.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "DreamUIPrefabEditorViewportToolbar.h"
 #include "SDreamUIPrefabPalette.h"
 #include "Core/DreamUIManager.h"
@@ -13,7 +13,7 @@
 
 #define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorViewport"
 
-void SDreamUIPrefabEditorViewport::Construct(const FArguments& InArgs, TSharedPtr<FDreamUIPrefabEditor> InPrefabEditor, EViewModeIndex InViewMode)
+void SDreamUIPrefabEditorViewport::Construct(const FArguments& InArgs, TSharedPtr<FDreamWidgetBlueprintEditor> InPrefabEditor, EViewModeIndex InViewMode)
 {
 	this->PrefabEditorPtr = InPrefabEditor;
 	this->ViewMode = InViewMode;
@@ -52,7 +52,7 @@ bool SDreamUIPrefabEditorViewport::SummonContextMenu()
 	FSlateApplication& SlateApplication = FSlateApplication::Get();
 	SlateApplication.DismissAllMenus();
 
-	TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	if (!Editor.IsValid())
 	{
 		return false;
@@ -128,7 +128,7 @@ FReply SDreamUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const F
 {
 	if (TSharedPtr<FDreamUIPaletteDragDropOp> PaletteOp = DragDropEvent.GetOperationAs<FDreamUIPaletteDragDropOp>())
 	{
-		TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+		TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
 		const FIntPoint Pixel = DreamUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
@@ -152,7 +152,7 @@ FReply SDreamUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const F
 	if (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid()
 		|| DragDropEvent.GetOperationAs<FHierarchyDreamWidgetDragDropOp>().IsValid())
 	{
-		TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+		TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
 		const FIntPoint Pixel = DreamUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);

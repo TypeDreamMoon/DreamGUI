@@ -3,7 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
@@ -77,13 +77,13 @@ bool FDreamFramingBoundsAreAlwaysAnsweredTest::RunTest(const FString& Parameters
 	// Deliberately poisoned: the failure being pinned is bounds that were never written at all, and
 	// a default-constructed FBoxSphereBounds would hide it by looking plausible.
 	FBoxSphereBounds Bounds(FVector(12345.0, -777.0, 9999.0), FVector(4242.0), 5150.0f);
-	const bool bAnyBounds = FDreamUIPrefabEditor::AccumulateWidgetsBounds(TArray<UDreamWidget*>(), Bounds);
+	const bool bAnyBounds = FDreamWidgetBlueprintEditor::AccumulateWidgetsBounds(TArray<UDreamWidget*>(), Bounds);
 
 	TestFalse(TEXT("an empty prefab contributes no bounds"), bAnyBounds);
 	TestTrue(TEXT("and the out param is zeroed rather than left as it was found"),
 		Bounds.Origin.IsNearlyZero() && Bounds.BoxExtent.IsNearlyZero() && FMath::IsNearlyZero(Bounds.SphereRadius));
 
-	const FBoxSphereBounds Fallback = FDreamUIPrefabEditor::MakeCanvasFramingBounds(FIntPoint(1920, 1080));
+	const FBoxSphereBounds Fallback = FDreamWidgetBlueprintEditor::MakeCanvasFramingBounds(FIntPoint(1920, 1080));
 	TestTrue(TEXT("the fallback framing is finite"), FMath::IsFinite(Fallback.SphereRadius) && !Fallback.Origin.ContainsNaN());
 	TestTrue(TEXT("and covers the canvas"), Fallback.SphereRadius > 0.0f
 		&& FMath::IsNearlyEqual(Fallback.BoxExtent.Y, 960.0, 0.01)
@@ -108,10 +108,10 @@ bool FDreamFramingBoundsUnionActiveWidgetsTest::RunTest(const FString& Parameter
 
 	FBoxSphereBounds Bounds;
 	const TArray<UDreamWidget*> Widgets = { Root.Get(), Child.Get() };
-	TestTrue(TEXT("two active widgets contribute bounds"), FDreamUIPrefabEditor::AccumulateWidgetsBounds(Widgets, Bounds));
+	TestTrue(TEXT("two active widgets contribute bounds"), FDreamWidgetBlueprintEditor::AccumulateWidgetsBounds(Widgets, Bounds));
 
-	const FBox RootBox = FDreamUIPrefabEditor::GetWidgetWorldBox(Root.Get());
-	const FBox ChildBox = FDreamUIPrefabEditor::GetWidgetWorldBox(Child.Get());
+	const FBox RootBox = FDreamWidgetBlueprintEditor::GetWidgetWorldBox(Root.Get());
+	const FBox ChildBox = FDreamWidgetBlueprintEditor::GetWidgetWorldBox(Child.Get());
 	const FBox Union = Bounds.GetBox();
 	TestTrue(TEXT("the union holds the root"), Union.IsInsideOrOn(RootBox.Min) && Union.IsInsideOrOn(RootBox.Max));
 	TestTrue(TEXT("the union holds the child"), Union.IsInsideOrOn(ChildBox.Min) && Union.IsInsideOrOn(ChildBox.Max));
@@ -146,15 +146,15 @@ bool FDreamDesignerZoomRatioTest::RunTest(const FString& Parameters)
 	// Half a pixel per unit now, one pixel per unit wanted: the view has to zoom IN, which is a
 	// smaller ortho zoom. Inverting the ratio zooms the wrong way and still looks like it did something.
 	TestEqual(TEXT("zooming in halves the ortho zoom"),
-		FDreamUIPrefabEditor::DesignerOrthoZoomFor(1000.0f, 2.0f, 1.0f), 500.0f, 0.01f);
+		FDreamWidgetBlueprintEditor::DesignerOrthoZoomFor(1000.0f, 2.0f, 1.0f), 500.0f, 0.01f);
 	// 2 units per pixel already IS half a pixel per unit, so asking for half again is the no-op;
 	// a quarter is the request that actually zooms out.
 	TestEqual(TEXT("asking for the scale it already has changes nothing"),
-		FDreamUIPrefabEditor::DesignerOrthoZoomFor(1000.0f, 2.0f, 0.5f), 1000.0f, 0.01f);
+		FDreamWidgetBlueprintEditor::DesignerOrthoZoomFor(1000.0f, 2.0f, 0.5f), 1000.0f, 0.01f);
 	TestEqual(TEXT("zooming out doubles it"),
-		FDreamUIPrefabEditor::DesignerOrthoZoomFor(1000.0f, 2.0f, 0.25f), 2000.0f, 0.01f);
+		FDreamWidgetBlueprintEditor::DesignerOrthoZoomFor(1000.0f, 2.0f, 0.25f), 2000.0f, 0.01f);
 	TestEqual(TEXT("a viewport with no scale yet leaves the view alone"),
-		FDreamUIPrefabEditor::DesignerOrthoZoomFor(1000.0f, 0.0f, 1.0f), 1000.0f, 0.01f);
+		FDreamWidgetBlueprintEditor::DesignerOrthoZoomFor(1000.0f, 0.0f, 1.0f), 1000.0f, 0.01f);
 	return true;
 }
 
@@ -167,13 +167,13 @@ bool FDreamDesignerDesiredSizeTest::RunTest(const FString& Parameters)
 {
 	const FIntPoint Current(1920, 1080);
 	TestTrue(TEXT("a measured content size becomes the canvas"),
-		FDreamUIPrefabEditor::DesignerViewportSizeFromDesired(FVector2D(321.4, 200.6), Current) == FIntPoint(321, 201));
+		FDreamWidgetBlueprintEditor::DesignerViewportSizeFromDesired(FVector2D(321.4, 200.6), Current) == FIntPoint(321, 201));
 	// Zero is a measurement that failed, not a request for a canvas with no width.
 	TestTrue(TEXT("an axis that measured nothing keeps the canvas it had"),
-		FDreamUIPrefabEditor::DesignerViewportSizeFromDesired(FVector2D(0.0, 200.0), Current) == FIntPoint(1920, 200));
+		FDreamWidgetBlueprintEditor::DesignerViewportSizeFromDesired(FVector2D(0.0, 200.0), Current) == FIntPoint(1920, 200));
 	const double NotANumber = std::numeric_limits<double>::quiet_NaN();
 	TestTrue(TEXT("and so does one that measured nonsense"),
-		FDreamUIPrefabEditor::DesignerViewportSizeFromDesired(FVector2D(NotANumber, NotANumber), Current) == Current);
+		FDreamWidgetBlueprintEditor::DesignerViewportSizeFromDesired(FVector2D(NotANumber, NotANumber), Current) == Current);
 	return true;
 }
 

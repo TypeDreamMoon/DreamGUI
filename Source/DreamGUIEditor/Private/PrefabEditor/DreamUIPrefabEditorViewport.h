@@ -8,7 +8,7 @@
 #include "SEditorViewport.h"
 #include "SCommonEditorViewportToolbarBase.h"
 
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 class FDreamUIPrefabEditorViewportClient;
 
 //Encapsulates a simple scene setup for preview or thumbnail rendering.
@@ -18,7 +18,7 @@ public:
 	SLATE_BEGIN_ARGS(SDreamUIPrefabEditorViewport) {}
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, TSharedPtr<FDreamUIPrefabEditor> InPrefabEditor, EViewModeIndex InViewMode);
+	void Construct(const FArguments& InArgs, TSharedPtr<FDreamWidgetBlueprintEditor> InPrefabEditor, EViewModeIndex InViewMode);
 
 	// SEditorViewport interface
 	virtual void BindCommands() override;
@@ -36,12 +36,12 @@ public:
 	virtual TSharedPtr<FExtender> GetExtenders() const override;
 	virtual void OnFloatingButtonClicked() override;
 	// End of ICommonEditorViewportToolbarInfoProvider interface
-	TSharedPtr<FDreamUIPrefabEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
+	TSharedPtr<FDreamWidgetBlueprintEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
 	bool SummonContextMenu();
 
 private:
 	// Pointer back to owning sprite editor instance (the keeper of state)
-	TWeakPtr<FDreamUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FDreamWidgetBlueprintEditor> PrefabEditorPtr;
 	EViewModeIndex ViewMode = EViewModeIndex::VMI_Lit;
 
 	// Viewport client

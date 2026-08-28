@@ -1,56 +1,28 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
+
+#pragma once
 
 #include "CoreMinimal.h"
 #include "UObject/GCObject.h"
 #include "Toolkits/IToolkitHost.h"
 #include "Toolkits/AssetEditorToolkit.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#pragma once
-
+#include "TickableEditorObject.h"
 #include "Engine/DeveloperSettings.h"
-#include "DreamUIPrefabEditor.generated.h"
+#include "DreamWidgetBlueprintEditor.generated.h"
 
 class SDreamUIPrefabSequenceEditor;
 class UDreamUIPrefabSequence;
 class SDreamWidgetEditorHierarchyView;
 class UDreamWidget;
-class UDreamUIPrefab;
+class UDreamWidgetBlueprint;
 class SDreamUIPrefabEditorViewport;
 class SDreamUIPrefabEditorDetails;
 class AActor;
-class UDreamUIPrefabHelperObject;
-class UDreamUIBehaviour;
-class IDreamUIBehaviourEditorBackend;
-enum class EDreamUIBehaviourHandlerType : uint8;
-class IMessageLogListing;
+class FDreamUIPrefabInstanceScene;
+class FDreamWidgetPreviewHost;
 class UToolMenu;
-struct FDreamUISubPrefabData;
 struct FDreamUIControlDescriptor;
-namespace DreamUIPrefabBehaviourUtils { struct FDiscoveredEvent; }
-
-enum class EDreamUIPrefabApplyStatus : uint8
-{
-	Unknown,
-	Success,
-	Warning,
-	Error,
-};
-
-enum class EDreamUIPrefabCompilerSeverity : uint8
-{
-	Info,
-	Warning,
-	Error,
-};
-
-struct FDreamUIPrefabCompilerIssue
-{
-	EDreamUIPrefabCompilerSeverity Severity = EDreamUIPrefabCompilerSeverity::Warning;
-	FString Message;
-	TWeakObjectPtr<UObject> SourceObject;
-	TWeakObjectPtr<UDreamUIPrefabSequence> Animation;
-};
 
 /** UMG-toolbar-style alignment target for a multi-widget selection (DreamGUI UI plane is YZ: horizontal=Y, vertical=Z). */
 enum class EDreamUIWidgetAlignType : uint8
@@ -71,11 +43,11 @@ enum class EDreamUIDesignerSizeRule : uint8
 };
 
 /**
- * How this author's designer behaves, as opposed to what the prefab is. Grid snapping, the grid size
- * and the overlays are preferences: kept on the prefab asset they dirtied prefabs whose content
- * nobody had touched, and travelled to teammates in the diff; kept in DefaultEditor.ini they were
- * still one shared project-wide value. Per-project-per-user is the same home UMG's designer uses.
- * The canvas size and the lock set stay on the asset, because those describe the prefab itself.
+ * How this author's designer behaves, as opposed to what the asset is. Grid snapping, the grid size
+ * and the overlays are preferences: kept on the asset they dirtied assets whose content nobody had
+ * touched, and travelled to teammates in the diff; kept in DefaultEditor.ini they were still one
+ * shared project-wide value. Per-project-per-user is the same home UMG's designer uses. The canvas
+ * size and the lock set stay on the asset, because those describe the hierarchy itself.
  */
 UCLASS(config = EditorPerProjectUserSettings, meta = (DisplayName = "DreamUI Designer"))
 class UDreamUIDesignerSettings : public UDeveloperSettings
@@ -97,7 +69,7 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowLayoutDebug = false;
 	/**
-	 * Honour the designer locks recorded on the prefab. Turning it off reaches a locked background
+	 * Honour the designer locks recorded on the asset. Turning it off reaches a locked background
 	 * for one edit without unlocking it, which is the only way back from a lock that would otherwise
 	 * have to be undone and redone. The locks themselves are untouched: this decides who reads them.
 	 */
@@ -109,15 +81,35 @@ public:
 };
 
 /**
+ * The designer for one UDreamWidgetBlueprint.
  *
+ * This is the prefab editor's toolkit, retargeted rather than rewritten: the viewport, hierarchy,
+ * palette and details panels are the same 11.8k lines, and what changed underneath them is what
+ * they are looking at.
+ *
+ * ## Two halves
+ *
+ * The asset holds an inert object graph -- template widgets outered to the Blueprint, with no world,
+ * never registered, unable to lay out or draw. So there are two halves and the split is deliberate
+ * (see FDreamWidgetPreviewHost, which owns it): STRUCTURE is edited on the template and the preview
+ * is rebuilt from it, while VALUES are edited on the live preview and mirrored back. Every panel
+ * here sees the preview, because the preview is the only half that can answer a question about
+ * geometry; anything that changes the shape of the hierarchy goes through DreamWidgetTreeEditing.
+ *
+ * ## What is gone from the prefab editor
+ *
+ * Apply, and everything that hung off it: a prefab was edited live and serialised back on demand,
+ * so there was a second copy to push and a status to report. A Blueprint is edited directly and
+ * compiled. Sub-prefabs, because nesting is a class reference. The companion behaviour blueprint,
+ * because the Widget Blueprint is the logic host now.
  */
-class FDreamUIPrefabEditor : public FAssetEditorToolkit
-	, public FGCObject, public FEditorUndoClient
+class FDreamWidgetBlueprintEditor : public FAssetEditorToolkit
+	, public FGCObject, public FEditorUndoClient, public FTickableEditorObject
 {
 public:
-	
-	FDreamUIPrefabEditor();
-	virtual ~FDreamUIPrefabEditor()override;
+
+	FDreamWidgetBlueprintEditor();
+	virtual ~FDreamWidgetBlueprintEditor()override;
 
 	// IToolkit interface
 	virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& TabManager) override;
@@ -140,35 +132,36 @@ public:
 	virtual FString GetDocumentationLink() const override;
 	virtual void OnToolkitHostingStarted(const TSharedRef<class IToolkit>& Toolkit) override;
 	virtual void OnToolkitHostingFinished(const TSharedRef<class IToolkit>& Toolkit) override;
+	/** Compile, then save. Compiling is what makes an authoring edit reach the class instances are built from. */
 	virtual void SaveAsset_Execute()override;
+	// End of FAssetEditorToolkit
+
+	// FTickableEditorObject -- FAssetEditorToolkit does not tick, and a stale preview has to be
+	// rebuilt somewhere. FBlueprintEditor gets the same interface, which is where this lands in D1c.
+	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override;
+	// End of FTickableEditorObject
 private:
 	// End of FAssetEditorToolkit
 	void SyncSelection();
 	void HandlePostTransaction(bool bSuccess);
 	bool bIsSelecting = false;
 	bool bRegisteredForUndo = false;
-	EDreamUIPrefabApplyStatus LastApplyStatus = EDreamUIPrefabApplyStatus::Unknown;
-	bool bLastApplySerializationSucceeded = false;
-	int32 LastApplyWarningCount = 0;
-	int32 LastApplyErrorCount = 0;
-	void OnApply();
-	bool ApplyPrefabChanges();
-	void SaveAppliedPrefabToDisk();
 public:
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
-	virtual FString GetReferencerName()const override { return TEXT("DreamUIPrefabEditor"); }
+	virtual FString GetReferencerName()const override { return TEXT("DreamWidgetBlueprintEditor"); }
 
 	void SelectWidgets(const TSet<UDreamWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor = true);
 	const TArray<TWeakObjectPtr<UDreamWidget>>& GetSelectedWidgets(){return SelectedWidgets;}
 	bool IsWidgetHiddenInDesigner(const UDreamWidget* Widget) const;
 	void SetWidgetHiddenInDesigner(UDreamWidget* Widget, bool bHidden);
-	/** Whether the prefab records this widget as locked, which is what the padlock column reports. */
+	/** Whether the asset records this widget as locked, which is what the padlock column reports. */
 	bool IsWidgetLockedInDesigner(const UDreamWidget* Widget) const;
 	/**
 	 * Whether a gesture must refuse this widget: locked AND locks are being honoured. Every picking,
 	 * selection and drag gate asks this one rather than the record, so the toolbar's respect-locks
-	 * switch reaches all of them and the padlock still shows what the prefab says.
+	 * switch reaches all of them and the padlock still shows what the asset says.
 	 */
 	bool IsWidgetLockedForInteraction(const UDreamWidget* Widget) const;
 	void SetWidgetLockedInDesigner(UDreamWidget* Widget, bool bLocked, bool bRecursive = true);
@@ -190,12 +183,12 @@ public:
 	/** Device resolution being previewed; assets predating the scale rule fall back to the canvas size. */
 	FIntPoint GetDesignerViewportSize();
 	/**
-	 * Run the prefab's own canvas-scaler rule over a device resolution: the canvas size that rule
-	 * produces, and the scale the canvas would report. Returns false when the prefab's root carries
-	 * no canvas of its own, leaving the canvas size equal to the device resolution.
+	 * Run the hierarchy's own canvas-scaler rule over a device resolution: the canvas size that rule
+	 * produces, and the scale the canvas would report. Returns false when the root carries no canvas
+	 * of its own, leaving the canvas size equal to the device resolution.
 	 */
 	bool CalculateDesignerCanvasFor(FIntPoint InViewportSize, FIntPoint& OutCanvasSize, float& OutScale);
-	/** Preview a device resolution: sizes the design canvas by the prefab's own rule, with undo. */
+	/** Preview a device resolution: sizes the design canvas by the hierarchy's own rule, with undo. */
 	void SetDesignerViewportSize(FIntPoint NewViewportSize);
 	void ToggleDesignerGuides();
 	bool GetShowLayoutDebug() const;
@@ -213,27 +206,28 @@ public:
 	EDreamUIDesignerSizeRule GetDesignerSizeRule() const { return DesignerSizeRule; }
 	/** Choosing Desired sizes the canvas to the content once; it does not keep following it. */
 	void SetDesignerSizeRule(EDreamUIDesignerSizeRule InRule);
-	/** What the prefab's content measures, or false when nothing in it can be measured. */
+	/** What the hierarchy's content measures, or false when nothing in it can be measured. */
 	bool GetDesignerDesiredSize(FVector2D& OutSize);
 	/** A canvas size for a measured content size, keeping InFallback on any axis that measured nothing. */
 	static FIntPoint DesignerViewportSizeFromDesired(const FVector2D& InDesiredSize, FIntPoint InFallback);
 	TSharedPtr<SWidget> BuildWidgetContextMenu();
 
-	void InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, UDreamUIPrefab* InPrefab);
+	void InitDesigner(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, UDreamWidgetBlueprint* InBlueprint);
 
 	/** Try to handle a drag-drop operation */
 	FReply TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, UDreamWidget* InParentWidget = nullptr);
 
 	FDreamUIPrefabInstanceScene* GetPreviewScene();
 	UWorld* GetWorld();
-	UDreamUIPrefab* GetPrefabBeingEdited()const { return PrefabBeingEdited; }
+	UDreamWidgetBlueprint* GetWidgetBlueprint()const { return BlueprintBeingEdited; }
+	TSharedPtr<FDreamWidgetPreviewHost> GetPreviewHost()const { return PreviewHost; }
 
-	static FDreamUIPrefabEditor* GetEditorForPrefabIfValid(UDreamUIPrefab* InPrefab);
-	static bool WorldIsPrefabEditor(UWorld* InWorld);
-	static TWeakPtr<FDreamUIPrefabEditor> GetEditorByWorld(UWorld* InWorld);
+	static bool WorldIsDesigner(UWorld* InWorld);
+	static TWeakPtr<FDreamWidgetBlueprintEditor> GetEditorByWorld(UWorld* InWorld);
 	static bool WidgetIsRootAgent(UDreamWidget* InWidget);
-	static void IterateAllPrefabEditor(const TFunction<void(FDreamUIPrefabEditor*)>& InFunction);
-	bool RefreshOnSubPrefabDirty(UDreamUIPrefab* InSubPrefab);
+	static void IterateAllDesigners(const TFunction<void(FDreamWidgetBlueprintEditor*)>& InFunction);
+	/** Every open designer whose asset is InBlueprint rebuilds its preview. */
+	static void RefreshDesignersFor(UDreamWidgetBlueprint* InBlueprint);
 
 	/** One widget's own extent in world space: its drawn geometry when it has any, its rect otherwise. */
 	static FBox GetWidgetWorldBox(const UDreamWidget* InWidget);
@@ -242,24 +236,25 @@ public:
 	 * case OutResult is zeroed -- never left as it was found.
 	 */
 	static bool AccumulateWidgetsBounds(const TArray<UDreamWidget*>& InWidgets, FBoxSphereBounds& OutResult);
-	/** Where the design canvas is, for framing a prefab that has nothing active to frame. */
+	/** Where the design canvas is, for framing a hierarchy that has nothing active to frame. */
 	static FBoxSphereBounds MakeCanvasFramingBounds(FIntPoint InCanvasSize);
 	bool GetSelectedObjectsBounds(FBoxSphereBounds& OutResult);
 	bool GetAllObjectsBounds(FBoxSphereBounds& OutResult);
 	/** The same union, already fallen back to the canvas, for callers with no way to say "nothing". */
 	FBoxSphereBounds GetAllObjectsBounds();
-	bool WidgetBelongsToSubPrefab(UDreamWidget* InSubPrefabActor);
-	bool WidgetIsSubPrefabRoot(UDreamWidget* InSubPrefabRootWidget);
-	FDreamUISubPrefabData GetSubPrefabDataForActor(UDreamWidget* InSubPrefabWidget);
 	void GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType);
 
-	void OpenSubPrefab(UDreamWidget* InSubPrefabWidget);
-	void SelectSubPrefab(UDreamWidget* InSubPrefabWidget);
 	bool GetAnythingDirty()const;
 
-	UDreamUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabBeingEdited->GetPrefabHelperObject(); }
 	UDreamWidget* GetRootAgentWidget();
-	UDreamWidget* GetLoadedRootWidget();
+	/**
+	 * Root of the PREVIEW hierarchy -- the counterpart of the authoring tree's root, and what every
+	 * panel that draws or picks is looking at. The authoring root is
+	 * GetWidgetBlueprint()->WidgetTree->RootWidget, which is inert.
+	 */
+	UDreamWidget* GetPreviewRootWidget();
+	/** The template counterpart of a preview widget, for anything about to write authored data. */
+	UDreamWidget* GetTemplateWidget(const UDreamWidget* InPreviewWidget) const;
 
 	TSharedPtr<SDreamUIPrefabSequenceEditor> GetSequencerEditor()const{return SequencerPtr;}
 	static FName GetSequencerTabID();
@@ -269,7 +264,7 @@ public:
 	/**
 	 * The animation currently selected in the animation list, or nullptr when none is.
 	 * While one is selected the widgets in the viewport are being driven by Sequencer,
-	 * so what is on screen is the animated pose rather than the prefab's design values.
+	 * so what is on screen is the animated pose rather than the authored design values.
 	 */
 	UDreamUIPrefabSequence* GetAnimationBeingEdited()const;
 	bool IsInAnimationEditMode()const { return GetAnimationBeingEdited() != nullptr; }
@@ -277,15 +272,16 @@ public:
 	/** Fires whenever the selected set of widgets changes */
 	FSimpleMulticastDelegate OnSelectionChanged;
 private:
-	TObjectPtr<UDreamUIPrefab> PrefabBeingEdited = nullptr;
-	static TArray<FDreamUIPrefabEditor*> PrefabEditorInstanceCollection;
+	TObjectPtr<UDreamWidgetBlueprint> BlueprintBeingEdited = nullptr;
+	/** The preview world, the design canvas, the live instance and the template correspondence. */
+	TSharedPtr<FDreamWidgetPreviewHost> PreviewHost;
+	static TArray<FDreamWidgetBlueprintEditor*> DesignerInstances;
 
 	TSharedPtr<SDreamUIPrefabEditorViewport> ViewportPtr;
 	TSharedPtr<SDreamUIPrefabEditorDetails> DetailsPtr;
 	TSharedPtr<SDreamWidgetEditorHierarchyView> OutlinerPtr;
 	TSharedPtr<class SDreamUIPrefabPalette> PalettePtr;
 	TSharedPtr<SDreamUIPrefabSequenceEditor> SequencerPtr;
-	TSharedPtr<IMessageLogListing> CompilerResultsListing;
 
 	TArray<TWeakObjectPtr<UDreamWidget>> SelectedWidgets;
 	/** Session state: the rule decided a canvas size, the size itself is what got stored. */
@@ -293,45 +289,8 @@ private:
 private:
 
 	void BindCommands();
-	//void ExtendMenu();
 	void ExtendToolbar();
-	void GenerateApplyOptionsMenu(UToolMenu* InMenu);
-	void GenerateBehaviourOptionsMenu(UToolMenu* InMenu);
-	void GenerateSaveOnApplyMenu(UToolMenu* InMenu);
-	void SetSaveOnApplyMode(int32 InMode);
-	bool IsSaveOnApplyMode(int32 InMode)const;
-
-	FText GetApplyButtonStatusTooltip()const;
-	FSlateIcon GetApplyButtonStatusImage()const;
-
-	void OnOpenPrefabHelperObjectDetailsPanel();
 public:
-	/**
-	 * UMG-WidgetBlueprint-style logic host: open the prefab's companion behaviour blueprint
-	 * (a UDreamUIBehaviour script on the root widget), creating & attaching "BP_<PrefabName>"
-	 * next to the prefab asset if there is none yet.
-	 */
-	void CreateOrOpenBehaviourBlueprint();
-	void CreateAndAssignBehaviourBlueprint();
-	void PickBehaviourClass();
-	void RemovePrimaryBehaviour();
-	UClass* GetEffectiveBehaviourClass() const;
-	UDreamUIBehaviour* GetPrimaryBehaviour() const;
-	bool CanAuthorBehaviour() const;
-	/**
-	 * UMG "Is Variable" counterpart: add a member variable to the companion behaviour blueprint
-	 * (created on demand) typed to InTarget's class, and bind it to InTarget. Serialized with
-	 * the prefab (GUID-remapped), so it survives renames and needs no runtime lookup.
-	 */
-	void PromoteToBehaviourVariable(UObject* InTarget);
-	/**
-	 * UMG "Event +" counterpart: generate a signature-matching handler on the companion
-	 * behaviour blueprint (created on demand), wire the given event to it, and open the
-	 * blueprint at the new function. InEvent is one FDreamUIEventDelegate discovered on a
-	 * selected widget's behaviour (see DreamUIPrefabBehaviourUtils::DiscoverEvents).
-	 */
-	void AddEventHandler(const DreamUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent, EDreamUIBehaviourHandlerType InHandlerType);
-	bool CanAddEventHandler(EDreamUIBehaviourHandlerType InHandlerType) const;
 	/**
 	 * UMG-toolbar-style align: move every selected sibling widget so the chosen edge/center
 	 * lines up with the selection's overall bound. Operates in the shared parent's frame;
@@ -357,8 +316,8 @@ public:
 	 * and has to carry the children across; here the panel is an instanced UDreamLayoutContainer
 	 * hanging off the widget, so the swap touches nothing else -- name, parent, sibling index,
 	 * anchors, visual, components, slot and children all stay as they are. Needs exactly one
-	 * selected widget that already has a layout container, and refuses widgets owned by a
-	 * sub prefab. Returns quietly when the target panel cannot hold that many children.
+	 * selected widget that already has a layout container. Returns quietly when the target panel
+	 * cannot hold that many children.
 	 */
 	void ReplaceSelectedWidgetLayout(UClass* PanelClass);
 	/**
@@ -368,15 +327,6 @@ public:
 	 * InExcludeClass drops the one a widget already has, for menus where offering it does nothing.
 	 */
 	static void CollectLayoutPanelDescriptors(const UClass* InExcludeClass, TArray<const FDreamUIControlDescriptor*>& OutDescriptors);
-	/**
-	 * UMG "Find References": search the prefab's companion behaviour blueprint for the variable
-	 * the selected widget binds to. UMG can search by widget name because there the variable is
-	 * the widget; here the link is the same sanitized-display-name convention auto-bind uses, so
-	 * that is what gets searched. Does nothing (with a note) when the prefab has no companion
-	 * blueprint -- searching should never be the thing that creates one.
-	 */
-	void FindReferencesForSelectedWidget();
-	bool CanFindReferencesForSelectedWidget() const;
 	void SaveEditorState();
 	/**
 	 * Flip the preview between the canvas's own virtual camera (ScreenSpaceOverlay -- what play
@@ -388,22 +338,30 @@ public:
 	/** Stand the viewport camera at the canvas's own virtual camera. See the viewport client. */
 	void FrameViewportFromCanvasEye();
 	bool CanFrameViewportFromCanvasEye()const;
+	/**
+	 * Write the authored geometry of these PREVIEW widgets onto their templates.
+	 *
+	 * Every gesture that moves a widget -- a drag, a nudge, Align, Distribute -- writes onto the
+	 * preview, because the preview is where layout runs and where the result can be seen. The
+	 * preview is thrown away and rebuilt from the template, so a gesture that stops there is a
+	 * gesture that silently did nothing. This is the other half of it.
+	 */
+	void CommitWidgetGeometryToTemplate(TConstArrayView<UDreamWidget*> InPreviewWidgets);
+	/** The same, for whatever is selected -- which is what every menu-driven gesture operates on. */
+	void CommitSelectedWidgetGeometryToTemplate();
+	/**
+	 * Say that the authored hierarchy changed in a way that does not add or remove a widget.
+	 *
+	 * Marks the Blueprint modified and nothing else. It deliberately does NOT rebuild the preview:
+	 * the values were written onto the preview, so it is already showing them, and a rebuild in the
+	 * middle of a drag would destroy the widget being dragged. Structural changes go through
+	 * DreamWidgetTreeEditing, whose MarkBlueprintAsStructurallyModified reaches the preview host on
+	 * its own.
+	 */
+	void MarkDesignChanged();
 private:
-	FGuid FindOrAddWidgetGuid(UDreamWidget* Widget);
-	FGuid FindWidgetGuid(const UDreamWidget* Widget) const;
+	/** Push the asset's recorded hidden set onto the preview widgets it names. */
 	void ApplyDesignerState();
-	/** Companion behaviour blueprint for this prefab, created + attached to the root widget on demand. Null on failure. */
-	class UBlueprint* GetOrCreateBehaviourBlueprint();
-	bool AssignBehaviourClass(UClass* InClass);
-	bool ReplacePrimaryBehaviour(UDreamUIBehaviour* InOldBehaviour, UDreamUIBehaviour* InNewBehaviour, bool bNewBehaviourWasCreated);
-	TSharedPtr<IDreamUIBehaviourEditorBackend> GetBehaviourEditorBackend() const;
-	TArray<FString> PendingBehaviourWarnings;
-	void ValidatePrefabReferences(TArray<FDreamUIPrefabCompilerIssue>& OutIssues) const;
-	void PublishCompilerResults(const FText& PageTitle, const TArray<FDreamUIPrefabCompilerIssue>& Issues,
-		const FText& Summary, bool bAutoOpenOnProblems);
-	void RunInitialReferenceValidation();
-	void NavigateToCompilerObject(TWeakObjectPtr<UObject> InObject);
-	void NavigateToAnimation(TWeakObjectPtr<UDreamUIPrefabSequence> InAnimation);
 public:
 
 	/**
@@ -418,7 +376,7 @@ public:
 		FSlateIcon Icon;
 		/** Builds the content for a freshly spawned dock tab. */
 		TFunction<TSharedRef<SWidget>()> MakeContent;
-		/** Runs before MakeContent so a panel can refresh against the current prefab. */
+		/** Runs before MakeContent so a panel can refresh against the current asset. */
 		TFunction<void()> OnSpawn;
 		/** Runs when the user closes the tab, so a panel can drop editor-wide state it was driving. */
 		TFunction<void()> OnClosed;
@@ -431,8 +389,6 @@ public:
 	TSharedRef<SDockTab> SpawnTabFromDescriptor(const FSpawnTabArgs& Args, FName TabId);
 	/** The layout a fresh install gets; the name carries a version so a change here wins over saved layouts. */
 	static TSharedRef<FTabManager::FLayout> CreateDefaultLayout();
-	bool HasAnySubPrefab() const;
-	void GenerateDebugMenu(UToolMenu* InMenu);
 
 	bool IsFilteredActor(const AActor* Actor);
 	void OnOutlinerActorDoubleClick(AActor* Actor);

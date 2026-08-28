@@ -115,6 +115,19 @@ public:
 	 */
 	bool MigratePropertyToTemplate(UDreamWidget* InPreviewWidget, FEditPropertyChain& InChain, bool bIsModify);
 
+	/**
+	 * Copy named properties straight from a preview widget onto its template counterpart.
+	 *
+	 * The chain-walking migration above is what a details panel needs, because an edit there can be
+	 * buried inside an instanced sub-object. A designer gesture is not like that: it moves a widget,
+	 * and what it moved is a handful of known properties on the widget itself. This is that case,
+	 * and having it saves every gesture from having to fabricate an FEditPropertyChain.
+	 *
+	 * Returns how many were copied. Zero means the widget has no template -- the design canvas, or
+	 * anything else in the preview world that is not part of the authored hierarchy.
+	 */
+	int32 CopyPreviewValuesToTemplate(UDreamWidget* InPreviewWidget, TConstArrayView<FName> InPropertyNames);
+
 	/** Fires after every rebuild, once the new preview and the name map are both in place. */
 	FSimpleMulticastDelegate OnPreviewRebuilt;
 

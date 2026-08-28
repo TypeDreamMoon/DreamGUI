@@ -356,6 +356,36 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UDreamWidget* InPreviewW
 	return bMigrated;
 }
 
+int32 FDreamWidgetPreviewHost::CopyPreviewValuesToTemplate(UDreamWidget* InPreviewWidget, TConstArrayView<FName> InPropertyNames)
+{
+	UDreamWidget* Template = FindTemplateForPreview(InPreviewWidget);
+	if (Template == nullptr || Template->GetClass() != InPreviewWidget->GetClass())
+	{
+		return 0;
+	}
+	Template->SetFlags(RF_Transactional);
+	Template->Modify();
+
+	int32 Copied = 0;
+	for (const FName PropertyName : InPropertyNames)
+	{
+		FProperty* Property = InPreviewWidget->GetClass()->FindPropertyByName(PropertyName);
+		if (Property == nullptr)
+		{
+			// A name that does not resolve is a rename nobody followed through, and it would
+			// otherwise show up as a value that silently stops being saved.
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' is not a property of %s."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *PropertyName.ToString(), *InPreviewWidget->GetClass()->GetName());
+			continue;
+		}
+		if (FObjectEditorUtils::MigratePropertyValue(InPreviewWidget, Property, Template, Property))
+		{
+			Copied++;
+		}
+	}
+	return Copied;
+}
+
 void FDreamWidgetPreviewHost::OnBlueprintChanged(UBlueprint* InBlueprint)
 {
 	if (InBlueprint == Blueprint)

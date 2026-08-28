@@ -3,7 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "PrefabEditor/DreamUIPrefabEditorViewportClient.h"
 #include "DreamUIControlRegistry.h"
 #include "Core/Components/DreamWidget.h"
@@ -163,7 +163,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamSurfacePanelMenuOffersEveryRegisteredPanelTest::RunTest(const FString& Parameters)
 {
 	TArray<const FDreamUIControlDescriptor*> Panels;
-	FDreamUIPrefabEditor::CollectLayoutPanelDescriptors(nullptr, Panels);
+	FDreamWidgetBlueprintEditor::CollectLayoutPanelDescriptors(nullptr, Panels);
 
 	auto Contains = [&Panels](UClass* InClass)
 	{
@@ -215,7 +215,7 @@ bool FDreamSurfacePanelMenuOffersEveryRegisteredPanelTest::RunTest(const FString
 	}
 
 	TArray<const FDreamUIControlDescriptor*> WithoutGrid;
-	FDreamUIPrefabEditor::CollectLayoutPanelDescriptors(UDreamLayoutContainerGridPanel::StaticClass(), WithoutGrid);
+	FDreamWidgetBlueprintEditor::CollectLayoutPanelDescriptors(UDreamLayoutContainerGridPanel::StaticClass(), WithoutGrid);
 	TestEqual(TEXT("excluding the panel a widget already has drops exactly that one"), WithoutGrid.Num(), Panels.Num() - 1);
 	TestFalse(TEXT("and it is the one that is gone"), WithoutGrid.ContainsByPredicate([](const FDreamUIControlDescriptor* Descriptor)
 	{

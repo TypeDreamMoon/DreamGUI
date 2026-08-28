@@ -11,7 +11,7 @@
 #include "Widgets/Views/STreeView.h"
 #include "DreamUIControlRegistry.h"
 
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 class UDreamWidget;
 
 /**
@@ -124,7 +124,7 @@ public:
 	SLATE_END_ARGS()
 
 	virtual ~SDreamUIPrefabPalette() override;
-	void Construct(const FArguments& InArgs, TSharedPtr<FDreamUIPrefabEditor> InPrefabEditor);
+	void Construct(const FArguments& InArgs, TSharedPtr<FDreamWidgetBlueprintEditor> InPrefabEditor);
 	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
 private:
@@ -181,7 +181,7 @@ private:
 	/** The editor's first selected widget, or null -- the parent for created elements. */
 	UDreamWidget* GetSelectedWidget()const;
 
-	TWeakPtr<FDreamUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FDreamWidgetBlueprintEditor> PrefabEditorPtr;
 	TSharedPtr<STreeView<FItemPtr>> TreeView;
 	/** Everything the collectors found, filter-independent; RootItems is derived from it. */
 	TArray<FItemPtr> AllGroups;

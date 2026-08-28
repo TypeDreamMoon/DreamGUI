@@ -11,7 +11,7 @@
 #include "Editor/UnrealEdEngine.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Misc/NotifyHook.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "DetailLayoutBuilder.h"
 #include "DreamWidgetDetailPropertyExtensionHandler.h"
 #include "PrefabSystem/DreamUIPrefab.h"
@@ -55,7 +55,7 @@ namespace DreamUIPrefabDetailsLayout
 void SDreamUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorld)
 {
 	World = InWorld;
-	PrefabEditorPtr = FDreamUIPrefabEditor::GetEditorByWorld(World.Get());
+	PrefabEditorPtr = FDreamWidgetBlueprintEditor::GetEditorByWorld(World.Get());
 	if (PrefabEditorPtr.IsValid())
 	{
 		//if open in PrefabEditor then sync selection by PrefabEditor
@@ -167,7 +167,7 @@ void SDreamUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWo
 
 SDreamUIPrefabEditorDetails::~SDreamUIPrefabEditorDetails()
 {
-	if (TSharedPtr<FDreamUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin())
+	if (TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = PrefabEditorPtr.Pin())
 	{
 		PrefabEditor->OnSelectionChanged.RemoveAll(this);
 	}
@@ -181,7 +181,7 @@ bool SDreamUIPrefabEditorDetails::IsEditorAllowEditing()const
 {
 	if (PrefabEditorPtr.IsValid() && CachedWidget.IsValid())
 	{
-		return !PrefabEditorPtr.Pin()->WidgetBelongsToSubPrefab(CachedWidget.Get());
+		return true;//no sub prefabs: nothing in the design is owned by another asset
 	}
 	return true;
 }

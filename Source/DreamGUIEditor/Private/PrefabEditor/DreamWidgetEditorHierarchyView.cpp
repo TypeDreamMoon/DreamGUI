@@ -4,8 +4,7 @@
 #include "DreamWidgetEditorHierarchyView.h"
 
 #include "DreamGUIEditorModule.h"
-#include "DreamUIPrefabEditor.h"
-#include "DreamUIBehaviourEditorBackend.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "DreamWidgetEditorHierarchyViewItem.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUISettings.h"
@@ -13,7 +12,6 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/DreamUIBehaviour.h"
-#include "DreamUIPrefabBehaviourUtils.h"
 #include "DreamUIControlRegistry.h"
 #include "SDreamUIPrefabPalette.h"//FDreamUIPaletteDragDropOp
 #include "Styling/SlateIconFinder.h"
@@ -30,7 +28,7 @@ UE_DISABLE_OPTIMIZATION
 void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld* InWorld)
 {
 	World = InWorld;
-	Manager = FDreamUIPrefabEditor::GetEditorByWorld(World.Get());
+	Manager = FDreamWidgetBlueprintEditor::GetEditorByWorld(World.Get());
 	bRebuildTreeRequested = false;
 	bIsUpdatingSelection = false;
 
@@ -81,14 +79,17 @@ void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld
 	{
 		Manager.Pin()->OnSelectionChanged.AddRaw(this, &SDreamWidgetEditorHierarchyView::OnEditorSelectionChanged);
 
-		auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject();
-		auto UnexpandWidgetGuidSet = Manager.Pin()->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandedWidgetSet;
+		// Collapsed rows are recorded by name: the preview widget a row shows is a different object
+		// after every rebuild, but the name it shares with its template is not.
+		const TSet<FName>& UnexpandedNames = Manager.Pin()->GetWidgetBlueprint()->DesignerData.UnexpandedWidgets;
 		TSet<TWeakObjectPtr<UDreamWidget>> UnexpendWidgetSet;
-		for (auto& ItemActorGuid : UnexpandWidgetGuidSet)
+		if (UDreamWidget* PreviewRoot = Manager.Pin()->GetPreviewRootWidget())
 		{
-			if (auto ObjectPtr = PrefabHelperObject->MapGuidToObject.Find(ItemActorGuid))
+			TArray<UDreamWidget*> AllWidgets;
+			UDreamWidget::CollectChildrenWidgets(PreviewRoot, AllWidgets, true);
+			for (UDreamWidget* Widget : AllWidgets)
 			{
-				if (auto Widget = Cast<UDreamWidget>(*ObjectPtr))
+				if (IsValid(Widget) && UnexpandedNames.Contains(Widget->GetFName()))
 				{
 					UnexpendWidgetSet.Add(Widget);
 				}
@@ -179,7 +180,7 @@ FReply SDreamWidgetEditorHierarchyView::OnDrop(const FGeometry& MyGeometry, cons
 	{
 		if (auto Editor = Manager.Pin())
 		{
-			PaletteOp->CreateUnder(Editor->GetLoadedRootWidget());
+			PaletteOp->CreateUnder(Editor->GetPreviewRootWidget());
 			return FReply::Handled();
 		}
 	}
@@ -581,13 +582,6 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Delete);
 			}
 			MenuBuilder.PopCommandList();
-			// UMG sits Find References between Delete and Rename.
-			MenuBuilder.AddMenuEntry(LOCTEXT("FindReferences", "Find References"),
-				LOCTEXT("FindReferencesTooltip", "Search the prefab's companion behaviour blueprint for the variable this widget binds to."),
-				FSlateIcon(FAppStyle::GetAppStyleSetName(), "Kismet.Tabs.FindResults"),
-				FUIAction(
-					FExecuteAction::CreateLambda([WeakEditor = Manager]() { if (auto E = WeakEditor.Pin())E->FindReferencesForSelectedWidget(); }),
-					FCanExecuteAction::CreateLambda([WeakEditor = Manager]() { auto E = WeakEditor.Pin(); return E.IsValid() && E->CanFindReferencesForSelectedWidget(); })));
 			MenuBuilder.PushCommandList(CommandList.ToSharedRef());
 			{
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Rename);
@@ -596,116 +590,6 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 		}
 		MenuBuilder.EndSection();
 
-			// UMG "Is Variable" counterpart: bind the selected element to a typed variable on
-			// the prefab's companion behaviour blueprint (created on demand)
-			if (auto Editor = Manager.Pin())
-			{
-				UDreamWidget* SelectedWidget = GetSelectedWidgetFunction();
-				if (SelectedWidget != nullptr && SelectedWidget != Editor->GetLoadedRootWidget())
-				{
-					MenuBuilder.BeginSection("Behaviour", LOCTEXT("Behaviour", "Behaviour"));
-					{
-						MenuBuilder.AddSubMenu(
-							LOCTEXT("PromoteSubMenu", "Promote to Behaviour Variable"),
-							LOCTEXT("PromoteSubMenuTooltip", "Ask the primary Behaviour's editor backend to declare and bind a reflected variable. Blueprint is supported built-in; external script systems can register a backend."),
-							FNewMenuDelegate::CreateLambda([WeakEditor = Manager, WeakWidget = TWeakObjectPtr<UDreamWidget>(SelectedWidget)](FMenuBuilder& SubMenu)
-							{
-									auto AddEntry = [&SubMenu, WeakEditor](UObject* Target, const FText& Label)
-									{
-									SubMenu.AddMenuEntry(Label, FText::FromString(Target->GetClass()->GetPathName()),
-										FSlateIconFinder::FindIconForClass(Target->GetClass()),
-										FUIAction(FExecuteAction::CreateLambda([WeakEditor, WeakTarget = TWeakObjectPtr<UObject>(Target)]()
-										{
-											auto E = WeakEditor.Pin();
-											if (E.IsValid() && WeakTarget.IsValid())E->PromoteToBehaviourVariable(WeakTarget.Get());
-										}), FCanExecuteAction::CreateLambda([WeakEditor]()
-										{
-											auto E = WeakEditor.Pin();
-											return E.IsValid() && E->CanAuthorBehaviour();
-										})));
-								};
-								UDreamWidget* W = WeakWidget.Get();
-								if (W == nullptr)return;
-								// behaviours carry the useful APIs (Button.OnClick / ...), then the visual, then the widget
-								for (UDreamUIBehaviour* Comp : W->GetAllComponents())
-								{
-									if (Comp == nullptr)continue;
-									AddEntry(Comp, FText::Format(LOCTEXT("PromoteAsBehaviour", "As {0} ({1})"),
-										Comp->GetClass()->GetDisplayNameText(), FText::FromString(Comp->GetName())));
-								}
-								if (auto Visual = W->GetVisual())
-								{
-									AddEntry(Visual, FText::Format(LOCTEXT("PromoteAsVisual", "As {0} (Visual)"), Visual->GetClass()->GetDisplayNameText()));
-								}
-								SubMenu.AddSeparator();
-								AddEntry(W, FText::Format(LOCTEXT("PromoteAsWidget", "As Widget ({0})"), W->GetClass()->GetDisplayNameText()));
-							}));
-
-						MenuBuilder.AddSubMenu(
-							LOCTEXT("AddEventSubMenu", "Add Event Handler"),
-							LOCTEXT("AddEventSubMenuTooltip", "Ask the primary Behaviour's editor backend to generate and bind a compatible handler."),
-							FNewMenuDelegate::CreateLambda([WeakEditor = Manager, WeakWidget = TWeakObjectPtr<UDreamWidget>(SelectedWidget)](FMenuBuilder& SubMenu)
-							{
-								UDreamWidget* W = WeakWidget.Get();
-								if (W == nullptr)return;
-								TArray<DreamUIPrefabBehaviourUtils::FDiscoveredEvent> Events;
-								DreamUIPrefabBehaviourUtils::DiscoverEvents(W, Events);
-								int32 UnboundEventCount = 0;
-								for (const auto& Event : Events)
-								{
-									if (Event.Component == nullptr || Event.bIsBound)continue;
-									++UnboundEventCount;
-									SubMenu.AddSubMenu(
-										FText::Format(LOCTEXT("AddEventEntry", "{0} ({1})"), FText::FromString(Event.DisplayName), FText::FromString(Event.Component->GetClass()->GetName())),
-										FText::Format(LOCTEXT("AddEventEntryTooltip", "Create a handler for {0} and bind it."), FText::FromString(Event.DisplayName)),
-										FNewMenuDelegate::CreateLambda([WeakEditor, Event](FMenuBuilder& HandlerMenu)
-										{
-											auto AddHandlerType = [&HandlerMenu, WeakEditor, Event](const FText& Label,
-												const FText& Tooltip, const FSlateIcon& Icon, EDreamUIBehaviourHandlerType HandlerType)
-											{
-												HandlerMenu.AddMenuEntry(Label, Tooltip, Icon,
-													FUIAction(FExecuteAction::CreateLambda([WeakEditor, Event, HandlerType]()
-													{
-														if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())
-														{
-															Editor->AddEventHandler(Event, HandlerType);
-														}
-													}), FCanExecuteAction::CreateLambda([WeakEditor, HandlerType]()
-													{
-														TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
-														return Editor.IsValid() && Editor->CanAddEventHandler(HandlerType);
-													})));
-											};
-											AddHandlerType(LOCTEXT("AddEventFromFunction", "From Function"),
-												LOCTEXT("AddEventFromFunctionTooltip", "Create and bind a Blueprint function."),
-												FSlateIcon(FAppStyle::GetAppStyleSetName(), "GraphEditor.Function_16x"),
-												EDreamUIBehaviourHandlerType::Function);
-											AddHandlerType(LOCTEXT("AddEventFromEvent", "From Event"),
-												LOCTEXT("AddEventFromEventTooltip", "Create and bind a Blueprint custom event."),
-												FSlateIcon(FAppStyle::GetAppStyleSetName(), "GraphEditor.Event_16x"),
-												EDreamUIBehaviourHandlerType::Event);
-										}), false, FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Plus"));
-								}
-								if (Events.IsEmpty())
-								{
-									SubMenu.AddMenuEntry(
-										LOCTEXT("NoEventsAvailable", "No Events Available"),
-										FText::GetEmpty(), FSlateIcon(),
-										FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([] { return false; })));
-								}
-								else if (UnboundEventCount == 0)
-								{
-									SubMenu.AddMenuEntry(
-										LOCTEXT("AllEventsBound", "All Events Are Bound"),
-										LOCTEXT("AllEventsBoundTooltip", "Every event on this widget already has a binding."),
-										FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.SuccessWithColor"),
-										FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([] { return false; })));
-								}
-							}));
-					}
-					MenuBuilder.EndSection();
-				}
-			}
 
 			// UMG "Wrap With": group the selection under a new container widget
 			if (auto Editor = Manager.Pin())
@@ -732,7 +616,7 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 								// Replace With offers: a menu naming its containers by hand is a
 								// second list, and the day one is extended the two disagree.
 								TArray<const FDreamUIControlDescriptor*> Panels;
-								FDreamUIPrefabEditor::CollectLayoutPanelDescriptors(nullptr, Panels);
+								FDreamWidgetBlueprintEditor::CollectLayoutPanelDescriptors(nullptr, Panels);
 								for (const FDreamUIControlDescriptor* Descriptor : Panels)
 								{
 									UClass* PanelClass = Descriptor->LayoutContainerClass.Get();
@@ -778,7 +662,7 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 								// registered layout container takes children, so the equivalent
 								// filter is simply "has a layout container class".
 								TArray<const FDreamUIControlDescriptor*> Panels;
-								FDreamUIPrefabEditor::CollectLayoutPanelDescriptors(Current, Panels);
+								FDreamWidgetBlueprintEditor::CollectLayoutPanelDescriptors(Current, Panels);
 								for (const FDreamUIControlDescriptor* Descriptor : Panels)
 								{
 									UClass* PanelClass = Descriptor->LayoutContainerClass.Get();

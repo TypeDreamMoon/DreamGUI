@@ -11,7 +11,7 @@
 
 class UDreamVisual;
 class UDreamWidget;
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 class UDreamUIPrefab;
 struct FDreamLayoutControlAnchorData;
 
@@ -19,7 +19,7 @@ struct FDreamLayoutControlAnchorData;
 class FDreamUIPrefabEditorViewportClient : public FEditorViewportClient
 {
 public:
-	FDreamUIPrefabEditorViewportClient(TWeakPtr<FDreamUIPrefabEditor> InPrefabEditorPtr, const TSharedRef<class SDreamUIPrefabEditorViewport>& InEditorViewportPtr);
+	FDreamUIPrefabEditorViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InPrefabEditorPtr, const TSharedRef<class SDreamUIPrefabEditorViewport>& InEditorViewportPtr);
 
 	virtual ~FDreamUIPrefabEditorViewportClient()override;
 
@@ -116,7 +116,7 @@ public:
 	void TickWorld(float DeltaSeconds);
 
 	bool FocusViewportToTargets();
-	TSharedPtr<FDreamUIPrefabEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
+	TSharedPtr<FDreamWidgetBlueprintEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
 	/**
 	 * Which of a widget's own axes something else is deciding: its parent's container, plus its own
 	 * layout-self. Free of any viewport state so the handle policy can be tested directly.
@@ -377,7 +377,7 @@ private:
 	bool bCursorInViewport = false;
 	FDelegateHandle OnSelectionChangedDelegateHandle;
 
-	TWeakPtr<FDreamUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FDreamWidgetBlueprintEditor> PrefabEditorPtr;
 	TWeakPtr<class SDreamUIPrefabEditorViewport> EditorViewportPtr;
 	FIntPoint RightMouseDownPosition = FIntPoint::ZeroValue;
 	bool bRightMouseButtonDown = false;
@@ -398,7 +398,7 @@ private:
 	bool bHasCachedElementsToManipulate = false;
 	FTypedElementListRef CachedElementsToManipulate;
 
-	UDreamUIPrefab* GetPrefabBeingEdited()const;
+	UDreamWidgetBlueprint* GetWidgetBlueprint()const;
 	/**
 	 * Collects the set of components and actors on which to apply move operations during or after drag operations.
 	 */

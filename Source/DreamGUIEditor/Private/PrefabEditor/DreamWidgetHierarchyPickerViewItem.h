@@ -9,7 +9,7 @@
 
 class SDreamWidgetEditorHierarchyView;
 class UDreamWidget;
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 
 class SDreamWidgetHierarchyPickerViewItem : public STableRow<SDreamWidgetHierarchyPickerView::DataType>
 {

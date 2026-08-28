@@ -30,7 +30,7 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamUIEditorTools.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "Utils/DreamUIUtils.h"
 
 /**
@@ -598,10 +598,10 @@ private:
 		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
-		auto PrefabEditor = FDreamUIPrefabEditor::GetEditorByWorld(Widget->GetWorld());
+		auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld());
 		if (PrefabEditor.IsValid())
 		{
-			PrefabEditor.Pin()->GetPrefabHelperObject()->SetAnythingDirty();
+			PrefabEditor.Pin()->MarkDesignChanged();
 		}
 
 		UDreamUIBehaviour* LastAddedComponent = nullptr;
@@ -682,10 +682,10 @@ private:
 		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
-		auto PrefabEditor = FDreamUIPrefabEditor::GetEditorByWorld(Widget->GetWorld());
+		auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld());
 		if (PrefabEditor.IsValid())
 		{
-			PrefabEditor.Pin()->GetPrefabHelperObject()->SetAnythingDirty();
+			PrefabEditor.Pin()->MarkDesignChanged();
 		}
 
 		Widget->MoveComponentToIndex(Component, ClampedIndex);

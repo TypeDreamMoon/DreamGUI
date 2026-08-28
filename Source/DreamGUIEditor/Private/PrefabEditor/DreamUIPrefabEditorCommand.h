@@ -26,12 +26,6 @@ public:
 	// End of TCommand<> interface
 
 public:
-	TSharedPtr<FUICommandInfo> Apply;
-	TSharedPtr<FUICommandInfo> SaveOnApply_Never;
-	TSharedPtr<FUICommandInfo> SaveOnApply_SuccessOnly;
-	TSharedPtr<FUICommandInfo> SaveOnApply_Always;
-	TSharedPtr<FUICommandInfo> OpenPrefabHelperObject;
-	TSharedPtr<FUICommandInfo> OpenBehaviourBlueprint;
 	TSharedPtr<FUICommandInfo> ToggleScreenSpacePreview;
 	TSharedPtr<FUICommandInfo> FrameFromCanvasEye;
 };

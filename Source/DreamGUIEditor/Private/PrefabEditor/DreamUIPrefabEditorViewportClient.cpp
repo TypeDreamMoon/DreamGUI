@@ -19,7 +19,7 @@
 #include "Editor/UnrealEdEngine.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "DreamUIWidgetPicking.h"
 #include "MouseDeltaTracker.h"
 #include "Misc/ITransaction.h"
@@ -64,7 +64,7 @@ bool DreamUIPrefabSequence_CanBindWidgetToSequencer(class UDreamUIPrefabHelperOb
 // (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).
 
 
-FDreamUIPrefabEditorViewportClient::FDreamUIPrefabEditorViewportClient(TWeakPtr<FDreamUIPrefabEditor> InPrefabEditorPtr
+FDreamUIPrefabEditorViewportClient::FDreamUIPrefabEditorViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InPrefabEditorPtr
 	, const TSharedRef<SDreamUIPrefabEditorViewport>& InEditorViewportPtr)
 	// UE5.8: pass nullptr (NOT &GLevelEditorModeTools()) so the base creates a PRIVATE
 	// FAssetEditorModeManager for this viewport. Sharing the global level-editor mode tools
@@ -122,7 +122,10 @@ FDreamUIPrefabEditorViewportClient::FDreamUIPrefabEditorViewportClient(TWeakPtr<
 	this->ViewportType = InitialViewportType;
 	SetViewRotation(InitialViewRotation);
 	SetLookAtLocation(InitialViewOrbitLocation);
-	GetPrefabBeingEdited()->GetPrefabInstanceScene()->SetSkyCubeVisibility(IsPerspective());
+	if (FDreamUIPrefabInstanceScene* Scene = PrefabEditorPtr.Pin()->GetPreviewScene())
+	{
+		Scene->SetSkyCubeVisibility(IsPerspective());
+	}
 	// Assigning ViewportType above deliberately bypasses SetViewportType, so its side effects have
 	// to be repeated here or they never fire on opening a prefab.
 	DrawHelper.bDrawGrid = !ShouldUseCanvasView();
@@ -344,7 +347,7 @@ void FDreamUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FScen
 
 void FDreamUIPrefabEditorViewportClient::DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const
 {
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	UDreamUIPrefabSequence* Animation = Editor.IsValid() ? Editor->GetAnimationBeingEdited() : nullptr;
 	if (Animation == nullptr)
 	{
@@ -406,7 +409,7 @@ void FDreamUIPrefabEditorViewportClient::DrawAnimationModeIndicator(FViewport& I
 
 void FDreamUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<UDreamWidget*>& InWidgets, bool bLocation, bool bRotation, bool bScale) const
 {
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	if (!Editor.IsValid() || !Editor->IsInAnimationEditMode())
 	{
 		return;
@@ -427,7 +430,9 @@ void FDreamUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<U
 		return;
 	}
 
-	UDreamUIPrefabHelperObject* Helper = Editor->GetPrefabHelperObject();
+	// No sub prefabs: the gate below treats a null helper as "not owned by one", which is
+	// now true of every widget in the design.
+	UDreamUIPrefabHelperObject* Helper = nullptr;
 	TArray<UObject*> ObjectsToKey;
 	for (UDreamWidget* KeyedWidget : InWidgets)
 	{
@@ -752,7 +757,7 @@ void FDreamUIPrefabEditorViewportClient::DrawWidgetScreenOutline(UDreamWidget* I
 
 void FDreamUIPrefabEditorViewportClient::DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
 {
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	UDreamWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
 	if (!IsValid(RootAgent) || RootAgent->GetWidth() <= 0.0f || RootAgent->GetHeight() <= 0.0f)
 	{
@@ -827,7 +832,7 @@ void FDreamUIPrefabEditorViewportClient::DrawDesignerCanvasBoundary(FViewport& I
 
 void FDreamUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
 {
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	UDreamWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
 	if (!IsValid(RootAgent))
 	{
@@ -899,7 +904,7 @@ void FDreamUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewp
 
 void FDreamUIPrefabEditorViewportClient::DrawSafeZoneGuide(FSceneView& View, FCanvas& Canvas) const
 {
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	UDreamWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
 	if (!IsValid(RootAgent) || RootAgent->GetWidth() <= 0.0f || RootAgent->GetHeight() <= 0.0f)return;
 	if (!FSlateApplication::IsInitialized())return;
@@ -949,7 +954,7 @@ void FDreamUIPrefabEditorViewportClient::DrawSafeZoneGuide(FSceneView& View, FCa
 void FDreamUIPrefabEditorViewportClient::DrawCursorReadout(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
 {
 	if (!bCursorInViewport)return;
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	UDreamWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
 	UFont* Font = GEngine->GetSmallFont();
 	if (!IsValid(RootAgent) || Font == nullptr)return;
@@ -1177,7 +1182,7 @@ void FDreamUIPrefabEditorViewportClient::DrawDesignerMarquee(FCanvas& Canvas) co
 
 void FDreamUIPrefabEditorViewportClient::DrawLayoutDebugOverlay(FViewport& InViewport, FCanvas& Canvas) const
 {
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	if (!Editor.IsValid() || !Editor->GetShowLayoutDebug() || Editor->GetSelectedWidgets().Num() != 1)
 	{
 		return;
@@ -1507,10 +1512,7 @@ void FDreamUIPrefabEditorViewportClient::BeginDesignerDrag(EDesignerHandle InHan
 
 	DesignerSnapshots.Reset();
 	DesignerTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("DesignerTransformWidgets", "Transform Widgets"));
-	if (UDreamUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
-	{
-		Helper->Modify();
-	}
+	PrefabEditorPtr.Pin()->CommitSelectedWidgetGeometryToTemplate();
 	for (UDreamWidget* SelectedWidget : Widgets)
 	{
 		SelectedWidget->Modify();
@@ -1757,8 +1759,8 @@ void FDreamUIPrefabEditorViewportClient::UpdateDesignerReparentTarget(const FVec
 		});
 		int32 CycleIndex = INDEX_NONE;
 		UDreamWidget* Hit = DreamUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, CycleIndex);
-		TSharedPtr<FDreamUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin();
-		Container = ResolveDragDropContainer(Hit, PrefabEditor.IsValid() ? PrefabEditor->GetLoadedRootWidget() : nullptr, Dragged,
+		TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = PrefabEditorPtr.Pin();
+		Container = ResolveDragDropContainer(Hit, PrefabEditor.IsValid() ? PrefabEditor->GetPreviewRootWidget() : nullptr, Dragged,
 			[&PrefabEditor](const UDreamWidget* InWidget){ return PrefabEditor.IsValid() && PrefabEditor->IsWidgetLockedForInteraction(InWidget); });
 	}
 	PendingReparentTarget = Container;
@@ -1870,10 +1872,7 @@ void FDreamUIPrefabEditorViewportClient::FinishDesignerDrag(bool bCancel)
 		if (ApplyPendingReparent())bDesignerChanged = true;
 		if (bDesignerChanged && PrefabEditorPtr.IsValid())
 		{
-			if (UDreamUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
-			{
-				Helper->SetAnythingDirty();
-			}
+			PrefabEditorPtr.Pin()->CommitSelectedWidgetGeometryToTemplate();
 			// Dragging in the designer moves the widget by its anchored position, which the widget
 			// resolves into RelativeLocation; that is the property the animation keys.
 			TArray<UDreamWidget*> DraggedWidgets;
@@ -2465,7 +2464,10 @@ FSceneView* FDreamUIPrefabEditorViewportClient::CalcSceneView(FSceneViewFamily* 
 void FDreamUIPrefabEditorViewportClient::SetViewportType(ELevelViewportType InViewportType)
 {
 	FEditorViewportClient::SetViewportType(InViewportType);
-	GetPrefabBeingEdited()->GetPrefabInstanceScene()->SetSkyCubeVisibility(IsPerspective());
+	if (FDreamUIPrefabInstanceScene* Scene = PrefabEditorPtr.Pin()->GetPreviewScene())
+	{
+		Scene->SetSkyCubeVisibility(IsPerspective());
+	}
 	// The editor's grid branches on the PROJECTION MATRIX, not on the viewport type, so once the 2D
 	// view projects through the canvas it would swap the flat design grid for the world-space
 	// perspective one -- seen edge-on from the canvas eye, i.e. a single stray horizontal line.
@@ -2576,11 +2578,7 @@ void FDreamUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInpu
 		bNudgeTransactionOpen = true;
 		if (PrefabEditorPtr.IsValid())
 		{
-			if (UDreamUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
-			{
-				Helper->Modify();
-				Helper->SetAnythingDirty();
-			}
+			PrefabEditorPtr.Pin()->CommitSelectedWidgetGeometryToTemplate();
 		}
 		for (UDreamWidget* DreamWidget : Movable)
 		{
@@ -3016,7 +3014,7 @@ UDreamWidget* FDreamUIPrefabEditorViewportClient::GetDropContainerUnderCursor(in
 	if (UDreamWidget* Container = DreamUIWidgetPicking::ResolveDropContainer(Hit))return Container;
 	if (PrefabEditorPtr.IsValid())
 	{
-		if (UDreamWidget* Root = PrefabEditorPtr.Pin()->GetLoadedRootWidget())
+		if (UDreamWidget* Root = PrefabEditorPtr.Pin()->GetPreviewRootWidget())
 		{
 			return Root->CanAcceptAdditionalChildren() ? Root : nullptr;
 		}
@@ -3067,13 +3065,13 @@ UWorld* FDreamUIPrefabEditorViewportClient::GetWorld()const
 	// GetScene sweep) and on every GC (AddReferencedObjects below). A closing tab releases the
 	// toolkit before Slate lets go of the viewport widget holding this client, so for a frame or
 	// two these get called with the editor already gone -- answer null instead of asserting.
-	const TSharedPtr<FDreamUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = PrefabEditorPtr.Pin();
 	return PrefabEditor.IsValid() ? PrefabEditor->GetWorld() : nullptr;
 }
 void FDreamUIPrefabEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	FEditorViewportClient::AddReferencedObjects(Collector);
-	const TSharedPtr<FDreamUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = PrefabEditorPtr.Pin();
 	if (PrefabEditor.IsValid())
 	{
 		PrefabEditor->GetPreviewScene()->AddReferencedObjects(Collector);
@@ -3223,9 +3221,9 @@ bool FDreamUIPrefabEditorViewportClient::Internal_InputAxis(FViewport* InViewpor
 // End override because PreviewScene is nullptr
 
 
-UDreamUIPrefab* FDreamUIPrefabEditorViewportClient::GetPrefabBeingEdited()const
+UDreamWidgetBlueprint* FDreamUIPrefabEditorViewportClient::GetWidgetBlueprint()const
 {
-	return PrefabEditorPtr.Pin()->GetPrefabBeingEdited();
+	return PrefabEditorPtr.Pin()->GetWidgetBlueprint();
 }
 
 namespace LevelEditorViewportClientHelper
@@ -3445,7 +3443,7 @@ void FDreamUIPrefabEditorViewportClient::DrawHoverOutline(FSceneView& View, FCan
 {
 	UDreamWidget* HoverTarget = HoveredWidget.Get();
 	if (!IsValid(HoverTarget))return;
-	const TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
 	if (!Editor.IsValid())return;
 	// A selected widget already has an outline; a second one over it would only say "still here".
 	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : Editor->GetSelectedWidgets())

@@ -15,7 +15,7 @@
 #include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "DreamGUIEditorModule.h"
-#include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "PrefabEditor/DreamUIPrefabBehaviourUtils.h"
 #include "Core/DreamUIBehaviour.h"
 #include "UObject/UnrealType.h"
@@ -1154,28 +1154,9 @@ void FDreamUIEditorTools::RefreshLoadedPrefab()
 
 void FDreamUIEditorTools::RefreshOpenedPrefabEditor(UDreamUIPrefab* InPrefab)
 {
-	if (auto PrefabEditor = FDreamUIPrefabEditor::GetEditorForPrefabIfValid(InPrefab))//refresh opened prefab
-	{
-		if (PrefabEditor->GetAnythingDirty())
-		{
-			auto Msg = LOCTEXT("PrefabEditorChangedDataWillLose", "Prefab editor will automaticallly refresh changed prefab, but detect some data changed in prefab editor, refresh the prefab editor will lose these data, do you want to continue?");
-			auto Result = FMessageDialog::Open(EAppMsgType::YesNo, Msg);
-			if (Result == EAppReturnType::Yes)
-			{
-				//reopen this prefab editor
-				PrefabEditor->CloseWindow(EAssetEditorCloseReason::AssetEditorHostClosed);
-				UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-				AssetEditorSubsystem->OpenEditorForAsset(InPrefab);
-			}
-		}
-		else
-		{
-			//reopen this prefab editor
-			PrefabEditor->CloseWindow(EAssetEditorCloseReason::AssetEditorHostClosed);
-			UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-			AssetEditorSubsystem->OpenEditorForAsset(InPrefab);
-		}
-	}
+	// Nothing to do: a prefab has no editor to reopen. It used to close and reopen the prefab
+	// editor so the live copy would pick up what had changed on disk, which is a problem that only
+	// exists when the editor holds a copy at all.
 }
 
 void FDreamUIEditorTools::RefreshOnSubPrefabChange(UDreamUIPrefab* InSubPrefab)
@@ -1197,10 +1178,6 @@ void FDreamUIEditorTools::RefreshOnSubPrefabChange(UDreamUIPrefab* InSubPrefab)
 				if (Prefab->IsPrefabBelongsToThisSubPrefab(InSubPrefab, false))
 				{
 					//check if is opened by prefab editor
-					if (auto PrefabEditor = FDreamUIPrefabEditor::GetEditorForPrefabIfValid(Prefab))//refresh opened prefab
-					{
-						PrefabEditor->RefreshOnSubPrefabDirty(InSubPrefab);
-					}
 					RefreshAllPrefabsOnSubPrefabChange(InPrefabs, Prefab, VisitedPrefabs);
 				}
 			}
@@ -1387,7 +1364,7 @@ void FDreamUIEditorTools::CleanupPrefabs()
 
 bool FDreamUIEditorTools::IsWidgetCompatibleWithDreamUIToolsMenu(UDreamWidget* InWidget)
 {
-	if (!FDreamUIPrefabEditor::WidgetIsRootAgent(InWidget))
+	if (!FDreamWidgetBlueprintEditor::WidgetIsRootAgent(InWidget))
 	{
 		return true;
 	}

@@ -6,13 +6,13 @@
 #include "IDetailKeyframeHandler.h"
 
 class ISequencer;
-class FDreamUIPrefabEditor;
+class FDreamWidgetBlueprintEditor;
 class IPropertyHandle;
 
 class FDreamUIDetailKeyframeHandler : public IDetailKeyframeHandler
 {
 public:
-	FDreamUIDetailKeyframeHandler( TSharedPtr<FDreamUIPrefabEditor> InSequenceEditor );
+	FDreamUIDetailKeyframeHandler( TSharedPtr<FDreamWidgetBlueprintEditor> InSequenceEditor );
 
 	virtual bool IsPropertyKeyable(const UClass* InObjectClass, const class IPropertyHandle& PropertyHandle) const override;
 
@@ -26,5 +26,5 @@ public:
 
 private:
 	TSharedPtr<ISequencer> GetSequencer() const;
-	TWeakPtr<FDreamUIPrefabEditor> PrefabEditor;
+	TWeakPtr<FDreamWidgetBlueprintEditor> PrefabEditor;
 };

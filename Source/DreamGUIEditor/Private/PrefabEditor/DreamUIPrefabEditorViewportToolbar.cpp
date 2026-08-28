@@ -4,7 +4,7 @@
 #include "DreamUIPrefabEditorViewportToolbar.h"
 #include "DreamUIDesignScreenSizes.h"
 #include "DreamUIPrefabEditorViewport.h"
-#include "DreamUIPrefabEditor.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Styling/AppStyle.h"
 #include "ToolMenus.h"
@@ -108,7 +108,7 @@ namespace DreamUI_Private
 namespace DreamUI_Private
 {
 	/** The screen-size picker: presets, size rule, a typed custom size, and the canvas tools. */
-	static TSharedRef<SWidget> MakeScreenSizeMenu(TWeakPtr<FDreamUIPrefabEditor> WeakEditor)
+	static TSharedRef<SWidget> MakeScreenSizeMenu(TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor)
 	{
 		FMenuBuilder MenuBuilder(true, nullptr);
 		MenuBuilder.BeginSection(NAME_None, LOCTEXT("ScreenSizeSection", "Screen Size"));
@@ -118,7 +118,7 @@ namespace DreamUI_Private
 			// Show what each device resolution actually becomes, so the rule is visible
 			// at the point of choosing rather than only after the canvas jumps.
 			FText Label = FText::FromString(ScreenSize.Label);
-			if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())
+			if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())
 			{
 				FIntPoint CanvasSize;
 				float Scale = 1.0f;
@@ -131,14 +131,14 @@ namespace DreamUI_Private
 			MenuBuilder.AddMenuEntry(Label, FText::GetEmpty(), FSlateIcon(),
 				FUIAction(FExecuteAction::CreateLambda([WeakEditor, Size]()
 				{
-					if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())
+					if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())
 					{
 						Editor->SetDesignerSizeRule(EDreamUIDesignerSizeRule::Custom);
 						Editor->SetDesignerViewportSize(Size);
 					}
 				}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor, Size]()
 				{
-					if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerViewportSize() == Size;
+					if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerViewportSize() == Size;
 					return false;
 				})), NAME_None, EUserInterfaceActionType::RadioButton);
 		}
@@ -148,20 +148,20 @@ namespace DreamUI_Private
 			LOCTEXT("SizeRuleCustomTip", "The canvas is the resolution picked above, or typed below."), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(EDreamUIDesignerSizeRule::Custom);
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(EDreamUIDesignerSizeRule::Custom);
 			}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == EDreamUIDesignerSizeRule::Custom;
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == EDreamUIDesignerSizeRule::Custom;
 				return false;
 			})), NAME_None, EUserInterfaceActionType::RadioButton);
 		MenuBuilder.AddMenuEntry(LOCTEXT("SizeRuleDesired", "Desired"),
 			LOCTEXT("SizeRuleDesiredTip", "Size the canvas to what the root widget's UMG-compatible panel measures, so a tooltip-sized prefab can be authored at its own size. Applied once, when chosen. A root with no such panel measures nothing, and a canvas sized by a scaler rule is not this menu's to set."), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(EDreamUIDesignerSizeRule::Desired);
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(EDreamUIDesignerSizeRule::Desired);
 			}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == EDreamUIDesignerSizeRule::Desired;
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == EDreamUIDesignerSizeRule::Desired;
 				return false;
 			})), NAME_None, EUserInterfaceActionType::RadioButton);
 		MenuBuilder.EndSection();
@@ -176,14 +176,14 @@ namespace DreamUI_Private
 					.MinDesiredValueWidth(60.0f)
 					.Value_Lambda([WeakEditor, bHorizontal]() -> TOptional<int32>
 					{
-						TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+						TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 						if (!Editor.IsValid())return TOptional<int32>();
 						const FIntPoint Size = Editor->GetDesignerViewportSize();
 						return bHorizontal ? Size.X : Size.Y;
 					})
 					.OnValueCommitted_Lambda([WeakEditor, bHorizontal](int32 NewValue, ETextCommit::Type)
 					{
-						TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+						TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 						if (!Editor.IsValid() || NewValue <= 0)return;
 						FIntPoint Size = Editor->GetDesignerViewportSize();
 						if (bHorizontal)Size.X = NewValue;
@@ -202,7 +202,7 @@ namespace DreamUI_Private
 			LOCTEXT("FlipOrientationTip", "Swap the previewed device resolution's width and height."), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())
 				{
 					const FIntPoint Size = Editor->GetDesignerViewportSize();
 					Editor->SetDesignerViewportSize(FIntPoint(Size.Y, Size.X));
@@ -214,14 +214,14 @@ namespace DreamUI_Private
 			// so with it off this entry could only report a state the viewport contradicts.
 			FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleResolutionGuides();
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())Editor->ToggleResolutionGuides();
 			}), FCanExecuteAction::CreateLambda([WeakEditor]()
 			{
-				TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 				return Editor.IsValid() && Editor->GetShowDesignerChrome();
 			}), FIsActionChecked::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetShowResolutionGuides();
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())return Editor->GetShowResolutionGuides();
 				return false;
 			})), NAME_None, EUserInterfaceActionType::ToggleButton);
 		MenuBuilder.EndSection();
@@ -232,7 +232,7 @@ namespace DreamUI_Private
 namespace DreamUI_Private
 {
 	/** The prefab editor behind the viewport a tool-menu section is being built for, or null. */
-	static TWeakPtr<FDreamUIPrefabEditor> GetPrefabEditorFromSection(const FToolMenuSection& InSection)
+	static TWeakPtr<FDreamWidgetBlueprintEditor> GetPrefabEditorFromSection(const FToolMenuSection& InSection)
 	{
 		if (UUnrealEdViewportToolbarContext* const Context = InSection.FindContext<UUnrealEdViewportToolbarContext>())
 		{
@@ -245,24 +245,24 @@ namespace DreamUI_Private
 	}
 
 	/** A checked/unchecked toggle bound to one designer flag. */
-	static FToolMenuEntry MakeDesignerToggle(const FName Name, const TWeakPtr<FDreamUIPrefabEditor>& WeakEditor,
+	static FToolMenuEntry MakeDesignerToggle(const FName Name, const TWeakPtr<FDreamWidgetBlueprintEditor>& WeakEditor,
 		const FText& Label, const FText& ToolTip, const FSlateIcon& Icon,
-		bool (FDreamUIPrefabEditor::*Getter)() const, void (FDreamUIPrefabEditor::*Toggle)(),
-		bool (FDreamUIPrefabEditor::*EnabledWhen)() const = nullptr)
+		bool (FDreamWidgetBlueprintEditor::*Getter)() const, void (FDreamWidgetBlueprintEditor::*Toggle)(),
+		bool (FDreamWidgetBlueprintEditor::*EnabledWhen)() const = nullptr)
 	{
 		FUIAction Action(
 			FExecuteAction::CreateLambda([WeakEditor, Toggle]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin()) { ((*Editor).*Toggle)(); }
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin()) { ((*Editor).*Toggle)(); }
 			}),
 			FCanExecuteAction::CreateLambda([WeakEditor, EnabledWhen]()
 			{
-				TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 				return Editor.IsValid() && (EnabledWhen == nullptr || ((*Editor).*EnabledWhen)());
 			}),
 			FIsActionChecked::CreateLambda([WeakEditor, Getter]()
 			{
-				TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 				return Editor.IsValid() && ((*Editor).*Getter)();
 			}));
 		return FToolMenuEntry::InitToolBarButton(Name, FToolUIActionChoice(Action), Label, ToolTip, Icon, EUserInterfaceActionType::ToggleButton);
@@ -283,16 +283,16 @@ namespace DreamUI_Private
 		SnapSection.Alignment = EToolMenuSectionAlign::First;
 		SnapSection.AddDynamicEntry("DesignerSnapping", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamUIPrefabEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
 			InSection.AddEntry(MakeDesignerToggle("GridSnap", WeakEditor,
 				LOCTEXT("DesignerSnapLabel", "Snap"),
 				LOCTEXT("DesignerSnapTooltip", "Snap 2D designer movement and resize operations to the grid size next to this button."),
 				FSlateIcon(AppStyle, "Icons.Snap"),
-				&FDreamUIPrefabEditor::IsDesignerGridSnapEnabled, &FDreamUIPrefabEditor::ToggleDesignerGridSnap));
+				&FDreamWidgetBlueprintEditor::IsDesignerGridSnapEnabled, &FDreamWidgetBlueprintEditor::ToggleDesignerGridSnap));
 
 			const TAttribute<FText> GridLabel = TAttribute<FText>::CreateLambda([WeakEditor]()
 			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin()) { return FText::AsNumber(Editor->GetDesignerGridSize()); }
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin()) { return FText::AsNumber(Editor->GetDesignerGridSize()); }
 				return FText::GetEmpty();
 			});
 			FToolMenuEntry GridEntry = FToolMenuEntry::InitComboButton("GridSize", FUIAction(),
@@ -305,10 +305,10 @@ namespace DreamUI_Private
 						MenuBuilder.AddMenuEntry(FText::AsNumber(GridSize), FText::GetEmpty(), FSlateIcon(),
 							FUIAction(FExecuteAction::CreateLambda([WeakEditor, GridSize]()
 							{
-								if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin()) { Editor->SetDesignerGridSize(GridSize); }
+								if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin()) { Editor->SetDesignerGridSize(GridSize); }
 							}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor, GridSize]()
 							{
-								if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin()) { return FMath::IsNearlyEqual(Editor->GetDesignerGridSize(), GridSize); }
+								if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin()) { return FMath::IsNearlyEqual(Editor->GetDesignerGridSize(), GridSize); }
 								return false;
 							})), NAME_None, EUserInterfaceActionType::RadioButton);
 					}
@@ -325,10 +325,10 @@ namespace DreamUI_Private
 		ZoomSection.Alignment = EToolMenuSectionAlign::First;
 		ZoomSection.AddDynamicEntry("DesignerZoom", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamUIPrefabEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
 			const TAttribute<FText> ZoomLabel = TAttribute<FText>::CreateLambda([WeakEditor]()
 			{
-				TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 				if (!Editor.IsValid()) { return FText::GetEmpty(); }
 				const float PixelsPerUnit = Editor->GetDesignerPixelsPerUnit();
 				// A perspective view has a different scale at every depth, so there is no one
@@ -345,13 +345,13 @@ namespace DreamUI_Private
 						LOCTEXT("ZoomToFitTip", "Frame the whole design canvas. F frames the selection instead."), FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 						{
-							if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin()) { Editor->ZoomDesignerToFit(); }
+							if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin()) { Editor->ZoomDesignerToFit(); }
 						})));
 					MenuBuilder.AddMenuEntry(LOCTEXT("ZoomActualSize", "Zoom 1:1"),
 						LOCTEXT("ZoomActualSizeTip", "One design unit per screen pixel: the size the UI will really be."), FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
 						{
-							if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin()) { Editor->ZoomDesignerToActualSize(); }
+							if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin()) { Editor->ZoomDesignerToActualSize(); }
 						})));
 					MenuBuilder.EndSection();
 					return MenuBuilder.MakeWidget();
@@ -365,10 +365,10 @@ namespace DreamUI_Private
 		SizeSection.Alignment = EToolMenuSectionAlign::First;
 		SizeSection.AddDynamicEntry("DesignerScreenSize", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamUIPrefabEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
 			const TAttribute<FText> SizeLabel = TAttribute<FText>::CreateLambda([WeakEditor]()
 			{
-				TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 				if (!Editor.IsValid()) { return FText::GetEmpty(); }
 				const FIntPoint Viewport = Editor->GetDesignerViewportSize();
 				FIntPoint CanvasSize;
@@ -383,7 +383,7 @@ namespace DreamUI_Private
 			});
 			const TAttribute<FText> SizeToolTip = TAttribute<FText>::CreateLambda([WeakEditor]()
 			{
-				TSharedPtr<FDreamUIPrefabEditor> Editor = WeakEditor.Pin();
+				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
 				if (!Editor.IsValid()) { return FText::GetEmpty(); }
 				const FIntPoint Viewport = Editor->GetDesignerViewportSize();
 				FIntPoint CanvasSize;
@@ -405,26 +405,26 @@ namespace DreamUI_Private
 		OverlaySection.Alignment = EToolMenuSectionAlign::First;
 		OverlaySection.AddDynamicEntry("DesignerOverlays", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamUIPrefabEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
 			InSection.AddEntry(MakeDesignerToggle("Guides", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("DesignerGuidesTooltip", "Show 2D designer snapping guides while manipulating widgets."),
 				FSlateIcon(AppStyle, "ViewportToolbar.SetShowGrid"),
-				&FDreamUIPrefabEditor::GetShowDesignerGuides, &FDreamUIPrefabEditor::ToggleDesignerGuides));
+				&FDreamWidgetBlueprintEditor::GetShowDesignerGuides, &FDreamWidgetBlueprintEditor::ToggleDesignerGuides));
 			InSection.AddEntry(MakeDesignerToggle("LayoutDebug", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("LayoutDebugTooltip", "Show layout measurement, arrangement, slot, ownership, and clipping diagnostics for the selected widget. Needs the designer overlay switched on."),
 				FSlateIcon(AppStyle, "Icons.Info"),
-				&FDreamUIPrefabEditor::GetShowLayoutDebug, &FDreamUIPrefabEditor::ToggleLayoutDebug,
+				&FDreamWidgetBlueprintEditor::GetShowLayoutDebug, &FDreamWidgetBlueprintEditor::ToggleLayoutDebug,
 				// The overlay switch draws this readout or nothing does, so with it off the button
 				// would sit checked over a viewport showing none of it.
-				&FDreamUIPrefabEditor::GetShowDesignerChrome));
+				&FDreamWidgetBlueprintEditor::GetShowDesignerChrome));
 			InSection.AddEntry(MakeDesignerToggle("RespectLocks", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("RespectLocksTooltip", "Honour the designer locks. Switch it off to select and drag a locked widget without unlocking it; the locks themselves are left as they are."),
 				FSlateIcon(AppStyle, "Icons.Lock"),
-				&FDreamUIPrefabEditor::GetRespectDesignerLocks, &FDreamUIPrefabEditor::ToggleRespectDesignerLocks));
+				&FDreamWidgetBlueprintEditor::GetRespectDesignerLocks, &FDreamWidgetBlueprintEditor::ToggleRespectDesignerLocks));
 			InSection.AddEntry(MakeDesignerToggle("DesignerChrome", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("DesignerChromeTooltip", "Draw everything the editor puts over the prefab: the canvas boundary, selection outlines, handles, guides, layout diagnostics and readouts. Switch it off to see the prefab on its own; the gestures all still work."),
 				FSlateIcon(AppStyle, "Icons.Visibility"),
-				&FDreamUIPrefabEditor::GetShowDesignerChrome, &FDreamUIPrefabEditor::ToggleShowDesignerChrome));
+				&FDreamWidgetBlueprintEditor::GetShowDesignerChrome, &FDreamWidgetBlueprintEditor::ToggleShowDesignerChrome));
 		}));
 	}
 }

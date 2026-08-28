@@ -15,7 +15,7 @@
 #include "IPropertyUtilities.h"
 #include "Widgets/Input/SButton.h"
 #include "DreamUIPrefabSequenceEditor.h"
-#include "PrefabEditor/DreamUIPrefabEditor.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Editor.h"
@@ -52,7 +52,7 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 		return;
 	}
 
-	auto PrefabEditor = FDreamUIPrefabEditor::GetEditorByWorld(World);
+	auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(World);
 
 	DetailBuilder.HideProperty("SequenceArray");
 
@@ -103,7 +103,7 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 					UAssetEditorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 					Subsystem->OpenEditorForAsset(SourceAsset);
 					// The animation focus below used to blind-cast the returned editor to
-					// FDreamUIPrefabEditor. That was only ever safe because the asset was always a
+					// FDreamWidgetBlueprintEditor. That was only ever safe because the asset was always a
 					// prefab; against a Blueprint it is undefined behaviour, so the jump-to-animation
 					// only happens when the editor really is the prefab editor. Restoring it for the
 					// class model is the editor branch's job.
@@ -111,7 +111,7 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 					{
 						if (SourceAsset->IsA<UDreamUIPrefab>())
 						{
-							static_cast<FDreamUIPrefabEditor*>(Instance)->FocusAnimationByDisplayName(CurrentName);
+							static_cast<FDreamWidgetBlueprintEditor*>(Instance)->FocusAnimationByDisplayName(CurrentName);
 						}
 					}
 					return FReply::Handled();
@@ -128,7 +128,7 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 	bool bIsExternalTabAlreadyOpened = false;
 
 	auto HostTabManager = PrefabEditor.Pin()->GetTabManager();
-	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FDreamUIPrefabEditor::GetSequencerTabID());
+	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FDreamWidgetBlueprintEditor::GetSequencerTabID());
 	if (ExistingTab.IsValid())
 	{
 		auto SequencerWidget = StaticCastSharedRef<SDreamUIPrefabSequenceEditor>(ExistingTab->GetContent());
@@ -146,7 +146,7 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 			SNew(SButton)
 			.OnClicked_Lambda([=, this]()
 			{
-				if (TSharedPtr<SDockTab> Tab = HostTabManager->TryInvokeTab(FDreamUIPrefabEditor::GetSequencerTabID()))
+				if (TSharedPtr<SDockTab> Tab = HostTabManager->TryInvokeTab(FDreamWidgetBlueprintEditor::GetSequencerTabID()))
 				{
 					// Set up a delegate that forces a refresh of this panel when the tab is closed to ensure we see the inline widget
 					TWeakPtr<IPropertyUtilities> WeakUtilities = PropertyUtilities;
