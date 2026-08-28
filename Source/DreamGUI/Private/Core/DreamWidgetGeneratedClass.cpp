@@ -12,6 +12,14 @@
 void UDreamWidgetGeneratedClass::SetWidgetTreeArchetype(UDreamWidgetTree* InWidgetTree)
 {
 	WidgetTree = InWidgetTree;
+
+	if (WidgetTree != nullptr)
+	{
+		// The tree arrives as a duplicate of the Blueprint's authoring copy and must not inherit that
+		// copy's role. RF_ArchetypeObject / RF_DefaultSubObject would make instancing treat it as a
+		// subobject template of the Blueprint, and RF_Transient would drop the class's own data on save.
+		WidgetTree->ClearFlags(RF_Public | RF_ArchetypeObject | RF_DefaultSubObject | RF_Transient);
+	}
 }
 #endif
 
@@ -69,9 +77,19 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 	// 3. Bind each widget to the class property of the same name -- this is BindWidget, and it is the
 	//    same shape UMG uses (walk the tree, look the name up in the class's object properties).
 	//    Widgets are matched by DisplayName, not object name: object names here are generated.
+	//
+	//    Only properties declared BELOW UDreamUserWidget are candidates. Binding is driven by display
+	//    names, which a designer types, so without this a widget named "Parent" would overwrite
+	//    UDreamWidget::Parent and quietly detach the hierarchy from itself. Framework members are not
+	//    bindings; bindings live on the class someone wrote for this hierarchy.
 	TMap<FName, FObjectPropertyBase*> ObjectPropertiesByName;
 	for (TFieldIterator<FObjectPropertyBase> It(const_cast<UClass*>(InClass), EFieldIterationFlags::Default); It; ++It)
 	{
+		const UClass* OwnerClass = It->GetOwnerClass();
+		if (OwnerClass == nullptr || !OwnerClass->IsChildOf(UDreamUserWidget::StaticClass()) || OwnerClass == UDreamUserWidget::StaticClass())
+		{
+			continue;
+		}
 		ObjectPropertiesByName.Add(It->GetFName(), *It);
 	}
 	InstancedTree->ForEachWidget([&](UDreamWidget* Widget)
