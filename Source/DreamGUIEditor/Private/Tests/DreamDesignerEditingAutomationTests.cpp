@@ -20,6 +20,10 @@
 #include "Editor.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "K2Node_VariableGet.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "UObject/Package.h"
 
@@ -376,6 +380,77 @@ bool FDreamDesignerWrapReachesTheAssetTest::RunTest(const FString&)
 		TestNotNull(TEXT("And that parent is the wrapper, with the panel it was asked for"),
 			TemplateA->GetParent()->GetLayoutContainer());
 	}
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDeleteWarnsAboutGraphUseTest,
+	"DreamGUI.Designer.DeletingAWidgetTheGraphsUseIsReportedFirst",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerDeleteWarnsAboutGraphUseTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerDeleteWarning"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	UDreamWidget* Used = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("UsedByGraph"), nullptr, nullptr);
+	PreviewRoot = Scoped.PreviewRoot();
+	UDreamWidget* Unused = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("NobodyReadsThis"), nullptr, nullptr);
+	if (!TestNotNull(TEXT("A widget to reference"), Used) || !TestNotNull(TEXT("And one to leave alone"), Unused))
+	{
+		return false;
+	}
+	// The variables are the compiler's, so they only exist once it has run.
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+
+	UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Scoped.Blueprint);
+	if (!TestNotNull(TEXT("The Blueprint has an event graph"), Graph))
+	{
+		return false;
+	}
+	UK2Node_VariableGet* Getter = NewObject<UK2Node_VariableGet>(Graph);
+	Getter->VariableReference.SetSelfMember(FName(TEXT("UsedByGraph")));
+	Graph->AddNode(Getter, /*bFromUI*/false, /*bSelectNewNode*/false);
+	Getter->CreateNewGuid();
+	Getter->PostPlacedNewNode();
+	Getter->AllocateDefaultPins();
+
+	// Compiling reinstances the generated class, so the preview instance built from the old one is
+	// trashed and the name map points at nothing. Republish before asking it for anything.
+	Scoped.Rebuild();
+	UDreamWidget* UsedPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("UsedByGraph")));
+	UDreamWidget* UnusedPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("NobodyReadsThis")));
+	if (!TestNotNull(TEXT("The referenced widget has a preview"), UsedPreview)
+		|| !TestNotNull(TEXT("So does the other one"), UnusedPreview))
+	{
+		return false;
+	}
+
+	const TArray<FText> ForUsed = Scoped.Designer->CollectGraphReferencesToWidgets({ UsedPreview });
+	TestEqual(TEXT("The graph use is reported"), ForUsed.Num(), 1);
+	if (ForUsed.Num() == 1)
+	{
+		TestTrue(TEXT("And it names the variable"), ForUsed[0].ToString().Contains(TEXT("UsedByGraph")));
+	}
+
+	// The half that makes the report worth anything: a widget nothing reads must not be reported,
+	// or the prompt appears on every delete and stops being read.
+	TestEqual(TEXT("An unreferenced widget is not reported"),
+		Scoped.Designer->CollectGraphReferencesToWidgets({ UnusedPreview }).Num(), 0);
+
+	// Descendants count: deleting a parent takes its children's variables with it.
+	UDreamWidget* RootPreview = Scoped.PreviewRoot();
+	TestEqual(TEXT("Deleting the parent reports the child's use"),
+		Scoped.Designer->CollectGraphReferencesToWidgets({ RootPreview }).Num(), 1);
+
 	return true;
 }
 

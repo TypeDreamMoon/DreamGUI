@@ -39,6 +39,7 @@
 #include "BlueprintEditor.h"//SummonSearchUI (Find References)
 #include "EdGraph/EdGraph.h"
 #include "K2Node_CustomEvent.h"
+#include "K2Node_Variable.h"
 #include "UMGStyle.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUISettings.h"
@@ -2328,6 +2329,71 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 		DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
 	}
 	RepublishPreviewAndSelect(NewTemplates, Result);
+	return Result;
+}
+
+TArray<FText> FDreamWidgetBlueprintEditor::CollectGraphReferencesToWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets) const
+{
+	TArray<FText> Result;
+	if (!IsValid(BlueprintBeingEdited))
+	{
+		return Result;
+	}
+
+	// Descendants count: deleting a parent deletes them too, and their variables go with it.
+	TSet<FName> DoomedVariables;
+	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
+	{
+		UDreamWidget* Template = GetTemplateWidget(PreviewWidget);
+		if (Template == nullptr)
+		{
+			continue;
+		}
+		DreamWidgetTreeEditing::ForEachWidgetInSubtree(Template, [&DoomedVariables](UDreamWidget* Member)
+		{
+			const FName VariableName = UDreamWidgetTree::MakeWidgetVariableName(Member);
+			if (!VariableName.IsNone())
+			{
+				DoomedVariables.Add(VariableName);
+			}
+		});
+	}
+	if (DoomedVariables.Num() == 0)
+	{
+		return Result;
+	}
+
+	TArray<UK2Node_Variable*> VariableNodes;
+	FBlueprintEditorUtils::GetAllNodesOfClass<UK2Node_Variable>(BlueprintBeingEdited, VariableNodes);
+	// Several nodes reading one variable in one graph is one thing to report. Deduped on the key
+	// rather than on the line, because FText has no operator== to compare finished lines with.
+	TSet<FString> Reported;
+	for (const UK2Node_Variable* Node : VariableNodes)
+	{
+		// Self-context only: a variable of the same name on some other object is a different variable,
+		// and this delete does nothing to it.
+		if (!IsValid(Node) || !Node->VariableReference.IsSelfContext())
+		{
+			continue;
+		}
+		const FName MemberName = Node->VariableReference.GetMemberName();
+		if (!DoomedVariables.Contains(MemberName))
+		{
+			continue;
+		}
+		const UEdGraph* Graph = Node->GetGraph();
+		const FString GraphName = Graph != nullptr ? Graph->GetName() : FString();
+		bool bAlreadyReported = false;
+		Reported.Add(MemberName.ToString() + TEXT("|") + GraphName, &bAlreadyReported);
+		if (bAlreadyReported)
+		{
+			continue;
+		}
+		Result.Add(FText::Format(
+			LOCTEXT("GraphReferenceToDoomedWidget", "{0} - used in {1}"),
+			FText::FromName(MemberName),
+			Graph != nullptr ? FText::FromString(GraphName) : LOCTEXT("SomeGraph", "a graph")));
+	}
 	return Result;
 }
 

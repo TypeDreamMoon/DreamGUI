@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UITextInputCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "Interaction/UITextInput.h"
 
 #include "DreamGUIEditorModule.h"
@@ -56,9 +57,7 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	auto AllowMultilineHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, bAllowMultiLine));
 	AllowMultilineHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	bool bAllowMultiLine;
-	AllowMultilineHandle->GetValue(bAllowMultiLine);
-	if (!bAllowMultiLine)
+	if (DreamDetailsMultiSelect::AllEqual(AllowMultilineHandle, false))
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, MultiLineSubmitFunctionKeys));
 	}

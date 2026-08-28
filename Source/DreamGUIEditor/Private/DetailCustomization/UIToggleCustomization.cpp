@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIToggleCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "DreamUIEditorUtils.h"
 #include "Core/Components/DreamWidget.h"
 #include "IDetailGroup.h"
@@ -44,8 +45,10 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, CustomToggleTransition));
 	CustomTransition_PH->GetValue(*(UObject**)&CustomTransition);
 
-	uint8 TransitionType;
-	ToggleTransition_PH->GetValue(TransitionType);
+	// Hiding rows may only act on unanimity: a selection that disagrees about the transition still
+	// has objects using each of them, so hiding either set would hide properties that are live for
+	// some of them. MAX_uint8 matches no branch below, which leaves every row in place.
+	const uint8 TransitionType = DreamDetailsMultiSelect::ValueOr<uint8>(ToggleTransition_PH, MAX_uint8);
 	TArray<FName> NeedToHidePropertyNamesForTransition;
 	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), LOCTEXT("Transition", "Transition"));
 	TransitionGroup.HeaderProperty(ToggleTransition_PH);

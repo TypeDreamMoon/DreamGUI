@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "DreamUIEditorUtils.h"
 #include "Interaction/UIScrollViewWithScrollbar.h"
 
@@ -45,13 +46,6 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	auto VerticalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbarVisibility));
 	HorizontalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	VerticalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	uint8 HorizontalScrollbarVisibilityByte;
-	uint8 VerticalScrollbarVisibilityByte;
-	HorizontalScrollbarVisibilityHandle->GetValue(HorizontalScrollbarVisibilityByte);
-	VerticalScrollbarVisibilityHandle->GetValue(VerticalScrollbarVisibilityByte);
-	EDreamUIScrollViewScrollbarVisibility HorizontalScrollbarVisibility = (EDreamUIScrollViewScrollbarVisibility)HorizontalScrollbarVisibilityByte;
-	EDreamUIScrollViewScrollbarVisibility VerticalScrollbarVisibility = (EDreamUIScrollViewScrollbarVisibility)VerticalScrollbarVisibilityByte;
-
 	auto HorizontalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbar));
 	HorizontalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	UUIScrollbar* HorizontalScrollbar = nullptr;
@@ -72,9 +66,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 
 	auto KeepProgressHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, KeepProgress));
 	KeepProgressHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	bool KeepProgress;
-	KeepProgressHandle->GetValue(KeepProgress);
-	if (!KeepProgress)
+	if (DreamDetailsMultiSelect::AllEqual(KeepProgressHandle, false))
 	{
 		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, Progress));
 	}

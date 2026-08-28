@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamUIEventDelegateCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "DreamGUIEditorStyle.h"
 #include "IDetailChildrenBuilder.h"
 #include "IDetailGroup.h"
@@ -960,9 +961,9 @@ void FDreamUIEventDelegateCustomization::SetEventDataParameterType(TSharedRef<IP
 EDreamUIEventDelegateParameterType FDreamUIEventDelegateCustomization::GetNativeParameterType()const
 {
 	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegate, SupportParameterType));
-	uint8 supportParameterTypeUint8;
-	NativeParameterTypeHandle->GetValue(supportParameterTypeUint8);
-	EDreamUIEventDelegateParameterType eventParameterType = (EDreamUIEventDelegateParameterType)supportParameterTypeUint8;
+	// None is the enum's own "not initialized", so it is also the right answer for "they disagree".
+	const auto eventParameterType = (EDreamUIEventDelegateParameterType)DreamDetailsMultiSelect::ValueOr<uint8>(
+		NativeParameterTypeHandle, (uint8)EDreamUIEventDelegateParameterType::None);
 	return eventParameterType;
 }
 void FDreamUIEventDelegateCustomization::AddNativeParameterTypeProperty(IDetailChildrenBuilder& ChildBuilder)
@@ -974,9 +975,8 @@ void FDreamUIEventDelegateCustomization::AddNativeParameterTypeProperty(IDetailC
 EDreamUIEventDelegateParameterType FDreamUIEventDelegateCustomization::GetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle)const
 {
 	auto paramTypeHandle = EventDataItemHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ParamType));
-	uint8 functionParameterTypeUint8;
-	paramTypeHandle->GetValue(functionParameterTypeUint8);
-	EDreamUIEventDelegateParameterType functionParameterType = (EDreamUIEventDelegateParameterType)functionParameterTypeUint8;
+	const auto functionParameterType = (EDreamUIEventDelegateParameterType)DreamDetailsMultiSelect::ValueOr<uint8>(
+		paramTypeHandle, (uint8)EDreamUIEventDelegateParameterType::None);
 	return functionParameterType;
 }
 
@@ -1883,8 +1883,7 @@ SetBufferValue(BufferHandle, ToBinary);
 
 void FDreamUIEventDelegateCustomization::BoolValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
-	bool Value; 
-	ValueHandle->GetValue(Value); 
+	const bool Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, false);
 	TArray<uint8> Buffer;
 	Buffer.Add(Value ? 1 : 0);
 	SetBufferValue(BufferHandle, Buffer);
@@ -1943,8 +1942,7 @@ void FDreamUIEventDelegateCustomization::TextValueChange(TSharedPtr<IPropertyHan
 }
 void FDreamUIEventDelegateCustomization::Vector2ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
-	FVector2D Value;
-	ValueHandle->GetValue(Value);
+	FVector2D Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FVector2D::ZeroVector);
 	switch (AxisType)
 	{
 	case 0:	Value.X = NewValue; break;
@@ -1957,8 +1955,7 @@ void FDreamUIEventDelegateCustomization::Vector2ItemValueChange(float NewValue, 
 }
 TOptional<float> FDreamUIEventDelegateCustomization::Vector2GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
-	FVector2D Value;
-	ValueHandle->GetValue(Value);
+	const FVector2D Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FVector2D::ZeroVector);
 	switch (AxisType)
 	{
 	default:
@@ -2153,9 +2150,7 @@ TArray<uint8> FDreamUIEventDelegateCustomization::GetBuffer(TSharedPtr<IProperty
 	for (uint32 i = 0; i < bufferHandleCount; i++)
 	{
 		auto elementHandle = BufferArrayHandle->GetElement(i);
-		uint8 value;
-		elementHandle->GetValue(value);
-		resultBuffer.Add(value);
+		resultBuffer.Add(DreamDetailsMultiSelect::ValueOr<uint8>(elementHandle, 0));
 	}
 	return resultBuffer;
 }
@@ -2169,9 +2164,7 @@ TArray<uint8> FDreamUIEventDelegateCustomization::GetPropertyBuffer(TSharedPtr<I
 	for (uint32 i = 0; i < bufferCount; i++)
 	{
 		auto bufferHandle = paramBufferArrayHandle->GetElement(i);
-		uint8 buffer;
-		bufferHandle->GetValue(buffer);
-		paramBuffer.Add(buffer);
+		paramBuffer.Add(DreamDetailsMultiSelect::ValueOr<uint8>(bufferHandle, 0));
 	}
 	return paramBuffer;
 }

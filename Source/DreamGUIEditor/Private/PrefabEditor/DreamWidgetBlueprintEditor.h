@@ -387,6 +387,13 @@ public:
 	class UDreamUIBehaviour* DesignerAddComponentBy(UDreamWidget* InPreviewWidget,
 		TFunctionRef<class UDreamUIBehaviour*(UDreamWidget*)> InAddToTemplate);
 	bool DesignerRemoveComponent(UDreamWidget* InPreviewWidget, class UDreamUIBehaviour* InPreviewComponent);
+	/**
+	 * Where this Blueprint's own graphs read the variables these widgets own, one line per node.
+	 *
+	 * The variables are the compiler's, named after the widgets, so deleting a widget deletes its
+	 * variable and every node reading it stops compiling. This is what lets the delete say so first.
+	 */
+	TArray<FText> CollectGraphReferencesToWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets) const;
 	TArray<UDreamWidget*> DesignerDuplicateWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
 	void DesignerCopyWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
 	TArray<UDreamWidget*> DesignerPasteWidgets(UDreamWidget* InPreviewParent);

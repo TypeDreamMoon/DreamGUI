@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamUISpriteDataCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "Core/DreamUISettings.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
@@ -58,8 +59,7 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 	TArray<FName> PropertiesNeedToHide;
 	IDetailCategoryBuilder& AtlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
 	auto PackingType_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingType));
-	EDreamUISpritePackingType PackingType;
-	PackingType_PH->GetValue(*(uint8*)&PackingType);
+	const auto PackingType = (EDreamUISpritePackingType)DreamDetailsMultiSelect::ValueOr<uint8>(PackingType_PH, 0);
 	PackingType_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]()
 	{
 		DetailBuilder.ForceRefreshDetails();

@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "Misc/FileHelper.h"
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Widget/DreamUIFileBrowser.h"
@@ -55,9 +56,7 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 
 	auto fontTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontType));
 	fontTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FDreamUIFontData_FreeTypeRenderCustomization::ForceRefresh, &DetailBuilder));
-	uint8 fontTypeUint8;
-	fontTypeHandle->GetValue(fontTypeUint8);
-	auto fontType = (EDreamUIDynamicFontDataType)fontTypeUint8;
+	const auto fontType = (EDreamUIDynamicFontDataType)DreamDetailsMultiSelect::ValueOr<uint8>(fontTypeHandle, 0);
 
 	IDetailCategoryBuilder& dreamguiCategory = DetailBuilder.EditCategory("DreamGUI");
 	dreamguiCategory.AddCustomRow(LOCTEXT("ReloadFont", "ReloadFont"))

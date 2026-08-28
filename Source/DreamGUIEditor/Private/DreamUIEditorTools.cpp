@@ -985,6 +985,23 @@ UDreamUIBehaviour* FDreamUIEditorTools::FindCompanionForWidgets(const TArray<UDr
 }
 bool FDreamUIEditorTools::ShouldContinueDeleteOperation(const TArray<UDreamWidget*>& InWidgets)
 {
+	if (InWidgets.Num() > 0)
+	{
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(InWidgets[0]))
+		{
+			// A class has no companion behaviour blueprint, so the prefab question below answers
+			// "nothing is bound" here no matter what the graphs do. What breaks instead is the
+			// compiler's own variables: the nodes reading them stop compiling. Saying so now is the
+			// whole point -- otherwise it surfaces as an error on the next compile.
+			const TArray<FText> References = Designer->CollectGraphReferencesToWidgets(InWidgets);
+			if (References.Num() == 0)return true;
+			const FText GraphMessage = FText::Format(
+				LOCTEXT("ConfirmDeleteReferencedWidgets", "One or more widgets are used by this Blueprint's graphs. Deleting them removes the variables those nodes read, and the Blueprint will not compile until the nodes are fixed. Delete anyway?\n\n{0}")
+				, FText::Join(FText::FromString(TEXT("\n")), References));
+			return FMessageDialog::Open(EAppMsgType::YesNo, EAppReturnType::Yes, GraphMessage
+				, LOCTEXT("ConfirmDeleteReferencedWidgetsTitle", "Delete Widgets")) == EAppReturnType::Yes;
+		}
+	}
 	const TArray<FText> Bindings = CollectBehaviourBindingsToWidgets(FindCompanionForWidgets(InWidgets), InWidgets);
 	if (Bindings.Num() == 0)return true;
 	const FText Message = FText::Format(

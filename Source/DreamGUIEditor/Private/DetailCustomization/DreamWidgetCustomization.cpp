@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DetailCustomization/DreamWidgetCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "IDetailGroup.h"
 #include "DreamGUIEditorStyle.h"
@@ -368,12 +369,10 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		};
 
 		CornerRadiusXHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=] {
-			bool bUniformSetCornerRadius = false;
-			UniformSetCornerRadiusHandle->GetValue(bUniformSetCornerRadius);
-			if (bUniformSetCornerRadius)
+			float CornerRadiusX = 0.0f;
+			if (DreamDetailsMultiSelect::AllEqual(UniformSetCornerRadiusHandle, true)
+				&& CornerRadiusXHandle->GetValue(CornerRadiusX) == FPropertyAccess::Success)
 			{
-				float CornerRadiusX;
-				CornerRadiusXHandle->GetValue(CornerRadiusX);
 				CornerRadiusYHandle->SetValue(CornerRadiusX);
 				CornerRadiusZHandle->SetValue(CornerRadiusX);
 				CornerRadiusWHandle->SetValue(CornerRadiusX);

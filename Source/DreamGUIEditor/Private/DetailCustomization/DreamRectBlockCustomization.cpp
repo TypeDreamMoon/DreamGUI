@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamRectBlockCustomization.h"
+#include "DreamDetailsMultiSelect.h"
 #include "DreamUIEditorUtils.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Utils/DreamUIUtils.h"
@@ -65,9 +66,7 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 				PropertyHandle->SetValue((uint8)EDreamRectBlockUnitMode::Value);
 				})
 			.IsChecked_Lambda([=] {
-				uint8 Value;
-				PropertyHandle->GetValue(Value);
-				return Value == (uint8)EDreamRectBlockUnitMode::Value ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+				return DreamDetailsMultiSelect::CheckedIfEqual<uint8>(PropertyHandle, (uint8)EDreamRectBlockUnitMode::Value);
 				})
 			[
 				SNew(STextBlock)
@@ -89,9 +88,7 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 			PropertyHandle->SetValue((uint8)EDreamRectBlockUnitMode::Percentage);
 				})
 			.IsChecked_Lambda([=] {
-				uint8 Value;
-				PropertyHandle->GetValue(Value);
-				return Value == (uint8)EDreamRectBlockUnitMode::Percentage ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+				return DreamDetailsMultiSelect::CheckedIfEqual<uint8>(PropertyHandle, (uint8)EDreamRectBlockUnitMode::Percentage);
 				})
 			[
 				SNew(STextBlock)
@@ -222,12 +219,10 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 	};
 
 	CornerRadiusXHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=] {
-		bool bUniformSetCornerRadius = false;
-		UniformSetCornerRadiusHandle->GetValue(bUniformSetCornerRadius);
-		if (bUniformSetCornerRadius)
+		float CornerRadiusX = 0.0f;
+		if (DreamDetailsMultiSelect::AllEqual(UniformSetCornerRadiusHandle, true)
+			&& CornerRadiusXHandle->GetValue(CornerRadiusX) == FPropertyAccess::Success)
 		{
-			float CornerRadiusX;
-			CornerRadiusXHandle->GetValue(CornerRadiusX);
 			CornerRadiusYHandle->SetValue(CornerRadiusX);
 			CornerRadiusZHandle->SetValue(CornerRadiusX);
 			CornerRadiusWHandle->SetValue(CornerRadiusX);
@@ -352,9 +347,10 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 		});
 		AddPropertyRowToGroup(BodyColor, Color, BodyGroup, EnableBodyAttribute);
 
-		EDreamRectBlockTextureMode BodyTextureMode;
 		auto BodyTextureModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTextureMode));
-		BodyTextureModeHandle->GetValue(*(uint8*)&BodyTextureMode);
+		// A disagreeing selection gets the first mode, which is the property's own default: the panel
+		// has to build one shape or the other, and picking it off the stack is not a choice.
+		const auto BodyTextureMode = (EDreamRectBlockTextureMode)DreamDetailsMultiSelect::ValueOr<uint8>(BodyTextureModeHandle, 0);
 		BodyTextureModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {
 			DetailBuilder.ForceRefreshDetails();
 			}));
@@ -423,9 +419,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 								BodyTextureModeHandle->SetValue((uint8)EDreamRectBlockTextureMode::Texture);
 								})
 							.IsChecked_Lambda([=] {
-								uint8 Value;
-								BodyTextureModeHandle->GetValue(Value);
-								return Value == (uint8)EDreamRectBlockTextureMode::Texture ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+								return DreamDetailsMultiSelect::CheckedIfEqual<uint8>(BodyTextureModeHandle, (uint8)EDreamRectBlockTextureMode::Texture);
 								})
 							[
 								SNew(STextBlock)
@@ -447,9 +441,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 								BodyTextureModeHandle->SetValue((uint8)EDreamRectBlockTextureMode::Sprite);
 								})
 							.IsChecked_Lambda([=] {
-								uint8 Value;
-								BodyTextureModeHandle->GetValue(Value);
-								return Value == (uint8)EDreamRectBlockTextureMode::Sprite ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+								return DreamDetailsMultiSelect::CheckedIfEqual<uint8>(BodyTextureModeHandle, (uint8)EDreamRectBlockTextureMode::Sprite);
 								})
 							[
 								SNew(STextBlock)
