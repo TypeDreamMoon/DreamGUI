@@ -35,14 +35,10 @@ private:
 	TWeakObjectPtr<UWorld> World;
 
 	bool IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent);
-	bool IsPrefabButtonEnable()const;
-	FOptionalSize GetPrefabButtonHeight()const;
-	EVisibility GetPrefabButtonVisibility()const;
 	bool IsEditorAllowEditing()const;
 
 	TSharedPtr<class IDetailsView> DetailsView;
 	TSharedPtr<class SDreamWidgetComponentEditor> ComponentEditor;
-	TSharedPtr<class SDreamUIPrefabOverrideDataViewer> PrefabOverrideDataViewer;
 	TWeakObjectPtr<UDreamWidget> CachedWidget;
 	bool bIsSelectFromDreamUIEditor = false;
 	bool bIsSelectFromComponentList = false;

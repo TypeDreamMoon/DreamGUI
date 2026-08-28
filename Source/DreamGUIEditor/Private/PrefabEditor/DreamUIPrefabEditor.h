@@ -18,9 +18,6 @@ class UDreamWidget;
 class UDreamUIPrefab;
 class SDreamUIPrefabEditorViewport;
 class SDreamUIPrefabEditorDetails;
-class SDreamUIPrefabRawDataViewer;
-class SDreamUIPrefabOverridesViewer;
-class SDreamUIPrefabBehaviourViewer;
 class AActor;
 class UDreamUIPrefabHelperObject;
 class UDreamUIBehaviour;
@@ -53,7 +50,6 @@ struct FDreamUIPrefabCompilerIssue
 	FString Message;
 	TWeakObjectPtr<UObject> SourceObject;
 	TWeakObjectPtr<UDreamUIPrefabSequence> Animation;
-	bool bOpenRawData = false;
 };
 
 /** UMG-toolbar-style alignment target for a multi-widget selection (DreamGUI UI plane is YZ: horizontal=Y, vertical=Z). */
@@ -289,9 +285,6 @@ private:
 	TSharedPtr<SDreamWidgetEditorHierarchyView> OutlinerPtr;
 	TSharedPtr<class SDreamUIPrefabPalette> PalettePtr;
 	TSharedPtr<SDreamUIPrefabSequenceEditor> SequencerPtr;
-	TSharedPtr<SDreamUIPrefabRawDataViewer> PrefabRawDataViewer;
-	TSharedPtr<SDreamUIPrefabOverridesViewer> PrefabOverridesViewer;
-	TSharedPtr<SDreamUIPrefabBehaviourViewer> PrefabBehaviourViewer;
 	TSharedPtr<IMessageLogListing> CompilerResultsListing;
 
 	TArray<TWeakObjectPtr<UDreamWidget>> SelectedWidgets;
@@ -311,9 +304,6 @@ private:
 	FText GetApplyButtonStatusTooltip()const;
 	FSlateIcon GetApplyButtonStatusImage()const;
 
-	void OnOpenRawDataViewerPanel();
-	void OnOpenOverridesViewerPanel();
-	void OnOpenBehaviourViewerPanel();
 	void OnOpenPrefabHelperObjectDetailsPanel();
 public:
 	/**

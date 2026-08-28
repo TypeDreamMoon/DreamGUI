@@ -60,7 +60,6 @@
 #include "DetailCustomization/UISpriteSheetTexturePlayerCustomization.h"
 #include "DetailCustomization/DreamVisualPostProcessCustomization.h"
 
-#include "PrefabEditor/DreamUIPrefabOverrideDataViewer.h"
 #include "Engine/Selection.h"
 
 #include "PrefabAnimation/DreamUIPrefabSequenceComponentCustomization.h"
@@ -580,52 +579,6 @@ TSharedRef<SWidget> FDreamGUIEditorModule::MakeEditorToolsMenu(TFunction<UDreamW
 					, FCanExecuteAction::CreateStatic(&FDreamUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction)
 					, FGetActionCheckState()
 					, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction))
-			);
-			MenuBuilder.AddMenuEntry(
-				FUIAction(FExecuteAction()
-					, FCanExecuteAction::CreateStatic(&FDreamUIEditorTools::CanCheckPrefabOverrideParameter, GetSelectedWidgetFunction)
-					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanCheckPrefabOverrideParameter, GetSelectedWidgetFunction))
-				, 
-				SNew(SComboButton)
-				.HasDownArrow(true)
-				.ToolTipText(LOCTEXT("PrefabOverride", "Edit override parameters for this prefab"))
-				.ButtonContent()
-				[
-					SNew(STextBlock)
-					.Text(LOCTEXT("OverrideButton", "Prefab Override Properties"))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				]
-				.MenuContent()
-				[
-					SNew(SBox)
-					.Padding(FMargin(4, 4))
-					[
-						SNew(SHorizontalBox)
-						+SHorizontalBox::Slot()
-						.AutoWidth()
-						[
-							SNew(SVerticalBox)
-							+SVerticalBox::Slot()
-							.AutoHeight()
-							[
-								SNew(SHorizontalBox)
-								+SHorizontalBox::Slot()
-								.AutoWidth()
-								[
-									SNew(SDreamUIPrefabOverrideDataViewer, GetSelectedWidgetFunction)
-									.AfterRevertPrefab_Lambda([=, this](UDreamUIPrefab* PrefabAsset) {
-										})
-									.AfterApplyPrefab_Lambda([=, this](UDreamUIPrefab* PrefabAsset) {
-										FDreamUIEditorTools::RefreshLoadedPrefab();
-										FDreamUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
-										FDreamUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
-										})
-								]
-							]
-						]
-					]
-				]
 			);
 		}
 		MenuBuilder.EndSection();

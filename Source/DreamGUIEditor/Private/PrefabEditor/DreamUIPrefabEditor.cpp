@@ -5,9 +5,6 @@
 #include "DreamGUIEditorModule.h"
 #include "DreamUIPrefabEditorViewport.h"
 #include "DreamUIPrefabEditorDetails.h"
-#include "DreamUIPrefabRawDataViewer.h"
-#include "DreamUIPrefabOverridesViewer.h"
-#include "DreamUIPrefabBehaviourViewer.h"
 #include "EditorModeManager.h"
 #include "GameFramework/Actor.h"
 #include "AssetSelection.h"
@@ -75,9 +72,6 @@ struct FDreamUIPrefabEditorTabs
 	static const FName OutlinerID;
 	static const FName PaletteID;
 	static const FName SequencerID;
-	static const FName PrefabRawDataViewerID;
-	static const FName PrefabOverridesViewerID;
-	static const FName PrefabBehaviourViewerID;
 	static const FName CompilerResultsID;
 };
 
@@ -86,9 +80,6 @@ const FName FDreamUIPrefabEditorTabs::ViewportID(TEXT("Viewport"));
 const FName FDreamUIPrefabEditorTabs::OutlinerID(TEXT("Outliner"));
 const FName FDreamUIPrefabEditorTabs::PaletteID(TEXT("Palette"));
 const FName FDreamUIPrefabEditorTabs::SequencerID(TEXT("Sequencer"));
-const FName FDreamUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
-const FName FDreamUIPrefabEditorTabs::PrefabOverridesViewerID(TEXT("PrefabOverridesViewer"));
-const FName FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID(TEXT("PrefabBehaviourViewer"));
 const FName FDreamUIPrefabEditorTabs::CompilerResultsID(TEXT("CompilerResults"));
 
 namespace DreamUIPrefabEditorLocal
@@ -441,16 +432,6 @@ void FDreamUIPrefabEditor::BuildTabDescriptors()
 			check(CompilerResultsListing.IsValid());
 			return FModuleManager::LoadModuleChecked<FMessageLogModule>("MessageLog").CreateLogListingWidget(CompilerResultsListing.ToSharedRef());
 		} });
-	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID, LOCTEXT("PrefabBehaviourViewerTabLabel", "Behaviour"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Event"), Content(PrefabBehaviourViewer),
-		[this]() { if (PrefabBehaviourViewer.IsValid()) { PrefabBehaviourViewer->Rebuild(); } } });
-	TabDescriptors.Add({ FDreamUIPrefabEditorTabs::PrefabOverridesViewerID, LOCTEXT("PrefabOverridesViewerTabLabel", "Overrides"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Adjust"), Content(PrefabOverridesViewer),
-		[this]() { if (PrefabOverridesViewer.IsValid()) { PrefabOverridesViewer->Rebuild(); } } });
-	FTabDescriptor RawData{ FDreamUIPrefabEditorTabs::PrefabRawDataViewerID, LOCTEXT("PrefabRawDataViewerTabLabel", "Raw Data"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Advanced"), Content(PrefabRawDataViewer) };
-	RawData.bListedInWindowMenu = false;
-	TabDescriptors.Add(MoveTemp(RawData));
 	// The sequencer invokes this tab by its engine-wide id and then fills it with the curve editor;
 	// spawning it empty here just gives it a home in this window.
 	FTabDescriptor CurveEditor{ FName("SequencerGraphEditor"), NSLOCTEXT("Sequencer", "SequencerMainGraphEditorTitle", "Sequencer Curves"),
@@ -587,9 +568,6 @@ TSharedRef<FTabManager::FLayout> FDreamUIPrefabEditor::CreateDefaultLayout()
 					->SetForegroundTab(FDreamUIPrefabEditorTabs::SequencerID)
 					->AddTab(FDreamUIPrefabEditorTabs::SequencerID, ETabState::ClosedTab)
 					->AddTab(FDreamUIPrefabEditorTabs::CompilerResultsID, ETabState::ClosedTab)
-					->AddTab(FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID, ETabState::ClosedTab)
-					->AddTab(FDreamUIPrefabEditorTabs::PrefabOverridesViewerID, ETabState::ClosedTab)
-					->AddTab(FDreamUIPrefabEditorTabs::PrefabRawDataViewerID, ETabState::ClosedTab)
 					->AddTab(FName("SequencerGraphEditor"), ETabState::ClosedTab)
 				)
 			)
@@ -669,11 +647,6 @@ void FDreamUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const
 	
 	DetailsPtr = SNew(SDreamUIPrefabEditorDetails, GetWorld());
 
-	PrefabRawDataViewer = SNew(SDreamUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
-
-	PrefabOverridesViewer = SNew(SDreamUIPrefabOverridesViewer, PrefabEditorPtr, PrefabBeingEdited);
-
-	PrefabBehaviourViewer = SNew(SDreamUIPrefabBehaviourViewer, PrefabEditorPtr, PrefabBeingEdited);
 	
 	UDreamUIManagerWorldSubsystem::GetInstance(GetWorld())->OnDreamUIWidgetOutlinerChanged.AddSPLambda(this, [=, this]()
 	{
@@ -800,20 +773,6 @@ void FDreamUIPrefabEditor::SaveAppliedPrefabToDisk()
 	FDreamUIEditorTools::RefreshOnSubPrefabChange(GetPrefabHelperObject()->PrefabAsset);
 }
 
-void FDreamUIPrefabEditor::OnOpenOverridesViewerPanel()
-{
-	this->InvokeTab(FDreamUIPrefabEditorTabs::PrefabOverridesViewerID);
-}
-
-void FDreamUIPrefabEditor::OnOpenBehaviourViewerPanel()
-{
-	this->InvokeTab(FDreamUIPrefabEditorTabs::PrefabBehaviourViewerID);
-}
-
-void FDreamUIPrefabEditor::OnOpenRawDataViewerPanel()
-{
-	this->InvokeTab(FDreamUIPrefabEditorTabs::PrefabRawDataViewerID);
-}
 void FDreamUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel()
 {
 	UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
@@ -1885,14 +1844,13 @@ void FDreamUIPrefabEditor::SaveEditorState()
 void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompilerIssue>& OutIssues) const
 {
 	auto AddIssue = [&OutIssues](EDreamUIPrefabCompilerSeverity Severity, FString Message,
-		UObject* SourceObject = nullptr, UDreamUIPrefabSequence* Animation = nullptr, bool bOpenRawData = false)
+		UObject* SourceObject = nullptr, UDreamUIPrefabSequence* Animation = nullptr)
 	{
 		FDreamUIPrefabCompilerIssue& Issue = OutIssues.AddDefaulted_GetRef();
 		Issue.Severity = Severity;
 		Issue.Message = MoveTemp(Message);
 		Issue.SourceObject = SourceObject;
 		Issue.Animation = Animation;
-		Issue.bOpenRawData = bOpenRawData;
 	};
 
 	UDreamUIPrefab* Prefab = PrefabBeingEdited;
@@ -1909,7 +1867,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		if (!IsValid(Prefab->ReferenceAssetList[Index]))
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
-				FString::Printf(TEXT("ReferenceAssetList[%d] is missing."), Index), nullptr, nullptr, true);
+				FString::Printf(TEXT("ReferenceAssetList[%d] is missing."), Index));
 		}
 	}
 	for (int32 Index = 0; Index < Prefab->ReferenceClassList.Num(); ++Index)
@@ -1917,7 +1875,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		if (!IsValid(Prefab->ReferenceClassList[Index]))
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
-				FString::Printf(TEXT("ReferenceClassList[%d] is missing."), Index), nullptr, nullptr, true);
+				FString::Printf(TEXT("ReferenceClassList[%d] is missing."), Index));
 		}
 	}
 
@@ -1926,19 +1884,19 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 	{
 		if (!Pair.Key.IsValid())
 		{
-			AddIssue(EDreamUIPrefabCompilerSeverity::Warning, TEXT("Helper GUID map contains an invalid GUID."), Pair.Value.Get(), nullptr, true);
+			AddIssue(EDreamUIPrefabCompilerSeverity::Warning, TEXT("Helper GUID map contains an invalid GUID."), Pair.Value.Get());
 		}
 		if (!IsValid(Pair.Value))
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
-				FString::Printf(TEXT("Helper GUID '%s' points to a missing object."), *Pair.Key.ToString()), nullptr, nullptr, true);
+				FString::Printf(TEXT("Helper GUID '%s' points to a missing object."), *Pair.Key.ToString()));
 			continue;
 		}
 		if (const FGuid* ExistingGuid = FirstGuidByObject.Find(Pair.Value.Get()))
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 				FString::Printf(TEXT("Object '%s' is mapped by multiple helper GUIDs (%s and %s)."),
-					*Pair.Value->GetName(), *ExistingGuid->ToString(), *Pair.Key.ToString()), Pair.Value.Get(), nullptr, true);
+					*Pair.Value->GetName(), *ExistingGuid->ToString(), *Pair.Key.ToString()), Pair.Value.Get());
 		}
 		else
 		{
@@ -1964,7 +1922,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 				FString::Printf(TEXT("Widget hierarchy contains a duplicate or cyclic reference to '%s'."),
-					*Widget->GetDisplayName()), Widget, nullptr, true);
+					*Widget->GetDisplayName()), Widget);
 			continue;
 		}
 		VisitedWidgets.Add(Widget);
@@ -1976,7 +1934,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 				{
 					AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 						FString::Printf(TEXT("Widget '%s' is listed under '%s' but points to a different parent."),
-							*Child->GetDisplayName(), *Widget->GetDisplayName()), Child, nullptr, true);
+							*Child->GetDisplayName(), *Widget->GetDisplayName()), Child);
 				}
 				Widgets.Add(Child);
 			}
@@ -2022,7 +1980,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		if (bExpectCompleteGuidMap && !FirstGuidByObject.Contains(Widget))
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
-				FString::Printf(TEXT("Widget '%s' is missing from the helper GUID map."), *Widget->GetDisplayName()), Widget, nullptr, true);
+				FString::Printf(TEXT("Widget '%s' is missing from the helper GUID map."), *Widget->GetDisplayName()), Widget);
 		}
 		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
 		{
@@ -2030,7 +1988,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 			{
 				AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 					FString::Printf(TEXT("Component '%s' on widget '%s' is missing from the helper GUID map."),
-						*Component->GetName(), *Widget->GetDisplayName()), Component, nullptr, true);
+						*Component->GetName(), *Widget->GetDisplayName()), Component);
 			}
 		}
 	}
@@ -2047,7 +2005,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 				FString::Printf(TEXT("Helper GUID '%s' maps '%s', which is outside the prefab root hierarchy."),
-					*Pair.Key.ToString(), *Object->GetName()), Object, nullptr, true);
+					*Pair.Key.ToString(), *Object->GetName()), Object);
 		}
 	}
 
@@ -2085,7 +2043,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		else if (bExpectCompleteGuidMap && !FirstGuidByObject.Contains(Match))
 		{
 			AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
-				FString::Printf(TEXT("Primary Behaviour '%s' has no helper GUID mapping."), *Match->GetName()), Match, nullptr, true);
+				FString::Printf(TEXT("Primary Behaviour '%s' has no helper GUID mapping."), *Match->GetName()), Match);
 		}
 	}
 
@@ -2095,7 +2053,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 		const FDreamUISubPrefabData& Data = Pair.Value;
 		if (!IsValid(SubPrefabRoot))
 		{
-			AddIssue(EDreamUIPrefabCompilerSeverity::Warning, TEXT("SubPrefabMap contains a missing root widget."), nullptr, nullptr, true);
+			AddIssue(EDreamUIPrefabCompilerSeverity::Warning, TEXT("SubPrefabMap contains a missing root widget."));
 		}
 		if (!IsValid(Data.PrefabAsset))
 		{
@@ -2108,7 +2066,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 			{
 				AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 					FString::Printf(TEXT("Sub-prefab '%s' contains an invalid object mapping for GUID '%s'."),
-						*GetNameSafe(Data.PrefabAsset), *ObjectPair.Key.ToString()), SubPrefabRoot, nullptr, true);
+						*GetNameSafe(Data.PrefabAsset), *ObjectPair.Key.ToString()), SubPrefabRoot);
 			}
 		}
 		for (const FDreamUIPrefabOverrideParameterData& Override : Data.ObjectOverrideParameterArray)
@@ -2118,7 +2076,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 			{
 				AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 					FString::Printf(TEXT("Sub-prefab '%s' contains an override for a missing object."), *GetNameSafe(Data.PrefabAsset)),
-					SubPrefabRoot, nullptr, true);
+					SubPrefabRoot);
 				continue;
 			}
 			for (FName PropertyName : Override.MemberPropertyNames)
@@ -2128,7 +2086,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 				{
 					AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 						FString::Printf(TEXT("Override property '%s.%s' no longer exists."),
-							*OverrideObject->GetClass()->GetName(), *PropertyName.ToString()), OverrideObject, nullptr, true);
+							*OverrideObject->GetClass()->GetName(), *PropertyName.ToString()), OverrideObject);
 				}
 			}
 		}
@@ -2196,7 +2154,7 @@ void FDreamUIPrefabEditor::ValidatePrefabReferences(TArray<FDreamUIPrefabCompile
 					{
 						AddIssue(EDreamUIPrefabCompilerSeverity::Warning,
 							FString::Printf(TEXT("Animation '%s' has mismatched object binding ID and reference arrays."),
-								*Sequence->GetDisplayNameString()), Component, Sequence, true);
+								*Sequence->GetDisplayNameString()), Component, Sequence);
 					}
 					for (const FGuid& BindingId : InvalidBindingIds)
 					{
@@ -2320,18 +2278,6 @@ void FDreamUIPrefabEditor::PublishCompilerResults(const FText& PageTitle,
 					if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakThis.Pin())
 					{
 						Editor->NavigateToAnimation(WeakAnimation);
-					}
-				}));
-		}
-		else if (Issue.bOpenRawData)
-		{
-			ActionToken = FActionToken::Create(LOCTEXT("OpenRawDataIssueAction", "Open Raw Data"),
-				LOCTEXT("OpenRawDataIssueActionTooltip", "Open the prefab reference and GUID data."),
-				FOnActionTokenExecuted::CreateLambda([WeakThis]()
-				{
-					if (TSharedPtr<FDreamUIPrefabEditor> Editor = WeakThis.Pin())
-					{
-						Editor->OnOpenRawDataViewerPanel();
 					}
 				}));
 		}
@@ -3120,24 +3066,6 @@ void FDreamUIPrefabEditor::BindCommands()
 		FIsActionChecked::CreateSP(this, &FDreamUIPrefabEditor::IsSaveOnApplyMode, static_cast<int32>(DreamUIPrefabEditorLocal::Always))
 	);
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.RawDataViewer,
-		FExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::OnOpenRawDataViewerPanel),
-		FCanExecuteAction(),
-		FIsActionChecked()
-	);
-	ToolkitCommands->MapAction(
-		PrefabEditorCommands.OverridesViewer,
-		FExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::OnOpenOverridesViewerPanel),
-		FCanExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::HasAnySubPrefab),
-		FIsActionChecked()
-	);
-	ToolkitCommands->MapAction(
-		PrefabEditorCommands.BehaviourViewer,
-		FExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::OnOpenBehaviourViewerPanel),
-		FCanExecuteAction(),
-		FIsActionChecked()
-	);
-	ToolkitCommands->MapAction(
 		PrefabEditorCommands.OpenPrefabHelperObject,
 		FExecuteAction::CreateSP(this, &FDreamUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel),
 		FCanExecuteAction(),
@@ -3291,17 +3219,7 @@ void FDreamUIPrefabEditor::ExtendToolbar()
 		BehaviourSection.AddEntry(BehaviourOptionsMenuEntry);
 	}
 
-	FToolMenuSection& PanelsSection = ToolBar->AddSection("DreamUIPrefabPanels", TAttribute<FText>(), FToolMenuInsert("DreamUIPrefabBehaviour", EToolMenuInsertType::After));
-	{
-		PanelsSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.BehaviourViewer
-			, TAttribute<FText>(), TAttribute<FText>()
-			, FSlateIcon(AppStyle, "Icons.Event")));
-		PanelsSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.OverridesViewer
-			, TAttribute<FText>(), TAttribute<FText>()
-			, FSlateIcon(AppStyle, "Icons.Adjust")));
-	}
-
-	FToolMenuSection& ViewSection = ToolBar->AddSection("DreamUIPrefabView", TAttribute<FText>(), FToolMenuInsert("DreamUIPrefabPanels", EToolMenuInsertType::After));
+	FToolMenuSection& ViewSection = ToolBar->AddSection("DreamUIPrefabView", TAttribute<FText>(), FToolMenuInsert("DreamUIPrefabBehaviour", EToolMenuInsertType::After));
 	{
 		ViewSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.ToggleScreenSpacePreview
 			, TAttribute<FText>(), TAttribute<FText>()
@@ -3327,7 +3245,6 @@ void FDreamUIPrefabEditor::GenerateDebugMenu(UToolMenu* InMenu)
 {
 	FToolMenuSection& Section = InMenu->AddSection("Debug", LOCTEXT("DebugMenuSection", "Inspect"));
 	const FDreamUIPrefabEditorCommand& Commands = FDreamUIPrefabEditorCommand::Get();
-	Section.AddMenuEntry(Commands.RawDataViewer, TAttribute<FText>(), TAttribute<FText>(), FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Advanced"));
 	Section.AddMenuEntry(Commands.OpenPrefabHelperObject, TAttribute<FText>(), TAttribute<FText>(), FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Details"));
 }
 

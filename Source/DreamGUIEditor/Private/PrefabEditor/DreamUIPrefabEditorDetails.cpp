@@ -14,7 +14,6 @@
 #include "DreamUIPrefabEditor.h"
 #include "DetailLayoutBuilder.h"
 #include "DreamWidgetDetailPropertyExtensionHandler.h"
-#include "DreamUIPrefabOverrideDataViewer.h"
 #include "PrefabSystem/DreamUIPrefab.h"
 #include "DreamUIEditorTools.h"
 #include "Core/DreamUIBehaviour.h"
@@ -50,9 +49,6 @@ namespace DreamUIPrefabDetailsLayout
 {
 	constexpr float ComponentsPaneFraction = 0.2f;
 	constexpr float ComponentsPaneMinHeight = 200.0f;
-	constexpr float PrefabRowButtonWidth = 0.2f;
-	constexpr float PrefabRowOverridesWidth = 0.5f;
-	constexpr float PrefabRowHeight = 26.0f;
 	const FMargin PanelPadding(2, 2);
 }
 
@@ -106,97 +102,9 @@ void SDreamUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWo
 		.CanEdit(this, &SDreamUIPrefabEditorDetails::IsEditorAllowEditing)
 		.OnSelectionChanged(this, &SDreamUIPrefabEditorDetails::OnComponentSelectionChanged);
 
-	// The Open / Select buttons on the sub-prefab row are the same button with a different label and
-	// target; one factory keeps the two from drifting apart.
-	auto MakePrefabButton = [this](const FText& Label, void (FDreamUIPrefabEditor::*Action)(UDreamWidget*))
-	{
-		return SNew(SButton)
-			.OnClicked_Lambda([this, Action]()
-			{
-				if (TSharedPtr<FDreamUIPrefabEditor> Editor = PrefabEditorPtr.Pin())
-				{
-					((*Editor).*Action)(CachedWidget.Get());
-				}
-				return FReply::Handled();
-			})
-			.HAlign(HAlign_Center)
-			.VAlign(VAlign_Center)
-			[
-				SNew(STextBlock)
-				.Text(Label)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-			];
-	};
-
 	ChildSlot
 	[
 		SNew(SVerticalBox)
-		// Sub-prefab instance row: open the asset, select the whole instance, pinned overrides.
-		+ SVerticalBox::Slot()
-		.Padding(DreamUIPrefabDetailsLayout::PanelPadding)
-		.AutoHeight()
-		[
-			SNew(SBox)
-			.Visibility(this, &SDreamUIPrefabEditorDetails::GetPrefabButtonVisibility)
-			.IsEnabled(this, &SDreamUIPrefabEditorDetails::IsPrefabButtonEnable)
-			.HeightOverride(this, &SDreamUIPrefabEditorDetails::GetPrefabButtonHeight)
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				.Padding(FMargin(4, 0))
-				[
-					SNew(STextBlock)
-					.Text(LOCTEXT("PrefabFunctions", "Prefab"))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				]
-				+ SHorizontalBox::Slot()
-				.FillWidth(DreamUIPrefabDetailsLayout::PrefabRowButtonWidth)
-				.Padding(FMargin(2, 0))
-				[
-					MakePrefabButton(LOCTEXT("OpenPrefab", "Open"), &FDreamUIPrefabEditor::OpenSubPrefab)
-				]
-				+ SHorizontalBox::Slot()
-				.FillWidth(DreamUIPrefabDetailsLayout::PrefabRowButtonWidth)
-				.Padding(FMargin(2, 0))
-				[
-					MakePrefabButton(LOCTEXT("SelectPrefab", "Select"), &FDreamUIPrefabEditor::SelectSubPrefab)
-				]
-				+ SHorizontalBox::Slot()
-				.FillWidth(DreamUIPrefabDetailsLayout::PrefabRowOverridesWidth)
-				.Padding(FMargin(2, 0))
-				[
-					SNew(SComboButton)
-					.HasDownArrow(true)
-					.ToolTipText(LOCTEXT("PrefabOverride", "Edit override parameters for this prefab"))
-					.ButtonContent()
-					[
-						SNew(STextBlock)
-						.Text(LOCTEXT("OverrideButton", "Prefab Override Properties"))
-						.Font(IDetailLayoutBuilder::GetDetailFont())
-					]
-					.MenuContent()
-					[
-						SNew(SBox)
-						.Padding(FMargin(4, 4))
-						[
-							SAssignNew(PrefabOverrideDataViewer, SDreamUIPrefabOverrideDataViewer, [this]()
-							{
-								return CachedWidget.Get();
-							})
-							.AfterRevertPrefab_Lambda([](UDreamUIPrefab* PrefabAsset) {})
-							.AfterApplyPrefab_Lambda([](UDreamUIPrefab* PrefabAsset)
-							{
-								FDreamUIEditorTools::RefreshLoadedPrefab();
-								FDreamUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
-								FDreamUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
-							})
-						]
-					]
-				]
-			]
-		]
 		+ SVerticalBox::Slot()
 		[
 			SNew(SSplitter)
@@ -269,25 +177,6 @@ SDreamUIPrefabEditorDetails::~SDreamUIPrefabEditorDetails()
 	}
 }
 
-bool SDreamUIPrefabEditorDetails::IsPrefabButtonEnable()const
-{
-	if (PrefabEditorPtr.IsValid() && CachedWidget.IsValid())
-	{
-		return PrefabEditorPtr.Pin()->WidgetIsSubPrefabRoot(CachedWidget.Get());
-	}
-	return false;
-}
-
-FOptionalSize SDreamUIPrefabEditorDetails::GetPrefabButtonHeight()const
-{
-	return IsPrefabButtonEnable() ? DreamUIPrefabDetailsLayout::PrefabRowHeight : 0;
-}
-
-EVisibility SDreamUIPrefabEditorDetails::GetPrefabButtonVisibility()const
-{
-	return IsPrefabButtonEnable() ? EVisibility::Visible : EVisibility::Hidden;
-}
-
 bool SDreamUIPrefabEditorDetails::IsEditorAllowEditing()const
 {
 	if (PrefabEditorPtr.IsValid() && CachedWidget.IsValid())
@@ -328,7 +217,6 @@ void SDreamUIPrefabEditorDetails::OnEditorSelectionChanged()
 			}
 
 			CachedWidget = Widget;
-			PrefabOverrideDataViewer->RefreshDataContent();
 			if (ComponentEditor)
 			{
 				ComponentEditor->RefreshComponents();
@@ -362,7 +250,6 @@ void SDreamUIPrefabEditorDetails::OnEditorSelectionChanged()
 		if (SelectedObjectList.Num() == 0)
 		{
 			CachedWidget = nullptr;
-			PrefabOverrideDataViewer->RefreshDataContent();
 			if (ComponentEditor)
 			{
 				ComponentEditor->RefreshComponents();
@@ -388,7 +275,6 @@ void SDreamUIPrefabEditorDetails::OnEditorSelectionChanged()
 			DetailsView->SetObjects(SelectedObjectList, true);
 		}
 		CachedWidget = nullptr;
-		PrefabOverrideDataViewer->RefreshDataContent();
 		if (ComponentEditor)
 		{
 			ComponentEditor->RefreshComponents();
