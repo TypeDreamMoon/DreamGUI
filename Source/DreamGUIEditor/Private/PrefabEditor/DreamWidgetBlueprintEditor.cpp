@@ -2122,6 +2122,23 @@ bool FDreamWidgetBlueprintEditor::DesignerDeleteWidgets(TConstArrayView<UDreamWi
 
 UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponents(UDreamWidget* InPreviewWidget, TConstArrayView<UClass*> InComponentClasses)
 {
+	return DesignerAddComponentBy(InPreviewWidget, [InComponentClasses](UDreamWidget* InTemplate) -> UDreamUIBehaviour*
+	{
+		UDreamUIBehaviour* Last = nullptr;
+		for (UClass* ComponentClass : InComponentClasses)
+		{
+			if (UDreamUIBehaviour* Added = InTemplate->AddComponent(ComponentClass))
+			{
+				Last = Added;
+			}
+		}
+		return Last;
+	});
+}
+
+UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponentBy(UDreamWidget* InPreviewWidget,
+	TFunctionRef<UDreamUIBehaviour*(UDreamWidget*)> InAddToTemplate)
+{
 	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
 	if (Template == nullptr || !IsValid(BlueprintBeingEdited))
 	{
@@ -2131,16 +2148,14 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponents(UDreamWidg
 	Template->SetFlags(RF_Transactional);
 	Template->Modify();
 
-	int32 LastIndex = INDEX_NONE;
-	for (UClass* ComponentClass : InComponentClasses)
+	UDreamUIBehaviour* AddedOnTemplate = InAddToTemplate(Template);
+	if (!IsValid(AddedOnTemplate))
 	{
-		if (UDreamUIBehaviour* Added = Template->AddComponent(ComponentClass))
-		{
-			Added->SetFlags(RF_Transactional);
-			LastIndex = Template->GetAllComponents().Find(Added);
-		}
+		return nullptr;
 	}
-	if (LastIndex == INDEX_NONE)
+	AddedOnTemplate->SetFlags(RF_Transactional);
+	const int32 Index = Template->GetAllComponents().Find(AddedOnTemplate);
+	if (Index == INDEX_NONE)
 	{
 		return nullptr;
 	}
@@ -2153,9 +2168,9 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponents(UDreamWidg
 	{
 		// By position, because an instanced sub-object has no name the two halves share.
 		const TArray<UDreamUIBehaviour*>& Components = Previews[0]->GetAllComponents();
-		if (Components.IsValidIndex(LastIndex))
+		if (Components.IsValidIndex(Index))
 		{
-			return Components[LastIndex];
+			return Components[Index];
 		}
 	}
 	return nullptr;

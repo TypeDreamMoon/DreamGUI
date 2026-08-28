@@ -380,6 +380,12 @@ public:
 	 * counterpart, matched by position, for the panel to select.
 	 */
 	class UDreamUIBehaviour* DesignerAddComponents(UDreamWidget* InPreviewWidget, TConstArrayView<UClass*> InComponentClasses);
+	/**
+	 * The general form: InAddToTemplate is handed the TEMPLATE widget and returns the component it
+	 * created on it. Paste and duplicate need it because what they add is not describable as a class.
+	 */
+	class UDreamUIBehaviour* DesignerAddComponentBy(UDreamWidget* InPreviewWidget,
+		TFunctionRef<class UDreamUIBehaviour*(UDreamWidget*)> InAddToTemplate);
 	bool DesignerRemoveComponent(UDreamWidget* InPreviewWidget, class UDreamUIBehaviour* InPreviewComponent);
 	TArray<UDreamWidget*> DesignerDuplicateWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
 	void DesignerCopyWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);

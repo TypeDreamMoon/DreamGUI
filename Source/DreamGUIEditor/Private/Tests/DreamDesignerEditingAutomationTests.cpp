@@ -284,6 +284,23 @@ bool FDreamDesignerComponentsAndPropertiesReachTheAssetTest::RunTest(const FStri
 		Scoped.Rebuild();
 		SubjectTemplate = Scoped.FindTemplate(TEXT("Subject"));
 		TestEqual(TEXT("And still does after a rebuild"), SubjectTemplate->GetAllComponents().Num(), 1);
+
+		// Removal crosses the split by POSITION: the caller holds the preview's component, and the
+		// template's is a different object that shares no name with it.
+		UDreamWidget* Subject = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate);
+		if (TestNotNull(TEXT("The subject has a preview to remove from"), Subject)
+			&& TestEqual(TEXT("Which shows the behaviour"), Subject->GetAllComponents().Num(), 1))
+		{
+			TestTrue(TEXT("The removal was accepted"),
+				Scoped.Designer->DesignerRemoveComponent(Subject, Subject->GetAllComponents()[0]));
+			Scoped.Rebuild();
+			SubjectTemplate = Scoped.FindTemplate(TEXT("Subject"));
+			TestEqual(TEXT("And the ASSET lost the behaviour"), SubjectTemplate->GetAllComponents().Num(), 0);
+		}
+
+		// Put one back, so the details-panel half below runs against the same shape as before.
+		Scoped.Designer->DesignerAddComponents(
+			Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate), ToAdd);
 	}
 
 	// ---- a details-panel edit, through the same call the panel's notify hook makes

@@ -13,6 +13,7 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
 #include "Utils/DreamUIUtils.h"
+#include "DreamWidgetBlueprintEditor.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorDetailTab"
 
@@ -158,6 +159,13 @@ private:
 		}
 
 		const FScopedTransaction Transaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
+		// The hierarchy's rename box is not the only one: this is the same edit, and the display name
+		// is the compiler's variable name either way, so it has to reach the asset from here too.
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(Widget))
+		{
+			Designer->DesignerRenameWidget(Widget, ProposedName);
+			return;
+		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
 		const FString UniqueName = FDreamUIEditorTools::MakeUniqueWidgetDisplayName(Widget, ProposedName, Widget);

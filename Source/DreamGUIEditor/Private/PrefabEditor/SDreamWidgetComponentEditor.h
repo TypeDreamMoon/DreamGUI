@@ -378,12 +378,32 @@ private:
 		Widget->Modify();
 	}
 
+	/**
+	 * Create a component on the widget the edit has to REACH: the template when a designer owns this
+	 * widget, because one built on a preview goes away with the next rebuild. What comes back is
+	 * always the preview's, which is what the panel goes on to show.
+	 */
+	UDreamUIBehaviour* AddComponentToWidget(UDreamWidget* Widget, TFunctionRef<UDreamUIBehaviour*(UDreamWidget*)> InAdd)
+	{
+		if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()).Pin();
+			Designer.IsValid() && Designer->GetTemplateWidget(Widget) != nullptr)
+		{
+			return Designer->DesignerAddComponentBy(Widget, InAdd);
+		}
+		return InAdd(Widget);
+	}
+
 	/** Record and announce a newly added component. Call inside the caller's transaction, not after it. */
-	void FinishComponentAdd(UDreamWidget* Widget, UDreamUIBehaviour* NewComponent)
+	void FinishComponentAdd(UDreamUIBehaviour* NewComponent)
 	{
 		NewComponent->SetFlags(RF_Transactional);
 		NewComponent->Modify();
-		FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
+		// The owner is read off the component rather than passed in: a designer add republishes the
+		// preview, so the widget the caller was holding when it started is not the one to announce on.
+		if (UDreamWidget* Owner = NewComponent->GetWidget())
+		{
+			FDreamUIUtils::NotifyPropertyChanged(Owner, UDreamWidget::GetPropertyName_Components());
+		}
 
 		RefreshComponents();
 		SelectComponent(NewComponent);
@@ -467,13 +487,15 @@ private:
 		FScopedTransaction Transaction(LOCTEXT("PasteDreamWidgetComponent_Transaction", "Paste DreamUI Component"));
 		ModifyWidgetForComponentEdit(Widget);
 
-		UDreamUIBehaviour* NewComponent = DreamUIWidgetComponentClipboard_PasteOnto(Widget, DreamUIWidgetComponentClipboard().Get());
+		UDreamUIBehaviour* const Source = DreamUIWidgetComponentClipboard().Get();
+		UDreamUIBehaviour* NewComponent = AddComponentToWidget(Widget,
+			[Source](UDreamWidget* Target) { return DreamUIWidgetComponentClipboard_PasteOnto(Target, Source); });
 		if (!IsValid(NewComponent))
 		{
 			Transaction.Cancel();
 			return;
 		}
-		FinishComponentAdd(Widget, NewComponent);
+		FinishComponentAdd(NewComponent);
 	}
 
 	void HandleDuplicateSelectedComponent()
@@ -488,13 +510,22 @@ private:
 		FScopedTransaction Transaction(LOCTEXT("DuplicateDreamWidgetComponent_Transaction", "Duplicate DreamUI Component"));
 		ModifyWidgetForComponentEdit(Widget);
 
-		UDreamUIBehaviour* NewComponent = DreamUIWidgetComponentClipboard_PasteOnto(Widget, Component);
+		const int32 SourceIndex = Widget->GetAllComponents().Find(Component);
+		UDreamUIBehaviour* NewComponent = AddComponentToWidget(Widget,
+			[Component, SourceIndex](UDreamWidget* Target) -> UDreamUIBehaviour*
+			{
+				// Duplicate what was AUTHORED, not the preview's copy of it: the preview is live and
+				// its values can have moved since. Positional, like removal, for the same reason.
+				UDreamUIBehaviour* Source = Target->GetAllComponents().IsValidIndex(SourceIndex)
+					? Target->GetAllComponents()[SourceIndex] : Component;
+				return DreamUIWidgetComponentClipboard_PasteOnto(Target, Source);
+			});
 		if (!IsValid(NewComponent))
 		{
 			Transaction.Cancel();
 			return;
 		}
-		FinishComponentAdd(Widget, NewComponent);
+		FinishComponentAdd(NewComponent);
 	}
 
 	FReply HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, FDreamWidgetComponentItem InItem)
@@ -607,51 +638,41 @@ private:
 		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
-		auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld());
-		if (PrefabEditor.IsValid())
+		if (auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()); PrefabEditor.IsValid())
 		{
 			PrefabEditor.Pin()->MarkDesignChanged();
 		}
 
-		// A behaviour is an instanced sub-object of the widget, so adding one to a preview builds it
-		// into the copy the next rebuild throws away.
-		if (PrefabEditor.IsValid() && PrefabEditor.Pin()->GetTemplateWidget(Widget) != nullptr)
-		{
-			UDreamUIBehaviour* Added = PrefabEditor.Pin()->DesignerAddComponents(Widget, ComponentClassesToAdd);
-			if (!IsValid(Added))
+		UDreamUIBehaviour* LastAddedComponent = AddComponentToWidget(Widget,
+			[&ComponentClassesToAdd](UDreamWidget* Target) -> UDreamUIBehaviour*
 			{
-				return false;
-			}
-			RefreshComponents();
-			SelectComponent(Added);
-			return true;
-		}
-
-		UDreamUIBehaviour* LastAddedComponent = nullptr;
-		for (UClass* ComponentClass : ComponentClassesToAdd)
-		{
-			UDreamUIBehaviour* NewComponent = Widget->AddComponent(ComponentClass);
-			if (!IsValid(NewComponent))
-			{
-				continue;
-			}
-
-			NewComponent->SetFlags(RF_Transactional);
-			NewComponent->Modify();
-			LastAddedComponent = NewComponent;
-		}
+				UDreamUIBehaviour* Last = nullptr;
+				for (UClass* ComponentClass : ComponentClassesToAdd)
+				{
+					if (UDreamUIBehaviour* NewComponent = Target->AddComponent(ComponentClass))
+					{
+						NewComponent->SetFlags(RF_Transactional);
+						NewComponent->Modify();
+						Last = NewComponent;
+					}
+				}
+				return Last;
+			});
 
 		if (!IsValid(LastAddedComponent))
 		{
 			return false;
 		}
 
-		Widget->OnUnregister();
-		Widget->OnRegister();
-		FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
-
-		RefreshComponents();
-		SelectComponent(LastAddedComponent);
+		// Only the in-place path has to cycle the widget for the new component to take: a designer add
+		// rebuilt the preview, and that registers the hierarchy as it goes. The owner being a DIFFERENT
+		// widget than the one this started on is exactly what says which path ran.
+		if (UDreamWidget* Owner = LastAddedComponent->GetWidget(); Owner == Widget)
+		{
+			Owner->OnUnregister();
+			Owner->OnRegister();
+		}
+		FinishComponentAdd(LastAddedComponent);
 		return true;
 	}
 
@@ -890,18 +911,13 @@ private:
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
 
-		UDreamUIBehaviour* NewComponent = Widget->AddComponent(InClass);
+		UDreamUIBehaviour* NewComponent = AddComponentToWidget(Widget,
+			[InClass](UDreamWidget* Target) { return Target->AddComponent(InClass); });
 		if (!IsValid(NewComponent))
 		{
 			return;
 		}
-
-		NewComponent->SetFlags(RF_Transactional);
-		NewComponent->Modify();
-		FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
-
-		RefreshComponents();
-		SelectComponent(NewComponent);
+		FinishComponentAdd(NewComponent);
 	}
 
 	void HandleEditComponentClass()
