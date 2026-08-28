@@ -4,10 +4,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/GCObject.h"
 #include "Toolkits/IToolkitHost.h"
-#include "Toolkits/AssetEditorToolkit.h"
-#include "TickableEditorObject.h"
+#include "BlueprintEditor.h"
 #include "Engine/DeveloperSettings.h"
 #include "DreamWidgetBlueprintEditor.generated.h"
 
@@ -103,26 +101,22 @@ public:
  * compiled. Sub-prefabs, because nesting is a class reference. The companion behaviour blueprint,
  * because the Widget Blueprint is the logic host now.
  */
-class FDreamWidgetBlueprintEditor : public FAssetEditorToolkit
-	, public FGCObject, public FEditorUndoClient, public FTickableEditorObject
+class FDreamWidgetBlueprintEditor : public FBlueprintEditor
 {
 public:
 
 	FDreamWidgetBlueprintEditor();
 	virtual ~FDreamWidgetBlueprintEditor()override;
 
-	// IToolkit interface
-	virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& TabManager) override;
-	virtual void UnregisterTabSpawners(const TSharedRef<class FTabManager>& TabManager) override;
-	// End of IToolkit interface
-
 	//Begin EditorUndo
 	virtual void PostUndo(bool bSuccess)override;
 	virtual void PostRedo(bool bSuccess)override;
 	//End EditorUndo
 
-	// FAssetEditorToolkit
+	// FBlueprintEditor
 public:
+	/** Designer and Graph. The switcher in the toolbar is the stock one. */
+	virtual void RegisterApplicationModes(const TArray<UBlueprint*>& InBlueprints, bool bShouldOpenInDefaultsMode, bool bNewlyCreated = false) override;
 	virtual FName GetToolkitFName() const override;
 	virtual FText GetBaseToolkitName() const override;
 	virtual FText GetToolkitName() const override;
@@ -134,15 +128,18 @@ public:
 	virtual void OnToolkitHostingFinished(const TSharedRef<class IToolkit>& Toolkit) override;
 	/** Compile, then save. Compiling is what makes an authoring edit reach the class instances are built from. */
 	virtual void SaveAsset_Execute()override;
-	// End of FAssetEditorToolkit
-
-	// FTickableEditorObject -- FAssetEditorToolkit does not tick, and a stale preview has to be
-	// rebuilt somewhere. FBlueprintEditor gets the same interface, which is where this lands in D1c.
+	/** Where a stale preview is paid for -- once per frame, however many edits went into the gesture. */
 	virtual void Tick(float DeltaTime) override;
-	virtual TStatId GetStatId() const override;
-	// End of FTickableEditorObject
+	// End of FBlueprintEditor
+
+	/** The designer panels, for the tab factories that host them. */
+	TSharedPtr<SDreamUIPrefabEditorViewport> GetViewportWidget() const { return ViewportPtr; }
+	TSharedPtr<SDreamWidgetEditorHierarchyView> GetHierarchyWidget() const { return OutlinerPtr; }
+	TSharedPtr<class SDreamUIPrefabPalette> GetPaletteWidget() const { return PalettePtr; }
+	TSharedPtr<SDreamUIPrefabEditorDetails> GetDesignerDetailsWidget() const { return DetailsPtr; }
+	/** Add the design surface's own view controls to a mode toolbar. */
+	void ExtendDesignerToolbar(class UToolMenu* InToolbar);
 private:
-	// End of FAssetEditorToolkit
 	void SyncSelection();
 	void HandlePostTransaction(bool bSuccess);
 	bool bIsSelecting = false;
@@ -213,6 +210,8 @@ public:
 	TSharedPtr<SWidget> BuildWidgetContextMenu();
 
 	void InitDesigner(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, UDreamWidgetBlueprint* InBlueprint);
+	/** The mode a freshly opened asset lands in. */
+	static FName GetDefaultModeName();
 
 	/** Try to handle a drag-drop operation */
 	FReply TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, UDreamWidget* InParentWidget = nullptr);
@@ -289,7 +288,6 @@ private:
 private:
 
 	void BindCommands();
-	void ExtendToolbar();
 public:
 	/**
 	 * UMG-toolbar-style align: move every selected sibling widget so the chosen edge/center
@@ -363,32 +361,6 @@ private:
 	/** Push the asset's recorded hidden set onto the preview widgets it names. */
 	void ApplyDesignerState();
 public:
-
-	/**
-	 * One row per dockable panel. Registration, un-registration, the Window menu entry and the
-	 * SDockTab label all read the same row, so a new panel is one entry here plus a slot in
-	 * CreateDefaultLayout -- nothing to keep in step by hand.
-	 */
-	struct FTabDescriptor
-	{
-		FName Id;
-		FText Label;
-		FSlateIcon Icon;
-		/** Builds the content for a freshly spawned dock tab. */
-		TFunction<TSharedRef<SWidget>()> MakeContent;
-		/** Runs before MakeContent so a panel can refresh against the current asset. */
-		TFunction<void()> OnSpawn;
-		/** Runs when the user closes the tab, so a panel can drop editor-wide state it was driving. */
-		TFunction<void()> OnClosed;
-		/** Debug panels stay out of the Window menu; the toolbar's Debug menu opens them. */
-		bool bListedInWindowMenu = true;
-	};
-	TArray<FTabDescriptor> TabDescriptors;
-	void BuildTabDescriptors();
-	const FTabDescriptor* FindTabDescriptor(FName TabId) const;
-	TSharedRef<SDockTab> SpawnTabFromDescriptor(const FSpawnTabArgs& Args, FName TabId);
-	/** The layout a fresh install gets; the name carries a version so a change here wins over saved layouts. */
-	static TSharedRef<FTabManager::FLayout> CreateDefaultLayout();
 
 	bool IsFilteredActor(const AActor* Actor);
 	void OnOutlinerActorDoubleClick(AActor* Actor);

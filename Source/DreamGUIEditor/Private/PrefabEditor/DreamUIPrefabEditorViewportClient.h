@@ -12,6 +12,7 @@
 class UDreamVisual;
 class UDreamWidget;
 class FDreamWidgetBlueprintEditor;
+class UDreamWidgetBlueprint;
 class UDreamUIPrefab;
 struct FDreamLayoutControlAnchorData;
 

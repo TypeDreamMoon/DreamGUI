@@ -30,6 +30,7 @@
 #include "AssetTypeActions/AssetTypeActions_DreamUIStaticSpriteAtlasData.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontData_Bitmap.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIPrefab.h"
+#include "AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIMLResource.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIStaticMeshCache.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIRichTextCustomStyleData.h"
@@ -257,6 +258,7 @@ void FDreamGUIEditorModule::StartupModule()
 		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_DreamUIStaticSpriteAtlasData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> BitmapFontDataAction = MakeShareable(new FAssetTypeActions_DreamUIFontData_Bitmap(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_DreamUIPrefab(DreamUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> WidgetBlueprintAction = MakeShareable(new FAssetTypeActions_DreamWidgetBlueprint(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> SequenceAssetAction = MakeShareable(new FAssetTypeActions_DreamUISequence(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_DreamUIStaticMeshCache(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextCustomStyleDataAction = MakeShareable(new FAssetTypeActions_DreamUIRichTextCustomStyleData(DreamUIAssetCategoryBit));
@@ -268,6 +270,7 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(BitmapFontDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(PrefabDataAction.ToSharedRef());
+		AssetTools.RegisterAssetTypeActions(WidgetBlueprintAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(SequenceAssetAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(UIStaticMeshCacheDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(RichTextCustomStyleDataAction.ToSharedRef());
@@ -279,6 +282,7 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
 		AssetTypeActionsArray.Add(BitmapFontDataAction);
 		AssetTypeActionsArray.Add(PrefabDataAction);
+		AssetTypeActionsArray.Add(WidgetBlueprintAction);
 		AssetTypeActionsArray.Add(UIStaticMeshCacheDataAction);
 		AssetTypeActionsArray.Add(RichTextCustomStyleDataAction);
 		AssetTypeActionsArray.Add(RichTextImageDataAction);

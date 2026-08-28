@@ -2,6 +2,9 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetDesignerModes.h"
+#include "Designer/DreamWidgetDesignerTabs.h"
+#include "BlueprintEditorTabs.h"
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprint.h"
 #include "Designer/DreamWidgetPreviewHost.h"
@@ -139,11 +142,6 @@ FDreamWidgetBlueprintEditor::~FDreamWidgetBlueprintEditor()
 		Selection->SelectNone();
 	}
 
-	if (bRegisteredForUndo && GEditor)
-	{
-		GEditor->UnregisterForUndo(this);
-		bRegisteredForUndo = false;
-	}
 	// Last, and only here: the panels above are still reading the world it owns.
 	if (PreviewHost.IsValid())
 	{
@@ -334,172 +332,36 @@ void FDreamWidgetBlueprintEditor::SyncSelection()
 	RefreshOutliner();
 }
 
-void FDreamWidgetBlueprintEditor::BuildTabDescriptors()
+FName FDreamWidgetBlueprintEditor::GetDefaultModeName()
 {
-	TabDescriptors.Reset();
-	auto Content = [](TSharedPtr<SWidget> Widget) { return [Widget]() { return Widget.ToSharedRef(); }; };
-
-	TabDescriptors.Add({ FDreamWidgetBlueprintEditorTabs::ViewportID, LOCTEXT("ViewportTab", "Viewport"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports"), Content(ViewportPtr) });
-	TabDescriptors.Add({ FDreamWidgetBlueprintEditorTabs::DetailsID, LOCTEXT("DetailsTabLabel", "Details"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Details"), Content(DetailsPtr) });
-	TabDescriptors.Add({ FDreamWidgetBlueprintEditorTabs::OutlinerID, LOCTEXT("OutlinerTabLabel", "Hierarchy"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Outliner"), Content(OutlinerPtr) });
-	TabDescriptors.Add({ FDreamWidgetBlueprintEditorTabs::PaletteID, LOCTEXT("PaletteTabLabel", "Palette"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Kismet.Tabs.Palette"), Content(PalettePtr) });
-	FTabDescriptor SequencerTab{ FDreamWidgetBlueprintEditorTabs::SequencerID, LOCTEXT("SequencerTabLabel", "Animations"),
-		FSlateIcon(FUMGStyle::GetStyleSetName(), "Animations.TabIcon"), Content(SequencerPtr) };
-	// Closing the panel must also leave animation mode; the sequencer would otherwise keep driving
-	// the viewport (and auto-keying) with nothing visible to say so.
-	SequencerTab.OnClosed = [this]() { if (SequencerPtr.IsValid()) { SequencerPtr->ClearAnimationSelection(); } };
-	TabDescriptors.Add(MoveTemp(SequencerTab));
-	// The sequencer invokes this tab by its engine-wide id and then fills it with the curve editor;
-	// spawning it empty here just gives it a home in this window.
-	FTabDescriptor CurveEditor{ FName("SequencerGraphEditor"), NSLOCTEXT("Sequencer", "SequencerMainGraphEditorTitle", "Sequencer Curves"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "GenericCurveEditor.TabIcon"), []() { return SNullWidget::NullWidget; } };
-	CurveEditor.bListedInWindowMenu = false;
-	TabDescriptors.Add(MoveTemp(CurveEditor));
+	return FDreamWidgetBlueprintApplicationModes::DesignerMode;
 }
 
-const FDreamWidgetBlueprintEditor::FTabDescriptor* FDreamWidgetBlueprintEditor::FindTabDescriptor(FName TabId) const
+void FDreamWidgetBlueprintEditor::RegisterApplicationModes(const TArray<UBlueprint*>& InBlueprints,
+	bool bShouldOpenInDefaultsMode, bool bNewlyCreated)
 {
-	return TabDescriptors.FindByPredicate([TabId](const FTabDescriptor& Desc) { return Desc.Id == TabId; });
-}
-
-TSharedRef<SDockTab> FDreamWidgetBlueprintEditor::SpawnTabFromDescriptor(const FSpawnTabArgs& Args, FName TabId)
-{
-	const FTabDescriptor* Desc = FindTabDescriptor(TabId);
-	checkf(Desc, TEXT("No tab descriptor for %s"), *TabId.ToString());
-	if (Desc->OnSpawn)
+	// Deliberately NOT calling the base: FBlueprintEditor's own modes are the standalone Blueprint
+	// window's, and one of them would open a DreamUI hierarchy with no design surface at all.
+	if (InBlueprints.Num() != 1)
 	{
-		Desc->OnSpawn();
+		return;
 	}
-	TSharedRef<SDockTab> NewTab = SNew(SDockTab)
-		.Label(Desc->Label)
-		[
-			Desc->MakeContent()
-		];
-	if (Desc->OnClosed)
-	{
-		NewTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateLambda(
-			[OnClosed = Desc->OnClosed](TSharedRef<SDockTab>) { OnClosed(); }));
-	}
-	return NewTab;
-}
-
-void FDreamWidgetBlueprintEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
-{
-	WorkspaceMenuCategory = InTabManager->AddLocalWorkspaceMenuCategory(LOCTEXT("WorkspaceMenu_DreamUIPrefabEditor", "DreamUIPrefab Editor"));
-	auto WorkspaceMenuCategoryRef = WorkspaceMenuCategory.ToSharedRef();
-
-	FAssetEditorToolkit::RegisterTabSpawners(InTabManager);
-
-	if (TabDescriptors.Num() == 0)
-	{
-		BuildTabDescriptors();
-	}
-	for (const FTabDescriptor& Desc : TabDescriptors)
-	{
-		InTabManager->RegisterTabSpawner(Desc.Id, FOnSpawnTab::CreateSP(this, &FDreamWidgetBlueprintEditor::SpawnTabFromDescriptor, Desc.Id))
-			.SetDisplayName(Desc.Label)
-			.SetGroup(WorkspaceMenuCategoryRef)
-			.SetIcon(Desc.Icon)
-			.SetMenuType(Desc.bListedInWindowMenu ? ETabSpawnerMenuType::Enabled : ETabSpawnerMenuType::Hidden);
-	}
-}
-void FDreamWidgetBlueprintEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
-{
-	FAssetEditorToolkit::UnregisterTabSpawners(InTabManager);
-
-	for (const FTabDescriptor& Desc : TabDescriptors)
-	{
-		InTabManager->UnregisterTabSpawner(Desc.Id);
-	}
-}
-
-TSharedRef<FTabManager::FLayout> FDreamWidgetBlueprintEditor::CreateDefaultLayout()
-{
-	// Bump the version whenever the tab set or the arrangement changes: the tab manager restores a
-	// user's saved layout by this name, so an unchanged name means an edit here never reaches anyone
-	// who has opened the editor before.
-	//
-	//   +-----------+--------------------------------+-----------+
-	//   | Palette   |                                |           |
-	//   +-----------+           Viewport             |  Details  |
-	//   | Hierarchy |                                |           |
-	//   |           +--------------------------------+-----------+
-	//   |           | Animations | Compiler Results | Behaviour | Overrides | Raw Data   (all closed)
-	//   +-----------+--------------------------------------------+
-	constexpr float LeftColumnWidth = 0.15f;
-	constexpr float ViewportWidth = 0.75f;
-	constexpr float BottomDrawerHeight = 0.3f;
-	return FTabManager::NewLayout("Standalone_DreamUIPrefabEditor_Layout_v5")
-		->AddArea
-		(
-			FTabManager::NewPrimaryArea()
-			->SetOrientation(Orient_Horizontal)
-			->Split
-			(
-				FTabManager::NewSplitter()
-				->SetOrientation(Orient_Vertical)
-				->SetSizeCoefficient(LeftColumnWidth)
-				->Split
-				(
-					FTabManager::NewStack()
-					->SetSizeCoefficient(0.5f)
-					->AddTab(FDreamWidgetBlueprintEditorTabs::PaletteID, ETabState::OpenedTab)
-				)
-				->Split
-				(
-					FTabManager::NewStack()
-					->SetSizeCoefficient(0.5f)
-					->AddTab(FDreamWidgetBlueprintEditorTabs::OutlinerID, ETabState::OpenedTab)
-				)
-			)
-			->Split
-			(
-				FTabManager::NewSplitter()
-				->SetOrientation(Orient_Vertical)
-				->SetSizeCoefficient(1.0f - LeftColumnWidth)
-				->Split
-				(
-					FTabManager::NewSplitter()
-					->SetOrientation(Orient_Horizontal)
-					->SetSizeCoefficient(1.0f - BottomDrawerHeight)
-					->Split
-					(
-						FTabManager::NewStack()
-						->SetSizeCoefficient(ViewportWidth)
-						->SetHideTabWell(true)
-						->AddTab(FDreamWidgetBlueprintEditorTabs::ViewportID, ETabState::OpenedTab)
-					)
-					->Split
-					(
-						FTabManager::NewStack()
-						->SetSizeCoefficient(1.0f - ViewportWidth)
-						->AddTab(FDreamWidgetBlueprintEditorTabs::DetailsID, ETabState::OpenedTab)
-					)
-				)
-				->Split
-				(
-					// Every secondary panel has a home here, so InvokeTab lands it in a known place
-					// instead of wherever the tab manager guesses.
-					FTabManager::NewStack()
-					->SetSizeCoefficient(BottomDrawerHeight)
-					->SetForegroundTab(FDreamWidgetBlueprintEditorTabs::SequencerID)
-					->AddTab(FDreamWidgetBlueprintEditorTabs::SequencerID, ETabState::ClosedTab)
-					->AddTab(FName("SequencerGraphEditor"), ETabState::ClosedTab)
-				)
-			)
-		);
+	TSharedPtr<FDreamWidgetBlueprintEditor> ThisPtr(SharedThis(this));
+	AddApplicationMode(FDreamWidgetBlueprintApplicationModes::DesignerMode,
+		MakeShared<FDreamWidgetDesignerApplicationMode>(ThisPtr));
+	AddApplicationMode(FDreamWidgetBlueprintApplicationModes::GraphMode,
+		MakeShared<FDreamWidgetGraphApplicationMode>(ThisPtr));
+	SetCurrentMode(GetDefaultModeName());
 }
 
 void FDreamWidgetBlueprintEditor::PostUndo(bool bSuccess)
 {
+	FBlueprintEditor::PostUndo(bSuccess);
 	HandlePostTransaction(bSuccess);
 }
 void FDreamWidgetBlueprintEditor::PostRedo(bool bSuccess)
 {
+	FBlueprintEditor::PostRedo(bSuccess);
 	HandlePostTransaction(bSuccess);
 }
 
@@ -510,13 +372,13 @@ void FDreamWidgetBlueprintEditor::HandlePostTransaction(bool bSuccess)
 		return;
 	}
 
-	FDreamUIPrefabInstanceScene* PreviewScene = GetPreviewScene();
-	if (!PreviewScene)
+	FDreamUIPrefabInstanceScene* DesignerScene = GetPreviewScene();
+	if (!DesignerScene)
 	{
 		return;
 	}
-	UWorld* EditorWorld = PreviewScene->GetWorld();
-	UDreamWidget* RootAgent = PreviewScene->GetRootAgent();
+	UWorld* EditorWorld = DesignerScene->GetWorld();
+	UDreamWidget* RootAgent = DesignerScene->GetRootAgent();
 	if (!IsValid(EditorWorld) || !IsValid(RootAgent))
 	{
 		return;
@@ -602,27 +464,22 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	SequencerPtr = SNew(SDreamUIPrefabSequenceEditor);
 	
 	BindCommands();
-	ExtendToolbar();
-	// InitAssetEditor below builds the menus, so a project's extenders have to be registered first.
+	// InitBlueprintEditor below builds the menus, so a project's extenders have to be registered first.
 	AddMenuExtender(FDreamGUIEditorModule::Get().GetMenuExtensibilityManager()->GetAllExtenders(
 		GetToolkitCommands(), TArray<UObject*>{ GetWidgetBlueprint() }));
 	AddToolbarExtender(FDreamGUIEditorModule::Get().GetToolBarExtensibilityManager()->GetAllExtenders(
 		GetToolkitCommands(), TArray<UObject*>{ GetWidgetBlueprint() }));
 
-	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = CreateDefaultLayout();
-
-	InitAssetEditor(Mode, InitToolkitHost, DesignerAppName, StandaloneDefaultLayout, true, true, BlueprintBeingEdited);
+	// The modes own the layouts, so this hands over to FBlueprintEditor and RegisterApplicationModes
+	// decides what the window looks like.
+	InitBlueprintEditor(Mode, InitToolkitHost, TArray<UBlueprint*>{ BlueprintBeingEdited }, /*bShouldOpenInDefaultsMode*/false);
 	// Only now does this toolkit have a host; the sequencer's side panels (the curve editor) must
 	// dock into this window rather than the level editor's.
 	if (SequencerPtr.IsValid())
 	{
 		SequencerPtr->SetToolkitHost(GetToolkitHost());
 	}
-	if (!bRegisteredForUndo && GEditor)
-	{
-		GEditor->RegisterForUndo(this);
-		bRegisteredForUndo = true;
-	}
+	// FBlueprintEditor registers for undo itself.
 
 	// After opening, broadcast event to DreamUIPrefabSequencerEditor
 	FDreamUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewRootWidget());
@@ -688,22 +545,18 @@ void FDreamWidgetBlueprintEditor::SaveAsset_Execute()
 	{
 		FKismetEditorUtilities::CompileBlueprint(BlueprintBeingEdited);
 	}
-	FAssetEditorToolkit::SaveAsset_Execute();
+	FBlueprintEditor::SaveAsset_Execute();
 }
 
 void FDreamWidgetBlueprintEditor::Tick(float DeltaTime)
 {
+	FBlueprintEditor::Tick(DeltaTime);
 	// A structural edit only marks the preview stale; this is where it is paid for, once, however
 	// many edits went into the gesture.
 	if (PreviewHost.IsValid())
 	{
 		PreviewHost->RebuildPreviewIfInvalidated();
 	}
-}
-
-TStatId FDreamWidgetBlueprintEditor::GetStatId() const
-{
-	RETURN_QUICK_DECLARE_CYCLE_STAT(FDreamWidgetBlueprintEditor, STATGROUP_Tickables);
 }
 
 void FDreamWidgetBlueprintEditor::RefreshDesignersFor(UDreamWidgetBlueprint* InBlueprint)
@@ -1150,8 +1003,8 @@ void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass
 
 void FDreamWidgetBlueprintEditor::TogglePreviewRenderMode()
 {
-	FDreamUIPrefabInstanceScene* PreviewScene = GetPreviewScene();
-	UDreamWidget* RootAgent = PreviewScene ? PreviewScene->GetRootAgent() : nullptr;
+	FDreamUIPrefabInstanceScene* DesignerScene = GetPreviewScene();
+	UDreamWidget* RootAgent = DesignerScene ? DesignerScene->GetRootAgent() : nullptr;
 	UDreamCanvas* RootCanvas = IsValid(RootAgent) ? RootAgent->GetComponent<UDreamCanvas>() : nullptr;
 	if (!IsValid(RootCanvas))
 	{
@@ -1188,8 +1041,8 @@ bool FDreamWidgetBlueprintEditor::CanFrameViewportFromCanvasEye()const
 
 bool FDreamWidgetBlueprintEditor::IsPreviewingScreenSpace()const
 {
-	FDreamUIPrefabInstanceScene* PreviewScene = const_cast<FDreamWidgetBlueprintEditor*>(this)->GetPreviewScene();
-	UDreamWidget* RootAgent = PreviewScene ? PreviewScene->GetRootAgent() : nullptr;
+	FDreamUIPrefabInstanceScene* DesignerScene = const_cast<FDreamWidgetBlueprintEditor*>(this)->GetPreviewScene();
+	UDreamWidget* RootAgent = DesignerScene ? DesignerScene->GetRootAgent() : nullptr;
 	UDreamCanvas* RootCanvas = IsValid(RootAgent) ? RootAgent->GetComponent<UDreamCanvas>() : nullptr;
 	return IsValid(RootCanvas) && RootCanvas->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay;
 }
@@ -1812,15 +1665,12 @@ void FDreamWidgetBlueprintEditor::BindCommands()
 		FIsActionButtonVisible()
 	);
 }
-void FDreamWidgetBlueprintEditor::ExtendToolbar()
+void FDreamWidgetBlueprintEditor::ExtendDesignerToolbar(UToolMenu* ToolBar)
 {
-	const FName MenuName = GetToolMenuToolbarName();
-	if (!UToolMenus::Get()->IsMenuRegistered(MenuName))
+	if (ToolBar == nullptr)
 	{
-		UToolMenus::Get()->RegisterMenu(MenuName, "AssetEditor.DefaultToolBar", EMultiBoxType::ToolBar);
+		return;
 	}
-
-	UToolMenu* ToolBar = UToolMenus::Get()->FindMenu(MenuName);
 	const FDreamUIPrefabEditorCommand& Commands = FDreamUIPrefabEditorCommand::Get();
 	const FName AppStyle = FAppStyle::GetAppStyleSetName();
 
@@ -1900,11 +1750,11 @@ void FDreamWidgetBlueprintEditor::OnOutlinerActorDoubleClick(AActor* Actor)
 
 FName FDreamWidgetBlueprintEditor::GetToolkitFName() const
 {
-	return FName("DreamUIPrefabEditor");
+	return FName("DreamWidgetBlueprintEditor");
 }
 FText FDreamWidgetBlueprintEditor::GetBaseToolkitName() const
 {
-	return LOCTEXT("DreamUIPrefabEditorAppLabel", "DreamUI Prefab Editor");
+	return LOCTEXT("DreamWidgetDesignerAppLabel", "DreamUI Designer");
 }
 FText FDreamWidgetBlueprintEditor::GetToolkitName() const
 {
@@ -1920,7 +1770,7 @@ FLinearColor FDreamWidgetBlueprintEditor::GetWorldCentricTabColorScale() const
 }
 FString FDreamWidgetBlueprintEditor::GetWorldCentricTabPrefix() const
 {
-	return TEXT("DreamUIPrefabEditor");
+	return TEXT("DreamUIDesigner");
 }
 FString FDreamWidgetBlueprintEditor::GetDocumentationLink() const
 {
