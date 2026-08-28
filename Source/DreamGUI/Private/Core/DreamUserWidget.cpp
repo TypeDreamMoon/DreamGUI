@@ -3,8 +3,57 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamUIManager.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
+
+namespace
+{
+	/**
+	 * Bring a freshly built hierarchy to life, exactly as the prefab loader does at the end of a load.
+	 *
+	 * Building the tree is not enough on its own: an unregistered widget is inert -- no layout, no
+	 * rendering, no behaviour lifecycle -- so a class that only instanced its template would produce a
+	 * hierarchy that is structurally perfect and completely dead. Structure tests do not notice.
+	 *
+	 * BeginPlay is gated on the MANAGER having begun play, not the world. The prefab loader learned
+	 * that the hard way and left a note: World->HasBegunPlay() returns false even when called from
+	 * BeginPlay. When it has not, the manager's own OnWorldBeginPlay picks these up later.
+	 */
+	void BringHierarchyToLife(UDreamWidget* InRoot)
+	{
+		if (!IsValid(InRoot))
+		{
+			return;
+		}
+		TArray<UDreamWidget*> AllWidgets;
+		UDreamWidget::CollectChildrenWidgets(InRoot, AllWidgets, true);
+
+		// Parents before children, which CollectChildrenWidgets already gives us: OnRegister reads the
+		// parent link to reconcile panel slots.
+		for (UDreamWidget* Widget : AllWidgets)
+		{
+			if (IsValid(Widget))
+			{
+				Widget->OnRegister();
+			}
+		}
+
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
+		{
+			if (Manager->HasBegunPlay())
+			{
+				for (UDreamWidget* Widget : AllWidgets)
+				{
+					if (IsValid(Widget))
+					{
+						Widget->BeginPlay();
+					}
+				}
+			}
+		}
+	}
+}
 
 void UDreamUserWidget::Initialize()
 {
@@ -59,9 +108,12 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 		OwnedTree->RootWidget = UserWidget;
 	}
 	UserWidget->Initialize();
+	// Parent first, then registration: OnRegister reconciles the panel slot against the parent, so
+	// registering an orphan and attaching it afterwards produces a widget the parent never laid out.
 	if (IsValid(InParent))
 	{
 		UserWidget->SetParentBeforeRegister(InParent);
 	}
+	BringHierarchyToLife(UserWidget);
 	return UserWidget;
 }

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -123,6 +123,21 @@ bool FDreamWidgetBlueprintCompilesToAClassTest::RunTest(const FString& Parameter
 	if (TestNotNull(TEXT("the class instantiates"), Instance))
 	{
 		TestNotNull(TEXT("and builds its contents"), Instance->GetContentRoot());
+
+		// Built is not the same as alive, and every other assertion in this file would pass against a
+		// hierarchy that is structurally perfect and completely dead: unregistered means no layout, no
+		// rendering, no behaviour lifecycle. Registration is the last thing the prefab loader does, and
+		// the class path has to do it too or replacing prefabs with classes ships UI that does nothing.
+		TestTrue(TEXT("the instance is registered, not merely constructed"), Instance->HasRegistered());
+		int32 Unregistered = 0;
+		if (Instance->GetWidgetTree() != nullptr)
+		{
+			Instance->GetWidgetTree()->ForEachWidget([&Unregistered](UDreamWidget* Widget)
+			{
+				if (!Widget->HasRegistered()) { Unregistered++; }
+			});
+		}
+		TestEqual(TEXT("and so is every widget it built"), Unregistered, 0);
 		FObjectPropertyBase* HeaderProperty = CastField<FObjectPropertyBase>(GeneratedClass->FindPropertyByName(FName(TEXT("Header"))));
 		if (HeaderProperty != nullptr)
 		{
