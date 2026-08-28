@@ -2,6 +2,7 @@
 
 #include "Event/DreamStandaloneInputEventSystemActor.h"
 #include "Interaction/DreamUIActionRouter.h"
+#include "Interaction/DreamUINavigationStack.h"
 
 #include "Components/InputComponent.h"
 #include "DreamGUI.h"
@@ -27,6 +28,15 @@ namespace DreamStandaloneInputEventSystemActorLocal
 	static const FKey NavigationTriggerKeys[] = {
 		EKeys::Enter,
 		EKeys::Gamepad_FaceButton_Bottom,
+	};
+
+	/**
+	 * Keys that mean Back when nothing has bound an action to them. A project that wants its own can
+	 * put Back in its action table and bind it; that is offered the key first and wins.
+	 */
+	static const FKey BackKeys[] = {
+		EKeys::Escape,
+		EKeys::Gamepad_FaceButton_Right,
 	};
 
 	/** Direction keys, paired with the direction they mean. Read by GetNavigationDirectionForKey. */
@@ -260,12 +270,29 @@ void ADreamStandaloneInputEventSystemActor::OnTouchMoved(ETouchIndex::Type Finge
 
 void ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed(FKey Key)
 {
+	using namespace DreamStandaloneInputEventSystemActorLocal;
+
 	ReportDeviceForKey(Key);
 	if (IsNavigationKey(Key))
 	{
 		return;//routed from its own handler; doing it here too would fire a bound action twice
 	}
-	RouteActionKey(Key, true);
+	if (RouteActionKey(Key, true))
+	{
+		return;
+	}
+	// Only once nothing has claimed the key: a project that binds its own Back action gets to define
+	// what Back does, and the built-in behaviour is the fallback for one that has not.
+	for (const FKey& BackKey : BackKeys)
+	{
+		if (BackKey != Key)continue;
+		if (UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(this))
+		{
+			UDreamEventSystem* Events = GetEventSystem();
+			Stack->HandleBack(Events != nullptr ? Events->GetUserIndex() : 0);
+		}
+		return;
+	}
 }
 
 void ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased(FKey Key)

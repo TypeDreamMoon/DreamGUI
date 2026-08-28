@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "PrefabSystem/PrefabAnimation/DreamUISequenceTrack.h"
@@ -12,6 +12,7 @@
 #include "Evaluation/MovieSceneEvaluationField.h"
 #include "Bindings/MovieSceneCustomBinding.h"
 #include "Evaluation/MovieSceneEvaluationState.h"
+#include "Evaluation/MovieSceneRootOverridePath.h"
 
 #define LOCTEXT_NAMESPACE "DreamUISequenceTrack"
 

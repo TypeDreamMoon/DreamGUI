@@ -56,6 +56,18 @@ public:
 	 */
 	UDreamUINavigationScope* FindConfiningScopeFor(const UDreamWidget* InWidget, int32 InUserIndex = INDEX_NONE)const;
 
+	/** InUserIndex's open screens, topmost first. */
+	void GetScopeStack(int32 InUserIndex, TArray<UDreamUINavigationScope*>& OutScopes)const;
+
+	/**
+	 * Send Back down InUserIndex's stack. A field being edited swallows it first -- cancelling the edit
+	 * is what the player means, not closing the screen out from under them. Then each screen from the
+	 * top down is offered it, and closes if it neither handled it nor opted out of closing.
+	 * @return true when something took it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	bool HandleBack(int32 InUserIndex = 0);
+
 	/** Whatever holds focus for InUserIndex right now, or null. */
 	static UUISelectable* GetFocusedSelectable(const UObject* WorldContextObject, int32 InUserIndex);
 	/**

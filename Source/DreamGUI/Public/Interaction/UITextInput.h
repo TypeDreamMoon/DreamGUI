@@ -248,6 +248,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetReadOnly(bool Value);
 
+	/**
+	 * True while this field owns the keyboard. Back has to know: with a field being edited, cancelling
+	 * the edit is what the player means, not closing the screen out from under them.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+	bool IsInputActive()const{ return bInputActive; }
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 	void ActivateInput(UDreamPointerEventData* EventData = nullptr);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")

@@ -82,6 +82,19 @@ public:
 	void NotifyScopeActivated();
 	void NotifyScopeDeactivated();
 
+	/**
+	 * Deal with Back yourself -- discard an edit, step back a page, ask for confirmation.
+	 * @return true to stop Back going any further down the stack. Returning false lets it reach this
+	 *         scope's close behaviour, and then the screen underneath.
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "DreamGUI-Navigation")
+	bool HandleBackAction();
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	bool GetCloseOnBack()const{ return bCloseOnBack; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	void SetCloseOnBack(bool Value){ bCloseOnBack = Value; }
+
 protected:
 	virtual void OnEnable()override;
 	virtual void OnDisable()override;
@@ -103,6 +116,12 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
 	bool bConfineNavigation = true;
+	/**
+	 * Close when Back reaches this screen and nothing handled it. Off for a root screen, which Back
+	 * should pass straight through rather than shutting down the UI.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
+	bool bCloseOnBack = true;
 	/** Come back to where focus was last time rather than to the authored target. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
 	bool bRestoreLastFocus = true;

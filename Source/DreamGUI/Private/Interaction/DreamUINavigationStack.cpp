@@ -3,6 +3,7 @@
 #include "Interaction/DreamUINavigationStack.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/UISelectable.h"
+#include "Interaction/UITextInput.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
 #include "Engine/World.h"
@@ -137,6 +138,60 @@ void UDreamUINavigationStack::RestoreFocusForTopScope(int32 InUserIndex)
 	{
 		FocusSelectable(this, InUserIndex, Target);
 	}
+}
+
+void UDreamUINavigationStack::GetScopeStack(int32 InUserIndex, TArray<UDreamUINavigationScope*>& OutScopes) const
+{
+	OutScopes.Reset();
+	for (int32 Index = Scopes.Num() - 1; Index >= 0; --Index)
+	{
+		UDreamUINavigationScope* Scope = Scopes[Index].Get();
+		if (IsValid(Scope) && Scope->GetUserIndex() == InUserIndex)
+		{
+			OutScopes.Add(Scope);
+		}
+	}
+}
+
+bool UDreamUINavigationStack::HandleBack(int32 InUserIndex)
+{
+	// A field being edited gets it first, whatever screen it is on. Escape out of a half-typed name is
+	// the near-universal meaning of Back at that moment, and closing the screen instead would throw the
+	// edit away along with the screen.
+	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, InUserIndex);
+	if (IsValid(EventSystem))
+	{
+		if (UDreamWidget* Selected = EventSystem->GetCurrentSelectedComponent(0))
+		{
+			if (UUITextInput* TextInput = Selected->GetComponent<UUITextInput>())
+			{
+				if (TextInput->IsInputActive())
+				{
+					TextInput->DeactivateInput();
+					return true;
+				}
+			}
+		}
+	}
+
+	// Snapshot before walking: handling Back closes screens, which mutates the stack underneath us.
+	TArray<UDreamUINavigationScope*> Stack;
+	GetScopeStack(InUserIndex, Stack);
+	for (UDreamUINavigationScope* Scope : Stack)
+	{
+		if (!IsValid(Scope))continue;
+		if (Scope->HandleBackAction())
+		{
+			return true;
+		}
+		if (Scope->GetCloseOnBack())
+		{
+			Scope->DeactivateScope();
+			return true;
+		}
+		// Neither handled nor closes: transparent to Back, so the screen underneath gets its turn.
+	}
+	return false;
 }
 
 UUISelectable* UDreamUINavigationStack::GetFocusedSelectable(const UObject* WorldContextObject, int32 InUserIndex)

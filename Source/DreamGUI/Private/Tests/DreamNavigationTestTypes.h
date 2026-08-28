@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Interaction/DreamUINavigationScope.h"
 #include "DreamNavigationTestTypes.generated.h"
 
 /**
@@ -20,4 +21,22 @@ public:
 	void Fire() { ++CallCount; }
 
 	int32 CallCount = 0;
+};
+
+/** A screen that can be told to intercept Back, and counts how often it was offered it. */
+UCLASS()
+class UDreamBackHandlingScope : public UDreamUINavigationScope
+{
+	GENERATED_BODY()
+
+public:
+	bool bHandleBack = false;
+	int32 BackOfferCount = 0;
+
+protected:
+	virtual bool HandleBackAction_Implementation() override
+	{
+		++BackOfferCount;
+		return bHandleBack;
+	}
 };

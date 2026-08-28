@@ -95,6 +95,13 @@ UUISelectable* UDreamUINavigationScope::ResolveFocusTarget() const
 	return UUISelectable::FindDefaultSelectableIn(const_cast<UDreamUINavigationScope*>(this), GetWidget());
 }
 
+bool UDreamUINavigationScope::HandleBackAction_Implementation()
+{
+	// Nothing by default, which lets Back fall through to bCloseOnBack and then to the screen below.
+	// A screen that wants to intercept overrides this in Blueprint or C++.
+	return false;
+}
+
 void UDreamUINavigationScope::NotifyScopeActivated()
 {
 	bIsScopeActive = true;
