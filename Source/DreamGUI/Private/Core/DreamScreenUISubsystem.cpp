@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamScreenUISubsystem.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
 
 #include "Core/Components/DreamCanvas.h"
@@ -291,9 +292,9 @@ void UDreamScreenUISubsystem::AddToViewport(UDreamWidget* InRoot, int32 InSortOr
 	RegisterUI(AutoName, InRoot, InSortOrder);
 }
 
-UDreamWidget* UDreamScreenUISubsystem::LoadPrefabToScreen(UDreamUIPrefab* InPrefab, int32 InSortOrder)
+UDreamWidget* UDreamScreenUISubsystem::CreateWidgetOnScreen(TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder)
 {
-	if (!IsValid(InPrefab))
+	if (!IsValid(InWidgetClass))
 	{
 		return nullptr;
 	}
@@ -302,7 +303,7 @@ UDreamWidget* UDreamScreenUISubsystem::LoadPrefabToScreen(UDreamUIPrefab* InPref
 	{
 		return nullptr;
 	}
-	UDreamWidget* Page = InPrefab->LoadPrefab(GetWorld(), Root, nullptr, true);
+	UDreamWidget* Page = CreateDreamWidget(GetWorld(), InWidgetClass, Root);
 	if (Page)
 	{
 		AddToViewport(Page, InSortOrder);
@@ -322,7 +323,7 @@ void UDreamScreenUISubsystem::RegisterUIInternal(
 	UDreamWidget* InRoot,
 	int32 InSortOrder,
 	EDreamUIScreenPageCachePolicy InCachePolicy,
-	TSoftObjectPtr<UDreamUIPrefab> InSourcePrefab,
+	TSoftClassPtr<UDreamUserWidget> InSourceClass,
 	bool bInitiallyVisible)
 {
 	if (InName.IsNone() || !IsUsablePage(InRoot) || InRoot == ScreenRoot)
@@ -344,9 +345,9 @@ void UDreamScreenUISubsystem::RegisterUIInternal(
 		{
 			Existing->SortOrder = InSortOrder;
 			Existing->CachePolicy = InCachePolicy;
-			if (!InSourcePrefab.IsNull())
+			if (!InSourceClass.IsNull())
 			{
-				Existing->SourcePrefab = InSourcePrefab;
+				Existing->SourceClass = InSourceClass;
 			}
 			ConfigurePage(InRoot, InSortOrder);
 			SetPageActive(InName, bInitiallyVisible);
@@ -359,7 +360,7 @@ void UDreamScreenUISubsystem::RegisterUIInternal(
 	ConfigurePage(InRoot, InSortOrder);
 	FEntry Entry;
 	Entry.Root = InRoot;
-	Entry.SourcePrefab = InSourcePrefab;
+	Entry.SourceClass = InSourceClass;
 	Entry.SortOrder = InSortOrder;
 	Entry.CachePolicy = InCachePolicy;
 	Entry.State = EDreamUIScreenPageState::Inactive;
@@ -369,9 +370,9 @@ void UDreamScreenUISubsystem::RegisterUIInternal(
 	SetPageActive(InName, bInitiallyVisible);
 }
 
-UDreamWidget* UDreamScreenUISubsystem::ShowPrefab(FName InName, UDreamUIPrefab* InPrefab, int32 InSortOrder)
+UDreamWidget* UDreamScreenUISubsystem::ShowWidgetOfClass(FName InName, TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder)
 {
-	if (InName.IsNone() || !IsValid(InPrefab))
+	if (InName.IsNone() || !IsValid(InWidgetClass))
 	{
 		return nullptr;
 	}
@@ -380,11 +381,11 @@ UDreamWidget* UDreamScreenUISubsystem::ShowPrefab(FName InName, UDreamUIPrefab* 
 	{
 		return nullptr;
 	}
-	UDreamWidget* Page = InPrefab->LoadPrefab(GetWorld(), Root, nullptr, true);
+	UDreamWidget* Page = CreateDreamWidget(GetWorld(), InWidgetClass, Root);
 	if (Page)
 	{
 		const FName PreviousTop = GetTopUI();
-		RegisterUIInternal(InName, Page, InSortOrder, EDreamUIScreenPageCachePolicy::DestroyOnPop, InPrefab, true);
+		RegisterUIInternal(InName, Page, InSortOrder, EDreamUIScreenPageCachePolicy::DestroyOnPop, TSoftClassPtr<UDreamUserWidget>(InWidgetClass), true);
 		RefreshStack(PreviousTop);
 	}
 	return Page;
@@ -537,48 +538,48 @@ TArray<FName> UDreamScreenUISubsystem::GetAllUINames() const
 	return Names;
 }
 
-bool UDreamScreenUISubsystem::RegisterPageAsset(
+bool UDreamScreenUISubsystem::RegisterPageClass(
 	FName InName,
-	TSoftObjectPtr<UDreamUIPrefab> InPrefab,
+	TSoftClassPtr<UDreamUserWidget> InWidgetClass,
 	EDreamUIScreenPageCachePolicy InCachePolicy)
 {
-	if (InName.IsNone() || InPrefab.IsNull())
+	if (InName.IsNone() || InWidgetClass.IsNull())
 	{
 		return false;
 	}
 
-	const FSoftObjectPath NewPrefabPath = InPrefab.ToSoftObjectPath();
-	bool bPrefabChanged = false;
+	const FSoftObjectPath NewClassPath = InWidgetClass.ToSoftObjectPath();
+	bool bPageClassChanged = false;
 	if (const FPageDefinition* ExistingDefinition = PageDefinitions.Find(InName))
 	{
-		bPrefabChanged = ExistingDefinition->Prefab.ToSoftObjectPath() != NewPrefabPath;
+		bPageClassChanged = ExistingDefinition->PageClass.ToSoftObjectPath() != NewClassPath;
 	}
 
-	PageDefinitions.Add(InName, FPageDefinition{ InPrefab, InCachePolicy });
-	if (bPrefabChanged)
+	PageDefinitions.Add(InName, FPageDefinition{ InWidgetClass, InCachePolicy });
+	if (bPageClassChanged)
 	{
 		CancelPageLoad(InName);
 		const FPageDefinition* CurrentDefinition = PageDefinitions.Find(InName);
-		if (!CurrentDefinition || CurrentDefinition->Prefab.ToSoftObjectPath() != NewPrefabPath)
+		if (!CurrentDefinition || CurrentDefinition->PageClass.ToSoftObjectPath() != NewClassPath)
 		{
 			return true;
 		}
 		if (const FEntry* ExistingEntry = Entries.Find(InName);
-			ExistingEntry && !ExistingEntry->SourcePrefab.IsNull()
-			&& ExistingEntry->SourcePrefab.ToSoftObjectPath() != NewPrefabPath)
+			ExistingEntry && !ExistingEntry->SourceClass.IsNull()
+			&& ExistingEntry->SourceClass.ToSoftObjectPath() != NewClassPath)
 		{
 			RemoveUI(InName);
 		}
 	}
 	if (FEntry* Entry = Entries.Find(InName);
-		Entry && Entry->SourcePrefab.ToSoftObjectPath() == NewPrefabPath)
+		Entry && Entry->SourceClass.ToSoftObjectPath() == NewClassPath)
 	{
 		Entry->CachePolicy = InCachePolicy;
 	}
 	return true;
 }
 
-void UDreamScreenUISubsystem::UnregisterPageAsset(FName InName, bool bRemoveLoadedPage)
+void UDreamScreenUISubsystem::UnregisterPageClass(FName InName, bool bRemoveLoadedPage)
 {
 	PageDefinitions.Remove(InName);
 	CancelPageLoad(InName);
@@ -588,11 +589,11 @@ void UDreamScreenUISubsystem::UnregisterPageAsset(FName InName, bool bRemoveLoad
 	}
 }
 
-TSoftObjectPtr<UDreamUIPrefab> UDreamScreenUISubsystem::GetPageAsset(FName InName) const
+TSoftClassPtr<UDreamUserWidget> UDreamScreenUISubsystem::GetPageClass(FName InName) const
 {
 	if (const FPageDefinition* Definition = PageDefinitions.Find(InName))
 	{
-		return Definition->Prefab;
+		return Definition->PageClass;
 	}
 	return {};
 }
@@ -627,9 +628,9 @@ void UDreamScreenUISubsystem::CompletePageLoad(FName InName)
 	}
 
 	const FPageDefinition* Definition = PageDefinitions.Find(InName);
-	UDreamUIPrefab* Prefab = Definition ? Definition->Prefab.Get() : nullptr;
-	UDreamWidget* Page = Definition && IsValid(Prefab)
-		? PushPrefab(InName, Prefab, Definition->CachePolicy, PendingLoad.bHidePrevious)
+	UClass* PageClass = Definition ? Definition->PageClass.Get() : nullptr;
+	UDreamWidget* Page = Definition && IsValid(PageClass)
+		? PushWidgetOfClass(InName, PageClass, Definition->CachePolicy, PendingLoad.bHidePrevious)
 		: nullptr;
 	ExecuteLoadCallbacks(InName, PendingLoad, Page, Page != nullptr);
 }
@@ -640,7 +641,7 @@ void UDreamScreenUISubsystem::PushPageAsync(
 	bool bHidePrevious)
 {
 	const FPageDefinition* Definition = PageDefinitions.Find(InName);
-	if (InName.IsNone() || !Definition || Definition->Prefab.IsNull())
+	if (InName.IsNone() || !Definition || Definition->PageClass.IsNull())
 	{
 		OnComplete.ExecuteIfBound(InName, nullptr, false);
 		return;
@@ -650,8 +651,8 @@ void UDreamScreenUISubsystem::PushPageAsync(
 	{
 		const FEntry* ExistingEntry = Entries.Find(InName);
 		if (ExistingEntry
-			&& !ExistingEntry->SourcePrefab.IsNull()
-			&& ExistingEntry->SourcePrefab.ToSoftObjectPath() == Definition->Prefab.ToSoftObjectPath())
+			&& !ExistingEntry->SourceClass.IsNull()
+			&& ExistingEntry->SourceClass.ToSoftObjectPath() == Definition->PageClass.ToSoftObjectPath())
 		{
 			PushUI(InName, ExistingPage, Definition->CachePolicy, bHidePrevious);
 			OnComplete.ExecuteIfBound(InName, ExistingPage, true);
@@ -659,7 +660,7 @@ void UDreamScreenUISubsystem::PushPageAsync(
 		}
 		RemoveUI(InName);
 		Definition = PageDefinitions.Find(InName);
-		if (!Definition || Definition->Prefab.IsNull())
+		if (!Definition || Definition->PageClass.IsNull())
 		{
 			OnComplete.ExecuteIfBound(InName, nullptr, false);
 			return;
@@ -676,9 +677,9 @@ void UDreamScreenUISubsystem::PushPageAsync(
 		return;
 	}
 
-	if (UDreamUIPrefab* LoadedPrefab = Definition->Prefab.Get())
+	if (UClass* AlreadyLoadedClass = Definition->PageClass.Get())
 	{
-		UDreamWidget* Page = PushPrefab(InName, LoadedPrefab, Definition->CachePolicy, bHidePrevious);
+		UDreamWidget* Page = PushWidgetOfClass(InName, AlreadyLoadedClass, Definition->CachePolicy, bHidePrevious);
 		OnComplete.ExecuteIfBound(InName, Page, Page != nullptr);
 		return;
 	}
@@ -692,7 +693,7 @@ void UDreamScreenUISubsystem::PushPageAsync(
 
 	const TWeakObjectPtr<UDreamScreenUISubsystem> WeakThis(this);
 	PendingLoad.Handle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		Definition->Prefab.ToSoftObjectPath(),
+		Definition->PageClass.ToSoftObjectPath(),
 		[WeakThis, InName]()
 		{
 			if (UDreamScreenUISubsystem* This = WeakThis.Get())
@@ -741,22 +742,22 @@ EDreamUIScreenPageState UDreamScreenUISubsystem::GetPageState(FName InName) cons
 	return EDreamUIScreenPageState::Unloaded;
 }
 
-UDreamWidget* UDreamScreenUISubsystem::PushPrefab(
+UDreamWidget* UDreamScreenUISubsystem::PushWidgetOfClass(
 	FName InName,
-	UDreamUIPrefab* InPrefab,
+	TSubclassOf<UDreamUserWidget> InWidgetClass,
 	EDreamUIScreenPageCachePolicy InCachePolicy,
 	bool bHidePrevious)
 {
-	if (InName.IsNone() || !IsValid(InPrefab))
+	if (InName.IsNone() || !IsValid(InWidgetClass))
 	{
 		return nullptr;
 	}
 
 	if (FEntry* ExistingEntry = Entries.Find(InName))
 	{
-		const TSoftObjectPtr<UDreamUIPrefab> RequestedPrefab(InPrefab);
-		if (!ExistingEntry->SourcePrefab.IsNull()
-			&& ExistingEntry->SourcePrefab.ToSoftObjectPath() == RequestedPrefab.ToSoftObjectPath())
+		const TSoftClassPtr<UDreamUserWidget> RequestedClass(InWidgetClass);
+		if (!ExistingEntry->SourceClass.IsNull()
+			&& ExistingEntry->SourceClass.ToSoftObjectPath() == RequestedClass.ToSoftObjectPath())
 		{
 			if (UDreamWidget* ExistingPage = GetUI(InName))
 			{
@@ -772,7 +773,7 @@ UDreamWidget* UDreamScreenUISubsystem::PushPrefab(
 	{
 		return nullptr;
 	}
-	UDreamWidget* Page = InPrefab->LoadPrefab(GetWorld(), Root, nullptr, true);
+	UDreamWidget* Page = CreateDreamWidget(GetWorld(), InWidgetClass, Root);
 	if (!Page)
 	{
 		return nullptr;
@@ -780,7 +781,7 @@ UDreamWidget* UDreamScreenUISubsystem::PushPrefab(
 
 	const FName PreviousTop = GetTopUI();
 	const int32 SortOrder = StackBaseSortOrder + Stack.Num() * StackSortOrderStep;
-	RegisterUIInternal(InName, Page, SortOrder, InCachePolicy, InPrefab, false);
+	RegisterUIInternal(InName, Page, SortOrder, InCachePolicy, TSoftClassPtr<UDreamUserWidget>(InWidgetClass), false);
 	Stack.Remove(InName);
 	Stack.Add(InName);
 	if (FEntry* Entry = Entries.Find(InName))

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -8,7 +8,7 @@
 
 class AActor;
 class UDreamCanvas;
-class UDreamUIPrefab;
+class UDreamUserWidget;
 class UDreamWidget;
 struct FStreamableHandle;
 
@@ -73,7 +73,7 @@ public:
 	UDreamCanvas* GetScreenCanvas() const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen")
-	UDreamWidget* LoadPrefabToScreen(UDreamUIPrefab* InPrefab, int32 InSortOrder = 0);
+	UDreamWidget* CreateWidgetOnScreen(TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder = 0);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen")
 	void AddToViewport(UDreamWidget* InRoot, int32 InSortOrder = 0);
@@ -88,7 +88,7 @@ public:
 	void RegisterUI(FName InName, UDreamWidget* InRoot, int32 InSortOrder = 0);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen")
-	UDreamWidget* ShowPrefab(FName InName, UDreamUIPrefab* InPrefab, int32 InSortOrder = 0);
+	UDreamWidget* ShowWidgetOfClass(FName InName, TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder = 0);
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Screen")
 	UDreamWidget* GetUI(FName InName) const;
@@ -109,14 +109,14 @@ public:
 	TArray<FName> GetAllUINames() const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen|Pages")
-	bool RegisterPageAsset(FName InName, TSoftObjectPtr<UDreamUIPrefab> InPrefab,
+	bool RegisterPageClass(FName InName, TSoftClassPtr<UDreamUserWidget> InWidgetClass,
 		EDreamUIScreenPageCachePolicy InCachePolicy = EDreamUIScreenPageCachePolicy::KeepAlive);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen|Pages")
-	void UnregisterPageAsset(FName InName, bool bRemoveLoadedPage = true);
+	void UnregisterPageClass(FName InName, bool bRemoveLoadedPage = true);
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Screen|Pages")
-	TSoftObjectPtr<UDreamUIPrefab> GetPageAsset(FName InName) const;
+	TSoftClassPtr<UDreamUserWidget> GetPageClass(FName InName) const;
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Screen|Pages")
 	TArray<FName> GetRegisteredPageNames() const;
@@ -131,7 +131,7 @@ public:
 	EDreamUIScreenPageState GetPageState(FName InName) const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen|Stack")
-	UDreamWidget* PushPrefab(FName InName, UDreamUIPrefab* InPrefab,
+	UDreamWidget* PushWidgetOfClass(FName InName, TSubclassOf<UDreamUserWidget> InWidgetClass,
 		EDreamUIScreenPageCachePolicy InCachePolicy = EDreamUIScreenPageCachePolicy::DestroyOnPop,
 		bool bHidePrevious = true);
 
@@ -165,7 +165,7 @@ private:
 	struct FEntry
 	{
 		TWeakObjectPtr<UDreamWidget> Root;
-		TSoftObjectPtr<UDreamUIPrefab> SourcePrefab;
+		TSoftClassPtr<UDreamUserWidget> SourceClass;
 		int32 SortOrder = 0;
 		EDreamUIScreenPageCachePolicy CachePolicy = EDreamUIScreenPageCachePolicy::DestroyOnPop;
 		EDreamUIScreenPageState State = EDreamUIScreenPageState::Inactive;
@@ -174,7 +174,7 @@ private:
 
 	struct FPageDefinition
 	{
-		TSoftObjectPtr<UDreamUIPrefab> Prefab;
+		TSoftClassPtr<UDreamUserWidget> PageClass;
 		EDreamUIScreenPageCachePolicy CachePolicy = EDreamUIScreenPageCachePolicy::KeepAlive;
 	};
 
@@ -210,7 +210,7 @@ private:
 	FName FindNameForWidget(const UDreamWidget* InRoot) const;
 	void ConfigurePage(UDreamWidget* InRoot, int32 InSortOrder);
 	void RegisterUIInternal(FName InName, UDreamWidget* InRoot, int32 InSortOrder,
-		EDreamUIScreenPageCachePolicy InCachePolicy, TSoftObjectPtr<UDreamUIPrefab> InSourcePrefab,
+		EDreamUIScreenPageCachePolicy InCachePolicy, TSoftClassPtr<UDreamUserWidget> InSourceClass,
 		bool bInitiallyVisible);
 	void SetPageActive(FName InName, bool bActive);
 	void RefreshStack(FName InPreviousTop);
