@@ -7,6 +7,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamWidgetTree.h"
 
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "Utils/DreamUIUtils.h"
@@ -645,6 +646,50 @@ void UDreamUIPrefab::PreSave(FObjectPreSaveContext SaveContext)
 
 #endif
 
+namespace
+{
+	/**
+	 * Where the widgets a load creates get outered.
+	 *
+	 * They used to go straight onto the UWorld, flat, which left the hierarchy with no owner the engine
+	 * could serialize, duplicate or instance -- the prefab blob was the only record of it. A load now
+	 * either joins the tree its parent already belongs to, so one hierarchy stays one object graph, or
+	 * mints a fresh UDreamWidgetTree. The tree is outered to the world, so UDreamWidget::GetWorld
+	 * (GetTypedOuter<UWorld>) still resolves for everything inside it.
+	 *
+	 * Nothing here is rooted for GC until the caller takes the returned widget. That is not new -- the
+	 * deserializer has always built into locals -- and it is safe only because GC cannot interleave with
+	 * a synchronous game-thread load.
+	 */
+	struct FDreamPrefabLoadOwner
+	{
+		UObject* Outer = nullptr;
+		/** Set only when this load minted the tree, and so is the only one entitled to name its root. */
+		UDreamWidgetTree* OwnedTree = nullptr;
+
+		static FDreamPrefabLoadOwner Resolve(UWorld* InWorld, UDreamWidget* InParent)
+		{
+			FDreamPrefabLoadOwner Result;
+			if (IsValid(InParent) && InParent->GetOuter() != nullptr)
+			{
+				Result.Outer = InParent->GetOuter();
+				return Result;
+			}
+			Result.OwnedTree = NewObject<UDreamWidgetTree>(InWorld);
+			Result.Outer = Result.OwnedTree;
+			return Result;
+		}
+
+		void AdoptRoot(UDreamWidget* InRootWidget) const
+		{
+			if (OwnedTree != nullptr && IsValid(InRootWidget))
+			{
+				OwnedTree->RootWidget = InRootWidget;
+			}
+		}
+	};
+}
+
 UDreamWidget* UDreamUIPrefab::LoadPrefab(UWorld* InWorld, UDreamWidget* InParent, const TFunction<void(UDreamWidget*)>& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
 {
 	UDreamWidget* LoadedRootWidget = nullptr;
@@ -656,7 +701,9 @@ UDreamWidget* UDreamUIPrefab::LoadPrefab(UWorld* InWorld, UDreamWidget* InParent
 		case EDreamUIPrefabVersion::FTextAsReference:
 		case EDreamUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(InWorld, InWorld, this, InParent, SetRelativeTransformToIdentity, InCallbackBeforeAwake);
+			const FDreamPrefabLoadOwner Owner = FDreamPrefabLoadOwner::Resolve(InWorld, InParent);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(InWorld, Owner.Outer, this, InParent, SetRelativeTransformToIdentity, InCallbackBeforeAwake);
+			Owner.AdoptRoot(LoadedRootWidget);
 		}
 		break;
 		}
@@ -688,7 +735,9 @@ UDreamWidget* UDreamUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObjec
 		case EDreamUIPrefabVersion::FTextAsReference:
 		case EDreamUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation.Quaternion(), Scale, CallbackBeforeAwake);
+			const FDreamPrefabLoadOwner Owner = FDreamPrefabLoadOwner::Resolve(World, InParent);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, Owner.Outer, this, InParent, Location, Rotation.Quaternion(), Scale, CallbackBeforeAwake);
+			Owner.AdoptRoot(LoadedRootWidget);
 		}
 		break;
 		}
@@ -745,7 +794,9 @@ UDreamWidget* UDreamUIPrefab::LoadPrefabWithReplacement(UObject* WorldContextObj
 		case EDreamUIPrefabVersion::FTextAsReference:
 		case EDreamUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, false, CallbackBeforeAwake);
+			const FDreamPrefabLoadOwner Owner = FDreamPrefabLoadOwner::Resolve(World, InParent);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, Owner.Outer, this, InParent, false, CallbackBeforeAwake);
+			Owner.AdoptRoot(LoadedRootWidget);
 		}
 		break;
 		}
@@ -789,7 +840,9 @@ UDreamWidget* UDreamUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObjec
 		case EDreamUIPrefabVersion::FTextAsReference:
 		case EDreamUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
+			const FDreamPrefabLoadOwner Owner = FDreamPrefabLoadOwner::Resolve(World, InParent);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, Owner.Outer, this, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
+			Owner.AdoptRoot(LoadedRootWidget);
 		}
 		break;
 		}
