@@ -90,14 +90,14 @@ public:
 
 
 	/**
-	 * Content folder the preset prefabs live in.
+	 * Content folder the shipped control classes live in.
 	 *
 	 * A folder rather than a list because three places need it and they need it for different
 	 * reasons: one builds a path into it, one is the base for the preset menu, and the palette
 	 * excludes it so presets do not show up twice.
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Editor")
-	FString PresetPrefabFolder;
+	FString PresetControlFolder;
 
 	// ---------------------------------------------------------------- Spawned actors
 

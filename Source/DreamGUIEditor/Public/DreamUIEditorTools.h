@@ -29,9 +29,9 @@ public:
 	/** Normalize an existing prefab tree and return how many duplicate names were changed. */
 	static int32 EnsureUniqueWidgetDisplayNames(UDreamWidget* RootWidget, TArray<FString>* OutRenamedWidgets = nullptr);
 	static void CreateWidget(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class UDreamWidget*)> Callback);
-	static void CreateUIControls(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InPrefabPath);
+	static void CreateUIControls(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath);
 	static UDreamWidget* CreateWidgetAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class UDreamWidget*)> Callback);
-	static UDreamWidget* CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(class UDreamWidget*)> Callback = nullptr);
+	static UDreamWidget* CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath, TFunction<void(class UDreamWidget*)> Callback = nullptr);
 	/**
 	 * Instantiate a prefab under the selection and keep it linked to its source asset, the way a
 	 * Content Browser drop does. CreateUIControls flattens instead, which is only what the plugin's

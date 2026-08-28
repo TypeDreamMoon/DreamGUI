@@ -165,8 +165,8 @@ namespace DreamUIControlRegistryLocal
 		Result.Name = Name;
 		Result.DisplayName = FText::FromString(DisplayName);
 		Result.Category = TEXT("Controls");
-		Result.CreationKind = EDreamUIControlCreationKind::Prefab;
-		Result.PrefabPath = UDreamGUISettings::Get()->PresetPrefabFolder + AssetName;
+		Result.CreationKind = EDreamUIControlCreationKind::WidgetClass;
+		Result.WidgetClassPath = UDreamGUISettings::Get()->PresetControlFolder + TEXT("BP_") + AssetName;
 		Result.Icon = MakeUMGIcon(IconStyleName);
 		return Result;
 	}
@@ -386,7 +386,7 @@ bool FDreamUIControlRegistry::Register(const FDreamUIControlDescriptor& Descript
 	// and asking it mid-scan -- which is where the defaults register from the constructor -- answers
 	// "missing" about every one of them.
 	IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
-	if (Descriptor.CreationKind != EDreamUIControlCreationKind::Prefab || (AssetRegistry != nullptr && !AssetRegistry->IsLoadingAssets()))
+	if (Descriptor.CreationKind != EDreamUIControlCreationKind::WidgetClass || (AssetRegistry != nullptr && !AssetRegistry->IsLoadingAssets()))
 	{
 		FText ValidationError;
 		if (!Validate(Descriptor, ValidationError))
@@ -412,19 +412,19 @@ bool FDreamUIControlRegistry::Unregister(FName Name)
 
 bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descriptor, FText& OutError) const
 {
-	if (Descriptor.CreationKind == EDreamUIControlCreationKind::Prefab)
+	if (Descriptor.CreationKind == EDreamUIControlCreationKind::WidgetClass)
 	{
-		if (Descriptor.PrefabPath.IsEmpty() || !FPackageName::DoesPackageExist(Descriptor.PrefabPath))
+		if (Descriptor.WidgetClassPath.IsEmpty() || !FPackageName::DoesPackageExist(Descriptor.WidgetClassPath))
 		{
-			OutError = FText::Format(LOCTEXT("MissingPrefab", "Missing control prefab: {0}"), FText::FromString(Descriptor.PrefabPath));
+			OutError = FText::Format(LOCTEXT("MissingControlClass", "Missing control class: {0}"), FText::FromString(Descriptor.WidgetClassPath));
 			return false;
 		}
 		TArray<FAssetData> PackageAssets;
 		IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
-		AssetRegistry.GetAssetsByPackageName(FName(Descriptor.PrefabPath), PackageAssets, true);
+		AssetRegistry.GetAssetsByPackageName(FName(Descriptor.WidgetClassPath), PackageAssets, true);
 		const bool bContainsPrefab = PackageAssets.ContainsByPredicate([](const FAssetData& Asset)
 		{
-			return Asset.AssetClassPath == UDreamUIPrefab::StaticClass()->GetClassPathName();
+			return Asset.AssetClassPath == UDreamWidgetBlueprint::StaticClass()->GetClassPathName();
 		});
 		// A registry that has not finished scanning knows nothing about the package's contents, and
 		// answering "wrong type" to a question it cannot answer yet disabled every prefab-backed
@@ -432,7 +432,7 @@ bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descript
 		// until OnFilesLoaded, which the Palette re-validates on.
 		if (!bContainsPrefab && !AssetRegistry.IsLoadingAssets())
 		{
-			OutError = FText::Format(LOCTEXT("WrongPrefabType", "Control resource is not a DreamUI Prefab: {0}"), FText::FromString(Descriptor.PrefabPath));
+			OutError = FText::Format(LOCTEXT("WrongControlType", "Control resource is not a DreamUI Widget Blueprint: {0}"), FText::FromString(Descriptor.WidgetClassPath));
 			return false;
 		}
 	}

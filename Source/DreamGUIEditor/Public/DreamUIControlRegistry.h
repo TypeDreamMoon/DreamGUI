@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -10,7 +10,8 @@ DECLARE_MULTICAST_DELEGATE(FOnDreamUIControlRegistryChanged);
 
 enum class EDreamUIControlCreationKind : uint8
 {
-	Prefab,
+	/** A hierarchy class asset. The palette places an INSTANCE of it, so fixing the class fixes every use. */
+	WidgetClass,
 	Native,
 };
 
@@ -21,7 +22,8 @@ struct DREAMGUIEDITOR_API FDreamUIControlDescriptor
 	FText DisplayName;
 	FName Category;
 	EDreamUIControlCreationKind CreationKind = EDreamUIControlCreationKind::Native;
-	FString PrefabPath;
+	/** Package path of the UDreamWidgetBlueprint backing this control, for the WidgetClass kind. */
+	FString WidgetClassPath;
 	TWeakObjectPtr<UClass> VisualClass;
 	TWeakObjectPtr<UClass> LayoutContainerClass;
 	TWeakObjectPtr<UClass> LayoutSelfClass;

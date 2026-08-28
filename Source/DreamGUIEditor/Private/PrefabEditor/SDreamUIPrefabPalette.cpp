@@ -228,9 +228,9 @@ void SDreamUIPrefabPalette::CollectControls(TArray<FItemPtr>& Out)
 			CategoryOrder.Add(Descriptor.Category);
 		}
 		auto Item = MakeShared<FPaletteItem>();
-		Item->Kind = Descriptor.CreationKind == EDreamUIControlCreationKind::Prefab ? EItemKind::Prefab : EItemKind::Native;
+		Item->Kind = Descriptor.CreationKind == EDreamUIControlCreationKind::WidgetClass ? EItemKind::Prefab : EItemKind::Native;
 		Item->DisplayName = Descriptor.DisplayName.ToString();
-		Item->PrefabPath = Descriptor.PrefabPath;
+		Item->PrefabPath = Descriptor.WidgetClassPath;
 		Item->NativeDescriptor = MakeShared<FDreamUIControlDescriptor>(Descriptor);
 		Item->bValid = FDreamUIControlRegistry::Get().Validate(Descriptor, Item->ValidationError);
 		Item->FavoriteKey = DreamUIPalette::MakeFavoriteKey(*Item);
@@ -278,7 +278,7 @@ void SDreamUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
 	for (auto& AssetData : PrefabAssets)
 	{
 		// the plugin's built-in preset prefabs already live in the Controls section
-		if (AssetData.PackageName.ToString().StartsWith(UDreamGUISettings::Get()->PresetPrefabFolder))continue;
+		if (AssetData.PackageName.ToString().StartsWith(UDreamGUISettings::Get()->PresetControlFolder))continue;
 		if (AssetData.PackageName == EditingPackage)continue;
 		if (ReferencingPackages.Contains(AssetData.PackageName))
 		{

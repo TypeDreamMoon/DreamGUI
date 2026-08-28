@@ -39,7 +39,7 @@ UDreamGUISettings::UDreamGUISettings()
 
 	// The event system defaults to the native preset rather than to the Blueprint one it used to
 	// spawn: same behaviour, and nothing to break if the Blueprint is renamed or deleted.
-	PresetPrefabFolder = TEXT("/DreamGUI/Prefabs/");
+	PresetControlFolder = TEXT("/DreamGUI/Controls/");
 
 	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamEnhancedInputEventSystemActor")));
 

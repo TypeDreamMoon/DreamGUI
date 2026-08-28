@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIEditorTools.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIControlRegistry.h"
 #include "Core/DreamUIManager.h"
@@ -321,43 +322,43 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 	return NewWidget;
 }
 
-void FDreamUIEditorTools::CreateUIControls(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InPrefabPath)
+void FDreamUIEditorTools::CreateUIControls(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath)
 {
-	CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), MoveTemp(InPrefabPath));
+	CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), MoveTemp(InControlClassPath));
 }
 
-UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(UDreamWidget*)> Callback)
+UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath, TFunction<void(UDreamWidget*)> Callback)
 {
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create prefab '%s': no parent widget is selected."), *InPrefabPath);
+		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': no parent widget is selected."), *InControlClassPath);
 		return nullptr;
 	}
 	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create prefab '%s': widget '%s' is not a valid parent."), *InPrefabPath, *SelectedWidget->GetDisplayName());
+		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': widget '%s' is not a valid parent."), *InControlClassPath, *SelectedWidget->GetDisplayName());
 		return nullptr;
 	}
 	if (!SelectedWidget->CanAcceptAdditionalChildren())
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Widget '%s' cannot accept another child prefab."), *SelectedWidget->GetDisplayName());
+		UE_LOG(DreamGUIEditor, Warning, TEXT("Widget '%s' cannot accept another child control."), *SelectedWidget->GetDisplayName());
 		return nullptr;
 	}
-	auto Prefab = LoadObject<UDreamUIPrefab>(NULL, *InPrefabPath);
-	if (Prefab == nullptr)
+
+	// The control is a CLASS, and what lands in the hierarchy is an instance of it.
+	//
+	// This used to load a prefab and flatten a copy of its widgets into the tree, which is why fixing
+	// the shipped Button never reached a single Button anyone had already dropped -- there was no link
+	// left to follow. An instance keeps one.
+	UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, *(InControlClassPath + TEXT(".") + FPackageName::GetShortName(InControlClassPath)));
+	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
+	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
 	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InPrefabPath);
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
 		return nullptr;
 	}
-	// Flattening happens before anything can look at the result, so the nesting guard has to run
-	// ahead of the transaction rather than as a dialog on the way out.
-	FText NestError;
-	if (!CanNestPrefabUnderWidget(Prefab, SelectedWidget, NestError))
-	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("Cannot create prefab '%s': %s"), *InPrefabPath, *NestError.ToString());
-		return nullptr;
-	}
+
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "DreamUI Create UI Control"));
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	ModifyForHierarchyChange(SelectedWidget);
@@ -366,9 +367,13 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 		PrefabHelperObject->Modify();
 		PrefabHelperObject->SetAnythingDirty();
 	}
-	auto CreatedWidget = Prefab->LoadPrefabInEditor(SelectedWidget->GetWorld()
-		, SelectedWidget->GetOuter()
-		, SelectedWidget);
+
+	UDreamWidget* CreatedWidget = CreateDreamWidget(SelectedWidget->GetWorld(), ControlClass, SelectedWidget);
+	if (!IsValid(CreatedWidget))
+	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("Control class '%s' produced no widget."), *InControlClassPath);
+		return nullptr;
+	}
 	if (Callback)Callback(CreatedWidget);
 	EnsureUniqueWidgetDisplayNames(FDreamUIEditorToolsHelperFunctionHolder::GetNamingRoot(CreatedWidget));
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
@@ -492,9 +497,9 @@ UDreamWidget* FDreamUIEditorTools::CreateRegisteredControlAndReturn(TFunction<UD
 		UE_LOG(DreamGUIEditor, Error, TEXT("Cannot create control '%s': %s"), *ControlName.ToString(), *ValidationError.ToString());
 		return nullptr;
 	}
-	if (Descriptor->CreationKind == EDreamUIControlCreationKind::Prefab)
+	if (Descriptor->CreationKind == EDreamUIControlCreationKind::WidgetClass)
 	{
-		return CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), Descriptor->PrefabPath, MoveTemp(Callback));
+		return CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), Descriptor->WidgetClassPath, MoveTemp(Callback));
 	}
 
 	const FDreamUIControlDescriptor Recipe = *Descriptor;

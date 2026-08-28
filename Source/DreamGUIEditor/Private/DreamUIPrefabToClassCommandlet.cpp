@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIPrefabToClassCommandlet.h"
 #include "DreamUIPrefabToClassConverter.h"
@@ -43,8 +43,13 @@ int32 UDreamUIPrefabToClassCommandlet::Main(const FString& Params)
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
 	AssetRegistryModule.Get().SearchAllAssets(/*bSynchronous*/true);
 
+	// Filtered by PATH and not by class, deliberately. The registry's idea of an asset's class comes
+	// from what was written into the package, and a rename leaves entries that no longer match the
+	// class they load as -- two of the shipped controls are exactly that, invisible to a ClassPaths
+	// filter while LoadObject<UDreamUIPrefab> resolves them without complaint. A migration that
+	// silently converts eleven of thirteen is the worst thing this tool could do, so it looks at
+	// everything in the folder and lets the load decide.
 	FARFilter Filter;
-	Filter.ClassPaths.Add(UDreamUIPrefab::StaticClass()->GetClassPathName());
 	Filter.PackagePaths.Add(FName(*SourcePath));
 	Filter.bRecursivePaths = true;
 	TArray<FAssetData> Found;
@@ -53,13 +58,13 @@ int32 UDreamUIPrefabToClassCommandlet::Main(const FString& Params)
 	// Deterministic order, so two runs produce the same log and the same failures.
 	Found.Sort([](const FAssetData& A, const FAssetData& B) { return A.AssetName.LexicalLess(B.AssetName); });
 
-	UE_LOG(LogDreamUIPrefabToClass, Display, TEXT("%d prefab(s) under '%s' -> '%s'%s"),
+	UE_LOG(LogDreamUIPrefabToClass, Display, TEXT("%d asset(s) under '%s' -> '%s'%s"),
 		Found.Num(), *SourcePath, *DestPath, bDryRun ? TEXT(" (dry run)") : TEXT(""));
 
 	// One throwaway world for every fidelity check; conversion must not touch a real one.
 	UWorld* VerifyWorld = UWorld::CreateWorld(EWorldType::Game, false);
 
-	int32 Converted = 0, Skipped = 0, Failed = 0, Unfaithful = 0;
+	int32 Converted = 0, Skipped = 0, Failed = 0, Unfaithful = 0, NotPrefabs = 0;
 	TArray<UPackage*> PackagesToSave;
 
 	for (const FAssetData& AssetData : Found)
@@ -76,11 +81,15 @@ int32 UDreamUIPrefabToClassCommandlet::Main(const FString& Params)
 			continue;
 		}
 
-		UDreamUIPrefab* Prefab = Cast<UDreamUIPrefab>(AssetData.GetAsset());
-		if (!IsValid(Prefab))
+		UObject* Asset = AssetData.GetAsset();
+		UDreamUIPrefab* Prefab = Cast<UDreamUIPrefab>(Asset);
+		if (Prefab == nullptr)
 		{
-			UE_LOG(LogDreamUIPrefabToClass, Error, TEXT("FAIL  %s (did not load)"), *AssetData.AssetName.ToString());
-			Failed++;
+			// Not a prefab at all -- reported rather than skipped in silence, so the arithmetic at the
+			// end accounts for every asset in the folder.
+			UE_LOG(LogDreamUIPrefabToClass, Display, TEXT("--    %s (not a prefab: %s)"),
+				*AssetData.AssetName.ToString(), Asset != nullptr ? *Asset->GetClass()->GetName() : TEXT("did not load"));
+			NotPrefabs++;
 			continue;
 		}
 
@@ -135,7 +144,9 @@ int32 UDreamUIPrefabToClassCommandlet::Main(const FString& Params)
 
 	VerifyWorld->DestroyWorld(false);
 
-	UE_LOG(LogDreamUIPrefabToClass, Display, TEXT("done: %d converted, %d skipped, %d failed, %d unfaithful"),
-		Converted, Skipped, Failed, Unfaithful);
+	// Every asset the folder held is accounted for in one line; a count that does not add up to the
+	// number found is the signal that something was dropped.
+	UE_LOG(LogDreamUIPrefabToClass, Display, TEXT("done: %d found = %d converted + %d skipped + %d failed + %d unfaithful + %d not-prefabs"),
+		Found.Num(), Converted, Skipped, Failed, Unfaithful, NotPrefabs);
 	return (Failed > 0 || Unfaithful > 0) ? 1 : 0;
 }
