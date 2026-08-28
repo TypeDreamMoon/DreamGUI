@@ -64,4 +64,20 @@ public:
 
 	/** Total widget count, root included. Walks the tree; not cached. */
 	int32 CountWidgets() const;
+
+	/** The first widget whose variable name matches, or null. Used to resolve a binding by name. */
+	UDreamWidget* FindWidgetByVariableName(FName InVariableName) const;
+
+	/**
+	 * The member-variable name a widget binds to.
+	 *
+	 * Widgets are named by DisplayName, not by object name -- object names are generated -- so this is
+	 * the display name sanitized to an identifier. It lives here, in the runtime, on purpose: the
+	 * compiler declares variables from it and the runtime resolves bindings with it, and the two
+	 * agreeing is the whole contract. A second, subtly different copy on the editor side is exactly how
+	 * a binding reports success and comes back null.
+	 */
+	static FName MakeWidgetVariableName(const UDreamWidget* InWidget);
+	/** Alnum/underscore only, non-ASCII kept (CJK display names are common), never leading with a digit. */
+	static FString SanitizeIdentifier(const FString& InRaw);
 };

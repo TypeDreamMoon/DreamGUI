@@ -72,3 +72,40 @@ int32 UDreamWidgetTree::CountWidgets() const
 	ForEachWidget([&Count](UDreamWidget*) { Count++; });
 	return Count;
 }
+
+UDreamWidget* UDreamWidgetTree::FindWidgetByVariableName(FName InVariableName) const
+{
+	UDreamWidget* Found = nullptr;
+	ForEachWidget([&Found, InVariableName](UDreamWidget* Widget)
+	{
+		if (Found == nullptr && MakeWidgetVariableName(Widget) == InVariableName)
+		{
+			Found = Widget;
+		}
+	});
+	return Found;
+}
+
+FString UDreamWidgetTree::SanitizeIdentifier(const FString& InRaw)
+{
+	FString Result;
+	Result.Reserve(InRaw.Len());
+	for (TCHAR Char : InRaw)
+	{
+		Result.AppendChar(FChar::IsAlnum(Char) || Char == TEXT('_') || Char > 0x7F ? Char : TEXT('_'));
+	}
+	if (Result.IsEmpty())
+	{
+		Result = TEXT("Element");
+	}
+	if (FChar::IsDigit(Result[0]))
+	{
+		Result.InsertAt(0, TEXT('_'));
+	}
+	return Result;
+}
+
+FName UDreamWidgetTree::MakeWidgetVariableName(const UDreamWidget* InWidget)
+{
+	return InWidget != nullptr ? FName(*SanitizeIdentifier(InWidget->GetDisplayName())) : NAME_None;
+}

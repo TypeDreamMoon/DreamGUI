@@ -1,0 +1,131 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
+#include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamWidget.h"
+#include "DreamGUI.h"
+#include "UObject/LinkerLoad.h"
+#include "UObject/Package.h"
+
+#if WITH_EDITOR
+void UDreamWidgetGeneratedClass::SetWidgetTreeArchetype(UDreamWidgetTree* InWidgetTree)
+{
+	WidgetTree = InWidgetTree;
+}
+#endif
+
+UDreamWidgetTree* UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(const UClass* InClass)
+{
+	for (const UClass* Walker = InClass; Walker != nullptr; Walker = Walker->GetSuperClass())
+	{
+		if (const UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(Walker))
+		{
+			if (GeneratedClass->WidgetTree != nullptr)
+			{
+				return GeneratedClass->WidgetTree;
+			}
+		}
+	}
+	return nullptr;
+}
+
+void UDreamWidgetGeneratedClass::InitializeWidget(UDreamUserWidget* InUserWidget) const
+{
+	InitializeWidgetStatic(InUserWidget, this, FindWidgetTreeArchetype(this));
+}
+
+void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUserWidget, const UClass* InClass, UDreamWidgetTree* InWidgetTreeArchetype)
+{
+	if (!IsValid(InUserWidget) || InClass == nullptr)
+	{
+		return;
+	}
+	// A CDO is the template, not an instance of one. Building into it would give the class a
+	// hierarchy of its own that every later instance would then copy.
+	if (InUserWidget->IsTemplate())
+	{
+		return;
+	}
+	if (InWidgetTreeArchetype == nullptr)
+	{
+		// Legitimate for a class that declares no hierarchy (logic-only, or not compiled yet). The
+		// widget stays empty rather than half-built.
+		return;
+	}
+
+	// 1. Instance the template. The instancing graph follows Instanced properties -- UDreamWidgetTree
+	//    ::RootWidget and UDreamWidget::Children -- which is what carries the whole hierarchy across.
+	FObjectInstancingGraph InstancingGraph;
+	UDreamWidgetTree* InstancedTree = NewObject<UDreamWidgetTree>(
+		InUserWidget, InWidgetTreeArchetype->GetClass(), NAME_None, RF_Transactional,
+		InWidgetTreeArchetype, /*bCopyTransientsFromClassDefaults*/false, &InstancingGraph);
+	InUserWidget->WidgetTree = InstancedTree;
+
+	// 2. Parent is DuplicateTransient, so the instanced tree arrives with the structure intact and
+	//    every back-pointer empty. Nothing below may run before this.
+	InstancedTree->RebuildParentLinks();
+
+	// 3. Bind each widget to the class property of the same name -- this is BindWidget, and it is the
+	//    same shape UMG uses (walk the tree, look the name up in the class's object properties).
+	//    Widgets are matched by DisplayName, not object name: object names here are generated.
+	TMap<FName, FObjectPropertyBase*> ObjectPropertiesByName;
+	for (TFieldIterator<FObjectPropertyBase> It(const_cast<UClass*>(InClass), EFieldIterationFlags::Default); It; ++It)
+	{
+		ObjectPropertiesByName.Add(It->GetFName(), *It);
+	}
+	InstancedTree->ForEachWidget([&](UDreamWidget* Widget)
+	{
+		const FName VariableName = UDreamWidgetTree::MakeWidgetVariableName(Widget);
+		if (FObjectPropertyBase** PropertyPtr = ObjectPropertiesByName.Find(VariableName))
+		{
+			FObjectPropertyBase* Property = *PropertyPtr;
+			// A same-named property of an unrelated type is a mistake worth naming rather than a
+			// silent skip -- the compiler declares these, so a mismatch means the two disagree.
+			if (Widget->IsA(Property->PropertyClass))
+			{
+				Property->SetObjectPropertyValue_InContainer(InUserWidget, Widget);
+			}
+			else
+			{
+				UE_LOG(DreamGUI, Warning,
+					TEXT("Widget '%s' matches property '%s' on '%s' by name but not by type (property expects %s); left unbound."),
+					*Widget->GetDisplayName(), *VariableName.ToString(), *InClass->GetName(),
+					*Property->PropertyClass->GetName());
+			}
+		}
+
+		// A nested user widget builds its own contents from its own class, the way UMG initializes
+		// instanced sub-widgets during DuplicateAndInitializeFromWidgetTree.
+		if (UDreamUserWidget* NestedUserWidget = Cast<UDreamUserWidget>(Widget))
+		{
+			if (NestedUserWidget != InUserWidget)
+			{
+				NestedUserWidget->Initialize();
+			}
+		}
+	});
+
+	// 4. Hang the contents under the user widget. SetParentBeforeRegister rather than TrySetParent:
+	//    nothing here is registered yet, and the attach path would run layout against a half-built
+	//    hierarchy and recapture authored geometry while doing it.
+	if (IsValid(InstancedTree->RootWidget))
+	{
+		InstancedTree->RootWidget->SetParentBeforeRegister(InUserWidget);
+	}
+}
+
+void UDreamWidgetGeneratedClass::PurgeClass(bool bRecompilingOnLoad)
+{
+	Super::PurgeClass(bRecompilingOnLoad);
+
+	if (WidgetTree != nullptr)
+	{
+		// Renaming into the transient package drops the linker's export for it; invalidating first is
+		// what keeps the stale export from being resolved afterwards. Straight out of UMG's PurgeClass.
+		const ERenameFlags RenameFlags = REN_DontCreateRedirectors | REN_NonTransactional | REN_DoNotDirty;
+		FLinkerLoad::InvalidateExport(WidgetTree);
+		WidgetTree->Rename(nullptr, GetTransientPackage(), RenameFlags);
+		WidgetTree = nullptr;
+	}
+}
