@@ -14,6 +14,8 @@
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "Interaction/DreamSelectableStyle.h"
 #include "Interaction/DreamUINavigationScroll.h"
+#include "Interaction/DreamUINavigationScope.h"
+#include "Interaction/DreamUINavigationStack.h"
 
 
 UUITransition::UUITransition()
@@ -653,6 +655,17 @@ UUISelectable* UUISelectable::FindSelectable(FVector InDirection)
 
 UUISelectable* UUISelectable::FindSelectable(FVector InDirection, UDreamWidget* InParent)
 {
+	// A screen that confines navigation is a harder boundary than whatever the caller asked for: while
+	// a dialog is on top, no directional move may land on the page behind it, wherever that page sits
+	// in the hierarchy. Applied here rather than one level up so it also holds for the Escape boundary
+	// rule, which would otherwise be a way out of a screen that said nothing may leave.
+	if (auto Stack = UDreamUINavigationStack::Get(this))
+	{
+		if (auto Scope = Stack->FindConfiningScopeFor(GetWidget()))
+		{
+			InParent = Scope->GetWidget();
+		}
+	}
 	const UDreamWidget* RestrictNavNode = nullptr;
 	if (auto Widget = GetWidget())
 	{
@@ -828,8 +841,32 @@ UUISelectable* UUISelectable::ScanForSelectable(const FVector& InDirection, UDre
 	}
 	return bestPick;
 }
-UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject)
+UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject, int32 InUserIndex)
 {
+	// A scope knows where its screen wants focus. This scan only knows registration order, which is
+	// invisible to whoever authored the screen and need not even match between editor and packaged.
+	if (auto Stack = UDreamUINavigationStack::Get(WorldContextObject))
+	{
+		if (auto Scope = Stack->GetActiveScope(InUserIndex))
+		{
+			if (auto Target = Scope->ResolveFocusTarget())
+			{
+				return Target;
+			}
+		}
+	}
+	return FindDefaultSelectableIn(WorldContextObject, nullptr);
+}
+
+UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObject, const UDreamWidget* InParent)
+{
+	auto IsInsideParent = [InParent](const UUISelectable* Item)
+	{
+		if (InParent == nullptr)return true;
+		const UDreamWidget* Widget = Item->GetWidget();
+		return IsValid(Widget) && (Widget == InParent || Widget->IsChildOf(InParent));
+	};
+
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(WorldContextObject->GetWorld()))
 	{
 		const auto& SelectableArray = DreamUIManager->GetAllSelectableArray();
@@ -839,7 +876,8 @@ UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject)
 			for (int i = 0; i < SelectableArray.Num(); i++)
 			{
 				auto SelectableItem = SelectableArray[i];
-				if (SelectableItem->IsInteractable() && SelectableItem->GetCanNavigateHere())
+				if (SelectableItem.IsValid() && SelectableItem->IsInteractable() && SelectableItem->GetCanNavigateHere()
+					&& IsInsideParent(SelectableItem.Get()))
 				{
 					Selectable = SelectableItem.Get();//find a interactable one
 					break;
@@ -870,6 +908,7 @@ UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject)
 					if (!IsValid(PrevSelectable) 
 						|| PrevSelectable == Selectable
 						|| FoundSelectables.Contains(PrevSelectable)//incase cycle loop, eg: A is left and B is top, A's top return B, and B's left return A
+						|| !IsInsideParent(PrevSelectable)//the walk must not stroll out of the area we were asked about
 						)
 					{
 						break;

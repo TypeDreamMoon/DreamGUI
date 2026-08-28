@@ -552,7 +552,8 @@ bool UDreamPointerInputModule::Navigate(EDreamUINavigationDirection InDirection,
 	
 	if (CurrentNavigateObject == nullptr)//not find valid selectable object, use default one
 	{
-		CurrentNavigateObject = UUISelectable::FindDefaultSelectable(this);//@todo: don't reference UISelectableComponent directly
+		//@todo: don't reference UISelectableComponent directly
+		CurrentNavigateObject = UUISelectable::FindDefaultSelectable(this, EventSystem.IsValid() ? EventSystem->GetUserIndex() : 0);
 	}
 	else//find valid selectable, do navigation
 	{

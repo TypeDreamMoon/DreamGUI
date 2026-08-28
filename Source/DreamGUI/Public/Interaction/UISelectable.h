@@ -435,8 +435,16 @@ protected:
 public:
 	/**
      * Default selectable is the most "Prev" one (left top most).
+	 *
+	 * When a navigation scope is active for InUserIndex it answers instead, because a scope knows
+	 * where its screen wants focus and this scan only knows what registered first.
 	 */
-	static UUISelectable* FindDefaultSelectable(UObject* WorldContextObject);
+	static UUISelectable* FindDefaultSelectable(UObject* WorldContextObject, int32 InUserIndex = 0);
+	/**
+	 * The most "Prev" selectable inside InParent, never leaving it. A null InParent searches
+	 * everything, which is what FindDefaultSelectable falls back to.
+	 */
+	static UUISelectable* FindDefaultSelectableIn(UObject* WorldContextObject, const UDreamWidget* InParent);
 	virtual UUISelectable* FindSelectableOnLeft();
 	virtual UUISelectable* FindSelectableOnRight();
 	virtual UUISelectable* FindSelectableOnUp();
