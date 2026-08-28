@@ -108,6 +108,10 @@ void ADreamEnhancedInputEventSystemActor::Tick(float DeltaSeconds)
 
 void ADreamEnhancedInputEventSystemActor::ForwardTrigger(const FInputActionValue& Value, EDreamUIMouseButtonType ButtonType)
 {
+	// These four actions are the mouse half of the preset, and an Input Action has no FKey to classify
+	// -- the mapping context is what decided the key. Tick is deliberately left out: it polls movement
+	// every frame regardless of whether the mouse moved, which would pin the device to the mouse.
+	ReportDeviceForKey(EKeys::LeftMouseButton);
 	if (IsValid(InputModule))
 	{
 		InputModule->InputTrigger(GetPointerPosition(), Value.Get<bool>(), ButtonType);
@@ -136,6 +140,7 @@ void ADreamEnhancedInputEventSystemActor::OnMouseWheelAction(const FInputActionV
 	{
 		return;
 	}
+	ReportDeviceForKey(EKeys::MouseWheelAxis);
 	if (IsValid(InputModule))
 	{
 		InputModule->InputScroll(FVector2D(AxisValue, AxisValue));

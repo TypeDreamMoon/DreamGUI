@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Event/DreamStandaloneInputEventSystemActor.h"
 
@@ -149,9 +149,20 @@ FVector ADreamStandaloneInputEventSystemActor::GetPointerPosition() const
 	return FVector(MousePosition.X, MousePosition.Y, 0.0f);
 }
 
+void ADreamStandaloneInputEventSystemActor::ReportDeviceForKey(const FKey& Key)
+{
+	// Every bound handler goes through here. Which device the player has their hands on is only ever
+	// visible at the moment a key arrives, and a prompt bar drawn from anything else is guessing.
+	if (UDreamEventSystem* Events = GetEventSystem())
+	{
+		Events->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(Key));
+	}
+}
+
 void ADreamStandaloneInputEventSystemActor::OnMouseButtonPressed(FKey Key)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
+	ReportDeviceForKey(Key);
 
 	for (const TPair<FKey, EDreamUIMouseButtonType>& Button : MouseButtons)
 	{
@@ -166,6 +177,7 @@ void ADreamStandaloneInputEventSystemActor::OnMouseButtonPressed(FKey Key)
 void ADreamStandaloneInputEventSystemActor::OnMouseButtonReleased(FKey Key)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
+	ReportDeviceForKey(Key);
 
 	for (const TPair<FKey, EDreamUIMouseButtonType>& Button : MouseButtons)
 	{
@@ -179,6 +191,13 @@ void ADreamStandaloneInputEventSystemActor::OnMouseButtonReleased(FKey Key)
 
 void ADreamStandaloneInputEventSystemActor::OnMouseMoved(FVector AxisValue)
 {
+	// A bound vector axis fires every frame whether or not the mouse moved, so only an actual delta
+	// counts as the player using it -- reporting unconditionally would pin the device to the mouse and
+	// no gamepad prompt would ever appear.
+	if (!AxisValue.IsNearlyZero())
+	{
+		ReportDeviceForKey(EKeys::Mouse2D);
+	}
 	// The axis delta is only the wake-up; the module is asked for the absolute position, because that
 	// is what the pointer API wants and what bOverrideMousePosition may have replaced.
 	InputModule->InputMouseMove(GetPointerPosition());
@@ -188,8 +207,9 @@ void ADreamStandaloneInputEventSystemActor::OnMouseWheel(float AxisValue)
 {
 	if (FMath::IsNearlyZero(AxisValue))
 	{
-		return;
+		return;//a resting wheel fires every frame; reporting it would pin the device to the mouse
 	}
+	ReportDeviceForKey(EKeys::MouseWheelAxis);
 	// Both components carry the wheel value: InputScroll documents X as horizontal and Y as vertical,
 	// and a mouse wheel has no horizontal axis to distinguish.
 	InputModule->InputScroll(FVector2D(AxisValue, AxisValue));
@@ -197,6 +217,7 @@ void ADreamStandaloneInputEventSystemActor::OnMouseWheel(float AxisValue)
 
 void ADreamStandaloneInputEventSystemActor::OnTouchPressed(ETouchIndex::Type FingerIndex, FVector Location)
 {
+	ReportDeviceForKey(EKeys::TouchKeys[FMath::Clamp((int32)FingerIndex, 0, (int32)EKeys::NUM_TOUCH_KEYS - 1)]);
 	InputModule->InputTouchTrigger(true, static_cast<int32>(FingerIndex), Location);
 }
 
@@ -212,6 +233,7 @@ void ADreamStandaloneInputEventSystemActor::OnTouchMoved(ETouchIndex::Type Finge
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed(FKey Key)
 {
+	ReportDeviceForKey(Key);
 	InputModule->InputTriggerForNavigation(true, DreamStandaloneInputEventSystemActorLocal::NavigationPointerID);
 }
 
@@ -222,6 +244,7 @@ void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased(FKey Key
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed(FKey Key)
 {
+	ReportDeviceForKey(Key);
 	InputModule->InputNavigation(
 		GetNavigationDirectionForKey(Key), true, DreamStandaloneInputEventSystemActorLocal::NavigationPointerID);
 }

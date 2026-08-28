@@ -20,6 +20,21 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDreamUIRaycastHitDynamicDelegate
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamUIBaseEventDataDynamicDelegate, UDreamBaseEventData*, Data);
 
 /**
+ * What the player last touched. Not what the game is configured for -- what their hands are on right
+ * now, which is the only thing a key prompt can honestly be drawn from.
+ */
+UENUM(BlueprintType)
+enum class EDreamUIInputDevice : uint8
+{
+	MouseAndKeyboard,
+	Gamepad,
+	Touch,
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamUIInputDeviceChangedDynamicDelegate, EDreamUIInputDevice, Device);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIInputDeviceChangedDelegate, EDreamUIInputDevice);
+
+/**
  * This is the place for manage DreamUI's input/raycast/event.
  * InputTrigger and InputScroll need manually setup in InputModule.
  * About event bubble: if all interface of target component return true, then event will bubble up. if no interface found on target, then event will bubble up
@@ -111,6 +126,14 @@ protected:
 	
 	/** called when any pointerEventData's input type is changed */
 	FDreamUIPointerInputTypeChangedDelegate PointerInputTypedChangedEvent;
+
+	/**
+	 * Mouse and keyboard until told otherwise: it is the device present on every platform, and being
+	 * wrong about it costs a stale prompt for one keypress rather than a wrong one forever.
+	 */
+	UPROPERTY(VisibleAnywhere, Category = DreamGUI, AdvancedDisplay)
+	EDreamUIInputDevice CurrentInputDevice = EDreamUIInputDevice::MouseAndKeyboard;
+	FDreamUIInputDeviceChangedDelegate InputDeviceChangedEvent;
 public:
 	const TMap<int, TObjectPtr<UDreamPointerEventData>>& GetPointerEventDataMap()const{return PointerEventDataMap;}
 	
@@ -196,6 +219,27 @@ public:
 	void SetScrollNavigationTargetIntoView(bool Value){ bScrollNavigationTargetIntoView = Value;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetAnimateNavigationScroll(bool Value){ bAnimateNavigationScroll = Value;}
+
+#pragma region InputDevice
+	/** What the player last used. Key prompts and cursor visibility both hang off this. */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	EDreamUIInputDevice GetCurrentInputDevice()const{ return CurrentInputDevice; }
+	/**
+	 * Tell the event system a device was just used. Called for every key the input actor sees, so it
+	 * must stay cheap and must only broadcast on an actual change -- a prompt bar rebuilding itself
+	 * once per mouse-move frame is exactly the failure this guards against.
+	 * @return true when the device changed.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool ReportInputDevice(EDreamUIInputDevice InDevice);
+	/** Classify a key. Gamepad and touch keys announce themselves; everything else is a keyboard. */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	static EDreamUIInputDevice GetInputDeviceForKey(const FKey& InKey);
+
+	UPROPERTY(BlueprintAssignable, Category = DreamGUI, DisplayName = "InputDeviceChangedEvent")
+	FDreamUIInputDeviceChangedDynamicDelegate InputDeviceChangedEventBP;
+	FDreamUIInputDeviceChangedDelegate& GetInputDeviceChangedEvent(){ return InputDeviceChangedEvent; }
+#pragma endregion
 public:
 	template<class UEventData, class UInterfaceFunction>
 	static void ExecuteDreamUIInterface(UDreamWidget* Widget,

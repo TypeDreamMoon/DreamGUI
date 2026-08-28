@@ -62,6 +62,13 @@ protected:
 	/** Current mouse position as the module reports it, as a 3D vector for the pointer API. */
 	FVector GetPointerPosition() const;
 
+	/**
+	 * Tell the event system which device Key belongs to. Called from every bound handler: the actor is
+	 * the only place a real key is still in hand, and everything downstream sees pointer positions and
+	 * navigation directions with no trace of what produced them.
+	 */
+	void ReportDeviceForKey(const FKey& Key);
+
 private:
 	void OnMouseButtonPressed(FKey Key);
 	void OnMouseButtonReleased(FKey Key);

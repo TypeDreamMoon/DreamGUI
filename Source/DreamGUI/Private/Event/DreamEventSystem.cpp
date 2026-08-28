@@ -158,6 +158,29 @@ UDreamWidget* UDreamEventSystem::GetHighlightedComponentForNavigation(int InPoin
 	return nullptr;
 }
 
+EDreamUIInputDevice UDreamEventSystem::GetInputDeviceForKey(const FKey& InKey)
+{
+	if (InKey.IsTouch())
+	{
+		return EDreamUIInputDevice::Touch;
+	}
+	// A mouse key is neither gamepad nor touch, so it lands with the keyboard -- which is what a prompt
+	// wants anyway: the pair is one device as far as the player's hands are concerned.
+	return InKey.IsGamepadKey() ? EDreamUIInputDevice::Gamepad : EDreamUIInputDevice::MouseAndKeyboard;
+}
+
+bool UDreamEventSystem::ReportInputDevice(EDreamUIInputDevice InDevice)
+{
+	if (CurrentInputDevice == InDevice)
+	{
+		return false;//every key comes through here; broadcasting each one would rebuild prompts per frame
+	}
+	CurrentInputDevice = InDevice;
+	InputDeviceChangedEvent.Broadcast(InDevice);
+	InputDeviceChangedEventBP.Broadcast(InDevice);
+	return true;
+}
+
 bool UDreamEventSystem::SetPointerInputTypeByPointerID(int InPointerID, EDreamUIPointerInputType InInputType)
 {
 	if (auto EventData = GetPointerEventData(InPointerID, false))
