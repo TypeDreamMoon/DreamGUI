@@ -22,6 +22,15 @@ public:
 	FColor PressedColor = FColor(150, 150, 150, 255);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style")
 	FColor DisabledColor = FColor(150, 150, 150, 128);
+	/**
+	 * Give keyboard and gamepad focus a look of its own. Off, a focused control wears the Hovered
+	 * visuals -- what every control authored before focus was a separate state already expects, and
+	 * still the right answer for a UI that is only ever driven by a pointer.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style")
+	bool bUseFocusedVisuals = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style", meta = (EditCondition = "bUseFocusedVisuals"))
+	FColor FocusedColor = FColor(220, 220, 255, 255);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style")
 	FDreamUIImageBrush NormalImageBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style")
@@ -30,6 +39,8 @@ public:
 	FDreamUIImageBrush PressedImageBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style")
 	FDreamUIImageBrush DisabledImageBrush;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style", meta = (EditCondition = "bUseFocusedVisuals"))
+	FDreamUIImageBrush FocusedImageBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style", meta = (ClampMin = "0.0"))
 	float AnimationDuration = 0.2f;
 };

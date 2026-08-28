@@ -79,6 +79,13 @@ void UUISelectableTransition::OnDisabled(bool InImmediateSet)
 		ReceiveOnDisabled(InImmediateSet);
 	}
 }
+void UUISelectableTransition::OnFocused(bool InImmediateSet)
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveOnFocused(InImmediateSet);
+	}
+}
 
 UUISelectable::UUISelectable()
 {
@@ -86,6 +93,7 @@ UUISelectable::UUISelectable()
 	HoveredColor = FColor(200, 200, 200, 255);
 	PressedColor = FColor(150, 150, 150, 255);
 	DisabledColor = FColor(150, 150, 150, 128);
+	FocusedColor = FColor(220, 220, 255, 255);
 }
 
 void UUISelectable::Awake()
@@ -251,6 +259,41 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 			}
 		}
 		break;
+	case EUISelectableSelectionState::Focused:
+		{
+			switch (TransitionType)
+			{
+			case EUISelectableTransitionType::None:break;
+			case EUISelectableTransitionType::Color:
+				{
+					Color = GetFocusedColor();
+				}
+				break;
+			case EUISelectableTransitionType::ImageBrush:
+				{
+					Brush = GetFocusedImageBrush();
+				}
+				break;
+			case EUISelectableTransitionType::Custom:
+				{
+					if (CustomTransition.IsValid())
+					{
+						// A transition that was written before focus existed only implements OnHovered,
+						// and that is where a control with no focus look of its own belongs anyway.
+						if (GetUseFocusedVisuals())
+						{
+							CustomTransition->OnFocused(ImmediateSet);
+						}
+						else
+						{
+							CustomTransition->OnHovered(ImmediateSet);
+						}
+					}
+				}
+				break;
+			}
+		}
+		break;
 	}
 
 	if (Color.IsSet())
@@ -323,6 +366,7 @@ bool UUISelectable::CheckNavigationSelectionState()
 bool UUISelectable::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	bIsPointerInsideThis = true;
+	bIsEnteredByNavigation = IsValid(EventData) && EventData->InputType == EDreamUIPointerInputType::Navigation;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
 	if (EventData->InputType == EDreamUIPointerInputType::Navigation)
@@ -344,6 +388,7 @@ bool UUISelectable::OnPointerEnter_Implementation(UDreamPointerEventData* EventD
 bool UUISelectable::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
 	bIsPointerInsideThis = false;
+	bIsEnteredByNavigation = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
 	return AllowEventBubbleUp;
@@ -368,10 +413,16 @@ bool UUISelectable::OnPointerUp_Implementation(UDreamPointerEventData* EventData
 }
 bool UUISelectable::OnPointerSelect_Implementation(UDreamBaseEventData* EventData)
 {
+	bIsSelected = true;
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
 	return AllowEventBubbleUp;
 }
 bool UUISelectable::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)
 {
+	bIsSelected = false;
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
 	return AllowEventBubbleUp;
 }
 
@@ -381,8 +432,14 @@ EUISelectableSelectionState UUISelectable::GetSelectionState()const
 		return EUISelectableSelectionState::Disabled;
 	if (bIsPointerDown)
 		return EUISelectableSelectionState::Pressed;
+	// Navigation and a real pointer both arrive as an enter, because the confirm button has to press
+	// whatever navigation landed on. Which of them it was is the whole difference between hover and
+	// focus, and it is only knowable here, at the moment the enter came in.
 	if (bIsPointerInsideThis)
-		return EUISelectableSelectionState::Hovered;
+		return bIsEnteredByNavigation ? EUISelectableSelectionState::Focused : EUISelectableSelectionState::Hovered;
+	// Still the selected control with the pointer somewhere else: focused, and drawn as such.
+	if (bIsSelected)
+		return EUISelectableSelectionState::Focused;
 	return EUISelectableSelectionState::Normal;
 }
 
@@ -394,6 +451,20 @@ const FDreamUIImageBrush& UUISelectable::GetNormalImageBrush() const { return St
 const FDreamUIImageBrush& UUISelectable::GetHoveredImageBrush() const { return Style ? Style->HoveredImageBrush : HoveredImageBrush; }
 const FDreamUIImageBrush& UUISelectable::GetPressedImageBrush() const { return Style ? Style->PressedImageBrush : PressedImageBrush; }
 const FDreamUIImageBrush& UUISelectable::GetDisabledImageBrush() const { return Style ? Style->DisabledImageBrush : DisabledImageBrush; }
+
+bool UUISelectable::GetUseFocusedVisuals() const { return Style ? Style->bUseFocusedVisuals : bUseFocusedVisuals; }
+// Falling back to the hovered look is what keeps every control authored before focus was a state of
+// its own looking exactly as it did: focus used to BE hover, so that is the honest default.
+FColor UUISelectable::GetFocusedColor() const
+{
+	if (!GetUseFocusedVisuals())return GetHoveredColor();
+	return Style ? Style->FocusedColor : FocusedColor;
+}
+const FDreamUIImageBrush& UUISelectable::GetFocusedImageBrush() const
+{
+	if (!GetUseFocusedVisuals())return GetHoveredImageBrush();
+	return Style ? Style->FocusedImageBrush : FocusedImageBrush;
+}
 
 void UUISelectable::SetStyle(UDreamSelectableStyle* Value)
 {
@@ -423,7 +494,33 @@ void UUISelectable::SetNormalColor(FColor Value)
 void UUISelectable::SetHoveredColor(FColor Value)
 {
 	HoveredColor = Value;
-	if (CurrentSelectionState == EUISelectableSelectionState::Hovered)
+	// Focused borrows the hovered colour while it has none of its own, so it has to repaint too.
+	if (CurrentSelectionState == EUISelectableSelectionState::Hovered
+		|| (CurrentSelectionState == EUISelectableSelectionState::Focused && !GetUseFocusedVisuals()))
+	{
+		ApplyPointerSelectionState(false);
+	}
+}
+void UUISelectable::SetFocusedColor(FColor Value)
+{
+	FocusedColor = Value;
+	if (CurrentSelectionState == EUISelectableSelectionState::Focused)
+	{
+		ApplyPointerSelectionState(false);
+	}
+}
+void UUISelectable::SetFocusedImageBrush(const FDreamUIImageBrush& Value)
+{
+	FocusedImageBrush = Value;
+	if (CurrentSelectionState == EUISelectableSelectionState::Focused)
+	{
+		ApplyPointerSelectionState(false);
+	}
+}
+void UUISelectable::SetUseFocusedVisuals(bool Value)
+{
+	bUseFocusedVisuals = Value;
+	if (CurrentSelectionState == EUISelectableSelectionState::Focused)
 	{
 		ApplyPointerSelectionState(false);
 	}

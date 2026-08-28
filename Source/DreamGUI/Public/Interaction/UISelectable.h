@@ -38,6 +38,12 @@ enum class EUISelectableSelectionState :uint8
 	Pressed,
 	/** Disabled, not interactable. */
 	Disabled,
+	/**
+	 * Holds keyboard/gamepad focus. Distinct from Hovered: a pointer can rest on one control while
+	 * focus sits on another, and the two want to look different when both are on screen at once.
+	 * Appended rather than slotted in beside Hovered so no saved asset changes meaning.
+	 */
+	Focused,
 };
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EUISelectableNavigationMode:uint8
@@ -111,6 +117,12 @@ protected:
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI-Transition", meta = (DisplayName = "OnDisabled"))
 		void ReceiveOnDisabled(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = focused.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI-Transition", meta = (DisplayName = "OnFocused"))
+		void ReceiveOnFocused(bool InImmediateSet);
 public:
 	/**
 	 * Called when UISelectableComponent's transition state = normal.
@@ -136,6 +148,12 @@ public:
 	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
 	 */
 	virtual void OnDisabled(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = focused, and only when the selectable is
+	 * set to give focus its own look; otherwise a focused control routes to OnHovered as before.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void OnFocused(bool InImmediateSet);
 };
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
@@ -192,6 +210,14 @@ protected:
 		FColor PressedColor = FColor(150, 150, 150, 255);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
 		FColor DisabledColor = FColor(150, 150, 150, 128);
+	/**
+	 * Give keyboard and gamepad focus a look of its own. Off, a focused control wears the Hovered
+	 * visuals -- what every control authored before focus was a separate state already expects.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+		bool bUseFocusedVisuals = false;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (EditCondition = "bUseFocusedVisuals"))
+		FColor FocusedColor = FColor(220, 220, 255, 255);
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false"))
 		FDreamUIImageBrush NormalImageBrush;
@@ -201,6 +227,8 @@ protected:
 		FDreamUIImageBrush PressedImageBrush;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false"))
 		FDreamUIImageBrush DisabledImageBrush;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (DisplayThumbnail = "false", EditCondition = "bUseFocusedVisuals"))
+		FDreamUIImageBrush FocusedImageBrush;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (ClampMin = "0.0"))
 	float AnimDuration = 0.2f;
@@ -209,6 +237,14 @@ protected:
 	void ApplyPointerSelectionState(bool ImmediateSet);
 	bool bIsPointerInsideThis = false;
 	bool bIsPointerDown = false;
+	/**
+	 * The pointer resting on this arrived from a navigation move rather than a real pointer. The two
+	 * share the enter/exit path -- that is what makes the confirm button press whatever navigation
+	 * landed on -- so the input type is the only thing that separates a hover from a focus here.
+	 */
+	bool bIsEnteredByNavigation = false;
+	/** Selected by the event system, whether or not a pointer is on it. Survives the pointer moving away. */
+	bool bIsSelected = false;
 	bool CheckNavigationSelectionState();
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 #pragma endregion
@@ -254,6 +290,9 @@ public:
 	FColor GetPressedColor()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 	FColor GetDisabledColor()const;
+	/** The focused colour, or the hovered one when focus has no look of its own. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	FColor GetFocusedColor()const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable") 
 	const FDreamUIImageBrush& GetNormalImageBrush()const;
@@ -263,6 +302,15 @@ public:
 	const FDreamUIImageBrush& GetPressedImageBrush()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 	const FDreamUIImageBrush& GetDisabledImageBrush()const;
+	/** The focused brush, or the hovered one when focus has no look of its own. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	const FDreamUIImageBrush& GetFocusedImageBrush()const;
+	/** Whether focus is drawn differently from hover on this control; reads the Style when one is set. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	bool GetUseFocusedVisuals()const;
+	/** True while this control holds keyboard/gamepad focus, whatever a pointer happens to be doing. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	bool IsFocused()const{ return bIsSelected || (bIsPointerInsideThis && bIsEnteredByNavigation); }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 	void SetStyle(UDreamSelectableStyle* Value);
@@ -292,6 +340,12 @@ public:
 	void SetPressedImageBrush(const FDreamUIImageBrush& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 	void SetDisabledImageBrush(const FDreamUIImageBrush& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	void SetFocusedColor(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	void SetFocusedImageBrush(const FDreamUIImageBrush& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	void SetUseFocusedVisuals(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		void SetSelectionState(EUISelectableSelectionState NewState);
 
