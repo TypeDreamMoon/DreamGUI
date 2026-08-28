@@ -2,6 +2,9 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIEditorTools.h"
+#include "Styling/AppStyle.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Framework/Notifications/NotificationManager.h"
 #include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Core/DreamUserWidget.h"
@@ -478,6 +481,21 @@ UDreamWidget* FDreamUIEditorTools::CreateSubPrefabAndReturn(TFunction<UDreamWidg
 	if (SelectedWidget == nullptr)
 	{
 		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot add sub prefab '%s': no parent widget is selected."), *InPrefabPath);
+		return nullptr;
+	}
+	// The one create path that is NOT routed to the authoring tree, deliberately: a prefab instance
+	// carries override tracking and a link back to its source, none of which a widget class has
+	// anywhere to keep. Building one on the preview would look like it worked until the next
+	// rebuild, so this refuses and says what to do instead.
+	if (FDreamWidgetBlueprintEditor::FindDesignerForWidget(SelectedWidget) != nullptr)
+	{
+		FNotificationInfo Info(LOCTEXT("SubPrefabInDesignerRefused",
+			"A Widget Blueprint cannot nest a DreamUI prefab. Convert the prefab to a Widget Blueprint first, then place that."));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 8.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		UE_LOG(DreamGUIEditor, Warning,
+			TEXT("Refused to nest prefab '%s' in a Widget Blueprint: convert it to a Widget Blueprint first."), *InPrefabPath);
 		return nullptr;
 	}
 	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))
