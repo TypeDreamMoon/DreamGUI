@@ -110,7 +110,7 @@ protected:
 	 * Only valid if CellTemplateType is Prefab.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-RecyclableScrollView")
-		TObjectPtr<class UDreamUIPrefab> CellTemplatePrefab;
+		TSubclassOf<class UDreamUserWidget> CellTemplateClass;
 	/** When use horizontal scroll, this can set the row count in every cell. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-RecyclableScrollView", meta = (ClampMin = "1", EditCondition = "Horizontal"))
 		uint16 Rows = 1;
@@ -155,7 +155,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-RecyclableScrollView")
 		UDreamWidget* GetCellTemplate()const { return CellTemplate; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-RecyclableScrollView")
-		class UDreamUIPrefab* GetCellTemplatePrefab()const { return CellTemplatePrefab; }
+		TSubclassOf<class UDreamUserWidget> GetCellTemplateClass()const { return CellTemplateClass; }
 
 	/**
 	 * Delete all created cell objects.
@@ -190,7 +190,7 @@ public:
 	 * This function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-RecyclableScrollView")
-		void SetCellTemplatePrefab(class UDreamUIPrefab* value);
+		void SetCellTemplateClass(TSubclassOf<class UDreamUserWidget> value);
 
 	/** Recreate cell list. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-RecyclableScrollView")

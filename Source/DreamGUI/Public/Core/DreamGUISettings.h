@@ -9,7 +9,7 @@
 enum class EDreamRenderMode : uint8;
 
 class UDreamUIFontData_BaseObject;
-class UDreamUIPrefab;
+class UDreamUserWidget;
 class UDreamUISpriteData;
 class UMaterialInterface;
 class UTexture2D;
@@ -86,7 +86,7 @@ public:
 
 	/** Prefab spawned to show which widget navigation input has selected. */
 	UPROPERTY(config, EditAnywhere, Category = "Assets")
-	TSoftObjectPtr<UDreamUIPrefab> NavigationSelectionPrefab;
+	TSoftClassPtr<UDreamUserWidget> NavigationSelectionClass;
 
 
 	/**
@@ -158,6 +158,15 @@ public:
 		return Cast<T>(LoadSetting(Soft.ToSoftObjectPath(), PropertyName));
 	}
 
-	/** Same, for a class-valued setting. */
-	static UClass* LoadSettingClass(const TSoftClassPtr<AActor>& Soft, const TCHAR* PropertyName);
+	/**
+	 * Same, for a class-valued setting. Templated over the class the setting is typed to, because
+	 * these are no longer all actors: a UI hierarchy is a class now too.
+	 */
+	template<typename T>
+	static UClass* LoadSettingClass(const TSoftClassPtr<T>& Soft, const TCHAR* PropertyName)
+	{
+		// TryLoad on a class path returns the UClass itself, not an instance, so the cast is the
+		// identity when the setting is good and a clean null when it points at something else.
+		return Cast<UClass>(LoadSetting(Soft.ToSoftObjectPath(), PropertyName));
+	}
 };

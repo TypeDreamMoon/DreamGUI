@@ -76,11 +76,11 @@ UDreamWidget* UDreamUIBPLibrary::ConstructWidget(UObject* WorldContextObject, co
 	return DreamUICreateLocal::RegisterAndPark(World, Widget);
 }
 
-UDreamWidget* UDreamUIBPLibrary::CreateWidgetFromPrefab(UObject* WorldContextObject, UDreamUIPrefab* InPrefab)
+UDreamWidget* UDreamUIBPLibrary::CreateDreamWidgetOfClass(UObject* WorldContextObject, TSubclassOf<UDreamUserWidget> InWidgetClass)
 {
-	if (!IsValid(InPrefab))
+	if (!IsValid(InWidgetClass))
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d InPrefab is not valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d InWidgetClass is not valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
@@ -88,11 +88,11 @@ UDreamWidget* UDreamUIBPLibrary::CreateWidgetFromPrefab(UObject* WorldContextObj
 	{
 		return nullptr;
 	}
-	// A null parent is what makes this "create" rather than "load into"; LoadPrefab only requires a
-	// world. The loader registers and begins play on the tree itself, so parking is all that is left
-	// -- and it has to happen before the caller ever sees the pointer, because a prefab root with a
-	// canvas is a render root from the instant it exists.
-	UDreamWidget* Root = InPrefab->LoadPrefab(World, nullptr, [](UDreamWidget*) {}, false);
+	// A null parent is what makes this "create" rather than "add into"; CreateDreamWidget only requires
+	// a world. It registers and begins play on the tree itself, so parking is all that is left -- and it
+	// has to happen before the caller ever sees the pointer, because a root with a canvas is a render
+	// root from the instant it exists.
+	UDreamWidget* Root = CreateDreamWidget(World, InWidgetClass);
 	if (!IsValid(Root))
 	{
 		return nullptr;
@@ -109,11 +109,11 @@ UDreamWidget* UDreamUIBPLibrary::GetOrCreateScreenSpaceUIRoot(UObject* WorldCont
 	return nullptr;
 }
 
-UDreamWidget* UDreamUIBPLibrary::LoadPrefabToScreen(UObject* WorldContextObject, UDreamUIPrefab* InPrefab, const FDreamUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, int32 SortOrder)
+UDreamWidget* UDreamUIBPLibrary::AddWidgetOfClassToScreen(UObject* WorldContextObject, TSubclassOf<UDreamUserWidget> InWidgetClass, const FDreamUIWidgetCreatedCallback& InCallbackBeforeAlive, int32 SortOrder)
 {
-	if (!IsValid(InPrefab))
+	if (!IsValid(InWidgetClass))
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d InPrefab is not valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d InWidgetClass is not valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 
@@ -124,7 +124,8 @@ UDreamWidget* UDreamUIBPLibrary::LoadPrefabToScreen(UObject* WorldContextObject,
 		return nullptr;
 	}
 
-	UDreamWidget* Page = InPrefab->LoadPrefab(WorldContextObject, ScreenRoot, InCallbackBeforeAwake, true);
+	UDreamWidget* Page = CreateDreamWidget(ScreenUI->GetWorld(), InWidgetClass, ScreenRoot,
+		[&InCallbackBeforeAlive](UDreamUserWidget* Created) { InCallbackBeforeAlive.ExecuteIfBound(Created); });
 	if (Page)
 	{
 		ScreenUI->AddToViewport(Page, SortOrder);
@@ -132,9 +133,9 @@ UDreamWidget* UDreamUIBPLibrary::LoadPrefabToScreen(UObject* WorldContextObject,
 	return Page;
 }
 
-UDreamWidget* UDreamUIBPLibrary::AddPrefabToViewport(UObject* WorldContextObject, UDreamUIPrefab* InPrefab, int32 SortOrder)
+UDreamWidget* UDreamUIBPLibrary::AddWidgetOfClassToViewport(UObject* WorldContextObject, TSubclassOf<UDreamUserWidget> InWidgetClass, int32 SortOrder)
 {
-	return LoadPrefabToScreen(WorldContextObject, InPrefab, FDreamUIPrefab_LoadPrefabCallback(), SortOrder);
+	return AddWidgetOfClassToScreen(WorldContextObject, InWidgetClass, FDreamUIWidgetCreatedCallback(), SortOrder);
 }
 
 void UDreamUIBPLibrary::RemoveFromViewport(UObject* WorldContextObject, UDreamWidget* InRoot)

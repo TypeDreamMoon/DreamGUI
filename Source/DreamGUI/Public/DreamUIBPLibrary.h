@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "Core/DreamUserWidget.h"
+
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "DreamUIComponentReference.h"
@@ -58,7 +60,7 @@ public:
 	 * GetComponent rather than by casting the returned pointer.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"), Category = "DreamGUI|Create")
-	static UDreamWidget* CreateWidgetFromPrefab(UObject* WorldContextObject, UDreamUIPrefab* InPrefab);
+	static UDreamWidget* CreateDreamWidgetOfClass(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> InWidgetClass);
 
 	/** Return the world's shared ScreenSpaceOverlay root, creating it on demand. */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "DreamGUI|Screen")
@@ -66,11 +68,11 @@ public:
 
 	/** Load a prefab under the shared screen root and track it as a viewport page. */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = "DreamGUI|Screen")
-	static UDreamWidget* LoadPrefabToScreen(UObject* WorldContextObject, UDreamUIPrefab* InPrefab, const FDreamUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, int32 SortOrder = 0);
+	static UDreamWidget* AddWidgetOfClassToScreen(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> InWidgetClass, const FDreamUIWidgetCreatedCallback& InCallbackBeforeAlive, int32 SortOrder = 0);
 
 	/** UMG-style CreateWidget + AddToViewport convenience node for a DreamUI prefab. */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject"), Category = "DreamGUI|Screen")
-	static UDreamWidget* AddPrefabToViewport(UObject* WorldContextObject, UDreamUIPrefab* InPrefab, int32 SortOrder = 0);
+	static UDreamWidget* AddWidgetOfClassToViewport(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> InWidgetClass, int32 SortOrder = 0);
 
 	/** Destroy a tracked viewport page and remove it from the screen registry. */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "DreamGUI|Screen")

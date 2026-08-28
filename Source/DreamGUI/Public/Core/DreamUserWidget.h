@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -7,6 +7,10 @@
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;
+class UDreamUserWidget;
+
+/** Blueprint-facing counterpart of CreateDreamWidget's before-alive hook. */
+DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamUIWidgetCreatedCallback, UDreamUserWidget*, CreatedWidget);
 
 /**
  * A widget hierarchy that is a CLASS rather than an asset instance -- the counterpart to UMG's

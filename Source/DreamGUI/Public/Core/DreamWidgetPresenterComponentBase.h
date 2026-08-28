@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -9,7 +9,6 @@
 class UDreamWidget;
 class UUINavigationInputSelectionHandler;
 class UDreamCanvas;
-class UDreamUIPrefab;
 
 // Abstract: LoadWidget is PURE_VIRTUAL, so an instance of this class asserts the moment it
 // registers. Without this the Add Component list offers it, and picking it there is a crash
@@ -56,7 +55,7 @@ protected:
 	 * For navigation input, show a selection widget
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=DreamWidgetPresenter)
-	TObjectPtr<UDreamUIPrefab> NavigationSelectionPrefab;
+	TSubclassOf<class UDreamUserWidget> NavigationSelectionClass;
 
 	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category=DreamWidgetPresenter, AdvancedDisplay)
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;

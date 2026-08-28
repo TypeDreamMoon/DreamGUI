@@ -33,7 +33,9 @@ UDreamGUISettings::UDreamGUISettings()
 	DefaultFrameRectSprite = TSoftObjectPtr<UDreamUISpriteData>(FSoftObjectPath(TEXT("/DreamGUI/DreamUIPreset_Rect_Sprite.DreamUIPreset_Rect_Sprite")));
 	DefaultWhiteSolidTexture = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(TEXT("/DreamGUI/Textures/DreamUIPreset_WhiteSolid.DreamUIPreset_WhiteSolid")));
 	DefaultRectBlockData = TSoftObjectPtr<UDreamRectBlockData>(FSoftObjectPath(TEXT("/DreamGUI/DefaultRectBlockData.DefaultRectBlockData")));
-	NavigationSelectionPrefab = TSoftObjectPtr<UDreamUIPrefab>(FSoftObjectPath(TEXT("/DreamGUI/Prefabs/NavigationSelectionInputHandler.NavigationSelectionInputHandler")));
+	// Points at nothing until the shipped controls are converted to classes; a null default simply
+	// means no navigation-selection visual, which is the same as it behaved with a missing prefab.
+	NavigationSelectionClass = nullptr;
 
 	// The event system defaults to the native preset rather than to the Blueprint one it used to
 	// spawn: same behaviour, and nothing to break if the Blueprint is renamed or deleted.
@@ -89,11 +91,5 @@ UObject* UDreamGUISettings::LoadSetting(const FSoftObjectPath& Path, const TCHAR
 	return Loaded;
 }
 
-UClass* UDreamGUISettings::LoadSettingClass(const TSoftClassPtr<AActor>& Soft, const TCHAR* PropertyName)
-{
-	// TryLoad on a class path returns the UClass itself, not an instance, so the cast is the identity
-	// when the setting is good and a clean null when it points at something that is not a class.
-	return Cast<UClass>(LoadSetting(Soft.ToSoftObjectPath(), PropertyName));
-}
 
 #undef LOCTEXT_NAMESPACE

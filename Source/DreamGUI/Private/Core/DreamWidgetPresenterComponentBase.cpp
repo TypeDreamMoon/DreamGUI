@@ -1,6 +1,7 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
 
 #include "EngineUtils.h"
@@ -26,7 +27,7 @@ UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
 
 	CanvasTemplate = CreateDefaultSubobject<UDreamCanvas>(TEXT("CanvasTemplate"));
 	
-	NavigationSelectionPrefab = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->NavigationSelectionPrefab, TEXT("NavigationSelectionPrefab"));
+	NavigationSelectionClass = UDreamGUISettings::LoadSettingClass(UDreamGUISettings::Get()->NavigationSelectionClass, TEXT("NavigationSelectionClass"));
 }
 
 void UDreamWidgetPresenterComponentBase::BeginPlay()
@@ -329,7 +330,7 @@ UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::GetNavig
 {
 	if (!NavigationSelection.IsValid())
 	{
-		if (auto Widget = NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this->LoadedWidget.Get()))
+		if (auto Widget = CreateDreamWidget(this->GetWorld(), NavigationSelectionClass, this->LoadedWidget.Get()))
 		{
 			NavigationSelection = Widget->GetComponent<UUINavigationInputSelectionHandler>();
 		}

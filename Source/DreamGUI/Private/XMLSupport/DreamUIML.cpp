@@ -15,6 +15,8 @@
 #include "Core/DreamUISpriteData.h"
 #include "Core/DreamUIAnchorData.h"
 #include "PrefabSystem/DreamUIPrefab.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetTree.h"
 #include "Misc/FileHelper.h"
 #include "PrefabSystem/WidgetSerializer.h"
 #include "UObject/UObjectGlobals.h"
@@ -77,9 +79,9 @@ UDreamUIFontData_BaseObject* UDreamUIMLResource::GetFont(const FString& Key) con
 	return UDreamUIFontData_BaseObject::GetDefaultFont();
 }
 
-UDreamUIPrefab* UDreamUIMLResource::GetPrefab(const FString& Key) const
+TSubclassOf<UDreamUserWidget> UDreamUIMLResource::GetWidgetClass(const FString& Key) const
 {
-	if (const TObjectPtr<UDreamUIPrefab>* Found = Prefabs.Find(Key))
+	if (const TSubclassOf<UDreamUserWidget>* Found = WidgetClasses.Find(Key))
 	{
 		return Found->Get();
 	}
@@ -758,9 +760,9 @@ UDreamUIMLBehaviour* FDreamUIMLUtils::LoadFromString(UWorld* InWorld, UDreamWidg
 			return nullptr;
 		}
 		const FString PrefabName = GetElementSrc(ContentRoot);
-		if (auto Prefab = Resources->GetPrefab(PrefabName))
+		if (auto WidgetClass = Resources->GetWidgetClass(PrefabName))
 		{
-			RootBehaviour = ParsePrefabElement(ContentRoot, Prefab, Parent, nullptr, ScriptClass);
+			RootBehaviour = ParsePrefabElement(ContentRoot, WidgetClass, Parent, nullptr, ScriptClass);
 		}
 		else
 		{
@@ -996,19 +998,19 @@ static bool TryApplyAnchorDataField(const FString& AttrName, const FString& Attr
  * Parse a prefab-tag node: instantiate the UDreamUIPrefab,
  * then apply attributes and children from the XML node.
  */
-UDreamUIMLBehaviour* FDreamUIMLUtils::ParsePrefabElement(const FXmlNode* PrefabNode, UDreamUIPrefab* Prefab, UDreamWidget* ParentWidget, UDreamUIMLBehaviour* EventContext, UClass* ScriptClass)
+UDreamUIMLBehaviour* FDreamUIMLUtils::ParsePrefabElement(const FXmlNode* PrefabNode, TSubclassOf<UDreamUserWidget> WidgetClass, UDreamWidget* ParentWidget, UDreamUIMLBehaviour* EventContext, UClass* ScriptClass)
 {
 	const FString& Tag = PrefabNode->GetTag();
 
-	// Instantiate prefab
-	TMap<FGuid, TObjectPtr<UObject>> SubPrefabMapGuidToObject;
-	UDreamWidget* NewWidget =
-		LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadSubPrefab(World, World, Prefab
-		, ParentWidget, SubPrefabMapGuidToObject
-		, [&](UDreamWidget*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<UDreamWidget*>& InSubWidgets)
-		{
-			this->AllWidgets.Append(InSubWidgets);
-		});
+	// The markup's own bookkeeping wants every widget the element brought in, which the sub-prefab
+	// loader used to hand over through a callback. A class hands its contents over as a tree, so they
+	// are collected from it instead -- same set, gathered rather than reported.
+	UDreamUserWidget* NewWidget = CreateDreamWidget(World, WidgetClass, ParentWidget);
+	if (NewWidget != nullptr && NewWidget->GetWidgetTree() != nullptr)
+	{
+		this->AllWidgets.Add(NewWidget);
+		NewWidget->GetWidgetTree()->ForEachWidget([this](UDreamWidget* Widget) { this->AllWidgets.Add(Widget); });
+	}
 	if (!NewWidget)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[%s].%d - Failed to instantiate Prefab '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Tag);
@@ -1394,9 +1396,9 @@ void FDreamUIMLUtils::ProcessChildElements(const TArray<FXmlNode*>& Children, UD
 				continue;
 			}
 			const FString PrefabName = GetElementSrc(Child);
-			if (auto ChildPrefab = Resources->GetPrefab(PrefabName))
+			if (auto ChildWidgetClass = Resources->GetWidgetClass(PrefabName))
 			{
-				ParsePrefabElement(Child, ChildPrefab, ParentWidget, EventContext, ScriptClass);
+				ParsePrefabElement(Child, ChildWidgetClass, ParentWidget, EventContext, ScriptClass);
 			}
 			else
 			{

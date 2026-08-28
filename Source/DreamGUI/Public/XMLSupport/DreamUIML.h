@@ -11,7 +11,7 @@
 class UDreamVisual;
 class UDreamUIMLBehaviour;
 class UDreamUIBehaviour;
-class UDreamUIPrefab;
+class UDreamUserWidget;
 class UDreamUISpriteData_BaseObject;
 class UDreamUIFontData_BaseObject;
 class UDreamWidget;
@@ -45,7 +45,7 @@ public:
 	UDreamUIFontData_BaseObject* GetFont(const FString& Key) const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamUIML")
-	UDreamUIPrefab* GetPrefab(const FString& Key) const;
+	TSubclassOf<UDreamUserWidget> GetWidgetClass(const FString& Key) const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamUIML")
 	TSubclassOf<UDreamUIMLBehaviour> GetTemplate(const FString& Key) const;
@@ -67,7 +67,7 @@ private:
 	TMap<FString, TObjectPtr<UDreamUIFontData_BaseObject>> Fonts;
 	
 	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-	TMap<FString, TObjectPtr<UDreamUIPrefab>> Prefabs;
+	TMap<FString, TSubclassOf<UDreamUserWidget>> WidgetClasses;
 	
 	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
 	TMap<FString, TSubclassOf<UDreamUIMLBehaviour>> Templates;
@@ -200,7 +200,7 @@ public:
  *   Sprite           — UDreamWidget + UDreamSprite         (Src → Sprites)
  *   Component        — attach a UDreamUIBehaviour         (Class aliases: Button, TextInput, Toggle, Slider)
  *   Slot / Slot:Name — placeholder or named slot        (binds to Behaviour slots)
- *   Prefab:Key       — instantiate UDreamUIPrefab from Resources.Prefabs
+ *   Prefab:Key       — instantiate a hierarchy class from Resources.WidgetClasses
  *   Template:Key     — instantiate UDreamUIMLBehaviour subclass from Resources.Templates
  *
  * Event attributes (Event:OnClick, Event:OnValueChanged, etc.):
@@ -248,7 +248,7 @@ private:
 	void ParseBindings(const FXmlNode* XmlNode, const TArray<UObject*>& TargetCandidates, UDreamUIMLBehaviour* EventContext);
 	
 	UDreamUIMLBehaviour* ParseWidgetElement(const FXmlNode* WidgetNode, UClass* VisualClass, UDreamWidget* ParentWidget, UDreamUIMLBehaviour* EventContext, UClass* ScriptClass);
-	UDreamUIMLBehaviour* ParsePrefabElement(const FXmlNode* PrefabNode, UDreamUIPrefab* Prefab, UDreamWidget* ParentWidget, UDreamUIMLBehaviour* EventContext, UClass* ScriptClass);
+	UDreamUIMLBehaviour* ParsePrefabElement(const FXmlNode* PrefabNode, TSubclassOf<UDreamUserWidget> WidgetClass, UDreamWidget* ParentWidget, UDreamUIMLBehaviour* EventContext, UClass* ScriptClass);
 	UDreamUIMLBehaviour* ParseTemplateElement(const FXmlNode* TemplateNode, TSubclassOf<UDreamUIMLBehaviour> TemplateClass, UDreamWidget* ParentWidget, UDreamUIMLBehaviour* EventContext, UClass* ScriptClass);
 	void ParseComponentElement(const FXmlNode* ComponentNode, UDreamWidget* ParentWidget, UDreamUIMLBehaviour* EventContext);
 	void ParsePropertyElement(const FXmlNode* PropNode, UObject* TargetObject);

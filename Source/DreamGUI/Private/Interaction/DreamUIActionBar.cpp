@@ -1,6 +1,7 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUIActionBar.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamText.h"
@@ -153,7 +154,7 @@ void UDreamUIActionBar::Rebuild()
 
 	UDreamWidget* BarWidget = GetWidget();
 	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
-	if (!IsValid(BarWidget) || Router == nullptr || !IsValid(EntryPrefab))
+	if (!IsValid(BarWidget) || Router == nullptr || !IsValid(EntryClass))
 	{
 		return;//nothing to build into, or nothing to build from
 	}
@@ -168,16 +169,16 @@ void UDreamUIActionBar::Rebuild()
 	{
 		const FDreamUIActionBinding& Prompt = Prompts[Index];
 		// Filled in before Awake: an entry that pops in blank and is corrected a frame later is visible,
-		// and the prefab's own Awake may already want to read what it is showing.
-		UDreamWidget* Entry = EntryPrefab->LoadPrefab(GetWorld(), BarWidget,
-			[&Prompt](UDreamWidget* LoadedRoot)
+		// and the entry's own Awake may already want to read what it is showing.
+		UDreamWidget* Entry = CreateDreamWidget(GetWorld(), EntryClass, BarWidget,
+			[&Prompt](UDreamUserWidget* LoadedRoot)
 			{
 				if (!IsValid(LoadedRoot))return;
 				if (UDreamUIActionBarEntry* EntryComp = LoadedRoot->GetComponent<UDreamUIActionBarEntry>())
 				{
 					EntryComp->SetBinding(Prompt);
 				}
-			}, true);
+			});
 		if (IsValid(Entry))
 		{
 			SpawnedEntries.Add(Entry);

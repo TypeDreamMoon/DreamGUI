@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -7,7 +7,7 @@
 #include "Interaction/DreamUIActionRouter.h"
 #include "DreamUIActionBar.generated.h"
 
-class UDreamUIPrefab;
+class UDreamUserWidget;
 class UDreamImage;
 class UDreamText;
 class UDreamWidget;
@@ -99,7 +99,7 @@ protected:
 
 	/** Loaded once per prompt, as a child of this widget. Nothing is shown without one. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
-	TObjectPtr<UDreamUIPrefab> EntryPrefab = nullptr;
+	TSubclassOf<UDreamUserWidget> EntryClass = nullptr;
 	/** Whose prompts these are. Matches the event system's user index. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
 	int32 UserIndex = 0;
