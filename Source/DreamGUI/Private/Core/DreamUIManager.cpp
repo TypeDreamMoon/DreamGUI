@@ -202,16 +202,9 @@ void UDreamUIManagerObject::OnAssetReimport(UObject* Asset)
 				UDreamUIManagerWorldSubsystem::RefreshAllUI();
 			}
 		}
-		else if (Asset->IsA<UDreamUIPrefab>())
-		{
-			for (TObjectIterator<UDreamUIPrefabPresenterComponent> Itr; Itr; ++Itr)
-			{
-				if (Itr->GetWorld())
-				{
-					Itr->CheckPrefabVersion();
-				}
-			}
-		}
+		// A presenter used to be refreshed by hand when its prefab was saved, by comparing a stored
+		// MD5. It holds a class now, and recompiling a Blueprint reinstances the objects of that class
+		// on its own, so there is nothing left for this branch to do.
 	}
 }
 

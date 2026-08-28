@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DataFactory/DreamUIPrefabActorFactory.h"
+#include "DreamWidgetBlueprint.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
 #include "PrefabSystem/DreamUIPrefab.h"
 #include "AssetRegistry/AssetData.h"
@@ -61,10 +63,12 @@ void UDreamUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewAct
 {
 	Super::PostSpawnActor(Asset, InNewActor);
 
-	auto Prefab = CastChecked<UDreamUIPrefab>(Asset);
+	// Dropping a UI into a level means dropping its Blueprint; what the presenter holds is the class
+	// that Blueprint generates.
+	auto Blueprint = CastChecked<UDreamWidgetBlueprint>(Asset);
 
 	auto WidgetPresenterComponent = InNewActor->FindComponentByClass<UDreamUIPrefabPresenterComponent>();
-	WidgetPresenterComponent->SetPrefab(Prefab);
+	WidgetPresenterComponent->SetWidgetClass(Blueprint->GeneratedClass.Get());
 
 	auto World = InNewActor->GetWorld();
 	if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditorPreview
@@ -89,7 +93,9 @@ UObject* UDreamUIPrefabActorFactory::GetAssetFromActorInstance(AActor* ActorInst
 {
 	auto WidgetPresenterComponent = ActorInstance->FindComponentByClass<UDreamUIPrefabPresenterComponent>();
 	check(WidgetPresenterComponent);
-	return WidgetPresenterComponent->GetPrefab();
+	// Back to the asset the class came from, which is what the placement system expects to round-trip.
+	UClass* WidgetClass = WidgetPresenterComponent->GetWidgetClass();
+	return WidgetClass != nullptr ? WidgetClass->ClassGeneratedBy : nullptr;
 }
 
 UClass* UDreamUIPrefabActorFactory::GetDefaultActorClass(const FAssetData& AssetData)

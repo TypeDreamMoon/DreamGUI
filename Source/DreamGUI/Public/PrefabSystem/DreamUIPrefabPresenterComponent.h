@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -9,7 +9,7 @@
 class UDreamWidget;
 class UUINavigationInputSelectionHandler;
 class UDreamCanvas;
-class UDreamUIPrefab;
+class UDreamUserWidget;
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent), DisplayName="DreamUI Prefab Presenter Component")
 class DREAMGUI_API UDreamUIPrefabPresenterComponent : public UDreamWidgetPresenterComponentBase
@@ -26,21 +26,19 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 public:
 	bool bIsSpawnFromFactory = false;
-	void CheckPrefabVersion();
 #endif
 	
 protected:
+	/**
+	 * The hierarchy class to present. Replaces the prefab asset this component used to hold; a level
+	 * that had one assigned comes back empty and has to be pointed at the converted class.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=DreamWidgetPresenter)
-	TObjectPtr<UDreamUIPrefab> WidgetPrefab;
-	
-#if WITH_EDITORONLY_DATA
-private:
-	UPROPERTY()
-	FString OverallVersionMD5;
-#endif
+	TSubclassOf<UDreamUserWidget> WidgetClass;
+
 public:
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)
-	void SetPrefab(UDreamUIPrefab* Value);
+	void SetWidgetClass(TSubclassOf<UDreamUserWidget> Value);
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)
-	UDreamUIPrefab* GetPrefab()const{return WidgetPrefab;}
+	TSubclassOf<UDreamUserWidget> GetWidgetClass()const{return WidgetClass;}
 };

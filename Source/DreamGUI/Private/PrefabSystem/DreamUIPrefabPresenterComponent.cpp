@@ -1,7 +1,8 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 
 #include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
+#include "Core/DreamUserWidget.h"
 
 #include "DreamGUI.h"
 #include "Core/DreamUIManager.h"
@@ -42,11 +43,14 @@ void UDreamUIPrefabPresenterComponent::LoadWidget()
 		return;
 	}
 #endif
-	if (IsValid(WidgetPrefab))
+	if (IsValid(WidgetClass))
 	{
 		if (auto World = GetWorld())
 		{
-			LoadedWidget = WidgetPrefab->LoadPrefab(World, nullptr, [this](UDreamWidget* RootWidget)
+			// The canvas swap runs before the hierarchy comes alive, as it did under the prefab
+			// loader's CallbackBeforeAwake: a behaviour that woke up first could have cached the
+			// canvas this replaces.
+			LoadedWidget = CreateDreamWidget(World, WidgetClass, nullptr, [this](UDreamUserWidget* RootWidget)
 			{
 				if (auto Canvas = RootWidget->GetComponent<UDreamCanvas>())
 				{
@@ -70,7 +74,6 @@ void UDreamUIPrefabPresenterComponent::LoadWidget()
 					Widget->SetFlags(RF_Transient);
 				}
 			}
-			OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
 #endif
 		}
 	}
@@ -100,39 +103,21 @@ void UDreamUIPrefabPresenterComponent::PostEditChangeProperty(FPropertyChangedEv
 	if (PropertyChangedEvent.MemberProperty != nullptr)
 	{
 		auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamUIPrefabPresenterComponent, WidgetPrefab))
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamUIPrefabPresenterComponent, WidgetClass))
 		{
 			LoadWidget();
 		}
 	}
 }
 
-void UDreamUIPrefabPresenterComponent::CheckPrefabVersion()
-{
-	if (IsValid(WidgetPrefab))
-	{
-		if (OverallVersionMD5 != WidgetPrefab->GenerateOverallVersionMD5())
-		{
-			LoadWidget();
-		}
-	}
-	else
-	{
-		if (LoadedWidget.IsValid())
-		{
-			LoadedWidget->DestroyWidget();
-			LoadedWidget = nullptr;
-		}
-	}
-}
 
 #endif
 
-void UDreamUIPrefabPresenterComponent::SetPrefab(UDreamUIPrefab* Value)
+void UDreamUIPrefabPresenterComponent::SetWidgetClass(TSubclassOf<UDreamUserWidget> Value)
 {
-	if (WidgetPrefab != Value)
+	if (WidgetClass != Value)
 	{
-		WidgetPrefab = Value;
+		WidgetClass = Value;
 		LoadWidget();
 	}
 }

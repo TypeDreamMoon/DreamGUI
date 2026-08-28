@@ -1143,13 +1143,8 @@ void FDreamUIEditorTools::RefreshLoadedPrefab()
 	{
 		Itr->CheckPrefabVersion();
 	}
-	for (TObjectIterator<UDreamUIPrefabPresenterComponent> Itr; Itr; ++Itr)
-	{
-		if (Itr->GetWorld())
-		{
-			Itr->CheckPrefabVersion();
-		}
-	}
+	// Presenters hold a class now, and recompiling a Blueprint reinstances its objects, so there is
+	// no hand-rolled version check left to run over them.
 }
 
 void FDreamUIEditorTools::RefreshOpenedPrefabEditor(UDreamUIPrefab* InPrefab)

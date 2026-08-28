@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabSequenceComponentCustomization.h"
@@ -82,24 +82,37 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 					{
 						Root = Root->GetParent();
 					}
-					UDreamUIPrefab* Prefab = nullptr;
-					for (TObjectIterator<UDreamUIPrefabPresenterComponent> It; It && Prefab == nullptr; ++It)
+					// The presenter holds a hierarchy CLASS now; the asset behind it is the Blueprint
+					// that generated the class.
+					UObject* SourceAsset = nullptr;
+					for (TObjectIterator<UDreamUIPrefabPresenterComponent> It; It && SourceAsset == nullptr; ++It)
 					{
 						if (It->GetLoadedWidget() == Root)
 						{
-							Prefab = It->GetPrefab();
+							if (UClass* WidgetClass = It->GetWidgetClass())
+							{
+								SourceAsset = WidgetClass->ClassGeneratedBy;
+							}
 						}
 					}
-					if (Prefab == nullptr || GEditor == nullptr)
+					if (SourceAsset == nullptr || GEditor == nullptr)
 					{
 						return FReply::Handled();
 					}
 					const FString CurrentName = Component->GetCurrentSequence() ? Component->GetCurrentSequence()->GetDisplayName().ToString() : FString();
 					UAssetEditorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-					Subsystem->OpenEditorForAsset(Prefab);
-					if (IAssetEditorInstance* Instance = Subsystem->FindEditorForAsset(Prefab, /*bFocusIfOpen*/true))
+					Subsystem->OpenEditorForAsset(SourceAsset);
+					// The animation focus below used to blind-cast the returned editor to
+					// FDreamUIPrefabEditor. That was only ever safe because the asset was always a
+					// prefab; against a Blueprint it is undefined behaviour, so the jump-to-animation
+					// only happens when the editor really is the prefab editor. Restoring it for the
+					// class model is the editor branch's job.
+					if (IAssetEditorInstance* Instance = Subsystem->FindEditorForAsset(SourceAsset, /*bFocusIfOpen*/true))
 					{
-						static_cast<FDreamUIPrefabEditor*>(Instance)->FocusAnimationByDisplayName(CurrentName);
+						if (SourceAsset->IsA<UDreamUIPrefab>())
+						{
+							static_cast<FDreamUIPrefabEditor*>(Instance)->FocusAnimationByDisplayName(CurrentName);
+						}
 					}
 					return FReply::Handled();
 				})

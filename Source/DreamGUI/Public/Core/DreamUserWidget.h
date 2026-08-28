@@ -69,14 +69,21 @@ private:
  * with the new widget as its root -- the same ownership a prefab load produces. Pass InParent to put
  * the widget into an existing hierarchy instead, in which case it joins that hierarchy's tree.
  *
+ * InCallbackBeforeAlive runs after the hierarchy exists and is parented, but before it is registered
+ * and before any behaviour's Awake. It is the counterpart of the prefab loader's CallbackBeforeAwake
+ * and exists for the same reason: a caller that has to reshape what was built -- swapping the root
+ * canvas, for one -- must do it before anything observes the old shape and caches it.
+ *
  * Returns null if InClass is not a UDreamUserWidget, or if the world is invalid.
  */
-DREAMGUI_API UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent = nullptr);
+DREAMGUI_API UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent = nullptr,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive = nullptr);
 
 template<typename WidgetT>
-WidgetT* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass = WidgetT::StaticClass(), UDreamWidget* InParent = nullptr)
+WidgetT* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass = WidgetT::StaticClass(), UDreamWidget* InParent = nullptr,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive = nullptr)
 {
 	static_assert(TPointerIsConvertibleFromTo<WidgetT, const UDreamUserWidget>::Value,
 		"'WidgetT' template parameter to CreateDreamWidget must be derived from UDreamUserWidget");
-	return Cast<WidgetT>(CreateDreamWidget(InWorld, InClass, InParent));
+	return Cast<WidgetT>(CreateDreamWidget(InWorld, InClass, InParent, InCallbackBeforeAlive));
 }

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
@@ -75,7 +75,8 @@ UDreamWidget* UDreamUserWidget::GetContentRoot() const
 	return IsValid(WidgetTree) ? WidgetTree->RootWidget : nullptr;
 }
 
-UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent)
+UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
 {
 	if (!IsValid(InWorld))
 	{
@@ -113,6 +114,11 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 	if (IsValid(InParent))
 	{
 		UserWidget->SetParentBeforeRegister(InParent);
+	}
+	// Last chance to reshape what was built before anything observes it. See the header.
+	if (InCallbackBeforeAlive)
+	{
+		InCallbackBeforeAlive(UserWidget);
 	}
 	BringHierarchyToLife(UserWidget);
 	return UserWidget;
