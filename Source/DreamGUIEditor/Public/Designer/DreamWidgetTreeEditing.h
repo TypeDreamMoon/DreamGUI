@@ -66,6 +66,24 @@ namespace DreamWidgetTreeEditing
 	 */
 	DREAMGUIEDITOR_API FString RenameWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, const FString& InDesiredDisplayName);
 
+	/**
+	 * Copy InSource and everything under it, and put the copy under InNewParent.
+	 *
+	 * The copy is re-homed flat onto the tree and given fresh object names on the way. That is not
+	 * tidiness: FNames only have to be unique within an outer, duplication nests the copies under
+	 * their parents, and the template-to-preview correspondence is BY FName -- so a nested copy
+	 * sharing its original's name would put two templates on one name and the designer would start
+	 * resolving one of them to the other's preview.
+	 *
+	 * Display names are made unique too, for the same reason one step up: they are the compiler's
+	 * variable names.
+	 */
+	DREAMGUIEDITOR_API UDreamWidget* DuplicateWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InSource,
+		UDreamWidget* InNewParent, int32 InSiblingIndex = -1);
+
+	/** Visit InRoot and every descendant, parents first. */
+	DREAMGUIEDITOR_API void ForEachWidgetInSubtree(UDreamWidget* InRoot, TFunctionRef<void(UDreamWidget*)> InPredicate);
+
 	/** InDesired, suffixed until no other widget in InTree (InIgnore excepted) answers to it. */
 	DREAMGUIEDITOR_API FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore = nullptr);
 

@@ -792,6 +792,15 @@ void SDreamWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText
 	}
 
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
+	// The display name is the compiler's variable name, so renaming is an edit to the asset, not a
+	// label on a preview object that is about to be rebuilt away.
+	if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(Widget.Get()))
+	{
+		Designer->DesignerRenameWidget(Widget.Get(), InText.ToString().TrimStartAndEnd());
+		GEditor->EndTransaction();
+		HierarchyView.Pin()->RequestRefresh();
+		return;
+	}
 	Widget->Modify();
 	const FString UniqueName = FDreamUIEditorTools::MakeUniqueWidgetDisplayName(
 		Widget.Get(), InText.ToString().TrimStartAndEnd(), Widget.Get());

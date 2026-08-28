@@ -80,6 +80,70 @@ namespace DreamWidgetTreeEditing
 		}
 	}
 
+	void ForEachWidgetInSubtree(UDreamWidget* InRoot, TFunctionRef<void(UDreamWidget*)> InPredicate)
+	{
+		if (!IsValid(InRoot))
+		{
+			return;
+		}
+		InPredicate(InRoot);
+		// A copy of the array: the predicate is allowed to reparent or destroy what it is handed.
+		const TArray<UDreamWidget*> Children = InRoot->GetChildren();
+		for (UDreamWidget* Child : Children)
+		{
+			ForEachWidgetInSubtree(Child, InPredicate);
+		}
+	}
+
+	UDreamWidget* DuplicateWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InSource,
+		UDreamWidget* InNewParent, int32 InSiblingIndex)
+	{
+		if (!IsTemplateWidgetOf(InBlueprint, InSource) || !IsTemplateWidgetOf(InBlueprint, InNewParent))
+		{
+			return nullptr;
+		}
+		if (InNewParent == InSource || InNewParent->IsChildOf(InSource))
+		{
+			// Copying a subtree into itself: the copy would contain a copy of the place it is going.
+			return nullptr;
+		}
+		if (!InNewParent->CanAcceptAdditionalChildren(1))
+		{
+			return nullptr;
+		}
+
+		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
+		InBlueprint->Modify();
+		Tree->Modify();
+		InNewParent->Modify();
+
+		UDreamWidget* Copy = DuplicateObject<UDreamWidget>(InSource, Tree);
+		if (!IsValid(Copy))
+		{
+			return nullptr;
+		}
+		// Parent is DuplicateTransient, so the copy arrives structurally complete with every
+		// back-pointer empty. Nothing below may read a parent before this.
+		Copy->RestoreParentLinksRecursive();
+
+		// Re-home flat, with fresh names. See the header for why this is not cosmetic.
+		TArray<UDreamWidget*> Copied;
+		ForEachWidgetInSubtree(Copy, [&Copied](UDreamWidget* Widget) { Copied.Add(Widget); });
+		for (UDreamWidget* Widget : Copied)
+		{
+			Widget->Rename(*MakeUniqueObjectName(Tree, Widget->GetClass()).ToString(), Tree, REN_DontCreateRedirectors);
+			Widget->SetDisplayName(MakeUniqueDisplayName(Tree, Widget->GetDisplayName(), Widget));
+		}
+
+		if (!Copy->TrySetParent(InNewParent, /*bKeepWorldPosition*/false, InSiblingIndex))
+		{
+			Copy->DestroyWidget();
+			return nullptr;
+		}
+		NotifyStructureChanged(InBlueprint);
+		return Copy;
+	}
+
 	UDreamWidget* CreateWidget(UDreamWidgetBlueprint* InBlueprint, TSubclassOf<UDreamWidget> InWidgetClass,
 		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName)
 	{

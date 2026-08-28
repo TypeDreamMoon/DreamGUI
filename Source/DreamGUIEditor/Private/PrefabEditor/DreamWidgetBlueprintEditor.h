@@ -348,6 +348,42 @@ public:
 	/** The same, for whatever is selected -- which is what every menu-driven gesture operates on. */
 	void CommitSelectedWidgetGeometryToTemplate();
 	/**
+	 * Structural editing, as the designer has to do it.
+	 *
+	 * FDreamUIEditorTools' create/delete/duplicate/copy/paste were written when the widget you had
+	 * selected WAS the thing being saved, so they build and destroy live objects. In a designer the
+	 * selection is a PREVIEW, rebuilt from the authoring tree, and an edit made there is gone at the
+	 * next rebuild -- looking, until then, exactly like an edit that worked. So the tools route here
+	 * when FindDesignerForWidget answers, and these do the same operation on the templates.
+	 *
+	 * Each rebuilds the preview before returning and hands back PREVIEW widgets, because that is what
+	 * every caller goes on to select, name and show.
+	 */
+	static FDreamWidgetBlueprintEditor* FindDesignerForWidget(const UDreamWidget* InWidget);
+
+	/**
+	 * Carry a details-panel edit from the selected preview widgets onto their templates.
+	 *
+	 * The panel shows previews because a preview is the half that can answer a question about
+	 * geometry. It is also the half that gets thrown away, so this is the other end of the same
+	 * arrangement UMG uses (FWidgetBlueprintEditor::MigrateFromChain).
+	 */
+	void MigrateDetailsChangeToTemplate(FEditPropertyChain& InChain, bool bIsModify);
+
+	/** InConfigureTemplate runs on the new TEMPLATE, before the preview is rebuilt from it. */
+	UDreamWidget* DesignerCreateWidget(UDreamWidget* InPreviewParent, TSubclassOf<UDreamWidget> InWidgetClass,
+		const FString& InDesiredName, TFunction<void(UDreamWidget*)> InConfigureTemplate = nullptr);
+	bool DesignerDeleteWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
+	TArray<UDreamWidget*> DesignerDuplicateWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
+	void DesignerCopyWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
+	TArray<UDreamWidget*> DesignerPasteWidgets(UDreamWidget* InPreviewParent);
+	static bool DesignerHasClipboardContent();
+	/** Returns the name actually applied, which differs when it had to be disambiguated. */
+	FString DesignerRenameWidget(UDreamWidget* InPreviewWidget, const FString& InNewDisplayName);
+	/** Rebuild the preview right now and select the previews of these templates. */
+	void RepublishPreviewAndSelect(TConstArrayView<UDreamWidget*> InTemplates, TArray<UDreamWidget*>& OutPreviews);
+
+	/**
 	 * Mirror a reparent performed on the surface onto the authoring tree.
 	 *
 	 * The gesture happens on the preview first, deliberately: keeping a widget where it was dropped
@@ -358,6 +394,16 @@ public:
 	 * Without it a drag between containers looks right until the next rebuild and then is gone.
 	 */
 	bool ReparentTemplatesFrom(TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParent);
+	/**
+	 * Mirror a Wrap With performed on the surface onto the authoring tree.
+	 *
+	 * Same arrangement as the reparent: the preview does it first, because working out a rect that
+	 * encloses a selection needs real geometry and a template has none. The wrapper the preview built
+	 * has no template counterpart -- it was made with NewObject, not from the tree -- so its rect is
+	 * copied across by value rather than looked up by name.
+	 */
+	bool WrapTemplatesFrom(UDreamWidget* InPreviewWrapper, TConstArrayView<UDreamWidget*> InPreviewChildren,
+		UClass* InLayoutContainerClass);
 	/**
 	 * Say that the authored hierarchy changed in a way that does not add or remove a widget.
 	 *

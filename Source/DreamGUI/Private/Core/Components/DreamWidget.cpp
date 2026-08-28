@@ -3731,7 +3731,14 @@ void UDreamWidget::CalculateWidgetActive_Recursive()
 			}
 			for (auto& Child : Widget->GetChildren())
 			{
-				CalculateWidgetActive(Child);
+				// Children can hold nulls -- garbage collection clears a reference to a widget it
+				// took while this one lived, and this walk runs from OnDetachedFromParent, which is
+				// exactly when a hierarchy is coming apart. Every other walk in this file guards;
+				// this one did not, and dereferenced the null on its first line.
+				if (IsValid(Child))
+				{
+					CalculateWidgetActive(Child);
+				}
 			}
 		}
 	};
@@ -3834,7 +3841,13 @@ void UDreamWidget::CalculateInteractable_Recursive()
 			}
 			for (auto& Child : Widget->GetChildren())
 			{
-				CalculateInteractable(Child);
+				// Same guard the visibility walk already had, and for the same reason: Children can
+				// hold nulls, and this runs from OnDetachedFromParent -- when a hierarchy is coming
+				// apart is exactly when it will.
+				if (IsValid(Child))
+				{
+					CalculateInteractable(Child);
+				}
 			}
 		}
 	};
@@ -3870,7 +3883,13 @@ void UDreamWidget::CalculateRaycastable_Recursive()
 			}
 			for (auto& Child : Widget->GetChildren())
 			{
-				CalculateRaycastable(Child);
+				// Same guard the visibility walk already had, and for the same reason: Children can
+				// hold nulls, and this runs from OnDetachedFromParent -- when a hierarchy is coming
+				// apart is exactly when it will.
+				if (IsValid(Child))
+				{
+					CalculateRaycastable(Child);
+				}
 			}
 		}
 	};

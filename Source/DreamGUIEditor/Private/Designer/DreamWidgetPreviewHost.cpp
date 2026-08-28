@@ -198,12 +198,15 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 {
 	bPreviewInvalidated = false;
 
-	DestroyPreview();
-
-	if (!IsValid(Blueprint) || !Scene.IsValid())
+	// Checked BEFORE the teardown, not after. Once the asset is gone -- a closed editor, a collected
+	// package -- the preview's world can already have been destroyed, and walking the hierarchy to
+	// take it down then reads freed memory. There is also nothing left to rebuild from.
+	if (!IsValid(Blueprint) || !Scene.IsValid() || Scene->GetWorld() == nullptr)
 	{
 		return;
 	}
+
+	DestroyPreview();
 
 	UDreamWidget* RootAgent = Scene->EnsureRootAgent(
 		Blueprint->DesignerData.CanvasSize,

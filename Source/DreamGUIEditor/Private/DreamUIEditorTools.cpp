@@ -2,6 +2,9 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIEditorTools.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetTreeEditing.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIControlRegistry.h"
@@ -289,6 +292,34 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 		return nullptr;
 	}
 	const FScopedTransaction Transaction(LOCTEXT("CreateChildWidget_Transaction", "DreamUI Child Widget"));
+	// In a designer the selection is a PREVIEW of the asset, and anything built next to it is thrown
+	// away by the next rebuild. Build into the authoring tree instead and hand back the preview of
+	// what was built, which is what the caller goes on to select.
+	if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(SelectedWidget))
+	{
+		UDreamWidget* Created = Designer->DesignerCreateWidget(SelectedWidget, UDreamWidget::StaticClass(), Name,
+			[VisualClass, Callback](UDreamWidget* InTemplate)
+			{
+				InTemplate->SetAnchoredPosition(FVector2D::ZeroVector);
+				if (VisualClass)
+				{
+					InTemplate->CreateNewVisual(VisualClass);
+				}
+				if (Callback)
+				{
+					Callback(InTemplate);
+				}
+			});
+		if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(SelectedWidget->GetWorld()))
+		{
+			Selection->SelectNone();
+			if (Created != nullptr)
+			{
+				Selection->SelectWidget(Created);
+			}
+		}
+		return Created;
+	}
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	ModifyForHierarchyChange(SelectedWidget);
 	auto NewWidget = NewObject<UDreamWidget>(SelectedWidget->GetOuter(), UDreamWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
@@ -339,6 +370,35 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	{
 		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': widget '%s' is not a valid parent."), *InControlClassPath, *SelectedWidget->GetDisplayName());
 		return nullptr;
+	}
+	if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(SelectedWidget))
+	{
+		UClass* ControlClass = LoadClass<UDreamUserWidget>(nullptr, *InControlClassPath);
+		if (ControlClass == nullptr)
+		{
+			UE_LOG(DreamGUIEditor, Error, TEXT("Cannot create control: '%s' is not a loadable hierarchy class."), *InControlClassPath);
+			return nullptr;
+		}
+		// A control IS a class now, so placing one is creating a widget of that class -- its contents
+		// come from its own class when the preview instances it.
+		UDreamWidget* Created = Designer->DesignerCreateWidget(SelectedWidget, ControlClass,
+			ControlClass->GetName(), [Callback](UDreamWidget* InTemplate)
+			{
+				InTemplate->SetAnchoredPosition(FVector2D::ZeroVector);
+				if (Callback)
+				{
+					Callback(InTemplate);
+				}
+			});
+		if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(SelectedWidget->GetWorld()))
+		{
+			Selection->SelectNone();
+			if (Created != nullptr)
+			{
+				Selection->SelectWidget(Created);
+			}
+		}
+		return Created;
 	}
 	if (!SelectedWidget->CanAcceptAdditionalChildren())
 	{
@@ -547,6 +607,23 @@ void FDreamUIEditorTools::DuplicateWidgets(TFunction<TArray<UDreamWidget*>()> Ge
 		return;
 	}
 	auto RootWidgetList = FDreamUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
+	if (RootWidgetList.Num() > 0)
+	{
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(RootWidgetList[0]))
+		{
+			const FScopedTransaction Transaction(LOCTEXT("DuplicateWidget_Transaction", "DreamUI Duplicate Widgets"));
+			const TArray<UDreamWidget*> Created = Designer->DesignerDuplicateWidgets(RootWidgetList);
+			if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(RootWidgetList[0]->GetWorld()))
+			{
+				Selection->SelectNone();
+				for (UDreamWidget* Widget : Created)
+				{
+					Selection->SelectWidget(Widget);
+				}
+			}
+			return;
+		}
+	}
 	TMap<UDreamWidget*, int32> AdditionalChildrenByParent;
 	for (UDreamWidget* Widget : RootWidgetList)
 	{
@@ -672,6 +749,16 @@ void FDreamUIEditorTools::CopyWidgets(TFunction<TArray<UDreamWidget*>()> GetSele
 	}
 	auto CopyWidgetList = FDreamUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
 	CopiedWidgetPrefabList.Reset();
+	if (CopyWidgetList.Num() > 0)
+	{
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(CopyWidgetList[0]))
+		{
+			// A designer clipboard holds duplicated TEMPLATE subtrees. The prefab-blob clipboard below
+			// round-trips through a serializer that has nothing left to serialize into.
+			Designer->DesignerCopyWidgets(CopyWidgetList);
+			return;
+		}
+	}
 	for (auto Widget : CopyWidgetList)
 	{
 		auto Prefab = NewObject<UDreamUIPrefab>();
@@ -753,6 +840,20 @@ void FDreamUIEditorTools::PasteWidgets(TFunction<TArray<UDreamWidget*>()> GetSel
 		return;
 	}
 	auto ParentWidget = SelectedWidgets[0];
+	if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(ParentWidget))
+	{
+		const FScopedTransaction Transaction(LOCTEXT("PasteWidget_Transaction", "DreamUI Paste Widgets"));
+		const TArray<UDreamWidget*> Pasted = Designer->DesignerPasteWidgets(ParentWidget);
+		if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(ParentWidget->GetWorld()))
+		{
+			Selection->SelectNone();
+			for (UDreamWidget* Widget : Pasted)
+			{
+				Selection->SelectWidget(Widget);
+			}
+		}
+		return;
+	}
 	auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ParentWidget);
 	if (PrefabHelperObject == nullptr)return;
 	int32 PasteCount = 0;
@@ -882,6 +983,14 @@ void FDreamUIEditorTools::DeleteWidgets(TFunction<TArray<UDreamWidget*>()> GetSe
 	auto RootWidgetList = FDreamUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
 	if (WarningType == EDeleteWidgetWarningType::WarnAndAskUser && !ShouldContinueDeleteOperation(RootWidgetList))return;
 	const FScopedTransaction Transaction(LOCTEXT("DestroyWidget_Transaction", "DreamUI Destroy Widgets"));
+	if (RootWidgetList.Num() > 0)
+	{
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(RootWidgetList[0]))
+		{
+			Designer->DesignerDeleteWidgets(RootWidgetList);
+			return;
+		}
+	}
 	for (auto Widget : RootWidgetList)
 	{
 		Widget->GetOuter()->Modify();
@@ -947,10 +1056,15 @@ bool FDreamUIEditorTools::CanCopyWidget(TFunction<TArray<UDreamWidget*>()> GetSe
 }
 bool FDreamUIEditorTools::CanPasteWidget(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
 {
-	if (FDreamUIEditorTools::CopiedWidgetPrefabList.Num() == 0)return false;
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return false;
 	if (!FDreamUIEditorTools::IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return false;
+	if (FDreamWidgetBlueprintEditor::FindDesignerForWidget(SelectedWidget) != nullptr)
+	{
+		return FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()
+			&& SelectedWidget->CanAcceptAdditionalChildren(1);
+	}
+	if (FDreamUIEditorTools::CopiedWidgetPrefabList.Num() == 0)return false;
 	int32 PasteCount = 0;
 	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
 	{

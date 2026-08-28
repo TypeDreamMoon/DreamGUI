@@ -71,7 +71,9 @@ void SDreamUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWo
     FDetailsViewArgs DetailsViewArgs;
 	DetailsViewArgs.bUpdatesFromSelection = false;
     DetailsViewArgs.bLockable = true;
-    DetailsViewArgs.NotifyHook = GUnrealEd;
+    // This panel, not GUnrealEd: an edit here has to be carried from the preview onto the
+    // template, and NotifyPreChange/NotifyPostChange are where that happens.
+    DetailsViewArgs.NotifyHook = this;
     DetailsViewArgs.ViewIdentifier = FName(TEXT("DreamUIPrefabEditor"));
     DetailsViewArgs.bCustomNameAreaLocation = true;
     DetailsViewArgs.bCustomFilterAreaLocation = false;
@@ -174,6 +176,32 @@ SDreamUIPrefabEditorDetails::~SDreamUIPrefabEditorDetails()
 	if (auto Selection = UDreamUISelection::GetInstance(World.Get()))
 	{
 		Selection->OnSelectionChanged.RemoveAll(this);
+	}
+}
+
+void SDreamUIPrefabEditorDetails::NotifyPreChange(FEditPropertyChain* PropertyAboutToChange)
+{
+	// The pre-change pass writes nothing; it snapshots the destination so undo has the old value.
+	if (PropertyAboutToChange != nullptr)
+	{
+		if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin())
+		{
+			Editor->MigrateDetailsChangeToTemplate(*PropertyAboutToChange, /*bIsModify*/true);
+		}
+	}
+}
+
+void SDreamUIPrefabEditorDetails::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FEditPropertyChain* PropertyThatChanged)
+{
+	// Not while a slider is being dragged. Every interactive tick would otherwise copy the value
+	// across and mark the asset modified; the committed change that follows carries the result.
+	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive || PropertyThatChanged == nullptr)
+	{
+		return;
+	}
+	if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin())
+	{
+		Editor->MigrateDetailsChangeToTemplate(*PropertyThatChanged, /*bIsModify*/false);
 	}
 }
 

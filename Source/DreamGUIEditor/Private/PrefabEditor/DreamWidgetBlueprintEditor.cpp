@@ -766,19 +766,6 @@ void FDreamWidgetBlueprintEditor::CollectLayoutPanelDescriptors(const UClass* In
 
 void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerClass)
 {
-	// Refused on purpose, for now. Wrapping creates a widget and reparents the selection under it,
-	// and both halves are STRUCTURE -- they have to land on the authoring tree. This function builds
-	// the wrapper with NewObject in the preview world and reparents preview widgets, which is exactly
-	// the shape of edit the next rebuild throws away. Saying so beats appearing to work and losing it.
-	{
-		FNotificationInfo Info(LOCTEXT("WrapWithNotRetargeted",
-			"Wrap With is not available yet: it still builds into the preview, which the designer rebuilds from the asset. Create the container and reparent by hand for now."));
-		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
-		Info.ExpireDuration = 8.0f;
-		FSlateNotificationManager::Get().AddNotification(Info);
-		return;
-	}
-
 	if (InLayoutContainerClass != nullptr && !InLayoutContainerClass->IsChildOf(UDreamLayoutContainer::StaticClass()))return;
 	TArray<UDreamWidget*> Widgets;
 	UDreamWidget* CommonParent = nullptr;
@@ -954,11 +941,75 @@ void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerC
 		return;
 	}
 
-	CommitSelectedWidgetGeometryToTemplate();
-
-	SelectWidgets(TSet<UDreamWidget*>{ Wrapper }, false);
+	// Everything above happened on the PREVIEW, which is where the geometry could be worked out.
+	// This is the half that reaches the asset.
+	{
+		TArray<UDreamWidget*> WrappedPreviews;
+		WrappedPreviews.Reserve(WidgetStates.Num());
+		for (const FWidgetWrapState& State : WidgetStates)
+		{
+			WrappedPreviews.Add(State.Widget);
+		}
+		if (!WrapTemplatesFrom(Wrapper, WrappedPreviews, InLayoutContainerClass))
+		{
+			RestoreOriginalHierarchy();
+			FNotificationInfo Info(LOCTEXT("WrapNotMirrored",
+				"Wrap With could not be applied to the asset, so it was rolled back."));
+			Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+			Info.ExpireDuration = 6.0f;
+			FSlateNotificationManager::Get().AddNotification(Info);
+			return;
+		}
+	}
 
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
+}
+
+bool FDreamWidgetBlueprintEditor::WrapTemplatesFrom(UDreamWidget* InPreviewWrapper, TConstArrayView<UDreamWidget*> InPreviewChildren,
+	UClass* InLayoutContainerClass)
+{
+	if (!IsValid(BlueprintBeingEdited) || !IsValid(InPreviewWrapper) || !IsValid(InPreviewWrapper->GetParent()))
+	{
+		return false;
+	}
+	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewWrapper->GetParent());
+	if (ParentTemplate == nullptr)
+	{
+		return false;
+	}
+	const int32 SiblingIndex = InPreviewWrapper->GetParent()->GetChildIndex(InPreviewWrapper);
+	UDreamWidget* WrapperTemplate = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited,
+		UDreamWidget::StaticClass(), ParentTemplate, SiblingIndex, InPreviewWrapper->GetDisplayName());
+	if (WrapperTemplate == nullptr)
+	{
+		return false;
+	}
+	// By value, not by the name lookup the other mirrors use: this wrapper is the one widget in the
+	// gesture that the preview invented, so there is no name to look it up by.
+	WrapperTemplate->SetAnchorData(InPreviewWrapper->GetAnchorData());
+
+	for (UDreamWidget* PreviewChild : InPreviewChildren)
+	{
+		if (UDreamWidget* ChildTemplate = GetTemplateWidget(PreviewChild))
+		{
+			DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, WrapperTemplate,
+				InPreviewWrapper->GetChildIndex(PreviewChild));
+		}
+	}
+	// After the children, so a single-child panel is asked to accept what it will actually hold.
+	if (InLayoutContainerClass != nullptr)
+	{
+		WrapperTemplate->CreateNewLayoutContainer(InLayoutContainerClass);
+	}
+	CommitWidgetGeometryToTemplate(InPreviewChildren);
+
+	TArray<UDreamWidget*> Previews;
+	RepublishPreviewAndSelect({ WrapperTemplate }, Previews);
+	if (Previews.Num() > 0)
+	{
+		SelectWidgets(TSet<UDreamWidget*>{ Previews[0] }, false);
+	}
+	return true;
 }
 
 void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass)
@@ -1924,7 +1975,291 @@ void FDreamWidgetBlueprintEditor::CommitSelectedWidgetGeometryToTemplate()
 	CommitWidgetGeometryToTemplate(Widgets);
 }
 
-bool FDreamWidgetBlueprintEditor::ReparentTemplatesFrom(TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParent)
+//////////////////////////////////////////////////////////////////////////
+// Structural editing, routed here from FDreamUIEditorTools. See the header.
+
+namespace DreamWidgetDesignerClipboard
+{
+	/**
+	 * Copied template subtrees, kept alive in a tree of their own.
+	 *
+	 * Copies rather than references on purpose: the source can be deleted, its Blueprint closed, or
+	 * the whole hierarchy reshaped between the copy and the paste, and a clipboard that pointed at
+	 * the originals would then paste whatever they had become. Shared across designer windows, which
+	 * is what makes copy-here paste-there work.
+	 *
+	 * Held by a strong pointer because nothing else references it -- a plain static would be collected.
+	 */
+	static TStrongObjectPtr<UDreamWidgetTree> Tree;
+
+	UDreamWidgetTree& Get()
+	{
+		if (!Tree.IsValid())
+		{
+			Tree.Reset(NewObject<UDreamWidgetTree>(GetTransientPackage(), NAME_None, RF_Transient));
+		}
+		return *Tree.Get();
+	}
+
+	/** The copied roots, in the order they were copied. */
+	static TArray<TWeakObjectPtr<UDreamWidget>> Roots;
+}
+
+void FDreamWidgetBlueprintEditor::MigrateDetailsChangeToTemplate(FEditPropertyChain& InChain, bool bIsModify)
+{
+	if (!PreviewHost.IsValid())
+	{
+		return;
+	}
+	bool bMigrated = false;
+	for (const TWeakObjectPtr<UDreamWidget>& Widget : SelectedWidgets)
+	{
+		if (Widget.IsValid())
+		{
+			bMigrated |= PreviewHost->MigratePropertyToTemplate(Widget.Get(), InChain, bIsModify);
+		}
+	}
+	if (bMigrated && !bIsModify)
+	{
+		// The preview already shows the value; what changed is that the asset now carries it too.
+		MarkDesignChanged();
+	}
+}
+
+FDreamWidgetBlueprintEditor* FDreamWidgetBlueprintEditor::FindDesignerForWidget(const UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return nullptr;
+	}
+	// A preview widget lives in a designer's world; a widget in a level does not. That is the whole
+	// distinction, and it is already the one GetEditorByWorld draws.
+	return GetEditorByWorld(InWidget->GetWorld()).Pin().Get();
+}
+
+void FDreamWidgetBlueprintEditor::RepublishPreviewAndSelect(TConstArrayView<UDreamWidget*> InTemplates, TArray<UDreamWidget*>& OutPreviews)
+{
+	OutPreviews.Reset();
+	if (!PreviewHost.IsValid())
+	{
+		return;
+	}
+	// Now, not on the next tick: the caller is about to select what it just made, and a selection of
+	// widgets that do not exist yet is a selection of nothing.
+	PreviewHost->RebuildPreview();
+	for (const UDreamWidget* Template : InTemplates)
+	{
+		if (UDreamWidget* Preview = PreviewHost->FindPreviewForTemplate(Template))
+		{
+			OutPreviews.Add(Preview);
+		}
+	}
+	RefreshOutliner();
+}
+
+UDreamWidget* FDreamWidgetBlueprintEditor::DesignerCreateWidget(UDreamWidget* InPreviewParent, TSubclassOf<UDreamWidget> InWidgetClass,
+	const FString& InDesiredName, TFunction<void(UDreamWidget*)> InConfigureTemplate)
+{
+	if (!IsValid(BlueprintBeingEdited))
+	{
+		return nullptr;
+	}
+	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewParent);
+	if (ParentTemplate == nullptr)
+	{
+		// The design canvas, or the user widget itself: the authored root is the only sensible home.
+		ParentTemplate = IsValid(BlueprintBeingEdited->WidgetTree) ? BlueprintBeingEdited->WidgetTree->RootWidget.Get() : nullptr;
+	}
+	UDreamWidget* Template = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, InWidgetClass, ParentTemplate, -1, InDesiredName);
+	if (Template == nullptr)
+	{
+		return nullptr;
+	}
+	// Configuration lands on the TEMPLATE -- the visual, the components, whatever the caller adds.
+	// Done on the preview it would be built and thrown away in the same gesture.
+	if (InConfigureTemplate)
+	{
+		InConfigureTemplate(Template);
+	}
+	TArray<UDreamWidget*> Previews;
+	RepublishPreviewAndSelect({ Template }, Previews);
+	return Previews.Num() > 0 ? Previews[0] : nullptr;
+}
+
+bool FDreamWidgetBlueprintEditor::DesignerDeleteWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets)
+{
+	if (!IsValid(BlueprintBeingEdited))
+	{
+		return false;
+	}
+	bool bDeleted = false;
+	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
+	{
+		if (UDreamWidget* Template = GetTemplateWidget(PreviewWidget))
+		{
+			bDeleted |= DreamWidgetTreeEditing::DeleteWidget(BlueprintBeingEdited, Template);
+		}
+	}
+	if (bDeleted)
+	{
+		if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(GetWorld()))
+		{
+			// The preview objects the selection is holding are about to stop existing.
+			Selection->SelectNone();
+		}
+		TArray<UDreamWidget*> Unused;
+		RepublishPreviewAndSelect({}, Unused);
+	}
+	return bDeleted;
+}
+
+TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerDuplicateWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets)
+{
+	TArray<UDreamWidget*> Result;
+	if (!IsValid(BlueprintBeingEdited))
+	{
+		return Result;
+	}
+	TArray<UDreamWidget*> NewTemplates;
+	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
+	{
+		UDreamWidget* Template = GetTemplateWidget(PreviewWidget);
+		if (Template == nullptr || !IsValid(Template->GetParent()))
+		{
+			// The authored root has no parent to be duplicated alongside.
+			continue;
+		}
+		if (UDreamWidget* Copy = DreamWidgetTreeEditing::DuplicateWidget(BlueprintBeingEdited, Template, Template->GetParent()))
+		{
+			NewTemplates.Add(Copy);
+		}
+	}
+	RepublishPreviewAndSelect(NewTemplates, Result);
+	return Result;
+}
+
+void FDreamWidgetBlueprintEditor::DesignerCopyWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets)
+{
+	UDreamWidgetTree& Clipboard = DreamWidgetDesignerClipboard::Get();
+	for (const TWeakObjectPtr<UDreamWidget>& Previous : DreamWidgetDesignerClipboard::Roots)
+	{
+		if (Previous.IsValid())
+		{
+			Previous->DestroyWidget();
+		}
+	}
+	DreamWidgetDesignerClipboard::Roots.Reset();
+
+	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
+	{
+		UDreamWidget* Template = GetTemplateWidget(PreviewWidget);
+		if (Template == nullptr)
+		{
+			continue;
+		}
+		UDreamWidget* Copy = DuplicateObject<UDreamWidget>(Template, &Clipboard);
+		if (IsValid(Copy))
+		{
+			// Parent is DuplicateTransient; the copy is structurally complete and link-less until this.
+			Copy->RestoreParentLinksRecursive();
+			DreamWidgetDesignerClipboard::Roots.Add(Copy);
+		}
+	}
+}
+
+bool FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()
+{
+	for (const TWeakObjectPtr<UDreamWidget>& Root : DreamWidgetDesignerClipboard::Roots)
+	{
+		if (Root.IsValid())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWidget* InPreviewParent)
+{
+	TArray<UDreamWidget*> Result;
+	if (!IsValid(BlueprintBeingEdited) || !IsValid(BlueprintBeingEdited->WidgetTree))
+	{
+		return Result;
+	}
+	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewParent);
+	if (ParentTemplate == nullptr)
+	{
+		ParentTemplate = BlueprintBeingEdited->WidgetTree->RootWidget.Get();
+	}
+	if (ParentTemplate == nullptr)
+	{
+		return Result;
+	}
+
+	UDreamWidgetTree* Tree = BlueprintBeingEdited->WidgetTree;
+	BlueprintBeingEdited->Modify();
+	Tree->Modify();
+	ParentTemplate->Modify();
+
+	TArray<UDreamWidget*> NewTemplates;
+	for (const TWeakObjectPtr<UDreamWidget>& Root : DreamWidgetDesignerClipboard::Roots)
+	{
+		if (!Root.IsValid())
+		{
+			continue;
+		}
+		if (!ParentTemplate->CanAcceptAdditionalChildren(1))
+		{
+			break;
+		}
+		// A second copy, so pasting twice does not hand the tree the clipboard's own objects.
+		UDreamWidget* Copy = DuplicateObject<UDreamWidget>(Root.Get(), Tree);
+		if (!IsValid(Copy))
+		{
+			continue;
+		}
+		Copy->RestoreParentLinksRecursive();
+		TArray<UDreamWidget*> Copied;
+		DreamWidgetTreeEditing::ForEachWidgetInSubtree(Copy, [&Copied](UDreamWidget* Widget) { Copied.Add(Widget); });
+		for (UDreamWidget* Widget : Copied)
+		{
+			// Flat and freshly named, for the same reason DuplicateWidget does it: names are what the
+			// template-to-preview correspondence runs on.
+			Widget->Rename(*MakeUniqueObjectName(Tree, Widget->GetClass()).ToString(), Tree, REN_DontCreateRedirectors);
+			Widget->SetDisplayName(DreamWidgetTreeEditing::MakeUniqueDisplayName(Tree, Widget->GetDisplayName(), Widget));
+		}
+		if (Copy->TrySetParent(ParentTemplate, /*bKeepWorldPosition*/false, -1))
+		{
+			NewTemplates.Add(Copy);
+		}
+		else
+		{
+			Copy->DestroyWidget();
+		}
+	}
+	if (NewTemplates.Num() > 0)
+	{
+		DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
+	}
+	RepublishPreviewAndSelect(NewTemplates, Result);
+	return Result;
+}
+
+FString FDreamWidgetBlueprintEditor::DesignerRenameWidget(UDreamWidget* InPreviewWidget, const FString& InNewDisplayName)
+{
+	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
+	if (Template == nullptr || !IsValid(BlueprintBeingEdited))
+	{
+		return FString();
+	}
+	const FString Applied = DreamWidgetTreeEditing::RenameWidget(BlueprintBeingEdited, Template, InNewDisplayName);
+	TArray<UDreamWidget*> Previews;
+	RepublishPreviewAndSelect({ Template }, Previews);
+	return Applied;
+}
+
+bool FDreamWidgetBlueprintEditor::ReparentTemplatesFrom(
+TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParent)
 {
 	if (!IsValid(BlueprintBeingEdited) || !PreviewHost.IsValid())
 	{
