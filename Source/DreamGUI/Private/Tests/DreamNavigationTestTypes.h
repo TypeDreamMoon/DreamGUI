@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Interaction/DreamUIActionBar.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "DreamNavigationTestTypes.generated.h"
 
@@ -21,6 +22,25 @@ public:
 	void Fire() { ++CallCount; }
 
 	int32 CallCount = 0;
+};
+
+/** A prompt bar that counts its rebuilds, so a test can see that it heard about a change at all. */
+UCLASS()
+class UDreamCountingActionBar : public UDreamUIActionBar
+{
+	GENERATED_BODY()
+
+public:
+	int32 RebuildCount = 0;
+
+	virtual void Rebuild() override
+	{
+		++RebuildCount;
+		Super::Rebuild();
+	}
+
+	/** OnEnable is where the bar subscribes, and a bare test world never fires it. */
+	void ForceEnable() { OnEnable(); }
 };
 
 /** A screen that can be told to intercept Back, and counts how often it was offered it. */
