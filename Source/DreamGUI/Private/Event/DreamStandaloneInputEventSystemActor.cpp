@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Event/DreamStandaloneInputEventSystemActor.h"
+#include "Interaction/DreamUIActionRouter.h"
 
 #include "Components/InputComponent.h"
 #include "DreamGUI.h"
@@ -88,6 +89,7 @@ void ADreamStandaloneInputEventSystemActor::BindDreamInput()
 
 	BindMouseInput();
 	BindNavigationAndTouchInput();
+	BindActionRouting();
 }
 
 void ADreamStandaloneInputEventSystemActor::BindMouseInput()
@@ -123,6 +125,31 @@ void ADreamStandaloneInputEventSystemActor::BindNavigationAndTouchInput()
 		InputComponent->BindKey(Direction.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed);
 		InputComponent->BindKey(Direction.Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased);
 	}
+}
+
+void ADreamStandaloneInputEventSystemActor::BindActionRouting()
+{
+	InputComponent->BindKey(EKeys::AnyKey, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed);
+	InputComponent->BindKey(EKeys::AnyKey, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased);
+}
+
+bool ADreamStandaloneInputEventSystemActor::IsNavigationKey(const FKey& Key)
+{
+	using namespace DreamStandaloneInputEventSystemActorLocal;
+
+	for (const FKey& Trigger : NavigationTriggerKeys)
+	{
+		if (Trigger == Key)return true;
+	}
+	return GetNavigationDirectionForKey(Key) != EDreamUINavigationDirection::None;
+}
+
+bool ADreamStandaloneInputEventSystemActor::RouteActionKey(const FKey& Key, bool bPressed)
+{
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
+	UDreamEventSystem* Events = GetEventSystem();
+	if (Router == nullptr || Events == nullptr)return false;
+	return Router->HandleKey(Events->GetUserIndex(), Key, bPressed);
 }
 
 EDreamUINavigationDirection ADreamStandaloneInputEventSystemActor::GetNavigationDirectionForKey(const FKey& Key)
@@ -231,26 +258,52 @@ void ADreamStandaloneInputEventSystemActor::OnTouchMoved(ETouchIndex::Type Finge
 	InputModule->InputTouchMoved(static_cast<int32>(FingerIndex), Location);
 }
 
+void ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed(FKey Key)
+{
+	ReportDeviceForKey(Key);
+	if (IsNavigationKey(Key))
+	{
+		return;//routed from its own handler; doing it here too would fire a bound action twice
+	}
+	RouteActionKey(Key, true);
+}
+
+void ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased(FKey Key)
+{
+	if (IsNavigationKey(Key))
+	{
+		return;
+	}
+	RouteActionKey(Key, false);
+}
+
 void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed(FKey Key)
 {
 	ReportDeviceForKey(Key);
+	// An action explicitly bound to this key outranks the preset's built-in meaning for it. Confirm is
+	// the likeliest thing a screen binds to Enter, and it must not also press whatever navigation is
+	// sitting on -- one keypress, one outcome.
+	if (RouteActionKey(Key, true))return;
 	InputModule->InputTriggerForNavigation(true, DreamStandaloneInputEventSystemActorLocal::NavigationPointerID);
 }
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased(FKey Key)
 {
+	if (RouteActionKey(Key, false))return;
 	InputModule->InputTriggerForNavigation(false, DreamStandaloneInputEventSystemActorLocal::NavigationPointerID);
 }
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed(FKey Key)
 {
 	ReportDeviceForKey(Key);
+	if (RouteActionKey(Key, true))return;
 	InputModule->InputNavigation(
 		GetNavigationDirectionForKey(Key), true, DreamStandaloneInputEventSystemActorLocal::NavigationPointerID);
 }
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased(FKey Key)
 {
+	if (RouteActionKey(Key, false))return;
 	// The direction is still passed on release even though the module ignores it there, so the two
 	// handlers stay symmetric and a future module change cannot silently depend on a None here.
 	InputModule->InputNavigation(

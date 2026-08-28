@@ -50,6 +50,24 @@ protected:
 	virtual void BindNavigationAndTouchInput();
 
 	/**
+	 * One AnyKey binding, so a named action can live on any key without the preset knowing which.
+	 *
+	 * Navigation keys are deliberately skipped here and routed from their own handlers instead. Input
+	 * gives no ordering guarantee between an AnyKey binding and a specific one, so a key that both saw
+	 * would be offered to the router twice and a bound action would fire twice.
+	 */
+	virtual void BindActionRouting();
+
+	/** True for a key this preset already binds by name, and which therefore routes itself. */
+	static bool IsNavigationKey(const FKey& Key);
+
+	/**
+	 * Offer Key to the action router for this actor's player.
+	 * @return true when a bound action took it, and the preset's own meaning for the key must not run.
+	 */
+	bool RouteActionKey(const FKey& Key, bool bPressed);
+
+	/**
 	 * Which navigation direction a key stands for, or None if it is not a navigation key.
 	 *
 	 * The preset Blueprint left every InputNavigation call on None, which made press and release
@@ -78,6 +96,9 @@ private:
 	void OnTouchPressed(ETouchIndex::Type FingerIndex, FVector Location);
 	void OnTouchReleased(ETouchIndex::Type FingerIndex, FVector Location);
 	void OnTouchMoved(ETouchIndex::Type FingerIndex, FVector Location);
+
+	void OnAnyKeyPressed(FKey Key);
+	void OnAnyKeyReleased(FKey Key);
 
 	void OnNavigationTriggerPressed(FKey Key);
 	void OnNavigationTriggerReleased(FKey Key);

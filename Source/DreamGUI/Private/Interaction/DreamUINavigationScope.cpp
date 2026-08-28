@@ -2,6 +2,7 @@
 
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
+#include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/UISelectable.h"
 #include "Core/Components/DreamWidget.h"
 
@@ -30,6 +31,12 @@ void UDreamUINavigationScope::OnDisable()
 void UDreamUINavigationScope::OnUnregister()
 {
 	DeactivateScope();
+	// A binding outliving the screen that registered it would keep answering for a screen that no
+	// longer exists; the router's stale sweep would get there eventually, but not before the next key.
+	if (UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this))
+	{
+		Router->UnregisterScope(this);
+	}
 	Super::OnUnregister();
 }
 
