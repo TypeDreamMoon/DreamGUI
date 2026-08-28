@@ -348,6 +348,17 @@ public:
 	/** The same, for whatever is selected -- which is what every menu-driven gesture operates on. */
 	void CommitSelectedWidgetGeometryToTemplate();
 	/**
+	 * Mirror a reparent performed on the surface onto the authoring tree.
+	 *
+	 * The gesture happens on the preview first, deliberately: keeping a widget where it was dropped
+	 * needs the new parent's real transform, and a template has none. So the preview does the move,
+	 * the engine works out the resulting geometry, and this carries BOTH across -- the structure by
+	 * reparenting the templates, the geometry by CommitWidgetGeometryToTemplate.
+	 *
+	 * Without it a drag between containers looks right until the next rebuild and then is gone.
+	 */
+	bool ReparentTemplatesFrom(TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParent);
+	/**
 	 * Say that the authored hierarchy changed in a way that does not add or remove a widget.
 	 *
 	 * Marks the Blueprint modified and nothing else. It deliberately does NOT rebuild the preview:

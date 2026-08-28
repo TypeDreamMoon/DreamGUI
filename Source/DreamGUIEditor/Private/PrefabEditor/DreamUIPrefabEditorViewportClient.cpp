@@ -1837,6 +1837,9 @@ bool FDreamUIPrefabEditorViewportClient::ApplyPendingReparent()
 	}
 	if (bReparented && PrefabEditorPtr.IsValid())
 	{
+		// The move so far is on the PREVIEW, which the next rebuild throws away. This is the half
+		// that makes it an edit: the same reparent, on the authoring tree.
+		PrefabEditorPtr.Pin()->ReparentTemplatesFrom(Dragged, NewParent);
 		PrefabEditorPtr.Pin()->RefreshOutliner();
 	}
 	return bReparented;

@@ -1924,6 +1924,43 @@ void FDreamWidgetBlueprintEditor::CommitSelectedWidgetGeometryToTemplate()
 	CommitWidgetGeometryToTemplate(Widgets);
 }
 
+bool FDreamWidgetBlueprintEditor::ReparentTemplatesFrom(TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParent)
+{
+	if (!IsValid(BlueprintBeingEdited) || !PreviewHost.IsValid())
+	{
+		return false;
+	}
+	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewNewParent);
+	if (ParentTemplate == nullptr)
+	{
+		// The design canvas, or anything else in the preview world that is not authored. A widget
+		// cannot be parented to it, and pretending otherwise would drop the move on the floor.
+		return false;
+	}
+
+	bool bMoved = false;
+	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
+	{
+		UDreamWidget* ChildTemplate = GetTemplateWidget(PreviewWidget);
+		if (ChildTemplate == nullptr)
+		{
+			continue;
+		}
+		// The sibling index the preview ended up at, so the two halves agree on order as well as on
+		// parentage -- the drop position is part of what the author expressed.
+		const int32 SiblingIndex = IsValid(PreviewWidget->GetParent())
+			? PreviewWidget->GetParent()->GetChildIndex(PreviewWidget) : -1;
+		bMoved |= DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, ParentTemplate, SiblingIndex);
+	}
+	if (bMoved)
+	{
+		// The geometry the preview just resolved against its new parent. Ordered after the reparent
+		// so the values land on templates that are already in the right place.
+		CommitWidgetGeometryToTemplate(InPreviewWidgets);
+	}
+	return bMoved;
+}
+
 void FDreamWidgetBlueprintEditor::MarkDesignChanged()
 {
 	if (!IsValid(BlueprintBeingEdited))

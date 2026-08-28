@@ -336,6 +336,67 @@ bool FDreamDesignerPropertyMirrorTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerSurfaceReparentReachesTemplateTest,
+	"DreamGUI.Designer.ASurfaceReparentReachesTheTemplate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerSurfaceReparentReachesTemplateTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	// Dragging a widget into another container on the design surface moves a PREVIEW widget, and the
+	// preview is rebuilt from the authoring tree. Without the mirroring half the move looks right,
+	// survives until the next rebuild, and then is silently gone -- which is indistinguishable from
+	// "the drag did not take" and impossible to notice from a structure test of the preview alone.
+	FScopedBlueprint Scoped(TEXT("DesignerSurfaceReparent"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))
+	{
+		return false;
+	}
+	BuildSampleHierarchy(Scoped.Blueprint);
+	// Give First a panel so it can accept a child at all.
+	UDreamWidget* FirstTemplate = FindTemplateByDisplayName(Scoped.Blueprint, TEXT("First"));
+	FirstTemplate->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+	Scoped.Compile();
+
+	TSharedRef<FDreamWidgetPreviewHost> Host = MakeShared<FDreamWidgetPreviewHost>();
+	Host->Initialize(Scoped.Blueprint);
+
+	UDreamWidget* SecondTemplate = FindTemplateByDisplayName(Scoped.Blueprint, TEXT("Second"));
+	UDreamWidget* PreviewSecond = Host->FindPreviewForTemplate(SecondTemplate);
+	UDreamWidget* PreviewFirst = Host->FindPreviewForTemplate(FirstTemplate);
+	if (!TestNotNull(TEXT("Both widgets have previews"), PreviewSecond) || PreviewFirst == nullptr)
+	{
+		Host->Shutdown();
+		return false;
+	}
+	TestEqual(TEXT("Second starts under the root"), SecondTemplate->GetParent(), Scoped.Blueprint->WidgetTree->RootWidget.Get());
+
+	// What the surface does: move the preview, then mirror. Done here without the viewport client,
+	// because what is being claimed is the mirroring, not Slate.
+	PreviewSecond->TrySetParent(PreviewFirst, /*bKeepWorldPosition*/true);
+	TestEqual(TEXT("The preview moved"), PreviewSecond->GetParent(), PreviewFirst);
+	TestEqual(TEXT("But the template has not, yet"), SecondTemplate->GetParent(), Scoped.Blueprint->WidgetTree->RootWidget.Get());
+
+	const int32 SiblingIndex = PreviewFirst->GetChildIndex(PreviewSecond);
+	TestTrue(TEXT("The mirror reports it moved something"),
+		DreamWidgetTreeEditing::ReparentWidget(Scoped.Blueprint, SecondTemplate, FirstTemplate, SiblingIndex));
+	TestEqual(TEXT("The template moved too"), SecondTemplate->GetParent(), FirstTemplate);
+
+	// And it survives the rebuild, which is the whole point.
+	Host->RebuildPreview();
+	UDreamWidget* RebuiltSecond = Host->FindPreviewForTemplate(SecondTemplate);
+	if (TestNotNull(TEXT("Second still has a preview"), RebuiltSecond))
+	{
+		UDreamWidget* RebuiltFirst = Host->FindPreviewForTemplate(FirstTemplate);
+		TestEqual(TEXT("And the rebuilt preview kept the new parent"), RebuiltSecond->GetParent(), RebuiltFirst);
+	}
+
+	Host->Shutdown();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerReferenceLifetimeTest,
 	"DreamGUI.Designer.AReferenceSurvivesRebuildsAndReportsDeath",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
