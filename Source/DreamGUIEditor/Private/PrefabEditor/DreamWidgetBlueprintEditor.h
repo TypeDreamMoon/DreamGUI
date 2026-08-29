@@ -38,6 +38,14 @@ enum class EDreamUIDesignerSizeRule : uint8
 {
 	Custom,
 	Desired,
+	/**
+	 * The canvas is the viewport, one design unit per pixel.
+	 *
+	 * A view rule rather than an asset edit: it follows the window, so recording it would dirty the
+	 * asset on every resize and leave a number in the diff describing somebody's window instead of
+	 * the UI. The resolution the author chose stays on the asset and comes back on Custom.
+	 */
+	FillScreen,
 };
 
 /**
@@ -66,6 +74,9 @@ public:
 	/** Show the selected widget's measurement, arrangement, slot, ownership and clipping diagnostics. */
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowLayoutDebug = false;
+	/** Rulers along the top and left of the design viewport, in the canvas's own units. */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bShowDesignerRulers = true;
 	/**
 	 * Honour the designer locks recorded on the asset. Turning it off reaches a locked background
 	 * for one edit without unlocking it, which is the only way back from a lock that would otherwise
@@ -190,6 +201,9 @@ public:
 	void ToggleDesignerGuides();
 	bool GetShowLayoutDebug() const;
 	void ToggleLayoutDebug();
+
+	bool GetShowDesignerRulers() const;
+	void ToggleDesignerRulers();
 	float SnapDesignerValue(float Value) const;
 	/** The whole design canvas, which is what "fit" means here -- not whatever happens to be selected. */
 	FBox GetDesignerFramingBox();
@@ -203,6 +217,17 @@ public:
 	EDreamUIDesignerSizeRule GetDesignerSizeRule() const { return DesignerSizeRule; }
 	/** Choosing Desired sizes the canvas to the content once; it does not keep following it. */
 	void SetDesignerSizeRule(EDreamUIDesignerSizeRule InRule);
+
+	/** The viewport's size in pixels, which under Fill Screen is also the canvas size. Zero if none. */
+	FIntPoint GetDesignerViewportPixelSize() const;
+
+	/**
+	 * Size the design canvas, recording the choice on the asset only when the author made one.
+	 *
+	 * The recording half is what separates a resolution somebody picked from a canvas that is merely
+	 * following the window: only the first belongs in the asset, and in the diff.
+	 */
+	void ApplyDesignerViewportSize(FIntPoint NewViewportSize, bool bRecordOnAsset);
 	/** What the hierarchy's content measures, or false when nothing in it can be measured. */
 	bool GetDesignerDesiredSize(FVector2D& OutSize);
 	/** A canvas size for a measured content size, keeping InFallback on any axis that measured nothing. */
@@ -312,6 +337,8 @@ private:
 	TArray<TWeakObjectPtr<UDreamWidget>> SelectedWidgets;
 	/** Session state: the rule decided a canvas size, the size itself is what got stored. */
 	EDreamUIDesignerSizeRule DesignerSizeRule = EDreamUIDesignerSizeRule::Custom;
+	/** Size the canvas to the viewport, once per resize. A no-op when it already is. */
+	void ApplyFillScreenSize();
 private:
 
 	void BindCommands();

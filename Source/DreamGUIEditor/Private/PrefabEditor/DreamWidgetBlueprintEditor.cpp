@@ -606,6 +606,22 @@ void FDreamWidgetBlueprintEditor::Tick(float DeltaTime)
 	{
 		PreviewHost->RebuildPreviewIfInvalidated();
 	}
+	// Fill Screen has no resize event to hang off -- the viewport is an FViewport, not a Slate
+	// widget this toolkit hears from -- so it is asked here. ApplyDesignerViewportSize returns
+	// immediately when the size already matches, which is every tick but the ones after a resize.
+	if (DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen)
+	{
+		ApplyFillScreenSize();
+	}
+}
+
+void FDreamWidgetBlueprintEditor::ApplyFillScreenSize()
+{
+	const FIntPoint PixelSize = GetDesignerViewportPixelSize();
+	if (PixelSize.X > 0 && PixelSize.Y > 0)
+	{
+		ApplyDesignerViewportSize(PixelSize, /*bRecordOnAsset*/false);
+	}
 }
 
 void FDreamWidgetBlueprintEditor::RefreshDesignersFor(UDreamWidgetBlueprint* InBlueprint)
@@ -1426,6 +1442,18 @@ bool FDreamWidgetBlueprintEditor::GetShowResolutionGuides() const
 	return GetShowDesignerChrome() && GetDefault<UDreamUIDesignerSettings>()->bShowResolutionGuides;
 }
 
+bool FDreamWidgetBlueprintEditor::GetShowDesignerRulers() const
+{
+	return GetShowDesignerChrome() && GetDefault<UDreamUIDesignerSettings>()->bShowDesignerRulers;
+}
+
+void FDreamWidgetBlueprintEditor::ToggleDesignerRulers()
+{
+	UDreamUIDesignerSettings* Settings = GetMutableDefault<UDreamUIDesignerSettings>();
+	Settings->bShowDesignerRulers = !Settings->bShowDesignerRulers;
+	Settings->SaveConfig();
+}
+
 void FDreamWidgetBlueprintEditor::ToggleResolutionGuides()
 {
 	UDreamUIDesignerSettings* Settings = GetMutableDefault<UDreamUIDesignerSettings>();
@@ -1444,6 +1472,20 @@ FIntPoint FDreamWidgetBlueprintEditor::GetDesignerCanvasSize()
 
 FIntPoint FDreamWidgetBlueprintEditor::GetDesignerViewportSize()
 {
+	// Under Fill Screen the asset still holds the resolution the author picked, which is the right
+	// thing to keep and the wrong thing to report: the picker would name a resolution the canvas is
+	// not. The agent canvas's edit-mode size is what was actually applied.
+	if (DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen)
+	{
+		if (UDreamWidget* RootAgent = GetRootAgentWidget())
+		{
+			if (UDreamCanvas* AgentCanvas = RootAgent->GetComponent<UDreamCanvas>();
+				IsValid(AgentCanvas) && AgentCanvas->SizeInEditMode.X > 0 && AgentCanvas->SizeInEditMode.Y > 0)
+			{
+				return AgentCanvas->SizeInEditMode;
+			}
+		}
+	}
 	if (BlueprintBeingEdited)
 	{
 		const FIntPoint Stored = BlueprintBeingEdited->DesignerData.DesignViewportSize;
@@ -1488,6 +1530,11 @@ bool FDreamWidgetBlueprintEditor::CalculateDesignerCanvasFor(FIntPoint InViewpor
 
 void FDreamWidgetBlueprintEditor::SetDesignerViewportSize(FIntPoint NewViewportSize)
 {
+	ApplyDesignerViewportSize(NewViewportSize, /*bRecordOnAsset*/true);
+}
+
+void FDreamWidgetBlueprintEditor::ApplyDesignerViewportSize(FIntPoint NewViewportSize, bool bRecordOnAsset)
+{
 	UDreamWidget* RootAgent = GetRootAgentWidget();
 	if (!IsValid(RootAgent) || !BlueprintBeingEdited || NewViewportSize.X <= 0 || NewViewportSize.Y <= 0)
 	{
@@ -1499,32 +1546,58 @@ void FDreamWidgetBlueprintEditor::SetDesignerViewportSize(FIntPoint NewViewportS
 	FIntPoint NewCanvasSize;
 	float NewScale = 1.0f;
 	CalculateDesignerCanvasFor(NewViewportSize, NewCanvasSize, NewScale);
+	UDreamCanvas* AgentCanvas = RootAgent->GetComponent<UDreamCanvas>();
 	// Re-clicking the checked preset (or flipping a square canvas) must not dirty the asset or
-	// push an empty undo entry.
-	if (NewViewportSize == GetDesignerViewportSize() && NewCanvasSize == GetDesignerCanvasSize())
+	// push an empty undo entry. Fill Screen asks the same question of the APPLIED state instead:
+	// the asset still holds the author's chosen resolution, so comparing against it would answer
+	// "no" every tick and resize the canvas forever.
+	const bool bAlreadyApplied = bRecordOnAsset
+		? (NewViewportSize == GetDesignerViewportSize() && NewCanvasSize == GetDesignerCanvasSize())
+		: (IsValid(AgentCanvas) && AgentCanvas->SizeInEditMode == NewViewportSize && NewCanvasSize == GetDesignerCanvasSize());
+	if (bAlreadyApplied)
 	{
 		return;
 	}
-	const FScopedTransaction Transaction(LOCTEXT("SetDesignScreenSize", "Set Design Screen Size"));
-	// The preview-scene agent is created without RF_Transactional; without it Modify records
-	// nothing and undo would roll back only the stored CanvasSize, not the visible canvas.
-	RootAgent->SetFlags(RF_Transactional);
-	RootAgent->Modify();
+	// No transaction on the view-only path: undo restores the asset, and there is nothing here of
+	// the asset's to restore. An entry per window resize would also bury whatever the author was
+	// actually doing.
+	TOptional<FScopedTransaction> Transaction;
+	if (bRecordOnAsset)
+	{
+		Transaction.Emplace(LOCTEXT("SetDesignScreenSize", "Set Design Screen Size"));
+		// The preview-scene agent is created without RF_Transactional; without it Modify records
+		// nothing and undo would roll back only the stored CanvasSize, not the visible canvas.
+		RootAgent->SetFlags(RF_Transactional);
+		RootAgent->Modify();
+	}
 	// SetSizeDelta, matching how the instance scene and thumbnail scene size the root canvas.
 	RootAgent->SetSizeDelta(FVector2D(NewCanvasSize.X, NewCanvasSize.Y));
 	// Keep the agent canvas's edit-mode viewport in step: it is forced to a fixed size, and if the
 	// preview ever runs a screen-space render mode its editor tick would otherwise resize the agent
 	// to the stale default and stomp this.
-	if (UDreamCanvas* AgentCanvas = RootAgent->GetComponent<UDreamCanvas>())
+	if (IsValid(AgentCanvas))
 	{
-		AgentCanvas->Modify();
+		if (bRecordOnAsset)
+		{
+			AgentCanvas->Modify();
+		}
 		AgentCanvas->SizeInEditMode = NewViewportSize;
 	}
-	BlueprintBeingEdited->Modify();
-	BlueprintBeingEdited->DesignerData.CanvasSize = NewCanvasSize;
-	BlueprintBeingEdited->DesignerData.DesignViewportSize = NewViewportSize;
+	if (bRecordOnAsset)
+	{
+		BlueprintBeingEdited->Modify();
+		BlueprintBeingEdited->DesignerData.CanvasSize = NewCanvasSize;
+		BlueprintBeingEdited->DesignerData.DesignViewportSize = NewViewportSize;
+	}
 	UDreamWidget::MarkLayoutForRebuild(RootAgent);
 	UDreamWidget::RebuildLayoutImmediately(RootAgent);
+}
+
+FIntPoint FDreamWidgetBlueprintEditor::GetDesignerViewportPixelSize() const
+{
+	TSharedPtr<FEditorViewportClient> Client = ViewportPtr.IsValid() ? ViewportPtr->GetViewportClient() : nullptr;
+	FViewport* Viewport = Client.IsValid() ? Client->Viewport : nullptr;
+	return Viewport != nullptr ? FIntPoint(Viewport->GetSizeXY()) : FIntPoint::ZeroValue;
 }
 
 void FDreamWidgetBlueprintEditor::ToggleLayoutDebug()
@@ -1590,9 +1663,25 @@ float FDreamWidgetBlueprintEditor::DesignerOrthoZoomFor(float InCurrentOrthoZoom
 
 void FDreamWidgetBlueprintEditor::SetDesignerSizeRule(EDreamUIDesignerSizeRule InRule)
 {
-	if (InRule != EDreamUIDesignerSizeRule::Desired)
+	if (InRule == EDreamUIDesignerSizeRule::FillScreen)
 	{
 		DesignerSizeRule = InRule;
+		// 1:1 as well, or the name is a lie the first time it is clicked: the canvas would be the
+		// viewport's size in units while the camera showed some other fraction of it.
+		ZoomDesignerToActualSize();
+		ApplyFillScreenSize();
+		return;
+	}
+	if (InRule != EDreamUIDesignerSizeRule::Desired)
+	{
+		const bool bLeavingFillScreen = DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen;
+		DesignerSizeRule = InRule;
+		if (bLeavingFillScreen)
+		{
+			// Back to the resolution the asset has held all along -- applied, not recorded, because
+			// it is already what the asset says.
+			ApplyDesignerViewportSize(GetDesignerViewportSize(), /*bRecordOnAsset*/false);
+		}
 		return;
 	}
 	auto Refuse = [](const FText& InMessage)

@@ -154,6 +154,16 @@ namespace DreamUI_Private
 				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == EDreamUIDesignerSizeRule::Custom;
 				return false;
 			})), NAME_None, EUserInterfaceActionType::RadioButton);
+		MenuBuilder.AddMenuEntry(LOCTEXT("SizeRuleFillScreen", "Fill Screen"),
+			LOCTEXT("SizeRuleFillScreenTip", "The canvas is the viewport, one design unit per pixel, and follows it as the window resizes. Picking it zooms to 1:1 so that is true straight away. The resolution you chose stays on the asset and comes back with Custom."), FSlateIcon(),
+			FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+			{
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())Editor->SetDesignerSizeRule(EDreamUIDesignerSizeRule::FillScreen);
+			}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor]()
+			{
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerSizeRule() == EDreamUIDesignerSizeRule::FillScreen;
+				return false;
+			})), NAME_None, EUserInterfaceActionType::RadioButton);
 		MenuBuilder.AddMenuEntry(LOCTEXT("SizeRuleDesired", "Desired"),
 			LOCTEXT("SizeRuleDesiredTip", "Size the canvas to what the root widget's UMG-compatible panel measures, so a tooltip-sized prefab can be authored at its own size. Applied once, when chosen. A root with no such panel measures nothing, and a canvas sized by a scaler rule is not this menu's to set."), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
@@ -410,6 +420,11 @@ namespace DreamUI_Private
 				LOCTEXT("DesignerGuidesTooltip", "Show 2D designer snapping guides while manipulating widgets."),
 				FSlateIcon(AppStyle, "ViewportToolbar.SetShowGrid"),
 				&FDreamWidgetBlueprintEditor::GetShowDesignerGuides, &FDreamWidgetBlueprintEditor::ToggleDesignerGuides));
+			InSection.AddEntry(MakeDesignerToggle("Rulers", WeakEditor, FText::GetEmpty(),
+				LOCTEXT("DesignerRulersTooltip", "Rulers along the top and left of the viewport, in the design canvas's own units, with the cursor marked on each. Needs the designer overlay switched on."),
+				FSlateIcon(AppStyle, "Icons.Adjust"),
+				&FDreamWidgetBlueprintEditor::GetShowDesignerRulers, &FDreamWidgetBlueprintEditor::ToggleDesignerRulers,
+				&FDreamWidgetBlueprintEditor::GetShowDesignerChrome));
 			InSection.AddEntry(MakeDesignerToggle("LayoutDebug", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("LayoutDebugTooltip", "Show layout measurement, arrangement, slot, ownership, and clipping diagnostics for the selected widget. Needs the designer overlay switched on."),
 				FSlateIcon(AppStyle, "Icons.Info"),

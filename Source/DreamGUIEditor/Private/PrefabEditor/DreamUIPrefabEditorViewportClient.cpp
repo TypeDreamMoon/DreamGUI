@@ -6,6 +6,7 @@
 #include "Settings/LevelEditorViewportSettings.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIDesignScreenSizes.h"
+#include "DreamUIDesignerRuler.h"
 #include "DreamUIPrefabEditorViewport.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Animation/AnimationAsset.h"
@@ -951,6 +952,115 @@ void FDreamUIPrefabEditorViewportClient::DrawSafeZoneGuide(FSceneView& View, FCa
 	}
 }
 
+void FDreamUIPrefabEditorViewportClient::DrawDesignerRulers(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
+{
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin();
+	UDreamWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
+	UFont* Font = GEngine->GetSmallFont();
+	if (!IsValid(RootAgent) || Font == nullptr)return;
+
+	// The canvas plane's own axes, projected: Y is right and Z is up in this space, and the pixel
+	// scale along each is whatever the camera makes of one unit. Reading it off the projection rather
+	// than off the ortho zoom means the ruler cannot disagree with the outlines drawn beside it.
+	const FTransform& Transform = RootAgent->GetWorldTransform();
+	FVector2D OriginPixel, RightPixel, UpPixel;
+	if (!DreamWorldToPixelInFront(View, Transform.TransformPosition(FVector::ZeroVector), OriginPixel)
+		|| !DreamWorldToPixelInFront(View, Transform.TransformPosition(FVector(0, 1, 0)), RightPixel)
+		|| !DreamWorldToPixelInFront(View, Transform.TransformPosition(FVector(0, 0, 1)), UpPixel))
+	{
+		return;
+	}
+	const float DpiScale = Canvas.GetDPIScale();
+	OriginPixel /= DpiScale;
+	RightPixel /= DpiScale;
+	UpPixel /= DpiScale;
+	// Signed on purpose: the vertical ruler's units go up while its pixels go down.
+	const float ScaleX = RightPixel.X - OriginPixel.X;
+	const float ScaleY = UpPixel.Y - OriginPixel.Y;
+	if (FMath::Abs(ScaleX) <= UE_SMALL_NUMBER || FMath::Abs(ScaleY) <= UE_SMALL_NUMBER)return;
+
+	const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
+	constexpr float HorizontalThickness = 16.0f;
+	// Wider than it is tall, because the numbers are drawn upright: rotating them would be prettier
+	// and would mean pushing a transform onto the canvas for four characters.
+	constexpr float VerticalThickness = 34.0f;
+	constexpr float MinPixelsPerStep = 72.0f;
+	constexpr int32 MinorPerMajor = 5;
+	if (ViewSize.X <= VerticalThickness || ViewSize.Y <= HorizontalThickness)return;
+
+	const FLinearColor StripColor(0.02f, 0.02f, 0.03f, 0.78f);
+	const FLinearColor TickColor(0.55f, 0.60f, 0.68f);
+	const FLinearColor LabelColor(0.78f, 0.83f, 0.90f);
+	const FLinearColor CursorColor(1.0f, 0.72f, 0.12f);
+
+	auto DrawStrip = [&Canvas, &StripColor](const FVector2D& Position, const FVector2D& Size)
+	{
+		FCanvasTileItem Tile(Position, Size, StripColor);
+		Tile.BlendMode = SE_BLEND_Translucent;
+		Canvas.DrawItem(Tile);
+	};
+	DrawStrip(FVector2D::ZeroVector, FVector2D(ViewSize.X, HorizontalThickness));
+	DrawStrip(FVector2D(0.0f, HorizontalThickness), FVector2D(VerticalThickness, ViewSize.Y - HorizontalThickness));
+
+	auto DrawTick = [&Canvas, &TickColor](const FVector2D& Start, const FVector2D& End)
+	{
+		FCanvasLineItem Line(Start, End);
+		Line.SetColor(TickColor);
+		Canvas.DrawItem(Line);
+	};
+	auto DrawLabel = [&Canvas, Font, &LabelColor](const FVector2D& Position, float Unit)
+	{
+		// FromInt, not AsNumber: a ruler labelled "1,080" is a number with a comma in it, and the
+		// grouping separator is whatever the editor's locale says, which is not a coordinate.
+		FCanvasTextItem Text(Position, FText::FromString(FString::FromInt(FMath::RoundToInt(Unit))), Font, LabelColor);
+		Text.EnableShadow(FLinearColor::Black);
+		Canvas.DrawItem(Text);
+	};
+
+	TArray<FDreamUIRulerTick> Ticks;
+	// Horizontal: the canvas's X, along the top edge, over the part of it the vertical ruler leaves.
+	{
+		const float StartUnit = (VerticalThickness - OriginPixel.X) / ScaleX;
+		const float EndUnit = (ViewSize.X - OriginPixel.X) / ScaleX;
+		const float Step = ChooseDreamUIRulerStep(FMath::Abs(ScaleX), MinPixelsPerStep);
+		BuildDreamUIRulerTicks(FMath::Min(StartUnit, EndUnit), FMath::Max(StartUnit, EndUnit), Step, MinorPerMajor,
+			[&OriginPixel, ScaleX](float Unit) { return OriginPixel.X + Unit * ScaleX; }, Ticks);
+		for (const FDreamUIRulerTick& Tick : Ticks)
+		{
+			const float Length = Tick.bMajor ? HorizontalThickness : HorizontalThickness * 0.4f;
+			DrawTick(FVector2D(Tick.Pixel, HorizontalThickness - Length), FVector2D(Tick.Pixel, HorizontalThickness));
+			if (Tick.bMajor)DrawLabel(FVector2D(Tick.Pixel + 3.0f, 1.0f), Tick.Unit);
+		}
+	}
+	// Vertical: the canvas's Y, down the left edge, below the horizontal ruler.
+	{
+		const float StartUnit = (HorizontalThickness - OriginPixel.Y) / ScaleY;
+		const float EndUnit = (ViewSize.Y - OriginPixel.Y) / ScaleY;
+		const float Step = ChooseDreamUIRulerStep(FMath::Abs(ScaleY), MinPixelsPerStep);
+		BuildDreamUIRulerTicks(FMath::Min(StartUnit, EndUnit), FMath::Max(StartUnit, EndUnit), Step, MinorPerMajor,
+			[&OriginPixel, ScaleY](float Unit) { return OriginPixel.Y + Unit * ScaleY; }, Ticks);
+		for (const FDreamUIRulerTick& Tick : Ticks)
+		{
+			if (Tick.Pixel < HorizontalThickness)continue;
+			const float Length = Tick.bMajor ? VerticalThickness : VerticalThickness * 0.25f;
+			DrawTick(FVector2D(VerticalThickness - Length, Tick.Pixel), FVector2D(VerticalThickness, Tick.Pixel));
+			if (Tick.bMajor)DrawLabel(FVector2D(2.0f, Tick.Pixel + 1.0f), Tick.Unit);
+		}
+	}
+	// Where the cursor is on each ruler. The readout in the corner says the same thing in numbers;
+	// this is the half of it that answers "and where is that on the canvas" without reading them.
+	if (bCursorInViewport)
+	{
+		const FVector2D Cursor = FVector2D(HoverPixel) / DpiScale;
+		FCanvasLineItem Horizontal(FVector2D(Cursor.X, 0.0f), FVector2D(Cursor.X, HorizontalThickness));
+		Horizontal.SetColor(CursorColor);
+		Canvas.DrawItem(Horizontal);
+		FCanvasLineItem Vertical(FVector2D(0.0f, Cursor.Y), FVector2D(VerticalThickness, Cursor.Y));
+		Vertical.SetColor(CursorColor);
+		Canvas.DrawItem(Vertical);
+	}
+}
+
 void FDreamUIPrefabEditorViewportClient::DrawCursorReadout(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
 {
 	if (!bCursorInViewport)return;
@@ -1113,6 +1223,12 @@ void FDreamUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 			SizeText.EnableShadow(FLinearColor::Black);
 			Canvas.DrawItem(SizeText);
 		}
+	}
+	// Drawn last: the strips sit at the viewport edges, where outlines and handles reach, and a
+	// ruler with a selection handle drawn through it is worse than no ruler.
+	if (IsOrtho() && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowDesignerRulers())
+	{
+		DrawDesignerRulers(InViewport, View, Canvas);
 	}
 	if (bDesignerDragging && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowDesignerGuides())
 	{

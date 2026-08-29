@@ -327,6 +327,8 @@ private:
 	void DrawSafeZoneGuide(FSceneView& View, FCanvas& Canvas) const;
 	/** The cursor's place on the design canvas, in the units the details panel is written in. */
 	void DrawCursorReadout(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
+	/** Rulers along the top and left edges, measured in the design canvas's own units. */
+	void DrawDesignerRulers(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	void DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const;
 	/** Where the animation chip's close button was last drawn, in raw viewport pixels; invalid outside animation mode. */
 	mutable FBox2D AnimationChipCloseRect = FBox2D(ForceInit);
