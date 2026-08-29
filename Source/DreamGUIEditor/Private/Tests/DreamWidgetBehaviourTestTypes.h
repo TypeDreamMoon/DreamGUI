@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Core/DreamUIBehaviour.h"
-#include "DreamUIPrefabBehaviourTestTypes.generated.h"
+#include "DreamWidgetBehaviourTestTypes.generated.h"
 
 class UDreamWidget;
 
@@ -35,7 +35,7 @@ public:
 		TObjectPtr<UDreamWidget> Absent;
 	/** Only a sub-prefab widget carries this name, which the prefab writer cannot reference. */
 	UPROPERTY(EditAnywhere)
-		TObjectPtr<UDreamWidget> InsideSubPrefab;
+		TObjectPtr<UDreamWidget> InsideNestedInstance;
 	/** Behaviour-typed bind: resolves to a component on the same-named widget. */
 	UPROPERTY(EditAnywhere)
 		TObjectPtr<UDreamUIAutoBindTargetBehaviour> Scoreboard;

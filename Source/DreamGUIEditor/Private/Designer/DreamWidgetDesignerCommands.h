@@ -13,7 +13,7 @@ public:
 	FDreamWidgetDesignerCommands()
 		: TCommands<FDreamWidgetDesignerCommands>(
 			TEXT("DreamUIPrefabEditor"), // Context name for fast lookup
-			NSLOCTEXT("Contexts", "DreamUIPrefabEditor", "DreamUI Prefab Editor"), // Localized context name for displaying
+			NSLOCTEXT("Contexts", "DreamUIPrefabEditor", "DreamUI Designer"), // Localized context name for displaying
 			NAME_None, // Parent
 			FDreamGUIEditorStyle::Get().GetStyleSetName() // Icon Style Set
 			)

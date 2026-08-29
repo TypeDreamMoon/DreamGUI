@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "MovieSceneSequenceEditor.h"
 
-struct FMovieSceneSequenceEditor_DreamUIPrefabSequence : FMovieSceneSequenceEditor
+struct FMovieSceneSequenceEditor_DreamWidgetAnimation : FMovieSceneSequenceEditor
 {
 	virtual bool CanCreateEvents(UMovieSceneSequence* InSequence) const override
 	{

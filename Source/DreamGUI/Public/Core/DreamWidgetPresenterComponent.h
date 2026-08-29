@@ -4,20 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
-#include "DreamUIPrefabPresenterComponent.generated.h"
+#include "DreamWidgetPresenterComponent.generated.h"
 
 class UDreamWidget;
 class UUINavigationInputSelectionHandler;
 class UDreamCanvas;
 class UDreamUserWidget;
 
-UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent), DisplayName="DreamUI Prefab Presenter Component")
-class DREAMGUI_API UDreamUIPrefabPresenterComponent : public UDreamWidgetPresenterComponentBase
+UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent), DisplayName="DreamUI Widget Presenter Component")
+class DREAMGUI_API UDreamWidgetPresenterComponent : public UDreamWidgetPresenterComponentBase
 {
 	GENERATED_BODY()
 
 public:
-	UDreamUIPrefabPresenterComponent();
+	UDreamWidgetPresenterComponent();
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

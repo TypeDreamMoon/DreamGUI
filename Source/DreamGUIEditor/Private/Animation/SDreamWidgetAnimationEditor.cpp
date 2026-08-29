@@ -4,8 +4,8 @@
 #include "SDreamWidgetAnimationEditor.h"
 #include "Core/DreamUserWidget.h"
 #include "K2Node_CallFunction.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
-#include "PrefabSystem/DreamUIWidgetBinding.h"
+#include "Animation/DreamUISequence.h"
+#include "Animation/DreamUIWidgetBinding.h"
 #include "DataFactory/DreamUISequenceFactory.h"
 #include "AssetToolsModule.h"
 #include "ObjectTools.h"
@@ -15,8 +15,8 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "ScopedTransaction.h"
 #include "Editor.h"
 #include "SDreamWidgetAnimationEditorWidget.h"
@@ -37,13 +37,13 @@
 
 struct FWidgetAnimationListItem
 {
-	FWidgetAnimationListItem(UDreamUIPrefabSequence* InAnimation, bool bInRenameRequestPending = false, bool bInNewAnimation = false)
+	FWidgetAnimationListItem(UDreamWidgetAnimation* InAnimation, bool bInRenameRequestPending = false, bool bInNewAnimation = false)
 		: Animation(InAnimation)
 		, bRenameRequestPending(bInRenameRequestPending)
 		, bNewAnimation(bInNewAnimation)
 	{}
 
-	UDreamUIPrefabSequence* Animation;
+	UDreamWidgetAnimation* Animation;
 	bool bRenameRequestPending;
 	bool bNewAnimation;
 };
@@ -102,7 +102,7 @@ private:
 		if (SequenceComp)
 		{
 			auto& SequenceArray = SequenceComp->GetSequenceArray();
-			auto ExistIndex = SequenceArray.IndexOfByPredicate([InText, this](const UDreamUIPrefabSequence* Item) {
+			auto ExistIndex = SequenceArray.IndexOfByPredicate([InText, this](const UDreamWidgetAnimation* Item) {
 				if (ListItem.Pin()->Animation == Item)
 				{
 					return false;
@@ -176,7 +176,7 @@ private:
 SDreamWidgetAnimationEditor::~SDreamWidgetAnimationEditor()
 {
 	FCoreUObjectDelegates::OnObjectsReplaced.Remove(OnObjectsReplacedHandle);
-	FDreamUIEditorTools::OnEditingPrefabChanged.Remove(EditingPrefabChangedHandle);
+	FDreamUIEditorTools::OnEditingWidgetChanged.Remove(EditingWidgetChangedHandle);
 	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoHandle);
 }
 
@@ -252,18 +252,18 @@ void SDreamWidgetAnimationEditor::Construct(const FArguments& InArgs)
 
 	OnObjectsReplacedHandle = FCoreUObjectDelegates::OnObjectsReplaced.AddSP(this, &SDreamWidgetAnimationEditor::OnObjectsReplaced);
 
-	PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
-	EditingPrefabChangedHandle = FDreamUIEditorTools::OnEditingPrefabChanged.AddRaw(this, &SDreamWidgetAnimationEditor::OnEditingPrefabChanged);
+	PrefabSequenceEditor->AssignSequence(GetAnimation());
+	EditingWidgetChangedHandle = FDreamUIEditorTools::OnEditingWidgetChanged.AddRaw(this, &SDreamWidgetAnimationEditor::OnEditingWidgetChanged);
 	PostUndoRedoHandle = FEditorDelegates::PostUndoRedo.AddSP(this, &SDreamWidgetAnimationEditor::OnPostUndoRedo);
 }
 
-void SDreamWidgetAnimationEditor::AssignDreamUIPrefabSequenceComponent(TWeakObjectPtr<UDreamUIPrefabSequenceComponent> InSequenceComponent)
+void SDreamWidgetAnimationEditor::AssignDreamWidgetAnimationComponent(TWeakObjectPtr<UDreamWidgetAnimationComponent> InSequenceComponent)
 {
 	WeakSequenceComponent = InSequenceComponent;
 	RefreshAnimationList();
 }
 
-UDreamUIPrefabSequence* SDreamWidgetAnimationEditor::GetPrefabSequence() const
+UDreamWidgetAnimation* SDreamWidgetAnimationEditor::GetAnimation() const
 {
 	return GetSelectedAnimation();
 }
@@ -306,7 +306,7 @@ void SDreamWidgetAnimationEditor::NotifyAnimationRenamed(const FString& OldName,
 		for (const UEdGraphNode* Node : Graph->Nodes)
 		{
 			const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
-			if (Call == nullptr || Call->FunctionReference.GetMemberName() != GET_FUNCTION_NAME_CHECKED(UDreamUIPrefabSequenceComponent, PlayAnimationByDisplayName))
+			if (Call == nullptr || Call->FunctionReference.GetMemberName() != GET_FUNCTION_NAME_CHECKED(UDreamWidgetAnimationComponent, PlayAnimationByDisplayName))
 			{
 				continue;
 			}
@@ -340,7 +340,7 @@ void SDreamWidgetAnimationEditor::ClearAnimationSelection()
 	}
 }
 
-void SDreamWidgetAnimationEditor::SelectAnimation(UDreamUIPrefabSequence* InAnimation)
+void SDreamWidgetAnimationEditor::SelectAnimation(UDreamWidgetAnimation* InAnimation)
 {
 	if (!AnimationListView.IsValid() || !IsValid(InAnimation))
 	{
@@ -368,20 +368,20 @@ void SDreamWidgetAnimationEditor::SelectAnimation(UDreamUIPrefabSequence* InAnim
 	}
 }
 
-UDreamUIPrefabSequenceComponent* SDreamWidgetAnimationEditor::FindAnimationHost(UDreamWidget* RootWidget) const
+UDreamWidgetAnimationComponent* SDreamWidgetAnimationEditor::FindAnimationHost(UDreamWidget* RootWidget) const
 {
 	if (!IsValid(RootWidget))
 	{
 		return nullptr;
 	}
 
-	if (UDreamUIPrefabSequenceComponent* RootHost = RootWidget->GetComponent<UDreamUIPrefabSequenceComponent>())
+	if (UDreamWidgetAnimationComponent* RootHost = RootWidget->GetComponent<UDreamWidgetAnimationComponent>())
 	{
 		return RootHost;
 	}
 
-	TFunction<UDreamUIPrefabSequenceComponent*(UDreamWidget*)> FindRecursive;
-	FindRecursive = [&](UDreamWidget* ParentWidget) -> UDreamUIPrefabSequenceComponent*
+	TFunction<UDreamWidgetAnimationComponent*(UDreamWidget*)> FindRecursive;
+	FindRecursive = [&](UDreamWidget* ParentWidget) -> UDreamWidgetAnimationComponent*
 	{
 		for (UDreamWidget* ChildWidget : ParentWidget->GetChildren())
 		{
@@ -390,11 +390,11 @@ UDreamUIPrefabSequenceComponent* SDreamWidgetAnimationEditor::FindAnimationHost(
 				continue;
 			}
 
-			if (UDreamUIPrefabSequenceComponent* LegacyHost = ChildWidget->GetComponent<UDreamUIPrefabSequenceComponent>())
+			if (UDreamWidgetAnimationComponent* LegacyHost = ChildWidget->GetComponent<UDreamWidgetAnimationComponent>())
 			{
 				return LegacyHost;
 			}
-			if (UDreamUIPrefabSequenceComponent* DescendantHost = FindRecursive(ChildWidget))
+			if (UDreamWidgetAnimationComponent* DescendantHost = FindRecursive(ChildWidget))
 			{
 				return DescendantHost;
 			}
@@ -404,18 +404,18 @@ UDreamUIPrefabSequenceComponent* SDreamWidgetAnimationEditor::FindAnimationHost(
 	return FindRecursive(RootWidget);
 }
 
-UDreamUIPrefabSequenceComponent* SDreamWidgetAnimationEditor::EnsureAnimationHost()
+UDreamWidgetAnimationComponent* SDreamWidgetAnimationEditor::EnsureAnimationHost()
 {
 	UDreamWidget* RootWidget = WeakRootWidget.Get();
 	if (!IsValid(RootWidget))
 	{
 		return nullptr;
 	}
-	if (UDreamUIPrefabSequenceComponent* ExistingHost = FindAnimationHost(RootWidget))
+	if (UDreamWidgetAnimationComponent* ExistingHost = FindAnimationHost(RootWidget))
 	{
 		if (WeakSequenceComponent.Get() != ExistingHost)
 		{
-			AssignDreamUIPrefabSequenceComponent(ExistingHost);
+			AssignDreamWidgetAnimationComponent(ExistingHost);
 		}
 		return ExistingHost;
 	}
@@ -427,7 +427,7 @@ UDreamUIPrefabSequenceComponent* SDreamWidgetAnimationEditor::EnsureAnimationHos
 		WidgetOuter->Modify();
 	}
 
-	UDreamUIPrefabSequenceComponent* NewHost = RootWidget->AddComponent<UDreamUIPrefabSequenceComponent>();
+	UDreamWidgetAnimationComponent* NewHost = RootWidget->AddComponent<UDreamWidgetAnimationComponent>();
 	if (!IsValid(NewHost))
 	{
 		return nullptr;
@@ -435,7 +435,7 @@ UDreamUIPrefabSequenceComponent* SDreamWidgetAnimationEditor::EnsureAnimationHos
 	NewHost->SetFlags(RF_Transactional);
 	NewHost->Modify();
 	FDreamUIUtils::NotifyPropertyChanged(RootWidget, UDreamWidget::GetPropertyName_Components());
-	AssignDreamUIPrefabSequenceComponent(NewHost);
+	AssignDreamWidgetAnimationComponent(NewHost);
 	MarkAnimationDataDirty();
 	return NewHost;
 }
@@ -461,18 +461,18 @@ void SDreamWidgetAnimationEditor::OnObjectsReplaced(const TMap<UObject*, UObject
 		}
 	}
 
-	if (UDreamUIPrefabSequenceComponent* Component = WeakSequenceComponent.Get(true))
+	if (UDreamWidgetAnimationComponent* Component = WeakSequenceComponent.Get(true))
 	{
-		if (UDreamUIPrefabSequenceComponent* NewSequenceComponent = Cast<UDreamUIPrefabSequenceComponent>(ReplacementMap.FindRef(Component)))
+		if (UDreamWidgetAnimationComponent* NewSequenceComponent = Cast<UDreamWidgetAnimationComponent>(ReplacementMap.FindRef(Component)))
 		{
-			AssignDreamUIPrefabSequenceComponent(NewSequenceComponent);
+			AssignDreamWidgetAnimationComponent(NewSequenceComponent);
 			return;
 		}
 	}
 
 	if (bRootReplaced)
 	{
-		AssignDreamUIPrefabSequenceComponent(FindAnimationHost(WeakRootWidget.Get()));
+		AssignDreamWidgetAnimationComponent(FindAnimationHost(WeakRootWidget.Get()));
 	}
 }
 
@@ -483,10 +483,10 @@ TSharedRef<ITableRow> SDreamWidgetAnimationEditor::OnGenerateRowForAnimationList
 
 void SDreamWidgetAnimationEditor::OnAnimationListViewSelectionChanged(TSharedPtr<FWidgetAnimationListItem> InListItem, ESelectInfo::Type InSelectInfo)
 {
-	PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
+	PrefabSequenceEditor->AssignSequence(GetAnimation());
 }
 
-UDreamUIPrefabSequence* SDreamWidgetAnimationEditor::GetSelectedAnimation() const
+UDreamWidgetAnimation* SDreamWidgetAnimationEditor::GetSelectedAnimation() const
 {
 	if (!AnimationListView.IsValid())
 	{
@@ -498,7 +498,7 @@ UDreamUIPrefabSequence* SDreamWidgetAnimationEditor::GetSelectedAnimation() cons
 
 int32 SDreamWidgetAnimationEditor::GetSelectedAnimationSourceIndex() const
 {
-	UDreamUIPrefabSequence* SelectedAnimation = GetSelectedAnimation();
+	UDreamWidgetAnimation* SelectedAnimation = GetSelectedAnimation();
 	return WeakSequenceComponent.IsValid() && IsValid(SelectedAnimation)
 		? WeakSequenceComponent->GetSequenceArray().IndexOfByKey(SelectedAnimation)
 		: INDEX_NONE;
@@ -511,7 +511,7 @@ bool SDreamWidgetAnimationEditor::CanExecuteAnimationListAction() const
 
 void SDreamWidgetAnimationEditor::RefreshAnimationList()
 {
-	UDreamUIPrefabSequence* PreviouslySelectedAnimation = GetSelectedAnimation();
+	UDreamWidgetAnimation* PreviouslySelectedAnimation = GetSelectedAnimation();
 	if (AnimationListView.IsValid())
 	{
 		AnimationListView->ClearSelection();
@@ -520,9 +520,9 @@ void SDreamWidgetAnimationEditor::RefreshAnimationList()
 	if (WeakSequenceComponent.IsValid())
 	{
 		const FText SearchText = SearchBoxPtr.IsValid() ? SearchBoxPtr->GetText() : FText::GetEmpty();
-		TTextFilter<UDreamUIPrefabSequence*> TextFilter(
-			TTextFilter<UDreamUIPrefabSequence*>::FItemToStringArray::CreateLambda(
-				[](UDreamUIPrefabSequence* InAnimation, TArray<FString>& OutFilterStrings)
+		TTextFilter<UDreamWidgetAnimation*> TextFilter(
+			TTextFilter<UDreamWidgetAnimation*>::FItemToStringArray::CreateLambda(
+				[](UDreamWidgetAnimation* InAnimation, TArray<FString>& OutFilterStrings)
 				{
 					OutFilterStrings.Add(InAnimation->GetDisplayNameString());
 					OutFilterStrings.Add(InAnimation->GetName());
@@ -533,7 +533,7 @@ void SDreamWidgetAnimationEditor::RefreshAnimationList()
 			SearchBoxPtr->SetError(TextFilter.GetFilterErrorText());
 		}
 
-		for (UDreamUIPrefabSequence* Item : WeakSequenceComponent->GetSequenceArray())
+		for (UDreamWidgetAnimation* Item : WeakSequenceComponent->GetSequenceArray())
 		{
 			if (IsValid(Item) && (SearchText.IsEmpty() || TextFilter.PassesFilter(Item)))
 			{
@@ -574,20 +574,20 @@ void SDreamWidgetAnimationEditor::RefreshAnimationList()
 
 void SDreamWidgetAnimationEditor::OnPostUndoRedo()
 {
-	AssignDreamUIPrefabSequenceComponent(FindAnimationHost(WeakRootWidget.Get()));
+	AssignDreamWidgetAnimationComponent(FindAnimationHost(WeakRootWidget.Get()));
 }
 
 // Trigger when opening a new prefab
-void SDreamWidgetAnimationEditor::OnEditingPrefabChanged(UDreamWidget* RootWidget)
+void SDreamWidgetAnimationEditor::OnEditingWidgetChanged(UDreamWidget* RootWidget)
 {
 	WeakRootWidget = RootWidget;
-	UDreamUIPrefabSequenceComponent* AnimationHost = FindAnimationHost(RootWidget);
+	UDreamWidgetAnimationComponent* AnimationHost = FindAnimationHost(RootWidget);
 
 	// A migration for animation hosts that older builds put on the transient preview root. It
 	// needed the prefab helper to tell preview from authored; the designer answers that itself now,
 	// and no build in this tree can produce that state any more.
 
-	AssignDreamUIPrefabSequenceComponent(AnimationHost);
+	AssignDreamWidgetAnimationComponent(AnimationHost);
 }
 
 TSharedPtr<ISequencer> SDreamWidgetAnimationEditor::GetSequencer() const
@@ -641,8 +641,8 @@ TSharedPtr<SWidget> SDreamWidgetAnimationEditor::OnContextMenuOpening()const
 											   "so if Widget's DisplayName and Widget's hierarchy is same as before, it is possible to fix the bad tracks."),
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([=, this]() {
-							UDreamUIPrefabSequenceComponent* SequenceComponent = WeakSequenceComponent.Get();
-							UDreamUIPrefabSequence* Animation = SelectedItem->Animation;
+							UDreamWidgetAnimationComponent* SequenceComponent = WeakSequenceComponent.Get();
+							UDreamWidgetAnimation* Animation = SelectedItem->Animation;
 							UDreamWidget* ContextWidget = IsValid(SequenceComponent) ? SequenceComponent->GetWidget() : nullptr;
 							if (!IsValid(Animation) || !IsValid(ContextWidget))
 							{
@@ -650,14 +650,14 @@ TSharedPtr<SWidget> SDreamWidgetAnimationEditor::OnContextMenuOpening()const
 							}
 
 							// A repair rewrites bindings the prefab has already saved, so it has to be
-							// both recorded and announced: RefreshOpenedPrefabEditor closes and reopens
+							// both recorded and announced: RefreshOpenedDesigner closes and reopens
 							// this editor without prompting, and a prefab that still looks clean takes
 							// the repair down with it.
 							TArray<FGuid> BrokenBindingsBefore;
 							Animation->GetInvalidObjectBindingIds(ContextWidget, BrokenBindingsBefore);
 
 							FScopedTransaction Transaction(LOCTEXT("FixObjectReference_Transaction", "Fix Animation Object References"));
-							// Recorded here rather than left to UDreamUIPrefabSequence::FixObjectReferences,
+							// Recorded here rather than left to UDreamWidgetAnimation::FixObjectReferences,
 							// which calls Modify() once the references have already been rewritten: the
 							// snapshot a transaction restores is taken when Modify() runs, so from in
 							// there it is a snapshot of the repair, and Cancel() below would keep a
@@ -717,10 +717,10 @@ void SDreamWidgetAnimationEditor::CreateCommandList()
 FReply SDreamWidgetAnimationEditor::OnNewAnimationClicked()
 {
 	const FScopedTransaction Transaction(LOCTEXT("AddAnimation_Transaction", "Add DreamUI Animation"));
-	if (UDreamUIPrefabSequenceComponent* SequenceComponent = EnsureAnimationHost())
+	if (UDreamWidgetAnimationComponent* SequenceComponent = EnsureAnimationHost())
 	{
 		SequenceComponent->Modify();
-		UDreamUIPrefabSequence* Sequence = SequenceComponent->AddNewAnimation();
+		UDreamWidgetAnimation* Sequence = SequenceComponent->AddNewAnimation();
 		MarkAnimationDataDirty();
 		if (SearchBoxPtr.IsValid())
 		{
@@ -746,7 +746,7 @@ void SDreamWidgetAnimationEditor::OnDuplicateAnimation()
 	{
 		const FScopedTransaction Transaction(LOCTEXT("DuplicateAnimation_Transaction", "DreamUISequence Duplicate Animation"));
 		WeakSequenceComponent->Modify();
-		UDreamUIPrefabSequence* Sequence = WeakSequenceComponent->DuplicateAnimationByIndex(SourceIndex);
+		UDreamWidgetAnimation* Sequence = WeakSequenceComponent->DuplicateAnimationByIndex(SourceIndex);
 		MarkAnimationDataDirty();
 
 		if (Sequence)
@@ -785,7 +785,7 @@ void SDreamWidgetAnimationEditor::OnDeleteAnimation()
 }
 void SDreamWidgetAnimationEditor::OnExportAnimationToAsset()
 {
-	UDreamUIPrefabSequence* Source = GetSelectedAnimation();
+	UDreamWidgetAnimation* Source = GetSelectedAnimation();
 	UDreamWidget* RootWidget = WeakRootWidget.Get();
 	if (Source == nullptr || RootWidget == nullptr)
 	{

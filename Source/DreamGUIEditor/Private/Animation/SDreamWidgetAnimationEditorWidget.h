@@ -6,7 +6,7 @@
 
 
 class SDreamWidgetAnimationEditorWidgetImpl;
-class UDreamUIPrefabSequence;
+class UDreamWidgetAnimation;
 
 class SDreamWidgetAnimationEditorWidget
 	: public SCompoundWidget
@@ -19,8 +19,8 @@ public:
 	void Construct(const FArguments&);
 	/** The window whose tab manager hosts spawned side panels (the curve editor). Defaults to the level editor. */
 	void SetToolkitHost(TSharedPtr<class IToolkitHost> InToolkitHost);
-	void AssignSequence(UDreamUIPrefabSequence* NewDreamUIPrefabSequence);
-	UDreamUIPrefabSequence* GetSequence() const;
+	void AssignSequence(UDreamWidgetAnimation* NewDreamWidgetAnimation);
+	UDreamWidgetAnimation* GetSequence() const;
 	FText GetDisplayLabel() const;
 	TSharedPtr<ISequencer> GetSequencer() const;
 

@@ -2,8 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIAnimEventTrackEditor.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIAnimEventTrack.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamUIAnimEventTrack.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "MovieScene.h"
 #include "ISequencerSection.h"
 #include "SequencerSectionPainter.h"
@@ -26,7 +26,7 @@ bool FDreamUIAnimEventTrackEditor::SupportsSequence(UMovieSceneSequence* InSeque
 {
 	// The trigger resolves through the hosting sequence component, which only a DreamUI prefab
 	// sequence has; showing the track anywhere else would author sections nothing can fire.
-	return InSequence != nullptr && InSequence->IsA<UDreamUIPrefabSequence>();
+	return InSequence != nullptr && InSequence->IsA<UDreamWidgetAnimation>();
 }
 
 bool FDreamUIAnimEventTrackEditor::SupportsType(TSubclassOf<UMovieSceneTrack> Type) const

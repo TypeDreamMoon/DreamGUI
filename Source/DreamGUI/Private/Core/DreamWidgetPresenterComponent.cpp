@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 
-#include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
+#include "Core/DreamWidgetPresenterComponent.h"
 #include "Core/DreamUserWidget.h"
 
 #include "DreamGUI.h"
@@ -12,23 +12,23 @@
 
 #define LOCTEXT_NAMESPACE "DreamWidgetPresenterComponent"
 
-UDreamUIPrefabPresenterComponent::UDreamUIPrefabPresenterComponent()
+UDreamWidgetPresenterComponent::UDreamWidgetPresenterComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
-void UDreamUIPrefabPresenterComponent::BeginPlay()
+void UDreamWidgetPresenterComponent::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
-void UDreamUIPrefabPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UDreamWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 }
 
-void UDreamUIPrefabPresenterComponent::LoadWidget()
+void UDreamWidgetPresenterComponent::LoadWidget()
 {
 	if (LoadedWidget.IsValid())
 	{
@@ -96,13 +96,13 @@ void UDreamUIPrefabPresenterComponent::LoadWidget()
 }
 
 #if WITH_EDITOR
-void UDreamUIPrefabPresenterComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UDreamWidgetPresenterComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (PropertyChangedEvent.MemberProperty != nullptr)
 	{
 		auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamUIPrefabPresenterComponent, WidgetClass))
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamWidgetPresenterComponent, WidgetClass))
 		{
 			LoadWidget();
 		}
@@ -112,7 +112,7 @@ void UDreamUIPrefabPresenterComponent::PostEditChangeProperty(FPropertyChangedEv
 
 #endif
 
-void UDreamUIPrefabPresenterComponent::SetWidgetClass(TSubclassOf<UDreamUserWidget> Value)
+void UDreamWidgetPresenterComponent::SetWidgetClass(TSubclassOf<UDreamUserWidget> Value)
 {
 	if (WidgetClass != Value)
 	{

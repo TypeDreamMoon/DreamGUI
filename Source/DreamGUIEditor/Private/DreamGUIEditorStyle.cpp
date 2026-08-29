@@ -173,7 +173,7 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassIcon.UINavigationInputSelectionHandler", new STARSHIP_ICON(TEXT("Navigation"), Icon16x16));
 	Style->Set("ClassIcon.DreamUIPlayTweenComponent", new STARSHIP_ICON(TEXT("Animation"), Icon16x16));
 	Style->Set("ClassIcon.DreamUIPlayTweenSequenceComponent", new STARSHIP_ICON(TEXT("Timeline"), Icon16x16));
-	Style->Set("ClassIcon.DreamUIPrefabSequenceComponent", new UMG_IMAGE(TEXT("Animations_16x"), Icon16x16));
+	Style->Set("ClassIcon.DreamWidgetAnimationComponent", new UMG_IMAGE(TEXT("Animations_16x"), Icon16x16));
 	Style->Set("ClassIcon.DreamUIMLBindingBehaviour", new IMAGE_BRUSH(TEXT("Xaml_16x"), Icon16x16));
 	Style->Set("ClassIcon.DreamUMGWidgetInteraction", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 

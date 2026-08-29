@@ -1,6 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIComponentTypes.h"
+#include "Animation/MovieSceneDreamUIComponentTypes.h"
 #include "EntitySystem/BuiltInComponentTypes.h"
 #include "EntitySystem/MovieSceneComponentRegistry.h"
 #include "EntitySystem/MovieSceneEntityFactoryTemplates.h"

@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceObjectReference.h"
+#include "Animation/DreamWidgetAnimationObjectReference.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/Blueprint.h"
@@ -10,7 +10,7 @@
 #include "Core/Components/DreamWidget.h"
 
 
-FString FDreamUIPrefabSequenceObjectReference::GetWidgetPathRelativeToContextWidget(UDreamWidget* InContextWidget, UDreamWidget* InWidget)
+FString FDreamWidgetAnimationObjectReference::GetWidgetPathRelativeToContextWidget(UDreamWidget* InContextWidget, UDreamWidget* InWidget)
 {
 	if (InWidget == InContextWidget)
 	{
@@ -29,7 +29,7 @@ FString FDreamUIPrefabSequenceObjectReference::GetWidgetPathRelativeToContextWid
 	}
 	return TEXT("");
 }
-UDreamWidget* FDreamUIPrefabSequenceObjectReference::GetWidgetFromContextWidgetByRelativePath(UDreamWidget* InContextWidget, const FString& InPath)
+UDreamWidget* FDreamWidgetAnimationObjectReference::GetWidgetFromContextWidgetByRelativePath(UDreamWidget* InContextWidget, const FString& InPath)
 {
 	if (InPath == TEXT("/"))
 	{
@@ -86,7 +86,7 @@ UDreamWidget* FDreamUIPrefabSequenceObjectReference::GetWidgetFromContextWidgetB
 	}
 	return nullptr;
 }
-bool FDreamUIPrefabSequenceObjectReference::FixObjectReferenceFromEditorHelpers(UDreamWidget* InContextWidget)
+bool FDreamWidgetAnimationObjectReference::FixObjectReferenceFromEditorHelpers(UDreamWidget* InContextWidget)
 {
 #if WITH_EDITOR
 	if (auto FoundHelper = GetWidgetFromContextWidgetByRelativePath(InContextWidget, this->HelperWidgetPath))
@@ -106,11 +106,11 @@ bool FDreamUIPrefabSequenceObjectReference::FixObjectReferenceFromEditorHelpers(
 	}
 	return false;
 }
-bool FDreamUIPrefabSequenceObjectReference::CanFixObjectReferenceFromEditorHelpers()const
+bool FDreamWidgetAnimationObjectReference::CanFixObjectReferenceFromEditorHelpers()const
 {
 	return !HelperWidgetPath.IsEmpty();
 }
-bool FDreamUIPrefabSequenceObjectReference::IsObjectReferenceGood(UDreamWidget* InContextWidget)const
+bool FDreamWidgetAnimationObjectReference::IsObjectReferenceGood(UDreamWidget* InContextWidget)const
 {
 	if (!IsValid(InContextWidget) || !CheckTargetObject() || !IsValid(Object))
 	{
@@ -129,7 +129,7 @@ bool FDreamUIPrefabSequenceObjectReference::IsObjectReferenceGood(UDreamWidget* 
 	}
 	return false;
 }
-bool FDreamUIPrefabSequenceObjectReference::IsEditorHelpersGood(UDreamWidget* InContextWidget)const
+bool FDreamWidgetAnimationObjectReference::IsEditorHelpersGood(UDreamWidget* InContextWidget)const
 {
 	return IsValid(HelperWidget)
 		&& HelperWidgetPath == GetWidgetPathRelativeToContextWidget(InContextWidget, HelperWidget)
@@ -137,7 +137,7 @@ bool FDreamUIPrefabSequenceObjectReference::IsEditorHelpersGood(UDreamWidget* In
 }
 #endif
 
-bool FDreamUIPrefabSequenceObjectReference::InitHelpers(UDreamWidget* InContextWidget)
+bool FDreamWidgetAnimationObjectReference::InitHelpers(UDreamWidget* InContextWidget)
 {
 	if (!IsValid(InContextWidget) || !IsValid(Object))
 	{
@@ -164,13 +164,13 @@ bool FDreamUIPrefabSequenceObjectReference::InitHelpers(UDreamWidget* InContextW
 		return true;
 	}
 }
-bool FDreamUIPrefabSequenceObjectReference::CreateForObject(UDreamWidget* InContextWidget, UObject* InObject, FDreamUIPrefabSequenceObjectReference& OutResult)
+bool FDreamWidgetAnimationObjectReference::CreateForObject(UDreamWidget* InContextWidget, UObject* InObject, FDreamWidgetAnimationObjectReference& OutResult)
 {
 	OutResult.Object = InObject;
 	return OutResult.InitHelpers(InContextWidget);
 }
 
-bool FDreamUIPrefabSequenceObjectReference::CheckTargetObject()const
+bool FDreamWidgetAnimationObjectReference::CheckTargetObject()const
 {
 	if (IsValid(Object))
 	{
@@ -196,13 +196,13 @@ bool FDreamUIPrefabSequenceObjectReference::CheckTargetObject()const
 	return false;
 }
 
-UObject* FDreamUIPrefabSequenceObjectReference::Resolve() const
+UObject* FDreamWidgetAnimationObjectReference::Resolve() const
 {
 	CheckTargetObject();
 	return Object;
 }
 
-UObject* FDreamUIPrefabSequenceObjectReference::ResolveInContext(UDreamWidget* InContextWidget) const
+UObject* FDreamWidgetAnimationObjectReference::ResolveInContext(UDreamWidget* InContextWidget) const
 {
 	if (!IsValid(InContextWidget) || HelperWidgetPath.IsEmpty())
 	{
@@ -223,13 +223,13 @@ UObject* FDreamUIPrefabSequenceObjectReference::ResolveInContext(UDreamWidget* I
 	return SubObjectPath.ResolveObject();
 }
 
-bool FDreamUIPrefabSequenceObjectReferenceMap::HasBinding(const FGuid& ObjectId) const
+bool FDreamWidgetAnimationObjectReferenceMap::HasBinding(const FGuid& ObjectId) const
 {
 	const int32 Index = BindingIds.IndexOfByKey(ObjectId);
 	return References.IsValidIndex(Index);
 }
 
-void FDreamUIPrefabSequenceObjectReferenceMap::RemoveBinding(const FGuid& ObjectId)
+void FDreamWidgetAnimationObjectReferenceMap::RemoveBinding(const FGuid& ObjectId)
 {
 	References.SetNum(BindingIds.Num());
 	int32 Index = BindingIds.IndexOfByKey(ObjectId);
@@ -240,7 +240,7 @@ void FDreamUIPrefabSequenceObjectReferenceMap::RemoveBinding(const FGuid& Object
 	}
 }
 
-void FDreamUIPrefabSequenceObjectReferenceMap::CreateBinding(const FGuid& ObjectId, const FDreamUIPrefabSequenceObjectReference& ObjectReference)
+void FDreamWidgetAnimationObjectReferenceMap::CreateBinding(const FGuid& ObjectId, const FDreamWidgetAnimationObjectReference& ObjectReference)
 {
 	References.SetNum(BindingIds.Num());
 	int32 ExistingIndex = BindingIds.IndexOfByKey(ObjectId);
@@ -254,7 +254,7 @@ void FDreamUIPrefabSequenceObjectReferenceMap::CreateBinding(const FGuid& Object
 	References[ExistingIndex].Array.AddUnique(ObjectReference);
 }
 
-void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBinding(const FGuid& ObjectId, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
+void FDreamWidgetAnimationObjectReferenceMap::ResolveBinding(const FGuid& ObjectId, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
 {
 	int32 Index = BindingIds.IndexOfByKey(ObjectId);
 	if (!References.IsValidIndex(Index))
@@ -262,7 +262,7 @@ void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBinding(const FGuid& Objec
 		return;
 	}
 
-	for (const FDreamUIPrefabSequenceObjectReference& Reference : References[Index].Array)
+	for (const FDreamWidgetAnimationObjectReference& Reference : References[Index].Array)
 	{
 		if (UObject* Object = Reference.Resolve())
 		{
@@ -271,7 +271,7 @@ void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBinding(const FGuid& Objec
 	}
 }
 
-void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBindingInContext(const FGuid& ObjectId,
+void FDreamWidgetAnimationObjectReferenceMap::ResolveBindingInContext(const FGuid& ObjectId,
 	UDreamWidget* InContextWidget, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
 {
 	const int32 Index = BindingIds.IndexOfByKey(ObjectId);
@@ -279,7 +279,7 @@ void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBindingInContext(const FGu
 	{
 		return;
 	}
-	for (const FDreamUIPrefabSequenceObjectReference& Reference : References[Index].Array)
+	for (const FDreamWidgetAnimationObjectReference& Reference : References[Index].Array)
 	{
 		if (UObject* Object = Reference.ResolveInContext(InContextWidget))
 		{
@@ -289,7 +289,7 @@ void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBindingInContext(const FGu
 }
 
 #if WITH_EDITOR
-bool FDreamUIPrefabSequenceObjectReferenceMap::IsObjectReferencesGood(UDreamWidget* InContextWidget)const
+bool FDreamWidgetAnimationObjectReferenceMap::IsObjectReferencesGood(UDreamWidget* InContextWidget)const
 {
 	if (BindingIds.Num() != References.Num()) return false;
 	for (auto& Reference : References)
@@ -304,12 +304,12 @@ bool FDreamUIPrefabSequenceObjectReferenceMap::IsObjectReferencesGood(UDreamWidg
 	}
 	return true;
 }
-void FDreamUIPrefabSequenceObjectReferenceMap::GetInvalidBindingIds(UDreamWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const
+void FDreamWidgetAnimationObjectReferenceMap::GetInvalidBindingIds(UDreamWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const
 {
 	const int32 Count = FMath::Min(BindingIds.Num(), References.Num());
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
-		for (const FDreamUIPrefabSequenceObjectReference& Reference : References[Index].Array)
+		for (const FDreamWidgetAnimationObjectReference& Reference : References[Index].Array)
 		{
 			if (!Reference.IsObjectReferenceGood(InContextWidget))
 			{
@@ -323,7 +323,7 @@ void FDreamUIPrefabSequenceObjectReferenceMap::GetInvalidBindingIds(UDreamWidget
 		OutBindingIds.AddUnique(BindingIds[Index]);
 	}
 }
-bool FDreamUIPrefabSequenceObjectReferenceMap::IsEditorHelpersGood(UDreamWidget* InContextWidget)const
+bool FDreamWidgetAnimationObjectReferenceMap::IsEditorHelpersGood(UDreamWidget* InContextWidget)const
 {
 	if (BindingIds.Num() != References.Num()) return false;
 	for (auto& Reference : References)
@@ -338,7 +338,7 @@ bool FDreamUIPrefabSequenceObjectReferenceMap::IsEditorHelpersGood(UDreamWidget*
 	}
 	return true;
 }
-bool FDreamUIPrefabSequenceObjectReferenceMap::FixObjectReferences(UDreamWidget* InContextWidget)
+bool FDreamWidgetAnimationObjectReferenceMap::FixObjectReferences(UDreamWidget* InContextWidget)
 {
 	bool anythingChanged = false;
 	for (auto& Reference : References)
@@ -356,7 +356,7 @@ bool FDreamUIPrefabSequenceObjectReferenceMap::FixObjectReferences(UDreamWidget*
 	}
 	return anythingChanged;
 }
-bool FDreamUIPrefabSequenceObjectReferenceMap::FixEditorHelpers(UDreamWidget* InContextWidget)
+bool FDreamWidgetAnimationObjectReferenceMap::FixEditorHelpers(UDreamWidget* InContextWidget)
 {
 	bool anythingChanged = false;
 	for (auto& Reference : References)

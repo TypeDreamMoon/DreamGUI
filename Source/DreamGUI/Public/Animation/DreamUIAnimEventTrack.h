@@ -11,7 +11,7 @@
 
 /**
  * One named trigger key on the animation timeline. The name is broadcast through the hosting
- * UDreamUIPrefabSequenceComponent's OnAnimationEvent delegate when playback crosses the key.
+ * UDreamWidgetAnimationComponent's OnAnimationEvent delegate when playback crosses the key.
  *
  * This is DreamUI's stand-in for the engine's event track. The engine track needs a director
  * blueprint instance and refuses to fire in an editor world unless the endpoint is CallInEditor;

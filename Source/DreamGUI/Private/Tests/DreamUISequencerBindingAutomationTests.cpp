@@ -5,10 +5,10 @@
 
 #include "Misc/AutomationTest.h"
 #include "Core/Components/DreamWidget.h"
-#include "PrefabSystem/DreamUIWidgetBinding.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIAnimEventTrack.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamUIWidgetBinding.h"
+#include "Animation/DreamUISequence.h"
+#include "Animation/DreamUIAnimEventTrack.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
 #include "MovieSceneBindingReferences.h"
@@ -151,7 +151,7 @@ bool FDreamUIAnimEventTrackShapeTest::RunTest(const FString& Parameters)
 	Section->EventChannel.GetData().AddKey(FFrameNumber(20), TEXT("Closed"));
 	TestEqual(TEXT("Trigger times mirror the channel keys"), Section->GetTriggerTimes().Num(), 2);
 
-	UDreamUIPrefabSequenceComponent* Component = Tree.Root->AddComponent<UDreamUIPrefabSequenceComponent>();
+	UDreamWidgetAnimationComponent* Component = Tree.Root->AddComponent<UDreamWidgetAnimationComponent>();
 	if (!TestNotNull(TEXT("Component created"), Component))return false;
 	// The dynamic delegate wants a UFUNCTION listener, which a test cannot supply cheaply; what the
 	// runtime contract requires is that broadcasting with no listeners is a safe no-op.

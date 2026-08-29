@@ -14,7 +14,7 @@ class UDreamUserWidget;
 /**
  * A DreamGUI animation as a standalone asset.
  *
- * The embedded UDreamUIPrefabSequence lives inside one widget's sequence component and can be
+ * The embedded UDreamWidgetAnimation lives inside one widget's sequence component and can be
  * played only there. This asset form exists so a Level Sequence can play the same animation as an
  * ordinary subsequence -- scrubbing, time-warping and blending included -- and so one animation can
  * be reused across widget classes.

@@ -4,7 +4,7 @@
 #pragma once
 
 #include "UObject/LazyObjectPtr.h"
-#include "DreamUIPrefabSequenceObjectReference.generated.h"
+#include "DreamWidgetAnimationObjectReference.generated.h"
 
 class UDreamWidget;
 
@@ -12,7 +12,7 @@ class UDreamWidget;
  * An external reference to a level sequence object, resolvable through an arbitrary context.
  */
 USTRUCT()
-struct DREAMGUI_API FDreamUIPrefabSequenceObjectReference
+struct DREAMGUI_API FDreamWidgetAnimationObjectReference
 {
 	GENERATED_BODY()
 
@@ -38,7 +38,7 @@ public:
 	bool IsObjectReferenceGood(UDreamWidget* InContextWidget)const;
 	bool IsEditorHelpersGood(UDreamWidget* InContextWidget)const;
 #endif
-	static bool CreateForObject(UDreamWidget* InContextWidget, UObject* InObject, FDreamUIPrefabSequenceObjectReference& OutResult);
+	static bool CreateForObject(UDreamWidget* InContextWidget, UObject* InObject, FDreamWidgetAnimationObjectReference& OutResult);
 
 	bool InitHelpers(UDreamWidget* InContextWidget);
 	bool CheckTargetObject()const;
@@ -60,7 +60,7 @@ public:
 	/**
 	 * Equality comparator
 	 */
-	friend bool operator==(const FDreamUIPrefabSequenceObjectReference& A, const FDreamUIPrefabSequenceObjectReference& B)
+	friend bool operator==(const FDreamWidgetAnimationObjectReference& A, const FDreamWidgetAnimationObjectReference& B)
 	{
 		return A.Resolve() == B.Resolve();
 	}
@@ -85,16 +85,16 @@ private:
 };
 
 USTRUCT()
-struct FDreamUIPrefabSequenceObjectReferences
+struct FDreamWidgetAnimationObjectReferences
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TArray<FDreamUIPrefabSequenceObjectReference> Array;
+	TArray<FDreamWidgetAnimationObjectReference> Array;
 };
 
 USTRUCT()
-struct FDreamUIPrefabSequenceObjectReferenceMap
+struct FDreamWidgetAnimationObjectReferenceMap
 {
 	GENERATED_BODY()
 
@@ -120,7 +120,7 @@ struct FDreamUIPrefabSequenceObjectReferenceMap
 	 * @param ObjectId				The ID to associate the component with
 	 * @param ObjectReference	The component reference to bind
 	 */
-	void CreateBinding(const FGuid& ObjectId, const FDreamUIPrefabSequenceObjectReference& ObjectReference);
+	void CreateBinding(const FGuid& ObjectId, const FDreamWidgetAnimationObjectReference& ObjectReference);
 
 	/**
 	 * Resolve a binding for the specified ID using a given context
@@ -146,5 +146,5 @@ private:
 	TArray<FGuid> BindingIds;
 
 	UPROPERTY()
-	TArray<FDreamUIPrefabSequenceObjectReferences> References;
+	TArray<FDreamWidgetAnimationObjectReferences> References;
 };

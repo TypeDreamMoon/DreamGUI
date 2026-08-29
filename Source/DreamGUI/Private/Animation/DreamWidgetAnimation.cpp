@@ -1,39 +1,39 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "MovieScene.h"
 #include "Core/Components/DreamWidget.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Tracks/MovieSceneAudioTrack.h"
 #include "Tracks/MovieSceneEventTrack.h"
 #include "Tracks/MovieSceneMaterialParameterCollectionTrack.h"
 #include "Tracks/MovieSceneTimeWarpTrack.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIAnimEventTrack.h"
+#include "Animation/DreamUIAnimEventTrack.h"
 
 #if WITH_EDITOR
-UDreamUIPrefabSequence::FOnInitialize UDreamUIPrefabSequence::OnInitializeSequenceEvent;
+UDreamWidgetAnimation::FOnInitialize UDreamWidgetAnimation::OnInitializeSequenceEvent;
 #endif
 
 static TAutoConsoleVariable<int32> CVarDefaultEvaluationType(
-	TEXT("DreamGUIPrefabSequence.DefaultEvaluationType"),
+	TEXT("DreamWidgetAnimation.DefaultEvaluationType"),
 	0,
 	TEXT("0: Playback locked to playback frames\n1: Unlocked playback with sub frame interpolation"),
 	ECVF_Default);
 
 static TAutoConsoleVariable<FString> CVarDefaultTickResolution(
-	TEXT("DreamGUIPrefabSequence.DefaultTickResolution"),
+	TEXT("DreamWidgetAnimation.DefaultTickResolution"),
 	TEXT("24000fps"),
 	TEXT("Specifies default a tick resolution for newly created level sequences. Examples: 30 fps, 120/1 (120 fps), 30000/1001 (29.97), 0.01s (10ms)."),
 	ECVF_Default);
 
 static TAutoConsoleVariable<FString> CVarDefaultDisplayRate(
-	TEXT("DreamGUIPrefabSequence.DefaultDisplayRate"),
+	TEXT("DreamWidgetAnimation.DefaultDisplayRate"),
 	TEXT("30fps"),
 	TEXT("Specifies default a display frame rate for newly created level sequences; also defines frame locked frame rate where sequences are set to be frame locked. Examples: 30 fps, 120/1 (120 fps), 30000/1001 (29.97), 0.01s (10ms)."),
 	ECVF_Default);
 
-UDreamUIPrefabSequence::UDreamUIPrefabSequence(const FObjectInitializer& ObjectInitializer)
+UDreamWidgetAnimation::UDreamWidgetAnimation(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, MovieScene(nullptr)
 #if WITH_EDITORONLY_DATA
@@ -48,12 +48,12 @@ UDreamUIPrefabSequence::UDreamUIPrefabSequence(const FObjectInitializer& ObjectI
 	DisplayNameString = this->GetName();
 }
 
-bool UDreamUIPrefabSequence::IsEditable() const
+bool UDreamWidgetAnimation::IsEditable() const
 {
 	return true;
 }
 
-void UDreamUIPrefabSequence::PostInitProperties()
+void UDreamWidgetAnimation::PostInitProperties()
 {
 #if WITH_EDITOR && WITH_EDITORONLY_DATA
 
@@ -83,9 +83,9 @@ void UDreamUIPrefabSequence::PostInitProperties()
 	Super::PostInitProperties();
 }
 
-void UDreamUIPrefabSequence::BindPossessableObject(const FGuid& ObjectId, UObject& PossessedObject, UObject* Context)
+void UDreamWidgetAnimation::BindPossessableObject(const FGuid& ObjectId, UObject& PossessedObject, UObject* Context)
 {
-	FDreamUIPrefabSequenceObjectReference ObjectRef;
+	FDreamWidgetAnimationObjectReference ObjectRef;
 	auto Widget = Cast<UDreamWidget>(&PossessedObject);
 	if (Widget == nullptr)
 	{
@@ -100,13 +100,13 @@ void UDreamUIPrefabSequence::BindPossessableObject(const FGuid& ObjectId, UObjec
 	{
 		ContextWidget = Widget;
 	}
-	if (FDreamUIPrefabSequenceObjectReference::CreateForObject(ContextWidget, &PossessedObject, ObjectRef))
+	if (FDreamWidgetAnimationObjectReference::CreateForObject(ContextWidget, &PossessedObject, ObjectRef))
 	{
 		ObjectReferences.CreateBinding(ObjectId, ObjectRef);
 	}
 }
 
-bool UDreamUIPrefabSequence::CanPossessObject(UObject& Object, UObject* InPlaybackContext) const
+bool UDreamWidgetAnimation::CanPossessObject(UObject& Object, UObject* InPlaybackContext) const
 {
 	if (InPlaybackContext == nullptr)
 	{
@@ -130,7 +130,7 @@ bool UDreamUIPrefabSequence::CanPossessObject(UObject& Object, UObject* InPlayba
 	return false;
 }
 
-void UDreamUIPrefabSequence::LocateBoundObjects(const FGuid& ObjectId,
+void UDreamWidgetAnimation::LocateBoundObjects(const FGuid& ObjectId,
 	const UE::UniversalObjectLocator::FResolveParams& ResolveParams,
 	TSharedPtr<const FSharedPlaybackState> SharedPlaybackState, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
 {
@@ -151,29 +151,29 @@ void UDreamUIPrefabSequence::LocateBoundObjects(const FGuid& ObjectId,
 	ObjectReferences.ResolveBinding(ObjectId, OutObjects);
 }
 
-UMovieScene* UDreamUIPrefabSequence::GetMovieScene() const
+UMovieScene* UDreamWidgetAnimation::GetMovieScene() const
 {
 	return MovieScene;
 }
 
-UObject* UDreamUIPrefabSequence::GetParentObject(UObject* Object) const
+UObject* UDreamWidgetAnimation::GetParentObject(UObject* Object) const
 {
 	return Object->GetTypedOuter<UDreamWidget>();
 }
 
-void UDreamUIPrefabSequence::UnbindPossessableObjects(const FGuid& ObjectId)
+void UDreamWidgetAnimation::UnbindPossessableObjects(const FGuid& ObjectId)
 {
 	ObjectReferences.RemoveBinding(ObjectId);
 }
 
-UObject* UDreamUIPrefabSequence::CreateDirectorInstance(TSharedRef<const FSharedPlaybackState> SharedPlaybackState, FMovieSceneSequenceID SequenceID)
+UObject* UDreamWidgetAnimation::CreateDirectorInstance(TSharedRef<const FSharedPlaybackState> SharedPlaybackState, FMovieSceneSequenceID SequenceID)
 {
 	return nullptr;
 }
 
 #if WITH_EDITOR
 
-ETrackSupport UDreamUIPrefabSequence::IsTrackSupportedImpl(TSubclassOf<class UMovieSceneTrack> InTrackClass) const
+ETrackSupport UDreamWidgetAnimation::IsTrackSupportedImpl(TSubclassOf<class UMovieSceneTrack> InTrackClass) const
 {
 	if (InTrackClass == UMovieSceneAudioTrack::StaticClass() ||
 		// InTrackClass == UMovieSceneEventTrack::StaticClass() ||
@@ -187,7 +187,7 @@ ETrackSupport UDreamUIPrefabSequence::IsTrackSupportedImpl(TSubclassOf<class UMo
 	return Super::IsTrackSupportedImpl(InTrackClass);
 }
 
-bool UDreamUIPrefabSequence::IsFilterSupportedImpl(const FString& InFilterName) const
+bool UDreamWidgetAnimation::IsFilterSupportedImpl(const FString& InFilterName) const
 {
 	// The default answer of "every filter" fills the dropdown with Camera Cuts and Skeletal Mesh
 	// entries nothing here can ever produce; this is UWidgetAnimation's list minus Event (the event
@@ -204,23 +204,23 @@ bool UDreamUIPrefabSequence::IsFilterSupportedImpl(const FString& InFilterName) 
 	return SupportedFilters.Contains(InFilterName);
 }
 
-bool UDreamUIPrefabSequence::IsObjectReferencesGood(UDreamWidget* InContextWidget)const
+bool UDreamWidgetAnimation::IsObjectReferencesGood(UDreamWidget* InContextWidget)const
 {
 	return ObjectReferences.IsObjectReferencesGood(InContextWidget);
 }
-void UDreamUIPrefabSequence::GetInvalidObjectBindingIds(UDreamWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const
+void UDreamWidgetAnimation::GetInvalidObjectBindingIds(UDreamWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const
 {
 	ObjectReferences.GetInvalidBindingIds(InContextWidget, OutBindingIds);
 }
-bool UDreamUIPrefabSequence::HasObjectBindingCountMismatch() const
+bool UDreamWidgetAnimation::HasObjectBindingCountMismatch() const
 {
 	return ObjectReferences.HasBindingCountMismatch();
 }
-bool UDreamUIPrefabSequence::IsEditorHelpersGood(UDreamWidget* InContextWidget)const
+bool UDreamWidgetAnimation::IsEditorHelpersGood(UDreamWidget* InContextWidget)const
 {
 	return ObjectReferences.IsEditorHelpersGood(InContextWidget);
 }
-void UDreamUIPrefabSequence::FixObjectReferences(UDreamWidget* InContextWidget)
+void UDreamWidgetAnimation::FixObjectReferences(UDreamWidget* InContextWidget)
 {
 	// Modify() snapshots what the object holds right now, so it has to run before the repair.
 	// Recording afterwards stores the already-repaired value as the thing to undo back to, which
@@ -228,7 +228,7 @@ void UDreamUIPrefabSequence::FixObjectReferences(UDreamWidget* InContextWidget)
 	this->Modify();
 	ObjectReferences.FixObjectReferences(InContextWidget);
 }
-void UDreamUIPrefabSequence::FixEditorHelpers(UDreamWidget* InContextWidget)
+void UDreamWidgetAnimation::FixEditorHelpers(UDreamWidget* InContextWidget)
 {
 	this->Modify();
 	ObjectReferences.FixEditorHelpers(InContextWidget);

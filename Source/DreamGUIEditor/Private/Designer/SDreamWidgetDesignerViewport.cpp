@@ -79,7 +79,7 @@ bool SDreamWidgetDesignerViewport::SummonContextMenu()
 		EPopupMethod::UseCurrentWindow).IsValid();
 }
 
-namespace DreamUIPrefabViewportLocal
+namespace DreamWidgetDesignerViewportLocal
 {
 	static FIntPoint ToViewportPixel(const FGeometry& Geometry, const FVector2D& ScreenPosition, FViewport* Viewport)
 	{
@@ -97,7 +97,7 @@ FReply SDreamWidgetDesignerViewport::OnDragOver(const FGeometry& MyGeometry, con
 {
 	if (DragDropEvent.GetOperationAs<FDreamUIPaletteDragDropOp>().IsValid() && EditorViewportClient.IsValid())
 	{
-		const FIntPoint Pixel = DreamUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Target = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		EditorViewportClient->SetPaletteDropPreview(Target);
 		return Target ? FReply::Handled() : FReply::Unhandled();
@@ -111,7 +111,7 @@ FReply SDreamWidgetDesignerViewport::OnDragOver(const FGeometry& MyGeometry, con
 		&& (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid()
 			|| DragDropEvent.GetOperationAs<FHierarchyDreamWidgetDragDropOp>().IsValid()))
 	{
-		const FIntPoint Pixel = DreamUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Target = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		// ProcessHierarchyDragDrop is the tree's own validator: it refuses a cycle, a full parent
 		// and a drop onto the dragged widget itself, and writes the reason onto the cursor. Asking
@@ -130,7 +130,7 @@ FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const F
 	{
 		TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
-		const FIntPoint Pixel = DreamUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		if (!Parent)return FReply::Unhandled();
 		FVector DropWorldPosition = FVector::ZeroVector;
@@ -154,7 +154,7 @@ FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const F
 	{
 		TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
-		const FIntPoint Pixel = DreamUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		EditorViewportClient->ClearPaletteDropPreview();
 		if (!Parent)return FReply::Unhandled();

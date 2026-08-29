@@ -6,12 +6,12 @@
 #include "Components/ActorComponent.h"
 #include "MovieSceneSequencePlayer.h"
 #include "Core/DreamUIBehaviour.h"
-#include "DreamUIPrefabSequenceComponent.generated.h"
+#include "DreamWidgetAnimationComponent.generated.h"
 
 
-class UDreamUIPrefabSequence;
+class UDreamWidgetAnimation;
 class UDreamUISequence;
-class UDreamUIPrefabSequencePlayer;
+class UDreamWidgetAnimationPlayer;
 
 UENUM(BlueprintType)
 enum class EDreamUIAnimationPlayMode : uint8
@@ -26,7 +26,7 @@ struct DREAMGUI_API FDreamUIAnimationHandle
 	GENERATED_BODY()
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "DreamUI|Animation")
-	TObjectPtr<UDreamUIPrefabSequencePlayer> Player = nullptr;
+	TObjectPtr<UDreamWidgetAnimationPlayer> Player = nullptr;
 
 	bool IsValid() const;
 };
@@ -36,21 +36,21 @@ struct DREAMGUI_API FDreamUIAnimationHandle
  */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamUIAnimEventDelegate, FName, EventName);
 
-UCLASS(Blueprintable, ClassGroup=DreamGUI, meta=(BlueprintSpawnableComponent), DisplayName="DreamUI Prefab Sequence Component")
-class DREAMGUI_API UDreamUIPrefabSequenceComponent
+UCLASS(Blueprintable, ClassGroup=DreamGUI, meta=(BlueprintSpawnableComponent), DisplayName="DreamUI Widget Animation Component")
+class DREAMGUI_API UDreamWidgetAnimationComponent
 	: public UDreamUIBehaviour
 {
 public:
 	GENERATED_BODY()
 
-	UDreamUIPrefabSequenceComponent();
+	UDreamWidgetAnimationComponent();
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		UDreamUIPrefabSequence* GetSequenceByDisplayName(const FString& InName) const;
+		UDreamWidgetAnimation* GetSequenceByDisplayName(const FString& InName) const;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		UDreamUIPrefabSequence* GetSequenceByIndex(int32 InIndex) const;
+		UDreamWidgetAnimation* GetSequenceByIndex(int32 InIndex) const;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		const TArray<UDreamUIPrefabSequence*>& GetSequenceArray() const { return SequenceArray; }
+		const TArray<UDreamWidgetAnimation*>& GetSequenceArray() const { return SequenceArray; }
 	/** Init SequencePlayer with current sequence. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		void InitSequencePlayer();
@@ -64,9 +64,9 @@ public:
 		int32 GetCurrentSequenceIndex()const { return CurrentSequenceIndex; }
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		UDreamUIPrefabSequence* GetCurrentSequence() const { return GetSequenceByIndex(CurrentSequenceIndex); }
+		UDreamWidgetAnimation* GetCurrentSequence() const { return GetSequenceByIndex(CurrentSequenceIndex); }
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		UDreamUIPrefabSequencePlayer* GetSequencePlayer() const { return SequencePlayer; }
+		UDreamWidgetAnimationPlayer* GetSequencePlayer() const { return SequencePlayer; }
 
 	/**
 	 * Plays a new animation instance without interrupting animations already running on this prefab.
@@ -102,9 +102,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
 	void BroadcastAnimationEvent(FName EventName) { OnAnimationEvent.Broadcast(EventName); }
 
-	UDreamUIPrefabSequence* AddNewAnimation();
+	UDreamWidgetAnimation* AddNewAnimation();
 	bool DeleteAnimationByIndex(int32 InIndex);
-	UDreamUIPrefabSequence* DuplicateAnimationByIndex(int32 InIndex);
+	UDreamWidgetAnimation* DuplicateAnimationByIndex(int32 InIndex);
 	
 	virtual void Awake()override;
 	virtual void OnDestroy() override;
@@ -124,7 +124,7 @@ protected:
 	FMovieSceneSequencePlaybackSettings PlaybackSettings;
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category= Playback)
-		TArray<TObjectPtr<UDreamUIPrefabSequence>> SequenceArray;
+		TArray<TObjectPtr<UDreamWidgetAnimation>> SequenceArray;
 	/** Standalone animation assets this component can also play, addressed by asset name. */
 	UPROPERTY(EditAnywhere, Category = Playback)
 		TArray<TObjectPtr<UDreamUISequence>> SequenceAssets;
@@ -132,13 +132,13 @@ protected:
 		int32 CurrentSequenceIndex = 0;
 
 	UPROPERTY(transient)
-		TObjectPtr<UDreamUIPrefabSequencePlayer> SequencePlayer;
+		TObjectPtr<UDreamWidgetAnimationPlayer> SequencePlayer;
 
 	/** Players created by PlayAnimationByDisplayName. Kept alive independently for concurrent playback. */
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UDreamUIPrefabSequencePlayer>> ActiveSequencePlayers;
+	TArray<TObjectPtr<UDreamWidgetAnimationPlayer>> ActiveSequencePlayers;
 
-	void HandleActiveSequencePlayerFinished(UDreamUIPrefabSequencePlayer* Player);
-	bool IsActiveSequencePlayer(const UDreamUIPrefabSequencePlayer* Player) const;
-	void ReleaseActiveSequencePlayer(UDreamUIPrefabSequencePlayer* Player, bool bStopPlayer = true);
+	void HandleActiveSequencePlayerFinished(UDreamWidgetAnimationPlayer* Player);
+	bool IsActiveSequencePlayer(const UDreamWidgetAnimationPlayer* Player) const;
+	void ReleaseActiveSequencePlayer(UDreamWidgetAnimationPlayer* Player, bool bStopPlayer = true);
 };

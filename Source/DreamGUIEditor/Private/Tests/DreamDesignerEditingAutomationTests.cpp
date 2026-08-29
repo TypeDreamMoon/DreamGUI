@@ -17,8 +17,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Interaction/UITextInput.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "Core/Components/DreamText.h"
 #include "Designer/DreamWidgetPropertyBindingExtension.h"
 #include "EdGraph/EdGraph.h"
@@ -815,18 +815,18 @@ bool FDreamDesignerAnimationReachesTheAssetTest::RunTest(const FString&)
 	TestEqual(TEXT("And it is the AUTHORED root, not the preview's"), Host, Tree->RootWidget.Get());
 
 	// Which means a new animation lands in the asset.
-	UDreamUIPrefabSequenceComponent* Animator =
-		Cast<UDreamUIPrefabSequenceComponent>(Host->AddComponent(UDreamUIPrefabSequenceComponent::StaticClass()));
+	UDreamWidgetAnimationComponent* Animator =
+		Cast<UDreamWidgetAnimationComponent>(Host->AddComponent(UDreamWidgetAnimationComponent::StaticClass()));
 	if (TestNotNull(TEXT("An animation host component"), Animator))
 	{
-		UDreamUIPrefabSequence* Sequence = Animator->AddNewAnimation();
+		UDreamWidgetAnimation* Sequence = Animator->AddNewAnimation();
 		TestNotNull(TEXT("And an animation on it"), Sequence);
 
 		Scoped.Rebuild();
 		// Survives the rebuild, because it was never on the thing that gets rebuilt.
 		UDreamWidget* RootAfter = Scoped.Blueprint->WidgetTree->RootWidget.Get();
-		UDreamUIPrefabSequenceComponent* AnimatorAfter =
-			IsValid(RootAfter) ? RootAfter->GetComponent<UDreamUIPrefabSequenceComponent>() : nullptr;
+		UDreamWidgetAnimationComponent* AnimatorAfter =
+			IsValid(RootAfter) ? RootAfter->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
 		if (TestNotNull(TEXT("The asset still carries the host"), AnimatorAfter))
 		{
 			TestEqual(TEXT("And the animation"), AnimatorAfter->GetSequenceArray().Num(), 1);

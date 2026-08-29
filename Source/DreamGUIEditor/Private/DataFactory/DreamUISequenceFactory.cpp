@@ -2,7 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUISequenceFactory.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
+#include "Animation/DreamUISequence.h"
 #include "MovieScene.h"
 #include "Animation/DreamUISequenceEditorToolkit.h"
 

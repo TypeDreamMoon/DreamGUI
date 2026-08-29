@@ -5,20 +5,20 @@
 
 #include "MovieSceneSequence.h"
 #include "MovieScene.h"
-#include "DreamUIPrefabSequenceObjectReference.h"
-#include "DreamUIPrefabSequence.generated.h"
+#include "DreamWidgetAnimationObjectReference.h"
+#include "DreamWidgetAnimation.generated.h"
 
 /**
  * Movie scene animation embedded within DreamGUI prefab.
  */
-UCLASS(BlueprintType, DefaultToInstanced, DisplayName="DreamUI Prefab Sequence")
-class DREAMGUI_API UDreamUIPrefabSequence
+UCLASS(BlueprintType, DefaultToInstanced, DisplayName="DreamUI Widget Animation")
+class DREAMGUI_API UDreamWidgetAnimation
 	: public UMovieSceneSequence
 {
 public:
 	GENERATED_BODY()
 
-	UDreamUIPrefabSequence(const FObjectInitializer& ObjectInitializer);
+	UDreamWidgetAnimation(const FObjectInitializer& ObjectInitializer);
 
 	//~ UMovieSceneSequence interface
 	virtual void BindPossessableObject(const FGuid& ObjectId, UObject& PossessedObject, UObject* Context) override;
@@ -54,7 +54,7 @@ private:
 
 	/** Collection of object references. */
 	UPROPERTY()
-	FDreamUIPrefabSequenceObjectReferenceMap ObjectReferences;
+	FDreamWidgetAnimationObjectReferenceMap ObjectReferences;
 
 	UPROPERTY()
 	FString DisplayNameString;
@@ -63,7 +63,7 @@ private:
 public:
 
 	/** Event that is fired to initialize default state for a sequence */
-	DECLARE_EVENT_OneParam(UDreamUIPrefabSequence, FOnInitialize, UDreamUIPrefabSequence*)
+	DECLARE_EVENT_OneParam(UDreamWidgetAnimation, FOnInitialize, UDreamWidgetAnimation*)
 	static FOnInitialize& OnInitializeSequence() { return OnInitializeSequenceEvent; }
 
 	bool IsObjectReferencesGood(UDreamWidget* InContextWidget)const;

@@ -1,11 +1,11 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
 
 #include "Core/DreamWidgetPresenterComponentBase.h"
-#include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
+#include "Core/DreamWidgetPresenterComponent.h"
 #include "XMLSupport/DreamUIMLPresenterComponent.h"
 #include "UObject/UObjectIterator.h"
 #include "Core/DreamGUISettings.h"
@@ -34,8 +34,8 @@ bool FDreamPresenterBaseIsAbstractTest::RunTest(const FString& Parameters)
 		UDreamWidgetPresenterComponentBase::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
 
 	// The point of hiding the base is that the usable ones stay usable.
-	TestFalse(TEXT("prefab presenter is spawnable"),
-		UDreamUIPrefabPresenterComponent::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
+	TestFalse(TEXT("the widget presenter is spawnable"),
+		UDreamWidgetPresenterComponent::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
 	TestFalse(TEXT("markup presenter is spawnable"),
 		UDreamUIMLPresenterComponent::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
 
@@ -75,7 +75,7 @@ bool FDreamPresenterConcreteRosterTest::RunTest(const FString& Parameters)
 
 	const TArray<FString> Expected = {
 		TEXT("DreamUIMLPresenterComponent"),
-		TEXT("DreamUIPrefabPresenterComponent"),
+		TEXT("DreamWidgetPresenterComponent"),
 	};
 	TestEqual(FString::Printf(TEXT("spawnable presenters, got [%s]"), *FString::Join(Spawnable, TEXT(", "))),
 		Spawnable, Expected);
@@ -107,7 +107,7 @@ bool FDreamPresenterNavigationSelectionResolvesLateTest::RunTest(const FString& 
 {
 	// Read through reflection: the property is protected, and what is being pinned is the VALUE the
 	// constructor leaves behind, which C++ access rules have nothing to say about.
-	const UDreamUIPrefabPresenterComponent* CDO = GetDefault<UDreamUIPrefabPresenterComponent>();
+	const UDreamWidgetPresenterComponent* CDO = GetDefault<UDreamWidgetPresenterComponent>();
 	const FObjectPropertyBase* Property = CastField<FObjectPropertyBase>(
 		UDreamWidgetPresenterComponentBase::StaticClass()->FindPropertyByName(TEXT("NavigationSelectionClass")));
 	if (!TestNotNull(TEXT("the presenter still has a NavigationSelectionClass property"), Property))

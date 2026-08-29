@@ -4,18 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "SequencerSettings.h"
-#include "DreamUIPrefabSequencerSettings.generated.h"
+#include "DreamWidgetAnimationSequencerSettings.generated.h"
 
 /**
  * Just create this to set default values.
  * These default values are copy from "Engine/Config/BaseEditorPerProjectUserSettings.ini"-> EmbeddedActorSequenceEditor
  */
 UCLASS(config = EditorPerProjectUserSettings, PerObjectConfig)
-class UDreamUIPrefabSequencerSettings : public USequencerSettings
+class UDreamWidgetAnimationSequencerSettings : public USequencerSettings
 {
 	GENERATED_BODY()
 public:
-	UDreamUIPrefabSequencerSettings()
+	UDreamWidgetAnimationSequencerSettings()
 	{
 		bShowRangeSlider = true;
 		bKeepPlayRangeInSectionBounds = false;

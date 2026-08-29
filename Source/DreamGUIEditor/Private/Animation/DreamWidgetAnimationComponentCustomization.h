@@ -6,7 +6,7 @@
 #include "IDetailCustomization.h"
 #include "Input/Reply.h"
 
-class UDreamUIPrefabSequenceComponent;
+class UDreamWidgetAnimationComponent;
 
 class FDreamWidgetAnimationComponentCustomization : public IDetailCustomization
 {
@@ -17,6 +17,6 @@ public:
 
 private:
 
-	TWeakObjectPtr<UDreamUIPrefabSequenceComponent> WeakSequenceComponent;
+	TWeakObjectPtr<UDreamWidgetAnimationComponent> WeakSequenceComponent;
 	TSharedPtr<IPropertyUtilities> PropertyUtilities;
 };

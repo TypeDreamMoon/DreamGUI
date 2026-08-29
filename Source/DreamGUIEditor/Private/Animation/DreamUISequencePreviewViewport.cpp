@@ -3,7 +3,7 @@
 
 #include "DreamUISequencePreviewViewport.h"
 #include "DreamUISequenceEditorToolkit.h"
-#include "Designer/DreamUIPrefabEdMode.h"
+#include "Designer/DreamWidgetDesignerEdMode.h"
 #include "DreamUIWidgetPicking.h"
 #include "Core/Components/DreamWidget.h"
 #include "Editor.h"
@@ -27,7 +27,7 @@ FDreamUISequencePreviewViewportClient::FDreamUISequencePreviewViewportClient(TWe
 	// Without an active mode whose ShouldDrawWidget says yes, the transform gizmo never draws for
 	// DreamWidgets (the stock answer needs actors or components selected). The prefab editor's mode
 	// exists for exactly this and carries no other state, so it serves here too.
-	ModeTools->SetDefaultMode(UDreamUIPrefabEdMode::EM_DreamUIPrefab);
+	ModeTools->SetDefaultMode(UDreamWidgetDesignerEdMode::EM_DreamUIPrefab);
 	ModeTools->ActivateDefaultMode();
 	ModeTools->SetSupportsViewportITF(false);
 

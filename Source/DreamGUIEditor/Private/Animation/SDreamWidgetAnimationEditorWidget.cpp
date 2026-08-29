@@ -3,7 +3,7 @@
 
 #include "SDreamWidgetAnimationEditorWidget.h"
 
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "ISequencer.h"
 #include "ISequencerModule.h"
 #include "LevelEditorSequencerIntegration.h"
@@ -14,7 +14,7 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Utils/DreamUIUtils.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "LevelEditor.h"
 #include "Core/DreamUIManager.h"
@@ -24,7 +24,7 @@
 #include "Designer/DreamWidgetHierarchyPickerView.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "Materials/MaterialInterface.h"
-#include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIMaterialTrack.h"
+#include "Animation/MovieSceneDreamUIMaterialTrack.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIPrefabSequenceEditorWidget"
 
@@ -41,7 +41,7 @@
  * Declared here rather than in the widget's header because that header describes the Slate class,
  * which no headless test can construct; DreamPrefabPanelsAutomationTests declares this prototype.
  */
-bool DreamUIPrefabSequence_CanBindWidgetToSequencer(const UDreamWidget* InWidget)
+bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget)
 {
 	// The refusal this made was "a sub-prefab widget's binding does not survive a save". A class
 	// model has no sub-prefab instances, so a valid widget is bindable.
@@ -130,7 +130,7 @@ public:
 
 	virtual void PostUndo(bool bSuccess) override
 	{
-		if (!GetPrefabSequence())
+		if (!GetAnimation())
 		{
 			Close();
 		}
@@ -138,7 +138,7 @@ public:
 
 	FText GetDisplayLabel() const
 	{
-		UDreamUIPrefabSequence* Sequence = WeakSequence.Get();
+		UDreamWidgetAnimation* Sequence = WeakSequence.Get();
 		return Sequence ? Sequence->GetDisplayName() : LOCTEXT("DefaultSequencerLabel", "Sequencer");
 	}
 
@@ -147,16 +147,16 @@ public:
 		return Sequencer;
 	}
 
-	UDreamUIPrefabSequence* GetPrefabSequence() const
+	UDreamWidgetAnimation* GetAnimation() const
 	{
 		return WeakSequence.Get();
 	}
 
 	UObject* GetPlaybackContext() const
 	{
-		if (auto LocalPrefabSequence = GetPrefabSequence())
+		if (auto LocalAnimation = GetAnimation())
 		{
-			auto Component = LocalPrefabSequence->GetTypedOuter<UDreamUIPrefabSequenceComponent>();
+			auto Component = LocalAnimation->GetTypedOuter<UDreamWidgetAnimationComponent>();
 			UDreamWidget* Owner = Component != nullptr ? Component->GetWidget() : nullptr;
 			// The animation is authored on the asset, where nothing is alive to watch it on. Scrub
 			// against the PREVIEW instead -- possible at all because bindings resolve by name against
@@ -183,19 +183,19 @@ public:
 
 	auto GetNullSequence()
 	{
-		static UDreamUIPrefabSequence* NullSequence = nullptr;
+		static UDreamWidgetAnimation* NullSequence = nullptr;
 		if (!NullSequence)
 		{
-			NullSequence = NewObject<UDreamUIPrefabSequence>(GetTransientPackage(), NAME_None);
+			NullSequence = NewObject<UDreamWidgetAnimation>(GetTransientPackage(), NAME_None);
 			NullSequence->AddToRoot();
 			NullSequence->GetMovieScene()->SetDisplayRate(FFrameRate(30, 1));
 		}
 		return NullSequence;
 	}
 
-	void SetDreamUIPrefabSequence(UDreamUIPrefabSequence* NewSequence)
+	void SetDreamWidgetAnimation(UDreamWidgetAnimation* NewSequence)
 	{
-		if (UDreamUIPrefabSequence* OldSequence = WeakSequence.Get())
+		if (UDreamWidgetAnimation* OldSequence = WeakSequence.Get())
 		{
 			if (OnSequenceChangedHandle.IsValid())
 			{
@@ -250,7 +250,7 @@ public:
 		// We need to initialize a new sequencer instance
 		FSequencerInitParams SequencerInitParams;
 		{
-			TWeakObjectPtr<UDreamUIPrefabSequence> LocalWeakSequence = NewSequence;
+			TWeakObjectPtr<UDreamWidgetAnimation> LocalWeakSequence = NewSequence;
 
 			SequencerInitParams.RootSequence = NewSequence ? NewSequence : GetNullSequence();
 			SequencerInitParams.EventContexts = TAttribute<TArray<UObject*>>(this, &SDreamWidgetAnimationEditorWidgetImpl::GetEventContexts);
@@ -264,7 +264,7 @@ public:
 
 			SequencerInitParams.ViewParams.bReadOnly = !NewSequence->IsEditable();
 			SequencerInitParams.ViewParams.AddMenuExtender = AddMenuExtender;
-			SequencerInitParams.ViewParams.UniqueName = "EmbeddedDreamUIPrefabSequenceEditor";
+			SequencerInitParams.ViewParams.UniqueName = "EmbeddedDreamWidgetAnimationEditor";
 			SequencerInitParams.ViewParams.ScrubberStyle = ESequencerScrubberStyle::FrameBlock;
 			SequencerInitParams.ViewParams.OnReceivedFocus.BindRaw(this, &SDreamWidgetAnimationEditorWidgetImpl::OnSequencerReceivedFocus);
 			SequencerInitParams.ViewParams.OnBuildCustomContextMenuForGuid = FOnBuildCustomContextMenuForGuid::CreateSP(this, &SDreamWidgetAnimationEditorWidgetImpl::BuildBindingContextMenu);
@@ -427,7 +427,7 @@ public:
 		{
 			return nullptr;
 		}
-		return DreamUIPrefabSequence_CanBindWidgetToSequencer(Widget) ? Widget : nullptr;
+		return DreamWidgetAnimation_CanBindWidgetToSequencer(Widget) ? Widget : nullptr;
 	}
 
 	void BuildBindingContextMenu(FMenuBuilder& MenuBuilder, FGuid ObjectBinding)
@@ -454,7 +454,7 @@ public:
 	void ReplaceBindingWithWidget(TWeakObjectPtr<UDreamWidget> InWidget, FGuid ObjectBinding)
 	{
 		UDreamWidget* Widget = InWidget.Get();
-		UDreamUIPrefabSequence* Sequence = WeakSequence.Get();
+		UDreamWidgetAnimation* Sequence = WeakSequence.Get();
 		if (Widget == nullptr || Sequence == nullptr || !Sequencer.IsValid())
 		{
 			return;
@@ -524,7 +524,7 @@ public:
 								{
 									TargetWidget = InItem->GetTypedOuter<UDreamWidget>();
 								}
-								if (!DreamUIPrefabSequence_CanBindWidgetToSequencer(TargetWidget))
+								if (!DreamWidgetAnimation_CanBindWidgetToSequencer(TargetWidget))
 								{
 									FDreamUIUtils::EditorNotification(LOCTEXT("SubPrefabWidgetNotBindable"
 										, "This widget belongs to a sub-prefab, so a track bound to it would be lost the next time the prefab loads. Animate it inside its own prefab instead."), false, 8);
@@ -717,7 +717,7 @@ private:
 		}
 	}
 private:
-	TWeakObjectPtr<UDreamUIPrefabSequence> WeakSequence;
+	TWeakObjectPtr<UDreamWidgetAnimation> WeakSequence;
 	TWeakObjectPtr<UDreamUISelection> ObservedSelection;
 	FDelegateHandle WidgetSelectionChangedHandle;
 
@@ -762,14 +762,14 @@ void SDreamWidgetAnimationEditorWidget::SetToolkitHost(TSharedPtr<IToolkitHost> 
 	}
 }
 
-void SDreamWidgetAnimationEditorWidget::AssignSequence(UDreamUIPrefabSequence* NewDreamUIPrefabSequence)
+void SDreamWidgetAnimationEditorWidget::AssignSequence(UDreamWidgetAnimation* NewDreamWidgetAnimation)
 {
-	Impl.Pin()->SetDreamUIPrefabSequence(NewDreamUIPrefabSequence);
+	Impl.Pin()->SetDreamWidgetAnimation(NewDreamWidgetAnimation);
 }
 
-UDreamUIPrefabSequence* SDreamWidgetAnimationEditorWidget::GetSequence() const
+UDreamWidgetAnimation* SDreamWidgetAnimationEditorWidget::GetSequence() const
 {
-	return Impl.Pin()->GetPrefabSequence();
+	return Impl.Pin()->GetAnimation();
 }
 
 #undef LOCTEXT_NAMESPACE

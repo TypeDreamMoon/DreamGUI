@@ -2,8 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUISequenceTrackEditor.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequenceTrack.h"
+#include "Animation/DreamUISequence.h"
+#include "Animation/DreamUISequenceTrack.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "MovieScene.h"

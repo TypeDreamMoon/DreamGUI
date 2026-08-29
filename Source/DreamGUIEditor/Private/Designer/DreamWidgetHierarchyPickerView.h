@@ -58,7 +58,7 @@ public:
 		SLATE_EVENT(FOnSelectItem, OnSelectItem)
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, UWorld* InPrefabWorld, UClass* InObjectClass, UDreamWidget* InRootWidget = nullptr);
+	void Construct(const FArguments& InArgs, UWorld* InDesignerWorld, UClass* InObjectClass, UDreamWidget* InRootWidget = nullptr);
 	virtual ~SDreamWidgetHierarchyPickerView();
 
 	// Begin SWidget
@@ -81,7 +81,7 @@ protected:
 	void UpdateItemsExpansionFromModel();
 	void OnSelectionChanged(DataType SelectedItem, ESelectInfo::Type SelectInfo);
 
-	TWeakObjectPtr<UWorld> PrefabWorld;
+	TWeakObjectPtr<UWorld> DesignerWorld;
 	TSharedPtr< TreeFilterHandler< DataType > > FilterHandler;
 	TArray< DataType > RootWidgets;
 	TArray< DataType > TreeRootWidgets;

@@ -3,13 +3,13 @@
 #pragma once
 
 #include "MovieSceneSequencePlayer.h"
-#include "DreamUIPrefabSequencePlayer.generated.h"
+#include "DreamWidgetAnimationPlayer.generated.h"
 
 /**
- * UDreamUIPrefabSequencePlayer is used to actually "play" an actor sequence asset at runtime.
+ * UDreamWidgetAnimationPlayer is used to actually "play" an actor sequence asset at runtime.
  */
-UCLASS(BlueprintType, DisplayName="DreamUI Prefab Sequence Player")
-class DREAMGUI_API UDreamUIPrefabSequencePlayer
+UCLASS(BlueprintType, DisplayName="DreamUI Widget Animation Player")
+class DREAMGUI_API UDreamWidgetAnimationPlayer
 	: public UMovieSceneSequencePlayer
 {
 public:

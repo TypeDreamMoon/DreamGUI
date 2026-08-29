@@ -9,9 +9,9 @@
 
 #define LOCTEXT_NAMESPACE "DreamWidgetHierarchyPickerView"
 
-void SDreamWidgetHierarchyPickerView::Construct(const FArguments& InArgs, UWorld* InPrefabWorld, UClass* InObjectClass, UDreamWidget* InRootWidget)
+void SDreamWidgetHierarchyPickerView::Construct(const FArguments& InArgs, UWorld* InDesignerWorld, UClass* InObjectClass, UDreamWidget* InRootWidget)
 {
-	PrefabWorld = InPrefabWorld;
+	DesignerWorld = InDesignerWorld;
 	OnSelectItem = InArgs._OnSelectItem;
 	ObjectClass = InObjectClass;
 	SpecificRootWidget = InRootWidget;
@@ -126,7 +126,7 @@ void SDreamWidgetHierarchyPickerView::RefreshTree()
 	}
 	else
 	{
-		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(PrefabWorld.Get()))
+		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(DesignerWorld.Get()))
 		{
 			for (auto& Widget : DreamUIManager->GetAllWidgetArray())
 			{

@@ -1,6 +1,6 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
-#include "Tests/DreamUIPrefabBehaviourTestTypes.h"
+#include "Tests/DreamWidgetBehaviourTestTypes.h"
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 

@@ -103,9 +103,9 @@ private:
 	bool GetLayoutControlVerticalSizeDelta()const;
 
 	/** Prefab root only: the design canvas rows, backed by the owning prefab editor. */
-	void AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuilder& DetailBuilder);
+	void AddCanvasSizeRowsForDesignerRoot(IDetailLayoutBuilder& DetailBuilder);
 	TOptional<int32> GetDesignScreenSizeAxis(int32 AxisIndex) const;
 	void OnDesignScreenSizeAxisCommitted(int32 NewValue, ETextCommit::Type CommitType, int32 AxisIndex);
 	FText GetCanvasSizeText() const;
-	TWeakPtr<class FDreamWidgetBlueprintEditor> PrefabEditorForCanvasSize;
+	TWeakPtr<class FDreamWidgetBlueprintEditor> DesignerForCanvasSize;
 };

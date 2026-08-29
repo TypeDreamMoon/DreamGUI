@@ -2,7 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetDesignerViewportClient.h"
-#include "DreamUIPrefabEdMode.h"
+#include "DreamWidgetDesignerEdMode.h"
 #include "Settings/LevelEditorViewportSettings.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIDesignScreenSizes.h"
@@ -39,7 +39,7 @@
 #include "Core/DreamCanvasViewFit.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamWidget.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "Animation/SDreamWidgetAnimationEditor.h"
 #include "ISequencer.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -58,13 +58,13 @@
 #define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorViewportClient"
 
 //declared in DreamUIPrefabSequenceEditorWidget.cpp; the comment there says why it is a bare prototype
-bool DreamUIPrefabSequence_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
+bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 // UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
 // (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).
 
 
-FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InPrefabEditorPtr
+FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InDesignerPtr
 	, const TSharedRef<SDreamWidgetDesignerViewport>& InEditorViewportPtr)
 	// UE5.8: pass nullptr (NOT &GLevelEditorModeTools()) so the base creates a PRIVATE
 	// FAssetEditorModeManager for this viewport. Sharing the global level-editor mode tools
@@ -76,13 +76,13 @@ FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<
 	, TrackingTransaction()
 	, CachedElementsToManipulate(UTypedElementRegistry::GetInstance()->CreateElementList())
 {
-	DesignerPtr = InPrefabEditorPtr;
+	DesignerPtr = InDesignerPtr;
 	EditorViewportPtr = InEditorViewportPtr;
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
 	// Without an active mode that says ShouldDrawWidget, FWidget::Render draws nothing: the stock
 	// answer is "only when actors or components are selected", and a prefab holds neither.
-	ModeTools->SetDefaultMode(UDreamUIPrefabEdMode::EM_DreamUIPrefab);
+	ModeTools->SetDefaultMode(UDreamWidgetDesignerEdMode::EM_DreamUIPrefab);
 	ModeTools->ActivateDefaultMode();
 	// The classic widget, not the Interactive Tools one. Whether FWidget draws itself or defers to
 	// the ITF gizmo comes from AreEditorGizmosAllowed(ModeTools), which is on by default and follows
@@ -117,7 +117,7 @@ FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<
 	FRotator InitialViewRotation;
 	FVector InitialViewOrbitLocation;
 	ELevelViewportType InitialViewportType;
-	InPrefabEditorPtr.Pin()->GetInitialViewSetting(InitialViewLocation, InitialViewRotation, InitialViewOrbitLocation, InitialViewportType);
+	InDesignerPtr.Pin()->GetInitialViewSetting(InitialViewLocation, InitialViewRotation, InitialViewOrbitLocation, InitialViewportType);
 	SetViewLocation(InitialViewLocation);
 	this->ViewportType = InitialViewportType;
 	SetViewRotation(InitialViewRotation);
@@ -359,7 +359,7 @@ void FDreamWidgetDesignerViewportClient::DrawCanvas(FViewport& InViewport, FScen
 void FDreamWidgetDesignerViewportClient::DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const
 {
 	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
-	UDreamUIPrefabSequence* Animation = Editor.IsValid() ? Editor->GetAnimationBeingEdited() : nullptr;
+	UDreamWidgetAnimation* Animation = Editor.IsValid() ? Editor->GetAnimationBeingEdited() : nullptr;
 	if (Animation == nullptr)
 	{
 		AnimationChipCloseRect = FBox2D(ForceInit);
@@ -448,7 +448,7 @@ void FDreamWidgetDesignerViewportClient::AutoKeyAnimatedTransform(const TArray<U
 	{
 		// A sub-prefab widget's binding does not survive a save; keying one would author a track
 		// that silently binds nothing on the next load.
-		if (IsValid(KeyedWidget) && DreamUIPrefabSequence_CanBindWidgetToSequencer(KeyedWidget))
+		if (IsValid(KeyedWidget) && DreamWidgetAnimation_CanBindWidgetToSequencer(KeyedWidget))
 		{
 			ObjectsToKey.Add(KeyedWidget);
 		}
@@ -2399,7 +2399,7 @@ UE::Widget::EWidgetMode FDreamWidgetDesignerViewportClient::GetWidgetMode() cons
 		return UE::Widget::WM_None;
 	}
 	// Nothing to act on, nothing to draw. This is the one place that decides whether a gizmo appears:
-	// UDreamUIPrefabEdMode answers ShouldDrawWidget unconditionally.
+	// UDreamWidgetDesignerEdMode answers ShouldDrawWidget unconditionally.
 	TArray<UDreamWidget*> Widgets;
 	GetGizmoWidgets(Widgets);
 	if (Widgets.IsEmpty())

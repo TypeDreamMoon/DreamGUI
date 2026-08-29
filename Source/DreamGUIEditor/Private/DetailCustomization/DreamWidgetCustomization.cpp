@@ -161,7 +161,7 @@ void FDreamWidgetCustomization::ForceUpdateUI()
  * resolution the designer picked; "Canvas Size" is what the root canvas's scale rule makes of it and
  * is what a parentless load sizes the root to (UDreamUIPrefab::CanvasSize).
  */
-void FDreamWidgetCustomization::AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuilder& DetailBuilder)
+void FDreamWidgetCustomization::AddCanvasSizeRowsForDesignerRoot(IDetailLayoutBuilder& DetailBuilder)
 {
 	if (TargetScriptArray.Num() != 1 || !TargetScriptArray[0].IsValid())
 	{
@@ -174,7 +174,7 @@ void FDreamWidgetCustomization::AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuil
 	{
 		return;
 	}
-	PrefabEditorForCanvasSize = EditorPtr;
+	DesignerForCanvasSize = EditorPtr;
 
 	IDetailCategoryBuilder& CanvasCategory = DetailBuilder.EditCategory(
 		"DreamCanvasSize", LOCTEXT("CanvasSizeCategory", "Canvas"), ECategoryPriority::Important);
@@ -226,7 +226,7 @@ void FDreamWidgetCustomization::AddCanvasSizeRowsForPrefabRoot(IDetailLayoutBuil
 
 TOptional<int32> FDreamWidgetCustomization::GetDesignScreenSizeAxis(int32 AxisIndex) const
 {
-	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerForCanvasSize.Pin())
 	{
 		const FIntPoint Size = Editor->GetDesignerViewportSize();
 		return AxisIndex == 0 ? Size.X : Size.Y;
@@ -236,7 +236,7 @@ TOptional<int32> FDreamWidgetCustomization::GetDesignScreenSizeAxis(int32 AxisIn
 
 void FDreamWidgetCustomization::OnDesignScreenSizeAxisCommitted(int32 NewValue, ETextCommit::Type CommitType, int32 AxisIndex)
 {
-	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerForCanvasSize.Pin())
 	{
 		FIntPoint Size = Editor->GetDesignerViewportSize();
 		(AxisIndex == 0 ? Size.X : Size.Y) = FMath::Max(1, NewValue);
@@ -246,7 +246,7 @@ void FDreamWidgetCustomization::OnDesignScreenSizeAxisCommitted(int32 NewValue, 
 
 FText FDreamWidgetCustomization::GetCanvasSizeText() const
 {
-	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorForCanvasSize.Pin())
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerForCanvasSize.Pin())
 	{
 		const FIntPoint Size = Editor->GetDesignerCanvasSize();
 		return FText::FromString(FString::Printf(TEXT("%d x %d"), Size.X, Size.Y));
@@ -301,7 +301,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	AppearanceCategory.SetSortOrder(-70);
 	AccessibilityCategory.SetSortOrder(-30);
 	AccessibilityCategory.InitiallyCollapsed(true);
-	AddCanvasSizeRowsForPrefabRoot(DetailBuilder);
+	AddCanvasSizeRowsForDesignerRoot(DetailBuilder);
 
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData));
 

@@ -105,7 +105,7 @@ public:
 };
 
 /**
- * "Palette" tab for the DreamUI Prefab Editor, modeled on UMG's Palette (and the DreamGUI3 palette
+ * "Palette" tab for the DreamUI Designer, modeled on UMG's Palette (and the DreamGUI3 palette
  * we built earlier): a categorized list of creatable UI elements -- basic widgets/visuals,
  * built-in controls, and project prefab assets -- created under the selected widget on
  * double-click. DreamUI creates elements imperatively (UDreamWidget + a Visual, or a prefab
@@ -167,8 +167,8 @@ private:
 	 * nothing ever asked again.
 	 */
 	void RequestRebuild();
-	void HandlePrefabAssetChanged(const FAssetData& InAssetData);
-	void HandlePrefabAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath);
+	void HandleWidgetAssetChanged(const FAssetData& InAssetData);
+	void HandleWidgetAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath);
 	void HandleAssetRegistryFilesLoaded();
 
 	/** Create InItem's element under the editor's selected widget (no-op if nothing selected). */

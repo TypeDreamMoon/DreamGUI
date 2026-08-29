@@ -61,7 +61,7 @@
 #include "Engine/Selection.h"
 
 #include "Animation/DreamWidgetAnimationComponentCustomization.h"
-#include "Animation/MovieSceneSequenceEditor_DreamUIPrefabSequence.h"
+#include "Animation/MovieSceneSequenceEditor_DreamWidgetAnimation.h"
 #include "SequencerSettings.h"
 #include "ISequencerModule.h"
 #include "DreamUIComponentReference.h"
@@ -70,7 +70,7 @@
 #include "Animation/DreamUIAnimEventTrackEditor.h"
 #include "Animation/DreamUISequenceTrackEditor.h"
 #include "DataFactory/DreamUISequenceFactory.h"
-#include "Animation/DreamUIPrefabSequencerSettings.h"
+#include "Animation/DreamWidgetAnimationSequencerSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontEmojiData.h"
@@ -117,8 +117,8 @@
 #include "Interaction/UIToggleGroup.h"
 #include "MeshModifier/DreamMeshModifierBase.h"
 #include "MeshModifier/DreamMeshModifierTextAnimation.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Styling/SlateIconFinder.h"
 #include "Window/DreamUIWidgetInspector.h"
 
@@ -147,10 +147,10 @@ void FDreamGUIEditorModule::StartupModule()
 				CastChecked<UDreamWidgetBlueprint>(InBlueprint), InMessageLog, InCompileOptions));
 		});
 
-	OnInitializeSequenceHandle = UDreamUIPrefabSequence::OnInitializeSequence().AddStatic(FDreamGUIEditorModule::OnInitializeSequence);
+	OnInitializeSequenceHandle = UDreamWidgetAnimation::OnInitializeSequence().AddStatic(FDreamGUIEditorModule::OnInitializeSequence);
 
 	ISequencerModule& SequencerModule = FModuleManager::Get().LoadModuleChecked<ISequencerModule>("Sequencer");
-	SequenceEditorHandle = SequencerModule.RegisterSequenceEditor(UDreamUIPrefabSequence::StaticClass(), MakeUnique<FMovieSceneSequenceEditor_DreamUIPrefabSequence>());
+	SequenceEditorHandle = SequencerModule.RegisterSequenceEditor(UDreamWidgetAnimation::StaticClass(), MakeUnique<FMovieSceneSequenceEditor_DreamWidgetAnimation>());
 	DreamUIMaterialTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUIMaterialTrackEditor::CreateTrackEditor));
 	DreamUIAnimEventTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUIAnimEventTrackEditor::CreateTrackEditor));
 	DreamUISequenceTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FDreamUISequenceTrackEditor::CreateTrackEditor));
@@ -230,7 +230,7 @@ void FDreamGUIEditorModule::StartupModule()
 
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIComponentReferenceCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomClassLayout(UDreamUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetAnimationComponentCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamWidgetAnimationComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetAnimationComponentCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamImageBrushStructCustomization::MakeInstance));
 		
@@ -307,11 +307,11 @@ void FDreamGUIEditorModule::StartupModule()
 				LOCTEXT("DreamUIEditorSettingsDescription", "DreamGUI Editor Settings"),
 				GetMutableDefault<UDreamUIEditorSettings>());
 
-			DreamUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<UDreamUIPrefabSequencerSettings>(TEXT("EmbeddedDreamUIPrefabSequenceEditor"));
-			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedDreamUIPrefabSequenceEditor",
-				LOCTEXT("DreamUIPrefabSequencerSettingsName", "DreamGUI Prefab Sequence Editor"),
-				LOCTEXT("DreamUIPrefabSequencerSettingsDescription", "Configure the look and feel of the DreamGUI Prefab Sequence Editor."),
-				DreamUIPrefabSequencerSettings);
+			DreamWidgetAnimationSequencerSettings = USequencerSettingsContainer::GetOrCreate<UDreamWidgetAnimationSequencerSettings>(TEXT("EmbeddedDreamWidgetAnimationEditor"));
+			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedDreamWidgetAnimationEditor",
+				LOCTEXT("DreamWidgetAnimationSequencerSettingsName", "DreamGUI Animation Editor"),
+				LOCTEXT("DreamWidgetAnimationSequencerSettingsDescription", "Configure the look and feel of the DreamGUI Animation Editor."),
+				DreamWidgetAnimationSequencerSettings);
 		}
 	}
 	//blueprint
@@ -349,7 +349,7 @@ void FDreamGUIEditorModule::StartupModule()
 	}
 }
 
-void FDreamGUIEditorModule::OnInitializeSequence(UDreamUIPrefabSequence* Sequence)
+void FDreamGUIEditorModule::OnInitializeSequence(UDreamWidgetAnimation* Sequence)
 {
 	auto* ProjectSettings = GetDefault<UMovieSceneToolsProjectSettings>();
 	UMovieScene* MovieScene = Sequence->GetMovieScene();
@@ -376,7 +376,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 
 	FDreamUIEditorCommands::Unregister();
 
-	UDreamUIPrefabSequence::OnInitializeSequence().Remove(OnInitializeSequenceHandle);
+	UDreamWidgetAnimation::OnInitializeSequence().Remove(OnInitializeSequenceHandle);
 	ISequencerModule* SequencerModule = FModuleManager::Get().GetModulePtr<ISequencerModule>("Sequencer");
 	if (SequencerModule)
 	{
@@ -451,7 +451,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIComponentReference::StaticStruct()->GetFName());
 
-		PropertyModule.UnregisterCustomClassLayout(UDreamUIPrefabSequenceComponent::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(UDreamWidgetAnimationComponent::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIImageBrush::StaticStruct()->GetFName());
 		
@@ -489,7 +489,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI");
 			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI Editor");
 			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI Prefab");
-			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUIPrefabSequencerSettings");
+			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamWidgetAnimationSequencerSettings");
 		}
 	}
 
@@ -500,7 +500,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 
 void FDreamGUIEditorModule::AddReferencedObjects(FReferenceCollector& Collector)
 {
-	Collector.AddReferencedObject(DreamUIPrefabSequencerSettings);
+	Collector.AddReferencedObject(DreamWidgetAnimationSequencerSettings);
 }
 FString FDreamGUIEditorModule::GetReferencerName() const 
 {

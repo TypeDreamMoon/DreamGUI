@@ -9,7 +9,7 @@
 #include "Core/Components/DreamWidget.h"
 
 //declared in DreamUIPrefabSequenceEditorWidget.cpp; the comment there says why it is a bare prototype
-bool DreamUIPrefabSequence_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
+bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 
 FDreamUIDetailKeyframeHandler::FDreamUIDetailKeyframeHandler(TSharedPtr<FDreamWidgetBlueprintEditor> InSequenceEditor)
@@ -82,7 +82,7 @@ void FDreamUIDetailKeyframeHandler::OnKeyPropertyClicked(const IPropertyHandle& 
 			{
 				Widget = Object->GetTypedOuter<UDreamWidget>();
 			}
-			return Widget != nullptr && !DreamUIPrefabSequence_CanBindWidgetToSequencer(Widget);
+			return Widget != nullptr && !DreamWidgetAnimation_CanBindWidgetToSequencer(Widget);
 		});
 		if (Objects.IsEmpty())
 		{

@@ -19,7 +19,7 @@ struct FDreamLayoutControlAnchorData;
 class FDreamWidgetDesignerViewportClient : public FEditorViewportClient
 {
 public:
-	FDreamWidgetDesignerViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InPrefabEditorPtr, const TSharedRef<class SDreamWidgetDesignerViewport>& InEditorViewportPtr);
+	FDreamWidgetDesignerViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InDesignerPtr, const TSharedRef<class SDreamWidgetDesignerViewport>& InEditorViewportPtr);
 
 	virtual ~FDreamWidgetDesignerViewportClient()override;
 

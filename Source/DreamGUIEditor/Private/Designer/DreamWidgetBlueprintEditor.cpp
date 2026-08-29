@@ -58,8 +58,8 @@
 #include "SourceCodeNavigation.h"
 #include "Event/DreamUIEventDelegate.h"
 #include "Utils/DreamUIUtils.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "MessageLogModule.h"
 #include "IMessageLogListing.h"
 #include "Logging/TokenizedMessage.h"
@@ -88,7 +88,7 @@ const FName FDreamWidgetBlueprintEditorTabs::OutlinerID(TEXT("Outliner"));
 const FName FDreamWidgetBlueprintEditorTabs::PaletteID(TEXT("Palette"));
 const FName FDreamWidgetBlueprintEditorTabs::SequencerID(TEXT("Sequencer"));
 
-namespace DreamUIPrefabEditorLocal
+namespace DreamWidgetDesignerLocal
 {
 	class FBehaviourClassFilter final : public IClassViewerFilter
 	{
@@ -115,7 +115,7 @@ namespace DreamUIPrefabEditorLocal
 
 }
 
-FName GetPrefabWorldName()
+FName GetDesignerWorldName()
 {
 	static uint32 NameSuffix = 0;
 	return FName(*FString::Printf(TEXT("PrefabEditorWorld_%d"), NameSuffix++));
@@ -464,34 +464,34 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	}
 	// FBlueprintEditor registers for undo itself.
 
-	// After opening, broadcast event to DreamUIPrefabSequencerEditor
+	// After opening, broadcast event to DreamWidgetAnimationSequencerEditor
 	// The AUTHORING root: animations are asset data, and the panel edits them in place.
-	FDreamUIEditorTools::OnEditingPrefabChanged.Broadcast(GetAnimationHostWidget());
+	FDreamUIEditorTools::OnEditingWidgetChanged.Broadcast(GetAnimationHostWidget());
 }
 
 void FDreamWidgetBlueprintEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
 {
-	auto& PrefabEditorData = BlueprintBeingEdited->DesignerData;
+	auto& DesignerViewData = BlueprintBeingEdited->DesignerData;
 	auto SceneBounds = this->GetAllObjectsBounds();
-	if (PrefabEditorData.ViewLocation == FVector::ZeroVector && PrefabEditorData.ViewRotation == FRotator::ZeroRotator)
+	if (DesignerViewData.ViewLocation == FVector::ZeroVector && DesignerViewData.ViewRotation == FRotator::ZeroRotator)
 	{
 		OutLocation = FVector(-SceneBounds.SphereRadius * 1.2f, SceneBounds.Origin.Y, SceneBounds.Origin.Z);
 		OutRotation = FRotator::ZeroRotator;
 	}
 	else
 	{
-		OutLocation = PrefabEditorData.ViewLocation;
-		OutRotation = PrefabEditorData.ViewRotation;
+		OutLocation = DesignerViewData.ViewLocation;
+		OutRotation = DesignerViewData.ViewRotation;
 	}
-	if (PrefabEditorData.ViewOrbitLocation == FVector::ZeroVector)
+	if (DesignerViewData.ViewOrbitLocation == FVector::ZeroVector)
 	{
 		OutOrbitLocation = SceneBounds.Origin;
 	}
 	else
 	{
-		OutOrbitLocation = PrefabEditorData.ViewOrbitLocation;
+		OutOrbitLocation = DesignerViewData.ViewOrbitLocation;
 	}
-	OutViewType = (ELevelViewportType)PrefabEditorData.ViewportType;
+	OutViewType = (ELevelViewportType)DesignerViewData.ViewportType;
 }
 
 UDreamWidget* FDreamWidgetBlueprintEditor::GetRootAgentWidget()
@@ -577,9 +577,9 @@ FName FDreamWidgetBlueprintEditor::GetSequencerTabID()
 	return FDreamWidgetBlueprintEditorTabs::SequencerID;
 }
 
-UDreamUIPrefabSequence* FDreamWidgetBlueprintEditor::GetAnimationBeingEdited()const
+UDreamWidgetAnimation* FDreamWidgetBlueprintEditor::GetAnimationBeingEdited()const
 {
-	return SequencerPtr.IsValid() ? SequencerPtr->GetPrefabSequence() : nullptr;
+	return SequencerPtr.IsValid() ? SequencerPtr->GetAnimation() : nullptr;
 }
 
 void FDreamWidgetBlueprintEditor::SaveAsset_Execute()
@@ -1217,9 +1217,9 @@ void FDreamWidgetBlueprintEditor::FocusAnimationByDisplayName(const FString& InD
 	{
 		return;
 	}
-	if (UDreamUIPrefabSequenceComponent* Host = SequencerPtr->GetSequenceComponent())
+	if (UDreamWidgetAnimationComponent* Host = SequencerPtr->GetSequenceComponent())
 	{
-		if (UDreamUIPrefabSequence* Sequence = Host->GetSequenceByDisplayName(InDisplayName))
+		if (UDreamWidgetAnimation* Sequence = Host->GetSequenceByDisplayName(InDisplayName))
 		{
 			SequencerPtr->SelectAnimation(Sequence);
 		}
@@ -1769,15 +1769,15 @@ UWorld* FDreamWidgetBlueprintEditor::GetWorld()
 
 void FDreamWidgetBlueprintEditor::BindCommands()
 {
-	const FDreamWidgetDesignerCommands& PrefabEditorCommands = FDreamWidgetDesignerCommands::Get();
+	const FDreamWidgetDesignerCommands& DesignerCommands = FDreamWidgetDesignerCommands::Get();
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.ToggleScreenSpacePreview,
+		DesignerCommands.ToggleScreenSpacePreview,
 		FExecuteAction::CreateSP(this, &FDreamWidgetBlueprintEditor::TogglePreviewRenderMode),
 		FCanExecuteAction(),
 		FIsActionChecked::CreateSP(this, &FDreamWidgetBlueprintEditor::IsPreviewingScreenSpace)
 	);
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.FrameFromCanvasEye,
+		DesignerCommands.FrameFromCanvasEye,
 		FExecuteAction::CreateSP(this, &FDreamWidgetBlueprintEditor::FrameViewportFromCanvasEye),
 		FCanExecuteAction::CreateSP(this, &FDreamWidgetBlueprintEditor::CanFrameViewportFromCanvasEye)
 	);

@@ -1,8 +1,8 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
-#include "PrefabSystem/DreamUIWidgetBinding.h"
+#include "Animation/DreamUISequence.h"
+#include "Animation/DreamUIWidgetBinding.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "MovieScene.h"

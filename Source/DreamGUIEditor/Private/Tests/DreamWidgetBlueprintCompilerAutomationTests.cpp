@@ -13,8 +13,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
 #include "Core/DreamWidgetPropertyBinding.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "MovieScene.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/CompilerResultsLog.h"
@@ -446,13 +446,13 @@ bool FDreamWidgetAnimationBindingSurvivesTheClassTest::RunTest(const FString& Pa
 
 	// The animation lives on a BEHAVIOUR, so it already rides the authoring tree onto the class. What
 	// is in question is the binding inside it, which names a widget.
-	UDreamUIPrefabSequenceComponent* Animator =
-		Cast<UDreamUIPrefabSequenceComponent>(Root->AddComponent(UDreamUIPrefabSequenceComponent::StaticClass()));
+	UDreamWidgetAnimationComponent* Animator =
+		Cast<UDreamWidgetAnimationComponent>(Root->AddComponent(UDreamWidgetAnimationComponent::StaticClass()));
 	if (!TestNotNull(TEXT("The animation component was added"), Animator))
 	{
 		return false;
 	}
-	UDreamUIPrefabSequence* Sequence = Animator->AddNewAnimation();
+	UDreamWidgetAnimation* Sequence = Animator->AddNewAnimation();
 	if (!TestNotNull(TEXT("An animation was created"), Sequence))
 	{
 		return false;
@@ -501,10 +501,10 @@ bool FDreamWidgetAnimationBindingSurvivesTheClassTest::RunTest(const FString& Pa
 		{
 			TestNotEqual(TEXT("Which is NOT the authored one"), LiveTarget, Target);
 
-			UDreamUIPrefabSequenceComponent* LiveAnimator = nullptr;
+			UDreamWidgetAnimationComponent* LiveAnimator = nullptr;
 			for (UDreamUIBehaviour* Component : LiveRoot->GetAllComponents())
 			{
-				if (UDreamUIPrefabSequenceComponent* Candidate = Cast<UDreamUIPrefabSequenceComponent>(Component))
+				if (UDreamWidgetAnimationComponent* Candidate = Cast<UDreamWidgetAnimationComponent>(Component))
 				{
 					LiveAnimator = Candidate;
 					break;
@@ -512,7 +512,7 @@ bool FDreamWidgetAnimationBindingSurvivesTheClassTest::RunTest(const FString& Pa
 			}
 			if (TestNotNull(TEXT("The instance carries the animation component"), LiveAnimator))
 			{
-				UDreamUIPrefabSequence* LiveSequence = LiveAnimator->GetSequenceByIndex(0);
+				UDreamWidgetAnimation* LiveSequence = LiveAnimator->GetSequenceByIndex(0);
 				if (TestNotNull(TEXT("And the animation"), LiveSequence))
 				{
 					TArray<UObject*, TInlineAllocator<1>> Bound;

@@ -748,7 +748,7 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 										SNew(SBox)
 										.Padding(FMargin(0, 0, 6, 0))
 										[
-											DrawDreamWidgetSelectorForPrefabEditor(EventItemIndex)
+											DrawDreamWidgetSelectorForDesigner(EventItemIndex)
 										]
 									]
 									+SHorizontalBox::Slot()
@@ -980,7 +980,7 @@ EDreamUIEventDelegateParameterType FDreamUIEventDelegateCustomization::GetEventD
 	return functionParameterType;
 }
 
-TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawDreamWidgetSelectorForPrefabEditor(int32 itemIndex)
+TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawDreamWidgetSelectorForDesigner(int32 itemIndex)
 {
 	auto EventListHandle = GetEventListHandle();
 	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);

@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
-#include "PrefabSystem/PrefabAnimation/DreamUISequenceTrack.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
+#include "Animation/DreamUISequenceTrack.h"
+#include "Animation/DreamUISequence.h"
 #include "EntitySystem/BuiltInComponentTypes.h"
 #include "EntitySystem/MovieSceneEntitySystemLinker.h"
 #include "EntitySystem/MovieSceneEntityBuilder.h"

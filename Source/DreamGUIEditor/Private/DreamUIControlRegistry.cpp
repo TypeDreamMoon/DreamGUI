@@ -424,7 +424,7 @@ bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descript
 		TArray<FAssetData> PackageAssets;
 		IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
 		AssetRegistry.GetAssetsByPackageName(FName(Descriptor.WidgetClassPath), PackageAssets, true);
-		const bool bContainsPrefab = PackageAssets.ContainsByPredicate([](const FAssetData& Asset)
+		const bool bContainsWidgetBlueprint = PackageAssets.ContainsByPredicate([](const FAssetData& Asset)
 		{
 			return Asset.AssetClassPath == UDreamWidgetBlueprint::StaticClass()->GetClassPathName();
 		});
@@ -432,7 +432,7 @@ bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descript
 		// answering "wrong type" to a question it cannot answer yet disabled every prefab-backed
 		// control for the rest of the session. The package exists on disk; that is all we can say
 		// until OnFilesLoaded, which the Palette re-validates on.
-		if (!bContainsPrefab && !AssetRegistry.IsLoadingAssets())
+		if (!bContainsWidgetBlueprint && !AssetRegistry.IsLoadingAssets())
 		{
 			OutError = FText::Format(LOCTEXT("WrongControlType", "Control resource is not a DreamUI Widget Blueprint: {0}"), FText::FromString(Descriptor.WidgetClassPath));
 			return false;

@@ -242,7 +242,7 @@ namespace DreamUI_Private
 namespace DreamUI_Private
 {
 	/** The prefab editor behind the viewport a tool-menu section is being built for, or null. */
-	static TWeakPtr<FDreamWidgetBlueprintEditor> GetPrefabEditorFromSection(const FToolMenuSection& InSection)
+	static TWeakPtr<FDreamWidgetBlueprintEditor> GetDesignerFromSection(const FToolMenuSection& InSection)
 	{
 		if (UUnrealEdViewportToolbarContext* const Context = InSection.FindContext<UUnrealEdViewportToolbarContext>())
 		{
@@ -293,7 +293,7 @@ namespace DreamUI_Private
 		SnapSection.Alignment = EToolMenuSectionAlign::First;
 		SnapSection.AddDynamicEntry("DesignerSnapping", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetDesignerFromSection(InSection);
 			InSection.AddEntry(MakeDesignerToggle("GridSnap", WeakEditor,
 				LOCTEXT("DesignerSnapLabel", "Snap"),
 				LOCTEXT("DesignerSnapTooltip", "Snap 2D designer movement and resize operations to the grid size next to this button."),
@@ -335,7 +335,7 @@ namespace DreamUI_Private
 		ZoomSection.Alignment = EToolMenuSectionAlign::First;
 		ZoomSection.AddDynamicEntry("DesignerZoom", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetDesignerFromSection(InSection);
 			const TAttribute<FText> ZoomLabel = TAttribute<FText>::CreateLambda([WeakEditor]()
 			{
 				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
@@ -375,7 +375,7 @@ namespace DreamUI_Private
 		SizeSection.Alignment = EToolMenuSectionAlign::First;
 		SizeSection.AddDynamicEntry("DesignerScreenSize", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetDesignerFromSection(InSection);
 			const TAttribute<FText> SizeLabel = TAttribute<FText>::CreateLambda([WeakEditor]()
 			{
 				TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
@@ -415,7 +415,7 @@ namespace DreamUI_Private
 		OverlaySection.Alignment = EToolMenuSectionAlign::First;
 		OverlaySection.AddDynamicEntry("DesignerOverlays", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
-			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetPrefabEditorFromSection(InSection);
+			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetDesignerFromSection(InSection);
 			InSection.AddEntry(MakeDesignerToggle("Guides", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("DesignerGuidesTooltip", "Show 2D designer snapping guides while manipulating widgets."),
 				FSlateIcon(AppStyle, "ViewportToolbar.SetShowGrid"),

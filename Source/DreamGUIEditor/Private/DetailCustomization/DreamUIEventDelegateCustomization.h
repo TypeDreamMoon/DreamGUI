@@ -77,7 +77,7 @@ private:
 	}
 	TWeakObjectPtr<UWorld> World;
 	TSharedPtr<SComboButton> WidgetPickerComboButton;
-	TSharedRef<SWidget> DrawDreamWidgetSelectorForPrefabEditor(int32 itemIndex);
+	TSharedRef<SWidget> DrawDreamWidgetSelectorForDesigner(int32 itemIndex);
 	TSharedRef<SWidget> MakeComponentSelectorMenu(int32 itemIndex);
 	TSharedRef<SWidget> MakeFunctionSelectorMenu(int32 itemIndex);
 	void OnHelperWidgetParameterChanged(TSharedRef<IPropertyHandle> ItemPropertyHandle);

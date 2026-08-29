@@ -95,11 +95,11 @@ private:
 	
 	FDelegateHandle SequenceEditorHandle;
 	FDelegateHandle OnInitializeSequenceHandle;
-	static void OnInitializeSequence(class UDreamUIPrefabSequence* Sequence);
+	static void OnInitializeSequence(class UDreamWidgetAnimation* Sequence);
 	FDelegateHandle DreamUIMaterialTrackEditorCreateTrackEditorHandle;
 	FDelegateHandle DreamUIAnimEventTrackEditorCreateTrackEditorHandle;
 	FDelegateHandle DreamUISequenceTrackEditorCreateTrackEditorHandle;
-	TObjectPtr<class USequencerSettings> DreamUIPrefabSequencerSettings = nullptr;
+	TObjectPtr<class USequencerSettings> DreamWidgetAnimationSequencerSettings = nullptr;
 
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;

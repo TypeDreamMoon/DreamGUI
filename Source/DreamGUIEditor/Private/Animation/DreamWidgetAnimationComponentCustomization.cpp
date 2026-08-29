@@ -3,9 +3,9 @@
 
 #include "DreamWidgetAnimationComponentCustomization.h"
 #include "Core/Components/DreamWidget.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimation.h"
 
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "GameFramework/Actor.h"
 #include "IDetailsView.h"
 #include "DetailLayoutBuilder.h"
@@ -18,7 +18,7 @@
 #include "Widgets/Input/SButton.h"
 #include "SDreamWidgetAnimationEditor.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
-#include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
+#include "Core/DreamWidgetPresenterComponent.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Editor.h"
 #include "UObject/UObjectIterator.h"
@@ -42,7 +42,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 		return;
 	}
 
-	WeakSequenceComponent = Cast<UDreamUIPrefabSequenceComponent>(Objects[0].Get());
+	WeakSequenceComponent = Cast<UDreamWidgetAnimationComponent>(Objects[0].Get());
 	if (!WeakSequenceComponent.Get())
 	{
 		return;
@@ -78,7 +78,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 				.ToolTipText(LOCTEXT("EditInPrefabTooltip", "Open this widget's prefab and edit its animations there. Apply in the prefab editor reloads this instance."))
 				.OnClicked_Lambda([WeakComponent = WeakSequenceComponent]()
 				{
-					UDreamUIPrefabSequenceComponent* Component = WeakComponent.Get();
+					UDreamWidgetAnimationComponent* Component = WeakComponent.Get();
 					UDreamWidget* Root = Component ? Component->GetWidget() : nullptr;
 					while (Root != nullptr && Root->GetParent() != nullptr)
 					{
@@ -87,7 +87,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 					// The presenter holds a hierarchy CLASS now; the asset behind it is the Blueprint
 					// that generated the class.
 					UObject* SourceAsset = nullptr;
-					for (TObjectIterator<UDreamUIPrefabPresenterComponent> It; It && SourceAsset == nullptr; ++It)
+					for (TObjectIterator<UDreamWidgetPresenterComponent> It; It && SourceAsset == nullptr; ++It)
 					{
 						if (It->GetLoadedWidget() == Root)
 						{
@@ -163,7 +163,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 	
 					Tab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateLambda(OnClosed));
 	
-					StaticCastSharedRef<SDreamWidgetAnimationEditor>(Tab->GetContent())->AssignDreamUIPrefabSequenceComponent(WeakSequenceComponent);
+					StaticCastSharedRef<SDreamWidgetAnimationEditor>(Tab->GetContent())->AssignDreamWidgetAnimationComponent(WeakSequenceComponent);
 				}
 
 				PropertyUtilities->ForceRefresh();

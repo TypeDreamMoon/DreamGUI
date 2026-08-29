@@ -105,9 +105,9 @@ void SDreamWidgetPalette::Construct(const FArguments& InArgs, TSharedPtr<FDreamW
 	DesignerPtr = InDesigner;
 	RegistryChangedHandle = FDreamUIControlRegistry::Get().OnChanged().AddSP(SharedThis(this), &SDreamWidgetPalette::RebuildList);
 	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
-	AssetAddedHandle = AssetRegistry.OnAssetAdded().AddSP(SharedThis(this), &SDreamWidgetPalette::HandlePrefabAssetChanged);
-	AssetRemovedHandle = AssetRegistry.OnAssetRemoved().AddSP(SharedThis(this), &SDreamWidgetPalette::HandlePrefabAssetChanged);
-	AssetRenamedHandle = AssetRegistry.OnAssetRenamed().AddSP(SharedThis(this), &SDreamWidgetPalette::HandlePrefabAssetRenamed);
+	AssetAddedHandle = AssetRegistry.OnAssetAdded().AddSP(SharedThis(this), &SDreamWidgetPalette::HandleWidgetAssetChanged);
+	AssetRemovedHandle = AssetRegistry.OnAssetRemoved().AddSP(SharedThis(this), &SDreamWidgetPalette::HandleWidgetAssetChanged);
+	AssetRenamedHandle = AssetRegistry.OnAssetRenamed().AddSP(SharedThis(this), &SDreamWidgetPalette::HandleWidgetAssetRenamed);
 	FilesLoadedHandle = AssetRegistry.OnFilesLoaded().AddSP(SharedThis(this), &SDreamWidgetPalette::HandleAssetRegistryFilesLoaded);
 	LoadPreferences();
 
@@ -156,16 +156,16 @@ void SDreamWidgetPalette::RequestRebuild()
 	bRebuildRequested = true;
 }
 
-void SDreamWidgetPalette::HandlePrefabAssetChanged(const FAssetData& InAssetData)
+void SDreamWidgetPalette::HandleWidgetAssetChanged(const FAssetData& InAssetData)
 {
 	// Any asset add/remove/rename can change what the registered controls resolve to, so the list is
 	// rebuilt for all of them. It used to filter for prefab assets, back when it listed those.
 	RequestRebuild();
 }
 
-void SDreamWidgetPalette::HandlePrefabAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath)
+void SDreamWidgetPalette::HandleWidgetAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath)
 {
-	HandlePrefabAssetChanged(InAssetData);
+	HandleWidgetAssetChanged(InAssetData);
 }
 
 void SDreamWidgetPalette::HandleAssetRegistryFilesLoaded()

@@ -6,7 +6,7 @@
 #include "DreamGUI.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamWidget.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 
 UDreamUIBehaviour::UDreamUIBehaviour()
 {
@@ -312,7 +312,7 @@ UDreamWidget* UDreamUIBehaviour::GetWidget() const
 	return CacheWidget.Get();
 }
 
-UDreamUIPrefabSequenceComponent* UDreamUIBehaviour::GetAnimationPlayer() const
+UDreamWidgetAnimationComponent* UDreamUIBehaviour::GetAnimationPlayer() const
 {
 	UDreamWidget* Widget = GetWidget();
 	if (!IsValid(Widget))
@@ -327,17 +327,17 @@ UDreamUIPrefabSequenceComponent* UDreamUIBehaviour::GetAnimationPlayer() const
 		const bool bHostIsInHierarchy = IsValid(HostWidget)
 			&& (HostWidget == Widget || Widget->IsChildOf(HostWidget));
 		const bool bHostIsStillRegistered = bHostIsInHierarchy
-			&& HostWidget->GetComponent<UDreamUIPrefabSequenceComponent>() == AnimationPlayer;
+			&& HostWidget->GetComponent<UDreamWidgetAnimationComponent>() == AnimationPlayer;
 		if (bHostIsStillRegistered)
 		{
 			return AnimationPlayer.Get();
 		}
 	}
 
-	AnimationPlayer = Widget->GetComponent<UDreamUIPrefabSequenceComponent>();
+	AnimationPlayer = Widget->GetComponent<UDreamWidgetAnimationComponent>();
 	if (!IsValid(AnimationPlayer))
 	{
-		AnimationPlayer = Widget->GetComponentInParent<UDreamUIPrefabSequenceComponent>();
+		AnimationPlayer = Widget->GetComponentInParent<UDreamWidgetAnimationComponent>();
 	}
 	return AnimationPlayer.Get();
 }

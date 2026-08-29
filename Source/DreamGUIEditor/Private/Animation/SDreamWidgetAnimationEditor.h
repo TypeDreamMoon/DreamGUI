@@ -11,8 +11,8 @@
 
 class ISequencer;
 class UDreamWidget;
-class UDreamUIPrefabSequenceComponent;
-class UDreamUIPrefabSequence;
+class UDreamWidgetAnimationComponent;
+class UDreamWidgetAnimation;
 class SDreamWidgetAnimationEditorWidget;
 struct FWidgetAnimationListItem;
 
@@ -32,23 +32,23 @@ public:
 	void SetToolkitHost(TSharedPtr<class IToolkitHost> InToolkitHost);
 	/** Warn about companion-blueprint calls that still play the old display name. */
 	void NotifyAnimationRenamed(const FString& OldName, const FString& NewName);
-	void AssignDreamUIPrefabSequenceComponent(TWeakObjectPtr<UDreamUIPrefabSequenceComponent> InSequenceComponent);
-	UDreamUIPrefabSequence* GetPrefabSequence() const;
-	void SelectAnimation(UDreamUIPrefabSequence* InAnimation);
+	void AssignDreamWidgetAnimationComponent(TWeakObjectPtr<UDreamWidgetAnimationComponent> InSequenceComponent);
+	UDreamWidgetAnimation* GetAnimation() const;
+	void SelectAnimation(UDreamWidgetAnimation* InAnimation);
 	/** Leave animation mode: deselect, hand the sequencer a null sequence, restore the pre-animated pose. */
 	void ClearAnimationSelection();
-	UDreamUIPrefabSequenceComponent* GetSequenceComponent()const { return WeakSequenceComponent.Get(); }
+	UDreamWidgetAnimationComponent* GetSequenceComponent()const { return WeakSequenceComponent.Get(); }
 	void RefreshAnimationList();
 	void MarkAnimationDataDirty();
-	void OnEditingPrefabChanged(UDreamWidget* RootWidget);
+	void OnEditingWidgetChanged(UDreamWidget* RootWidget);
 	TSharedPtr<ISequencer> GetSequencer() const;
 private:
 	TWeakObjectPtr<UDreamWidget> WeakRootWidget;
-	TWeakObjectPtr<UDreamUIPrefabSequenceComponent> WeakSequenceComponent;
-	UDreamUIPrefabSequenceComponent* FindAnimationHost(UDreamWidget* RootWidget) const;
-	UDreamUIPrefabSequenceComponent* EnsureAnimationHost();
+	TWeakObjectPtr<UDreamWidgetAnimationComponent> WeakSequenceComponent;
+	UDreamWidgetAnimationComponent* FindAnimationHost(UDreamWidget* RootWidget) const;
+	UDreamWidgetAnimationComponent* EnsureAnimationHost();
 	FDelegateHandle OnObjectsReplacedHandle;
-	FDelegateHandle EditingPrefabChangedHandle;
+	FDelegateHandle EditingWidgetChangedHandle;
 	FDelegateHandle PostUndoRedoHandle;
 	void OnPostUndoRedo();
 
@@ -69,7 +69,7 @@ private:
 	void OnExportAnimationToAsset();
 	void OnDeleteAnimation();
 	void OnRenameAnimation();
-	UDreamUIPrefabSequence* GetSelectedAnimation() const;
+	UDreamWidgetAnimation* GetSelectedAnimation() const;
 	int32 GetSelectedAnimationSourceIndex() const;
 	bool CanExecuteAnimationListAction() const;
 	void OnObjectsReplaced(const TMap<UObject*, UObject*>& ReplacementMap);

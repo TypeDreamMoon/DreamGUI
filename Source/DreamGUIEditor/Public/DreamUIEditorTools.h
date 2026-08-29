@@ -10,13 +10,13 @@
 class UDreamWidget;
 class UDreamUIBehaviour;
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FEditingPrefabChangedDelegate, UDreamWidget*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FEditingWidgetChangedDelegate, UDreamWidget*);
 
 class DREAMGUIEDITOR_API FDreamUIEditorTools
 {
 private:
 public:
-	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
+	static FEditingWidgetChangedDelegate OnEditingWidgetChanged;
 	static TArray<UDreamWidget*> GetRootWidgetListFromSelection(const TArray<UDreamWidget*>& InSelectedWidgets);
 	/** UMG-style unique name in the containing prefab: Name, Name_1, Name_2, ... */
 	static FString MakeUniqueWidgetDisplayName(UDreamWidget* ContextWidget, const FString& DesiredName,
@@ -69,8 +69,8 @@ public:
 	static bool CanCutWidget(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction);
 	static bool CanDeleteWidget(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction);
 	
-	static void RefreshLoadedPrefab();
-	static bool CanCheckPrefabOverrideParameter(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
+	static void RefreshLoadedWidget();
+	static bool CanCheckNestedOverrideParameter(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
 	static bool CanCreateWidget(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
 	static bool IsWidgetCompatibleWithDreamUIToolsMenu(UDreamWidget* InWidget);
 

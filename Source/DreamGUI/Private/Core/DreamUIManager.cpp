@@ -22,7 +22,7 @@
 #include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
 #include "CoreGlobals.h"
 #include "Event/DreamEventSystem.h"
-#include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
+#include "Core/DreamWidgetPresenterComponent.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorViewportClient.h"
@@ -601,7 +601,7 @@ void UDreamUIManagerWorldSubsystem::OnEnginePreExit()
 	// for (TObjectIterator<UDreamUIPrefab> Itr; Itr; ++Itr)
 	// {
 	// 	auto Prefab = *Itr;
-	// 	Prefab->ClearPrefabInstanceScene();
+	// 	Prefab->ClearDesignerScene();
 	// }
 }
 

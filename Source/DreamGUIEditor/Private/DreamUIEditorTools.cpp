@@ -24,13 +24,13 @@
 #include "UObject/UnrealType.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
-#include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
+#include "Core/DreamWidgetPresenterComponent.h"
 #include "Utils/DreamUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIEditorTools"
 
 
-FEditingPrefabChangedDelegate FDreamUIEditorTools::OnEditingPrefabChanged;
+FEditingWidgetChangedDelegate FDreamUIEditorTools::OnEditingWidgetChanged;
 
 struct FDreamUIEditorToolsHelperFunctionHolder
 {
@@ -771,7 +771,7 @@ bool FDreamUIEditorTools::CanDeleteWidget(TFunction<TArray<UDreamWidget*>()> Get
 	return true;
 }
 
-bool FDreamUIEditorTools::CanCheckPrefabOverrideParameter(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
+bool FDreamUIEditorTools::CanCheckNestedOverrideParameter(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
 {
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return false;

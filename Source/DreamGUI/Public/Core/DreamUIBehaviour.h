@@ -7,7 +7,7 @@
 #include "DreamUIBehaviour.generated.h"
 
 class UDreamWidget;
-class UDreamUIPrefabSequenceComponent;
+class UDreamWidgetAnimationComponent;
 class USceneComponent;
 
 /**
@@ -75,7 +75,7 @@ private:
 	UPROPERTY(Transient, Getter=GetWidget, DisplayName=Widget, BlueprintReadOnly, Category=DreamUIBehaviour, meta=(AllowPrivateAccess=true))
 	mutable TObjectPtr<UDreamWidget> CacheWidget = nullptr;
 	UPROPERTY(Transient, Getter=GetAnimationPlayer, DisplayName="Animation Player", BlueprintReadOnly, Category="DreamUI|Animation", meta=(AllowPrivateAccess=true))
-	mutable TObjectPtr<UDreamUIPrefabSequenceComponent> AnimationPlayer = nullptr;
+	mutable TObjectPtr<UDreamWidgetAnimationComponent> AnimationPlayer = nullptr;
 protected:
 
 	/**
@@ -151,7 +151,7 @@ public:
 	UDreamWidget* GetWidget() const;
 	/** Finds the prefab animation host on this widget or the nearest parent widget. */
 	UFUNCTION(BlueprintPure, Category = "DreamUI|Animation")
-	UDreamUIPrefabSequenceComponent* GetAnimationPlayer() const;
+	UDreamWidgetAnimationComponent* GetAnimationPlayer() const;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	FString GetPathDisplayName()const;
 	

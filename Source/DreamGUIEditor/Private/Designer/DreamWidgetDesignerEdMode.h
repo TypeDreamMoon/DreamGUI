@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Tools/LegacyEdModeWidgetHelpers.h"
-#include "DreamUIPrefabEdMode.generated.h"
+#include "DreamWidgetDesignerEdMode.generated.h"
 
 /**
  * The editor mode the prefab editor's viewport runs, and the only reason it exists is the engine's
@@ -23,14 +23,14 @@
  * registers it under GetModeInfo().ID.
  */
 UCLASS()
-class UDreamUIPrefabEdMode : public UBaseLegacyWidgetEdMode
+class UDreamWidgetDesignerEdMode : public UBaseLegacyWidgetEdMode
 {
 	GENERATED_BODY()
 
 public:
 	static const FEditorModeID EM_DreamUIPrefab;
 
-	UDreamUIPrefabEdMode();
+	UDreamWidgetDesignerEdMode();
 
 	/** No toolkit: this mode has no UI of its own and must not open a panel in the prefab editor. */
 	virtual bool UsesToolkits() const override { return false; }

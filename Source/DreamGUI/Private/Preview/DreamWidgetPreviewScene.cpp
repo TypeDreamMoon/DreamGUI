@@ -215,7 +215,7 @@ FString FDreamWidgetPreviewScene::GetReferencerName() const
 
 void FDreamWidgetPreviewScene::UpdateCaptureContents()
 {
-	// This function is called from FAdvancedPrefabScene::Tick, FBlueprintEditor::Tick, and FThumbnailPrefabScene::Tick,
+	// This function is called from FAdvancedPreviewSceneHost::Tick, FBlueprintEditor::Tick, and FThumbnailPreviewScene::Tick,
 	// so assume we are inside a Tick function.
 	const bool bInsideTick = true;
 

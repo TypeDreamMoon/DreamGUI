@@ -1,16 +1,16 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequencePlayer.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamUISequence.h"
+#include "Animation/DreamWidgetAnimationPlayer.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
 
 #include "MovieSceneSequencePlaybackSettings.h"
 
-UDreamUIPrefabSequenceComponent::UDreamUIPrefabSequenceComponent()
+UDreamWidgetAnimationComponent::UDreamWidgetAnimationComponent()
 {
 }
 
@@ -19,7 +19,7 @@ bool FDreamUIAnimationHandle::IsValid() const
 	return ::IsValid(Player.Get());
 }
 
-void UDreamUIPrefabSequenceComponent::Awake()
+void UDreamWidgetAnimationComponent::Awake()
 {
 	Super::Awake();
 	InitSequencePlayer();
@@ -30,7 +30,7 @@ void UDreamUIPrefabSequenceComponent::Awake()
 	}
 }
 
-void UDreamUIPrefabSequenceComponent::OnDestroy()
+void UDreamWidgetAnimationComponent::OnDestroy()
 {
 	Super::OnDestroy();
 	StopAllAnimations();
@@ -42,7 +42,7 @@ void UDreamUIPrefabSequenceComponent::OnDestroy()
 	}
 }
 
-FDreamUIAnimationHandle UDreamUIPrefabSequenceComponent::PlayAnimationByDisplayName(
+FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationByDisplayName(
 	const FString& Name,
 	float StartAtTime,
 	int32 NumLoopsToPlay,
@@ -80,11 +80,11 @@ FDreamUIAnimationHandle UDreamUIPrefabSequenceComponent::PlayAnimationByDisplayN
 		? EMovieSceneCompletionModeOverride::ForceRestoreState
 		: EMovieSceneCompletionModeOverride::ForceKeepState;
 
-	UDreamUIPrefabSequencePlayer* Player = NewObject<UDreamUIPrefabSequencePlayer>(this);
+	UDreamWidgetAnimationPlayer* Player = NewObject<UDreamWidgetAnimationPlayer>(this);
 	Player->SetPlaybackClient(this);
 	Player->InitializeForTick(this);
 	Player->Initialize(Sequence, Settings);
-	Player->OnNativeFinished.BindUObject(this, &UDreamUIPrefabSequenceComponent::HandleActiveSequencePlayerFinished, Player);
+	Player->OnNativeFinished.BindUObject(this, &UDreamWidgetAnimationComponent::HandleActiveSequencePlayerFinished, Player);
 	ActiveSequencePlayers.Add(Player);
 
 	if (PlayMode == EDreamUIAnimationPlayMode::Reverse)
@@ -105,7 +105,7 @@ FDreamUIAnimationHandle UDreamUIPrefabSequenceComponent::PlayAnimationByDisplayN
 	return Handle;
 }
 
-void UDreamUIPrefabSequenceComponent::PauseAnimation(FDreamUIAnimationHandle Handle)
+void UDreamWidgetAnimationComponent::PauseAnimation(FDreamUIAnimationHandle Handle)
 {
 	if (IsActiveSequencePlayer(Handle.Player) && Handle.Player->IsPlaying())
 	{
@@ -113,7 +113,7 @@ void UDreamUIPrefabSequenceComponent::PauseAnimation(FDreamUIAnimationHandle Han
 	}
 }
 
-void UDreamUIPrefabSequenceComponent::StopAnimation(FDreamUIAnimationHandle Handle)
+void UDreamWidgetAnimationComponent::StopAnimation(FDreamUIAnimationHandle Handle)
 {
 	if (IsActiveSequencePlayer(Handle.Player))
 	{
@@ -121,7 +121,7 @@ void UDreamUIPrefabSequenceComponent::StopAnimation(FDreamUIAnimationHandle Hand
 	}
 }
 
-void UDreamUIPrefabSequenceComponent::ReverseAnimation(FDreamUIAnimationHandle Handle)
+void UDreamWidgetAnimationComponent::ReverseAnimation(FDreamUIAnimationHandle Handle)
 {
 	if (IsActiveSequencePlayer(Handle.Player))
 	{
@@ -129,21 +129,21 @@ void UDreamUIPrefabSequenceComponent::ReverseAnimation(FDreamUIAnimationHandle H
 	}
 }
 
-bool UDreamUIPrefabSequenceComponent::IsAnimationPlaying(FDreamUIAnimationHandle Handle) const
+bool UDreamWidgetAnimationComponent::IsAnimationPlaying(FDreamUIAnimationHandle Handle) const
 {
 	return IsActiveSequencePlayer(Handle.Player) && Handle.Player->IsPlaying();
 }
 
-void UDreamUIPrefabSequenceComponent::StopAllAnimations()
+void UDreamWidgetAnimationComponent::StopAllAnimations()
 {
 	if (SequencePlayer && SequencePlayer->IsPlaying())
 	{
 		SequencePlayer->Stop();
 	}
 
-	TArray<TObjectPtr<UDreamUIPrefabSequencePlayer>> Players = MoveTemp(ActiveSequencePlayers);
+	TArray<TObjectPtr<UDreamWidgetAnimationPlayer>> Players = MoveTemp(ActiveSequencePlayers);
 	ActiveSequencePlayers.Reset();
-	for (UDreamUIPrefabSequencePlayer* Player : Players)
+	for (UDreamWidgetAnimationPlayer* Player : Players)
 	{
 		if (IsValid(Player))
 		{
@@ -154,7 +154,7 @@ void UDreamUIPrefabSequenceComponent::StopAllAnimations()
 	}
 }
 
-void UDreamUIPrefabSequenceComponent::HandleActiveSequencePlayerFinished(UDreamUIPrefabSequencePlayer* Player)
+void UDreamWidgetAnimationComponent::HandleActiveSequencePlayerFinished(UDreamWidgetAnimationPlayer* Player)
 {
 	// bPauseAtEnd intentionally leaves the handle alive so callers can resume or stop it.
 	if (IsValid(Player) && !Player->IsPaused())
@@ -165,12 +165,12 @@ void UDreamUIPrefabSequenceComponent::HandleActiveSequencePlayerFinished(UDreamU
 	}
 }
 
-bool UDreamUIPrefabSequenceComponent::IsActiveSequencePlayer(const UDreamUIPrefabSequencePlayer* Player) const
+bool UDreamWidgetAnimationComponent::IsActiveSequencePlayer(const UDreamWidgetAnimationPlayer* Player) const
 {
 	return IsValid(Player) && ActiveSequencePlayers.Contains(Player);
 }
 
-void UDreamUIPrefabSequenceComponent::ReleaseActiveSequencePlayer(UDreamUIPrefabSequencePlayer* Player, bool bStopPlayer)
+void UDreamWidgetAnimationComponent::ReleaseActiveSequencePlayer(UDreamWidgetAnimationPlayer* Player, bool bStopPlayer)
 {
 	if (!IsValid(Player))
 	{
@@ -187,31 +187,31 @@ void UDreamUIPrefabSequenceComponent::ReleaseActiveSequencePlayer(UDreamUIPrefab
 }
 
 #if WITH_EDITOR
-void UDreamUIPrefabSequenceComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UDreamWidgetAnimationComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 }
-void UDreamUIPrefabSequenceComponent::PreDuplicate(FObjectDuplicationParameters& DupParams)
+void UDreamWidgetAnimationComponent::PreDuplicate(FObjectDuplicationParameters& DupParams)
 {
 	Super::PreDuplicate(DupParams);
 	FixEditorHelpers();
 }
 #include "UObject/ObjectSaveContext.h"
-void UDreamUIPrefabSequenceComponent::PreSave(FObjectPreSaveContext SaveContext)
+void UDreamWidgetAnimationComponent::PreSave(FObjectPreSaveContext SaveContext)
 {
 	Super::PreSave(SaveContext);
 	FixEditorHelpers();
 }
-void UDreamUIPrefabSequenceComponent::PostDuplicate(bool bDuplicateForPIE)
+void UDreamWidgetAnimationComponent::PostDuplicate(bool bDuplicateForPIE)
 {
 	Super::PostDuplicate(bDuplicateForPIE);
 }
-void UDreamUIPrefabSequenceComponent::PostInitProperties()
+void UDreamWidgetAnimationComponent::PostInitProperties()
 {
 	Super::PostInitProperties();
 }
-void UDreamUIPrefabSequenceComponent::PostLoad()
+void UDreamWidgetAnimationComponent::PostLoad()
 {
 	Super::PostLoad();
 }
@@ -224,14 +224,14 @@ void UDreamUIPrefabSequenceComponent::PostLoad()
  * later repair possible at all; leave it until the reference has already broken and there is nothing
  * to rebuild it from.
  */
-void UDreamUIPrefabSequenceComponent::FixEditorHelpers()
+void UDreamWidgetAnimationComponent::FixEditorHelpers()
 {
 	UDreamWidget* ContextWidget = GetWidget();
 	if (!IsValid(ContextWidget))
 	{
 		return;
 	}
-	for (UDreamUIPrefabSequence* Sequence : SequenceArray)
+	for (UDreamWidgetAnimation* Sequence : SequenceArray)
 	{
 		if (IsValid(Sequence))
 		{
@@ -242,7 +242,7 @@ void UDreamUIPrefabSequenceComponent::FixEditorHelpers()
 
 #endif
 
-UDreamUIPrefabSequence* UDreamUIPrefabSequenceComponent::GetSequenceByDisplayName(const FString& InName) const
+UDreamWidgetAnimation* UDreamWidgetAnimationComponent::GetSequenceByDisplayName(const FString& InName) const
 {
 	for (auto Item : SequenceArray)
 	{
@@ -253,7 +253,7 @@ UDreamUIPrefabSequence* UDreamUIPrefabSequenceComponent::GetSequenceByDisplayNam
 	}
 	return nullptr;
 }
-UDreamUIPrefabSequence* UDreamUIPrefabSequenceComponent::GetSequenceByIndex(int32 InIndex) const
+UDreamWidgetAnimation* UDreamWidgetAnimationComponent::GetSequenceByIndex(int32 InIndex) const
 {
 	if (InIndex < 0 || InIndex >= SequenceArray.Num())
 	{
@@ -263,11 +263,11 @@ UDreamUIPrefabSequence* UDreamUIPrefabSequenceComponent::GetSequenceByIndex(int3
 	return SequenceArray[InIndex];
 }
 
-void UDreamUIPrefabSequenceComponent::InitSequencePlayer()
+void UDreamWidgetAnimationComponent::InitSequencePlayer()
 {
 	if (!SequencePlayer)
 	{
-		SequencePlayer = NewObject<UDreamUIPrefabSequencePlayer>(this, "SequencePlayer");
+		SequencePlayer = NewObject<UDreamWidgetAnimationPlayer>(this, "SequencePlayer");
 		SequencePlayer->SetPlaybackClient(this);
 
 		// Initialize this player for tick as soon as possible to ensure that a persistent
@@ -279,16 +279,16 @@ void UDreamUIPrefabSequenceComponent::InitSequencePlayer()
 		SequencePlayer->Initialize(SequenceArray[CurrentSequenceIndex], PlaybackSettings);
 	}
 }
-void UDreamUIPrefabSequenceComponent::SetSequenceByIndex(int32 InIndex)
+void UDreamWidgetAnimationComponent::SetSequenceByIndex(int32 InIndex)
 {
 	CurrentSequenceIndex = InIndex;
 	InitSequencePlayer();
 }
 
-void UDreamUIPrefabSequenceComponent::SetSequenceByDisplayName(const FString& InName)
+void UDreamWidgetAnimationComponent::SetSequenceByDisplayName(const FString& InName)
 {
 	int FoundIndex = -1;
-	FoundIndex = SequenceArray.IndexOfByPredicate([InName](const UDreamUIPrefabSequence* Item) {
+	FoundIndex = SequenceArray.IndexOfByPredicate([InName](const UDreamWidgetAnimation* Item) {
 		return Item->GetDisplayNameString() == InName;
 		});
 	if (FoundIndex != INDEX_NONE)
@@ -298,15 +298,15 @@ void UDreamUIPrefabSequenceComponent::SetSequenceByDisplayName(const FString& In
 	}
 }
 
-UDreamUIPrefabSequence* UDreamUIPrefabSequenceComponent::AddNewAnimation()
+UDreamWidgetAnimation* UDreamWidgetAnimationComponent::AddNewAnimation()
 {
-	auto NewSequence = NewObject<UDreamUIPrefabSequence>(this, NAME_None, RF_Public | RF_Transactional);
+	auto NewSequence = NewObject<UDreamWidgetAnimation>(this, NAME_None, RF_Public | RF_Transactional);
 	auto MovieScene = NewSequence->GetMovieScene();
 	SequenceArray.Add(NewSequence);
 	return NewSequence;
 }
 
-bool UDreamUIPrefabSequenceComponent::DeleteAnimationByIndex(int32 InIndex)
+bool UDreamWidgetAnimationComponent::DeleteAnimationByIndex(int32 InIndex)
 {
 	if (InIndex < 0 || InIndex >= SequenceArray.Num())
 	{
@@ -317,7 +317,7 @@ bool UDreamUIPrefabSequenceComponent::DeleteAnimationByIndex(int32 InIndex)
 	CurrentSequenceIndex = SequenceArray.IsEmpty() ? 0 : FMath::Clamp(CurrentSequenceIndex, 0, SequenceArray.Num() - 1);
 	return true;
 }
-UDreamUIPrefabSequence* UDreamUIPrefabSequenceComponent::DuplicateAnimationByIndex(int32 InIndex)
+UDreamWidgetAnimation* UDreamWidgetAnimationComponent::DuplicateAnimationByIndex(int32 InIndex)
 {
 	if (InIndex < 0 || InIndex >= SequenceArray.Num())
 	{

@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIMaterialTrack.h"
-#include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIComponentTypes.h"
+#include "Animation/MovieSceneDreamUIMaterialTrack.h"
+#include "Animation/MovieSceneDreamUIComponentTypes.h"
 #include "EntitySystem/BuiltInComponentTypes.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MovieSceneDreamUIMaterialTrack)

@@ -10,7 +10,7 @@
 #include "DreamWidgetBlueprintEditor.generated.h"
 
 class SDreamWidgetAnimationEditor;
-class UDreamUIPrefabSequence;
+class UDreamWidgetAnimation;
 class SDreamWidgetEditorHierarchyView;
 class UDreamWidget;
 class UDreamWidgetBlueprint;
@@ -317,7 +317,7 @@ public:
 	 * While one is selected the widgets in the viewport are being driven by Sequencer,
 	 * so what is on screen is the animated pose rather than the authored design values.
 	 */
-	UDreamUIPrefabSequence* GetAnimationBeingEdited()const;
+	UDreamWidgetAnimation* GetAnimationBeingEdited()const;
 	bool IsInAnimationEditMode()const { return GetAnimationBeingEdited() != nullptr; }
 
 	/** Fires whenever the selected set of widgets changes */

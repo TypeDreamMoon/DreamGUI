@@ -1,8 +1,8 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
-#include "PrefabSystem/PrefabAnimation/DreamUIAnimEventTrack.h"
-#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "Animation/DreamUIAnimEventTrack.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/Components/DreamWidget.h"
 #include "Evaluation/MovieScenePlayback.h"
 #include "MovieSceneCommonHelpers.h"
@@ -52,12 +52,12 @@ void UDreamUIAnimEventSection::Trigger(TSharedRef<UE::MovieScene::FSharedPlaybac
 
 	// Embedded in a component: the section's outer chain ends at it. The asset form has no such
 	// outer, so fall back to the playback context, which is the hosting widget.
-	UDreamUIPrefabSequenceComponent* Component = GetTypedOuter<UDreamUIPrefabSequenceComponent>();
+	UDreamWidgetAnimationComponent* Component = GetTypedOuter<UDreamWidgetAnimationComponent>();
 	if (Component == nullptr)
 	{
 		if (const UDreamWidget* ContextWidget = Cast<UDreamWidget>(SharedPlaybackState->GetPlaybackContext()))
 		{
-			Component = ContextWidget->GetComponent<UDreamUIPrefabSequenceComponent>();
+			Component = ContextWidget->GetComponent<UDreamWidgetAnimationComponent>();
 		}
 	}
 	if (Component != nullptr)

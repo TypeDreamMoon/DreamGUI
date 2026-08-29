@@ -3,8 +3,8 @@
 
 #include "DreamUISequenceEditorToolkit.h"
 #include "Core/DreamUserWidget.h"
-#include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
-#include "PrefabSystem/DreamUIWidgetBinding.h"
+#include "Animation/DreamUISequence.h"
+#include "Animation/DreamUIWidgetBinding.h"
 #include "Preview/DreamWidgetDesignerScene.h"
 #include "Animation/DreamUISequencePreviewViewport.h"
 #include "ISequencerModule.h"

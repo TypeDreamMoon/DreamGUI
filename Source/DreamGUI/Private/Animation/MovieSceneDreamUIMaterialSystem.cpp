@@ -1,10 +1,10 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIMaterialSystem.h"
+#include "Animation/MovieSceneDreamUIMaterialSystem.h"
 
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamText.h"
-#include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIComponentTypes.h"
+#include "Animation/MovieSceneDreamUIComponentTypes.h"
 #include "Evaluation/PreAnimatedState/MovieScenePreAnimatedStorageID.inl"
 
 #include "Systems/FloatChannelEvaluatorSystem.h"

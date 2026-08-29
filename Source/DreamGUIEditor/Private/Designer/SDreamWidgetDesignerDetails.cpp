@@ -43,7 +43,7 @@
 
 #define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorDetailTab"
 
-namespace DreamUIPrefabDetailsLayout
+namespace DreamWidgetDesignerDetailsLayout
 {
 	constexpr float ComponentsPaneFraction = 0.2f;
 	constexpr float ComponentsPaneMinHeight = 200.0f;
@@ -113,10 +113,10 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
 			+ SSplitter::Slot()
 			.Resizable(true)
 			.SizeRule(SSplitter::ESizeRule::FractionOfParent)
-			.Value(DreamUIPrefabDetailsLayout::ComponentsPaneFraction)
+			.Value(DreamWidgetDesignerDetailsLayout::ComponentsPaneFraction)
 			[
 				SNew(SBox)
-				.MinDesiredHeight(DreamUIPrefabDetailsLayout::ComponentsPaneMinHeight)
+				.MinDesiredHeight(DreamWidgetDesignerDetailsLayout::ComponentsPaneMinHeight)
 				.Padding(FMargin(0, 2))
 				[
 					SNew(SBorder)

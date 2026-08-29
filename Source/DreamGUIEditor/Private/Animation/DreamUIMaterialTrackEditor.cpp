@@ -5,7 +5,7 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
-#include "PrefabSystem/PrefabAnimation/MovieSceneDreamUIMaterialTrack.h"
+#include "Animation/MovieSceneDreamUIMaterialTrack.h"
 
 
 FDreamUIMaterialTrackEditor::FDreamUIMaterialTrackEditor( TSharedRef<ISequencer> InSequencer )
