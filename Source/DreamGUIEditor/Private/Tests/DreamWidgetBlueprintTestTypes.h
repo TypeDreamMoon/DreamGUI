@@ -28,3 +28,22 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test")
 	TObjectPtr<UDreamWidget> UnmarkedReference = nullptr;
 };
+
+/**
+ * A plain object with editable properties and no detail customization registered against it.
+ *
+ * FPropertyRowGenerator builds the real layout, customizations included, and DreamGUI's reach for a
+ * details view a generator has none of. Anything testing property-handle SEMANTICS wants a class
+ * nobody customizes, which is the whole job of this one.
+ */
+UCLASS(NotBlueprintType, HideDropdown)
+class UDreamDetailsMultiSelectTestObject : public UObject
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, Category = "Test")
+	bool bFlag = false;
+
+	UPROPERTY(EditAnywhere, Category = "Test")
+	float Amount = 0.0f;
+};
