@@ -65,6 +65,95 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	bInitialized = true;
 
 	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
+
+	// After the tree exists: the bindings name widgets in it.
+	ResolvePropertyBindings();
+	if (ResolvedBindings.Num() > 0)
+	{
+		// Once now, so the first frame shows bound values rather than the authored ones.
+		EvaluatePropertyBindings();
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+		{
+			Manager->AddPropertyBindingUser(this);
+		}
+	}
+}
+
+void UDreamUserWidget::ResolvePropertyBindings()
+{
+	ResolvedBindings.Reset();
+
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectPropertyBindings(GetClass(), Bindings);
+	if (Bindings.Num() == 0)
+	{
+		return;
+	}
+
+	for (const FDreamWidgetPropertyBinding& Binding : Bindings)
+	{
+		// The target widget is reached the same way everything else reaches one: the class property
+		// the compiler named after it, which InitializeWidgetStatic has already filled in.
+		FObjectPropertyBase* WidgetProperty = FindFProperty<FObjectPropertyBase>(GetClass(), Binding.WidgetName);
+		if (WidgetProperty == nullptr)
+		{
+			continue;
+		}
+		UDreamWidget* TargetWidget = Cast<UDreamWidget>(WidgetProperty->GetObjectPropertyValue_InContainer(this));
+		UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Binding.Target, Binding.BehaviourIndex);
+		if (!IsValid(Target))
+		{
+			continue;
+		}
+		UFunction* SourceFunction = FindFunction(Binding.FunctionName);
+		UFunction* Setter = Target->FindFunction(Binding.SetterName);
+		if (SourceFunction == nullptr || Setter == nullptr)
+		{
+			continue;
+		}
+
+		FResolvedBinding& Resolved = ResolvedBindings.AddDefaulted_GetRef();
+		Resolved.Target = Target;
+		Resolved.SourceFunction = SourceFunction;
+		Resolved.Setter = Setter;
+	}
+}
+
+void UDreamUserWidget::EvaluatePropertyBindings()
+{
+	for (const FResolvedBinding& Binding : ResolvedBindings)
+	{
+		UObject* Target = Binding.Target.Get();
+		if (!IsValid(Target) || Binding.SourceFunction == nullptr || Binding.Setter == nullptr)
+		{
+			continue;
+		}
+
+		// FStructOnScope rather than a raw buffer: a returned FText or FString has to be constructed
+		// before ProcessEvent writes it and destroyed afterwards, and this does both.
+		FStructOnScope SourceFrame(Binding.SourceFunction);
+		ProcessEvent(Binding.SourceFunction, SourceFrame.GetStructMemory());
+
+		FProperty* ReturnProperty = Binding.SourceFunction->GetReturnProperty();
+		FProperty* SetterParameter = nullptr;
+		for (TFieldIterator<FProperty> It(Binding.Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+		{
+			SetterParameter = *It;
+			break;
+		}
+		if (ReturnProperty == nullptr || SetterParameter == nullptr
+			|| !ReturnProperty->SameType(SetterParameter))
+		{
+			// The compiler checked this pairing; reaching here means the class moved underneath us.
+			continue;
+		}
+
+		FStructOnScope SetterFrame(Binding.Setter);
+		SetterParameter->CopyCompleteValue(
+			SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory()),
+			ReturnProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory()));
+		Target->ProcessEvent(Binding.Setter, SetterFrame.GetStructMemory());
+	}
 }
 
 UDreamWidget* UDreamUserWidget::GetContentRoot() const

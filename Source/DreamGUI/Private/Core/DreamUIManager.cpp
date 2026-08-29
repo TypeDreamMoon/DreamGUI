@@ -976,6 +976,19 @@ void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
 	}
 }
 
+void UDreamUIManagerWorldSubsystem::AddPropertyBindingUser(UDreamUserWidget* InUserWidget)
+{
+	if (IsValid(InUserWidget))
+	{
+		PropertyBindingUsers.AddUnique(InUserWidget);
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::RemovePropertyBindingUser(UDreamUserWidget* InUserWidget)
+{
+	PropertyBindingUsers.RemoveSingleSwap(InUserWidget);
+}
+
 void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 {
 	SweepExpiredParkedWidgets();
@@ -988,6 +1001,21 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 			{
 				IDreamUICultureChangedInterface::Execute_OnCultureChanged(Culture.Get());
 			}
+		}
+	}
+
+	// Property bindings, BEFORE the behaviours: a behaviour that reads a bound property this frame
+	// should see this frame's value, not the one from before the function was called.
+	{
+		for (int32 Index = PropertyBindingUsers.Num() - 1; Index >= 0; --Index)
+		{
+			UDreamUserWidget* UserWidget = PropertyBindingUsers[Index].Get();
+			if (!IsValid(UserWidget))
+			{
+				PropertyBindingUsers.RemoveAtSwap(Index);
+				continue;
+			}
+			UserWidget->EvaluatePropertyBindings();
 		}
 	}
 

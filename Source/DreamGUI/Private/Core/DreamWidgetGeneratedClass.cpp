@@ -133,6 +133,31 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 	}
 }
 
+void UDreamWidgetGeneratedClass::CollectPropertyBindings(const UClass* InClass, TArray<FDreamWidgetPropertyBinding>& OutBindings)
+{
+	OutBindings.Reset();
+	// Base first, so a subclass binding on the same property is applied last and wins.
+	TArray<const UDreamWidgetGeneratedClass*> Chain;
+	for (const UClass* Current = InClass; Current != nullptr; Current = Current->GetSuperClass())
+	{
+		if (const UDreamWidgetGeneratedClass* Generated = Cast<UDreamWidgetGeneratedClass>(Current))
+		{
+			Chain.Add(Generated);
+		}
+	}
+	for (int32 Index = Chain.Num() - 1; Index >= 0; --Index)
+	{
+		OutBindings.Append(Chain[Index]->PropertyBindings);
+	}
+}
+
+#if WITH_EDITOR
+void UDreamWidgetGeneratedClass::SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings)
+{
+	PropertyBindings = MoveTemp(InBindings);
+}
+#endif
+
 void UDreamWidgetGeneratedClass::PurgeClass(bool bRecompilingOnLoad)
 {
 	Super::PurgeClass(bRecompilingOnLoad);

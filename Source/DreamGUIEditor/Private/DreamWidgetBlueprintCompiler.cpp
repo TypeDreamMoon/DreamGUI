@@ -200,6 +200,121 @@ void FDreamWidgetBlueprintCompilerContext::UpdateGeneratedClassWidgetTree(UDream
 	OldWidgetTree = nullptr;
 }
 
+FName FDreamWidgetBlueprintCompilerContext::MakeSetterName(const FProperty* InProperty)
+{
+	// SetText for Text, SetUseKerning for bUseKerning: the bool prefix is not part of the name the
+	// setter is spelled with, and every setter in the library follows this.
+	FString Name = InProperty->GetName();
+	if (InProperty->IsA<FBoolProperty>() && Name.Len() > 1 && Name[0] == TEXT('b') && FChar::IsUpper(Name[1]))
+	{
+		Name.RightChopInline(1);
+	}
+	return FName(*(TEXT("Set") + Name));
+}
+
+UFunction* FDreamWidgetBlueprintCompilerContext::FindSetterFor(const UClass* InWidgetClass, const FProperty* InProperty)
+{
+	if (InWidgetClass == nullptr || InProperty == nullptr)
+	{
+		return nullptr;
+	}
+	UFunction* Setter = InWidgetClass->FindFunctionByName(MakeSetterName(InProperty));
+	if (Setter == nullptr || Setter->NumParms != 1 || Setter->GetReturnProperty() != nullptr)
+	{
+		return nullptr;
+	}
+	for (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+	{
+		// One parameter, in, of the property's own type. Anything else is a different function that
+		// happens to be spelled the same.
+		return (!(It->PropertyFlags & CPF_OutParm) && It->SameType(InProperty)) ? Setter : nullptr;
+	}
+	return nullptr;
+}
+
+void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InClass)
+{
+	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
+	UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(InClass);
+	if (DreamBlueprint == nullptr || GeneratedClass == nullptr)
+	{
+		return;
+	}
+	// Skeleton-only compiles do not carry data onto the class; see ValidateWidgetBindings.
+	if (CompileOptions.CompileType == EKismetCompileType::SkeletonOnly)
+	{
+		return;
+	}
+
+	UDreamWidgetTree* Archetype = IsValid(DreamBlueprint->WidgetTree) ? DreamBlueprint->WidgetTree : nullptr;
+	TArray<FDreamWidgetPropertyBinding> Resolved;
+	for (const FDreamWidgetPropertyBinding& Authored : DreamBlueprint->PropertyBindings)
+	{
+		const UDreamWidget* TargetWidget = Archetype != nullptr
+			? Archetype->FindWidgetByVariableName(Authored.WidgetName) : nullptr;
+		if (TargetWidget == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("BindingWidgetNotFound", "The binding on \"{0}\" expects a widget named \"{1}\", and this hierarchy has none."),
+				FText::FromName(Authored.PropertyName), FText::FromName(Authored.WidgetName)).ToString());
+			continue;
+		}
+		// The same resolver the runtime uses: the compiler must check the object the runtime will
+		// actually write to, or a binding passes here and finds nothing there.
+		const UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Authored.Target, Authored.BehaviourIndex);
+		if (Target == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("BindingTargetNotFound", "The binding on \"{0}.{1}\" points at something \"{0}\" does not have."),
+				FText::FromName(Authored.WidgetName), FText::FromName(Authored.PropertyName)).ToString());
+			continue;
+		}
+		const FProperty* TargetProperty = Target->GetClass()->FindPropertyByName(Authored.PropertyName);
+		if (TargetProperty == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("BindingPropertyNotFound", "\"{0}\" has no property named \"{1}\" to bind."),
+				FText::FromName(Authored.WidgetName), FText::FromName(Authored.PropertyName)).ToString());
+			continue;
+		}
+		UFunction* Setter = FindSetterFor(Target->GetClass(), TargetProperty);
+		if (Setter == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("BindingNoSetter", "\"{0}\" cannot be bound: {1} exposes no setter for it, so a bound value would be written but never take effect."),
+				FText::FromName(Authored.PropertyName), FText::FromString(Target->GetClass()->GetName())).ToString());
+			continue;
+		}
+		UFunction* SourceFunction = InClass->FindFunctionByName(Authored.FunctionName);
+		if (SourceFunction == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("BindingFunctionNotFound", "The binding on \"{0}.{1}\" calls \"{2}\", and this Blueprint has no such function."),
+				FText::FromName(Authored.WidgetName), FText::FromName(Authored.PropertyName),
+				FText::FromName(Authored.FunctionName)).ToString());
+			continue;
+		}
+		const FProperty* ReturnProperty = SourceFunction->GetReturnProperty();
+		if (SourceFunction->NumParms != 1 || ReturnProperty == nullptr || !ReturnProperty->SameType(TargetProperty))
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("BindingFunctionWrongShape", "\"{0}\" has to take no arguments and return the type of \"{1}.{2}\" to bind to it."),
+				FText::FromName(Authored.FunctionName), FText::FromName(Authored.WidgetName),
+				FText::FromName(Authored.PropertyName)).ToString());
+			continue;
+		}
+
+		FDreamWidgetPropertyBinding& Entry = Resolved.AddDefaulted_GetRef();
+		Entry.WidgetName = Authored.WidgetName;
+		Entry.Target = Authored.Target;
+		Entry.BehaviourIndex = Authored.BehaviourIndex;
+		Entry.PropertyName = Authored.PropertyName;
+		Entry.FunctionName = Authored.FunctionName;
+		Entry.SetterName = Setter->GetFName();
+	}
+	GeneratedClass->SetPropertyBindings(MoveTemp(Resolved));
+}
+
 void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClass)
 {
 	// The AUTHORING tree, not the class's copy of it. They are the same thing on a full compile -- the
@@ -288,6 +403,7 @@ void FDreamWidgetBlueprintCompilerContext::FinishCompilingClass(UClass* Class)
 
 	// After the base pass, so the properties being checked against actually exist on the class.
 	ValidateWidgetBindings(Class);
+	CompilePropertyBindings(Class);
 }
 
 #undef LOCTEXT_NAMESPACE

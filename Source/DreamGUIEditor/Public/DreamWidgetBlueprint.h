@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/Blueprint.h"
 #include "Engine/EngineTypes.h"
+#include "Core/DreamWidgetPropertyBinding.h"
 #include "DreamWidgetBlueprint.generated.h"
 
 class UDreamWidgetTree;
@@ -91,6 +92,14 @@ public:
 	/** Designer session state for this asset. Not part of the hierarchy; see the struct. */
 	UPROPERTY()
 	FDreamWidgetDesignerData DesignerData;
+
+	/**
+	 * Property bindings as authored. The compiler resolves each into the class's copy, and reports
+	 * the ones it cannot -- so a binding that stops making sense (the widget renamed, the function
+	 * deleted, the setter's type changed) surfaces on the next compile rather than at runtime.
+	 */
+	UPROPERTY()
+	TArray<FDreamWidgetPropertyBinding> PropertyBindings;
 
 	/** Create the tree (and its root) if this asset has none yet, so a fresh asset is editable. */
 	UDreamWidgetTree* GetOrCreateWidgetTree();

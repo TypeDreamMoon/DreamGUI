@@ -199,6 +199,14 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
+public:
+	/** Register a user widget whose class carries property bindings, so they are evaluated per frame. */
+	void AddPropertyBindingUser(class UDreamUserWidget* InUserWidget);
+	void RemovePropertyBindingUser(class UDreamUserWidget* InUserWidget);
+private:
+	/** Weak, and swept as it is walked: a widget can be destroyed between two frames. */
+	TArray<TWeakObjectPtr<class UDreamUserWidget>> PropertyBindingUsers;
+
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TMap<int, TWeakObjectPtr<UDreamEventSystem>> MapUserIndexToEventSystem;
 

@@ -76,7 +76,32 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	UDreamWidget* GetContentRoot() const;
 
+	/**
+	 * Run this widget's property bindings once: call each bound function, hand the result to the
+	 * widget's setter. Called every frame by the UI manager, and safe to call by hand.
+	 *
+	 * Going through the setter is what makes the change take -- see FDreamWidgetPropertyBinding.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
+	void EvaluatePropertyBindings();
+
+	/** Whether this widget has anything to evaluate; the manager only ticks the ones that do. */
+	bool HasPropertyBindings() const { return ResolvedBindings.Num() > 0; }
+
 private:
+	/** A binding with its lookups already done. Resolved once, at Initialize. */
+	struct FResolvedBinding
+	{
+		/** The object the setter is called on -- the widget, its visual, or one of its behaviours. */
+		TWeakObjectPtr<UObject> Target;
+		UFunction* SourceFunction = nullptr;
+		UFunction* Setter = nullptr;
+	};
+	TArray<FResolvedBinding> ResolvedBindings;
+
+	/** Resolve the class's bindings against this instance's widgets. Silent: the compiler reported. */
+	void ResolvePropertyBindings();
+
 	uint8 bInitialized : 1 = false;
 };
 

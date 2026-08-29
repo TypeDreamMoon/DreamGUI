@@ -11,6 +11,8 @@
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Components/DreamText.h"
+#include "Core/DreamWidgetPropertyBinding.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Engine/World.h"
@@ -275,6 +277,112 @@ bool FDreamWidgetBlueprintRecompileTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("and holds the new hierarchy exactly once"), SecondArchetype->CountWidgets(), 3);
 	TestNotNull(TEXT("the new widget got a variable"), SecondClass->FindPropertyByName(FName(TEXT("Footer"))));
 	TestNotNull(TEXT("and the old one kept its"), SecondClass->FindPropertyByName(FName(TEXT("Header"))));
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetPropertyBindingDrivesTheWidgetTest,
+	"DreamGUI.WidgetBlueprint.APropertyBindingDrivesTheWidgetThroughItsSetter",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetPropertyBindingDrivesTheWidgetTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	FScopedBlueprint Fixture(TEXT("BP_PropertyBinding"));
+	UDreamWidget* Label = Fixture.AddWidget(TEXT("Label"));
+	UDreamText* Text = Cast<UDreamText>(Label->CreateNewVisual(UDreamText::StaticClass()));
+	if (!TestNotNull(TEXT("the widget has a text visual"), Text))
+	{
+		return false;
+	}
+	// The authored value, so "it changed" is distinguishable from "it was always this".
+	Text->SetUseKerning(false);
+
+	// The property lives on the VISUAL, which is the case worth testing: Text, FontSize and the rest
+	// of what an author reaches for are not on the widget that carries the name.
+	FDreamWidgetPropertyBinding& Binding = Fixture.Blueprint->PropertyBindings.AddDefaulted_GetRef();
+	Binding.WidgetName = FName(TEXT("Label"));
+	Binding.Target = EDreamWidgetBindingTarget::Visual;
+	Binding.PropertyName = FName(TEXT("bUseKerning"));
+	// A no-argument function on the user widget returning the property's type. IsInitialized is a
+	// native one, so this needs no hand-built graph to have something real to call.
+	Binding.FunctionName = FName(TEXT("IsInitialized"));
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("the binding compiles clean"), Results.NumErrors, 0);
+
+	UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(Fixture.Blueprint->GeneratedClass.Get());
+	if (!TestNotNull(TEXT("a class came out"), GeneratedClass))
+	{
+		return false;
+	}
+	const TArray<FDreamWidgetPropertyBinding>& Compiled = GeneratedClass->GetPropertyBindings();
+	if (!TestEqual(TEXT("the class carries the binding"), Compiled.Num(), 1))
+	{
+		return false;
+	}
+	// The compiler resolved the setter, so the runtime never has to guess at a name.
+	TestEqual(TEXT("and the setter it resolved"), Compiled[0].SetterName, FName(TEXT("SetUseKerning")));
+
+	// End to end. IsInitialized is true by the time bindings run, so a binding that took shows true
+	// on a visual whose authored value was false.
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+	UDreamUserWidget* Instance = CreateDreamWidget(World, GeneratedClass);
+	if (TestNotNull(TEXT("the class instantiates"), Instance))
+	{
+		UDreamWidget* LiveLabel = Instance->GetWidgetTree() != nullptr
+			? Instance->GetWidgetTree()->FindWidgetByVariableName(FName(TEXT("Label"))) : nullptr;
+		if (TestNotNull(TEXT("the live hierarchy has the widget"), LiveLabel))
+		{
+			UDreamText* LiveText = Cast<UDreamText>(LiveLabel->GetVisual());
+			if (TestNotNull(TEXT("and its visual"), LiveText))
+			{
+				TestTrue(TEXT("the binding drove the property"), LiveText->GetUseKerning());
+			}
+		}
+	}
+	World->DestroyWorld(false);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetPropertyBindingWithoutASetterIsRefusedTest,
+	"DreamGUI.WidgetBlueprint.APropertyWithNoSetterCannotBeBound",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetPropertyBindingWithoutASetterIsRefusedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	// The compiler error IS the assertion here, so it has to be declared expected -- the framework
+	// counts anything logged at Error against the test otherwise.
+	AddExpectedError(TEXT("has no property named"), EAutomationExpectedErrorFlags::Contains, 0);
+
+	FScopedBlueprint Fixture(TEXT("BP_PropertyBindingNoSetter"));
+	Fixture.AddWidget(TEXT("Label"));
+
+	// A property nothing exposes a setter for. Writing it would land in memory and never repaint,
+	// which is precisely the silent failure the setter rule exists to refuse.
+	FDreamWidgetPropertyBinding& Binding = Fixture.Blueprint->PropertyBindings.AddDefaulted_GetRef();
+	Binding.WidgetName = FName(TEXT("Label"));
+	Binding.Target = EDreamWidgetBindingTarget::Widget;
+	Binding.PropertyName = FName(TEXT("NoSuchPropertyAnywhere"));
+	Binding.FunctionName = FName(TEXT("IsInitialized"));
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestTrue(TEXT("the compile reports it rather than dropping it"), Results.NumErrors > 0);
+
+	UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(Fixture.Blueprint->GeneratedClass.Get());
+	if (TestNotNull(TEXT("a class still came out"), GeneratedClass))
+	{
+		TestEqual(TEXT("and carries no binding it could not honour"), GeneratedClass->GetPropertyBindings().Num(), 0);
+	}
 
 	return true;
 }

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#include "Core/DreamWidgetPropertyBinding.h"
 #include "DreamWidgetGeneratedClass.generated.h"
 
 class UDreamUserWidget;
@@ -27,9 +28,22 @@ public:
 	/** The authored hierarchy this class instantiates. Null on a class that inherits its parent's. */
 	UDreamWidgetTree* GetWidgetTreeArchetype() const { return WidgetTree; }
 
+	/** The property bindings the compiler resolved for this class. Not inherited: see the getter below. */
+	const TArray<FDreamWidgetPropertyBinding>& GetPropertyBindings() const { return PropertyBindings; }
+
+	/**
+	 * Every binding that applies to an instance of InClass, its ancestors' included.
+	 *
+	 * Bindings accumulate down the chain where the tree does not: a subclass that adds none still has
+	 * to honour its parent's, and one that adds some does not replace them.
+	 */
+	static void CollectPropertyBindings(const UClass* InClass, TArray<FDreamWidgetPropertyBinding>& OutBindings);
+
 #if WITH_EDITOR
 	/** Compiler-only: hand the class the tree it will instance. */
 	void SetWidgetTreeArchetype(UDreamWidgetTree* InWidgetTree);
+	/** Compiler-only: hand the class the bindings it resolved. */
+	void SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings);
 #endif
 
 	/**
@@ -63,4 +77,8 @@ private:
 	 */
 	UPROPERTY(DuplicateTransient)
 	TObjectPtr<UDreamWidgetTree> WidgetTree = nullptr;
+
+	/** Persistent and DuplicateTransient for the same reasons as WidgetTree. */
+	UPROPERTY(DuplicateTransient)
+	TArray<FDreamWidgetPropertyBinding> PropertyBindings;
 };
