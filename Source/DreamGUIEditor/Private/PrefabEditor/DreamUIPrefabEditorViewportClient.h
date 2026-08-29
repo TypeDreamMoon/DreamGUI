@@ -13,7 +13,6 @@ class UDreamVisual;
 class UDreamWidget;
 class FDreamWidgetBlueprintEditor;
 class UDreamWidgetBlueprint;
-class UDreamUIPrefab;
 struct FDreamLayoutControlAnchorData;
 
 /** Viewport client for editor viewports. Contains common functionality for camera movement, rendering debug information, etc. */

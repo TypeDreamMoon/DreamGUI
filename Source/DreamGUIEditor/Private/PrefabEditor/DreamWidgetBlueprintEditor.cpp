@@ -2,7 +2,6 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetBlueprintEditor.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "Designer/DreamWidgetDesignerTabs.h"
 #include "BlueprintEditorTabs.h"

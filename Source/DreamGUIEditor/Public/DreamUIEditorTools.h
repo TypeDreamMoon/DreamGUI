@@ -9,19 +9,14 @@
 #pragma once
 class UDreamWidget;
 class UDreamUIBehaviour;
-class UDreamUIPrefabHelperObject;
-class UDreamUIPrefab;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FEditingPrefabChangedDelegate, UDreamWidget*);
-DECLARE_MULTICAST_DELEGATE_OneParam(FBeforeApplyPrefabDelegate, UDreamUIPrefabHelperObject*);
 
 class DREAMGUIEDITOR_API FDreamUIEditorTools
 {
 private:
-	static FString PrevSavePrefabFolder;
 public:
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
-	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
 	static TArray<UDreamWidget*> GetRootWidgetListFromSelection(const TArray<UDreamWidget*>& InSelectedWidgets);
 	/** UMG-style unique name in the containing prefab: Name, Name_1, Name_2, ... */
 	static FString MakeUniqueWidgetDisplayName(UDreamWidget* ContextWidget, const FString& DesiredName,
@@ -74,35 +69,9 @@ public:
 	static bool CanCutWidget(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction);
 	static bool CanDeleteWidget(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction);
 	
-	static bool CanCreatePrefab(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
-	static void CreatePrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
 	static void RefreshLoadedPrefab();
-	static void RefreshOpenedPrefabEditor(UDreamUIPrefab* InPrefab);
-	static void RefreshOnSubPrefabChange(UDreamUIPrefab* InSubPrefab);
-	static TArray<UDreamUIPrefab*> GetAllPrefabArray();
-	static bool CanUnpackWidgetForPrefab(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
-	static void UnpackPrefab(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
-	static void SelectPrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
-	static bool CanBrowsePrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
-	static void OpenPrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
 	static bool CanCheckPrefabOverrideParameter(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
 	static bool CanCreateWidget(TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
-	static void CleanupPrefabs();
 	static bool IsWidgetCompatibleWithDreamUIToolsMenu(UDreamWidget* InWidget);
 
-	/**
-	 * One entry per copied widget, in selection order.
-	 *
-	 * This used to be keyed by display name, so two copied widgets sharing a name collapsed into one
-	 * and pasted as one, silently. Sub-prefab children collide by construction --
-	 * EnsureUniqueWidgetDisplayNames deliberately skips them -- so the name is a naming hint for
-	 * paste and nothing more; it must never decide how many widgets there are.
-	 */
-	struct FCopiedWidgetPrefab
-	{
-		FString DisplayName;
-		TWeakObjectPtr<UDreamUIPrefab> Prefab;
-	};
-	static TArray<FCopiedWidgetPrefab> CopiedWidgetPrefabList;
-	static bool HaveValidCopiedWidgets();
 };

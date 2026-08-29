@@ -3,7 +3,6 @@
 
 #include "PrefabSystem/DreamUIPrefabInstanceScene.h"
 #include "DreamGUI.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureCube.h"
@@ -77,48 +76,6 @@ FDreamUIPrefabInstanceScene::~FDreamUIPrefabInstanceScene()
 		RootAgentWidget->DestroyWidget();
 		RootAgentWidget.Reset();
 	}
-}
-
-UDreamWidget* FDreamUIPrefabInstanceScene::GetParentForLoadPrefab(UDreamUIPrefab* InPrefab)
-{
-	if (RootAgentWidget != nullptr)
-	{
-		return RootAgentWidget.Get();
-	}
-	if (!IsValid(InPrefab))return nullptr;
-	auto Prefab = InPrefab;
-	if (InPrefab->GetIsPrefabVariant())
-	{
-		auto RootSubPrefab = InPrefab;
-		TSet<const UDreamUIPrefab*> VisitedVariants;
-		while (RootSubPrefab->GetIsPrefabVariant())
-		{
-			if (VisitedVariants.Contains(RootSubPrefab))
-			{
-				UE_LOG(DreamGUI, Error, TEXT("Circular prefab variant reference detected while opening '%s'."), *InPrefab->GetPathName());
-				return nullptr;
-			}
-			VisitedVariants.Add(RootSubPrefab);
-			if (RootSubPrefab->ReferenceAssetList.Num() <= 0)
-			{
-				return nullptr;
-			}
-			RootSubPrefab = Cast<UDreamUIPrefab>(RootSubPrefab->ReferenceAssetList[0]);
-			if (!RootSubPrefab)
-			{
-				return nullptr;
-			}
-		}
-		Prefab = RootSubPrefab;
-	}
-	
-	// The design canvas size belongs to the asset being edited: a variant saves its own
-	// CanvasSize (SetDesignerCanvasSize / SaveEditorState), so reading the walked base's value
-	// here would snap the canvas back to the base size on every reopen.
-	return EnsureRootAgent(
-		InPrefab->CanvasSize,
-		(EDreamRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode,
-		InPrefab->PrefabDataForPrefabEditor.DesignViewportSize);
 }
 
 UDreamWidget* FDreamUIPrefabInstanceScene::EnsureRootAgent(FIntPoint InCanvasSize, EDreamRenderMode InRenderMode, FIntPoint InSizeInEditMode)

@@ -10,7 +10,6 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture2D.h"
 #include "Materials/MaterialInterface.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUISettings"
 

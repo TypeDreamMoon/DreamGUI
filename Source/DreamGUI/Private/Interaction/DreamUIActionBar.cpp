@@ -6,7 +6,6 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamText.h"
 #include "Event/DreamEventSystem.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 #include "Engine/Texture2D.h"
 
 UDreamUIActionBarEntry::UDreamUIActionBarEntry()

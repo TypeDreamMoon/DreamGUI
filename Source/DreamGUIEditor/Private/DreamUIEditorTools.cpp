@@ -2,7 +2,6 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIEditorTools.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -19,7 +18,6 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Widgets/SViewport.h"
 #include "Engine/Selection.h"
-#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "DreamGUIEditorModule.h"
 #include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "Core/DreamUIBehaviour.h"
@@ -33,7 +31,6 @@
 
 
 FEditingPrefabChangedDelegate FDreamUIEditorTools::OnEditingPrefabChanged;
-FBeforeApplyPrefabDelegate FDreamUIEditorTools::OnBeforeApplyPrefab;
 
 struct FDreamUIEditorToolsHelperFunctionHolder
 {
@@ -87,18 +84,10 @@ struct FDreamUIEditorToolsHelperFunctionHolder
 		{
 			return nullptr;
 		}
-		if (UDreamUIPrefabHelperObject* Helper = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ContextWidget))
-		{
-			if (IsValid(Helper->LoadedRootWidget))
-			{
-				return Helper->LoadedRootWidget;
-			}
-		}
 		return ContextWidget->GetRootWidgetInHierarchy();
 	}
 };
 
-TArray<FDreamUIEditorTools::FCopiedWidgetPrefab> FDreamUIEditorTools::CopiedWidgetPrefabList;
 
 
 namespace
@@ -194,19 +183,11 @@ int32 FDreamUIEditorTools::EnsureUniqueWidgetDisplayNames(UDreamWidget* RootWidg
 
 	TArray<UDreamWidget*> Widgets;
 	UDreamWidget::CollectChildrenWidgets(RootWidget, Widgets);
-	UDreamUIPrefabHelperObject* ManagingHelper =
-		UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
 	TSet<FName> UsedNames;
 	int32 RenameCount = 0;
 	for (UDreamWidget* Widget : Widgets)
 	{
 		if (!IsValid(Widget))
-		{
-			continue;
-		}
-		if (ManagingHelper
-			&& ManagingHelper->IsWidgetBelongsToSubPrefab(Widget)
-			&& !ManagingHelper->IsSubPrefabRootWidget(Widget))
 		{
 			continue;
 		}
@@ -328,11 +309,6 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 	if (IsValid(NewWidget))
 	{
 		NewWidget->Modify();
-		if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-		{
-			PrefabHelperObject->Modify();
-			PrefabHelperObject->SetAnythingDirty();
-		}
 		NewWidget->SetDisplayName(MakeUniqueWidgetDisplayName(SelectedWidget, Name));
 		NewWidget->OnRegister();
 		if (SelectedWidget != nullptr)
@@ -424,11 +400,6 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "DreamUI Create UI Control"));
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	ModifyForHierarchyChange(SelectedWidget);
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		PrefabHelperObject->Modify();
-		PrefabHelperObject->SetAnythingDirty();
-	}
 
 	UDreamWidget* CreatedWidget = CreateDreamWidget(SelectedWidget->GetWorld(), ControlClass, SelectedWidget);
 	if (!IsValid(CreatedWidget))
@@ -563,72 +534,14 @@ void FDreamUIEditorTools::DuplicateWidgets(TFunction<TArray<UDreamWidget*>()> Ge
 		{
 			Parent->Modify();
 		}
-		TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> DuplicatedSubPrefabMap;
-		TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
-		TMap<UObject*, FGuid> InMapObjectToGuid;
-		if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
+		// One deep copy of the whole subtree; the sub-prefab bookkeeping either side of it had no
+		// subject left, since a class-model widget has no prefab helper for that branch to find.
+		CopiedWidget = DuplicateDreamWidgetHierarchy(Widget->GetOuter(), Widget, Parent);
+		if (!IsValid(CopiedWidget))
 		{
-			PrefabHelperObject->CleanupInvalidSubPrefab();//do cleanup before everything else
-			PrefabHelperObject->Modify();
-			struct LOCAL {
-				static void CollectSubPrefabWidgets(UDreamWidget* InWidget, const TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData>& InSubPrefabMap, TArray<UDreamWidget*>& OutSubPrefabRootWidgets)
-				{
-					if (InSubPrefabMap.Contains(InWidget))
-					{
-						OutSubPrefabRootWidgets.Add(InWidget);
-					}
-					else
-					{
-						for (auto& Child : InWidget->GetChildren())
-						{
-							CollectSubPrefabWidgets(Child, InSubPrefabMap, OutSubPrefabRootWidgets);
-						}
-					}
-				}
-			};
-			TArray<UDreamWidget*> SubPrefabRootWidgets;
-			LOCAL::CollectSubPrefabWidgets(Widget, PrefabHelperObject->SubPrefabMap, SubPrefabRootWidgets);//collect sub prefabs that is attached to this Widget
-			for (auto& SubPrefabKeyValue : PrefabHelperObject->SubPrefabMap)//generate MapObjectToGuid
-			{
-				auto SubPrefabRootWidget = SubPrefabKeyValue.Key;
-				if (SubPrefabRootWidgets.Contains(SubPrefabRootWidget))
-				{
-					auto& SubPrefabData = SubPrefabKeyValue.Value;
-					PrefabHelperObject->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, SubPrefabRootWidget);//need to update subprefab to latest before duplicate
-					auto FindObjectGuidInParentPrefab = [&](FGuid InGuidInSubPrefab) {
-						for (auto& KeyValue : SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab)
-						{
-							if (KeyValue.Value == InGuidInSubPrefab)
-							{
-								return KeyValue.Key;
-							}
-						}
-						UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-						FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-						return FGuid::NewGuid();
-					};
-					for (auto& MapGuidToObjectKeyValue : SubPrefabData.MapGuidToObject)
-					{
-						InMapObjectToGuid.Add(MapGuidToObjectKeyValue.Value, FindObjectGuidInParentPrefab(MapGuidToObjectKeyValue.Key));
-					}
-				}
-			}
-			CopiedWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
-			CopiedWidget->SetAsLastSibling();
-			for (auto& KeyValue : DuplicatedSubPrefabMap)
-			{
-				TMap<FGuid, TObjectPtr<UObject>> SubMapGuidToObject;
-				for (auto& MapGuidItem : KeyValue.Value.MapObjectGuidFromParentPrefabToSubPrefab)
-				{
-					SubMapGuidToObject.Add(MapGuidItem.Value, OutMapGuidToObject[MapGuidItem.Key]);
-				}
-				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
-			}
+			continue;
 		}
-		else 
-		{
-			CopiedWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
-		}
+		CopiedWidget->SetAsLastSibling();
 		CopiedWidget->Modify();
 		FDreamUIUtils::ChangePropertyWithNotify(CopiedWidget, UDreamWidget::GetPropertyName_DisplayName(), [CopiedWidget, CopiedWidgetName]()
 		{
@@ -647,16 +560,7 @@ void FDreamUIEditorTools::CopyWidgets(TFunction<TArray<UDreamWidget*>()> GetSele
 		UE_LOG(DreamGUIEditor, Error, TEXT("NothingSelected"));
 		return;
 	}
-	for (auto& CopiedItem : CopiedWidgetPrefabList)
-	{
-		if (CopiedItem.Prefab.IsValid())
-		{
-			CopiedItem.Prefab->RemoveFromRoot();
-			CopiedItem.Prefab->ConditionalBeginDestroy();
-		}
-	}
 	auto CopyWidgetList = FDreamUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
-	CopiedWidgetPrefabList.Reset();
 	if (CopyWidgetList.Num() > 0)
 	{
 		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(CopyWidgetList[0]))
@@ -667,78 +571,11 @@ void FDreamUIEditorTools::CopyWidgets(TFunction<TArray<UDreamWidget*>()> GetSele
 			return;
 		}
 	}
-	for (auto Widget : CopyWidgetList)
-	{
-		auto Prefab = NewObject<UDreamUIPrefab>();
-		Prefab->AddToRoot();
-		TMap<UObject*, FGuid> MapObjectToGuid;
-		TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> SubPrefabMap;
-		if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
-		{
-			SubPrefabMap = PrefabHelperObject->SubPrefabMap;
-
-			if (PrefabHelperObject->CleanupInvalidSubPrefab())//do cleanup before everything else
-			{
-				PrefabHelperObject->Modify();
-			}
-			struct LOCAL {
-				static void CollectSubPrefabWidgets(UDreamWidget* InWidget, const TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData>& InSubPrefabMap, TArray<UDreamWidget*>& OutSubPrefabRootWidgets)
-				{
-					if (InSubPrefabMap.Contains(InWidget))
-					{
-						OutSubPrefabRootWidgets.Add(InWidget);
-					}
-					else
-					{
-						for (auto& ChildWidget : InWidget->GetChildren())
-						{
-							CollectSubPrefabWidgets(ChildWidget, InSubPrefabMap, OutSubPrefabRootWidgets);
-						}
-					}
-				}
-			};
-			TArray<UDreamWidget*> SubPrefabRootWidgets;
-			LOCAL::CollectSubPrefabWidgets(Widget, PrefabHelperObject->SubPrefabMap, SubPrefabRootWidgets);//collect sub prefabs that is attached to this Widget
-			for (auto& SubPrefabKeyValue : PrefabHelperObject->SubPrefabMap)//generate MapObjectToGuid
-			{
-				auto SubPrefabRootWidget = SubPrefabKeyValue.Key;
-				if (SubPrefabRootWidgets.Contains(SubPrefabRootWidget))
-				{
-					auto& SubPrefabData = SubPrefabKeyValue.Value;
-					PrefabHelperObject->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, SubPrefabRootWidget);//need to update subprefab to latest before duplicate
-					auto FindObjectGuidInParentPrefab = [&](FGuid InGuidInSubPrefab) {
-						for (auto& KeyValue : SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab)
-						{
-							if (KeyValue.Value == InGuidInSubPrefab)
-							{
-								return KeyValue.Key;
-							}
-						}
-						UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-						FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-						return FGuid::NewGuid();
-					};
-					for (auto& MapGuidToObjectKeyValue : SubPrefabData.MapGuidToObject)
-					{
-						MapObjectToGuid.Add(MapGuidToObjectKeyValue.Value, FindObjectGuidInParentPrefab(MapGuidToObjectKeyValue.Key));
-					}
-				}
-			}
-		}
-
-		TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> TempSubPrefabMap;
-		for (auto& SubPrefabKeyValue : SubPrefabMap)
-		{
-			if (SubPrefabKeyValue.Key->IsChildOf(Widget) || SubPrefabKeyValue.Key == Widget)
-			{
-				TempSubPrefabMap = SubPrefabMap;
-				break;
-			}
-		}
-		Prefab->SavePrefab(Widget, MapObjectToGuid, TempSubPrefabMap);
-		CopiedWidgetPrefabList.Add({ Widget->GetDisplayName(), Prefab });
-	}
+	// Nothing below the designer route any more. The fallback here copied the selection into a
+	// transient UDreamUIPrefab and pasted it back by loading the blob; a widget that no designer owns
+	// is not something this command can be invoked on.
 }
+
 void FDreamUIEditorTools::PasteWidgets(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction)
 {
 	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
@@ -762,59 +599,8 @@ void FDreamUIEditorTools::PasteWidgets(TFunction<TArray<UDreamWidget*>()> GetSel
 		}
 		return;
 	}
-	auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ParentWidget);
-	if (PrefabHelperObject == nullptr)return;
-	int32 PasteCount = 0;
-	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
-	{
-		PasteCount += CopiedItem.Prefab.IsValid() ? 1 : 0;
-	}
-	if (!ParentWidget->CanAcceptAdditionalChildren(PasteCount))
-	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Widget '%s' cannot accept %d pasted child widget(s)."),
-			*ParentWidget->GetDisplayName(), PasteCount);
-		return;
-	}
-
-	const FScopedTransaction Transaction(LOCTEXT("PasteWidget_Transaction", "DreamUI Paste Widgets"));
-	auto World = ParentWidget->GetWorld();
-	UDreamUISelection::GetInstance(World)->Modify();
-	ModifyForHierarchyChange(ParentWidget);
-	if (IsValid(PrefabHelperObject))PrefabHelperObject->Modify();
-	UDreamUISelection::GetInstance(World)->SelectNone();
-	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
-	{
-		if (CopiedItem.Prefab.IsValid())
-		{
-			TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
-			TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> LoadedSubPrefabMap;
-			auto CopiedWidgetName = MakeUniqueWidgetDisplayName(ParentWidget, CopiedItem.DisplayName);
-			auto CopiedWidget = CopiedItem.Prefab->LoadPrefabInEditor(ParentWidget->GetWorld(), ParentWidget->GetOuter(), ParentWidget, LoadedSubPrefabMap, OutMapGuidToObject, false);
-			for (auto& KeyValue : LoadedSubPrefabMap)
-			{
-				TMap<FGuid, TObjectPtr<UObject>> SubMapGuidToObject;
-				for (auto& MapGuidItem : KeyValue.Value.MapObjectGuidFromParentPrefabToSubPrefab)
-				{
-					SubMapGuidToObject.Add(MapGuidItem.Value, OutMapGuidToObject[MapGuidItem.Key]);
-				}
-				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
-			}
-			CopiedWidget->Modify();
-			FDreamUIUtils::ChangePropertyWithNotify(CopiedWidget, UDreamWidget::GetPropertyName_DisplayName(), [CopiedWidget, CopiedWidgetName]()
-			{
-				CopiedWidget->SetDisplayName(CopiedWidgetName);
-			});
-			EnsureUniqueWidgetDisplayNames(FDreamUIEditorToolsHelperFunctionHolder::GetNamingRoot(CopiedWidget));
-			PrefabHelperObject->SetAnythingDirty();
-			UDreamUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
-		}
-		else
-		{
-			UE_LOG(DreamGUIEditor, Error, TEXT("Source copied widget is missing!"));
-		}
-	}
-	UDreamUIManagerWorldSubsystem::RefreshAllUI();
 }
+
 TArray<FText> FDreamUIEditorTools::CollectBehaviourBindingsToWidgets(UDreamUIBehaviour* InCompanionBehaviour, const TArray<UDreamWidget*>& InWidgets)
 {
 	TArray<FText> Result;
@@ -918,22 +704,10 @@ void FDreamUIEditorTools::DeleteWidgets(TFunction<TArray<UDreamWidget*>()> GetSe
 			Parent->SetFlags(RF_Public | RF_Transactional);
 			Parent->Modify();
 		}
-		if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
-		{
-			PrefabHelperObject->Modify();
-			PrefabHelperObject->SetAnythingDirty();
-			TArray<UDreamWidget*> ChildrenWidgets;
-			UDreamWidget::CollectChildrenWidgets(Widget, ChildrenWidgets);
-			for (auto ChildWidget : ChildrenWidgets)
-			{
-				PrefabHelperObject->RemoveSubPrefabByAnyWidgetOfSubPrefab(ChildWidget);
-			}
-		}
 		Widget->SetParent(nullptr);
 		Widget->DestroyWidget();
 		Widget->MarkPackageDirty();
 	}
-	CleanupPrefabs();
 }
 void FDreamUIEditorTools::CutWidgets(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction)
 {
@@ -981,14 +755,8 @@ bool FDreamUIEditorTools::CanPasteWidget(TFunction<UDreamWidget*()> GetSelectedW
 		return FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()
 			&& SelectedWidget->CanAcceptAdditionalChildren(1);
 	}
-	if (FDreamUIEditorTools::CopiedWidgetPrefabList.Num() == 0)return false;
-	int32 PasteCount = 0;
-	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
-	{
-		PasteCount += CopiedItem.Prefab.IsValid() ? 1 : 0;
-	}
-	if (!SelectedWidget->CanAcceptAdditionalChildren(PasteCount))return false;
-	return true;
+	// Outside a designer there is no clipboard: the only one is the designer's own.
+	return false;
 }
 bool FDreamUIEditorTools::CanCutWidget(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction)
 {
@@ -998,361 +766,9 @@ bool FDreamUIEditorTools::CanDeleteWidget(TFunction<TArray<UDreamWidget*>()> Get
 {
 	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
 	if (SelectedWidgets.Num() == 0)return false;
-	for (auto Widget : SelectedWidgets)
-	{
-		if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
-		{
-			if (!PrefabHelperObject->IsSubPrefabRootWidget(Widget)//allowed to delete sub prefab's root Widget
-				&& PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget))//not allowed to delete sub prefab's Widget
-			{
-				return false;
-			}
-		}
-	}
+	// The refusal this used to make was "you cannot delete a widget inside a sub-prefab instance".
+	// A class model has no sub-prefab instances, so nothing here is off limits.
 	return true;
-}
-
-bool FDreamUIEditorTools::HaveValidCopiedWidgets()
-{
-	if (CopiedWidgetPrefabList.Num() == 0)return false;
-	for (const FCopiedWidgetPrefab& CopiedItem : CopiedWidgetPrefabList)
-	{
-		if (!CopiedItem.Prefab.IsValid())
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-bool FDreamUIEditorTools::CanCreatePrefab(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
-{
-	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return false;
-	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return false;
-	if (SelectedWidget->HasAnyFlags(EObjectFlags::RF_Transient))return false;
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		if (PrefabHelperObject->LoadedRootWidget == SelectedWidget)
-		{
-			return false;
-		}
-		if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(SelectedWidget))
-		{
-			return false;
-		}
-		else if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(SelectedWidget))
-		{
-			return false;
-		}
-	}
-	return true;
-}
-FString FDreamUIEditorTools::PrevSavePrefabFolder = TEXT("");
-void FDreamUIEditorTools::CreatePrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)//@todo: make some referenced parameter as override parameter(eg: Widget parameter reference other Widget that is not belongs to prefab hierarchy)
-{
-	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return;
-	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return;
-	auto OldPrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
-	if (IsValid(OldPrefabHelperObject) && OldPrefabHelperObject->LoadedRootWidget == SelectedWidget)//If create prefab from an existing prefab's root Widget, this is not allowed
-	{
-		auto Message = LOCTEXT("CreatePrefabError_BelongToOtherPrefab", "This Widget is a root Widget of another prefab, this is not allowed! Instead you can duplicate the prefab asset.");
-		FMessageDialog::Open(EAppMsgType::Ok, Message);
-		return;
-	}
-	IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
-	if (DesktopPlatform)
-	{
-		TArray<FString> OutFileNames;
-		DesktopPlatform->SaveFileDialog(
-			FSlateApplication::Get().FindBestParentWindowHandleForDialogs(FSlateApplication::Get().GetGameViewport()),
-			TEXT("Choose a path to save prefab asset, must inside Content folder"),
-			PrevSavePrefabFolder.IsEmpty() ? FPaths::ProjectContentDir() : PrevSavePrefabFolder,
-			SelectedWidget->GetDisplayName() + TEXT("_Prefab"),
-			TEXT("*.*"),
-			EFileDialogFlags::None,
-			OutFileNames
-		);
-		if (OutFileNames.Num() > 0)
-		{
-			FString selectedFilePath = OutFileNames[0];
-			if (selectedFilePath.StartsWith(FPaths::ProjectDir()))
-			{
-				PrevSavePrefabFolder = FPaths::GetPath(selectedFilePath);
-				if (FPaths::FileExists(selectedFilePath + TEXT(".uasset")))
-				{
-					auto returnValue = FMessageDialog::Open(EAppMsgType::YesNo
-						, FText::Format(LOCTEXT("Error_AssetAlreadyExist", "Asset already exist at path: \"{0}\" !\nReplace it?"), FText::FromString(selectedFilePath)));
-					if (returnValue != EAppReturnType::Yes)
-					{
-						return;
-					}
-				}
-				selectedFilePath.RemoveFromStart(FPaths::ProjectContentDir(), ESearchCase::CaseSensitive);
-				FString packageName = TEXT("/Game/") + selectedFilePath;
-				UPackage* package = CreatePackage(*packageName);
-				if (package == nullptr)
-				{
-					FMessageDialog::Open(EAppMsgType::Ok
-						, LOCTEXT("Error_NotValidPathForSavePrefab", "Selected path not valid, please choose another path to save prefab."));
-					return;
-				}
-				package->FullyLoad();
-				FString fileName = FPaths::GetBaseFilename(selectedFilePath);
-				auto OutPrefab = NewObject<UDreamUIPrefab>(package, UDreamUIPrefab::StaticClass(), *fileName, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
-				FAssetRegistryModule::AssetCreated(OutPrefab);
-
-				auto PrefabHelperObjectWhichManageThisWidget = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
-				check(PrefabHelperObjectWhichManageThisWidget != nullptr)
-				{
-					struct LOCAL
-					{
-						static auto Make_MapGuidFromParentToSub(const TMap<UObject*, FGuid>& InNewParentMapObjectToGuid, UDreamUIPrefabHelperObject* InPrefabHelperObject, const FDreamUISubPrefabData& InOriginSubPrefabData)
-						{
-							TMap<FGuid, FGuid> Result;
-							for (auto& KeyValue : InOriginSubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab)
-							{
-								auto Object = InPrefabHelperObject->MapGuidToObject[KeyValue.Key];
-								if (IsValid(Object))
-								{
-									auto Guid = InNewParentMapObjectToGuid[Object];
-									if (!Result.Contains(Guid))
-									{
-										Result.Add(Guid, KeyValue.Value);
-									}
-								}
-							}
-							return Result;
-						}
-						static void CollectSubPrefab(UDreamWidget* InWidget, TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData>& InOutSubPrefabMap, UDreamUIPrefabHelperObject* InPrefabHelperObject, const TMap<UObject*, FGuid>& InMapObjectToGuid)
-						{
-							if (InPrefabHelperObject->IsWidgetBelongsToSubPrefab(InWidget))
-							{
-								auto OriginSubPrefabData = InPrefabHelperObject->GetSubPrefabData(InWidget);
-								FDreamUISubPrefabData SubPrefabData;
-								SubPrefabData.PrefabAsset = OriginSubPrefabData.PrefabAsset;
-								SubPrefabData.ObjectOverrideParameterArray = OriginSubPrefabData.ObjectOverrideParameterArray;
-								SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab = Make_MapGuidFromParentToSub(InMapObjectToGuid, InPrefabHelperObject, OriginSubPrefabData);
-								InOutSubPrefabMap.Add(InWidget, SubPrefabData);
-								return;
-							}
-							for (auto& ChildWidget : InWidget->GetChildren())
-							{
-								CollectSubPrefab(ChildWidget, InOutSubPrefabMap, InPrefabHelperObject, InMapObjectToGuid);//collect all Widget, include subprefab's Widget
-							}
-						}
-					};
-					TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> SubPrefabMap;
-					TMap<UObject*, FGuid> MapObjectToGuid;
-					OutPrefab->SavePrefab(SelectedWidget, MapObjectToGuid, SubPrefabMap);//save prefab first step, just collect guid and sub prefab
-					LOCAL::CollectSubPrefab(SelectedWidget, SubPrefabMap, PrefabHelperObjectWhichManageThisWidget, MapObjectToGuid);
-					for (auto& KeyValue : SubPrefabMap)
-					{
-						PrefabHelperObjectWhichManageThisWidget->RemoveSubPrefabByAnyWidgetOfSubPrefab(KeyValue.Key);//remove prefab from origin PrefabHelperObject
-					}
-					OutPrefab->SavePrefab(SelectedWidget, MapObjectToGuid, SubPrefabMap);//save prefab second step, store sub prefab data
-					OutPrefab->EnsureInstanceObjects();
-
-					//make it as sub-prefab
-					TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
-					for (auto KeyValue : MapObjectToGuid)
-					{
-						MapGuidToObject.Add(KeyValue.Value, KeyValue.Key);
-					}
-					PrefabHelperObjectWhichManageThisWidget->MakePrefabAsSubPrefab(OutPrefab, SelectedWidget, MapGuidToObject, {});
-				}
-				CleanupPrefabs();
-			}
-			else
-			{
-				FMessageDialog::Open(EAppMsgType::Ok
-					, LOCTEXT("Error_PrefabSaveLocation", "Prefab should only save inside Content folder!"));
-			}
-		}
-	}
-}
-
-void FDreamUIEditorTools::RefreshLoadedPrefab()
-{
-	for (TObjectIterator<UDreamUIPrefabHelperObject> Itr; Itr; ++Itr)
-	{
-		Itr->CheckPrefabVersion();
-	}
-	// Presenters hold a class now, and recompiling a Blueprint reinstances its objects, so there is
-	// no hand-rolled version check left to run over them.
-}
-
-void FDreamUIEditorTools::RefreshOpenedPrefabEditor(UDreamUIPrefab* InPrefab)
-{
-	// Nothing to do: a prefab has no editor to reopen. It used to close and reopen the prefab
-	// editor so the live copy would pick up what had changed on disk, which is a problem that only
-	// exists when the editor holds a copy at all.
-}
-
-void FDreamUIEditorTools::RefreshOnSubPrefabChange(UDreamUIPrefab* InSubPrefab)
-{
-	auto AllPrefabs = GetAllPrefabArray();
-
-	struct Local
-	{
-	public:
-		static void RefreshAllPrefabsOnSubPrefabChange(
-			const TArray<UDreamUIPrefab*>& InPrefabs,
-			UDreamUIPrefab* InSubPrefab,
-			TSet<const UDreamUIPrefab*>& VisitedPrefabs)
-		{
-			if (!IsValid(InSubPrefab) || VisitedPrefabs.Contains(InSubPrefab))return;
-			VisitedPrefabs.Add(InSubPrefab);
-			for (auto& Prefab : InPrefabs)
-			{
-				if (Prefab->IsPrefabBelongsToThisSubPrefab(InSubPrefab, false))
-				{
-					//check if is opened by prefab editor
-					RefreshAllPrefabsOnSubPrefabChange(InPrefabs, Prefab, VisitedPrefabs);
-				}
-			}
-		}
-	};
-
-	TSet<const UDreamUIPrefab*> VisitedPrefabs;
-	Local::RefreshAllPrefabsOnSubPrefabChange(AllPrefabs, InSubPrefab, VisitedPrefabs);
-}
-
-TArray<UDreamUIPrefab*> FDreamUIEditorTools::GetAllPrefabArray()
-{
-#if 0//Why disable? Because we don't need to refresh not-loaded prefab, because prefab will reload all sub prefab when load
-	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
-	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-
-	// Need to do this if running in the editor with -game to make sure that the assets in the following path are available
-	TArray<FString> PathsToScan;
-	PathsToScan.Add(TEXT("/Game/"));
-	AssetRegistry.ScanPathsSynchronous(PathsToScan);
-
-	// Get asset in path
-	TArray<FAssetData> ScriptAssetList;
-	AssetRegistry.GetAssetsByPath(FName("/Game/"), ScriptAssetList, /*bRecursive=*/true);
-
-	TArray<UDreamUIPrefab*> AllPrefabs;
-	auto PrefabClassName = UDreamUIPrefab::StaticClass()->GetClassPathName();
-	// Ensure all assets are loaded
-	for (const FAssetData& Asset : ScriptAssetList)
-	{
-		// Gets the loaded asset, loads it if necessary
-		if (Asset.AssetClassPath == PrefabClassName)
-		{
-			auto AssetObject = Asset.GetAsset();
-			if (auto Prefab = Cast<UDreamUIPrefab>(AssetObject))
-			{
-				Prefab->MakeAgentObjectsInPreviewWorld();
-				AllPrefabs.Add(Prefab);
-			}
-		}
-	}
-#else
-	TArray<UDreamUIPrefab*> AllPrefabs;
-#endif
-	//collect prefabs that are not saved to disc yet
-	for (TObjectIterator<UDreamUIPrefab> Itr; Itr; ++Itr)
-	{
-		if (!AllPrefabs.Contains(*Itr))
-		{
-			AllPrefabs.Add(*Itr);
-		}
-	}
-	return AllPrefabs;
-}
-
-bool FDreamUIEditorTools::CanUnpackWidgetForPrefab(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
-{
-	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return false;
-	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return false;
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget))
-		{
-			return true;
-		}
-		else if (PrefabHelperObject->MissingPrefab.Contains(SelectedWidget))
-		{
-			return true;
-		}
-		return false;
-	}
-	else
-	{
-		return false;
-	}
-}
-void FDreamUIEditorTools::UnpackPrefab(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
-{	
-	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return;
-	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return;
-	const FScopedTransaction Transaction(LOCTEXT("UnpackPrefab_Transaction", "DreamUI UnpackPrefab"));
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		SelectedWidget->GetWorld()->Modify();
-		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget) || PrefabHelperObject->MissingPrefab.Contains(SelectedWidget));//should already filtered by menu
-		PrefabHelperObject->Modify();
-		PrefabHelperObject->RemoveSubPrefabByRootWidget(SelectedWidget);//the SelectedWidget must be root Widget, should already filtered by menu
-	}
-	CleanupPrefabs();
-}
-
-void FDreamUIEditorTools::SelectPrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
-{
-	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return;
-	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return;
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget));//should have being checked in Browse button
-		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedWidget);
-		if (IsValid(PrefabAsset))
-		{
-			TArray<UObject*> ObjectsToSync;
-			ObjectsToSync.Add(PrefabAsset);
-			GEditor->SyncBrowserToObjects(ObjectsToSync);
-		}
-	}
-}
-bool FDreamUIEditorTools::CanBrowsePrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
-{
-	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return false;
-	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return false;
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget))
-		{
-			return true;
-		}
-		return false;
-	}
-	else
-	{
-		return false;
-	}
-}
-
-void FDreamUIEditorTools::OpenPrefabAsset(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
-{
-	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return;
-	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return;
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget));//should have being check in menu
-		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedWidget);
-		if (IsValid(PrefabAsset))
-		{
-			UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-			AssetEditorSubsystem->OpenEditorForAsset(PrefabAsset);
-		}
-	}
 }
 
 bool FDreamUIEditorTools::CanCheckPrefabOverrideParameter(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
@@ -1360,21 +776,8 @@ bool FDreamUIEditorTools::CanCheckPrefabOverrideParameter(TFunction<UDreamWidget
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return false;
 	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return false;
-	if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
-	{
-		for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
-		{
-			if (KeyValue.Key == SelectedWidget || SelectedWidget->IsChildOf(KeyValue.Key))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-	else
-	{
-		return false;
-	}
+	// Override parameters belonged to sub-prefab instances. There are none.
+	return false;
 }
 
 bool FDreamUIEditorTools::CanCreateWidget(TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
@@ -1383,14 +786,6 @@ bool FDreamUIEditorTools::CanCreateWidget(TFunction<UDreamWidget*()> GetSelected
 	if (SelectedWidget == nullptr)return false;
 	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))return false;
 	return true;
-}
-
-void FDreamUIEditorTools::CleanupPrefabs()
-{
-	for (TObjectIterator<UDreamUIPrefabHelperObject> Itr; Itr; ++Itr)
-	{
-		Itr->CleanupInvalidSubPrefab();
-	}
 }
 
 bool FDreamUIEditorTools::IsWidgetCompatibleWithDreamUIToolsMenu(UDreamWidget* InWidget)

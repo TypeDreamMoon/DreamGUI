@@ -8,7 +8,6 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamText.h"
-#include "PrefabSystem/DreamUIObjectReaderAndWriter.h"
 #include "Engine/World.h"
 #include "UObject/Package.h"
 
@@ -26,9 +25,7 @@
  *     template instances through, which is why this is the cheap proxy for it),
  *   - the transient Parent back-pointers can always be rebuilt from the persistent Children,
  *   - a tree with no world is inert rather than fatal, which is what a class template will be.
- *
- * The fourth test guards the other direction: the prefab blob must keep ignoring Children, or every
- * child gets attached twice on load -- once from the restored array, once from the attach pass.
+
  */
 
 namespace DreamWidgetTreeObjectGraphTestLocal
@@ -255,54 +252,6 @@ bool FDreamWidgetTreeTemplateHasNoWorldTest::RunTest(const FString& Parameters)
 
 	return true;
 }
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPrefabBlobStillSkipsChildrenTest,
-	"DreamGUI.WidgetTree.ObjectGraph.PrefabBlobStillIgnoresChildren",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamPrefabBlobStillSkipsChildrenTest::RunTest(const FString& Parameters)
-{
-	// Children used to be skipped for free, by being Transient. It no longer is, and the prefab format
-	// still carries the hierarchy separately (MapWidgetToParent) and still replays it through
-	// SetParentBeforeRegister. If the writer ever starts emitting Children, load attaches every child
-	// twice and the damage shows up as duplicated widgets, not as an error.
-	const FProperty* ChildrenProperty = UDreamWidget::StaticClass()->FindPropertyByName(UDreamWidget::GetPropertyName_Children());
-	if (!TestNotNull(TEXT("UDreamWidget still has a Children property under that name"), ChildrenProperty))
-	{
-		return false;
-	}
-	TestFalse(TEXT("Children is no longer Transient -- it is the persistent hierarchy now"),
-		ChildrenProperty->HasAnyPropertyFlags(CPF_Transient));
-	// UPROPERTY(Instanced) on an array puts CPF_InstancedReference on the ELEMENT; the array itself
-	// only gets CPF_ContainsInstancedReference. Asserting on the array was how this test first failed.
-	const FArrayProperty* ChildrenArray = CastField<FArrayProperty>(ChildrenProperty);
-	if (TestNotNull(TEXT("Children is still an array property"), ChildrenArray))
-	{
-		TestTrue(TEXT("its element is Instanced, which is what instancing and duplication follow"),
-			ChildrenArray->Inner->HasAnyPropertyFlags(CPF_InstancedReference));
-	}
-	TestTrue(TEXT("and the prefab writer skips it anyway"),
-		DreamUIPrefabSystem::DreamUIPrefab_ShouldSkipProperty(ChildrenProperty));
-	// The duplicate and override archives roll their own property filter instead of calling
-	// ShouldSkipProperty, so making Children persistent silently opened a second door. They share the
-	// hierarchy predicate now; this is the assertion that catches it closing again.
-	TestTrue(TEXT("the shared hierarchy predicate recognises Children"),
-		DreamUIPrefabSystem::DreamUIPrefab_IsHierarchyProperty(ChildrenProperty));
-
-	// A sibling property that must keep serializing, so the skip above cannot be a blanket refusal.
-	const FProperty* SiblingIndexProperty = UDreamWidget::StaticClass()->FindPropertyByName(UDreamWidget::GetPropertyName_SiblingIndex());
-	if (TestNotNull(TEXT("UDreamWidget still has SiblingIndex"), SiblingIndexProperty))
-	{
-		TestFalse(TEXT("SiblingIndex is still written to the prefab, so ordering survives"),
-			DreamUIPrefabSystem::DreamUIPrefab_ShouldSkipProperty(SiblingIndexProperty));
-		TestFalse(TEXT("and the hierarchy predicate does not over-reach onto it"),
-			DreamUIPrefabSystem::DreamUIPrefab_IsHierarchyProperty(SiblingIndexProperty));
-	}
-
-	return true;
-}
-
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamWidgetDuplicateHierarchyTest,

@@ -9,8 +9,6 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamPanelLayouts.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Engine/World.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -20,12 +18,10 @@
 // finding the companion at all, and which of its properties count as a binding worth stopping for.
 namespace DreamToolsAuditTestLocal
 {
-	/** A prefab, its helper and a root carrying the companion: the state a real delete runs against. */
+	/** A root carrying the companion behaviour: the state a real delete warning runs against. */
 	struct FManagedPrefabFixture
 	{
 		UWorld* World = nullptr;
-		TStrongObjectPtr<UDreamUIPrefab> Prefab;
-		TStrongObjectPtr<UDreamUIPrefabHelperObject> Helper;
 		TStrongObjectPtr<UDreamWidget> Root;
 		TStrongObjectPtr<UDreamUIAutoBindTestBehaviour> Companion;
 		TArray<TStrongObjectPtr<UDreamWidget>> KeepAlive;
@@ -33,27 +29,15 @@ namespace DreamToolsAuditTestLocal
 		FManagedPrefabFixture()
 		{
 			World = UWorld::CreateWorld(EWorldType::Editor, false);
-			Prefab.Reset(NewObject<UDreamUIPrefab>());
-			// The explicit behaviour class is what lets a NATIVE companion take part; without it the
-			// lookup falls back to the BP_<PrefabName> blueprint convention, which needs an asset.
-			Prefab->SetBehaviourClass(UDreamUIAutoBindTestBehaviour::StaticClass());
 			Root.Reset(MakeWidget(TEXT("Root")));
 			Root->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>();
 			Companion.Reset(Root->AddComponent<UDreamUIAutoBindTestBehaviour>());
-			Helper.Reset(NewObject<UDreamUIPrefabHelperObject>(World));
-			Helper->PrefabAsset = Prefab.Get();
-			Helper->LoadedRootWidget = Root.Get();
 		}
 		~FManagedPrefabFixture()
 		{
 			KeepAlive.Empty();
 			Companion.Reset();
-			// The helper is what claims these widgets, and it answers a global iteration -- drop it
-			// before the world so a later test cannot find this one still holding a dead root.
-			Helper->LoadedRootWidget = nullptr;
-			Helper.Reset();
 			Root.Reset();
-			Prefab.Reset();
 			if (World != nullptr)
 			{
 				World->DestroyWorld(false);

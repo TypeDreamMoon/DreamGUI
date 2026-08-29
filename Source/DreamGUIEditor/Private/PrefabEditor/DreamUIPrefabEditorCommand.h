@@ -6,7 +6,6 @@
 #include "Framework/Commands/Commands.h"
 #include "DreamGUIEditorStyle.h"
 
-class UDreamUIPrefab;
 
 class FDreamUIPrefabEditorCommand : public TCommands<FDreamUIPrefabEditorCommand>
 {

@@ -8,16 +8,19 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabSystem/WidgetSerializer.h"
 
 /*
- * Coverage for the two halves of "arranged geometry must never masquerade as authored data":
+ * "Arranged geometry must never masquerade as authored data", from both sides.
  *
- *  - Measurement: GetDesiredSize may only see authored values. Feeding a panel-arranged rect back into
- *    measurement closes the loop where a squeezed widget measures as squeezed forever.
- *  - Persistence: the asset stores authored AnchorData only. Panel arrangement is a runtime result,
- *    re-derived by the first layout pass after load, so re-saves cannot churn arranged values.
+ * Measurement: GetDesiredSize may only see authored values. Feeding a panel-arranged rect back into
+ * measurement closes the loop where a squeezed widget measures as squeezed forever.
+ *
+ * Authoring: a user's anchor edit IS the authored value, and the next canvas pass must not overwrite
+ * it with what the panel arranged.
+ *
+ * A third test lived here, asserting the same rule through a prefab save and re-save. The asset
+ * model it round-tripped through is gone; what it was really pinning -- that arrangement is
+ * re-derived rather than stored -- these two assert directly.
  */
 
 namespace DreamUIAuthoredGeometryTestLocal
@@ -101,103 +104,67 @@ bool FDreamMeasureIgnoresArrangedValuesTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamSaveWritesAuthoredGeometryTest,
-	"DreamGUI.Prefab.AuthoredGeometry.SaveWritesAuthoredNotArranged",
+	FDreamPanelSlotUserAnchorEditTest,
+	"DreamGUI.Layout.Canvas.UserAnchorEditPersists",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FDreamSaveWritesAuthoredGeometryTest::RunTest(const FString& Parameters)
+bool FDreamPanelSlotUserAnchorEditTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamUIAuthoredGeometryTestLocal;
-	using namespace DreamUIPrefabSystem;
-	FArrangedFixture Fixture;
-	if (!Fixture.BuildAndArrange())
+	UDreamWidget* Parent = NewObject<UDreamWidget>();
+	UDreamWidget* Child = NewObject<UDreamWidget>(Parent);
+	UDreamLayoutContainerCanvasPanel* Canvas = Parent->CreateNewLayoutContainer<UDreamLayoutContainerCanvasPanel>();
+	TestNotNull(TEXT("Canvas layout created"), Canvas);
+	TestTrue(TEXT("Child joins the canvas"), Child->TrySetParent(Parent, false));
+	UDreamPanelSlot* Slot = Child->CreateNewPanelSlot<UDreamPanelSlot>();
+	TestNotNull(TEXT("Canvas slot created"), Slot);
+	if (!Parent || !Child || !Canvas || !Slot)
 	{
-		AddError(TEXT("Fixture failed to build"));
 		return false;
 	}
 
-	UDreamUIPrefab* Prefab = NewObject<UDreamUIPrefab>();
-	TMap<UObject*, FGuid> ObjectToGuid;
-	ObjectToGuid.Add(Fixture.Root, FGuid::NewGuid());
-	TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> EmptySubPrefabs;
-	TestTrue(TEXT("Arranged hierarchy saves"),
-		WidgetSerializer::SavePrefab(Fixture.Root, Prefab, ObjectToGuid, EmptySubPrefabs, true));
+	FDreamUIAnchorData Centered;
+	Centered.AnchorMin = FVector2D(0.5, 0.5);
+	Centered.AnchorMax = FVector2D(0.5, 0.5);
+	Centered.SizeDelta = FVector2D(1920.0, 1080.0);
+	Child->SetAnchorData(Centered);
+	Slot->CaptureAuthoredGeometry(true);
+	Slot->MarkLayoutGeometryApplied();
 
-	// The live hierarchy keeps its arranged state after the save (the scope restored it).
-	TestEqual(TEXT("Live child keeps its arranged rect after saving"),
-		Fixture.Child->GetSize(), Fixture.Root->GetSize());
-	TestTrue(TEXT("Live slot still reads applied after saving"),
-		Fixture.Child->GetPanelSlot()->HasLayoutGeometryApplied());
-
-	// The asset holds the authored rect: reload without running layout and read what was persisted.
-	UWorld* ReloadWorld = UWorld::CreateWorld(EWorldType::None, false);
-	TestNotNull(TEXT("Reload world created"), ReloadWorld);
-	if (ReloadWorld)
+	FDreamUIAnchorData Stretched = Centered;
+	Stretched.AnchorMin = FVector2D::ZeroVector;
+	Stretched.AnchorMax = FVector2D::UnitVector;
+	Stretched.SizeDelta = FVector2D::ZeroVector;
+	Child->SetAnchorData(Stretched);
+	Slot->SyncAuthoredGeometryAfterUserEdit();
+	TestFalse(TEXT("Canvas without AutoSize releases stale layout geometry"), Slot->HasLayoutGeometryApplied());
+	Canvas->SnapshotLayout();
+	Canvas->CalculateLayout();
+	if (Slot->HasLayoutGeometryApplied())
 	{
-		TMap<FGuid, TObjectPtr<UObject>> ReloadedObjects;
-		TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> ReloadedSubPrefabs;
-		UDreamWidget* ReloadedRoot = WidgetSerializer::LoadPrefabWithExistingObjects(
-			ReloadWorld, ReloadWorld, Prefab, nullptr, ReloadedObjects, ReloadedSubPrefabs);
-		UDreamWidget* ReloadedChild = IsValid(ReloadedRoot) && ReloadedRoot->GetChildrenCount() == 1
-			? ReloadedRoot->GetChildByIndex(0) : nullptr;
-		TestNotNull(TEXT("Reloaded child exists"), ReloadedChild);
-		if (ReloadedChild)
-		{
-			TestEqual(TEXT("Asset persisted the AUTHORED rect, not the arranged one"),
-				ReloadedChild->GetSize(), FVector2D(120.0, 80.0));
-			UDreamPanelSlot* ReloadedSlot = ReloadedChild->GetPanelSlot();
-			TestNotNull(TEXT("Reloaded slot exists"), ReloadedSlot);
-			if (ReloadedSlot)
-			{
-				TestFalse(TEXT("Persisted slot reads 'nothing applied' so the first layout pass re-arranges"),
-					ReloadedSlot->HasLayoutGeometryApplied());
-			}
-		}
-		if (IsValid(ReloadedRoot))
-		{
-			ReloadedRoot->DestroyWidget();
-		}
-		ReloadWorld->DestroyWorld(false);
+		Slot->RestoreAuthoredGeometry();
 	}
-
-	Fixture.Root->DestroyWidget();
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamResaveIsByteStableTest,
-	"DreamGUI.Prefab.AuthoredGeometry.ResaveIsByteStable",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamResaveIsByteStableTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamUIAuthoredGeometryTestLocal;
-	using namespace DreamUIPrefabSystem;
-	FArrangedFixture Fixture;
-	if (!Fixture.BuildAndArrange())
+	else
 	{
-		AddError(TEXT("Fixture failed to build"));
-		return false;
+		Slot->CaptureAuthoredGeometry(true);
 	}
+	TestEqual(TEXT("Stretch anchor minimum survives the next canvas pass"), Child->GetAnchorMin(), FVector2D::ZeroVector);
+	TestEqual(TEXT("Stretch anchor maximum survives the next canvas pass"), Child->GetAnchorMax(), FVector2D::UnitVector);
 
-	UDreamUIPrefab* Prefab = NewObject<UDreamUIPrefab>();
-	TMap<UObject*, FGuid> ObjectToGuid;
-	ObjectToGuid.Add(Fixture.Root, FGuid::NewGuid());
-	TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> EmptySubPrefabs;
-	TestTrue(TEXT("First save succeeds"),
-		WidgetSerializer::SavePrefab(Fixture.Root, Prefab, ObjectToGuid, EmptySubPrefabs, true));
-	const TArray<uint8> FirstPayload = Prefab->BinaryData;
-
-	// Re-arrange (same inputs, same results) and save again: with arranged geometry excluded from the
-	// payload, an untouched hierarchy re-saves to the identical bytes — the "prefab always diffs" churn
-	// class is gone.
-	UDreamWidget::MarkLayoutForRebuild(Fixture.Root);
-	UDreamWidget::RebuildLayoutImmediately(Fixture.Root);
-	TestTrue(TEXT("Second save succeeds"),
-		WidgetSerializer::SavePrefab(Fixture.Root, Prefab, ObjectToGuid, EmptySubPrefabs, true));
-	TestTrue(TEXT("An untouched hierarchy re-saves byte-identical"), FirstPayload == Prefab->BinaryData);
-
-	Fixture.Root->DestroyWidget();
+	Child->SetAnchorData(Centered);
+	Slot->CaptureAuthoredGeometry(true);
+	Slot->SetAutoSize(true);
+	Slot->MarkLayoutGeometryApplied(false, false, true, true);
+	Child->SetAnchorData(Stretched);
+	Slot->SyncAuthoredGeometryAfterUserEdit();
+	TestTrue(TEXT("Canvas AutoSize retains size ownership"), Slot->HasLayoutGeometryApplied());
+	Canvas->SnapshotLayout();
+	Canvas->CalculateLayout();
+	Slot->SetAutoSize(false);
+	Slot->RestoreAuthoredGeometry();
+	TestEqual(TEXT("AutoSize restore keeps the user-authored anchor minimum"), Child->GetAnchorMin(), FVector2D::ZeroVector);
+	TestEqual(TEXT("AutoSize restore keeps the user-authored anchor maximum"), Child->GetAnchorMax(), FVector2D::UnitVector);
+	TestEqual(TEXT("AutoSize restore returns the authored width"), Child->GetSizeDelta().X, 1920.0);
+	TestEqual(TEXT("AutoSize restore returns the authored height"), Child->GetSizeDelta().Y, 1080.0);
 	return true;
 }
 

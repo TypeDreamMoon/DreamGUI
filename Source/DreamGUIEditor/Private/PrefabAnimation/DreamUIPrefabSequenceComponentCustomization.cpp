@@ -4,7 +4,6 @@
 #include "DreamUIPrefabSequenceComponentCustomization.h"
 #include "Core/Components/DreamWidget.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
 #include "GameFramework/Actor.h"
@@ -112,7 +111,7 @@ void FDreamUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayou
 					// class model is the editor branch's job.
 					if (IAssetEditorInstance* Instance = Subsystem->FindEditorForAsset(SourceAsset, /*bFocusIfOpen*/true))
 					{
-						if (SourceAsset->IsA<UDreamUIPrefab>())
+						if (false)
 						{
 							static_cast<FDreamWidgetBlueprintEditor*>(Instance)->FocusAnimationByDisplayName(CurrentName);
 						}

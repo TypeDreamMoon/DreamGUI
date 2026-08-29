@@ -14,7 +14,6 @@
 #include "Engine/World.h"
 #include "Modules/ModuleManager.h"
 #include "Widgets/Docking/SDockTab.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
 #include "PropertyEditorModule.h"

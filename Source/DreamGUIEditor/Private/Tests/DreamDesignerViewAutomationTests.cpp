@@ -12,6 +12,7 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Components/DreamCanvas.h"
 
 #include "Editor.h"
 #include "Framework/Application/SlateApplication.h"
@@ -238,5 +239,23 @@ bool FDreamDesignerRulerTicksTest::RunTest(const FString&)
 
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPerspectivePreviewDefaultTest,
+	"DreamGUI.Perspective.Widget.NewWidgetBlueprintsPreviewThroughTheCanvasCamera",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPerspectivePreviewDefaultTest::RunTest(const FString& Parameters)
+{
+	// The designer previews through whatever DesignerData.CanvasRenderMode says. A world-space preview
+	// is projected by the editor camera, where a declared Perspective is correctly inert -- so if the
+	// default were world space, the feature would look broken in the first place anyone tries it,
+	// which is exactly how it was reported.
+	FDreamWidgetDesignerData Defaults;
+	TestEqual(TEXT("A fresh Widget Blueprint previews through the canvas camera"),
+		Defaults.CanvasRenderMode, (uint8)EDreamRenderMode::ScreenSpaceOverlay);
+	return true;
+}
+
 
 #endif

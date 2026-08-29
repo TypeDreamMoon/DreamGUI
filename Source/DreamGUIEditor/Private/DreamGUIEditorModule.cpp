@@ -119,7 +119,6 @@
 #include "MeshModifier/DreamMeshModifierTextAnimation.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 #include "Styling/SlateIconFinder.h"
 #include "Window/DreamUIWidgetInspector.h"
 
@@ -415,7 +414,6 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UUIToggle::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUITextInput::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIScrollViewWithScrollbar::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UDreamUIPrefab::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UDreamMeshModifierTextAnimation_Property::StaticClass()->GetFName());
 
@@ -476,7 +474,6 @@ void FDreamGUIEditorModule::ShutdownModule()
 	//unregister thumbnail
 	if (UObjectInitialized())
 	{
-		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamUIPrefab::StaticClass());
 		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamUISpriteData::StaticClass());
 		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamUISpriteData_BaseObject::StaticClass());
 	}
@@ -537,46 +534,6 @@ TSharedRef<SWidget> FDreamGUIEditorModule::MakeEditorToolsMenu(TFunction<UDreamW
 
 	//prefab
 	{
-		MenuBuilder.BeginSection("Prefab", LOCTEXT("Prefab", "Prefab"));
-		{
-			MenuBuilder.AddMenuEntry(
-				LOCTEXT("CreatePrefab", "Create Prefab"),
-				LOCTEXT("CreatePrefab_Tooltip", "Use selected Widget to create a new prefab"),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FDreamUIEditorTools::CreatePrefabAsset, GetSelectedWidgetFunction)
-					, FCanExecuteAction::CreateStatic(&FDreamUIEditorTools::CanCreatePrefab, GetSelectedWidgetFunction)
-					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanCreatePrefab, GetSelectedWidgetFunction))
-			);
-			MenuBuilder.AddMenuEntry(
-				LOCTEXT("UnpackPrefab", "Unpack this Prefab"),
-				LOCTEXT("UnpackPrefab_Tooltip", "Unpack the Widget from related prefab asset"),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FDreamUIEditorTools::UnpackPrefab, GetSelectedWidgetFunction)
-					, FCanExecuteAction::CreateStatic(&FDreamUIEditorTools::CanUnpackWidgetForPrefab, GetSelectedWidgetFunction)
-					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanUnpackWidgetForPrefab, GetSelectedWidgetFunction))
-			);
-			MenuBuilder.AddMenuEntry(
-				LOCTEXT("SelectPrefabAsset", "Browse to Prefab asset"),
-				LOCTEXT("SelectPrefabAsset_Tooltip", "Browse to Prefab asset in Content Browser"),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FDreamUIEditorTools::SelectPrefabAsset, GetSelectedWidgetFunction)
-					, FCanExecuteAction::CreateStatic(&FDreamUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction)
-					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction))
-			);
-			MenuBuilder.AddMenuEntry(
-				LOCTEXT("OpenPrefabAsset", "Open Prefab asset"),
-				LOCTEXT("OpenPrefabAsset_Tooltip", "Open Prefab asset in PrefabEditor"),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FDreamUIEditorTools::OpenPrefabAsset, GetSelectedWidgetFunction)
-					, FCanExecuteAction::CreateStatic(&FDreamUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction)
-					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction))
-			);
-		}
-		MenuBuilder.EndSection();
 	}
 
 	MenuBuilder.BeginSection("DreamUI Widget", LOCTEXT("DreamUI Widget", "DreamUI Widget Operations"));
@@ -611,7 +568,6 @@ TSharedRef<SWidget> FDreamGUIEditorModule::MakeEditorToolsMenu(TFunction<UDreamW
 				, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanCreateWidget, GetSelectedWidgetFunction)),
 			NAME_None, EUserInterfaceActionType::None
 		);
-		CreateExtraPrefabsSubMenu(MenuBuilder, GetSelectedWidgetFunction);
 	}
 	MenuBuilder.EndSection();
 
@@ -749,66 +705,6 @@ bool FDreamGUIEditorModule::IsValidClassName(const FString& InName)
 		&& !InName.Contains(TEXT("TRASH_"))
 		&& !InName.Contains(TEXT("_DEPRECATED"))
 		;
-}
-
-void FDreamGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
-{
-	struct LOCAL
-	{
-		static void CreateExtraPrefab_SubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction, TArray<UDreamUIPrefab*> InPrefabArray)
-		{
-			for (auto Prefab : InPrefabArray)
-			{
-				MenuBuilder.AddMenuEntry(
-					FText::FromString(FPaths::GetBaseFilename(Prefab->GetPathName())),
-					FText::FromString(Prefab->GetPathName()),
-					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateStatic(&FDreamUIEditorTools::CreateUIControls, GetSelectedWidgetFunction, Prefab->GetPathName()))
-				);
-			}
-		}
-	};
-
-	auto PrefabFolders = GetDefault<UDreamUIEditorSettings>()->ExtraPrefabFolders;
-	for (auto PrefabFolder : PrefabFolders)
-	{
-		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
-		IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-		// Need to do this if running in the editor with -game to make sure that the assets in the following path are available
-		TArray<FString> PathsToScan;
-		PathsToScan.Add(TEXT("/Game/"));
-		AssetRegistry.ScanPathsSynchronous(PathsToScan);
-
-		TArray<FAssetData> ScriptAssetList;
-		AssetRegistry.GetAssetsByPath(FName(*PrefabFolder.Path), ScriptAssetList, false);
-		TArray<UDreamUIPrefab*> PrefabAssets;
-		auto PrefabClassName = UDreamUIPrefab::StaticClass()->GetClassPathName();
-		for (auto Asset : ScriptAssetList)
-		{
-			if (Asset.AssetClassPath == PrefabClassName)
-			{
-				auto AssetObject = Asset.GetAsset();
-				if (auto Prefab = Cast<UDreamUIPrefab>(AssetObject))
-				{
-					PrefabAssets.Add(Prefab);
-				}
-			}
-		}
-
-		if(PrefabAssets.Num() > 0)
-		{
-			MenuBuilder.AddSubMenu(
-				FText::Format(LOCTEXT("CreateExtra", "CreateExtra {0}"), FText::FromString(PrefabFolder.Path)),
-				FText::Format(LOCTEXT("CreateExtra_Tooltip", "CreateExtra prefab from folder {0}"), FText::FromString(PrefabFolder.Path)),
-				FNewMenuDelegate::CreateStatic(&LOCAL::CreateExtraPrefab_SubMenu, GetSelectedWidgetFunction, PrefabAssets),
-				FUIAction(FExecuteAction()
-					, FCanExecuteAction()
-					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FDreamUIEditorTools::CanCreateWidget, GetSelectedWidgetFunction)),
-				NAME_None, EUserInterfaceActionType::None
-			);
-		}
-	}
 }
 
 void FDreamGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction)

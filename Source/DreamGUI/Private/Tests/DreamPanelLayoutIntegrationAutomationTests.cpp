@@ -9,8 +9,6 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabSystem/WidgetSerializer.h"
 
 namespace DreamPanelLayoutIntegrationTestLocal
 {
@@ -219,69 +217,6 @@ bool FDreamVisibleNestedPanelRebuildTest::RunTest(const FString& Parameters)
 		NestedChild->GetSize(), NestedPanel->GetSize());
 
 	Root->DestroyWidget();
-	World->DestroyWorld(false);
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPanelPrefabRoundTripTest,
-	"DreamGUI.Prefab.PanelLayoutRoundTrip",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamPanelPrefabRoundTripTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamUIPrefabSystem;
-
-	UWorld* World = UWorld::CreateWorld(EWorldType::None, false);
-	TestNotNull(TEXT("Test world created"), World);
-	if (!World)
-	{
-		return false;
-	}
-
-	UDreamUIPrefab* Prefab = NewObject<UDreamUIPrefab>();
-	UDreamWidget* Root = NewObject<UDreamWidget>(World, NAME_None, RF_Public | RF_Transactional);
-	UDreamWidget* Child = NewObject<UDreamWidget>(Root, NAME_None, RF_Public | RF_Transactional);
-	TestTrue(TEXT("Child joins the prefab root"), Child->TrySetParent(Root, false));
-	UDreamLayoutContainerHorizontalBox* Horizontal = Root->CreateNewLayoutContainer<UDreamLayoutContainerHorizontalBox>();
-	UDreamPanelSlot* Slot = Child->GetPanelSlot();
-	TestNotNull(TEXT("Horizontal layout created"), Horizontal);
-	TestNotNull(TEXT("Panel slot created"), Slot);
-	if (!Prefab || !Horizontal || !Slot)
-	{
-		World->DestroyWorld(false);
-		return false;
-	}
-	Horizontal->SetSpacing(17.0f);
-	Slot->SetSizeRule(EDreamPanelSizeRule::Fill);
-	Slot->SetFillWeight(3.25f);
-	Slot->SetPadding(FMargin(2.0f, 4.0f, 6.0f, 8.0f));
-
-	TMap<UObject*, FGuid> ObjectToGuid;
-	ObjectToGuid.Add(Root, FGuid::NewGuid());
-	TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> EmptySubPrefabs;
-	TestTrue(TEXT("Panel prefab serializes"),
-		WidgetSerializer::SavePrefab(Root, Prefab, ObjectToGuid, EmptySubPrefabs, true));
-
-	TMap<FGuid, TObjectPtr<UObject>> ReloadedObjects;
-	TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> ReloadedSubPrefabs;
-	UDreamWidget* ReloadedRoot = WidgetSerializer::LoadPrefabWithExistingObjects(
-		World, World, Prefab, nullptr, ReloadedObjects, ReloadedSubPrefabs);
-	UDreamWidget* ReloadedChild = IsValid(ReloadedRoot) && ReloadedRoot->GetChildrenCount() == 1
-		? ReloadedRoot->GetChildByIndex(0) : nullptr;
-	UDreamLayoutContainerHorizontalBox* ReloadedHorizontal = IsValid(ReloadedRoot)
-		? Cast<UDreamLayoutContainerHorizontalBox>(ReloadedRoot->GetLayoutContainer()) : nullptr;
-	UDreamPanelSlot* ReloadedSlot = IsValid(ReloadedChild) ? ReloadedChild->GetPanelSlot() : nullptr;
-	TestNotNull(TEXT("Horizontal layout survives reload"), ReloadedHorizontal);
-	TestNotNull(TEXT("Panel slot survives reload"), ReloadedSlot);
-	if (ReloadedHorizontal && ReloadedSlot)
-	{
-		TestEqual(TEXT("Panel spacing survives reload"), ReloadedHorizontal->Spacing, 17.0f);
-		TestEqual(TEXT("Slot size rule survives reload"), ReloadedSlot->SizeRule, EDreamPanelSizeRule::Fill);
-		TestEqual(TEXT("Slot fill weight survives reload"), ReloadedSlot->FillWeight, 3.25f);
-		TestEqual(TEXT("Slot padding survives reload"), ReloadedSlot->Padding, FMargin(2.0f, 4.0f, 6.0f, 8.0f));
-	}
-
 	World->DestroyWorld(false);
 	return true;
 }

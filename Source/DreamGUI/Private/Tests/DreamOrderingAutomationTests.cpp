@@ -10,8 +10,6 @@
 #include "Engine/World.h"
 #include "Interaction/UIToggle.h"
 #include "Interaction/UIToggleGroup.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabSystem/WidgetSerializer.h"
 
 /*
  * Regression coverage for the ordering/sorting defect batch:
@@ -97,71 +95,6 @@ bool FDreamOverlayHonorsZOrderTest::RunTest(const FString& Parameters)
 	UDreamWidget::MarkLayoutForRebuild(Root);
 	UDreamWidget::RebuildLayoutImmediately(Root);
 	TestEqual(TEXT("Equal ZOrder keeps current order"), ChildNames(Root)[0], FString(TEXT("Resolution")));
-
-	Root->DestroyWidget();
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPrefabReloadRestoresSiblingOrderTest,
-	"DreamGUI.Ordering.PrefabReloadRestoresSiblingOrder",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamPrefabReloadRestoresSiblingOrderTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamOrderingTestLocal;
-	using namespace DreamUIPrefabSystem;
-	FScopedGameWorld TestWorld;
-	UDreamWidget* Root = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
-	Root->SetDisplayName(TEXT("OrderRoot"));
-	Root->SetWidth(100.0f);
-	Root->SetHeight(100.0f);
-	UDreamWidget* A = MakeChild(TestWorld.World, Root, TEXT("A"));
-	UDreamWidget* B = MakeChild(TestWorld.World, Root, TEXT("B"));
-	UDreamWidget* C = MakeChild(TestWorld.World, Root, TEXT("C"));
-	Root->OnRegister();
-	A->OnRegister();
-	B->OnRegister();
-	C->OnRegister();
-
-	UDreamUIPrefab* Prefab = NewObject<UDreamUIPrefab>();
-	TMap<UObject*, FGuid> ObjectToGuid;
-	ObjectToGuid.Add(Root, FGuid::NewGuid());
-	TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> SubPrefabs;
-	TestTrue(TEXT("Prefab saves with order A,B,C"),
-		WidgetSerializer::SavePrefab(Root, Prefab, ObjectToGuid, SubPrefabs, true));
-
-	// Diverge the live hierarchy, then reload the saved payload onto the SAME registered objects — the
-	// refresh flow. The serialized order must win; the attach path used to overwrite the restored
-	// indices with tail positions.
-	C->SetSiblingIndex(0);
-	TestEqual(TEXT("Live order diverged"), ChildNames(Root)[0], FString(TEXT("C")));
-
-	TMap<FGuid, TObjectPtr<UObject>> GuidToObject;
-	for (const TPair<UObject*, FGuid>& Pair : ObjectToGuid)
-	{
-		GuidToObject.Add(Pair.Value, Pair.Key);
-	}
-	TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> ReloadedSubPrefabs;
-	UDreamWidget* ReloadedRoot = WidgetSerializer::LoadPrefabWithExistingObjects(
-		TestWorld.World, TestWorld.World, Prefab, nullptr, GuidToObject, ReloadedSubPrefabs);
-	TestEqual(TEXT("Reload reuses the live root"), ReloadedRoot, Root);
-	TestEqual(TEXT("Child count unchanged after reload"), Root->GetChildrenCount(), 3);
-	for (UDreamWidget* Child : Root->GetChildren())
-	{
-		AddInfo(FString::Printf(TEXT("post-reload child '%s' sibling=%d reusedA=%d reusedB=%d reusedC=%d"),
-			*Child->GetDisplayName(), Child->GetSiblingIndex(), Child == A ? 1 : 0, Child == B ? 1 : 0, Child == C ? 1 : 0));
-	}
-
-	const TArray<FString> Names = ChildNames(Root);
-	TestEqual(TEXT("Serialized order restored [0]"), Names[0], FString(TEXT("A")));
-	TestEqual(TEXT("Serialized order restored [1]"), Names[1], FString(TEXT("B")));
-	TestEqual(TEXT("Serialized order restored [2]"), Names[2], FString(TEXT("C")));
-	for (int32 i = 0; i < Root->GetChildrenCount(); i++)
-	{
-		TestEqual(FString::Printf(TEXT("SiblingIndex contiguous at %d"), i),
-			Root->GetChildren()[i]->GetSiblingIndex(), i);
-	}
 
 	Root->DestroyWidget();
 	return true;

@@ -48,7 +48,6 @@
 #include "MeshModifier/DreamMeshModifierPositionAsUV.h"
 #include "MeshModifier/DreamMeshModifierShadow.h"
 #include "MeshModifier/DreamMeshModifierTextAnimation.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "DreamGUIEditorModule.h"
 #include "Editor.h"

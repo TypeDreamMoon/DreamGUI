@@ -88,9 +88,7 @@ private:
 	void CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
 	void CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
 	void CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction);
-	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedActorFunction);
 
-	TWeakObjectPtr<class UDreamUIPrefabHelperObject> CurrentPrefabHelperObject;
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnDreamUIInspectorTab(const FSpawnTabArgs& SpawnTabArgs);

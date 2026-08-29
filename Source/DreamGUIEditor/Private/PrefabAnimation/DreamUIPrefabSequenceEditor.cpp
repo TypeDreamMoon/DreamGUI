@@ -2,7 +2,6 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabSequenceEditor.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Core/DreamUserWidget.h"
 #include "K2Node_CallFunction.h"
 #include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
@@ -178,7 +177,6 @@ SDreamUIPrefabSequenceEditor::~SDreamUIPrefabSequenceEditor()
 {
 	FCoreUObjectDelegates::OnObjectsReplaced.Remove(OnObjectsReplacedHandle);
 	FDreamUIEditorTools::OnEditingPrefabChanged.Remove(EditingPrefabChangedHandle);
-	FDreamUIEditorTools::OnBeforeApplyPrefab.Remove(OnBeforeApplyPrefabHandle);
 	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoHandle);
 }
 
@@ -256,7 +254,6 @@ void SDreamUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 
 	PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
 	EditingPrefabChangedHandle = FDreamUIEditorTools::OnEditingPrefabChanged.AddRaw(this, &SDreamUIPrefabSequenceEditor::OnEditingPrefabChanged);
-	OnBeforeApplyPrefabHandle = FDreamUIEditorTools::OnBeforeApplyPrefab.AddRaw(this, &SDreamUIPrefabSequenceEditor::OnBeforeApplyPrefab);
 	PostUndoRedoHandle = FEditorDelegates::PostUndoRedo.AddSP(this, &SDreamUIPrefabSequenceEditor::OnPostUndoRedo);
 }
 
@@ -294,8 +291,6 @@ void SDreamUIPrefabSequenceEditor::NotifyAnimationRenamed(const FString& OldName
 	// rename edits only the sequence -- so list the companion-blueprint calls that still say the old
 	// name. A warning, not an auto-fix: a literal pin may be assembled for a different prefab.
 	UDreamWidget* RootWidget = WeakRootWidget.Get();
-	UDreamUIPrefabHelperObject* Helper = RootWidget ? UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget) : nullptr;
-	UDreamUIPrefab* Prefab = Helper ? Helper->PrefabAsset.Get() : nullptr;
 	// The companion behaviour Blueprint a prefab used to carry its graph in. A widget class is its own
 	// Blueprint, so there is nothing beside it to find.
 	UBlueprint* Blueprint = nullptr;
@@ -385,14 +380,12 @@ UDreamUIPrefabSequenceComponent* SDreamUIPrefabSequenceEditor::FindAnimationHost
 		return RootHost;
 	}
 
-	UDreamUIPrefabHelperObject* PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
 	TFunction<UDreamUIPrefabSequenceComponent*(UDreamWidget*)> FindRecursive;
 	FindRecursive = [&](UDreamWidget* ParentWidget) -> UDreamUIPrefabSequenceComponent*
 	{
 		for (UDreamWidget* ChildWidget : ParentWidget->GetChildren())
 		{
-			if (!IsValid(ChildWidget)
-				|| (PrefabHelperObject && PrefabHelperObject->IsWidgetBelongsToSubPrefab(ChildWidget)))
+			if (!IsValid(ChildWidget))
 			{
 				continue;
 			}
@@ -453,11 +446,6 @@ void SDreamUIPrefabSequenceEditor::MarkAnimationDataDirty()
 	if (!IsValid(ContextWidget) && WeakSequenceComponent.IsValid())
 	{
 		ContextWidget = WeakSequenceComponent->GetWidget();
-	}
-	if (UDreamUIPrefabHelperObject* Helper = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ContextWidget))
-	{
-		Helper->Modify();
-		Helper->SetAnythingDirty();
 	}
 }
 
@@ -584,23 +572,6 @@ void SDreamUIPrefabSequenceEditor::RefreshAnimationList()
 	}
 }
 
-void SDreamUIPrefabSequenceEditor::OnBeforeApplyPrefab(UDreamUIPrefabHelperObject* InObject)
-{
-	if (WeakSequenceComponent.IsValid())
-	{
-		if (auto Widget = WeakSequenceComponent->GetWidget())
-		{
-			if (InObject->IsWidgetBelongsToThis(Widget))
-			{
-				// Last point at which a binding's object pointer is still live: apply serializes the
-				// tree and drops it, leaving only the display-name path behind to repair from.
-				WeakSequenceComponent->FixEditorHelpers();
-				this->AnimationListView->ClearSelection();
-			}
-		}
-	}
-}
-
 void SDreamUIPrefabSequenceEditor::OnPostUndoRedo()
 {
 	AssignDreamUIPrefabSequenceComponent(FindAnimationHost(WeakRootWidget.Get()));
@@ -612,70 +583,9 @@ void SDreamUIPrefabSequenceEditor::OnEditingPrefabChanged(UDreamWidget* RootWidg
 	WeakRootWidget = RootWidget;
 	UDreamUIPrefabSequenceComponent* AnimationHost = FindAnimationHost(RootWidget);
 
-	// Older editor builds could create the animation host on the transient preview root.
-	// Move its data into the serialized prefab hierarchy while that preview is still alive.
-	if (!IsValid(AnimationHost) && IsValid(RootWidget))
-	{
-		UDreamWidget* PreviewRoot = RootWidget->GetParent();
-		UDreamUIPrefabHelperObject* PrefabHelperObject =
-			UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
-		if (IsValid(PreviewRoot)
-			&& IsValid(PrefabHelperObject)
-			&& !PrefabHelperObject->IsWidgetBelongsToThis(PreviewRoot))
-		{
-			UDreamUIPrefabSequenceComponent* TemporaryHost =
-				PreviewRoot->GetComponent<UDreamUIPrefabSequenceComponent>();
-			if (IsValid(TemporaryHost) && !TemporaryHost->GetSequenceArray().IsEmpty())
-			{
-				const FScopedTransaction Transaction(LOCTEXT(
-					"MigrateTemporaryAnimationHost",
-					"Move Animations Into Prefab"));
-				RootWidget->SetFlags(RF_Transactional);
-				RootWidget->Modify();
-				PreviewRoot->Modify();
-				if (UObject* WidgetOuter = RootWidget->GetOuter())
-				{
-					WidgetOuter->Modify();
-				}
-
-				AnimationHost = RootWidget->AddComponentByTemplate<UDreamUIPrefabSequenceComponent>(TemporaryHost);
-				if (IsValid(AnimationHost))
-				{
-					bool bAnimationDataWasInstanced =
-						AnimationHost->GetSequenceArray().Num() == TemporaryHost->GetSequenceArray().Num();
-					for (UDreamUIPrefabSequence* Sequence : AnimationHost->GetSequenceArray())
-					{
-						if (!IsValid(Sequence)
-							|| Sequence->GetOuter() != AnimationHost
-							|| !IsValid(Sequence->GetMovieScene())
-							|| Sequence->GetMovieScene()->GetOuter() != Sequence)
-						{
-							bAnimationDataWasInstanced = false;
-							break;
-						}
-					}
-
-					if (bAnimationDataWasInstanced)
-					{
-						for (UDreamUIPrefabSequence* Sequence : AnimationHost->GetSequenceArray())
-						{
-							Sequence->FixEditorHelpers(RootWidget);
-						}
-						AnimationHost->SetFlags(RF_Transactional);
-						AnimationHost->Modify();
-						PreviewRoot->RemoveComponent(TemporaryHost);
-						FDreamUIUtils::NotifyPropertyChanged(RootWidget, UDreamWidget::GetPropertyName_Components());
-						MarkAnimationDataDirty();
-					}
-					else
-					{
-						RootWidget->RemoveComponent(AnimationHost);
-						AnimationHost = nullptr;
-					}
-				}
-			}
-		}
-	}
+	// A migration for animation hosts that older builds put on the transient preview root. It
+	// needed the prefab helper to tell preview from authored; the designer answers that itself now,
+	// and no build in this tree can produce that state any more.
 
 	AssignDreamUIPrefabSequenceComponent(AnimationHost);
 }

@@ -9,7 +9,6 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetPresenterComponent"
 

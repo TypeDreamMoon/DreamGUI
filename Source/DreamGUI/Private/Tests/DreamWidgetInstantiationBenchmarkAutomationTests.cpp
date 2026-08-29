@@ -6,8 +6,6 @@
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetTree.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabSystem/WidgetSerializer.h"
 #include "Engine/World.h"
 #include "UObject/Package.h"
 #include "HAL/PlatformTime.h"
@@ -148,115 +146,6 @@ bool FDreamWidgetInstantiationBenchmarkTest::RunTest(const FString& Parameters)
 	TestTrue(
 		FString::Printf(TEXT("instancing scales sub-quadratically: %.2fx time for %.2fx widgets"), TimeRatio, SizeRatio),
 		TimeRatio < SizeRatio * SizeRatio * 0.5);
-
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPrefabLoadVersusInstancingBenchmarkTest,
-	"DreamGUI.WidgetTree.Benchmark.PrefabLoadVersusTemplateInstancing",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamPrefabLoadVersusInstancingBenchmarkTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamWidgetInstantiationBenchmarkLocal;
-	FScopedGameWorld TestWorld;
-	if (!TestNotNull(TEXT("the benchmark needs a world"), TestWorld.World))
-	{
-		return false;
-	}
-
-	// The template lives in the world here, not the transient package: SavePrefab walks a live
-	// hierarchy, and the prefab path it is being compared against loads into a world too.
-	int32 WidgetCount = 0;
-	TStrongObjectPtr<UDreamWidgetTree> Template(BuildTree(TestWorld.World, LargeBranches, LargeLeavesPerBranch, WidgetCount));
-
-	TStrongObjectPtr<UDreamUIPrefab> Prefab(NewObject<UDreamUIPrefab>());
-	TMap<UObject*, FGuid> ObjectToGuid;
-	ObjectToGuid.Add(Template->RootWidget, FGuid::NewGuid());
-	TMap<TObjectPtr<UDreamWidget>, FDreamUISubPrefabData> NoSubPrefabs;
-	if (!TestTrue(TEXT("the sample hierarchy serializes into a prefab"),
-		DreamUIPrefabSystem::WidgetSerializer::SavePrefab(Template->RootWidget, Prefab.Get(), ObjectToGuid, NoSubPrefabs, true)))
-	{
-		return false;
-	}
-
-	// Path A, today: read the blob back, property by property, and register as it goes.
-	//
-	// The loaded roots are kept and torn down after the measurement rather than inside it. They have
-	// to be torn down -- a blob load registers every widget, and a registered widget reaching
-	// BeginDestroy without its owner having destroyed it logs an error, which an automation test
-	// counts as a failure. Doing it inside the timed body would be measuring the teardown too.
-	TArray<UDreamWidget*> LoadedRoots;
-	int32 LoadedCount = 0;
-	const double LoadMs = BestOfMilliseconds([&]()
-	{
-		UDreamWidget* LoadedRoot = Prefab->LoadPrefab(TestWorld.World, nullptr);
-		LoadedCount = 0;
-		if (IsValid(LoadedRoot))
-		{
-			LoadedRoots.Add(LoadedRoot);
-			TArray<UDreamWidget*> All;
-			UDreamWidget::CollectChildrenWidgets(LoadedRoot, All, true);
-			LoadedCount = All.Num();
-		}
-	}, RunsPerMeasurement);
-	for (UDreamWidget* LoadedRoot : LoadedRoots)
-	{
-		if (IsValid(LoadedRoot))
-		{
-			LoadedRoot->DestroyWidget();
-		}
-	}
-
-	// Path B, the class model: instance the template and rebuild the back-pointers.
-	int32 InstancedCount = 0;
-	const double InstanceMs = MeasureInstancing(TestWorld.World, Template.Get(), InstancedCount);
-
-	// Path B', the honest comparison. A blob load registers every widget on its way through; instancing
-	// stops at a live but unregistered tree. Reporting only B against A would flatter the new mechanism
-	// by exactly the cost of registration, so measure that too and compare the totals.
-	TArray<UDreamWidget*> RegisteredRoots;
-	int32 RegisteredCount = 0;
-	const double InstanceAndRegisterMs = BestOfMilliseconds([&]()
-	{
-		FObjectInstancingGraph InstancingGraph;
-		UDreamWidgetTree* Instance = NewObject<UDreamWidgetTree>(
-			TestWorld.World, Template->GetClass(), NAME_None, RF_Transactional,
-			Template.Get(), /*bCopyTransientsFromClassDefaults*/false, &InstancingGraph);
-		Instance->RebuildParentLinks();
-		// Root first, parents before children -- the order the deserializer registers in.
-		int32 Registered = 0;
-		Instance->ForEachWidget([&Registered](UDreamWidget* Widget) { Widget->OnRegister(); Registered++; });
-		RegisteredCount = Registered;
-		if (IsValid(Instance->RootWidget))
-		{
-			RegisteredRoots.Add(Instance->RootWidget);
-		}
-	}, RunsPerMeasurement);
-	// Registered widgets have to be torn down for the same reason the loaded ones did.
-	for (UDreamWidget* RegisteredRoot : RegisteredRoots)
-	{
-		if (IsValid(RegisteredRoot))
-		{
-			RegisteredRoot->DestroyWidget();
-		}
-	}
-
-	AddInfo(FString::Printf(TEXT("%d widgets -- blob load (deserialize + register): %.3f ms"), WidgetCount, LoadMs));
-	AddInfo(FString::Printf(TEXT("%d widgets -- template instancing alone: %.3f ms"), WidgetCount, InstanceMs));
-	AddInfo(FString::Printf(TEXT("%d widgets -- template instancing + register: %.3f ms  <-- the comparable one"),
-		WidgetCount, InstanceAndRegisterMs));
-	if (LoadMs > 0.0)
-	{
-		AddInfo(FString::Printf(TEXT("instancing+register is %.2fx the blob load; registration alone is %.3f ms of it"),
-			InstanceAndRegisterMs / LoadMs, InstanceAndRegisterMs - InstanceMs));
-	}
-
-	// The comparison is only worth anything if all three really built the tree.
-	TestEqual(TEXT("the blob load produced the whole hierarchy"), LoadedCount, WidgetCount);
-	TestEqual(TEXT("and so did instancing"), InstancedCount, WidgetCount);
-	TestEqual(TEXT("and so did instancing with registration"), RegisteredCount, WidgetCount);
 
 	return true;
 }

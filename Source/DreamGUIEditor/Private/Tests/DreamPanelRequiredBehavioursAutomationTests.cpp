@@ -10,8 +10,6 @@
 #include "Editor.h"
 #include "Engine/World.h"
 #include "Interaction/DreamContentWidget.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
 
@@ -184,44 +182,6 @@ bool FDreamPanelRequiredBehavioursCapacityTest::RunTest(const FString& Parameter
 	TestTrue(TEXT("The Overlay is kept"), IsValid(Cast<UDreamLayoutContainerOverlay>(Widget->GetLayoutContainer())));
 	TestEqual(TEXT("No ContentWidget was added for the refused panel"), CountContentWidgets(Widget.Get()), 0);
 	TestEqual(TEXT("Both children are still attached"), Widget->GetChildren().Num(), 2);
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPanelRequiredBehavioursSubPrefabGateTest,
-	"DreamGUI.Editor.PanelRequiredBehaviours.AWidgetInsideASubPrefabIsLeftAlone",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamPanelRequiredBehavioursSubPrefabGateTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamPanelRequiredBehavioursTestLocal;
-	FScopedTestWorld TestWorld;
-	TStrongObjectPtr<UDreamWidget> Root(MakeWidget(TestWorld.World, TEXT("Root")));
-	Root->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
-	UDreamWidget* Nested = MakeWidget(Root.Get(), TEXT("Nested"));
-	Nested->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
-	Nested->TrySetParent(Root.Get(), false);
-
-	TStrongObjectPtr<UDreamUIPrefabHelperObject> Helper(NewObject<UDreamUIPrefabHelperObject>());
-	TStrongObjectPtr<UDreamUIPrefab> SubPrefabAsset(NewObject<UDreamUIPrefab>());
-	Helper->LoadedRootWidget = Root.Get();
-	FDreamUISubPrefabData Data;
-	Data.PrefabAsset = SubPrefabAsset.Get();
-	Data.MapGuidToObject.Add(FGuid::NewGuid(), Nested);
-	Helper->SubPrefabMap.Add(Nested, MoveTemp(Data));
-
-	TestTrue(TEXT("The fixture registers Nested as a sub-prefab instance"), UDreamUIPrefabHelperObject::IsWidgetInsideSubPrefabInstance(Nested));
-	TestFalse(TEXT("The prefab's own root is not"), UDreamUIPrefabHelperObject::IsWidgetInsideSubPrefabInstance(Root.Get()));
-
-	// The override system records property values, not added components, so a component added to a
-	// sub-prefab instance would not survive a refresh from its asset.
-	AssignPanelThroughPropertyEditor(Nested, UDreamLayoutContainerSizeBox::StaticClass());
-	TestEqual(TEXT("No ContentWidget is added inside a sub-prefab instance"), CountContentWidgets(Nested), 0);
-
-	AssignPanelThroughPropertyEditor(Root.Get(), UDreamLayoutContainerSizeBox::StaticClass());
-	TestEqual(TEXT("The prefab's own widget still gets one"), CountContentWidgets(Root.Get()), 1);
-
-	Helper->ClearLoadedPrefab();
 	return true;
 }
 

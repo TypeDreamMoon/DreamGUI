@@ -10,7 +10,6 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/DreamUISpriteData.h"
 #include "Core/Components/DreamLayout.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Misc/ConfigCacheIni.h"
@@ -159,10 +158,9 @@ void SDreamUIPrefabPalette::RequestRebuild()
 
 void SDreamUIPrefabPalette::HandlePrefabAssetChanged(const FAssetData& InAssetData)
 {
-	if (InAssetData.IsInstanceOf(UDreamUIPrefab::StaticClass()))
-	{
-		RequestRebuild();
-	}
+	// Any asset add/remove/rename can change what the registered controls resolve to, so the list is
+	// rebuilt for all of them. It used to filter for prefab assets, back when it listed those.
+	RequestRebuild();
 }
 
 void SDreamUIPrefabPalette::HandlePrefabAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath)

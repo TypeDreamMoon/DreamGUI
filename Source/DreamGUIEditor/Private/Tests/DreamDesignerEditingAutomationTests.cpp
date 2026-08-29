@@ -871,4 +871,59 @@ bool FDreamDesignerRecompileDoesNotOrphanThePreviewTest::RunTest(const FString&)
 	return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerClipboardKeepsSameNamedWidgetsApartTest,
+	"DreamGUI.Designer.CopyingTwoSameNamedWidgetsPastesTwo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerClipboardKeepsSameNamedWidgetsApartTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerClipboardNames"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	// Two widgets that share a display name. The clipboard used to be keyed by name, so a pair like
+	// this collapsed into one entry and pasted as one widget -- silently, which is the only reason it
+	// survived as long as it did.
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	UDreamWidget* First = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("Twin"), nullptr, nullptr);
+	UDreamWidget* Second = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("Twin"), nullptr, nullptr);
+	if (!TestNotNull(TEXT("First twin created"), First) || !TestNotNull(TEXT("Second twin created"), Second))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	UDreamWidget* FirstPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Twin")));
+	TArray<UDreamWidget*> ToCopy;
+	Scoped.Designer->GetPreviewHost()->GetPreviewRoot()->GetChildren();
+	for (UDreamWidget* Child : Scoped.Designer->GetPreviewHost()->GetPreviewRoot()->GetChildren())
+	{
+		if (IsValid(Child) && Child->GetDisplayName().StartsWith(TEXT("Twin")))
+		{
+			ToCopy.Add(Child);
+		}
+	}
+	if (!TestEqual(TEXT("Two same-named widgets to copy"), ToCopy.Num(), 2))
+	{
+		return false;
+	}
+	Scoped.Designer->DesignerCopyWidgets(ToCopy);
+	TestTrue(TEXT("The clipboard has content"), FDreamWidgetBlueprintEditor::DesignerHasClipboardContent());
+
+	const TArray<UDreamWidget*> Pasted = Scoped.Designer->DesignerPasteWidgets(Scoped.Designer->GetPreviewHost()->GetPreviewRoot());
+	TestEqual(TEXT("Pasting two same-named widgets yields two"), Pasted.Num(), 2);
+	Scoped.Rebuild();
+	TestEqual(TEXT("And the asset gained two"), Scoped.TemplateCount(), CountBefore + 2);
+
+	return true;
+}
+
 #endif

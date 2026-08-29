@@ -13,9 +13,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 
-#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
 namespace DreamUICreateLocal
 {

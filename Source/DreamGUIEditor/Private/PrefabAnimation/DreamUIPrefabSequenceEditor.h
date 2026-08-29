@@ -15,7 +15,6 @@ class UDreamUIPrefabSequenceComponent;
 class UDreamUIPrefabSequence;
 class SDreamUIPrefabSequenceEditorWidget;
 struct FWidgetAnimationListItem;
-class UDreamUIPrefabHelperObject;
 
 class SDreamUIPrefabSequenceEditor : public SCompoundWidget
 {
@@ -50,9 +49,7 @@ private:
 	UDreamUIPrefabSequenceComponent* EnsureAnimationHost();
 	FDelegateHandle OnObjectsReplacedHandle;
 	FDelegateHandle EditingPrefabChangedHandle;
-	FDelegateHandle OnBeforeApplyPrefabHandle;
 	FDelegateHandle PostUndoRedoHandle;
-	void OnBeforeApplyPrefab(UDreamUIPrefabHelperObject* InObject);
 	void OnPostUndoRedo();
 
 	TSharedPtr<SDreamUIPrefabSequenceEditorWidget> PrefabSequenceEditor;

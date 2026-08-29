@@ -10,7 +10,6 @@
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamWorldSpaceRaycasterBase.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 
 #include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"

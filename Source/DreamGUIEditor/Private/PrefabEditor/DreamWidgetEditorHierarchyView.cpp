@@ -19,8 +19,6 @@
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Framework/Commands/GenericCommands.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetEditorHierarchyView"
 

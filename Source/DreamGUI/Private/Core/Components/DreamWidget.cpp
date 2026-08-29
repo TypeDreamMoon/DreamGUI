@@ -20,7 +20,6 @@
 #endif
 #include "Components/SceneComponent.h"
 #include "Core/DreamUIBehaviour.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #if WITH_EDITOR
 #include "UObject/UnrealType.h"
 #endif
@@ -838,13 +837,9 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 				LayoutContainer->CalculateLayout();
 			}
 			// The details dropdown assigns the container without going through CreateNewLayoutContainer,
-			// so the behaviour dependencies are reconciled here. A widget inside a sub-prefab instance is
-			// left alone: the override system records property values, not added components, and the
-			// dropdown is disabled there anyway.
-			if (!UDreamUIPrefabHelperObject::IsWidgetInsideSubPrefabInstance(this))
-			{
-				SyncRequiredBehavioursForLayoutContainer(PreviousLayout, LayoutContainer);
-			}
+			// so the behaviour dependencies are reconciled here. This used to be skipped for a widget
+			// inside a sub-prefab instance; a class model has none.
+			SyncRequiredBehavioursForLayoutContainer(PreviousLayout, LayoutContainer);
 			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 			MarkLayoutForRebuild(this);
 		}

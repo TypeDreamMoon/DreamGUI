@@ -22,7 +22,6 @@
 #include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
 #include "CoreGlobals.h"
 #include "Event/DreamEventSystem.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "PrefabSystem/DreamUIPrefabPresenterComponent.h"
 #if WITH_EDITOR
 #include "Editor.h"

@@ -23,7 +23,6 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "DetailCustomization/DreamPanelSlotCustomization.h"
 #include "Editor/UnrealEdEngine.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "Utils/DreamUIUtils.h"
 
@@ -260,7 +259,8 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	TArray<TWeakObjectPtr<UObject>> TargetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(TargetObjects);
 	TargetScriptArray.Empty();
-	bool bIsSubPrefab = false;
+	// The header controls used to be disabled on a widget inside a sub-prefab instance. There are
+	// none, so they are always editable.
 	for (auto Item : TargetObjects)
 	{
 		if (auto ValidItem = Cast<UDreamWidget>(Item.Get()))
@@ -270,10 +270,6 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			{
 				if (ValidItem->GetWorld()->WorldType == EWorldType::Editor)
 				{
-					if (auto PrefabHelper = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ValidItem))
-					{
-						bIsSubPrefab = PrefabHelper->IsWidgetBelongsToSubPrefab(ValidItem);
-					}
 					ValidItem->MarkCanvasUpdate(true);
 				}
 			}
@@ -1056,7 +1052,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		auto& LayoutCategory = DetailBuilder.EditCategory(
 			"LayoutContainer", LOCTEXT("PanelCategory", "Panel"), ECategoryPriority::Default);
 		LayoutCategory.SetSortOrder(-60);
-		LayoutCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Layout_PH, !bIsSubPrefab));
+		LayoutCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Layout_PH, true));
 		LayoutCategory.SetIsEmpty(!IsValid(Layout));
 		LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
 			.Visibility(IsValid(Layout) ? EVisibility::Hidden : EVisibility::Visible)
@@ -1082,7 +1078,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			"LayoutSelf", LOCTEXT("SelfLayoutCategory", "Self Layout"), ECategoryPriority::Default);
 		LayoutSelfCategory.SetSortOrder(-50);
 		LayoutSelfCategory.InitiallyCollapsed(!IsValid(LayoutSelf));
-		LayoutSelfCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, LayoutSelf_PH, !bIsSubPrefab));
+		LayoutSelfCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, LayoutSelf_PH, true));
 		LayoutSelfCategory.SetIsEmpty(!IsValid(LayoutSelf));
 		LayoutSelfCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
 			.Visibility(IsValid(LayoutSelf) ? EVisibility::Hidden : EVisibility::Visible)
@@ -1158,7 +1154,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		Visual_PH->GetValue(Visual);
 		IDetailCategoryBuilder& VisualCategory = DetailBuilder.EditCategory("Visual");
 		VisualCategory.SetSortOrder(-40);
-		VisualCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Visual_PH, !bIsSubPrefab));
+		VisualCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Visual_PH, true));
 		VisualCategory.SetIsEmpty(Visual == nullptr);
 		VisualCategory.AddCustomRow(LOCTEXT("VisualPlaceholder", "Placeholder"))
 			.Visibility(IsValid(Visual) ? EVisibility::Hidden : EVisibility::Visible)

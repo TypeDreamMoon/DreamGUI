@@ -50,7 +50,6 @@
 #include "Core/DreamUIRender/DreamUIRenderer.h"
 #include "PrefabSystem/DreamUIPrefabInstanceScene.h"
 #include "Utils/DreamUIUtils.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Engine/Canvas.h"
 #include "CanvasItem.h"
 #include "Framework/Application/SlateApplication.h"
@@ -59,7 +58,7 @@
 #define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorViewportClient"
 
 //declared in DreamUIPrefabSequenceEditorWidget.cpp; the comment there says why it is a bare prototype
-bool DreamUIPrefabSequence_CanBindWidgetToSequencer(class UDreamUIPrefabHelperObject* InPrefabHelper, const UDreamWidget* InWidget);
+bool DreamUIPrefabSequence_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 // UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
 // (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).
@@ -444,15 +443,12 @@ void FDreamUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<U
 		return;
 	}
 
-	// No sub prefabs: the gate below treats a null helper as "not owned by one", which is
-	// now true of every widget in the design.
-	UDreamUIPrefabHelperObject* Helper = nullptr;
 	TArray<UObject*> ObjectsToKey;
 	for (UDreamWidget* KeyedWidget : InWidgets)
 	{
 		// A sub-prefab widget's binding does not survive a save; keying one would author a track
 		// that silently binds nothing on the next load.
-		if (IsValid(KeyedWidget) && DreamUIPrefabSequence_CanBindWidgetToSequencer(Helper, KeyedWidget))
+		if (IsValid(KeyedWidget) && DreamUIPrefabSequence_CanBindWidgetToSequencer(KeyedWidget))
 		{
 			ObjectsToKey.Add(KeyedWidget);
 		}

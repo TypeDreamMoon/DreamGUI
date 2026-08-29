@@ -14,7 +14,6 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Utils/DreamUIUtils.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
 #include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "LevelEditor.h"
@@ -42,11 +41,11 @@
  * Declared here rather than in the widget's header because that header describes the Slate class,
  * which no headless test can construct; DreamPrefabPanelsAutomationTests declares this prototype.
  */
-bool DreamUIPrefabSequence_CanBindWidgetToSequencer(UDreamUIPrefabHelperObject* InPrefabHelper, const UDreamWidget* InWidget)
+bool DreamUIPrefabSequence_CanBindWidgetToSequencer(const UDreamWidget* InWidget)
 {
-	if (!IsValid(InWidget))return false;
-	if (!IsValid(InPrefabHelper))return true;//outside a prefab editor there is no sub-prefab to be part of
-	return !InPrefabHelper->IsWidgetBelongsToSubPrefab(InWidget);
+	// The refusal this made was "a sub-prefab widget's binding does not survive a save". A class
+	// model has no sub-prefab instances, so a valid widget is bindable.
+	return IsValid(InWidget);
 }
 
 class SDreamUIPrefabSequenceEditorWidgetImpl : public SCompoundWidget, public FEditorUndoClient
@@ -428,8 +427,7 @@ public:
 		{
 			return nullptr;
 		}
-		UDreamUIPrefabHelperObject* Helper = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ContextWidget);
-		return DreamUIPrefabSequence_CanBindWidgetToSequencer(Helper, Widget) ? Widget : nullptr;
+		return DreamUIPrefabSequence_CanBindWidgetToSequencer(Widget) ? Widget : nullptr;
 	}
 
 	void BuildBindingContextMenu(FMenuBuilder& MenuBuilder, FGuid ObjectBinding)
@@ -526,8 +524,7 @@ public:
 								{
 									TargetWidget = InItem->GetTypedOuter<UDreamWidget>();
 								}
-								if (!DreamUIPrefabSequence_CanBindWidgetToSequencer(
-									UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget), TargetWidget))
+								if (!DreamUIPrefabSequence_CanBindWidgetToSequencer(TargetWidget))
 								{
 									FDreamUIUtils::EditorNotification(LOCTEXT("SubPrefabWidgetNotBindable"
 										, "This widget belongs to a sub-prefab, so a track bound to it would be lost the next time the prefab loads. Animate it inside its own prefab instead."), false, 8);
@@ -551,13 +548,8 @@ public:
 	void OnSequenceChanged()
 	{
 		auto Widget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
-		if (Widget)
-		{
-			if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
-			{
-				PrefabHelperObject->SetAnythingDirty();
-			}
-		}
+		// The prefab helper was what a sequence change had to mark dirty. A Widget Blueprint's own
+		// dirty state is the Blueprint's, and the sequence lives on it.
 	}
 private:
 	TSharedRef<FExtender> GetAddTrackSequencerExtender(const TSharedRef<FUICommandList> CommandList, const TArray<UObject*> ContextSensitiveObjects)

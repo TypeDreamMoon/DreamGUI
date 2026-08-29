@@ -12,8 +12,6 @@
 #include "Event/DreamUIEventDelegate.h"
 #include "Event/DreamUIEventDelegate_PresetParameter.h"
 #include "Core/DreamUISpriteData_BaseObject.h"
-#include "PrefabSystem/DreamUIPrefab.h"
-#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "DreamUIBPLibrary.generated.h"
 
 /**
