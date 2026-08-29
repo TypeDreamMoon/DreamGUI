@@ -368,7 +368,8 @@ public:
 	 * geometry. It is also the half that gets thrown away, so this is the other end of the same
 	 * arrangement UMG uses (FWidgetBlueprintEditor::MigrateFromChain).
 	 */
-	void MigrateDetailsChangeToTemplate(FEditPropertyChain& InChain, bool bIsModify);
+	/** InEditedObjects is what the details panel is showing -- widgets, visuals or behaviours. */
+	void MigrateDetailsChangeToTemplate(TConstArrayView<UObject*> InEditedObjects, FEditPropertyChain& InChain, bool bIsModify);
 
 	/** InConfigureTemplate runs on the new TEMPLATE, before the preview is rebuilt from it. */
 	UDreamWidget* DesignerCreateWidget(UDreamWidget* InPreviewParent, TSubclassOf<UDreamWidget> InWidgetClass,

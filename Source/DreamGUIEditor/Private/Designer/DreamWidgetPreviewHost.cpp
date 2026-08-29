@@ -9,6 +9,7 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
 #include "DreamGUI.h"
 #include "PrefabSystem/DreamUIPrefabInstanceScene.h"
 
@@ -336,19 +337,44 @@ UDreamWidget* FDreamWidgetPreviewHost::FindTemplateForPreview(const UDreamWidget
 	return Found;
 }
 
-bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UDreamWidget* InPreviewWidget, FEditPropertyChain& InChain, bool bIsModify)
+bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject, FEditPropertyChain& InChain, bool bIsModify)
 {
-	UDreamWidget* Template = FindTemplateForPreview(InPreviewWidget);
+	if (!IsValid(InPreviewObject))
+	{
+		return false;
+	}
+	// Which object on the widget this is -- the widget, its visual, or a behaviour by position. The
+	// same question bindings ask, answered in the same place so the two cannot disagree about it.
+	const DreamWidgetPropertyBindingExtension::FBindingSite Site =
+		DreamWidgetPropertyBindingExtension::ResolveBindingSite(InPreviewObject);
+	if (Site.Widget == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Template = FindTemplateForPreview(Site.Widget);
 	if (Template == nullptr)
 	{
 		return false;
 	}
+	UObject* TemplateObject = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
+	if (!IsValid(TemplateObject) || TemplateObject->GetClass() != InPreviewObject->GetClass())
+	{
+		return false;
+	}
+
 	FEditPropertyChain::TDoubleLinkedListNode* Head = InChain.GetHead();
 	if (Head == nullptr)
 	{
 		return false;
 	}
-	const bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewWidget, Template, Head, Head->GetValue(), bIsModify);
+	// The chain has to belong to what it is being applied to. Without this an edit made while a
+	// different object was selected reaches here and asserts inside ContainerPtrToValuePtr.
+	const FProperty* HeadProperty = Head->GetValue();
+	if (HeadProperty == nullptr || !InPreviewObject->GetClass()->IsChildOf(HeadProperty->GetOwnerClass()))
+	{
+		return false;
+	}
+	const bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewObject, TemplateObject, Head, Head->GetValue(), bIsModify);
 	if (bMigrated && !bIsModify)
 	{
 		// Modified, not structurally modified: no member changed, so there is nothing for the skeleton

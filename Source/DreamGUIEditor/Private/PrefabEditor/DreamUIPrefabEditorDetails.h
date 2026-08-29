@@ -28,6 +28,9 @@ public:
 	// FNotifyHook -- the details view edits PREVIEW widgets, and a preview is rebuilt from the
 	// authoring tree, so an edit that stopped there would be gone at the next rebuild. These two are
 	// where it reaches the asset. UMG's SWidgetDetailsView has the same pair for the same reason.
+	/** What the panel is currently showing -- widgets, visuals or behaviours, whichever was selected. */
+	TArray<UObject*> GetEditedObjects() const;
+
 	virtual void NotifyPreChange(FEditPropertyChain* PropertyAboutToChange) override;
 	virtual void NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FEditPropertyChain* PropertyThatChanged) override;
 	// End FNotifyHook

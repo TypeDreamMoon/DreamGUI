@@ -2009,19 +2009,18 @@ namespace DreamWidgetDesignerClipboard
 	static TArray<TWeakObjectPtr<UDreamWidget>> Roots;
 }
 
-void FDreamWidgetBlueprintEditor::MigrateDetailsChangeToTemplate(FEditPropertyChain& InChain, bool bIsModify)
+void FDreamWidgetBlueprintEditor::MigrateDetailsChangeToTemplate(TConstArrayView<UObject*> InEditedObjects, FEditPropertyChain& InChain, bool bIsModify)
 {
 	if (!PreviewHost.IsValid())
 	{
 		return;
 	}
+	// The objects the PANEL is showing, not the widget selection: a component's properties are edited
+	// on the component, and the widget it hangs off has no such property to write.
 	bool bMigrated = false;
-	for (const TWeakObjectPtr<UDreamWidget>& Widget : SelectedWidgets)
+	for (UObject* Edited : InEditedObjects)
 	{
-		if (Widget.IsValid())
-		{
-			bMigrated |= PreviewHost->MigratePropertyToTemplate(Widget.Get(), InChain, bIsModify);
-		}
+		bMigrated |= PreviewHost->MigratePropertyToTemplate(Edited, InChain, bIsModify);
 	}
 	if (bMigrated && !bIsModify)
 	{

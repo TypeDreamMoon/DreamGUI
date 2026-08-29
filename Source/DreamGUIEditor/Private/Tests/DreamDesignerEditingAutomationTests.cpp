@@ -16,6 +16,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Interaction/UITextInput.h"
 #include "Core/Components/DreamText.h"
 #include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
 #include "EdGraph/EdGraph.h"
@@ -323,7 +324,7 @@ bool FDreamDesignerComponentsAndPropertiesReachTheAssetTest::RunTest(const FStri
 		FProperty* AnchorDataProperty = UDreamWidget::StaticClass()->FindPropertyByName(UDreamWidget::GetPropertyName_AnchorData());
 		FEditPropertyChain Chain;
 		Chain.AddHead(AnchorDataProperty);
-		Scoped.Designer->MigrateDetailsChangeToTemplate(Chain, /*bIsModify*/false);
+		Scoped.Designer->MigrateDetailsChangeToTemplate({ SubjectPreview }, Chain, /*bIsModify*/false);
 
 		TestEqual(TEXT("The asset took the edited width"), (float)SubjectTemplate->GetSizeDelta().X, 77.0f, 0.001f);
 		Scoped.Rebuild();
@@ -707,6 +708,74 @@ bool FDreamDesignerPlaceAControlTest::RunTest(const FString&)
 			TestTrue(TEXT("The placed widget is of its generated class"),
 				Template->GetClass() == ControlBlueprint->GeneratedClass.Get());
 		}
+	}
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerComponentPropertyEditReachesTheAssetTest,
+	"DreamGUI.Designer.EditingAComponentPropertyReachesTheComponentNotTheWidget",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerComponentPropertyEditReachesTheAssetTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerComponentPropertyEdit"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	UDreamWidget* Created = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("Host"), nullptr, nullptr);
+	if (!TestNotNull(TEXT("A widget to hang a component on"), Created))
+	{
+		return false;
+	}
+	TArray<UClass*> ToAdd{ UUITextInput::StaticClass() };
+	UDreamUIBehaviour* Component = Scoped.Designer->DesignerAddComponents(Created, ToAdd);
+	if (!TestNotNull(TEXT("The component was added"), Component))
+	{
+		return false;
+	}
+
+	FProperty* MultiLine = UUITextInput::StaticClass()->FindPropertyByName(FName(TEXT("bAllowMultiLine")));
+	if (!TestNotNull(TEXT("The component property exists"), MultiLine))
+	{
+		return false;
+	}
+
+	// The details panel shows a widget, its visual and its behaviours as peers. This is the edit made
+	// on the COMPONENT, and the migration used to apply the chain to the WIDGET -- which asserts,
+	// because bAllowMultiLine does not belong to UDreamWidget, and never reached the asset either.
+	Cast<UUITextInput>(Component)->SetAllowMultiLine(true);
+	FEditPropertyChain Chain;
+	Chain.AddHead(MultiLine);
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ Component }, Chain, /*bIsModify*/false);
+
+	UDreamWidget* HostTemplate = Scoped.FindTemplate(TEXT("Host"));
+	if (TestNotNull(TEXT("The host is in the asset"), HostTemplate)
+		&& TestEqual(TEXT("With its component"), HostTemplate->GetAllComponents().Num(), 1))
+	{
+		UUITextInput* TemplateInput = Cast<UUITextInput>(HostTemplate->GetAllComponents()[0]);
+		if (TestNotNull(TEXT("Of the right class"), TemplateInput))
+		{
+			TestTrue(TEXT("And the edit reached the TEMPLATE's component"), TemplateInput->GetAllowMultiLine());
+		}
+	}
+
+	// A chain whose property belongs to something else must be refused, not applied. This is the
+	// assertion itself: applying a component's property to a widget crashes the editor outright.
+	UDreamWidget* HostPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(HostTemplate);
+	if (TestNotNull(TEXT("The host has a preview"), HostPreview))
+	{
+		FEditPropertyChain Mismatched;
+		Mismatched.AddHead(MultiLine);
+		Scoped.Designer->MigrateDetailsChangeToTemplate({ HostPreview }, Mismatched, /*bIsModify*/false);
+		TestTrue(TEXT("Migrating a component property onto a widget is refused rather than fatal"), true);
 	}
 
 	return true;

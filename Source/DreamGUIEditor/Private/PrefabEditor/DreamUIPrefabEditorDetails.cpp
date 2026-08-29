@@ -186,7 +186,7 @@ void SDreamUIPrefabEditorDetails::NotifyPreChange(FEditPropertyChain* PropertyAb
 	{
 		if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin())
 		{
-			Editor->MigrateDetailsChangeToTemplate(*PropertyAboutToChange, /*bIsModify*/true);
+			Editor->MigrateDetailsChangeToTemplate(GetEditedObjects(), *PropertyAboutToChange, /*bIsModify*/true);
 		}
 	}
 }
@@ -201,8 +201,25 @@ void SDreamUIPrefabEditorDetails::NotifyPostChange(const FPropertyChangedEvent& 
 	}
 	if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = PrefabEditorPtr.Pin())
 	{
-		Editor->MigrateDetailsChangeToTemplate(*PropertyThatChanged, /*bIsModify*/false);
+		Editor->MigrateDetailsChangeToTemplate(GetEditedObjects(), *PropertyThatChanged, /*bIsModify*/false);
 	}
+}
+
+TArray<UObject*> SDreamUIPrefabEditorDetails::GetEditedObjects() const
+{
+	TArray<UObject*> Result;
+	if (!DetailsView.IsValid())
+	{
+		return Result;
+	}
+	for (const TWeakObjectPtr<UObject>& Object : DetailsView->GetSelectedObjects())
+	{
+		if (Object.IsValid())
+		{
+			Result.Add(Object.Get());
+		}
+	}
+	return Result;
 }
 
 bool SDreamUIPrefabEditorDetails::IsEditorAllowEditing()const

@@ -113,7 +113,14 @@ public:
 	 * every mouse move. UMG's details view skips the whole migration for interactive changes and
 	 * mirrors once at the end; do the same.
 	 */
-	bool MigratePropertyToTemplate(UDreamWidget* InPreviewWidget, FEditPropertyChain& InChain, bool bIsModify);
+	/**
+	 * Copy one details-panel edit from a PREVIEW object onto its counterpart in the authoring tree.
+	 *
+	 * InPreviewObject is whatever the panel is showing -- the widget, its visual, or one of its
+	 * behaviours. Taking it as a widget was wrong twice over: the property does not belong to
+	 * UDreamWidget, so applying it asserts, and the edit never reached the asset either.
+	 */
+	bool MigratePropertyToTemplate(UObject* InPreviewObject, FEditPropertyChain& InChain, bool bIsModify);
 
 	/**
 	 * Copy named properties straight from a preview widget onto its template counterpart.
