@@ -86,6 +86,31 @@ namespace DreamUITextAuthoring
 	DREAMGUIEDITOR_API bool IsTextAuthored(const UDreamWidgetBlueprint* InBlueprint);
 
 	/**
+	 * Whether this Blueprint's class CAN name a `.dui` -- its class default object is a
+	 * UDreamTextUserWidget -- regardless of whether it names one yet.
+	 *
+	 * A separate question from IsTextAuthored, and the gap between them is a real state: a text class
+	 * with an empty path. The gate must NOT lock such a Blueprint (there is no text to be the truth
+	 * yet, so refusing structural edits would refuse everything and explain it by naming a file that
+	 * does not exist), and the designer MUST offer to set one -- which is the state every text-backed
+	 * widget starts in, and the state that had nowhere to be fixed from.
+	 */
+	DREAMGUIEDITOR_API bool CanAuthorFromText(const UDreamWidgetBlueprint* InBlueprint);
+
+	/**
+	 * Point the class at a `.dui`, or clear it. Returns false when the class cannot hold one.
+	 *
+	 * On the CDO, transacted, and followed by a compile, because all three are what make the value
+	 * mean anything: the compiler reads the CDO, undo has to be able to take it back, and until a
+	 * compile runs the class still has whatever hierarchy it had before. Setting the property and
+	 * stopping is the shape that produces "I set the file and nothing happened".
+	 *
+	 * The path is stored as given except for being made portable (DreamUIPaths::MakePortablePath), so
+	 * a caller may hand this the absolute path a file dialog returned.
+	 */
+	DREAMGUIEDITOR_API bool SetAuthoredSourcePath(UDreamWidgetBlueprint* InBlueprint, const FString& InPath);
+
+	/**
 	 * The Blueprint InWidget belongs to, whichever half of the designer it came from.
 	 *
 	 * A TEMPLATE widget is outered to the tree, which is outered to the asset, so the outer chain

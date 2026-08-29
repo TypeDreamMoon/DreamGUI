@@ -12,7 +12,13 @@
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Text/DreamUITextWriteBack.h"
 #include "Core/DreamTextUserWidget.h"
+#include "Text/DreamUIPaths.h"
+
+#include "DesktopPlatformModule.h"
+#include "IDesktopPlatform.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/MessageDialog.h"
+#include "Misc/Paths.h"
 #include "Core/DreamWidgetTree.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Preview/DreamWidgetDesignerScene.h"
@@ -1925,6 +1931,157 @@ void FDreamWidgetBlueprintEditor::ExtendDesignerToolbar(UToolMenu* ToolBar)
 			, FSlateIcon(AppStyle, "EditorViewport.ToggleRealTime")));
 	}
 
+	// The .dui, on the toolbar, because it is the one property of a text-backed class that has to be
+	// findable.
+	//
+	// It IS reachable without this -- Graph mode, Class Defaults, the Details panel -- and that is
+	// exactly the problem: the file a screen is authored in should not take a mode switch and three
+	// clicks to name, and a class that has one should say which one where the author is looking at
+	// the hierarchy it produced. The empty state is what made this necessary: a widget blueprint
+	// parented to UDreamTextUserWidget opens on a blank designer with no visible reason and nothing
+	// to click.
+	TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = SharedThis(this);
+	FToolMenuSection& SourceSection = ToolBar->AddSection("DreamWidgetTextSource", TAttribute<FText>(),
+		FToolMenuInsert("DreamWidgetDesignerView", EToolMenuInsertType::After));
+	{
+		FToolUIAction SourceAction;
+		// Hidden rather than disabled for a hand-authored class: a greyed control implies "not now",
+		// and this one is "never, and nothing you do here will change it" -- the parent class decides,
+		// and a parent class is not changed from a toolbar.
+		SourceAction.IsActionVisibleDelegate = FToolMenuIsActionButtonVisible::CreateLambda(
+			[WeakEditor](const FToolMenuContext&)
+			{
+				const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
+				return Editor.IsValid()
+					&& DreamUITextAuthoring::CanAuthorFromText(Editor->GetWidgetBlueprint());
+			});
+
+		SourceSection.AddEntry(FToolMenuEntry::InitComboButton(
+			"DreamWidgetTextSourceCombo",
+			FToolUIActionChoice(SourceAction),
+			FNewToolMenuChoice(FNewToolMenuDelegate::CreateSP(this, &FDreamWidgetBlueprintEditor::FillTextSourceMenu)),
+			TAttribute<FText>::CreateLambda([WeakEditor]
+			{
+				const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
+				const FString FileName = Editor.IsValid()
+					? DreamUITextAuthoring::GetAuthoredSourceFileName(Editor->GetWidgetBlueprint()) : FString();
+				return FileName.IsEmpty()
+					? LOCTEXT("NoTextSource", "No Source File")
+					: FText::FromString(FileName);
+			}),
+			TAttribute<FText>::CreateLambda([WeakEditor]
+			{
+				const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
+				const FString Path = Editor.IsValid()
+					? DreamUITextAuthoring::GetAuthoredSourcePath(Editor->GetWidgetBlueprint()) : FString();
+				// The RESOLVED path in the tooltip, not the stored one. The stored one is short and
+				// portable and says nothing about where the file actually is, which is exactly the
+				// question asked by anyone hovering this after a compile could not find it.
+				return Path.IsEmpty()
+					? LOCTEXT("NoTextSourceTooltip",
+						"This class builds its hierarchy from a .dui, and does not name one yet. Pick a file to author it in.")
+					: FText::FromString(UDreamTextUserWidget::ResolveDuiFilePath(Path));
+			}),
+			FSlateIcon(AppStyle, "Icons.Documentation")));
+	}
+}
+
+void FDreamWidgetBlueprintEditor::FillTextSourceMenu(UToolMenu* InMenu)
+{
+	if (InMenu == nullptr)
+	{
+		return;
+	}
+	UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint();
+	const FString AuthoredPath = DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint);
+	const FString ResolvedPath = UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
+	const bool bFileExists = !ResolvedPath.IsEmpty() && FPaths::FileExists(ResolvedPath);
+	const FName AppStyle = FAppStyle::GetAppStyleSetName();
+
+	FToolMenuSection& Section = InMenu->AddSection("DreamWidgetTextSourceActions",
+		LOCTEXT("TextSourceSection", "DreamUI Source"));
+
+	Section.AddMenuEntry("PickTextSource",
+		LOCTEXT("PickTextSource", "Set Source File..."),
+		LOCTEXT("PickTextSourceTooltip", "Choose the .dui this class builds its hierarchy from, then recompile."),
+		FSlateIcon(AppStyle, "Icons.FolderOpen"),
+		FUIAction(FExecuteAction::CreateSP(this, &FDreamWidgetBlueprintEditor::PickTextSourceFile)));
+
+	Section.AddMenuEntry("OpenTextSource",
+		LOCTEXT("OpenTextSource", "Open in Default Editor"),
+		LOCTEXT("OpenTextSourceTooltip", "Open the .dui in whatever application the system opens .dui files with."),
+		FSlateIcon(AppStyle, "Icons.Edit"),
+		FUIAction(
+			FExecuteAction::CreateLambda([ResolvedPath]
+			{
+				FPlatformProcess::LaunchFileInDefaultExternalApplication(*ResolvedPath, nullptr, ELaunchVerb::Open);
+			}),
+			FCanExecuteAction::CreateLambda([bFileExists] { return bFileExists; })));
+
+	Section.AddMenuEntry("ShowTextSource",
+		LOCTEXT("ShowTextSource", "Show in Explorer"),
+		LOCTEXT("ShowTextSourceTooltip", "Select the .dui in the file browser."),
+		FSlateIcon(AppStyle, "SystemWideCommands.FindInContentBrowser"),
+		FUIAction(
+			FExecuteAction::CreateLambda([ResolvedPath]
+			{
+				FPlatformProcess::ExploreFolder(*ResolvedPath);
+			}),
+			FCanExecuteAction::CreateLambda([bFileExists] { return bFileExists; })));
+
+	// Said out loud rather than left to be inferred from an empty designer. A path that resolves to
+	// nothing is the one state where every other entry here is disabled and the reason is invisible.
+	if (!AuthoredPath.IsEmpty() && !bFileExists)
+	{
+		Section.AddMenuEntry("MissingTextSource",
+			FText::Format(LOCTEXT("MissingTextSource", "Not found: {0}"), FText::FromString(ResolvedPath)),
+			FText::FromString(ResolvedPath),
+			FSlateIcon(AppStyle, "Icons.Warning"),
+			FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([] { return false; })));
+	}
+}
+
+void FDreamWidgetBlueprintEditor::PickTextSourceFile()
+{
+	IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
+	if (DesktopPlatform == nullptr)
+	{
+		return;
+	}
+	UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint();
+	if (!DreamUITextAuthoring::CanAuthorFromText(Blueprint))
+	{
+		return;
+	}
+
+	// Opened at the file it already names, else at the first source root, else at the project. The
+	// last fallback is the one that matters: with no DUI directory anywhere yet, the project root is
+	// where the author is about to make one.
+	const FString AuthoredPath = DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint);
+	FString DefaultDirectory;
+	if (!AuthoredPath.IsEmpty())
+	{
+		DefaultDirectory = FPaths::GetPath(UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath));
+	}
+	if (!FPaths::DirectoryExists(DefaultDirectory))
+	{
+		const TArray<FDreamUISourceRoot> Roots = DreamUIPaths::GetSourceRoots();
+		DefaultDirectory = Roots.Num() > 0
+			? Roots[0].Directory
+			: FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+	}
+
+	const void* ParentWindowHandle = FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr);
+	TArray<FString> Chosen;
+	const bool bPicked = DesktopPlatform->OpenFileDialog(ParentWindowHandle,
+		LOCTEXT("PickTextSourceTitle", "Pick a DreamUI source file").ToString(),
+		DefaultDirectory, FString(), TEXT("DreamUI source (*.dui)|*.dui"),
+		EFileDialogFlags::None, Chosen);
+	if (!bPicked || Chosen.Num() == 0)
+	{
+		return;
+	}
+	DreamUITextAuthoring::SetAuthoredSourcePath(Blueprint, Chosen[0]);
 }
 
 bool FDreamWidgetBlueprintEditor::IsFilteredActor(const AActor* Actor)

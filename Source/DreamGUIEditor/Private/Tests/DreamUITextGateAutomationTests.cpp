@@ -628,4 +628,78 @@ bool FDreamUIBoundPropertyIsShownReadOnlyTest::RunTest(const FString&)
 	return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextSetSourceFileTest,
+	"DreamGUI.WidgetBlueprint.TheSourceFileCanBeSetFromTheEditor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The empty state, and the way out of it.
+ *
+ * A Blueprint parented to UDreamTextUserWidget with no path set is where every text-backed widget
+ * starts, and for a while it was a dead end: the designer showed a blank hierarchy, the gate did not
+ * lock (correctly -- there is no text to be the truth yet), and the one property that would fix it
+ * was three clicks away in another mode. The two claims here are what make the toolbar entry work:
+ * that a class with no path is still recognised as text-capable, and that setting a path recompiles
+ * rather than merely storing a string.
+ */
+bool FDreamUITextSetSourceFileTest::RunTest(const FString&)
+{
+	using namespace DreamUITextGateTestLocal;
+
+	FScopedDuiFile File(TEXT("GateSetSource.dui"));
+	if (!TestTrue(TEXT("the .dui was written"), File.Write({
+		TEXT("Widget Root {"),
+		TEXT("  + CanvasPanel { }"),
+		TEXT("  Text Title { }"),
+		TEXT("}"),
+	})))
+	{
+		return false;
+	}
+
+	// Created with NO path, which is the state the toolbar entry exists for.
+	FScopedGatedDesigner Scoped(TEXT("GateSetSource"), UDreamTextUserWidget::StaticClass(), FString());
+	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("a text class with no path is still text-CAPABLE"),
+		DreamUITextAuthoring::CanAuthorFromText(Scoped.Blueprint));
+	TestFalse(TEXT("but is not yet text-AUTHORED, so the structural gate stays open"),
+		DreamUITextAuthoring::IsTextAuthored(Scoped.Blueprint));
+
+	TestTrue(TEXT("the path was accepted"),
+		DreamUITextAuthoring::SetAuthoredSourcePath(Scoped.Blueprint, File.FilePath));
+	TestTrue(TEXT("and the class now reads as text-authored"),
+		DreamUITextAuthoring::IsTextAuthored(Scoped.Blueprint));
+
+	// The claim that matters: SetAuthoredSourcePath compiles. Storing the string and stopping is the
+	// shape that produces "I set the file and nothing happened".
+	TestNotNull(TEXT("and the compile it ran built the file's hierarchy"),
+		Scoped.FindTemplate(TEXT("Title")));
+
+	// Setting the same path again is a no-op that still reports success: the caller asked for a
+	// state and got it. Asserted because the alternative -- returning false -- would read as an
+	// error at the call site and put a failure notification on an idempotent click.
+	TestTrue(TEXT("setting the same path again is accepted and changes nothing"),
+		DreamUITextAuthoring::SetAuthoredSourcePath(Scoped.Blueprint, File.FilePath));
+
+	// A hand-authored class cannot hold one, and must say so rather than writing to its parent's CDO
+	// -- which would set the source file of every Blueprint deriving from UDreamUserWidget.
+	FScopedGatedDesigner Plain(TEXT("GateSetSourcePlain"), UDreamUserWidget::StaticClass(), FString());
+	if (TestNotNull(TEXT("the control designer opened"), Plain.Designer))
+	{
+		TestFalse(TEXT("a hand-authored class is not text-capable"),
+			DreamUITextAuthoring::CanAuthorFromText(Plain.Blueprint));
+		TestFalse(TEXT("and refuses the path rather than writing it somewhere shared"),
+			DreamUITextAuthoring::SetAuthoredSourcePath(Plain.Blueprint, File.FilePath));
+		TestTrue(TEXT("leaving UDreamTextUserWidget's own default untouched"),
+			GetDefault<UDreamTextUserWidget>()->SourceFile.FilePath.IsEmpty());
+	}
+	return true;
+}
+
 #endif

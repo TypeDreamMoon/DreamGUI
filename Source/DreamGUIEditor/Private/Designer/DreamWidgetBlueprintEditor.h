@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #pragma once
@@ -151,6 +151,10 @@ public:
 	TSharedPtr<SDreamWidgetDesignerDetails> GetDesignerDetailsWidget() const { return DetailsPtr; }
 	/** Add the design surface's own view controls to a mode toolbar. */
 	void ExtendDesignerToolbar(class UToolMenu* InToolbar);
+	/** The Source File combo's dropdown: pick, open, reveal, and a line naming a file that is not there. */
+	void FillTextSourceMenu(class UToolMenu* InMenu);
+	/** File dialog to Blueprint, via DreamUITextAuthoring::SetAuthoredSourcePath -- which recompiles. */
+	void PickTextSourceFile();
 private:
 	void SyncSelection();
 	void HandlePostTransaction(bool bSuccess);

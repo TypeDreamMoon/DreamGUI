@@ -14,6 +14,11 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
+#include "Text/DreamUIPaths.h"
+
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "ScopedTransaction.h"
 
 #include "Misc/Paths.h"
 #include "UObject/UnrealType.h"
@@ -299,6 +304,55 @@ namespace DreamUITextAuthoring
 		// the path to throw away each time.
 		const UDreamTextUserWidget* Defaults = Local::FindTextDefaults(InBlueprint);
 		return Defaults != nullptr && Local::HasNonWhitespace(Defaults->SourceFile.FilePath);
+	}
+
+	bool CanAuthorFromText(const UDreamWidgetBlueprint* InBlueprint)
+	{
+		return Local::FindTextDefaults(InBlueprint) != nullptr;
+	}
+
+	bool SetAuthoredSourcePath(UDreamWidgetBlueprint* InBlueprint, const FString& InPath)
+	{
+		if (!IsValid(InBlueprint))
+		{
+			return false;
+		}
+		// bCreateIfNeeded TRUE here, unlike every read in this file: a read happens once per row per
+		// tick and must not build a CDO as a side effect of drawing, but a write happens when someone
+		// clicks, and a Blueprint whose generated class has no CDO yet is exactly the case that needs
+		// one made rather than skipped.
+		UDreamTextUserWidget* Defaults = InBlueprint->GeneratedClass != nullptr
+			? Cast<UDreamTextUserWidget>(InBlueprint->GeneratedClass->GetDefaultObject(/*bCreateIfNeeded*/true))
+			: nullptr;
+		if (Defaults == nullptr)
+		{
+			// The parent's CDO is what the READ falls back to, and it must not be what the write
+			// falls back to: writing there would set the source file of every Blueprint deriving from
+			// that parent, this one included, and the property would look like it took.
+			return false;
+		}
+
+		const FString Portable = DreamUIPaths::MakePortablePath(InPath.TrimStartAndEnd());
+		if (Defaults->SourceFile.FilePath.Equals(Portable, ESearchCase::CaseSensitive))
+		{
+			// Already there. Returning true rather than false: the caller asked for a state, and the
+			// state is what it asked for. Recompiling anyway would make picking the same file twice a
+			// way to rebuild the tree, which is a coincidence rather than a feature.
+			return true;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("SetAuthoredSource", "Set DreamUI Source File"));
+		Defaults->SetFlags(RF_Transactional);
+		Defaults->Modify();
+		InBlueprint->Modify();
+		Defaults->SourceFile.FilePath = Portable;
+
+		// Structurally, not merely modified: the hierarchy this class declares is about to be a
+		// different one, so the skeleton has to regenerate along with it -- a member variable per
+		// widget, and the old file's widgets gone.
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+		FKismetEditorUtilities::CompileBlueprint(InBlueprint);
+		return true;
 	}
 
 	UDreamWidgetBlueprint* FindOwningBlueprint(const UDreamWidget* InWidget)
