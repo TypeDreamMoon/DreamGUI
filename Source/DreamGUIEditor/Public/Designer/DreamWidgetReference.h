@@ -1,8 +1,12 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
+// FWeakObjectPtr itself, not just the template that names it: TWeakObjectPtr<UDreamWidget> is a
+// member below, so the pointee type has to be complete here.
+#include "UObject/WeakObjectPtr.h"
+#include "UObject/WeakObjectPtrTemplates.h"
 
 class FDreamWidgetPreviewHost;
 class UDreamWidget;

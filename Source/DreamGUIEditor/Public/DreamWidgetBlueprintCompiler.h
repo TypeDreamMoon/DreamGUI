@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "KismetCompiler.h"
 
+class UDreamWidget;
 class UDreamWidgetBlueprint;
 class UDreamWidgetGeneratedClass;
 class UDreamWidgetTree;

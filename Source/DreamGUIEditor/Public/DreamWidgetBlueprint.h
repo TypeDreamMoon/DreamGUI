@@ -1,10 +1,13 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/Blueprint.h"
 #include "Engine/EngineTypes.h"
+// EViewModeIndex, for the saved viewport state below. EngineTypes.h does not carry it, and inside a
+// unity blob some neighbour always had. -SingleFile on any file that reaches this header said so.
+#include "Engine/EngineBaseTypes.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "DreamWidgetBlueprint.generated.h"
 

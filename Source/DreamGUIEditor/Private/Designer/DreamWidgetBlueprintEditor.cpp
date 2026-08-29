@@ -12,6 +12,7 @@
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Text/DreamUITextWriteBack.h"
 #include "Core/DreamTextUserWidget.h"
+#include "Misc/MessageDialog.h"
 #include "Core/DreamWidgetTree.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Preview/DreamWidgetDesignerScene.h"

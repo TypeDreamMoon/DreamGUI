@@ -3,6 +3,10 @@
 
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
+// FNotifyHook is a BASE below, and FPropertyAndParent is a parameter type: both have to be
+// complete here, and inside a unity blob some neighbour always had included them.
+#include "Misc/NotifyHook.h"
+#include "PropertyEditorDelegates.h"
 #pragma once
 
 class FDreamWidgetBlueprintEditor;
