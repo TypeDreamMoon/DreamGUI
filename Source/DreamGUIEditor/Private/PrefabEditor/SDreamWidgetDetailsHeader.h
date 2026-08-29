@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -136,6 +136,14 @@ private:
 
 	bool VerifyDisplayName(const FText& InText, FText& OutErrorMessage) const
 	{
+		if (!IsValid(GetCurrentWidget()))
+		{
+			// Nothing is selected, so the box is empty because there is nothing to name -- not because
+			// somebody cleared it. The box is bound to the name AND to this check, so it re-validates
+			// whenever the binding changes: an empty selection painted a red "Widget name cannot be
+			// empty." across the details panel and left it there.
+			return true;
+		}
 		const FString ProposedName = InText.ToString().TrimStartAndEnd();
 		if (ProposedName.IsEmpty())
 		{

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "Designer/DreamWidgetDesignerTabs.h"
@@ -175,7 +175,7 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 	//   +-----------+           Viewport             |  Details  |
 	//   | Hierarchy |                                |           |
 	//   |           +--------------------------------+-----------+
-	//   |           | Animations | Sequencer Curves | Compiler Results   (all closed)
+	//   |           | Animations | Sequencer Curves   (both closed)
 	//   +-----------+--------------------------------------------+
 	constexpr float LeftColumnWidth = 0.15f;
 	constexpr float ViewportWidth = 0.75f;
@@ -236,7 +236,13 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 					->SetForegroundTab(FDreamWidgetDesignerTabs::AnimationsID)
 					->AddTab(FDreamWidgetDesignerTabs::AnimationsID, ETabState::ClosedTab)
 					->AddTab(FDreamWidgetDesignerTabs::SequencerCurvesID, ETabState::ClosedTab)
-					->AddTab(FBlueprintEditorTabs::CompilerResultsID, ETabState::ClosedTab)
+					// NOT the compiler results: this mode registers only its own panels (see
+					// RegisterTabFactories), and FCompilerResultsSummoner lives in Kismet private
+					// headers a plugin cannot reach -- so naming that tab here asked the tab manager
+					// for a spawner nobody had. It said so on every open: "Cannot spawn tab because no
+					// spawner is registered for Document", then a tab called "Unknown" failing to
+					// appear in this layout. Compile results reach the author through the toolbar
+					// badge and the Message Log.
 				)
 			)
 		);
