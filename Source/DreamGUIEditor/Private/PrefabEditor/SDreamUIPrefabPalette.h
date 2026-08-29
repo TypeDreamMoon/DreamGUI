@@ -26,8 +26,7 @@ namespace DreamUIPalette
 	{
 		Category,     // header
 		BasicWidget,  // UDreamWidget + optional Visual class (VisualClass, may be null)
-		Prefab,       // flatten a built-in /DreamGUI/Prefabs/ recipe by path
-		ProjectPrefab,// instantiate a project asset and keep it linked as a sub-prefab
+		Prefab,       // instantiate a registered control by its widget-class path
 		Native,       // registry recipe (layout/behaviour/optional factory)
 	};
 
@@ -38,9 +37,8 @@ namespace DreamUIPalette
 		// BasicWidget:
 		TWeakObjectPtr<UClass> VisualClass;
 		bool bSetDefaultSprite = false;// Image element gets a default sprite, like the menu
-		// Prefab:
+		// Prefab: the widget class to instantiate, by path.
 		FString PrefabPath;
-		FAssetData PrefabAsset;// valid only for project prefabs (thumbnail/browse)
 		TSharedPtr<FDreamUIControlDescriptor> NativeDescriptor;
 		bool bValid = true;
 		FText ValidationError;
@@ -95,8 +93,6 @@ public:
 	bool bSetDefaultSprite = false;
 	TSharedPtr<FDreamUIControlDescriptor> NativeDescriptor;
 	FString PrefabPath;
-	/** Project assets stay linked to their source; only the plugin's own recipes are flattened. */
-	bool bLinkedSubPrefab = false;
 	FString DisplayName;
 
 	/**
@@ -144,7 +140,6 @@ private:
 	void RefreshRootItems();
 	void CollectBasics(TArray<FItemPtr>& Out);
 	void CollectControls(TArray<FItemPtr>& Out);
-	void CollectPrefabs(TArray<FItemPtr>& Out);
 
 	TSharedRef<class ITableRow> OnGenerateRow(FItemPtr InItem, const TSharedRef<class STableViewBase>& OwnerTable);
 	void OnGetChildren(FItemPtr InItem, TArray<FItemPtr>& OutChildren);

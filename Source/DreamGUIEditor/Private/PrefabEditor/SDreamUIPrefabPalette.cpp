@@ -37,8 +37,6 @@ namespace DreamUIPalette
 			return FString();
 		case EItemKind::BasicWidget:
 			return FString::Printf(TEXT("Basic:%s"), *Item.DisplayName);
-		case EItemKind::ProjectPrefab:
-			return FString::Printf(TEXT("Asset:%s"), *Item.PrefabPath);
 		default:
 			// Registry entries are keyed by the registry's Name, not by the label they show: relabeling
 			// a control, or moving it to another category, must not drop the star off it.
@@ -242,90 +240,11 @@ void SDreamUIPrefabPalette::CollectControls(TArray<FItemPtr>& Out)
 	}
 }
 
-void SDreamUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
-{
-	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
-	// Deliberately empty. This section listed prefab assets the palette could drop in as
-	// sub-prefabs; the palette places CLASSES now, and a prefab is not one. Listing them would
-	// offer entries nothing can place. The replacement -- listing the project's Widget Blueprints
-	// here -- belongs with the palette rework, not with retargeting the toolkit.
-	TArray<FAssetData> PrefabAssets;
-
-	UObject* EditingAsset = nullptr;
-	if (auto Editor = PrefabEditorPtr.Pin())EditingAsset = Editor->GetWidgetBlueprint();
-	const FName EditingPackage = IsValid(EditingAsset) ? EditingAsset->GetOutermost()->GetFName() : NAME_None;
-
-	// Whether a candidate already nests the prefab being edited is a question only the loaded asset
-	// can answer, and loading every prefab in the project to ask it would stall the panel. Nesting
-	// implies a package reference, so the registry's referencer closure narrows the candidates that
-	// are worth a load down to the handful that could possibly be cyclic.
-	TSet<FName> ReferencingPackages;
-	if (EditingPackage != NAME_None)
-	{
-		TArray<FName> Pending;
-		Pending.Add(EditingPackage);
-		while (Pending.Num() > 0)
-		{
-			TArray<FName> Referencers;
-			AssetRegistry.GetReferencers(Pending.Pop(), Referencers, UE::AssetRegistry::EDependencyCategory::Package);
-			for (FName Referencer : Referencers)
-			{
-				bool bAlreadyKnown = false;
-				ReferencingPackages.Add(Referencer, &bAlreadyKnown);
-				if (!bAlreadyKnown)Pending.Add(Referencer);
-			}
-		}
-	}
-
-	FItemPtr Header;
-	for (auto& AssetData : PrefabAssets)
-	{
-		// the plugin's built-in preset prefabs already live in the Controls section
-		if (AssetData.PackageName.ToString().StartsWith(UDreamGUISettings::Get()->PresetControlFolder))continue;
-		if (AssetData.PackageName == EditingPackage)continue;
-		if (ReferencingPackages.Contains(AssetData.PackageName))
-		{
-			auto Candidate = Cast<UDreamUIPrefab>(AssetData.GetAsset());
-			if (Candidate == nullptr)continue;
-		}
-
-		if (!Header.IsValid())
-		{
-			Header = MakeShared<FPaletteItem>();
-			Header->Kind = EItemKind::Category;
-			Header->DisplayName = TEXT("Prefabs");
-		}
-		auto Item = MakeShared<FPaletteItem>();
-		Item->Kind = EItemKind::ProjectPrefab;
-		Item->DisplayName = AssetData.AssetName.ToString();
-		Item->PrefabPath = AssetData.GetSoftObjectPath().ToString();
-		Item->PrefabAsset = AssetData;
-		Item->FavoriteKey = DreamUIPalette::MakeFavoriteKey(*Item);
-		// Only prefabs already in memory can be version-checked for free; the rest are rejected by
-		// FDreamUIEditorTools::CanNestPrefabUnderWidget at create time, which is the guard that counts.
-		if (auto Loaded = Cast<UDreamUIPrefab>(AssetData.FastGetAsset(false)))
-		{
-			if (Loaded->PrefabVersion <= (uint16)EDreamUIPrefabVersion::OldVersion)
-			{
-				Item->bValid = false;
-				Item->ValidationError = FText::Format(LOCTEXT("OldPrefabVersion", "{0}\nThis prefab's version is too old. Open it and hit \"Save\" to upgrade it."), FText::FromString(Item->PrefabPath));
-			}
-		}
-		Header->Children.Add(Item);
-	}
-	if (Header.IsValid())
-	{
-		Header->Children.Sort([](const FItemPtr& A, const FItemPtr& B) { return A->DisplayName < B->DisplayName; });
-		Out.Add(Header);
-	}
-}
-
 void SDreamUIPrefabPalette::RebuildList()
 {
 	AllGroups.Reset();
 	CollectBasics(AllGroups);
 	CollectControls(AllGroups);
-	CollectPrefabs(AllGroups);
 	RefreshRootItems();
 }
 
@@ -403,16 +322,11 @@ TSharedRef<ITableRow> SDreamUIPrefabPalette::OnGenerateRow(FItemPtr InItem, cons
 	}
 	if (!IconBrush)
 	{
-		UClass* IconClass = InItem->VisualClass.IsValid() ? InItem->VisualClass.Get()
-			: InItem->PrefabAsset.IsValid() ? UDreamUIPrefab::StaticClass() : UDreamWidget::StaticClass();
+		UClass* IconClass = InItem->VisualClass.IsValid() ? InItem->VisualClass.Get() : UDreamWidget::StaticClass();
 		IconBrush = FSlateIconFinder::FindIconBrushForClass(IconClass);
 	}
-	// Two gestures on one asset used to mean opposite things with nothing saying so. Now the palette
-	// links like the Content Browser does, and the row says which of the two it is.
 	const FText Tooltip = !InItem->bValid
 		? InItem->ValidationError
-		: InItem->Kind == EItemKind::ProjectPrefab
-		? FText::Format(LOCTEXT("ProjectPrefabRowTooltip", "{0}\nDouble-click, or drag onto a Hierarchy widget, to add it as a linked sub-prefab."), FText::FromString(InItem->PrefabPath))
 		: InItem->Kind == EItemKind::Prefab
 		? FText::Format(LOCTEXT("PrefabRowTooltip", "{0}\nDouble-click to add a copy under the selected widget."), FText::FromString(InItem->PrefabPath))
 		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click, or drag onto a Hierarchy widget, to add it under that widget."), FText::FromString(InItem->DisplayName));
@@ -492,7 +406,7 @@ namespace SDreamUIPrefabPaletteLocal
 	// (parent = selection) and drop (parent = drop-target widget) reuse the same logic
 	UDreamWidget* CreateElement(bool bIsBasicWidget, UClass* VisualClass, bool bSetDefaultSprite,
 		const TSharedPtr<FDreamUIControlDescriptor>& NativeDescriptor, const FString& PrefabPath,
-		bool bLinkedSubPrefab, const FString& DisplayName, TFunction<UDreamWidget*()> GetParent,
+		const FString& DisplayName, TFunction<UDreamWidget*()> GetParent,
 		TFunction<void(UDreamWidget*)> AfterCreate = nullptr)
 	{
 		if (bIsBasicWidget)
@@ -513,12 +427,6 @@ namespace SDreamUIPrefabPaletteLocal
 		if (NativeDescriptor.IsValid())
 		{
 			return FDreamUIEditorTools::CreateRegisteredControlAndReturn(GetParent, NativeDescriptor->Name, AfterCreate);
-		}
-		// A project asset dropped as a flattened copy loses its override tracking and every route
-		// back to the source; only the plugin's own recipes mean to be baked in.
-		if (bLinkedSubPrefab)
-		{
-			return FDreamUIEditorTools::CreateSubPrefabAndReturn(GetParent, PrefabPath, AfterCreate);
 		}
 		return FDreamUIEditorTools::CreateUIControlsAndReturn(GetParent, PrefabPath, AfterCreate);
 	}
@@ -544,7 +452,7 @@ UDreamWidget* FDreamUIPaletteDragDropOp::CreateUnder(UDreamWidget* InParentWidge
 			}
 		};
 	return SDreamUIPrefabPaletteLocal::CreateElement(bIsBasicWidget, VisualClass.Get(), bSetDefaultSprite,
-		NativeDescriptor, PrefabPath, bLinkedSubPrefab, DisplayName, [InParentWidget]() -> UDreamWidget* { return InParentWidget; },
+		NativeDescriptor, PrefabPath, DisplayName, [InParentWidget]() -> UDreamWidget* { return InParentWidget; },
 		MoveTemp(PlaceThenForward));
 }
 
@@ -554,7 +462,7 @@ void SDreamUIPrefabPalette::CreateItem(FItemPtr InItem)
 	// With nothing selected, fall back to the prefab root -- the same "add to root" the hierarchy's
 	// empty-area drop performs. Double-click used to be a no-op here, which reads as a dead panel.
 	SDreamUIPrefabPaletteLocal::CreateElement(InItem->Kind == EItemKind::BasicWidget, InItem->VisualClass.Get(),
-		InItem->bSetDefaultSprite, InItem->NativeDescriptor, InItem->PrefabPath, InItem->Kind == EItemKind::ProjectPrefab, InItem->DisplayName,
+		InItem->bSetDefaultSprite, InItem->NativeDescriptor, InItem->PrefabPath, InItem->DisplayName,
 		[this]() -> UDreamWidget*
 		{
 			if (UDreamWidget* Selected = GetSelectedWidget())return Selected;
@@ -572,7 +480,6 @@ FReply SDreamUIPrefabPalette::OnItemDragDetected(const FGeometry& MyGeometry, co
 	Op->bSetDefaultSprite = InItem->bSetDefaultSprite;
 	Op->NativeDescriptor = InItem->NativeDescriptor;
 	Op->PrefabPath = InItem->PrefabPath;
-	Op->bLinkedSubPrefab = (InItem->Kind == EItemKind::ProjectPrefab);
 	Op->DisplayName = InItem->DisplayName;
 	Op->Construct();
 	Op->SetToolTip(FText::FromString(InItem->DisplayName), nullptr);

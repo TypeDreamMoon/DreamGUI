@@ -38,9 +38,7 @@ public:
 	 * own preset recipes want -- a project asset dropped that way loses every override and every
 	 * route back to the thing it came from.
 	 */
-	static UDreamWidget* CreateSubPrefabAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(class UDreamWidget*)> Callback = nullptr);
 	/** Reject self-nesting, cyclic nesting and prefab versions too old to deserialize. */
-	static bool CanNestPrefabUnderWidget(UDreamUIPrefab* InPrefab, UDreamWidget* InParentWidget, FText& OutError);
 	static void CreateRegisteredControl(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FName ControlName);
 	static UDreamWidget* CreateRegisteredControlAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FName ControlName, TFunction<void(class UDreamWidget*)> Callback = nullptr);
 	static void DuplicateWidgets(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction);
