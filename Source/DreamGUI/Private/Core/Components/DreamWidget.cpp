@@ -2396,6 +2396,13 @@ void UDreamWidget::OnAttachedToParent()
 
 void UDreamWidget::OnChildDetached(UDreamWidget* ChildWidget)
 {
+	// Drop the dead slots before renumbering. This ran unguarded and was the only Children loop in
+	// this file that did: deleting a widget blueprint instance from the designer tears its contents
+	// down first, and the detach that follows walked a Children array holding an entry the teardown
+	// had already emptied -- an access violation reading SiblingIndex off a null, taking the editor
+	// with it. Removing rather than skipping is also what makes the renumbering below mean anything:
+	// a hole would leave every sibling after it numbered one past its own position.
+	EnsureUIChildrenValid();
 	for (int i = 0; i < Children.Num(); i++)
 	{
 		auto& UIChild = Children[i];

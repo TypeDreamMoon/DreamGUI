@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -204,6 +204,53 @@ bool FDreamChildQueriesTest::RunTest(const FString& Parameters)
 	Panel->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>();
 	TestTrue(TEXT("A panel layout does"), Panel->HasPanelSlots());
 	TestNotNull(TEXT("...which is exactly when AddChild returns one"), Panel->AddChild(A, 0));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDetachSurvivesADeadSiblingTest,
+	"DreamGUI.RemoveChild.DetachingDropsADeadSibling",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDetachSurvivesADeadSiblingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRemoveChildTestLocal;
+	FScopedGameWorld TestWorld;
+
+	// Found by deleting a widget blueprint instance in the designer, which took the editor down:
+	// UDreamWidget::OnChildDetached renumbered siblings over a Children array holding an entry that
+	// was no longer a live widget, and read SiblingIndex off it. EXCEPTION_ACCESS_VIOLATION reading
+	// 0x480. Every other Children loop in DreamWidget.cpp guards; that one did not.
+	//
+	// COVERAGE BOUNDARY: the editor hit a slot the COLLECTOR had already emptied -- a literal null.
+	// Reproducing that needs a CollectGarbage, and a collection here also sweeps up whatever earlier
+	// tests in the run left behind, reporting their orphans against this test and putting lines in
+	// the log that the suite's own zero-orphan check reads. So this pins the guard one step earlier,
+	// on a child that is garbage but not yet swept: same predicate, same fix, no collection.
+	TStrongObjectPtr<UDreamWidget> Root(MakeWidget(TestWorld.World, nullptr, TEXT("Root")));
+	Root->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
+	UDreamWidget* Keep = MakeWidget(TestWorld.World, Root.Get(), TEXT("Keep"));
+	UDreamWidget* Doomed = MakeWidget(TestWorld.World, Root.Get(), TEXT("Doomed"));
+	if (!TestEqual(TEXT("both children attached"), Root->GetChildrenCount(), 2))return false;
+
+	Doomed->MarkAsGarbage();
+	TestEqual(TEXT("the dead child is still in the array until something looks"), Root->GetChildrenCount(), 2);
+
+	// The detach. Whatever it does to the surviving sibling, it must not leave the dead one behind:
+	// SiblingIndex is renumbered by array position here, so a stale slot misnumbers everything after
+	// it and the numbers are what the lazy sort orders children by.
+	Keep->TrySetParent(nullptr, false);
+
+	TestEqual(TEXT("the detach leaves nothing behind"), Root->GetChildrenCount(), 0);
+	for (const UDreamWidget* Child : Root->GetChildren())
+	{
+		TestTrue(TEXT("and every remaining child is live"), IsValid(Child));
+	}
+
+	// A detached widget is still registered and still held by the manager -- see the file header --
+	// so this has to be taken down by hand or the suite reports it as an orphan.
+	Keep->DestroyWidget();
+	Root->DestroyWidget();
 	return true;
 }
 
