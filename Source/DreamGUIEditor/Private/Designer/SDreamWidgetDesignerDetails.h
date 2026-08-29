@@ -44,8 +44,30 @@ private:
 	TWeakPtr<FDreamWidgetBlueprintEditor> DesignerPtr;
 	TWeakObjectPtr<UWorld> World;
 
+	/**
+	 * The two halves of "visibly disabled" for a hierarchy that came from a `.dui`.
+	 *
+	 * Two, because the details view asks two different questions and only reaches one of them per
+	 * row: a row backed by a property node goes through FIsPropertyReadOnly and can be answered per
+	 * property, while a row that IS a custom widget goes through FIsCustomRowReadOnly and arrives
+	 * with nothing but its own name and its category's -- there is no property node behind it to ask
+	 * (FDetailItemNode::IsPropertyEditingEnabledImpl). Binding only the first leaves the anchor block,
+	 * the Panel/Visual/Self-Layout pickers and the canvas rows fully live on an asset whose structure
+	 * the text owns, which is the worst of the two halves to miss.
+	 */
 	bool IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent);
+	bool IsCustomRowReadOnly(FName InRowName, FName InCategoryName) const;
+	/**
+	 * Whether this panel may make STRUCTURAL edits: the rename box in the header, and the component
+	 * list's add / remove / cut / paste. False for a text-authored hierarchy -- both of those write
+	 * things only the `.dui` can say, and both are drawn disabled rather than failing on click.
+	 */
 	bool IsEditorAllowEditing()const;
+	/** The hierarchy this panel is showing belongs to a `.dui`. */
+	bool IsTextAuthoredHierarchy() const;
+	/** The banner above the properties: which file owns this, and what is still editable here. */
+	FText GetTextAuthoredBannerText() const;
+	EVisibility GetTextAuthoredBannerVisibility() const;
 
 	TSharedPtr<class IDetailsView> DetailsView;
 	TSharedPtr<class SDreamWidgetComponentEditor> ComponentEditor;

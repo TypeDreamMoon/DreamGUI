@@ -9,6 +9,9 @@
 #include "DreamWidgetBlueprint.h"
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/DreamWidgetTreeEditing.h"
+#include "Designer/DreamUITextAuthoringGate.h"
+#include "Text/DreamUITextWriteBack.h"
+#include "Core/DreamTextUserWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Preview/DreamWidgetDesignerScene.h"
@@ -403,6 +406,27 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	// every one of them asks for the world in its constructor.
 	PreviewHost = MakeShared<FDreamWidgetPreviewHost>();
 	PreviewHost->Initialize(BlueprintBeingEdited);
+
+	// For a text-authored asset, hook the designer's edits up to the file they came from. Without
+	// this the host still marks itself dirty and still broadcasts on every flush -- it just does it
+	// to nobody, and the panel looks like it is editing the .dui while nothing reaches the disk.
+	{
+		const FString AuthoredPath = DreamUITextAuthoring::GetAuthoredSourcePath(BlueprintBeingEdited);
+		if (!AuthoredPath.IsEmpty())
+		{
+			const FString AbsolutePath = UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
+			FString WriteBackError;
+			TextWriteBack = FDreamUITextWriteBack::Create(AbsolutePath, PreviewHost, WriteBackError);
+			if (!TextWriteBack.IsValid())
+			{
+				// Loud, and not fatal: the designer is still worth opening on a file that cannot be
+				// read, and refusing to open it would leave the author with no way to look at the
+				// asset at all.
+				UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Designer edits will not reach '%s': %s"),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *AbsolutePath, *WriteBackError);
+			}
+		}
+	}
 
 	TSharedPtr<FDreamWidgetBlueprintEditor> DesignerPtr = SharedThis(this);
 
@@ -1077,6 +1101,22 @@ bool FDreamWidgetBlueprintEditor::WrapTemplatesFrom(UDreamWidget* InPreviewWrapp
 
 void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass)
 {
+	// A NINTH structural entry, and one that hides behind a viewport toolbar rather than behind any
+	// of the create/delete/move family: swapping a widget's layout container is rewriting its
+	// `+ VerticalBox` line, and it writes straight onto the template without touching
+	// DreamWidgetTreeEditing. A notification as well as the log, because this one is only ever
+	// reached from a toolbar and a toolbar click that silently does nothing is the failure W5 spent
+	// its time removing.
+	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+		FString::Printf(TEXT("replace the panel with a '%s'"), *GetNameSafe(PanelClass))))
+	{
+		FNotificationInfo Info(DreamUITextAuthoring::DescribeStructuralRefusal(
+			BlueprintBeingEdited, TEXT("replace this widget's panel")));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 6.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
 	if (!IsValid(PanelClass) || !PanelClass->IsChildOf(UDreamLayoutContainer::StaticClass()))return;
 	const TArray<TWeakObjectPtr<UDreamWidget>>& Selection = GetSelectedWidgets();
 	if (Selection.Num() != 1)return;
@@ -2171,6 +2211,10 @@ void FDreamWidgetBlueprintEditor::MigrateDetailsChangeToTemplate(TConstArrayView
 	{
 		// The preview already shows the value; what changed is that the asset now carries it too.
 		MarkDesignChanged();
+		// A committed details edit is a natural flush point: the interactive ticks were already
+		// dropped upstream (SDreamWidgetDesignerDetails::NotifyPostChange refuses
+		// EPropertyChangeType::Interactive), so reaching here at all means the author let go.
+		PreviewHost->FlushTemplateChanges();
 	}
 }
 
@@ -2293,6 +2337,16 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponents(UDreamWidg
 UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponentBy(UDreamWidget* InPreviewWidget,
 	TFunctionRef<UDreamUIBehaviour*(UDreamWidget*)> InAddToTemplate)
 {
+	// A seventh and eighth entry the design note did not list, and they are structural for the same
+	// reason the six are: a behaviour is a `+ Class { }` line in the .dui, so adding or removing one
+	// here is adding or removing a line the next compile will put back exactly as the file has it.
+	// They do not come through DreamWidgetTreeEditing at all -- they call NotifyStructureChanged
+	// themselves -- which is why gating the five (or the six) does not reach them.
+	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+		TEXT("add a behaviour")))
+	{
+		return nullptr;
+	}
 	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
 	if (Template == nullptr || !IsValid(BlueprintBeingEdited))
 	{
@@ -2332,6 +2386,12 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponentBy(UDreamWid
 
 bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPreviewWidget, UDreamUIBehaviour* InPreviewComponent)
 {
+	// The other half of the pair above.
+	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+		FString::Printf(TEXT("remove the behaviour '%s'"), *GetNameSafe(InPreviewComponent ? InPreviewComponent->GetClass() : nullptr))))
+	{
+		return false;
+	}
 	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
 	if (Template == nullptr || !IsValid(InPreviewComponent) || !IsValid(BlueprintBeingEdited))
 	{
@@ -2428,6 +2488,15 @@ bool FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()
 TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWidget* InPreviewParent)
 {
 	TArray<UDreamWidget*> Result;
+	// THE SIXTH STRUCTURAL ENTRY POINT, and the one that is easy to miss: paste is not in
+	// DreamWidgetTreeEditing with the other five -- it duplicates the clipboard's subtrees straight
+	// onto the tree below -- so a gate installed only there would have left Ctrl+V adding nodes to a
+	// hierarchy that is regenerated from a text file. See DreamUITextAuthoringGate.h.
+	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+		TEXT("paste widgets")))
+	{
+		return Result;
+	}
 	if (!IsValid(BlueprintBeingEdited) || !IsValid(BlueprintBeingEdited->WidgetTree))
 	{
 		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot paste: this designer has no authoring tree."),

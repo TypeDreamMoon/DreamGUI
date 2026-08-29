@@ -4,6 +4,8 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamUITextAuthoringGate.h"
+#include "DreamGUIEditorModule.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
@@ -84,6 +86,19 @@ namespace DreamWidgetPropertyBindingExtension
 		{
 			return false;
 		}
+		// A `.dui` class carries its bindings in the file, and the compiler REPLACES
+		// UDreamWidgetBlueprint::PropertyBindings from the `<-` lines wholesale on every compile. So a
+		// binding authored from this panel is not merely un-written-back -- it is deleted, along with
+		// the function Create Binding just made and opened, at the next compile of anything.
+		//
+		// Refused here rather than at SetBinding alone, because this is the one function BOTH the row
+		// builder and the extension handler ask: returning false takes the Bind control off the row
+		// instead of leaving a menu that does nothing, which is what "visibly disabled" means for a
+		// control whose only content is actions.
+		if (!DreamUITextAuthoring::CanAuthorBindingsOn(InObject))
+		{
+			return false;
+		}
 		// Editable, and settable. The second half is the same question the compiler asks.
 		if (!InProperty->HasAnyPropertyFlags(CPF_Edit) || InProperty->HasAnyPropertyFlags(CPF_EditConst))
 		{
@@ -109,8 +124,34 @@ namespace DreamWidgetPropertyBindingExtension
 			});
 	}
 
+	/**
+	 * Every write to the authored binding list goes through here first.
+	 *
+	 * IsBindable already takes the Bind control off the row, so nothing in the UI reaches these three
+	 * today. They are gated anyway, out loud, because "the only caller checks" is a property of this
+	 * afternoon rather than of the code: a tool menu, a fixup commandlet or a migration that calls
+	 * SetBinding directly would otherwise write a binding that the next compile deletes without a word.
+	 */
+	static bool RefuseBindingAuthoring(const UDreamWidgetBlueprint* InBlueprint, const TCHAR* InFunction, int32 InLine,
+		const FString& InOperation)
+	{
+		if (!DreamUITextAuthoring::IsTextAuthored(InBlueprint))
+		{
+			return false;
+		}
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Refusing to %s in '%s': its bindings are the `<-` lines of '%s', and the next compile replaces the whole list from that file."),
+			InFunction, InLine, *InOperation, *GetNameSafe(InBlueprint),
+			*DreamUITextAuthoring::GetAuthoredSourceFileName(InBlueprint));
+		return true;
+	}
+
 	void SetBinding(UDreamWidgetBlueprint* InBlueprint, const FBindingSite& InSite, FName InPropertyName, FName InFunctionName)
 	{
+		if (RefuseBindingAuthoring(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("bind '%s'"), *InPropertyName.ToString())))
+		{
+			return;
+		}
 		if (!IsValid(InBlueprint))
 		{
 			return;
@@ -135,6 +176,14 @@ namespace DreamWidgetPropertyBindingExtension
 
 	void RemoveBinding(UDreamWidgetBlueprint* InBlueprint, const FBindingSite& InSite, FName InPropertyName)
 	{
+		// Removal is refused as well as authoring, which is not obviously symmetric: the binding is a
+		// `<-` line in the file, so dropping it here leaves the file saying it and the next compile
+		// puts it back -- a "remove" that reverts itself is worse than one that says it cannot.
+		if (RefuseBindingAuthoring(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("unbind '%s'"), *InPropertyName.ToString())))
+		{
+			return;
+		}
 		if (!IsValid(InBlueprint))
 		{
 			return;
@@ -191,6 +240,14 @@ namespace DreamWidgetPropertyBindingExtension
 	UEdGraph* CreateAndBindFunction(FDreamWidgetBlueprintEditor* InDesigner, UDreamWidgetBlueprint* InBlueprint,
 		const FBindingSite& InSite, const FProperty* InProperty)
 	{
+		// Before the graph is created, not after: this one does not merely record a binding, it adds a
+		// function to the Blueprint and opens it. Refusing later would leave the author looking at a
+		// brand new empty function that nothing will ever call.
+		if (RefuseBindingAuthoring(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("create a binding for '%s'"), InProperty != nullptr ? *InProperty->GetName() : TEXT("nothing"))))
+		{
+			return nullptr;
+		}
 		if (!IsValid(InBlueprint) || InProperty == nullptr)
 		{
 			return nullptr;

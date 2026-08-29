@@ -9,6 +9,7 @@
 #include "Engine/DeveloperSettings.h"
 #include "DreamWidgetBlueprintEditor.generated.h"
 
+class FDreamUITextWriteBack;
 class SDreamWidgetAnimationEditor;
 class UDreamWidgetAnimation;
 class SDreamWidgetEditorHierarchyView;
@@ -326,6 +327,13 @@ private:
 	TObjectPtr<UDreamWidgetBlueprint> BlueprintBeingEdited = nullptr;
 	/** The preview world, the design canvas, the live instance and the template correspondence. */
 	TSharedPtr<FDreamWidgetPreviewHost> PreviewHost;
+
+	/**
+	 * Turns designer edits back into lines of the .dui, for a text-authored asset. Null for every
+	 * other asset, and holding it here is what keeps it alive: it subscribes to the host on
+	 * construction and unsubscribes on destruction, so its lifetime IS the subscription.
+	 */
+	TSharedPtr<FDreamUITextWriteBack> TextWriteBack;
 	static TArray<FDreamWidgetBlueprintEditor*> DesignerInstances;
 
 	TSharedPtr<SDreamWidgetDesignerViewport> ViewportPtr;

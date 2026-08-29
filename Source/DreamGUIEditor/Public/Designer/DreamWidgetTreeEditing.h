@@ -24,6 +24,12 @@ class UDreamWidgetTree;
  * They are free functions rather than methods on the Blueprint because they are editor policy --
  * name uniqueness, capacity refusal, what counts as a legal parent -- and the asset should not carry
  * that. The Blueprint owns the data; this owns the rules for changing it.
+ *
+ * ALL FIVE REFUSE A HIERARCHY THAT CAME FROM A `.dui`, first thing, out loud. Structure belongs to
+ * the text there and nothing writes it back, so an edit made here would live until the next compile
+ * and then be silently gone. See DreamUITextAuthoringGate.h -- and note that it is SIX entry points,
+ * not five: paste is FDreamWidgetBlueprintEditor::DesignerPasteWidgets, which builds its copies
+ * straight onto the tree without coming through here.
  */
 namespace DreamWidgetTreeEditing
 {

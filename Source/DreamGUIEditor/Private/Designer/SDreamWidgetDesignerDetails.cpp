@@ -13,6 +13,7 @@
 #include "Misc/NotifyHook.h"
 #include "DreamWidgetBlueprintEditor.h"
 #include "DetailLayoutBuilder.h"
+#include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamWidgetDetailPropertyExtensionHandler.h"
 #include "DreamUIEditorTools.h"
 #include "Core/DreamUIBehaviour.h"
@@ -35,6 +36,7 @@
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Text/STextBlock.h"
 #include "Widgets/Views/SListView.h"
 #include "Widgets/Views/STableRow.h"
 #include "EditorClassUtils.h"
@@ -87,6 +89,8 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
 
     DetailsView = PropPlugin.CreateDetailView(DetailsViewArgs);
     DetailsView->SetIsPropertyReadOnlyDelegate(FIsPropertyReadOnly::CreateSP(this, &SDreamWidgetDesignerDetails::IsPropertyReadOnly));
+    // Both, and see the header for why one is not enough.
+    DetailsView->SetIsCustomRowReadOnlyDelegate(FIsCustomRowReadOnly::CreateSP(this, &SDreamWidgetDesignerDetails::IsCustomRowReadOnly));
 
 	if (DesignerPtr.IsValid())
 	{
@@ -155,6 +159,24 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
 						return EditedObjects.Num() == 1 ? EditedObjects[0].Get() : nullptr;
 					})
 				]
+				// Why half this panel is grey. A disabled row with no explanation reads as a bug in
+				// the editor, and the author's next move -- open the .dui -- is not one they can
+				// guess from a greyed-out spin box. The same sentence names the file, because that
+				// is the thing they have to go and edit.
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(FMargin(4, 4))
+				[
+					// The same shape as the "Arranged By" banner the widget customization draws, and
+					// deliberately: both say "these fields are not yours to set, and here is who owns
+					// them", so they should not look like two unrelated kinds of notice.
+					SNew(STextBlock)
+					.Visibility(this, &SDreamWidgetDesignerDetails::GetTextAuthoredBannerVisibility)
+					.Text(this, &SDreamWidgetDesignerDetails::GetTextAuthoredBannerText)
+					.ColorAndOpacity(FLinearColor(1.0f, 0.78f, 0.30f))
+					.AutoWrapText(true)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+				]
 				+ SVerticalBox::Slot()
 				.Padding(FMargin(0, 2))
 				[
@@ -222,11 +244,39 @@ TArray<UObject*> SDreamWidgetDesignerDetails::GetEditedObjects() const
 
 bool SDreamWidgetDesignerDetails::IsEditorAllowEditing()const
 {
-	if (DesignerPtr.IsValid() && CachedWidget.IsValid())
+	// Structural editing, which is what this gates: the rename box in the header, and the component
+	// list's add / remove / cut / paste. A `.dui` owns both -- the display name IS the node's id, and
+	// a behaviour is a `+ Class { }` line -- so they are drawn disabled rather than left live to fail
+	// on click. The primitives underneath refuse anyway; this is the half the author can see.
+	if (IsTextAuthoredHierarchy())
 	{
-		return true;//no sub prefabs: nothing in the design is owned by another asset
+		return false;
 	}
+	//no sub prefabs: nothing else in the design is owned by another asset
 	return true;
+}
+
+bool SDreamWidgetDesignerDetails::IsTextAuthoredHierarchy() const
+{
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin();
+	return Designer.IsValid() && DreamUITextAuthoring::IsTextAuthored(Designer->GetWidgetBlueprint());
+}
+
+EVisibility SDreamWidgetDesignerDetails::GetTextAuthoredBannerVisibility() const
+{
+	return IsTextAuthoredHierarchy() ? EVisibility::Visible : EVisibility::Collapsed;
+}
+
+FText SDreamWidgetDesignerDetails::GetTextAuthoredBannerText() const
+{
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin();
+	const FString FileName = Designer.IsValid()
+		? DreamUITextAuthoring::GetAuthoredSourceFileName(Designer->GetWidgetBlueprint()) : FString();
+	// Names the file, says what IS editable, and says what happens to the rest. All three, because a
+	// banner that only says "read only" leaves the author with the same question they started with.
+	return FText::Format(LOCTEXT("TextAuthoredBanner",
+		"This hierarchy is authored in {0}. Layout, slot and style values are edited here and written back to the file; structure, names and bindings are written in the text, and edits to anything greyed out would be lost at the next compile."),
+		FText::FromString(FileName));
 }
 
 UDreamWidget* SDreamWidgetDesignerDetails::GetSelectedWidgetContext() const
@@ -389,6 +439,38 @@ void SDreamWidgetDesignerDetails::Refresh()
 
 bool SDreamWidgetDesignerDetails::IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent)
 {
+	// FPropertyAndParent::Objects, never the panel's selection: the widget's visual, its panel slot
+	// and its layouts are shown through AddExternalObjects, so a great many rows in this panel belong
+	// to an object that is NOT what the hierarchy has selected -- and those are exactly the objects
+	// the .dui can still write. Reading the selection here would have marked all of them read-only.
+	for (const TWeakObjectPtr<UObject>& Object : InPropertyAndParent.Objects)
+	{
+		// Any, not all. A mixed selection where one widget is text-authored has to lock the row: the
+		// edit would otherwise go through for the whole selection and be thrown away for one of them.
+		if (Object.IsValid() && DreamUITextAuthoring::IsPropertyReadOnly(
+			Object.Get(), &InPropertyAndParent.Property, InPropertyAndParent.ParentProperties))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool SDreamWidgetDesignerDetails::IsCustomRowReadOnly(FName InRowName, FName InCategoryName) const
+{
+	if (!DetailsView.IsValid())
+	{
+		return false;
+	}
+	// The selection, because a custom row hands over no objects at all -- see the header. That is why
+	// this answer is per category rather than per property, and why the gate refuses by default here.
+	for (const TWeakObjectPtr<UObject>& Object : DetailsView->GetSelectedObjects())
+	{
+		if (Object.IsValid() && DreamUITextAuthoring::IsCustomRowReadOnly(Object.Get(), InRowName, InCategoryName))
+		{
+			return true;
+		}
+	}
 	return false;
 }
 

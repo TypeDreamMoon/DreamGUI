@@ -259,6 +259,24 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	EnsureAuthoredGuids();
 	PreviewWidget->InitializeFromArchetype(FindArchetypeForPreview());
 	PreviewWidget->SetParentBeforeRegister(RootAgent);
+
+	// Fill the design canvas. A freshly constructed widget is 100x100 centred, and this one is not a
+	// widget the author placed -- it is the instance the class's contents hang inside, so any size of
+	// its own is a second, invisible frame that the authored root then fills instead of the canvas.
+	// The symptom is a screen laid out correctly and clipped to a 100x100 square in the middle.
+	//
+	// After parenting on purpose: anchors are resolved against a parent, and setting them on an
+	// orphan is refused (UDreamWidget::SetHorizontalAndVerticalAnchorMinMax says so out loud).
+	{
+		FDreamUIAnchorData FillParent;
+		FillParent.Pivot = FVector2D(0.5, 0.5);
+		FillParent.AnchorMin = FVector2D(0.0, 0.0);
+		FillParent.AnchorMax = FVector2D(1.0, 1.0);
+		FillParent.AnchoredPosition = FVector2D::ZeroVector;
+		FillParent.SizeDelta = FVector2D::ZeroVector;
+		PreviewWidget->SetAnchorData(FillParent);
+	}
+
 	RegisterDreamWidgetHierarchy(PreviewWidget);
 
 	RebuildPreviewGuidMap();
@@ -455,8 +473,21 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 		// to regenerate -- but the class archetype is a duplicate of this tree, and until the next full
 		// compile every instance still carries the old value. This is what marks that gap.
 		FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+		bTemplateDirty = true;
 	}
 	return bMigrated;
+}
+
+void FDreamWidgetPreviewHost::FlushTemplateChanges()
+{
+	// Guarded rather than broadcasting unconditionally, so a flush point is free to fire on every
+	// gesture end, every committed edit and every focus change without any of them costing a write.
+	if (!bTemplateDirty)
+	{
+		return;
+	}
+	bTemplateDirty = false;
+	OnTemplateChanged.Broadcast();
 }
 
 int32 FDreamWidgetPreviewHost::CopyPreviewValuesToTemplate(UDreamWidget* InPreviewWidget, TConstArrayView<FName> InPropertyNames)
@@ -485,6 +516,13 @@ int32 FDreamWidgetPreviewHost::CopyPreviewValuesToTemplate(UDreamWidget* InPrevi
 		{
 			Copied++;
 		}
+	}
+	// A drag calls this on every mouse move, so this marks far more often than anything should act
+	// on it. That is the point: the flag absorbs the rate, and FlushTemplateChanges decides when a
+	// write is worth doing. See IsTemplateDirty.
+	if (Copied > 0)
+	{
+		bTemplateDirty = true;
 	}
 	return Copied;
 }

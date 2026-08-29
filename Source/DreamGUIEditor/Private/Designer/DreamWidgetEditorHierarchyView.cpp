@@ -373,9 +373,29 @@ namespace DreamWidgetHierarchyRows
 void SDreamWidgetEditorHierarchyView::RefreshTree()
 {
 	RootWidgets.Empty();
-	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
+
+	// The authored root is the top row, the way UMG's hierarchy shows the user widget's own tree.
+	//
+	// Walking the manager's parentless widgets instead surfaces the preview scaffolding: the design
+	// canvas agent, and under it the UDreamUserWidget instance the contents hang inside. Both are
+	// real widgets and neither is in the .dui or in the authoring tree, so every row above the root
+	// is one the author cannot edit, cannot find in their file, and cannot delete.
+	if (Manager.IsValid())
 	{
-		DreamWidgetHierarchyRows::CollectRoots(DreamUIManager->GetAllWidgetArray(), RootWidgets);
+		if (UDreamWidget* PreviewRoot = Manager.Pin()->GetPreviewRootWidget())
+		{
+			RootWidgets.Add(PreviewRoot);
+		}
+	}
+
+	// Before the first successful build there is no preview root, and the scaffolding walk is still
+	// the only thing that can show anything at all.
+	if (RootWidgets.Num() == 0)
+	{
+		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
+		{
+			DreamWidgetHierarchyRows::CollectRoots(DreamUIManager->GetAllWidgetArray(), RootWidgets);
+		}
 	}
 
 	FilterHandler->RefreshAndFilterTree();

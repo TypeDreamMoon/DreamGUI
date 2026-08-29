@@ -3,6 +3,8 @@
 
 #include "DreamWidgetDesignerViewportClient.h"
 #include "DreamWidgetDesignerEdMode.h"
+#include "Designer/DreamUITextAuthoringGate.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Settings/LevelEditorViewportSettings.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIDesignScreenSizes.h"
@@ -2407,7 +2409,35 @@ UE::Widget::EWidgetMode FDreamWidgetDesignerViewportClient::GetWidgetMode() cons
 		return UE::Widget::WM_None;
 	}
 
-	return FEditorViewportClient::GetWidgetMode();
+	const UE::Widget::EWidgetMode Mode = FEditorViewportClient::GetWidgetMode();
+	// A `.dui` hierarchy gets the move gizmo and nothing else, and the reason is not that rotating a
+	// widget is forbidden -- it is that the result cannot be written down.
+	//
+	// CommitWidgetGeometryToTemplate mirrors four properties on every mouse move: AnchorData,
+	// RelativeLocation, RelativeRotation and RelativeScale. The write-back covers `AnchorData.*` and
+	// stops there, because the language has no spelling for an FQuat or an FVector. A MOVE therefore
+	// survives -- SetRelativeLocation recomputes the anchors, and it is the anchors that get written
+	// -- while a rotate or a scale changes only properties that have nowhere to go, so it looks right
+	// until the next compile and is then gone.
+	//
+	// Offering no handle rather than a handle that does nothing: a control the author drags and then
+	// finds undone is worse than one that was never there, and there is no way to report the loss at
+	// the moment it happens because nothing has gone wrong yet.
+	//
+	// The other half of this rule lives in DreamUITextAuthoringGate's writable set, which for the
+	// same reason lists AnchorData and not the other three. The two have to agree: a panel that greys
+	// the rotation while the gizmo still writes it is the contradiction this pair exists to avoid.
+	if (Mode != UE::Widget::WM_Translate && Mode != UE::Widget::WM_None)
+	{
+		if (const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin())
+		{
+			if (DreamUITextAuthoring::IsTextAuthored(Designer->GetWidgetBlueprint()))
+			{
+				return UE::Widget::WM_Translate;
+			}
+		}
+	}
+	return Mode;
 }
 FVector FDreamWidgetDesignerViewportClient::GetWidgetLocation() const
 {
@@ -3806,6 +3836,18 @@ void FDreamWidgetDesignerViewportClient::TrackingStopped()
 		LevelDirtyCallback.Request();
 
 		RedrawAllViewportsIntoThisScene();
+	}
+
+	// The gesture is over, so this is where a drag's accumulated edits become worth writing down.
+	// CommitWidgetGeometryToTemplate ran on every mouse move on purpose -- it cannot rebuild
+	// mid-gesture without pulling the widget out from under the handle -- so the flush has to be
+	// here rather than next to the mirroring.
+	if (DesignerPtr.IsValid())
+	{
+		if (TSharedPtr<FDreamWidgetPreviewHost> Host = DesignerPtr.Pin()->GetPreviewHost())
+		{
+			Host->FlushTemplateChanges();
+		}
 	}
 }
 

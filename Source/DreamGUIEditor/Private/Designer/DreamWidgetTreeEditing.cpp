@@ -2,6 +2,7 @@
 
 #include "Designer/DreamWidgetTreeEditing.h"
 
+#include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
@@ -19,6 +20,18 @@ namespace DreamWidgetTreeEditing
 		UDreamWidgetTree* GetTree(const UDreamWidgetBlueprint* InBlueprint)
 		{
 			return IsValid(InBlueprint) && IsValid(InBlueprint->WidgetTree) ? InBlueprint->WidgetTree.Get() : nullptr;
+		}
+
+		/**
+		 * The name a refusal should quote: the one in the hierarchy panel, not the UObject's.
+		 *
+		 * GetNameSafe would print "DreamWidget_7", which is a name the author has never seen and cannot
+		 * search their .dui for -- and the whole point of naming the file in the message is that they
+		 * can go and find the line.
+		 */
+		FString DisplayNameOf(const UDreamWidget* InWidget)
+		{
+			return IsValid(InWidget) ? InWidget->GetDisplayName() : FString(TEXT("nothing"));
 		}
 	}
 
@@ -98,6 +111,13 @@ namespace DreamWidgetTreeEditing
 	UDreamWidget* DuplicateWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InSource,
 		UDreamWidget* InNewParent, int32 InSiblingIndex)
 	{
+		// Before the validity checks, not after: an author whose duplicate was going to be refused for
+		// some second reason still needs to be told the one they can act on. See DreamUITextAuthoringGate.
+		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("duplicate '%s'"), *Local::DisplayNameOf(InSource))))
+		{
+			return nullptr;
+		}
 		// Every refusal below says so. A duplicate that returns null without a word is a menu item that
 		// does nothing when clicked, which is what it looked like from the outside.
 		if (!IsTemplateWidgetOf(InBlueprint, InSource) || !IsTemplateWidgetOf(InBlueprint, InNewParent))
@@ -161,6 +181,11 @@ namespace DreamWidgetTreeEditing
 	UDreamWidget* CreateWidget(UDreamWidgetBlueprint* InBlueprint, TSubclassOf<UDreamWidget> InWidgetClass,
 		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName)
 	{
+		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("create a '%s'"), *GetNameSafe(InWidgetClass))))
+		{
+			return nullptr;
+		}
 		// Same rule as the duplicate path below: every refusal says so. A command that returns null
 		// without a word is a palette drop that does nothing, and the user has no way to tell that
 		// from a bug in the drag.
@@ -225,8 +250,18 @@ namespace DreamWidgetTreeEditing
 
 	bool DeleteWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget)
 	{
+		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("delete '%s'"), *Local::DisplayNameOf(InWidget))))
+		{
+			return false;
+		}
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget))
 		{
+			// The one branch in this family W5 left silent, and it is the one that fires when a caller
+			// hands over a preview widget instead of a template -- the single easiest mistake to make
+			// against this API. Said out loud for the same reason as its four siblings.
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot delete '%s': not part of '%s' authoring tree."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(InWidget), *GetNameSafe(InBlueprint));
 			return false;
 		}
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
@@ -257,6 +292,14 @@ namespace DreamWidgetTreeEditing
 
 	bool ReparentWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, UDreamWidget* InNewParent, int32 InSiblingIndex)
 	{
+		// Reordering inside one parent comes through here too, and it is refused with the rest: sibling
+		// order in the file IS the order in the hierarchy, so a reorder is a text edit like any other
+		// structural change and there is nothing in the patcher that moves a block of lines.
+		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("move '%s'"), *Local::DisplayNameOf(InWidget))))
+		{
+			return false;
+		}
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget) || !IsTemplateWidgetOf(InBlueprint, InNewParent))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot move '%s' under '%s': not part of '%s' authoring tree."),
@@ -310,6 +353,16 @@ namespace DreamWidgetTreeEditing
 
 	FString RenameWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, const FString& InDesiredDisplayName)
 	{
+		// A rename is structural here for a reason the other four do not have: the display name is the
+		// node's `id`, which is its identity in the file, its compiler variable, its binding key and
+		// its animation path all at once. Changing it from the designer would rename three things the
+		// text still spells the old way -- and the language has `(was: OldId)` precisely so that a
+		// rename is expressed in the file, where the fixup can see it.
+		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			FString::Printf(TEXT("rename '%s'"), *Local::DisplayNameOf(InWidget))))
+		{
+			return FString();
+		}
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot rename '%s': not part of '%s' authoring tree."),

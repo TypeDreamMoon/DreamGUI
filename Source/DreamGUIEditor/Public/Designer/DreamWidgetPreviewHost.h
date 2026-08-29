@@ -138,12 +138,45 @@ public:
 	/** Fires after every rebuild, once the new preview and the name map are both in place. */
 	FSimpleMulticastDelegate OnPreviewRebuilt;
 
+	/**
+	 * A value edit reached the authoring tree. Raised by the two write paths, cleared by a flush.
+	 *
+	 * This exists for the .dui write-back, whose job is to turn a designer edit into a line in a text
+	 * file, and it is a FLAG rather than a delegate fired per edit because the two paths disagree
+	 * about how often they run. The details panel already drops interactive ticks upstream -- see
+	 * SDreamWidgetDesignerDetails::NotifyPostChange -- but a viewport drag calls
+	 * CopyPreviewValuesToTemplate on EVERY MOUSE MOVE, deliberately, because rebuilding mid-gesture
+	 * would pull the widget out from under the handle moving it. Writing a file at that rate is not
+	 * an option, and putting the debounce in the caller would mean every future write path having to
+	 * remember it.
+	 *
+	 * So: mirror as often as it likes, mark here, and let a flush point decide when it is worth a
+	 * write. FlushTemplateChanges is called at gesture end, at a committed details-panel change, and
+	 * when the editor loses focus.
+	 */
+	bool IsTemplateDirty() const { return bTemplateDirty; }
+	/**
+	 * Broadcast OnTemplateChanged if anything is pending, and clear the flag. No-op when clean, so a
+	 * flush point that fires on every tick costs nothing.
+	 */
+	void FlushTemplateChanges();
+	/**
+	 * Fires from FlushTemplateChanges, never from the write paths themselves.
+	 *
+	 * Chosen over "one delegate per edit" for the reason above: a subscriber that wrote a file per
+	 * broadcast would write a few hundred times per drag.
+	 */
+	FSimpleMulticastDelegate OnTemplateChanged;
+
 	// FGCObject
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 	virtual FString GetReferencerName() const override { return TEXT("FDreamWidgetPreviewHost"); }
 	// End FGCObject
 
 private:
+	/** Set by the two template write paths, cleared by FlushTemplateChanges. See IsTemplateDirty. */
+	bool bTemplateDirty = false;
+
 	void DestroyPreview();
 	/**
 	 * The tree the preview is instanced from: the Blueprint's own authoring tree, or -- when this asset

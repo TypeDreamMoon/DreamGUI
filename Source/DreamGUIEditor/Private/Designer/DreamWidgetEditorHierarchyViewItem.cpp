@@ -7,6 +7,7 @@
 #include "ClassIconFinder.h"
 #include "DetailLayoutBuilder.h"
 #include "DreamWidgetEditorHierarchyView.h"
+#include "Designer/DreamUITextAuthoringGate.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Styling/CoreStyle.h"
@@ -191,6 +192,22 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			{
 				HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
 				HierarchyDragDropOp->CurrentHoverText = LOCTEXT("ParentAtCapacity", "This widget cannot accept the selected children.");
+				return TOptional<EItemDropZone>();
+			}
+			// A TENTH structural entry, and the only one that does not pass through
+			// DreamWidgetTreeEditing at all: this drop calls TrySetParent on the widgets directly,
+			// below. Refused during the drag rather than at the drop, so the cursor says no before
+			// the author lets go -- which is what "visibly disabled" means for a gesture.
+			//
+			// (Worth knowing while reading the rest of this handler: what it moves are the PREVIEW
+			// widgets the hierarchy lists, and nothing here mirrors the move onto the template the
+			// way the viewport's drag does through ReparentTemplatesFrom. That is a defect of its
+			// own and older than this gate; it is not what this refusal is about.)
+			if (Manager.IsValid() && DreamUITextAuthoring::IsTextAuthored(Manager->GetWidgetBlueprint()))
+			{
+				HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+				HierarchyDragDropOp->CurrentHoverText = DreamUITextAuthoring::DescribeStructuralRefusal(
+					Manager->GetWidgetBlueprint(), TEXT("move a widget"));
 				return TOptional<EItemDropZone>();
 			}
 
