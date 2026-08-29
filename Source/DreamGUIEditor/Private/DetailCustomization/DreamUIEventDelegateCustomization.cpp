@@ -1965,8 +1965,9 @@ TOptional<float> FDreamUIEventDelegateCustomization::Vector2GetItemValue(int Axi
 }
 void FDreamUIEventDelegateCustomization::Vector3ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
-	FVector Value;
-	ValueHandle->GetValue(Value);
+	// WRITES: one axis is set and the pair stored back, so an uninitialised read put stack
+	// bytes into every OTHER axis of the saved parameter.
+	FVector Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FVector::ZeroVector);
 	switch (AxisType)
 	{
 	case 0:	Value.X = NewValue; break;
@@ -1980,8 +1981,7 @@ void FDreamUIEventDelegateCustomization::Vector3ItemValueChange(float NewValue, 
 }
 TOptional<float> FDreamUIEventDelegateCustomization::Vector3GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
-	FVector Value;
-	ValueHandle->GetValue(Value);
+	const FVector Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FVector::ZeroVector);
 	switch (AxisType)
 	{
 	default:
@@ -1992,8 +1992,9 @@ TOptional<float> FDreamUIEventDelegateCustomization::Vector3GetItemValue(int Axi
 }
 void FDreamUIEventDelegateCustomization::Vector4ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
-	FVector4 Value;
-	ValueHandle->GetValue(Value);
+	// WRITES: one axis is set and the pair stored back, so an uninitialised read put stack
+	// bytes into every OTHER axis of the saved parameter.
+	FVector4 Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FVector4(0.0f, 0.0f, 0.0f, 0.0f));
 	switch (AxisType)
 	{
 	case 0:	Value.X = NewValue; break;
@@ -2008,8 +2009,7 @@ void FDreamUIEventDelegateCustomization::Vector4ItemValueChange(float NewValue, 
 }
 TOptional<float> FDreamUIEventDelegateCustomization::Vector4GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
-	FVector4 Value;
-	ValueHandle->GetValue(Value);
+	const FVector4 Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FVector4(0.0f, 0.0f, 0.0f, 0.0f));
 	switch (AxisType)
 	{
 	default:
@@ -2071,8 +2071,7 @@ FReply FDreamUIEventDelegateCustomization::OnMouseButtonDownColorBlock(const FGe
 }
 TOptional<float> FDreamUIEventDelegateCustomization::RotatorGetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
-	FRotator Value;
-	ValueHandle->GetValue(Value);
+	const FRotator Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FRotator::ZeroRotator);
 	switch (AxisType)
 	{
 	default:
@@ -2083,8 +2082,9 @@ TOptional<float> FDreamUIEventDelegateCustomization::RotatorGetItemValue(int Axi
 }
 void FDreamUIEventDelegateCustomization::RotatorValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
-	FRotator Value;
-	ValueHandle->GetValue(Value);
+	// WRITES: one axis is set and the pair stored back, so an uninitialised read put stack
+	// bytes into every OTHER axis of the saved parameter.
+	FRotator Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FRotator::ZeroRotator);
 	switch (AxisType)
 	{
 	case 0:	Value.Roll = NewValue; break;

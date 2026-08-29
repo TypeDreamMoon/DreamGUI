@@ -36,16 +36,19 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	auto InputTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, InputType));
 	InputTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	EUITextInputType InputType;
-	InputTypeHandle->GetValue(*(uint8*)&InputType);
+	// Custom as the fallback because it is the value that hides NOTHING: a selection that disagrees
+	// still has objects using CustomValidation, and hiding it would hide a live property from them.
+	const auto InputType = (EUITextInputType)DreamDetailsMultiSelect::ValueOr<uint8>(
+		InputTypeHandle, (uint8)EUITextInputType::Custom);
 	if (InputType != EUITextInputType::Custom)
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, CustomValidation));
 	}
 	auto DisplayTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, DisplayType));
 	DisplayTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	EUITextInputDisplayType DisplayType;
-	DisplayTypeHandle->GetValue(*(uint8*)&DisplayType);
+	// Password for the same reason: it is the branch that hides nothing.
+	const auto DisplayType = (EUITextInputDisplayType)DreamDetailsMultiSelect::ValueOr<uint8>(
+		DisplayTypeHandle, (uint8)EUITextInputDisplayType::Password);
 	switch (DisplayType)
 	{
 	case EUITextInputDisplayType::Standard:
