@@ -589,7 +589,7 @@ bool FDreamUITextLexicalDiagnosticsTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUIParserTestLocal;
 
-	// A run of unrecognised characters is one complaint, not one per character. A DUI_File_Path
+	// A run of unrecognised characters is one complaint, not one per character. A Source File
 	// pointed at a binary would otherwise fill the message log with thousands of them and bury
 	// whatever else the file got wrong.
 	ExpectOneDiagnostic(*this, TEXT("a stray run of punctuation"), MakeSource({

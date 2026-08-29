@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -35,10 +35,10 @@
  * treatment: a real file, written to Saved/, read back by the compiler through the same call the
  * editor makes, and removed when the test leaves.
  *
- * Saved/ rather than Content/ because a .dui in Content is a source file the content browser will
- * show and the next cook will copy. Absolute paths in the fixtures, because ProjectSavedDir() is
- * itself relative and the resolver would then root it at Content -- the Content-relative rule is
- * asserted directly instead, where it can be read.
+ * Saved/ rather than the project's DUI/ directory, so a run of the suite cannot leave a file behind
+ * that the workspace then offers to compile. Absolute paths in the fixtures, because the resolver
+ * roots a relative one at a DUI root -- the root-relative rule is asserted directly instead, where
+ * it can be read.
  */
 
 namespace DreamUITextCompileTestLocal
@@ -109,7 +109,7 @@ namespace DreamUITextCompileTestLocal
 		/**
 		 * Point the class at a .dui, the way the Class Defaults panel does.
 		 *
-		 * On the CDO, because DUI_File_Path is EditDefaultsOnly and a class default is what a CDO IS.
+		 * On the CDO, because SourceFile is EditDefaultsOnly and a class default is what a CDO IS.
 		 * CreateBlueprint has already compiled once, so there is one to write to; every compile after
 		 * this copies the value onto the CDO it makes, which is what lets the path be set once here
 		 * and still be read by the third compile.
@@ -122,7 +122,7 @@ namespace DreamUITextCompileTestLocal
 			{
 				return false;
 			}
-			Defaults->DUI_File_Path.FilePath = InFilePath;
+			Defaults->SourceFile.FilePath = InFilePath;
 			return true;
 		}
 
@@ -293,7 +293,7 @@ bool FDreamUITextCompilesTreeFromTextTest::RunTest(const FString& Parameters)
 	}
 
 	// The file is the source of truth on EVERY compile, not only the first. This is also what proves
-	// DUI_File_Path survives a compile: it was written to the CDO once, above, and the CDO that reads
+	// SourceFile survives a compile: it was written to the CDO once, above, and the CDO that reads
 	// it here is the one the previous compile made.
 	if (!TestTrue(TEXT("the fixture rewrote the .dui"), Source.Write({
 		TEXT("Widget Root {"),
@@ -399,18 +399,20 @@ bool FDreamUITextMissingFileTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUITextCompileTestLocal;
 
-	// The resolution rule, on its own, without a file: a relative path is rooted at Content. Asserted
-	// here rather than by writing a .dui into the project's Content directory, which would be a source
-	// file the content browser shows and the next cook copies.
+	// The resolution rule, on its own, without a file. Asserted here rather than by writing a .dui
+	// into a real DUI root, which would leave a source file the workspace then offers to compile.
 	const FString Expected = [] {
 		FString Path = FPaths::ConvertRelativePathToFull(
-			FPaths::Combine(FPaths::ProjectContentDir(), TEXT("UI/NotThere.dui")));
+			FPaths::Combine(FPaths::ProjectDir(), TEXT("DUI"), TEXT("UI/NotThere.dui")));
 		FPaths::NormalizeFilename(Path);
 		return Path;
 	}();
-	TestEqual(TEXT("a relative path is rooted at the project's Content directory"),
+	// Nothing exists at any root, so what comes back is the project candidate -- which is the whole
+	// reason the resolver returns one instead of an empty string: the caller is about to name this
+	// path in a diagnostic, and "could not read ''" tells a reader nothing.
+	TestEqual(TEXT("an unresolvable relative path falls back to the project's DUI directory"),
 		UDreamTextUserWidget::ResolveDuiFilePath(TEXT("UI/NotThere.dui")), Expected);
-	TestEqual(TEXT("and an empty one stays empty rather than becoming the Content directory"),
+	TestEqual(TEXT("and an empty one stays empty rather than becoming the DUI directory"),
 		UDreamTextUserWidget::ResolveDuiFilePath(TEXT("  ")), FString());
 
 	FScopedBlueprint Fixture(TEXT("BP_MissingDui"));
@@ -426,8 +428,8 @@ bool FDreamUITextMissingFileTest::RunTest(const FString& Parameters)
 		Code(EDreamUIDiagnosticCode::SourceFileUnreadable));
 	// Both spellings. The author wrote the relative one and will go looking for that; the file that is
 	// missing is at the resolved one. A message with only one of them cannot tell a typo apart from a
-	// relative path that resolved somewhere the author did not expect, which is the failure mode a
-	// Content-rooted rule has.
+	// relative path that resolved somewhere the author did not expect -- and a relative path is
+	// searched across every root, so the resolved one is only where the search gave up.
 	TestMessagesContain(*this, TEXT("naming the path as the author wrote it"), Results, TEXT("UI/NotThere.dui"));
 	TestMessagesContain(*this, TEXT("and the place it actually looked"), Results, Expected);
 

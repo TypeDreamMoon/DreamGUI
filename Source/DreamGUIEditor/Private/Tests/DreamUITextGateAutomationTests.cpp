@@ -130,12 +130,12 @@ namespace DreamUITextGateTestLocal
 			}
 			else
 			{
-				// On the CDO, because DUI_File_Path is EditDefaultsOnly and a class default is what a
+				// On the CDO, because SourceFile is EditDefaultsOnly and a class default is what a
 				// CDO IS. CreateBlueprint has already compiled once, so there is one to write to.
 				if (UDreamTextUserWidget* Defaults = Blueprint->GeneratedClass != nullptr
 					? Cast<UDreamTextUserWidget>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr)
 				{
-					Defaults->DUI_File_Path.FilePath = InDuiFilePath;
+					Defaults->SourceFile.FilePath = InDuiFilePath;
 				}
 			}
 

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -64,7 +64,7 @@ namespace DreamUITextAuthoring
 	/**
 	 * The `.dui` this Blueprint's class declares, as the author wrote it. Empty for a hand-authored one.
 	 *
-	 * THE CRITERION, and there is only one: UDreamTextUserWidget::DUI_File_Path on the class default
+	 * THE CRITERION, and there is only one: UDreamTextUserWidget::SourceFile on the class default
 	 * object, non-empty. Not "does the asset have a tree", not "does the file exist" -- a .dui that is
 	 * missing or malformed still means the hierarchy belongs to the text, and unlocking the designer
 	 * when the file fails to load would let an author "fix" a broken screen by dragging boxes and lose

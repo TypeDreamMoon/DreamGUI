@@ -119,7 +119,7 @@ namespace DreamUITextMigrationTestLocal
 			{
 				return false;
 			}
-			Defaults->DUI_File_Path.FilePath = InFilePath;
+			Defaults->SourceFile.FilePath = InFilePath;
 			return true;
 		}
 

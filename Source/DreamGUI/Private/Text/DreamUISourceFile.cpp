@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUISourceFile.h"
 
@@ -704,7 +704,7 @@ namespace DreamUIText
 			}
 
 			// Reported as a run rather than per character, because the case that gets here in practice
-			// is a DUI_File_Path aimed at something that is not a .dui at all -- per-character
+			// is a Source File aimed at something that is not a .dui at all -- per-character
 			// diagnostics over a binary would bury every other problem in the message log. Letters
 			// never reach here, non-ASCII ones included; see IsIdentifierChar.
 			const FString Run = Slice(Start, Offset);

@@ -42,23 +42,30 @@ public:
 	 * tells you whether it has variables once it is running is the failure this whole pipeline exists
 	 * to remove.
 	 *
-	 * Relative paths are rooted at the project's Content directory; see ResolveDuiFilePath.
+	 * Relative paths are rooted at a `DUI/` source directory; see DreamUIPaths.h for the rule.
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "DreamGUI", meta = (FilePathFilter = "dui"))
-	FFilePath DUI_File_Path;
+	FFilePath SourceFile;
 
 	/**
-	 * An authored path as an absolute filename: relative ones are rooted at the project's Content
-	 * directory, absolute ones are left alone. Empty in, empty out.
+	 * An authored path as an absolute filename. Empty in, empty out.
 	 *
-	 * Content rather than the project directory because that is where UI source has always lived here
-	 * (UIML resolved its XAML the same way), and because a path that is relative to the project root
-	 * would have to start with "Content/" in every single file.
-	 *
-	 * Static so the compiler can resolve a path off a CDO without an instance, and so anything else
-	 * that has to find the same file -- a watcher, the write-back patcher, a validation commandlet --
-	 * asks this rather than keeping its own idea of what a relative path means. Two implementations of
-	 * this rule is how "the editor opened it and the compiler could not find it" happens.
+	 * Kept as a static on this class even though DreamUIPaths::Resolve is where the rule now lives,
+	 * because this is the name every caller already asks -- the compiler off a CDO, the designer's
+	 * write-back, the watcher. One forwarding line is cheaper than the failure the alternative
+	 * invites, which is a second implementation of "what does a relative path mean" and the
+	 * "the editor opened it and the compiler could not find it" that follows.
 	 */
 	static FString ResolveDuiFilePath(const FString& InPath);
+
+#if WITH_EDITOR
+	/**
+	 * Turns a picked path back into a portable one.
+	 *
+	 * The file picker hands back an absolute path, and an absolute path stored in an asset is a path
+	 * that works on one machine. Nobody notices until someone else opens the project, at which point
+	 * the class compiles to an empty hierarchy and the error names a drive letter they do not have.
+	 */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 };

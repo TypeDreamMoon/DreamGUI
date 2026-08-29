@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Designer/DreamUITextAuthoringGate.h"
 
@@ -283,7 +283,7 @@ namespace DreamUITextAuthoring
 		}
 		// Trimmed, matching the compiler: a path of nothing but spaces is a path nobody typed on
 		// purpose, and treating it as authored would lock a designer over a stray keystroke.
-		return Defaults->DUI_File_Path.FilePath.TrimStartAndEnd();
+		return Defaults->SourceFile.FilePath.TrimStartAndEnd();
 	}
 
 	FString GetAuthoredSourceFileName(const UDreamWidgetBlueprint* InBlueprint)
@@ -298,7 +298,7 @@ namespace DreamUITextAuthoring
 		// one -- every property row asks it every tick -- and that spelling allocates a trimmed copy of
 		// the path to throw away each time.
 		const UDreamTextUserWidget* Defaults = Local::FindTextDefaults(InBlueprint);
-		return Defaults != nullptr && Local::HasNonWhitespace(Defaults->DUI_File_Path.FilePath);
+		return Defaults != nullptr && Local::HasNonWhitespace(Defaults->SourceFile.FilePath);
 	}
 
 	UDreamWidgetBlueprint* FindOwningBlueprint(const UDreamWidget* InWidget)

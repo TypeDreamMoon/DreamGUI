@@ -12,6 +12,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUIPaths.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextBuilder.h"
 
@@ -25,6 +26,7 @@
 #include "Kismet2/KismetReinstanceUtilities.h"
 #include "KismetCompilerMisc.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
 
@@ -121,7 +123,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		return;
 	}
 
-	// DUI_File_Path is a CLASS DEFAULT, so the CDO is where it is read from -- and the CDO still
+	// SourceFile is a CLASS DEFAULT, so the CDO is where it is read from -- and the CDO still
 	// standing at this point in the compile is the previous one, which is exactly the object carrying
 	// what the author typed into the Class Defaults panel. CleanAndSanitizeClass has not run yet, and
 	// the new CDO that eventually replaces this one has these values copied onto it, so the path
@@ -144,7 +146,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		return;
 	}
 
-	const FString AuthoredPath = Defaults->DUI_File_Path.FilePath.TrimStartAndEnd();
+	const FString AuthoredPath = Defaults->SourceFile.FilePath.TrimStartAndEnd();
 	if (AuthoredPath.IsEmpty())
 	{
 		// The negative control, and the single most important line in this function. A widget
@@ -155,19 +157,34 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 
 	const FString ResolvedPath = UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
 	// The path, not the leaf name. Every diagnostic below is prefixed with this, in the layout an
-	// editor turns into a jump -- "C:/Proj/Content/UI/Login.dui(12,5): error DUI2001: ..." -- and a
-	// bare "Login.dui" is a string a message log cannot do anything with.
+	// editor turns into a jump -- "C:/Proj/DUI/Login.dui(12,5): error DUI2001: ..." -- and a bare
+	// "Login.dui" is a string a message log cannot do anything with.
 	OutDiagnostics.SourceName = ResolvedPath;
 
 	FString SourceText;
 	if (!FFileHelper::LoadFileToString(SourceText, *ResolvedPath))
 	{
 		// Both spellings, deliberately: the author wrote AuthoredPath and will go looking for that,
-		// while the file that is missing is at ResolvedPath. A message naming only one of them is a
-		// message that cannot tell "you misspelled it" apart from "your relative path resolved
-		// somewhere you did not expect", which is the whole failure mode of a Content-rooted rule.
-		OutDiagnostics.AddError(EDreamUIDiagnosticCode::SourceFileUnreadable, FDreamUISourceLocation(),
-			FString::Printf(TEXT("DUI_File_Path is '%s', and there is no readable file at that path"), *AuthoredPath));
+		// while the file that is missing is at ResolvedPath. A message naming only one of them cannot
+		// tell "you misspelled it" apart from "your relative path resolved somewhere you did not
+		// expect" -- and a relative path is now SEARCHED across roots, so the resolved one is merely
+		// where the search gave up. The roots themselves are what a reader needs to see, because the
+		// most likely cause of this error is a file sitting somewhere that is not a root at all.
+		FString Message = FString::Printf(
+			TEXT("Source File is '%s', and there is no readable file at '%s'"), *AuthoredPath, *ResolvedPath);
+		if (FPaths::IsRelative(AuthoredPath))
+		{
+			TArray<FString> RootDirectories;
+			for (const FDreamUISourceRoot& Root : DreamUIPaths::GetSourceRoots())
+			{
+				RootDirectories.Add(Root.Directory);
+			}
+			Message += RootDirectories.Num() > 0
+				? FString::Printf(TEXT(". Searched: %s"), *FString::Join(RootDirectories, TEXT(", ")))
+				: FString::Printf(TEXT(". No %s directory exists in this project or any enabled plugin"),
+					DreamUIPaths::SourceDirectoryName);
+		}
+		OutDiagnostics.AddError(EDreamUIDiagnosticCode::SourceFileUnreadable, FDreamUISourceLocation(), Message);
 		return;
 	}
 

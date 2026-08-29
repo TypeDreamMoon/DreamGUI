@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -204,7 +204,7 @@ enum class EDreamUIDiagnosticCode : int32
 	NothingToBuild = 5009,
 
 	// --- 6xxx compile ---
-	/** DUI_File_Path names a file that does not exist or cannot be read. */
+	/** The class's Source File names a file that does not exist or cannot be read. */
 	SourceFileUnreadable = 6001,
 	/** The .dui parsed, but produced no tree to compile. */
 	EmptyTree = 6002,
