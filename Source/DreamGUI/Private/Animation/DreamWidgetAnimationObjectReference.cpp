@@ -135,6 +135,42 @@ bool FDreamWidgetAnimationObjectReference::IsEditorHelpersGood(UDreamWidget* InC
 		&& HelperWidgetPath == GetWidgetPathRelativeToContextWidget(InContextWidget, HelperWidget)
 		;
 }
+bool FDreamWidgetAnimationObjectReference::RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment)
+{
+	// An empty path resolves in no context at all and a "/" path names the context widget itself.
+	// Neither spells a display name, so neither can carry a rename. Checked before the split rather
+	// than relying on it, because ParseIntoArray would turn "/" into two empty segments and rejoining
+	// them would silently turn the self-path into "" -- a repair that unbinds the track it was fixing.
+	if (HelperWidgetPath.IsEmpty() || HelperWidgetPath == TEXT("/"))
+	{
+		return false;
+	}
+	if (InOldSegment.IsEmpty() || InNewSegment.IsEmpty() || InOldSegment.Equals(InNewSegment, ESearchCase::IgnoreCase))
+	{
+		return false;
+	}
+
+	TArray<FString> Segments;
+	// Empties kept, so a path that already had an odd shape comes back out the shape it went in.
+	// This function's job is one word, not normalisation: a rejoin that dropped an empty segment
+	// would rewrite paths this rename has nothing to do with, and those are the edits nobody reviews.
+	HelperWidgetPath.ParseIntoArray(Segments, TEXT("/"), /*InCullEmpty*/false);
+
+	bool bChanged = false;
+	for (FString& Segment : Segments)
+	{
+		if (Segment.Equals(InOldSegment, ESearchCase::IgnoreCase))
+		{
+			Segment = InNewSegment;
+			bChanged = true;
+		}
+	}
+	if (bChanged)
+	{
+		HelperWidgetPath = FString::Join(Segments, TEXT("/"));
+	}
+	return bChanged;
+}
 #endif
 
 bool FDreamWidgetAnimationObjectReference::InitHelpers(UDreamWidget* InContextWidget)
@@ -322,6 +358,50 @@ void FDreamWidgetAnimationObjectReferenceMap::GetInvalidBindingIds(UDreamWidget*
 	{
 		OutBindingIds.AddUnique(BindingIds[Index]);
 	}
+}
+void FDreamWidgetAnimationObjectReferenceMap::GetUnresolvableBindingPaths(UDreamWidget* InContextWidget, TArray<TPair<FGuid, FString>>& OutBindings) const
+{
+	const int32 Count = FMath::Min(BindingIds.Num(), References.Num());
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		for (const FDreamWidgetAnimationObjectReference& Reference : References[Index].Array)
+		{
+			// ResolveInContext and nothing weaker. It is the exact call LocateBoundObjects makes for
+			// an instance, so whatever it refuses here is refused there too -- and there the refusal
+			// is invisible, because the fallback path then resolves the stored pointer instead and
+			// the animation drives the class template's widget rather than the instance's.
+			if (Reference.ResolveInContext(InContextWidget) == nullptr)
+			{
+				OutBindings.Emplace(BindingIds[Index], Reference.GetHelperWidgetPath());
+				break;
+			}
+		}
+	}
+	// Ids past the end of References hold no reference to ask. GetInvalidBindingIds reports the same
+	// tail for the same reason: a count mismatch means the two arrays stopped describing each other.
+	for (int32 Index = Count; Index < BindingIds.Num(); ++Index)
+	{
+		OutBindings.Emplace(BindingIds[Index], FString());
+	}
+}
+int32 FDreamWidgetAnimationObjectReferenceMap::RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment)
+{
+	// Every reference, not only the ones a context cannot walk. A hierarchy mid-rename has bindings
+	// on BOTH sides of the change -- one track already pointing at the new name, another still at the
+	// old -- and asking "is this one broken" first would make the repair depend on which order the
+	// author renamed things in. Matching the segment is the whole condition.
+	int32 ChangedCount = 0;
+	for (FDreamWidgetAnimationObjectReferences& Reference : References)
+	{
+		for (FDreamWidgetAnimationObjectReference& RefItem : Reference.Array)
+		{
+			if (RefItem.RenameWidgetPathSegment(InOldSegment, InNewSegment))
+			{
+				++ChangedCount;
+			}
+		}
+	}
+	return ChangedCount;
 }
 bool FDreamWidgetAnimationObjectReferenceMap::IsEditorHelpersGood(UDreamWidget* InContextWidget)const
 {

@@ -212,6 +212,45 @@ void UDreamWidgetAnimation::GetInvalidObjectBindingIds(UDreamWidget* InContextWi
 {
 	ObjectReferences.GetInvalidBindingIds(InContextWidget, OutBindingIds);
 }
+void UDreamWidgetAnimation::GetUnresolvableBindingPaths(UDreamWidget* InContextWidget, TArray<TPair<FGuid, FString>>& OutBindings) const
+{
+	ObjectReferences.GetUnresolvableBindingPaths(InContextWidget, OutBindings);
+}
+int32 UDreamWidgetAnimation::RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment)
+{
+	// Modify() before the edit, for the same reason FixObjectReferences says so: it snapshots what
+	// the object holds NOW, and a snapshot taken afterwards records the repaired value as the state
+	// to undo back to.
+	this->Modify();
+	const int32 ChangedCount = ObjectReferences.RenameWidgetPathSegment(InOldSegment, InNewSegment);
+	if (ChangedCount == 0)
+	{
+		return 0;
+	}
+
+	// The track labels, on the movie scene rather than on the reference map -- a different object,
+	// hence a second Modify(). Only the ones spelled exactly like the old id: a possessable's name is
+	// free text the sequencer lets an author change, so rewriting one that says something else would
+	// be discarding a label somebody chose. UMG's widget rename makes the same restriction.
+	if (UMovieScene* Scene = GetMovieScene())
+	{
+		bool bRenamedALabel = false;
+		for (int32 Index = 0; Index < Scene->GetPossessableCount(); ++Index)
+		{
+			FMovieScenePossessable& Possessable = Scene->GetPossessable(Index);
+			if (Possessable.GetName() == InOldSegment)
+			{
+				if (!bRenamedALabel)
+				{
+					Scene->Modify();
+					bRenamedALabel = true;
+				}
+				Possessable.SetName(InNewSegment);
+			}
+		}
+	}
+	return ChangedCount;
+}
 bool UDreamWidgetAnimation::HasObjectBindingCountMismatch() const
 {
 	return ObjectReferences.HasBindingCountMismatch();

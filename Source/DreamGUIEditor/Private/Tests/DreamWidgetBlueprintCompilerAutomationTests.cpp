@@ -79,6 +79,36 @@ namespace DreamWidgetBlueprintCompilerTestLocal
 	{
 		FKismetEditorUtilities::CompileBlueprint(InBlueprint, EBlueprintCompileOptions::SkipGarbageCollection, &OutResults);
 	}
+
+	/**
+	 * Put an animation on the fixture's root and bind one track to InTarget, the way the sequencer
+	 * does: a possessable in the movie scene, then BindPossessableObject with the ROOT as context,
+	 * which is what makes the recorded path relative to the animation's owner rather than to the
+	 * widget being animated.
+	 */
+	FGuid BindAnimationToWidget(FScopedBlueprint& InFixture, UDreamWidget* InTarget, UDreamWidgetAnimation*& OutSequence)
+	{
+		OutSequence = nullptr;
+		UDreamWidget* Root = InFixture.Blueprint->GetOrCreateWidgetTree()->RootWidget.Get();
+		if (Root == nullptr || InTarget == nullptr)
+		{
+			return FGuid();
+		}
+		UDreamWidgetAnimationComponent* Animator =
+			Cast<UDreamWidgetAnimationComponent>(Root->AddComponent(UDreamWidgetAnimationComponent::StaticClass()));
+		if (Animator == nullptr)
+		{
+			return FGuid();
+		}
+		OutSequence = Animator->AddNewAnimation();
+		if (OutSequence == nullptr || OutSequence->GetMovieScene() == nullptr)
+		{
+			return FGuid();
+		}
+		const FGuid BindingId = OutSequence->GetMovieScene()->AddPossessable(InTarget->GetDisplayName(), InTarget->GetClass());
+		OutSequence->BindPossessableObject(BindingId, *InTarget, Root);
+		return BindingId;
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -596,6 +626,77 @@ bool FDreamWidgetUnmarkedPropertyProbeTest::RunTest(const FString& Parameters)
 			Typed->UnmarkedReference.Get());
 	}
 	World->DestroyWorld(false);
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetRenamedWidgetBreaksAnimationBindingTest,
+	"DreamGUI.WidgetBlueprint.ARenamedWidgetBreaksItsAnimationBindingLoudly",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetRenamedWidgetBreaksAnimationBindingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	// The control comes first on purpose. A check that fires on every animation would pass the
+	// interesting half of this test and be worse than no check at all, and reading the two halves in
+	// this order is the only way that shows up as a failure rather than as a green run.
+	{
+		FScopedBlueprint Fixture(TEXT("BP_AnimationBindingIntact"));
+		UDreamWidget* Target = Fixture.AddWidget(TEXT("Target"));
+		UDreamWidgetAnimation* Sequence = nullptr;
+		if (!TestTrue(TEXT("the control's animation binding was authored"),
+			BindAnimationToWidget(Fixture, Target, Sequence).IsValid()))
+		{
+			return false;
+		}
+
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestEqual(TEXT("an animation bound to a widget still called that compiles clean"), Results.NumErrors, 0);
+	}
+
+	// And the rename. Nothing else about the hierarchy changes -- no property binding names the
+	// widget, no member declares it -- so the only thing that can fail the compile is the animation.
+	{
+		// The compiler error IS the assertion, so it has to be declared or automation counts it
+		// against the test. Occurrences 0 because the compiler logs it and the results log replays
+		// it, and what is being claimed is that it exists.
+		AddExpectedError(TEXT("through the path"), EAutomationExpectedErrorFlags::Contains, 0);
+
+		FScopedBlueprint Fixture(TEXT("BP_AnimationBindingRenamed"));
+		UDreamWidget* Target = Fixture.AddWidget(TEXT("Target"));
+		UDreamWidgetAnimation* Sequence = nullptr;
+		if (!TestTrue(TEXT("the animation binding was authored"),
+			BindAnimationToWidget(Fixture, Target, Sequence).IsValid()))
+		{
+			return false;
+		}
+
+		// The rename, which is the entire mutation. It leaves the binding's stored POINTER pointing
+		// at this same object -- so every pointer-based validity check still answers "fine" -- and
+		// only invalidates the recorded path, which is what an instance resolves through.
+		Target->SetDisplayName(TEXT("Renamed"));
+
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestTrue(TEXT("a rename that orphans an animation binding fails the compile"), Results.NumErrors > 0);
+
+		FString AllMessages;
+		for (const TSharedRef<FTokenizedMessage>& Message : Results.Messages)
+		{
+			AllMessages += Message->ToText().ToString() + TEXT(" | ");
+		}
+		// WHICH binding, not merely that something broke. The old name is the actionable half of the
+		// message: it is the only thing that tells an author what the animation is still looking for.
+		// Deliberately not printed into these descriptions -- the expected-error entry above matches
+		// by substring, and a description carrying the same text gets swallowed with it.
+		TestTrue(TEXT("and names the path it can no longer walk"), AllMessages.Contains(TEXT("\"Target\"")));
+		TestTrue(TEXT("and the animation that holds it"),
+			Sequence != nullptr && AllMessages.Contains(Sequence->GetDisplayNameString()));
+	}
+
 	return true;
 }
 

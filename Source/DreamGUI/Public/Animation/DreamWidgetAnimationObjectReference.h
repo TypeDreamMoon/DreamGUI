@@ -4,6 +4,7 @@
 #pragma once
 
 #include "UObject/LazyObjectPtr.h"
+#include "Templates/Tuple.h"
 #include "DreamWidgetAnimationObjectReference.generated.h"
 
 class UDreamWidget;
@@ -32,11 +33,37 @@ public:
 	/** Resolve against THIS context's tree rather than through the stored pointer. Null if it cannot. */
 	UObject* ResolveInContext(UDreamWidget* InContextWidget) const;
 
+	/**
+	 * The stored path, verbatim, so a caller that found this reference unresolvable can say what it
+	 * was looking for. Empty means no path was ever recorded, which resolves in no context at all.
+	 */
+	const FString& GetHelperWidgetPath() const { return HelperWidgetPath; }
+
 #if WITH_EDITOR
 	bool FixObjectReferenceFromEditorHelpers(UDreamWidget* InContextWidget);
 	bool CanFixObjectReferenceFromEditorHelpers()const;
 	bool IsObjectReferenceGood(UDreamWidget* InContextWidget)const;
 	bool IsEditorHelpersGood(UDreamWidget* InContextWidget)const;
+	/**
+	 * Rename one '/'-separated step of the stored path, for a widget that moved name rather than away.
+	 *
+	 * This is the repair half of GetUnresolvableBindingPaths: that one reports a path this context
+	 * cannot walk, and when the reason is a rename -- not a deletion -- the path is still correct
+	 * about everything except one word. Nothing else on the reference needs touching. The stored
+	 * pointer already points at the renamed object (renaming a widget does not replace it), and
+	 * ObjectPathRelativeToWidget is built from OBJECT names, which a display-name rename never
+	 * touches, so the path is the only stale field there is.
+	 *
+	 * Segment equality is case-insensitive, matching the id namespace it comes from: a .dui refuses
+	 * two ids that differ only in case (they would collide as FName member variables anyway), so two
+	 * segments that compare equal here cannot both be real widgets of one hierarchy.
+	 *
+	 * The "/" path -- the context widget itself -- is never rewritten, and correctly: it names no
+	 * widget by name, so renaming the context widget leaves every path it owns already right.
+	 *
+	 * @return true when this reference's path changed, so a caller knows whether to mark anything.
+	 */
+	bool RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment);
 #endif
 	static bool CreateForObject(UDreamWidget* InContextWidget, UObject* InObject, FDreamWidgetAnimationObjectReference& OutResult);
 
@@ -133,6 +160,26 @@ struct FDreamWidgetAnimationObjectReferenceMap
 #if WITH_EDITOR
 	bool IsObjectReferencesGood(UDreamWidget* InContextWidget)const;
 	void GetInvalidBindingIds(UDreamWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const;
+	/**
+	 * Every binding this context cannot walk to, paired with the path it holds.
+	 *
+	 * A different question from GetInvalidBindingIds, and the difference is the whole reason this
+	 * exists: that one asks whether the stored POINTER still lands on a widget under the context, and
+	 * a rename leaves the pointer perfectly good while only the path goes stale. So the pointer-based
+	 * check answers "fine" for the one case playback cannot survive -- ResolveInContext is what an
+	 * instance actually calls, so it is what gets asked here.
+	 */
+	void GetUnresolvableBindingPaths(UDreamWidget* InContextWidget, TArray<TPair<FGuid, FString>>& OutBindings) const;
+	/**
+	 * Rename one path step across every reference in this map. Returns how many references changed.
+	 *
+	 * Deliberately takes no context widget, unlike everything else in this block. A rename fixup runs
+	 * while the hierarchy is being rebuilt from its source of truth, at which point the tree these
+	 * paths describe may not exist yet in either its old or its new shape -- so a repair that first
+	 * had to resolve the path against a live tree could only run when the damage was already done.
+	 * The path is text, the edit is textual, and that is what makes it orderable.
+	 */
+	int32 RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment);
 	bool HasBindingCountMismatch() const { return BindingIds.Num() != References.Num(); }
 	bool IsEditorHelpersGood(UDreamWidget* InContextWidget)const;
 	//return true if anything changed

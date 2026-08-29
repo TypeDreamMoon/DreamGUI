@@ -68,6 +68,20 @@ public:
 
 	bool IsObjectReferencesGood(UDreamWidget* InContextWidget)const;
 	void GetInvalidObjectBindingIds(UDreamWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const;
+	/** Bindings whose recorded path this context cannot walk; see the map's own note on the distinction. */
+	void GetUnresolvableBindingPaths(UDreamWidget* InContextWidget, TArray<TPair<FGuid, FString>>& OutBindings) const;
+	/**
+	 * Carry every binding path through a widget rename, and the track labels with them.
+	 *
+	 * The paths are the binding; the possessable's name is only what the sequencer prints on the
+	 * track. Both are the widget's display name and both go stale together, but only one of them
+	 * breaks playback -- so the label is renamed on a strict equality check and never guessed at,
+	 * because a possessable whose name was already something else was named that on purpose.
+	 *
+	 * @return how many binding paths changed. Zero means this animation had nothing to migrate,
+	 *         which is the ordinary answer for a `(was: ...)` clause the author has simply not deleted.
+	 */
+	int32 RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment);
 	bool HasObjectBindingCountMismatch() const;
 	bool IsEditorHelpersGood(UDreamWidget* InContextWidget)const;
 	void FixObjectReferences(UDreamWidget* InContextWidget);
