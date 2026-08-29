@@ -374,18 +374,26 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': widget '%s' is not a valid parent."), *InControlClassPath, *SelectedWidget->GetDisplayName());
 		return nullptr;
 	}
+	// Resolved ONCE, for both paths. A control is named by its ASSET path and the class is the
+	// Blueprint's generated one; resolving it a second time is how the designer branch came to call
+	// LoadClass on an asset path and refuse every control in the palette.
+	UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, *(InControlClassPath + TEXT(".") + FPackageName::GetShortName(InControlClassPath)));
+	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
+	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
+	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
+		return nullptr;
+	}
+
 	if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(SelectedWidget))
 	{
-		UClass* ControlClass = LoadClass<UDreamUserWidget>(nullptr, *InControlClassPath);
-		if (ControlClass == nullptr)
-		{
-			UE_LOG(DreamGUIEditor, Error, TEXT("Cannot create control: '%s' is not a loadable hierarchy class."), *InControlClassPath);
-			return nullptr;
-		}
 		// A control IS a class now, so placing one is creating a widget of that class -- its contents
 		// come from its own class when the preview instances it.
+		//
+		// Named after the BLUEPRINT, not the class: a generated class is BP_TextInput_C, and the
+		// display name is what the hierarchy shows and what the compiler makes a variable of.
 		UDreamWidget* Created = Designer->DesignerCreateWidget(SelectedWidget, ControlClass,
-			ControlClass->GetName(), [Callback](UDreamWidget* InTemplate)
+			ControlBlueprint->GetName(), [Callback](UDreamWidget* InTemplate)
 			{
 				InTemplate->SetAnchoredPosition(FVector2D::ZeroVector);
 				if (Callback)
@@ -414,14 +422,6 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	// This used to load a prefab and flatten a copy of its widgets into the tree, which is why fixing
 	// the shipped Button never reached a single Button anyone had already dropped -- there was no link
 	// left to follow. An instance keeps one.
-	UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, *(InControlClassPath + TEXT(".") + FPackageName::GetShortName(InControlClassPath)));
-	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
-	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
-	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
-		return nullptr;
-	}
-
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "DreamUI Create UI Control"));
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	ModifyForHierarchyChange(SelectedWidget);
@@ -1517,7 +1517,12 @@ bool FDreamUIEditorTools::IsWidgetCompatibleWithDreamUIToolsMenu(UDreamWidget* I
 	{
 		return true;
 	}
-	return false;
+	// The design canvas is not something anyone can parent to in a level, which is what this refusal
+	// is for. In a DESIGNER it is what "no particular selection" resolves to -- the palette's
+	// empty-selection fallback hands it over by design -- and DesignerCreateWidget retargets it to
+	// the authored root. Refusing it here made a palette double-click with the canvas row selected
+	// do nothing at all except log, which reads as a dead panel.
+	return FDreamWidgetBlueprintEditor::FindDesignerForWidget(InWidget) != nullptr;
 }
 
 

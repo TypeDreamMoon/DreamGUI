@@ -9,6 +9,7 @@
 #include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Designer/DreamWidgetPreviewHost.h"
+#include "PrefabSystem/DreamUIPrefabInstanceScene.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -613,6 +614,98 @@ bool FDreamDesignerCreateBindingBuildsAUsableFunctionTest::RunTest(const FString
 			{
 				TestTrue(TEXT("Of the bound property's type"), Return->SameType(TextProperty));
 			}
+		}
+	}
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerCreateUnderTheCanvasTest,
+	"DreamGUI.Designer.CreatingWithTheDesignCanvasSelectedLandsOnTheAuthoredRoot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerCreateUnderTheCanvasTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerCanvasParent"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	// The design canvas, which is what the palette hands over when nothing in the tree is selected --
+	// and what the user has selected whenever they click the top row of the hierarchy. It is not a
+	// widget anyone can parent to in a level, so the tools refuse it; in a designer it has to mean
+	// the authored root, or a palette double-click there does nothing but log.
+	FDreamUIPrefabInstanceScene* Scene = Scoped.Designer->GetPreviewScene();
+	UDreamWidget* Canvas = Scene != nullptr ? Scene->GetRootAgent() : nullptr;
+	if (!TestNotNull(TEXT("There is a design canvas"), Canvas))
+	{
+		return false;
+	}
+	TestTrue(TEXT("It really is the root agent"), FDreamWidgetBlueprintEditor::WidgetIsRootAgent(Canvas));
+	TestTrue(TEXT("And the tools accept it as a parent inside a designer"),
+		FDreamUIEditorTools::IsWidgetCompatibleWithDreamUIToolsMenu(Canvas));
+
+	UDreamWidget* Created = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[Canvas]() { return Canvas; }, TEXT("FromCanvas"), nullptr, nullptr);
+	TestNotNull(TEXT("A widget is created"), Created);
+
+	Scoped.Rebuild();
+	UDreamWidget* Template = Scoped.FindTemplate(TEXT("FromCanvas"));
+	if (TestNotNull(TEXT("And it reached the asset"), Template))
+	{
+		// Under the authored root, not hanging off the canvas -- the canvas is not in the asset.
+		TestEqual(TEXT("Parented to the authored root"),
+			Template->GetParent(), Scoped.Blueprint->WidgetTree->RootWidget.Get());
+	}
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerPlaceAControlTest,
+	"DreamGUI.Designer.PlacingAPaletteControlReachesTheAssetAsAnInstanceOfItsClass",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerPlaceAControlTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerPlaceControl"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+
+	// The palette names a control by its ASSET path, and the class is the Blueprint's generated one.
+	// The designer branch resolved it a second way -- LoadClass on that asset path -- which returns
+	// null for every control in the palette, so double-clicking one did nothing but log.
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	UDreamWidget* Created = FDreamUIEditorTools::CreateUIControlsAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("/DreamGUI/Controls/BP_TextInput"), nullptr);
+	if (!TestNotNull(TEXT("The control is placed"), Created))
+	{
+		return false;
+	}
+
+	Scoped.Rebuild();
+	// Named after the Blueprint. The generated class is BP_TextInput_C, and that suffix would be what
+	// the hierarchy showed and what the compiler made a variable of.
+	UDreamWidget* Template = Scoped.FindTemplate(TEXT("BP_TextInput"));
+	TestNull(TEXT("Not named after the generated class"), Scoped.FindTemplate(TEXT("BP_TextInput_C")));
+	if (TestNotNull(TEXT("And it reached the asset"), Template))
+	{
+		// An INSTANCE of the control's class, not a flattened copy of its widgets -- which is the
+		// whole reason controls became classes: fixing the shipped one reaches the ones already placed.
+		UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, TEXT("/DreamGUI/Controls/BP_TextInput.BP_TextInput"));
+		if (TestNotNull(TEXT("The control Blueprint loads"), ControlBlueprint))
+		{
+			TestTrue(TEXT("The placed widget is of its generated class"),
+				Template->GetClass() == ControlBlueprint->GeneratedClass.Get());
 		}
 	}
 
