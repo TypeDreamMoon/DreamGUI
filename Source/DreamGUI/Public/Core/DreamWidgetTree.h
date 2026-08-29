@@ -33,6 +33,8 @@ class DREAMGUI_API UDreamWidgetTree : public UObject
 
 public:
 	virtual UWorld* GetWorld() const override;
+	/** Restores the Parent back-pointers, which serialization does not carry. See RebuildParentLinks. */
+	virtual void PostLoad() override;
 
 	/**
 	 * Root of the hierarchy. Instanced: this is where FObjectInstancingGraph enters the tree, and

@@ -2355,7 +2355,11 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerDuplicateWidgets(TCon
 		UDreamWidget* Template = GetTemplateWidget(PreviewWidget);
 		if (Template == nullptr || !IsValid(Template->GetParent()))
 		{
-			// The authored root has no parent to be duplicated alongside.
+			// The authored root has no parent to be duplicated alongside. Said out loud, because a
+			// menu item that quietly does nothing is indistinguishable from one that is broken.
+			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Not duplicating '%s': %s."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(PreviewWidget),
+				Template == nullptr ? TEXT("it has no template counterpart") : TEXT("the authored root has no parent"));
 			continue;
 		}
 		if (UDreamWidget* Copy = DreamWidgetTreeEditing::DuplicateWidget(BlueprintBeingEdited, Template, Template->GetParent()))

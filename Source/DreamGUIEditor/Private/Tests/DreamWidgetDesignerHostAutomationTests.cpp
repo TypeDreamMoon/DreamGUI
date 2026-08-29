@@ -520,4 +520,60 @@ bool FDreamTreeEditingDuplicateCopiesTheSubtreeTest::RunTest(const FString& Para
 	return true;
 }
 
+/*
+ * A tree that came off disk knows who its parents are.
+ *
+ * Parent is transient. Serialization carries Children and drops every back-pointer, and the doc on
+ * RebuildParentLinks says as much -- "required after any path that produces a tree without going
+ * through the attach functions: package load, class template instancing, subtree duplication". The
+ * compiled tree got it from the compiler and the instanced one from the generated class. The
+ * AUTHORING tree on the Blueprint, the one the designer edits, came straight off disk and had nobody
+ * to do it, so GetParent() was null for every widget in every saved asset.
+ *
+ * Nothing headless noticed because a test builds its tree with CreateWidget, which attaches live. The
+ * symptom in the editor was Duplicate on a loaded asset doing nothing at all, silently: it asks the
+ * template for its parent, and refused when there was none.
+ */
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetTreeRestoresParentsOnLoadTest,
+	"DreamGUI.Designer.ATreeFromDiskKnowsItsParents",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetTreeRestoresParentsOnLoadTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	FScopedBlueprint Scoped(TEXT("TreeFromDisk"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))
+	{
+		return false;
+	}
+	BuildSampleHierarchy(Scoped.Blueprint);
+
+	// A duplicate is the closest thing to a load that a test can make: Parent is DuplicateTransient
+	// as well as Transient, so the copy arrives in exactly the state a package load leaves behind.
+	UDreamWidgetTree* AsLoaded = DuplicateObject<UDreamWidgetTree>(Scoped.Blueprint->WidgetTree, Scoped.Blueprint);
+	if (!TestNotNull(TEXT("the tree was copied"), AsLoaded) || AsLoaded->RootWidget == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* FirstChild = AsLoaded->RootWidget->GetChildren().Num() > 0 ? AsLoaded->RootWidget->GetChildren()[0] : nullptr;
+	if (!TestNotNull(TEXT("and carries its children"), FirstChild))
+	{
+		return false;
+	}
+	// No negative control is possible here and that is the point: the copy cannot be observed without
+	// its links, because the same PostLoad that fixes a load fixes a duplicate. On the code this was
+	// written against, GetParent() here is null and the assertion fails.
+	TestEqual(TEXT("a tree that arrived without the attach path still knows its parents"),
+		FirstChild->GetParent(), AsLoaded->RootWidget.Get());
+
+	// And the consequence that was actually visible: the designer can edit such a tree.
+	Scoped.Blueprint->WidgetTree = AsLoaded;
+	TestNotNull(TEXT("a widget in a loaded tree can be duplicated"),
+		DreamWidgetTreeEditing::DuplicateWidget(Scoped.Blueprint, FirstChild, AsLoaded->RootWidget));
+	return true;
+}
+
 #endif

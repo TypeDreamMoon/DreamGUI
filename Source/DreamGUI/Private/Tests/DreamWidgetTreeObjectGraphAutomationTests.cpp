@@ -141,8 +141,10 @@ bool FDreamWidgetTreeParentLinksRebuildTest::RunTest(const FString& Parameters)
 	const FSampleTree Source = BuildSampleTree(TestWorld.World);
 
 	// A duplicate is the honest stand-in for a tree that arrived without going through the attach path.
-	// Parent is DuplicateTransient precisely so this happens: the copy comes back with the structure
-	// intact and every back-pointer empty -- the same state a package load leaves behind.
+	// Parent is DuplicateTransient precisely so this happens: the copy is handed the structure with
+	// every back-pointer empty -- the same state a package load leaves behind. It does not STAY that
+	// way, because both paths run PostLoad and PostLoad rebuilds the links; the assertion below is that
+	// the copy is usable when it comes back, which is the claim that matters to a caller.
 	TStrongObjectPtr<UDreamWidgetTree> Copy(DuplicateObject<UDreamWidgetTree>(Source.Tree, GetTransientPackage()));
 	if (!TestNotNull(TEXT("the copy has a root"), Copy.IsValid() ? Copy->RootWidget.Get() : nullptr))
 	{
@@ -154,10 +156,11 @@ bool FDreamWidgetTreeParentLinksRebuildTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	TestNull(TEXT("Parent does not survive duplication, which is what makes the rebuild necessary"), CopiedA->GetParent());
+	TestEqual(TEXT("a copy arrives with its parent links already restored"), CopiedA->GetParent(), Copy->RootWidget.Get());
 
+	// Explicitly, too: the rebuild is what PostLoad calls, and callers that build a tree by hand still
+	// have to reach for it.
 	Copy->RebuildParentLinks();
-
 	TestEqual(TEXT("the child's parent is restored"), CopiedA->GetParent(), Copy->RootWidget.Get());
 	UDreamWidget* CopiedC = CopiedA->GetChildren().Num() > 0 ? CopiedA->GetChildren()[0] : nullptr;
 	if (TestNotNull(TEXT("the grandchild survived"), CopiedC))

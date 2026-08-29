@@ -23,6 +23,17 @@ UDreamWidget* UDreamWidgetTree::ConstructWidget(TSubclassOf<UDreamWidget> InWidg
 	return NewObject<UDreamWidget>(this, InWidgetClass, InName, RF_Transactional);
 }
 
+void UDreamWidgetTree::PostLoad()
+{
+	Super::PostLoad();
+	// Parent is transient, so a tree that arrives from disk has its Children arrays intact and every
+	// back-pointer empty. The tree a compile produces gets this from the compiler and an instanced one
+	// from the generated class; the AUTHORING tree on the Blueprint comes straight off disk and had
+	// nobody to do it -- which is why GetParent() was null for every widget in a loaded asset, and why
+	// the designer's duplicate refused to copy anything in one ("the authored root has no parent").
+	RebuildParentLinks();
+}
+
 void UDreamWidgetTree::RebuildParentLinks()
 {
 	if (IsValid(RootWidget))

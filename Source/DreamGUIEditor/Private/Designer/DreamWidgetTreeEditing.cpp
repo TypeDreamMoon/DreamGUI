@@ -98,17 +98,25 @@ namespace DreamWidgetTreeEditing
 	UDreamWidget* DuplicateWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InSource,
 		UDreamWidget* InNewParent, int32 InSiblingIndex)
 	{
+		// Every refusal below says so. A duplicate that returns null without a word is a menu item that
+		// does nothing when clicked, which is what it looked like from the outside.
 		if (!IsTemplateWidgetOf(InBlueprint, InSource) || !IsTemplateWidgetOf(InBlueprint, InNewParent))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot duplicate '%s' under '%s': not part of '%s' authoring tree."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(InSource), *GetNameSafe(InNewParent), *GetNameSafe(InBlueprint));
 			return nullptr;
 		}
 		if (InNewParent == InSource || InNewParent->IsChildOf(InSource))
 		{
 			// Copying a subtree into itself: the copy would contain a copy of the place it is going.
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot duplicate '%s' into itself."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InSource->GetDisplayName());
 			return nullptr;
 		}
 		if (!InNewParent->CanAcceptAdditionalChildren(1))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot take another child, so '%s' was not duplicated."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNewParent->GetDisplayName(), *InSource->GetDisplayName());
 			return nullptr;
 		}
 
@@ -125,6 +133,8 @@ namespace DreamWidgetTreeEditing
 		UDreamWidget* Copy = UDreamWidget::DuplicateSubtree(Tree, InSource);
 		if (!IsValid(Copy))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Duplicating the subtree under '%s' produced nothing."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InSource->GetDisplayName());
 			return nullptr;
 		}
 
@@ -139,6 +149,8 @@ namespace DreamWidgetTreeEditing
 
 		if (!Copy->TrySetParent(InNewParent, /*bKeepWorldPosition*/false, InSiblingIndex))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' refused the copy of '%s' as a child."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNewParent->GetDisplayName(), *InSource->GetDisplayName());
 			Copy->DestroyWidget();
 			return nullptr;
 		}
