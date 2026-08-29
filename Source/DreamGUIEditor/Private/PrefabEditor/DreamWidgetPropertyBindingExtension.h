@@ -50,6 +50,15 @@ namespace DreamWidgetPropertyBindingExtension
 	/** Drop it, leaving the property at its authored value. */
 	void RemoveBinding(UDreamWidgetBlueprint* InBlueprint, const FBindingSite& InSite, FName InPropertyName);
 
+	/**
+	 * Add a function shaped to feed this property, bind it, and open it.
+	 *
+	 * Returns the graph so a caller can check what was built. InDesigner may be null, which skips
+	 * only the opening -- the graph and the binding are the same either way.
+	 */
+	class UEdGraph* CreateAndBindFunction(FDreamWidgetBlueprintEditor* InDesigner, UDreamWidgetBlueprint* InBlueprint,
+		const FBindingSite& InSite, const FProperty* InProperty);
+
 	/** The Bind combo for one property row. Null when the row is not bindable. */
 	TSharedPtr<SWidget> MakeBindingWidget(FDreamWidgetBlueprintEditor* InDesigner, UObject* InObject,
 		TSharedPtr<IPropertyHandle> InPropertyHandle);

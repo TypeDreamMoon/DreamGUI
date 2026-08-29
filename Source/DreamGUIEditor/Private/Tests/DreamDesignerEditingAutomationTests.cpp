@@ -17,6 +17,8 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamText.h"
 #include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
+#include "EdGraph/EdGraph.h"
+#include "K2Node_FunctionEntry.h"
 #include "UObject/UObjectIterator.h"
 
 #include "Editor.h"
@@ -526,6 +528,93 @@ bool FDreamDesignerBindingIsAuthoredAgainstTheRightObjectTest::RunTest(const FSt
 
 	RemoveBinding(Scoped.Blueprint, Site, FName(TEXT("bUseKerning")));
 	TestEqual(TEXT("And removal clears it"), Scoped.Blueprint->PropertyBindings.Num(), 0);
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerCreateBindingBuildsAUsableFunctionTest,
+	"DreamGUI.Designer.CreateBindingBuildsAFunctionThatCompilesAndBinds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerCreateBindingBuildsAUsableFunctionTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	using namespace DreamWidgetPropertyBindingExtension;
+
+	FScopedDesigner Scoped(TEXT("DesignerCreateBinding"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	FDreamUIEditorTools::CreateWidgetAndReturn([PreviewRoot]() { return PreviewRoot; },
+		TEXT("Label"), UDreamText::StaticClass(), nullptr);
+	UDreamWidget* Label = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Label")));
+	UDreamText* Text = IsValid(Label) ? Cast<UDreamText>(Label->GetVisual()) : nullptr;
+	if (!TestNotNull(TEXT("A text visual to bind on"), Text))
+	{
+		return false;
+	}
+	const FBindingSite Site = ResolveBindingSite(Text);
+	FProperty* TextProperty = UDreamText::StaticClass()->FindPropertyByName(FName(TEXT("Text")));
+	if (!TestTrue(TEXT("The site resolves"), Site.IsValid()) || !TestNotNull(TEXT("Text exists"), TextProperty))
+	{
+		return false;
+	}
+
+	// The menu entry, minus the opening: a null designer skips only that.
+	UEdGraph* Graph = CreateAndBindFunction(nullptr, Scoped.Blueprint, Site, TextProperty);
+	if (!TestNotNull(TEXT("A function graph was built"), Graph))
+	{
+		return false;
+	}
+
+	// Pure: a binding is asked for a value, and an exec pin invites side effects in something that
+	// runs every frame.
+	UK2Node_FunctionEntry* Entry = nullptr;
+	for (UEdGraphNode* Node : Graph->Nodes)
+	{
+		if (UK2Node_FunctionEntry* Candidate = Cast<UK2Node_FunctionEntry>(Node))
+		{
+			Entry = Candidate;
+			break;
+		}
+	}
+	if (TestNotNull(TEXT("It has an entry node"), Entry))
+	{
+		TestTrue(TEXT("And is marked pure"), (Entry->GetExtraFlags() & FUNC_BlueprintPure) != 0);
+	}
+
+	// Bound to what was built, not to something the author still has to pick.
+	const FDreamWidgetPropertyBinding* Authored = FindBinding(Scoped.Blueprint, Site, FName(TEXT("Text")));
+	if (TestNotNull(TEXT("The property is bound"), Authored))
+	{
+		TestEqual(TEXT("To the new function"), Authored->FunctionName, Graph->GetFName());
+	}
+
+	// The real claim: the compiler accepts it. A graph of the wrong shape -- no return value, wrong
+	// type, parameters -- would build fine here and fail only when someone compiled.
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(Scoped.Blueprint->GeneratedClass.Get());
+	if (TestNotNull(TEXT("A class came out"), GeneratedClass))
+	{
+		TestEqual(TEXT("And carries the resolved binding"), GeneratedClass->GetPropertyBindings().Num(), 1);
+
+		UFunction* Built = GeneratedClass->FindFunctionByName(Graph->GetFName());
+		if (TestNotNull(TEXT("The function is on the class"), Built))
+		{
+			// One parm and it is the return: the shape CompilePropertyBindings insists on, which is
+			// why the binding above survived the compile rather than being reported.
+			TestEqual(TEXT("It takes no arguments"), (int32)Built->NumParms, 1);
+			const FProperty* Return = Built->GetReturnProperty();
+			if (TestNotNull(TEXT("It returns something"), Return))
+			{
+				TestTrue(TEXT("Of the bound property's type"), Return->SameType(TextProperty));
+			}
+		}
+	}
 
 	return true;
 }

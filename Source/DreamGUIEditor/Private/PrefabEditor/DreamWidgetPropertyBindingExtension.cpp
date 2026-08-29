@@ -178,75 +178,78 @@ namespace DreamWidgetPropertyBindingExtension
 			return Result;
 		}
 
-		/**
-		 * A new function shaped to feed this property, bound and opened.
-		 *
-		 * Built rather than merely offered because the alternative is telling the author to go make a
-		 * function with exactly the right signature and come back -- which is the step they came here
-		 * to skip.
-		 */
-		void CreateAndBindFunction(FDreamWidgetBlueprintEditor* InDesigner, UDreamWidgetBlueprint* InBlueprint,
-			const FBindingSite& InSite, const FProperty* InProperty)
+
+	}
+
+	/**
+	 * A new function shaped to feed this property, bound and opened.
+	 *
+	 * Built rather than merely offered because the alternative is telling the author to go make a
+	 * function with exactly the right signature and come back -- which is the step they came here
+	 * to skip.
+	 */
+	UEdGraph* CreateAndBindFunction(FDreamWidgetBlueprintEditor* InDesigner, UDreamWidgetBlueprint* InBlueprint,
+		const FBindingSite& InSite, const FProperty* InProperty)
+	{
+		if (!IsValid(InBlueprint) || InProperty == nullptr)
 		{
-			if (!IsValid(InBlueprint) || InProperty == nullptr)
-			{
-				return;
-			}
-			FEdGraphPinType PinType;
-			if (!GetDefault<UEdGraphSchema_K2>()->ConvertPropertyToPinType(InProperty, PinType))
-			{
-				return;
-			}
+			return nullptr;
+		}
+		FEdGraphPinType PinType;
+		if (!GetDefault<UEdGraphSchema_K2>()->ConvertPropertyToPinType(InProperty, PinType))
+		{
+			return nullptr;
+		}
 
-			const FScopedTransaction Transaction(LOCTEXT("CreateBinding", "Create Binding"));
-			InBlueprint->Modify();
+		const FScopedTransaction Transaction(LOCTEXT("CreateBinding", "Create Binding"));
+		InBlueprint->Modify();
 
-			const FName GraphName = FBlueprintEditorUtils::FindUniqueKismetName(InBlueprint,
-				FString::Printf(TEXT("Get%s_%s"), *InSite.WidgetName.ToString(), *InProperty->GetName()));
-			UEdGraph* FunctionGraph = FBlueprintEditorUtils::CreateNewGraph(
-				InBlueprint, GraphName, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
-			if (FunctionGraph == nullptr)
+		const FName GraphName = FBlueprintEditorUtils::FindUniqueKismetName(InBlueprint,
+			FString::Printf(TEXT("Get%s_%s"), *InSite.WidgetName.ToString(), *InProperty->GetName()));
+		UEdGraph* FunctionGraph = FBlueprintEditorUtils::CreateNewGraph(
+			InBlueprint, GraphName, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+		if (FunctionGraph == nullptr)
+		{
+			return nullptr;
+		}
+		FBlueprintEditorUtils::AddFunctionGraph<UClass>(InBlueprint, FunctionGraph, /*bIsUserCreated*/true, nullptr);
+
+		// The entry node exists by now; the result node does not, and the return pin lives on it.
+		UK2Node_FunctionEntry* EntryNode = nullptr;
+		for (UEdGraphNode* Node : FunctionGraph->Nodes)
+		{
+			if (UK2Node_FunctionEntry* Entry = Cast<UK2Node_FunctionEntry>(Node))
 			{
-				return;
-			}
-			FBlueprintEditorUtils::AddFunctionGraph<UClass>(InBlueprint, FunctionGraph, /*bIsUserCreated*/true, nullptr);
-
-			// The entry node exists by now; the result node does not, and the return pin lives on it.
-			UK2Node_FunctionEntry* EntryNode = nullptr;
-			for (UEdGraphNode* Node : FunctionGraph->Nodes)
-			{
-				if (UK2Node_FunctionEntry* Entry = Cast<UK2Node_FunctionEntry>(Node))
-				{
-					EntryNode = Entry;
-					break;
-				}
-			}
-			if (EntryNode != nullptr)
-			{
-				// Pure: a binding is asked for a value, and giving it an exec pin invites side effects
-				// on a function that runs every frame.
-				EntryNode->AddExtraFlags(FUNC_BlueprintPure);
-				EntryNode->MetaData.Category = LOCTEXT("BindingCategory", "Bindings");
-			}
-
-			FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*FunctionGraph);
-			UK2Node_FunctionResult* ResultNode = ResultCreator.CreateNode();
-			ResultNode->FunctionReference.SetSelfMember(GraphName);
-			ResultNode->NodePosX = (EntryNode != nullptr ? EntryNode->NodePosX : 0) + 400;
-			ResultNode->NodePosY = (EntryNode != nullptr ? EntryNode->NodePosY : 0);
-			ResultCreator.Finalize();
-			ResultNode->CreateUserDefinedPin(UEdGraphSchema_K2::PN_ReturnValue, PinType, EGPD_Input);
-
-			FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
-			SetBinding(InBlueprint, InSite, InProperty->GetFName(), GraphName);
-
-			// Straight into it: an empty function returning a default is not what was asked for, it is
-			// the place the author now has to write what was.
-			if (InDesigner != nullptr)
-			{
-				InDesigner->OpenDocument(FunctionGraph, FDocumentTracker::OpenNewDocument);
+				EntryNode = Entry;
+				break;
 			}
 		}
+		if (EntryNode != nullptr)
+		{
+			// Pure: a binding is asked for a value, and giving it an exec pin invites side effects
+			// on a function that runs every frame.
+			EntryNode->AddExtraFlags(FUNC_BlueprintPure);
+			EntryNode->MetaData.Category = LOCTEXT("BindingCategory", "Bindings");
+		}
+
+		FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*FunctionGraph);
+		UK2Node_FunctionResult* ResultNode = ResultCreator.CreateNode();
+		ResultNode->FunctionReference.SetSelfMember(GraphName);
+		ResultNode->NodePosX = (EntryNode != nullptr ? EntryNode->NodePosX : 0) + 400;
+		ResultNode->NodePosY = (EntryNode != nullptr ? EntryNode->NodePosY : 0);
+		ResultCreator.Finalize();
+		ResultNode->CreateUserDefinedPin(UEdGraphSchema_K2::PN_ReturnValue, PinType, EGPD_Input);
+
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+		SetBinding(InBlueprint, InSite, InProperty->GetFName(), GraphName);
+
+		// Straight into it: an empty function returning a default is not what was asked for, it is
+		// the place the author now has to write what was.
+		if (InDesigner != nullptr)
+		{
+			InDesigner->OpenDocument(FunctionGraph, FDocumentTracker::OpenNewDocument);
+		}
+		return FunctionGraph;
 	}
 
 	TSharedPtr<SWidget> MakeBindingWidget(FDreamWidgetBlueprintEditor* InDesigner, UObject* InObject,
@@ -299,7 +302,7 @@ namespace DreamWidgetPropertyBindingExtension
 					FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Plus")),
 					FUIAction(FExecuteAction::CreateLambda([InDesigner, Blueprint, Site, Property]()
 					{
-						Local::CreateAndBindFunction(InDesigner, Blueprint, Site, Property);
+						CreateAndBindFunction(InDesigner, Blueprint, Site, Property);
 					})));
 				MenuBuilder.EndSection();
 
