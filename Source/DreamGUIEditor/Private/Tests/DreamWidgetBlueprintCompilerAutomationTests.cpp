@@ -205,11 +205,27 @@ bool FDreamWidgetBlueprintMissingBindingIsACompileErrorTest::RunTest(const FStri
 		// LogBlueprint and automation counts any logged error as a failed test. Occurrences 0 because
 		// the message is emitted once by the compiler and replayed once by the results log, and the
 		// test is about the error existing, not about how many times it is printed.
-		AddExpectedError(TEXT("expects a widget of that name"), EAutomationExpectedErrorFlags::Contains, 0);
+		AddExpectedError(TEXT("must contain a widget of that name"), EAutomationExpectedErrorFlags::Contains, 0);
 
 		FCompilerResultsLog Results;
 		Compile(Fixture.Blueprint, Results);
 		TestTrue(TEXT("a declared binding with no widget of that name fails the compile"), Results.NumErrors > 0);
+
+		// WHICH property was reported, not merely that something was. The base class declares three
+		// widget-typed members: one marked meta=(BindDreamWidget), one unmarked, and one marked with
+		// UMG's spelling. None of the three has a widget in this hierarchy, so if the compiler were
+		// reading the wrong key -- or both -- this is where it shows.
+		FString AllMessages;
+		for (const TSharedRef<FTokenizedMessage>& Message : Results.Messages)
+		{
+			AllMessages += Message->ToText().ToString() + TEXT(" | ");
+		}
+		TestTrue(*FString::Printf(TEXT("the BindDreamWidget one is named, saw [%s]"), *AllMessages),
+			AllMessages.Contains(TEXT("RequiredHeader")));
+		TestFalse(*FString::Printf(TEXT("and the UMG-spelled one is not, saw [%s]"), *AllMessages),
+			AllMessages.Contains(TEXT("UMGSpelledBinding")));
+		TestFalse(*FString::Printf(TEXT("nor the unmarked one, saw [%s]"), *AllMessages),
+			AllMessages.Contains(TEXT("UnmarkedReference")));
 	}
 
 	// And the other side: the check must not fire on a hierarchy that answers the binding, or it is
@@ -569,7 +585,7 @@ bool FDreamWidgetUnmarkedPropertyProbeTest::RunTest(const FString& Parameters)
 		// AND SO DOES THE UNMARKED ONE. This is the behaviour, not the intent I would have guessed:
 		// InitializeWidgetStatic collects every FObjectPropertyBase declared below UDreamUserWidget and
 		// binds by variable name, without ever asking whether the property claimed to be a binding.
-		// meta=(BindWidget) therefore does not make a property bindable -- it only makes a MISSING
+		// meta=(BindDreamWidget) therefore does not make a property bindable -- it only makes a MISSING
 		// widget a compile error. In UMG the tag is what makes a property a binding at all, and an
 		// unmarked UWidget* member belongs to whoever declared it.
 		//

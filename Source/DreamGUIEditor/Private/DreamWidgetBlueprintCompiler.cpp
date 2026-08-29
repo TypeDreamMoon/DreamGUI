@@ -313,7 +313,7 @@ void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClas
 	// that no widget answers used to fail at RUN time, as a null, after a save had already dropped it.
 	// Here it is an error at compile time, on the asset, with the name in the message.
 	//
-	// Only properties that SAY they are bindings, via meta=(BindWidget). Raising an error means
+	// Only properties that SAY they are bindings, via meta=(BindDreamWidget). Raising an error means
 	// asserting intent, and intent cannot be inferred from the shape of a property: the first attempt
 	// here treated "transient and widget-typed" as the marker and promptly flagged
 	// UDreamWidget::Parent, which is both of those and is not a binding. A widget-typed member with no
@@ -325,7 +325,7 @@ void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClas
 		{
 			continue;
 		}
-		if (!Property->HasMetaData(TEXT("BindWidget")))
+		if (!Property->HasMetaData(UDreamWidgetGeneratedClass::BindWidgetMetaName))
 		{
 			continue;
 		}
@@ -334,13 +334,13 @@ void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClas
 		if (Match == nullptr)
 		{
 			MessageLog.Error(*FText::Format(
-				LOCTEXT("WidgetBindingNotFound", "The binding \"{0}\" expects a widget of that name, and this hierarchy has none."),
+				LOCTEXT("WidgetBindingNotFound", "\"{0}\" is declared meta=(BindDreamWidget), so this hierarchy must contain a widget of that name, and it has none. Rename a widget to match, or drop the specifier."),
 				FText::FromName(Property->GetFName())).ToString());
 		}
 		else if (!Match->IsA(Property->PropertyClass))
 		{
 			MessageLog.Error(*FText::Format(
-				LOCTEXT("WidgetBindingWrongType", "The binding \"{0}\" expects {1}, but the widget of that name is {2}."),
+				LOCTEXT("WidgetBindingWrongType", "\"{0}\" is declared meta=(BindDreamWidget) as {1}, but the widget of that name is {2}."),
 				FText::FromName(Property->GetFName()),
 				FText::FromString(Property->PropertyClass->GetName()),
 				FText::FromString(Match->GetClass()->GetName())).ToString());

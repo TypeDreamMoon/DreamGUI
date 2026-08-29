@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -21,12 +21,21 @@ class UDreamWidgetBlueprintBindingBase : public UDreamUserWidget
 	GENERATED_BODY()
 public:
 	/** Says it is a binding, so a hierarchy without a widget of this name is a compile error. */
-	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindDreamWidget))
 	TObjectPtr<UDreamWidget> RequiredHeader = nullptr;
 
 	/** Widget-typed and transient, but claims nothing. Must never be reported as a missing binding. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test")
 	TObjectPtr<UDreamWidget> UnmarkedReference = nullptr;
+
+	/**
+	 * Spelled UMG's way. This framework reads BindDreamWidget and must not read this one.
+	 *
+	 * Two spellings of a metadata key never fail to compile -- they fail by quietly never matching --
+	 * so the only way to know which one is live is to declare both and see which raises the error.
+	 */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindWidget))
+	TObjectPtr<UDreamWidget> UMGSpelledBinding = nullptr;
 };
 
 /**

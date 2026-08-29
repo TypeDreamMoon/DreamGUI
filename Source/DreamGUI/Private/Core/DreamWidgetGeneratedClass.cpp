@@ -38,6 +38,8 @@ UDreamWidgetTree* UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(const UCla
 	return nullptr;
 }
 
+const FName UDreamWidgetGeneratedClass::BindWidgetMetaName(TEXT("BindDreamWidget"));
+
 void UDreamWidgetGeneratedClass::InitializeWidget(UDreamUserWidget* InUserWidget) const
 {
 	InitializeWidgetStatic(InUserWidget, this, FindWidgetTreeArchetype(this));
@@ -74,7 +76,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 	//    every back-pointer empty. Nothing below may run before this.
 	InstancedTree->RebuildParentLinks();
 
-	// 3. Bind each widget to the class property of the same name -- this is BindWidget, and it is the
+	// 3. Bind each widget to the class property of the same name -- this is BindDreamWidget, and it is the
 	//    same shape UMG uses (walk the tree, look the name up in the class's object properties).
 	//    Widgets are matched by DisplayName, not object name: object names here are generated.
 	//

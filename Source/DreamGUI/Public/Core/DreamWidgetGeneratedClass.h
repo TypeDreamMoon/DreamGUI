@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -25,6 +25,25 @@ class DREAMGUI_API UDreamWidgetGeneratedClass : public UBlueprintGeneratedClass
 	GENERATED_BODY()
 
 public:
+	/**
+	 * The UPROPERTY meta specifier that declares a widget binding: meta = (BindDreamWidget).
+	 *
+	 * Deliberately not UMG's "BindWidget". The two never collide at run time -- one is read on
+	 * UUserWidget subclasses and the other on UDreamUserWidget subclasses, and no class is both --
+	 * but a header is read by people, and a bare meta=(BindWidget) on a Dream widget says it belongs
+	 * to a framework it does not belong to.
+	 *
+	 * Named here, once, because the compiler validates against it and anything else that ever asks
+	 * "is this property a binding" must ask the same question. Two spellings of a metadata key do not
+	 * fail to compile; they fail by quietly never matching.
+	 *
+	 * What it does NOT do, and the name would let you assume it does: it does not decide whether a
+	 * property is bound. InitializeWidgetStatic binds every widget-typed property declared below
+	 * UDreamUserWidget by name, marked or not. This specifier decides whether a MISSING widget is a
+	 * compile error. See DreamGUI.WidgetBlueprint.AnUnmarkedWidgetMemberIsBoundAnyway.
+	 */
+	static const FName BindWidgetMetaName;
+
 	/** The authored hierarchy this class instantiates. Null on a class that inherits its parent's. */
 	UDreamWidgetTree* GetWidgetTreeArchetype() const { return WidgetTree; }
 
