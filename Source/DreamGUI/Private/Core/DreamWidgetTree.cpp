@@ -1,7 +1,8 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUserWidget.h"
 #include "DreamGUI.h"
 
 UWorld* UDreamWidgetTree::GetWorld() const
@@ -76,6 +77,20 @@ void UDreamWidgetTree::ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredica
 			continue;
 		}
 		InPredicate(Widget);
+		// A nested widget blueprint's named-slot content belongs to THIS tree -- the host authored it
+		// -- but it hangs off the binding map rather than off Children until the instance is built.
+		// A walk that only followed Children would miss it, which means no variable declared for it,
+		// no identity minted, and the compiler never seeing it at all.
+		if (const UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(Widget))
+		{
+			for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : UserWidget->NamedSlotContent)
+			{
+				if (IsValid(Binding.Value) && Binding.Value->GetTypedOuter<UDreamWidgetTree>() == this)
+				{
+					Pending.Push(Binding.Value);
+				}
+			}
+		}
 		const TArray<UDreamWidget*>& Children = Widget->GetChildren();
 		// Push in reverse so siblings are visited in their sibling order.
 		for (int32 i = Children.Num() - 1; i >= 0; i--)

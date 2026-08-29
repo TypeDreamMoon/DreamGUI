@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -63,6 +63,8 @@ private:
 	 * surfaced at runtime as a null, after a save had already dropped it.
 	 */
 	void ValidateWidgetBindings(UClass* InClass);
+	/** Every nested instance's slot bindings, against the slots its class actually declares. */
+	void ValidateNamedSlotBindings(UDreamWidgetTree* InArchetype);
 	/**
 	 * Resolve the authored property bindings onto InClass, reporting the ones that cannot be honoured.
 	 *

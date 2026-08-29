@@ -14,6 +14,8 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/DreamContentWidget.h"
+#include "Kismet2/CompilerResultsLog.h"
 
 #include "Editor.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -917,6 +919,156 @@ bool FDreamDesignerUndoWithAPreviewTest::RunTest(const FString&)
 	TestEqual(TEXT("and is the size it started"), AfterPreview.Slots, BeforePreview.Slots);
 
 	Host->Shutdown();
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNamedSlotRoundTripTest,
+	"DreamGUI.Designer.NamedSlot.AHostFillsAHoleTheClassDeclared",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNamedSlotRoundTripTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	// A shell class with a hole in it: a root and a Body carrying UDreamNamedSlot. This is the case
+	// folding alone cannot serve -- a Card or a dialogue shell is only useful when the parent
+	// supplies the middle.
+	FScopedBlueprint Shell(TEXT("NamedSlotShell"));
+	if (!TestNotNull(TEXT("the shell Blueprint was created"), Shell.Blueprint))return false;
+	UDreamWidgetTree* ShellTree = Shell.Blueprint->GetOrCreateWidgetTree();
+	ShellTree->RootWidget->SetDisplayName(TEXT("ShellRoot"));
+	ShellTree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+	UDreamWidget* Body = DreamWidgetTreeEditing::CreateWidget(Shell.Blueprint, UDreamWidget::StaticClass(), nullptr, -1, TEXT("Body"));
+	if (!TestNotNull(TEXT("the shell has a Body to make a slot of"), (UObject*)Body))return false;
+	Body->AddComponent<UDreamNamedSlot>();
+	Shell.Compile();
+
+	TArray<FName> Declared;
+	UDreamUserWidget::CollectDeclaredSlotNames(ShellTree, Declared);
+	if (!TestEqual(TEXT("the class declares one slot"), Declared.Num(), 1))return false;
+	TestEqual(TEXT("named after the widget carrying it"), Declared[0], FName(TEXT("Body")));
+
+	// The host places the shell and authors the content that goes in it. The content is the HOST's
+	// widget -- that is what keeps this from being a cross-asset difference record.
+	FScopedBlueprint Host(TEXT("NamedSlotHostScreen"));
+	if (!TestNotNull(TEXT("the host Blueprint was created"), Host.Blueprint))return false;
+	UDreamWidgetTree* HostTree = Host.Blueprint->GetOrCreateWidgetTree();
+	HostTree->RootWidget->SetDisplayName(TEXT("HostRoot"));
+	HostTree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+	UDreamUserWidget* Placed = Cast<UDreamUserWidget>(HostTree->ConstructWidget(TSubclassOf<UDreamWidget>(Shell.Blueprint->GeneratedClass)));
+	if (!TestNotNull(TEXT("the shell was placed in the host"), (UObject*)Placed))return false;
+	Placed->SetDisplayName(TEXT("Card"));
+	Placed->SetParentBeforeRegister(HostTree->RootWidget);
+
+	UDreamWidget* Filling = HostTree->ConstructWidget<UDreamWidget>();
+	Filling->SetDisplayName(TEXT("Filling"));
+	TestTrue(TEXT("the host can bind its own widget to the slot"), Placed->SetContentForNamedSlot(TEXT("Body"), Filling));
+	TestEqual(TEXT("and reads it back"), Placed->GetContentForNamedSlot(TEXT("Body")), Filling);
+
+	// Content from somewhere else is refused, loudly. A slot filled from a third asset would be the
+	// cross-asset difference record the prefab model was, and is not coming back.
+	AddExpectedError(TEXT("belongs to another hierarchy"), EAutomationExpectedErrorFlags::Contains, 1);
+	TestFalse(TEXT("but not a widget from another hierarchy"),
+		Placed->SetContentForNamedSlot(TEXT("Body"), ShellTree->RootWidget));
+
+	// The tree has to see it, or the compiler declares no variable for it and nothing mints its id.
+	int32 Seen = 0;
+	HostTree->ForEachWidget([&Seen, Filling](UDreamWidget* W) { if (W == Filling) { Seen++; } });
+	TestEqual(TEXT("the host tree walk reaches the slot content"), Seen, 1);
+	Host.Compile();
+
+	// And the instance actually puts it there.
+	TSharedRef<FDreamWidgetPreviewHost> PreviewHost = MakeShared<FDreamWidgetPreviewHost>();
+	PreviewHost->Initialize(Host.Blueprint);
+	if (!TestNotNull(TEXT("the preview was built"), PreviewHost->GetPreviewWidget()))
+	{
+		PreviewHost->Shutdown();
+		return false;
+	}
+	UDreamUserWidget* PreviewCard = Cast<UDreamUserWidget>(PreviewHost->FindPreviewForTemplate(Placed));
+	if (!TestNotNull(TEXT("the placed shell has a preview"), (UObject*)PreviewCard))
+	{
+		PreviewHost->Shutdown();
+		return false;
+	}
+	UDreamWidget* PreviewSlot = PreviewCard->FindSlotWidget(TEXT("Body"));
+	UDreamWidget* PreviewFilling = PreviewHost->FindPreviewForTemplate(Filling);
+	if (TestNotNull(TEXT("the slot exists in the instance"), (UObject*)PreviewSlot)
+		&& TestNotNull(TEXT("and the content was instanced too"), (UObject*)PreviewFilling))
+	{
+		TestEqual(TEXT("the content hangs in the slot"), PreviewFilling->GetParent(), PreviewSlot);
+	}
+
+	// The designer surface: the instance is still one row, but the hole shows, and what is in it is
+	// the host's to edit. A slot the author cannot see is a slot nobody uses.
+	TArray<UDreamWidget*> Rows;
+	CollectDreamEditorChildren(PreviewCard, Rows);
+	TestEqual(TEXT("the folded instance shows exactly its slots"), Rows.Num(), 1);
+	if (Rows.Num() == 1)
+	{
+		TestEqual(TEXT("which is the slot widget"), Rows[0], PreviewSlot);
+		TArray<UDreamWidget*> Under;
+		CollectDreamEditorChildren(Rows[0], Under);
+		TestTrue(TEXT("and the content shows under it"), Under.Contains(PreviewFilling));
+	}
+	// Nothing of the shell own hierarchy is reachable from here.
+	TArray<UDreamWidget*> Everything;
+	CollectDreamWidgetsToNestedBoundary(PreviewHost->GetPreviewRoot(), Everything);
+	TestFalse(TEXT("the shell content root is not shown"),
+		Everything.Contains(PreviewCard->GetContentRoot()));
+	TestTrue(TEXT("but the host content in the slot is"), Everything.Contains(PreviewFilling));
+
+	PreviewHost->Shutdown();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNamedSlotUndeclaredIsAnErrorTest,
+	"DreamGUI.Designer.NamedSlot.BindingASlotTheClassDoesNotDeclareIsACompileError",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNamedSlotUndeclaredIsAnErrorTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	FScopedBlueprint Shell(TEXT("NamedSlotNoSlots"));
+	if (!TestNotNull(TEXT("the shell Blueprint was created"), Shell.Blueprint))return false;
+	Shell.Blueprint->GetOrCreateWidgetTree()->RootWidget->SetDisplayName(TEXT("ShellRoot"));
+	Shell.Compile();
+
+	FScopedBlueprint Host(TEXT("NamedSlotWrongName"));
+	if (!TestNotNull(TEXT("the host Blueprint was created"), Host.Blueprint))return false;
+	UDreamWidgetTree* HostTree = Host.Blueprint->GetOrCreateWidgetTree();
+	HostTree->RootWidget->SetDisplayName(TEXT("HostRoot"));
+	HostTree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+	UDreamUserWidget* Placed = Cast<UDreamUserWidget>(HostTree->ConstructWidget(TSubclassOf<UDreamWidget>(Shell.Blueprint->GeneratedClass)));
+	if (!TestNotNull(TEXT("the shell was placed"), (UObject*)Placed))return false;
+	Placed->SetDisplayName(TEXT("Card"));
+	Placed->SetParentBeforeRegister(HostTree->RootWidget);
+	UDreamWidget* Filling = HostTree->ConstructWidget<UDreamWidget>();
+	Filling->SetDisplayName(TEXT("Filling"));
+	Placed->SetContentForNamedSlot(TEXT("NoSuchSlot"), Filling);
+
+	// A class can drop or rename a slot long after the host bound content to it. Dropping that
+	// content silently is how a screen loses a piece with nothing in the log to say why.
+	// The compiler routes its errors through the log as well, and this test is asserting that one is
+	// raised -- so it has to say it expects it, or the framework counts the very thing under test as
+	// a failure. Occurrences 0: skeleton and full compiles each report it.
+	AddExpectedError(TEXT("declares no such slot"), EAutomationExpectedErrorFlags::Contains, 0);
+	FCompilerResultsLog Results;
+	FKismetEditorUtilities::CompileBlueprint(Host.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+	bool bReported = false;
+	for (const TSharedRef<FTokenizedMessage>& Message : Results.Messages)
+	{
+		if (Message->ToText().ToString().Contains(TEXT("declares no such slot")))
+		{
+			bReported = true;
+		}
+	}
+	TestTrue(TEXT("the compiler says so, naming both the instance and the slot"), bReported);
+	TestTrue(TEXT("and it is an error, not a warning"), Results.NumErrors > 0);
 	return true;
 }
 

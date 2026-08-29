@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -57,4 +57,35 @@ public:
 	void ClearSlot(FName SlotName, bool bDetach = true);
 	UFUNCTION(BlueprintPure, Category = "NamedSlots")
 	TArray<FName> GetSlotNames()const;
+};
+
+/**
+ * Marks its widget as a hole in a widget blueprint that whoever PLACES that blueprint fills in.
+ *
+ * The other half of the boundary DreamWidget_ShouldEditorExpandContents draws. Folding a nested
+ * instance into one row is right for a Button or a Slider, which are finished things; it makes a
+ * Card, a Panel or a dialogue shell impossible, because the whole point of those is that the parent
+ * supplies the middle. This is the sanctioned opening: the class says WHERE, the host says WHAT.
+ *
+ * The name is the widget's display name, which is what the author already types and already sees in
+ * the hierarchy -- the same choice UMG makes for UNamedSlot. One child, like UContentWidget: a slot
+ * that took several would be a panel, and panels are a thing the class can put here itself.
+ *
+ * Not to be confused with UDreamNamedSlotHost above, which is the INamedSlotInterface analogue: a
+ * runtime name->child map inside ONE hierarchy, with no other asset involved.
+ */
+UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+class DREAMGUI_API UDreamNamedSlot : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	virtual int32 GetMaxWidgetChildren() const override { return 1; }
+
+	/** The name the host binds content to: this widget's display name. */
+	FName GetSlotName() const;
+
+	/** The content the host put here, or null while the slot is empty. */
+	UFUNCTION(BlueprintPure, Category = "NamedSlot")
+	UDreamWidget* GetSlotContent() const;
 };

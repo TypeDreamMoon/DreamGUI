@@ -329,13 +329,15 @@ namespace DreamWidgetHierarchyRows
 		{
 			return;
 		}
-		if (!DreamWidget_ShouldEditorExpandContents(InParent))
-		{
-			// A nested widget blueprint instance is one row. Its contents belong to another asset and
-			// are not editable from here; double-clicking the row opens the asset that owns them.
-			return;
-		}
-		const TArray<UDreamWidget*>& Children = InParent->GetChildren();
+		// A nested widget blueprint instance shows its SLOTS here, not its contents: the contents
+		// belong to another asset and are edited by opening it, while a slot is a hole this host was
+		// invited to fill. Everything else shows its own children.
+		TArray<UDreamWidget*> Children;
+		CollectDreamEditorChildren(InParent, Children);
+		// The back-pointer check only means anything for a widget InParent actually lists. A slot row
+		// is reached through the class that declares it, not through Children, and it can be reached
+		// that way from exactly one instance -- so it cannot land on two rows either.
+		const bool bChildrenAreItsOwn = DreamWidget_ShouldEditorExpandContents(InParent);
 		TSet<const UDreamWidget*> Seen;
 		Seen.Reserve(Children.Num());
 		for (UDreamWidget* Child : Children)
@@ -344,7 +346,7 @@ namespace DreamWidgetHierarchyRows
 			{
 				continue;
 			}
-			if (Child->GetParent() != InParent)
+			if (bChildrenAreItsOwn && Child->GetParent() != InParent)
 			{
 				// Children is the persistent record and Parent is derived from it, so the two
 				// disagreeing means some other widget's Children array holds this one too. Showing

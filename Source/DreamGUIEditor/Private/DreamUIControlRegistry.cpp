@@ -544,7 +544,10 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Progress.VisualClass = UDreamImage::StaticClass();
 	Register(Progress);
 	Register(MakeBehaviour(TEXT("ContentWidget"), UDreamContentWidget::StaticClass(), TEXT("ClassIcon.NativeWidgetHost")));
-	Register(MakeBehaviour(TEXT("NamedSlot"), UDreamNamedSlotHost::StaticClass(), TEXT("ClassIcon.NamedSlot")));
+	// The hole a widget blueprint opens for whoever places it. The one below is the older, unrelated
+	// thing with a confusingly similar name: a runtime name->child map inside one hierarchy.
+	Register(MakeBehaviour(TEXT("NamedSlot"), UDreamNamedSlot::StaticClass(), TEXT("ClassIcon.NamedSlot")));
+	Register(MakeBehaviour(TEXT("NamedSlotHost"), UDreamNamedSlotHost::StaticClass(), TEXT("ClassIcon.NamedSlot")));
 	Register(MakeBehaviour(TEXT("ListView"), UUIListView::StaticClass(), TEXT("ClassIcon.ListView"), ConfigureListView));
 	Register(MakeBehaviour(TEXT("TileView"), UUITileView::StaticClass(), TEXT("ClassIcon.TileView"), ConfigureListView));
 	Register(MakeBehaviour(TEXT("TreeView"), UUITreeView::StaticClass(), TEXT("ClassIcon.TreeView"), ConfigureListView));

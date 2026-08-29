@@ -4,6 +4,7 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUIManager.h"
+#include "Interaction/DreamContentWidget.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
 
@@ -38,6 +39,37 @@ bool DreamWidget_ShouldEditorExpandContents(const UDreamWidget* InWidget)
 	return true;
 }
 
+void CollectDreamEditorChildren(UDreamWidget* InWidget, TArray<UDreamWidget*>& OutChildren)
+{
+	if (!IsValid(InWidget))
+	{
+		return;
+	}
+	if (DreamWidget_ShouldEditorExpandContents(InWidget))
+	{
+		OutChildren.Append(InWidget->GetChildren());
+		return;
+	}
+	// A nested instance. Its own contents are another asset's; its slots are holes this host is
+	// invited to fill, so those are the only thing it shows -- named, in the order the class declares
+	// them, and present whether or not anything is in them yet. An empty slot the author cannot see
+	// is a slot nobody uses.
+	const UDreamUserWidget* Nested = Cast<UDreamUserWidget>(InWidget);
+	if (Nested == nullptr)
+	{
+		return;
+	}
+	TArray<FName> Declared;
+	UDreamUserWidget::CollectDeclaredSlotNames(Nested->GetWidgetTree(), Declared);
+	for (const FName& SlotName : Declared)
+	{
+		if (UDreamWidget* SlotWidget = Nested->FindSlotWidget(SlotName))
+		{
+			OutChildren.Add(SlotWidget);
+		}
+	}
+}
+
 void CollectDreamWidgetsToNestedBoundary(UDreamWidget* InRoot, TArray<UDreamWidget*>& OutWidgets, bool bIncludeRoot)
 {
 	if (!IsValid(InRoot))
@@ -48,11 +80,9 @@ void CollectDreamWidgetsToNestedBoundary(UDreamWidget* InRoot, TArray<UDreamWidg
 	{
 		OutWidgets.Add(InRoot);
 	}
-	if (!DreamWidget_ShouldEditorExpandContents(InRoot))
-	{
-		return;
-	}
-	for (UDreamWidget* Child : InRoot->GetChildren())
+	TArray<UDreamWidget*> Children;
+	CollectDreamEditorChildren(InRoot, Children);
+	for (UDreamWidget* Child : Children)
 	{
 		CollectDreamWidgetsToNestedBoundary(Child, OutWidgets, true);
 	}
@@ -229,6 +259,89 @@ void UDreamUserWidget::EvaluatePropertyBindings()
 UDreamWidget* UDreamUserWidget::GetContentRoot() const
 {
 	return IsValid(WidgetTree) ? WidgetTree->RootWidget : nullptr;
+}
+
+void UDreamUserWidget::CollectDeclaredSlotNames(const UDreamWidgetTree* InTree, TArray<FName>& OutNames)
+{
+	if (!IsValid(InTree))
+	{
+		return;
+	}
+	InTree->ForEachWidget([&OutNames](UDreamWidget* Widget)
+	{
+		if (const UDreamNamedSlot* Slot = Widget->GetComponent<UDreamNamedSlot>())
+		{
+			const FName SlotName = Slot->GetSlotName();
+			// A duplicate slot name is a mistake the class author has to see; the compiler reports it
+			// (DreamWidgetBlueprintCompiler). Listing it once here keeps every consumer agreeing on
+			// what the class offers rather than each de-duplicating differently.
+			if (!SlotName.IsNone())
+			{
+				OutNames.AddUnique(SlotName);
+			}
+		}
+	});
+}
+
+UDreamWidget* UDreamUserWidget::FindSlotWidget(FName InSlotName) const
+{
+	if (InSlotName.IsNone() || !IsValid(WidgetTree))
+	{
+		return nullptr;
+	}
+	UDreamWidget* Found = nullptr;
+	WidgetTree->ForEachWidget([&Found, InSlotName](UDreamWidget* Widget)
+	{
+		if (Found != nullptr)
+		{
+			return;
+		}
+		if (const UDreamNamedSlot* Slot = Widget->GetComponent<UDreamNamedSlot>())
+		{
+			if (Slot->GetSlotName() == InSlotName)
+			{
+				Found = Widget;
+			}
+		}
+	});
+	return Found;
+}
+
+UDreamWidget* UDreamUserWidget::GetContentForNamedSlot(FName InSlotName) const
+{
+	const TObjectPtr<UDreamWidget>* Found = NamedSlotContent.Find(InSlotName);
+	return Found != nullptr && IsValid(*Found) ? Found->Get() : nullptr;
+}
+
+bool UDreamUserWidget::SetContentForNamedSlot(FName InSlotName, UDreamWidget* InContent)
+{
+	if (InSlotName.IsNone())
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot bind content to an unnamed slot on '%s'."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
+		return false;
+	}
+	if (InContent == nullptr)
+	{
+		NamedSlotContent.Remove(InSlotName);
+		return true;
+	}
+	if (InContent == this || InContent->IsChildOf(this) || this->IsChildOf(InContent))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot go into a slot of '%s': one contains the other."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContent->GetPathDisplayName(), *GetPathDisplayName());
+		return false;
+	}
+	// The content must be the host's own. Taking a widget out of a third asset would make this a
+	// cross-asset difference record, which is the thing P4 deleted and is not coming back.
+	if (InContent->GetTypedOuter<UDreamWidgetTree>() != this->GetTypedOuter<UDreamWidgetTree>())
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' belongs to another hierarchy; a slot is filled by the host that placed '%s'."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContent->GetPathDisplayName(), *GetPathDisplayName());
+		return false;
+	}
+	NamedSlotContent.Add(InSlotName, InContent);
+	return true;
 }
 
 UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,

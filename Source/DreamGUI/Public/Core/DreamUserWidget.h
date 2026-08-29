@@ -44,6 +44,21 @@ public:
 	TObjectPtr<UDreamWidgetTree> WidgetTree = nullptr;
 
 	/**
+	 * What the HOST authored for the slots this widget's class declares, keyed by slot name.
+	 *
+	 * The values are widgets of the host's tree, not of this class's -- that is the whole point.
+	 * Nothing about them is a difference recorded against another asset: they are the host's own
+	 * widgets, authored in the host's hierarchy, that happen to be placed through a hole the class
+	 * opened. Instanced, so object instancing carries them across with the rest of the host's tree,
+	 * and Initialize hangs them under the matching UDreamNamedSlot afterwards.
+	 *
+	 * Empty on the class template of a class that declares slots -- a slot with nothing in it is the
+	 * normal state, and the class has no business filling its own holes.
+	 */
+	UPROPERTY(Instanced)
+	TMap<FName, TObjectPtr<UDreamWidget>> NamedSlotContent;
+
+	/**
 	 * Instance the class's template into this widget, resolve the by-name widget bindings, and attach
 	 * the resulting root beneath this widget.
 	 *
@@ -75,6 +90,25 @@ public:
 	/** The root of this widget's own contents -- the tree's root, not this widget. Null before Initialize. */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	UDreamWidget* GetContentRoot() const;
+
+	/** The widget carrying the UDreamNamedSlot of that name inside this instance, or null. */
+	UDreamWidget* FindSlotWidget(FName InSlotName) const;
+
+	/** What the host put in InSlotName, or null. Reads the binding, not the attachment. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	UDreamWidget* GetContentForNamedSlot(FName InSlotName) const;
+
+	/**
+	 * Bind InContent to InSlotName. InContent must belong to the same tree as this widget -- a slot
+	 * is filled by the host that placed this instance, never by a third asset.
+	 *
+	 * Returns false, loudly, when the slot is not declared or the content is not the caller's to
+	 * give. Editor-facing: the designer's drop into a slot row is this call.
+	 */
+	bool SetContentForNamedSlot(FName InSlotName, UDreamWidget* InContent);
+
+	/** Every slot name InTree declares, in tree order. Static because the compiler asks before any instance exists. */
+	static void CollectDeclaredSlotNames(const UDreamWidgetTree* InTree, TArray<FName>& OutNames);
 
 	/**
 	 * Run this widget's property bindings once: call each bound function, hand the result to the
@@ -133,10 +167,25 @@ DREAMGUI_API void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot);
  * where an instance ends -- three answers to this question is how "the panel folded it but you could
  * still click into it" happens.
  *
- * Not a visibility rule and not persisted: it changes nothing about what a hierarchy IS. NamedSlot
- * will be the one sanctioned hole in it, and it will be opened here.
+ * Not a visibility rule and not persisted: it changes nothing about what a hierarchy IS. The one
+ * sanctioned hole in it is UDreamNamedSlot, and CollectDreamEditorChildren is where it is opened.
  */
 DREAMGUI_API bool DreamWidget_ShouldEditorExpandContents(const UDreamWidget* InWidget);
+
+/**
+ * The children an editor shows under InWidget, which is not always the children it has.
+ *
+ * For anything but a nested widget blueprint instance this is simply Children. For a nested
+ * instance it is the SLOTS its class declares -- one row each, named by the slot -- and nothing
+ * else, because everything else in there belongs to another asset. What the host put in a slot then
+ * hangs under that row and expands like any other widget, which it is: it lives in the host's tree.
+ *
+ * One function rather than a predicate each caller interprets: the hierarchy panel, viewport picking
+ * and the walk that records per-widget designer state all have to agree about where an instance ends
+ * and a hole begins, and three implementations of that is how "the panel folded it but you could
+ * still click into it" happens.
+ */
+DREAMGUI_API void CollectDreamEditorChildren(UDreamWidget* InWidget, TArray<UDreamWidget*>& OutChildren);
 
 /**
  * InRoot and its descendants as an editor sees them: everything down to, and including, each nested

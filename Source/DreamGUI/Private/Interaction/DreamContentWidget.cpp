@@ -1,6 +1,7 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamContentWidget.h"
+#include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
 
 void UDreamContentWidget::OnRegister()
@@ -287,4 +288,29 @@ TArray<FName> UDreamNamedSlotHost::GetSlotNames() const
 		if (GetContentForSlot(Pair.Key)) Result.Add(Pair.Key);
 	}
 	return Result;
+}
+
+FName UDreamNamedSlot::GetSlotName() const
+{
+	const UDreamWidget* Host = GetWidget();
+	// Sanitized the same way a widget's variable name is, so a slot called "Header Content" and the
+	// binding key the compiler and the host write cannot come out different.
+	return IsValid(Host) ? UDreamWidgetTree::MakeWidgetVariableName(Host) : NAME_None;
+}
+
+UDreamWidget* UDreamNamedSlot::GetSlotContent() const
+{
+	const UDreamWidget* Host = GetWidget();
+	if (!IsValid(Host))
+	{
+		return nullptr;
+	}
+	for (UDreamWidget* Child : Host->GetChildren())
+	{
+		if (IsValid(Child))
+		{
+			return Child;
+		}
+	}
+	return nullptr;
 }

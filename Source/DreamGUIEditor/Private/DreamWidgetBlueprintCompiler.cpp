@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamWidgetBlueprintCompiler.h"
 #include "DreamWidgetBlueprint.h"
@@ -346,6 +346,42 @@ void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClas
 				FText::FromString(Match->GetClass()->GetName())).ToString());
 		}
 	}
+
+	ValidateNamedSlotBindings(Archetype);
+}
+
+void FDreamWidgetBlueprintCompilerContext::ValidateNamedSlotBindings(UDreamWidgetTree* InArchetype)
+{
+	if (!IsValid(InArchetype))
+	{
+		return;
+	}
+	// Every nested widget blueprint instance in this hierarchy, checked against the slots its own
+	// class declares. A slot the class removed or renamed leaves the host still holding content for a
+	// name nobody answers, and the runtime's only options are to drop it or to guess -- so it is
+	// reported here, on the asset that can fix it, with both names in the message.
+	InArchetype->ForEachWidget([this](UDreamWidget* Widget)
+	{
+		UDreamUserWidget* Nested = Cast<UDreamUserWidget>(Widget);
+		if (Nested == nullptr || Nested->NamedSlotContent.Num() == 0)
+		{
+			return;
+		}
+		TArray<FName> Declared;
+		UDreamUserWidget::CollectDeclaredSlotNames(
+			UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(Nested->GetClass()), Declared);
+		for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : Nested->NamedSlotContent)
+		{
+			if (!Declared.Contains(Binding.Key))
+			{
+				MessageLog.Error(*FText::Format(
+					LOCTEXT("NamedSlotNotDeclared", "\"{0}\" has content bound to a slot named \"{1}\", and {2} declares no such slot."),
+					FText::FromString(Nested->GetDisplayName()),
+					FText::FromName(Binding.Key),
+					FText::FromString(Nested->GetClass()->GetName())).ToString());
+			}
+		}
+	});
 }
 
 void FDreamWidgetBlueprintCompilerContext::FinishCompilingClass(UClass* Class)
