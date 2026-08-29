@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Designer/DreamWidgetTreeEditing.h"
 
@@ -161,8 +161,13 @@ namespace DreamWidgetTreeEditing
 	UDreamWidget* CreateWidget(UDreamWidgetBlueprint* InBlueprint, TSubclassOf<UDreamWidget> InWidgetClass,
 		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName)
 	{
+		// Same rule as the duplicate path below: every refusal says so. A command that returns null
+		// without a word is a palette drop that does nothing, and the user has no way to tell that
+		// from a bug in the drag.
 		if (!IsValid(InBlueprint))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot create a widget: there is no Blueprint to create it in."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return nullptr;
 		}
 		if (!IsValid(InWidgetClass) || InWidgetClass->HasAnyClassFlags(CLASS_Abstract))
@@ -182,6 +187,8 @@ namespace DreamWidgetTreeEditing
 		}
 		if (!Parent->CanAcceptAdditionalChildren(1))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot take another child, so nothing was created under it."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName());
 			return nullptr;
 		}
 
@@ -194,6 +201,8 @@ namespace DreamWidgetTreeEditing
 		UDreamWidget* Widget = Tree->ConstructWidget(InWidgetClass);
 		if (!IsValid(Widget))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Constructing a '%s' produced nothing."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(InWidgetClass));
 			return nullptr;
 		}
 		const FString Desired = InDesiredDisplayName.IsEmpty() ? InWidgetClass->GetName() : InDesiredDisplayName;
@@ -204,6 +213,8 @@ namespace DreamWidgetTreeEditing
 			// The capacity check above already passed, so this is a cycle or a refusal from the panel
 			// itself. Leaving a parentless widget outered to the tree would put it in no hierarchy and
 			// in every save.
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' refused the new '%s' as a child; it was not created."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName(), *GetNameSafe(InWidgetClass));
 			Widget->DestroyWidget();
 			return nullptr;
 		}
@@ -248,21 +259,29 @@ namespace DreamWidgetTreeEditing
 	{
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget) || !IsTemplateWidgetOf(InBlueprint, InNewParent))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot move '%s' under '%s': not part of '%s' authoring tree."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(InWidget), *GetNameSafe(InNewParent), *GetNameSafe(InBlueprint));
 			return false;
 		}
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
 		if (Tree->RootWidget == InWidget)
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Refusing to move the root of '%s'; a hierarchy has to have one."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InBlueprint->GetName());
 			return false;
 		}
 		if (InWidget == InNewParent || InNewParent->IsChildOf(InWidget))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot move '%s' into itself or into something it contains."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InWidget->GetDisplayName());
 			return false;
 		}
 		// Only when it is actually moving house: a reorder inside the same parent is not an arrival,
 		// and asking whether there is room for one more would refuse a full panel reordering itself.
 		if (InWidget->GetParent() != InNewParent && !InNewParent->CanAcceptChild(InWidget))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot take '%s', so it was not moved."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNewParent->GetDisplayName(), *InWidget->GetDisplayName());
 			return false;
 		}
 
@@ -280,6 +299,8 @@ namespace DreamWidgetTreeEditing
 		// position turns into a stale one.
 		if (!InWidget->TrySetParent(InNewParent, /*bKeepWorldPosition*/false, InSiblingIndex))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' refused '%s' as a child; it stayed where it was."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNewParent->GetDisplayName(), *InWidget->GetDisplayName());
 			return false;
 		}
 
@@ -291,6 +312,8 @@ namespace DreamWidgetTreeEditing
 	{
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget))
 		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot rename '%s': not part of '%s' authoring tree."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(InWidget), *GetNameSafe(InBlueprint));
 			return FString();
 		}
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);

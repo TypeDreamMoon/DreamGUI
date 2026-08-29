@@ -2214,8 +2214,16 @@ UDreamWidget* FDreamWidgetBlueprintEditor::DesignerCreateWidget(UDreamWidget* In
 {
 	if (!IsValid(BlueprintBeingEdited))
 	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot create a widget: this designer has no Blueprint."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
+	// Every other structural command in this editor opens one; this one did not, so dragging a
+	// control out of the palette landed a widget that Ctrl+Z could not take back -- the undo stack
+	// simply had no entry for it, and the next Ctrl+Z reached past it into the user's earlier work.
+	// Here rather than at the call sites: the palette, the hierarchy drop and the tools menu all
+	// arrive through this function, and three of them remembering separately is how one forgets.
+	const FScopedTransaction Transaction(LOCTEXT("CreateWidget_Transaction", "DreamUI Create Widget"));
 	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewParent);
 	if (ParentTemplate == nullptr)
 	{
@@ -2225,6 +2233,7 @@ UDreamWidget* FDreamWidgetBlueprintEditor::DesignerCreateWidget(UDreamWidget* In
 	UDreamWidget* Template = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, InWidgetClass, ParentTemplate, -1, InDesiredName);
 	if (Template == nullptr)
 	{
+		// CreateWidget said why. Nothing was written, so the transaction records nothing either.
 		return nullptr;
 	}
 	// Configuration lands on the TEMPLATE -- the visual, the components, whatever the caller adds.
@@ -2421,6 +2430,8 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 	TArray<UDreamWidget*> Result;
 	if (!IsValid(BlueprintBeingEdited) || !IsValid(BlueprintBeingEdited->WidgetTree))
 	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot paste: this designer has no authoring tree."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return Result;
 	}
 	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewParent);
@@ -2430,6 +2441,8 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 	}
 	if (ParentTemplate == nullptr)
 	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot paste: '%s' has no root to paste into."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *BlueprintBeingEdited->GetName());
 		return Result;
 	}
 
@@ -2447,6 +2460,9 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 		}
 		if (!ParentTemplate->CanAcceptAdditionalChildren(1))
 		{
+			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d '%s' has no room for the rest of the clipboard; %d of %d pasted."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ParentTemplate->GetDisplayName(),
+				NewTemplates.Num(), DreamWidgetDesignerClipboard::Roots.Num());
 			break;
 		}
 		// A second copy, so pasting twice does not hand the tree the clipboard's own objects. Same
@@ -2454,6 +2470,8 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 		UDreamWidget* Copy = UDreamWidget::DuplicateSubtree(Tree, Root.Get());
 		if (!IsValid(Copy))
 		{
+			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Copying '%s' out of the clipboard produced nothing."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Root->GetDisplayName());
 			continue;
 		}
 		TArray<UDreamWidget*> Copied;
@@ -2471,6 +2489,8 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 		}
 		else
 		{
+			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d '%s' refused the pasted '%s'; it was discarded."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ParentTemplate->GetDisplayName(), *Copy->GetDisplayName());
 			Copy->DestroyWidget();
 		}
 	}

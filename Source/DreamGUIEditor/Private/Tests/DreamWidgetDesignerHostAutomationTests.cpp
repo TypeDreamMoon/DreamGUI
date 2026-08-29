@@ -215,6 +215,13 @@ bool FDreamDesignerTreeEditingTest::RunTest(const FString&)
 {
 	using namespace DreamWidgetDesignerHostTestLocal;
 
+	// This test asks for two refusals on purpose, and every refusal in the editing API now says so
+	// out loud -- a command that returns false without a word is a menu item that does nothing when
+	// clicked. So the refusals it provokes have to be declared here, or the very thing under test
+	// counts as a failure.
+	AddExpectedError(TEXT("into itself or into something it contains"), EAutomationExpectedErrorFlags::Contains, 0);
+	AddExpectedError(TEXT("not part of .* authoring tree"), EAutomationExpectedErrorFlags::Contains, 0);
+
 	FScopedBlueprint Scoped(TEXT("DesignerTreeEditing"));
 	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))
 	{
@@ -1069,6 +1076,46 @@ bool FDreamNamedSlotUndeclaredIsAnErrorTest::RunTest(const FString&)
 	}
 	TestTrue(TEXT("the compiler says so, naming both the instance and the slot"), bReported);
 	TestTrue(TEXT("and it is an error, not a warning"), Results.NumErrors > 0);
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerCreateIsUndoableTest,
+	"DreamGUI.Designer.CreatingAWidgetInTheTreeIsUndoable",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerCreateIsUndoableTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+
+	// COVERAGE BOUNDARY: this pins that the WRITE is recorded. The defect found by dragging a
+	// control out of the palette was the other half -- FDreamWidgetBlueprintEditor::DesignerCreateWidget
+	// opened no transaction at all, so there was nothing on the stack to pop and the user's next
+	// Ctrl+Z reached past the drop into their earlier work. That call needs a live editor toolkit,
+	// which no test here can build; it is verified by hand in the editor.
+	FScopedBlueprint Scoped(TEXT("CreateIsUndoable"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))return false;
+	BuildSampleHierarchy(Scoped.Blueprint);
+	UDreamWidgetTree* Tree = Scoped.Blueprint->WidgetTree;
+	const int32 Before = Tree->RootWidget->GetChildrenCount();
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Create")));
+	UDreamWidget* Created = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Tree->RootWidget, -1, TEXT("Fourth"));
+	GEditor->EndTransaction();
+	if (!TestNotNull(TEXT("the widget was created"), (UObject*)Created))return false;
+	TestEqual(TEXT("and attached"), Tree->RootWidget->GetChildrenCount(), Before + 1);
+
+	GEditor->UndoTransaction();
+	// Slots, not live children: an object created inside a transaction is invalidated by the undo,
+	// so counting only the valid ones reports success while a dead entry sits in the array.
+	TestEqual(TEXT("undo takes it back out, leaving no slot behind"), Tree->RootWidget->GetChildrenCount(), Before);
 	return true;
 }
 
