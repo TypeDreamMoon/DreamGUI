@@ -8,7 +8,10 @@
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamLayout.h"
+#include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Designer/DreamWidgetPropertyBindingExtension.h"
 #include "DreamGUI.h"
 #include "DreamGUIEditorModule.h"
@@ -99,6 +102,107 @@ namespace DreamWidgetPreviewHostLocal
 				NextNode, NextNode->GetValue(), bIsModify);
 		}
 		return MigrateAlongChain(InSource, InDestination, NextNode, InMemberProperty, bIsModify);
+	}
+
+	/**
+	 * A widget's sub-objects that no binding can name.
+	 *
+	 * ResolveBindingSite answers for the widget, its visual and its behaviours, because those are the
+	 * three a `<-` can target. It is the right answer to the question BINDINGS ask. The mirror asks a
+	 * different question that happens to have the same answer three times out of five -- "given this
+	 * object in the preview, which object is it on the template?" -- and by reusing that call it
+	 * inherited the two cases bindings do not have.
+	 *
+	 * Those two are the panel slot and the layouts, and between them they own most of what a designer
+	 * actually drags: Padding, both alignments, FillWeight, the grid coordinates, every spacing and
+	 * every layout rule. All of them moved the preview and none of them reached the asset -- and since
+	 * the .dui is written by comparing the file against the ASSET, none of them reached the file
+	 * either. It read as a write-back that did not fire.
+	 */
+	enum class ESubObjectSite : uint8
+	{
+		None,
+		PanelSlot,
+		LayoutContainer,
+		LayoutSelf,
+	};
+
+	/** Which sub-object of which widget InObject is, by identity rather than by type. */
+	ESubObjectSite ResolveSubObjectSite(const UObject* InObject, UDreamWidget*& OutOwner)
+	{
+		OutOwner = nullptr;
+		const UDreamWidgetSubObjectBehaviour* SubObject = Cast<UDreamWidgetSubObjectBehaviour>(InObject);
+		if (SubObject == nullptr)
+		{
+			return ESubObjectSite::None;
+		}
+		UDreamWidget* Owner = SubObject->GetWidget();
+		if (!IsValid(Owner))
+		{
+			return ESubObjectSite::None;
+		}
+		// Compared by pointer, the same way ResolveBindingSite insists on the widget's OWN visual: an
+		// object that merely has this outer but is no longer the one the widget uses would otherwise
+		// have its edits written onto whichever object replaced it.
+		OutOwner = Owner;
+		if (Owner->GetPanelSlot() == InObject)
+		{
+			return ESubObjectSite::PanelSlot;
+		}
+		if (Owner->GetLayoutContainer() == InObject)
+		{
+			return ESubObjectSite::LayoutContainer;
+		}
+		if (Owner->GetLayoutSelf() == InObject)
+		{
+			return ESubObjectSite::LayoutSelf;
+		}
+		OutOwner = nullptr;
+		return ESubObjectSite::None;
+	}
+
+	/**
+	 * The same sub-object on another widget, minting a panel slot if that is what is missing.
+	 *
+	 * Minting is right for the slot and wrong for the layouts. A panel slot is not authored: it is
+	 * per-child data the PARENT's layout hands out, created at registration by EnsurePanelSlotForChild
+	 * -- which an authoring tree never reaches, so a template routinely has none until something writes
+	 * to it. Refusing here would mean the first padding a designer sets is dropped and every one after
+	 * it works, which is worse than either alternative.
+	 *
+	 * A layout is authored: `+ VerticalBox {}` in the text, or the Layout picker in the panel. If the
+	 * template has none and the preview does, the two have diverged structurally, and quietly creating
+	 * one here would write the divergence into the asset instead of reporting it.
+	 */
+	UObject* ResolveSubObjectOn(UDreamWidget* InWidget, ESubObjectSite InSite, UClass* InExpectedClass)
+	{
+		if (!IsValid(InWidget))
+		{
+			return nullptr;
+		}
+		switch (InSite)
+		{
+		case ESubObjectSite::PanelSlot:
+		{
+			UDreamPanelSlot* Slot = InWidget->GetPanelSlot();
+			if (!IsValid(Slot) && InExpectedClass != nullptr
+				&& InExpectedClass->IsChildOf(UDreamPanelSlot::StaticClass()))
+			{
+				InWidget->SetFlags(RF_Transactional);
+				InWidget->Modify();
+				// The preview's class, not the default: the parent's layout chose it, and both widgets
+				// have the same parent.
+				Slot = InWidget->CreateNewPanelSlot(TSubclassOf<UDreamPanelSlot>(InExpectedClass));
+			}
+			return Slot;
+		}
+		case ESubObjectSite::LayoutContainer:
+			return InWidget->GetLayoutContainer();
+		case ESubObjectSite::LayoutSelf:
+			return InWidget->GetLayoutSelf();
+		default:
+			return nullptr;
+		}
 	}
 }
 
@@ -435,20 +539,34 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 	{
 		return false;
 	}
-	// Which object on the widget this is -- the widget, its visual, or a behaviour by position. The
-	// same question bindings ask, answered in the same place so the two cannot disagree about it.
-	const DreamWidgetPropertyBindingExtension::FBindingSite Site =
-		DreamWidgetPropertyBindingExtension::ResolveBindingSite(InPreviewObject);
-	if (Site.Widget == nullptr)
+	// Which object on the widget this is. Two questions, asked in this order because the second is
+	// the narrower one: bindings name the widget, its visual and its behaviours, and everything else
+	// a details panel edits is a sub-object identified by position on its owner.
+	UObject* TemplateObject = nullptr;
+	UDreamWidget* SubObjectOwner = nullptr;
+	const DreamWidgetPreviewHostLocal::ESubObjectSite SubSite =
+		DreamWidgetPreviewHostLocal::ResolveSubObjectSite(InPreviewObject, SubObjectOwner);
+	if (SubSite != DreamWidgetPreviewHostLocal::ESubObjectSite::None)
 	{
-		return false;
+		TemplateObject = DreamWidgetPreviewHostLocal::ResolveSubObjectOn(
+			FindTemplateForPreview(SubObjectOwner), SubSite, InPreviewObject->GetClass());
 	}
-	UDreamWidget* Template = FindTemplateForPreview(Site.Widget);
-	if (Template == nullptr)
+	else
 	{
-		return false;
+		// The same question bindings ask, answered in the same place so the two cannot disagree.
+		const DreamWidgetPropertyBindingExtension::FBindingSite Site =
+			DreamWidgetPropertyBindingExtension::ResolveBindingSite(InPreviewObject);
+		if (Site.Widget == nullptr)
+		{
+			return false;
+		}
+		UDreamWidget* Template = FindTemplateForPreview(Site.Widget);
+		if (Template == nullptr)
+		{
+			return false;
+		}
+		TemplateObject = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
 	}
-	UObject* TemplateObject = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
 	if (!IsValid(TemplateObject) || TemplateObject->GetClass() != InPreviewObject->GetClass())
 	{
 		return false;

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -13,7 +13,9 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelLayouts.h"
+#include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Interaction/UITextInput.h"
@@ -1056,6 +1058,104 @@ bool FDreamDesignerClipboardCarriesTheSubtreeTest::RunTest(const FString&)
 	TestEqual(TEXT("pasting brought the whole subtree, not just its root"),
 		Scoped.TemplateCount(), CountBefore + 4);
 	TestEqual(TEXT("and the original is still whole"), Panel->GetChildren().Num(), 2);
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerSubObjectEditsReachTheAssetTest,
+	"DreamGUI.Designer.SubObjectEditsReachTheAsset",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The mirror has to carry the sub-objects a details panel edits, not only the widget itself.
+ *
+ * Most of what a designer touches does not live on the UDreamWidget: Padding and the alignments are
+ * on its UDreamPanelSlot, spacing and layout rules on its UDreamLayoutContainer. Those rows reach the
+ * panel through AddExternalObjects and used to be dropped by the mirror, which asked
+ * ResolveBindingSite -- the right question for BINDINGS, which can name only the widget, its visual
+ * and its behaviours.
+ *
+ * Nothing about it looked broken: the preview moved, the viewport re-laid-out, and the value stayed
+ * until the next rebuild. Downstream it read as a write-back failure, because a .dui is written by
+ * comparing the file against the ASSET, and the asset never heard about the edit.
+ */
+bool FDreamDesignerSubObjectEditsReachTheAssetTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerSubObjectEdits"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* ChildTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Child"));
+	Scoped.Rebuild();
+	ChildTemplate = Scoped.FindTemplate(TEXT("Child"));
+	UDreamWidget* ChildPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(ChildTemplate);
+	if (!TestNotNull(TEXT("The child has a preview"), ChildPreview))
+	{
+		return false;
+	}
+
+	// ---- the panel slot
+	UDreamPanelSlot* PreviewSlot = ChildPreview->GetPanelSlot();
+	if (!TestNotNull(TEXT("Registration gave the preview child a panel slot"), PreviewSlot))
+	{
+		return false;
+	}
+	// Deliberately NOT creating one on the template first. An authoring tree never registers, so
+	// EnsurePanelSlotForChild never runs on it and the first padding anyone sets arrives with nothing
+	// to write to. Refusing that one edit and accepting every later one is its own bug.
+	TestNull(TEXT("and the template starts without one"), ChildTemplate->GetPanelSlot());
+
+	PreviewSlot->Padding = FMargin(12.0f);
+	FProperty* PaddingProperty = UDreamPanelSlot::StaticClass()->FindPropertyByName(
+		GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, Padding));
+	FEditPropertyChain PaddingChain;
+	PaddingChain.AddHead(PaddingProperty);
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewSlot }, PaddingChain, /*bIsModify*/false);
+
+	UDreamPanelSlot* TemplateSlot = ChildTemplate->GetPanelSlot();
+	if (TestNotNull(TEXT("The edit minted the template's slot"), TemplateSlot))
+	{
+		TestEqual(TEXT("and the asset took the padding"), TemplateSlot->Padding.Left, 12.0f);
+	}
+	Scoped.Rebuild();
+	UDreamWidget* Rebuilt = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(
+		Scoped.FindTemplate(TEXT("Child")));
+	if (TestNotNull(TEXT("Still previewed after a rebuild"), Rebuilt)
+		&& TestNotNull(TEXT("with a slot"), Rebuilt->GetPanelSlot()))
+	{
+		// The assertion the preview-only version of this test would have passed without the fix.
+		TestEqual(TEXT("And the rebuilt preview shows it"), Rebuilt->GetPanelSlot()->Padding.Left, 12.0f);
+	}
+
+	// ---- the layout container, which is authored and so is never minted here
+	UDreamWidget* RootTemplate = Scoped.TemplateRoot();
+	UDreamWidget* RootPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(RootTemplate);
+	UDreamLayoutContainerCanvasPanel* PreviewCanvas =
+		Cast<UDreamLayoutContainerCanvasPanel>(RootPreview != nullptr ? RootPreview->GetLayoutContainer() : nullptr);
+	if (TestNotNull(TEXT("The preview root has the canvas layout"), PreviewCanvas))
+	{
+		FProperty* SortProperty = UDreamLayoutContainerCanvasPanel::StaticClass()->FindPropertyByName(
+			GET_MEMBER_NAME_CHECKED(UDreamLayoutContainerCanvasPanel, bSortChildrenByZOrder));
+		if (TestNotNull(TEXT("which has a rule to edit"), SortProperty))
+		{
+			PreviewCanvas->bSortChildrenByZOrder = false;
+			FEditPropertyChain LayoutChain;
+			LayoutChain.AddHead(SortProperty);
+			Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewCanvas }, LayoutChain, /*bIsModify*/false);
+
+			UDreamLayoutContainerCanvasPanel* TemplateCanvas =
+				Cast<UDreamLayoutContainerCanvasPanel>(RootTemplate->GetLayoutContainer());
+			if (TestNotNull(TEXT("The template root still has its layout"), TemplateCanvas))
+			{
+				TestFalse(TEXT("and the asset took the layout rule"), TemplateCanvas->bSortChildrenByZOrder);
+			}
+		}
+	}
 	return true;
 }
 

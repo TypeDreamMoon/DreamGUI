@@ -219,10 +219,51 @@ void SDreamWidgetDesignerDetails::NotifyPostChange(const FPropertyChangedEvent& 
 	{
 		return;
 	}
-	if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin())
+	TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
+	if (!Editor.IsValid())
 	{
-		Editor->MigrateDetailsChangeToTemplate(GetEditedObjects(), *PropertyThatChanged, /*bIsModify*/false);
+		return;
 	}
+
+	// The objects the EVENT names, not the ones the hierarchy selected.
+	//
+	// A widget's interesting properties mostly do not live on the widget: Padding and the alignments
+	// belong to its UDreamPanelSlot, spacing and layout rules to its UDreamLayoutContainer, Text and
+	// FontSize to its visual. Those rows reach this panel through AddExternalObjects, so they are
+	// never in GetSelectedObjects -- and MigratePropertyToTemplate refuses any object the changed
+	// property does not belong to, by design, because applying a chain to the wrong object asserts.
+	//
+	// Half the fix. The mirror also had no case for those sub-objects, so getting the right object
+	// here still wrote nothing until FDreamWidgetPreviewHost learned them; see ESubObjectSite there
+	// for why the two are separate. Both were silent, and both looked like the write-back's fault:
+	// edit a slot's Padding, watch the preview move, find the template unchanged and the .dui
+	// untouched. Only properties sitting on UDreamWidget itself ever reached the asset.
+	//
+	// The two things worth knowing about the event, because both were guessed wrong once:
+	// PropertyNode.cpp calls this hook unconditionally, external-object rows included, and
+	// TopLevelObjects is filled from FObjectBaseAddress::Object -- which for such a row IS the
+	// external object. The fallback below is for callers that construct an event without them.
+	TArray<UObject*> EditedObjects;
+	const int32 NumEdited = PropertyChangedEvent.GetNumObjectsBeingEdited();
+	EditedObjects.Reserve(NumEdited);
+	for (int32 Index = 0; Index < NumEdited; ++Index)
+	{
+		if (UObject* Edited = const_cast<UObject*>(PropertyChangedEvent.GetObjectBeingEdited(Index)))
+		{
+			EditedObjects.Add(Edited);
+		}
+	}
+	if (EditedObjects.Num() == 0)
+	{
+		EditedObjects = GetEditedObjects();
+	}
+
+	// Modify first, for the same reason NotifyPreChange does it: the destination has to be in the
+	// transaction before it is written or the edit cannot be undone. Pre-change only ever saw the
+	// SELECTION, so an external object reaching here has never been snapshotted -- and Modify inside
+	// an open transaction is idempotent, so doing it again for a selected one costs nothing.
+	Editor->MigrateDetailsChangeToTemplate(EditedObjects, *PropertyThatChanged, /*bIsModify*/true);
+	Editor->MigrateDetailsChangeToTemplate(EditedObjects, *PropertyThatChanged, /*bIsModify*/false);
 }
 
 TArray<UObject*> SDreamWidgetDesignerDetails::GetEditedObjects() const
