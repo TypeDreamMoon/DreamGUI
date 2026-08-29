@@ -15,6 +15,8 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamText.h"
+#include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
 #include "UObject/UObjectIterator.h"
 
 #include "Editor.h"
@@ -450,6 +452,80 @@ bool FDreamDesignerDeleteWarnsAboutGraphUseTest::RunTest(const FString&)
 	UDreamWidget* RootPreview = Scoped.PreviewRoot();
 	TestEqual(TEXT("Deleting the parent reports the child's use"),
 		Scoped.Designer->CollectGraphReferencesToWidgets({ RootPreview }).Num(), 1);
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerBindingIsAuthoredAgainstTheRightObjectTest,
+	"DreamGUI.Designer.BindingIsOfferedAndAuthoredAgainstTheRightObject",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerBindingIsAuthoredAgainstTheRightObjectTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	using namespace DreamWidgetPropertyBindingExtension;
+
+	FScopedDesigner Scoped(TEXT("DesignerBinding"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	FDreamUIEditorTools::CreateWidgetAndReturn([PreviewRoot]() { return PreviewRoot; },
+		TEXT("Label"), UDreamText::StaticClass(), nullptr);
+
+	UDreamWidget* LabelTemplate = Scoped.FindTemplate(TEXT("Label"));
+	UDreamWidget* Label = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(LabelTemplate);
+	if (!TestNotNull(TEXT("The widget has a preview"), Label))
+	{
+		return false;
+	}
+	UDreamText* Text = Cast<UDreamText>(Label->GetVisual());
+	if (!TestNotNull(TEXT("And a text visual"), Text))
+	{
+		return false;
+	}
+
+	// A visual has no name of its own, so a binding on one has to be found on the widget that owns it.
+	const FBindingSite Site = ResolveBindingSite(Text);
+	TestTrue(TEXT("The visual resolves to a site"), Site.IsValid());
+	TestEqual(TEXT("Named after the WIDGET"), Site.WidgetName, FName(TEXT("Label")));
+	TestTrue(TEXT("And marked as the visual"), Site.Target == EDreamWidgetBindingTarget::Visual);
+
+	// Offered exactly where the compiler would accept it: a property with a setter, and not one
+	// without. The two answers come from one function so the panel cannot offer what compiling refuses.
+	FProperty* Kerning = UDreamText::StaticClass()->FindPropertyByName(FName(TEXT("bUseKerning")));
+	if (TestNotNull(TEXT("The settable property exists"), Kerning))
+	{
+		TestTrue(TEXT("It is offered"), IsBindable(Text, Kerning));
+	}
+	FProperty* NoSetter = UDreamText::StaticClass()->FindPropertyByName(
+		FName(TEXT("WidgetPropertyDataStartPosition")));
+	if (NoSetter != nullptr)
+	{
+		TestFalse(TEXT("A property with no setter is not"), IsBindable(Text, NoSetter));
+	}
+
+	// Authoring writes to the Blueprint, which is the only place a binding can survive a rebuild.
+	SetBinding(Scoped.Blueprint, Site, FName(TEXT("bUseKerning")), FName(TEXT("IsInitialized")));
+	TestEqual(TEXT("The asset carries the binding"), Scoped.Blueprint->PropertyBindings.Num(), 1);
+	if (Scoped.Blueprint->PropertyBindings.Num() == 1)
+	{
+		const FDreamWidgetPropertyBinding& Authored = Scoped.Blueprint->PropertyBindings[0];
+		TestEqual(TEXT("Against the widget's name"), Authored.WidgetName, FName(TEXT("Label")));
+		TestTrue(TEXT("On the visual"), Authored.Target == EDreamWidgetBindingTarget::Visual);
+		TestEqual(TEXT("Calling the chosen function"), Authored.FunctionName, FName(TEXT("IsInitialized")));
+	}
+
+	// Rebinding replaces rather than accumulates: two bindings on one property would both run, and
+	// which one won would be array order.
+	SetBinding(Scoped.Blueprint, Site, FName(TEXT("bUseKerning")), FName(TEXT("IsRegistered")));
+	TestEqual(TEXT("Rebinding replaces"), Scoped.Blueprint->PropertyBindings.Num(), 1);
+
+	RemoveBinding(Scoped.Blueprint, Site, FName(TEXT("bUseKerning")));
+	TestEqual(TEXT("And removal clears it"), Scoped.Blueprint->PropertyBindings.Num(), 0);
 
 	return true;
 }

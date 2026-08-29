@@ -95,3 +95,15 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
  * at, and two copies of this walk would be two chances to disagree.
  */
 DREAMGUI_API UObject* ResolveDreamWidgetBindingTarget(const UDreamWidget* InWidget, EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex);
+
+/** The name a property's setter is spelled with: SetText for Text, SetUseKerning for bUseKerning. */
+DREAMGUI_API FName MakeDreamWidgetSetterName(const FProperty* InProperty);
+
+/**
+ * That setter, when it exists taking one in-parameter of the property's type -- and so also the
+ * answer to "is this property bindable".
+ *
+ * Shared rather than duplicated because the editor and the compiler have to agree: a panel that
+ * offers Bind on a property the compiler then refuses is worse than no panel entry at all.
+ */
+DREAMGUI_API UFunction* FindDreamWidgetSetterFor(const UClass* InClass, const FProperty* InProperty);

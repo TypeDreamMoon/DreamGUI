@@ -6,6 +6,8 @@
 #include "IPropertyUtilities.h"
 #include "PropertyCustomizationHelpers.h"
 #include "DreamWidgetHierarchyPickerView.h"
+#include "DreamWidgetPropertyBindingExtension.h"
+#include "DreamWidgetBlueprintEditor.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
@@ -39,7 +41,17 @@ bool FDreamWidgetDetailPropertyExtensionHandler::IsWidgetReferenceProperty(const
 
 bool FDreamWidgetDetailPropertyExtensionHandler::IsPropertyExtendable(const UClass* ObjectClass, const IPropertyHandle& PropertyHandle) const
 {
-	return IsWidgetReferenceProperty(PropertyHandle.GetProperty());
+	if (IsWidgetReferenceProperty(PropertyHandle.GetProperty()))
+	{
+		return true;
+	}
+	// The other tenant of this slot: a property a binding could drive. Asked about every row in the
+	// panel, so it answers with the same rule the row builder does -- a bare true makes the property
+	// editor allocate an extension slot for rows that will never use one.
+	TArray<UObject*> Outers;
+	PropertyHandle.GetOuterObjects(Outers);
+	return Outers.Num() == 1
+		&& DreamWidgetPropertyBindingExtension::IsBindable(Outers[0], PropertyHandle.GetProperty());
 }
 
 void FDreamWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow& InWidgetRow, const IDetailLayoutBuilder& InDetailBuilder, const UClass* InObjectClass,	TSharedPtr<IPropertyHandle> InPropertyHandle)
@@ -48,7 +60,24 @@ void FDreamWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRo
 	InDetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 	if (ObjectsBeingCustomized.Num() != 1)return;
 	if (!ObjectsBeingCustomized[0].IsValid())return;
-	if (!IsWidgetReferenceProperty(InPropertyHandle->GetProperty()))return;
+
+	if (!IsWidgetReferenceProperty(InPropertyHandle->GetProperty()))
+	{
+		// The binding row draws its own control; the picker below is only for reference properties.
+		UObject* Owner = ObjectsBeingCustomized[0].Get();
+		if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(World.Get()).Pin())
+		{
+			if (TSharedPtr<SWidget> BindingWidget = DreamWidgetPropertyBindingExtension::MakeBindingWidget(
+				Designer.Get(), Owner, InPropertyHandle))
+			{
+				InWidgetRow.ExtensionContent()
+				[
+					BindingWidget.ToSharedRef()
+				];
+			}
+		}
+		return;
+	}
 	auto ObjectClass = CastField<FObjectPropertyBase>(InPropertyHandle->GetProperty())->PropertyClass;
 	UObject* Object = nullptr;
 	if (InPropertyHandle->GetValue(Object) != FPropertyAccess::Success)return;

@@ -200,38 +200,6 @@ void FDreamWidgetBlueprintCompilerContext::UpdateGeneratedClassWidgetTree(UDream
 	OldWidgetTree = nullptr;
 }
 
-FName FDreamWidgetBlueprintCompilerContext::MakeSetterName(const FProperty* InProperty)
-{
-	// SetText for Text, SetUseKerning for bUseKerning: the bool prefix is not part of the name the
-	// setter is spelled with, and every setter in the library follows this.
-	FString Name = InProperty->GetName();
-	if (InProperty->IsA<FBoolProperty>() && Name.Len() > 1 && Name[0] == TEXT('b') && FChar::IsUpper(Name[1]))
-	{
-		Name.RightChopInline(1);
-	}
-	return FName(*(TEXT("Set") + Name));
-}
-
-UFunction* FDreamWidgetBlueprintCompilerContext::FindSetterFor(const UClass* InWidgetClass, const FProperty* InProperty)
-{
-	if (InWidgetClass == nullptr || InProperty == nullptr)
-	{
-		return nullptr;
-	}
-	UFunction* Setter = InWidgetClass->FindFunctionByName(MakeSetterName(InProperty));
-	if (Setter == nullptr || Setter->NumParms != 1 || Setter->GetReturnProperty() != nullptr)
-	{
-		return nullptr;
-	}
-	for (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
-	{
-		// One parameter, in, of the property's own type. Anything else is a different function that
-		// happens to be spelled the same.
-		return (!(It->PropertyFlags & CPF_OutParm) && It->SameType(InProperty)) ? Setter : nullptr;
-	}
-	return nullptr;
-}
-
 void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InClass)
 {
 	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
@@ -277,7 +245,7 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				FText::FromName(Authored.WidgetName), FText::FromName(Authored.PropertyName)).ToString());
 			continue;
 		}
-		UFunction* Setter = FindSetterFor(Target->GetClass(), TargetProperty);
+		UFunction* Setter = FindDreamWidgetSetterFor(Target->GetClass(), TargetProperty);
 		if (Setter == nullptr)
 		{
 			MessageLog.Error(*FText::Format(

@@ -70,10 +70,6 @@ private:
 	 * parameter type are all decided once, with a place to report the answer.
 	 */
 	void CompilePropertyBindings(UClass* InClass);
-	/** The name a property's setter is spelled with -- SetText for Text, SetUseKerning for bUseKerning. */
-	static FName MakeSetterName(const FProperty* InProperty);
-	/** That setter, when it exists with the one in-parameter of the property's type. */
-	static UFunction* FindSetterFor(const UClass* InWidgetClass, const FProperty* InProperty);
 
 	UDreamWidgetGeneratedClass* NewDreamWidgetClass = nullptr;
 	/** The class's previous archetype, kept across the sanitize pass so it can be patched over. */
