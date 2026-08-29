@@ -387,4 +387,39 @@ bool FDreamWidgetPropertyBindingWithoutASetterIsRefusedTest::RunTest(const FStri
 	return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetSetterRuleTest,
+	"DreamGUI.WidgetBlueprint.TheSetterRuleFindsByValueAndByConstReferenceSetters",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetSetterRuleTest::RunTest(const FString& Parameters)
+{
+	UClass* TextClass = UDreamText::StaticClass();
+
+	auto SetterFor = [TextClass](const TCHAR* InPropertyName) -> FName
+	{
+		const FProperty* Property = TextClass->FindPropertyByName(FName(InPropertyName));
+		UFunction* Setter = FindDreamWidgetSetterFor(TextClass, Property);
+		return Setter != nullptr ? Setter->GetFName() : NAME_None;
+	};
+
+	// By value.
+	TestEqual(TEXT("A float setter is found"), SetterFor(TEXT("FontSize")), FName(TEXT("SetFontSize")));
+	// The bool prefix is not part of the setter's name.
+	TestEqual(TEXT("A bool setter drops the b"), SetterFor(TEXT("bUseKerning")), FName(TEXT("SetUseKerning")));
+
+	// By CONST REFERENCE, which is how every FText, FString and struct setter in the library is
+	// written. UHT flags such a parameter CPF_OutParm as well as CPF_ConstParm, so a rule that
+	// rejects OutParm alone refuses all of them -- and refuses them silently, as a property that
+	// simply offers no Bind entry. Text is the one anybody would try to bind first.
+	TestEqual(TEXT("A const-reference setter is found too"), SetterFor(TEXT("Text")), FName(TEXT("SetText")));
+
+	// And the negative still holds, or every property would look bindable.
+	TestEqual(TEXT("A property with no setter has none"),
+		SetterFor(TEXT("WidgetPropertyDataStartPosition")), FName(NAME_None));
+
+	return true;
+}
+
 #endif

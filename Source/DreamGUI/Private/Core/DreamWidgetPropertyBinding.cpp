@@ -36,7 +36,14 @@ UFunction* FindDreamWidgetSetterFor(const UClass* InClass, const FProperty* InPr
 	{
 		// One parameter, in, of the property's own type. Anything else is a different function that
 		// happens to be spelled the same way.
-		return (!(It->PropertyFlags & CPF_OutParm) && It->SameType(InProperty)) ? Setter : nullptr;
+		//
+		// "In" has to allow const-reference: UHT flags a `const FText&` parameter CPF_OutParm as well
+		// as CPF_ConstParm, so rejecting OutParm alone throws away every setter that takes its value
+		// by const-ref -- which is how all of the FText, FString and struct setters are written, and
+		// so exactly the properties anyone would want to bind. A genuine out-parameter is OutParm
+		// WITHOUT ConstParm.
+		const bool bIsOutParameter = (It->PropertyFlags & CPF_OutParm) && !(It->PropertyFlags & CPF_ConstParm);
+		return (!bIsOutParameter && It->SameType(InProperty)) ? Setter : nullptr;
 	}
 	return nullptr;
 }
