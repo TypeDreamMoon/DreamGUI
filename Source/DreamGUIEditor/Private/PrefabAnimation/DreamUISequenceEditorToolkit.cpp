@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUISequenceEditorToolkit.h"
+#include "Core/DreamUserWidget.h"
 #include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
 #include "PrefabSystem/DreamUIWidgetBinding.h"
 #include "PrefabSystem/DreamUIPrefabInstanceScene.h"
@@ -69,15 +70,20 @@ void FDreamUISequenceEditorToolkit::DestroyPreviewTree()
 void FDreamUISequenceEditorToolkit::RebuildPreviewTree()
 {
 	DestroyPreviewTree();
-	UDreamUIPrefab* Prefab = Sequence != nullptr ? Sequence->PreviewPrefab.LoadSynchronous() : nullptr;
-	if (Prefab == nullptr || !PreviewScene.IsValid())
+	UClass* WidgetClass = Sequence != nullptr ? Sequence->PreviewWidgetClass.LoadSynchronous() : nullptr;
+	if (WidgetClass == nullptr || !PreviewScene.IsValid())
 	{
 		return;
 	}
-	// The root agent carries the canvas (design size, render mode) exactly the way the prefab
-	// editor sets it up; loading under it is what makes the tree lay out and draw.
-	UDreamWidget* ParentAgent = PreviewScene->GetParentForLoadPrefab(Prefab);
-	UDreamWidget* Root = Prefab->LoadPrefab(PreviewScene->GetWorld(), ParentAgent);
+	// The root agent carries the canvas (design size, render mode) exactly the way the designer sets
+	// it up; instantiating under it is what makes the tree lay out and draw. The size is the
+	// designer's own default rather than anything on the asset: an animation is authored against a
+	// class, and a class does not carry the screen it was drawn for.
+	UDreamWidget* ParentAgent = PreviewScene->EnsureRootAgent(
+		FIntPoint(1920, 1080), EDreamRenderMode::ScreenSpaceOverlay, FIntPoint(1920, 1080));
+	UDreamUserWidget* Instance = ParentAgent != nullptr
+		? CreateDreamWidget(PreviewScene->GetWorld(), WidgetClass, ParentAgent) : nullptr;
+	UDreamWidget* Root = Instance;
 	if (Root == nullptr)
 	{
 		return;
@@ -105,10 +111,10 @@ void FDreamUISequenceEditorToolkit::RebuildPreviewTree()
 void FDreamUISequenceEditorToolkit::OnObjectPropertyChanged(UObject* InObject, FPropertyChangedEvent& InEvent)
 {
 	if (InObject == Sequence
-		&& InEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UDreamUISequence, PreviewPrefab))
+		&& InEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UDreamUISequence, PreviewWidgetClass))
 	{
-		// The root agent's canvas was configured for the previous prefab; rebuild the scene so the
-		// new prefab gets its own design size and render mode.
+		// EnsureRootAgent is idempotent -- it hands back the agent it already made -- so the scene has
+		// to go for the new class to get a canvas of its own rather than the last one's.
 		DestroyPreviewTree();
 		PreviewScene.Reset();
 		PreviewScene = MakeUnique<FDreamUIPrefabInstanceScene>(

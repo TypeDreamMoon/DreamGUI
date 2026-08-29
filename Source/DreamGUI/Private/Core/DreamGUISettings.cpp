@@ -33,9 +33,7 @@ UDreamGUISettings::UDreamGUISettings()
 	DefaultFrameRectSprite = TSoftObjectPtr<UDreamUISpriteData>(FSoftObjectPath(TEXT("/DreamGUI/DreamUIPreset_Rect_Sprite.DreamUIPreset_Rect_Sprite")));
 	DefaultWhiteSolidTexture = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(TEXT("/DreamGUI/Textures/DreamUIPreset_WhiteSolid.DreamUIPreset_WhiteSolid")));
 	DefaultRectBlockData = TSoftObjectPtr<UDreamRectBlockData>(FSoftObjectPath(TEXT("/DreamGUI/DefaultRectBlockData.DefaultRectBlockData")));
-	// Points at nothing until the shipped controls are converted to classes; a null default simply
-	// means no navigation-selection visual, which is the same as it behaved with a missing prefab.
-	NavigationSelectionClass = nullptr;
+	NavigationSelectionClass = TSoftClassPtr<UDreamUserWidget>(FSoftClassPath(TEXT("/DreamGUI/Controls/BP_NavigationSelectionInputHandler.BP_NavigationSelectionInputHandler_C")));
 
 	// The event system defaults to the native preset rather than to the Blueprint one it used to
 	// spawn: same behaviour, and nothing to break if the Blueprint is renamed or deleted.

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabSequenceEditor.h"
+#include "Core/DreamUserWidget.h"
 #include "PrefabEditor/DreamUIPrefabBehaviourUtils.h"
 #include "K2Node_CallFunction.h"
 #include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
@@ -892,11 +893,19 @@ void SDreamUIPrefabSequenceEditor::OnExportAnimationToAsset()
 	// The movie scene is copied whole; the bindings are rebuilt as widget paths, because the
 	// embedded form's direct HelperWidget pointers mean nothing outside this prefab instance.
 	Asset->Modify();
-	if (UDreamUIPrefabHelperObject* SourceHelper = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget))
+	// The asset remembers which widget CLASS it was authored against, so its own editor can put up a
+	// live preview tree. The instance the animation was authored on is the class: an embedded
+	// animation lives on a widget that belongs to exactly one UDreamUserWidget, preview or live.
 	{
-		// The asset remembers which prefab it was authored against, so its own editor can put up
-		// a live preview tree.
-		Asset->PreviewPrefab = SourceHelper->PrefabAsset.Get();
+		UDreamUserWidget* OwningInstance = Cast<UDreamUserWidget>(RootWidget);
+		if (OwningInstance == nullptr && RootWidget != nullptr)
+		{
+			OwningInstance = RootWidget->GetTypedOuter<UDreamUserWidget>();
+		}
+		if (OwningInstance != nullptr)
+		{
+			Asset->PreviewWidgetClass = OwningInstance->GetClass();
+		}
 	}
 	UMovieScene* CopiedScene = DuplicateObject<UMovieScene>(Source->GetMovieScene(), Asset);
 	Asset->MovieScene = CopiedScene;

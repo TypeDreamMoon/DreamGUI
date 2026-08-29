@@ -9,19 +9,24 @@
 #include "DreamUISequence.generated.h"
 
 class UDreamWidget;
+class UDreamUserWidget;
 
 /**
  * A DreamGUI animation as a standalone asset.
  *
- * The embedded UDreamUIPrefabSequence lives inside one prefab's sequence component and can be
+ * The embedded UDreamUIPrefabSequence lives inside one widget's sequence component and can be
  * played only there. This asset form exists so a Level Sequence can play the same animation as an
  * ordinary subsequence -- scrubbing, time-warping and blending included -- and so one animation can
- * be reused across prefabs.
+ * be reused across widget classes.
  *
  * Bindings are FMovieSceneBindingReferences carrying UDreamUIWidgetBinding entries: a root binding
  * (empty path) plus per-widget display-name paths. Child possessables are parented to the root and
  * parent contexts are significant, so resolving the root against a different presenter re-roots the
  * whole tree -- which is exactly what UDreamUISequenceSection's binding override does.
+ *
+ * Bindings resolve by NAME against whatever tree they are given, so one animation can drive the
+ * preview here, a live instance at runtime, and any other instance of the class -- the same thing
+ * that made the embedded animations work on a class model at all.
  */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamUISequence
@@ -49,12 +54,12 @@ public:
 #endif
 
 	/**
-	 * The prefab this animation is authored against. The standalone editor instantiates it as a
+	 * The widget class this animation is authored against. The standalone editor instantiates it as a
 	 * preview tree so the bindings resolve and scrubbing shows the real thing; playback through a
 	 * component or a subsequence override ignores it entirely.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamUI")
-	TSoftObjectPtr<class UDreamUIPrefab> PreviewPrefab;
+	TSoftClassPtr<UDreamUserWidget> PreviewWidgetClass;
 
 	/** The standalone editor's live preview tree, if one is up. Not serialized, not owned here. */
 	UDreamWidget* GetPreviewRoot() const { return PreviewRootWidget.Get(); }
