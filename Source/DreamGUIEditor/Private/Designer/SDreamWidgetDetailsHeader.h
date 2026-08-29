@@ -15,7 +15,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "DreamWidgetBlueprintEditor.h"
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorDetailTab"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerDetails"
 
 /**
  * The name and class strip above the details view.

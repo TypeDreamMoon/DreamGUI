@@ -1556,7 +1556,7 @@ void UDreamWidget::WarnIfPerspectiveCannotApply()const
 	}
 	else if (Root->IsRenderToWorldSpace())
 	{
-		// The prefab editor previews in world space by default, so this is the message an author is
+		// The designer previews in world space by default, so this is the message an author is
 		// most likely to need: the field they are adjusting is genuinely inert in front of them.
 		Reason = TEXT("its canvas renders in world space, where the scene camera does the projecting and already supplies perspective of its own. Perspective is defined against a canvas's own virtual camera, so switch the preview canvas to ScreenSpaceOverlay (the Screen Space button on the toolbar). The remap is baked into the geometry, so it then shows in the editor viewport too -- use Canvas Eye to view it from the projection it was built for");
 	}
@@ -1682,25 +1682,7 @@ void UDreamWidget::SetParentBeforeRegister(UDreamWidget* InParent)
 	}
 }
 
-void UDreamWidget::ApplySiblingIndexFromPrefab_Recursive()
-{
-	// Order by the restored indices first — StableSort keeps relative order across holes and duplicates
-	// (legacy data, cross-parent moves) — then renumber contiguously so a later tail-append can never
-	// collide with a restored index. Silent on purpose: this runs during prefab assembly/refresh, before
-	// anything consumes the hierarchy.
-	Children.StableSort([](const UDreamWidget& A, const UDreamWidget& B)
-		{
-			return A.SiblingIndex < B.SiblingIndex;
-		});
-	for (int i = 0; i < Children.Num(); i++)
-	{
-		auto& Child = Children[i];
-		Child->SiblingIndex = i;
-		Child->ApplySiblingIndexFromPrefab_Recursive();
-	}
-}
-
-void UDreamWidget::RestoreSiblingIndexFromPrefab(int32 InSiblingIndex)
+void UDreamWidget::RestoreSiblingIndex(int32 InSiblingIndex)
 {
 	SiblingIndex = InSiblingIndex;
 	if (Parent.IsValid())
@@ -1914,7 +1896,7 @@ bool UDreamWidget::TrySetParent(UDreamWidget* InParent, bool InKeepWorldPosition
 	return TrySetParentInternal(InParent, InKeepWorldPosition, InSiblingIndex, true);
 }
 
-bool UDreamWidget::SetParentFromPrefab(UDreamWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex)
+bool UDreamWidget::SetParentIgnoringCapacity(UDreamWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex)
 {
 	return TrySetParentInternal(InParent, InKeepWorldPosition, InSiblingIndex, false);
 }
@@ -2386,10 +2368,10 @@ void UDreamWidget::OnAttachedToParent()
 		DreamUIManager->UnparkWidget(this);
 	}
 	RefreshPerspectiveInHierarchy();//a new parent can put this subtree inside a perspective scope
-	if (this->bIsRegistered)//registered means not during prefab process
+	if (this->bIsRegistered)//registered means the hierarchy is live, not still being assembled
 	{
 		Call_TransformChanged();
-		CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
+		CalculateAnchorFromTransform();//a live attach has to derive anchors from the transform so KeepRelative/KeepWorld hold; while a tree is being assembled the serialized anchors are already right
 	}
 
 	UDreamCanvas* ParentCanvas = this->GetComponentInParent<UDreamCanvas>();
@@ -2475,7 +2457,7 @@ void UDreamWidget::OnRegister()
 	// fires no attach events. So registration is the first moment the transient bits derived from
 	// serialized properties can be recomputed. Without this, a saved render transform (or a saved
 	// perspective declared anywhere but the root) works in the session that authored it and
-	// silently does nothing after a load -- which reads as "only works in the prefab editor".
+	// silently does nothing after a load -- which reads as "only works in the designer".
 	RefreshRenderTransformFlag();
 	RefreshPerspectiveInHierarchy();
 	const bool bPanelSlotRegisteredByEnsure = Parent.IsValid()

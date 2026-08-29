@@ -225,7 +225,7 @@ public:
 	/**
 	 * Editor: append a binding calling InTargetComponent's InFunctionName, wiring the helper
 	 * fields so it survives serialization and shows in the customization -- the programmatic
-	 * counterpart of picking a function in the details panel, for the prefab editor's Event "+".
+	 * counterpart of picking a function in the details panel, for the designer's Event "+".
 	 */
 	void AddFunctionBinding(UDreamWidget* InHelperWidget, UDreamUIBehaviour* InTargetComponent, FName InFunctionName, EDreamUIEventDelegateParameterType InParamType, bool bInUseNativeParameter);
 	/** True when any binding already targets InTargetComponent's InFunctionName. */

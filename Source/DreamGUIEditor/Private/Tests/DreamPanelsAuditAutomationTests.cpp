@@ -14,7 +14,7 @@
 // the class picker hides. Whichever way the refusal is reached, it has to be reached before the menu
 // entry is offered: Cut has already deleted the component by the time the paste refuses it, Duplicate
 // silently does nothing, and the clipboard is one static shared by every panel, so an item no paste
-// will accept leaves Paste greyed out for every widget in every prefab editor.
+// will accept leaves Paste greyed out for every widget in every designer.
 //
 // The predicate is asked here rather than through the panel because the panel is a Slate widget no
 // headless test can construct.

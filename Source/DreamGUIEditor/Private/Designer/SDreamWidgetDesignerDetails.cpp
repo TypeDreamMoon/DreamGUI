@@ -41,7 +41,7 @@
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorDetailTab"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerDetails"
 
 namespace DreamWidgetDesignerDetailsLayout
 {
@@ -56,7 +56,7 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
 	DesignerPtr = FDreamWidgetBlueprintEditor::GetEditorByWorld(World.Get());
 	if (DesignerPtr.IsValid())
 	{
-		//if open in PrefabEditor then sync selection by PrefabEditor
+		//if open in DesignerEditor then sync selection by DesignerEditor
 		DesignerPtr.Pin()->OnSelectionChanged.AddRaw(this, &SDreamWidgetDesignerDetails::OnEditorSelectionChanged);
 	}
 	else
@@ -72,7 +72,7 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
     // This panel, not GUnrealEd: an edit here has to be carried from the preview onto the
     // template, and NotifyPreChange/NotifyPostChange are where that happens.
     DetailsViewArgs.NotifyHook = this;
-    DetailsViewArgs.ViewIdentifier = FName(TEXT("DreamUIPrefabEditor"));
+    DetailsViewArgs.ViewIdentifier = FName(TEXT("DreamWidgetDesigner"));
     DetailsViewArgs.bCustomNameAreaLocation = true;
     DetailsViewArgs.bCustomFilterAreaLocation = false;
     DetailsViewArgs.DefaultsOnlyVisibility = EEditDefaultsOnlyNodeVisibility::Hide;
@@ -167,9 +167,9 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
 
 SDreamWidgetDesignerDetails::~SDreamWidgetDesignerDetails()
 {
-	if (TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = DesignerPtr.Pin())
+	if (TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin())
 	{
-		PrefabEditor->OnSelectionChanged.RemoveAll(this);
+		DesignerEditor->OnSelectionChanged.RemoveAll(this);
 	}
 	if (auto Selection = UDreamUISelection::GetInstance(World.Get()))
 	{

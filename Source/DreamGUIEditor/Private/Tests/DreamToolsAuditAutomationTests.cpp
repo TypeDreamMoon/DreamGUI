@@ -19,21 +19,21 @@
 namespace DreamToolsAuditTestLocal
 {
 	/** A root carrying the companion behaviour: the state a real delete warning runs against. */
-	struct FManagedPrefabFixture
+	struct FCompanionBehaviourFixture
 	{
 		UWorld* World = nullptr;
 		TStrongObjectPtr<UDreamWidget> Root;
 		TStrongObjectPtr<UDreamUIAutoBindTestBehaviour> Companion;
 		TArray<TStrongObjectPtr<UDreamWidget>> KeepAlive;
 
-		FManagedPrefabFixture()
+		FCompanionBehaviourFixture()
 		{
 			World = UWorld::CreateWorld(EWorldType::Editor, false);
 			Root.Reset(MakeWidget(TEXT("Root")));
 			Root->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>();
 			Companion.Reset(Root->AddComponent<UDreamUIAutoBindTestBehaviour>());
 		}
-		~FManagedPrefabFixture()
+		~FCompanionBehaviourFixture()
 		{
 			KeepAlive.Empty();
 			Companion.Reset();
@@ -74,7 +74,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamDeleteReportsVisualBindingTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamToolsAuditTestLocal;
-	FManagedPrefabFixture Fixture;
+	FCompanionBehaviourFixture Fixture;
 	UDreamWidget* Banner = Fixture.AddChild(TEXT("Banner"));
 	UDreamImage* Image = Banner->CreateNewVisual<UDreamImage>();
 	if (!TestNotNull(TEXT("the visual attached"), (UObject*)Image))return false;
@@ -98,7 +98,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamDeleteIgnoresNotInstanceEditableBindingTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamToolsAuditTestLocal;
-	FManagedPrefabFixture Fixture;
+	FCompanionBehaviourFixture Fixture;
 	UDreamWidget* Child = Fixture.AddChild(TEXT("NotInstanceEditable"));
 	Fixture.Companion->NotInstanceEditable = Child;
 

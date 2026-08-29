@@ -161,7 +161,7 @@ namespace DreamUIControlRegistryLocal
 		return FSlateIconFinder::FindIconForClass(Class);
 	}
 
-	static FDreamUIControlDescriptor MakePrefab(const TCHAR* Name, const TCHAR* DisplayName, const TCHAR* AssetName, const TCHAR* IconStyleName)
+	static FDreamUIControlDescriptor MakeControl(const TCHAR* Name, const TCHAR* DisplayName, const TCHAR* AssetName, const TCHAR* IconStyleName)
 	{
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
@@ -495,18 +495,18 @@ void FDreamUIControlRegistry::RegisterDefaults()
 		}
 		return Descriptor;
 	};
-	Register(MakePrefab(TEXT("Button"), TEXT("Button"), TEXT("Button"), TEXT("ClassIcon.Button")));
-	Register(MakePrefab(TEXT("CheckBox"), TEXT("Check Box"), TEXT("Toggle"), TEXT("ClassIcon.CheckBox")));
-	Register(MakePrefab(TEXT("ToggleGroup"), TEXT("Toggle Group"), TEXT("ToggleGroup"), TEXT("ClassIcon.CheckBox")));
-	Register(MakePrefab(TEXT("HorizontalSlider"), TEXT("Horizontal Slider"), TEXT("HorizontalSlider"), TEXT("ClassIcon.Slider")));
-	Register(MakePrefab(TEXT("VerticalSlider"), TEXT("Vertical Slider"), TEXT("VerticalSlider"), TEXT("ClassIcon.Slider")));
-	Register(MakePrefab(TEXT("HorizontalScrollbar"), TEXT("Horizontal Scrollbar"), TEXT("HorizontalScrollbar"), TEXT("ClassIcon.ScrollBar")));
-	Register(MakePrefab(TEXT("VerticalScrollbar"), TEXT("Vertical Scrollbar"), TEXT("VerticalScrollbar"), TEXT("ClassIcon.ScrollBar")));
-	Register(MakePrefab(TEXT("ComboBox"), TEXT("Combo Box"), TEXT("Dropdown"), TEXT("ClassIcon.ComboBox")));
-	Register(MakePrefab(TEXT("TextInput"), TEXT("Text Input"), TEXT("TextInput"), TEXT("ClassIcon.EditableTextBox")));
-	Register(MakePrefab(TEXT("TextInputMultiline"), TEXT("Text Input (Multiline)"), TEXT("TextInput_Multiline"), TEXT("ClassIcon.MultilineEditableTextBox")));
-	Register(MakePrefab(TEXT("HorizontalScrollView"), TEXT("Horizontal Scroll Box"), TEXT("HorizontalScrollView"), TEXT("ClassIcon.Scrollbox")));
-	Register(MakePrefab(TEXT("VerticalScrollView"), TEXT("Vertical Scroll Box"), TEXT("VerticalScrollView"), TEXT("ClassIcon.Scrollbox")));
+	Register(MakeControl(TEXT("Button"), TEXT("Button"), TEXT("Button"), TEXT("ClassIcon.Button")));
+	Register(MakeControl(TEXT("CheckBox"), TEXT("Check Box"), TEXT("Toggle"), TEXT("ClassIcon.CheckBox")));
+	Register(MakeControl(TEXT("ToggleGroup"), TEXT("Toggle Group"), TEXT("ToggleGroup"), TEXT("ClassIcon.CheckBox")));
+	Register(MakeControl(TEXT("HorizontalSlider"), TEXT("Horizontal Slider"), TEXT("HorizontalSlider"), TEXT("ClassIcon.Slider")));
+	Register(MakeControl(TEXT("VerticalSlider"), TEXT("Vertical Slider"), TEXT("VerticalSlider"), TEXT("ClassIcon.Slider")));
+	Register(MakeControl(TEXT("HorizontalScrollbar"), TEXT("Horizontal Scrollbar"), TEXT("HorizontalScrollbar"), TEXT("ClassIcon.ScrollBar")));
+	Register(MakeControl(TEXT("VerticalScrollbar"), TEXT("Vertical Scrollbar"), TEXT("VerticalScrollbar"), TEXT("ClassIcon.ScrollBar")));
+	Register(MakeControl(TEXT("ComboBox"), TEXT("Combo Box"), TEXT("Dropdown"), TEXT("ClassIcon.ComboBox")));
+	Register(MakeControl(TEXT("TextInput"), TEXT("Text Input"), TEXT("TextInput"), TEXT("ClassIcon.EditableTextBox")));
+	Register(MakeControl(TEXT("TextInputMultiline"), TEXT("Text Input (Multiline)"), TEXT("TextInput_Multiline"), TEXT("ClassIcon.MultilineEditableTextBox")));
+	Register(MakeControl(TEXT("HorizontalScrollView"), TEXT("Horizontal Scroll Box"), TEXT("HorizontalScrollView"), TEXT("ClassIcon.Scrollbox")));
+	Register(MakeControl(TEXT("VerticalScrollView"), TEXT("Vertical Scroll Box"), TEXT("VerticalScrollView"), TEXT("ClassIcon.Scrollbox")));
 
 	Register(MakeFrameworkPanel(TEXT("CanvasPanel"), UDreamLayoutContainerCanvasPanel::StaticClass(), TEXT("ClassIcon.CanvasPanel"), true));
 	Register(MakeFrameworkPanel(TEXT("Overlay"), UDreamLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Overlay"), true));

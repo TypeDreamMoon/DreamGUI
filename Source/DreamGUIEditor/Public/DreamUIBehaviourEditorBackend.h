@@ -15,7 +15,7 @@ enum class EDreamUIBehaviourHandlerType : uint8
 
 /**
  * Optional editor integration for a script system that produces UDreamUIBehaviour classes.
- * The prefab editor itself only depends on UClass reflection; Blueprint and future
+ * The designer itself only depends on UClass reflection; Blueprint and future
  * AngelScript integrations register code-authoring support through this interface.
  */
 class DREAMGUIEDITOR_API IDreamUIBehaviourEditorBackend

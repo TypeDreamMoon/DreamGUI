@@ -116,7 +116,7 @@ public:
 	void TickWorld(float DeltaSeconds);
 
 	bool FocusViewportToTargets();
-	TSharedPtr<FDreamWidgetBlueprintEditor> GetPrefabEditor() const { return DesignerPtr.Pin(); }
+	TSharedPtr<FDreamWidgetBlueprintEditor> GetDesigner() const { return DesignerPtr.Pin(); }
 	/**
 	 * Which of a widget's own axes something else is deciding: its parent's container, plus its own
 	 * layout-self. Free of any viewport state so the handle policy can be tested directly.

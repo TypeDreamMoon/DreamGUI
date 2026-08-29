@@ -100,7 +100,7 @@ class DREAMGUI_API UDreamUISelection : public UObject
 	GENERATED_BODY()
 
 public:
-	/** Scriptable so editor automation (the unreal-bridge) can drive the prefab editor's selection. */
+	/** Scriptable so editor automation (the unreal-bridge) can drive the designer's selection. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Editor")
 	static UDreamUISelection* GetInstance(UWorld* InWorld);
 	virtual bool IsEditorOnly() const override{return true;}

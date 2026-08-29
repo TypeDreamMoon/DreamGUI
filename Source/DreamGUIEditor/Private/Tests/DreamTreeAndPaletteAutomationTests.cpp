@@ -26,7 +26,7 @@
 // COVERAGE BOUNDARY: what follows pins the decisions, which is what these fixes moved out of Slate
 // on purpose. It does NOT reach the rows: that the palette row binds its check box, that the
 // hierarchy row prints the label and highlights the match, and that the collectors are only run
-// from RebuildList, all need a live prefab editor and generated rows.
+// from RebuildList, all need a live designer and generated rows.
 namespace DreamTreeAndPaletteTestLocal
 {
 	struct FScopedTestWorld

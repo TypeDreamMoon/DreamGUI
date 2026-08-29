@@ -52,7 +52,7 @@ private:
 	FDelegateHandle PostUndoRedoHandle;
 	void OnPostUndoRedo();
 
-	TSharedPtr<SDreamWidgetAnimationEditorWidget> PrefabSequenceEditor;
+	TSharedPtr<SDreamWidgetAnimationEditorWidget> AnimationEditorWidget;
 
 	TSharedPtr<SListView<TSharedPtr<FWidgetAnimationListItem>>> AnimationListView;
 	TArray< TSharedPtr<FWidgetAnimationListItem> > Animations;

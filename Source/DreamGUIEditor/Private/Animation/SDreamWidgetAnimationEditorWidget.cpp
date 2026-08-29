@@ -28,7 +28,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Animation/MovieSceneDreamUIMaterialTrack.h"
 
-#define LOCTEXT_NAMESPACE "DreamUIPrefabSequenceEditorWidget"
+#define LOCTEXT_NAMESPACE "DreamWidgetAnimationEditorWidget"
 
 /**
  * Whether a track may be bound to InWidget at all.
@@ -41,7 +41,7 @@
  * reason.
  *
  * Declared here rather than in the widget's header because that header describes the Slate class,
- * which no headless test can construct; DreamPrefabPanelsAutomationTests declares this prototype.
+ * which no headless test can construct; DreamPanelsAuditAutomationTests declares this prototype.
  */
 bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget)
 {
@@ -144,7 +144,7 @@ public:
 		];
 
 		GEditor->RegisterForUndo(this);
-		// A fallback only: the prefab editor injects its own host via SetToolkitHost so side panels
+		// A fallback only: the designer injects its own host via SetToolkitHost so side panels
 		// (the curve editor) open in its window rather than the level editor's.
 		ToolkitHost = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor").GetFirstLevelEditor();
 
@@ -597,7 +597,7 @@ private:
 	{
 		if (ContextObjects.Num() != 1)return;
 		// This extender is registered with the process-wide manager, so it fires for every sequencer
-		// in the editor -- another prefab editor's, the level editor's, anyone's. The entries below
+		// in the editor -- another designer's, the level editor's, anyone's. The entries below
 		// write into *this* editor's sequencer, so only the widgets of this editor's own prefab may
 		// see them; anything else got duplicate menu items whose click landed in the wrong sequence
 		// (or dereferenced a null sequencer).
@@ -758,7 +758,7 @@ private:
 
 	TSharedPtr<STextBlock> NoAnimationTextBlock;
 
-	/** The asset editor that created this Sequencer if any. Weak on purpose: the prefab editor's host
+	/** The asset editor that created this Sequencer if any. Weak on purpose: the designer's host
 	 *  strong-owns its toolkit, which strong-owns this widget -- a strong pointer here closes that loop
 	 *  and the toolkit never destructs, leaving the asset registered as open after its window is gone. */
 	TWeakPtr<IToolkitHost> ToolkitHost;

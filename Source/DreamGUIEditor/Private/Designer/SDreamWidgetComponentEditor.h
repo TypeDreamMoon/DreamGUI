@@ -34,13 +34,13 @@
 #include "Utils/DreamUIUtils.h"
 
 /**
- * The component list of the prefab editor's details panel: the behaviours on the selected widget,
+ * The component list of the designer's details panel: the behaviours on the selected widget,
  * with add / remove / reorder / copy / paste and asset drops. Used by SDreamWidgetDesignerDetails
- * in the prefab editor and by the Widget Inspector window.
+ * in the designer and by the Widget Inspector window.
  *
  * The class body is written inline here, as it was when it lived inside the details panel's .cpp;
  * the free functions below it are out-of-line in SDreamWidgetComponentEditor.cpp so headless tests
- * can link against them (DreamPrefabPanelsAutomationTests declares the prototypes itself).
+ * can link against them (DreamPanelsAuditAutomationTests declares the prototypes itself).
  */
 
 /** Whether a component of this class may be put on a widget at all. */
@@ -56,7 +56,7 @@ TStrongObjectPtr<UDreamUIBehaviour>& DreamUIWidgetComponentClipboard();
 /** Drop the clipboard while the editor is still up. Called from module shutdown. */
 void DreamUIWidgetComponentClipboard_Reset();
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorDetailTab"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerDetails"
 
 class FDreamWidgetComponentClassFilter : public IClassViewerFilter
 {
@@ -638,9 +638,9 @@ private:
 		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
-		if (auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()); PrefabEditor.IsValid())
+		if (auto DesignerEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()); DesignerEditor.IsValid())
 		{
-			PrefabEditor.Pin()->MarkDesignChanged();
+			DesignerEditor.Pin()->MarkDesignChanged();
 		}
 
 		UDreamUIBehaviour* LastAddedComponent = AddComponentToWidget(Widget,
@@ -726,10 +726,10 @@ private:
 		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
-		auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld());
-		if (PrefabEditor.IsValid())
+		auto DesignerEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld());
+		if (DesignerEditor.IsValid())
 		{
-			PrefabEditor.Pin()->MarkDesignChanged();
+			DesignerEditor.Pin()->MarkDesignChanged();
 		}
 
 		Widget->MoveComponentToIndex(Component, ClampedIndex);

@@ -45,7 +45,7 @@ private:
 
 	TWeakPtr<FDreamUISequenceEditorToolkit> ToolkitPtr;
 
-	/** Click-through cycling state, same scheme as the prefab editor viewport. */
+	/** Click-through cycling state, same scheme as the designer viewport. */
 	int32 ClickCycleIndex = INDEX_NONE;
 	FIntPoint LastClickPixel = FIntPoint(-1, -1);
 

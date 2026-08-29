@@ -8,12 +8,12 @@
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Core/Components/DreamWidget.h"
 
-//declared in DreamUIPrefabSequenceEditorWidget.cpp; the comment there says why it is a bare prototype
+//declared in DreamWidgetAnimationEditorWidget.cpp; the comment there says why it is a bare prototype
 bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 
 FDreamUIDetailKeyframeHandler::FDreamUIDetailKeyframeHandler(TSharedPtr<FDreamWidgetBlueprintEditor> InSequenceEditor)
-	: PrefabEditor( InSequenceEditor )
+	: DesignerEditor( InSequenceEditor )
 {}
 
 bool FDreamUIDetailKeyframeHandler::IsPropertyKeyable(const UClass* InObjectClass, const IPropertyHandle& InPropertyHandle) const
@@ -55,9 +55,9 @@ EPropertyKeyedStatus FDreamUIDetailKeyframeHandler::GetPropertyKeyedStatus(const
 
 TSharedPtr<ISequencer> FDreamUIDetailKeyframeHandler::GetSequencer() const
 {
-	if (PrefabEditor.IsValid())
+	if (DesignerEditor.IsValid())
 	{
-		auto SequencerEditor = PrefabEditor.Pin()->GetSequencerEditor();
+		auto SequencerEditor = DesignerEditor.Pin()->GetSequencerEditor();
 		if (SequencerEditor.IsValid())
 		{
 			return SequencerEditor->GetSequencer();

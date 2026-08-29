@@ -19,7 +19,7 @@
 // dereferenced. The rename policy is the one that crashed (F2 on a row scrolled off screen), and
 // the picker's collection is the one that only ever saw the first root hierarchy. Both now live in
 // free functions over the model, which is what makes them reachable from here at all: everything
-// left in those files needs a generated Slate row or a live prefab editor toolkit.
+// left in those files needs a generated Slate row or a live designer toolkit.
 // COVERAGE BOUNDARY, so the next reader is not misled: these tests pin the rename policy and the
 // picker's root collection as free functions. They do NOT reach the two Slate call sites the
 // defects actually lived in -- SDreamWidgetEditorHierarchyView::CanRename's null-row dereference, and

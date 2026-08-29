@@ -11,7 +11,7 @@
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "DreamWidgetEditorHierarchyViewItem.h"
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorViewport"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerViewport"
 
 void SDreamWidgetDesignerViewport::Construct(const FArguments& InArgs, TSharedPtr<FDreamWidgetBlueprintEditor> InDesigner, EViewModeIndex InViewMode)
 {

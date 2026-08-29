@@ -102,7 +102,7 @@ private:
 	bool GetLayoutControlHorizontalSizeDelta()const;
 	bool GetLayoutControlVerticalSizeDelta()const;
 
-	/** Prefab root only: the design canvas rows, backed by the owning prefab editor. */
+	/** Prefab root only: the design canvas rows, backed by the owning designer. */
 	void AddCanvasSizeRowsForDesignerRoot(IDetailLayoutBuilder& DetailBuilder);
 	TOptional<int32> GetDesignScreenSizeAxis(int32 AxisIndex) const;
 	void OnDesignScreenSizeAxisCommitted(int32 NewValue, ETextCommit::Type CommitType, int32 AxisIndex);

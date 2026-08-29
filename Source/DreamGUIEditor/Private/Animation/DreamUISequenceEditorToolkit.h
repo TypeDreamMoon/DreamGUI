@@ -14,7 +14,7 @@ class SDreamUISequencePreviewViewport;
 
 /**
  * The standalone editor a DreamUI Animation asset opens into: a preview viewport over a private
- * preview world holding the asset's PreviewPrefab, a full Sequencer, and a details panel. The
+ * preview world holding the asset's PreviewWidgetClass, a full Sequencer, and a details panel. The
  * bindings resolve against the preview tree, so scrubbing previews live in the viewport; clicking
  * a widget selects its binding in the Sequencer and dragging the gizmo auto-keys the animation
  * (render translation when the parent's layout owns the position, authored location otherwise).
@@ -48,7 +48,7 @@ private:
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
-	/** (Re)instantiates PreviewPrefab into the private preview world so the bindings resolve. */
+	/** (Re)instantiates PreviewWidgetClass into the private preview world so the bindings resolve. */
 	void RebuildPreviewTree();
 	void DestroyPreviewTree();
 	void OnObjectPropertyChanged(UObject* InObject, struct FPropertyChangedEvent& InEvent);

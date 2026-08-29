@@ -182,10 +182,6 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassIcon.DreamUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
 	Style->Set("ClassIcon.DreamUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
 
-	Style->Set("ClassThumbnail.DreamUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
-	Style->Set("ClassIcon.DreamUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
-	Style->Set("ClassThumbnail.DreamUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
-	Style->Set("ClassIcon.DreamUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
 	Style->Set("ClassThumbnail.DreamUISpriteData", new IMAGE_BRUSH(TEXT("UISprite_40x"), Icon40x40));
 	Style->Set("ClassIcon.DreamUISpriteData", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
 	Style->Set("ClassThumbnail.DreamUIStaticSpriteAtlasData", new IMAGE_BRUSH(TEXT("SpriteAtlas_40x"), Icon40x40));
@@ -197,7 +193,6 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("DreamGUIEditor.SpriteDataAction", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
 	Style->Set("DreamGUIEditor.SpriteDataCreate", new IMAGE_BRUSH(TEXT("SpriteDataCreate_16x"), Icon16x16));
 	Style->Set("DreamGUIEditor.SpriteDataSetting", new IMAGE_BRUSH(TEXT("SpriteDataSetting_16x"), Icon16x16));
-	Style->Set("DreamGUIEditor.PrefabDataAction", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
 
 	Style->Set("DreamGUIEditor.WhiteFrame", new BOX_BRUSH(TEXT("WhiteFrame_1x"), FVector2D(16, 16), 4.0f / 16.0f));
 	Style->Set("DreamGUIEditor.WhiteFrameHorizontal", new BOX_BRUSH(TEXT("WhiteFrameHorizontal_1x"), FVector2D(16, 16), 4.0f / 16.0f));
@@ -222,10 +217,6 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 		.SetHovered(FSlateColorBrush(FColor(0, 39, 131, 64)))
 		.SetPressed(FSlateColorBrush(FColor(0, 39, 131, 128)));
 	Style->Set("EmptyButton", EmptyButton);
-	Style->Set("PrefabMarkWhite", new IMAGE_BRUSH("PrefabMarkWhite_16x", Icon16x16));
-	Style->Set("PrefabPlusMarkWhite", new IMAGE_BRUSH("PrefabPlusMarkWhite_16x", Icon16x16));
-	Style->Set("PrefabVariantMarkWhite", new IMAGE_BRUSH("PrefabVariantMarkWhite_16x", Icon16x16));
-	Style->Set("PrefabMarkBroken", new IMAGE_BRUSH("PrefabMarkBroken_16x", Icon16x16));
 	Style->Set("CanvasMark", new IMAGE_BRUSH("CanvasMark_16x", Icon16x16));
 
 	Style->Set("WidgetSize_ExpandToParent", new IMAGE_BRUSH("WidgetSize_ExpandToParent", Icon16x16));

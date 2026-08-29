@@ -244,7 +244,7 @@ void SDreamWidgetAnimationEditor::Construct(const FArguments& InArgs)
 			+SSplitter::Slot()
 			.Value(0.8f)
 			[
-				SAssignNew(PrefabSequenceEditor, SDreamWidgetAnimationEditorWidget)
+				SAssignNew(AnimationEditorWidget, SDreamWidgetAnimationEditorWidget)
 			]
 		];
 
@@ -252,7 +252,7 @@ void SDreamWidgetAnimationEditor::Construct(const FArguments& InArgs)
 
 	OnObjectsReplacedHandle = FCoreUObjectDelegates::OnObjectsReplaced.AddSP(this, &SDreamWidgetAnimationEditor::OnObjectsReplaced);
 
-	PrefabSequenceEditor->AssignSequence(GetAnimation());
+	AnimationEditorWidget->AssignSequence(GetAnimation());
 	EditingWidgetChangedHandle = FDreamUIEditorTools::OnEditingWidgetChanged.AddRaw(this, &SDreamWidgetAnimationEditor::OnEditingWidgetChanged);
 	PostUndoRedoHandle = FEditorDelegates::PostUndoRedo.AddSP(this, &SDreamWidgetAnimationEditor::OnPostUndoRedo);
 }
@@ -279,9 +279,9 @@ FReply SDreamWidgetAnimationEditor::OnKeyDown(const FGeometry& MyGeometry, const
 
 void SDreamWidgetAnimationEditor::SetToolkitHost(TSharedPtr<IToolkitHost> InToolkitHost)
 {
-	if (PrefabSequenceEditor.IsValid())
+	if (AnimationEditorWidget.IsValid())
 	{
-		PrefabSequenceEditor->SetToolkitHost(InToolkitHost);
+		AnimationEditorWidget->SetToolkitHost(InToolkitHost);
 	}
 }
 
@@ -334,9 +334,9 @@ void SDreamWidgetAnimationEditor::ClearAnimationSelection()
 		//the selection-changed callback assigns the null sequence, which restores the pre-animated state
 		AnimationListView->ClearSelection();
 	}
-	else if (PrefabSequenceEditor.IsValid())
+	else if (AnimationEditorWidget.IsValid())
 	{
-		PrefabSequenceEditor->AssignSequence(nullptr);
+		AnimationEditorWidget->AssignSequence(nullptr);
 	}
 }
 
@@ -354,7 +354,7 @@ void SDreamWidgetAnimationEditor::SelectAnimation(UDreamWidgetAnimation* InAnima
 			{
 				AnimationListView->SetSelection(Item, ESelectInfo::Direct);
 				AnimationListView->RequestScrollIntoView(Item);
-				PrefabSequenceEditor->AssignSequence(InAnimation);
+				AnimationEditorWidget->AssignSequence(InAnimation);
 				return true;
 			}
 		}
@@ -483,7 +483,7 @@ TSharedRef<ITableRow> SDreamWidgetAnimationEditor::OnGenerateRowForAnimationList
 
 void SDreamWidgetAnimationEditor::OnAnimationListViewSelectionChanged(TSharedPtr<FWidgetAnimationListItem> InListItem, ESelectInfo::Type InSelectInfo)
 {
-	PrefabSequenceEditor->AssignSequence(GetAnimation());
+	AnimationEditorWidget->AssignSequence(GetAnimation());
 }
 
 UDreamWidgetAnimation* SDreamWidgetAnimationEditor::GetSelectedAnimation() const
@@ -564,9 +564,9 @@ void SDreamWidgetAnimationEditor::RefreshAnimationList()
 			// refresh put the viewport into animation mode the moment a prefab with any animation was
 			// opened, which is invisible as a cause while the Animations tab is closed.
 			AnimationListView->ClearSelection();
-			if (PrefabSequenceEditor.IsValid())
+			if (AnimationEditorWidget.IsValid())
 			{
-				PrefabSequenceEditor->AssignSequence(nullptr);
+				AnimationEditorWidget->AssignSequence(nullptr);
 			}
 		}
 	}
@@ -592,7 +592,7 @@ void SDreamWidgetAnimationEditor::OnEditingWidgetChanged(UDreamWidget* RootWidge
 
 TSharedPtr<ISequencer> SDreamWidgetAnimationEditor::GetSequencer() const
 {
-	return PrefabSequenceEditor.IsValid() ? PrefabSequenceEditor->GetSequencer() : nullptr;
+	return AnimationEditorWidget.IsValid() ? AnimationEditorWidget->GetSequencer() : nullptr;
 }
 
 void SDreamWidgetAnimationEditor::OnAnimationListViewSearchChanged(const FText& InSearchText)
@@ -637,7 +637,7 @@ TSharedPtr<SWidget> SDreamWidgetAnimationEditor::OnContextMenuOpening()const
 					MenuBuilder.AddMenuSeparator();
 					MenuBuilder.AddMenuEntry(
 						LOCTEXT("TryFixObjectReference", "Try fix object reference"),
-						LOCTEXT("TryFixObjectReference_Tooltip", "DreamUI can search target object by Widget's path relative to ContextObject (Owner Widget of DreamUIPrefabSequenceComponent), "
+						LOCTEXT("TryFixObjectReference_Tooltip", "DreamUI can search target object by Widget's path relative to ContextObject (Owner Widget of DreamWidgetAnimationComponent), "
 											   "so if Widget's DisplayName and Widget's hierarchy is same as before, it is possible to fix the bad tracks."),
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([=, this]() {

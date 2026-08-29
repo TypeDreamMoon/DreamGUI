@@ -15,7 +15,7 @@
 #define LOCTEXT_NAMESPACE "DreamUISequencePreviewViewport"
 
 FDreamUISequencePreviewViewportClient::FDreamUISequencePreviewViewportClient(TWeakPtr<FDreamUISequenceEditorToolkit> InToolkit, const TSharedRef<SDreamUISequencePreviewViewport>& InViewport)
-	// Same base call as the prefab editor viewport: a null mode-tools pointer makes the base create
+	// Same base call as the designer viewport: a null mode-tools pointer makes the base create
 	// a private FAssetEditorModeManager; sharing the global level-editor one routes input through
 	// the 5.8 Interactive Tools Framework's global InputRouter, which has no valid context in a
 	// custom asset-editor viewport and null-derefs in InputKey.
@@ -25,9 +25,9 @@ FDreamUISequencePreviewViewportClient::FDreamUISequencePreviewViewportClient(TWe
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
 	// Without an active mode whose ShouldDrawWidget says yes, the transform gizmo never draws for
-	// DreamWidgets (the stock answer needs actors or components selected). The prefab editor's mode
+	// DreamWidgets (the stock answer needs actors or components selected). The designer's mode
 	// exists for exactly this and carries no other state, so it serves here too.
-	ModeTools->SetDefaultMode(UDreamWidgetDesignerEdMode::EM_DreamUIPrefab);
+	ModeTools->SetDefaultMode(UDreamWidgetDesignerEdMode::EM_DreamWidgetDesigner);
 	ModeTools->ActivateDefaultMode();
 	ModeTools->SetSupportsViewportITF(false);
 
@@ -114,7 +114,7 @@ void FDreamUISequencePreviewViewportClient::ProcessClick(FSceneView& View, HHitP
 	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0;
 
 	// Clicking the same pixel repeatedly walks down through overlapping widgets; a moved cursor
-	// restarts from the top. Same scheme as the prefab editor.
+	// restarts from the top. Same scheme as the designer.
 	const FIntPoint ClickPixel((int32)HitX, (int32)HitY);
 	if (ClickPixel != LastClickPixel)
 	{
@@ -293,7 +293,7 @@ void FDreamUISequencePreviewViewportClient::FocusOnPreview()
 	{
 		return;
 	}
-	// Same pose the prefab editor opens with: on the -X side of the UI plane, looking straight at it.
+	// Same pose the designer opens with: on the -X side of the UI plane, looking straight at it.
 	const FVector Center = Root->GetWorldLocation();
 	const double HalfWidth = FMath::Abs(Root->GetLocalSpaceRight() - Root->GetLocalSpaceLeft()) * 0.5;
 	const double HalfHeight = FMath::Abs(Root->GetLocalSpaceTop() - Root->GetLocalSpaceBottom()) * 0.5;

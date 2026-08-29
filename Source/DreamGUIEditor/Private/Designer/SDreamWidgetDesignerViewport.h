@@ -36,7 +36,7 @@ public:
 	virtual TSharedPtr<FExtender> GetExtenders() const override;
 	virtual void OnFloatingButtonClicked() override;
 	// End of ICommonEditorViewportToolbarInfoProvider interface
-	TSharedPtr<FDreamWidgetBlueprintEditor> GetPrefabEditor() const { return DesignerPtr.Pin(); }
+	TSharedPtr<FDreamWidgetBlueprintEditor> GetDesigner() const { return DesignerPtr.Pin(); }
 	bool SummonContextMenu();
 
 private:

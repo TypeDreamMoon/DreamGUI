@@ -100,38 +100,3 @@ int32 UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame()
 	return GetDefault<UDreamUISettings>()->AsyncGlyphSyncBudgetPerFrame;
 }
 
-
-#if WITH_EDITOR
-void UDreamUIEditorSettings::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-	auto MemberProperty = PropertyChangedEvent.MemberProperty;
-	auto Property = PropertyChangedEvent.Property;
-	if (MemberProperty && Property)
-	{
-		if (MemberProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UDreamUIEditorSettings, ExtraPrefabFolders)
-			|| (
-				Property->GetFName() == GET_MEMBER_NAME_CHECKED(FDirectoryPath, Path)
-				&& MemberProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UDreamUIEditorSettings, ExtraPrefabFolders)
-				)
-			)
-		{
-			for (FDirectoryPath& PathToFix : ExtraPrefabFolders)
-			{
-				if (!PathToFix.Path.IsEmpty() && !PathToFix.Path.StartsWith(TEXT("/"), ESearchCase::CaseSensitive))
-				{
-					PathToFix.Path = FString::Printf(TEXT("/Game/%s"), *PathToFix.Path);
-				}
-			}
-			if (IsValid(GEditor))
-			{
-				GEditor->BroadcastLevelActorListChanged();//refresh Outliner menu
-			}
-		}
-	}
-}
-void UDreamUIEditorSettings::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeChainProperty(PropertyChangedEvent);
-}
-#endif

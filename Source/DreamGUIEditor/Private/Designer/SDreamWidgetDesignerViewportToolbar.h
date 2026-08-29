@@ -7,7 +7,7 @@
 #include "Widgets/SWidget.h"
 #include "SCommonEditorViewportToolbarBase.h"
 
-// In-viewport toolbar used in the DreamUI prefab editor
+// In-viewport toolbar used in the DreamUI designer
 class SDreamWidgetDesignerViewportToolbar : public SCommonEditorViewportToolbarBase
 {
 public:

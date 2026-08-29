@@ -38,7 +38,7 @@ void UDreamWidgetPresenterComponent::LoadWidget()
 #if WITH_EDITOR
 	if (this->GetName().Contains(TEXT("SKEL_")) || this->GetName().Contains(TEXT("TRASH_")))
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("Skip LoadPrefab for %s because it's a temp object for blueprint compiling!"), *this->GetName());
+		UE_LOG(DreamGUI, Warning, TEXT("Skip loading the widget for %s because it's a temp object for blueprint compiling!"), *this->GetName());
 		return;
 	}
 #endif

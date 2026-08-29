@@ -360,7 +360,7 @@ void FDreamGUIEditorModule::OnInitializeSequence(UDreamWidgetAnimation* Sequence
 	MovieScene->SetPlaybackRange(StartFrame, Duration);
 }
 
-/** Defined in PrefabEditor/DreamUIPrefabEditorDetails.cpp, next to the clipboard it clears. */
+/** Defined in DesignerEditor/DreamWidgetDesignerDetails.cpp, next to the clipboard it clears. */
 void DreamUIWidgetComponentClipboard_Reset();
 
 void FDreamGUIEditorModule::ShutdownModule()
@@ -488,7 +488,6 @@ void FDreamGUIEditorModule::ShutdownModule()
 		{
 			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI");
 			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI Editor");
-			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI Prefab");
 			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamWidgetAnimationSequencerSettings");
 		}
 	}

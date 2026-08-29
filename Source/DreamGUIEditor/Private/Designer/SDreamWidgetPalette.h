@@ -26,7 +26,7 @@ namespace DreamUIPalette
 	{
 		Category,     // header
 		BasicWidget,  // UDreamWidget + optional Visual class (VisualClass, may be null)
-		Prefab,       // instantiate a registered control by its widget-class path
+		WidgetClass,  // instantiate a registered control by its widget-class path
 		Native,       // registry recipe (layout/behaviour/optional factory)
 	};
 
@@ -37,8 +37,8 @@ namespace DreamUIPalette
 		// BasicWidget:
 		TWeakObjectPtr<UClass> VisualClass;
 		bool bSetDefaultSprite = false;// Image element gets a default sprite, like the menu
-		// Prefab: the widget class to instantiate, by path.
-		FString PrefabPath;
+		// WidgetClass: the widget class to instantiate, by path.
+		FString WidgetClassPath;
 		TSharedPtr<FDreamUIControlDescriptor> NativeDescriptor;
 		bool bValid = true;
 		FText ValidationError;
@@ -88,11 +88,11 @@ class FDreamUIPaletteDragDropOp : public FDecoratedDragDropOp
 public:
 	DRAG_DROP_OPERATOR_TYPE(FDreamUIPaletteDragDropOp, FDecoratedDragDropOp)
 
-	bool bIsBasicWidget = false;// true: UDreamWidget + VisualClass; false: instantiate PrefabPath
+	bool bIsBasicWidget = false;// true: UDreamWidget + VisualClass; false: instantiate WidgetClassPath
 	TWeakObjectPtr<UClass> VisualClass;
 	bool bSetDefaultSprite = false;
 	TSharedPtr<FDreamUIControlDescriptor> NativeDescriptor;
-	FString PrefabPath;
+	FString WidgetClassPath;
 	FString DisplayName;
 
 	/**

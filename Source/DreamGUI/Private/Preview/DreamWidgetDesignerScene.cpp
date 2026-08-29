@@ -12,7 +12,7 @@
 
 #if WITH_EDITOR
 
-#define LOCTEXT_NAMESPACE "DreamUIPrefabInstanceScene"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerScene"
 
 const FString FDreamWidgetDesignerScene::RootAgentActorName = TEXT("[temporary_RootAgent]");
 

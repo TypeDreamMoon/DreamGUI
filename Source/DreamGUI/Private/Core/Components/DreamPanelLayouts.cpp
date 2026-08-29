@@ -439,7 +439,7 @@ const UDreamPanelSlot* UDreamPanelLayoutBase::GetSlot(const UDreamWidget* Child)
  * bIgnoreLayout means "I position myself", so restoring the authored geometry is what the author asked for.
  * A child that is merely collapsed right now is still owned by this panel and will be laid out again the moment
  * it becomes visible, so its geometry must be left untouched. The authored snapshot is captured at design time
- * (in the prefab editor, at whatever root size that scene had) and can encode a position that is far outside the
+ * (in the designer, at whatever root size that scene had) and can encode a position that is far outside the
  * runtime canvas — restoring it there teleports the whole subtree off-screen, and because the panel skips the
  * child again on the next pass it never comes back.
  */
@@ -1977,7 +1977,7 @@ void UDreamLayoutContainerScrollBox::BeginPlay()
 	{
 		return;
 	}
-	// Runtime input companions exist in GAME worlds only. Editor scenes (prefab editor, helper loads for
+	// Runtime input companions exist in GAME worlds only. Editor scenes (designer, helper loads for
 	// save/refresh) never begin play, and the editor never needs wheel/drag on the panel anyway; its
 	// viewport has its own scrolling.
 	if (!Widget->GetWorld() || !Widget->GetWorld()->IsGameWorld())

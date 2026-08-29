@@ -23,7 +23,7 @@
 #include "Editor.h"
 #include "UObject/UObjectIterator.h"
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabSequenceComponentCustomization"
+#define LOCTEXT_NAMESPACE "DreamWidgetAnimationComponentCustomization"
 
 
 TSharedRef<IDetailCustomization> FDreamWidgetAnimationComponentCustomization::MakeInstance()
@@ -54,16 +54,16 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 		return;
 	}
 
-	auto PrefabEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(World);
+	auto DesignerEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(World);
 
 	DetailBuilder.HideProperty("SequenceArray");
 
 	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Animation", LOCTEXT("AnimationCategory", "Animation"), ECategoryPriority::Important);
 
-	if (!PrefabEditor.IsValid())
+	if (!DesignerEditor.IsValid())
 	{
 		// A level instance: its widget tree is transient and owns no prefab helper, so nothing
-		// edited here could ever be saved. The honest offer is the prefab editor, whose Apply
+		// edited here could ever be saved. The honest offer is the designer, whose Apply
 		// flows back into this instance through the presenter's version check.
 		Category.AddCustomRow(FText())
 			.NameContent()
@@ -75,7 +75,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 			.ValueContent()
 			[
 				SNew(SButton)
-				.ToolTipText(LOCTEXT("EditInPrefabTooltip", "Open this widget's prefab and edit its animations there. Apply in the prefab editor reloads this instance."))
+				.ToolTipText(LOCTEXT("EditInDesignerTooltip", "Open this widget's own Blueprint and edit its animations there. Apply in the designer reloads this instance."))
 				.OnClicked_Lambda([WeakComponent = WeakSequenceComponent]()
 				{
 					UDreamWidgetAnimationComponent* Component = WeakComponent.Get();
@@ -107,7 +107,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 					// The animation focus below used to blind-cast the returned editor to
 					// FDreamWidgetBlueprintEditor. That was only ever safe because the asset was always a
 					// prefab; against a Blueprint it is undefined behaviour, so the jump-to-animation
-					// only happens when the editor really is the prefab editor. Restoring it for the
+					// only happens when the editor really is the designer. Restoring it for the
 					// class model is the editor branch's job.
 					if (IAssetEditorInstance* Instance = Subsystem->FindEditorForAsset(SourceAsset, /*bFocusIfOpen*/true))
 					{
@@ -120,7 +120,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 				})
 				[
 					SNew(STextBlock)
-					.Text(LOCTEXT("EditInPrefabButtonText", "Edit Animations in Prefab"))
+					.Text(LOCTEXT("EditInDesignerButtonText", "Edit Animations in Designer"))
 					.Font(DetailBuilder.GetDetailFont())
 				]
 			];
@@ -129,7 +129,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 
 	bool bIsExternalTabAlreadyOpened = false;
 
-	auto HostTabManager = PrefabEditor.Pin()->GetTabManager();
+	auto HostTabManager = DesignerEditor.Pin()->GetTabManager();
 	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FDreamWidgetBlueprintEditor::GetSequencerTabID());
 	if (ExistingTab.IsValid())
 	{

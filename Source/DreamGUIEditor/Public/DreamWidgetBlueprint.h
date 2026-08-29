@@ -45,7 +45,7 @@ struct FDreamWidgetDesignerData
 	 */
 	UPROPERTY()
 	FIntPoint DesignViewportSize = FIntPoint::ZeroValue;
-	/** Preview render mode (an EDreamRenderMode). ScreenSpaceOverlay by default, as in the prefab editor. */
+	/** Preview render mode (an EDreamRenderMode). ScreenSpaceOverlay by default, as in the designer. */
 	UPROPERTY()
 	uint8 CanvasRenderMode = 0;
 

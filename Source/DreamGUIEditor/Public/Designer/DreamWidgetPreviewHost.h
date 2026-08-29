@@ -26,7 +26,7 @@ struct FPropertyChangedEvent;
  *
  * ## Why a preview at all
  *
- * The prefab editor had no such split: it opened a prefab by DESERIALIZING it into the editor world
+ * The designer had no such split: it opened a prefab by DESERIALIZING it into the editor world
  * and then edited that live hierarchy, applying it back to the asset on demand. That is what made
  * "Apply" a concept, and what made an editor holding an out-of-date copy a recurring failure. Under
  * the class model the asset holds an ordinary object graph, and the graph is inert -- template

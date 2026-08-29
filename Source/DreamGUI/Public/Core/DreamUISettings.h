@@ -68,21 +68,6 @@ class DREAMGUI_API UDreamUISettings :public UObject
 	GENERATED_BODY()
 public:
 	/**
-	 * After every editor prefab save, immediately deserialize the just-written payload into a throwaway
-	 * world and compare it with the edited hierarchy. A structural mismatch (an object lost, gained or
-	 * class-changed by the round trip) rolls the asset back to its previous payload and fails the save,
-	 * so corrupted data can never silently reach disk.
-	 */
-	UPROPERTY(EditAnywhere, config, Category = "Prefab", meta = (DisplayName = "Verify Prefab Save Round Trip"))
-	bool bVerifyPrefabSaveRoundTrip = true;
-	/**
-	 * Escalate property-level round-trip drift (values that load back different from what was saved) from a
-	 * logged warning to a hard save failure. Off by default until the known-benign drift list is burned down.
-	 */
-	UPROPERTY(EditAnywhere, config, Category = "Prefab", meta = (EditCondition = "bVerifyPrefabSaveRoundTrip"))
-	bool bBlockPrefabSaveOnPropertyDrift = false;
-
-	/**
 	 * Seconds a widget may sit created-but-never-added before it is reported and destroyed. Zero
 	 * turns the check off, which is the default.
 	 *
@@ -197,17 +182,8 @@ class DREAMGUI_API UDreamUIEditorSettings : public UObject
 {
 	GENERATED_BODY()
 public:
-#if WITH_EDITOR
-	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
-	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)override;
-#endif
 	virtual bool IsEditorOnly()const override { return true; }
 #if WITH_EDITORONLY_DATA
-	/**
-	 * Prefabs in these folders will appear in "DreamGUI Tools" menu, so we can easily create our own UI control.
-	 */
-	UPROPERTY(EditAnywhere, config, Category = "DreamGUI Editor", meta = (LongPackageName))
-		TArray<FDirectoryPath> ExtraPrefabFolders;
 	/**
 	 * Draw helper box on selected UI element.
 	 */
@@ -218,7 +194,7 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "DreamGUI Editor|Layout")
 		bool bShowLayoutDebugVisualization = false;
 
-	/** Overlay common device resolutions on the prefab designer canvas, like UMG's designer surface. */
+	/** Overlay common device resolutions on the designer canvas, like UMG's designer surface. */
 	UPROPERTY(EditAnywhere, config, Category = "DreamGUI Editor|Layout")
 		bool bShowDesignResolutionGuides = false;
 
@@ -228,9 +204,4 @@ public:
 	UPROPERTY(Transient)
 		bool bDrawSelectableNavigationVisualizer = false;
 #endif
-	/**
-	 * For load prefab debug, display a log that shows how much time a LoadPrefab cost.
-	 */
-	UPROPERTY(EditAnywhere, config, Category = "DreamGUI")
-	bool bLogPrefabLoadTime = false;
 };

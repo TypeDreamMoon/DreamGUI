@@ -2,7 +2,7 @@
 
 #include "MovieSceneSequenceEditor_DreamWidgetAnimation.h"
 
-#define LOCTEXT_NAMESPACE "MovieSceneSequenceEditor_DreamGUIPrefabSequence"
+#define LOCTEXT_NAMESPACE "MovieSceneSequenceEditor_DreamWidgetAnimation"
 
 
 

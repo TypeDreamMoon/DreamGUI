@@ -55,9 +55,9 @@
 #include "Framework/Application/SlateApplication.h"
 #include "ScopedTransaction.h"
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorViewportClient"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerViewportClient"
 
-//declared in DreamUIPrefabSequenceEditorWidget.cpp; the comment there says why it is a bare prototype
+//declared in DreamWidgetAnimationEditorWidget.cpp; the comment there says why it is a bare prototype
 bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 // UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
@@ -82,7 +82,7 @@ FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
 	// Without an active mode that says ShouldDrawWidget, FWidget::Render draws nothing: the stock
 	// answer is "only when actors or components are selected", and a prefab holds neither.
-	ModeTools->SetDefaultMode(UDreamWidgetDesignerEdMode::EM_DreamUIPrefab);
+	ModeTools->SetDefaultMode(UDreamWidgetDesignerEdMode::EM_DreamWidgetDesigner);
 	ModeTools->ActivateDefaultMode();
 	// The classic widget, not the Interactive Tools one. Whether FWidget draws itself or defers to
 	// the ITF gizmo comes from AreEditorGizmosAllowed(ModeTools), which is on by default and follows
@@ -1159,7 +1159,7 @@ void FDreamWidgetDesignerViewportClient::DrawShippedImageOutline(UDreamWidget* I
 	FBox2D ShippedBounds(EForceInit::ForceInit);
 	for (const FVector2D& Corner : Shipped)ShippedBounds += Corner;
 	FCanvasTextItem Label(FVector2D(ShippedBounds.Min.X, ShippedBounds.Max.Y + 2.0f),
-		NSLOCTEXT("DreamUIPrefabEditor", "ShippedImageOutline", "shipped"),
+		NSLOCTEXT("DreamWidgetDesigner", "ShippedImageOutline", "shipped"),
 		GEngine->GetSmallFont(), ShippedColor);
 	Label.EnableShadow(FLinearColor::Black);
 	Canvas.DrawItem(Label);
@@ -1878,9 +1878,9 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerReparentTarget(const FVec
 		});
 		int32 CycleIndex = INDEX_NONE;
 		UDreamWidget* Hit = DreamUIWidgetPicking::PickTopmostWidget(GetWorld(), Widgets, LineStart, LineEnd, CycleIndex);
-		TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = DesignerPtr.Pin();
-		Container = ResolveDragDropContainer(Hit, PrefabEditor.IsValid() ? PrefabEditor->GetPreviewRootWidget() : nullptr, Dragged,
-			[&PrefabEditor](const UDreamWidget* InWidget){ return PrefabEditor.IsValid() && PrefabEditor->IsWidgetLockedForInteraction(InWidget); });
+		TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
+		Container = ResolveDragDropContainer(Hit, DesignerEditor.IsValid() ? DesignerEditor->GetPreviewRootWidget() : nullptr, Dragged,
+			[&DesignerEditor](const UDreamWidget* InWidget){ return DesignerEditor.IsValid() && DesignerEditor->IsWidgetLockedForInteraction(InWidget); });
 	}
 	PendingReparentTarget = Container;
 	// The palette's drop outline already says "this is where it would land", and a drag can only be
@@ -2245,13 +2245,13 @@ void FDreamWidgetDesignerViewportClient::GetGizmoWidgets(TArray<UDreamWidget*>& 
 {
 	OutWidgets.Reset();
 	if (!DesignerPtr.IsValid())return;
-	auto PrefabEditor = DesignerPtr.Pin();
-	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : PrefabEditor->GetSelectedWidgets())
+	auto DesignerEditor = DesignerPtr.Pin();
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : DesignerEditor->GetSelectedWidgets())
 	{
 		UDreamWidget* SelectedWidget = WeakWidget.Get();
 		if (!SelectedWidget)continue;
-		if (PrefabEditor->IsWidgetLockedForInteraction(SelectedWidget))continue;
-		if (PrefabEditor->IsWidgetHiddenInDesigner(SelectedWidget))continue;
+		if (DesignerEditor->IsWidgetLockedForInteraction(SelectedWidget))continue;
+		if (DesignerEditor->IsWidgetHiddenInDesigner(SelectedWidget))continue;
 		OutWidgets.Add(SelectedWidget);
 	}
 }
@@ -3187,16 +3187,16 @@ UWorld* FDreamWidgetDesignerViewportClient::GetWorld()const
 	// GetScene sweep) and on every GC (AddReferencedObjects below). A closing tab releases the
 	// toolkit before Slate lets go of the viewport widget holding this client, so for a frame or
 	// two these get called with the editor already gone -- answer null instead of asserting.
-	const TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = DesignerPtr.Pin();
-	return PrefabEditor.IsValid() ? PrefabEditor->GetWorld() : nullptr;
+	const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
+	return DesignerEditor.IsValid() ? DesignerEditor->GetWorld() : nullptr;
 }
 void FDreamWidgetDesignerViewportClient::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	FEditorViewportClient::AddReferencedObjects(Collector);
-	const TSharedPtr<FDreamWidgetBlueprintEditor> PrefabEditor = DesignerPtr.Pin();
-	if (PrefabEditor.IsValid())
+	const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
+	if (DesignerEditor.IsValid())
 	{
-		PrefabEditor->GetPreviewScene()->AddReferencedObjects(Collector);
+		DesignerEditor->GetPreviewScene()->AddReferencedObjects(Collector);
 	}
 }
 namespace PreviewLightConstants
@@ -3216,12 +3216,12 @@ namespace PreviewLightConstants
 void FDreamWidgetDesignerViewportClient::DrawPreviewLightVisualization(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
 	// Draw the indicator of the current light direction if it was recently moved
-	auto PrefabScene = DesignerPtr.Pin()->GetPreviewScene();
-	if ((PrefabScene != nullptr) && (PrefabScene->DirectionalLight != nullptr) && (MovingPreviewLightTimer > 0.0f))
+	auto DesignerScene = DesignerPtr.Pin()->GetPreviewScene();
+	if ((DesignerScene != nullptr) && (DesignerScene->DirectionalLight != nullptr) && (MovingPreviewLightTimer > 0.0f))
 	{
 		const float A = MovingPreviewLightTimer / PreviewLightConstants::MovingPreviewLightTimerDuration;
 
-		ULightComponent* Light = PrefabScene->DirectionalLight;
+		ULightComponent* Light = DesignerScene->DirectionalLight;
 
 		const FLinearColor ArrowColor = Light->LightColor;
 
@@ -3261,8 +3261,8 @@ void FDreamWidgetDesignerViewportClient::DrawPreviewLightVisualization(const FSc
 }
 FLinearColor FDreamWidgetDesignerViewportClient::GetBackgroundColor() const
 {
-	auto PrefabScene = DesignerPtr.Pin()->GetPreviewScene();
-	return PrefabScene ? PrefabScene->GetBackgroundColor() : FColor(55, 55, 55);
+	auto DesignerScene = DesignerPtr.Pin()->GetPreviewScene();
+	return DesignerScene ? DesignerScene->GetBackgroundColor() : FColor(55, 55, 55);
 }
 namespace EditorViewportClient
 {
@@ -3299,16 +3299,16 @@ bool FDreamWidgetDesignerViewportClient::Internal_InputAxis(FViewport* InViewpor
 	const float DragX = (Key == EKeys::MouseX) ? Delta : 0.f;
 	const float DragY = (Key == EKeys::MouseY) ? Delta : 0.f;
 
-	auto PrefabScene = DesignerPtr.Pin()->GetPreviewScene();
-	if (bLightMoveDown && bMouseButtonDown && PrefabScene)
+	auto DesignerScene = DesignerPtr.Pin()->GetPreviewScene();
+	if (bLightMoveDown && bMouseButtonDown && DesignerScene)
 	{
 		// Adjust the preview light direction
-		FRotator LightDir = PrefabScene->GetLightDirection();
+		FRotator LightDir = DesignerScene->GetLightDirection();
 
 		LightDir.Yaw += -DragX * EditorViewportClient::LightRotSpeed;
 		LightDir.Pitch += -DragY * EditorViewportClient::LightRotSpeed;
 
-		PrefabScene->SetLightDirection(LightDir);
+		DesignerScene->SetLightDirection(LightDir);
 
 		// Remember that we adjusted it for the visualization
 		MovingPreviewLightTimer = PreviewLightConstants::MovingPreviewLightTimerDuration;

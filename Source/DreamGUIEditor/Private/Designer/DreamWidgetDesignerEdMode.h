@@ -7,7 +7,7 @@
 #include "DreamWidgetDesignerEdMode.generated.h"
 
 /**
- * The editor mode the prefab editor's viewport runs, and the only reason it exists is the engine's
+ * The editor mode the designer's viewport runs, and the only reason it exists is the engine's
  * transform gizmo.
  *
  * FWidget::Render draws nothing unless some active mode's ShouldDrawWidget() says yes, and the stock
@@ -28,11 +28,11 @@ class UDreamWidgetDesignerEdMode : public UBaseLegacyWidgetEdMode
 	GENERATED_BODY()
 
 public:
-	static const FEditorModeID EM_DreamUIPrefab;
+	static const FEditorModeID EM_DreamWidgetDesigner;
 
 	UDreamWidgetDesignerEdMode();
 
-	/** No toolkit: this mode has no UI of its own and must not open a panel in the prefab editor. */
+	/** No toolkit: this mode has no UI of its own and must not open a panel in the designer. */
 	virtual bool UsesToolkits() const override { return false; }
 	virtual bool ShouldDrawWidget() const override { return true; }
 	virtual bool UsesTransformWidget() const override { return true; }

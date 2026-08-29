@@ -13,7 +13,7 @@ class UDreamWidgetBlueprint;
 /**
  * The two things a DreamUI hierarchy is: a layout, and a class.
  *
- * They are modes rather than tabs because they want the whole window. The prefab editor had only the
+ * They are modes rather than tabs because they want the whole window. The designer had only the
  * first, and the second lived in a separate asset -- the companion behaviour blueprint -- which is
  * precisely the separation the class model removes.
  */
@@ -49,7 +49,7 @@ protected:
 	FWorkflowAllowedTabSet TabFactories;
 };
 
-/** Viewport, hierarchy, palette, details, animations -- the panels the prefab editor already had. */
+/** Viewport, hierarchy, palette, details, animations -- the panels the designer already had. */
 class FDreamWidgetDesignerApplicationMode : public FDreamWidgetBlueprintApplicationMode
 {
 public:

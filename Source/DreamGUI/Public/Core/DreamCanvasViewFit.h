@@ -6,7 +6,7 @@
 /**
  * Fitting a canvas's own projection into an editor viewport that is zoomed and panned.
  *
- * The prefab editor's 2D view is orthographic, and an orthographic projection has no perspective
+ * The designer's 2D view is orthographic, and an orthographic projection has no perspective
  * divide -- so a widget pushed away in depth keeps exactly its laid-out size, and a declared
  * Perspective cannot show itself there however the camera is placed. Showing it means the viewport
  * has to project through the canvas's own virtual camera, which is what play projects through.

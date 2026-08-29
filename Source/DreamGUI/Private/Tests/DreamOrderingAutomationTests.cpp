@@ -118,11 +118,11 @@ bool FDreamChildrenSortIsStableTest::RunTest(const FString& Parameters)
 	// Force the duplicate-key state legacy assets can carry (C and D both claim index 2) through the
 	// prefab-facing raw setter, then sort repeatedly: the order must settle once and never oscillate
 	// (the unstable sort deterministically swapped the equal-key pair on every refresh).
-	D->RestoreSiblingIndexFromPrefab(2);
+	D->RestoreSiblingIndex(2);
 	const TArray<FString> FirstPass = ChildNames(Root);
 	const TArray<FString> SecondPass = ChildNames(Root);
 	UDreamWidget* Dummy = MakeChild(TestWorld.World, Root, TEXT("E"));
-	Dummy->RestoreSiblingIndexFromPrefab(99);
+	Dummy->RestoreSiblingIndex(99);
 	const TArray<FString> ThirdPass = ChildNames(Root);
 
 	TestEqual(TEXT("Equal keys keep order across resorts (1v2)"), FirstPass, SecondPass);

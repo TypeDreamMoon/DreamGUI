@@ -3,7 +3,7 @@
 
 #include "DreamWidgetDesignerCommands.h"
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorCommand"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerCommands"
 
 void FDreamWidgetDesignerCommands::RegisterCommands()
 {

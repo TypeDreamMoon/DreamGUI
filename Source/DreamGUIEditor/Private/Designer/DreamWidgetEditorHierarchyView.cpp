@@ -97,7 +97,7 @@ void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld
 		}
 
 		// The tick runs a frame later and the manager holds the lambda meanwhile, so nothing in it may
-		// be captured raw: closing the prefab editor within that frame leaves this panel destroyed and
+		// be captured raw: closing the designer within that frame leaves this panel destroyed and
 		// the widgets it named collected. Weak on both sides, and the whole body is skipped if either
 		// is already gone.
 		UDreamUIManagerObject::AddOneShotTickFunction([WeakSelf = TWeakPtr<SDreamWidgetEditorHierarchyView>(SharedThis(this)), UnexpendWidgetSet]()

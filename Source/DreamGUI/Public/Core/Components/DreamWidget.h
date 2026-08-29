@@ -497,20 +497,19 @@ public:
 	const FTransform& GetWorldTransform()const;
 
 	void SetWorldTransform(const FTransform& InWorldTransform);
-	/** Only called by PrefabSystem to restore parent-children hierarchy */
+	/**
+	 * Attach without the register-time side effects, for a hierarchy that is still being assembled:
+	 * class instantiation (UDreamWidgetGeneratedClass), nested-widget and NamedSlot content, and the
+	 * designer's preview host all build their trees this way before anything is registered.
+	 */
 	void SetParentBeforeRegister(UDreamWidget* InParent);
 	/** Restores a serialized hierarchy while preserving legacy over-capacity assets. Cycle checks still apply. */
-	bool SetParentFromPrefab(UDreamWidget* InParent, bool InKeepWorldPosition = false, int InSiblingIndex = -1);
+	bool SetParentIgnoringCapacity(UDreamWidget* InParent, bool InKeepWorldPosition = false, int InSiblingIndex = -1);
 	/**
-	 * PrefabSystem only: order every children array by the restored sibling indices (stable across holes
-	 * and duplicates) and renumber contiguously, so later appends can never collide with restored values.
+	 * Re-assert a deserialized sibling index after an attach overwrote it with a tail index, deferring
+	 * the reorder to the parent's lazy sort.
 	 */
-	void ApplySiblingIndexFromPrefab_Recursive();
-	/**
-	 * PrefabSystem only: re-assert a deserialized sibling index after an attach overwrote it with a tail
-	 * index, deferring the reorder to the parent's lazy sort.
-	 */
-	void RestoreSiblingIndexFromPrefab(int32 InSiblingIndex);
+	void RestoreSiblingIndex(int32 InSiblingIndex);
 	/**
 	 * Rebuild the transient Parent back-pointers across this subtree from the persistent Children arrays.
 	 *
@@ -1034,7 +1033,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetVisibility", Setter = "SetVisibility", meta = (AllowPrivateAccess = true))
 	EDreamWidgetVisibility Visibility = EDreamWidgetVisibility::Visible;
 #if WITH_EDITORONLY_DATA
-	/** Transient preview state restored from the owning prefab editor data. */
+	/** Transient preview state restored from the owning designer data. */
 	bool bHiddenInDesigner = false;
 	/** LayoutContainer captured in PreEditChange so PostEditChangeProperty can diff required behaviours. */
 	TWeakObjectPtr<UDreamLayoutContainer> LayoutContainerBeforeEdit;

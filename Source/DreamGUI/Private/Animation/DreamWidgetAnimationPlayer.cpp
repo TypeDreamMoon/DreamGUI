@@ -9,9 +9,9 @@
 
 UObject* UDreamWidgetAnimationPlayer::GetPlaybackContext() const
 {
-	if (auto PrefabSequence = CastChecked<UDreamWidgetAnimation>(Sequence))
+	if (auto WidgetAnimation = CastChecked<UDreamWidgetAnimation>(Sequence))
 	{
-		auto Component = PrefabSequence->GetTypedOuter<UDreamWidgetAnimationComponent>();
+		auto Component = WidgetAnimation->GetTypedOuter<UDreamWidgetAnimationComponent>();
 		return Component->GetWidget();
 	}
 

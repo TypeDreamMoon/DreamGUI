@@ -897,7 +897,7 @@ namespace DreamWidgetDesignerClickHandlers
 		{
 			if( !Click.IsControlDown() )
 			{
-				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = ViewportClient->GetPrefabEditor())
+				if (TSharedPtr<FDreamWidgetBlueprintEditor> Editor = ViewportClient->GetDesigner())
 				{
 					Editor->SelectWidgets({}, false);
 				}

@@ -22,7 +22,7 @@
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Views/STableRow.h"
 
-#define LOCTEXT_NAMESPACE "DreamUIPrefabPalette"
+#define LOCTEXT_NAMESPACE "DreamWidgetPalette"
 
 namespace DreamUIPalette
 {
@@ -224,9 +224,9 @@ void SDreamWidgetPalette::CollectControls(TArray<FItemPtr>& Out)
 			CategoryOrder.Add(Descriptor.Category);
 		}
 		auto Item = MakeShared<FPaletteItem>();
-		Item->Kind = Descriptor.CreationKind == EDreamUIControlCreationKind::WidgetClass ? EItemKind::Prefab : EItemKind::Native;
+		Item->Kind = Descriptor.CreationKind == EDreamUIControlCreationKind::WidgetClass ? EItemKind::WidgetClass : EItemKind::Native;
 		Item->DisplayName = Descriptor.DisplayName.ToString();
-		Item->PrefabPath = Descriptor.WidgetClassPath;
+		Item->WidgetClassPath = Descriptor.WidgetClassPath;
 		Item->NativeDescriptor = MakeShared<FDreamUIControlDescriptor>(Descriptor);
 		Item->bValid = FDreamUIControlRegistry::Get().Validate(Descriptor, Item->ValidationError);
 		Item->FavoriteKey = DreamUIPalette::MakeFavoriteKey(*Item);
@@ -325,8 +325,8 @@ TSharedRef<ITableRow> SDreamWidgetPalette::OnGenerateRow(FItemPtr InItem, const 
 	}
 	const FText Tooltip = !InItem->bValid
 		? InItem->ValidationError
-		: InItem->Kind == EItemKind::Prefab
-		? FText::Format(LOCTEXT("PrefabRowTooltip", "{0}\nDouble-click to add a copy under the selected widget."), FText::FromString(InItem->PrefabPath))
+		: InItem->Kind == EItemKind::WidgetClass
+		? FText::Format(LOCTEXT("ControlRowTooltip", "{0}\nDouble-click to add a copy under the selected widget."), FText::FromString(InItem->WidgetClassPath))
 		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click, or drag onto a Hierarchy widget, to add it under that widget."), FText::FromString(InItem->DisplayName));
 	TSharedRef<STableRow<FItemPtr>> Row = SNew(STableRow<FItemPtr>, OwnerTable)
 		.IsEnabled(InItem->bValid)
@@ -396,14 +396,14 @@ namespace SDreamWidgetPaletteLocal
 {
 	// Favourites and collapsed groups are per user and per project, and neither is worth a settings
 	// object: nothing outside this panel reads them.
-	static const TCHAR* PreferencesSection = TEXT("DreamUIPrefabPalette.Preferences");
+	static const TCHAR* PreferencesSection = TEXT("DreamWidgetPalette.Preferences");
 	static const TCHAR* FavoritesKey = TEXT("Favorites");
 	static const TCHAR* CollapsedGroupsKey = TEXT("CollapsedGroups");
 
 	// shared create path: the create primitives take a "get parent" function, so double-click
 	// (parent = selection) and drop (parent = drop-target widget) reuse the same logic
 	UDreamWidget* CreateElement(bool bIsBasicWidget, UClass* VisualClass, bool bSetDefaultSprite,
-		const TSharedPtr<FDreamUIControlDescriptor>& NativeDescriptor, const FString& PrefabPath,
+		const TSharedPtr<FDreamUIControlDescriptor>& NativeDescriptor, const FString& WidgetClassPath,
 		const FString& DisplayName, TFunction<UDreamWidget*()> GetParent,
 		TFunction<void(UDreamWidget*)> AfterCreate = nullptr)
 	{
@@ -426,7 +426,7 @@ namespace SDreamWidgetPaletteLocal
 		{
 			return FDreamUIEditorTools::CreateRegisteredControlAndReturn(GetParent, NativeDescriptor->Name, AfterCreate);
 		}
-		return FDreamUIEditorTools::CreateUIControlsAndReturn(GetParent, PrefabPath, AfterCreate);
+		return FDreamUIEditorTools::CreateUIControlsAndReturn(GetParent, WidgetClassPath, AfterCreate);
 	}
 }
 
@@ -450,7 +450,7 @@ UDreamWidget* FDreamUIPaletteDragDropOp::CreateUnder(UDreamWidget* InParentWidge
 			}
 		};
 	return SDreamWidgetPaletteLocal::CreateElement(bIsBasicWidget, VisualClass.Get(), bSetDefaultSprite,
-		NativeDescriptor, PrefabPath, DisplayName, [InParentWidget]() -> UDreamWidget* { return InParentWidget; },
+		NativeDescriptor, WidgetClassPath, DisplayName, [InParentWidget]() -> UDreamWidget* { return InParentWidget; },
 		MoveTemp(PlaceThenForward));
 }
 
@@ -460,7 +460,7 @@ void SDreamWidgetPalette::CreateItem(FItemPtr InItem)
 	// With nothing selected, fall back to the prefab root -- the same "add to root" the hierarchy's
 	// empty-area drop performs. Double-click used to be a no-op here, which reads as a dead panel.
 	SDreamWidgetPaletteLocal::CreateElement(InItem->Kind == EItemKind::BasicWidget, InItem->VisualClass.Get(),
-		InItem->bSetDefaultSprite, InItem->NativeDescriptor, InItem->PrefabPath, InItem->DisplayName,
+		InItem->bSetDefaultSprite, InItem->NativeDescriptor, InItem->WidgetClassPath, InItem->DisplayName,
 		[this]() -> UDreamWidget*
 		{
 			if (UDreamWidget* Selected = GetSelectedWidget())return Selected;
@@ -477,7 +477,7 @@ FReply SDreamWidgetPalette::OnItemDragDetected(const FGeometry& MyGeometry, cons
 	Op->VisualClass = InItem->VisualClass;
 	Op->bSetDefaultSprite = InItem->bSetDefaultSprite;
 	Op->NativeDescriptor = InItem->NativeDescriptor;
-	Op->PrefabPath = InItem->PrefabPath;
+	Op->WidgetClassPath = InItem->WidgetClassPath;
 	Op->DisplayName = InItem->DisplayName;
 	Op->Construct();
 	Op->SetToolTip(FText::FromString(InItem->DisplayName), nullptr);

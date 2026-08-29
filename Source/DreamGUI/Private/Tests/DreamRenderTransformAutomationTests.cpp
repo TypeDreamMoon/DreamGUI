@@ -331,7 +331,7 @@ bool FDreamRenderTransformSurvivesLoadTest::RunTest(const FString& Parameters)
 
 	// The exact sequence the prefab loader runs: create the object, write the property into memory
 	// with no setter and no notification, then register. Every behaviour test that calls the setter
-	// is blind to this path, which is how "works in the prefab editor, dead in PIE" shipped.
+	// is blind to this path, which is how "works in the designer, dead in PIE" shipped.
 	UDreamWidget* Loaded = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
 	Loaded->SetDisplayName(TEXT("Loaded"));
 	Loaded->SetWidth(100.0f);

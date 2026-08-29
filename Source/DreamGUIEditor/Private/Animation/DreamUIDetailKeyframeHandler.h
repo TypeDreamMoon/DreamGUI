@@ -26,5 +26,5 @@ public:
 
 private:
 	TSharedPtr<ISequencer> GetSequencer() const;
-	TWeakPtr<FDreamWidgetBlueprintEditor> PrefabEditor;
+	TWeakPtr<FDreamWidgetBlueprintEditor> DesignerEditor;
 };

@@ -65,8 +65,8 @@ void FDreamUISequenceTrackEditor::BuildObjectBindingTrackMenu(FMenuBuilder& Menu
 		return;
 	}
 	MenuBuilder.AddSubMenu(
-		LOCTEXT("BindPrefabWidget", "Bind Prefab Widget"),
-		LOCTEXT("BindPrefabWidgetTooltip", "Possess a widget inside the prefab this binding presents; property tracks can then key it directly."),
+		LOCTEXT("BindNestedWidget", "Bind Nested Widget"),
+		LOCTEXT("BindNestedWidgetTooltip", "Possess a widget inside the nested widget this binding presents; property tracks can then key it directly."),
 		FNewMenuDelegate::CreateRaw(this, &FDreamUISequenceTrackEditor::AddWidgetPickerSubMenu, TArray<FGuid>(ObjectBindings)));
 	MenuBuilder.AddSubMenu(
 		LOCTEXT("AddDreamUISequence", "DreamUI Animation"),
@@ -174,7 +174,7 @@ void FDreamUISequenceTrackEditor::HandleWidgetPicked(TWeakObjectPtr<UDreamWidget
 		return;
 	}
 
-	const FScopedTransaction Transaction(LOCTEXT("BindPrefabWidget_Transaction", "Bind Prefab Widget"));
+	const FScopedTransaction Transaction(LOCTEXT("BindNestedWidget_Transaction", "Bind Nested Widget"));
 	// The custom-binding machinery picks UDreamUIWidgetBinding by itself: it is the only binding
 	// type that supports creation from a widget, and it derives the presenter and path from it.
 	const FGuid NewGuid = FSequencerUtilities::CreateBinding(SequencerPtr.ToSharedRef(), *Widget);

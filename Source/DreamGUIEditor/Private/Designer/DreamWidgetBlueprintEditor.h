@@ -92,7 +92,7 @@ public:
 /**
  * The designer for one UDreamWidgetBlueprint.
  *
- * This is the prefab editor's toolkit, retargeted rather than rewritten: the viewport, hierarchy,
+ * This is the designer's toolkit, retargeted rather than rewritten: the viewport, hierarchy,
  * palette and details panels are the same 11.8k lines, and what changed underneath them is what
  * they are looking at.
  *
@@ -105,7 +105,7 @@ public:
  * here sees the preview, because the preview is the only half that can answer a question about
  * geometry; anything that changes the shape of the hierarchy goes through DreamWidgetTreeEditing.
  *
- * ## What is gone from the prefab editor
+ * ## What is gone from the designer
  *
  * Apply, and everything that hung off it: a prefab was edited live and serialised back on demand,
  * so there was a second copy to push and a status to report. A Blueprint is edited directly and

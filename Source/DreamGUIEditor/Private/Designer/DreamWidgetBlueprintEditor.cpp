@@ -66,7 +66,7 @@
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
 
-#define LOCTEXT_NAMESPACE "DreamUIPrefabEditor"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesigner"
 
 const FName DesignerAppName = FName(TEXT("DreamWidgetBlueprintEditorApp"));
 
@@ -118,7 +118,7 @@ namespace DreamWidgetDesignerLocal
 FName GetDesignerWorldName()
 {
 	static uint32 NameSuffix = 0;
-	return FName(*FString::Printf(TEXT("PrefabEditorWorld_%d"), NameSuffix++));
+	return FName(*FString::Printf(TEXT("DesignerWorld_%d"), NameSuffix++));
 }
 FDreamWidgetBlueprintEditor::FDreamWidgetBlueprintEditor()
 {
@@ -586,7 +586,7 @@ void FDreamWidgetBlueprintEditor::SaveAsset_Execute()
 {
 	// Compile FIRST. The class instances are built from is a duplicate of the authoring tree taken
 	// at compile time, so saving without compiling writes a hierarchy that no instance has yet --
-	// the exact shape of the prefab editor's "forgot to press Apply", which this is here to end.
+	// the exact shape of the designer's "forgot to press Apply", which this is here to end.
 	SaveEditorState();
 	if (IsValid(BlueprintBeingEdited))
 	{
@@ -692,7 +692,7 @@ namespace
 			if (!bParentSet) { CommonParent = Parent; bParentSet = true; }
 			else if (Parent != CommonParent)
 			{
-				FNotificationInfo Info(NSLOCTEXT("DreamUIPrefabEditor", "SharedParentRequired", "This action needs the selected widgets to share a parent."));
+				FNotificationInfo Info(NSLOCTEXT("DreamWidgetDesigner", "SharedParentRequired", "This action needs the selected widgets to share a parent."));
 				Info.ExpireDuration = 4.0f;
 				Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
 				FSlateNotificationManager::Get().AddNotification(Info);
@@ -703,7 +703,7 @@ namespace
 		}
 		if (bRefuseLayoutParent && bParentSet && CommonParent != nullptr && CommonParent->GetLayoutContainer() != nullptr)
 		{
-			FNotificationInfo Info(NSLOCTEXT("DreamUIPrefabEditor", "AlignLayoutParent", "The shared parent has a layout container that positions its children -- align/distribute would be overridden by the layout."));
+			FNotificationInfo Info(NSLOCTEXT("DreamWidgetDesigner", "AlignLayoutParent", "The shared parent has a layout container that positions its children -- align/distribute would be overridden by the layout."));
 			Info.ExpireDuration = 5.0f;
 			Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
 			FSlateNotificationManager::Get().AddNotification(Info);
@@ -738,7 +738,7 @@ void FDreamWidgetBlueprintEditor::AlignSelectedWidgets(EDreamUIWidgetAlignType A
 	const double GroupCenterH = (GroupLeft + GroupRight) * 0.5;
 	const double GroupCenterV = (GroupBottom + GroupTop) * 0.5;
 
-	const FScopedTransaction Transaction(NSLOCTEXT("DreamUIPrefabEditor", "AlignWidgets", "Align Widgets"));
+	const FScopedTransaction Transaction(NSLOCTEXT("DreamWidgetDesigner", "AlignWidgets", "Align Widgets"));
 	for (int32 i = 0; i < Widgets.Num(); i++)
 	{
 		UDreamWidget* W = Widgets[i];
@@ -786,7 +786,7 @@ void FDreamWidgetBlueprintEditor::DistributeSelectedWidgets(bool bHorizontal)
 	for (const FEntry& E : Entries) { SizeSum += HighEdge(E.Rect) - LowEdge(E.Rect); }
 	const double Gap = (SpanHigh - SpanLow - SizeSum) / (Entries.Num() - 1);
 
-	const FScopedTransaction Transaction(NSLOCTEXT("DreamUIPrefabEditor", "DistributeWidgets", "Distribute Widgets"));
+	const FScopedTransaction Transaction(NSLOCTEXT("DreamWidgetDesigner", "DistributeWidgets", "Distribute Widgets"));
 	double Cursor = HighEdge(Entries[0].Rect);//trailing edge of the fixed first widget
 	for (int32 i = 1; i < Entries.Num() - 1; i++)
 	{
@@ -880,7 +880,7 @@ void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerC
 	}
 	if (MinSiblingIndex == TNumericLimits<int32>::Max()) MinSiblingIndex = -1;
 
-	FScopedTransaction Transaction(NSLOCTEXT("DreamUIPrefabEditor", "WrapWidgets", "Wrap Widgets"));
+	FScopedTransaction Transaction(NSLOCTEXT("DreamWidgetDesigner", "WrapWidgets", "Wrap Widgets"));
 	CommonParent->Modify();
 
 	struct FWidgetWrapState
@@ -931,7 +931,7 @@ void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerC
 		{
 			if (IsValid(State.Widget) && State.Widget->GetParent() != CommonParent)
 			{
-				State.Widget->SetParentFromPrefab(CommonParent, true, State.SiblingIndex);
+				State.Widget->SetParentIgnoringCapacity(CommonParent, true, State.SiblingIndex);
 			}
 			if (IsValid(State.Widget))
 			{
@@ -1091,7 +1091,7 @@ void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass
 	UDreamWidget* TargetTemplate = GetTemplateWidget(Target);
 	if (!IsValid(TargetTemplate))return;
 
-	FScopedTransaction Transaction(NSLOCTEXT("DreamUIPrefabEditor", "ReplaceWidgetLayout", "Replace Widget Layout"));
+	FScopedTransaction Transaction(NSLOCTEXT("DreamWidgetDesigner", "ReplaceWidgetLayout", "Replace Widget Layout"));
 	TargetTemplate->Modify();
 	Target = TargetTemplate;
 	// CreateNewLayoutContainer carries the whole swap: it unregisters the old container, registers
@@ -1363,7 +1363,7 @@ void FDreamWidgetBlueprintEditor::ToggleRespectDesignerLocks()
 	UDreamUIDesignerSettings* Settings = GetMutableDefault<UDreamUIDesignerSettings>();
 	Settings->bRespectDesignerLocks = !Settings->bRespectDesignerLocks;
 	Settings->SaveConfig();
-	// What is selectable just changed for every open prefab editor, and the padlock column reads
+	// What is selectable just changed for every open designer, and the padlock column reads
 	// the same switch, so both surfaces have to be told rather than waiting for the next click.
 	IterateAllDesigners([](FDreamWidgetBlueprintEditor* Editor)
 	{
@@ -1874,7 +1874,7 @@ void FDreamWidgetBlueprintEditor::ExtendDesignerToolbar(UToolMenu* ToolBar)
 	// Compiling and saving are the stock asset-editor buttons; what is left here is the design
 	// surface's own view state. Apply is gone with the prefab, and so is the behaviour host: the
 	// Blueprint's own toolbar owns compiling, and its graph owns the logic.
-	FToolMenuSection& ViewSection = ToolBar->AddSection("DreamUIPrefabView", TAttribute<FText>(), FToolMenuInsert("Asset", EToolMenuInsertType::After));
+	FToolMenuSection& ViewSection = ToolBar->AddSection("DreamWidgetDesignerView", TAttribute<FText>(), FToolMenuInsert("Asset", EToolMenuInsertType::After));
 	{
 		ViewSection.AddEntry(FToolMenuEntry::InitToolBarButton(Commands.ToggleScreenSpacePreview
 			, TAttribute<FText>(), TAttribute<FText>()

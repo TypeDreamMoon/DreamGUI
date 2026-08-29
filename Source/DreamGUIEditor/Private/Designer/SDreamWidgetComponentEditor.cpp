@@ -5,7 +5,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "UObject/UnrealType.h"
 
-#define LOCTEXT_NAMESPACE "DreamGUIPrefabEditorDetailTab"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerDetails"
 
 namespace
 {
@@ -43,7 +43,7 @@ namespace
  * class the picker refuses arrives on a widget by way of somewhere it was once allowed.
  *
  * Declared here rather than in the panel's header because the panel is a Slate widget no headless
- * test can construct; DreamPrefabPanelsAutomationTests declares these prototypes itself.
+ * test can construct; DreamPanelsAuditAutomationTests declares these prototypes itself.
  */
 bool DreamUIWidgetComponentClipboard_CanPasteClass(const UClass* InComponentClass)
 {

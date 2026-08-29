@@ -428,7 +428,7 @@ bool FDreamPerspectiveRefusesWhereItCannotApplyTest::RunTest(const FString& Para
 
 	// The feature re-aims geometry at the eye the CANVAS projects from. In a world-space mode the
 	// scene camera does the projecting and the canvas's eye is nobody, so re-aiming at it would
-	// displace everything for a viewer that does not exist. This is what the prefab editor previews
+	// displace everything for a viewer that does not exist. This is what the designer previews
 	// through by default, which is why the answer has to be "inert" and not "approximately right".
 	Canvas->SetRenderMode(EDreamRenderMode::WorldSpace);
 	TestTrue(TEXT("World space leaves the geometry alone"),

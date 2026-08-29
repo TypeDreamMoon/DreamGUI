@@ -241,14 +241,14 @@ namespace DreamUI_Private
 
 namespace DreamUI_Private
 {
-	/** The prefab editor behind the viewport a tool-menu section is being built for, or null. */
+	/** The designer behind the viewport a tool-menu section is being built for, or null. */
 	static TWeakPtr<FDreamWidgetBlueprintEditor> GetDesignerFromSection(const FToolMenuSection& InSection)
 	{
 		if (UUnrealEdViewportToolbarContext* const Context = InSection.FindContext<UUnrealEdViewportToolbarContext>())
 		{
 			if (TSharedPtr<SEditorViewport> Viewport = Context->Viewport.Pin())
 			{
-				return StaticCastSharedPtr<SDreamWidgetDesignerViewport>(Viewport)->GetPrefabEditor();
+				return StaticCastSharedPtr<SDreamWidgetDesignerViewport>(Viewport)->GetDesigner();
 			}
 		}
 		return nullptr;
@@ -282,7 +282,7 @@ namespace DreamUI_Private
 	 * The designer's own controls, in the same tool-menu style as the camera and view-mode buttons
 	 * on the right. Each group is its own section so the toolbar draws a separator between them:
 	 *   [ Snap | 10 ]  [ 75% ]  [ 1000 x 500 ]  [ guides  diagnostics  locks  overlay ]
-	 * Everything is built per viewport from the menu context, so two open prefab editors each
+	 * Everything is built per viewport from the menu context, so two open designers each
 	 * drive their own designer rather than whichever one registered the menu first.
 	 */
 	static void AddDesignerSections(UToolMenu* InMenu)
@@ -464,7 +464,7 @@ void SDreamWidgetDesignerViewportToolbar::Construct(const FArguments& InArgs, TS
 	// Camera and View Modes buttons on the right.
 	TSharedRef<SEditorViewport> ViewportRef = GetInfoProvider().GetViewportWidget();
 
-	static const FName DreamUIViewportToolbarName = TEXT("DreamUIPrefabEditor.ViewportToolbar");
+	static const FName DreamUIViewportToolbarName = TEXT("DreamWidgetDesigner.ViewportToolbar");
 	if (!UToolMenus::Get()->IsMenuRegistered(DreamUIViewportToolbarName))
 	{
 		UToolMenu* const ViewportToolbarMenu = UToolMenus::Get()->RegisterMenu(

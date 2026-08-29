@@ -2,17 +2,17 @@
 
 #include "DreamWidgetDesignerEdMode.h"
 
-#define LOCTEXT_NAMESPACE "DreamUIPrefabEdMode"
+#define LOCTEXT_NAMESPACE "DreamWidgetDesignerEdMode"
 
-const FEditorModeID UDreamWidgetDesignerEdMode::EM_DreamUIPrefab = TEXT("EM_DreamUIPrefab");
+const FEditorModeID UDreamWidgetDesignerEdMode::EM_DreamWidgetDesigner = TEXT("EM_DreamWidgetDesigner");
 
 UDreamWidgetDesignerEdMode::UDreamWidgetDesignerEdMode()
 {
-	// bVisible false: this is not a mode anyone picks from a toolbar, it is what the prefab editor's
+	// bVisible false: this is not a mode anyone picks from a toolbar, it is what the designer's
 	// viewport activates on itself.
 	Info = FEditorModeInfo(
-		EM_DreamUIPrefab,
-		LOCTEXT("DreamUIPrefabEdModeName", "DreamGUI Prefab"),
+		EM_DreamWidgetDesigner,
+		LOCTEXT("DreamWidgetDesignerEdModeName", "DreamGUI Designer"),
 		FSlateIcon(),
 		false);
 }

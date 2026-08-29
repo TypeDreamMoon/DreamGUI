@@ -11,7 +11,7 @@
 class UStaticMeshComponent;
 class AActor;
 
-//Encapsulates a simple scene setup for Prefab Editor.
+//Encapsulates a simple scene setup for Designer.
 class DREAMGUI_API FDreamWidgetDesignerScene : public FDreamWidgetPreviewScene
 {
 public:

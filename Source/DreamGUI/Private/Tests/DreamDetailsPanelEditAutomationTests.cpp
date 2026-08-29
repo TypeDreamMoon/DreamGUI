@@ -15,7 +15,7 @@
  * and does nothing with it -- the number appears in the field and the widget does not move. That
  * failure is invisible to every test that goes through the setter, invisible at compile time, and
  * indistinguishable to an author from the feature simply not working. It cost a round of
- * "the render transform does nothing in the prefab editor" to find.
+ * "the render transform does nothing in the designer" to find.
  *
  * So these reach for the property by name and poke it, exactly as the panel would.
  */

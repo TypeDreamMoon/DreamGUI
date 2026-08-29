@@ -13,7 +13,7 @@ class FDreamWidgetBlueprintEditor;
 DECLARE_LOG_CATEGORY_EXTERN(DreamGUIEditor, Log, All);
 
 /**
- * One project-side addition to the prefab editor's widget context menu, registered on the module's
+ * One project-side addition to the designer's widget context menu, registered on the module's
  * extensibility manager. The menu is built inside the plugin, so without this a project has to
  * fork the hierarchy view to put an entry of its own on it.
  */

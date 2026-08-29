@@ -22,7 +22,7 @@ class UDreamWidgetPresenterComponentBase;
  * what runs.
  *
  * Create one by possessing the presenter's actor or component and converting the binding to
- * "DreamUI Widget", or by adding a binding from a selected widget inside a prefab editor world.
+ * "DreamUI Widget", or by adding a binding from a selected widget inside a designer world.
  * Property tracks then key any Interp property on the widget (transform, color, opacity, width...).
  *
  * A widget loaded after the sequence started stays unresolved until someone pokes the player --

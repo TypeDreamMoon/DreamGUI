@@ -84,7 +84,7 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Assets")
 	TSoftObjectPtr<class UDreamRectBlockData> DefaultRectBlockData;
 
-	/** Prefab spawned to show which widget navigation input has selected. */
+	/** Widget class spawned to show which widget navigation input has selected. */
 	UPROPERTY(config, EditAnywhere, Category = "Assets")
 	TSoftClassPtr<UDreamUserWidget> NavigationSelectionClass;
 
@@ -114,15 +114,15 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> WorldSpaceRaycasterSourceClass;
 
-	/** Root actor the prefab factory places for a screen-space prefab. */
+	/** Root actor placed for a screen-space widget. */
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> ScreenSpaceRootClass;
 
-	/** Root actor the prefab factory places for a world-space prefab drawn by DreamGUI's own renderer. */
+	/** Root actor placed for a world-space widget drawn by DreamGUI's own renderer. */
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> WorldSpaceRootClass;
 
-	/** Root actor for a world-space prefab drawn through UMG's renderer instead. */
+	/** Root actor for a world-space widget drawn through UMG's renderer instead. */
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> WorldSpaceUERendererRootClass;
 

@@ -10,7 +10,7 @@
 #include "Engine/World.h"
 
 /*
- * Reported from the prefab editor: dragging a Button out of the palette into an Overlay leaves it at its
+ * Reported from the designer: dragging a Button out of the palette into an Overlay leaves it at its
  * authored 100x30 instead of filling the panel, and changing the slot alignment afterwards does nothing
  * either. Slot defaults are Fill on both axes, so "arranged at all" and "still 100x30" are the same
  * question.
@@ -116,11 +116,11 @@ bool FDreamAttachArrangesChildRegisterBeforeTest::RunTest(const FString& Paramet
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamAttachPrefabShapedSubtreeTest,
-	"DreamGUI.Layout.Attach.PrefabShapedSubtreeIsArranged",
+	FDreamAttachRestoredSubtreeTest,
+	"DreamGUI.Layout.Attach.RestoredSubtreeIsArranged",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FDreamAttachPrefabShapedSubtreeTest::RunTest(const FString& Parameters)
+bool FDreamAttachRestoredSubtreeTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamAttachArrangesChildTestLocal;
 	FScopedTestWorld TestWorld;
@@ -271,8 +271,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamAttachInEditorWorldTest::RunTest(const FString& Parameters)
 {
-	// FDreamWidgetPreviewScene builds its world as EWorldType::Editor (DreamUIPrefabScene.cpp:30), and several
-	// DreamGUI paths branch on IsGameWorld. Same fixture, the world type the prefab editor actually uses.
+	// FDreamWidgetPreviewScene builds its world as EWorldType::Editor (DreamWidgetDesignerScene.cpp:30), and several
+	// DreamGUI paths branch on IsGameWorld. Same fixture, the world type the designer actually uses.
 	UWorld* World = UWorld::CreateWorld(EWorldType::Editor, false);
 	ON_SCOPE_EXIT{ if (World) { World->DestroyWorld(false); } };
 
