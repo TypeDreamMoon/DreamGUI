@@ -229,7 +229,11 @@ bool FDreamWidgetBlueprintMissingBindingIsACompileErrorTest::RunTest(const FStri
 		if (UDreamWidgetBlueprintBindingBase* Typed = Cast<UDreamWidgetBlueprintBindingBase>(Instance))
 		{
 			TestNotNull(TEXT("the declared binding resolves on the instance"), Typed->RequiredHeader.Get());
-			TestNull(TEXT("and the unmarked member is left alone"), Typed->UnmarkedReference.Get());
+			// This says less than it looks like it says, so it is worth being explicit: there is no
+			// widget called UnmarkedReference in this hierarchy, so the only thing being checked is
+			// that a property with no widget of its name stays null. Whether the MARK matters is a
+			// different question, and AnUnmarkedWidgetMemberIsBoundAnyway is where it is asked.
+			TestNull(TEXT("and a member with no widget of its name stays null"), Typed->UnmarkedReference.Get());
 		}
 		World->DestroyWorld(false);
 	}
@@ -529,5 +533,55 @@ bool FDreamWidgetAnimationBindingSurvivesTheClassTest::RunTest(const FString& Pa
 
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetUnmarkedPropertyProbeTest,
+	"DreamGUI.WidgetBlueprint.AnUnmarkedWidgetMemberIsBoundAnyway",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetUnmarkedPropertyProbeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	// The existing pair of tests above never asks this. Their fixture adds a widget called
+	// RequiredHeader and nothing called UnmarkedReference, so "the unmarked member is left alone"
+	// holds for the boring reason that no widget of that name exists -- it would pass whether or not
+	// an unmarked property is bindable. This one puts a widget of that name in the hierarchy and
+	// looks, which is the only way to find out.
+	//
+	// It matters because it is the difference from UMG that a C++ author will trip over: there,
+	// BindWidget and BindWidgetOptional are what make a property a binding and an unmarked UWidget*
+	// member is nobody's business but its owner's.
+	FScopedBlueprint Fixture(TEXT("BP_UnmarkedProbe"), UDreamWidgetBlueprintBindingBase::StaticClass());
+	Fixture.AddWidget(TEXT("RequiredHeader"));
+	Fixture.AddWidget(TEXT("UnmarkedReference"));
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("the hierarchy answers the declared binding, so it compiles clean"), Results.NumErrors, 0);
+
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+	UDreamUserWidget* Instance = CreateDreamWidget(World, Fixture.Blueprint->GeneratedClass.Get());
+	if (UDreamWidgetBlueprintBindingBase* Typed = Cast<UDreamWidgetBlueprintBindingBase>(Instance))
+	{
+		TestNotNull(TEXT("the marked binding resolves"), Typed->RequiredHeader.Get());
+
+		// AND SO DOES THE UNMARKED ONE. This is the behaviour, not the intent I would have guessed:
+		// InitializeWidgetStatic collects every FObjectPropertyBase declared below UDreamUserWidget and
+		// binds by variable name, without ever asking whether the property claimed to be a binding.
+		// meta=(BindWidget) therefore does not make a property bindable -- it only makes a MISSING
+		// widget a compile error. In UMG the tag is what makes a property a binding at all, and an
+		// unmarked UWidget* member belongs to whoever declared it.
+		//
+		// Pinned rather than fixed: changing it is a semantic decision, not a defect fix, and any
+		// existing C++ subclass that leans on implicit binding would stop working. If the rule ever
+		// does move to UMG's, this assertion is the one that flips and says so.
+		TestNotNull(TEXT("an unmarked widget-typed member is bound too, by name alone"),
+			Typed->UnmarkedReference.Get());
+	}
+	World->DestroyWorld(false);
+	return true;
+}
+
 
 #endif
