@@ -13,6 +13,9 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
 #include "Core/DreamWidgetPropertyBinding.h"
+#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "MovieScene.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Engine/World.h"
@@ -418,6 +421,111 @@ bool FDreamWidgetSetterRuleTest::RunTest(const FString& Parameters)
 	// And the negative still holds, or every property would look bindable.
 	TestEqual(TEXT("A property with no setter has none"),
 		SetterFor(TEXT("WidgetPropertyDataStartPosition")), FName(NAME_None));
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationBindingSurvivesTheClassTest,
+	"DreamGUI.WidgetBlueprint.AnEmbeddedAnimationBindsToTheInstanceNotTheTemplate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationBindingSurvivesTheClassTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	FScopedBlueprint Fixture(TEXT("BP_AnimationBinding"));
+	UDreamWidgetTree* Tree = Fixture.Blueprint->GetOrCreateWidgetTree();
+	UDreamWidget* Root = Tree->RootWidget.Get();
+	UDreamWidget* Target = Fixture.AddWidget(TEXT("Target"));
+	if (!TestNotNull(TEXT("A root"), Root) || !TestNotNull(TEXT("And a widget to animate"), Target))
+	{
+		return false;
+	}
+
+	// The animation lives on a BEHAVIOUR, so it already rides the authoring tree onto the class. What
+	// is in question is the binding inside it, which names a widget.
+	UDreamUIPrefabSequenceComponent* Animator =
+		Cast<UDreamUIPrefabSequenceComponent>(Root->AddComponent(UDreamUIPrefabSequenceComponent::StaticClass()));
+	if (!TestNotNull(TEXT("The animation component was added"), Animator))
+	{
+		return false;
+	}
+	UDreamUIPrefabSequence* Sequence = Animator->AddNewAnimation();
+	if (!TestNotNull(TEXT("An animation was created"), Sequence))
+	{
+		return false;
+	}
+	UMovieScene* MovieScene = Sequence->GetMovieScene();
+	if (!TestNotNull(TEXT("The animation has a movie scene"), MovieScene))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The widget can be possessed"), Sequence->CanPossessObject(*Target, Root));
+	const FGuid BindingId = MovieScene->AddPossessable(TEXT("Target"), Target->GetClass());
+	Sequence->BindPossessableObject(BindingId, *Target, Root);
+
+	// Before anything else: it resolves to the TEMPLATE's widget in the asset, which is what an
+	// author sees while editing.
+	{
+		TArray<UObject*, TInlineAllocator<1>> Bound;
+		Sequence->LocateBoundObjects(BindingId, UE::UniversalObjectLocator::FResolveParams(Root), nullptr, Bound);
+		TestEqual(TEXT("It resolves to exactly one object in the asset"), Bound.Num(), 1);
+		if (Bound.Num() == 1)
+		{
+			TestEqual(TEXT("And that object is the authored widget"), Bound[0], (UObject*)Target);
+		}
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(Fixture.Blueprint->GeneratedClass.Get());
+	if (!TestNotNull(TEXT("A class came out"), GeneratedClass))
+	{
+		return false;
+	}
+
+	// The claim under test. Every instance instances the tree again, so each one needs its own
+	// animation bound to its OWN widgets. A binding that still points at the authoring widget would
+	// have every instance in the game animating the same off-screen object, and nothing would say so.
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+	UDreamUserWidget* Instance = CreateDreamWidget(World, GeneratedClass);
+	if (TestNotNull(TEXT("The class instantiates"), Instance))
+	{
+		UDreamWidget* LiveRoot = Instance->GetContentRoot();
+		UDreamWidget* LiveTarget = Instance->GetWidgetTree() != nullptr
+			? Instance->GetWidgetTree()->FindWidgetByVariableName(FName(TEXT("Target"))) : nullptr;
+		if (TestNotNull(TEXT("The instance has a root"), LiveRoot)
+			&& TestNotNull(TEXT("And its own Target"), LiveTarget))
+		{
+			TestNotEqual(TEXT("Which is NOT the authored one"), LiveTarget, Target);
+
+			UDreamUIPrefabSequenceComponent* LiveAnimator = nullptr;
+			for (UDreamUIBehaviour* Component : LiveRoot->GetAllComponents())
+			{
+				if (UDreamUIPrefabSequenceComponent* Candidate = Cast<UDreamUIPrefabSequenceComponent>(Component))
+				{
+					LiveAnimator = Candidate;
+					break;
+				}
+			}
+			if (TestNotNull(TEXT("The instance carries the animation component"), LiveAnimator))
+			{
+				UDreamUIPrefabSequence* LiveSequence = LiveAnimator->GetSequenceByIndex(0);
+				if (TestNotNull(TEXT("And the animation"), LiveSequence))
+				{
+					TArray<UObject*, TInlineAllocator<1>> Bound;
+					LiveSequence->LocateBoundObjects(BindingId, UE::UniversalObjectLocator::FResolveParams(LiveRoot), nullptr, Bound);
+					if (TestEqual(TEXT("The binding resolves in the instance"), Bound.Num(), 1))
+					{
+						TestEqual(TEXT("To the INSTANCE's widget, not the template's"), Bound[0], (UObject*)LiveTarget);
+					}
+				}
+			}
+		}
+	}
+	World->DestroyWorld(false);
 
 	return true;
 }

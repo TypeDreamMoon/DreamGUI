@@ -92,7 +92,15 @@ void UDreamUIPrefabSequence::BindPossessableObject(const FGuid& ObjectId, UObjec
 		Widget = PossessedObject.GetTypedOuter<UDreamWidget>();
 	}
 	check(Widget != nullptr);
-	if (FDreamUIPrefabSequenceObjectReference::CreateForObject(Widget, &PossessedObject, ObjectRef))
+	// Relative to the CONTEXT -- the widget that owns this animation -- not to the widget being bound.
+	// Passing the bound widget made every recorded path "/", meaning "the context widget itself", so
+	// the path was never an identity for anything and playback had only the stored pointer to go on.
+	UDreamWidget* ContextWidget = Cast<UDreamWidget>(Context);
+	if (ContextWidget == nullptr)
+	{
+		ContextWidget = Widget;
+	}
+	if (FDreamUIPrefabSequenceObjectReference::CreateForObject(ContextWidget, &PossessedObject, ObjectRef))
 	{
 		ObjectReferences.CreateBinding(ObjectId, ObjectRef);
 	}
@@ -126,6 +134,20 @@ void UDreamUIPrefabSequence::LocateBoundObjects(const FGuid& ObjectId,
 	const UE::UniversalObjectLocator::FResolveParams& ResolveParams,
 	TSharedPtr<const FSharedPlaybackState> SharedPlaybackState, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
 {
+	// The CONTEXT first, and this is the whole of what makes animation work on a class. The stored
+	// pointer names one particular widget; a class has one tree per instance, so resolving through it
+	// makes every instance drive the authoring tree's widgets -- successfully, and invisibly, until
+	// somebody notices one screen animating another's.
+	if (UDreamWidget* ContextWidget = Cast<UDreamWidget>(ResolveParams.Context))
+	{
+		ObjectReferences.ResolveBindingInContext(ObjectId, ContextWidget, OutObjects);
+		if (OutObjects.Num() > 0)
+		{
+			return;
+		}
+	}
+	// No context, or nothing of that name under it: the pointer still identifies the widget while the
+	// asset is being authored, which is when there is exactly one tree and it is the right one.
 	ObjectReferences.ResolveBinding(ObjectId, OutObjects);
 }
 

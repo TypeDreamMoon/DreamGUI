@@ -18,9 +18,21 @@ struct DREAMGUI_API FDreamUIPrefabSequenceObjectReference
 
 public:
 
-#if WITH_EDITOR
+	/**
+	 * The chain of display names from the widget that owns the animation down to the bound one.
+	 *
+	 * Not editor-only any more, and not a helper: under the class model this IS the binding. A stored
+	 * pointer names one particular widget, which is right for a prefab (one tree) and wrong for a
+	 * class (one tree per instance) -- every instance's animation would drive the authoring tree's
+	 * widgets, resolving perfectly well the entire time.
+	 */
 	static FString GetWidgetPathRelativeToContextWidget(UDreamWidget* InContextWidget, UDreamWidget* InWidget);
 	static UDreamWidget* GetWidgetFromContextWidgetByRelativePath(UDreamWidget* InContextWidget, const FString& InPath);
+
+	/** Resolve against THIS context's tree rather than through the stored pointer. Null if it cannot. */
+	UObject* ResolveInContext(UDreamWidget* InContextWidget) const;
+
+#if WITH_EDITOR
 	bool FixObjectReferenceFromEditorHelpers(UDreamWidget* InContextWidget);
 	bool CanFixObjectReferenceFromEditorHelpers()const;
 	bool IsObjectReferenceGood(UDreamWidget* InContextWidget)const;
@@ -67,11 +79,9 @@ private:
 	UPROPERTY()
 	FString ObjectPathRelativeToWidget;
 
-#if WITH_EDITORONLY_DATA
-	/** HelperWidget's path relative to context widget, split by '/'. If only '/' means it is the context widget itself. could use this to replace reference object in editor/ */
+	/** HelperWidget's path relative to context widget, split by '/'. If only '/' means it is the context widget itself. */
 	UPROPERTY()
-		FString HelperWidgetPath;
-#endif
+	FString HelperWidgetPath;
 };
 
 USTRUCT()
@@ -93,6 +103,9 @@ struct FDreamUIPrefabSequenceObjectReferenceMap
 	 * @return true if this map contains a binding for the id, false otherwise
 	 */
 	bool HasBinding(const FGuid& ObjectId) const;
+
+	/** Resolve every reference for this id against InContextWidget's tree. Empty if none resolve there. */
+	void ResolveBindingInContext(const FGuid& ObjectId, UDreamWidget* InContextWidget, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const;
 
 	/**
 	 * Remove a binding for the specified ID

@@ -10,7 +10,6 @@
 #include "Core/Components/DreamWidget.h"
 
 
-#if WITH_EDITOR
 FString FDreamUIPrefabSequenceObjectReference::GetWidgetPathRelativeToContextWidget(UDreamWidget* InContextWidget, UDreamWidget* InWidget)
 {
 	if (InWidget == InContextWidget)
@@ -89,6 +88,7 @@ UDreamWidget* FDreamUIPrefabSequenceObjectReference::GetWidgetFromContextWidgetB
 }
 bool FDreamUIPrefabSequenceObjectReference::FixObjectReferenceFromEditorHelpers(UDreamWidget* InContextWidget)
 {
+#if WITH_EDITOR
 	if (auto FoundHelper = GetWidgetFromContextWidgetByRelativePath(InContextWidget, this->HelperWidgetPath))
 	{
 		HelperWidget = FoundHelper;
@@ -143,9 +143,7 @@ bool FDreamUIPrefabSequenceObjectReference::InitHelpers(UDreamWidget* InContextW
 	{
 		HelperWidget = nullptr;
 		ObjectPathRelativeToWidget.Reset();
-#if WITH_EDITOR
 		HelperWidgetPath.Reset();
-#endif
 		return false;
 	}
 
@@ -153,9 +151,8 @@ bool FDreamUIPrefabSequenceObjectReference::InitHelpers(UDreamWidget* InContextW
 	{
 		this->HelperWidget = Widget;
 		this->ObjectPathRelativeToWidget = "";
-#if WITH_EDITOR
+		// Always, not only in the editor: this path is the binding now, not a convenience for fixup.
 		this->HelperWidgetPath = GetWidgetPathRelativeToContextWidget(InContextWidget, Widget);
-#endif
 		return true;
 	}
 	else
@@ -163,9 +160,7 @@ bool FDreamUIPrefabSequenceObjectReference::InitHelpers(UDreamWidget* InContextW
 		Widget = Object->GetTypedOuter<UDreamWidget>();
 		this->HelperWidget = Widget;
 		this->ObjectPathRelativeToWidget = Object->GetPathName(Widget);
-#if WITH_EDITOR
 		this->HelperWidgetPath = GetWidgetPathRelativeToContextWidget(InContextWidget, Widget);
-#endif
 		return true;
 	}
 }
@@ -205,6 +200,27 @@ UObject* FDreamUIPrefabSequenceObjectReference::Resolve() const
 {
 	CheckTargetObject();
 	return Object;
+}
+
+UObject* FDreamUIPrefabSequenceObjectReference::ResolveInContext(UDreamWidget* InContextWidget) const
+{
+	if (!IsValid(InContextWidget) || HelperWidgetPath.IsEmpty())
+	{
+		return nullptr;
+	}
+	UDreamWidget* Widget = GetWidgetFromContextWidgetByRelativePath(InContextWidget, HelperWidgetPath);
+	if (!IsValid(Widget))
+	{
+		return nullptr;
+	}
+	if (ObjectPathRelativeToWidget.IsEmpty())
+	{
+		return Widget;
+	}
+	// A sub-object of that widget -- its visual, or one of its behaviours. Relative to the widget
+	// this context resolved to, so it lands in the same tree rather than the authored one.
+	const FSoftObjectPath SubObjectPath(FString::Printf(TEXT("%s.%s"), *Widget->GetPathName(), *ObjectPathRelativeToWidget));
+	return SubObjectPath.ResolveObject();
 }
 
 bool FDreamUIPrefabSequenceObjectReferenceMap::HasBinding(const FGuid& ObjectId) const
@@ -249,6 +265,23 @@ void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBinding(const FGuid& Objec
 	for (const FDreamUIPrefabSequenceObjectReference& Reference : References[Index].Array)
 	{
 		if (UObject* Object = Reference.Resolve())
+		{
+			OutObjects.Add(Object);
+		}
+	}
+}
+
+void FDreamUIPrefabSequenceObjectReferenceMap::ResolveBindingInContext(const FGuid& ObjectId,
+	UDreamWidget* InContextWidget, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
+{
+	const int32 Index = BindingIds.IndexOfByKey(ObjectId);
+	if (!References.IsValidIndex(Index))
+	{
+		return;
+	}
+	for (const FDreamUIPrefabSequenceObjectReference& Reference : References[Index].Array)
+	{
+		if (UObject* Object = Reference.ResolveInContext(InContextWidget))
 		{
 			OutObjects.Add(Object);
 		}
