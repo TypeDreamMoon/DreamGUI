@@ -16,6 +16,11 @@
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Text/DreamUIPaths.h"
 
+#include "Framework/Application/SlateApplication.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "HAL/PlatformProcess.h"
+#include "Widgets/Notifications/SNotificationList.h"
+
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "ScopedTransaction.h"
@@ -184,6 +189,73 @@ namespace DreamUITextAuthoring
 				return Cast<UDreamTextUserWidget>(InBlueprint->ParentClass->GetDefaultObject(/*bCreateIfNeeded*/false));
 			}
 			return nullptr;
+		}
+
+		/**
+		 * One notification per gesture, not one per widget.
+		 *
+		 * Deleting a multi-selection calls the refusal once per widget, and five toasts stacked up for
+		 * one Delete keypress is worse than the silence it replaces -- the author dismisses them
+		 * without reading, which is the same outcome with more clicking. Refusals arriving close
+		 * together fold into the first one with a count.
+		 *
+		 * Folded on TIME rather than on the message, because the messages differ: each names its own
+		 * widget. What the author needs to know is the one thing all of them say.
+		 */
+		void NotifyRefusal(const FText& InMessage, const UDreamWidgetBlueprint* InBlueprint)
+		{
+			// Notifications are Slate. A commandlet, a cook or an automation run without a UI reaches
+			// here through the same primitives and must not try to draw one.
+			if (!FSlateApplication::IsInitialized())
+			{
+				return;
+			}
+
+			static TWeakPtr<SNotificationItem> WeakItem;
+			static double LastTime = 0.0;
+			static int32 FoldedCount = 0;
+			static FText FirstMessage;
+
+			constexpr double FoldWindowSeconds = 2.0;
+			const double Now = FPlatformTime::Seconds();
+			const TSharedPtr<SNotificationItem> Existing = WeakItem.Pin();
+
+			if (Existing.IsValid() && (Now - LastTime) < FoldWindowSeconds)
+			{
+				LastTime = Now;
+				++FoldedCount;
+				Existing->SetText(FText::Format(
+					LOCTEXT("StructuralRefusalFolded", "{0} ({1} more refused)"),
+					FirstMessage, FText::AsNumber(FoldedCount)));
+				return;
+			}
+
+			LastTime = Now;
+			FoldedCount = 0;
+			FirstMessage = InMessage;
+
+			FNotificationInfo Info(InMessage);
+			Info.ExpireDuration = 8.0f;
+			Info.bFireAndForget = true;
+
+			// The file, because the message just told them structure lives in it. A refusal that names
+			// a file and gives no way to reach it is a message that ends in homework.
+			const FString Resolved = UDreamTextUserWidget::ResolveDuiFilePath(GetAuthoredSourcePath(InBlueprint));
+			if (!Resolved.IsEmpty() && FPaths::FileExists(Resolved))
+			{
+				Info.Hyperlink = FSimpleDelegate::CreateLambda([Resolved]
+				{
+					FPlatformProcess::LaunchFileInDefaultExternalApplication(*Resolved, nullptr, ELaunchVerb::Open);
+				});
+				Info.HyperlinkText = LOCTEXT("StructuralRefusalOpen", "Open the file");
+			}
+
+			const TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info);
+			if (Item.IsValid())
+			{
+				Item->SetCompletionState(SNotificationItem::CS_Fail);
+			}
+			WeakItem = Item;
 		}
 
 		/**
@@ -392,14 +464,21 @@ namespace DreamUITextAuthoring
 		{
 			return false;
 		}
+		const FText Message = DescribeStructuralRefusal(InBlueprint, InOperation);
 		// The file name, never just "this asset comes from text". The author's next action is to open a
 		// file, and a message that does not name one is a message they have to go and research.
 		//
 		// One category for all six call sites even though the family they interrupt logs to two, and
 		// one sentence built here rather than at each site: six refusals written six times is six
 		// chances for one of them to be worded so it cannot be told from an ordinary failure.
-		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d %s"),
-			InFunction, InLine, *DescribeStructuralRefusal(InBlueprint, InOperation).ToString());
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d %s"), InFunction, InLine, *Message.ToString());
+		// And where the author is looking, not only in the Output Log. This class comment has said
+		// since it was written that a refusal has to be visible BEFORE the edit -- and it was, for the
+		// two call sites that had somewhere to put an FText. The five primitives had nowhere, so
+		// dragging from the palette, pressing Delete, or renaming in the hierarchy did nothing at all
+		// and said nothing at all. That is the failure this whole gate exists to prevent, reproduced
+		// by the gate.
+		Local::NotifyRefusal(Message, InBlueprint);
 		return true;
 	}
 

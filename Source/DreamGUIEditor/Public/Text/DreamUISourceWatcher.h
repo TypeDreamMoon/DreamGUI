@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -18,10 +18,21 @@ class UDreamWidgetBlueprint;
  *
  * ## What it rebuilds, and what it does not
  *
- * LOADED Blueprints only. A `.dui` names its class only in one direction -- the class points at the
- * file -- so finding the classes for a file means asking each of them, and asking every widget
- * Blueprint in the project means loading every widget Blueprint in the project. That is not a thing
- * to do on a keystroke.
+ * LOADED Blueprints only, and asked of each Blueprint rather than read off the file.
+ *
+ * A `.dui` CAN name its class -- `class /Game/UI/WBP_Login` on the first line -- but that line is
+ * not what it looks like. It is optional, nothing validates it against the Blueprint being compiled,
+ * and its only current use is as a stable localization namespace (DreamUITextBuilder.cpp). Trusting
+ * it here would mean trusting a string no compile has ever checked, and being wrong about it means
+ * rebuilding the wrong class or silently rebuilding none.
+ *
+ * So the mapping runs the direction that IS load-bearing -- the class names the file -- which means
+ * finding the classes for a file is asking each of them, and asking every widget Blueprint in the
+ * project means loading every widget Blueprint in the project. Not a keystroke's worth of work.
+ *
+ * Validating `class` would change this: it would make the file->class direction real, let a save
+ * reach an unloaded class, and catch two classes claiming one file. It is the obvious next step and
+ * this deliberately does not take it on a line nothing enforces yet.
  *
  * It is also not the loop this exists to shorten. The loop is: designer open, edit the file, look.
  * The Blueprint in that loop is loaded by definition.

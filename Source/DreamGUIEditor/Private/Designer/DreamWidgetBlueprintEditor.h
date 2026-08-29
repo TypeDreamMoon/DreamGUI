@@ -155,6 +155,10 @@ public:
 	void FillTextSourceMenu(class UToolMenu* InMenu);
 	/** File dialog to Blueprint, via DreamUITextAuthoring::SetAuthoredSourcePath -- which recompiles. */
 	void PickTextSourceFile();
+	/** Writes a starter .dui, points the class at it, and compiles. Offered only when there is none. */
+	void CreateTextSourceFile();
+	/** The first DUI root, or where the project's would be. Never a directory outside every root. */
+	FString GetDefaultTextSourceDirectory() const;
 private:
 	void SyncSelection();
 	void HandlePostTransaction(bool bSuccess);

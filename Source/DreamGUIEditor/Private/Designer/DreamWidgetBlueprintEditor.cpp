@@ -19,6 +19,8 @@
 #include "HAL/PlatformProcess.h"
 #include "Misc/MessageDialog.h"
 #include "Misc/Paths.h"
+#include "Misc/FileHelper.h"
+#include "HAL/FileManager.h"
 #include "Core/DreamWidgetTree.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Preview/DreamWidgetDesignerScene.h"
@@ -2001,6 +2003,20 @@ void FDreamWidgetBlueprintEditor::FillTextSourceMenu(UToolMenu* InMenu)
 	FToolMenuSection& Section = InMenu->AddSection("DreamWidgetTextSourceActions",
 		LOCTEXT("TextSourceSection", "DreamUI Source"));
 
+	// First, and only when there is nothing yet. Picking a file assumes a file exists, and until this
+	// existed the way to get one was to leave the editor, create an empty file by hand, and know the
+	// syntax well enough to type a hierarchy into it before anything would compile. That is a hard
+	// stop at the very first step of the very first screen anyone authors.
+	if (AuthoredPath.IsEmpty())
+	{
+		Section.AddMenuEntry("CreateTextSource",
+			LOCTEXT("CreateTextSource", "Create Source File..."),
+			LOCTEXT("CreateTextSourceTooltip",
+				"Write a new .dui with a starter hierarchy, point this class at it, and compile."),
+			FSlateIcon(AppStyle, "Icons.Plus"),
+			FUIAction(FExecuteAction::CreateSP(this, &FDreamWidgetBlueprintEditor::CreateTextSourceFile)));
+	}
+
 	Section.AddMenuEntry("PickTextSource",
 		LOCTEXT("PickTextSource", "Set Source File..."),
 		LOCTEXT("PickTextSourceTooltip", "Choose the .dui this class builds its hierarchy from, then recompile."),
@@ -2082,6 +2098,106 @@ void FDreamWidgetBlueprintEditor::PickTextSourceFile()
 		return;
 	}
 	DreamUITextAuthoring::SetAuthoredSourcePath(Blueprint, Chosen[0]);
+}
+
+FString FDreamWidgetBlueprintEditor::GetDefaultTextSourceDirectory() const
+{
+	const TArray<FDreamUISourceRoot> Roots = DreamUIPaths::GetSourceRoots();
+	if (Roots.Num() > 0)
+	{
+		return Roots[0].Directory;
+	}
+	// No root exists yet, which is the first-time case and the one that has to work. Offering the
+	// project root instead would have the author create their first .dui one directory above where
+	// anything looks for it.
+	return FPaths::ConvertRelativePathToFull(
+		FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+}
+
+void FDreamWidgetBlueprintEditor::CreateTextSourceFile()
+{
+	IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
+	UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint();
+	if (DesktopPlatform == nullptr || !DreamUITextAuthoring::CanAuthorFromText(Blueprint))
+	{
+		return;
+	}
+
+	const FString DefaultDirectory = GetDefaultTextSourceDirectory();
+	// Created before the dialog, not after: a save dialog pointed at a directory that does not exist
+	// silently opens somewhere else, and the author ends up with their first source outside every
+	// root without being told.
+	IFileManager::Get().MakeDirectory(*DefaultDirectory, /*Tree*/true);
+
+	const FString SuggestedName = FString::Printf(TEXT("%s%s"),
+		*Blueprint->GetName(), DreamUIPaths::SourceExtension);
+
+	TArray<FString> Chosen;
+	const bool bPicked = DesktopPlatform->SaveFileDialog(
+		FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr),
+		LOCTEXT("CreateTextSourceTitle", "Create a DreamUI source file").ToString(),
+		DefaultDirectory, SuggestedName, TEXT("DreamUI source (*.dui)|*.dui"),
+		EFileDialogFlags::None, Chosen);
+	if (!bPicked || Chosen.Num() == 0)
+	{
+		return;
+	}
+
+	FString FilePath = FPaths::ConvertRelativePathToFull(Chosen[0]);
+	if (!FPaths::GetExtension(FilePath, /*bIncludeDot*/true)
+		.Equals(DreamUIPaths::SourceExtension, ESearchCase::IgnoreCase))
+	{
+		FilePath += DreamUIPaths::SourceExtension;
+	}
+
+	// Never over an existing file. This command exists for the empty state; a "create" that can
+	// silently replace somebody's screen is not worth the one click it saves.
+	if (FPaths::FileExists(FilePath))
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::Format(
+			LOCTEXT("TextSourceExists", "'{0}' already exists. Use Set Source File... to point at it."),
+			FText::FromString(FilePath)));
+		return;
+	}
+
+	// A starter that RENDERS. An empty file compiles to an empty hierarchy, which looks exactly like
+	// a broken pipeline the first time anyone sees it; a root plus one centred label is the smallest
+	// thing that answers "did this work" by appearing.
+	//
+	// The class line is written because it is what makes localization keys survive renaming the file,
+	// and the anchor block because the root is the one place in a .dui where anchors are still the
+	// right tool -- everything below it lays out with containers and alignment.
+	const FString Starter = FString::Printf(
+		TEXT("// %s\n")
+		TEXT("class %s\n")
+		TEXT("\n")
+		TEXT("Widget Root {\n")
+		TEXT("    AnchorData.AnchorMin = (0, 0)\n")
+		TEXT("    AnchorData.AnchorMax = (1, 1)\n")
+		TEXT("    AnchorData.SizeDelta = (0, 0)\n")
+		TEXT("\n")
+		TEXT("    + Overlay {}\n")
+		TEXT("\n")
+		TEXT("    Text Title {\n")
+		TEXT("        Text     = \"%s\"\n")
+		TEXT("        FontSize = 24\n")
+		TEXT("        @slot HorizontalAlignment = Center\n")
+		TEXT("        @slot VerticalAlignment   = Center\n")
+		TEXT("    }\n")
+		TEXT("}\n"),
+		*FPaths::GetCleanFilename(FilePath),
+		*Blueprint->GetPathName(),
+		*Blueprint->GetName());
+
+	if (!FFileHelper::SaveStringToFile(Starter, *FilePath,
+		FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::Format(
+			LOCTEXT("TextSourceNotWritten", "Could not write '{0}'."), FText::FromString(FilePath)));
+		return;
+	}
+
+	DreamUITextAuthoring::SetAuthoredSourcePath(Blueprint, FilePath);
 }
 
 bool FDreamWidgetBlueprintEditor::IsFilteredActor(const AActor* Actor)
