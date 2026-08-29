@@ -48,6 +48,32 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 	}
 }
 
+UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDreamWidget* InTemplate, UDreamWidget* InParent)
+{
+	if (!IsValid(InTemplate))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Nothing to duplicate."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return nullptr;
+	}
+	UObject* Outer = InOuter != nullptr ? InOuter : InTemplate->GetOuter();
+	if (Outer == nullptr)
+	{
+		return nullptr;
+	}
+	// The deep copy, and the parent back-pointers with it.
+	UDreamWidget* Copy = UDreamWidget::DuplicateSubtree(Outer, InTemplate);
+	if (!IsValid(Copy))
+	{
+		return nullptr;
+	}
+	if (InParent != nullptr)
+	{
+		Copy->SetParentBeforeRegister(InParent);
+	}
+	RegisterDreamWidgetHierarchy(Copy);
+	return Copy;
+}
+
 void UDreamUserWidget::Initialize()
 {
 	// Walk up for the tree: a subclass that only adds logic declares none of its own, and has to

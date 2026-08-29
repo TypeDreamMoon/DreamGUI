@@ -119,6 +119,20 @@ private:
 DREAMGUI_API void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot);
 
 /**
+ * Copy a live widget subtree and bring the copy to life under InParent.
+ *
+ * InTemplate is used as the ARCHETYPE of a single NewObject: FObjectInstancingGraph follows the
+ * Instanced properties (Children, the visual, the behaviours, the panel slot) and carries the whole
+ * subtree across in one go. This is the same mechanism the compiler instantiates a class's hierarchy
+ * with -- NewObject does not care whether its archetype is a template object or a live one.
+ *
+ * The copy is NOT attached in the source's sibling order and gets a generated object name; callers
+ * that care about either say so afterwards. Display names are not made unique here either: what
+ * "unique" means depends on where the copy landed, which only the caller knows.
+ */
+DREAMGUI_API UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDreamWidget* InTemplate, UDreamWidget* InParent);
+
+/**
  * Create and initialize a user widget of InClass.
  *
  * A widget needs a tree to belong to, so a fresh UDreamWidgetTree is minted and outered to the world,

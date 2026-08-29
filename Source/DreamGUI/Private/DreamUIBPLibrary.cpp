@@ -184,26 +184,25 @@ bool UDreamUIBPLibrary::IsInViewport(UObject* WorldContextObject, UDreamWidget* 
 
 UDreamWidget* UDreamUIBPLibrary::DuplicateWidget(UObject* WorldContextObject, UDreamWidget* Target, UDreamWidget* Parent)
 {
-	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+	if (!IsValid(Parent))
 	{
-		return LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidget(World, Parent->GetOuter(), Target, Parent);
+		return nullptr;
 	}
-	return nullptr;
+	return DuplicateDreamWidgetHierarchy(Parent->GetOuter(), Target, Parent);
 }
 void UDreamUIBPLibrary::PrepareDuplicateData(UDreamWidget* Target, FDreamUIDuplicateDataContainer& DataContainer)
 {
-	DataContainer.bIsValid = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::PrepareDataForDuplicate(Target, DataContainer.DuplicateData);
+	// Nothing to prepare any more: instancing reads the template directly, so this just remembers it.
+	DataContainer.Template = Target;
+	DataContainer.bIsValid = IsValid(Target);
 }
 UDreamWidget* UDreamUIBPLibrary::DuplicateWidgetWithPreparedData(UObject* WorldContextObject, FDreamUIDuplicateDataContainer& Data, UDreamWidget* Parent)
 {
-	if (Data.bIsValid)
+	if (!Data.bIsValid || !IsValid(Parent))
 	{
-		if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
-		{
-			return LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetWithPreparedData(World, Parent->GetOuter(), Data.DuplicateData, Parent);
-		}
+		return nullptr;
 	}
-	return nullptr;
+	return DuplicateDreamWidgetHierarchy(Parent->GetOuter(), Data.Template, Parent);
 }
 
 UActorComponent* UDreamUIBPLibrary::GetComponentInParent(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, AActor* InStopNode)

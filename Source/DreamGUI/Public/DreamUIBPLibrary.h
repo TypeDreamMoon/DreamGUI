@@ -16,18 +16,23 @@
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "DreamUIBPLibrary.generated.h"
 
-namespace LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
-{
-	struct FDuplicateWidgetDataContainer;
-}
-
+/**
+ * What PrepareDuplicateData hands to DuplicateWidgetWithPreparedData.
+ *
+ * It used to carry a serialised blob, because duplication meant a save/load round trip and the point
+ * of preparing was to pay for the save once. Duplication instances the template now, so there is
+ * nothing to prepare: the template itself is the data, and the pair is kept because Blueprints call
+ * it and because holding the template strongly is what keeps it alive between the two calls.
+ */
 USTRUCT(BlueprintType)
 struct FDreamUIDuplicateDataContainer
 {
 	GENERATED_BODY()
 public:
 	bool bIsValid = false;
-	LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::FDuplicateWidgetDataContainer DuplicateData;
+
+	UPROPERTY()
+	TObjectPtr<class UDreamWidget> Template = nullptr;
 };
 
 UCLASS()

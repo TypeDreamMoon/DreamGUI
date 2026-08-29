@@ -522,6 +522,24 @@ public:
 	 */
 	void RestoreParentLinksRecursive();
 
+	/**
+	 * Deep-copy this subtree into InOuter, flat, and hand back the copy of this widget.
+	 *
+	 * Each widget is instanced individually and its Children rewired from the source's, rather than
+	 * handing the root to one NewObject and letting FObjectInstancingGraph walk it. That shortcut
+	 * works for a whole UDreamWidgetTree, whose widgets are all its sub-objects; it does NOT work
+	 * from a widget in the middle of one, because Children are outered flat to the tree and are
+	 * therefore external references from any single widget's point of view -- so the "copy" would
+	 * share its children with the original, and every structural comparison would still pass.
+	 *
+	 * Per-widget instancing still does the real work: a widget's visual, behaviours and panel slot
+	 * ARE its own sub-objects, so those come across as fresh copies without any help.
+	 *
+	 * The copy is detached, unregistered, and named by the engine. Attaching, registering and any
+	 * display-name uniquing are the caller's, because only the caller knows where it landed.
+	 */
+	static UDreamWidget* DuplicateSubtree(UObject* InOuter, UDreamWidget* InSource);
+
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	UDreamWidget* GetParent()const { return Parent.Get(); }
 	/**

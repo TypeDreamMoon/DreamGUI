@@ -2561,6 +2561,68 @@ void UDreamWidget::EnsureUIChildrenValid()
 	}
 }
 
+UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InSource)
+{
+	if (InOuter == nullptr || !IsValid(InSource))
+	{
+		return nullptr;
+	}
+	struct LOCAL
+	{
+		static UDreamWidget* Walk(UObject* InOuter, UDreamWidget* InSource, TSet<const UDreamWidget*>& InVisited)
+		{
+			bool bAlreadyVisited = false;
+			InVisited.Add(InSource, &bAlreadyVisited);
+			if (bAlreadyVisited)
+			{
+				// The same guard RestoreParentLinksRecursive keeps: a malformed Children array would
+				// recurse forever here rather than fail somewhere legible.
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cycle in Children reached widget '%s'; not duplicating it twice."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InSource->GetPathDisplayName());
+				return nullptr;
+			}
+
+			// Flags from the source, not fixed here: a copy of a transient preview widget must not
+			// become a saveable one, and a copy of an authored widget has to stay transactional or
+			// undo cannot reach it.
+			FObjectInstancingGraph InstancingGraph;
+			UDreamWidget* Copy = NewObject<UDreamWidget>(InOuter, InSource->GetClass(), NAME_None,
+				InSource->GetMaskedFlags(RF_Transactional | RF_Transient | RF_Public),
+				InSource, /*bCopyTransientsFromClassDefaults*/false, &InstancingGraph);
+			if (!IsValid(Copy))
+			{
+				return nullptr;
+			}
+			// Whatever instancing put in Children is not the hierarchy -- see the header. Rebuilt below
+			// from the source's array, which is the structural truth.
+			Copy->Children.Reset();
+			Copy->Parent = nullptr;
+
+			for (const TObjectPtr<UDreamWidget>& Child : InSource->Children)
+			{
+				if (!IsValid(Child))
+				{
+					continue;
+				}
+				if (UDreamWidget* ChildCopy = Walk(InOuter, Child, InVisited))
+				{
+					Copy->Children.Add(ChildCopy);
+				}
+			}
+			return Copy;
+		}
+	};
+	TSet<const UDreamWidget*> Visited;
+	UDreamWidget* Copy = LOCAL::Walk(InOuter, InSource, Visited);
+	if (IsValid(Copy))
+	{
+		// Parent is transient, so the copies arrive with the structure intact and every back-pointer
+		// empty. OnRegister reads Parent, so nothing may register before this.
+		Copy->RestoreParentLinksRecursive();
+	}
+	return Copy;
+}
+
 void UDreamWidget::RestoreParentLinksRecursive()
 {
 	// A cycle here would hang the walk rather than assert somewhere useful later, and a persisted

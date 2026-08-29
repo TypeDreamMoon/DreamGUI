@@ -6,6 +6,8 @@
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/Components/DreamText.h"
 #include "PrefabSystem/DreamUIObjectReaderAndWriter.h"
 #include "Engine/World.h"
 #include "UObject/Package.h"
@@ -298,6 +300,70 @@ bool FDreamPrefabBlobStillSkipsChildrenTest::RunTest(const FString& Parameters)
 			DreamUIPrefabSystem::DreamUIPrefab_IsHierarchyProperty(SiblingIndexProperty));
 	}
 
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetDuplicateHierarchyTest,
+	"DreamGUI.WidgetTree.ObjectGraph.DuplicatingALiveSubtreeGivesItItsOwnEverything",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetDuplicateHierarchyTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetTreeObjectGraphTestLocal;
+	FScopedGameWorld TestWorld;
+
+	// A live, registered subtree -- what every caller of this actually passes.
+	UDreamWidget* Host = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transactional);
+	Host->SetDisplayName(TEXT("Host"));
+	Host->OnRegister();
+
+	UDreamWidget* Source = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transactional);
+	Source->SetDisplayName(TEXT("Cell"));
+	Source->TrySetParent(Host, false);
+	UDreamText* SourceVisual = Source->CreateNewVisual<UDreamText>();
+	UDreamWidget* SourceChild = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transactional);
+	SourceChild->SetDisplayName(TEXT("Label"));
+	SourceChild->TrySetParent(Source, false);
+	RegisterDreamWidgetHierarchy(Source);
+	if (!TestNotNull(TEXT("the source has a visual to share or not share"), SourceVisual))
+	{
+		return false;
+	}
+
+	UDreamWidget* Copy = DuplicateDreamWidgetHierarchy(Host->GetOuter(), Source, Host);
+	if (!TestNotNull(TEXT("duplicating produced a widget"), Copy))
+	{
+		return false;
+	}
+
+	TestNotEqual(TEXT("the copy is a distinct object"), (const UDreamWidget*)Copy, (const UDreamWidget*)Source);
+	TestEqual(TEXT("and carries the child with it"), Copy->GetChildrenCount(), 1);
+
+	// Attached and alive. An unregistered copy never lays out or draws, and every caller of this
+	// expects the widget it gets back to be usable immediately.
+	TestEqual(TEXT("the copy is attached where it was asked to be"), Copy->GetParent(), Host);
+	TestTrue(TEXT("the copy is registered"), Copy->HasRegistered());
+	if (Copy->GetChildrenCount() == 1)
+	{
+		UDreamWidget* CopiedChild = Copy->GetChildren()[0];
+		TestNotEqual(TEXT("the copied child is distinct too"), (const UDreamWidget*)CopiedChild, (const UDreamWidget*)SourceChild);
+		TestTrue(TEXT("and registered"), CopiedChild->HasRegistered());
+		// The back-pointer: Parent is DuplicateTransient, so it arrives empty and has to be rebuilt.
+		// Without that pass the copy has children that do not know who their parent is, and every
+		// structural check above still passes.
+		TestEqual(TEXT("and knows its parent"), CopiedChild->GetParent(), Copy);
+	}
+
+	// The half no structural comparison can see: a shared visual writes through to the original.
+	UDreamVisual* CopiedVisual = Copy->GetVisual();
+	TestNotNull(TEXT("the copy has a visual"), CopiedVisual);
+	TestNotEqual(TEXT("which is NOT the source's"), (const UObject*)CopiedVisual, (const UObject*)SourceVisual);
+
+	Copy->DestroyWidget();
+	Source->DestroyWidget();
+	Host->DestroyWidget();
 	return true;
 }
 
