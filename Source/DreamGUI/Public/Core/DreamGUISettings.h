@@ -126,20 +126,14 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> WorldSpaceUERendererRootClass;
 
-	/** Screen-space root for a markup (.dreamuiml) document, which has its own presenter component. */
-	UPROPERTY(config, EditAnywhere, Category = "Actors")
-	TSoftClassPtr<AActor> MarkupScreenSpaceRootClass;
-
-	/** World-space root for a markup document. */
-	UPROPERTY(config, EditAnywhere, Category = "Actors")
-	TSoftClassPtr<AActor> MarkupWorldSpaceRootClass;
-
-	/** World-space root for a markup document drawn through UMG's renderer. */
-	UPROPERTY(config, EditAnywhere, Category = "Actors")
-	TSoftClassPtr<AActor> MarkupWorldSpaceUERendererRootClass;
-
-	/** The root class for one render mode, so the two actor factories cannot disagree. */
-	TSoftClassPtr<AActor> GetRootClassForRenderMode(EDreamRenderMode RenderMode, bool bMarkup) const;
+	/**
+	 * The root class for one render mode, so two actor factories cannot disagree about it.
+	 *
+	 * Took a bMarkup flag until the markup pipeline was retired; the second set of root classes it
+	 * chose between went with it. Nothing calls this today -- the prefab factory that did was removed
+	 * with the prefab asset model -- so it is kept for the next factory rather than for a caller.
+	 */
+	TSoftClassPtr<AActor> GetRootClassForRenderMode(EDreamRenderMode RenderMode) const;
 
 	// ---------------------------------------------------------------- Resolution
 

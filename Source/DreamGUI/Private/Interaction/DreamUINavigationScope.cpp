@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
@@ -9,6 +9,13 @@
 UDreamUINavigationScope::UDreamUINavigationScope()
 {
 	bStartWithTickEnabled = false;
+}
+
+void UDreamUINavigationScope::SetDesiredFocusTarget(UUISelectable* Value)
+{
+	// Out of line because TWeakObjectPtr's assignment needs UUISelectable complete, and the header
+	// only forward declares it. See the comment on the declaration.
+	DesiredFocusTarget = Value;
 }
 
 void UDreamUINavigationScope::OnEnable()

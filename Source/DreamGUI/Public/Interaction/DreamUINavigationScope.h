@@ -50,8 +50,18 @@ public:
 	void SetConfineNavigation(bool Value){ bConfineNavigation = Value; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	UUISelectable* GetDesiredFocusTarget()const{ return DesiredFocusTarget.Get(); }
+	/**
+	 * Defined in the .cpp, unlike its neighbours, because assigning to a TWeakObjectPtr needs the
+	 * pointee to be COMPLETE -- the operator has to prove the conversion -- and UUISelectable is only
+	 * forward declared here. The getter can stay inline: Get() returns T* and never asks.
+	 *
+	 * It compiled inline for a long time on borrowed completeness: some neighbour in the same unity
+	 * blob included UISelectable.h, so the definition happened to be in scope. Deleting an unrelated
+	 * set of files reshuffled the blobs and it stopped being. Including the header here would fix it
+	 * too, and would hand that include to everyone who includes this one.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
-	void SetDesiredFocusTarget(UUISelectable* Value){ DesiredFocusTarget = Value; }
+	void SetDesiredFocusTarget(UUISelectable* Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	bool GetRestoreLastFocus()const{ return bRestoreLastFocus; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")

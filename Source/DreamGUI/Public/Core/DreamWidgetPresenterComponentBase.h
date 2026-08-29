@@ -12,7 +12,7 @@ class UDreamCanvas;
 
 // Abstract: LoadWidget is PURE_VIRTUAL, so an instance of this class asserts the moment it
 // registers. Without this the Add Component list offers it, and picking it there is a crash
-// rather than an error. Add DreamWidgetPresenterComponent or DreamUIMLPresenterComponent.
+// rather than an error. Add DreamWidgetPresenterComponent.
 UCLASS(Abstract, ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UDreamWidgetPresenterComponentBase : public USceneComponent
 {

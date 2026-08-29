@@ -6,7 +6,6 @@
 
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "Core/DreamWidgetPresenterComponent.h"
-#include "XMLSupport/DreamUIMLPresenterComponent.h"
 #include "UObject/UObjectIterator.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamUserWidget.h"
@@ -36,14 +35,12 @@ bool FDreamPresenterBaseIsAbstractTest::RunTest(const FString& Parameters)
 	// The point of hiding the base is that the usable ones stay usable.
 	TestFalse(TEXT("the widget presenter is spawnable"),
 		UDreamWidgetPresenterComponent::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
-	TestFalse(TEXT("markup presenter is spawnable"),
-		UDreamUIMLPresenterComponent::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
 
 	return true;
 }
 
 /*
- * The concrete presenters are exactly the two that implement LoadWidget.
+ * The concrete presenters are exactly the ones that implement LoadWidget.
  *
  * Hiding the base does nothing for a third native subclass that forgets the override: it inherits the
  * PURE_VIRTUAL body and crashes the same way, under its own name. Whether a virtual was overridden is
@@ -74,7 +71,6 @@ bool FDreamPresenterConcreteRosterTest::RunTest(const FString& Parameters)
 	Spawnable.Sort();
 
 	const TArray<FString> Expected = {
-		TEXT("DreamUIMLPresenterComponent"),
 		TEXT("DreamWidgetPresenterComponent"),
 	};
 	TestEqual(FString::Printf(TEXT("spawnable presenters, got [%s]"), *FString::Join(Spawnable, TEXT(", "))),

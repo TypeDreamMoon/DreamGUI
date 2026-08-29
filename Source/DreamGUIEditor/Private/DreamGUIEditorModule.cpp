@@ -15,6 +15,8 @@
 #include "DreamWidgetBlueprintCompiler.h"
 
 #include "DreamGUIEditorStyle.h"
+#include "Designer/DreamUITextAuthoringGate.h"
+#include "Text/DreamUITextWriteBack.h"
 #include "DreamUIEditorCommands.h"
 #include "DreamUIEditorTools.h"
 #include "DreamUIControlRegistry.h"
@@ -29,7 +31,6 @@
 #include "AssetTypeActions/AssetTypeActions_DreamUIStaticSpriteAtlasData.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontData_Bitmap.h"
 #include "AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.h"
-#include "AssetTypeActions/AssetTypeActions_DreamUIMLResource.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIStaticMeshCache.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIRichTextCustomStyleData.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIRichTextImageData.h"
@@ -135,6 +136,18 @@ void FDreamGUIEditorModule::StartupModule()
 	FDreamGUIEditorStyle::Initialize();
 	FDreamGUIEditorStyle::ReloadTextures();
 	FDreamUIControlRegistry::Get().InitializeDynamicDiscovery();
+
+	// Tell the details panel how to ask "can this value be written into a .dui at all". Without it the
+	// gate fails open, and a font or texture reference on a text-authored widget reads as editable --
+	// the author changes it, the preview agrees, and the next compile drops it, which is the exact
+	// silent failure the text pipeline exists to remove. Installed here rather than defaulted inside
+	// the gate so the editor module owns the dependency: the gate is about authoring policy, and
+	// what has a literal spelling is the write-back's question to answer.
+	DreamUITextAuthoring::SetLiteralSpellingProbe(
+		[](const FProperty* InLeaf, const void* InValuePtr)
+		{
+			return FDreamUITextWriteBack::CanSpellAsLiteral(InLeaf, InValuePtr);
+		});
 	FDreamUIBehaviourEditorBackendRegistry::Get().RegisterBuiltInBackends();
 
 	// Teaches Kismet how to compile a DreamUI hierarchy into a class. Registering the compiler is
@@ -258,7 +271,6 @@ void FDreamGUIEditorModule::StartupModule()
 		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_DreamUIRichTextImageData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> FontEmojiDataAction = MakeShareable(new FAssetTypeActions_DreamUIFontEmojiData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> DistanceFieldFontDataTypeAction = MakeShareable(new FAssetTypeActions_DreamUIFontData_DistanceField(DreamUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> UIMLResourceAction = MakeShareable(new FAssetTypeActions_DreamUIMLResource(DreamUIAssetCategoryBit));
 		AssetTools.RegisterAssetTypeActions(SpriteDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(BitmapFontDataAction.ToSharedRef());
@@ -269,7 +281,6 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(RichTextImageDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(FontEmojiDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(DistanceFieldFontDataTypeAction.ToSharedRef());
-		AssetTools.RegisterAssetTypeActions(UIMLResourceAction.ToSharedRef());
 		AssetTypeActionsArray.Add(SpriteDataAction);
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
 		AssetTypeActionsArray.Add(BitmapFontDataAction);
@@ -279,7 +290,6 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTypeActionsArray.Add(RichTextImageDataAction);
 		AssetTypeActionsArray.Add(FontEmojiDataAction);
 		AssetTypeActionsArray.Add(DistanceFieldFontDataTypeAction);
-		AssetTypeActionsArray.Add(UIMLResourceAction);
 	}
 	//register Thumbnail
 	{
@@ -367,6 +377,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+	DreamUITextAuthoring::SetLiteralSpellingProbe(nullptr);
 	FDreamUIControlRegistry::Get().ShutdownDynamicDiscovery();
 	FDreamUIBehaviourEditorBackendRegistry::Get().UnregisterBuiltInBackends();
 	FDreamGUIEditorStyle::Shutdown();

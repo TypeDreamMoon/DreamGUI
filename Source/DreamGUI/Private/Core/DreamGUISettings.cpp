@@ -43,25 +43,22 @@ UDreamGUISettings::UDreamGUISettings()
 	WorldSpaceRaycasterSourceClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/DreamWorldSpaceRaycasterSource_Mouse.DreamWorldSpaceRaycasterSource_Mouse_C")));
 	ScreenSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/ScreenSpaceRoot.ScreenSpaceRoot_C")));
 	WorldSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/WorldSpaceRoot_DreamRenderer.WorldSpaceRoot_DreamRenderer_C")));
-	MarkupScreenSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/XMLSupport/ScreenSpaceRoot.ScreenSpaceRoot_C")));
-	MarkupWorldSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/XMLSupport/WorldSpaceRoot_DreamRenderer.WorldSpaceRoot_DreamRenderer_C")));
 	WorldSpaceUERendererRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/WorldSpaceRoot_UERenderer.WorldSpaceRoot_UERenderer_C")));
-	MarkupWorldSpaceUERendererRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/XMLSupport/WorldSpaceRoot_UERenderer.WorldSpaceRoot_UERenderer_C")));
 }
 
-TSoftClassPtr<AActor> UDreamGUISettings::GetRootClassForRenderMode(EDreamRenderMode RenderMode, bool bMarkup) const
+TSoftClassPtr<AActor> UDreamGUISettings::GetRootClassForRenderMode(EDreamRenderMode RenderMode) const
 {
-	// The prefab factory and the markup factory used to each build this path by hand from the same
-	// three-case switch, differing only by a folder. One switch means they cannot drift apart.
+	// One switch, so two factories cannot build this path by hand and drift apart -- which is what
+	// they did before it existed.
 	switch (RenderMode)
 	{
 	case EDreamRenderMode::WorldSpace:
-		return bMarkup ? MarkupWorldSpaceUERendererRootClass : WorldSpaceUERendererRootClass;
+		return WorldSpaceUERendererRootClass;
 	case EDreamRenderMode::WorldSpace_DreamUI:
-		return bMarkup ? MarkupWorldSpaceRootClass : WorldSpaceRootClass;
+		return WorldSpaceRootClass;
 	case EDreamRenderMode::ScreenSpaceOverlay:
 	default:
-		return bMarkup ? MarkupScreenSpaceRootClass : ScreenSpaceRootClass;
+		return ScreenSpaceRootClass;
 	}
 }
 

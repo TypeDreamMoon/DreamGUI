@@ -70,7 +70,6 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassThumbnail.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.DreamVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.DreamUIBehaviour", new IMAGE_BRUSH(TEXT("DreamUIBehaviour_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.DreamUIMLBehaviour", new IMAGE_BRUSH(TEXT("Xaml_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.DreamRectBlock", new IMAGE_BRUSH(TEXT("DreamRectBlock_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_40x"), Icon40x40));
@@ -102,7 +101,6 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassIcon.DreamBackgroundPixelate", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.DreamPixelSort", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.DreamUIBehaviour", new IMAGE_BRUSH(TEXT("DreamUIBehaviour_16x"), Icon16x16));
-	Style->Set("ClassIcon.DreamUIMLBehaviour", new IMAGE_BRUSH(TEXT("Xaml_16x"), Icon16x16));
 	Style->Set("ClassIcon.DreamRectBlock", new UMG_ICON(TEXT("Border"), Icon16x16));
 	Style->Set("ClassIcon.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
@@ -174,7 +172,6 @@ TSharedRef< FSlateStyleSet > FDreamGUIEditorStyle::Create()
 	Style->Set("ClassIcon.DreamUIPlayTweenComponent", new STARSHIP_ICON(TEXT("Animation"), Icon16x16));
 	Style->Set("ClassIcon.DreamUIPlayTweenSequenceComponent", new STARSHIP_ICON(TEXT("Timeline"), Icon16x16));
 	Style->Set("ClassIcon.DreamWidgetAnimationComponent", new UMG_IMAGE(TEXT("Animations_16x"), Icon16x16));
-	Style->Set("ClassIcon.DreamUIMLBindingBehaviour", new IMAGE_BRUSH(TEXT("Xaml_16x"), Icon16x16));
 	Style->Set("ClassIcon.DreamUMGWidgetInteraction", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 
 	Style->Set("ClassThumbnail.DreamUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
