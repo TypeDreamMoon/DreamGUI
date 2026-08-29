@@ -836,4 +836,39 @@ bool FDreamDesignerAnimationReachesTheAssetTest::RunTest(const FString&)
 	return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRecompileDoesNotOrphanThePreviewTest,
+	"DreamGUI.Designer.ARecompileDoesNotOrphanThePreview",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerRecompileDoesNotOrphanThePreviewTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerRecompilePreview"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	UDreamWidget* PreviewBefore = Scoped.PreviewRoot();
+	if (!TestNotNull(TEXT("With a preview"), PreviewBefore))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Which is registered in the preview world"), PreviewBefore->HasRegistered());
+
+	// A recompile reinstances the preview along with every other instance of the class. Nothing here
+	// asks the designer for anything afterwards, deliberately: the claim is about the object left
+	// BEHIND, which no reachable pointer names any more.
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+
+	// Registered and unowned is the defect. Left that way it survives until GC, and then reports
+	// itself through UDreamWidget's last-resort cleanup at Error verbosity -- in whichever test was
+	// running at the time, which is why this went unattributed for so long.
+	TestFalse(TEXT("The replaced preview was unregistered, not abandoned"), PreviewBefore->HasRegistered());
+
+	return true;
+}
+
 #endif

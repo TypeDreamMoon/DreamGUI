@@ -193,9 +193,15 @@ UDreamWidget* FDreamWidgetPreviewHost::GetPreviewRoot() const
 void FDreamWidgetPreviewHost::DestroyPreview()
 {
 	PreviewWidgetsByName.Reset();
-	if (IsValid(PreviewWidget))
+	// Deliberately not IsValid(): an object marked for collection is still live memory whose widgets
+	// are still registered, and skipping teardown on it is precisely how one gets orphaned.
+	// DestroyWidget is written for that case -- it walks on RF_FinishDestroyed, not on IsValid.
+	if (UDreamUserWidget* Preview = PreviewWidget)
 	{
-		PreviewWidget->DestroyWidget();
+		if (!Preview->HasAnyFlags(RF_FinishDestroyed))
+		{
+			Preview->DestroyWidget();
+		}
 	}
 	PreviewWidget = nullptr;
 }
@@ -446,6 +452,27 @@ void FDreamWidgetPreviewHost::OnBlueprintCompiled(UBlueprint* InBlueprint)
 
 void FDreamWidgetPreviewHost::OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap)
 {
+	// A recompile reinstances the preview like any other instance of the class: the original is
+	// renamed aside and every reference to it is swapped for a property copy. Ours is swapped too --
+	// a beat after this delegate -- and that is the whole problem, because the original is REGISTERED
+	// in the preview world and the copy is not (bIsRegistered is not a UPROPERTY, so it does not come
+	// across). Adopt the copy and the original is left live, registered, and unowned; it turns up much
+	// later as UDreamWidget's last-resort cleanup, at Error verbosity, inside whatever happened to be
+	// running when GC reached it.
+	//
+	// This delegate is the one moment the pointer still names the object that needs tearing down.
+	// Take it down and leave the preview empty: the compile has already invalidated it, so the next
+	// tick builds a real one rather than adopting a husk that never registered.
+	for (const TPair<UObject*, UObject*>& Replacement : InReplacementMap)
+	{
+		if (Replacement.Key == PreviewWidget && Replacement.Key != Replacement.Value)
+		{
+			DestroyPreview();
+			InvalidatePreview();
+			break;
+		}
+	}
+
 	// A template widget whose own class is a Blueprint gets replaced when that class recompiles. The
 	// references handed out before then point at the dead object; repointing them here is what keeps
 	// a selection alive across an unrelated asset's compile.
