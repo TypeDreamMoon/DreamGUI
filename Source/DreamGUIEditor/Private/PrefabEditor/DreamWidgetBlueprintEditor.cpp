@@ -130,25 +130,9 @@ FDreamWidgetBlueprintEditor::~FDreamWidgetBlueprintEditor()
 {
 	DesignerInstances.Remove(this);
 
-	UWorld* EditorWorld = PreviewHost.IsValid() ? PreviewHost->GetWorld() : nullptr;
-	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(EditorWorld))
-	{
-		Manager->OnDreamUIWidgetOutlinerChanged.RemoveAll(this);
-		Manager->EventOnOutlineChanged.RemoveAll(this);
-		Manager->bShouldTickInEditor = false;
-	}
-	if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(EditorWorld))
-	{
-		Selection->OnSelectionChanged.RemoveAll(this);
-		Selection->SelectNone();
-	}
-
-	// Last, and only here: the panels above are still reading the world it owns.
-	if (PreviewHost.IsValid())
-	{
-		PreviewHost->Shutdown();
-		PreviewHost.Reset();
-	}
+	// A backstop only. OnClose does this while the world is still alive, which is the case that
+	// matters; reaching here with a preview still held means the editor was never closed.
+	ShutdownPreview();
 }
 
 bool FDreamWidgetBlueprintEditor::WorldIsDesigner(UWorld* InWorld)
@@ -515,6 +499,36 @@ void FDreamWidgetBlueprintEditor::GetInitialViewSetting(FVector& OutLocation, FR
 UDreamWidget* FDreamWidgetBlueprintEditor::GetRootAgentWidget()
 {
 	return PreviewHost.IsValid() ? PreviewHost->GetRootAgent() : nullptr;
+}
+
+void FDreamWidgetBlueprintEditor::OnClose()
+{
+	// Base first: it deactivates the mode and closes the tabs, and those panels are still reading the
+	// world the preview owns.
+	FBlueprintEditor::OnClose();
+	ShutdownPreview();
+}
+
+void FDreamWidgetBlueprintEditor::ShutdownPreview()
+{
+	if (!PreviewHost.IsValid())
+	{
+		return;
+	}
+	UWorld* EditorWorld = PreviewHost->GetWorld();
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(EditorWorld))
+	{
+		Manager->OnDreamUIWidgetOutlinerChanged.RemoveAll(this);
+		Manager->EventOnOutlineChanged.RemoveAll(this);
+		Manager->bShouldTickInEditor = false;
+	}
+	if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(EditorWorld))
+	{
+		Selection->OnSelectionChanged.RemoveAll(this);
+		Selection->SelectNone();
+	}
+	PreviewHost->Shutdown();
+	PreviewHost.Reset();
 }
 
 UDreamWidget* FDreamWidgetBlueprintEditor::GetPreviewRootWidget()

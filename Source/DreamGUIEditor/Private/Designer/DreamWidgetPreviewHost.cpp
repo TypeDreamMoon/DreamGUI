@@ -156,6 +156,19 @@ void FDreamWidgetPreviewHost::Shutdown()
 	BlueprintChangedHandle.Reset();
 	BlueprintCompiledHandle.Reset();
 	DestroyPreview();
+	// The design canvas, taken down HERE rather than left to the scene's destructor.
+	//
+	// Both orders destroy it, but only this one is guaranteed to run while the world is still alive.
+	// A widget whose world is collected first is cleaned up by UDreamWidget's last-resort path in
+	// BeginDestroy instead, which says so at Error verbosity -- correct, and a real signal, but the
+	// owner is right here and can simply do it.
+	if (Scene.IsValid())
+	{
+		if (UDreamWidget* RootAgent = Scene->GetRootAgent())
+		{
+			RootAgent->DestroyWidget();
+		}
+	}
 	// The scene owns the world and the design canvas; dropping it takes both.
 	Scene.Reset();
 	Blueprint = nullptr;

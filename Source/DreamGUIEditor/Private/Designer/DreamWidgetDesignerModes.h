@@ -56,6 +56,16 @@ public:
 	explicit FDreamWidgetDesignerApplicationMode(TSharedPtr<FDreamWidgetBlueprintEditor> InEditor);
 
 	virtual void RegisterTabFactories(TSharedPtr<FTabManager> InTabManager) override;
+
+	/**
+	 * Deliberately does NOT chain to the Blueprint mode, exactly as UMG's designer mode does not.
+	 *
+	 * The base saves the Blueprint editor's document state and touches the My Blueprint widget --
+	 * neither of which a designer mode has. Deleting an asset removes it from the toolkit's editing
+	 * objects BEFORE closing the editor, so the base's GetBlueprintObj() then asserts on an empty
+	 * list and takes the editor with it.
+	 */
+	virtual void PreDeactivateMode() override;
 };
 
 /** The stock Blueprint graph, verbatim. Nothing here is DreamUI's business. */

@@ -251,6 +251,20 @@ public:
 	 * panel that draws or picks is looking at. The authoring root is
 	 * GetWidgetBlueprint()->WidgetTree->RootWidget, which is inert.
 	 */
+	/**
+	 * Tear the preview world down here, while it still exists.
+	 *
+	 * The destructor cannot be trusted with it: a toolkit dies whenever its last reference goes, which
+	 * can be after the transient preview world has already been collected -- and then the widget tree
+	 * is cleaned up by UDreamWidget's own last-resort path, which says so at Error verbosity.
+	 */
+	virtual void OnClose() override;
+
+private:
+	/** Shared by OnClose and the destructor's backstop. */
+	void ShutdownPreview();
+public:
+
 	UDreamWidget* GetPreviewRootWidget();
 
 	/**

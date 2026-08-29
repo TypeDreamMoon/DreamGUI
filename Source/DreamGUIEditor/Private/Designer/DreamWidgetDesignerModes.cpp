@@ -46,26 +46,36 @@ void FDreamWidgetBlueprintApplicationModes::AddModeSwitcher(TSharedPtr<FDreamWid
 	{
 		return;
 	}
+	// WEAK, and this matters more than it looks. The extender is held by the mode, the mode by the
+	// editor -- so a lambda capturing the editor by shared pointer closes a cycle and the toolkit is
+	// never destroyed. A leaked toolkit stays subscribed to OnBlueprintUnloaded, whose engine handler
+	// walks GetEditingObjects() unguarded, so deleting the asset asserted and took the editor down.
+	TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = InEditor;
 	InExtender->AddToolBarExtension("Asset", EExtensionHook::After, InEditor->GetToolkitCommands(),
-		FToolBarExtensionDelegate::CreateLambda([InEditor](FToolBarBuilder&)
+		FToolBarExtensionDelegate::CreateLambda([WeakEditor](FToolBarBuilder&)
 		{
-			TAttribute<FName> GetActiveMode(InEditor.ToSharedRef(), &FBlueprintEditor::GetCurrentMode);
+			TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
+			if (!Editor.IsValid())
+			{
+				return;
+			}
+			TAttribute<FName> GetActiveMode(Editor.ToSharedRef(), &FBlueprintEditor::GetCurrentMode);
 			FOnModeChangeRequested SetActiveMode = FOnModeChangeRequested::CreateSP(
-				InEditor.ToSharedRef(), &FBlueprintEditor::SetCurrentMode);
+				Editor.ToSharedRef(), &FBlueprintEditor::SetCurrentMode);
 
-			InEditor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(4.0f, 1.0f)));
-			InEditor->AddToolbarWidget(
+			Editor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(4.0f, 1.0f)));
+			Editor->AddToolbarWidget(
 				SNew(SModeWidget, GetLocalizedMode(DesignerMode), DesignerMode)
 				.OnGetActiveMode(GetActiveMode)
 				.OnSetActiveMode(SetActiveMode)
 				.IconImage(FAppStyle::GetBrush("UMGEditor.SwitchToDesigner")));
-			InEditor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(10.0f, 1.0f)));
-			InEditor->AddToolbarWidget(
+			Editor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(10.0f, 1.0f)));
+			Editor->AddToolbarWidget(
 				SNew(SModeWidget, GetLocalizedMode(GraphMode), GraphMode)
 				.OnGetActiveMode(GetActiveMode)
 				.OnSetActiveMode(SetActiveMode)
 				.IconImage(FAppStyle::GetBrush("FullBlueprintEditor.SwitchToScriptingMode")));
-			InEditor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(10.0f, 1.0f)));
+			Editor->AddToolbarWidget(SNew(SSpacer).Size(FVector2D(10.0f, 1.0f)));
 		}));
 }
 
@@ -246,6 +256,13 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 			InEditor->ExtendDesignerToolbar(Toolbar);
 		}
 	}
+}
+
+void FDreamWidgetDesignerApplicationMode::PreDeactivateMode()
+{
+	// Base deliberately not called -- see the header. UMG's designer mode leaves the same call
+	// commented out for the same reason.
+	FApplicationMode::PreDeactivateMode();
 }
 
 void FDreamWidgetDesignerApplicationMode::RegisterTabFactories(TSharedPtr<FTabManager> InTabManager)
