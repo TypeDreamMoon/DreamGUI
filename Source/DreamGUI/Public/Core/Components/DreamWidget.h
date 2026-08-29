@@ -523,6 +523,34 @@ public:
 	void RestoreParentLinksRecursive();
 
 	/**
+	 * Who this widget is, for anything that has to match a widget in one tree against a widget in
+	 * another -- the designer pairing a preview instance with the authored widget it came from,
+	 * above all.
+	 *
+	 * That pairing used to go by FName. Object names are generated (DreamWidget_N) from a counter
+	 * that runs for the life of the process, so within one session they never repeat and the scheme
+	 * looks sound; every asset loaded from disk brings its own numbering back with it, starting at
+	 * zero. Two assets open at once therefore both hold a DreamWidget_0, and a nested widget
+	 * blueprint's contents sit in the same preview hierarchy as the host's own widgets: editing a
+	 * value inside a nested Button wrote it onto whichever host widget happened to share the name.
+	 * Silently, onto the wrong object, and no test in the suite could see it because a single
+	 * process never generates the same name twice.
+	 *
+	 * Instancing carries it, which is what makes it work: a preview is NewObject'd with the authored
+	 * widget as its archetype, so it arrives already holding the same id. Duplication deliberately
+	 * does NOT (DuplicateSubtree issues a fresh one) -- a copy is a different widget.
+	 *
+	 * This is emphatically NOT the prefab guid table that P4 deleted. That one recorded per-instance
+	 * DIFFERENCES against another asset and had to be kept in step with it; this is a name, it
+	 * records nothing, and nothing else stores it.
+	 */
+	const FGuid& GetWidgetGuid() const { return WidgetGuid; }
+	/** Give this widget a new identity. For a copy, which is not the widget it was copied from. */
+	void AssignNewWidgetGuid() { WidgetGuid = FGuid::NewGuid(); }
+	/** Give this widget an identity only if it has none: an asset authored before ids existed. */
+	void EnsureWidgetGuid() { if (!WidgetGuid.IsValid()) { WidgetGuid = FGuid::NewGuid(); } }
+
+	/**
 	 * Deep-copy this subtree into InOuter, flat, and hand back the copy of this widget.
 	 *
 	 * Each widget is instanced individually and its Children rewired from the source's, rather than
@@ -775,6 +803,15 @@ protected:
 	 * links are expressed purely by Instanced properties. Reparenting therefore never moves an outer.
 	 */
 	UPROPERTY(Instanced) mutable TArray<TObjectPtr<UDreamWidget>> Children;
+	/**
+	 * Stable identity across trees. See GetWidgetGuid for what it replaces and why.
+	 *
+	 * Neither Transient nor DuplicateTransient, and that is the mechanism rather than an oversight:
+	 * a preview widget is instanced with its authored counterpart as the archetype, and a class
+	 * archetype is a duplicate of the authoring tree, so both arrive already carrying the id that
+	 * pairs them back. Only DuplicateSubtree, which makes a NEW widget, issues a fresh one.
+	 */
+	UPROPERTY() FGuid WidgetGuid;
 	/** check valid, incase un-normally deleting actor, like undo */
 	void EnsureUIChildrenValid();
 	void EnsureUIChildrenSorted()const;

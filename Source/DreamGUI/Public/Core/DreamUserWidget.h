@@ -119,6 +119,39 @@ private:
 DREAMGUI_API void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot);
 
 /**
+ * Whether an editor should show what is inside this widget, or stop and treat it as one thing.
+ *
+ * A widget blueprint instance is a node in its host's hierarchy and expands its own contents when it
+ * is initialized, so a live hierarchy is one flat run of widgets with no seam in it: the designer's
+ * tree showed a music player as forty rows, most of them the innards of Buttons and Sliders that are
+ * separate assets. Worse than long -- they are not editable here. Editing one has to mean editing the
+ * class, which is what opening that asset is for; UMG draws exactly this line.
+ *
+ * The line: the OUTERMOST widget blueprint instance on a path is the one being edited, and everything
+ * nested inside it is somebody else's asset. Asked of the widget rather than of the editor, so that
+ * the hierarchy panel, viewport picking and the preview-to-template pairing cannot disagree about
+ * where an instance ends -- three answers to this question is how "the panel folded it but you could
+ * still click into it" happens.
+ *
+ * Not a visibility rule and not persisted: it changes nothing about what a hierarchy IS. NamedSlot
+ * will be the one sanctioned hole in it, and it will be opened here.
+ */
+DREAMGUI_API bool DreamWidget_ShouldEditorExpandContents(const UDreamWidget* InWidget);
+
+/**
+ * InRoot and its descendants as an editor sees them: everything down to, and including, each nested
+ * widget blueprint instance, and nothing inside one.
+ *
+ * The counterpart to UDreamWidget::CollectChildrenWidgets, which walks the whole live hierarchy and
+ * is the right answer for anything about what EXISTS -- bounds, reachability, registration. This is
+ * the right answer for anything about what the author is editing, and the designer's per-widget
+ * state is the reason it has to exist: hidden, locked and collapsed are recorded by object name, and
+ * every asset's names start at DreamWidget_0, so walking into a nested instance files its widgets
+ * under names the host also uses. Hiding a Button's inner Text hid an unrelated host widget.
+ */
+DREAMGUI_API void CollectDreamWidgetsToNestedBoundary(UDreamWidget* InRoot, TArray<UDreamWidget*>& OutWidgets, bool bIncludeRoot = true);
+
+/**
  * Copy a live widget subtree and bring the copy to life under InParent.
  *
  * InTemplate is used as the ARCHETYPE of a single NewObject: FObjectInstancingGraph follows the

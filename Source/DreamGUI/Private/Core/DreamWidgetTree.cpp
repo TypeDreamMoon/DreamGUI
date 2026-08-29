@@ -20,7 +20,15 @@ UDreamWidget* UDreamWidgetTree::ConstructWidget(TSubclassOf<UDreamWidget> InWidg
 		return nullptr;
 	}
 	// RF_Transactional so widget creation participates in undo the same way the attach path does.
-	return NewObject<UDreamWidget>(this, InWidgetClass, InName, RF_Transactional);
+	UDreamWidget* Widget = NewObject<UDreamWidget>(this, InWidgetClass, InName, RF_Transactional);
+	// Authoring is the one moment a widget's identity is born. Everything downstream -- the class
+	// archetype, every preview instance -- is a copy of this object and inherits it, which is what
+	// lets the designer pair a preview back to the widget the author is editing. See GetWidgetGuid.
+	if (IsValid(Widget))
+	{
+		Widget->AssignNewWidgetGuid();
+	}
+	return Widget;
 }
 
 void UDreamWidgetTree::PostLoad()

@@ -42,6 +42,29 @@ namespace DreamWidgetHierarchyType
 	FString GetTypeLabel(const UDreamWidget* Widget);
 }
 
+/**
+ * The rows the panel shows, gathered so that no widget can land on two of them.
+ *
+ * STreeView does not tolerate the same item appearing twice in its flattened list: SListView.h:1154
+ * is a check(false), so a model that is momentarily self-contradictory takes the editor down rather
+ * than drawing something slightly wrong. It got there for real -- duplicating a panel used to leave
+ * the copy's Children array pointing at the ORIGINAL's children, so one widget was a child of two
+ * parents and appeared twice in the list. That defect is fixed (UDreamWidget::DuplicateSubtree), but
+ * a Children array is persisted data and RestoreParentLinksRecursive already carries a cycle guard
+ * for the same reason: it can arrive malformed and the view must not be the thing that dies.
+ *
+ * The rule that makes duplicates impossible without needing to see the whole traversal: a widget is
+ * shown exactly where its Parent back-pointer says it belongs. Parent is a single pointer, so at
+ * most one parent can claim any widget; a root claims only widgets nothing else claims.
+ */
+namespace DreamWidgetHierarchyRows
+{
+	/** The tops of the hierarchies, each once, in the order the manager reports them. */
+	void CollectRoots(const TArray<TObjectPtr<UDreamWidget>>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots);
+	/** InParent's children, minus any that do not name InParent as their parent, and minus repeats. */
+	void CollectChildren(UDreamWidget* InParent, TArray<TWeakObjectPtr<UDreamWidget>>& OutChildren);
+}
+
 class SDreamWidgetEditorHierarchyView : public SCompoundWidget
 {
 public:

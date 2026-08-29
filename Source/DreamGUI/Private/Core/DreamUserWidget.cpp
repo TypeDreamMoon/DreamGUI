@@ -14,6 +14,50 @@
  * that the hard way and left a note: World->HasBegunPlay() returns false even when called from
  * BeginPlay. When it has not, the manager's own OnWorldBeginPlay picks these up later.
  */
+bool DreamWidget_ShouldEditorExpandContents(const UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return false;
+	}
+	if (!InWidget->IsA<UDreamUserWidget>())
+	{
+		// A plain widget's children are its own hierarchy. Nothing to hide.
+		return true;
+	}
+	// Walk up rather than asking the editor which asset is open: the outermost instance on this path
+	// is the one being edited, and that is decidable from the widget alone. In the designer the walk
+	// stops at the design canvas's root agent; at runtime, at whatever the screen was added to.
+	for (const UDreamWidget* Ancestor = InWidget->GetParent(); Ancestor != nullptr; Ancestor = Ancestor->GetParent())
+	{
+		if (Ancestor->IsA<UDreamUserWidget>())
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void CollectDreamWidgetsToNestedBoundary(UDreamWidget* InRoot, TArray<UDreamWidget*>& OutWidgets, bool bIncludeRoot)
+{
+	if (!IsValid(InRoot))
+	{
+		return;
+	}
+	if (bIncludeRoot)
+	{
+		OutWidgets.Add(InRoot);
+	}
+	if (!DreamWidget_ShouldEditorExpandContents(InRoot))
+	{
+		return;
+	}
+	for (UDreamWidget* Child : InRoot->GetChildren())
+	{
+		CollectDreamWidgetsToNestedBoundary(Child, OutWidgets, true);
+	}
+}
+
 void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 {
 	if (!IsValid(InRoot))

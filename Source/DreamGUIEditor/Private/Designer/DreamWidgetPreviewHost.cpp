@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Designer/DreamWidgetPreviewHost.h"
 
@@ -11,6 +11,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
 #include "DreamGUI.h"
+#include "DreamGUIEditorModule.h"
 #include "PrefabSystem/DreamUIPrefabInstanceScene.h"
 
 #include "Engine/World.h"
@@ -192,7 +193,7 @@ UDreamWidget* FDreamWidgetPreviewHost::GetPreviewRoot() const
 
 void FDreamWidgetPreviewHost::DestroyPreview()
 {
-	PreviewWidgetsByName.Reset();
+	PreviewWidgetsByGuid.Reset();
 	// Deliberately not IsValid(): an object marked for collection is still live memory whose widgets
 	// are still registered, and skipping teardown on it is precisely how one gets orphaned.
 	// DestroyWidget is written for that case -- it walks on RF_FinishDestroyed, not on IsValid.
@@ -236,7 +237,7 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	UClass* GeneratedClass = Blueprint->GeneratedClass;
 	if (GeneratedClass == nullptr || !GeneratedClass->IsChildOf(UDreamUserWidget::StaticClass()) || RootAgent == nullptr)
 	{
-		RebuildPreviewNameMap();
+		RebuildPreviewGuidMap();
 		OnPreviewRebuilt.Broadcast();
 		return;
 	}
@@ -255,11 +256,12 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	// a recompile -- the class is a compile behind for as long as the author has not pressed the
 	// button, and a preview built from it would show the hierarchy as it was, not as it is. Straight
 	// out of UMG (CreateUserWidgetFromBlueprint: "so the preview can update without a full recompile").
+	EnsureAuthoredGuids();
 	PreviewWidget->InitializeFromArchetype(FindArchetypeForPreview());
 	PreviewWidget->SetParentBeforeRegister(RootAgent);
 	RegisterDreamWidgetHierarchy(PreviewWidget);
 
-	RebuildPreviewNameMap();
+	RebuildPreviewGuidMap();
 	// Tell the canvas it has something new to draw. Nothing else here does, and a canvas that is
 	// never marked builds no draw calls at all -- the preview would be registered, laid out, and
 	// invisible. It looked like it worked because compiling a Blueprint refreshes every canvas in
@@ -291,18 +293,53 @@ UDreamWidgetTree* FDreamWidgetPreviewHost::FindArchetypeForPreview() const
 	return nullptr;
 }
 
-void FDreamWidgetPreviewHost::RebuildPreviewNameMap()
+void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()
 {
-	PreviewWidgetsByName.Reset();
+	PreviewWidgetsByGuid.Reset();
 	if (!IsValid(PreviewWidget) || !IsValid(PreviewWidget->GetWidgetTree()))
 	{
 		return;
 	}
-	PreviewWidget->GetWidgetTree()->ForEachWidget([this](UDreamWidget* Widget)
+	// From the content root down to the nested boundary, NOT the tree's ForEachWidget. The tree walks
+	// Children, and a nested instance hangs its own contents off itself as children -- so the tree
+	// walk crosses into other assets. Those widgets have no counterpart in this Blueprint's authoring
+	// tree and belong in nobody's map.
+	TArray<UDreamWidget*> PreviewWidgets;
+	CollectDreamWidgetsToNestedBoundary(PreviewWidget->GetContentRoot(), PreviewWidgets);
+	for (UDreamWidget* Widget : PreviewWidgets)
+	{
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		const FGuid& Guid = Widget->GetWidgetGuid();
+		if (!Guid.IsValid())
+		{
+			// An unidentified widget is not a key. Adding it would file every unidentified widget in
+			// the preview under the same empty guid and hand the details panel whichever one landed
+			// last -- the exact failure the ids were introduced to end, rebuilt out of a default value.
+			UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Preview widget '%s' has no id; it will not pair with anything authored."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Widget->GetPathDisplayName());
+			continue;
+		}
+		PreviewWidgetsByGuid.Add(Guid, Widget);
+	}
+}
+
+void FDreamWidgetPreviewHost::EnsureAuthoredGuids()
+{
+	if (!IsValid(Blueprint) || !IsValid(Blueprint->WidgetTree))
+	{
+		return;
+	}
+	// Before the preview is instanced, never after: the preview copies whatever the authored widget
+	// is holding, so minting here means both sides come out of the same value. Minting on the preview
+	// instead would give it an id the authoring tree has never heard of.
+	Blueprint->WidgetTree->ForEachWidget([](UDreamWidget* Widget)
 	{
 		if (IsValid(Widget))
 		{
-			PreviewWidgetsByName.Add(Widget->GetFName(), Widget);
+			Widget->EnsureWidgetGuid();
 		}
 	});
 }
@@ -341,7 +378,11 @@ UDreamWidget* FDreamWidgetPreviewHost::FindPreviewForTemplate(const UDreamWidget
 	{
 		return nullptr;
 	}
-	const TWeakObjectPtr<UDreamWidget>* Found = PreviewWidgetsByName.Find(InTemplateWidget->GetFName());
+	if (!InTemplateWidget->GetWidgetGuid().IsValid())
+	{
+		return nullptr;
+	}
+	const TWeakObjectPtr<UDreamWidget>* Found = PreviewWidgetsByGuid.Find(InTemplateWidget->GetWidgetGuid());
 	return Found != nullptr ? Found->Get() : nullptr;
 }
 
@@ -351,11 +392,18 @@ UDreamWidget* FDreamWidgetPreviewHost::FindTemplateForPreview(const UDreamWidget
 	{
 		return nullptr;
 	}
-	const FName Name = InPreviewWidget->GetFName();
-	UDreamWidget* Found = nullptr;
-	Blueprint->WidgetTree->ForEachWidget([&Found, Name](UDreamWidget* Widget)
+	const FGuid Guid = InPreviewWidget->GetWidgetGuid();
+	if (!Guid.IsValid())
 	{
-		if (Found == nullptr && Widget->GetFName() == Name)
+		return nullptr;
+	}
+	// The authoring tree of THIS asset only. A nested widget blueprint's contents live in the same
+	// preview hierarchy but carry their own asset's ids, so they find nothing here -- which is the
+	// answer the designer wants: a nested instance is edited by opening the class it came from.
+	UDreamWidget* Found = nullptr;
+	Blueprint->WidgetTree->ForEachWidget([&Found, Guid](UDreamWidget* Widget)
+	{
+		if (Found == nullptr && Widget->GetWidgetGuid() == Guid)
 		{
 			Found = Widget;
 		}

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -318,5 +318,53 @@ bool FDreamWidgetDuplicateHierarchyTest::RunTest(const FString& Parameters)
 	Host->DestroyWidget();
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetIdentityTest,
+	"DreamGUI.WidgetTree.ObjectGraph.EveryAuthoredWidgetHasAnIdAndACopyGetsANewOne",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetIdentityTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetTreeObjectGraphTestLocal;
+	FScopedGameWorld TestWorld;
+
+	const FSampleTree Sample = BuildSampleTree(TestWorld.World);
+	TSet<FGuid> Ids;
+	for (const UDreamWidget* Widget : { Sample.Root, Sample.A, Sample.B, Sample.C })
+	{
+		if (!TestTrue(*FString::Printf(TEXT("'%s' was born with an id"), *Widget->GetDisplayName()),
+			Widget->GetWidgetGuid().IsValid()))
+		{
+			return false;
+		}
+		bool bAlreadySeen = false;
+		Ids.Add(Widget->GetWidgetGuid(), &bAlreadySeen);
+		TestFalse(TEXT("and it is its own"), bAlreadySeen);
+	}
+
+	// Duplicating a whole TREE keeps the ids: the copy is the same hierarchy in another container,
+	// which is what a class archetype is, and what lets a preview instanced from it pair back.
+	TStrongObjectPtr<UDreamWidgetTree> TreeCopy(DuplicateObject<UDreamWidgetTree>(Sample.Tree, GetTransientPackage()));
+	if (!TestNotNull(TEXT("the tree copy exists"), TreeCopy.Get()))return false;
+	TestEqual(TEXT("a duplicated tree's root keeps the id it is a copy of"),
+		TreeCopy->RootWidget->GetWidgetGuid(), Sample.Root->GetWidgetGuid());
+
+	// Duplicating a SUBTREE does not: that is the designer's copy/paste/duplicate, and the result is
+	// a new widget standing next to the one it came from. Sharing the id would make the designer pair
+	// the copy's preview with the ORIGINAL's authored widget, so editing either would write to both --
+	// the same shape as the Children array the copy also must not share.
+	UDreamWidget* SubtreeCopy = UDreamWidget::DuplicateSubtree(Sample.Tree, Sample.A);
+	if (!TestNotNull(TEXT("the subtree copy exists"), (UObject*)SubtreeCopy))return false;
+	TestTrue(TEXT("the copy has an id"), SubtreeCopy->GetWidgetGuid().IsValid());
+	TestNotEqual(TEXT("which is NOT the source's"), SubtreeCopy->GetWidgetGuid(), Sample.A->GetWidgetGuid());
+	if (TestEqual(TEXT("and it carried the child"), SubtreeCopy->GetChildren().Num(), 1))
+	{
+		TestNotEqual(TEXT("whose id is new as well"),
+			SubtreeCopy->GetChildren()[0]->GetWidgetGuid(), Sample.C->GetWidgetGuid());
+	}
+	return true;
+}
+
 
 #endif

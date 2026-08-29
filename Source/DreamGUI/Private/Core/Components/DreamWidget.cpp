@@ -539,6 +539,10 @@ void UDreamWidget::PostLoad()
 	// RelativeRotation through reflection rather than the setter, which would leave the mirror at
 	// zero and make Sequencer restore an animated widget to no rotation at all.
 	this->RelativeRotationEuler = this->RelativeRotation.Rotator();
+	// Every asset authored before ids existed has none. Backfilling here rather than in a migration
+	// commandlet keeps a widget that never gets resaved working for the session it is open in: the
+	// preview is instanced from this object, so it copies whatever id this object is holding.
+	EnsureWidgetGuid();
 }
 
 void UDreamWidget::BeginDestroy()
@@ -2592,6 +2596,11 @@ UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InS
 			// from the source's array, which is the structural truth.
 			Copy->Children.Reset();
 			Copy->Parent = nullptr;
+			// A copy is a different widget. Instancing brought the source's id across with everything
+			// else, and leaving it would make the designer pair the copy's preview with the ORIGINAL's
+			// authored widget -- so an edit to either would land on the other. Same shape as the
+			// Children array above: what instancing gives you is not what identity means here.
+			Copy->AssignNewWidgetGuid();
 
 			for (const TObjectPtr<UDreamWidget>& Child : InSource->Children)
 			{

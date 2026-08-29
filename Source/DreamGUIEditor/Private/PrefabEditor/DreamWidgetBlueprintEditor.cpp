@@ -1195,8 +1195,10 @@ void FDreamWidgetBlueprintEditor::SaveEditorState()
 	TSet<FName> Unexpanded;
 	if (UDreamWidget* Root = GetPreviewRootWidget())
 	{
+		// To the nested boundary only. Object names repeat across assets, so recording the innards of
+		// a nested Button here would collapse whichever host widget happens to share one of them.
 		TArray<UDreamWidget*> AllWidgets;
-		UDreamWidget::CollectChildrenWidgets(Root, AllWidgets, true);
+		CollectDreamWidgetsToNestedBoundary(Root, AllWidgets);
 		for (UDreamWidget* Widget : AllWidgets)
 		{
 			if (IsValid(Widget) && !ExpandWidgetSet.Contains(Widget))
@@ -1287,7 +1289,7 @@ void FDreamWidgetBlueprintEditor::ApplyDesignerState()
 	if (!IsValid(Root))return;
 	const TSet<FName>& HiddenSet = BlueprintBeingEdited->DesignerData.HiddenWidgets;
 	TArray<UDreamWidget*> AllWidgets;
-	UDreamWidget::CollectChildrenWidgets(Root, AllWidgets, true);
+	CollectDreamWidgetsToNestedBoundary(Root, AllWidgets);
 	for (UDreamWidget* Widget : AllWidgets)
 	{
 		if (IsValid(Widget))
@@ -1329,7 +1331,7 @@ void FDreamWidgetBlueprintEditor::SetWidgetLockedInDesigner(UDreamWidget* Widget
 	if (bRecursive)
 	{
 		TArray<UDreamWidget*> Descendants;
-		UDreamWidget::CollectChildrenWidgets(Widget, Descendants);
+		CollectDreamWidgetsToNestedBoundary(Widget, Descendants, /*bIncludeRoot*/false);
 		Widgets.Append(Descendants);
 	}
 	const FScopedTransaction Transaction(LOCTEXT("ToggleDesignerLock", "Toggle Designer Lock"));

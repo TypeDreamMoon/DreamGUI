@@ -1,9 +1,10 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIWidgetPicking.h"
 
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamCanvas.h"
 
@@ -118,7 +119,10 @@ namespace DreamUIWidgetPicking
 			if (!IsValid(Root))continue;
 			// The root is included. ProcessClick used to collect children only, which is why the
 			// prefab root itself could never be selected by clicking it.
-			UDreamWidget::CollectChildrenWidgets(Root, OutWidgets, /*IncludeTarget*/true);
+			// Stops at nested widget blueprint instances, the same boundary the hierarchy panel draws.
+			// Without it the panel folds an instance into one row and the viewport still selects the
+			// Text inside it -- and that selection has no row to highlight and no template to edit.
+			CollectDreamWidgetsToNestedBoundary(Root, OutWidgets);
 		}
 	}
 }

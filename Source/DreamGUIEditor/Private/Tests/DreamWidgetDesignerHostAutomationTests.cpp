@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -575,5 +575,145 @@ bool FDreamWidgetTreeRestoresParentsOnLoadTest::RunTest(const FString&)
 		DreamWidgetTreeEditing::DuplicateWidget(Scoped.Blueprint, FirstChild, AsLoaded->RootWidget));
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerNestedInstanceIsFoldedTest,
+	"DreamGUI.Designer.Folding.ANestedInstanceIsOneRowAndPairsAsOne",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerNestedInstanceIsFoldedTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	// Two assets, the way a real project has them: a small reusable one, and a screen that places it.
+	FScopedBlueprint Inner(TEXT("FoldingInnerControl"));
+	if (!TestNotNull(TEXT("the inner Blueprint was created"), Inner.Blueprint))return false;
+	Inner.Blueprint->GetOrCreateWidgetTree()->RootWidget->SetDisplayName(TEXT("InnerRoot"));
+	Inner.Blueprint->GetOrCreateWidgetTree()->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+	UDreamWidget* InnerLabel = DreamWidgetTreeEditing::CreateWidget(Inner.Blueprint, UDreamWidget::StaticClass(), nullptr, -1, TEXT("InnerLabel"));
+	Inner.Compile();
+	if (!TestNotNull(TEXT("the inner class compiled"), (UObject*)Inner.Blueprint->GeneratedClass))return false;
+
+	FScopedBlueprint Host(TEXT("FoldingHostScreen"));
+	if (!TestNotNull(TEXT("the host Blueprint was created"), Host.Blueprint))return false;
+	UDreamWidgetTree* HostTree = Host.Blueprint->GetOrCreateWidgetTree();
+	HostTree->RootWidget->SetDisplayName(TEXT("HostRoot"));
+	HostTree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+
+	// The collision, built rather than hoped for: every asset's object names start at DreamWidget_0
+	// once it has been to disk, so a host widget and a widget inside a nested control share one. In a
+	// single process the counter never repeats, which is exactly why no test had ever seen this.
+	const FName CollidingName = InnerLabel->GetFName();
+	UDreamWidget* HostTwin = HostTree->ConstructWidget(UDreamWidget::StaticClass(), CollidingName);
+	if (!TestNotNull(TEXT("a host widget could take the inner widget's object name"), (UObject*)HostTwin))return false;
+	HostTwin->SetDisplayName(TEXT("HostTwin"));
+	HostTwin->SetParentBeforeRegister(HostTree->RootWidget);
+	TestEqual(TEXT("and really did take it"), HostTwin->GetFName(), CollidingName);
+
+	UDreamWidget* NestedNode = HostTree->ConstructWidget(TSubclassOf<UDreamWidget>(Inner.Blueprint->GeneratedClass));
+	if (!TestNotNull(TEXT("the nested instance node was authored"), (UObject*)NestedNode))return false;
+	NestedNode->SetDisplayName(TEXT("NestedControl"));
+	NestedNode->SetParentBeforeRegister(HostTree->RootWidget);
+	Host.Compile();
+
+	TSharedRef<FDreamWidgetPreviewHost> PreviewHost = MakeShared<FDreamWidgetPreviewHost>();
+	PreviewHost->Initialize(Host.Blueprint);
+	if (!TestNotNull(TEXT("the preview was built"), PreviewHost->GetPreviewWidget()))
+	{
+		PreviewHost->Shutdown();
+		return false;
+	}
+
+	UDreamWidget* PreviewNested = PreviewHost->FindPreviewForTemplate(NestedNode);
+	if (!TestNotNull(TEXT("the nested instance itself pairs -- it IS a widget of this asset"), PreviewNested))
+	{
+		PreviewHost->Shutdown();
+		return false;
+	}
+	TestEqual(TEXT("and pairs back"), PreviewHost->FindTemplateForPreview(PreviewNested), NestedNode);
+
+	// It expanded its own contents, which is what makes the fold necessary rather than cosmetic.
+	TestTrue(TEXT("the nested instance built its contents"), PreviewNested->GetChildrenCount() > 0);
+	TestFalse(TEXT("but the designer stops there"), DreamWidget_ShouldEditorExpandContents(PreviewNested));
+	TestTrue(TEXT("while the host's own widgets still expand"), DreamWidget_ShouldEditorExpandContents(PreviewHost->GetPreviewRoot()));
+
+	TArray<UDreamWidget*> Shown;
+	CollectDreamWidgetsToNestedBoundary(PreviewHost->GetPreviewRoot(), Shown);
+	TestTrue(TEXT("the nested instance is shown"), Shown.Contains(PreviewNested));
+	for (UDreamWidget* Inside : PreviewNested->GetChildren())
+	{
+		TestFalse(TEXT("nothing inside it is"), Shown.Contains(Inside));
+	}
+
+	// The reason the fold had to reach the pairing too. Something inside the nested control shares an
+	// object name with a host widget; by name it resolved to the host's HostTwin, so editing a value
+	// on it wrote onto an unrelated widget of this asset, silently.
+	UDreamWidget* InsideWithCollidingName = nullptr;
+	TArray<UDreamWidget*> Everything;
+	UDreamWidget::CollectChildrenWidgets(PreviewNested, Everything, false);
+	for (UDreamWidget* Candidate : Everything)
+	{
+		if (IsValid(Candidate) && Candidate->GetFName() == CollidingName)
+		{
+			InsideWithCollidingName = Candidate;
+		}
+	}
+	if (TestNotNull(TEXT("the collision reached the preview"), (UObject*)InsideWithCollidingName))
+	{
+		TestNull(TEXT("a widget inside a nested control belongs to no template of this asset"),
+			PreviewHost->FindTemplateForPreview(InsideWithCollidingName));
+	}
+	TestEqual(TEXT("and the host's own widget still pairs with itself"),
+		PreviewHost->FindTemplateForPreview(PreviewHost->FindPreviewForTemplate(HostTwin)), HostTwin);
+
+	PreviewHost->Shutdown();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerIdentityCarriesToPreviewTest,
+	"DreamGUI.Designer.Identity.InstancingCarriesTheIdToThePreview",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerIdentityCarriesToPreviewTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	// The premise the whole pairing rests on: a preview widget is NewObject'd with its authored
+	// counterpart as archetype, so a plain UPROPERTY comes across untouched. If that ever stops being
+	// true the designer pairs nothing at all, and this is the test that says so.
+	FScopedBlueprint Scoped(TEXT("IdentityCarries"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))return false;
+	BuildSampleHierarchy(Scoped.Blueprint);
+	Scoped.Compile();
+
+	TSharedRef<FDreamWidgetPreviewHost> Host = MakeShared<FDreamWidgetPreviewHost>();
+	Host->Initialize(Scoped.Blueprint);
+	if (!TestNotNull(TEXT("the preview was built"), Host->GetPreviewWidget()))
+	{
+		Host->Shutdown();
+		return false;
+	}
+
+	TSet<FGuid> SeenIds;
+	Scoped.Blueprint->WidgetTree->ForEachWidget([&](UDreamWidget* Template)
+	{
+		if (!TestTrue(*FString::Printf(TEXT("'%s' has an id"), *Template->GetDisplayName()), Template->GetWidgetGuid().IsValid()))
+		{
+			return;
+		}
+		bool bAlreadySeen = false;
+		SeenIds.Add(Template->GetWidgetGuid(), &bAlreadySeen);
+		TestFalse(TEXT("no two authored widgets share an id"), bAlreadySeen);
+		if (UDreamWidget* Preview = Host->FindPreviewForTemplate(Template))
+		{
+			TestEqual(TEXT("the preview carries the same id"), Preview->GetWidgetGuid(), Template->GetWidgetGuid());
+		}
+	});
+
+	Host->Shutdown();
+	return true;
+}
+
 
 #endif

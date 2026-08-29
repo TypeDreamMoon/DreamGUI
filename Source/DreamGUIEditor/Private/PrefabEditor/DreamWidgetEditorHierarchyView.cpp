@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetEditorHierarchyView.h"
@@ -8,6 +8,7 @@
 #include "DreamWidgetBlueprintEditor.h"
 #include "DreamWidgetEditorHierarchyViewItem.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamUISettings.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamVisual.h"
@@ -85,7 +86,7 @@ void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld
 		if (UDreamWidget* PreviewRoot = Manager.Pin()->GetPreviewRootWidget())
 		{
 			TArray<UDreamWidget*> AllWidgets;
-			UDreamWidget::CollectChildrenWidgets(PreviewRoot, AllWidgets, true);
+			CollectDreamWidgetsToNestedBoundary(PreviewRoot, AllWidgets);
 			for (UDreamWidget* Widget : AllWidgets)
 			{
 				if (IsValid(Widget) && UnexpandedNames.Contains(Widget->GetFName()))
@@ -296,18 +297,83 @@ void SDreamWidgetEditorHierarchyView::RefreshImmediately()
 	RefreshTree();
 	UpdateItemsExpansionFromModel();
 }
+namespace DreamWidgetHierarchyRows
+{
+	void CollectRoots(const TArray<TObjectPtr<UDreamWidget>>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots)
+	{
+		TSet<const UDreamWidget*> Seen;
+		Seen.Reserve(InAllWidgets.Num());
+		for (const TObjectPtr<UDreamWidget>& Widget : InAllWidgets)
+		{
+			if (!IsValid(Widget) || !Widget->IsRootWidgetInHierarchy())
+			{
+				continue;
+			}
+			bool bAlreadySeen = false;
+			Seen.Add(Widget, &bAlreadySeen);
+			if (bAlreadySeen)
+			{
+				// The manager's list holding one widget twice is a registration bug, not something
+				// the panel can fix -- but it must not be the reason the editor dies.
+				UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d '%s' is registered more than once; showing it once."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Widget->GetPathDisplayName());
+				continue;
+			}
+			OutRoots.Add(Widget);
+		}
+	}
+
+	void CollectChildren(UDreamWidget* InParent, TArray<TWeakObjectPtr<UDreamWidget>>& OutChildren)
+	{
+		if (!IsValid(InParent))
+		{
+			return;
+		}
+		if (!DreamWidget_ShouldEditorExpandContents(InParent))
+		{
+			// A nested widget blueprint instance is one row. Its contents belong to another asset and
+			// are not editable from here; double-clicking the row opens the asset that owns them.
+			return;
+		}
+		const TArray<UDreamWidget*>& Children = InParent->GetChildren();
+		TSet<const UDreamWidget*> Seen;
+		Seen.Reserve(Children.Num());
+		for (UDreamWidget* Child : Children)
+		{
+			if (!IsValid(Child))
+			{
+				continue;
+			}
+			if (Child->GetParent() != InParent)
+			{
+				// Children is the persistent record and Parent is derived from it, so the two
+				// disagreeing means some other widget's Children array holds this one too. Showing
+				// it under both is what SListView asserts on; showing it under the parent it names
+				// keeps every widget on exactly one row.
+				UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d '%s' is listed under '%s' but names '%s' as its parent; not showing it here."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Child->GetPathDisplayName(),
+					*InParent->GetPathDisplayName(), *GetNameSafe(Child->GetParent()));
+				continue;
+			}
+			bool bAlreadySeen = false;
+			Seen.Add(Child, &bAlreadySeen);
+			if (bAlreadySeen)
+			{
+				UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d '%s' appears twice under '%s'; showing it once."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Child->GetPathDisplayName(), *InParent->GetPathDisplayName());
+				continue;
+			}
+			OutChildren.Add(Child);
+		}
+	}
+}
+
 void SDreamWidgetEditorHierarchyView::RefreshTree()
 {
 	RootWidgets.Empty();
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
 	{
-		for (auto& Widget : DreamUIManager->GetAllWidgetArray())
-		{
-			if (Widget->IsRootWidgetInHierarchy())
-			{
-				RootWidgets.Add(Widget);
-			}
-		}
+		DreamWidgetHierarchyRows::CollectRoots(DreamUIManager->GetAllWidgetArray(), RootWidgets);
 	}
 
 	FilterHandler->RefreshAndFilterTree();
@@ -455,9 +521,7 @@ void SDreamWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<UDreamWi
 }
 void SDreamWidgetEditorHierarchyView::OnGetChildren(TWeakObjectPtr<UDreamWidget> InParent, TArray< TWeakObjectPtr<UDreamWidget> >& OutChildren)
 {
-	if (!InParent.IsValid())return;
-	auto& Children = InParent->GetChildren();
-	OutChildren.Append(Children);
+	DreamWidgetHierarchyRows::CollectChildren(InParent.Get(), OutChildren);
 }
 namespace DreamWidgetHierarchyType
 {

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -150,8 +150,10 @@ private:
 	 * authors none -- the nearest ancestor class that does.
 	 */
 	UDreamWidgetTree* FindArchetypeForPreview() const;
-	/** Rebuild the FName -> preview widget map from the current preview. */
-	void RebuildPreviewNameMap();
+	/** Rebuild the id -> preview widget map from the current preview. */
+	void RebuildPreviewGuidMap();
+	/** Mint an id for any authored widget that has none, before the preview is instanced from it. */
+	void EnsureAuthoredGuids();
 	/** Repoint the handle pool after the editor replaced objects (a widget's own class recompiling). */
 	void OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap);
 	/** The Blueprint changed shape (a structural edit, or an undo). The preview is a compile behind. */
@@ -162,8 +164,16 @@ private:
 	TObjectPtr<UDreamUserWidget> PreviewWidget = nullptr;
 	TUniquePtr<FDreamUIPrefabInstanceScene> Scene;
 
-	/** Preview widgets by object FName. Rebuilt wholesale; never patched. */
-	TMap<FName, TWeakObjectPtr<UDreamWidget>> PreviewWidgetsByName;
+	/**
+	 * Preview widgets by UDreamWidget::GetWidgetGuid. Rebuilt wholesale; never patched.
+	 *
+	 * Keyed on the id rather than the object FName, which is what this used to be. Object names are
+	 * generated per process and every loaded asset brings its own numbering back starting at zero, so
+	 * a nested widget blueprint's DreamWidget_0 collided with the host's own DreamWidget_0 -- and a
+	 * TMap resolves that by overwriting. Editing a value inside a nested Button wrote it onto an
+	 * unrelated host widget. See UDreamWidget::GetWidgetGuid.
+	 */
+	TMap<FGuid, TWeakObjectPtr<UDreamWidget>> PreviewWidgetsByGuid;
 
 	TArray<TWeakPtr<FDreamWidgetHandle>> HandlePool;
 

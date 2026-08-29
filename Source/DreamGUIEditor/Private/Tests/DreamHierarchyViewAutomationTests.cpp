@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -12,6 +12,7 @@
 #include "Widgets/Views/SListView.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Core/Components/DreamImage.h"
+#include "Core/DreamUserWidget.h"
 
 // Two of the hierarchy panels asked their questions of Slate rather than of the model, and Slate
 // answers "I have not built that yet" by handing back a null TSharedPtr -- which the caller then
@@ -207,5 +208,97 @@ bool FDreamHierarchyRowShowsTheNameTest::RunTest(const FString& Parameters)
 
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamHierarchyRowsNoWidgetTwiceTest,
+	"DreamGUI.Editor.HierarchyRows.NoWidgetLandsOnTwoRows",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamHierarchyRowsNoWidgetTwiceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamHierarchyViewTestLocal;
+	FScopedTestWorld TestWorld;
+
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"));
+	Root->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
+	UDreamWidget* Panel = MakeWidget(TestWorld.World, nullptr, TEXT("Panel"));
+	Panel->TrySetParent(Root, false);
+	UDreamWidget* Child = MakeWidget(TestWorld.World, nullptr, TEXT("Child"));
+	Child->TrySetParent(Panel, false);
+	RegisterDreamWidgetHierarchy(Root);
+
+	// The shape the editor actually died in, reproduced rather than imagined: duplicating a panel
+	// with DuplicateObject copied the panel alone -- its children are outered to the tree, not to it,
+	// so they are not its subobjects -- and left the copy's Children array pointing at the original's
+	// child. One widget, two parents. The duplicate path no longer does this (DuplicateSubtree), but
+	// a persisted Children array can arrive malformed and the panel must survive reading it.
+	UDreamWidget* Copy = DuplicateObject<UDreamWidget>(Panel, TestWorld.World);
+	if (!TestNotNull(TEXT("the malformed copy exists"), (UObject*)Copy))return false;
+	Copy->SetDisplayName(TEXT("PanelCopy"));
+	Copy->SetParentBeforeRegister(Root);
+	Copy->OnRegister();
+	if (!TestEqual(TEXT("and shares the original's child, which is the whole point of the fixture"),
+		Copy->GetChildren().Num(), 1))return false;
+	if (!TestEqual(TEXT("the very same object"), (const UDreamWidget*)Copy->GetChildren()[0], (const UDreamWidget*)Child))return false;
+
+	// Walk it the way the tree view does: roots from the manager's list, then children per row.
+	TArray<TObjectPtr<UDreamWidget>> AllWidgets = { Root, Panel, Child, Copy };
+	TArray<TWeakObjectPtr<UDreamWidget>> Roots;
+	DreamWidgetHierarchyRows::CollectRoots(AllWidgets, Roots);
+	TestEqual(TEXT("one root"), Roots.Num(), 1);
+
+	TArray<const UDreamWidget*> Rows;
+	TFunction<void(UDreamWidget*)> Walk = [&Rows, &Walk](UDreamWidget* Widget)
+	{
+		Rows.Add(Widget);
+		TArray<TWeakObjectPtr<UDreamWidget>> Children;
+		DreamWidgetHierarchyRows::CollectChildren(Widget, Children);
+		for (const TWeakObjectPtr<UDreamWidget>& ChildRow : Children)
+		{
+			Walk(ChildRow.Get());
+		}
+	};
+	for (const TWeakObjectPtr<UDreamWidget>& RootRow : Roots)
+	{
+		Walk(RootRow.Get());
+	}
+
+	// SListView.h:1154 is a check(false), so this is not a cosmetic claim: a repeat here took the
+	// editor down. The row the widget appears on may be either parent -- what may not happen is both.
+	TSet<const UDreamWidget*> Seen;
+	for (const UDreamWidget* Row : Rows)
+	{
+		bool bAlreadySeen = false;
+		Seen.Add(Row, &bAlreadySeen);
+		TestFalse(FString::Printf(TEXT("'%s' is on exactly one row"), *Row->GetDisplayName()), bAlreadySeen);
+	}
+	TestEqual(TEXT("every widget still reachable is shown"), Rows.Num(), Seen.Num());
+	TestTrue(TEXT("the shared child is shown somewhere, not dropped"), Seen.Contains(Child));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamHierarchyRootsAreDedupedTest,
+	"DreamGUI.Editor.HierarchyRows.ARootRegisteredTwiceIsOneRoot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamHierarchyRootsAreDedupedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamHierarchyViewTestLocal;
+	FScopedTestWorld TestWorld;
+
+	UDreamWidget* Root = MakeRootWithChild(TestWorld.World, TEXT("Root"), TEXT("Child"));
+	RegisterDreamWidgetHierarchy(Root);
+
+	// The manager's array is append-on-register and nothing there refuses a second append, so a
+	// double registration reaches the panel as the same pointer twice.
+	TArray<TObjectPtr<UDreamWidget>> AllWidgets = { Root, Root };
+	TArray<TWeakObjectPtr<UDreamWidget>> Roots;
+	DreamWidgetHierarchyRows::CollectRoots(AllWidgets, Roots);
+	TestEqual(TEXT("the root is collected once"), Roots.Num(), 1);
+	return true;
+}
+
 
 #endif

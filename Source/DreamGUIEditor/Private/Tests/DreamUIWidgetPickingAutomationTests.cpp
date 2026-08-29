@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -8,6 +8,8 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Interaction/DreamContentWidget.h"
 #include "Core/Components/DreamImage.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Engine/World.h"
 
 // The designer used to ask UDreamUIManagerWorldSubsystem::RaycastHitUI what was under the cursor, and
@@ -248,5 +250,49 @@ bool FDreamPickingHitsVisualWidgetsTooTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the image is picked"), HitsContain(Hits, Image));
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPickingStopsAtNestedInstanceTest,
+	"DreamGUI.Editor.Picking.NothingInsideANestedInstanceIsPickable",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPickingStopsAtNestedInstanceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWidgetPickingTestLocal;
+	FScopedTestWorld TestWorld;
+
+	// A canvas root, the host screen under it, and a nested widget blueprint instance with contents.
+	// A bare UDreamUserWidget stands in for a compiled one: the boundary is decided by class and
+	// ancestry, and nothing here asks what class the instance came from.
+	UDreamWidget* CanvasRoot = MakeWidget(TestWorld.World, nullptr, TEXT("CanvasRoot"), 1920.0f, 1080.0f);
+	CanvasRoot->AddComponent<UDreamCanvas>();
+	UDreamUserWidget* HostScreen = NewObject<UDreamUserWidget>(TestWorld.World);
+	HostScreen->SetDisplayName(TEXT("HostScreen"));
+	HostScreen->SetParentBeforeRegister(CanvasRoot);
+	UDreamWidget* HostPanel = MakeWidget(TestWorld.World, nullptr, TEXT("HostPanel"), 200.0f, 200.0f);
+	HostPanel->SetParentBeforeRegister(HostScreen);
+	UDreamUserWidget* Nested = NewObject<UDreamUserWidget>(TestWorld.World);
+	Nested->SetDisplayName(TEXT("NestedControl"));
+	Nested->SetParentBeforeRegister(HostPanel);
+	UDreamWidget* InsideNested = MakeWidget(TestWorld.World, nullptr, TEXT("InsideNested"), 50.0f, 50.0f);
+	InsideNested->SetParentBeforeRegister(Nested);
+	RegisterDreamWidgetHierarchy(CanvasRoot);
+
+	TArray<UDreamWidget*> Pickable;
+	DreamUIWidgetPicking::CollectPickableWidgets(TestWorld.World, Pickable);
+
+	TestTrue(TEXT("the canvas root is pickable"), Pickable.Contains(CanvasRoot));
+	TestTrue(TEXT("the host screen is"), Pickable.Contains(HostScreen));
+	TestTrue(TEXT("a widget the host owns is"), Pickable.Contains(HostPanel));
+	TestTrue(TEXT("the nested instance itself is -- it is a widget of the host"), Pickable.Contains(Nested));
+	// The half that makes folding real. If the panel shows a nested control as one row and the
+	// viewport still selects the Text inside it, that selection has no row to highlight and no
+	// template to migrate an edit onto: it looks like the details panel simply stopped working.
+	TestFalse(TEXT("but nothing inside it is"), Pickable.Contains(InsideNested));
+
+	CanvasRoot->DestroyWidget();
+	return true;
+}
+
 
 #endif
