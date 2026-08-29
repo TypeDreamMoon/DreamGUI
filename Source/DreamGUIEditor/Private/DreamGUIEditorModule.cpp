@@ -20,7 +20,6 @@
 #include "DreamUIControlRegistry.h"
 #include "DreamUIBehaviourEditorBackend.h"
 
-#include "Thumbnail/DreamUIPrefabThumbnailRenderer.h"
 #include "Thumbnail/DreamUISpriteThumbnailRenderer.h"
 #include "Thumbnail/DreamUISpriteDataBaseObjectThumbnailRenderer.h"
 #include "ContentBrowserExtensions/DreamUIContentBrowserExtensions.h"
@@ -29,7 +28,6 @@
 #include "AssetTypeActions/AssetTypeActions_DreamUISpriteData.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIStaticSpriteAtlasData.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontData_Bitmap.h"
-#include "AssetTypeActions/AssetTypeActions_DreamUIPrefab.h"
 #include "AssetTypeActions/AssetTypeActions_DreamWidgetBlueprint.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIMLResource.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIStaticMeshCache.h"
@@ -53,7 +51,6 @@
 #include "DetailCustomization/UISelectableCustomization.h"
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "DetailCustomization/UITextInputCustomization.h"
-#include "DetailCustomization/DreamUIPrefabCustomization.h"
 #include "DetailCustomization/DreamUIEventDelegateCustomization.h"
 #include "DetailCustomization/DreamUIComponentReferenceCustomization.h"
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
@@ -198,8 +195,6 @@ void FDreamGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUITextInput::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextInputCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIScrollViewWithScrollbar::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIScrollViewWithScrollBarCustomization::MakeInstance));
 		
-		PropertyModule.RegisterCustomClassLayout(UDreamUIPrefab::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIPrefabCustomization::MakeInstance));
-
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
 
@@ -257,7 +252,6 @@ void FDreamGUIEditorModule::StartupModule()
 		TSharedPtr<FAssetTypeActions_Base> SpriteDataAction = MakeShareable(new FAssetTypeActions_DreamUISpriteData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_DreamUIStaticSpriteAtlasData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> BitmapFontDataAction = MakeShareable(new FAssetTypeActions_DreamUIFontData_Bitmap(DreamUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_DreamUIPrefab(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> WidgetBlueprintAction = MakeShareable(new FAssetTypeActions_DreamWidgetBlueprint(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> SequenceAssetAction = MakeShareable(new FAssetTypeActions_DreamUISequence(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_DreamUIStaticMeshCache(DreamUIAssetCategoryBit));
@@ -269,7 +263,6 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(SpriteDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(BitmapFontDataAction.ToSharedRef());
-		AssetTools.RegisterAssetTypeActions(PrefabDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(WidgetBlueprintAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(SequenceAssetAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(UIStaticMeshCacheDataAction.ToSharedRef());
@@ -281,7 +274,6 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTypeActionsArray.Add(SpriteDataAction);
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
 		AssetTypeActionsArray.Add(BitmapFontDataAction);
-		AssetTypeActionsArray.Add(PrefabDataAction);
 		AssetTypeActionsArray.Add(WidgetBlueprintAction);
 		AssetTypeActionsArray.Add(UIStaticMeshCacheDataAction);
 		AssetTypeActionsArray.Add(RichTextCustomStyleDataAction);
@@ -292,7 +284,6 @@ void FDreamGUIEditorModule::StartupModule()
 	}
 	//register Thumbnail
 	{
-		UThumbnailManager::Get().RegisterCustomRenderer(UDreamUIPrefab::StaticClass(), UDreamUIPrefabThumbnailRenderer::StaticClass());
 		UThumbnailManager::Get().RegisterCustomRenderer(UDreamUISpriteData::StaticClass(), UDreamUISpriteThumbnailRenderer::StaticClass());
 		UThumbnailManager::Get().RegisterCustomRenderer(UDreamUISpriteData_BaseObject::StaticClass(), UDreamUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
 	}

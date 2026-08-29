@@ -10,9 +10,7 @@
 #include "Core/DreamUIFontData_DistanceField.h"
 #include "DataFactory/DreamUIFontDataDistanceFieldFactory.h"
 #include "DataFactory/DreamUISpriteDataFactory.h"
-#include "DataFactory/DreamUIPrefabFactory.h"
 #include "Engine/FontFace.h"
-#include "PrefabSystem/DreamUIPrefab.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIContentBrowserExtensions"
 
@@ -62,16 +60,6 @@ public:
 			FNewMenuDelegate::CreateStatic(&FDreamGUIContentBrowserExtensions_Impl::PopulateSpriteActionsMenu, SelectedAssets),
 			false,
 			FSlateIcon(FDreamGUIEditorStyle::GetStyleSetName(), "DreamGUIEditor.SpriteDataAction")
-		);
-	}
-	static void CreatePrefabActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
-	{
-		MenuBuilder.AddSubMenu(
-			LOCTEXT("PrefabActionsSubMenuLabel", "DreamUIPrefab"),
-			LOCTEXT("PrefabActionsSubMenuToolTip", "Prefab-related actions for this prefab."),
-			FNewMenuDelegate::CreateStatic(&FDreamGUIContentBrowserExtensions_Impl::PopulatePrefabActionMenu, SelectedAssets),
-			false,
-			FSlateIcon(FDreamGUIEditorStyle::GetStyleSetName(), "DreamGUIEditor.PrefabDataAction")
 		);
 	}
 	static void CreateFontActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
@@ -151,54 +139,6 @@ public:
 			EUserInterfaceActionType::Button);
 	}
 
-	static void PopulatePrefabActionMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
-	{
-		struct LOCAL
-		{
-			static void CreatePrefabVariant(TArray<FAssetData> InPrefabs)
-			{
-				FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
-				FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
-
-				TArray<UObject*> ObjectsToSync;
-
-				for (UDreamUIPrefab* Prefab : DreamUIResolveSelectedAssets<UDreamUIPrefab>(InPrefabs))
-				{
-					// Create the factory used to generate the prefab
-					auto PrefabFactory = NewObject<UDreamUIPrefabFactory>();
-					PrefabFactory->SourcePrefab = Prefab;
-
-					// Create the prefab
-					FString Name;
-					FString PackageName;
-
-					// Get a unique name for the prefab
-					const FString DefaultSuffix = TEXT("_Variant");
-					AssetToolsModule.Get().CreateUniqueAssetName(Prefab->GetOutermost()->GetName(), DefaultSuffix, /*out*/ PackageName, /*out*/ Name);
-					const FString PackagePath = FPackageName::GetLongPackagePath(PackageName);
-
-					if (UObject* NewAsset = AssetToolsModule.Get().CreateAsset(Name, PackagePath, UDreamUIPrefab::StaticClass(), PrefabFactory))
-					{
-						ObjectsToSync.Add(NewAsset);
-					}
-				}
-
-				if (ObjectsToSync.Num() > 0)
-				{
-					ContentBrowserModule.Get().SyncBrowserToAssets(ObjectsToSync);
-				}
-			}
-		};
-
-		const FName DreamGUIStyleSetName = FDreamGUIEditorStyle::GetStyleSetName();
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("CreatePrefabVariant", "Create PrefabVariant"),
-			LOCTEXT("CreatePrefabVariant_Tooltip", "Create variant prefab using this prefab."),
-			FSlateIcon(DreamGUIStyleSetName, "DreamGUIEditor.PrefabDataAction"),
-			FUIAction(FExecuteAction::CreateStatic(&LOCAL::CreatePrefabVariant, SelectedAssets)),
-			NAME_None,
-			EUserInterfaceActionType::Button);
-	}
 	static void PopulateFontActionMenu(FMenuBuilder& MenuBuilder, TArray<FAssetData> SelectedAssets)
 	{
 		struct LOCAL
@@ -252,10 +192,9 @@ public:
 		TSharedRef<FExtender> Extender(new FExtender());
 
 		// Run thru the assets to determine if any meet our criteria. The registry's recorded class
-		// answers that without touching the package: all three classes are native and therefore
-		// always loaded, so IsInstanceOf resolves them without loading anything either.
+		// answers that without touching the package: both classes are native and therefore always
+		// loaded, so IsInstanceOf resolves them without loading anything either.
 		TArray<FAssetData> Textures;
-		TArray<FAssetData> Prefabs;
 		TArray<FAssetData> Fonts;
 		for (auto AssetIt = SelectedAssets.CreateConstIterator(); AssetIt; ++AssetIt)
 		{
@@ -263,10 +202,6 @@ public:
 			if (Asset.IsInstanceOf<UTexture2D>())
 			{
 				Textures.Add(Asset);
-			}
-			else if (Asset.IsInstanceOf<UDreamUIPrefab>())
-			{
-				Prefabs.Add(Asset);
 			}
 			else if (Asset.IsInstanceOf<UFontFace>())
 			{
@@ -282,14 +217,6 @@ public:
 				EExtensionHook::After,
 				nullptr,
 				FMenuExtensionDelegate::CreateStatic(&FDreamGUIContentBrowserExtensions_Impl::CreateSpriteActionsSubMenu, Textures));
-		}
-		if (Prefabs.Num() > 0)
-		{
-			Extender->AddMenuExtension(
-				"GetAssetActions",
-				EExtensionHook::After,
-				nullptr,
-				FMenuExtensionDelegate::CreateStatic(&FDreamGUIContentBrowserExtensions_Impl::CreatePrefabActionsSubMenu, Prefabs));
 		}
 		if (Fonts.Num() > 0)
 		{

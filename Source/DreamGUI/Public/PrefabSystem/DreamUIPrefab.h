@@ -222,8 +222,6 @@ class DREAMGUI_API UDreamUIPrefab : public UObject
 
 public:
 	UDreamUIPrefab();
-	friend class FDreamUIPrefabCustomization;
-	friend class UDreamUIPrefabFactory;
 	friend class FDreamWidgetBlueprintEditor;
 
 private:
