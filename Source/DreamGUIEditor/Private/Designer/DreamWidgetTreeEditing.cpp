@@ -117,14 +117,16 @@ namespace DreamWidgetTreeEditing
 		Tree->Modify();
 		InNewParent->Modify();
 
-		UDreamWidget* Copy = DuplicateObject<UDreamWidget>(InSource, Tree);
+		// NOT DuplicateObject. Every widget in a tree is outered flat to the UDreamWidgetTree, and
+		// duplication follows the OUTER chain: a widget's children are not its subobjects, so
+		// DuplicateObject copied the source alone and left the copy's Children array pointing at the
+		// ORIGINAL children -- which RestoreParentLinksRecursive then re-parented onto the copy,
+		// taking them out of the hierarchy they were in. Duplicating a leaf hides all of it.
+		UDreamWidget* Copy = UDreamWidget::DuplicateSubtree(Tree, InSource);
 		if (!IsValid(Copy))
 		{
 			return nullptr;
 		}
-		// Parent is DuplicateTransient, so the copy arrives structurally complete with every
-		// back-pointer empty. Nothing below may read a parent before this.
-		Copy->RestoreParentLinksRecursive();
 
 		// Re-home flat, with fresh names. See the header for why this is not cosmetic.
 		TArray<UDreamWidget*> Copied;

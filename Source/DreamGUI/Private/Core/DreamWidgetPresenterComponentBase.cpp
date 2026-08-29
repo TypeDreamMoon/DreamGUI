@@ -25,8 +25,12 @@ UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
 	
 
 	CanvasTemplate = CreateDefaultSubobject<UDreamCanvas>(TEXT("CanvasTemplate"));
-	
-	NavigationSelectionClass = UDreamGUISettings::LoadSettingClass(UDreamGUISettings::Get()->NavigationSelectionClass, TEXT("NavigationSelectionClass"));
+
+	// The configured class is deliberately NOT loaded here. This constructor runs for the CDO while
+	// the engine is still bringing modules up, and the setting now names a Blueprint whose class
+	// (UDreamWidgetBlueprint) lives in the editor module -- too early to exist, so the load failed and
+	// left every instance null. It used to name a prefab asset from this module, which could load that
+	// early. GetNavigationSelection() resolves it on first use instead; the property stays an override.
 }
 
 void UDreamWidgetPresenterComponentBase::BeginPlay()
@@ -329,7 +333,13 @@ UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::GetNavig
 {
 	if (!NavigationSelection.IsValid())
 	{
-		if (auto Widget = CreateDreamWidget(this->GetWorld(), NavigationSelectionClass, this->LoadedWidget.Get()))
+		// Null means "not overridden on this component", so fall back to the project setting.
+		TSubclassOf<UDreamUserWidget> SelectionClass = NavigationSelectionClass;
+		if (SelectionClass == nullptr)
+		{
+			SelectionClass = UDreamGUISettings::LoadSettingClass(UDreamGUISettings::Get()->NavigationSelectionClass, TEXT("NavigationSelectionClass"));
+		}
+		if (auto Widget = CreateDreamWidget(this->GetWorld(), SelectionClass, this->LoadedWidget.Get()))
 		{
 			NavigationSelection = Widget->GetComponent<UUINavigationInputSelectionHandler>();
 		}

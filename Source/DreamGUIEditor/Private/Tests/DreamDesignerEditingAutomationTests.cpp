@@ -926,4 +926,137 @@ bool FDreamDesignerClipboardKeepsSameNamedWidgetsApartTest::RunTest(const FStrin
 	return true;
 }
 
+/*
+ * After a structural edit the preview comes back BY ITSELF.
+ *
+ * Every other test in this file calls Rebuild() straight after the edit, because what they are
+ * asserting is that the edit reached the asset. That call is also what hides this: a structural edit
+ * recompiles the Blueprint, reinstancing replaces the preview object, the host tears the old one
+ * down -- and if nothing puts it back, the designer is left showing an empty canvas until the author
+ * does something that happens to rebuild. A manual Rebuild() in the test IS that something.
+ *
+ * So this one edits and then ticks, which is all the running editor does, and asks the viewport's
+ * question rather than the asset's: is there a preview, and does it have the widgets.
+ */
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerPreviewSurvivesAStructuralEditTest,
+	"DreamGUI.Designer.ThePreviewComesBackAfterAStructuralEdit",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerPreviewSurvivesAStructuralEditTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("PreviewSurvivesEdit"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	UDreamWidget* Created = FDreamUIEditorTools::CreateWidgetAndReturn(
+		[PreviewRoot]() { return PreviewRoot; }, TEXT("Kept"), nullptr, nullptr);
+	if (!TestNotNull(TEXT("Creating returns a widget"), Created))
+	{
+		return false;
+	}
+
+	// One tick, the way the editor pays for a stale preview. No manual RebuildPreview anywhere.
+	Scoped.Designer->Tick(0.0f);
+
+	if (!TestNotNull(TEXT("There is still a preview root after the edit"), Scoped.PreviewRoot()))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("and the created widget has a preview counterpart"),
+		Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Kept"))));
+
+	// Duplicate is the same gesture with more of the tree moving, and it is the one that was seen
+	// blanking the canvas in the running editor.
+	UDreamWidget* KeptPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(
+		Scoped.FindTemplate(TEXT("Kept")));
+	FDreamUIEditorTools::DuplicateWidgets([KeptPreview]() { return TArray<UDreamWidget*>{ KeptPreview }; });
+	Scoped.Designer->Tick(0.0f);
+
+	if (!TestNotNull(TEXT("There is still a preview root after a duplicate"), Scoped.PreviewRoot()))
+	{
+		return false;
+	}
+	// The count is the part an "is it null" check cannot see: a preview that rebuilt from an empty
+	// class is not null, it is blank.
+	int32 PreviewCount = 0;
+	TFunction<void(UDreamWidget*)> Count = [&Count, &PreviewCount](UDreamWidget* Widget)
+	{
+		if (Widget == nullptr) { return; }
+		PreviewCount++;
+		for (UDreamWidget* Child : Widget->GetChildren()) { Count(Child); }
+	};
+	Count(Scoped.PreviewRoot());
+	TestEqual(TEXT("and it holds one preview widget per template widget"), PreviewCount, Scoped.TemplateCount());
+	return true;
+}
+
+/*
+ * Copy and paste move a whole subtree, and copying does not empty what it copied.
+ *
+ * The clipboard is a UDreamWidgetTree of its own and the copy into it was DuplicateObject, which has
+ * the same hole the designer's duplicate had: children are outered to the tree, not to their parent,
+ * so they are not duplicated -- the clipboard copy came out pointing at the ASSET's live children,
+ * and RestoreParentLinksRecursive then re-parented them onto it. Copying a panel took its contents
+ * out of the hierarchy. The canvas going blank in the running editor is what that looks like.
+ *
+ * The existing copy/paste test copies a leaf, which cannot tell any of this apart.
+ */
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerClipboardCarriesTheSubtreeTest,
+	"DreamGUI.Designer.CopyingAWidgetWithChildrenLeavesItIntact",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerClipboardCarriesTheSubtreeTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("ClipboardSubtree"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	UDreamWidget* Panel = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Panel"));
+	UDreamWidget* ChildA = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Panel, -1, TEXT("ChildA"));
+	DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), ChildA, -1, TEXT("Grandchild"));
+	DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Panel, -1, TEXT("ChildB"));
+	Scoped.Rebuild();
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	UDreamWidget* PanelPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Panel);
+	if (!TestNotNull(TEXT("the panel has a preview to select"), PanelPreview))
+	{
+		return false;
+	}
+
+	FDreamUIEditorTools::CopyWidgets([PanelPreview]() { return TArray<UDreamWidget*>{ PanelPreview }; });
+	TestTrue(TEXT("the clipboard has something"), FDreamWidgetBlueprintEditor::DesignerHasClipboardContent());
+
+	// The half that was broken: a copy must not reach into the asset.
+	TestEqual(TEXT("copying changed nothing in the asset"), Scoped.TemplateCount(), CountBefore);
+	TestEqual(TEXT("the copied panel still has both children"), Panel->GetChildren().Num(), 2);
+	TestEqual(TEXT("ChildA is still under it"), ChildA->GetParent(), Panel);
+	TestEqual(TEXT("and still has its grandchild"), ChildA->GetChildren().Num(), 1);
+
+	UDreamWidget* PasteParent = Scoped.Designer->GetPreviewRootWidget();
+	FDreamUIEditorTools::PasteWidgets([PasteParent]() { return TArray<UDreamWidget*>{ PasteParent }; });
+	Scoped.Rebuild();
+	TestEqual(TEXT("pasting brought the whole subtree, not just its root"),
+		Scoped.TemplateCount(), CountBefore + 4);
+	TestEqual(TEXT("and the original is still whole"), Panel->GetChildren().Num(), 2);
+	return true;
+}
+
 #endif

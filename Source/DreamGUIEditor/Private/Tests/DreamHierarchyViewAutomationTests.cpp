@@ -8,6 +8,10 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Engine/World.h"
+#include "PrefabEditor/DreamWidgetEditorHierarchyViewItem.h"
+#include "Widgets/Views/SListView.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Core/Components/DreamImage.h"
 
 // Two of the hierarchy panels asked their questions of Slate rather than of the model, and Slate
 // answers "I have not built that yet" by handing back a null TSharedPtr -- which the caller then
@@ -135,6 +139,72 @@ bool FDreamHierarchyPickerHandlesNoRootsTest::RunTest(const FString& Parameters)
 	UDreamWidget* Root = MakeRootWithChild(TestWorld.World, TEXT("Root"), TEXT("Child"));
 	DreamWidgetHierarchyPicker_BuildRoots({nullptr, Root}, UDreamWidget::StaticClass(), Roots);
 	TestEqual(TEXT("a null root is skipped, the live one is not"), Roots.Num(), 1);
+	return true;
+}
+
+/*
+ * A hierarchy row shows the widget's name.
+ *
+ * This is the one thing every other row test takes for granted, and it is exactly what an edit to the
+ * row's Slate tree can silently take away: removing the sub-prefab badge from the middle of one
+ * SHorizontalBox took the canvas draw-call badge, the name and the type label out with it, and every
+ * headless test stayed green while the panel showed nothing but icons. Nothing else in the suite
+ * builds the row, so nothing else could have noticed.
+ *
+ * It reads the text out of the built row rather than checking which Slate classes are present: what
+ * matters is that the name reaches the screen, not which widget carries it.
+ */
+namespace DreamHierarchyViewTestLocal
+{
+	void CollectTexts(TSharedRef<SWidget> Root, TArray<FString>& Out)
+	{
+		if (Root->GetType() == TEXT("STextBlock"))
+		{
+			Out.Add(StaticCastSharedRef<STextBlock>(Root)->GetText().ToString());
+		}
+		FChildren* Children = Root->GetChildren();
+		for (int32 Index = 0; Children != nullptr && Index < Children->Num(); ++Index)
+		{
+			CollectTexts(Children->GetChildAt(Index), Out);
+		}
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamHierarchyRowShowsTheNameTest,
+	"DreamGUI.Editor.HierarchyView.ARowShowsTheWidgetsName",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamHierarchyRowShowsTheNameTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamHierarchyViewTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamWidget* Widget = MakeWidget(TestWorld.World, nullptr, TEXT("PlayButton"));
+	Widget->CreateNewVisual<UDreamImage>();
+
+	// The row needs an owner table view to construct against; it never asks it anything here.
+	TArray<TWeakObjectPtr<UDreamWidget>> Items = { Widget };
+	TSharedRef<SListView<TWeakObjectPtr<UDreamWidget>>> OwnerTable =
+		SNew(SListView<TWeakObjectPtr<UDreamWidget>>)
+		.ListItemsSource(&Items)
+		.OnGenerateRow_Lambda([](TWeakObjectPtr<UDreamWidget>, const TSharedRef<STableViewBase>& Table)
+		{
+			return SNew(STableRow<TWeakObjectPtr<UDreamWidget>>, Table);
+		});
+
+	TSharedRef<SDreamWidgetEditorHierarchyViewItem> Row =
+		SNew(SDreamWidgetEditorHierarchyViewItem, OwnerTable, TWeakObjectPtr<UDreamWidget>(Widget), nullptr, nullptr);
+
+	TArray<FString> Texts;
+	CollectTexts(Row, Texts);
+	TestTrue(FString::Printf(TEXT("the row shows the widget's name, saw [%s]"), *FString::Join(Texts, TEXT(" | "))),
+		Texts.Contains(TEXT("PlayButton")));
+
+	// And what it is made of, because every row is a UDreamWidget: without the type label a picture and
+	// a horizontal box are told apart by the icon alone.
+	TestTrue(FString::Printf(TEXT("the row shows what the widget is, saw [%s]"), *FString::Join(Texts, TEXT(" | "))),
+		Texts.ContainsByPredicate([](const FString& Text) { return Text.Contains(TEXT("Image")); }));
+
 	return true;
 }
 

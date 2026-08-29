@@ -32,6 +32,12 @@
  * These run headless. What they cannot see is pixels: a preview that registers, lays out and draws
  * nothing would pass every assertion below. That gap is real and is covered in the designer phases
  * by looking at the thing.
+ *
+ * It is not for want of trying. UDreamCanvas::GetDrawCallCount() is exactly the number that would
+ * have caught the blank preview -- the canvas building no geometry at all -- and under -nullrhi it
+ * is zero for a working preview too, so a test written on it fails on correct code. The defect it
+ * would have caught (a rebuild that never marked the canvas, so the designer drew only on the first
+ * open in an editor session) was found by opening the editor and fixed in RebuildPreview.
  */
 
 namespace DreamWidgetDesignerHostTestLocal
@@ -443,6 +449,74 @@ bool FDreamDesignerReferenceLifetimeTest::RunTest(const FString&)
 	TestNull(TEXT("An empty reference has no preview"), Empty.GetPreview());
 
 	Host->Shutdown();
+	return true;
+}
+
+/*
+ * Duplicating a widget copies what is under it.
+ *
+ * The duplicate that shipped is DuplicateObject onto the tree, and the assumption in that one line is
+ * that a widget's children come with it. They are not its subobjects: every widget in a tree is
+ * outered flat to the UDreamWidgetTree, and duplication follows the OUTER chain, not the Children
+ * array. Whether the children are copied, shared, or dropped is therefore a property of the engine,
+ * not of the code that reads as if it had decided -- and RestoreParentLinksRecursive on a copy that
+ * SHARED them would walk the originals and re-parent them onto the copy, taking them out of the
+ * hierarchy they were in.
+ *
+ * Every existing duplicate test duplicates a leaf, so none of them can tell those three apart.
+ */
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTreeEditingDuplicateCopiesTheSubtreeTest,
+	"DreamGUI.Designer.TreeEditing.DuplicatingAWidgetCopiesItsChildren",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTreeEditingDuplicateCopiesTheSubtreeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+	FScopedBlueprint Scoped(TEXT("DuplicateSubtreeInTree"));
+	if (!TestNotNull(TEXT("the blueprint was created"), Scoped.Blueprint))
+	{
+		return false;
+	}
+	UDreamWidgetTree* Tree = Scoped.Blueprint->WidgetTree;
+	UDreamWidget* Root = Tree->RootWidget.Get();
+
+	UDreamWidget* Panel = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Panel"));
+	UDreamWidget* ChildA = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Panel, -1, TEXT("ChildA"));
+	UDreamWidget* Grandchild = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), ChildA, -1, TEXT("Grandchild"));
+	DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Panel, -1, TEXT("ChildB"));
+	if (!TestNotNull(TEXT("the subtree was built"), Grandchild))
+	{
+		return false;
+	}
+	const int32 CountBefore = Tree->CountWidgets();
+
+	UDreamWidget* Copy = DreamWidgetTreeEditing::DuplicateWidget(Scoped.Blueprint, Panel, Root, -1);
+	if (!TestNotNull(TEXT("duplicating returned a widget"), Copy))
+	{
+		return false;
+	}
+
+	// Four widgets went in, four more should be in the tree.
+	TestEqual(TEXT("the whole subtree was copied, not just its root"), Tree->CountWidgets(), CountBefore + 4);
+	TestEqual(TEXT("the copy has both children"), Copy->GetChildren().Num(), 2);
+
+	// The half a shared-children duplicate would fail: the original keeps what it had.
+	TestEqual(TEXT("and the original still has both of its own"), Panel->GetChildren().Num(), 2);
+	TestEqual(TEXT("ChildA is still under Panel"), ChildA->GetParent(), Panel);
+	TestEqual(TEXT("and still has its grandchild"), ChildA->GetChildren().Num(), 1);
+
+	for (UDreamWidget* Child : Copy->GetChildren())
+	{
+		TestFalse(TEXT("no child object is shared between the original and the copy"),
+			Panel->GetChildren().Contains(Child));
+		TestEqual(TEXT("every copied child points at the copy"), Child->GetParent(), Copy);
+	}
 	return true;
 }
 

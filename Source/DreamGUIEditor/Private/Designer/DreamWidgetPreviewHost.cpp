@@ -260,6 +260,13 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	RegisterDreamWidgetHierarchy(PreviewWidget);
 
 	RebuildPreviewNameMap();
+	// Tell the canvas it has something new to draw. Nothing else here does, and a canvas that is
+	// never marked builds no draw calls at all -- the preview would be registered, laid out, and
+	// invisible. It looked like it worked because compiling a Blueprint refreshes every canvas in
+	// every world (UDreamUIManagerObject::OnBlueprintCompiled), which is true of the first open of a
+	// freshly loaded asset and of pressing Compile, and false of every open after that.
+	UDreamUIManagerWorldSubsystem::RefreshAllUI(Scene->GetWorld());
+
 	OnPreviewRebuilt.Broadcast();
 }
 

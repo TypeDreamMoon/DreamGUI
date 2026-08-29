@@ -2386,11 +2386,13 @@ void FDreamWidgetBlueprintEditor::DesignerCopyWidgets(TConstArrayView<UDreamWidg
 		{
 			continue;
 		}
-		UDreamWidget* Copy = DuplicateObject<UDreamWidget>(Template, &Clipboard);
+		// DuplicateSubtree, not DuplicateObject: widgets are outered flat to their tree, so a
+		// widget's children are not its subobjects and duplication would not have copied them --
+		// the clipboard copy would have pointed at the ASSET's children and stolen them on the
+		// next RestoreParentLinksRecursive. Copying used to empty the thing it copied.
+		UDreamWidget* Copy = UDreamWidget::DuplicateSubtree(&Clipboard, Template);
 		if (IsValid(Copy))
 		{
-			// Parent is DuplicateTransient; the copy is structurally complete and link-less until this.
-			Copy->RestoreParentLinksRecursive();
 			DreamWidgetDesignerClipboard::Roots.Add(Copy);
 		}
 	}
@@ -2441,13 +2443,13 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 		{
 			break;
 		}
-		// A second copy, so pasting twice does not hand the tree the clipboard's own objects.
-		UDreamWidget* Copy = DuplicateObject<UDreamWidget>(Root.Get(), Tree);
+		// A second copy, so pasting twice does not hand the tree the clipboard's own objects. Same
+		// reason as the copy above for why this is DuplicateSubtree and not DuplicateObject.
+		UDreamWidget* Copy = UDreamWidget::DuplicateSubtree(Tree, Root.Get());
 		if (!IsValid(Copy))
 		{
 			continue;
 		}
-		Copy->RestoreParentLinksRecursive();
 		TArray<UDreamWidget*> Copied;
 		DreamWidgetTreeEditing::ForEachWidgetInSubtree(Copy, [&Copied](UDreamWidget* Widget) { Copied.Add(Widget); });
 		for (UDreamWidget* Widget : Copied)
