@@ -343,6 +343,17 @@ void FDreamUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FScen
 
 	FEditorViewportClient::DrawCanvas(InViewport, View, Canvas);
 	DrawDesignerOverlay(InViewport, View, Canvas);
+	// AFTER the overlay rather than inside it: the overlay gives up as soon as there is no selection
+	// geometry to draw, and a ruler is not a thing about the selection -- put inside, it drew only
+	// while something was selected, which on an empty canvas is never.
+	//
+	// Drawn late also means the strips sit OVER the outlines and handles that reach the viewport
+	// edge; a ruler with a resize handle through it is worse than no ruler.
+	if (IsOrtho() && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowDesignerRulers())
+	{
+		DrawDesignerRulers(InViewport, View, Canvas);
+	}
+	// The chip last of all: it is the loudest thing on the screen on purpose.
 	DrawAnimationModeIndicator(InViewport, Canvas);
 }
 
@@ -385,7 +396,9 @@ void FDreamUIPrefabEditorViewportClient::DrawAnimationModeIndicator(FViewport& I
 	const FString Label = FString::Printf(TEXT("ANIMATION MODE   %s"), *Animation->GetDisplayNameString());
 	const FVector2D Padding(8.0f, 4.0f);
 	const FVector2D ChipSize = FVector2D(Font->GetStringSize(*Label), Font->GetMaxCharHeight()) + Padding * 2.0f;
-	const FVector2D ChipPos((ViewSize.X - ChipSize.X) * 0.5f, 6.0f);
+	// Below the horizontal ruler when there is one, rather than through it.
+	const float ChipTop = 6.0f + (Editor->GetShowDesignerRulers() ? DreamUIRulerHorizontalThickness : 0.0f);
+	const FVector2D ChipPos((ViewSize.X - ChipSize.X) * 0.5f, ChipTop);
 
 	FCanvasTileItem Chip(ChipPos, ChipSize, FLinearColor(0.0f, 0.0f, 0.0f, 0.65f));
 	Chip.BlendMode = SE_BLEND_Translucent;
@@ -980,10 +993,8 @@ void FDreamUIPrefabEditorViewportClient::DrawDesignerRulers(FViewport& InViewpor
 	if (FMath::Abs(ScaleX) <= UE_SMALL_NUMBER || FMath::Abs(ScaleY) <= UE_SMALL_NUMBER)return;
 
 	const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
-	constexpr float HorizontalThickness = 16.0f;
-	// Wider than it is tall, because the numbers are drawn upright: rotating them would be prettier
-	// and would mean pushing a transform onto the canvas for four characters.
-	constexpr float VerticalThickness = 34.0f;
+	constexpr float HorizontalThickness = DreamUIRulerHorizontalThickness;
+	constexpr float VerticalThickness = DreamUIRulerVerticalThickness;
 	constexpr float MinPixelsPerStep = 72.0f;
 	constexpr int32 MinorPerMajor = 5;
 	if (ViewSize.X <= VerticalThickness || ViewSize.Y <= HorizontalThickness)return;
@@ -1082,7 +1093,9 @@ void FDreamUIPrefabEditorViewportClient::DrawCursorReadout(FViewport& InViewport
 
 	const float DpiScale = Canvas.GetDPIScale();
 	const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
-	FCanvasTextItem Readout(FVector2D(8.0f, ViewSize.Y - 18.0f),
+	// Clear of the vertical ruler, which occupies this corner when it is on.
+	const float ReadoutLeft = 8.0f + (Editor->GetShowDesignerRulers() ? DreamUIRulerVerticalThickness : 0.0f);
+	FCanvasTextItem Readout(FVector2D(ReadoutLeft, ViewSize.Y - 18.0f),
 		FText::FromString(FString::Printf(TEXT("%.0f, %.0f"), Local.Y, Local.Z)), Font, FLinearColor(0.72f, 0.78f, 0.85f));
 	Readout.EnableShadow(FLinearColor::Black);
 	Canvas.DrawItem(Readout);
@@ -1223,12 +1236,6 @@ void FDreamUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 			SizeText.EnableShadow(FLinearColor::Black);
 			Canvas.DrawItem(SizeText);
 		}
-	}
-	// Drawn last: the strips sit at the viewport edges, where outlines and handles reach, and a
-	// ruler with a selection handle drawn through it is worse than no ruler.
-	if (IsOrtho() && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowDesignerRulers())
-	{
-		DrawDesignerRulers(InViewport, View, Canvas);
 	}
 	if (bDesignerDragging && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowDesignerGuides())
 	{

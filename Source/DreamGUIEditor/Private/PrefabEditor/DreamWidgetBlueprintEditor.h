@@ -337,6 +337,14 @@ private:
 	TArray<TWeakObjectPtr<UDreamWidget>> SelectedWidgets;
 	/** Session state: the rule decided a canvas size, the size itself is what got stored. */
 	EDreamUIDesignerSizeRule DesignerSizeRule = EDreamUIDesignerSizeRule::Custom;
+	/**
+	 * What the canvas was before Fill Screen took over, so leaving it can put that back.
+	 *
+	 * Remembered rather than asked for: GetDesignerViewportSize falls back to the canvas's CURRENT
+	 * size when the asset never recorded a resolution -- which every converted asset is -- so under
+	 * Fill Screen it answers with the fill size, and "restore" restored it to itself.
+	 */
+	FIntPoint DesignerSizeBeforeFillScreen = FIntPoint::ZeroValue;
 	/** Size the canvas to the viewport, once per resize. A no-op when it already is. */
 	void ApplyFillScreenSize();
 private:

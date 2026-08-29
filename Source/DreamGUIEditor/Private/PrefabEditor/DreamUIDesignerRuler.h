@@ -5,6 +5,17 @@
 #include "CoreMinimal.h"
 
 /**
+ * How much of the viewport's edges the rulers take.
+ *
+ * Shared because everything else drawn at those edges has to keep out of them -- the cursor readout
+ * in the bottom-left corner and the animation-mode chip along the top both sat exactly where the
+ * rulers now are. Nudging each by eye is how they drift apart.
+ */
+constexpr float DreamUIRulerHorizontalThickness = 16.0f;
+/** Wider than the horizontal one is tall, because the numbers on it are drawn upright. */
+constexpr float DreamUIRulerVerticalThickness = 34.0f;
+
+/**
  * Where a designer ruler's ticks go — the arithmetic on its own, so it can be tested without a
  * viewport, a camera or a canvas.
  *

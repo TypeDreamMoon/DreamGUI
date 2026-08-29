@@ -113,6 +113,21 @@ bool FDreamDesignerFillScreenIsAViewRuleTest::RunTest(const FString&)
 		Scoped.Designer->GetDesignerViewportSize(), FIntPoint(1280, 720));
 	TestEqual(TEXT("And the canvas with it"), Scoped.Designer->GetDesignerCanvasSize(), FIntPoint(1280, 720));
 
+	// The case that actually bit, found by clicking Custom in a real designer and watching nothing
+	// happen: an asset that never recorded a resolution, which every converted asset is. The getter
+	// then answers with the canvas's CURRENT size, so asking it after the rule has flipped hands back
+	// the fill size and "restore" restores it to itself.
+	Scoped.Blueprint->DesignerData.DesignViewportSize = FIntPoint::ZeroValue;
+	Scoped.Designer->ApplyDesignerViewportSize(FIntPoint(1024, 768), /*bRecordOnAsset*/false);
+	TestEqual(TEXT("A canvas with nothing recorded behind it"),
+		Scoped.Designer->GetDesignerCanvasSize(), FIntPoint(1024, 768));
+	Scoped.Designer->SetDesignerSizeRule(EDreamUIDesignerSizeRule::FillScreen);
+	// Standing in for the viewport, which headless has no size to offer.
+	Scoped.Designer->ApplyDesignerViewportSize(FIntPoint(640, 480), /*bRecordOnAsset*/false);
+	Scoped.Designer->SetDesignerSizeRule(EDreamUIDesignerSizeRule::Custom);
+	TestEqual(TEXT("Leaving restores what was on screen before, recorded or not"),
+		Scoped.Designer->GetDesignerCanvasSize(), FIntPoint(1024, 768));
+
 	return true;
 }
 

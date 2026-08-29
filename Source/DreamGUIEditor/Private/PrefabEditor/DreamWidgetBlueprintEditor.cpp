@@ -1665,22 +1665,30 @@ void FDreamWidgetBlueprintEditor::SetDesignerSizeRule(EDreamUIDesignerSizeRule I
 {
 	if (InRule == EDreamUIDesignerSizeRule::FillScreen)
 	{
+		// Read BEFORE the rule changes: once it is Fill Screen this getter answers with the fill size.
+		if (DesignerSizeRule != EDreamUIDesignerSizeRule::FillScreen)
+		{
+			DesignerSizeBeforeFillScreen = GetDesignerViewportSize();
+		}
 		DesignerSizeRule = InRule;
-		// 1:1 as well, or the name is a lie the first time it is clicked: the canvas would be the
-		// viewport's size in units while the camera showed some other fraction of it.
-		ZoomDesignerToActualSize();
 		ApplyFillScreenSize();
+		// Framed and then 1:1, in that order and both needed. 1:1 alone makes the canvas the
+		// viewport's size in units while the camera looks at some other part of the world, which
+		// fills nothing anybody can see; framing alone fits it at whatever zoom that takes.
+		ZoomDesignerToFit();
+		ZoomDesignerToActualSize();
 		return;
 	}
 	if (InRule != EDreamUIDesignerSizeRule::Desired)
 	{
 		const bool bLeavingFillScreen = DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen;
 		DesignerSizeRule = InRule;
-		if (bLeavingFillScreen)
+		if (bLeavingFillScreen && DesignerSizeBeforeFillScreen.X > 0 && DesignerSizeBeforeFillScreen.Y > 0)
 		{
-			// Back to the resolution the asset has held all along -- applied, not recorded, because
-			// it is already what the asset says.
-			ApplyDesignerViewportSize(GetDesignerViewportSize(), /*bRecordOnAsset*/false);
+			// Applied, not recorded: this is putting back what was on screen before, and if the asset
+			// had a resolution of its own then this IS it.
+			ApplyDesignerViewportSize(DesignerSizeBeforeFillScreen, /*bRecordOnAsset*/false);
+			DesignerSizeBeforeFillScreen = FIntPoint::ZeroValue;
 		}
 		return;
 	}
