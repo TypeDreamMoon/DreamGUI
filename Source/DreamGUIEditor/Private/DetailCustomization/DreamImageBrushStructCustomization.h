@@ -1,9 +1,10 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "IPropertyTypeCustomization.h"
+#include "Widgets/Notifications/SErrorText.h"
 
 class FDreamImageBrushStructCustomization : public IPropertyTypeCustomization
 {

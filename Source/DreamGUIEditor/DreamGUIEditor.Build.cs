@@ -46,6 +46,7 @@ public class DreamGUIEditor : ModuleRules
                 "DreamGUI",
                 "LevelEditor",
                 "Projects",
+                "DirectoryWatcher",//FDreamUISourceWatcher
                 "EditorWidgets",
                 "DesktopPlatform",//file system
                 "ImageWrapper",//texture load

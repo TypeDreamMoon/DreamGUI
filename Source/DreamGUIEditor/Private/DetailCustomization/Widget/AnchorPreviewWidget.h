@@ -1,6 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Widgets/SCompoundWidget.h"
+// SNew(SImage) needs the type, not a declaration: the declarative syntax takes SImage::FArguments
+// by value. Inside a unity blob some neighbour always had this.
+#include "Widgets/Images/SImage.h"
+#include "Framework/Application/SlateApplication.h"
 #include "DesktopPlatformModule.h"
 #include "DreamGUIEditorStyle.h"
 #pragma once
