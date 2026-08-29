@@ -716,4 +716,209 @@ bool FDreamDesignerIdentityCarriesToPreviewTest::RunTest(const FString&)
 }
 
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUndoLeavesNoDoubleTest,
+	"DreamGUI.Designer.UndoingADuplicateLeavesNothingReachableTwice",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerUndoLeavesNoDoubleTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+
+	FScopedBlueprint Scoped(TEXT("UndoDuplicateNoDouble"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))return false;
+	BuildSampleHierarchy(Scoped.Blueprint);
+	UDreamWidgetTree* Tree = Scoped.Blueprint->WidgetTree;
+	UDreamWidget* First = FindTemplateByDisplayName(Scoped.Blueprint, TEXT("First"));
+	if (!TestNotNull(TEXT("the sample tree has a First"), (UObject*)First))return false;
+
+	// Every widget in the tree, counting SLOTS and reporting anything reached twice. CountWidgets
+	// keeps a visited set and skips revisits, so it reports the same number for a healthy tree and
+	// for one where a widget hangs off two parents -- which is exactly the state under test.
+	// Counts SLOTS, and reports a slot holding something that is not a live widget rather than
+	// stepping over it. Filtering on IsValid is what made the first version of this test pass on
+	// broken data: an object invalidated by undo leaves an entry behind, the entry is invisible to
+	// every IsValid-guarded walk in the codebase, and object instancing does not filter at all -- so
+	// the next preview rebuilt it into a live duplicate. Count the slots.
+	struct FWalk
+	{
+		TArray<FString> Revisits;
+		TArray<FString> DeadSlots;
+		int32 Slots = 0;
+		TSet<const UDreamWidget*> Seen;
+		void Run(UDreamWidget* Widget)
+		{
+			Slots++;
+			bool bAlreadySeen = false;
+			Seen.Add(Widget, &bAlreadySeen);
+			if (bAlreadySeen)
+			{
+				Revisits.Add(Widget->GetDisplayName());
+				return;
+			}
+			for (UDreamWidget* Child : Widget->GetChildren())
+			{
+				if (!IsValid(Child))
+				{
+					DeadSlots.Add(FString::Printf(TEXT("under '%s'"), *Widget->GetDisplayName()));
+					continue;
+				}
+				Run(Child);
+			}
+		}
+	};
+
+	FWalk Before;
+	Before.Run(Tree->RootWidget);
+	TestEqual(TEXT("the sample tree starts sound"), Before.Revisits.Num(), 0);
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Duplicate")));
+	UDreamWidget* Copy = DreamWidgetTreeEditing::DuplicateWidget(Scoped.Blueprint, First, Tree->RootWidget);
+	GEditor->EndTransaction();
+	if (!TestNotNull(TEXT("the duplicate happened"), (UObject*)Copy))return false;
+	FWalk Duplicated;
+	Duplicated.Run(Tree->RootWidget);
+	TestEqual(TEXT("and added First plus its child"), Duplicated.Slots, Before.Slots + 2);
+
+	GEditor->UndoTransaction();
+
+	// The claim. Undo restores Children; UDreamWidget::Parent is Transient and is NOT restored, so
+	// anything that reads the back-pointer afterwards is reading a pointer the transaction never
+	// touched. PostEditUndo did exactly that -- it re-inserted itself into whatever its stale Parent
+	// still named -- which put the undone copy back into the tree it had just been removed from.
+	// In the editor that surfaced as a cycle out of RestoreParentLinksRecursive on the next preview
+	// rebuild, two identical rows in the hierarchy panel, and before the row collection was hardened,
+	// an SListView check(false) that took the editor down.
+	FWalk Undone;
+	Undone.Run(Tree->RootWidget);
+	TestEqual(*FString::Printf(TEXT("nothing is reachable twice, saw [%s]"), *FString::Join(Undone.Revisits, TEXT(", "))),
+		Undone.Revisits.Num(), 0);
+	TestEqual(*FString::Printf(TEXT("and no dead slot is left behind, saw [%s]"), *FString::Join(Undone.DeadSlots, TEXT(", "))),
+		Undone.DeadSlots.Num(), 0);
+	TestEqual(TEXT("and the tree is the size it started"), Undone.Slots, Before.Slots);
+
+	// The back-pointers have to agree with the restored Children too: every child names the parent
+	// that lists it. A tree that walks correctly while Parent points somewhere else is the state the
+	// hierarchy panel drops rows over.
+	for (const UDreamWidget* Widget : Undone.Seen)
+	{
+		for (const UDreamWidget* Child : Widget->GetChildren())
+		{
+			if (IsValid(Child))
+			{
+				TestEqual(*FString::Printf(TEXT("'%s' names the parent that lists it"), *Child->GetDisplayName()),
+					(const UDreamWidget*)Child->GetParent(), Widget);
+			}
+		}
+	}
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUndoWithAPreviewTest,
+	"DreamGUI.Designer.UndoingADuplicateWithAPreviewOpenLeavesBothTreesSound",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerUndoWithAPreviewTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+
+	// The same undo as the test above, with the one thing the editor has that it does not: a live
+	// preview. The damage seen by hand showed up in the PREVIEW tree -- RestoreParentLinksRecursive
+	// reporting a cycle while instancing it -- so the preview is either the victim or the cause, and
+	// a test without one cannot tell which.
+	FScopedBlueprint Scoped(TEXT("UndoDuplicateWithPreview"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))return false;
+	BuildSampleHierarchy(Scoped.Blueprint);
+	Scoped.Compile();
+
+	TSharedRef<FDreamWidgetPreviewHost> Host = MakeShared<FDreamWidgetPreviewHost>();
+	Host->Initialize(Scoped.Blueprint);
+	if (!TestNotNull(TEXT("the preview was built"), Host->GetPreviewWidget()))
+	{
+		Host->Shutdown();
+		return false;
+	}
+
+	// Counts SLOTS, and reports a slot holding something that is not a live widget rather than
+	// stepping over it. Filtering on IsValid is what made the first version of this test pass on
+	// broken data: an object invalidated by undo leaves an entry behind, the entry is invisible to
+	// every IsValid-guarded walk in the codebase, and object instancing does not filter at all -- so
+	// the next preview rebuilt it into a live duplicate. Count the slots.
+	struct FWalk
+	{
+		TArray<FString> Revisits;
+		TArray<FString> DeadSlots;
+		int32 Slots = 0;
+		TSet<const UDreamWidget*> Seen;
+		void Run(UDreamWidget* Widget)
+		{
+			Slots++;
+			bool bAlreadySeen = false;
+			Seen.Add(Widget, &bAlreadySeen);
+			if (bAlreadySeen)
+			{
+				Revisits.Add(Widget->GetDisplayName());
+				return;
+			}
+			for (UDreamWidget* Child : Widget->GetChildren())
+			{
+				if (!IsValid(Child))
+				{
+					DeadSlots.Add(FString::Printf(TEXT("under '%s'"), *Widget->GetDisplayName()));
+					continue;
+				}
+				Run(Child);
+			}
+		}
+	};
+
+	UDreamWidgetTree* Tree = Scoped.Blueprint->WidgetTree;
+	UDreamWidget* First = FindTemplateByDisplayName(Scoped.Blueprint, TEXT("First"));
+	FWalk BeforeTemplate;  BeforeTemplate.Run(Tree->RootWidget);
+	FWalk BeforePreview;   BeforePreview.Run(Host->GetPreviewRoot());
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Duplicate")));
+	UDreamWidget* Copy = DreamWidgetTreeEditing::DuplicateWidget(Scoped.Blueprint, First, Tree->RootWidget);
+	GEditor->EndTransaction();
+	if (!TestNotNull(TEXT("the duplicate happened"), (UObject*)Copy))
+	{
+		Host->Shutdown();
+		return false;
+	}
+	Host->RebuildPreview();
+	FWalk WithCopy; WithCopy.Run(Host->GetPreviewRoot());
+	TestEqual(TEXT("the preview shows the copy"), WithCopy.Slots, BeforePreview.Slots + 2);
+
+	GEditor->UndoTransaction();
+	Host->RebuildPreview();
+
+	FWalk AfterTemplate; AfterTemplate.Run(Tree->RootWidget);
+	TestEqual(*FString::Printf(TEXT("the authored tree has nothing reachable twice, saw [%s]"),
+		*FString::Join(AfterTemplate.Revisits, TEXT(", "))), AfterTemplate.Revisits.Num(), 0);
+	TestEqual(*FString::Printf(TEXT("and no dead slot in it, saw [%s]"),
+		*FString::Join(AfterTemplate.DeadSlots, TEXT(", "))), AfterTemplate.DeadSlots.Num(), 0);
+	TestEqual(TEXT("and is the size it started"), AfterTemplate.Slots, BeforeTemplate.Slots);
+
+	FWalk AfterPreview; AfterPreview.Run(Host->GetPreviewRoot());
+	TestEqual(*FString::Printf(TEXT("the preview has nothing reachable twice, saw [%s]"),
+		*FString::Join(AfterPreview.Revisits, TEXT(", "))), AfterPreview.Revisits.Num(), 0);
+	TestEqual(TEXT("and is the size it started"), AfterPreview.Slots, BeforePreview.Slots);
+
+	Host->Shutdown();
+	return true;
+}
+
+
 #endif

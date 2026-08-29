@@ -1015,12 +1015,22 @@ void UDreamWidget::PostEditUndo()
 	// Same silence for the bits derived from the render transform and perspective properties.
 	RefreshRenderTransformFlag();
 	RefreshPerspectiveInHierarchy();
-	if (Parent.IsValid())
+	// Parent is Transient, so the transaction did NOT restore it: after an undo it still names
+	// whoever this widget was attached to when the undo began. Children IS restored, and it is the
+	// structural truth -- so the parent's restored array is the thing to ask, not the back-pointer.
+	//
+	// Asking the back-pointer instead is how undoing a duplicate put the copy back. Undo removed it
+	// from the parent's Children and invalidated the object; the re-insert below then wrote it back
+	// in at its old sibling index, where it sat as a dead slot that no IsValid-filtered walk could
+	// see. Instancing does not filter: the next preview rebuild carried it across as a live widget,
+	// so the designer showed the undone copy again, with its child reachable from two parents.
+	if (Parent.IsValid() && Parent->Children.Contains(this))
 	{
 		//restore SiblingIndex
 		Parent->Children.Remove(this);
 		const int32 RestoredSiblingIndex = FMath::Clamp(SiblingIndex, 0, Parent->Children.Num());
 		Parent->Children.Insert(this, RestoredSiblingIndex);
+		Parent->EnsureUIChildrenValid();
 		for (int i = 0; i < Parent->Children.Num(); i++)
 		{
 			auto& UIChild = Parent->Children[i];
@@ -1029,6 +1039,13 @@ void UDreamWidget::PostEditUndo()
 				UIChild->SiblingIndex = i;
 			}
 		}
+	}
+	else if (Parent.IsValid())
+	{
+		// The parent the undo restored does not list this widget, which means the back-pointer is
+		// stale rather than the array being wrong. Clear it: OnRegister and every walk upward read
+		// it, and a widget claiming a parent that disowns it is worse than one claiming none.
+		Parent = nullptr;
 	}
 	// Re-register if unregistered (e.g., undo of a delete operation via DeleteForUndo).
 	// bIsRegistered is not a UPROPERTY so it is not saved/restored by the undo system;
