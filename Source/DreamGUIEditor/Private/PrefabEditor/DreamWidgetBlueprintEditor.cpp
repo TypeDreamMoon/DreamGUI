@@ -483,7 +483,8 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	// FBlueprintEditor registers for undo itself.
 
 	// After opening, broadcast event to DreamUIPrefabSequencerEditor
-	FDreamUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewRootWidget());
+	// The AUTHORING root: animations are asset data, and the panel edits them in place.
+	FDreamUIEditorTools::OnEditingPrefabChanged.Broadcast(GetAnimationHostWidget());
 }
 
 void FDreamWidgetBlueprintEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
@@ -519,6 +520,39 @@ UDreamWidget* FDreamWidgetBlueprintEditor::GetRootAgentWidget()
 UDreamWidget* FDreamWidgetBlueprintEditor::GetPreviewRootWidget()
 {
 	return PreviewHost.IsValid() ? PreviewHost->GetPreviewRoot() : nullptr;
+}
+
+UDreamWidget* FDreamWidgetBlueprintEditor::GetAnimationHostWidget() const
+{
+	if (!IsValid(BlueprintBeingEdited) || !IsValid(BlueprintBeingEdited->WidgetTree))
+	{
+		return nullptr;
+	}
+	return BlueprintBeingEdited->WidgetTree->RootWidget.Get();
+}
+
+UDreamWidget* FDreamWidgetBlueprintEditor::FindPreviewForAnimationContext(UDreamWidget* InAuthoredWidget)
+{
+	if (!IsValid(InAuthoredWidget))
+	{
+		return nullptr;
+	}
+	// The designer that owns this AUTHORED widget -- found by the Blueprint it belongs to, since an
+	// authoring widget lives in no world and the usual world lookup finds nothing.
+	UDreamWidgetTree* Tree = InAuthoredWidget->GetTypedOuter<UDreamWidgetTree>();
+	UDreamWidgetBlueprint* Blueprint = Tree != nullptr ? Tree->GetTypedOuter<UDreamWidgetBlueprint>() : nullptr;
+	if (Blueprint == nullptr)
+	{
+		return nullptr;
+	}
+	for (FDreamWidgetBlueprintEditor* Designer : DesignerInstances)
+	{
+		if (Designer != nullptr && Designer->GetWidgetBlueprint() == Blueprint && Designer->PreviewHost.IsValid())
+		{
+			return Designer->PreviewHost->FindPreviewForTemplate(InAuthoredWidget);
+		}
+	}
+	return nullptr;
 }
 
 UDreamWidget* FDreamWidgetBlueprintEditor::GetTemplateWidget(const UDreamWidget* InPreviewWidget) const

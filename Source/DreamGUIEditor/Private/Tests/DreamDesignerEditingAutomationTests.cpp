@@ -17,6 +17,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Interaction/UITextInput.h"
+#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
 #include "Core/Components/DreamText.h"
 #include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
 #include "EdGraph/EdGraph.h"
@@ -776,6 +778,59 @@ bool FDreamDesignerComponentPropertyEditReachesTheAssetTest::RunTest(const FStri
 		Mismatched.AddHead(MultiLine);
 		Scoped.Designer->MigrateDetailsChangeToTemplate({ HostPreview }, Mismatched, /*bIsModify*/false);
 		TestTrue(TEXT("Migrating a component property onto a widget is refused rather than fatal"), true);
+	}
+
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerAnimationReachesTheAssetTest,
+	"DreamGUI.Designer.AnAnimationAuthoredInTheDesignerReachesTheAsset",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerAnimationReachesTheAssetTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerAnimationHost"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+
+	// The panel asks the editor where animations live. Under prefabs that was the one tree there was;
+	// in a designer the preview is a copy that gets rebuilt, so an animation authored there is gone
+	// the next time anything structural happens -- and never in the saved asset at all.
+	UDreamWidget* Host = Scoped.Designer->GetAnimationHostWidget();
+	if (!TestNotNull(TEXT("There is a widget to host animations"), Host))
+	{
+		return false;
+	}
+	UDreamWidgetTree* Tree = Scoped.Blueprint->WidgetTree;
+	if (!TestNotNull(TEXT("The asset has a tree"), Tree))
+	{
+		return false;
+	}
+	TestEqual(TEXT("And it is the AUTHORED root, not the preview's"), Host, Tree->RootWidget.Get());
+
+	// Which means a new animation lands in the asset.
+	UDreamUIPrefabSequenceComponent* Animator =
+		Cast<UDreamUIPrefabSequenceComponent>(Host->AddComponent(UDreamUIPrefabSequenceComponent::StaticClass()));
+	if (TestNotNull(TEXT("An animation host component"), Animator))
+	{
+		UDreamUIPrefabSequence* Sequence = Animator->AddNewAnimation();
+		TestNotNull(TEXT("And an animation on it"), Sequence);
+
+		Scoped.Rebuild();
+		// Survives the rebuild, because it was never on the thing that gets rebuilt.
+		UDreamWidget* RootAfter = Scoped.Blueprint->WidgetTree->RootWidget.Get();
+		UDreamUIPrefabSequenceComponent* AnimatorAfter =
+			IsValid(RootAfter) ? RootAfter->GetComponent<UDreamUIPrefabSequenceComponent>() : nullptr;
+		if (TestNotNull(TEXT("The asset still carries the host"), AnimatorAfter))
+		{
+			TestEqual(TEXT("And the animation"), AnimatorAfter->GetSequenceArray().Num(), 1);
+		}
 	}
 
 	return true;

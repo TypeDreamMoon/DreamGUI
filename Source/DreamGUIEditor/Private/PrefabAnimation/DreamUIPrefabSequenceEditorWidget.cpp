@@ -16,6 +16,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
+#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
 #include "LevelEditor.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamImage.h"
@@ -157,7 +158,15 @@ public:
 		if (auto LocalPrefabSequence = GetPrefabSequence())
 		{
 			auto Component = LocalPrefabSequence->GetTypedOuter<UDreamUIPrefabSequenceComponent>();
-			return Component->GetWidget();
+			UDreamWidget* Owner = Component != nullptr ? Component->GetWidget() : nullptr;
+			// The animation is authored on the asset, where nothing is alive to watch it on. Scrub
+			// against the PREVIEW instead -- possible at all because bindings resolve by name against
+			// their context, so one sequence answers for either tree.
+			if (UDreamWidget* Preview = FDreamWidgetBlueprintEditor::FindPreviewForAnimationContext(Owner))
+			{
+				return Preview;
+			}
+			return Owner;
 		}
 		
 		return nullptr;

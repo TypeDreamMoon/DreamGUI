@@ -252,6 +252,19 @@ public:
 	 * GetWidgetBlueprint()->WidgetTree->RootWidget, which is inert.
 	 */
 	UDreamWidget* GetPreviewRootWidget();
+
+	/**
+	 * The widget animations are AUTHORED on: the authoring tree's root, not the preview's.
+	 *
+	 * An animation is data on the asset, like the hierarchy is. Put on the preview it lives until the
+	 * next rebuild and never reaches the saved asset -- the same loss every other edit had, in the one
+	 * place that was still making it. What the preview is for is watching them play, which is the
+	 * playback context's job, not this one's.
+	 */
+	UDreamWidget* GetAnimationHostWidget() const;
+
+	/** The preview counterpart of an authored widget, for scrubbing. Null outside a designer. */
+	static UDreamWidget* FindPreviewForAnimationContext(UDreamWidget* InAuthoredWidget);
 	/** The template counterpart of a preview widget, for anything about to write authored data. */
 	UDreamWidget* GetTemplateWidget(const UDreamWidget* InPreviewWidget) const;
 
