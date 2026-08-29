@@ -1,6 +1,7 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DreamWidgetHierarchyPickerView.h"
+#include "Core/DreamUserWidget.h"
 #include "DreamWidgetHierarchyPickerViewItem.h"
 #include "Core/DreamUIManager.h"
 #include "Widgets/Layout/SScrollBorder.h"
@@ -88,7 +89,12 @@ namespace
 			}
 		});
 
-		auto WidgetChildren = InParent->Widget->GetChildren();
+		// The same boundary the hierarchy panel and viewport picking draw. This picker is a second,
+		// older collection that W3 did not touch, so it went on offering the innards of every nested
+		// widget blueprint as things to bind a track to -- and the two panels disagreeing about where
+		// an instance ends is exactly what one shared function exists to prevent.
+		TArray<UDreamWidget*> WidgetChildren;
+		CollectDreamEditorChildren(InParent->Widget.Get(), WidgetChildren);
 		for (int i = 0; i < WidgetChildren.Num(); i++)
 		{
 			auto ChildWidget = WidgetChildren[i];

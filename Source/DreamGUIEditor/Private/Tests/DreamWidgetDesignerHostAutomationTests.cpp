@@ -15,6 +15,7 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamContentWidget.h"
+#include "Designer/DreamWidgetHierarchyPickerView.h"
 #include "Kismet2/CompilerResultsLog.h"
 
 #include "Editor.h"
@@ -1116,6 +1117,121 @@ bool FDreamDesignerCreateIsUndoableTest::RunTest(const FString&)
 	// Slots, not live children: an object created inside a transaction is invalidated by the undo,
 	// so counting only the valid ones reports success while a dead entry sits in the array.
 	TestEqual(TEXT("undo takes it back out, leaving no slot behind"), Tree->RootWidget->GetChildrenCount(), Before);
+	return true;
+}
+
+
+// Declared here rather than included: it lives beside a Slate class no headless test can construct.
+bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamAnimationBindingStopsAtTheBoundaryTest,
+	"DreamGUI.Designer.Animation.ABindingStopsWhereTheInstanceDoes",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamAnimationBindingStopsAtTheBoundaryTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	// A shell with a hole, placed in a host: the one shape that has widgets of BOTH kinds sitting
+	// inside the same nested instance -- the shell's own, and the host's, in the slot.
+	FScopedBlueprint Shell(TEXT("AnimBindShell"));
+	if (!TestNotNull(TEXT("the shell Blueprint was created"), Shell.Blueprint))return false;
+	UDreamWidgetTree* ShellTree = Shell.Blueprint->GetOrCreateWidgetTree();
+	ShellTree->RootWidget->SetDisplayName(TEXT("ShellRoot"));
+	ShellTree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+	UDreamWidget* Body = DreamWidgetTreeEditing::CreateWidget(Shell.Blueprint, UDreamWidget::StaticClass(), nullptr, -1, TEXT("Body"));
+	if (!TestNotNull(TEXT("the shell has a Body"), (UObject*)Body))return false;
+	Body->AddComponent<UDreamNamedSlot>();
+	UDreamWidget* ShellOwn = DreamWidgetTreeEditing::CreateWidget(Shell.Blueprint, UDreamWidget::StaticClass(), nullptr, -1, TEXT("ShellOwn"));
+	if (!TestNotNull(TEXT("and something of its own"), (UObject*)ShellOwn))return false;
+	Shell.Compile();
+
+	FScopedBlueprint Host(TEXT("AnimBindHost"));
+	if (!TestNotNull(TEXT("the host Blueprint was created"), Host.Blueprint))return false;
+	UDreamWidgetTree* HostTree = Host.Blueprint->GetOrCreateWidgetTree();
+	HostTree->RootWidget->SetDisplayName(TEXT("HostRoot"));
+	HostTree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass());
+	UDreamUserWidget* Placed = Cast<UDreamUserWidget>(HostTree->ConstructWidget(TSubclassOf<UDreamWidget>(Shell.Blueprint->GeneratedClass)));
+	if (!TestNotNull(TEXT("the shell was placed"), (UObject*)Placed))return false;
+	Placed->SetDisplayName(TEXT("Card"));
+	Placed->SetParentBeforeRegister(HostTree->RootWidget);
+	UDreamWidget* Filling = HostTree->ConstructWidget<UDreamWidget>();
+	Filling->SetDisplayName(TEXT("Filling"));
+	Placed->SetContentForNamedSlot(TEXT("Body"), Filling);
+	Host.Compile();
+
+	TSharedRef<FDreamWidgetPreviewHost> PreviewHost = MakeShared<FDreamWidgetPreviewHost>();
+	PreviewHost->Initialize(Host.Blueprint);
+	if (!TestNotNull(TEXT("the preview was built"), PreviewHost->GetPreviewWidget()))
+	{
+		PreviewHost->Shutdown();
+		return false;
+	}
+	UDreamUserWidget* PreviewCard = Cast<UDreamUserWidget>(PreviewHost->FindPreviewForTemplate(Placed));
+	UDreamWidget* PreviewFilling = PreviewHost->FindPreviewForTemplate(Filling);
+	UDreamWidget* PreviewHostRoot = PreviewHost->GetPreviewRoot();
+	if (!TestNotNull(TEXT("the placed shell has a preview"), (UObject*)PreviewCard)
+		|| !TestNotNull(TEXT("and so does the slot content"), (UObject*)PreviewFilling))
+	{
+		PreviewHost->Shutdown();
+		return false;
+	}
+	UDreamWidget* InsideShell = nullptr;
+	TArray<UDreamWidget*> Everything;
+	UDreamWidget::CollectChildrenWidgets(PreviewCard, Everything, false);
+	for (UDreamWidget* W : Everything)
+	{
+		if (IsValid(W) && W->GetDisplayName() == TEXT("ShellOwn"))
+		{
+			InsideShell = W;
+		}
+	}
+
+	// The host's own widgets, including the nested instance itself, are the host's to animate.
+	TestTrue(TEXT("the host root is bindable"), DreamWidgetAnimation_CanBindWidgetToSequencer(PreviewHostRoot));
+	TestTrue(TEXT("the nested instance itself is bindable -- it IS a widget of this asset"),
+		DreamWidgetAnimation_CanBindWidgetToSequencer(PreviewCard));
+
+	// What is inside it is not. A binding is a chain of display names resolved at play time, so one
+	// reaching in here is a name path through another asset, and that asset renaming a widget breaks
+	// it with nothing in this asset to report it.
+	if (TestNotNull(TEXT("the shell's own widget reached the preview"), (UObject*)InsideShell))
+	{
+		TestFalse(TEXT("but a widget inside the nested instance is not bindable"),
+			DreamWidgetAnimation_CanBindWidgetToSequencer(InsideShell));
+	}
+
+	// And the exception that makes the rule worth stating: slot content sits inside the nested
+	// instance's subtree and is still the HOST's widget. Animating your own widget is the point.
+	TestTrue(TEXT("named-slot content stays bindable"),
+		DreamWidgetAnimation_CanBindWidgetToSequencer(PreviewFilling));
+
+	// The picker that offers widgets to bind draws the same boundary, which is the half that was
+	// missing: the panel folded the instance while this list went on showing its innards.
+	TArray<TSharedPtr<FDreamWidgetHierarchyPickerView_DataItem>> Roots;
+	DreamWidgetHierarchyPicker_BuildRoots({ PreviewHostRoot }, UDreamWidget::StaticClass(), Roots);
+	TArray<FString> Offered;
+	TFunction<void(const TSharedPtr<FDreamWidgetHierarchyPickerView_DataItem>&)> Walk =
+		[&Offered, &Walk](const TSharedPtr<FDreamWidgetHierarchyPickerView_DataItem>& Item)
+	{
+		if (!Item.IsValid())return;
+		Offered.Add(Item->DisplayText);
+		for (const TSharedPtr<FDreamWidgetHierarchyPickerView_DataItem>& Child : Item->Children)
+		{
+			Walk(Child);
+		}
+	};
+	for (const TSharedPtr<FDreamWidgetHierarchyPickerView_DataItem>& Root : Roots)
+	{
+		Walk(Root);
+	}
+	TestTrue(FString::Printf(TEXT("the picker offers the nested instance, saw [%s]"), *FString::Join(Offered, TEXT(", "))),
+		Offered.Contains(TEXT("Card")));
+	TestFalse(FString::Printf(TEXT("but not what is inside it, saw [%s]"), *FString::Join(Offered, TEXT(", "))),
+		Offered.Contains(TEXT("ShellOwn")));
+
+	PreviewHost->Shutdown();
 	return true;
 }
 

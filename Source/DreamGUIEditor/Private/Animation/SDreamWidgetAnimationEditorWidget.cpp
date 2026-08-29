@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "SDreamWidgetAnimationEditorWidget.h"
+#include "Core/DreamWidgetTree.h"
+#include "Core/DreamUserWidget.h"
 
 #include "Animation/DreamWidgetAnimation.h"
 #include "ISequencer.h"
@@ -43,9 +45,37 @@
  */
 bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget)
 {
-	// The refusal this made was "a sub-prefab widget's binding does not survive a save". A class
-	// model has no sub-prefab instances, so a valid widget is bindable.
-	return IsValid(InWidget);
+	if (!IsValid(InWidget))
+	{
+		return false;
+	}
+	// The refusal this used to make was "a sub-prefab widget's binding does not survive a save", and
+	// when the prefab model went it was rewritten to allow everything -- correct at the time, because
+	// nothing was nested yet. Nesting came back as widget blueprint instances, and the same objection
+	// with it: a binding is a chain of DISPLAY NAMES resolved through Children at play time, so one
+	// that reaches into a nested instance is a name path through somebody else's asset. That asset's
+	// author renames a widget and every host animating it silently drives nothing -- the host's
+	// compiler never looks inside a class it merely places.
+	//
+	// Named-slot content is deliberately NOT caught by this. It sits inside the nested instance's
+	// subtree but is outered to the HOST's tree, because the host authored it; it is the host's
+	// widget standing in a hole, and animating your own widget is the whole point.
+	for (const UDreamWidget* Ancestor = InWidget->GetParent(); Ancestor != nullptr; Ancestor = Ancestor->GetParent())
+	{
+		const UDreamUserWidget* Nested = Cast<UDreamUserWidget>(Ancestor);
+		if (Nested == nullptr)
+		{
+			continue;
+		}
+		// The first widget blueprint instance above this widget. If it is the one being edited, the
+		// widget is part of what is being edited and is bindable.
+		if (DreamWidget_ShouldEditorExpandContents(Ancestor))
+		{
+			return true;
+		}
+		return !InWidget->IsIn(Nested->GetWidgetTree());
+	}
+	return true;
 }
 
 class SDreamWidgetAnimationEditorWidgetImpl : public SCompoundWidget, public FEditorUndoClient
@@ -526,8 +556,8 @@ public:
 								}
 								if (!DreamWidgetAnimation_CanBindWidgetToSequencer(TargetWidget))
 								{
-									FDreamUIUtils::EditorNotification(LOCTEXT("SubPrefabWidgetNotBindable"
-										, "This widget belongs to a sub-prefab, so a track bound to it would be lost the next time the prefab loads. Animate it inside its own prefab instead."), false, 8);
+									FDreamUIUtils::EditorNotification(LOCTEXT("NestedWidgetNotBindable"
+										, "This widget belongs to a nested widget blueprint, so a track bound to it would follow a name path through another asset and break the moment that asset renames it. Animate it inside its own blueprint instead."), false, 8);
 									return;
 								}
 								const FScopedTransaction Transaction(LOCTEXT("AddWidgetToSequencer", "Add Widget to Sequencer"));
