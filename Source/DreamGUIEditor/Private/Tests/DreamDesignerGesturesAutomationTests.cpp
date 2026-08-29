@@ -3,7 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamUIPrefabEditorViewportClient.h"
+#include "Designer/DreamWidgetDesignerViewportClient.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Engine/World.h"
@@ -58,7 +58,7 @@ bool FDreamAnchorDragKeepsTheRectTest::RunTest(const FString& Parameters)
 
 	// Centre anchors to the bottom-left corner: the anchor line travels 400 x 300 across the parent,
 	// which is exactly how far the rect teleports if the offsets are not re-measured against it.
-	FDreamUIPrefabEditorViewportClient::SetAnchorsPreservingRect(Child, FVector2D(0.0f, 0.0f), FVector2D(0.0f, 0.0f));
+	FDreamWidgetDesignerViewportClient::SetAnchorsPreservingRect(Child, FVector2D(0.0f, 0.0f), FVector2D(0.0f, 0.0f));
 	TestTrue(TEXT("the anchors did move"), Child->GetAnchorMin().Equals(FVector2D(0.0f, 0.0f), 0.001f));
 	TestTrue(TEXT("and the rect did not"), Child->GetRelativeLocation().Equals(Location, 0.01));
 	TestTrue(TEXT("nor did its size"), Child->GetSize().Equals(Size, 0.01));
@@ -86,7 +86,7 @@ bool FDreamAnchorDragToStretchKeepsTheRectTest::RunTest(const FString& Parameter
 	// Pulling the anchors apart is the case where the size itself changes meaning: once stretched,
 	// the parent contributes the span and SizeDelta is only what is left over, so a SizeDelta that
 	// stayed put would grow the widget to the full 800 x 600.
-	FDreamUIPrefabEditorViewportClient::SetAnchorsPreservingRect(Child, FVector2D(0.0f, 0.0f), FVector2D(1.0f, 1.0f));
+	FDreamWidgetDesignerViewportClient::SetAnchorsPreservingRect(Child, FVector2D(0.0f, 0.0f), FVector2D(1.0f, 1.0f));
 	TestTrue(TEXT("the widget is now stretched"), Child->GetAnchorData().IsHorizontalStretched() && Child->GetAnchorData().IsVerticalStretched());
 	TestTrue(TEXT("the rect did not move"), Child->GetRelativeLocation().Equals(Location, 0.01));
 	TestTrue(TEXT("and kept its size"), Child->GetSize().Equals(Size, 0.01));
@@ -100,11 +100,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamAnchorSnapTest::RunTest(const FString& Parameters)
 {
-	TestEqual(TEXT("just past a gridline"), FDreamUIPrefabEditorViewportClient::SnapAnchorFraction(0.262, 0.02), 0.25);
-	TestEqual(TEXT("just short of the far edge"), FDreamUIPrefabEditorViewportClient::SnapAnchorFraction(0.99, 0.02), 1.0);
+	TestEqual(TEXT("just past a gridline"), FDreamWidgetDesignerViewportClient::SnapAnchorFraction(0.262, 0.02), 0.25);
+	TestEqual(TEXT("just short of the far edge"), FDreamWidgetDesignerViewportClient::SnapAnchorFraction(0.99, 0.02), 1.0);
 	// Halfway between two stops belongs to neither: snapping everything would make the free positions
 	// the gesture exists to reach unreachable.
-	TestEqual(TEXT("between two stops"), FDreamUIPrefabEditorViewportClient::SnapAnchorFraction(0.4, 0.02), 0.4);
+	TestEqual(TEXT("between two stops"), FDreamWidgetDesignerViewportClient::SnapAnchorFraction(0.4, 0.02), 0.4);
 	return true;
 }
 
@@ -120,14 +120,14 @@ bool FDreamAnchorAxisPolicyTest::RunTest(const FString& Parameters)
 
 	UDreamWidget* Orphan = MakeWidget(TestWorld.World, TEXT("Orphan"), 100.0f, 50.0f);
 	bool bHorizontal = true, bVertical = true;
-	FDreamUIPrefabEditorViewportClient::GetAnchorEditableAxes(Orphan, bHorizontal, bVertical);
+	FDreamWidgetDesignerViewportClient::GetAnchorEditableAxes(Orphan, bHorizontal, bVertical);
 	TestFalse(TEXT("a parentless widget has no anchor space at all"), bHorizontal || bVertical);
 
 	UDreamWidget* CanvasRoot = MakeWidget(TestWorld.World, TEXT("CanvasRoot"), 800.0f, 600.0f);
 	CanvasRoot->CreateNewLayoutContainer<UDreamLayoutContainerCanvasPanel>();
 	UDreamWidget* CanvasChild = MakeWidget(CanvasRoot, TEXT("CanvasChild"), 100.0f, 50.0f);
 	CanvasChild->TrySetParent(CanvasRoot, false);
-	FDreamUIPrefabEditorViewportClient::GetAnchorEditableAxes(CanvasChild, bHorizontal, bVertical);
+	FDreamWidgetDesignerViewportClient::GetAnchorEditableAxes(CanvasChild, bHorizontal, bVertical);
 	TestTrue(TEXT("a canvas child is placed by its anchors, so both axes are the author's"), bHorizontal && bVertical);
 
 	// The case the gesture must not offer: a vertical box writes its children's position and size, so
@@ -136,7 +136,7 @@ bool FDreamAnchorAxisPolicyTest::RunTest(const FString& Parameters)
 	BoxRoot->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>();
 	UDreamWidget* BoxChild = MakeWidget(BoxRoot, TEXT("BoxChild"), 100.0f, 50.0f);
 	BoxChild->TrySetParent(BoxRoot, false);
-	FDreamUIPrefabEditorViewportClient::GetAnchorEditableAxes(BoxChild, bHorizontal, bVertical);
+	FDreamWidgetDesignerViewportClient::GetAnchorEditableAxes(BoxChild, bHorizontal, bVertical);
 	TestFalse(TEXT("an arranged child gets no anchor handles"), bHorizontal || bVertical);
 	return true;
 }
@@ -151,15 +151,15 @@ bool FDreamMarqueeMeetsRectTest::RunTest(const FString& Parameters)
 	using namespace DreamDesignerGestureTestLocal;
 
 	const TArray<FVector2D> Upright = MakeQuad(FVector2D(100, 100), FVector2D(200, 100), FVector2D(200, 160), FVector2D(100, 160));
-	TestTrue(TEXT("a box laid over the rect catches it"), FDreamUIPrefabEditorViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(80, 90), FVector2D(150, 150)), Upright));
-	TestTrue(TEXT("a box entirely inside it counts as crossing it"), FDreamUIPrefabEditorViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(120, 120), FVector2D(130, 130)), Upright));
-	TestFalse(TEXT("a box beside it does not"), FDreamUIPrefabEditorViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(0, 0), FVector2D(60, 60)), Upright));
+	TestTrue(TEXT("a box laid over the rect catches it"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(80, 90), FVector2D(150, 150)), Upright));
+	TestTrue(TEXT("a box entirely inside it counts as crossing it"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(120, 120), FVector2D(130, 130)), Upright));
+	TestFalse(TEXT("a box beside it does not"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(0, 0), FVector2D(60, 60)), Upright));
 
 	// A rotated widget projects to a diamond. Its bounding box reaches into all four corners it does
 	// not occupy, so a box-against-bounds test would hand it a marquee that never touched it.
 	const TArray<FVector2D> Diamond = MakeQuad(FVector2D(100, 50), FVector2D(150, 100), FVector2D(100, 150), FVector2D(50, 100));
-	TestFalse(TEXT("a corner of the bounding box is not the widget"), FDreamUIPrefabEditorViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(52, 52), FVector2D(62, 62)), Diamond));
-	TestTrue(TEXT("but its middle is"), FDreamUIPrefabEditorViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(95, 95), FVector2D(105, 105)), Diamond));
+	TestFalse(TEXT("a corner of the bounding box is not the widget"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(52, 52), FVector2D(62, 62)), Diamond));
+	TestTrue(TEXT("but its middle is"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(95, 95), FVector2D(105, 105)), Diamond));
 	return true;
 }
 
@@ -171,7 +171,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamMarqueeSelectionModesTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamDesignerGestureTestLocal;
-	using EMarqueeMode = FDreamUIPrefabEditorViewportClient::EMarqueeMode;
+	using EMarqueeMode = FDreamWidgetDesignerViewportClient::EMarqueeMode;
 	FScopedTestWorld TestWorld;
 
 	UDreamWidget* A = MakeWidget(TestWorld.World, TEXT("A"), 10.0f, 10.0f);
@@ -181,15 +181,15 @@ bool FDreamMarqueeSelectionModesTest::RunTest(const FString& Parameters)
 	const TArray<UDreamWidget*> Caught{ B, C };
 
 	TSet<UDreamWidget*> Result;
-	FDreamUIPrefabEditorViewportClient::CombineMarqueeSelection(EMarqueeMode::Replace, Current, Caught, Result);
+	FDreamWidgetDesignerViewportClient::CombineMarqueeSelection(EMarqueeMode::Replace, Current, Caught, Result);
 	TestTrue(TEXT("a plain marquee replaces"), Result.Num() == 2 && Result.Contains(B) && Result.Contains(C));
 
 	// B is in both sets, which is where a toggle would go wrong: ctrl+marquee over something already
 	// selected has to leave it selected, not turn it off.
-	FDreamUIPrefabEditorViewportClient::CombineMarqueeSelection(EMarqueeMode::Add, Current, Caught, Result);
+	FDreamWidgetDesignerViewportClient::CombineMarqueeSelection(EMarqueeMode::Add, Current, Caught, Result);
 	TestTrue(TEXT("ctrl adds without toggling"), Result.Num() == 3 && Result.Contains(A) && Result.Contains(B) && Result.Contains(C));
 
-	FDreamUIPrefabEditorViewportClient::CombineMarqueeSelection(EMarqueeMode::Remove, Current, Caught, Result);
+	FDreamWidgetDesignerViewportClient::CombineMarqueeSelection(EMarqueeMode::Remove, Current, Caught, Result);
 	TestTrue(TEXT("alt removes, and never adds what it caught"), Result.Num() == 1 && Result.Contains(A));
 	return true;
 }

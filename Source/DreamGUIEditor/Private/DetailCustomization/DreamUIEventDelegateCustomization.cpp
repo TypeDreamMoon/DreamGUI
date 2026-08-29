@@ -22,7 +22,7 @@
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
-#include "PrefabEditor/DreamWidgetHierarchyPickerView.h"
+#include "Designer/DreamWidgetHierarchyPickerView.h"
 #include "Widgets/Input/NumericUnitTypeInterface.inl"
 
 #define LOCTEXT_NAMESPACE "DreamUIEventDelegateCustomization"

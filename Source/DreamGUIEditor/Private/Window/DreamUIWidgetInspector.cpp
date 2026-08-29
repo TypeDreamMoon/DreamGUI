@@ -4,8 +4,8 @@
 
 #include "DetailLayoutBuilder.h"
 #include "Core/DreamUIManager.h"
-#include "PrefabEditor/DreamUIPrefabEditorDetails.h"
-#include "PrefabEditor/DreamWidgetEditorHierarchyView.h"
+#include "Designer/SDreamWidgetDesignerDetails.h"
+#include "Designer/DreamWidgetEditorHierarchyView.h"
 #include "Widgets/Docking/SDockTab.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIWidgetInspector"
@@ -75,7 +75,7 @@ void SDreamUIWidgetInspector::RefreshContent()
 			]
 			+ SSplitter::Slot()
 			[
-				SNew(SDreamUIPrefabEditorDetails, World.Get())
+				SNew(SDreamWidgetDesignerDetails, World.Get())
 			]
 			);
 	}

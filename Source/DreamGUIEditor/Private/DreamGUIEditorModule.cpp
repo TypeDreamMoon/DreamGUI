@@ -60,17 +60,17 @@
 
 #include "Engine/Selection.h"
 
-#include "PrefabAnimation/DreamUIPrefabSequenceComponentCustomization.h"
-#include "PrefabAnimation/MovieSceneSequenceEditor_DreamUIPrefabSequence.h"
+#include "Animation/DreamWidgetAnimationComponentCustomization.h"
+#include "Animation/MovieSceneSequenceEditor_DreamUIPrefabSequence.h"
 #include "SequencerSettings.h"
 #include "ISequencerModule.h"
 #include "DreamUIComponentReference.h"
 #include "MovieSceneToolsProjectSettings.h"
-#include "PrefabAnimation/DreamUIMaterialTrackEditor.h"
-#include "PrefabAnimation/DreamUIAnimEventTrackEditor.h"
-#include "PrefabAnimation/DreamUISequenceTrackEditor.h"
+#include "Animation/DreamUIMaterialTrackEditor.h"
+#include "Animation/DreamUIAnimEventTrackEditor.h"
+#include "Animation/DreamUISequenceTrackEditor.h"
 #include "DataFactory/DreamUISequenceFactory.h"
-#include "PrefabAnimation/DreamUIPrefabSequencerSettings.h"
+#include "Animation/DreamUIPrefabSequencerSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontEmojiData.h"
@@ -230,7 +230,7 @@ void FDreamGUIEditorModule::StartupModule()
 
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIComponentReferenceCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomClassLayout(UDreamUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIPrefabSequenceComponentCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetAnimationComponentCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamImageBrushStructCustomization::MakeInstance));
 		

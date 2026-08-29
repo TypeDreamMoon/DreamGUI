@@ -6,10 +6,10 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "DreamUIEditorTools.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Designer/DreamWidgetPreviewHost.h"
-#include "PrefabSystem/DreamUIPrefabInstanceScene.h"
+#include "Preview/DreamWidgetDesignerScene.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -20,7 +20,7 @@
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
 #include "Core/Components/DreamText.h"
-#include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
+#include "Designer/DreamWidgetPropertyBindingExtension.h"
 #include "EdGraph/EdGraph.h"
 #include "K2Node_FunctionEntry.h"
 #include "UObject/UObjectIterator.h"
@@ -642,7 +642,7 @@ bool FDreamDesignerCreateUnderTheCanvasTest::RunTest(const FString&)
 	// and what the user has selected whenever they click the top row of the hierarchy. It is not a
 	// widget anyone can parent to in a level, so the tools refuse it; in a designer it has to mean
 	// the authored root, or a palette double-click there does nothing but log.
-	FDreamUIPrefabInstanceScene* Scene = Scoped.Designer->GetPreviewScene();
+	FDreamWidgetDesignerScene* Scene = Scoped.Designer->GetPreviewScene();
 	UDreamWidget* Canvas = Scene != nullptr ? Scene->GetRootAgent() : nullptr;
 	if (!TestNotNull(TEXT("There is a design canvas"), Canvas))
 	{

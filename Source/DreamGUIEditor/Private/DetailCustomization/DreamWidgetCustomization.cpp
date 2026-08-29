@@ -23,7 +23,7 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "DetailCustomization/DreamPanelSlotCustomization.h"
 #include "Editor/UnrealEdEngine.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Utils/DreamUIUtils.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"

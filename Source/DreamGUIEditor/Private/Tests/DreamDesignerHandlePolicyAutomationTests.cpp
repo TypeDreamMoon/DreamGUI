@@ -3,7 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamUIPrefabEditorViewportClient.h"
+#include "Designer/DreamWidgetDesignerViewportClient.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamLayoutSelfAspectRatio.h"
@@ -49,7 +49,7 @@ bool FDreamHandlesSuppressedUnderArrangingPanelTest::RunTest(const FString& Para
 	UDreamWidget* Child = MakeWidget(Root, TEXT("Child"), 100.0f, 50.0f);
 	Child->TrySetParent(Root, false);
 
-	const FDreamLayoutControlAnchorData Control = FDreamUIPrefabEditorViewportClient::GetEffectiveLayoutControl(Child);
+	const FDreamLayoutControlAnchorData Control = FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(Child);
 	TestTrue(TEXT("a vertical box decides width"), Control.bCanControlHorizontalSize);
 	TestTrue(TEXT("and height"), Control.bCanControlVerticalSize);
 	return true;
@@ -72,14 +72,14 @@ bool FDreamHandlesFreeUnderCanvasPanelTest::RunTest(const FString& Parameters)
 	Child->TrySetParent(Root, false);
 
 	// This is the case the blanket rule got wrong: a plain canvas child's size is the author's.
-	const FDreamLayoutControlAnchorData Free = FDreamUIPrefabEditorViewportClient::GetEffectiveLayoutControl(Child);
+	const FDreamLayoutControlAnchorData Free = FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(Child);
 	TestFalse(TEXT("width stays the author's"), Free.bCanControlHorizontalSize);
 	TestFalse(TEXT("height stays the author's"), Free.bCanControlVerticalSize);
 
 	UDreamPanelSlot* Slot = Child->GetPanelSlot();
 	if (!TestNotNull(TEXT("the child has a slot"), (UObject*)Slot))return false;
 	Slot->SetAutoSize(true);
-	const FDreamLayoutControlAnchorData Auto = FDreamUIPrefabEditorViewportClient::GetEffectiveLayoutControl(Child);
+	const FDreamLayoutControlAnchorData Auto = FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(Child);
 	TestTrue(TEXT("auto size hands width to the panel"), Auto.bCanControlHorizontalSize);
 	TestTrue(TEXT("and height"), Auto.bCanControlVerticalSize);
 	return true;
@@ -100,9 +100,9 @@ bool FDreamHandlesFreeWhenIgnoringLayoutTest::RunTest(const FString& Parameters)
 	UDreamWidget* Child = MakeWidget(Root, TEXT("Child"), 100.0f, 50.0f);
 	Child->TrySetParent(Root, false);
 
-	TestTrue(TEXT("arranged to begin with"), FDreamUIPrefabEditorViewportClient::GetEffectiveLayoutControl(Child).bCanControlHorizontalSize);
+	TestTrue(TEXT("arranged to begin with"), FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(Child).bCanControlHorizontalSize);
 	Child->SetIgnoreLayout(true);
-	const FDreamLayoutControlAnchorData Control = FDreamUIPrefabEditorViewportClient::GetEffectiveLayoutControl(Child);
+	const FDreamLayoutControlAnchorData Control = FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(Child);
 	TestFalse(TEXT("an ignored child owns its width again"), Control.bCanControlHorizontalSize);
 	TestFalse(TEXT("and its height"), Control.bCanControlVerticalSize);
 	return true;
@@ -123,13 +123,13 @@ bool FDreamHandlesRespectLayoutSelfTest::RunTest(const FString& Parameters)
 	UDreamWidget* Root = MakeWidget(TestWorld.World, TEXT("Root"), 800.0f, 600.0f);
 	UDreamWidget* Child = MakeWidget(Root, TEXT("Child"), 100.0f, 50.0f);
 	Child->TrySetParent(Root, false);
-	TestFalse(TEXT("nothing arranges it yet"), FDreamUIPrefabEditorViewportClient::GetEffectiveLayoutControl(Child).bCanControlVerticalSize);
+	TestFalse(TEXT("nothing arranges it yet"), FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(Child).bCanControlVerticalSize);
 
 	UDreamLayoutSelfAspectRatio* Aspect = Child->CreateNewLayoutSelf<UDreamLayoutSelfAspectRatio>();
 	if (!TestNotNull(TEXT("aspect ratio layout self"), (UObject*)Aspect))return false;
 	Aspect->SetAspectRatio(1.0f);
 	Aspect->SetAspectRatioType(EDreamLayoutAspectRatioType::HeightControlWidth);
-	const FDreamLayoutControlAnchorData Control = FDreamUIPrefabEditorViewportClient::GetEffectiveLayoutControl(Child);
+	const FDreamLayoutControlAnchorData Control = FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(Child);
 	TestTrue(TEXT("height-controls-width takes the width"), Control.bCanControlHorizontalSize);
 	return true;
 }

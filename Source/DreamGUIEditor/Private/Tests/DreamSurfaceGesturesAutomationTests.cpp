@@ -3,8 +3,8 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
-#include "PrefabEditor/DreamUIPrefabEditorViewportClient.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetDesignerViewportClient.h"
 #include "DreamUIControlRegistry.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
@@ -43,9 +43,9 @@ namespace DreamSurfaceGestureTestLocal
 	}
 
 	/** One target in an unrotated, unscaled parent, so the arithmetic under test is the snap alone. */
-	FDreamUIPrefabEditorViewportClient::FMoveDragTarget MakeTarget(const FVector2D& InStartPosition, const FVector& InTravel)
+	FDreamWidgetDesignerViewportClient::FMoveDragTarget MakeTarget(const FVector2D& InStartPosition, const FVector& InTravel)
 	{
-		FDreamUIPrefabEditorViewportClient::FMoveDragTarget Target;
+		FDreamWidgetDesignerViewportClient::FMoveDragTarget Target;
 		Target.PlaneTransform = FTransform::Identity;
 		Target.StartPlanePoint = FVector::ZeroVector;
 		Target.CurrentPlanePoint = InTravel;
@@ -65,12 +65,12 @@ bool FDreamSurfaceMoveDragKeepsSelectionRigidTest::RunTest(const FString& Parame
 
 	// Two widgets in one parent, three units apart, which is less than the grid step. Dragged five
 	// units on a grid of eight, the leader lands on 8; the follower has to keep its three units.
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragTarget> Targets;
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Targets;
 	Targets.Add(MakeTarget(FVector2D(0.0, 0.0), FVector(0.0, 5.0, 0.0)));
 	Targets.Add(MakeTarget(FVector2D(3.0, 0.0), FVector(0.0, 5.0, 0.0)));
 
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragResult> Results;
-	FDreamUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
+	FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
 	if (!TestEqual(TEXT("one result per target"), Results.Num(), 2))return false;
 	TestTrue(TEXT("the widget the gesture is anchored on lands on the gridline"), Results[0].Position.Equals(FVector2D(8.0, 0.0)));
 	// Snapped on its own, this one reads 8 as well, and the two widgets end up on top of each other.
@@ -93,12 +93,12 @@ bool FDreamSurfaceMoveDragGuideFollowsWritableAxesTest::RunTest(const FString& P
 
 	// A real grid, so the correction on both axes is non-zero: without one the axis guard under
 	// test is unreachable, because nothing snapped on either axis in the first place.
-	FDreamUIPrefabEditorViewportClient::FMoveDragTarget Target = MakeTarget(FVector2D(100.0, 200.0), FVector(0.0, 10.0, 7.0));
+	FDreamWidgetDesignerViewportClient::FMoveDragTarget Target = MakeTarget(FVector2D(100.0, 200.0), FVector(0.0, 10.0, 7.0));
 	Target.bHorizontalFree = false;
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragTarget> Targets = { Target };
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Targets = { Target };
 
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragResult> Results;
-	FDreamUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
+	FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
 	if (!TestEqual(TEXT("one result"), Results.Num(), 1))return false;
 	TestTrue(TEXT("the arranged axis is untouched and the free one snaps"),
 		Results[0].Position.Equals(FVector2D(100.0, 208.0)));
@@ -139,19 +139,19 @@ bool FDreamSurfaceReparentRefusalsTest::RunTest(const FString& Parameters)
 	TArray<UDreamWidget*> OnlyPanel = { Panel.Get() };
 	TArray<UDreamWidget*> Nothing;
 	TestTrue(TEXT("a widget dropped into a sibling panel with room is a reparent"),
-		FDreamUIPrefabEditorViewportClient::CanReparentSelectionUnder(OnlyLeaf, Panel.Get()));
+		FDreamWidgetDesignerViewportClient::CanReparentSelectionUnder(OnlyLeaf, Panel.Get()));
 	TestFalse(TEXT("a widget cannot be dropped into itself"),
-		FDreamUIPrefabEditorViewportClient::CanReparentSelectionUnder(OnlyPanel, Panel.Get()));
+		FDreamWidgetDesignerViewportClient::CanReparentSelectionUnder(OnlyPanel, Panel.Get()));
 	TestFalse(TEXT("nor into something it already contains"),
-		FDreamUIPrefabEditorViewportClient::CanReparentSelectionUnder(OnlyPanel, Grandchild.Get()));
+		FDreamWidgetDesignerViewportClient::CanReparentSelectionUnder(OnlyPanel, Grandchild.Get()));
 	TestFalse(TEXT("nor into a parent with no room left"),
-		FDreamUIPrefabEditorViewportClient::CanReparentSelectionUnder(OnlyLeaf, Full.Get()));
+		FDreamWidgetDesignerViewportClient::CanReparentSelectionUnder(OnlyLeaf, Full.Get()));
 	// Not a refusal so much as "there is nothing here to do": the drag stays the move it was.
 	TestFalse(TEXT("a widget dropped where it already lives is not a reparent"),
-		FDreamUIPrefabEditorViewportClient::CanReparentSelectionUnder(OnlyLeaf, Root.Get()));
+		FDreamWidgetDesignerViewportClient::CanReparentSelectionUnder(OnlyLeaf, Root.Get()));
 	TestFalse(TEXT("and neither an empty selection nor an empty container is one"),
-		FDreamUIPrefabEditorViewportClient::CanReparentSelectionUnder(Nothing, Panel.Get())
-		|| FDreamUIPrefabEditorViewportClient::CanReparentSelectionUnder(OnlyLeaf, nullptr));
+		FDreamWidgetDesignerViewportClient::CanReparentSelectionUnder(Nothing, Panel.Get())
+		|| FDreamWidgetDesignerViewportClient::CanReparentSelectionUnder(OnlyLeaf, nullptr));
 	return true;
 }
 

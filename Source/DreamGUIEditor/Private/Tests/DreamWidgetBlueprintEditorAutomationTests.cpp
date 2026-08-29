@@ -5,7 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "DreamWidgetBlueprint.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "Designer/DreamWidgetDesignerTabs.h"
 #include "Designer/DreamWidgetPreviewHost.h"

@@ -21,7 +21,7 @@ class IDreamUIWidgetContextMenuExtension
 {
 public:
 	virtual ~IDreamUIWidgetContextMenuExtension() = default;
-	virtual void ExtendWidgetContextMenu(FMenuBuilder& MenuBuilder, TSharedRef<FDreamWidgetBlueprintEditor> InPrefabEditor)const = 0;
+	virtual void ExtendWidgetContextMenu(FMenuBuilder& MenuBuilder, TSharedRef<FDreamWidgetBlueprintEditor> InDesigner)const = 0;
 };
 
 /** The registered widget-context-menu extensions, UMG's FWidgetContextMenuExtensibilityManager shape. */
@@ -69,11 +69,11 @@ public:
 	virtual TSharedPtr<FExtensibilityManager> GetToolBarExtensibilityManager()override{return ToolBarExtensibilityManager;}
 	TSharedPtr<FDreamUIWidgetContextMenuExtensibilityManager> GetWidgetContextMenuExtensibilityManager()const{return WidgetContextMenuExtensibilityManager;}
 	/** Run every registered extension, so the menu that hosts them needs a single line. */
-	void ExtendWidgetContextMenu(FMenuBuilder& MenuBuilder, TSharedRef<FDreamWidgetBlueprintEditor> InPrefabEditor)const
+	void ExtendWidgetContextMenu(FMenuBuilder& MenuBuilder, TSharedRef<FDreamWidgetBlueprintEditor> InDesigner)const
 	{
 		for (const TSharedPtr<IDreamUIWidgetContextMenuExtension>& Extension : WidgetContextMenuExtensibilityManager->GetExtensions())
 		{
-			if (Extension.IsValid())Extension->ExtendWidgetContextMenu(MenuBuilder, InPrefabEditor);
+			if (Extension.IsValid())Extension->ExtendWidgetContextMenu(MenuBuilder, InDesigner);
 		}
 	}
 private:

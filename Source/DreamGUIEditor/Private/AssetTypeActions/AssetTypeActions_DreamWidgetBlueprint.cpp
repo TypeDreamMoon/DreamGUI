@@ -2,7 +2,7 @@
 
 #include "AssetTypeActions_DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprint.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_DreamWidgetBlueprint"
 

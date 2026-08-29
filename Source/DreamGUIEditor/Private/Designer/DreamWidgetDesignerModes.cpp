@@ -2,12 +2,12 @@
 
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "Designer/DreamWidgetDesignerTabs.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
-#include "PrefabEditor/DreamUIPrefabEditorViewport.h"
-#include "PrefabEditor/DreamUIPrefabEditorDetails.h"
-#include "PrefabEditor/DreamWidgetEditorHierarchyView.h"
-#include "PrefabEditor/SDreamUIPrefabPalette.h"
-#include "PrefabAnimation/DreamUIPrefabSequenceEditor.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/SDreamWidgetDesignerViewport.h"
+#include "Designer/SDreamWidgetDesignerDetails.h"
+#include "Designer/DreamWidgetEditorHierarchyView.h"
+#include "Designer/SDreamWidgetPalette.h"
+#include "Animation/SDreamWidgetAnimationEditor.h"
 #include "DreamWidgetBlueprint.h"
 
 #include "BlueprintEditorTabs.h"
@@ -157,7 +157,7 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 		// driving the viewport (and auto-keying) with nothing visible to say so.
 		Animations->OnClosedCallback = [](FDreamWidgetBlueprintEditor& Editor)
 		{
-			if (TSharedPtr<SDreamUIPrefabSequenceEditor> Sequencer = Editor.GetSequencerEditor())
+			if (TSharedPtr<SDreamWidgetAnimationEditor> Sequencer = Editor.GetSequencerEditor())
 			{
 				Sequencer->ClearAnimationSelection();
 			}

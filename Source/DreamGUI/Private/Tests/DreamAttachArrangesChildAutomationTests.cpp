@@ -271,7 +271,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamAttachInEditorWorldTest::RunTest(const FString& Parameters)
 {
-	// FDreamUIPrefabScene builds its world as EWorldType::Editor (DreamUIPrefabScene.cpp:30), and several
+	// FDreamWidgetPreviewScene builds its world as EWorldType::Editor (DreamUIPrefabScene.cpp:30), and several
 	// DreamGUI paths branch on IsGameWorld. Same fixture, the world type the prefab editor actually uses.
 	UWorld* World = UWorld::CreateWorld(EWorldType::Editor, false);
 	ON_SCOPE_EXIT{ if (World) { World->DestroyWorld(false); } };

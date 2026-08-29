@@ -3,7 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamUIPrefabEditorViewportClient.h"
+#include "Designer/DreamWidgetDesignerViewportClient.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Engine/World.h"
@@ -39,9 +39,9 @@ namespace DreamSurfaceAuditTestLocal
 	}
 
 	/** One target in an unrotated, unscaled parent, so the arithmetic under test is the snap alone. */
-	FDreamUIPrefabEditorViewportClient::FMoveDragTarget MakeTarget(const FVector2D& InStartPosition, const FVector& InTravel)
+	FDreamWidgetDesignerViewportClient::FMoveDragTarget MakeTarget(const FVector2D& InStartPosition, const FVector& InTravel)
 	{
-		FDreamUIPrefabEditorViewportClient::FMoveDragTarget Target;
+		FDreamWidgetDesignerViewportClient::FMoveDragTarget Target;
 		Target.PlaneTransform = FTransform::Identity;
 		Target.StartPlanePoint = FVector::ZeroVector;
 		Target.CurrentPlanePoint = InTravel;
@@ -77,13 +77,13 @@ bool FDreamSurfaceAuditDropContainerTest::RunTest(const FString& Parameters)
 	auto IsLocked = [&Locked](const UDreamWidget* InWidget) { return Locked.Contains(InWidget); };
 
 	TestSamePtr(TEXT("a hit inside a panel resolves to the panel that will arrange the drop"),
-		FDreamUIPrefabEditorViewportClient::ResolveDragDropContainer(Label.Get(), Root.Get(), Dragged, IsLocked), Panel.Get());
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(Label.Get(), Root.Get(), Dragged, IsLocked), Panel.Get());
 
 	Locked.Add(Panel.Get());
 	TestNull(TEXT("and a locked panel stays shut when the cursor is over an unlocked child of it"),
-		FDreamUIPrefabEditorViewportClient::ResolveDragDropContainer(Label.Get(), Root.Get(), Dragged, IsLocked));
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(Label.Get(), Root.Get(), Dragged, IsLocked));
 	TestNull(TEXT("as it does when the cursor is on the panel itself"),
-		FDreamUIPrefabEditorViewportClient::ResolveDragDropContainer(Panel.Get(), Root.Get(), Dragged, IsLocked));
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(Panel.Get(), Root.Get(), Dragged, IsLocked));
 	Locked.Reset();
 
 	// A prefab whose root carries no container at all: the resolve walks the whole chain and finds
@@ -93,16 +93,16 @@ bool FDreamSurfaceAuditDropContainerTest::RunTest(const FString& Parameters)
 	BareChild->TrySetParent(BareRoot.Get(), false);
 
 	TestSamePtr(TEXT("a chain with no container anywhere drops on the prefab root"),
-		FDreamUIPrefabEditorViewportClient::ResolveDragDropContainer(BareChild.Get(), BareRoot.Get(), Dragged, IsLocked), BareRoot.Get());
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(BareChild.Get(), BareRoot.Get(), Dragged, IsLocked), BareRoot.Get());
 	Locked.Add(BareRoot.Get());
 	TestNull(TEXT("unless the root is locked too"),
-		FDreamUIPrefabEditorViewportClient::ResolveDragDropContainer(BareChild.Get(), BareRoot.Get(), Dragged, IsLocked));
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(BareChild.Get(), BareRoot.Get(), Dragged, IsLocked));
 	Locked.Reset();
 
 	// The hierarchy's own refusals still have the last word over whatever was resolved.
 	TArray<UDreamWidget*> DraggingThePanel = { Panel.Get() };
 	TestNull(TEXT("and a widget is not dropped into itself however the container was reached"),
-		FDreamUIPrefabEditorViewportClient::ResolveDragDropContainer(Label.Get(), Root.Get(), DraggingThePanel, IsLocked));
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(Label.Get(), Root.Get(), DraggingThePanel, IsLocked));
 	return true;
 }
 
@@ -117,24 +117,24 @@ bool FDreamSurfaceAuditMoveDragAxisLeaderTest::RunTest(const FString& Parameters
 
 	// Two widgets dragged five units on a grid of eight. The first is arranged in X, so its own X
 	// lands nowhere; the second starts two units along, and is the one whose X the grid may bend.
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragTarget> Horizontal;
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Horizontal;
 	Horizontal.Add(MakeTarget(FVector2D(0.0, 0.0), FVector(0.0, 5.0, 0.0)));
 	Horizontal[0].bHorizontalFree = false;
 	Horizontal.Add(MakeTarget(FVector2D(2.0, 0.0), FVector(0.0, 5.0, 0.0)));
 
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragResult> Results;
-	FDreamUIPrefabEditorViewportClient::ResolveMoveDrag(Horizontal, 8.0f, Results);
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
+	FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Horizontal, 8.0f, Results);
 	if (!TestEqual(TEXT("one result per target"), Results.Num(), 2))return false;
 	TestTrue(TEXT("the arranged widget keeps the X it was given"), Results[0].Position.Equals(FVector2D(0.0, 0.0)));
 	// Correcting by the arranged widget's three units instead puts this one on 10, between gridlines.
 	TestTrue(TEXT("and the widget that may move lands on the gridline"), Results[1].Position.Equals(FVector2D(8.0, 0.0)));
 
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragTarget> Vertical;
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Vertical;
 	Vertical.Add(MakeTarget(FVector2D(0.0, 0.0), FVector(0.0, 0.0, 5.0)));
 	Vertical[0].bVerticalFree = false;
 	Vertical.Add(MakeTarget(FVector2D(0.0, 2.0), FVector(0.0, 0.0, 5.0)));
 
-	FDreamUIPrefabEditorViewportClient::ResolveMoveDrag(Vertical, 8.0f, Results);
+	FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Vertical, 8.0f, Results);
 	if (!TestEqual(TEXT("one result per target"), Results.Num(), 2))return false;
 	TestTrue(TEXT("the same on the other axis, which is decided separately"), Results[0].Position.Equals(FVector2D(0.0, 0.0)));
 	TestTrue(TEXT("so a widget arranged in Y cannot bend anyone else's Y"), Results[1].Position.Equals(FVector2D(0.0, 8.0)));

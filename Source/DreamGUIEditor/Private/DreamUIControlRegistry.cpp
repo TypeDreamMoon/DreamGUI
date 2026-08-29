@@ -1,6 +1,9 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIControlRegistry.h"
+// Explicit: this used to arrive through whichever designer header the unity blob happened to pull
+// in first, which is not a dependency, it is a coincidence.
+#include "DreamWidgetBlueprint.h"
 #include "Core/DreamGUISettings.h"
 
 #include "Core/Components/DreamBackgroundBlur.h"

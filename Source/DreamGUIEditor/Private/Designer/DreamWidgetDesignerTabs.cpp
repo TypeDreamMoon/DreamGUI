@@ -1,7 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Designer/DreamWidgetDesignerTabs.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
 
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/SNullWidget.h"

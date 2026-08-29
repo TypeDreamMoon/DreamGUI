@@ -6,7 +6,7 @@
 #include "UObject/GCObject.h"
 #include "Designer/DreamWidgetReference.h"
 
-class FDreamUIPrefabInstanceScene;
+class FDreamWidgetDesignerScene;
 class UDreamUserWidget;
 class UDreamWidget;
 class UDreamWidgetBlueprint;
@@ -65,7 +65,7 @@ public:
 
 	UDreamWidgetBlueprint* GetBlueprint() const { return Blueprint; }
 	UWorld* GetWorld() const;
-	FDreamUIPrefabInstanceScene* GetScene() const { return Scene.Get(); }
+	FDreamWidgetDesignerScene* GetScene() const { return Scene.Get(); }
 
 	/** The design canvas everything hangs under. Not part of the hierarchy and never serialized. */
 	UDreamWidget* GetRootAgent() const;
@@ -162,7 +162,7 @@ private:
 
 	TObjectPtr<UDreamWidgetBlueprint> Blueprint = nullptr;
 	TObjectPtr<UDreamUserWidget> PreviewWidget = nullptr;
-	TUniquePtr<FDreamUIPrefabInstanceScene> Scene;
+	TUniquePtr<FDreamWidgetDesignerScene> Scene;
 
 	/**
 	 * Preview widgets by UDreamWidget::GetWidgetGuid. Rebuilt wholesale; never patched.

@@ -4,7 +4,7 @@
 #include "DreamUISequenceFactory.h"
 #include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
 #include "MovieScene.h"
-#include "PrefabAnimation/DreamUISequenceEditorToolkit.h"
+#include "Animation/DreamUISequenceEditorToolkit.h"
 
 UDreamUISequenceFactory::UDreamUISequenceFactory()
 {

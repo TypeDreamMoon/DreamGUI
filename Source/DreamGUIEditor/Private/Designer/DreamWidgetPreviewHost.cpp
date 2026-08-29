@@ -9,10 +9,10 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
-#include "PrefabEditor/DreamWidgetPropertyBindingExtension.h"
+#include "Designer/DreamWidgetPropertyBindingExtension.h"
 #include "DreamGUI.h"
 #include "DreamGUIEditorModule.h"
-#include "PrefabSystem/DreamUIPrefabInstanceScene.h"
+#include "Preview/DreamWidgetDesignerScene.h"
 
 #include "Engine/World.h"
 #include "Kismet2/BlueprintEditorUtils.h"
@@ -118,8 +118,8 @@ void FDreamWidgetPreviewHost::Initialize(UDreamWidgetBlueprint* InBlueprint)
 	}
 	Blueprint = InBlueprint;
 
-	Scene = MakeUnique<FDreamUIPrefabInstanceScene>(
-		FDreamUIPrefabInstanceScene::ConstructionValues()
+	Scene = MakeUnique<FDreamWidgetDesignerScene>(
+		FDreamWidgetDesignerScene::ConstructionValues()
 		.AllowAudioPlayback(true)
 		.ShouldSimulatePhysics(false)
 		.SetEditor(true));

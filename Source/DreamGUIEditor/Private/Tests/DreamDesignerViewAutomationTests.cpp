@@ -5,8 +5,8 @@
 #include "Misc/AutomationTest.h"
 
 #include "DreamWidgetBlueprint.h"
-#include "PrefabEditor/DreamWidgetBlueprintEditor.h"
-#include "PrefabEditor/DreamUIDesignerRuler.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamUIDesignerRuler.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"

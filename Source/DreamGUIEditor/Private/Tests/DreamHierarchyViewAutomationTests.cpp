@@ -3,12 +3,12 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamWidgetEditorHierarchyView.h"
-#include "PrefabEditor/DreamWidgetHierarchyPickerView.h"
+#include "Designer/DreamWidgetEditorHierarchyView.h"
+#include "Designer/DreamWidgetHierarchyPickerView.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Engine/World.h"
-#include "PrefabEditor/DreamWidgetEditorHierarchyViewItem.h"
+#include "Designer/DreamWidgetEditorHierarchyViewItem.h"
 #include "Widgets/Views/SListView.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Core/Components/DreamImage.h"

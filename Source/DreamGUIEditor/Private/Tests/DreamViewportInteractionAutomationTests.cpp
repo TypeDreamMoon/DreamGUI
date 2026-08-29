@@ -3,7 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamUIPrefabEditorViewportClient.h"
+#include "Designer/DreamWidgetDesignerViewportClient.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelLayouts.h"
@@ -40,9 +40,9 @@ namespace DreamViewportInteractionTestLocal
 		return Widget;
 	}
 
-	FDreamUIPrefabEditorViewportClient::FMoveDragTarget MakeTarget(const FTransform& InPlane, const FVector& InTravel)
+	FDreamWidgetDesignerViewportClient::FMoveDragTarget MakeTarget(const FTransform& InPlane, const FVector& InTravel)
 	{
-		FDreamUIPrefabEditorViewportClient::FMoveDragTarget Target;
+		FDreamWidgetDesignerViewportClient::FMoveDragTarget Target;
 		Target.PlaneTransform = InPlane;
 		Target.StartPlanePoint = FVector::ZeroVector;
 		Target.CurrentPlanePoint = InTravel;
@@ -75,9 +75,9 @@ bool FDreamViewportMoveRefusedWhenArrangedTest::RunTest(const FString& Parameter
 	TArray<UDreamWidget*> OnlyArranged = { Arranged.Get() };
 	TArray<UDreamWidget*> OnlyFree = { Free.Get() };
 	TArray<UDreamWidget*> Mixed = { Arranged.Get(), Free.Get() };
-	TestFalse(TEXT("a widget a box arranges cannot be moved"), FDreamUIPrefabEditorViewportClient::CanMoveSelection(OnlyArranged));
-	TestTrue(TEXT("a canvas child can"), FDreamUIPrefabEditorViewportClient::CanMoveSelection(OnlyFree));
-	TestTrue(TEXT("and one free widget keeps the gesture alive for the selection"), FDreamUIPrefabEditorViewportClient::CanMoveSelection(Mixed));
+	TestFalse(TEXT("a widget a box arranges cannot be moved"), FDreamWidgetDesignerViewportClient::CanMoveSelection(OnlyArranged));
+	TestTrue(TEXT("a canvas child can"), FDreamWidgetDesignerViewportClient::CanMoveSelection(OnlyFree));
+	TestTrue(TEXT("and one free widget keeps the gesture alive for the selection"), FDreamWidgetDesignerViewportClient::CanMoveSelection(Mixed));
 	return true;
 }
 
@@ -92,19 +92,19 @@ bool FDreamViewportNudgeDropsArrangedAxisTest::RunTest(const FString& Parameters
 
 	FDreamLayoutControlAnchorData Free;
 	TestTrue(TEXT("nothing arranged, nothing dropped"),
-		FDreamUIPrefabEditorViewportClient::FilterMoveDelta(Nudge, Free).Equals(Nudge));
+		FDreamWidgetDesignerViewportClient::FilterMoveDelta(Nudge, Free).Equals(Nudge));
 
 	FDreamLayoutControlAnchorData HorizontalTaken;
 	HorizontalTaken.bCanControlHorizontalPosition = true;
 	TestTrue(TEXT("an arranged X keeps its free Y"),
-		FDreamUIPrefabEditorViewportClient::FilterMoveDelta(Nudge, HorizontalTaken).Equals(FVector2D(0.0, 5.0)));
+		FDreamWidgetDesignerViewportClient::FilterMoveDelta(Nudge, HorizontalTaken).Equals(FVector2D(0.0, 5.0)));
 
 	FDreamLayoutControlAnchorData BothTaken;
 	BothTaken.bCanControlHorizontalPosition = true;
 	BothTaken.bCanControlVerticalPosition = true;
 	// Zero is what the nudge reads to decide there is nothing to open a transaction for.
 	TestTrue(TEXT("both arranged leaves nothing to write"),
-		FDreamUIPrefabEditorViewportClient::FilterMoveDelta(Nudge, BothTaken).IsZero());
+		FDreamWidgetDesignerViewportClient::FilterMoveDelta(Nudge, BothTaken).IsZero());
 	return true;
 }
 
@@ -120,12 +120,12 @@ bool FDreamViewportMoveDragMeasuresEachParentTest::RunTest(const FString& Parame
 	// One pointer travel, two parents. The parent-local distance the same world travel covers is
 	// halved by a parent twice as large, so a single shared delta stretches the selection.
 	const FVector Travel(0.0, 10.0, 0.0);
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragTarget> Targets;
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Targets;
 	Targets.Add(MakeTarget(FTransform::Identity, Travel));
 	Targets.Add(MakeTarget(FTransform(FQuat::Identity, FVector::ZeroVector, FVector(2.0)), Travel));
 
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragResult> Results;
-	FDreamUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 0.0f, Results);
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
+	FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 0.0f, Results);
 	if (!TestEqual(TEXT("one result per target"), Results.Num(), 2))return false;
 	TestTrue(TEXT("the unscaled parent travels the full distance"), Results[0].Position.Equals(FVector2D(10.0, 0.0)));
 	TestTrue(TEXT("the doubled parent travels half of it"), Results[1].Position.Equals(FVector2D(5.0, 0.0)));
@@ -148,12 +148,12 @@ bool FDreamViewportSnapCrossesParentScaleTest::RunTest(const FString& Parameters
 	// moves them different distances on screen, which is the deformation snapping once exists to
 	// avoid -- the bug hides completely whenever every parent happens to share a scale.
 	const FVector Travel(0.0, 10.0, 0.0);
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragTarget> Targets;
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Targets;
 	Targets.Add(MakeTarget(FTransform::Identity, Travel));
 	Targets.Add(MakeTarget(FTransform(FQuat::Identity, FVector::ZeroVector, FVector(2.0)), Travel));
 
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragResult> Results;
-	FDreamUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
+	FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
 	if (!TestEqual(TEXT("one result per target"), Results.Num(), 2))return false;
 
 	// The leader travels 10 in its own space and the grid pulls it back to 8: a correction of -2,
@@ -180,13 +180,13 @@ bool FDreamViewportMoveDragLeavesArrangedAxisTest::RunTest(const FString& Parame
 {
 	using namespace DreamViewportInteractionTestLocal;
 
-	FDreamUIPrefabEditorViewportClient::FMoveDragTarget Target = MakeTarget(FTransform::Identity, FVector(0.0, 10.0, 7.0));
+	FDreamWidgetDesignerViewportClient::FMoveDragTarget Target = MakeTarget(FTransform::Identity, FVector(0.0, 10.0, 7.0));
 	Target.StartPosition = FVector2D(100.0, 200.0);
 	Target.bHorizontalFree = false;
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragTarget> Targets = { Target };
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Targets = { Target };
 
-	TArray<FDreamUIPrefabEditorViewportClient::FMoveDragResult> Results;
-	FDreamUIPrefabEditorViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
+	TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
+	FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
 	if (!TestEqual(TEXT("one result"), Results.Num(), 1))return false;
 	// A real grid, because with no grid the snap branch never runs and the guard below is
 	// unreachable -- the assertion then holds whether or not the axis is honoured.
@@ -206,9 +206,9 @@ bool FDreamViewportClickCycleResetTest::RunTest(const FString& Parameters)
 {
 	const FIntPoint Pixel(120, 80);
 	TestEqual(TEXT("clicking the same pixel walks deeper into that stack"),
-		FDreamUIPrefabEditorViewportClient::ResolveClickCycleIndex(Pixel, Pixel, 2), 2);
+		FDreamWidgetDesignerViewportClient::ResolveClickCycleIndex(Pixel, Pixel, 2), 2);
 	TestEqual(TEXT("clicking anywhere else starts at the top of the new one"),
-		FDreamUIPrefabEditorViewportClient::ResolveClickCycleIndex(Pixel, FIntPoint(121, 80), 2), (int32)INDEX_NONE);
+		FDreamWidgetDesignerViewportClient::ResolveClickCycleIndex(Pixel, FIntPoint(121, 80), 2), (int32)INDEX_NONE);
 	return true;
 }
 
@@ -221,13 +221,13 @@ bool FDreamViewportSafeZoneRectTest::RunTest(const FString& Parameters)
 {
 	// 1920x1080 about a centred pivot, inset 5% per side: the rect the platform's title-safe padding
 	// leaves, in the same local space the canvas outline is drawn in.
-	const FBox2D Safe = FDreamUIPrefabEditorViewportClient::GetSafeZoneLocalRect(
+	const FBox2D Safe = FDreamWidgetDesignerViewportClient::GetSafeZoneLocalRect(
 		FVector2D(1920.0, 1080.0), FVector2D(0.5, 0.5), FVector4(96.0, 54.0, 96.0, 54.0));
 	if (!TestTrue(TEXT("a rect at all"), Safe.bIsValid))return false;
 	TestTrue(TEXT("inset from the bottom-left"), Safe.Min.Equals(FVector2D(-864.0, -486.0)));
 	TestTrue(TEXT("and from the top-right"), Safe.Max.Equals(FVector2D(864.0, 486.0)));
 
-	const FBox2D Swallowed = FDreamUIPrefabEditorViewportClient::GetSafeZoneLocalRect(
+	const FBox2D Swallowed = FDreamWidgetDesignerViewportClient::GetSafeZoneLocalRect(
 		FVector2D(100.0, 100.0), FVector2D(0.5, 0.5), FVector4(80.0, 0.0, 80.0, 0.0));
 	TestFalse(TEXT("padding wider than the canvas leaves no rect, not an inside-out one"), Swallowed.bIsValid);
 	return true;

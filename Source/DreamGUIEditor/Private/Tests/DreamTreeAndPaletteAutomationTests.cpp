@@ -3,9 +3,9 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
-#include "PrefabEditor/DreamWidgetEditorHierarchyView.h"
-#include "PrefabEditor/DreamWidgetEditorHierarchyViewItem.h"
-#include "PrefabEditor/SDreamUIPrefabPalette.h"
+#include "Designer/DreamWidgetEditorHierarchyView.h"
+#include "Designer/DreamWidgetEditorHierarchyViewItem.h"
+#include "Designer/SDreamWidgetPalette.h"
 #include "DreamUIControlRegistry.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamImage.h"
