@@ -2,8 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabSequenceEditor.h"
+#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Core/DreamUserWidget.h"
-#include "PrefabEditor/DreamUIPrefabBehaviourUtils.h"
 #include "K2Node_CallFunction.h"
 #include "PrefabSystem/PrefabAnimation/DreamUISequence.h"
 #include "PrefabSystem/DreamUIWidgetBinding.h"
@@ -28,7 +28,6 @@
 #include "Framework/Commands/GenericCommands.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "Misc/TextFilter.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "DreamUIEditorTools.h"
 #include "SPositiveActionButton.h"
 #include "Core/Components/DreamWidget.h"
@@ -297,7 +296,9 @@ void SDreamUIPrefabSequenceEditor::NotifyAnimationRenamed(const FString& OldName
 	UDreamWidget* RootWidget = WeakRootWidget.Get();
 	UDreamUIPrefabHelperObject* Helper = RootWidget ? UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget) : nullptr;
 	UDreamUIPrefab* Prefab = Helper ? Helper->PrefabAsset.Get() : nullptr;
-	UBlueprint* Blueprint = Prefab ? DreamUIPrefabBehaviourUtils::FindBehaviourBlueprint(RootWidget, Prefab) : nullptr;
+	// The companion behaviour Blueprint a prefab used to carry its graph in. A widget class is its own
+	// Blueprint, so there is nothing beside it to find.
+	UBlueprint* Blueprint = nullptr;
 	if (Blueprint == nullptr)
 	{
 		return;

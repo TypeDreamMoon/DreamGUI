@@ -2,6 +2,9 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIPrefabSequenceComponentCustomization.h"
+#include "Core/Components/DreamWidget.h"
+#include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequence.h"
+#include "PrefabSystem/DreamUIPrefab.h"
 
 #include "PrefabSystem/PrefabAnimation/DreamUIPrefabSequenceComponent.h"
 #include "GameFramework/Actor.h"

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetBlueprintEditor.h"
+#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "Designer/DreamWidgetDesignerTabs.h"
 #include "BlueprintEditorTabs.h"
@@ -26,7 +27,6 @@
 #include "Editor.h"
 #include "DreamWidgetEditorHierarchyView.h"
 #include "SDreamUIPrefabPalette.h"
-#include "DreamUIPrefabBehaviourUtils.h"
 #include "DreamUIBehaviourEditorBackend.h"
 #include "ClassViewerFilter.h"
 #include "ClassViewerModule.h"
@@ -52,7 +52,6 @@
 #include "Interaction/DreamContentWidget.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/DreamUIPrefabInstanceScene.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "PrefabAnimation/DreamUIPrefabSequenceEditor.h"
 #include "ScopedTransaction.h"
 #include "Misc/ConfigCacheIni.h"

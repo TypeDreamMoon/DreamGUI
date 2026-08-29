@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIEditorTools.h"
+#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -18,11 +19,9 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Widgets/SViewport.h"
 #include "Engine/Selection.h"
-#include "PrefabSystem/DreamUIPrefabHelperObject.h"
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "DreamGUIEditorModule.h"
 #include "PrefabEditor/DreamWidgetBlueprintEditor.h"
-#include "PrefabEditor/DreamUIPrefabBehaviourUtils.h"
 #include "Core/DreamUIBehaviour.h"
 #include "UObject/UnrealType.h"
 #include "Core/Components/DreamLayout.h"
@@ -862,16 +861,8 @@ TArray<FText> FDreamUIEditorTools::CollectBehaviourBindingsToWidgets(UDreamUIBeh
 }
 UDreamUIBehaviour* FDreamUIEditorTools::FindCompanionForWidgets(const TArray<UDreamWidget*>& InWidgets)
 {
-	// The companion is per prefab and a selection cannot span two prefabs, so the first widget
-	// that reports a helper names the prefab whose bindings are at stake.
-	for (UDreamWidget* Widget : InWidgets)
-	{
-		if (!IsValid(Widget))continue;
-		if (auto PrefabHelperObject = UDreamUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
-		{
-			return DreamUIPrefabBehaviourUtils::FindBehaviourComponent(PrefabHelperObject->LoadedRootWidget, PrefabHelperObject->PrefabAsset);
-		}
-	}
+	// The companion was the behaviour a PREFAB carried its graph in, one per prefab. A widget class is
+	// its own Blueprint and has no companion beside it, so there is nothing here to find.
 	return nullptr;
 }
 bool FDreamUIEditorTools::ShouldContinueDeleteOperation(const TArray<UDreamWidget*>& InWidgets)

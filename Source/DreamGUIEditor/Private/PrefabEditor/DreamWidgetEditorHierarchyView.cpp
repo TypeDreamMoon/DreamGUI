@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetEditorHierarchyView.h"
+#include "DreamWidgetBlueprint.h"
 
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprintEditor.h"

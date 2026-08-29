@@ -5,7 +5,6 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/KismetEditorUtilities.h"
-#include "PrefabEditor/DreamUIPrefabBehaviourUtils.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Editor.h"
 #include "SourceCodeNavigation.h"
@@ -32,45 +31,36 @@ namespace
 			return false;
 		}
 
-		virtual bool CanPromoteToVariable(const UClass* InBehaviourClass) const override { return SupportsClass(InBehaviourClass); }
+		/**
+		 * Both of these wrote into a prefab's COMPANION behaviour Blueprint -- the second asset a prefab
+		 * needed to hold its widget variables and its graph. A widget class holds both itself: the
+		 * compiler mints the variables from the display names, and the graph is the Blueprint's own.
+		 *
+		 * They answer no rather than disappearing, because the panel asks before it offers, and "no,
+		 * and here is why" is the answer worth showing.
+		 */
+		virtual bool CanPromoteToVariable(const UClass* InBehaviourClass) const override { return false; }
 
 		virtual bool PromoteToVariable(UDreamWidget* InRootWidget, UDreamUIBehaviour* InPrimaryBehaviour, UObject* InTarget, FText& OutMessage) override
 		{
-			UBlueprint* Blueprint = IsValid(InPrimaryBehaviour) ? Cast<UBlueprint>(InPrimaryBehaviour->GetClass()->ClassGeneratedBy) : nullptr;
-			if (Blueprint == nullptr)
-			{
-				OutMessage = NSLOCTEXT("DreamUIBehaviourEditorBackend", "MissingBlueprint", "The primary behaviour is not backed by a Blueprint.");
-				return false;
-			}
-			return DreamUIPrefabBehaviourUtils::PromoteToVariable(Blueprint, InRootWidget, InTarget,
-				DreamUIPrefabBehaviourUtils::MakeVariableNameForTarget(InTarget), OutMessage);
+			OutMessage = NSLOCTEXT("DreamUIBehaviourEditorBackend", "PromoteRetired",
+				"Widget variables are minted by the Widget Blueprint compiler from the display names in the hierarchy. Rename the widget in the designer instead.");
+			return false;
 		}
 
-		virtual bool CanAddEventHandler(const UClass* InBehaviourClass) const override { return SupportsClass(InBehaviourClass); }
+		virtual bool CanAddEventHandler(const UClass* InBehaviourClass) const override { return false; }
 		virtual bool CanAddEventHandler(const UClass* InBehaviourClass, EDreamUIBehaviourHandlerType InHandlerType) const override
 		{
-			return SupportsClass(InBehaviourClass);
+			return false;
 		}
 
 		virtual FName AddEventHandler(UDreamWidget* InRootWidget, UDreamUIBehaviour* InPrimaryBehaviour,
 			UDreamUIBehaviour* InSourceComponent, FName InEventPropertyName, EDreamUIBehaviourHandlerType InHandlerType,
 			FText& OutMessage) override
 		{
-			UBlueprint* Blueprint = IsValid(InPrimaryBehaviour) ? Cast<UBlueprint>(InPrimaryBehaviour->GetClass()->ClassGeneratedBy) : nullptr;
-			FStructProperty* EventProperty = IsValid(InSourceComponent)
-				? FindFProperty<FStructProperty>(InSourceComponent->GetClass(), InEventPropertyName)
-				: nullptr;
-			if (Blueprint == nullptr || EventProperty == nullptr)
-			{
-				OutMessage = NSLOCTEXT("DreamUIBehaviourEditorBackend", "MissingEventInput", "The Blueprint or event property is no longer valid.");
-				return NAME_None;
-			}
-
-			DreamUIPrefabBehaviourUtils::FDiscoveredEvent Event;
-			Event.Component = InSourceComponent;
-			Event.EventProperty = EventProperty;
-			Event.DisplayName = EventProperty->GetName();
-			return DreamUIPrefabBehaviourUtils::AddEventHandler(Blueprint, InRootWidget, Event, InHandlerType, OutMessage);
+			OutMessage = NSLOCTEXT("DreamUIBehaviourEditorBackend", "AddEventRetired",
+				"Bind the event in the Widget Blueprint's own graph; it has the widget variables the handler needs.");
+			return NAME_None;
 		}
 	};
 

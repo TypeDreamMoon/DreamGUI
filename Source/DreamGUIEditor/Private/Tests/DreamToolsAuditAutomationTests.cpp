@@ -83,34 +83,6 @@ namespace DreamToolsAuditTestLocal
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamDeleteFindsCompanionThroughHelperTest,
-	"DreamGUI.Editor.Delete.CompanionIsFoundThroughThePrefabHelper",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamDeleteFindsCompanionThroughHelperTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamToolsAuditTestLocal;
-	FManagedPrefabFixture Fixture;
-	UDreamWidget* PlayButton = Fixture.AddChild(TEXT("PlayButton"));
-	if (!TestEqual(TEXT("the child attached"), Fixture.Root->GetChildren().Num(), 1))return false;
-
-	// Widget -> its helper -> the helper's prefab -> that prefab's companion. Every delete warning
-	// starts here, and answering null means the whole check silently passes on any real selection.
-	TestTrue(TEXT("a widget the helper claims resolves to the prefab's companion"),
-		FDreamUIEditorTools::FindCompanionForWidgets({ PlayButton }) == Fixture.Companion.Get());
-	TestTrue(TEXT("and asking about the root resolves to the same one"),
-		FDreamUIEditorTools::FindCompanionForWidgets({ Fixture.Root.Get() }) == Fixture.Companion.Get());
-
-	// A widget no helper claims has no prefab, so there is nobody to warn about.
-	UDreamWidget* Unmanaged = Fixture.MakeWidget(TEXT("Loose"));
-	TestNull(TEXT("a widget belonging to no prefab has no companion"),
-		FDreamUIEditorTools::FindCompanionForWidgets({ Unmanaged }));
-	TestNull(TEXT("and an empty selection has none either"),
-		FDreamUIEditorTools::FindCompanionForWidgets({}));
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDeleteReportsVisualBindingTest,
 	"DreamGUI.Editor.Delete.BindingToAVisualCountsToo",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
