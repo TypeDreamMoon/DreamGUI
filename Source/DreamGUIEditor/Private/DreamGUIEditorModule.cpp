@@ -18,6 +18,7 @@
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Text/DreamUITextWriteBack.h"
 #include "Text/DreamUIBridgeService.h"
+#include "Text/DreamUIMenus.h"
 #include "Text/DreamUISourceWatcher.h"
 #include "Text/DreamUISymbolExport.h"
 #include "DreamUIEditorCommands.h"
@@ -149,6 +150,8 @@ void FDreamGUIEditorModule::StartupModule()
 	// The drop-folder RPC those editors talk back through: functions for completion, reveal,
 	// compile-on-demand. Requests land under Saved/DreamGUI/Bridge/.
 	FDreamUIBridgeService::Register();
+	// The Tools entries and this plugin's share of the Dream-family toolbar combo.
+	FDreamUIMenus::Register();
 
 	// Tell the details panel how to ask "can this value be written into a .dui at all". Without it the
 	// gate fails open, and a font or texture reference on a text-authored widget reads as editable --
@@ -392,6 +395,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 	// we call this function before unloading the module.
 	FDreamUISymbolExport::Unregister();
 	FDreamUIBridgeService::Unregister();
+	FDreamUIMenus::Unregister();
 	FDreamUISourceWatcher::Unregister();
 	DreamUITextAuthoring::SetLiteralSpellingProbe(nullptr);
 	FDreamUIControlRegistry::Get().ShutdownDynamicDiscovery();
