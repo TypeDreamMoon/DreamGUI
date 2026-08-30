@@ -12,6 +12,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUIDiagnosticsMailbox.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUIValueFormat.h"
 #include "Text/DreamUISourceFile.h"
@@ -711,6 +712,9 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 	FDreamUIDiagnosticBag TextDiagnostics;
 	BuildWidgetTreeFromTextSource(TextDiagnostics);
 	ReportTextDiagnostics(TextDiagnostics);
+	// The same bag, delivered to editors that are not this one. A clean compile deposits an empty
+	// entry on purpose: over there, that is what clears the file's squiggles.
+	FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics);
 
 	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
 	if (DreamBlueprint != nullptr)
