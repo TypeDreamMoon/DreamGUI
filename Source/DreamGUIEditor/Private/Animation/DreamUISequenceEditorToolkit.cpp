@@ -12,7 +12,9 @@
 #include "LevelEditorSequencerIntegration.h"
 #include "Editor.h"
 #include "Engine/World.h"
+#include "Framework/Notifications/NotificationManager.h"
 #include "Modules/ModuleManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
@@ -357,6 +359,36 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 	FLevelEditorSequencerIntegration::Get().AddSequencer(Sequencer.ToSharedRef(), Options);
 
 	Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &FDreamUISequenceEditorToolkit::HandleSequencerSelectionChanged);
+
+	// Open-time audit of every widget binding against the live preview tree. A path this cannot
+	// resolve is a track that will silently drive nothing -- the classic aftermath of a widget
+	// rename that this asset was not loaded for -- and the moment the asset is opened is the one
+	// moment someone is looking.
+	if (Sequence != nullptr && PreviewRoot.IsValid())
+	{
+		TArray<FString> DeadPaths;
+		if (const FMovieSceneBindingReferences* References = Sequence->GetBindingReferences())
+		{
+			for (const FMovieSceneBindingReference& Reference : References->GetAllReferences())
+			{
+				const UDreamUIWidgetBinding* WidgetBinding = Cast<UDreamUIWidgetBinding>(Reference.CustomBinding);
+				if (WidgetBinding != nullptr && !WidgetBinding->WidgetPath.IsEmpty()
+					&& UDreamUIWidgetBinding::ResolveWidgetPath(PreviewRoot.Get(), WidgetBinding->WidgetPath) == nullptr)
+				{
+					DeadPaths.Add(WidgetBinding->WidgetPath);
+				}
+			}
+		}
+		if (DeadPaths.Num() > 0)
+		{
+			FNotificationInfo Info(FText::Format(
+				NSLOCTEXT("DreamUISequenceEditor", "UnresolvableBindings",
+					"{0} binding(s) in this sequence name widgets the preview tree does not have: {1}. A rename in the widget class probably happened while this asset was unloaded -- repoint them, or re-add the '(was:)' line and recompile the class with this asset open."),
+				DeadPaths.Num(), FText::FromString(FString::Join(DeadPaths, TEXT(", ")))));
+			Info.ExpireDuration = 12.0f;
+			FSlateNotificationManager::Get().AddNotification(Info);
+		}
+	}
 
 	// The tab may have spawned before the sequencer existed; fill it now.
 	if (const TSharedPtr<SDockTab> Tab = TabManager->FindExistingLiveTab(SequencerMainTabId))

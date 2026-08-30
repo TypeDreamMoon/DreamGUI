@@ -3,8 +3,11 @@
 #include "DreamWidgetBlueprintCompiler.h"
 #include "DreamWidgetBlueprint.h"
 
+#include "Animation/DreamUISequence.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
+#include "AssetRegistry/IAssetRegistry.h"
+#include "UObject/UObjectIterator.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
@@ -379,7 +382,7 @@ namespace DreamWidgetRenameMigrationLocal
 	 * they are in the localization archive next to it. All the compiler can do is say so at the one
 	 * moment the author is looking at the rename.
 	 */
-	bool HasIdDerivedLocalizationKey(const FDreamUINode& InNode)
+	bool HasIdDerivedLocalizationKey(const FDreamUINode& InNode, const FDreamUIAst& InAst)
 	{
 		auto AnyUnkeyedString = [](const TArray<FDreamUIProperty>& InProperties)
 		{
@@ -405,6 +408,21 @@ namespace DreamWidgetRenameMigrationLocal
 			{
 				return true;
 			}
+		}
+		// A string can also reach the node THROUGH the style it wears -- the builder keys those by
+		// this node's id exactly the same way, so a rename orphans them exactly the same way. The
+		// walk mirrors the builder's chain (base upward, cycle-guarded); a broken chain just stops,
+		// because the builder already reported it and this predicate only decides whether to hint.
+		const FDreamUIStyle* Style = InNode.StyleName.IsEmpty() ? nullptr : InAst.FindStyle(InNode.StyleName);
+		TSet<const FDreamUIStyle*> Visited;
+		while (Style != nullptr && !Visited.Contains(Style))
+		{
+			Visited.Add(Style);
+			if (AnyUnkeyedString(Style->Properties))
+			{
+				return true;
+			}
+			Style = Style->BaseName.IsEmpty() ? nullptr : InAst.FindStyle(Style->BaseName);
 		}
 		return false;
 	}
@@ -620,6 +638,35 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 		}
 	}
 
+	// --- 4. Standalone sequence assets authored against this class. --------------------------
+	//
+	// The fourth identity, and the fourth silent channel: a UDreamUISequence lives in its own
+	// package, binds widgets by the same '/'-joined display names, and the class compile cannot
+	// otherwise see it. PreviewWidgetClass is what makes the reach SAFE -- the sequence itself says
+	// which class it is authored against, so this never blind-renames a segment in some other UI's
+	// sequence that happens to reuse the id. Loaded sequences only: loading packages mid-compile is
+	// its own hazard, and the unloaded ones get named in a warning by the caller instead.
+	{
+		for (TObjectIterator<UDreamUISequence> It; *It; ++It)
+		{
+			UDreamUISequence* Sequence = *It;
+			if (!IsValid(Sequence) || Sequence->PreviewWidgetClass.IsNull())
+			{
+				continue;
+			}
+			const UClass* SequenceClass = Sequence->PreviewWidgetClass.Get();
+			const bool bMatches =
+				(SequenceClass != nullptr
+					&& (SequenceClass == InBlueprint->GeneratedClass || SequenceClass == InBlueprint->SkeletonGeneratedClass))
+				|| (InBlueprint->GeneratedClass != nullptr
+					&& Sequence->PreviewWidgetClass.ToSoftObjectPath() == FSoftObjectPath(InBlueprint->GeneratedClass));
+			if (bMatches)
+			{
+				Result.ExternalSequenceBindings += Sequence->RenameWidgetPathSegments(InOldId, InNewId);
+			}
+		}
+	}
+
 	return Result;
 }
 
@@ -731,7 +778,17 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 		// The localization key moved with the id and cannot be brought along: the translations live
 		// in the localization archive, not in this asset. Said only when the node actually has a
 		// string the builder would key, so an ordinary rename does not carry a paragraph about it.
-		const FString LocalizationHint = HasIdDerivedLocalizationKey(*Node)
+		// A rename that re-keys localized strings deserves a WARNING of its own, not just the note's
+		// appended sentence: notes are the first thing filtered out of a compile log, and orphaned
+		// translations surface weeks later as English text in a shipped build.
+		if (HasIdDerivedLocalizationKey(*Node, InAst))
+		{
+			MessageLog.Warning(*FString::Printf(
+				TEXT("%sRenaming \"%s\" -> \"%s\" re-keys its localized strings (styles it wears included): translations recorded against \"%s.<property>\" are orphaned unless @key(\"%s.<property>\") pins them."),
+				*SourcePrefix(InSourceName, Node->Location), *Node->WasId, *Node->Id, *Node->WasId, *Node->WasId));
+		}
+
+		const FString LocalizationHint = HasIdDerivedLocalizationKey(*Node, InAst)
 			? FString::Printf(
 				TEXT(" Its localized strings are keyed by id, so translations recorded against \"%s.<property>\" are NOT carried over -- write @key(\"%s.<property>\") on those lines to keep them."),
 				*Node->WasId, *Node->WasId)
@@ -740,10 +797,16 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 		if (Migration.Total() > 0)
 		{
 			MessageLog.Note(*FString::Printf(
-				TEXT("%s\"%s\" took over from \"%s\": %d graph reference(s), %d property binding(s), %d animation path(s). That is done and recorded on the asset, so the '(was: %s)' line has served its purpose and can be deleted.%s"),
+				TEXT("%s\"%s\" took over from \"%s\": %d graph reference(s), %d property binding(s), %d animation path(s), %d sequence-asset binding(s). That is done and recorded on the asset, so the '(was: %s)' line has served its purpose and can be deleted.%s"),
 				*SourcePrefix(InSourceName, Node->Location), *Node->Id, *Node->WasId,
-				Migration.GraphReferences, Migration.PropertyBindings, Migration.AnimationBindings,
+				Migration.GraphReferences, Migration.PropertyBindings, Migration.AnimationBindings, Migration.ExternalSequenceBindings,
 				*Node->WasId, *LocalizationHint));
+			if (Migration.ExternalSequenceBindings > 0)
+			{
+				MessageLog.Warning(*FString::Printf(
+					TEXT("%sThe rename \"%s\" -> \"%s\" rewrote %d binding(s) in loaded sequence ASSETS. Those assets are dirty and unsaved -- save them, or the migration exists only in memory."),
+					*SourcePrefix(InSourceName, Node->Location), *Node->WasId, *Node->Id, Migration.ExternalSequenceBindings));
+			}
 		}
 		else
 		{
@@ -755,6 +818,44 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 				TEXT("%s\"%s\" found nothing still named \"%s\", so this rename has already been applied. The '(was: %s)' line can be deleted.%s"),
 				*SourcePrefix(InSourceName, Node->Location), *Node->Id, *Node->WasId, *Node->WasId,
 				*LocalizationHint));
+		}
+	}
+
+	// Sequence assets that reference this Blueprint but are NOT loaded could not take the hop --
+	// leg 4 deliberately touches loaded objects only. Name them once, so "the map's sequence broke a
+	// week after the rename" becomes "the compile told me which assets to open" instead. A registry
+	// that is still scanning stays silent rather than crying wolf.
+	{
+		IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+		if (AssetRegistry != nullptr && !AssetRegistry->IsLoadingAssets())
+		{
+			TArray<FName> Referencers;
+			AssetRegistry->GetReferencers(DreamBlueprint->GetOutermost()->GetFName(), Referencers, UE::AssetRegistry::EDependencyCategory::Package);
+			TArray<FString> UnmigratedSequencePackages;
+			for (const FName Referencer : Referencers)
+			{
+				if (FindPackage(nullptr, *Referencer.ToString()) != nullptr)
+				{
+					// Loaded: leg 4 already reached it through the object iterator.
+					continue;
+				}
+				TArray<FAssetData> Assets;
+				AssetRegistry->GetAssetsByPackageName(Referencer, Assets);
+				for (const FAssetData& Asset : Assets)
+				{
+					if (Asset.AssetClassPath == UDreamUISequence::StaticClass()->GetClassPathName())
+					{
+						UnmigratedSequencePackages.Add(Referencer.ToString());
+						break;
+					}
+				}
+			}
+			if (UnmigratedSequencePackages.Num() > 0)
+			{
+				MessageLog.Warning(*FString::Printf(
+					TEXT("%d unloaded sequence asset(s) reference this class and did NOT take the rename hop: %s. Open them and recompile this Blueprint while the '(was:)' line is still in the file."),
+					UnmigratedSequencePackages.Num(), *FString::Join(UnmigratedSequencePackages, TEXT(", "))));
+			}
 		}
 	}
 }

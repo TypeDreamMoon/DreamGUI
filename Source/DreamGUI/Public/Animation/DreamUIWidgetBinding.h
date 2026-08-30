@@ -70,6 +70,16 @@ public:
 	static FString BuildWidgetPathFromRoot(const UDreamWidget* Root, const UDreamWidget* Widget);
 	static UDreamWidget* ResolveWidgetPath(UDreamWidget* Root, const FString& InPath);
 
+#if WITH_EDITOR
+	/**
+	 * One `(was:)` hop for this binding's path: every segment spelling InOldSegment becomes
+	 * InNewSegment. The same one-word contract as the animation reference's rewriter -- no
+	 * normalisation, empties kept -- because a repair that reshapes paths it has no business with
+	 * is an edit nobody reviews. An empty path binds the root and carries no name to rename.
+	 */
+	bool RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment);
+#endif
+
 private:
 	/** The presenter this binding resolves through, honoring PIE world remapping via the context. */
 	UDreamWidgetPresenterComponentBase* ResolvePresenter(UObject* Context) const;

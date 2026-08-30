@@ -51,6 +51,12 @@ public:
 		/** Embedded animation binding paths whose stale segment was rewritten. */
 		int32 AnimationBindings = 0;
 		/**
+		 * Widget bindings rewritten inside LOADED standalone UDreamUISequence assets whose
+		 * PreviewWidgetClass is this class -- the sequence asset says whose it is, which is what
+		 * keeps this from renaming a stranger's path. Those assets are dirtied, not saved.
+		 */
+		int32 ExternalSequenceBindings = 0;
+		/**
 		 * Why the graph leg was refused, ready to print; empty when it ran.
 		 *
 		 * The graph leg is the one that can do harm. It matches purely by NAME, so if anything other
@@ -60,7 +66,7 @@ public:
 		 */
 		FString GraphRefusal;
 
-		int32 Total() const { return GraphReferences + PropertyBindings + AnimationBindings; }
+		int32 Total() const { return GraphReferences + PropertyBindings + AnimationBindings + ExternalSequenceBindings; }
 	};
 
 	/**

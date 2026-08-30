@@ -71,6 +71,14 @@ public:
 #if WITH_EDITOR
 	/** The export path builds bindings by hand and then records which one is the root. */
 	void SetRootBindingGuidForExport(const FGuid& InGuid) { RootBindingGuid = InGuid; }
+
+	/**
+	 * One `(was:)` hop across every widget binding this sequence holds. Returns how many bindings
+	 * changed; the sequence is Modify()'d before the first write so the rename transacts and
+	 * dirties the asset -- this is the compiler reaching a SEQUENCE asset the class compile cannot
+	 * otherwise see, which is exactly the fourth silent channel.
+	 */
+	int32 RenameWidgetPathSegments(const FString& InOldSegment, const FString& InNewSegment);
 #endif
 
 	/** Adds a possessable + widget binding for the given path ('' = root). Editor-time authoring helper. */

@@ -94,6 +94,23 @@ FGuid UDreamUISequence::AddWidgetBinding(const FString& InWidgetPath, const FStr
 }
 
 #if WITH_EDITOR
+int32 UDreamUISequence::RenameWidgetPathSegments(const FString& InOldSegment, const FString& InNewSegment)
+{
+	int32 Renamed = 0;
+	for (const FMovieSceneBindingReference& Reference : BindingReferences.GetAllReferences())
+	{
+		UDreamUIWidgetBinding* WidgetBinding = Cast<UDreamUIWidgetBinding>(Reference.CustomBinding.Get());
+		if (WidgetBinding == nullptr)
+		{
+			continue;
+		}
+		// The binding Modify()s itself before writing, and it is outered to this sequence's
+		// MovieScene, so the package dirties exactly when something changed and not before.
+		Renamed += WidgetBinding->RenameWidgetPathSegment(InOldSegment, InNewSegment) ? 1 : 0;
+	}
+	return Renamed;
+}
+
 
 FText UDreamUISequence::GetDisplayName() const
 {

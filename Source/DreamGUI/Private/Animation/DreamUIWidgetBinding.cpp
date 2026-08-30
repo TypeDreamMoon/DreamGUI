@@ -235,6 +235,38 @@ UMovieSceneCustomBinding* UDreamUIWidgetBinding::CreateCustomBindingFromBinding(
 	return CreateNewCustomBinding(SourceObject, OwnerMovieScene);
 }
 
+bool UDreamUIWidgetBinding::RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment)
+{
+	// Empty binds the root and spells no name; see the animation reference's rewriter for why the
+	// checks come before the split.
+	if (WidgetPath.IsEmpty()
+		|| InOldSegment.IsEmpty() || InNewSegment.IsEmpty()
+		|| InOldSegment.Equals(InNewSegment, ESearchCase::IgnoreCase))
+	{
+		return false;
+	}
+
+	TArray<FString> Segments;
+	// Empties kept: this function's job is one word, not normalisation.
+	WidgetPath.ParseIntoArray(Segments, TEXT("/"), /*InCullEmpty*/false);
+
+	bool bChanged = false;
+	for (FString& Segment : Segments)
+	{
+		if (Segment.Equals(InOldSegment, ESearchCase::IgnoreCase))
+		{
+			Segment = InNewSegment;
+			bChanged = true;
+		}
+	}
+	if (bChanged)
+	{
+		Modify();
+		WidgetPath = FString::Join(Segments, TEXT("/"));
+	}
+	return bChanged;
+}
+
 #endif
 
 #undef LOCTEXT_NAMESPACE
