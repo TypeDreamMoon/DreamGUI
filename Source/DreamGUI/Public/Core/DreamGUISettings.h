@@ -135,6 +135,28 @@ public:
 	 */
 	TSoftClassPtr<AActor> GetRootClassForRenderMode(EDreamRenderMode RenderMode) const;
 
+	// ---------------------------------------------------------------- Tooltip
+
+	/** Seconds the pointer rests on a widget before its ToolTipText shows. */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip", meta = (ClampMin = "0.0", UIMax = "3.0"))
+	float TooltipDelaySeconds = 0.5f;
+
+	/**
+	 * Bubble offset from the pointer, in canvas units, X right and Y up -- the default puts it
+	 * below-right of the cursor. The tooltip flips to the pointer's other side when this side runs
+	 * out of canvas.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip")
+	FVector2D TooltipOffset = FVector2D(18.0f, -22.0f);
+
+	/** Widest the built-in text bubble grows before the text wraps. */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip", meta = (ClampMin = "50.0"))
+	float TooltipMaxWidth = 420.0f;
+
+	/** Font size of the built-in text bubble. */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip", meta = (ClampMin = "6.0"))
+	float TooltipFontSize = 14.0f;
+
 	// ---------------------------------------------------------------- Resolution
 
 	/**
