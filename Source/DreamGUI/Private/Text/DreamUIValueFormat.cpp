@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUIValueFormat.h"
+#include "DreamGUI.h"
 
 #include "Layout/Margin.h"
 #include "Math/Color.h"
@@ -399,11 +400,35 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 		return false;
 	}
 
+	// A non-finite component has no text spelling: PrintScalar would produce printf's "inf"/"nan",
+	// which lexes as a bare identifier and fails the NEXT compile on a line nobody edited. Refusing
+	// here makes "no spelling for this value" the answer, which every caller already handles by
+	// leaving the line alone. DUI7003 (PatchValueNotRepresentable) raised at the refusal so the
+	// value's existence is not silent -- a NaN in a UI property is an error someone should chase.
+	auto AllFinite = [InProperty](std::initializer_list<double> InComponents) -> bool
+	{
+		for (const double Component : InComponents)
+		{
+			if (!FMath::IsFinite(Component))
+			{
+				UE_LOG(DreamGUI, Warning,
+					TEXT("DUI7003: '%s' holds a non-finite float, which has no text spelling; its line is left untouched."),
+					InProperty != nullptr ? *InProperty->GetName() : TEXT("<null>"));
+				return false;
+			}
+		}
+		return true;
+	};
+
 	switch (Classify(InProperty))
 	{
 	case EShortForm::Vector2Double:
 	{
 		const FVector2D& Value = *static_cast<const FVector2D*>(InValuePtr);
+		if (!AllFinite({Value.X, Value.Y}))
+		{
+			return false;
+		}
 		OutText = FString::Printf(TEXT("(%s, %s)"),
 			*PrintScalar(Value.X, false), *PrintScalar(Value.Y, false));
 		return true;
@@ -411,6 +436,10 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 	case EShortForm::Vector2Float:
 	{
 		const FVector2f& Value = *static_cast<const FVector2f*>(InValuePtr);
+		if (!AllFinite({static_cast<double>(Value.X), static_cast<double>(Value.Y)}))
+		{
+			return false;
+		}
 		OutText = FString::Printf(TEXT("(%s, %s)"),
 			*PrintScalar(Value.X, true), *PrintScalar(Value.Y, true));
 		return true;
@@ -418,6 +447,10 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 	case EShortForm::Vector3Double:
 	{
 		const FVector& Value = *static_cast<const FVector*>(InValuePtr);
+		if (!AllFinite({Value.X, Value.Y, Value.Z}))
+		{
+			return false;
+		}
 		OutText = FString::Printf(TEXT("(%s, %s, %s)"),
 			*PrintScalar(Value.X, false), *PrintScalar(Value.Y, false), *PrintScalar(Value.Z, false));
 		return true;
@@ -428,6 +461,10 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 		// exactly what the euler field holds: no trip through a quaternion, so 370 stays 370 and the
 		// number in the file is the number in the panel.
 		const FRotator& Value = *static_cast<const FRotator*>(InValuePtr);
+		if (!AllFinite({Value.Pitch, Value.Yaw, Value.Roll}))
+		{
+			return false;
+		}
 		OutText = FString::Printf(TEXT("(%s, %s, %s)"),
 			*PrintScalar(Value.Pitch, false), *PrintScalar(Value.Yaw, false), *PrintScalar(Value.Roll, false));
 		return true;
@@ -448,6 +485,11 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 	case EShortForm::Margin:
 	{
 		const FMargin& Value = *static_cast<const FMargin*>(InValuePtr);
+		if (!AllFinite({static_cast<double>(Value.Left), static_cast<double>(Value.Top),
+			static_cast<double>(Value.Right), static_cast<double>(Value.Bottom)}))
+		{
+			return false;
+		}
 		OutText = FString::Printf(TEXT("(%s, %s, %s, %s)"),
 			*PrintScalar(Value.Left, true), *PrintScalar(Value.Top, true),
 			*PrintScalar(Value.Right, true), *PrintScalar(Value.Bottom, true));

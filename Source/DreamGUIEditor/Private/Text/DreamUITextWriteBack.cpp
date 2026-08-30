@@ -338,8 +338,17 @@ namespace DreamUIWriteBackLocal
 		{
 			if (AsNumeric->IsFloatingPoint())
 			{
-				OutText = PrintScalar(AsNumeric->GetFloatingPointPropertyValue(InValuePtr),
-					InLeaf->IsA<FFloatProperty>());
+				const double Value = AsNumeric->GetFloatingPointPropertyValue(InValuePtr);
+				if (!FMath::IsFinite(Value))
+				{
+					// DUI7003: printf's "inf"/"nan" would lex as a bare identifier and fail the next
+					// compile on a line nobody edited. No spelling means no edit; the row greys.
+					UE_LOG(DreamGUIEditor, Warning,
+						TEXT("DUI7003: '%s' holds a non-finite float, which has no text spelling; its line is left untouched."),
+						*InLeaf->GetName());
+					return false;
+				}
+				OutText = PrintScalar(Value, InLeaf->IsA<FFloatProperty>());
 				return true;
 			}
 			// Integers have one spelling and LexToString is exact for all of them.

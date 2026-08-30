@@ -14,7 +14,12 @@ void UDreamTextUserWidget::PostEditChangeProperty(FPropertyChangedEvent& Propert
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	if (PropertyChangedEvent.GetPropertyName()
+	// GetMemberPropertyName, not GetPropertyName: the file picker edits the struct's inner FilePath
+	// FString, so the innermost name here is "FilePath" and the member name is "SourceFile". The
+	// original guard compared the innermost name and therefore NEVER fired for a details-panel pick,
+	// which is how absolute paths ended up stored: the picker stores the path verbatim, this was the
+	// normalisation, and it was dead on exactly the path that needed it.
+	if (PropertyChangedEvent.GetMemberPropertyName()
 		== GET_MEMBER_NAME_CHECKED(UDreamTextUserWidget, SourceFile))
 	{
 		// Assigned unconditionally rather than only when it changes: MakePortablePath returns its
