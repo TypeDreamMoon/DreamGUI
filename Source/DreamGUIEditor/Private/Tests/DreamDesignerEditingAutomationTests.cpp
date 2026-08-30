@@ -1105,10 +1105,17 @@ bool FDreamDesignerSubObjectEditsReachTheAssetTest::RunTest(const FString&)
 	{
 		return false;
 	}
-	// Deliberately NOT creating one on the template first. An authoring tree never registers, so
-	// EnsurePanelSlotForChild never runs on it and the first padding anyone sets arrives with nothing
-	// to write to. Refusing that one edit and accepting every later one is its own bug.
-	TestNull(TEXT("and the template starts without one"), ChildTemplate->GetPanelSlot());
+	// Removed on purpose, to put the template in the state a .dui-built tree is routinely in.
+	//
+	// A designer-created widget goes through AddChild, which mints the slot, so the template has one
+	// already -- that was the assumption this test was written on and it was wrong for the case that
+	// matters. The builder only mints a slot for a node that HAS `@slot` properties
+	// (DreamUITextBuilder::BuildSlotProperties), and registration, which would mint it otherwise,
+	// never happens to an authoring tree. So a widget whose .dui says nothing about its slot reaches
+	// the designer with no slot on the template at all, and the first padding anyone sets there has
+	// nothing to write to. Refusing that one edit and accepting every later one is its own bug.
+	ChildTemplate->RemovePanelSlot();
+	TestNull(TEXT("the template is in the state a .dui builds"), ChildTemplate->GetPanelSlot());
 
 	PreviewSlot->Padding = FMargin(12.0f);
 	FProperty* PaddingProperty = UDreamPanelSlot::StaticClass()->FindPropertyByName(

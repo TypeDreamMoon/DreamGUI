@@ -423,7 +423,10 @@ namespace DreamUITextAuthoring
 		// different one, so the skeleton has to regenerate along with it -- a member variable per
 		// widget, and the old file's widgets gone.
 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
-		FKismetEditorUtilities::CompileBlueprint(InBlueprint);
+		// SkipGarbageCollection, matching every other compile in this plugin. Nothing here needs a
+		// collection, and running one turns an unrelated leak somewhere else in the process into an
+		// error attributed to whoever happened to call this.
+		FKismetEditorUtilities::CompileBlueprint(InBlueprint, EBlueprintCompileOptions::SkipGarbageCollection);
 		return true;
 	}
 

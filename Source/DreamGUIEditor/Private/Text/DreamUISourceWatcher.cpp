@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUISourceWatcher.h"
 
@@ -195,7 +195,11 @@ namespace DreamUISourceWatcherLocal
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(Blueprint), *InFilePath);
 
 			FCompilerResultsLog Results;
-			FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::None, &Results);
+			// SkipGarbageCollection, like every other compile in this plugin. A save-triggered rebuild
+			// runs on Ctrl-S, and a full GC per keystroke is a stall the author did not ask for and
+			// cannot attribute to anything they did. The engine collects on its own schedule.
+			FKismetEditorUtilities::CompileBlueprint(Blueprint,
+				EBlueprintCompileOptions::SkipGarbageCollection, &Results);
 
 			if (Results.NumErrors > 0)
 			{
@@ -462,7 +466,8 @@ int32 FDreamUISourceWatcher::RebuildAll()
 		++Found;
 
 		FCompilerResultsLog Results;
-		FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::None, &Results);
+		FKismetEditorUtilities::CompileBlueprint(Blueprint,
+			EBlueprintCompileOptions::SkipGarbageCollection, &Results);
 		if (Results.NumErrors > 0)
 		{
 			++Batch.Failed;
