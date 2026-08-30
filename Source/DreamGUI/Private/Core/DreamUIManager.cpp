@@ -6,6 +6,7 @@
 
 #include "DreamGUI.h"
 #include "Utils/DreamUIUtils.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Event/DreamBaseRaycaster.h"

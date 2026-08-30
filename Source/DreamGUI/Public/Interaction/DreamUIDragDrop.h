@@ -6,6 +6,7 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
 #include "Event/Interface/DreamPointerDragDropInterface.h"
+#include "Interaction/DreamDragDropOperation.h" // FDreamUIDragDropOperationEvent
 #include "Subsystems/WorldSubsystem.h"
 #include "DreamUIDragDrop.generated.h"
 
