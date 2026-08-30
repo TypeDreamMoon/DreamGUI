@@ -194,15 +194,12 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				HierarchyDragDropOp->CurrentHoverText = LOCTEXT("ParentAtCapacity", "This widget cannot accept the selected children.");
 				return TOptional<EItemDropZone>();
 			}
-			// A TENTH structural entry, and the only one that does not pass through
-			// DreamWidgetTreeEditing at all: this drop calls TrySetParent on the widgets directly,
-			// below. Refused during the drag rather than at the drop, so the cursor says no before
-			// the author lets go -- which is what "visibly disabled" means for a gesture.
-			//
-			// (Worth knowing while reading the rest of this handler: what it moves are the PREVIEW
-			// widgets the hierarchy lists, and nothing here mirrors the move onto the template the
-			// way the viewport's drag does through ReparentTemplatesFrom. That is a defect of its
-			// own and older than this gate; it is not what this refusal is about.)
+			// A structural entry that does not pass through DreamWidgetTreeEditing directly: this
+			// drop calls TrySetParent on the PREVIEW widgets below, then mirrors the whole move onto
+			// the templates through ReparentTemplatesFrom -- the same two halves, in the same order,
+			// as the viewport's drag. Refused during the drag rather than at the drop, so the cursor
+			// says no before the author lets go -- which is what "visibly disabled" means for a
+			// gesture.
 			if (Manager.IsValid() && DreamUITextAuthoring::IsTextAuthored(Manager->GetWidgetBlueprint()))
 			{
 				HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
@@ -219,6 +216,12 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				}
 				NewParent->SetFlags(RF_Transactional);
 				NewParent->Modify();
+
+				// The preview widgets that actually moved, for the template mirror below. Collected
+				// rather than mirrored per widget: ReparentWidget broadcasts a structural change that
+				// invalidates the preview, and doing that while this loop still iterates preview
+				// widgets is how a drop eats its own state.
+				TArray<UDreamWidget*> MovedPreviewWidgets;
 
 				for (const auto& DraggedWidget : HierarchyDragDropOp->DraggedWidgets)
 				{
@@ -257,6 +260,15 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 					{
 						Index = Index.GetValue() + 1;
 					}
+					MovedPreviewWidgets.Add(TemplateWidget);
+				}
+
+				// The other half of the move: without it the reparent lives only in the preview and
+				// the next rebuild puts everything back. Once, after the loop, exactly as the
+				// viewport's drag does after ApplyPendingReparent.
+				if (Manager.IsValid() && MovedPreviewWidgets.Num() > 0)
+				{
+					Manager->ReparentTemplatesFrom(MovedPreviewWidgets, NewParent);
 				}
 			}
 
