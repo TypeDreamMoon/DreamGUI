@@ -963,6 +963,11 @@ TArray<UDreamUIManagerWorldSubsystem*> UDreamUIManagerWorldSubsystem::InstanceAr
 DECLARE_CYCLE_STAT(TEXT("DreamUIBehaviour Tick"), STAT_DreamUIBehaviourTick, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("DreamUIBehaviour Start"), STAT_DreamUIBehaviourStart, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("UpdateLayout"), STAT_UpdateLayout, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("PropertyBindings Poll"), STAT_DreamUIPropertyBindingsPoll, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("RefreshAllClipData"), STAT_DreamUIRefreshClipData, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("UpdateRootCanvas"), STAT_DreamUIUpdateRootCanvas, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("RenderPrioritySort"), STAT_DreamUIRenderPrioritySort, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("SubmitCanvasDrawCall"), STAT_DreamUISubmitCanvasDrawCall, STATGROUP_DreamGUI);
 
 void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
@@ -1006,6 +1011,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// Property bindings, BEFORE the behaviours: a behaviour that reads a bound property this frame
 	// should see this frame's value, not the one from before the function was called.
 	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIPropertyBindingsPoll);
 		for (int32 Index = PropertyBindingUsers.Num() - 1; Index >= 0; --Index)
 		{
 			UDreamUserWidget* UserWidget = PropertyBindingUsers[Index].Get();
@@ -1221,16 +1227,20 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// missed mark left the shader clipping against a stale rectangle and silently culled a whole subtree.
 	// FDreamUIClipData::UpdateData diffs against the last uploaded block, so an unchanged clip costs one matrix
 	// build and a memcmp, with no GPU write.
-	for (auto& Canvas : AllCanvasArray)
 	{
-		if (Canvas.IsValid())
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIRefreshClipData);
+		for (auto& Canvas : AllCanvasArray)
 		{
-			Canvas->RefreshAllClipData();
+			if (Canvas.IsValid())
+			{
+				Canvas->RefreshAllClipData();
+			}
 		}
 	}
 
 	//update draw-call
 	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
 		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
 			for (auto& Canvas : AllCanvasArray)
 			{
@@ -1250,11 +1260,14 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// Consume render-priority sort requests at their owner. A request raised outside the owner's own
 	// draw-call rebuild (runtime SetSortOrder, a child canvas rebuilding alone) used to sit in the flag
 	// until the owner happened to rebuild for some other reason; this sweep executes it the same frame.
-	for (auto& Canvas : AllCanvasArray)
 	{
-		if (Canvas.IsValid())
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIRenderPrioritySort);
+		for (auto& Canvas : AllCanvasArray)
 		{
-			Canvas->ConsumePendingRenderPrioritySort();
+			if (Canvas.IsValid())
+			{
+				Canvas->ConsumePendingRenderPrioritySort();
+			}
 		}
 	}
 }
@@ -1340,6 +1353,7 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 
 void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 {
+	SCOPE_CYCLE_COUNTER(STAT_DreamUISubmitCanvasDrawCall);
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 	//update draw-call
 	{

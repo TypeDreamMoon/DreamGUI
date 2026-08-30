@@ -60,6 +60,8 @@ protected:
 	uint8 bCanExecuteTick : 1 = true;
 	/** use this to tell if the class is compiled from blueprint, only blueprint can execute ReceiveXXX. */
 	uint8 bCanExecuteBlueprintEvent : 1;
+	/** The Blueprint wrote a Tick event, as opposed to merely being a Blueprint. Set once in the ctor. */
+	uint8 bHasBlueprintTick : 1 = false;
 
 	UPROPERTY(EditAnywhere, Category=DreamUIBehaviour)
 	uint8 bStartWithTickEnabled : 1 = true;

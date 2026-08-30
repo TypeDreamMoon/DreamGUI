@@ -166,6 +166,8 @@ struct FDreamCanvasDynamicMaterialArrayContainer
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> MaterialArray;
 
 	int CurrentIndex = 0;
+	/** Consecutive frames the tail of MaterialArray went unused; past the decay window it is trimmed. */
+	int UnusedStreak = 0;
 };
 
 USTRUCT()
@@ -789,7 +791,7 @@ private:
 	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	int UsingMaterialStartIndex = 0;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//@todo: delete not using material
+	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//trimmed by the decay pass in UpdateDrawCallMaterial once a tail sits idle a whole window
 	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasMaterialParameterCache> MapMatToParamCache;
 	uint64 NewestDrawCallFrameNumber = 0;

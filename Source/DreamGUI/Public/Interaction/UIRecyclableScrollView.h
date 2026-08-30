@@ -86,7 +86,6 @@ class DREAMGUI_API UUIRecyclableScrollView : public UUIScrollViewWithScrollbar
 protected:
 	virtual void Awake() override;
 	virtual void Start() override;
-	virtual void Tick(float DeltaTime) override;
 	virtual void OnDestroy() override;
 
 #if WITH_EDITOR

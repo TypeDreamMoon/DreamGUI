@@ -372,6 +372,9 @@ void UDreamCanvas::ClearDrawCall()
 	}
 	PooledDefaultMaterialList.Empty();
 	MapSrcMatToDynamicMat.Empty();
+	// The parameter cache keys the same MIDs the two pools above just dropped; without this line it
+	// both leaked entries and kept those MIDs rooted forever -- the pool died, the cache did not.
+	MapMatToParamCache.Empty();
 	CurrentDrawCallData.DrawCallArray.Empty();
 	bNeedToSetClipDataTextureMaterialParameter = true;
 }
@@ -1697,11 +1700,45 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 	{
 		UsingMaterialStartIndex = PooledDefaultMaterialList.Num() - 1;
 	}
-	//reset index for dynamic material
+	//reset index for dynamic material -- and retire what stopped being used. The pools were
+	//high-water-mark allocators: a screenful of one-off materials was rent paid forever (the old
+	//@todo on MapSrcMatToDynamicMat). At this point the counters still hold LAST frame's usage, so
+	//the tail beyond it is provably idle; a tail idle for a whole decay window is dropped, its
+	//parameter-cache entries with it. The window keeps a transiently hidden panel from thrashing
+	//allocate/free on every blink.
 	{
+		constexpr int MaterialPoolDecayFrames = 120;
+		TArray<UMaterialInterface*, TInlineAllocator<8>> EmptiedSources;
 		for (auto& KeyValue : MapSrcMatToDynamicMat)
 		{
-			KeyValue.Value.CurrentIndex = 0;
+			FDreamCanvasDynamicMaterialArrayContainer& Container = KeyValue.Value;
+			const int UsedLastFrame = Container.CurrentIndex;
+			if (UsedLastFrame < Container.MaterialArray.Num())
+			{
+				++Container.UnusedStreak;
+				if (Container.UnusedStreak > MaterialPoolDecayFrames)
+				{
+					for (int Index = UsedLastFrame; Index < Container.MaterialArray.Num(); ++Index)
+					{
+						MapMatToParamCache.Remove(Container.MaterialArray[Index]);
+					}
+					Container.MaterialArray.SetNum(UsedLastFrame);
+					Container.UnusedStreak = 0;
+					if (Container.MaterialArray.Num() == 0)
+					{
+						EmptiedSources.Add(KeyValue.Key);
+					}
+				}
+			}
+			else
+			{
+				Container.UnusedStreak = 0;
+			}
+			Container.CurrentIndex = 0;
+		}
+		for (UMaterialInterface* Source : EmptiedSources)
+		{
+			MapSrcMatToDynamicMat.Remove(Source);
 		}
 	}
 

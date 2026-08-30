@@ -19,11 +19,6 @@ void UUIRecyclableScrollView::Start()
     InitializeOnDataSource();
 }
 
-void UUIRecyclableScrollView::Tick(float DeltaTime)
-{
-    Super::Tick(DeltaTime);
-}
-
 void UUIRecyclableScrollView::OnDestroy()
 {
     if (OnScrollEventDelegateHandle.IsValid())

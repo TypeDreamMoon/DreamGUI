@@ -43,7 +43,9 @@ void UUITextInput::Awake()
 	{
 		TextInputMethodContext = FTextInputMethodContext::Create(this);
 	}
-	this->SetCanExecuteTick(true);
+	// The tick's only job is the caret blink, which only exists while input is active -- so the
+	// tick does too. Activate/deactivate toggle it; an inactive input costs the frame nothing.
+	this->SetCanExecuteTick(false);
 }
 void UUITextInput::Tick(float DeltaTime)
 {
@@ -1399,6 +1401,7 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		}
 	}
 	bInputActive = true;
+	SetCanExecuteTick(true);
 	//caret and selection
 	if (Text.Len() == 0)//if no text, use caret
 	{
@@ -1596,6 +1599,7 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 		FSlateApplication::Get().ShowVirtualKeyboard(false, 0);
 	}
 	bInputActive = false;
+	SetCanExecuteTick(false);
 	//hide caret
 	if (CaretWidget.IsValid())
 	{

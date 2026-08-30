@@ -387,6 +387,23 @@ void UDreamLyricsView::Tick(float DeltaTime)
 	{
 		return;
 	}
+
+	// A paused view settles -- the smoothing lerp needs a few frames to land -- and then the whole
+	// per-frame body (a linear scan of every line plus two update passes) is pure tax. A seek while
+	// paused moves CurrentTime, which re-arms the window; play, dirty and snap re-arm it too.
+	if (!bPlaying && !bSnapNextLayout && CurrentTime == LastTickedCurrentTime)
+	{
+		IdleSettleSeconds += DeltaTime;
+		if (IdleSettleSeconds > AlphaSmoothing * 4.0f + 0.25f)
+		{
+			return;
+		}
+	}
+	else
+	{
+		IdleSettleSeconds = 0.0f;
+	}
+	LastTickedCurrentTime = CurrentTime;
 	if (bPlaying)
 	{
 		CurrentTime += DeltaTime * PlaybackRate;

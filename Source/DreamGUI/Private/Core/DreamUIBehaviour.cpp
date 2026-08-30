@@ -11,6 +11,17 @@
 UDreamUIBehaviour::UDreamUIBehaviour()
 {
 	bCanExecuteBlueprintEvent = GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native);
+	// Whether the Blueprint actually IMPLEMENTED the tick event, not merely whether it could: a
+	// UFunction that lives on a Blueprint-compiled class is an override; the one on the native
+	// declaring class is the empty stub. Every BP behaviour used to pay a ProcessEvent per frame
+	// for a tick event it never wrote.
+	if (bCanExecuteBlueprintEvent)
+	{
+		static const FName ReceiveTickName(TEXT("ReceiveTick"));
+		const UFunction* TickFunction = GetClass()->FindFunctionByName(ReceiveTickName);
+		bHasBlueprintTick = TickFunction != nullptr
+			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+	}
 	CallbacksBeforeAwake.SetNumZeroed((int)ECallbackFunctionType::COUNT);
 }
 
@@ -154,7 +165,7 @@ void UDreamUIBehaviour::Start()
 }
 void UDreamUIBehaviour::Tick(float DeltaTime)
 {
-	if (bCanExecuteBlueprintEvent)
+	if (bCanExecuteBlueprintEvent && bHasBlueprintTick)
 	{
 		ReceiveTick(DeltaTime);
 	}
