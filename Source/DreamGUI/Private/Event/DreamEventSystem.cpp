@@ -425,6 +425,10 @@ void UDreamEventSystem::CallOnPointerDrag(UDreamWidget* TargetWidget, UDreamPoin
 {
 	LogEventData(EventData);
 	ExecuteEvent_OnPointerDrag(TargetWidget, EventData, true);
+	// Both, like every sibling Call*. This one alone skipped the native broadcast, so a C++
+	// observer -- a drag visual following the cursor, a drop-target highlighter -- silently never
+	// saw drag frames while the Blueprint one did.
+	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
 void UDreamEventSystem::CallOnPointerEndDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)

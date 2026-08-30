@@ -10,6 +10,7 @@
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/Interface/DreamNavigationInterface.h"
 #include "Interaction/UISelectable.h"
+#include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUINavigationScroll.h"
 
 bool UDreamPointerInputModule::LineTrace(UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& OutDreamHitResult)
@@ -483,6 +484,9 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 						}
 					}
 					EventData->DragWidget = nullptr;
+					// The operation lives exactly as long as the drag; EndDrag has already run, so
+					// the source has read bDropWasHandled by now.
+					EventData->DragOperation = nullptr;
 				}
 			}
 			else//not dragging
@@ -642,6 +646,7 @@ void UDreamPointerInputModule::ClearEventByID(int pointerID)
 					EventSystem->CallOnPointerEndDrag(EventData->DragWidget, EventData);
 					EventData->DragWidget = nullptr;
 				}
+				EventData->DragOperation = nullptr;
 			}
 		}
 

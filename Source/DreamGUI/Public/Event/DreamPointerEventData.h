@@ -8,6 +8,7 @@
 
 class UDreamWidget;
 class UDreamBaseRaycaster;
+class UDreamDragDropOperation;
 
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUINavigationDirection :uint8
@@ -124,6 +125,13 @@ public:
 	/** current dragging component */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamWidget> DragWidget = nullptr;
+	/**
+	 * What this drag MEANS -- payload, tag, drag visual. Set by the drag's source when it begins
+	 * (UDreamUIDragSource does), read by drop targets, cleared wherever DragWidget is: it lives
+	 * exactly as long as the drag. Null for a drag nothing gave meaning to (a scroll, a slider).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI")
+		TObjectPtr<UDreamDragDropOperation> DragOperation = nullptr;
 
 	bool bIsUpFiredAtCurrentFrame = false;//PointerUp event is called at current frame?
 	bool bIsExitFiredAtCurrentFrame = false;//PointerExit event is called at current frame?
