@@ -1508,26 +1508,27 @@ namespace DreamUIText
 			Loop.LoopSourceFunction = Current().Text;
 			Advance();
 
-			// The parentheses are required rather than optional decoration: they are the reminder that
-			// the right hand side is a call and not a variable, and the same reminder the binding
-			// arrow carries.
-			if (!Check(ETokenKind::OpenParen))
+			// The parentheses now DISTINGUISH rather than merely remind: `in GetItems()` calls a
+			// function, `in Items` reads a variable -- the two source shapes the ruling admits. The
+			// variable spelling is what lets a FieldNotify array drive the list's refresh.
+			if (Check(ETokenKind::OpenParen))
 			{
-				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedLoopHeader, Loop.Location,
-					FString::Printf(TEXT("write the source as '%s()' -- the parentheses are part of it"), *Loop.LoopSourceFunction));
-				RecoverToStatementBoundary();
-				return;
+				Advance();
+				if (!Check(ETokenKind::CloseParen))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedLoopHeader, Loop.Location,
+						FString::Printf(TEXT("'%s' is called with no arguments"), *Loop.LoopSourceFunction));
+					SkipPastCloseParen();
+					RecoverToStatementBoundary();
+					return;
+				}
+				Advance();
+				Loop.bLoopSourceIsFunction = true;
 			}
-			Advance();
-			if (!Check(ETokenKind::CloseParen))
+			else
 			{
-				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedLoopHeader, Loop.Location,
-					FString::Printf(TEXT("'%s' is called with no arguments"), *Loop.LoopSourceFunction));
-				SkipPastCloseParen();
-				RecoverToStatementBoundary();
-				return;
+				Loop.bLoopSourceIsFunction = false;
 			}
-			Advance();
 
 			// A warning, deliberately, and this is the line to change if that stops being right. Today
 			// nothing in the grammar can REFERENCE a loop variable -- there is no interpolation, the
@@ -1954,9 +1955,25 @@ namespace DreamUIText
 					return true;
 				}
 				// A bare identifier is a variable on the user widget -- the day `<-` learned
-				// expressions is the day a property could be a source too.
+				// expressions is the day a property could be a source too. Dots extend it into a
+				// path: outside a loop body that is an error the thunk generator raises (a graph
+				// cannot get a sub-property by name), but inside an `each` it is how a binding says
+				// something about the item -- `Entry.Name`.
 				OutExpression.Kind = FDreamUIExpression::EKind::VariableRef;
 				OutExpression.Symbol = Name;
+				while (Check(ETokenKind::Dot))
+				{
+					Advance();
+					if (!Check(ETokenKind::Identifier))
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+							FString::Printf(TEXT("expected a member name after '%s.'"), *OutExpression.Symbol));
+						RecoverToStatementBoundary();
+						return false;
+					}
+					OutExpression.Symbol += TEXT(".") + Current().Text;
+					Advance();
+				}
 				return true;
 			}
 			default:

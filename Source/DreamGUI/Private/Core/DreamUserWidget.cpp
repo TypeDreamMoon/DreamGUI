@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamUIEachAdapter.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUIManager.h"
@@ -170,6 +171,7 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// After the tree exists: the bindings name widgets in it.
 	ResolvePropertyBindings();
 	BindEventBindings();
+	ResolveEachBindings();
 	if (ResolvedBindings.Num() > 0)
 	{
 		// Once now, so the first frame shows bound values rather than the authored ones. All of
@@ -414,6 +416,86 @@ void UDreamUserWidget::HandleSourceFieldValueChanged(UObject* InObject, UE::Fiel
 		if (Binding.SourceFieldId.IsValid() && Binding.SourceFieldId.GetName() == InFieldId.GetName())
 		{
 			EvaluateBinding(Binding);
+		}
+	}
+}
+
+void UDreamUserWidget::ResolveEachBindings()
+{
+	EachAdapters.Reset();
+
+	TArray<FDreamWidgetEachBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectEachBindings(GetClass(), Bindings);
+	if (Bindings.Num() == 0)
+	{
+		return;
+	}
+
+	TSet<int32> SubscribedFieldIndices;
+	for (const FDreamWidgetEachBinding& Binding : Bindings)
+	{
+		auto FindWidgetByVariable = [this](FName InName) -> UDreamWidget*
+		{
+			FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(GetClass(), InName);
+			return Property != nullptr ? Cast<UDreamWidget>(Property->GetObjectPropertyValue_InContainer(this)) : nullptr;
+		};
+		UDreamWidget* Host = FindWidgetByVariable(Binding.HostWidgetName);
+		UDreamWidget* Template = FindWidgetByVariable(Binding.TemplateWidgetName);
+		UUIRecyclableScrollView* ListView = IsValid(Host) ? Host->GetComponent<UUIRecyclableScrollView>() : nullptr;
+		if (!IsValid(ListView) || !IsValid(Template))
+		{
+			// The compiler and builder vetted all of this; the class moved underneath us. Skip.
+			continue;
+		}
+
+		UDreamUIEachAdapter* Adapter = NewObject<UDreamUIEachAdapter>(this);
+		Adapter->Initialize(this, Binding, ListView);
+		EachAdapters.Add(Adapter);
+
+		ListView->SetCellTemplate(Template);
+		TScriptInterface<IUIRecyclableScrollViewDataSource> DataSource;
+		DataSource.SetObject(Adapter);
+		DataSource.SetInterface(Cast<IUIRecyclableScrollViewDataSource>(Adapter));
+		ListView->SetDataSource(DataSource);
+
+		// A variable source that broadcasts refreshes its list the way a FieldNotify binding
+		// re-evaluates: from the change, not from a poll.
+		if (!Binding.bSourceIsFunction)
+		{
+			const UE::FieldNotification::FFieldId FieldId = GetFieldNotificationDescriptor().GetField(GetClass(), Binding.SourceName);
+			if (FieldId.IsValid())
+			{
+				bool bAlreadySubscribed = false;
+				SubscribedFieldIndices.Add(FieldId.GetIndex(), &bAlreadySubscribed);
+				if (!bAlreadySubscribed)
+				{
+					AddFieldValueChangedDelegate(FieldId,
+						FFieldValueChangedDelegate::CreateUObject(this, &UDreamUserWidget::HandleEachSourceChanged));
+				}
+			}
+		}
+	}
+}
+
+void UDreamUserWidget::HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId)
+{
+	for (UDreamUIEachAdapter* Adapter : EachAdapters)
+	{
+		if (IsValid(Adapter) && !Adapter->GetBinding().bSourceIsFunction
+			&& Adapter->GetBinding().SourceName == InFieldId.GetName())
+		{
+			Adapter->Refresh();
+		}
+	}
+}
+
+void UDreamUserWidget::RefreshEachBindings()
+{
+	for (UDreamUIEachAdapter* Adapter : EachAdapters)
+	{
+		if (IsValid(Adapter))
+		{
+			Adapter->Refresh();
 		}
 	}
 }

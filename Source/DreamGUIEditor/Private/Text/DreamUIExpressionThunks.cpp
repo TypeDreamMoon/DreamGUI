@@ -721,6 +721,13 @@ namespace DreamUIExpressionThunksLocal
 		}
 		for (FDreamUINode& Child : InNode.Children)
 		{
+			// A loop body's bindings are not this pass's to lower: `Item.Member` reads belong to
+			// the each machinery, applied per cell, and a thunk for one would ask the CLASS for a
+			// variable only the iteration has.
+			if (Child.Kind == EDreamUINodeKind::EachLoop || Child.Kind == EDreamUINodeKind::ForLoop)
+			{
+				continue;
+			}
 			WalkNode(InBlueprint, Child, InDiagnostics);
 		}
 	}

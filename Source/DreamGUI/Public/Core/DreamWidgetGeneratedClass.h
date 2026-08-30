@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "DreamWidgetGeneratedClass.generated.h"
 
@@ -60,6 +61,8 @@ public:
 	static void CollectPropertyBindings(const UClass* InClass, TArray<FDreamWidgetPropertyBinding>& OutBindings);
 	/** Base first, like the property bindings: a subclass listening to the same event binds after. */
 	static void CollectEventBindings(const UClass* InClass, TArray<FDreamWidgetEventBinding>& OutBindings);
+	/** Base first, like the others. */
+	static void CollectEachBindings(const UClass* InClass, TArray<FDreamWidgetEachBinding>& OutBindings);
 
 #if WITH_EDITOR
 	/** Compiler-only: hand the class the tree it will instance. */
@@ -67,6 +70,7 @@ public:
 	/** Compiler-only: hand the class the bindings it resolved. */
 	void SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings);
 	void SetEventBindings(TArray<FDreamWidgetEventBinding> InBindings);
+	void SetEachBindings(TArray<FDreamWidgetEachBinding> InBindings);
 #endif
 
 	/**
@@ -107,4 +111,7 @@ private:
 
 	UPROPERTY()
 	TArray<FDreamWidgetEventBinding> EventBindings;
+
+	UPROPERTY()
+	TArray<FDreamWidgetEachBinding> EachBindings;
 };

@@ -222,6 +222,12 @@ enum class EDreamUIDiagnosticCode : int32
 	 * expression, or move the logic into a real function and bind that.
 	 */
 	BindingExpressionUnsupported = 5011,
+	/**
+	 * An `each` somewhere it cannot work: nested in another, at the root, on a widget with no list
+	 * view to fill, or with a body that is not exactly one template widget. One code because the
+	 * reader's move is the same -- restructure the block; the message names which rule.
+	 */
+	EachMisplaced = 5012,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */

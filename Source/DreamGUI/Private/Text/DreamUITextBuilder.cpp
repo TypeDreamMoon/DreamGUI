@@ -7,7 +7,10 @@
 
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetTree.h"
+#include "Interaction/UIListView.h"
+#include "Interaction/UIRecyclableScrollView.h"
 #include "Core/Components/DreamBackgroundBlur.h"
 #include "Core/Components/DreamBackgroundPixelate.h"
 #include "Core/Components/DreamImage.h"
@@ -313,6 +316,11 @@ namespace DreamUITextBuilderLocal
 		TArray<FDreamWidgetPropertyBinding>* Bindings = nullptr;
 		/** Null when the caller has no use for events -- a reference tree, most tests. */
 		TArray<FDreamWidgetEventBinding>* EventBindings = nullptr;
+		/** Null likewise; an `each` met without it degrades to the parsed-not-built warning. */
+		TArray<FDreamWidgetEachBinding>* EachBindings = nullptr;
+		/** Non-null while building an `each` body: item-scoped bindings divert into it. */
+		FDreamWidgetEachBinding* ActiveEach = nullptr;
+		FString ActiveLoopVariable;
 		/** ClassPath, or the source name when the file declares no class. Fixed for the whole build. */
 		FString LocalizationNamespace;
 	};
@@ -785,7 +793,31 @@ namespace DreamUITextBuilderLocal
 	bool AddBinding(const FResolvedDestination& InDestination, UDreamWidget* InWidget,
 		const FDreamUIProperty& InProperty, FBuildContext& InContext)
 	{
-		if (InProperty.BindingFunction.IsEmpty())
+		// Inside an `each` body, a binding whose source is `<LoopVar>.<Member>` is not a class
+		// binding at all -- it is a per-CELL write, recorded on the each and applied at SetCell
+		// time. Detected before the empty-name guard below, because these arrive as un-lowered
+		// expressions on purpose: the thunk pass skips loop bodies.
+		FString EachItemMember;
+		if (InContext.ActiveEach != nullptr
+			&& InProperty.BindingExpression.IsSet()
+			&& InProperty.BindingExpression.GetValue().Kind == FDreamUIExpression::EKind::VariableRef)
+		{
+			const FString& Symbol = InProperty.BindingExpression.GetValue().Symbol;
+			const FString Prefix = InContext.ActiveLoopVariable + TEXT(".");
+			if (Symbol.StartsWith(Prefix, ESearchCase::CaseSensitive))
+			{
+				EachItemMember = Symbol.Mid(Prefix.Len());
+				if (EachItemMember.IsEmpty() || EachItemMember.Contains(TEXT(".")))
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+						FString::Printf(TEXT("'%s' reads more than one member deep; an item binding is '%s.Member'"),
+							*Symbol, *InContext.ActiveLoopVariable));
+					return false;
+				}
+			}
+		}
+
+		if (InProperty.BindingFunction.IsEmpty() && EachItemMember.IsEmpty())
 		{
 			// An expression binding the compiler has not lowered yet: the real compile rewrites
 			// BindingFunction to the generated thunk's name before Build runs, so reaching here
@@ -824,6 +856,19 @@ namespace DreamUITextBuilderLocal
 					*InDestination.Owner->GetClass()->GetName(),
 					*MakeDreamWidgetSetterName(InDestination.LeafProperty).ToString()));
 			return false;
+		}
+
+		if (!EachItemMember.IsEmpty())
+		{
+			// The per-cell record, with the setter the ordinary resolution above already vetted.
+			FDreamWidgetEntryBinding& Entry = InContext.ActiveEach->EntryBindings.AddDefaulted_GetRef();
+			Entry.TargetWidgetDisplayName = FName(*InWidget->GetDisplayName());
+			Entry.Target = InDestination.BindingTarget;
+			Entry.BehaviourIndex = InDestination.BehaviourIndex;
+			Entry.PropertyName = InDestination.LeafProperty->GetFName();
+			Entry.SetterName = Setter->GetFName();
+			Entry.ItemMember = FName(*EachItemMember);
+			return true;
 		}
 
 		FDreamWidgetPropertyBinding Binding;
@@ -1299,12 +1344,19 @@ namespace DreamUITextBuilderLocal
 		return true;
 	}
 
+	UDreamWidget* BuildEachLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext);
+
 	UDreamWidget* BuildNode(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
 	{
+		if (InNode.Kind == EDreamUINodeKind::EachLoop && InContext.EachBindings != nullptr)
+		{
+			return BuildEachLoop(InNode, InParent, InContext);
+		}
 		if (InNode.Kind == EDreamUINodeKind::ForLoop || InNode.Kind == EDreamUINodeKind::EachLoop)
 		{
 			// A warning rather than an error: the rest of the file is still a tree worth building, and
-			// an author previewing a screen wants to see the parts that do work.
+			// an author previewing a screen wants to see the parts that do work. `each` only lands
+			// here for a caller that offered nowhere to record it -- a reference tree, most tests.
 			InContext.Diagnostics->AddWarning(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
 				FString::Printf(TEXT("'%s' loops are parsed but not yet expanded, so everything under this one was skipped"),
 					InNode.Kind == EDreamUINodeKind::ForLoop ? TEXT("for") : TEXT("each")));
@@ -1412,11 +1464,84 @@ namespace DreamUITextBuilderLocal
 		}
 		return Widget;
 	}
+
+	UDreamWidget* BuildEachLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
+	{
+		if (InContext.ActiveEach != nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' cannot nest inside another 'each'"));
+			return nullptr;
+		}
+		if (InParent == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' lives inside the widget whose list it fills; it cannot be the root"));
+			return nullptr;
+		}
+		// The host contract: the ENCLOSING widget carries the list view, configured however the
+		// author likes -- the `each` only supplies the template and the data. Auto-adding a view
+		// here would mean auto-choosing its scroll direction, content and bars, which are layout
+		// decisions this block has no words for.
+		if (InParent->GetComponent<UUIRecyclableScrollView>() == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				FString::Printf(TEXT("'%s' has no UIListView/UIRecyclableScrollView behaviour for this 'each' to fill -- add one with '+ UIListView { }'"),
+					*InParent->GetDisplayName()));
+			return nullptr;
+		}
+
+		const FDreamUINode* TemplateNode = nullptr;
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			if (Child.Kind != EDreamUINodeKind::Widget || TemplateNode != nullptr)
+			{
+				TemplateNode = nullptr;
+				break;
+			}
+			TemplateNode = &Child;
+		}
+		if (TemplateNode == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' body holds exactly one template widget -- the thing repeated per item"));
+			return nullptr;
+		}
+
+		FDreamWidgetEachBinding& Each = InContext.EachBindings->AddDefaulted_GetRef();
+		Each.HostWidgetName = UDreamWidgetTree::MakeWidgetVariableName(InParent);
+		Each.SourceName = FName(*InNode.LoopSourceFunction);
+		Each.bSourceIsFunction = InNode.bLoopSourceIsFunction;
+		Each.LoopVariable = FName(*InNode.LoopVariable);
+
+		// Nested `each` is refused above, so no sibling can grow EachBindings under this pointer
+		// while it is live -- the reallocation that would otherwise dangle it cannot happen.
+		InContext.ActiveEach = &Each;
+		InContext.ActiveLoopVariable = InNode.LoopVariable;
+		UDreamWidget* Template = BuildNode(*TemplateNode, InParent, InContext);
+		InContext.ActiveEach = nullptr;
+		InContext.ActiveLoopVariable.Reset();
+
+		if (!IsValid(Template))
+		{
+			InContext.EachBindings->Pop();
+			return nullptr;
+		}
+		Each.TemplateWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Template);
+
+		// The recyclable view clones whatever carries the cell-marker interface; a template the
+		// author did not mark gets the plain list entry, which is the marker plus click plumbing.
+		if (Template->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
+		{
+			Template->AddComponent<UUIListEntry>();
+		}
+		return Template;
+	}
 }
 
 UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* InOuter,
 	FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings,
-	TArray<FDreamWidgetEventBinding>* OutEventBindings)
+	TArray<FDreamWidgetEventBinding>* OutEventBindings, TArray<FDreamWidgetEachBinding>* OutEachBindings)
 {
 	using namespace DreamUITextBuilderLocal;
 
@@ -1437,6 +1562,7 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	Context.Diagnostics = &OutDiagnostics;
 	Context.Bindings = &OutBindings;
 	Context.EventBindings = OutEventBindings;
+	Context.EachBindings = OutEachBindings;
 	// The namespace a translator sees. ClassPath makes it stable across a rename of the .dui file,
 	// which the source name would not; the source name is the fallback for a file that has not been
 	// given a class yet, which is every file in an editor preview before it is first compiled.

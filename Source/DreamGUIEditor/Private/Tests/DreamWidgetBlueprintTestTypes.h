@@ -65,6 +65,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Test")
 	float GetScale() const { return 2.0f; }
+
+	/** Source for the `each` tests: the shape the compiler demands, returning nothing. */
+	UFUNCTION(BlueprintPure, Category = "Test")
+	TArray<UObject*> GetRows() const { return {}; }
 };
 
 /**

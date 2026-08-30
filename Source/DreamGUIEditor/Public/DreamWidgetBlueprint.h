@@ -8,6 +8,7 @@
 // EViewModeIndex, for the saved viewport state below. EngineTypes.h does not carry it, and inside a
 // unity blob some neighbour always had. -SingleFile on any file that reaches this header said so.
 #include "Engine/EngineBaseTypes.h"
+#include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "DreamWidgetBlueprint.generated.h"
 
@@ -103,6 +104,10 @@ public:
 	 */
 	UPROPERTY()
 	TArray<FDreamWidgetPropertyBinding> PropertyBindings;
+
+	/** `each` blocks, authored form; the compiler validates the source and hands them to the class. */
+	UPROPERTY()
+	TArray<FDreamWidgetEachBinding> EachBindings;
 
 	/** `Event -> Handler` lines, authored form; CompileEventBindings resolves them onto the class. */
 	UPROPERTY()

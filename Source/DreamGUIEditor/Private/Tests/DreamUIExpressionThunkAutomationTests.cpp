@@ -302,4 +302,107 @@ bool FDreamUITwoWayBindingTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIEachCompilesTest,
+	"DreamGUI.Text.Expression.AnEachBlockCompilesIntoTemplateAndBindings",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIEachCompilesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	FScopedDuiFile File(TEXT("EachFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_EachFixture"),
+		TEXT("Widget Root {"),
+		TEXT("    Widget List {"),
+		TEXT("        + UIListView {"),
+		TEXT("        }"),
+		TEXT("        each Item in GetRows() {"),
+		TEXT("            Widget Row {"),
+		TEXT("                Text Label {"),
+		TEXT("                    Text <- Item.Title"),
+		TEXT("                }"),
+		TEXT("            }"),
+		TEXT("        }"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_EachFixture"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("The each compile has no errors"), Results.NumErrors, 0);
+
+	TArray<FDreamWidgetEachBinding> EachBindings;
+	UDreamWidgetGeneratedClass::CollectEachBindings(Fixture.Blueprint->GeneratedClass, EachBindings);
+	if (!TestEqual(TEXT("One each binding on the class"), EachBindings.Num(), 1))
+	{
+		return false;
+	}
+	const FDreamWidgetEachBinding& Each = EachBindings[0];
+	TestEqual(TEXT("Hosted by the list widget"), Each.HostWidgetName, FName(TEXT("List")));
+	TestEqual(TEXT("Templated by the row"), Each.TemplateWidgetName, FName(TEXT("Row")));
+	TestEqual(TEXT("Fed by the function"), Each.SourceName, FName(TEXT("GetRows")));
+	TestTrue(TEXT("...as a function"), Each.bSourceIsFunction);
+	if (!TestEqual(TEXT("One item binding inside"), Each.EntryBindings.Num(), 1))
+	{
+		return false;
+	}
+	TestEqual(TEXT("The item binding lands on the label"), Each.EntryBindings[0].TargetWidgetDisplayName, FName(TEXT("Label")));
+	TestEqual(TEXT("...on its Text"), Each.EntryBindings[0].PropertyName, FName(TEXT("Text")));
+	TestEqual(TEXT("...through the setter"), Each.EntryBindings[0].SetterName, FName(TEXT("SetText")));
+	TestEqual(TEXT("...from the item's member"), Each.EntryBindings[0].ItemMember, FName(TEXT("Title")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIEachMisplacedTest,
+	"DreamGUI.Text.Expression.AnEachWithoutAListViewIsRefused",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIEachMisplacedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	AddExpectedError(TEXT("DUI5012"), EAutomationExpectedErrorFlags::Contains, 0);
+	// The fixture's only content IS the broken block, so the refusal leaves nothing to build and
+	// the empty-tree error legitimately follows it.
+	AddExpectedError(TEXT("DUI6002"), EAutomationExpectedErrorFlags::Contains, 0);
+
+	FScopedDuiFile File(TEXT("EachMisplacedFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_EachMisplaced"),
+		TEXT("Widget Root {"),
+		TEXT("    each Item in GetRows() {"),
+		TEXT("        Widget Row {"),
+		TEXT("        }"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_EachMisplaced"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestTrue(TEXT("The compile reports the misplaced each"), Results.NumErrors > 0);
+
+	TArray<FDreamWidgetEachBinding> EachBindings;
+	UDreamWidgetGeneratedClass::CollectEachBindings(Fixture.Blueprint->GeneratedClass, EachBindings);
+	TestEqual(TEXT("Nothing half-made reaches the class"), EachBindings.Num(), 0);
+	return true;
+}
+
 #endif

@@ -160,6 +160,14 @@ public:
 	/** Whether any binding still needs the per-frame poll; the manager only ticks the ones that do. */
 	bool HasPolledPropertyBindings() const { return PolledBindingCount > 0; }
 
+	/**
+	 * Re-read every `each` source and refresh its list. A source that is a FieldNotify variable
+	 * calls this for you when it broadcasts; a function source has nothing to broadcast, so code
+	 * that changed what it returns calls this by hand.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
+	void RefreshEachBindings();
+
 private:
 	/** A binding with its lookups already done. Resolved once, at Initialize. */
 	struct FResolvedBinding
@@ -183,6 +191,14 @@ private:
 	void ResolvePropertyBindings();
 	/** Adds each compiled `Event -> Handler` route as a delegate on its live target. */
 	void BindEventBindings();
+	/** Wires each `each` block: template and data source onto the host's list view, one adapter per block. */
+	void ResolveEachBindings();
+	/** A FieldNotify array source broadcast: refresh the adapters reading that field. */
+	void HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId);
+
+	/** One per `each` block, kept alive here; the view holds them only as its data source interface. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UDreamUIEachAdapter>> EachAdapters;
 	/** One binding, source through setter. Shared by the poll, the initial push and the broadcasts. */
 	void EvaluateBinding(const FResolvedBinding& InBinding);
 	/** Re-evaluates every binding whose source field just broadcast. */

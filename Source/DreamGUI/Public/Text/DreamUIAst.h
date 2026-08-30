@@ -179,6 +179,9 @@ struct DREAMGUI_API FDreamUINode
 	 */
 	FString TypeName;
 
+	/** Loops only: whether the source is `Func()` (true) or a variable read (false). */
+	bool bLoopSourceIsFunction = true;
+
 	/**
 	 * The node's identity. Required on Widget and NamedSlot, empty on loops.
 	 *

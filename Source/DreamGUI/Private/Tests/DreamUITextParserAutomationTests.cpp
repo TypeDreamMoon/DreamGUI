@@ -864,11 +864,20 @@ bool FDreamUITextClauseDiagnosticsTest::RunTest(const FString& Parameters)
 		TEXT("}")
 	}), EDreamUIDiagnosticCode::MalformedLoopHeader, 2);
 
-	ExpectOneDiagnostic(*this, TEXT("a loop source written without brackets"), MakeSource({
-		TEXT("Widget Root {"),
-		TEXT("    each Item in GetItems { }"),
-		TEXT("}")
-	}), EDreamUIDiagnosticCode::MalformedLoopHeader, 2);
+	// `in GetItems` without brackets stopped being an error the day `each` learned variable
+	// sources: the brackets now DISTINGUISH the two shapes rather than merely reminding.
+	{
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a bracketless loop source now parses as a variable source"), Parse(MakeSource({
+			TEXT("Widget Root {"),
+			TEXT("    each Item in Items { }"),
+			TEXT("}")
+		}), Ast, Diagnostics));
+		TestEqual(TEXT("...with no complaint"), Diagnostics.Diagnostics.Num(), 0);
+		TestTrue(TEXT("...flagged as a variable read"),
+			Ast.Root.Children.Num() == 1 && !Ast.Root.Children[0].bLoopSourceIsFunction);
+	}
 
 	// The clauses are accepted in either order. The canonical spelling puts the rename first, but
 	// refusing the other order buys nothing -- neither reading is ambiguous.

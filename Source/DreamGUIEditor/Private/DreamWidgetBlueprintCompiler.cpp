@@ -249,6 +249,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 
 	TArray<FDreamWidgetPropertyBinding> Bindings;
 	TArray<FDreamWidgetEventBinding> EventBindings;
+	TArray<FDreamWidgetEachBinding> EachBindings;
 	// Outered to the Blueprint, which is where UDreamWidgetBlueprint::GetOrCreateWidgetTree puts the
 	// hand-authored one. That is not a detail: FinishCompilingClass duplicates THIS object onto the
 	// generated class as the archetype, and SaveSubObjectsFromCleanAndSanitizeClass keeps it alive
@@ -259,7 +260,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// expression the generator refuses reports DUI5011 into the bag and clears its binding.
 	DreamUIExpressionThunks::Generate(DreamBlueprint, Ast, OutDiagnostics);
 
-	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings);
+	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings, &EachBindings);
 	if (!IsValid(NewTree) || !IsValid(NewTree->RootWidget))
 	{
 		// Its own code even though the builder has already said why. The builder reports a CAUSE (this
@@ -333,6 +334,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// Blueprint does not declare becomes an error here rather than a null at run time.
 	DreamBlueprint->PropertyBindings = MoveTemp(Bindings);
 	DreamBlueprint->EventBindings = MoveTemp(EventBindings);
+	DreamBlueprint->EachBindings = MoveTemp(EachBindings);
 
 	// Last, with the new hierarchy in place: `(was: OldId)` moves what the OLD name still owns onto
 	// the new one. See MigrateRenamedWidgets for why after the install and not before.
@@ -1212,6 +1214,48 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		ResolvedEvents.Add(Authored);
 	}
 	GeneratedClass->SetEventBindings(MoveTemp(ResolvedEvents));
+
+	// The `each` half, with the one check only this stage can make: the SOURCE lives on the class
+	// being compiled -- a nullary function returning TArray of objects, or such an array variable.
+	// The per-cell setters were vetted by the builder against the template's real classes, and the
+	// host's view is a runtime fact the resolve checks again.
+	TArray<FDreamWidgetEachBinding> ResolvedEach;
+	for (const FDreamWidgetEachBinding& Authored : DreamBlueprint->EachBindings)
+	{
+		const FArrayProperty* ItemsProperty = nullptr;
+		if (Authored.bSourceIsFunction)
+		{
+			const UFunction* Source = InClass->FindFunctionByName(Authored.SourceName);
+			if (Source == nullptr || Source->NumParms != 1)
+			{
+				MessageLog.Error(*FString::Printf(
+					TEXT("The 'each %s in %s()' block needs a no-argument function of that name on this Blueprint."),
+					*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+				continue;
+			}
+			ItemsProperty = CastField<FArrayProperty>(Source->GetReturnProperty());
+		}
+		else
+		{
+			ItemsProperty = FindFProperty<FArrayProperty>(InClass, Authored.SourceName);
+			if (ItemsProperty == nullptr)
+			{
+				MessageLog.Error(*FString::Printf(
+					TEXT("The 'each %s in %s' block needs an array variable of that name on this Blueprint."),
+					*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+				continue;
+			}
+		}
+		if (ItemsProperty == nullptr || CastField<FObjectPropertyBase>(ItemsProperty->Inner) == nullptr)
+		{
+			MessageLog.Error(*FString::Printf(
+				TEXT("'%s' must supply an array of OBJECTS -- the item bindings read members off each element by reflection."),
+				*Authored.SourceName.ToString()));
+			continue;
+		}
+		ResolvedEach.Add(Authored);
+	}
+	GeneratedClass->SetEachBindings(MoveTemp(ResolvedEach));
 }
 
 void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClass)
