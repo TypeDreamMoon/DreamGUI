@@ -90,9 +90,42 @@ void UDreamStandaloneInputModule::InputTrigger(const FVector& InMousePosition, b
 }
 void UDreamStandaloneInputModule::GetMousePosition(FVector2D& OutMousePos)const
 {
+	if (bOverrideMousePosition)
+	{
+		OutMousePos = OverridePointerPosition;
+		return;
+	}
 	if (auto Viewport = this->GetWorld()->GetGameViewport())
 	{
 		Viewport->GetMousePosition(OutMousePos);
+	}
+}
+
+void UDreamStandaloneInputModule::SetOverrideMousePosition(bool bInOverride)
+{
+	if (bOverrideMousePosition == bInOverride)
+	{
+		return;
+	}
+	bOverrideMousePosition = bInOverride;
+	if (bInOverride)
+	{
+		// Start where the real mouse is, so the substituted pointer does not teleport.
+		FVector2D Current = FVector2D::ZeroVector;
+		if (auto Viewport = this->GetWorld()->GetGameViewport())
+		{
+			Viewport->GetMousePosition(Current);
+		}
+		OverridePointerPosition = Current;
+	}
+}
+
+void UDreamStandaloneInputModule::SetOverridePointerPosition(const FVector2D& InPosition)
+{
+	OverridePointerPosition = InPosition;
+	if (bOverrideMousePosition && EventSystem.IsValid())
+	{
+		InputMouseMove(FVector(InPosition.X, InPosition.Y, 0.0f));
 	}
 }
 

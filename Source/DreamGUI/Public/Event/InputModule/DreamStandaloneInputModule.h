@@ -41,6 +41,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void GetMousePosition(FVector2D& OutMousePos)const;
 
+	/**
+	 * While on, the pointer position comes from SetOverridePointerPosition rather than the OS mouse:
+	 * GetMousePosition answers with the override, so every caller that routes through it -- the
+	 * event system actor's clicks and moves included -- follows the substituted pointer for free.
+	 * This is the virtual-cursor seam. (The doc comments referenced this property for years; it now
+	 * exists.)
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetOverrideMousePosition(bool bInOverride);
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool GetOverrideMousePosition() const { return bOverrideMousePosition; }
+	/** Move the substituted pointer. Pushes the position into the pointer pipeline when overriding. */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetOverridePointerPosition(const FVector2D& InPosition);
+
 	/** input for gamepad or keyboard navigation */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void InputNavigation(EDreamUINavigationDirection InDirection, bool InPressOrRelease, int InPointerID);
@@ -59,4 +74,8 @@ protected:
 		FVector PointerPosition;
 	};
 	TArray<StandaloneInputData> StandaloneInputDataArray;//collect input data into array in input event, and process these input data in ProcessInput. This can solve the condition: multiple mouse button input in one frame
+
+	UPROPERTY(VisibleAnywhere, Category = DreamGUI, AdvancedDisplay)
+	bool bOverrideMousePosition = false;
+	FVector2D OverridePointerPosition = FVector2D::ZeroVector;
 };
