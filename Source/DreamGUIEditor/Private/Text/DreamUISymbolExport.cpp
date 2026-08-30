@@ -69,9 +69,39 @@ namespace DreamUISymbolExportLocal
 		return nullptr;
 	}
 
-	/** One class's writable leaves, as the extension wants them: name, a type word, an enum ref. */
+	/**
+	 * The leaf's VALUE on a default object, walked down the same dotted path ResolveLeaf walks
+	 * down the types. Null when any segment fails, which the caller treats as "no default".
+	 */
+	const void* ResolveLeafValue(const UStruct* InScope, const UObject* InDefaults, const FString& InPath)
+	{
+		TArray<FString> Segments;
+		InPath.ParseIntoArray(Segments, TEXT("."));
+		const UStruct* Scope = InScope;
+		const void* Container = InDefaults;
+		const void* ValuePtr = nullptr;
+		for (const FString& Segment : Segments)
+		{
+			const FProperty* Property = Scope != nullptr ? FindFProperty<FProperty>(Scope, *Segment) : nullptr;
+			if (Property == nullptr || Container == nullptr)
+			{
+				return nullptr;
+			}
+			ValuePtr = Property->ContainerPtrToValuePtr<void>(Container);
+			const FStructProperty* AsStruct = CastField<FStructProperty>(Property);
+			Scope = AsStruct != nullptr ? AsStruct->Struct : nullptr;
+			Container = ValuePtr;
+		}
+		return ValuePtr;
+	}
+
+	/**
+	 * One class's writable leaves, as the extension wants them: name, a type word, an enum ref --
+	 * and, when a default object is handed in, the property's tooltip and its default value in
+	 * this language's own spelling. Hover text over there is only as good as what lands here.
+	 */
 	TArray<TSharedPtr<FJsonValue>> DescribeProperties(const UStruct* InScope,
-		TMap<FString, TSharedPtr<FJsonObject>>& InOutEnums)
+		TMap<FString, TSharedPtr<FJsonObject>>& InOutEnums, const UObject* InDefaults = nullptr)
 	{
 		TArray<TSharedPtr<FJsonValue>> Out;
 		for (const FString& Path : DreamUIReflection::GetWritableLeafPaths(InScope))
@@ -84,6 +114,24 @@ namespace DreamUISymbolExportLocal
 			TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
 			Entry->SetStringField(TEXT("name"), Path);
 			Entry->SetStringField(TEXT("type"), Leaf->GetCPPType());
+			const FString Tooltip = Leaf->GetToolTipText().ToString();
+			if (!Tooltip.IsEmpty())
+			{
+				Entry->SetStringField(TEXT("tooltip"), Tooltip);
+			}
+			if (InDefaults != nullptr)
+			{
+				// Printed through the same formatter the compiler reads with, so a hover's
+				// "default = (0, 28)" is a value the author can paste straight into the file.
+				if (const void* ValuePtr = ResolveLeafValue(InScope, InDefaults, Path))
+				{
+					FString Printed;
+					if (DreamUIValueFormat::Print(Leaf, ValuePtr, Printed))
+					{
+						Entry->SetStringField(TEXT("default"), Printed);
+					}
+				}
+			}
 			if (const UEnum* Enum = EnumOf(Leaf))
 			{
 				const FString EnumName = Enum->GetName();
@@ -201,7 +249,13 @@ FString FDreamUISymbolExport::ExportNow()
 		if (Tag.Value != nullptr)
 		{
 			Entry->SetStringField(TEXT("class"), Tag.Value->GetName());
-			Entry->SetArrayField(TEXT("properties"), DescribeProperties(Tag.Value, Enums));
+			const FString ClassTooltip = Tag.Value->GetToolTipText().ToString();
+			if (!ClassTooltip.IsEmpty())
+			{
+				Entry->SetStringField(TEXT("tooltip"), ClassTooltip);
+			}
+			Entry->SetArrayField(TEXT("properties"),
+				DescribeProperties(Tag.Value, Enums, Tag.Value->GetDefaultObject()));
 			Entry->SetArrayField(TEXT("events"), DescribeEvents(Tag.Value));
 		}
 		Tags->SetObjectField(Tag.Key, Entry);
@@ -209,9 +263,11 @@ FString FDreamUISymbolExport::ExportNow()
 	Root->SetObjectField(TEXT("tags"), Tags);
 
 	// ---- the two classes every node line can address regardless of tag
-	Root->SetArrayField(TEXT("widgetProperties"), DescribeProperties(UDreamWidget::StaticClass(), Enums));
+	Root->SetArrayField(TEXT("widgetProperties"), DescribeProperties(UDreamWidget::StaticClass(), Enums,
+		UDreamWidget::StaticClass()->GetDefaultObject()));
 	Root->SetArrayField(TEXT("widgetEvents"), DescribeEvents(UDreamWidget::StaticClass()));
-	Root->SetArrayField(TEXT("slotProperties"), DescribeProperties(UDreamPanelSlot::StaticClass(), Enums));
+	Root->SetArrayField(TEXT("slotProperties"), DescribeProperties(UDreamPanelSlot::StaticClass(), Enums,
+		UDreamPanelSlot::StaticClass()->GetDefaultObject()));
 
 	// ---- components: everything `+` can attach, under the shortest name the compiler resolves
 	TSharedPtr<FJsonObject> Components = MakeShared<FJsonObject>();
@@ -232,7 +288,12 @@ FString FDreamUISymbolExport::ExportNow()
 		}
 		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
 		Entry->SetStringField(TEXT("class"), Class->GetName());
-		Entry->SetArrayField(TEXT("properties"), DescribeProperties(Class, Enums));
+		const FString ClassTooltip = Class->GetToolTipText().ToString();
+		if (!ClassTooltip.IsEmpty())
+		{
+			Entry->SetStringField(TEXT("tooltip"), ClassTooltip);
+		}
+		Entry->SetArrayField(TEXT("properties"), DescribeProperties(Class, Enums, Class->GetDefaultObject()));
 		Entry->SetArrayField(TEXT("events"), DescribeEvents(Class));
 		Components->SetObjectField(Short, Entry);
 	}
