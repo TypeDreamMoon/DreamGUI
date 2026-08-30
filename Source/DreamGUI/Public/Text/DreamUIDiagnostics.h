@@ -156,6 +156,8 @@ enum class EDreamUIDiagnosticCode : int32
 	RenameGraphReferenceAmbiguous = 3013,
 	/** Two `resources` entries share a name; the first one wins everywhere, so the second is refused. */
 	DuplicateResource = 3014,
+	/** `style A : B` where following the bases comes back to A. Nothing applies; the node errors. */
+	StyleCycle = 3015,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */
@@ -208,12 +210,17 @@ enum class EDreamUIDiagnosticCode : int32
 	BindingTargetNotSupported = 5008,
 	/** The AST carried no root node, so there was nothing to build. Parser already said why. */
 	NothingToBuild = 5009,
+	/** `X -> Handler` where X is not an assignable event on the destination, or is a path into one. */
+	EventNotFound = 5010,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */
 	SourceFileUnreadable = 6001,
 	/** The .dui parsed, but produced no tree to compile. */
 	EmptyTree = 6002,
+	/** The `class` line names a different asset than the Blueprint being compiled. A warning: the
+	 * line's job is a stable localization namespace, and being wrong drifts keys, not the build. */
+	ClassPathMismatch = 6003,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */

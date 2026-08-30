@@ -63,6 +63,8 @@ namespace DreamUIText
 		Dot,
 		Colon,
 		Equals,
+		/** `->` -- routes an event to a handler, the way `<-` (Arrow) drives a value from a function. */
+		EventArrow,
 		/** `<-`, the binding arrow. */
 		Arrow,
 		Plus,
@@ -240,6 +242,13 @@ namespace DreamUIText
 				if (IsIdentifierStart(Char))
 				{
 					LexIdentifier(OutTokens);
+					continue;
+				}
+				if (Char == TEXT('-') && PeekChar(1) == TEXT('>'))
+				{
+					// Before the number branch on purpose: '-' otherwise always starts a number, and
+					// `->` would lex as a malformed negative.
+					EmitPunctuation(OutTokens, ETokenKind::EventArrow, 2);
 					continue;
 				}
 				if (IsDigit(Char) || Char == TEXT('-'))
@@ -1074,6 +1083,21 @@ namespace DreamUIText
 			Style.Name = Current().Text;
 			Advance();
 
+			if (Check(ETokenKind::Colon))
+			{
+				// `style Danger : Button` -- the same ':' a node uses to wear a style, because it is
+				// the same relationship: properties from over there, then mine on top.
+				Advance();
+				if (!Check(ETokenKind::Identifier))
+				{
+					RaiseUnexpectedToken(FString::Printf(TEXT("expected a base style name after 'style %s :'"), *Style.Name));
+					RecoverToStatementBoundary();
+					return;
+				}
+				Style.BaseName = Current().Text;
+				Advance();
+			}
+
 			if (!Check(ETokenKind::OpenBrace))
 			{
 				RaiseUnexpectedToken(FString::Printf(TEXT("style '%s' needs a '{ ... }' block"), *Style.Name));
@@ -1334,7 +1358,8 @@ namespace DreamUIText
 				return false;
 			}
 			const ETokenKind Next = Peek(1).Kind;
-			return Next == ETokenKind::Dot || Next == ETokenKind::Equals || Next == ETokenKind::Arrow;
+			return Next == ETokenKind::Dot || Next == ETokenKind::Equals || Next == ETokenKind::Arrow
+				|| Next == ETokenKind::EventArrow;
 		}
 
 		void ParseNamedSlot(FDreamUINode& OutNode)
@@ -1583,6 +1608,22 @@ namespace DreamUIText
 					RecoverToStatementBoundary();
 					return false;
 				}
+				return true;
+			}
+			if (Check(ETokenKind::EventArrow))
+			{
+				// `OnClicked -> Confirm`. A bare handler name, no parens: `<-` writes `Func()` because
+				// the file is DESCRIBING a call it will make; `->` names a function something else
+				// will call, and dressing it as a call would promise arguments the author cannot pass.
+				Advance();
+				if (!Check(ETokenKind::Identifier))
+				{
+					RaiseUnexpectedToken(FString::Printf(TEXT("expected a handler name after '%s ->'"), *OutProperty.Name));
+					RecoverToStatementBoundary();
+					return false;
+				}
+				OutProperty.EventHandler = Current().Text;
+				Advance();
 				return true;
 			}
 			if (Check(ETokenKind::Arrow))

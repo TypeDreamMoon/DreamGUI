@@ -135,6 +135,8 @@ private:
 
 	/** Resolve the class's bindings against this instance's widgets. Silent: the compiler reported. */
 	void ResolvePropertyBindings();
+	/** Adds each compiled `Event -> Handler` route as a delegate on its live target. */
+	void BindEventBindings();
 
 	uint8 bInitialized : 1 = false;
 };

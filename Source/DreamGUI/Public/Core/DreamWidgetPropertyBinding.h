@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -84,6 +84,53 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
 			&& BehaviourIndex == Other.BehaviourIndex
 			&& PropertyName == Other.PropertyName
 			&& SetterName == Other.SetterName
+			&& FunctionName == Other.FunctionName;
+	}
+};
+
+/**
+ * "Route this event to this handler", the `->` to the property binding's `<-`.
+ *
+ * The arrows point the way the data flows: `Text <- GetTitle()` pulls a value out of a function,
+ * `OnClicked -> Confirm` pushes an event into one. Everything else is deliberately the same shape
+ * as FDreamWidgetPropertyBinding -- same widget naming, same target enum, same resolve walk -- so
+ * the second kind of binding costs no second mental model.
+ *
+ * EventName is a DYNAMIC multicast delegate property on the target, because dynamic is the kind a
+ * UFUNCTION can be bound to by name and the kind that survives serialization; a plain multicast
+ * delegate has neither property. FunctionName is a UFUNCTION on the user widget -- the compiler has
+ * checked it exists and that its signature matches the delegate's, so the runtime binds without
+ * guessing.
+ */
+USTRUCT()
+struct DREAMGUI_API FDreamWidgetEventBinding
+{
+	GENERATED_BODY()
+
+	/** The widget, by the variable name the compiler gave it. */
+	UPROPERTY()
+	FName WidgetName;
+
+	UPROPERTY()
+	EDreamWidgetBindingTarget Target = EDreamWidgetBindingTarget::Widget;
+
+	UPROPERTY()
+	int32 BehaviourIndex = INDEX_NONE;
+
+	/** The dynamic multicast delegate property being listened to. */
+	UPROPERTY()
+	FName EventName;
+
+	/** The UFUNCTION on the user widget the event calls. */
+	UPROPERTY()
+	FName FunctionName;
+
+	bool operator==(const FDreamWidgetEventBinding& Other) const
+	{
+		return WidgetName == Other.WidgetName
+			&& Target == Other.Target
+			&& BehaviourIndex == Other.BehaviourIndex
+			&& EventName == Other.EventName
 			&& FunctionName == Other.FunctionName;
 	}
 };

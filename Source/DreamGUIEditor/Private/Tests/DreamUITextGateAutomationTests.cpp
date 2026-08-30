@@ -4,6 +4,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "DreamWidgetBehaviourTestTypes.h"
+
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintTestTypes.h"
 #include "Designer/DreamUITextAuthoringGate.h"
@@ -719,6 +721,125 @@ bool FDreamUITextSetSourceFileTest::RunTest(const FString&)
 			DreamUITextAuthoring::SetAuthoredSourcePath(Plain.Blueprint, File.FilePath));
 		TestTrue(TEXT("leaving UDreamTextUserWidget's own default untouched"),
 			GetDefault<UDreamTextUserWidget>()->SourceFile.FilePath.IsEmpty());
+	}
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextEventRouteTest,
+	"DreamGUI.WidgetBlueprint.AnEventRoutesToItsHandlerEndToEnd",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * `OnPoked -> HandlePoked`, the whole way: parsed, recorded, compiled onto the class with the
+ * handler and signature checked, bound on a LIVE instance, and fired. The firing is the assertion
+ * that matters -- every earlier stage can be green while the runtime never actually listened, which
+ * is precisely how the property bindings' own history went.
+ *
+ * The live instance is the designer's preview, because that is an instance built exactly the way
+ * the game builds one, standing already in a world this fixture pays for anyway.
+ */
+bool FDreamUITextEventRouteTest::RunTest(const FString&)
+{
+	using namespace DreamUITextGateTestLocal;
+
+	FScopedDuiFile File(TEXT("EventRoute.dui"));
+	if (!TestTrue(TEXT("the .dui was written"), File.Write({
+		TEXT("Widget Root {"),
+		TEXT("  + CanvasPanel { }"),
+		TEXT("  Widget Button {"),
+		TEXT("    + /Script/DreamGUIEditor.DreamUIEventTestBehaviour {"),
+		TEXT("      OnPoked -> HandlePoked"),
+		TEXT("    }"),
+		TEXT("  }"),
+		TEXT("}"),
+	})))
+	{
+		return false;
+	}
+
+	FScopedGatedDesigner Scoped(TEXT("EventRoute"), UDreamUIEventTestUserWidget::StaticClass(), File.FilePath);
+	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer)) return false;
+	TestEqual(TEXT("the file compiled clean"), Scoped.CompileErrors, 0);
+
+	UDreamUIEventTestUserWidget* Preview = Cast<UDreamUIEventTestUserWidget>(
+		Scoped.Designer->GetPreviewHost()->GetPreviewWidget());
+	if (!TestNotNull(TEXT("the preview is an instance of the test parent"), Preview))
+	{
+		return false;
+	}
+
+	// Find the behaviour on the live hierarchy and fire it.
+	UDreamUIEventTestBehaviour* Poker = nullptr;
+	TArray<UDreamWidget*> Pending;
+	if (UDreamWidget* Content = Preview->GetContentRoot())
+	{
+		Pending.Add(Content);
+	}
+	while (Pending.Num() > 0 && Poker == nullptr)
+	{
+		UDreamWidget* Widget = Pending.Pop();
+		for (UDreamUIBehaviour* Behaviour : Widget->GetAllComponents())
+		{
+			if (UDreamUIEventTestBehaviour* AsPoker = Cast<UDreamUIEventTestBehaviour>(Behaviour))
+			{
+				Poker = AsPoker;
+			}
+		}
+		Pending.Append(Widget->GetChildren());
+	}
+	if (!TestNotNull(TEXT("the behaviour is on the live hierarchy"), Poker))
+	{
+		return false;
+	}
+
+	TestEqual(TEXT("nothing has fired yet"), Preview->PokeCount, 0);
+	Poker->Poke();
+	TestEqual(TEXT("the event reached the handler"), Preview->PokeCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextEventRouteRefusalsTest,
+	"DreamGUI.WidgetBlueprint.AnEventRouteMistakeIsACompileError",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUITextEventRouteRefusalsTest::RunTest(const FString&)
+{
+	using namespace DreamUITextGateTestLocal;
+
+	// A delegate that is not assignable: refused by the builder, where the AST can already tell.
+	{
+		FScopedDuiFile File(TEXT("EventRouteNotAssignable.dui"));
+		if (!File.Write({
+			TEXT("Widget Root {"),
+			TEXT("  + /Script/DreamGUIEditor.DreamUIEventTestBehaviour { NotAssignable -> HandlePoked }"),
+			TEXT("}") }))
+		{
+			return false;
+		}
+		AddExpectedError(TEXT("DUI5010"), EAutomationExpectedErrorFlags::Contains, 0);
+		// The refused route empties the whole build, so the outcome code follows the cause code --
+		// the same pair every builder refusal produces.
+		AddExpectedError(TEXT("DUI6002"), EAutomationExpectedErrorFlags::Contains, 0);
+		FScopedGatedDesigner Scoped(TEXT("EventRouteNA"), UDreamUIEventTestUserWidget::StaticClass(), File.FilePath);
+		TestTrue(TEXT("a non-assignable delegate fails the compile"), Scoped.CompileErrors > 0);
+	}
+
+	// A handler the class does not declare: refused by the compiler, the only stage that can see it.
+	{
+		FScopedDuiFile File(TEXT("EventRouteNoHandler.dui"));
+		if (!File.Write({
+			TEXT("Widget Root {"),
+			TEXT("  + /Script/DreamGUIEditor.DreamUIEventTestBehaviour { OnPoked -> NoSuchHandler }"),
+			TEXT("}") }))
+		{
+			return false;
+		}
+		AddExpectedError(TEXT("no such function"), EAutomationExpectedErrorFlags::Contains, 0);
+		FScopedGatedDesigner Scoped(TEXT("EventRouteNH"), UDreamUIEventTestUserWidget::StaticClass(), File.FilePath);
+		TestTrue(TEXT("a missing handler fails the compile"), Scoped.CompileErrors > 0);
 	}
 	return true;
 }

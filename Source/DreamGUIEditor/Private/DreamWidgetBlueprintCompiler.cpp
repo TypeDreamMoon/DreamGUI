@@ -199,12 +199,35 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		return;
 	}
 
+	// The `class` line, checked against the asset actually being compiled. A WARNING: the line's
+	// job is a stable localization namespace, so a wrong one drifts keys rather than breaking the
+	// build -- and a file deliberately shared by a native parent across subclasses legitimately
+	// matches none of them, which an error would forbid. Both spellings of the same asset pass
+	// ("/Game/UI/WBP_X" and "/Game/UI/WBP_X.WBP_X").
+	if (!Ast.ClassPath.IsEmpty() && !Ast.ClassPath.StartsWith(TEXT("/Script/")))
+	{
+		const FString PackageName = DreamBlueprint->GetOutermost()->GetName();
+		FString Claimed = Ast.ClassPath;
+		int32 DotIndex;
+		if (Claimed.FindLastChar(TEXT('.'), DotIndex))
+		{
+			Claimed.LeftInline(DotIndex);
+		}
+		if (!Claimed.Equals(PackageName, ESearchCase::IgnoreCase))
+		{
+			OutDiagnostics.AddWarning(EDreamUIDiagnosticCode::ClassPathMismatch, Ast.ClassPathLocation,
+				FString::Printf(TEXT("this file says it compiles into '%s', but it is being compiled into '%s' -- localization keys will use the name in the file"),
+					*Ast.ClassPath, *PackageName));
+		}
+	}
+
 	TArray<FDreamWidgetPropertyBinding> Bindings;
+	TArray<FDreamWidgetEventBinding> EventBindings;
 	// Outered to the Blueprint, which is where UDreamWidgetBlueprint::GetOrCreateWidgetTree puts the
 	// hand-authored one. That is not a detail: FinishCompilingClass duplicates THIS object onto the
 	// generated class as the archetype, and SaveSubObjectsFromCleanAndSanitizeClass keeps it alive
 	// through the sanitize pass by name -- both were written against a tree that lives on the asset.
-	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings);
+	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings);
 	if (!IsValid(NewTree) || !IsValid(NewTree->RootWidget))
 	{
 		// Its own code even though the builder has already said why. The builder reports a CAUSE (this
@@ -233,6 +256,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// compile and reports the ones that cannot be honoured, which is how a .dui naming a function the
 	// Blueprint does not declare becomes an error here rather than a null at run time.
 	DreamBlueprint->PropertyBindings = MoveTemp(Bindings);
+	DreamBlueprint->EventBindings = MoveTemp(EventBindings);
 
 	// Last, with the new hierarchy in place: `(was: OldId)` moves what the OLD name still owns onto
 	// the new one. See MigrateRenamedWidgets for why after the install and not before.
@@ -952,6 +976,52 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		Entry.SetterName = Setter->GetFName();
 	}
 	GeneratedClass->SetPropertyBindings(MoveTemp(Resolved));
+
+	// The event half, with the check only this stage can make: the handler is a function on the
+	// class being compiled, and the builder could not see that class. The signature test is the
+	// delegate's own -- a handler that takes what the event sends, no more.
+	TArray<FDreamWidgetEventBinding> ResolvedEvents;
+	for (const FDreamWidgetEventBinding& Authored : DreamBlueprint->EventBindings)
+	{
+		const UDreamWidget* TargetWidget = Archetype != nullptr
+			? Archetype->FindWidgetByVariableName(Authored.WidgetName) : nullptr;
+		if (TargetWidget == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("EventWidgetNotFound", "The event route on \"{0}\" expects a widget named \"{1}\", and this hierarchy has none."),
+				FText::FromName(Authored.EventName), FText::FromName(Authored.WidgetName)).ToString());
+			continue;
+		}
+		const UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Authored.Target, Authored.BehaviourIndex);
+		const FMulticastDelegateProperty* Event = Target != nullptr
+			? CastField<FMulticastDelegateProperty>(Target->GetClass()->FindPropertyByName(Authored.EventName)) : nullptr;
+		if (Event == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("EventNotOnTarget", "\"{0}\" has no event named \"{1}\" to route."),
+				FText::FromName(Authored.WidgetName), FText::FromName(Authored.EventName)).ToString());
+			continue;
+		}
+		const UFunction* Handler = InClass->FindFunctionByName(Authored.FunctionName);
+		if (Handler == nullptr)
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("EventHandlerNotFound", "\"{0}.{1}\" routes to \"{2}\", and this Blueprint has no such function."),
+				FText::FromName(Authored.WidgetName), FText::FromName(Authored.EventName),
+				FText::FromName(Authored.FunctionName)).ToString());
+			continue;
+		}
+		if (Event->SignatureFunction != nullptr && !Handler->IsSignatureCompatibleWith(Event->SignatureFunction))
+		{
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("EventHandlerWrongShape", "\"{0}\" cannot handle \"{1}.{2}\": its parameters do not match the event's."),
+				FText::FromName(Authored.FunctionName), FText::FromName(Authored.WidgetName),
+				FText::FromName(Authored.EventName)).ToString());
+			continue;
+		}
+		ResolvedEvents.Add(Authored);
+	}
+	GeneratedClass->SetEventBindings(MoveTemp(ResolvedEvents));
 }
 
 void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClass)

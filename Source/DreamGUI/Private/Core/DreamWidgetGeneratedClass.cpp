@@ -184,10 +184,32 @@ void UDreamWidgetGeneratedClass::CollectPropertyBindings(const UClass* InClass, 
 	}
 }
 
+void UDreamWidgetGeneratedClass::CollectEventBindings(const UClass* InClass, TArray<FDreamWidgetEventBinding>& OutBindings)
+{
+	OutBindings.Reset();
+	TArray<const UDreamWidgetGeneratedClass*> Chain;
+	for (const UClass* Current = InClass; Current != nullptr; Current = Current->GetSuperClass())
+	{
+		if (const UDreamWidgetGeneratedClass* Generated = Cast<UDreamWidgetGeneratedClass>(Current))
+		{
+			Chain.Add(Generated);
+		}
+	}
+	for (int32 Index = Chain.Num() - 1; Index >= 0; --Index)
+	{
+		OutBindings.Append(Chain[Index]->EventBindings);
+	}
+}
+
 #if WITH_EDITOR
 void UDreamWidgetGeneratedClass::SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings)
 {
 	PropertyBindings = MoveTemp(InBindings);
+}
+
+void UDreamWidgetGeneratedClass::SetEventBindings(TArray<FDreamWidgetEventBinding> InBindings)
+{
+	EventBindings = MoveTemp(InBindings);
 }
 #endif
 

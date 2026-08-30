@@ -168,6 +168,7 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 
 	// After the tree exists: the bindings name widgets in it.
 	ResolvePropertyBindings();
+	BindEventBindings();
 	if (ResolvedBindings.Num() > 0)
 	{
 		// Once now, so the first frame shows bound values rather than the authored ones.
@@ -176,6 +177,40 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 		{
 			Manager->AddPropertyBindingUser(this);
 		}
+	}
+}
+
+void UDreamUserWidget::BindEventBindings()
+{
+	TArray<FDreamWidgetEventBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectEventBindings(GetClass(), Bindings);
+	for (const FDreamWidgetEventBinding& Binding : Bindings)
+	{
+		FObjectPropertyBase* WidgetProperty = FindFProperty<FObjectPropertyBase>(GetClass(), Binding.WidgetName);
+		if (WidgetProperty == nullptr)
+		{
+			continue;
+		}
+		UDreamWidget* TargetWidget = Cast<UDreamWidget>(WidgetProperty->GetObjectPropertyValue_InContainer(this));
+		UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Binding.Target, Binding.BehaviourIndex);
+		if (!IsValid(Target) || FindFunction(Binding.FunctionName) == nullptr)
+		{
+			// The compiler checked all of this; reaching here means the class moved underneath us,
+			// which is the property bindings' rule too: skip, never guess.
+			continue;
+		}
+		FMulticastDelegateProperty* Event = CastField<FMulticastDelegateProperty>(
+			Target->GetClass()->FindPropertyByName(Binding.EventName));
+		if (Event == nullptr)
+		{
+			continue;
+		}
+		// AddDelegate, not Set: an event can have other listeners, and a route from the file is one
+		// more of them, not a replacement. The delegate holds this widget weakly, so an instance
+		// dying does not need an unbind pass -- broadcast skips dead entries.
+		FScriptDelegate Route;
+		Route.BindUFunction(this, Binding.FunctionName);
+		Event->AddDelegate(MoveTemp(Route), Target);
 	}
 }
 

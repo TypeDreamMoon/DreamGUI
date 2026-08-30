@@ -311,6 +311,8 @@ namespace DreamUITextBuilderLocal
 		UDreamWidgetTree* Tree = nullptr;
 		FDreamUIDiagnosticBag* Diagnostics = nullptr;
 		TArray<FDreamWidgetPropertyBinding>* Bindings = nullptr;
+		/** Null when the caller has no use for events -- a reference tree, most tests. */
+		TArray<FDreamWidgetEventBinding>* EventBindings = nullptr;
 		/** ClassPath, or the source name when the file declares no class. Fixed for the whole build. */
 		FString LocalizationNamespace;
 	};
@@ -833,6 +835,52 @@ namespace DreamUITextBuilderLocal
 		return true;
 	}
 
+	/** One `Event -> Handler` line: checked here for the half the AST can answer, recorded for the
+	 * compiler to check the other half (the handler lives on a class this build cannot see). */
+	bool AddEventBinding(const FResolvedDestination& InDestination, UDreamWidget* InWidget,
+		const FDreamUIProperty& InProperty, FBuildContext& InContext)
+	{
+		if (!InDestination.bBindable)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::BindingTargetNotSupported, InProperty.Location,
+				FString::Printf(TEXT("'%s' lives on %s, which no binding can name -- EDreamWidgetBindingTarget reaches the widget, its visual and its behaviours only"),
+					*InProperty.Name, *InDestination.Owner->GetClass()->GetName()));
+			return false;
+		}
+		if (InDestination.bNested)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
+				FString::Printf(TEXT("'%s' is a path into a struct, and an event is always a whole property"), *InProperty.Name));
+			return false;
+		}
+		// DYNAMIC multicast, specifically: it is the kind a UFUNCTION binds to by name and the kind
+		// UHT gives BlueprintAssignable events, and the two facts are why every OnSomething an author
+		// would reach for is one. A plain FMulticastDelegateProperty cannot be bound from a name.
+		if (CastField<FMulticastDelegateProperty>(InDestination.LeafProperty) == nullptr
+			|| !InDestination.LeafProperty->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
+				FString::Printf(TEXT("'%s' on %s is not an assignable event (a BlueprintAssignable dynamic multicast delegate)"),
+					*InProperty.Name, *InDestination.Owner->GetClass()->GetName()));
+			return false;
+		}
+		if (InContext.EventBindings == nullptr)
+		{
+			// A caller that asked for no events still gets the CHECKS above; only the recording is
+			// skipped. The reference tree is such a caller, and its file may legally carry `->`.
+			return true;
+		}
+
+		FDreamWidgetEventBinding Binding;
+		Binding.WidgetName = UDreamWidgetTree::MakeWidgetVariableName(InWidget);
+		Binding.Target = InDestination.BindingTarget;
+		Binding.BehaviourIndex = InDestination.BehaviourIndex;
+		Binding.EventName = InDestination.LeafProperty->GetFName();
+		Binding.FunctionName = FName(*InProperty.EventHandler.TrimStartAndEnd());
+		InContext.EventBindings->Add(Binding);
+		return true;
+	}
+
 	/** One `Name = Value` or `Name <- Func()` against a set of candidate destinations. */
 	void ApplyProperty(const FDreamUINode& InNode, const FDreamUIProperty& InProperty, UDreamWidget* InWidget,
 		TConstArrayView<FDestinationCandidate> InCandidates, const FString& InDestinationDescription,
@@ -841,6 +889,11 @@ namespace DreamUITextBuilderLocal
 		FResolvedDestination Destination;
 		if (!ResolveDestination(InProperty, InCandidates, InDestinationDescription, InContext, Destination, bInSuggestVisualTag))
 		{
+			return;
+		}
+		if (InProperty.IsEventBinding())
+		{
+			AddEventBinding(Destination, InWidget, InProperty, InContext);
 			return;
 		}
 		if (InProperty.IsBinding())
@@ -1079,9 +1132,44 @@ namespace DreamUITextBuilderLocal
 		{
 			if (const FDreamUIStyle* Style = InContext.Ast->FindStyle(InNode.StyleName))
 			{
-				for (const FDreamUIProperty& Property : Style->Properties)
+				// Base first, then each derivation on top -- assignment order IS override order, the
+				// same rule that lets the node's own lines override the style's. The chain is walked
+				// from this style upward and applied in reverse; a base that comes back around is a
+				// cycle, refused at the node so every node wearing the broken style says so.
+				TArray<const FDreamUIStyle*> Chain;
+				TSet<const FDreamUIStyle*> Visited;
+				bool bCycle = false;
+				for (const FDreamUIStyle* Link = Style; Link != nullptr;)
 				{
-					ApplyProperty(InNode, Property, InWidget, Candidates, Description, InContext, true);
+					if (Visited.Contains(Link))
+					{
+						InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::StyleCycle, InNode.Location,
+							FString::Printf(TEXT("style '%s' inherits itself through its bases, so nothing was applied"), *Style->Name));
+						bCycle = true;
+						break;
+					}
+					Visited.Add(Link);
+					Chain.Add(Link);
+					if (Link->BaseName.IsEmpty())
+					{
+						break;
+					}
+					const FDreamUIStyle* Base = InContext.Ast->FindStyle(Link->BaseName);
+					if (Base == nullptr)
+					{
+						InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
+							FString::Printf(TEXT("style '%s' inherits '%s', which this file does not declare"),
+								*Link->Name, *Link->BaseName));
+						break;
+					}
+					Link = Base;
+				}
+				for (int32 Index = bCycle ? -1 : Chain.Num() - 1; Index >= 0; --Index)
+				{
+					for (const FDreamUIProperty& Property : Chain[Index]->Properties)
+					{
+						ApplyProperty(InNode, Property, InWidget, Candidates, Description, InContext, true);
+					}
 				}
 			}
 			else
@@ -1250,7 +1338,8 @@ namespace DreamUITextBuilderLocal
 }
 
 UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* InOuter,
-	FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings)
+	FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings,
+	TArray<FDreamWidgetEventBinding>* OutEventBindings)
 {
 	using namespace DreamUITextBuilderLocal;
 
@@ -1270,6 +1359,7 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	Context.Ast = &InAst;
 	Context.Diagnostics = &OutDiagnostics;
 	Context.Bindings = &OutBindings;
+	Context.EventBindings = OutEventBindings;
 	// The namespace a translator sees. ClassPath makes it stable across a rename of the .dui file,
 	// which the source name would not; the source name is the fallback for a file that has not been
 	// given a class yet, which is every file in an editor preview before it is first compiled.

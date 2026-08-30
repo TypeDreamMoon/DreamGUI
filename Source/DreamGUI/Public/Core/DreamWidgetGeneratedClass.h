@@ -49,6 +49,7 @@ public:
 
 	/** The property bindings the compiler resolved for this class. Not inherited: see the getter below. */
 	const TArray<FDreamWidgetPropertyBinding>& GetPropertyBindings() const { return PropertyBindings; }
+	const TArray<FDreamWidgetEventBinding>& GetEventBindings() const { return EventBindings; }
 
 	/**
 	 * Every binding that applies to an instance of InClass, its ancestors' included.
@@ -57,12 +58,15 @@ public:
 	 * to honour its parent's, and one that adds some does not replace them.
 	 */
 	static void CollectPropertyBindings(const UClass* InClass, TArray<FDreamWidgetPropertyBinding>& OutBindings);
+	/** Base first, like the property bindings: a subclass listening to the same event binds after. */
+	static void CollectEventBindings(const UClass* InClass, TArray<FDreamWidgetEventBinding>& OutBindings);
 
 #if WITH_EDITOR
 	/** Compiler-only: hand the class the tree it will instance. */
 	void SetWidgetTreeArchetype(UDreamWidgetTree* InWidgetTree);
 	/** Compiler-only: hand the class the bindings it resolved. */
 	void SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings);
+	void SetEventBindings(TArray<FDreamWidgetEventBinding> InBindings);
 #endif
 
 	/**
@@ -100,4 +104,7 @@ private:
 	/** Persistent and DuplicateTransient for the same reasons as WidgetTree. */
 	UPROPERTY(DuplicateTransient)
 	TArray<FDreamWidgetPropertyBinding> PropertyBindings;
+
+	UPROPERTY()
+	TArray<FDreamWidgetEventBinding> EventBindings;
 };

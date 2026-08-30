@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -43,7 +43,8 @@ struct DREAMGUI_API FDreamUITextBuilder
 	 * does not have to keep its own accumulator.
 	 */
 	static UDreamWidgetTree* Build(const FDreamUIAst& InAst, UObject* InOuter,
-		FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings);
+		FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings,
+		TArray<FDreamWidgetEventBinding>* OutEventBindings = nullptr);
 
 	/**
 	 * The UDreamVisual class a built-in tag creates, and whether the tag is one at all.

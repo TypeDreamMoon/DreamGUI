@@ -87,7 +87,11 @@ struct DREAMGUI_API FDreamUIProperty
 	 */
 	FString BindingFunction;
 
+	/** Set when this is `->`: the UFUNCTION on the user widget the event calls. */
+	FString EventHandler;
+
 	bool IsBinding() const { return !BindingFunction.IsEmpty(); }
+	bool IsEventBinding() const { return !EventHandler.IsEmpty(); }
 
 	FDreamUISourceLocation Location;
 };
@@ -159,6 +163,8 @@ struct DREAMGUI_API FDreamUINode
 struct DREAMGUI_API FDreamUIStyle
 {
 	FString Name;
+	/** `style Danger : Button` -- Button's properties apply first, then these override. Empty = none. */
+	FString BaseName;
 	TArray<FDreamUIProperty> Properties;
 	FDreamUISourceLocation Location;
 };

@@ -104,6 +104,10 @@ public:
 	UPROPERTY()
 	TArray<FDreamWidgetPropertyBinding> PropertyBindings;
 
+	/** `Event -> Handler` lines, authored form; CompileEventBindings resolves them onto the class. */
+	UPROPERTY()
+	TArray<FDreamWidgetEventBinding> EventBindings;
+
 	/** Create the tree (and its root) if this asset has none yet, so a fresh asset is editable. */
 	UDreamWidgetTree* GetOrCreateWidgetTree();
 

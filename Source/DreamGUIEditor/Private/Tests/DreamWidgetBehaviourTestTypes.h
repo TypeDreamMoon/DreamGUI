@@ -3,8 +3,11 @@
 #pragma once
 
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamTextUserWidget.h"
 #include "Engine/Texture2D.h"
 #include "DreamWidgetBehaviourTestTypes.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDreamUIEventTestPoked);
 
 class UDreamWidget;
 
@@ -50,6 +53,34 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float Plain = 0.0f;
+};
+
+/** An assignable event and a way to fire it, for `OnPoked -> Handler` routes to land on. */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class UDreamUIEventTestBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(BlueprintAssignable, Category = "Test")
+	FDreamUIEventTestPoked OnPoked;
+
+	/** Not assignable, deliberately: the specimen `->` must refuse. */
+	UPROPERTY()
+	FDreamUIEventTestPoked NotAssignable;
+
+	void Poke() { OnPoked.Broadcast(); }
+};
+
+/** A user widget parent with a handler, so a .dui can route an event without authoring a graph. */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class UDreamUIEventTestUserWidget : public UDreamTextUserWidget
+{
+	GENERATED_BODY()
+public:
+	UFUNCTION()
+	void HandlePoked() { ++PokeCount; }
+
+	int32 PokeCount = 0;
 };
 
 /** Stand-in for a behaviour a designer drops on a widget, so behaviour-typed binds have a target. */
