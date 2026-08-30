@@ -77,6 +77,17 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
 	UPROPERTY()
 	FName FunctionName;
 
+	/**
+	 * Set for the forward half of a `<->`: the FieldNotify VARIABLE this binding really reads
+	 * (FunctionName is only its generated getter). The runtime subscribes to this field's
+	 * broadcasts instead of the getter's nonexistent one, and both the compiler and the builder
+	 * prefer the property's silent `...WithoutNotify` setter when it exists -- pushing a value
+	 * INTO a control must not fire the control's changed event back at the variable, and killing
+	 * the echo at the setter beats trusting every control to early-out on an equal value.
+	 */
+	UPROPERTY()
+	FName NotifyField;
+
 	bool operator==(const FDreamWidgetPropertyBinding& Other) const
 	{
 		return WidgetName == Other.WidgetName
@@ -84,7 +95,8 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
 			&& BehaviourIndex == Other.BehaviourIndex
 			&& PropertyName == Other.PropertyName
 			&& SetterName == Other.SetterName
-			&& FunctionName == Other.FunctionName;
+			&& FunctionName == Other.FunctionName
+			&& NotifyField == Other.NotifyField;
 	}
 };
 

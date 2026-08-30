@@ -11,7 +11,9 @@
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Text/DreamUIExpressionThunks.h"
 
+#include "EdGraphSchema_K2.h"
 #include "HAL/FileManager.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
@@ -196,6 +198,107 @@ bool FDreamUIExpressionThunkRefusalTest::RunTest(const FString& Parameters)
 	// survives to confuse the next one.
 	TestTrue(TEXT("The compile reports errors"), Results.NumErrors > 0);
 	TestEqual(TEXT("No generated graph is left behind"), CountGeneratedGraphs(Fixture.Blueprint), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITwoWayBindingTest,
+	"DreamGUI.Text.Expression.ATwoWayBindingDesugarsIntoBothHalves",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUITwoWayBindingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	FScopedDuiFile File(TEXT("TwoWayFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_TwoWayFixture"),
+		TEXT("Widget Root {"),
+		TEXT("    Widget Knob {"),
+		TEXT("        + UIToggle {"),
+		TEXT("        }"),
+		TEXT("        bIsOn <-> bMuted"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_TwoWayFixture"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+	// The variable the two sides mirror. Bool, so the 5.x "Blueprint float is a double" width trap
+	// stays out of this test's way.
+	FEdGraphPinType BoolType;
+	BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+	if (!TestTrue(TEXT("Variable added"), FBlueprintEditorUtils::AddMemberVariable(Fixture.Blueprint, TEXT("bMuted"), BoolType)))
+	{
+		return false;
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("The two-way compile has no errors"), Results.NumErrors, 0);
+
+	// Both generated halves, with the shapes the two routes demand.
+	UFunction* Getter = Fixture.Blueprint->GeneratedClass->FindFunctionByName(TEXT("__DreamTwoWayGet_Knob_bIsOn"));
+	UFunction* Setter = Fixture.Blueprint->GeneratedClass->FindFunctionByName(TEXT("__DreamTwoWaySet_Knob_bIsOn"));
+	if (!TestTrue(TEXT("The getter thunk exists"), Getter != nullptr)
+		|| !TestTrue(TEXT("The setter thunk exists"), Setter != nullptr))
+	{
+		return false;
+	}
+	TestEqual(TEXT("Getter: return only"), static_cast<int32>(Getter->NumParms), 1);
+	TestTrue(TEXT("Getter returns bool"), CastField<FBoolProperty>(Getter->GetReturnProperty()) != nullptr);
+	TestTrue(TEXT("Getter is pure"), Getter->HasAnyFunctionFlags(FUNC_BlueprintPure));
+	if (Setter->NumParms != 1)
+	{
+		FString ParameterDump;
+		for (TFieldIterator<FProperty> It(Setter); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			ParameterDump += FString::Printf(TEXT("[%s:%s:%s] "), *It->GetName(), *It->GetClass()->GetName(),
+				It->HasAnyPropertyFlags(CPF_ReturnParm) ? TEXT("ret") : (It->HasAnyPropertyFlags(CPF_OutParm) ? TEXT("out") : TEXT("in")));
+		}
+		AddInfo(FString::Printf(TEXT("setter params: %s"), *ParameterDump));
+	}
+	TestEqual(TEXT("Setter: one input, no return"), static_cast<int32>(Setter->NumParms), 1);
+	TestTrue(TEXT("Setter is not pure -- it has a side effect"), !Setter->HasAnyFunctionFlags(FUNC_BlueprintPure));
+
+	// The forward half: a property binding whose function is the getter, whose subscription keys on
+	// the VARIABLE, and whose push goes through the silent setter -- the echo dies there.
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectPropertyBindings(Fixture.Blueprint->GeneratedClass, Bindings);
+	const FDreamWidgetPropertyBinding* Forward = Bindings.FindByPredicate([](const FDreamWidgetPropertyBinding& InBinding)
+	{
+		return InBinding.FunctionName == TEXT("__DreamTwoWayGet_Knob_bIsOn");
+	});
+	if (!TestTrue(TEXT("The forward binding resolved"), Forward != nullptr))
+	{
+		return false;
+	}
+	TestEqual(TEXT("...subscribing to the variable"), Forward->NotifyField, FName(TEXT("bMuted")));
+	TestEqual(TEXT("...pushing through the silent setter"), Forward->SetterName, FName(TEXT("SetIsOnWithoutNotify")));
+
+	// The reverse half: a synthesized event route from the control's one conventional changed
+	// event into the setter thunk.
+	TArray<FDreamWidgetEventBinding> Events;
+	UDreamWidgetGeneratedClass::CollectEventBindings(Fixture.Blueprint->GeneratedClass, Events);
+	const bool bReverseRouted = Events.ContainsByPredicate([](const FDreamWidgetEventBinding& InBinding)
+	{
+		return InBinding.EventName == TEXT("OnValueChangedBP")
+			&& InBinding.FunctionName == TEXT("__DreamTwoWaySet_Knob_bIsOn");
+	});
+	TestTrue(TEXT("The reverse route resolved"), bReverseRouted);
+
+	// Regeneration: the second compile leaves exactly one pair, same names.
+	FCompilerResultsLog SecondResults;
+	Compile(Fixture.Blueprint, SecondResults);
+	TestEqual(TEXT("The recompile has no errors"), SecondResults.NumErrors, 0);
+	TestTrue(TEXT("The pair survives by its deterministic names"),
+		Fixture.Blueprint->GeneratedClass->FindFunctionByName(TEXT("__DreamTwoWayGet_Knob_bIsOn")) != nullptr
+		&& Fixture.Blueprint->GeneratedClass->FindFunctionByName(TEXT("__DreamTwoWaySet_Knob_bIsOn")) != nullptr);
 	return true;
 }
 

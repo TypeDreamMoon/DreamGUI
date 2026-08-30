@@ -835,6 +835,17 @@ namespace DreamUITextBuilderLocal
 		Binding.BehaviourIndex = InDestination.BehaviourIndex;
 		Binding.PropertyName = InDestination.LeafProperty->GetFName();
 		Binding.SetterName = Setter->GetFName();
+		if (!InProperty.TwoWayProperty.IsEmpty())
+		{
+			// The forward half of a `<->`: remember the variable for the runtime's subscription,
+			// and push through the silent setter when the control offers one -- see NotifyField.
+			Binding.NotifyField = FName(*InProperty.TwoWayProperty);
+			const FName SilentSetterName(*(Setter->GetFName().ToString() + TEXT("WithoutNotify")));
+			if (InDestination.Owner->GetClass()->FindFunctionByName(SilentSetterName) != nullptr)
+			{
+				Binding.SetterName = SilentSetterName;
+			}
+		}
 		// The parser already hands over a bare identifier -- `()` is grammar, not part of the name --
 		// so the trim is only for the other caller this struct has: an editor or a test building an
 		// FDreamUIProperty by hand, which naturally writes what the author would have typed.
@@ -1142,6 +1153,29 @@ namespace DreamUITextBuilderLocal
 			VisualCandidate.Object = Visual;
 			VisualCandidate.Target = EDreamWidgetBindingTarget::Visual;
 			Candidates.Add(VisualCandidate);
+		}
+		// The behaviours, after the widget and its visual so those keep shadowing on a name clash.
+		// EDreamWidgetBindingTarget::Behaviour and its resolver existed all along -- the runtime and
+		// the compiler both walk it -- but node-level lines never offered behaviours as candidates,
+		// so `bIsOn <- F()` on a toggle-carrying node died in DUI4001 while the machinery to serve
+		// it sat finished one layer down. The discriminator matches the component write path's, so
+		// a localized string keys the same whichever spelling put it there.
+		{
+			const TArray<UDreamUIBehaviour*>& Behaviours = InWidget->GetAllComponents();
+			for (int32 BehaviourIndex = 0; BehaviourIndex < Behaviours.Num(); ++BehaviourIndex)
+			{
+				if (!IsValid(Behaviours[BehaviourIndex]))
+				{
+					continue;
+				}
+				FDestinationCandidate BehaviourCandidate;
+				BehaviourCandidate.Object = Behaviours[BehaviourIndex];
+				BehaviourCandidate.Target = EDreamWidgetBindingTarget::Behaviour;
+				BehaviourCandidate.BehaviourIndex = BehaviourIndex;
+				BehaviourCandidate.LocalizationDiscriminator = FString::Printf(TEXT("%s_%d"),
+					*Behaviours[BehaviourIndex]->GetClass()->GetName(), BehaviourIndex);
+				Candidates.Add(BehaviourCandidate);
+			}
 		}
 		const FString Description = InWidget->GetVisual() != nullptr
 			? FString::Printf(TEXT("'%s' or its %s"), *InNode.Id, *InWidget->GetVisual()->GetClass()->GetName())

@@ -67,6 +67,8 @@ namespace DreamUIText
 		EventArrow,
 		/** `<-`, the binding arrow. */
 		Arrow,
+		/** `<->`, the two-way binding arrow: property and variable mirror each other. */
+		TwoWayArrow,
 		Plus,
 		At,
 		/**
@@ -311,8 +313,13 @@ namespace DreamUIText
 				{
 					// '<' immediately followed by '-' is the binding arrow, which means a less-than
 					// against a negative number needs the space: `a < -1`. Written `a <-1` it reads
-					// as an arrow to this lexer exactly as it does to a squinting human.
-					if (PeekChar(1) == TEXT('-'))
+					// as an arrow to this lexer exactly as it does to a squinting human. Three
+					// characters make the two-way arrow.
+					if (PeekChar(1) == TEXT('-') && PeekChar(2) == TEXT('>'))
+					{
+						EmitPunctuation(OutTokens, ETokenKind::TwoWayArrow, 3);
+					}
+					else if (PeekChar(1) == TEXT('-'))
 					{
 						EmitPunctuation(OutTokens, ETokenKind::Arrow, 2);
 					}
@@ -1441,7 +1448,7 @@ namespace DreamUIText
 			}
 			const ETokenKind Next = Peek(1).Kind;
 			return Next == ETokenKind::Dot || Next == ETokenKind::Equals || Next == ETokenKind::Arrow
-				|| Next == ETokenKind::EventArrow;
+				|| Next == ETokenKind::EventArrow || Next == ETokenKind::TwoWayArrow;
 		}
 
 		void ParseNamedSlot(FDreamUINode& OutNode)
@@ -1705,6 +1712,22 @@ namespace DreamUIText
 					return false;
 				}
 				OutProperty.EventHandler = Current().Text;
+				Advance();
+				return true;
+			}
+			if (Check(ETokenKind::TwoWayArrow))
+			{
+				// `Value <-> Volume`. A bare VARIABLE name: the two sides mirror each other, and a
+				// call or an expression has no left-hand side to write back into.
+				Advance();
+				if (!Check(ETokenKind::Identifier))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+						FString::Printf(TEXT("'%s <->' expects the name of a variable on this class"), *OutProperty.Name));
+					RecoverToStatementBoundary();
+					return false;
+				}
+				OutProperty.TwoWayProperty = Current().Text;
 				Advance();
 				return true;
 			}

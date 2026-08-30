@@ -12,6 +12,7 @@
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
 #include "K2Node_VariableGet.h"
+#include "K2Node_VariableSet.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
@@ -291,6 +292,14 @@ namespace DreamUIExpressionThunksLocal
 		Result.Pin = Node->FindPin(FName(*InExpression.Symbol));
 		if (Result.Pin == nullptr)
 		{
+			// A variable added since the last compile: this pass runs BEFORE the skeleton regen, so
+			// the node's own allocation resolved nothing. The type is known from the Blueprint's
+			// variable description, and a pin with the right name and type is all the compiler
+			// matches on.
+			Result.Pin = Node->CreatePin(EGPD_Output, VariableType, FName(*InExpression.Symbol));
+		}
+		if (Result.Pin == nullptr)
+		{
 			InContext.Fail(InExpression.Location, FString::Printf(TEXT("internal: getter for '%s' grew no pin"), *InExpression.Symbol));
 			return FEmitted();
 		}
@@ -485,7 +494,7 @@ namespace DreamUIExpressionThunksLocal
 		}
 	}
 
-	FString MakeThunkName(const FString& InNodeId, const FString& InPropertyName)
+	FString MakeThunkName(const TCHAR* InPrefix, const FString& InNodeId, const FString& InPropertyName)
 	{
 		FString Sanitized = InNodeId + TEXT("_") + InPropertyName;
 		for (TCHAR& Char : Sanitized)
@@ -495,49 +504,29 @@ namespace DreamUIExpressionThunksLocal
 				Char = TEXT('_');
 			}
 		}
-		return DreamUIExpressionThunks::GeneratedGraphPrefix + Sanitized;
+		return InPrefix + Sanitized;
 	}
 
-	void LowerProperty(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty, FDreamUIDiagnosticBag& InDiagnostics)
+	/** The empty function graph plus its hand-made entry -- see LowerProperty for why by hand. */
+	UEdGraph* BeginThunkGraph(UDreamWidgetBlueprint* InBlueprint, const FString& InName, UK2Node_FunctionEntry*& OutEntry)
 	{
-		const FString ThunkName = MakeThunkName(InNodeId, InProperty.Name);
-
-		// Assembled by hand rather than through AddFunctionGraph: its terminator pass looks the graph
-		// name up on the SKELETON and inherits the signature it finds -- which, on every compile
-		// after the first, is this very thunk, so the graph came pre-fitted with a second result
-		// node and the function grew a phantom parameter. It also marks the Blueprint structurally
-		// modified, which is no thing to do from inside the compile that is already running.
-		UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, FName(*ThunkName), UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+		UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, FName(*InName), UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
 		InBlueprint->FunctionGraphs.Add(Graph);
 
 		FGraphNodeCreator<UK2Node_FunctionEntry> EntryCreator(*Graph);
-		UK2Node_FunctionEntry* Entry = EntryCreator.CreateNode(false);
-		Entry->FunctionReference.SetSelfMember(Graph->GetFName());
+		OutEntry = EntryCreator.CreateNode(false);
+		OutEntry->FunctionReference.SetSelfMember(Graph->GetFName());
 		EntryCreator.Finalize();
+		return Graph;
+	}
 
-		FThunkContext Context;
-		Context.Blueprint = InBlueprint;
-		Context.Diagnostics = &InDiagnostics;
-		Context.Graph = Graph;
-		Context.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
-
-		const FEmitted Root = EmitExpression(InProperty.BindingExpression.GetValue(), Context);
-		if (Context.bFailed)
-		{
-			// The expression STAYS on the property: with it set and no function name, the builder's
-			// guard skips the binding silently -- the refusal already errored here, and clearing it
-			// would send the property down the literal path to complain a second time about an
-			// empty value that was never the author's mistake.
-			FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
-			return;
-		}
-
-		// The result node, typed by what the expression turned out to be. The compiler's existing
-		// signature check then compares this against the destination property and reports any
-		// mismatch with the message it always used.
-		FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*Graph);
+	/** The result node with a reuse-or-create return pin, the exec chain's close, and the flags. */
+	bool FinishThunkGraph(UEdGraph* InGraph, UK2Node_FunctionEntry* InEntry, const FEmitted& InRoot,
+		FThunkContext& InContext, const FDreamUISourceLocation& InLocation)
+	{
+		FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*InGraph);
 		UK2Node_FunctionResult* Result = ResultCreator.CreateNode(false);
-		Result->FunctionReference.SetSelfMember(Graph->GetFName());
+		Result->FunctionReference.SetSelfMember(InGraph->GetFName());
 		ResultCreator.Finalize();
 		// On every compile AFTER the first, Finalize resolves the self-reference against the
 		// SKELETON -- which holds last compile's thunk -- and the node arrives with a ReturnValue
@@ -547,43 +536,182 @@ namespace DreamUIExpressionThunksLocal
 		UEdGraphPin* ReturnPin = Result->FindPin(UEdGraphSchema_K2::PN_ReturnValue, EGPD_Input);
 		if (ReturnPin != nullptr)
 		{
-			ReturnPin->PinType = Root.PinType;
+			ReturnPin->PinType = InRoot.PinType;
 		}
 		else
 		{
-			ReturnPin = Result->CreateUserDefinedPin(UEdGraphSchema_K2::PN_ReturnValue, Root.PinType, EGPD_Input);
+			ReturnPin = Result->CreateUserDefinedPin(UEdGraphSchema_K2::PN_ReturnValue, InRoot.PinType, EGPD_Input);
 		}
-		if (ReturnPin == nullptr
-			|| !ConnectOrDefault(ReturnPin, Root, Context, InProperty.Location))
+		if (ReturnPin == nullptr || !ConnectOrDefault(ReturnPin, InRoot, InContext, InLocation))
 		{
+			return false;
+		}
+		UEdGraphPin* ResultExecutePin = Result->FindPin(UEdGraphSchema_K2::PN_Execute);
+		if (ResultExecutePin != nullptr && InContext.LastExecPin != nullptr)
+		{
+			GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(InContext.LastExecPin, ResultExecutePin);
+		}
+		InEntry->AddExtraFlags(FUNC_Private | (InContext.bAnyImpureCall ? 0 : FUNC_BlueprintPure));
+		return true;
+	}
+
+	void LowerProperty(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty, FDreamUIDiagnosticBag& InDiagnostics)
+	{
+		const FString ThunkName = MakeThunkName(DreamUIExpressionThunks::GeneratedGraphPrefix, InNodeId, InProperty.Name);
+
+		// Assembled by hand rather than through AddFunctionGraph: its terminator pass looks the graph
+		// name up on the SKELETON and inherits the signature it finds -- which, on every compile
+		// after the first, is this very thunk, so the graph came pre-fitted with a second result
+		// node and the function grew a phantom parameter. It also marks the Blueprint structurally
+		// modified, which is no thing to do from inside the compile that is already running.
+		UK2Node_FunctionEntry* Entry = nullptr;
+		UEdGraph* Graph = BeginThunkGraph(InBlueprint, ThunkName, Entry);
+
+		FThunkContext Context;
+		Context.Blueprint = InBlueprint;
+		Context.Diagnostics = &InDiagnostics;
+		Context.Graph = Graph;
+		Context.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
+
+		const FEmitted Root = EmitExpression(InProperty.BindingExpression.GetValue(), Context);
+		if (Context.bFailed || !FinishThunkGraph(Graph, Entry, Root, Context, InProperty.Location))
+		{
+			// The expression STAYS on the property: with it set and no function name, the builder's
+			// guard skips the binding silently -- the refusal already errored here, and clearing it
+			// would send the property down the literal path to complain a second time about an
+			// empty value that was never the author's mistake.
 			FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
 			return;
 		}
 
-		// Close the exec chain, and declare purity honestly: a thunk that called something impure
-		// is not pure, and lying about it is how side effects run at unpredictable times.
-		UEdGraphPin* ResultExecutePin = Result->FindPin(UEdGraphSchema_K2::PN_Execute);
-		if (ResultExecutePin != nullptr && Context.LastExecPin != nullptr)
-		{
-			GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(Context.LastExecPin, ResultExecutePin);
-		}
-		Entry->AddExtraFlags(FUNC_Private | (Context.bAnyImpureCall ? 0 : FUNC_BlueprintPure));
-
 		InProperty.BindingFunction = ThunkName;
 		InProperty.BindingExpression.Reset();
+	}
+
+	void LowerTwoWay(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty,
+		TArray<FDreamUIProperty>& OutSynthesized, FDreamUIDiagnosticBag& InDiagnostics)
+	{
+		FEdGraphPinType VariableType;
+		if (!FindVariablePinType(InBlueprint, InProperty.TwoWayProperty, VariableType))
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+				FString::Printf(TEXT("'<-> %s' names no variable on this class (as of the previous compile)"), *InProperty.TwoWayProperty));
+			return;
+		}
+
+		// The forward half: a generated getter reading the variable, standing exactly where any
+		// bound function stands. TwoWayProperty stays set -- the builder reads it to fill the
+		// binding's NotifyField and to prefer the silent setter.
+		const FString GetterName = MakeThunkName(TEXT("__DreamTwoWayGet_"), InNodeId, InProperty.Name);
+		{
+			UK2Node_FunctionEntry* Entry = nullptr;
+			UEdGraph* Graph = BeginThunkGraph(InBlueprint, GetterName, Entry);
+			FThunkContext Context;
+			Context.Blueprint = InBlueprint;
+			Context.Diagnostics = &InDiagnostics;
+			Context.Graph = Graph;
+			Context.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
+
+			FDreamUIExpression VariableExpression;
+			VariableExpression.Kind = FDreamUIExpression::EKind::VariableRef;
+			VariableExpression.Symbol = InProperty.TwoWayProperty;
+			VariableExpression.Location = InProperty.Location;
+			const FEmitted Root = EmitExpression(VariableExpression, Context);
+			if (Context.bFailed || !FinishThunkGraph(Graph, Entry, Root, Context, InProperty.Location))
+			{
+				FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
+				return;
+			}
+		}
+
+		// The reverse half: a generated setter the control's changed event routes into, writing the
+		// variable through a real K2 variable-set -- which is what makes a FieldNotify variable
+		// broadcast, which is what re-evaluates every OTHER binding reading it. The echo back into
+		// THIS control dies at the silent setter the forward half prefers.
+		const FString SetterName = MakeThunkName(TEXT("__DreamTwoWaySet_"), InNodeId, InProperty.Name);
+		{
+			UK2Node_FunctionEntry* Entry = nullptr;
+			UEdGraph* Graph = BeginThunkGraph(InBlueprint, SetterName, Entry);
+			// Reuse-or-create, the third door of the same trap the result node had: when a skeleton
+			// from an earlier pass already holds this thunk, Finalize resolves the self-reference
+			// and the entry arrives with the parameter pin grown; creating it again made NewValue1
+			// and a two-parameter setter no event could route to.
+			UEdGraphPin* NewValuePin = Entry->FindPin(TEXT("NewValue"), EGPD_Output);
+			if (NewValuePin != nullptr)
+			{
+				NewValuePin->PinType = VariableType;
+			}
+			else
+			{
+				NewValuePin = Entry->CreateUserDefinedPin(TEXT("NewValue"), VariableType, EGPD_Output);
+			}
+
+			FGraphNodeCreator<UK2Node_VariableSet> SetCreator(*Graph);
+			UK2Node_VariableSet* SetNode = SetCreator.CreateNode(false);
+			SetNode->VariableReference.SetSelfMember(FName(*InProperty.TwoWayProperty));
+			SetCreator.Finalize();
+
+			FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*Graph);
+			UK2Node_FunctionResult* Result = ResultCreator.CreateNode(false);
+			Result->FunctionReference.SetSelfMember(Graph->GetFName());
+			ResultCreator.Finalize();
+
+			const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+			UEdGraphPin* ValuePin = SetNode->FindPin(FName(*InProperty.TwoWayProperty), EGPD_Input);
+			if (ValuePin == nullptr)
+			{
+				// Same pre-skeleton story as the getter: a variable added since the last compile
+				// resolves no pin yet, so make the one the compiler will match by name and type.
+				ValuePin = SetNode->CreatePin(EGPD_Input, VariableType, FName(*InProperty.TwoWayProperty));
+			}
+			UEdGraphPin* EntryThen = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
+			UEdGraphPin* SetExecute = SetNode->FindPin(UEdGraphSchema_K2::PN_Execute);
+			UEdGraphPin* SetThen = SetNode->FindPin(UEdGraphSchema_K2::PN_Then);
+			UEdGraphPin* ResultExecute = Result->FindPin(UEdGraphSchema_K2::PN_Execute);
+			const bool bWired = NewValuePin != nullptr && ValuePin != nullptr
+				&& Schema->TryCreateConnection(NewValuePin, ValuePin)
+				&& EntryThen != nullptr && SetExecute != nullptr && Schema->TryCreateConnection(EntryThen, SetExecute)
+				&& SetThen != nullptr && ResultExecute != nullptr && Schema->TryCreateConnection(SetThen, ResultExecute);
+			if (!bWired)
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+					FString::Printf(TEXT("internal: the reverse route for '<-> %s' would not wire"), *InProperty.TwoWayProperty));
+				FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
+				return;
+			}
+			// A setter has a side effect by definition; private, never pure.
+			Entry->AddExtraFlags(FUNC_Private);
+		}
+
+		InProperty.BindingFunction = GetterName;
+
+		// The synthesized route, appended to the SAME property list this binding came from, so a
+		// `<->` inside a component block resolves its changed event on that same behaviour. Every
+		// value control broadcasts through one conventional name; a destination without it fails
+		// the builder's own EventNotFound with the file and line, which is the honest answer.
+		FDreamUIProperty& Route = OutSynthesized.AddDefaulted_GetRef();
+		Route.Name = TEXT("OnValueChangedBP");
+		Route.EventHandler = SetterName;
+		Route.Location = InProperty.Location;
 	}
 
 	void WalkNode(UDreamWidgetBlueprint* InBlueprint, FDreamUINode& InNode, FDreamUIDiagnosticBag& InDiagnostics)
 	{
 		auto LowerAll = [InBlueprint, &InNode, &InDiagnostics](TArray<FDreamUIProperty>& InProperties)
 		{
+			TArray<FDreamUIProperty> Synthesized;
 			for (FDreamUIProperty& Property : InProperties)
 			{
 				if (Property.BindingExpression.IsSet())
 				{
 					LowerProperty(InBlueprint, InNode.Id, Property, InDiagnostics);
 				}
+				else if (!Property.TwoWayProperty.IsEmpty())
+				{
+					LowerTwoWay(InBlueprint, InNode.Id, Property, Synthesized, InDiagnostics);
+				}
 			}
+			InProperties.Append(MoveTemp(Synthesized));
 		};
 		LowerAll(InNode.Properties);
 		LowerAll(InNode.SlotProperties);
@@ -608,7 +736,14 @@ void DreamUIExpressionThunks::Generate(UDreamWidgetBlueprint* InBlueprint, FDrea
 	TArray<TObjectPtr<UEdGraph>> Graphs = InBlueprint->FunctionGraphs;
 	for (UEdGraph* Graph : Graphs)
 	{
-		if (Graph != nullptr && Graph->GetName().StartsWith(GeneratedGraphPrefix))
+		if (Graph == nullptr)
+		{
+			continue;
+		}
+		const FString GraphName = Graph->GetName();
+		if (GraphName.StartsWith(GeneratedGraphPrefix)
+			|| GraphName.StartsWith(TEXT("__DreamTwoWayGet_"))
+			|| GraphName.StartsWith(TEXT("__DreamTwoWaySet_")))
 		{
 			FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
 		}

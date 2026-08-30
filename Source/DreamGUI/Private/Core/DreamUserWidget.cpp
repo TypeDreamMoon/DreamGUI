@@ -330,8 +330,11 @@ void UDreamUserWidget::ResolvePropertyBindings()
 
 		// A source function the class marked FieldNotify tells us when it changes; everything else
 		// can change silently and stays on the per-frame poll. The classification is per instance
-		// only because the resolution is -- the answer is a pure function of the class.
-		Resolved.SourceFieldId = GetFieldNotificationDescriptor().GetField(GetClass(), Binding.FunctionName);
+		// only because the resolution is -- the answer is a pure function of the class. A two-way
+		// binding names its VARIABLE in NotifyField -- the function is only its generated getter,
+		// which no broadcast will ever carry -- so the subscription keys on the variable instead.
+		Resolved.SourceFieldId = GetFieldNotificationDescriptor().GetField(GetClass(),
+			Binding.NotifyField.IsNone() ? Binding.FunctionName : Binding.NotifyField);
 		if (Resolved.SourceFieldId.IsValid())
 		{
 			bool bAlreadySubscribed = false;

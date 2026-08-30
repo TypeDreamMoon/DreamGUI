@@ -134,7 +134,15 @@ struct DREAMGUI_API FDreamUIProperty
 	/** Set when this is `->`: the UFUNCTION on the user widget the event calls. */
 	FString EventHandler;
 
-	bool IsBinding() const { return !BindingFunction.IsEmpty() || BindingExpression.IsSet(); }
+	/**
+	 * Set when this is `<->`: the FieldNotify variable on the user widget the property mirrors,
+	 * both ways. The compiler's thunk pass desugars it -- a generated getter lands in
+	 * BindingFunction (this field then rides into the binding's NotifyField), and a synthesized
+	 * `OnValueChangedBP -> generated-setter` event property joins the node.
+	 */
+	FString TwoWayProperty;
+
+	bool IsBinding() const { return !BindingFunction.IsEmpty() || BindingExpression.IsSet() || !TwoWayProperty.IsEmpty(); }
 	bool IsEventBinding() const { return !EventHandler.IsEmpty(); }
 
 	FDreamUISourceLocation Location;

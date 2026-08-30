@@ -1151,6 +1151,19 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		Entry.PropertyName = Authored.PropertyName;
 		Entry.FunctionName = Authored.FunctionName;
 		Entry.SetterName = Setter->GetFName();
+		Entry.NotifyField = Authored.NotifyField;
+		if (!Authored.NotifyField.IsNone())
+		{
+			// The forward half of a `<->` pushes through the silent setter when there is one: the
+			// full setter fires the control's changed event, which is the reverse route, which
+			// writes the variable this push just read -- the echo dies here, not in a hope that
+			// every control early-outs on an equal value.
+			const FName SilentSetterName(*(Setter->GetFName().ToString() + TEXT("WithoutNotify")));
+			if (Target->GetClass()->FindFunctionByName(SilentSetterName) != nullptr)
+			{
+				Entry.SetterName = SilentSetterName;
+			}
+		}
 	}
 	GeneratedClass->SetPropertyBindings(MoveTemp(Resolved));
 
