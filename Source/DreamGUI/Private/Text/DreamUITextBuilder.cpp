@@ -1277,7 +1277,23 @@ namespace DreamUITextBuilderLocal
 		// THE rule. Not NewObject<UDreamWidget>(World, …), which is what UIML did and why a UIML
 		// hierarchy is flat-outered to the world, owned by nothing, and can never become a class
 		// template, enter the designer, or carry a binding. See UDreamWidgetTree's class comment.
-		UDreamWidget* Widget = InContext.Tree->ConstructWidget(WidgetClass);
+		//
+		// Name and guid both derive from the node id, so every compile of the same file births the
+		// same identities: designer state is keyed by object FName and preview pairing by guid, and
+		// with random identities both reset on every rebuild while the .uasset churns for source
+		// control. MakeUniqueObjectName keeps a duplicate id from tripping NewObject's fatal name
+		// collision -- deterministic anyway, because build order is AST order -- and the guid is
+		// hashed from the RESOLVED name so even that duplicate pair gets distinct identities. Salted
+		// with the localization namespace (the class path): a guid derived from the bare id would
+		// recreate exactly the cross-asset collision guids were introduced to fix.
+		FName WidgetName = NAME_None;
+		FGuid WidgetGuid;
+		if (!InNode.Id.IsEmpty())
+		{
+			WidgetName = MakeUniqueObjectName(InContext.Tree, WidgetClass, FName(*InNode.Id));
+			WidgetGuid = FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + WidgetName.ToString());
+		}
+		UDreamWidget* Widget = InContext.Tree->ConstructWidget(WidgetClass, WidgetName, WidgetGuid);
 		if (!IsValid(Widget))
 		{
 			// Not reachable today -- ResolveNodeClasses has already established the class is valid and

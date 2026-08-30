@@ -43,15 +43,21 @@ public:
 	UPROPERTY(Instanced)
 	TObjectPtr<UDreamWidget> RootWidget = nullptr;
 
-	/** Create a widget owned by this tree. Every widget in a tree is outered to the tree itself. */
-	UDreamWidget* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass, FName InName = NAME_None);
+	/**
+	 * Create a widget owned by this tree. Every widget in a tree is outered to the tree itself.
+	 *
+	 * A valid InWidgetGuid becomes the widget's identity instead of a fresh random one -- the .dui
+	 * builder passes a hash of the node id so identity survives the rebuild; leave it invalid
+	 * everywhere else.
+	 */
+	UDreamWidget* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass, FName InName = NAME_None, const FGuid& InWidgetGuid = FGuid());
 
 	template<typename WidgetT>
-	WidgetT* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass = WidgetT::StaticClass(), FName InName = NAME_None)
+	WidgetT* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass = WidgetT::StaticClass(), FName InName = NAME_None, const FGuid& InWidgetGuid = FGuid())
 	{
 		static_assert(TPointerIsConvertibleFromTo<WidgetT, const UDreamWidget>::Value,
 			"'WidgetT' template parameter to ConstructWidget must be derived from UDreamWidget");
-		return Cast<WidgetT>(ConstructWidget(InWidgetClass, InName));
+		return Cast<WidgetT>(ConstructWidget(InWidgetClass, InName, InWidgetGuid));
 	}
 
 	/**

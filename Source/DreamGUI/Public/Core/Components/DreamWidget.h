@@ -557,6 +557,13 @@ public:
 	const FGuid& GetWidgetGuid() const { return WidgetGuid; }
 	/** Give this widget a new identity. For a copy, which is not the widget it was copied from. */
 	void AssignNewWidgetGuid() { WidgetGuid = FGuid::NewGuid(); }
+	/**
+	 * Give this widget a SPECIFIC identity. For the one caller that derives identity from an
+	 * external name -- the .dui builder, whose hash of the node id makes every compile of the same
+	 * file produce the same guid, so designer state and preview pairing survive the rebuild. A
+	 * random guid here would be AssignNewWidgetGuid; a colliding one is the caller's bug.
+	 */
+	void SetWidgetGuid(const FGuid& InGuid) { WidgetGuid = InGuid; }
 	/** Give this widget an identity only if it has none: an asset authored before ids existed. */
 	void EnsureWidgetGuid() { if (!WidgetGuid.IsValid()) { WidgetGuid = FGuid::NewGuid(); } }
 

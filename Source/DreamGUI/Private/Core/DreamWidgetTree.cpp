@@ -12,7 +12,7 @@ UWorld* UDreamWidgetTree::GetWorld() const
 	return GetTypedOuter<UWorld>();
 }
 
-UDreamWidget* UDreamWidgetTree::ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass, FName InName)
+UDreamWidget* UDreamWidgetTree::ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass, FName InName, const FGuid& InWidgetGuid)
 {
 	if (!IsValid(InWidgetClass))
 	{
@@ -25,9 +25,18 @@ UDreamWidget* UDreamWidgetTree::ConstructWidget(TSubclassOf<UDreamWidget> InWidg
 	// Authoring is the one moment a widget's identity is born. Everything downstream -- the class
 	// archetype, every preview instance -- is a copy of this object and inherits it, which is what
 	// lets the designer pair a preview back to the widget the author is editing. See GetWidgetGuid.
+	// A caller that derives identity from a name (the .dui builder) hands it in instead, so a
+	// rebuild of the same file births the same identity.
 	if (IsValid(Widget))
 	{
-		Widget->AssignNewWidgetGuid();
+		if (InWidgetGuid.IsValid())
+		{
+			Widget->SetWidgetGuid(InWidgetGuid);
+		}
+		else
+		{
+			Widget->AssignNewWidgetGuid();
+		}
 	}
 	return Widget;
 }
