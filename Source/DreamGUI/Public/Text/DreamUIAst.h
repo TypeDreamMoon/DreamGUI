@@ -248,8 +248,18 @@ struct DREAMGUI_API FDreamUIAst
 	FDreamUISourceLocation ClassPathLocation;
 
 	TArray<FDreamUIStyle> Styles;
+	/**
+	 * What `use "…"` pulled in, kept apart from the file's own declarations: the compiler's
+	 * resources leg reads Styles/Resources for what THIS file owns (imported resources become
+	 * nobody's class variables), while FindStyle/FindResource chain into these -- own first, so a
+	 * local name shadows an imported one.
+	 */
+	TArray<FDreamUIStyle> ImportedStyles;
 
 	TArray<FDreamUIResource> Resources;
+	TArray<FDreamUIResource> ImportedResources;
+	/** Every `use` path, RESOLVED, in encounter order -- what the watcher's dependency table eats. */
+	TArray<FString> Imports;
 
 	/** Exactly one root. bHasRoot is false when parsing failed before one was produced. */
 	FDreamUINode Root;

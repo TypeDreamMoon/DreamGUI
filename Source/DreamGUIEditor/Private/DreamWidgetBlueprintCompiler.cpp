@@ -23,6 +23,7 @@
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "Text/DreamUIExpressionThunks.h"
+#include "Text/DreamUISourceWatcher.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
@@ -216,7 +217,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	}
 
 	FDreamUIAst Ast;
-	if (!FDreamUISourceFile::Parse(SourceText, ResolvedPath, Ast, OutDiagnostics))
+	if (!FDreamUISourceFile::Parse(SourceText, ResolvedPath, Ast, OutDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
 	{
 		// The previous hierarchy is left exactly where it is. A file that will not parse says nothing
 		// about what the class should contain, and blanking the tree here would turn one typo into a
@@ -254,6 +255,9 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// hand-authored one. That is not a detail: FinishCompilingClass duplicates THIS object onto the
 	// generated class as the archetype, and SaveSubObjectsFromCleanAndSanitizeClass keeps it alive
 	// through the sanitize pass by name -- both were written against a tree that lives on the asset.
+	// The dependency edges, republished every parse: a saved style library recompiles its wearers.
+	FDreamUISourceWatcher::NoteImports(ResolvedPath, Ast.Imports);
+
 	// Expression bindings lower into generated pure functions here, BEFORE the builder reads the
 	// AST: each `<- expr` line's BindingFunction is rewritten in place to its thunk's name, so the
 	// builder, the runtime and every migration see exactly the one-name shape they always did. An

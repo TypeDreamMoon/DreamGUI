@@ -227,6 +227,16 @@ namespace DreamUISourceWatcherLocal
 		}
 	}
 
+	/** import (normalized, lowercased) -> importer (same spelling RecompileFor expects). */
+	TMultiMap<FString, FString> GImportEdges;
+
+	FString NormalizeImportKey(const FString& InPath)
+	{
+		FString Key = InPath;
+		FPaths::NormalizeFilename(Key);
+		return Key.ToLower();
+	}
+
 	void DrainQueue()
 	{
 		TArray<FString> Files = GPendingFiles.Array();
@@ -236,8 +246,33 @@ namespace DreamUISourceWatcherLocal
 		const bool bAnnounceSuccess = GAnnounceSuccess;
 		GAnnounceSuccess = false;
 
-		FBatchResult Batch;
+		// A changed file recompiles its importers too, transitively: saving the style library IS
+		// saving every screen that wears it, as far as the classes are concerned. The worklist
+		// carries a visited set so a diamond expands once and a (rejected, but defensive) cycle
+		// terminates.
+		TArray<FString> Worklist = Files;
+		TSet<FString> Visited;
 		for (const FString& File : Files)
+		{
+			Visited.Add(NormalizeImportKey(File));
+		}
+		for (int32 Index = 0; Index < Worklist.Num(); ++Index)
+		{
+			TArray<FString> Importers;
+			GImportEdges.MultiFind(NormalizeImportKey(Worklist[Index]), Importers);
+			for (const FString& Importer : Importers)
+			{
+				bool bAlreadyVisited = false;
+				Visited.Add(NormalizeImportKey(Importer), &bAlreadyVisited);
+				if (!bAlreadyVisited)
+				{
+					Worklist.Add(Importer);
+				}
+			}
+		}
+
+		FBatchResult Batch;
+		for (const FString& File : Worklist)
 		{
 			if (!FPaths::FileExists(File))
 			{
@@ -342,6 +377,24 @@ namespace DreamUISourceWatcherLocal
 		{
 			GLastChangeTime = FPlatformTime::Seconds();
 		}
+	}
+}
+
+void FDreamUISourceWatcher::NoteImports(const FString& InImporter, const TArray<FString>& InImports)
+{
+	using namespace DreamUISourceWatcherLocal;
+	// Replace, not append: a file that dropped a `use` line must stop recompiling on that library's
+	// saves, and the compiler republished the WHOLE current list.
+	for (auto It = GImportEdges.CreateIterator(); It; ++It)
+	{
+		if (It.Value() == InImporter)
+		{
+			It.RemoveCurrent();
+		}
+	}
+	for (const FString& Import : InImports)
+	{
+		GImportEdges.Add(NormalizeImportKey(Import), InImporter);
 	}
 }
 

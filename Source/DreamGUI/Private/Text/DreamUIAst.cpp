@@ -39,12 +39,28 @@ const FDreamUIStyle* FDreamUIAst::FindStyle(const FString& InName) const
 			return &Style;
 		}
 	}
+	// Then the imports, so a local declaration shadows an imported one -- the same first-wins rule
+	// that already resolves two locals.
+	for (const FDreamUIStyle& Style : ImportedStyles)
+	{
+		if (Style.Name == InName)
+		{
+			return &Style;
+		}
+	}
 	return nullptr;
 }
 
 const FDreamUIResource* FDreamUIAst::FindResource(const FString& InName) const
 {
 	for (const FDreamUIResource& Resource : Resources)
+	{
+		if (Resource.Name == InName)
+		{
+			return &Resource;
+		}
+	}
+	for (const FDreamUIResource& Resource : ImportedResources)
 	{
 		if (Resource.Name == InName)
 		{

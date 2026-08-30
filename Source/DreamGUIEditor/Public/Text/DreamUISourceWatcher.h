@@ -57,6 +57,13 @@ public:
 	static void Unregister();
 
 	/**
+	 * Record which files InImporter pulls in through `use`, replacing its previous edges. The
+	 * compiler publishes this after every parse, which is what lets a saved style library recompile
+	 * the classes that wear it: the drain expands a changed file to its transitive importers.
+	 */
+	static void NoteImports(const FString& InImporter, const TArray<FString>& InImports);
+
+	/**
 	 * Queues one file as if it had just been saved.
 	 *
 	 * @param bAnnounceSuccess  toast on success as well as failure. A save stays quiet when it worked

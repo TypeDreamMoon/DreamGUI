@@ -86,6 +86,8 @@ enum class EDreamUIDiagnosticCode : int32
 	MalformedLoopHeader = 2010,
 	/** The right side of `<-` did not parse as an expression: a stray token, an unclosed paren. */
 	MalformedBindingExpression = 2011,
+	/** A `use` that could not be honoured: no string, unresolvable path, unreadable file, a cycle. */
+	ImportFailed = 2012,
 
 	// --- 3xxx semantic ---
 	/**

@@ -1,6 +1,9 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUISourceFile.h"
+#include "Text/DreamUIPaths.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 /*
  * A hand written lexer and a recursive descent parser, in that order, both private to this file.
@@ -191,7 +194,7 @@ namespace DreamUIText
 	/** Keywords, and therefore the words a node id may not be. Case sensitive, see the file comment. */
 	bool IsReservedWord(const FString& InWord)
 	{
-		static const TCHAR* Reserved[] = { TEXT("class"), TEXT("style"), TEXT("resources"), TEXT("slot"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("was") };
+		static const TCHAR* Reserved[] = { TEXT("class"), TEXT("style"), TEXT("resources"), TEXT("slot"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("was"), TEXT("use") };
 		for (const TCHAR* Word : Reserved)
 		{
 			if (InWord.Equals(Word, ESearchCase::CaseSensitive))
@@ -815,6 +818,11 @@ namespace DreamUIText
 	// Parser
 	// --------------------------------------------------------------------------------------------
 
+	bool ParseWithImports(const FString& InText, const FString& InSourceName,
+		FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics,
+		const TFunction<bool(const FString&, FString&, FString&)>& InImportReader, TSet<FString> InAncestors,
+		bool bInAllowRootless = false);
+
 	class FParser
 	{
 	public:
@@ -824,6 +832,13 @@ namespace DreamUIText
 			, Diagnostics(InDiagnostics)
 		{
 		}
+
+		/** Null when the caller offered no way to read files; a `use` then reports ImportFailed. */
+		const TFunction<bool(const FString&, FString&, FString&)>* ImportReader = nullptr;
+		/** This branch's ancestor chain, for the cycle guard. Normalized, lowercased paths. */
+		TSet<FString> ImportAncestors;
+		/** True for a file reached through `use`: a style library legitimately has no root node. */
+		bool bAllowRootless = false;
 
 		void ParseFile(FDreamUIAst& OutAst)
 		{
@@ -840,6 +855,10 @@ namespace DreamUIText
 				if (CheckKeyword(TEXT("class")))
 				{
 					ParseClassDeclaration(OutAst);
+				}
+				else if (CheckKeyword(TEXT("use")))
+				{
+					ParseUseDeclaration(OutAst);
 				}
 				else if (CheckKeyword(TEXT("resources")))
 				{
@@ -892,7 +911,9 @@ namespace DreamUIText
 				}
 			}
 
-			if (!OutAst.bHasRoot)
+			// A file compiled AS A CLASS needs a hierarchy; one pulled in through `use` is allowed
+			// to be nothing but styles and resources -- that is what a library IS.
+			if (!OutAst.bHasRoot && !bAllowRootless)
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedRoot, Tokens.Last().Location,
 					TEXT("this file declares no root node"));
@@ -1073,6 +1094,73 @@ namespace DreamUIText
 		}
 
 		/**
+		 * `use "Styles/Common.dui"` -- pull another file's styles and resources into this one's
+		 * lookup, shadowed by local declarations. Paths resolve exactly like SourceFile paths
+		 * (DUI-root-relative, Plugin.X:-qualified, or absolute); the imported file's OWN imports
+		 * ride along, so a style library can layer. An import that fails parses nothing into this
+		 * file and says so once, here, at the line that asked for it -- its internal errors are its
+		 * own to show when IT is compiled.
+		 */
+		void ParseUseDeclaration(FDreamUIAst& OutAst)
+		{
+			const FDreamUISourceLocation UseLocation = Current().Location;
+			Advance(); // 'use'
+
+			if (!Check(ETokenKind::String))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
+					TEXT("'use' takes a quoted path, as in 'use \"Styles/Common.dui\"'"));
+				RecoverToStatementBoundary();
+				return;
+			}
+			const FString Spelling = Current().Text;
+			Advance();
+
+			if (ImportReader == nullptr || !(*ImportReader))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
+					FString::Printf(TEXT("'%s' cannot be imported here: this parse was given no way to read files"), *Spelling));
+				return;
+			}
+			FString Resolved;
+			FString ImportedText;
+			if (!(*ImportReader)(Spelling, Resolved, ImportedText))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
+					FString::Printf(TEXT("'%s' resolves to no readable file under any DUI root"), *Spelling));
+				return;
+			}
+			FString Normalized = Resolved;
+			FPaths::NormalizeFilename(Normalized);
+			Normalized = Normalized.ToLower();
+			if (ImportAncestors.Contains(Normalized))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
+					FString::Printf(TEXT("'%s' is already being imported further up this chain -- the imports form a cycle"), *Spelling));
+				return;
+			}
+
+			FDreamUIAst Imported;
+			FDreamUIDiagnosticBag ImportedDiagnostics;
+			TSet<FString> BranchAncestors = ImportAncestors;
+			BranchAncestors.Add(Normalized);
+			if (!ParseWithImports(ImportedText, Resolved, Imported, ImportedDiagnostics, *ImportReader, MoveTemp(BranchAncestors), /*bInAllowRootless*/true))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
+					FString::Printf(TEXT("'%s' failed to parse (%d error(s)); compile it directly to see them"),
+						*Spelling, ImportedDiagnostics.NumErrors()));
+				return;
+			}
+
+			OutAst.ImportedStyles.Append(MoveTemp(Imported.Styles));
+			OutAst.ImportedStyles.Append(MoveTemp(Imported.ImportedStyles));
+			OutAst.ImportedResources.Append(MoveTemp(Imported.Resources));
+			OutAst.ImportedResources.Append(MoveTemp(Imported.ImportedResources));
+			OutAst.Imports.Add(Resolved);
+			OutAst.Imports.Append(MoveTemp(Imported.Imports));
+		}
+
+		/**
 		 * `resources { Color Accent = #FF6600 ... }` -- named constants, referenced as `@Accent`.
 		 *
 		 * Entries accumulate across blocks (a second `resources` block is fine; a second ACCENT is
@@ -1197,7 +1285,12 @@ namespace DreamUIText
 			Advance();
 			ParsePropertyOnlyBlock(Style.Properties, OpenLocation, TEXT("a style"));
 
-			if (OutAst.FindStyle(Style.Name) != nullptr)
+			// Own styles only, not the import chain: a local name matching an imported one is the
+			// SHADOWING rule working, not a duplicate -- FindStyle looks locally first, so declaring
+			// it here is exactly how a file overrides a library.
+			const bool bAlreadyDeclaredLocally = OutAst.Styles.ContainsByPredicate(
+				[&Style](const FDreamUIStyle& InExisting) { return InExisting.Name == Style.Name; });
+			if (bAlreadyDeclaredLocally)
 			{
 				// Dropped rather than appended, so FindStyle keeps naming the first one for everybody
 				// downstream. Two entries under one name is the kind of state where the builder and
@@ -2266,26 +2359,62 @@ namespace DreamUIText
 	};
 }
 
+namespace DreamUIText
+{
+	bool ParseWithImports(const FString& InText, const FString& InSourceName,
+		FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics,
+		const TFunction<bool(const FString&, FString&, FString&)>& InImportReader, TSet<FString> InAncestors,
+		bool bInAllowRootless)
+	{
+		OutAst = FDreamUIAst();
+		OutDiagnostics.SourceName = InSourceName;
+
+		// Counted rather than asked afterwards, because the bag is allowed to arrive with other files'
+		// problems already in it: the compiler collects a whole project into one message log, and
+		// "did THIS file parse" has to keep meaning that.
+		const int32 ErrorsBefore = OutDiagnostics.NumErrors();
+
+		TArray<FToken> Tokens;
+		Tokens.Reserve(InText.Len() / 4 + 8);
+		FLexer Lexer(InText, OutDiagnostics);
+		Lexer.Run(Tokens);
+
+		FParser Parser(InText, Tokens, OutDiagnostics);
+		Parser.ImportReader = &InImportReader;
+		// By value on purpose: the set is this branch's ANCESTOR CHAIN, not a global visited set. A
+		// diamond -- two imports both pulling one base file -- parses the base twice and merges twice
+		// (first-wins lookup makes the duplicates inert); only a genuine cycle trips the guard.
+		Parser.ImportAncestors = MoveTemp(InAncestors);
+		Parser.bAllowRootless = bInAllowRootless;
+		Parser.ParseFile(OutAst);
+
+		return OutDiagnostics.NumErrors() == ErrorsBefore;
+	}
+}
+
 bool FDreamUISourceFile::Parse(const FString& InText, const FString& InSourceName,
 	FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics)
 {
+	return Parse(InText, InSourceName, OutAst, OutDiagnostics, nullptr);
+}
+
+bool FDreamUISourceFile::Parse(const FString& InText, const FString& InSourceName,
+	FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics,
+	TFunction<bool(const FString&, FString&, FString&)> InImportReader)
+{
 	using namespace DreamUIText;
+	TSet<FString> Ancestors;
+	FString NormalizedSelf = InSourceName;
+	FPaths::NormalizeFilename(NormalizedSelf);
+	Ancestors.Add(NormalizedSelf.ToLower());
+	return ParseWithImports(InText, InSourceName, OutAst, OutDiagnostics, InImportReader, MoveTemp(Ancestors));
+}
 
-	OutAst = FDreamUIAst();
-	OutDiagnostics.SourceName = InSourceName;
-
-	// Counted rather than asked afterwards, because the bag is allowed to arrive with other files'
-	// problems already in it: the compiler collects a whole project into one message log, and
-	// "did THIS file parse" has to keep meaning that.
-	const int32 ErrorsBefore = OutDiagnostics.NumErrors();
-
-	TArray<FToken> Tokens;
-	Tokens.Reserve(InText.Len() / 4 + 8);
-	FLexer Lexer(InText, OutDiagnostics);
-	Lexer.Run(Tokens);
-
-	FParser Parser(InText, Tokens, OutDiagnostics);
-	Parser.ParseFile(OutAst);
-
-	return OutDiagnostics.NumErrors() == ErrorsBefore;
+TFunction<bool(const FString&, FString&, FString&)> FDreamUISourceFile::MakeFileImportReader()
+{
+	return [](const FString& InSpelling, FString& OutResolvedPath, FString& OutText)
+	{
+		OutResolvedPath = DreamUIPaths::Resolve(InSpelling);
+		return !OutResolvedPath.IsEmpty() && FFileHelper::LoadFileToString(OutText, *OutResolvedPath);
+	};
 }
