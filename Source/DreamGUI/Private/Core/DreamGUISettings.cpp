@@ -34,11 +34,16 @@ UDreamGUISettings::UDreamGUISettings()
 	DefaultRectBlockData = TSoftObjectPtr<UDreamRectBlockData>(FSoftObjectPath(TEXT("/DreamGUI/DefaultRectBlockData.DefaultRectBlockData")));
 	NavigationSelectionClass = TSoftClassPtr<UDreamUserWidget>(FSoftClassPath(TEXT("/DreamGUI/Controls/BP_NavigationSelectionInputHandler.BP_NavigationSelectionInputHandler_C")));
 
-	// The event system defaults to the native preset rather than to the Blueprint one it used to
-	// spawn: same behaviour, and nothing to break if the Blueprint is renamed or deleted.
 	PresetControlFolder = TEXT("/DreamGUI/Controls/");
 
-	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamEnhancedInputEventSystemActor")));
+	// The STANDALONE native preset, and the choice is load-bearing: this class is the auto-spawn
+	// path's actor, and of the two native presets it is the only one that works unconfigured --
+	// AutoReceiveInput plus direct key bindings, "useful as a drop-in" by its own doc.
+	// ADreamEnhancedInputEventSystemActor looks like the newer pick but leaves its mapping context
+	// and mouse actions deliberately empty for a Blueprint to fill (and no such Blueprint ships),
+	// so pointing here at it spawned an event system that never heard a click -- every
+	// auto-spawned screen UI lost interaction until this pointed back.
+	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamStandaloneInputEventSystemActor")));
 
 	WorldSpaceRaycasterSourceClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/DreamWorldSpaceRaycasterSource_Mouse.DreamWorldSpaceRaycasterSource_Mouse_C")));
 	ScreenSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/ScreenSpaceRoot.ScreenSpaceRoot_C")));
