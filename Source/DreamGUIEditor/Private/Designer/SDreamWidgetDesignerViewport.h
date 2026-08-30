@@ -46,4 +46,8 @@ private:
 
 	// Viewport client
 	TSharedPtr<FDreamWidgetDesignerViewportClient> EditorViewportClient;
+
+public:
+	/** The client, for panels that talk to the design surface directly -- the hierarchy's hover. */
+	TSharedPtr<FDreamWidgetDesignerViewportClient> GetViewportClient() const { return EditorViewportClient; }
 };

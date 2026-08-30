@@ -76,6 +76,19 @@ public:
 	void SyncViewFOVToCanvas();
 
 	/**
+	 * Announce a hover that happened in another panel -- the hierarchy row under the cursor -- so
+	 * the design surface outlines the same widget. The viewport's own cursor-driven hover wins
+	 * whenever the cursor is actually in the viewport.
+	 */
+	void SetExternalHoverWidget(UDreamWidget* InWidget);
+	/**
+	 * Withdraw an announcement, but only while it is still the standing one: a cursor sliding down
+	 * the list can fire the next row's enter before this row's exit, and an unconditional clear
+	 * would wipe the newer announcement.
+	 */
+	void ClearExternalHoverWidget(UDreamWidget* InOnlyIfThisOne);
+
+	/**
 	 * Get the elements (from the current selection set) that this viewport can manipulate (eg, via the transform gizmo).
 	 */
 	FTypedElementListConstRef GetElementsToManipulate(const bool bForceRefresh = false);
@@ -373,6 +386,13 @@ private:
 	FIntPoint LastClickPixel = FIntPoint(-1, -1);
 	TWeakObjectPtr<UDreamWidget> PaletteDropPreviewWidget;
 	TWeakObjectPtr<UDreamWidget> HoveredWidget;
+	/**
+	 * A hover announced from outside the viewport -- today the hierarchy panel's rows. Kept apart
+	 * from HoveredWidget because the cursor is in ANOTHER panel while this is set, so the
+	 * cursor-driven update (and MouseLeave) must not fight it. DrawHoverOutline prefers the
+	 * cursor's answer when both exist.
+	 */
+	TWeakObjectPtr<UDreamWidget> ExternalHoverWidget;
 	FIntPoint HoverPixel = FIntPoint::ZeroValue;
 	bool bHoverPixelDirty = false;
 	/** The cursor readout has to go quiet when the cursor is not over this viewport at all. */

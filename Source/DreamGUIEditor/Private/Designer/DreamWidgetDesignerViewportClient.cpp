@@ -3571,9 +3571,25 @@ void FDreamWidgetDesignerViewportClient::UpdateHoveredWidget()
 	HoveredWidget = GetWidgetUnderCursor(HoverPixel.X, HoverPixel.Y);
 }
 
+void FDreamWidgetDesignerViewportClient::SetExternalHoverWidget(UDreamWidget* InWidget)
+{
+	if (ExternalHoverWidget.Get() == InWidget)return;
+	ExternalHoverWidget = InWidget;
+	// The viewport is not the panel the mouse is moving in, so nothing else asks it to repaint.
+	Invalidate();
+}
+
+void FDreamWidgetDesignerViewportClient::ClearExternalHoverWidget(UDreamWidget* InOnlyIfThisOne)
+{
+	if (ExternalHoverWidget.Get() != InOnlyIfThisOne)return;
+	ExternalHoverWidget = nullptr;
+	Invalidate();
+}
+
 void FDreamWidgetDesignerViewportClient::DrawHoverOutline(FSceneView& View, FCanvas& Canvas) const
 {
 	UDreamWidget* HoverTarget = HoveredWidget.Get();
+	if (!IsValid(HoverTarget))HoverTarget = ExternalHoverWidget.Get();
 	if (!IsValid(HoverTarget))return;
 	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
 	if (!Editor.IsValid())return;

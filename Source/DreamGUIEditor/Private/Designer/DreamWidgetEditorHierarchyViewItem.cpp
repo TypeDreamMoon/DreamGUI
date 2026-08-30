@@ -137,9 +137,41 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
 	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyDreamWidgetDragDropOp>())
 	{
+		// The palette and asset ops are decorated the same way the hierarchy-internal drag is,
+		// so an illegal target says no while the author still holds the button. Without this the
+		// cursor carried whatever the previous row wrote -- the drag looked legal over a full
+		// container and dead over a legal one.
+		const TSharedPtr<FDecoratedDragDropOp> Decorated = DragDropOp->IsOfType<FDecoratedDragDropOp>()
+			? StaticCastSharedPtr<FDecoratedDragDropOp>(DragDropOp) : TSharedPtr<FDecoratedDragDropOp>();
+		if (Decorated.IsValid())
+		{
+			Decorated->ResetToDefaultToolTip();
+		}
 		if (!IsValid(TargetItem) || !TargetItem->CanAcceptAdditionalChildren())
 		{
+			if (Decorated.IsValid())
+			{
+				Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+				Decorated->CurrentHoverText = LOCTEXT("TargetCannotTakeChild", "This widget cannot accept another child.");
+			}
 			return TOptional<EItemDropZone>();
+		}
+		// The same gate the drop will hit in CreateWidget, said during the drag: a text-authored
+		// class refuses structural edits from the designer, and finding that out on release reads
+		// as a broken palette rather than a rule.
+		if (Manager.IsValid() && DreamUITextAuthoring::IsTextAuthored(Manager->GetWidgetBlueprint()))
+		{
+			if (Decorated.IsValid())
+			{
+				Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+				Decorated->CurrentHoverText = DreamUITextAuthoring::DescribeStructuralRefusal(
+					Manager->GetWidgetBlueprint(), TEXT("create a widget"));
+			}
+			return TOptional<EItemDropZone>();
+		}
+		if (Decorated.IsValid())
+		{
+			Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.OK"));
 		}
 		if (bIsDrop)
 		{

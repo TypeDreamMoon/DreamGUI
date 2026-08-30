@@ -7,6 +7,8 @@
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprintEditor.h"
 #include "DreamWidgetEditorHierarchyViewItem.h"
+#include "SDreamWidgetDesignerViewport.h"
+#include "DreamWidgetDesignerViewportClient.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamUISettings.h"
@@ -500,11 +502,29 @@ void SDreamWidgetEditorHierarchyView::OnObjectsReplaced(const TMap<UObject*, UOb
 
 TSharedRef< ITableRow > SDreamWidgetEditorHierarchyView::OnGenerateRow(TWeakObjectPtr<UDreamWidget> InItem, const TSharedRef<STableViewBase>& OwnerTable)
 {
+	// Hovering a row outlines the widget on the design surface -- the reverse of the viewport's own
+	// hover, through the same overlay. Exit clears only its own announcement: rows fire enter-B
+	// before exit-A when the cursor slides down the list, and an unconditional clear would wipe B's.
+	auto ViewportClientOf = [](const TWeakPtr<FDreamWidgetBlueprintEditor>& InManager)
+		-> TSharedPtr<FDreamWidgetDesignerViewportClient>
+	{
+		const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = InManager.Pin();
+		const TSharedPtr<SDreamWidgetDesignerViewport> Viewport = Editor.IsValid() ? Editor->GetViewportWidget() : nullptr;
+		return Viewport.IsValid() ? Viewport->GetViewportClient() : nullptr;
+	};
 	return SNew(SDreamWidgetEditorHierarchyViewItem, OwnerTable, InItem, SharedThis(this), Manager.Pin())
 	.HighlightText(this, &SDreamWidgetEditorHierarchyView::GetSearchText)
-	.MouseEnter_Lambda([=, this] {
+	.MouseEnter_Lambda([WeakManager = Manager, InItem, ViewportClientOf] {
+			if (const TSharedPtr<FDreamWidgetDesignerViewportClient> Client = ViewportClientOf(WeakManager))
+			{
+				Client->SetExternalHoverWidget(InItem.Get());
+			}
 		})
-	.MouseExit_Lambda([=, this] {
+	.MouseExit_Lambda([WeakManager = Manager, InItem, ViewportClientOf] {
+			if (const TSharedPtr<FDreamWidgetDesignerViewportClient> Client = ViewportClientOf(WeakManager))
+			{
+				Client->ClearExternalHoverWidget(InItem.Get());
+			}
 		})
 	;
 }
