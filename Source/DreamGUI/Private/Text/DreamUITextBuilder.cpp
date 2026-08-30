@@ -1535,6 +1535,46 @@ namespace DreamUITextBuilderLocal
 		{
 			Template->AddComponent<UUIListEntry>();
 		}
+
+		// The runtime prerequisites the walkthrough caught the view silently returning without:
+		// InitializeOnDataSource needs a CONTENT widget under the host (the thing scrolling moves
+		// and sizes), and exactly one scroll axis -- the scroll-view default is both. The language
+		// has no words for either, so the builder supplies them: a synthesized content the template
+		// moves into, and a vertical list when the author configured no single axis. An author who
+		// set one axis on the behaviour keeps it.
+		UUIRecyclableScrollView* View = InParent->GetComponent<UUIRecyclableScrollView>();
+		if (View->GetHorizontal() == View->GetVertical())
+		{
+			View->SetHorizontal(false);
+			View->SetVertical(true);
+		}
+		const FString ContentName = InParent->GetDisplayName() + TEXT("_EachContent");
+		UDreamWidget* Content = InContext.Tree->ConstructWidget(UDreamWidget::StaticClass(), FName(*ContentName),
+			FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + ContentName));
+		if (IsValid(Content))
+		{
+			Content->SetDisplayName(ContentName);
+			FDreamUIAnchorData ContentAnchors;
+			if (View->GetVertical())
+			{
+				// Stretch across the top: the view drives the height from the item count.
+				ContentAnchors.AnchorMin = FVector2D(0.0, 1.0);
+				ContentAnchors.AnchorMax = FVector2D(1.0, 1.0);
+				ContentAnchors.Pivot = FVector2D(0.5, 1.0);
+			}
+			else
+			{
+				ContentAnchors.AnchorMin = FVector2D(0.0, 0.0);
+				ContentAnchors.AnchorMax = FVector2D(0.0, 1.0);
+				ContentAnchors.Pivot = FVector2D(0.0, 0.5);
+			}
+			ContentAnchors.AnchoredPosition = FVector2D::ZeroVector;
+			ContentAnchors.SizeDelta = FVector2D::ZeroVector;
+			Content->SetAnchorData(ContentAnchors);
+			Content->TrySetParent(InParent, /*bKeepWorldPosition*/false);
+			Template->TrySetParent(Content, /*bKeepWorldPosition*/false);
+			View->SetContent(Content);
+		}
 		return Template;
 	}
 }
