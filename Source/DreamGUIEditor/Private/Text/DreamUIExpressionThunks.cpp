@@ -533,14 +533,25 @@ namespace DreamUIExpressionThunksLocal
 		// pin already grown from that signature. Creating a second one gave the function a phantom
 		// parameter and failed the binding's shape check, so: reuse the inherited pin (re-typed, in
 		// case the expression's type changed) and only create one when the node came bare.
+		//
+		// A real-typed expression returns FLOAT, not the double the math library computes in. The
+		// binding's shape check compares the return property to the TARGET property with SameType,
+		// and every bindable real property in the framework is a float UPROPERTY -- a double
+		// return can never bind one. K2 treats the precisions as one connectable Real category, so
+		// the double output narrows into the float return pin without a conversion node.
+		FEdGraphPinType ReturnType = InRoot.PinType;
+		if (ReturnType.PinCategory == UEdGraphSchema_K2::PC_Real && ReturnType.ContainerType == EPinContainerType::None)
+		{
+			ReturnType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+		}
 		UEdGraphPin* ReturnPin = Result->FindPin(UEdGraphSchema_K2::PN_ReturnValue, EGPD_Input);
 		if (ReturnPin != nullptr)
 		{
-			ReturnPin->PinType = InRoot.PinType;
+			ReturnPin->PinType = ReturnType;
 		}
 		else
 		{
-			ReturnPin = Result->CreateUserDefinedPin(UEdGraphSchema_K2::PN_ReturnValue, InRoot.PinType, EGPD_Input);
+			ReturnPin = Result->CreateUserDefinedPin(UEdGraphSchema_K2::PN_ReturnValue, ReturnType, EGPD_Input);
 		}
 		if (ReturnPin == nullptr || !ConnectOrDefault(ReturnPin, InRoot, InContext, InLocation))
 		{

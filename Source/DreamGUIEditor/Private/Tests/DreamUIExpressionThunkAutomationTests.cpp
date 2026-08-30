@@ -164,6 +164,58 @@ bool FDreamUIExpressionThunkCompilesTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIExpressionThunkFloatTargetTest,
+	"DreamGUI.Text.Expression.ArithmeticOntoAFloatPropertyReturnsFloatAndBinds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIExpressionThunkFloatTargetTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	// The regression the MediaConsole walkthrough caught: the math library computes in double, the
+	// thunk returned double, and SameType refused to bind it to RenderOpacity -- a float UPROPERTY,
+	// like every bindable real property in the framework. The thunk must return FLOAT.
+	FScopedDuiFile File(TEXT("ThunkFloatFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_ThunkFloat"),
+		TEXT("Widget Root {"),
+		TEXT("    Text Title {"),
+		TEXT("        RenderOpacity <- GetScale() * 0.5 + 0.25"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_ThunkFloat"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("The float-target compile has no errors"), Results.NumErrors, 0);
+
+	UFunction* Thunk = Fixture.Blueprint->GeneratedClass->FindFunctionByName(TEXT("__DreamBinding_Title_RenderOpacity"));
+	if (!TestTrue(TEXT("The generated function exists"), Thunk != nullptr))
+	{
+		return false;
+	}
+	TestTrue(TEXT("It returns a float, not the double the math ran in"),
+		CastField<FFloatProperty>(Thunk->GetReturnProperty()) != nullptr);
+
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectPropertyBindings(Fixture.Blueprint->GeneratedClass, Bindings);
+	TestTrue(TEXT("The binding resolved onto the thunk"), Bindings.ContainsByPredicate(
+		[](const FDreamWidgetPropertyBinding& InBinding)
+	{
+		return InBinding.FunctionName == FName(TEXT("__DreamBinding_Title_RenderOpacity"));
+	}));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUIExpressionThunkRefusalTest,
 	"DreamGUI.Text.Expression.AnUnloweredExpressionFailsTheCompileWithDUI5011",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
