@@ -46,6 +46,7 @@ public class DreamGUI : ModuleRules
                 "InputCore",//UITextInput
                 "EnhancedInput",//DreamEnhancedInputEventSystemActor
                 "DeveloperSettings",//UDreamGUISettings
+                "FieldNotification",//UDreamUserWidget implements INotifyFieldValueChanged
                 //"FreeType2",
                 "UElibPNG",
                 "zlib",

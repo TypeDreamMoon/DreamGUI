@@ -1014,7 +1014,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 				PropertyBindingUsers.RemoveAtSwap(Index);
 				continue;
 			}
-			UserWidget->EvaluatePropertyBindings();
+			// Only the polled remainder: subscribed bindings re-evaluate from their field's
+			// broadcast, and visiting them here would just do the work twice.
+			UserWidget->EvaluatePolledPropertyBindings();
 		}
 	}
 

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamFieldNotification.h"
+#include "INotifyFieldValueChanged.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;
@@ -31,11 +33,36 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamUIWidgetCreatedCallback, UDreamUserWidge
  * Initialize, from the class, every time.
  */
 UCLASS(ClassGroup = (DreamGUI), BlueprintType, Blueprintable, DisplayName = "DreamUI User Widget")
-class DREAMGUI_API UDreamUserWidget : public UDreamWidget
+class DREAMGUI_API UDreamUserWidget : public UDreamWidget, public INotifyFieldValueChanged
 {
 	GENERATED_BODY()
 
 public:
+	/**
+	 * No native fields yet: everything notifiable on a user widget today is authored in the
+	 * Blueprint, where the kismet compiler records it -- but only for classes that implement
+	 * INotifyFieldValueChanged (KismetCompiler gates FieldNotifies on exactly that), which is why
+	 * this interface lives on the base class rather than being opt-in per Blueprint.
+	 */
+	struct FFieldNotificationClassDescriptor : public ::UE::FieldNotification::IClassDescriptor
+	{
+		DREAMGUI_API virtual void ForEachField(const UClass* Class, TFunctionRef<bool(::UE::FieldNotification::FFieldId FieldId)> Callback) const override;
+	};
+
+	//~ Begin INotifyFieldValueChanged Interface
+	virtual FDelegateHandle AddFieldValueChangedDelegate(UE::FieldNotification::FFieldId InFieldId, FFieldValueChangedDelegate InNewDelegate) override;
+	virtual bool RemoveFieldValueChangedDelegate(UE::FieldNotification::FFieldId InFieldId, FDelegateHandle InHandle) override;
+	virtual int32 RemoveAllFieldValueChangedDelegates(FDelegateUserObjectConst InUserObject) override;
+	virtual int32 RemoveAllFieldValueChangedDelegates(UE::FieldNotification::FFieldId InFieldId, FDelegateUserObjectConst InUserObject) override;
+	virtual const UE::FieldNotification::IClassDescriptor& GetFieldNotificationDescriptor() const override;
+	virtual void BroadcastFieldValueChanged(UE::FieldNotification::FFieldId InFieldId) override;
+	//~ End INotifyFieldValueChanged Interface
+
+	UFUNCTION(BlueprintCallable, Category = "FieldNotify", meta = (DisplayName = "Add Field Value Changed Delegate", ScriptName = "AddFieldValueChangedDelegate"))
+	void K2_AddFieldValueChangedDelegate(FFieldNotificationId FieldId, FFieldValueChangedDynamicDelegate Delegate);
+
+	UFUNCTION(BlueprintCallable, Category = "FieldNotify", meta = (DisplayName = "Remove Field Value Changed Delegate", ScriptName = "RemoveFieldValueChangedDelegate"))
+	void K2_RemoveFieldValueChangedDelegate(FFieldNotificationId FieldId, FFieldValueChangedDynamicDelegate Delegate);
 	/**
 	 * This instance's own hierarchy, instanced from the class template. Transient and
 	 * DuplicateTransient: it is regenerated from the class, never persisted and never copied.
@@ -111,16 +138,27 @@ public:
 	static void CollectDeclaredSlotNames(const UDreamWidgetTree* InTree, TArray<FName>& OutNames);
 
 	/**
-	 * Run this widget's property bindings once: call each bound function, hand the result to the
-	 * widget's setter. Called every frame by the UI manager, and safe to call by hand.
+	 * Run ALL of this widget's property bindings once: call each bound function, hand the result to
+	 * the widget's setter. Runs at Initialize (so the first frame shows bound values), and is safe
+	 * to call by hand.
 	 *
 	 * Going through the setter is what makes the change take -- see FDreamWidgetPropertyBinding.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
 	void EvaluatePropertyBindings();
 
-	/** Whether this widget has anything to evaluate; the manager only ticks the ones that do. */
+	/**
+	 * Run only the POLLED bindings -- the ones whose source carries no FieldNotify entry and can
+	 * therefore change without telling anyone. This is what the manager calls every frame; the
+	 * subscribed bindings re-evaluate from their broadcast instead and cost nothing in between.
+	 */
+	void EvaluatePolledPropertyBindings();
+
+	/** Whether this widget resolved any bindings at all. */
 	bool HasPropertyBindings() const { return ResolvedBindings.Num() > 0; }
+
+	/** Whether any binding still needs the per-frame poll; the manager only ticks the ones that do. */
+	bool HasPolledPropertyBindings() const { return PolledBindingCount > 0; }
 
 private:
 	/** A binding with its lookups already done. Resolved once, at Initialize. */
@@ -130,13 +168,27 @@ private:
 		TWeakObjectPtr<UObject> Target;
 		UFunction* SourceFunction = nullptr;
 		UFunction* Setter = nullptr;
+		/**
+		 * The source function's FieldNotify id on this class, when it has one. A valid id means the
+		 * binding is subscription-driven; an invalid one means it stays on the per-frame poll.
+		 */
+		UE::FieldNotification::FFieldId SourceFieldId;
 	};
 	TArray<FResolvedBinding> ResolvedBindings;
+
+	/** How many of ResolvedBindings carry no FieldNotify id and must be polled. */
+	int32 PolledBindingCount = 0;
 
 	/** Resolve the class's bindings against this instance's widgets. Silent: the compiler reported. */
 	void ResolvePropertyBindings();
 	/** Adds each compiled `Event -> Handler` route as a delegate on its live target. */
 	void BindEventBindings();
+	/** One binding, source through setter. Shared by the poll, the initial push and the broadcasts. */
+	void EvaluateBinding(const FResolvedBinding& InBinding);
+	/** Re-evaluates every binding whose source field just broadcast. */
+	void HandleSourceFieldValueChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId);
+
+	FDreamFieldNotificationDelegates NotificationDelegates;
 
 	uint8 bInitialized : 1 = false;
 };

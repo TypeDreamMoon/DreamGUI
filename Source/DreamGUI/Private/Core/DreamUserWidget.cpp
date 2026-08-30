@@ -6,6 +6,7 @@
 #include "Core/DreamUIManager.h"
 #include "Interaction/DreamContentWidget.h"
 #include "DreamGUI.h"
+#include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/World.h"
 
 /**
@@ -171,11 +172,81 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	BindEventBindings();
 	if (ResolvedBindings.Num() > 0)
 	{
-		// Once now, so the first frame shows bound values rather than the authored ones.
+		// Once now, so the first frame shows bound values rather than the authored ones. All of
+		// them: a subscribed binding's broadcast only fires on the NEXT change, and the current
+		// value has to reach the widget too.
 		EvaluatePropertyBindings();
-		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+		if (HasPolledPropertyBindings())
 		{
-			Manager->AddPropertyBindingUser(this);
+			// Only the polled remainder needs the per-frame visit; the subscribed bindings
+			// re-evaluate from their field's broadcast.
+			if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+			{
+				Manager->AddPropertyBindingUser(this);
+			}
+		}
+	}
+}
+
+void UDreamUserWidget::FFieldNotificationClassDescriptor::ForEachField(const UClass* Class, TFunctionRef<bool(::UE::FieldNotification::FFieldId FieldId)> Callback) const
+{
+	if (const UBlueprintGeneratedClass* BPClass = Cast<const UBlueprintGeneratedClass>(Class))
+	{
+		BPClass->ForEachFieldNotify(Callback, true);
+	}
+}
+
+FDelegateHandle UDreamUserWidget::AddFieldValueChangedDelegate(UE::FieldNotification::FFieldId InFieldId, FFieldValueChangedDelegate InNewDelegate)
+{
+	return NotificationDelegates.AddFieldValueChangedDelegate(this, InFieldId, MoveTemp(InNewDelegate));
+}
+
+bool UDreamUserWidget::RemoveFieldValueChangedDelegate(UE::FieldNotification::FFieldId InFieldId, FDelegateHandle InHandle)
+{
+	return NotificationDelegates.RemoveFieldValueChangedDelegate(this, InFieldId, InHandle);
+}
+
+int32 UDreamUserWidget::RemoveAllFieldValueChangedDelegates(FDelegateUserObjectConst InUserObject)
+{
+	return NotificationDelegates.RemoveAllFieldValueChangedDelegates(this, InUserObject);
+}
+
+int32 UDreamUserWidget::RemoveAllFieldValueChangedDelegates(UE::FieldNotification::FFieldId InFieldId, FDelegateUserObjectConst InUserObject)
+{
+	return NotificationDelegates.RemoveAllFieldValueChangedDelegates(this, InFieldId, InUserObject);
+}
+
+const UE::FieldNotification::IClassDescriptor& UDreamUserWidget::GetFieldNotificationDescriptor() const
+{
+	static FFieldNotificationClassDescriptor Local;
+	return Local;
+}
+
+void UDreamUserWidget::BroadcastFieldValueChanged(UE::FieldNotification::FFieldId InFieldId)
+{
+	NotificationDelegates.BroadcastFieldValueChanged(this, InFieldId);
+}
+
+void UDreamUserWidget::K2_AddFieldValueChangedDelegate(FFieldNotificationId InFieldId, FFieldValueChangedDynamicDelegate InDelegate)
+{
+	if (InFieldId.IsValid())
+	{
+		const UE::FieldNotification::FFieldId FieldId = GetFieldNotificationDescriptor().GetField(GetClass(), InFieldId.FieldName);
+		if (FieldId.IsValid())
+		{
+			NotificationDelegates.AddFieldValueChangedDelegate(this, FieldId, InDelegate);
+		}
+	}
+}
+
+void UDreamUserWidget::K2_RemoveFieldValueChangedDelegate(FFieldNotificationId InFieldId, FFieldValueChangedDynamicDelegate InDelegate)
+{
+	if (InFieldId.IsValid())
+	{
+		const UE::FieldNotification::FFieldId FieldId = GetFieldNotificationDescriptor().GetField(GetClass(), InFieldId.FieldName);
+		if (FieldId.IsValid())
+		{
+			NotificationDelegates.RemoveFieldValueChangedDelegate(this, FieldId, InDelegate);
 		}
 	}
 }
@@ -217,6 +288,7 @@ void UDreamUserWidget::BindEventBindings()
 void UDreamUserWidget::ResolvePropertyBindings()
 {
 	ResolvedBindings.Reset();
+	PolledBindingCount = 0;
 
 	TArray<FDreamWidgetPropertyBinding> Bindings;
 	UDreamWidgetGeneratedClass::CollectPropertyBindings(GetClass(), Bindings);
@@ -224,6 +296,10 @@ void UDreamUserWidget::ResolvePropertyBindings()
 	{
 		return;
 	}
+
+	// One subscription per distinct source field, no matter how many bindings read it; the handler
+	// fans out to every binding carrying that id.
+	TSet<int32> SubscribedFieldIndices;
 
 	for (const FDreamWidgetPropertyBinding& Binding : Bindings)
 	{
@@ -251,43 +327,91 @@ void UDreamUserWidget::ResolvePropertyBindings()
 		Resolved.Target = Target;
 		Resolved.SourceFunction = SourceFunction;
 		Resolved.Setter = Setter;
+
+		// A source function the class marked FieldNotify tells us when it changes; everything else
+		// can change silently and stays on the per-frame poll. The classification is per instance
+		// only because the resolution is -- the answer is a pure function of the class.
+		Resolved.SourceFieldId = GetFieldNotificationDescriptor().GetField(GetClass(), Binding.FunctionName);
+		if (Resolved.SourceFieldId.IsValid())
+		{
+			bool bAlreadySubscribed = false;
+			SubscribedFieldIndices.Add(Resolved.SourceFieldId.GetIndex(), &bAlreadySubscribed);
+			if (!bAlreadySubscribed)
+			{
+				// Bound to self: the delegate store lives on this same object, so lifetime is
+				// co-terminal and no unbind pass is owed.
+				AddFieldValueChangedDelegate(Resolved.SourceFieldId,
+					FFieldValueChangedDelegate::CreateUObject(this, &UDreamUserWidget::HandleSourceFieldValueChanged));
+			}
+		}
+		else
+		{
+			++PolledBindingCount;
+		}
 	}
+}
+
+void UDreamUserWidget::EvaluateBinding(const FResolvedBinding& Binding)
+{
+	UObject* Target = Binding.Target.Get();
+	if (!IsValid(Target) || Binding.SourceFunction == nullptr || Binding.Setter == nullptr)
+	{
+		return;
+	}
+
+	// FStructOnScope rather than a raw buffer: a returned FText or FString has to be constructed
+	// before ProcessEvent writes it and destroyed afterwards, and this does both.
+	FStructOnScope SourceFrame(Binding.SourceFunction);
+	ProcessEvent(Binding.SourceFunction, SourceFrame.GetStructMemory());
+
+	FProperty* ReturnProperty = Binding.SourceFunction->GetReturnProperty();
+	FProperty* SetterParameter = nullptr;
+	for (TFieldIterator<FProperty> It(Binding.Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+	{
+		SetterParameter = *It;
+		break;
+	}
+	if (ReturnProperty == nullptr || SetterParameter == nullptr
+		|| !ReturnProperty->SameType(SetterParameter))
+	{
+		// The compiler checked this pairing; reaching here means the class moved underneath us.
+		return;
+	}
+
+	FStructOnScope SetterFrame(Binding.Setter);
+	SetterParameter->CopyCompleteValue(
+		SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory()),
+		ReturnProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory()));
+	Target->ProcessEvent(Binding.Setter, SetterFrame.GetStructMemory());
 }
 
 void UDreamUserWidget::EvaluatePropertyBindings()
 {
 	for (const FResolvedBinding& Binding : ResolvedBindings)
 	{
-		UObject* Target = Binding.Target.Get();
-		if (!IsValid(Target) || Binding.SourceFunction == nullptr || Binding.Setter == nullptr)
-		{
-			continue;
-		}
+		EvaluateBinding(Binding);
+	}
+}
 
-		// FStructOnScope rather than a raw buffer: a returned FText or FString has to be constructed
-		// before ProcessEvent writes it and destroyed afterwards, and this does both.
-		FStructOnScope SourceFrame(Binding.SourceFunction);
-		ProcessEvent(Binding.SourceFunction, SourceFrame.GetStructMemory());
-
-		FProperty* ReturnProperty = Binding.SourceFunction->GetReturnProperty();
-		FProperty* SetterParameter = nullptr;
-		for (TFieldIterator<FProperty> It(Binding.Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+void UDreamUserWidget::EvaluatePolledPropertyBindings()
+{
+	for (const FResolvedBinding& Binding : ResolvedBindings)
+	{
+		if (!Binding.SourceFieldId.IsValid())
 		{
-			SetterParameter = *It;
-			break;
+			EvaluateBinding(Binding);
 		}
-		if (ReturnProperty == nullptr || SetterParameter == nullptr
-			|| !ReturnProperty->SameType(SetterParameter))
-		{
-			// The compiler checked this pairing; reaching here means the class moved underneath us.
-			continue;
-		}
+	}
+}
 
-		FStructOnScope SetterFrame(Binding.Setter);
-		SetterParameter->CopyCompleteValue(
-			SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory()),
-			ReturnProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory()));
-		Target->ProcessEvent(Binding.Setter, SetterFrame.GetStructMemory());
+void UDreamUserWidget::HandleSourceFieldValueChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId)
+{
+	for (const FResolvedBinding& Binding : ResolvedBindings)
+	{
+		if (Binding.SourceFieldId.IsValid() && Binding.SourceFieldId.GetName() == InFieldId.GetName())
+		{
+			EvaluateBinding(Binding);
+		}
 	}
 }
 
