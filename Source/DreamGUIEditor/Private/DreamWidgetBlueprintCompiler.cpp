@@ -17,6 +17,8 @@
 #include "Text/DreamUIValueFormat.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextBuilder.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
@@ -123,6 +125,25 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	if (DreamBlueprint == nullptr)
 	{
 		return;
+	}
+
+	// Edits mirrored into the template but not yet flushed into the .dui die here otherwise: this
+	// function reads the FILE and rebuilds the tree from it, and the designer triggers a skeleton
+	// compile on every structural edit -- so an unflushed property edit would be rebuilt away
+	// moments after it was made. Flushing at the top of the read is the one chokepoint every
+	// compile type passes through (the pre-compile broadcast fires a stage too late, after this
+	// runs). Free when the template is clean; the flush's own write is invisible to the source
+	// watcher through the own-write hash. Skipped while a transaction is being applied: the flush
+	// opens a transaction of its own, and an undo application is no place to start one.
+	if (!GIsTransacting)
+	{
+		if (FDreamWidgetBlueprintEditor* OpenEditor = FDreamWidgetBlueprintEditor::FindEditorForBlueprint(DreamBlueprint))
+		{
+			if (const TSharedPtr<FDreamWidgetPreviewHost> Host = OpenEditor->GetPreviewHost())
+			{
+				Host->FlushTemplateChanges();
+			}
+		}
 	}
 
 	// SourceFile is a CLASS DEFAULT, so the CDO is where it is read from -- and the CDO still
@@ -245,6 +266,50 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// transaction buffer -- was written against that object, and a tree that differs from it only in
 	// its flags is the kind of difference that surfaces three files away as "undo does nothing here".
 	NewTree->SetFlags(RF_Transactional);
+
+	// Animations ride across the rebuild. The grammar cannot author a sequence, so everything in a
+	// SequenceArray was made in the animation editor and lives nowhere but the tree this compile is
+	// about to drop -- without this carry, one compile deletes the author's animation work. Matched
+	// by display name because that is the model animation bindings themselves resolve through, and
+	// carried BEFORE MigrateRenamedWidgets so `(was: OldId)` clauses rewrite the carried paths.
+	// AddComponentByTemplate goes through FObjectInstancingGraph, and SequenceArray is Instanced, so
+	// the sequences are re-homed rather than pointer-shared with an object headed for the reaper.
+	if (IsValid(DreamBlueprint->WidgetTree) && IsValid(DreamBlueprint->WidgetTree->RootWidget))
+	{
+		TMap<FString, UDreamWidget*> NewWidgetsByDisplayName;
+		TArray<UDreamWidget*> NewWidgets;
+		UDreamWidget::CollectChildrenWidgets(NewTree->RootWidget, NewWidgets, /*IncludeTarget*/true);
+		for (UDreamWidget* NewWidget : NewWidgets)
+		{
+			NewWidgetsByDisplayName.Add(NewWidget->GetDisplayName(), NewWidget);
+		}
+
+		TArray<UDreamWidget*> OldWidgets;
+		UDreamWidget::CollectChildrenWidgets(DreamBlueprint->WidgetTree->RootWidget, OldWidgets, /*IncludeTarget*/true);
+		for (UDreamWidget* OldWidget : OldWidgets)
+		{
+			UDreamWidgetAnimationComponent* OldAnimator = IsValid(OldWidget) ? OldWidget->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
+			if (OldAnimator == nullptr || OldAnimator->GetSequenceArray().Num() == 0)
+			{
+				continue;
+			}
+			// The root hosts the animations in practice, and a renamed root has no name to match, so
+			// root pairs with root regardless of what either is called.
+			UDreamWidget* NewHome = OldWidget == DreamBlueprint->WidgetTree->RootWidget
+				? NewTree->RootWidget.Get()
+				: NewWidgetsByDisplayName.FindRef(OldWidget->GetDisplayName());
+			if (!IsValid(NewHome) || NewHome->GetComponent<UDreamWidgetAnimationComponent>() != nullptr)
+			{
+				// No widget by that name in the new file, or (impossible today) it already animates:
+				// the sequences stay with the old tree and die with it. Said out loud, not silently.
+				MessageLog.Warning(*FString::Printf(
+					TEXT("Animations on widget '%s' could not be carried across the .dui rebuild: no widget with that name in the new hierarchy. Rename with (was: %s) to keep them."),
+					*OldWidget->GetDisplayName(), *OldWidget->GetDisplayName()));
+				continue;
+			}
+			NewHome->AddComponentByTemplate(OldAnimator);
+		}
+	}
 
 	// The one field the text owns. Replaced rather than merged: the .dui is the whole hierarchy, so
 	// anything still in the old tree is by definition not in the file any more.

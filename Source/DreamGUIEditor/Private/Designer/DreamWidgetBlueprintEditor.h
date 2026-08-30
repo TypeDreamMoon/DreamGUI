@@ -261,6 +261,8 @@ public:
 	static TWeakPtr<FDreamWidgetBlueprintEditor> GetEditorByWorld(UWorld* InWorld);
 	static bool WidgetIsRootAgent(UDreamWidget* InWidget);
 	static void IterateAllDesigners(const TFunction<void(FDreamWidgetBlueprintEditor*)>& InFunction);
+	/** The open designer editing InBlueprint, or null. The compiler's route to the preview host. */
+	static FDreamWidgetBlueprintEditor* FindEditorForBlueprint(const UDreamWidgetBlueprint* InBlueprint);
 	/** Every open designer whose asset is InBlueprint rebuilds its preview. */
 	static void RefreshDesignersFor(UDreamWidgetBlueprint* InBlueprint);
 

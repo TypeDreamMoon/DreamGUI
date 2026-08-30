@@ -681,6 +681,19 @@ void FDreamWidgetBlueprintEditor::RefreshDesignersFor(UDreamWidgetBlueprint* InB
 	});
 }
 
+FDreamWidgetBlueprintEditor* FDreamWidgetBlueprintEditor::FindEditorForBlueprint(const UDreamWidgetBlueprint* InBlueprint)
+{
+	FDreamWidgetBlueprintEditor* Found = nullptr;
+	IterateAllDesigners([InBlueprint, &Found](FDreamWidgetBlueprintEditor* Editor)
+	{
+		if (Editor->BlueprintBeingEdited == InBlueprint)
+		{
+			Found = Editor;
+		}
+	});
+	return Found;
+}
+
 namespace
 {
 	// A widget's axis-aligned bounds in ITS PARENT's frame. DreamGUI's UI plane is YZ
