@@ -83,8 +83,7 @@ namespace DreamUIMenusLocal
 			LOCTEXT("DreamToolsComboLabel", "Dream"),
 			LOCTEXT("DreamToolsComboTooltip",
 				"Dream-family language tools: open a source workspace in VSCode, or rebuild a whole source tree (DreamShader / DreamFX / DreamUI)."),
-			FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.OpenInExternalEditor")),
-				/*bInSimpleComboBox*/ true));
+			FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.OpenInExternalEditor"))));
 	}
 
 	void RegisterMenusInternal()
