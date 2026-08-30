@@ -127,6 +127,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	void SetValueWithoutNotify(bool Value);
 	/**
+	 * Aliases in the spelling the binding system derives from the property: bIsOn's setter is
+	 * SetIsOn by the naming rule, and until these existed a toggle could not be bound at all --
+	 * FindDreamWidgetSetterFor found nothing and DUI5005 blamed the author.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetIsOn(bool Value) { SetValue(Value); }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetIsOnWithoutNotify(bool Value) { SetValueWithoutNotify(Value); }
+	/**
 	 * If this toggle added to a ToggleGroup, then return index in group. Return -1 if not add to ToggleGroup.
 	 * Index is sorted by flatten-hierarchy-index, from RootComponent(UIItem).
 	 */
