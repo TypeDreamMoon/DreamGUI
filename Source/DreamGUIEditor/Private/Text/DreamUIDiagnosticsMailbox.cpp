@@ -66,6 +66,15 @@ FString FDreamUIDiagnosticsMailbox::FlushNow(const FString& InOverrideDirectory)
 {
 	using namespace DreamUIMailboxLocal;
 
+	// The automation suite compiles text-backed fixtures through the real compiler, and their
+	// deposits must not land in the project's LIVE mailbox -- a VSCode session may be watching it
+	// while the tests run (observed in the field: a suite pass left a fixture entry there). Tests
+	// that test the mailbox itself pass an override directory and sail through.
+	if (InOverrideDirectory.IsEmpty() && GIsAutomationTesting)
+	{
+		return FString();
+	}
+
 	const FString Directory = InOverrideDirectory.IsEmpty() ? DefaultDirectory() : InOverrideDirectory;
 	if (!IFileManager::Get().DirectoryExists(*Directory))
 	{
