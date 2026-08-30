@@ -13,6 +13,7 @@
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
 #include "Text/DreamUIPaths.h"
+#include "Text/DreamUIValueFormat.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextBuilder.h"
 
@@ -224,6 +225,9 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// The one field the text owns. Replaced rather than merged: the .dui is the whole hierarchy, so
 	// anything still in the old tree is by definition not in the file any more.
 	DreamBlueprint->WidgetTree = NewTree;
+	// And the resources ride along for PopulateBlueprintGeneratedVariables, which declares one class
+	// variable per entry a few lines after this function returns.
+	TextResources = Ast.Resources;
 	// And the bindings alongside it, for the same reason -- `<-` lines live in the same file. These
 	// are the AUTHORED list; CompilePropertyBindings resolves them onto the class at the end of the
 	// compile and reports the ones that cannot be honoured, which is how a .dui naming a function the
@@ -738,6 +742,93 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 			WidgetVariable.SetMetaData(TEXT("Category"), *DreamBlueprint->GetName());
 
 			DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(WidgetVariable));
+		}
+
+		// One class variable per `resources` entry, which is what makes the block editable from the
+		// Class Defaults panel and readable from the graph. DefaultValue is rebuilt from the file on
+		// EVERY compile and the compiler applies it onto the final CDO after the old CDO's values
+		// have been copied over -- so the FILE wins each compile, by construction. A panel edit is
+		// not lost because the write-back carries it into the file the moment it is committed; a
+		// panel edit made with the write-back broken is lost at the next compile, which is the same
+		// contract every widget property in the designer already lives under.
+		for (const FDreamUIResource& Entry : TextResources)
+		{
+			const FName VariableName(*Entry.Name);
+			if (VariableName.IsNone() || DeclaredNames.Contains(VariableName))
+			{
+				// A resource sharing a widget's name would be two variables fighting for one slot.
+				// The widget won above; the file's own duplicate-name diagnostics cover the rest.
+				continue;
+			}
+			if (Blueprint->ParentClass != nullptr && Blueprint->ParentClass->FindPropertyByName(VariableName) != nullptr)
+			{
+				continue;
+			}
+
+			FEdGraphPinType PinType;
+			FString DefaultValue;
+			if (Entry.TypeName.Equals(TEXT("Number"), ESearchCase::IgnoreCase))
+			{
+				PinType = FEdGraphPinType(UEdGraphSchema_K2::PC_Real, UEdGraphSchema_K2::PC_Double,
+					nullptr, EPinContainerType::None, false, FEdGraphTerminalType());
+				// The lexer's number text is ImportText's number text; no reformatting to drift on.
+				DefaultValue = Entry.Value.Raw;
+			}
+			else if (Entry.TypeName.Equals(TEXT("Color"), ESearchCase::IgnoreCase))
+			{
+				PinType = FEdGraphPinType(UEdGraphSchema_K2::PC_Struct, NAME_None,
+					TBaseStructure<FLinearColor>::Get(), EPinContainerType::None, false, FEdGraphTerminalType());
+				FLinearColor Color = FLinearColor::White;
+				DreamUIValueFormat::ParseColorHex(Entry.Value.Raw, Color);
+				TBaseStructure<FLinearColor>::Get()->ExportText(DefaultValue, &Color, nullptr, nullptr, PPF_None, nullptr);
+			}
+			else if (Entry.TypeName.Equals(TEXT("Vector2"), ESearchCase::IgnoreCase))
+			{
+				PinType = FEdGraphPinType(UEdGraphSchema_K2::PC_Struct, NAME_None,
+					TBaseStructure<FVector2D>::Get(), EPinContainerType::None, false, FEdGraphTerminalType());
+				FVector2D Vector = FVector2D::ZeroVector;
+				if (Entry.Value.Elements.Num() == 2)
+				{
+					LexTryParseString(Vector.X, *Entry.Value.Elements[0]);
+					LexTryParseString(Vector.Y, *Entry.Value.Elements[1]);
+				}
+				TBaseStructure<FVector2D>::Get()->ExportText(DefaultValue, &Vector, nullptr, nullptr, PPF_None, nullptr);
+			}
+			else if (Entry.TypeName.Equals(TEXT("String"), ESearchCase::IgnoreCase))
+			{
+				PinType = FEdGraphPinType(UEdGraphSchema_K2::PC_String, NAME_None,
+					nullptr, EPinContainerType::None, false, FEdGraphTerminalType());
+				DefaultValue = Entry.Value.Raw;
+			}
+			else if (Entry.TypeName.Equals(TEXT("Asset"), ESearchCase::IgnoreCase))
+			{
+				// A soft OBJECT pin, not a path struct: the Class Defaults panel then offers the
+				// asset picker, which is the whole reason an author would edit a resource there.
+				PinType = FEdGraphPinType(UEdGraphSchema_K2::PC_SoftObject, NAME_None,
+					UObject::StaticClass(), EPinContainerType::None, false, FEdGraphTerminalType());
+				DefaultValue = Entry.Value.Raw;
+			}
+			else
+			{
+				// The builder already refused the entry (DUI4008); declaring a variable for it anyway
+				// would put an untyped slot on the class for a value nothing can fill.
+				continue;
+			}
+			DeclaredNames.Add(VariableName);
+
+			FBPVariableDescription ResourceVariable;
+			ResourceVariable.VarName = VariableName;
+			ResourceVariable.VarGuid = FGuid::NewDeterministicGuid(VariableName.ToString());
+			ResourceVariable.VarType = MoveTemp(PinType);
+			ResourceVariable.FriendlyName = Entry.Name;
+			// Editable on the CLASS, read-only in graphs and on instances: the block is a table of
+			// constants, and an instance override would be a value the file cannot see and the next
+			// compile cannot preserve.
+			ResourceVariable.PropertyFlags =
+				(CPF_Edit | CPF_BlueprintVisible | CPF_BlueprintReadOnly | CPF_DisableEditOnInstance);
+			ResourceVariable.Category = FText::FromString(TEXT("Resources"));
+			ResourceVariable.DefaultValue = MoveTemp(DefaultValue);
+			DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(ResourceVariable));
 		}
 	}
 }

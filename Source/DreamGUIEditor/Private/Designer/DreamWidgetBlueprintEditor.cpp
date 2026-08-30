@@ -138,6 +138,11 @@ FDreamWidgetBlueprintEditor::FDreamWidgetBlueprintEditor()
 }
 FDreamWidgetBlueprintEditor::~FDreamWidgetBlueprintEditor()
 {
+	if (DefaultsChangedHandle.IsValid())
+	{
+		FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(DefaultsChangedHandle);
+		DefaultsChangedHandle.Reset();
+	}
 	DesignerInstances.Remove(this);
 
 	// A backstop only. OnClose does this while the world is still alive, which is the case that
@@ -433,6 +438,16 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 				// asset at all.
 				UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Designer edits will not reach '%s': %s"),
 					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *AbsolutePath, *WriteBackError);
+			}
+			else
+			{
+				// The resources block compiles into Class Defaults, so the panel that edits those is
+				// the stock Kismet one -- no notify hook of ours anywhere near it. The global
+				// property-changed broadcast is the one place such an edit is visible, filtered hard:
+				// this fires for every property change in the process, so everything short of "our
+				// CDO, committed" has to leave in one compare.
+				DefaultsChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddSP(
+					this, &FDreamWidgetBlueprintEditor::OnAnyObjectPropertyChanged);
 			}
 		}
 	}
@@ -2466,6 +2481,29 @@ namespace DreamWidgetDesignerClipboard
 
 	/** The copied roots, in the order they were copied. */
 	static TArray<TWeakObjectPtr<UDreamWidget>> Roots;
+}
+
+void FDreamWidgetBlueprintEditor::OnAnyObjectPropertyChanged(UObject* InObject, FPropertyChangedEvent& InEvent)
+{
+	if (InEvent.ChangeType == EPropertyChangeType::Interactive
+		|| InObject == nullptr || !TextWriteBack.IsValid())
+	{
+		return;
+	}
+	const UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint();
+	if (!IsValid(Blueprint) || Blueprint->GeneratedClass == nullptr
+		|| InObject != Blueprint->GeneratedClass->GetDefaultObject(/*bCreateIfNeeded*/false))
+	{
+		return;
+	}
+	// Straight to the flush, not through the preview host's dirty flag: the CDO is not mirrored
+	// from any preview, so there is no template pass to wait for. Flush() reads the CDO itself.
+	FString FlushError;
+	if (!TextWriteBack->Flush(FlushError) && !FlushError.IsEmpty())
+	{
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d A Class Defaults edit did not reach the .dui: %s"),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FlushError);
+	}
 }
 
 void FDreamWidgetBlueprintEditor::MigrateDetailsChangeToTemplate(TConstArrayView<UObject*> InEditedObjects, FEditPropertyChain& InChain, bool bIsModify)

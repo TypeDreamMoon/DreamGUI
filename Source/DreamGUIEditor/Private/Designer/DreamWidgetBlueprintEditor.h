@@ -155,6 +155,8 @@ public:
 	void FillTextSourceMenu(class UToolMenu* InMenu);
 	/** File dialog to Blueprint, via DreamUITextAuthoring::SetAuthoredSourcePath -- which recompiles. */
 	void PickTextSourceFile();
+	/** Carries a committed Class Defaults edit (the resources block) into the .dui. */
+	void OnAnyObjectPropertyChanged(UObject* InObject, FPropertyChangedEvent& InEvent);
 	/** Writes a starter .dui, points the class at it, and compiles. Offered only when there is none. */
 	void CreateTextSourceFile();
 	/** The first DUI root, or where the project's would be. Never a directory outside every root. */
@@ -342,6 +344,8 @@ private:
 	 * construction and unsubscribes on destruction, so its lifetime IS the subscription.
 	 */
 	TSharedPtr<FDreamUITextWriteBack> TextWriteBack;
+	/** Class Defaults edits (the resources block) reach the file through this; see InitDesigner. */
+	FDelegateHandle DefaultsChangedHandle;
 	static TArray<FDreamWidgetBlueprintEditor*> DesignerInstances;
 
 	TSharedPtr<SDreamWidgetDesignerViewport> ViewportPtr;

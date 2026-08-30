@@ -14,6 +14,8 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "Text/DreamUITextWriteBack.h"
+#include "Text/DreamUIValueFormat.h"
 
 #include "HAL/FileManager.h"
 #include "Kismet2/CompilerResultsLog.h"
@@ -681,6 +683,117 @@ bool FDreamUITextRotationReachesTheQuaternionTest::RunTest(const FString& Parame
 	TestTrue(TEXT("and the quaternion -- the value instances are built from -- carries the rotation"),
 		Spinner->GetRelativeRotation().Equals(FRotator(0, 0, 45).Quaternion()));
 	TestEqual(TEXT("and the scale landed"), Spinner->GetRelativeScale(), FVector(2, 3, 1));
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextResourcesCompileToClassDefaultsTest,
+	"DreamGUI.WidgetBlueprint.AResourceCompilesToAClassDefaultAndEditsFlowBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The panel half of the resources block, end to end through a REAL compile:
+ *
+ *   resources entry -> generated class variable -> CDO value     (the compiler's leg)
+ *   CDO edit        -> resources entry line updated              (the write-back's leg)
+ *   recompile       -> CDO carries the edited value              (the file winning, by construction)
+ *
+ * The last leg is the contract the whole design leans on: DefaultValue is rebuilt from the file on
+ * every compile and applied onto the final CDO after the old one's values are copied over, so a
+ * panel edit survives exactly as long as the write-back has carried it into the file.
+ */
+bool FDreamUITextResourcesCompileToClassDefaultsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITextCompileTestLocal;
+
+	FScopedDuiFile File(TEXT("ResourcesCompile.dui"));
+	if (!TestTrue(TEXT("the .dui was written"), File.Write({
+		TEXT("resources {"),
+		TEXT("    Number Gap    = 7"),
+		TEXT("    Color  Accent = #FF6600"),
+		TEXT("}"),
+		TEXT(""),
+		TEXT("Widget Root {"),
+		TEXT("}"),
+	})))
+	{
+		return false;
+	}
+
+	FScopedBlueprint Fixture(TEXT("BP_ResourcesCompile"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)) return false;
+	if (!TestTrue(TEXT("and points at the file"), Fixture.SetDuiFilePath(File.FilePath))) return false;
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("the file compiles clean"), Results.NumErrors, 0);
+
+	UObject* Defaults = Fixture.Blueprint->GeneratedClass != nullptr
+		? Fixture.Blueprint->GeneratedClass->GetDefaultObject(/*bCreateIfNeeded*/false) : nullptr;
+	if (!TestNotNull(TEXT("the class has defaults"), Defaults))
+	{
+		return false;
+	}
+
+	const FDoubleProperty* GapProperty = CastField<FDoubleProperty>(
+		Defaults->GetClass()->FindPropertyByName(TEXT("Gap")));
+	if (!TestNotNull(TEXT("the Number entry became a double class variable"), GapProperty))
+	{
+		return false;
+	}
+	TestEqual(TEXT("holding the entry's value"),
+		GapProperty->GetPropertyValue_InContainer(Defaults), 7.0);
+	TestTrue(TEXT("editable in the panel"), GapProperty->HasAnyPropertyFlags(CPF_Edit));
+	TestTrue(TEXT("but not per instance"), GapProperty->HasAnyPropertyFlags(CPF_DisableEditOnInstance));
+
+	const FStructProperty* AccentProperty = CastField<FStructProperty>(
+		Defaults->GetClass()->FindPropertyByName(TEXT("Accent")));
+	if (TestNotNull(TEXT("the Color entry became a FLinearColor variable"), AccentProperty)
+		&& TestTrue(TEXT("of the right struct"), AccentProperty->Struct == TBaseStructure<FLinearColor>::Get()))
+	{
+		FLinearColor Expected = FLinearColor::White;
+		DreamUIValueFormat::ParseColorHex(TEXT("FF6600"), Expected);
+		// Within a ULP, not bit-equal: the value reached the CDO through ExportText -> DefaultValue
+		// -> ImportText, and a float that has been text twice is allowed its last bit.
+		TestTrue(TEXT("holding the entry's colour"),
+			AccentProperty->ContainerPtrToValuePtr<FLinearColor>(Defaults)->Equals(Expected, 1e-4f));
+	}
+
+	// ---- the write-back leg: a panel edit, delivered as the hook delivers it
+	GapProperty->SetPropertyValue_InContainer(Defaults, 11.0);
+
+	FString SourceText;
+	if (!TestTrue(TEXT("the source is readable"), FFileHelper::LoadFileToString(SourceText, *File.FilePath)))
+	{
+		return false;
+	}
+	FString Updated;
+	FDreamUIDiagnosticBag Diagnostics;
+	if (!TestTrue(TEXT("the flush computed an answer"), FDreamUITextWriteBack::ProduceText(
+		SourceText, Fixture.Blueprint->WidgetTree, Updated, Diagnostics, nullptr, Defaults)))
+	{
+		return false;
+	}
+	TestTrue(TEXT("the entry's line took the edited value"), Updated.Contains(TEXT("Number Gap    = 11")));
+	TestTrue(TEXT("and the untouched entry did not move"), Updated.Contains(TEXT("Color  Accent = #FF6600")));
+
+	// ---- the last leg: write the updated text back and recompile; the file wins, carrying the edit
+	if (!TestTrue(TEXT("the updated source was saved"), FFileHelper::SaveStringToFile(Updated, *File.FilePath)))
+	{
+		return false;
+	}
+	FCompilerResultsLog SecondResults;
+	Compile(Fixture.Blueprint, SecondResults);
+	TestEqual(TEXT("the recompile is clean"), SecondResults.NumErrors, 0);
+	UObject* SecondDefaults = Fixture.Blueprint->GeneratedClass->GetDefaultObject(false);
+	const FDoubleProperty* SecondGap = CastField<FDoubleProperty>(
+		SecondDefaults->GetClass()->FindPropertyByName(TEXT("Gap")));
+	if (TestNotNull(TEXT("the variable survived the recompile"), SecondGap))
+	{
+		TestEqual(TEXT("carrying the value the panel set, via the file"),
+			SecondGap->GetPropertyValue_InContainer(SecondDefaults), 11.0);
+	}
 	return true;
 }
 

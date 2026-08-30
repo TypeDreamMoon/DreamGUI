@@ -632,6 +632,85 @@ namespace DreamUIWriteBackLocal
 		Edit.NewValueText = MoveTemp(LiveText);
 	}
 
+	/**
+	 * The `resources` block against the class defaults it was compiled into.
+	 *
+	 * The reference side is the entry's own literal, materialised through the LIVE property's type
+	 * -- parse into a scratch value, print, compare printed forms -- so the comparison inherits every
+	 * folding the node passes rely on: a colour's sRGB quantisation, a double's shortest spelling.
+	 * Building a second CDO to read the reference from would be the honest-looking alternative, and
+	 * it would drag a Blueprint compile into every flush.
+	 *
+	 * An entry with no property on the class is skipped in silence: the class has not been compiled
+	 * since the entry was added, or the compile refused it -- both already reported where they
+	 * happened, and neither is something a flush can act on.
+	 */
+	void CollectResourceEdits(const FDreamUIAst& InAst, const UObject* InLiveDefaults,
+		TArray<FDreamUIPropertyEdit>& OutEdits)
+	{
+		if (InLiveDefaults == nullptr)
+		{
+			return;
+		}
+		for (const FDreamUIResource& Entry : InAst.Resources)
+		{
+			const FProperty* Property = InLiveDefaults->GetClass()->FindPropertyByName(FName(*Entry.Name));
+			if (Property == nullptr)
+			{
+				continue;
+			}
+
+			void* Scratch = FMemory::Malloc(Property->GetSize(), Property->GetMinAlignment());
+			Property->InitializeValue(Scratch);
+
+			bool bFilled = false;
+			if (DreamUIValueFormat::HasShortForm(Property))
+			{
+				// Colour and Vector2 entries: the short-form parser reads the same literal kinds the
+				// entry holds (a hex, a 2-tuple).
+				bFilled = DreamUIValueFormat::Parse(Property, Entry.Value, Scratch);
+			}
+			else if (const FNumericProperty* AsNumeric = CastField<FNumericProperty>(Property))
+			{
+				double Number = 0.0;
+				bFilled = AsNumeric->IsFloatingPoint() && LexTryParseString(Number, *Entry.Value.Raw);
+				if (bFilled)
+				{
+					AsNumeric->SetFloatingPointPropertyValue(Scratch, Number);
+				}
+			}
+			else if (const FStrProperty* AsString = CastField<FStrProperty>(Property))
+			{
+				AsString->SetPropertyValue(Scratch, Entry.Value.Raw);
+				bFilled = true;
+			}
+			else if (const FSoftObjectProperty* AsSoft = CastField<FSoftObjectProperty>(Property))
+			{
+				AsSoft->SetPropertyValue(Scratch, FSoftObjectPtr(FSoftObjectPath(Entry.Value.Raw)));
+				bFilled = true;
+			}
+
+			FString LiveText;
+			FString ReferenceText;
+			const bool bComparable = bFilled
+				&& PrintLiteral(Property, Property->ContainerPtrToValuePtr<const void>(InLiveDefaults), LiveText)
+				&& PrintLiteral(Property, Scratch, ReferenceText);
+
+			Property->DestroyValue(Scratch);
+			FMemory::Free(Scratch);
+
+			if (!bComparable || LiveText.Equals(ReferenceText, ESearchCase::CaseSensitive))
+			{
+				continue;
+			}
+
+			FDreamUIPropertyEdit& Edit = OutEdits.AddDefaulted_GetRef();
+			Edit.Target = EDreamUIPatchTarget::Resource;
+			Edit.PropertyName = Entry.Name;
+			Edit.NewValueText = MoveTemp(LiveText);
+		}
+	}
+
 	/** Add a property path once, keeping the order it was first seen in. */
 	void AddCandidateName(const FString& InName, TArray<FString>& InOutNames, TSet<FString>& InOutSeen)
 	{
@@ -858,7 +937,8 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 }
 
 bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
-	FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits)
+	FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits,
+	const UObject* InLiveDefaults)
 {
 	OutText = InText;
 	if (OutEdits != nullptr)
@@ -884,6 +964,7 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 
 	TArray<FDreamUIPropertyEdit> Edits;
 	CollectEdits(Ast, InLiveTree, TextTree.Get(), Edits, OutDiagnostics);
+	DreamUIWriteBackLocal::CollectResourceEdits(Ast, InLiveDefaults, Edits);
 	if (OutEdits != nullptr)
 	{
 		*OutEdits = Edits;
@@ -983,10 +1064,21 @@ bool FDreamUITextWriteBack::Flush(FString& OutError)
 		// mirror -- and reporting that on every flush point would bury the failures that matter.
 		return true;
 	}
-	return FlushTree(Pinned->GetBlueprint()->WidgetTree, OutError);
+	// The class defaults ride along, because the resources block compiles into them: an author who
+	// edits a resource in the Class Defaults panel has made a change only the CDO knows about.
+	const UObject* LiveDefaults = nullptr;
+	if (const UDreamWidgetBlueprint* Blueprint = Pinned->GetBlueprint())
+	{
+		if (Blueprint->GeneratedClass != nullptr)
+		{
+			LiveDefaults = Blueprint->GeneratedClass->GetDefaultObject(/*bCreateIfNeeded*/false);
+		}
+	}
+	return FlushTree(Pinned->GetBlueprint()->WidgetTree, OutError, LiveDefaults);
 }
 
-bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FString& OutError)
+bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FString& OutError,
+	const UObject* InLiveDefaults)
 {
 	OutError.Reset();
 	LastDiagnostics.Reset();
@@ -1010,7 +1102,7 @@ bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FStrin
 	const FString Current = Document->GetContent();
 	FString Updated;
 	TArray<FDreamUIPropertyEdit> Edits;
-	if (!ProduceText(Current, InLiveTree, Updated, LastDiagnostics, &Edits))
+	if (!ProduceText(Current, InLiveTree, Updated, LastDiagnostics, &Edits, InLiveDefaults))
 	{
 		OutError = FString::Printf(
 			TEXT("'%s' does not currently parse and build, so nothing was written back: %s"),

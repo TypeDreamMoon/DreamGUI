@@ -183,7 +183,8 @@ public:
 	bool Flush(FString& OutError);
 
 	/** Flush an explicit tree. Flush() is this with the host's, and the two share every line below. */
-	bool FlushTree(const UDreamWidgetTree* InLiveTree, FString& OutError);
+	bool FlushTree(const UDreamWidgetTree* InLiveTree, FString& OutError,
+		const UObject* InLiveDefaults = nullptr);
 
 	/**
 	 * The document's text changed and the tree has to be rebuilt from it.
@@ -258,8 +259,8 @@ public:
 	 * disagree about what a flush did.
 	 */
 	static bool ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
-		FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics,
-		TArray<FDreamUIPropertyEdit>* OutEdits = nullptr);
+		FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits = nullptr,
+		const UObject* InLiveDefaults = nullptr);
 
 
 

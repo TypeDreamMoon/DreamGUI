@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "KismetCompiler.h"
+#include "Text/DreamUIAst.h"
 
 class UDreamWidget;
 class UDreamWidgetBlueprint;
@@ -115,6 +116,15 @@ protected:
 	 * earliest point the compilation manager offers, and it is the point the variable list is built.
 	 */
 	virtual void PopulateBlueprintGeneratedVariables() override;
+
+	/**
+	 * The `resources` entries of the file just built, carried from BuildWidgetTreeFromTextSource to
+	 * the variable declarations a few lines later in the same stage. Not persisted anywhere: the
+	 * compiler context lives for one compile, and the entries are re-read from the file every time,
+	 * which is what makes the file win -- a Class Defaults edit survives exactly until the next
+	 * compile unless the write-back has carried it home first.
+	 */
+	TArray<FDreamUIResource> TextResources;
 	virtual void FinishCompilingClass(UClass* Class) override;
 	// End FKismetCompilerContext
 

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -20,6 +20,12 @@ enum class EDreamUIPatchTarget : uint8
 	Node,
 	/** An `@slot Name = Value` line -- the node's UDreamPanelSlot. */
 	Slot,
+	/**
+	 * A `resources` block entry, addressed by PropertyName = the entry's name; NodeId is unused.
+	 * Replace-only: an entry the file does not declare has no variable on the class either, so
+	 * there is never a value with no line to hold it.
+	 */
+	Resource,
 	/**
 	 * A property inside the ComponentIndex'th `+ Class { }` block of the node.
 	 *

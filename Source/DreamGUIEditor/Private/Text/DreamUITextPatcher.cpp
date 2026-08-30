@@ -1130,6 +1130,31 @@ namespace DreamUIPatchLocal
 			return false;
 		}
 
+		if (InEdit.Target == EDreamUIPatchTarget::Resource)
+		{
+			const FDreamUIResource* Entry = InAst.FindResource(InEdit.PropertyName);
+			if (Entry == nullptr)
+			{
+				RefuseTarget(OutDiagnostics, FDreamUISourceLocation(),
+					FString::Printf(TEXT("no resources entry is named '%s'"), *InEdit.PropertyName));
+				return false;
+			}
+			if (!ValidateValueText(InEdit.NewValueText, Entry->Value.Location, OutDiagnostics))
+			{
+				return false;
+			}
+			// PlanReplace wants an FDreamUIProperty, and an entry is close enough to wear one: the
+			// value and its location are real, and Name carries the TYPE keyword because that is what
+			// the entry's line starts with -- the stale-check reads the text at Location and expects
+			// the first word of Name there.
+			FDreamUIProperty StandIn;
+			StandIn.Name = Entry->TypeName;
+			StandIn.Value = Entry->Value;
+			StandIn.Location = Entry->Location;
+			return PlanReplace(InText, InEdit, StandIn, /*bInSlotNotation*/false,
+				OutSplices, InOutOrder, OutDiagnostics);
+		}
+
 		FResolvedTarget Target;
 		if (!ResolveTarget(InText, InAst, InEdit, Target, OutDiagnostics))
 		{
