@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -622,6 +622,64 @@ bool FDreamUIWriteBackUndoDefersItsRebuildTest::RunTest(const FString& Parameter
 	// and only the text after Apply finishes is worth building from.
 	WriteBack->ProcessDeferredRebuild();
 	TestEqual(TEXT("and a second pump does nothing"), Seen.Num(), 2);
+
+	return true;
+}
+
+
+// -------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackRotationAndScaleTest,
+	"DreamGUI.Designer.ARotationAndAScaleReachTheTextFile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The user-shaped case this pipeline shipped without: rotate a widget, save, and the .dui carries
+ * it. Neither property is written in the fixture, so both go through the insertion path -- and the
+ * rotation goes through the transient-mirror pair, which is where three separate implementations
+ * used to drop it (the compared set, the transient refusal, the raw write past the setter).
+ */
+bool FDreamUIWriteBackRotationAndScaleTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const FString Source = Fixture();
+	FBuiltTree Live = BuildTree(Source);
+	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid())) return false;
+
+	UDreamWidget* Title = Live.Find(TEXT("Title"));
+	if (!TestNotNull(TEXT("the title is there"), (UObject*)Title)) return false;
+
+	// The gesture, exactly as the setters deliver it: rotation through the euler (what the .dui
+	// spells), scale straight in.
+	Title->SetRelativeRotationEuler(FRotator(0, 0, 30));
+	Title->SetRelativeScale(FVector(2, 2, 1));
+
+	FString Produced;
+	FDreamUIDiagnosticBag Diagnostics;
+	if (!TestTrue(TEXT("the write-back computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Produced, Diagnostics)))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("the rotation reached the file, spelled as the euler"),
+		Produced.Contains(TEXT("RelativeRotationEuler = (0, 0, 30)")));
+	TestTrue(TEXT("and so did the scale"),
+		Produced.Contains(TEXT("RelativeScale = (2, 2, 1)")));
+	TestFalse(TEXT("and the quaternion, which has no spelling, was not smuggled in as ExportText"),
+		Produced.Contains(TEXT("RelativeRotation =")));
+
+	// Converges in one step, like every other property: a second flush against the same tree finds
+	// nothing, or an idle editor rewrites the file on every gesture end for the rest of the session.
+	// For the rotation pair this is the assertion that matters most -- it fails if printing reads a
+	// different field than parsing writes.
+	FString Again;
+	FDreamUIDiagnosticBag AgainDiagnostics;
+	TestTrue(TEXT("a second pass computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Produced, Live.Tree.Get(), Again, AgainDiagnostics));
+	TestEqualSensitive(TEXT("and found nothing more to write"), Again, Produced);
 
 	return true;
 }

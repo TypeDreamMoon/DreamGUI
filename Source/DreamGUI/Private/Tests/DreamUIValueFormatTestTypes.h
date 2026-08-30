@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -16,9 +16,11 @@
  * works too, but then a rename somewhere else breaks this file with a message about the wrong thing.
  *
  * The near misses carry as much weight as the hits, and each one is a specific wrong implementation:
- * FVector is what a name-prefix match lets through (FVector2D and FVector share four characters),
- * FIntPoint is what a "two numeric fields, must be a tuple" match lets through, and Scalar/Label are
- * there because the caller asks HasShortForm about every property it meets, not only struct ones.
+ * FVector4 is what a name-prefix match lets through (every FVector* shares the first seven
+ * characters), FIntPoint is what a "N numeric fields, must be a tuple" match lets through, and
+ * Scalar/Label are there because the caller asks HasShortForm about every property it meets, not
+ * only struct ones. FVector used to be the prefix near-miss; it graduated to a real entry when
+ * RelativeScale needed a spelling, and FVector4 inherited the role.
  */
 USTRUCT()
 struct FDreamUIValueFormatFixture
@@ -43,6 +45,13 @@ struct FDreamUIValueFormatFixture
 
 	UPROPERTY()
 	FVector Vector = FVector::ZeroVector;
+
+	UPROPERTY()
+	FRotator Rotator = FRotator::ZeroRotator;
+
+	/** The near miss FVector used to be: shares the name prefix, has no short form. */
+	UPROPERTY()
+	FVector4 Vector4 = FVector4(0, 0, 0, 0);
 
 	UPROPERTY()
 	FIntPoint IntPoint = FIntPoint::ZeroValue;

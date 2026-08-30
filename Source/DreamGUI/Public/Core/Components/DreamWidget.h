@@ -219,6 +219,10 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, RelativeRotation);
 	}
+	static FName GetPropertyName_RelativeRotationEuler()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, RelativeRotationEuler);
+	}
 	static FName GetPropertyName_RelativeScale()
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, RelativeScale);

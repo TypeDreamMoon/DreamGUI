@@ -2410,33 +2410,13 @@ UE::Widget::EWidgetMode FDreamWidgetDesignerViewportClient::GetWidgetMode() cons
 	}
 
 	const UE::Widget::EWidgetMode Mode = FEditorViewportClient::GetWidgetMode();
-	// A `.dui` hierarchy gets the move gizmo and nothing else, and the reason is not that rotating a
-	// widget is forbidden -- it is that the result cannot be written down.
-	//
-	// CommitWidgetGeometryToTemplate mirrors four properties on every mouse move: AnchorData,
-	// RelativeLocation, RelativeRotation and RelativeScale. The write-back covers `AnchorData.*` and
-	// stops there, because the language has no spelling for an FQuat or an FVector. A MOVE therefore
-	// survives -- SetRelativeLocation recomputes the anchors, and it is the anchors that get written
-	// -- while a rotate or a scale changes only properties that have nowhere to go, so it looks right
-	// until the next compile and is then gone.
-	//
-	// Offering no handle rather than a handle that does nothing: a control the author drags and then
-	// finds undone is worse than one that was never there, and there is no way to report the loss at
-	// the moment it happens because nothing has gone wrong yet.
-	//
-	// The other half of this rule lives in DreamUITextAuthoringGate's writable set, which for the
-	// same reason lists AnchorData and not the other three. The two have to agree: a panel that greys
-	// the rotation while the gizmo still writes it is the contradiction this pair exists to avoid.
-	if (Mode != UE::Widget::WM_Translate && Mode != UE::Widget::WM_None)
-	{
-		if (const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin())
-		{
-			if (DreamUITextAuthoring::IsTextAuthored(Designer->GetWidgetBlueprint()))
-			{
-				return UE::Widget::WM_Translate;
-			}
-		}
-	}
+	// A text-authored hierarchy gets every gizmo. It did not always: rotate and scale were withheld
+	// while the language had no spelling for them, because a handle whose result cannot be written
+	// down is a handle whose edit dies at the next compile. FRotator and FVector have short forms now
+	// and the write-back prints RelativeRotationEuler and RelativeScale, so the reason is gone --
+	// this comment remains only so the withhold does not come back the next time someone notices
+	// CommitWidgetGeometryToTemplate mirroring properties the writable set does not name. It names
+	// them; the set is DreamUITextAuthoringGate's IsWritableWidgetPropertyRoot.
 	return Mode;
 }
 FVector FDreamWidgetDesignerViewportClient::GetWidgetLocation() const

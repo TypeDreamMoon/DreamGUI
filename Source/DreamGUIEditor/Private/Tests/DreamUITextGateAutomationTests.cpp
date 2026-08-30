@@ -450,22 +450,32 @@ bool FDreamUINonWritablePropertyIsShownReadOnlyTest::RunTest(const FString&)
 		}
 	}
 
-	// ---- the transform the viewport writes but the file cannot hold
-	// CommitWidgetGeometryToTemplate mirrors these three alongside AnchorData on every mouse move,
-	// and the write-back covers none of them: the language has no spelling for an FQuat or an FVector.
-	// A move survives because SetRelativeLocation recomputes the anchors and the anchors ARE written;
-	// a rotate or a scale would not, which is why the viewport offers no gizmo for them either.
-	for (const TCHAR* TransformProperty : { TEXT("RelativeLocation"), TEXT("RelativeRotation"), TEXT("RelativeScale") })
+	// ---- the transform, split the way the writable set splits it
+	// Rotation and scale became writable when FRotator and FVector got spellings: the write-back
+	// prints RelativeRotationEuler and RelativeScale, so the gate lets the panel edit them.
+	// LOCATION stays read-only as a plain row, and not because it cannot be spelled -- its setter
+	// recomputes the anchors and the anchors are what the file carries, so a spelling of its own
+	// would put the same position in the file twice.
+	for (const TCHAR* TransformProperty : { TEXT("RelativeRotation"), TEXT("RelativeScale") })
 	{
 		if (const FProperty* Found = FindProperty(UDreamWidget::StaticClass(), TransformProperty))
 		{
-			TestTrue(FString::Printf(TEXT("%s has no .dui spelling, so it is read-only"), TransformProperty),
+			TestFalse(FString::Printf(TEXT("%s is writable now that the file can hold it"), TransformProperty),
 				DreamUITextAuthoring::IsPropertyReadOnly(Title, Found, {}));
 		}
 		else
 		{
 			AddError(FString::Printf(TEXT("UDreamWidget no longer declares %s"), TransformProperty));
 		}
+	}
+	if (const FProperty* Location = FindProperty(UDreamWidget::StaticClass(), TEXT("RelativeLocation")))
+	{
+		TestTrue(TEXT("RelativeLocation stays read-only; the anchors carry the position"),
+			DreamUITextAuthoring::IsPropertyReadOnly(Title, Location, {}));
+	}
+	else
+	{
+		AddError(TEXT("UDreamWidget no longer declares RelativeLocation"));
 	}
 
 	// ---- outside it

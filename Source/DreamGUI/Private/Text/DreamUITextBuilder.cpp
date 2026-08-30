@@ -258,8 +258,13 @@ namespace DreamUITextBuilderLocal
 			OutReason = TEXT("it is deprecated");
 			return false;
 		}
-		if (InProperty->HasAnyPropertyFlags(CPF_Transient))
+		if (InProperty->HasAnyPropertyFlags(CPF_Transient) && !InProperty->HasSetter())
 		{
+			// The refusal is about persistence, so a transient WITH a native setter is exempt: such a
+			// property is a mirror whose setter derives the value that does serialize, and WriteValue
+			// routes it through that setter. RelativeRotationEuler is the case -- the rotation an author
+			// writes lands in the quaternion, and refusing it here was refusing the only spelling a
+			// rotation has.
 			OutReason = TEXT("it is transient -- nothing written to it would survive being saved");
 			return false;
 		}
@@ -533,6 +538,31 @@ namespace DreamUITextBuilderLocal
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::TupleArityMismatch, Value.Location,
 					FString::Printf(TEXT("'%s' takes %d values, not %d"), *InProperty.Name, ExpectedArity, Value.Elements.Num()));
 				return false;
+			}
+			// Through the property's native setter when it has one and the destination is the property
+			// itself rather than a leaf inside it. The property this exists for is RelativeRotationEuler:
+			// a transient mirror whose setter derives the serialized quaternion. A raw write puts the
+			// rotation in a field that dies with serialization and leaves the quat -- the value instances
+			// are actually built from -- at identity: the preview would rotate and the cooked game would
+			// not. Routed generically rather than by property name, because the next Setter-backed
+			// property authored in a .dui would hit the same wall and nothing would say so.
+			if (!InDestination.bNested && Leaf->HasSetter())
+			{
+				void* Scratch = FMemory::Malloc(Leaf->GetSize(), Leaf->GetMinAlignment());
+				Leaf->InitializeValue(Scratch);
+				const bool bParsed = DreamUIValueFormat::Parse(Leaf, Value, Scratch);
+				if (bParsed)
+				{
+					Leaf->SetValue_InContainer(InDestination.Owner, Scratch);
+				}
+				Leaf->DestroyValue(Scratch);
+				FMemory::Free(Scratch);
+				if (!bParsed)
+				{
+					RaiseTypeMismatch(InProperty, Leaf, InContext);
+					return false;
+				}
+				return true;
 			}
 			if (!DreamUIValueFormat::Parse(Leaf, Value, ValuePtr))
 			{

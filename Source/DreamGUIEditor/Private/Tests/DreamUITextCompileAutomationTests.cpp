@@ -626,4 +626,62 @@ bool FDreamUITextBindingReachesTheClassTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextRotationReachesTheQuaternionTest,
+	"DreamGUI.WidgetBlueprint.ARotationInTheFileReachesTheQuaternion",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * `RelativeRotationEuler = (0, 0, 45)` has to rotate the widget, not merely fill a field.
+ *
+ * The euler is a TRANSIENT mirror; the value instances are built from is the quaternion its setter
+ * derives. Two wrong implementations both pass a euler-only assertion: a builder that writes the
+ * property bytes raw (the mirror holds 45, the quat holds identity, the cooked game does not
+ * rotate), and a writable-set that refuses transients wholesale (the line raises DUI6004 and the
+ * author is told their rotation "would not survive being saved" -- of a value whose entire design is
+ * that it survives through the quat). The quat assertion below is what catches the first; this test
+ * compiling without errors is what catches the second.
+ */
+bool FDreamUITextRotationReachesTheQuaternionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITextCompileTestLocal;
+
+	FScopedDuiFile File(TEXT("RotationCompile.dui"));
+	if (!TestTrue(TEXT("the .dui was written"), File.Write({
+		TEXT("Widget Root {"),
+		TEXT("  + CanvasPanel { }"),
+		TEXT("  Widget Spinner {"),
+		TEXT("    RelativeRotationEuler = (0, 0, 45)"),
+		TEXT("    RelativeScale = (2, 3, 1)"),
+		TEXT("  }"),
+		TEXT("}"),
+	})))
+	{
+		return false;
+	}
+
+	FScopedBlueprint Fixture(TEXT("BP_RotationCompile"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)) return false;
+	if (!TestTrue(TEXT("and points at the file"), Fixture.SetDuiFilePath(File.FilePath))) return false;
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("the file compiles clean"), Results.NumErrors, 0);
+
+	UDreamWidget* Spinner = FindWidget(Fixture.Blueprint->WidgetTree, TEXT("Spinner"));
+	if (!TestNotNull(TEXT("the spinner was built"), Spinner))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the euler mirror holds the authored angles"),
+		Spinner->GetRelativeRotationEuler(), FRotator(0, 0, 45));
+	// THE assertion: the serialized value. Equal within quaternion tolerance, because the setter
+	// derives it through FRotator::Quaternion and bit-exactness was never the contract there.
+	TestTrue(TEXT("and the quaternion -- the value instances are built from -- carries the rotation"),
+		Spinner->GetRelativeRotation().Equals(FRotator(0, 0, 45).Quaternion()));
+	TestEqual(TEXT("and the scale landed"), Spinner->GetRelativeScale(), FVector(2, 3, 1));
+	return true;
+}
+
 #endif

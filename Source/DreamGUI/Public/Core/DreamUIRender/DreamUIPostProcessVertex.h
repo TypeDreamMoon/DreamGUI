@@ -4,6 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "RenderResource.h"
+// FVertexDeclarationRHIRef is TRefCountPtr<FRHIVertexDeclaration>, and this class's implicit
+// operator= instantiates it -- which needs the pointee complete, not forward-declared. Inside a
+// unity blob some neighbour always had it.
+#include "RHIResources.h"
 
 struct DREAMGUI_API FDreamUIPostProcessVertex
 {

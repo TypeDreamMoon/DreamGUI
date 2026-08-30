@@ -2,6 +2,10 @@
 
 #include "Text/DreamUITextWriteBack.h"
 
+// FTextProperty is dereferenced when deciding whether a value is an FText literal; inside a unity
+// blob a neighbour always had it.
+#include "UObject/TextProperty.h"
+
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprint.h"
 
@@ -644,6 +648,12 @@ const TArray<FString>& FDreamUITextWriteBack::GetGeometryPropertyPaths()
 		TEXT("AnchorData.AnchorMax"),
 		TEXT("AnchorData.AnchoredPosition"),
 		TEXT("AnchorData.SizeDelta"),
+		// The euler, not the quat: the quat has no spelling, and the euler is the authored face of the
+		// same rotation -- kept in step by SetRelativeRotationEuler in one direction and by
+		// PostEditChangeProperty in the other. RelativeLocation is deliberately absent from this list
+		// too: its setter recomputes the anchors, and the anchors above already carry the position.
+		TEXT("RelativeRotationEuler"),
+		TEXT("RelativeScale"),
 	};
 	return Paths;
 }

@@ -75,16 +75,16 @@ namespace DreamUITextAuthoring
 		 * failure this gate exists to remove. An allowlist fails closed, and the cost of missing one is
 		 * a row that is greyed until somebody adds a name here.
 		 *
-		 * ONE ENTRY, and the three obvious companions are deliberately absent. An earlier version of
-		 * this table also listed RelativeLocation, RelativeRotation and RelativeScale, reasoning that
-		 * CommitWidgetGeometryToTemplate writes all four on every mouse move of a transform handle and
-		 * that greying in the panel what the viewport keeps writing would tell the author two
-		 * different things. That reasoning was right about the symptom and wrong about which half to
-		 * fix: the write-back covers `AnchorData.*` and nothing else, because the language has no
-		 * spelling for an FQuat or an FVector. So those three are not writable, a drag that moves the
-		 * widget survives only through the anchors the move recomputes, and the contradiction is
-		 * resolved on the VIEWPORT side instead -- FDreamWidgetDesignerViewportClient::GetWidgetMode
-		 * offers no rotate or scale gizmo on a text-authored hierarchy.
+		 * ROTATION AND SCALE are here as a pair -- the quat and its euler mirror -- because edits and
+		 * text address different halves of the same value. The transform section and the gizmo write
+		 * the QUAT (with the euler synced in PostEditChangeProperty); the .dui spells the EULER (with
+		 * the quat derived by its setter). Listing only one half would grey the write path or the
+		 * written path, and both are the same rotation.
+		 *
+		 * RELATIVELOCATION is deliberately still absent, and not because it cannot be spelled: its
+		 * setter recomputes the anchors, and it is the anchors the write-back prints. Giving location
+		 * a spelling of its own would put the same position in the file twice, and the two copies
+		 * would argue at every compile.
 		 *
 		 * To widen the set: add the root name here, and only after the write-back can spell it. That
 		 * is deliberately the only edit -- one table, so "what can the designer still change" is a
@@ -95,6 +95,9 @@ namespace DreamUITextAuthoring
 			static const FName WritableRoots[] =
 			{
 				UDreamWidget::GetPropertyName_AnchorData(),
+				UDreamWidget::GetPropertyName_RelativeRotation(),
+				UDreamWidget::GetPropertyName_RelativeRotationEuler(),
+				UDreamWidget::GetPropertyName_RelativeScale(),
 			};
 			for (const FName Writable : WritableRoots)
 			{

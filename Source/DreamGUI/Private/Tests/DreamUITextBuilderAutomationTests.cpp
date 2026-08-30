@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -762,11 +762,14 @@ bool FDreamUITextBuilderDiagnosticCodesTest::RunTest(const FString& Parameters)
 			[](FDreamUIAst& Ast) { Ast.Root.Properties.Add(AssignIdentifier(TEXT("Visibility"), TEXT("Sideways"))); }
 		},
 		{
-			// AnimatableWidth is one of the Interp mirrors of AnchorData, and transient. It would take
-			// the value, read back correctly for the rest of the build, and be gone the moment the
-			// class was saved -- the silent failure the whole text pipeline exists to make impossible.
+			// FlattenHierarchyIndex is transient with NO setter: a value written to it would read back
+			// for the rest of the build and be gone the moment the class was saved -- the silent
+			// failure the whole text pipeline exists to make impossible. AnimatableWidth held this
+			// role until transients WITH a native setter became writable; its setter derives
+			// AnchorData, so what is written to it does survive -- the same rule that lets
+			// RelativeRotationEuler carry a rotation into the quaternion.
 			TEXT("a transient property"), EDreamUIDiagnosticCode::PropertyNotWritable,
-			[](FDreamUIAst& Ast) { Ast.Root.Properties.Add(AssignNumber(TEXT("AnimatableWidth"), TEXT("100"))); }
+			[](FDreamUIAst& Ast) { Ast.Root.Properties.Add(AssignNumber(TEXT("FlattenHierarchyIndex"), TEXT("3"))); }
 		},
 		{
 			TEXT("a style the file does not declare"), EDreamUIDiagnosticCode::UnknownStyle,

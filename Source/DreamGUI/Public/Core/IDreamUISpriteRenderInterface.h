@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+// UInterface is the base class two lines down; inside a unity blob a neighbour always had it.
+#include "UObject/Interface.h"
 #include "IDreamUISpriteRenderInterface.generated.h"
 
 class UDreamUISpriteData_BaseObject;

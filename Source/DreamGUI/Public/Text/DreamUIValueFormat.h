@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -15,12 +15,17 @@ class FProperty;
  * form is what an author would actually see every day:
  *
  *   FVector2D / FVector2f      (400, 240)
+ *   FVector                    (2, 3, 1)
+ *   FRotator                   (0, 0, 45)        Pitch, Yaw, Roll, in degrees
  *   FLinearColor / FColor      #1E1E1E
  *   FMargin                    (8, 8, 8, 8)
  *
  * FDreamUIAnchorData is deliberately NOT here: nested structs are written with dotted paths
  * (AnchorData.SizeDelta = (400, 240)), so it never appears as a whole value -- only its leaves do.
- * That decision is what keeps this table at three entries instead of growing with every struct.
+ * That decision is what keeps this table this small instead of growing with every struct. FVector
+ * and FRotator earned their rows the same way the first three did: RelativeScale and
+ * RelativeRotationEuler are values a designer drags, and without a spelling every rotation and
+ * scale was silently dropped by the write-back -- edited, mirrored, and gone at the next compile.
  *
  * PRINTER AND PARSER MUST BE INVERSE. A short form that parses to a slightly different value than
  * it was printed from makes the designer's write-back drift: drag an anchor, and the number in the
@@ -32,6 +37,9 @@ class FProperty;
  * to be a decision rather than a discovery:
  *
  *   FVector2D / FVector2f / FMargin   Exact. Parse(Print(v)) == v for every finite value.
+ *   FVector / FRotator                Exact, same rule. A rotator is NOT normalised: the text
+ *                                     carries the euler field as authored, so 370 stays 370 --
+ *                                     which is what lets an animation cross a full turn.
  *   FColor                            Exact. The text IS the eight bits.
  *   FLinearColor                      Quantised once through sRGB, then stable. Parse(Print(v)) is
  *                                     the colour that hex code point names, not v; what is exact is

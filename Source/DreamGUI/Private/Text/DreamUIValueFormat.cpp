@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUIValueFormat.h"
 
@@ -47,6 +47,10 @@ namespace DreamUIValueFormatLocal
 		Vector2Double,
 		/** FVector2f, whose components are floats. Different struct, different precision, same text. */
 		Vector2Float,
+		/** FVector, double components under LWC. RelativeScale is why it is here. */
+		Vector3Double,
+		/** FRotator, printed (Pitch, Yaw, Roll) in degrees. RelativeRotationEuler is why it is here. */
+		Rotator,
 		LinearColor,
 		Color,
 		Margin,
@@ -78,6 +82,14 @@ namespace DreamUIValueFormatLocal
 		if (Struct == TVariantStructure<FVector2f>::Get())
 		{
 			return EShortForm::Vector2Float;
+		}
+		if (Struct == TBaseStructure<FVector>::Get())
+		{
+			return EShortForm::Vector3Double;
+		}
+		if (Struct == TBaseStructure<FRotator>::Get())
+		{
+			return EShortForm::Rotator;
 		}
 		if (Struct == TBaseStructure<FLinearColor>::Get())
 		{
@@ -357,6 +369,9 @@ int32 DreamUIValueFormat::GetExpectedTupleArity(const FProperty* InProperty)
 	case EShortForm::Vector2Double:
 	case EShortForm::Vector2Float:
 		return 2;
+	case EShortForm::Vector3Double:
+	case EShortForm::Rotator:
+		return 3;
 	case EShortForm::Margin:
 		return 4;
 	default:
@@ -400,6 +415,23 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 			*PrintScalar(Value.X, true), *PrintScalar(Value.Y, true));
 		return true;
 	}
+	case EShortForm::Vector3Double:
+	{
+		const FVector& Value = *static_cast<const FVector*>(InValuePtr);
+		OutText = FString::Printf(TEXT("(%s, %s, %s)"),
+			*PrintScalar(Value.X, false), *PrintScalar(Value.Y, false), *PrintScalar(Value.Z, false));
+		return true;
+	}
+	case EShortForm::Rotator:
+	{
+		// (Pitch, Yaw, Roll) -- FRotator's own declaration order, matched in Parse. The text carries
+		// exactly what the euler field holds: no trip through a quaternion, so 370 stays 370 and the
+		// number in the file is the number in the panel.
+		const FRotator& Value = *static_cast<const FRotator*>(InValuePtr);
+		OutText = FString::Printf(TEXT("(%s, %s, %s)"),
+			*PrintScalar(Value.Pitch, false), *PrintScalar(Value.Yaw, false), *PrintScalar(Value.Roll, false));
+		return true;
+	}
 	case EShortForm::LinearColor:
 	{
 		OutText = PrintColorHex(*static_cast<const FLinearColor*>(InValuePtr));
@@ -440,6 +472,8 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 	{
 	case EShortForm::Vector2Double:
 	case EShortForm::Vector2Float:
+	case EShortForm::Vector3Double:
+	case EShortForm::Rotator:
 	case EShortForm::Margin:
 	{
 		// Exactly the printed arity, with none of ImportText's leniency: FMargin's own text format
@@ -447,7 +481,8 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 		// would give the file two spellings for the same margin while the printer only ever writes
 		// the four. Every designer touch would then rewrite `Padding = 8` into `(8, 8, 8, 8)` --
 		// a line the author never edited, in every diff, for the rest of the file's life.
-		const int32 Arity = Form == EShortForm::Margin ? 4 : 2;
+		const int32 Arity = Form == EShortForm::Margin ? 4
+			: (Form == EShortForm::Vector3Double || Form == EShortForm::Rotator) ? 3 : 2;
 		if (InValue.Kind != EDreamUIValueKind::Tuple || InValue.Elements.Num() != Arity)
 		{
 			return false;
@@ -475,6 +510,20 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 			FVector2f& Out = *static_cast<FVector2f*>(OutValuePtr);
 			Out.X = static_cast<float>(Components[0]);
 			Out.Y = static_cast<float>(Components[1]);
+		}
+		else if (Form == EShortForm::Vector3Double)
+		{
+			FVector& Out = *static_cast<FVector*>(OutValuePtr);
+			Out.X = Components[0];
+			Out.Y = Components[1];
+			Out.Z = Components[2];
+		}
+		else if (Form == EShortForm::Rotator)
+		{
+			FRotator& Out = *static_cast<FRotator*>(OutValuePtr);
+			Out.Pitch = Components[0];
+			Out.Yaw = Components[1];
+			Out.Roll = Components[2];
 		}
 		else
 		{
