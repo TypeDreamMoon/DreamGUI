@@ -1166,4 +1166,60 @@ bool FDreamDesignerSubObjectEditsReachTheAssetTest::RunTest(const FString&)
 	return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRotationEditKeepsTheMirrorInStepTest,
+	"DreamGUI.Designer.ARotationEditKeepsTheEulerMirrorInStep",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The transform section edits the QUAT; the .dui spells the EULER. Between them sits the mirror:
+ * the panel's edit reaches the template as a raw quaternion copy, and the write-back then prints
+ * the template's RelativeRotationEuler. Nothing syncs the two on that path except the
+ * PostEditChangeProperty branch this test exists to pin -- MigratePropertyValue notifies through
+ * it, and before the branch learned to reseed the euler, the file received whatever rotation the
+ * template happened to hold last.
+ *
+ * Driven through the same call the panel's notify hook makes, with the chain the chainless
+ * overload builds: one link, the widget's own RelativeRotation.
+ */
+bool FDreamDesignerRotationEditKeepsTheMirrorInStepTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerRotationEdit"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* ChildTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Spinner"));
+	Scoped.Rebuild();
+	ChildTemplate = Scoped.FindTemplate(TEXT("Spinner"));
+	UDreamWidget* ChildPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(ChildTemplate);
+	if (!TestNotNull(TEXT("The spinner has a preview"), ChildPreview))
+	{
+		return false;
+	}
+
+	// What the transform section does: the quat, through the setter, on the preview.
+	ChildPreview->SetRelativeRotation(FRotator(0, 0, 30).Quaternion());
+	TestEqual(TEXT("the preview's own mirror followed, via the setter"),
+		ChildPreview->GetRelativeRotationEuler(), FRotator(0, 0, 30));
+
+	FProperty* QuatProperty = UDreamWidget::StaticClass()->FindPropertyByName(
+		UDreamWidget::GetPropertyName_RelativeRotation());
+	FEditPropertyChain Chain;
+	Chain.AddHead(QuatProperty);
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ ChildPreview }, Chain, /*bIsModify*/false);
+
+	TestTrue(TEXT("the template took the quaternion"),
+		ChildTemplate->GetRelativeRotation().Equals(FRotator(0, 0, 30).Quaternion()));
+	// The half the write-back reads. A raw property copy leaves it at zero; only the
+	// PostEditChangeProperty reseed brings it along.
+	TestEqual(TEXT("and its euler mirror followed, via PostEditChangeProperty"),
+		ChildTemplate->GetRelativeRotationEuler(), FRotator(0, 0, 30));
+	return true;
+}
+
 #endif

@@ -266,6 +266,28 @@ void SDreamWidgetDesignerDetails::NotifyPostChange(const FPropertyChangedEvent& 
 	Editor->MigrateDetailsChangeToTemplate(EditedObjects, *PropertyThatChanged, /*bIsModify*/false);
 }
 
+void SDreamWidgetDesignerDetails::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged)
+{
+	// FNotifyHook's OTHER overload. The property grid never calls it -- PropertyNode.cpp always
+	// builds a chain -- so for a long time it was dead weight whose absence nobody could observe.
+	// The transform section is what made it load-bearing: it is a port of the engine's
+	// FComponentTransformDetails, which has no property node and notifies through THIS overload.
+	// Every rotation and scale typed into the panel arrived here, fell into the base class's empty
+	// default, and the template never heard -- the preview moved, the asset kept its old transform,
+	// and the .dui stayed exactly as it was. The gate never fired either, because nothing it guards
+	// was ever asked to do anything.
+	if (PropertyThatChanged == nullptr)
+	{
+		return;
+	}
+	// A one-link chain is not a degraded stand-in; it is the exact shape the mirror wants. The chain
+	// walk copies the MEMBER the head names, whole -- and a caller with no property node is always
+	// editing a member, never a leaf inside one.
+	FEditPropertyChain Chain;
+	Chain.AddHead(PropertyThatChanged);
+	NotifyPostChange(PropertyChangedEvent, &Chain);
+}
+
 TArray<UObject*> SDreamWidgetDesignerDetails::GetEditedObjects() const
 {
 	TArray<UObject*> Result;

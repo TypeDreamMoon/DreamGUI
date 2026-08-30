@@ -743,6 +743,16 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RelativeLocation) || MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RelativeRotation) || MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RelativeScale))
 		{
+			if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RelativeRotation))
+			{
+				// A reflection write lands in the quat without the setter that keeps the transient euler
+				// mirror in step -- the same silence PostEditUndo and PostLoad already cover for their
+				// paths. This one matters to the designer: the template's rotation arrives through
+				// FObjectEditorUtils::MigratePropertyValue, which notifies through here, and the
+				// write-back prints the EULER field into the .dui. Without the sync the file would
+				// carry whatever rotation the template happened to have last session.
+				this->RelativeRotationEuler = this->RelativeRotation.Rotator();
+			}
 			CalculateAnchorFromTransform();
 			CalculateObjectToWorldTransform();
 			OnUpdateTransform();

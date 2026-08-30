@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "ComponentTransformDetails.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
@@ -670,7 +670,12 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 	{
 	case ETransformField::Location:
 		TransactionText = LOCTEXT("OnSetLocation", "Set Location");
-		ValueProperty = FindFProperty<FProperty>(USceneComponent::StaticClass(), TEXT("RelativeLocation"));
+		// UDreamWidget's own property, not USceneComponent's. This is a port of the engine's actor
+		// transform section, and the ported lookups kept pointing at the class the original edited.
+		// The event built from that property could never reach the designer's mirror: its guard asks
+		// whether the edited object's class owns the head property, and a UDreamWidget is not a
+		// USceneComponent -- so every transform typed into this panel moved the preview and died there.
+		ValueProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeLocation());
 		
 		// Only set axis property for single axis set
 		if (Axis == EAxisList::X)
@@ -688,7 +693,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 		break;
 	case ETransformField::Rotation:
 		TransactionText = LOCTEXT("OnSetRotation", "Set Rotation");
-		ValueProperty = FindFProperty<FProperty>(USceneComponent::StaticClass(), TEXT("RelativeRotation"));
+		ValueProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeRotation());
 		
 		// Only set axis property for single axis set
 		if (Axis == EAxisList::X)
@@ -706,7 +711,9 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 		break;
 	case ETransformField::Scale:
 		TransactionText = LOCTEXT("OnSetScale", "Set Scale");
-		ValueProperty = FindFProperty<FProperty>(USceneComponent::StaticClass(), TEXT("RelativeScale3D"));
+		// Also the NAME: the widget calls it RelativeScale, so the ported RelativeScale3D found the
+		// scene component's property or nothing at all.
+		ValueProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeScale());
 
 		// If keep scale is set, don't set axis property
 		if (!bPreserveScaleRatio && Axis == EAxisList::X)

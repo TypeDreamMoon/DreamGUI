@@ -37,6 +37,8 @@ public:
 
 	virtual void NotifyPreChange(FEditPropertyChain* PropertyAboutToChange) override;
 	virtual void NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FEditPropertyChain* PropertyThatChanged) override;
+	/** The chainless overload custom sections notify through; forwards into the one above. */
+	virtual void NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged) override;
 	// End FNotifyHook
 
 	virtual ~SDreamWidgetDesignerDetails();
