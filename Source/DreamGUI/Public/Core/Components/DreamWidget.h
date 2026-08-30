@@ -249,15 +249,22 @@ private:
 	void Call_RaycastableChanged();
 #pragma endregion
 private:
-	/** Local space position */
-	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta=(AllowPrivateAccess = true))
+	/**
+	 * Local space position.
+	 * DuiHidden: the setter recomputes the anchors, and AnchorData is what a .dui spells -- a
+	 * reflective sweep that also wrote this would author one position twice.
+	 */
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta=(AllowPrivateAccess = true, DuiHidden))
 	FVector RelativeLocation = FVector::ZeroVector;
 	/**
 	 * Local space rotation.
 	 * Not marked Interp: Sequencer has no property track for FQuat, so this cannot be keyed
 	 * directly. Animate RelativeRotationEuler instead, which mirrors this value.
 	 */
-	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true))
+	// DuiHidden: RelativeRotationEuler is the authored face of this value, and a quaternion has no
+	// spelling -- but FQuat is an ordinary struct, so without the tag a reflective sweep would
+	// recurse it and write X/Y/Z/W component lines beside the euler it already wrote.
+	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, DuiHidden))
 	FQuat RelativeRotation = FQuat::Identity;
 	/**
 	 * Local space rotation as euler angles, mirroring RelativeRotation so that rotation can be
@@ -830,17 +837,20 @@ protected:
 	 * to the caches below. A stale cache and its mirror go stale together, which is exactly what
 	 * the details panel shows too.
 	 */
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetWidth", Setter = "SetWidth", Category = "DreamGUI-AnchorData", DisplayName = "Width", meta = (AllowPrivateAccess = true))
+	// DuiHidden on all six: they are Interp mirrors of AnchorData for Sequencer, and their setters
+	// write through to it -- which is exactly what exempts them from the transient refusal and
+	// exactly why a reflective sweep must not spell them: AnchorData already carries the value.
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetWidth", Setter = "SetWidth", Category = "DreamGUI-AnchorData", DisplayName = "Width", meta = (AllowPrivateAccess = true, DuiHidden))
 	float AnimatableWidth = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetHeight", Setter = "SetHeight", Category = "DreamGUI-AnchorData", DisplayName = "Height", meta = (AllowPrivateAccess = true))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetHeight", Setter = "SetHeight", Category = "DreamGUI-AnchorData", DisplayName = "Height", meta = (AllowPrivateAccess = true, DuiHidden))
 	float AnimatableHeight = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetLeft", Setter = "SetAnchorOffsetLeft", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Left", meta = (AllowPrivateAccess = true))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetLeft", Setter = "SetAnchorOffsetLeft", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Left", meta = (AllowPrivateAccess = true, DuiHidden))
 	float AnimatableAnchorLeft = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetRight", Setter = "SetAnchorOffsetRight", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Right", meta = (AllowPrivateAccess = true))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetRight", Setter = "SetAnchorOffsetRight", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Right", meta = (AllowPrivateAccess = true, DuiHidden))
 	float AnimatableAnchorRight = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetTop", Setter = "SetAnchorOffsetTop", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Top", meta = (AllowPrivateAccess = true))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetTop", Setter = "SetAnchorOffsetTop", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Top", meta = (AllowPrivateAccess = true, DuiHidden))
 	float AnimatableAnchorTop = 0;
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetBottom", Setter = "SetAnchorOffsetBottom", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Bottom", meta = (AllowPrivateAccess = true))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter = "GetAnchorOffsetBottom", Setter = "SetAnchorOffsetBottom", Category = "DreamGUI-AnchorData", DisplayName = "Anchor Bottom", meta = (AllowPrivateAccess = true, DuiHidden))
 	float AnimatableAnchorBottom = 0;
 	void SyncAnimatableGeometryMirrors() const;
 

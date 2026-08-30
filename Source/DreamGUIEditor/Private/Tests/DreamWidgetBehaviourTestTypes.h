@@ -1,11 +1,53 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
 #include "Core/DreamUIBehaviour.h"
+#include "Engine/Texture2D.h"
 #include "DreamWidgetBehaviourTestTypes.generated.h"
 
 class UDreamWidget;
+
+/**
+ * A struct with no short form, so the reflective sweep has to recurse it to leaves. One field of
+ * every interesting kind: a scalar, a struct WITH a short form (recursion must stop there and print
+ * it whole), and one tagged DuiHidden (the sweep must not see it).
+ */
+USTRUCT()
+struct FDreamUISweepTestStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere)
+	float Thickness = 1.0f;
+
+	UPROPERTY(EditAnywhere)
+	FVector2D Offset = FVector2D::ZeroVector;
+
+	UPROPERTY(EditAnywhere, meta = (DuiHidden))
+	float DerivedCache = 0.0f;
+};
+
+/**
+ * The reflective sweep's subject: properties nobody listed anywhere, which is the point. Under the
+ * old hand-kept tables a `+` component block compared only what the file already wrote, so the
+ * FIRST edit of any of these died silently.
+ */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class UDreamUISweepTestBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere)
+	FDreamUISweepTestStyle Style;
+
+	/** Soft on purpose: stored as a path, never loaded by the compile. */
+	UPROPERTY(EditAnywhere)
+	TSoftObjectPtr<UTexture2D> Icon;
+
+	UPROPERTY(EditAnywhere)
+	float Plain = 0.0f;
+};
 
 /** Stand-in for a behaviour a designer drops on a widget, so behaviour-typed binds have a target. */
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)

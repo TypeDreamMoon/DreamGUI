@@ -5,6 +5,8 @@
 // FTextProperty is dereferenced when deciding whether a value is an FText literal; inside a unity
 // blob a neighbour always had it.
 #include "UObject/TextProperty.h"
+#include "Text/DreamUIReflectionPolicy.h"
+#include "Core/Components/DreamVisual.h"
 
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprint.h"
@@ -359,6 +361,25 @@ namespace DreamUIWriteBackLocal
 			return true;
 		}
 
+		// Object references, soft before hard because FSoftObjectProperty IS an FObjectPropertyBase.
+		// Both print the asset path, quoted -- a path contains dots and slashes the lexer would
+		// otherwise have opinions about -- and both read back through WriteValue's own branches.
+		// Printing is what un-greys the font and texture rows: CanSpellAsLiteral asks by printing.
+		if (const FSoftObjectProperty* AsSoft = CastField<FSoftObjectProperty>(InLeaf))
+		{
+			const FSoftObjectPtr& Value = AsSoft->GetPropertyValue(InValuePtr);
+			OutText = Value.IsNull() ? TEXT("None") : QuoteString(Value.ToSoftObjectPath().ToString());
+			return true;
+		}
+		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InLeaf))
+		{
+			const UObject* Value = AsObject->GetObjectPropertyValue(InValuePtr);
+			// None bare, not quoted: it is the spelling WriteValue's null branch reads, and an FName
+			// would have claimed the quotes first anyway.
+			OutText = Value != nullptr ? QuoteString(FSoftObjectPath(Value).ToString()) : TEXT("None");
+			return true;
+		}
+
 		return false;
 	}
 
@@ -636,54 +657,6 @@ bool FDreamUITextWriteBack::CanSpellAsLiteral(const FProperty* InLeaf, const voi
 		&& DreamUIWriteBackLocal::PrintLiteral(InLeaf, InValuePtr, Unused);
 }
 
-const TArray<FString>& FDreamUITextWriteBack::GetGeometryPropertyPaths()
-{
-	// Leaves, not `AnchorData` whole: a nested struct is written with dotted paths and only its
-	// leaves ever appear as a value, which is the same rule DreamUIValueFormat's header states for
-	// why FDreamUIAnchorData has no short form of its own.
-	static const TArray<FString> Paths =
-	{
-		TEXT("AnchorData.Pivot"),
-		TEXT("AnchorData.AnchorMin"),
-		TEXT("AnchorData.AnchorMax"),
-		TEXT("AnchorData.AnchoredPosition"),
-		TEXT("AnchorData.SizeDelta"),
-		// The euler, not the quat: the quat has no spelling, and the euler is the authored face of the
-		// same rotation -- kept in step by SetRelativeRotationEuler in one direction and by
-		// PostEditChangeProperty in the other. RelativeLocation is deliberately absent from this list
-		// too: its setter recomputes the anchors, and the anchors above already carry the position.
-		TEXT("RelativeRotationEuler"),
-		TEXT("RelativeScale"),
-	};
-	return Paths;
-}
-
-const TArray<FString>& FDreamUITextWriteBack::GetPanelSlotPropertyNames()
-{
-	// The counterpart of GetGeometryPropertyPaths for the panel slot: what a designer edits on a
-	// child of a layout, whether or not the .dui already mentions it.
-	//
-	// An allowlist rather than "every property on UDreamPanelSlot", because the slot also carries the
-	// layout's OUTPUT -- AuthoredAnchorData, bLayoutGeometryApplied, LayoutGeometryControlMask and
-	// the cached geometry are results, not authoring. Writing those into the file would put a
-	// computed value in a source document and then argue with the layout that computed it.
-	static const TArray<FString> Names =
-	{
-		TEXT("Padding"),
-		TEXT("HorizontalAlignment"),
-		TEXT("VerticalAlignment"),
-		TEXT("SizeRule"),
-		TEXT("FillWeight"),
-		// Grid placement. Meaningless under any other layout, and harmless there: the comparison
-		// runs against the same defaults on both sides, so an untouched one produces nothing.
-		TEXT("Row"),
-		TEXT("Column"),
-		TEXT("RowSpan"),
-		TEXT("ColumnSpan"),
-	};
-	return Names;
-}
-
 UDreamWidgetTree* FDreamUITextWriteBack::BuildReferenceTree(const FString& InText, FDreamUIAst& OutAst,
 	FDreamUIDiagnosticBag& OutDiagnostics)
 {
@@ -771,9 +744,20 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 				// which is the only way the user ever hears that their drag did not stick.
 				AddCandidateName(Property.Name, Names, Seen);
 			}
-			for (const FString& Path : GetGeometryPropertyPaths())
+			// Every property the policy can write, on the widget and on its visual -- derived from
+			// reflection, so a property added to either class next month is synced the day it exists
+			// instead of waiting for somebody to extend a list. The file-written and style names above
+			// still go first, so a line the author placed keeps its own spot.
+			for (const FString& Path : DreamUIReflection::GetWritableLeafPaths(LiveWidget->GetClass()))
 			{
 				AddCandidateName(Path, Names, Seen);
+			}
+			if (const UDreamVisual* Visual = LiveWidget->GetVisual())
+			{
+				for (const FString& Path : DreamUIReflection::GetWritableLeafPaths(Visual->GetClass()))
+				{
+					AddCandidateName(Path, Names, Seen);
+				}
 			}
 
 			for (const FString& Name : Names)
@@ -807,7 +791,7 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 			{
 				AddCandidateName(Property.Name, Names, Seen);
 			}
-			for (const FString& Name : GetPanelSlotPropertyNames())
+			for (const FString& Name : DreamUIReflection::GetWritableLeafPaths(LiveWidget->GetPanelSlot()->GetClass()))
 			{
 				AddCandidateName(Name, Names, Seen);
 			}
@@ -846,6 +830,13 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 				for (const FDreamUIProperty& Property : InNode.Components[ComponentIndex].Properties)
 				{
 					AddCandidateName(Property.Name, Names, Seen);
+				}
+				// The sweep, which this pass never had: components used to compare only what the file
+				// already wrote, so the FIRST edit of any behaviour property was the one that died --
+				// the exact off-by-one the slot pass's comment warned about, standing one block away.
+				for (const FString& Name : DreamUIReflection::GetWritableLeafPaths(LiveObjects[ComponentIndex]->GetClass()))
+				{
+					AddCandidateName(Name, Names, Seen);
 				}
 				for (const FString& Name : Names)
 				{

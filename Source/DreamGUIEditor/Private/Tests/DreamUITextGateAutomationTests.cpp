@@ -456,7 +456,7 @@ bool FDreamUINonWritablePropertyIsShownReadOnlyTest::RunTest(const FString&)
 	// LOCATION stays read-only as a plain row, and not because it cannot be spelled -- its setter
 	// recomputes the anchors and the anchors are what the file carries, so a spelling of its own
 	// would put the same position in the file twice.
-	for (const TCHAR* TransformProperty : { TEXT("RelativeRotation"), TEXT("RelativeScale") })
+	for (const TCHAR* TransformProperty : { TEXT("RelativeRotationEuler"), TEXT("RelativeScale") })
 	{
 		if (const FProperty* Found = FindProperty(UDreamWidget::StaticClass(), TransformProperty))
 		{
@@ -468,6 +468,14 @@ bool FDreamUINonWritablePropertyIsShownReadOnlyTest::RunTest(const FString&)
 			AddError(FString::Printf(TEXT("UDreamWidget no longer declares %s"), TransformProperty));
 		}
 	}
+	// The QUAT itself stays grey: DuiHidden, because the euler is its authored face and the file has
+	// no quaternion spelling. The transform section still edits it -- that is a custom row gated by
+	// category, and the mirror accepts its chains -- so nothing an author can actually touch is lost.
+	if (const FProperty* Quat = FindProperty(UDreamWidget::StaticClass(), TEXT("RelativeRotation")))
+	{
+		TestTrue(TEXT("the quaternion, whose authored face is the euler, stays read-only as a plain row"),
+			DreamUITextAuthoring::IsPropertyReadOnly(Title, Quat, {}));
+	}
 	if (const FProperty* Location = FindProperty(UDreamWidget::StaticClass(), TEXT("RelativeLocation")))
 	{
 		TestTrue(TEXT("RelativeLocation stays read-only; the anchors carry the position"),
@@ -478,13 +486,16 @@ bool FDreamUINonWritablePropertyIsShownReadOnlyTest::RunTest(const FString&)
 		AddError(TEXT("UDreamWidget no longer declares RelativeLocation"));
 	}
 
-	// ---- outside it
+	// ---- an ordinary widget property, which the old allowlist wrongly greyed
+	// Visibility spent the list era read-only on every text-authored widget: it was not AnchorData,
+	// so the panel refused an edit the language could spell perfectly well. Under the reflective
+	// policy "in the writable set" and "the sweep will sync it" are the same fact.
 	const FProperty* Visibility = FindProperty(UDreamWidget::StaticClass(), TEXT("Visibility"));
 	if (TestNotNull(TEXT("UDreamWidget declares Visibility"), Visibility))
 	{
-		TestEqual(TEXT("A widget property the write-back has no home for is read-only"),
+		TestEqual(TEXT("an ordinary editable property is writable, not grey"),
 			(uint8)DreamUITextAuthoring::GetPropertyEditVerdict(Title, Visibility, {}),
-			(uint8)EVerdict::OutsideTheWritableSet);
+			(uint8)EVerdict::Writable);
 	}
 	const FProperty* Children = FindProperty(UDreamWidget::StaticClass(), TEXT("Children"));
 	if (TestNotNull(TEXT("UDreamWidget declares Children"), Children))

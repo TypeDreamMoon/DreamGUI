@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Text/DreamUITextWriteBack.h"
+#include "DreamWidgetBehaviourTestTypes.h"
 
 #include "Core/DreamUIAnchorData.h"
 #include "Core/DreamWidgetTree.h"
@@ -681,6 +682,119 @@ bool FDreamUIWriteBackRotationAndScaleTest::RunTest(const FString& Parameters)
 		FDreamUITextWriteBack::ProduceText(Produced, Live.Tree.Get(), Again, AgainDiagnostics));
 	TestEqualSensitive(TEXT("and found nothing more to write"), Again, Produced);
 
+	return true;
+}
+
+
+// -------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackReflectiveSweepTest,
+	"DreamGUI.Designer.AnUnlistedPropertyReachesTheTextFileByReflection",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The sweep is derived from reflection, so the properties in this test are chosen for never having
+ * been on any list: a scalar on a test behaviour, a leaf inside a custom USTRUCT (dotted path the
+ * printer has to derive), a soft object path, and a DuiHidden field that must NOT appear no matter
+ * what its value does.
+ */
+bool FDreamUIWriteBackReflectiveSweepTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const FString Source = Join({
+		TEXT("Widget Root {"),
+		TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour {"),
+		TEXT("        Style.Thickness = 3"),
+		TEXT("    }"),
+		TEXT("}")
+	});
+	FBuiltTree Live = BuildTree(Source);
+	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid())) return false;
+
+	UDreamWidget* Root = Live.Find(TEXT("Root"));
+	if (!TestNotNull(TEXT("the root is there"), (UObject*)Root)) return false;
+	if (!TestEqual(TEXT("with the behaviour attached"), Root->GetAllComponents().Num(), 1)) return false;
+	UDreamUISweepTestBehaviour* Behaviour = Cast<UDreamUISweepTestBehaviour>(Root->GetAllComponents()[0]);
+	if (!TestNotNull(TEXT("of the sweep-test class"), Behaviour)) return false;
+	TestEqual(TEXT("and the authored dotted leaf applied"), Behaviour->Style.Thickness, 3.0f);
+
+	// The gesture: four edits, three of which no list ever named.
+	Behaviour->Plain = 7.0f;
+	Behaviour->Style.Offset = FVector2D(4, 5);
+	Behaviour->Icon = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(TEXT("/Game/NotLoaded/T_Icon.T_Icon")));
+	Behaviour->Style.DerivedCache = 99.0f;
+
+	FString Produced;
+	FDreamUIDiagnosticBag Diagnostics;
+	if (!TestTrue(TEXT("the write-back computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Produced, Diagnostics)))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("the unlisted scalar reached the file"), Produced.Contains(TEXT("Plain = 7")));
+	TestTrue(TEXT("the struct leaf reached it as a dotted path"),
+		Produced.Contains(TEXT("Style.Offset = (4, 5)")));
+	TestTrue(TEXT("the soft reference reached it as a quoted path, unloaded"),
+		Produced.Contains(TEXT("Icon = \"/Game/NotLoaded/T_Icon.T_Icon\"")));
+	TestFalse(TEXT("and the DuiHidden field did not, whatever its value did"),
+		Produced.Contains(TEXT("DerivedCache")));
+
+	FString Again;
+	FDreamUIDiagnosticBag AgainDiagnostics;
+	TestTrue(TEXT("a second pass computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Produced, Live.Tree.Get(), Again, AgainDiagnostics));
+	TestEqualSensitive(TEXT("and found nothing more to write"), Again, Produced);
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackMoveWritesAnchorsOnlyTest,
+	"DreamGUI.Designer.AMoveWritesTheAnchorsAndNotTheirMirrors",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The anti-double-write claim, on the reflective sweep's sharpest edge. A viewport move calls
+ * SetRelativeLocation, which recomputes the anchors -- so after one gesture, RelativeLocation, six
+ * Animatable mirrors AND AnchorData all differ from the reference. The DuiHidden tags are what keep
+ * the sweep from spelling one position nine ways; this test is what keeps the tags honest.
+ */
+bool FDreamUIWriteBackMoveWritesAnchorsOnlyTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const FString Source = Fixture();
+	FBuiltTree Live = BuildTree(Source);
+	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid())) return false;
+
+	UDreamWidget* Title = Live.Find(TEXT("Title"));
+	if (!TestNotNull(TEXT("the title is there"), (UObject*)Title)) return false;
+
+	// The gesture, as the viewport delivers it.
+	Title->SetRelativeLocation(Title->GetRelativeLocation() + FVector(0, 40, -25));
+
+	FString Produced;
+	FDreamUIDiagnosticBag Diagnostics;
+	if (!TestTrue(TEXT("the write-back computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Produced, Diagnostics)))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("the anchors carry the move"), Produced.Contains(TEXT("AnchorData.")));
+	TestFalse(TEXT("the location, whose value the anchors already carry, is not spelled"),
+		Produced.Contains(TEXT("RelativeLocation")));
+	TestFalse(TEXT("and neither is any Animatable mirror"), Produced.Contains(TEXT("Animatable")));
+
+	FString Again;
+	FDreamUIDiagnosticBag AgainDiagnostics;
+	TestTrue(TEXT("a second pass computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Produced, Live.Tree.Get(), Again, AgainDiagnostics));
+	TestEqualSensitive(TEXT("and found nothing more to write"), Again, Produced);
 	return true;
 }
 

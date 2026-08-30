@@ -261,30 +261,7 @@ public:
 		FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics,
 		TArray<FDreamUIPropertyEdit>* OutEdits = nullptr);
 
-	/**
-	 * The property paths a designer gesture writes that a file usually does not mention.
-	 *
-	 * Everything else this considers is a property the TEXT already names, which is what keeps a
-	 * flush from inserting the hundred reflected properties nobody wrote. Geometry is the exception
-	 * that forces the list to exist: dragging a widget is the commonest edit there is, and the
-	 * anchor block is exactly what the author did not have to type to get a sensible default.
-	 *
-	 * `AnchorData.*` and nothing else, deliberately. The other half of what a gesture writes --
-	 * RelativeLocation, RelativeRotation, RelativeScale -- is an FVector and an FQuat, which the
-	 * language has no spelling for; inventing one for a quaternion in a layout language is a
-	 * decision for the grammar, not for the write-back.
-	 */
-	static const TArray<FString>& GetGeometryPropertyPaths();
 
-	/**
-	 * The panel-slot properties compared on every child of a layout, written or not.
-	 *
-	 * Alignment and padding are the first controls a designer touches, and they live on the slot --
-	 * so gating them on the .dui already mentioning them would mean an edit that takes in the preview
-	 * and never reaches the file. Kept as an allowlist because the slot also carries the layout's
-	 * OUTPUT, and a computed value has no business in a source document.
-	 */
-	static const TArray<FString>& GetPanelSlotPropertyNames();
 
 	/**
 	 * Whether this property's value can be written as a literal this language can read back.

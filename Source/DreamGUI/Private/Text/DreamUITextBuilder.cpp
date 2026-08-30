@@ -617,6 +617,24 @@ namespace DreamUITextBuilderLocal
 			}
 		}
 
+		if (const FSoftObjectProperty* AsSoft = CastField<FSoftObjectProperty>(Leaf))
+		{
+			// Stored, never loaded: not loading is what SOFT means, and a class template that loaded
+			// its soft references would drag every referenced asset into memory at compile time --
+			// the exact cost the author chose this property type to avoid. The flip side is stated
+			// rather than hidden: a misspelled path is not caught here, it is caught wherever the
+			// game first resolves it. FSoftClassProperty comes through this branch too.
+			if (Value.Kind == EDreamUIValueKind::Tuple || Value.Kind == EDreamUIValueKind::HexColor)
+			{
+				RaiseTypeMismatch(InProperty, Leaf, InContext);
+				return false;
+			}
+			const bool bIsNone = Value.Raw.IsEmpty() || Value.Raw == TEXT("None");
+			AsSoft->SetPropertyValue(ValuePtr,
+				FSoftObjectPtr(bIsNone ? FSoftObjectPath() : FSoftObjectPath(Value.Raw)));
+			return true;
+		}
+
 		if (const FObjectProperty* AsObject = CastField<FObjectProperty>(Leaf))
 		{
 			if (Value.Raw.IsEmpty() || Value.Raw == TEXT("None"))

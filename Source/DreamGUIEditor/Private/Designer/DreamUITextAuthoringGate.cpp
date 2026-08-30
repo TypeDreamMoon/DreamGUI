@@ -15,6 +15,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Text/DreamUIPaths.h"
+#include "Text/DreamUIReflectionPolicy.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -75,38 +76,23 @@ namespace DreamUITextAuthoring
 		 * failure this gate exists to remove. An allowlist fails closed, and the cost of missing one is
 		 * a row that is greyed until somebody adds a name here.
 		 *
-		 * ROTATION AND SCALE are here as a pair -- the quat and its euler mirror -- because edits and
-		 * text address different halves of the same value. The transform section and the gizmo write
-		 * the QUAT (with the euler synced in PostEditChangeProperty); the .dui spells the EULER (with
-		 * the quat derived by its setter). Listing only one half would grey the write path or the
-		 * written path, and both are the same rotation.
+		 * NO TABLE ANY MORE. The list this function used to keep was the panel-side twin of the
+		 * write-back's path lists, and the pair had the failure both halves of a copied rule always
+		 * have: rotation was edited, mirrored, and dropped, because one list knew it and the other
+		 * did not. Both now ask DreamUIReflection -- the same (Edit-or-setter, not hidden, writable)
+		 * policy, one body -- so a row is grey exactly when the sweep would not write it. Widening
+		 * the set is done at the property: tag or untag it, and both halves move together.
 		 *
-		 * RELATIVELOCATION is deliberately still absent, and not because it cannot be spelled: its
-		 * setter recomputes the anchors, and it is the anchors the write-back prints. Giving location
-		 * a spelling of its own would put the same position in the file twice, and the two copies
-		 * would argue at every compile.
-		 *
-		 * To widen the set: add the root name here, and only after the write-back can spell it. That
-		 * is deliberately the only edit -- one table, so "what can the designer still change" is a
-		 * question with one answer to read.
+		 * The QUAT is a deliberate oddity worth naming: it is DuiHidden (the euler is its authored
+		 * face), which greys a hypothetical plain quat row -- but the transform section is a custom
+		 * row gated by category, and its edits arrive as quat chains the MIRROR accepts. That is the
+		 * one place the panel writes a property the file does not spell, and it is correct: the
+		 * mirror syncs the euler, and the euler is what the sweep prints.
 		 */
 		bool IsWritableWidgetPropertyRoot(const FName InRootName)
 		{
-			static const FName WritableRoots[] =
-			{
-				UDreamWidget::GetPropertyName_AnchorData(),
-				UDreamWidget::GetPropertyName_RelativeRotation(),
-				UDreamWidget::GetPropertyName_RelativeRotationEuler(),
-				UDreamWidget::GetPropertyName_RelativeScale(),
-			};
-			for (const FName Writable : WritableRoots)
-			{
-				if (Writable == InRootName)
-				{
-					return true;
-				}
-			}
-			return false;
+			const FProperty* Root = UDreamWidget::StaticClass()->FindPropertyByName(InRootName);
+			return DreamUIReflection::IsSweepRoot(Root);
 		}
 
 		/**
