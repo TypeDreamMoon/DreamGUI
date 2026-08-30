@@ -224,6 +224,9 @@ void UDreamUIVirtualCursorSubsystem::UpdateCursorVisualPosition()
 	FVector2D InCanvas = FVector2D::ZeroVector;
 	if (RootCanvas->ConvertPositionFromViewportToCanvas(CursorPosition, InCanvas))
 	{
+		// Bottom-left-origin out of the conversion, center-origin into the anchored position --
+		// the tooltip's and drag visual's missing shift, third copy.
+		InCanvas -= FVector2D(ScreenRoot->GetWidth() * 0.5f, ScreenRoot->GetHeight() * 0.5f);
 		CursorHolder->SetAnchoredPosition(InCanvas);
 	}
 }

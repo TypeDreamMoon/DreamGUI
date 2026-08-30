@@ -338,6 +338,11 @@ void UDreamUITooltipSubsystem::UpdateTooltipPosition()
 	}
 
 	const FVector2D HalfCanvas(ScreenRoot->GetWidth() * 0.5f, ScreenRoot->GetHeight() * 0.5f);
+	// The conversion answers in the canvas's BOTTOM-LEFT origin (x right, y up from the corner);
+	// anchored positions -- and the policy's ±HalfCanvas bounds -- are CENTER-origin. The
+	// walkthrough caught the bubble parked in a corner: this shift was missing, so a corner-origin
+	// number was fed to a center-origin consumer.
+	PointerInCanvas -= HalfCanvas;
 	const FVector2D TopLeft = DreamUITooltipPolicy::ComputeTooltipTopLeft(
 		-HalfCanvas, HalfCanvas,
 		FVector2D(TooltipHolder->GetWidth(), TooltipHolder->GetHeight()),

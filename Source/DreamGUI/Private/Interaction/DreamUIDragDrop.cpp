@@ -258,6 +258,10 @@ void UDreamUIDragDropSubsystem::UpdateDragVisualPosition()
 	{
 		return;
 	}
+	// Bottom-left-origin out of the conversion, center-origin into the anchored position -- the
+	// same shift the tooltip needed; without it the visual rides in a corner instead of under the
+	// pointer.
+	PointerInCanvas -= FVector2D(ScreenRoot->GetWidth() * 0.5f, ScreenRoot->GetHeight() * 0.5f);
 	DragVisualHolder->SetAnchoredPosition(PointerInCanvas + Operation->DragVisualOffset);
 }
 
