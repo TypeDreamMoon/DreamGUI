@@ -96,6 +96,8 @@ private:
 	void HandleInputEvent(UDreamBaseEventData* InEventData);
 
 	void ShowFor(UDreamWidget* InSource);
+	/** Size the built-in bubble to its text's preferred size; safe to call before the text can answer. */
+	void SizeBubbleToText();
 	void UpdateTooltipPosition();
 	void DestroyTooltipWidgets();
 

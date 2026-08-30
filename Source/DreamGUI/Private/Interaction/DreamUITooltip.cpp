@@ -180,6 +180,10 @@ void UDreamUITooltipSubsystem::Tick(float DeltaTime)
 			HideTooltip();
 			return;
 		}
+		// Fonts load and lay out asynchronously; the size the bubble opened with may have been a
+		// guess. Re-measuring every frame is one text layout read for the single visible bubble,
+		// and it settles to a no-op the moment the numbers agree.
+		SizeBubbleToText();
 		UpdateTooltipPosition();
 		return;
 	}
@@ -288,19 +292,11 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 		TextWidget->SetParentBeforeRegister(TooltipHolder);
 		TooltipHolder->SetParentBeforeRegister(ScreenRoot);
 		RegisterDreamWidgetHierarchy(TooltipHolder);
-
-		// Measure AFTER registration so the text has a live layout to answer from: preferred width
-		// unwrapped, clamped to the max, and the height asked at that width.
-		const float MaxTextWidth = FMath::Max(50.0f, Settings->TooltipMaxWidth - 2.0f * TooltipPadding);
-		const float TextWidth = FMath::Min(BubbleText->GetPreferredWidth(), MaxTextWidth);
-		TextWidget->SetWidth(TextWidth);
-		const float TextHeight = BubbleText->GetPreferredHeight();
-		TextWidget->SetHeight(TextHeight);
-		TextWidget->SetAnchoredPosition(FVector2D::ZeroVector);
-
-		TooltipHolder->SetSizeDelta(FVector2D(TextWidth + 2.0f * TooltipPadding, TextHeight + 2.0f * TooltipPadding));
 	}
 
+	// The sort canvas goes on BEFORE the text is measured: text layout early-outs without a render
+	// canvas on the widget, and the first ship of this code measured first -- preferred width came
+	// back zero and the bubble wrapped one character per line, a vertical strip of text.
 	UDreamCanvas* Canvas = TooltipHolder->GetComponent<UDreamCanvas>();
 	if (!IsValid(Canvas))
 	{
@@ -312,8 +308,36 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 		Canvas->SetSortOrder(TooltipSortOrder, /*PropagateToChildrenCanvas*/true);
 	}
 
+	if (IsValid(BubbleText))
+	{
+		SizeBubbleToText();
+	}
+
 	ShownFor = InSource;
 	UpdateTooltipPosition();
+}
+
+void UDreamUITooltipSubsystem::SizeBubbleToText()
+{
+	UDreamWidget* TextWidget = IsValid(BubbleText) ? BubbleText->GetWidget() : nullptr;
+	if (!IsValid(TextWidget) || !IsValid(TooltipHolder))
+	{
+		return;
+	}
+	// Preferred width unwrapped, clamped to the max, and the height asked at that width. A
+	// not-ready measurement (font still loading, no canvas yet) answers near zero; the bubble
+	// takes the full width for that frame rather than a one-character column, and the tick's
+	// re-measure shrinks it the moment the text can answer.
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	const float MaxTextWidth = FMath::Max(50.0f, Settings->TooltipMaxWidth - 2.0f * TooltipPadding);
+	const float Preferred = BubbleText->GetPreferredWidth();
+	const float TextWidth = Preferred > 1.0f ? FMath::Min(Preferred, MaxTextWidth) : MaxTextWidth;
+	TextWidget->SetWidth(TextWidth);
+	const float TextHeight = BubbleText->GetPreferredHeight();
+	TextWidget->SetHeight(TextHeight);
+	TextWidget->SetAnchoredPosition(FVector2D::ZeroVector);
+
+	TooltipHolder->SetSizeDelta(FVector2D(TextWidth + 2.0f * TooltipPadding, TextHeight + 2.0f * TooltipPadding));
 }
 
 void UDreamUITooltipSubsystem::UpdateTooltipPosition()
