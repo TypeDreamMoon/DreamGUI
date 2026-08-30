@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUIAst.h"
 
@@ -37,6 +37,18 @@ const FDreamUIStyle* FDreamUIAst::FindStyle(const FString& InName) const
 		if (Style.Name == InName)
 		{
 			return &Style;
+		}
+	}
+	return nullptr;
+}
+
+const FDreamUIResource* FDreamUIAst::FindResource(const FString& InName) const
+{
+	for (const FDreamUIResource& Resource : Resources)
+	{
+		if (Resource.Name == InName)
+		{
+			return &Resource;
 		}
 	}
 	return nullptr;

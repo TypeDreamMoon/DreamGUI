@@ -508,12 +508,95 @@ namespace DreamUITextBuilderLocal
 	 * they are the only spellings that are not the reflected one. Everything after that is
 	 * ImportText_Direct, which is always correct and merely verbose.
 	 */
+	/**
+	 * The value a `@Name` stands for, or null with a diagnostic.
+	 *
+	 * Substitution happens HERE, at the use site, rather than in a prepass that rewrites the AST:
+	 * the patcher owns the AST's raw text and byte offsets, and an AST whose values had been
+	 * replaced under it would splice literals into the wrong columns. What the entry declares and
+	 * what it holds are checked against each other too -- `Color Accent = 8` fails on the ENTRY's
+	 * line, once, instead of as a shape mismatch on every line that says `@Accent`.
+	 */
+	const FDreamUIValue* ResolveResourceRef(const FDreamUIValue& InValue, const FDreamUIProperty& InProperty,
+		FBuildContext& InContext)
+	{
+		const FDreamUIResource* Resource = InContext.Ast != nullptr
+			? InContext.Ast->FindResource(InValue.Raw) : nullptr;
+		if (Resource == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownResource, InValue.Location,
+				FString::Printf(TEXT("'@%s' names no entry in a resources block"), *InValue.Raw));
+			return nullptr;
+		}
+
+		// The declared type against the entry's own literal. A small closed table, one shape each,
+		// because an entry is authored without a destination and this is its only chance to be
+		// checked where the mistake was made.
+		struct FResourceShape { const TCHAR* TypeName; EDreamUIValueKind Kind; int32 TupleArity; };
+		static const FResourceShape Shapes[] =
+		{
+			{ TEXT("Color"),   EDreamUIValueKind::HexColor, INDEX_NONE },
+			{ TEXT("Number"),  EDreamUIValueKind::Number,   INDEX_NONE },
+			{ TEXT("Vector2"), EDreamUIValueKind::Tuple,    2 },
+			{ TEXT("String"),  EDreamUIValueKind::String,   INDEX_NONE },
+			{ TEXT("Asset"),   EDreamUIValueKind::AssetPath, INDEX_NONE },
+		};
+		const FResourceShape* Shape = nullptr;
+		for (const FResourceShape& Candidate : Shapes)
+		{
+			if (Resource->TypeName.Equals(Candidate.TypeName, ESearchCase::IgnoreCase))
+			{
+				Shape = &Candidate;
+				break;
+			}
+		}
+		if (Shape == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
+				FString::Printf(TEXT("'%s' is not a resource type; write Color, Number, Vector2, String or Asset"),
+					*Resource->TypeName));
+			return nullptr;
+		}
+		// A quoted path is accepted where an Asset is declared: both spell an FSoftObjectPath, and
+		// refusing the quoted one would make copy-pasting from the editor's Copy Reference a syntax
+		// exercise.
+		const bool bShapeMatches = Resource->Value.Kind == Shape->Kind
+			|| (Shape->Kind == EDreamUIValueKind::AssetPath && Resource->Value.Kind == EDreamUIValueKind::String);
+		if (!bShapeMatches
+			|| (Shape->TupleArity != INDEX_NONE && Resource->Value.Elements.Num() != Shape->TupleArity))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
+				FString::Printf(TEXT("resource '%s' is declared %s, but its value is not one"),
+					*Resource->Name, *Resource->TypeName));
+			return nullptr;
+		}
+		(void)InProperty;
+		return &Resource->Value;
+	}
+
 	bool WriteValue(const FResolvedDestination& InDestination, const FDreamUINode& InNode,
 		const FDreamUIProperty& InProperty, FBuildContext& InContext)
 	{
 		FProperty* Leaf = InDestination.LeafProperty;
 		void* ValuePtr = InDestination.LeafValuePtr;
-		const FDreamUIValue& Value = InProperty.Value;
+		const FDreamUIValue& Authored = InProperty.Value;
+
+		// `@Name` is resolved before any type branch looks at the value, so every branch below --
+		// FText localization included -- sees the same literal it would have seen written inline.
+		// The one thing kept from the use site is its LOCATION: a mismatch against the destination
+		// should point at the line that said `@Accent`, not into the resources block.
+		FDreamUIValue Substituted;
+		if (Authored.Kind == EDreamUIValueKind::ResourceRef)
+		{
+			const FDreamUIValue* Entry = ResolveResourceRef(Authored, InProperty, InContext);
+			if (Entry == nullptr)
+			{
+				return false;
+			}
+			Substituted = *Entry;
+			Substituted.Location = Authored.Location;
+		}
+		const FDreamUIValue& Value = Authored.Kind == EDreamUIValueKind::ResourceRef ? Substituted : Authored;
 
 		if (const FTextProperty* AsText = CastField<FTextProperty>(Leaf))
 		{

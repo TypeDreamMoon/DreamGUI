@@ -169,7 +169,7 @@ namespace DreamUIText
 	/** Keywords, and therefore the words a node id may not be. Case sensitive, see the file comment. */
 	bool IsReservedWord(const FString& InWord)
 	{
-		static const TCHAR* Reserved[] = { TEXT("class"), TEXT("style"), TEXT("slot"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("was") };
+		static const TCHAR* Reserved[] = { TEXT("class"), TEXT("style"), TEXT("resources"), TEXT("slot"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("was") };
 		for (const TCHAR* Word : Reserved)
 		{
 			if (InWord.Equals(Word, ESearchCase::CaseSensitive))
@@ -743,6 +743,10 @@ namespace DreamUIText
 				{
 					ParseClassDeclaration(OutAst);
 				}
+				else if (CheckKeyword(TEXT("resources")))
+				{
+					ParseResourcesDeclaration(OutAst);
+				}
 				else if (CheckKeyword(TEXT("style")))
 				{
 					// Accepted anywhere at file scope, including after the root, and that is on
@@ -968,6 +972,89 @@ namespace DreamUIText
 			// needs the column of the thing it replaces.
 			OutAst.ClassPathLocation = PathToken.Location;
 			Advance();
+		}
+
+		/**
+		 * `resources { Color Accent = #FF6600 ... }` -- named constants, referenced as `@Accent`.
+		 *
+		 * Entries accumulate across blocks (a second `resources` block is fine; a second ACCENT is
+		 * not), and first declaration wins on a duplicate for the same reason FindStyle keeps the
+		 * first style: everybody downstream must agree about what a name means.
+		 */
+		void ParseResourcesDeclaration(FDreamUIAst& OutAst)
+		{
+			Advance(); // 'resources'
+
+			if (!Check(ETokenKind::OpenBrace))
+			{
+				RaiseUnexpectedToken(TEXT("'resources' needs a '{ ... }' block"));
+				RecoverToStatementBoundary();
+				return;
+			}
+			Advance();
+
+			while (!IsAtEnd() && !Check(ETokenKind::CloseBrace))
+			{
+				// A stray ';' is tolerated here the way it is everywhere else in the grammar.
+				if (Check(ETokenKind::Separator))
+				{
+					Advance();
+					continue;
+				}
+				if (!Check(ETokenKind::Identifier))
+				{
+					RaiseUnexpectedToken(TEXT("expected 'Type Name = Value' in a resources block"));
+					RecoverToStatementBoundary();
+					continue;
+				}
+
+				FDreamUIResource Resource;
+				Resource.Location = Current().Location;
+				Resource.TypeName = Current().Text;
+				Advance();
+
+				if (!Check(ETokenKind::Identifier))
+				{
+					RaiseUnexpectedToken(FString::Printf(
+						TEXT("expected a resource name after '%s'"), *Resource.TypeName));
+					RecoverToStatementBoundary();
+					continue;
+				}
+				Resource.Name = Current().Text;
+				Advance();
+
+				if (!Check(ETokenKind::Equals))
+				{
+					RaiseUnexpectedToken(FString::Printf(
+						TEXT("resource '%s' needs '= Value'"), *Resource.Name));
+					RecoverToStatementBoundary();
+					continue;
+				}
+				Advance();
+
+				if (!ParseValue(Resource.Value))
+				{
+					RecoverToStatementBoundary();
+					continue;
+				}
+
+				if (OutAst.FindResource(Resource.Name) != nullptr)
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateResource, Resource.Location,
+						FString::Printf(TEXT("resource '%s' is declared twice"), *Resource.Name));
+					continue;
+				}
+				OutAst.Resources.Add(MoveTemp(Resource));
+			}
+
+			if (Check(ETokenKind::CloseBrace))
+			{
+				Advance();
+			}
+			else
+			{
+				RaiseUnexpectedToken(TEXT("a resources block is missing its '}'"));
+			}
 		}
 
 		void ParseStyleDeclaration(FDreamUIAst& OutAst)
@@ -1592,6 +1679,23 @@ namespace DreamUIText
 					return false;
 				}
 				break;
+			case ETokenKind::At:
+			{
+				// `@Accent` -- a reference into the resources block. The location is the '@', which
+				// is where the patcher's MeasureValue starts when a designer edit replaces the whole
+				// reference with a literal.
+				Advance();
+				if (!Check(ETokenKind::Identifier))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MissingPropertyValue, ValueToken.Location,
+						TEXT("expected a resource name after '@'"));
+					return false;
+				}
+				OutValue.Kind = EDreamUIValueKind::ResourceRef;
+				OutValue.Raw = Current().Text;
+				Advance();
+				break;
+			}
 			default:
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MissingPropertyValue, ValueToken.Location,
 					FString::Printf(TEXT("expected a value, found '%s'"), *DescribeCurrent()));

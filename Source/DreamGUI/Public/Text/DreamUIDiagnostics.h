@@ -154,6 +154,8 @@ enum class EDreamUIDiagnosticCode : int32
 	 * rather than an error: the binding and animation legs are unambiguous and still run.
 	 */
 	RenameGraphReferenceAmbiguous = 3013,
+	/** Two `resources` entries share a name; the first one wins everywhere, so the second is refused. */
+	DuplicateResource = 3014,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */
@@ -168,6 +170,10 @@ enum class EDreamUIDiagnosticCode : int32
 	UnknownEnumValue = 4005,
 	/** A property that exists but is not writable from text (Transient, editor-only, no setter). */
 	PropertyNotWritable = 4006,
+	/** `@Name` names no entry in any `resources` block. */
+	UnknownResource = 4007,
+	/** A `resources` entry whose declared type does not match its own literal (`Color Accent = 8`). */
+	ResourceTypeMismatch = 4008,
 
 	// --- 5xxx builder ---
 	/** The node names an asset that could not be loaded. */

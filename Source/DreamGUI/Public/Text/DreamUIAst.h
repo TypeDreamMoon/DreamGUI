@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -38,6 +38,8 @@ enum class EDreamUIValueKind : uint8
 	HexColor,
 	/** /Game/UI/F_Body -- an unquoted object path. */
 	AssetPath,
+	/** @Accent -- a reference into the file's `resources` block. Raw is the name, no '@'. */
+	ResourceRef,
 };
 
 struct DREAMGUI_API FDreamUIValue
@@ -161,6 +163,23 @@ struct DREAMGUI_API FDreamUIStyle
 	FDreamUISourceLocation Location;
 };
 
+/**
+ * One `resources { Color Accent = #FF6600 }` entry: a named constant with a declared type.
+ *
+ * TYPED, unlike everything else in the language, because an entry is authored without a
+ * destination: `8` on a property knows what it is from the FProperty it lands on, but `8` in a
+ * resources block has nothing to land on until somebody writes `@CornerRadius` -- and by then a
+ * type error would point at the use site instead of the mistake. The type names are the builder's
+ * to validate (Color, Number, Vector2, String, Asset); the parser records shape, as always.
+ */
+struct DREAMGUI_API FDreamUIResource
+{
+	FString TypeName;
+	FString Name;
+	FDreamUIValue Value;
+	FDreamUISourceLocation Location;
+};
+
 struct DREAMGUI_API FDreamUIAst
 {
 	/** `class /Game/UI/WBP_SavePanel` -- which blueprint this tree compiles into. */
@@ -169,11 +188,16 @@ struct DREAMGUI_API FDreamUIAst
 
 	TArray<FDreamUIStyle> Styles;
 
+	TArray<FDreamUIResource> Resources;
+
 	/** Exactly one root. bHasRoot is false when parsing failed before one was produced. */
 	FDreamUINode Root;
 	bool bHasRoot = false;
 
 	const FDreamUIStyle* FindStyle(const FString& InName) const;
+
+	/** The entry `@InName` refers to, or null. First declaration wins, like styles. */
+	const FDreamUIResource* FindResource(const FString& InName) const;
 
 	/** Every node in the tree, root first, parents before children. Loop bodies included. */
 	void ForEachNode(TFunctionRef<void(const FDreamUINode&)> InPredicate) const;

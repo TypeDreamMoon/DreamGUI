@@ -6,6 +6,7 @@
 
 #include "Text/DreamUITextWriteBack.h"
 #include "DreamWidgetBehaviourTestTypes.h"
+#include "Text/DreamUIValueFormat.h"
 
 #include "Core/DreamUIAnchorData.h"
 #include "Core/DreamWidgetTree.h"
@@ -795,6 +796,142 @@ bool FDreamUIWriteBackMoveWritesAnchorsOnlyTest::RunTest(const FString& Paramete
 	TestTrue(TEXT("a second pass computed an answer"),
 		FDreamUITextWriteBack::ProduceText(Produced, Live.Tree.Get(), Again, AgainDiagnostics));
 	TestEqualSensitive(TEXT("and found nothing more to write"), Again, Produced);
+	return true;
+}
+
+
+// -------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIResourceReferencesTest,
+	"DreamGUI.Text.AResourceIsDeclaredOnceAndReferencedByName",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The resources block, end to end: parse, substitute, and -- the half that earns the design --
+ * survive the write-back. An untouched file full of `@` references must produce ZERO edits, because
+ * the reference tree substitutes the same values the live tree carries; and a designer edit of a
+ * referenced property must bake THAT USE SITE to a literal, leaving the resources block and every
+ * other reference exactly as written.
+ */
+bool FDreamUIResourceReferencesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const FString Source = Join({
+		TEXT("resources {"),
+		TEXT("    Number  Gap    = 7"),
+		TEXT("    Color   Accent = #FF6600"),
+		TEXT("    Vector2 Nudge  = (3, 4)"),
+		TEXT("    Asset   Icon   = \"/Game/NotLoaded/T_Icon.T_Icon\""),
+		TEXT("}"),
+		TEXT(""),
+		TEXT("Widget Root {"),
+		TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour {"),
+		TEXT("        Plain        = @Gap"),
+		TEXT("        Style.Tint   = @Accent"),
+		TEXT("        Style.Offset = @Nudge"),
+		TEXT("        Icon         = @Icon"),
+		TEXT("    }"),
+		TEXT("}")
+	});
+	FBuiltTree Live = BuildTree(Source);
+	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid())) return false;
+
+	UDreamWidget* Root = Live.Find(TEXT("Root"));
+	if (!TestNotNull(TEXT("the root is there"), (UObject*)Root)
+		|| !TestEqual(TEXT("with the behaviour"), Root->GetAllComponents().Num(), 1)) return false;
+	UDreamUISweepTestBehaviour* Behaviour = Cast<UDreamUISweepTestBehaviour>(Root->GetAllComponents()[0]);
+	if (!TestNotNull(TEXT("of the sweep-test class"), Behaviour)) return false;
+
+	TestEqual(TEXT("a Number substituted"), Behaviour->Plain, 7.0f);
+	TestEqual(TEXT("a Vector2 substituted"), Behaviour->Style.Offset, FVector2D(3, 4));
+	TestEqual(TEXT("an Asset substituted, unloaded"),
+		Behaviour->Icon.ToSoftObjectPath().ToString(), FString(TEXT("/Game/NotLoaded/T_Icon.T_Icon")));
+	// Through the same sRGB quantisation an inline #FF6600 goes through: the reference IS the hex.
+	FString TintPrinted;
+	TestTrue(TEXT("a Color substituted"),
+		DreamUIValueFormat::Print(
+			FDreamUISweepTestStyle::StaticStruct()->FindPropertyByName(TEXT("Tint")),
+			&Behaviour->Style.Tint, TintPrinted));
+	TestEqual(TEXT("to the hex the entry declared"), TintPrinted, FString(TEXT("#FF6600")));
+
+	// Untouched: every reference equals its substitution on both sides, so nothing is written.
+	FString Untouched;
+	FDreamUIDiagnosticBag UntouchedDiagnostics;
+	TestTrue(TEXT("an untouched flush computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Untouched, UntouchedDiagnostics));
+	TestEqualSensitive(TEXT("and rewrote nothing -- references are not churn"), Untouched, Source);
+
+	// The bake: edit ONE referenced property. Its use site becomes a literal; the resources block
+	// and the other three references stay byte-identical.
+	Behaviour->Plain = 11.0f;
+	FString Baked;
+	FDreamUIDiagnosticBag BakedDiagnostics;
+	TestTrue(TEXT("the edited flush computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Baked, BakedDiagnostics));
+	TestTrue(TEXT("the edited use site was baked to a literal"),
+		Baked.Contains(TEXT("Plain        = 11")));
+	TestFalse(TEXT("and no longer says @Gap"), Baked.Contains(TEXT("@Gap")));
+	TestTrue(TEXT("while the entry it referenced is still declared"),
+		Baked.Contains(TEXT("Number  Gap    = 7")));
+	TestTrue(TEXT("and an untouched reference is still a reference"),
+		Baked.Contains(TEXT("Style.Tint   = @Accent")));
+
+	FString Again;
+	FDreamUIDiagnosticBag AgainDiagnostics;
+	TestTrue(TEXT("a second pass computed an answer"),
+		FDreamUITextWriteBack::ProduceText(Baked, Live.Tree.Get(), Again, AgainDiagnostics));
+	TestEqualSensitive(TEXT("and converged"), Again, Baked);
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIResourceRefusalsTest,
+	"DreamGUI.Text.AResourceMistakeIsReportedWhereItWasMade",
+	EAutomationTestFlags::EngineFilter | EAutomationTestFlags::EditorContext)
+
+bool FDreamUIResourceRefusalsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	// A reference to nothing: reported at the USE site, which is where the typo is.
+	{
+		FBuiltTree Live = BuildTree(Join({
+			TEXT("Widget Root {"),
+			TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour { Plain = @NoSuch }"),
+			TEXT("}")
+		}));
+		TestTrue(TEXT("an unknown resource is DUI4007"),
+			Live.Diagnostics.Diagnostics.ContainsByPredicate([](const FDreamUIDiagnostic& D)
+				{ return D.Code == EDreamUIDiagnosticCode::UnknownResource; }));
+	}
+
+	// An entry that lies about its type: reported at the ENTRY, once, instead of at every reference.
+	{
+		FBuiltTree Live = BuildTree(Join({
+			TEXT("resources { Color Accent = 8 }"),
+			TEXT("Widget Root {"),
+			TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour { Style.Tint = @Accent }"),
+			TEXT("}")
+		}));
+		TestTrue(TEXT("a mistyped entry is DUI4008"),
+			Live.Diagnostics.Diagnostics.ContainsByPredicate([](const FDreamUIDiagnostic& D)
+				{ return D.Code == EDreamUIDiagnosticCode::ResourceTypeMismatch; }));
+	}
+
+	// Two entries, one name: the second is refused so the first means the same thing everywhere.
+	{
+		FBuiltTree Live = BuildTree(Join({
+			TEXT("resources { Number Gap = 1  Number Gap = 2 }"),
+			TEXT("Widget Root { }")
+		}));
+		TestTrue(TEXT("a duplicate entry is DUI3014"),
+			Live.Diagnostics.Diagnostics.ContainsByPredicate([](const FDreamUIDiagnostic& D)
+				{ return D.Code == EDreamUIDiagnosticCode::DuplicateResource; }));
+	}
 	return true;
 }
 

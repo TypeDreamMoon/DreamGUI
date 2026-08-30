@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUITextPatcher.h"
 
@@ -405,9 +405,13 @@ namespace DreamUIPatchLocal
 		// together rather than told apart because the AST already knows which one it is -- the only
 		// thing left to find is where it stops, and they all stop at the same characters.
 		int32 Offset = InOffset;
-		if (First == TEXT('#'))
+		if (First == TEXT('#') || First == TEXT('@'))
 		{
-			++Offset; // The '#' is a delimiter, like a quote; the digits are the token.
+			// Both are delimiters, like a quote: '#' before a colour's digits, '@' before a resource
+			// reference's name. Without this the '@' break below would measure a `@Accent` value as
+			// zero characters, and a designer edit that bakes the reference to a literal would splice
+			// itself in FRONT of the reference instead of over it.
+			++Offset;
 		}
 		while (Offset < Length)
 		{

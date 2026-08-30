@@ -24,6 +24,9 @@ struct FDreamUISweepTestStyle
 	UPROPERTY(EditAnywhere)
 	FVector2D Offset = FVector2D::ZeroVector;
 
+	UPROPERTY(EditAnywhere)
+	FLinearColor Tint = FLinearColor::White;
+
 	UPROPERTY(EditAnywhere, meta = (DuiHidden))
 	float DerivedCache = 0.0f;
 };
