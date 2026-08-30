@@ -18,6 +18,7 @@
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Text/DreamUITextWriteBack.h"
 #include "Text/DreamUISourceWatcher.h"
+#include "Text/DreamUISymbolExport.h"
 #include "DreamUIEditorCommands.h"
 #include "DreamUIEditorTools.h"
 #include "DreamUIControlRegistry.h"
@@ -142,6 +143,8 @@ void FDreamGUIEditorModule::StartupModule()
 	// the first designer open, because the loop it closes does not require one: a .dui saved with
 	// no designer open still has to reach whatever classes ARE loaded.
 	FDreamUISourceWatcher::Register();
+	// The completion data external editors read; regenerated at startup so it never goes stale.
+	FDreamUISymbolExport::Register();
 
 	// Tell the details panel how to ask "can this value be written into a .dui at all". Without it the
 	// gate fails open, and a font or texture reference on a text-authored widget reads as editable --
@@ -383,6 +386,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+	FDreamUISymbolExport::Unregister();
 	FDreamUISourceWatcher::Unregister();
 	DreamUITextAuthoring::SetLiteralSpellingProbe(nullptr);
 	FDreamUIControlRegistry::Get().ShutdownDynamicDiscovery();

@@ -912,6 +912,15 @@ namespace DreamUITextBuilderLocal
 	}
 }
 
+void FDreamUITextBuilder::GetVisualTags(TArray<TPair<FString, UClass*>>& OutTags)
+{
+	OutTags.Reset();
+	for (const TPair<const TCHAR*, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())
+	{
+		OutTags.Emplace(FString(Entry.Key), Entry.Value);
+	}
+}
+
 UClass* FDreamUITextBuilder::FindVisualClassForTag(const FString& InTag, bool& bOutIsKnownTag)
 {
 	for (const TPair<const TCHAR*, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())

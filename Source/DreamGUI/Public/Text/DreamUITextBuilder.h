@@ -57,6 +57,14 @@ struct DREAMGUI_API FDreamUITextBuilder
 	static UClass* FindVisualClassForTag(const FString& InTag, bool& bOutIsKnownTag);
 
 	/**
+	 * Every built-in tag and the visual class it creates (null for the plain `Widget`).
+	 *
+	 * Exported for the symbol dump the VSCode extension eats: completion has to offer exactly the
+	 * tags the compiler accepts, and the only way two lists agree forever is for there to be one.
+	 */
+	static void GetVisualTags(TArray<TPair<FString, UClass*>>& OutTags);
+
+	/**
 	 * The class `+ Xxx` names: an alias, a reflected name, or a full object path.
 	 *
 	 * Null when nothing resolves or when what resolved is abstract, deprecated, or not something a

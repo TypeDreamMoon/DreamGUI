@@ -1,0 +1,270 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
+#include "Text/DreamUISymbolExport.h"
+
+#include "DreamGUIEditorModule.h"
+#include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamLayout.h"
+#include "Core/Components/DreamPanelSlot.h"
+#include "Core/Components/DreamWidget.h"
+#include "Text/DreamUIPaths.h"
+#include "Text/DreamUIReflectionPolicy.h"
+#include "Text/DreamUITextBuilder.h"
+#include "Text/DreamUIValueFormat.h"
+
+#include "Dom/JsonObject.h"
+#include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/CoreDelegates.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Serialization/JsonSerializer.h"
+#include "UObject/UObjectIterator.h"
+
+namespace DreamUISymbolExportLocal
+{
+	FDelegateHandle GStartupHandle;
+
+	FAutoConsoleCommand GExportCommand(
+		TEXT("DreamUI.ExportSymbols"),
+		TEXT("Rewrites DUI/.dui-symbols.json, the completion data the VSCode extension reads."),
+		FConsoleCommandDelegate::CreateLambda([]
+		{
+			const FString Written = FDreamUISymbolExport::ExportNow();
+			UE_LOG(DreamGUIEditor, Display, TEXT("DreamUI.ExportSymbols: %s"),
+				Written.IsEmpty() ? TEXT("no project DUI/ directory, nothing written") : *Written);
+		}));
+
+	/** The leaf FProperty a dotted path names on a class, or null. Mirrors the builder's walk. */
+	const FProperty* ResolveLeaf(const UStruct* InScope, const FString& InPath)
+	{
+		TArray<FString> Segments;
+		InPath.ParseIntoArray(Segments, TEXT("."));
+		const FProperty* Property = nullptr;
+		const UStruct* Scope = InScope;
+		for (const FString& Segment : Segments)
+		{
+			Property = Scope != nullptr ? FindFProperty<FProperty>(Scope, *Segment) : nullptr;
+			if (Property == nullptr)
+			{
+				return nullptr;
+			}
+			const FStructProperty* AsStruct = CastField<FStructProperty>(Property);
+			Scope = AsStruct != nullptr ? AsStruct->Struct : nullptr;
+		}
+		return Property;
+	}
+
+	/** UEnum for a property, matching the builder's own resolution. */
+	UEnum* EnumOf(const FProperty* InProperty)
+	{
+		if (const FEnumProperty* AsEnum = CastField<FEnumProperty>(InProperty))
+		{
+			return AsEnum->GetEnum();
+		}
+		if (const FByteProperty* AsByte = CastField<FByteProperty>(InProperty))
+		{
+			return AsByte->Enum;
+		}
+		return nullptr;
+	}
+
+	/** One class's writable leaves, as the extension wants them: name, a type word, an enum ref. */
+	TArray<TSharedPtr<FJsonValue>> DescribeProperties(const UStruct* InScope,
+		TMap<FString, TSharedPtr<FJsonObject>>& InOutEnums)
+	{
+		TArray<TSharedPtr<FJsonValue>> Out;
+		for (const FString& Path : DreamUIReflection::GetWritableLeafPaths(InScope))
+		{
+			const FProperty* Leaf = ResolveLeaf(InScope, Path);
+			if (Leaf == nullptr)
+			{
+				continue;
+			}
+			TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+			Entry->SetStringField(TEXT("name"), Path);
+			Entry->SetStringField(TEXT("type"), Leaf->GetCPPType());
+			if (const UEnum* Enum = EnumOf(Leaf))
+			{
+				const FString EnumName = Enum->GetName();
+				Entry->SetStringField(TEXT("enum"), EnumName);
+				if (!InOutEnums.Contains(EnumName))
+				{
+					TSharedPtr<FJsonObject> Values = MakeShared<FJsonObject>();
+					TArray<TSharedPtr<FJsonValue>> Names;
+					// NumEnums-1: the trailing _MAX UHT invents is not a value an author can write.
+					for (int32 Index = 0; Index < Enum->NumEnums() - 1; ++Index)
+					{
+						Names.Add(MakeShared<FJsonValueString>(Enum->GetNameStringByIndex(Index)));
+					}
+					Values->SetArrayField(TEXT("values"), Names);
+					InOutEnums.Add(EnumName, Values);
+				}
+			}
+			else if (DreamUIValueFormat::HasShortForm(Leaf))
+			{
+				const int32 Arity = DreamUIValueFormat::GetExpectedTupleArity(Leaf);
+				Entry->SetStringField(TEXT("literal"), Arity != INDEX_NONE
+					? FString::Printf(TEXT("tuple%d"), Arity) : TEXT("color"));
+			}
+			Out.Add(MakeShared<FJsonValueObject>(Entry));
+		}
+		return Out;
+	}
+
+	/** BlueprintAssignable delegate names on a class: what `->` can route. */
+	TArray<TSharedPtr<FJsonValue>> DescribeEvents(const UStruct* InScope)
+	{
+		TArray<TSharedPtr<FJsonValue>> Out;
+		for (TFieldIterator<FProperty> It(InScope); It; ++It)
+		{
+			if (CastField<FMulticastDelegateProperty>(*It) != nullptr
+				&& It->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+			{
+				Out.Add(MakeShared<FJsonValueString>(It->GetName()));
+			}
+		}
+		return Out;
+	}
+
+	/**
+	 * The shortest spelling ResolveComponentClass resolves back to this class -- the builder's own
+	 * prefix scheme run in reverse and verified, so completion never offers a name the compiler
+	 * would then refuse.
+	 */
+	FString ShortComponentName(UClass* InClass)
+	{
+		const FString Full = InClass->GetName();
+		static const TCHAR* Prefixes[] =
+		{
+			TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf"), TEXT("Dream"), TEXT("UI")
+		};
+		for (const TCHAR* Prefix : Prefixes)
+		{
+			FString Candidate = Full;
+			if (Candidate.RemoveFromStart(Prefix) && !Candidate.IsEmpty())
+			{
+				if (FDreamUITextBuilder::ResolveComponentClass(Candidate) == InClass)
+				{
+					return Candidate;
+				}
+			}
+		}
+		if (FDreamUITextBuilder::ResolveComponentClass(Full) == InClass)
+		{
+			return Full;
+		}
+		return FString();
+	}
+}
+
+void FDreamUISymbolExport::Register()
+{
+	using namespace DreamUISymbolExportLocal;
+	// OnPostEngineInit rather than module startup: the dump reads every reflected class, and the
+	// class set is only whole once every module has loaded.
+	GStartupHandle = FCoreDelegates::OnPostEngineInit.AddLambda([] { ExportNow(); });
+}
+
+void FDreamUISymbolExport::Unregister()
+{
+	using namespace DreamUISymbolExportLocal;
+	if (GStartupHandle.IsValid())
+	{
+		FCoreDelegates::OnPostEngineInit.Remove(GStartupHandle);
+		GStartupHandle.Reset();
+	}
+}
+
+FString FDreamUISymbolExport::ExportNow()
+{
+	using namespace DreamUISymbolExportLocal;
+
+	const FString Directory = FPaths::ConvertRelativePathToFull(
+		FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+	if (!IFileManager::Get().DirectoryExists(*Directory))
+	{
+		return FString();
+	}
+
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetNumberField(TEXT("version"), 1);
+	TMap<FString, TSharedPtr<FJsonObject>> Enums;
+
+	// ---- tags, from the builder's own table
+	TSharedPtr<FJsonObject> Tags = MakeShared<FJsonObject>();
+	TArray<TPair<FString, UClass*>> TagTable;
+	FDreamUITextBuilder::GetVisualTags(TagTable);
+	for (const TPair<FString, UClass*>& Tag : TagTable)
+	{
+		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+		if (Tag.Value != nullptr)
+		{
+			Entry->SetStringField(TEXT("class"), Tag.Value->GetName());
+			Entry->SetArrayField(TEXT("properties"), DescribeProperties(Tag.Value, Enums));
+			Entry->SetArrayField(TEXT("events"), DescribeEvents(Tag.Value));
+		}
+		Tags->SetObjectField(Tag.Key, Entry);
+	}
+	Root->SetObjectField(TEXT("tags"), Tags);
+
+	// ---- the two classes every node line can address regardless of tag
+	Root->SetArrayField(TEXT("widgetProperties"), DescribeProperties(UDreamWidget::StaticClass(), Enums));
+	Root->SetArrayField(TEXT("widgetEvents"), DescribeEvents(UDreamWidget::StaticClass()));
+	Root->SetArrayField(TEXT("slotProperties"), DescribeProperties(UDreamPanelSlot::StaticClass(), Enums));
+
+	// ---- components: everything `+` can attach, under the shortest name the compiler resolves
+	TSharedPtr<FJsonObject> Components = MakeShared<FJsonObject>();
+	for (TObjectIterator<UClass> It; It; ++It)
+	{
+		UClass* Class = *It;
+		const bool bAttachable = Class->IsChildOf(UDreamUIBehaviour::StaticClass())
+			|| Class->IsChildOf(UDreamLayout::StaticClass());
+		if (!bAttachable
+			|| Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_HideDropDown))
+		{
+			continue;
+		}
+		const FString Short = ShortComponentName(Class);
+		if (Short.IsEmpty())
+		{
+			continue;
+		}
+		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+		Entry->SetStringField(TEXT("class"), Class->GetName());
+		Entry->SetArrayField(TEXT("properties"), DescribeProperties(Class, Enums));
+		Entry->SetArrayField(TEXT("events"), DescribeEvents(Class));
+		Components->SetObjectField(Short, Entry);
+	}
+	Root->SetObjectField(TEXT("components"), Components);
+
+	// ---- enums referenced above, and the resource types the grammar's one typed corner takes
+	TSharedPtr<FJsonObject> EnumsObject = MakeShared<FJsonObject>();
+	for (const TPair<FString, TSharedPtr<FJsonObject>>& Enum : Enums)
+	{
+		EnumsObject->SetObjectField(Enum.Key, Enum.Value);
+	}
+	Root->SetObjectField(TEXT("enums"), EnumsObject);
+
+	TArray<TSharedPtr<FJsonValue>> ResourceTypes;
+	for (const TCHAR* Type : { TEXT("Color"), TEXT("Number"), TEXT("Vector2"), TEXT("String"), TEXT("Asset") })
+	{
+		ResourceTypes.Add(MakeShared<FJsonValueString>(Type));
+	}
+	Root->SetArrayField(TEXT("resourceTypes"), ResourceTypes);
+
+	FString Serialized;
+	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
+	FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
+
+	const FString FilePath = FPaths::Combine(Directory, TEXT(".dui-symbols.json"));
+	if (!FFileHelper::SaveStringToFile(Serialized, *FilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Could not write '%s'."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
+		return FString();
+	}
+	UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d Wrote '%s'."),
+		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
+	return FilePath;
+}
