@@ -7,6 +7,9 @@
 #include "Core/DreamUIImageBrush.h"
 #include "DreamSelectableStyle.generated.h"
 
+class USoundBase;
+class UForceFeedbackEffect;
+
 /** Reusable appearance shared by Button, Toggle, Slider and other selectable controls. */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamSelectableStyle : public UDataAsset
@@ -43,4 +46,20 @@ public:
 	FDreamUIImageBrush FocusedImageBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style", meta = (ClampMin = "0.0"))
 	float AnimationDuration = 0.2f;
+
+	/**
+	 * Audio and rumble live on the style, not the instance: a click should sound like the OTHER
+	 * clicks in this UI, which is a shared decision the same way its colors are. Navigation gets no
+	 * slot of its own -- moving focus fires Enter on the target, so HoveredSound already plays once
+	 * per move.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feedback")
+	TObjectPtr<USoundBase> HoveredSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feedback")
+	TObjectPtr<USoundBase> PressedSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feedback")
+	TObjectPtr<USoundBase> ClickedSound;
+	/** Rumble on click, for the gamepad the click came from. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feedback")
+	TObjectPtr<UForceFeedbackEffect> ClickedForceFeedback;
 };

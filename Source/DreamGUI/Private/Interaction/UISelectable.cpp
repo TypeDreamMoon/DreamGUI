@@ -16,6 +16,23 @@
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
+#include "GameFramework/ForceFeedbackEffect.h"
+#include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+
+namespace
+{
+	/** 2D UI sound, gated to worlds where a player is actually listening. */
+	void PlayDreamUISound(const UDreamWidget* InWidget, USoundBase* InSound)
+	{
+		UWorld* World = IsValid(InWidget) ? InWidget->GetWorld() : nullptr;
+		if (IsValid(InSound) && IsValid(World) && World->IsGameWorld())
+		{
+			UGameplayStatics::PlaySound2D(World, InSound);
+		}
+	}
+}
 
 
 UUITransition::UUITransition()
@@ -147,6 +164,14 @@ void UUISelectable::OnInteractableChanged(bool IsEnabled)
 
 void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 {
+	// Feedback on the TRANSITION, and only for interactive applies: ImmediateSet is the initial
+	// state and the editor's property refresh, neither of which is something the user did.
+	if (!ImmediateSet && CurrentSelectionState != LastFeedbackState)
+	{
+		PlaySelectionStateFeedback();
+	}
+	LastFeedbackState = CurrentSelectionState;
+
 	const float EffectiveAnimDuration = Style ? Style->AnimationDuration : AnimDuration;
 	if (TransitionType != EUISelectableTransitionType::Custom)
 	{
@@ -1103,5 +1128,43 @@ void UUISelectable::SetNavigationNextExplicit(UUISelectable* Value)
 	}
 }
 #pragma endregion
+
+void UUISelectable::PlaySelectionStateFeedback()
+{
+	if (Style == nullptr)
+	{
+		// Deliberately style-only, no per-instance twins: a click should sound like the OTHER
+		// clicks in this UI, and forty inline sound slots is how it stops doing that.
+		return;
+	}
+	switch (CurrentSelectionState)
+	{
+	case EUISelectableSelectionState::Hovered:
+		PlayDreamUISound(GetWidget(), Style->HoveredSound);
+		break;
+	case EUISelectableSelectionState::Pressed:
+		PlayDreamUISound(GetWidget(), Style->PressedSound);
+		break;
+	default:
+		break;
+	}
+}
+
+void UUISelectable::PlayClickFeedback()
+{
+	if (Style == nullptr)
+	{
+		return;
+	}
+	PlayDreamUISound(GetWidget(), Style->ClickedSound);
+	UWorld* World = IsValid(GetWidget()) ? GetWidget()->GetWorld() : nullptr;
+	if (IsValid(Style->ClickedForceFeedback) && IsValid(World) && World->IsGameWorld())
+	{
+		if (APlayerController* PlayerController = World->GetFirstPlayerController())
+		{
+			PlayerController->ClientPlayForceFeedback(Style->ClickedForceFeedback);
+		}
+	}
+}
 
 

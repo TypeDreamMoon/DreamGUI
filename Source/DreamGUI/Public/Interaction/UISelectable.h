@@ -235,6 +235,12 @@ protected:
 
 	EUISelectableSelectionState CurrentSelectionState = EUISelectableSelectionState::Normal;
 	void ApplyPointerSelectionState(bool ImmediateSet);
+	/** What feedback last played for, so re-applying the same state stays silent. */
+	EUISelectableSelectionState LastFeedbackState = EUISelectableSelectionState::Normal;
+	/** Style-driven sound for entering CurrentSelectionState. Called by ApplyPointerSelectionState. */
+	void PlaySelectionStateFeedback();
+	/** Style-driven click sound and rumble. Button calls this from its click; other subclasses may too. */
+	void PlayClickFeedback();
 	bool bIsPointerInsideThis = false;
 	bool bIsPointerDown = false;
 	/**

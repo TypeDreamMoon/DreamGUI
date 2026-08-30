@@ -34,6 +34,7 @@ bool UUIButton::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 
 bool UUIButton::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 {
+	PlayClickFeedback();
 	OnClickCPP.Broadcast();
 	OnClickBP.Broadcast();
 	OnClick.FireEvent();
