@@ -157,6 +157,26 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Tooltip", meta = (ClampMin = "6.0"))
 	float TooltipFontSize = 14.0f;
 
+	// ---------------------------------------------------------------- Modal
+
+	/** Tint of the input-eating scrim behind a modal dialog. */
+	UPROPERTY(config, EditAnywhere, Category = "Modal")
+	FColor ModalScrimColor = FColor(0, 0, 0, 160);
+
+	// ---------------------------------------------------------------- Virtual cursor
+
+	/** Show the virtual cursor whenever the physical device is a gamepad, hide it otherwise. */
+	UPROPERTY(config, EditAnywhere, Category = "Virtual Cursor")
+	bool bAutoVirtualCursorOnGamepad = false;
+
+	/** Cursor speed at full stick deflection, viewport pixels per second. */
+	UPROPERTY(config, EditAnywhere, Category = "Virtual Cursor", meta = (ClampMin = "100.0"))
+	float VirtualCursorSpeed = 1200.0f;
+
+	/** Widget class drawn as the cursor. Empty draws the built-in square. */
+	UPROPERTY(config, EditAnywhere, Category = "Virtual Cursor")
+	TSoftClassPtr<UDreamUserWidget> VirtualCursorClass;
+
 	// ---------------------------------------------------------------- Resolution
 
 	/**
