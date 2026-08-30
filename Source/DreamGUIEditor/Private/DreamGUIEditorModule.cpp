@@ -17,6 +17,7 @@
 #include "DreamGUIEditorStyle.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Text/DreamUITextWriteBack.h"
+#include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUISourceWatcher.h"
 #include "Text/DreamUISymbolExport.h"
 #include "DreamUIEditorCommands.h"
@@ -145,6 +146,9 @@ void FDreamGUIEditorModule::StartupModule()
 	FDreamUISourceWatcher::Register();
 	// The completion data external editors read; regenerated at startup so it never goes stale.
 	FDreamUISymbolExport::Register();
+	// The drop-folder RPC those editors talk back through: functions for completion, reveal,
+	// compile-on-demand. Requests land under Saved/DreamGUI/Bridge/.
+	FDreamUIBridgeService::Register();
 
 	// Tell the details panel how to ask "can this value be written into a .dui at all". Without it the
 	// gate fails open, and a font or texture reference on a text-authored widget reads as editable --
@@ -387,6 +391,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
 	FDreamUISymbolExport::Unregister();
+	FDreamUIBridgeService::Unregister();
 	FDreamUISourceWatcher::Unregister();
 	DreamUITextAuthoring::SetLiteralSpellingProbe(nullptr);
 	FDreamUIControlRegistry::Get().ShutdownDynamicDiscovery();
