@@ -1290,7 +1290,15 @@ namespace DreamUITextBuilderLocal
 		FGuid WidgetGuid;
 		if (!InNode.Id.IsEmpty())
 		{
-			WidgetName = MakeUniqueObjectName(InContext.Tree, WidgetClass, FName(*InNode.Id));
+			// The bare id, verbatim, whenever it is free -- MakeUniqueObjectName is not tried first
+			// because it ALWAYS numbers ("Root" becomes "Root_0"), and the whole point is that the
+			// object is named exactly what the author typed. The occupied case is error recovery
+			// only: duplicate ids are a build error upstream (DuplicateNodeId).
+			WidgetName = FName(*InNode.Id);
+			if (StaticFindObjectFast(nullptr, InContext.Tree, WidgetName) != nullptr)
+			{
+				WidgetName = MakeUniqueObjectName(InContext.Tree, WidgetClass, WidgetName);
+			}
 			WidgetGuid = FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + WidgetName.ToString());
 		}
 		UDreamWidget* Widget = InContext.Tree->ConstructWidget(WidgetClass, WidgetName, WidgetGuid);
