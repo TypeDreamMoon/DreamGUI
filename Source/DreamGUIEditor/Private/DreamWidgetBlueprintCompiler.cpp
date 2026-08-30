@@ -22,6 +22,7 @@
 #include "Text/DreamUITextBuilder.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetPreviewHost.h"
+#include "Text/DreamUIExpressionThunks.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
@@ -252,6 +253,12 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// hand-authored one. That is not a detail: FinishCompilingClass duplicates THIS object onto the
 	// generated class as the archetype, and SaveSubObjectsFromCleanAndSanitizeClass keeps it alive
 	// through the sanitize pass by name -- both were written against a tree that lives on the asset.
+	// Expression bindings lower into generated pure functions here, BEFORE the builder reads the
+	// AST: each `<- expr` line's BindingFunction is rewritten in place to its thunk's name, so the
+	// builder, the runtime and every migration see exactly the one-name shape they always did. An
+	// expression the generator refuses reports DUI5011 into the bag and clears its binding.
+	DreamUIExpressionThunks::Generate(DreamBlueprint, Ast, OutDiagnostics);
+
 	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings);
 	if (!IsValid(NewTree) || !IsValid(NewTree->RootWidget))
 	{
@@ -647,7 +654,7 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 	// sequence that happens to reuse the id. Loaded sequences only: loading packages mid-compile is
 	// its own hazard, and the unloaded ones get named in a warning by the caller instead.
 	{
-		for (TObjectIterator<UDreamUISequence> It; *It; ++It)
+		for (TObjectIterator<UDreamUISequence> It; It; ++It)
 		{
 			UDreamUISequence* Sequence = *It;
 			if (!IsValid(Sequence) || Sequence->PreviewWidgetClass.IsNull())

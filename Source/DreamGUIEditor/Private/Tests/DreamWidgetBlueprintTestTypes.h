@@ -58,6 +58,13 @@ class UDreamTextUserWidgetBindingBase : public UDreamTextUserWidget
 public:
 	UFUNCTION(BlueprintPure, Category = "Test")
 	FText GetTitleText() const { return FText::FromString(TEXT("bound")); }
+
+	/** Sources for the expression-thunk tests: a bool and a number an expression can chew on. */
+	UFUNCTION(BlueprintPure, Category = "Test")
+	bool IsBusy() const { return true; }
+
+	UFUNCTION(BlueprintPure, Category = "Test")
+	float GetScale() const { return 2.0f; }
 };
 
 /**

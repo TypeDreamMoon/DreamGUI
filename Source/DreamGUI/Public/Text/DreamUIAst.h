@@ -65,6 +65,42 @@ struct DREAMGUI_API FDreamUIValue
 };
 
 /**
+ * One node of a binding expression -- the parsed shape of everything to the right of `<-`.
+ *
+ * A tree of value structs, exactly like nodes hold their children: Operands nests by value, and the
+ * whole thing carries no UObject anywhere, so an AST stays as parseable-off-thread as it was.
+ */
+struct DREAMGUI_API FDreamUIExpression
+{
+	enum class EKind : uint8
+	{
+		/** `Func(a, b)` -- Symbol is the function name, Operands the arguments (often none). */
+		Call,
+		/** A bare identifier -- a variable on the user widget. Symbol is the name. */
+		VariableRef,
+		/** A literal: LiteralKind + LiteralRaw carry it exactly as FDreamUIValue would. */
+		Literal,
+		/** `!x` or unary `-x` -- Symbol is the operator spelling, Operands has one entry. */
+		Unary,
+		/** `a op b` -- Symbol is the operator spelling, Operands has two entries. */
+		Binary,
+	};
+
+	EKind Kind = EKind::Call;
+	/** Function name, variable name, or operator spelling ("!", "==", "&&", …). */
+	FString Symbol;
+	/** Literal only: the value kind and its raw spelling, matching FDreamUIValue's fields. */
+	EDreamUIValueKind LiteralKind = EDreamUIValueKind::Identifier;
+	FString LiteralRaw;
+
+	TArray<FDreamUIExpression> Operands;
+	FDreamUISourceLocation Location;
+
+	/** True for exactly the shape the plain binding path always handled: `Name()` with no arguments. */
+	bool IsBareCall() const { return Kind == EKind::Call && Operands.Num() == 0; }
+};
+
+/**
  * One `Name = Value` or `Name <- Func()` line.
  *
  * A binding and an assignment share this struct because they share a destination: the difference is
@@ -80,17 +116,25 @@ struct DREAMGUI_API FDreamUIProperty
 	FDreamUIValue Value;
 
 	/**
-	 * Set when this is `<-`: the no-argument UFUNCTION on the user widget that drives the property.
-	 *
-	 * A name, not an expression. FDreamWidgetPropertyBinding holds exactly one FunctionName today,
-	 * so anything richer has nowhere to be stored -- see the plan's one open item.
+	 * Set when this is `<-` with a bare `Func()`: the no-argument UFUNCTION on the user widget that
+	 * drives the property. For anything richer the parser fills BindingExpression instead, and the
+	 * COMPILER lowers it into a generated pure function whose name it writes back into this field
+	 * before the builder runs -- so downstream of that pass, this is always the one name
+	 * FDreamWidgetPropertyBinding can hold.
 	 */
 	FString BindingFunction;
+
+	/**
+	 * Set when the right side of `<-` is more than a bare call. Lowered by the compiler's thunk
+	 * pass; a consumer that builds an un-lowered AST (the write-back's reference tree) sees a
+	 * binding whose function name is still empty and must treat it as a binding, not a literal.
+	 */
+	TOptional<FDreamUIExpression> BindingExpression;
 
 	/** Set when this is `->`: the UFUNCTION on the user widget the event calls. */
 	FString EventHandler;
 
-	bool IsBinding() const { return !BindingFunction.IsEmpty(); }
+	bool IsBinding() const { return !BindingFunction.IsEmpty() || BindingExpression.IsSet(); }
 	bool IsEventBinding() const { return !EventHandler.IsEmpty(); }
 
 	FDreamUISourceLocation Location;

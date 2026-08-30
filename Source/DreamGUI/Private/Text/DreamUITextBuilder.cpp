@@ -785,6 +785,16 @@ namespace DreamUITextBuilderLocal
 	bool AddBinding(const FResolvedDestination& InDestination, UDreamWidget* InWidget,
 		const FDreamUIProperty& InProperty, FBuildContext& InContext)
 	{
+		if (InProperty.BindingFunction.IsEmpty())
+		{
+			// An expression binding the compiler has not lowered yet: the real compile rewrites
+			// BindingFunction to the generated thunk's name before Build runs, so reaching here
+			// means this is a consumer that builds a raw AST -- the write-back's reference tree,
+			// a test. Recording a nameless binding would resolve to nothing at runtime and trip
+			// the compiler's not-found check with an empty name; skipping records nothing, which
+			// is the truth about an un-lowered expression.
+			return false;
+		}
 		// Both of these are 5008 rather than 5005, and the split is the whole reason 5008 exists: what
 		// is wrong here is the KIND of destination, not the property. Told "no setter", a reader goes
 		// and writes one, and it still cannot be bound.

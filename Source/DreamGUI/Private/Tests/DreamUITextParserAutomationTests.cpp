@@ -738,11 +738,22 @@ bool FDreamUITextGrammarDiagnosticsTest::RunTest(const FString& Parameters)
 		TEXT("}")
 	}), EDreamUIDiagnosticCode::MissingPropertyValue, 2);
 
-	ExpectOneDiagnostic(*this, TEXT("a binding given an argument"), MakeSource({
-		TEXT("Widget Root {"),
-		TEXT("    Text <- GetTitle(1)"),
-		TEXT("}")
-	}), EDreamUIDiagnosticCode::UnexpectedToken, 2);
+	// `<- GetTitle(1)` stopped being an error the day the right of `<-` became an expression:
+	// arguments are legal now, carried on BindingExpression for the compiler's thunk pass. The
+	// refusal this case used to pin lives on in the expression grammar's own malformed cases
+	// (DreamUIExpressionParserAutomationTests), so what this file keeps is the compat claim.
+	{
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a binding given an argument now parses as an expression"), Parse(MakeSource({
+			TEXT("Widget Root {"),
+			TEXT("    Text <- GetTitle(1)"),
+			TEXT("}")
+		}), Ast, Diagnostics));
+		TestEqual(TEXT("...with no complaint"), Diagnostics.Diagnostics.Num(), 0);
+		TestTrue(TEXT("...riding the expression field, not the bare name"),
+			Ast.Root.Properties.Num() == 1 && Ast.Root.Properties[0].BindingExpression.IsSet());
+	}
 
 	return true;
 }

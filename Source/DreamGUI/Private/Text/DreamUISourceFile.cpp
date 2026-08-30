@@ -69,6 +69,24 @@ namespace DreamUIText
 		Arrow,
 		Plus,
 		At,
+		/**
+		 * Expression operators. They exist for the right side of `<-` and are inert everywhere
+		 * else -- a property line that meets one reports UnexpectedToken exactly as it would for
+		 * any token it has no rule for. Division is deliberately absent: '/' belongs to comments
+		 * and asset paths, and an expression that needs it writes a function.
+		 */
+		Bang,
+		Star,
+		Percent,
+		Minus,
+		Less,
+		LessEqual,
+		Greater,
+		GreaterEqual,
+		EqualEqual,
+		BangEqual,
+		AmpAmp,
+		PipePipe,
 	};
 
 	struct FToken
@@ -251,7 +269,30 @@ namespace DreamUIText
 					EmitPunctuation(OutTokens, ETokenKind::EventArrow, 2);
 					continue;
 				}
-				if (IsDigit(Char) || Char == TEXT('-'))
+				if (Char == TEXT('-'))
+				{
+					// A '-' after an OPERAND is subtraction; anywhere else it is a number's sign --
+					// including a malformed one, so a lone minus where a value belongs keeps
+					// reporting as the malformed number it always was. `(400, -240)` and `X = -5`
+					// lex exactly as before (previous token is a comma or an equals), while
+					// `A - 5` and `Count() - Base()` become the operator.
+					const bool bPreviousIsOperand = OutTokens.Num() > 0
+						&& (OutTokens.Last().Kind == ETokenKind::Identifier
+							|| OutTokens.Last().Kind == ETokenKind::Number
+							|| OutTokens.Last().Kind == ETokenKind::String
+							|| OutTokens.Last().Kind == ETokenKind::HexColor
+							|| OutTokens.Last().Kind == ETokenKind::CloseParen);
+					if (bPreviousIsOperand)
+					{
+						EmitPunctuation(OutTokens, ETokenKind::Minus, 1);
+					}
+					else
+					{
+						LexNumber(OutTokens);
+					}
+					continue;
+				}
+				if (IsDigit(Char))
 				{
 					LexNumber(OutTokens);
 					continue;
@@ -266,9 +307,48 @@ namespace DreamUIText
 					LexHexColor(OutTokens);
 					continue;
 				}
-				if (Char == TEXT('<') && PeekChar(1) == TEXT('-'))
+				if (Char == TEXT('<'))
 				{
-					EmitPunctuation(OutTokens, ETokenKind::Arrow, 2);
+					// '<' immediately followed by '-' is the binding arrow, which means a less-than
+					// against a negative number needs the space: `a < -1`. Written `a <-1` it reads
+					// as an arrow to this lexer exactly as it does to a squinting human.
+					if (PeekChar(1) == TEXT('-'))
+					{
+						EmitPunctuation(OutTokens, ETokenKind::Arrow, 2);
+					}
+					else if (PeekChar(1) == TEXT('='))
+					{
+						EmitPunctuation(OutTokens, ETokenKind::LessEqual, 2);
+					}
+					else
+					{
+						EmitPunctuation(OutTokens, ETokenKind::Less, 1);
+					}
+					continue;
+				}
+				if (Char == TEXT('>'))
+				{
+					EmitPunctuation(OutTokens, PeekChar(1) == TEXT('=') ? ETokenKind::GreaterEqual : ETokenKind::Greater, PeekChar(1) == TEXT('=') ? 2 : 1);
+					continue;
+				}
+				if (Char == TEXT('!'))
+				{
+					EmitPunctuation(OutTokens, PeekChar(1) == TEXT('=') ? ETokenKind::BangEqual : ETokenKind::Bang, PeekChar(1) == TEXT('=') ? 2 : 1);
+					continue;
+				}
+				if (Char == TEXT('=') && PeekChar(1) == TEXT('='))
+				{
+					EmitPunctuation(OutTokens, ETokenKind::EqualEqual, 2);
+					continue;
+				}
+				if (Char == TEXT('&') && PeekChar(1) == TEXT('&'))
+				{
+					EmitPunctuation(OutTokens, ETokenKind::AmpAmp, 2);
+					continue;
+				}
+				if (Char == TEXT('|') && PeekChar(1) == TEXT('|'))
+				{
+					EmitPunctuation(OutTokens, ETokenKind::PipePipe, 2);
 					continue;
 				}
 				if (Char == TEXT(';'))
@@ -289,6 +369,8 @@ namespace DreamUIText
 				case TEXT('='): EmitPunctuation(OutTokens, ETokenKind::Equals, 1); continue;
 				case TEXT('+'): EmitPunctuation(OutTokens, ETokenKind::Plus, 1); continue;
 				case TEXT('@'): EmitPunctuation(OutTokens, ETokenKind::At, 1); continue;
+				case TEXT('*'): EmitPunctuation(OutTokens, ETokenKind::Star, 1); continue;
+				case TEXT('%'): EmitPunctuation(OutTokens, ETokenKind::Percent, 1); continue;
 				default: break;
 				}
 
@@ -1645,34 +1727,221 @@ namespace DreamUIText
 
 		bool ParseBindingFunction(FDreamUIProperty& OutProperty)
 		{
-			if (!Check(ETokenKind::Identifier))
+			// The open question closed: the right of `<-` is an EXPRESSION. A bare `Func()` keeps
+			// travelling as the one name FDreamWidgetPropertyBinding holds -- byte-for-byte the old
+			// behaviour -- and anything richer is carried as a tree for the compiler to lower into
+			// a generated pure function before the builder runs.
+			FDreamUIExpression Expression;
+			if (!ParseBindingExpression(Expression, /*InMinPrecedence*/1))
 			{
-				RaiseUnexpectedToken(TEXT("'<-' binds to a function, written 'SomeFunction()'"));
 				return false;
 			}
-			const FString FunctionName = Current().Text;
-			Advance();
-
-			if (!Check(ETokenKind::OpenParen))
+			if (!Check(ETokenKind::Separator) && !Check(ETokenKind::CloseBrace) && !Check(ETokenKind::EndOfFile))
 			{
-				RaiseUnexpectedToken(FString::Printf(TEXT("write the binding as '<- %s()' -- the parentheses are part of it"), *FunctionName));
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+					FString::Printf(TEXT("unexpected '%s' after the binding expression"), *Current().Text));
+				RecoverToStatementBoundary();
 				return false;
 			}
-			Advance();
-			if (!Check(ETokenKind::CloseParen))
+			if (Expression.IsBareCall())
 			{
-				// Arguments are rejected in the grammar, not left for the builder, because the shape
-				// is the problem and not the target: FDreamWidgetPropertyBinding holds one function
-				// name and nowhere to put an argument. When the open question about expressions on
-				// the right of '<-' is settled, this is the one place that loosens.
-				RaiseUnexpectedToken(TEXT("a bound function takes no arguments"));
-				SkipPastCloseParen();
-				return false;
+				OutProperty.BindingFunction = Expression.Symbol;
 			}
-			Advance();
-
-			OutProperty.BindingFunction = FunctionName;
+			else
+			{
+				OutProperty.BindingExpression = MoveTemp(Expression);
+			}
 			return true;
+		}
+
+		/** 0 means "not a binary operator". Higher binds tighter; all binaries are left-associative. */
+		static int32 GetBinaryPrecedence(ETokenKind InKind)
+		{
+			switch (InKind)
+			{
+			case ETokenKind::PipePipe: return 1;
+			case ETokenKind::AmpAmp: return 2;
+			case ETokenKind::EqualEqual:
+			case ETokenKind::BangEqual: return 3;
+			case ETokenKind::Less:
+			case ETokenKind::LessEqual:
+			case ETokenKind::Greater:
+			case ETokenKind::GreaterEqual: return 4;
+			case ETokenKind::Plus:
+			case ETokenKind::Minus: return 5;
+			case ETokenKind::Star:
+			case ETokenKind::Percent: return 6;
+			default: return 0;
+			}
+		}
+
+		static const TCHAR* GetOperatorSpelling(ETokenKind InKind)
+		{
+			switch (InKind)
+			{
+			case ETokenKind::PipePipe: return TEXT("||");
+			case ETokenKind::AmpAmp: return TEXT("&&");
+			case ETokenKind::EqualEqual: return TEXT("==");
+			case ETokenKind::BangEqual: return TEXT("!=");
+			case ETokenKind::Less: return TEXT("<");
+			case ETokenKind::LessEqual: return TEXT("<=");
+			case ETokenKind::Greater: return TEXT(">");
+			case ETokenKind::GreaterEqual: return TEXT(">=");
+			case ETokenKind::Plus: return TEXT("+");
+			case ETokenKind::Minus: return TEXT("-");
+			case ETokenKind::Star: return TEXT("*");
+			case ETokenKind::Percent: return TEXT("%");
+			case ETokenKind::Bang: return TEXT("!");
+			default: return TEXT("?");
+			}
+		}
+
+		bool ParseBindingExpression(FDreamUIExpression& OutExpression, int32 InMinPrecedence)
+		{
+			if (!ParseUnaryExpression(OutExpression))
+			{
+				return false;
+			}
+			while (true)
+			{
+				const int32 Precedence = GetBinaryPrecedence(Current().Kind);
+				if (Precedence == 0 || Precedence < InMinPrecedence)
+				{
+					return true;
+				}
+				const ETokenKind OperatorKind = Current().Kind;
+				const FDreamUISourceLocation OperatorLocation = Current().Location;
+				Advance();
+
+				FDreamUIExpression Right;
+				// Precedence + 1 makes every level left-associative: `a - b - c` is `(a-b)-c`.
+				if (!ParseBindingExpression(Right, Precedence + 1))
+				{
+					return false;
+				}
+				FDreamUIExpression Combined;
+				Combined.Kind = FDreamUIExpression::EKind::Binary;
+				Combined.Symbol = GetOperatorSpelling(OperatorKind);
+				Combined.Location = OperatorLocation;
+				Combined.Operands.Add(MoveTemp(OutExpression));
+				Combined.Operands.Add(MoveTemp(Right));
+				OutExpression = MoveTemp(Combined);
+			}
+		}
+
+		bool ParseUnaryExpression(FDreamUIExpression& OutExpression)
+		{
+			if (Check(ETokenKind::Bang) || Check(ETokenKind::Minus))
+			{
+				FDreamUIExpression Unary;
+				Unary.Kind = FDreamUIExpression::EKind::Unary;
+				Unary.Symbol = GetOperatorSpelling(Current().Kind);
+				Unary.Location = Current().Location;
+				Advance();
+				FDreamUIExpression& Inner = Unary.Operands.AddDefaulted_GetRef();
+				if (!ParseUnaryExpression(Inner))
+				{
+					return false;
+				}
+				OutExpression = MoveTemp(Unary);
+				return true;
+			}
+			return ParsePrimaryExpression(OutExpression);
+		}
+
+		bool ParsePrimaryExpression(FDreamUIExpression& OutExpression)
+		{
+			OutExpression.Location = Current().Location;
+			switch (Current().Kind)
+			{
+			case ETokenKind::OpenParen:
+			{
+				Advance();
+				if (!ParseBindingExpression(OutExpression, 1))
+				{
+					return false;
+				}
+				if (!Check(ETokenKind::CloseParen))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+						TEXT("this '(' was never closed"));
+					RecoverToStatementBoundary();
+					return false;
+				}
+				Advance();
+				return true;
+			}
+			case ETokenKind::Number:
+			{
+				OutExpression.Kind = FDreamUIExpression::EKind::Literal;
+				OutExpression.LiteralKind = EDreamUIValueKind::Number;
+				OutExpression.LiteralRaw = Current().Text;
+				Advance();
+				return true;
+			}
+			case ETokenKind::String:
+			{
+				OutExpression.Kind = FDreamUIExpression::EKind::Literal;
+				OutExpression.LiteralKind = EDreamUIValueKind::String;
+				OutExpression.LiteralRaw = Current().Text;
+				Advance();
+				return true;
+			}
+			case ETokenKind::Identifier:
+			{
+				const FString Name = Current().Text;
+				Advance();
+				if (Name == TEXT("true") || Name == TEXT("false"))
+				{
+					OutExpression.Kind = FDreamUIExpression::EKind::Literal;
+					OutExpression.LiteralKind = EDreamUIValueKind::Identifier;
+					OutExpression.LiteralRaw = Name;
+					return true;
+				}
+				if (Check(ETokenKind::OpenParen))
+				{
+					Advance();
+					OutExpression.Kind = FDreamUIExpression::EKind::Call;
+					OutExpression.Symbol = Name;
+					if (!Check(ETokenKind::CloseParen))
+					{
+						while (true)
+						{
+							FDreamUIExpression& Argument = OutExpression.Operands.AddDefaulted_GetRef();
+							if (!ParseBindingExpression(Argument, 1))
+							{
+								return false;
+							}
+							if (Check(ETokenKind::Comma))
+							{
+								Advance();
+								continue;
+							}
+							break;
+						}
+					}
+					if (!Check(ETokenKind::CloseParen))
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+							FString::Printf(TEXT("the call to '%s' was never closed"), *Name));
+						RecoverToStatementBoundary();
+						return false;
+					}
+					Advance();
+					return true;
+				}
+				// A bare identifier is a variable on the user widget -- the day `<-` learned
+				// expressions is the day a property could be a source too.
+				OutExpression.Kind = FDreamUIExpression::EKind::VariableRef;
+				OutExpression.Symbol = Name;
+				return true;
+			}
+			default:
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+					TEXT("'<-' expects an expression: a function call, a variable, a literal, or an operator combination of them"));
+				RecoverToStatementBoundary();
+				return false;
+			}
 		}
 
 		bool ParseValue(FDreamUIValue& OutValue)

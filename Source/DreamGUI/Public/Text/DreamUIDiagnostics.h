@@ -84,6 +84,8 @@ enum class EDreamUIDiagnosticCode : int32
 	MalformedKeyOverride = 2009,
 	/** A `for` / `each` header that is not `<keyword> <Var> in <Func>()`. */
 	MalformedLoopHeader = 2010,
+	/** The right side of `<-` did not parse as an expression: a stray token, an unclosed paren. */
+	MalformedBindingExpression = 2011,
 
 	// --- 3xxx semantic ---
 	/**
@@ -212,6 +214,14 @@ enum class EDreamUIDiagnosticCode : int32
 	NothingToBuild = 5009,
 	/** `X -> Handler` where X is not an assignable event on the destination, or is a path into one. */
 	EventNotFound = 5010,
+	/**
+	 * A binding expression the thunk generator could not lower into a Blueprint function: a name
+	 * neither a variable nor a function on this class, an operator with no overload for its operand
+	 * types, or a type the generator does not know how to convert. The message names the specific
+	 * refusal; the code is one because the reader's next move is the same for all of them -- fix the
+	 * expression, or move the logic into a real function and bind that.
+	 */
+	BindingExpressionUnsupported = 5011,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */
