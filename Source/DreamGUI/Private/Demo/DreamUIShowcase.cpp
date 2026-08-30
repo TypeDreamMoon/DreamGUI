@@ -89,3 +89,48 @@ void UDreamUIShowcasePanel::HandleChipDropped(UDreamDragDropOperation* InOperati
 	++DropCount;
 	UE_LOG(DreamGUI, Log, TEXT("[Showcase] Chip dropped (%d)."), DropCount);
 }
+
+FText UDreamUIControlsGalleryPanel::GetEventLogText() const
+{
+	if (EventLines.Num() == 0)
+	{
+		return NSLOCTEXT("DreamUIShowcase", "NoEvents", "interact with anything below…");
+	}
+	return FText::FromString(FString::Join(EventLines, TEXT("\n")));
+}
+
+FText UDreamUIControlsGalleryPanel::GetClickTotalText() const
+{
+	return FText::FromString(FString::Printf(TEXT("events: %d"), GalleryClickTotal));
+}
+
+void UDreamUIControlsGalleryPanel::OnGalleryButton()
+{
+	LogEvent(TEXT("Button A clicked"));
+}
+
+void UDreamUIControlsGalleryPanel::OnGallerySecondButton()
+{
+	LogEvent(TEXT("Button B clicked"));
+}
+
+void UDreamUIControlsGalleryPanel::OnGalleryToggle(bool InValue)
+{
+	LogEvent(FString::Printf(TEXT("Toggle -> %s"), InValue ? TEXT("on") : TEXT("off")));
+}
+
+void UDreamUIControlsGalleryPanel::OnGalleryChipDropped(UDreamDragDropOperation* InOperation)
+{
+	LogEvent(TEXT("Chip landed in the well"));
+}
+
+void UDreamUIControlsGalleryPanel::LogEvent(const FString& InLine)
+{
+	++GalleryClickTotal;
+	EventLines.Insert(FString::Printf(TEXT("%02d · %s"), GalleryClickTotal, *InLine), 0);
+	if (EventLines.Num() > 4)
+	{
+		EventLines.SetNum(4);
+	}
+	UE_LOG(DreamGUI, Log, TEXT("[Gallery] %s"), *InLine);
+}

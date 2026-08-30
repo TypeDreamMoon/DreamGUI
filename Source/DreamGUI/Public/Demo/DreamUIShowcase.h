@@ -105,3 +105,50 @@ protected:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UObject>> History;
 };
+
+/**
+ * The native base for the ControlsGallery showcase .dui: one handler per input-control family,
+ * every one of them appending to a short event log a binding displays live. The gallery's job is
+ * INPUT coverage -- click, toggle, drag, scroll, text, selection -- so what the class provides is
+ * observation: every interaction leaves a line, and a walkthrough (or a human) reads the panel
+ * itself to see what fired.
+ */
+UCLASS(Abstract, BlueprintType)
+class DREAMGUI_API UDreamUIControlsGalleryPanel : public UDreamUIShowcasePanel
+{
+	GENERATED_BODY()
+public:
+	/** The `<->` target of the gallery's main toggle. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Showcase")
+	bool bGalleryToggle = false;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Showcase")
+	int32 GalleryClickTotal = 0;
+
+	/** The last few events, newest first, one string a Text binding shows. */
+	UFUNCTION(BlueprintPure, Category = "Showcase")
+	FText GetEventLogText() const;
+
+	UFUNCTION(BlueprintPure, Category = "Showcase")
+	FText GetClickTotalText() const;
+
+	UFUNCTION()
+	void OnGalleryButton();
+
+	UFUNCTION()
+	void OnGallerySecondButton();
+
+	UFUNCTION()
+	void OnGalleryToggle(bool InValue);
+
+	UFUNCTION()
+	void OnGalleryChipDropped(UDreamDragDropOperation* InOperation);
+
+	/** Appends one line, newest first, keeping the log short. */
+	UFUNCTION(BlueprintCallable, Category = "Showcase")
+	void LogEvent(const FString& InLine);
+
+protected:
+	UPROPERTY(Transient)
+	TArray<FString> EventLines;
+};
