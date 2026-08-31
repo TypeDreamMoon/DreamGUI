@@ -3301,8 +3301,15 @@ void UDreamWidget::SetAnchoredPositionAndSizeDelta(FVector2D Position, FVector2D
 	{
 		bSizeChange = true;
 		AnchorData.SizeDelta = Size;
-		CacheWidth = Size.X;
-		CacheHeight = Size.Y;
+		// DIRTIED, never assigned. A size DELTA is only the resolved size on a point-anchored axis;
+		// on a stretched one the size is the delta PLUS the parent's span across the anchors, and
+		// writing the delta into the resolved cache published a number no arithmetic in this class
+		// agrees with. That is where the list's "-0 wide viewport inside a 342-wide face" came from:
+		// RefreshScrollFurniture states the gutter as a delta (0, or -Thickness) on a stretched
+		// viewport, and this line then answered every GetWidth() with it. SetSizeDelta next door has
+		// always dirtied instead; the two are the same operation and now say the same thing.
+		bCacheWidthDirty = true;
+		bCacheHeightDirty = true;
 	}
 	if (bPosChange || bSizeChange)
 	{
@@ -3535,85 +3542,53 @@ void UDreamWidget::SetAnchorOffsetBottom(float Value)
 	}
 }
 
+/**
+ * The gate is the RESOLVED width, and so is the invalidation. Both used to be the size DELTA, and
+ * that is one defect rather than two spellings of the same one.
+ *
+ * A stretched node's width is its delta PLUS the parent's span across its anchors, so the delta can
+ * sit still while the width moves -- which is the ordinary case, not an exotic one: a node authored
+ * as "exactly the parent's span" keeps a delta of 0 from the moment it is built to the moment the
+ * window is resized. The old shape assigned the new width into this node's own cache and then
+ * declined to tell anybody, because the delta had not changed; every stretched descendant went on
+ * answering with the number it resolved when the parent was still zero-sized. Measured as a list
+ * whose viewport read back -0 inside a 342-wide face, worked around at the control layer by
+ * re-publishing anchors from a per-frame watch, and the watch then oscillated in the designer.
+ *
+ * GetWidth() first, rather than comparing against a possibly-stale cache: it resolves the stretch
+ * and clears the dirty flag, so "did the width change" is asked of the width and not of a leftover.
+ * When the answer is no this returns having done nothing, which is the same contract as before.
+ */
 void UDreamWidget::SetWidth(float Value)
 {
-	if (CacheWidth != Value || bCacheWidthDirty)
+	if (GetWidth() == Value)
 	{
-		bCacheWidthDirty = false;
-		CacheWidth = Value;
-		SyncAnimatableGeometryMirrors();
-		if (Parent.IsValid())
-		{
-			if (AnchorData.IsHorizontalStretched())
-			{
-				auto CalculatedSizeDeltaX = Value - (Parent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-				if (AnchorData.SizeDelta.X != CalculatedSizeDeltaX)
-				{
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-					MarkAnchorDataChanged_Recursive(false, true, false, false);
-					MarkLayoutForRebuild(this);
-				}
-			}
-			else
-			{
-				if (AnchorData.SizeDelta.X != Value)
-				{
-					AnchorData.SizeDelta.X = Value;
-					MarkAnchorDataChanged_Recursive(false, true, false, false);
-					MarkLayoutForRebuild(this);
-				}
-			}
-		}
-		else
-		{
-			if (AnchorData.SizeDelta.X != Value)
-			{
-				AnchorData.SizeDelta.X = Value;
-				MarkAnchorDataChanged_Recursive(false, true, false, false);
-				MarkLayoutForRebuild(this);
-			}
-		}
+		return;
 	}
+	CacheWidth = Value;
+	bCacheWidthDirty = false;
+	SyncAnimatableGeometryMirrors();
+	AnchorData.SizeDelta.X = (Parent.IsValid() && AnchorData.IsHorizontalStretched())
+		? Value - (Parent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X))
+		: Value;
+	MarkAnchorDataChanged_Recursive(false, true, false, false);
+	MarkLayoutForRebuild(this);
 }
+/** The vertical twin of SetWidth, defect included and fixed the same way. */
 void UDreamWidget::SetHeight(float Value)
 {
-	if (CacheHeight != Value || bCacheHeightDirty)
+	if (GetHeight() == Value)
 	{
-		bCacheHeightDirty = false;
-		CacheHeight = Value;
-		SyncAnimatableGeometryMirrors();
-		if (Parent.IsValid())
-		{
-			if (AnchorData.IsVerticalStretched())
-			{
-				auto CalculatedSizeDeltaY = Value - (Parent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-				if (AnchorData.SizeDelta.Y != CalculatedSizeDeltaY)
-				{
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-					MarkAnchorDataChanged_Recursive(false, false, true, false);
-					MarkLayoutForRebuild(this);
-				}
-			}
-			else
-			{
-				if (AnchorData.SizeDelta.Y != Value)
-				{
-					AnchorData.SizeDelta.Y = Value;
-					MarkAnchorDataChanged_Recursive(false, false, true, false);
-					MarkLayoutForRebuild(this);
-				}
-			}
-		}
-		else
-		{
-			if (AnchorData.SizeDelta.Y != Value)
-			{
-				AnchorData.SizeDelta.Y = Value;
-				MarkAnchorDataChanged_Recursive(false, false, true, false);
-				MarkLayoutForRebuild(this);
-			}
-		}
+		return;
 	}
+	CacheHeight = Value;
+	bCacheHeightDirty = false;
+	SyncAnimatableGeometryMirrors();
+	AnchorData.SizeDelta.Y = (Parent.IsValid() && AnchorData.IsVerticalStretched())
+		? Value - (Parent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y))
+		: Value;
+	MarkAnchorDataChanged_Recursive(false, false, true, false);
+	MarkLayoutForRebuild(this);
 }
 
 #pragma endregion
@@ -3655,6 +3630,22 @@ void UDreamWidget::RefreshInheritedStateFromParentChain()
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();
 	RefreshRenderCanvasFromParentChain();
+
+	// And the raycast's own ordering, which is the sixth thing a subtree inherits from the chain it
+	// was just attached to and the one this function was missing.
+	//
+	// FlattenHierarchyIndex is born -1 and only recalculated when the HIERARCHY ROOT is marked
+	// dirty; the mark rides the attachment event, which SetParentBeforeRegister deliberately does
+	// not raise. So a subtree assembled that way keeps -1 on every node -- and unlike the render
+	// canvas (patched just above, for this same hole), nothing downstream self-heals it.
+	//
+	// It still DRAWS, which is what makes the symptom so misleading. What it loses is the hit sort:
+	// UDreamBaseRaycaster orders hits within a canvas by flatten index, descending, so -1 loses to
+	// every widget that has one. Measured on a modal dialog whose two buttons could not be clicked
+	// at all -- scrim, panel and both buttons all read -1 while the page behind them ran 0..215, so
+	// every click was awarded to the page. Re-attaching the layer by hand in a live session moved
+	// them to 216..228 and the dialog answered the pointer again.
+	MarkFlattenHierarchyIndexDirty();
 }
 
 void UDreamWidget::RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas)
