@@ -126,6 +126,9 @@ class DREAMGUI_API UDreamUIControlsGalleryPanel : public UDreamUIShowcasePanel
 {
 	GENERATED_BODY()
 public:
+	/** Feeds the native dropdown its demo options -- a TArray has no .dui text form yet. */
+	virtual void NativeOnInitialized() override;
+
 	/** The `<->` target of the gallery's main toggle. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Showcase")
 	bool bGalleryToggle = false;

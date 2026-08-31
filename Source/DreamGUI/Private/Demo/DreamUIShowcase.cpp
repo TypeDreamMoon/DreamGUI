@@ -2,6 +2,9 @@
 
 #include "Demo/DreamUIShowcase.h"
 
+#include "Controls/DreamDropdown.h"
+#include "Core/DreamWidgetTree.h"
+
 #include "DreamGUI.h"
 #include "Interaction/DreamUIModal.h"
 
@@ -114,6 +117,23 @@ FText UDreamUIControlsGalleryPanel::GetEventLogText() const
 FText UDreamUIControlsGalleryPanel::GetClickTotalText() const
 {
 	return FText::FromString(FString::Printf(TEXT("events: %d"), GalleryClickTotal));
+}
+
+void UDreamUIControlsGalleryPanel::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	// By variable name, because the .dui declares the node and this base class predates it: the
+	// compiler turns node ids into class members of the GENERATED class, which a C++ base cannot
+	// name at compile time. Also the demo of how a host reaches a native control it did not build.
+	if (GetWidgetTree() != nullptr)
+	{
+		if (UDreamDropdown* Quality = Cast<UDreamDropdown>(GetWidgetTree()->FindWidgetByVariableName(TEXT("NativeDropdown"))))
+		{
+			Quality->SetOptions({ FText::FromString(TEXT("Low")), FText::FromString(TEXT("Medium")),
+				FText::FromString(TEXT("High")), FText::FromString(TEXT("Ultra")) });
+		}
+	}
 }
 
 void UDreamUIControlsGalleryPanel::OnGalleryButton()

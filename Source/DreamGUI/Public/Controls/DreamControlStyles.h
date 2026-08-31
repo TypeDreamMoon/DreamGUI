@@ -143,6 +143,14 @@ struct DREAMGUI_API FDreamTextInputStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style")
 	FColor Background = FColor(38, 42, 52, 255);
 
+	/**
+	 * While hovered. The field's behaviour is a selectable and WILL tint the background with its
+	 * transition colours -- left unset those default to white, which is exactly how the first build
+	 * of this control shipped as a white bar.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style")
+	FColor BackgroundHovered = FColor(48, 53, 66, 255);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style")
 	FColor TextColor = FColor(230, 233, 240, 255);
 
