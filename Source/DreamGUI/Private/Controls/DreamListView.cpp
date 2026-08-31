@@ -112,6 +112,9 @@ void UDreamListViewBase::NativeOnInitialized()
 				// it resolved when that rect was still zero. Re-stating the viewport's anchors on
 				// every resize is what keeps the rows as wide as the list -- see RepublishAnchors.
 				GetDimensionChangedEvent().AddUObject(this, &UDreamListViewBase::HandleDimensionsChanged);
+				// And a watch, because the event is not enough: a consumer's layout can size this
+				// control before its tree exists, which is a change nothing was listening for.
+				SetWantsTick(true);
 				ScrollBehaviour = ViewportNode != nullptr ? ViewportNode->GetComponent<UUIScrollView>() : nullptr;
 				if (ScrollBehaviour != nullptr && ColumnNode != nullptr)
 				{
@@ -256,6 +259,19 @@ void UDreamListViewBase::RebuildRows()
 	ColumnNode->SetHeight(ContentHeight);
 
 	RefreshScrollFurniture(Active);
+}
+
+void UDreamListViewBase::NativeOnTick(float InDeltaTime)
+{
+	Super::NativeOnTick(InDeltaTime);
+	if (NeedsStretchRefresh(ViewportNode) || NeedsStretchRefresh(ColumnNode))
+	{
+		RepublishAnchors(ViewportNode);
+		RepublishAnchors(ColumnNode);
+		// The rows sit on the column's Fill slots, so their widths come from a layout pass rather
+		// than from an anchor: the republish alone would leave them at the width they had.
+		UDreamWidget::MarkLayoutForRebuild(ColumnNode, EDreamLayoutInvalidation::Measure);
+	}
 }
 
 void UDreamListViewBase::HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged)

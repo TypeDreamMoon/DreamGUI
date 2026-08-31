@@ -68,6 +68,7 @@ void UDreamScrollBox::NativeOnInitialized()
 				// See UDreamListView's twin: a consumer's layout writes this control's rect, and a
 				// stretched child caches the span it resolved back when that rect was zero.
 				GetDimensionChangedEvent().AddUObject(this, &UDreamScrollBox::HandleDimensionsChanged);
+				SetWantsTick(true);
 				ScrollView = ViewportNode != nullptr ? ViewportNode->GetComponent<UUIScrollView>() : nullptr;
 				ContentStack = ContentNode != nullptr
 					? Cast<UDreamLayoutContainerStackBox>(ContentNode->GetLayoutContainer())
@@ -93,6 +94,17 @@ void UDreamScrollBox::NativeOnInitialized()
 			}));
 
 	ApplyStyle();
+}
+
+void UDreamScrollBox::NativeOnTick(float InDeltaTime)
+{
+	Super::NativeOnTick(InDeltaTime);
+	if (NeedsStretchRefresh(ViewportNode) || NeedsStretchRefresh(ContentNode))
+	{
+		RepublishAnchors(ViewportNode);
+		RepublishAnchors(ContentNode);
+		UDreamWidget::MarkLayoutForRebuild(ContentNode, EDreamLayoutInvalidation::Measure);
+	}
 }
 
 void UDreamScrollBox::HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged)

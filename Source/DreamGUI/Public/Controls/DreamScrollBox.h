@@ -134,6 +134,9 @@ public:
 	/** Re-resolve the stretched viewport (and its content) after this control is resized. */
 	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
 
+	/** The same watch UDreamListViewBase keeps, for the same reason -- see there. */
+	virtual void NativeOnTick(float InDeltaTime) override;
+
 protected:
 	virtual void NativeOnInitialized() override;
 

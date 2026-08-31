@@ -247,6 +247,17 @@ public:
 	/** Re-resolve the stretched viewport (and everything under it) after this control is resized. */
 	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
 
+protected:
+	/**
+	 * Watches for the stale-stretch case the dimensions event cannot catch: a consumer's layout
+	 * writes this control's rect BEFORE the tree exists, so there is no size change left to hear
+	 * about and the viewport keeps the span it resolved against a zero-wide face. One comparison
+	 * per frame, and it settles the moment it agrees -- see NeedsStretchRefresh.
+	 */
+	virtual void NativeOnTick(float InDeltaTime) override;
+
+private:
+
 	virtual void ApplyStyle() override;
 
 protected:

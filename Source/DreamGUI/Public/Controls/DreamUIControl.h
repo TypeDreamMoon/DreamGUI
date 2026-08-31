@@ -127,6 +127,46 @@ protected:
 		}
 	}
 
+	/**
+	 * Whether a stretched node still holds a span it resolved against a smaller parent.
+	 *
+	 * The honest test is the arithmetic the resolver itself does: a horizontally stretched node's
+	 * width is its delta plus the parent's width across the anchored fraction. When the cached
+	 * answer disagrees with that, the cache is stale and RepublishAnchors is what clears it.
+	 */
+	static bool NeedsStretchRefresh(const UDreamWidget* InNode)
+	{
+		if (InNode == nullptr)
+		{
+			return false;
+		}
+		const UDreamWidget* Parent = InNode->GetParent();
+		if (Parent == nullptr)
+		{
+			return false;
+		}
+		const FDreamUIAnchorData& Anchors = InNode->GetAnchorData();
+		if (Anchors.IsHorizontalStretched())
+		{
+			const double Expected = Anchors.SizeDelta.X
+				+ Parent->GetWidth() * (Anchors.AnchorMax.X - Anchors.AnchorMin.X);
+			if (!FMath::IsNearlyEqual(InNode->GetWidth(), Expected, 0.01))
+			{
+				return true;
+			}
+		}
+		if (Anchors.IsVerticalStretched())
+		{
+			const double Expected = Anchors.SizeDelta.Y
+				+ Parent->GetHeight() * (Anchors.AnchorMax.Y - Anchors.AnchorMin.Y);
+			if (!FMath::IsNearlyEqual(InNode->GetHeight(), Expected, 0.01))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** The brush's drawn size when it states one, the style's size otherwise -- Slate's ImageSize rule. */
 	static FVector2D BrushSizeOr(const FDreamUIFaceBrush& InBrush, const FVector2D& InStyleSize)
 	{
