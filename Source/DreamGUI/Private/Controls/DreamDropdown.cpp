@@ -308,4 +308,5 @@ void UDreamDropdown::HandleValueChanged(int32 InIndex)
 {
 	SelectedIndex = InIndex;
 	OnSelectionChanged.Broadcast(InIndex);
+	OnValueChangedBP.Broadcast(InIndex);
 }

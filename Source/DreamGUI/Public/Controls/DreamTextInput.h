@@ -49,9 +49,28 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Text Input")
 	FDreamTextInputChangedEvent OnTextChanged;
 
-	/** The Enter key (or the multiline submit chord). */
+	/**
+	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
+	 * name, so a value control carries it alongside its spoken events. Fires with them.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Text Input")
+	FDreamTextInputChangedEvent OnValueChangedBP;
+
+
+	/**
+	 * The Enter key (or the multiline submit chord). The compatibility spelling of OnTextCommitted:
+	 * both fire from the same moment with the same string. New code speaks OnTextCommitted.
+	 */
 	UPROPERTY(BlueprintAssignable, Category = "Text Input")
 	FDreamTextInputChangedEvent OnSubmitted;
+
+	/**
+	 * UMG's spelling of the same moment (its editable text pairs OnTextChanged with
+	 * OnTextCommitted). Carries just the string -- UMG's commit-method enum describes Slate input
+	 * routing this control does not have, and a fake one would be a lie in the signature.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Text Input")
+	FDreamTextInputChangedEvent OnTextCommitted;
 
 	UFUNCTION(BlueprintCallable, Category = "Text Input")
 	FString GetText() const;

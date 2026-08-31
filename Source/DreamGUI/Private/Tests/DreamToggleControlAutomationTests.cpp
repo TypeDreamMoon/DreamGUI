@@ -184,12 +184,98 @@ bool FDreamToggleControlStyleTest::RunTest(const FString& Parameters)
 	// one can arrive at all -- and it has to reach the behaviour, not merely sit on the control.
 	TestTrue(TEXT("the authored value reached the behaviour"), Toggle->GetIsOn());
 
+	// Only the legacy spelling was authored, so the reconciliation must side with it: this is the
+	// path every existing .dui (`bIsOn = true`, `bIsOn <-> ...`) still takes. CheckedState wins
+	// only when IT says something non-default.
+	TestEqual(TEXT("and the UMG spelling mirrors it"), Toggle->GetCheckedState(), EDreamCheckState::Checked);
+
 	// The checked colour goes through the immediate path, so the tick actually carries it. A tween
 	// would not run here (no world), which is why this is the assertion worth making.
 	if (UDreamVisual* TickVisual = Toggle->TickNode->GetVisual())
 	{
 		TestEqual(TEXT("the tick is wearing the checked colour"), TickVisual->GetColor(), FColor(11, 22, 33, 255));
 	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamToggleControlTriStateTest,
+	"DreamGUI.Controls.Toggle.TheThirdStateIsAuthorableAndLeavesByBecomingChecked",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamToggleControlTriStateTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamToggleControlTestLocal;
+
+	// Authored Undetermined, the way a .dui line or a details panel would leave it. Distinct tick
+	// colours, so which one the bar wears is an assertion rather than a coincidence.
+	TStrongObjectPtr<UDreamToggle> Toggle(NewObject<UDreamToggle>(GetTransientPackage()));
+	Toggle->CheckedState = EDreamCheckState::Undetermined;
+	Toggle->Style.TickChecked = FColor(11, 22, 33, 255);
+	Toggle->Style.TickUnchecked = FColor(44, 55, 66, 255);
+	Toggle->Initialize();
+
+	if (!TestNotNull(TEXT("the toggle behaviour exists"), Toggle->ToggleBehaviour.Get()))
+	{
+		return false;
+	}
+	UDreamText* TickText = Cast<UDreamText>(Toggle->TickNode != nullptr ? Toggle->TickNode->GetVisual() : nullptr);
+	if (!TestNotNull(TEXT("the tick is a glyph"), TickText))
+	{
+		return false;
+	}
+
+	// The bar, in the CHECKED colour. The behaviour underneath is two-state and parked at
+	// unchecked, so left alone the glyph would wear TickUnchecked; the control aims the off colour
+	// at TickChecked for exactly as long as the third state stands, and it must land through the
+	// immediate path because no tween runs here.
+	TestEqual(TEXT("the tick shows the bar"), TickText->GetText().ToString(), FString(TEXT("—")));
+	TestEqual(TEXT("and wears the checked colour"), TickText->GetColor(), FColor(11, 22, 33, 255));
+
+	// Every spelling of the state agrees that Undetermined projects to false.
+	TestEqual(TEXT("GetCheckedState says Undetermined"), Toggle->GetCheckedState(), EDreamCheckState::Undetermined);
+	TestFalse(TEXT("IsChecked projects it to false"), Toggle->IsChecked());
+	TestFalse(TEXT("the compatibility getter agrees"), Toggle->GetIsOn());
+	TestFalse(TEXT("the compatibility property agrees"), Toggle->bIsOn);
+	TestFalse(TEXT("the behaviour is parked at unchecked"), Toggle->ToggleBehaviour->GetValue());
+
+	// Dynamic delegates need a UFUNCTION to land on, and a test cpp cannot declare a UCLASS of its
+	// own -- but another instance of the control IS one. An uninitialized probe has no behaviour,
+	// so its setters just store what the event carried, readable afterwards and silent otherwise.
+	TStrongObjectPtr<UDreamToggle> StateProbe(NewObject<UDreamToggle>(GetTransientPackage()));
+	TStrongObjectPtr<UDreamToggle> BoolProbe(NewObject<UDreamToggle>(GetTransientPackage()));
+	Toggle->OnCheckStateChanged.AddDynamic(StateProbe.Get(), &UDreamToggle::SetCheckedState);
+	Toggle->OnToggleChanged.AddDynamic(BoolProbe.Get(), &UDreamToggle::SetIsOn);
+
+	// Programmatic set to Checked: the glyph flips back to the check mark, and BOTH events fire --
+	// the UMG spelling with the state, the compatibility spelling with the bool.
+	Toggle->SetCheckedState(EDreamCheckState::Checked);
+	TestEqual(TEXT("the glyph is the check mark again"), TickText->GetText().ToString(), FString(TEXT("✓")));
+	TestEqual(TEXT("the state moved"), Toggle->GetCheckedState(), EDreamCheckState::Checked);
+	TestTrue(TEXT("the behaviour moved with it"), Toggle->ToggleBehaviour->GetValue());
+	TestTrue(TEXT("the compatibility property mirrors it"), Toggle->bIsOn);
+	TestEqual(TEXT("OnCheckStateChanged fired, carrying Checked"), StateProbe->CheckedState, EDreamCheckState::Checked);
+	TestTrue(TEXT("OnToggleChanged fired, carrying true"), BoolProbe->bIsOn);
+
+	// A behaviour-driven change -- the exact shape a click has, value first, callback after --
+	// comes back up: the control translates it and re-broadcasts on both spellings.
+	Toggle->ToggleBehaviour->SetValue(false);
+	TestEqual(TEXT("the control translated the behaviour's change"), Toggle->GetCheckedState(), EDreamCheckState::Unchecked);
+	TestFalse(TEXT("the compatibility property followed"), Toggle->bIsOn);
+	TestEqual(TEXT("OnCheckStateChanged fired, carrying Unchecked"), StateProbe->CheckedState, EDreamCheckState::Unchecked);
+	TestFalse(TEXT("OnToggleChanged fired, carrying false"), BoolProbe->bIsOn);
+
+	// Back to Undetermined from Unchecked: the tri-state event fires, the bool one stays silent,
+	// because false to false is not a change on that spelling. The probe is pre-loaded with true
+	// so the silence is observable.
+	BoolProbe->bIsOn = true;
+	Toggle->SetCheckedState(EDreamCheckState::Undetermined);
+	TestEqual(TEXT("the bar is back"), TickText->GetText().ToString(), FString(TEXT("—")));
+	TestEqual(TEXT("wearing the checked colour again"), TickText->GetColor(), FColor(11, 22, 33, 255));
+	TestEqual(TEXT("OnCheckStateChanged fired, carrying Undetermined"), StateProbe->CheckedState, EDreamCheckState::Undetermined);
+	TestTrue(TEXT("OnToggleChanged stayed silent"), BoolProbe->bIsOn);
+	TestFalse(TEXT("underneath, a state no click can reach still reads unchecked"), Toggle->ToggleBehaviour->GetValue());
 
 	return true;
 }

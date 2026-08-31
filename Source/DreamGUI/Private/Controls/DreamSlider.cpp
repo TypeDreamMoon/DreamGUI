@@ -131,4 +131,5 @@ void UDreamSlider::HandleValueChanged(float InValue)
 {
 	Value = InValue;
 	OnValueChanged.Broadcast(InValue);
+	OnValueChangedBP.Broadcast(InValue);
 }

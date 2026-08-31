@@ -147,6 +147,17 @@ bool FDreamControlTextInputTest::RunTest(const FString& Parameters)
 	// The one structural fact of a text field: its content overflows, and the overflow is clipped.
 	TestEqual(TEXT("the clip area clips"),
 		Input->ClipNode->GetAuthoredClipping(), EDreamWidgetClipping::ClipToBounds);
+
+	// UMG's event spelling, OnTextCommitted, rides the same submit as OnSubmitted. Dynamic
+	// delegates need a UFUNCTION to land on and a test cpp cannot declare a UCLASS of its own, so
+	// a second, uninitialized input is the listener: its SetText is signature-compatible and, with
+	// no behaviour underneath, just stores what the event carried. Driving the behaviour's native
+	// submit delegate is not simulating Enter -- it is the seam the control subscribed to,
+	// exercised directly, which is all a headless test may claim.
+	TStrongObjectPtr<UDreamTextInput> CommitProbe(NewObject<UDreamTextInput>(GetTransientPackage()));
+	Input->OnTextCommitted.AddDynamic(CommitProbe.Get(), &UDreamTextInput::SetText);
+	Input->InputBehaviour->GetOnSubmitEvent().Broadcast(FString(TEXT("committed")));
+	TestEqual(TEXT("OnTextCommitted fired with the submitted string"), CommitProbe->Text, FString(TEXT("committed")));
 	return true;
 }
 

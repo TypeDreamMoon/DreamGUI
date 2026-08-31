@@ -47,6 +47,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownChangedEvent OnSelectionChanged;
 
+	/**
+	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
+	 * name, so a value control carries it alongside its spoken events. Fires with them.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
+	FDreamDropdownChangedEvent OnValueChangedBP;
+
+
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")
 	int32 GetSelectedIndex() const;
 

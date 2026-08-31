@@ -53,6 +53,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Slider")
 	FDreamSliderValueChangedEvent OnValueChanged;
 
+	/**
+	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
+	 * name, so a value control carries it alongside its spoken events. Fires with them.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Slider")
+	FDreamSliderValueChangedEvent OnValueChangedBP;
+
+
 	UFUNCTION(BlueprintCallable, Category = "Slider")
 	float GetValue() const;
 
