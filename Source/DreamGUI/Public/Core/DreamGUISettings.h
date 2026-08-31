@@ -88,6 +88,14 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Assets")
 	TSoftClassPtr<UDreamUserWidget> NavigationSelectionClass;
 
+	/**
+	 * The project's control style sheet -- one asset where every native control's default look
+	 * lives. Unset is a supported state, not a missing one: controls then use their styles' own
+	 * C++ defaults, which are the built-in theme.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Assets")
+	TSoftObjectPtr<class UDreamUIStyleSheet> DefaultStyleSheet;
+
 
 	/**
 	 * Content folder the shipped control classes live in.

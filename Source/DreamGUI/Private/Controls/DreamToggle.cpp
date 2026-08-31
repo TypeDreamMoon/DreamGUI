@@ -82,23 +82,28 @@ namespace
 
 void UDreamToggle::ApplyStyle()
 {
+	// The sheet when the project has one and this instance did not opt out; the inline Style
+	// otherwise. One decision at the top, so everything below is about one style, whichever it is.
+	const FDreamToggleStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ToggleStyle);
+
 	// Through the BRUSH, not SetWidth. Inside a layout container the child's rect is the layout's to
 	// decide, and UDreamPanelLayoutBase::GetDesiredSize reads a node's size off its visual's preferred
 	// size -- UDreamImage::GetPreferredWidth returns Brush.ImageSize.X. Setting the widget's width
 	// directly is overwritten by the next arrange pass, silently, which is what this control did on
 	// its first run: a 26-wide box came out 32 and the tick filled it.
-	SetImageSize(BoxNode, Style.BoxSize);
-	SetImageSize(TickNode, Style.TickSize);
+	SetImageSize(BoxNode, Active.BoxSize);
+	SetImageSize(TickNode, Active.TickSize);
 	if (UDreamText* LabelVisual = LabelNode != nullptr ? Cast<UDreamText>(LabelNode->GetVisual()) : nullptr)
 	{
 		LabelVisual->SetText(Label);
-		LabelVisual->SetColor(Style.LabelColor);
+		LabelVisual->SetColor(Active.LabelColor);
+		LabelVisual->SetFontSize(Active.FontSize);
 	}
 	if (UDreamLayoutContainerHorizontalBox* Row = GetWidgetTree() != nullptr && GetWidgetTree()->RootWidget != nullptr
 		? Cast<UDreamLayoutContainerHorizontalBox>(GetWidgetTree()->RootWidget->GetLayoutContainer())
 		: nullptr)
 	{
-		Row->SetSpacing(static_cast<float>(Style.Spacing));
+		Row->SetSpacing(Active.Spacing);
 	}
 	if (ToggleBehaviour != nullptr)
 	{
@@ -107,11 +112,11 @@ void UDreamToggle::ApplyStyle()
 		ToggleBehaviour->SetIsOnWithoutNotify(bIsOn);
 		// The pointer transition tints the box; the checked one tints the tick. Which colour goes
 		// where is the whole of what this control decides.
-		ToggleBehaviour->SetNormalColor(Style.BoxNormal);
-		ToggleBehaviour->SetHoveredColor(Style.BoxHovered);
-		ToggleBehaviour->SetPressedColor(Style.BoxPressed);
-		ToggleBehaviour->SetOnColor(Style.TickChecked);
-		ToggleBehaviour->SetOffColor(Style.TickUnchecked);
+		ToggleBehaviour->SetNormalColor(Active.BoxNormal);
+		ToggleBehaviour->SetHoveredColor(Active.BoxHovered);
+		ToggleBehaviour->SetPressedColor(Active.BoxPressed);
+		ToggleBehaviour->SetOnColor(Active.TickChecked);
+		ToggleBehaviour->SetOffColor(Active.TickUnchecked);
 	}
 }
 
@@ -137,14 +142,3 @@ void UDreamToggle::HandleValueChanged(bool bInIsOn)
 	bIsOn = bInIsOn;
 	OnToggleChanged.Broadcast(bInIsOn);
 }
-
-#if WITH_EDITOR
-void UDreamToggle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-	// The cost of building the tree in code: nothing re-derives from a property the way instancing a
-	// changed template would, so every knob has to be pushed through by hand. This is UMG's
-	// SynchronizeProperties, and it is the tax the trade comes with.
-	ApplyStyle();
-}
-#endif
