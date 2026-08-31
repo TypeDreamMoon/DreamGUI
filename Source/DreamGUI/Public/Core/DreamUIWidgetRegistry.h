@@ -57,6 +57,9 @@ struct FDreamUIWidgetRegistration
  *
  *     DECLARE_DREAM_GUI_WIDGET("Native", "Toggle", UDreamToggle)
  */
+/* Keyed by the class, not __LINE__: under a unity build two of these in one blob can land on the
+ * same line number of their own files, and the "unique" names collide. The class is the one token
+ * guaranteed distinct per declaration. */
 #define DECLARE_DREAM_GUI_WIDGET(Scope, Name, Class) \
-	static const FDreamUIWidgetRegistration PREPROCESSOR_JOIN(DreamUIWidgetRegistration_, __LINE__)( \
+	static const FDreamUIWidgetRegistration PREPROCESSOR_JOIN(DreamUIWidgetRegistration_, Class)( \
 		TEXT(Scope), TEXT(Name), []() -> UClass* { return Class::StaticClass(); });
