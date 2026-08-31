@@ -43,6 +43,18 @@ void UUIScrollViewHelper::OnChildDimensionsChanged(UDreamWidget *Child, bool Piv
 void UUIScrollView::Awake()
 {
     Super::Awake();
+    // A scroll view IS a window onto content larger than itself: content that keeps drawing outside
+    // the view is not a scroll view, it is a pile. The framework already draws this conclusion for
+    // UDreamLayoutContainerScrollBox (DreamWidget.cpp, where the layout container is registered), but
+    // that path only sees layout containers, and a scroll view is a behaviour -- so scrolling here
+    // dragged the rows straight out of the box and went on painting them.
+    //
+    // An override rather than an assignment: GetClipping only consults it while the author left
+    // Clipping at Inherit, so anyone who deliberately wrote No Clip still gets no clip.
+    if (UDreamWidget* Widget = GetWidget())
+    {
+        Widget->SetLayoutClippingOverride(EDreamWidgetClipping::ClipToBounds);
+    }
     bRangeCalculated = false;
     RecalculateRange();
     this->SetCanExecuteTick(true);
@@ -63,6 +75,11 @@ void UUIScrollView::OnUnregister()
 
 void UUIScrollView::OnDestroy()
 {
+	// Removing the behaviour removes what it asserted about its host; the widget outlives it.
+	if (UDreamWidget* Widget = GetWidget())
+	{
+		Widget->ClearLayoutClippingOverride();
+	}
 	ReleaseRangeHelper();
 	Super::OnDestroy();
 }

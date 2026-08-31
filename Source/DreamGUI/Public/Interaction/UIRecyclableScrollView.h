@@ -87,6 +87,7 @@ protected:
 	virtual void Awake() override;
 	virtual void Start() override;
 	virtual void OnDestroy() override;
+	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged) override;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

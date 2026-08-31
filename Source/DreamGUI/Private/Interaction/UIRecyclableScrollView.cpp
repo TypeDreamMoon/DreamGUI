@@ -28,6 +28,21 @@ void UUIRecyclableScrollView::OnDestroy()
     Super::OnDestroy();
 }
 
+void UUIRecyclableScrollView::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+{
+    Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+    // A cell's size along the cross axis is this view's size divided by the row or column count, and
+    // the position of every cell is derived from it -- so the whole layout was computed against
+    // whatever size this view happened to have when the data source arrived. That is not the final
+    // size when the data arrives before the layout does: the view is still at its authored default,
+    // and the cells keep that width forever while the view goes on to fill its column. Recomputing
+    // here is what the plain scroll view already does with its scroll range, one line above.
+    if (WidthChanged || HeightChanged)
+    {
+        InitializeOnDataSource();
+    }
+}
+
 #if WITH_EDITOR
 void UUIRecyclableScrollView::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
