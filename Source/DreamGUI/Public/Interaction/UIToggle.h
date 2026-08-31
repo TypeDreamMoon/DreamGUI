@@ -115,6 +115,32 @@ public:
 	FDreamUIMulticastDelegateBool& GetOnValueChangedEvent(){ return OnValueChangedCPP;}
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	UDreamVisual* GetToggleTransitionTarget()const { return ToggleTransitionTarget.Get(); }
+	/**
+	 * What the CHECKED transition tints -- deliberately a different visual from the hover one, see
+	 * ApplyValueToVisual.
+	 *
+	 * The property is EditAnywhere, so the designer and .dui have always been able to reach it by
+	 * reflection while no caller could. A toggle assembled in code has to name its own tick.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetToggleTransitionTarget(UDreamVisual* Value);
+
+	/**
+	 * The two colours the checked transition moves between, the counterparts of UUISelectable's
+	 * normal/hovered/pressed setters. Same reason those exist: a toggle assembled by code rather than
+	 * in a details panel has no other way to say what checked looks like.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	FColor GetOnColor()const { return OnColor; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetOnColor(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	FColor GetOffColor()const { return OffColor; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetOffColor(FColor Value);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	UUIToggleGroup* GetToggleGroup()const { return ToggleGroup.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	void SetToggleGroup(UUIToggleGroup* InGroupComp);

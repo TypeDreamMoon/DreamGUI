@@ -135,9 +135,9 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 		// one (checked/unchecked) -- and pointing both at one visual makes them overwrite each
 		// other, so the checked colour would survive only until the next hover event. The preset
 		// Blueprints give them separate visuals (a backing plate and a tick), which is the design.
-		// A text-authored toggle cannot express "the tick is that child" yet, so it has no checked
-		// visual and this returns; closing that needs the language's intra-tree reference, not a
-		// default that fights.
+		// A text-authored toggle names its own tick now -- `ToggleTransitionTarget = Check` -- and a
+		// code-authored one calls SetToggleTransitionTarget. Left unset it still returns rather than
+		// falling back to the widget's own visual, because that fallback is the one that fights.
 		if (!ToggleTransitionTarget.IsValid())return;
 	}
 
@@ -215,6 +215,35 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 				}
 			}
 		}
+	}
+}
+
+void UUIToggle::SetToggleTransitionTarget(UDreamVisual* Value)
+{
+	if (ToggleTransitionTarget != Value)
+	{
+		ToggleTransitionTarget = Value;
+		// Immediately, and without the tween: a target handed over after the toggle already has a
+		// value would otherwise show the unchecked colour until the next click.
+		ApplyValueToVisual(false);
+	}
+}
+
+void UUIToggle::SetOnColor(FColor Value)
+{
+	OnColor = Value;
+	if (bIsOn)
+	{
+		ApplyValueToVisual(true);
+	}
+}
+
+void UUIToggle::SetOffColor(FColor Value)
+{
+	OffColor = Value;
+	if (!bIsOn)
+	{
+		ApplyValueToVisual(true);
 	}
 }
 
