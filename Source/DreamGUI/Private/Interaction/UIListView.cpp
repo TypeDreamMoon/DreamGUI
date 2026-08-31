@@ -29,7 +29,14 @@ void UUIListEntry::Assign(UUIListView* InOwner, UObject* InItem, int32 InIndex, 
 
 void UUIListView::Awake()
 {
-	DataSource = this;
+	// The list view is its own default data source (the Items array), but only when nothing
+	// external claimed the seat first: an `each` block's adapter is wired at widget
+	// initialization, BEFORE Awake, and an unconditional self-assign here silently threw that
+	// adapter away -- lists fed by `each` stayed empty while every gate upstream was green.
+	if (!IsValid(DataSource))
+	{
+		DataSource = this;
+	}
 	bInfiniteLoop = false;
 	if (GetWidget())
 	{
