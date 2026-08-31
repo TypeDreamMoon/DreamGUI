@@ -185,8 +185,11 @@ void UDreamDropdown::ApplyStyle()
 	}
 	if (ListNode != nullptr)
 	{
-		// A starting height; the behaviour re-derives the real one from the built column when the
-		// list opens, clamped to its max.
+		// The width is the stretch axis, and zero is a statement: SizeDelta defaults to (100,100),
+		// and on a stretched axis that is ADDED to the parent's span -- the measured symptom was a
+		// list exactly 100 wider than the face it hangs from. Height gets a real value below, per
+		// open, from the row count.
+		ListNode->SetWidth(0.0f);
 		ListNode->SetHeight(Active.MaxListHeight);
 		ListNode->SetAnchoredPosition(FVector2D(0.0, -Active.MaxListHeight * 0.5));
 	}
@@ -284,6 +287,15 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 	}
 	if (bInVisible)
 	{
+		// The list is as tall as its rows, no taller. The behaviour's own shrink cannot decide this:
+		// it measures the column, and the column here is stretched to the list -- measuring it is
+		// measuring the list against itself. A dropdown's content height is not a layout question
+		// anyway: rows times row height, clamped to the max. Sized before the lift, because the lift
+		// pins the height it finds; the anchored end (Show sets the pivot to the edge touching the
+		// face) stays put, so the trim comes off the far end -- exactly where the blank was.
+		const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
+		const int32 RowCount = FMath::Max(1, Options.Num());
+		ListNode->SetHeight(FMath::Min(RowCount * Active.ItemHeight, Active.MaxListHeight));
 		Popup->Elevate(ListNode);
 	}
 	else
