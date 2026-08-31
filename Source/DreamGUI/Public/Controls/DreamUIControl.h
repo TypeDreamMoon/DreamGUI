@@ -8,6 +8,9 @@
 #include "Controls/DreamUIStyleSheet.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamRectBlock.h"
+// SkinFace casts to it, so the definition is this header's to provide: with only a forward
+// declaration the header compiles or not depending on which unity blob it lands in.
+#include "Core/DreamUISpriteData_BaseObject.h"
 #include "Engine/Texture.h"
 #include "DreamUIControl.generated.h"
 
@@ -98,73 +101,6 @@ protected:
 		{
 			Slot->SyncAuthoredDesiredSizeFromWidget();
 		}
-	}
-
-	/**
-	 * Re-state a node's anchors, unchanged, to make its stretched axes recompute.
-	 *
-	 * GetWidth/GetHeight DO resolve a stretched axis against the parent's span -- and then cache the
-	 * answer. The cache is invalidated when the node's OWN anchor data is written, and propagated
-	 * down from a parent's size change through MarkAnchorDataChanged_Recursive; but a control whose
-	 * own rect is written by a consumer's layout pass can find its inner stretched nodes still
-	 * holding the number they computed when the control was zero-sized. The measured symptom was a
-	 * list whose viewport read back -0 wide inside a 364-wide face, so every row was invisible.
-	 *
-	 * SetAnchorData writes unconditionally (no equality gate), which is exactly what is wanted here:
-	 * the values do not change, the CACHE does, and the recursion carries it to every stretched
-	 * descendant. Cheap enough to call from a dimensions-changed handler; the walk stops at nodes
-	 * that are not stretched, which is most of them.
-	 *
-	 * The real fix is one level down -- a parent's arranged size should invalidate its anchor-driven
-	 * children the way an authored size does. That is engine work, booked separately; this is the
-	 * control-layer answer that makes the family usable today.
-	 */
-	static void RepublishAnchors(UDreamWidget* InNode)
-	{
-		if (InNode != nullptr)
-		{
-			InNode->SetAnchorData(InNode->GetAnchorData());
-		}
-	}
-
-	/**
-	 * Whether a stretched node still holds a span it resolved against a smaller parent.
-	 *
-	 * The honest test is the arithmetic the resolver itself does: a horizontally stretched node's
-	 * width is its delta plus the parent's width across the anchored fraction. When the cached
-	 * answer disagrees with that, the cache is stale and RepublishAnchors is what clears it.
-	 */
-	static bool NeedsStretchRefresh(const UDreamWidget* InNode)
-	{
-		if (InNode == nullptr)
-		{
-			return false;
-		}
-		const UDreamWidget* Parent = InNode->GetParent();
-		if (Parent == nullptr)
-		{
-			return false;
-		}
-		const FDreamUIAnchorData& Anchors = InNode->GetAnchorData();
-		if (Anchors.IsHorizontalStretched())
-		{
-			const double Expected = Anchors.SizeDelta.X
-				+ Parent->GetWidth() * (Anchors.AnchorMax.X - Anchors.AnchorMin.X);
-			if (!FMath::IsNearlyEqual(InNode->GetWidth(), Expected, 0.01))
-			{
-				return true;
-			}
-		}
-		if (Anchors.IsVerticalStretched())
-		{
-			const double Expected = Anchors.SizeDelta.Y
-				+ Parent->GetHeight() * (Anchors.AnchorMax.Y - Anchors.AnchorMin.Y);
-			if (!FMath::IsNearlyEqual(InNode->GetHeight(), Expected, 0.01))
-			{
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/** The brush's drawn size when it states one, the style's size otherwise -- Slate's ImageSize rule. */
