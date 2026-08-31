@@ -1199,6 +1199,17 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			{
 				auto& ItemGeo = RenderData.BatchMeshGeometry;
 
+				// Same gate as the renderer's dump: which geometry reaches assembly, with what
+				// material -- the missing rect block is either absent here or arriving material-less.
+				if (IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"))->GetInt() != 0)
+				{
+					UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws][assemble] visual=%s verts=%d material=%s batching=%d"),
+						RenderData.BatchMeshVisualObject.IsValid() ? *RenderData.BatchMeshVisualObject->GetClass()->GetName() : TEXT("null"),
+						ItemGeo.Vertices.Num(),
+						ItemGeo.Material.IsValid() ? *ItemGeo.Material->GetName() : TEXT("none"),
+						ItemGeo.bSupportDrawcallBatching ? 1 : 0);
+				}
+
 				bool is2DUIItem = Is2DUITransform(ItemGeo.TransformRelativeToCanvas);
 				int DrawCallIndexToFitin;
 				if (ItemGeo.bSupportDrawcallBatching && CanFitInDrawCall(ItemGeo, is2DUIItem, DrawCallIndexToFitin))

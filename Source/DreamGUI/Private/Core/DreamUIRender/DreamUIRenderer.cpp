@@ -28,6 +28,11 @@
 #endif
 #include "Core/DreamUISettings.h"
 #include "ClearQuad.h"
+
+static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
+	TEXT("dreamgui.DumpMaterialDraws"), 0,
+	TEXT("1: log one line per screen-space material draw attempt (which branch/exit it took), then reset to 0."),
+	ECVF_RenderThreadSafe);
 #include "RHIResourceUtils.h"
 #include "Core/DreamUIMeshVertex.h"
 #include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
@@ -1128,23 +1133,48 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 							auto DoRender = [&](bool bWireframe)
 							{
+								const bool bDump = CVarDreamGUIDumpMaterialDraws.GetValueOnRenderThread() != 0;
 								if (!bWireframe && MeshBatchContainer.BuiltIn.bEnabled)
 								{
+									if (bDump)
+									{
+										UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] built-in batch, %d verts"), MeshBatchContainer.NumVerts);
+									}
 									DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
 										, NumSamples, GammaValue, ValidDepth
 										, false, 0.0f, 0, SceneDepthTexST, nullptr);
 									return;
 								}
 								auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
-								if (!MaterialRenderProxy)return;
+								if (!MaterialRenderProxy)
+								{
+									if (bDump) { UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] EXIT no proxy")); }
+									return;
+								}
 								auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with DreamUIRenderer
-								if (!Material)return;
+								if (!Material)
+								{
+									if (bDump)
+									{
+										UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] EXIT no material (shader map not ready?) proxy=%s"),
+											*MaterialRenderProxy->GetMaterialName());
+									}
+									return;
+								}
 								
 								FMaterialShaderTypes ShaderTypes;
 								ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
 								ShaderTypes.AddShaderType<FDreamUIScreenRenderPS>();
 								FMaterialShaders Shaders;
-								if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+								const bool bGotShaders = Material->TryGetShaders(ShaderTypes, nullptr, Shaders);
+								if (bDump)
+								{
+									UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] material=%s verts=%d prims=%d shaders=%s"),
+										*Material->GetFriendlyName(), MeshBatchContainer.NumVerts,
+										Mesh.Elements.Num() > 0 ? Mesh.Elements[0].NumPrimitives : -1,
+										bGotShaders ? TEXT("OK") : TEXT("MISSING"));
+								}
+								if (bGotShaders)
 								{
 									TShaderRef<FDreamUIScreenRenderVS> VertexShader;
 									TShaderRef<FDreamUIScreenRenderPS> PixelShader;
