@@ -89,9 +89,17 @@ namespace DreamUITextAuthoring
 		 * one place the panel writes a property the file does not spell, and it is correct: the
 		 * mirror syncs the euler, and the euler is what the sweep prints.
 		 */
-		bool IsWritableWidgetPropertyRoot(const FName InRootName)
+		bool IsWritableWidgetPropertyRoot(const UDreamWidget* InWidget, const FName InRootName)
 		{
-			const FProperty* Root = UDreamWidget::StaticClass()->FindPropertyByName(InRootName);
+			// The widget's ACTUAL class, not UDreamWidget: a native control (Native.Toggle,
+			// Native.Dropdown) declares its own properties -- Style, MaxVisibleItems, SelectedIndex --
+			// and the write-back sweep already enumerates by GetClass()
+			// (GetWritableLeafPaths(LiveWidget->GetClass())). A gate that looked the root up on the
+			// base class judged every one of those OutsideTheWritableSet, so the whole panel of a
+			// native control sat grey while the sweep would happily have written it -- the exact
+			// two-halves drift this pairing exists to prevent, just in the opposite direction.
+			const UClass* Scope = IsValid(InWidget) ? InWidget->GetClass() : UDreamWidget::StaticClass();
+			const FProperty* Root = Scope->FindPropertyByName(InRootName);
 			return DreamUIReflection::IsSweepRoot(Root);
 		}
 
@@ -538,7 +546,7 @@ namespace DreamUITextAuthoring
 		}
 
 		const bool bInWritableSet = InOwner == Widget
-			? Local::IsWritableWidgetPropertyRoot(Local::GetChainRootName(InLeafProperty, InParentProperties))
+			? Local::IsWritableWidgetPropertyRoot(Widget, Local::GetChainRootName(InLeafProperty, InParentProperties))
 			// Every other object the panel can be showing is one the language addresses as a whole --
 			// the visual, the panel slot, the layouts, a behaviour -- so every property on it has a
 			// line it can be written into and none of them needs an allowlist of its own.

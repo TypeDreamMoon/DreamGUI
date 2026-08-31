@@ -70,8 +70,13 @@ class DREAMGUI_API UDreamToggle : public UDreamUIControl
 	GENERATED_BODY()
 
 public:
-	/** This instance's own look -- consulted only when StyleSource is Inline. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle", meta = (EditCondition = "StyleSource == EDreamUIStyleSource::Inline"))
+	/**
+	 * This instance's own look. The project sheet wins while StyleSource says so AND a sheet
+	 * actually exists; with no sheet in the project this IS the look in effect -- which is why
+	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
+	 * exact values that were driving the control.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle")
 	FDreamToggleStyle Style;
 
 	/**
