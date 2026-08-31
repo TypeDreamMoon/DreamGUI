@@ -37,13 +37,23 @@ struct DREAMGUI_API FDreamUIFaceBrush
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush", meta = (DisplayThumbnail = "false"))
-	TObjectPtr<class UTexture> Texture = nullptr;
+	/**
+	 * One slot for the image, the Slate-brush shape: a plain texture or an atlas sprite, whichever
+	 * is dropped in. Two typed slots with a "sprite wins" rule was a worse panel for the same data.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush", meta = (DisplayThumbnail = "true", DisplayName = "Image",
+		AllowedClasses = "/Script/Engine.Texture,/Script/DreamGUI.DreamUISpriteData_BaseObject"))
+	TObjectPtr<UObject> Image = nullptr;
 
-	/** Wins over Texture when both are set: an atlas entry is a texture plus the UVs to cut it. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush", meta = (DisplayThumbnail = "false"))
-	TObjectPtr<class UDreamUISpriteData_BaseObject> Sprite = nullptr;
+	/**
+	 * Multiplied over the image -- Slate's tint. A separate channel from the style's state colours:
+	 * those ride the visual's colour via the selectable's transition, this rides the rect's BODY
+	 * colour, and the two multiply.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush")
+	FColor Tint = FColor::White;
 
+	/** Stretch / FitIn / Envelop -- the rect's three, matching UMG's Stretch / ScaleToFit / ScaleToFill. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush")
 	EDreamRectBlockTextureScaleMode ScaleMode = EDreamRectBlockTextureScaleMode::Stretch;
 };

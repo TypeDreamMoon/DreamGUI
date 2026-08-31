@@ -8,6 +8,7 @@
 #include "Controls/DreamUIStyleSheet.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamRectBlock.h"
+#include "Engine/Texture.h"
 #include "DreamUIControl.generated.h"
 
 /**
@@ -70,12 +71,16 @@ protected:
 	{
 		if (UDreamRectBlock* Rect = InNode != nullptr ? Cast<UDreamRectBlock>(InNode->GetVisual()) : nullptr)
 		{
-			Rect->SetBodySpriteTexture(InBrush.Sprite);
-			Rect->SetBodyTexture(InBrush.Texture);
-			Rect->SetBodyTextureMode(InBrush.Sprite != nullptr
+			UDreamUISpriteData_BaseObject* Sprite = Cast<UDreamUISpriteData_BaseObject>(InBrush.Image);
+			Rect->SetBodySpriteTexture(Sprite);
+			Rect->SetBodyTexture(Cast<UTexture>(InBrush.Image));
+			Rect->SetBodyTextureMode(Sprite != nullptr
 				? EDreamRectBlockTextureMode::Sprite
 				: EDreamRectBlockTextureMode::Texture);
 			Rect->SetBodyTextureScaleMode(InBrush.ScaleMode);
+			// The tint multiplies whatever the face shows -- the image, or the plain rect when the
+			// brush is empty. White is "no opinion", which keeps every existing look intact.
+			Rect->SetBodyColor(InBrush.Tint);
 		}
 	}
 
