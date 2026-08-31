@@ -276,7 +276,7 @@ void UDreamDropdown::ApplyStyle()
 		DropdownBehaviour->SetPressedColor(Active.FacePressed);
 		DropdownBehaviour->SetMaxHeight(MaxVisibleItems * Active.ItemHeight);
 	}
-	SetHeight(Active.Height);
+	SizeControlHeight(Active.Height);
 }
 
 int32 UDreamDropdown::GetSelectedIndex() const

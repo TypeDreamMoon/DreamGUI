@@ -539,7 +539,8 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child) const
 	{
 		if (!IsValid(Widget) || Visited.Contains(Widget))
 		{
-			return FVector2D::ZeroVector;
+			// No opinion, not zero: a negative axis is ignored by Accumulate, a zero is a CLAIM.
+			return FVector2D(-1.0, -1.0);
 		}
 		Visited.Add(Widget);
 
@@ -622,18 +623,29 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child) const
 		// forever — the "column collapsed to zero and never comes back" failure. Measurement therefore
 		// prefers the authored snapshot whenever one exists (every slot arranged in-session has one:
 		// MarkLayoutGeometryApplied captures it first, and UDreamPanelSlot::OnRegister heals legacy slots
-		// by capturing the pre-arrangement rect on load). The bare GetWidth/GetHeight fallback remains
-		// only for legacy "applied but never snapshotted" data in worlds that skip registration, where
-		// zeroing instead would collapse content that used to render; the prefab compiler reports
-		// zero-desired Auto children so those spots surface in CompilerResults rather than on screen.
-		if (Desired.X < 0.0) Desired.X = bHasAuthoredFallback ? AuthoredFallback.X : Widget->GetWidth();
-		if (Desired.Y < 0.0) Desired.Y = bHasAuthoredFallback ? AuthoredFallback.Y : Widget->GetHeight();
-		return DreamPanelLayoutLocal::CleanSize(Desired);
+		// by capturing the pre-arrangement rect on load).
+		//
+		// An axis with neither a claim nor a snapshot stays NEGATIVE here -- raw, not cleaned. An
+		// anchor-driven child (no panel above it, so no slot and no snapshot: a progress bar's track
+		// and fill) has no opinion, and Accumulate ignores a negative, which is how a subtree with
+		// nothing to say stays silent instead of shouting "zero". The bare current-size fallback
+		// lives at the measure ROOT only -- inside the recursion it was this comment's loop one
+		// level down: the child fed its CURRENT height back into the parent's desired size, one
+		// mid-layout zero (a widget's first tick can run before its first arrange) and the parent
+		// measured zero forever after.
+		if (Desired.X < 0.0 && bHasAuthoredFallback) Desired.X = AuthoredFallback.X;
+		if (Desired.Y < 0.0 && bHasAuthoredFallback) Desired.Y = AuthoredFallback.Y;
+		return Desired;
 	};
 
 	TSet<const UDreamWidget*> Visited;
 	++DesiredSizeComputeCount;
-	const FVector2D Result = GetIntrinsicSize(Child, Visited);
+	FVector2D Result = GetIntrinsicSize(Child, Visited);
+	// The legacy "applied but never snapshotted" fallback, at the measure root only -- see the
+	// comment inside the lambda for why it must not run one level down.
+	if (Result.X < 0.0) Result.X = Child->GetWidth();
+	if (Result.Y < 0.0) Result.Y = Child->GetHeight();
+	Result = DreamPanelLayoutLocal::CleanSize(Result);
 	if (DesiredSizeMemoDepth > 0)
 	{
 		DesiredSizeMemo.Add(Child, Result);

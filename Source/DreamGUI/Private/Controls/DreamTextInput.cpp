@@ -96,7 +96,7 @@ void UDreamTextInput::ApplyStyle()
 		// Without an event: pushing the authored text in is not the user typing.
 		InputBehaviour->SetTextWithoutNotify(Text);
 	}
-	SetHeight(Active.Height);
+	SizeControlHeight(Active.Height);
 }
 
 FString UDreamTextInput::GetText() const

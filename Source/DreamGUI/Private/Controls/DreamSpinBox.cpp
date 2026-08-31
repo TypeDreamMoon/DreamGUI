@@ -188,7 +188,7 @@ void UDreamSpinBox::ApplyStyle()
 
 	// The control's own height; placed in a stack this is what Auto measures. Width belongs to
 	// whoever placed the control.
-	SetHeight(Active.Height);
+	SizeControlHeight(Active.Height);
 }
 
 float UDreamSpinBox::GetValue() const

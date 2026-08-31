@@ -84,6 +84,22 @@ protected:
 		}
 	}
 
+	/**
+	 * Authored height for the CONTROL itself; width stays whoever-placed-it's. Syncs the slot's
+	 * desired-size snapshot, because the slot's first capture (OnRegister) runs before any style
+	 * ever applied -- without the sync an Auto consumer measures the pre-style default (100), not
+	 * the style's number. The bare-current-size measure fallback that used to paper over this now
+	 * lives at the measure root only (see UDreamPanelLayoutBase::GetDesiredSize).
+	 */
+	void SizeControlHeight(float InHeight)
+	{
+		SetHeight(InHeight);
+		if (UDreamPanelSlot* Slot = GetPanelSlot())
+		{
+			Slot->SyncAuthoredDesiredSizeFromWidget();
+		}
+	}
+
 	/** The brush's drawn size when it states one, the style's size otherwise -- Slate's ImageSize rule. */
 	static FVector2D BrushSizeOr(const FDreamUIFaceBrush& InBrush, const FVector2D& InStyleSize)
 	{

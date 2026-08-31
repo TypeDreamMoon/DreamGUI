@@ -75,10 +75,14 @@ bool FDreamControlProgressBarTest::RunTest(const FString& Parameters)
 		static_cast<float>(Bar->FillNode->GetAnchorMax().X), 0.25f);
 	TestEqual(TEXT("while its horizontal min stays at the track's start"),
 		static_cast<float>(Bar->FillNode->GetAnchorMin().X), 0.0f);
-	TestEqual(TEXT("and the vertical span stays whole -- bottom"),
-		static_cast<float>(Bar->FillNode->GetAnchorMin().Y), 0.0f);
-	TestEqual(TEXT("and the vertical span stays whole -- top"),
-		static_cast<float>(Bar->FillNode->GetAnchorMax().Y), 1.0f);
+	// The vertical axis is a POINT with an absolute height, not a stretch: an anchor-driven child
+	// re-derives a stretched axis only when its own anchor data changes, so a stretched fill kept a
+	// stale zero height forever after its track grew back from a mid-layout zero. The height is the
+	// track's, pushed on every percent write.
+	TestEqual(TEXT("the vertical axis is a point anchor -- min"),
+		static_cast<float>(Bar->FillNode->GetAnchorMin().Y), 0.5f);
+	TestEqual(TEXT("the vertical axis is a point anchor -- max"),
+		static_cast<float>(Bar->FillNode->GetAnchorMax().Y), 0.5f);
 
 	// UMG's split: the property keeps the author's number, the geometry clamps.
 	Bar->SetPercent(1.7f);

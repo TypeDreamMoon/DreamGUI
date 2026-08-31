@@ -47,7 +47,7 @@ void UDreamProgressBar::ApplyStyle()
 	}
 	// The control's own height; placed in a stack this is what Auto measures. Width belongs to
 	// whoever placed the control.
-	SetHeight(Active.Height);
+	SizeControlHeight(Active.Height);
 	ApplyPercent();
 }
 
@@ -72,10 +72,14 @@ void UDreamProgressBar::ApplyPercent()
 	// number (UMG does the same), the anchors never leave the track.
 	const float Clamped = FMath::Clamp(Percent, 0.0f, 1.0f);
 	FillNode->SetHorizontalAnchorMinMax(FVector2D(0.0, Clamped), false, false);
-	// Anchors are the WHOLE geometry. bKeepSize=false already derives a zero SizeDelta from zero
-	// offsets, but that is a consequence, not a contract -- pin the offsets so the fill's edges are
-	// its anchors whatever state a caller left it in.
-	FillNode->SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D::ZeroVector);
+	// The HEIGHT is absolute, not stretched: an anchor-driven child re-derives a stretched axis
+	// only when its own anchor data changes, and the Y half of this fill's data never would -- a
+	// track that grew back from a mid-layout zero left the fill's cached height at zero forever
+	// (the dropdown list's stale-width case, one axis over). The track's height is always live,
+	// and this runs on every percent push anyway.
+	FillNode->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), false, false);
+	const float TrackHeight = TrackNode != nullptr ? static_cast<float>(TrackNode->GetHeight()) : 0.0f;
+	FillNode->SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D(0.0, TrackHeight));
 }
 
 // The tag this class answers to in .dui.
