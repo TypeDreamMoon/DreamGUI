@@ -147,6 +147,12 @@ bool UUITextInput::CheckPlayerController()
 void UUITextInput::AnyKeyPressed(FKey Key)
 {
 	if (bInputActive == false)return;
+	// While a composition is open the IME owns the text: it edits through SetTextInRange, and the same raw
+	// key presses that drive it are also delivered here, because the bound InputComponent reads key state
+	// straight from the message pump and TSF never consumed them. Acting on both is what types every
+	// character twice; it is also what lets an arrow key drag the caret out from under the candidate window
+	// mid-composition.
+	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())return;
 	if (!CheckPlayerController())return;
 	if (TextVisual == nullptr)return;
 
@@ -275,12 +281,6 @@ void UUITextInput::AnyKeyPressed(FKey Key)
 			return;
 		}
 	}
-	//Cancel
-	else if (Key == EKeys::Escape)
-	{
-		return;
-	}
-
 	//space
 	else if (Key == EKeys::SpaceBar)
 	{
@@ -1414,6 +1414,34 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 	{
 		SelectAll();
 	}
+	else if (IsValid(EventData) && EventData->InputType == EDreamUIPointerInputType::Pointer)
+	{
+		// The click that activates a field is also the click that says where in it to type. OnPointerDown saw
+		// that press first but skipped its own placement because the field was not active yet, so this is the
+		// last place that still holds the press position. Navigation events are excluded on purpose: they
+		// carry no meaningful world point, so asking one where the caret goes gives a position off the text.
+		//caret position when press, UIText space
+		auto PressCaretPosition = FVector2f(0, 0);
+		TextVisual->FindCaretByWorldPosition(EventData->GetWorldPointInPlane(), PressCaretPosition, PressCaretPositionLineIndex, PressCaretPositionIndex);
+		PressCaretPositionIndex = PressCaretPositionIndex + VisibleCaretStartIndex;
+		CaretPositionIndex = PressCaretPositionIndex;
+		PressCaretPositionLineIndex = PressCaretPositionLineIndex + VisibleCaretStartLineIndex;
+		CaretPositionLineIndex = PressCaretPositionLineIndex;
+		UpdateCaretPosition(PressCaretPosition);
+		UpdateUITextComponent();
+	}
+	else
+	{
+		// Activated with nobody naming a position -- navigated into, or a Blueprint calling this directly.
+		// The chain has to end in a caret anyway: with no final branch, turning bSelectAllWhenActivateInput
+		// off leaves the caret on whatever index the previous session abandoned it at, and the first key
+		// typed lands in the middle of the text. End of text is the same answer the already-active path
+		// above gives.
+		CaretPositionIndex = TextVisual->GetLastCaret();
+		PressCaretPositionIndex = CaretPositionIndex;
+		UpdateCaretPosition();
+		UpdateUITextComponent();
+	}
 
 	BindKeys();
 	UpdatePlaceHolderComponent();
@@ -1457,7 +1485,11 @@ void UUITextInput::BindKeys()
 	EKeys::Pause,
 
 	EKeys::CapsLock,
-	EKeys::Escape,
+	// Escape is deliberately absent. This InputComponent is pushed on top of the stack and consumes what it
+	// binds, so binding Escape sinks it for everything below while any field is being edited -- not just the
+	// built-in Back, but whatever action a project put on Escape, since the action router is offered every
+	// key before Back is. Nothing is lost by leaving it out: UDreamUINavigationStack::HandleBack already
+	// ends the edit on the focused field first and only pops a screen if there was no edit to end.
 	EKeys::SpaceBar,
 	EKeys::PageUp,
 	EKeys::PageDown,
@@ -1983,6 +2015,13 @@ bool UUITextInput::FTextInputMethodContext::GetTextBounds(const uint32 BeginInde
 #if DreamGUI_LOG_TextInputMethodContext
 	UE_LOG(LogTemp, Log, TEXT("GetTextBounds:%s"), *(Position.ToString()));
 #endif
+	// The return is "is this range drawn clipped", not "is it visible": it goes straight through to
+	// ITextStoreACP::GetTextExt's pfClipped. False is the answer for a range that is wholly on screen, and is
+	// what Slate's own context returns. Do not flip it to true -- that tells the IME the rect below is only
+	// part of the range.
+	// @todo: the rect itself is still a placeholder. It is meant to be the screen-space bounds of the range,
+	// and the IME puts the candidate window under it, so until this projects the text through the render
+	// canvas the candidates sit at the top-left of the screen rather than beneath the caret.
 	return false;
 }
 void UUITextInput::FTextInputMethodContext::GetScreenBounds(FVector2D& Position, FVector2D& Size)
