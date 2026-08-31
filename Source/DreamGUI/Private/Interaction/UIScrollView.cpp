@@ -1,9 +1,27 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Interaction/UIScrollView.h"
 #include "DreamTweenManager.h"
 #include "Core/Components/DreamWidget.h"
+
+namespace DreamScrollViewLocal
+{
+	/** Below this, an offset is at the boundary and a velocity is stopped. Local units, and units/s. */
+	static constexpr float SettleThreshold = 0.01f;
+	/** How hard the boundary pushes back against a fling that is already past it. Per unit of overshoot. */
+	static constexpr float BoundaryForce = 50.0f;
+	/** e-folds per second of the pull back into range once the fling has given up. */
+	static constexpr float ReturnRate = 10.0f;
+	/** Converts DecelerateRate into e-folds per second, so 0.135 keeps the feel it always had. */
+	static constexpr float DecelerationScale = 50.0f;
+
+	/** Exponential decay: the frame-rate independent spelling of Lerp(Value, 0, Rate * Dt). */
+	static double Decay(double InValue, double InRatePerSecond, double InDeltaTime)
+	{
+		return InValue * FMath::Exp(-FMath::Max(0.0, InRatePerSecond) * InDeltaTime);
+	}
+}
 
 void UUIScrollViewHelper::Awake()
 {
@@ -19,8 +37,7 @@ void UUIScrollViewHelper::OnDimensionsChanged(bool PivotChanged, bool WidthChang
     }
     else
     {
-        TargetComp->bRangeCalculated = false;
-        TargetComp->RecalculateRange();
+        TargetComp->RectRangeChanged();
     }
 }
 void UUIScrollViewHelper::OnChildDimensionsChanged(UDreamWidget *Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
@@ -30,13 +47,9 @@ void UUIScrollViewHelper::OnChildDimensionsChanged(UDreamWidget *Child, bool Piv
     {
         this->DestroyComponent();
     }
-    else
+    else if (WidthChanged || HeightChanged)
     {
-        if (WidthChanged || HeightChanged)
-        {
-            TargetComp->bRangeCalculated = false;
-            TargetComp->RecalculateRange();
-        }
+        TargetComp->RectRangeChanged();
     }
 }
 
@@ -55,8 +68,8 @@ void UUIScrollView::Awake()
     {
         Widget->SetLayoutClippingOverride(EDreamWidgetClipping::ClipToBounds);
     }
-    bRangeCalculated = false;
-    RecalculateRange();
+    bGestureHorizontal = bGestureVertical = false;
+    RectRangeChanged();
     this->SetCanExecuteTick(true);
 }
 
@@ -88,8 +101,7 @@ void UUIScrollView::OnDestroy()
 void UUIScrollView::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
-    bRangeCalculated = false;
-    RecalculateRange();
+    RectRangeChanged();
     if (auto Property = PropertyChangedEvent.MemberProperty)
     {
         if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUIScrollView, Progress))
@@ -100,72 +112,70 @@ void UUIScrollView::PostEditChangeProperty(FPropertyChangedEvent &PropertyChange
 }
 #endif
 
+/**
+ * Both ranges, the two capability bits, and whatever has to move because of them.
+ *
+ * The capability bits are written on EVERY pass rather than only when scrolling is on, which is the
+ * half of this function that used to be missing: they are the answer to "does this view scroll
+ * sideways", and a past drag has no business being the last word on it.
+ */
 void UUIScrollView::RecalculateRange()
 {
     if (bRangeCalculated)return;
-    if (CheckParameters())
-    {
-		bRangeCalculated = true;
-        if (Horizontal)
-        {
-            this->CalculateHorizontalRange();
-            bAllowHorizontalScroll = true;
-        }
-        else
-        {
-            bAllowHorizontalScroll = false;
-        }
-        if (Vertical)
-        {
-            this->CalculateVerticalRange();
-            bAllowVerticalScroll = true;
-        }
-        else
-        {
-            bAllowVerticalScroll = false;
-        }
+    if (!CheckParameters())return;
 
-        if (KeepProgress)
-        {
-            ApplyContentPositionWithProgress();
-        }
-        else
-        {
-			const FVector2D Position = GetContentPosition();
-            if (
-				(bAllowHorizontalScroll && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y))
-				|| (bAllowVerticalScroll && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y))
-                )
-            {
-                bCanUpdateAfterDrag = true;
-            }
-            else
-            {
-                UpdateProgress(false);
-            }
-        }
+    bRangeCalculated = true;
+    bAllowHorizontalScroll = Horizontal;
+    bAllowVerticalScroll = Vertical;
+    if (Horizontal)
+    {
+        this->CalculateHorizontalRange();
     }
+    if (Vertical)
+    {
+        this->CalculateVerticalRange();
+    }
+
+    if (KeepProgress)
+    {
+        // The author asked for the progress to be the thing that survives, so the content moves to
+        // wherever the new range puts that progress. This is the branch the recycler leans on: its
+        // content grows by whole cells and the view must not appear to jump.
+        ApplyContentPositionWithProgress();
+        return;
+    }
+    // Otherwise the OFFSET is what survives, and the progress follows from it. A content that grew
+    // while the view sat at the top stays at the top; one that shrank out from under the current
+    // offset is out of range, and the settle pass walks it back in.
+    const FVector2D Position = GetContentPosition();
+    const bool bOutOfRange =
+        (bAllowHorizontalScroll && (Position.X < HorizontalRange.X - DreamScrollViewLocal::SettleThreshold
+            || Position.X > HorizontalRange.Y + DreamScrollViewLocal::SettleThreshold))
+        || (bAllowVerticalScroll && (Position.Y < VerticalRange.X - DreamScrollViewLocal::SettleThreshold
+            || Position.Y > VerticalRange.Y + DreamScrollViewLocal::SettleThreshold));
+    if (bOutOfRange && RestrictRectArea)
+    {
+        bCanUpdateAfterDrag = true;
+    }
+    UpdateProgress(false);
 }
 
 void UUIScrollView::OnEnable()
 {
     Super::OnEnable();
-    bRangeCalculated = false;
-    RecalculateRange();
+    RectRangeChanged();
 }
 
 void UUIScrollView::OnTransformChanged()
 {
     Super::OnTransformChanged();
-    bRangeCalculated = false;
-    RecalculateRange();
+    RectRangeChanged();
 }
 
 void UUIScrollView::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
     Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
-    bRangeCalculated = false;
-    RecalculateRange();
+    RectRangeChanged();
 }
 
 bool UUIScrollView::CheckParameters()
@@ -230,6 +240,136 @@ void UUIScrollView::SetContentPosition(const FVector2D& Value) const
 	Content->SetRelativeLocation(RelativeLocation);
 }
 
+void UUIScrollView::ApplyContentPosition(const FVector2D& InPosition, bool bInFireEvent)
+{
+	SetContentPosition(InPosition);
+	UpdateProgress(bInFireEvent);
+}
+
+/**
+ * "How far must the content move for its start edges to meet the viewport's", added to where the
+ * content is now.
+ *
+ * The delta is measured in the parent's own space -- relative location plus the child's local edge,
+ * which is the same arithmetic CalculateRevealContentPosition already uses -- and then added to the
+ * position in whichever coordinate mode is active. That is legitimate because the two modes differ
+ * by a term that depends on the ANCHORS and the parent's size and not on where the content sits: a
+ * displacement of D in one is a displacement of D in the other. It is also the entire reason the
+ * CoordinateMode correction that used to be bolted onto the range maths is gone.
+ */
+FVector2D UUIScrollView::GetStartAlignedPosition() const
+{
+	if (!Content.IsValid() || !ContentParent.IsValid())
+	{
+		return GetContentPosition();
+	}
+	const UDreamWidget* Viewport = ContentParent.Get();
+	const FVector ContentLocation = Content->GetRelativeLocation();
+	// Left edges together on X, TOP edges together on Y: the start of the reading direction, which
+	// is where a scroll view rests before anybody has scrolled it.
+	const double ContentLeft = ContentLocation.Y + Content->GetLocalSpaceLeft();
+	const double ContentTop = ContentLocation.Z + Content->GetLocalSpaceTop();
+	FVector2D Delta(
+		Viewport->GetLocalSpaceLeft() - ContentLeft,
+		Viewport->GetLocalSpaceTop() - ContentTop);
+
+	// An axis whose content is SMALLER than the window has no travel, so where it rests is the whole
+	// of its behaviour -- and FlipDirectionInSmallSize is the author's word on which end that is.
+	if (FlipDirectionInSmallSize)
+	{
+		const FVector2D ViewportSize = GetViewportSize();
+		const FVector2D ContentSize = GetContentSize();
+		if (ContentSize.X < ViewportSize.X)
+		{
+			Delta.X += ViewportSize.X - ContentSize.X;
+		}
+		if (ContentSize.Y < ViewportSize.Y)
+		{
+			Delta.Y -= ViewportSize.Y - ContentSize.Y;
+		}
+	}
+	return GetContentPosition() + Delta;
+}
+
+FVector2D UUIScrollView::GetViewportSize() const
+{
+	const UDreamWidget* Viewport = ContentParent.Get();
+	return Viewport != nullptr ? FVector2D(Viewport->GetWidth(), Viewport->GetHeight()) : FVector2D::ZeroVector;
+}
+
+FVector2D UUIScrollView::GetContentSize() const
+{
+	const UDreamWidget* Widget = Content.Get();
+	return Widget != nullptr ? FVector2D(Widget->GetWidth(), Widget->GetHeight()) : FVector2D::ZeroVector;
+}
+
+FVector2D UUIScrollView::GetScrollableExtent() const
+{
+	const FVector2D ViewportSize = GetViewportSize();
+	const FVector2D ContentSize = GetContentSize();
+	return FVector2D(
+		FMath::Max(0.0, ContentSize.X - ViewportSize.X),
+		FMath::Max(0.0, ContentSize.Y - ViewportSize.Y));
+}
+
+FVector2D UUIScrollView::GetScrollOffset() const
+{
+	// Distance from the resting position, expressed in the reading direction: scrolling right moves
+	// the content LEFT (X decreases), scrolling down moves it UP (Y increases). One sign flip on X
+	// is the whole of the difference between the two axes.
+	const FVector2D Start = GetStartAlignedPosition();
+	const FVector2D Position = GetContentPosition();
+	return FVector2D(Start.X - Position.X, Position.Y - Start.Y);
+}
+
+void UUIScrollView::SetScrollOffset(FVector2D InOffset)
+{
+	if (!CheckParameters())
+	{
+		return;
+	}
+	RecalculateRange();
+	const FVector2D Extent = GetScrollableExtent();
+	const FVector2D Start = GetStartAlignedPosition();
+	FVector2D Position = GetContentPosition();
+	if (Horizontal)
+	{
+		Position.X = Start.X - FMath::Clamp(InOffset.X, 0.0, Extent.X);
+	}
+	if (Vertical)
+	{
+		Position.Y = Start.Y + FMath::Clamp(InOffset.Y, 0.0, Extent.Y);
+	}
+	Velocity = FVector2D::ZeroVector;
+	bCanUpdateAfterDrag = false;
+	ApplyContentPosition(Position);
+}
+
+void UUIScrollView::ScrollBy(FVector2D InDelta)
+{
+	SetScrollOffset(GetScrollOffset() + InDelta);
+}
+
+void UUIScrollView::ScrollToStart()
+{
+	SetScrollOffset(FVector2D::ZeroVector);
+}
+
+void UUIScrollView::ScrollToEnd()
+{
+	SetScrollOffset(GetScrollableExtent());
+}
+
+bool UUIScrollView::CanScrollOnAxis(bool bInHorizontalAxis) const
+{
+	if (bInHorizontalAxis ? !Horizontal : !Vertical)
+	{
+		return false;
+	}
+	const FVector2D Extent = GetScrollableExtent();
+	return (bInHorizontalAxis ? Extent.X : Extent.Y) > DreamScrollViewLocal::SettleThreshold;
+}
+
 void UUIScrollView::ReleaseRangeHelper()
 {
 	if (RangeHelper.IsValid())
@@ -246,44 +386,48 @@ float UUIScrollView::GetSafeDeltaTime() const
 	return FMath::Max(World ? World->GetDeltaSeconds() : 0.0f, UE_SMALL_NUMBER);
 }
 
+/**
+ * Which axis a gesture drives, decided once from its first movement and then left alone.
+ *
+ * OnlyOneDirection is about the GESTURE, so a diagonal flick on a two-axis view commits to the axis
+ * it started along; without it every axis this view scrolls follows the pointer.
+ */
+void UUIScrollView::ResolveGestureAxes(const FVector2D& InFirstDelta)
+{
+	bGestureHorizontal = false;
+	bGestureVertical = false;
+	if (OnlyOneDirection && Horizontal && Vertical)
+	{
+		if (FMath::Abs(InFirstDelta.X) > FMath::Abs(InFirstDelta.Y))
+		{
+			bGestureHorizontal = true;
+		}
+		else
+		{
+			bGestureVertical = true;
+		}
+		return;
+	}
+	bGestureHorizontal = Horizontal;
+	bGestureVertical = Vertical;
+}
+
 bool UUIScrollView::OnPointerBeginDrag_Implementation(UDreamPointerEventData *EventData)
 {
 	if (EventData && CheckParameters() && CheckValidHit(EventData->DragWidget))
     {
         PrevPointerPosition = EventData->PressWorldPoint;
-        auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
+        const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
         const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
         PrevPointerPosition = CurrentPointerPosition;
-        bAllowHorizontalScroll = false;
-        bAllowVerticalScroll = false;
-        if (OnlyOneDirection && Horizontal && Vertical)
-        {
-            if (FMath::Abs(localMoveDelta.Y) > FMath::Abs(localMoveDelta.Z))
-            {
-                bAllowHorizontalScroll = true;
-            }
-            else
-            {
-                bAllowVerticalScroll = true;
-            }
-        }
-        else
-        {
-            if (Horizontal)
-            {
-                bAllowHorizontalScroll = true;
-            }
-            if (Vertical)
-            {
-                bAllowVerticalScroll = true;
-            }
-        }
+        ResolveGestureAxes(FVector2D(localMoveDelta.Y, localMoveDelta.Z));
+        Velocity = FVector2D::ZeroVector;
         bCanUpdateAfterDrag = false;
         OnPointerDrag_Implementation(EventData);
     }
     else
     {
-        bAllowHorizontalScroll = bAllowVerticalScroll = false;
+        bGestureHorizontal = bGestureVertical = false;
     }
     return AllowEventBubbleUp;
 }
@@ -293,39 +437,37 @@ bool UUIScrollView::OnPointerDrag_Implementation(UDreamPointerEventData *EventDa
 	if (!EventData || !Content.IsValid())
         return AllowEventBubbleUp;
 	FVector2D Position = GetContentPosition();
-    auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
-    auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+    const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
+    const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
     PrevPointerPosition = CurrentPointerPosition;
-    if (bAllowHorizontalScroll)
+    if (!bGestureHorizontal && !bGestureVertical)
     {
-		auto predict = Position.X + localMoveDelta.Y;
-        if ((predict < HorizontalRange.X || predict > HorizontalRange.Y) && RestrictRectArea) //out-of-range, lower the sentitivity
-        {
-			Position.X += localMoveDelta.Y * OutOfRangeDamper;
-        }
-        else
-        {
-			Position.X = predict;
-        }
-        bCanUpdateAfterDrag = false;
-		SetContentPosition(Position);
-        UpdateProgress();
+        return AllowEventBubbleUp;
     }
-    if (bAllowVerticalScroll)
+    // The pointer's delta, damped on whichever axis is already past its boundary -- and past it
+    // BEFORE this move rather than after, so a drag heading back into range is at full weight the
+    // whole way home instead of crawling the last unit.
+    if (bGestureHorizontal)
     {
-		auto predict = Position.Y + localMoveDelta.Z;
-        if ((predict < VerticalRange.X || predict > VerticalRange.Y) && RestrictRectArea)
-        {
-			Position.Y += localMoveDelta.Z * OutOfRangeDamper;
-        }
-        else
-        {
-			Position.Y = predict;
-        }
-        bCanUpdateAfterDrag = false;
-		SetContentPosition(Position);
-        UpdateProgress();
+        Position.X += localMoveDelta.Y * ((RestrictRectArea
+            && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y)) ? OutOfRangeDamper : 1.0f);
     }
+    if (bGestureVertical)
+    {
+        Position.Y += localMoveDelta.Z * ((RestrictRectArea
+            && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)) ? OutOfRangeDamper : 1.0f);
+    }
+    if (!CanScrollInSmallSize)
+    {
+        // The author said content smaller than the window does not move at all, so it does not move
+        // at all -- not even out and back. Only the axes that actually fit are pinned.
+        const FVector2D Extent = GetScrollableExtent();
+        const FVector2D Start = GetStartAlignedPosition();
+        if (Extent.X <= DreamScrollViewLocal::SettleThreshold) Position.X = Start.X;
+        if (Extent.Y <= DreamScrollViewLocal::SettleThreshold) Position.Y = Start.Y;
+    }
+    bCanUpdateAfterDrag = false;
+    ApplyContentPosition(Position);
     return AllowEventBubbleUp;
 }
 
@@ -335,104 +477,67 @@ bool UUIScrollView::OnPointerEndDrag_Implementation(UDreamPointerEventData *Even
 	{
 		return AllowEventBubbleUp;
 	}
-    auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
+    const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
     const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
-    if (bAllowHorizontalScroll)
+    const float DeltaTime = GetSafeDeltaTime();
+    if (bGestureHorizontal)
     {
         bCanUpdateAfterDrag = true;
-		Velocity.X = localMoveDelta.Y / GetSafeDeltaTime();
+		Velocity.X = localMoveDelta.Y / DeltaTime;
     }
-    if (bAllowVerticalScroll)
+    if (bGestureVertical)
     {
         bCanUpdateAfterDrag = true;
-		Velocity.Y = localMoveDelta.Z / GetSafeDeltaTime();
+		Velocity.Y = localMoveDelta.Z / DeltaTime;
     }
     return AllowEventBubbleUp;
 }
+
+/**
+ * The wheel, and the one place this component deliberately declines to consume an event.
+ *
+ * A view that cannot move on the axis the wheel just turned hands the event ON, which is what makes
+ * a list inside a scrolling page behave: reaching the end of the inner list continues the page,
+ * rather than the page freezing because something under the pointer is nominally scrollable. UMG's
+ * scroll box makes the same call.
+ */
 bool UUIScrollView::OnPointerScroll_Implementation(UDreamPointerEventData *EventData)
 {
-	if (EventData && CheckParameters() && CheckValidHit(EventData->EnterWidget))
+    if (!EventData || !CheckParameters() || !CheckValidHit(EventData->EnterWidget))
     {
-        if (EventData->ScrollAxisValue != FVector2D::ZeroVector)
-        {
-            bAllowHorizontalScroll = false;
-            bAllowVerticalScroll = false;
-            if (OnlyOneDirection && Horizontal && Vertical)
-            {
-                if (FMath::Abs(EventData->ScrollAxisValue.X) > FMath::Abs(EventData->ScrollAxisValue.Y))
-                {
-                    bAllowHorizontalScroll = true;
-                }
-                else
-                {
-                    bAllowVerticalScroll = true;
-                }
-            }
-            else
-            {
-                if (Horizontal)
-                {
-                    bAllowHorizontalScroll = true;
-                }
-                if (Vertical)
-                {
-                    bAllowVerticalScroll = true;
-                }
-            }
-
-			if (WheelProgressStep > UE_SMALL_NUMBER)
-			{
-				FVector2D NextProgress = Progress;
-				if (bAllowHorizontalScroll)
-				{
-					NextProgress.X -= FMath::Sign(EventData->ScrollAxisValue.X) * WheelProgressStep;
-				}
-				if (bAllowVerticalScroll)
-				{
-					NextProgress.Y -= FMath::Sign(EventData->ScrollAxisValue.Y) * WheelProgressStep;
-				}
-				Velocity = FVector2D::ZeroVector;
-				bCanUpdateAfterDrag = false;
-				SetScrollProgress(NextProgress);
-				return AllowEventBubbleUp;
-			}
-
-			FVector2D Position = GetContentPosition();
-            if (bAllowHorizontalScroll)
-            {
-                auto delta = EventData->ScrollAxisValue.X * ScrollSensitivity;
-                bCanUpdateAfterDrag = true;
-				if ((Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y) && RestrictRectArea)
-                {
-					Position.X += delta * OutOfRangeDamper;
-					Velocity.X = delta * OutOfRangeDamper / GetSafeDeltaTime();
-                }
-                else
-                {
-					Position.X += delta;
-					Velocity.X = delta / GetSafeDeltaTime();
-                }
-				SetContentPosition(Position);
-            }
-            if (bAllowVerticalScroll)
-            {
-                auto delta = EventData->ScrollAxisValue.Y * -ScrollSensitivity;
-                bCanUpdateAfterDrag = true;
-				if ((Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y) && RestrictRectArea)
-                {
-					Position.Y += delta * OutOfRangeDamper;
-					Velocity.Y = delta * OutOfRangeDamper / GetSafeDeltaTime();
-                }
-                else
-                {
-					Position.Y += delta;
-					Velocity.Y = delta / GetSafeDeltaTime();
-                }
-				SetContentPosition(Position);
-            }
-			UpdateProgress();
-        }
+        return AllowEventBubbleUp;
     }
+    if (EventData->ScrollAxisValue.IsZero())
+    {
+        return AllowEventBubbleUp;
+    }
+    RecalculateRange();
+    ResolveGestureAxes(FVector2D(EventData->ScrollAxisValue.X, EventData->ScrollAxisValue.Y));
+
+    // The wheel reads in the SAME direction on both axes -- a notch away from the user advances the
+    // offset -- which is what the offset model buys: no per-axis sign to remember, because the
+    // offset itself already runs left-to-right and top-to-bottom.
+    const FVector2D Extent = GetScrollableExtent();
+    const FVector2D BeforeOffset = GetScrollOffset();
+    FVector2D AfterOffset = BeforeOffset;
+    if (WheelProgressStep > UE_SMALL_NUMBER)
+    {
+        if (bGestureHorizontal) AfterOffset.X -= FMath::Sign(EventData->ScrollAxisValue.X) * WheelProgressStep * Extent.X;
+        if (bGestureVertical) AfterOffset.Y -= FMath::Sign(EventData->ScrollAxisValue.Y) * WheelProgressStep * Extent.Y;
+    }
+    else
+    {
+        if (bGestureHorizontal) AfterOffset.X -= EventData->ScrollAxisValue.X * ScrollSensitivity;
+        if (bGestureVertical) AfterOffset.Y -= EventData->ScrollAxisValue.Y * ScrollSensitivity;
+    }
+    AfterOffset.X = FMath::Clamp(AfterOffset.X, 0.0, Extent.X);
+    AfterOffset.Y = FMath::Clamp(AfterOffset.Y, 0.0, Extent.Y);
+    if (AfterOffset.Equals(BeforeOffset, DreamScrollViewLocal::SettleThreshold))
+    {
+        // Nothing moved: already at that end, or this axis does not scroll. Hand it on.
+        return true;
+    }
+    SetScrollOffset(AfterOffset);
     return AllowEventBubbleUp;
 }
 
@@ -442,6 +547,13 @@ void UUIScrollView::SetVelocity(const FVector2D& value)
     {
         Velocity = value;
 		bCanUpdateAfterDrag = !Velocity.IsNearlyZero();
+        if (bCanUpdateAfterDrag)
+        {
+            // A velocity handed in from outside is a fling nobody made a gesture for, so it drives
+            // every axis this view scrolls.
+            bGestureHorizontal = Horizontal;
+            bGestureVertical = Vertical;
+        }
     }
 }
 
@@ -452,18 +564,13 @@ void UUIScrollView::SetContent(UDreamWidget* Value)
 		ReleaseRangeHelper();
 		Content = Value;
 		ContentParent = nullptr;
-		bRangeCalculated = false;
-		RecalculateRange();
+		RectRangeChanged();
 	}
 }
 
 void UUIScrollView::SetDecelerateRate(float value)
 {
-    if (DecelerateRate != value)
-    {
-        DecelerateRate = value;
-        DecelerateRate = FMath::Max(0.0f, DecelerateRate);
-    }
+    DecelerateRate = FMath::Max(0.0f, value);
 }
 
 void UUIScrollView::SetRestrictRectArea(bool value)
@@ -480,120 +587,147 @@ void UUIScrollView::SetRestrictRectArea(bool value)
 
 void UUIScrollView::SetOutOfRangeDamper(float value)
 {
-    if (OutOfRangeDamper != value)
-    {
-        OutOfRangeDamper = value;
-        OutOfRangeDamper = FMath::Clamp(OutOfRangeDamper, 0.0f, 1.0f);
-    }
+    OutOfRangeDamper = FMath::Clamp(value, 0.0f, 1.0f);
 }
 
 void UUIScrollView::SetScrollDelta(FVector2D value)
 {
-    if (CheckParameters())
+    if (!CheckParameters())
     {
-        auto delta = value;
-		FVector2D Position = GetContentPosition();
-        if (Horizontal)
-		{
-			bAllowHorizontalScroll = true;
-			bCanUpdateAfterDrag = true;
-			if ((Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y) && RestrictRectArea)
-			{
-				Position.X += delta.X * OutOfRangeDamper;
-				Velocity.X = delta.X * OutOfRangeDamper / GetSafeDeltaTime();
-			}
-			else
-			{
-				Position.X += delta.X;
-				Velocity.X = delta.X / GetSafeDeltaTime();
-			}
-			SetContentPosition(Position);
-		}
-		if (Vertical)
-		{
-			bAllowVerticalScroll = true;
-			bCanUpdateAfterDrag = true;
-			if ((Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y) && RestrictRectArea)
-			{
-				Position.Y += delta.Y * OutOfRangeDamper;
-				Velocity.Y = delta.Y * OutOfRangeDamper / GetSafeDeltaTime();
-			}
-			else
-			{
-				Position.Y += delta.Y;
-				Velocity.Y = delta.Y / GetSafeDeltaTime();
-			}
-			SetContentPosition(Position);
-		}
-		UpdateProgress();
+        return;
     }
+    RecalculateRange();
+    FVector2D Position = GetContentPosition();
+    const float DeltaTime = GetSafeDeltaTime();
+    if (Horizontal)
+    {
+        const float Damper = (RestrictRectArea
+            && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y)) ? OutOfRangeDamper : 1.0f;
+        Position.X += value.X * Damper;
+        Velocity.X = value.X * Damper / DeltaTime;
+        bGestureHorizontal = true;
+        bCanUpdateAfterDrag = true;
+    }
+    if (Vertical)
+    {
+        const float Damper = (RestrictRectArea
+            && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)) ? OutOfRangeDamper : 1.0f;
+        Position.Y += value.Y * Damper;
+        Velocity.Y = value.Y * Damper / DeltaTime;
+        bGestureVertical = true;
+        bCanUpdateAfterDrag = true;
+    }
+    ApplyContentPosition(Position);
 }
+
 void UUIScrollView::SetScrollValue(FVector2D value)
 {
-    if (CheckParameters())
+    if (!CheckParameters())
     {
-		FVector2D Position = GetContentPosition();
-        if (Horizontal)
-		{
-			bAllowHorizontalScroll = true;
-			bCanUpdateAfterDrag = true;
-			Position.X = value.X;
-			Velocity.X = 0;
-        }
-		if (Vertical)
-		{
-			bAllowVerticalScroll = true;
-			bCanUpdateAfterDrag = true;
-			Position.Y = value.Y;
-			Velocity.Y = 0;
-		}
-		SetContentPosition(Position);
-		UpdateProgress();
+        return;
     }
+    RecalculateRange();
+    FVector2D Position = GetContentPosition();
+    if (Horizontal)
+    {
+        Position.X = value.X;
+        Velocity.X = 0;
+    }
+    if (Vertical)
+    {
+        Position.Y = value.Y;
+        Velocity.Y = 0;
+    }
+    // Whether the settle pass runs is decided by where this PUT the content, not by the fact that
+    // somebody called a setter: writing an in-range position used to arm the spring anyway, and the
+    // spring then fought every tween that drove this function frame by frame.
+    bCanUpdateAfterDrag = RestrictRectArea && !ClampToRange(Position).Equals(Position, DreamScrollViewLocal::SettleThreshold);
+    if (bCanUpdateAfterDrag)
+    {
+        bGestureHorizontal = Horizontal;
+        bGestureVertical = Vertical;
+    }
+    ApplyContentPosition(Position);
 }
 
 void UUIScrollView::SetScrollProgress(FVector2D value)
 {
-    if (CheckParameters())
+    if (!CheckParameters())
     {
-		Progress.X = FMath::Clamp(value.X, 0.0f, 1.0f);
-		Progress.Y = FMath::Clamp(value.Y, 0.0f, 1.0f);
-		bAllowHorizontalScroll = Horizontal;
-		bAllowVerticalScroll = Vertical;
-		Velocity = FVector2D::ZeroVector;
-		bCanUpdateAfterDrag = false;
-		ApplyContentPositionWithProgress();
-		UpdateProgress();
+        return;
+    }
+    RecalculateRange();
+    Progress.X = FMath::Clamp(value.X, 0.0, 1.0);
+    Progress.Y = FMath::Clamp(value.Y, 0.0, 1.0);
+    Velocity = FVector2D::ZeroVector;
+    bCanUpdateAfterDrag = false;
+    ApplyContentPositionWithProgress();
+    UpdateProgress();
+}
+
+FVector2D UUIScrollView::ClampToRange(const FVector2D& InPosition) const
+{
+    FVector2D Result = InPosition;
+    if (bAllowHorizontalScroll)
+    {
+        Result.X = FMath::Clamp(Result.X, HorizontalRange.X, HorizontalRange.Y);
+    }
+    if (bAllowVerticalScroll)
+    {
+        Result.Y = FMath::Clamp(Result.Y, VerticalRange.X, VerticalRange.Y);
+    }
+    return Result;
+}
+
+void UUIScrollView::GlideContentTo(const FVector2D& InTargetPosition, bool InEaseAnimation, float InAnimationDuration)
+{
+    if (!InEaseAnimation)
+    {
+        Velocity = FVector2D::ZeroVector;
+        bCanUpdateAfterDrag = false;
+        ApplyContentPosition(InTargetPosition);
+        return;
+    }
+    // The tween writes the position and nothing else: no velocity, no spring armed behind it. The
+    // old form drove SetScrollValue, which set bCanUpdateAfterDrag on every step, so the settle pass
+    // and the tween spent the whole animation writing the same widget.
+    Velocity = FVector2D::ZeroVector;
+    bCanUpdateAfterDrag = false;
+    auto Tweener = UDreamTweenManager::To(this
+        , FDreamTweenVector2DGetterFunction::CreateWeakLambda(this, [this]
+        {
+            return GetContentPosition();
+        })
+        , FDreamTweenVector2DSetterFunction::CreateWeakLambda(this, [this](FVector2D Value)
+        {
+            ApplyContentPosition(Value);
+        }), InTargetPosition, InAnimationDuration);
+    if (Tweener)
+    {
+        UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
     }
 }
 
 void UUIScrollView::ScrollTo(UDreamWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
 {
+    if (!IsValid(InChild))return;
     if (!CheckParameters())return;
-    auto CenterPos = InChild->GetLocalSpaceCenter();
-    auto CenterPosWorld = InChild->GetWorldTransform().TransformPosition(FVector(0, CenterPos.X, CenterPos.Y));
-    auto PosOffset = Content->GetWorldTransform().InverseTransformPosition(CenterPosWorld);
-    auto TargetContentPos = FVector2D(-PosOffset.Y, -PosOffset.Z);
-    TargetContentPos.X = FMath::Clamp(TargetContentPos.X, HorizontalRange.X, HorizontalRange.Y);
-    TargetContentPos.Y = FMath::Clamp(TargetContentPos.Y, VerticalRange.X, VerticalRange.Y);
-    if (InEaseAnimation)
-    {
-        auto Tweener = UDreamTweenManager::To(this, FDreamTweenVector2DGetterFunction::CreateWeakLambda(this
-            , [this] {
-				return GetContentPosition();
-            })
-            , FDreamTweenVector2DSetterFunction::CreateWeakLambda(this, [this](FVector2D value) {
-                this->SetScrollValue(value);
-                }), TargetContentPos, InAnimationDuration);
-        if (Tweener)
-        {
-            UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
-        }
-    }
-    else
-    {
-        SetScrollValue(TargetContentPos);
-    }
+    RecalculateRange();
+    const UDreamWidget* Viewport = ContentParent.Get();
+    if (!IsValid(Viewport))return;
+    const FVector2D ChildCenter = InChild->GetLocalSpaceCenter();
+    const FVector ChildCenterWorld = InChild->GetWorldTransform().TransformPosition(FVector(0, ChildCenter.X, ChildCenter.Y));
+    const FVector InContent = Content->GetWorldTransform().InverseTransformPosition(ChildCenterWorld);
+    // Where the child's centre sits in the VIEWPORT's space right now, and where it should sit. The
+    // answer is a DISPLACEMENT, which is what makes it independent of the coordinate mode: the two
+    // modes differ by a term that does not depend on where the content is, so a move of D in one is
+    // a move of D in the other. The old form computed an absolute relative-location and wrote it
+    // through a setter that, in AnchoredPosition mode, meant something else entirely -- and it also
+    // assumed the viewport's pivot was centred, which is why GetLocalSpaceCenter appears here.
+    const FVector ContentLocation = Content->GetRelativeLocation();
+    const FVector2D ChildCenterInViewport(ContentLocation.Y + InContent.Y, ContentLocation.Z + InContent.Z);
+    const FVector2D Displacement = Viewport->GetLocalSpaceCenter() - ChildCenterInViewport;
+    GlideContentTo(ClampToRange(GetContentPosition() + Displacement), InEaseAnimation, InAnimationDuration);
 }
 
 bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVector2D& OutPosition)
@@ -682,221 +816,133 @@ bool UUIScrollView::ScrollWidgetIntoView(UDreamWidget* InChild, bool InEaseAnima
     {
         return false;
     }
-    if (InEaseAnimation)
-    {
-        auto Tweener = UDreamTweenManager::To(this, FDreamTweenVector2DGetterFunction::CreateWeakLambda(this
-            , [this] {
-                return GetContentPosition();
-            })
-            , FDreamTweenVector2DSetterFunction::CreateWeakLambda(this, [this](FVector2D value) {
-                this->SetScrollValue(value);
-                }), TargetContentPos, InAnimationDuration);
-        if (Tweener)
-        {
-            UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
-        }
-    }
-    else
-    {
-        SetScrollValue(TargetContentPos);
-    }
+    GlideContentTo(TargetContentPos, InEaseAnimation, InAnimationDuration);
     return true;
 }
 
-#define POSITION_THRESHOLD 0.001f
+/**
+ * Inertia, and the pull back into range. Both are exponential and both are per-second, so the feel
+ * does not change with the frame rate -- the old form multiplied by (rate * deltaTime) directly,
+ * which made a fling on a 30fps frame travel further than the same fling on a 120fps one.
+ *
+ * Per axis, and only on the axes the gesture drove: a vertical flick has no business settling the
+ * horizontal one, and the capability bits decide what "in range" even means.
+ */
 void UUIScrollView::UpdateAfterDrag(float deltaTime)
 {
-	if (!Content.IsValid())
-	{
-		bCanUpdateAfterDrag = false;
-		return;
-	}
-	FVector2D Position = GetContentPosition();
-    if (FMath::Abs(Velocity.X) > KINDA_SMALL_NUMBER || FMath::Abs(Velocity.Y) > KINDA_SMALL_NUMBER//speed larger than threshold
-		|| (bAllowHorizontalScroll && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y))//horizontal out of range
-		|| (bAllowVerticalScroll && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)))//vertical out of range
-    {
-        bool canMove = false;
-        const float dragForceMulitply = 500.0f;
-        const float positionLerpTimeMultiply = 10.0f;
-        if (bAllowHorizontalScroll)
-        {
-			if (Position.X - HorizontalRange.X < 0 && RestrictRectArea)
-            {
-                if (Velocity.X < 0)
-                {
-					float dragForce = (HorizontalRange.X - Position.X) * dragForceMulitply;
-                    Velocity.X += -FMath::Sign(Velocity.X) * dragForce * deltaTime;
-
-					Position.X += Velocity.X * deltaTime;
-                    canMove = true;
-                }
-                else
-                {
-                    Velocity.X = 0;
-					if (FMath::Abs(HorizontalRange.X - Position.X) < POSITION_THRESHOLD)
-                    {
-						Position.X = HorizontalRange.X;
-                    }
-                    else
-                    {
-                        auto lerpAlpha = FMath::Clamp(positionLerpTimeMultiply * deltaTime, 0.0f, 1.0f);
-						Position.X = FMath::Lerp(Position.X, HorizontalRange.X, lerpAlpha);
-                    }
-                    canMove = true;
-                }
-            }
-			else if (Position.X - HorizontalRange.Y > 0 && RestrictRectArea)
-            {
-                if (Velocity.X > 0) //move right, use opposite force
-                {
-					float dragForce = (Position.X - HorizontalRange.Y) * dragForceMulitply;
-                    Velocity.X += -FMath::Sign(Velocity.X) * dragForce * deltaTime;
-
-					Position.X += Velocity.X * deltaTime;
-                    canMove = true;
-                }
-                else
-                {
-                    Velocity.X = 0;
-					if (FMath::Abs(Position.X - HorizontalRange.Y) < POSITION_THRESHOLD)
-                    {
-						Position.X = HorizontalRange.Y;
-                    }
-                    else
-                    {
-                        auto lerpAlpha = FMath::Clamp(positionLerpTimeMultiply * deltaTime, 0.0f, 1.0f);
-						Position.X = FMath::Lerp(Position.X, HorizontalRange.Y, lerpAlpha);
-                    }
-                    canMove = true;
-                }
-            }
-            else
-            {
-                auto speedXDir = FMath::Sign(Velocity.X);
-                float dragForce = dragForceMulitply * 0.1f;
-                float VelocityLerpAlpha = FMath::Clamp(DecelerateRate * dragForce * deltaTime, 0.0f, 1.0f);
-                Velocity.X = FMath::Lerp(Velocity.X, 0.0f, VelocityLerpAlpha);
-				Position.X += Velocity.X * deltaTime;
-                canMove = true;
-            }
-        }
-        if (bAllowVerticalScroll)
-        {
-			if (Position.Y - VerticalRange.X < 0 && RestrictRectArea)
-            {
-                if (Velocity.Y < 0)
-                {
-					float dragForce = (VerticalRange.X - Position.Y) * dragForceMulitply;
-                    Velocity.Y += -FMath::Sign(Velocity.Y) * dragForce * deltaTime;
-
-					Position.Y += Velocity.Y * deltaTime;
-                    canMove = true;
-                }
-                else
-                {
-                    Velocity.Y = 0;
-					if (FMath::Abs(VerticalRange.X - Position.Y) < POSITION_THRESHOLD)
-                    {
-						Position.Y = VerticalRange.X;
-                    }
-                    else
-                    {
-                        auto lerpAlpha = FMath::Clamp(positionLerpTimeMultiply * deltaTime, 0.0f, 1.0f);
-						Position.Y = FMath::Lerp(Position.Y, VerticalRange.X, lerpAlpha);
-                    }
-                    canMove = true;
-                }
-            }
-			else if (Position.Y - VerticalRange.Y > 0 && RestrictRectArea)
-            {
-                if (Velocity.Y > 0) //move up, use opposite force
-                {
-					float dragForce = (Position.Y - VerticalRange.Y) * dragForceMulitply;
-                    Velocity.Y += -FMath::Sign(Velocity.Y) * dragForce * deltaTime;
-
-					Position.Y += Velocity.Y * deltaTime;
-                    canMove = true;
-                }
-                else
-                {
-                    Velocity.Y = 0;
-					if (FMath::Abs(Position.Y - VerticalRange.Y) < POSITION_THRESHOLD)
-                    {
-						Position.Y = VerticalRange.Y;
-                    }
-                    else
-                    {
-                        auto lerpAlpha = FMath::Clamp(positionLerpTimeMultiply * deltaTime, 0.0f, 1.0f);
-						Position.Y = FMath::Lerp(Position.Y, VerticalRange.Y, lerpAlpha);
-                    }
-                    canMove = true;
-                }
-            }
-            else
-            {
-                float dragForce = dragForceMulitply * 0.1f;
-                float VelocityLerpAlpha = FMath::Clamp(DecelerateRate * dragForce * deltaTime, 0.0f, 1.0f);
-                Velocity.Y = FMath::Lerp(Velocity.Y, 0.0f, VelocityLerpAlpha);
-				Position.Y += Velocity.Y * deltaTime;
-                canMove = true;
-            }
-        }
-		if (canMove)
-		{
-			SetContentPosition(Position);
-			UpdateProgress();
-        }
-    }
-    else
+    if (!Content.IsValid() || deltaTime <= 0.0f)
     {
         bCanUpdateAfterDrag = false;
+        return;
     }
+    FVector2D Position = GetContentPosition();
+    const FVector2D Clamped = ClampToRange(Position);
+
+    bool bStillMoving = false;
+    auto SettleAxis = [&](double& InOutPosition, double InClamped, double& InOutVelocity, bool bInActive)
+    {
+        if (!bInActive)
+        {
+            InOutVelocity = 0.0;
+            return;
+        }
+        const double Overshoot = InOutPosition - InClamped;
+        const bool bOutOfRange = RestrictRectArea && FMath::Abs(Overshoot) > DreamScrollViewLocal::SettleThreshold;
+        if (bOutOfRange)
+        {
+            // Past the edge, and still travelling further out: the boundary bleeds the fling off in
+            // proportion to how far past it already is, so a hard throw rebounds and a gentle one
+            // simply stops.
+            if (InOutVelocity != 0.0 && FMath::Sign(InOutVelocity) == FMath::Sign(Overshoot))
+            {
+                InOutVelocity -= FMath::Sign(InOutVelocity)
+                    * FMath::Abs(Overshoot) * DreamScrollViewLocal::BoundaryForce * deltaTime;
+                InOutPosition += InOutVelocity * deltaTime;
+                bStillMoving = true;
+                return;
+            }
+            // Heading home, or out of momentum: ease onto the boundary and give the velocity up.
+            InOutVelocity = 0.0;
+            InOutPosition = InClamped + Overshoot * FMath::Exp(-DreamScrollViewLocal::ReturnRate * deltaTime);
+            if (FMath::Abs(InOutPosition - InClamped) < DreamScrollViewLocal::SettleThreshold)
+            {
+                InOutPosition = InClamped;
+            }
+            else
+            {
+                bStillMoving = true;
+            }
+            return;
+        }
+        if (FMath::Abs(InOutVelocity) <= DreamScrollViewLocal::SettleThreshold)
+        {
+            InOutVelocity = 0.0;
+            return;
+        }
+        InOutVelocity = DreamScrollViewLocal::Decay(InOutVelocity,
+            static_cast<double>(DecelerateRate) * DreamScrollViewLocal::DecelerationScale, deltaTime);
+        InOutPosition += InOutVelocity * deltaTime;
+        bStillMoving = true;
+    };
+
+    SettleAxis(Position.X, Clamped.X, Velocity.X, bGestureHorizontal && bAllowHorizontalScroll);
+    SettleAxis(Position.Y, Clamped.Y, Velocity.Y, bGestureVertical && bAllowVerticalScroll);
+
+    if (!Position.Equals(GetContentPosition(), DreamScrollViewLocal::SettleThreshold * 0.1))
+    {
+        ApplyContentPosition(Position);
+    }
+    bCanUpdateAfterDrag = bStillMoving;
 }
 
 void UUIScrollView::ApplyContentPositionWithProgress()
 {
-    if (CheckParameters())
+    if (!CheckParameters())
     {
-		FVector2D Position = GetContentPosition();
-        if (Horizontal)
-        {
-            bAllowHorizontalScroll = true;
-
-            Progress.X = FMath::Clamp(Progress.X, 0.0f, 1.0f);
-			Position.X = FMath::Lerp(HorizontalRange.X, HorizontalRange.Y, 1.0f - Progress.X);
-        }
-        if (Vertical)
-        {
-            bAllowVerticalScroll = true;
-
-            Progress.Y = FMath::Clamp(Progress.Y, 0.0f, 1.0f);
-			Position.Y = FMath::Lerp(VerticalRange.X, VerticalRange.Y, Progress.Y);
-        }
-		SetContentPosition(Position);
-		bCanUpdateAfterDrag = false;
+        return;
     }
+    // Progress in, position out -- through the offset, so this is the one function that has to
+    // agree with GetScrollOffset and it agrees by construction.
+    const FVector2D Extent = GetScrollableExtent();
+    const FVector2D Start = GetStartAlignedPosition();
+    FVector2D Position = GetContentPosition();
+    if (Horizontal)
+    {
+        Progress.X = FMath::Clamp(Progress.X, 0.0, 1.0);
+        Position.X = Start.X - Progress.X * Extent.X;
+    }
+    if (Vertical)
+    {
+        Progress.Y = FMath::Clamp(Progress.Y, 0.0, 1.0);
+        Position.Y = Start.Y + Progress.Y * Extent.Y;
+    }
+    SetContentPosition(Position);
+    bCanUpdateAfterDrag = false;
 }
 
-
+/**
+ * Position in, progress out, on every axis this view SCROLLS -- not on the axis some past gesture
+ * happened to drive. That distinction is the bug this pair of flags used to carry: after one
+ * vertical drag with OnlyOneDirection on, Progress.X stopped being maintained for good, and every
+ * horizontal scroll bar attached to this view quietly froze.
+ */
 void UUIScrollView::UpdateProgress(bool InFireEvent)
 {
     if (!Content.IsValid())
         return;
-	const FVector2D Position = GetContentPosition();
+    const FVector2D Extent = GetScrollableExtent();
+    const FVector2D Offset = GetScrollOffset();
     if (bAllowHorizontalScroll)
     {
-        if (FMath::Abs(HorizontalRange.Y - HorizontalRange.X) > KINDA_SMALL_NUMBER)
-        {
-			Progress.X = 1.0f - (Position.X - HorizontalRange.X) / (HorizontalRange.Y - HorizontalRange.X);
-        }
+        // An axis with nowhere to go reads zero rather than dividing by it: the bar over a list that
+        // fits is at its start, and it covers the whole track.
+        Progress.X = Extent.X > DreamScrollViewLocal::SettleThreshold
+            ? FMath::Clamp(Offset.X / Extent.X, 0.0, 1.0) : 0.0;
     }
     if (bAllowVerticalScroll)
     {
-        if (FMath::Abs(VerticalRange.Y - VerticalRange.X) > KINDA_SMALL_NUMBER)
-        {
-			Progress.Y = (Position.Y - VerticalRange.X) / (VerticalRange.Y - VerticalRange.X);
-        }
+        Progress.Y = Extent.Y > DreamScrollViewLocal::SettleThreshold
+            ? FMath::Clamp(Offset.Y / Extent.Y, 0.0, 1.0) : 0.0;
     }
     if (InFireEvent)
     {
@@ -906,87 +952,27 @@ void UUIScrollView::UpdateProgress(bool InFireEvent)
     }
 }
 
+/**
+ * The content-position range on one axis: the resting position, and that position plus the extent.
+ *
+ * Four pivot-weighted terms and a coordinate correction became two lines because the resting
+ * position is now measured instead of derived. Kept as a virtual writing into HorizontalRange
+ * because UUIScrollViewWithScrollbar extends it and UUIRecyclableScrollView reads the result.
+ */
 void UUIScrollView::CalculateHorizontalRange()
 {
-    if (ContentParent->GetWidth() > Content->GetWidth())//content size smaller than parent
-    {
-        //parent
-        HorizontalRange.X = -ContentParent->GetPivot().X * ContentParent->GetWidth();
-        HorizontalRange.Y = (1.0f - ContentParent->GetPivot().X) * ContentParent->GetWidth();
-        //self
-        HorizontalRange.X += Content->GetPivot().X * Content->GetWidth();
-        HorizontalRange.Y += (Content->GetPivot().X - 1.0f) * Content->GetWidth();
-
-        if (KeepProgress)
-        {
-            if (!CanScrollInSmallSize)
-            {
-                //this can make content stay at Progress.X's position
-                HorizontalRange.X = HorizontalRange.Y = FMath::Lerp(HorizontalRange.X, HorizontalRange.Y
-                    , FlipDirectionInSmallSize ? 1.0f - Progress.X : Progress.X
-                );
-            }
-        }
-        else
-        {
-            HorizontalRange.Y -= ContentParent->GetWidth() - Content->GetWidth();
-        }
-    }
-    else//content size bigger than parent
-    {
-        //self
-        HorizontalRange.X = (Content->GetPivot().X - 1.0f) * Content->GetWidth();
-        HorizontalRange.Y = Content->GetPivot().X * Content->GetWidth();
-        //parent
-        HorizontalRange.X += (1.0f - ContentParent->GetPivot().X) * ContentParent->GetWidth();
-        HorizontalRange.Y += -ContentParent->GetPivot().X * ContentParent->GetWidth();
-    }
-	if (CoordinateMode == EDreamScrollCoordinateMode::AnchoredPosition)
-	{
-		const float CoordinateOffset = Content->GetAnchoredPosition().X - Content->GetRelativeLocation().Y;
-		HorizontalRange += FVector2D(CoordinateOffset);
-	}
+    const double Start = GetStartAlignedPosition().X;
+    // Scrolling right moves the content LEFT, so the far end is the SMALLER coordinate: this pair
+    // stays (min, max) the way every reader of it expects.
+    HorizontalRange.Y = Start;
+    HorizontalRange.X = Start - GetScrollableExtent().X;
 }
 void UUIScrollView::CalculateVerticalRange()
 {
-    if (ContentParent->GetHeight() > Content->GetHeight())//content size smaller than parent
-    {
-        //parent
-        VerticalRange.X = -ContentParent->GetPivot().Y * ContentParent->GetHeight();
-        VerticalRange.Y = (1.0f - ContentParent->GetPivot().Y) * ContentParent->GetHeight();
-        //self
-        VerticalRange.X += Content->GetPivot().Y * Content->GetHeight();
-        VerticalRange.Y += (Content->GetPivot().Y - 1.0f) * Content->GetHeight();
-
-        if (KeepProgress)
-        {
-            if (!CanScrollInSmallSize)
-            {
-                //this can make content stay at Progress.Y's position
-                VerticalRange.X = VerticalRange.Y = FMath::Lerp(VerticalRange.X, VerticalRange.Y
-                    , FlipDirectionInSmallSize ? Progress.Y : 1.0f - Progress.Y
-                );
-            }
-        }
-        else
-        {
-            VerticalRange.X += ContentParent->GetHeight() - Content->GetHeight();
-        }
-    }
-    else//content size bigger than parent
-    {
-        //self
-        VerticalRange.X = (Content->GetPivot().Y - 1.0f) * Content->GetHeight();
-        VerticalRange.Y = Content->GetPivot().Y * Content->GetHeight();
-        //parent
-        VerticalRange.X += (1.0f - ContentParent->GetPivot().Y) * ContentParent->GetHeight();
-        VerticalRange.Y += -ContentParent->GetPivot().Y * ContentParent->GetHeight();
-    }
-	if (CoordinateMode == EDreamScrollCoordinateMode::AnchoredPosition)
-	{
-		const float CoordinateOffset = Content->GetAnchoredPosition().Y - Content->GetRelativeLocation().Z;
-		VerticalRange += FVector2D(CoordinateOffset);
-	}
+    const double Start = GetStartAlignedPosition().Y;
+    // Scrolling down moves the content UP, so the far end is the LARGER coordinate.
+    VerticalRange.X = Start;
+    VerticalRange.Y = Start + GetScrollableExtent().Y;
 }
 void UUIScrollView::RectRangeChanged()
 {
@@ -999,8 +985,7 @@ void UUIScrollView::SetHorizontal(bool value)
     if (Horizontal != value)
     {
         Horizontal = value;
-        bRangeCalculated = false;
-        RecalculateRange();
+        RectRangeChanged();
     }
 }
 void UUIScrollView::SetVertical(bool value)
@@ -1008,24 +993,16 @@ void UUIScrollView::SetVertical(bool value)
 	if (Vertical != value)
 	{
         Vertical = value;
-        bRangeCalculated = false;
-        RecalculateRange();
+        RectRangeChanged();
 	}
 }
 void UUIScrollView::SetOnlyOneDirection(bool value)
 {
-	if (OnlyOneDirection != value)
-	{
-        OnlyOneDirection = value;
-	}
+	OnlyOneDirection = value;
 }
 void UUIScrollView::SetScrollSensitivity(float value)
 {
-	value = FMath::IsFinite(value) ? value : 0.0f;
-	if (ScrollSensitivity != value)
-    {
-        ScrollSensitivity = value;
-    }
+	ScrollSensitivity = FMath::IsFinite(value) ? value : 0.0f;
 }
 
 void UUIScrollView::SetWheelProgressStep(float value)
@@ -1038,8 +1015,7 @@ void UUIScrollView::SetCoordinateMode(EDreamScrollCoordinateMode value)
 	if (CoordinateMode != value)
 	{
 		CoordinateMode = value;
-		bRangeCalculated = false;
-		RecalculateRange();
+		RectRangeChanged();
 	}
 }
 
@@ -1048,8 +1024,7 @@ void UUIScrollView::SetKeepProgress(bool value)
 	if (KeepProgress != value)
 	{
 		KeepProgress = value;
-		bRangeCalculated = false;
-		RecalculateRange();
+		RectRangeChanged();
 	}
 }
 void UUIScrollView::SetCanScrollInSmallSize(bool value)
@@ -1057,7 +1032,6 @@ void UUIScrollView::SetCanScrollInSmallSize(bool value)
     if (CanScrollInSmallSize != value)
     {
         CanScrollInSmallSize = value;
-        bRangeCalculated = false;
-        RecalculateRange();
+        RectRangeChanged();
     }
 }

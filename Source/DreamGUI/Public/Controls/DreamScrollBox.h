@@ -57,9 +57,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (EditCondition = "bShowScrollBar"))
 	EDreamScrollBoxScrollbarVisibility ScrollBarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
 
-	/** Multiplier on mouse-wheel input. */
+	/**
+	 * Local units travelled per mouse-wheel notch. It used to be documented as a MULTIPLIER and
+	 * pushed straight into a view that multiplied the raw axis by it, so the default of 1 moved the
+	 * content one unit a notch -- a wheel that visibly did nothing. 40 is what
+	 * UDreamLayoutContainerScrollBox already uses for the same gesture.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (ClampMin = "0.0"))
-	float ScrollSensitivity = 1.0f;
+	float ScrollSensitivity = 40.0f;
 
 	/** How quickly a flick stops. Zero never slows down; larger stops sooner. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (ClampMin = "0.0"))
@@ -131,15 +136,8 @@ public:
 
 	virtual void ApplyStyle() override;
 
-	/** Re-resolve the stretched viewport (and its content) after this control is resized. */
+	/** Re-measure the content and re-state the scroll range after this control is resized. */
 	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
-
-	/** The same watch UDreamListViewBase keeps, for the same reason -- see there. */
-	virtual void NativeOnTick(float InDeltaTime) override;
-
-	/** The face size the inner stretched nodes were last made to agree with. */
-	UPROPERTY(Transient)
-	FVector2D LastSettledFaceSize = FVector2D(-1.0, -1.0);
 
 protected:
 	virtual void NativeOnInitialized() override;

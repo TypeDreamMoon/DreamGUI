@@ -13,52 +13,6 @@ class UDreamWidget;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamScrollBarValueChangedEvent, float, Value);
 
 /**
- * UUIScrollbar with the three things a code-built bar needs and the shipped component does not hand out.
- *
- * Handle and DirectionType are protected UPROPERTYs with getters and no setters -- the component was
- * written to be filled in by the details panel of a Blueprint prefab, and the only other writer it
- * admits is its editor customization, declared a friend. A control that builds its own hierarchy has
- * no details panel to be filled in from, so the two writes have to come from inside the class.
- *
- * The third is the reason this is a class rather than two one-line setters: ApplyValueToVisual places
- * the handle by writing RATIO anchors on it, and this library has paid four separate defects for that
- * shape (see UDreamScrollBar::ApplyHandleGeometry). It is private and non-virtual, so it cannot be
- * replaced -- but every path that reaches it either broadcasts afterwards or goes through a virtual
- * this class overrides, so the owning control can always get the last word. These overrides are that
- * last word for the three paths nobody else sees: enable, dimensions changed, and Start.
- */
-UCLASS(ClassGroup = (DreamGUI), NotBlueprintable, HideDropdown, DisplayName = "Dream Scroll Bar Behaviour")
-class DREAMGUI_API UDreamScrollBarBehaviour : public UUIScrollbar
-{
-	GENERATED_BODY()
-
-public:
-	/** The widget the value moves. Its PARENT becomes the area the value is measured against. */
-	void SetHandleWidget(UDreamWidget* InHandle);
-
-	/** Which end of the track means zero. The bar's whole horizontal/vertical split lives here. */
-	void SetBarDirection(EUIScrollbarDirectionType InDirection);
-
-	/**
-	 * The base class just wrote the handle's anchors and nothing broadcast it.
-	 *
-	 * Fires from the three lifecycle paths that reach ApplyValueToVisual without passing through the
-	 * value event -- so the owner re-asserts its own geometry after them instead of discovering a
-	 * ratio-anchored handle on the frame the bar happens to be resized.
-	 */
-	FSimpleMulticastDelegate& GetOnHandleVisualDirtyEvent() { return OnHandleVisualDirtyCPP; }
-
-	virtual void Start() override;
-
-protected:
-	virtual void OnEnable() override;
-	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged) override;
-
-private:
-	FSimpleMulticastDelegate OnHandleVisualDirtyCPP;
-};
-
-/**
  * A scroll bar whose hierarchy is code, not an asset.
  *
  * Two nodes: a track, and a handle inside it. BP_HorizontalScrollbar and BP_VerticalScrollbar are two
@@ -66,6 +20,15 @@ private:
  * Direction is the only thing they disagreed about. The handle's parent IS the track, which is what
  * the behaviour measures the value against -- a scroll bar handle rides the whole track (unlike a
  * slider's, which is inset by its own size), because its LENGTH already shrinks the travel.
+ *
+ * WHAT THIS CLASS STOPPED DOING
+ * -----------------------------
+ * It used to carry a UUIScrollbar SUBCLASS and re-place the handle itself, because the component
+ * wrote ratio anchors and exposed neither Handle nor DirectionType to anything but a details panel.
+ * All three of those are fixed at the source now: UUIScrollbar places the handle with absolute
+ * geometry, takes both writes through public setters, and owns the minimum-length floor together
+ * with the drag scale it has to agree with. What is left here is what a control is for -- style,
+ * properties a designer and a `<->` binding can reach, and the link to a scroll view.
  *
  * A bar with no scroll view is a value control in its own right: its value is a position from 0 to 1
  * and HandleSize is how much of the track the handle covers. Point it at a UUIScrollView and both
@@ -103,9 +66,9 @@ public:
 	float HandleSize = 0.25f;
 
 	/**
-	 * Floor on the handle's drawn length, in local units. Applied by raising the FRACTION rather than
-	 * by clamping the drawn rect: the behaviour derives its drag scale from Size, so a handle drawn
-	 * longer than Size claims would drag at the wrong rate for the whole of a long list.
+	 * Floor on the handle's drawn length, in local units. Pushed into the behaviour, which applies it
+	 * to the drawn length and to the drag scale together -- a handle drawn longer than the fraction
+	 * it drags with would run at the wrong rate for the whole of a long list.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar", meta = (ClampMin = "0.0"))
 	float MinHandleLength = 24.0f;
@@ -132,7 +95,7 @@ public:
 	TObjectPtr<UDreamWidget> HandleNode = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
-	TObjectPtr<UDreamScrollBarBehaviour> BarBehaviour = nullptr;
+	TObjectPtr<UUIScrollbar> BarBehaviour = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
 	float GetValue() const;
@@ -172,13 +135,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
 	void RefreshFromScrollView();
 
-	/**
-	 * Place the handle from the value the behaviour holds. Public because the geometry has to be
-	 * re-asserted after anything that writes the handle's anchors behind the control's back.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
-	void ApplyHandleGeometry();
-
 	virtual void ApplyStyle() override;
 
 protected:
@@ -190,9 +146,6 @@ private:
 
 	/** The one writer of Value/HandleSize and the behaviour's copy of them. */
 	void PushValueAndSize(float InValue, float InFraction, bool bInBroadcast);
-
-	/** HandleSize raised to whatever MinHandleLength asks for on the current track. */
-	float ResolveEffectiveSize() const;
 
 	UPROPERTY(Transient)
 	TWeakObjectPtr<UUIScrollView> ScrollView;

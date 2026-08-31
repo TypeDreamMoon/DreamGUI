@@ -128,9 +128,13 @@ bool FDreamControlScrollBoxTest::RunTest(const FString& Parameters)
 		static_cast<float>(Box->ViewportNode->GetSizeDelta().X), -14.0f);
 	TestEqual(TEXT("and nothing on the other axis"),
 		static_cast<float>(Box->ViewportNode->GetSizeDelta().Y), 0.0f);
-	// Absolute, off the viewport's own delta -- no span left for an anchor setter to resolve wrongly.
+	// Absolute, off the viewport's RESOLVED width -- no span left for an anchor setter to resolve
+	// wrongly. This assertion used to read -14, which is the viewport's size DELTA and not any width
+	// at all: a stretched node published its delta as its resolved size, so the content rect was
+	// literally negative-width and every child of it drew nowhere. Both halves are fixed at the
+	// source (UDreamWidget::SetAnchoredPositionAndSizeDelta and ::SetWidth); 300 less the bar is 286.
 	TestEqual(TEXT("the content is sized against the viewport that came out"),
-		static_cast<float>(Box->ContentNode->GetSizeDelta().X), -14.0f);
+		static_cast<float>(Box->ContentNode->GetSizeDelta().X), 286.0f);
 	TestEqual(TEXT("the content's cross axis is a point anchor -- min"),
 		static_cast<float>(Box->ContentNode->GetAnchorMin().X), 0.5f);
 	TestEqual(TEXT("the content's cross axis is a point anchor -- max"),
@@ -207,8 +211,10 @@ bool FDreamControlScrollBoxOrientationTest::RunTest(const FString& Parameters)
 	// Shifted up by half the gutter, so the top edge stayed where it was.
 	TestEqual(TEXT("the viewport shifted by half the gutter to keep its top edge"),
 		static_cast<float>(Box->ViewportNode->GetAnchoredPosition().Y), 7.0f);
+	// The cross axis, resolved rather than published as a delta -- see the vertical twin above for
+	// what -14 used to mean here. 200 less the bar is 186.
 	TestEqual(TEXT("the content is sized against the viewport that came out"),
-		static_cast<float>(Box->ContentNode->GetSizeDelta().Y), -14.0f);
+		static_cast<float>(Box->ContentNode->GetSizeDelta().Y), 186.0f);
 	return true;
 }
 
@@ -250,9 +256,11 @@ bool FDreamControlScrollBarTest::RunTest(const FString& Parameters)
 
 	// The style's numbers arrived: thickness is the bar's cross axis, and the track fills it.
 	TestEqual(TEXT("the bar is as thick as the style says"), Bar->GetWidth(), 12.0f);
-	// The track is stretched over the bar, so headless it reads back its delta (zero, meaning
-	// "exactly the bar") rather than an arranged length. The handle geometry below is the part
-	// that has to be absolute, and it is computed from the bar's own authored length.
+	// The track is stretched over the bar: its DELTA is zero, meaning "exactly the bar", and its
+	// resolved length is the bar's -- which it now answers with even headless, because a parent's
+	// resolved size invalidates its anchor-driven children at the source (UDreamWidget::SetWidth).
+	// That is what let the handle maths move down into UUIScrollbar and read the TRACK, where it
+	// belongs, instead of being re-done up here off the control's own rect.
 	TestEqual(TEXT("the track fills the bar across"),
 		static_cast<float>(Bar->TrackNode->GetSizeDelta().X), 0.0f);
 	TestEqual(TEXT("and along it"),
@@ -262,6 +270,8 @@ bool FDreamControlScrollBarTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
+	TestEqual(TEXT("and the stretched track resolves to it with no layout pass"),
+		Bar->TrackNode->GetHeight(), 200.0f);
 
 	// The white trap: the handle's colour comes from the SELECTABLE, which re-tints its target on
 	// every state change. A behaviour that was never given colours ships a white handle.
@@ -319,8 +329,9 @@ bool FDreamControlScrollBarTest::RunTest(const FString& Parameters)
 	Bar->MinHandleLength = 100.0f;
 	Bar->HandleSize = 0.1f;
 	Bar->ApplyStyle();
-	TestEqual(TEXT("the floor went into the fraction the behaviour drags with"),
-		Bar->BarBehaviour->GetSize(), 0.5f);
+	TestEqual(TEXT("the authored fraction is left alone"), Bar->BarBehaviour->GetSize(), 0.1f);
+	TestEqual(TEXT("and the floor is what the behaviour actually draws and drags with"),
+		Bar->BarBehaviour->GetEffectiveSize(), 0.5f);
 	TestEqual(TEXT("so the drawn handle and the drag scale agree"),
 		static_cast<float>(Bar->HandleNode->GetSizeDelta().Y), 100.0f);
 	return true;
@@ -343,6 +354,21 @@ bool FDreamControlScrollBarDrivesBoxTest::RunTest(const FString& Parameters)
 	TDreamTestControl<UDreamScrollBox> Box(MakeBox(EDreamPanelOrientation::Vertical, 14.0f));
 	if (!TestNotNull(TEXT("the box built its bar"), Box->ScrollBarNode.Get()) ||
 		!TestNotNull(TEXT("the box has a view to drive"), Box->GetScrollView()))
+	{
+		return false;
+	}
+
+	// Something to actually scroll. Without it this box has a 200-tall window over 200-tall content,
+	// and a view with nowhere to go now reports progress ZERO however it is driven -- which is the
+	// right answer (a bar over content that fits sits at its start covering the whole track) and was
+	// not the old one: the old UpdateProgress skipped an axis whose range was degenerate, so the
+	// authored 1.0 simply stayed there and the test read it back as if the view had moved.
+	UDreamWidget* Filler = NewObject<UDreamWidget>(Box->GetContentNode());
+	Filler->SetWidth(200.0f);
+	Filler->SetHeight(600.0f);
+	Box->AddContent(Filler);
+	if (!TestTrue(TEXT("the box now has somewhere to scroll"),
+		Box->GetScrollView()->GetScrollableExtent().Y > 0.0))
 	{
 		return false;
 	}
