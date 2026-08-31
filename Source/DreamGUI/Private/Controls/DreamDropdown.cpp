@@ -348,6 +348,11 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 		const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
 		const int32 RowCount = FMath::Max(1, Options.Num());
 		const int32 VisibleRows = FMath::Min(RowCount, FMath::Max(1, MaxVisibleItems));
+		// The SCHEME first: Show()'s automatic placement thinks in the preset Blueprint's terms and
+		// rewrites the pivot (measured: top-pivot 0.5,1) -- under which our centre-pivot position
+		// maths hangs the list a full height below the face. Re-assert anchors and pivot, then
+		// write this open's numbers over the resting ones.
+		ApplyListRestingGeometry(Active);
 		// Width explicitly, each open: the face is the one measurement that is always live.
 		const float OpenHeight = VisibleRows * Active.ItemHeight;
 		const float OpenWidth = FaceNode != nullptr ? static_cast<float>(FaceNode->GetWidth()) : static_cast<float>(ListNode->GetWidth());
