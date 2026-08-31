@@ -2576,6 +2576,65 @@ void UDreamWidget::EnsureUIChildrenValid()
 	}
 }
 
+namespace DreamWidgetDuplicateLocal
+{
+	/** Widget pair by pair, every sub-object a widget owns: what "the same part, other tree" means. */
+	void MapCounterparts(UDreamWidget* InSource, UDreamWidget* InCopy, TMap<UObject*, UObject*>& OutMap)
+	{
+		OutMap.Add(InSource, InCopy);
+		if (InSource->GetVisual() != nullptr && InCopy->GetVisual() != nullptr)
+		{
+			OutMap.Add(InSource->GetVisual(), InCopy->GetVisual());
+		}
+		if (InSource->GetLayoutContainer() != nullptr && InCopy->GetLayoutContainer() != nullptr)
+		{
+			OutMap.Add(InSource->GetLayoutContainer(), InCopy->GetLayoutContainer());
+		}
+		if (InSource->GetPanelSlot() != nullptr && InCopy->GetPanelSlot() != nullptr)
+		{
+			OutMap.Add(InSource->GetPanelSlot(), InCopy->GetPanelSlot());
+		}
+		const TArray<UDreamUIBehaviour*>& SourceComponents = InSource->GetAllComponents();
+		const TArray<UDreamUIBehaviour*>& CopyComponents = InCopy->GetAllComponents();
+		// By index: Components is Instanced, so the copy's array is the source's in order, and only
+		// the index tells two behaviours of one class apart.
+		const int32 Count = FMath::Min(SourceComponents.Num(), CopyComponents.Num());
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			if (SourceComponents[Index] != nullptr && CopyComponents[Index] != nullptr
+				&& SourceComponents[Index]->GetClass() == CopyComponents[Index]->GetClass())
+			{
+				OutMap.Add(SourceComponents[Index], CopyComponents[Index]);
+			}
+		}
+	}
+
+	/** Rewrite InContainer's object properties that still point at the source subtree. */
+	void RemapReferencesOn(UObject* InContainer, const TMap<UObject*, UObject*>& InMap)
+	{
+		if (!IsValid(InContainer))
+		{
+			return;
+		}
+		for (TFieldIterator<FObjectPropertyBase> It(InContainer->GetClass(), EFieldIterationFlags::Default); It; ++It)
+		{
+			if (It->IsA<FSoftObjectProperty>() || It->IsA<FClassProperty>())
+			{
+				continue;
+			}
+			UObject* Value = It->GetObjectPropertyValue_InContainer(InContainer);
+			if (Value == nullptr)
+			{
+				continue;
+			}
+			if (UObject* const* Counterpart = InMap.Find(Value))
+			{
+				It->SetObjectPropertyValue_InContainer(InContainer, *Counterpart);
+			}
+		}
+	}
+}
+
 UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InSource)
 {
 	if (InOuter == nullptr || !IsValid(InSource))
@@ -2639,6 +2698,50 @@ UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InS
 		// Parent is transient, so the copies arrive with the structure intact and every back-pointer
 		// empty. OnRegister reads Parent, so nothing may register before this.
 		Copy->RestoreParentLinksRecursive();
+
+		// Re-aim every pointer that runs from one part of the subtree to another. Instancing follows
+		// only Instanced properties, so a plain or weak reference at a sibling -- a toggle's tick, a
+		// dropdown item's label, a slider's fill -- was copied VERBATIM and still points into the
+		// SOURCE subtree. Every copy then drives the original's parts: the measured symptom was a
+		// dropdown whose duplicated rows all wrote their text onto the template's one label, each row
+		// on screen wearing whatever the template said at the moment it was copied, off by one.
+		//
+		// The same defect InitializeWidgetStatic re-aims per instance, one layer down: this is the
+		// duplicate path's half, and it lives in the one choke point every duplication goes through --
+		// list cells, dropdown rows, tooltips, drag visuals.
+		//
+		// Structure-parallel rather than by name: the copy's tree IS the source's tree in order, by
+		// construction three lines up, and names need not be unique across a subtree.
+		TMap<UObject*, UObject*> SourceToCopy;
+		struct FPairWalk
+		{
+			static void Walk(UDreamWidget* InFrom, UDreamWidget* InTo, TMap<UObject*, UObject*>& OutMap)
+			{
+				DreamWidgetDuplicateLocal::MapCounterparts(InFrom, InTo, OutMap);
+				const TArray<UDreamWidget*>& FromChildren = InFrom->GetChildren();
+				const TArray<UDreamWidget*>& ToChildren = InTo->GetChildren();
+				// The copy's array skips the source's invalid entries, so walk the source's VALID ones
+				// in step with the copy's.
+				int32 ToIndex = 0;
+				for (UDreamWidget* FromChild : FromChildren)
+				{
+					if (!IsValid(FromChild))
+					{
+						continue;
+					}
+					if (!ToChildren.IsValidIndex(ToIndex))
+					{
+						break;
+					}
+					Walk(FromChild, ToChildren[ToIndex++], OutMap);
+				}
+			}
+		};
+		FPairWalk::Walk(InSource, Copy, SourceToCopy);
+		for (const TPair<UObject*, UObject*>& Pair : SourceToCopy)
+		{
+			DreamWidgetDuplicateLocal::RemapReferencesOn(Pair.Value, SourceToCopy);
+		}
 	}
 	return Copy;
 }
