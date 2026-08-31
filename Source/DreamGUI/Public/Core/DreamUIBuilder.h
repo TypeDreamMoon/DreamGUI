@@ -247,6 +247,13 @@ struct TDreamUINode : FDreamUINodeSpec
 		});
 	}
 
+	/**
+	 * Anchor corners, as points: (0,0)-(0,0) pins to one corner, (0,0)-(1,1) stretches to all four.
+	 *
+	 * Only meaningful on a node that has a parent, which is why Realize attaches before it configures
+	 * -- SetHorizontalAndVerticalAnchorMinMax's entire body sits inside `if (Parent.IsValid())` and
+	 * says nothing when there is none.
+	 */
 	ThisType&& Anchors(FVector2D InMin, FVector2D InMax)
 	{
 		return Self([InMin, InMax](UDreamWidget& InWidget)
@@ -309,11 +316,16 @@ namespace DreamUI
 	/**
 	 * Build the description into InTree and return its root.
 	 *
-	 * The tree comes back whole but UNREGISTERED and unparented -- registration is the caller's, and
-	 * has to be, because a subtree registered before it is attached inherits nothing from where it
-	 * ends up. Attach first, then RegisterDreamWidgetHierarchy.
+	 * The tree comes back whole but UNREGISTERED -- registration is the caller's, and has to be,
+	 * because a subtree registered before it is attached inherits nothing from where it ends up.
+	 *
+	 * InParent is where the root hangs, and passing it is not the same as attaching afterwards: a
+	 * widget with no parent silently refuses to be told its anchors, so a root realized loose and
+	 * parented later keeps whatever anchors it was born with, however carefully the expression
+	 * described them.
 	 */
-	DREAMGUI_API UDreamWidget* Realize(UDreamWidgetTree* InTree, FDreamUINodeSpec&& InRoot);
+	DREAMGUI_API UDreamWidget* Realize(UDreamWidgetTree* InTree, FDreamUINodeSpec&& InRoot,
+		UDreamWidget* InParent = nullptr);
 
 	/**
 	 * Build a native user widget's own contents, tree and all.

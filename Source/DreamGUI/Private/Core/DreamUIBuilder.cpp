@@ -91,6 +91,16 @@ namespace
 			Widget->SetDisplayName(InSpec.Name.ToString());
 		}
 
+		// Before anything is configured, not after. Half of what a widget can be told depends on
+		// having a parent -- SetHorizontalAndVerticalAnchorMinMax does nothing at all without one, its
+		// whole body is inside `if (Parent.IsValid())` -- so an anchor set on an unattached node is a
+		// silent no-op. Nothing here is registered, so this is the cheap attach; TrySetParent would
+		// run layout against a hierarchy that is still being built.
+		if (InParent != nullptr)
+		{
+			Widget->SetParentBeforeRegister(InParent);
+		}
+
 		if (InSpec.VisualClass != nullptr)
 		{
 			Widget->CreateNewVisual(InSpec.VisualClass);
@@ -142,13 +152,6 @@ namespace
 			}
 		}
 
-		// The statement after the widget exists. Nothing here is registered, so this is the attach that
-		// costs nothing; TrySetParent would run layout against a hierarchy that is still being built.
-		if (InParent != nullptr)
-		{
-			Widget->SetParentBeforeRegister(InParent);
-		}
-
 		ApplySlotSettings(InSpec, *Widget, InParent);
 
 		for (FDreamUINodeSpec& Child : InSpec.ChildSpecs)
@@ -167,7 +170,7 @@ namespace
 	}
 }
 
-UDreamWidget* DreamUI::Realize(UDreamWidgetTree* InTree, FDreamUINodeSpec&& InRoot)
+UDreamWidget* DreamUI::Realize(UDreamWidgetTree* InTree, FDreamUINodeSpec&& InRoot, UDreamWidget* InParent)
 {
 	if (!IsValid(InTree))
 	{
@@ -176,7 +179,7 @@ UDreamWidget* DreamUI::Realize(UDreamWidgetTree* InTree, FDreamUINodeSpec&& InRo
 	}
 	FDreamUINodeSpec RootSpec = MoveTemp(InRoot);
 	TArray<FDreamUIDeferredEntry> Deferred;
-	UDreamWidget* Root = RealizeNode(*InTree, RootSpec, nullptr, Deferred);
+	UDreamWidget* Root = RealizeNode(*InTree, RootSpec, InParent, Deferred);
 
 	// Declaration order, parents before children. Which of two .Then bodies runs first is not
 	// something a tree should depend on, but it should at least be the same answer every time.
@@ -204,11 +207,12 @@ UDreamWidget* DreamUI::Realize(UDreamUserWidget* InOwner, FDreamUINodeSpec&& InR
 		// that indirection is what separates "the class of a widget" from "the class of a hierarchy".
 		InOwner->WidgetTree = NewObject<UDreamWidgetTree>(InOwner, NAME_None, RF_Transactional);
 	}
-	UDreamWidget* Root = DreamUI::Realize(InOwner->WidgetTree, MoveTemp(InRoot));
+	// The owner goes in as the parent rather than being attached afterwards: the root's own anchors
+	// are set while the walk is inside it, and a widget with no parent is told nothing.
+	UDreamWidget* Root = DreamUI::Realize(InOwner->WidgetTree, MoveTemp(InRoot), InOwner);
 	if (IsValid(Root))
 	{
 		InOwner->WidgetTree->RootWidget = Root;
-		Root->SetParentBeforeRegister(InOwner);
 	}
 	return Root;
 }

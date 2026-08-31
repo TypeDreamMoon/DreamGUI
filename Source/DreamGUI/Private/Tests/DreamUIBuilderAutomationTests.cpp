@@ -160,6 +160,52 @@ bool FDreamUIBuilderShapeTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIBuilderAttachOrderTest,
+	"DreamGUI.Builder.ANodeIsAttachedBeforeItIsConfigured",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIBuilderAttachOrderTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUI;
+	using namespace DreamUIBuilderTestLocal;
+
+	FScopedTree Fixture;
+
+	// Half of what a widget can be told is refused while it has no parent, and refused SILENTLY:
+	// SetHorizontalAndVerticalAnchorMinMax's whole body is inside `if (Parent.IsValid())`. Configuring
+	// before attaching therefore produces a tree that is correct in structure and inert in layout,
+	// which is exactly the state the first native control came out in -- a root anchored to nothing,
+	// measuring zero, with every part of it correctly sized inside a box of no size.
+	UDreamWidget* Child = nullptr;
+	UDreamWidget* Root = Realize(Fixture.Get(),
+		Widget("Parent")
+			.Size(200.0f, 100.0f)
+			.Children(
+				Widget("Stretched").Out(Child).Anchors(FVector2D(0.0, 0.0), FVector2D(1.0, 1.0))));
+
+	if (!TestNotNull(TEXT("Realize returns a root"), Root) || !TestNotNull(TEXT("and the child"), Child))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the child's anchors were actually set"), Child->GetAnchorMin(), FVector2D(0.0, 0.0));
+	TestEqual(TEXT("both corners of them"), Child->GetAnchorMax(), FVector2D(1.0, 1.0));
+
+	// And the ROOT, which is the one that actually went missing: inside the walk it has no parent
+	// unless the caller names one, so a root described as stretched came out at its birth anchors and
+	// measured zero -- with every part beneath it correctly sized inside a box of no size.
+	UDreamWidget* Host = Realize(Fixture.Get(), Widget("Host").Size(300.0f, 80.0f));
+	UDreamWidget* StretchedRoot = Realize(Fixture.Get(),
+		Widget("Root").Anchors(FVector2D(0.0, 0.0), FVector2D(1.0, 1.0)), Host);
+	if (TestNotNull(TEXT("a root realized under a parent"), StretchedRoot))
+	{
+		TestEqual(TEXT("is told its anchors too"), StretchedRoot->GetAnchorMax(), FVector2D(1.0, 1.0));
+		TestTrue(TEXT("and hangs where it was told"), (UObject*)StretchedRoot->GetParent() == (UObject*)Host);
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUIBuilderDeferredTest,
 	"DreamGUI.Builder.ThenRunsOnceTheWholeTreeExists",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
