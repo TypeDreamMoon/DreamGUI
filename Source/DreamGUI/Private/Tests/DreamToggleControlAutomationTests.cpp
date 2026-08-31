@@ -6,6 +6,7 @@
 
 #include "Controls/DreamToggle.h"
 #include "Core/Components/DreamImage.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
@@ -163,17 +164,15 @@ bool FDreamToggleControlStyleTest::RunTest(const FString& Parameters)
 
 	// A code-built control has no tree for anyone to open, so the style has to be the whole of what
 	// an author can decide. If any of these does not arrive, that decision was silently ignored.
-	// Asserted on the BRUSH, which is where a node's size actually comes from: a widget inside a
-	// layout container does not own its rect, and UDreamPanelLayoutBase::GetDesiredSize reads
-	// UDreamImage::GetPreferredWidth, which returns Brush.ImageSize.X. The first version of this
-	// control set widths directly and the arrange pass overwrote every one of them.
+	// The box is an image (the rect-block face is parked on a render defect), so the Auto slot reads
+	// its size off the brush.
 	UDreamImage* BoxImage = Cast<UDreamImage>(Toggle->BoxNode->GetVisual());
-	UDreamImage* TickImage = Cast<UDreamImage>(Toggle->TickNode->GetVisual());
-	if (TestNotNull(TEXT("the box is drawn by an image"), BoxImage) && TestNotNull(TEXT("so is the tick"), TickImage))
+	UDreamText* TickText = Cast<UDreamText>(Toggle->TickNode->GetVisual());
+	if (TestNotNull(TEXT("the box is drawn by an image"), BoxImage) && TestNotNull(TEXT("the tick is a glyph"), TickText))
 	{
 		TestEqual(TEXT("the box states the style's width to the layout"), BoxImage->GetPreferredWidth(), 40.0f);
 		TestEqual(TEXT("and its height"), BoxImage->GetPreferredHeight(), 18.0f);
-		TestEqual(TEXT("the tick states its own"), TickImage->GetPreferredWidth(), 12.0f);
+		TestEqual(TEXT("the glyph is sized by the style's tick height"), TickText->GetFontSize(), 12.0f);
 	}
 
 	if (UDreamText* LabelVisual = Cast<UDreamText>(Toggle->LabelNode->GetVisual()))

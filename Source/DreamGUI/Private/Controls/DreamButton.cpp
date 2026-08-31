@@ -7,6 +7,7 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIButton.h"
@@ -50,15 +51,21 @@ void UDreamButton::NativeOnInitialized()
 	ApplyStyle();
 }
 
+
 void UDreamButton::ApplyStyle()
 {
 	const FDreamButtonStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ButtonStyle);
+	ShapeFace(FaceNode, Active.CornerRadius);
 
 	if (UDreamText* LabelVisual = LabelNode != nullptr ? Cast<UDreamText>(LabelNode->GetVisual()) : nullptr)
 	{
 		LabelVisual->SetText(Label);
 		LabelVisual->SetColor(Active.LabelColor);
 		LabelVisual->SetFontSize(Active.FontSize);
+	}
+	if (UDreamPanelSlot* LabelSlot = LabelNode != nullptr ? LabelNode->GetPanelSlot() : nullptr)
+	{
+		LabelSlot->SetPadding(Active.ContentPadding);
 	}
 	if (ButtonBehaviour != nullptr)
 	{

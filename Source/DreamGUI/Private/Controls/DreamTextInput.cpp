@@ -5,6 +5,7 @@
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UITextInput.h"
@@ -49,6 +50,7 @@ void UDreamTextInput::NativeOnInitialized()
 void UDreamTextInput::ApplyStyle()
 {
 	const FDreamTextInputStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::TextInputStyle);
+	ShapeFace(BackgroundNode, Active.CornerRadius);
 
 	// The padding is geometry, not a text property: the clip area is inset from the field, and the
 	// placeholder is inset the same amount so the hint sits exactly where typing will.

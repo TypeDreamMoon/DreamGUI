@@ -7,6 +7,7 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIToggle.h"
@@ -35,7 +36,13 @@ void UDreamToggle::NativeOnInitialized()
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
 					})
 					.Children(
-						Image("Tick").Out(TickNode)
+						DreamUI::Text("Tick").Out(TickNode)
+							.Visual([](UDreamText& InText)
+							{
+								InText.SetText(FText::AsCultureInvariant(TEXT("✓")));
+								InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
+								InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
+							})
 							.Slot([](UDreamPanelSlot& InSlot)
 							{
 								InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
@@ -66,20 +73,6 @@ void UDreamToggle::NativeOnInitialized()
 	ApplyStyle();
 }
 
-namespace
-{
-	/** How a node states its size to a layout: the brush it draws with. */
-	void SetImageSize(UDreamWidget* InNode, const FVector2D& InSize)
-	{
-		if (UDreamImage* Image = InNode != nullptr ? Cast<UDreamImage>(InNode->GetVisual()) : nullptr)
-		{
-			FDreamUIImageBrush Brush = Image->GetBrush();
-			Brush.ImageSize = FVector2f(static_cast<float>(InSize.X), static_cast<float>(InSize.Y));
-			Image->SetBrush(Brush);
-		}
-	}
-}
-
 void UDreamToggle::ApplyStyle()
 {
 	// The sheet when the project has one and this instance did not opt out; the inline Style
@@ -91,8 +84,20 @@ void UDreamToggle::ApplyStyle()
 	// size -- UDreamImage::GetPreferredWidth returns Brush.ImageSize.X. Setting the widget's width
 	// directly is overwritten by the next arrange pass, silently, which is what this control did on
 	// its first run: a 26-wide box came out 32 and the tick filled it.
-	SetImageSize(BoxNode, Active.BoxSize);
-	SetImageSize(TickNode, Active.TickSize);
+	ShapeFace(BoxNode, Active.CornerRadius);
+	if (UDreamImage* BoxImage = BoxNode != nullptr ? Cast<UDreamImage>(BoxNode->GetVisual()) : nullptr)
+	{
+		// Through the brush while the face is an image: the Auto slot reads the visual's preferred
+		// size, which for an image is Brush.ImageSize.
+		FDreamUIImageBrush Brush = BoxImage->GetBrush();
+		Brush.ImageSize = FVector2f(static_cast<float>(Active.BoxSize.X), static_cast<float>(Active.BoxSize.Y));
+		BoxImage->SetBrush(Brush);
+	}
+	if (UDreamText* TickText = TickNode != nullptr ? Cast<UDreamText>(TickNode->GetVisual()) : nullptr)
+	{
+		// A glyph, sized by the style's tick height; its colour is the checked transition's to give.
+		TickText->SetFontSize(static_cast<float>(Active.TickSize.Y));
+	}
 	if (UDreamText* LabelVisual = LabelNode != nullptr ? Cast<UDreamText>(LabelNode->GetVisual()) : nullptr)
 	{
 		LabelVisual->SetText(Label);

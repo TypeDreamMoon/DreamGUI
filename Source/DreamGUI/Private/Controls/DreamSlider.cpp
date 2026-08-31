@@ -5,6 +5,7 @@
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 
 void UDreamSlider::NativeOnInitialized()
@@ -84,6 +85,11 @@ void UDreamSlider::ApplyStyle()
 		HandleNode->SetWidth(static_cast<float>(Active.HandleSize.X));
 		HandleNode->SetHeight(static_cast<float>(Active.HandleSize.Y));
 	}
+	// Capsules, derived rather than styled: half the thickness rounds a bar fully, half the handle
+	// makes it a circle -- the UMG slider's silhouette.
+	ShapeFace(TrackNode, Active.TrackThickness * 0.5f);
+	ShapeFace(FillNode, Active.TrackThickness * 0.5f);
+	ShapeFace(HandleNode, static_cast<float>(FMath::Min(Active.HandleSize.X, Active.HandleSize.Y)) * 0.5f);
 	if (UDreamVisual* TrackVisual = TrackNode != nullptr ? TrackNode->GetVisual() : nullptr)
 	{
 		TrackVisual->SetColor(Active.TrackColor);

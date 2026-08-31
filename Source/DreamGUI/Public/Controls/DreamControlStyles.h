@@ -67,6 +67,10 @@ struct DREAMGUI_API FDreamToggleStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
 	float FontSize = 15.0f;
+
+	/** Of the box. The faces are procedural rects now, which is where the UMG feel mostly lives. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
+	float CornerRadius = 5.0f;
 };
 
 /**
@@ -97,8 +101,15 @@ struct DREAMGUI_API FDreamButtonStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style")
 	FColor LabelColor = FColor(230, 233, 240, 255);
 
+	/** Between the face's edge and the label -- UMG's ContentPadding. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style")
+	FMargin ContentPadding = FMargin(12.0f, 4.0f, 12.0f, 4.0f);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style")
 	float FontSize = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style")
+	float CornerRadius = 5.0f;
 };
 
 /** A slider: a track, the filled part of it, and the handle riding it. */
@@ -163,6 +174,9 @@ struct DREAMGUI_API FDreamTextInputStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style")
 	float FontSize = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style")
+	float CornerRadius = 5.0f;
 };
 
 /** A dropdown: a button-shaped face, and the list it opens. */
@@ -208,4 +222,8 @@ struct DREAMGUI_API FDreamDropdownStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
 	float FontSize = 15.0f;
+
+	/** Face and list share it; the items inside the list stay square against its edge. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
+	float CornerRadius = 5.0f;
 };

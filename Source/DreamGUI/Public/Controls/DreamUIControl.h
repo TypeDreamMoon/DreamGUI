@@ -6,6 +6,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Controls/DreamControlStyles.h"
 #include "Controls/DreamUIStyleSheet.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "DreamUIControl.generated.h"
 
 /**
@@ -46,6 +47,19 @@ public:
 	virtual void ApplyStyle() {}
 
 protected:
+	/**
+	 * Round a face. Every control's face is a procedural rect now -- that is where most of the UMG
+	 * feel lives -- and the radius is the one thing all of them push the same way.
+	 */
+	static void ShapeFace(const UDreamWidget* InNode, float InRadius)
+	{
+		if (UDreamRectBlock* Rect = InNode != nullptr ? Cast<UDreamRectBlock>(InNode->GetVisual()) : nullptr)
+		{
+			Rect->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Value);
+			Rect->SetCornerRadius(FVector4(InRadius, InRadius, InRadius, InRadius));
+		}
+	}
+
 	template<class TStyle>
 	const TStyle& ResolveStyle(const TStyle& InInlineStyle, const TStyle& (UDreamUIStyleSheet::*InFamily)(FName) const) const
 	{
