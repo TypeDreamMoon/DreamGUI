@@ -774,6 +774,14 @@ public:
 	void UpdateVisual()const;
 	
 	void ForceUpdateLayout();
+
+	/**
+	 * Re-derive this subtree's render canvas from the parent chain and push it down, registering
+	 * the visuals it reaches. For subtrees assembled through SetParentBeforeRegister, which fires
+	 * no attach events: nothing propagated a canvas into them, so their OnRegister ran with none
+	 * and every visual stayed off the render lists -- built, laid out, and invisible.
+	 */
+	void RefreshRenderCanvasFromParentChain();
 protected:
 	void RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas);
 

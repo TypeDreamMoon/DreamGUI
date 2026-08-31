@@ -3536,6 +3536,11 @@ void UDreamWidget::RegisterRenderCanvas(UDreamCanvas* InRenderCanvas)
 		}
 	}
 }
+void UDreamWidget::RefreshRenderCanvasFromParentChain()
+{
+	RenewRenderCanvasRecursive(GetComponentInParent<UDreamCanvas>(true));
+}
+
 void UDreamWidget::RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas)
 {
 	auto ThisRenderCanvas = this->GetComponent<UDreamCanvas>();

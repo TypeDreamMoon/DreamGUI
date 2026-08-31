@@ -147,6 +147,11 @@ UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDreamWidget* InTe
 		Copy->SetParentBeforeRegister(InParent);
 	}
 	RegisterDreamWidgetHierarchy(Copy);
+	// SetParentBeforeRegister fires no attach events, so nothing propagated a render canvas into
+	// the copy: OnRegister ran with none, no visual reached the render lists, and the subtree was
+	// built, laid out, active -- and invisible. The each walkthrough found list cells in exactly
+	// that state.
+	Copy->RefreshRenderCanvasFromParentChain();
 	return Copy;
 }
 
