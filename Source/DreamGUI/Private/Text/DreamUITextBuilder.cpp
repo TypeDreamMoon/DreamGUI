@@ -7,6 +7,7 @@
 
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetTree.h"
 #include "Interaction/UIListView.h"
@@ -1424,6 +1425,38 @@ namespace DreamUITextBuilderLocal
 		{
 			return true;
 		}
+		// `Native.Toggle` -- a scoped tag, resolved through the widget registry. What it accepts is
+		// exactly what DECLARE_DREAM_GUI_WIDGET declared, so the language never carries a list of the
+		// library's controls -- or of anyone else's: a project plugin registering under its own scope
+		// is in the language the moment it links.
+		int32 DotIndex = INDEX_NONE;
+		if (!InNode.TypeName.StartsWith(TEXT("/")) && InNode.TypeName.FindChar(TEXT('.'), DotIndex))
+		{
+			const FName Scope(*InNode.TypeName.Left(DotIndex));
+			const FName Name(*InNode.TypeName.Mid(DotIndex + 1));
+			UClass* Registered = FDreamUIWidgetRegistry::Resolve(Scope, Name);
+			if (Registered == nullptr || !Registered->IsChildOf(UDreamUserWidget::StaticClass())
+				|| Registered->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
+			{
+				TArray<FName> Known = FDreamUIWidgetRegistry::NamesInScope(Scope);
+				FString KnownList;
+				for (const FName& KnownName : Known)
+				{
+					KnownList += (KnownList.IsEmpty() ? TEXT("") : TEXT(", "));
+					KnownList += FString::Printf(TEXT("%s.%s"), *Scope.ToString(), *KnownName.ToString());
+				}
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownNodeType, InNode.Location,
+					KnownList.IsEmpty()
+						? FString::Printf(TEXT("'%s' names no registered widget -- nothing is declared under scope '%s' (DECLARE_DREAM_GUI_WIDGET registers one)"),
+							*InNode.TypeName, *Scope.ToString())
+						: FString::Printf(TEXT("'%s' names no registered widget -- scope '%s' declares: %s"),
+							*InNode.TypeName, *Scope.ToString(), *KnownList));
+				return false;
+			}
+			OutWidgetClass = Registered;
+			return true;
+		}
+
 		if (InNode.TypeName.StartsWith(TEXT("/")))
 		{
 			UClass* Loaded = ResolveWidgetClassFromPath(InNode.TypeName);

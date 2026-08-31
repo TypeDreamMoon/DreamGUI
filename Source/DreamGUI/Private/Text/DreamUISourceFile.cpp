@@ -1317,9 +1317,23 @@ namespace DreamUIText
 			OutNode.Kind = EDreamUINodeKind::Widget;
 			OutNode.TypeName = TypeToken.Text;
 			OutNode.Location = TypeToken.Location;
-			const FString TypeName = TypeToken.Text;
+			FString TypeName = TypeToken.Text;
 			const FDreamUISourceLocation TypeLocation = TypeToken.Location;
 			Advance();
+
+			// `Native.Toggle` -- a scoped tag, resolved through the widget registry. The lexer hands
+			// it over as three tokens (identifier, dot, identifier) because a dot elsewhere separates
+			// property path segments; the tag position is the one place they mean a single name, so
+			// they are joined here rather than taught to the lexer. LooksLikeProperty has already
+			// ruled out the property reading before ParseNode is entered. One dot only: a second
+			// segment has no meaning the registry knows.
+			if (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+			{
+				Advance();
+				TypeName = FString::Printf(TEXT("%s.%s"), *TypeName, *Current().Text);
+				OutNode.TypeName = TypeName;
+				Advance();
+			}
 
 			// The type is taken exactly as written and never checked. Whether `Image` is a tag and
 			// whether /Game/UI/WBP_SlotCard loads needs reflection and the asset registry, which is
@@ -1540,7 +1554,22 @@ namespace DreamUIText
 				return false;
 			}
 			const ETokenKind Next = Peek(1).Kind;
-			return Next == ETokenKind::Dot || Next == ETokenKind::Equals || Next == ETokenKind::Arrow
+			if (Next == ETokenKind::Dot)
+			{
+				// A dot no longer settles it: `AnchorData.SizeDelta = ...` is a property, and
+				// `Native.Toggle Mute {` is a node whose tag has a scope. Walk the dotted run and let
+				// what FOLLOWS it decide -- and only an id or an open brace reads as a node, so that a
+				// property missing its '=' (`AnchorData.SizeDelta` alone on a line) still fails as
+				// the property it was meant to be, with the diagnostic that says so.
+				int32 Ahead = 1;
+				while (Peek(Ahead).Kind == ETokenKind::Dot && Peek(Ahead + 1).Kind == ETokenKind::Identifier)
+				{
+					Ahead += 2;
+				}
+				const ETokenKind After = Peek(Ahead).Kind;
+				return After != ETokenKind::Identifier && After != ETokenKind::OpenBrace;
+			}
+			return Next == ETokenKind::Equals || Next == ETokenKind::Arrow
 				|| Next == ETokenKind::EventArrow || Next == ETokenKind::TwoWayArrow;
 		}
 
