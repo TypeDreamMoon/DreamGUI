@@ -126,7 +126,14 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 		{
 			for (UDreamWidget* Widget : AllWidgets)
 			{
-				if (IsValid(Widget))
+				// Skipped the way OnRegister above skips an already-registered widget, and for the same
+				// reason: this walk does not own every widget it covers. It collects the whole subtree,
+				// nested user widgets and all, and anything built by CreateDreamWidget has already
+				// registered and begun on its own -- a nested widget when its own class initialized it,
+				// an `each` list's cells the moment the list was given a data source, which is before
+				// the containing widget is registered at all. BeginPlay asserts rather than tolerating a
+				// second call, so the caller is the one that has to know.
+				if (IsValid(Widget) && !Widget->HasBegunPlay())
 				{
 					Widget->BeginPlay();
 				}
