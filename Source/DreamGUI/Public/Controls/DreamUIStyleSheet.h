@@ -75,6 +75,46 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spin Box")
 	TMap<FName, FDreamSpinBoxStyle> SpinBoxVariants;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Scroll Box")
+	FDreamScrollBoxStyle ScrollBox;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Scroll Box")
+	TMap<FName, FDreamScrollBoxStyle> ScrollBoxVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Scroll Bar")
+	FDreamScrollBarStyle ScrollBar;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Scroll Bar")
+	TMap<FName, FDreamScrollBarStyle> ScrollBarVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "List")
+	FDreamListStyle List;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "List")
+	TMap<FName, FDreamListStyle> ListVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tree View")
+	FDreamTreeViewStyle TreeView;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tree View")
+	TMap<FName, FDreamTreeViewStyle> TreeViewVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab View")
+	FDreamTabViewStyle TabView;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tab View")
+	TMap<FName, FDreamTabViewStyle> TabViewVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dialog")
+	FDreamDialogStyle Dialog;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dialog")
+	TMap<FName, FDreamDialogStyle> DialogVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Expandable Area")
+	FDreamExpandableAreaStyle ExpandableArea;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Expandable Area")
+	TMap<FName, FDreamExpandableAreaStyle> ExpandableAreaVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input Key Selector")
+	FDreamInputKeySelectorStyle InputKeySelector;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input Key Selector")
+	TMap<FName, FDreamInputKeySelectorStyle> InputKeySelectorVariants;
+
 	/**
 	 * The named variant, or the family default when the name is none or matches nothing.
 	 *
@@ -90,6 +130,14 @@ public:
 	const FDreamProgressBarStyle& ProgressBarStyle(FName InVariant) const { return Pick(ProgressBar, ProgressBarVariants, InVariant); }
 	const FDreamRadioButtonStyle& RadioButtonStyle(FName InVariant) const { return Pick(RadioButton, RadioButtonVariants, InVariant); }
 	const FDreamSpinBoxStyle& SpinBoxStyle(FName InVariant) const { return Pick(SpinBox, SpinBoxVariants, InVariant); }
+	const FDreamScrollBoxStyle& ScrollBoxStyle(FName InVariant) const { return Pick(ScrollBox, ScrollBoxVariants, InVariant); }
+	const FDreamScrollBarStyle& ScrollBarStyle(FName InVariant) const { return Pick(ScrollBar, ScrollBarVariants, InVariant); }
+	const FDreamListStyle& ListStyle(FName InVariant) const { return Pick(List, ListVariants, InVariant); }
+	const FDreamTreeViewStyle& TreeViewStyle(FName InVariant) const { return Pick(TreeView, TreeViewVariants, InVariant); }
+	const FDreamTabViewStyle& TabViewStyle(FName InVariant) const { return Pick(TabView, TabViewVariants, InVariant); }
+	const FDreamDialogStyle& DialogStyle(FName InVariant) const { return Pick(Dialog, DialogVariants, InVariant); }
+	const FDreamExpandableAreaStyle& ExpandableAreaStyle(FName InVariant) const { return Pick(ExpandableArea, ExpandableAreaVariants, InVariant); }
+	const FDreamInputKeySelectorStyle& InputKeySelectorStyle(FName InVariant) const { return Pick(InputKeySelector, InputKeySelectorVariants, InVariant); }
 
 private:
 	template<class T>

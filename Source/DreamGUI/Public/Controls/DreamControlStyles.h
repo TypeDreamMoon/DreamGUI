@@ -302,6 +302,22 @@ struct DREAMGUI_API FDreamDropdownStyle
 };
 
 /**
+ * Which silhouette a progress bar draws.
+ *
+ * One control, two shapes, for the reason the slider has one Direction rather than two Blueprint
+ * presets: the parts, the events and the percent are identical, and the only thing that differs is
+ * how the fill is drawn. Radial rides the rect's own RadialFill -- no second visual, no mask.
+ */
+UENUM(BlueprintType)
+enum class EDreamProgressShape : uint8
+{
+	/** A horizontal bar; Percent is the fill's width. */
+	Bar,
+	/** A ring; Percent is the swept angle. */
+	Radial,
+};
+
+/**
  * A progress bar: a track and the filled part of it.
  *
  * No handle colours and no pointer states, because there is no behaviour: what fraction is filled
@@ -331,6 +347,374 @@ struct DREAMGUI_API FDreamProgressBarStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
 	FDreamUIFaceBrush FillBrush;
+
+	/** Radial only: the ring's outer size. The bar shape takes its length from wherever it is placed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style|Radial")
+	FVector2D RadialSize = FVector2D(64.0, 64.0);
+
+	/** Radial only: how thick the ring is, as a fraction of half its size. 1 is a full pie. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style|Radial", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float RadialThickness = 0.25f;
+
+	/** Radial only: where zero percent sits, in degrees clockwise from twelve o'clock. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style|Radial")
+	float RadialStartAngle = 0.0f;
+};
+
+/**
+ * A scroll box: a clipped viewport, the content that slides inside it, and the bars beside it.
+ *
+ * The bar's own look is FDreamScrollBarStyle -- the same struct the standalone scroll bar uses, so
+ * a project styles its bars once and both wear it.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamScrollBarStyle
+{
+	GENERATED_BODY()
+
+	/** Across the bar's axis. Its length comes from whatever it is scrolling. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	float Thickness = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	FColor TrackColor = FColor(38, 42, 52, 255);
+
+	/** The handle carries the pointer transition, the way the slider's does. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	FColor HandleNormal = FColor(74, 81, 98, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	FColor HandleHovered = FColor(96, 105, 126, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	FColor HandlePressed = FColor(120, 132, 158, 255);
+
+	/** Half the thickness is a capsule, which is what a bar reads as with nobody styling it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	FDreamUIFaceBrush TrackBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style")
+	FDreamUIFaceBrush HandleBrush;
+};
+
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamScrollBoxStyle
+{
+	GENERATED_BODY()
+
+	/** Transparent by default: a scroll box is a viewport, not a panel -- the content brings its look. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box Style")
+	FColor Background = FColor(0, 0, 0, 0);
+
+	/** Between the viewport's edge and the content. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box Style")
+	FMargin Padding = FMargin(0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box Style")
+	float CornerRadius = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box Style")
+	FDreamUIFaceBrush BackgroundBrush;
+
+	/** The bars this box shows, when it shows them. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box Style")
+	FDreamScrollBarStyle Bar;
+};
+
+/**
+ * A list: rows built from a source, in a scrolling viewport.
+ *
+ * Row colours are the list's, not the row's: a row is whatever the item template makes it, and the
+ * selection and hover states have to read the same across every template a project writes.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamListStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FColor Background = FColor(38, 42, 52, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	float RowHeight = 30.0f;
+
+	/** Between rows. Zero is the dense list UMG draws by default. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	float RowSpacing = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FMargin Padding = FMargin(0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FColor RowNormal = FColor(0, 0, 0, 0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FColor RowHovered = FColor(74, 81, 98, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FColor RowSelected = FColor(0, 119, 255, 255);
+
+	/** Every other row, when bAlternatingRowColors is on. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FColor RowAlternate = FColor(44, 49, 60, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FColor TextColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	float FontSize = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FDreamUIFaceBrush BackgroundBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FDreamUIFaceBrush RowBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style")
+	FDreamScrollBarStyle Bar;
+};
+
+/** A tree: a list whose rows carry an indent and a twisty. */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamTreeViewStyle
+{
+	GENERATED_BODY()
+
+	/** The rows and the viewport, shared whole with the list -- a tree IS a list that indents. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View Style")
+	FDreamListStyle List;
+
+	/** Per depth level. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View Style")
+	float IndentPerLevel = 16.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View Style")
+	FVector2D TwistySize = FVector2D(14.0, 14.0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View Style")
+	FColor TwistyColor = FColor(140, 147, 166, 255);
+
+	/** Empty keeps the built-in glyphs, the way the check box's state brushes do. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View Style")
+	FDreamUIFaceBrush ExpandedBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View Style")
+	FDreamUIFaceBrush CollapsedBrush;
+};
+
+/** A tab view: a strip of tabs over a switcher of pages. */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamTabViewStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	float TabHeight = 34.0f;
+
+	/** Between tabs. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	float TabSpacing = 4.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FMargin TabPadding = FMargin(14.0f, 4.0f, 14.0f, 4.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor TabNormal = FColor(44, 49, 60, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor TabHovered = FColor(60, 67, 82, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor TabPressed = FColor(38, 42, 52, 255);
+
+	/** The tab whose page is showing. Its own colour, because selection is not a pointer state. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor TabSelected = FColor(52, 57, 70, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor LabelColor = FColor(170, 178, 196, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor LabelSelectedColor = FColor(240, 244, 252, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	float FontSize = 15.0f;
+
+	/** The line under the selected tab. Zero height turns it off. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	float IndicatorThickness = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor IndicatorColor = FColor(0, 119, 255, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FColor PageBackground = FColor(38, 42, 52, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FMargin PagePadding = FMargin(12.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FDreamUIFaceBrush TabBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style")
+	FDreamUIFaceBrush PageBrush;
+};
+
+/** A dialog: a dimmer over the screen, a panel on it, a title, content and buttons. */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamDialogStyle
+{
+	GENERATED_BODY()
+
+	/** The screen behind. Alpha is the whole of it -- a dimmer nobody can see is a dimmer nobody wants. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FColor DimmerColor = FColor(0, 0, 0, 160);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FVector2D PanelSize = FVector2D(420.0, 200.0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FColor PanelBackground = FColor(38, 42, 52, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FMargin PanelPadding = FMargin(20.0f, 16.0f, 20.0f, 16.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FColor TitleColor = FColor(240, 244, 252, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	float TitleFontSize = 19.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FColor MessageColor = FColor(198, 205, 220, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	float MessageFontSize = 15.0f;
+
+	/** Between the title, the message and the button row. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	float Spacing = 12.0f;
+
+	/** Between the buttons. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	float ButtonSpacing = 8.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	float CornerRadius = 8.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FDreamUIFaceBrush PanelBrush;
+
+	/** The buttons are Native.Button instances; this is the style they wear. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FDreamButtonStyle Button;
+
+	/** The confirming button, when a dialog wants it to stand out. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style")
+	FDreamButtonStyle PrimaryButton;
+};
+
+/** An expandable area: a header that toggles, and the content it hides. */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamExpandableAreaStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	float HeaderHeight = 32.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FColor HeaderNormal = FColor(52, 57, 70, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FColor HeaderHovered = FColor(74, 81, 98, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FColor HeaderPressed = FColor(38, 42, 52, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FColor LabelColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	float FontSize = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FMargin HeaderPadding = FMargin(10.0f, 0.0f, 10.0f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FColor ContentBackground = FColor(44, 49, 60, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FMargin ContentPadding = FMargin(10.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FVector2D ArrowSize = FVector2D(14.0, 14.0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FColor ArrowColor = FColor(140, 147, 166, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FDreamUIFaceBrush HeaderBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FDreamUIFaceBrush ContentBrush;
+
+	/** Empty keeps the built-in glyphs, as with the check box's state brushes. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FDreamUIFaceBrush ExpandedBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style")
+	FDreamUIFaceBrush CollapsedBrush;
+};
+
+/** A key binder: a button whose label is the bound key, and which listens when pressed. */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamInputKeySelectorStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	float Height = 34.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	FColor Normal = FColor(52, 57, 70, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	FColor Hovered = FColor(74, 81, 98, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	FColor Pressed = FColor(38, 42, 52, 255);
+
+	/** While it is listening. A different colour is the whole of the "press a key now" feedback. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	FColor Listening = FColor(0, 119, 255, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	FColor LabelColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	float FontSize = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	FMargin ContentPadding = FMargin(12.0f, 4.0f, 12.0f, 4.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style")
+	FDreamUIFaceBrush FaceBrush;
 };
 
 /**
