@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamExpandableArea.h"
 
@@ -13,7 +13,11 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/DreamContentWidget.h"
 #include "Interaction/UIButton.h"
+
+const FName UDreamExpandableArea::ContentSlotName(TEXT("Content"));
+const FName UDreamExpandableArea::HeaderSlotName(TEXT("Header"));
 
 void UDreamExpandableArea::NativeOnInitialized()
 {
@@ -102,12 +106,30 @@ void UDreamExpandableArea::NativeOnInitialized()
 									{
 										InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
 										InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
+									}),
+								// The header's hole, beside the arrow and in the label's place: a section title is
+								// not always a sentence. Empty until a host fills it, at which point the stock
+								// label stands down.
+								Widget("Header").Out(HeaderSlotNode)
+									.With<UDreamNamedSlot>()
+									.Slot([](UDreamPanelSlot& InSlot)
+									{
+										// Fill, like the label it replaces: the two never share the
+										// row, so there is no pair of Fill siblings splitting it.
+										InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
+										InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 									}))),
 				// The hole the consumer fills. A vertical box so several nested widgets stack rather
 				// than pile up, and so the column can be MEASURED -- which is what the control's own
-				// expanded height is read from.
+				// expanded height is read from. Declared as a named slot, and as this control's
+				// default one, so nesting reaches it without the class hand-adopting stray children;
+				// bAcceptsSeveral because the panel is already here.
 				Node<UDreamRectBlock>("Content").Out(ContentNode)
 					.With<UDreamLayoutContainerVerticalBox>()
+					.With<UDreamNamedSlot>([](UDreamNamedSlot& InSlot)
+					{
+						InSlot.bAcceptsSeveral = true;
+					})
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
@@ -124,8 +146,10 @@ void UDreamExpandableArea::NativeOnInitialized()
 				}
 			}));
 
-	// Before the first style push, so the height that push computes already counts the content.
-	AdoptAuthoredChildren();
+	// Nested content reaches the column through the default slot now, which happens after this
+	// function returns -- so the height this push computes counts an empty column, and the push
+	// UDreamUIControl::NativeOnSlotContentAttached makes afterwards is the one that counts the
+	// content. Both run before registration; nothing lays out the intermediate answer.
 	ApplyStyle();
 }
 
@@ -144,6 +168,9 @@ void UDreamExpandableArea::ApplyStyle()
 		// header's is the selectable's to give, which is why only one of the two is set here.
 		ContentVisual->SetColor(Active.ContentBackground);
 	}
+
+	// A supplied header replaces the stock label -- they are the same place in the row.
+	SwapBuiltInForSlot(LabelNode, HeaderSlotNode, HeaderSlotName);
 
 	// The header's one authored number, and the only place it can go that a content measure cannot
 	// out-vote. See the tree comment.
@@ -303,26 +330,6 @@ void UDreamExpandableArea::PushExpansionVisuals()
 	// it answers header plus whatever the content column wants.
 	const float ContentExtent = bIsExpanded ? MeasureContentExtent() : 0.0f;
 	SizeControlHeight(Active.HeaderHeight + ContentExtent);
-}
-
-void UDreamExpandableArea::AdoptAuthoredChildren()
-{
-	if (ContentNode == nullptr)
-	{
-		return;
-	}
-	// A copy: re-parenting mutates the list being walked.
-	TArray<UDreamWidget*> Existing(GetChildren());
-	for (UDreamWidget* Child : Existing)
-	{
-		// Everything except the tree this control just realized for itself. Whatever else is hanging
-		// here was put there by the consumer -- nested in .dui, or dropped in the designer -- and
-		// belongs in the content column rather than beside the control's own root.
-		if (IsValid(Child) && Child != RootNode)
-		{
-			MoveIntoContent(Child);
-		}
-	}
 }
 
 void UDreamExpandableArea::MoveIntoContent(UDreamWidget* InWidget)

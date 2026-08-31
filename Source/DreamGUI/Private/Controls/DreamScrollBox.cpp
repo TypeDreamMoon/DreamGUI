@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamScrollBox.h"
 
@@ -10,7 +10,10 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/DreamContentWidget.h"
 #include "Interaction/UIScrollView.h"
+
+const FName UDreamScrollBox::ContentSlotName(TEXT("Content"));
 
 void UDreamScrollBox::NativeOnInitialized()
 {
@@ -60,8 +63,17 @@ void UDreamScrollBox::NativeOnInitialized()
 						InScroll.SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
 					})
 					.Children(
+						// The scrolled column, and this control's hole. It was reachable only from
+						// code (AddContent) until it became a named slot: `Native.ScrollBox { ... }`
+						// left its children hanging beside the control's own root, drawn nowhere and
+						// scrolled by nothing. bAcceptsSeveral because the stack is already here --
+						// a scroll box that took one child would be a scroll box nobody wants.
 						Widget("Content").Out(ContentNode)
-							.With<UDreamLayoutContainerStackBox>()),
+							.With<UDreamLayoutContainerStackBox>()
+							.With<UDreamNamedSlot>([](UDreamNamedSlot& InSlot)
+							{
+								InSlot.bAcceptsSeveral = true;
+							})),
 				Nested<UDreamScrollBar>("ScrollBar").Out(ScrollBarNode))
 			.Then([this](UDreamWidget& InRoot)
 			{

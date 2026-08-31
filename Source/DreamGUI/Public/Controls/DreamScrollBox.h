@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -96,6 +96,12 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Box")
 	TObjectPtr<UDreamWidget> ContentNode = nullptr;
+
+	virtual TArray<FName> GetNativeSlotNames() const override { return { ContentSlotName }; }
+	virtual FName GetDefaultSlotName() const override { return ContentSlotName; }
+
+	/** Named once: the declaration, the node's display name and the binding key are the same string. */
+	static const FName ContentSlotName;
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Box")
 	TObjectPtr<UDreamScrollBar> ScrollBarNode = nullptr;

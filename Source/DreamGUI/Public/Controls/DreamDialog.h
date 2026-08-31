@@ -166,6 +166,19 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
 	TObjectPtr<UDreamWidget> TitleNode = nullptr;
 
+	/**
+	 * The hole in the middle band. Empty is the normal state; what a host puts here replaces the
+	 * built-in message, which is its overlay sibling rather than its child for exactly that reason.
+	 */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
+	TObjectPtr<UDreamWidget> BodyNode = nullptr;
+
+	virtual TArray<FName> GetNativeSlotNames() const override { return { BodySlotName }; }
+	virtual FName GetDefaultSlotName() const override { return BodySlotName; }
+
+	/** Named once: the declaration, the node's display name and the binding key are the same string. */
+	static const FName BodySlotName;
+
 	/** The middle band. Holds MessageNode, and is where a consumer's own content goes. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
 	TObjectPtr<UDreamWidget> ContentNode = nullptr;

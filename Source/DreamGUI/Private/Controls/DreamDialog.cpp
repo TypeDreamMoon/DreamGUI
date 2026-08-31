@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamDialog.h"
 
@@ -13,6 +13,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/DreamContentWidget.h"
 #include "Interaction/DreamUIModal.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIEventBlocker.h"
@@ -28,6 +29,8 @@ UDreamDialog::UDreamDialog()
 	Buttons.Emplace(LOCTEXT("DefaultCancel", "Cancel"), TEXT("Cancel"), false);
 	Buttons.Emplace(LOCTEXT("DefaultConfirm", "OK"), TEXT("Confirm"), true);
 }
+
+const FName UDreamDialog::BodySlotName(TEXT("Body"));
 
 void UDreamDialog::NativeOnInitialized()
 {
@@ -98,6 +101,17 @@ void UDreamDialog::NativeOnInitialized()
 										InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Left);
 										InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Top);
 									})
+									.Slot([](UDreamPanelSlot& InSlot)
+									{
+										InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
+										InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
+									}),
+								// The slot that comment promised. A SIBLING of the message rather
+								// than a wrapper around it: "is this hole filled" is read off the
+								// node's children, so a hole that also held the built-in occupant
+								// would answer yes before anyone put anything in it.
+								Widget("Body").Out(BodyNode)
+									.With<UDreamNamedSlot>()
 									.Slot([](UDreamPanelSlot& InSlot)
 									{
 										InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
@@ -218,6 +232,10 @@ void UDreamDialog::ApplyStyle()
 	};
 	PushText(TitleNode, Title, Active.TitleColor, Active.TitleFontSize);
 	PushText(MessageNode, Message, Active.MessageColor, Active.MessageFontSize);
+	// The supplied body wins over the built-in sentence: they overlay the same band, so showing both
+	// draws one through the other. Narrowing what PushText just decided rather than overwriting it --
+	// an empty message stays away whether or not anything filled the hole.
+	SwapBuiltInForSlot(MessageNode, BodyNode, BodySlotName, !Message.IsEmpty());
 
 	if (ButtonRowNode != nullptr)
 	{

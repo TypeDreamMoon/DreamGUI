@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamButton.h"
 
@@ -12,7 +12,10 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/DreamContentWidget.h"
 #include "Interaction/UIButton.h"
+
+const FName UDreamButton::ContentSlotName(TEXT("Content"));
 
 void UDreamButton::NativeOnInitialized()
 {
@@ -34,6 +37,17 @@ void UDreamButton::NativeOnInitialized()
 						InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
 						InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
 					})
+					.Slot([](UDreamPanelSlot& InSlot)
+					{
+						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
+						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
+					}),
+				// The hole, over the label rather than beside it: the two are alternatives, and
+				// ApplyStyle stands the label down whenever this holds anything. Fill on both axes so
+				// whatever the host puts here gets the whole face to arrange itself in, exactly as
+				// the label does; the node itself draws nothing.
+				Widget("Content").Out(ContentNode)
+					.With<UDreamNamedSlot>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
@@ -66,6 +80,10 @@ void UDreamButton::ApplyStyle()
 		LabelVisual->SetColor(Active.LabelColor);
 		LabelVisual->SetFontSize(Active.FontSize);
 	}
+	// Content wins over the stock label. Here rather than at attach time because ApplyStyle is the
+	// one function every road already ends at -- initialize, a property edit, a runtime restyle --
+	// and a rule enforced in only some of them is a rule that holds until someone recolours.
+	SwapBuiltInForSlot(LabelNode, ContentNode, ContentSlotName);
 	if (UDreamPanelSlot* LabelSlot = LabelNode != nullptr ? LabelNode->GetPanelSlot() : nullptr)
 	{
 		LabelSlot->SetPadding(Active.ContentPadding);

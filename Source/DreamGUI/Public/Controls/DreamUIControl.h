@@ -51,6 +51,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Style")
 	virtual void ApplyStyle() {}
 
+	/**
+	 * The style push is what reads the holes -- DeactivateWhenSlotFilled and anything else that has
+	 * to know what a host supplied -- and the FIRST push cannot have seen them: it happens at the
+	 * end of NativeOnInitialized, and content arrives after that. So push again once the holes are
+	 * real.
+	 *
+	 * Only for a control that opens holes at all. For every other one this would be a second
+	 * identical push, and "harmless duplicate work in the common path" is how a control family gets
+	 * slow one honest line at a time.
+	 */
+	virtual void NativeOnSlotContentAttached() override
+	{
+		if (GetNativeSlotNames().Num() > 0)
+		{
+			ApplyStyle();
+		}
+	}
+
 protected:
 	/**
 	 * Round a face. Every control's face is a procedural rect now -- that is where most of the UMG
@@ -100,6 +118,76 @@ protected:
 		if (UDreamPanelSlot* Slot = GetPanelSlot())
 		{
 			Slot->SyncAuthoredDesiredSizeFromWidget();
+		}
+	}
+
+	/**
+	 * Authored size for the CONTROL itself, both axes -- for a control that has no "length comes
+	 * from whoever placed it" axis at all. A circle has no long side, so a ring states its own
+	 * width the same way everything else states its own height.
+	 *
+	 * Syncs the slot's desired-size snapshot rather than re-capturing the whole authored rect
+	 * (which is what SizeFace does, and what makes it a helper for PARTS): the control's live
+	 * anchors may already be holding layout output, and CaptureAuthoredGeometry would enshrine
+	 * that as the restore target. Same call, and same reason, as SizeControlHeight.
+	 */
+	void SizeControl(const FVector2D& InSize)
+	{
+		SetWidth(static_cast<float>(InSize.X));
+		SetHeight(static_cast<float>(InSize.Y));
+		if (UDreamPanelSlot* Slot = GetPanelSlot())
+		{
+			Slot->SyncAuthoredDesiredSizeFromWidget();
+		}
+	}
+
+	/**
+	 * Whether the host put anything in InSlotName.
+	 *
+	 * Reads the ATTACHMENT rather than the NamedSlotContent binding, because unslotted content --
+	 * .dui nesting, a designer drop -- reaches the default slot through AdoptUnslottedChildren and
+	 * never appears in that map. What is hanging in the hole is the question every caller here
+	 * actually has.
+	 *
+	 * Which makes a slot node's emptiness load-bearing: it must hold NOTHING but slot content. A
+	 * control whose built-in occupant lives in the same node reads as permanently filled -- so the
+	 * dialog's message is a SIBLING of its body slot rather than a child of it, and stands down when
+	 * that slot fills.
+	 */
+	bool IsSlotFilled(FName InSlotName) const
+	{
+		const UDreamWidget* SlotWidget = FindSlotWidget(InSlotName);
+		return SlotWidget != nullptr && SlotWidget->GetChildrenCount() > 0;
+	}
+
+	/**
+	 * The built-in part and the hole are alternatives: exactly one of the two is awake.
+	 *
+	 * A control's stock label (or message, or header) and the slot that replaces it occupy the same
+	 * place -- they are two answers to "what is in here", and leaving both awake means one drawn
+	 * over the other, or two Fill siblings splitting a row that only one of them is using. Content
+	 * wins: a host that filled the hole said what it wanted there.
+	 *
+	 * Only where a built-in alternative actually exists. A hole with nothing to replace -- the
+	 * expander's content column, the scroll box's stack -- has its own reasons to be awake or not,
+	 * and this would overwrite them.
+	 *
+	 * bInBuiltInWanted is that part's OWN answer, which this narrows rather than replaces. The
+	 * dialog's message is already put away when it is empty (an absent sentence must not reserve a
+	 * line), and a swap that simply wrote `!filled` would wake it back up -- two rules about one
+	 * widget's visibility, with the last writer quietly winning.
+	 */
+	void SwapBuiltInForSlot(UDreamWidget* InBuiltIn, UDreamWidget* InSlotNode, FName InSlotName,
+		bool bInBuiltInWanted = true) const
+	{
+		const bool bFilled = IsSlotFilled(InSlotName);
+		if (InBuiltIn != nullptr)
+		{
+			InBuiltIn->SetWidgetActive(bInBuiltInWanted && !bFilled);
+		}
+		if (InSlotNode != nullptr)
+		{
+			InSlotNode->SetWidgetActive(bFilled);
 		}
 	}
 

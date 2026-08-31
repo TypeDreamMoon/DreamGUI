@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -29,13 +29,17 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamExpandableAreaExpansionChanged
  *
  * Nesting, plainly. The text builder attaches a node's children to the widget it just built
  * (BuildNode's TrySetParent), so those widgets arrive as children of THIS control, sitting beside
- * the tree the control realized for itself -- and this class adopts them into its content column at
- * initialize. UDreamNamedSlot, the class-model idiom, is deliberately NOT used: a host's
- * NamedSlotContent is hung by UDreamWidgetGeneratedClass::InitializeWidgetStatic, which returns
- * before any of that for a class with no widget-tree archetype, and a native control never has one.
- * A slot declared here would be a hole nothing could ever fill. Code that assembles a hierarchy by
- * hand calls SetContent instead; the designer's drag into this control lands as a child, which is
- * the same road as the .dui above.
+ * the tree the control realized for itself -- and the content column is this control's DEFAULT
+ * NAMED SLOT, so they are moved into it for free.
+ *
+ * That used to be a hand-written adoption pass here, with a comment explaining that UDreamNamedSlot
+ * could not be used: a host's NamedSlotContent was hung by InitializeWidgetStatic, which returns
+ * immediately for a class with no widget-tree archetype, and a native control never has one -- so a
+ * slot declared here would have been a hole nothing could fill. That gate is gone (slots are now
+ * filled from UDreamUserWidget::Initialize, after NativeOnInitialized, which is the first moment
+ * BOTH kinds of contents exist), and with it the reason to hand-roll this. Code that assembles a
+ * hierarchy by hand can still call SetContent; the designer's drag into this control lands as a
+ * child, which is the same road as the .dui above.
  *
  * UMG parity is UExpandableArea's core: bIsExpanded, SetIsExpanded, OnExpansionChanged -- plus the
  * library's OnValueChangedBP, because the expanded flag is a value and `<->` binds against it.
@@ -136,6 +140,22 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Expandable Area")
 	TObjectPtr<UUIButton> HeaderBehaviour = nullptr;
 
+	/** The header's hole, in the stock label's place. Empty is the normal state. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Expandable Area")
+	TObjectPtr<UDreamWidget> HeaderSlotNode = nullptr;
+
+	/**
+	 * Two holes: the body, which nesting fills, and the header, which has to be named. The default
+	 * is the body because that is what nesting means here -- a section's content is the thing you
+	 * write inside it, and a custom title bar is the deliberate case.
+	 */
+	virtual TArray<FName> GetNativeSlotNames() const override { return { ContentSlotName, HeaderSlotName }; }
+	virtual FName GetDefaultSlotName() const override { return ContentSlotName; }
+
+	/** Named once each: the declaration, the node's display name and the binding key are the same string. */
+	static const FName ContentSlotName;
+	static const FName HeaderSlotName;
+
 protected:
 	virtual void NativeOnInitialized() override;
 
@@ -148,14 +168,6 @@ private:
 	 * is not the user opening the section, which is the same line UDreamToggle draws.
 	 */
 	void PushExpansionVisuals();
-
-	/**
-	 * Take the children the consumer nested on this control and move them into the content column.
-	 *
-	 * Runs once, right after the control's own tree exists, and skips that tree's root. See the class
-	 * comment for why nesting -- rather than a named slot -- is the idiom a .dui author can reach.
-	 */
-	void AdoptAuthoredChildren();
 
 	/** One re-parent into the content column, with the slot the column hands out captured. */
 	void MoveIntoContent(UDreamWidget* InWidget);
