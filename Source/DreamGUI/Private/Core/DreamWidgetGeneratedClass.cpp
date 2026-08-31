@@ -3,10 +3,130 @@
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Components/DreamVisual.h"
 #include "DreamGUI.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
+
+namespace
+{
+	/**
+	 * Given an object that lives in the archetype tree, find the object that plays the same part in an
+	 * instance of it. Widgets are outered flat to the tree (UDreamWidgetTree::ConstructWidget), so the
+	 * owning widget of any subobject is one hop out, and matching that one widget by name is the whole
+	 * job -- the property's own type then says which of its parts was wanted.
+	 */
+	UObject* FindIntraTreeCounterpart(const UObject* InArchetypeValue, const UDreamWidgetTree* InInstancedTree)
+	{
+		const UDreamWidget* ArchetypeWidget = Cast<UDreamWidget>(InArchetypeValue);
+		const bool bWantsTheWidgetItself = ArchetypeWidget != nullptr;
+		if (ArchetypeWidget == nullptr)
+		{
+			ArchetypeWidget = InArchetypeValue->GetTypedOuter<UDreamWidget>();
+		}
+		if (ArchetypeWidget == nullptr)
+		{
+			return nullptr;
+		}
+
+		UDreamWidget* InstancedWidget = InInstancedTree->FindWidgetByVariableName(
+			UDreamWidgetTree::MakeWidgetVariableName(ArchetypeWidget));
+		if (InstancedWidget == nullptr)
+		{
+			return nullptr;
+		}
+		if (bWantsTheWidgetItself)
+		{
+			return InstancedWidget;
+		}
+		if (InArchetypeValue->IsA(UDreamVisual::StaticClass()))
+		{
+			return InstancedWidget->GetVisual();
+		}
+		// A behaviour: UUISelectable's six explicit-navigation members and UUIToggle::ToggleGroup all
+		// name one on a sibling node. Matched by position rather than by class, because a widget may
+		// carry two behaviours of the same class and only the index tells them apart -- Components is
+		// UPROPERTY(Instanced), so the instance's array is the archetype's, in order.
+		const int32 ComponentIndex = ArchetypeWidget->GetAllComponents().IndexOfByPredicate(
+			[InArchetypeValue](const UDreamUIBehaviour* InCandidate) { return InCandidate == InArchetypeValue; });
+		if (ComponentIndex != INDEX_NONE && InstancedWidget->GetAllComponents().IsValidIndex(ComponentIndex))
+		{
+			UDreamUIBehaviour* Counterpart = InstancedWidget->GetAllComponents()[ComponentIndex];
+			if (Counterpart != nullptr && Counterpart->GetClass() == InArchetypeValue->GetClass())
+			{
+				return Counterpart;
+			}
+		}
+		return nullptr;
+	}
+
+	/** Rewrite one container's object properties that still name the archetype tree. */
+	void RetargetReferencesOn(UObject* InContainer, UDreamWidgetTree* InInstancedTree, const UDreamWidgetTree* InArchetypeTree)
+	{
+		if (!IsValid(InContainer))
+		{
+			return;
+		}
+		for (TFieldIterator<FObjectPropertyBase> It(InContainer->GetClass(), EFieldIterationFlags::Default); It; ++It)
+		{
+			// Soft and class references cannot name a node of a tree, and walking them would resolve
+			// paths for nothing.
+			if (It->IsA<FSoftObjectProperty>() || It->IsA<FClassProperty>())
+			{
+				continue;
+			}
+			UObject* Value = It->GetObjectPropertyValue_InContainer(InContainer);
+			// The criterion is where the value lives, not how it is typed: anything still inside the
+			// archetype tree is by construction the wrong object for this instance to be holding.
+			if (Value == nullptr || !Value->IsIn(InArchetypeTree))
+			{
+				continue;
+			}
+			if (UObject* Counterpart = FindIntraTreeCounterpart(Value, InInstancedTree))
+			{
+				It->SetObjectPropertyValue_InContainer(InContainer, Counterpart);
+			}
+			else
+			{
+				// Left pointing into the template rather than nulled: a stale pointer at least keeps the
+				// old behaviour, and the log names the property so the cause is not a mystery.
+				UE_LOG(DreamGUI, Warning,
+					TEXT("[%s].%d '%s.%s' points at '%s' in the class template and has no counterpart in this instance; left as authored."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContainer->GetName(), *It->GetName(), *Value->GetName());
+			}
+		}
+	}
+
+	/**
+	 * The instancing graph redirects only properties marked Instanced. A plain -- or weak -- pointer
+	 * from one node of the tree to another is copied verbatim, so every instance would keep naming the
+	 * archetype's object: one shared by all instances of the class, and one that is never drawn.
+	 * UUISlider::Fill/Handle, UUISelectable::TransitionTarget and .dui node references all have this
+	 * shape, and UUISelectable::Start's `if (!TransitionTarget.IsValid())` self-heal cannot see it --
+	 * a pointer at the template is perfectly valid.
+	 *
+	 * Same defect, and same fix, as UUIRecyclableScrollView::Content in UDreamUserWidget::
+	 * ResolveEachBindings: re-resolve by name, per instance.
+	 */
+	void RetargetIntraTreeReferences(UDreamWidgetTree* InInstancedTree, const UDreamWidgetTree* InArchetypeTree)
+	{
+		if (InInstancedTree == nullptr || InArchetypeTree == nullptr)
+		{
+			return;
+		}
+		InInstancedTree->ForEachWidget([&](UDreamWidget* Widget)
+		{
+			RetargetReferencesOn(Widget, InInstancedTree, InArchetypeTree);
+			RetargetReferencesOn(Widget->GetVisual(), InInstancedTree, InArchetypeTree);
+			for (UDreamUIBehaviour* Behaviour : Widget->GetAllComponents())
+			{
+				RetargetReferencesOn(Behaviour, InInstancedTree, InArchetypeTree);
+			}
+		});
+	}
+}
 
 #if WITH_EDITOR
 void UDreamWidgetGeneratedClass::SetWidgetTreeArchetype(UDreamWidgetTree* InWidgetTree)
@@ -75,6 +195,10 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 	// 2. Parent is DuplicateTransient, so the instanced tree arrives with the structure intact and
 	//    every back-pointer empty. Nothing below may run before this.
 	InstancedTree->RebuildParentLinks();
+
+	// 2b. Re-aim the pointers that run from one node of the tree to another. Done here, with the rest
+	//     of "make the instanced tree whole", and before anything below reads them.
+	RetargetIntraTreeReferences(InstancedTree, InWidgetTreeArchetype);
 
 	// 3. Bind each widget to the class property of the same name -- this is BindDreamWidget, and it is the
 	//    same shape UMG uses (walk the tree, look the name up in the class's object properties).

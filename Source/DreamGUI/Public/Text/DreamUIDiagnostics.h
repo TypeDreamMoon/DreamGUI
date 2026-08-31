@@ -230,6 +230,16 @@ enum class EDreamUIDiagnosticCode : int32
 	 * reader's move is the same -- restructure the block; the message names which rule.
 	 */
 	EachMisplaced = 5012,
+	/**
+	 * A property pointed at a node id this file does not declare.
+	 *
+	 * The node-reference twin of AssetNotFound, and split from the type check for the same reason
+	 * the asset case is: "no node named CheckMark" and "CheckMark is not the kind of thing this
+	 * property holds" are different mistakes and only the first one is about the NAME. A node that
+	 * exists but creates no visual, or is the wrong widget class, is a ValueTypeMismatch -- the same
+	 * code an asset path raises when it loads something the property cannot take.
+	 */
+	NodeReferenceNotFound = 5013,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */

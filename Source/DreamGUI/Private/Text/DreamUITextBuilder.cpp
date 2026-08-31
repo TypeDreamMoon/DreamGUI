@@ -139,6 +139,34 @@ namespace DreamUITextBuilderLocal
 		return BestDistance <= Ceiling ? Best : FString();
 	}
 
+	/**
+	 * The nearest node id in a built tree, for a `Prop = SomeNode` line that named nothing.
+	 *
+	 * Over DISPLAY names rather than variable names, because the display name is the id the author
+	 * typed and the one they have to correct; the sanitized form is an implementation detail they
+	 * never see. Only ever asked after a lookup has already failed, like the two above.
+	 */
+	FString SuggestNearestNodeId(const FString& InName, const UDreamWidgetTree* InTree)
+	{
+		if (InTree == nullptr)
+		{
+			return FString();
+		}
+		FString Best;
+		int32 BestDistance = MAX_int32;
+		InTree->ForEachWidget([&Best, &BestDistance, &InName](UDreamWidget* Widget)
+		{
+			const int32 Distance = EditDistance(InName, Widget->GetDisplayName());
+			if (Distance < BestDistance)
+			{
+				BestDistance = Distance;
+				Best = Widget->GetDisplayName();
+			}
+		});
+		const int32 Ceiling = FMath::Max(2, InName.Len() / 3);
+		return BestDistance <= Ceiling ? Best : FString();
+	}
+
 	/** " (did you mean 'FontSize'?)", or nothing. Kept out of the message sites so they stay readable. */
 	FString FormatSuggestion(const FString& InSuggestion)
 	{
@@ -271,7 +299,12 @@ namespace DreamUITextBuilderLocal
 			OutReason = TEXT("it is transient -- nothing written to it would survive being saved");
 			return false;
 		}
-		if (InProperty->HasAnyPropertyFlags(CPF_InstancedReference))
+		// A weak reference is never a containment edge: it keeps nothing alive, so writing one cannot
+		// make the structure and the Children array disagree. It carries the flag anyway, because
+		// UDreamVisual is DefaultToInstanced and UHT sets CPF_InstancedReference from the class rather
+		// than from the pointer -- which is why UUIToggle::ToggleTransitionTarget, a property whose whole
+		// job is to POINT AT another node's visual, was refused as if it owned one.
+		if (InProperty->HasAnyPropertyFlags(CPF_InstancedReference) && !InProperty->IsA<FWeakObjectProperty>())
 		{
 			OutReason = TEXT("it holds part of the widget's object graph, which is authored by nesting and by '+', not assigned");
 			return false;
@@ -308,6 +341,30 @@ namespace DreamUITextBuilderLocal
 		FString LocalizationDiscriminator;
 	};
 
+	/**
+	 * One `Prop = SomeNode` line, held until the whole tree exists.
+	 *
+	 * A node is regularly referenced from ABOVE its own declaration -- a toggle at the top of a file
+	 * pointing at the check mark nested three levels below it -- and properties are written on the
+	 * way DOWN the tree, so at the moment the line is read its target usually has not been built. The
+	 * destination is fully resolved here (that part only needs the object being written to, which
+	 * does exist); only the lookup and the write wait. See ResolveNodeReferences.
+	 *
+	 * LeafValuePtr is an address inside a UObject, which never moves, and no object a property was
+	 * resolved against is destroyed later in the walk -- a node that fails gives up before any of its
+	 * properties are applied.
+	 */
+	struct FPendingNodeReference
+	{
+		const FObjectPropertyBase* Property = nullptr;
+		void* LeafValuePtr = nullptr;
+		/** The id exactly as written: sanitized for the lookup, quoted verbatim in the message. */
+		FString NodeId;
+		/** For the message only -- the destination above is already resolved. */
+		FString PropertyName;
+		FDreamUISourceLocation Location;
+	};
+
 	struct FBuildContext
 	{
 		const FDreamUIAst* Ast = nullptr;
@@ -321,6 +378,8 @@ namespace DreamUITextBuilderLocal
 		/** Non-null while building an `each` body: item-scoped bindings divert into it. */
 		FDreamWidgetEachBinding* ActiveEach = nullptr;
 		FString ActiveLoopVariable;
+		/** Filled during the walk, drained by ResolveNodeReferences once the tree is whole. */
+		TArray<FPendingNodeReference> NodeReferences;
 		/** ClassPath, or the source name when the file declares no class. Fixed for the whole build. */
 		FString LocalizationNamespace;
 	};
@@ -584,6 +643,30 @@ namespace DreamUITextBuilderLocal
 		return &Resource->Value;
 	}
 
+	/**
+	 * Whether a bare name written on this property means a node in this file rather than an asset.
+	 *
+	 * Exactly the two class hierarchies the language can NAME: a node builds a UDreamWidget, that
+	 * widget may own a UDreamVisual, and nothing else in a tree has an identity the file wrote down.
+	 * Deliberately not widened to every object property -- on a UTexture2D* the only thing a bare
+	 * name can be is a mistyped asset path, and reporting that as a missing node would send the
+	 * reader looking for a node they never meant to write.
+	 */
+	bool IsNodeReferenceProperty(const FObjectPropertyBase* InProperty)
+	{
+		const UClass* Wanted = InProperty->PropertyClass;
+		// The three things a node can supply: itself, its visual, and a behaviour on it. Nothing else in
+		// the library is a per-node object, and each of the three is named by the property's own type --
+		// UDreamWidget, UDreamVisual and UDreamUIBehaviour share no ancestor below UObject, so no value
+		// is ambiguous about which was meant. Behaviours are here because a whole family of properties
+		// exists only to name one on a sibling: UUISelectable's six explicit-navigation members and
+		// UUIToggle::ToggleGroup.
+		return Wanted != nullptr
+			&& (Wanted->IsChildOf(UDreamWidget::StaticClass())
+				|| Wanted->IsChildOf(UDreamVisual::StaticClass())
+				|| Wanted->IsChildOf(UDreamUIBehaviour::StaticClass()));
+	}
+
 	bool WriteValue(const FResolvedDestination& InDestination, const FDreamUINode& InNode,
 		const FDreamUIProperty& InProperty, FBuildContext& InContext)
 	{
@@ -728,11 +811,41 @@ namespace DreamUITextBuilderLocal
 			return true;
 		}
 
-		if (const FObjectProperty* AsObject = CastField<FObjectProperty>(Leaf))
+		// FObjectPropertyBase, not FObjectProperty. TObjectPtr, TWeakObjectPtr and TLazyObjectPtr are
+		// SIBLINGS under that base, not a chain, so the narrower cast silently excluded every weak
+		// reference in the library -- UUISelectable::TransitionTarget, UUIToggle::ToggleTransitionTarget
+		// and UUISlider::Fill/Handle are all TWeakObjectPtr. They did not fail outright, which is why
+		// it went unnoticed: they fell past here to ImportText_Direct, which does resolve an asset
+		// path, but reports a miss as ValueTypeMismatch instead of AssetNotFound and -- worse --
+		// searches every loaded package by bare name (ParseObjectPropertyValue defaults
+		// bAllowAnyPackage to true), so a typo could bind to whatever object happened to share it.
+		// The write-back has read this family through FObjectPropertyBase all along; this side was
+		// the odd one out. FSoftObjectProperty is a sibling too and is claimed by the branch above,
+		// which is why that one has to stay ahead of this one.
+		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(Leaf))
 		{
 			if (Value.Raw.IsEmpty() || Value.Raw == TEXT("None"))
 			{
 				AsObject->SetObjectPropertyValue(ValuePtr, nullptr);
+				return true;
+			}
+			// A widget- or visual-typed property is the one destination where a bare name can mean
+			// something this same file declares, so it is read as a node id. No new syntax is needed
+			// to tell the two apart: an asset path always begins with '/' and a node id never can,
+			// being required to be a C++ identifier (InvalidNodeId).
+			//
+			// Recorded rather than resolved, and that is the whole difficulty: the node named may be
+			// declared BELOW the line naming it -- a toggle pointing at its own check mark is the
+			// motivating case -- and this walk is what is still building the file. See
+			// FPendingNodeReference.
+			if (IsNodeReferenceProperty(AsObject) && !Value.Raw.StartsWith(TEXT("/")))
+			{
+				FPendingNodeReference& Pending = InContext.NodeReferences.AddDefaulted_GetRef();
+				Pending.Property = AsObject;
+				Pending.LeafValuePtr = ValuePtr;
+				Pending.NodeId = Value.Raw;
+				Pending.PropertyName = InProperty.Name;
+				Pending.Location = Value.Location;
 				return true;
 			}
 			// Loaded rather than soft-referenced: a class template holds the same hard reference an
@@ -1580,6 +1693,81 @@ namespace DreamUITextBuilderLocal
 		}
 		return Template;
 	}
+
+	/**
+	 * Every `Prop = SomeNode` line the walk deferred, now that every node it could name exists.
+	 *
+	 * One flat pass, not a fixpoint: a node reference resolves to a WIDGET, never to another pending
+	 * reference, so nothing here can unblock anything else here. In collection order, so a node line
+	 * still overrides the style line that wrote the same property -- assignment order is override
+	 * order, and deferring these must not quietly stop being true of them.
+	 */
+	void ResolveNodeReferences(FBuildContext& InContext)
+	{
+		for (const FPendingNodeReference& Pending : InContext.NodeReferences)
+		{
+			// The tree's own lookup, sanitized with the tree's own function. The author writes a node
+			// id and what the tree matches on is that id sanitized into an identifier, and a private
+			// copy of that walk is exactly how `Ok Btn` becomes a member variable for the compiler and
+			// comes back null here -- the same trap MakeWidgetVariableName exists to close.
+			UDreamWidget* Named = InContext.Tree->FindWidgetByVariableName(
+				FName(*UDreamWidgetTree::SanitizeIdentifier(Pending.NodeId)));
+			if (!IsValid(Named))
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NodeReferenceNotFound, Pending.Location,
+					FString::Printf(TEXT("'%s' names no node in this file, so '%s' has nothing to point at%s"),
+						*Pending.NodeId, *Pending.PropertyName,
+						*FormatSuggestion(SuggestNearestNodeId(Pending.NodeId, InContext.Tree))));
+				continue;
+			}
+
+			UClass* Wanted = Pending.Property->PropertyClass;
+			// A choice, not a fallback: UDreamWidget, UDreamVisual and UDreamUIBehaviour share no
+			// ancestor below UObject, so the property's type says unambiguously which part of the named
+			// node the author meant. Coercing to the visual is what lets a transition be aimed at
+			// `CheckMark` rather than at some second name for the same node.
+			UObject* Resolved = nullptr;
+			const TCHAR* MissingPartAdvice = nullptr;
+			if (Wanted->IsChildOf(UDreamVisual::StaticClass()))
+			{
+				Resolved = Named->GetVisual();
+				MissingPartAdvice = TEXT("give that node a visual tag such as 'Image'");
+			}
+			else if (Wanted->IsChildOf(UDreamUIBehaviour::StaticClass()))
+			{
+				Resolved = Named->GetComponent(Wanted);
+				MissingPartAdvice = TEXT("add that behaviour to the node with '+'");
+			}
+			else
+			{
+				Resolved = Named;
+			}
+			if (Resolved == nullptr)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Pending.Location,
+					FString::Printf(TEXT("'%s' has no %s, and '%s' takes one -- %s"),
+						*Pending.NodeId, *Wanted->GetName(), *Pending.PropertyName, MissingPartAdvice));
+				continue;
+			}
+			if (!Resolved->IsA(Wanted))
+			{
+				// The same code and the same sentence an asset gets when it loads and turns out to be
+				// the wrong class. The reader's move is identical, so the code is.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Pending.Location,
+					FString::Printf(TEXT("'%s' is a %s, and '%s' takes a %s"), *Pending.NodeId,
+						*Resolved->GetClass()->GetName(), *Pending.PropertyName, *Wanted->GetName()));
+				continue;
+			}
+			// This write lands in the class TEMPLATE, and a non-Instanced object reference is copied
+			// verbatim into every instance -- InitializeWidgetStatic instances the tree with an
+			// FObjectInstancingGraph, which re-aims only properties carrying CPF_InstancedReference.
+			// Left at that, every instance's toggle would drive the ARCHETYPE's visual: one object
+			// shared by all of them and never drawn. What makes this write correct is the pass that
+			// runs one layer up -- RetargetIntraTreeReferences, called from InitializeWidgetStatic --
+			// which re-resolves any pointer still naming the template against the instance's own tree.
+			Pending.Property->SetObjectPropertyValue(Pending.LeafValuePtr, Resolved);
+		}
+	}
 }
 
 UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* InOuter,
@@ -1621,6 +1809,12 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	// the tree's invariant is that Parent is derivable from Children, and a builder that leaves it
 	// almost-true hands the designer a tree whose GetParent() is null in one place nobody looks.
 	Context.Tree->RebuildParentLinks();
+
+	// Last, because it is the one pass that needs the finished tree: a property may name a node
+	// declared below the line that points at it, and the walk above only ever knows what it has
+	// already passed. After the parent links rather than before, so what it resolves against is a
+	// tree with no half-set invariant left in it.
+	ResolveNodeReferences(Context);
 
 	return OutDiagnostics.NumErrors() > ErrorsBefore ? nullptr : Context.Tree;
 }
