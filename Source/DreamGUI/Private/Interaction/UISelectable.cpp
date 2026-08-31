@@ -171,7 +171,13 @@ void UUISelectable::OnInteractableChanged(bool IsEnabled)
 	Super::OnInteractableChanged(IsEnabled);
 	CurrentSelectionState = GetSelectionState();
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//is editor, just set properties immediately
+	// Null world included, and taking the immediate branch is the only thing that CAN work there:
+	// the tween manager is a world subsystem, so the animated path has nothing to animate with.
+	// A selectable reaches this with no world whenever something disables a widget outside a game --
+	// a headless test, or a Blueprint's authoring tree, whose outer is the Blueprint. (Its caller,
+	// UDreamUIBehaviour::Call_OnInteractableChanged, carries the same guard for the same reason.)
+	const UWorld* SelectableWorld = this->GetWorld();
+	if (SelectableWorld == nullptr || !SelectableWorld->IsGameWorld())//is editor, just set properties immediately
 	{
 		ApplyPointerSelectionState(true);
 	}

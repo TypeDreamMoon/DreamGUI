@@ -423,7 +423,15 @@ void UDreamUIBehaviour::OnRaycastableChanged(bool Raycastable)
 void UDreamUIBehaviour::Call_OnInteractableChanged(bool Interactable)
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	// A widget can genuinely have NO world -- a headless test, and a Blueprint's authoring tree,
+	// whose outer is the Blueprint rather than a world. UDreamWidget::SetInteractable broadcasts
+	// here through CalculateInteractable_Recursive, so any caller in either of those places used to
+	// dereference null: UDreamRingMenu was simply the first control to disable one of its own parts.
+	// A missing world is not a game world, so it takes the same branch edit mode does -- which is
+	// the branch that actually delivers the state change (Call_OnTransformChanged's older guard
+	// returns instead, and a selectable left un-notified is one that never goes grey).
+	const UWorld* BehaviourWorld = this->GetWorld();
+	if (BehaviourWorld == nullptr || !BehaviourWorld->IsGameWorld())//edit mode
 	{
 		OnInteractableChanged(Interactable);
 	}
