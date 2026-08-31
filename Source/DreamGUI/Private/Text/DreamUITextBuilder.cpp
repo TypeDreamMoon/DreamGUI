@@ -1574,6 +1574,9 @@ namespace DreamUITextBuilderLocal
 			Content->TrySetParent(InParent, /*bKeepWorldPosition*/false);
 			Template->TrySetParent(Content, /*bKeepWorldPosition*/false);
 			View->SetContent(Content);
+			// By name too: the pointer above lives in the archetype and does not survive into
+			// instances -- ResolveEachBindings re-aims it per instance through this.
+			Each.ContentWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Content);
 		}
 		return Template;
 	}

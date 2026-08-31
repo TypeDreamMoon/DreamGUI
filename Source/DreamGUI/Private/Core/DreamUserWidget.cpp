@@ -448,6 +448,24 @@ void UDreamUserWidget::ResolveEachBindings()
 			continue;
 		}
 
+		// The view's Content pointer was authored against the archetype; re-aim it at THIS
+		// instance's content, the same per-instance re-wiring the template gets below. Without it
+		// every cell the view clones lands in the invisible archetype tree. The synthesized
+		// content may not have earned a class variable, so the template's own parent -- which IS
+		// that content whenever the builder synthesized one -- is the fallback.
+		if (!Binding.ContentWidgetName.IsNone())
+		{
+			UDreamWidget* Content = FindWidgetByVariable(Binding.ContentWidgetName);
+			if (!IsValid(Content) && Template->GetParent() != Host)
+			{
+				Content = Template->GetParent();
+			}
+			if (IsValid(Content))
+			{
+				ListView->SetContent(Content);
+			}
+		}
+
 		UDreamUIEachAdapter* Adapter = NewObject<UDreamUIEachAdapter>(this);
 		Adapter->Initialize(this, Binding, ListView);
 		EachAdapters.Add(Adapter);

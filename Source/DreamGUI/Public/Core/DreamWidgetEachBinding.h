@@ -60,6 +60,15 @@ struct DREAMGUI_API FDreamWidgetEachBinding
 	UPROPERTY()
 	FName TemplateWidgetName;
 
+	/**
+	 * The builder-synthesized content widget under the host, by variable name. Carried here because
+	 * the view's own Content pointer is authored against the ARCHETYPE tree: copied into an
+	 * instance it still aims at the archetype, and every cell the view cloned landed in the
+	 * invisible template tree. Resolve re-aims it per instance, exactly as it does the template.
+	 */
+	UPROPERTY()
+	FName ContentWidgetName;
+
 	/** Function or variable on the user widget supplying TArray<UObject*>. */
 	UPROPERTY()
 	FName SourceName;
