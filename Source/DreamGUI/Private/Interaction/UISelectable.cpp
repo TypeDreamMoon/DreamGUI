@@ -126,6 +126,26 @@ void UUISelectable::OnRegister()
 	if (GetWidget())
 	{
 		GetWidget()->SetIsFocusable(true);
+
+		// The transition needs something to tint, and ApplyPointerSelectionState returns without a
+		// word when it has none -- so an unwired selectable is not "a button with no feedback", it
+		// is a button whose feedback silently never happens. The preset control Blueprints set this
+		// by hand in the asset; nothing else could, because a text-authored .dui can only give an
+		// object property an ASSET PATH and this target is a sibling in the same live tree.
+		//
+		// The widget's own visual is the answer every one of those Blueprints picked anyway, so
+		// default to it and leave an explicit choice untouched.
+		if (!TransitionTarget.IsValid() && TransitionType != EUISelectableTransitionType::Custom)
+		{
+			if (UDreamVisual* OwnVisual = GetWidget()->GetVisual())
+			{
+				TransitionTarget = OwnVisual;
+				// The state was computed before a target existed; apply it now so the control opens
+				// in its normal colours rather than whatever the brush was authored with.
+				CurrentSelectionState = GetSelectionState();
+				ApplyPointerSelectionState(true);
+			}
+		}
 	}
 	UDreamUIManagerWorldSubsystem::AddSelectable(this);
 }
