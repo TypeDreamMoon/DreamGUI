@@ -26,7 +26,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamRadioButtonChangedEvent, bool,
  * turns it off; a group with bAllowNoneSelected=false is what forbids that.
  *
  *     /Script/DreamGUI.DreamRadioButton OptionA {
- *         Label = "Option A"
  *         bIsOn = true
  *         OnToggleChanged -> HandleOptionA
  *     }
@@ -40,9 +39,6 @@ public:
 	/** This instance's own look -- consulted only when StyleSource is Inline. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button", meta = (EditCondition = "StyleSource == EDreamUIStyleSource::Inline"))
 	FDreamRadioButtonStyle Style;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button")
-	FText Label;
 
 	/**
 	 * Find a UUIToggleGroup on an ancestor at Awake and join it -- with a group behaviour on the
@@ -100,9 +96,6 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Radio Button")
 	TObjectPtr<UDreamWidget> DotNode = nullptr;
-
-	UPROPERTY(BlueprintReadOnly, Transient, Category = "Radio Button")
-	TObjectPtr<UDreamWidget> LabelNode = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Radio Button")
 	TObjectPtr<UUIToggle> ToggleBehaviour = nullptr;

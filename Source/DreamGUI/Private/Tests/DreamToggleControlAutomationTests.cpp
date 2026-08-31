@@ -92,14 +92,12 @@ bool FDreamToggleControlShapeTest::RunTest(const FString& Parameters)
 	// BP_Button had for months with nothing to say so.
 	TestNotNull(TEXT("the toggle behaviour is always there"), Toggle->ToggleBehaviour.Get());
 
-	// The parts, by name and by nesting: the tick is INSIDE the box, not beside it.
-	TestNotNull(TEXT("the box is a child of the root"), FindChildNamed(Root, TEXT("Box")));
-	TestNotNull(TEXT("the label is a child of the root"), FindChildNamed(Root, TEXT("Label")));
+	// The parts, by name and by nesting: the control IS the box -- no label and no row, because the
+	// text beside a check box is the consumer's layout to write -- and the tick sits INSIDE the box.
+	TestTrue(TEXT("the root is the box"), (UObject*)Root == (UObject*)Toggle->BoxNode.Get());
+	TestNull(TEXT("no label part exists any more"), FindChildNamed(Root, TEXT("Label")));
 	TestNotNull(TEXT("the tick is a child of the box"), FindChildNamed(Toggle->BoxNode, TEXT("Tick")));
-	TestTrue(TEXT("BoxNode names the box"), (UObject*)Toggle->BoxNode.Get() == (UObject*)FindChildNamed(Root, TEXT("Box")));
 	TestTrue(TEXT("TickNode names the tick"), (UObject*)Toggle->TickNode.Get() == (UObject*)FindChildNamed(Toggle->BoxNode, TEXT("Tick")));
-
-	TestNotNull(TEXT("the label is drawn by text"), Cast<UDreamText>(Toggle->LabelNode != nullptr ? Toggle->LabelNode->GetVisual() : nullptr));
 
 	return true;
 }
@@ -153,7 +151,6 @@ bool FDreamToggleControlStyleTest::RunTest(const FString& Parameters)
 	Toggle->Style.BoxSize = FVector2D(40.0, 18.0);
 	Toggle->Style.TickSize = FVector2D(12.0, 12.0);
 	Toggle->Style.TickChecked = FColor(11, 22, 33, 255);
-	Toggle->Label = FText::FromString(TEXT("muted"));
 	Toggle->bIsOn = true;
 	Toggle->Initialize();
 
@@ -164,20 +161,15 @@ bool FDreamToggleControlStyleTest::RunTest(const FString& Parameters)
 
 	// A code-built control has no tree for anyone to open, so the style has to be the whole of what
 	// an author can decide. If any of these does not arrive, that decision was silently ignored.
-	// The box is a procedural rect, which states no intrinsic size: authored width/height feed the
-	// Auto slot's desired-size fallback, and before any arrange pass they read straight back.
+	// The box stretches over the CONTROL, and the control carries the authored size: that is what
+	// a consumer's Auto slot measures, and before any arrange pass it reads straight back.
 	UDreamRectBlock* BoxRect = Cast<UDreamRectBlock>(Toggle->BoxNode->GetVisual());
 	UDreamText* TickText = Cast<UDreamText>(Toggle->TickNode->GetVisual());
 	if (TestNotNull(TEXT("the box is a rect block"), BoxRect) && TestNotNull(TEXT("the tick is a glyph"), TickText))
 	{
-		TestEqual(TEXT("the box took the style's width"), Toggle->BoxNode->GetWidth(), 40.0f);
-		TestEqual(TEXT("and its height"), Toggle->BoxNode->GetHeight(), 18.0f);
+		TestEqual(TEXT("the control took the style's width"), Toggle->GetWidth(), 40.0f);
+		TestEqual(TEXT("and its height"), Toggle->GetHeight(), 18.0f);
 		TestEqual(TEXT("the glyph is sized by the style's tick height"), TickText->GetFontSize(), 12.0f);
-	}
-
-	if (UDreamText* LabelVisual = Cast<UDreamText>(Toggle->LabelNode->GetVisual()))
-	{
-		TestEqual(TEXT("the label says what was authored"), LabelVisual->GetText().ToString(), FString(TEXT("muted")));
 	}
 
 	// bIsOn is a property, not just a getter/setter pair, precisely so an authored value like this

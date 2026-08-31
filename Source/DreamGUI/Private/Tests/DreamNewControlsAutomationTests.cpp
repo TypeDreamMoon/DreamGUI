@@ -141,13 +141,10 @@ bool FDreamControlRadioButtonTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("the dot is wearing the checked colour"), DotVisual->GetColor(), FColor(11, 22, 33, 255));
 	}
 
-	// The dot is sized by the style through the brush -- in a centred overlay slot its rect is the
-	// layout's, and the layout reads the image's preferred size.
-	if (UDreamImage* DotImage = Cast<UDreamImage>(Radio->DotNode->GetVisual()))
-	{
-		TestEqual(TEXT("the dot states the style's size to the layout"),
-			DotImage->GetPreferredWidth(), static_cast<float>(FDreamRadioButtonStyle().DotSize.X));
-	}
+	// The dot is a rect block, which states no intrinsic size: the authored width is what the
+	// centred overlay slot's desired-size fallback reads.
+	TestEqual(TEXT("the dot states the style's size to the layout"),
+		Radio->DotNode->GetWidth(), static_cast<float>(FDreamRadioButtonStyle().DotSize.X));
 
 	// What makes it read as a radio out of the box: the default radius is half the default box.
 	TestEqual(TEXT("the default corner radius is half the default box"),

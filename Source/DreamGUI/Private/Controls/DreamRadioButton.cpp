@@ -22,33 +22,19 @@ void UDreamRadioButton::NativeOnInitialized()
 
 	using namespace DreamUI;
 
+	// The control IS the round box -- no label, no row. The text beside a radio is the consumer's
+	// layout, exactly as with the check box.
 	Realize(this,
-		Widget("RadioButton")
+		Node<UDreamRectBlock>("Box").Out(BoxNode)
 			.Stretch()
-			.With<UDreamLayoutContainerHorizontalBox>()
-			// On the root, not on the box, so the whole row is one click target -- the toggle's
-			// arrangement, kept.
+			// An overlay so the dot has a slot to be centred in.
+			.With<UDreamLayoutContainerOverlay>()
 			.With<UUIToggle>()
 			.Children(
-				Node<UDreamRectBlock>("Box").Out(BoxNode)
-					// An overlay so the dot has a slot to be centred in.
-					.With<UDreamLayoutContainerOverlay>()
+				Node<UDreamRectBlock>("Dot").Out(DotNode)
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
-						InSlot.SetSizeRule(EDreamPanelSizeRule::Auto);
-						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
-					})
-					.Children(
-						Node<UDreamRectBlock>("Dot").Out(DotNode)
-							.Slot([](UDreamPanelSlot& InSlot)
-							{
-								InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
-								InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
-							})),
-				DreamUI::Text("Label").Out(LabelNode)
-					.Slot([](UDreamPanelSlot& InSlot)
-					{
-						InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
+						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
 					}))
 			.Then([this](UDreamWidget& InRoot)
@@ -79,32 +65,14 @@ void UDreamRadioButton::ApplyStyle()
 	// which is the one visual fact separating this control from the toggle.
 	ShapeFace(BoxNode, Active.CornerRadius);
 	ShapeFace(DotNode, static_cast<float>(FMath::Min(Active.DotSize.X, Active.DotSize.Y)) * 0.5f);
+	SkinFace(BoxNode, Active.BoxBrush);
+	SkinFace(DotNode, Active.DotBrush);
 
-	// A rect block states no intrinsic size; authored width/height feed the Auto slot's (and the
-	// overlay's centred slot's) desired-size fallback, captured before the first arrange.
-	auto SizeAuthored = [](UDreamWidget* InNode, const FVector2D& InSize)
-	{
-		if (InNode != nullptr)
-		{
-			InNode->SetWidth(static_cast<float>(InSize.X));
-			InNode->SetHeight(static_cast<float>(InSize.Y));
-		}
-	};
-	SizeAuthored(BoxNode, Active.BoxSize);
-	SizeAuthored(DotNode, Active.DotSize);
+	// The control's own authored size: the box fills it; in an Auto slot the desired-size fallback
+	// reads exactly this.
+	SizeFace(this, Active.BoxSize);
+	SizeFace(DotNode, Active.DotSize);
 
-	if (UDreamText* LabelVisual = LabelNode != nullptr ? Cast<UDreamText>(LabelNode->GetVisual()) : nullptr)
-	{
-		LabelVisual->SetText(Label);
-		LabelVisual->SetColor(Active.LabelColor);
-		LabelVisual->SetFontSize(Active.FontSize);
-	}
-	if (UDreamLayoutContainerHorizontalBox* Row = GetWidgetTree() != nullptr && GetWidgetTree()->RootWidget != nullptr
-		? Cast<UDreamLayoutContainerHorizontalBox>(GetWidgetTree()->RootWidget->GetLayoutContainer())
-		: nullptr)
-	{
-		Row->SetSpacing(Active.Spacing);
-	}
 	if (ToggleBehaviour != nullptr)
 	{
 		// Without notify: pushing the authored value in is not the user selecting. Value before

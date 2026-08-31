@@ -46,11 +46,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamCheckStateChangedEvent, EDream
  *
  * It composes into .dui with no language change at all, because a class path is already a node tag:
  *
- *     /Script/DreamGUI.DreamToggle Mute {
- *         Label = "muted"
+ *     Native.Toggle Mute {
  *         Style.TickChecked = #FF3355
  *         OnToggleChanged -> HandleMute
  *     }
+ *
+ * Deliberately label-less: a check box is one square and its mark, and the text beside it is the
+ * consumer's layout. Pair it with a Text node in whatever row the screen wants.
  *
  * API-wise it speaks UMG's check box: CheckedState (Unchecked/Checked/Undetermined) with
  * GetCheckedState/SetCheckedState, IsChecked/SetIsChecked, and OnCheckStateChanged. bIsOn with
@@ -71,9 +73,6 @@ public:
 	/** This instance's own look -- consulted only when StyleSource is Inline. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle", meta = (EditCondition = "StyleSource == EDreamUIStyleSource::Inline"))
 	FDreamToggleStyle Style;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle")
-	FText Label;
 
 	/**
 	 * The authored state, in UMG's spelling and with UMG's third value. A property rather than the
@@ -165,9 +164,6 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Toggle")
 	TObjectPtr<UDreamWidget> TickNode = nullptr;
-
-	UPROPERTY(BlueprintReadOnly, Transient, Category = "Toggle")
-	TObjectPtr<UDreamWidget> LabelNode = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Toggle")
 	TObjectPtr<UUIToggle> ToggleBehaviour = nullptr;

@@ -20,46 +20,31 @@ void UDreamToggle::NativeOnInitialized()
 
 	using namespace DreamUI;
 
+	// The control IS the box. No label, no row: a check box is one square and its mark, and
+	// whatever text sits beside it is the consumer's layout, not this control's opinion -- UMG's
+	// check box draws the same line.
 	Realize(this,
-		Widget("Toggle")
+		Node<UDreamRectBlock>("Box").Out(BoxNode)
 			.Stretch()
-			.With<UDreamLayoutContainerHorizontalBox>()
-			// On the root, not on the box, so the whole control is one click target: the box is what
-			// gets hit, and the event bubbles up to here. Same arrangement BP_Toggle has.
+			// An overlay so the tick has a slot to be centred in. Without a layout container
+			// a child has no slot at all, and centring would have to be spelled in anchors.
+			.With<UDreamLayoutContainerOverlay>()
 			.With<UUIToggle>()
 			.Children(
-				Node<UDreamRectBlock>("Box").Out(BoxNode)
-					// An overlay so the tick has a slot to be centred in. Without a layout container
-					// a child has no slot at all, and centring would have to be spelled in anchors.
-					.With<UDreamLayoutContainerOverlay>()
-					.Slot([](UDreamPanelSlot& InSlot)
+				DreamUI::Text("Tick").Out(TickNode)
+					.Visual([](UDreamText& InText)
 					{
-						InSlot.SetSizeRule(EDreamPanelSizeRule::Auto);
-						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
+						InText.SetText(FText::AsCultureInvariant(TEXT("✓")));
+						InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
+						InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
 					})
-					.Children(
-						DreamUI::Text("Tick").Out(TickNode)
-							.Visual([](UDreamText& InText)
-							{
-								InText.SetText(FText::AsCultureInvariant(TEXT("✓")));
-								InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
-								InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
-							})
-							.Slot([](UDreamPanelSlot& InSlot)
-							{
-								InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
-								InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
-							})),
-				Text("Label").Out(LabelNode)
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
-						InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
+						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
 					}))
 			.Then([this](UDreamWidget& InRoot)
 			{
-				// Everything here names a node other than the one it is written on, which is why it
-				// cannot be inline: the root is built before the box and the tick exist.
 				ToggleBehaviour = InRoot.GetComponent<UUIToggle>();
 				if (ToggleBehaviour == nullptr)
 				{
@@ -77,55 +62,25 @@ void UDreamToggle::NativeOnInitialized()
 
 void UDreamToggle::ApplyStyle()
 {
-	// Raw authored values may have left the two state spellings disagreeing; settle that before
-	// anything below reads either.
-	ReconcileCheckSpellings();
-
 	// The sheet when the project has one and this instance did not opt out; the inline Style
 	// otherwise. One decision at the top, so everything below is about one style, whichever it is.
 	const FDreamToggleStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ToggleStyle);
 
-	// Through the BRUSH, not SetWidth. Inside a layout container the child's rect is the layout's to
-	// decide, and UDreamPanelLayoutBase::GetDesiredSize reads a node's size off its visual's preferred
-	// size -- UDreamImage::GetPreferredWidth returns Brush.ImageSize.X. Setting the widget's width
-	// directly is overwritten by the next arrange pass, silently, which is what this control did on
-	// its first run: a 26-wide box came out 32 and the tick filled it.
 	ShapeFace(BoxNode, Active.CornerRadius);
-	if (BoxNode != nullptr)
-	{
-		// A rect block states no intrinsic size; authored width/height feed the Auto slot's
-		// desired-size fallback, captured before the first arrange.
-		BoxNode->SetWidth(static_cast<float>(Active.BoxSize.X));
-		BoxNode->SetHeight(static_cast<float>(Active.BoxSize.Y));
-	}
+	SkinFace(BoxNode, Active.BoxBrush);
+	// The control's own authored size: the box fills it, and in an Auto slot this is what the
+	// desired-size fallback reads.
+	SizeFace(this, Active.BoxSize);
 	if (UDreamText* TickText = TickNode != nullptr ? Cast<UDreamText>(TickNode->GetVisual()) : nullptr)
 	{
 		// A glyph, sized by the style's tick height; its colour is the checked transition's to give.
 		TickText->SetFontSize(static_cast<float>(Active.TickSize.Y));
 	}
-	if (UDreamText* LabelVisual = LabelNode != nullptr ? Cast<UDreamText>(LabelNode->GetVisual()) : nullptr)
-	{
-		LabelVisual->SetText(Label);
-		LabelVisual->SetColor(Active.LabelColor);
-		LabelVisual->SetFontSize(Active.FontSize);
-	}
-	if (UDreamLayoutContainerHorizontalBox* Row = GetWidgetTree() != nullptr && GetWidgetTree()->RootWidget != nullptr
-		? Cast<UDreamLayoutContainerHorizontalBox>(GetWidgetTree()->RootWidget->GetLayoutContainer())
-		: nullptr)
-	{
-		Row->SetSpacing(Active.Spacing);
-	}
-	// Before the value push: if the push starts a checked-transition (a raw state edit landing here
-	// through PostEditChangeProperty, with a live tween manager), it must already aim at the
-	// state's off colour -- a tween aimed at the stale one would end on the wrong colour and stay
-	// there.
-	PushCheckStateVisuals();
 	if (ToggleBehaviour != nullptr)
 	{
-		// Without notify: pushing the authored value in is not the user toggling it, and a
-		// broadcast here would reach handlers before the screen they belong to has finished
-		// building. Undetermined parks the behaviour at unchecked -- the behaviour is two-state on
-		// purpose, and the click that leaves the third state must read as unchecked -> checked.
+		ReconcileCheckSpellings();
+		// Without notify: pushing the authored value in is not the user toggling it.
+		PushCheckStateVisuals(false);
 		ToggleBehaviour->SetIsOnWithoutNotify(CheckedState == EDreamCheckState::Checked);
 		// The pointer transition tints the box; the checked one tints the tick. Which colour goes
 		// where is the whole of what this control decides.
@@ -133,13 +88,8 @@ void UDreamToggle::ApplyStyle()
 		ToggleBehaviour->SetHoveredColor(Active.BoxHovered);
 		ToggleBehaviour->SetPressedColor(Active.BoxPressed);
 		ToggleBehaviour->SetOnColor(Active.TickChecked);
+		PushCheckStateVisuals(true);
 	}
-	// And after it, FORCED: SetOffColor applies immediately while the behaviour reads unchecked,
-	// which is what lands the off/bar colour with no world at all (the same immediate path
-	// SetOnColor takes for a checked authored value). The first call could not have done this --
-	// before the push the behaviour may still have read checked (its own default), where SetOffColor
-	// only stores.
-	PushCheckStateVisuals(/*bForceOffColour =*/ true);
 }
 
 bool UDreamToggle::GetIsOn() const
