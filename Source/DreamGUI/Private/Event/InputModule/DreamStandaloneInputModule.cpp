@@ -41,9 +41,21 @@ void UDreamStandaloneInputModule::ProcessInput()
 	}
 	else
 	{
-		for (auto& keyValue : EventSystem->GetPointerEventDataMap())
+		// Everything dispatched from inside this loop runs game code, and game code reaches
+		// UDreamEventSystem::GetPointerEventData -- UDreamWidget::SetFocus alone does it -- which adds
+		// to the very map being iterated, for any pointer id it has never seen. One insertion that
+		// grows the map rehashes it and leaves the iterator walking freed storage, so this walks a
+		// snapshot. A pointer that appears mid-frame is simply picked up on the next one.
+		TArray<UDreamPointerEventData*> FrameEventDataArray;
+		FrameEventDataArray.Reserve(EventSystem->GetPointerEventDataMap().Num());
+		for (const auto& keyValue : EventSystem->GetPointerEventDataMap())
 		{
-			auto& EventData = keyValue.Value;
+			FrameEventDataArray.Add(keyValue.Value.Get());
+		}
+		for (auto EventData : FrameEventDataArray)
+		{
+			// The same game code can tear a pointer down while we are still walking the snapshot.
+			if (!IsValid(EventData))continue;
 			switch (EventData->InputType)
 			{
 			default:

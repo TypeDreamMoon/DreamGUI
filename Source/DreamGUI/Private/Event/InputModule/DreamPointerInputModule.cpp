@@ -47,9 +47,16 @@ bool UDreamPointerInputModule::LineTrace(UDreamPointerEventData* InPointerEventD
 				});
 			if (HitResultArray.Num() > 0)
 			{
+				// An uninteractable widget in front still occludes -- but only along the ray that struck
+				// it, and every raycaster generates its own ray from its own origin. Returning out of
+				// LineTrace here promoted that to a statement about the whole frame: hits already
+				// collected from raycasters earlier in the list were thrown away and every raycaster
+				// after this one never ran, so one disabled panel under the mouse also blanked out a
+				// motion controller aimed at a different UI entirely. Skip this raycaster instead; its
+				// own results stay hidden, which is all the occlusion ever meant.
 				if (!HitResultArray[0].Widget->GetInteractableInHierarchy())
 				{
-					return false;
+					continue;
 				}
 				FDreamUIHitResultContainer DreamHitResult;
 				DreamHitResult.HitResult = HitResultArray[0];
@@ -728,9 +735,14 @@ void UDreamPointerInputModule::DeselectIfSelectionChanged(UDreamEventSystem* eve
 
 void UDreamPointerInputModule::ClearEvent()
 {
-	for (auto& keyValue : EventSystem->GetPointerEventDataMap())
+	// ClearEventByID fires Exit/Up/EndDrag into game code, and game code reaches
+	// UDreamEventSystem::GetPointerEventData, which adds to the map this loop walks -- an insertion
+	// that grows it rehashes it and leaves the iterator on freed storage. Snapshot the ids first.
+	TArray<int> PointerIDArray;
+	EventSystem->GetPointerEventDataMap().GenerateKeyArray(PointerIDArray);
+	for (auto PointerID : PointerIDArray)
 	{
-		ClearEventByID(keyValue.Key);
+		ClearEventByID(PointerID);
 	}
 }
 
