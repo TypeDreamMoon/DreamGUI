@@ -6,10 +6,21 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamFieldNotification.h"
 #include "INotifyFieldValueChanged.h"
+// The event bridge declared at the bottom of this header is a behaviour and SPEAKS the pointer
+// interfaces, so these are base classes here, not forward-declarable references.
+#include "Core/DreamUIBehaviour.h"
+#include "Event/DreamPointerEventData.h"
+#include "Event/Interface/DreamNavigationInterface.h"
+#include "Event/Interface/DreamPointerClickInterface.h"
+#include "Event/Interface/DreamPointerDownUpInterface.h"
+#include "Event/Interface/DreamPointerDragDropInterface.h"
+#include "Event/Interface/DreamPointerDragInterface.h"
+#include "Event/Interface/DreamPointerEnterExitInterface.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;
 class UDreamUserWidget;
+class UDreamUserWidgetEventBridge;
 
 /** Blueprint-facing counterpart of CreateDreamWidget's before-alive hook. */
 DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamUIWidgetCreatedCallback, UDreamUserWidget*, CreatedWidget);
@@ -185,6 +196,228 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
 	void RefreshEachBindings();
 
+#pragma region BlueprintSurface
+	/*
+	 * THE BLUEPRINT-OVERRIDABLE SURFACE, and how it is wired.
+	 *
+	 * Every event below follows the NativeOnInitialized precedent exactly: a Native* virtual that a
+	 * C++ subclass overrides (calling Super so the Blueprint event still fires), calling a
+	 * BlueprintImplementableEvent of the same moment. What differs per group is which REAL seam feeds
+	 * the Native* twin, because this framework routes everything through a widget's BEHAVIOURS:
+	 * UDreamEventSystem::ExecuteDreamUIInterface iterates GetAllComponents() and never asks the widget
+	 * object itself, the navigation search (UDreamPointerInputModule::Navigate) does the same, and the
+	 * only per-frame update paths the manager owns are behaviour lists. A user widget therefore cannot
+	 * simply implement the IDream* interfaces -- nothing would ever call them.
+	 *
+	 * The wiring is one hidden behaviour, UDreamUserWidgetEventBridge (bottom of this file), added at
+	 * Initialize in GAME worlds only. It rides the ordinary behaviour lifecycle -- Awake/OnEnable/
+	 * Tick/OnDisable/OnDestroy -- and implements the pointer, drag and navigation interfaces, each
+	 * callback a one-line forward to the Native* twin here. Focus needs no bridge: UDreamWidget's own
+	 * NotifyFocusReceived/NotifyFocusLost broadcasts feed two handlers this class binds on itself.
+	 *
+	 * Routing neutrality: adding the bridge must not change what any EXISTING screen receives. It does
+	 * not, for reasons a reader can check in the dispatch code: who receives a pointer event is decided
+	 * by the raycast and by ProcessPointerEvent's press/drag state machine, never by who implements an
+	 * interface; the bubble walk only stops when a component RETURNS FALSE, and every bridge callback
+	 * returns bAllowEventBubbleUp, default true; select/deselect routing (the one path that does search
+	 * by interface -- GetEventHandle) is untouched because the bridge deliberately does not implement
+	 * IDreamPointerSelectDeselectInterface; and the navigation search skips any component whose
+	 * CanNavigateHere is false, which the bridge answers until bCanNavigateHere is opted in. The
+	 * designer never sees the bridge at all -- edit-world widgets are skipped -- so authored component
+	 * lists, previews and asset diffs are unchanged.
+	 */
+public:
+	/**
+	 * The widget has begun play: its hierarchy is registered, the manager has begun, and it is on
+	 * screen. Rides the bridge's Awake, which UDreamWidget::BeginPlay drives -- so it fires once per
+	 * begin-play regardless of the active flag, before the first OnEnable. Overriders call Super.
+	 */
+	virtual void NativeOnConstruct();
+
+	/** The Blueprint half of NativeOnConstruct, called by it. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "On Construct"))
+	void OnConstruct();
+
+	/**
+	 * The widget is going away: EndPlay (DestroyWidget, or the world tearing down). Runs after the
+	 * final NativeOnDisable, mirroring behaviour OnDestroy. Overriders call Super.
+	 */
+	virtual void NativeOnDestruct();
+
+	/** The Blueprint half of NativeOnDestruct, called by it. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "On Destruct"))
+	void OnDestruct();
+
+	/**
+	 * WidgetActiveInHierarchy became true (or was true at begin play). The bridge's OnEnable, with
+	 * the same contract as every behaviour's: after Construct, before the first tick.
+	 */
+	virtual void NativeOnEnable();
+
+	/** The Blueprint half of NativeOnEnable, called by it. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "On Enable"))
+	void OnEnable();
+
+	/** WidgetActiveInHierarchy became false, or the widget is being destroyed (before OnDestruct). */
+	virtual void NativeOnDisable();
+
+	/** The Blueprint half of NativeOnDisable, called by it. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "On Disable"))
+	void OnDisable();
+
+	/**
+	 * Once per frame while bWantsTick is on and the widget is active. Costs nothing when off: the
+	 * bridge only joins the manager's tick list when asked. The Blueprint event is additionally
+	 * skipped when the Blueprint never implemented it, so a C++ override pays no ProcessEvent.
+	 */
+	virtual void NativeOnTick(float DeltaTime);
+
+	/** The Blueprint half of NativeOnTick, called by it while ticking is opted in. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "On Tick"))
+	void OnTick(float DeltaTime);
+
+	/** True between NativeOnConstruct and NativeOnDestruct -- the widget is live on screen. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	bool IsConstructed() const { return bConstructed; }
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	bool GetWantsTick() const { return bWantsTick; }
+
+	/** Opt this widget in or out of per-frame OnTick. Safe at any time, including from OnInitialized. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
+	void SetWantsTick(bool Value);
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	bool GetAllowEventBubbleUp() const { return bAllowEventBubbleUp; }
+
+	/** Whether pointer/drag events keep bubbling to ancestors after this widget has seen them. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
+	void SetAllowEventBubbleUp(bool Value) { bAllowEventBubbleUp = Value; }
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	bool GetCanNavigateHere() const { return bCanNavigateHere; }
+
+	/** Opt this widget in as a gamepad/keyboard navigation stop. Off, navigation ignores it entirely. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
+	void SetCanNavigateHere(bool Value) { bCanNavigateHere = Value; }
+
+	/*
+	 * Pointer events. Delivered when this widget is the pointer's target, or when a descendant let the
+	 * event bubble up -- the same delivery every behaviour gets. A control that consumes its events (a
+	 * Button's UISelectable returns bubble-up false) stops them before they get here, exactly as it
+	 * stops them reaching any other ancestor. Each Native* returns whether the event may continue
+	 * bubbling PAST this widget; the default implementation fires the Blueprint event and returns
+	 * bAllowEventBubbleUp. Overriders call Super and forward its return.
+	 */
+	virtual bool NativeOnPointerEnter(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Pointer Enter"))
+	void OnPointerEnter(UDreamPointerEventData* EventData);
+
+	virtual bool NativeOnPointerExit(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Pointer Exit"))
+	void OnPointerExit(UDreamPointerEventData* EventData);
+
+	virtual bool NativeOnPointerDown(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Pointer Down"))
+	void OnPointerDown(UDreamPointerEventData* EventData);
+
+	virtual bool NativeOnPointerUp(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Pointer Up"))
+	void OnPointerUp(UDreamPointerEventData* EventData);
+
+	virtual bool NativeOnPointerClick(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Pointer Click"))
+	void OnPointerClick(UDreamPointerEventData* EventData);
+
+	/*
+	 * Drag events. BeginDrag/Drag/EndDrag arrive on (or bubble up from) the widget being dragged;
+	 * Drop arrives on the widget under the pointer when something ELSE is dropped onto it. Same
+	 * bubble contract as the pointer events.
+	 */
+	virtual bool NativeOnBeginDrag(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On Begin Drag"))
+	void OnBeginDrag(UDreamPointerEventData* EventData);
+
+	virtual bool NativeOnDrag(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On Drag"))
+	void OnDrag(UDreamPointerEventData* EventData);
+
+	virtual bool NativeOnEndDrag(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On End Drag"))
+	void OnEndDrag(UDreamPointerEventData* EventData);
+
+	virtual bool NativeOnDrop(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On Drop"))
+	void OnDrop(UDreamPointerEventData* EventData);
+
+	/*
+	 * Focus. UDreamWidget already broadcasts OnFocusReceived/OnFocusLost delegates from
+	 * NotifyFocusReceived/NotifyFocusLost; this class listens to its own broadcasts and forwards.
+	 * The Blueprint events carry Receive* C++ names because the delegate PROPERTIES of those names
+	 * already exist on UDreamWidget; their Blueprint faces read "On Focus Received"/"On Focus Lost".
+	 */
+	virtual void NativeOnFocusReceived(int32 UserIndex, int32 PointerId);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Focus", meta = (DisplayName = "On Focus Received"))
+	void ReceiveFocusReceived(int32 UserIndex, int32 PointerId);
+
+	virtual void NativeOnFocusLost(int32 UserIndex, int32 PointerId);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Focus", meta = (DisplayName = "On Focus Lost"))
+	void ReceiveFocusLost(int32 UserIndex, int32 PointerId);
+
+	/**
+	 * A directional navigation move while this widget holds the navigation highlight. Only reachable
+	 * after SetCanNavigateHere(true) -- an opted-out widget is invisible to the navigation search.
+	 * Fill OutNextWidget to send navigation somewhere else (the target needs a navigation-capable
+	 * behaviour, a UISelectable being the ordinary one); leave it null to keep the highlight here.
+	 * The default implementation asks the Blueprint event.
+	 */
+	virtual void NativeOnNavigate(EDreamUINavigationDirection Direction, UDreamWidget*& OutNextWidget);
+
+	/** The Blueprint half of NativeOnNavigate: return the widget to move to, or nothing to stay. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Focus", meta = (DisplayName = "On Navigate"))
+	UDreamWidget* OnNavigate(EDreamUINavigationDirection Direction);
+#pragma endregion
+
+private:
+	/**
+	 * Add the event bridge to this instance, once, in game worlds only. Edit worlds (the designer's
+	 * preview above all) are skipped so authored component lists, panels and diffs never see it; a
+	 * duplicated instance already carries a copy through the Instanced Components array, which the
+	 * idempotence check honours instead of stacking a second one.
+	 */
+	void EnsureEventBridge();
+
+	/** Bound to this widget's own OnFocusReceived broadcast; forwards to NativeOnFocusReceived. */
+	UFUNCTION()
+	void HandleFocusReceivedBroadcast(int32 UserIndex, int32 PointerId);
+
+	/** Bound to this widget's own OnFocusLost broadcast; forwards to NativeOnFocusLost. */
+	UFUNCTION()
+	void HandleFocusLostBroadcast(int32 UserIndex, int32 PointerId);
+
+	/**
+	 * Per-frame OnTick, off by default: the cost of a tick is a manager list entry, a virtual call and
+	 * a Blueprint ProcessEvent every frame, which no widget should pay for a surface it never uses.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetWantsTick", Setter = "SetWantsTick", meta = (AllowPrivateAccess = true, DisplayName = "Wants Tick"))
+	bool bWantsTick = false;
+
+	/**
+	 * The bubble policy every pointer/drag Native* returns by default. True, unlike UISelectable's
+	 * false: a user widget is a container, and a container that silently swallowed every click inside
+	 * it would break each screen it was placed on. Set false to consume events at this boundary.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetAllowEventBubbleUp", Setter = "SetAllowEventBubbleUp", meta = (AllowPrivateAccess = true, DisplayName = "Allow Event Bubble Up"))
+	bool bAllowEventBubbleUp = true;
+
+	/**
+	 * Whether this widget itself is a navigation stop. Off by default so the navigation search walks
+	 * past it exactly as it always has -- a user widget full of UISelectables must not steal their
+	 * moves. Opting in makes OnNavigate reachable.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetCanNavigateHere", Setter = "SetCanNavigateHere", meta = (AllowPrivateAccess = true, DisplayName = "Can Navigate Here"))
+	bool bCanNavigateHere = false;
+
 private:
 	/** A binding with its lookups already done. Resolved once, at Initialize. */
 	struct FResolvedBinding
@@ -224,6 +457,92 @@ private:
 	FDreamFieldNotificationDelegates NotificationDelegates;
 
 	uint8 bInitialized : 1 = false;
+	/** Set by NativeOnConstruct, cleared by NativeOnDestruct. See IsConstructed. */
+	uint8 bConstructed : 1 = false;
+	/**
+	 * The Blueprint actually implemented OnTick, as opposed to merely being able to. Same check
+	 * UDreamUIBehaviour makes for ReceiveTick, for the same reason: a per-frame ProcessEvent for an
+	 * event nobody wrote is pure cost. Cached at Initialize.
+	 */
+	uint8 bHasBlueprintOnTick : 1 = false;
+};
+
+/**
+ * The hidden behaviour that connects a UDreamUserWidget to the seams this framework actually routes
+ * through. Everything about events and lifecycle here is component-shaped: the event system's bubble
+ * walk (UDreamEventSystem::ExecuteDreamUIInterface), the navigation search and the manager's
+ * start/tick lists all speak to a widget's BEHAVIOURS and never to the widget object itself -- so the
+ * user widget's Blueprint surface is fed by this one bridge rather than by interfaces on the widget,
+ * which nothing would ever call.
+ *
+ * Runtime-only and invisible to authors: UDreamUserWidget::EnsureEventBridge adds it in game worlds
+ * at Initialize, transient, and the designer's edit worlds never get one. Every callback is a
+ * one-line forward to the owning widget's Native* twin; every pointer callback returns the widget's
+ * bAllowEventBubbleUp so a widget with no Blueprint bodies is routing-identical to one without a
+ * bridge. It implements neither IDreamPointerSelectDeselectInterface (GetEventHandle searches by that
+ * one, and finding the bridge would move focus/deselect decisions onto every user widget) nor the
+ * scroll interface; navigation is present but answers CanNavigateHere false until the widget opts in.
+ *
+ * The ForwardCount fields are introspection for tests and diagnostics -- they count forwards that
+ * COMPLETED, so a count is proof the widget-side Native* ran.
+ */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown, DisplayName = "User Widget Event Bridge")
+class DREAMGUI_API UDreamUserWidgetEventBridge : public UDreamUIBehaviour
+	, public IDreamPointerEnterExitInterface
+	, public IDreamPointerDownUpInterface
+	, public IDreamPointerClickInterface
+	, public IDreamPointerDragInterface
+	, public IDreamPointerDragDropInterface
+	, public IDreamNavigationInterface
+{
+	GENERATED_BODY()
+public:
+	UDreamUserWidgetEventBridge();
+
+	/** The owning user widget: this bridge is outered to it, as every behaviour is to its widget. */
+	UDreamUserWidget* GetUserWidget() const;
+
+	/**
+	 * Align tick participation with the widget's bWantsTick, through whichever door matches the
+	 * current lifecycle state: registration add/remove once enabled, a bare flag before that.
+	 */
+	void SyncTickEnabled(bool bValue);
+
+	/** True while this bridge would forward a tick if the manager delivered one. */
+	bool IsTickForwardingEnabled() const { return bCanExecuteTick; }
+
+	/** Completed forwards into the widget's Native* seams. Introspection; never reset. */
+	int32 ConstructForwardCount = 0;
+	int32 DestructForwardCount = 0;
+	int32 EnableForwardCount = 0;
+	int32 DisableForwardCount = 0;
+	int32 TickForwardCount = 0;
+
+protected:
+	//~ Behaviour lifecycle -> widget lifecycle
+	virtual void Awake() override;
+	virtual void OnEnable() override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void OnDisable() override;
+	virtual void OnDestroy() override;
+
+	//~ IDreamPointerEnterExitInterface
+	virtual bool OnPointerEnter_Implementation(UDreamPointerEventData* EventData) override;
+	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamPointerDownUpInterface
+	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData) override;
+	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamPointerClickInterface
+	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamPointerDragInterface
+	virtual bool OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData) override;
+	virtual bool OnPointerDrag_Implementation(UDreamPointerEventData* EventData) override;
+	virtual bool OnPointerEndDrag_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamPointerDragDropInterface
+	virtual bool OnPointerDragDrop_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamNavigationInterface
+	virtual bool CanNavigateHere_Implementation() const override;
+	virtual bool OnNavigate_Implementation(EDreamUINavigationDirection direction, TScriptInterface<IDreamNavigationInterface>& result) override;
 };
 
 /**

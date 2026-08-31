@@ -212,6 +212,24 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 
 	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
 
+	// The Blueprint surface's wiring, before NativeOnInitialized so OnInitialized code can already
+	// SetWantsTick or SetAllowEventBubbleUp and have it hold. The bridge carries lifecycle, pointer,
+	// drag and navigation delivery (see UDreamUserWidgetEventBridge); focus rides this widget's own
+	// existing broadcasts, bound here because Initialize is the one moment every instance passes
+	// through exactly once.
+	EnsureEventBridge();
+	OnFocusReceived.AddUniqueDynamic(this, &UDreamUserWidget::HandleFocusReceivedBroadcast);
+	OnFocusLost.AddUniqueDynamic(this, &UDreamUserWidget::HandleFocusLostBroadcast);
+	{
+		// Whether the Blueprint actually implemented OnTick: the UFunction on a Blueprint-compiled
+		// class is an override, the one on the native declaring class is the empty stub. Same probe
+		// UDreamUIBehaviour runs for ReceiveTick, cached for the same per-frame reason.
+		static const FName OnTickName(TEXT("OnTick"));
+		const UFunction* TickFunction = GetClass()->FindFunctionByName(OnTickName);
+		bHasBlueprintOnTick = TickFunction != nullptr
+			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+	}
+
 	// Before anything reads this widget's data. Everything below pulls from it -- a binding reads a
 	// property, an `each` list asks its source how many rows there are -- so a subclass filling a list
 	// source gets the floor here. Later is after the first frame has already been composed from
@@ -244,6 +262,337 @@ void UDreamUserWidget::NativeOnInitialized()
 {
 	OnInitialized();
 }
+
+#pragma region BlueprintSurface
+void UDreamUserWidget::EnsureEventBridge()
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr || !World->IsGameWorld())
+	{
+		// Edit worlds -- the designer's preview above all -- never get a bridge: behaviour lifecycle
+		// refuses edit mode anyway, and a component the author did not add has no business in a
+		// preview whose component list the editor reads back.
+		return;
+	}
+	if (GetComponent<UDreamUserWidgetEventBridge>() != nullptr)
+	{
+		// A duplicated instance (a list cell) arrives with its copy through the Instanced Components
+		// array; a second bridge would double every event.
+		return;
+	}
+	if (UDreamUIBehaviour* Bridge = AddComponent<UDreamUserWidgetEventBridge>())
+	{
+		// The class is already Transient; the instance flag keeps even the REFERENCE out of any
+		// serializer that ever walks a live game-world tree.
+		Bridge->SetFlags(RF_Transient);
+	}
+}
+
+void UDreamUserWidget::NativeOnConstruct()
+{
+	bConstructed = true;
+	OnConstruct();
+}
+
+void UDreamUserWidget::NativeOnDestruct()
+{
+	bConstructed = false;
+	OnDestruct();
+}
+
+void UDreamUserWidget::NativeOnEnable()
+{
+	OnEnable();
+}
+
+void UDreamUserWidget::NativeOnDisable()
+{
+	OnDisable();
+}
+
+void UDreamUserWidget::NativeOnTick(float DeltaTime)
+{
+	if (bHasBlueprintOnTick)
+	{
+		OnTick(DeltaTime);
+	}
+}
+
+void UDreamUserWidget::SetWantsTick(bool Value)
+{
+	if (bWantsTick == Value)
+	{
+		return;
+	}
+	bWantsTick = Value;
+	if (UDreamUserWidgetEventBridge* Bridge = GetComponent<UDreamUserWidgetEventBridge>())
+	{
+		Bridge->SyncTickEnabled(Value);
+	}
+	// No bridge -- a template, an edit world, or before Initialize -- means nothing is registered
+	// anywhere; the bridge reads bWantsTick when it awakes.
+}
+
+bool UDreamUserWidget::NativeOnPointerEnter(UDreamPointerEventData* EventData)
+{
+	OnPointerEnter(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerExit(UDreamPointerEventData* EventData)
+{
+	OnPointerExit(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerDown(UDreamPointerEventData* EventData)
+{
+	OnPointerDown(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerUp(UDreamPointerEventData* EventData)
+{
+	OnPointerUp(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerClick(UDreamPointerEventData* EventData)
+{
+	OnPointerClick(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnBeginDrag(UDreamPointerEventData* EventData)
+{
+	OnBeginDrag(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnDrag(UDreamPointerEventData* EventData)
+{
+	OnDrag(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnEndDrag(UDreamPointerEventData* EventData)
+{
+	OnEndDrag(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnDrop(UDreamPointerEventData* EventData)
+{
+	OnDrop(EventData);
+	return bAllowEventBubbleUp;
+}
+
+void UDreamUserWidget::NativeOnFocusReceived(int32 UserIndex, int32 PointerId)
+{
+	ReceiveFocusReceived(UserIndex, PointerId);
+}
+
+void UDreamUserWidget::NativeOnFocusLost(int32 UserIndex, int32 PointerId)
+{
+	ReceiveFocusLost(UserIndex, PointerId);
+}
+
+void UDreamUserWidget::HandleFocusReceivedBroadcast(int32 UserIndex, int32 PointerId)
+{
+	NativeOnFocusReceived(UserIndex, PointerId);
+}
+
+void UDreamUserWidget::HandleFocusLostBroadcast(int32 UserIndex, int32 PointerId)
+{
+	NativeOnFocusLost(UserIndex, PointerId);
+}
+
+void UDreamUserWidget::NativeOnNavigate(EDreamUINavigationDirection Direction, UDreamWidget*& OutNextWidget)
+{
+	OutNextWidget = OnNavigate(Direction);
+}
+#pragma endregion
+
+#pragma region EventBridge
+UDreamUserWidgetEventBridge::UDreamUserWidgetEventBridge()
+{
+	// Opt-in cost: never in the tick list until the widget asks. Awake re-reads the widget's
+	// bWantsTick, so these are only the values for the window before Awake -- both lowered so
+	// IsTickForwardingEnabled cannot claim ticking that is not armed.
+	bStartWithTickEnabled = false;
+	bCanExecuteTick = false;
+}
+
+UDreamUserWidget* UDreamUserWidgetEventBridge::GetUserWidget() const
+{
+	return Cast<UDreamUserWidget>(GetWidget());
+}
+
+void UDreamUserWidgetEventBridge::SyncTickEnabled(bool bValue)
+{
+	bStartWithTickEnabled = bValue;
+	if (bIsEnableCalled)
+	{
+		// Enabled: the standard door, which adds to or removes from the manager's tick list once
+		// Start has run and leaves the flag for the start pass to read when it has not.
+		SetCanExecuteTick(bValue);
+	}
+	else
+	{
+		// Disabled (or not yet begun): no tick registration exists, so going through
+		// SetCanExecuteTick on a started behaviour would try to remove what OnDisable already
+		// removed and log a spurious warning. OnEnable reads the flag and registers.
+		bCanExecuteTick = bValue;
+	}
+}
+
+void UDreamUserWidgetEventBridge::Awake()
+{
+	Super::Awake();
+	if (UDreamUserWidget* UserWidget = GetUserWidget())
+	{
+		// Before UDreamUIBehaviour::BeginPlay copies bStartWithTickEnabled into bCanExecuteTick,
+		// which happens right after Awake returns.
+		bStartWithTickEnabled = UserWidget->GetWantsTick();
+		UserWidget->NativeOnConstruct();
+		++ConstructForwardCount;
+	}
+}
+
+void UDreamUserWidgetEventBridge::OnEnable()
+{
+	Super::OnEnable();
+	if (UDreamUserWidget* UserWidget = GetUserWidget())
+	{
+		UserWidget->NativeOnEnable();
+		++EnableForwardCount;
+	}
+}
+
+void UDreamUserWidgetEventBridge::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	if (UDreamUserWidget* UserWidget = GetUserWidget())
+	{
+		UserWidget->NativeOnTick(DeltaTime);
+		++TickForwardCount;
+	}
+}
+
+void UDreamUserWidgetEventBridge::OnDisable()
+{
+	Super::OnDisable();
+	if (UDreamUserWidget* UserWidget = GetUserWidget())
+	{
+		UserWidget->NativeOnDisable();
+		++DisableForwardCount;
+	}
+}
+
+void UDreamUserWidgetEventBridge::OnDestroy()
+{
+	Super::OnDestroy();
+	if (UDreamUserWidget* UserWidget = GetUserWidget())
+	{
+		UserWidget->NativeOnDestruct();
+		++DestructForwardCount;
+	}
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerEnter(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerExit(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerDown(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerUp(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerClick(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnBeginDrag(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerDrag_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnDrag(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerEndDrag_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnEndDrag(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerDragDrop_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnDrop(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::CanNavigateHere_Implementation() const
+{
+	const UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(GetWidget());
+	return UserWidget != nullptr
+		&& UserWidget->GetCanNavigateHere()
+		&& UserWidget->GetWidgetActiveInHierarchy()
+		&& UserWidget->GetInteractableInHierarchy();
+}
+
+bool UDreamUserWidgetEventBridge::OnNavigate_Implementation(EDreamUINavigationDirection direction, TScriptInterface<IDreamNavigationInterface>& result)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	if (UserWidget == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* NextWidget = nullptr;
+	UserWidget->NativeOnNavigate(direction, NextWidget);
+	if (IsValid(NextWidget))
+	{
+		// The navigation module speaks to behaviours (its result is cast to UDreamUIBehaviour), so a
+		// widget answer resolves to that widget's navigation-capable component -- a UISelectable, a
+		// nested user widget's own bridge, or any custom handler.
+		if (UDreamUIBehaviour* NextHandler = NextWidget->GetComponentByInterface(UDreamNavigationInterface::StaticClass()))
+		{
+			result.SetObject(NextHandler);
+			result.SetInterface(Cast<IDreamNavigationInterface>(NextHandler));
+		}
+		else
+		{
+			UE_LOG(DreamGUI, Warning,
+				TEXT("[%s].%d OnNavigate on '%s' returned '%s', which has no navigation-capable behaviour; staying put."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *UserWidget->GetPathDisplayName(), *NextWidget->GetPathDisplayName());
+		}
+	}
+	// True with a null result keeps the highlight here: an opted-in widget that names no successor
+	// is a navigation sink, which is what it opted in to be.
+	return true;
+}
+#pragma endregion
 
 void UDreamUserWidget::FFieldNotificationClassDescriptor::ForEachField(const UClass* Class, TFunctionRef<bool(::UE::FieldNotification::FFieldId FieldId)> Callback) const
 {
