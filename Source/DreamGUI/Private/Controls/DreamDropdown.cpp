@@ -7,8 +7,10 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UIDropdown.h"
 #include "Interaction/UIToggle.h"
 
@@ -56,6 +58,14 @@ void UDreamDropdown::NativeOnInitialized()
 					}),
 				Image("ListRoot").Out(ListNode)
 					.Anchors(FVector2D(0.0, 0.0), FVector2D(1.0, 0.0))
+					// A popup, the way UMG's combo list is: it stays in the tree so Show() can
+					// position it against the face, but layout must not see it -- an Auto-sized row
+					// otherwise grows by the list's height the moment it opens and shoves the rest
+					// of the screen down.
+					.Self([](UDreamWidget& InList)
+					{
+						InList.SetIgnoreLayout(true);
+					})
 					.Children(
 						Widget("Column")
 							.Stretch()
@@ -78,7 +88,11 @@ void UDreamDropdown::NativeOnInitialized()
 												InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 												InSlot.SetPadding(FMargin(10.0f, 0.0f, 24.0f, 0.0f));
 											}),
-										Image("ItemCheck")
+										DreamUI::Text("ItemCheck")
+											.Visual([](UDreamText& InText)
+											{
+												InText.SetText(FText::AsCultureInvariant(TEXT("✓")));
+											})
 											.Slot([](UDreamPanelSlot& InSlot)
 											{
 												InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Right);
@@ -136,6 +150,12 @@ void UDreamDropdown::NativeOnInitialized()
 					ListNode->SetWidgetActive(false);
 				}
 				DropdownBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamDropdown::HandleValueChanged);
+				// The list is a child of the face for positioning and a citizen of the popup layer for
+				// everything else: Show anchors it against the face, then the layer lifts it to the
+				// screen root with its world position kept -- the UMG menu-stack arrangement -- so an
+				// ancestor's clip cannot cut it and an ancestor's layout never counts it. Hide hands it
+				// home before the fade.
+				DropdownBehaviour->GetOnListVisibilityChangedEvent().AddUObject(this, &UDreamDropdown::HandleListVisibilityChanged);
 			}));
 
 	ApplyStyle();
@@ -145,6 +165,8 @@ void UDreamDropdown::NativeOnInitialized()
 void UDreamDropdown::ApplyStyle()
 {
 	const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
+	ShapeFace(FaceNode, Active.CornerRadius);
+	ShapeFace(ListNode, Active.CornerRadius);
 
 	auto TintText = [&Active](UDreamWidget* InNode, const FColor& InColor)
 	{
@@ -171,8 +193,6 @@ void UDreamDropdown::ApplyStyle()
 
 	if (ItemTemplateNode != nullptr)
 	{
-		// Through the brush: the template lives in a vertical box, and a stacked child's height is
-		// read off its visual's preferred size, not off SetHeight.
 		if (UDreamImage* RowImage = Cast<UDreamImage>(ItemTemplateNode->GetVisual()))
 		{
 			FDreamUIImageBrush Brush = RowImage->GetBrush();
@@ -191,11 +211,10 @@ void UDreamDropdown::ApplyStyle()
 			}
 			else if (Child->GetDisplayName() == TEXT("ItemCheck"))
 			{
-				if (UDreamImage* CheckImage = Cast<UDreamImage>(Child->GetVisual()))
+				if (UDreamText* CheckText = Cast<UDreamText>(Child->GetVisual()))
 				{
-					FDreamUIImageBrush Brush = CheckImage->GetBrush();
-					Brush.ImageSize = FVector2f(10.0f, 10.0f);
-					CheckImage->SetBrush(Brush);
+					// Colour comes from the toggle's checked transition; only the glyph size is style.
+					CheckText->SetFontSize(Active.FontSize);
 				}
 			}
 		}
@@ -254,6 +273,23 @@ void UDreamDropdown::PushOptions()
 	}
 	DropdownBehaviour->SetOptions(Data);
 	DropdownBehaviour->SetValueWithoutNotify(SelectedIndex);
+}
+
+void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
+{
+	UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this);
+	if (Popup == nullptr || ListNode == nullptr)
+	{
+		return;
+	}
+	if (bInVisible)
+	{
+		Popup->Elevate(ListNode);
+	}
+	else
+	{
+		Popup->Restore(ListNode);
+	}
 }
 
 void UDreamDropdown::HandleValueChanged(int32 InIndex)

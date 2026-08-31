@@ -81,6 +81,7 @@ protected:
 	virtual void NativeOnInitialized() override;
 
 private:
+	void HandleListVisibilityChanged(bool bInVisible);
 	void HandleValueChanged(int32 InIndex);
 	void PushOptions();
 };

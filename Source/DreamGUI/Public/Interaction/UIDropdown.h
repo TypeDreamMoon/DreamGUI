@@ -132,8 +132,11 @@ protected:
 	/** Bind this delegate and set custom data for option list item. */
 	FUIDropdownComponentDelegate_SetItemCustomData OnSetItemCustomDataFunction;
 	void SetValue(int InValue, bool FireEvent);
+	/** Fired with true from Show and false from Hide, so a control can lift the list to a popup layer. */
+	FDreamUIMulticastDelegateBool OnListVisibilityChangedCPP;
 public:
 	FDreamUIMulticastDelegateInt32& GetOnValueChangedEvent(){return OnValueChangedCPP;}
+	FDreamUIMulticastDelegateBool& GetOnListVisibilityChangedEvent(){return OnListVisibilityChangedCPP;}
 	
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 		void Show();

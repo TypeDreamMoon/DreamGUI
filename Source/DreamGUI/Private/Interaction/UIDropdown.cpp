@@ -275,6 +275,10 @@ void UUIDropdown::Show()
 	ListRoot->SetHorizontalAnchoredPosition(0);
 
 	ListRoot->SetPivot(Pivot);
+
+	// Last, after the list is awake and POSITIONED: a listener lifting it to a popup layer wants the
+	// final on-screen placement, not the intent.
+	OnListVisibilityChangedCPP.Broadcast(true);
 }
 void UUIDropdown::Hide()
 {
@@ -285,6 +289,9 @@ void UUIDropdown::Hide()
 	}
 	if (!bIsShow)return;
 	bIsShow = false;
+	// First, before the fade: a listener returning the list to its owner should move it while it is
+	// still where the user saw it, and the fade-out plays the same either side of the reparent.
+	OnListVisibilityChangedCPP.Broadcast(false);
 	if (ShowOrHideTweener.IsValid())
 	{
 		ShowOrHideTweener->Kill();
