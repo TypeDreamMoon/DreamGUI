@@ -147,6 +147,21 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Input Key Selector")
 	bool bIsListening = false;
 
+	/**
+	 * Whether arming also listens for the key itself.
+	 *
+	 * On, the control spawns an input agent for exactly as long as it is armed -- the arrangement
+	 * UUITextInput already uses to get raw keys (an actor with AutoReceiveInput, its InputComponent
+	 * pushed on top of the stack, every key bound). It is created on arming and destroyed on
+	 * disarming, so nothing is intercepted at any other moment: a key binder that consumed keys
+	 * while idle would be a key binder nobody could play past.
+	 *
+	 * Off, the control is state and visuals only and the project calls NotifyKeyPressed from
+	 * wherever it already sees keys. Both were true before this flag; only the default changed.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	bool bCaptureKeysWhileListening = true;
+
 protected:
 	virtual void NativeOnInitialized() override;
 
@@ -155,6 +170,22 @@ private:
 
 	/** The armed flag's one writer, so the visual and the event can never disagree with the state. */
 	void SetIsListening(bool bInIsListening);
+
+	/** Spawn the input agent and bind every bindable key to HandleCapturedKey. */
+	void BeginKeyCapture();
+
+	/** Destroy it. Called from every path that disarms, including the one a key took. */
+	void EndKeyCapture();
+
+	/** What the agent's bindings call. Routes to NotifyKeyPressed, which owns the decision. */
+	void HandleCapturedKey(FKey InKey);
+
+	/**
+	 * Lives only while armed. Weak because the world owns it: a level transition mid-arming takes
+	 * it, and this control must not be the thing that keeps a dead actor alive.
+	 */
+	UPROPERTY(Transient)
+	TWeakObjectPtr<AActor> InputAgent;
 
 	/** The words on the face: the listening prompt while armed, the key's name otherwise. */
 	void PushLabel();

@@ -2,6 +2,10 @@
 
 #include "Controls/DreamInputKeySelector.h"
 
+#include "Components/InputComponent.h"
+#include "Engine/World.h"
+#include "GameFramework/Actor.h"
+
 #include "Core/DreamUIWidgetRegistry.h"
 
 #include "Core/DreamUIBuilder.h"
@@ -158,9 +162,92 @@ void UDreamInputKeySelector::SetIsListening(bool bInIsListening)
 		return;
 	}
 	bIsListening = bInIsListening;
+	// The agent's lifetime is exactly the armed state, which is what keeps this control from
+	// consuming a single key at any other moment.
+	if (bCaptureKeysWhileListening)
+	{
+		if (bIsListening)
+		{
+			BeginKeyCapture();
+		}
+		else
+		{
+			EndKeyCapture();
+		}
+	}
 	PushLabel();
 	PushFaceColours();
 	OnIsListeningChanged.Broadcast(bIsListening);
+}
+
+void UDreamInputKeySelector::BeginKeyCapture()
+{
+	if (InputAgent.IsValid())
+	{
+		return;
+	}
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		// No world means no input stack -- an initialize-time arming, or a test. The control stays
+		// armed and NotifyKeyPressed remains the way in, which is the contract without this flag.
+		return;
+	}
+
+	AActor* Agent = World->SpawnActor<AActor>();
+	if (Agent == nullptr)
+	{
+		return;
+	}
+#if WITH_EDITOR
+	Agent->SetActorLabel(FString::Printf(TEXT("%s_KeyCaptureAgent"), *GetName()));
+#endif
+	// AutoReceiveInput plus PreInitializeComponents is what actually builds the InputComponent and
+	// pushes it on the player's stack; UUITextInput does the same two lines for the same reason.
+	Agent->AutoReceiveInput = EAutoReceiveInput::Player0;
+	Agent->PreInitializeComponents();
+	InputAgent = Agent;
+
+	if (UInputComponent* Input = Agent->InputComponent)
+	{
+		// Highest priority and consuming: while a binder is armed, the key the player presses is
+		// FOR the binder and must not also fire whatever it is currently bound to.
+		Input->Priority = TNumericLimits<int32>::Max();
+		Input->bBlockInput = true;
+
+		TArray<FKey> AllKeys;
+		EKeys::GetAllKeys(AllKeys);
+		for (const FKey& Key : AllKeys)
+		{
+			// Axes are excluded, not filtered later: an axis fires continuously from a resting stick
+			// and would bind itself the instant anything is armed. Everything a player can press --
+			// keyboard, mouse buttons, gamepad face buttons -- is a bindable non-axis key.
+			if (!Key.IsBindableInBlueprints() || Key.IsAxis1D() || Key.IsAxis2D() || Key.IsAxis3D())
+			{
+				continue;
+			}
+			// No payload: an FInputActionHandlerSignature taking an FKey is handed the key that
+			// fired, which is the shape UUITextInput's AnyKeyPressed already relies on.
+			Input->BindKey(Key, EInputEvent::IE_Pressed,
+				this, &UDreamInputKeySelector::HandleCapturedKey);
+		}
+	}
+}
+
+void UDreamInputKeySelector::EndKeyCapture()
+{
+	if (AActor* Agent = InputAgent.Get())
+	{
+		Agent->Destroy();
+	}
+	InputAgent.Reset();
+}
+
+void UDreamInputKeySelector::HandleCapturedKey(FKey InKey)
+{
+	// Through the public entry, so a captured key and a project-fed one take the same path and
+	// cannot come to mean different things.
+	NotifyKeyPressed(InKey);
 }
 
 void UDreamInputKeySelector::PushLabel()
