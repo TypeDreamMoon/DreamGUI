@@ -117,7 +117,16 @@ protected:
 	virtual int32 GetItemDepth(int32 InItemIndex) const override;
 	virtual float GetRowContentInset(int32 InItemIndex) const override;
 	virtual void DecorateRowTemplate(UDreamWidget& InTemplate) override;
-	virtual void DecorateRow(UDreamWidget& InRow, int32 InRowIndex, int32 InItemIndex) override;
+	/**
+	 * The twisty's click handler, subscribed ONCE per row widget.
+	 *
+	 * Not from DecorateRow, which runs on every bind: a recycled row that had shown ten items would
+	 * be carrying ten subscriptions, and one click would toggle ten different rows' expansion. The
+	 * handler asks GetRowItemIndex at the moment it fires instead of capturing an item index, because
+	 * which item this slot shows changes underneath it.
+	 */
+	virtual void DecorateNewRow(UDreamWidget& InRow, int32 InPoolIndex) override;
+	virtual void DecorateRow(UDreamWidget& InRow, int32 InPoolIndex, int32 InItemIndex) override;
 
 private:
 	/** The whole style. ResolveListStyle hands the base the List half of this same answer. */

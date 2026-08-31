@@ -10,6 +10,8 @@
 
 #include "Controls/DreamListView.h"
 #include "Controls/DreamTreeView.h"
+#include "Core/Components/DreamLayoutSelfAuthoredSurface.h"
+#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
@@ -156,6 +158,15 @@ bool FDreamControlListViewPartsTest::RunTest(const FString& Parameters)
 		List->FaceNode->GetAuthoredClipping(), EDreamWidgetClipping::ClipToBounds);
 	TestEqual(TEXT("and so does the viewport"),
 		List->ViewportNode->GetAuthoredClipping(), EDreamWidgetClipping::ClipToBounds);
+	// The measure boundary rides the CONTROL, not the inner tree: an authored-surface layout-self
+	// overrides the measure per authored axis while the invalidation walk still runs through it to
+	// the consumer. IgnoreLayout on the face was tried and is asserted AGAINST here -- it broke the
+	// dirty walk too, stranding every inner invalidation on a container-less node (32 layout passes
+	// a frame in the designer). The class header on the surface tells that story.
+	TestNotNull(TEXT("the control carries the authored-surface boundary"),
+		Cast<UDreamLayoutSelfAuthoredSurface>(List->GetLayoutSelf()));
+	TestFalse(TEXT("and the face stays inside the layout conversation"),
+		List->FaceNode->GetIgnoreLayout());
 
 	// The template is the thing rows are copied from, not a row.
 	TestFalse(TEXT("the template is not a row"), List->RowTemplateNode->GetWidgetActive());
@@ -216,19 +227,31 @@ bool FDreamControlListViewRowsTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("a row is awake"), FirstRow->GetWidgetActive());
 	TestFalse(TEXT("and the template went back to sleep"), List->RowTemplateNode->GetWidgetActive());
 
-	// THE claim. A row is an overlay, and an overlay's Auto measure is its content's -- the label's
-	// line height, which is nowhere near 44. Two things make the style win: the authored height on
-	// the widget, and a Fill slot against a column of known height (the second is what survives a
-	// real layout pass, where no authored number outruns a content measure).
+	// THE claim, and the reason the column holds no layout container. A row is an overlay, and an
+	// overlay's Auto measure is its content's -- the label's line height, which is nowhere near 44.
+	// The row STATES its rect instead of being handed one: point-anchored to the column's top,
+	// stretched across it, height straight from the style. The shape this replaced put the rows on
+	// equal-weight Fill slots and authored the column's height to exactly rows*RowHeight so the box
+	// would divide it back out -- one equation solved in two places, which stopped agreeing the
+	// moment anything measured a row's content.
 	TestEqual(TEXT("a row is exactly the style's row height"), FirstRow->GetHeight(), 44.0f);
-	if (UDreamPanelSlot* RowSlot = FirstRow->GetPanelSlot())
-	{
-		TestEqual(TEXT("and it gets there through its slot, not its own measure"),
-			RowSlot->SizeRule, EDreamPanelSizeRule::Fill);
-		TestEqual(TEXT("with the weight every other row has"), RowSlot->FillWeight, 1.0f);
-	}
-	// The column is the other half of that equation: rows*RowHeight + gaps, so equal fill weights
-	// divide back into exactly RowHeight apiece.
+	TestNull(TEXT("a row is placed, not arranged -- the column has no container to slot it into"),
+		List->ColumnNode->GetLayoutContainer());
+	TestEqual(TEXT("a row is point-anchored to the column's top -- min"),
+		static_cast<float>(FirstRow->GetAnchorMin().Y), 1.0f);
+	TestEqual(TEXT("-- and max"),
+		static_cast<float>(FirstRow->GetAnchorMax().Y), 1.0f);
+	TestEqual(TEXT("and stretched across it"),
+		static_cast<float>(FirstRow->GetAnchorMax().X - FirstRow->GetAnchorMin().X), 1.0f);
+	// One step down the column is RowHeight + RowSpacing, stated from the index and depending on no
+	// sibling -- which is what makes recycling possible at all, and what makes the answer available
+	// with no layout pass anywhere in sight.
+	TestEqual(TEXT("the first row sits at the column's top"),
+		static_cast<float>(FirstRow->GetAnchoredPosition().Y), 0.0f);
+	TestEqual(TEXT("and the second one pitch below it"),
+		static_cast<float>(List->RowNodes[1]->GetAnchoredPosition().Y), -(44.0f + 6.0f));
+	// The column is the scroll range: rows, gaps and the viewport's own inset, stated rather than
+	// measured.
 	TestEqual(TEXT("the column is as tall as all the rows plus their gaps"),
 		List->ColumnNode->GetHeight(), 3.0f * 44.0f + 2.0f * 6.0f);
 
@@ -269,6 +292,58 @@ bool FDreamControlListViewRowsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("objects decide the count when there are any"), List->GetRowCount(), 3);
 	TestTrue(TEXT("and a row can be found by the item it stands for"),
 		(UObject*)List->GetRowWidget(2) == (UObject*)List->RowNodes[2].Get());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlListViewMeasureTest,
+	"DreamGUI.Controls.List.AnAutoConsumerMeasuresTheAuthoredControlNotTheScrolledColumn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlListViewMeasureTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListControlsTestLocal;
+
+	// Enough rows that the scrolled column is unmistakably taller than the control. The designer
+	// measured exactly this shape going wrong: a gallery list in an Auto slot, its own height
+	// flapping between one wrapped label's measure and the whole column's (59 <-> 1299), because
+	// the measure walk crossed the viewport and read the scroll range as a footprint.
+	TDreamTestControl<UDreamListView> List(Author<UDreamListView>());
+	List->Style.RowHeight = 44.0f;
+	TArray<FString> Sources;
+	for (int32 Index = 0; Index < 22; ++Index)
+	{
+		Sources.Add(FString::Printf(TEXT("Track %d"), Index));
+	}
+	List->Items = Labels(Sources);
+	List->Initialize();
+
+	if (!TestNotNull(TEXT("the face exists"), List->FaceNode.Get()) ||
+		!TestNotNull(TEXT("the column exists"), List->ColumnNode.Get()))
+	{
+		return false;
+	}
+	// The trap must actually be armed: the column really is all-rows tall -- that is the scroll
+	// range, and the point of the assertion below is that it stays a scroll range.
+	TestTrue(TEXT("the column is taller than the control"),
+		List->ColumnNode->GetHeight() > 200.0f);
+
+	// What an Auto slot actually asks. The authored-surface layout-self overrides the measure on
+	// every authored axis, so nothing the walk would find below -- the column's rows, their labels'
+	// text -- reaches the answer. A bare control has no panel slot, so the surface reads the
+	// authored anchor data: point anchors on both axes, SizeDelta (320, 200).
+	TDreamTestControl<UDreamWidget> Panel(NewObject<UDreamWidget>(GetTransientPackage()));
+	UDreamPanelLayoutBase* Box = Cast<UDreamPanelLayoutBase>(
+		Panel->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass()));
+	if (!TestNotNull(TEXT("a consumer's box exists to ask"), Box))
+	{
+		return false;
+	}
+	const FVector2D Desired = Box->GetDesiredSize(List.Get());
+	TestEqual(TEXT("the measure answers the authored width"),
+		static_cast<float>(Desired.X), 320.0f);
+	TestEqual(TEXT("-- and the authored height, not the column's"),
+		static_cast<float>(Desired.Y), 200.0f);
 	return true;
 }
 

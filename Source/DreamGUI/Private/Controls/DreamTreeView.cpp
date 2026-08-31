@@ -60,7 +60,35 @@ void UDreamTreeView::DecorateRowTemplate(UDreamWidget& InTemplate)
 		&InTemplate);
 }
 
-void UDreamTreeView::DecorateRow(UDreamWidget& InRow, int32 InRowIndex, int32 InItemIndex)
+void UDreamTreeView::DecorateNewRow(UDreamWidget& InRow, int32 InPoolIndex)
+{
+	UDreamWidget* Twisty = InRow.FindChildByDisplayName(TEXT("Twisty"));
+	if (!IsValid(Twisty))
+	{
+		return;
+	}
+	if (UUIButton* TwistyButton = Twisty->GetComponent<UUIButton>())
+	{
+		// Once, for the life of this widget. The POOL index is what gets captured and the ITEM index
+		// is asked for at click time, because a recycled row shows a different item every time the
+		// list scrolls past it -- and a subscription taken per bind would accumulate one per pass.
+		//
+		// The toggle this starts rebuilds the rows, which may destroy the very widget that is
+		// mid-broadcast. That is the arrangement UUIDropdown's blocker already runs on -- its click
+		// calls Hide(), which destroys the blocker -- and it holds for the same reason: a UObject's
+		// memory outlives the call that let it go, and the multicast is iterating its own copy.
+		TwistyButton->GetOnClickEvent().AddWeakLambda(this, [this, InPoolIndex]()
+		{
+			const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
+			if (ItemIndex != INDEX_NONE)
+			{
+				ToggleItemExpansion(ItemIndex);
+			}
+		});
+	}
+}
+
+void UDreamTreeView::DecorateRow(UDreamWidget& InRow, int32 InPoolIndex, int32 InItemIndex)
 {
 	UDreamWidget* Twisty = InRow.FindChildByDisplayName(TEXT("Twisty"));
 	if (!IsValid(Twisty))
@@ -118,14 +146,8 @@ void UDreamTreeView::DecorateRow(UDreamWidget& InRow, int32 InRowIndex, int32 In
 		TwistyButton->SetNormalColor(TwistyFace);
 		TwistyButton->SetHoveredColor(TwistyFace);
 		TwistyButton->SetPressedColor(TwistyFace);
-		// The rebuild this starts destroys the very widget that is mid-broadcast. That is the
-		// arrangement UUIDropdown's blocker already runs on -- its click calls Hide(), which
-		// destroys the blocker -- and it holds for the same reason: a UObject's memory outlives the
-		// call that let it go, and the multicast is iterating its own copy of the list.
-		TwistyButton->GetOnClickEvent().AddWeakLambda(this, [this, InItemIndex]()
-		{
-			ToggleItemExpansion(InItemIndex);
-		});
+		// The click handler is NOT taken here -- see DecorateNewRow for why a per-bind subscription
+		// on a recycled row is one subscription per pass through the list.
 	}
 
 	if (UDreamWidget* Glyph = Twisty->FindChildByDisplayName(TEXT("TwistyGlyph")))

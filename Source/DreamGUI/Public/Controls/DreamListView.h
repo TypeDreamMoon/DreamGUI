@@ -18,10 +18,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDreamListRowEvent, int32, ItemIn
  * Everything a list and a tree have in common, which is nearly all of it.
  *
  * A tree IS a list that indents, and this class is written to be exactly that: the viewport, the
- * bar, the scrolled column, the row template, the row-building loop, the row colours and the one
- * selected index live here, and each concrete control adds only what makes it itself -- its typed
- * style, and (for the tree) a depth per item, a per-row indent and a twisty. FDreamTreeViewStyle is
- * built the same way round, carrying a whole FDreamListStyle rather than restating its fields.
+ * bar, the scrolled column, the row template, the row POOL, the row colours and the one selected
+ * index live here, and each concrete control adds only what makes it itself -- its typed style,
+ * and (for the tree) a depth per item, a per-row indent and a twisty. FDreamTreeViewStyle is built
+ * the same way round, carrying a whole FDreamListStyle rather than restating its fields.
  *
  * This class is abstract and holds NO style property. That is deliberate, and it is the reason
  * there is a base class at all rather than UDreamTreeView deriving from UDreamListView: the
@@ -40,36 +40,45 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDreamListRowEvent, int32, ItemIn
  * content every time the handle was grabbed; and the column's height is the control's statement of
  * how far there is to scroll, never layout output.
  *
- * That last part is why this does not simply nest a UDreamScrollBox, which is otherwise the same
- * control: a scroll box takes its content's extent from the stack's MEASURE, and a row measures as
- * its label's line height (see UDreamPanelLayoutBase::GetDesiredSize -- an authored size is only
- * consulted for an axis nothing else claimed, and a row's overlay always claims one). A list whose
- * rows were as tall as their text would not be a list with a row height.
+ * ROWS ARE PLACED, NOT ARRANGED
+ * -----------------------------
+ * The column holds NO layout container and every row states its own rect: top-anchored, stretched
+ * across, and offset by its index times the row pitch. Three things follow, and all three matter:
+ *
+ *  - a row's height is the style's RowHeight, full stop. The previous shape put the rows in a
+ *    vertical box on equal-weight Fill slots and then authored the COLUMN's height to exactly
+ *    rows*RowHeight + gaps so the box would divide it back out -- an equation solved in two places
+ *    that had to agree, and which stopped agreeing the moment anything measured a row's content;
+ *  - placing row N costs nothing and depends on no sibling, which is what makes recycling possible
+ *    at all: a box arranges every child it has, so a box can never show a window onto a million;
+ *  - and the answer is available with no layout pass at all, which is what a headless test and the
+ *    designer's first frame actually see.
+ *
+ * VIRTUALIZATION IS A THRESHOLD, NOT A MODE
+ * -----------------------------------------
+ * Under VirtualizationThreshold items there is one row widget per item and GetRowWidget answers for
+ * every index -- the contract this control has always had, and the one that makes it correct in a
+ * headless test where no viewport has been arranged. At or above it, the pool is sized to the
+ * window plus an overscan and rows are re-bound as the view moves, which is what UMG's ListView
+ * does and the only way a hundred thousand rows is anything but a hang. GetRowWidget then answers
+ * for realized rows and null for the rest, which is UMG's contract too.
  *
  * WHY THE PLAIN SCROLL VIEW, NOT UUIListView
  * ------------------------------------------
  * The recycling stack (UUIRecyclableScrollView, and UUIListView on top of it) is the right answer
- * for a hundred thousand rows and the wrong one for a control, for four reasons that are all in
- * those files:
+ * for a data source and the wrong one for a control, for reasons that are all in those files:
  *
  *  - its unit is a UObject* item, because IUIRecyclableScrollViewDataSource is a UObject protocol.
  *    A Native.List's natural item is a line of text -- the same call FDreamDropdownStyle's options
  *    make -- and feeding the recycler would mean minting a UObject per label;
  *  - a cell only exists after Start(), which needs a live world, a registered tree AND an arranged
  *    viewport: InitializeOnDataSource sizes the cell pool from the content parent's local-space
- *    extents. A control has to be correct the instant its properties are set -- in the designer's
- *    preview, in a headless test, before anything ticks;
- *  - the pool is sized to what is VISIBLE, so "one row per item" is never true of it. Half of what
- *    a consumer asks a list control ("give me the widget for item 7") has no answer there;
+ *    extents. A control has to be correct the instant its properties are set;
  *  - and UUIListView::Awake hands its data-source seat to whoever claimed it first, which is how an
  *    `each` block's adapter gets in. A control hosting one would be a third party to that seat.
  *
  * So the rows are built here, from a template, into a column inside a plain UUIScrollView -- which
- * is what UDreamDropdown's option list does, because it is the same problem. The fixes that file
- * paid for are re-applied here rather than re-earned: absolute sizes with point anchors on anything
- * positioned, a zero size DELTA (never a width) on the stretched column, both scroll axes stated
- * explicitly, and rows sized through their SLOTS against a column of known height instead of
- * through authored heights an Auto content measure would outvote.
+ * is what UDreamDropdown's option list does, because it is the same problem.
  *
  * HOW THIS RELATES TO `each`
  * --------------------------
@@ -81,10 +90,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDreamListRowEvent, int32, ItemIn
  *   bindings, and you pay for it with a .dui class to live in and a row you have to draw yourself.
  *
  *   `Native.List` is the CONTROL route. One tag, two properties, and you have a list that looks
- *   like every other list in the project because its rows come from the style sheet -- placed from
- *   .dui, C++, Blueprint or the far side of a `<->` binding, with no `each` block and no generated
- *   class needed. Rows come from Items (texts) or ItemObjects (your objects); RowTemplateClass or
- *   OnRowGenerated fill in a richer row when the built-in label is not enough.
+ *   like every other list in the project because its rows come from the style sheet.
  *
  * Reach for `each` when the ROW is the interesting part. Reach for Native.List when the LIST is.
  */
@@ -112,10 +118,12 @@ public:
 	TArray<TObjectPtr<UObject>> ItemObjects;
 
 	/**
-	 * A row's CONTENT, authored elsewhere: one instance of this class is created inside every row,
-	 * filling it, and the built-in label steps aside. The row's face, height, hover and selection
-	 * stay the control's, so a template only has to draw an item -- it does not have to re-implement
-	 * being a row.
+	 * A row's CONTENT, authored elsewhere: one instance of this class is created inside every row
+	 * widget, filling it, and the built-in label steps aside. The row's face, height, hover and
+	 * selection stay the control's, so a template only has to draw an item.
+	 *
+	 * Created once per POOL row rather than per item, which is what makes it survive recycling:
+	 * OnRowGenerated fires on every bind, and that is where a consumer updates it.
 	 *
 	 * Null (the default) is the built-in label row. Instancing a user widget needs a world, so with
 	 * none this quietly stays the built-in row rather than producing half a list.
@@ -143,6 +151,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List", meta = (EditCondition = "bShowScrollBar"))
 	EDreamScrollBoxScrollbarVisibility ScrollBarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
 
+	/**
+	 * Above this many rows the list recycles a window of widgets instead of building one per item.
+	 *
+	 * A threshold rather than a switch because the two behaviours are each right somewhere: below
+	 * it every index has a widget, which is what a headless test, a designer preview and a consumer
+	 * asking "give me the widget for item 7" all want; above it a list of a hundred thousand is a
+	 * pool of thirty. Zero recycles always; a very large number never does.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List", meta = (ClampMin = "0"))
+	int32 VirtualizationThreshold = 200;
+
+	/** Extra rows kept realized past each edge of the window, so a fast scroll never shows a gap. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List", meta = (ClampMin = "0", ClampMax = "16"))
+	int32 VirtualizationOverscan = 2;
+
 	/** Re-broadcast from the rows, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListSelectionChangedEvent OnSelectionChanged;
@@ -155,9 +178,10 @@ public:
 	FDreamListSelectionChangedEvent OnValueChangedBP;
 
 	/**
-	 * One per row, as it is built, with the row widget and the item it stands for. The hook for a
-	 * consumer whose rows are richer than a label but who would rather not author a whole class:
-	 * everything under the row is reachable from here by display name.
+	 * One per row, every time it is BOUND to an item -- which, while recycling, is every time that
+	 * row comes back round to a new item rather than once in its life. The hook for a consumer whose
+	 * rows are richer than a label but who would rather not author a whole class: everything under
+	 * the row is reachable from here by display name.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnRowGenerated;
@@ -193,11 +217,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "List")
 	TObjectPtr<UUIScrollView> ScrollBehaviour = nullptr;
 
-	/** The live rows, in visual order. Empty until the first rebuild. */
+	/**
+	 * The row widgets that exist, in pool order -- which is visual order only while the list is not
+	 * recycling. RowSourceIndices says what each one is currently showing.
+	 */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "List")
 	TArray<TObjectPtr<UDreamWidget>> RowNodes;
 
-	/** Parallel to RowNodes: which source item each row stands for. Identity for a flat list. */
+	/** Parallel to RowNodes: which source item each pool row stands for, or -1 while it is parked. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "List")
 	TArray<int32> RowSourceIndices;
 
@@ -224,15 +251,38 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetSelectedIndexWithoutNotify(int32 InIndex);
 
-	/** How many rows exist. For a tree this is the VISIBLE count, which is the point of a tree. */
+	/**
+	 * How many rows the list is SHOWING -- for a tree the visible count, which is the point of a
+	 * tree. Not the number of widgets: see GetRealizedRowCount for that.
+	 */
 	UFUNCTION(BlueprintPure, Category = "List")
-	int32 GetRowCount() const { return RowNodes.Num(); }
+	int32 GetRowCount() const { return VisibleItemIndices.Num(); }
 
-	/** The row standing for a source item, or null when that item has no row (collapsed, or gone). */
+	/** How many row widgets exist. Equal to GetRowCount until the list starts recycling. */
+	UFUNCTION(BlueprintPure, Category = "List")
+	int32 GetRealizedRowCount() const { return RowNodes.Num(); }
+
+	/** True while the list is showing a window of widgets rather than one per item. */
+	UFUNCTION(BlueprintPure, Category = "List")
+	bool IsVirtualizing() const { return bVirtualizing; }
+
+	/**
+	 * The row standing for a source item, or null when that item has no row right now -- collapsed
+	 * under a tree node, gone from the source, or (while recycling) scrolled out of the window.
+	 */
 	UFUNCTION(BlueprintPure, Category = "List")
 	UDreamWidget* GetRowWidget(int32 InItemIndex) const;
 
-	/** Scroll the least distance that brings an item's row fully into the viewport. */
+	/** Which source item a POOL row is currently showing, or -1 while it is parked. */
+	UFUNCTION(BlueprintPure, Category = "List")
+	int32 GetRowItemIndex(int32 InPoolIndex) const;
+
+	/**
+	 * Scroll the least distance that brings an item's row fully into the viewport.
+	 *
+	 * Computed from the row pitch rather than from a widget, so it answers for an item whose row is
+	 * not realized -- which is the only version of this that means anything while recycling.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	bool ScrollItemIntoView(int32 InItemIndex, bool bInAnimate = true);
 
@@ -244,24 +294,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void RebuildRows();
 
-	/** Re-resolve the stretched viewport (and everything under it) after this control is resized. */
+	/** Re-resolve the gutter, the bar and the realized window after this control is resized. */
 	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
 
-protected:
-	/**
-	 * Watches for the stale-stretch case the dimensions event cannot catch: a consumer's layout
-	 * writes this control's rect BEFORE the tree exists, so there is no size change left to hear
-	 * about and the viewport keeps the span it resolved against a zero-wide face. One comparison
-	 * per frame, and it settles the moment it agrees -- see NeedsStretchRefresh.
-	 */
-	virtual void NativeOnTick(float InDeltaTime) override;
-
-	/** The face size the inner stretched nodes were last made to agree with. See NativeOnTick. */
-	UPROPERTY(Transient)
-	FVector2D LastSettledFaceSize = FVector2D(-1.0, -1.0);
-
 private:
-
 	virtual void ApplyStyle() override;
 
 protected:
@@ -290,8 +326,18 @@ protected:
 	/** Add to the row template, once, before the first row is copied from it. */
 	virtual void DecorateRowTemplate(UDreamWidget& InTemplate) {}
 
-	/** Fix up one freshly built row. Runs after the base has skinned, sized and wired it. */
-	virtual void DecorateRow(UDreamWidget& InRow, int32 InRowIndex, int32 InItemIndex) {}
+	/**
+	 * A pool row was just created. ONCE in that widget's life, which is what anything permanent
+	 * belongs in -- a click handler above all: subscribing from DecorateRow instead would add one
+	 * more every time the row came round to another item.
+	 *
+	 * A handler that needs to know which item it is acting on asks GetRowItemIndex(InPoolIndex) at
+	 * the moment it fires, because the answer changes underneath it.
+	 */
+	virtual void DecorateNewRow(UDreamWidget& InRow, int32 InPoolIndex) {}
+
+	/** A pool row was just bound to an item. Runs after the base has skinned, sized and placed it. */
+	virtual void DecorateRow(UDreamWidget& InRow, int32 InPoolIndex, int32 InItemIndex) {}
 
 	/** The label a row shows: the matching text, else the item object's name, else nothing. */
 	FText GetItemLabel(int32 InItemIndex) const;
@@ -305,16 +351,62 @@ protected:
 	/** Between a row's edge and its content -- the row's own inset, not the viewport's Padding. */
 	static FMargin GetRowPadding();
 
+	/** Row height plus the gap under it: what one step down the column costs. */
+	float GetRowPitch() const;
+
+	/** Where a row sits in the column, as an offset from the column's top edge. */
+	float GetRowTopOffset(int32 InDisplayIndex) const;
+
+	/** The display positions of the items the source is showing, in order. */
+	UPROPERTY(Transient)
+	TArray<int32> VisibleItemIndices;
+
 private:
-	void HandleRowClicked(int32 InItemIndex);
-	void BuildRow(int32 InRowIndex, int32 InItemIndex, const FDreamListStyle& InStyle);
-	void ApplyRowColor(UDreamWidget* InRow, int32 InRowIndex, int32 InItemIndex, const FDreamListStyle& InStyle);
+	void HandleRowClicked(int32 InPoolIndex);
+	void HandleScrollViewMoved(FVector2D InProgress);
+
+	/** Duplicate one row widget out of the template and wire what it keeps for life. */
+	UDreamWidget* CreatePoolRow(int32 InPoolIndex);
+
+	/** Point a pool row at an item: label, colour, inset, rect, and both decoration hooks. */
+	void BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 InItemIndex, const FDreamListStyle& InStyle);
+
+	/** Put a pool row to sleep: no item, no draw, no place in anything. */
+	void ParkRow(int32 InPoolIndex);
+
+	void ApplyRowColor(UDreamWidget* InRow, int32 InDisplayIndex, int32 InItemIndex, const FDreamListStyle& InStyle);
+
+	/** Grow or shrink the pool to exactly this many widgets. */
+	void ResizePool(int32 InPoolSize);
+
+	/** Bind the pool to whatever the current scroll offset makes visible. The recycling pass. */
+	void RefreshVisibleWindow();
 
 	/** The gutter, the bar's rect and the scroll range -- everything that follows from the row count. */
 	void RefreshScrollFurniture(const FDreamListStyle& InStyle);
 
 	/** True while the bar has something to say: shown at all, and either permanent or overflowing. */
 	bool ShouldShowScrollBar() const;
+
+	/** How many widgets the window needs: the viewport's worth, plus overscan at both edges. */
+	int32 ResolveWindowSize() const;
+
+	/** Set while the pool is a window onto the source rather than a widget per item. */
+	UPROPERTY(Transient)
+	bool bVirtualizing = false;
+
+	/**
+	 * The authored row class the pool was built with. A rebind can carry a new style into an existing
+	 * row but not a new CLASS -- the instance lives inside the row and is made once per pool row --
+	 * so this is one of the two things that still forces a teardown. See RebuildRows for why a
+	 * teardown is worth avoiding at all.
+	 */
+	UPROPERTY(Transient)
+	TSubclassOf<UDreamUserWidget> PoolRowTemplateClass = nullptr;
+
+	/** The display index the pool's first row currently shows. Zero while not recycling. */
+	UPROPERTY(Transient)
+	int32 WindowStart = 0;
 };
 
 /**
@@ -325,8 +417,8 @@ private:
  * for (a set of items, and which one is selected) are UPROPERTYs, so .dui, the designer, Blueprint
  * and a `<->` binding can all drive them without anyone writing a line of glue.
  *
- * See UDreamListViewBase for the shape of the tree, why it hosts the plain scroll view rather than
- * the recycling one, and how a Native.List sits beside the `each` language feature.
+ * See UDreamListViewBase for the shape of the tree, why the rows are placed rather than arranged,
+ * when it starts recycling them, and how a Native.List sits beside the `each` language feature.
  */
 UCLASS(BlueprintType, Blueprintable, DisplayName = "Dream List View")
 class DREAMGUI_API UDreamListView : public UDreamListViewBase
