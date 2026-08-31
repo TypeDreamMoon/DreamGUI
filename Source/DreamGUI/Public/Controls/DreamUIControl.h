@@ -6,6 +6,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Controls/DreamControlStyles.h"
 #include "Controls/DreamUIStyleSheet.h"
+#include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "DreamUIControl.generated.h"
 
@@ -57,6 +58,43 @@ protected:
 		{
 			Rect->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Value);
 			Rect->SetCornerRadius(FVector4(InRadius, InRadius, InRadius, InRadius));
+		}
+	}
+
+	/**
+	 * Skin a face. The brush becomes the rect's BODY texture, so the silhouette, the border and the
+	 * selectable's tint keep working over it; an empty brush is the plain rect again (a null body
+	 * texture self-heals to white). Sprite wins over texture -- see the brush struct.
+	 */
+	static void SkinFace(const UDreamWidget* InNode, const FDreamUIFaceBrush& InBrush)
+	{
+		if (UDreamRectBlock* Rect = InNode != nullptr ? Cast<UDreamRectBlock>(InNode->GetVisual()) : nullptr)
+		{
+			Rect->SetBodySpriteTexture(InBrush.Sprite);
+			Rect->SetBodyTexture(InBrush.Texture);
+			Rect->SetBodyTextureMode(InBrush.Sprite != nullptr
+				? EDreamRectBlockTextureMode::Sprite
+				: EDreamRectBlockTextureMode::Texture);
+			Rect->SetBodyTextureScaleMode(InBrush.ScaleMode);
+		}
+	}
+
+	/**
+	 * Authored size for a rect-faced part (or the control itself). A rect block states no intrinsic
+	 * size, so this is what an Auto slot's desired-size fallback reads -- and the slot SNAPSHOTS it,
+	 * so a style edit after the first arrange must re-take the snapshot or the new number is never
+	 * read. A consumer that stretches the node still wins, as always.
+	 */
+	static void SizeFace(UDreamWidget* InNode, const FVector2D& InSize)
+	{
+		if (InNode != nullptr)
+		{
+			InNode->SetWidth(static_cast<float>(InSize.X));
+			InNode->SetHeight(static_cast<float>(InSize.Y));
+			if (UDreamPanelSlot* Slot = InNode->GetPanelSlot())
+			{
+				Slot->CaptureAuthoredGeometry(true);
+			}
 		}
 	}
 

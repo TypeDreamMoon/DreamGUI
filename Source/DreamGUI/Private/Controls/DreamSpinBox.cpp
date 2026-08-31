@@ -6,7 +6,6 @@
 
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
-#include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamRectBlock.h"
@@ -30,8 +29,8 @@ void UDreamSpinBox::NativeOnInitialized()
 			.Children(
 				// The step faces are button-shaped the way DreamButton is: the face IS the node the
 				// behaviour stands on, with a glyph centred in an overlay. Auto slots, so their
-				// width comes from the brush (set in ApplyStyle); the field takes what remains.
-				Image("Decrement").Out(DecrementNode)
+				// width is the authored fallback (set in ApplyStyle); the field takes what remains.
+				Node<UDreamRectBlock>("Decrement").Out(DecrementNode)
 					.With<UDreamLayoutContainerOverlay>()
 					.With<UUIButton>()
 					.Slot([](UDreamPanelSlot& InSlot)
@@ -55,7 +54,7 @@ void UDreamSpinBox::NativeOnInitialized()
 								InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 								InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 							})),
-				Image("Field").Out(FieldNode)
+				Node<UDreamRectBlock>("Field").Out(FieldNode)
 					.With<UUITextInput>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
@@ -81,7 +80,7 @@ void UDreamSpinBox::NativeOnInitialized()
 										InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
 										InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
 									}))),
-				Image("Increment").Out(IncrementNode)
+				Node<UDreamRectBlock>("Increment").Out(IncrementNode)
 					.With<UDreamLayoutContainerOverlay>()
 					.With<UUIButton>()
 					.Slot([](UDreamPanelSlot& InSlot)
@@ -140,20 +139,14 @@ void UDreamSpinBox::ApplyStyle()
 	ShapeFace(FieldNode, Active.CornerRadius);
 	ShapeFace(IncrementNode, Active.CornerRadius);
 
-	// The step faces' width goes through the BRUSH: they sit in Auto slots, and an Auto slot reads
-	// the visual's preferred size -- SetWidth would be overwritten by the next arrange pass. Height
-	// is the slot's (Fill), so only the X of the brush size is load-bearing.
-	auto SizeFace = [&Active](UDreamWidget* InNode)
-	{
-		if (UDreamImage* FaceImage = InNode != nullptr ? Cast<UDreamImage>(InNode->GetVisual()) : nullptr)
-		{
-			FDreamUIImageBrush Brush = FaceImage->GetBrush();
-			Brush.ImageSize = FVector2f(Active.ButtonWidth, Active.Height);
-			FaceImage->SetBrush(Brush);
-		}
-	};
-	SizeFace(DecrementNode);
-	SizeFace(IncrementNode);
+	SkinFace(DecrementNode, Active.ButtonBrush);
+	SkinFace(IncrementNode, Active.ButtonBrush);
+	SkinFace(FieldNode, Active.FieldBrush);
+
+	// The step faces sit in Auto slots; a rect block states no size of its own, so the authored
+	// width is what Auto measures. Height is the slot's (Fill) -- only the X is load-bearing.
+	SizeFace(DecrementNode, FVector2D(Active.ButtonWidth, Active.Height));
+	SizeFace(IncrementNode, FVector2D(Active.ButtonWidth, Active.Height));
 
 	auto StyleGlyph = [&Active](UDreamWidget* InNode)
 	{

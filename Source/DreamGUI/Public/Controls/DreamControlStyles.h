@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "DreamControlStyles.generated.h"
 
 /**
@@ -24,6 +25,30 @@ enum class EDreamUIStyleSource : uint8
 };
 
 /**
+ * An optional skin for a control part's procedural-rect face.
+ *
+ * Empty means the face stays the plain rounded rect -- the built-in look. Set a texture (or an
+ * atlas sprite) and the face draws it inside the same silhouette: corner radius, borders and the
+ * selectable's tint all keep working, because the skin is the rect's BODY texture, not a different
+ * visual. Deliberately not the image brush: a control face never stops being a rect.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamUIFaceBrush
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush", meta = (DisplayThumbnail = "false"))
+	TObjectPtr<class UTexture> Texture = nullptr;
+
+	/** Wins over Texture when both are set: an atlas entry is a texture plus the UVs to cut it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush", meta = (DisplayThumbnail = "false"))
+	TObjectPtr<class UDreamUISpriteData_BaseObject> Sprite = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush")
+	EDreamRectBlockTextureScaleMode ScaleMode = EDreamRectBlockTextureScaleMode::Stretch;
+};
+
+/**
  * What a toggle looks like, separated from what it is.
  *
  * This is the FButtonStyle shape, and it exists for the reason Slate's does: the control assembles
@@ -42,10 +67,6 @@ struct DREAMGUI_API FDreamToggleStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
 	FVector2D TickSize = FVector2D(14.0, 14.0);
 
-	/** Between the box and the label. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
-	float Spacing = 8.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
 	FColor BoxNormal = FColor(52, 57, 70, 255);
 
@@ -62,15 +83,12 @@ struct DREAMGUI_API FDreamToggleStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
 	FColor TickUnchecked = FColor(0, 119, 255, 0);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
-	FColor LabelColor = FColor(230, 233, 240, 255);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
-	float FontSize = 15.0f;
-
 	/** Of the box. The faces are procedural rects now, which is where the UMG feel mostly lives. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
 	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
+	FDreamUIFaceBrush BoxBrush;
 };
 
 /**
@@ -110,6 +128,9 @@ struct DREAMGUI_API FDreamButtonStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style")
 	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style")
+	FDreamUIFaceBrush FaceBrush;
 };
 
 /** A slider: a track, the filled part of it, and the handle riding it. */
@@ -140,6 +161,15 @@ struct DREAMGUI_API FDreamSliderStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style")
 	FColor HandlePressed = FColor(154, 176, 216, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style")
+	FDreamUIFaceBrush TrackBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style")
+	FDreamUIFaceBrush FillBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style")
+	FDreamUIFaceBrush HandleBrush;
 };
 
 /** A text field: the box, the text in it, and the placeholder shown while there is none. */
@@ -177,6 +207,9 @@ struct DREAMGUI_API FDreamTextInputStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style")
 	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style")
+	FDreamUIFaceBrush BackgroundBrush;
 };
 
 /** A dropdown: a button-shaped face, and the list it opens. */
@@ -218,14 +251,21 @@ struct DREAMGUI_API FDreamDropdownStyle
 	FColor CheckColor = FColor(0, 119, 255, 255);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
-	float MaxListHeight = 180.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
 	float FontSize = 15.0f;
 
 	/** Face and list share it; the items inside the list stay square against its edge. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
 	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
+	FDreamUIFaceBrush FaceBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
+	FDreamUIFaceBrush ListBrush;
+
+	/** The rows, template and duplicates alike; a row at rest also shows the list background colour. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
+	FDreamUIFaceBrush ItemBrush;
 };
 
 /**
@@ -252,6 +292,12 @@ struct DREAMGUI_API FDreamProgressBarStyle
 	/** Half the default height: a capsule, the silhouette UMG's bar fakes with a rounded brush. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
 	float CornerRadius = 4.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
+	FDreamUIFaceBrush TrackBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
+	FDreamUIFaceBrush FillBrush;
 };
 
 /**
@@ -274,10 +320,6 @@ struct DREAMGUI_API FDreamRadioButtonStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
 	FVector2D DotSize = FVector2D(12.0, 12.0);
 
-	/** Between the box and the label. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
-	float Spacing = 8.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
 	FColor BoxNormal = FColor(52, 57, 70, 255);
 
@@ -294,18 +336,18 @@ struct DREAMGUI_API FDreamRadioButtonStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
 	FColor DotUnchecked = FColor(0, 119, 255, 0);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
-	FColor LabelColor = FColor(230, 233, 240, 255);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
-	float FontSize = 15.0f;
-
 	/**
 	 * Half of BoxSize by default -- that is the whole of what makes a radio round. Kept a knob
 	 * rather than derived, so a project that squares its radios is one edit, not a subclass.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
 	float CornerRadius = 13.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FDreamUIFaceBrush BoxBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FDreamUIFaceBrush DotBrush;
 };
 
 /** A spin box: a numeric field between a decrement face and an increment face. */
@@ -350,4 +392,11 @@ struct DREAMGUI_API FDreamSpinBoxStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
 	float CornerRadius = 5.0f;
+
+	/** Both step faces; each keeps its own selectable, they only share the look. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FDreamUIFaceBrush ButtonBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FDreamUIFaceBrush FieldBrush;
 };

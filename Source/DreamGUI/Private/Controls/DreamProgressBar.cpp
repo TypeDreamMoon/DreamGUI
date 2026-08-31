@@ -6,7 +6,6 @@
 
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
-#include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
@@ -22,10 +21,10 @@ void UDreamProgressBar::NativeOnInitialized()
 	// which matters because anchors alone do not clear it -- and ApplyPercent narrows the
 	// horizontal max from there.
 	Realize(this,
-		Image("Track").Out(TrackNode)
+		Node<UDreamRectBlock>("Track").Out(TrackNode)
 			.Stretch()
 			.Children(
-				Image("Fill").Out(FillNode).Stretch()));
+				Node<UDreamRectBlock>("Fill").Out(FillNode).Stretch()));
 
 	ApplyStyle();
 }
@@ -36,6 +35,8 @@ void UDreamProgressBar::ApplyStyle()
 
 	ShapeFace(TrackNode, Active.CornerRadius);
 	ShapeFace(FillNode, Active.CornerRadius);
+	SkinFace(TrackNode, Active.TrackBrush);
+	SkinFace(FillNode, Active.FillBrush);
 	if (UDreamVisual* TrackVisual = TrackNode != nullptr ? TrackNode->GetVisual() : nullptr)
 	{
 		TrackVisual->SetColor(Active.TrackColor);

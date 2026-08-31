@@ -92,6 +92,9 @@ void UDreamSlider::ApplyStyle()
 	ShapeFace(TrackNode, Active.TrackThickness * 0.5f);
 	ShapeFace(FillNode, Active.TrackThickness * 0.5f);
 	ShapeFace(HandleNode, static_cast<float>(FMath::Min(Active.HandleSize.X, Active.HandleSize.Y)) * 0.5f);
+	SkinFace(TrackNode, Active.TrackBrush);
+	SkinFace(FillNode, Active.FillBrush);
+	SkinFace(HandleNode, Active.HandleBrush);
 	if (UDreamVisual* TrackVisual = TrackNode != nullptr ? TrackNode->GetVisual() : nullptr)
 	{
 		TrackVisual->SetColor(Active.TrackColor);

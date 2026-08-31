@@ -58,6 +58,7 @@ void UDreamButton::ApplyStyle()
 {
 	const FDreamButtonStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ButtonStyle);
 	ShapeFace(FaceNode, Active.CornerRadius);
+	SkinFace(FaceNode, Active.FaceBrush);
 
 	if (UDreamText* LabelVisual = LabelNode != nullptr ? Cast<UDreamText>(LabelNode->GetVisual()) : nullptr)
 	{
