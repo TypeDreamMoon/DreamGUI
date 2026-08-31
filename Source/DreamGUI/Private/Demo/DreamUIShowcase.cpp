@@ -8,6 +8,29 @@
 #include "DreamGUI.h"
 #include "Interaction/DreamUIModal.h"
 
+#define LOCTEXT_NAMESPACE "DreamUIShowcase"
+
+UDreamUIShowcaseDialog::UDreamUIShowcaseDialog()
+{
+	// Everything this subclass exists for. The buttons are UDreamDialog's seeded pair -- re-stated
+	// here only to say them in the gallery's language; the results ("Cancel", "Confirm") stay the
+	// base class's, because those are the names the callback below switches on.
+	Title = LOCTEXT("ShowcaseDialogTitle", "确认操作");
+	Message = LOCTEXT("ShowcaseDialogMessage", "这是一个 Native.Dialog：遮罩、面板、标题、正文，还有一排真正的 Native.Button。");
+	Buttons = {
+		FDreamDialogButton(LOCTEXT("ShowcaseDialogCancel", "取消"), TEXT("Cancel"), false),
+		FDreamDialogButton(LOCTEXT("ShowcaseDialogConfirm", "确定"), TEXT("Confirm"), true),
+	};
+}
+
+UDreamUIShowcasePanel::UDreamUIShowcasePanel()
+{
+	// The one line the 弹窗 button was missing. A modal service takes a CLASS, so a showcase with no
+	// class to give it is a button that reaches the subsystem, finds nothing to show and logs -- which
+	// is precisely what it did.
+	ModalDialogClass = UDreamUIShowcaseDialog::StaticClass();
+}
+
 FText UDreamUIShowcasePanel::GetNowPlaying() const
 {
 	if (Tracks.Num() == 0)
@@ -84,11 +107,15 @@ void UDreamUIShowcasePanel::HandleOpenModal()
 		UE_LOG(DreamGUI, Log, TEXT("[Showcase] Modal button clicked, but no ModalDialogClass is set."));
 		return;
 	}
+	// The result road, unchanged: the dialog's buttons name a result, the dialog hands it to
+	// CloseTopModal, the subsystem tears the modal down and calls this back exactly once -- with
+	// "Back" too, when the scope's Back action closed it instead of a button.
 	Modal->ShowModalNative(ModalDialogClass, [WeakThis = TWeakObjectPtr<UDreamUIShowcasePanel>(this)](FName InResult)
 	{
 		if (UDreamUIShowcasePanel* Panel = WeakThis.Get())
 		{
 			Panel->LastModalResult = InResult;
+			UE_LOG(DreamGUI, Log, TEXT("[Showcase] Modal closed with '%s'."), *InResult.ToString());
 		}
 	});
 }
@@ -175,3 +202,5 @@ void UDreamUIControlsGalleryPanel::LogEvent(const FString& InLine)
 	}
 	UE_LOG(DreamGUI, Log, TEXT("[Gallery] %s"), *InLine);
 }
+
+#undef LOCTEXT_NAMESPACE

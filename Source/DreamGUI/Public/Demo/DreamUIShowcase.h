@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Controls/DreamDialog.h"
 #include "Core/DreamTextUserWidget.h"
 #include "DreamUIShowcase.generated.h"
 
@@ -29,6 +30,22 @@ public:
 };
 
 /**
+ * What the showcase's 弹窗 button opens: Native.Dialog with the demo's words already in it.
+ *
+ * A CLASS rather than a configured instance because that is the shape ShowModal takes -- the
+ * subsystem instantiates the class itself, so anything a dialog is supposed to say has to be part of
+ * what the class IS. Three lines of constructor defaults are the whole subclass; everything else,
+ * including which result each button answers with, is UDreamDialog's.
+ */
+UCLASS(BlueprintType)
+class DREAMGUI_API UDreamUIShowcaseDialog : public UDreamDialog
+{
+	GENERATED_BODY()
+public:
+	UDreamUIShowcaseDialog();
+};
+
+/**
  * The native base for the MediaConsole showcase .dui: every variable and function that file binds
  * against, in one place a Blueprint can parent. It exists so the language demo exercises real
  * bindings -- `<->` onto bMuted, expressions over IsMuted()/GetFade(), `each` over both a variable
@@ -40,6 +57,8 @@ class DREAMGUI_API UDreamUIShowcasePanel : public UDreamTextUserWidget
 {
 	GENERATED_BODY()
 public:
+	UDreamUIShowcasePanel();
+
 	/** The `<->` target of the mute toggle: the toggle writes here, code writes move the toggle. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Showcase")
 	bool bMuted = false;
@@ -98,7 +117,12 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Showcase")
 	int32 DropCount = 0;
 
-	/** What HandleOpenModal shows. Unset, the click logs instead of opening nothing. */
+	/**
+	 * What HandleOpenModal shows. Defaults to UDreamUIShowcaseDialog, which is the only reason the
+	 * gallery's 弹窗 button does anything: it was a TSubclassOf nobody ever filled in, so the click
+	 * reached the subsystem, found no class, logged a line and stopped. Still overridable -- unset,
+	 * the click logs instead of opening nothing.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Showcase")
 	TSubclassOf<UDreamUserWidget> ModalDialogClass;
 
