@@ -108,6 +108,23 @@ public:
 	 */
 	void InitializeFromArchetype(UDreamWidgetTree* InArchetype);
 
+	/**
+	 * The tree exists and every by-name widget binding points into it; nothing has read this widget's
+	 * own data yet.
+	 *
+	 * This is the place to fill what the bindings and the `each` lists are about to read. There was no
+	 * such place before, and the first frame is composed inside Initialize -- so a list source
+	 * populated from a Blueprint Begin Play, or on the first tick, is populated after the list has
+	 * already asked and been told there is nothing.
+	 *
+	 * Runs in the designer preview too, which instances the same way.
+	 */
+	virtual void NativeOnInitialized();
+
+	/** The Blueprint half of NativeOnInitialized, called by it. Same contract, same moment. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "On Initialized"))
+	void OnInitialized();
+
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	bool IsInitialized() const { return bInitialized; }
 

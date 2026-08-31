@@ -76,6 +76,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Showcase")
 	void PopulateDemoData(int32 InTrackCount = 6);
 
+	/**
+	 * Seeds the demo rows, unless something already filled them.
+	 *
+	 * A showcase whose lists are empty until someone remembers to call PopulateDemoData showcases
+	 * nothing -- and reads as a broken `each`, which is exactly how it was read.
+	 */
+	virtual void NativeOnInitialized() override;
+
 	/** `OnClickBP -> HandleOpenModal`: shows ModalDialogClass through the modal subsystem. */
 	UFUNCTION()
 	void HandleOpenModal();

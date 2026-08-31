@@ -57,6 +57,18 @@ void UDreamUIShowcasePanel::PopulateDemoData(int32 InTrackCount)
 	}
 }
 
+void UDreamUIShowcasePanel::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	// Guarded rather than unconditional, so a level or a Blueprint that supplies its own rows before
+	// initialization keeps them; this only covers the case of nobody having supplied any.
+	if (Tracks.Num() == 0 && History.Num() == 0)
+	{
+		PopulateDemoData();
+	}
+}
+
 void UDreamUIShowcasePanel::HandleOpenModal()
 {
 	UDreamUIModalSubsystem* Modal = UDreamUIModalSubsystem::Get(this);

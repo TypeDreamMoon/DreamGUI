@@ -182,6 +182,12 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 
 	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
 
+	// Before anything reads this widget's data. Everything below pulls from it -- a binding reads a
+	// property, an `each` list asks its source how many rows there are -- so a subclass filling a list
+	// source gets the floor here. Later is after the first frame has already been composed from
+	// whatever the source held, which for a list built at Begin Play is nothing.
+	NativeOnInitialized();
+
 	// After the tree exists: the bindings name widgets in it.
 	ResolvePropertyBindings();
 	BindEventBindings();
@@ -202,6 +208,11 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 			}
 		}
 	}
+}
+
+void UDreamUserWidget::NativeOnInitialized()
+{
+	OnInitialized();
 }
 
 void UDreamUserWidget::FFieldNotificationClassDescriptor::ForEachField(const UClass* Class, TFunctionRef<bool(::UE::FieldNotification::FFieldId FieldId)> Callback) const
