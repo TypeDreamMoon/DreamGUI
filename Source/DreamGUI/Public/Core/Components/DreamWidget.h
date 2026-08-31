@@ -782,6 +782,20 @@ public:
 	 * and every visual stayed off the render lists -- built, laid out, and invisible.
 	 */
 	void RefreshRenderCanvasFromParentChain();
+
+	/**
+	 * Recompute every piece of state this subtree INHERITS from its ancestors -- active, visibility,
+	 * raycastable, interactable -- plus the render canvas.
+	 *
+	 * OnRegister only runs those four walks for a widget that is the root of its hierarchy
+	 * (see its IsRootWidgetInHierarchy() gate), because a normal attach event does the propagation
+	 * instead. A subtree parented with SetParentBeforeRegister raises no attach event, so it
+	 * registers holding the defaults it was born with: a raycast-disabled holder does not disable
+	 * its children, a hidden parent does not hide them, a deactivated one does not deactivate them.
+	 * The drag visual walked straight into that -- its holder is Disabled, its instanced content
+	 * was not, so the visual became the pointer's EnterWidget and swallowed every drop.
+	 */
+	void RefreshInheritedStateFromParentChain();
 protected:
 	void RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas);
 

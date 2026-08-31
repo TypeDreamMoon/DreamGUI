@@ -109,6 +109,17 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 		}
 	}
 
+	// Everything this subtree inherits from the parent it was just attached to. OnRegister does
+	// this itself only for a hierarchy ROOT; a subtree parented through SetParentBeforeRegister
+	// raises no attach event, so without this it registers holding its birth defaults -- visible
+	// under a hidden parent, raycastable under a disabled one, and off the parent's render canvas.
+	// One call here rather than at each of the four call sites, because this function IS the seam
+	// every one of them goes through.
+	if (InRoot->GetParent() != nullptr)
+	{
+		InRoot->RefreshInheritedStateFromParentChain();
+	}
+
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
 	{
 		if (Manager->HasBegunPlay())
@@ -146,12 +157,10 @@ UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDreamWidget* InTe
 	{
 		Copy->SetParentBeforeRegister(InParent);
 	}
+	// Registration now re-derives everything the copy inherits from its new parent, the render
+	// canvas among it -- which is what kept duplicated list cells built, laid out, active and
+	// invisible until it was found.
 	RegisterDreamWidgetHierarchy(Copy);
-	// SetParentBeforeRegister fires no attach events, so nothing propagated a render canvas into
-	// the copy: OnRegister ran with none, no visual reached the render lists, and the subtree was
-	// built, laid out, active -- and invisible. The each walkthrough found list cells in exactly
-	// that state.
-	Copy->RefreshRenderCanvasFromParentChain();
 	return Copy;
 }
 

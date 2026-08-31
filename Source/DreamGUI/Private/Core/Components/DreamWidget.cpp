@@ -3541,6 +3541,19 @@ void UDreamWidget::RefreshRenderCanvasFromParentChain()
 	RenewRenderCanvasRecursive(GetComponentInParent<UDreamCanvas>(true));
 }
 
+void UDreamWidget::RefreshInheritedStateFromParentChain()
+{
+	// The same four walks OnRegister runs for a hierarchy root, plus the canvas. Each one reads the
+	// parent's cached value and pushes the result down, and each only fires its changed-event when a
+	// value actually moves -- so running this on a subtree that was already correct costs the walk
+	// and nothing else.
+	CalculateWidgetActive_Recursive();
+	CalculateVisibility_Recursive();
+	CalculateRaycastable_Recursive();
+	CalculateInteractable_Recursive();
+	RefreshRenderCanvasFromParentChain();
+}
+
 void UDreamWidget::RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas)
 {
 	auto ThisRenderCanvas = this->GetComponent<UDreamCanvas>();
