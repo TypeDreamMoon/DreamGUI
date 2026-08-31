@@ -9,6 +9,8 @@
 #include "Core/Components/DreamRingSectorRaycast.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
+#include "Core/Components/DreamPanelLayouts.h"
+#include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIButton.h"
 #include "Tests/DreamControlTestScope.h"
@@ -217,13 +219,22 @@ bool FDreamRingSectorRaycastTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("inside the slice but in the hub"), Trace(0.0, 40.0));
 	TestFalse(TEXT("inside the slice but past the outer edge"), Trace(0.0, 260.0));
 
-	// Slice drops the far edge. That is what makes a flick of the mouse far outside the ring still
-	// pick an item, and it works because nothing culls a widget by its bounds before the trace.
+	// Slice reaches PAST the drawn ring -- and it is BOUNDED by default, which is not a detail: an
+	// unbounded wedge claims its direction across the whole screen, and the raycast sort (by
+	// flattened hierarchy index, descending) then hands it every hit against anything declared
+	// earlier. The measured symptom was a gallery in which nothing else could be clicked.
 	Menu->HitArea = EDreamRingHitArea::Slice;
 	Menu->ApplyStyle();
-	TestEqual(TEXT("Slice states no outer radius at all"), Sector->OuterRadius, 0.0f);
-	TestTrue(TEXT("and now reaches past where the ring is drawn"), Trace(0.0, 900.0));
+	TestEqual(TEXT("Slice reaches a stated multiple of the outer radius"), Sector->OuterRadius, 400.0f);
+	TestTrue(TEXT("so it reaches past where the ring is drawn"), Trace(0.0, 300.0));
+	TestFalse(TEXT("-- and stops, so a neighbour outside it is still clickable"), Trace(0.0, 900.0));
 	TestFalse(TEXT("while the dead zone still holds"), Trace(0.0, 40.0));
+
+	// Zero is the weapon wheel, and it takes asking for.
+	Menu->SliceHitRadiusScale = 0.0f;
+	Menu->ApplyStyle();
+	TestEqual(TEXT("an explicit zero states no far edge at all"), Sector->OuterRadius, 0.0f);
+	TestTrue(TEXT("and then the slice really does own its direction"), Trace(0.0, 5000.0));
 	return true;
 }
 
@@ -463,6 +474,61 @@ bool FDreamRingMenuPoolIdentityTest::RunTest(const FString& Parameters)
 	TestNull(TEXT("the pool follows the item count down"), Menu->GetWedgeWidget(2));
 	TestTrue(TEXT("and the survivors are still the same widgets"),
 		(UObject*)Menu->GetWedgeWidget(1) == (UObject*)Before);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRingMenuMeasureTest,
+	"DreamGUI.Controls.RingMenu.AnAutoConsumerMeasuresTheWholeRing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRingMenuMeasureTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRingMenuTestLocal;
+
+	// The gallery's shape exactly, and the order the .dui path builds it in: the control is already
+	// parented when its Initialize runs (a duplicated tree carries its parent links), and only
+	// AFTERWARDS is the hierarchy registered. That order is the whole point of the test -- the
+	// measured symptom was a ring drawing its full 192 while the vertical box above it reserved a
+	// slot barely half that, so the next control in the column was painted straight across it.
+	TDreamTestControl<UDreamWidget> Panel(NewObject<UDreamWidget>(GetTransientPackage()));
+	UDreamPanelLayoutBase* Box = Cast<UDreamPanelLayoutBase>(
+		Panel->CreateNewLayoutContainer(UDreamLayoutContainerVerticalBox::StaticClass()));
+	if (!TestNotNull(TEXT("a consumer's box exists to ask"), Box))
+	{
+		return false;
+	}
+
+	UDreamRingMenu* Raw = NewObject<UDreamRingMenu>(GetTransientPackage());
+	Raw->StyleSource = EDreamUIStyleSource::Inline;
+	Raw->Style.OuterRadius = 96.0f;
+	Raw->Style.InnerRadius = 40.0f;
+	Raw->Items = { MakeItem(TEXT("A")), MakeItem(TEXT("B")), MakeItem(TEXT("C")) };
+	Raw->SetParentBeforeRegister(Panel.Get());
+	TDreamTestControl<UDreamRingMenu> Menu(Raw);
+	Menu->Initialize();
+	Menu->OnRegister();
+
+	// The control states BOTH axes -- there is no "length comes from whoever placed it" for a circle.
+	TestEqual(TEXT("the control sizes itself to the ring"), Menu->GetWidth(), 192.0f);
+	TestEqual(TEXT("-- on both axes"), Menu->GetHeight(), 192.0f);
+
+	// And what an Auto slot actually asks. Nothing under the control has an intrinsic size to
+	// contribute (a rect block states none), so this answer comes from the authored snapshot alone,
+	// which is exactly the thing a control that sizes ITSELF has to keep honest.
+	const FVector2D Desired = Box->GetDesiredSize(Menu.Get());
+	TestEqual(TEXT("an Auto consumer measures the whole ring -- width"),
+		static_cast<float>(Desired.X), 192.0f);
+	TestEqual(TEXT("-- and height, not the pre-style default"),
+		static_cast<float>(Desired.Y), 192.0f);
+
+	// A style edit has to carry into the measure too, or the first restyle desynchronises the
+	// column: this is the path a details-panel edit takes.
+	Menu->Style.OuterRadius = 60.0f;
+	Menu->ApplyStyle();
+	const FVector2D Restyled = Box->GetDesiredSize(Menu.Get());
+	TestEqual(TEXT("a restyle moves the measure with it"),
+		static_cast<float>(Restyled.Y), 120.0f);
 	return true;
 }
 

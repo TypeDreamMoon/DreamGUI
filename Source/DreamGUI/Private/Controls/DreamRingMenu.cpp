@@ -7,6 +7,7 @@
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamLayoutSelfAuthoredSurface.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamRingSectorRaycast.h"
 #include "Core/Components/DreamText.h"
@@ -116,6 +117,20 @@ void UDreamRingMenu::NativeOnInitialized()
 	using namespace DreamUI;
 	using namespace DreamRingMenuLocal;
 
+	// The control's desired size is its AUTHORED square, and the measure walk stops here.
+	//
+	// Not optional, and the measured symptom says why: an Auto consumer asked what this control was
+	// worth and got ZERO -- so the vertical box above it reserved no room at all, the next control
+	// in the column was painted straight across the ring, and the wedges (absolute rects centred on
+	// the control) spilled out of a slot with no height. The walk crosses every container-less
+	// widget on its way down (UDreamPanelLayoutBase::GetDesiredSize), so it reached the item labels;
+	// a negative axis is "no opinion" there, but a UDreamText with no font layout behind it answers
+	// ZERO, and zero is a CLAIM. One label saying nothing therefore spoke for the whole ring.
+	//
+	// A ring is the case where descending is meaningless anyway: its parts are placed by polar
+	// geometry, and the smallest box containing them is the circle the style already states.
+	CreateNewLayoutSelf<UDreamLayoutSelfAuthoredSurface>();
+
 	// Backdrop, wedges, hub -- in that order, which IS the draw order: the unbroken ring sits under
 	// the wedges so the gaps between them show something, and the hub sits over both so a wedge that
 	// grows on highlight cannot creep into the middle.
@@ -184,7 +199,11 @@ void UDreamRingMenu::ApplyStyle()
 	// a circle. The wedges may grow past this on highlight; the control's footprint does not follow
 	// them, because a menu that resized its own slot every time the pointer moved would push
 	// whatever is beside it around.
-	SizeFace(this, FVector2D(Outer * 2.0, Outer * 2.0));
+	//
+	// SizeControl, not SizeFace: this is the control's own rect, so the slot's snapshot has to be
+	// SYNCED rather than re-captured -- and that snapshot is exactly what the authored-surface
+	// layout-self above answers an Auto consumer with.
+	SizeControl(FVector2D(Outer * 2.0, Outer * 2.0));
 
 	if (BackdropNode != nullptr)
 	{
@@ -430,6 +449,22 @@ UDreamWidget* UDreamRingMenu::CreatePoolWedge(int32 InIndex)
 	return Wedge;
 }
 
+float UDreamRingMenu::ResolveHitOuterRadius(const FDreamRingMenuStyle& InStyle, float InDrawnReach) const
+{
+	if (HitArea != EDreamRingHitArea::Slice)
+	{
+		// Ring claims exactly what it draws, growth included -- see the note in SetHighlightedIndex
+		// about why the hit edge has to follow the drawn one outward.
+		return InDrawnReach;
+	}
+	// Against the AUTHORED radius, not the grown one: the slice's far edge has nothing to do with
+	// which item the pointer is on, and a boundary that moved when the highlight did would be one
+	// more thing to oscillate.
+	const float Outer = FMath::Max(InStyle.OuterRadius, 1.0f);
+	// Zero is the raycast's "no limit", and reaching it takes an explicit zero here.
+	return SliceHitRadiusScale > 0.0f ? Outer * SliceHitRadiusScale : 0.0f;
+}
+
 void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle)
 {
 	using namespace DreamRingMenuLocal;
@@ -468,7 +503,7 @@ void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle
 		if (UDreamRingSectorRaycast* Sector = Cast<UDreamRingSectorRaycast>(WedgeVisual->GetCustomRaycastObject()))
 		{
 			Sector->InnerRadius = DeadZoneRadius > 0.0f ? DeadZoneRadius : Inner;
-			Sector->OuterRadius = (HitArea == EDreamRingHitArea::Slice) ? 0.0f : Reach;
+			Sector->OuterRadius = ResolveHitOuterRadius(InStyle, Reach);
 			Sector->StartAngle = SliceStart;
 			Sector->SweepAngle = SliceSweep;
 		}
@@ -670,7 +705,7 @@ void UDreamRingMenu::SetHighlightedIndex(int32 InIndex)
 	{
 		return Outer + (bHighlighted ? FMath::Max(Active.HighlightGrowth, 0.0f) : 0.0f);
 	};
-	auto Resize = [this, Inner, &ReachOf](int32 InWedgeIndex, bool bHighlighted)
+	auto Resize = [this, &Active, Inner, &ReachOf](int32 InWedgeIndex, bool bHighlighted)
 	{
 		UDreamWidget* Wedge = GetWedgeWidget(InWedgeIndex);
 		if (!IsValid(Wedge))
@@ -692,7 +727,7 @@ void UDreamRingMenu::SetHighlightedIndex(int32 InIndex)
 				// The Ring hit area follows the drawn edge outward, so the wedge does not slip out
 				// from under the pointer that grew it -- which would exit, shrink, re-enter, and
 				// oscillate for as long as the pointer sat on the old boundary.
-				Sector->OuterRadius = (HitArea == EDreamRingHitArea::Slice) ? 0.0f : Reach;
+				Sector->OuterRadius = ResolveHitOuterRadius(Active, Reach);
 			}
 		}
 	};

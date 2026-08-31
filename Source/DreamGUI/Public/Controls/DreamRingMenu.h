@@ -72,10 +72,12 @@ enum class EDreamRingHitArea : uint8
 	/** Exactly the annulus that is drawn. The hub and everything past the outer edge are dead. */
 	Ring,
 	/**
-	 * The slice, from the dead zone outward with no far edge -- the weapon-wheel feel, where a flick
-	 * of the mouse anywhere on screen picks the item in that direction. Nothing culls a widget by
-	 * its bounds before the trace, so this genuinely reaches past the control's own rect; a clipping
-	 * ancestor still bounds it, which is what a menu inside a panel wants.
+	 * The slice, reaching PAST the drawn ring -- the weapon-wheel feel, where a flick of the mouse
+	 * short of the ring still picks the item in that direction. How far past is SliceHitRadiusScale,
+	 * and that knob is not decoration: nothing culls a widget by its bounds before the trace, so an
+	 * unbounded slice really does claim its whole direction across the screen, and the raycast sort
+	 * hands a wedge every hit against anything earlier in the hierarchy. A menu that owns the screen
+	 * wants exactly that; a menu sharing a panel with other controls makes them unclickable.
 	 */
 	Slice,
 };
@@ -174,6 +176,23 @@ public:
 	/** See EDreamRingHitArea. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
 	EDreamRingHitArea HitArea = EDreamRingHitArea::Ring;
+
+	/**
+	 * How far a Slice reaches, as a multiple of the ring's outer radius. Ignored by Ring.
+	 *
+	 * Two is one more ring's worth of slack -- comfortably past what is drawn, which is the whole
+	 * point of Slice, and still a bounded shape that a neighbour can be clicked outside of. It
+	 * scales with the ring rather than being a pixel count, so a bigger wheel reaches further by
+	 * itself.
+	 *
+	 * ZERO IS NO LIMIT, and it is the weapon-wheel setting: the slice claims its direction to the
+	 * edge of the screen and beyond. Correct for a menu that owns the screen (put it over a blocker,
+	 * the way a modal does) and wrong for anything sharing a panel -- an unbounded wedge wins the
+	 * raycast against every widget earlier in the hierarchy, which is most of them.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu", meta = (ClampMin = "0.0",
+		EditCondition = "HitArea == EDreamRingHitArea::Slice"))
+	float SliceHitRadiusScale = 2.0f;
 
 	/**
 	 * The radius inside which the POINTER picks nothing, in ring units. Zero (the default) means the
@@ -394,6 +413,13 @@ protected:
 	virtual void NativeOnInitialized() override;
 
 private:
+	/**
+	 * The hit sector's far edge: what the wedge draws to in Ring, the bounded reach in Slice, and
+	 * zero (the raycast's "no limit") only where the author asked for it. One function because two
+	 * writers -- the bind pass and the highlight pass -- is how the two learn to disagree.
+	 */
+	float ResolveHitOuterRadius(const FDreamRingMenuStyle& InStyle, float InDrawnReach) const;
+
 	/** Duplicate one wedge out of the template and wire what it keeps for life. */
 	UDreamWidget* CreatePoolWedge(int32 InIndex);
 
