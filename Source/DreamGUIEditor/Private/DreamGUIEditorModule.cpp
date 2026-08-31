@@ -57,6 +57,7 @@
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "DetailCustomization/UITextInputCustomization.h"
 #include "DetailCustomization/DreamUIEventDelegateCustomization.h"
+#include "DetailCustomization/DreamWidgetEventCustomization.h"
 #include "DetailCustomization/DreamUIComponentReferenceCustomization.h"
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
 #include "DetailCustomization/UISpriteSequencePlayerCustomization.h"
@@ -93,6 +94,7 @@
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamTextureBase.h"
 #include "Core/Components/DreamVisualPostProcess.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "DetailCustomization/DreamImageBrushStructCustomization.h"
 #include "DetailCustomization/DreamLayoutContainerCustomization.h"
@@ -225,6 +227,14 @@ void FDreamGUIEditorModule::StartupModule()
 		
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
+
+		// The "green +": event rows in the designer's details panel. Two registrations, one class of
+		// rows -- UDreamUserWidget is every native control and every nested widget Blueprint, and
+		// UDreamUIBehaviour is where the interaction events (UIButton, UIToggle...) actually live.
+		// Class layouts stack along the inheritance chain, so these run alongside the widget and
+		// behaviour customizations above rather than replacing them.
+		PropertyModule.RegisterCustomClassLayout(UDreamUserWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetEventCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UDreamUIBehaviour::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamWidgetEventCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UDreamUIFontEmojiData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIFontEmojiDataCustomization::MakeInstance));
 
@@ -450,6 +460,9 @@ void FDreamGUIEditorModule::ShutdownModule()
 
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName());
+
+		PropertyModule.UnregisterCustomClassLayout(UDreamUserWidget::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(UDreamUIBehaviour::StaticClass()->GetFName());
 		
 		PropertyModule.UnregisterCustomClassLayout(UDreamUIFontEmojiData::StaticClass()->GetFName());
 
