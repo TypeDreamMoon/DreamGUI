@@ -3,6 +3,7 @@
 #include "Demo/DreamUIShowcase.h"
 
 #include "Controls/DreamDropdown.h"
+#include "Controls/DreamRingMenu.h"
 #include "Core/DreamWidgetTree.h"
 
 #include "DreamGUI.h"
@@ -164,6 +165,28 @@ void UDreamUIControlsGalleryPanel::NativeOnInitialized()
 				FText::FromString(TEXT("Epic")), FText::FromString(TEXT("Cinematic")),
 				FText::FromString(TEXT("Custom")), FText::FromString(TEXT("Auto")) });
 		}
+		if (UDreamRingMenu* Wheel = Cast<UDreamRingMenu>(GetWidgetTree()->FindWidgetByVariableName(TEXT("GalleryWheel"))))
+		{
+			// The same story as the dropdown's options, and the same reason: an array of structs has
+			// no .dui text form yet. Five items, one of them disabled and one weighted double, so the
+			// gallery shows the two things a ring does that a row of buttons cannot -- an uneven
+			// wheel, and a slice that refuses to be picked.
+			TArray<FDreamRingMenuItem> Spells;
+			auto AddItem = [&Spells](const TCHAR* InLabel, const TCHAR* InTag, float InWeight, bool bInEnabled)
+			{
+				FDreamRingMenuItem& Item = Spells.AddDefaulted_GetRef();
+				Item.Label = FText::AsCultureInvariant(InLabel);
+				Item.Tag = FName(InTag);
+				Item.Weight = InWeight;
+				Item.bEnabled = bInEnabled;
+			};
+			AddItem(TEXT("攻击"), TEXT("Attack"), 1.0f, true);
+			AddItem(TEXT("防御"), TEXT("Defend"), 1.0f, true);
+			AddItem(TEXT("道具"), TEXT("Item"), 2.0f, true);
+			AddItem(TEXT("逃跑"), TEXT("Flee"), 1.0f, false);
+			AddItem(TEXT("等待"), TEXT("Wait"), 1.0f, true);
+			Wheel->SetItems(Spells);
+		}
 	}
 }
 
@@ -185,6 +208,11 @@ void UDreamUIControlsGalleryPanel::OnGalleryToggle(bool InValue)
 void UDreamUIControlsGalleryPanel::HandleGallerySpin(float InValue)
 {
 	LogEvent(FString::Printf(TEXT("SpinBox -> %g"), InValue));
+}
+
+void UDreamUIControlsGalleryPanel::OnGalleryWheelPick(int32 InIndex, FName InTag)
+{
+	LogEvent(FString::Printf(TEXT("RingMenu -> %s"), *InTag.ToString()));
 }
 
 void UDreamUIControlsGalleryPanel::OnGalleryChipDropped(UDreamDragDropOperation* InOperation)

@@ -182,6 +182,10 @@ public:
 	UFUNCTION()
 	void HandleGallerySpin(float InValue);
 
+	/** The ring menu's commit. Logs the TAG, which is the whole point of an item carrying one. */
+	UFUNCTION()
+	void OnGalleryWheelPick(int32 InIndex, FName InTag);
+
 	/** Appends one line, newest first, keeping the log short. */
 	UFUNCTION(BlueprintCallable, Category = "Showcase")
 	void LogEvent(const FString& InLine);

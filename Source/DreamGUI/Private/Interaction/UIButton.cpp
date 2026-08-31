@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Interaction/UIButton.h"
@@ -7,6 +7,7 @@
 bool UUIButton::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	const bool bBubble = Super::OnPointerEnter_Implementation(EventData);
+	OnHoveredCPP.Broadcast();
 	OnHoveredBP.Broadcast();
 	return bBubble;
 }
@@ -14,6 +15,7 @@ bool UUIButton::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 bool UUIButton::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
 	const bool bBubble = Super::OnPointerExit_Implementation(EventData);
+	OnUnhoveredCPP.Broadcast();
 	OnUnhoveredBP.Broadcast();
 	return bBubble;
 }

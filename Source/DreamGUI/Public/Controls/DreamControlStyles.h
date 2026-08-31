@@ -817,3 +817,150 @@ struct DREAMGUI_API FDreamSpinBoxStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
 	FDreamUIFaceBrush FieldBrush;
 };
+
+
+/**
+ * A ring menu: wedges around a hub, and the geometry that decides where they sit.
+ *
+ * Bigger than the other style structs in this file, and it has to be: a ring menu has no natural
+ * size the way a button has a height. Where the ring begins and ends, how far round it runs, how
+ * wide the gaps are and where the labels ride are all APPEARANCE -- a project themes its wheels
+ * once, and a designer who wants a half-ring on the left edge of the screen gets there without a
+ * subclass. What the menu CONTAINS, and how it answers a pointer, stays on the control.
+ *
+ * Every radius is in local units, measured from the ring's centre.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamRingMenuStyle
+{
+	GENERATED_BODY()
+
+	/** The wedges' far edge. The control sizes itself to twice this, square. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (ClampMin = "1.0"))
+	float OuterRadius = 200.0f;
+
+	/**
+	 * The hole. Also the hub's radius, and (unless DeadZoneRadius overrides it) the radius inside
+	 * which the pointer picks nothing -- one number for one edge, because three knobs describing
+	 * the same circle is three chances for it to stop being a circle.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (ClampMin = "0.0"))
+	float InnerRadius = 80.0f;
+
+	/** Where the first item begins, in degrees clockwise from twelve o'clock. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry")
+	float StartAngle = 0.0f;
+
+	/**
+	 * How far round the items are spread from there. 360 is a full wheel; 180 is the half-ring a
+	 * menu hanging off a screen edge wants, and it is why this is a knob at all.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (ClampMin = "1.0", ClampMax = "360.0"))
+	float SweepAngle = 360.0f;
+
+	/**
+	 * Taken out of each wedge, half at each end, so neighbours do not touch.
+	 *
+	 * Drawn only. The HIT sector keeps the full slice, which is not a shortcut: with the gap in the
+	 * hit shape too, dragging across one would exit a wedge and enter nothing, and the highlight
+	 * would blink off between every pair of items.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (ClampMin = "0.0"))
+	float ItemGapAngle = 2.0f;
+
+	/** How much further out the highlighted wedge reaches. Zero for a wheel that only recolours. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (ClampMin = "0.0"))
+	float HighlightGrowth = 12.0f;
+
+	/**
+	 * Where an item's icon and label ride, as a radius. Zero means midway between the two edges,
+	 * which is right for almost every ring and stays right when the radii change.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (ClampMin = "0.0"))
+	float ContentRadius = 0.0f;
+
+	/** How wide an item's icon-and-label box is, which is also what a long label wraps at. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Geometry", meta = (ClampMin = "1.0"))
+	float ContentWidth = 120.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors")
+	FColor WedgeNormal = FColor(52, 57, 70, 235);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors")
+	FColor WedgeHovered = FColor(74, 81, 98, 245);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors")
+	FColor WedgePressed = FColor(38, 42, 52, 255);
+
+	/** The committed item's wedge. Separate from Hovered because the two say different things. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors")
+	FColor WedgeSelected = FColor(0, 119, 255, 255);
+
+	/**
+	 * An item whose bEnabled is false. Its selectable is switched off, so the pointer transition
+	 * never reaches it and this is the only colour it ever wears.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors")
+	FColor WedgeDisabled = FColor(40, 43, 52, 140);
+
+	/**
+	 * The unbroken ring behind the wedges, filling the gaps between them. Transparent to switch it
+	 * off; it is a separate node and costs nothing when it draws nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors")
+	FColor BackdropColor = FColor(24, 26, 33, 190);
+
+	/** The disc inside InnerRadius. Transparent leaves the middle of the screen visible. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors")
+	FColor HubColor = FColor(30, 33, 41, 235);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	FColor LabelColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	FColor LabelSelectedColor = FColor(255, 255, 255, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	FColor LabelDisabledColor = FColor(120, 126, 140, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	float FontSize = 15.0f;
+
+	/** The hub's caption -- the highlighted item's name, in the common arrangement. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	FColor HubTextColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	float HubFontSize = 18.0f;
+
+	/** An item's icon, when it has one. A brush stating its own ImageSize wins over this. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	FVector2D IconSize = FVector2D(40.0, 40.0);
+
+	/** Between the icon and the label under it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text")
+	float IconSpacing = 4.0f;
+
+	/**
+	 * The box a label is drawn in, which decides where the icon above it ends up.
+	 *
+	 * Zero derives it as 2.6 line heights, so a label that wraps to two lines still sits centred
+	 * where a one-line label sat -- the text is vertically centred in this box, and measuring the
+	 * real thing is not available where this is decided (a rebuild runs with no layout pass behind
+	 * it, and a headless test has no text layout at all).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Text", meta = (ClampMin = "0.0"))
+	float LabelHeight = 0.0f;
+
+	/**
+	 * How long Open and Close take. Zero snaps -- and so does a control with no world, because the
+	 * tween manager is a world subsystem and hands back null without one (which is every headless
+	 * test, and is why the end state is written first and the tween only animates toward it).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Open", meta = (ClampMin = "0.0"))
+	float OpenDuration = 0.12f;
+
+	/** What the ring scales up FROM while opening, and back down to while closing. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Open", meta = (ClampMin = "0.01"))
+	float OpenScaleFrom = 0.86f;
+};

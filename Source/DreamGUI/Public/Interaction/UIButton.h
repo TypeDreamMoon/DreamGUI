@@ -26,6 +26,14 @@ protected:
 	FUIButtonSimpleEvent OnHoveredBP;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Button", DisplayName="OnUnhovered")
 	FUIButtonSimpleEvent OnUnhoveredBP;
+	/**
+	 * The C++ counterparts of the two above, and they exist for the same reason OnClickCPP does:
+	 * a native control wires its parts from C++, and a dynamic delegate can only carry a UFUNCTION
+	 * with no arguments -- so a control with N of these buttons could not tell WHICH one spoke.
+	 * A weak lambda per button can, which is how UDreamRingMenu knows the pointer left wedge 3.
+	 */
+	FSimpleMulticastDelegate OnHoveredCPP;
+	FSimpleMulticastDelegate OnUnhoveredCPP;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Button", DisplayName="OnPressed")
 	FUIButtonSimpleEvent OnPressedBP;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Button", DisplayName="OnReleased")
@@ -37,4 +45,6 @@ protected:
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;
 public:
 	FSimpleMulticastDelegate& GetOnClickEvent(){return OnClickCPP;}
+	FSimpleMulticastDelegate& GetOnHoveredEvent(){return OnHoveredCPP;}
+	FSimpleMulticastDelegate& GetOnUnhoveredEvent(){return OnUnhoveredCPP;}
 };

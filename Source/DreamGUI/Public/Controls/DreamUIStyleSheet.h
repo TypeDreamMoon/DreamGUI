@@ -115,6 +115,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input Key Selector")
 	TMap<FName, FDreamInputKeySelectorStyle> InputKeySelectorVariants;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ring Menu")
+	FDreamRingMenuStyle RingMenu;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ring Menu")
+	TMap<FName, FDreamRingMenuStyle> RingMenuVariants;
+
 	/**
 	 * The named variant, or the family default when the name is none or matches nothing.
 	 *
@@ -138,6 +143,7 @@ public:
 	const FDreamDialogStyle& DialogStyle(FName InVariant) const { return Pick(Dialog, DialogVariants, InVariant); }
 	const FDreamExpandableAreaStyle& ExpandableAreaStyle(FName InVariant) const { return Pick(ExpandableArea, ExpandableAreaVariants, InVariant); }
 	const FDreamInputKeySelectorStyle& InputKeySelectorStyle(FName InVariant) const { return Pick(InputKeySelector, InputKeySelectorVariants, InVariant); }
+	const FDreamRingMenuStyle& RingMenuStyle(FName InVariant) const { return Pick(RingMenu, RingMenuVariants, InVariant); }
 
 private:
 	template<class T>
