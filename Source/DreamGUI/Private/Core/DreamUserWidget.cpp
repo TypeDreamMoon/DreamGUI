@@ -230,6 +230,16 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
 	}
 
+	// UMG's TickFrequency=Auto, translated: implementing On Tick IS opting in. bWantsTick stays
+	// off by default because the widgets that never tick should pay nothing, but a Blueprint that
+	// put the event in its graph means it -- without this the graph compiles, PIE runs, and nothing
+	// fires, with no line anywhere saying why. Before NativeOnInitialized, so an OnInitialized that
+	// explicitly calls SetWantsTick(false) still wins.
+	if (bHasBlueprintOnTick && !bWantsTick)
+	{
+		SetWantsTick(true);
+	}
+
 	// Before anything reads this widget's data. Everything below pulls from it -- a binding reads a
 	// property, an `each` list asks its source how many rows there are -- so a subclass filling a list
 	// source gets the floor here. Later is after the first frame has already been composed from
