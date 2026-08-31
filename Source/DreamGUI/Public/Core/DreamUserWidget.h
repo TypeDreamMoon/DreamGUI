@@ -146,8 +146,41 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	UDreamWidget* GetContentRoot() const;
 
-	/** The widget carrying the UDreamNamedSlot of that name inside this instance, or null. */
+	/**
+	 * The widget carrying the UDreamNamedSlot of that name inside this instance, or null.
+	 *
+	 * Two roads, because there are two kinds of contents. A class built from an archetype has a
+	 * UDreamWidgetTree to walk. A native control has none -- nothing instanced a template to make
+	 * its contents; it built them under itself in NativeOnInitialized -- so the walk is its own
+	 * children, stopping at any nested instance, whose slots belong to that instance.
+	 */
 	UDreamWidget* FindSlotWidget(FName InSlotName) const;
+
+	/**
+	 * The holes this CLASS opens, for a class whose contents are code rather than an archetype.
+	 *
+	 * An archetype-built class declares its slots by putting a UDreamNamedSlot in its tree, and
+	 * every consumer -- the compiler, the designer's hierarchy rows, the text builder -- reads them
+	 * off that tree. A native control has no tree to read: it has none on the CDO, and none at all
+	 * until it builds one. So the class itself has to be able to answer, before any instance exists.
+	 *
+	 * The names returned here are a promise: each must be the display name of a widget the control
+	 * puts a UDreamNamedSlot on. This is the declaration and the built tree is the implementation;
+	 * FindSlotWidget is what matches them, by name.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	virtual TArray<FName> GetNativeSlotNames() const;
+
+	/**
+	 * The slot that content arriving WITHOUT a slot name goes to -- .dui nesting, and a designer
+	 * drop onto the control itself. None means unslotted content stays where it landed.
+	 *
+	 * Nesting is the one thing .dui does natively, so for the common case -- one hole, the obvious
+	 * one -- it should not have to be spelled. `Native.Button OK { Image Icon {} Text {} }` puts
+	 * both children inside the button because the button's default slot is its content area.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	virtual FName GetDefaultSlotName() const;
 
 	/** What the host put in InSlotName, or null. Reads the binding, not the attachment. */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
@@ -164,6 +197,37 @@ public:
 
 	/** Every slot name InTree declares, in tree order. Static because the compiler asks before any instance exists. */
 	static void CollectDeclaredSlotNames(const UDreamWidgetTree* InTree, TArray<FName>& OutNames);
+
+	/**
+	 * Every slot name InClass offers, from BOTH roads: the UDreamNamedSlots in its archetype, and
+	 * a native class's own GetNativeSlotNames.
+	 *
+	 * The overload every consumer should reach for. Asking the archetype alone was correct while
+	 * only archetype-built classes could have slots at all, and is now the answer to a narrower
+	 * question -- one that silently reports "no slots" for every native control.
+	 */
+	static void CollectDeclaredSlotNames(const UClass* InClass, TArray<FName>& OutNames);
+
+	/**
+	 * Hang what the host bound into the slots of that name inside this instance.
+	 *
+	 * Called for you at the end of Initialize, after NativeOnInitialized -- which is the earliest
+	 * moment BOTH kinds of contents exist, and still before registration, so nothing lays out a
+	 * half-filled shell. It used to live inside InitializeWidgetStatic, where it ran before a
+	 * native control had built anything for the content to go into.
+	 */
+	void AttachNamedSlotContent();
+
+	/**
+	 * This widget's holes have just been filled -- the named bindings and whatever nesting handed to
+	 * the default slot. Called at the end of Initialize, after NativeOnInitialized.
+	 *
+	 * A class cannot answer "is my content slot filled?" from NativeOnInitialized, because the
+	 * content arrives after it. Anything that has to react to what a host supplied -- a stock label
+	 * standing down for a supplied one, a header sizing itself around what is in it -- belongs here
+	 * rather than in a first pass that is structurally too early to be right.
+	 */
+	virtual void NativeOnSlotContentAttached() {}
 
 	/**
 	 * Run ALL of this widget's property bindings once: call each bound function, hand the result to
@@ -379,6 +443,20 @@ public:
 #pragma endregion
 
 private:
+	/**
+	 * Move content that arrived with no slot name into the default slot.
+	 *
+	 * InHostSupplied is the children this widget had BEFORE it made any of its own -- snapshotted in
+	 * Initialize, ahead of both roads that produce contents. That ordering is the whole trick: .dui
+	 * nesting and a designer drop attach to the control while it is still empty, so "was already
+	 * here" and "is not mine" are the same set, and no control has to name its own root to be told
+	 * apart from its guests.
+	 *
+	 * Anything a named binding already claimed has been re-parented into its slot by then and is no
+	 * longer a child of this widget, so it is skipped without a second rule.
+	 */
+	void AdoptUnslottedChildren(const TArray<UDreamWidget*>& InHostSupplied);
+
 	/**
 	 * Add the event bridge to this instance, once, in game worlds only. Edit worlds (the designer's
 	 * preview above all) are skipped so authored component lists, panels and diffs never see it; a

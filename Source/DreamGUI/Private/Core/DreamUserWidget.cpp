@@ -61,8 +61,10 @@ void CollectDreamEditorChildren(UDreamWidget* InWidget, TArray<UDreamWidget*>& O
 	{
 		return;
 	}
+	// The CLASS, not this instance's tree: a native control has no tree object to read slots off,
+	// and asking the instance would show the author no rows at all for one.
 	TArray<FName> Declared;
-	UDreamUserWidget::CollectDeclaredSlotNames(Nested->GetWidgetTree(), Declared);
+	UDreamUserWidget::CollectDeclaredSlotNames(Nested->GetClass(), Declared);
 	for (const FName& SlotName : Declared)
 	{
 		if (UDreamWidget* SlotWidget = Nested->FindSlotWidget(SlotName))
@@ -210,6 +212,12 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	}
 	bInitialized = true;
 
+	// What the HOST hung on this widget, taken before this widget makes anything of its own. Both
+	// roads that produce contents run below -- InitializeWidgetStatic instances an archetype,
+	// NativeOnInitialized realizes a native control's tree -- so this snapshot is exactly "not
+	// mine", and AdoptUnslottedChildren needs no other rule to tell guests from furniture.
+	TArray<UDreamWidget*> HostSuppliedChildren(GetChildren());
+
 	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
 
 	// The Blueprint surface's wiring, before NativeOnInitialized so OnInitialized code can already
@@ -245,6 +253,12 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// source gets the floor here. Later is after the first frame has already been composed from
 	// whatever the source held, which for a list built at Begin Play is nothing.
 	NativeOnInitialized();
+
+	// Both kinds of contents now exist, and nothing is registered yet: the one moment that works for
+	// an archetype-instanced tree and a code-built one alike.
+	AttachNamedSlotContent();
+	AdoptUnslottedChildren(HostSuppliedChildren);
+	NativeOnSlotContentAttached();
 
 	// After the tree exists: the bindings name widgets in it.
 	ResolvePropertyBindings();
@@ -959,16 +973,52 @@ void UDreamUserWidget::CollectDeclaredSlotNames(const UDreamWidgetTree* InTree, 
 	});
 }
 
+void UDreamUserWidget::CollectDeclaredSlotNames(const UClass* InClass, TArray<FName>& OutNames)
+{
+	if (InClass == nullptr || !InClass->IsChildOf(UDreamUserWidget::StaticClass()))
+	{
+		return;
+	}
+	// The archetype's slots first, so an archetype-built class is answered exactly as before.
+	CollectDeclaredSlotNames(UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(InClass), OutNames);
+
+	// Then what the class declares for itself. The CDO, because this is a question about the class
+	// and is asked before any instance exists -- the compiler asks it, and so does a designer
+	// hierarchy row for a control nobody has placed yet.
+	if (const UDreamUserWidget* Defaults = InClass->GetDefaultObject<UDreamUserWidget>())
+	{
+		for (const FName& SlotName : Defaults->GetNativeSlotNames())
+		{
+			if (!SlotName.IsNone())
+			{
+				OutNames.AddUnique(SlotName);
+			}
+		}
+	}
+}
+
+TArray<FName> UDreamUserWidget::GetNativeSlotNames() const
+{
+	// Nothing by default: a class built from an archetype declares its slots in that archetype, and
+	// answering for it here would be a second source for the same question.
+	return TArray<FName>();
+}
+
+FName UDreamUserWidget::GetDefaultSlotName() const
+{
+	return NAME_None;
+}
+
 UDreamWidget* UDreamUserWidget::FindSlotWidget(FName InSlotName) const
 {
-	if (InSlotName.IsNone() || !IsValid(WidgetTree))
+	if (InSlotName.IsNone())
 	{
 		return nullptr;
 	}
 	UDreamWidget* Found = nullptr;
-	WidgetTree->ForEachWidget([&Found, InSlotName](UDreamWidget* Widget)
+	const auto Consider = [&Found, InSlotName](UDreamWidget* Widget)
 	{
-		if (Found != nullptr)
+		if (Found != nullptr || !IsValid(Widget))
 		{
 			return;
 		}
@@ -979,8 +1029,111 @@ UDreamWidget* UDreamUserWidget::FindSlotWidget(FName InSlotName) const
 				Found = Widget;
 			}
 		}
-	});
+	};
+
+	if (IsValid(WidgetTree))
+	{
+		WidgetTree->ForEachWidget(Consider);
+		return Found;
+	}
+
+	// A native control: no tree object, because nothing instanced a template to make its contents --
+	// it built them under itself. A plain structural walk, and NOT CollectDreamWidgetsToNestedBoundary,
+	// whose children are editor-semantic: for a nested instance that function returns the very slot
+	// rows this function is being asked for, so using it here would ask the question to answer it.
+	//
+	// Stopping at a nested instance is the same boundary either way. A slot inside a Button placed
+	// inside this control is that Button's hole, and answering with it would let a host fill it from
+	// outside the asset that opened it.
+	TArray<UDreamWidget*> Pending(GetChildren());
+	while (Pending.Num() > 0 && Found == nullptr)
+	{
+		UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		Consider(Widget);
+		if (!Widget->IsA<UDreamUserWidget>())
+		{
+			Pending.Append(Widget->GetChildren());
+		}
+	}
 	return Found;
+}
+
+void UDreamUserWidget::AttachNamedSlotContent()
+{
+	// The content objects belong to the host's tree and arrived with it; all that is left is to hang
+	// each under the UDreamNamedSlot of that name inside this instance. Done by this widget rather
+	// than by the host, because only it knows where its own slots are.
+	for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : NamedSlotContent)
+	{
+		UDreamWidget* Content = Binding.Value;
+		if (!IsValid(Content))
+		{
+			continue;
+		}
+		UDreamWidget* SlotWidget = FindSlotWidget(Binding.Key);
+		if (!IsValid(SlotWidget))
+		{
+			// The class dropped or renamed a slot the host still binds. Silently discarding it is how
+			// content disappears from a screen with nothing in the log to say why; the compiler
+			// reports this as an error on the host too, but a class can change after that compile.
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' has no slot named '%s'; the content bound to it is not shown."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetClass()->GetName(), *Binding.Key.ToString());
+			continue;
+		}
+		if (Content->HasRegistered())
+		{
+			Content->TrySetParent(SlotWidget, false);
+		}
+		else
+		{
+			Content->SetParentBeforeRegister(SlotWidget);
+		}
+	}
+}
+
+void UDreamUserWidget::AdoptUnslottedChildren(const TArray<UDreamWidget*>& InHostSupplied)
+{
+	const FName DefaultSlot = GetDefaultSlotName();
+	if (DefaultSlot.IsNone() || InHostSupplied.Num() == 0)
+	{
+		return;
+	}
+	UDreamWidget* SlotWidget = FindSlotWidget(DefaultSlot);
+	if (!IsValid(SlotWidget))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' names '%s' as its default slot but opens no slot of that name."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetClass()->GetName(), *DefaultSlot.ToString());
+		return;
+	}
+	for (UDreamWidget* Content : InHostSupplied)
+	{
+		// Still a child of this widget means no named binding claimed it: AttachNamedSlotContent
+		// re-parents what it places, so anything it took is already somewhere else.
+		if (!IsValid(Content) || Content->GetParent() != this || SlotWidget->IsChildOf(Content))
+		{
+			continue;
+		}
+		if (Content->HasRegistered())
+		{
+			// Try, not Set: a refusal is real (a cycle, or a slot already holding its one child) and
+			// silent otherwise -- the content would vanish from a hierarchy that still looks right.
+			// World position dropped on purpose, the same call AddChild makes: content handed to a
+			// slot is handed to that slot's arrangement.
+			if (!Content->TrySetParent(SlotWidget, false))
+			{
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' refused '%s' as default-slot content."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *SlotWidget->GetDisplayName(), *Content->GetDisplayName());
+			}
+		}
+		else
+		{
+			Content->SetParentBeforeRegister(SlotWidget);
+		}
+	}
 }
 
 UDreamWidget* UDreamUserWidget::GetContentForNamedSlot(FName InSlotName) const

@@ -80,7 +80,23 @@ class DREAMGUI_API UDreamNamedSlot : public UDreamUIBehaviour
 	GENERATED_BODY()
 
 public:
-	virtual int32 GetMaxWidgetChildren() const override { return 1; }
+	/**
+	 * Whether this hole takes more than one widget.
+	 *
+	 * One is the default and the norm -- UMG's UNamedSlot, our own UContentWidget -- for the reason
+	 * above: a hole that took several would be a panel, and a panel is a thing the class can put
+	 * here itself. A class that ALREADY put one here says so with this. The expander's content
+	 * column is a vertical box and its hole is that box; without this, `Native.ExpandableArea {
+	 * Text {} Text {} }` would place the first line and refuse the second.
+	 *
+	 * Only NESTED content can arrive in numbers. NamedSlotContent maps a name to one widget, so a
+	 * designer drop or an explicit binding is one either way -- this widens what an author can nest,
+	 * not what the binding map can hold.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NamedSlot")
+	bool bAcceptsSeveral = false;
+
+	virtual int32 GetMaxWidgetChildren() const override { return bAcceptsSeveral ? INDEX_NONE : 1; }
 
 	/** The name the host binds content to: this widget's display name. */
 	FName GetSlotName() const;

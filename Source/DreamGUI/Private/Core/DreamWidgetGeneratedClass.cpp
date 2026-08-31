@@ -250,36 +250,10 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		}
 	});
 
-	// 3b. Fill the slots the HOST bound. The content objects belong to the host's tree and arrived
-	//     with it; all that is left is to hang each under the UDreamNamedSlot of that name inside
-	//     this instance. Done here rather than by the host, because only this class knows where its
-	//     own slots are -- and done before registration, so nothing lays out a half-filled shell.
-	for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : InUserWidget->NamedSlotContent)
-	{
-		UDreamWidget* Content = Binding.Value;
-		if (!IsValid(Content))
-		{
-			continue;
-		}
-		UDreamWidget* SlotWidget = InUserWidget->FindSlotWidget(Binding.Key);
-		if (!IsValid(SlotWidget))
-		{
-			// The class dropped or renamed a slot the host still binds. Silently discarding it is how
-			// content disappears from a screen with nothing in the log to say why; the compiler
-			// reports this as an error on the host too, but a class can change after that compile.
-			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' has no slot named '%s'; the content bound to it is not shown."),
-				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InClass->GetName(), *Binding.Key.ToString());
-			continue;
-		}
-		if (Content->HasRegistered())
-		{
-			Content->TrySetParent(SlotWidget, false);
-		}
-		else
-		{
-			Content->SetParentBeforeRegister(SlotWidget);
-		}
-	}
+	// Filling the host's slots used to be step 3b, here. It is now UDreamUserWidget::
+	// AttachNamedSlotContent, called at the end of Initialize -- late enough that a NATIVE control
+	// has built the tree the content goes into, and still before registration. This function only
+	// ever saw one of the two kinds of contents.
 
 	// 4. Hang the contents under the user widget. SetParentBeforeRegister rather than TrySetParent:
 	//    nothing here is registered yet, and the attach path would run layout against a half-built

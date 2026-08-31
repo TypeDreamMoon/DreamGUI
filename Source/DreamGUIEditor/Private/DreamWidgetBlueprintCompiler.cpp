@@ -1347,9 +1347,11 @@ void FDreamWidgetBlueprintCompilerContext::ValidateNamedSlotBindings(UDreamWidge
 		{
 			return;
 		}
+		// The class overload: it asks the archetype exactly as this line used to, and then asks a
+		// native control for the slots it declares in code. Without that half, every slot bound on a
+		// placed native control compiled to an error saying the class declares no such slot.
 		TArray<FName> Declared;
-		UDreamUserWidget::CollectDeclaredSlotNames(
-			UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(Nested->GetClass()), Declared);
+		UDreamUserWidget::CollectDeclaredSlotNames(Nested->GetClass(), Declared);
 		for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : Nested->NamedSlotContent)
 		{
 			if (!Declared.Contains(Binding.Key))
