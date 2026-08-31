@@ -65,6 +65,9 @@ void UDreamScrollBox::NativeOnInitialized()
 				Nested<UDreamScrollBar>("ScrollBar").Out(ScrollBarNode))
 			.Then([this](UDreamWidget& InRoot)
 			{
+				// See UDreamListView's twin: a consumer's layout writes this control's rect, and a
+				// stretched child caches the span it resolved back when that rect was zero.
+				GetDimensionChangedEvent().AddUObject(this, &UDreamScrollBox::HandleDimensionsChanged);
 				ScrollView = ViewportNode != nullptr ? ViewportNode->GetComponent<UUIScrollView>() : nullptr;
 				ContentStack = ContentNode != nullptr
 					? Cast<UDreamLayoutContainerStackBox>(ContentNode->GetLayoutContainer())
@@ -90,6 +93,16 @@ void UDreamScrollBox::NativeOnInitialized()
 			}));
 
 	ApplyStyle();
+}
+
+void UDreamScrollBox::HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged)
+{
+	if (!bWidthChanged && !bHeightChanged)
+	{
+		return;
+	}
+	RepublishAnchors(ViewportNode);
+	RepublishAnchors(ContentNode);
 }
 
 void UDreamScrollBox::ApplyStyle()

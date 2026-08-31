@@ -108,6 +108,10 @@ void UDreamListViewBase::NativeOnInitialized()
 				Nested<UDreamScrollBar>("ScrollBar").Out(ScrollBarNode))
 			.Then([this](UDreamWidget& InRoot)
 			{
+				// A consumer's layout writes this control's rect, and a stretched child caches the span
+				// it resolved when that rect was still zero. Re-stating the viewport's anchors on
+				// every resize is what keeps the rows as wide as the list -- see RepublishAnchors.
+				GetDimensionChangedEvent().AddUObject(this, &UDreamListViewBase::HandleDimensionsChanged);
 				ScrollBehaviour = ViewportNode != nullptr ? ViewportNode->GetComponent<UUIScrollView>() : nullptr;
 				if (ScrollBehaviour != nullptr && ColumnNode != nullptr)
 				{
@@ -252,6 +256,16 @@ void UDreamListViewBase::RebuildRows()
 	ColumnNode->SetHeight(ContentHeight);
 
 	RefreshScrollFurniture(Active);
+}
+
+void UDreamListViewBase::HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged)
+{
+	if (!bWidthChanged && !bHeightChanged)
+	{
+		return;
+	}
+	RepublishAnchors(ViewportNode);
+	RepublishAnchors(ColumnNode);
 }
 
 void UDreamListViewBase::RefreshScrollFurniture(const FDreamListStyle& InStyle)

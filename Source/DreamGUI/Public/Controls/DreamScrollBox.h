@@ -131,6 +131,9 @@ public:
 
 	virtual void ApplyStyle() override;
 
+	/** Re-resolve the stretched viewport (and its content) after this control is resized. */
+	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
+
 protected:
 	virtual void NativeOnInitialized() override;
 

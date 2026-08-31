@@ -244,6 +244,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void RebuildRows();
 
+	/** Re-resolve the stretched viewport (and everything under it) after this control is resized. */
+	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
+
 	virtual void ApplyStyle() override;
 
 protected:

@@ -100,6 +100,33 @@ protected:
 		}
 	}
 
+	/**
+	 * Re-state a node's anchors, unchanged, to make its stretched axes recompute.
+	 *
+	 * GetWidth/GetHeight DO resolve a stretched axis against the parent's span -- and then cache the
+	 * answer. The cache is invalidated when the node's OWN anchor data is written, and propagated
+	 * down from a parent's size change through MarkAnchorDataChanged_Recursive; but a control whose
+	 * own rect is written by a consumer's layout pass can find its inner stretched nodes still
+	 * holding the number they computed when the control was zero-sized. The measured symptom was a
+	 * list whose viewport read back -0 wide inside a 364-wide face, so every row was invisible.
+	 *
+	 * SetAnchorData writes unconditionally (no equality gate), which is exactly what is wanted here:
+	 * the values do not change, the CACHE does, and the recursion carries it to every stretched
+	 * descendant. Cheap enough to call from a dimensions-changed handler; the walk stops at nodes
+	 * that are not stretched, which is most of them.
+	 *
+	 * The real fix is one level down -- a parent's arranged size should invalidate its anchor-driven
+	 * children the way an authored size does. That is engine work, booked separately; this is the
+	 * control-layer answer that makes the family usable today.
+	 */
+	static void RepublishAnchors(UDreamWidget* InNode)
+	{
+		if (InNode != nullptr)
+		{
+			InNode->SetAnchorData(InNode->GetAnchorData());
+		}
+	}
+
 	/** The brush's drawn size when it states one, the style's size otherwise -- Slate's ImageSize rule. */
 	static FVector2D BrushSizeOr(const FDreamUIFaceBrush& InBrush, const FVector2D& InStyleSize)
 	{
