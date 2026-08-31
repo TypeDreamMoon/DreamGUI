@@ -137,6 +137,10 @@ public:
 	/** The same watch UDreamListViewBase keeps, for the same reason -- see there. */
 	virtual void NativeOnTick(float InDeltaTime) override;
 
+	/** The face size the inner stretched nodes were last made to agree with. */
+	UPROPERTY(Transient)
+	FVector2D LastSettledFaceSize = FVector2D(-1.0, -1.0);
+
 protected:
 	virtual void NativeOnInitialized() override;
 

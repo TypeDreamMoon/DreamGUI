@@ -99,12 +99,31 @@ void UDreamScrollBox::NativeOnInitialized()
 void UDreamScrollBox::NativeOnTick(float InDeltaTime)
 {
 	Super::NativeOnTick(InDeltaTime);
+	// Only while the face's size differs from the one the inner nodes were last settled against.
+	//
+	// The unconditional version of this oscillated, and the measurement is worth keeping: the
+	// control's own height alternated between 59 and 1299 in the DESIGNER, where a slot change
+	// rebuilds layout immediately (UDreamPanelSlot::NotifySlotChanged, editor-only) -- so a
+	// republish every frame is a synchronous relayout every frame, and asking for a MEASURE
+	// invalidation on top of it sent the control's own desired size back up to its consumer, which
+	// resized it, which made the next frame disagree again.
+	//
+	// SetAnchorData already marks layout for rebuild, so the republish alone is the whole action.
+	const FVector2D FaceSize = FaceNode != nullptr
+		? FVector2D(FaceNode->GetWidth(), FaceNode->GetHeight())
+		: FVector2D::ZeroVector;
+	if (FaceSize.Equals(LastSettledFaceSize, 0.01))
+	{
+		return;
+	}
 	if (NeedsStretchRefresh(ViewportNode) || NeedsStretchRefresh(ContentNode))
 	{
 		RepublishAnchors(ViewportNode);
 		RepublishAnchors(ContentNode);
-		UDreamWidget::MarkLayoutForRebuild(ContentNode, EDreamLayoutInvalidation::Measure);
+		// Not settled yet: leave the record alone and look again next frame.
+		return;
 	}
+	LastSettledFaceSize = FaceSize;
 }
 
 void UDreamScrollBox::HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged)
