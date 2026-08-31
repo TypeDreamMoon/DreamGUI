@@ -65,20 +65,20 @@ bool FDreamControlProgressBarTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the fill lives inside the track"),
 		(UObject*)Bar->FillNode->GetParent() == (UObject*)Bar->TrackNode.Get());
 
-	// There is no behaviour here on purpose; the control is the only writer of this anchor, so the
-	// anchor IS the claim.
-	TestEqual(TEXT("the authored percent arrived as the fill's anchor"),
-		static_cast<float>(Bar->FillNode->GetAnchorMax().X), 0.6f);
+	// There is no behaviour here on purpose; the control is the only writer of this geometry. Both
+	// axes are ABSOLUTE (point anchors on the track's left edge, sizes from the track's arranged
+	// rect): the ratio-anchor route resolved the parent's span at write time against the track's
+	// zero SizeDelta on all but full-layout frames, and the fill flickered at zero width. The
+	// percent's claim is therefore the SizeDelta.X : track-width ratio.
+	const double TrackWidth = Bar->TrackNode->GetWidth();
+	TestEqual(TEXT("the authored percent arrived as the fill's width"),
+		static_cast<float>(Bar->FillNode->GetSizeDelta().X), static_cast<float>(TrackWidth * 0.6));
 
 	Bar->SetPercent(0.25f);
-	TestEqual(TEXT("SetPercent moves the fill's horizontal max"),
-		static_cast<float>(Bar->FillNode->GetAnchorMax().X), 0.25f);
-	TestEqual(TEXT("while its horizontal min stays at the track's start"),
+	TestEqual(TEXT("SetPercent moves the fill's width"),
+		static_cast<float>(Bar->FillNode->GetSizeDelta().X), static_cast<float>(TrackWidth * 0.25));
+	TestEqual(TEXT("the horizontal anchor is a point on the track's start"),
 		static_cast<float>(Bar->FillNode->GetAnchorMin().X), 0.0f);
-	// The vertical axis is a POINT with an absolute height, not a stretch: an anchor-driven child
-	// re-derives a stretched axis only when its own anchor data changes, so a stretched fill kept a
-	// stale zero height forever after its track grew back from a mid-layout zero. The height is the
-	// track's, pushed on every percent write.
 	TestEqual(TEXT("the vertical axis is a point anchor -- min"),
 		static_cast<float>(Bar->FillNode->GetAnchorMin().Y), 0.5f);
 	TestEqual(TEXT("the vertical axis is a point anchor -- max"),
@@ -88,7 +88,7 @@ bool FDreamControlProgressBarTest::RunTest(const FString& Parameters)
 	Bar->SetPercent(1.7f);
 	TestEqual(TEXT("the property stores what was set"), Bar->GetPercent(), 1.7f);
 	TestEqual(TEXT("the fill never leaves the track"),
-		static_cast<float>(Bar->FillNode->GetAnchorMax().X), 1.0f);
+		static_cast<float>(Bar->FillNode->GetSizeDelta().X), static_cast<float>(TrackWidth));
 
 	// The style reached the parts -- absolute colours, no behaviour in between to carry them.
 	if (UDreamVisual* TrackVisual = Bar->TrackNode->GetVisual())

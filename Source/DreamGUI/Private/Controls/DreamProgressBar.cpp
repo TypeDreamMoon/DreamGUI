@@ -69,17 +69,24 @@ void UDreamProgressBar::ApplyPercent()
 		return;
 	}
 	// Clamped where it becomes geometry, not where it is stored: the property keeps the author's
-	// number (UMG does the same), the anchors never leave the track.
+	// number (UMG does the same).
 	const float Clamped = FMath::Clamp(Percent, 0.0f, 1.0f);
-	FillNode->SetHorizontalAnchorMinMax(FVector2D(0.0, Clamped), false, false);
-	// The HEIGHT is absolute, not stretched: an anchor-driven child re-derives a stretched axis
-	// only when its own anchor data changes, and the Y half of this fill's data never would -- a
-	// track that grew back from a mid-layout zero left the fill's cached height at zero forever
-	// (the dropdown list's stale-width case, one axis over). The track's height is always live,
-	// and this runs on every percent push anyway.
-	FillNode->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), false, false);
-	const float TrackHeight = TrackNode != nullptr ? static_cast<float>(TrackNode->GetHeight()) : 0.0f;
-	FillNode->SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D(0.0, TrackHeight));
+	// BOTH axes are absolute numbers read from the track's live arranged size, pushed on every
+	// percent write. The anchor-ratio route asked the setter to resolve the parent's span at write
+	// time, and on all but the occasional full-layout frame that resolution saw the track's
+	// SizeDelta (zero -- it stretches) rather than its arranged width: the fill spent those frames
+	// at zero width, rendered as a round dot walking the track (the flicker). The same family as
+	// the dropdown list's stale width and this fill's own stale height: an anchor-driven child's
+	// geometry is only as fresh as the last time ITS OWN data changed, so the control feeds it
+	// values with no spans left to resolve. Pivot and point anchor sit on the track's left edge,
+	// so the width grows rightward, exactly as the ratio anchor drew it.
+	const FVector2D TrackSize = TrackNode != nullptr
+		? FVector2D(TrackNode->GetWidth(), TrackNode->GetHeight())
+		: FVector2D::ZeroVector;
+	FillNode->SetPivot(FVector2D(0.0, 0.5));
+	FillNode->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0, 0.5), FVector2D(0.0, 0.5), false, false);
+	FillNode->SetAnchoredPositionAndSizeDelta(
+		FVector2D::ZeroVector, FVector2D(Clamped * TrackSize.X, TrackSize.Y));
 }
 
 // The tag this class answers to in .dui.
