@@ -89,4 +89,12 @@ struct DREAMGUI_API FDreamUITextBuilder
 	 * compile error, a tooltip, or a log line without rewording it.
 	 */
 	static bool IsWritableFromText(const FProperty* InProperty, FString& OutReason);
+
+	/**
+	 * Whether this object property names a node (the widget, its visual, or a behaviour) rather
+	 * than an asset. Exported for the write-back: a node reference's only .dui spelling is a bare
+	 * node id, which a value printer without the tree cannot produce -- so it must refuse, with
+	 * this exact judge, or it prints the object PATH and poisons the file.
+	 */
+	static bool IsNodeReferenceProperty(const FObjectPropertyBase* InProperty);
 };

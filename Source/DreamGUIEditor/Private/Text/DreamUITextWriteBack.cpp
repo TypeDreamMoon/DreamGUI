@@ -377,12 +377,34 @@ namespace DreamUIWriteBackLocal
 		if (const FSoftObjectProperty* AsSoft = CastField<FSoftObjectProperty>(InLeaf))
 		{
 			const FSoftObjectPtr& Value = AsSoft->GetPropertyValue(InValuePtr);
+			if (!Value.IsNull() && !Value.ToSoftObjectPath().GetSubPathString().IsEmpty())
+			{
+				// A subobject, not an asset -- see the hard branch below.
+				return false;
+			}
 			OutText = Value.IsNull() ? TEXT("None") : QuoteString(Value.ToSoftObjectPath().ToString());
 			return true;
 		}
 		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InLeaf))
 		{
+			// A node reference (the widget, its visual, a behaviour) has no literal spelling from
+			// HERE: its .dui form is a bare node id, which needs the tree for context this printer
+			// does not have. Printing the object path instead is how
+			// 'Content = "/Game/UI/....:DreamWidgetTree_0.TrackList_EachContent"' once got swept
+			// into a file -- a subobject path the next compile's LoadObject cannot resolve against
+			// the class being rebuilt, taking the whole hierarchy down (DUI5001 -> DUI6002).
+			if (FDreamUITextBuilder::IsNodeReferenceProperty(AsObject))
+			{
+				return false;
+			}
 			const UObject* Value = AsObject->GetObjectPropertyValue(InValuePtr);
+			// The second fence, for object properties outside the node-reference family: a
+			// subobject path is an instance's name, not an asset's, and it is not stable across
+			// compiles. No spelling; the row greys, the sweep skips.
+			if (Value != nullptr && !FSoftObjectPath(Value).GetSubPathString().IsEmpty())
+			{
+				return false;
+			}
 			// None bare, not quoted: it is the spelling WriteValue's null branch reads, and an FName
 			// would have claimed the quotes first anyway.
 			OutText = Value != nullptr ? QuoteString(FSoftObjectPath(Value).ToString()) : TEXT("None");

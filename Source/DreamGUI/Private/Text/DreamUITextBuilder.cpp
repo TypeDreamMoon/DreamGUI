@@ -1122,6 +1122,12 @@ bool FDreamUITextBuilder::IsWritableFromText(const FProperty* InProperty, FStrin
 	return DreamUITextBuilderLocal::IsWritableFromText(InProperty, OutReason);
 }
 
+bool FDreamUITextBuilder::IsNodeReferenceProperty(const FObjectPropertyBase* InProperty)
+{
+	// Same forwarder arrangement, same reason: one body, two callers that must never disagree.
+	return InProperty != nullptr && DreamUITextBuilderLocal::IsNodeReferenceProperty(InProperty);
+}
+
 UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 {
 	const FString Name = InClassName.TrimStartAndEnd();
