@@ -748,7 +748,13 @@ bool FDreamUITextWriteBack::CanSpellAsLiteral(const FProperty* InLeaf, const voi
 UDreamWidgetTree* FDreamUITextWriteBack::BuildReferenceTree(const FString& InText, FDreamUIAst& OutAst,
 	FDreamUIDiagnosticBag& OutDiagnostics)
 {
-	if (!FDreamUISourceFile::Parse(InText, OutDiagnostics.SourceName, OutAst, OutDiagnostics))
+	// With the real import reader, deliberately: the readerless overload makes every `use` line an
+	// ImportFailed, so the pre-flight parse of any file that imports its styles "failed" and the
+	// write-back refused to write -- a details edit on such a file went nowhere, with only a log
+	// line to say so. The compiler and the watcher parse with this same reader; the reference tree
+	// must see the file the way they do.
+	if (!FDreamUISourceFile::Parse(InText, OutDiagnostics.SourceName, OutAst, OutDiagnostics,
+		FDreamUISourceFile::MakeFileImportReader()))
 	{
 		return nullptr;
 	}
