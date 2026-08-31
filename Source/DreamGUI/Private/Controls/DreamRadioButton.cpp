@@ -69,9 +69,9 @@ void UDreamRadioButton::ApplyStyle()
 	SkinFace(DotNode, Active.DotBrush);
 
 	// The control's own authored size: the box fills it; in an Auto slot the desired-size fallback
-	// reads exactly this.
-	SizeFace(this, Active.BoxSize);
-	SizeFace(DotNode, Active.DotSize);
+	// reads exactly this. Either brush may state its own drawn size.
+	SizeFace(this, BrushSizeOr(Active.BoxBrush, Active.BoxSize));
+	SizeFace(DotNode, BrushSizeOr(Active.DotBrush, Active.DotSize));
 
 	if (ToggleBehaviour != nullptr)
 	{

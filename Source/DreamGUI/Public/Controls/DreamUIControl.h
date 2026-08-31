@@ -84,6 +84,12 @@ protected:
 		}
 	}
 
+	/** The brush's drawn size when it states one, the style's size otherwise -- Slate's ImageSize rule. */
+	static FVector2D BrushSizeOr(const FDreamUIFaceBrush& InBrush, const FVector2D& InStyleSize)
+	{
+		return InBrush.ImageSize.IsNearlyZero() ? InStyleSize : InBrush.ImageSize;
+	}
+
 	/**
 	 * Authored size for a rect-faced part (or the control itself). A rect block states no intrinsic
 	 * size, so this is what an Auto slot's desired-size fallback reads -- and the slot SNAPSHOTS it,

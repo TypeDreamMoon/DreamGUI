@@ -170,6 +170,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Toggle")
 	TObjectPtr<UDreamWidget> TickNode = nullptr;
 
+	/** The image mark -- active only while the current state's brush holds an image. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Toggle")
+	TObjectPtr<UDreamWidget> MarkNode = nullptr;
+
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Toggle")
 	TObjectPtr<UUIToggle> ToggleBehaviour = nullptr;
 

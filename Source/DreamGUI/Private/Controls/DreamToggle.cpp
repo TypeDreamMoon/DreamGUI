@@ -42,6 +42,19 @@ void UDreamToggle::NativeOnInitialized()
 					{
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
+					}),
+				// The image mark, the glyph's stand-in: exactly one of the two is active,
+				// decided per state by whether that state's brush holds an image. Asleep by default
+				// -- an imageless rect block draws a plain white square.
+				Node<UDreamRectBlock>("Mark").Out(MarkNode)
+					.Self([](UDreamWidget& InMark)
+					{
+						InMark.SetWidgetActive(false);
+					})
+					.Slot([](UDreamPanelSlot& InSlot)
+					{
+						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
+						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
 					}))
 			.Then([this](UDreamWidget& InRoot)
 			{
@@ -69,8 +82,8 @@ void UDreamToggle::ApplyStyle()
 	ShapeFace(BoxNode, Active.CornerRadius);
 	SkinFace(BoxNode, Active.BoxBrush);
 	// The control's own authored size: the box fills it, and in an Auto slot this is what the
-	// desired-size fallback reads.
-	SizeFace(this, Active.BoxSize);
+	// desired-size fallback reads. The background brush may state its own drawn size.
+	SizeFace(this, BrushSizeOr(Active.BoxBrush, Active.BoxSize));
 	if (UDreamText* TickText = TickNode != nullptr ? Cast<UDreamText>(TickNode->GetVisual()) : nullptr)
 	{
 		// A glyph, sized by the style's tick height; its colour is the checked transition's to give.
@@ -235,11 +248,34 @@ void UDreamToggle::ReconcileCheckSpellings()
 void UDreamToggle::PushCheckStateVisuals(bool bForceOffColour)
 {
 	const bool bUndetermined = (CheckedState == EDreamCheckState::Undetermined);
+	const FDreamToggleStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ToggleStyle);
+
+	// Which face the mark wears is decided per STATE: a state whose brush holds an image draws the
+	// image (the UMG arrangement -- Checked/Unchecked/Undetermined each their own picture); a state
+	// whose brush is empty keeps the glyph. The two nodes are exclusive stand-ins for each other.
+	const FDreamUIFaceBrush& StateBrush = bUndetermined
+		? Active.UndeterminedBrush
+		: (CheckedState == EDreamCheckState::Checked ? Active.CheckedBrush : Active.UncheckedBrush);
+	const bool bImageMark = StateBrush.Image != nullptr;
+	if (MarkNode != nullptr)
+	{
+		MarkNode->SetWidgetActive(bImageMark);
+		if (bImageMark)
+		{
+			SkinFace(MarkNode, StateBrush);
+			SizeFace(MarkNode, BrushSizeOr(StateBrush, Active.TickSize));
+		}
+	}
+	if (TickNode != nullptr)
+	{
+		TickNode->SetWidgetActive(!bImageMark);
+	}
 
 	// The glyph is where the third state shows: an em-dash bar (U+2014) instead of the check mark
 	// (U+2713, the one the builder starts the tick with). Literals, same as the builder's -- this
 	// file is already UTF-8 with a literal check mark in it. Culture-invariant because they are
-	// glyphs, not words.
+	// glyphs, not words. Written even while the image stands in, so a style edit that empties the
+	// brush finds the glyph already correct.
 	if (UDreamText* TickText = TickNode != nullptr ? Cast<UDreamText>(TickNode->GetVisual()) : nullptr)
 	{
 		TickText->SetText(FText::AsCultureInvariant(bUndetermined ? TEXT("—") : TEXT("✓")));
@@ -254,7 +290,6 @@ void UDreamToggle::PushCheckStateVisuals(bool bForceOffColour)
 		// ordinary two-state clicks never touch it: SetOffColor applies immediately while the value
 		// is off, and an unguarded push would snap the uncheck tween dead. ApplyStyle forces it --
 		// re-pushing the style is exactly when an equal-looking colour must land anyway (see there).
-		const FDreamToggleStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ToggleStyle);
 		const FColor DesiredOff = bUndetermined ? Active.TickChecked : Active.TickUnchecked;
 		if (bForceOffColour || ToggleBehaviour->GetOffColor() != DesiredOff)
 		{

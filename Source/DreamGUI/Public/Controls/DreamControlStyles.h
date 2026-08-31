@@ -56,6 +56,14 @@ struct DREAMGUI_API FDreamUIFaceBrush
 	/** Stretch / FitIn / Envelop -- the rect's three, matching UMG's Stretch / ScaleToFit / ScaleToFill. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush")
 	EDreamRectBlockTextureScaleMode ScaleMode = EDreamRectBlockTextureScaleMode::Stretch;
+
+	/**
+	 * The image's own drawn size -- Slate's ImageSize. Zero means no opinion: the part keeps the
+	 * size its style gives it. Non-zero wins over the style's size field on the parts that carry
+	 * one (the toggle's box and mark, the radio's box and dot, the slider's handle).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush")
+	FVector2D ImageSize = FVector2D::ZeroVector;
 };
 
 /**
@@ -97,8 +105,23 @@ struct DREAMGUI_API FDreamToggleStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
 	float CornerRadius = 5.0f;
 
+	/** The background. State colours (BoxNormal/Hovered/Pressed) tint it, exactly as with no image. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
 	FDreamUIFaceBrush BoxBrush;
+
+	/**
+	 * The mark, per state, as images -- UMG's CheckedImage / UncheckedImage / UndeterminedImage.
+	 * A state whose brush holds an image draws it (sized by the brush's ImageSize, else TickSize);
+	 * a state whose brush is empty keeps the built-in glyph -- check mark, nothing, em-dash.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
+	FDreamUIFaceBrush CheckedBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
+	FDreamUIFaceBrush UncheckedBrush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style")
+	FDreamUIFaceBrush UndeterminedBrush;
 };
 
 /**

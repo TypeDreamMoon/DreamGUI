@@ -188,6 +188,28 @@ bool FDreamToggleControlStyleTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("the tick is wearing the checked colour"), TickVisual->GetColor(), FColor(11, 22, 33, 255));
 	}
 
+	// The image mark: give the CHECKED state a real image and the mark stands in for the glyph --
+	// active, skinned, sized by the brush's own ImageSize (Slate's rule); empty the brush and the
+	// glyph stands back up. The toggle is checked here, so CheckedBrush is the state that decides.
+	UTexture* MarkImage = LoadObject<UTexture>(nullptr, TEXT("/Engine/EngineResources/DefaultTexture.DefaultTexture"));
+	if (TestNotNull(TEXT("an engine texture to mark with"), MarkImage))
+	{
+		Toggle->Style.CheckedBrush.Image = MarkImage;
+		Toggle->Style.CheckedBrush.ImageSize = FVector2D(14.0, 18.0);
+		Toggle->ApplyStyle();
+		TestTrue(TEXT("the image mark stands in while checked"),
+			Toggle->MarkNode != nullptr && Toggle->MarkNode->GetWidgetActive());
+		TestTrue(TEXT("and the glyph stands down"),
+			Toggle->TickNode != nullptr && !Toggle->TickNode->GetWidgetActive());
+		TestEqual(TEXT("the mark wears the brush's own width"), Toggle->MarkNode->GetWidth(), 14.0f);
+		TestEqual(TEXT("and its height"), Toggle->MarkNode->GetHeight(), 18.0f);
+
+		Toggle->Style.CheckedBrush.Image = nullptr;
+		Toggle->ApplyStyle();
+		TestTrue(TEXT("emptying the brush restores the glyph"), Toggle->TickNode->GetWidgetActive());
+		TestTrue(TEXT("and retires the mark"), !Toggle->MarkNode->GetWidgetActive());
+	}
+
 	return true;
 }
 

@@ -57,6 +57,8 @@ void UDreamSlider::ApplyStyle()
 
 	const bool bHorizontal = Direction == EUISliderDirectionType::LeftToRight
 		|| Direction == EUISliderDirectionType::RightToLeft;
+	// The handle's drawn size; its brush may state one (Slate's ImageSize), the style otherwise.
+	const FVector2D HandleSize = BrushSizeOr(Active.HandleBrush, Active.HandleSize);
 
 	// The track and the fill area share one rect: a line across the middle of the control, as thick
 	// as the style says. The handle area is that same line inset by the handle's own size, so the
@@ -79,19 +81,19 @@ void UDreamSlider::ApplyStyle()
 		? FVector2D(0.0, Active.TrackThickness)
 		: FVector2D(Active.TrackThickness, 0.0));
 	PlaceOnAxis(HandleAreaNode, bHorizontal
-		? FVector2D(-Active.HandleSize.X, Active.HandleSize.Y)
-		: FVector2D(Active.HandleSize.X, -Active.HandleSize.Y));
+		? FVector2D(-HandleSize.X, HandleSize.Y)
+		: FVector2D(HandleSize.X, -HandleSize.Y));
 
 	if (HandleNode != nullptr)
 	{
-		HandleNode->SetWidth(static_cast<float>(Active.HandleSize.X));
-		HandleNode->SetHeight(static_cast<float>(Active.HandleSize.Y));
+		HandleNode->SetWidth(static_cast<float>(HandleSize.X));
+		HandleNode->SetHeight(static_cast<float>(HandleSize.Y));
 	}
 	// Capsules, derived rather than styled: half the thickness rounds a bar fully, half the handle
 	// makes it a circle -- the UMG slider's silhouette.
 	ShapeFace(TrackNode, Active.TrackThickness * 0.5f);
 	ShapeFace(FillNode, Active.TrackThickness * 0.5f);
-	ShapeFace(HandleNode, static_cast<float>(FMath::Min(Active.HandleSize.X, Active.HandleSize.Y)) * 0.5f);
+	ShapeFace(HandleNode, static_cast<float>(FMath::Min(HandleSize.X, HandleSize.Y)) * 0.5f);
 	SkinFace(TrackNode, Active.TrackBrush);
 	SkinFace(FillNode, Active.FillBrush);
 	SkinFace(HandleNode, Active.HandleBrush);
