@@ -130,6 +130,14 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 {
 	if (ToggleTransitionType != EUISelectableTransitionType::Custom)
 	{
+		// Deliberately NOT defaulted to the widget's own visual the way UUISelectable's hover target
+		// is: a toggle owns two transitions -- the selectable one (normal/hovered/pressed) and this
+		// one (checked/unchecked) -- and pointing both at one visual makes them overwrite each
+		// other, so the checked colour would survive only until the next hover event. The preset
+		// Blueprints give them separate visuals (a backing plate and a tick), which is the design.
+		// A text-authored toggle cannot express "the tick is that child" yet, so it has no checked
+		// visual and this returns; closing that needs the language's intra-tree reference, not a
+		// default that fights.
 		if (!ToggleTransitionTarget.IsValid())return;
 	}
 

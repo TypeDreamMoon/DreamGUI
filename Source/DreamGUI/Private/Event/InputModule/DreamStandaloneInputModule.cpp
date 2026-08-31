@@ -157,7 +157,19 @@ void UDreamStandaloneInputModule::CommonInputTrigger(const FVector& InPointerPos
 
 void UDreamStandaloneInputModule::InputMouseMove(const FVector& InMousePosition)
 {
+	// The guard every other entry point here has, and the only one that was missing: this runs from
+	// a bound axis delegate that keeps firing while the world tears down.
+	if (!EventSystem.IsValid())return;
+
 	auto EventData = EventSystem->GetPointerEventData(0, true);
+	// Moving the mouse IS pointer input, and saying so is not decoration: InputType is a sticky
+	// mode bit, ProcessInput's per-frame branch skips the line trace entirely while it reads
+	// Navigation, and only a press ever reset it. So one arrow key, Enter or stick nudge --
+	// InputNavigation / InputTriggerForNavigation flip pointer 0 -- and hover died for the rest of
+	// the session: the position kept updating, nothing re-traced with it, EnterWidget froze on
+	// whatever navigation last highlighted. Clicks went on working (the queued branch ignores the
+	// mode and resets it), which is exactly the "click fine, hover dead" shape this was reported as.
+	EventSystem->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
 	EventData->PointerPosition = InMousePosition;
 }
 
@@ -170,8 +182,11 @@ void UDreamStandaloneInputModule::InputTouchTrigger(bool InTouchPress, int InTou
 void UDreamStandaloneInputModule::InputTouchMoved(int InTouchID, const FVector& InTouchPointPosition)
 {
 	if (!EventSystem.IsValid())return;
-	
+
 	auto EventData = EventSystem->GetPointerEventData(InTouchID, true);
+	// Same reason as InputMouseMove: a moving touch is pointer input and has to say so, or a
+	// pointer left in Navigation mode never line-traces again.
+	EventSystem->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
 	EventData->PointerPosition = InTouchPointPosition;
 }
 
