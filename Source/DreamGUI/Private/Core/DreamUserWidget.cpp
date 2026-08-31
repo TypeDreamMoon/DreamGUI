@@ -122,6 +122,29 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
 	{
+		// A layout tree is collected once and cached against the widget it is rooted at, and nothing
+		// invalidates that cache when a widget appears -- so a subtree registered after its ancestor's
+		// tree was cached is laid out by nobody, and keeps its authored defaults until something
+		// re-dirties everything top-down (a viewport resize). That is how a list cell created on a
+		// second pass ends up drawn as a 100x100 block of overlapping text.
+		//
+		// Only ancestors: a cached tree not rooted above this subtree cannot contain it. Bounded,
+		// because a parent chain is only acyclic while nothing has corrupted it.
+		UDreamWidget* Parent = InRoot->GetParent();
+		int32 DepthGuard = 0;
+		for (UDreamWidget* Ancestor = Parent;
+			Ancestor != nullptr && DepthGuard < 256;
+			Ancestor = Ancestor->GetParent(), ++DepthGuard)
+		{
+			Manager->MarkRebuildLayoutTree(Ancestor);
+		}
+		// Dropping the cache only decides what the next pass would see; something still has to ask for
+		// a pass. Ask on the parent, since that is the widget whose contents just changed.
+		if (Parent != nullptr)
+		{
+			Manager->AddLayoutDirtyWidget(Parent);
+		}
+
 		if (Manager->HasBegunPlay())
 		{
 			for (UDreamWidget* Widget : AllWidgets)
