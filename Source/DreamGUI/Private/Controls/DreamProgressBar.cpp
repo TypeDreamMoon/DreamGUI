@@ -1,0 +1,76 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
+#include "Controls/DreamProgressBar.h"
+
+#include "Core/DreamUIBuilder.h"
+#include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamImage.h"
+#include "Core/Components/DreamRectBlock.h"
+#include "Core/Components/DreamVisual.h"
+#include "Core/Components/DreamWidget.h"
+
+void UDreamProgressBar::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	using namespace DreamUI;
+
+	// No layout container and no behaviour: the fill is anchor-driven geometry and the control is
+	// the only thing that moves it. The fill starts stretched -- (0,0)-(1,1) with a zero SizeDelta,
+	// which matters because anchors alone do not clear it -- and ApplyPercent narrows the
+	// horizontal max from there.
+	Realize(this,
+		Image("Track").Out(TrackNode)
+			.Stretch()
+			.Children(
+				Image("Fill").Out(FillNode).Stretch()));
+
+	ApplyStyle();
+}
+
+void UDreamProgressBar::ApplyStyle()
+{
+	const FDreamProgressBarStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ProgressBarStyle);
+
+	ShapeFace(TrackNode, Active.CornerRadius);
+	ShapeFace(FillNode, Active.CornerRadius);
+	if (UDreamVisual* TrackVisual = TrackNode != nullptr ? TrackNode->GetVisual() : nullptr)
+	{
+		TrackVisual->SetColor(Active.TrackColor);
+	}
+	if (UDreamVisual* FillVisual = FillNode != nullptr ? FillNode->GetVisual() : nullptr)
+	{
+		FillVisual->SetColor(Active.FillColor);
+	}
+	// The control's own height; placed in a stack this is what Auto measures. Width belongs to
+	// whoever placed the control.
+	SetHeight(Active.Height);
+	ApplyPercent();
+}
+
+float UDreamProgressBar::GetPercent() const
+{
+	return Percent;
+}
+
+void UDreamProgressBar::SetPercent(float InPercent)
+{
+	Percent = InPercent;
+	ApplyPercent();
+}
+
+void UDreamProgressBar::ApplyPercent()
+{
+	if (FillNode == nullptr)
+	{
+		return;
+	}
+	// Clamped where it becomes geometry, not where it is stored: the property keeps the author's
+	// number (UMG does the same), the anchors never leave the track.
+	const float Clamped = FMath::Clamp(Percent, 0.0f, 1.0f);
+	FillNode->SetHorizontalAnchorMinMax(FVector2D(0.0, Clamped), false, false);
+	// Anchors are the WHOLE geometry. bKeepSize=false already derives a zero SizeDelta from zero
+	// offsets, but that is a consequence, not a contract -- pin the offsets so the fill's edges are
+	// its anchors whatever state a caller left it in.
+	FillNode->SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D::ZeroVector);
+}

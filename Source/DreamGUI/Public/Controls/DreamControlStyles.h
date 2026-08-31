@@ -227,3 +227,127 @@ struct DREAMGUI_API FDreamDropdownStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style")
 	float CornerRadius = 5.0f;
 };
+
+/**
+ * A progress bar: a track and the filled part of it.
+ *
+ * No handle colours and no pointer states, because there is no behaviour: what fraction is filled
+ * is the control's one property, and the fill's geometry is the control's own to drive.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamProgressBarStyle
+{
+	GENERATED_BODY()
+
+	/** The control's own height; length comes from wherever it is placed, like the slider's. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
+	float Height = 8.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
+	FColor TrackColor = FColor(52, 57, 70, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
+	FColor FillColor = FColor(0, 119, 255, 255);
+
+	/** Half the default height: a capsule, the silhouette UMG's bar fakes with a rounded brush. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style")
+	float CornerRadius = 4.0f;
+};
+
+/**
+ * A radio button: the toggle's anatomy -- a box, a mark inside it, a label beside it -- with the
+ * mark an image dot rather than a glyph, and the corner radius defaulted to HALF the box so the
+ * face reads as a radio with nobody styling anything.
+ *
+ * The box and the dot carry separate colour sets for the same reason the toggle's box and tick do:
+ * the pointer transition and the checked transition are two writers, and pointed at one visual they
+ * overwrite each other.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamRadioButtonStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FVector2D BoxSize = FVector2D(26.0, 26.0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FVector2D DotSize = FVector2D(12.0, 12.0);
+
+	/** Between the box and the label. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	float Spacing = 8.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FColor BoxNormal = FColor(52, 57, 70, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FColor BoxHovered = FColor(74, 81, 98, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FColor BoxPressed = FColor(38, 42, 52, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FColor DotChecked = FColor(0, 119, 255, 255);
+
+	/** Transparent, not absent: the dot exists either way, unchecked just does not show it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FColor DotUnchecked = FColor(0, 119, 255, 0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	FColor LabelColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	float FontSize = 15.0f;
+
+	/**
+	 * Half of BoxSize by default -- that is the whole of what makes a radio round. Kept a knob
+	 * rather than derived, so a project that squares its radios is one edit, not a subclass.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style")
+	float CornerRadius = 13.0f;
+};
+
+/** A spin box: a numeric field between a decrement face and an increment face. */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamSpinBoxStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	float Height = 34.0f;
+
+	/** The two step buttons share one colour set; each still carries its own selectable. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FColor ButtonNormal = FColor(52, 57, 70, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FColor ButtonHovered = FColor(74, 81, 98, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FColor ButtonPressed = FColor(38, 42, 52, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FColor FieldBackground = FColor(38, 42, 52, 255);
+
+	/**
+	 * While hovered. The field's behaviour is a selectable and WILL tint the background with its
+	 * transition colours -- left unset those default to white, which is exactly how the first build
+	 * of the text input shipped as a white bar.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FColor FieldBackgroundHovered = FColor(48, 53, 66, 255);
+
+	/** The value and the step glyphs alike. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	FColor TextColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	float FontSize = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	float ButtonWidth = 26.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style")
+	float CornerRadius = 5.0f;
+};

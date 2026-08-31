@@ -60,6 +60,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dropdown")
 	TMap<FName, FDreamDropdownStyle> DropdownVariants;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Progress Bar")
+	FDreamProgressBarStyle ProgressBar;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Progress Bar")
+	TMap<FName, FDreamProgressBarStyle> ProgressBarVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Radio Button")
+	FDreamRadioButtonStyle RadioButton;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Radio Button")
+	TMap<FName, FDreamRadioButtonStyle> RadioButtonVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spin Box")
+	FDreamSpinBoxStyle SpinBox;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spin Box")
+	TMap<FName, FDreamSpinBoxStyle> SpinBoxVariants;
+
 	/**
 	 * The named variant, or the family default when the name is none or matches nothing.
 	 *
@@ -72,6 +87,9 @@ public:
 	const FDreamSliderStyle& SliderStyle(FName InVariant) const { return Pick(Slider, SliderVariants, InVariant); }
 	const FDreamTextInputStyle& TextInputStyle(FName InVariant) const { return Pick(TextInput, TextInputVariants, InVariant); }
 	const FDreamDropdownStyle& DropdownStyle(FName InVariant) const { return Pick(Dropdown, DropdownVariants, InVariant); }
+	const FDreamProgressBarStyle& ProgressBarStyle(FName InVariant) const { return Pick(ProgressBar, ProgressBarVariants, InVariant); }
+	const FDreamRadioButtonStyle& RadioButtonStyle(FName InVariant) const { return Pick(RadioButton, RadioButtonVariants, InVariant); }
+	const FDreamSpinBoxStyle& SpinBoxStyle(FName InVariant) const { return Pick(SpinBox, SpinBoxVariants, InVariant); }
 
 private:
 	template<class T>
