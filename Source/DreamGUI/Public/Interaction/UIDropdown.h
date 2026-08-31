@@ -161,6 +161,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 		bool GetUseInteractionBlock()const { return bUseInteractionBlock; }
 
+	/**
+	 * The parts, settable from code. All four are EditAnywhere weak references the designer and .dui
+	 * always reached by reflection while no caller could -- the UUIToggle transition-target hole.
+	 * A part swap invalidates the built list; the caption re-applies at once.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetListRoot(UDreamWidget* InListRoot);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetCaptionText(UDreamText* InCaptionText);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetItemTemplate(UUIDropdownItemComponent* InItemTemplate);
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetValue(int InValue);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
@@ -226,6 +238,15 @@ protected:
 private:
 	FSimpleDelegate OnSelectCPP;
 	UPROPERTY()FUIDropdownItem_OnSelect OnSelectDynamic;
+public:
+	/** The parts, settable from code -- the same reflection-only hole the dropdown itself had. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetText(UDreamText* InText) { Text = InText; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetImage(UDreamImage* InImage) { Image = InImage; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetToggle(UUIToggle* InToggle) { Toggle = InToggle; }
+protected:
 	UFUNCTION()void DynamicDelegate_OnSelect() { OnSelectCPP.ExecuteIfBound(); }
 protected:
 	/**

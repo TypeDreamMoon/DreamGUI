@@ -394,6 +394,33 @@ void UUIDropdown::SetValue(int InValue, bool FireEvent)
 	}
 }
 
+void UUIDropdown::SetListRoot(UDreamWidget* InListRoot)
+{
+	if (ListRoot != InListRoot)
+	{
+		ListRoot = InListRoot;
+		bNeedRecreate = true;
+	}
+}
+
+void UUIDropdown::SetCaptionText(UDreamText* InCaptionText)
+{
+	if (CaptionText != InCaptionText)
+	{
+		CaptionText = InCaptionText;
+		ApplyValueToVisual();
+	}
+}
+
+void UUIDropdown::SetItemTemplate(UUIDropdownItemComponent* InItemTemplate)
+{
+	if (ItemTemplate != InItemTemplate)
+	{
+		ItemTemplate = InItemTemplate;
+		bNeedRecreate = true;
+	}
+}
+
 void UUIDropdown::SetValue(int InValue)
 {
 	SetValue(InValue, true);

@@ -1129,58 +1129,59 @@ UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 		return nullptr;
 	}
 
-	UClass* Found = nullptr;
-	if (Name.StartsWith(TEXT("/")))
-	{
-		Found = UClass::TryFindTypeSlowSafe<UClass>(Name);
-		if (Found == nullptr)
-		{
-			Found = LoadObject<UClass>(nullptr, *Name, nullptr, LOAD_NoWarn | LOAD_Quiet);
-		}
-	}
-	else
-	{
-		// Prefixes rather than an alias table. `Canvas` finds UDreamCanvas, `Button` finds UUIButton
-		// and `VerticalBox` finds UDreamLayoutContainerVerticalBox without any of them being written
-		// down anywhere, so adding a behaviour to the library adds it to the language -- a table
-		// would be a second place to remember, and the one that gets forgotten. UIML's four
-		// hand-written aliases all fall out of this.
-		//
-		// Longest last only matters for reading: the names in each family are distinct, so no input
-		// resolves under two prefixes.
-		static const TCHAR* Prefixes[] =
-		{
-			TEXT(""), TEXT("Dream"), TEXT("UI"), TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf")
-		};
-		for (const TCHAR* Prefix : Prefixes)
-		{
-			Found = UClass::TryFindTypeSlowSafe<UClass>(FString::Printf(TEXT("/Script/DreamGUI.%s%s"), Prefix, *Name));
-			if (Found != nullptr)
-			{
-				break;
-			}
-		}
-		if (Found == nullptr)
-		{
-			// A behaviour from the game module or another plugin. Last, because it is the slow lookup
-			// and the ambiguous one, and native-first so a Blueprint of the same name never wins.
-			Found = FindFirstObjectSafe<UClass>(*Name, EFindFirstObjectOptions::NativeFirst);
-		}
-	}
-
-	if (Found == nullptr || Found->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
-	{
-		return nullptr;
-	}
+	// What `+` can mean, applied PER CANDIDATE rather than once at the end. The prefix families
+	// stopped being distinct the day the control library arrived: `Slider` names both UDreamSlider
+	// (a control, which `+` cannot carry) and UUISlider (the behaviour the author meant), and taking
+	// the first class that merely exists resolved `+ Slider` to the wrong one and failed every file
+	// that says it. Resolution is the first name that could BE a component.
+	//
 	// Layout containers are accepted alongside behaviours, and that is a deliberate widening of what
 	// `+` means. They are not UDreamUIBehaviour -- they are UDreamWidgetSubObjectBehaviour, a separate
 	// hierarchy -- so without this the language cannot produce a panel at all, which in turn means no
 	// child ever gets a UDreamPanelSlot and every `@slot` line in every file resolves to
 	// NoPanelSlotForProperty. A diagnostic that is always right is one nobody can act on.
-	return Found->IsChildOf(UDreamUIBehaviour::StaticClass())
-		|| Found->IsChildOf(UDreamLayoutContainer::StaticClass())
-		|| Found->IsChildOf(UDreamLayoutSelf::StaticClass())
-		? Found : nullptr;
+	auto AsComponentClass = [](UClass* InFound) -> UClass*
+	{
+		if (InFound == nullptr || InFound->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+		{
+			return nullptr;
+		}
+		return InFound->IsChildOf(UDreamUIBehaviour::StaticClass())
+			|| InFound->IsChildOf(UDreamLayoutContainer::StaticClass())
+			|| InFound->IsChildOf(UDreamLayoutSelf::StaticClass())
+			? InFound : nullptr;
+	};
+
+	if (Name.StartsWith(TEXT("/")))
+	{
+		UClass* Found = UClass::TryFindTypeSlowSafe<UClass>(Name);
+		if (Found == nullptr)
+		{
+			Found = LoadObject<UClass>(nullptr, *Name, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		}
+		return AsComponentClass(Found);
+	}
+
+	// Prefixes rather than an alias table. `Canvas` finds UDreamCanvas, `Button` finds UUIButton
+	// and `VerticalBox` finds UDreamLayoutContainerVerticalBox without any of them being written
+	// down anywhere, so adding a behaviour to the library adds it to the language -- a table
+	// would be a second place to remember, and the one that gets forgotten. UIML's four
+	// hand-written aliases all fall out of this.
+	static const TCHAR* Prefixes[] =
+	{
+		TEXT(""), TEXT("Dream"), TEXT("UI"), TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf")
+	};
+	for (const TCHAR* Prefix : Prefixes)
+	{
+		if (UClass* Found = AsComponentClass(UClass::TryFindTypeSlowSafe<UClass>(
+			FString::Printf(TEXT("/Script/DreamGUI.%s%s"), Prefix, *Name))))
+		{
+			return Found;
+		}
+	}
+	// A behaviour from the game module or another plugin. Last, because it is the slow lookup
+	// and the ambiguous one, and native-first so a Blueprint of the same name never wins.
+	return AsComponentClass(FindFirstObjectSafe<UClass>(*Name, EFindFirstObjectOptions::NativeFirst));
 }
 
 namespace DreamUITextBuilderLocal

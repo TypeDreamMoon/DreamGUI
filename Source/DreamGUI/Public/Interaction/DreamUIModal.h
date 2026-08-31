@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/DreamUserWidget.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Templates/SubclassOf.h"

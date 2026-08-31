@@ -1759,6 +1759,21 @@ void UUITextInput::SetPlaceHolder(UDreamWidget* Value)
 {
 	PlaceHolder = Value;
 }
+void UUITextInput::SetTextVisual(UDreamText* Value)
+{
+	if (TextVisual != Value)
+	{
+		TextVisual = Value;
+		if (TextVisual != nullptr)
+		{
+			// The same normalization PostEditChangeProperty applies when the designer rewires it:
+			// overflow follows the line mode, and the text a field edits must not vary by culture.
+			TextVisual->SetOverflowType(GetAllowMultiLine() ? EDreamUITextOverflowType::VerticalOverflow : EDreamUITextOverflowType::HorizontalOverflow);
+		}
+		UpdateUITextComponent();
+		UpdatePlaceHolderComponent();
+	}
+}
 void UUITextInput::SetCaretBlinkRate(float Value)
 {
 	CaretBlinkRate = Value;

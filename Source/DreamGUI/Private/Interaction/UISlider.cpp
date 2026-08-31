@@ -58,6 +58,35 @@ void UUISlider::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool H
     ApplyValueToVisual();
 }
 
+void UUISlider::SetFill(UDreamWidget* InFill)
+{
+	if (Fill != InFill)
+	{
+		Fill = InFill;
+		FillArea = nullptr;//force re-check
+		ApplyValueToVisual();
+	}
+}
+
+void UUISlider::SetHandle(UDreamWidget* InHandle)
+{
+	if (Handle != InHandle)
+	{
+		Handle = InHandle;
+		HandleArea = nullptr;//force re-check
+		ApplyValueToVisual();
+	}
+}
+
+void UUISlider::SetDirectionType(EUISliderDirectionType InDirection)
+{
+	if (DirectionType != InDirection)
+	{
+		DirectionType = InDirection;
+		ApplyValueToVisual();
+	}
+}
+
 void UUISlider::SetValue(float InValue, bool FireEvent)
 {
     InValue = FMath::Clamp(InValue, MinValue, MaxValue);

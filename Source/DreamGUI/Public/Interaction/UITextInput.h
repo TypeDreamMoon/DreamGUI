@@ -174,6 +174,10 @@ protected:
 
 	void SetText(const FString& InText, bool InFireEvent);
 public:
+	/** The C++ halves of the events, the accessors every sibling behaviour already has. */
+	FDreamUIMulticastDelegateString& GetOnValueChangedEvent() { return OnValueChangedCPP; }
+	FDreamUIMulticastDelegateString& GetOnSubmitEvent() { return OnSubmitCPP; }
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		class UDreamText* GetTextComponent()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -231,6 +235,12 @@ public:
 		void SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetPlaceHolder(UDreamWidget* Value);
+	/**
+	 * The text the field edits. EditAnywhere like its neighbours, so the designer and .dui always
+	 * reached it by reflection while no caller could -- the UUIToggle transition-target hole again.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetTextVisual(UDreamText* Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetCaretBlinkRate(float Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")

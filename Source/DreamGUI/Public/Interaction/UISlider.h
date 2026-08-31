@@ -84,6 +84,18 @@ public:
 		UDreamWidget* GetHandle()const { return Handle.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
 		EUISliderDirectionType GetDirectionType()const { return DirectionType; }
+	/**
+	 * The parts and the direction, settable from code. All three properties are EditAnywhere, so the
+	 * designer and .dui have always reached them by reflection while no caller could -- the same hole
+	 * UUIToggle's transition target had. Each resets the cached area and re-applies, the way
+	 * PostEditChangeProperty already does for an edit.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+	void SetFill(UDreamWidget* InFill);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+	void SetHandle(UDreamWidget* InHandle);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+	void SetDirectionType(EUISliderDirectionType InDirection);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
 		float GetNavigationChangeInterval()const { return NavigationChangeInterval; }
 
