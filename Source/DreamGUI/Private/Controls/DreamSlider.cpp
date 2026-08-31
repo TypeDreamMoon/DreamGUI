@@ -2,6 +2,8 @@
 
 #include "Controls/DreamSlider.h"
 
+#include "Core/DreamUIWidgetRegistry.h"
+
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -133,3 +135,6 @@ void UDreamSlider::HandleValueChanged(float InValue)
 	OnValueChanged.Broadcast(InValue);
 	OnValueChangedBP.Broadcast(InValue);
 }
+
+// The tag this class answers to in .dui.
+DECLARE_DREAM_GUI_WIDGET("Native", "Slider", UDreamSlider)

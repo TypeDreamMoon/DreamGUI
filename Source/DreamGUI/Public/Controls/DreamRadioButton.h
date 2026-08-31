@@ -45,6 +45,14 @@ public:
 	FText Label;
 
 	/**
+	 * Find a UUIToggleGroup on an ancestor at Awake and join it -- with a group behaviour on the
+	 * shared parent, sibling radios exclude each other with nothing wired. Default on, because a
+	 * radio that does not exclude is a round toggle; off, grouping goes through SetToggleGroup.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button")
+	bool bAutoGroupWithSiblings = true;
+
+	/**
 	 * Selected or not. A property rather than the getter/setter pair alone, because the pair alone
 	 * is invisible: .dui writes properties, the designer lists properties, and a binding resolves a
 	 * property. Authored value in, mirror of the behaviour's out -- HandleValueChanged keeps it

@@ -2,6 +2,8 @@
 
 #include "Controls/DreamSpinBox.h"
 
+#include "Core/DreamUIWidgetRegistry.h"
+
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -287,3 +289,6 @@ FString UDreamSpinBox::FormatValue() const
 	// field destroys on the next submit.
 	return DreamUIValueFormat::PrintScalar(Value, /*bSinglePrecision*/ true);
 }
+
+// The tag this class answers to in .dui.
+DECLARE_DREAM_GUI_WIDGET("Native", "SpinBox", UDreamSpinBox)

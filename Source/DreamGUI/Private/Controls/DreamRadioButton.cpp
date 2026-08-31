@@ -2,6 +2,8 @@
 
 #include "Controls/DreamRadioButton.h"
 
+#include "Core/DreamUIWidgetRegistry.h"
+
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -28,7 +30,7 @@ void UDreamRadioButton::NativeOnInitialized()
 			// arrangement, kept.
 			.With<UUIToggle>()
 			.Children(
-				Image("Box").Out(BoxNode)
+				Node<UDreamRectBlock>("Box").Out(BoxNode)
 					// An overlay so the dot has a slot to be centred in.
 					.With<UDreamLayoutContainerOverlay>()
 					.Slot([](UDreamPanelSlot& InSlot)
@@ -37,7 +39,7 @@ void UDreamRadioButton::NativeOnInitialized()
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
 					})
 					.Children(
-						Image("Dot").Out(DotNode)
+						Node<UDreamRectBlock>("Dot").Out(DotNode)
 							.Slot([](UDreamPanelSlot& InSlot)
 							{
 								InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
@@ -56,6 +58,9 @@ void UDreamRadioButton::NativeOnInitialized()
 				{
 					return;
 				}
+				// Before Awake reads it: NativeOnInitialized runs during Initialize, Awake at begin
+				// play, so the flag set here is the one the behaviour's own group search consults.
+				ToggleBehaviour->SetAutoFindToggleGroupInParent(bAutoGroupWithSiblings);
 				// The two transitions, deliberately on two visuals: pointed at one they overwrite
 				// each other and the checked colour survives until the next hover.
 				ToggleBehaviour->SetTransitionTarget(BoxNode != nullptr ? BoxNode->GetVisual() : nullptr);
@@ -75,20 +80,18 @@ void UDreamRadioButton::ApplyStyle()
 	ShapeFace(BoxNode, Active.CornerRadius);
 	ShapeFace(DotNode, static_cast<float>(FMath::Min(Active.DotSize.X, Active.DotSize.Y)) * 0.5f);
 
-	// Sizes go through the BRUSH, not SetWidth: in an Auto slot (and centred in an overlay) a
-	// node's rect is the layout's to decide, and the layout reads the visual's preferred size,
-	// which for an image is Brush.ImageSize. SetWidth is overwritten by the next arrange pass.
-	auto SizeThroughBrush = [](UDreamWidget* InNode, const FVector2D& InSize)
+	// A rect block states no intrinsic size; authored width/height feed the Auto slot's (and the
+	// overlay's centred slot's) desired-size fallback, captured before the first arrange.
+	auto SizeAuthored = [](UDreamWidget* InNode, const FVector2D& InSize)
 	{
-		if (UDreamImage* ImageVisual = InNode != nullptr ? Cast<UDreamImage>(InNode->GetVisual()) : nullptr)
+		if (InNode != nullptr)
 		{
-			FDreamUIImageBrush Brush = ImageVisual->GetBrush();
-			Brush.ImageSize = FVector2f(static_cast<float>(InSize.X), static_cast<float>(InSize.Y));
-			ImageVisual->SetBrush(Brush);
+			InNode->SetWidth(static_cast<float>(InSize.X));
+			InNode->SetHeight(static_cast<float>(InSize.Y));
 		}
 	};
-	SizeThroughBrush(BoxNode, Active.BoxSize);
-	SizeThroughBrush(DotNode, Active.DotSize);
+	SizeAuthored(BoxNode, Active.BoxSize);
+	SizeAuthored(DotNode, Active.DotSize);
 
 	if (UDreamText* LabelVisual = LabelNode != nullptr ? Cast<UDreamText>(LabelNode->GetVisual()) : nullptr)
 	{
@@ -153,3 +156,6 @@ void UDreamRadioButton::HandleValueChanged(bool bInIsOn)
 	bIsOn = bInIsOn;
 	OnValueChangedBP.Broadcast(bInIsOn), OnToggleChanged.Broadcast(bInIsOn);
 }
+
+// The tag this class answers to in .dui.
+DECLARE_DREAM_GUI_WIDGET("Native", "RadioButton", UDreamRadioButton)

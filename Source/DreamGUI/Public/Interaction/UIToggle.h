@@ -144,6 +144,12 @@ public:
 	UUIToggleGroup* GetToggleGroup()const { return ToggleGroup.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	void SetToggleGroup(UUIToggleGroup* InGroupComp);
+	/**
+	 * Settable because Awake reads it: a control assembled in code runs before Awake and could
+	 * never reach this EditAnywhere flag -- the same reflection-only hole every part reference had.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetAutoFindToggleGroupInParent(bool InValue) { bAutoFindToggleGroupInParent = InValue; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	bool GetValue()const { return bIsOn; }
 	/** Set IsChecked value and send callback event */

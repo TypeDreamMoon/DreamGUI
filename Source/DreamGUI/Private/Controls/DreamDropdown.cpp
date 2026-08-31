@@ -2,6 +2,8 @@
 
 #include "Controls/DreamDropdown.h"
 
+#include "Core/DreamUIWidgetRegistry.h"
+
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -307,3 +309,6 @@ void UDreamDropdown::HandleValueChanged(int32 InIndex)
 	OnSelectionChanged.Broadcast(InIndex);
 	OnValueChangedBP.Broadcast(InIndex);
 }
+
+// The tag this class answers to in .dui.
+DECLARE_DREAM_GUI_WIDGET("Native", "Dropdown", UDreamDropdown)

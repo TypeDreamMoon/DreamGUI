@@ -2,6 +2,8 @@
 
 #include "Controls/DreamToggle.h"
 
+#include "Core/DreamUIWidgetRegistry.h"
+
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -330,3 +332,6 @@ void UDreamToggle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
+
+// The tag this class answers to in .dui.
+DECLARE_DREAM_GUI_WIDGET("Native", "Toggle", UDreamToggle)

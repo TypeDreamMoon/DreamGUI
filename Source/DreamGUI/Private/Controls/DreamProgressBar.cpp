@@ -2,6 +2,8 @@
 
 #include "Controls/DreamProgressBar.h"
 
+#include "Core/DreamUIWidgetRegistry.h"
+
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -74,3 +76,6 @@ void UDreamProgressBar::ApplyPercent()
 	// its anchors whatever state a caller left it in.
 	FillNode->SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D::ZeroVector);
 }
+
+// The tag this class answers to in .dui.
+DECLARE_DREAM_GUI_WIDGET("Native", "ProgressBar", UDreamProgressBar)
