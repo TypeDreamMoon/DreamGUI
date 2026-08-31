@@ -155,6 +155,9 @@ public:
 	UFUNCTION()
 	void OnGalleryChipDropped(UDreamDragDropOperation* InOperation);
 
+	UFUNCTION()
+	void HandleGallerySpin(float InValue);
+
 	/** Appends one line, newest first, keeping the log short. */
 	UFUNCTION(BlueprintCallable, Category = "Showcase")
 	void LogEvent(const FString& InLine);

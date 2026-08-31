@@ -249,6 +249,7 @@ void UDreamRectBlock::BeginPlay()
 }
 void UDreamRectBlock::EndPlay()
 {
+	Super::EndPlay();
 	if (bHasAddToSprite)
 	{
 		if (IsValid(BodySpriteTexture))
@@ -613,9 +614,13 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 		bNeedUpdateBlockData = false;
 
 		auto BlockSize = RectBlockData->GetBlockSizeInByte();
+		// The RHI upload copies whole pixels -- BlockPixelCount * 16 bytes for the R32G32B32A32
+		// format registered in OnRegister -- so an exactly BlockSize-d buffer (156 bytes = 9.75
+		// pixels) is overread by the tail of the last pixel. Pad to pixel granularity, zeroed.
+		auto BufferSize = Align(BlockSize, 16);
 		TArray<uint8> BlockBuffer;
-		BlockBuffer.SetNumUninitialized(BlockSize);
-		FMemory::Memzero(BlockBuffer.GetData(), BlockSize);
+		BlockBuffer.SetNumUninitialized(BufferSize);
+		FMemory::Memzero(BlockBuffer.GetData(), BufferSize);
 		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight());
 		RectBlockData->UpdateBlock(DataStartPosition, MoveTemp(BlockBuffer));
 	}

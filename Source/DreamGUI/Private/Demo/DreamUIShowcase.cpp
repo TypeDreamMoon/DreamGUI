@@ -3,6 +3,8 @@
 #include "Demo/DreamUIShowcase.h"
 
 #include "Controls/DreamDropdown.h"
+#include "Controls/DreamRadioButton.h"
+#include "Interaction/UIToggleGroup.h"
 #include "Core/DreamWidgetTree.h"
 
 #include "DreamGUI.h"
@@ -133,6 +135,20 @@ void UDreamUIControlsGalleryPanel::NativeOnInitialized()
 			Quality->SetOptions({ FText::FromString(TEXT("Low")), FText::FromString(TEXT("Medium")),
 				FText::FromString(TEXT("High")), FText::FromString(TEXT("Ultra")) });
 		}
+		// The radio pair's exclusivity: SetToggleGroup is a passthrough UFUNCTION, not a property,
+		// so .dui cannot express it yet -- the host wires it, on a group behaviour the row carries.
+		UDreamRadioButton* RadioA = Cast<UDreamRadioButton>(GetWidgetTree()->FindWidgetByVariableName(TEXT("GalleryRadioA")));
+		UDreamRadioButton* RadioB = Cast<UDreamRadioButton>(GetWidgetTree()->FindWidgetByVariableName(TEXT("GalleryRadioB")));
+		if (RadioA != nullptr && RadioB != nullptr && RadioA->GetParent() != nullptr)
+		{
+			UUIToggleGroup* Group = RadioA->GetParent()->GetComponent<UUIToggleGroup>();
+			if (Group == nullptr)
+			{
+				Group = RadioA->GetParent()->AddComponent<UUIToggleGroup>();
+			}
+			RadioA->SetToggleGroup(Group);
+			RadioB->SetToggleGroup(Group);
+		}
 	}
 }
 
@@ -149,6 +165,11 @@ void UDreamUIControlsGalleryPanel::OnGallerySecondButton()
 void UDreamUIControlsGalleryPanel::OnGalleryToggle(bool InValue)
 {
 	LogEvent(FString::Printf(TEXT("Toggle -> %s"), InValue ? TEXT("on") : TEXT("off")));
+}
+
+void UDreamUIControlsGalleryPanel::HandleGallerySpin(float InValue)
+{
+	LogEvent(FString::Printf(TEXT("SpinBox -> %g"), InValue));
 }
 
 void UDreamUIControlsGalleryPanel::OnGalleryChipDropped(UDreamDragDropOperation* InOperation)

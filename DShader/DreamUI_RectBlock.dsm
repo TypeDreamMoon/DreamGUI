@@ -67,26 +67,6 @@ VirtualFunction(Name="MF_DreamUI_ConvertVertexColor")
 		float3 Result;
 	}
 }
-VirtualFunction(Name="SMF_UE4Unlit")
-{
-	Options = {
-		Asset = Path(Engine, "Functions/Substrate/SMF_UE4Unlit");
-		Description = "Generated from /Engine/Functions/Substrate/SMF_UE4Unlit.SMF_UE4Unlit";
-	}
-
-	Inputs = {
-		opt float3 Color = float3(0, 0, 0) [
-			Description="Emissive color added to the scene.";
-		];
-		opt float Opacity = 0.5 [
-			Description="Represent the coverage of the material. 0 means 100% see through, 1 means fully opaque.";
-		];
-	}
-
-	Outputs = {
-		Substrate Result;
-	}
-}
 Shader(Name="Materials/DreamUI_RectBlock", Root="Plugin.DreamGUI")
 {
 	Properties = {
@@ -102,7 +82,7 @@ Shader(Name="Materials/DreamUI_RectBlock", Root="Plugin.DreamGUI")
 		// which would make DreamGUI fail to load its own materials wherever DreamShader is absent.
 		Backend = "Graph";
 		Domain = "Surface";
-		ShadingModel = "Substrate";
+		ShadingModel = "Unlit";
 		BlendMode = "AlphaComposite";
 		TwoSided = true;
 	}
@@ -110,11 +90,9 @@ Shader(Name="Materials/DreamUI_RectBlock", Root="Plugin.DreamGUI")
 	Outputs = {
 		float3 EmissiveColor;
 		float Opacity;
-		Substrate FrontMaterial;
 
 		Base.EmissiveColor = EmissiveColor;
 		Base.Opacity = Opacity;
-		Base.FrontMaterial = FrontMaterial;
 	}
 
 	Graph = {
@@ -129,11 +107,8 @@ Shader(Name="Materials/DreamUI_RectBlock", Root="Plugin.DreamGUI")
 		float4 LinearInterpolate = lerp(Multiply_1, Multiply, DreamUI_IsRenderByDreamUIRenderer);
 		#EndRegion
 
-		Substrate SMF_UE4Unlit = SMF_UE4Unlit(Multiply, MF_DreamUI_Clip);
-
 		EmissiveColor = LinearInterpolate;
 		Opacity = MF_DreamUI_Clip;
-		FrontMaterial = SMF_UE4Unlit;
 	}
 
 	Layout = {
@@ -144,7 +119,6 @@ Shader(Name="Materials/DreamUI_RectBlock", Root="Plugin.DreamGUI")
 		Node(Var="MF_DreamWidgetProperty", X=512, Y=336);
 		Node(Var="Multiply", X=688, Y=-80);
 		Node(Var="MF_DreamUI_Clip", X=896, Y=192);
-		Node(Var="SMF_UE4Unlit", X=1152, Y=-128);
 		Node(Var="DreamUI_IsRenderByDreamUIRenderer", X=1200, Y=288);
 		Node(Var="Multiply_1", X=1298, Y=66);
 		Node(Var="LinearInterpolate", X=1426, Y=66);

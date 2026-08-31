@@ -4,6 +4,10 @@
 #include "Animation/DreamUISequenceTrack.h"
 #include "Animation/DreamUISequence.h"
 #include "EntitySystem/BuiltInComponentTypes.h"
+#include "EntitySystem/MovieSceneComponentRegistry.h"
+// NewComponentType / DuplicateChildComponent are templates whose definitions live here; without it
+// this TU links only while a unity-blob neighbour happens to include it first.
+#include "EntitySystem/MovieSceneEntityFactoryTemplates.h"
 #include "EntitySystem/MovieSceneEntitySystemLinker.h"
 #include "EntitySystem/MovieSceneEntityBuilder.h"
 #include "EntitySystem/MovieSceneEntitySystemTask.h"

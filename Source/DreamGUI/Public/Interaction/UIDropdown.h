@@ -244,11 +244,11 @@ private:
 public:
 	/** The parts, settable from code -- the same reflection-only hole the dropdown itself had. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
-	void SetText(UDreamText* InText) { Text = InText; }
+	void SetText(UDreamText* InText);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
-	void SetImage(UDreamImage* InImage) { Image = InImage; }
+	void SetImage(UDreamImage* InImage);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
-	void SetToggle(UUIToggle* InToggle) { Toggle = InToggle; }
+	void SetToggle(UUIToggle* InToggle);
 protected:
 	UFUNCTION()void DynamicDelegate_OnSelect() { OnSelectCPP.ExecuteIfBound(); }
 protected:

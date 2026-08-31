@@ -401,6 +401,12 @@ void UUIDropdown::SetValue(int InValue, bool FireEvent)
 	}
 }
 
+// Out of line: the header only forward-declares these part types, and a weak-pointer assignment
+// needs the complete type.
+void UUIDropdownItemComponent::SetText(UDreamText* InText) { Text = InText; }
+void UUIDropdownItemComponent::SetImage(UDreamImage* InImage) { Image = InImage; }
+void UUIDropdownItemComponent::SetToggle(UUIToggle* InToggle) { Toggle = InToggle; }
+
 void UUIDropdown::SetListRoot(UDreamWidget* InListRoot)
 {
 	if (ListRoot != InListRoot)
