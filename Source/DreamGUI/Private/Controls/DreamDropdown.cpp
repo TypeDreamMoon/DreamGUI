@@ -14,6 +14,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UIDropdown.h"
+#include "Interaction/UIScrollView.h"
 #include "Interaction/UIToggle.h"
 
 void UDreamDropdown::NativeOnInitialized()
@@ -59,7 +60,12 @@ void UDreamDropdown::NativeOnInitialized()
 						InSlot.SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
 					}),
 				Node<UDreamRectBlock>("ListRoot").Out(ListNode)
-					.Anchors(FVector2D(0.0, 0.0), FVector2D(1.0, 0.0))
+					// POINT anchors, deliberately: the list is inactive between opens, and an
+					// inactive widget's stretched axis never re-arranges -- its cached width is
+					// stale (zero, after an elevation round-trip), and Elevate pins whatever it
+					// finds. Absolute sizes have no cache to go stale; the open handler writes
+					// the face's live width in.
+					.Anchors(FVector2D(0.5, 0.0), FVector2D(0.5, 0.0))
 					// A popup, the way UMG's combo list is: it stays in the tree so Show() can
 					// position it against the face, but layout must not see it -- an Auto-sized row
 					// otherwise grows by the list's height the moment it opens and shoves the rest
@@ -67,10 +73,33 @@ void UDreamDropdown::NativeOnInitialized()
 					.Self([](UDreamWidget& InList)
 					{
 						InList.SetIgnoreLayout(true);
+						// The viewport of the scroll below; without the clip, rows past the visible
+						// count draw over whatever is under the list.
+						InList.SetClipping(EDreamWidgetClipping::ClipToBounds);
+					})
+					// Vertical only, explicitly: the behaviour ships with BOTH axes on, and a
+					// zero-config scroll view drifts horizontally the first time a drag lands.
+					.With<UUIScrollView>([](UUIScrollView& InScroll)
+					{
+						InScroll.SetHorizontal(false);
+						InScroll.SetVertical(true);
 					})
 					.Children(
 						Widget("Column")
-							.Stretch()
+							// Top-anchored, stretch-X, its HEIGHT authored per open: the column is
+							// the scrolled content, so it must be as tall as ALL rows while the
+							// list shows only the visible count. Stretch would pin it to the list.
+							.Anchors(FVector2D(0.0, 1.0), FVector2D(1.0, 1.0))
+							.Self([](UDreamWidget& InColumn)
+							{
+								InColumn.SetPivot(FVector2D(0.5, 1.0));
+								// The DELTA, not the width: SetWidth(0) on a stretched axis
+								// computes a delta against the parent's span AT THIS MOMENT --
+								// still the default 100 here -- and bakes -100 in forever (the
+								// measured symptom: a 300-wide column in a 400-wide list). A
+								// zero delta says "exactly the span", whenever it is decided.
+								InColumn.SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D::ZeroVector);
+							})
 							.With<UDreamLayoutContainerVerticalBox>()
 							.Children(
 								Node<UDreamRectBlock>("ItemTemplate").Out(ItemTemplateNode)
@@ -110,6 +139,18 @@ void UDreamDropdown::NativeOnInitialized()
 				}
 				DropdownBehaviour->SetTransitionTarget(InRoot.GetVisual());
 				DropdownBehaviour->SetListRoot(ListNode);
+				if (UUIScrollView* Scroll = ListNode != nullptr ? ListNode->GetComponent<UUIScrollView>() : nullptr)
+				{
+					UDreamWidget* Column = nullptr;
+					for (UDreamWidget* Child : ListNode->GetChildren())
+					{
+						if (Child != nullptr && Child->GetDisplayName() == TEXT("Column"))
+						{
+							Column = Child;
+						}
+					}
+					Scroll->SetContent(Column);
+				}
 				DropdownBehaviour->SetCaptionText(CaptionNode != nullptr ? Cast<UDreamText>(CaptionNode->GetVisual()) : nullptr);
 
 				if (ItemTemplateNode != nullptr)
@@ -169,6 +210,10 @@ void UDreamDropdown::ApplyStyle()
 	const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
 	ShapeFace(FaceNode, Active.CornerRadius);
 	ShapeFace(ListNode, Active.CornerRadius);
+	SkinFace(FaceNode, Active.FaceBrush);
+	SkinFace(ListNode, Active.ListBrush);
+	// The template only; duplicated rows copy it, and every options push rebuilds them from it.
+	SkinFace(ItemTemplateNode, Active.ItemBrush);
 
 	auto TintText = [&Active](UDreamWidget* InNode, const FColor& InColor)
 	{
@@ -185,15 +230,9 @@ void UDreamDropdown::ApplyStyle()
 	{
 		ListVisual->SetColor(Active.ListBackground);
 	}
-	if (ListNode != nullptr)
+	if (!bListElevated)
 	{
-		// The width is the stretch axis, and zero is a statement: SizeDelta defaults to (100,100),
-		// and on a stretched axis that is ADDED to the parent's span -- the measured symptom was a
-		// list exactly 100 wider than the face it hangs from. Height gets a real value below, per
-		// open, from the row count.
-		ListNode->SetWidth(0.0f);
-		ListNode->SetHeight(Active.MaxListHeight);
-		ListNode->SetAnchoredPosition(FVector2D(0.0, -Active.MaxListHeight * 0.5));
+		ApplyListRestingGeometry(Active);
 	}
 
 	if (ItemTemplateNode != nullptr)
@@ -235,7 +274,7 @@ void UDreamDropdown::ApplyStyle()
 		DropdownBehaviour->SetNormalColor(Active.FaceNormal);
 		DropdownBehaviour->SetHoveredColor(Active.FaceHovered);
 		DropdownBehaviour->SetPressedColor(Active.FacePressed);
-		DropdownBehaviour->SetMaxHeight(Active.MaxListHeight);
+		DropdownBehaviour->SetMaxHeight(MaxVisibleItems * Active.ItemHeight);
 	}
 	SetHeight(Active.Height);
 }
@@ -277,6 +316,17 @@ void UDreamDropdown::PushOptions()
 	DropdownBehaviour->SetValueWithoutNotify(SelectedIndex);
 }
 
+#if WITH_EDITOR
+void UDreamDropdown::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	// The base re-applies the style; the options and the selection live OUTSIDE ApplyStyle, so
+	// without this re-push a details-panel edit of either is silently nothing until the next
+	// initialize. Re-pushing unconditionally is fine: rows rebuild from the template either way.
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	PushOptions();
+}
+#endif
+
 void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 {
 	UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this);
@@ -286,21 +336,72 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 	}
 	if (bInVisible)
 	{
-		// The list is as tall as its rows, no taller. The behaviour's own shrink cannot decide this:
-		// it measures the column, and the column here is stretched to the list -- measuring it is
-		// measuring the list against itself. A dropdown's content height is not a layout question
-		// anyway: rows times row height, clamped to the max. Sized before the lift, because the lift
-		// pins the height it finds; the anchored end (Show sets the pivot to the edge touching the
-		// face) stays put, so the trim comes off the far end -- exactly where the blank was.
+		bListElevated = true;
+		// The control owns every height in the open list, because nothing else can. The list is
+		// exactly visible-rows tall (past MaxVisibleItems the rest scroll -- the scroll view only
+		// engages when the column outgrows it); the column is all-rows tall, the scrolled content.
+		// The rows go through their SLOTS, not through authored heights: a row is an overlay whose
+		// Auto measure is its TEXT's line height -- 19.7 for the default font, the measured symptom,
+		// and no authored number ever wins against a content measure. Fill does: the column is
+		// exactly rows*ItemHeight tall, so equal fill weights hand every row exactly ItemHeight.
+		// All before the lift, which pins the height it finds.
 		const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
 		const int32 RowCount = FMath::Max(1, Options.Num());
-		ListNode->SetHeight(FMath::Min(RowCount * Active.ItemHeight, Active.MaxListHeight));
+		const int32 VisibleRows = FMath::Min(RowCount, FMath::Max(1, MaxVisibleItems));
+		// Width explicitly, each open: the face is the one measurement that is always live.
+		const float OpenHeight = VisibleRows * Active.ItemHeight;
+		const float OpenWidth = FaceNode != nullptr ? static_cast<float>(FaceNode->GetWidth()) : static_cast<float>(ListNode->GetWidth());
+		ListNode->SetAnchoredPositionAndSizeDelta(
+			FVector2D(0.0, -OpenHeight * 0.5), FVector2D(OpenWidth, OpenHeight));
+		for (UDreamWidget* Child : ListNode->GetChildren())
+		{
+			if (Child == nullptr || Child->GetDisplayName() != TEXT("Column"))
+			{
+				continue;
+			}
+			Child->SetHeight(RowCount * Active.ItemHeight);
+			for (UDreamWidget* Row : Child->GetChildren())
+			{
+				if (Row == nullptr || Row == ItemTemplateNode)
+				{
+					continue;
+				}
+				if (UDreamPanelSlot* RowSlot = Row->GetPanelSlot())
+				{
+					RowSlot->SetSizeRule(EDreamPanelSizeRule::Fill);
+					RowSlot->SetFillWeight(1.0f);
+				}
+			}
+		}
 		Popup->Elevate(ListNode);
 	}
 	else
 	{
 		Popup->Restore(ListNode);
+		bListElevated = false;
+		// The whole resting scheme, not just the numbers: Elevate re-anchored the list to a POINT
+		// for the screen root and Restore reparents plainly, so without this the next open (and any
+		// ApplyStyle in between) works against point anchors -- where a zero width delta is a zero
+		// WIDTH. The measured symptom: a 0-wide list on the second open.
+		ApplyListRestingGeometry(ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle));
 	}
+}
+
+void UDreamDropdown::ApplyListRestingGeometry(const FDreamDropdownStyle& InActive)
+{
+	if (ListNode == nullptr)
+	{
+		return;
+	}
+	// Hanging centred under the face's bottom edge, POINT-anchored on both axes: absolute numbers
+	// only, because the list is inactive between opens and a stretched axis's cached width goes
+	// stale there (see the tree comment). Width is nominal at rest -- the open handler writes the
+	// face's live width; height is a sane resting value the behaviour reads as MaxHeight.
+	const float RestingHeight = MaxVisibleItems * InActive.ItemHeight;
+	ListNode->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5, 0.0), FVector2D(0.5, 0.0), false, false);
+	ListNode->SetPivot(FVector2D(0.5, 0.5));
+	ListNode->SetAnchoredPositionAndSizeDelta(
+		FVector2D(0.0, -RestingHeight * 0.5), FVector2D(0.0, RestingHeight));
 }
 
 void UDreamDropdown::HandleValueChanged(int32 InIndex)

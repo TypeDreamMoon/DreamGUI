@@ -43,6 +43,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
 	int32 SelectedIndex = 0;
 
+	/**
+	 * How many rows the open list shows at most. The list is always exactly as tall as its visible
+	 * rows -- rows-times-row-height, no more -- and past this many the rest scroll: the cap is a
+	 * count because that is how a designer thinks about a dropdown, not in pixels.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown", meta = (ClampMin = "1"))
+	int32 MaxVisibleItems = 6;
+
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownChangedEvent OnSelectionChanged;
@@ -87,9 +95,17 @@ public:
 
 protected:
 	virtual void NativeOnInitialized() override;
+#if WITH_EDITOR
+	/** The base re-applies style; options and selection live outside ApplyStyle and re-push here. */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 private:
 	void HandleListVisibilityChanged(bool bInVisible);
 	void HandleValueChanged(int32 InIndex);
 	void PushOptions();
+	void ApplyListRestingGeometry(const FDreamDropdownStyle& InActive);
+
+	/** True between Elevate and Restore; resting geometry must not be written while it is. */
+	bool bListElevated = false;
 };

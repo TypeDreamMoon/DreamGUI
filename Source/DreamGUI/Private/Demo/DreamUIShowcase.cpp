@@ -130,8 +130,12 @@ void UDreamUIControlsGalleryPanel::NativeOnInitialized()
 	{
 		if (UDreamDropdown* Quality = Cast<UDreamDropdown>(GetWidgetTree()->FindWidgetByVariableName(TEXT("NativeDropdown"))))
 		{
+			// Eight options against the default six visible rows, so the open list demonstrates
+			// the scroll: exactly-visible-rows tall, wheel for the rest.
 			Quality->SetOptions({ FText::FromString(TEXT("Low")), FText::FromString(TEXT("Medium")),
-				FText::FromString(TEXT("High")), FText::FromString(TEXT("Ultra")) });
+				FText::FromString(TEXT("High")), FText::FromString(TEXT("Ultra")),
+				FText::FromString(TEXT("Epic")), FText::FromString(TEXT("Cinematic")),
+				FText::FromString(TEXT("Custom")), FText::FromString(TEXT("Auto")) });
 		}
 	}
 }
