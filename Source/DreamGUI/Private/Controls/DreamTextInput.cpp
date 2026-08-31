@@ -17,7 +17,7 @@ void UDreamTextInput::NativeOnInitialized()
 	using namespace DreamUI;
 
 	Realize(this,
-		Image("Field").Out(BackgroundNode)
+		Node<UDreamRectBlock>("Field").Out(BackgroundNode)
 			.Stretch()
 			.With<UUITextInput>()
 			.Children(

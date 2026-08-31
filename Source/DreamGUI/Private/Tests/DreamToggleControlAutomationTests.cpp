@@ -164,14 +164,14 @@ bool FDreamToggleControlStyleTest::RunTest(const FString& Parameters)
 
 	// A code-built control has no tree for anyone to open, so the style has to be the whole of what
 	// an author can decide. If any of these does not arrive, that decision was silently ignored.
-	// The box is an image (the rect-block face is parked on a render defect), so the Auto slot reads
-	// its size off the brush.
-	UDreamImage* BoxImage = Cast<UDreamImage>(Toggle->BoxNode->GetVisual());
+	// The box is a procedural rect, which states no intrinsic size: authored width/height feed the
+	// Auto slot's desired-size fallback, and before any arrange pass they read straight back.
+	UDreamRectBlock* BoxRect = Cast<UDreamRectBlock>(Toggle->BoxNode->GetVisual());
 	UDreamText* TickText = Cast<UDreamText>(Toggle->TickNode->GetVisual());
-	if (TestNotNull(TEXT("the box is drawn by an image"), BoxImage) && TestNotNull(TEXT("the tick is a glyph"), TickText))
+	if (TestNotNull(TEXT("the box is a rect block"), BoxRect) && TestNotNull(TEXT("the tick is a glyph"), TickText))
 	{
-		TestEqual(TEXT("the box states the style's width to the layout"), BoxImage->GetPreferredWidth(), 40.0f);
-		TestEqual(TEXT("and its height"), BoxImage->GetPreferredHeight(), 18.0f);
+		TestEqual(TEXT("the box took the style's width"), Toggle->BoxNode->GetWidth(), 40.0f);
+		TestEqual(TEXT("and its height"), Toggle->BoxNode->GetHeight(), 18.0f);
 		TestEqual(TEXT("the glyph is sized by the style's tick height"), TickText->GetFontSize(), 12.0f);
 	}
 

@@ -41,9 +41,10 @@ void UDreamSpinBox::NativeOnInitialized()
 						DreamUI::Text("DecrementGlyph").Out(DecrementLabelNode)
 							.Visual([](UDreamText& InText)
 							{
-								// U+2212, the minus SIGN: a hyphen-minus draws low and thin at
+								// ASCII hyphen-minus: U+2212 has no glyph in the default SDF font
+								// and drew a tofu box. A hyphen sits slightly low at
 								// button sizes.
-								InText.SetText(FText::AsCultureInvariant(TEXT("−")));
+								InText.SetText(FText::AsCultureInvariant(TEXT("-")));
 								InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
 								InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
 							})

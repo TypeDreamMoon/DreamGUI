@@ -26,7 +26,7 @@ void UDreamDropdown::NativeOnInitialized()
 	// the thing rows are copied from. Show() takes care of placing and animating ListRoot; here it
 	// only has to exist, sized, and asleep.
 	Realize(this,
-		Image("Face").Out(FaceNode)
+		Node<UDreamRectBlock>("Face").Out(FaceNode)
 			.Stretch()
 			.With<UDreamLayoutContainerOverlay>()
 			.With<UUIDropdown>()
@@ -56,7 +56,7 @@ void UDreamDropdown::NativeOnInitialized()
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 						InSlot.SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
 					}),
-				Image("ListRoot").Out(ListNode)
+				Node<UDreamRectBlock>("ListRoot").Out(ListNode)
 					.Anchors(FVector2D(0.0, 0.0), FVector2D(1.0, 0.0))
 					// A popup, the way UMG's combo list is: it stays in the tree so Show() can
 					// position it against the face, but layout must not see it -- an Auto-sized row
@@ -71,7 +71,7 @@ void UDreamDropdown::NativeOnInitialized()
 							.Stretch()
 							.With<UDreamLayoutContainerVerticalBox>()
 							.Children(
-								Image("ItemTemplate").Out(ItemTemplateNode)
+								Node<UDreamRectBlock>("ItemTemplate").Out(ItemTemplateNode)
 									.With<UDreamLayoutContainerOverlay>()
 									.With<UUIToggle>()
 									.With<UUIDropdownItemComponent>()
@@ -196,12 +196,9 @@ void UDreamDropdown::ApplyStyle()
 
 	if (ItemTemplateNode != nullptr)
 	{
-		if (UDreamImage* RowImage = Cast<UDreamImage>(ItemTemplateNode->GetVisual()))
-		{
-			FDreamUIImageBrush Brush = RowImage->GetBrush();
-			Brush.ImageSize = FVector2f(100.0f, Active.ItemHeight);
-			RowImage->SetBrush(Brush);
-		}
+		// A rect block states no size of its own; the authored height feeds the column's desired-size
+		// fallback, and the duplicated rows inherit the slot snapshot.
+		ItemTemplateNode->SetHeight(Active.ItemHeight);
 		for (UDreamWidget* Child : ItemTemplateNode->GetChildren())
 		{
 			if (Child == nullptr)

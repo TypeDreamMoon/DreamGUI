@@ -21,7 +21,7 @@ void UDreamButton::NativeOnInitialized()
 	// The face IS the root: a button is one rectangle, and giving it a separate background child
 	// would only manufacture a gap for the hit test to fall through.
 	Realize(this,
-		Image("Face").Out(FaceNode)
+		Node<UDreamRectBlock>("Face").Out(FaceNode)
 			.Stretch()
 			.With<UDreamLayoutContainerOverlay>()
 			.With<UUIButton>()

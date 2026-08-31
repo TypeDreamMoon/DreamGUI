@@ -23,13 +23,13 @@ void UDreamSlider::NativeOnInitialized()
 			.Stretch()
 			.With<UUISlider>()
 			.Children(
-				Image("Track").Out(TrackNode),
+				Node<UDreamRectBlock>("Track").Out(TrackNode),
 				Widget("FillArea").Out(FillAreaNode)
 					.Children(
-						Image("Fill").Out(FillNode).Stretch()),
+						Node<UDreamRectBlock>("Fill").Out(FillNode).Stretch()),
 				Widget("HandleArea").Out(HandleAreaNode)
 					.Children(
-						Image("Handle").Out(HandleNode)))
+						Node<UDreamRectBlock>("Handle").Out(HandleNode)))
 			.Then([this](UDreamWidget& InRoot)
 			{
 				SliderBehaviour = InRoot.GetComponent<UUISlider>();

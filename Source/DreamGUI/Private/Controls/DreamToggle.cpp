@@ -26,7 +26,7 @@ void UDreamToggle::NativeOnInitialized()
 			// gets hit, and the event bubbles up to here. Same arrangement BP_Toggle has.
 			.With<UUIToggle>()
 			.Children(
-				Image("Box").Out(BoxNode)
+				Node<UDreamRectBlock>("Box").Out(BoxNode)
 					// An overlay so the tick has a slot to be centred in. Without a layout container
 					// a child has no slot at all, and centring would have to be spelled in anchors.
 					.With<UDreamLayoutContainerOverlay>()
@@ -89,13 +89,12 @@ void UDreamToggle::ApplyStyle()
 	// directly is overwritten by the next arrange pass, silently, which is what this control did on
 	// its first run: a 26-wide box came out 32 and the tick filled it.
 	ShapeFace(BoxNode, Active.CornerRadius);
-	if (UDreamImage* BoxImage = BoxNode != nullptr ? Cast<UDreamImage>(BoxNode->GetVisual()) : nullptr)
+	if (BoxNode != nullptr)
 	{
-		// Through the brush while the face is an image: the Auto slot reads the visual's preferred
-		// size, which for an image is Brush.ImageSize.
-		FDreamUIImageBrush Brush = BoxImage->GetBrush();
-		Brush.ImageSize = FVector2f(static_cast<float>(Active.BoxSize.X), static_cast<float>(Active.BoxSize.Y));
-		BoxImage->SetBrush(Brush);
+		// A rect block states no intrinsic size; authored width/height feed the Auto slot's
+		// desired-size fallback, captured before the first arrange.
+		BoxNode->SetWidth(static_cast<float>(Active.BoxSize.X));
+		BoxNode->SetHeight(static_cast<float>(Active.BoxSize.Y));
 	}
 	if (UDreamText* TickText = TickNode != nullptr ? Cast<UDreamText>(TickNode->GetVisual()) : nullptr)
 	{
