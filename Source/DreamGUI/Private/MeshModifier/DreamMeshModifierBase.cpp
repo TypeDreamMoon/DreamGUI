@@ -12,22 +12,57 @@ UDreamMeshModifierBase::UDreamMeshModifierBase()
 
 UDreamVisualBatchMesh* UDreamMeshModifierBase::GetVisualBatchMesh()const
 {
-	if (!CacheVisualBatchMesh.IsValid())
+	// Resolved on every ask rather than remembered from the first one, because a widget's visual is
+	// replaceable and nothing tells a modifier when it has been replaced: CreateNewVisual swaps the
+	// widget's visual and re-registers only the visual itself. A weak pointer does not notice either,
+	// since the old visual is not destroyed but merely orphaned, so it stays valid forever -- and a
+	// modifier still holding it goes on dirtying a mesh nobody draws while the mesh that IS drawn
+	// never learns the modifier exists. Both halves of that are silent.
+	UDreamVisualBatchMesh* Current = nullptr;
+	if (auto Widget = GetWidget())
 	{
-		if (auto Widget = GetWidget())
+		Current = Cast<UDreamVisualBatchMesh>(Widget->GetVisual());
+		if (!IsValid(Current))
 		{
-			CacheVisualBatchMesh = Cast<UDreamVisualBatchMesh>(Widget->GetVisual());
+			Current = nullptr;
 		}
 	}
-	return CacheVisualBatchMesh.Get();
+
+	UDreamVisualBatchMesh* Cached = CacheVisualBatchMesh.Get();
+	if (Current != Cached)
+	{
+		// Written before the registration moves, so that a nested resolve reached through the calls
+		// below sees a cache that already agrees and stops there. Those calls dirty the mesh, and a
+		// batch mesh is entitled to be walking its own modifier list while that happens; the list
+		// being walked is only ever the one this would ADD to, and AddUnique is a no-op for a
+		// modifier already in it, so no iteration has its array grown underneath it.
+		CacheVisualBatchMesh = Current;
+		if (bRegisteredWithVisual)
+		{
+			// Moving the registration here instead of leaving it in OnRegister is what makes the two
+			// orders a modifier and a visual can appear in equivalent. A modifier added to a widget
+			// that has no visual yet used to register with nothing and then stay inert for the rest
+			// of its life, which reads on screen as a component that simply does not work.
+			auto* Self = const_cast<UDreamMeshModifierBase*>(this);
+			if (Cached != nullptr)
+			{
+				Cached->RemoveMeshModifier(Self);
+			}
+			if (Current != nullptr)
+			{
+				Current->AddMeshModifier(Self);
+			}
+		}
+	}
+	return Current;
 }
 #if WITH_EDITOR
 void UDreamMeshModifierBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (GetVisualBatchMesh())
+	if (auto Mesh = GetVisualBatchMesh())
 	{
-		CacheVisualBatchMesh->MarkVerticesDirty(true, true, true, true);
+		Mesh->MarkVerticesDirty(true, true, true, true);
 	}
 }
 #endif
@@ -44,18 +79,18 @@ void UDreamMeshModifierBase::OnRegister()
 			{
 				if (ChangedType == EDreamWidgetComponentsChangedType::Reorder)
 				{
-					if (GetVisualBatchMesh() != nullptr)
+					if (auto Mesh = GetVisualBatchMesh())
 					{
-						CacheVisualBatchMesh->MarkMeshModifierOrderChanged();
+						Mesh->MarkMeshModifierOrderChanged();
 					}
 				}
 			});
 		}
 	}
-	if (GetVisualBatchMesh() != nullptr)
-	{
-		CacheVisualBatchMesh->AddMeshModifier(this);
-	}
+	// The flag goes up before the resolve rather than after it, because the resolve is now what
+	// performs the registration.
+	bRegisteredWithVisual = true;
+	GetVisualBatchMesh();
 }
 
 void UDreamMeshModifierBase::OnUnregister()
@@ -69,10 +104,17 @@ void UDreamMeshModifierBase::OnUnregister()
 			ComponentsChangedDelegateHandle.Reset();
 		}
 	}
-	if (CacheVisualBatchMesh.IsValid())
+	// One last resolve while the flag is still up, so that a visual swapped in behind this modifier's
+	// back is the one asked to forget it. Only then is the flag dropped: every setter on this family
+	// ends in a resolve, and any of them running after this point would otherwise quietly re-register
+	// a component the widget has already released.
+	UDreamVisualBatchMesh* Mesh = GetVisualBatchMesh();
+	bRegisteredWithVisual = false;
+	if (Mesh != nullptr)
 	{
-		CacheVisualBatchMesh->RemoveMeshModifier(this);
+		Mesh->RemoveMeshModifier(this);
 	}
+	CacheVisualBatchMesh.Reset();
 }
 
 void UDreamMeshModifierBase::SetEnable(bool Value)
@@ -80,9 +122,9 @@ void UDreamMeshModifierBase::SetEnable(bool Value)
 	if (bEnable != Value)
 	{
 		bEnable = Value;
-		if (GetVisualBatchMesh() != nullptr)
+		if (auto Mesh = GetVisualBatchMesh())
 		{
-			CacheVisualBatchMesh->MarkVerticesDirty(true, true, true, true);
+			Mesh->MarkVerticesDirty(true, true, true, true);
 		}
 	}
 }

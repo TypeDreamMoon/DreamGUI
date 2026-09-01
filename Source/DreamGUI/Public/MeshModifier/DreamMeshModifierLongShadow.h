@@ -43,6 +43,8 @@ public:
 		bool GetUseGradientColor()const { return bUseGradientColor; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetGradientColor()const { return GradientColor; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		bool GetMultiplySourceAlpha()const { return bMultiplySourceAlpha; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetShadowColor(FColor Value);
@@ -54,4 +56,6 @@ public:
 		void SetUseGradientColor(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetGradientColor(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetMultiplySourceAlpha(bool Value);
 };

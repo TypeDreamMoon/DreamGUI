@@ -203,3 +203,11 @@ void UDreamMeshModifierOutline::SetUse8Direction(bool Value)
 		if (auto Visual = GetVisualBatchMesh())Visual->MarkVerticesDirty(true, true, true, true);
 	}
 }
+void UDreamMeshModifierOutline::SetMultiplySourceAlpha(bool Value)
+{
+	if (bMultiplySourceAlpha != Value)
+	{
+		bMultiplySourceAlpha = Value;
+		if (auto Visual = GetVisualBatchMesh())Visual->MarkColorDirty();
+	}
+}

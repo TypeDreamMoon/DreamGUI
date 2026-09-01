@@ -87,6 +87,13 @@ protected:
 
 private:
 	mutable TWeakObjectPtr<UDreamVisualBatchMesh> CacheVisualBatchMesh;
+	/**
+	 * Whether this modifier currently occupies a slot in some visual's modifier list. The cached mesh
+	 * pointer cannot stand in for this, because it is re-resolved on every access -- including before
+	 * the component is ever registered and after the widget has let it go -- and re-adding the
+	 * modifier in either of those states would resurrect a registration that no longer exists.
+	 */
+	uint8 bRegisteredWithVisual : 1 = false;
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		UDreamVisualBatchMesh* GetVisualBatchMesh()const;

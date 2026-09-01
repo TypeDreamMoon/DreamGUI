@@ -5,6 +5,7 @@
 #include "Core/Components/DreamText.h"
 #include "DreamTweenBPLibrary.h"
 #include "Engine/World.h"
+#include "Core/DreamUIWorldContext.h"
 
 void UDreamMeshModifierTextAnimation_PropertyWithWave::Init()
 {
@@ -16,6 +17,14 @@ void UDreamMeshModifierTextAnimation_PropertyWithWave::Deinit()
 	UDreamTweenBPLibrary::KillIfIsTweening(this, UpdateTweener.Get());
 }
 void UDreamMeshModifierTextAnimation_PropertyWithWave::SetFrequency(float Value)
+{
+	if (Frequency != Value)
+	{
+		Frequency = Value;
+		MarkUITextPositionDirty();
+	}
+}
+void UDreamMeshModifierTextAnimation_PropertyWithWave::SetSpeed(float Value)
 {
 	if (Speed != Value)
 	{
@@ -35,7 +44,13 @@ void UDreamMeshModifierTextAnimation_PositionWaveProperty::ApplyProperty(UDreamT
 {
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	float PIxFreq = this->GetWorld()->TimeSeconds * PI * Speed;
+	// A wave needs a clock, and one of the three places this runs has none: a mesh modifier rebuilds
+	// geometry in a Blueprint's authoring tree and in a headless test, and this property is a plain
+	// UObject whose GetWorld walks an outer chain that ends at the widget tree rather than at a world.
+	// Phase zero is the honest answer there -- the still frame of the animation, which is exactly what
+	// a designer wants to look at anyway. See DreamUIWorldContext.h for the rule.
+	const UWorld* WaveWorld = DreamUI::GetWorldSafe(this);
+	float PIxFreq = (WaveWorld != nullptr ? WaveWorld->TimeSeconds : 0.0f) * PI * Speed;
 	PIxFreq = FlipDirection ? -PIxFreq : PIxFreq;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
@@ -64,7 +79,13 @@ void UDreamMeshModifierTextAnimation_RotationWaveProperty::ApplyProperty(UDreamT
 {
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	float PIxFreq = this->GetWorld()->TimeSeconds * PI * Speed;
+	// A wave needs a clock, and one of the three places this runs has none: a mesh modifier rebuilds
+	// geometry in a Blueprint's authoring tree and in a headless test, and this property is a plain
+	// UObject whose GetWorld walks an outer chain that ends at the widget tree rather than at a world.
+	// Phase zero is the honest answer there -- the still frame of the animation, which is exactly what
+	// a designer wants to look at anyway. See DreamUIWorldContext.h for the rule.
+	const UWorld* WaveWorld = DreamUI::GetWorldSafe(this);
+	float PIxFreq = (WaveWorld != nullptr ? WaveWorld->TimeSeconds : 0.0f) * PI * Speed;
 	PIxFreq = FlipDirection ? -PIxFreq : PIxFreq;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
@@ -101,7 +122,13 @@ void UDreamMeshModifierTextAnimation_ScaleWaveProperty::ApplyProperty(UDreamText
 {
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	float PIxFreq = this->GetWorld()->TimeSeconds * PI * Speed;
+	// A wave needs a clock, and one of the three places this runs has none: a mesh modifier rebuilds
+	// geometry in a Blueprint's authoring tree and in a headless test, and this property is a plain
+	// UObject whose GetWorld walks an outer chain that ends at the widget tree rather than at a world.
+	// Phase zero is the honest answer there -- the still frame of the animation, which is exactly what
+	// a designer wants to look at anyway. See DreamUIWorldContext.h for the rule.
+	const UWorld* WaveWorld = DreamUI::GetWorldSafe(this);
+	float PIxFreq = (WaveWorld != nullptr ? WaveWorld->TimeSeconds : 0.0f) * PI * Speed;
 	PIxFreq = FlipDirection ? -PIxFreq : PIxFreq;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{

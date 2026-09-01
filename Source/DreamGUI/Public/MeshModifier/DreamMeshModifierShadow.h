@@ -30,9 +30,13 @@ public:
 		FColor GetShadowColor()const { return ShadowColor; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FVector3f GetShadowOffset()const { return ShadowOffset; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		bool GetMultiplySourceAlpha()const { return bMultiplySourceAlpha; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetShadowColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetShadowOffset(FVector3f Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetMultiplySourceAlpha(bool Value);
 };
