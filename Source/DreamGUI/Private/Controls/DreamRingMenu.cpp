@@ -453,6 +453,16 @@ UDreamWidget* UDreamRingMenu::CreatePoolWedge(int32 InIndex)
 		});
 	}
 
+	// An authored wedge, when the consumer supplied a class for one. See WedgeTemplateClass: the
+	// wedge stays the control's shape and hit sector, the content is the template's.
+	if (WedgeTemplateClass != nullptr && GetWorld() != nullptr)
+	{
+		if (UDreamUserWidget* Content = CreateDreamWidget(GetWorld(), WedgeTemplateClass, Wedge))
+		{
+			Content->SetDisplayName(TEXT("WedgeContent"));
+		}
+	}
+
 	// The hit shape. Made once per wedge and re-aimed the same way the transition target is: an
 	// Instanced subobject copied out of the template would be shared or stale, and either way the
 	// answer would be some other wedge's slice.
@@ -615,6 +625,11 @@ void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle
 		}
 	}
 
+	// Declared since this control shipped and never fired -- the hook a consumer needs for a wedge
+	// richer than an icon and a word, and the counterpart of the list's OnRowGenerated. On every
+	// BIND, so a template's instance (made once per pool wedge) is told each time the item under it
+	// changes.
+	OnWedgeGenerated.Broadcast(InIndex, Wedge);
 }
 
 void UDreamRingMenu::RefreshWedgeColors()

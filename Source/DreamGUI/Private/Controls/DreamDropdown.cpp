@@ -189,6 +189,36 @@ void UDreamDropdown::WireParts()
 	{
 		ListNode->SetWidgetActive(false);
 	}
+	// The behaviour makes the rows (it owns the list's lifetime), and this is the seam it leaves for
+	// whoever placed it: one call per created row, with the row widget. Everything this control adds
+	// on top of a row -- an authored template inside it, and the consumer's event -- hangs here.
+	DropdownBehaviour->SetItemCustomDataFunction(
+		[this](int InIndex, UUIDropdownItemComponent*, UDreamWidget* InItem)
+		{
+			if (!IsValid(InItem))
+			{
+				return;
+			}
+			if (ItemTemplateClass != nullptr && GetWorld() != nullptr)
+			{
+				if (UDreamUserWidget* Content = CreateDreamWidget(GetWorld(), ItemTemplateClass, InItem))
+				{
+					Content->SetDisplayName(TEXT("ItemContent"));
+					if (UDreamPanelSlot* ContentSlot = Content->GetPanelSlot())
+					{
+						ContentSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
+						ContentSlot->SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
+					}
+				}
+				// The stock label and the supplied content are two answers to what is on this row --
+				// the same rule the content slots follow, and the same one the list's rows follow.
+				if (UDreamWidget* ItemLabel = InItem->FindChildByDisplayName(TEXT("ItemLabel"), true))
+				{
+					ItemLabel->SetWidgetActive(false);
+				}
+			}
+			OnItemGenerated.Broadcast(InIndex, InItem);
+		});
 	DropdownBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamDropdown::HandleValueChanged);
 	// The list is a child of the face for positioning and a citizen of the popup layer for
 	// everything else: Show anchors it against the face, then the layer lifts it to the screen root

@@ -276,6 +276,21 @@ public:
 	FDreamRingMenuWedgeEvent OnWedgeGenerated;
 
 	/**
+	 * A wedge's CONTENT, authored elsewhere: one instance of this class is created inside every
+	 * wedge widget, filling it, and the built-in label steps aside. The wedge's shape, its hit
+	 * sector, its highlight and its click stay the control's, so a template only has to draw an item.
+	 *
+	 * Created once per POOL wedge rather than per bind, which is what makes it survive a rebuild of
+	 * the item list; OnWedgeGenerated fires on every bind, and that is where a consumer updates it.
+	 *
+	 * Null (the default) is the built-in label. Instancing a user widget needs a world, so with none
+	 * this quietly stays the built-in wedge rather than producing half a ring. Exactly the bargain
+	 * UDreamListViewBase::RowTemplateClass makes, in the same words.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	TSubclassOf<UDreamUserWidget> WedgeTemplateClass;
+
+	/**
 	 * Open and Close, each carrying the SELECTION at that moment -- which is the whole of what a
 	 * "hold to open, release to choose" input wants back from a close.
 	 */

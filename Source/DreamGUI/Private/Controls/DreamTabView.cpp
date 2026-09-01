@@ -260,10 +260,34 @@ void UDreamTabView::RebuildTabs()
 			Toggle->GetOnValueChangedEvent().AddUObject(this, &UDreamTabView::HandleTabValueChanged);
 		}
 
+		// An authored tab, when the consumer supplied a class for one. See TabTemplateClass: the tab
+		// stays the control's face, plate and group membership; the content is the template's.
+		// Before registration, so the whole tab registers once as a piece.
+		if (TabTemplateClass != nullptr && GetWorld() != nullptr && IsValid(TabRoot))
+		{
+			if (UDreamUserWidget* Content = CreateDreamWidget(GetWorld(), TabTemplateClass, TabRoot))
+			{
+				Content->SetDisplayName(TEXT("TabContent"));
+				if (UDreamPanelSlot* ContentSlot = Content->GetPanelSlot())
+				{
+					ContentSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
+					ContentSlot->SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
+				}
+			}
+			// The stock label and the supplied content are two answers to what is on this tab, laid
+			// over each other in the same overlay -- the same rule the content slots follow.
+			if (Label != nullptr)
+			{
+				Label->SetWidgetActive(false);
+			}
+		}
+
 		if (StripNode->HasRegistered() && IsValid(TabRoot) && !TabRoot->HasRegistered())
 		{
 			RegisterDreamWidgetHierarchy(TabRoot);
 		}
+
+		OnTabGenerated.Broadcast(Index, TabRoot);
 	}
 
 	ApplyStyle();

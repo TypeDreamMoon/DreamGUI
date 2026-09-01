@@ -12,6 +12,7 @@ class UUIToggle;
 class UUIToggleGroup;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamTabViewChangedEvent, int32, ActiveTabIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDreamTabViewTabEvent, int32, TabIndex, UDreamWidget*, Tab);
 
 /**
  * One generated tab's parts.
@@ -129,6 +130,30 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetActiveTabIndex", BlueprintSetter = "SetActiveTabIndex", Category = "Tab View", meta = (ClampMin = "0"))
 	int32 ActiveTabIndex = 0;
+
+	/**
+	 * A tab's CONTENT, authored elsewhere: one instance of this class is created inside every tab
+	 * widget, filling it, and the built-in label steps aside. The tab's face, its selected plate,
+	 * its hover and its place in the toggle group stay the control's, so a template only has to draw
+	 * a tab.
+	 *
+	 * Rebuilt with the strip rather than pooled -- tabs are not recycled, there is one per page --
+	 * and OnTabGenerated fires for each as it is made.
+	 *
+	 * Null (the default) is the built-in label tab. Instancing a user widget needs a world, so with
+	 * none this quietly stays the built-in tab rather than producing half a strip. Exactly the
+	 * bargain UDreamListViewBase::RowTemplateClass makes, in the same words.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	TSubclassOf<UDreamUserWidget> TabTemplateClass;
+
+	/**
+	 * One per tab, as the strip is built. The hook for a consumer whose tabs are richer than a word
+	 * but who would rather not author a whole class: everything under the tab is reachable from here
+	 * by display name. The tab view's counterpart of the list's OnRowGenerated.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Tab View")
+	FDreamTabViewTabEvent OnTabGenerated;
 
 	/** Fired when the open tab changes, whoever changed it. A consumer binds to this, not to a tab. */
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
