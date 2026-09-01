@@ -40,7 +40,11 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height)
 	Fill8BytesToData(Data
 		, BoolAsByte
 		, static_cast<uint8>(BodyTextureScaleMode)
-		, 0, 0
+		// The third byte of the first pixel, which has been spare since this block was designed.
+		// Forced back to Image when there is no plain texture to slice -- see GetBodySampledTexture.
+		, static_cast<uint8>(GetBodySampledTexture() != nullptr
+			? BodyTextureDrawMode : EDreamRectBlockTextureDrawMode::Image)
+		, 0
 		, DataOffset);
 
 	FillVector2ToData(Data, FVector2f(width, height), DataOffset);
@@ -76,6 +80,26 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height)
 	FillFloatToData(Data, GetValueWithUnitMode(OuterShadowSize, OuterShadowSizeUnitMode, width, height, 0.5f), DataOffset);
 	FillFloatToData(Data, GetValueWithUnitMode(OuterShadowBlur, OuterShadowBlurUnitMode, width, height, 1.0f), DataOffset);
 	FillVector2ToData(Data, GetOuterShadowOffset(width, height), DataOffset);
+
+	// The nine-slice margins, in the two spaces the shader needs -- see ResolveSliceMarginPixels for
+	// what happens when a rect is too small to hold the ones it was given.
+	FVector2f TextureSize(1.0f, 1.0f);
+	if (const UTexture* SampledTexture = GetBodySampledTexture())
+	{
+		TextureSize = FVector2f(
+			FMath::Max(static_cast<float>(SampledTexture->GetSurfaceWidth()), 1.0f),
+			FMath::Max(static_cast<float>(SampledTexture->GetSurfaceHeight()), 1.0f));
+	}
+	const FVector4f MarginPixels = ResolveSliceMarginPixels(BodyTextureMargin, width, height);
+	// The UV pair comes from the AUTHORED margin, not the clamped one: which texels the cap reads is
+	// a fact about the texture, and squeezing the cap on screen must not also start reading a
+	// different part of the image.
+	FillVector4ToData(Data, FVector4f(
+		FMath::Max(BodyTextureMargin.Left, 0.0f) / TextureSize.X,
+		FMath::Max(BodyTextureMargin.Top, 0.0f) / TextureSize.Y,
+		FMath::Max(BodyTextureMargin.Right, 0.0f) / TextureSize.X,
+		FMath::Max(BodyTextureMargin.Bottom, 0.0f) / TextureSize.Y), DataOffset);
+	FillVector4ToData(Data, MarginPixels, DataOffset);
 }
 
 float UDreamRectBlock::GetValueWithUnitMode(float SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
@@ -106,6 +130,36 @@ FVector2f UDreamRectBlock::GetOuterShadowOffset(float RectWidth, float RectHeigh
 	float Cos = FMath::Cos(AngleRadian);
 	float Distance = GetValueWithUnitMode(OuterShadowDistance, OuterShadowDistanceUnitMode, RectWidth, RectHeight, 0.5f);
 	return FVector2f(-Sin, Cos) * Distance;
+}
+
+FVector4f UDreamRectBlock::ResolveSliceMarginPixels(const FMargin& InMargin, float InWidth, float InHeight)
+{
+	FVector4f Result(
+		FMath::Max(InMargin.Left, 0.0f), FMath::Max(InMargin.Top, 0.0f),
+		FMath::Max(InMargin.Right, 0.0f), FMath::Max(InMargin.Bottom, 0.0f));
+	const float HorizontalCaps = Result.X + Result.Z;
+	if (HorizontalCaps > InWidth && HorizontalCaps > KINDA_SMALL_NUMBER)
+	{
+		// Together, so the ratio survives: the shader's middle span is quad minus both caps, and
+		// clamping them one at a time would leave the first at full size and take the whole squeeze
+		// out of the second.
+		const float Scale = FMath::Max(InWidth, 0.0f) / HorizontalCaps;
+		Result.X *= Scale;
+		Result.Z *= Scale;
+	}
+	const float VerticalCaps = Result.Y + Result.W;
+	if (VerticalCaps > InHeight && VerticalCaps > KINDA_SMALL_NUMBER)
+	{
+		const float Scale = FMath::Max(InHeight, 0.0f) / VerticalCaps;
+		Result.Y *= Scale;
+		Result.W *= Scale;
+	}
+	return Result;
+}
+
+const UTexture* UDreamRectBlock::GetBodySampledTexture() const
+{
+	return BodyTextureMode == EDreamRectBlockTextureMode::Texture ? BodyTexture.Get() : nullptr;
 }
 
 constexpr int UDreamRectBlock::DataCountInBytes()
@@ -150,6 +204,13 @@ constexpr int UDreamRectBlock::DataCountInBytes()
 		+ 4//size
 		+ 4//blur
 		+ 8//offset, this is not angle & distance, we calculate offset result here
+
+		//nine-slice. Both, because the shader needs the margins in TWO spaces and can get neither
+		//from the other without asking the texture how big it is -- a fetch it does not otherwise
+		//need. The UV pair says which texels the caps are; the pixel pair says how much of the quad
+		//they occupy.
+		+ 16//margin as a fraction of the texture, LTRB
+		+ 16//the same margin in quad pixels, LTRB
 		;
 	return result;
 }
@@ -727,6 +788,17 @@ void UDreamRectBlock::SetSoftEdge(bool value)
 void UDreamRectBlock::SetBodyTextureScaleMode(EDreamRectBlockTextureScaleMode value)
 {
 	this->BodyTextureScaleMode = value;
+	MarkNeedUpdateBlockData();
+}
+
+void UDreamRectBlock::SetBodyTextureDrawMode(EDreamRectBlockTextureDrawMode value)
+{
+	this->BodyTextureDrawMode = value;
+	MarkNeedUpdateBlockData();
+}
+void UDreamRectBlock::SetBodyTextureMargin(const FMargin& value)
+{
+	this->BodyTextureMargin = value;
 	MarkNeedUpdateBlockData();
 }
 

@@ -265,6 +265,8 @@ protected:
 				? EDreamRectBlockTextureMode::Sprite
 				: EDreamRectBlockTextureMode::Texture);
 			Rect->SetBodyTextureScaleMode(InBrush.ScaleMode);
+			Rect->SetBodyTextureDrawMode(InBrush.DrawMode);
+			Rect->SetBodyTextureMargin(InBrush.Margin);
 			// The tint multiplies whatever the face shows -- the image, or the plain rect when the
 			// brush is empty. White is "no opinion", which keeps every existing look intact.
 			Rect->SetBodyColor(InBrush.Tint);

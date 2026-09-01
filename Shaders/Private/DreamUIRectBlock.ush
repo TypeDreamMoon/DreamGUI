@@ -1,4 +1,4 @@
-#include "/Engine/Private/GammaCorrectionCommon.ush"
+﻿#include "/Engine/Private/GammaCorrectionCommon.ush"
 #include "/Engine/Public/Platform.ush"
 
 #ifndef PI
@@ -91,9 +91,40 @@ float DreamUI_RadialGradient(float2 uv, float2 quadSize, float2 center, float2 r
     return distToCenter;
 }
 
+/**
+ * Nine-slice along one axis: the two caps keep their own size and only what is between them stretches.
+ *
+ * InUV is the quad's own 0..1 across this axis. InLowUV / InHighUV are how much of the TEXTURE each
+ * cap is; InLowPx / InHighPx are how much of the QUAD it occupies. Both are needed and neither can be
+ * derived from the other here -- that would take the texture's dimensions, which is a fetch this
+ * function does not otherwise need and the C++ side already knows.
+ *
+ * The caps are clamped against the quad on the C++ side, so InLowPx + InHighPx <= InQuadPx and the
+ * middle span below is never negative. The max() is a guard for the exactly-equal case, where a rect
+ * squeezed to precisely its two margins has no middle at all.
+ */
+float DreamUI_NineSliceAxis(float InUV, float InLowUV, float InHighUV, float InLowPx, float InHighPx, float InQuadPx)
+{
+    float Pos = InUV * InQuadPx;
+    if (Pos < InLowPx)
+    {
+        // The leading cap, 1:1 with the texture -- an eight-pixel border stays eight pixels.
+        return InLowUV * (Pos / max(InLowPx, 1e-4f));
+    }
+    if (Pos > InQuadPx - InHighPx)
+    {
+        return 1.0f - InHighUV * ((InQuadPx - Pos) / max(InHighPx, 1e-4f));
+    }
+    float MiddleT = (Pos - InLowPx) / max(InQuadPx - InLowPx - InHighPx, 1e-4f);
+    return InLowUV + MiddleT * (1.0f - InLowUV - InHighUV);
+}
+
 float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
 {
     half _TextureScaleMode;
+    half _TextureDrawMode;
+    float4 _SliceMarginUV;
+    float4 _SliceMarginPx;
     float4 _CornerRadius;
     float2 _QuadSize;
     
@@ -141,6 +172,7 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         uint ByteUint = asuint(PixelData.r);
         uint BoolValues = (ByteUint >> 24) & 0x000000ff;
         _TextureScaleMode = (ByteUint >> 16) & 0x000000ff;
+        _TextureDrawMode = (ByteUint >> 8) & 0x000000ff;
         
         _EnableBody = (BoolValues >> 7) & 1;
         _EnableOuterShadow = (BoolValues >> 6) & 1;
@@ -191,6 +223,13 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         _OuterShadowBlur = PixelData.x;
         _OuterShadowOffset = PixelData.yz;
 
+        // The nine-slice margins, LTRB, in the texture's space and then in the quad's.
+        _SliceMarginUV.x = PixelData.w;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _SliceMarginUV.yzw = PixelData.xyz;
+        _SliceMarginPx.x = PixelData.w;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _SliceMarginPx.yzw = PixelData.xyz;
     }
     
     
@@ -236,7 +275,37 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         }
         
         float2 texUV = lerp(lerp(stretchUV, fitUV, _TextureScaleMode), envelopUV, max(0, _TextureScaleMode - 1));
+
+        // Nine-slice, as a remap of the sample rather than as nine quads: this rect is ONE quad
+        // whose whole silhouette -- the rounded corners, the border, both shadows -- is signed
+        // distance work against it, and cutting it up would leave nine SDFs that each know only
+        // their own ninth. Changing which texel a body pixel reads leaves every one of them alone.
+        //
+        // Off the STRETCH UV, not the fitted one: a nine-slice already answers "how does this
+        // survive a different aspect ratio", and letting FitIn pre-squash the source first would be
+        // two answers to one question.
+        float SliceCentreFade = 1.0f;
+        if (_TextureDrawMode > 0.5f)
+        {
+            texUV.x = DreamUI_NineSliceAxis(UV2.x, _SliceMarginUV.x, _SliceMarginUV.z,
+                _SliceMarginPx.x, _SliceMarginPx.z, _QuadSize.x);
+            texUV.y = DreamUI_NineSliceAxis(UV2.y, _SliceMarginUV.y, _SliceMarginUV.w,
+                _SliceMarginPx.y, _SliceMarginPx.w, _QuadSize.y);
+
+            // Border is Box without its middle -- a frame around whatever is behind it. Dropped by
+            // alpha rather than by discard: this body sits under a border, an inner shadow and a
+            // gradient that all still have to draw, and a discard would take them with it.
+            if (_TextureDrawMode > 1.5f)
+            {
+                float2 QuadPos = UV2 * _QuadSize;
+                float2 InsideLow = step(_SliceMarginPx.xy, QuadPos);
+                float2 InsideHigh = step(QuadPos, _QuadSize - _SliceMarginPx.zw);
+                SliceCentreFade = 1.0f - InsideLow.x * InsideLow.y * InsideHigh.x * InsideHigh.y;
+            }
+        }
+
         float4 MainTexColor = Texture2DSample(MainTex, MainTexSampler, texUV);
+        MainTexColor.a *= SliceCentreFade;
         float4 bodyColor = MainTexColor * _BodyColor;
         bodyColor.rgb *= bodyColor.a;
 

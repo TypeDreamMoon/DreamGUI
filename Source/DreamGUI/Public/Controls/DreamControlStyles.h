@@ -97,6 +97,28 @@ struct DREAMGUI_API FDreamUIFaceBrush
 	EDreamRectBlockTextureScaleMode ScaleMode = EDreamRectBlockTextureScaleMode::Stretch;
 
 	/**
+	 * Image / Box / Border -- Slate's DrawAs, and the last thing this brush could not say.
+	 *
+	 * Box and Border are nine-slice: Margin's edges keep their own pixel size and only the middle
+	 * stretches, so a skin drawn with a bevel or a stitched border survives being put on a button of
+	 * a different size. Border is Box without its middle, for a frame around something else.
+	 *
+	 * Only for a plain TEXTURE. An atlas sprite's UV span is a sub-rect of its atlas, so slicing
+	 * within it would read the neighbouring sprite; a sprite draws as Image whatever this says.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush")
+	EDreamRectBlockTextureDrawMode DrawMode = EDreamRectBlockTextureDrawMode::Image;
+
+	/**
+	 * The nine-slice edges, in TEXTURE pixels -- Slate's Margin, and the number the artist has: a
+	 * border eight pixels wide in the file stays eight pixels wide on screen at any rect size.
+	 * Ignored unless DrawMode slices.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Face Brush",
+		meta = (EditCondition = "DrawMode != EDreamRectBlockTextureDrawMode::Image", ClampMin = "0.0"))
+	FMargin Margin = FMargin(0.0f);
+
+	/**
 	 * The image's own drawn size -- Slate's ImageSize. Zero means no opinion: the part keeps the
 	 * size its style gives it. Non-zero wins over the style's size field on the parts that carry
 	 * one (the toggle's box and mark, the radio's box and dot, the slider's handle).
