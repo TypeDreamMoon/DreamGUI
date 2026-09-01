@@ -7,6 +7,7 @@
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 void UDreamCanvasRenderTargetPreviewer::BeginPlay()
 {
@@ -71,17 +72,29 @@ void UDreamCanvasRenderTargetPreviewer::PostEditChangeProperty(struct FPropertyC
 #endif
 
 
+/*
+ * AddWeakLambda, not AddLambda, and the difference is the whole bug: a plain lambda is bound to no
+ * object, so the RemoveAll(this) in the unregister half could never match it. Register and
+ * unregister are called in pairs -- on every OnRegister/OnUnregister, on BeginPlay/EndPlay, and
+ * around every edit of the Canvas property -- and each pair left one more orphaned lambda on the
+ * canvas's event, all of them still firing.
+ *
+ * The captured weak pointer was the author noticing the lifetime problem and solving the wrong half
+ * of it: it kept the dead lambdas from dereferencing a destroyed previewer, which is why this never
+ * crashed and never got found. Binding the object is what makes the removal work, and it makes the
+ * hand-rolled weak capture redundant -- AddWeakLambda already declines to fire once the object is
+ * gone. UDreamPostProcessRenderElement, the sibling doing the same job, had it right all along.
+ */
 void UDreamCanvasRenderTargetPreviewer::RegisterRenderTargetChangedEvent()
 {
 	if (bHasRegisterRenderTargetChangedEvent)return;
 	if (Canvas.IsValid())
 	{
 		bHasRegisterRenderTargetChangedEvent = true;
-		Canvas->GetRenderTargetChangedEvent().AddLambda([=, WeakThis = MakeWeakObjectPtr(this)](UTextureRenderTarget2D*)
+		Canvas->GetRenderTargetChangedEvent().AddWeakLambda(this, [this](UTextureRenderTarget2D*)
 		{
-			if (!WeakThis.IsValid())return;
-			WeakThis->MarkTextureDirty();
-			WeakThis->UpdateSpriteData();
+			MarkTextureDirty();
+			UpdateSpriteData();
 		});
 		MarkTextureDirty();
 		UpdateSpriteData();
@@ -172,3 +185,5 @@ void UDreamCanvasRenderTargetPreviewer::OnUpdateGeometry(FDreamUIGeometry& InGeo
 		InGeo.Clear();
 	}
 }
+
+DECLARE_DREAM_GUI_VISUAL("CanvasRenderTargetPreviewer", UDreamCanvasRenderTargetPreviewer)

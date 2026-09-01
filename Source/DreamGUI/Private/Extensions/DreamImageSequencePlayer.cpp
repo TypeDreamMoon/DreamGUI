@@ -33,6 +33,7 @@ void UDreamImageSequencePlayer::OnRegister()
 		{
 			EditorPlayDelegateHandle = DreamUIManagerObject->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
 				if (!bPreviewInEditor)return;
+				EnforceFrameRate();
 				if (!CanPlay())return;
 				Duration = GetDuration();
 				PrepareForPlay();
@@ -56,8 +57,31 @@ void UDreamImageSequencePlayer::OnUnregister()
 #endif
 }
 
+/*
+ * Fps is a divisor, a multiplier and the only source of Duration, and every one of those breaks at
+ * zero in a way nothing reports. GetDuration becomes an infinity (or, on an empty sequence, a NaN
+ * from zero over zero); UpdateAnimation wraps when ElapsedTime > Duration and stops when it is not
+ * looping, and NEITHER comparison is ever true against those -- so a non-looping animation with no
+ * frame rate never ends and never says why. SeekFrame divides by it directly, so a zero there
+ * writes a NaN into ElapsedTime that every subsequent += preserves forever.
+ *
+ * A negative rate is the same defect with the sign flipped: the duration goes negative and the wrap
+ * fires on every tick. This design has no notion of playing backwards -- ElapsedTime only ever
+ * accumulates -- so a negative rate is not a feature being refused, it is a value with no meaning.
+ *
+ * The floor is a small positive number rather than 1: a rate below one frame a second is a
+ * legitimate slow crawl, and only the zero itself has to be excluded. It is enforced where the
+ * value is USED rather than only in the setter, because the property is EditAnywhere and assets
+ * authored before the ClampMin metadata existed can still carry a zero in from disk.
+ */
+void UDreamImageSequencePlayer::EnforceFrameRate()
+{
+	Fps = FMath::Max(Fps, UE_KINDA_SMALL_NUMBER);
+}
+
 void UDreamImageSequencePlayer::Play()
 {
+	EnforceFrameRate();
 	if (!CanPlay())return;
 	if (!bIsPlaying)
 	{
@@ -87,25 +111,42 @@ void UDreamImageSequencePlayer::Stop()
 	}
 }
 
+/*
+ * Seeking draws a frame, and drawing a frame needs the same derived state Play computes before its
+ * first draw: the length, and whatever PrepareForPlay works out for the subclass. The sheet player
+ * turns its two grid counts into a UV cell size there and nowhere else, so a seek on a player that
+ * had never played used to read two floats nothing had written and hand the visual a cell with no
+ * size -- silently, and only on the path a designer uses to scrub.
+ *
+ * PrepareForPlay is only reachable once CanPlay has agreed, because the preparation is what CanPlay
+ * guards: the sheet player divides by its cell counts the instant it is allowed to.
+ */
 void UDreamImageSequencePlayer::SeekFrame(int frameNumber)
 {
+	EnforceFrameRate();
 	ElapsedTime = frameNumber / Fps;
 	if (CanPlay())
 	{
+		Duration = GetDuration();
+		PrepareForPlay();
 		OnUpdateAnimation(frameNumber);
 	}
 }
 void UDreamImageSequencePlayer::SeekTime(float time)
 {
+	EnforceFrameRate();
 	ElapsedTime = time;
 	if (CanPlay())
 	{
+		Duration = GetDuration();
+		PrepareForPlay();
 		OnUpdateAnimation(ElapsedTime * Fps);
 	}
 }
 
 void UDreamImageSequencePlayer::UpdateAnimation(float deltaTime)
 {
+	EnforceFrameRate();
 	if (bIsPaused)return;
 	ElapsedTime += deltaTime;
 	if (ElapsedTime > Duration)
@@ -126,7 +167,7 @@ void UDreamImageSequencePlayer::UpdateAnimation(float deltaTime)
 
 void UDreamImageSequencePlayer::SetFps(float value)
 {
-	Fps = value;
+	Fps = FMath::Max(value, UE_KINDA_SMALL_NUMBER);
 }
 void UDreamImageSequencePlayer::SetLoop(bool value)
 {

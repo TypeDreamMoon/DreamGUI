@@ -24,7 +24,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		int HeightCount = 8;
 
-	float WidthUVInterval, HeightUVInterval;
+	/**
+	 * The size of one cell in UV space, derived from the two counts by PrepareForPlay and read by
+	 * OnUpdateAnimation. Initialised because these are the only members of the class outside the
+	 * reflection system, so nothing else zeroes them: a read that reached them before the first
+	 * PrepareForPlay used to hand the visual whatever the allocation happened to contain. The base
+	 * class now prepares on every entry point that draws, so the initialiser is a floor rather than
+	 * a value anything is expected to see.
+	 */
+	float WidthUVInterval = 0.0f, HeightUVInterval = 0.0f;
 	virtual bool CanPlay()override;
 	virtual float GetDuration()const override;
 	virtual void PrepareForPlay()override;
