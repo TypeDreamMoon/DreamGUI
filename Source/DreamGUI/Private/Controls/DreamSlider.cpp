@@ -117,9 +117,8 @@ void UDreamSlider::ApplyStyle()
 
 	if (SliderBehaviour != nullptr)
 	{
-		SliderBehaviour->SetNormalColor(Active.HandleNormal);
-		SliderBehaviour->SetHoveredColor(Active.HandleHovered);
-		SliderBehaviour->SetPressedColor(Active.HandlePressed);
+		PushSelectableState(SliderBehaviour, Active.HandleNormal, Active.HandleHovered, Active.HandlePressed,
+			Active.HandleDisabled, Active.HandleFocused, Active.TransitionDuration);
 		SliderBehaviour->SetDirectionType(Direction);
 		// Range before value, so the value is clamped against the authored range and not the default
 		// one; both without events, since pushing authored state is not the user dragging.

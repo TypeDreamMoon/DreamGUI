@@ -289,9 +289,14 @@ void UDreamInputKeySelector::PushFaceColours()
 	// player just clicked, so the selectable is sitting in Hovered or Pressed -- writing the listening
 	// colour into Normal alone means the feedback appears only once the mouse is moved away, which is
 	// precisely when the player has stopped looking for it.
-	ButtonBehaviour->SetNormalColor(bIsListening ? Active.Listening : Active.Normal);
-	ButtonBehaviour->SetHoveredColor(bIsListening ? Active.Listening : Active.Hovered);
-	ButtonBehaviour->SetPressedColor(bIsListening ? Active.Listening : Active.Pressed);
+	// Listening flattens the pointer states onto one colour: while the control is waiting for a key
+	// press, hovering and pressing it mean nothing, and a face that still moved under the pointer
+	// would say they did. Disabled and focused keep their own answers either way.
+	PushSelectableState(ButtonBehaviour,
+		bIsListening ? Active.Listening : Active.Normal,
+		bIsListening ? Active.Listening : Active.Hovered,
+		bIsListening ? Active.Listening : Active.Pressed,
+		Active.Disabled, Active.Focused, Active.TransitionDuration);
 }
 
 #undef LOCTEXT_NAMESPACE

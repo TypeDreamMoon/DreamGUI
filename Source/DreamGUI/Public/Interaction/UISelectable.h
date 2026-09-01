@@ -352,6 +352,17 @@ public:
 	void SetFocusedImageBrush(const FDreamUIImageBrush& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 	void SetUseFocusedVisuals(bool Value);
+	/**
+	 * How long a state change takes, in seconds. Zero snaps.
+	 *
+	 * A setter because a native control has to be able to push it: everything else about how a
+	 * control looks is a style knob, and a transition speed that only a hand-placed behaviour could
+	 * reach is the one part of the feel a project sheet could not state.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	void SetAnimDuration(float Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
+	float GetAnimDuration() const { return AnimDuration; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		void SetSelectionState(EUISelectableSelectionState NewState);
 

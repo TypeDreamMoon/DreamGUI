@@ -167,23 +167,22 @@ void UDreamSpinBox::ApplyStyle()
 
 	if (DecrementBehaviour != nullptr)
 	{
-		DecrementBehaviour->SetNormalColor(Active.ButtonNormal);
-		DecrementBehaviour->SetHoveredColor(Active.ButtonHovered);
-		DecrementBehaviour->SetPressedColor(Active.ButtonPressed);
+		PushSelectableState(DecrementBehaviour, Active.ButtonNormal, Active.ButtonHovered,
+			Active.ButtonPressed, Active.ButtonDisabled, Active.ButtonFocused, Active.TransitionDuration);
 	}
 	if (IncrementBehaviour != nullptr)
 	{
-		IncrementBehaviour->SetNormalColor(Active.ButtonNormal);
-		IncrementBehaviour->SetHoveredColor(Active.ButtonHovered);
-		IncrementBehaviour->SetPressedColor(Active.ButtonPressed);
+		PushSelectableState(IncrementBehaviour, Active.ButtonNormal, Active.ButtonHovered,
+			Active.ButtonPressed, Active.ButtonDisabled, Active.ButtonFocused, Active.TransitionDuration);
 	}
 	if (InputBehaviour != nullptr)
 	{
 		// The field's behaviour is a selectable and its pointer transition tints the field's own
 		// visual -- left unset those colours are white, and the field ships as a white bar.
-		InputBehaviour->SetNormalColor(Active.FieldBackground);
-		InputBehaviour->SetHoveredColor(Active.FieldBackgroundHovered);
-		InputBehaviour->SetPressedColor(Active.FieldBackground);
+		// The field's pressed state is its resting one: clicking into a text field places a caret,
+		// it does not push a button, and a face that darkened would say otherwise.
+		PushSelectableState(InputBehaviour, Active.FieldBackground, Active.FieldBackgroundHovered,
+			Active.FieldBackground, Active.ButtonDisabled, Active.ButtonFocused, Active.TransitionDuration);
 	}
 
 	// The authored value, clamped against the authored range and mirrored, so the property and the

@@ -301,9 +301,8 @@ void UDreamDropdown::ApplyStyle()
 
 	if (DropdownBehaviour != nullptr)
 	{
-		DropdownBehaviour->SetNormalColor(Active.FaceNormal);
-		DropdownBehaviour->SetHoveredColor(Active.FaceHovered);
-		DropdownBehaviour->SetPressedColor(Active.FacePressed);
+		PushSelectableState(DropdownBehaviour, Active.FaceNormal, Active.FaceHovered, Active.FacePressed,
+			Active.FaceDisabled, Active.FaceFocused, Active.TransitionDuration);
 		DropdownBehaviour->SetMaxHeight(MaxVisibleItems * Active.ItemHeight);
 	}
 	SizeControlHeight(Active.Height);

@@ -594,6 +594,12 @@ void UUISelectable::SetDisabledColor(FColor Value)
 		ApplyPointerSelectionState(false);
 	}
 }
+void UUISelectable::SetAnimDuration(float Value)
+{
+	// Nothing re-applied: a duration decides how the NEXT change plays, and re-running the current
+	// state to honour a new speed would replay a transition the pointer already finished.
+	AnimDuration = FMath::Max(Value, 0.0f);
+}
 void UUISelectable::SetNormalImageBrush(const FDreamUIImageBrush& Value)
 {
 	NormalImageBrush = Value;

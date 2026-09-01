@@ -95,9 +95,8 @@ void UDreamTextInput::ApplyStyle()
 	{
 		// The behaviour is a selectable and its pointer transition tints the field's own visual --
 		// UISelectable defaults the target to it, in white. These are what actually colour the box.
-		InputBehaviour->SetNormalColor(Active.Background);
-		InputBehaviour->SetHoveredColor(Active.BackgroundHovered);
-		InputBehaviour->SetPressedColor(Active.Background);
+		PushSelectableState(InputBehaviour, Active.Background, Active.BackgroundHovered, Active.Background,
+			Active.BackgroundDisabled, Active.BackgroundFocused, Active.TransitionDuration);
 		InputBehaviour->SetAllowMultiLine(bMultiLine);
 		// Without an event: pushing the authored text in is not the user typing.
 		InputBehaviour->SetTextWithoutNotify(Text);

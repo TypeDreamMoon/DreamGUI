@@ -84,9 +84,8 @@ void UDreamRadioButton::ApplyStyle()
 		ToggleBehaviour->SetIsOnWithoutNotify(bIsOn);
 		// The pointer transition tints the box; the checked one tints the dot. A selectable left
 		// without explicit colours ships white -- these are never optional.
-		ToggleBehaviour->SetNormalColor(Active.BoxNormal);
-		ToggleBehaviour->SetHoveredColor(Active.BoxHovered);
-		ToggleBehaviour->SetPressedColor(Active.BoxPressed);
+		PushSelectableState(ToggleBehaviour, Active.BoxNormal, Active.BoxHovered, Active.BoxPressed,
+			Active.BoxDisabled, Active.BoxFocused, Active.TransitionDuration);
 		ToggleBehaviour->SetOnColor(Active.DotChecked);
 		ToggleBehaviour->SetOffColor(Active.DotUnchecked);
 	}

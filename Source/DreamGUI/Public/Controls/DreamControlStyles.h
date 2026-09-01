@@ -143,6 +143,33 @@ struct DREAMGUI_API FDreamToggleStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (EditCondition = "bOverride_BoxPressed"))
 	FColor BoxPressed = FColor(38, 42, 52, 255);
 
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BoxDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (EditCondition = "bOverride_BoxDisabled"))
+	FColor BoxDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BoxFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (EditCondition = "bOverride_BoxFocused"))
+	FColor BoxFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (InlineEditConditionToggle))
 	bool bOverride_TickChecked = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (EditCondition = "bOverride_TickChecked"))
@@ -220,6 +247,33 @@ struct DREAMGUI_API FDreamButtonStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_Pressed"))
 	FColor Pressed = FColor(38, 42, 52, 255);
 
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Disabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_Disabled"))
+	FColor Disabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Focused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_Focused"))
+	FColor Focused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
 	bool bOverride_LabelColor = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_LabelColor"))
@@ -290,6 +344,33 @@ struct DREAMGUI_API FDreamSliderStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (EditCondition = "bOverride_HandlePressed"))
 	FColor HandlePressed = FColor(154, 176, 216, 255);
 
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (InlineEditConditionToggle))
+	bool bOverride_HandleDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (EditCondition = "bOverride_HandleDisabled"))
+	FColor HandleDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (InlineEditConditionToggle))
+	bool bOverride_HandleFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (EditCondition = "bOverride_HandleFocused"))
+	FColor HandleFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (InlineEditConditionToggle))
 	bool bOverride_TrackBrush = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider Style", meta = (EditCondition = "bOverride_TrackBrush"))
@@ -321,6 +402,33 @@ struct DREAMGUI_API FDreamTextInputStyle
 	bool bOverride_Background = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_Background"))
 	FColor Background = FColor(38, 42, 52, 255);
+
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BackgroundDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_BackgroundDisabled"))
+	FColor BackgroundDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BackgroundFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_BackgroundFocused"))
+	FColor BackgroundFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
 
 	/**
 	 * While hovered. The field's behaviour is a selectable and WILL tint the background with its
@@ -389,6 +497,33 @@ struct DREAMGUI_API FDreamDropdownStyle
 	bool bOverride_FacePressed = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_FacePressed"))
 	FColor FacePressed = FColor(38, 42, 52, 255);
+
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
+	bool bOverride_FaceDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_FaceDisabled"))
+	FColor FaceDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
+	bool bOverride_FaceFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_FaceFocused"))
+	FColor FaceFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
 	bool bOverride_TextColor = true;
@@ -565,6 +700,33 @@ struct DREAMGUI_API FDreamScrollBarStyle
 	bool bOverride_HandlePressed = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_HandlePressed"))
 	FColor HandlePressed = FColor(120, 132, 158, 255);
+
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
+	bool bOverride_HandleDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_HandleDisabled"))
+	FColor HandleDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
+	bool bOverride_HandleFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_HandleFocused"))
+	FColor HandleFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
 
 	/** Half the thickness is a capsule, which is what a bar reads as with nobody styling it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
@@ -778,6 +940,33 @@ struct DREAMGUI_API FDreamTabViewStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (EditCondition = "bOverride_TabPressed"))
 	FColor TabPressed = FColor(38, 42, 52, 255);
 
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TabDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (EditCondition = "bOverride_TabDisabled"))
+	FColor TabDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TabFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (EditCondition = "bOverride_TabFocused"))
+	FColor TabFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
+
 	/** The tab whose page is showing. Its own colour, because selection is not a pointer state. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View Style", meta = (InlineEditConditionToggle))
 	bool bOverride_TabSelected = true;
@@ -944,6 +1133,33 @@ struct DREAMGUI_API FDreamExpandableAreaStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_HeaderPressed"))
 	FColor HeaderPressed = FColor(38, 42, 52, 255);
 
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
+	bool bOverride_HeaderDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_HeaderDisabled"))
+	FColor HeaderDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
+	bool bOverride_HeaderFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_HeaderFocused"))
+	FColor HeaderFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (InlineEditConditionToggle))
 	bool bOverride_LabelColor = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area Style", meta = (EditCondition = "bOverride_LabelColor"))
@@ -1032,6 +1248,33 @@ struct DREAMGUI_API FDreamInputKeySelectorStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (EditCondition = "bOverride_Pressed"))
 	FColor Pressed = FColor(38, 42, 52, 255);
 
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Disabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (EditCondition = "bOverride_Disabled"))
+	FColor Disabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Focused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (EditCondition = "bOverride_Focused"))
+	FColor Focused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
+
 	/** While it is listening. A different colour is the whole of the "press a key now" feedback. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector Style", meta = (InlineEditConditionToggle))
 	bool bOverride_Listening = true;
@@ -1103,6 +1346,33 @@ struct DREAMGUI_API FDreamRadioButtonStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (EditCondition = "bOverride_BoxPressed"))
 	FColor BoxPressed = FColor(38, 42, 52, 255);
 
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BoxDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (EditCondition = "bOverride_BoxDisabled"))
+	FColor BoxDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BoxFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (EditCondition = "bOverride_BoxFocused"))
+	FColor BoxFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (InlineEditConditionToggle))
 	bool bOverride_DotChecked = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button Style", meta = (EditCondition = "bOverride_DotChecked"))
@@ -1160,6 +1430,33 @@ struct DREAMGUI_API FDreamSpinBoxStyle
 	bool bOverride_ButtonPressed = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (EditCondition = "bOverride_ButtonPressed"))
 	FColor ButtonPressed = FColor(38, 42, 52, 255);
+
+	/**
+	 * Not interactable. Every control pushed three pointer colours and left this one to the
+	 * behaviour's library default, a flat grey that belongs to no theme -- so a disabled control was
+	 * the one state a project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ButtonDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (EditCondition = "bOverride_ButtonDisabled"))
+	FColor ButtonDisabled = FColor(60, 63, 72, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user saw the
+	 * navigation land on nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ButtonFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (EditCondition = "bOverride_ButtonFocused"))
+	FColor ButtonFocused = FColor(96, 140, 200, 255);
+
+	/** How long a state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (InlineEditConditionToggle))
 	bool bOverride_FieldBackground = true;

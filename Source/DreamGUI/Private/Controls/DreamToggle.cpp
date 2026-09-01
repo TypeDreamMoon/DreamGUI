@@ -104,9 +104,8 @@ void UDreamToggle::ApplyStyle()
 		ToggleBehaviour->SetIsOnWithoutNotify(CheckedState == EDreamCheckState::Checked);
 		// The pointer transition tints the box; the checked one tints the tick. Which colour goes
 		// where is the whole of what this control decides.
-		ToggleBehaviour->SetNormalColor(Active.BoxNormal);
-		ToggleBehaviour->SetHoveredColor(Active.BoxHovered);
-		ToggleBehaviour->SetPressedColor(Active.BoxPressed);
+		PushSelectableState(ToggleBehaviour, Active.BoxNormal, Active.BoxHovered, Active.BoxPressed,
+			Active.BoxDisabled, Active.BoxFocused, Active.TransitionDuration);
 		ToggleBehaviour->SetOnColor(Active.TickChecked);
 		PushCheckStateVisuals(true);
 	}

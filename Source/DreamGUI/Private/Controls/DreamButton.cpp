@@ -101,9 +101,8 @@ void UDreamButton::ApplyStyle()
 	}
 	if (ButtonBehaviour != nullptr)
 	{
-		ButtonBehaviour->SetNormalColor(Active.Normal);
-		ButtonBehaviour->SetHoveredColor(Active.Hovered);
-		ButtonBehaviour->SetPressedColor(Active.Pressed);
+		PushSelectableState(ButtonBehaviour, Active.Normal, Active.Hovered, Active.Pressed,
+			Active.Disabled, Active.Focused, Active.TransitionDuration);
 	}
 	// The control's own height; placed in a stack this is what Auto measures. Width belongs to
 	// whoever placed the control.

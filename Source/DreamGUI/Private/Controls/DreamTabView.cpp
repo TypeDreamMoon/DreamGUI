@@ -344,9 +344,8 @@ void UDreamTabView::ApplyStyle()
 		if (Tab.Toggle != nullptr)
 		{
 			// A selectable left without explicit colours ships white -- these are never optional.
-			Tab.Toggle->SetNormalColor(Active.TabNormal);
-			Tab.Toggle->SetHoveredColor(Active.TabHovered);
-			Tab.Toggle->SetPressedColor(Active.TabPressed);
+			PushSelectableState(Tab.Toggle, Active.TabNormal, Active.TabHovered, Active.TabPressed,
+				Active.TabDisabled, Active.TabFocused, Active.TransitionDuration);
 			// The plate: opaque in the selected colour while this tab is open, and the same colour at
 			// zero alpha otherwise, so an unselected tab shows the face's own pointer tint through it.
 			Tab.Toggle->SetOnColor(Active.TabSelected);

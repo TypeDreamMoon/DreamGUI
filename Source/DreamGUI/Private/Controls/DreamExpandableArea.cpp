@@ -219,9 +219,8 @@ void UDreamExpandableArea::ApplyStyle()
 	{
 		// A UUISelectable-hosted face renders WHITE without these: the transition is the only writer
 		// of that visual's colour, and an unset transition colour is not "leave it alone".
-		HeaderBehaviour->SetNormalColor(Active.HeaderNormal);
-		HeaderBehaviour->SetHoveredColor(Active.HeaderHovered);
-		HeaderBehaviour->SetPressedColor(Active.HeaderPressed);
+		PushSelectableState(HeaderBehaviour, Active.HeaderNormal, Active.HeaderHovered, Active.HeaderPressed,
+			Active.HeaderDisabled, Active.HeaderFocused, Active.TransitionDuration);
 	}
 
 	// Last: it reads the header height just written and the content's measure, and both feed the

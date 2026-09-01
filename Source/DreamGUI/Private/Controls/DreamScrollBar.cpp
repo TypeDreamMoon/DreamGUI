@@ -84,9 +84,8 @@ void UDreamScrollBar::ApplyStyle()
 		// The handle's colour is the SELECTABLE's, not the visual's: the behaviour re-tints its
 		// transition target on every state change, so a handle whose behaviour was never given
 		// colours ships white the first time a pointer touches it.
-		BarBehaviour->SetNormalColor(Active.HandleNormal);
-		BarBehaviour->SetHoveredColor(Active.HandleHovered);
-		BarBehaviour->SetPressedColor(Active.HandlePressed);
+		PushSelectableState(BarBehaviour, Active.HandleNormal, Active.HandleHovered, Active.HandlePressed,
+			Active.HandleDisabled, Active.HandleFocused, Active.TransitionDuration);
 		BarBehaviour->SetDirectionType(Direction);
 		BarBehaviour->SetNavigationChangeInterval(NavigationChangeInterval);
 		// The floor lives in the behaviour, which is the one place that can honour it in the drawn

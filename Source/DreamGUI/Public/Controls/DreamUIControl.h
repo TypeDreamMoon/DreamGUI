@@ -12,6 +12,7 @@
 // declaration the header compiles or not depending on which unity blob it lands in.
 #include "Core/DreamUISpriteData_BaseObject.h"
 #include "Engine/Texture.h"
+#include "Interaction/UISelectable.h"
 #include "DreamUIControl.generated.h"
 
 /**
@@ -197,6 +198,31 @@ protected:
 
 	/** Resolve every part CollectParts declares, and name any required one the tree does not have. */
 	void BindParts();
+
+	/**
+	 * The whole state set onto a selectable, in one call.
+	 *
+	 * Three pointer colours is what every control used to push, and it left two states and the
+	 * speed to the library's defaults: a flat grey for disabled that belongs to no theme, and focus
+	 * visuals that ship OFF, so keyboard and gamepad navigation landed on a control that showed
+	 * nothing. Both are style knobs now, and pushing a focus colour is what switches the focus
+	 * visuals on -- a control that states one means it.
+	 */
+	static void PushSelectableState(UUISelectable* InSelectable, FColor InNormal, FColor InHovered,
+		FColor InPressed, FColor InDisabled, FColor InFocused, float InDuration)
+	{
+		if (InSelectable == nullptr)
+		{
+			return;
+		}
+		InSelectable->SetNormalColor(InNormal);
+		InSelectable->SetHoveredColor(InHovered);
+		InSelectable->SetPressedColor(InPressed);
+		InSelectable->SetDisabledColor(InDisabled);
+		InSelectable->SetFocusedColor(InFocused);
+		InSelectable->SetUseFocusedVisuals(true);
+		InSelectable->SetAnimDuration(InDuration);
+	}
 
 	/** InNode's T, added if whoever drew this tree did not put one there. */
 	template<class T>
