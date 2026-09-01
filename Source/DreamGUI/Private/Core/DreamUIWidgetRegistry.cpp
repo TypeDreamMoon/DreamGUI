@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamUIWidgetRegistry.h"
 
@@ -13,6 +13,11 @@ TArray<FDreamUIWidgetRegistry::FEntry>& FDreamUIWidgetRegistry::Entries()
 void FDreamUIWidgetRegistry::Register(const FEntry& InEntry)
 {
 	Entries().Add(InEntry);
+}
+
+void FDreamUIWidgetRegistry::GetAllEntries(TArray<FEntry>& OutEntries)
+{
+	OutEntries = Entries();
 }
 
 UClass* FDreamUIWidgetRegistry::Resolve(FName InScope, FName InName)

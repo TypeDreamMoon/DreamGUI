@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -35,6 +35,16 @@ public:
 		FName Name;
 		UClass* (*ClassGetter)() = nullptr;
 	};
+
+	/**
+	 * Every registration, scope and all.
+	 *
+	 * NamesInScope answers a diagnostic that already knows which scope it is suggesting within;
+	 * this is for the callers that have to enumerate the whole table without knowing the scopes --
+	 * the symbol export the VSCode extension reads, above all, which had no way to learn that
+	 * `Native.Button` exists and so offered completion for the primitives alone.
+	 */
+	static void GetAllEntries(TArray<FEntry>& OutEntries);
 
 	/** Called by the DECLARE macro's static object; not for direct use. */
 	static void Register(const FEntry& InEntry);
