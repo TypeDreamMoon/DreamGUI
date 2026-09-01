@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamDropdown.h"
 
@@ -17,10 +17,18 @@
 #include "Interaction/UIScrollView.h"
 #include "Interaction/UIToggle.h"
 
-void UDreamDropdown::NativeOnInitialized()
+void UDreamDropdown::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Face"), FaceNode);
+	OutParts.Emplace(TEXT("Caption"), CaptionNode);
+	OutParts.Emplace(TEXT("ListRoot"), ListNode);
+	OutParts.Emplace(TEXT("ItemTemplate"), ItemTemplateNode);
+	// The glyph is scenery: a template that draws its own arrow, or none, is still a dropdown.
+	OutParts.Emplace(TEXT("Arrow"), ArrowNode, /*bRequired*/false);
+}
 
+void UDreamDropdown::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The shape UUIDropdown reads, and nothing else. CreateListItems duplicates the template under
@@ -29,12 +37,11 @@ void UDreamDropdown::NativeOnInitialized()
 	// the thing rows are copied from. Show() takes care of placing and animating ListRoot; here it
 	// only has to exist, sized, and asleep.
 	Realize(this,
-		Node<UDreamRectBlock>("Face").Out(FaceNode)
+		Node<UDreamRectBlock>("Face")
 			.Stretch()
 			.With<UDreamLayoutContainerOverlay>()
-			.With<UUIDropdown>()
 			.Children(
-				DreamUI::Text("Caption").Out(CaptionNode)
+				DreamUI::Text("Caption")
 					.Visual([](UDreamText& InText)
 					{
 						InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Left);
@@ -46,7 +53,7 @@ void UDreamDropdown::NativeOnInitialized()
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 						InSlot.SetPadding(FMargin(10.0f, 0.0f, 24.0f, 0.0f));
 					}),
-				DreamUI::Text("Arrow").Out(ArrowNode)
+				DreamUI::Text("Arrow")
 					.Visual([](UDreamText& InText)
 					{
 						InText.SetText(FText::AsCultureInvariant(TEXT("▼")));
@@ -59,7 +66,7 @@ void UDreamDropdown::NativeOnInitialized()
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 						InSlot.SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
 					}),
-				Node<UDreamRectBlock>("ListRoot").Out(ListNode)
+				Node<UDreamRectBlock>("ListRoot")
 					// POINT anchors, deliberately: the list is inactive between opens, and an
 					// inactive widget's stretched axis never re-arranges -- its cached width is
 					// stale (zero, after an elevation round-trip), and Elevate pins whatever it
@@ -102,7 +109,7 @@ void UDreamDropdown::NativeOnInitialized()
 							})
 							.With<UDreamLayoutContainerVerticalBox>()
 							.Children(
-								Node<UDreamRectBlock>("ItemTemplate").Out(ItemTemplateNode)
+								Node<UDreamRectBlock>("ItemTemplate")
 									.With<UDreamLayoutContainerOverlay>()
 									.With<UUIToggle>()
 									.With<UUIDropdownItemComponent>()
@@ -129,79 +136,72 @@ void UDreamDropdown::NativeOnInitialized()
 												InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Right);
 												InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
 												InSlot.SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
-											})))))
-			.Then([this](UDreamWidget& InRoot)
+											}))))));
+}
+
+void UDreamDropdown::WireParts()
+{
+	DropdownBehaviour = EnsureComponent<UUIDropdown>(FaceNode);
+	if (DropdownBehaviour == nullptr || FaceNode == nullptr)
+	{
+		return;
+	}
+	DropdownBehaviour->SetTransitionTarget(FaceNode->GetVisual());
+	DropdownBehaviour->SetListRoot(ListNode);
+	if (UUIScrollView* Scroll = ListNode != nullptr ? ListNode->GetComponent<UUIScrollView>() : nullptr)
+	{
+		Scroll->SetContent(FindPart(TEXT("Column")));
+	}
+	DropdownBehaviour->SetCaptionText(CaptionNode != nullptr ? Cast<UDreamText>(CaptionNode->GetVisual()) : nullptr);
+
+	if (ItemTemplateNode != nullptr)
+	{
+		// The row template's own parts, named as everything else is. FindPart stops at nested
+		// instances but descends plain nodes, so these resolve wherever inside the template a
+		// tree's author put them.
+		UUIDropdownItemComponent* Item = EnsureComponent<UUIDropdownItemComponent>(ItemTemplateNode);
+		UUIToggle* ItemToggle = EnsureComponent<UUIToggle>(ItemTemplateNode);
+		UDreamWidget* Check = FindPart(TEXT("ItemCheck"));
+		if (UDreamWidget* ItemLabel = FindPart(TEXT("ItemLabel")))
+		{
+			if (Item != nullptr)
 			{
-				DropdownBehaviour = InRoot.GetComponent<UUIDropdown>();
-				if (DropdownBehaviour == nullptr)
-				{
-					return;
-				}
-				DropdownBehaviour->SetTransitionTarget(InRoot.GetVisual());
-				DropdownBehaviour->SetListRoot(ListNode);
-				if (UUIScrollView* Scroll = ListNode != nullptr ? ListNode->GetComponent<UUIScrollView>() : nullptr)
-				{
-					UDreamWidget* Column = nullptr;
-					for (UDreamWidget* Child : ListNode->GetChildren())
-					{
-						if (Child != nullptr && Child->GetDisplayName() == TEXT("Column"))
-						{
-							Column = Child;
-						}
-					}
-					Scroll->SetContent(Column);
-				}
-				DropdownBehaviour->SetCaptionText(CaptionNode != nullptr ? Cast<UDreamText>(CaptionNode->GetVisual()) : nullptr);
+				Item->SetText(Cast<UDreamText>(ItemLabel->GetVisual()));
+			}
+		}
+		if (Item != nullptr)
+		{
+			Item->SetToggle(ItemToggle);
+		}
+		if (ItemToggle != nullptr && Check != nullptr)
+		{
+			// The row's own pair of the library's recurring arrangement: hover tints the row, the
+			// selection mark is its own visual.
+			ItemToggle->SetTransitionTarget(ItemTemplateNode->GetVisual());
+			ItemToggle->SetToggleTransitionTarget(Check->GetVisual());
+		}
+		DropdownBehaviour->SetItemTemplate(Item);
+		// The template is the thing rows are copied from, not a row.
+		ItemTemplateNode->SetWidgetActive(false);
+	}
+	// Asleep until Show(); Show() wakes it, positions it and fades it in.
+	if (ListNode != nullptr)
+	{
+		ListNode->SetWidgetActive(false);
+	}
+	DropdownBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamDropdown::HandleValueChanged);
+	// The list is a child of the face for positioning and a citizen of the popup layer for
+	// everything else: Show anchors it against the face, then the layer lifts it to the screen root
+	// with its world position kept -- the UMG menu-stack arrangement -- so an ancestor's clip cannot
+	// cut it and an ancestor's layout never counts it. Hide hands it home before the fade.
+	DropdownBehaviour->GetOnListVisibilityChangedEvent().AddUObject(this, &UDreamDropdown::HandleListVisibilityChanged);
+}
 
-				if (ItemTemplateNode != nullptr)
-				{
-					UUIDropdownItemComponent* Item = ItemTemplateNode->GetComponent<UUIDropdownItemComponent>();
-					UUIToggle* ItemToggle = ItemTemplateNode->GetComponent<UUIToggle>();
-					UDreamWidget* Check = nullptr;
-					for (UDreamWidget* Child : ItemTemplateNode->GetChildren())
-					{
-						if (Child != nullptr && Child->GetDisplayName() == TEXT("ItemCheck"))
-						{
-							Check = Child;
-						}
-						else if (Child != nullptr && Child->GetDisplayName() == TEXT("ItemLabel"))
-						{
-							if (Item != nullptr)
-							{
-								Item->SetText(Cast<UDreamText>(Child->GetVisual()));
-							}
-						}
-					}
-					if (Item != nullptr)
-					{
-						Item->SetToggle(ItemToggle);
-					}
-					if (ItemToggle != nullptr && Check != nullptr)
-					{
-						// The row's own pair of the library's recurring arrangement: hover tints the
-						// row, the selection mark is its own visual.
-						ItemToggle->SetTransitionTarget(ItemTemplateNode->GetVisual());
-						ItemToggle->SetToggleTransitionTarget(Check->GetVisual());
-					}
-					DropdownBehaviour->SetItemTemplate(Item);
-					// The template is the thing rows are copied from, not a row.
-					ItemTemplateNode->SetWidgetActive(false);
-				}
-				// Asleep until Show(); Show() wakes it, positions it and fades it in.
-				if (ListNode != nullptr)
-				{
-					ListNode->SetWidgetActive(false);
-				}
-				DropdownBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamDropdown::HandleValueChanged);
-				// The list is a child of the face for positioning and a citizen of the popup layer for
-				// everything else: Show anchors it against the face, then the layer lifts it to the
-				// screen root with its world position kept -- the UMG menu-stack arrangement -- so an
-				// ancestor's clip cannot cut it and an ancestor's layout never counts it. Hide hands it
-				// home before the fade.
-				DropdownBehaviour->GetOnListVisibilityChangedEvent().AddUObject(this, &UDreamDropdown::HandleListVisibilityChanged);
-			}));
-
-	ApplyStyle();
+void UDreamDropdown::OnPartsReady()
+{
+	// The options and the selection are DATA, and live outside ApplyStyle -- which is why
+	// PostEditChangeProperty has to call this alongside the style push rather than relying on it.
+	// Either order works against the caption: the style push only tints that text, never writes it.
 	PushOptions();
 }
 

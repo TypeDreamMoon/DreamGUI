@@ -15,10 +15,17 @@
 
 const FName UDreamScrollBox::ContentSlotName(TEXT("Content"));
 
-void UDreamScrollBox::NativeOnInitialized()
+void UDreamScrollBox::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Face"), FaceNode);
+	OutParts.Emplace(TEXT("Viewport"), ViewportNode);
+	OutParts.Emplace(UDreamScrollBox::ContentSlotName, ContentNode);
+	// ScrollBarNode is a UDreamScrollBar, not a UDreamWidget, so it cannot ride this list -- see
+	// WireParts, which binds it by the same name.
+}
 
+void UDreamScrollBox::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The scroll behaviour sits on the VIEWPORT, not on the face, and that placement is the whole
@@ -30,7 +37,7 @@ void UDreamScrollBox::NativeOnInitialized()
 	// rect the content slides inside. A stack container on it so children pile up in order, the way
 	// UMG's scroll box does; the control authors the extent (see RefreshContentExtent).
 	Realize(this,
-		Node<UDreamRectBlock>("Face").Out(FaceNode)
+		Node<UDreamRectBlock>("Face")
 			.Stretch()
 			.Self([](UDreamWidget& InFace)
 			{
@@ -38,7 +45,7 @@ void UDreamScrollBox::NativeOnInitialized()
 				InFace.SetClipping(EDreamWidgetClipping::ClipToBounds);
 			})
 			.Children(
-				Node<UDreamRectBlock>("Viewport").Out(ViewportNode)
+				Node<UDreamRectBlock>("Viewport")
 					// A rect, not a bare Widget: the viewport is the drag surface, and only something
 					// that draws is raycast against. It is tinted away in ApplyStyle -- a transparent
 					// rect still hits, because hit testing is the rect range and not the pixels.
@@ -47,67 +54,71 @@ void UDreamScrollBox::NativeOnInitialized()
 					{
 						InViewport.SetClipping(EDreamWidgetClipping::ClipToBounds);
 					})
-					.With<UUIScrollView>([](UUIScrollView& InScroll)
-					{
-						// Both axes, explicitly, from the first moment: the behaviour ships with BOTH
-						// on, so a zero-config view drifts sideways the first time a drag lands even
-						// though nothing in the box scrolls that way. ApplyStyle re-states them from
-						// Orientation; this is the build-time floor.
-						InScroll.SetHorizontal(false);
-						InScroll.SetVertical(true);
-						// The content is layout-managed and this control writes its rect, so the
-						// scroll offset has to live somewhere both parties read. In RelativeLocation
-						// mode the view moves the widget without touching its anchored position, and
-						// the next extent refresh would then restore a stale offset and snap the
-						// content back to the top.
-						InScroll.SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
-					})
 					.Children(
 						// The scrolled column, and this control's hole. It was reachable only from
 						// code (AddContent) until it became a named slot: `Native.ScrollBox { ... }`
 						// left its children hanging beside the control's own root, drawn nowhere and
 						// scrolled by nothing. bAcceptsSeveral because the stack is already here --
 						// a scroll box that took one child would be a scroll box nobody wants.
-						Widget("Content").Out(ContentNode)
+						Widget("Content")
 							.With<UDreamLayoutContainerStackBox>()
 							.With<UDreamNamedSlot>([](UDreamNamedSlot& InSlot)
 							{
 								InSlot.bAcceptsSeveral = true;
 							})),
-				Nested<UDreamScrollBar>("ScrollBar").Out(ScrollBarNode))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				// A resize changes the viewport, and the content's extent is measured against it.
-				// It no longer has to re-publish anchors to make the stretched children agree: a
-				// parent's resolved size invalidates its anchor-driven children at the source now
-				// (UDreamWidget::SetWidth), which retired the per-frame watch this control kept --
-				// and the designer oscillation that watch caused with it.
-				GetDimensionChangedEvent().AddUObject(this, &UDreamScrollBox::HandleDimensionsChanged);
-				ScrollView = ViewportNode != nullptr ? ViewportNode->GetComponent<UUIScrollView>() : nullptr;
-				ContentStack = ContentNode != nullptr
-					? Cast<UDreamLayoutContainerStackBox>(ContentNode->GetLayoutContainer())
-					: nullptr;
-				if (ScrollView != nullptr)
-				{
-					ScrollView->SetContent(ContentNode);
-					ScrollView->GetOnValueChangedEvent().AddUObject(this, &UDreamScrollBox::HandleScrollViewChanged);
-				}
-				if (ScrollBarNode != nullptr)
-				{
-					// A nested user widget builds its own contents at Initialize, and nothing calls it
-					// here: the walk that initializes nested widgets belongs to instancing a class
-					// TEMPLATE, and a class that declares its hierarchy in code has no template to be
-					// instanced from. Without this the bar is an empty node with no track and no
-					// handle, and every push into it lands on nothing.
-					ScrollBarNode->Initialize();
-					// The bar owns the two-way link, so the box hands it the view and stops thinking
-					// about scroll values -- one implementation whether the bar is this one or a
-					// standalone bar somebody points at GetScrollView().
-					ScrollBarNode->SetScrollView(ScrollView);
-				}
-			}));
+				Nested<UDreamScrollBar>("ScrollBar")));
+}
 
-	ApplyStyle();
+void UDreamScrollBox::WireParts()
+{
+	// A resize changes the viewport, and the content's extent is measured against it. It no longer
+	// has to re-publish anchors to make the stretched children agree: a parent's resolved size
+	// invalidates its anchor-driven children at the source now (UDreamWidget::SetWidth), which
+	// retired the per-frame watch this control kept -- and the designer oscillation with it.
+	GetDimensionChangedEvent().AddUObject(this, &UDreamScrollBox::HandleDimensionsChanged);
+
+	ScrollView = EnsureComponent<UUIScrollView>(ViewportNode);
+	if (ScrollView != nullptr)
+	{
+		// The view's floor, set HERE rather than in the built-in tree: a template's viewport gets a
+		// freshly added behaviour carrying the library defaults, and a knob that only the code tree
+		// ever wrote is a knob the template road silently does without.
+		//
+		// Both axes explicitly, from the first moment: the behaviour ships with BOTH on, so a
+		// zero-config view drifts sideways the first time a drag lands even though nothing in the box
+		// scrolls that way. ApplyStyle re-states them from Orientation.
+		ScrollView->SetHorizontal(false);
+		ScrollView->SetVertical(true);
+		// The content is layout-managed and this control writes its rect, so the scroll offset has to
+		// live somewhere both parties read. In RelativeLocation mode the view moves the widget
+		// without touching its anchored position, and the next extent refresh would then restore a
+		// stale offset and snap the content back to the top.
+		ScrollView->SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
+	}
+	ContentStack = ContentNode != nullptr
+		? Cast<UDreamLayoutContainerStackBox>(ContentNode->GetLayoutContainer())
+		: nullptr;
+	// The one part whose field is TYPED, so the generic list cannot carry it. Bound here, by the
+	// same name the built-in tree gives it, and a template offering something that is not a scroll
+	// bar leaves it null rather than half-bound.
+	ScrollBarNode = Cast<UDreamScrollBar>(FindPart(TEXT("ScrollBar")));
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetContent(ContentNode);
+		ScrollView->GetOnValueChangedEvent().AddUObject(this, &UDreamScrollBox::HandleScrollViewChanged);
+	}
+	if (ScrollBarNode != nullptr)
+	{
+		// A nested user widget builds its own contents at Initialize, and nothing calls it here: the
+		// walk that initializes nested widgets belongs to instancing a class TEMPLATE, and a class
+		// that declares its hierarchy in code has no template to be instanced from. Without this the
+		// bar is an empty node with no track and no handle, and every push into it lands on nothing.
+		ScrollBarNode->Initialize();
+		// The bar owns the two-way link, so the box hands it the view and stops thinking about
+		// scroll values -- one implementation whether the bar is this one or a standalone bar
+		// somebody points at GetScrollView().
+		ScrollBarNode->SetScrollView(ScrollView);
+	}
 }
 
 void UDreamScrollBox::HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged)

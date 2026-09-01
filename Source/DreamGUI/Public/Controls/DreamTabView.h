@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -213,7 +213,10 @@ public:
 	TArray<FDreamTabViewTab> Tabs;
 
 protected:
-	virtual void NativeOnInitialized() override;
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
+	virtual void RealizeBuiltIn() override;
+	virtual void WireParts() override;
+	virtual void OnPartsReady() override;
 
 #if WITH_EDITOR
 	/** The base re-applies style; the label list lives outside ApplyStyle and regenerates here. */
@@ -225,7 +228,7 @@ private:
 	void RebuildTabs();
 
 	/** Move everything that was already a child of this control into the switcher. */
-	void AdoptAuthoredPages(const TArray<UDreamWidget*>& InAuthoredChildren);
+	void AdoptAuthoredPages(const TArray<TObjectPtr<UDreamWidget>>& InAuthoredChildren);
 
 	/** Attach InPage under the switcher through whichever door its registration state allows. */
 	void AttachPage(UDreamWidget* InPage);

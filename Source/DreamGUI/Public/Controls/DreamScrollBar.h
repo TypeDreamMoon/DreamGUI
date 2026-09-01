@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -138,7 +138,9 @@ public:
 	virtual void ApplyStyle() override;
 
 protected:
-	virtual void NativeOnInitialized() override;
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
+	virtual void RealizeBuiltIn() override;
+	virtual void WireParts() override;
 
 private:
 	void HandleValueChanged(float InValue);

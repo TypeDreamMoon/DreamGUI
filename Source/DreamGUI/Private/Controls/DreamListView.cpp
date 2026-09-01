@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamListView.h"
 
@@ -17,10 +17,21 @@
 #include "Interaction/UIButton.h"
 #include "Interaction/UIScrollView.h"
 
-void UDreamListViewBase::NativeOnInitialized()
+void UDreamListViewBase::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Face"), FaceNode);
+	OutParts.Emplace(TEXT("Viewport"), ViewportNode);
+	OutParts.Emplace(TEXT("Column"), ColumnNode);
+	OutParts.Emplace(TEXT("RowTemplate"), RowTemplateNode);
+	// The stock row's label. A template whose row draws something else entirely is exactly the case
+	// this feature exists for, so its absence is not an error -- DecorateRow null-checks.
+	OutParts.Emplace(TEXT("RowLabel"), RowLabelNode, /*bRequired*/false);
+	// ScrollBarNode is a UDreamScrollBar, not a UDreamWidget, so it cannot ride this list -- see
+	// WireParts, which binds it by the same name.
+}
 
+void UDreamListViewBase::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The control's desired size is its AUTHORED size, not its scrolled content's: the column below
@@ -42,7 +53,7 @@ void UDreamListViewBase::NativeOnInitialized()
 	// scroll view accepts drags from anywhere inside its own widget, so a bar hung underneath it
 	// would scroll the list every time somebody grabbed the handle.
 	Realize(this,
-		Node<UDreamRectBlock>("Face").Out(FaceNode)
+		Node<UDreamRectBlock>("Face")
 			.Stretch()
 			.Self([](UDreamWidget& InFace)
 			{
@@ -50,7 +61,7 @@ void UDreamListViewBase::NativeOnInitialized()
 				InFace.SetClipping(EDreamWidgetClipping::ClipToBounds);
 			})
 			.Children(
-				Node<UDreamRectBlock>("Viewport").Out(ViewportNode)
+				Node<UDreamRectBlock>("Viewport")
 					// A rect, not a bare Widget: the viewport is the drag surface, and only something
 					// that draws is raycast against. ApplyStyle tints it away -- a transparent rect
 					// still hits, because hit testing is the rect range and not the pixels.
@@ -61,24 +72,11 @@ void UDreamListViewBase::NativeOnInitialized()
 						// the list: the behaviour moves content, it does not hide it.
 						InViewport.SetClipping(EDreamWidgetClipping::ClipToBounds);
 					})
-					.With<UUIScrollView>([](UUIScrollView& InScroll)
-					{
-						// Vertical only, explicitly, from the first moment: the behaviour ships with
-						// BOTH axes on, and a zero-config scroll view drifts sideways the first time
-						// a drag lands even though nothing in a list scrolls that way.
-						InScroll.SetHorizontal(false);
-						InScroll.SetVertical(true);
-						// The column's height is rewritten on every rebuild. In RelativeLocation mode
-						// the view scrolls by moving the widget WITHOUT touching its anchored
-						// position, so the next write of the column's rect would restore a stale
-						// offset and snap the list back to the top on every source change.
-						InScroll.SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
-					})
 					.Children(
 						// No layout container. Every row states its own rect from its index, which is
 						// what makes the row height the style's number and the pool a window rather
 						// than a wall -- see the class header.
-						Widget("Column").Out(ColumnNode)
+						Widget("Column")
 							// Top-anchored, stretch-X, its HEIGHT authored per rebuild: the column is
 							// the scrolled content, so it has to be as tall as ALL the rows while the
 							// viewport shows only what fits. A stretched vertical axis would pin it to
@@ -95,7 +93,7 @@ void UDreamListViewBase::NativeOnInitialized()
 								InColumn.SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D::ZeroVector);
 							})
 							.Children(
-								Node<UDreamRectBlock>("RowTemplate").Out(RowTemplateNode)
+								Node<UDreamRectBlock>("RowTemplate")
 									.Self([](UDreamWidget& InTemplate)
 									{
 										// The thing rows are copied from, not a row: asleep, so it
@@ -107,7 +105,7 @@ void UDreamListViewBase::NativeOnInitialized()
 									.With<UDreamLayoutContainerOverlay>()
 									.With<UUIButton>()
 									.Children(
-										DreamUI::Text("RowLabel").Out(RowLabelNode)
+										DreamUI::Text("RowLabel")
 											.Visual([](UDreamText& InText)
 											{
 												InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Left);
@@ -119,45 +117,67 @@ void UDreamListViewBase::NativeOnInitialized()
 												InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 												InSlot.SetPadding(UDreamListViewBase::GetRowPadding());
 											})))),
-				Nested<UDreamScrollBar>("ScrollBar").Out(ScrollBarNode))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				// A resize changes the gutter, the bar's shape and how many rows fit in the window.
-				// It no longer has to re-publish anchors to make the stretched children agree: a
-				// parent's resolved size invalidates its anchor-driven children at the source now
-				// (UDreamWidget::SetWidth), which is what retired the per-frame watch this control
-				// used to run -- and the oscillation that watch caused in the designer with it.
-				GetDimensionChangedEvent().AddUObject(this, &UDreamListViewBase::HandleDimensionsChanged);
-				ScrollBehaviour = ViewportNode != nullptr ? ViewportNode->GetComponent<UUIScrollView>() : nullptr;
-				if (ScrollBehaviour != nullptr && ColumnNode != nullptr)
-				{
-					// What moves. The viewport is the window; the column is what slides behind it.
-					ScrollBehaviour->SetContent(ColumnNode);
-					// And what recycling listens to: the window is a function of the offset.
-					ScrollBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamListViewBase::HandleScrollViewMoved);
-				}
-				if (ScrollBarNode != nullptr)
-				{
-					// A nested user widget builds its own contents at Initialize, and nothing calls it
-					// here: the walk that initializes nested widgets belongs to instancing a class
-					// TEMPLATE, and a class that declares its hierarchy in code has no template to be
-					// instanced from. Without this the bar is an empty node with no track and no
-					// handle, and every push into it lands on nothing.
-					ScrollBarNode->Initialize();
-					// The bar owns the two-way link, so the list hands it the view and stops thinking
-					// about scroll values -- one implementation, shared with the scroll box.
-					ScrollBarNode->SetScrollView(ScrollBehaviour);
-				}
-			}));
+				Nested<UDreamScrollBar>("ScrollBar")));
+}
 
+void UDreamListViewBase::WireParts()
+{
+	// A resize changes the gutter, the bar's shape and how many rows fit in the window. It no longer
+	// has to re-publish anchors to make the stretched children agree: a parent's resolved size
+	// invalidates its anchor-driven children at the source now (UDreamWidget::SetWidth), which is
+	// what retired the per-frame watch this control used to run -- and the oscillation that watch
+	// caused in the designer with it.
+	GetDimensionChangedEvent().AddUObject(this, &UDreamListViewBase::HandleDimensionsChanged);
+
+	ScrollBehaviour = EnsureComponent<UUIScrollView>(ViewportNode);
+	if (ScrollBehaviour != nullptr)
+	{
+		// The view's floor, set HERE rather than in the built-in tree: a template's viewport gets a
+		// freshly added behaviour carrying the library defaults, and a knob only the code tree ever
+		// wrote is a knob the template road silently does without.
+		//
+		// Vertical only, explicitly, from the first moment: the behaviour ships with BOTH axes on,
+		// and a zero-config scroll view drifts sideways the first time a drag lands even though
+		// nothing in a list scrolls that way.
+		ScrollBehaviour->SetHorizontal(false);
+		ScrollBehaviour->SetVertical(true);
+		// The column's height is rewritten on every rebuild. In RelativeLocation mode the view
+		// scrolls by moving the widget WITHOUT touching its anchored position, so the next write of
+		// the column's rect would restore a stale offset and snap the list back to the top on every
+		// source change.
+		ScrollBehaviour->SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
+	}
+	// The one part whose field is TYPED, so the generic list cannot carry it. Bound here, by the
+	// same name the built-in tree gives it.
+	ScrollBarNode = Cast<UDreamScrollBar>(FindPart(TEXT("ScrollBar")));
+	if (ScrollBehaviour != nullptr && ColumnNode != nullptr)
+	{
+		// What moves. The viewport is the window; the column is what slides behind it.
+		ScrollBehaviour->SetContent(ColumnNode);
+		// And what recycling listens to: the window is a function of the offset.
+		ScrollBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamListViewBase::HandleScrollViewMoved);
+	}
+	if (ScrollBarNode != nullptr)
+	{
+		// A nested user widget builds its own contents at Initialize, and nothing calls it here: the
+		// walk that initializes nested widgets belongs to instancing a class TEMPLATE, and a class
+		// that declares its hierarchy in code has no template to be instanced from. Without this the
+		// bar is an empty node with no track and no handle, and every push into it lands on nothing.
+		ScrollBarNode->Initialize();
+		// The bar owns the two-way link, so the list hands it the view and stops thinking about
+		// scroll values -- one implementation, shared with the scroll box.
+		ScrollBarNode->SetScrollView(ScrollBehaviour);
+	}
+}
+
+void UDreamListViewBase::OnPartsReady()
+{
 	// Before the first copy is taken. Whatever a subclass adds to the template has to be IN it by
 	// the time rows are built, or the template and the rows disagree about what a row is.
 	if (RowTemplateNode != nullptr)
 	{
 		DecorateRowTemplate(*RowTemplateNode);
 	}
-
-	ApplyStyle();
 }
 
 void UDreamListViewBase::ApplyStyle()

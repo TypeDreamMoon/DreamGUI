@@ -32,10 +32,21 @@ UDreamDialog::UDreamDialog()
 
 const FName UDreamDialog::BodySlotName(TEXT("Body"));
 
-void UDreamDialog::NativeOnInitialized()
+void UDreamDialog::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Panel"), PanelNode);
+	OutParts.Emplace(TEXT("Title"), TitleNode);
+	OutParts.Emplace(TEXT("Content"), ContentNode);
+	OutParts.Emplace(TEXT("Message"), MessageNode);
+	OutParts.Emplace(TEXT("ButtonRow"), ButtonRowNode);
+	// The dimmer and the body hole are both optional. A template that scrims for itself needs no
+	// dimmer of ours, and a dialog that only ever shows a sentence needs no hole.
+	OutParts.Emplace(TEXT("Dimmer"), DimmerNode, /*bRequired*/false);
+	OutParts.Emplace(UDreamDialog::BodySlotName, BodyNode, /*bRequired*/false);
+}
 
+void UDreamDialog::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The root draws nothing and carries no layout container, so its two children are ANCHOR-driven
@@ -48,14 +59,14 @@ void UDreamDialog::NativeOnInitialized()
 		Widget("Dialog")
 			.Stretch()
 			.Children(
-				Node<UDreamRectBlock>("Dimmer").Out(DimmerNode)
+				Node<UDreamRectBlock>("Dimmer")
 					.Stretch()
 					// The standalone arrangement's input blocking. Under the modal subsystem this
 					// node is asleep and the subsystem's own blocker is the one holding the line --
 					// see RefreshHostArrangement.
 					.With<UUIEventBlocker>(),
 
-				Node<UDreamRectBlock>("Panel").Out(PanelNode)
+				Node<UDreamRectBlock>("Panel")
 					.Self([](UDreamWidget& InPanel)
 					{
 						// The panel is a FIXED size and its content is not: a message longer than the
@@ -66,7 +77,7 @@ void UDreamDialog::NativeOnInitialized()
 					// PanelPadding around. A column is the only thing all three parts agree about.
 					.With<UDreamLayoutContainerVerticalBox>()
 					.Children(
-						DreamUI::Text("Title").Out(TitleNode)
+						DreamUI::Text("Title")
 							.Visual([](UDreamText& InText)
 							{
 								InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Left);
@@ -83,7 +94,7 @@ void UDreamDialog::NativeOnInitialized()
 						// The middle band gets its own node, and an overlay on it, so that a consumer
 						// wanting a form instead of a sentence has somewhere with a SLOT to put it.
 						// The message is merely the built-in occupant.
-						Widget("Content").Out(ContentNode)
+						Widget("Content")
 							.With<UDreamLayoutContainerOverlay>()
 							.Slot([](UDreamPanelSlot& InSlot)
 							{
@@ -95,7 +106,7 @@ void UDreamDialog::NativeOnInitialized()
 								InSlot.SetFillWeight(1.0f);
 							})
 							.Children(
-								DreamUI::Text("Message").Out(MessageNode)
+								DreamUI::Text("Message")
 									.Visual([](UDreamText& InText)
 									{
 										InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Left);
@@ -110,7 +121,7 @@ void UDreamDialog::NativeOnInitialized()
 								// than a wrapper around it: "is this hole filled" is read off the
 								// node's children, so a hole that also held the built-in occupant
 								// would answer yes before anyone put anything in it.
-								Widget("Body").Out(BodyNode)
+								Widget("Body")
 									.With<UDreamNamedSlot>()
 									.Slot([](UDreamPanelSlot& InSlot)
 									{
@@ -118,7 +129,7 @@ void UDreamDialog::NativeOnInitialized()
 										InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 									})),
 
-						Widget("ButtonRow").Out(ButtonRowNode)
+						Widget("ButtonRow")
 							.With<UDreamLayoutContainerHorizontalBox>()
 							.Slot([](UDreamPanelSlot& InSlot)
 							{
@@ -131,7 +142,12 @@ void UDreamDialog::NativeOnInitialized()
 
 	// Before ApplyStyle: the style push walks the button widgets, so they have to exist first.
 	RebuildButtons();
-	ApplyStyle();
+}
+
+void UDreamDialog::OnPartsReady()
+{
+	// Before the first style push, which walks the button widgets, so they have to exist first.
+	RebuildButtons();
 }
 
 void UDreamDialog::NativeOnConstruct()

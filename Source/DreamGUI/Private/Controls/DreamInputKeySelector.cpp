@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamInputKeySelector.h"
 
@@ -19,21 +19,24 @@
 
 #define LOCTEXT_NAMESPACE "DreamInputKeySelector"
 
-void UDreamInputKeySelector::NativeOnInitialized()
+void UDreamInputKeySelector::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Face"), FaceNode);
+	OutParts.Emplace(TEXT("Label"), LabelNode);
+}
 
+void UDreamInputKeySelector::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The button's tree, unchanged: the face IS the root -- a key binder is one rectangle, and a
 	// separate background child would only manufacture a gap for the hit test to fall through.
 	Realize(this,
-		Node<UDreamRectBlock>("Face").Out(FaceNode)
+		Node<UDreamRectBlock>("Face")
 			.Stretch()
 			.With<UDreamLayoutContainerOverlay>()
-			.With<UUIButton>()
 			.Children(
-				DreamUI::Text("Label").Out(LabelNode)
+				DreamUI::Text("Label")
 					.Visual([](UDreamText& InText)
 					{
 						InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
@@ -43,20 +46,19 @@ void UDreamInputKeySelector::NativeOnInitialized()
 					{
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
-					}))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				ButtonBehaviour = InRoot.GetComponent<UUIButton>();
-				if (ButtonBehaviour != nullptr)
-				{
-					// Its own visual: the pointer transition tints the face it is standing on, and the
-					// listening state rides those same three colours (see PushFaceColours).
-					ButtonBehaviour->SetTransitionTarget(InRoot.GetVisual());
-					ButtonBehaviour->GetOnClickEvent().AddUObject(this, &UDreamInputKeySelector::HandleClicked);
-				}
-			}));
+					})));
+}
 
-	ApplyStyle();
+void UDreamInputKeySelector::WireParts()
+{
+	ButtonBehaviour = EnsureComponent<UUIButton>(FaceNode);
+	if (ButtonBehaviour != nullptr && FaceNode != nullptr)
+	{
+		// Its own visual: the pointer transition tints the face it is standing on, and the listening
+		// state rides those same three colours (see PushFaceColours).
+		ButtonBehaviour->SetTransitionTarget(FaceNode->GetVisual());
+		ButtonBehaviour->GetOnClickEvent().AddUObject(this, &UDreamInputKeySelector::HandleClicked);
+	}
 }
 
 void UDreamInputKeySelector::ApplyStyle()

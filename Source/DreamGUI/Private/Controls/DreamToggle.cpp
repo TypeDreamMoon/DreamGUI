@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamToggle.h"
 
@@ -14,24 +14,30 @@
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIToggle.h"
 
-void UDreamToggle::NativeOnInitialized()
+void UDreamToggle::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Box"), BoxNode);
+	OutParts.Emplace(TEXT("Tick"), TickNode);
+	// The image mark stands in for the glyph, so a template that only draws one of the two is a
+	// coherent check box -- PushCheckStateVisuals picks whichever it was given.
+	OutParts.Emplace(TEXT("Mark"), MarkNode, /*bRequired*/false);
+}
 
+void UDreamToggle::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The control IS the box. No label, no row: a check box is one square and its mark, and
 	// whatever text sits beside it is the consumer's layout, not this control's opinion -- UMG's
 	// check box draws the same line.
 	Realize(this,
-		Node<UDreamRectBlock>("Box").Out(BoxNode)
+		Node<UDreamRectBlock>("Box")
 			.Stretch()
 			// An overlay so the tick has a slot to be centred in. Without a layout container
 			// a child has no slot at all, and centring would have to be spelled in anchors.
 			.With<UDreamLayoutContainerOverlay>()
-			.With<UUIToggle>()
 			.Children(
-				DreamUI::Text("Tick").Out(TickNode)
+				DreamUI::Text("Tick")
 					.Visual([](UDreamText& InText)
 					{
 						InText.SetText(FText::AsCultureInvariant(TEXT("✓")));
@@ -46,7 +52,7 @@ void UDreamToggle::NativeOnInitialized()
 				// The image mark, the glyph's stand-in: exactly one of the two is active,
 				// decided per state by whether that state's brush holds an image. Asleep by default
 				// -- an imageless rect block draws a plain white square.
-				Node<UDreamRectBlock>("Mark").Out(MarkNode)
+				Node<UDreamRectBlock>("Mark")
 					.Self([](UDreamWidget& InMark)
 					{
 						InMark.SetWidgetActive(false);
@@ -55,22 +61,23 @@ void UDreamToggle::NativeOnInitialized()
 					{
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
-					}))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				ToggleBehaviour = InRoot.GetComponent<UUIToggle>();
-				if (ToggleBehaviour == nullptr)
-				{
-					return;
-				}
-				// The two transitions, deliberately on two visuals. Pointed at one they would
-				// overwrite each other and the checked colour would survive until the next hover.
-				ToggleBehaviour->SetTransitionTarget(BoxNode != nullptr ? BoxNode->GetVisual() : nullptr);
-				ToggleBehaviour->SetToggleTransitionTarget(TickNode != nullptr ? TickNode->GetVisual() : nullptr);
-				ToggleBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamToggle::HandleValueChanged);
-			}));
+					})));
+}
 
-	ApplyStyle();
+void UDreamToggle::WireParts()
+{
+	// Ensure, not Get: on the template road the box is somebody's drawing, and this is what makes it
+	// a check box at all.
+	ToggleBehaviour = EnsureComponent<UUIToggle>(BoxNode);
+	if (ToggleBehaviour == nullptr)
+	{
+		return;
+	}
+	// The two transitions, deliberately on two visuals. Pointed at one they would overwrite each
+	// other and the checked colour would survive until the next hover.
+	ToggleBehaviour->SetTransitionTarget(BoxNode != nullptr ? BoxNode->GetVisual() : nullptr);
+	ToggleBehaviour->SetToggleTransitionTarget(TickNode != nullptr ? TickNode->GetVisual() : nullptr);
+	ToggleBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamToggle::HandleValueChanged);
 }
 
 void UDreamToggle::ApplyStyle()

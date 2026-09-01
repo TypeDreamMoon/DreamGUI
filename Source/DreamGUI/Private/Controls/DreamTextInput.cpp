@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamTextInput.h"
 
@@ -12,19 +12,24 @@
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UITextInput.h"
 
-void UDreamTextInput::NativeOnInitialized()
+void UDreamTextInput::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Field"), BackgroundNode);
+	OutParts.Emplace(TEXT("Placeholder"), PlaceholderNode);
+	OutParts.Emplace(TEXT("ClipArea"), ClipNode);
+	OutParts.Emplace(TEXT("Text"), TextNode);
+}
 
+void UDreamTextInput::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	Realize(this,
-		Node<UDreamRectBlock>("Field").Out(BackgroundNode)
+		Node<UDreamRectBlock>("Field")
 			.Stretch()
-			.With<UUITextInput>()
 			.Children(
-				DreamUI::Text("Placeholder").Out(PlaceholderNode).Stretch(),
-				Widget("ClipArea").Out(ClipNode)
+				DreamUI::Text("Placeholder").Stretch(),
+				Widget("ClipArea")
 					.Self([](UDreamWidget& InClip)
 					{
 						// The one structural fact of a text field: its content is regularly wider
@@ -32,21 +37,22 @@ void UDreamTextInput::NativeOnInitialized()
 						InClip.SetClipping(EDreamWidgetClipping::ClipToBounds);
 					})
 					.Children(
-						DreamUI::Text("Text").Out(TextNode).Stretch()))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				InputBehaviour = InRoot.GetComponent<UUITextInput>();
-				if (InputBehaviour == nullptr)
-				{
-					return;
-				}
-				InputBehaviour->SetTextVisual(TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr);
-				InputBehaviour->SetPlaceHolder(PlaceholderNode);
-				InputBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamTextInput::HandleTextChanged);
-				InputBehaviour->GetOnSubmitEvent().AddUObject(this, &UDreamTextInput::HandleSubmitted);
-			}));
+						DreamUI::Text("Text").Stretch())));
+}
 
-	ApplyStyle();
+void UDreamTextInput::WireParts()
+{
+	// On the background, which is the control's own face: the input owns the whole box, not the
+	// scrolled text inside it.
+	InputBehaviour = EnsureComponent<UUITextInput>(BackgroundNode);
+	if (InputBehaviour == nullptr)
+	{
+		return;
+	}
+	InputBehaviour->SetTextVisual(TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr);
+	InputBehaviour->SetPlaceHolder(PlaceholderNode);
+	InputBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamTextInput::HandleTextChanged);
+	InputBehaviour->GetOnSubmitEvent().AddUObject(this, &UDreamTextInput::HandleSubmitted);
 }
 
 void UDreamTextInput::ApplyStyle()

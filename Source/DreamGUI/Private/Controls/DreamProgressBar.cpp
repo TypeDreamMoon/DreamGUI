@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamProgressBar.h"
 
@@ -10,10 +10,14 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 
-void UDreamProgressBar::NativeOnInitialized()
+void UDreamProgressBar::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Track"), TrackNode);
+	OutParts.Emplace(TEXT("Fill"), FillNode);
+}
 
+void UDreamProgressBar::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// No layout container and no behaviour: the fill is anchor-driven geometry and the control is
@@ -23,12 +27,10 @@ void UDreamProgressBar::NativeOnInitialized()
 	// The same two nodes serve both shapes. A ring needs no extra part: Radial turns each rect into
 	// a circle drawn as its own border, and the swept wedge is a property of the fill rect.
 	Realize(this,
-		Node<UDreamRectBlock>("Track").Out(TrackNode)
+		Node<UDreamRectBlock>("Track")
 			.Stretch()
 			.Children(
-				Node<UDreamRectBlock>("Fill").Out(FillNode).Stretch()));
-
-	ApplyStyle();
+				Node<UDreamRectBlock>("Fill").Stretch()));
 }
 
 void UDreamProgressBar::ApplyStyle()

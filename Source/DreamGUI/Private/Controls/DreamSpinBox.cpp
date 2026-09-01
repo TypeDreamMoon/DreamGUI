@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamSpinBox.h"
 
@@ -16,10 +16,19 @@
 #include "Interaction/UITextInput.h"
 #include "Text/DreamUIValueFormat.h"
 
-void UDreamSpinBox::NativeOnInitialized()
+void UDreamSpinBox::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Decrement"), DecrementNode);
+	OutParts.Emplace(TEXT("DecrementGlyph"), DecrementLabelNode);
+	OutParts.Emplace(TEXT("Field"), FieldNode);
+	OutParts.Emplace(TEXT("ClipArea"), ClipNode);
+	OutParts.Emplace(TEXT("Value"), ValueTextNode);
+	OutParts.Emplace(TEXT("Increment"), IncrementNode);
+	OutParts.Emplace(TEXT("IncrementGlyph"), IncrementLabelNode);
+}
 
+void UDreamSpinBox::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	Realize(this,
@@ -30,16 +39,15 @@ void UDreamSpinBox::NativeOnInitialized()
 				// The step faces are button-shaped the way DreamButton is: the face IS the node the
 				// behaviour stands on, with a glyph centred in an overlay. Auto slots, so their
 				// width is the authored fallback (set in ApplyStyle); the field takes what remains.
-				Node<UDreamRectBlock>("Decrement").Out(DecrementNode)
+				Node<UDreamRectBlock>("Decrement")
 					.With<UDreamLayoutContainerOverlay>()
-					.With<UUIButton>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetSizeRule(EDreamPanelSizeRule::Auto);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 					})
 					.Children(
-						DreamUI::Text("DecrementGlyph").Out(DecrementLabelNode)
+						DreamUI::Text("DecrementGlyph")
 							.Visual([](UDreamText& InText)
 							{
 								// ASCII hyphen-minus: U+2212 has no glyph in the default SDF font
@@ -54,14 +62,13 @@ void UDreamSpinBox::NativeOnInitialized()
 								InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 								InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 							})),
-				Node<UDreamRectBlock>("Field").Out(FieldNode)
-					.With<UUITextInput>()
+				Node<UDreamRectBlock>("Field")
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
 					})
 					.Children(
-						Widget("ClipArea").Out(ClipNode)
+						Widget("ClipArea")
 							// Stretch, explicitly: the field has no layout container, so this node
 							// has no slot, and a node left to its anchor defaults is a 100x100 box
 							// in the middle of the field -- .Anchors alone would not clear that
@@ -74,22 +81,21 @@ void UDreamSpinBox::NativeOnInitialized()
 								InClip.SetClipping(EDreamWidgetClipping::ClipToBounds);
 							})
 							.Children(
-								DreamUI::Text("Value").Out(ValueTextNode).Stretch()
+								DreamUI::Text("Value").Stretch()
 									.Visual([](UDreamText& InText)
 									{
 										InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
 										InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
 									}))),
-				Node<UDreamRectBlock>("Increment").Out(IncrementNode)
+				Node<UDreamRectBlock>("Increment")
 					.With<UDreamLayoutContainerOverlay>()
-					.With<UUIButton>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetSizeRule(EDreamPanelSizeRule::Auto);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 					})
 					.Children(
-						DreamUI::Text("IncrementGlyph").Out(IncrementLabelNode)
+						DreamUI::Text("IncrementGlyph")
 							.Visual([](UDreamText& InText)
 							{
 								InText.SetText(FText::AsCultureInvariant(TEXT("+")));
@@ -100,35 +106,34 @@ void UDreamSpinBox::NativeOnInitialized()
 							{
 								InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 								InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
-							})))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				// Three behaviours on three nodes below the root -- none existed when the root was
-				// built, which is what .Then is for.
-				DecrementBehaviour = DecrementNode != nullptr ? DecrementNode->GetComponent<UUIButton>() : nullptr;
-				IncrementBehaviour = IncrementNode != nullptr ? IncrementNode->GetComponent<UUIButton>() : nullptr;
-				InputBehaviour = FieldNode != nullptr ? FieldNode->GetComponent<UUITextInput>() : nullptr;
-				if (DecrementBehaviour != nullptr)
-				{
-					DecrementBehaviour->SetTransitionTarget(DecrementNode->GetVisual());
-					DecrementBehaviour->GetOnClickEvent().AddUObject(this, &UDreamSpinBox::HandleDecrementClicked);
-				}
-				if (IncrementBehaviour != nullptr)
-				{
-					IncrementBehaviour->SetTransitionTarget(IncrementNode->GetVisual());
-					IncrementBehaviour->GetOnClickEvent().AddUObject(this, &UDreamSpinBox::HandleIncrementClicked);
-				}
-				if (InputBehaviour != nullptr)
-				{
-					InputBehaviour->SetTextVisual(ValueTextNode != nullptr ? Cast<UDreamText>(ValueTextNode->GetVisual()) : nullptr);
-					// Per-character rejection of everything a number cannot contain; the submit
-					// parse below stays the backstop for shapes the filter cannot judge ("-", "1.2.").
-					InputBehaviour->SetInputType(EUITextInputType::DecimalNumber);
-					InputBehaviour->GetOnSubmitEvent().AddUObject(this, &UDreamSpinBox::HandleSubmitted);
-				}
-			}));
+							}))));
+}
 
-	ApplyStyle();
+void UDreamSpinBox::WireParts()
+{
+	// Three behaviours on three parts. Ensure rather than Get on every one of them: a template's
+	// author draws two buttons and a field, and this is what makes them behave like any.
+	DecrementBehaviour = EnsureComponent<UUIButton>(DecrementNode);
+	IncrementBehaviour = EnsureComponent<UUIButton>(IncrementNode);
+	InputBehaviour = EnsureComponent<UUITextInput>(FieldNode);
+	if (DecrementBehaviour != nullptr)
+	{
+		DecrementBehaviour->SetTransitionTarget(DecrementNode->GetVisual());
+		DecrementBehaviour->GetOnClickEvent().AddUObject(this, &UDreamSpinBox::HandleDecrementClicked);
+	}
+	if (IncrementBehaviour != nullptr)
+	{
+		IncrementBehaviour->SetTransitionTarget(IncrementNode->GetVisual());
+		IncrementBehaviour->GetOnClickEvent().AddUObject(this, &UDreamSpinBox::HandleIncrementClicked);
+	}
+	if (InputBehaviour != nullptr)
+	{
+		InputBehaviour->SetTextVisual(ValueTextNode != nullptr ? Cast<UDreamText>(ValueTextNode->GetVisual()) : nullptr);
+		// Per-character rejection of everything a number cannot contain; the submit parse below
+		// stays the backstop for shapes the filter cannot judge ("-", "1.2.").
+		InputBehaviour->SetInputType(EUITextInputType::DecimalNumber);
+		InputBehaviour->GetOnSubmitEvent().AddUObject(this, &UDreamSpinBox::HandleSubmitted);
+	}
 }
 
 void UDreamSpinBox::ApplyStyle()

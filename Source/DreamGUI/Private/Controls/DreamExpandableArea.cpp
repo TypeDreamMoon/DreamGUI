@@ -19,10 +19,22 @@
 const FName UDreamExpandableArea::ContentSlotName(TEXT("Content"));
 const FName UDreamExpandableArea::HeaderSlotName(TEXT("Header"));
 
-void UDreamExpandableArea::NativeOnInitialized()
+void UDreamExpandableArea::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("ExpandableArea"), RootNode);
+	OutParts.Emplace(TEXT("Header"), HeaderNode);
+	OutParts.Emplace(TEXT("HeaderRow"), HeaderRowNode);
+	OutParts.Emplace(TEXT("Content"), ContentNode);
+	OutParts.Emplace(TEXT("Label"), LabelNode);
+	// The indicators and the header hole are all optional: exactly one indicator is ever awake, and
+	// a template that draws its own arrow needs neither of ours.
+	OutParts.Emplace(TEXT("Arrow"), ArrowNode, /*bRequired*/false);
+	OutParts.Emplace(TEXT("ArrowMark"), ArrowMarkNode, /*bRequired*/false);
+	OutParts.Emplace(UDreamExpandableArea::HeaderSlotName, HeaderSlotNode, /*bRequired*/false);
+}
 
+void UDreamExpandableArea::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// A column of two, and the two size themselves differently on purpose.
@@ -40,27 +52,26 @@ void UDreamExpandableArea::NativeOnInitialized()
 	// PushExpansionVisuals), so the fill hands the content exactly its own measure -- and if a
 	// consumer stretches the control, the extra goes to the CONTENT rather than inflating the header.
 	Realize(this,
-		Widget("ExpandableArea").Out(RootNode)
+		Widget("ExpandableArea")
 			.Stretch()
 			.With<UDreamLayoutContainerVerticalBox>()
 			.Children(
 				// The header IS a button, face and all: DreamButton's argument, that a control which
 				// always carries its own UIButton has no state in which clicking does nothing.
-				Node<UDreamRectBlock>("Header").Out(HeaderNode)
+				Node<UDreamRectBlock>("Header")
 					.With<UDreamLayoutContainerSizeBox>([](UDreamLayoutContainerSizeBox& InBox)
 					{
 						// The override is structural; WHICH height it is, is the style's, pushed in
 						// ApplyStyle like every other knob.
 						InBox.SetOverrideHeight(true);
 					})
-					.With<UUIButton>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetSizeRule(EDreamPanelSizeRule::Auto);
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 					})
 					.Children(
-						Widget("HeaderRow").Out(HeaderRowNode)
+						Widget("HeaderRow")
 							.With<UDreamLayoutContainerHorizontalBox>()
 							.Slot([](UDreamPanelSlot& InSlot)
 							{
@@ -68,7 +79,7 @@ void UDreamExpandableArea::NativeOnInitialized()
 								InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 							})
 							.Children(
-								DreamUI::Text("Arrow").Out(ArrowNode)
+								DreamUI::Text("Arrow")
 									.Visual([](UDreamText& InText)
 									{
 										InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
@@ -85,7 +96,7 @@ void UDreamExpandableArea::NativeOnInitialized()
 								// image. The check box established the convention and this follows it
 								// verbatim; asleep by default, because an imageless rect block draws a
 								// plain white square.
-								Node<UDreamRectBlock>("ArrowMark").Out(ArrowMarkNode)
+								Node<UDreamRectBlock>("ArrowMark")
 									.Self([](UDreamWidget& InMark)
 									{
 										InMark.SetWidgetActive(false);
@@ -96,7 +107,7 @@ void UDreamExpandableArea::NativeOnInitialized()
 										InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
 										InSlot.SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
 									}),
-								DreamUI::Text("Label").Out(LabelNode)
+								DreamUI::Text("Label")
 									.Visual([](UDreamText& InText)
 									{
 										InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Left);
@@ -110,7 +121,7 @@ void UDreamExpandableArea::NativeOnInitialized()
 								// The header's hole, beside the arrow and in the label's place: a section title is
 								// not always a sentence. Empty until a host fills it, at which point the stock
 								// label stands down.
-								Widget("Header").Out(HeaderSlotNode)
+								Widget("Header")
 									.With<UDreamNamedSlot>()
 									.Slot([](UDreamPanelSlot& InSlot)
 									{
@@ -124,7 +135,7 @@ void UDreamExpandableArea::NativeOnInitialized()
 				// expanded height is read from. Declared as a named slot, and as this control's
 				// default one, so nesting reaches it without the class hand-adopting stray children;
 				// bAcceptsSeveral because the panel is already here.
-				Node<UDreamRectBlock>("Content").Out(ContentNode)
+				Node<UDreamRectBlock>("Content")
 					.With<UDreamLayoutContainerVerticalBox>()
 					.With<UDreamNamedSlot>([](UDreamNamedSlot& InSlot)
 					{
@@ -134,23 +145,18 @@ void UDreamExpandableArea::NativeOnInitialized()
 					{
 						InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
-					}))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				HeaderBehaviour = HeaderNode != nullptr ? HeaderNode->GetComponent<UUIButton>() : nullptr;
-				if (HeaderBehaviour != nullptr)
-				{
-					// Its own visual: the pointer transition tints the face it is standing on.
-					HeaderBehaviour->SetTransitionTarget(HeaderNode->GetVisual());
-					HeaderBehaviour->GetOnClickEvent().AddUObject(this, &UDreamExpandableArea::HandleHeaderClicked);
-				}
-			}));
+					})));
+}
 
-	// Nested content reaches the column through the default slot now, which happens after this
-	// function returns -- so the height this push computes counts an empty column, and the push
-	// UDreamUIControl::NativeOnSlotContentAttached makes afterwards is the one that counts the
-	// content. Both run before registration; nothing lays out the intermediate answer.
-	ApplyStyle();
+void UDreamExpandableArea::WireParts()
+{
+	HeaderBehaviour = EnsureComponent<UUIButton>(HeaderNode);
+	if (HeaderBehaviour != nullptr && HeaderNode != nullptr)
+	{
+		// Its own visual: the pointer transition tints the face it is standing on.
+		HeaderBehaviour->SetTransitionTarget(HeaderNode->GetVisual());
+		HeaderBehaviour->GetOnClickEvent().AddUObject(this, &UDreamExpandableArea::HandleHeaderClicked);
+	}
 }
 
 void UDreamExpandableArea::ApplyStyle()

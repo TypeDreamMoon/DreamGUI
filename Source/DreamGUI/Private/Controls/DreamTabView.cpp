@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamTabView.h"
 
@@ -17,43 +17,38 @@
 #include "Interaction/UIToggle.h"
 #include "Interaction/UIToggleGroup.h"
 
-void UDreamTabView::NativeOnInitialized()
+void UDreamTabView::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Body"), BodyNode);
+	OutParts.Emplace(TEXT("TabStrip"), StripNode);
+	OutParts.Emplace(TEXT("PageHost"), PageHostNode);
+	// The moving underline is decoration: a template whose tabs mark themselves needs none.
+	OutParts.Emplace(TEXT("Indicator"), IndicatorNode, /*bRequired*/false);
+}
 
+void UDreamTabView::RealizeBuiltIn()
+{
 	using namespace DreamUI;
-
-	// BEFORE anything of ours exists. Whatever is already hanging on this widget was put there by
-	// whoever placed the control -- the .dui author nesting pages, or code adding children before
-	// Initialize -- and the instant Realize runs, our own root joins that same list and the two
-	// become indistinguishable. Snapshotting first is what keeps them apart.
-	const TArray<UDreamWidget*> AuthoredPages = GetChildren();
 
 	// A column: the strip hugs its tabs, the page area takes the rest. A vertical box rather than
 	// two anchor-driven halves on purpose -- an anchor-driven child only re-derives a stretched axis
 	// when its OWN anchor data changes, so a hand-anchored split would be correct exactly until the
 	// screen resized and nothing told it.
 	Realize(this,
-		Widget("Body").Out(BodyNode)
+		Widget("Body")
 			.Stretch()
 			.With<UDreamLayoutContainerVerticalBox>()
 			.Children(
 				// The strip draws nothing itself -- the style has a colour for a tab and for a page,
 				// and none for the space around them, which is the honest amount of opinion for a
 				// row of buttons to have.
-				Widget("TabStrip").Out(StripNode)
+				Widget("TabStrip")
 					.With<UDreamLayoutContainerHorizontalBox>()
 					// The group lives here, on the tabs' common parent: that is where a toggle's own
 					// auto-find would look for it, and it is the one widget that outlives any
-					// particular strip contents.
-					.With<UUIToggleGroup>([this](UUIToggleGroup& InGroup)
-					{
-						TabGroup = &InGroup;
-						// A second click on the open tab must not close it. UUIToggle's click handler
-						// flips the value, and with none-selected allowed that flip would leave the
-						// view with no tab lit and the switcher still showing a page nobody chose.
-						InGroup.SetAllowNoneSelected(false);
-					})
+					// particular strip contents. Configured in WireParts, which is the half a
+					// template's own strip needs too.
+					.With<UUIToggleGroup>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						// Auto: the strip is exactly as tall as the tallest tab, and a tab is never
@@ -67,17 +62,14 @@ void UDreamTabView::NativeOnInitialized()
 						// its anchors resolve in the strip's frame -- the same frame the horizontal
 						// box writes the tabs into -- while taking no place in the row. Giving it a
 						// slot would make the box count it as a tab-shaped gap.
-						Node<UDreamRectBlock>("Indicator").Out(IndicatorNode)
+						Node<UDreamRectBlock>("Indicator")
 							.Self([](UDreamWidget& InIndicator)
 							{
 								InIndicator.SetIgnoreLayout(true);
 							})),
 				// The page area IS the switcher's widget: one panel, one background, one padding.
-				Node<UDreamRectBlock>("PageHost").Out(PageHostNode)
-					.With<UDreamLayoutContainerWidgetSwitcher>([this](UDreamLayoutContainerWidgetSwitcher& InSwitcher)
-					{
-						PageSwitcher = &InSwitcher;
-					})
+				Node<UDreamRectBlock>("PageHost")
+					.With<UDreamLayoutContainerWidgetSwitcher>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetSizeRule(EDreamPanelSizeRule::Fill);
@@ -85,14 +77,45 @@ void UDreamTabView::NativeOnInitialized()
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 					})));
+}
 
-	AdoptAuthoredPages(AuthoredPages);
+void UDreamTabView::WireParts()
+{
+	// Two containers this control keeps a typed handle on, held rather than looked up each time
+	// because every tab rebuild and every page switch goes through them. Ensure, not Get: on the
+	// template road the strip is somebody's drawing and this is what makes its tabs a group.
+	TabGroup = EnsureComponent<UUIToggleGroup>(StripNode);
+	if (TabGroup != nullptr)
+	{
+		// A second click on the open tab must not close it. UUIToggle's click handler flips the
+		// value, and with none-selected allowed that flip would leave the view with no tab lit and
+		// the switcher still showing a page nobody chose.
+		TabGroup->SetAllowNoneSelected(false);
+	}
+	PageSwitcher = PageHostNode != nullptr
+		? Cast<UDreamLayoutContainerWidgetSwitcher>(PageHostNode->GetLayoutContainer())
+		: nullptr;
+	if (PageSwitcher == nullptr && PageHostNode != nullptr)
+	{
+		// A template whose page host is not a switcher cannot switch pages, and every push into it
+		// would land on nothing. Said out loud rather than left as a view stuck on page one.
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' has no widget switcher on its PageHost; pages will not switch."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
+	}
+}
+
+void UDreamTabView::OnPartsReady()
+{
+	// The pages a host nested on this control, from the snapshot the base took before either road
+	// built anything. This control opens no default slot: a page is not merely content moved into a
+	// hole, it is a page AND a tab, and only this class knows how to make the second.
+	AdoptAuthoredPages(HostSuppliedChildren);
 	// The strip, then the look: RebuildTabs ends in ApplyStyle, because a tab it just made has no
 	// colours yet and a selectable with no colours ships white.
 	RebuildTabs();
 }
 
-void UDreamTabView::AdoptAuthoredPages(const TArray<UDreamWidget*>& InAuthoredChildren)
+void UDreamTabView::AdoptAuthoredPages(const TArray<TObjectPtr<UDreamWidget>>& InAuthoredChildren)
 {
 	for (UDreamWidget* Page : InAuthoredChildren)
 	{

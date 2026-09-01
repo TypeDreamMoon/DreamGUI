@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -163,7 +163,9 @@ public:
 	bool bCaptureKeysWhileListening = true;
 
 protected:
-	virtual void NativeOnInitialized() override;
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
+	virtual void RealizeBuiltIn() override;
+	virtual void WireParts() override;
 
 private:
 	void HandleClicked();

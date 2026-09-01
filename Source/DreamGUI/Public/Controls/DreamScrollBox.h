@@ -146,7 +146,9 @@ public:
 	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
 
 protected:
-	virtual void NativeOnInitialized() override;
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
+	virtual void RealizeBuiltIn() override;
+	virtual void WireParts() override;
 
 private:
 	void HandleScrollViewChanged(FVector2D InProgress);

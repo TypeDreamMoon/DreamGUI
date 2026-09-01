@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamRingMenu.h"
 
@@ -110,26 +110,22 @@ namespace DreamRingMenuLocal
 	}
 }
 
-void UDreamRingMenu::NativeOnInitialized()
+void UDreamRingMenu::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Ring"), RingNode);
+	OutParts.Emplace(TEXT("Wedges"), WedgeRootNode);
+	OutParts.Emplace(TEXT("WedgeTemplate"), WedgeTemplateNode);
+	// The unbroken ring behind the wedges and the middle are both decoration: a template that draws
+	// only wedges is a coherent radial menu, and every writer to these null-checks.
+	OutParts.Emplace(TEXT("Backdrop"), BackdropNode, /*bRequired*/false);
+	OutParts.Emplace(TEXT("Hub"), HubNode, /*bRequired*/false);
+	OutParts.Emplace(TEXT("HubLabel"), HubLabelNode, /*bRequired*/false);
+}
 
+void UDreamRingMenu::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 	using namespace DreamRingMenuLocal;
-
-	// The control's desired size is its AUTHORED square, and the measure walk stops here.
-	//
-	// Not optional, and the measured symptom says why: an Auto consumer asked what this control was
-	// worth and got ZERO -- so the vertical box above it reserved no room at all, the next control
-	// in the column was painted straight across the ring, and the wedges (absolute rects centred on
-	// the control) spilled out of a slot with no height. The walk crosses every container-less
-	// widget on its way down (UDreamPanelLayoutBase::GetDesiredSize), so it reached the item labels;
-	// a negative axis is "no opinion" there, but a UDreamText with no font layout behind it answers
-	// ZERO, and zero is a CLAIM. One label saying nothing therefore spoke for the whole ring.
-	//
-	// A ring is the case where descending is meaningless anyway: its parts are placed by polar
-	// geometry, and the smallest box containing them is the circle the style already states.
-	CreateNewLayoutSelf<UDreamLayoutSelfAuthoredSurface>();
 
 	// Backdrop, wedges, hub -- in that order, which IS the draw order: the unbroken ring sits under
 	// the wedges so the gaps between them show something, and the hub sits over both so a wedge that
@@ -141,16 +137,16 @@ void UDreamRingMenu::NativeOnInitialized()
 	// designer's first frame actually see. A ring is the case where that matters most, because the
 	// arrangement a container would produce is not one any container knows how to make.
 	Realize(this,
-		Widget("Ring").Out(RingNode)
+		Widget("Ring")
 			.Stretch()
 			.Children(
-				Node<UDreamRectBlock>("Backdrop").Out(BackdropNode)
+				Node<UDreamRectBlock>("Backdrop")
 					.Stretch()
 					.Visual([](UDreamRectBlock& InRect) { MakeDecoration(&InRect); }),
-				Widget("Wedges").Out(WedgeRootNode)
+				Widget("Wedges")
 					.Stretch()
 					.Children(
-						Node<UDreamRectBlock>("WedgeTemplate").Out(WedgeTemplateNode)
+						Node<UDreamRectBlock>("WedgeTemplate")
 							.Self([](UDreamWidget& InTemplate)
 							{
 								// The thing wedges are copied from, not a wedge: asleep, so it
@@ -173,18 +169,38 @@ void UDreamRingMenu::NativeOnInitialized()
 												InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
 												MakeDecoration(&InText);
 											})))),
-				Node<UDreamRectBlock>("Hub").Out(HubNode)
+				Node<UDreamRectBlock>("Hub")
 					.Visual([](UDreamRectBlock& InRect) { MakeDecoration(&InRect); })
 					.Children(
-						DreamUI::Text("HubLabel").Out(HubLabelNode)
+						DreamUI::Text("HubLabel")
 							.Visual([](UDreamText& InText)
 							{
 								InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
 								InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
 								MakeDecoration(&InText);
 							}))));
+}
 
-	ApplyStyle();
+void UDreamRingMenu::WireParts()
+{
+	// The control's desired size is its AUTHORED square, and the measure walk stops here. A fact
+	// about this control rather than about the tree it happens to be driving, so it is asserted on
+	// both roads -- a templated ring measures the same way.
+	//
+	// Not optional, and the measured symptom says why: an Auto consumer asked what this control was
+	// worth and got ZERO -- so the vertical box above it reserved no room at all, the next control
+	// in the column was painted straight across the ring, and the wedges (absolute rects centred on
+	// the control) spilled out of a slot with no height. The walk crosses every container-less
+	// widget on its way down (UDreamPanelLayoutBase::GetDesiredSize), so it reached the item labels;
+	// a negative axis is "no opinion" there, but a UDreamText with no font layout behind it answers
+	// ZERO, and zero is a CLAIM. One label saying nothing therefore spoke for the whole ring.
+	//
+	// A ring is the case where descending is meaningless anyway: its parts are placed by polar
+	// geometry, and the smallest box containing them is the circle the style already states.
+	if (GetLayoutSelf() == nullptr)
+	{
+		CreateNewLayoutSelf<UDreamLayoutSelfAuthoredSurface>();
+	}
 }
 
 void UDreamRingMenu::ApplyStyle()

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamSlider.h"
 
@@ -10,10 +10,19 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 
-void UDreamSlider::NativeOnInitialized()
+void UDreamSlider::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Track"), TrackNode);
+	// The fill and the handle each move inside their own AREA, and the behaviour reads that area as
+	// the space -- so both halves of each pair are parts a template has to provide.
+	OutParts.Emplace(TEXT("FillArea"), FillAreaNode);
+	OutParts.Emplace(TEXT("Fill"), FillNode);
+	OutParts.Emplace(TEXT("HandleArea"), HandleAreaNode);
+	OutParts.Emplace(TEXT("Handle"), HandleNode);
+}
 
+void UDreamSlider::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// No layout container anywhere in here: a slider is anchor-driven geometry, because the
@@ -23,32 +32,32 @@ void UDreamSlider::NativeOnInitialized()
 	Realize(this,
 		Widget("Slider")
 			.Stretch()
-			.With<UUISlider>()
 			.Children(
-				Node<UDreamRectBlock>("Track").Out(TrackNode),
-				Widget("FillArea").Out(FillAreaNode)
+				Node<UDreamRectBlock>("Track"),
+				Widget("FillArea")
 					.Children(
-						Node<UDreamRectBlock>("Fill").Out(FillNode).Stretch()),
-				Widget("HandleArea").Out(HandleAreaNode)
+						Node<UDreamRectBlock>("Fill").Stretch()),
+				Widget("HandleArea")
 					.Children(
-						Node<UDreamRectBlock>("Handle").Out(HandleNode)))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				SliderBehaviour = InRoot.GetComponent<UUISlider>();
-				if (SliderBehaviour == nullptr)
-				{
-					return;
-				}
-				// The behaviour reads each part's PARENT as the space it moves the part in; handing
-				// it the parts is handing it the geometry.
-				SliderBehaviour->SetFill(FillNode);
-				SliderBehaviour->SetHandle(HandleNode);
-				// The pointer transition rides the handle, the way the toggle's rides its box.
-				SliderBehaviour->SetTransitionTarget(HandleNode != nullptr ? HandleNode->GetVisual() : nullptr);
-				SliderBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamSlider::HandleValueChanged);
-			}));
+						Node<UDreamRectBlock>("Handle"))));
+}
 
-	ApplyStyle();
+void UDreamSlider::WireParts()
+{
+	// On the CONTENT ROOT, which is what the builder's .Then handed over: the behaviour moves the
+	// parts within it, so it belongs to the whole control rather than to any one piece.
+	SliderBehaviour = EnsureComponent<UUISlider>(GetContentRoot());
+	if (SliderBehaviour == nullptr)
+	{
+		return;
+	}
+	// The behaviour reads each part's PARENT as the space it moves the part in; handing it the parts
+	// is handing it the geometry.
+	SliderBehaviour->SetFill(FillNode);
+	SliderBehaviour->SetHandle(HandleNode);
+	// The pointer transition rides the handle, the way the toggle's rides its box.
+	SliderBehaviour->SetTransitionTarget(HandleNode != nullptr ? HandleNode->GetVisual() : nullptr);
+	SliderBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamSlider::HandleValueChanged);
 }
 
 void UDreamSlider::ApplyStyle()

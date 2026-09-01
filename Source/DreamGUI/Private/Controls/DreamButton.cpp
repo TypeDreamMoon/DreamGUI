@@ -17,21 +17,28 @@
 
 const FName UDreamButton::ContentSlotName(TEXT("Content"));
 
-void UDreamButton::NativeOnInitialized()
+void UDreamButton::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	// The names the built-in tree gives them, and the names a template has to use. Content is
+	// optional because a template that offers no hole is a perfectly good button -- everything that
+	// writes to it null-checks, and the slot machinery treats "no such slot" as an empty one.
+	OutParts.Emplace(TEXT("Face"), FaceNode);
+	OutParts.Emplace(TEXT("Label"), LabelNode);
+	OutParts.Emplace(TEXT("Content"), ContentNode, /*bRequired*/false);
+}
 
+void UDreamButton::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The face IS the root: a button is one rectangle, and giving it a separate background child
 	// would only manufacture a gap for the hit test to fall through.
 	Realize(this,
-		Node<UDreamRectBlock>("Face").Out(FaceNode)
+		Node<UDreamRectBlock>("Face")
 			.Stretch()
 			.With<UDreamLayoutContainerOverlay>()
-			.With<UUIButton>()
 			.Children(
-				Text("Label").Out(LabelNode)
+				Text("Label")
 					.Visual([](UDreamText& InText)
 					{
 						InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
@@ -46,27 +53,31 @@ void UDreamButton::NativeOnInitialized()
 				// ApplyStyle stands the label down whenever this holds anything. Fill on both axes so
 				// whatever the host puts here gets the whole face to arrange itself in, exactly as
 				// the label does; the node itself draws nothing.
-				Widget("Content").Out(ContentNode)
+				Widget("Content")
 					.With<UDreamNamedSlot>()
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
-					}))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				ButtonBehaviour = InRoot.GetComponent<UUIButton>();
-				if (ButtonBehaviour != nullptr)
-				{
-					// Its own visual: a button's pointer transition tints the face it is standing on.
-					ButtonBehaviour->SetTransitionTarget(InRoot.GetVisual());
-					ButtonBehaviour->GetOnClickEvent().AddUObject(this, &UDreamButton::HandleClicked);
-				}
-			}));
-
-	ApplyStyle();
+					})));
+	// No .Out() and no .Then(): the parts are bound by name afterwards, and the behaviour goes on in
+	// WireParts. Both of those have to work for a tree this code did not write.
 }
 
+void UDreamButton::WireParts()
+{
+	// Ensure, not Get: on the built-in road the face is ours and this adds the behaviour; on the
+	// template road the face is somebody's drawing and this is the only thing that makes it a
+	// button. A control that always carries its own UIButton has no state in which clicking it does
+	// nothing -- which is the omission BP_Button shipped with for months.
+	ButtonBehaviour = EnsureComponent<UUIButton>(FaceNode);
+	if (ButtonBehaviour != nullptr && FaceNode != nullptr)
+	{
+		// Its own visual: a button's pointer transition tints the face it is standing on.
+		ButtonBehaviour->SetTransitionTarget(FaceNode->GetVisual());
+		ButtonBehaviour->GetOnClickEvent().AddUObject(this, &UDreamButton::HandleClicked);
+	}
+}
 
 void UDreamButton::ApplyStyle()
 {

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -91,7 +91,8 @@ public:
 	TObjectPtr<UDreamWidget> FillNode = nullptr;
 
 protected:
-	virtual void NativeOnInitialized() override;
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
+	virtual void RealizeBuiltIn() override;
 
 private:
 	/**

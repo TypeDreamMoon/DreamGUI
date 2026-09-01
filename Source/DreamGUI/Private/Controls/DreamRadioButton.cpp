@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamRadioButton.h"
 
@@ -16,45 +16,49 @@
 #include "Interaction/UIToggle.h"
 #include "Interaction/UIToggleGroup.h"
 
-void UDreamRadioButton::NativeOnInitialized()
+void UDreamRadioButton::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Box"), BoxNode);
+	OutParts.Emplace(TEXT("Dot"), DotNode);
+}
 
+void UDreamRadioButton::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// The control IS the round box -- no label, no row. The text beside a radio is the consumer's
 	// layout, exactly as with the check box.
 	Realize(this,
-		Node<UDreamRectBlock>("Box").Out(BoxNode)
+		Node<UDreamRectBlock>("Box")
 			.Stretch()
 			// An overlay so the dot has a slot to be centred in.
 			.With<UDreamLayoutContainerOverlay>()
-			.With<UUIToggle>()
 			.Children(
-				Node<UDreamRectBlock>("Dot").Out(DotNode)
+				Node<UDreamRectBlock>("Dot")
 					.Slot([](UDreamPanelSlot& InSlot)
 					{
 						InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
-					}))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				ToggleBehaviour = InRoot.GetComponent<UUIToggle>();
-				if (ToggleBehaviour == nullptr)
-				{
-					return;
-				}
-				// Before Awake reads it: NativeOnInitialized runs during Initialize, Awake at begin
-				// play, so the flag set here is the one the behaviour's own group search consults.
-				ToggleBehaviour->SetAutoFindToggleGroupInParent(bAutoGroupWithSiblings);
-				// The two transitions, deliberately on two visuals: pointed at one they overwrite
-				// each other and the checked colour survives until the next hover.
-				ToggleBehaviour->SetTransitionTarget(BoxNode != nullptr ? BoxNode->GetVisual() : nullptr);
-				ToggleBehaviour->SetToggleTransitionTarget(DotNode != nullptr ? DotNode->GetVisual() : nullptr);
-				ToggleBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamRadioButton::HandleValueChanged);
-			}));
+					})));
+}
 
-	ApplyStyle();
+void UDreamRadioButton::WireParts()
+{
+	// Ensure, not Get: on the template road the box is somebody's drawing, and this is what makes it
+	// a radio at all.
+	ToggleBehaviour = EnsureComponent<UUIToggle>(BoxNode);
+	if (ToggleBehaviour == nullptr)
+	{
+		return;
+	}
+	// Before Awake reads it: WireParts runs during Initialize, Awake at begin play, so the flag set
+	// here is the one the behaviour's own group search consults.
+	ToggleBehaviour->SetAutoFindToggleGroupInParent(bAutoGroupWithSiblings);
+	// The two transitions, deliberately on two visuals: pointed at one they overwrite each other and
+	// the checked colour survives until the next hover.
+	ToggleBehaviour->SetTransitionTarget(BoxNode != nullptr ? BoxNode->GetVisual() : nullptr);
+	ToggleBehaviour->SetToggleTransitionTarget(DotNode != nullptr ? DotNode->GetVisual() : nullptr);
+	ToggleBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamRadioButton::HandleValueChanged);
 }
 
 void UDreamRadioButton::ApplyStyle()

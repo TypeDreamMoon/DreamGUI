@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamScrollBar.h"
 
@@ -12,10 +12,14 @@
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIScrollView.h"
 
-void UDreamScrollBar::NativeOnInitialized()
+void UDreamScrollBar::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
-	Super::NativeOnInitialized();
+	OutParts.Emplace(TEXT("Track"), TrackNode);
+	OutParts.Emplace(TEXT("Handle"), HandleNode);
+}
 
+void UDreamScrollBar::RealizeBuiltIn()
+{
 	using namespace DreamUI;
 
 	// No layout container: a scroll bar is anchor-driven geometry, and the behaviour is the only
@@ -24,26 +28,24 @@ void UDreamScrollBar::NativeOnInitialized()
 	// area are the same rect here, which is what makes value 0 sit the handle flush against the
 	// track's start.
 	Realize(this,
-		Node<UDreamRectBlock>("Track").Out(TrackNode)
+		Node<UDreamRectBlock>("Track")
 			.Stretch()
-			.With<UUIScrollbar>()
 			.Children(
-				Node<UDreamRectBlock>("Handle").Out(HandleNode))
-			.Then([this](UDreamWidget& InRoot)
-			{
-				BarBehaviour = InRoot.GetComponent<UUIScrollbar>();
-				if (BarBehaviour == nullptr)
-				{
-					return;
-				}
-				BarBehaviour->SetHandle(HandleNode);
-				// The pointer transition rides the handle, the way the slider's does: the track is
-				// scenery, the handle is the thing being grabbed.
-				BarBehaviour->SetTransitionTarget(HandleNode != nullptr ? HandleNode->GetVisual() : nullptr);
-				BarBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamScrollBar::HandleValueChanged);
-			}));
+				Node<UDreamRectBlock>("Handle")));
+}
 
-	ApplyStyle();
+void UDreamScrollBar::WireParts()
+{
+	BarBehaviour = EnsureComponent<UUIScrollbar>(TrackNode);
+	if (BarBehaviour == nullptr)
+	{
+		return;
+	}
+	BarBehaviour->SetHandle(HandleNode);
+	// The pointer transition rides the handle, the way the slider's does: the track is scenery, the
+	// handle is the thing being grabbed.
+	BarBehaviour->SetTransitionTarget(HandleNode != nullptr ? HandleNode->GetVisual() : nullptr);
+	BarBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamScrollBar::HandleValueChanged);
 }
 
 void UDreamScrollBar::ApplyStyle()

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -301,7 +301,10 @@ private:
 	virtual void ApplyStyle() override;
 
 protected:
-	virtual void NativeOnInitialized() override;
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
+	virtual void RealizeBuiltIn() override;
+	virtual void WireParts() override;
+	virtual void OnPartsReady() override;
 
 	/**
 	 * The list half of this control's style. Each concrete control resolves its own family and hands

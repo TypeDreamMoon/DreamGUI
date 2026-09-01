@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -194,7 +194,9 @@ public:
 	TArray<TObjectPtr<UDreamButton>> ButtonWidgets;
 
 protected:
-	virtual void NativeOnInitialized() override;
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
+	virtual void RealizeBuiltIn() override;
+	virtual void OnPartsReady() override;
 
 	/**
 	 * The first moment this dialog has a parent: Initialize runs before CreateDreamWidget attaches
