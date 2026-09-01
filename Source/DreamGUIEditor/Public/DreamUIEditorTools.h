@@ -28,6 +28,13 @@ public:
 	static UDreamWidget* CreateWidgetAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class UDreamWidget*)> Callback);
 	static UDreamWidget* CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath, TFunction<void(class UDreamWidget*)> Callback = nullptr);
 	/**
+	 * Place an instance of a control CLASS under the selected widget: the shared half of the two
+	 * roads to one, a Blueprint resolved from an asset path and a C++ control that arrives as the
+	 * class. InDisplayName names the new widget in the hierarchy and is what failures are logged
+	 * against.
+	 */
+	static UDreamWidget* PlaceControlClassAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, UClass* ControlClass, const FString& InDisplayName, TFunction<void(class UDreamWidget*)> Callback = nullptr);
+	/**
 	 * Instantiate a prefab under the selection and keep it linked to its source asset, the way a
 	 * Content Browser drop does. CreateUIControls flattens instead, which is only what the plugin's
 	 * own preset recipes want -- a project asset dropped that way loses every override and every

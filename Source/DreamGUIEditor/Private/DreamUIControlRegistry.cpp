@@ -21,6 +21,25 @@
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamVisual.h"
+#include "Controls/DreamButton.h"
+#include "Controls/DreamDialog.h"
+#include "Controls/DreamDropdown.h"
+#include "Controls/DreamExpandableArea.h"
+#include "Controls/DreamInputKeySelector.h"
+#include "Controls/DreamRadioButton.h"
+#include "Controls/DreamRingMenu.h"
+#include "Controls/DreamScrollBar.h"
+#include "Controls/DreamScrollBox.h"
+#include "Controls/DreamSlider.h"
+#include "Controls/DreamSpinBox.h"
+#include "Controls/DreamTabView.h"
+#include "Controls/DreamTextInput.h"
+#include "Controls/DreamToggle.h"
+#include "Interaction/UIToggleGroup.h"
+#include "Controls/DreamListView.h"
+#include "Controls/DreamProgressBar.h"
+#include "Controls/DreamTreeView.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUISpriteData.h"
@@ -143,6 +162,75 @@ namespace DreamUIControlRegistryLocal
 		ScrollView->SetVertical(true);
 	}
 
+	/*
+	 * The property writes that turn one control class into two palette rows.
+	 *
+	 * Each of these replaces a Blueprint preset that existed ONLY to hold this one value -- an asset
+	 * cannot branch on a property, so "horizontal" and "vertical" had to be two files. They are
+	 * still two rows, because that is how an author looks for them, but the difference is now one
+	 * line of code instead of a second asset to keep in step.
+	 *
+	 * Written on the TEMPLATE, before anything observes it -- which is why a bare assignment is
+	 * enough and none of these needs a setter. They are plain public UPROPERTYs, so the value
+	 * serialises with the widget, and the control reads it in RealizeBuiltIn, which has not run
+	 * yet at this point.
+	 */
+	static void ConfigureSliderHorizontal(UDreamWidget* Root)
+	{
+		if (UDreamSlider* Slider = Cast<UDreamSlider>(Root))
+		{
+			Slider->Direction = EUISliderDirectionType::LeftToRight;
+		}
+	}
+
+	static void ConfigureSliderVertical(UDreamWidget* Root)
+	{
+		if (UDreamSlider* Slider = Cast<UDreamSlider>(Root))
+		{
+			Slider->Direction = EUISliderDirectionType::BottomToTop;
+		}
+	}
+
+	static void ConfigureScrollBarHorizontal(UDreamWidget* Root)
+	{
+		if (UDreamScrollBar* Bar = Cast<UDreamScrollBar>(Root))
+		{
+			Bar->Direction = EUIScrollbarDirectionType::LeftToRight;
+		}
+	}
+
+	static void ConfigureScrollBarVertical(UDreamWidget* Root)
+	{
+		if (UDreamScrollBar* Bar = Cast<UDreamScrollBar>(Root))
+		{
+			Bar->Direction = EUIScrollbarDirectionType::TopToBottom;
+		}
+	}
+
+	static void ConfigureScrollBoxHorizontal(UDreamWidget* Root)
+	{
+		if (UDreamScrollBox* Box = Cast<UDreamScrollBox>(Root))
+		{
+			Box->Orientation = EDreamPanelOrientation::Horizontal;
+		}
+	}
+
+	static void ConfigureScrollBoxVertical(UDreamWidget* Root)
+	{
+		if (UDreamScrollBox* Box = Cast<UDreamScrollBox>(Root))
+		{
+			Box->Orientation = EDreamPanelOrientation::Vertical;
+		}
+	}
+
+	static void ConfigureTextInputMultiline(UDreamWidget* Root)
+	{
+		if (UDreamTextInput* Input = Cast<UDreamTextInput>(Root))
+		{
+			Input->bMultiLine = true;
+		}
+	}
+
 	static void ConfigureImage(UDreamWidget* Root)
 	{
 		if (UDreamImage* Image = Cast<UDreamImage>(Root->GetVisual()))
@@ -150,6 +238,16 @@ namespace DreamUIControlRegistryLocal
 			Image->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultFrameRect());
 		}
 	}
+
+	/**
+	 * Where an entry goes when the control library has taken over its job.
+	 *
+	 * Kept in the palette rather than deleted: existing assets reference these behaviours, and an
+	 * entry that vanishes takes with it the only way to understand what an old widget is made of.
+	 * A category is the honest amount of discouragement -- findable on purpose, not by accident.
+	 * Sibling of "Legacy DreamGUI Panels", which the Dream scroll view already sits in.
+	 */
+	static const TCHAR* LegacyControlsCategory = TEXT("Legacy DreamGUI Controls");
 
 	static FSlateIcon MakeUMGIcon(const TCHAR* StyleName)
 	{
@@ -170,6 +268,44 @@ namespace DreamUIControlRegistryLocal
 		Result.CreationKind = EDreamUIControlCreationKind::WidgetClass;
 		Result.WidgetClassPath = UDreamGUISettings::Get()->PresetControlFolder + TEXT("BP_") + AssetName;
 		Result.Icon = MakeUMGIcon(IconStyleName);
+		return Result;
+	}
+
+	/**
+	 * A control whose hierarchy is code: the palette entry for a `Native.X` tag.
+	 *
+	 * The name is the registry key and stays spaceless like every other; DisplayName is what the
+	 * row reads. Both are given rather than derived from the class, because the class is called
+	 * UDreamListView and the tag is Native.List -- the language's name for a control is the one an
+	 * author knows it by, and the palette should agree with the language.
+	 */
+	static FDreamUIControlDescriptor MakeControlClass(const TCHAR* Name, const TCHAR* DisplayName,
+		UClass* ControlClass, const TCHAR* IconStyleName, TFunction<void(UDreamWidget*)> Configure = nullptr)
+	{
+		FDreamUIControlDescriptor Result;
+		Result.Name = Name;
+		Result.DisplayName = FText::FromString(DisplayName);
+		Result.Category = TEXT("Controls");
+		Result.CreationKind = EDreamUIControlCreationKind::ControlClass;
+		Result.ControlClass = ControlClass;
+		Result.Icon = MakeUMGIcon(IconStyleName);
+		Result.NativeConfigure = MoveTemp(Configure);
+		return Result;
+	}
+
+	/**
+	 * The Blueprint preset a native control replaced, kept in the palette and moved out of the way.
+	 *
+	 * Not deleted, and the asset is not touched either: a project has these dropped in levels and in
+	 * prefabs, and an entry that vanishes takes with it the only way to recognise what an existing
+	 * widget was made from. The label says what it is so the two rows are never confused.
+	 */
+	static FDreamUIControlDescriptor MakeLegacyPreset(const TCHAR* Name, const TCHAR* DisplayName,
+		const TCHAR* AssetName, const TCHAR* IconStyleName)
+	{
+		FDreamUIControlDescriptor Result = MakeControl(Name, DisplayName, AssetName, IconStyleName);
+		Result.DisplayName = FText::FromString(FString::Printf(TEXT("%s (Prefab)"), DisplayName));
+		Result.Category = LegacyControlsCategory;
 		return Result;
 	}
 
@@ -438,6 +574,31 @@ bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descript
 			return false;
 		}
 	}
+	else if (Descriptor.CreationKind == EDreamUIControlCreationKind::ControlClass)
+	{
+		// Everything a placement needs to succeed, asked here rather than discovered by
+		// CreateRegisteredControlClassAndReturn logging a failure the author cannot connect to a
+		// registration. Abstract is the one worth spelling: UDreamUIControl itself is abstract, and
+		// a family base slipping into the palette places a control with no tree.
+		if (!Descriptor.ControlClass.IsValid())
+		{
+			OutError = LOCTEXT("MissingControlClassObject", "The control has no class to instance.");
+			return false;
+		}
+		if (!Descriptor.ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
+		{
+			OutError = FText::Format(LOCTEXT("ControlClassNotUserWidget",
+				"ControlClass must derive from UDreamUserWidget, and {0} does not."),
+				FText::FromString(Descriptor.ControlClass->GetName()));
+			return false;
+		}
+		if (Descriptor.ControlClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+		{
+			OutError = FText::Format(LOCTEXT("ControlClassNotConcrete",
+				"{0} cannot be instanced."), FText::FromString(Descriptor.ControlClass->GetName()));
+			return false;
+		}
+	}
 	else if (!Descriptor.VisualClass.IsValid() && !Descriptor.LayoutContainerClass.IsValid()
 		&& !Descriptor.LayoutSelfClass.IsValid() && !Descriptor.BehaviourClass.IsValid()
 		&& !Descriptor.MeshModifierClass.IsValid() && !Descriptor.NativeConfigure)
@@ -495,18 +656,76 @@ void FDreamUIControlRegistry::RegisterDefaults()
 		}
 		return Descriptor;
 	};
-	Register(MakeControl(TEXT("Button"), TEXT("Button"), TEXT("Button"), TEXT("ClassIcon.Button")));
-	Register(MakeControl(TEXT("CheckBox"), TEXT("Check Box"), TEXT("Toggle"), TEXT("ClassIcon.CheckBox")));
-	Register(MakeControl(TEXT("ToggleGroup"), TEXT("Toggle Group"), TEXT("ToggleGroup"), TEXT("ClassIcon.CheckBox")));
-	Register(MakeControl(TEXT("HorizontalSlider"), TEXT("Horizontal Slider"), TEXT("HorizontalSlider"), TEXT("ClassIcon.Slider")));
-	Register(MakeControl(TEXT("VerticalSlider"), TEXT("Vertical Slider"), TEXT("VerticalSlider"), TEXT("ClassIcon.Slider")));
-	Register(MakeControl(TEXT("HorizontalScrollbar"), TEXT("Horizontal Scrollbar"), TEXT("HorizontalScrollbar"), TEXT("ClassIcon.ScrollBar")));
-	Register(MakeControl(TEXT("VerticalScrollbar"), TEXT("Vertical Scrollbar"), TEXT("VerticalScrollbar"), TEXT("ClassIcon.ScrollBar")));
-	Register(MakeControl(TEXT("ComboBox"), TEXT("Combo Box"), TEXT("Dropdown"), TEXT("ClassIcon.ComboBox")));
-	Register(MakeControl(TEXT("TextInput"), TEXT("Text Input"), TEXT("TextInput"), TEXT("ClassIcon.EditableTextBox")));
-	Register(MakeControl(TEXT("TextInputMultiline"), TEXT("Text Input (Multiline)"), TEXT("TextInput_Multiline"), TEXT("ClassIcon.MultilineEditableTextBox")));
-	Register(MakeControl(TEXT("HorizontalScrollView"), TEXT("Horizontal Scroll Box"), TEXT("HorizontalScrollView"), TEXT("ClassIcon.Scrollbox")));
-	Register(MakeControl(TEXT("VerticalScrollView"), TEXT("Vertical Scroll Box"), TEXT("VerticalScrollView"), TEXT("ClassIcon.Scrollbox")));
+	// THE CONTROL LIBRARY IS THE CONTROLS CATEGORY.
+	//
+	// Every row here was a Blueprint preset under /DreamGUI/Controls until now, and the presets are
+	// still registered -- in the legacy category, at the bottom of this function. What changed is
+	// which one an author reaches by default, and the reasons are not stylistic:
+	//
+	//   - A preset is an ASSET, so a defect in one is a defect in every copy already placed, and
+	//     fixing it reaches none of them. Two shipped broken for months with nothing saying so:
+	//     BP_Button carries no UIButton at all, and BP_VerticalScrollbar no UIScrollbar. A control
+	//     cannot be half-built -- WireParts puts the behaviour on, and a test sweeps every class.
+	//   - A preset cannot branch on a property, which is why there were two sliders, two scrollbars,
+	//     two scroll boxes and two text inputs. One class with a Direction covers each pair, and the
+	//     two palette rows survive as two ENTRIES that differ by one property write.
+	//   - A control reads the project style sheet, so a project restyles every button at once.
+	//
+	// Names keep their registry keys ("Button", "CheckBox") because those are what a favourite, a
+	// layout preference and any project extension already refer to. The legacy rows below take
+	// suffixed keys instead, since the pair has to coexist.
+	Register(MakeControlClass(TEXT("Button"), TEXT("Button"),
+		UDreamButton::StaticClass(), TEXT("ClassIcon.Button")));
+	Register(MakeControlClass(TEXT("CheckBox"), TEXT("Check Box"),
+		UDreamToggle::StaticClass(), TEXT("ClassIcon.CheckBox")));
+	Register(MakeControlClass(TEXT("RadioButton"), TEXT("Radio Button"),
+		UDreamRadioButton::StaticClass(), TEXT("ClassIcon.CheckBox")));
+	Register(MakeControlClass(TEXT("ComboBox"), TEXT("Combo Box"),
+		UDreamDropdown::StaticClass(), TEXT("ClassIcon.ComboBox")));
+	Register(MakeControlClass(TEXT("SpinBox"), TEXT("Spin Box"),
+		UDreamSpinBox::StaticClass(), TEXT("ClassIcon.SpinBox")));
+
+	Register(MakeControlClass(TEXT("HorizontalSlider"), TEXT("Horizontal Slider"),
+		UDreamSlider::StaticClass(), TEXT("ClassIcon.Slider"), ConfigureSliderHorizontal));
+	Register(MakeControlClass(TEXT("VerticalSlider"), TEXT("Vertical Slider"),
+		UDreamSlider::StaticClass(), TEXT("ClassIcon.Slider"), ConfigureSliderVertical));
+	Register(MakeControlClass(TEXT("HorizontalScrollbar"), TEXT("Horizontal Scrollbar"),
+		UDreamScrollBar::StaticClass(), TEXT("ClassIcon.ScrollBar"), ConfigureScrollBarHorizontal));
+	Register(MakeControlClass(TEXT("VerticalScrollbar"), TEXT("Vertical Scrollbar"),
+		UDreamScrollBar::StaticClass(), TEXT("ClassIcon.ScrollBar"), ConfigureScrollBarVertical));
+	Register(MakeControlClass(TEXT("HorizontalScrollView"), TEXT("Horizontal Scroll Box"),
+		UDreamScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBoxHorizontal));
+	Register(MakeControlClass(TEXT("VerticalScrollView"), TEXT("Vertical Scroll Box"),
+		UDreamScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBoxVertical));
+	Register(MakeControlClass(TEXT("TextInput"), TEXT("Text Input"),
+		UDreamTextInput::StaticClass(), TEXT("ClassIcon.EditableTextBox")));
+	Register(MakeControlClass(TEXT("TextInputMultiline"), TEXT("Text Input (Multiline)"),
+		UDreamTextInput::StaticClass(), TEXT("ClassIcon.MultilineEditableTextBox"), ConfigureTextInputMultiline));
+
+	Register(MakeControlClass(TEXT("TabView"), TEXT("Tab View"),
+		UDreamTabView::StaticClass(), TEXT("ClassIcon.WidgetSwitcher")));
+	Register(MakeControlClass(TEXT("ExpandableArea"), TEXT("Expandable Area"),
+		UDreamExpandableArea::StaticClass(), TEXT("ClassIcon.ExpandableArea")));
+	Register(MakeControlClass(TEXT("Dialog"), TEXT("Dialog"),
+		UDreamDialog::StaticClass(), TEXT("ClassIcon.NamedSlot")));
+	// No ClassIcon.InputKeySelector in the UMG style set -- the icon sweep found that, which is what
+	// it is for. FindIconForClass always resolves, falling back to the generic class icon.
+	FDreamUIControlDescriptor InputKeySelector = MakeControlClass(TEXT("InputKeySelector"), TEXT("Input Key Selector"),
+		UDreamInputKeySelector::StaticClass(), TEXT("ClassIcon.Button"));
+	InputKeySelector.Icon = MakeClassIcon(UDreamInputKeySelector::StaticClass());
+	Register(InputKeySelector);
+	Register(MakeControlClass(TEXT("RingMenu"), TEXT("Ring Menu"),
+		UDreamRingMenu::StaticClass(), TEXT("ClassIcon.Border")));
+
+	// The toggle group is the one entry with no control of its own, because it needs none: it is a
+	// behaviour that a set of toggles points at, with nothing to draw and no parts to build. The
+	// preset existed only because a palette had no way to offer a bare component. This one does.
+	FDreamUIControlDescriptor ToggleGroup = MakeComponent(TEXT("ToggleGroup"), TEXT("Toggle Group"), UUIToggleGroup::StaticClass());
+	// In Controls rather than the Components category MakeComponent defaults to: this row REPLACES a
+	// preset that lived in Controls, and an author who goes looking for a toggle group where they
+	// have always found one should not have to know it stopped being a prefab.
+	ToggleGroup.Category = TEXT("Controls");
+	Register(ToggleGroup);
 
 	Register(MakeFrameworkPanel(TEXT("CanvasPanel"), UDreamLayoutContainerCanvasPanel::StaticClass(), TEXT("ClassIcon.CanvasPanel"), true));
 	Register(MakeFrameworkPanel(TEXT("Overlay"), UDreamLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Overlay"), true));
@@ -543,17 +762,47 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Spacer.Icon = MakeUMGIcon(TEXT("ClassIcon.Spacer"));
 	Register(Spacer);
 
+	// THE CONTROL LIBRARY IN THE PALETTE, and the three entries that had two implementations.
+	//
+	// Each of these names a control the library already had and the palette was still offering the
+	// LGUI-era behaviour for. They are not two ways of spelling one thing: the control builds and
+	// owns its parts and reads the project style sheet, and the behaviour is a component you drop
+	// on a widget whose parts you then wire yourself. Registering the control here and moving the
+	// behaviour to the legacy category below is what makes the palette agree with `.dui`, where
+	// `Native.ProgressBar` has been the answer since the library landed.
+	//
+	// Only three, deliberately. The other fourteen controls have a BP preset in this category that
+	// they also replace, and retiring THOSE is a separate change with its own decisions to make.
+	Register(MakeControlClass(TEXT("NativeProgressBar"), TEXT("Progress Bar"),
+		UDreamProgressBar::StaticClass(), TEXT("ClassIcon.ProgressBar")));
+	Register(MakeControlClass(TEXT("NativeList"), TEXT("List"),
+		UDreamListView::StaticClass(), TEXT("ClassIcon.ListView")));
+	Register(MakeControlClass(TEXT("NativeTreeView"), TEXT("Tree View"),
+		UDreamTreeView::StaticClass(), TEXT("ClassIcon.TreeView")));
+
 	FDreamUIControlDescriptor Progress = MakeBehaviour(TEXT("ProgressBar"), UUIProgressBar::StaticClass(), TEXT("ClassIcon.ProgressBar"), ConfigureProgressBar);
 	Progress.VisualClass = UDreamImage::StaticClass();
+	Progress.DisplayName = FText::FromString(TEXT("Progress Bar (Behaviour)"));
+	Progress.Category = LegacyControlsCategory;
 	Register(Progress);
 	Register(MakeBehaviour(TEXT("ContentWidget"), UDreamContentWidget::StaticClass(), TEXT("ClassIcon.NativeWidgetHost")));
 	// The hole a widget blueprint opens for whoever places it. The one below is the older, unrelated
 	// thing with a confusingly similar name: a runtime name->child map inside one hierarchy.
 	Register(MakeBehaviour(TEXT("NamedSlot"), UDreamNamedSlot::StaticClass(), TEXT("ClassIcon.NamedSlot")));
 	Register(MakeBehaviour(TEXT("NamedSlotHost"), UDreamNamedSlotHost::StaticClass(), TEXT("ClassIcon.NamedSlot")));
-	Register(MakeBehaviour(TEXT("ListView"), UUIListView::StaticClass(), TEXT("ClassIcon.ListView"), ConfigureListView));
+	FDreamUIControlDescriptor ListView = MakeBehaviour(TEXT("ListView"), UUIListView::StaticClass(), TEXT("ClassIcon.ListView"), ConfigureListView);
+	ListView.DisplayName = FText::FromString(TEXT("List View (Behaviour)"));
+	ListView.Category = LegacyControlsCategory;
+	Register(ListView);
+	// NOT moved, because nothing replaces it: the control library has List and TreeView and no tile
+	// view, so this is the only way to get one. It is the same recycling stack as the other two and
+	// carries the same caveats; it is here rather than in the legacy category because retiring an
+	// entry with no successor is just deleting a feature.
 	Register(MakeBehaviour(TEXT("TileView"), UUITileView::StaticClass(), TEXT("ClassIcon.TileView"), ConfigureListView));
-	Register(MakeBehaviour(TEXT("TreeView"), UUITreeView::StaticClass(), TEXT("ClassIcon.TreeView"), ConfigureListView));
+	FDreamUIControlDescriptor TreeView = MakeBehaviour(TEXT("TreeView"), UUITreeView::StaticClass(), TEXT("ClassIcon.TreeView"), ConfigureListView);
+	TreeView.DisplayName = FText::FromString(TEXT("Tree View (Behaviour)"));
+	TreeView.Category = LegacyControlsCategory;
+	Register(TreeView);
 
 	Register(MakeVisual(TEXT("Polygon"), TEXT("Polygon"), TEXT("Extensions"), UDreamPolygon::StaticClass()));
 	Register(MakeVisual(TEXT("PolygonLine"), TEXT("Polygon Line"), TEXT("Extensions"), UDreamPolygonLine::StaticClass()));
@@ -592,6 +841,30 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Register(MakeMeshModifier(TEXT("PositionAsUVModifier"), TEXT("Position as UV"), UDreamMeshModifierPositionAsUV::StaticClass(), UDreamImage::StaticClass(), ConfigureImage));
 	Register(MakeMeshModifier(TEXT("ShadowModifier"), TEXT("Shadow"), UDreamMeshModifierShadow::StaticClass(), UDreamImage::StaticClass(), ConfigureImage));
 	Register(MakeMeshModifier(TEXT("TextAnimationModifier"), TEXT("Text Animation"), UDreamMeshModifierTextAnimation::StaticClass(), UDreamText::StaticClass()));
+
+	// THE TWELVE BLUEPRINT PRESETS, retired into the legacy category.
+	//
+	// Registered last, so they read as the footnote they now are. The keys carry a suffix because
+	// the control rows above took the plain ones -- a favourite or a layout preference pointing at
+	// "Button" should follow the control, which is what an author who saved it meant.
+	//
+	// The ASSETS are untouched, deliberately: /DreamGUI/Controls still ships them, anything already
+	// placed still loads, and BP_NavigationSelectionInputHandler was never a palette entry at all.
+	// Two of these are known broken and stay that way -- BP_Button has no UIButton and
+	// BP_VerticalScrollbar no UIScrollbar -- because repairing an asset does not reach the copies a
+	// project has already placed, and the row above is the repair.
+	Register(MakeLegacyPreset(TEXT("ButtonPreset"), TEXT("Button"), TEXT("Button"), TEXT("ClassIcon.Button")));
+	Register(MakeLegacyPreset(TEXT("CheckBoxPreset"), TEXT("Check Box"), TEXT("Toggle"), TEXT("ClassIcon.CheckBox")));
+	Register(MakeLegacyPreset(TEXT("ToggleGroupPreset"), TEXT("Toggle Group"), TEXT("ToggleGroup"), TEXT("ClassIcon.CheckBox")));
+	Register(MakeLegacyPreset(TEXT("HorizontalSliderPreset"), TEXT("Horizontal Slider"), TEXT("HorizontalSlider"), TEXT("ClassIcon.Slider")));
+	Register(MakeLegacyPreset(TEXT("VerticalSliderPreset"), TEXT("Vertical Slider"), TEXT("VerticalSlider"), TEXT("ClassIcon.Slider")));
+	Register(MakeLegacyPreset(TEXT("HorizontalScrollbarPreset"), TEXT("Horizontal Scrollbar"), TEXT("HorizontalScrollbar"), TEXT("ClassIcon.ScrollBar")));
+	Register(MakeLegacyPreset(TEXT("VerticalScrollbarPreset"), TEXT("Vertical Scrollbar"), TEXT("VerticalScrollbar"), TEXT("ClassIcon.ScrollBar")));
+	Register(MakeLegacyPreset(TEXT("ComboBoxPreset"), TEXT("Combo Box"), TEXT("Dropdown"), TEXT("ClassIcon.ComboBox")));
+	Register(MakeLegacyPreset(TEXT("TextInputPreset"), TEXT("Text Input"), TEXT("TextInput"), TEXT("ClassIcon.EditableTextBox")));
+	Register(MakeLegacyPreset(TEXT("TextInputMultilinePreset"), TEXT("Text Input (Multiline)"), TEXT("TextInput_Multiline"), TEXT("ClassIcon.MultilineEditableTextBox")));
+	Register(MakeLegacyPreset(TEXT("HorizontalScrollViewPreset"), TEXT("Horizontal Scroll Box"), TEXT("HorizontalScrollView"), TEXT("ClassIcon.Scrollbox")));
+	Register(MakeLegacyPreset(TEXT("VerticalScrollViewPreset"), TEXT("Vertical Scroll Box"), TEXT("VerticalScrollView"), TEXT("ClassIcon.Scrollbox")));
 }
 
 #undef LOCTEXT_NAMESPACE

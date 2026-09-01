@@ -336,27 +336,29 @@ void FDreamUIEditorTools::CreateUIControls(TFunction<UDreamWidget*()> GetSelecte
 	CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), MoveTemp(InControlClassPath));
 }
 
-UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath, TFunction<void(UDreamWidget*)> Callback)
+UDreamWidget* FDreamUIEditorTools::PlaceControlClassAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction,
+	UClass* ControlClass, const FString& InDisplayName, TFunction<void(UDreamWidget*)> Callback)
 {
+	// Everything below the class-resolution step, which is the only part the two roads to a control
+	// class disagree about: a Blueprint one arrives as an asset path to load, and a code-built one
+	// arrives as the class. Placing them is identical work, because a UDreamUIControl subclass is a
+	// UDreamUserWidget subclass exactly as a compiled DreamUI Blueprint is, and both are placed by
+	// instancing. Keeping it one function is what stops the second road from growing its own
+	// almost-right copy of the designer/no-designer split below.
+	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
+	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("Cannot create control '%s': it is not a DreamUI user widget class."), *InDisplayName);
+		return nullptr;
+	}
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': no parent widget is selected."), *InControlClassPath);
+		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': no parent widget is selected."), *InDisplayName);
 		return nullptr;
 	}
 	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': widget '%s' is not a valid parent."), *InControlClassPath, *SelectedWidget->GetDisplayName());
-		return nullptr;
-	}
-	// Resolved ONCE, for both paths. A control is named by its ASSET path and the class is the
-	// Blueprint's generated one; resolving it a second time is how the designer branch came to call
-	// LoadClass on an asset path and refuse every control in the palette.
-	UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, *(InControlClassPath + TEXT(".") + FPackageName::GetShortName(InControlClassPath)));
-	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
-	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
-	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
+		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': widget '%s' is not a valid parent."), *InDisplayName, *SelectedWidget->GetDisplayName());
 		return nullptr;
 	}
 
@@ -368,7 +370,7 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 		// Named after the BLUEPRINT, not the class: a generated class is BP_TextInput_C, and the
 		// display name is what the hierarchy shows and what the compiler makes a variable of.
 		UDreamWidget* Created = Designer->DesignerCreateWidget(SelectedWidget, ControlClass,
-			ControlBlueprint->GetName(), [Callback](UDreamWidget* InTemplate)
+			InDisplayName, [Callback](UDreamWidget* InTemplate)
 			{
 				InTemplate->SetAnchoredPosition(FVector2D::ZeroVector);
 				if (Callback)
@@ -404,7 +406,7 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	UDreamWidget* CreatedWidget = CreateDreamWidget(SelectedWidget->GetWorld(), ControlClass, SelectedWidget);
 	if (!IsValid(CreatedWidget))
 	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("Control class '%s' produced no widget."), *InControlClassPath);
+		UE_LOG(DreamGUIEditor, Error, TEXT("Control class '%s' produced no widget."), *InDisplayName);
 		return nullptr;
 	}
 	if (Callback)Callback(CreatedWidget);
@@ -412,6 +414,24 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(CreatedWidget);
 	return CreatedWidget;
+}
+
+UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath, TFunction<void(UDreamWidget*)> Callback)
+{
+	// Resolved ONCE, here. A control is named by its ASSET path and the class is the Blueprint's
+	// generated one; resolving it a second time is how the designer branch came to call LoadClass on
+	// an asset path and refuse every control in the palette.
+	UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, *(InControlClassPath + TEXT(".") + FPackageName::GetShortName(InControlClassPath)));
+	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
+	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
+	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
+		return nullptr;
+	}
+	// The BLUEPRINT's name, not the class's: a generated class is BP_TextInput_C, and that suffix
+	// would be what the hierarchy shows and what the compiler makes a variable of.
+	return PlaceControlClassAndReturn(MoveTemp(GetSelectedWidgetFunction), ControlClass,
+		ControlBlueprint->GetName(), MoveTemp(Callback));
 }
 
 void FDreamUIEditorTools::CreateRegisteredControl(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FName ControlName)
@@ -439,6 +459,38 @@ UDreamWidget* FDreamUIEditorTools::CreateRegisteredControlAndReturn(TFunction<UD
 	if (Descriptor->CreationKind == EDreamUIControlCreationKind::WidgetClass)
 	{
 		return CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), Descriptor->WidgetClassPath, MoveTemp(Callback));
+	}
+	if (Descriptor->CreationKind == EDreamUIControlCreationKind::ControlClass)
+	{
+		// The class is already in hand -- Validate above has established it is a concrete
+		// UDreamUserWidget subclass -- so the only step the Blueprint road adds is the one this
+		// road does not need.
+		//
+		// Named after the class with the family prefix off: the name becomes the hierarchy row and
+		// the Blueprint variable, and "ProgressBar" is what an author calls the thing while
+		// "DreamProgressBar" is what C++ calls it. Not the registry name, which is a key and has to
+		// stay distinct from the legacy entry's ("ProgressBar" is taken); not the tag, which carries
+		// a dot that no variable name can.
+		FString ControlName = Descriptor->ControlClass->GetName();
+		ControlName.RemoveFromStart(TEXT("Dream"));
+		// NativeConfigure runs for this kind too, and it is what lets ONE control class back two
+		// palette rows. A slider is one class with a Direction, but "Horizontal Slider" and
+		// "Vertical Slider" are two things an author looks for by name; the entry carries the
+		// property write that tells them apart. Ordered before the caller's callback so a drop that
+		// positions the new widget still gets the last word.
+		TFunction<void(UDreamWidget*)> Configure = Descriptor->NativeConfigure;
+		return PlaceControlClassAndReturn(MoveTemp(GetSelectedWidgetFunction), Descriptor->ControlClass.Get(),
+			ControlName, [Configure, Callback = MoveTemp(Callback)](UDreamWidget* InWidget) mutable
+			{
+				if (Configure)
+				{
+					Configure(InWidget);
+				}
+				if (Callback)
+				{
+					Callback(InWidget);
+				}
+			});
 	}
 
 	const FDreamUIControlDescriptor Recipe = *Descriptor;

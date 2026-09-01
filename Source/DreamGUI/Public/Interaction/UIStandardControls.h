@@ -20,6 +20,18 @@ enum class EUIProgressBarFillType : uint8
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIProgressChangedEvent, float, Percent);
 
+/**
+ * SUPERSEDED by UDreamProgressBar (`Native.ProgressBar`). Kept for the assets that use it.
+ *
+ * The difference is not features, it is who owns the parts. This is a component you drop on a
+ * widget whose track and fill you then build and wire yourself; the control builds both, reads
+ * its look from the project style sheet, and offers a second SHAPE -- Radial, which is also
+ * where a throbber comes from -- that a fill-widget pointer cannot express.
+ *
+ * UDreamProgressBar deliberately does not compose this class. A behaviour earns its place by
+ * owning interaction or per-frame work, and a plain bar has neither; the control writing its own
+ * fill is smaller than handing a part to a component whose other features it then has to hide.
+ */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UUIProgressBar : public UDreamUIBehaviour
 {
@@ -54,6 +66,10 @@ public:
 	void SetFillWidget(UDreamWidget* Value) { FillWidget = Value; ApplyProgress(); }
 	UFUNCTION(BlueprintPure, Category = "ProgressBar")
 	UDreamWidget* GetFillWidget()const { return FillWidget.Get(); }
+	UFUNCTION(BlueprintCallable, Category = "ProgressBar")
+	void SetFillType(EUIProgressBarFillType Value);
+	UFUNCTION(BlueprintPure, Category = "ProgressBar")
+	EUIProgressBarFillType GetFillType()const { return FillType; }
 	UFUNCTION(BlueprintCallable, Category = "ProgressBar")
 	void SetIsMarquee(bool Value);
 };

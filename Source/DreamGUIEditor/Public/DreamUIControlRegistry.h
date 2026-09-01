@@ -13,6 +13,19 @@ enum class EDreamUIControlCreationKind : uint8
 	/** A hierarchy class asset. The palette places an INSTANCE of it, so fixing the class fixes every use. */
 	WidgetClass,
 	Native,
+	/**
+	 * A control class written in C++ -- UDreamUIControl and its family, the `Native.X` tags.
+	 *
+	 * Distinct from WidgetClass in the RESOLUTION step alone: that one names a Blueprint by asset
+	 * path and asks the asset registry for its generated class, and this one already has the class.
+	 * Everything downstream is shared, because a code-built control is a UDreamUserWidget subclass
+	 * exactly like a compiled Blueprint is, and placing either means instancing it.
+	 *
+	 * Distinct from Native, which composes a widget out of a visual plus a behaviour plus a layout.
+	 * A control is not a recipe for parts; it BUILDS its parts, in RealizeBuiltIn, and the palette
+	 * has nothing to say about them.
+	 */
+	ControlClass,
 };
 
 /** A Palette entry with an explicit creation recipe and validation contract. */
@@ -24,6 +37,8 @@ struct DREAMGUIEDITOR_API FDreamUIControlDescriptor
 	EDreamUIControlCreationKind CreationKind = EDreamUIControlCreationKind::Native;
 	/** Package path of the UDreamWidgetBlueprint backing this control, for the WidgetClass kind. */
 	FString WidgetClassPath;
+	/** The UDreamUserWidget subclass to instance, for the ControlClass kind. */
+	TWeakObjectPtr<UClass> ControlClass;
 	TWeakObjectPtr<UClass> VisualClass;
 	TWeakObjectPtr<UClass> LayoutContainerClass;
 	TWeakObjectPtr<UClass> LayoutSelfClass;
