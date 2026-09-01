@@ -171,6 +171,16 @@ protected:
 	/** will this tween use dilation-time or real-time? */
 	bool affectByTimeDilation = true;
 
+	/**
+	 * Which ease the caller asked for. Kept ALONGSIDE the bound function rather than instead of it,
+	 * because CurveFloat is the one ease with no static function to bind: its curve arrives in a
+	 * separate call, and only by remembering the choice can SetCurveFloat tell "the author picked
+	 * CurveFloat and left the curve empty" -- which falls back to linear, loudly -- from "a caller
+	 * handed over a curve this tween was never meant to use", which must leave the chosen ease alone.
+	 * Defaults to the ease the constructor binds, so the two never start out disagreeing.
+	 */
+	EDreamTweenEase easeType = EDreamTweenEase::OutCubic;
+
 	/** tween function */
 	FDreamTweenFunction tweenFunc;
 

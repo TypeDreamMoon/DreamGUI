@@ -105,6 +105,7 @@ FDreamTweenFunction UDreamTweener::GetEaseFunction(EDreamTweenEase easetype)
 UDreamTweener* UDreamTweener::SetEase(EDreamTweenEase easetype)
 {
 	if (elapseTime > 0 || startToTween)return this;
+	this->easeType = easetype;
 	// CurveFloat has no static curve of its own -- SetCurveFloat binds that -- so an unbound result
 	// must leave whatever is already bound alone, exactly as the original switch did by omitting it.
 	FDreamTweenFunction Func = GetEaseFunction(easetype);
@@ -135,17 +136,25 @@ UDreamTweener* UDreamTweener::SetLoop(EDreamTweenLoop newLoopType, int32 newLoop
 UDreamTweener* UDreamTweener::SetCurveFloat(UCurveFloat* newCurveFloat)
 {
 	if (elapseTime > 0 || startToTween)return this;
-	tweenFunc.BindWeakLambda(newCurveFloat, [=](float c, float b, float t, float d) {
-		if (d < KINDA_SMALL_NUMBER)return c + b;
-		if (newCurveFloat)
-		{
-			return newCurveFloat->GetFloatValue(t / d) * c + b;
-		}
-		else
+	if (newCurveFloat == nullptr)
+	{
+		// A null curve is not a curve to animate along, it is the absence of one, and rebinding on it
+		// could only destroy the ease that had already been chosen. That is exactly what used to
+		// happen to every caller holding an authored ease type and an authored curve side by side:
+		// handing the curve over unconditionally replaced the chosen ease with a lambda that re-tested
+		// the same null on every evaluation, logged from inside the tween loop, and ran linear. So a
+		// null is answered here instead of per frame, and only where the author actually asked for
+		// CurveFloat does it mean anything -- everywhere else the ease already set survives untouched.
+		if (easeType == EDreamTweenEase::CurveFloat)
 		{
 			UE_LOG(DreamTween, Warning, TEXT("[UDreamTweener::SetCurveFloat] CurveFloat not valid! Fallback to linear. You should always call SetCurveFloat(and pass a valid curve) if set Easetype to CurveFloat."));
-			return Linear(c, b, t, d);
+			tweenFunc.BindStatic(&UDreamTweener::Linear);
 		}
+		return this;
+	}
+	tweenFunc.BindWeakLambda(newCurveFloat, [newCurveFloat](float c, float b, float t, float d) {
+		if (d < KINDA_SMALL_NUMBER)return c + b;
+		return newCurveFloat->GetFloatValue(t / d) * c + b;
 	});
 	return this;
 }

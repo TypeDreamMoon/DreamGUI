@@ -30,6 +30,22 @@ protected:
 	bool bIsPlaying = false;
 	int CurrentTweenPlayIndex = 0;
 	void OnTweenComplete();
+	/**
+	 * Which of a play tween's two completion events drives this sequence is one authored flag, but the
+	 * subscribe and the unsubscribe live three call sites apart. They are a pair of functions rather
+	 * than four inline branches because the unsubscribe used to read the cycle event whichever way the
+	 * flag pointed: a sequence chained on OnComplete therefore never let go, and every replay left
+	 * another live subscription behind to push the index along the next time that tween was started by
+	 * anyone else.
+	 */
+	void SubscribeToTween(class UDreamUIPlayTween* InPlayTween);
+	void UnsubscribeFromTween(class UDreamUIPlayTween* InPlayTween);
+	/**
+	 * The first playable tween at or after InStartIndex, or Num() when there is none left. An Instanced
+	 * array on a details panel gains its rows before it gains its contents, so a hole in the middle of
+	 * the list is an ordinary authoring state and not an error to report.
+	 */
+	int32 FindNextPlayableTweenIndex(int32 InStartIndex)const;
 	FDelegateHandle OnCompleteDelegateHandle;
 	DECLARE_EVENT(UDreamUIPlayTweenSequenceComponent, FOnCompleteEvent);
 
