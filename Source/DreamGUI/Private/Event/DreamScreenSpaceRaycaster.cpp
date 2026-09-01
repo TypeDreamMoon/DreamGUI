@@ -5,6 +5,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "DreamGUI.h"
 #include "Core/DreamUISettings.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIScreenSpaceRaycaster"
@@ -43,6 +44,17 @@ void UDreamScreenSpaceRaycaster::BeginPlay()
 	}
 }
 
+#if WITH_EDITOR
+void UDreamScreenSpaceRaycaster::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	// Recomputed unconditionally rather than only when DragThreshold is the property that changed:
+	// the multiply is free next to everything else an editor property change triggers, and a
+	// name-matched branch is one rename away from silently going dead again.
+	DragThresholdSquare = DragThreshold * DragThreshold;
+}
+#endif
+
 void UDreamScreenSpaceRaycaster::SetRootCanvas(UDreamCanvas* InRootCanvas)
 {
 	RootCanvas = InRootCanvas;
@@ -66,7 +78,13 @@ bool UDreamScreenSpaceRaycaster::ShouldStartDrag(UDreamPointerEventData* InPoint
 {
 	if (bHoldToDrag)
 	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		// No world means no clock to measure the hold against, so the hold cannot have elapsed and
+		// the question falls through to distance -- which needs nothing but the event data. This is
+		// the one branch of this function that was not pure arithmetic, and it is the reason a
+		// raycaster reached from an authoring tree or a headless fixture used to be a crash rather
+		// than an answer.
+		const UWorld* World = DreamUI::GetWorldSafe(this);
+		if (World != nullptr && World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}

@@ -3,6 +3,7 @@
 #include "Extensions/DreamUMGWidgetInteraction.h"
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Extensions/DreamUMGWidget.h"
 #include "Framework/Application/SlateUser.h"
 #include "Framework/Application/SlateApplication.h"
@@ -17,17 +18,34 @@ UDreamUMGWidgetInteraction::UDreamUMGWidgetInteraction()
 	
 }
 
+UDreamUMGWidgetInteractionManager::FInteractionContainer* UDreamUMGWidgetInteraction::FindEnrolledInteractions()
+{
+	if (UDreamUMGWidgetInteractionManager::Instance == nullptr)
+	{
+		return nullptr;
+	}
+	return UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction.Find(VirtualUserIndex);
+}
+
 bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	if (CurrentPointerEventData == nullptr)
 	{
 		CurrentPointerEventData = EventData;
 
-		auto& Interactions = UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction[VirtualUserIndex];
-		if (Interactions.CurrentInteraction == nullptr)
+		// Claiming the shared virtual user is only meaningful for a component that has one to claim.
+		// Un-enrolled, there is no cursor to contend for and nothing downstream would do anything
+		// with the tick either -- SimulatePointerMovement refuses on its first line without a
+		// virtual user -- so the hover is recorded and the arbitration is skipped entirely. Both
+		// halves of this used to be unconditional, which is why a hover on a build with no Slate
+		// application was fatal twice over: a null Instance, and then a key the map never got.
+		if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
 		{
-			Interactions.CurrentInteraction = this;
-			this->SetCanExecuteTick(true);//hover in, enable update
+			if (Interactions->CurrentInteraction == nullptr)
+			{
+				Interactions->CurrentInteraction = this;
+				this->SetCanExecuteTick(true);//hover in, enable update
+			}
 		}
 	}
 	return bAllowEventBubbleUp;
@@ -38,12 +56,14 @@ bool UDreamUMGWidgetInteraction::OnPointerExit_Implementation(UDreamPointerEvent
 	{
 		CurrentPointerEventData = nullptr;
 
-		auto& Interactions = UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction[VirtualUserIndex];
-		if (Interactions.CurrentInteraction == this)
+		if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
 		{
-			SimulatePointerMovement();//pointer exit;
-			Interactions.CurrentInteraction = nullptr;
-			this->SetCanExecuteTick(false);//hover out, disable update
+			if (Interactions->CurrentInteraction == this)
+			{
+				SimulatePointerMovement();//pointer exit;
+				Interactions->CurrentInteraction = nullptr;
+				this->SetCanExecuteTick(false);//hover out, disable update
+			}
 		}
 	}
 	return bAllowEventBubbleUp;
@@ -105,18 +125,25 @@ void UDreamUMGWidgetInteraction::Awake()
 {
 	Super::Awake();
 
-	if (UDreamUMGWidgetInteractionManager::Instance == nullptr)
-	{
-		UDreamUMGWidgetInteractionManager::Instance = NewObject<UDreamUMGWidgetInteractionManager>();
-		UDreamUMGWidgetInteractionManager::Instance->AddToRoot();
-	}
-	Helper = UDreamUMGWidgetInteractionManager::Instance;
-	// Only create another user in a real world. FindOrCreateVirtualUser changes focus
-	if (FSlateApplication::IsInitialized() && !GetWorld()->IsPreviewWorld())
+	// Only create another user in a real world. FindOrCreateVirtualUser changes focus, so a preview
+	// world is excluded -- and so, now, is having no world at all, which is the state of every
+	// widget in an authoring tree and of every widget a headless test builds.
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (FSlateApplication::IsInitialized() && World != nullptr && !World->IsPreviewWorld())
 	{
 		if (!VirtualUser.IsValid())
 		{
 			VirtualUser = FSlateApplication::Get().FindOrCreateVirtualUser(VirtualUserIndex);
+			// The manager comes into being here, as part of enrolling, and not a line earlier. See
+			// its class comment: a component that reaches Awake without getting this far has nothing
+			// to arbitrate, and letting it create the manager anyway is what made the manager's
+			// existence and its contents two separate facts.
+			if (UDreamUMGWidgetInteractionManager::Instance == nullptr)
+			{
+				UDreamUMGWidgetInteractionManager::Instance = NewObject<UDreamUMGWidgetInteractionManager>();
+				UDreamUMGWidgetInteractionManager::Instance->AddToRoot();
+			}
+			Helper = UDreamUMGWidgetInteractionManager::Instance;
 			auto& Interactions = UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction.FindOrAdd(VirtualUserIndex);
 			Interactions.AllInteractions.Add(this);
 		}
@@ -129,26 +156,56 @@ void UDreamUMGWidgetInteraction::OnDestroy()
 {
 	Super::OnDestroy();
 
-	if (FSlateApplication::IsInitialized())
+	if (VirtualUser.IsValid())
 	{
-		if (VirtualUser.IsValid())
+		// Slate can be gone before the component is, on a shutdown that tears the application down
+		// first, so handing the user back is conditional while forgetting it is not.
+		if (FSlateApplication::IsInitialized())
 		{
 			FSlateApplication::Get().UnregisterUser(VirtualUser->GetUserIndex());
-			VirtualUser.Reset();
-			auto& Interactions = UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction[VirtualUserIndex];
-			Interactions.AllInteractions.Remove(this);
-			if (Interactions.AllInteractions.Num() == 0)
-			{
-				UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction.Remove(VirtualUserIndex);
-			}
+		}
+		VirtualUser.Reset();
+	}
+
+	// A component that never enrolled has no manager to leave and, more to the point, no standing to
+	// destroy one. This early return is the other half of the fix in Awake: while un-enrolled
+	// components fell through to the teardown below, the first one destroyed found the map empty and
+	// took the Instance with it, leaving the enrolled components that were still hovering to
+	// dereference a null static.
+	if (UDreamUMGWidgetInteractionManager::Instance == nullptr)
+	{
+		Helper = nullptr;
+		return;
+	}
+
+	auto& MapVirtualUserIndexToInteraction = UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction;
+	if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = MapVirtualUserIndexToInteraction.Find(VirtualUserIndex))
+	{
+		// Giving the shared cursor back matters more than leaving the list tidy. CurrentInteraction
+		// is exactly what the next component's hover tests for null, so a destroyed component still
+		// named there does not leak an entry -- it makes the whole virtual user index permanently
+		// deaf, because no later hover can ever claim a cursor that is already spoken for.
+		if (Interactions->CurrentInteraction == this)
+		{
+			Interactions->CurrentInteraction = nullptr;
+		}
+		Interactions->AllInteractions.Remove(this);
+		if (Interactions->AllInteractions.Num() == 0)
+		{
+			MapVirtualUserIndexToInteraction.Remove(VirtualUserIndex);
 		}
 	}
 
-	if (UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction.Num() == 0)
+	if (MapVirtualUserIndexToInteraction.Num() == 0)
 	{
+		// RemoveFromRoot before ConditionalBeginDestroy, because the root set is what has kept this
+		// object alive since Awake. Marking it for destruction while it is still rooted leaves the
+		// root set holding an object garbage collection is not allowed to collect.
+		UDreamUMGWidgetInteractionManager::Instance->RemoveFromRoot();
 		UDreamUMGWidgetInteractionManager::Instance->ConditionalBeginDestroy();
 		UDreamUMGWidgetInteractionManager::Instance = nullptr;
 	}
+	Helper = nullptr;
 }
 
 void UDreamUMGWidgetInteraction::Tick(float DeltaTime)
@@ -161,11 +218,6 @@ void UDreamUMGWidgetInteraction::Tick(float DeltaTime)
 bool UDreamUMGWidgetInteraction::CanSendInput()
 {
 	return FSlateApplication::IsInitialized() && VirtualUser.IsValid() && WidgetComponent != nullptr;
-}
-
-void UDreamUMGWidgetInteraction::SetCustomHitResult(const FDreamUIHitResult& HitResult)
-{
-	CustomHitResult = HitResult;
 }
 
 void UDreamUMGWidgetInteraction::SetFocus(UWidget* FocusWidget)
@@ -182,7 +234,11 @@ bool UDreamUMGWidgetInteraction::CanInteractWithComponent(UDreamUMGWidget* Compo
 
 	if (Component)
 	{
-		bCanInteract = !GetWorld()->IsPaused()
+		// No world reads as "cannot interact" rather than as "not paused". Nothing here has a caller
+		// today, but the naked GetWorld() that used to be on this line is precisely the shape that
+		// gets copied into one, and a component with no world could not send the input anyway.
+		const UWorld* World = DreamUI::GetWorldSafe(this);
+		bCanInteract = World != nullptr && !World->IsPaused()
 		//|| Component->PrimaryComponentTick.bTickEvenWhenPaused;
 		;
 	}

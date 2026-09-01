@@ -3,6 +3,7 @@
 #include "Extensions/DreamUIRenderTargetInteraction.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamGUI.h"
 #include "Event/DreamWorldSpaceRaycasterBase.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
@@ -19,11 +20,40 @@ UDreamUIRenderTargetInteraction::UDreamUIRenderTargetInteraction()
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 }
 
+namespace DreamUIRenderTargetInteractionLocal
+{
+	/**
+	 * The owning world's clock, or zero when there is no world to ask.
+	 *
+	 * Zero is not a plausible timestamp so much as a harmless one: the only reader of these stamps
+	 * is the base class's hold-to-drag test, which declines to measure a hold at all when the world
+	 * it would measure against is missing, so a stamp taken without a world is never subtracted from
+	 * anything. What matters here is that a press arriving outside a world writes a defined value
+	 * instead of dereferencing null.
+	 */
+	double WorldTimeSeconds(const UObject* InObject)
+	{
+		const UWorld* World = DreamUI::GetWorldSafe(InObject);
+		return World != nullptr ? World->TimeSeconds : 0.0;
+	}
+}
+
+UDreamPointerEventData* UDreamUIRenderTargetInteraction::EnsurePointerEventData()
+{
+	if (!IsValid(PointerEventData))
+	{
+		PointerEventData = NewObject<UDreamPointerEventData>(this);
+		PointerEventData->PointerID = -1;//make it -1, different from DreamGUIEventSystem created
+	}
+	return PointerEventData;
+}
+
 void UDreamUIRenderTargetInteraction::BeginPlay()
 {
 	Super::BeginPlay();
-	PointerEventData = NewObject<UDreamPointerEventData>(this);
-	PointerEventData->PointerID = -1;//make it -1, different from DreamGUIEventSystem created
+	// Still built here, so the ordinary case pays for it once at a moment nobody is waiting on
+	// input. EnsurePointerEventData exists for the cases that get here first, not instead of this.
+	EnsurePointerEventData();
 }
 
 void UDreamUIRenderTargetInteraction::OnRegister()
@@ -57,6 +87,11 @@ void UDreamUIRenderTargetInteraction::TickComponent(float DeltaTime, ELevelTick 
 	}
 	if (!InputPointerEventData.IsValid())
 		return;
+
+	// LineTrace writes through PointerEventData before it reads anything back, and this tick is
+	// enabled from the constructor rather than from BeginPlay, so the same ordering question the
+	// pointer handlers have applies here too.
+	EnsurePointerEventData();
 
 	FDreamUIHitResultContainer hitResultContainer;
 	bool lineTraceHitSomething = LineTrace(hitResultContainer);
@@ -114,19 +149,6 @@ bool UDreamUIRenderTargetInteraction::LineTrace(FDreamUIHitResultContainer& OutH
 	return false;
 }
 
-bool UDreamUIRenderTargetInteraction::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
-{
-	if (bHoldToDrag)
-	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
-		{
-			return true;
-		}
-	}
-	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
-	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
-	return FVector2D::DistSquared(pressMousePos, mousePos) > DragThresholdSquare;
-}
 void UDreamUIRenderTargetInteraction::Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
 {
 	return Super::RaycastUI(InPointerEventData, TargetCanvas.Get(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResultArray);
@@ -144,27 +166,32 @@ bool UDreamUIRenderTargetInteraction::OnPointerExit_Implementation(UDreamPointer
 }
 bool UDreamUIRenderTargetInteraction::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 {
-	PointerEventData->PressPointerPosition = PointerEventData->PointerPosition;
-	PointerEventData->PressTime = GetWorld()->TimeSeconds;
-	PointerEventData->bNowIsTriggerPressed = true;
-	PointerEventData->MouseButtonType = EventData->MouseButtonType;
+	using namespace DreamUIRenderTargetInteractionLocal;
+	UDreamPointerEventData* Synthesised = EnsurePointerEventData();
+	Synthesised->PressPointerPosition = Synthesised->PointerPosition;
+	Synthesised->PressTime = WorldTimeSeconds(this);
+	Synthesised->bNowIsTriggerPressed = true;
+	Synthesised->MouseButtonType = EventData->MouseButtonType;
 	return bAllowEventBubbleUp;
 }
 bool UDreamUIRenderTargetInteraction::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
-	PointerEventData->ReleaseTime = GetWorld()->TimeSeconds;
-	PointerEventData->bNowIsTriggerPressed = false;
+	using namespace DreamUIRenderTargetInteractionLocal;
+	UDreamPointerEventData* Synthesised = EnsurePointerEventData();
+	Synthesised->ReleaseTime = WorldTimeSeconds(this);
+	Synthesised->bNowIsTriggerPressed = false;
 	return bAllowEventBubbleUp;
 }
 bool UDreamUIRenderTargetInteraction::OnPointerScroll_Implementation(UDreamPointerEventData* EventData)
 {
 	auto inAxisValue = EventData->ScrollAxisValue;
-	if (IsValid(PointerEventData->EnterWidget))
+	UDreamPointerEventData* Synthesised = EnsurePointerEventData();
+	if (IsValid(Synthesised->EnterWidget))
 	{
-		if (inAxisValue != FVector2D::ZeroVector || PointerEventData->ScrollAxisValue != inAxisValue)
+		if (inAxisValue != FVector2D::ZeroVector || Synthesised->ScrollAxisValue != inAxisValue)
 		{
-			PointerEventData->ScrollAxisValue = inAxisValue;
-			UDreamEventSystem::ExecuteEvent_OnPointerScroll(PointerEventData->EnterWidget, PointerEventData, true);
+			Synthesised->ScrollAxisValue = inAxisValue;
+			UDreamEventSystem::ExecuteEvent_OnPointerScroll(Synthesised->EnterWidget, Synthesised, true);
 		}
 	}
 	return bAllowEventBubbleUp;

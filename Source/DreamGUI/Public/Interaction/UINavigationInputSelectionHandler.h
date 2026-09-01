@@ -31,6 +31,19 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TArray<TWeakObjectPtr<UDreamTweener>> TweenerCollection;
+
+	/**
+	 * Fade the cursor towards InOpacity and hand back the tween that will do it, or null -- in which
+	 * case the cursor has already been put at InOpacity outright.
+	 *
+	 * The distinction is the caller's business because a tween is the only thing an OnComplete can
+	 * hang off, and there is frequently no tween to be had: UDreamTweenManager answers null whenever
+	 * it cannot reach the game instance subsystem that drives tweens, which covers a widget with no
+	 * world at all AND a widget in an editor world, which has a world but no game instance. Both are
+	 * ordinary rather than exotic -- an authoring tree and a headless test are the first, the
+	 * designer preview is the second.
+	 */
+	UDreamTweener* FadeCursorTo(UDreamWidget* InWidget, float InOpacity);
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	virtual void SelectWidget(UDreamWidget* InSelected);

@@ -13,12 +13,33 @@
 class UDreamUMGWidget;
 class UDreamUMGWidgetInteraction;
 
+/**
+ * The one place that answers "which of the components sharing a virtual Slate user is driving it".
+ *
+ * A virtual user is a Slate-wide resource keyed by index, and nothing stops several
+ * DreamUMGWidgetInteraction components from being authored with the same VirtualUserIndex -- several
+ * UMG panels in a level sharing one simulated cursor is the intended use. Only one of them may hold
+ * that cursor at a time, so the hover that arrives first claims CurrentInteraction and the rest
+ * stand down until it is given back.
+ *
+ * ITS LIFETIME IS THE MAP'S. Instance is created by the first component to ENROL and destroyed by
+ * the last one to leave, and enrolling is not something every component does: one that never got a
+ * virtual user -- a build with no Slate application, a preview world, an authoring tree -- cannot
+ * send input at all, so it has no claim to arbitrate and no business in here.
+ *
+ * Making creation part of enrolling, rather than something Awake does first and unconditionally, is
+ * what stops "Instance exists" and "this component has a map entry" from being two facts that can
+ * disagree. While they could, the first un-enrolled component to be destroyed found the map empty,
+ * concluded nobody was left, and destroyed the Instance out from under every enrolled component that
+ * was still alive -- which then dereferenced a dangling static on its next hover.
+ */
 UCLASS()
 class DREAMGUI_API UDreamUMGWidgetInteractionManager : public UObject
 {
 	GENERATED_BODY()
 public:
 
+	/** Null whenever no component is enrolled, which includes the whole life of a server build. */
 	static UDreamUMGWidgetInteractionManager* Instance;
 	struct FInteractionContainer
 	{
@@ -148,12 +169,6 @@ public:
 	FVector2D Get2DHitLocation() const;
 
 	/**
-	 * Set custom hit result.  This is only taken into account if InteractionSource is set to EWidgetInteractionSource::Custom.
-	 */
-	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-	void SetCustomHitResult(const FDreamUIHitResult& HitResult);
-
-	/**
 	 * Set the focus target of the virtual user managed by this component
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
@@ -190,6 +205,16 @@ protected:
 	/** Is it safe for this interaction component to run?  Might not be in a server situation with no slate application. */
 	bool CanSendInput();
 
+	/**
+	 * This component's entry in the manager, or null when it has none.
+	 *
+	 * Null is an ordinary answer, not an error: it is what every component gets wherever there is no
+	 * Slate application to hand out a virtual user, and it is what every component gets before Awake
+	 * has run. Callers branch on it. The lookup it replaces was TMap::operator[], which checks and
+	 * takes the process down on a key that was never added rather than reporting the absence.
+	 */
+	UDreamUMGWidgetInteractionManager::FInteractionContainer* FindEnrolledInteractions();
+
 	/** Performs the simulation of pointer movement.  Does not run if bEnableHitTesting is set to false. */
 	void SimulatePointerMovement();
 
@@ -218,10 +243,6 @@ protected:
 
 	/** The current set of pressed keys we maintain the state of. */
 	TSet<FKey> PressedKeys;
-
-	/** Stores the custom hit result set by the player. */
-	UPROPERTY(Transient)
-	FDreamUIHitResult CustomHitResult;
 
 	/** The 2D location on the widget component that was hit. */
 	UPROPERTY(Transient)

@@ -19,9 +19,20 @@ class DREAMGUI_API UDreamScreenSpaceRaycaster : public UDreamBaseRaycaster
 {
 	GENERATED_BODY()
 	
-public:	
+public:
 	UDreamScreenSpaceRaycaster();
 	virtual void BeginPlay()override;
+#if WITH_EDITOR
+	/**
+	 * Keeps DragThresholdSquare in step with a DragThreshold typed into the Details panel.
+	 *
+	 * Without this the square is only ever recomputed by the constructor, BeginPlay and
+	 * SetDragThreshold, so an author who edits the threshold in the editor and then drags in the
+	 * viewport is still being measured against whatever the value was when the component was
+	 * constructed. Play-in-editor hid it, because BeginPlay catches up before anyone can notice.
+	 */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
+#endif
 
 	/** Bind the screen-space root used for projection and hit testing. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen")
@@ -42,6 +53,12 @@ protected:
 	/** hold press for "holdToDragTime" to entering drag mode */
 	UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (EditCondition = "bHoldToDrag"))
 	float HoldToDragTime = 0.5f;
+	/**
+	 * DragThreshold squared, so the per-move comparison can use DistSquared and skip a square root.
+	 * Derived, never authored: every write to DragThreshold has to be followed by a write to this,
+	 * which is why DragThreshold is protected and SetDragThreshold is the only supported way to
+	 * change it while the game runs.
+	 */
 	float DragThresholdSquare = 0;
 	
 	TWeakObjectPtr<UDreamCanvas> RootCanvas = nullptr;

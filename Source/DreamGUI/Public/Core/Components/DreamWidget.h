@@ -207,6 +207,29 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Visibility);
 	}
+	/*
+	 * The three below exist for UDreamDataBinding, which used to spell them as string literals.
+	 *
+	 * They have to live HERE and not at the call site, and the reason is the whole point of the
+	 * change: the properties are protected, and GET_MEMBER_NAME_CHECKED expands to an expression
+	 * that names the member, so only this class can write it. A literal compiles from anywhere,
+	 * which is exactly why it was a literal -- and why renaming any of these three used to make the
+	 * binding's special case silently stop matching and fall through to a memcpy, losing every side
+	 * effect the setter has (the recursive *InHierarchy caches on the children, most of all) while
+	 * still reporting success.
+	 */
+	static FName GetPropertyName_RenderOpacity()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderOpacity);
+	}
+	static FName GetPropertyName_Interactable()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Interactable);
+	}
+	static FName GetPropertyName_Raycastable()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Raycastable);
+	}
 	static FName GetPropertyName_DisplayName()
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, DisplayName);

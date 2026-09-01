@@ -109,15 +109,25 @@ public:
 	/** raycaster when press */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamBaseRaycaster> PressRaycaster;
+	/**
+	 * The three timestamps below all start at zero, meaning "the thing they date has not happened
+	 * yet". They were the only fields on this class without an initialiser, which was survivable
+	 * only for as long as nobody read one before writing it -- and PressTime IS read that way:
+	 * ShouldStartDrag subtracts it from the current time and compares the difference against a hold
+	 * duration. An event data that has never seen a button go down is completely ordinary (a hover,
+	 * a scroll, the object a raycaster hands around before the first press), and with indeterminate
+	 * bytes in PressTime hold-to-drag would begin a drag, or refuse to, at random on such a pointer.
+	 */
+
 	/** the last time when trigger click(time is get from GetWorld()->TimeSeconds), can be used to tell double click */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
-		double ClickTime;
+		double ClickTime = 0;
 	/** the last time when trigger release(time is get from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
-		double ReleaseTime;
+		double ReleaseTime = 0;
 	/** the last time when trigger press(time is tell from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
-		double PressTime;
+		double PressTime = 0;
 
 	/** is dragging? */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")

@@ -28,6 +28,14 @@ bool UDreamVisualCustomRaycast::Raycast(const UDreamVisual* InVisual, const FVec
 
 bool UDreamVisualCustomRaycast::GetRaycastPixelFromUIBatchMeshVisual(const UDreamVisualBatchMesh* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector2D& OutUV, FColor& OutPixel, FVector& OutHitPoint, FVector& OutHitNormal)
 {
+	// Blueprint-callable and static, which is the combination that makes this worth a guard rather
+	// than a contract: a graph can hand it anything, including the null that any unset object pin
+	// is, and the crash lands in the editor with no line naming the node that caused it. Every
+	// caller inside the plugin reaches this through a Cast that has already answered the question.
+	if (!IsValid(InVisual))
+	{
+		return false;
+	}
 	if (auto UIGeo = InVisual->GetGeometry())
 	{
 		//triangle hit test
