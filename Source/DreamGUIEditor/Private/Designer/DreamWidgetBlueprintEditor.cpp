@@ -975,7 +975,12 @@ void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerC
 		{
 			if (Descriptor->LayoutContainerClass.Get() == InLayoutContainerClass)
 			{
-				WrapperName = Descriptor->DisplayName.ToString();
+				// The registry KEY, not the palette label. The label carries a family prefix and
+				// spaces -- "UMG Size Box" -- and a display name becomes the Blueprint variable the
+				// compiler declares, which cannot have either. CreateRegisteredControlAndReturn has
+				// followed this rule since the labels grew prefixes; this site was missed, so every
+				// wrap-in-a-panel produced a widget whose own name the details panel refuses.
+				WrapperName = Descriptor->Name.ToString();
 				break;
 			}
 		}

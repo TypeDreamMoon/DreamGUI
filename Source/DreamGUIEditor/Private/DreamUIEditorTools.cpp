@@ -9,6 +9,7 @@
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetTree.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIControlRegistry.h"
 #include "Core/DreamUIManager.h"
@@ -53,7 +54,12 @@ struct FDreamUIEditorToolsHelperFunctionHolder
 
 	static FString MakeUniqueName(const FString& DesiredName, const TSet<FName>& UsedNames)
 	{
-		FString Candidate = DesiredName.TrimStartAndEnd();
+		// Sanitised, not merely trimmed. A display name IS the variable name the compiler declares
+		// -- UDreamWidgetTree::MakeWidgetVariableName is the same string through the same filter --
+		// so a name with a space in it compiles to something that does not match what the details
+		// panel shows, and the rename box then reports the widget's own name as invalid. Callers
+		// that hand over an already-valid name pay nothing: this is the identity on those.
+		FString Candidate = UDreamWidgetTree::SanitizeIdentifier(DesiredName.TrimStartAndEnd());
 		if (Candidate.IsEmpty())
 		{
 			Candidate = TEXT("Widget");

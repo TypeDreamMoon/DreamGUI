@@ -16,6 +16,7 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamUIControlRegistry.h"
+#include "DreamUIEditorTools.h"
 #include "Textures/SlateIcon.h"
 
 /*
@@ -300,6 +301,57 @@ bool FDreamLegacyControlCategoryTest::RunTest(const FString& Parameters)
 			ToggleGroup->CreationKind, EDreamUIControlCreationKind::Native);
 		TestEqual(TEXT("in the controls category"), ToggleGroup->Category, ControlsCategory);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPaletteNamesAreIdentifiersTest,
+	"DreamGUI.Palette.EveryRegistryKeyIsUsableAsAWidgetName",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPaletteNamesAreIdentifiersTest::RunTest(const FString& Parameters)
+{
+	// A new widget is named from the registry KEY, and its display name is what the compiler
+	// declares the Blueprint variable from -- so a key with a space in it produces a widget whose
+	// own name the details panel then refuses, in red, forever, for a name the author never typed.
+	//
+	// The labels are where the spaces legitimately live ("UMG Size Box"), and one creation path was
+	// naming from the label instead of the key. Asserting the keys is what makes that class of
+	// mistake impossible to reintroduce at the source rather than caught downstream.
+	int32 Checked = 0;
+	for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
+	{
+		const FString Key = Descriptor.Name.ToString();
+		++Checked;
+		TestEqual(*FString::Printf(TEXT("'%s' survives being used as a widget name"), *Key),
+			UDreamWidgetTree::SanitizeIdentifier(Key), Key);
+	}
+	TestTrue(TEXT("there were keys to check"), Checked >= 20);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUniqueNameSanitisesTest,
+	"DreamGUI.Palette.ANameHandedToTheEditorComesBackUsable",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUniqueNameSanitisesTest::RunTest(const FString& Parameters)
+{
+	// The second half of the guarantee, for the paths that do not name from the registry at all.
+	// Sanitising here costs nothing on a name that was already valid, and it is variable-name
+	// PRESERVING: the compiler has always derived the variable through the same filter, so a widget
+	// called "UMG Size Box" already compiled to UMG_Size_Box. Fixing the display name makes the two
+	// agree rather than changing what the graph refers to.
+	const FString Cleaned = FDreamUIEditorTools::MakeUniqueWidgetDisplayName(nullptr, TEXT("UMG Size Box"));
+	TestEqual(TEXT("a label with spaces comes back as an identifier"), Cleaned, FString(TEXT("UMG_Size_Box")));
+	TestEqual(TEXT("and it is what the compiler would have derived anyway"),
+		UDreamWidgetTree::SanitizeIdentifier(TEXT("UMG Size Box")), Cleaned);
+
+	// An already-valid name is returned untouched -- this must not start mangling what authors type.
+	TestEqual(TEXT("a valid name is left alone"),
+		FDreamUIEditorTools::MakeUniqueWidgetDisplayName(nullptr, TEXT("OkButton")), FString(TEXT("OkButton")));
+	TestEqual(TEXT("and so is one that is already suffixed"),
+		FDreamUIEditorTools::MakeUniqueWidgetDisplayName(nullptr, TEXT("Row_2")), FString(TEXT("Row_2")));
 	return true;
 }
 

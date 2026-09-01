@@ -63,7 +63,9 @@ namespace DreamWidgetTreeEditing
 
 	FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore)
 	{
-		const FString Base = InDesired.IsEmpty() ? TEXT("Widget") : InDesired;
+		// Sanitised for the reason MakeUniqueName is: the display name becomes the compiler's
+		// variable name, so anything the rename box would refuse must not be mintable here either.
+		const FString Base = InDesired.IsEmpty() ? TEXT("Widget") : UDreamWidgetTree::SanitizeIdentifier(InDesired);
 		if (InTree == nullptr)
 		{
 			return Base;
