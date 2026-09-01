@@ -824,7 +824,7 @@ void UDreamListViewBase::CollectVisibleItemIndices(TArray<int32>& OutIndices) co
 	}
 }
 
-const FDreamListStyle& UDreamListViewBase::ResolveListStyle() const
+FDreamListStyle UDreamListViewBase::ResolveListStyle() const
 {
 	// Abstract in spirit only: a CDO is constructed for an abstract class too, so this stays
 	// callable rather than pure. Every concrete control overrides it with its own family.
@@ -840,7 +840,7 @@ FMargin UDreamListViewBase::GetRowPadding()
 	return FMargin(10.0f, 0.0f, 10.0f, 0.0f);
 }
 
-const FDreamListStyle& UDreamListView::ResolveListStyle() const
+FDreamListStyle UDreamListView::ResolveListStyle() const
 {
 	return ResolveStyle(Style, &UDreamUIStyleSheet::ListStyle);
 }

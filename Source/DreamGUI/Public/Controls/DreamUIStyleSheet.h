@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -127,33 +127,39 @@ public:
 	 * default look, which is visibly *something* on screen and correct in nine cases out of ten,
 	 * where a null would make every caller carry the same if.
 	 */
-	const FDreamToggleStyle& ToggleStyle(FName InVariant) const { return Pick(Toggle, ToggleVariants, InVariant); }
-	const FDreamButtonStyle& ButtonStyle(FName InVariant) const { return Pick(Button, ButtonVariants, InVariant); }
-	const FDreamSliderStyle& SliderStyle(FName InVariant) const { return Pick(Slider, SliderVariants, InVariant); }
-	const FDreamTextInputStyle& TextInputStyle(FName InVariant) const { return Pick(TextInput, TextInputVariants, InVariant); }
-	const FDreamDropdownStyle& DropdownStyle(FName InVariant) const { return Pick(Dropdown, DropdownVariants, InVariant); }
-	const FDreamProgressBarStyle& ProgressBarStyle(FName InVariant) const { return Pick(ProgressBar, ProgressBarVariants, InVariant); }
-	const FDreamRadioButtonStyle& RadioButtonStyle(FName InVariant) const { return Pick(RadioButton, RadioButtonVariants, InVariant); }
-	const FDreamSpinBoxStyle& SpinBoxStyle(FName InVariant) const { return Pick(SpinBox, SpinBoxVariants, InVariant); }
-	const FDreamScrollBoxStyle& ScrollBoxStyle(FName InVariant) const { return Pick(ScrollBox, ScrollBoxVariants, InVariant); }
-	const FDreamScrollBarStyle& ScrollBarStyle(FName InVariant) const { return Pick(ScrollBar, ScrollBarVariants, InVariant); }
-	const FDreamListStyle& ListStyle(FName InVariant) const { return Pick(List, ListVariants, InVariant); }
-	const FDreamTreeViewStyle& TreeViewStyle(FName InVariant) const { return Pick(TreeView, TreeViewVariants, InVariant); }
-	const FDreamTabViewStyle& TabViewStyle(FName InVariant) const { return Pick(TabView, TabViewVariants, InVariant); }
-	const FDreamDialogStyle& DialogStyle(FName InVariant) const { return Pick(Dialog, DialogVariants, InVariant); }
-	const FDreamExpandableAreaStyle& ExpandableAreaStyle(FName InVariant) const { return Pick(ExpandableArea, ExpandableAreaVariants, InVariant); }
-	const FDreamInputKeySelectorStyle& InputKeySelectorStyle(FName InVariant) const { return Pick(InputKeySelector, InputKeySelectorVariants, InVariant); }
-	const FDreamRingMenuStyle& RingMenuStyle(FName InVariant) const { return Pick(RingMenu, RingMenuVariants, InVariant); }
+	FDreamToggleStyle ToggleStyle(FName InVariant) const { return Pick(Toggle, ToggleVariants, InVariant); }
+	FDreamButtonStyle ButtonStyle(FName InVariant) const { return Pick(Button, ButtonVariants, InVariant); }
+	FDreamSliderStyle SliderStyle(FName InVariant) const { return Pick(Slider, SliderVariants, InVariant); }
+	FDreamTextInputStyle TextInputStyle(FName InVariant) const { return Pick(TextInput, TextInputVariants, InVariant); }
+	FDreamDropdownStyle DropdownStyle(FName InVariant) const { return Pick(Dropdown, DropdownVariants, InVariant); }
+	FDreamProgressBarStyle ProgressBarStyle(FName InVariant) const { return Pick(ProgressBar, ProgressBarVariants, InVariant); }
+	FDreamRadioButtonStyle RadioButtonStyle(FName InVariant) const { return Pick(RadioButton, RadioButtonVariants, InVariant); }
+	FDreamSpinBoxStyle SpinBoxStyle(FName InVariant) const { return Pick(SpinBox, SpinBoxVariants, InVariant); }
+	FDreamScrollBoxStyle ScrollBoxStyle(FName InVariant) const { return Pick(ScrollBox, ScrollBoxVariants, InVariant); }
+	FDreamScrollBarStyle ScrollBarStyle(FName InVariant) const { return Pick(ScrollBar, ScrollBarVariants, InVariant); }
+	FDreamListStyle ListStyle(FName InVariant) const { return Pick(List, ListVariants, InVariant); }
+	FDreamTreeViewStyle TreeViewStyle(FName InVariant) const { return Pick(TreeView, TreeViewVariants, InVariant); }
+	FDreamTabViewStyle TabViewStyle(FName InVariant) const { return Pick(TabView, TabViewVariants, InVariant); }
+	FDreamDialogStyle DialogStyle(FName InVariant) const { return Pick(Dialog, DialogVariants, InVariant); }
+	FDreamExpandableAreaStyle ExpandableAreaStyle(FName InVariant) const { return Pick(ExpandableArea, ExpandableAreaVariants, InVariant); }
+	FDreamInputKeySelectorStyle InputKeySelectorStyle(FName InVariant) const { return Pick(InputKeySelector, InputKeySelectorVariants, InVariant); }
+	FDreamRingMenuStyle RingMenuStyle(FName InVariant) const { return Pick(RingMenu, RingMenuVariants, InVariant); }
 
 private:
 	template<class T>
-	static const T& Pick(const T& InDefault, const TMap<FName, T>& InVariants, FName InVariant)
+	static T Pick(const T& InDefault, const TMap<FName, T>& InVariants, FName InVariant)
 	{
 		if (!InVariant.IsNone())
 		{
 			if (const T* Found = InVariants.Find(InVariant))
 			{
-				return *Found;
+				// The family default with the variant's TICKED fields written over it. With every
+				// bit ticked -- which is the default, and what every variant authored before this
+				// existed carries -- the result is the variant, exactly as it always was. Unticking
+				// a field is the new thing, and it means "whatever the family default says", which
+				// is inheritance with the family default as the only possible parent: no Parent
+				// pointer to author, and no cycle to check for.
+				return DreamUI_MergeStyle(InDefault, *Found);
 			}
 		}
 		return InDefault;

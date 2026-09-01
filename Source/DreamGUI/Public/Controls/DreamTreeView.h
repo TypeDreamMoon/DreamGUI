@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -112,7 +112,7 @@ public:
 	void CollapseAll();
 
 protected:
-	virtual const FDreamListStyle& ResolveListStyle() const override;
+	virtual FDreamListStyle ResolveListStyle() const override;
 	virtual void CollectVisibleItemIndices(TArray<int32>& OutIndices) const override;
 	virtual int32 GetItemDepth(int32 InItemIndex) const override;
 	virtual float GetRowContentInset(int32 InItemIndex) const override;
@@ -130,5 +130,5 @@ protected:
 
 private:
 	/** The whole style. ResolveListStyle hands the base the List half of this same answer. */
-	const FDreamTreeViewStyle& ResolveTreeStyle() const;
+	FDreamTreeViewStyle ResolveTreeStyle() const;
 };

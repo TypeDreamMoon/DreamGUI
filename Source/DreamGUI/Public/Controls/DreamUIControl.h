@@ -356,17 +356,32 @@ protected:
 		}
 	}
 
+	/**
+	 * The style in effect: the sheet's, this instance's, or the sheet's with this instance's ticked
+	 * fields written over it.
+	 *
+	 * BY VALUE now, because the third answer is a value neither side stores. Every call site binds
+	 * it to a `const TStyle&`, which extends the temporary's lifetime to the reference's -- so the
+	 * seventeen ApplyStyle bodies are unchanged and still read as "resolve once, then push".
+	 */
 	template<class TStyle>
-	const TStyle& ResolveStyle(const TStyle& InInlineStyle, const TStyle& (UDreamUIStyleSheet::*InFamily)(FName) const) const
+	TStyle ResolveStyle(const TStyle& InInlineStyle, TStyle (UDreamUIStyleSheet::*InFamily)(FName) const) const
 	{
-		if (StyleSource == EDreamUIStyleSource::ProjectStyleSheet)
+		if (StyleSource == EDreamUIStyleSource::Inline)
 		{
-			if (const UDreamUIStyleSheet* Sheet = UDreamUIStyleSheet::GetProjectSheet())
-			{
-				return (Sheet->*InFamily)(StyleVariant);
-			}
+			return InInlineStyle;
 		}
-		return InInlineStyle;
+		const UDreamUIStyleSheet* Sheet = UDreamUIStyleSheet::GetProjectSheet();
+		if (Sheet == nullptr)
+		{
+			// No sheet in the project: the struct's own defaults ARE the theme, so this instance's
+			// values are the look in effect whether or not it asked to override anything.
+			return InInlineStyle;
+		}
+		const TStyle Resolved = (Sheet->*InFamily)(StyleVariant);
+		return StyleSource == EDreamUIStyleSource::ProjectStyleSheetOverride
+			? DreamUI_MergeStyle(Resolved, InInlineStyle)
+			: Resolved;
 	}
 
 #if WITH_EDITOR

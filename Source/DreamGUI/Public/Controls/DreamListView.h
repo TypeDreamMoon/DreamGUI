@@ -311,7 +311,7 @@ protected:
 	 * back a reference into it -- the sheet's entry or this instance's Style, both of which outlive
 	 * the call. The base never sees which.
 	 */
-	virtual const FDreamListStyle& ResolveListStyle() const;
+	virtual FDreamListStyle ResolveListStyle() const;
 
 	/** Which source items get rows, in order. All of them, for a flat list. */
 	virtual void CollectVisibleItemIndices(TArray<int32>& OutIndices) const;
@@ -438,5 +438,5 @@ public:
 	FDreamListStyle Style;
 
 protected:
-	virtual const FDreamListStyle& ResolveListStyle() const override;
+	virtual FDreamListStyle ResolveListStyle() const override;
 };

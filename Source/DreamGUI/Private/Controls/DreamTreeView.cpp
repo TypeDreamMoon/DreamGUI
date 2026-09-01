@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamTreeView.h"
 
@@ -297,15 +297,16 @@ void UDreamTreeView::SetItemDepths(const TArray<int32>& InDepths)
 	RebuildRows();
 }
 
-const FDreamListStyle& UDreamTreeView::ResolveListStyle() const
+FDreamListStyle UDreamTreeView::ResolveListStyle() const
 {
 	// The list half of the tree's own style -- the reason FDreamTreeViewStyle embeds a whole
-	// FDreamListStyle instead of restating its fields. A reference into the sheet's entry or into
-	// this instance's Style, both of which outlive the call.
+	// FDreamListStyle instead of restating its fields. BY VALUE, like everything downstream of
+	// ResolveStyle now: a resolved style can be a MERGE of the sheet's and this instance's, which is
+	// a value neither of them stores, so there is nothing left to return a reference into.
 	return ResolveTreeStyle().List;
 }
 
-const FDreamTreeViewStyle& UDreamTreeView::ResolveTreeStyle() const
+FDreamTreeViewStyle UDreamTreeView::ResolveTreeStyle() const
 {
 	return ResolveStyle(Style, &UDreamUIStyleSheet::TreeViewStyle);
 }

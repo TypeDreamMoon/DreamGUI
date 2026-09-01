@@ -6,6 +6,7 @@
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
+#include "UObject/UnrealType.h"
 
 void UDreamUIControl::NativeOnInitialized()
 {
@@ -134,4 +135,48 @@ TArray<FName> UDreamUIControl::GetUnboundRequiredParts()
 		}
 	}
 	return Missing;
+}
+
+void DreamUI_ApplyStyleOverrides(const UScriptStruct* InStruct, void* OutBase, const void* InOverrides)
+{
+	if (InStruct == nullptr || OutBase == nullptr || InOverrides == nullptr)
+	{
+		return;
+	}
+	// One pass over the struct's properties, pairing each bOverride_<field> with <field>. Driven by
+	// the NAME rather than by a hand-written table for the reason the part lists are: a table beside
+	// the fields is a second place to forget, and the thing forgotten is silent -- a style knob that
+	// simply stops being honoured.
+	static const FString Prefix(TEXT("bOverride_"));
+	for (const FProperty* Flag = InStruct->PropertyLink; Flag != nullptr; Flag = Flag->PropertyLinkNext)
+	{
+		const FBoolProperty* BoolFlag = CastField<FBoolProperty>(Flag);
+		if (BoolFlag == nullptr)
+		{
+			continue;
+		}
+		const FString FlagName = BoolFlag->GetName();
+		if (!FlagName.StartsWith(Prefix, ESearchCase::CaseSensitive))
+		{
+			continue;
+		}
+		if (!BoolFlag->GetPropertyValue_InContainer(InOverrides))
+		{
+			// Not ticked: whatever is already in the base stays. This is the whole feature.
+			continue;
+		}
+		const FName FieldName(*FlagName.RightChop(Prefix.Len()));
+		const FProperty* Field = InStruct->FindPropertyByName(FieldName);
+		if (Field == nullptr)
+		{
+			// A bit whose field was renamed or removed. Worth saying: it means an author is ticking
+			// a checkbox that decides nothing, and the panel gives no hint of that.
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d %s has a %s with no matching field; the tick decides nothing."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InStruct->GetName(), *FlagName);
+			continue;
+		}
+		Field->CopySingleValue(
+			Field->ContainerPtrToValuePtr<void>(OutBase),
+			Field->ContainerPtrToValuePtr<const void>(InOverrides));
+	}
 }
