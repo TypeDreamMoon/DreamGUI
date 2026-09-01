@@ -122,6 +122,22 @@ void UDreamUIControl::BindParts()
 	}
 }
 
+void UDreamUIControl::GetBoundParts(TArray<TPair<FName, UDreamWidget*>>& OutParts)
+{
+	OutParts.Reset();
+	TArray<FDreamControlPart> Parts;
+	CollectParts(Parts);
+	for (const FDreamControlPart& Part : Parts)
+	{
+		// An optional part a template chose not to offer is absent rather than broken, and a caller
+		// listing what can be animated wants what IS there.
+		if (Part.Field != nullptr && IsValid(*Part.Field))
+		{
+			OutParts.Emplace(Part.Name, *Part.Field);
+		}
+	}
+}
+
 TArray<FName> UDreamUIControl::GetUnboundRequiredParts()
 {
 	TArray<FName> Missing;

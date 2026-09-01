@@ -153,6 +153,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Control")
 	TArray<FName> GetUnboundRequiredParts();
 
+	/**
+	 * The parts this control found, in the order CollectParts declares them.
+	 *
+	 * A control's own root is nearly always bare -- the button IS its face, the face carries the
+	 * rect block and the behaviour, and the root carries neither -- so anything that wants to reach
+	 * what a control actually draws has to reach a part. The animation editor is the caller this
+	 * exists for: binding a control gave a track with nothing on it to animate, because everything
+	 * animatable is one level down.
+	 *
+	 * Safe to expose where the tree itself is not. A part is named by CollectParts, which is C++,
+	 * so a path through one is a compile-time contract rather than a name in somebody else's asset
+	 * -- which is the distinction the nested-instance boundary is drawn on everywhere else.
+	 */
+	void GetBoundParts(TArray<TPair<FName, UDreamWidget*>>& OutParts);
+
 protected:
 	/**
 	 * The four steps, in the one order that works. Not meant to be overridden -- a control says what

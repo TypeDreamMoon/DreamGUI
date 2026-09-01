@@ -23,6 +23,7 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamText.h"
+#include "Controls/DreamUIControl.h"
 #include "Designer/DreamWidgetHierarchyPickerView.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "Materials/MaterialInterface.h"
@@ -180,6 +181,56 @@ public:
 	UDreamWidgetAnimation* GetAnimation() const
 	{
 		return WeakSequence.Get();
+	}
+
+	/**
+	 * The object the sequencer may actually possess, given one the author picked.
+	 *
+	 * The two trees are the whole of it. An animation is authored data, so it lives on the ASSET's
+	 * tree, and everything that offers a widget to bind -- the hierarchy picker, the designer
+	 * selection -- offers one from there. Playback is against the PREVIEW, because that is the copy
+	 * that is alive and can be scrubbed. UDreamWidgetAnimation::CanPossessObject requires the object
+	 * and the context to share a world, and an authoring widget lives in no world at all, so handing
+	 * it straight to GetHandleToObject was refused -- silently, with no log, which is what "adding a
+	 * track does nothing" looked like from the outside.
+	 *
+	 * Translating here rather than relaxing CanPossessObject: the world check is what keeps one
+	 * designer's sequencer from possessing another's widgets, and a binding stored against an object
+	 * that is not in the playback context resolves to nothing at play time anyway. The binding is
+	 * name-based, so the preview and the authored widget produce the same path -- which is exactly
+	 * why the sequence can answer for either tree once the handle is taken against the live one.
+	 */
+	UObject* ResolveBindableObject(UObject* InPicked) const
+	{
+		UDreamWidget* Widget = Cast<UDreamWidget>(InPicked);
+		if (Widget == nullptr && InPicked != nullptr)
+		{
+			Widget = InPicked->GetTypedOuter<UDreamWidget>();
+		}
+		if (Widget == nullptr)
+		{
+			return InPicked;
+		}
+		// Already the live copy -- the selection can hand us either, depending on which panel it
+		// came from -- so nothing to translate.
+		if (Widget->GetWorld() != nullptr)
+		{
+			return InPicked;
+		}
+		UDreamWidget* Preview = FDreamWidgetBlueprintEditor::FindPreviewForAnimationContext(Widget);
+		if (Preview == nullptr)
+		{
+			return nullptr;
+		}
+		// A sub-object of the widget (a visual, a component) has to follow its widget across, and
+		// the only honest way back is by the same name the picker showed.
+		if (Widget == InPicked)
+		{
+			return Preview;
+		}
+		return Preview->GetVisual() != nullptr && Preview->GetVisual()->GetClass() == InPicked->GetClass()
+			? static_cast<UObject*>(Preview->GetVisual())
+			: static_cast<UObject*>(Preview);
 	}
 
 	UObject* GetPlaybackContext() const
@@ -442,7 +493,10 @@ public:
 	/** The designer-selected widget, if it may be bound into this sequence at all. */
 	UDreamWidget* GetBindableSelectedWidget() const
 	{
-		UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		// The PLAYBACK context, not the sequence's outer. The selection subsystem is found through a
+		// world, and the sequence's outer is the authored widget, which has none -- so asking it for
+		// the selection always answered null and every entry that reads the selection was dead.
+		UDreamWidget* ContextWidget = Cast<UDreamWidget>(GetPlaybackContext());
 		if (ContextWidget == nullptr)
 		{
 			return nullptr;
@@ -533,6 +587,38 @@ public:
 			}
 		}
 
+		// The selection is where the author already is. Walking a tree picker to find the widget they
+		// just clicked on is the kind of step that gets done a hundred times an afternoon, and the
+		// binding context menu already reads the selection for "Replace with" -- this is the same
+		// question asked before there is a binding to replace.
+		if (UDreamWidget* SelectedWidget = GetBindableSelectedWidget())
+		{
+			const bool bAlreadyBound = AllBoundObjects.Contains(SelectedWidget);
+			MenuBuilder.AddMenuEntry(
+				FText::Format(LOCTEXT("AddSelectedWidget_Label", "Add Track for {0}"), FText::FromString(SelectedWidget->GetDisplayName())),
+				bAlreadyBound
+					? LOCTEXT("AddSelectedWidgetBound_Tooltip", "The widget selected in the designer already has a binding in this animation.")
+					: LOCTEXT("AddSelectedWidget_Tooltip", "Bind the widget selected in the designer, without hunting for it in the tree below."),
+				FSlateIcon(),
+				FUIAction(
+					FExecuteAction::CreateSPLambda(this, [this, WeakSelected = MakeWeakObjectPtr(SelectedWidget)]()
+					{
+						UDreamWidget* Widget = WeakSelected.Get();
+						if (Widget == nullptr || !Sequencer.IsValid())
+						{
+							return;
+						}
+						UObject* Bindable = ResolveBindableObject(Widget);
+						if (Bindable == nullptr)
+						{
+							return;
+						}
+						const FScopedTransaction Transaction(LOCTEXT("AddSelectedWidgetToSequencer", "Add Selected Widget to Sequencer"));
+						Sequencer->GetHandleToObject(Bindable, true);
+					}),
+					FCanExecuteAction::CreateLambda([bAlreadyBound]() { return !bAlreadyBound; })));
+		}
+
 		//widget menu
 		{
 			MenuBuilder.AddSubMenu(
@@ -560,8 +646,15 @@ public:
 										, "This widget belongs to a nested widget blueprint, so a track bound to it would follow a name path through another asset and break the moment that asset renames it. Animate it inside its own blueprint instead."), false, 8);
 									return;
 								}
+								UObject* Bindable = ResolveBindableObject(InItem);
+								if (Bindable == nullptr)
+								{
+									FDreamUIUtils::EditorNotification(LOCTEXT("NoPreviewForWidget"
+										, "This widget has no preview to animate against yet. Compile the Blueprint, or reopen the designer, and try again."), false, 8);
+									return;
+								}
 								const FScopedTransaction Transaction(LOCTEXT("AddWidgetToSequencer", "Add Widget to Sequencer"));
-								Sequencer->GetHandleToObject(InItem, true);
+								Sequencer->GetHandleToObject(Bindable, true);
 							})
 						]
 						, FText::GetEmpty()
@@ -602,7 +695,12 @@ private:
 		// see them; anything else got duplicate menu items whose click landed in the wrong sequence
 		// (or dereferenced a null sequencer).
 		{
-			UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+			// The PLAYBACK context, for the same reason the selection helper uses it: a binding's
+			// object is the live PREVIEW widget, and asking whether that is a child of the ASSET's
+			// authored root is asking about two different trees -- the answer is always no, so this
+			// returned before adding anything and every binding's track menu came up with the
+			// Components and SubObjects sections missing. They were not empty; they were never built.
+			UDreamWidget* ContextWidget = Cast<UDreamWidget>(GetPlaybackContext());
 			UDreamWidget* TargetWidget = Cast<UDreamWidget>(ContextObjects[0]);
 			if (TargetWidget == nullptr && ContextObjects[0] != nullptr)
 			{
@@ -673,6 +771,44 @@ private:
 				}
 			}
 			AddTrackMenuBuilder.EndSection();
+
+			// A control's own root is bare by construction -- UDreamButton IS its face, and the rect
+			// block, the size box and the UUIButton all sit on the child named "Face" -- so the two
+			// sections above come out EMPTY for one, and Sequencer has no track editor for the Style
+			// struct that is nearly all a control declares. Binding a control therefore produced a
+			// row with nothing that could be animated on it, which reads as "controls cannot be
+			// animated" rather than as "you are one level too high".
+			//
+			// Offering the parts is safe where offering the whole subtree is not: a part is named by
+			// CollectParts in C++, so a binding path through one is a compile-time contract, while
+			// the rest of a nested instance's tree is another asset's names. The path resolves at
+			// play time through the real Children -- ResolveWidgetPath never consulted the editor's
+			// nested-instance boundary -- so a part binding works exactly like any other.
+			if (UDreamUIControl* Control = Cast<UDreamUIControl>(Widget))
+			{
+				TArray<TPair<FName, UDreamWidget*>> Parts;
+				Control->GetBoundParts(Parts);
+				if (Parts.Num() > 0)
+				{
+					AddTrackMenuBuilder.BeginSection("ControlParts", LOCTEXT("ControlPartsSection", "Control Parts"));
+					for (const TPair<FName, UDreamWidget*>& Part : Parts)
+					{
+						UDreamWidget* PartWidget = Part.Value;
+						AddTrackMenuBuilder.AddMenuEntry(
+							FText::Format(LOCTEXT("ControlPartLabelFormat", "{0} ({1})"),
+								FText::FromName(Part.Key), FText::FromString(PartWidget->GetClass()->GetName())),
+							FText::Format(LOCTEXT("ControlPartTooltip", "Bind {0}, the part this control builds under that name. Its own visual and components can then be tracked from its row."),
+								FText::FromName(Part.Key)),
+							FSlateIcon(),
+							FUIAction(FExecuteAction::CreateLambda([=, this]()
+							{
+								const FScopedTransaction Transaction(LOCTEXT("AddControlPartToSequencer", "Add Control Part to Sequencer"));
+								Sequencer->GetHandleToObject(PartWidget, true);
+							})));
+					}
+					AddTrackMenuBuilder.EndSection();
+				}
+			}
 		}
 		
 		if (auto Image = Cast<UDreamImage>(ContextObjects[0]))
