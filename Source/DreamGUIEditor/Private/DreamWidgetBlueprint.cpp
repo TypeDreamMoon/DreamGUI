@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamWidgetTree.h"
@@ -16,13 +16,13 @@ UClass* UDreamWidgetBlueprint::GetBlueprintClass() const
 	return UDreamWidgetGeneratedClass::StaticClass();
 }
 
-UDreamWidgetTree* UDreamWidgetBlueprint::GetOrCreateWidgetTree()
+UDreamWidgetTree* UDreamWidgetBlueprint::GetOrCreateWidgetTree(bool bEnsureRootWidget)
 {
 	if (!IsValid(WidgetTree))
 	{
 		WidgetTree = NewObject<UDreamWidgetTree>(this, UDreamWidgetTree::StaticClass(), NAME_None, RF_Transactional);
 	}
-	if (!IsValid(WidgetTree->RootWidget))
+	if (bEnsureRootWidget && !IsValid(WidgetTree->RootWidget))
 	{
 		UDreamWidget* Root = WidgetTree->ConstructWidget<UDreamWidget>();
 		Root->SetDisplayName(TEXT("Root"));

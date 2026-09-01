@@ -6,6 +6,7 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintCompiler.h"
+#include "DataFactory/DreamWidgetBlueprintFactory.h"
 #include "DreamWidgetBlueprintTestTypes.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
@@ -697,6 +698,47 @@ bool FDreamWidgetRenamedWidgetBreaksAnimationBindingTest::RunTest(const FString&
 			Sequence != nullptr && AllMessages.Contains(Sequence->GetDisplayNameString()));
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetBlueprintFactoryRootTest,
+	"DreamGUI.Blueprint.Factory.ANewWidgetBlueprintsRootFillsItsParent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetBlueprintFactoryRootTest::RunTest(const FString& Parameters)
+{
+	// The OTHER way a widget blueprint comes into existence, and the one nothing tested. The factory
+	// stretches the fresh root to the design canvas -- or means to: it used to say so through
+	// SetHorizontalAndVerticalAnchorMinMax, whose whole body sits inside `if (Parent.IsValid())`, and
+	// a tree's root has no parent. The call was a warning in the log and nothing else, while the
+	// SizeDelta line beside it applied regardless, so every new asset opened with a 0x0 root -- which
+	// arranges every descendant into a 0x0 rect. The symptom is "every control in this widget has
+	// size zero", reported against the controls.
+	UPackage* Package = CreatePackage(TEXT("/Temp/DreamGUITests/FactoryRoot"));
+	Package->AddToRoot();
+	ON_SCOPE_EXIT{ Package->RemoveFromRoot(); };
+
+	UDreamWidgetBlueprintFactory* Factory = NewObject<UDreamWidgetBlueprintFactory>();
+	UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(Factory->FactoryCreateNew(
+		UDreamWidgetBlueprint::StaticClass(), Package, TEXT("FactoryRoot"),
+		RF_Public | RF_Standalone, nullptr, GWarn));
+	if (!TestNotNull(TEXT("the factory made a blueprint"), Blueprint))
+	{
+		return false;
+	}
+	UDreamWidget* Root = Blueprint->GetOrCreateWidgetTree()->RootWidget.Get();
+	if (!TestNotNull(TEXT("with a root widget in its tree"), Root))
+	{
+		return false;
+	}
+
+	const FDreamUIAnchorData& Anchors = Root->GetAnchorData();
+	TestTrue(TEXT("the root is anchored to its parent's top-left"), Anchors.AnchorMin.IsNearlyZero());
+	TestTrue(TEXT("and to its bottom-right"), Anchors.AnchorMax.Equals(FVector2D(1.0, 1.0)));
+	// Both halves matter: stretched anchors with a non-zero SizeDelta is an inset, and a zero
+	// SizeDelta on POINT anchors -- which is what the no-op left behind -- is the collapsed root.
+	TestTrue(TEXT("with no inset, so it fills exactly"), Anchors.SizeDelta.IsNearlyZero());
 	return true;
 }
 

@@ -8,6 +8,7 @@
 #include "Controls/DreamDropdown.h"
 #include "Controls/DreamSlider.h"
 #include "Controls/DreamTextInput.h"
+#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
@@ -65,6 +66,83 @@ bool FDreamControlButtonTest::RunTest(const FString& Parameters)
 	// The style reached the parts: the resolved normal colour is on the behaviour.
 	TestEqual(TEXT("the style's normal colour arrived"),
 		Button->ButtonBehaviour->GetNormalColor(), FDreamButtonStyle().Normal);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlButtonSizeTest,
+	"DreamGUI.Controls.Button.MeasuresWhatIsInItWithTheStyleHeightAsAFloor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlButtonSizeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamControlLibraryTestLocal;
+
+	// The measure walk is a PANEL's method, so "how big does this button want to be" has to be put
+	// by one. No registration and no arrange pass: GetDesiredSize never reads a rect a pass has
+	// written, which is exactly why it can be asked of a tree that has never been laid out.
+	TStrongObjectPtr<UDreamWidget> Host(NewObject<UDreamWidget>(GetTransientPackage()));
+	UDreamLayoutContainerVerticalBox* Panel = Host->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>();
+	if (!TestNotNull(TEXT("the host lays its children out"), Panel))
+	{
+		return false;
+	}
+
+	auto Measure = [Panel](UDreamButton* InButton)
+	{
+		return Panel->GetDesiredSize(InButton);
+	};
+	auto Place = [&Host](UDreamButton* InButton)
+	{
+		InButton->SetParentBeforeRegister(Host.Get());
+	};
+
+	// An EMPTY button is its padding, and at least the style's height. The hole claims nothing
+	// because it is authored at zero: at the widget default the walk read its 100x100 rect as a
+	// claim and an empty button measured 124x108.
+	TStrongObjectPtr<UDreamButton> Empty(Make<UDreamButton>());
+	Place(Empty.Get());
+	const FDreamButtonStyle Default;
+	const double HorizontalPadding = Default.ContentPadding.Left + Default.ContentPadding.Right;
+	const double VerticalPadding = Default.ContentPadding.Top + Default.ContentPadding.Bottom;
+	const FVector2D EmptySize = Measure(Empty.Get());
+	TestEqual(TEXT("an empty button is exactly its content padding wide"), EmptySize.X, HorizontalPadding);
+	TestEqual(TEXT("and the style's height tall"), EmptySize.Y, static_cast<double>(Default.Height));
+
+	// Something SHORTER than the floor: the width follows it, the height does not drop below Height.
+	// This is the half that says Height is a floor rather than a number nobody reads.
+	TStrongObjectPtr<UDreamButton> Small(Make<UDreamButton>());
+	Place(Small.Get());
+	UDreamWidget* SmallGuest = NewObject<UDreamWidget>(Small.Get());
+	SmallGuest->SetWidth(40.0f);
+	SmallGuest->SetHeight(10.0f);
+	SmallGuest->SetParentBeforeRegister(Small->ContentNode);
+	// No restyle after the attach, deliberately: the size follows what is in the hole through the
+	// measure walk alone, so a widget hung there at runtime counts without anyone remembering to
+	// re-push the style. That was the trap in making an empty hole INACTIVE instead of zero-sized --
+	// content attached after the last style push would have been left in a sleeping parent.
+	const FVector2D SmallSize = Measure(Small.Get());
+	TestEqual(TEXT("a button around something small is that plus the padding"), SmallSize.X, 40.0 + HorizontalPadding);
+	TestEqual(TEXT("but never shorter than the style's height"), SmallSize.Y, static_cast<double>(Default.Height));
+
+	// Something TALLER than the floor: it grows. The old button could not -- the stock label's own
+	// text layout decided the height and the authored number was written onto the widget, where the
+	// next arrange pass overwrote it.
+	TStrongObjectPtr<UDreamButton> Big(Make<UDreamButton>());
+	Place(Big.Get());
+	UDreamWidget* BigGuest = NewObject<UDreamWidget>(Big.Get());
+	BigGuest->SetWidth(200.0f);
+	BigGuest->SetHeight(60.0f);
+	BigGuest->SetParentBeforeRegister(Big->ContentNode);
+	const FVector2D BigSize = Measure(Big.Get());
+	TestEqual(TEXT("a button around something big grows with it"), BigSize.X, 200.0 + HorizontalPadding);
+	TestEqual(TEXT("on the tall axis too"), BigSize.Y, 60.0 + VerticalPadding);
+
+	// And the hole is ARRANGED, which is the other half of what a bare content node could not do:
+	// whatever a host hung in it kept the rect it was authored with, ignoring the button's size and
+	// its padding alike.
+	TestNotNull(TEXT("the hole lays its content out"),
+		Big->ContentNode != nullptr ? Big->ContentNode->GetLayoutContainer() : nullptr);
 	return true;
 }
 

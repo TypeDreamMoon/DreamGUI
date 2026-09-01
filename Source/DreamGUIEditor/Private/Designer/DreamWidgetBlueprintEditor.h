@@ -455,6 +455,16 @@ public:
 	/** InEditedObjects is what the details panel is showing -- widgets, visuals or behaviours. */
 	void MigrateDetailsChangeToTemplate(TConstArrayView<UObject*> InEditedObjects, FEditPropertyChain& InChain, bool bIsModify);
 
+	/**
+	 * Whether a details mirror is already on the stack. NOT a convenience: see the body.
+	 *
+	 * Migrating fires PostEditChangeProperty on the TEMPLATE, which the engine broadcasts on
+	 * FCoreUObjectDelegates::OnObjectPropertyChanged -- and an open colour picker listens to that
+	 * and closes itself, which commits its value, which notifies the property node, which calls the
+	 * mirror again. Sixty-four thousand frames later the game thread runs out of stack.
+	 */
+	bool bMigratingDetailsChange = false;
+
 	/** InConfigureTemplate runs on the new TEMPLATE, before the preview is rebuilt from it. */
 	UDreamWidget* DesignerCreateWidget(UDreamWidget* InPreviewParent, TSubclassOf<UDreamWidget> InWidgetClass,
 		const FString& InDesiredName, TFunction<void(UDreamWidget*)> InConfigureTemplate = nullptr);

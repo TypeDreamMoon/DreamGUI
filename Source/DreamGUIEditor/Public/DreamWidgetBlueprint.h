@@ -113,8 +113,18 @@ public:
 	UPROPERTY()
 	TArray<FDreamWidgetEventBinding> EventBindings;
 
-	/** Create the tree (and its root) if this asset has none yet, so a fresh asset is editable. */
-	UDreamWidgetTree* GetOrCreateWidgetTree();
+	/**
+	 * Create the tree if this asset has none yet, so a fresh asset is editable.
+	 *
+	 * bEnsureRootWidget also puts a bare root in an empty tree, which is what makes a NEW asset
+	 * openable. It has to be opt-OUT rather than unconditional: the designer can delete the root now
+	 * (DreamWidgetTreeEditing::DeleteWidget, matching UMG), and an unconditional root here put one
+	 * straight back -- so the delete appeared to work, the hierarchy panel emptied, and the very next
+	 * caller resurrected a root the author had not asked for. The editing paths pass false and let
+	 * the empty state be real; asset creation and opening a designer pass true, because a hierarchy
+	 * nobody has authored yet still needs something to drop onto.
+	 */
+	UDreamWidgetTree* GetOrCreateWidgetTree(bool bEnsureRootWidget = true);
 
 	/** Every widget in the authored hierarchy, root first. Empty when nothing has been authored. */
 	void GetAllSourceWidgets(TArray<UDreamWidget*>& OutWidgets) const;

@@ -9,6 +9,7 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamLayout.h"
+#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
@@ -379,6 +380,30 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 		FillParent.AnchoredPosition = FVector2D::ZeroVector;
 		FillParent.SizeDelta = FVector2D::ZeroVector;
 		PreviewWidget->SetAnchorData(FillParent);
+	}
+
+	// And ARRANGE what is inside it, which is the other half of that same paragraph and was missing.
+	//
+	// This is UMG's PreviewSizeConstraint (SDesignerView.cpp: an SBox with WidthOverride /
+	// HeightOverride around UserWidget->TakeWidget()). In UMG the asset's root cannot be the wrong
+	// size because it has no size of its own to author -- a Slate tree root has no slot, so what it
+	// gets is whatever that SBox hands it. Here every widget carries an anchor rect, the ROOT
+	// included, and the wrapper above had no layout container -- so it handed its child nothing and
+	// the authored root fell back on anchors nothing validates. A root authored as point anchors with
+	// a zero SizeDelta then measured 0x0 and arranged every descendant into a 0x0 rect: a hierarchy
+	// that is structurally perfect and entirely invisible, reported as "every control in here has
+	// size zero". (The 100x100 case above is the same defect one level up, found first.)
+	//
+	// An overlay rather than a size box: the box takes one child and this wrapper legitimately holds
+	// exactly one, but a refused second child during a rebuild would be a lost preview rather than a
+	// tidier one -- and Fill on both axes, which is the default slot, is all the constraint that is
+	// wanted here. The AUTHORED anchors are untouched and still what runs at runtime; the designer is
+	// simulating the host that would arrange this widget, and which host it simulates is the
+	// designer's size rule (see FDreamWidgetBlueprintEditor::SetDesignerSizeRule).
+	{
+		UDreamLayoutContainer* Previous = PreviewWidget->GetLayoutContainer();
+		UDreamLayoutContainer* Stage = PreviewWidget->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
+		PreviewWidget->SyncRequiredBehavioursForLayoutContainer(Previous, Stage);
 	}
 
 	RegisterDreamWidgetHierarchy(PreviewWidget);

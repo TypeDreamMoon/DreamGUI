@@ -20,6 +20,24 @@
 
 #define LOCTEXT_NAMESPACE "DreamDialog"
 
+namespace DreamDialogLocal
+{
+	/**
+	 * The text this dialog put in InButton's content hole, or null.
+	 *
+	 * Read back rather than kept in a second array beside ButtonWidgets: two lists rebuilt from the
+	 * same specs is one list that can go out of step, and the hole is the only place this label has
+	 * ever been. A button draws no text of its own, so the dialog is a HOST filling a hole here --
+	 * exactly what `Native.Button OK { Text {} }` does in .dui, done from code.
+	 */
+	UDreamText* ButtonLabelVisual(const UDreamButton* InButton)
+	{
+		const UDreamWidget* Hole = IsValid(InButton) ? InButton->ContentNode.Get() : nullptr;
+		UDreamWidget* Label = IsValid(Hole) && Hole->GetChildrenCount() > 0 ? Hole->GetChildByIndex(0) : nullptr;
+		return IsValid(Label) ? Cast<UDreamText>(Label->GetVisual()) : nullptr;
+	}
+}
+
 UDreamDialog::UDreamDialog()
 {
 	// A dialog with no buttons cannot be answered, and .dui has no array literal to write one with --
@@ -363,7 +381,19 @@ void UDreamDialog::RebuildButtons()
 			Slot->SetSizeRule(EDreamPanelSizeRule::Fill);
 			Slot->SetFillWeight(1.0f);
 		}
-		Button->Label = Spec.Label;
+		// The label, as content. A button draws no text of its own, so a dialog that wants words on
+		// one puts a text in its hole like any other host -- through the named-slot binding rather
+		// than by reaching into the button's tree afterwards, which is the road AttachNamedSlotContent
+		// already walks and the reason it has to be done BEFORE Initialize. Built into the dialog's
+		// own tree, which is also what SetContentForNamedSlot insists on: a hole is filled by the
+		// host that placed the instance, never out of a third asset.
+		//
+		// Centred by UDreamText's own defaults, so nothing here has to say so; PushButtonStyles is
+		// what puts the wording, the colour and the size on it, and re-puts them on every restyle.
+		if (UDreamWidget* LabelWidget = DreamUI::Realize(Tree, DreamUI::Text(TEXT("Label"))))
+		{
+			Button->SetContentForNamedSlot(UDreamButton::ContentSlotName, LabelWidget);
+		}
 		// Inline, deliberately. The DIALOG's style has already resolved -- sheet or instance -- and
 		// carries the button look it wants in Button/PrimaryButton. Left on ProjectStyleSheet each
 		// button would re-resolve to the sheet's plain button style and those two fields would do
@@ -401,12 +431,21 @@ void UDreamDialog::PushButtonStyles(const FDreamDialogStyle& InActive)
 			continue;
 		}
 		const bool bPrimary = Buttons.IsValidIndex(Index) && Buttons[Index].bIsPrimary;
-		Button->Style = bPrimary ? InActive.PrimaryButton : InActive.Button;
-		if (Buttons.IsValidIndex(Index))
+		const FDreamButtonStyle& ButtonStyle = bPrimary ? InActive.PrimaryButton : InActive.Button;
+		Button->Style = ButtonStyle;
+		if (UDreamText* LabelVisual = DreamDialogLocal::ButtonLabelVisual(Button))
 		{
-			// The spec array stays the truth about the label too, so editing it and re-applying is
-			// enough -- no rebuild required for a wording change.
-			Button->Label = Buttons[Index].Label;
+			if (Buttons.IsValidIndex(Index))
+			{
+				// The spec array stays the truth about the label too, so editing it and re-applying
+				// is enough -- no rebuild required for a wording change.
+				LabelVisual->SetText(Buttons[Index].Label);
+			}
+			// The button styles nothing about the text in its hole -- it cannot, the text is this
+			// dialog's widget. So the dialog's own style says how it reads, beside the two it
+			// already carries for the title and the message.
+			LabelVisual->SetColor(InActive.ButtonLabelColor);
+			LabelVisual->SetFontSize(InActive.ButtonLabelFontSize);
 		}
 		// By hand, because nothing re-derives a control from a changed style property: that is the
 		// SynchronizeProperties tax the whole control family pays (see UDreamUIControl).

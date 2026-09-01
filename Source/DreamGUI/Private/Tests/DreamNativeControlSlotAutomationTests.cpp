@@ -142,12 +142,11 @@ bool FDreamNativeControlSlotNestingTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the nested widget ended up in the hole"),
 		(UObject*)Guest->GetParent() == (UObject*)Button->ContentNode.Get());
 
-	// The other half of filling a hole. The stock label and the supplied content are two answers to
-	// "what is on this button" laid over each other in the same overlay, so exactly one is awake --
-	// and this is the assertion that would fail if the style push ran only at the end of
-	// NativeOnInitialized, where the hole is structurally still empty.
-	TestFalse(TEXT("the stock label stood down"), Button->LabelNode->GetWidgetActive());
-	TestTrue(TEXT("and the hole woke up"), Button->ContentNode->GetWidgetActive());
+	// The other half of filling a hole: something has to ARRANGE what went in it. A hole with no
+	// layout container is a hole whose guest keeps the rect it was authored with -- the button's
+	// content ignored the button's size and its padding alike, which is invisible in a hierarchy
+	// that looks perfectly correct.
+	TestNotNull(TEXT("and the hole lays it out"), Button->ContentNode->GetLayoutContainer());
 
 	return true;
 }
@@ -168,7 +167,11 @@ bool FDreamNativeControlSlotFurnitureTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the face still hangs directly on the control"),
 		(UObject*)Button->FaceNode->GetParent() == (UObject*)Button.Get());
 	TestEqual(TEXT("and the hole is still empty"), Button->ContentNode->GetChildrenCount(), 0);
-	TestTrue(TEXT("so the stock label is the one showing"), Button->LabelNode->GetWidgetActive());
+	// An empty hole claims no size: its authored rect is what the measure walk falls back on, and
+	// the default 100x100 made an empty button measure 124x108. Stated in the tree rather than by a
+	// rule ApplyStyle enforces, so nothing attached later can arrive after the rule already ran.
+	TestTrue(TEXT("so it is authored at zero rather than at the widget default"),
+		Button->ContentNode->GetSizeDelta().IsNearlyZero());
 
 	return true;
 }

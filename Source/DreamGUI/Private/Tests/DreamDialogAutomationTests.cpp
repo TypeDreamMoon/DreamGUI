@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -192,13 +192,21 @@ bool FDreamControlDialogButtonsTest::RunTest(const FString& Parameters)
 		}
 		TestTrue(TEXT("it lives in the button row"),
 			(UObject*)Button->GetParent() == (UObject*)Dialog->ButtonRowNode.Get());
-		TestEqual(TEXT("its label is the spec's"), Button->Label.ToString(), FString(ExpectedLabels[Index]));
-		// Through to the glyphs: the label property reaching the button is not the same claim as the
-		// button's own ApplyStyle having run over it.
+		// A button draws no text of its own, so the dialog is a HOST here: the label is a widget of
+		// the dialog's tree hanging in the button's hole. Reaching it through the hole is what a
+		// reader would do, and it is the only place it has ever been -- there is no label property
+		// on the button to check first and no second copy to disagree with this one.
 		if (UDreamText* LabelVisual = Cast<UDreamText>(
-			Button->LabelNode != nullptr ? Button->LabelNode->GetVisual() : nullptr))
+			Button->ContentNode != nullptr && Button->ContentNode->GetChildrenCount() > 0
+				? Button->ContentNode->GetChildByIndex(0)->GetVisual()
+				: nullptr))
 		{
-			TestEqual(TEXT("...and the glyphs show it"), LabelVisual->GetText().ToString(), FString(ExpectedLabels[Index]));
+			TestEqual(TEXT("the glyphs in its hole are the spec's label"),
+				LabelVisual->GetText().ToString(), FString(ExpectedLabels[Index]));
+		}
+		else
+		{
+			AddError(FString::Printf(TEXT("button %d has no text in its content hole"), Index));
 		}
 		// Inline, deliberately: with the sheet as the source every dialog button would re-resolve to
 		// the sheet's plain button and FDreamDialogStyle::Button / ::PrimaryButton would do nothing.
@@ -242,7 +250,16 @@ bool FDreamControlDialogButtonsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("re-specifying the buttons rebuilt the row"), Dialog->ButtonWidgets.Num(), 1);
 	if (Dialog->ButtonWidgets.Num() == 1 && IsValid(Dialog->ButtonWidgets[0]))
 	{
-		TestEqual(TEXT("with the new label"), Dialog->ButtonWidgets[0]->Label.ToString(), FString(TEXT("Close")));
+		const UDreamWidget* Hole = Dialog->ButtonWidgets[0]->ContentNode.Get();
+		if (UDreamText* LabelVisual = Cast<UDreamText>(
+			IsValid(Hole) && Hole->GetChildrenCount() > 0 ? Hole->GetChildByIndex(0)->GetVisual() : nullptr))
+		{
+			TestEqual(TEXT("with the new label"), LabelVisual->GetText().ToString(), FString(TEXT("Close")));
+		}
+		else
+		{
+			AddError(TEXT("the rebuilt button has no text in its content hole"));
+		}
 	}
 	return true;
 }
@@ -274,6 +291,8 @@ bool FDreamControlDialogStyleTest::RunTest(const FString& Parameters)
 	Dialog->Style.Button.Height = 44.0f;
 	Dialog->Style.PrimaryButton.Normal = FColor(61, 62, 63, 255);
 	Dialog->Style.PrimaryButton.Height = 40.0f;
+	Dialog->Style.ButtonLabelColor = FColor(71, 72, 73, 255);
+	Dialog->Style.ButtonLabelFontSize = 14.0f;
 	Dialog->Initialize();
 
 	if (!TestNotNull(TEXT("the dimmer exists"), Dialog->DimmerNode.Get()) ||
@@ -353,6 +372,29 @@ bool FDreamControlDialogStyleTest::RunTest(const FString& Parameters)
 			Dialog->ButtonWidgets[0]->ButtonBehaviour->GetNormalColor(), FColor(51, 52, 53, 255));
 		TestEqual(TEXT("the primary button's selectable got PrimaryButton's"),
 			Dialog->ButtonWidgets[1]->ButtonBehaviour->GetNormalColor(), FColor(61, 62, 63, 255));
+
+		// The wording is the DIALOG's to describe, because the dialog is what puts it there: a button
+		// draws no text of its own. These two numbers have no reader anywhere else, so they are
+		// exactly the pair that would quietly do nothing if the dialog stopped applying them.
+		auto LabelOf = [](const UDreamButton* InButton) -> UDreamText*
+		{
+			const UDreamWidget* Hole = IsValid(InButton) ? InButton->ContentNode.Get() : nullptr;
+			return Cast<UDreamText>(IsValid(Hole) && Hole->GetChildrenCount() > 0
+				? Hole->GetChildByIndex(0)->GetVisual() : nullptr);
+		};
+		for (int32 Index = 0; Index < 2; ++Index)
+		{
+			if (UDreamText* Label = LabelOf(Dialog->ButtonWidgets[Index]))
+			{
+				TestEqual(TEXT("the button's label wears the dialog's label colour"),
+					Label->GetColor(), FColor(71, 72, 73, 255));
+				TestEqual(TEXT("and its label font size"), Label->GetFontSize(), 14.0f);
+			}
+			else
+			{
+				AddError(FString::Printf(TEXT("button %d has no label in its hole"), Index));
+			}
+		}
 	}
 	else
 	{

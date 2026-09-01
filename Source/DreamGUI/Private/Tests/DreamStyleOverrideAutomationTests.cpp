@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -40,24 +40,24 @@ bool FDreamStyleOverrideMergeTest::RunTest(const FString& Parameters)
 	FDreamButtonStyle Base;
 	Base.Height = 38.0f;
 	Base.Normal = FColor(52, 57, 70, 255);
-	Base.FontSize = 15.0f;
+	Base.CornerRadius = 5.0f;
 
 	FDreamButtonStyle Overrides;
 	Overrides.Height = 999.0f;
 	Overrides.Normal = FColor::Red;
-	Overrides.FontSize = 99.0f;
+	Overrides.CornerRadius = 99.0f;
 	// One field ticked, the rest not. The values are all set, deliberately: the claim is that an
 	// unticked field is ignored no matter what it holds, which is the only reading under which
 	// "leave it alone" is safe to author.
 	Overrides.bOverride_Height = false;
 	Overrides.bOverride_Normal = true;
-	Overrides.bOverride_FontSize = false;
+	Overrides.bOverride_CornerRadius = false;
 
 	const FDreamButtonStyle Merged = DreamUI_MergeStyle(Base, Overrides);
 
 	TestEqual(TEXT("the ticked colour came from the override"), Merged.Normal, FColor::Red);
 	TestEqual(TEXT("an unticked number stayed with the base"), Merged.Height, 38.0f);
-	TestEqual(TEXT("and so did the other one"), Merged.FontSize, 15.0f);
+	TestEqual(TEXT("and so did the other one"), Merged.CornerRadius, 5.0f);
 
 	// Nothing was written back. The merge produces a value; both sides are inputs, and an author's
 	// asset is not one of them.
@@ -97,7 +97,7 @@ bool FDreamStyleVariantInheritanceTest::RunTest(const FString& Parameters)
 	UDreamUIStyleSheet* Sheet = NewObject<UDreamUIStyleSheet>(GetTransientPackage());
 
 	Sheet->Button.Height = 44.0f;
-	Sheet->Button.FontSize = 17.0f;
+	Sheet->Button.CornerRadius = 17.0f;
 	Sheet->Button.Normal = FColor(10, 20, 30, 255);
 
 	// "Danger": red, and otherwise the project's button. Two lines of intent, where before this it
@@ -105,12 +105,12 @@ bool FDreamStyleVariantInheritanceTest::RunTest(const FString& Parameters)
 	FDreamButtonStyle& Danger = Sheet->ButtonVariants.Add(TEXT("Danger"));
 	Danger.Normal = FColor::Red;
 	Danger.bOverride_Height = false;
-	Danger.bOverride_FontSize = false;
+	Danger.bOverride_CornerRadius = false;
 
 	const FDreamButtonStyle Resolved = Sheet->ButtonStyle(TEXT("Danger"));
 	TestEqual(TEXT("what the variant states, it decides"), Resolved.Normal, FColor::Red);
 	TestEqual(TEXT("what it does not, the family default decides"), Resolved.Height, 44.0f);
-	TestEqual(TEXT("and keeps deciding"), Resolved.FontSize, 17.0f);
+	TestEqual(TEXT("and keeps deciding"), Resolved.CornerRadius, 17.0f);
 
 	// Moving the theme moves the variant with it, which is the entire reason not to fork.
 	Sheet->Button.Height = 52.0f;

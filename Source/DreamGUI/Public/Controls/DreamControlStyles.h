@@ -249,6 +249,11 @@ struct DREAMGUI_API FDreamButtonStyle
 {
 	GENERATED_BODY()
 
+	/**
+	 * The button's minimum height, not its height: a row of buttons lines up at this number, and one
+	 * holding something taller than it grows instead of clipping. It reaches the control as the size
+	 * box's MinDesiredSize; see UDreamButton.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
 	bool bOverride_Height = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_Height"))
@@ -296,21 +301,20 @@ struct DREAMGUI_API FDreamButtonStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
 	float TransitionDuration = 0.2f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
-	bool bOverride_LabelColor = true;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_LabelColor"))
-	FColor LabelColor = FColor(230, 233, 240, 255);
-
-	/** Between the face's edge and the label -- UMG's ContentPadding. */
+	/**
+	 * Between the face's edge and what is in the hole -- UMG's ContentPadding, and half of the
+	 * button's own size: the face is a size box, and this is the padding it measures with.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
 	bool bOverride_ContentPadding = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_ContentPadding"))
 	FMargin ContentPadding = FMargin(12.0f, 4.0f, 12.0f, 4.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
-	bool bOverride_FontSize = true;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_FontSize"))
-	float FontSize = 15.0f;
+	// No LabelColor and no FontSize. A button draws no text of its own -- what is on one is whatever
+	// the host puts in its hole -- so a text look here would be a knob with nothing to write it onto,
+	// which is worse than no knob at all: it reads as "this is how my button's label looks" and does
+	// nothing. Whoever supplies the label styles it, and where that is a control rather than an
+	// author, that control's own style says so (FDreamDialogStyle::ButtonLabelColor).
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
 	bool bOverride_CornerRadius = true;
@@ -1127,6 +1131,29 @@ struct DREAMGUI_API FDreamDialogStyle
 	bool bOverride_PrimaryButton = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style", meta = (EditCondition = "bOverride_PrimaryButton"))
 	FDreamButtonStyle PrimaryButton;
+
+	/**
+	 * The wording on those buttons -- which is the DIALOG's to describe, because the dialog is what
+	 * puts it there.
+	 *
+	 * A button draws no text of its own; UDreamDialog builds one UDreamText per entry in Buttons and
+	 * hangs it in that button's content hole, exactly as a .dui author would nest one. These two are
+	 * that text's look, and they sit beside TitleColor/MessageColor for the same reason: every other
+	 * string this dialog draws is described right here.
+	 *
+	 * One pair, not one per button kind. Plain and primary differ in their FACE (two whole button
+	 * styles above); nothing has yet wanted them to differ in their lettering, and a second pair can
+	 * be added the day something does.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ButtonLabelColor = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style", meta = (EditCondition = "bOverride_ButtonLabelColor"))
+	FColor ButtonLabelColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ButtonLabelFontSize = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog Style", meta = (EditCondition = "bOverride_ButtonLabelFontSize"))
+	float ButtonLabelFontSize = 15.0f;
 };
 
 /** An expandable area: a header that toggles, and the content it hides. */

@@ -1254,7 +1254,14 @@ void FDreamWidgetBlueprintEditor::SaveEditorState()
 	DesignerData.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
 	if (UDreamWidget* RootAgentWidget = GetRootAgentWidget())
 	{
-		DesignerData.CanvasSize = FIntPoint(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
+		// Per axis, and only when it is a size: this is the number the whole preview resolves
+		// against, and a zero written here outlives the session that produced it -- every later open
+		// of the asset builds its agent from it and comes up with a hierarchy that draws nothing.
+		// EnsureRootAgent substitutes for a stored zero on the way back in; this is the other end,
+		// and the cheaper one, because a value never written needs no substituting.
+		const FIntPoint AgentSize(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
+		if (AgentSize.X > 0) { DesignerData.CanvasSize.X = AgentSize.X; }
+		if (AgentSize.Y > 0) { DesignerData.CanvasSize.Y = AgentSize.Y; }
 		if (UDreamCanvas* RootCanvas = RootAgentWidget->GetComponent<UDreamCanvas>())
 		{
 			DesignerData.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
@@ -2389,11 +2396,10 @@ FReply FDreamWidgetBlueprintEditor::TryHandleAssetDragDropOperation(const FDragD
 		// hierarchy: the authored root is the only sensible home.
 		ParentTemplate = BlueprintBeingEdited->WidgetTree != nullptr ? BlueprintBeingEdited->WidgetTree->RootWidget.Get() : nullptr;
 	}
-	if (ParentTemplate == nullptr)
-	{
-		return FReply::Unhandled();
-	}
-	if (!ParentTemplate->CanAcceptAdditionalChildren(ClassesToPlace.Num()))
+	// A null one is no longer a refusal: an empty tree takes the first drop as its root (see
+	// DreamWidgetTreeEditing::CreateWidget), and anything after it lands inside that one. Without
+	// this, deleting the root would leave a hierarchy nothing could be dropped back into.
+	if (ParentTemplate != nullptr && !ParentTemplate->CanAcceptAdditionalChildren(ClassesToPlace.Num()))
 	{
 		FMessageDialog::Open(EAppMsgType::Ok,
 			LOCTEXT("Error_ParentAtCapacity", "The target widget cannot accept the dropped hierarchy."));
@@ -2525,6 +2531,33 @@ void FDreamWidgetBlueprintEditor::MigrateDetailsChangeToTemplate(TConstArrayView
 	{
 		return;
 	}
+	// ONE mirror at a time, and the outermost is the one that runs.
+	//
+	// The nested ones are not a different edit, they are the same value arriving again around a loop
+	// the engine closes for us:
+	//
+	//   this mirror -> FObjectEditorUtils::MigratePropertyValue fires PostEditChangeProperty on the
+	//   TEMPLATE -> UObject::PostEditChangeProperty broadcasts OnObjectPropertyChanged -> an open
+	//   colour picker is listening (FColorStructCustomization::CreateColorPicker registers a lambda
+	//   that closes it when "something else on this object changed") -> DestroyColorPicker ->
+	//   SWindow::NotifyWindowBeingDestroyed -> OnColorPickerWindowClosed writes the picked colour
+	//   back through the property handle -> FPropertyNode::NotifyPostChange -> this mirror again.
+	//
+	// Nothing breaks that on its own. The picker unbinds its listener at the END of
+	// OnColorPickerWindowClosed, after the write that re-enters; and the listener's own guard cannot
+	// help, because it asks whether the changed object shares an AActor owner with the one it is
+	// editing -- and for two widgets, neither of which has one, that comparison is nullptr ==
+	// nullptr and matches everything. Change a colour on any DreamGUI control, press OK, and the
+	// game thread recurses until its stack is gone (measured: 64352 frames).
+	//
+	// The outermost call has already written the value by the time the loop starts -- the broadcast
+	// happens INSIDE its MigratePropertyValue -- so skipping the re-entries loses nothing.
+	if (bMigratingDetailsChange)
+	{
+		return;
+	}
+	TGuardValue<bool> MigrationGuard(bMigratingDetailsChange, true);
+
 	// The objects the PANEL is showing, not the widget selection: a component's properties are edited
 	// on the component, and the widget it hangs off has no such property to write.
 	bool bMigrated = false;
@@ -2833,17 +2866,17 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 	{
 		ParentTemplate = BlueprintBeingEdited->WidgetTree->RootWidget.Get();
 	}
-	if (ParentTemplate == nullptr)
-	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot paste: '%s' has no root to paste into."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *BlueprintBeingEdited->GetName());
-		return Result;
-	}
+	// Still null means the tree is empty, which is now a state one can paste INTO: the first
+	// clipboard root becomes the hierarchy's root and the rest go inside it. UMG pastes into an empty
+	// tree the same way (FWidgetBlueprintEditorUtils::PasteWidgets assigns RootPasteWidgets[0]).
 
 	UDreamWidgetTree* Tree = BlueprintBeingEdited->WidgetTree;
 	BlueprintBeingEdited->Modify();
 	Tree->Modify();
-	ParentTemplate->Modify();
+	if (ParentTemplate != nullptr)
+	{
+		ParentTemplate->Modify();
+	}
 
 	TArray<UDreamWidget*> NewTemplates;
 	for (const TWeakObjectPtr<UDreamWidget>& Root : DreamWidgetDesignerClipboard::Roots)
@@ -2852,7 +2885,7 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 		{
 			continue;
 		}
-		if (!ParentTemplate->CanAcceptAdditionalChildren(1))
+		if (ParentTemplate != nullptr && !ParentTemplate->CanAcceptAdditionalChildren(1))
 		{
 			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d '%s' has no room for the rest of the clipboard; %d of %d pasted."),
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ParentTemplate->GetDisplayName(),
@@ -2877,7 +2910,16 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 			Widget->Rename(*MakeUniqueObjectName(Tree, Widget->GetClass()).ToString(), Tree, REN_DontCreateRedirectors);
 			Widget->SetDisplayName(DreamWidgetTreeEditing::MakeUniqueDisplayName(Tree, Widget->GetDisplayName(), Widget));
 		}
-		if (Copy->TrySetParent(ParentTemplate, /*bKeepWorldPosition*/false, -1))
+		if (ParentTemplate == nullptr)
+		{
+			// Into an empty tree. Taking the first one as the root and then pasting the rest INSIDE it
+			// is UMG's answer, and the only one that keeps a multi-widget clipboard whole: a tree has
+			// one root, so the alternative is silently dropping everything after the first.
+			Tree->RootWidget = Copy;
+			ParentTemplate = Copy;
+			NewTemplates.Add(Copy);
+		}
+		else if (Copy->TrySetParent(ParentTemplate, /*bKeepWorldPosition*/false, -1))
 		{
 			NewTemplates.Add(Copy);
 		}

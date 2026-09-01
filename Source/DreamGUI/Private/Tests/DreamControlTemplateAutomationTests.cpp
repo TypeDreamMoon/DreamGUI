@@ -9,8 +9,8 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamRectBlock.h"
-#include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/DreamContentWidget.h"
 #include "Interaction/UIButton.h"
 #include "UObject/UObjectIterator.h"
 #include "DreamControlTestScope.h"
@@ -44,12 +44,13 @@
 namespace DreamControlTemplateTestLocal
 {
 	/**
-	 * A hand-built stand-in for a widget blueprint's archetype: a face and a label, named the way
-	 * UDreamButton::CollectParts names them, and nothing else. No UUIButton anywhere, deliberately --
-	 * a template's author draws a look, and being handed the behaviour is the point.
+	 * A hand-built stand-in for a widget blueprint's archetype: a face and the hole on it, named the
+	 * way UDreamButton::CollectParts names them, and nothing else. No UUIButton anywhere,
+	 * deliberately -- a template's author draws a look, and being handed the behaviour is the point.
 	 *
-	 * Nested one level deeper than the built-in tree, and the label wrapped in a row, so that a bind
-	 * that quietly depended on the built-in SHAPE rather than on the names would fail here.
+	 * Neither part is where the built-in tree puts it: the face is two levels down under a root this
+	 * control has no name for, and the hole is wrapped in a row. A bind that quietly depended on the
+	 * built-in SHAPE rather than on the names would fail here.
 	 */
 	UDreamWidgetTree* MakeTemplateTree()
 	{
@@ -57,14 +58,18 @@ namespace DreamControlTemplateTestLocal
 
 		UDreamWidgetTree* Tree = NewObject<UDreamWidgetTree>(GetTransientPackage());
 		Tree->RootWidget = Realize(Tree,
-			Node<UDreamRectBlock>("Face")
+			Widget("Shell")
 				.Stretch()
 				.With<UDreamLayoutContainerVerticalBox>()
 				.Children(
-					Widget("Row")
+					Node<UDreamRectBlock>("Face")
 						.With<UDreamLayoutContainerHorizontalBox>()
 						.Children(
-							Text("Label"))));
+							Widget("Row")
+								.With<UDreamLayoutContainerHorizontalBox>()
+								.Children(
+									Widget("Content")
+										.With<UDreamNamedSlot>()))));
 		return Tree;
 	}
 }
@@ -79,7 +84,10 @@ bool FDreamControlTemplatePartsTest::RunTest(const FString& Parameters)
 	using namespace DreamControlTemplateTestLocal;
 
 	TDreamTestControl<UDreamButton> Button(NewObject<UDreamButton>(GetTransientPackage()));
-	Button->Label = FText::FromString(TEXT("OK"));
+	// No project sheet under a test, so ResolveStyle falls back to the inline Style without
+	// StyleSource being touched -- the same arrangement the rest of the control suite relies on.
+	Button->Style.CornerRadius = 9.0f;
+	Button->Style.Normal = FColor(11, 22, 33, 255);
 	Button->InitializeFromArchetype(MakeTemplateTree());
 
 	// Instanced, not borrowed: the parts have to be this control's own to drive, which is why a
@@ -88,11 +96,11 @@ bool FDreamControlTemplatePartsTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	if (!TestNotNull(TEXT("the face was found by name"), Button->FaceNode.Get()))
+	if (!TestNotNull(TEXT("the face was found by name, two levels down"), Button->FaceNode.Get()))
 	{
 		return false;
 	}
-	if (!TestNotNull(TEXT("and the label, two levels down"), Button->LabelNode.Get()))
+	if (!TestNotNull(TEXT("and so was the optional hole"), Button->ContentNode.Get()))
 	{
 		return false;
 	}
@@ -100,9 +108,11 @@ bool FDreamControlTemplatePartsTest::RunTest(const FString& Parameters)
 		Button->FaceNode->IsIn(Button.Get()));
 
 	// The shape is the template author's, and the binder did not assume the built-in one: in the
-	// code tree the label is a direct child of the face.
-	TestTrue(TEXT("the label sits where the template put it, not where the built-in tree does"),
-		Button->LabelNode->GetParent() != Button->FaceNode.Get());
+	// code tree the face IS the root and the hole is its direct child.
+	TestTrue(TEXT("the face sits where the template put it, not where the built-in tree does"),
+		Button->FaceNode->GetParent() != Button.Get());
+	TestTrue(TEXT("and so does the hole"),
+		Button->ContentNode->GetParent() != Button->FaceNode.Get());
 
 	// A face somebody drew is not a button until this happens, and nothing else in the pipeline
 	// would have said so -- an unclickable button raises no error anywhere.
@@ -113,17 +123,26 @@ bool FDreamControlTemplatePartsTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("and it went on the face itself"),
 		(UObject*)Button->ButtonBehaviour->GetWidget() == (UObject*)Button->FaceNode.Get());
 
-	// The style push drives the template's widgets exactly as it drives the built-in ones. This is
-	// the assertion that would go quiet rather than red if a part were left unbound.
-	if (UDreamText* LabelVisual = Cast<UDreamText>(Button->LabelNode->GetVisual()))
+	// The style push drives the template's widgets exactly as it drives the built-in ones. These are
+	// the assertions that would go quiet rather than red if a part were left unbound: both numbers
+	// are written THROUGH the bound face, one onto its visual and one onto the behaviour standing on
+	// it, and a null part is silently skipped by every writer in ApplyStyle.
+	if (UDreamRectBlock* FaceRect = Cast<UDreamRectBlock>(Button->FaceNode->GetVisual()))
 	{
-		TestEqual(TEXT("the control's text reached the template's label"),
-			LabelVisual->GetText().ToString(), FString(TEXT("OK")));
+		TestEqual(TEXT("the style's radius reached the template's face"),
+			FaceRect->GetCornerRadius().X, 9.0f);
 	}
 	else
 	{
-		AddError(TEXT("the template's label has no text visual to write to"));
+		AddError(TEXT("the template's face has no rect visual to shape"));
 	}
+	TestEqual(TEXT("and the style's colour reached the behaviour standing on it"),
+		Button->ButtonBehaviour->GetNormalColor(), FColor(11, 22, 33, 255));
+
+	// The size box is the built-in tree's, not this control's to impose: a template's author drew
+	// their own container and the padding and floor go unpushed rather than overruling it.
+	TestNull(TEXT("the template's own container was left alone"),
+		Cast<UDreamLayoutContainerSizeBox>(Button->FaceNode->GetLayoutContainer()));
 
 	return true;
 }
@@ -137,21 +156,25 @@ bool FDreamControlTemplateMissingPartTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUI;
 
-	// A template with a face and no label. Perfectly loadable, and every writer to LabelNode
-	// null-checks, so without the report this is a button whose text silently never appears.
+	// A template with a hole and no face. Perfectly loadable, and every writer to FaceNode
+	// null-checks, so without the report this is a button that is never shaped, never skinned and --
+	// because WireParts puts the UUIButton on the face -- cannot be clicked, all in silence.
 	UDreamWidgetTree* Tree = NewObject<UDreamWidgetTree>(GetTransientPackage());
-	Tree->RootWidget = Realize(Tree, Node<UDreamRectBlock>("Face").Stretch());
+	Tree->RootWidget = Realize(Tree,
+		Widget("Content")
+			.Stretch()
+			.With<UDreamNamedSlot>());
 
-	AddExpectedError(TEXT("found no part named 'Label'"), EAutomationExpectedErrorFlags::Contains, 1);
+	AddExpectedError(TEXT("found no part named 'Face'"), EAutomationExpectedErrorFlags::Contains, 1);
 
 	TDreamTestControl<UDreamButton> Button(NewObject<UDreamButton>(GetTransientPackage()));
 	Button->InitializeFromArchetype(Tree);
 
-	TestNotNull(TEXT("the part that IS there still bound"), Button->FaceNode.Get());
-	TestNull(TEXT("and the missing one is null rather than guessed at"), Button->LabelNode.Get());
 	// Optional parts are not reported, which is why the expected-error count above is exactly one:
-	// a template that offers no content hole is a perfectly good button.
-	TestNull(TEXT("the optional hole is simply absent"), Button->ContentNode.Get());
+	// a template that offers no content hole is a perfectly good button, and this one offers it.
+	TestNotNull(TEXT("the part that IS there still bound"), Button->ContentNode.Get());
+	TestNull(TEXT("and the missing one is null rather than guessed at"), Button->FaceNode.Get());
+	TestNull(TEXT("so the behaviour has nowhere to go and is not invented"), Button->ButtonBehaviour.Get());
 
 	return true;
 }

@@ -1222,4 +1222,58 @@ bool FDreamDesignerRotationEditKeepsTheMirrorInStepTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRootCanBeDeletedAndReplacedTest,
+	"DreamGUI.Designer.TheRootCanBeDeletedAndTheEmptyTreeRefilled",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerRootCanBeDeletedAndReplacedTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerRootDelete"));
+	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	UDreamWidgetTree* Tree = Scoped.Blueprint->GetOrCreateWidgetTree();
+	UDreamWidget* OldRoot = Tree->RootWidget.Get();
+	if (!TestNotNull(TEXT("there is a root to delete"), OldRoot))
+	{
+		return false;
+	}
+
+	// Refused for years on the grounds that nothing downstream could answer for an empty hierarchy.
+	// UMG has always allowed it (UWidgetTree::RemoveWidget nulls the root out), and there was no way
+	// to replace a root you had outgrown short of deleting the asset.
+	TestTrue(TEXT("the root can be deleted"), DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, OldRoot));
+	TestNull(TEXT("and the tree is empty afterwards"), Tree->RootWidget.Get());
+
+	// The other half, and the reason the first is not a one-way door: an empty tree takes the next
+	// widget as its root.
+	UDreamWidget* NewRoot = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), nullptr, -1, TEXT("Replacement"));
+	if (!TestNotNull(TEXT("a widget can be created into the empty tree"), NewRoot))
+	{
+		return false;
+	}
+	TestTrue(TEXT("and it became the root"), Tree->RootWidget.Get() == NewRoot);
+	TestNull(TEXT("with nothing above it"), NewRoot->GetParent());
+
+	// Stretched, like the one the factory makes: a root left at the widget default is a fixed rect
+	// nothing sizes, and the designer would show the whole hierarchy at whatever that rect happens
+	// to be.
+	const FDreamUIAnchorData& Anchors = NewRoot->GetAnchorData();
+	TestTrue(TEXT("the replacement root fills its parent"),
+		Anchors.AnchorMin.IsNearlyZero() && Anchors.AnchorMax.Equals(FVector2D(1.0, 1.0))
+			&& Anchors.SizeDelta.IsNearlyZero());
+
+	// And the designer survives the round trip: a preview built from an emptied and refilled tree is
+	// the assertion that would fail if any of the null-root guards downstream had been optimistic.
+	Scoped.Designer->GetPreviewHost()->RebuildPreview();
+	TestNotNull(TEXT("the preview rebuilt around the new root"), Scoped.PreviewRoot());
+	return true;
+}
+
+
 #endif
