@@ -946,7 +946,12 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 			WidgetVariable.VarType = FEdGraphPinType(UEdGraphSchema_K2::PC_Object, NAME_None, WidgetClass, EPinContainerType::None, false, FEdGraphTerminalType());
 			WidgetVariable.FriendlyName = Widget->GetDisplayName();
 			WidgetVariable.PropertyFlags = (CPF_BlueprintVisible | CPF_BlueprintReadOnly | CPF_RepSkip | CPF_Transient | CPF_DuplicateTransient);
-			WidgetVariable.SetMetaData(TEXT("Category"), *DreamBlueprint->GetName());
+			// One category for the whole family, not one named after the asset. Every variable in
+			// here was generated from a widget rather than declared by the author, and that is the
+			// distinction the panel should draw -- an asset-named category puts a heading above a
+			// list whose every member belongs to that asset anyway, and pushes the author's own
+			// variables into "Default" beside it. UMG groups bound widgets the same way.
+			WidgetVariable.SetMetaData(TEXT("Category"), TEXT("Widget"));
 
 			DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(WidgetVariable));
 		}
