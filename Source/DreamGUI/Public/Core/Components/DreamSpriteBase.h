@@ -56,6 +56,23 @@ protected:
 
 	bool bHasAddToSprite = false;
 
+	/**
+	 * The sprite's own pixel size, copied out the last time this component had the sprite data in
+	 * its hands. Negative until that has happened at least once.
+	 *
+	 * Deliberately not a UPROPERTY. It is a duplicate of something the sprite asset already owns,
+	 * and serialising it would let a stale copy -- taken while an atlas was mid-repack, say --
+	 * outlive the truth and win on load.
+	 */
+	FVector2f CachedSpriteSourceSize = FVector2f(-1.0f, -1.0f);
+	/**
+	 * Re-reads the sprite's source size into the cache above.
+	 *
+	 * Call this ONLY from a site that is already touching the sprite data on that same call. It goes
+	 * through GetSpriteInfo, which is not the accessor its name suggests: see GetPreferredWidth.
+	 */
+	void CacheSpriteSourceSize();
+
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") UDreamUISpriteData_BaseObject* GetSprite()const { return Sprite; }
@@ -71,4 +88,7 @@ public:
 		void SetSizeFromSpriteData();
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetOverrideMaterial(UMaterialInterface* Value);
+
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
 };

@@ -333,7 +333,9 @@ void UDreamUITooltipSubsystem::SizeBubbleToText()
 	const float Preferred = BubbleText->GetPreferredWidth();
 	const float TextWidth = Preferred > 1.0f ? FMath::Min(Preferred, MaxTextWidth) : MaxTextWidth;
 	TextWidget->SetWidth(TextWidth);
-	const float TextHeight = BubbleText->GetPreferredHeight();
+	// Clamped because "not ready" is spelled as a negative, and SetHeight takes what it is given:
+	// a bubble sized -1 tall is no better than one sized 0 and looks like arithmetic gone wrong.
+	const float TextHeight = FMath::Max(BubbleText->GetPreferredHeight(), 0.0f);
 	TextWidget->SetHeight(TextHeight);
 	TextWidget->SetAnchoredPosition(FVector2D::ZeroVector);
 

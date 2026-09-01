@@ -340,10 +340,52 @@ void UDream2DLineRendererBase::GenerateLinePoint(const FVector2D& InCurrentPoint
 		float angle = FMath::Acos(prevDotN);
 		float sin = FMath::Sin(angle);
 		itemNormal = AngleLargerThanPi(normalizedV1, normalizedV2) ? -itemNormal : itemNormal;
-		OutPosA = InCurrentPoint + InLineLeftWidth / sin * itemNormal;
-		OutPosB = InCurrentPoint - InLineRightWidth / sin * itemNormal;
+		const double MiterScale = ComputeMiterScale(sin);
+		OutPosA = InCurrentPoint + InLineLeftWidth * MiterScale * itemNormal;
+		OutPosB = InCurrentPoint - InLineRightWidth * MiterScale * itemNormal;
 		InOutPrevLineDir = normalizedV2;
 	}
+}
+
+/*
+ * How far out along the joint normal the two edge vertices have to sit for the strip's outer edges
+ * to actually meet at the corner. That distance is the half-width over sin(half the included
+ * angle), and the sine is what the caller has just computed -- so this is one divide with two
+ * things guarded.
+ *
+ * The blow-up first. A polyline that doubles exactly back on itself has both neighbour directions
+ * pointing the same way; the dot is 1, the angle is 0, the sine is 0, and the miter runs to
+ * infinity. The old code divided anyway and wrote an infinity straight into the vertex buffer,
+ * where nothing asserts. The path already had branches for the two OTHER degeneracies -- a
+ * collinear run and a zero normal -- so this was the one hole left in the set.
+ *
+ * The limit is the more interesting half, because it is not about a degenerate input at all. A
+ * merely SHARP corner produces a merely ENORMOUS spike by exactly the same arithmetic: at a five
+ * degree included angle the miter is already twenty-three times the line width, which on a ten unit
+ * UI line is a two-hundred unit shard sticking out of the drawing. Nothing in this class bounded it.
+ *
+ * Four is SVG's stroke-miterlimit default and Illustrator's, and it is the right one here rather
+ * than the Canvas2D default of ten: four bites at an included angle of about twenty-nine degrees,
+ * which is sharper than any corner a designer draws on purpose, while ten waits until eleven
+ * degrees and lets through a spike ten times the stroke width -- the exact artefact the limit
+ * exists to stop.
+ *
+ * Past the limit the miter is CLAMPED rather than bevelled, and that is forced rather than chosen:
+ * a real bevel needs two vertices per side at the joint and this vertex layout has exactly one, two
+ * per point for the whole strip. Clamping keeps the corner pointed and merely blunt instead of
+ * square, which is the closer of the two available lies.
+ */
+double UDream2DLineRendererBase::ComputeMiterScale(float InSinHalfAngle)
+{
+	// The limit doubles as the answer for a sine of zero, which is the honest reading of it: an
+	// infinite miter is past any finite limit.
+	constexpr double MiterLimit = 4.0;
+	const double Sine = FMath::Abs(static_cast<double>(InSinHalfAngle));
+	if (Sine <= UE_DOUBLE_SMALL_NUMBER)
+	{
+		return MiterLimit;
+	}
+	return FMath::Min(1.0 / Sine, MiterLimit);
 }
 
 
@@ -434,8 +476,23 @@ void UDream2DLineRendererBase::SetEndType(EDream2DLineRenderer_EndType newValue)
 		MarkVerticesDirty(true, true, true, true);
 	}
 }
+/*
+ * Both setters clamp to the range their own UPROPERTY metadata already declares, which the
+ * inspector honoured and code did not. The disagreement was the defect: an author dragging the
+ * slider could not reach a bad value, and one line of Blueprint could.
+ *
+ * What is on the other side of the range is not a slightly odd drawing. The strip's two edges sit
+ * at LineWidth * Offset and LineWidth * (1 - Offset) either side of the path, so an offset outside
+ * 0..1 makes one of those products negative and puts BOTH edges on the same side -- the ribbon
+ * turns inside out and every quad winds backwards. A negative width does the same to both halves
+ * at once, drawing the strip the right size with its edges swapped.
+ *
+ * LineWidthTo tweens through SetLineWidth, so this is also what stops a tween aimed past the range
+ * from flipping the line for the tail of its run.
+ */
 void UDream2DLineRendererBase::SetLineWidth(float newValue)
 {
+	newValue = FMath::Max(newValue, 0.0f);
 	if (LineWidth != newValue)
 	{
 		LineWidth = newValue;
@@ -444,6 +501,7 @@ void UDream2DLineRendererBase::SetLineWidth(float newValue)
 }
 void UDream2DLineRendererBase::SetLineWidthOffset(float newValue)
 {
+	newValue = FMath::Clamp(newValue, 0.0f, 1.0f);
 	if (LineWidthOffset != newValue)
 	{
 		LineWidthOffset = newValue;
@@ -460,4 +518,34 @@ UDreamTweener* UDream2DLineRendererBase::LineWidthTo(float endValue, float durat
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
 	return Tweener;
+}
+
+/*
+ * A line renderer has no natural size of its own, and it has to say so out loud, because what it
+ * would otherwise inherit is wrong rather than merely absent.
+ *
+ * This class derives from UDreamImage only to reuse the brush as the strip of pixels the line is
+ * painted with, and UDreamImage measures itself as Brush.ImageSize -- the size of that strip. For
+ * an image that IS the content size; here it is a fact about the texture, and a line's length has
+ * nothing to do with it. Every shape below this class draws itself from the rect it is given: the
+ * ring and the polygon line scale their radii by Widget->GetWidth() * 0.5f, and the
+ * children-as-points line reads positions of children that the rect itself placed.
+ *
+ * Left inherited, an Auto slot measures a ring with the default 32x32 brush at 32x32 no matter how
+ * large the ring is, and the ring silently collapses. Nothing logs; the brush is the last place
+ * anybody would think to look.
+ *
+ * The children-as-points case is worth stating separately, because it is the one that looks like it
+ * could answer and cannot: its points are its children's relative locations, and a child's relative
+ * location is a function of the rect it is anchored inside -- this widget's. Measuring the parent
+ * from them would feed the layout that decides them.
+ */
+float UDream2DLineRendererBase::GetPreferredWidth() const
+{
+	return -1;
+}
+
+float UDream2DLineRendererBase::GetPreferredHeight() const
+{
+	return -1;
 }

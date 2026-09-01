@@ -139,6 +139,7 @@ void UDreamUIStaticMeshCacheData::EnsureValidData()
 }
 
 #include "UObject/ObjectSaveContext.h"
+#include "Core/DreamUIWidgetRegistry.h"
 void UDreamUIStaticMeshCacheData::PreSave(FObjectPreSaveContext SaveContext)
 {
 	Super::PreSave(SaveContext);
@@ -392,16 +393,28 @@ bool UDreamStaticMesh::HaveValidData()const
 	return false;
 }
 
+/*
+ * MeshCache is null on a freshly added static mesh and stays null until somebody picks an asset,
+ * which is a normal state and not an error -- HaveValidData three lines above says as much by
+ * guarding the very same pointer. This getter did not, and it is the one on the Blueprint side of
+ * the wall: GetRenderMaterial and GetOrCreateDynamicMaterialInstance are both BlueprintCallable and
+ * both come through here, so asking an unconfigured mesh what it is painted with took the process
+ * down rather than answering "nothing yet".
+ *
+ * Null is the honest answer and the callers already expect it: GetOrCreateDynamicMaterialInstance
+ * has a !MaterialInstance branch that logs and returns null, which was unreachable until now.
+ */
 UMaterialInterface* UDreamStaticMesh::GetMaterial()const
 {
 	if (IsValid(ReplaceMaterial))
 	{
 		return ReplaceMaterial;
 	}
-	else
+	if (IsValid(MeshCache))
 	{
 		return MeshCache->GetMaterial();
 	}
+	return nullptr;
 }
 
 UMaterialInstanceDynamic* UDreamStaticMesh::GetOrCreateDynamicMaterialInstance()
@@ -463,5 +476,51 @@ void UDreamStaticMesh::SetVertexColorType(EDreamStaticMeshVertexColorType Value)
 	}
 }
 
+/*
+ * A mesh really does have a natural size, and unusually for this plugin it is already in the right
+ * units: CreateGeometry feeds each source vertex position straight through the item-to-canvas
+ * transform, so the mesh's own coordinates ARE this widget's local space. Nothing has to be guessed
+ * about scale.
+ *
+ * The flattening is the part to get right. A UI element's local space is the YZ plane -- see
+ * UDreamVisual::GetGeometryBounds3DInLocalSpace, which writes (depth, x, y) -- so the mesh's Y
+ * extent is the UI width and its Z extent is the UI height, and the X extent is depth that a 2D
+ * layout has no slot for and should not be shown.
+ *
+ * MeshBounds is filled once, in the editor, when the cache is built from the source StaticMesh, and
+ * serialised from there; reading it is a field access, which is what the measure contract requires.
+ * A cache saved before it existed deserialises with IsValid clear, and that is the case that must
+ * abstain rather than report the zero box -- an old asset is missing an answer, not asserting one.
+ */
+FVector2f UDreamStaticMesh::MeasureMeshBounds() const
+{
+	if (!IsValid(MeshCache))
+	{
+		return FVector2f(-1.0f, -1.0f);
+	}
+	const FBox& Bounds = MeshCache->GetMeshBounds();
+	if (Bounds.IsValid == 0)
+	{
+		return FVector2f(-1.0f, -1.0f);
+	}
+	const FVector Extent = Bounds.Max - Bounds.Min;
+	// A flat mesh drawn edge-on has genuinely zero extent on one axis, and zero is a claim this
+	// component is in no position to make on the strength of one degenerate mesh.
+	return FVector2f(Extent.Y > 0.0 ? static_cast<float>(Extent.Y) : -1.0f,
+		Extent.Z > 0.0 ? static_cast<float>(Extent.Z) : -1.0f);
+}
+
+float UDreamStaticMesh::GetPreferredWidth() const
+{
+	return MeasureMeshBounds().X;
+}
+
+float UDreamStaticMesh::GetPreferredHeight() const
+{
+	return MeasureMeshBounds().Y;
+}
+
 #undef LOCTEXT_NAMESPACE
 
+
+DECLARE_DREAM_GUI_VISUAL("StaticMesh", UDreamStaticMesh)

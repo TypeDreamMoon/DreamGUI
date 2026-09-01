@@ -199,14 +199,34 @@ public:
 	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const;
 	
 	/**
-	 * The preferred width this layout element should be allocated if there is sufficient space.
-	 * Can be -1 to ignore it.
+	 * How much room this element's CONTENT needs, for a layout that sizes to content -- an Auto slot,
+	 * a WrapBox, anything that asks before it decides. Negative means "no opinion", and the layout
+	 * falls back to whatever the widget was authored at.
+	 *
+	 * Two rules, both of which have already cost this codebase a bug:
+	 *
+	 * -1 AND 0 ARE DIFFERENT ANSWERS. Negative is an abstention; zero is this element asserting that
+	 * it wants no room whatsoever, and a caller has no way to tell an asserted zero from a
+	 * placeholder. A visual whose measurement has not happened yet -- no font, no texture loaded, no
+	 * geometry built -- must abstain. UDreamText answering 0 before it had laid out is what measured
+	 * an entire ring menu at nothing.
+	 *
+	 * IT MUST BE CHEAP AND IT MUST NOT CHANGE ANYTHING. A measure pass calls this once per element,
+	 * and a layout that does not converge calls it again; it is not a place to rebuild geometry,
+	 * initialise an asset, or mark anything dirty. Where the natural source of the number is an
+	 * accessor that initialises on first touch, copy the number where the initialisation already
+	 * happens and answer from the copy -- see UDreamSpriteBase.
+	 *
+	 * It must also answer without a world. Headless tests and Blueprint authoring trees have none;
+	 * ask DreamUI::IsGameWorld rather than dereferencing GetWorld().
+	 *
+	 * Procedural shapes generally have NO answer to give. A ring, a polygon and a polygon line
+	 * derive their vertices from the rect they are given, so asking them how big they want to be is
+	 * asking a question with no content in it: they abstain, which is a decision each of them states
+	 * rather than inherits.
 	 */
 	virtual float GetPreferredWidth()const{return -1;}
-	/**
-	 * The preferred height this layout element should be allocated if there is sufficient space.
-	 * Can be -1 to ignore it.
-	 */
+	/** The preferred height. See GetPreferredWidth for the contract -- it binds both. */
 	virtual float GetPreferredHeight()const{return -1;}
 
 	static int WidgetPropertyDataLength;

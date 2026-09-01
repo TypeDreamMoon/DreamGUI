@@ -168,7 +168,16 @@ protected:
 	virtual void UpdateGeometry()override;
 	virtual bool HaveValidData()const override;
 	virtual UMaterialInterface* GetMaterial()const override;
+
+	/**
+	 * The cached mesh bounds flattened onto the UI plane, or a negative pair when the cache has no
+	 * bounds to give. Both measure functions read it; they differ only in which component they take.
+	 */
+	FVector2f MeasureMeshBounds()const;
 public:
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
+
 	/** return 'MeshCache' property */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") 
 		UDreamUIStaticMeshCacheData* GetMeshCache()const { return MeshCache; }

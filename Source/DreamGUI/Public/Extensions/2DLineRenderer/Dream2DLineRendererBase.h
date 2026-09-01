@@ -30,7 +30,7 @@ public:
 protected:
 	virtual void BeginPlay()override;
 
-	UPROPERTY(EditAnywhere, Category = DreamGUI)
+	UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (ClampMin = "0"))
 		float LineWidth = 10.0f;
 	//Draw extra quad at start and end.
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
@@ -68,11 +68,32 @@ protected:
 		, float InLineLeftWidth, float InLineRightWidth
 		, FVector2D& OutPosA, FVector2D& OutPosB
 		, FVector2D& InOutPrevLineDir);
+public:
+	/**
+	 * How far out along a joint's normal the strip's edge vertices sit, as a multiple of the
+	 * half-width, for a joint whose half-included-angle has the given sine. Bounded -- see the
+	 * definition for the limit and why a sharp corner needs one as much as a degenerate one does.
+	 *
+	 * Public and static because it is the whole of the joint decision and the only part of this
+	 * class's geometry reachable without a canvas to pump.
+	 */
+	static double ComputeMiterScale(float InSinHalfAngle);
+protected:
 	FORCEINLINE bool CanConnectStartEndPoint(int InPointCount) { return EndType == EDream2DLineRenderer_EndType::ConnectStartAndEnd && InPointCount >= 3; }
 	void Update2DLineRendererBaseTriangle(FDreamUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
 	void Update2DLineRendererBaseUV(FDreamUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
 	void Update2DLineRendererBaseVertex(FDreamUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
 public:
+	/**
+	 * No opinion, cancelling the one UDreamImage would otherwise supply. See the note on the
+	 * definition -- the brush a line paints with says nothing about how long the line is.
+	 *
+	 * A subclass whose points are AUTHORED rather than derived from the rect overrides this again
+	 * and answers for real; UDream2DLineRaw is the one that does.
+	 */
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
+
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		float GetLineWidth()const { return LineWidth; }
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)

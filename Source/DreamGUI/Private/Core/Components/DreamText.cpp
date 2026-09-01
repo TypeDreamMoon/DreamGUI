@@ -17,6 +17,7 @@
 #include "Engine/Texture2D.h"
 #include "Engine/Texture2DArray.h"
 #include "Engine/World.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 
 #define LOCTEXT_NAMESPACE "UIText"
@@ -1077,9 +1078,28 @@ void UDreamText::GenerateEmojiObject()
 	}
 }
 
+/*
+ * UpdateCacheTextGeometry gives up on two conditions -- no font, and no render canvas, the latter
+ * being the state of every text in a headless test and in a Blueprint authoring tree -- and when it
+ * does, the display list it would have filled is still the empty one it was constructed with, whose
+ * PreferredSize is (0,0).
+ *
+ * Returning that plus the margins is a claim: zero means "this text wants no room", and a caller
+ * cannot tell it apart from a text that measured itself and found nothing. It is not a theoretical
+ * problem. A ring menu whose labels had not laid out yet measured its whole ring at nothing,
+ * because each label answered 0 where it should have abstained, and 0 wins a Max against -1.
+ *
+ * LayoutRunCount is the honest test for "has a measurement ever produced this display list", and it
+ * separates the two zeros: a laid-out empty string may legitimately answer 0 (it really does want
+ * no room), while a text that has never been laid out has nothing to say.
+ */
 float UDreamText::GetPreferredWidth() const
 {
 	UpdateCacheTextGeometry();
+	if (CacheTextGeometryData.GetLayoutRunCount() == 0)
+	{
+		return -1;
+	}
 	// textPreferredSize measures the glyphs, which were laid out inside the inset box, so the
 	// padding has to be added back or a content-sized parent would squeeze it straight out again.
 	return CacheTextGeometryData.GetPreferredSize().X + Margin.Left + Margin.Right;
@@ -1088,6 +1108,10 @@ float UDreamText::GetPreferredWidth() const
 float UDreamText::GetPreferredHeight() const
 {
 	UpdateCacheTextGeometry();
+	if (CacheTextGeometryData.GetLayoutRunCount() == 0)
+	{
+		return -1;
+	}
 	return CacheTextGeometryData.GetPreferredSize().Y + Margin.Top + Margin.Bottom;
 }
 
@@ -1630,3 +1654,5 @@ void UDreamText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 In
 #undef LOCTEXT_NAMESPACE
 
 
+
+DECLARE_DREAM_GUI_VISUAL("Text", UDreamText)

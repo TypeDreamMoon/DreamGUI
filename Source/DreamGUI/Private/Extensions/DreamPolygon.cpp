@@ -211,10 +211,19 @@ void UDreamPolygon::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleCha
 	}
 }
 
+/*
+ * Closing the cycle raises the floor under Sides from one to three, so the count has to be re-run
+ * through the clamp here as well as in SetSides. Without it the pair had a hole:
+ * SetFullCycle(false), SetSides(1), SetFullCycle(true) left a closed polygon claiming a single
+ * side -- a state its own invariant forbids. Nothing drew wrong, because OnUpdateGeometry re-clamps
+ * before it uses the number, but GetSides is BlueprintCallable and anything sizing an offset array
+ * from it was told 1.
+ */
 void UDreamPolygon::SetFullCycle(bool value) {
 	if (FullCycle != value)
 	{
 		FullCycle = value;
+		Sides = FMath::Max(Sides, FullCycle ? 3 : 1);
 		MarkVerticesDirty(true, true, true, false);
 	}
 }
@@ -248,19 +257,41 @@ void UDreamPolygon::SetUVType(EDreamPolygonUVType value)
 		MarkVertexUVDirty();
 	}
 }
+/*
+ * The length this refuses to differ from is the one the SHAPE implies, not the one the member
+ * happens to be holding. That is the fix, and the difference is the whole defect.
+ *
+ * Measured against the stored array, the requirement was unsatisfiable in the obvious order. The
+ * array is only ever sized inside OnUpdateGeometry, so it starts empty and stays empty until the
+ * polygon has been drawn once -- and the natural authoring sequence, pick a side count then hand
+ * over one offset per side, was rejected every time with a message naming a length no Blueprint
+ * could produce. The only working route was GetVertexOffsetArray_Direct, which is not a UFUNCTION
+ * and therefore not reachable from Blueprint at all.
+ *
+ * Measured against Sides it is a question the caller can answer in advance, which is what makes the
+ * refusal a contract rather than a deadlock. The count is the same expression the geometry pass
+ * sizes the array with: one offset per ring vertex, plus the extra vertex an open fan needs to
+ * close its far edge.
+ *
+ * Still a refusal and not a resize: an array of the wrong length is an author mistake about which
+ * corners they are moving, and silently padding it with the default would put the shape somewhere
+ * nobody asked for while reporting success.
+ */
 void UDreamPolygon::SetVertexOffsetArray(const TArray<float>& value)
 {
-	if (VertexOffsetArray.Num() == value.Num())
+	const int32 ExpectedCount = FullCycle ? Sides : (Sides + 1);
+	if (value.Num() == ExpectedCount)
 	{
 		VertexOffsetArray = value;
 		MarkVertexPositionDirty();
 	}
 	else
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Array count not equal! VertexOffsetArray:%d, value:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, VertexOffsetArray.Num(), value.Num());
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Array count not equal! Expected:%d for %d sides, value:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ExpectedCount, Sides, value.Num());
 	}
 }
 #include "Core/DreamUISettings.h"
+#include "Core/DreamUIWidgetRegistry.h"
 UDreamTweener* UDreamPolygon::StartAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, EDreamTweenEase easeType /* = EDreamTweenEase::OutCubic */)
 {
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamPolygon::GetStartAngle), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamPolygon::SetStartAngle), endValue, duration);
@@ -282,3 +313,30 @@ UDreamTweener* UDreamPolygon::EndAngleTo(float endValue, float duration /* = 0.5
 	return Tweener;
 }
 
+/*
+ * A polygon has no natural size, and it has to say so out loud.
+ *
+ * It derives from UDreamImage purely to reuse the brush as a source of pixels to paint with, and
+ * UDreamImage answers the measure question with Brush.ImageSize -- the size of that source. For an
+ * image that is the whole point; for a polygon it is a number about the texture being sampled,
+ * which has nothing to do with how big the shape is. The vertices come from the rect instead
+ * (OnUpdateGeometry: halfW = Widget->GetWidth() * 0.5f), so the shape is whatever size it is given.
+ *
+ * Inherited, the wrong answer is silent and it is confident: a decagon drawn 400px across, sitting
+ * in an Auto slot with the default 32x32 brush, gets measured at 32 and squeezed to a dot. Nothing
+ * logs, and the brush is the last place anyone would look.
+ *
+ * So: abstain. A size-driven shape has no opinion about its own size, and -1 lets the layout fall
+ * back to the authored rect, which IS what the polygon is going to draw itself into.
+ */
+float UDreamPolygon::GetPreferredWidth() const
+{
+	return -1;
+}
+
+float UDreamPolygon::GetPreferredHeight() const
+{
+	return -1;
+}
+
+DECLARE_DREAM_GUI_VISUAL("Polygon", UDreamPolygon)

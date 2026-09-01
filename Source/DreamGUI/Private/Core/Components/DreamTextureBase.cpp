@@ -115,4 +115,35 @@ void UDreamTextureBase::SetOverrideMaterial(UMaterialInterface* Value)
 	}
 }
 
+/*
+ * A texture's natural size is its own dimensions -- the same pair SetSizeFromTexture writes into
+ * the widget, so a texture asked to measure itself and a texture told to size itself to its content
+ * agree by construction.
+ *
+ * GetSurfaceWidth is a read of already-resident platform data, so this is as cheap as the protocol
+ * requires and touches nothing. What it is NOT is always available: a texture still compiling, or a
+ * render target not yet allocated, answers zero. Zero is a claim in this protocol -- "give me no
+ * room" -- and a UI element that vanished because its texture had not finished building is a bug
+ * that would only reproduce on a cold DDC. Anything that is not a positive number abstains instead.
+ */
+float UDreamTextureBase::GetPreferredWidth() const
+{
+	if (!IsValid(Texture))
+	{
+		return -1;
+	}
+	const float Width = Texture->GetSurfaceWidth();
+	return Width > 0.0f ? Width : -1.0f;
+}
+
+float UDreamTextureBase::GetPreferredHeight() const
+{
+	if (!IsValid(Texture))
+	{
+		return -1;
+	}
+	const float Height = Texture->GetSurfaceHeight();
+	return Height > 0.0f ? Height : -1.0f;
+}
+
 #undef LOCTEXT_NAMESPACE

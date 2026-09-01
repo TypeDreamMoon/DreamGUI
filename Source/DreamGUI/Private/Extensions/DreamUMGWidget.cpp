@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "Extensions/DreamUMGWidget.h"
+#include "Core/DreamUIWorldContext.h"
+#include "Blueprint/UserWidget.h"
 #include "DreamTweenBPLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Slate/WidgetRenderer.h"
@@ -16,6 +18,7 @@
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 #define LOCTEXT_NAMESPACE "UIWidget"
 
@@ -98,7 +101,7 @@ void UDreamUMGWidget::OnRegister()
 
 	if (!IsRunningDedicatedServer())
 	{
-		const bool bIsGameWorld = GetWorld()->IsGameWorld();
+		const bool bIsGameWorld = DreamUI::IsGameWorld(this);
 
 		if (!WidgetRenderer && !GUsingNullRHI)
 		{
@@ -115,7 +118,7 @@ void UDreamUMGWidget::OnRegister()
 #endif // !UE_SERVER
 
 #if WITH_EDITOR
-	if (!GetWorld()->IsGameWorld())
+	if (!DreamUI::IsGameWorld(this))
 	{
 		
 	}
@@ -223,7 +226,7 @@ void UDreamUMGWidget::OnUnregister()
 #endif
 
 #if WITH_EDITOR
-	if (!GetWorld()->IsGameWorld())
+	if (!DreamUI::IsGameWorld(this))
 	{
 		ReleaseResources();
 	}
@@ -370,7 +373,7 @@ void UDreamUMGWidget::SetComponentTickEnabled(bool bEnable)
 		if (bEnable)
 		{
 #if WITH_EDITOR
-			if (!GetWorld()->IsGameWorld())
+			if (!DreamUI::IsGameWorld(this))
 			{
 				if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
 				{
@@ -386,7 +389,7 @@ void UDreamUMGWidget::SetComponentTickEnabled(bool bEnable)
 		else
 		{
 #if WITH_EDITOR
-			if (!GetWorld()->IsGameWorld())
+			if (!DreamUI::IsGameWorld(this))
 			{
 				if (EditorTickHandle.IsValid())
 				{
@@ -831,4 +834,63 @@ void UDreamUMGWidget::SetWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
 	}
 }
 
+/*
+ * The hosted widget is the only thing here that knows how big it wants to be, and UMG already
+ * measured it: Slate caches a desired size on every widget during prepass, and this component runs
+ * one on the virtual window each time it redraws. So the answer exists and costs a weak-pointer pin
+ * plus a field read -- no TakeWidget(), which would BUILD the Slate tree, and nothing that would
+ * make a measure pass construct anything.
+ *
+ * Three states have to stay distinguishable, and only one of them is a size:
+ *
+ *   - Nothing hosted. No world means InitWidget never created the UUserWidget, which is the state of
+ *     every one of these in a headless test and in a Blueprint authoring tree. No opinion.
+ *   - Hosted but never prepassed. SWidget::GetDesiredSize returns zero when bDesiredSizeSet is
+ *     false, and zero here is indistinguishable from a widget that genuinely wants no room. Taking
+ *     it at face value is how a UMG panel would collapse on the frame before its first draw. No
+ *     opinion.
+ *   - Measured. Convert and answer.
+ *
+ * The conversion is the counter-intuitive bit. ResolutionScale does NOT scale the element on
+ * screen -- the quad is always the widget's rect. It scales the render target, so the virtual
+ * window is laid out at rect * ResolutionScale Slate units for the same UI rectangle. At scale 2 a
+ * widget wanting 100 Slate units is asking for 50 UI units, so the desired size has to be divided
+ * back out or a supersampled widget measures twice as large as it draws.
+ */
+FVector2f UDreamUMGWidget::MeasureHostedWidget() const
+{
+	// SlateWidget is set only by SetSlateWidget, and SetWidget/SetSlateWidget clear each other, so
+	// at most one of these two is ever live.
+	TSharedPtr<SWidget> Hosted = SlateWidget;
+	if (!Hosted.IsValid() && IsValid(UmgWidget))
+	{
+		// The already-built Slate tree if there is one. Not TakeWidget(), which builds it.
+		Hosted = UmgWidget->GetCachedWidget();
+	}
+	if (!Hosted.IsValid())
+	{
+		return FVector2f(-1.0f, -1.0f);
+	}
+
+	const UE::Slate::FDeprecateVector2DResult Desired = Hosted->GetDesiredSize();
+	const float Scale = ResolutionScale > 0.0f ? ResolutionScale : 1.0f;
+	return FVector2f(Desired.X > 0.0f ? Desired.X / Scale : -1.0f,
+		Desired.Y > 0.0f ? Desired.Y / Scale : -1.0f);
+}
+
+float UDreamUMGWidget::GetPreferredWidth() const
+{
+	return MeasureHostedWidget().X;
+}
+
+float UDreamUMGWidget::GetPreferredHeight() const
+{
+	return MeasureHostedWidget().Y;
+}
+
 #undef LOCTEXT_NAMESPACE
+
+// A custom mesh that supplies its OWN source, which is why this one is spellable where the bare
+// UDreamCustomMesh is not: the class it hosts is a property, and a property is something a .dui
+// can write.
+DECLARE_DREAM_GUI_VISUAL("UMGWidget", UDreamUMGWidget)
