@@ -19,6 +19,8 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "DreamWidgetBlueprint.h"
+#include "UObject/StrongObjectPtr.h"
+#include "UObject/Package.h"
 #include "LevelEditor.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamImage.h"
@@ -253,11 +255,13 @@ public:
 
 	UObject* GetPlaybackContext() const
 	{
-		// While evacuating (see EvacuateSequencerEntities) the sequencer must see no context: the
-		// forced evaluation against nowhere is what makes the engine let go of everything it holds.
+		// While evacuating (see EvacuateSequencerEntities) the sequencer is parked on a childless
+		// widget, under which every binding resolves to nothing. NOT null: with no context at all,
+		// binding resolution falls back to its stored object pointer and quietly re-binds the very
+		// objects the evacuation exists to let go of.
 		if (bPlaybackContextSuppressed)
 		{
-			return nullptr;
+			return SuppressionContext.Get();
 		}
 		if (auto LocalAnimation = GetAnimation())
 		{
@@ -544,19 +548,23 @@ public:
 	 * the remap's Add silently overwrites. From then on the maps disagree, and the next
 	 * empty-group free fails an ensure deep in engine code with nothing of ours on the stack.
 	 *
-	 * The maps only desync when keys are rewritten under LIVE entities, so the cure is to not
-	 * have entities across either window. Suppressing the playback context and forcing one
-	 * evaluation makes the engine itself unlink every entity and free every group through the
-	 * same context-switch path it uses every day, while everything is still coherent; resuming
-	 * re-resolves against whatever tree exists by then. Two windows, one pair each:
+	 * The maps only desync when keys are rewritten under LIVE entities, so the cure is to hold
+	 * ZERO object-keyed entities across either window. Parking the playback context on a
+	 * childless sentinel widget and forcing one evaluation makes the engine itself unlink every
+	 * entity and free every group through the same context-switch path it uses every day, while
+	 * everything is still coherent -- and under the sentinel every binding resolves to nothing,
+	 * so nothing new is keyed for the rest of the window. Resuming re-resolves against whatever
+	 * tree exists by then. Two windows, one pair each:
 	 *
 	 *   recompile -- HandleBlueprintPreCompile / UEditorEngine::OnBlueprintCompiled
 	 *   rebuild   -- OnPreviewAboutToRebuild   / OnPreviewRebuilt
 	 *
-	 * While suppressed, bindings resolve through their authored-widget fallback, so the interim
-	 * instance briefly holds the authoring tree instead. That is harmless: those widgets are
-	 * native-class instances no recompile replaces, and what evaluation writes onto them is
-	 * written back by the same pre-animated restore the context switch performs on resume.
+	 * The sentinel is the load-bearing half, learned the hard way: suppressing to NULL was tried
+	 * first, and with no context at all binding resolution falls back to its stored object
+	 * pointer -- the evacuation evaluation re-bound the very preview widgets it was letting go
+	 * of, their keys sat in the maps through re-instancing and the compile's garbage collection,
+	 * and the resume's evaluation then freed a group whose key the reverse map no longer agreed
+	 * about. Whatever rewrite poisons the maps, an empty map is not rewritable.
 	 *
 	 * RestorePreAnimatedState runs before each evacuation because writing saved values back
 	 * needs the objects they were saved onto; a tick later is an object too late.
@@ -566,6 +574,12 @@ public:
 		if (!Sequencer.IsValid() || bPlaybackContextSuppressed)
 		{
 			return;
+		}
+		if (!SuppressionContext.IsValid())
+		{
+			// Strongly held: the recompile window this parks across runs a garbage collection.
+			SuppressionContext = TStrongObjectPtr<UDreamWidget>(
+				NewObject<UDreamWidget>(GetTransientPackage(), NAME_None, RF_Transient));
 		}
 		Sequencer->RestorePreAnimatedState();
 		bPlaybackContextSuppressed = true;
@@ -1036,8 +1050,10 @@ private:
 	FDelegateHandle PreviewRebuiltHandle;
 	FDelegateHandle BlueprintPreCompileHandle;
 	FDelegateHandle BlueprintCompiledHandle;
-	/** True from an evacuation to its resume; GetPlaybackContext answers null throughout. */
+	/** True from an evacuation to its resume; GetPlaybackContext answers the sentinel throughout. */
 	bool bPlaybackContextSuppressed = false;
+	/** A childless widget nothing can resolve under. See EvacuateSequencerEntities. */
+	TStrongObjectPtr<UDreamWidget> SuppressionContext;
 
 	TSharedPtr<SBox> Content;
 	TSharedPtr<ISequencer> Sequencer;

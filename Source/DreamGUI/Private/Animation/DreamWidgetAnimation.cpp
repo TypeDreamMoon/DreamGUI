@@ -138,16 +138,20 @@ void UDreamWidgetAnimation::LocateBoundObjects(const FGuid& ObjectId,
 	// pointer names one particular widget; a class has one tree per instance, so resolving through it
 	// makes every instance drive the authoring tree's widgets -- successfully, and invisibly, until
 	// somebody notices one screen animating another's.
+	//
+	// And when the context has nothing there, NOTHING is the answer. A context is an assertion of
+	// scope: falling back to the stored pointer under someone else's context is the cross-tree leak
+	// above wearing a different hat, and it defeated the animation editor's compile-window
+	// suspension outright -- a suspension parks the playback context on a childless widget exactly
+	// so every binding resolves to nothing and the entity runtime holds no object keys while
+	// re-instancing rewrites the world (see SDreamWidgetAnimationEditorWidget).
 	if (UDreamWidget* ContextWidget = Cast<UDreamWidget>(ResolveParams.Context))
 	{
 		ObjectReferences.ResolveBindingInContext(ObjectId, ContextWidget, OutObjects);
-		if (OutObjects.Num() > 0)
-		{
-			return;
-		}
+		return;
 	}
-	// No context, or nothing of that name under it: the pointer still identifies the widget while the
-	// asset is being authored, which is when there is exactly one tree and it is the right one.
+	// No context at all: the pointer still identifies the widget while the asset is being authored,
+	// which is when there is exactly one tree and it is the right one.
 	ObjectReferences.ResolveBinding(ObjectId, OutObjects);
 }
 
