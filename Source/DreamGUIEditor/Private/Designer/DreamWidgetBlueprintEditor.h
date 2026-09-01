@@ -317,6 +317,8 @@ public:
 
 	/** The preview counterpart of an authored widget, for scrubbing. Null outside a designer. */
 	static UDreamWidget* FindPreviewForAnimationContext(UDreamWidget* InAuthoredWidget);
+	/** The host that owns that preview, for anything that needs to hear when it is replaced. */
+	static TSharedPtr<FDreamWidgetPreviewHost> FindPreviewHostForAnimationContext(UDreamWidget* InAuthoredWidget);
 	/** The template counterpart of a preview widget, for anything about to write authored data. */
 	UDreamWidget* GetTemplateWidget(const UDreamWidget* InPreviewWidget) const;
 

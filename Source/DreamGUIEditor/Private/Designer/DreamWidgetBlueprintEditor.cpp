@@ -591,6 +591,30 @@ UDreamWidget* FDreamWidgetBlueprintEditor::GetAnimationHostWidget() const
 	return BlueprintBeingEdited->WidgetTree->RootWidget.Get();
 }
 
+TSharedPtr<FDreamWidgetPreviewHost> FDreamWidgetBlueprintEditor::FindPreviewHostForAnimationContext(UDreamWidget* InAuthoredWidget)
+{
+	if (!IsValid(InAuthoredWidget))
+	{
+		return nullptr;
+	}
+	// Same walk as the preview lookup below, and for the same reason: an authoring widget lives in
+	// no world, so it is found by the Blueprint it belongs to rather than by a world lookup.
+	UDreamWidgetTree* Tree = InAuthoredWidget->GetTypedOuter<UDreamWidgetTree>();
+	UDreamWidgetBlueprint* Blueprint = Tree != nullptr ? Tree->GetTypedOuter<UDreamWidgetBlueprint>() : nullptr;
+	if (Blueprint == nullptr)
+	{
+		return nullptr;
+	}
+	for (FDreamWidgetBlueprintEditor* Designer : DesignerInstances)
+	{
+		if (Designer != nullptr && Designer->GetWidgetBlueprint() == Blueprint)
+		{
+			return Designer->PreviewHost;
+		}
+	}
+	return nullptr;
+}
+
 UDreamWidget* FDreamWidgetBlueprintEditor::FindPreviewForAnimationContext(UDreamWidget* InAuthoredWidget)
 {
 	if (!IsValid(InAuthoredWidget))

@@ -135,6 +135,22 @@ public:
 	 */
 	int32 CopyPreviewValuesToTemplate(UDreamWidget* InPreviewWidget, TConstArrayView<FName> InPropertyNames);
 
+	/**
+	 * Fires before a rebuild takes the CURRENT preview down, while its widgets are still alive.
+	 *
+	 * For the narrow set of things that can only be done to an object that still exists. Anything
+	 * that wants to READ the result of the rebuild wants OnPreviewRebuilt instead.
+	 *
+	 * Sequencer is the caller this exists for. It keys animation entities on raw UObject pointers,
+	 * and a rebuild destroys those objects without any of the replacement notifications the editor
+	 * broadcasts for a recompile -- a rebuild is a destruction and a fresh construction, not a
+	 * replacement, so nobody is told. It finds out a tick later through its playback-context
+	 * attribute, and the teardown that discovery triggers runs against bookkeeping that has already
+	 * drifted. Here it restores pre-animated values and evacuates its entities while their objects
+	 * are addressable; OnPreviewRebuilt is where it re-resolves against the new tree.
+	 */
+	FSimpleMulticastDelegate OnPreviewAboutToRebuild;
+
 	/** Fires after every rebuild, once the new preview and the name map are both in place. */
 	FSimpleMulticastDelegate OnPreviewRebuilt;
 

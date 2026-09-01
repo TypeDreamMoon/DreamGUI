@@ -18,6 +18,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "DreamWidgetBlueprint.h"
 #include "LevelEditor.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamImage.h"
@@ -25,6 +26,7 @@
 #include "Core/Components/DreamText.h"
 #include "Controls/DreamUIControl.h"
 #include "Designer/DreamWidgetHierarchyPickerView.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "Animation/MovieSceneDreamUIMaterialTrack.h"
@@ -103,6 +105,12 @@ public:
 
 	~SDreamWidgetAnimationEditorWidgetImpl()
 	{
+		if (GEditor != nullptr)
+		{
+			GEditor->OnBlueprintPreCompile().Remove(BlueprintPreCompileHandle);
+			GEditor->OnBlueprintCompiled().Remove(BlueprintCompiledHandle);
+		}
+
 		Close();
 
 		// Un-Register sequencer menu extenders.
@@ -123,6 +131,16 @@ public:
 
 	void Construct(const FArguments&)
 	{
+		if (GEditor != nullptr)
+		{
+			// See EvacuateSequencerEntities: a recompile of the edited asset replaces the preview
+			// objects this sequencer binds, and that is only survivable from in front of it.
+			BlueprintPreCompileHandle = GEditor->OnBlueprintPreCompile().AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::HandleBlueprintPreCompile);
+			BlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::HandleBlueprintCompiled);
+		}
+
 		NoAnimationTextBlock =
 			SNew(STextBlock)
 			.TextStyle(FAppStyle::Get(), "UMGEditor.NoAnimationFont")
@@ -235,6 +253,12 @@ public:
 
 	UObject* GetPlaybackContext() const
 	{
+		// While evacuating (see EvacuateSequencerEntities) the sequencer must see no context: the
+		// forced evaluation against nowhere is what makes the engine let go of everything it holds.
+		if (bPlaybackContextSuppressed)
+		{
+			return nullptr;
+		}
 		if (auto LocalAnimation = GetAnimation())
 		{
 			auto Component = LocalAnimation->GetTypedOuter<UDreamWidgetAnimationComponent>();
@@ -318,6 +342,7 @@ public:
 			if (Sequencer.IsValid())
 			{
 				StopObservingWidgetSelection();
+				StopObservingPreviewRebuild();
 				Sequencer->SetShowCurveEditor(false);
 				FLevelEditorSequencerIntegration::Get().RemoveSequencer(Sequencer.ToSharedRef());
 				Sequencer->Close();
@@ -358,6 +383,7 @@ public:
 		Content->SetContent(Sequencer->GetSequencerWidget());
 		Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &SDreamWidgetAnimationEditorWidgetImpl::SyncSelectedWidgetsWithSequencerSelection);
 		ObserveWidgetSelection();
+		ObservePreviewRebuild();
 		Sequencer->OnMovieSceneBindingsChanged().AddLambda([=, this]() {
 			if (!WeakSequence.IsValid())return;
 			auto MovieScene = WeakSequence->GetMovieScene();
@@ -395,13 +421,26 @@ public:
 		TGuardValue<bool> Guard(bUpdatingSequencerSelection, true);
 
 		UMovieSceneSequence* AnimationSequence = Sequencer->GetFocusedMovieSceneSequence();
-		UObject* BindingContext = WeakSequence.Get();
+		// The context a binding resolves against is a WIDGET -- UDreamWidgetAnimation::LocateBoundObjects
+		// casts it to one and walks the name path from there -- and the world context is an object that
+		// has a world. This passed the SEQUENCE for both: the cast to UDreamWidget silently failed, so
+		// resolution fell back to the stored pointer, and CreateTransientSharedPlaybackState's
+		// verify(WorldContext && Sequence) took a null, because an animation asset lives in no world.
+		//
+		// It had never run. Selecting a track row is what calls this, and until bindings could be
+		// created there were no rows to select -- so making the picker work is what woke it up.
+		UObject* PlaybackContext = GetPlaybackContext();
+		if (AnimationSequence == nullptr || PlaybackContext == nullptr)
+		{
+			return;
+		}
 		UDreamWidget* SequencerSelectedWidget = nullptr;
 		UDreamUIBehaviour* SequencerSelectedComponent = nullptr;
 		for (FGuid Guid : ObjectGuids)
 		{
 			TArray<UObject*, TInlineAllocator<1>> BoundObjects;
-			AnimationSequence->LocateBoundObjects(Guid, BindingContext, MovieSceneHelpers::CreateTransientSharedPlaybackState(BindingContext->GetWorld(), Cast<UMovieSceneSequence>(BindingContext)), BoundObjects);
+			AnimationSequence->LocateBoundObjects(Guid, PlaybackContext,
+				MovieSceneHelpers::CreateTransientSharedPlaybackState(PlaybackContext, AnimationSequence), BoundObjects);
 			if (BoundObjects.Num() == 0)
 				continue;
 
@@ -419,7 +458,10 @@ public:
 			SequencerSelectedWidget = SequencerSelectedComponent->GetWidget();
 		}
 
-		if (auto Widget = WeakSequence->GetTypedOuter<UDreamWidget>())
+		// The live copy again: the selection subsystem is reached through a world, and the sequence's
+		// outer is the authored widget, which has none. Even with the resolution above fixed, this
+		// half would have gone on selecting nothing.
+		if (UDreamWidget* Widget = Cast<UDreamWidget>(PlaybackContext))
 		{
 			// Sync Selection
 			if (auto Selection = UDreamUISelection::GetInstance(Widget->GetWorld()))
@@ -442,7 +484,9 @@ public:
 	void ObserveWidgetSelection()
 	{
 		StopObservingWidgetSelection();
-		UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		// And the other direction, which never subscribed at all for the same reason -- selecting a
+		// widget in the designer has never highlighted its track.
+		UDreamWidget* ContextWidget = Cast<UDreamWidget>(GetPlaybackContext());
 		UDreamUISelection* Selection = ContextWidget ? UDreamUISelection::GetInstance(ContextWidget->GetWorld()) : nullptr;
 		if (Selection)
 		{
@@ -459,6 +503,106 @@ public:
 		}
 		ObservedSelection.Reset();
 		WidgetSelectionChangedHandle.Reset();
+	}
+
+	// ------------------------------------------------------------------ the preview being replaced
+
+	void ObservePreviewRebuild()
+	{
+		StopObservingPreviewRebuild();
+		UDreamWidget* AuthoredWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		ObservedPreviewHost = FDreamWidgetBlueprintEditor::FindPreviewHostForAnimationContext(AuthoredWidget);
+		if (TSharedPtr<FDreamWidgetPreviewHost> Host = ObservedPreviewHost.Pin())
+		{
+			PreviewAboutToRebuildHandle = Host->OnPreviewAboutToRebuild.AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::EvacuateSequencerEntities);
+			PreviewRebuiltHandle = Host->OnPreviewRebuilt.AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::ResumeSequencerEvaluation);
+		}
+	}
+
+	void StopObservingPreviewRebuild()
+	{
+		if (TSharedPtr<FDreamWidgetPreviewHost> Host = ObservedPreviewHost.Pin())
+		{
+			Host->OnPreviewAboutToRebuild.Remove(PreviewAboutToRebuildHandle);
+			Host->OnPreviewRebuilt.Remove(PreviewRebuiltHandle);
+		}
+		ObservedPreviewHost.Reset();
+		PreviewAboutToRebuildHandle.Reset();
+		PreviewRebuiltHandle.Reset();
+	}
+
+	/**
+	 * Step the sequencer's entity runtime out of every window in which its bound objects die.
+	 *
+	 * Sequencer groups animation entities under raw bound-object pointers and keeps two maps of
+	 * those keys in lockstep. Nothing repairs them when a preview widget goes away: a preview
+	 * rebuild broadcasts no replacement at all, and the map a recompile broadcasts can be worse
+	 * than nothing -- re-instancing maps every instance to null when it cannot make a replacement
+	 * (a failed compile leaves the class abstract), distinct widgets' keys collapse into one, and
+	 * the remap's Add silently overwrites. From then on the maps disagree, and the next
+	 * empty-group free fails an ensure deep in engine code with nothing of ours on the stack.
+	 *
+	 * The maps only desync when keys are rewritten under LIVE entities, so the cure is to not
+	 * have entities across either window. Suppressing the playback context and forcing one
+	 * evaluation makes the engine itself unlink every entity and free every group through the
+	 * same context-switch path it uses every day, while everything is still coherent; resuming
+	 * re-resolves against whatever tree exists by then. Two windows, one pair each:
+	 *
+	 *   recompile -- HandleBlueprintPreCompile / UEditorEngine::OnBlueprintCompiled
+	 *   rebuild   -- OnPreviewAboutToRebuild   / OnPreviewRebuilt
+	 *
+	 * While suppressed, bindings resolve through their authored-widget fallback, so the interim
+	 * instance briefly holds the authoring tree instead. That is harmless: those widgets are
+	 * native-class instances no recompile replaces, and what evaluation writes onto them is
+	 * written back by the same pre-animated restore the context switch performs on resume.
+	 *
+	 * RestorePreAnimatedState runs before each evacuation because writing saved values back
+	 * needs the objects they were saved onto; a tick later is an object too late.
+	 */
+	void EvacuateSequencerEntities()
+	{
+		if (!Sequencer.IsValid() || bPlaybackContextSuppressed)
+		{
+			return;
+		}
+		Sequencer->RestorePreAnimatedState();
+		bPlaybackContextSuppressed = true;
+		Sequencer->ForceEvaluate();
+	}
+
+	void ResumeSequencerEvaluation()
+	{
+		if (!bPlaybackContextSuppressed)
+		{
+			return;
+		}
+		bPlaybackContextSuppressed = false;
+		if (Sequencer.IsValid())
+		{
+			// Resolved bindings still name the dead tree; UMG drops them at the same moment, at
+			// the end of FWidgetBlueprintEditor::UpdatePreview.
+			Sequencer->GetEvaluationState()->ClearObjectCaches(*Sequencer);
+			Sequencer->ForceEvaluate();
+		}
+	}
+
+	void HandleBlueprintPreCompile(UBlueprint* InBlueprint)
+	{
+		// Only this asset's recompile replaces objects this sequencer binds: bound objects are
+		// preview widgets, and the preview's only reinstanced parts are instances of this class.
+		if (InBlueprint == nullptr || !WeakSequence.IsValid()
+			|| InBlueprint != WeakSequence->GetTypedOuter<UDreamWidgetBlueprint>())
+		{
+			return;
+		}
+		EvacuateSequencerEntities();
+	}
+
+	void HandleBlueprintCompiled()
+	{
+		ResumeSequencerEvaluation();
 	}
 
 	/** The other half of SyncSelectedWidgetsWithSequencerSelection: picking a widget highlights its tracks. */
@@ -886,6 +1030,14 @@ private:
 	TWeakObjectPtr<UDreamWidgetAnimation> WeakSequence;
 	TWeakObjectPtr<UDreamUISelection> ObservedSelection;
 	FDelegateHandle WidgetSelectionChangedHandle;
+	/** Weak, because the host outlives nothing here and this panel must not keep a designer alive. */
+	TWeakPtr<FDreamWidgetPreviewHost> ObservedPreviewHost;
+	FDelegateHandle PreviewAboutToRebuildHandle;
+	FDelegateHandle PreviewRebuiltHandle;
+	FDelegateHandle BlueprintPreCompileHandle;
+	FDelegateHandle BlueprintCompiledHandle;
+	/** True from an evacuation to its resume; GetPlaybackContext answers null throughout. */
+	bool bPlaybackContextSuppressed = false;
 
 	TSharedPtr<SBox> Content;
 	TSharedPtr<ISequencer> Sequencer;

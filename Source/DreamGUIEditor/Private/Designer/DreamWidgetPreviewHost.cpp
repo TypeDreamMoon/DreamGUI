@@ -332,6 +332,9 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 		return;
 	}
 
+	// Last moment at which the outgoing preview is still addressable. See OnPreviewAboutToRebuild.
+	OnPreviewAboutToRebuild.Broadcast();
+
 	DestroyPreview();
 
 	UDreamWidget* RootAgent = Scene->EnsureRootAgent(
