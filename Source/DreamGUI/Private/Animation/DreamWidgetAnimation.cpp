@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Animation/DreamWidgetAnimation.h"
@@ -158,6 +158,21 @@ UMovieScene* UDreamWidgetAnimation::GetMovieScene() const
 
 UObject* UDreamWidgetAnimation::GetParentObject(UObject* Object) const
 {
+	// Sequencer uses this to OVERRIDE the binding context: whatever this returns is what
+	// BindPossessableObject records the widget path against, and what a child binding resolves
+	// through. A widget must answer nothing, so its context stays the playback context -- the
+	// widget this animation lives on, the same widget the compiler validates against and the
+	// runtime resolves from. Answering with the OUTER here handed every widget binding the
+	// instance shell instead (a widget's outer chain skips its parent widgets), so every
+	// recorded path gained a leading segment naming the animation owner itself, which no
+	// resolver could walk: tracks compiled as errors and went unbound on the first rebuild.
+	//
+	// A sub-object (a component, a visual) does hang under its owning widget: parenting it
+	// there is what lets it resolve relative to that widget's own binding.
+	if (Cast<UDreamWidget>(Object) != nullptr)
+	{
+		return nullptr;
+	}
 	return Object->GetTypedOuter<UDreamWidget>();
 }
 
