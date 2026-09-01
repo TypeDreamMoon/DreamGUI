@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Event/DreamBaseRaycaster.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
@@ -25,7 +26,7 @@ void UDreamBaseRaycaster::Activate(bool bReset)
 	Super::Activate(bReset);
 	if (this->GetWorld() == nullptr)return;
 #if WITH_EDITOR
-	if (this->GetWorld()->IsGameWorld())
+	if (DreamUI::IsGameWorld(this))
 #endif
 	{
 		ActivateRaycaster();

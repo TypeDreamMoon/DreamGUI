@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DetailCustomization/DreamWidgetCustomization.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamDetailsMultiSelect.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "IDetailGroup.h"
@@ -268,7 +269,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			TargetScriptArray.Add(ValidItem);
 			if (ValidItem->GetWorld() != nullptr)
 			{
-				if (ValidItem->GetWorld()->WorldType == EWorldType::Editor)
+				if (DreamUI::GetWorldType(ValidItem) == EWorldType::Editor)
 				{
 					ValidItem->MarkCanvasUpdate(true);
 				}

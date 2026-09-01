@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIFontEmojiData.h"
+#include "Core/DreamUIWorldContext.h"
 
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Core/DreamUISpriteData_BaseObject.h"
@@ -118,12 +119,16 @@ void UDreamUIFontEmojiData::CreateOrUpdateObject(UDreamWidget* parent, const TAr
 			{
 				if (!IsValid(sequencePlayerComp))
 				{
-					ImageWidget->AddComponent<UUISpriteSequencePlayer>();
+					// The assignment, which was missing: the branch condition establishes that the
+					// pointer is null, so the next line dereferenced null every time an animated
+					// emoji of two frames or more landed on a widget that had no player yet.
+					// UDreamUIRichTextImageData is the same code with the assignment in place.
+					sequencePlayerComp = ImageWidget->AddComponent<UUISpriteSequencePlayer>();
 					sequencePlayerComp->SetSnapSpriteSize(false);
 				}
 				sequencePlayerComp->SetSpriteSequence(spriteFrames);
 				sequencePlayerComp->SetFps(imageItemPtr->OverrideAnimationFps < 0 ? AnimationFps : imageItemPtr->OverrideAnimationFps);
-				if (parent->GetWorld()->IsGameWorld())
+				if (DreamUI::IsGameWorld(parent))
 				{
 					sequencePlayerComp->Play();
 				}

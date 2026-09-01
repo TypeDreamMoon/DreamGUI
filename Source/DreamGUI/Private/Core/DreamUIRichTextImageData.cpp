@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIRichTextImageData.h"
+#include "Core/DreamUIWorldContext.h"
 
 #include "Core/DreamUIManager.h"
 #include "Extensions/UISpriteSequencePlayer.h"
@@ -86,7 +87,7 @@ void UDreamUIRichTextImageData::CreateOrUpdateObject(UDreamWidget* parent, const
 				}
 				SequencePlayerComp->SetSpriteSequence(spriteFrames);
 				SequencePlayerComp->SetFps(imageItemPtr->OverrideAnimationFps < 0 ? AnimationFps : imageItemPtr->OverrideAnimationFps);
-				if (parent->GetWorld()->IsGameWorld())
+				if (DreamUI::IsGameWorld(parent))
 				{
 					SequencePlayerComp->Play();
 				}

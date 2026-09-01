@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamCanvas.h"
@@ -498,7 +499,7 @@ bool UDreamUIRenderTargetGeometrySource::CheckStaticMesh()const
 					if (bOverrideStaticMeshMaterial)
 					{
 #if WITH_EDITOR
-						if (!this->GetWorld()->IsGameWorld())
+						if (!DreamUI::IsGameWorld(this))
 						{
 							UDreamUIManagerObject::AddOneShotTickFunction([this] {
 								StaticMeshComp->SetMaterial(0, MaterialInstance);
@@ -664,7 +665,7 @@ void UDreamUIRenderTargetGeometrySource::OnRegister()
 			}
 		}
 #if WITH_EDITOR
-		if (!this->GetWorld()->IsGameWorld())//only do it in Editor world, because Game world can do it by BeginCheckRenderTarget
+		if (!DreamUI::IsGameWorld(this))//only do it in Editor world, because Game world can do it by BeginCheckRenderTarget
 		{
 			UpdateMeshData();
 		}
@@ -688,7 +689,7 @@ void UDreamUIRenderTargetGeometrySource::SetMaterial(int32 ElementIndex, UMateri
 	Super::SetMaterial(ElementIndex, Material);
 	MaterialInstance = nullptr;
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
+	if (!DreamUI::IsGameWorld(this))
 	{
 	}
 	else
@@ -1181,7 +1182,7 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstance()
 				if (CheckStaticMesh())
 				{
 #if WITH_EDITOR
-					if (!this->GetWorld()->IsGameWorld())
+					if (!DreamUI::IsGameWorld(this))
 					{
 						UDreamUIManagerObject::AddOneShotTickFunction([this] {
 							StaticMeshComp->SetMaterial(0, MaterialInstance);

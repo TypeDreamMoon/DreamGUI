@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 #include "Engine/UserInterfaceSettings.h"
 #include "DreamGUI.h"
@@ -101,7 +102,7 @@ void UDreamCanvas::UpdateRootCanvas()
 		{
 			auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
-			if (!GetWorld()->IsGameWorld())//edit mode
+			if (!DreamUI::IsGameWorld(this))//edit mode
 			{
 				if (ActualRenderMode == EDreamRenderMode::ScreenSpaceOverlay)
 					ActualRenderMode = EDreamRenderMode::WorldSpace_DreamUI;
@@ -215,7 +216,7 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 	{
 		auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
-		if (!GetWorld()->IsGameWorld())//edit mode
+		if (!DreamUI::IsGameWorld(this))//edit mode
 		{
 			if (ActualRenderMode == EDreamRenderMode::ScreenSpaceOverlay)
 				ActualRenderMode = EDreamRenderMode::WorldSpace_DreamUI;
@@ -262,7 +263,7 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 			if (IsValid(RenderTarget))
 			{
 #if WITH_EDITOR
-				if (!this->GetWorld()->IsGameWorld())
+				if (!DreamUI::IsGameWorld(this))
 				{
 					if (!RenderTarget->GameThread_GetRenderTargetResource())
 					{
@@ -1570,7 +1571,7 @@ void UDreamCanvas::CheckUIMesh()const
 		{
 			auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
-			if (!GetWorld()->IsGameWorld())//edit mode
+			if (!DreamUI::IsGameWorld(this))//edit mode
 			{
 				if (ActualRenderMode == EDreamRenderMode::ScreenSpaceOverlay)
 					ActualRenderMode = EDreamRenderMode::WorldSpace_DreamUI;
@@ -1587,7 +1588,7 @@ void UDreamCanvas::CheckUIMesh()const
 			case EDreamRenderMode::ScreenSpaceOverlay:
 			{
 #if WITH_EDITOR
-				if (!GetWorld()->IsGameWorld())
+				if (!DreamUI::IsGameWorld(this))
 				{
 					UIMesh->SetSupportDreamUIRenderer(true, UDreamUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
 					UIMesh->SetSupportUERenderer(true);
@@ -2898,7 +2899,7 @@ void UDreamCanvas::OnEditorTick(float DeltaTime)
 {
 	if (!GetWorld())
 		return;
-	if (GetWorld()->IsGameWorld())//When hit play there is still an editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
+	if (DreamUI::IsGameWorld(this))//When hit play there is still an editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
 	if (this->IsUnreachable())
 		return;
@@ -2936,7 +2937,7 @@ void UDreamCanvas::OnEditorTick(float DeltaTime)
 				}
 			}
 
-			if (!GetWorld()->IsGameWorld())
+			if (!DreamUI::IsGameWorld(this))
 			{
 				if (this->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
 				{

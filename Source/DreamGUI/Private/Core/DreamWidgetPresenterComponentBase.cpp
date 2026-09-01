@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
 
@@ -36,7 +37,7 @@ UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
 void UDreamWidgetPresenterComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
-	if (GetWorld()->IsGameWorld())
+	if (DreamUI::IsGameWorld(this))
 	{
 		LoadWidget();//load when BeginPlay in game mode
 	}

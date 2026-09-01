@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamVisualPostProcess.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIGeometry.h"
@@ -466,7 +467,7 @@ void UDreamVisualPostProcess::UpdateRenderTarget()
 	}
 
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
+	if (!DreamUI::IsGameWorld(this))
 	{
 		if (!OutputRenderTarget->GameThread_GetRenderTargetResource())
 		{

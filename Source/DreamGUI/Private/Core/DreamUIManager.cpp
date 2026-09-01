@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 
 #include "DreamGUI.h"
@@ -1340,7 +1341,7 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 			if (!Selectable->GetWidget()->GetInteractableInHierarchy())continue;
 
 			bool bIsScreenSpace = false;
-			if (Selectable->GetWorld()->IsGameWorld())
+			if (DreamUI::IsGameWorld(Selectable.Get()))
 			{
 				auto RenderCanvas = Selectable->GetWidget()->GetRenderCanvas();
 				bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
