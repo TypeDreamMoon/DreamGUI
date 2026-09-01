@@ -9,6 +9,8 @@
 #include "DreamGUI.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamWidgetAnimation.h"
 
 namespace
 {
@@ -239,7 +241,28 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 			}
 		}
 
-		// A nested user widget builds its own contents from its own class, the way UMG initializes
+		// The same by-name contract for this widget's animations. The compiler declared one
+		// property per authored animation; the INSTANCED copy is what must land in it, because a
+		// graph that plays the archetype's copy animates a tree nobody is looking at.
+		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
+			if (Animator == nullptr)
+			{
+				continue;
+			}
+			for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
+			{
+				const FName AnimationVariableName = IsValid(Animation) ? UDreamWidgetTree::MakeAnimationVariableName(Animation) : NAME_None;
+				FObjectPropertyBase* const* PropertyPtr = AnimationVariableName.IsNone() ? nullptr : ObjectPropertiesByName.Find(AnimationVariableName);
+				if (PropertyPtr != nullptr && Animation->IsA((*PropertyPtr)->PropertyClass))
+				{
+					(*PropertyPtr)->SetObjectPropertyValue_InContainer(InUserWidget, Animation);
+				}
+			}
+		}
+
+				// A nested user widget builds its own contents from its own class, the way UMG initializes
 		// instanced sub-widgets during DuplicateAndInitializeFromWidgetTree.
 		if (UDreamUserWidget* NestedUserWidget = Cast<UDreamUserWidget>(Widget))
 		{

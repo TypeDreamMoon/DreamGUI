@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Animation/DreamWidgetAnimationComponent.h"
@@ -50,7 +50,6 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationByDisplayNa
 	float PlaybackSpeed,
 	bool bRestoreState)
 {
-	FDreamUIAnimationHandle Handle;
 	UMovieSceneSequence* Sequence = GetSequenceByDisplayName(Name);
 	if (!IsValid(Sequence))
 	{
@@ -67,6 +66,24 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationByDisplayNa
 	if (!IsValid(Sequence))
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("Animation '%s' was not found on '%s'."), *Name, *GetPathName());
+		return FDreamUIAnimationHandle();
+	}
+	return PlayAnimation(Sequence, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+}
+
+FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimation(
+	UMovieSceneSequence* Animation,
+	float StartAtTime,
+	int32 NumLoopsToPlay,
+	EDreamUIAnimationPlayMode PlayMode,
+	float PlaybackSpeed,
+	bool bRestoreState)
+{
+	FDreamUIAnimationHandle Handle;
+	UMovieSceneSequence* Sequence = Animation;
+	if (!IsValid(Sequence))
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("PlayAnimation on '%s' was handed no animation."), *GetPathName());
 		return Handle;
 	}
 

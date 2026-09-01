@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -86,6 +86,9 @@ public:
 	 * a binding reports success and comes back null.
 	 */
 	static FName MakeWidgetVariableName(const UDreamWidget* InWidget);
+	/** The same shared rule for animations: the compiler declares the property with this name and
+	 * the runtime binds the instanced animation to it, so both must derive it the same way. */
+	static FName MakeAnimationVariableName(const class UDreamWidgetAnimation* InAnimation);
 	/** Alnum/underscore only, non-ASCII kept (CJK display names are common), never leading with a digit. */
 	static FString SanitizeIdentifier(const FString& InRaw);
 };

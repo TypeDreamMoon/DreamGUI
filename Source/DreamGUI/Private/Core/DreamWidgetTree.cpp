@@ -1,6 +1,8 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamWidgetTree.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Engine/World.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "DreamGUI.h"
@@ -151,4 +153,9 @@ FString UDreamWidgetTree::SanitizeIdentifier(const FString& InRaw)
 FName UDreamWidgetTree::MakeWidgetVariableName(const UDreamWidget* InWidget)
 {
 	return InWidget != nullptr ? FName(*SanitizeIdentifier(InWidget->GetDisplayName())) : NAME_None;
+}
+
+FName UDreamWidgetTree::MakeAnimationVariableName(const UDreamWidgetAnimation* InAnimation)
+{
+	return InAnimation != nullptr ? FName(*SanitizeIdentifier(InAnimation->GetDisplayNameString())) : NAME_None;
 }

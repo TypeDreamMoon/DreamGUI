@@ -1,4 +1,4 @@
-// Copyright 2019-Present LexLiu. All Rights Reserved.
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #pragma once
@@ -72,6 +72,22 @@ public:
 	 * Plays a new animation instance without interrupting animations already running on this prefab.
 	 * @param NumLoopsToPlay Total number of times to play the animation. Zero loops indefinitely, matching UMG.
 	 */
+	/**
+	 * Plays a new animation instance by OBJECT -- the form the compiler's generated animation
+	 * variables feed, so a graph drags the animation in instead of naming it with a string that
+	 * goes stale on rename. Accepts this component's embedded animations and its standalone
+	 * sequence assets alike.
+	 * @param NumLoopsToPlay Total number of times to play the animation. Zero loops indefinitely, matching UMG.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	FDreamUIAnimationHandle PlayAnimation(
+		UMovieSceneSequence* Animation,
+		float StartAtTime = 0.0f,
+		int32 NumLoopsToPlay = 1,
+		EDreamUIAnimationPlayMode PlayMode = EDreamUIAnimationPlayMode::Forward,
+		float PlaybackSpeed = 1.0f,
+		bool bRestoreState = false);
+
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
 	FDreamUIAnimationHandle PlayAnimationByDisplayName(
 		const FString& Name,

@@ -956,7 +956,62 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 			DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(WidgetVariable));
 		}
 
-		// One class variable per `resources` entry, which is what makes the block editable from the
+		// One member variable per authored animation, the way UMG exposes UWidgetAnimations: the
+		// graph drags the animation in and hands it to Play Animation, instead of addressing it by
+		// a display-name string that silently goes stale on rename. The runtime binds the INSTANCED
+		// animation to this property by the same shared name rule (see
+		// UDreamWidgetGeneratedClass' initialization), because playing the archetype's copy would
+		// animate a tree nobody is looking at.
+		for (const UDreamWidget* Widget : SourceWidgets)
+		{
+			for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+			{
+				UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
+				if (Animator == nullptr)
+				{
+					continue;
+				}
+				for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
+				{
+					if (!IsValid(Animation))
+					{
+						continue;
+					}
+					const FName VariableName = UDreamWidgetTree::MakeAnimationVariableName(Animation);
+					if (VariableName.IsNone())
+					{
+						continue;
+					}
+					if (DeclaredNames.Contains(VariableName))
+					{
+						MessageLog.Warning(*FText::Format(
+							LOCTEXT("DuplicateAnimationVariableName", "\"{0}\" already names a widget or another animation; only the first is exposed as a variable. Rename one of them."),
+							FText::FromName(VariableName)).ToString());
+						continue;
+					}
+					DeclaredNames.Add(VariableName);
+
+					if (Blueprint->ParentClass != nullptr && Blueprint->ParentClass->FindPropertyByName(VariableName) != nullptr)
+					{
+						continue;
+					}
+
+					FBPVariableDescription AnimationVariable;
+					AnimationVariable.VarName = VariableName;
+					AnimationVariable.VarGuid = FGuid::NewDeterministicGuid(VariableName.ToString());
+					AnimationVariable.VarType = FEdGraphPinType(UEdGraphSchema_K2::PC_Object, NAME_None, UDreamWidgetAnimation::StaticClass(), EPinContainerType::None, false, FEdGraphTerminalType());
+					AnimationVariable.FriendlyName = Animation->GetDisplayNameString();
+					AnimationVariable.PropertyFlags = (CPF_BlueprintVisible | CPF_BlueprintReadOnly | CPF_RepSkip | CPF_Transient | CPF_DuplicateTransient);
+					// Its own family, split from "Widget" the way UMG splits them: what the panel is
+					// telling the author is which generated handles animate rather than lay out.
+					AnimationVariable.SetMetaData(TEXT("Category"), TEXT("Animations"));
+
+					DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(AnimationVariable));
+				}
+			}
+		}
+
+				// One class variable per `resources` entry, which is what makes the block editable from the
 		// Class Defaults panel and readable from the graph. DefaultValue is rebuilt from the file on
 		// EVERY compile and the compiler applies it onto the final CDO after the old CDO's values
 		// have been copied over -- so the FILE wins each compile, by construction. A panel edit is
