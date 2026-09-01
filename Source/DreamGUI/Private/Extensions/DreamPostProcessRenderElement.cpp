@@ -9,6 +9,7 @@
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 FName UDreamPostProcessRenderElement::DreamUI_World2PostProcess_Row1 = FName(TEXT("DreamUI_World2PostProcess_Row1"));
 FName UDreamPostProcessRenderElement::DreamUI_World2PostProcess_Row2 = FName(TEXT("DreamUI_World2PostProcess_Row2"));
@@ -195,3 +196,5 @@ void UDreamPostProcessRenderElement::OnUpdateGeometry(FDreamUIGeometry& InGeo, b
 		InGeo.Clear();
 	}
 }
+
+DECLARE_DREAM_GUI_VISUAL("PostProcessRenderElement", UDreamPostProcessRenderElement)

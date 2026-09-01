@@ -11,6 +11,7 @@
 #include "RenderTargetPool.h"
 #include "Core/DreamVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIBackgroundBlurPassParameters, )
 	RDG_TEXTURE_ACCESS(SourceTexture, ERHIAccess::SRVGraphics)
@@ -423,3 +424,5 @@ void UDreamBackgroundBlur::SendRegionVertexDataToRenderProxy()
 				});
 	}
 }
+
+DECLARE_DREAM_GUI_VISUAL("BackgroundBlur", UDreamBackgroundBlur)

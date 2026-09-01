@@ -9,6 +9,7 @@
 #include "Core/DreamVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 UDreamBackgroundPixelate::UDreamBackgroundPixelate(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -232,3 +233,5 @@ void UDreamBackgroundPixelate::SendRegionVertexDataToRenderProxy()
 	Super::SendRegionVertexDataToRenderProxy();
 	SendOthersDataToRenderProxy();
 }
+
+DECLARE_DREAM_GUI_VISUAL("BackgroundPixelate", UDreamBackgroundPixelate)

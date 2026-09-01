@@ -3,6 +3,7 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/DreamUIGeometry.h"
 #include "Utils/DreamUIUtils.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 #if WITH_EDITOR
 void UDreamVisualEmpty::PreEditChange(FProperty* PropertyAboutToChange)
@@ -52,3 +53,7 @@ void UDreamVisualEmpty::OnUnregister()
 {
 	Super::OnUnregister();
 }
+
+// Draws nothing and still takes raycasts -- the invisible hit area every UI needs, and the one
+// thing a plain `Widget` cannot be, having no visual to hit-test against at all.
+DECLARE_DREAM_GUI_VISUAL("Empty", UDreamVisualEmpty)

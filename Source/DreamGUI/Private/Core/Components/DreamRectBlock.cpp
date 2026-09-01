@@ -987,6 +987,7 @@ void UDreamRectBlock::SetRaycastSupportCornerRadius(bool value)
 
 #pragma region TweenAnimation
 #include "DreamTweenManager.h"
+#include "Core/DreamUIWidgetRegistry.h"
 UDreamTweener* UDreamRectBlock::BodyColorTo(FColor endValue, float duration, float delay, EDreamTweenEase ease)
 {
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenColorGetterFunction::CreateWeakLambda(this, [this] {
@@ -1092,3 +1093,9 @@ FunctionPropertyAnimation(OuterShadowDistance, float, Float);
 #undef LOCTEXT_NAMESPACE
 
 
+
+// HEADLESS HAZARD, kept with the class that has it: OnRegister checks RectBlockData, which it
+// loads from UDreamGUISettings. A commandlet whose project settings do not carry
+// DefaultRectBlockData asserts here rather than reporting a diagnostic, with the .dui nowhere
+// in the callstack. The tag stays -- it is a real visual and authors want it.
+DECLARE_DREAM_GUI_VISUAL("RectBlock", UDreamRectBlock)

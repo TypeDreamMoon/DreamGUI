@@ -11,6 +11,7 @@
 #include "RenderTargetPool.h"
 #include "RHIStaticStates.h"
 #include "ScreenRendering.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 DECLARE_CYCLE_STAT(TEXT("PostProcess PixelSort"), STAT_PixelSort, STATGROUP_DreamGUI);
 
@@ -554,3 +555,5 @@ void UDreamPixelSort::SendRegionVertexDataToRenderProxy()
 	Super::SendRegionVertexDataToRenderProxy();
 	SendOthersDataToRenderProxy();
 }
+
+DECLARE_DREAM_GUI_VISUAL("PixelSort", UDreamPixelSort)

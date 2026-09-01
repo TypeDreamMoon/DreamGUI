@@ -70,3 +70,8 @@ void UDreamCustomMesh::SetCustomMesh(UDreamUICustomMeshSource* Value)
 }
 
 #undef LOCTEXT_NAMESPACE
+
+// NO DECLARE_DREAM_GUI_VISUAL, deliberately. This draws whatever a UDreamUICustomMeshSource hands
+// it, and the language has no way to hand it one, so a `CustomMesh` tag would only ever produce a
+// widget that draws nothing and no message saying why. UDreamUMGWidget derives from this and IS
+// declared, because the thing it hosts is a property and a property is something a .dui can write.

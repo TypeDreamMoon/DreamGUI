@@ -28,6 +28,7 @@
 
 #include "Misc/Paths.h"
 #include "UObject/UnrealType.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 #define LOCTEXT_NAMESPACE "DreamUITextAuthoringGate"
 
@@ -445,6 +446,15 @@ namespace DreamUITextAuthoring
 			return Designer->GetWidgetBlueprint();
 		}
 		return nullptr;
+	}
+
+	FString DescribeClassForAuthor(const UClass* InClass)
+	{
+		// The refusal's whole point is "go and edit the file", so the thing it names should be the
+		// thing they would TYPE there. A message naming UDreamProgressBar sends an author to look up
+		// what a UDreamProgressBar is called in the language; naming `Native.ProgressBar` is the line.
+		const FString Tag = FDreamUIWidgetRegistry::FindTagForClass(InClass);
+		return Tag.IsEmpty() ? GetNameSafe(InClass) : Tag;
 	}
 
 	FText DescribeStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint, const FString& InOperation)

@@ -8,6 +8,7 @@
 #include "Core/DreamUISpriteData.h"
 #include "Slate/SlateTextureAtlasInterface.h"
 #include "Utils/DreamUIUtils.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 #if WITH_EDITOR
 void UDreamImage::PreEditChange(FProperty* PropertyAboutToChange)
@@ -343,3 +344,5 @@ float UDreamImage::GetPreferredHeight() const
 {
 	return Brush.ImageSize.Y;
 }
+
+DECLARE_DREAM_GUI_VISUAL("Image", UDreamImage)

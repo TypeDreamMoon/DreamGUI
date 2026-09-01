@@ -182,7 +182,7 @@ namespace DreamWidgetTreeEditing
 		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName)
 	{
 		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-			FString::Printf(TEXT("create a '%s'"), *GetNameSafe(InWidgetClass))))
+			FString::Printf(TEXT("create a '%s'"), *DreamUITextAuthoring::DescribeClassForAuthor(InWidgetClass))))
 		{
 			return nullptr;
 		}
@@ -202,15 +202,23 @@ namespace DreamWidgetTreeEditing
 			return nullptr;
 		}
 
-		UDreamWidgetTree* Tree = InBlueprint->GetOrCreateWidgetTree();
+		// Without a root, deliberately: an empty tree is the state DeleteWidget leaves behind, and
+		// asking for one to be conjured here would fill the hole this function exists to fill --
+		// with a bare UDreamWidget the author never chose, which the widget they DID choose would
+		// then land inside.
+		UDreamWidgetTree* Tree = InBlueprint->GetOrCreateWidgetTree(/*bEnsureRootWidget*/false);
 		UDreamWidget* Parent = InParent != nullptr ? InParent : Tree->RootWidget.Get();
-		if (!IsTemplateWidgetOf(InBlueprint, Parent))
+		// Nothing to hang it on, because there is nothing at all: this widget IS the hierarchy now.
+		// The counterpart of DeleteWidget letting the root go -- an empty tree has to be fillable, or
+		// deleting the root would be a one-way door.
+		const bool bBecomesRoot = Parent == nullptr && !IsValid(Tree->RootWidget);
+		if (!bBecomesRoot && !IsTemplateWidgetOf(InBlueprint, Parent))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d The parent does not belong to '%s'."),
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InBlueprint->GetName());
 			return nullptr;
 		}
-		if (!Parent->CanAcceptAdditionalChildren(1))
+		if (!bBecomesRoot && !Parent->CanAcceptAdditionalChildren(1))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot take another child, so nothing was created under it."),
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName());
@@ -221,7 +229,10 @@ namespace DreamWidgetTreeEditing
 		// creation has to be able to put the tree back the way it was.
 		InBlueprint->Modify();
 		Tree->Modify();
-		Parent->Modify();
+		if (!bBecomesRoot)
+		{
+			Parent->Modify();
+		}
 
 		UDreamWidget* Widget = Tree->ConstructWidget(InWidgetClass);
 		if (!IsValid(Widget))
@@ -232,6 +243,24 @@ namespace DreamWidgetTreeEditing
 		}
 		const FString Desired = InDesiredDisplayName.IsEmpty() ? InWidgetClass->GetName() : InDesiredDisplayName;
 		Widget->SetDisplayName(MakeUniqueDisplayName(Tree, Desired, Widget));
+
+		if (bBecomesRoot)
+		{
+			Tree->RootWidget = Widget;
+			// Stretched, for the same reason UDreamWidgetBlueprintFactory stretches the root it makes:
+			// a root left at the widget default is a fixed rect nothing sizes, and every full-screen
+			// hierarchy then has to fix it by hand. Written as anchor DATA because the setters resolve
+			// against a parent and a tree root has none -- the exact trap that made the factory's own
+			// stretch a silent no-op for as long as it existed.
+			FDreamUIAnchorData Anchors = Widget->GetAnchorData();
+			Anchors.AnchorMin = FVector2D::ZeroVector;
+			Anchors.AnchorMax = FVector2D(1.0, 1.0);
+			Anchors.AnchoredPosition = FVector2D::ZeroVector;
+			Anchors.SizeDelta = FVector2D::ZeroVector;
+			Widget->SetAnchorData(Anchors);
+			NotifyStructureChanged(InBlueprint);
+			return Widget;
+		}
 
 		if (!Widget->TrySetParent(Parent, /*bKeepWorldPosition*/false, InSiblingIndex))
 		{
@@ -265,13 +294,16 @@ namespace DreamWidgetTreeEditing
 			return false;
 		}
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
-		if (Tree->RootWidget == InWidget)
-		{
-			// A hierarchy with no root is not a state the compiler or the designer has an answer for.
-			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Refusing to delete the root of '%s'; delete its children instead."),
-				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InBlueprint->GetName());
-			return false;
-		}
+		// The root goes like anything else, and the tree is simply left empty -- UMG's
+		// UWidgetTree::RemoveWidget does exactly this ("If the widget being removed is the root, null
+		// it out"). This used to be refused, on the grounds that nothing downstream had an answer for
+		// an empty hierarchy. That stopped being true: the compiler says so itself
+		// (FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings -- "No hierarchy at all is a
+		// legitimate state (logic-only class, or nothing authored yet)"), the preview host and the
+		// generated class both guard the root before touching it, and CreateWidget below adopts the
+		// next widget as the new root. What was left was a refusal nobody still needed, and no way to
+		// replace a root you had outgrown short of deleting the asset.
+		const bool bWasRoot = Tree->RootWidget == InWidget;
 
 		InBlueprint->Modify();
 		Tree->Modify();
@@ -280,6 +312,13 @@ namespace DreamWidgetTreeEditing
 			Parent->Modify();
 		}
 		InWidget->Modify();
+
+		if (bWasRoot)
+		{
+			// Before the destroy, and through Modify above, so undo puts the pointer back with the
+			// subtree the transaction buffer is holding.
+			Tree->RootWidget = nullptr;
+		}
 
 		// Not MarkAsGarbage: the transaction buffer is holding this subtree so undo can put it back,
 		// and a garbage object cannot be restored. Detached is what makes it absent from the class and

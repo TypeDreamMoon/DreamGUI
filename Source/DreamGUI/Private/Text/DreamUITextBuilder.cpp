@@ -175,41 +175,23 @@ namespace DreamUITextBuilderLocal
 	}
 
 	/**
-	 * The built-in tags, and the UDreamVisual each one creates. `Widget` is in it with a null class:
-	 * it is a known tag whose answer is "no visual", which is a different fact from an unknown tag.
+	 * The built-in tags, and the UDreamVisual each one creates -- now asked of the registry the
+	 * DECLARE_DREAM_GUI_VISUAL macro fills, rather than kept as a list here.
 	 *
-	 * A function-local static rather than a file-scope one because the values are StaticClass()
-	 * pointers, and a file-scope array would be built during static initialisation -- before UObject
-	 * bootstrapping, which is where that reliably turns into a null entry nobody can explain.
+	 * This used to BE the list, and the list is why the language knew nine visuals: the plugin ships
+	 * twenty, and the other eleven were placeable from the palette and unspellable in a `.dui` with
+	 * nothing anywhere saying so. A declaration next to each class cannot drift from the class the
+	 * way a table in a different module can.
 	 *
-	 * UDreamCustomMesh is deliberately absent: it draws whatever a UDreamUICustomMeshSource hands it,
-	 * and the language has no way to hand it one, so a `CustomMesh` tag would only ever produce a
-	 * widget that draws nothing and no message saying why.
+	 * Rebuilt per call rather than cached in a static: registrations arrive during static
+	 * initialisation, and a cache built on the first call would be correct only if that call came
+	 * after the last registration -- which is a link-order bet. The list is twenty entries long and
+	 * every caller is a diagnostic or an export.
 	 */
-	TConstArrayView<TPair<const TCHAR*, UClass*>> GetVisualTagTable()
+	TArray<TPair<FName, UClass*>> GetVisualTagTable()
 	{
-		static const TArray<TPair<const TCHAR*, UClass*>> Table =
-		{
-			{ TEXT("Widget"),             nullptr },
-			{ TEXT("Image"),              UDreamImage::StaticClass() },
-			{ TEXT("Text"),               UDreamText::StaticClass() },
-			{ TEXT("Texture"),            UDreamTexture::StaticClass() },
-			{ TEXT("Sprite"),             UDreamSprite::StaticClass() },
-			// HEADLESS HAZARD. UDreamWidget::CreateNewVisual calls Call_OnRegister unconditionally, and
-			// UDreamRectBlock::OnRegister does `check(RectBlockData != nullptr)` after loading it from
-			// UDreamGUISettings, then registers a data-texture buffer. Build a RectBlock node in a
-			// commandlet whose project settings do not carry DefaultRectBlockData and it asserts --
-			// not a diagnostic, an assert, with the .dui nowhere in the callstack. Whatever runs the
-			// compile without an editor has to keep that setting valid, or teach this table to skip
-			// visuals that need one. The tag stays: it is a real visual and authors want it.
-			{ TEXT("RectBlock"),          UDreamRectBlock::StaticClass() },
-			// Draws nothing and still takes raycasts -- the invisible hit area every UI needs, and the
-			// one thing a plain `Widget` cannot be, having no visual to hit-test against at all.
-			{ TEXT("Empty"),              UDreamVisualEmpty::StaticClass() },
-			{ TEXT("BackgroundBlur"),     UDreamBackgroundBlur::StaticClass() },
-			{ TEXT("BackgroundPixelate"), UDreamBackgroundPixelate::StaticClass() },
-			{ TEXT("PixelSort"),          UDreamPixelSort::StaticClass() },
-		};
+		TArray<TPair<FName, UClass*>> Table;
+		FDreamUIWidgetRegistry::GetVisualEntries(Table);
 		return Table;
 	}
 
@@ -243,17 +225,24 @@ namespace DreamUITextBuilderLocal
 		return nullptr;
 	}
 
-	/** The tag whose visual declares InName, when one does. Only ever asked after a name has failed. */
-	const TCHAR* FindTagWhoseVisualDeclares(const FString& InName)
+	/**
+	 * The tag whose visual declares InName, when one does. Only ever asked after a name has failed.
+	 *
+	 * FIRST match, over a list the registry sorts by tag name. Sorted rather than in registration
+	 * order because registration order is static-initialisation order across translation units --
+	 * a link-order detail -- and a hint that says `Sprite` on one build and `Texture` on the next
+	 * teaches an author something that is not true.
+	 */
+	FString FindTagWhoseVisualDeclares(const FString& InName)
 	{
-		for (const TPair<const TCHAR*, UClass*>& Entry : GetVisualTagTable())
+		for (const TPair<FName, UClass*>& Entry : GetVisualTagTable())
 		{
 			if (Entry.Value != nullptr && FindFProperty<FProperty>(Entry.Value, *InName) != nullptr)
 			{
-				return Entry.Key;
+				return Entry.Key.ToString();
 			}
 		}
-		return nullptr;
+		return FString();
 	}
 
 	UEnum* GetEnumForProperty(const FProperty* InProperty)
@@ -444,11 +433,12 @@ namespace DreamUITextBuilderLocal
 			// "No property named FontSize" is true and useless when the real mistake is that the node
 			// is a Widget and FontSize belongs to a Text. Naming the tag that WOULD have it turns a
 			// hunt through headers into a one-character edit, so it is worth its own code.
-			if (const TCHAR* Tag = bInSuggestVisualTag ? FindTagWhoseVisualDeclares(Segments[0]) : nullptr)
+			const FString Tag = bInSuggestVisualTag ? FindTagWhoseVisualDeclares(Segments[0]) : FString();
+			if (!Tag.IsEmpty())
 			{
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NoVisualForProperty, InProperty.Location,
 					FString::Printf(TEXT("'%s' belongs to the visual a '%s' node creates, and %s has no such visual"),
-						*Segments[0], Tag, *InDestinationDescription));
+						*Segments[0], *Tag, *InDestinationDescription));
 				return false;
 			}
 			// Still UnknownProperty: the name really does not exist. Only the advice changes, and only
@@ -1095,24 +1085,15 @@ namespace DreamUITextBuilderLocal
 void FDreamUITextBuilder::GetVisualTags(TArray<TPair<FString, UClass*>>& OutTags)
 {
 	OutTags.Reset();
-	for (const TPair<const TCHAR*, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())
+	for (const TPair<FName, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())
 	{
-		OutTags.Emplace(FString(Entry.Key), Entry.Value);
+		OutTags.Emplace(Entry.Key.ToString(), Entry.Value);
 	}
 }
 
 UClass* FDreamUITextBuilder::FindVisualClassForTag(const FString& InTag, bool& bOutIsKnownTag)
 {
-	for (const TPair<const TCHAR*, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())
-	{
-		if (InTag == Entry.Key)
-		{
-			bOutIsKnownTag = true;
-			return Entry.Value;
-		}
-	}
-	bOutIsKnownTag = false;
-	return nullptr;
+	return FDreamUIWidgetRegistry::ResolveVisual(FName(*InTag), bOutIsKnownTag);
 }
 
 bool FDreamUITextBuilder::IsWritableFromText(const FProperty* InProperty, FString& OutReason)

@@ -6,6 +6,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "DreamTweenManager.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 UDreamRing::UDreamRing(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -104,3 +105,5 @@ UDreamTweener* UDreamRing::EndAngleTo(float endValue, float duration, float dela
 	}
 	return Tweener;
 }
+
+DECLARE_DREAM_GUI_VISUAL("Ring", UDreamRing)

@@ -9,6 +9,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Extensions/DreamPostProcessRenderElement.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 void UDreamPostProcessRenderElement_Text::BeginPlay()
 {
@@ -151,3 +152,5 @@ void UDreamPostProcessRenderElement_Text::OnUpdateGeometry(FDreamUIGeometry& InG
 {
 	Super::OnUpdateGeometry(InGeo, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 }
+
+DECLARE_DREAM_GUI_VISUAL("PostProcessRenderElementText", UDreamPostProcessRenderElement_Text)
