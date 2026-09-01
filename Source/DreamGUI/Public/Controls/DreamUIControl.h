@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -15,13 +15,59 @@
 #include "DreamUIControl.generated.h"
 
 /**
+ * One part of a control: the name its tree gives the widget, and the field that holds it.
+ *
+ * Not a UPROPERTY and not serialized -- it is a description of where a pointer comes from, handed
+ * to the binder once per initialize and thrown away.
+ */
+struct FDreamControlPart
+{
+	FDreamControlPart(FName InName, TObjectPtr<UDreamWidget>& InField, bool bInRequired = true)
+		: Name(InName)
+		, Field(&InField)
+		, bRequired(bInRequired)
+	{
+	}
+
+	/** The widget's display name, in this control's tree and in any template that replaces it. */
+	FName Name;
+
+	/** Where the bound widget goes. The control's own member, so its lifetime is the control's. */
+	TObjectPtr<UDreamWidget>* Field;
+
+	/**
+	 * Whether a tree without it can still work as this control. A missing REQUIRED part is reported
+	 * by name; an optional one is simply absent, and every writer to it already null-checks.
+	 */
+	bool bRequired;
+};
+
+/**
  * A control whose hierarchy is code, not an asset.
  *
- * What every one of them shares is not the tree -- each builds its own in NativeOnInitialized --
- * but the style contract: where the look comes from (the project sheet by default, this instance
- * on request), which named variant, and the obligation to re-push every knob when one changes,
- * because nothing re-derives from a property the way instancing a changed template would. That
- * last part is UMG's SynchronizeProperties, and it is the tax the whole family pays.
+ * WHAT EVERY ONE OF THEM SHARES is not the tree but the four steps that produce one. This class owns
+ * NativeOnInitialized and runs them in order:
+ *
+ *     1. a tree           -- RealizeTemplate(), or RealizeBuiltIn() when nothing replaces it
+ *     2. the parts        -- BindParts(), by NAME, from the one list CollectParts declares
+ *     3. the behaviours   -- WireParts(), on whichever nodes step 2 found
+ *     4. the look         -- ApplyStyle(), and again whenever a knob changes
+ *
+ * Splitting 1 from 2 is what makes Template possible. A control used to reach its parts through the
+ * builder's .Out(), which writes a pointer at construction and therefore only ever works for a tree
+ * this code wrote; binding by name afterwards works for any tree with the right names in it, so the
+ * two roads differ in step 1 alone. That is also why CollectParts is ONE list rather than a name
+ * lookup beside a pointer list: two lists of the same names is how a template silently stops driving
+ * a part the code tree still names.
+ *
+ * Splitting 3 out is what keeps "a control always carries its own behaviour" true for a templated
+ * one -- the argument DreamButton was written for. A template's author draws a face; WireParts is
+ * what puts the UUIButton on it.
+ *
+ * THE STYLE CONTRACT is the other half: where the look comes from (the project sheet by default,
+ * this instance on request), which named variant, and the obligation to re-push every knob when one
+ * changes, because nothing re-derives from a property the way instancing a changed template would.
+ * That last part is UMG's SynchronizeProperties, and it is the tax the whole family pays.
  *
  * The concrete style struct stays on the derived class, typed; a control resolves it as
  *
@@ -42,6 +88,27 @@ public:
 	/** Named entry in the sheet ("Danger", "Compact"); none means the family default. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Style", meta = (EditCondition = "StyleSource == EDreamUIStyleSource::ProjectStyleSheet"))
 	FName StyleVariant;
+
+	/**
+	 * A hierarchy to use INSTEAD of the one this control builds for itself -- WPF's ControlTemplate.
+	 *
+	 * The bargain is the same one WPF makes: the control keeps the behaviour, the state machine and
+	 * the style contract; the template decides what the thing looks like, down to which nodes exist.
+	 * Parts are matched BY NAME -- the names in CollectParts, which are the names the built-in tree
+	 * already gives them -- so a template is "a widget blueprint with a Face and a Label in it", not
+	 * a subclass of anything and not an interface anybody has to implement.
+	 *
+	 * Its TREE is what gets used, instanced straight into this control, exactly as a class's own
+	 * archetype would be. Deliberately not placed as a nested widget: the parts have to be this
+	 * control's own to drive, and reaching into another instance to write its widgets is the
+	 * cross-asset difference record this codebase spent P4 deleting.
+	 *
+	 * A required part the template omits is reported once, by name. Silence there is how a control
+	 * ends up half-driven -- the missing node is simply never written to, and the symptom is a label
+	 * that never changes with nothing anywhere saying why.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Style")
+	TSubclassOf<UDreamUserWidget> Template;
 
 	/**
 	 * Re-push the resolved style, and every other knob, into the parts. Called for you after the
@@ -69,7 +136,80 @@ public:
 		}
 	}
 
+	/** The widget of that display name among this control's OWN contents, or null. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Control")
+	UDreamWidget* FindPart(FName InName) const;
+
+	/**
+	 * Every REQUIRED part this control did not find. Empty is the healthy answer.
+	 *
+	 * The diagnostic a template's author actually needs -- "which names is my tree missing" -- and
+	 * the same question a test can ask of every control at once. That sweep is not hypothetical
+	 * hygiene: the first run of it found three controls whose part list named a node the built-in
+	 * tree does not have ("List" for a node called "ListRoot", and two more), each of which left a
+	 * part permanently null on BOTH roads.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Control")
+	TArray<FName> GetUnboundRequiredParts();
+
 protected:
+	/**
+	 * The four steps, in the one order that works. Not meant to be overridden -- a control says what
+	 * it is through the hooks below, and a control that took this over would be the one control the
+	 * template road does not reach.
+	 */
+	virtual void NativeOnInitialized() override;
+
+	/**
+	 * The parts this control drives: the name its tree gives each widget, and the field that holds
+	 * it. Declared once and walked by both roads.
+	 */
+	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) {}
+
+	/**
+	 * Build the tree this control drives when no template replaces it -- the Realize() call that
+	 * used to be the body of NativeOnInitialized. Name the nodes the names CollectParts names.
+	 */
+	virtual void RealizeBuiltIn() {}
+
+	/**
+	 * Hook the behaviours onto the parts, once both roads have bound them.
+	 *
+	 * On the built-in road this is what used to live in Realize's .Then. On the template road it is
+	 * the only thing that can put a UUIButton on a face somebody drew -- so it ADDS what it needs
+	 * (EnsureComponent) rather than assuming, which is what keeps "a control always carries its own
+	 * behaviour" true for a templated one.
+	 */
+	virtual void WireParts() {}
+
+	/** Anything a control must do between having its parts and its first style push. */
+	virtual void OnPartsReady() {}
+
+	/**
+	 * Instance Template's tree into this control. False when there is nothing to instance, which is
+	 * the signal to build the code tree instead.
+	 *
+	 * A tree that ALREADY arrived counts as a template and is left alone -- which is how a Blueprint
+	 * subclass of a control templates it for free, and incidentally fixes those: before this, such a
+	 * subclass got the Blueprint's tree from Initialize and then the code tree on top of it.
+	 */
+	bool RealizeTemplate();
+
+	/** Resolve every part CollectParts declares, and name any required one the tree does not have. */
+	void BindParts();
+
+	/** InNode's T, added if whoever drew this tree did not put one there. */
+	template<class T>
+	static T* EnsureComponent(UDreamWidget* InNode)
+	{
+		if (InNode == nullptr)
+		{
+			return nullptr;
+		}
+		T* Existing = InNode->GetComponent<T>();
+		return Existing != nullptr ? Existing : InNode->AddComponent<T>();
+	}
+
 	/**
 	 * Round a face. Every control's face is a procedural rect now -- that is where most of the UMG
 	 * feel lives -- and the radius is the one thing all of them push the same way.

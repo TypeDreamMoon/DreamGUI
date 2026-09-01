@@ -97,6 +97,21 @@ public:
 	TMap<FName, TObjectPtr<UDreamWidget>> NamedSlotContent;
 
 	/**
+	 * The children this widget had BEFORE it made any of its own -- what a host nested on it.
+	 *
+	 * Taken at the top of Initialize, ahead of both roads that produce contents (an archetype
+	 * instanced above, a native control's tree realized in NativeOnInitialized), which is what makes
+	 * it a clean "not mine" with no control having to name its own root.
+	 *
+	 * Live only for the length of Initialize, and emptied once the default slot has taken its share
+	 * so nothing reads a stale list a frame later. A class that needs the list for something other
+	 * than a slot -- the tab view makes one TAB per nested page -- reads it from a hook that runs
+	 * inside that window.
+	 */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UDreamWidget>> HostSuppliedChildren;
+
+	/**
 	 * Instance the class's template into this widget, resolve the by-name widget bindings, and attach
 	 * the resulting root beneath this widget.
 	 *
@@ -446,16 +461,15 @@ private:
 	/**
 	 * Move content that arrived with no slot name into the default slot.
 	 *
-	 * InHostSupplied is the children this widget had BEFORE it made any of its own -- snapshotted in
-	 * Initialize, ahead of both roads that produce contents. That ordering is the whole trick: .dui
-	 * nesting and a designer drop attach to the control while it is still empty, so "was already
-	 * here" and "is not mine" are the same set, and no control has to name its own root to be told
-	 * apart from its guests.
+	 * Reads HostSuppliedChildren, which is the children this widget had BEFORE it made any of its
+	 * own. That ordering is the whole trick: .dui nesting and a designer drop attach to the control
+	 * while it is still empty, so "was already here" and "is not mine" are the same set, and no
+	 * control has to name its own root to be told apart from its guests.
 	 *
 	 * Anything a named binding already claimed has been re-parented into its slot by then and is no
 	 * longer a child of this widget, so it is skipped without a second rule.
 	 */
-	void AdoptUnslottedChildren(const TArray<UDreamWidget*>& InHostSupplied);
+	void AdoptUnslottedChildren();
 
 	/**
 	 * Add the event bridge to this instance, once, in game worlds only. Edit worlds (the designer's

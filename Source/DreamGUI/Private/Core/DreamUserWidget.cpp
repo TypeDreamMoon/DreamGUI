@@ -216,7 +216,11 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// roads that produce contents run below -- InitializeWidgetStatic instances an archetype,
 	// NativeOnInitialized realizes a native control's tree -- so this snapshot is exactly "not
 	// mine", and AdoptUnslottedChildren needs no other rule to tell guests from furniture.
-	TArray<UDreamWidget*> HostSuppliedChildren(GetChildren());
+	HostSuppliedChildren.Reset();
+	for (UDreamWidget* Child : GetChildren())
+	{
+		HostSuppliedChildren.Add(Child);
+	}
 
 	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
 
@@ -257,8 +261,11 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// Both kinds of contents now exist, and nothing is registered yet: the one moment that works for
 	// an archetype-instanced tree and a code-built one alike.
 	AttachNamedSlotContent();
-	AdoptUnslottedChildren(HostSuppliedChildren);
+	AdoptUnslottedChildren();
 	NativeOnSlotContentAttached();
+	// Whoever wanted it has had it. Kept any longer it is a list of widgets that have since moved,
+	// been reparented or been destroyed, answering a question nobody should still be asking.
+	HostSuppliedChildren.Reset();
 
 	// After the tree exists: the bindings name widgets in it.
 	ResolvePropertyBindings();
@@ -1095,10 +1102,10 @@ void UDreamUserWidget::AttachNamedSlotContent()
 	}
 }
 
-void UDreamUserWidget::AdoptUnslottedChildren(const TArray<UDreamWidget*>& InHostSupplied)
+void UDreamUserWidget::AdoptUnslottedChildren()
 {
 	const FName DefaultSlot = GetDefaultSlotName();
-	if (DefaultSlot.IsNone() || InHostSupplied.Num() == 0)
+	if (DefaultSlot.IsNone() || HostSuppliedChildren.Num() == 0)
 	{
 		return;
 	}
@@ -1109,7 +1116,7 @@ void UDreamUserWidget::AdoptUnslottedChildren(const TArray<UDreamWidget*>& InHos
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetClass()->GetName(), *DefaultSlot.ToString());
 		return;
 	}
-	for (UDreamWidget* Content : InHostSupplied)
+	for (UDreamWidget* Content : HostSuppliedChildren)
 	{
 		// Still a child of this widget means no named binding claimed it: AttachNamedSlotContent
 		// re-parents what it places, so anything it took is already somewhere else.
