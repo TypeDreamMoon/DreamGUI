@@ -560,14 +560,37 @@ void UDreamWidget::BeginDestroy()
 		auto Manager = UDreamUIManagerWorldSubsystem::GetInstance(World);
 		auto ManagerName = Manager ? Manager->GetName() : TEXT("null");
 
-		UE_LOG(DreamGUI, Error, TEXT("UDreamWidget tree %s was not destroyed by its owner. World:%s, WorldType:%d, Manager:%s. Auto cleanup in BeginDestroy."),
-			*TeardownRoot->GetPathDisplayName(), *WorldName, World ? World->WorldType : -1, *ManagerName);
-
-		if (GEngine)
+		// AN ERROR ONLY WHERE IT CAN MEAN SOMETHING, which is where there is a world.
+		//
+		// This says "an owner should have destroyed this tree", and the harm it names is the manager
+		// still holding pointers into a hierarchy nobody tore down -- ticks, raycasts and a draw list
+		// pointing at widgets on their way out. A tree with NO world has no manager to have leaked
+		// into: nothing outside its own object graph refers to it, and the collector reaching it is
+		// simply the end of its life rather than a symptom of one. That is the state of every tree in
+		// a headless test and of every Blueprint authoring tree.
+		//
+		// Reporting it as an Error there was worse than useless, because BeginDestroy runs at GC
+		// TIME and the automation framework attributes whatever is logged to whichever test happens
+		// to be running: one leak inside the widget-blueprint tests reliably failed an unrelated one,
+		// and it passed when run alone. A diagnostic that fails an innocent test teaches people to
+		// ignore the suite. As a Warning it still names the tree in the log for anyone auditing test
+		// hygiene -- TDreamTestControl exists for exactly that -- without accusing a bystander.
+		if (World != nullptr)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
-				, FString::Printf(TEXT("UDreamWidget tree %s was not destroyed by its owner; auto cleaned up. World:%s, Manager:%s")
-					, *TeardownRoot->GetPathDisplayName(), *WorldName, *ManagerName));
+			UE_LOG(DreamGUI, Error, TEXT("UDreamWidget tree %s was not destroyed by its owner. World:%s, WorldType:%d, Manager:%s. Auto cleanup in BeginDestroy."),
+				*TeardownRoot->GetPathDisplayName(), *WorldName, World->WorldType, *ManagerName);
+
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
+					, FString::Printf(TEXT("UDreamWidget tree %s was not destroyed by its owner; auto cleaned up. World:%s, Manager:%s")
+						, *TeardownRoot->GetPathDisplayName(), *WorldName, *ManagerName));
+			}
+		}
+		else
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("UDreamWidget tree %s reached the collector still registered, with no world to have leaked into. Auto cleanup in BeginDestroy."),
+				*TeardownRoot->GetPathDisplayName());
 		}
 
 		// Elevating fallback cleanup to the hierarchy root prevents one diagnostic per child.
