@@ -5,6 +5,9 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUIManager.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationPlayer.h"
+#include "Animation/DreamUISequence.h"
 #include "Interaction/DreamContentWidget.h"
 #include "DreamGUI.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -1227,4 +1230,168 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 	}
 	RegisterDreamWidgetHierarchy(UserWidget);
 	return UserWidget;
+}
+
+// ---------------------------------------------------------------------------------- animation
+//
+// Forwarding, not reimplementation. Every one of these finds the UDreamWidgetAnimationComponent
+// that owns the thing it was handed and calls the component's own method, because the component's
+// bookkeeping (its live players, its finished delegates) is what makes stopping and querying work.
+// Routing a handle to the WRONG component would not error -- the component's guard would simply
+// find the player is not one of its own and do nothing at all -- so the outer chain, which is
+// exact, is used in preference to searching.
+
+void UDreamUserWidget::CollectAnimationComponents(TArray<UDreamWidgetAnimationComponent*>& OutComponents) const
+{
+	UDreamWidget* ContentRoot = GetContentRoot();
+	if (!IsValid(ContentRoot))
+	{
+		return;
+	}
+	// To the nested boundary: a nested instance's animations are its own to stop and to name, and
+	// it exposes this same API for doing it.
+	TArray<UDreamWidget*> Widgets;
+	CollectDreamWidgetsToNestedBoundary(ContentRoot, Widgets);
+	for (UDreamWidget* Widget : Widgets)
+	{
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			if (UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component))
+			{
+				OutComponents.Add(Animator);
+			}
+		}
+	}
+}
+
+UDreamWidgetAnimationComponent* UDreamUserWidget::FindAnimationComponentFor(UMovieSceneSequence* InAnimation) const
+{
+	if (!IsValid(InAnimation))
+	{
+		return nullptr;
+	}
+	// An embedded animation is a sub-object of its component, so the outer chain names the owner
+	// outright -- and names the INSTANCED component when handed the instanced animation, which is
+	// what the generated variables hold.
+	if (UDreamWidgetAnimationComponent* Owner = InAnimation->GetTypedOuter<UDreamWidgetAnimationComponent>())
+	{
+		return Owner;
+	}
+	// A standalone sequence asset is outer'd to its own package, so it has to be looked for among
+	// the components that reference it.
+	UDreamUISequence* Asset = Cast<UDreamUISequence>(InAnimation);
+	if (Asset == nullptr)
+	{
+		return nullptr;
+	}
+	TArray<UDreamWidgetAnimationComponent*> Animators;
+	CollectAnimationComponents(Animators);
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		if (Component->GetSequenceAssets().Contains(Asset))
+		{
+			return Component;
+		}
+	}
+	return nullptr;
+}
+
+FDreamUIAnimationHandle UDreamUserWidget::PlayAnimation(
+	UMovieSceneSequence* Animation,
+	float StartAtTime,
+	int32 NumLoopsToPlay,
+	EDreamUIAnimationPlayMode PlayMode,
+	float PlaybackSpeed,
+	bool bRestoreState)
+{
+	UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation);
+	if (Component == nullptr)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("PlayAnimation on '%s': '%s' does not belong to this widget."),
+			*GetPathName(), IsValid(Animation) ? *Animation->GetName() : TEXT("(none)"));
+		return FDreamUIAnimationHandle();
+	}
+	return Component->PlayAnimation(Animation, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+}
+
+FDreamUIAnimationHandle UDreamUserWidget::PlayAnimationByName(
+	const FString& Name,
+	float StartAtTime,
+	int32 NumLoopsToPlay,
+	EDreamUIAnimationPlayMode PlayMode,
+	float PlaybackSpeed,
+	bool bRestoreState)
+{
+	TArray<UDreamWidgetAnimationComponent*> Animators;
+	CollectAnimationComponents(Animators);
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		// Asked of the component that HAS it, so a component without it stays silent instead of
+		// logging a not-found for every animation this widget owns but that one does not.
+		if (Component->GetSequenceByDisplayName(Name) != nullptr)
+		{
+			return Component->PlayAnimationByDisplayName(Name, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+		}
+	}
+	// Not embedded anywhere: the component's own fallback covers the standalone assets, and the
+	// first component is as good an owner as any for a name none of them claimed.
+	if (Animators.Num() > 0)
+	{
+		return Animators[0]->PlayAnimationByDisplayName(Name, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+	}
+	UE_LOG(DreamGUI, Warning, TEXT("PlayAnimationByName on '%s': no animation component in this widget."), *GetPathName());
+	return FDreamUIAnimationHandle();
+}
+
+namespace
+{
+	/** The component a handle's player was created under; see the note above. */
+	UDreamWidgetAnimationComponent* ComponentForHandle(const FDreamUIAnimationHandle& InHandle)
+	{
+		return IsValid(InHandle.Player) ? InHandle.Player->GetTypedOuter<UDreamWidgetAnimationComponent>() : nullptr;
+	}
+}
+
+void UDreamUserWidget::PauseAnimation(FDreamUIAnimationHandle Handle)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->PauseAnimation(Handle);
+	}
+}
+
+void UDreamUserWidget::StopAnimation(FDreamUIAnimationHandle Handle)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->StopAnimation(Handle);
+	}
+}
+
+void UDreamUserWidget::ReverseAnimation(FDreamUIAnimationHandle Handle)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->ReverseAnimation(Handle);
+	}
+}
+
+bool UDreamUserWidget::IsAnimationPlaying(FDreamUIAnimationHandle Handle) const
+{
+	UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle);
+	return Component != nullptr && Component->IsAnimationPlaying(Handle);
+}
+
+void UDreamUserWidget::StopAllAnimations()
+{
+	TArray<UDreamWidgetAnimationComponent*> Animators;
+	CollectAnimationComponents(Animators);
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		Component->StopAllAnimations();
+	}
 }

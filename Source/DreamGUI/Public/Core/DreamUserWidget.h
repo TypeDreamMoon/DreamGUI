@@ -16,6 +16,9 @@
 #include "Event/Interface/DreamPointerDragDropInterface.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
+// FDreamUIAnimationHandle is passed and returned by value below, so it is a definition here rather
+// than a forward declaration.
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;
@@ -160,6 +163,64 @@ public:
 	/** The root of this widget's own contents -- the tree's root, not this widget. Null before Initialize. */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	UDreamWidget* GetContentRoot() const;
+
+	// ---------------------------------------------------------------------------- animation
+
+	/**
+	 * Plays one of this widget's animations. The entry the compiler's generated animation
+	 * variables feed: drag the variable in, drop it on Animation, leave Target as self.
+	 *
+	 * The animations live on UDreamWidgetAnimationComponents somewhere in this hierarchy rather
+	 * than on the widget itself, which is an implementation detail no graph should have to walk --
+	 * UMG puts PlayAnimation on UUserWidget for the same reason. Each overload here finds the
+	 * component that actually owns the thing it was handed and forwards to it.
+	 *
+	 * @param NumLoopsToPlay Total number of times to play the animation. Zero loops indefinitely.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	FDreamUIAnimationHandle PlayAnimation(
+		UMovieSceneSequence* Animation,
+		float StartAtTime = 0.0f,
+		int32 NumLoopsToPlay = 1,
+		EDreamUIAnimationPlayMode PlayMode = EDreamUIAnimationPlayMode::Forward,
+		float PlaybackSpeed = 1.0f,
+		bool bRestoreState = false);
+
+	/** By display name, for callers that genuinely start from text. Prefer the animation variable. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	FDreamUIAnimationHandle PlayAnimationByName(
+		const FString& Name,
+		float StartAtTime = 0.0f,
+		int32 NumLoopsToPlay = 1,
+		EDreamUIAnimationPlayMode PlayMode = EDreamUIAnimationPlayMode::Forward,
+		float PlaybackSpeed = 1.0f,
+		bool bRestoreState = false);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void PauseAnimation(FDreamUIAnimationHandle Handle);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void StopAnimation(FDreamUIAnimationHandle Handle);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void ReverseAnimation(FDreamUIAnimationHandle Handle);
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	bool IsAnimationPlaying(FDreamUIAnimationHandle Handle) const;
+
+	/** Every animation on every component of this widget's own contents, nested instances excluded. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void StopAllAnimations();
+
+	/**
+	 * The component holding InAnimation, or null. Exposed because a caller that wants the parts of
+	 * the component API this widget does not mirror should not have to guess which widget carries it.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	UDreamWidgetAnimationComponent* FindAnimationComponentFor(UMovieSceneSequence* InAnimation) const;
+
+	/** The animation components on this widget's own contents, nested instances excluded. */
+	void CollectAnimationComponents(TArray<UDreamWidgetAnimationComponent*>& OutComponents) const;
 
 	/**
 	 * The widget carrying the UDreamNamedSlot of that name inside this instance, or null.

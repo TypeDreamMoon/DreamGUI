@@ -51,6 +51,8 @@ public:
 		UDreamWidgetAnimation* GetSequenceByIndex(int32 InIndex) const;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		const TArray<UDreamWidgetAnimation*>& GetSequenceArray() const { return SequenceArray; }
+	/** The standalone sequence assets on this component, which SequenceArray does not include. */
+		const TArray<TObjectPtr<UDreamUISequence>>& GetSequenceAssets() const { return SequenceAssets; }
 	/** Init SequencePlayer with current sequence. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		void InitSequencePlayer();
