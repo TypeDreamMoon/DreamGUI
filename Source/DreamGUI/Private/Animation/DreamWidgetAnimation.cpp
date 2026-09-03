@@ -3,6 +3,7 @@
 
 #include "Animation/DreamWidgetAnimation.h"
 #include "MovieScene.h"
+#include "MovieSceneSection.h"
 #include "Core/Components/DreamWidget.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Tracks/MovieSceneAudioTrack.h"
@@ -81,6 +82,29 @@ void UDreamWidgetAnimation::PostInitProperties()
 #endif
 
 	Super::PostInitProperties();
+
+	// An instance of a class gets its animation by template instancing -- NewObject with the
+	// archetype's animation as template -- which copies every section's key data and NOTHING else.
+	// A section's channel proxy is not a property; the engine rebuilds it on Serialize, on
+	// PostEditImport and, for the vector sections, on SetChannelsUsed, none of which runs here.
+	// So a vector section arrives with its keys and an EMPTY proxy, and the compiler, which asks
+	// the proxy how many channels a property section has before it emits an entity for it, emits
+	// none: every translate and scale track on an instanced widget was silently dead while every
+	// float and rotator track (whose proxies are built in their constructors) played fine.
+	// PostEditImport is the engine's own "rebuild your proxy" hook and is harmless on the rest.
+	// Loading is excluded because Serialize does this itself, and the CDO has nothing to play.
+	if (!HasAnyFlags(RF_ClassDefaultObject | RF_NeedLoad | RF_WasLoaded) && MovieScene != nullptr)
+	{
+		for (UMovieSceneSection* Section : MovieScene->GetAllSections())
+		{
+			if (IsValid(Section))
+			{
+				// UMovieSceneSection re-declares the hook protected; UObject's is public and the
+				// dispatch is virtual, so the base pointer reaches the section's own override.
+				static_cast<UObject*>(Section)->PostEditImport();
+			}
+		}
+	}
 }
 
 void UDreamWidgetAnimation::BindPossessableObject(const FGuid& ObjectId, UObject& PossessedObject, UObject* Context)

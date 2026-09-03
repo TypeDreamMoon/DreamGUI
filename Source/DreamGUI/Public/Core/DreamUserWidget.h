@@ -196,9 +196,72 @@ public:
 		float PlaybackSpeed = 1.0f,
 		bool bRestoreState = false);
 
-	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
-	void PauseAnimation(FDreamUIAnimationHandle Handle);
+	/**
+	 * Plays an animation and stops it at EndAtTime rather than at its end.
+	 * @param EndAtTime Absolute seconds into the animation where playback ends. Zero or less means the animation's own end.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	FDreamUIAnimationHandle PlayAnimationTimeRange(
+		UMovieSceneSequence* Animation,
+		float StartAtTime = 0.0f,
+		float EndAtTime = 0.0f,
+		int32 NumLoopsToPlay = 1,
+		EDreamUIAnimationPlayMode PlayMode = EDreamUIAnimationPlayMode::Forward,
+		float PlaybackSpeed = 1.0f,
+		bool bRestoreState = false);
 
+	/**
+	 * Plays an animation forward relative to its current state: an instance already running or
+	 * paused turns around from where it is, otherwise a new one starts from the beginning. The
+	 * "panel slides out on click, slides back on the next click" idiom, exactly as in UMG.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	FDreamUIAnimationHandle PlayAnimationForward(UMovieSceneSequence* Animation, float PlaybackSpeed = 1.0f, bool bRestoreState = false);
+
+	/** The reverse half of PlayAnimationForward: turns a live instance around, or starts one from the end. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	FDreamUIAnimationHandle PlayAnimationReverse(UMovieSceneSequence* Animation, float PlaybackSpeed = 1.0f, bool bRestoreState = false);
+
+	// The same operations deferred to the end of this frame's sequence evaluation: safe from inside
+	// an animation's own Started / Finished / event callbacks.
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	void QueuePlayAnimation(
+		UMovieSceneSequence* Animation,
+		float StartAtTime = 0.0f,
+		int32 NumLoopsToPlay = 1,
+		EDreamUIAnimationPlayMode PlayMode = EDreamUIAnimationPlayMode::Forward,
+		float PlaybackSpeed = 1.0f,
+		bool bRestoreState = false);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
+	void QueuePlayAnimationTimeRange(
+		UMovieSceneSequence* Animation,
+		float StartAtTime = 0.0f,
+		float EndAtTime = 0.0f,
+		int32 NumLoopsToPlay = 1,
+		EDreamUIAnimationPlayMode PlayMode = EDreamUIAnimationPlayMode::Forward,
+		float PlaybackSpeed = 1.0f,
+		bool bRestoreState = false);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void QueueStopAnimation(FDreamUIAnimationHandle Handle);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void QueueStopAllAnimations();
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void QueuePauseAnimation(FDreamUIAnimationHandle Handle);
+
+	/** @return the time the instance was at when paused, in seconds; feed it back to PlayAnimation's StartAtTime to resume from there. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	float PauseAnimation(FDreamUIAnimationHandle Handle);
+
+	/** Continues a paused instance in the direction it was going. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void ResumeAnimation(FDreamUIAnimationHandle Handle);
+
+	/** Ends the instance where it is. Its Finished delegates fire, the same as a natural end. */
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
 	void StopAnimation(FDreamUIAnimationHandle Handle);
 
@@ -208,9 +271,84 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
 	bool IsAnimationPlaying(FDreamUIAnimationHandle Handle) const;
 
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	bool IsAnimationPaused(FDreamUIAnimationHandle Handle) const;
+
+	/** True while the instance runs towards its end; false when reversed. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	bool IsAnimationPlayingForward(FDreamUIAnimationHandle Handle) const;
+
+	/** Seconds into the animation; zero for a handle that is no longer live. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	float GetAnimationCurrentTime(FDreamUIAnimationHandle Handle) const;
+
+	/** Jumps the instance to a time in seconds without changing whether it is playing. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void SetAnimationCurrentTime(FDreamUIAnimationHandle Handle, float InTime);
+
+	/** Changes how many times a live instance plays in total. Zero loops indefinitely. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void SetNumLoopsToPlay(FDreamUIAnimationHandle Handle, int32 NumLoopsToPlay);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void SetPlaybackSpeed(FDreamUIAnimationHandle Handle, float PlaybackSpeed = 1.0f);
+
+	/** The newest live (playing or paused) instance of an animation, or an invalid handle. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	FDreamUIAnimationHandle FindAnimationInstance(UMovieSceneSequence* Animation) const;
+
+	/** True if any instance of the animation is currently playing. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	bool HasPlayingAnimation(UMovieSceneSequence* Animation) const;
+
+	/** Stops every live instance of the animation. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void StopAnimationsOf(UMovieSceneSequence* Animation);
+
+	/** Pauses every live instance of the animation. @return the paused time of the newest one, in seconds. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	float PauseAnimationsOf(UMovieSceneSequence* Animation);
+
+	/** True if any animation on any component of this widget's own contents is playing. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	bool IsAnyAnimationPlaying() const;
+
 	/** Every animation on every component of this widget's own contents, nested instances excluded. */
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
 	void StopAllAnimations();
+
+	/** Applies any evaluation still queued for this widget's animations before returning. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void FlushAnimations();
+
+	/** Called when an instance of the animation starts. Unbind with the same delegate. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Animation")
+	void BindToAnimationStarted(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Animation")
+	void UnbindFromAnimationStarted(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Animation")
+	void UnbindAllFromAnimationStarted(UMovieSceneSequence* Animation);
+
+	/** Called when an instance of the animation ends, naturally or by Stop. Unbind with the same delegate. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Animation")
+	void BindToAnimationFinished(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Animation")
+	void UnbindFromAnimationFinished(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Animation")
+	void UnbindAllFromAnimationFinished(UMovieSceneSequence* Animation);
+
+	/** The general form of the two above. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Animation")
+	void BindToAnimationEvent(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate, EDreamUIAnimationEvent AnimationEvent);
+
+	/** A DreamUI Event track key crossed while one of this widget's animations plays. */
+	UPROPERTY(BlueprintAssignable, Category = "DreamGUI|Animation")
+	FDreamUIAnimEventDelegate OnAnimationEvent;
+
+	/** The component-side entry points; each raises the matching overridable event below. */
+	void NotifyAnimationStarted(UMovieSceneSequence* Animation);
+	void NotifyAnimationFinished(UMovieSceneSequence* Animation);
+	void NotifyAnimationEvent(FName EventName);
 
 	/**
 	 * The component holding InAnimation, or null. Exposed because a caller that wants the parts of
@@ -221,6 +359,22 @@ public:
 
 	/** The animation components on this widget's own contents, nested instances excluded. */
 	void CollectAnimationComponents(TArray<UDreamWidgetAnimationComponent*>& OutComponents) const;
+
+protected:
+	/** An instance of one of this widget's animations started. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void OnAnimationStarted(UMovieSceneSequence* Animation);
+	virtual void OnAnimationStarted_Implementation(UMovieSceneSequence* Animation) {}
+
+	/** An instance of one of this widget's animations ended, naturally or by Stop. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCosmetic, Category = "DreamGUI|Animation")
+	void OnAnimationFinished(UMovieSceneSequence* Animation);
+	virtual void OnAnimationFinished_Implementation(UMovieSceneSequence* Animation) {}
+
+	/** FindAnimationComponentFor, logging on a miss in the caller's name. */
+	UDreamWidgetAnimationComponent* RequireAnimationComponentFor(UMovieSceneSequence* InAnimation, const TCHAR* Caller) const;
+
+public:
 
 	/**
 	 * The widget carrying the UDreamNamedSlot of that name inside this instance, or null.

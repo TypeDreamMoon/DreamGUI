@@ -1356,11 +1356,97 @@ namespace
 	}
 }
 
-void UDreamUserWidget::PauseAnimation(FDreamUIAnimationHandle Handle)
+UDreamWidgetAnimationComponent* UDreamUserWidget::RequireAnimationComponentFor(UMovieSceneSequence* InAnimation, const TCHAR* Caller) const
+{
+	UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(InAnimation);
+	if (Component == nullptr)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("%s on '%s': '%s' does not belong to this widget."),
+			Caller, *GetPathName(), IsValid(InAnimation) ? *InAnimation->GetName() : TEXT("(none)"));
+	}
+	return Component;
+}
+
+FDreamUIAnimationHandle UDreamUserWidget::PlayAnimationTimeRange(
+	UMovieSceneSequence* Animation,
+	float StartAtTime,
+	float EndAtTime,
+	int32 NumLoopsToPlay,
+	EDreamUIAnimationPlayMode PlayMode,
+	float PlaybackSpeed,
+	bool bRestoreState)
+{
+	UDreamWidgetAnimationComponent* Component = RequireAnimationComponentFor(Animation, TEXT("PlayAnimationTimeRange"));
+	return Component != nullptr
+		? Component->PlayAnimationTimeRange(Animation, StartAtTime, EndAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState)
+		: FDreamUIAnimationHandle();
+}
+
+FDreamUIAnimationHandle UDreamUserWidget::PlayAnimationForward(UMovieSceneSequence* Animation, float PlaybackSpeed, bool bRestoreState)
+{
+	UDreamWidgetAnimationComponent* Component = RequireAnimationComponentFor(Animation, TEXT("PlayAnimationForward"));
+	return Component != nullptr ? Component->PlayAnimationForward(Animation, PlaybackSpeed, bRestoreState) : FDreamUIAnimationHandle();
+}
+
+FDreamUIAnimationHandle UDreamUserWidget::PlayAnimationReverse(UMovieSceneSequence* Animation, float PlaybackSpeed, bool bRestoreState)
+{
+	UDreamWidgetAnimationComponent* Component = RequireAnimationComponentFor(Animation, TEXT("PlayAnimationReverse"));
+	return Component != nullptr ? Component->PlayAnimationReverse(Animation, PlaybackSpeed, bRestoreState) : FDreamUIAnimationHandle();
+}
+
+void UDreamUserWidget::QueuePlayAnimation(UMovieSceneSequence* Animation, float StartAtTime, int32 NumLoopsToPlay, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, bool bRestoreState)
+{
+	if (UDreamWidgetAnimationComponent* Component = RequireAnimationComponentFor(Animation, TEXT("QueuePlayAnimation")))
+	{
+		Component->QueuePlayAnimation(Animation, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+	}
+}
+
+void UDreamUserWidget::QueuePlayAnimationTimeRange(UMovieSceneSequence* Animation, float StartAtTime, float EndAtTime, int32 NumLoopsToPlay, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, bool bRestoreState)
+{
+	if (UDreamWidgetAnimationComponent* Component = RequireAnimationComponentFor(Animation, TEXT("QueuePlayAnimationTimeRange")))
+	{
+		Component->QueuePlayAnimationTimeRange(Animation, StartAtTime, EndAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+	}
+}
+
+void UDreamUserWidget::QueueStopAnimation(FDreamUIAnimationHandle Handle)
 {
 	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
 	{
-		Component->PauseAnimation(Handle);
+		Component->QueueStopAnimation(Handle);
+	}
+}
+
+void UDreamUserWidget::QueueStopAllAnimations()
+{
+	TArray<UDreamWidgetAnimationComponent*> Animators;
+	CollectAnimationComponents(Animators);
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		Component->QueueStopAllAnimations();
+	}
+}
+
+void UDreamUserWidget::QueuePauseAnimation(FDreamUIAnimationHandle Handle)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->QueuePauseAnimation(Handle);
+	}
+}
+
+float UDreamUserWidget::PauseAnimation(FDreamUIAnimationHandle Handle)
+{
+	UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle);
+	return Component != nullptr ? Component->PauseAnimation(Handle) : 0.0f;
+}
+
+void UDreamUserWidget::ResumeAnimation(FDreamUIAnimationHandle Handle)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->ResumeAnimation(Handle);
 	}
 }
 
@@ -1386,6 +1472,88 @@ bool UDreamUserWidget::IsAnimationPlaying(FDreamUIAnimationHandle Handle) const
 	return Component != nullptr && Component->IsAnimationPlaying(Handle);
 }
 
+bool UDreamUserWidget::IsAnimationPaused(FDreamUIAnimationHandle Handle) const
+{
+	UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle);
+	return Component != nullptr && Component->IsAnimationPaused(Handle);
+}
+
+bool UDreamUserWidget::IsAnimationPlayingForward(FDreamUIAnimationHandle Handle) const
+{
+	UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle);
+	return Component != nullptr && Component->IsAnimationPlayingForward(Handle);
+}
+
+float UDreamUserWidget::GetAnimationCurrentTime(FDreamUIAnimationHandle Handle) const
+{
+	UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle);
+	return Component != nullptr ? Component->GetAnimationCurrentTime(Handle) : 0.0f;
+}
+
+void UDreamUserWidget::SetAnimationCurrentTime(FDreamUIAnimationHandle Handle, float InTime)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->SetAnimationCurrentTime(Handle, InTime);
+	}
+}
+
+void UDreamUserWidget::SetNumLoopsToPlay(FDreamUIAnimationHandle Handle, int32 NumLoopsToPlay)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->SetNumLoopsToPlay(Handle, NumLoopsToPlay);
+	}
+}
+
+void UDreamUserWidget::SetPlaybackSpeed(FDreamUIAnimationHandle Handle, float PlaybackSpeed)
+{
+	if (UDreamWidgetAnimationComponent* Component = ComponentForHandle(Handle))
+	{
+		Component->SetPlaybackSpeed(Handle, PlaybackSpeed);
+	}
+}
+
+FDreamUIAnimationHandle UDreamUserWidget::FindAnimationInstance(UMovieSceneSequence* Animation) const
+{
+	UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation);
+	return Component != nullptr ? Component->FindAnimationInstance(Animation) : FDreamUIAnimationHandle();
+}
+
+bool UDreamUserWidget::HasPlayingAnimation(UMovieSceneSequence* Animation) const
+{
+	UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation);
+	return Component != nullptr && Component->HasPlayingAnimation(Animation);
+}
+
+void UDreamUserWidget::StopAnimationsOf(UMovieSceneSequence* Animation)
+{
+	if (UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation))
+	{
+		Component->StopAnimationsOf(Animation);
+	}
+}
+
+float UDreamUserWidget::PauseAnimationsOf(UMovieSceneSequence* Animation)
+{
+	UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation);
+	return Component != nullptr ? Component->PauseAnimationsOf(Animation) : 0.0f;
+}
+
+bool UDreamUserWidget::IsAnyAnimationPlaying() const
+{
+	TArray<UDreamWidgetAnimationComponent*> Animators;
+	CollectAnimationComponents(Animators);
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		if (Component->IsAnyAnimationPlaying())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void UDreamUserWidget::StopAllAnimations()
 {
 	TArray<UDreamWidgetAnimationComponent*> Animators;
@@ -1394,4 +1562,79 @@ void UDreamUserWidget::StopAllAnimations()
 	{
 		Component->StopAllAnimations();
 	}
+}
+
+void UDreamUserWidget::FlushAnimations()
+{
+	TArray<UDreamWidgetAnimationComponent*> Animators;
+	CollectAnimationComponents(Animators);
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		Component->FlushAnimations();
+	}
+}
+
+void UDreamUserWidget::BindToAnimationStarted(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate)
+{
+	BindToAnimationEvent(Animation, Delegate, EDreamUIAnimationEvent::Started);
+}
+
+void UDreamUserWidget::UnbindFromAnimationStarted(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate)
+{
+	if (UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation))
+	{
+		Component->UnbindFromAnimationStarted(Animation, Delegate);
+	}
+}
+
+void UDreamUserWidget::UnbindAllFromAnimationStarted(UMovieSceneSequence* Animation)
+{
+	if (UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation))
+	{
+		Component->UnbindAllFromAnimationStarted(Animation);
+	}
+}
+
+void UDreamUserWidget::BindToAnimationFinished(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate)
+{
+	BindToAnimationEvent(Animation, Delegate, EDreamUIAnimationEvent::Finished);
+}
+
+void UDreamUserWidget::UnbindFromAnimationFinished(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate)
+{
+	if (UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation))
+	{
+		Component->UnbindFromAnimationFinished(Animation, Delegate);
+	}
+}
+
+void UDreamUserWidget::UnbindAllFromAnimationFinished(UMovieSceneSequence* Animation)
+{
+	if (UDreamWidgetAnimationComponent* Component = FindAnimationComponentFor(Animation))
+	{
+		Component->UnbindAllFromAnimationFinished(Animation);
+	}
+}
+
+void UDreamUserWidget::BindToAnimationEvent(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate, EDreamUIAnimationEvent AnimationEvent)
+{
+	if (UDreamWidgetAnimationComponent* Component = RequireAnimationComponentFor(Animation, TEXT("BindToAnimationEvent")))
+	{
+		Component->BindToAnimationEvent(Animation, Delegate, AnimationEvent);
+	}
+}
+
+void UDreamUserWidget::NotifyAnimationStarted(UMovieSceneSequence* Animation)
+{
+	OnAnimationStarted(Animation);
+}
+
+void UDreamUserWidget::NotifyAnimationFinished(UMovieSceneSequence* Animation)
+{
+	OnAnimationFinished(Animation);
+}
+
+void UDreamUserWidget::NotifyAnimationEvent(FName EventName)
+{
+	OnAnimationEvent.Broadcast(EventName);
 }

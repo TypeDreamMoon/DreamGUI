@@ -17,6 +17,7 @@ public class DreamGUIK2Nodes : ModuleRules
                 "Engine",
                 "UnrealEd",
                 "DreamGUI",
+                "MovieScene",
                 "KismetWidgets",
                 "BlueprintGraph",
                 "KismetCompiler",
