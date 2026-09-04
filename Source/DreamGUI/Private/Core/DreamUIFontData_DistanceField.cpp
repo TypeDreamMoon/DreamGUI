@@ -125,6 +125,9 @@ bool UDreamUIFontData_DistanceField::RenderGlyph(const FDreamUIGlyphKey& Glyph, 
 void UDreamUIFontData_DistanceField::ClearCharDataCache()
 {
 	CharDataMap.Empty();
+	// Kerning is cached at SampleFontSize off the same face the char data came from, so it goes stale
+	// with it: a reloaded or re-faced font kept the old pairs forever.
+	KerningPairsMap.Empty();
 	LineHeight = VerticalOffset = -1;
 	CachedAscent = CachedDescent = -1.0f;
 }

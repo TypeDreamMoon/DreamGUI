@@ -31,11 +31,18 @@ void UDreamVisualPostProcess::BeginPlay()
 
 void UDreamVisualPostProcess::BeginDestroy()
 {
-	ENQUEUE_RENDER_COMMAND(FDreamPostProcess_ReleaseRenderProxy)
-			([RenderProxyPtr = RenderProxy](FRHICommandListImmediate& RHICmdList)
+	// Hand this visual's reference to the render thread instead of deleting through it. The mesh
+	// section and any update command still in flight hold their own references, so the proxy dies
+	// when the last of them lets go -- and because every one of those is released on the render
+	// thread, the destructor (which touches render resources) always runs there.
+	if (RenderProxy.IsValid())
+	{
+		ENQUEUE_RENDER_COMMAND(FDreamPostProcess_ReleaseRenderProxy)
+			([ReleasedProxy = MoveTemp(RenderProxy)](FRHICommandListImmediate& RHICmdList) mutable
 				{
-					delete RenderProxyPtr;
+					ReleasedProxy.Reset();
 				});
+	}
 	Super::BeginDestroy();
 }
 
@@ -244,8 +251,10 @@ void UDreamVisualPostProcess::SendRegionVertexDataToRenderProxy()
 {
 	auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetWidget() : this->GetWidget();
 	auto RenderCanvas = Widget->GetRenderCanvas();
-	if (RenderProxy && RenderCanvas)
+	if (RenderProxy.IsValid() && RenderCanvas)
 	{
+		// Copied, not borrowed: the command below runs later and must not care whether this visual
+		// has since let go of the proxy.
 		auto TempRenderProxy = RenderProxy;
 		struct FUIPostProcess_SendRegionVertexDataToRenderProxy
 		{
@@ -370,7 +379,7 @@ void UDreamVisualPostProcess::SetUseFullSize(bool Value)
 
 void UDreamVisualPostProcess::SendMaskTextureToRenderProxy()
 {
-	if (RenderProxy)
+	if (RenderProxy.IsValid())
 	{
 		auto TempRenderProxy = RenderProxy;
 		FTexture2DResource* MaskTextureResource = nullptr;
@@ -388,7 +397,7 @@ void UDreamVisualPostProcess::SendMaskTextureToRenderProxy()
 
 void UDreamVisualPostProcess::SendRenderTargetToRenderProxy()
 {
-	if (RenderProxy)
+	if (RenderProxy.IsValid())
 	{
 		auto TempRenderProxy = RenderProxy;
 		FTextureRenderTargetResource* RenderTargetResource = nullptr;

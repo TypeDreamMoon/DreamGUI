@@ -35,17 +35,21 @@ void FDreamUIGizmoMesh::UpdateVertices(TArray<FDreamUIMeshVertex> InVertexArray)
 		auto& Vertices = VertexBuffer.Vertices;
 		Vertices.SetNumUninitialized(InVertexArray.Num());
 		FMemory::Memcpy(Vertices.GetData(), InVertexArray.GetData(), InVertexArray.Num() * sizeof(FDreamUIMeshVertex));
-		BeginInitResource(&IndexBuffer);
+		// The buffer that was just released and refilled is the vertex one; re-initializing the index
+		// buffer instead left VertexBufferRHI null, and the next same-count update locked nothing.
+		BeginInitResource(&VertexBuffer);
 	}
 	else
 	{
+		// Keep the mesh alive until the command has run: it is owned by shared pointers, and a bare
+		// `this` outlived nothing.
 		ENQUEUE_RENDER_COMMAND(FDreamUIMeshUpdate)(
-		[this, InVertexArray = MoveTemp(InVertexArray)](FRHICommandListImmediate& RHICmdList)
+		[Self = SharedThis(this), InVertexArray = MoveTemp(InVertexArray)](FRHICommandListImmediate& RHICmdList)
 		{
 			uint32 VertexDataLength = InVertexArray.Num() * sizeof(FDreamUIMeshVertex);
-			void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexDataLength, RLM_WriteOnly);
+			void* VertexBufferData = RHICmdList.LockBuffer(Self->VertexBuffer.VertexBufferRHI, 0, VertexDataLength, RLM_WriteOnly);
 			FMemory::Memcpy(VertexBufferData, InVertexArray.GetData(), VertexDataLength);
-			RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
+			RHICmdList.UnlockBuffer(Self->VertexBuffer.VertexBufferRHI);
 		});
 	}
 }
@@ -63,12 +67,12 @@ void FDreamUIGizmoMesh::UpdateIndices(TArray<FDreamUIMeshIndex> InIndexArray)
 	else
 	{
 		ENQUEUE_RENDER_COMMAND(FDreamUIMeshUpdate)(
-		[this, InIndexArray = MoveTemp(InIndexArray)](FRHICommandListImmediate& RHICmdList)
+		[Self = SharedThis(this), InIndexArray = MoveTemp(InIndexArray)](FRHICommandListImmediate& RHICmdList)
 		{
 			uint32 IndicesDataLength = InIndexArray.Num() * sizeof(FDreamUIMeshIndex);
-			auto IndexBufferData = RHICmdList.LockBuffer(IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
+			auto IndexBufferData = RHICmdList.LockBuffer(Self->IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
 			FMemory::Memcpy(IndexBufferData, InIndexArray.GetData(), IndicesDataLength);
-			RHICmdList.UnlockBuffer(IndexBuffer.IndexBufferRHI);
+			RHICmdList.UnlockBuffer(Self->IndexBuffer.IndexBufferRHI);
 		});
 	}
 }

@@ -3,6 +3,7 @@
 #include "Core/Text/DreamTextPainter.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUITextData.h"
+#include "DreamGUI.h"
 
 namespace DreamTextPainterLocal
 {
@@ -123,16 +124,36 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	// convention the rest of the plugin relies on for the channels nobody writes (UV1.x, tangents).
 	// With a separate effect layer every quad is written twice: the effect copy indexes into the first
 	// half of the index buffer, the face copy into the second, so all effects draw before any face.
-	int32 FaceQuads = 0;
-	for (const auto& Item : DisplayList.Items)
-	{
-		if (!Item.bEmit)continue;
-		FaceQuads++;
-		if (Item.Style.bUnderline)FaceQuads++;
-		if (Item.Style.bStrikethrough)FaceQuads++;
-	}
 	const bool bSeparateEffectLayer = Params.bDistanceField && Params.bSeparateEffectLayer;
-	const int32 TotalQuads = bSeparateEffectLayer ? FaceQuads * 2 : FaceQuads;
+	// An index is a vertex ordinal, and FDreamUIMeshIndex is 16 bits wide unless the 32-bit buffer is
+	// compiled in: past the limit every index wraps and the whole block draws as garbage. Stop adding
+	// glyphs at the limit instead, keeping each item's quads together so the cursors stay in step.
+	const int32 QuadsPerGlyph = bSeparateEffectLayer ? 2 : 1;
+	const int32 MaxFaceQuads = (LEXUI_MAX_VERTEX_COUNT / 4) / QuadsPerGlyph;
+	int32 FaceQuads = 0;
+	int32 EmitItemCount = DisplayList.Items.Num();
+	for (int32 ItemIndex = 0; ItemIndex < DisplayList.Items.Num(); ItemIndex++)
+	{
+		const auto& Item = DisplayList.Items[ItemIndex];
+		if (!Item.bEmit)continue;
+		int32 ItemQuads = 1;
+		if (Item.Style.bUnderline)ItemQuads++;
+		if (Item.Style.bStrikethrough)ItemQuads++;
+		if (FaceQuads + ItemQuads > MaxFaceQuads)
+		{
+			EmitItemCount = ItemIndex;
+			static bool bLoggedIndexLimit = false;
+			if (!bLoggedIndexLimit)
+			{
+				bLoggedIndexLimit = true;
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d A text needs more quads than the mesh index type can address (%d vertices); the rest of it is not drawn. (reported once)")
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, LEXUI_MAX_VERTEX_COUNT);
+			}
+			break;
+		}
+		FaceQuads += ItemQuads;
+	}
+	const int32 TotalQuads = FaceQuads * QuadsPerGlyph;
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.OriginVertices, TotalQuads * 4, false);
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Vertices, TotalQuads * 4, false);
 	FDreamUIGeometry::DreamUIGeometrySetArrayNum(OutGeometry.Triangles, TotalQuads * 6, false);
@@ -233,7 +254,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		}
 	};
 
-	for (int32 ItemIndex = 0; ItemIndex < DisplayList.Items.Num(); ItemIndex++)
+	for (int32 ItemIndex = 0; ItemIndex < EmitItemCount; ItemIndex++)
 	{
 		const auto& Item = DisplayList.Items[ItemIndex];
 		if (!Item.bEmit)continue;

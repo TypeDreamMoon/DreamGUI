@@ -68,7 +68,6 @@ void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InV
 	
 	if (ScreenSpaceRenderParameter.RootCanvas.IsValid())
 	{
-		//@todo: these parameters should use ENQUEUE_RENDER_COMMAND to pass to render thread
 		auto ViewLocation = ScreenSpaceRenderParameter.RootCanvas->GetViewLocation();
 		auto ViewRotationMatrix = FInverseRotationMatrix(ScreenSpaceRenderParameter.RootCanvas->GetViewRotator()) * FMatrix(
 			FPlane(0, 0, 1, 0),
@@ -78,22 +77,32 @@ void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InV
 		auto ProjectionMatrix = ScreenSpaceRenderParameter.RootCanvas->GetProjectionMatrix();
 		auto ViewProjectionMatrix = FMatrix44f(FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix);
 
-		ScreenSpaceRenderParameter.ViewOrigin = ViewLocation;
-		ScreenSpaceRenderParameter.ViewRotationMatrix = ViewRotationMatrix;
-		ScreenSpaceRenderParameter.ProjectionMatrix = ProjectionMatrix;
-		ScreenSpaceRenderParameter.ViewProjectionMatrix = FMatrix44f(ViewProjectionMatrix);
-		ScreenSpaceRenderParameter.bEnableDepthTest = ScreenSpaceRenderParameter.RootCanvas->GetEnableDepthTest();
+		GameThreadViewParameter.ViewOrigin = ViewLocation;
+		GameThreadViewParameter.ViewRotationMatrix = ViewRotationMatrix;
+		GameThreadViewParameter.ProjectionMatrix = ProjectionMatrix;
+		GameThreadViewParameter.ViewProjectionMatrix = FMatrix44f(ViewProjectionMatrix);
+		GameThreadViewParameter.bEnableDepthTest = ScreenSpaceRenderParameter.RootCanvas->GetEnableDepthTest();
 	}
 
 	if (auto DreamUISettings = GetDefault<UDreamUISettings>())
 	{
-		NumSamples_MSAA = DreamUISettings->AntiAliasingMethod == EDreamUIRendererAntiAliasingMethod::MSAA ? (uint8)DreamUISettings->MSAASampleCount : 1;
-		bFrustumCulling = DreamUISettings->bFrustumCulling;
+		GameThreadViewParameter.NumSamples_MSAA = DreamUISettings->AntiAliasingMethod == EDreamUIRendererAntiAliasingMethod::MSAA ? (uint8)DreamUISettings->MSAASampleCount : 1;
+		GameThreadViewParameter.bFrustumCulling = DreamUISettings->bFrustumCulling;
 	}
 	else
 	{
-		NumSamples_MSAA = 1;
+		GameThreadViewParameter.NumSamples_MSAA = 1;
 	}
+
+	// Hand the whole thing over by value. The render thread reads these while this function is writing
+	// them, which is what the @todo that used to sit above asked for.
+	auto ViewExtension = this;
+	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SetScreenSpaceViewParameter)(
+		[ViewExtension, Parameter = GameThreadViewParameter](FRHICommandListImmediate& RHICmdList)
+		{
+			ViewExtension->RenderThreadViewParameter = Parameter;
+		}
+	);
 }
 void FDreamUIRenderer::SetupViewPoint(APlayerController* Player, FMinimalViewInfo& InViewInfo)
 {
@@ -540,7 +549,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	//msaa render target
 	TRefCountPtr<IPooledRenderTarget> MSAARenderTarget = nullptr;
 
-	uint8 NumSamples = NumSamples_MSAA;
+	uint8 NumSamples = RenderThreadViewParameter.NumSamples_MSAA;
 	FIntRect ViewRect;
 	FRHICommandListImmediate& RHICmdList = GraphBuilder.RHICmdList;
 	FVector4f DepthTextureScaleOffset;
@@ -708,8 +717,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 				if (bIsPrimitiveVisible)
 				{
 					auto WorldBounds = WorldRenderParameter.Primitive->DreamUI_GetWorldBounds();
-					if (!bFrustumCulling 
-						|| (bFrustumCulling && InView.GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+					if (!RenderThreadViewParameter.bFrustumCulling 
+						|| (RenderThreadViewParameter.bFrustumCulling && InView.GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 						)
 					{
 						FWorldSpaceRenderParameterSequence Item;
@@ -789,6 +798,9 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 						{
 							for (int i = 0; i < RenderPrimitiveItem.Sections.Num(); i++)
 							{
+								// A reference, held for the call: the passes added below capture the proxy raw and
+								// only run at GraphBuilder.Execute(), so it has to outlive this loop. The section's
+								// own reference covers that -- nothing can drop it until this render command ends.
 								if (auto Primitive = RenderPrimitiveItem.Primitive->DreamUI_GetPostProcessElement(RenderPrimitiveItem.Sections[i].SectionPointer))
 								{
 									SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
@@ -975,20 +987,32 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		}
 		else
 		{
-			if (!bCanRenderScreenSpace)goto END_LEXUI_RENDER;
+			// The gizmo array's only Reset is inside the pass that draws it, so every path that leaves
+			// without drawing has to drop the meshes itself. An editor world that never plays takes one
+			// of these three every frame, and the array grew for the life of the renderer.
+			if (!bCanRenderScreenSpace)
+			{
+				ScreenSpaceGizmoMeshArray.Reset();
+				goto END_LEXUI_RENDER;
+			}
 			if (bIsPlaying)
 			{
-				if (!InView.bIsGameView)goto END_LEXUI_RENDER;
+				if (!InView.bIsGameView)
+				{
+					ScreenSpaceGizmoMeshArray.Reset();
+					goto END_LEXUI_RENDER;
+				}
 			}
 			else
 			{
+				ScreenSpaceGizmoMeshArray.Reset();
 				goto END_LEXUI_RENDER;
 			}
 		}
 #endif
 		TRefCountPtr<IPooledRenderTarget> DreamUIScreenSpaceDepthTexture = nullptr;
 		FRDGTextureRef DreamUIScreenSpaceDepthRDGTexture = nullptr;
-		if (ScreenSpaceRenderParameter.bEnableDepthTest)
+		if (RenderThreadViewParameter.bEnableDepthTest)
 		{
 			// Allow UAV depth?
 			const ETextureCreateFlags textureUAVCreateFlags = GRHISupportsDepthUAV ? TexCreate_UAV : TexCreate_None;
@@ -1015,13 +1039,13 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		FSceneView* RenderView = new FSceneView(InView);
 		auto GlobalShaderMap = GetGlobalShaderMap(RenderView->GetFeatureLevel());
 
-		RenderView->SceneViewInitOptions.ViewOrigin = ScreenSpaceRenderParameter.ViewOrigin;
-		RenderView->SceneViewInitOptions.ViewRotationMatrix = ScreenSpaceRenderParameter.ViewRotationMatrix;
-		RenderView->SceneViewInitOptions.ProjectionMatrix = ScreenSpaceRenderParameter.ProjectionMatrix;
+		RenderView->SceneViewInitOptions.ViewOrigin = RenderThreadViewParameter.ViewOrigin;
+		RenderView->SceneViewInitOptions.ViewRotationMatrix = RenderThreadViewParameter.ViewRotationMatrix;
+		RenderView->SceneViewInitOptions.ProjectionMatrix = RenderThreadViewParameter.ProjectionMatrix;
 		RenderView->ViewMatrices = FViewMatrices(RenderView->SceneViewInitOptions);
-		if (bFrustumCulling)
+		if (RenderThreadViewParameter.bFrustumCulling)
 		{
-			RenderView->UpdateProjectionMatrix(ScreenSpaceRenderParameter.ProjectionMatrix);//this is mainly for ViewFrustum
+			RenderView->UpdateProjectionMatrix(RenderThreadViewParameter.ProjectionMatrix);//this is mainly for ViewFrustum
 		}
 
 		FViewUniformShaderParameters ViewUniformShaderParameters;
@@ -1043,8 +1067,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			if (Primitive->DreamUI_CanRender())
 			{
 				auto WorldBounds = Primitive->DreamUI_GetWorldBounds();
-				if (!bFrustumCulling 
-					|| (bFrustumCulling && RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+				if (!RenderThreadViewParameter.bFrustumCulling 
+					|| (RenderThreadViewParameter.bFrustumCulling && RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 					)
 				{
 					Primitive->DreamUI_CollectRenderData(RenderSequenceArray);
@@ -1063,6 +1087,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			{
 				for (int i = 0; i < RenderSequenceItem.Sections.Num(); i++)
 				{
+					// See the world-space path above: the reference is what keeps the proxy alive until the
+					// passes this adds have actually executed.
 					if (auto Primitive = RenderSequenceItem.Primitive->DreamUI_GetPostProcessElement(RenderSequenceItem.Sections[i].SectionPointer))
 					{
 						SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
@@ -1072,7 +1098,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 							this,
 							ScreenColorRenderTargetTexture,
 							GlobalShaderMap,
-							ScreenSpaceRenderParameter.ViewProjectionMatrix,
+							RenderThreadViewParameter.ViewProjectionMatrix,
 							/*IsWorldSpace*/false,
 							/*IsRenderToRenderTarget*/bIsRenderTarget,
 							/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
@@ -1518,7 +1544,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 				auto& LocalBounds = RenderParameter->LocalBounds;
 				auto& LocalToWorldMatrix = RenderParameter->LocalToWorldMatrix;
 				auto WorldBounds = LocalBounds.TransformBy(LocalToWorldMatrix);
-				if (bFrustumCulling)
+				if (RenderThreadViewParameter.bFrustumCulling)
 				{
 					if (!RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;
 				}
@@ -1608,6 +1634,11 @@ void FDreamUIRenderer::AddWorldSpaceGizmoMesh(TSharedPtr<FDreamUIGizmoMesh> InMe
 	);
 }
 #endif
+
+// The single definitions behind the extern declarations in the header.
+TGlobalResource<FDreamUIFullScreenQuadVertexBuffer> GDreamUIFullScreenQuadVertexBuffer;
+TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> GDreamUIFullScreenQuadIndexBuffer;
+TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
 
 void FDreamUIFullScreenQuadVertexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
 {

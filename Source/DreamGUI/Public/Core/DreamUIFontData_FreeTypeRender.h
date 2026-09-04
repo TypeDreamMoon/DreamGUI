@@ -12,6 +12,8 @@
 
 class UDreamText;
 class FDreamGlyphRasterizer;
+/** Render-thread staging textures for partial atlas uploads; defined in DreamUIFontData_FreeTypeRender.cpp. */
+struct FDreamUIFontAtlasStagingPool;
 
 #if WITH_FREETYPE
 struct FT_GlyphSlotRec_;
@@ -205,6 +207,8 @@ protected:
 		TArray<FString> SubFaces;
 #endif
 	bool bAlreadyInitialized = false;
+	/** An InitFreeType that failed; cleared by DeinitFreeType so a reload retries. Stops per-glyph retries. */
+	bool bInitFailed = false;
 
 	struct FGlyphBitmap
 	{
@@ -256,8 +260,10 @@ protected:
 		friend FORCEINLINE uint32 GetTypeHash(const FAsyncGlyphRequest& R) { return HashCombine(HashCombine(GetTypeHash(R.Glyph), GetTypeHash(R.CharSize)), GetTypeHash(R.bBold)); }
 	};
 	TSet<FAsyncGlyphRequest> PendingAsyncGlyphs;
+	/** One warning per font when the worker cannot rasterize, rather than one per glyph per frame. */
+	bool bLoggedAsyncGlyphFailure = false;
 	TSharedPtr<FDreamGlyphRasterizer, ESPMode::ThreadSafe> Rasterizer;
-	/** The worker over this font's faces, created on first use. Null when a face has no bytes to share. */
+	/** The worker over this font's faces, created on first use. Null when no face has bytes to share. */
 	FDreamGlyphRasterizer* GetOrCreateRasterizer();
 	/** Collect finished worker glyphs into the atlas; fires OnGlyphsReady when any landed. */
 	void DrainAsyncGlyphs();
@@ -273,8 +279,27 @@ protected:
 
 	/** CPU source of truth used both for deferred uploads and texture-array expansion. */
 	TArray<uint8> FontTextureAtlasData;
-	TSet<int32> DirtyFontTextureSlices;
+	/**
+	 * What has been written into the atlas since the last upload: per slice, the union of every
+	 * region that landed in it.
+	 *
+	 * A slice used to be marked dirty as a whole, so one new glyph re-uploaded 2048x2048x4 bytes --
+	 * 16MB for an MTSDF atlas -- through a full-slice lock. The union keeps the cost proportional to
+	 * what changed, and glyphs cluster because the packer fills one 256x256 cell at a time.
+	 */
+	TMap<int32, FIntRect> DirtyFontTextureSlices;
 	int32 FontTextureBytesPerPixel = 0;
+	/**
+	 * Scratch textures the render thread uses to land partial slice updates.
+	 *
+	 * Created, used and destroyed only on the render thread; the game thread holds nothing but this
+	 * reference and gives it up through a render command, so the RHI references go with it.
+	 */
+	TSharedPtr<FDreamUIFontAtlasStagingPool, ESPMode::ThreadSafe> AtlasStagingPool;
+	/** Note that a rectangle of a slice was written, merging it into that slice's pending region. */
+	void MarkAtlasRegionDirty(int32 Slice, const FIntRect& Region);
+	/** Hand the staging pool to the render thread so its textures are released there. */
+	void ReleaseAtlasStagingPool();
 public:
 #if WITH_EDITOR
 	void ReloadFont();

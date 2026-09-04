@@ -43,6 +43,13 @@ void FDreamGlyphRasterizer::SetFaceSource(int32 FaceIndex, const TSharedRef<cons
 	Source.FaceIndexInFile = FaceIndexInFile;
 }
 
+bool FDreamGlyphRasterizer::HasFaceSource(int32 FaceIndex) const
+{
+	FScopeLock ScopeLock(&Lock);
+	const FFaceSource* Source = FaceSources.Find(FaceIndex);
+	return Source != nullptr && Source->Bytes.IsValid() && Source->Bytes->Num() > 0;
+}
+
 void FDreamGlyphRasterizer::Enqueue(const FJob& Job)
 {
 	bool bLaunch = false;

@@ -39,7 +39,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetApplyAlphaToStrength(bool Value);
 
-	virtual FDreamVisualPostProcessRenderProxy* GetRenderProxy()override;
+	virtual FDreamVisualPostProcessRenderProxyPtr GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 protected:
 	FORCEINLINE float GetStrengthInternal();

@@ -14,6 +14,7 @@
 #include "RHI.h"
 #include "TextureCompiler.h"
 #include "RenderingThread.h"
+#include "UObject/StrongObjectPtr.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUISpriteData"
 
@@ -249,13 +250,22 @@ void UDreamUISpriteData::MarkAllSpritesNeedToReinitialize()
 }
 #endif
 
-void UDreamUISpriteData::CheckAndApplySpriteTextureSetting(UTexture2D* InSpriteTexture)
+bool UDreamUISpriteData::NeedsSpriteTextureSetting(const UTexture2D* InSpriteTexture)
 {
-	if (
+	if (!IsValid(InSpriteTexture))
+	{
+		return false;
+	}
+	return
 		InSpriteTexture->CompressionSettings != TextureCompressionSettings::TC_EditorIcon
 		|| InSpriteTexture->LODGroup != TextureGroup::TEXTUREGROUP_UI
 		|| InSpriteTexture->SRGB != true
-		)
+		;
+}
+
+void UDreamUISpriteData::CheckAndApplySpriteTextureSetting(UTexture2D* InSpriteTexture)
+{
+	if (NeedsSpriteTextureSetting(InSpriteTexture))
 	{
 		InSpriteTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
 		InSpriteTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
@@ -476,7 +486,14 @@ bool UDreamUISpriteData::SupportReadPixel()const
 
 UDreamUISpriteData* UDreamUISpriteData::GetDefaultWhiteSolid()
 {
-	static auto defaultWhiteSolid = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultWhiteSolidSprite, TEXT("DefaultWhiteSolidSprite"));
+	// Strong, and re-checked every call: see UDreamUIFontData_BaseObject::GetDefaultFont. A bare
+	// static UObject* kept nothing alive across a level change and cached a failed load forever.
+	static TStrongObjectPtr<UDreamUISpriteData> defaultWhiteSolidCache;
+	if (!defaultWhiteSolidCache.IsValid())
+	{
+		defaultWhiteSolidCache.Reset(UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultWhiteSolidSprite, TEXT("DefaultWhiteSolidSprite")));
+	}
+	auto defaultWhiteSolid = defaultWhiteSolidCache.Get();
 	if (defaultWhiteSolid == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default Sprite error! Missing some content of DreamGUI plugin, reinstall this plugin may fix the issue.")
@@ -491,7 +508,12 @@ UDreamUISpriteData* UDreamUISpriteData::GetDefaultWhiteSolid()
 }
 UDreamUISpriteData* UDreamUISpriteData::GetDefaultFrameRect()
 {
-	static auto defaultFrameRect = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultFrameRectSprite, TEXT("DefaultFrameRectSprite"));
+	static TStrongObjectPtr<UDreamUISpriteData> defaultFrameRectCache;
+	if (!defaultFrameRectCache.IsValid())
+	{
+		defaultFrameRectCache.Reset(UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultFrameRectSprite, TEXT("DefaultFrameRectSprite")));
+	}
+	auto defaultFrameRect = defaultFrameRectCache.Get();
 	if (defaultFrameRect == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default sprite error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue.")

@@ -5,12 +5,21 @@
 #include "DreamGUI.h"
 #include "Core/DreamUIFontEmojiData.h"
 #include "Utils/DreamUIUtils.h"
+#include "UObject/StrongObjectPtr.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIFontData_BaseObject"
 
 UDreamUIFontData_BaseObject* UDreamUIFontData_BaseObject::GetDefaultFont()
 {
-	static auto defaultFont = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultFont, TEXT("DefaultFont"));
+	// Strong, and re-checked every call: a bare static UObject* was neither. Nothing else references
+	// the default font once the last text widget of a level is gone, so GC collected it and the next
+	// widget got the dangling pointer back; and a first load that failed was cached as null forever.
+	static TStrongObjectPtr<UDreamUIFontData_BaseObject> defaultFontCache;
+	if (!defaultFontCache.IsValid())
+	{
+		defaultFontCache.Reset(UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultFont, TEXT("DefaultFont")));
+	}
+	auto defaultFont = defaultFontCache.Get();
 	if (defaultFont == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default font error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue.")

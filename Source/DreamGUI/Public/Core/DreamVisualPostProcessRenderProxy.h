@@ -14,6 +14,12 @@ class UDreamVisualPostProcess;
 
 /**
  * DreamVisualPostProcessRenderProxy is a render-agent for DreamVisualPostProcess in render thread, just like a SceneProxy for PrimitiveComponent.
+ *
+ * Owned through FDreamVisualPostProcessRenderProxyPtr by three parties at once -- the visual, the mesh
+ * section, and any render command in flight -- and never deleted directly. Every one of those releases
+ * its reference on the render thread (the visual hands its own to a render command in BeginDestroy), so
+ * whichever is last, the destructor runs there. Everything below is therefore free to be render-thread
+ * state; subclasses may keep RHI references without arranging a deferred release of their own.
  */
 class DREAMGUI_API FDreamVisualPostProcessRenderProxy
 {

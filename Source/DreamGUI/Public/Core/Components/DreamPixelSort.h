@@ -280,7 +280,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetDescending(bool Value);
 
-	virtual FDreamVisualPostProcessRenderProxy* GetRenderProxy()override;
+	virtual FDreamVisualPostProcessRenderProxyPtr GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 
 protected:

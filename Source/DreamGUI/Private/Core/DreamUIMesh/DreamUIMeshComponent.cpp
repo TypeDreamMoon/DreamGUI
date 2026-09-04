@@ -165,11 +165,16 @@ struct FDreamUIRenderSectionProxy_PostProcess : public FDreamUIRenderSectionProx
 		Type = EDreamUIRenderSectionProxyType::PostProcess;
 	}
 
-	FDreamVisualPostProcessRenderProxy* PostProcessRenderProxy = nullptr;
+	/**
+	 * Shared with the visual that produced it. This section and the visual are torn down on their own
+	 * schedules -- the visual's BeginDestroy runs long before the canvas pools its sections -- so the
+	 * section holds a reference of its own and the proxy survives until whichever of them is last.
+	 */
+	FDreamVisualPostProcessRenderProxyPtr PostProcessRenderProxy;
 
 	virtual void Disable() override
 	{
-		PostProcessRenderProxy = nullptr;
+		PostProcessRenderProxy.Reset();
 		bCanRender = false;
 	}
 };
@@ -281,26 +286,40 @@ public:
 				delete OldSection;
 			});
 	}
-	void UpdatePostProcessSection(FDreamUIRenderSection_PostProcess* InSrcSection, FDreamVisualPostProcessRenderProxy* InRenderProxy)
+	/**
+	 * Takes the section proxy already resolved on the game thread, not the render section that owns it.
+	 * FDreamUIRenderSection_PostProcess is game-thread state -- the canvas pools it and hands it to the
+	 * next draw call -- so reading its RenderProxy field from inside the command would be a cross-thread
+	 * read of something that may have been repointed by then. Every other deferred section update in
+	 * this file passes the resolved proxy the same way (see UpdateRenderSectionPriority and friends).
+	 */
+	void UpdatePostProcessSection(FDreamUIRenderSectionProxy* InSectionProxy, FDreamVisualPostProcessRenderProxyPtr InRenderProxy)
 	{
+		check(InSectionProxy != nullptr && InSectionProxy->Type == EDreamUIRenderSectionProxyType::PostProcess);
 		ENQUEUE_RENDER_COMMAND(FDreamUIRenderSceneProxy_ReplaceSectionData)(
-			[this, InSrcSection, InRenderProxy](FRHICommandListImmediate& RHICmdList) {
-				auto PostProcessRenderProxy = static_cast<FDreamUIRenderSectionProxy_PostProcess*>(InSrcSection->RenderProxy);
-				PostProcessRenderProxy->PostProcessRenderProxy = InRenderProxy;
-				PostProcessRenderProxy->bCanRender = true;
+			[SectionProxy = static_cast<FDreamUIRenderSectionProxy_PostProcess*>(InSectionProxy)
+				, InRenderProxy = MoveTemp(InRenderProxy)](FRHICommandListImmediate& RHICmdList) {
+				SectionProxy->PostProcessRenderProxy = InRenderProxy;
+				SectionProxy->bCanRender = true;
 			});
 	}
-	void UpdateChildCanvasSection(FDreamUIRenderSection_ChildCanvas* InSrcSection, UDreamUIMeshComponent* InComp)
+	/**
+	 * Same rule as UpdatePostProcessSection above: the section proxy is resolved on the game thread and
+	 * captured, so the command never reads FDreamUIRenderSection_ChildCanvas -- which the canvas pools
+	 * and repoints on its own schedule. The other two things it needs are already game-thread snapshots.
+	 */
+	void UpdateChildCanvasSection(FDreamUIRenderSectionProxy* InSectionProxy, UDreamUIMeshComponent* InComp)
 	{
+		check(InSectionProxy != nullptr && InSectionProxy->Type == EDreamUIRenderSectionProxyType::ChildCanvas);
 		ENQUEUE_RENDER_COMMAND(FDreamUIRenderSceneProxy_ReplaceSectionData)(
-			[this, InSrcSection, CompID = InComp->GetPrimitiveSceneId(), SceneProxy = InComp->SceneProxy](FRHICommandListImmediate& RHICmdList) {
-				auto ChildCanvasRenderProxy = static_cast<FDreamUIRenderSectionProxy_ChildCanvas*>(InSrcSection->RenderProxy);
-				ChildCanvasRenderProxy->PrimitiveComponentID = CompID;
-				if (SceneProxy != nullptr)
+			[SectionProxy = static_cast<FDreamUIRenderSectionProxy_ChildCanvas*>(InSectionProxy)
+				, CompID = InComp->GetPrimitiveSceneId(), ChildSceneProxy = InComp->SceneProxy](FRHICommandListImmediate& RHICmdList) {
+				SectionProxy->PrimitiveComponentID = CompID;
+				if (ChildSceneProxy != nullptr)
 				{
-					ChildCanvasRenderProxy->ChildCanvasSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
+					SectionProxy->ChildCanvasSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(ChildSceneProxy);
 				}
-				ChildCanvasRenderProxy->bCanRender = true;
+				SectionProxy->bCanRender = true;
 			});
 	}
 
@@ -370,7 +389,14 @@ public:
 			{
 				auto SrcSection = static_cast<FDreamUIRenderSection_PostProcess*>(InSrcSection);
 				auto NewSectionProxy = new FDreamUIRenderSectionProxy_PostProcess();
-				NewSectionProxy->PostProcessRenderProxy = SrcSection->PostProcessVisualObject->GetRenderProxy();
+				// The visual is held weakly and can already be gone -- it is destroyed on its own
+				// schedule, while the section only goes away on the canvas's next pool pass. A stale weak
+				// pointer is therefore normal, and dereferencing it is a crash; the section simply gets no
+				// proxy and cannot render. (The proxy itself is safe once obtained: it is shared.)
+				if (SrcSection->PostProcessVisualObject.IsValid())
+				{
+					NewSectionProxy->PostProcessRenderProxy = SrcSection->PostProcessVisualObject->GetRenderProxy();
+				}
 
 				// Copy info
 				NewSectionProxy->SectionRenderPriority = SrcSection->RenderPriority;
@@ -442,8 +468,13 @@ public:
 	{
 		for (int i = 0; i < SectionArray.Num(); i++)
 		{
-			auto Section = SectionArray[i];
-			Section->Disable();
+			// Null entries are normal here -- CreateSectionData returns one for an empty mesh section, and
+			// every other walk of this array already skips them. This is where a post-process section lets
+			// go of its half of the render proxy, so it is not a loop to crash in.
+			if (auto Section = SectionArray[i])
+			{
+				Section->Disable();
+			}
 		}
 	}
 
@@ -540,7 +571,7 @@ public:
 				auto VertexBufferSize = MeshSection->DreamUIVertexBuffers.Vertices.Num() * sizeof(FDreamUIMeshVertexBuffer);
 				if (MaxVertexBufferSize < VertexBufferSize) MaxVertexBufferSize = VertexBufferSize;
 				MeshMemorySize += VertexBufferSize;
-				MeshMemorySize += MeshSection->IndexBuffer.Indices.Num() * sizeof(FDreamUIMeshIndexBufferType);
+				MeshMemorySize += MeshSection->IndexBuffer.Indices.Num() * sizeof(FDreamUIMeshIndex);
 			}
 		}
 		return MeshMemorySize;
@@ -741,7 +772,7 @@ public:
 		FMaterialRenderProxy* WireframeMaterialInstance = nullptr;
 		if (bWireframe)
 		{
-			WireframeMaterialInstance = GEngine->WireframeMaterial->GetRenderProxy();
+			WireframeMaterialInstance = GEngine->WireframeMaterial ? GEngine->WireframeMaterial->GetRenderProxy() : nullptr;
 		}
 
 		for (int i = 0; i < PrimitiveData.Sections.Num(); i++)
@@ -788,7 +819,7 @@ public:
 		}
 	}
 
-	virtual FDreamVisualPostProcessRenderProxy* DreamUI_GetPostProcessElement(FDreamUIRenderSectionProxy* SectionPtr)const override
+	virtual FDreamVisualPostProcessRenderProxyPtr DreamUI_GetPostProcessElement(FDreamUIRenderSectionProxy* SectionPtr)const override
 	{
 		check(SectionPtr->Type == EDreamUIRenderSectionProxyType::PostProcess);
 		return (static_cast<FDreamUIRenderSectionProxy_PostProcess*>(SectionPtr))->PostProcessRenderProxy;
@@ -852,7 +883,7 @@ public:
 			case EDreamUIRenderSectionProxyType::PostProcess:
 				{
 					auto Section = static_cast<FDreamUIRenderSectionProxy_PostProcess*>(RenderSection);
-					if (Section->PostProcessRenderProxy->CanRender())
+					if (Section->PostProcessRenderProxy.IsValid() && Section->PostProcessRenderProxy->CanRender())
 					{
 						FDreamUIPrimitiveSectionDataContainer SectionData;
 						SectionData.SectionPointer = RenderSection;
@@ -1110,6 +1141,12 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 			auto PostProcessSectionPtr = static_cast<FDreamUIRenderSection_PostProcess*>(RenderSection.Get());
 			auto PostProcessVisualObject = InDrawCallData->PostProcessVisualObject;
 			PostProcessSectionPtr->PostProcessVisualObject = PostProcessVisualObject;
+			// Weak, and destroyed independently of the section it feeds: nothing below survives a stale one.
+			// Its render proxy is shared, so what the section takes below stays valid on its own.
+			if (!PostProcessVisualObject.IsValid())
+			{
+				break;
+			}
 			auto BoundingBox = FBox(EForceInit::ForceInit);
 			FVector Min, Max;
 			PostProcessVisualObject->GetGeometryBounds3DInLocalSpace(Min, Max);
@@ -1122,7 +1159,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 				{
 					auto ThisSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(this->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
 					auto RenderProxy = PostProcessSectionPtr->PostProcessVisualObject->GetRenderProxy();
-					ThisSceneProxy->UpdatePostProcessSection(PostProcessSectionPtr, RenderProxy);
+					ThisSceneProxy->UpdatePostProcessSection(PostProcessSectionPtr->RenderProxy, RenderProxy);
 				}
 			}
 			else
@@ -1148,7 +1185,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 				if (this->SceneProxy != nullptr)
 				{
 					auto ThisSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(this->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
-					ThisSceneProxy->UpdateChildCanvasSection(ChildCanvasSectionPtr, InDrawCallData->ChildCanvas->GetUIMesh());
+					ThisSceneProxy->UpdateChildCanvasSection(ChildCanvasSectionPtr->RenderProxy, InDrawCallData->ChildCanvas->GetUIMesh());
 				}
 			}
 			else

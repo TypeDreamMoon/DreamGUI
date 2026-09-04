@@ -144,13 +144,25 @@ private:
 
 		IDreamUIRendererPrimitive* Primitive = nullptr;
 	};
-	struct FScreenSpaceRenderParameter
+	/**
+	 * What the game thread works out about the view in SetupView and the render thread draws with.
+	 *
+	 * One struct, copied across in a render command, because the render thread used to read these
+	 * fields straight out of the object the game thread was writing them into.
+	 */
+	struct FScreenSpaceViewParameter
 	{
 		FVector ViewOrigin = FVector::ZeroVector;
 		FMatrix ViewRotationMatrix = FMatrix::Identity;
 		FMatrix ProjectionMatrix = FMatrix::Identity;
 		FMatrix44f ViewProjectionMatrix = FMatrix44f::Identity;
 		bool bEnableDepthTest = false;
+		bool bFrustumCulling = true;
+		//sample count for MSAA
+		uint8 NumSamples_MSAA = 1;
+	};
+	struct FScreenSpaceRenderParameter
+	{
 		bool bNeedSortRenderPriority = true;
 
 		TWeakObjectPtr<UDreamCanvas> RootCanvas = nullptr;
@@ -159,8 +171,11 @@ private:
 	TArray<FWorldSpaceRenderParameter> WorldSpaceRenderCanvasParameterArray;
 	TMap<UDreamCanvas*, bool> WorldSpaceCanvasVisibilityMap;
 	bool bNeedSortWorldSpaceRenderCanvas = true;
-	bool bFrustumCulling = true;
 	FScreenSpaceRenderParameter ScreenSpaceRenderParameter;
+	/** Written by SetupView on the game thread; never read there. */
+	FScreenSpaceViewParameter GameThreadViewParameter;
+	/** The render thread's own copy, replaced by the command SetupView enqueues. */
+	FScreenSpaceViewParameter RenderThreadViewParameter;
 	TWeakObjectPtr<UWorld> World;
 	TArray<FDreamUIMeshBatchContainer> MeshBatchArray;
 	//if 'bIsRenderToRenderTarget' is true then we need a render target
@@ -168,8 +183,6 @@ private:
 	FColor RenderTargetClearColor = FColor::Transparent;
 	void SortScreenSpacePrimitiveRenderPriority_RenderThread();
 	void SetRenderCanvasDepthFade_RenderThread(UDreamCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
-	//render thread sample count for MSAA
-	uint8 NumSamples_MSAA = 1;
 	EDreamUIRendererType RendererType = EDreamUIRendererType::ScreenSpace_and_WorldSpace;
 
 	void RenderDreamUI_RenderThread(
@@ -213,9 +226,11 @@ class DREAMGUI_API FDreamUIFullScreenSlicedQuadIndexBuffer :public FIndexBuffer
 public:
 	void InitRHI(FRHICommandListBase& RHICmdList)override;
 };
-static TGlobalResource<FDreamUIFullScreenQuadVertexBuffer> GDreamUIFullScreenQuadVertexBuffer;
-static TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> GDreamUIFullScreenQuadIndexBuffer;
-static TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
+// One quad, not one per translation unit: `static` in a header gave every .cpp that included it its
+// own copy, each registering and holding its own GPU buffers. Defined in DreamUIRenderer.cpp.
+extern DREAMGUI_API TGlobalResource<FDreamUIFullScreenQuadVertexBuffer> GDreamUIFullScreenQuadVertexBuffer;
+extern DREAMGUI_API TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> GDreamUIFullScreenQuadIndexBuffer;
+extern DREAMGUI_API TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIWorldRenderPSParameter, )
 	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SceneDepthTex)
 	RENDER_TARGET_BINDING_SLOTS()

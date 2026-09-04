@@ -506,8 +506,8 @@ void UDreamPixelSort::SetDescending(bool Value)
 
 void UDreamPixelSort::SendOthersDataToRenderProxy()
 {
-	if (RenderProxy == nullptr)return;
-	auto TempRenderProxy = (FDreamPixelSortRenderProxy*)RenderProxy;
+	if (!RenderProxy.IsValid())return;
+	auto TempRenderProxy = StaticCastSharedPtr<FDreamPixelSortRenderProxy>(RenderProxy);
 	// Resolved on the game thread and shipped by value, so the render thread never reads a UPROPERTY.
 	const int32 PassCount = DreamPixelSort::ResolvePassCount(SortStrength, MaxSortPasses);
 	const FVector2f ResolvedBand = DreamPixelSort::ResolveBand(ThresholdMin, ThresholdMax);
@@ -531,11 +531,11 @@ void UDreamPixelSort::SendOthersDataToRenderProxy()
 			});
 }
 
-FDreamVisualPostProcessRenderProxy* UDreamPixelSort::GetRenderProxy()
+FDreamVisualPostProcessRenderProxyPtr UDreamPixelSort::GetRenderProxy()
 {
-	if (RenderProxy == nullptr)
+	if (!RenderProxy.IsValid())
 	{
-		RenderProxy = new FDreamPixelSortRenderProxy();
+		RenderProxy = MakeShared<FDreamPixelSortRenderProxy, ESPMode::ThreadSafe>();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
 		SendRenderTargetToRenderProxy();

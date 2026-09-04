@@ -92,12 +92,12 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "0.0", UIMax = "0.2"))
 		float BoldRatio = 0.04f;
-	/** -1 means not set yet. */
+	/** -1 means not set yet. Transient, so widening it costs no serialized data. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI", Transient)
-		int LineHeight = -1;
-	/** -1 means not set yet. */
+		float LineHeight = -1;
+	/** -1 means not set yet. Transient, so widening it costs no serialized data. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI", Transient)
-		int VerticalOffset = -1;
+		float VerticalOffset = -1;
 	/** Ascent and descent at SampleFontSize; negative means not cached yet. */
 	float CachedAscent = -1.0f;
 	float CachedDescent = -1.0f;
@@ -140,7 +140,9 @@ public:
 protected:
 	float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0;
 	TMap<FDreamUIDistanceFieldCharKey, FDreamUICharData> CharDataMap;
-	TMap<FDreamUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
+	// Kerning is a fraction of a pixel at SampleFontSize as often as not; int16 rounded every one of
+	// those to zero, and the first (uncached) call disagreed with every later one. Not serialized.
+	TMap<FDreamUIDistanceFieldFontKerningPair, float> KerningPairsMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 

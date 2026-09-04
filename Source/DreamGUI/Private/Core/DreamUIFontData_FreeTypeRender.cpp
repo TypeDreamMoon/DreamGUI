@@ -9,6 +9,8 @@
 #include "TextureResource.h"
 #include "Engine/FontFace.h"
 #include "Engine/Texture2DArray.h"
+#include "RHICommandList.h"
+#include "RHIResources.h"
 #include "Internationalization/Culture.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
@@ -39,13 +41,33 @@ void UDreamUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
 	if (CultureFontMap.Contains(CurrentCulture))
 		EngineFont = CultureFontMap[CurrentCulture].LoadSynchronous();
 
+#if WITH_FREETYPE
+	// Tear the old face down first: FreeType reads FontBinaryArray in place, so its bytes must not
+	// move while a face still points at them.
+	DeinitFreeType();
+#endif
+
 	if (FontType == EDreamUIDynamicFontDataType::EngineFont)
 	{
-		FontBinaryArray.Empty();//clear cache font data when switch to EngineFont
+#if WITH_EDITOR
+		FontBinaryArray.Empty();//clear cache font data when switch to EngineFont; the editor reads EngineFont directly
+#else
+		// Outside the editor these cached bytes are the only font there is -- a cooked UFontFace's
+		// runtime payload is not usable by FreeType, which is why they are cached at cook time. Emptying
+		// them first handed FT_New_Memory_Face nothing and killed the font for the rest of the session,
+		// so only swap them once the culture's face has actually produced bytes.
+		if (IsValid(EngineFont) && EngineFont->GetFontFaceData()->HasData())
+		{
+			FontBinaryArray = EngineFont->GetFontFaceData()->GetData();
+		}
+		else
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font:%s, culture '%s' has no usable font data; keeping the font that was loaded."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), *CurrentCulture);
+		}
+#endif
 	}
 
 #if WITH_FREETYPE
-	DeinitFreeType();
 	InitFreeType();
 #endif
 }
@@ -100,20 +122,39 @@ TArray<FString> UDreamUIFontData_FreeTypeRender::CacheSubFaces(FT_LibraryRec_* I
 void UDreamUIFontData_FreeTypeRender::InitFreeType()
 {
 	if (bAlreadyInitialized)return;
+	// One failed attempt is enough. Every glyph request comes back through here, so without this a font
+	// that cannot load re-ran the whole thing per glyph: an error line each time, and -- because the
+	// early exits below never closed it -- one leaked FT_Library each time. A Deinit clears the flag,
+	// which is what ReloadFont and a culture change already go through.
+	if (bInitFailed)return;
 	FT_Error error = 0;
 	error = FT_Init_FreeType(&Library);
 	if (error)
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), ANSI_TO_TCHAR(GetErrorMessage(error)));
+		Library = nullptr;
+		bInitFailed = true;
 		return;
 	}
+
+	// Every exit below owns the library it just opened; FreeType's faces are closed with it.
+	auto FailInit = [this]()
+	{
+		if (Library != nullptr)
+		{
+			FT_Done_FreeType(Library);
+			Library = nullptr;
+		}
+		Face = nullptr;
+		bInitFailed = true;
+	};
 
 	auto NewFontFace = [&error, this](const TArray<uint8>& InFontBinary) {
 #if WITH_EDITOR
 		SubFaces = CacheSubFaces(Library, InFontBinary);
 		if (SubFaces.Num() > 0)
 		{
-			FontFace = FMath::Clamp(FontFace, 0, SubFaces.Num());
+			FontFace = FMath::Clamp(FontFace, 0, SubFaces.Num() - 1);
 #endif
 			error = FT_New_Memory_Face(Library, InFontBinary.GetData(), InFontBinary.Num(), FontFace, &Face);
 #if WITH_EDITOR
@@ -140,6 +181,7 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 				if (!FFileHelper::LoadFileToArray(TempFontBinaryArray, *EngineFont->GetFontFilename()))
 				{
 					UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Failed to load or process '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *EngineFont->GetFontFilename());
+					FailInit();
 					return;
 				}
 				else
@@ -151,6 +193,7 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 		else
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, trying to load Unreal's font face, but not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()));
+			FailInit();
 			return;
 		}
 #else
@@ -174,6 +217,7 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 				else
 				{
 					UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, file: \"%s\" not exist!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), *FontFilePathStr);
+					FailInit();
 					return;
 				}
 			}
@@ -202,6 +246,7 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 				if (!FPaths::FileExists(*FontFilePathStr))
 				{
 					UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, file: \"%s\" not exist!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), *FontFilePathStr);
+					FailInit();
 					return;
 				}
 
@@ -216,10 +261,12 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 		}
 	}
 
-	if (error)
+	// A null face with no error is the editor's "have no face!" branch above: it never called
+	// FT_New_Memory_Face, and the success path below dereferences Face (FT_HAS_KERNING) straight away.
+	if (error || Face == nullptr)
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), ANSI_TO_TCHAR(GetErrorMessage(error)));
-		Face = nullptr;
+		FailInit();
 		return;
 	}
 	else
@@ -245,6 +292,7 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 {
 	bAlreadyInitialized = false;
+	bInitFailed = false;
 	// The worker keeps itself (and the font bytes it reads) alive until its task ends; results for
 	// this font are simply dropped with it.
 	Rasterizer.Reset();
@@ -695,7 +743,10 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 			}
 			if (!TakeSyncGlyphBudget())
 			{
-				if (FDreamGlyphRasterizer* Worker = GetOrCreateRasterizer())
+				FDreamGlyphRasterizer* Worker = GetOrCreateRasterizer();
+				// A face the worker has no bytes for fails every job it is given; fall through to the
+				// synchronous path for it instead of handing out a quad that never lands.
+				if (Worker != nullptr && Worker->HasFaceSource(Key.FaceIndex))
 				{
 					FDreamGlyphRasterizer::FJob Job;
 					Job.Key = Key;
@@ -822,6 +873,7 @@ FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
 		TSharedRef<FDreamGlyphRasterizer, ESPMode::ThreadSafe> NewRasterizer = MakeShared<FDreamGlyphRasterizer, ESPMode::ThreadSafe>();
 		// The worker reads its own copies of the font files; fallbacks contribute theirs by face index.
 		const int32 FaceCount = GetFaceCount();
+		int32 RegisteredFaces = 0;
 		for (int32 FaceIndex = 0; FaceIndex < FaceCount; FaceIndex++)
 		{
 			UDreamUIFontData_FreeTypeRender* Owner = this;
@@ -832,9 +884,34 @@ FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
 				if (Owner == nullptr || Owner == this)continue;
 				Owner->InitFreeType();
 			}
-			const TArray<uint8>& Bytes = Owner->TempFontBinaryArray.Num() > 0 ? Owner->TempFontBinaryArray : Owner->FontBinaryArray;
-			if (Bytes.Num() == 0)continue;
-			NewRasterizer->SetFaceSource(FaceIndex, MakeShared<const TArray<uint8>, ESPMode::ThreadSafe>(Bytes), Owner->FontFace);
+			const TArray<uint8>* Bytes = nullptr;
+			if (Owner->TempFontBinaryArray.Num() > 0)
+			{
+				Bytes = &Owner->TempFontBinaryArray;
+			}
+			else if (Owner->FontBinaryArray.Num() > 0)
+			{
+				Bytes = &Owner->FontBinaryArray;
+			}
+#if WITH_EDITOR
+			// In the editor an EngineFont keeps its bytes in the face asset and nowhere else -- both
+			// binary arrays are empty -- so the worker used to open no face at all and fail every job
+			// it was handed, silently, and the glyph never arrived.
+			else if (Owner->FontType == EDreamUIDynamicFontDataType::EngineFont
+				&& IsValid(Owner->EngineFont) && Owner->EngineFont->GetFontFaceData()->HasData())
+			{
+				Bytes = &Owner->EngineFont->GetFontFaceData()->GetData();
+			}
+#endif
+			if (Bytes == nullptr)continue;
+			NewRasterizer->SetFaceSource(FaceIndex, MakeShared<const TArray<uint8>, ESPMode::ThreadSafe>(*Bytes), Owner->FontFace);
+			RegisteredFaces++;
+		}
+		if (RegisteredFaces == 0)
+		{
+			// Nothing for a worker to read: say so rather than hand back a rasterizer that fails every
+			// job, and the caller rasterizes on the game thread instead.
+			return nullptr;
 		}
 		Rasterizer = NewRasterizer;
 	}
@@ -859,6 +936,7 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 		return;
 	}
 	bool bAnyLanded = false;
+	bool bAnyFailed = false;
 	for (FDreamGlyphRasterizer::FResult& Result : Results)
 	{
 		FAsyncGlyphRequest Request;
@@ -868,6 +946,13 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 		PendingAsyncGlyphs.Remove(Request);
 		if (!Result.bSucceeded)
 		{
+			if (!bLoggedAsyncGlyphFailure)
+			{
+				bLoggedAsyncGlyphFailure = true;
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font:%s, face %d glyph %u failed to rasterize on a worker; falling back to synchronous glyphs. (reported once per font)")
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), Result.Job.Key.FaceIndex, Result.Job.Key.GlyphIndex);
+			}
+			bAnyFailed = true;
 			continue;
 		}
 		FDreamUICharData Existing;
@@ -890,7 +975,9 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 			bAnyLanded = true;
 		}
 	}
-	if (bAnyLanded)
+	// A failure counts too: the quad handed out for a pending glyph is empty, so without a relayout
+	// that character would simply never appear again.
+	if (bAnyLanded || bAnyFailed)
 	{
 		OnGlyphsReady.Broadcast();
 	}
@@ -1047,9 +1134,134 @@ bool UDreamUIFontData_FreeTypeRender::UpdateFontTextureRegion(uint32 PosX, uint3
 		FMemory::Memcpy(DestData + static_cast<int64>(Row) * DestPitch, SourceData + static_cast<int64>(Row) * SrcPitch, RowDataSize);
 	}
 
-	DirtyFontTextureSlices.Add(Slice);
+	// The one place the CPU atlas is written, so the one place a dirty region is recorded. Note the
+	// rect is the GLYPH's, not the packed rect: the padding around it was never touched.
+	MarkAtlasRegionDirty(static_cast<int32>(Slice),
+		FIntRect(static_cast<int32>(PosX), static_cast<int32>(PosY),
+			static_cast<int32>(PosX + Width), static_cast<int32>(PosY + Height)));
 	PendingFontTextureUploads.Add(this);
 	return true;
+}
+
+namespace
+{
+	/** Staging textures are bucketed by size, rounded up to this, so similar regions share one. */
+	constexpr int32 AtlasStagingSizeAlignment = 64;
+	/** What the staging pool may hold between frames. One 256x256 BGRA region is 256KB. */
+	constexpr int64 AtlasStagingPoolByteBudget = 4 * 1024 * 1024;
+}
+
+/**
+ * Render-thread-only pool of scratch 2D textures used to land partial atlas updates.
+ *
+ * A Texture2DArray cannot be updated in place a region at a time. RHIUpdateTexture2D writes slice 0
+ * whatever slice is asked for, and LockTexture2DArray(RLM_WriteOnly) hands back a fresh upload buffer
+ * whose Unlock copies the WHOLE subresource -- so filling in part of it destroys the rest. The way
+ * through is to write the region into a plain 2D texture and CopyTexture that into the slice at an
+ * offset, which is what these are for.
+ *
+ * Every member is touched on the render thread only. The font holds the pool by TSharedPtr and gives
+ * that reference to a render command when it goes away, so the FTextureRHIRefs are released there too.
+ */
+struct FDreamUIFontAtlasStagingPool
+{
+	/** Free textures by bucket extent. Everything in here has PixelFormat's format. */
+	TMap<FIntPoint, TArray<FTextureRHIRef>> FreeTextures;
+	/** The atlas format the pooled textures were made for; a change empties the pool. */
+	EPixelFormat PixelFormat = PF_Unknown;
+	/** Bytes currently parked in FreeTextures, against AtlasStagingPoolByteBudget. */
+	int64 PooledBytes = 0;
+
+	/** The bucket a region of this size lands in: rounded up, and never larger than a slice. */
+	static FIntPoint BucketSizeFor(const FIntPoint& RegionSize, int32 MaxSize)
+	{
+		return FIntPoint(
+			FMath::Min(Align(FMath::Max(RegionSize.X, 1), AtlasStagingSizeAlignment), MaxSize),
+			FMath::Min(Align(FMath::Max(RegionSize.Y, 1), AtlasStagingSizeAlignment), MaxSize));
+	}
+
+	static int64 BytesFor(const FIntPoint& Size, EPixelFormat Format)
+	{
+		return static_cast<int64>(Size.X) * Size.Y * GPixelFormats[Format].BlockBytes;
+	}
+
+	/** A texture of exactly BucketSize, taken out of the pool or made. Null only if creation failed. */
+	FTextureRHIRef Acquire(FRHICommandListImmediate& RHICmdList, const FIntPoint& BucketSize, EPixelFormat Format)
+	{
+		if (PixelFormat != Format)
+		{
+			// The font swapped atlas format (single channel <-> MTSDF). Nothing pooled can be copied
+			// into the new atlas, so drop it all rather than keep textures that will never match.
+			FreeTextures.Empty();
+			PooledBytes = 0;
+			PixelFormat = Format;
+		}
+		if (TArray<FTextureRHIRef>* Bucket = FreeTextures.Find(BucketSize))
+		{
+			if (Bucket->Num() > 0)
+			{
+				FTextureRHIRef Result = Bucket->Pop(EAllowShrinking::No);
+				PooledBytes -= BytesFor(BucketSize, Format);
+				return Result;
+			}
+		}
+		return RHICmdList.CreateTexture(
+			FRHITextureCreateDesc::Create2D(TEXT("DreamUIFontAtlasStaging"), BucketSize, Format)
+			.SetFlags(ETextureCreateFlags::ShaderResource)
+			.SetInitialState(ERHIAccess::CopySrc));
+	}
+
+	/** Take a texture back, unless the pool is already holding its budget -- then just let it go. */
+	void Release(FTextureRHIRef&& InTexture)
+	{
+		if (!InTexture.IsValid())
+		{
+			return;
+		}
+		const FIntPoint Size = InTexture->GetDesc().Extent;
+		const int64 Bytes = BytesFor(Size, PixelFormat);
+		if (PooledBytes + Bytes > AtlasStagingPoolByteBudget)
+		{
+			return;
+		}
+		PooledBytes += Bytes;
+		FreeTextures.FindOrAdd(Size).Add(MoveTemp(InTexture));
+	}
+};
+
+void UDreamUIFontData_FreeTypeRender::MarkAtlasRegionDirty(int32 Slice, const FIntRect& Region)
+{
+	check(IsInGameThread());
+	if (Region.Width() <= 0 || Region.Height() <= 0)
+	{
+		return;
+	}
+	if (FIntRect* Existing = DirtyFontTextureSlices.Find(Slice))
+	{
+		// One rect per slice, not a list: a handful of glyphs landing in the same packing cell merge
+		// into a small region, and scattered ones grow it until the upload decides a whole-slice lock
+		// is cheaper. Tracking them separately would buy little and cost a rect list per slice.
+		Existing->Union(Region);
+	}
+	else
+	{
+		DirtyFontTextureSlices.Add(Slice, Region);
+	}
+}
+
+void UDreamUIFontData_FreeTypeRender::ReleaseAtlasStagingPool()
+{
+	if (!AtlasStagingPool.IsValid())
+	{
+		return;
+	}
+	// Queued behind any flush still in flight, and the textures are released wherever this reference
+	// dies -- which is the render thread, because that is where the command runs.
+	ENQUEUE_RENDER_COMMAND(FDreamUIFontData_ReleaseAtlasStagingPool)(
+		[ReleasedPool = MoveTemp(AtlasStagingPool)](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			ReleasedPool.Reset();
+		});
 }
 
 bool UDreamUIFontData_FreeTypeRender::FlushFontTexture()
@@ -1065,45 +1277,217 @@ bool UDreamUIFontData_FreeTypeRender::FlushFontTexture()
 	}
 
 	const int32 TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
-	const uint32 RowDataSize = TextureSize * FontTextureBytesPerPixel;
-	const int64 SliceDataSize = RowDataSize * TextureSize;
-	TArray<int32> SlicesToUpload = DirtyFontTextureSlices.Array();
-	SlicesToUpload.Sort();
+	const int32 BytesPerPixel = FontTextureBytesPerPixel;
+	if (!ensure(BytesPerPixel > 0))
+	{
+		DirtyFontTextureSlices.Reset();
+		return true;
+	}
+	const int64 SliceRowSize = static_cast<int64>(TextureSize) * BytesPerPixel;
+	const int64 SliceDataSize = SliceRowSize * TextureSize;
+	// Past half a slice the region path stops paying: the staging texture is then nearly slice-sized,
+	// so it is an upload of about the same bytes plus a copy on top. Lock the whole slice instead.
+	const int32 FullSliceAreaThreshold = (TextureSize * TextureSize) / 2;
+	const int32 SliceCount = Texture->GetArraySize();
+
+	struct FSliceUpload
+	{
+		int32 Slice = 0;
+		/** Region within the slice; the whole slice when bFullSlice. */
+		FIntRect Region;
+		/** Where this upload's rows start in UploadData. Rows are packed at Region.Width() * bpp. */
+		int64 DataOffset = 0;
+		bool bFullSlice = false;
+	};
+
+	TArray<int32> DirtySlices;
+	DirtyFontTextureSlices.GenerateKeyArray(DirtySlices);
+	DirtySlices.Sort();
+
+	TArray<FSliceUpload> Uploads;
+	Uploads.Reserve(DirtySlices.Num());
+	int64 TotalUploadBytes = 0;
+	for (int32 Slice : DirtySlices)
+	{
+		// A slice can have gone away under a pending region: the font is renewed (which rebuilds the
+		// texture from the CPU atlas anyway) or released between the write and this flush.
+		if (Slice < 0 || Slice >= SliceCount
+			|| static_cast<int64>(Slice + 1) * SliceDataSize > FontTextureAtlasData.Num())
+		{
+			continue;
+		}
+		FSliceUpload Upload;
+		Upload.Slice = Slice;
+		Upload.Region = DirtyFontTextureSlices[Slice];
+		Upload.Region.Clip(FIntRect(0, 0, TextureSize, TextureSize));
+		if (Upload.Region.Area() <= 0)
+		{
+			continue;
+		}
+		Upload.bFullSlice = Upload.Region.Area() >= FullSliceAreaThreshold;
+		if (Upload.bFullSlice)
+		{
+			Upload.Region = FIntRect(0, 0, TextureSize, TextureSize);
+		}
+		Upload.DataOffset = TotalUploadBytes;
+		TotalUploadBytes += static_cast<int64>(Upload.Region.Width()) * Upload.Region.Height() * BytesPerPixel;
+		Uploads.Add(Upload);
+	}
+	DirtyFontTextureSlices.Reset();
+	if (Uploads.Num() == 0)
+	{
+		return true;
+	}
+	// Every region is a subset of a distinct slice, so this cannot exceed the atlas, which
+	// EnsureFontTextureAtlasData already holds under MAX_int32.
+	if (!ensure(TotalUploadBytes <= MAX_int32))
+	{
+		return true;
+	}
 
 	TArray<uint8> UploadData;
-	UploadData.SetNumUninitialized(static_cast<int32>(SliceDataSize * SlicesToUpload.Num()));
-	for (int32 UploadIndex = 0; UploadIndex < SlicesToUpload.Num(); ++UploadIndex)
+	UploadData.SetNumUninitialized(static_cast<int32>(TotalUploadBytes));
+	for (const FSliceUpload& Upload : Uploads)
 	{
-		FMemory::Memcpy(
-			UploadData.GetData() + UploadIndex * SliceDataSize,
-			FontTextureAtlasData.GetData() + SlicesToUpload[UploadIndex] * SliceDataSize,
-			SliceDataSize);
+		const int64 UploadRowSize = static_cast<int64>(Upload.Region.Width()) * BytesPerPixel;
+		const uint8* SliceStart = FontTextureAtlasData.GetData() + static_cast<int64>(Upload.Slice) * SliceDataSize;
+		uint8* DestData = UploadData.GetData() + Upload.DataOffset;
+		for (int32 Row = 0; Row < Upload.Region.Height(); ++Row)
+		{
+			FMemory::Memcpy(
+				DestData + static_cast<int64>(Row) * UploadRowSize,
+				SliceStart + static_cast<int64>(Upload.Region.Min.Y + Row) * SliceRowSize
+					+ static_cast<int64>(Upload.Region.Min.X) * BytesPerPixel,
+				static_cast<SIZE_T>(UploadRowSize));
+		}
+	}
+
+	if (!AtlasStagingPool.IsValid())
+	{
+		AtlasStagingPool = MakeShared<FDreamUIFontAtlasStagingPool, ESPMode::ThreadSafe>();
 	}
 
 	FTextureResource* TextureResource = Texture->GetResource();
-	DirtyFontTextureSlices.Reset();
 	ENQUEUE_RENDER_COMMAND(FDreamUIFontData_FlushFontTexture)(
-		[TextureResource, TextureSize, RowDataSize, SliceDataSize, SlicesToUpload = MoveTemp(SlicesToUpload), UploadData = MoveTemp(UploadData)](FRHICommandListImmediate& RHICmdList)
+		[TextureResource, TextureSize, BytesPerPixel, Pool = AtlasStagingPool,
+			Uploads = MoveTemp(Uploads), UploadData = MoveTemp(UploadData)](FRHICommandListImmediate& RHICmdList)
 		{
 			FRHITexture* TextureRHI = TextureResource->GetTexture2DArrayRHI();
 			if (!ensure(TextureRHI != nullptr && TextureRHI->IsValid()))
 			{
 				return;
 			}
-			for (int32 UploadIndex = 0; UploadIndex < SlicesToUpload.Num(); ++UploadIndex)
+			const EPixelFormat AtlasFormat = TextureRHI->GetFormat();
+			if (!ensure(GPixelFormats[AtlasFormat].BlockBytes == BytesPerPixel))
 			{
-				uint32 DestStride = 0;
-				uint8* DestData = static_cast<uint8*>(RHICmdList.LockTexture2DArray(
-					TextureRHI, SlicesToUpload[UploadIndex], 0, RLM_WriteOnly, DestStride, false));
-				if (ensure(DestData != nullptr && DestStride >= RowDataSize))
+				return;
+			}
+
+			// One staging texture per region, held until every copy has been issued: each is written
+			// by its own lock/unlock and only read at the end, so two regions cannot share one.
+			struct FPendingCopy
+			{
+				FTextureRHIRef Staging;
+				FIntRect Region;
+				int32 Slice = 0;
+			};
+			TArray<FPendingCopy> PendingCopies;
+			PendingCopies.Reserve(Uploads.Num());
+
+			for (const FSliceUpload& Upload : Uploads)
+			{
+				const uint8* SourceData = UploadData.GetData() + Upload.DataOffset;
+				const int64 SourceRowSize = static_cast<int64>(Upload.Region.Width()) * BytesPerPixel;
+
+				if (Upload.bFullSlice)
 				{
-					const uint8* SourceData = UploadData.GetData() + UploadIndex * SliceDataSize;
-					for (int32 Row = 0; Row < TextureSize; ++Row)
+					uint32 DestStride = 0;
+					uint8* DestData = static_cast<uint8*>(RHICmdList.LockTexture2DArray(
+						TextureRHI, Upload.Slice, 0, RLM_WriteOnly, DestStride, false));
+					if (ensure(DestData != nullptr && DestStride >= static_cast<uint32>(SourceRowSize)))
 					{
-						FMemory::Memcpy(DestData + static_cast<int64>(Row) * DestStride, SourceData + static_cast<int64>(Row) * RowDataSize, RowDataSize);
+						for (int32 Row = 0; Row < Upload.Region.Height(); ++Row)
+						{
+							FMemory::Memcpy(DestData + static_cast<int64>(Row) * DestStride,
+								SourceData + static_cast<int64>(Row) * SourceRowSize,
+								static_cast<SIZE_T>(SourceRowSize));
+						}
+					}
+					RHICmdList.UnlockTexture2DArray(TextureRHI, Upload.Slice, 0, false);
+					continue;
+				}
+
+				const FIntPoint BucketSize = FDreamUIFontAtlasStagingPool::BucketSizeFor(Upload.Region.Size(), TextureSize);
+				FTextureRHIRef Staging = Pool->Acquire(RHICmdList, BucketSize, AtlasFormat);
+				if (!Staging.IsValid())
+				{
+					continue;
+				}
+				uint32 StagingStride = 0;
+				uint8* StagingData = static_cast<uint8*>(RHICmdList.LockTexture2D(
+					Staging.GetReference(), 0, RLM_WriteOnly, StagingStride, false));
+				const bool bStagingWritten = StagingData != nullptr && StagingStride >= static_cast<uint32>(SourceRowSize);
+				if (bStagingWritten)
+				{
+					for (int32 Row = 0; Row < Upload.Region.Height(); ++Row)
+					{
+						FMemory::Memcpy(StagingData + static_cast<int64>(Row) * StagingStride,
+							SourceData + static_cast<int64>(Row) * SourceRowSize,
+							static_cast<SIZE_T>(SourceRowSize));
 					}
 				}
-				RHICmdList.UnlockTexture2DArray(TextureRHI, SlicesToUpload[UploadIndex], 0, false);
+				RHICmdList.UnlockTexture2D(Staging.GetReference(), 0, false);
+				if (bStagingWritten)
+				{
+					FPendingCopy& Copy = PendingCopies.AddDefaulted_GetRef();
+					Copy.Staging = MoveTemp(Staging);
+					Copy.Region = Upload.Region;
+					Copy.Slice = Upload.Slice;
+				}
+				else
+				{
+					Pool->Release(MoveTemp(Staging));
+				}
+			}
+
+			if (PendingCopies.Num() > 0)
+			{
+				// Batched rather than per region: the same states as the engine's own
+				// TransitionAndCopyTexture, and Unknown as the before-state so a pooled texture's
+				// last declared state does not have to be tracked across frames.
+				TArray<FRHITransitionInfo, TInlineAllocator<8>> ToCopy;
+				ToCopy.Reserve(PendingCopies.Num() + 1);
+				ToCopy.Add(FRHITransitionInfo(TextureRHI, ERHIAccess::Unknown, ERHIAccess::CopyDest));
+				for (const FPendingCopy& Copy : PendingCopies)
+				{
+					ToCopy.Add(FRHITransitionInfo(Copy.Staging.GetReference(), ERHIAccess::Unknown, ERHIAccess::CopySrc));
+				}
+				RHICmdList.Transition(MakeArrayView(ToCopy.GetData(), ToCopy.Num()));
+
+				for (const FPendingCopy& Copy : PendingCopies)
+				{
+					FRHICopyTextureInfo CopyInfo;
+					CopyInfo.Size = FIntVector(Copy.Region.Width(), Copy.Region.Height(), 1);
+					CopyInfo.SourcePosition = FIntVector(0, 0, 0);
+					CopyInfo.DestPosition = FIntVector(Copy.Region.Min.X, Copy.Region.Min.Y, 0);
+					CopyInfo.DestSliceIndex = static_cast<uint32>(Copy.Slice);
+					CopyInfo.NumSlices = 1;
+					RHICmdList.CopyTexture(Copy.Staging.GetReference(), TextureRHI, CopyInfo);
+				}
+
+				TArray<FRHITransitionInfo, TInlineAllocator<8>> ToRead;
+				ToRead.Reserve(PendingCopies.Num() + 1);
+				ToRead.Add(FRHITransitionInfo(TextureRHI, ERHIAccess::CopyDest, ERHIAccess::SRVMask));
+				for (const FPendingCopy& Copy : PendingCopies)
+				{
+					ToRead.Add(FRHITransitionInfo(Copy.Staging.GetReference(), ERHIAccess::CopySrc, ERHIAccess::SRVMask));
+				}
+				RHICmdList.Transition(MakeArrayView(ToRead.GetData(), ToRead.Num()));
+
+				for (FPendingCopy& Copy : PendingCopies)
+				{
+					Pool->Release(MoveTemp(Copy.Staging));
+				}
 			}
 		});
 	return true;
@@ -1156,6 +1540,9 @@ void UDreamUIFontData_FreeTypeRender::ReleaseFontTexture()
 	check(IsInGameThread());
 	PendingFontTextureUploads.Remove(this);
 	DirtyFontTextureSlices.Reset();
+	// Covers teardown as well as a reload: BeginDestroy, DeinitFreeType and InitFreeType all come
+	// through here, and the pooled textures are sized and formatted for the atlas being dropped.
+	ReleaseAtlasStagingPool();
 	FontTextureAtlasData.Reset();
 	FontTextureBytesPerPixel = 0;
 	CurrentTextureSlice = 0;

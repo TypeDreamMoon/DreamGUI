@@ -7,7 +7,7 @@
 #ifdef LEXUI_USE_32BIT_INDEXBUFFER
 typedef uint32 FDreamUIMeshIndex;
 const int LEXUI_MAX_VERTEX_COUNT = 2147483647;
-typedef FDynamicMeshIndexBuffer32 FDreamGUIMeshIndexBuffer;
+typedef FDynamicMeshIndexBuffer32 FDreamUIMeshIndexBuffer;
 #else
 typedef uint16 FDreamUIMeshIndex;
 const int LEXUI_MAX_VERTEX_COUNT = 65535;

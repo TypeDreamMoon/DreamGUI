@@ -340,9 +340,9 @@ public:
 
 void UDreamBackgroundBlur::SendOthersDataToRenderProxy()
 {
-	if (RenderProxy != nullptr)
+	if (RenderProxy.IsValid())
 	{
-		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)RenderProxy;
+		auto BackgroundBlurRenderProxy = StaticCastSharedPtr<FUIBackgroundBlurRenderProxy>(RenderProxy);
 		struct FUIBackgroundBlurUpdateOthersData
 		{
 			float BlurStrengthWithAlpha;
@@ -397,11 +397,11 @@ float UDreamBackgroundBlur::GetBlurStrengthInternal()
 	return BlurStrength;
 }
 
-FDreamVisualPostProcessRenderProxy* UDreamBackgroundBlur::GetRenderProxy()
+FDreamVisualPostProcessRenderProxyPtr UDreamBackgroundBlur::GetRenderProxy()
 {
-	if (RenderProxy == nullptr)
+	if (!RenderProxy.IsValid())
 	{
-		RenderProxy = new FUIBackgroundBlurRenderProxy();
+		RenderProxy = MakeShared<FUIBackgroundBlurRenderProxy, ESPMode::ThreadSafe>();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
 		SendRenderTargetToRenderProxy();
@@ -413,9 +413,9 @@ FDreamVisualPostProcessRenderProxy* UDreamBackgroundBlur::GetRenderProxy()
 void UDreamBackgroundBlur::SendRegionVertexDataToRenderProxy()
 {
 	Super::SendRegionVertexDataToRenderProxy();
-	if (RenderProxy != nullptr)
+	if (RenderProxy.IsValid())
 	{
-		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)RenderProxy;
+		auto BackgroundBlurRenderProxy = StaticCastSharedPtr<FUIBackgroundBlurRenderProxy>(RenderProxy);
 		auto blurStrengthWithAlpha = this->GetBlurStrengthInternal();
 		ENQUEUE_RENDER_COMMAND(FDreamBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, blurStrengthWithAlpha](FRHICommandListImmediate& RHICmdList)

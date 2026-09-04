@@ -10,6 +10,15 @@
 class FDreamVisualPostProcessRenderProxy;
 struct FDreamUIPostProcessVertex;
 
+/**
+ * Shared ownership of a post-process render proxy -- see IDreamUIRendererPrimitive.h for why.
+ *
+ * Repeated here rather than included: that header drags the renderer's SceneManagement/MeshBatch
+ * includes in, and this one is a UObject header every visual and the editor module see. An alias
+ * redeclared to the same type is legal, so the two agree by construction.
+ */
+using FDreamVisualPostProcessRenderProxyPtr = TSharedPtr<FDreamVisualPostProcessRenderProxy, ESPMode::ThreadSafe>;
+
 UENUM(BlueprintType)
 enum class EDreamBackgroundBlurRenderType:uint8
 {
@@ -130,7 +139,14 @@ public:
 	void MarkVertexPositionDirty();
 	void MarkUVDirty();
 public:
-	virtual FDreamVisualPostProcessRenderProxy* GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return 0;);
+	/**
+	 * The render-thread agent for this visual, created on first use.
+	 *
+	 * Hands out a reference rather than a pointer: whoever asks (the mesh section, a render command)
+	 * keeps it alive on its own schedule, and this visual dropping its own reference in BeginDestroy
+	 * is not the end of the proxy.
+	 */
+	virtual FDreamVisualPostProcessRenderProxyPtr GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return nullptr;);
 	virtual bool HaveValidData()const;
 
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
@@ -140,7 +156,7 @@ private:
 	/** vertex's uv change */
 	uint8 bUVChanged : 1;
 protected:
-	FDreamVisualPostProcessRenderProxy* RenderProxy = nullptr;
+	FDreamVisualPostProcessRenderProxyPtr RenderProxy;
 	/** update ui geometry */
 	virtual void OnUpdateGeometry(bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	/** update region vertex data */
