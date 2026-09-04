@@ -482,6 +482,9 @@ void UDreamCanvas::SetParentCanvas(UDreamCanvas* InParentCanvas)
 
 void UDreamCanvas::CollectChildrenCanvas(UDreamCanvas* Target, TArray<UDreamCanvas*>& OutAllChildrenCanvas, bool IncludeTarget)
 {
+	//a destroyed child canvas leaves a stale entry behind until the array is rebuilt, and recursing into
+	//it would dereference null on the very next line
+	if (!IsValid(Target))return;
 	if (IncludeTarget)
 	{
 		OutAllChildrenCanvas.Add(Target);
@@ -604,6 +607,8 @@ void UDreamCanvas::RefreshAllClipData()
 	}
 	for (const auto& ClipData : ClipDataList)
 	{
+		//removing a widget's clip leaves the slot behind until the list is compacted
+		if (!ClipData.IsValid())continue;
 		ClipData->UpdateData();
 	}
 }
@@ -714,6 +719,11 @@ void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		}
 	}
 
+	//The Details panel writes ProjectionType/FieldOfView/the clip planes/the overrides straight into the
+	//property, bypassing the setters that would invalidate the cached view-projection matrix, and
+	//MarkAllDirtyRecursive above does not reach it either. Without this an author who changes the
+	//projection in the panel gets a picture on the new matrix and hit testing on the old one.
+	bIsViewProjectionMatrixDirty = true;
 	OnViewportParameterChanged();
 }
 void UDreamCanvas::PostLoad()
@@ -819,8 +829,19 @@ void UDreamCanvas::MarkVisualWillChange(UDreamVisual* InOldVisual)
 
 void UDreamCanvas::RegisterVisual(UDreamVisual* InVisual)
 {
+	if (!IsValid(InVisual))return;
+	/**
+	 * Registration has to be idempotent: a widget's visual is handed to this canvas once when the parent's
+	 * OnRegister walks into an unregistered child, and again when that child runs its own OnRegister. A
+	 * second RegisterBuffer() would hand out a second row of the property-data texture and overwrite the
+	 * recorded row number, so the first row is never returned to the free list -- one leaked row per
+	 * redundant registration. Moving a visual to another canvas always goes through UnregisterVisual first,
+	 * which clears the position, so this only short-circuits the genuinely redundant case.
+	 */
+	const bool bAlreadyRegisteredHere = InVisual->IsRegisteredToCanvas() && VisualList.Contains(InVisual);
 	VisualList.AddUnique(InVisual);
 	CheckWidgetPropertyData();
+	if (bAlreadyRegisteredHere)return;
 	InVisual->SetWidgetPropertyDataStartPosition(WidgetPropertyDataAsTexture->RegisterBuffer());
 }
 
@@ -868,25 +889,38 @@ bool UDreamCanvas::Is2DUITransform(const FTransform& Transform)
 	return true;
 }
 
+/**
+ * These four are the other half of what GetViewProjectionMatrix reads: GetViewLocation and GetViewRotator
+ * return their override verbatim, and GetProjectionMatrix returns OverrideProjectionMatrix outright or
+ * feeds OverrideFovAngle into the matrix it builds. So each has to invalidate the cached matrix for the
+ * same reason the projection setters do -- the renderer recomputes every frame, but the raycaster reads
+ * the cache, so a stale cache means hit testing answers for a view that is no longer on screen. Marked
+ * unconditionally rather than on a value change, matching SetProjectionParameters: a redundant mark costs
+ * one recalculation, and the flag and the value have to be considered together anyway.
+ */
 void UDreamCanvas::SetOverrideViewLocation(bool Override, FVector Value)
 {
 	bOverrideViewLocation = Override;
 	OverrideViewLocation = Value;
+	bIsViewProjectionMatrixDirty = true;
 }
 void UDreamCanvas::SetOverrideViewRotation(bool Override, FRotator Value)
 {
 	bOverrideViewRotation = Override;
 	OverrideViewRotation = Value;
+	bIsViewProjectionMatrixDirty = true;
 }
 void UDreamCanvas::SetOverrideFovAngle(bool Override, float Value)
 {
 	bOverrideFovAngle = Override;
 	OverrideFovAngle = Value;
+	bIsViewProjectionMatrixDirty = true;
 }
 void UDreamCanvas::SetOverrideProjectionMatrix(bool Override, FMatrix Value)
 {
 	bOverrideProjectionMatrix = Override;
 	OverrideProjectionMatrix = Value;
+	bIsViewProjectionMatrixDirty = true;
 }
 
 void UDreamCanvas::MarkTransformOrDimensionChanged()
@@ -967,6 +1001,7 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 	for (int i = 0; i < WidgetList.Num(); i++)
 	{
 		auto& Widget = WidgetList[i];
+		if (!IsValid(Widget))continue;//a widget collected earlier can be destroyed before the list is regenerated
 		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != this)//is child canvas
 		{
 			auto ChildCanvas = Widget->GetRenderCanvas();
@@ -1011,6 +1046,13 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 					if (!DreamVisualPostProcess->HaveValidData())continue;
 					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::PostProcess);
 					RenderData.PostProcessVisualObject = DreamVisualPostProcess;
+					//read the bounds here, on the game thread: the batching pass that needs them runs on a
+					//worker thread, where dereferencing the visual races with garbage collection
+					if (auto PostProcessGeo = DreamVisualPostProcess->GetGeometry())
+					{
+						RenderData.PostProcessBoundsMin2DInCanvasSpace = PostProcessGeo->BoundsMin2DInCanvasSpace;
+						RenderData.PostProcessBoundsMax2DInCanvasSpace = PostProcessGeo->BoundsMax2DInCanvasSpace;
+					}
 					OutRenderDataArray.Add(MoveTemp(RenderData));
 				}
 				break;
@@ -1062,9 +1104,10 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			break;
 		case EDreamUIDrawCallType::PostProcess:
 			{
-				auto OtherUIGeo = OtherDrawCallItem.PostProcessVisualObject->GetGeometry();
-				//check bounds overlap
-				if (IntersectBounds(InGeo.BoundsMin2DInCanvasSpace, InGeo.BoundsMax2DInCanvasSpace, OtherUIGeo->BoundsMin2DInCanvasSpace, OtherUIGeo->BoundsMax2DInCanvasSpace))
+				//check bounds overlap. This whole function runs on the draw-call batching thread, so the
+				//bounds are the copies taken on the game thread in PrepareDrawCallBatchingData -- asking the
+				//visual itself here would dereference a weak pointer while GC may be collecting it.
+				if (IntersectBounds(InGeo.BoundsMin2DInCanvasSpace, InGeo.BoundsMax2DInCanvasSpace, OtherDrawCallItem.PostProcessBoundsMin2DInCanvasSpace, OtherDrawCallItem.PostProcessBoundsMax2DInCanvasSpace))
 				{
 					return true;
 				}
@@ -1166,6 +1209,8 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			{
 				auto DrawCallItem = FDreamUIDrawCall(InDrawCallType);
 				DrawCallItem.PostProcessVisualObject = InRenderData.PostProcessVisualObject;
+				DrawCallItem.PostProcessBoundsMin2DInCanvasSpace = InRenderData.PostProcessBoundsMin2DInCanvasSpace;
+				DrawCallItem.PostProcessBoundsMax2DInCanvasSpace = InRenderData.PostProcessBoundsMax2DInCanvasSpace;
 				DrawCallItem.bIs2DSpace = InIs2DSpace;
 				InOutUIDrawCallList.Add(MoveTemp(DrawCallItem));
 			}
@@ -1202,7 +1247,10 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 
 				// Same gate as the renderer's dump: which geometry reaches assembly, with what
 				// material -- the missing rect block is either absent here or arriving material-less.
-				if (IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"))->GetInt() != 0)
+				// The cvar is a static living in the renderer's translation unit, so the lookup can answer
+				// null (not yet constructed, or that unit compiled out) -- and this runs on the batching thread.
+				auto* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
+				if (DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0)
 				{
 					UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws][assemble] visual=%s verts=%d material=%s batching=%d"),
 						RenderData.BatchMeshVisualObject.IsValid() ? *RenderData.BatchMeshVisualObject->GetClass()->GetName() : TEXT("null"),
@@ -1320,6 +1368,9 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				, UDreamCanvas* ThisCanvas
 				, TArray<TObjectPtr<UDreamWidget>>& WidgetCollection)
 			{
+				//deleting a child in the designer leaves a null entry in Children until the tree is rebuilt,
+				//and the widget list must not carry it into the update passes below
+				if (!IsValid(Widget))return;
 				WidgetCollection.Add(Widget);//maybe sub-canvas, so collect it before tell canvas
 				if (Widget->GetRenderCanvas() == ThisCanvas)
 				{
@@ -1344,6 +1395,8 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 			SCOPE_CYCLE_COUNTER(STAT_UpdateClipAndGeometry)
 			for (const auto& Widget : WidgetList)
 			{
+				//a widget collected earlier can be destroyed before the list is regenerated
+				if (!IsValid(Widget))continue;
 				Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
 				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
@@ -2100,6 +2153,7 @@ void UDreamCanvas::SetDefaultMaterial(UMaterialInterface* InMaterial)
 {
 	if (DefaultMaterial != InMaterial)
 	{
+		DefaultMaterial = InMaterial;
 		ClearDrawCall();
 		MarkCanvasUpdate(true);
 	}
@@ -3105,11 +3159,20 @@ void UDreamCanvas::DrawVirtualCamera()
 }
 #endif
 
+/**
+ * Every one of these four feeds GetProjectionMatrix, so the cached view-projection matrix has to be
+ * invalidated here. OnViewportParameterChanged does not do it: it only re-derives the canvas size, and
+ * only for a root canvas in a screen-space/render-target mode with a known viewport. The renderer
+ * recomputes its matrix each frame, but the raycaster reads GetViewProjectionMatrix -- so without this
+ * hit testing keeps using the projection from before the change while the picture uses the new one.
+ * SetProjectionParameters, the bulk setter, already marks it dirty for the same reason.
+ */
 void UDreamCanvas::SetProjectionType(TEnumAsByte<ECameraProjectionMode::Type> Value)
 {
 	if (ProjectionType != Value)
 	{
 		ProjectionType = ProjectionType = Value;
+		bIsViewProjectionMatrixDirty = true;
 		OnViewportParameterChanged();
 	}
 }
@@ -3118,6 +3181,7 @@ void UDreamCanvas::SetFieldOfView(float Value)
 	if (FieldOfView != Value)
 	{
 		FieldOfView = FieldOfView = Value;
+		bIsViewProjectionMatrixDirty = true;
 		OnViewportParameterChanged();
 	}
 }
@@ -3126,6 +3190,7 @@ void UDreamCanvas::SetNearClipPlane(float Value)
 	if (NearClipPlane != Value)
 	{
 		NearClipPlane = Value;
+		bIsViewProjectionMatrixDirty = true;
 		OnViewportParameterChanged();
 	}
 }
@@ -3134,6 +3199,7 @@ void UDreamCanvas::SetFarClipPlane(float Value)
 	if (FarClipPlane != Value)
 	{
 		FarClipPlane = Value;
+		bIsViewProjectionMatrixDirty = true;
 		OnViewportParameterChanged();
 	}
 }
@@ -3175,7 +3241,11 @@ void UDreamCanvas::SetCustomScale(UDreamCanvasCustomScale* Value)
 	if (CustomScale != Value)
 	{
 		CustomScale = Value;
-		CustomScale->Init(this);//need to initialize when first set
+		//null is the documented way to clear a custom scale, so only initialize when one was actually given
+		if (IsValid(CustomScale))
+		{
+			CustomScale->Init(this);//need to initialize when first set
+		}
 		if (ScaleMode == EDreamCanvasScaleMode::Custom)
 		{
 			OnViewportParameterChanged();

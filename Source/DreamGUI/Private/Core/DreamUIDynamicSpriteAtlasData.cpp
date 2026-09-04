@@ -367,6 +367,16 @@ void UDreamUIDynamicSpriteAtlasManager::DisposeAtlasByPackingTag(FName InPacking
 {
 	if (Instance != nullptr)
 	{
+		//CreateAtlasTexture roots every atlas texture, so dropping the entry without un-rooting them leaks
+		//the whole set -- exactly what ResetAtlasMap does before it empties the map
+		if (auto AtlasData = Instance->AtlasMap.Find(InPackingTag))
+		{
+			for (auto& AtlasTexture : AtlasData->AtlasTextureArray)
+			{
+				if (!IsValid(AtlasTexture))continue;
+				AtlasTexture->RemoveFromRoot();
+			}
+		}
 		Instance->AtlasMap.Remove(InPackingTag);
 	}
 }

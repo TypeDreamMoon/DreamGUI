@@ -711,6 +711,8 @@ void UDreamUIStaticSpriteAtlasData::BeginDestroy()
 #if WITH_EDITOR
 	for (auto& item : SpriteDataArray)
 	{
+		//the array can hold entries for sprites that were deleted, and on shutdown they may already be gone
+		if (!IsValid(item))continue;
 		item->bIsInitialized = false;
 	}
 #endif
@@ -846,13 +848,24 @@ bool UDreamUIStaticSpriteAtlasData::ReadPixel(int InTextureIndex, const FVector2
 {
 	InitCheck();
 
+	//InitCheck can fail (missing or unreadable atlas cache), and then there is no texture to read at all
+	if (!AtlasTextureArray.IsValidIndex(InTextureIndex))return false;
 	auto AtlasTexture = AtlasTextureArray[InTextureIndex];
+	if (!IsValid(AtlasTexture))return false;
 	auto PlatformData = AtlasTexture->GetPlatformData();
 	if (PlatformData && PlatformData->Mips.Num() > 0)
 	{
+		const int32 TextureSize = AtlasTexture->GetSizeX();
 		auto Pixels = static_cast<FColor*>(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY));
-		auto TextureSize = AtlasTexture->GetSizeX();
-		auto uvInFullSize = FIntPoint(InUV.X * TextureSize, InUV.Y * TextureSize);
+		if (Pixels == nullptr || TextureSize <= 0)
+		{
+			PlatformData->Mips[0].BulkData.Unlock();
+			return false;
+		}
+		//UV reaches 1.0 at the far edge of a sprite, which unclamped indexes one whole row past the end
+		auto uvInFullSize = FIntPoint(
+			FMath::Clamp((int32)(InUV.X * TextureSize), 0, TextureSize - 1)
+			, FMath::Clamp((int32)(InUV.Y * TextureSize), 0, TextureSize - 1));
 		auto PixelIndex = uvInFullSize.Y * TextureSize + uvInFullSize.X;
 		OutPixel = Pixels[PixelIndex];
 		PlatformData->Mips[0].BulkData.Unlock();

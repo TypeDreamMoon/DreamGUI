@@ -5,12 +5,33 @@
 
 void FDreamUIDrawCall::CopyBatchMeshGeometry()
 {
+	/**
+	 * This is the cheap refresh path: the draw-call layout is left alone and only the vertices are
+	 * re-read from the visuals. The destination was sized by ApplyBatchMeshGeometryToCombined from the
+	 * geometry as it stood when the batch was built, so two things have to be checked before each copy
+	 * rather than assumed -- that the visual is still alive (a widget can be destroyed between the batch
+	 * being built and this refresh) and that it still has the vertex count the buffer was sized for.
+	 * Either way the answer is to stop and leave the buffer as it is; a rebuild is what fixes it.
+	 */
+	const int32 CombinedVertexCount = CombinedBatchMeshGeometryVertices.Num();
+	auto CombinedVertexData = CombinedBatchMeshGeometryVertices.GetData();
 	int PrevVertCount = 0;
 	for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 	{
-		auto uiGeo = BatchMeshVisualArray[geoIndex]->GetGeometry();
-		FMemory::Memcpy(CombinedBatchMeshGeometryVertices.GetData() + PrevVertCount, uiGeo->Vertices.GetData(), uiGeo->Vertices.Num() * sizeof(FDreamUIMeshVertex));
-		PrevVertCount += uiGeo->Vertices.Num();
+		if (!BatchMeshVisualArray.IsValidIndex(geoIndex))return;
+		auto BatchMeshVisual = BatchMeshVisualArray[geoIndex].Get();
+		if (BatchMeshVisual == nullptr)return;
+		auto uiGeo = BatchMeshVisual->GetGeometry();
+		if (uiGeo == nullptr)return;
+		const int32 VertexCount = uiGeo->Vertices.Num();
+		if (!ensureMsgf(PrevVertCount + VertexCount <= CombinedVertexCount
+			, TEXT("[FDreamUIDrawCall::CopyBatchMeshGeometry] Geometry grew since the draw-call was built (%d + %d > %d), skipping the refresh; the draw-call rebuild will pick it up.")
+			, PrevVertCount, VertexCount, CombinedVertexCount))
+		{
+			return;
+		}
+		FMemory::Memcpy(CombinedVertexData + PrevVertCount, uiGeo->Vertices.GetData(), VertexCount * sizeof(FDreamUIMeshVertex));
+		PrevVertCount += VertexCount;
 	}
 }
 

@@ -40,6 +40,13 @@ public:
 	TWeakObjectPtr<UDreamVisualBatchMesh> BatchMeshVisualObject;
 
 	TWeakObjectPtr<UDreamVisualPostProcess> PostProcessVisualObject;//post process object
+	/**
+	 * The post-process element's canvas-space bounds, read off its geometry on the game thread while this
+	 * render-data is prepared. Batching runs on a worker thread and must not dereference the weak pointer
+	 * above, so the only thing it is allowed to know about a post-process draw-call is these two numbers.
+	 */
+	FVector2D PostProcessBoundsMin2DInCanvasSpace = FVector2D::ZeroVector;
+	FVector2D PostProcessBoundsMax2DInCanvasSpace = FVector2D::ZeroVector;
 
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
 
@@ -71,6 +78,9 @@ public:
 	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//actual material that render this draw-call
 
 	TWeakObjectPtr<UDreamVisualPostProcess> PostProcessVisualObject;//post process object
+	/** Canvas-space bounds carried over from FDreamUIRenderData so the batching worker thread never has to touch the visual. */
+	FVector2D PostProcessBoundsMin2DInCanvasSpace = FVector2D::ZeroVector;
+	FVector2D PostProcessBoundsMax2DInCanvasSpace = FVector2D::ZeroVector;
 
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
 
