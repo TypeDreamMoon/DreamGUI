@@ -343,6 +343,97 @@ bool FDreamDesignerComponentsAndPropertiesReachTheAssetTest::RunTest(const FStri
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUndoRebuildsThePreviewTest,
+	"DreamGUI.Designer.UndoRebuildsThePreviewFromTheRestoredTemplate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerUndoRebuildsThePreviewTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+
+	// The other half of the undo model, and the half no preview-host test can reach: the DESIGNER's
+	// reaction to a transaction being applied.
+	//
+	// The preview is not undoable -- it is not in the buffer at all -- so an undo restores the
+	// authoring tree and leaves the surface showing the edit that was just taken back. What closes
+	// that gap is FDreamWidgetBlueprintEditor::HandlePostTransaction rebuilding from the restored
+	// template, which is what this asserts: nothing here calls Rebuild(), and the value read off
+	// the preview afterwards is the authored one.
+	//
+	// It was the opposite way round before. Details edits appeared to undo correctly because the
+	// preview objects were themselves in the transaction, which is also what let an undo restore
+	// widgets a rebuild had already destroyed.
+	FScopedDesigner Scoped(TEXT("DesignerUndoRebuild"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+
+	UDreamWidget* SubjectTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Subject"));
+	if (!TestNotNull(TEXT("The subject was authored"), SubjectTemplate))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+	UDreamWidget* PreviewSubject = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate);
+	if (!TestNotNull(TEXT("And has a preview"), PreviewSubject))
+	{
+		return false;
+	}
+	const float WidthBefore = (float)SubjectTemplate->GetSizeDelta().X;
+
+	// Exactly the two calls SDreamWidgetDesignerDetails::NotifyPostChange makes, in that order: the
+	// bIsModify pass is what records the TEMPLATE, and the second writes the value onto it.
+	FProperty* AnchorDataProperty = UDreamWidget::StaticClass()->FindPropertyByName(UDreamWidget::GetPropertyName_AnchorData());
+	if (!TestNotNull(TEXT("The anchor data property was found"), AnchorDataProperty))
+	{
+		return false;
+	}
+	FEditPropertyChain Chain;
+	Chain.AddHead(AnchorDataProperty);
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Details Width")));
+	PreviewSubject->SetSizeDelta(FVector2D(77.0, 88.0));
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewSubject }, Chain, /*bIsModify*/true);
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewSubject }, Chain, /*bIsModify*/false);
+	GEditor->EndTransaction();
+	TestEqual(TEXT("the asset took the edited width"), (float)SubjectTemplate->GetSizeDelta().X, 77.0f, 0.001f);
+
+	GEditor->UndoTransaction();
+
+	TestEqual(TEXT("undo put the authored width back"),
+		(float)SubjectTemplate->GetSizeDelta().X, WidthBefore, 0.001f);
+	// No Rebuild() call. If the designer did not rebuild, this lookup answers with the SAME preview
+	// object the edit was made on, still carrying 77 -- which is the regression this pins.
+	UDreamWidget* Rebuilt = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate);
+	if (TestNotNull(TEXT("the subject still has a preview after the undo"), Rebuilt))
+	{
+		TestNotEqual(TEXT("and it is a fresh object, projected again rather than restored"),
+			(void*)Rebuilt, (void*)PreviewSubject);
+		TestEqual(TEXT("showing the width the asset now has"),
+			(float)Rebuilt->GetSizeDelta().X, WidthBefore, 0.001f);
+	}
+
+	// Redo is the same journey the other way: the template takes the edit back and the surface has
+	// to follow it there too, through the same PostRedo path.
+	GEditor->RedoTransaction();
+	TestEqual(TEXT("redo puts the edited width back on the asset"),
+		(float)SubjectTemplate->GetSizeDelta().X, 77.0f, 0.001f);
+	if (UDreamWidget* Redone = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate))
+	{
+		TestEqual(TEXT("and the preview shows it without anyone asking for a rebuild"),
+			(float)Redone->GetSizeDelta().X, 77.0f, 0.001f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerWrapReachesTheAssetTest,
 	"DreamGUI.Designer.WrapWithReachesTheAsset",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

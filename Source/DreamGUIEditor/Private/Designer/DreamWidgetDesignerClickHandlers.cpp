@@ -71,48 +71,19 @@ namespace DreamWidgetDesignerClickHandlers
 		//}
 	}
 
-	/**
- 	 * Creates an actor of the specified type, trying first to find an actor factory,
-	 * falling back to "ACTOR ADD" exec and SpawnActor if no factory is found.
-	 * Does nothing if ActorClass is NULL.
+	/*
+	 * The level editor's actor-placement shortcuts -- hold L/S/A/; and click to drop a point light,
+	 * a static mesh, the selected class or a target point -- came across with the rest of this file
+	 * and were never right here. FActorFactoryAssetProxy::AddActorForAsset spawns into the LEVEL
+	 * EDITOR's current level, not into the preview world, so the gesture put an actor in the map the
+	 * author happens to have open, from a viewport that shows a widget hierarchy. ClickBackdrop is
+	 * reached by every click that misses a widget and has no hit proxy, so a stray modifier key was
+	 * all it took. The PickColorAndAddLight variant then CastChecked the result, which asserts
+	 * outright when the factory refuses.
+	 *
+	 * There is nothing to place in a widget designer, so the whole family is gone rather than
+	 * retargeted at the preview world.
 	 */
-	static AActor* PrivateAddActor(UClass* ActorClass)
-	{
-		return FActorFactoryAssetProxy::AddActorForAsset(ActorClass);
-	}
-
-	/**
-	 * This function picks a color from under the mouse in the viewport and adds a light with that color.
-	 * This is to make it easy for LDs to add lights that fake radiosity.
-	 * @param Viewport	Viewport to pick color from.
-	 * @param Click		A class that has information about where and how the user clicked on the viewport.
-	 */
-	void PickColorAndAddLight(FViewport* Viewport, const FViewportClick &Click)
-	{
-		// Read pixels from viewport.
-		TArray<FColor> OutputBuffer;
-
-		// We need to redraw the viewport before reading pixels otherwise we may be reading back from an old buffer.
-		Viewport->Draw();
-		Viewport->ReadPixels(OutputBuffer);
-
-		// Sample the color we want.
-		const int32 ClickX = Click.GetClickPos().X;
-		const int32 ClickY = Click.GetClickPos().Y;
-		const int32 PixelIdx = ClickX + ClickY * (int32)Viewport->GetSizeXY().X;
-
-		if(PixelIdx < OutputBuffer.Num())
-		{
-			const FColor PixelColor = OutputBuffer[PixelIdx];
-
-			AActor* NewActor = PrivateAddActor( APointLight::StaticClass() );
-
-			APointLight* Light = CastChecked<APointLight>(NewActor);
-			Light->SetMobility(EComponentMobility::Stationary);
-			UPointLightComponent* PointLightComponent = Cast<UPointLightComponent>( Light->GetLightComponent() );
-			PointLightComponent->LightColor = PixelColor;
-		}
-	}
 
 	bool ClickViewport(FDreamWidgetDesignerViewportClient* ViewportClient, const FViewportClick& Click)
 	{
@@ -214,6 +185,14 @@ namespace DreamWidgetDesignerClickHandlers
 
 	bool ClickActor(FDreamWidgetDesignerViewportClient* ViewportClient,AActor* Actor,const FViewportClick& Click,bool bAllowSelectionChange)
 	{
+		// Anything clicked in THIS viewport lives in the designer's preview world, and GEditor's
+		// actor selection is the level editor's -- putting a transient preview actor in it shows it
+		// in the outliner, hands it to every level-editor gesture, and leaves it there after the
+		// designer's world is gone. The designer selects DreamWidgets, not actors.
+		if (Actor != nullptr && FDreamWidgetBlueprintEditor::WorldIsDesigner(Actor->GetWorld()))
+		{
+			return false;
+		}
 		// Pivot snapping
 		if( Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown() )
 		{
@@ -285,40 +264,7 @@ namespace DreamWidgetDesignerClickHandlers
 				Actor->GetComponents(Components);
 				//SetDebugLightmapSample(&Components, NULL, 0, GEditor->ClickLocation);
 			}
-			else 
-			if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::L) )
-			{
-				// If shift is down, we pick a color from under the mouse in the viewport and create a light with that color.
-				if(Click.IsControlDown())
-				{
-					PickColorAndAddLight(ViewportClient->Viewport, Click);
-				}
-				else
-				{
-					// Create a point light (they default to stationary)
-					PrivateAddActor( APointLight::StaticClass() );
-				}
-
-				return true;
-			}
-			else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::S) )
-			{
-				// Create a static mesh.
-				PrivateAddActor( AStaticMeshActor::StaticClass() );
-
-				return true;
-			}
-			else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::A) )
-			{
-				// Create an actor of the selected class.
-				UClass* SelectedClass = GEditor->GetSelectedObjects()->GetTop<UClass>();
-				if( SelectedClass )
-				{
-					PrivateAddActor( SelectedClass );
-				}
-
-				return true;
-			}
+			// The L / S / A placement shortcuts used to be here. See the note at the top of the file.
 			else if ( Actor )
 			{
 				if( bAllowSelectionChange  && GEditor->CanSelectActor(Actor, true, true, true) )
@@ -413,7 +359,13 @@ namespace DreamWidgetDesignerClickHandlers
 		if (Component == nullptr)
 		{
 			// It's possible to have a null component here if the primitive component contained in the hit proxy is not part of the actor contained in the hit proxy. In that case, component click is not possible
-			//  (but actor click can still be used as a fallback) : 
+			//  (but actor click can still be used as a fallback) :
+			return false;
+		}
+		// The same reason ClickActor refuses one: GEditor's component selection belongs to the level
+		// editor, and this component is in the preview world.
+		if (FDreamWidgetBlueprintEditor::WorldIsDesigner(Component->GetWorld()))
+		{
 			return false;
 		}
 
@@ -637,41 +589,10 @@ namespace DreamWidgetDesignerClickHandlers
 				}
 			}
 		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::A) )
-		{
-			// Create an actor of the selected class.
-			UClass* SelectedClass = GEditor->GetSelectedObjects()->GetTop<UClass>();
-			if( SelectedClass )
-			{
-				PrivateAddActor( SelectedClass );
-			}
-		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::L) )
-		{
-			// If shift is down, we pick a color from under the mouse in the viewport and create a light with that color.
-			if(Click.IsControlDown())
-			{
-				PickColorAndAddLight(ViewportClient->Viewport, Click);
-			}
-			else
-			{
-				// Create a point light (they default to stationary)
-				PrivateAddActor( APointLight::StaticClass() );
-			}
-		}
+		// The A / L / S / ; placement shortcuts used to be here. See the note at the top of the file.
 		else if( IsTexelDebuggingEnabled() && Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::T) )
 		{
 			//SetDebugLightmapSample(NULL, Model, iSurf, GEditor->ClickLocation);
-		}
-
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::S) )
-		{
-			// Create a static mesh.
-			PrivateAddActor( AStaticMeshActor::StaticClass() );
-		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::Semicolon) )
-		{
-			PrivateAddActor( ATargetPoint::StaticClass() );
 		}
 		else if( Click.IsAltDown() && Click.GetKey() == EKeys::RightMouseButton )
 		{
@@ -848,37 +769,11 @@ namespace DreamWidgetDesignerClickHandlers
 		{
 			GEditor->SetPivot( GEditor->ClickLocation, true, false, true );
 		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::A) )
-		{
-			// Create an actor of the selected class.
-			UClass* SelectedClass = GEditor->GetSelectedObjects()->GetTop<UClass>();
-			if( SelectedClass )
-			{
-				PrivateAddActor( SelectedClass );
-			}
-		}
+		// The A / L / S placement shortcuts used to be here, and this is the handler every click that
+		// misses a widget reaches. See the note at the top of the file.
 		else if( IsTexelDebuggingEnabled() && Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::T) )
 		{
 			//SetDebugLightmapSample(NULL, NULL, 0, GEditor->ClickLocation);
-		}
-
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::L) )
-		{
-			// If shift is down, we pick a color from under the mouse in the viewport and create a light with that color.
-			if(Click.IsControlDown())
-			{
-				PickColorAndAddLight(ViewportClient->Viewport, Click);
-			}
-			else
-			{
-				// Create a point light (they default to stationary)
-				PrivateAddActor( APointLight::StaticClass() );
-			}
-		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::S) )
-		{
-			// Create a static mesh.
-			PrivateAddActor( AStaticMeshActor::StaticClass() );
 		}
 		else if( Click.GetKey() == EKeys::RightMouseButton && !Click.IsControlDown() && !ViewportClient->Viewport->KeyState(EKeys::LeftMouseButton) )
 		{

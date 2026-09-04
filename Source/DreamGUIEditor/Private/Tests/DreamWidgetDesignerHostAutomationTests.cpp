@@ -160,6 +160,48 @@ bool FDreamDesignerPreviewMatchesTemplateTest::RunTest(const FString&)
 	TestEqual(TEXT("The preview root hangs under the design canvas"),
 		Host->GetPreviewWidget()->GetParent(), Host->GetRootAgent());
 
+	// The undo model, stated as a property of the objects rather than of the editor that drives
+	// them: the authoring tree is the only half a transaction can hold, and the preview is a
+	// projection that is thrown away and rebuilt. RF_Transactional is what decides that, and it is
+	// in RF_PropagateToSubObjects -- so asserting it on the tree alone would pass while every
+	// widget under it was still undoable. Walk the whole thing.
+	//
+	// This is not a style rule. For as long as the preview was transactional, an undo restored
+	// values onto -- and re-inserted -- objects a rebuild had already destroyed, which is what
+	// produced a preview tree with a cycle in it and left the transaction buffer holding the whole
+	// outgoing hierarchy. See UDreamWidgetGeneratedClass::InitializeWidgetStatic.
+	TestFalse(TEXT("The preview widget is not transactional"),
+		Host->GetPreviewWidget()->HasAnyFlags(RF_Transactional));
+	if (UDreamWidgetTree* PreviewTree = Host->GetPreviewWidget()->GetWidgetTree())
+	{
+		TestFalse(TEXT("Nor is the tree instanced into it"), PreviewTree->HasAnyFlags(RF_Transactional));
+	}
+	TArray<UDreamWidget*> PreviewWidgets;
+	CollectDreamWidgetsToNestedBoundary(Host->GetPreviewRoot(), PreviewWidgets);
+	TestTrue(TEXT("The walk reached the whole preview"), PreviewWidgets.Num() >= TemplateCount);
+	for (UDreamWidget* Preview : PreviewWidgets)
+	{
+		if (Preview->HasAnyFlags(RF_Transactional))
+		{
+			AddError(FString::Printf(TEXT("preview widget '%s' is transactional"), *Preview->GetDisplayName()));
+		}
+		// The sub-objects too: a details-panel edit lands on the panel slot, the layouts or the
+		// visual far more often than on the widget, and each of those is instanced by the same
+		// graph and would carry the same flag.
+		if (UDreamPanelSlot* Slot = Preview->GetPanelSlot(); IsValid(Slot) && Slot->HasAnyFlags(RF_Transactional))
+		{
+			AddError(FString::Printf(TEXT("the panel slot of '%s' is transactional"), *Preview->GetDisplayName()));
+		}
+		if (UDreamLayoutContainer* Container = Preview->GetLayoutContainer(); IsValid(Container) && Container->HasAnyFlags(RF_Transactional))
+		{
+			AddError(FString::Printf(TEXT("the layout container of '%s' is transactional"), *Preview->GetDisplayName()));
+		}
+	}
+	// And the other half of the same claim, because "nothing is transactional" would also pass on a
+	// build where the flag had simply been dropped everywhere: the AUTHORED widgets still are.
+	TestTrue(TEXT("The authored root is still transactional"),
+		Scoped.Blueprint->WidgetTree->RootWidget->HasAnyFlags(RF_Transactional));
+
 	Host->Shutdown();
 	return true;
 }
@@ -854,6 +896,13 @@ bool FDreamDesignerUndoWithAPreviewTest::RunTest(const FString&)
 	// preview. The damage seen by hand showed up in the PREVIEW tree -- RestoreParentLinksRecursive
 	// reporting a cycle while instancing it -- so the preview is either the victim or the cause, and
 	// a test without one cannot tell which.
+	//
+	// Read under the current model this asserts both halves of it. The undo restores the TEMPLATE,
+	// which is the only half a transaction holds; the RebuildPreview after it is the projection
+	// step, and it stands in for what an open designer does in
+	// FDreamWidgetBlueprintEditor::HandlePostTransaction -- there is no toolkit here to call it.
+	// The preview assertions are therefore about a hierarchy rebuilt from the restored template,
+	// not about one an undo wrote into, which is exactly the distinction the model draws.
 	FScopedBlueprint Scoped(TEXT("UndoDuplicateWithPreview"));
 	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))return false;
 	BuildSampleHierarchy(Scoped.Blueprint);
@@ -918,6 +967,23 @@ bool FDreamDesignerUndoWithAPreviewTest::RunTest(const FString&)
 	TestEqual(TEXT("the preview shows the copy"), WithCopy.Slots, BeforePreview.Slots + 2);
 
 	GEditor->UndoTransaction();
+
+	// Before the rebuild, and this is the model stated as an observation rather than as a flag: the
+	// undo restored the TEMPLATE and did not reach into the preview at all, so the preview is still
+	// showing the copy and every slot in it still holds a live widget. A preview that was in the
+	// transaction would have had objects invalidated out from under it here -- which is what left
+	// dead slots that no IsValid-guarded walk could see and that the next instancing pass rebuilt
+	// into live duplicates.
+	{
+		FWalk Undone; Undone.Run(Host->GetPreviewRoot());
+		TestEqual(TEXT("the undo did not reach the preview: it still shows the copy"),
+			Undone.Slots, BeforePreview.Slots + 2);
+		TestEqual(*FString::Printf(TEXT("and left no dead slot in it, saw [%s]"),
+			*FString::Join(Undone.DeadSlots, TEXT(", "))), Undone.DeadSlots.Num(), 0);
+	}
+
+	// The projection step. An open designer runs this from PostUndo/PostRedo (see
+	// FDreamWidgetBlueprintEditor::HandlePostTransaction); there is no toolkit here to do it.
 	Host->RebuildPreview();
 
 	FWalk AfterTemplate; AfterTemplate.Run(Tree->RootWidget);

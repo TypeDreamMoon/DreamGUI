@@ -449,7 +449,12 @@ namespace DreamUI_Private
 
 ICommonEditorViewportToolbarInfoProvider& SDreamWidgetDesignerViewportToolbar::GetInfoProvider() const
 {
-	return *InfoProviderWeakPtr.Pin().Get();
+	// A reference cannot say "gone", so the only guard available is one that names the failure: the
+	// provider is the viewport widget, and a toolbar that outlives it would otherwise dereference
+	// null somewhere far from here. The base class has the same hole and the same signature.
+	const TSharedPtr<ICommonEditorViewportToolbarInfoProvider> InfoProvider = InfoProviderWeakPtr.Pin();
+	checkf(InfoProvider.IsValid(), TEXT("The designer viewport toolbar outlived the viewport it belongs to."));
+	return *InfoProvider.Get();
 }
 
 void SDreamWidgetDesignerViewportToolbar::Construct(const FArguments& InArgs, TSharedPtr<class ICommonEditorViewportToolbarInfoProvider> InInfoProvider)

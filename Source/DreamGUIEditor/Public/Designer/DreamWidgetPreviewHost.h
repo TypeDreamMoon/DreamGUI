@@ -199,6 +199,17 @@ private:
 	 * authors none -- the nearest ancestor class that does.
 	 */
 	UDreamWidgetTree* FindArchetypeForPreview() const;
+	/**
+	 * Take RF_Transactional off the whole preview, sub-objects included.
+	 *
+	 * The preview is not undoable -- the authoring tree is the only half a transaction may hold, and
+	 * the preview is thrown away and projected again from it. Instancing honours that (the tree is
+	 * built with the host's own flags) and so do UDreamWidget's sub-object creators (they take the
+	 * flag from their owner). This is the backstop for the sites that still hard-code it and can
+	 * nonetheless build into a preview -- a native control's tree, a layout animation handler, a list
+	 * view's cells. Never touches the design canvas, which is deliberately transactional.
+	 */
+	void ClearTransactionalFlagsOnPreview();
 	/** Rebuild the id -> preview widget map from the current preview. */
 	void RebuildPreviewGuidMap();
 	/** Mint an id for any authored widget that has none, before the preview is instanced from it. */

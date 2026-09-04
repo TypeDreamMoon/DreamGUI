@@ -126,9 +126,15 @@ void DreamWidgetHierarchyPicker_BuildRoots(const TArray<UDreamWidget*>& InRootWi
 void SDreamWidgetHierarchyPickerView::RefreshTree()
 {
 	TArray<UDreamWidget*> Roots;
-	if (SpecificRootWidget)
+	// IsExplicitlyNull, not !IsValid: a picker OPENED on one root must not widen to every root in the
+	// world the moment that one is destroyed. Never assigned means "no particular root"; assigned and
+	// since gone means "that root, and there is nothing to show".
+	if (!SpecificRootWidget.IsExplicitlyNull())
 	{
-		Roots.Add(SpecificRootWidget);
+		if (UDreamWidget* SpecificRoot = SpecificRootWidget.Get())
+		{
+			Roots.Add(SpecificRoot);
+		}
 	}
 	else
 	{

@@ -178,9 +178,15 @@ bool FDreamWidgetBlueprintEditor::WidgetIsRootAgent(UDreamWidget* InWidget)
 {
 	for (auto Instance : DesignerInstances)
 	{
-		if (InWidget == Instance->GetPreviewScene()->GetRootAgent())
+		// A designer stays in DesignerInstances until its toolkit is destroyed, but OnClose drops the
+		// preview host first -- so the scene is null for every call made in between, and this one is
+		// made from every context menu's visibility delegate.
+		if (const FDreamWidgetDesignerScene* Scene = Instance->GetPreviewScene())
 		{
-			return true;
+			if (InWidget == Scene->GetRootAgent())
+			{
+				return true;
+			}
 		}
 	}
 	return false;
@@ -280,43 +286,6 @@ bool FDreamWidgetBlueprintEditor::GetAnythingDirty()const
 	return IsValid(BlueprintBeingEdited) && BlueprintBeingEdited->GetOutermost()->IsDirty();
 }
 
-namespace
-{
-	void SyncWidgetRegisterStateAfterTransaction(UDreamWidget* RootAgent, UWorld* EditorWorld)
-	{
-		if (!IsValid(RootAgent) || !IsValid(EditorWorld))
-		{
-			return;
-		}
-
-		RootAgent->EnsureChildrenAfterTransaction();
-		TArray<UDreamWidget*> ReachableWidgets;
-		UDreamWidget::CollectChildrenWidgets(RootAgent, ReachableWidgets);
-
-		TSet<UDreamWidget*> AllWidgets;
-		ForEachObjectOfClass(UDreamWidget::StaticClass(), [&](UObject* Object)
-		{
-			if (auto Widget = Cast<UDreamWidget>(Object))
-			{
-				if (Widget->GetWorld() == EditorWorld)
-				{
-					AllWidgets.Add(Widget);
-				}
-			}
-		});
-		for (auto Widget : AllWidgets)
-		{
-			if (!ReachableWidgets.Contains(Widget))
-			{
-				if (Widget->HasRegistered())
-				{
-					Widget->OnUnregister();
-				}
-			}
-		}
-	}
-}
-
 void FDreamWidgetBlueprintEditor::SyncSelection()
 {
 	// Every widget SelectWidgets hands to the selection broadcasts back into here, so without this
@@ -384,7 +353,34 @@ void FDreamWidgetBlueprintEditor::HandlePostTransaction(bool bSuccess)
 		return;
 	}
 
-	SyncWidgetRegisterStateAfterTransaction(RootAgent, EditorWorld);
+	// The design canvas is the ONE object in the preview world that is deliberately transactional
+	// -- ApplyDesignerViewportSize records it so undoing a screen-size change puts the visible
+	// canvas back -- and a Modify snapshots its Children along with its size. Restoring that array
+	// can therefore leave a slot naming the preview instance that was hanging under it at the time,
+	// which the rebuild below is about to replace. Compacted first, because everything after this
+	// walks from the agent.
+	//
+	// This is all that is left of the ghost sweep that used to run here. It searched the preview
+	// world for widgets no longer reachable from the agent and unregistered them, because an undo
+	// could resurrect a destroyed preview widget -- which it could, for exactly as long as the
+	// preview tree was built RF_Transactional. It is not any more (see RebuildPreview), so nothing
+	// in the preview enters the buffer to be resurrected, and the sweep had nothing left to find.
+	RootAgent->EnsureChildrenAfterTransaction();
+
+	// The template is the only undoable half, so after a transaction the preview is showing an
+	// edit the asset may no longer have -- a moved widget, a width typed into the details panel, a
+	// behaviour added and taken away again. Project the restored template again. This is UMG's
+	// PostUndo/PostRedo (FWidgetBlueprintEditor calls InvalidatePreview there); done immediately
+	// rather than on the next tick because everything below this line reads the preview, and
+	// because a caller that undoes and then asks a question wants the answer to be about the
+	// hierarchy the asset now has.
+	//
+	// Unconditional, not gated on whether the transaction named this asset: a rebuild that does not
+	// need to happen costs one instancing pass and looks identical, while one that is skipped
+	// leaves the surface showing an edit that has been undone -- which is the failure this model
+	// exists to end.
+	RebuildPreviewPreservingSelection();
+
 	ApplyDesignerState();
 	UDreamUIManagerWorldSubsystem::RefreshAllUI(EditorWorld);
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(EditorWorld))
@@ -478,11 +474,34 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	
 	OutlinerPtr = SNew(SDreamWidgetEditorHierarchyView, GetWorld());
 	PalettePtr = SNew(SDreamWidgetPalette, SharedThis(this));
-	if (UDreamWidget* RootWidget = GetPreviewRootWidget())
+	// On the AUTHORING tree, not the preview.
+	//
+	// The display name is the compiler's variable name, so a duplicate is a compile warning on every
+	// build until somebody fixes it. Run over the preview, the migration renamed objects that the
+	// next rebuild throws away: the asset kept its duplicates, the warning came back every compile,
+	// and the notification's "Save to keep the migration" was an offer the editor could not honour --
+	// there was nothing on the asset to save. The preview is rebuilt from the renamed templates
+	// instead, which is also what puts the new names in front of the author.
+	//
+	// Never for a text-authored hierarchy: there the display name is the node's `id` in the file, the
+	// file owns it, and a rename made here would be undone by the next compile -- leaving an asset
+	// dirtied on every open for a change that cannot stick. Same refusal every other structural edit
+	// makes (DreamWidgetTreeEditing::RenameWidget).
+	if (UDreamWidget* RootWidget = (IsValid(BlueprintBeingEdited->WidgetTree)
+		&& !DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited))
+		? BlueprintBeingEdited->WidgetTree->RootWidget.Get() : nullptr)
 	{
 		const int32 RenameCount = FDreamUIEditorTools::EnsureUniqueWidgetDisplayNames(RootWidget);
 		if (RenameCount > 0)
 		{
+			// Modified rather than structurally modified: a compile at the moment an asset opens is
+			// a surprise, and the next one regenerates the variables from these names anyway. The
+			// preview is rebuilt by hand because a value edit does not reach the host on its own.
+			FBlueprintEditorUtils::MarkBlueprintAsModified(BlueprintBeingEdited);
+			if (PreviewHost.IsValid())
+			{
+				PreviewHost->RebuildPreview();
+			}
 			FNotificationInfo Info(FText::Format(
 				LOCTEXT("UniqueWidgetNamesOnOpen", "Renamed {0} duplicate widget name(s) using UMG-style numeric suffixes. Save to keep the migration."),
 				FText::AsNumber(RenameCount)));
@@ -839,10 +858,12 @@ void FDreamWidgetBlueprintEditor::AlignSelectedWidgets(EDreamUIWidgetAlignType A
 		case EDreamUIWidgetAlignType::BottomEdge:       AnchoredPos.Y += GroupBottom - R.Bottom; break;
 		case EDreamUIWidgetAlignType::VerticalCenter:   AnchoredPos.Y += GroupCenterV - R.CenterV(); break;
 		}
-		W->Modify();
 		W->SetAnchoredPosition(AnchoredPos);
 	}
 
+	// Written straight onto the preview above and recorded HERE, on the template, which is the only
+	// half the transaction can hold: CopyPreviewValuesToTemplate Modify()s each template before it
+	// writes, so the entry carries the geometry as it was before this menu item ran.
 	CommitSelectedWidgetGeometryToTemplate();
 	//menu action (not a drag): repaint now so it shows even when the preview realtime is off
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
@@ -880,11 +901,11 @@ void FDreamWidgetBlueprintEditor::DistributeSelectedWidgets(bool bHorizontal)
 		UDreamWidget* W = Entries[i].Widget;
 		FVector2D AnchoredPos = W->GetAnchoredPosition();
 		if (bHorizontal) AnchoredPos.X += Delta; else AnchoredPos.Y += Delta;
-		W->Modify();
 		W->SetAnchoredPosition(AnchoredPos);
 		Cursor = TargetLow + (HighEdge(Entries[i].Rect) - LowEdge(Entries[i].Rect));
 	}
 
+	// The template is what the transaction records; see AlignSelectedWidgets.
 	CommitSelectedWidgetGeometryToTemplate();
 	//menu action (not a drag): repaint now so it shows even when the preview realtime is off
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
@@ -965,8 +986,12 @@ void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerC
 	}
 	if (MinSiblingIndex == TNumericLimits<int32>::Max()) MinSiblingIndex = -1;
 
+	// Nothing here Modify()s a preview widget, this parent included: the wrap is performed on the
+	// preview because working out a rect that encloses a selection needs real geometry, and it is
+	// WrapTemplatesFrom at the bottom that turns it into an edit -- reparenting the templates
+	// through DreamWidgetTreeEditing, which records the Blueprint, the tree and every parent it
+	// touches. That is the half this transaction holds.
 	FScopedTransaction Transaction(NSLOCTEXT("DreamWidgetDesigner", "WrapWidgets", "Wrap Widgets"));
-	CommonParent->Modify();
 
 	struct FWidgetWrapState
 	{
@@ -1009,8 +1034,11 @@ void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerC
 			}
 		}
 	}
-	UDreamWidget* Wrapper = NewObject<UDreamWidget>(CommonParent->GetOuter(), UDreamWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
-	Wrapper->Modify();//enroll the new widget in the transaction so undo/redo restores it (and re-registers it), like DeleteWidgets
+	// Scratch, and not RF_Transactional: this wrapper lives in the PREVIEW, only long enough for the
+	// engine to arrange the selection inside it and hand back the rect that encloses them.
+	// WrapTemplatesFrom then makes the real one on the template and republishes, which destroys
+	// this. Enrolling it in the transaction filed a doomed object in the undo history.
+	UDreamWidget* Wrapper = NewObject<UDreamWidget>(CommonParent->GetOuter(), UDreamWidget::StaticClass(), NAME_None, RF_Public);
 	Wrapper->SetDisplayName(FDreamUIEditorTools::MakeUniqueWidgetDisplayName(CommonParent, WrapperName));
 	Wrapper->OnRegister();
 
@@ -1038,7 +1066,6 @@ void FDreamWidgetBlueprintEditor::WrapSelectedWidgets(UClass* InLayoutContainerC
 	for (int32 Index = WidgetStates.Num() - 1; Index >= 0; --Index)
 	{
 		FWidgetWrapState& State = WidgetStates[Index];
-		State.Widget->Modify();
 		if (!State.Widget->TrySetParent(nullptr, true))
 		{
 			RestoreOriginalHierarchy();
@@ -1198,6 +1225,12 @@ void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass
 	if (!IsValid(TargetTemplate))return;
 
 	FScopedTransaction Transaction(NSLOCTEXT("DreamWidgetDesigner", "ReplaceWidgetLayout", "Replace Widget Layout"));
+	// The same three lines every other structural entry opens with (DesignerAddComponentBy,
+	// DesignerRemoveComponent): the Blueprint owns the tree the widget lives in, and the widget
+	// itself is what changes. The Blueprint's Modify was missing, so an undo restored the panel
+	// pointer on a template the asset had never been told about.
+	BlueprintBeingEdited->Modify();
+	TargetTemplate->SetFlags(RF_Transactional);
 	TargetTemplate->Modify();
 	Target = TargetTemplate;
 	// CreateNewLayoutContainer carries the whole swap: it unregisters the old container, registers
@@ -1216,8 +1249,22 @@ void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass
 		return;
 	}
 
-	CommitSelectedWidgetGeometryToTemplate();
-	if (OutlinerPtr.IsValid())OutlinerPtr->RequestRefresh();
+	// Structurally, exactly as DesignerAddComponentBy is: swapping the panel converts every child's
+	// slot to the new container's class and can add or drop the behaviours that container requires,
+	// so the hierarchy the compiler builds is not the one it was.
+	DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
+
+	// ...and then project the template again. This was the one structural entry that wrote the
+	// authoring tree and never republished: the preview kept the OLD container until something else
+	// invalidated it, so the toolbar looked like it had done nothing. Selection is carried across by
+	// widget id, and RefreshOutliner happens inside.
+	TArray<UDreamWidget*> Previews;
+	RepublishPreviewAndSelect({ TargetTemplate }, Previews);
+
+	// No CommitSelectedWidgetGeometryToTemplate here, and its absence is deliberate. Run before the
+	// republish it copied the STALE preview's geometry -- the arrangement the old panel produced --
+	// onto the template; run after it, it copies what the NEW panel just arranged. Either way it
+	// writes layout-derived values into authored data. A panel swap is not a geometry edit.
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
 }
 
@@ -1269,12 +1316,14 @@ bool FDreamWidgetBlueprintEditor::IsPreviewingScreenSpace()const
 
 void FDreamWidgetBlueprintEditor::SaveEditorState()
 {
-	//save view location and rotation
-	auto ViewTransform = ViewportPtr->GetViewportClient()->GetViewTransform();
-	if (!IsValid(BlueprintBeingEdited) || !ViewportPtr.IsValid())
+	// The guard came AFTER the dereference it guards, which made it dead code: by the time it could
+	// answer, the viewport had already been read through.
+	if (!IsValid(BlueprintBeingEdited) || !ViewportPtr.IsValid() || !ViewportPtr->GetViewportClient().IsValid())
 	{
 		return;
 	}
+	//save view location and rotation
+	auto ViewTransform = ViewportPtr->GetViewportClient()->GetViewTransform();
 	FDreamWidgetDesignerData& DesignerData = BlueprintBeingEdited->DesignerData;
 	DesignerData.ViewLocation = ViewTransform.GetLocation();
 	DesignerData.ViewRotation = ViewTransform.GetRotation();
@@ -1358,12 +1407,16 @@ void FDreamWidgetBlueprintEditor::SelectWidgets(const TSet<UDreamWidget*>& Widge
 		}
 	}
 
+	// Once, and null on a world that has gone -- the preview host is dropped before this toolkit is,
+	// so a selection change arriving in between has no selection object to talk to.
+	UDreamUISelection* Selection = bNotifyGEditor ? UDreamUISelection::GetInstance(GetWorld()) : nullptr;
+
 	if (!bAppendOrToggle)
 	{
 		SelectedWidgets.Empty();
-		if (bNotifyGEditor)
+		if (Selection != nullptr)
 		{
-			UDreamUISelection::GetInstance(GetWorld())->SelectNone();
+			Selection->SelectNone();
 		}
 	}
 
@@ -1378,15 +1431,15 @@ void FDreamWidgetBlueprintEditor::SelectWidgets(const TSet<UDreamWidget*>& Widge
 		{
 			SelectedWidgets.Add(Widget);
 		}
-		if (bNotifyGEditor)
+		if (Selection != nullptr)
 		{
 			if (bToggleOff)
 			{
-				UDreamUISelection::GetInstance(GetWorld())->DeselectWidget(Widget);
+				Selection->DeselectWidget(Widget);
 			}
 			else
 			{
-				UDreamUISelection::GetInstance(GetWorld())->SelectWidget(Widget);
+				Selection->SelectWidget(Widget);
 			}
 		}
 	}
@@ -2616,6 +2669,56 @@ FDreamWidgetBlueprintEditor* FDreamWidgetBlueprintEditor::FindDesignerForWidget(
 	return GetEditorByWorld(InWidget->GetWorld()).Pin().Get();
 }
 
+void FDreamWidgetBlueprintEditor::RebuildPreviewPreservingSelection()
+{
+	if (!PreviewHost.IsValid())
+	{
+		return;
+	}
+	// What the SELECTION is holding, resolved to templates while its preview objects still exist.
+	//
+	// The rebuild below destroys every one of them, and nothing re-points the selection at their
+	// replacements -- so after adding, cutting or removing a behaviour the selection still named the
+	// dead preview, the details panel's widget context resolved to it, and the component list drew
+	// the components of an object that had stopped existing. Templates survive the rebuild, so they
+	// are the way across it, and the widget ids are what pairs the two halves.
+	TArray<UDreamWidget*> SelectedTemplates;
+	SelectedTemplates.Reserve(SelectedWidgets.Num());
+	for (const TWeakObjectPtr<UDreamWidget>& Selected : SelectedWidgets)
+	{
+		if (UDreamWidget* Template = GetTemplateWidget(Selected.Get()))
+		{
+			SelectedTemplates.Add(Template);
+		}
+	}
+
+	// Now, not on the next tick: a structural caller is about to select what it just made, and a
+	// selection of widgets that do not exist yet is a selection of nothing.
+	//
+	// This invalidates every preview pointer anyone was holding, including ones handed out by an
+	// earlier call in the same gesture. That is the contract FDreamWidgetReference exists to state:
+	// resolve a preview when you need it, never keep one across a structural edit -- or across an
+	// undo, which now lands here too.
+	PreviewHost->RebuildPreview();
+
+	// Re-select the same widgets, by their rebuilt counterparts. Only when there were any: a caller
+	// that deselected first (delete does) means it, and re-selecting nothing must not clear a
+	// selection some other caller is about to set.
+	if (SelectedTemplates.Num() > 0)
+	{
+		TSet<UDreamWidget*> Rebuilt;
+		for (const UDreamWidget* Template : SelectedTemplates)
+		{
+			if (UDreamWidget* Preview = PreviewHost->FindPreviewForTemplate(Template))
+			{
+				Rebuilt.Add(Preview);
+			}
+		}
+		SelectWidgets(Rebuilt, false);
+	}
+	RefreshOutliner();
+}
+
 void FDreamWidgetBlueprintEditor::RepublishPreviewAndSelect(TConstArrayView<UDreamWidget*> InTemplates, TArray<UDreamWidget*>& OutPreviews)
 {
 	OutPreviews.Reset();
@@ -2623,13 +2726,7 @@ void FDreamWidgetBlueprintEditor::RepublishPreviewAndSelect(TConstArrayView<UDre
 	{
 		return;
 	}
-	// Now, not on the next tick: the caller is about to select what it just made, and a selection of
-	// widgets that do not exist yet is a selection of nothing.
-	//
-	// This invalidates every preview pointer anyone was holding, including ones handed out by an
-	// earlier call in the same gesture. That is the contract FDreamWidgetReference exists to state:
-	// resolve a preview when you need it, never keep one across a structural edit.
-	PreviewHost->RebuildPreview();
+	RebuildPreviewPreservingSelection();
 	for (const UDreamWidget* Template : InTemplates)
 	{
 		if (UDreamWidget* Preview = PreviewHost->FindPreviewForTemplate(Template))
@@ -2637,7 +2734,6 @@ void FDreamWidgetBlueprintEditor::RepublishPreviewAndSelect(TConstArrayView<UDre
 			OutPreviews.Add(Preview);
 		}
 	}
-	RefreshOutliner();
 }
 
 UDreamWidget* FDreamWidgetBlueprintEditor::DesignerCreateWidget(UDreamWidget* InPreviewParent, TSubclassOf<UDreamWidget> InWidgetClass,
@@ -2794,6 +2890,40 @@ bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPrevie
 	Template->Modify();
 	Template->RemoveComponent(Template->GetAllComponents()[Index]);
 	DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
+
+	TArray<UDreamWidget*> Previews;
+	RepublishPreviewAndSelect({ Template }, Previews);
+	return true;
+}
+
+bool FDreamWidgetBlueprintEditor::DesignerMoveComponent(UDreamWidget* InPreviewWidget, UDreamUIBehaviour* InPreviewComponent, int32 InNewIndex)
+{
+	// The third of the family, and refused for the same reason: the order of a widget's behaviours is
+	// the order of its `+ Class { }` lines, so in a text-authored hierarchy the file owns it.
+	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+		FString::Printf(TEXT("reorder the behaviour '%s'"), *GetNameSafe(InPreviewComponent ? InPreviewComponent->GetClass() : nullptr))))
+	{
+		return false;
+	}
+	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
+	if (Template == nullptr || !IsValid(InPreviewComponent) || !IsValid(BlueprintBeingEdited))
+	{
+		return false;
+	}
+	// By POSITION, exactly as the removal above: an instanced sub-object has no name the preview and
+	// the template share, and the two lists are built in the same order.
+	const int32 Index = InPreviewWidget->GetAllComponents().Find(InPreviewComponent);
+	if (!Template->GetAllComponents().IsValidIndex(Index))
+	{
+		return false;
+	}
+	BlueprintBeingEdited->Modify();
+	Template->SetFlags(RF_Transactional);
+	Template->Modify();
+	Template->MoveComponentToIndex(Template->GetAllComponents()[Index], InNewIndex);
+	// Modified, not structurally: a reorder adds and removes nothing, so no member of the class
+	// changes. What changes is the archetype, which is what the next compile picks up.
+	MarkDesignChanged();
 
 	TArray<UDreamWidget*> Previews;
 	RepublishPreviewAndSelect({ Template }, Previews);

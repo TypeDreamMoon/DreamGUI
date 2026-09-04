@@ -485,6 +485,14 @@ public:
 		TFunctionRef<class UDreamUIBehaviour*(UDreamWidget*)> InAddToTemplate);
 	bool DesignerRemoveComponent(UDreamWidget* InPreviewWidget, class UDreamUIBehaviour* InPreviewComponent);
 	/**
+	 * Reorder a behaviour on the TEMPLATE, matched to the preview's by position.
+	 *
+	 * The component list's drag-to-reorder moved the preview's array and nothing else, so the new
+	 * order lasted exactly until the next rebuild and never reached the asset. Same shape as the
+	 * add and the remove: edit the template, republish, hand the panel the rebuilt preview.
+	 */
+	bool DesignerMoveComponent(UDreamWidget* InPreviewWidget, class UDreamUIBehaviour* InPreviewComponent, int32 InNewIndex);
+	/**
 	 * Where this Blueprint's own graphs read the variables these widgets own, one line per node.
 	 *
 	 * The variables are the compiler's, named after the widgets, so deleting a widget deletes its
@@ -497,7 +505,17 @@ public:
 	static bool DesignerHasClipboardContent();
 	/** Returns the name actually applied, which differs when it had to be disambiguated. */
 	FString DesignerRenameWidget(UDreamWidget* InPreviewWidget, const FString& InNewDisplayName);
-	/** Rebuild the preview right now and select the previews of these templates. */
+	/**
+	 * Throw the preview away and project the authoring tree again, right now, keeping the selection.
+	 *
+	 * The one entry point for "the template changed underneath the preview", and it is called from
+	 * both directions: a structural edit that has just rewritten the tree, and an undo or redo that
+	 * has just restored it (HandlePostTransaction). The selection survives because it is carried
+	 * across as TEMPLATES -- the preview objects it named are destroyed here -- and found again by
+	 * the widget ids the two halves share.
+	 */
+	void RebuildPreviewPreservingSelection();
+	/** RebuildPreviewPreservingSelection, plus the rebuilt previews of the templates named here. */
 	void RepublishPreviewAndSelect(TConstArrayView<UDreamWidget*> InTemplates, TArray<UDreamWidget*>& OutPreviews);
 
 	/**

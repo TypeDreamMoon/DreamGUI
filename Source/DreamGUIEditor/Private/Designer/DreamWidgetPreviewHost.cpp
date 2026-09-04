@@ -25,6 +25,7 @@
 #include "PropertyCustomizationHelpers.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
+#include "UObject/UObjectHash.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetPreviewHost"
 
@@ -354,9 +355,18 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 		// A class whose last compile failed is marked abstract, and NewObject refuses those. Showing
 		// whatever the class last managed to build beats showing nothing while the author fixes it.
 		FMakeClassSpawnableOnScope TemporarilySpawnable(GeneratedClass);
-		// Not RF_Transactional: values written onto a preview must never enter the transaction buffer.
-		// Only the template is undoable; a preview that recorded its own edits would let undo restore
-		// an object the next rebuild is about to destroy. UMG clears the same flag for the same reason.
+		// RF_Transient and, deliberately, NOT RF_Transactional -- and this is not a statement about
+		// this object alone. UDreamWidgetGeneratedClass::InitializeWidgetStatic instances the tree
+		// with the HOST's RF_Transactional, and that flag propagates to sub-objects, so these flags
+		// are what keeps the entire preview hierarchy out of the transaction buffer.
+		//
+		// That is the whole undo model: the authoring tree is the only undoable half, and the preview
+		// is a projection of it that is thrown away and rebuilt. A preview that recorded its own
+		// edits would let an undo restore objects a rebuild had already destroyed -- which is exactly
+		// what produced a preview tree with a cycle in it -- and would pin the outgoing hierarchy in
+		// the buffer for as long as the entry lived. UMG clears the same flag for the same reason,
+		// and rebuilds from the template on PostUndo/PostRedo as this editor now does; see
+		// FDreamWidgetBlueprintEditor::HandlePostTransaction.
 		PreviewWidget = NewObject<UDreamUserWidget>(RootAgent->GetOuter(), GeneratedClass, NAME_None, RF_Transient);
 	}
 
@@ -411,6 +421,23 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 
 	RegisterDreamWidgetHierarchy(PreviewWidget);
 
+	// After registration, because registration is where the second kind of preview object is born.
+	//
+	// Instancing carries the flags of the tree it built (see the NewObject above), and UDreamWidget's
+	// own creators -- AddComponent, CreateNewVisual, CreateNewLayoutContainer, CreateNewLayoutSelf,
+	// CreateNewPanelSlot -- now take RF_Transactional from their owner, so the objects registration
+	// mints are non-transactional too. That covers the case this was written for: a panel slot is
+	// per-child data the PARENT's layout hands out, minted by EnsurePanelSlotForChild for any child
+	// whose authored counterpart has none, which the content root always is.
+	//
+	// A BACKSTOP, then, rather than the mechanism -- and it stays because the rule is not universal.
+	// Sites that still hard-code the flag and can put an object inside this preview: DreamUIBuilder's
+	// tree for a native control that declares its hierarchy in code, UDreamLayout's animation handler,
+	// UDreamWidgetAnimationComponent's sequences, and anything CreateDreamWidget makes (a list view's
+	// cells). One sweep per rebuild is cheap insurance against a rule that holds in five places and
+	// not in a sixth; what it cannot reach is an object created AFTER the rebuild.
+	ClearTransactionalFlagsOnPreview();
+
 	RebuildPreviewGuidMap();
 	// Tell the canvas it has something new to draw. Nothing else here does, and a canvas that is
 	// never marked builds no draw calls at all -- the preview would be registered, laid out, and
@@ -441,6 +468,26 @@ UDreamWidgetTree* FDreamWidgetPreviewHost::FindArchetypeForPreview() const
 		return UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(Blueprint->GeneratedClass->GetSuperClass());
 	}
 	return nullptr;
+}
+
+void FDreamWidgetPreviewHost::ClearTransactionalFlagsOnPreview()
+{
+	if (!IsValid(PreviewWidget))
+	{
+		return;
+	}
+	PreviewWidget->ClearFlags(RF_Transactional);
+	// Nested, because the objects this exists for are two and three levels down: the tree, the
+	// widgets outered flat to it, and each widget's slot, layouts, visual and behaviours.
+	//
+	// Rooted at the preview widget and not at the world. The design canvas is a sibling, not a
+	// descendant, and it is transactional ON PURPOSE -- it survives every rebuild, so undoing a
+	// screen-size change has something real to restore. See
+	// FDreamWidgetBlueprintEditor::ApplyDesignerViewportSize.
+	ForEachObjectWithOuter(PreviewWidget.Get(), [](UObject* Object)
+	{
+		Object->ClearFlags(RF_Transactional);
+	});
 }
 
 void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()

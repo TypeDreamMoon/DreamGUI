@@ -46,20 +46,17 @@ TSharedRef<FHierarchyDreamWidgetDragDropOp> FHierarchyDreamWidgetDragDropOp::New
 		Operation->Transaction = new FScopedTransaction(LOCTEXT("MoveWidgets", "Change Hierarchy"));
 	}
 
-	// Add an FItem for each widget in the drag operation
+	// Add an FItem for each widget in the drag operation.
+	//
+	// Nothing is Modify()'d here. These are PREVIEW widgets, which are not in the transaction
+	// buffer at all: the drop performs the move on them for the geometry, then mirrors it onto the
+	// authoring tree through ReparentTemplatesFrom, and that is what this transaction records.
 	for (const auto& Widget : InWidgets)
 	{
 		FItem DraggedWidget;
 
 		DraggedWidget.Widget = Widget;
-
-		Widget->Modify();
-
 		DraggedWidget.WidgetParent = Widget->GetParent();
-		if (DraggedWidget.WidgetParent)
-		{
-			DraggedWidget.WidgetParent->Modify();
-		}
 
 		Operation->DraggedWidgets.Add(DraggedWidget);
 	}
@@ -246,8 +243,10 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				{
 					Manager->MarkDesignChanged();
 				}
-				NewParent->SetFlags(RF_Transactional);
-				NewParent->Modify();
+				// No Modify on NewParent, and none on the dragged widgets below: every one of them
+				// is a PREVIEW object, and the preview is not undoable -- it is rebuilt from the
+				// template after the transaction. ReparentTemplatesFrom at the bottom of this block
+				// records the authored half, which is the half undo has to be able to put back.
 
 				// The preview widgets that actually moved, for the template mirror below. Collected
 				// rather than mirrored per widget: ReparentWidget broadcasts a structural change that
@@ -257,9 +256,9 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 
 				for (const auto& DraggedWidget : HierarchyDragDropOp->DraggedWidgets)
 				{
+					// Named TemplateWidget, but it is the preview's -- see the note above. Nothing
+					// records it.
 					auto TemplateWidget = DraggedWidget.Widget;
-					TemplateWidget->SetFlags(RF_Transactional);
-					TemplateWidget->Modify();
 
 					if (Index.IsSet())
 					{
@@ -384,7 +383,10 @@ void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, co
 							.Image(FDreamGUIEditorStyle::Get().GetBrush("CanvasMark"))
 							.Visibility_Lambda([=, this]()
 							{
-								if (Widget->IsCanvasWidget())
+								// Every other reader of Widget in this row checks first: the row
+								// outlives the preview widget it is showing, because a rebuild
+								// destroys the tree and the list refreshes a tick later.
+								if (Widget.IsValid() && Widget->IsCanvasWidget())
 								{
 									return EVisibility::Visible;
 								}
@@ -583,7 +585,12 @@ FReply SDreamWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent cons
 	TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 	if (Zone.IsSet())
 	{
-		HierarchyView.Pin()->RequestRefresh();
+		// Pinned and checked, like every other weak handle this row holds: a drop can be the
+		// gesture that closes the designer, and the tree view goes before the row does.
+		if (const TSharedPtr<SDreamWidgetEditorHierarchyView> View = HierarchyView.Pin())
+		{
+			View->RequestRefresh();
+		}
 		return FReply::Handled();
 	}
 	else
@@ -591,6 +598,7 @@ FReply SDreamWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent cons
 }
 FReply SDreamWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	if (!Widget.IsValid())return FReply::Handled();
 	if (Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(Widget.Get()))return FReply::Handled();
 	TArray<UDreamWidget*> DraggedItems;
 
@@ -677,7 +685,7 @@ bool SDreamWidgetEditorHierarchyViewItem::IsReadOnly() const
 }
 void SDreamWidgetEditorHierarchyViewItem::OnBeginNameTextEdit()
 {
-	InitialText = FText::FromString(Widget->GetDisplayName());
+	InitialText = Widget.IsValid() ? FText::FromString(Widget->GetDisplayName()) : FText::GetEmpty();
 }
 void SDreamWidgetEditorHierarchyViewItem::OnEndNameTextEdit()
 {
@@ -706,6 +714,12 @@ void SDreamWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText
 	{
 		return;
 	}
+	// The commit can arrive after the row's widget is gone -- a rebuild while the text box has focus
+	// is enough -- and everything below dereferences it.
+	if (!Widget.IsValid())
+	{
+		return;
+	}
 
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
 	// The display name is the compiler's variable name, so renaming is an edit to the asset, not a
@@ -714,7 +728,10 @@ void SDreamWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText
 	{
 		Designer->DesignerRenameWidget(Widget.Get(), InText.ToString().TrimStartAndEnd());
 		GEditor->EndTransaction();
-		HierarchyView.Pin()->RequestRefresh();
+		if (const TSharedPtr<SDreamWidgetEditorHierarchyView> View = HierarchyView.Pin())
+		{
+			View->RequestRefresh();
+		}
 		return;
 	}
 	Widget->Modify();
@@ -726,7 +743,10 @@ void SDreamWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText
 	});
 	GEditor->EndTransaction();
 
-	HierarchyView.Pin()->RequestRefresh();
+	if (const TSharedPtr<SDreamWidgetEditorHierarchyView> View = HierarchyView.Pin())
+	{
+		View->RequestRefresh();
+	}
 }
 FReply SDreamWidgetEditorHierarchyViewItem::OnToggleVisibility()
 {

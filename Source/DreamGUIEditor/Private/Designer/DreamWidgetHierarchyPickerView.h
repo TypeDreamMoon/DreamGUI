@@ -95,6 +95,11 @@ protected:
 	bool bRefreshRequested = true;
 	FOnSelectItem OnSelectItem;
 	UClass* ObjectClass = nullptr;
-	UDreamWidget* SpecificRootWidget = nullptr;
+	/**
+	 * Weak, because this picker outlives what it was opened on: a preview rebuild destroys the root
+	 * it was given and the tree refreshes from a timer, so a raw pointer here was passed to IsValid
+	 * after its object had been freed -- which reads the freed memory rather than answering false.
+	 */
+	TWeakObjectPtr<UDreamWidget> SpecificRootWidget;
 };
 

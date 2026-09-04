@@ -366,9 +366,35 @@ private:
 		return (SelectedItems.Num() > 0 && SelectedItems[0].IsValid()) ? SelectedItems[0].Get() : nullptr;
 	}
 
+	/**
+	 * The designer whose TEMPLATE answers for this widget, or null when the edit happens in place.
+	 *
+	 * The one predicate every operation here branches on: inside a designer a component edit is made
+	 * on the authoring tree and the preview is rebuilt from it, outside one the widget shown IS the
+	 * widget being edited.
+	 */
+	static FDreamWidgetBlueprintEditor* FindTemplateOwningDesigner(UDreamWidget* Widget)
+	{
+		if (!IsValid(Widget))
+		{
+			return nullptr;
+		}
+		TSharedPtr<FDreamWidgetBlueprintEditor> Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()).Pin();
+		return (Designer.IsValid() && Designer->GetTemplateWidget(Widget) != nullptr) ? Designer.Get() : nullptr;
+	}
+
 	/** The widget and whatever holds it both change when its component list does, so both are recorded. */
 	void ModifyWidgetForComponentEdit(UDreamWidget* Widget)
 	{
+		// Nothing to record on a PREVIEW. The designer paths below write onto the template and record
+		// it there, and the preview is thrown away and rebuilt from it -- so a Modify here files an
+		// object that is about to stop existing into the undo buffer, which pins the whole outgoing
+		// tree and lets an undo restore widgets the rebuild already destroyed. See RebuildPreview:
+		// "values written onto a preview must never enter the transaction buffer".
+		if (FindTemplateOwningDesigner(Widget) != nullptr)
+		{
+			return;
+		}
 		if (UObject* WidgetOuter = Widget->GetOuter())
 		{
 			WidgetOuter->SetFlags(RF_Transactional);
@@ -385,8 +411,7 @@ private:
 	 */
 	UDreamUIBehaviour* AddComponentToWidget(UDreamWidget* Widget, TFunctionRef<UDreamUIBehaviour*(UDreamWidget*)> InAdd)
 	{
-		if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()).Pin();
-			Designer.IsValid() && Designer->GetTemplateWidget(Widget) != nullptr)
+		if (FDreamWidgetBlueprintEditor* Designer = FindTemplateOwningDesigner(Widget))
 		{
 			return Designer->DesignerAddComponentBy(Widget, InAdd);
 		}
@@ -396,11 +421,19 @@ private:
 	/** Record and announce a newly added component. Call inside the caller's transaction, not after it. */
 	void FinishComponentAdd(UDreamUIBehaviour* NewComponent)
 	{
-		NewComponent->SetFlags(RF_Transactional);
-		NewComponent->Modify();
 		// The owner is read off the component rather than passed in: a designer add republishes the
 		// preview, so the widget the caller was holding when it started is not the one to announce on.
-		if (UDreamWidget* Owner = NewComponent->GetWidget())
+		UDreamWidget* Owner = NewComponent->GetWidget();
+		// Only the in-place path records the component. A designer add already recorded the TEMPLATE
+		// inside DesignerAddComponentBy, and what came back here is the REBUILT PREVIEW's copy --
+		// recording that is what puts doomed preview objects in the undo history. See
+		// ModifyWidgetForComponentEdit.
+		if (FindTemplateOwningDesigner(Owner) == nullptr)
+		{
+			NewComponent->SetFlags(RF_Transactional);
+			NewComponent->Modify();
+		}
+		if (IsValid(Owner))
 		{
 			FDreamUIUtils::NotifyPropertyChanged(Owner, UDreamWidget::GetPropertyName_Components());
 		}
@@ -456,19 +489,22 @@ private:
 		ModifyWidgetForComponentEdit(Widget);
 
 		DreamUIWidgetComponentClipboard().Reset(DreamUIWidgetComponentClipboard_Snapshot(Component));
-		Component->SetFlags(RF_Transactional);
-		Component->Modify();
 		// On the template when a designer owns this widget; the preview's copy goes with the rebuild.
-		if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()).Pin();
-			Designer.IsValid() && Designer->GetTemplateWidget(Widget) != nullptr)
+		if (FDreamWidgetBlueprintEditor* Designer = FindTemplateOwningDesigner(Widget))
 		{
+			// No Modify on the preview's component, and no notify afterwards: the removal republishes
+			// the preview, so by the time it returns both Widget and Component name objects that have
+			// been destroyed. DesignerRemoveComponent records the template, which is the half that
+			// undo has to be able to put back.
 			Designer->DesignerRemoveComponent(Widget, Component);
 		}
 		else
 		{
+			Component->SetFlags(RF_Transactional);
+			Component->Modify();
 			Widget->RemoveComponent(Component);
+			FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
 		}
-		FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
 
 		RefreshComponents();
 		ClearSelection();
@@ -630,14 +666,8 @@ private:
 			return false;
 		}
 
-		const FScopedTransaction Transaction(LOCTEXT("AddDreamWidgetComponentByDragDrop_Transaction", "Add DreamUI Component"));
-		if (UObject* WidgetOuter = Widget->GetOuter())
-		{
-			WidgetOuter->SetFlags(RF_Transactional);
-			WidgetOuter->Modify();
-		}
-		Widget->SetFlags(RF_Transactional);
-		Widget->Modify();
+		FScopedTransaction Transaction(LOCTEXT("AddDreamWidgetComponentByDragDrop_Transaction", "Add DreamUI Component"));
+		ModifyWidgetForComponentEdit(Widget);
 		if (auto DesignerEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()); DesignerEditor.IsValid())
 		{
 			DesignerEditor.Pin()->MarkDesignChanged();
@@ -651,6 +681,8 @@ private:
 				{
 					if (UDreamUIBehaviour* NewComponent = Target->AddComponent(ComponentClass))
 					{
+						// Target is the TEMPLATE under a designer and the widget itself outside one,
+						// so this is always the object the edit has to reach -- never a preview.
 						NewComponent->SetFlags(RF_Transactional);
 						NewComponent->Modify();
 						Last = NewComponent;
@@ -661,6 +693,9 @@ private:
 
 		if (!IsValid(LastAddedComponent))
 		{
+			// Otherwise the refusal leaves a committed transaction that undoes nothing, which is an
+			// undo step the author has to press through. Paste and duplicate already cancel theirs.
+			Transaction.Cancel();
 			return false;
 		}
 
@@ -718,18 +753,30 @@ private:
 			return false;
 		}
 
-		const FScopedTransaction Transaction(LOCTEXT("ReorderDreamWidgetComponent_Transaction", "Reorder DreamUI Component"));
-		if (UObject* WidgetOuter = Widget->GetOuter())
+		FScopedTransaction Transaction(LOCTEXT("ReorderDreamWidgetComponent_Transaction", "Reorder DreamUI Component"));
+		ModifyWidgetForComponentEdit(Widget);
+
+		// On the TEMPLATE when a designer owns this widget. Reordering the preview's array moved the
+		// rows in the list and nothing else: the next rebuild instanced the authoring tree's order
+		// straight back over it, so the drag looked like it worked until anything republished.
+		if (FDreamWidgetBlueprintEditor* Designer = FindTemplateOwningDesigner(Widget))
 		{
-			WidgetOuter->SetFlags(RF_Transactional);
-			WidgetOuter->Modify();
-		}
-		Widget->SetFlags(RF_Transactional);
-		Widget->Modify();
-		auto DesignerEditor = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld());
-		if (DesignerEditor.IsValid())
-		{
-			DesignerEditor.Pin()->MarkDesignChanged();
+			if (!Designer->DesignerMoveComponent(Widget, Component, ClampedIndex))
+			{
+				Transaction.Cancel();
+				return false;
+			}
+			// The republish inside it destroyed Widget and Component, so the row to select again is
+			// found on the rebuilt preview by the position it was moved to -- clamped the way
+			// UDreamWidget::MoveComponentToIndex clamps it, because ClampedIndex above is a DROP
+			// position and may be one past the end.
+			RefreshComponents();
+			const int32 SettledIndex = FMath::Clamp(ClampedIndex, 0, ComponentItems.Num() - 1);
+			if (ComponentItems.IsValidIndex(SettledIndex))
+			{
+				SelectComponent(ComponentItems[SettledIndex].Get());
+			}
+			return true;
 		}
 
 		Widget->MoveComponentToIndex(Component, ClampedIndex);
@@ -902,19 +949,16 @@ private:
 			return;
 		}
 
-		const FScopedTransaction Transaction(LOCTEXT("AddDreamWidgetComponent_Transaction", "Add DreamUI Component"));
-		if (UObject* WidgetOuter = Widget->GetOuter())
-		{
-			WidgetOuter->SetFlags(RF_Transactional);
-			WidgetOuter->Modify();
-		}
-		Widget->SetFlags(RF_Transactional);
-		Widget->Modify();
+		FScopedTransaction Transaction(LOCTEXT("AddDreamWidgetComponent_Transaction", "Add DreamUI Component"));
+		ModifyWidgetForComponentEdit(Widget);
 
 		UDreamUIBehaviour* NewComponent = AddComponentToWidget(Widget,
 			[InClass](UDreamWidget* Target) { return Target->AddComponent(InClass); });
 		if (!IsValid(NewComponent))
 		{
+			// A refused add leaves an empty undo step otherwise -- the same cancel paste and
+			// duplicate make on their own failure branch.
+			Transaction.Cancel();
 			return;
 		}
 		FinishComponentAdd(NewComponent);
@@ -989,13 +1033,7 @@ private:
 		ComponentListView->GetSelectedItems(SelectedItems);
 
 		const FScopedTransaction Transaction(LOCTEXT("RemoveDreamWidgetComponent_Transaction", "Remove DreamUI Component"));
-		if (UObject* WidgetOuter = Widget->GetOuter())
-		{
-			WidgetOuter->SetFlags(RF_Transactional);
-			WidgetOuter->Modify();
-		}
-		Widget->SetFlags(RF_Transactional);
-		Widget->Modify();
+		ModifyWidgetForComponentEdit(Widget);
 
 		for (const FDreamWidgetComponentItem& Item : SelectedItems)
 		{
@@ -1005,18 +1043,20 @@ private:
 				continue;
 			}
 
-			Component->SetFlags(RF_Transactional);
-			Component->Modify();
-			// See the cut path: a designer's widget keeps its behaviours on the template.
-			if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(Widget->GetWorld()).Pin();
-				Designer.IsValid() && Designer->GetTemplateWidget(Widget) != nullptr)
+			// See the cut path: a designer's widget keeps its behaviours on the template, and the
+			// republish that follows leaves both Widget and Component naming destroyed objects.
+			if (FDreamWidgetBlueprintEditor* Designer = FindTemplateOwningDesigner(Widget))
 			{
 				Designer->DesignerRemoveComponent(Widget, Component);
+				// Widget and every remaining item name destroyed preview objects from here on, and
+				// removing by a position read off a dead list would take the wrong component out of
+				// the template. The list is single-select, so this ends the loop it was already
+				// ending by accident, and does it before anything can be got wrong.
+				break;
 			}
-			else
-			{
-				Widget->RemoveComponent(Component);
-			}
+			Component->SetFlags(RF_Transactional);
+			Component->Modify();
+			Widget->RemoveComponent(Component);
 			FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_Components());
 		}
 
