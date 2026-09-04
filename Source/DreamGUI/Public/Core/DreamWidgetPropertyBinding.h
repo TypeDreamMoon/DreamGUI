@@ -88,6 +88,34 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
 	UPROPERTY()
 	FName NotifyField;
 
+#if WITH_EDITORONLY_DATA
+	/**
+	 * Where the `<-` that produced this was written: 1-based line and column, both 0 when it came
+	 * from anywhere but a .dui (the designer's Bind button, a test building the struct by hand).
+	 *
+	 * Carried on the BINDING rather than looked up later because there is nothing to look it up
+	 * from. The checks that need it -- DUI5004's two halves -- run inside the Blueprint compile,
+	 * which has the resolved binding list and no AST: the file was parsed in an earlier stage and
+	 * the tree it produced is gone. Without this the diagnostic reaches VSCode with a location of
+	 * (0,0), which the extension clamps to 1,1, and every binding mistake in a 300-line file
+	 * points at its first character.
+	 *
+	 * WITH_EDITORONLY_DATA because these ride into the generated class and so into a cooked build,
+	 * where a line number in a source file that was never shipped is dead weight. Two plain ints
+	 * rather than an FDreamUISourceLocation because that type is deliberately not a USTRUCT -- the
+	 * AST it belongs to must stay free of UObject so the parser can run off the game thread.
+	 *
+	 * NOT part of operator==: two bindings that differ only in where they were typed are the same
+	 * binding, and the equality here answers "is this the same route", never "is this the same
+	 * text".
+	 */
+	UPROPERTY()
+	int32 SourceLine = 0;
+
+	UPROPERTY()
+	int32 SourceColumn = 0;
+#endif // WITH_EDITORONLY_DATA
+
 	bool operator==(const FDreamWidgetPropertyBinding& Other) const
 	{
 		return WidgetName == Other.WidgetName
@@ -136,6 +164,20 @@ struct DREAMGUI_API FDreamWidgetEventBinding
 	/** The UFUNCTION on the user widget the event calls. */
 	UPROPERTY()
 	FName FunctionName;
+
+#if WITH_EDITORONLY_DATA
+	/**
+	 * Where the `->` that produced this was written, 1-based, 0 when it came from anywhere else --
+	 * the same field FDreamWidgetPropertyBinding carries and for the same reason, spelled out
+	 * there. This is the half DUI6004 and DUI6005 read: the handler's existence and its signature
+	 * can only be judged once the class exists, which is after the AST is gone.
+	 */
+	UPROPERTY()
+	int32 SourceLine = 0;
+
+	UPROPERTY()
+	int32 SourceColumn = 0;
+#endif // WITH_EDITORONLY_DATA
 
 	bool operator==(const FDreamWidgetEventBinding& Other) const
 	{

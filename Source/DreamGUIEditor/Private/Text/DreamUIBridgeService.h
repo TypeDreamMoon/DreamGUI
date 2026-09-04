@@ -21,9 +21,20 @@
  *   - one project, one editor: two editors would steal each other's requests, recorded and not
  *     defended against.
  *
- * Actions: ping / functions (what `<-` and `->` can name on a class) / assets / reveal (open the
- * designer, select a widget) / compile. Compile's verdicts travel through the diagnostics
- * mailbox, not the response -- the bridge does not re-ship what already has a channel.
+ * Actions: ping / functions (what `<-`, `->` and a binding expression can name on a class) /
+ * variables (what `<->` and a binding expression can read) / members (what a `.` reaches inside a
+ * struct or class, including through a TArray) / assets / reveal (open the designer, select a
+ * widget) / revealAsset (find an asset in the content browser and open it) / compile. Compile's
+ * verdicts travel through the diagnostics mailbox, not the response -- the bridge does not
+ * re-ship what already has a channel.
+ *
+ * One direction is NOT request/response: the editor also pushes, through
+ * `Bridge/reveal-to-editor.json`, when someone right-clicks a widget in the designer and asks for
+ * the line that authored it. A drop file rather than a reply because there is no request to reply
+ * to -- VSCode is not asking, it is being told -- and the client polls that one file the way it
+ * polls status.json. Written atomically for the same reason responses are: the reader is another
+ * process, and a half-written file it happens to catch reads as a corrupt reveal rather than as
+ * "not yet".
  */
 struct FDreamUIBridgeService
 {
@@ -39,4 +50,21 @@ struct FDreamUIBridgeService
 	 * requests were processed.
 	 */
 	static int32 ProcessPendingNow(const FString& InOverrideRoot = FString());
+
+	/**
+	 * Asks the VSCode side to put its cursor at InLine/InColumn of InAbsoluteFilePath -- the
+	 * designer's half of "reveal", pointing the other way.
+	 *
+	 * The reverse of the `reveal` ACTION, and deliberately not shaped like it: that one is an
+	 * answer the client waited for, this one is an announcement nobody asked for. So it is one
+	 * file, overwritten, never queued -- the newest reveal is the only one anybody wants, and a
+	 * backlog of stale cursor jumps is worse than none.
+	 *
+	 * InWidgetId rides along even when the position was not found (line and column then being
+	 * 1/1): the client can still say which node it failed to locate, and a message naming the
+	 * node beats a silent jump to the top of the file. Returns false when the file could not be
+	 * written; the caller reports that, because a menu command with no reaction reads as broken.
+	 */
+	static bool WriteRevealToEditor(const FString& InAbsoluteFilePath, int32 InLine, int32 InColumn,
+		const FString& InWidgetId, const FString& InOverrideRoot = FString());
 };

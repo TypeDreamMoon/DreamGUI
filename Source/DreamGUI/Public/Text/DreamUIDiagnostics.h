@@ -290,6 +290,30 @@ enum class EDreamUIDiagnosticCode : int32
 	EventHandlerNotFound = 6004,
 	/** `Event -> Handler` where the handler's parameters are not the ones the event sends. */
 	EventHandlerSignatureMismatch = 6005,
+	/**
+	 * `each Item in Source` naming a source the compiled class does not declare -- neither a
+	 * no-argument function of that name nor a variable of it.
+	 *
+	 * In the 6xxx band and not the 5xxx one for exactly the reason EventHandlerNotFound is: the
+	 * source lives on the class this compile is BUILDING, so the builder could not have looked it
+	 * up. It had the `each` line and no class; this stage has the class and, until the binding
+	 * started carrying its position, no line.
+	 *
+	 * One code for the function spelling and the variable spelling because the reader's move is the
+	 * same either way -- declare the thing, or fix the name. `Source()` and `Source` differ in what
+	 * the language will accept, not in what the author has to go and do.
+	 */
+	EachSourceNotFound = 6006,
+	/**
+	 * `each Item in Source` whose source exists but does not supply an array of OBJECTS.
+	 *
+	 * Split from EachSourceNotFound, not folded into it, because the fix is a different act: the
+	 * name is right and the TYPE is wrong. The item bindings read `Item.Member` off each element by
+	 * reflection, which needs an element that has members to read -- so `TArray<FMyRow>` and
+	 * `TArray<int32>` are refused here while `TArray<UMyRow*>` is not, and an author told only
+	 * "not found" would go looking for a misspelling that is not there.
+	 */
+	EachSourceNotObjectArray = 6007,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */

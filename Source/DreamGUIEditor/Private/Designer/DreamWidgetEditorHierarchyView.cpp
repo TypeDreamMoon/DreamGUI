@@ -831,6 +831,36 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 				}
 			}
 
+			// The text half of the designer, and only for a hierarchy the text owns: on a
+			// hand-authored one there is no file behind the row that was right-clicked, so the
+			// entry is absent rather than greyed -- nothing done here would make it work.
+			//
+			// One selected widget only. The gesture is "show me this line", and a multi-selection
+			// has no single line; offering it for two would have to pick one, which is a cursor
+			// jump nobody asked for.
+			if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = Manager.Pin())
+			{
+				if (Editor->GetSelectedWidgets().Num() == 1 && Editor->CanRevealInVSCode())
+				{
+					MenuBuilder.BeginSection("DreamUISource", LOCTEXT("DreamUISource", "DreamUI Source"));
+					{
+						MenuBuilder.AddMenuEntry(LOCTEXT("RevealInVSCode", "Reveal in VS Code"),
+							LOCTEXT("RevealInVSCodeTooltip",
+								"Put the VS Code cursor on the line of the .dui that declares this widget, opening the DreamUI workspace first if VS Code is not running."),
+							FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.OpenInExternalEditor")),
+							FUIAction(FExecuteAction::CreateLambda([WeakEditor = Manager]()
+							{
+								if (const TSharedPtr<FDreamWidgetBlueprintEditor> E = WeakEditor.Pin())
+								{
+									const TArray<TWeakObjectPtr<UDreamWidget>>& Sel = E->GetSelectedWidgets();
+									E->RevealInVSCode(Sel.Num() == 1 ? Sel[0].Get() : nullptr);
+								}
+							})));
+					}
+					MenuBuilder.EndSection();
+				}
+			}
+
 			// UMG's Hierarchy closes with an Expansion section; it is tree-view state, so it
 			// applies whatever is selected.
 			MenuBuilder.BeginSection("Expansion", LOCTEXT("Expansion", "Expansion"));

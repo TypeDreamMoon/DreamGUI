@@ -161,6 +161,32 @@ public:
 	void CreateTextSourceFile();
 	/** The first DUI root, or where the project's would be. Never a directory outside every root. */
 	FString GetDefaultTextSourceDirectory() const;
+
+	/**
+	 * Whether "Reveal in VS Code" has anywhere to point: a text-authored class whose .dui is on
+	 * disk right now.
+	 *
+	 * Hand-authored classes have no file, and a class naming a file that is missing has nothing to
+	 * open. Both are no, and neither turns into yes by clicking -- which is why the entry is hidden
+	 * on a hand-authored class rather than greyed, matching the Source File combo above it.
+	 */
+	bool CanRevealInVSCode() const;
+
+	/**
+	 * Ask VSCode to put its cursor on the line of the .dui that declares InWidget.
+	 *
+	 * The mirror of the bridge's `reveal` action, which walks the other way (VSCode says a node id,
+	 * the designer selects it). The position is found by PARSING the file rather than by
+	 * remembering one: a widget in the preview came from a tree the compiler built, and the tree
+	 * keeps ids, not offsets -- and the file may have been edited since that compile, in which case
+	 * a remembered offset would land on whatever now occupies that line. Re-reading is a
+	 * millisecond and is never wrong.
+	 *
+	 * A null widget, or one whose id the file does not contain, still reveals: the file opens at
+	 * 1,1 with the id carried along, so VSCode can say which node it could not find. Silence there
+	 * would be indistinguishable from a broken menu entry.
+	 */
+	void RevealInVSCode(const UDreamWidget* InWidget);
 private:
 	void SyncSelection();
 	void HandlePostTransaction(bool bSuccess);

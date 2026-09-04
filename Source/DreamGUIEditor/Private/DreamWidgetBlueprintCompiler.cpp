@@ -1197,8 +1197,31 @@ void FDreamWidgetBlueprintCompilerContext::UpdateGeneratedClassWidgetTree(UDream
 	OldWidgetTree = nullptr;
 }
 
+namespace DreamWidgetBindingDiagnostics
+{
+	/**
+	 * The .dui position a binding recorded when the builder made it, or nothing when it came from
+	 * somewhere with no text behind it (the designer's Bind button, a hand-built struct).
+	 *
+	 * A template over the two binding structs rather than a shared base: they are USTRUCTs whose
+	 * layouts are serialized into assets, and inventing a base to share two ints would change both
+	 * on disk to save four lines here.
+	 */
+	template <typename BindingType>
+	FDreamUISourceLocation AuthoredLocation(const BindingType& InBinding)
+	{
+#if WITH_EDITORONLY_DATA
+		return FDreamUISourceLocation(InBinding.SourceLine, InBinding.SourceColumn);
+#else
+		return FDreamUISourceLocation();
+#endif
+	}
+}
+
 void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InClass)
 {
+	using DreamWidgetBindingDiagnostics::AuthoredLocation;
+
 	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
 	UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(InClass);
 	if (DreamBlueprint == nullptr || GeneratedClass == nullptr)
@@ -1262,13 +1285,13 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 			// the builder writes a binding's function name down without checking it, because the
 			// class that would declare it is the one this compile is building. Reported only here
 			// meant the mailbox said the file was clean while the compile that produced it failed.
-			// No line: FDreamWidgetPropertyBinding carries names, not positions, so the honest answer
-			// is the file rather than a place in it.
+			// The line comes off the binding: this stage has no AST, so the position the builder
+			// copied onto the record is the only one there will ever be.
 			MessageLog.Error(*FText::Format(
 				LOCTEXT("BindingFunctionNotFound", "The binding on \"{0}.{1}\" calls \"{2}\", and this Blueprint has no such function."),
 				FText::FromName(Authored.WidgetName), FText::FromName(Authored.PropertyName),
 				FText::FromName(Authored.FunctionName)).ToString());
-			TextDiagnostics.AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, FDreamUISourceLocation(),
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, AuthoredLocation(Authored),
 				FString::Printf(TEXT("the binding on '%s.%s' calls '%s', and this Blueprint has no such function"),
 					*Authored.WidgetName.ToString(), *Authored.PropertyName.ToString(), *Authored.FunctionName.ToString()));
 			continue;
@@ -1282,7 +1305,7 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				FText::FromName(Authored.PropertyName)).ToString());
 			// The same code as the missing one, because 5004 covers both by design ("a function the
 			// class does not declare, OR that takes parameters") and the reader's move is identical.
-			TextDiagnostics.AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, FDreamUISourceLocation(),
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, AuthoredLocation(Authored),
 				FString::Printf(TEXT("'%s' has to take no arguments and return the type of '%s.%s' to bind to it"),
 					*Authored.FunctionName.ToString(), *Authored.WidgetName.ToString(), *Authored.PropertyName.ToString()));
 			continue;
@@ -1343,7 +1366,7 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				LOCTEXT("EventHandlerNotFound", "\"{0}.{1}\" routes to \"{2}\", and this Blueprint has no such function."),
 				FText::FromName(Authored.WidgetName), FText::FromName(Authored.EventName),
 				FText::FromName(Authored.FunctionName)).ToString());
-			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EventHandlerNotFound, FDreamUISourceLocation(),
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EventHandlerNotFound, AuthoredLocation(Authored),
 				FString::Printf(TEXT("'%s.%s' routes to '%s', and this Blueprint has no such function"),
 					*Authored.WidgetName.ToString(), *Authored.EventName.ToString(), *Authored.FunctionName.ToString()));
 			continue;
@@ -1354,7 +1377,7 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				LOCTEXT("EventHandlerWrongShape", "\"{0}\" cannot handle \"{1}.{2}\": its parameters do not match the event's."),
 				FText::FromName(Authored.FunctionName), FText::FromName(Authored.WidgetName),
 				FText::FromName(Authored.EventName)).ToString());
-			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EventHandlerSignatureMismatch, FDreamUISourceLocation(),
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EventHandlerSignatureMismatch, AuthoredLocation(Authored),
 				FString::Printf(TEXT("'%s' cannot handle '%s.%s': its parameters do not match the event's"),
 					*Authored.FunctionName.ToString(), *Authored.WidgetName.ToString(), *Authored.EventName.ToString()));
 			continue;
@@ -1367,6 +1390,11 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 	// being compiled -- a nullary function returning TArray of objects, or such an array variable.
 	// The per-cell setters were vetted by the builder against the template's real classes, and the
 	// host's view is a runtime fact the resolve checks again.
+	//
+	// Into the bag as well as the log, on the same grounds as 5004 and 6004 above and after the same
+	// omission: these three were reported to the MessageLog alone, so a .dui whose `each` named a
+	// function nobody had written yet failed its compile while the mailbox -- which is the only
+	// channel VSCode reads -- went on saying the file was clean.
 	TArray<FDreamWidgetEachBinding> ResolvedEach;
 	for (const FDreamWidgetEachBinding& Authored : DreamBlueprint->EachBindings)
 	{
@@ -1379,6 +1407,17 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				MessageLog.Error(*FString::Printf(
 					TEXT("The 'each %s in %s()' block needs a no-argument function of that name on this Blueprint."),
 					*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+				// NumParms == 1 is "the return value and nothing else". A function that is there but
+				// the wrong shape is as unusable as one that is missing, and the fix is the same act
+				// -- so both are 6006, and the message carries which of the two it was. Not spelled
+				// "takes arguments": NumParms == 0 is a function that returns nothing and takes
+				// nothing, which fails here too and takes no arguments at all.
+				TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotFound, AuthoredLocation(Authored),
+					FString::Printf(TEXT("the 'each %s in %s()' block needs a no-argument function of that name, %s"),
+						*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString(),
+						Source == nullptr
+							? TEXT("and this Blueprint declares none")
+							: TEXT("and this one does not take zero arguments and return a value")));
 				continue;
 			}
 			ItemsProperty = CastField<FArrayProperty>(Source->GetReturnProperty());
@@ -1391,6 +1430,13 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				MessageLog.Error(*FString::Printf(
 					TEXT("The 'each %s in %s' block needs an array variable of that name on this Blueprint."),
 					*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+				// FindFProperty<FArrayProperty> answers null for "no such variable" AND for "that
+				// variable is not an array", which the reader cannot tell apart from the code alone
+				// -- so the message covers both and 6007 is kept for the case where an array WAS
+				// found and its elements are wrong.
+				TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotFound, AuthoredLocation(Authored),
+					FString::Printf(TEXT("the 'each %s in %s' block needs an array variable of that name on this Blueprint"),
+						*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
 				continue;
 			}
 		}
@@ -1399,6 +1445,9 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 			MessageLog.Error(*FString::Printf(
 				TEXT("'%s' must supply an array of OBJECTS -- the item bindings read members off each element by reflection."),
 				*Authored.SourceName.ToString()));
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotObjectArray, AuthoredLocation(Authored),
+				FString::Printf(TEXT("'%s' must supply an array of OBJECTS -- the item bindings read members off each element by reflection"),
+					*Authored.SourceName.ToString()));
 			continue;
 		}
 		ResolvedEach.Add(Authored);

@@ -1040,6 +1040,13 @@ namespace DreamUITextBuilderLocal
 		}
 
 		FDreamWidgetPropertyBinding Binding;
+#if WITH_EDITORONLY_DATA
+		// The one place this position exists. DUI5004 is raised by the Blueprint compile, which runs
+		// after this AST is gone and holds only the binding list -- so a line number that is not
+		// copied here is a line number that stage can never have.
+		Binding.SourceLine = InProperty.Location.Line;
+		Binding.SourceColumn = InProperty.Location.Column;
+#endif
 		// Never sanitized a second time here. UDreamWidgetTree::MakeWidgetVariableName is the one
 		// implementation the runtime resolves bindings with, and a private copy that differs by one
 		// character is precisely how a binding reports success and comes back null.
@@ -1128,6 +1135,12 @@ namespace DreamUITextBuilderLocal
 		Binding.BehaviourIndex = InDestination.BehaviourIndex;
 		Binding.EventName = InDestination.LeafProperty->GetFName();
 		Binding.FunctionName = FName(*HandlerName);
+#if WITH_EDITORONLY_DATA
+		// Same reason as the `<-` half: DUI6004 and DUI6005 are raised by the Blueprint compile,
+		// which is the only stage that can see the handler and the last one that could see this line.
+		Binding.SourceLine = InProperty.Location.Line;
+		Binding.SourceColumn = InProperty.Location.Column;
+#endif
 		InContext.EventBindings->Add(Binding);
 		return true;
 	}
@@ -1742,6 +1755,13 @@ namespace DreamUITextBuilderLocal
 		Each.SourceName = FName(*InNode.LoopSourceFunction);
 		Each.bSourceIsFunction = InNode.bLoopSourceIsFunction;
 		Each.LoopVariable = FName(*InNode.LoopVariable);
+#if WITH_EDITORONLY_DATA
+		// The `each` HEADER's position, not the template's: DUI6006 and DUI6007 are both complaints
+		// about the source named on this line, and pointing an author at the widget inside the block
+		// would send them to read the one part of it that is fine.
+		Each.SourceLine = InNode.Location.Line;
+		Each.SourceColumn = InNode.Location.Column;
+#endif
 
 		// Nested `each` is refused above, so no sibling can grow EachBindings under this pointer
 		// while it is live -- the reallocation that would otherwise dangle it cannot happen.

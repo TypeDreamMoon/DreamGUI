@@ -9,10 +9,15 @@
 #include "Core/Components/DreamWidget.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "ContentBrowserModule.h"
 #include "Containers/Ticker.h"
 #include "Dom/JsonObject.h"
+#include "EdGraphSchema_K2.h"
 #include "Editor.h"
+#include "Engine/Blueprint.h"
+#include "Engine/BlueprintGeneratedClass.h"
 #include "HAL/FileManager.h"
+#include "IContentBrowserSingleton.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/App.h"
 #include "Misc/FileHelper.h"
@@ -20,6 +25,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Subsystems/AssetEditorSubsystem.h"
+#include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"
 
 namespace DreamUIBridgeLocal
@@ -38,17 +44,18 @@ namespace DreamUIBridgeLocal
 			FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("DreamGUI"), TEXT("Bridge")));
 	}
 
-	void WriteJsonAtomically(const TSharedRef<FJsonObject>& InObject, const FString& InFinalPath)
+	bool WriteJsonAtomically(const TSharedRef<FJsonObject>& InObject, const FString& InFinalPath)
 	{
 		FString Serialized;
 		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
 		FJsonSerializer::Serialize(InObject, Writer);
 
 		const FString TempPath = InFinalPath + TEXT(".tmp");
-		if (FFileHelper::SaveStringToFile(Serialized, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+		if (!FFileHelper::SaveStringToFile(Serialized, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
 		{
-			IFileManager::Get().Move(*InFinalPath, *TempPath, /*Replace*/true, /*EvenIfReadOnly*/true);
+			return false;
 		}
+		return IFileManager::Get().Move(*InFinalPath, *TempPath, /*Replace*/true, /*EvenIfReadOnly*/true);
 	}
 
 	void WriteStatus(const FString& InRoot, bool bBusy, const FString& InBusyAction)
@@ -102,6 +109,300 @@ namespace DreamUIBridgeLocal
 		return Count;
 	}
 
+	/**
+	 * A property's C++ spelling WITH its template arguments: `TArray<FVector>`, not `TArray`.
+	 *
+	 * GetCPPType puts the arguments in its out-parameter and returns only the bare template name,
+	 * so the obvious `GetCPPType()` call answers "TArray" for every array in the project -- which
+	 * is exactly the string the `members` action cannot do anything with. Every type string the
+	 * bridge emits goes through here, so what a `variables` reply prints is a string the client can
+	 * hand straight back as a `typePath`; two spellings of one type is how a client asks about a
+	 * type the editor just told it about and is told there is no such type.
+	 */
+	FString CppTypeOf(const FProperty* InProperty)
+	{
+		if (InProperty == nullptr)
+		{
+			return FString();
+		}
+		FString Extended;
+		const FString Base = InProperty->GetCPPType(&Extended, /*CPPExportFlags*/0);
+		return Base + Extended;
+	}
+
+	/** The editor's tooltip for a field, flattened to one string; empty when it has none. */
+	FString ToolTipOf(const UFunction* InFunction)
+	{
+		return InFunction != nullptr ? InFunction->GetToolTipText().ToString() : FString();
+	}
+
+	FString ToolTipOf(const FProperty* InProperty)
+	{
+		return InProperty != nullptr ? InProperty->GetToolTipText().ToString() : FString();
+	}
+
+	/** Written only when there is something to write: an empty tooltip is absence, not "". */
+	void SetOptionalString(const TSharedPtr<FJsonObject>& InObject, const TCHAR* InField, const FString& InValue)
+	{
+		if (!InValue.IsEmpty())
+		{
+			InObject->SetStringField(InField, InValue);
+		}
+	}
+
+	/**
+	 * One FunctionInfo: name, return type, parameters in DECLARATION order, purity, tooltip.
+	 *
+	 * Parameters are always emitted, the empty array included, because "this function takes none"
+	 * and "this editor is too old to say" have to look different from the other end -- the same
+	 * reason unknown actions are answered rather than dropped.
+	 */
+	TSharedPtr<FJsonObject> MakeFunctionInfo(const UFunction* InFunction)
+	{
+		TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
+		Info->SetStringField(TEXT("name"), InFunction->GetName());
+
+		TArray<TSharedPtr<FJsonValue>> Params;
+		for (TFieldIterator<FProperty> It(InFunction); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			if (It->HasAnyPropertyFlags(CPF_ReturnParm))
+			{
+				continue;
+			}
+			TSharedPtr<FJsonObject> Param = MakeShared<FJsonObject>();
+			Param->SetStringField(TEXT("name"), It->GetName());
+			Param->SetStringField(TEXT("type"), CppTypeOf(*It));
+			Params.Add(MakeShared<FJsonValueObject>(Param));
+		}
+		// Counted from the array rather than walked a second time: two counts of one thing is one
+		// count too many, and the one that drifts is always the one a client trusted.
+		Info->SetNumberField(TEXT("paramCount"), Params.Num());
+		Info->SetArrayField(TEXT("params"), Params);
+
+		if (const FProperty* Return = InFunction->GetReturnProperty())
+		{
+			Info->SetStringField(TEXT("returnType"), CppTypeOf(Return));
+		}
+		Info->SetBoolField(TEXT("pure"), InFunction->HasAnyFunctionFlags(FUNC_BlueprintPure));
+		SetOptionalString(Info, TEXT("tooltip"), ToolTipOf(InFunction));
+		return Info;
+	}
+
+	/**
+	 * Whether a binding EXPRESSION may call this -- the `Greeting()` in `Text <- Greeting() + Name`.
+	 *
+	 * The thunk pass lowers such a call with FindFunctionByName on the class and nothing else, so
+	 * the honest list is every Blueprint-reachable function, inherited ones included, with three
+	 * kinds struck out for reasons that are not taste:
+	 *   - an EVENT is entered, not called (its body is a graph and its caller is the dispatcher),
+	 *     so offering one produces a call the compiler will not make;
+	 *   - a DELEGATE SIGNATURE is a type wearing a function's clothes -- a name and parameters with
+	 *     no implementation anywhere;
+	 *   - an EDITOR-ONLY function is absent from a packaged build, so a file that compiles here
+	 *     would fail to at exactly the moment nobody is watching.
+	 */
+	bool IsCallableFromExpression(const UFunction* InFunction)
+	{
+		if (InFunction->HasAnyFunctionFlags(FUNC_Delegate | FUNC_MulticastDelegate | FUNC_Event | FUNC_EditorOnly))
+		{
+			return false;
+		}
+		return InFunction->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure);
+	}
+
+	/**
+	 * The class a `classPath` names, whichever of the three spellings it is.
+	 *
+	 * A widget Blueprint first, because that is what a `class` line writes and what every existing
+	 * caller sends. Falling through to a plain class lookup is what lets the actions answer for
+	 * `/Script/DreamGUI.DreamUserWidget` and for a `_C` path -- a native base class has bindable
+	 * functions and blueprint-visible variables exactly like a generated one does, and refusing to
+	 * say so only because no .uasset was involved would blank completion out on the base class
+	 * every text-backed widget derives from.
+	 */
+	UClass* ResolveClassByPath(const FString& InClassPath, FString& OutWhyNot)
+	{
+		if (InClassPath.IsEmpty())
+		{
+			OutWhyNot = TEXT("no classPath was given");
+			return nullptr;
+		}
+
+		// A `/Script/` path is a native class and a `_C` path is a generated one; neither can ever
+		// be a .uasset, and the Blueprint load that discovers so is not free -- it is a
+		// StaticLoadObject miss, which warns into the log, once per completion request. Skipping
+		// the attempt is the difference between a quiet editor and a log that scrolls while
+		// somebody types.
+		FString BlueprintWhyNot = FString::Printf(TEXT("'%s' is not a widget Blueprint path"), *InClassPath);
+		const bool bCouldBeBlueprintAsset = !InClassPath.StartsWith(TEXT("/Script/"))
+			&& !InClassPath.EndsWith(TEXT("_C"));
+		if (bCouldBeBlueprintAsset)
+		{
+			if (UDreamWidgetBlueprint* Blueprint = LoadBlueprintByClassPath(InClassPath, BlueprintWhyNot))
+			{
+				if (Blueprint->GeneratedClass == nullptr)
+				{
+					OutWhyNot = FString::Printf(TEXT("'%s' has never compiled; compile it once first"), *InClassPath);
+					return nullptr;
+				}
+				return Blueprint->GeneratedClass;
+			}
+		}
+
+		if (InClassPath.StartsWith(TEXT("/")))
+		{
+			// LOAD_NoWarn, because a path that is a class rather than a Blueprint is an ordinary
+			// case here and the load that discovers so must not narrate it into the log on every
+			// keystroke of an author's completion.
+			if (UObject* Loaded = LoadObject<UObject>(nullptr, *InClassPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
+			{
+				if (UClass* AsClass = Cast<UClass>(Loaded))
+				{
+					return AsClass;
+				}
+				if (const UBlueprint* AsBlueprint = Cast<UBlueprint>(Loaded))
+				{
+					if (AsBlueprint->GeneratedClass != nullptr)
+					{
+						return AsBlueprint->GeneratedClass;
+					}
+				}
+			}
+		}
+		else if (UClass* ByName = FindFirstObject<UClass>(*InClassPath, EFindFirstObjectOptions::None))
+		{
+			return ByName;
+		}
+
+		OutWhyNot = FString::Printf(TEXT("'%s' names no class: %s, and it is no other loadable class either"),
+			*InClassPath, *BlueprintWhyNot);
+		return nullptr;
+	}
+
+	/**
+	 * The UStruct a `typePath` names, and -- when the spelling was a container -- the element type
+	 * to report back so the client knows what to ask about next.
+	 *
+	 * The spellings are the ones CppTypeOf prints, because the client got the string from an
+	 * earlier reply: `TArray<FFoo>`, `TSet<FFoo>`, `FFoo`, `UFoo*`, `TObjectPtr<UFoo>`, an asset
+	 * path, or a bare reflected name. A container is peeled ONCE rather than to the bottom -- the
+	 * element is what the next question is about, and answering `FFoo` for `TArray<TArray<FFoo>>`
+	 * would describe a type the file has no way to name.
+	 *
+	 * Prefixes are tried and then dropped because reflection carries none -- `FVector` is a
+	 * UScriptStruct called `Vector` -- and the client is quoting C++, not reflection.
+	 */
+	UStruct* ResolveTypePath(const FString& InTypePath, FString& OutElementType, FString& OutWhyNot)
+	{
+		FString Type = InTypePath.TrimStartAndEnd();
+		if (Type.IsEmpty())
+		{
+			OutWhyNot = TEXT("no typePath was given");
+			return nullptr;
+		}
+
+		auto PeelTemplate = [](FString& InOutType, const TCHAR* InTemplateName) -> bool
+		{
+			const FString Prefix = FString(InTemplateName) + TEXT("<");
+			if (!InOutType.StartsWith(Prefix, ESearchCase::CaseSensitive) || !InOutType.EndsWith(TEXT(">")))
+			{
+				return false;
+			}
+			InOutType = InOutType.Mid(Prefix.Len(), InOutType.Len() - Prefix.Len() - 1).TrimStartAndEnd();
+			return true;
+		};
+
+		if (PeelTemplate(Type, TEXT("TArray")) || PeelTemplate(Type, TEXT("TSet")))
+		{
+			OutElementType = Type;
+		}
+		// Every pointer spelling means the same class. Which one a header happened to use is not a
+		// distinction the language has, so it is not one this answer should carry.
+		static const TCHAR* PointerTemplates[] =
+		{
+			TEXT("TObjectPtr"), TEXT("TSubclassOf"), TEXT("TSoftObjectPtr"),
+			TEXT("TSoftClassPtr"), TEXT("TWeakObjectPtr"), TEXT("TScriptInterface"),
+		};
+		for (const TCHAR* PointerTemplate : PointerTemplates)
+		{
+			if (PeelTemplate(Type, PointerTemplate))
+			{
+				break;
+			}
+		}
+		Type.RemoveFromEnd(TEXT("*"));
+		Type.TrimStartAndEndInline();
+		if (Type.IsEmpty())
+		{
+			OutWhyNot = FString::Printf(TEXT("'%s' peels down to nothing"), *InTypePath);
+			return nullptr;
+		}
+
+		if (Type.StartsWith(TEXT("/")))
+		{
+			// `/Game/UI/Row` and `/Game/UI/Row.Row` name the asset; `/Game/UI/Row.Row_C` names the
+			// class it generates. All three are things a .dui writes, so all three resolve.
+			FString ObjectPath = Type;
+			FString PackagePath;
+			FString Leaf;
+			if (!Type.Split(TEXT("."), &PackagePath, &Leaf, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
+			{
+				ObjectPath = Type + TEXT(".") + FPackageName::GetShortName(Type);
+			}
+			UObject* Loaded = LoadObject<UObject>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			if (UScriptStruct* AsStruct = Cast<UScriptStruct>(Loaded))
+			{
+				return AsStruct;
+			}
+			if (UClass* AsClass = Cast<UClass>(Loaded))
+			{
+				return AsClass;
+			}
+			if (const UBlueprint* AsBlueprint = Cast<UBlueprint>(Loaded))
+			{
+				if (AsBlueprint->GeneratedClass != nullptr)
+				{
+					return AsBlueprint->GeneratedClass;
+				}
+			}
+			OutWhyNot = FString::Printf(TEXT("nothing at '%s' is a struct or a class"), *ObjectPath);
+			return nullptr;
+		}
+
+		auto FindByReflectedName = [](const FString& InName) -> UStruct*
+		{
+			if (UScriptStruct* AsStruct = FindFirstObject<UScriptStruct>(*InName, EFindFirstObjectOptions::None))
+			{
+				return AsStruct;
+			}
+			return FindFirstObject<UClass>(*InName, EFindFirstObjectOptions::None);
+		};
+		if (UStruct* Found = FindByReflectedName(Type))
+		{
+			return Found;
+		}
+		if (Type.Len() > 1 && (Type[0] == TEXT('F') || Type[0] == TEXT('U') || Type[0] == TEXT('A'))
+			&& FChar::IsUpper(Type[1]))
+		{
+			if (UStruct* Found = FindByReflectedName(Type.RightChop(1)))
+			{
+				return Found;
+			}
+		}
+		OutWhyNot = FString::Printf(TEXT("'%s' names no struct or class this editor has loaded"), *InTypePath);
+		return nullptr;
+	}
+
+	/** Name, type and tooltip for one property: the shape `members` and `variables` share. */
+	TSharedPtr<FJsonObject> MakePropertyInfo(const FProperty* InProperty)
+	{
+		TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
+		Info->SetStringField(TEXT("name"), InProperty->GetName());
+		Info->SetStringField(TEXT("type"), CppTypeOf(InProperty));
+		SetOptionalString(Info, TEXT("tooltip"), ToolTipOf(InProperty));
+		return Info;
+	}
+
 	// ---- actions -------------------------------------------------------------------------------
 
 	void HandlePing(const TSharedRef<FJsonObject>& OutResponse)
@@ -112,73 +413,232 @@ namespace DreamUIBridgeLocal
 	}
 
 	/**
-	 * What `<-` and `->` can name on a class. Bindable = callable, no inputs, returns something
-	 * (a binding PULLS a value every frame; the compiler's own check is FindFunctionByName plus
-	 * the parameter rules, so this list can offer nothing the compiler then refuses for shape).
-	 * Handlers = callable functions; signature compatibility with the event stays the compiler's
-	 * verdict -- completion offers candidates, not promises. Both lists stop at the DreamGUI
-	 * widget base: the engine layers above it would drown the author's own functions in noise.
+	 * What `<-`, `->` and a binding expression can name on a class.
+	 *
+	 * Bindable = callable, no inputs, returns something (a binding PULLS a value every frame; the
+	 * compiler's own check is FindFunctionByName plus the parameter rules, so this list can offer
+	 * nothing the compiler then refuses for shape). Handlers = callable functions; signature
+	 * compatibility with the event stays the compiler's verdict -- completion offers candidates,
+	 * not promises. Both of those stop at the DreamGUI widget base: the engine layers above it
+	 * would drown the author's own functions in noise.
+	 *
+	 * Callable does NOT stop there, and the difference is not an oversight. The first two lists
+	 * answer "what may stand alone on the right of an arrow", which is a small authored set and a
+	 * menu an author reads. Callable answers "what may appear anywhere inside an expression",
+	 * which the thunk pass resolves with a bare FindFunctionByName over the whole class -- so a
+	 * list that stopped at UDreamUserWidget would hide functions the compiler accepts, and the
+	 * author would learn they exist only by guessing. The set stays small in practice because a
+	 * DreamGUI widget descends from UObject rather than from UUserWidget; there is no engine
+	 * widget hierarchy above it to flood the list.
 	 */
 	void HandleFunctions(const FString& InClassPath, const TSharedRef<FJsonObject>& OutResponse)
 	{
 		FString WhyNot;
-		UDreamWidgetBlueprint* Blueprint = LoadBlueprintByClassPath(InClassPath, WhyNot);
-		if (Blueprint == nullptr)
+		UClass* Class = ResolveClassByPath(InClassPath, WhyNot);
+		if (Class == nullptr)
 		{
 			OutResponse->SetBoolField(TEXT("ok"), false);
 			OutResponse->SetStringField(TEXT("message"), WhyNot);
 			return;
 		}
-		UClass* Class = Blueprint->GeneratedClass;
-		if (Class == nullptr)
-		{
-			OutResponse->SetBoolField(TEXT("ok"), false);
-			OutResponse->SetStringField(TEXT("message"),
-				FString::Printf(TEXT("'%s' has never compiled; compile it once first"), *InClassPath));
-			return;
-		}
 
 		TArray<TSharedPtr<FJsonValue>> Bindable;
 		TArray<TSharedPtr<FJsonValue>> Handlers;
+		TArray<TSharedPtr<FJsonValue>> Callable;
 		for (TFieldIterator<UFunction> It(Class, EFieldIteratorFlags::IncludeSuper); It; ++It)
 		{
 			UFunction* Function = *It;
 			const UClass* Owner = Function->GetOwnerClass();
-			if (Owner == nullptr || !Owner->IsChildOf(UDreamUserWidget::StaticClass()))
-			{
-				continue;
-			}
-			if (Function->HasAnyFunctionFlags(FUNC_Delegate))
-			{
-				continue;
-			}
-			if (!Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintEvent))
-			{
-				continue;
-			}
+			const bool bAuthorFacing = Owner != nullptr && Owner->IsChildOf(UDreamUserWidget::StaticClass());
 
-			TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
-			Info->SetStringField(TEXT("name"), Function->GetName());
-			const int32 ParamCount = InputParameterCount(Function);
-			Info->SetNumberField(TEXT("paramCount"), ParamCount);
-			if (const FProperty* Return = Function->GetReturnProperty())
+			// Built once and shared by whichever lists claim it: three copies of one function's
+			// tooltip is three times the JSON for no extra fact.
+			TSharedPtr<FJsonObject> Info;
+			auto EnsureInfo = [&Info, Function]() -> TSharedPtr<FJsonObject>
 			{
-				Info->SetStringField(TEXT("returnType"), Return->GetCPPType());
-			}
+				if (!Info.IsValid())
+				{
+					Info = MakeFunctionInfo(Function);
+				}
+				return Info;
+			};
 
-			Handlers.Add(MakeShared<FJsonValueObject>(Info));
-			if (ParamCount == 0 && Function->GetReturnProperty() != nullptr)
+			if (bAuthorFacing
+				&& !Function->HasAnyFunctionFlags(FUNC_Delegate)
+				&& Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintEvent))
 			{
-				Bindable.Add(MakeShared<FJsonValueObject>(Info));
+				Handlers.Add(MakeShared<FJsonValueObject>(EnsureInfo()));
+				if (InputParameterCount(Function) == 0 && Function->GetReturnProperty() != nullptr)
+				{
+					Bindable.Add(MakeShared<FJsonValueObject>(EnsureInfo()));
+				}
+			}
+			if (IsCallableFromExpression(Function))
+			{
+				Callable.Add(MakeShared<FJsonValueObject>(EnsureInfo()));
 			}
 		}
 
 		TSharedPtr<FJsonObject> Functions = MakeShared<FJsonObject>();
 		Functions->SetArrayField(TEXT("bindable"), Bindable);
 		Functions->SetArrayField(TEXT("handlers"), Handlers);
+		Functions->SetArrayField(TEXT("callable"), Callable);
 		OutResponse->SetObjectField(TEXT("functions"), Functions);
 		OutResponse->SetBoolField(TEXT("ok"), true);
 		OutResponse->SetStringField(TEXT("message"), FString());
+	}
+
+	/**
+	 * What a `<->` may name and what a binding expression may read: the class's blueprint-visible
+	 * variables, inherited ones included.
+	 *
+	 * `fieldNotify` is reported and not required, because the compiler does not require it. The
+	 * thunk pass accepts any variable of the right type for a `<->` (FindVariablePinType asks the
+	 * Blueprint's own variable lists and then the class, and nothing else); FieldNotify decides
+	 * something else entirely -- whether the runtime SUBSCRIBES to the variable or falls back to
+	 * polling it every frame. So a client that treated a false here as an error would refuse
+	 * bindings that compile and work, and one that ignored it would never be able to explain why
+	 * a screen updates a frame late.
+	 *
+	 * The judge is the runtime's own: UDreamUserWidget resolves a field through the generated
+	 * class's FieldNotify roster, so that roster is what is asked. The metadata is checked too,
+	 * for the native case a generated class has no entry for.
+	 */
+	void HandleVariables(const FString& InClassPath, const TSharedRef<FJsonObject>& OutResponse)
+	{
+		FString WhyNot;
+		UClass* Class = ResolveClassByPath(InClassPath, WhyNot);
+		if (Class == nullptr)
+		{
+			OutResponse->SetBoolField(TEXT("ok"), false);
+			OutResponse->SetStringField(TEXT("message"), WhyNot);
+			return;
+		}
+
+		TSet<FName> NotifyFields;
+		if (const UBlueprintGeneratedClass* GeneratedClass = Cast<UBlueprintGeneratedClass>(Class))
+		{
+			GeneratedClass->ForEachFieldNotify([&NotifyFields](UE::FieldNotification::FFieldId FieldId)
+			{
+				NotifyFields.Add(FieldId.GetName());
+				return true;
+			}, /*bIncludeSuper*/true);
+		}
+
+		TArray<TSharedPtr<FJsonValue>> Variables;
+		for (TFieldIterator<FProperty> It(Class, EFieldIteratorFlags::IncludeSuper); It; ++It)
+		{
+			const FProperty* Property = *It;
+			if (!Property->HasAnyPropertyFlags(CPF_BlueprintVisible))
+			{
+				continue;
+			}
+			TSharedPtr<FJsonObject> Info = MakePropertyInfo(Property);
+			Info->SetBoolField(TEXT("fieldNotify"),
+				NotifyFields.Contains(Property->GetFName())
+					|| Property->HasMetaData(FBlueprintMetadata::MD_FieldNotify));
+			Variables.Add(MakeShared<FJsonValueObject>(Info));
+		}
+
+		OutResponse->SetArrayField(TEXT("variables"), Variables);
+		OutResponse->SetBoolField(TEXT("ok"), true);
+		OutResponse->SetStringField(TEXT("message"), FString());
+	}
+
+	/**
+	 * What a `.` reaches inside a type: the blueprint-visible properties of the struct or class a
+	 * `typePath` names, with the element type reported when the path was a container.
+	 *
+	 * The container step is the point of the action. An `each Row in Rows()` block writes
+	 * `Text = Row.Label`, and to offer `Label` the client has to get from `TArray<FRowData>` to
+	 * `FRowData` -- which is a reflection question no amount of parsing the .dui can answer.
+	 * elementType comes back so the client can ask the follow-up itself rather than inventing a
+	 * string-peeling rule of its own that this side would then have to keep matching.
+	 */
+	void HandleMembers(const FString& InTypePath, const TSharedRef<FJsonObject>& OutResponse)
+	{
+		FString ElementType;
+		FString WhyNot;
+		UStruct* Struct = ResolveTypePath(InTypePath, ElementType, WhyNot);
+		if (Struct == nullptr)
+		{
+			OutResponse->SetBoolField(TEXT("ok"), false);
+			OutResponse->SetStringField(TEXT("message"), WhyNot);
+			return;
+		}
+
+		TArray<TSharedPtr<FJsonValue>> Members;
+		for (TFieldIterator<FProperty> It(Struct, EFieldIteratorFlags::IncludeSuper); It; ++It)
+		{
+			const FProperty* Property = *It;
+			if (!Property->HasAnyPropertyFlags(CPF_BlueprintVisible))
+			{
+				continue;
+			}
+			Members.Add(MakeShared<FJsonValueObject>(MakePropertyInfo(Property)));
+		}
+
+		OutResponse->SetArrayField(TEXT("members"), Members);
+		if (!ElementType.IsEmpty())
+		{
+			OutResponse->SetStringField(TEXT("elementType"), ElementType);
+		}
+		OutResponse->SetBoolField(TEXT("ok"), true);
+		OutResponse->SetStringField(TEXT("message"), FString());
+	}
+
+	/**
+	 * Find an asset in the content browser and open its editor -- the `reveal` action's answer for
+	 * the other half of a .dui, the asset paths written as values.
+	 *
+	 * Both halves, in that order, because either alone is half a gesture: syncing without opening
+	 * leaves the author looking at an icon, and opening without syncing leaves them with a window
+	 * and no idea where the thing lives. The sync goes first so the browser is already showing the
+	 * asset behind whatever editor lands on top of it.
+	 */
+	void HandleRevealAsset(const FString& InAssetPath, const TSharedRef<FJsonObject>& OutResponse)
+	{
+		if (InAssetPath.IsEmpty() || !InAssetPath.StartsWith(TEXT("/")))
+		{
+			OutResponse->SetBoolField(TEXT("ok"), false);
+			OutResponse->SetStringField(TEXT("message"),
+				FString::Printf(TEXT("'%s' is not an asset path"), *InAssetPath));
+			return;
+		}
+
+		// `/Game/UI/Tex` is the spelling a .dui writes; the object inside it repeats the leaf.
+		FString ObjectPath = InAssetPath;
+		FString PackagePath;
+		FString Leaf;
+		if (!InAssetPath.Split(TEXT("."), &PackagePath, &Leaf, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
+		{
+			ObjectPath = InAssetPath + TEXT(".") + FPackageName::GetShortName(InAssetPath);
+		}
+
+		UObject* Asset = LoadObject<UObject>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (Asset == nullptr)
+		{
+			OutResponse->SetBoolField(TEXT("ok"), false);
+			OutResponse->SetStringField(TEXT("message"),
+				FString::Printf(TEXT("no asset at '%s'"), *ObjectPath));
+			return;
+		}
+
+		FContentBrowserModule& ContentBrowser =
+			FModuleManager::LoadModuleChecked<FContentBrowserModule>(TEXT("ContentBrowser"));
+		ContentBrowser.Get().SyncBrowserToAssets(TArray<UObject*>{ Asset });
+
+		FString Message = FString::Printf(TEXT("found '%s' in the content browser"), *Asset->GetName());
+		if (GEditor != nullptr)
+		{
+			if (UAssetEditorSubsystem* Editors = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+			{
+				Editors->OpenEditorForAsset(Asset);
+				Message += TEXT(" and opened it");
+			}
+		}
+		OutResponse->SetBoolField(TEXT("ok"), true);
+		OutResponse->SetStringField(TEXT("message"), Message);
 	}
 
 	void HandleAssets(const FString& InClassFilter, const TSharedRef<FJsonObject>& OutResponse)
@@ -306,6 +766,22 @@ namespace DreamUIBridgeLocal
 		{
 			HandleFunctions(ClassPath, OutResponse);
 		}
+		else if (Action == TEXT("variables"))
+		{
+			HandleVariables(ClassPath, OutResponse);
+		}
+		else if (Action == TEXT("members"))
+		{
+			FString TypePath;
+			InRequest->TryGetStringField(TEXT("typePath"), TypePath);
+			HandleMembers(TypePath, OutResponse);
+		}
+		else if (Action == TEXT("revealAsset"))
+		{
+			FString AssetPath;
+			InRequest->TryGetStringField(TEXT("assetPath"), AssetPath);
+			HandleRevealAsset(AssetPath, OutResponse);
+		}
 		else if (Action == TEXT("assets"))
 		{
 			FString ClassFilter;
@@ -395,6 +871,32 @@ int32 FDreamUIBridgeService::ProcessPendingNow(const FString& InOverrideRoot)
 	WriteStatus(BridgeRoot, /*bBusy*/false, FString());
 	GLastHeartbeat = FPlatformTime::Seconds();
 	return Processed;
+}
+
+bool FDreamUIBridgeService::WriteRevealToEditor(const FString& InAbsoluteFilePath, int32 InLine, int32 InColumn,
+	const FString& InWidgetId, const FString& InOverrideRoot)
+{
+	using namespace DreamUIBridgeLocal;
+
+	const FString BridgeRoot = InOverrideRoot.IsEmpty() ? Root() : InOverrideRoot;
+	// The designer may be the first thing that ever writes here: a project whose author has not
+	// opened the workspace yet still has a right-click, and a reveal that failed because a folder
+	// was missing would be a feature that works only for people who did not need it.
+	IFileManager::Get().MakeDirectory(*BridgeRoot, /*Tree*/true);
+
+	TSharedRef<FJsonObject> Reveal = MakeShared<FJsonObject>();
+	Reveal->SetNumberField(TEXT("protocol"), ProtocolVersion);
+	// Absolute, always: the client is another process with its own working directory, and a
+	// relative path here would resolve against whatever VSCode happened to be started from.
+	Reveal->SetStringField(TEXT("file"), FPaths::ConvertRelativePathToFull(InAbsoluteFilePath));
+	// 1-based at the floor, because both halves count from one and a 0 would land the cursor a
+	// line above the one that was meant.
+	Reveal->SetNumberField(TEXT("line"), FMath::Max(1, InLine));
+	Reveal->SetNumberField(TEXT("column"), FMath::Max(1, InColumn));
+	Reveal->SetStringField(TEXT("widgetId"), InWidgetId);
+	Reveal->SetStringField(TEXT("stampUtc"), FDateTime::UtcNow().ToIso8601());
+
+	return WriteJsonAtomically(Reveal, FPaths::Combine(BridgeRoot, TEXT("reveal-to-editor.json")));
 }
 
 void FDreamUIBridgeService::Register()

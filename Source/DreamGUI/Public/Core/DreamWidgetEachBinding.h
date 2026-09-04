@@ -80,6 +80,23 @@ struct DREAMGUI_API FDreamWidgetEachBinding
 	UPROPERTY()
 	FName LoopVariable;
 
+#if WITH_EDITORONLY_DATA
+	/**
+	 * Where the `each` header was written, 1-based, 0 for a block that came from anywhere but a
+	 * .dui -- the same pair FDreamWidgetPropertyBinding and FDreamWidgetEventBinding carry, spelled
+	 * the same on purpose so one AuthoredLocation helper reads all three.
+	 *
+	 * DUI6006 and DUI6007 are the readers. Both ask whether the SOURCE exists on the class being
+	 * compiled, which is a question that only has an answer after the class is built and therefore
+	 * long after the AST that knew this line is gone.
+	 */
+	UPROPERTY()
+	int32 SourceLine = 0;
+
+	UPROPERTY()
+	int32 SourceColumn = 0;
+#endif // WITH_EDITORONLY_DATA
+
 	UPROPERTY()
 	TArray<FDreamWidgetEntryBinding> EntryBindings;
 };

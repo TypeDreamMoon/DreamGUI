@@ -10,7 +10,10 @@
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Designer/DreamUITextAuthoringGate.h"
+#include "Text/DreamUIBridgeService.h"
+#include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextWriteBack.h"
+#include "Text/DreamUIWorkspaceService.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Text/DreamUIPaths.h"
 
@@ -2162,6 +2165,30 @@ void FDreamWidgetBlueprintEditor::FillTextSourceMenu(UToolMenu* InMenu)
 			}),
 			FCanExecuteAction::CreateLambda([bFileExists] { return bFileExists; })));
 
+	// The reverse of the bridge's `reveal`: VSCode can already say "select this node", and this is
+	// the designer saying "show me the line". Offered only when the class is text-authored and the
+	// file is on disk, which is what CanRevealInVSCode answers -- an entry that is always present
+	// and never works teaches an author to stop reading the menu.
+	if (CanRevealInVSCode())
+	{
+		TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = SharedThis(this);
+		Section.AddMenuEntry("RevealTextSourceInVSCode",
+			LOCTEXT("RevealInVSCode", "Reveal in VS Code"),
+			LOCTEXT("RevealInVSCodeTooltip",
+				"Put the VS Code cursor on the line of the .dui that declares the selected widget, opening the DreamUI workspace first if VS Code is not running."),
+			FSlateIcon(AppStyle, "Icons.OpenInExternalEditor"),
+			FUIAction(FExecuteAction::CreateLambda([WeakEditor]
+			{
+				if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin())
+				{
+					// One selected widget or none: a multi-selection has no single line, and
+					// picking the first would move the cursor somewhere nobody asked for.
+					const TArray<TWeakObjectPtr<UDreamWidget>>& Selection = Editor->GetSelectedWidgets();
+					Editor->RevealInVSCode(Selection.Num() == 1 ? Selection[0].Get() : nullptr);
+				}
+			})));
+	}
+
 	// Said out loud rather than left to be inferred from an empty designer. A path that resolves to
 	// nothing is the one state where every other entry here is disabled and the reason is invisible.
 	if (!AuthoredPath.IsEmpty() && !bFileExists)
@@ -2172,6 +2199,137 @@ void FDreamWidgetBlueprintEditor::FillTextSourceMenu(UToolMenu* InMenu)
 			FSlateIcon(AppStyle, "Icons.Warning"),
 			FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([] { return false; })));
 	}
+}
+
+namespace DreamUIRevealLocal
+{
+	/**
+	 * Depth-first for the node carrying this id. Ids are unique across a whole .dui -- a duplicate
+	 * is DUI3001 and the file does not compile -- so the first hit is the only hit.
+	 */
+	const FDreamUINode* FindNodeById(const FDreamUINode& InNode, const FString& InId)
+	{
+		if (InNode.Id.Equals(InId, ESearchCase::CaseSensitive))
+		{
+			return &InNode;
+		}
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			if (const FDreamUINode* Found = FindNodeById(Child, InId))
+			{
+				return Found;
+			}
+		}
+		return nullptr;
+	}
+
+	void Notify(const FText& InMessage, bool bSuccess)
+	{
+		FNotificationInfo Info(InMessage);
+		Info.ExpireDuration = bSuccess ? 4.0f : 6.0f;
+		if (!bSuccess)
+		{
+			Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		}
+		if (const TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info))
+		{
+			Item->SetCompletionState(bSuccess ? SNotificationItem::CS_Success : SNotificationItem::CS_Fail);
+		}
+	}
+}
+
+bool FDreamWidgetBlueprintEditor::CanRevealInVSCode() const
+{
+	const UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint();
+	if (!DreamUITextAuthoring::IsTextAuthored(Blueprint))
+	{
+		return false;
+	}
+	const FString ResolvedPath = UDreamTextUserWidget::ResolveDuiFilePath(
+		DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint));
+	return !ResolvedPath.IsEmpty() && FPaths::FileExists(ResolvedPath);
+}
+
+void FDreamWidgetBlueprintEditor::RevealInVSCode(const UDreamWidget* InWidget)
+{
+	const FString ResolvedPath = UDreamTextUserWidget::ResolveDuiFilePath(
+		DreamUITextAuthoring::GetAuthoredSourcePath(GetWidgetBlueprint()));
+	if (ResolvedPath.IsEmpty() || !FPaths::FileExists(ResolvedPath))
+	{
+		// Reachable even though the menu gates on the same question: a menu is built once and
+		// clicked later, and "later" is long enough for a file to be renamed out from under it.
+		DreamUIRevealLocal::Notify(LOCTEXT("RevealNoSourceFile",
+			"There is no .dui on disk for this widget Blueprint, so there is no line to reveal."), false);
+		return;
+	}
+
+	const FString WidgetId = IsValid(InWidget) ? InWidget->GetDisplayName() : FString();
+
+	// 1,1 is the honest fallback and it is never an error: the FILE is the answer even when the
+	// node inside it is not found, and the id rides along so the other end can say which node it
+	// could not place rather than silently landing on line one.
+	int32 Line = 1;
+	int32 Column = 1;
+	if (!WidgetId.IsEmpty())
+	{
+		FString Text;
+		if (FFileHelper::LoadFileToString(Text, *ResolvedPath))
+		{
+			FDreamUIAst Ast;
+			FDreamUIDiagnosticBag Diagnostics;
+			// The parse's verdict is deliberately ignored. Recovery is on, so a file with mistakes
+			// still yields a tree, and the widget being revealed is very often the one the author
+			// is on their way to fix -- refusing to navigate into a broken file would withhold the
+			// feature at exactly the moment it is wanted. The bag is discarded rather than
+			// deposited: this is a navigation gesture, not a compile, and re-reporting a file's
+			// errors because somebody right-clicked would make the mailbox lie about when they
+			// were found.
+			FDreamUISourceFile::Parse(Text, FPaths::GetCleanFilename(ResolvedPath), Ast, Diagnostics,
+				FDreamUISourceFile::MakeFileImportReader());
+			if (Ast.bHasRoot)
+			{
+				if (const FDreamUINode* Node = DreamUIRevealLocal::FindNodeById(Ast.Root, WidgetId))
+				{
+					Line = FMath::Max(1, Node->Location.Line);
+					Column = FMath::Max(1, Node->Location.Column);
+				}
+			}
+		}
+	}
+
+	if (!FDreamUIBridgeService::WriteRevealToEditor(ResolvedPath, Line, Column, WidgetId))
+	{
+		DreamUIRevealLocal::Notify(LOCTEXT("RevealWriteFailed",
+			"DreamUI could not write the reveal request under Saved/DreamGUI/Bridge."), false);
+		return;
+	}
+
+	// The drop file is only half a gesture when nothing is there to read it, and the bridge cannot
+	// answer whether anything is: its heartbeat is THIS editor's, and says nothing about the other
+	// end. A running VS Code is the closest thing to proof available, and the workspace opener is
+	// the one already-written door -- opening a bare folder instead is what leaves the extension's
+	// workspace features switched off. Insiders is checked too: it registers for .code-workspace,
+	// so an Insiders-only machine gets its window found rather than a second editor launched at it.
+	static const TCHAR* const VSCodeProcessNames[] = { TEXT("Code.exe"), TEXT("Code - Insiders.exe") };
+	bool bVSCodeRunning = false;
+	for (const TCHAR* ProcessName : VSCodeProcessNames)
+	{
+		bVSCodeRunning = bVSCodeRunning || FPlatformProcess::IsApplicationRunning(ProcessName);
+	}
+	if (!bVSCodeRunning)
+	{
+		FDreamUIWorkspaceService::OpenWorkspace();
+	}
+
+	DreamUIRevealLocal::Notify(WidgetId.IsEmpty()
+		? FText::Format(LOCTEXT("RevealedFile", "Revealed {0} in VS Code."),
+			FText::FromString(FPaths::GetCleanFilename(ResolvedPath)))
+		// FromString rather than AsNumber: a line number is an address, not a quantity, and
+		// AsNumber would print line 1234 of a long file as "1,234".
+		: FText::Format(LOCTEXT("RevealedWidget", "Revealed '{0}' at {1}({2}) in VS Code."),
+			FText::FromString(WidgetId),
+			FText::FromString(FPaths::GetCleanFilename(ResolvedPath)),
+			FText::FromString(FString::FromInt(Line))), true);
 }
 
 void FDreamWidgetBlueprintEditor::PickTextSourceFile()
