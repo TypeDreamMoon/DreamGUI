@@ -73,9 +73,13 @@ private:
 	FDreamUIControlRegistry();
 	void RegisterDefaults();
 	void HandleAssetLoaded(UObject* Asset);
+	/** Subscribes to GEditor's compile broadcast, once GEditor exists. */
+	void BindBlueprintCompiled();
+	void HandlePostEngineInit();
 	TArray<FDreamUIControlDescriptor> Descriptors;
 	TMap<FName, TWeakObjectPtr<UClass>> DynamicPostProcessClasses;
 	FDelegateHandle BlueprintCompiledHandle;
+	FDelegateHandle PostEngineInitHandle;
 	FDelegateHandle AssetLoadedHandle;
 	FOnDreamUIControlRegistryChanged RegistryChanged;
 };

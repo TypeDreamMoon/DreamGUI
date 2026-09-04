@@ -16,6 +16,7 @@
 
 #include "DreamGUIEditorStyle.h"
 #include "Designer/DreamUITextAuthoringGate.h"
+#include "Designer/DreamWidgetDesignerCommands.h"
 #include "Text/DreamUITextWriteBack.h"
 #include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUIMenus.h"
@@ -311,6 +312,7 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
 		AssetTypeActionsArray.Add(BitmapFontDataAction);
 		AssetTypeActionsArray.Add(WidgetBlueprintAction);
+		AssetTypeActionsArray.Add(SequenceAssetAction);
 		AssetTypeActionsArray.Add(UIStaticMeshCacheDataAction);
 		AssetTypeActionsArray.Add(RichTextCustomStyleDataAction);
 		AssetTypeActionsArray.Add(RichTextImageDataAction);
@@ -416,6 +418,10 @@ void FDreamGUIEditorModule::ShutdownModule()
 	DreamUIWidgetComponentClipboard_Reset();
 
 	FDreamUIEditorCommands::Unregister();
+	// Registered lazily by the designer toolkit (DreamWidgetBlueprintEditor). A module only unloads
+	// after the AssetEditorSubsystem has closed every toolkit, so the command context comes off here,
+	// alongside the other command set -- the same place the stock editor modules unregister theirs.
+	FDreamWidgetDesignerCommands::Unregister();
 
 	UDreamWidgetAnimation::OnInitializeSequence().Remove(OnInitializeSequenceHandle);
 	ISequencerModule* SequencerModule = FModuleManager::Get().GetModulePtr<ISequencerModule>("Sequencer");
@@ -445,6 +451,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UDreamText::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UDreamTextureBase::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UDreamRectBlock::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(UDreamTexture::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UDreamVisualPostProcess::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UDreamUISpriteData::StaticClass()->GetFName());
@@ -455,8 +462,6 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UUIToggle::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUITextInput::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIScrollViewWithScrollbar::StaticClass()->GetFName());
-
-		PropertyModule.UnregisterCustomClassLayout(UDreamMeshModifierTextAnimation_Property::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName());
@@ -492,6 +497,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIEventDelegate_PointerEvent::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIEventDelegate_Class::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIEventDelegate_Rotator::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIEventDelegate_Text::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIEventDelegate_Name::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIComponentReference::StaticStruct()->GetFName());
 
@@ -530,9 +537,12 @@ void FDreamGUIEditorModule::ShutdownModule()
 	{
 		if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 		{
-			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI");
-			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamUI Editor");
-			SettingsModule->UnregisterSettings("Project", "Plugins", "DreamWidgetAnimationSequencerSettings");
+			// Container/category/section have to be spelled exactly as they were registered above --
+			// UnregisterSettings looks the section up by that triple and silently does nothing when it
+			// misses, which is why every one of these outlived the module.
+			SettingsModule->UnregisterSettings("Project", DREAM_PLUGIN, "DreamGUI");
+			SettingsModule->UnregisterSettings("Project", DREAM_PLUGIN, "DreamGUI Editor");
+			SettingsModule->UnregisterSettings("Editor", "ContentEditors", "EmbeddedDreamWidgetAnimationEditor");
 		}
 	}
 

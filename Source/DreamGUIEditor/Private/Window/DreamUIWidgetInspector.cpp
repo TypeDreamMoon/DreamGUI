@@ -14,20 +14,9 @@ void SDreamUIWidgetInspector::Construct(const FArguments& Args, TSharedPtr<SDock
 {
 	OwnerTab = InOwnerTab;
 	InOwnerTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateSP(this, &SDreamUIWidgetInspector::CloseTabCallback));
-	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
-	{
-		DreamUIManager->OnEndPlay.AddSPLambda(this, [this, InOwnerTab]()
-		{
-			InOwnerTab->RequestCloseTab();
-		});
-		DreamUIManager->OnDreamUIWidgetOutlinerChanged.AddSPLambda(this, [this]()
-		{
-			if (HierarchyView.IsValid())
-			{
-				HierarchyView->RequestRefresh();
-			}
-		});
-	}
+	// No subscriptions here: World is still null at construction, so the manager lookup never found
+	// anything and the handlers this used to install were never installed. AssignWorld is where the
+	// tab learns which world it is showing, and that is where it subscribes.
 	ChildSlot
 	[
 		SAssignNew(ContentBox, SBox)
@@ -36,15 +25,32 @@ void SDreamUIWidgetInspector::Construct(const FArguments& Args, TSharedPtr<SDock
 
 void SDreamUIWidgetInspector::AssignWorld(UWorld* InWorld)
 {
-	World = InWorld;
-	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
+	// The tab is reused across worlds, so the previous world's subscriptions have to come OFF before
+	// the next ones go on. Without this the widget accumulated one handler per world it was ever
+	// pointed at, and the first EndPlay from any of them blanked the world actually on screen.
+	if (UDreamUIManagerWorldSubsystem* PreviousManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
 	{
-		DreamUIManager->OnEndPlay.AddSPLambda(this, [this]()
+		PreviousManager->OnEndPlay.Remove(EndPlayHandle);
+		PreviousManager->OnDreamUIWidgetOutlinerChanged.Remove(OutlinerChangedHandle);
+	}
+	EndPlayHandle.Reset();
+	OutlinerChangedHandle.Reset();
+
+	World = InWorld;
+	if (UDreamUIManagerWorldSubsystem* DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
+	{
+		const TWeakObjectPtr<UWorld> SubscribedWorld = World;
+		EndPlayHandle = DreamUIManager->OnEndPlay.AddSPLambda(this, [this, SubscribedWorld]()
 		{
+			// A handler that outlived the world it was made for must not clear the current one.
+			if (World != SubscribedWorld)
+			{
+				return;
+			}
 			World = nullptr;
 			RefreshContent();
 		});
-		DreamUIManager->OnDreamUIWidgetOutlinerChanged.AddSPLambda(this, [this]()
+		OutlinerChangedHandle = DreamUIManager->OnDreamUIWidgetOutlinerChanged.AddSPLambda(this, [this]()
 		{
 			if (HierarchyView.IsValid())
 			{
@@ -92,7 +98,10 @@ void SDreamUIWidgetInspector::RefreshContent()
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 			]
 			);
-		OwnerTab.Pin()->RequestCloseTab();
+		if (const TSharedPtr<SDockTab> Tab = OwnerTab.Pin())
+		{
+			Tab->RequestCloseTab();
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

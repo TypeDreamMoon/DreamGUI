@@ -74,6 +74,7 @@
 #include "DreamGUIEditorModule.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
+#include "Misc/CoreDelegates.h"
 #include "Misc/PackageName.h"
 #include "Styling/SlateIconFinder.h"
 #include "UMGStyle.h"
@@ -106,6 +107,12 @@ namespace DreamUIControlRegistryLocal
 			Background->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultFrameRect());
 		}
 		UUIProgressBar* Progress = Root->GetComponent<UUIProgressBar>();
+		// Same guard the other native recipes carry: if the behaviour did not go on, bail before
+		// building parts nothing will own -- rather than dereferencing null two lines down.
+		if (!Progress)
+		{
+			return;
+		}
 		UDreamWidget* Fill = CreateChild(Root, TEXT("Fill"), UDreamImage::StaticClass());
 		CastChecked<UDreamImage>(Fill->GetVisual())->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultFrameRect());
 		Progress->SetFillWidget(Fill);
@@ -398,14 +405,36 @@ FDreamUIControlRegistry::FDreamUIControlRegistry()
 void FDreamUIControlRegistry::InitializeDynamicDiscovery()
 {
 	RefreshDynamicClasses();
-	if (GEditor && !BlueprintCompiledHandle.IsValid())
+	// This runs from StartupModule, and DreamGUIEditor loads in the Default phase -- which is BEFORE
+	// the editor engine object exists. Hooking the compile broadcast here therefore never happened at
+	// all, and nothing retried it, so a post-process Blueprint compiled during the session never
+	// reached the palette and a recompiled one left the descriptor pointing at the REINST_ class.
+	// Wait for the engine when it is not up yet; GEditor is assigned before this fires.
+	BindBlueprintCompiled();
+	if (!BlueprintCompiledHandle.IsValid() && !PostEngineInitHandle.IsValid())
 	{
-		BlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddRaw(this, &FDreamUIControlRegistry::RefreshDynamicClasses);
+		PostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddRaw(this, &FDreamUIControlRegistry::HandlePostEngineInit);
 	}
 	if (!AssetLoadedHandle.IsValid())
 	{
 		AssetLoadedHandle = FCoreUObjectDelegates::OnAssetLoaded.AddRaw(this, &FDreamUIControlRegistry::HandleAssetLoaded);
 	}
+}
+
+void FDreamUIControlRegistry::BindBlueprintCompiled()
+{
+	if (GEditor && !BlueprintCompiledHandle.IsValid())
+	{
+		BlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddRaw(this, &FDreamUIControlRegistry::RefreshDynamicClasses);
+	}
+}
+
+void FDreamUIControlRegistry::HandlePostEngineInit()
+{
+	BindBlueprintCompiled();
+	// Classes that came up while the hook did not exist yet are already in memory, so the palette
+	// has to be caught up once rather than waiting for the next compile.
+	RefreshDynamicClasses();
 }
 
 void FDreamUIControlRegistry::ShutdownDynamicDiscovery()
@@ -415,6 +444,11 @@ void FDreamUIControlRegistry::ShutdownDynamicDiscovery()
 		GEditor->OnBlueprintCompiled().Remove(BlueprintCompiledHandle);
 	}
 	BlueprintCompiledHandle.Reset();
+	if (PostEngineInitHandle.IsValid())
+	{
+		FCoreDelegates::GetOnPostEngineInit().Remove(PostEngineInitHandle);
+	}
+	PostEngineInitHandle.Reset();
 	if (AssetLoadedHandle.IsValid())
 	{
 		FCoreUObjectDelegates::OnAssetLoaded.Remove(AssetLoadedHandle);
