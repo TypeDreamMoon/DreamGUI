@@ -175,6 +175,45 @@ namespace DreamUITextBuilderLocal
 	}
 
 	/**
+	 * True when InText can become an FName without taking the editor down with it.
+	 *
+	 * FName does not REFUSE a string of NAME_SIZE characters or more -- it calls checkf(false)
+	 * (UnrealNames.cpp, FindOrStoreString) -- so every conversion of AUTHORED text has to be gated.
+	 * The lexer already refuses an over-long identifier (DUI1006), which covers everything that
+	 * arrives through a parse; these guards are for the builder's other callers, which assemble an
+	 * FDreamUINode by hand (the designer, the tests), and for the one authored value that is not an
+	 * identifier at all: a quoted string written onto an FName property.
+	 */
+	bool IsNameLengthLegal(const FString& InText)
+	{
+		return InText.Len() < NAME_SIZE;
+	}
+
+	/** The first 32 characters and an ellipsis -- long enough to recognise, short enough to read. */
+	FString EllipsizeName(const FString& InText)
+	{
+		return InText.Len() <= 32 ? InText : (InText.Left(32) + TEXT("..."));
+	}
+
+	/**
+	 * An error about a DECLARATION, stamped with the file that declares it rather than the file
+	 * being compiled.
+	 *
+	 * A `use` merges another file's styles and resources into this AST wholesale, so their Locations
+	 * count lines in a file the importer has never opened. Reported through the bag's own name they
+	 * came out as "Login.dui(4,2): ..." pointing at whatever happens to be on line 4 of Login.dui --
+	 * a position that looks authoritative and is not. FDreamUIDiagnosticBag::Add falls back to the
+	 * bag's name when this one is empty, so a hand-built AST behaves exactly as it did before.
+	 */
+	void AddErrorIn(FDreamUIDiagnosticBag& InBag, const FString& InSourceName, EDreamUIDiagnosticCode InCode,
+		const FDreamUISourceLocation& InLocation, FString InMessage)
+	{
+		FDreamUIDiagnostic Diagnostic(InCode, InLocation, MoveTemp(InMessage), EDreamUISeverity::Error);
+		Diagnostic.SourceName = InSourceName;
+		InBag.Add(MoveTemp(Diagnostic));
+	}
+
+	/**
 	 * The built-in tags, and the UDreamVisual each one creates -- now asked of the registry the
 	 * DECLARE_DREAM_GUI_VISUAL macro fills, rather than kept as a list here.
 	 *
@@ -612,7 +651,9 @@ namespace DreamUITextBuilderLocal
 		}
 		if (Shape == nullptr)
 		{
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
+			// Reported against the file that DECLARES the entry: `use` can have brought it in from a
+			// style library, and Location counts lines there, not here.
+			AddErrorIn(*InContext.Diagnostics, Resource->SourceName, EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
 				FString::Printf(TEXT("'%s' is not a resource type; write Color, Number, Vector2, String or Asset"),
 					*Resource->TypeName));
 			return nullptr;
@@ -625,7 +666,7 @@ namespace DreamUITextBuilderLocal
 		if (!bShapeMatches
 			|| (Shape->TupleArity != INDEX_NONE && Resource->Value.Elements.Num() != Shape->TupleArity))
 		{
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
+			AddErrorIn(*InContext.Diagnostics, Resource->SourceName, EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
 				FString::Printf(TEXT("resource '%s' is declared %s, but its value is not one"),
 					*Resource->Name, *Resource->TypeName));
 			return nullptr;
@@ -779,6 +820,15 @@ namespace DreamUITextBuilderLocal
 			}
 			if (const FNameProperty* AsName = CastField<FNameProperty>(Leaf))
 			{
+				// The one authored value that reaches an FName without having been an identifier
+				// first, so the lexer's length rule never saw it. See IsNameLengthLegal.
+				if (!IsNameLengthLegal(Value.Raw))
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Value.Location,
+						FString::Printf(TEXT("'%s' is %d characters long, and '%s' is a name, which holds at most %d"),
+							*EllipsizeName(Value.Raw), Value.Raw.Len(), *InProperty.Name, NAME_SIZE - 1));
+					return false;
+				}
 				AsName->SetPropertyValue(ValuePtr, FName(*Value.Raw));
 				return true;
 			}
@@ -923,6 +973,20 @@ namespace DreamUITextBuilderLocal
 
 		if (InProperty.BindingFunction.IsEmpty() && EachItemMember.IsEmpty())
 		{
+			if (InContext.ActiveEach != nullptr)
+			{
+				// Inside a loop body the un-lowered expression is not a stage that has not run yet --
+				// it is a stage that never will. DreamUIExpressionThunks::Generate deliberately skips
+				// loop bodies (a generated function would ask the CLASS for a name only the iteration
+				// has), so the ONLY source shape an `each` supports is the single hop `Item.Member`
+				// handled above. Everything else used to fall through this return and be dropped: the
+				// file compiled green and the property was simply never driven, which is the exact
+				// silent failure this pipeline exists to remove.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopBodyBindingUnsupported, InProperty.Location,
+					FString::Printf(TEXT("'%s' cannot be driven from inside an 'each': the body supports '%s.Member' only, so an expression or a '<->' has nowhere to be compiled to. Move the logic into the item's own class, or bind it outside the loop."),
+						*InProperty.Name, *InContext.ActiveLoopVariable));
+				return false;
+			}
 			// An expression binding the compiler has not lowered yet: the real compile rewrites
 			// BindingFunction to the generated thunk's name before Build runs, so reaching here
 			// means this is a consumer that builds a raw AST -- the write-back's reference tree,
@@ -1000,7 +1064,15 @@ namespace DreamUITextBuilderLocal
 		// FDreamUIProperty by hand, which naturally writes what the author would have typed.
 		FString FunctionName = InProperty.BindingFunction.TrimStartAndEnd();
 		FunctionName.RemoveFromEnd(TEXT("()"));
-		Binding.FunctionName = FName(*FunctionName.TrimStartAndEnd());
+		FunctionName.TrimStartAndEndInline();
+		if (!IsNameLengthLegal(FunctionName))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, InProperty.Location,
+				FString::Printf(TEXT("'%s' is %d characters long, and a function name holds at most %d"),
+					*EllipsizeName(FunctionName), FunctionName.Len(), NAME_SIZE - 1));
+			return false;
+		}
+		Binding.FunctionName = FName(*FunctionName);
 		InContext.Bindings->Add(Binding);
 		return true;
 	}
@@ -1041,12 +1113,21 @@ namespace DreamUITextBuilderLocal
 			return true;
 		}
 
+		const FString HandlerName = InProperty.EventHandler.TrimStartAndEnd();
+		if (!IsNameLengthLegal(HandlerName))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
+				FString::Printf(TEXT("'%s' is %d characters long, and a handler name holds at most %d"),
+					*EllipsizeName(HandlerName), HandlerName.Len(), NAME_SIZE - 1));
+			return false;
+		}
+
 		FDreamWidgetEventBinding Binding;
 		Binding.WidgetName = UDreamWidgetTree::MakeWidgetVariableName(InWidget);
 		Binding.Target = InDestination.BindingTarget;
 		Binding.BehaviourIndex = InDestination.BehaviourIndex;
 		Binding.EventName = InDestination.LeafProperty->GetFName();
-		Binding.FunctionName = FName(*InProperty.EventHandler.TrimStartAndEnd());
+		Binding.FunctionName = FName(*HandlerName);
 		InContext.EventBindings->Add(Binding);
 		return true;
 	}
@@ -1357,8 +1438,10 @@ namespace DreamUITextBuilderLocal
 					const FDreamUIStyle* Base = InContext.Ast->FindStyle(Link->BaseName);
 					if (Base == nullptr)
 					{
-						InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
-							FString::Printf(TEXT("style '%s' inherits '%s', which this file does not declare"),
+						// Link->Location is a line in the file that DECLARES the style, which an
+						// import chain makes a different file from the one being compiled.
+						AddErrorIn(*InContext.Diagnostics, Link->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
+							FString::Printf(TEXT("style '%s' inherits '%s', which is declared nowhere it can see"),
 								*Link->Name, *Link->BaseName));
 						break;
 					}
@@ -1501,6 +1584,18 @@ namespace DreamUITextBuilderLocal
 		UClass* VisualClass = nullptr;
 		if (!ResolveNodeClasses(InNode, InContext, WidgetClass, VisualClass))
 		{
+			return nullptr;
+		}
+
+		if (!IsNameLengthLegal(InNode.Id))
+		{
+			// Refused rather than truncated: the id IS the identity -- object name, member variable,
+			// binding key and localization key at once -- and a shortened one would silently be a
+			// different node from the one the file describes. A parse raises DUI1006 for this at the
+			// token, so this is the same rule for the callers that assemble a node by hand.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::InvalidNodeId, InNode.Location,
+				FString::Printf(TEXT("'%s' is %d characters long, and a node id holds at most %d"),
+					*EllipsizeName(InNode.Id), InNode.Id.Len(), NAME_SIZE - 1));
 			return nullptr;
 		}
 

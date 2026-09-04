@@ -287,7 +287,19 @@ namespace DreamUIText
 							|| OutTokens.Last().Kind == ETokenKind::String
 							|| OutTokens.Last().Kind == ETokenKind::HexColor
 							|| OutTokens.Last().Kind == ETokenKind::CloseParen);
-					if (bPreviousIsOperand)
+					// ... and a '-' with a WORD or a '(' after it is NEGATION, which is the third
+					// reading this rule had no room for. Without it `<- -Count()` went to LexNumber,
+					// whose trailing sweep swallowed the identifier and reported the whole thing as a
+					// malformed number -- so ParseUnaryExpression's '-' branch could never be reached
+					// by any operand that is not a literal.
+					//
+					// Narrow on purpose. A digit, a '.', a line ending or anything else still goes to
+					// LexNumber exactly as before, so `A = -` keeps reporting MalformedNumber rather
+					// than turning into a grammatical complaint about a token the author never
+					// thought of as one.
+					const TCHAR AfterMinus = PeekChar(1);
+					const bool bNegationFollows = IsIdentifierStart(AfterMinus) || AfterMinus == TEXT('(');
+					if (bPreviousIsOperand || bNegationFollows)
 					{
 						EmitPunctuation(OutTokens, ETokenKind::Minus, 1);
 					}
@@ -547,11 +559,33 @@ namespace DreamUIText
 		void LexIdentifier(TArray<FToken>& OutTokens)
 		{
 			const int32 Start = Offset;
+			const FDreamUISourceLocation Location = MakeLocation(Start);
 			while (Offset < Length && IsIdentifierChar(Chars[Offset]))
 			{
 				++Offset;
 			}
-			Emit(OutTokens, ETokenKind::Identifier, Start, Slice(Start, Offset));
+
+			// The one length rule this grammar has, and it is not taste. Every word a .dui writes
+			// down becomes an FName somewhere downstream -- a node id becomes a member variable, a
+			// property name a lookup key, a handler a function name -- and FName does not REFUSE a
+			// string of NAME_SIZE characters or more, it calls checkf(false) and takes the editor
+			// with it (UnrealNames.cpp, FindOrStoreString). Enforced here rather than at each of the
+			// dozen FName() conversions downstream, because one rule at the token covers every
+			// position a word can appear in.
+			//
+			// The token is emitted TRUNCATED rather than withheld: the parser has to find a name
+			// where a name belongs in order to go on reporting the rest of the file, and the
+			// shortened one is safe for anything that reaches an FName. The file already carries an
+			// error, so nothing is ever built from the shortened spelling.
+			FString Word = Slice(Start, Offset);
+			if (Word.Len() >= NAME_SIZE)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::IdentifierTooLong, Location,
+					FString::Printf(TEXT("'%s' is %d characters long, and a name here holds at most %d"),
+						*Ellipsize(Word), Word.Len(), NAME_SIZE - 1));
+				Word.LeftInline(NAME_SIZE - 1);
+			}
+			Emit(OutTokens, ETokenKind::Identifier, Start, MoveTemp(Word));
 		}
 
 		void LexNumber(TArray<FToken>& OutTokens)
@@ -931,6 +965,46 @@ namespace DreamUIText
 		/** The loop variables in scope at the current point, innermost last. Only used for shadowing. */
 		TArray<FString> ActiveLoopVariables;
 
+		/**
+		 * How many nested blocks / parenthesised sub-expressions the cursor is inside.
+		 *
+		 * A recursive-descent parser's answer to a file that nests a thousand deep is a stack
+		 * overflow, and that is not a diagnostic -- it is the editor vanishing with the author's
+		 * unsaved work and nothing written down about which file did it. One counter rather than one
+		 * per production, because the stack is one stack: nodes inside expressions inside nodes all
+		 * spend the same budget. See DreamUIAst::MaxNestingDepth for why 256.
+		 */
+		int32 NestingDepth = 0;
+
+		/** True (and reported once) when the cursor is already as deep as the parser will descend. */
+		bool IsTooDeep(const FDreamUISourceLocation& InLocation)
+		{
+			if (NestingDepth < DreamUIAst::MaxNestingDepth)
+			{
+				return false;
+			}
+			if (!bReportedNestingLimit)
+			{
+				// Once per file. A file that reaches the limit reaches it again on the way out of
+				// every level, and several hundred copies of one message is not a report.
+				bReportedNestingLimit = true;
+				Diagnostics.AddError(EDreamUIDiagnosticCode::NestingTooDeep, InLocation,
+					FString::Printf(TEXT("this nests more than %d levels deep; nothing below here was read"),
+						DreamUIAst::MaxNestingDepth));
+			}
+			return true;
+		}
+
+		bool bReportedNestingLimit = false;
+
+		/** Raises NestingDepth for the lifetime of one descent. */
+		struct FNestingScope
+		{
+			explicit FNestingScope(int32& InOutDepth) : Depth(InOutDepth) { ++Depth; }
+			~FNestingScope() { --Depth; }
+			int32& Depth;
+		};
+
 		// --- token stream -------------------------------------------------------------------------
 
 		// Peek clamps to the trailing EndOfFile token, which the lexer always emits, so there is no
@@ -1021,6 +1095,31 @@ namespace DreamUIText
 				Advance();
 			}
 			while (Depth > 0 && !IsAtEnd());
+		}
+
+		/**
+		 * Walk to the '}' that closes the block the cursor is already INSIDE, and step over it.
+		 *
+		 * SkipBalancedBlock's twin, for the one caller that has already consumed the opening brace:
+		 * the depth guard refuses a block after ParseNode/ParseComponent stepped past its '{', and
+		 * leaving the body unconsumed would hand the enclosing loop a wall of statements it would
+		 * report one by one.
+		 */
+		void SkipBalancedBlockBody()
+		{
+			int32 Depth = 1;
+			while (Depth > 0 && !IsAtEnd())
+			{
+				if (Check(ETokenKind::OpenBrace))
+				{
+					++Depth;
+				}
+				else if (Check(ETokenKind::CloseBrace))
+				{
+					--Depth;
+				}
+				Advance();
+			}
 		}
 
 		/** Past the next `)`, but never out of the statement -- a missing one must not eat the block. */
@@ -1196,6 +1295,10 @@ namespace DreamUIText
 
 				FDreamUIResource Resource;
 				Resource.Location = Current().Location;
+				// The file this entry is written in, which a `use` will carry into somebody else's
+				// AST -- see FDreamUIStyle::SourceName. Taken from the bag rather than passed in
+				// because the bag is already stamped with this parse's file name.
+				Resource.SourceName = Diagnostics.SourceName;
 				Resource.TypeName = Current().Text;
 				Advance();
 
@@ -1224,7 +1327,15 @@ namespace DreamUIText
 					continue;
 				}
 
-				if (OutAst.FindResource(Resource.Name) != nullptr)
+				// Own entries only, exactly like the style declaration below it, and for the same
+				// reason: FindResource CHAINS into ImportedResources, so asking it here made a local
+				// entry that shadows an imported one report as a duplicate -- and only when the `use`
+				// line happened to come first in the file, because that is when the import had
+				// already been merged. Shadowing an imported name is the language working (own
+				// declarations win, see FDreamUIAst::FindResource), not a mistake to refuse.
+				const bool bAlreadyDeclaredLocally = OutAst.Resources.ContainsByPredicate(
+					[&Resource](const FDreamUIResource& InExisting) { return InExisting.Name == Resource.Name; });
+				if (bAlreadyDeclaredLocally)
 				{
 					Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateResource, Resource.Location,
 						FString::Printf(TEXT("resource '%s' is declared twice"), *Resource.Name));
@@ -1257,6 +1368,7 @@ namespace DreamUIText
 
 			FDreamUIStyle Style;
 			Style.Location = KeywordLocation;
+			Style.SourceName = Diagnostics.SourceName;
 			Style.Name = Current().Text;
 			Advance();
 
@@ -1461,6 +1573,12 @@ namespace DreamUIText
 
 		void ParseNodeBody(FDreamUINode& OutNode, const FDreamUISourceLocation& InOpenLocation)
 		{
+			if (IsTooDeep(InOpenLocation))
+			{
+				SkipBalancedBlockBody();
+				return;
+			}
+			const FNestingScope Scope(NestingDepth);
 			for (;;)
 			{
 				SkipSeparators();
@@ -1741,6 +1859,12 @@ namespace DreamUIText
 
 		void ParsePropertyOnlyBlock(TArray<FDreamUIProperty>& OutProperties, const FDreamUISourceLocation& InOpenLocation, const TCHAR* InWhatItIs)
 		{
+			if (IsTooDeep(InOpenLocation))
+			{
+				SkipBalancedBlockBody();
+				return;
+			}
+			const FNestingScope Scope(NestingDepth);
 			for (;;)
 			{
 				SkipSeparators();
@@ -1944,6 +2068,12 @@ namespace DreamUIText
 
 		bool ParseBindingExpression(FDreamUIExpression& OutExpression, int32 InMinPrecedence)
 		{
+			if (IsTooDeep(Current().Location))
+			{
+				RecoverToStatementBoundary();
+				return false;
+			}
+			const FNestingScope Scope(NestingDepth);
 			if (!ParseUnaryExpression(OutExpression))
 			{
 				return false;
@@ -1977,6 +2107,12 @@ namespace DreamUIText
 
 		bool ParseUnaryExpression(FDreamUIExpression& OutExpression)
 		{
+			if (IsTooDeep(Current().Location))
+			{
+				RecoverToStatementBoundary();
+				return false;
+			}
+			const FNestingScope Scope(NestingDepth);
 			if (Check(ETokenKind::Bang) || Check(ETokenKind::Minus))
 			{
 				FDreamUIExpression Unary;
@@ -2019,6 +2155,18 @@ namespace DreamUIText
 			}
 			case ETokenKind::Number:
 			{
+				// The shape the lexer refused to judge on its own has landed where a NUMBER belongs,
+				// so it is a number and this is the position that gets to say what is wrong with it
+				// -- the same ruling ParseValue and ParseTuple already make. Without it `<- 24px`
+				// travelled as a literal, the thunk generator fed "24px" to a Real pin, and
+				// FCString::Atof read 24 out of it: a binding that compiled green and drove a value
+				// the author never wrote.
+				if (Current().bDigitLeadingWord)
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedNumber, Current().Location,
+						FString::Printf(TEXT("'%s' is not a number: write it as -12, 0.95 or 1e-45"),
+							*Ellipsize(Current().Text)));
+				}
 				OutExpression.Kind = FDreamUIExpression::EKind::Literal;
 				OutExpression.LiteralKind = EDreamUIValueKind::Number;
 				OutExpression.LiteralRaw = Current().Text;

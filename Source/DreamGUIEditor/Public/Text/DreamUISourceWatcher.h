@@ -57,6 +57,30 @@ public:
 	static void Unregister();
 
 	/**
+	 * Start watching InDirectory as a DUI root, if it is one and nothing is watching it yet.
+	 *
+	 * Register() runs once, at module startup, over the roots that EXIST at that moment -- and a
+	 * project's `DUI/` directory is routinely created later, by Open Workspace, on a project that
+	 * never had one. Until something called this, every file in that brand new directory saved into
+	 * silence for the rest of the session and the author's first experience of the language was the
+	 * one thing it exists to prevent: an edit that changed nothing and said nothing.
+	 *
+	 * Idempotent. Registering a directory twice would deliver every change to the queue twice.
+	 */
+	static void EnsureWatching(const FString& InDirectory);
+
+	/**
+	 * True while a Blueprint compile is running because the FILE changed underneath it.
+	 *
+	 * The compiler asks, and the answer decides who wins a conflict. Its ordinary path flushes the
+	 * designer's pending template edits into the .dui before reading it, which is right when the
+	 * compile was caused by the designer -- and exactly wrong here: the text on disk is the newer
+	 * one, and flushing would patch the preview's older values back over somebody else's edit and
+	 * save the result. On this path the file wins, so nothing is flushed.
+	 */
+	static bool IsCompilingFromExternalChange();
+
+	/**
 	 * Record which files InImporter pulls in through `use`, replacing its previous edges. The
 	 * compiler publishes this after every parse, which is what lets a saved style library recompile
 	 * the classes that wear it: the drain expands a changed file to its transitive importers.

@@ -62,6 +62,16 @@ enum class EDreamUIDiagnosticCode : int32
 	MalformedNumber = 1004,
 	/** A `#` colour literal whose digit count is not 3, 4, 6 or 8. */
 	MalformedHexColor = 1005,
+	/**
+	 * A name longer than an FName can hold (NAME_SIZE, see UnrealNames.h).
+	 *
+	 * Its own code, and a LEXICAL one, because the refusal has nothing to do with what the word
+	 * means: every name this language writes down -- a node id, a property, a handler, a loop
+	 * variable -- ends up as an FName somewhere downstream, and FName does not return an error for an
+	 * over-long string, it calls checkf(false) and takes the editor with it. Caught at the token so
+	 * one rule covers every position a word can appear in.
+	 */
+	IdentifierTooLong = 1006,
 
 	// --- 2xxx parser ---
 	/** A token appeared where the grammar allows something else. Message names both. */
@@ -88,6 +98,15 @@ enum class EDreamUIDiagnosticCode : int32
 	MalformedBindingExpression = 2011,
 	/** A `use` that could not be honoured: no string, unresolvable path, unreadable file, a cycle. */
 	ImportFailed = 2012,
+	/**
+	 * Nodes, blocks or parenthesised sub-expressions nested deeper than the parser will descend.
+	 *
+	 * A recursive-descent parser answers a file that nests a thousand deep by exhausting the stack,
+	 * and a stack overflow is not a diagnostic -- it is the editor disappearing with the author's
+	 * unsaved work. The limit is far above anything a hand-written or generated .dui reaches, so
+	 * meeting it means a file that is malformed or hostile rather than merely deep.
+	 */
+	NestingTooDeep = 2013,
 
 	// --- 3xxx semantic ---
 	/**
@@ -240,6 +259,17 @@ enum class EDreamUIDiagnosticCode : int32
 	 * code an asset path raises when it loads something the property cannot take.
 	 */
 	NodeReferenceNotFound = 5013,
+	/**
+	 * A `<-` expression or a `<->` inside a `for` / `each` body.
+	 *
+	 * The thunk pass deliberately skips loop bodies -- a generated function would ask the CLASS for a
+	 * name only the iteration has -- so the only source shape an `each` supports today is the single
+	 * hop `Item.Member`, which is recorded per cell instead. Anything richer used to be dropped where
+	 * the builder found a binding with no function name: the file compiled green and the property was
+	 * simply never driven. Its own code rather than BindingExpressionUnsupported because the
+	 * expression is fine and the PLACE is not, which is a different fix and a temporary limit.
+	 */
+	LoopBodyBindingUnsupported = 5014,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */
@@ -249,6 +279,17 @@ enum class EDreamUIDiagnosticCode : int32
 	/** The `class` line names a different asset than the Blueprint being compiled. A warning: the
 	 * line's job is a stable localization namespace, and being wrong drifts keys, not the build. */
 	ClassPathMismatch = 6003,
+	/**
+	 * `Event -> Handler` naming a function the compiled class does not declare.
+	 *
+	 * Split from EventNotFound because the two halves of a route fail for opposite reasons and only
+	 * the compiler can see this one: EventNotFound is about the EVENT, which the builder checks
+	 * against a class that already exists, while the handler lives on the class this compile is
+	 * building and cannot be looked up until it has been built.
+	 */
+	EventHandlerNotFound = 6004,
+	/** `Event -> Handler` where the handler's parameters are not the ones the event sends. */
+	EventHandlerSignatureMismatch = 6005,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */

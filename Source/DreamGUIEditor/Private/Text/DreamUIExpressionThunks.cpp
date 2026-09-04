@@ -135,6 +135,20 @@ namespace DreamUIExpressionThunksLocal
 		const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
 		if (InSource.IsLiteral())
 		{
+			// Asked BEFORE the write, because TrySetDefaultValue returns void and does not refuse:
+			// it writes whatever it is given and the pin later reads whatever FCString::Atof or
+			// appStringToBool makes of it. `<- Scale(24px)` therefore compiled green and drove 24,
+			// and `<- Toggle("yes")` drove true -- values nobody wrote, in a binding nothing flagged.
+			// The schema's own judgement rather than a private one, so a literal this generator
+			// accepts is exactly a literal the graph compiler would.
+			const FString Refusal = Schema->IsPinDefaultValid(InPin, InSource.LiteralDefault, nullptr, FText::GetEmpty());
+			if (!Refusal.IsEmpty())
+			{
+				InContext.Fail(InLocation, FString::Printf(
+					TEXT("'%s' cannot be the '%s' input: %s"),
+					*InSource.LiteralDefault, *InPin->PinName.ToString(), *Refusal));
+				return false;
+			}
 			Schema->TrySetDefaultValue(*InPin, InSource.LiteralDefault);
 			return true;
 		}
@@ -348,18 +362,14 @@ namespace DreamUIExpressionThunksLocal
 		Node->SetFromFunction(Function);
 		Creator.Finalize();
 
-		// An impure call rides the exec chain; a pure one floats, like it would in a hand-made graph.
-		if (!Function->HasAnyFunctionFlags(FUNC_BlueprintPure))
-		{
-			InContext.bAnyImpureCall = true;
-			UEdGraphPin* ExecutePin = Node->FindPin(UEdGraphSchema_K2::PN_Execute);
-			if (ExecutePin != nullptr && InContext.LastExecPin != nullptr)
-			{
-				GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(InContext.LastExecPin, ExecutePin);
-			}
-			InContext.LastExecPin = Node->FindPin(UEdGraphSchema_K2::PN_Then);
-		}
-
+		// The ARGUMENTS first, and this order is the whole correctness of a nested call.
+		//
+		// Emitting an argument can put its own impure call on the exec chain, and an argument has to
+		// have RUN before the call that consumes it. Threading this node onto the chain before the
+		// recursion put it ahead of its own operands: `SetTitle(NextPage())` ran SetTitle first and
+		// read whatever NextPage's return pin held before NextPage executed -- the type's default,
+		// every time, with no error anywhere. Wiring the value pins does not depend on the exec
+		// chain, so nothing is lost by doing them first.
 		for (int32 Index = 0; Index < InputParameters.Num(); ++Index)
 		{
 			const FEmitted Argument = EmitExpression(InExpression.Operands[Index], InContext);
@@ -372,6 +382,19 @@ namespace DreamUIExpressionThunksLocal
 			{
 				return FEmitted();
 			}
+		}
+
+		// An impure call rides the exec chain; a pure one floats, like it would in a hand-made graph.
+		// LastExecPin is now the tail the arguments left behind, so this lands after all of them.
+		if (!Function->HasAnyFunctionFlags(FUNC_BlueprintPure))
+		{
+			InContext.bAnyImpureCall = true;
+			UEdGraphPin* ExecutePin = Node->FindPin(UEdGraphSchema_K2::PN_Execute);
+			if (ExecutePin != nullptr && InContext.LastExecPin != nullptr)
+			{
+				GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(InContext.LastExecPin, ExecutePin);
+			}
+			InContext.LastExecPin = Node->FindPin(UEdGraphSchema_K2::PN_Then);
 		}
 
 		FEmitted Result;
@@ -494,7 +517,23 @@ namespace DreamUIExpressionThunksLocal
 		}
 	}
 
-	FString MakeThunkName(const TCHAR* InPrefix, const FString& InNodeId, const FString& InPropertyName)
+	/**
+	 * The graph name for one lowered property, guaranteed not to be another one's.
+	 *
+	 * `NodeId_PropertyName` with everything non-alphanumeric mapped to '_' is not an identity: '_' is
+	 * both the separator and a legal character in either half, so `A_B` + `C`, `A` + `B_C` and
+	 * `A.B` + `C` all come out `A_B_C`. Two properties sharing a graph name is worse than a clash --
+	 * FBlueprintEditorUtils::CreateNewGraph renames the FIRST graph out of the way rather than
+	 * refusing (BlueprintEditorUtils.cpp:2253), so both bindings end up naming the second
+	 * expression's function, silently, and the displaced graph is left in FunctionGraphs forever.
+	 *
+	 * Only the second claimant is disambiguated, and with a hash of the pair AS WRITTEN rather than a
+	 * counter: the ordinary file keeps names an author can recognise in the graph list, and a file
+	 * that does collide gets the same names on every compile instead of names that move when a line
+	 * is reordered.
+	 */
+	FString MakeThunkName(const TCHAR* InPrefix, const FString& InNodeId, const FString& InPropertyName,
+		TSet<FString>& InOutClaimedNames)
 	{
 		FString Sanitized = InNodeId + TEXT("_") + InPropertyName;
 		for (TCHAR& Char : Sanitized)
@@ -504,7 +543,58 @@ namespace DreamUIExpressionThunksLocal
 				Char = TEXT('_');
 			}
 		}
-		return InPrefix + Sanitized;
+
+		FString Name = InPrefix + Sanitized;
+		if (InOutClaimedNames.Contains(Name))
+		{
+			// US-31, a character no .dui token can contain, so the two halves cannot be confused
+			// with each other the way the sanitised spelling confuses them.
+			const FString Key = FString(InPrefix) + InNodeId + TEXT("\x1f") + InPropertyName;
+			const FString Disambiguated = FString::Printf(TEXT("%s_%08X"), *Name, FCrc::StrCrc32(*Key));
+			Name = Disambiguated;
+			for (int32 Attempt = 2; InOutClaimedNames.Contains(Name); ++Attempt)
+			{
+				// The same pair twice -- two `<-` lines on one property of one node. The file is its
+				// own problem; this only has to make sure no graph is ever created over another.
+				Name = FString::Printf(TEXT("%s_%d"), *Disambiguated, Attempt);
+			}
+		}
+		InOutClaimedNames.Add(Name);
+		return Name;
+	}
+
+	/**
+	 * True when this graph is one this pass made, whatever it is called NOW.
+	 *
+	 * The prefix sweep alone was not enough, and the gap is the same one MakeThunkName closes from
+	 * the other side: CreateNewGraph renames a displaced graph to "EdGraph_0" and leaves it in
+	 * FunctionGraphs, where a prefix match can never find it again -- so every collision leaked one
+	 * graph, and the class grew a function called EdGraph_0 on every compile from then on. The entry
+	 * node's FunctionReference still holds the name the graph was CREATED with, which is the one
+	 * record the rename does not touch.
+	 */
+	bool IsThunkGraphName(const FString& InName)
+	{
+		return InName.StartsWith(DreamUIExpressionThunks::GeneratedGraphPrefix)
+			|| InName.StartsWith(TEXT("__DreamTwoWayGet_"))
+			|| InName.StartsWith(TEXT("__DreamTwoWaySet_"));
+	}
+
+	bool IsGeneratedThunkGraph(const UEdGraph* InGraph)
+	{
+		if (IsThunkGraphName(InGraph->GetName()))
+		{
+			return true;
+		}
+		for (const UEdGraphNode* Node : InGraph->Nodes)
+		{
+			const UK2Node_FunctionEntry* Entry = Cast<UK2Node_FunctionEntry>(Node);
+			if (Entry != nullptr && IsThunkGraphName(Entry->FunctionReference.GetMemberName().ToString()))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** The empty function graph plus its hand-made entry -- see LowerProperty for why by hand. */
@@ -566,9 +656,10 @@ namespace DreamUIExpressionThunksLocal
 		return true;
 	}
 
-	void LowerProperty(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty, FDreamUIDiagnosticBag& InDiagnostics)
+	void LowerProperty(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty,
+		FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
 	{
-		const FString ThunkName = MakeThunkName(DreamUIExpressionThunks::GeneratedGraphPrefix, InNodeId, InProperty.Name);
+		const FString ThunkName = MakeThunkName(DreamUIExpressionThunks::GeneratedGraphPrefix, InNodeId, InProperty.Name, InOutClaimedNames);
 
 		// Assembled by hand rather than through AddFunctionGraph: its terminator pass looks the graph
 		// name up on the SKELETON and inherits the signature it finds -- which, on every compile
@@ -600,7 +691,7 @@ namespace DreamUIExpressionThunksLocal
 	}
 
 	void LowerTwoWay(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty,
-		TArray<FDreamUIProperty>& OutSynthesized, FDreamUIDiagnosticBag& InDiagnostics)
+		TArray<FDreamUIProperty>& OutSynthesized, FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
 	{
 		FEdGraphPinType VariableType;
 		if (!FindVariablePinType(InBlueprint, InProperty.TwoWayProperty, VariableType))
@@ -613,7 +704,7 @@ namespace DreamUIExpressionThunksLocal
 		// The forward half: a generated getter reading the variable, standing exactly where any
 		// bound function stands. TwoWayProperty stays set -- the builder reads it to fill the
 		// binding's NotifyField and to prefer the silent setter.
-		const FString GetterName = MakeThunkName(TEXT("__DreamTwoWayGet_"), InNodeId, InProperty.Name);
+		const FString GetterName = MakeThunkName(TEXT("__DreamTwoWayGet_"), InNodeId, InProperty.Name, InOutClaimedNames);
 		{
 			UK2Node_FunctionEntry* Entry = nullptr;
 			UEdGraph* Graph = BeginThunkGraph(InBlueprint, GetterName, Entry);
@@ -639,7 +730,7 @@ namespace DreamUIExpressionThunksLocal
 		// variable through a real K2 variable-set -- which is what makes a FieldNotify variable
 		// broadcast, which is what re-evaluates every OTHER binding reading it. The echo back into
 		// THIS control dies at the silent setter the forward half prefers.
-		const FString SetterName = MakeThunkName(TEXT("__DreamTwoWaySet_"), InNodeId, InProperty.Name);
+		const FString SetterName = MakeThunkName(TEXT("__DreamTwoWaySet_"), InNodeId, InProperty.Name, InOutClaimedNames);
 		{
 			UK2Node_FunctionEntry* Entry = nullptr;
 			UEdGraph* Graph = BeginThunkGraph(InBlueprint, SetterName, Entry);
@@ -706,20 +797,21 @@ namespace DreamUIExpressionThunksLocal
 		Route.Location = InProperty.Location;
 	}
 
-	void WalkNode(UDreamWidgetBlueprint* InBlueprint, FDreamUINode& InNode, FDreamUIDiagnosticBag& InDiagnostics)
+	void WalkNode(UDreamWidgetBlueprint* InBlueprint, FDreamUINode& InNode, FDreamUIDiagnosticBag& InDiagnostics,
+		TSet<FString>& InOutClaimedNames)
 	{
-		auto LowerAll = [InBlueprint, &InNode, &InDiagnostics](TArray<FDreamUIProperty>& InProperties)
+		auto LowerAll = [InBlueprint, &InNode, &InDiagnostics, &InOutClaimedNames](TArray<FDreamUIProperty>& InProperties)
 		{
 			TArray<FDreamUIProperty> Synthesized;
 			for (FDreamUIProperty& Property : InProperties)
 			{
 				if (Property.BindingExpression.IsSet())
 				{
-					LowerProperty(InBlueprint, InNode.Id, Property, InDiagnostics);
+					LowerProperty(InBlueprint, InNode.Id, Property, InDiagnostics, InOutClaimedNames);
 				}
 				else if (!Property.TwoWayProperty.IsEmpty())
 				{
-					LowerTwoWay(InBlueprint, InNode.Id, Property, Synthesized, InDiagnostics);
+					LowerTwoWay(InBlueprint, InNode.Id, Property, Synthesized, InDiagnostics, InOutClaimedNames);
 				}
 			}
 			InProperties.Append(MoveTemp(Synthesized));
@@ -739,7 +831,7 @@ namespace DreamUIExpressionThunksLocal
 			{
 				continue;
 			}
-			WalkNode(InBlueprint, Child, InDiagnostics);
+			WalkNode(InBlueprint, Child, InDiagnostics, InOutClaimedNames);
 		}
 	}
 }
@@ -758,10 +850,7 @@ void DreamUIExpressionThunks::Generate(UDreamWidgetBlueprint* InBlueprint, FDrea
 		{
 			continue;
 		}
-		const FString GraphName = Graph->GetName();
-		if (GraphName.StartsWith(GeneratedGraphPrefix)
-			|| GraphName.StartsWith(TEXT("__DreamTwoWayGet_"))
-			|| GraphName.StartsWith(TEXT("__DreamTwoWaySet_")))
+		if (IsGeneratedThunkGraph(Graph))
 		{
 			FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
 		}
@@ -769,6 +858,9 @@ void DreamUIExpressionThunks::Generate(UDreamWidgetBlueprint* InBlueprint, FDrea
 
 	if (InAst.bHasRoot)
 	{
-		WalkNode(InBlueprint, InAst.Root, InDiagnostics);
+		// Fresh per compile, like the graphs themselves. Its only job is that no two properties in
+		// ONE file claim one graph name; nothing about it has to survive to the next compile.
+		TSet<FString> ClaimedNames;
+		WalkNode(InBlueprint, InAst.Root, InDiagnostics, ClaimedNames);
 	}
 }

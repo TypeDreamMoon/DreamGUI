@@ -24,6 +24,22 @@
  * one changed.
  */
 
+namespace DreamUIAst
+{
+	/**
+	 * How deep a .dui may nest -- blocks, and parenthesised sub-expressions -- before the front end
+	 * refuses instead of recursing.
+	 *
+	 * Both the parser and every walk over the finished tree are recursive descent, so the alternative
+	 * to a limit is not "deep files work", it is a stack overflow: the editor vanishes and the
+	 * author's unsaved work with it, with nothing written down about which file did it. 256 is far
+	 * past anything a hand-written or generated hierarchy reaches -- a UI ten levels deep is already
+	 * unusual -- so reaching it means a file that is malformed or hostile, and saying so with a line
+	 * number is strictly better than any depth this could support.
+	 */
+	inline constexpr int32 MaxNestingDepth = 256;
+}
+
 enum class EDreamUIValueKind : uint8
 {
 	/** A bare word: an enum value, true/false, or an unquoted name. */
@@ -222,6 +238,17 @@ struct DREAMGUI_API FDreamUIStyle
 	FString BaseName;
 	TArray<FDreamUIProperty> Properties;
 	FDreamUISourceLocation Location;
+
+	/**
+	 * The file this declaration was READ from, which is not always the file being compiled.
+	 *
+	 * A `use` merges another file's styles into this AST wholesale, so Location then counts lines in
+	 * a file the importer has never opened -- and a diagnostic stamped with the importer's name sends
+	 * the reader to line 12 of the wrong file, which is worse than no position at all. Empty for an
+	 * AST built by hand; FDreamUIDiagnosticBag::Add then falls back to the bag's own name, exactly as
+	 * it did before this field existed.
+	 */
+	FString SourceName;
 };
 
 /**
@@ -239,6 +266,9 @@ struct DREAMGUI_API FDreamUIResource
 	FString Name;
 	FDreamUIValue Value;
 	FDreamUISourceLocation Location;
+
+	/** The file this entry was read from; see FDreamUIStyle::SourceName. Empty for a hand-built AST. */
+	FString SourceName;
 };
 
 struct DREAMGUI_API FDreamUIAst

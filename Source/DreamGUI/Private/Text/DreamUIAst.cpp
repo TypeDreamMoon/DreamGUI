@@ -13,12 +13,21 @@
 
 namespace DreamUIAstLocal
 {
-	void VisitDepthFirst(const FDreamUINode& InNode, TFunctionRef<void(const FDreamUINode&)> InPredicate)
+	void VisitDepthFirst(const FDreamUINode& InNode, TFunctionRef<void(const FDreamUINode&)> InPredicate, int32 InDepth)
 	{
 		InPredicate(InNode);
+		// The crash guard, not the policy. The parser refuses a file past DreamUIAst::MaxNestingDepth
+		// with a diagnostic and a line number, so a PARSED tree can never reach this -- what can is a
+		// tree assembled in code (the designer, a test) with a cycle or a runaway loop in it, and for
+		// those there is nobody to report to and no line to report. Stopping the descent leaves the
+		// caller with a partial walk; recursing leaves them with no editor.
+		if (InDepth >= DreamUIAst::MaxNestingDepth)
+		{
+			return;
+		}
 		for (const FDreamUINode& Child : InNode.Children)
 		{
-			VisitDepthFirst(Child, InPredicate);
+			VisitDepthFirst(Child, InPredicate, InDepth + 1);
 		}
 	}
 }
@@ -77,6 +86,6 @@ void FDreamUIAst::ForEachNode(TFunctionRef<void(const FDreamUINode&)> InPredicat
 	// each pick their own definition of empty.
 	if (bHasRoot)
 	{
-		DreamUIAstLocal::VisitDepthFirst(Root, InPredicate);
+		DreamUIAstLocal::VisitDepthFirst(Root, InPredicate, /*InDepth*/0);
 	}
 }

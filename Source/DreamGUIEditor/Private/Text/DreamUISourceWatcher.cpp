@@ -15,6 +15,7 @@
 #include "Containers/Ticker.h"
 #include "DirectoryWatcherModule.h"
 #include "Editor.h"
+#include "Editor/Transactor.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "HAL/PlatformProcess.h"
 #include "IDirectoryWatcher.h"
@@ -55,6 +56,16 @@ namespace DreamUISourceWatcherLocal
 
 	/** Set by an explicit command; a plain save leaves it false and stays quiet when it worked. */
 	bool GAnnounceSuccess = false;
+
+	/**
+	 * True for the span of a rebuild caused by a change on DISK rather than by the designer.
+	 *
+	 * Read by the compiler through FDreamUISourceWatcher::IsCompilingFromExternalChange. A flag
+	 * rather than a parameter because the question is asked five frames down a call chain that runs
+	 * through FKismetEditorUtilities and the compilation manager, neither of which has anywhere to
+	 * carry it.
+	 */
+	bool GbCompilingFromExternalChange = false;
 
 	/** What one drained queue did, and where to send the author when it did not work. */
 	struct FBatchResult
@@ -176,6 +187,11 @@ namespace DreamUISourceWatcherLocal
 			return;
 		}
 
+		// Everything from here on is "the file on disk won". The compiler asks, and skips the flush that
+		// would otherwise push the designer's unsaved preview values back over the text that just
+		// arrived -- see FDreamUISourceWatcher::IsCompilingFromExternalChange.
+		TGuardValue<bool> ExternalChangeGuard(GbCompilingFromExternalChange, true);
+
 		// The document first, and only when one is open. The designer's write-back compares the tree
 		// against the text it believes is on disk; leaving it believing the old text would make the
 		// next flush plan its edits against lines that have moved.
@@ -186,6 +202,15 @@ namespace DreamUISourceWatcherLocal
 			{
 				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Could not reload '%s': %s"),
 					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InFilePath, *LoadError);
+			}
+			else if (GEditor != nullptr && GEditor->Trans != nullptr)
+			{
+				// The contract UDreamUIDocument::LoadFromFile writes down, and which nothing in the
+				// codebase was honouring. A reload is deliberately NOT transacted, so every entry still
+				// on the undo stack describes text from BEFORE it -- and undoing past the reload writes
+				// that older text back over the file, which is a Ctrl+Z silently discarding somebody
+				// else's edit. The header says the host's move is a barrier; this is the host.
+				GEditor->Trans->SetUndoBarrier();
 			}
 		}
 
@@ -333,7 +358,7 @@ namespace DreamUISourceWatcherLocal
 		{
 			return true;
 		}
-		if (IsGarbageCollecting() || GIsSavingPackage)
+		if (GIsSavingPackage)
 		{
 			return true;
 		}
@@ -358,6 +383,15 @@ namespace DreamUISourceWatcherLocal
 		return true;
 	}
 
+	/**
+	 * Watch one root, once.
+	 *
+	 * Shared by startup and by EnsureWatching so there is one answer to "is this already watched":
+	 * registering a directory twice delivers every change to the queue twice, and the second handle
+	 * is one nothing unregisters.
+	 */
+	void WatchRoot(const FString& InDirectory);
+
 	void OnDirectoryChanged(const TArray<FFileChangeData>& InChanges)
 	{
 		for (const FFileChangeData& Change : InChanges)
@@ -376,6 +410,32 @@ namespace DreamUISourceWatcherLocal
 		if (GPendingFiles.Num() > 0)
 		{
 			GLastChangeTime = FPlatformTime::Seconds();
+		}
+	}
+
+	void WatchRoot(const FString& InDirectory)
+	{
+		if (GWatchHandles.Contains(InDirectory))
+		{
+			return;
+		}
+		FDirectoryWatcherModule& Module =
+			FModuleManager::LoadModuleChecked<FDirectoryWatcherModule>(TEXT("DirectoryWatcher"));
+		IDirectoryWatcher* Watcher = Module.Get();
+		if (Watcher == nullptr)
+		{
+			return;
+		}
+		FDelegateHandle Handle;
+		if (Watcher->RegisterDirectoryChangedCallback_Handle(
+			InDirectory,
+			IDirectoryWatcher::FDirectoryChanged::CreateStatic(&OnDirectoryChanged),
+			Handle,
+			IDirectoryWatcher::WatchOptions::IncludeDirectoryChanges))
+		{
+			GWatchHandles.Add(InDirectory, Handle);
+			UE_LOG(DreamGUI, Display, TEXT("[%s].%d Watching '%s' for .dui changes."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InDirectory);
 		}
 	}
 }
@@ -402,24 +462,9 @@ void FDreamUISourceWatcher::Register()
 {
 	using namespace DreamUISourceWatcherLocal;
 
-	FDirectoryWatcherModule& Module =
-		FModuleManager::LoadModuleChecked<FDirectoryWatcherModule>(TEXT("DirectoryWatcher"));
-	if (IDirectoryWatcher* Watcher = Module.Get())
+	for (const FDreamUISourceRoot& Root : DreamUIPaths::GetSourceRoots())
 	{
-		for (const FDreamUISourceRoot& Root : DreamUIPaths::GetSourceRoots())
-		{
-			FDelegateHandle Handle;
-			if (Watcher->RegisterDirectoryChangedCallback_Handle(
-				Root.Directory,
-				IDirectoryWatcher::FDirectoryChanged::CreateStatic(&OnDirectoryChanged),
-				Handle,
-				IDirectoryWatcher::WatchOptions::IncludeDirectoryChanges))
-			{
-				GWatchHandles.Add(Root.Directory, Handle);
-				UE_LOG(DreamGUI, Display, TEXT("[%s].%d Watching '%s' for .dui changes."),
-					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Root.Directory);
-			}
-		}
+		WatchRoot(Root.Directory);
 	}
 
 	// The ticker drains the queue, so it exists even with nothing watched: a project with no DUI
@@ -453,6 +498,43 @@ void FDreamUISourceWatcher::Unregister()
 	GPendingFiles.Reset();
 	GDeferredBulkFiles.Reset();
 	GAnnounceSuccess = false;
+}
+
+void FDreamUISourceWatcher::EnsureWatching(const FString& InDirectory)
+{
+	using namespace DreamUISourceWatcherLocal;
+
+	if (!GTickerHandle.IsValid())
+	{
+		// Nothing drains the queue, so nothing would come of watching: either Register has not run
+		// yet (it will, and it will pick this root up itself) or the module is shutting down.
+		return;
+	}
+
+	// Matched against DreamUIPaths' spelling of the roots rather than registered under the caller's.
+	// That namespace is the one place that decides what a root path looks like -- absolute, forward
+	// slashes, exactly one trailing slash -- and a second opinion here would put a duplicate entry
+	// in the watch table the first time the two disagreed about the slash, leaving a live callback
+	// behind at Unregister. It also means a directory that is not a root is silently ignored, which
+	// is the right answer to "watch this" for a path the language cannot resolve anything under.
+	FString Wanted = FPaths::ConvertRelativePathToFull(InDirectory);
+	FPaths::NormalizeDirectoryName(Wanted);
+
+	for (const FDreamUISourceRoot& Root : DreamUIPaths::GetSourceRoots())
+	{
+		FString RootDirectory = Root.Directory;
+		FPaths::NormalizeDirectoryName(RootDirectory);
+		if (RootDirectory.Equals(Wanted, ESearchCase::IgnoreCase))
+		{
+			WatchRoot(Root.Directory);
+			return;
+		}
+	}
+}
+
+bool FDreamUISourceWatcher::IsCompilingFromExternalChange()
+{
+	return DreamUISourceWatcherLocal::GbCompilingFromExternalChange;
 }
 
 void FDreamUISourceWatcher::QueueFile(const FString& InFilePath, const bool bAnnounceSuccess)

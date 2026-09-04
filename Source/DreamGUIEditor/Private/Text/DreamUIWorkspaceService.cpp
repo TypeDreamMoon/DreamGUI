@@ -4,6 +4,7 @@
 
 #include "DreamGUIEditorModule.h"
 #include "Text/DreamUIPaths.h"
+#include "Text/DreamUISourceWatcher.h"
 #include "Text/DreamUISymbolExport.h"
 
 #include "Dom/JsonObject.h"
@@ -195,6 +196,14 @@ bool FDreamUIWorkspaceService::WriteWorkspaceFile(FString& OutWorkspaceFilePath,
 		OutError = FString::Printf(TEXT("could not create '%s'"), *ProjectRoot);
 		return false;
 	}
+
+	// This line is where a project's DUI/ directory usually comes into existence, and the watcher
+	// registered its roots at module startup -- over the directories that existed THEN. Without this,
+	// the very first workspace a project opens is one whose saves reach nothing for the rest of the
+	// session: the author edits, saves, and the class never rebuilds, with nothing anywhere saying
+	// why. Idempotent, so the ordinary case (the directory was already there and already watched)
+	// costs a lookup.
+	FDreamUISourceWatcher::EnsureWatching(ProjectRoot);
 
 	const FString Serialized = BuildWorkspaceJson(DreamUIPaths::GetSourceRoots(), ProjectRoot);
 	const FString WorkspaceFilePath = FPaths::Combine(ProjectRoot, TEXT("DreamUI.code-workspace"));
