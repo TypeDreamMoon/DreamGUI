@@ -33,7 +33,7 @@ void FDreamGUIModule::StartupModule()
 	}
 	else
 	{
-		GPostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddLambda([]()
+		GPostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddLambda([]()
 		{
 			DreamUI::EnsureMovieScenePropertyAccessorsRegistered();
 		});
@@ -46,7 +46,7 @@ void FDreamGUIModule::ShutdownModule()
 	// we call this function before unloading the module.
 	if (GPostEngineInitHandle.IsValid())
 	{
-		FCoreDelegates::OnPostEngineInit.Remove(GPostEngineInitHandle);
+		FCoreDelegates::GetOnPostEngineInit().Remove(GPostEngineInitHandle);
 		GPostEngineInitHandle.Reset();
 	}
 }

@@ -12,7 +12,7 @@
 	"SupportURL": "https://github.com/TypeDreamMoon/DreamGUI/issues",
 	"EngineVersion": "5.8",
 	"CanContainContent": true,
-	"Installed": true,
+	"Installed": false,
 	"Plugins": [
 		{
 			"Name": "EnhancedInput",
@@ -24,25 +24,25 @@
 			"Name": "DreamGUI",
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
-			"WhitelistPlatforms": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
 		},
 		{
 			"Name": "DreamGUIEditor",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [ "Win64", "Mac", "Linux" ]
+			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
 		},
 		{
 			"Name": "DreamGUIK2Nodes",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
 		},
 		{
 			"Name": "DreamTween",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
 		}
 	]
 }

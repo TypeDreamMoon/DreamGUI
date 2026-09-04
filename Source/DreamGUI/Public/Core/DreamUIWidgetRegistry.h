@@ -111,7 +111,7 @@ struct FDreamUIWidgetRegistration
  * same line number of their own files, and the "unique" names collide. The class is the one token
  * guaranteed distinct per declaration. */
 #define DECLARE_DREAM_GUI_WIDGET(Scope, Name, Class) \
-	static const FDreamUIWidgetRegistration PREPROCESSOR_JOIN(DreamUIWidgetRegistration_, Class)( \
+	static const FDreamUIWidgetRegistration UE_JOIN(DreamUIWidgetRegistration_, Class)( \
 		TEXT(Scope), TEXT(Name), []() -> UClass* { return Class::StaticClass(); });
 
 /**
@@ -131,6 +131,6 @@ struct FDreamUIWidgetRegistration
  * to keep those settings valid; declaring a tag here is declaring that the class can be built.
  */
 #define DECLARE_DREAM_GUI_VISUAL(Tag, Class) \
-	static const FDreamUIWidgetRegistration PREPROCESSOR_JOIN(DreamUIVisualRegistration_, Class)( \
+	static const FDreamUIWidgetRegistration UE_JOIN(DreamUIVisualRegistration_, Class)( \
 		TEXT(""), TEXT(Tag), []() -> UClass* { return Class::StaticClass(); }, \
 		FDreamUIWidgetRegistry::EKind::VisualTag);
