@@ -92,7 +92,7 @@ void UDreamImageSequencePlayer::Play()
 		PlayTweener = UDreamTweenBPLibrary::UpdateCall(this, FDreamTweenUpdateDelegate::CreateUObject(this, &UDreamImageSequencePlayer::UpdateAnimation));
 		if (PlayTweener.IsValid())
 		{
-			PlayTweener->SetAffectByGamePause(bAffectByGamePause);
+			PlayTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 		}
 		UpdateAnimation(0);
 	}

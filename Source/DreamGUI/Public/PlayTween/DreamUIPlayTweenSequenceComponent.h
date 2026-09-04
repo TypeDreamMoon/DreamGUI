@@ -50,6 +50,7 @@ protected:
 	DECLARE_EVENT(UDreamUIPlayTweenSequenceComponent, FOnCompleteEvent);
 
 	virtual void Awake()override;
+	virtual void OnDestroy()override;
 public:
 	FOnCompleteEvent OnCompleteCPP;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI", meta=(DisplayName="OnComplete"))

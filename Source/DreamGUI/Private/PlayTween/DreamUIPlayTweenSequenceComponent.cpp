@@ -12,6 +12,14 @@ void UDreamUIPlayTweenSequenceComponent::Awake()
 	}
 }
 
+void UDreamUIPlayTweenSequenceComponent::OnDestroy()
+{
+	// Same reason as UDreamUIPlayTweenComponent: the running tween belongs to the game instance's
+	// manager and outlives this component, so it has to be stopped where the component goes away.
+	Stop();
+	Super::OnDestroy();
+}
+
 void UDreamUIPlayTweenSequenceComponent::SubscribeToTween(UDreamUIPlayTween* InPlayTween)
 {
 	if (bPlayNextWhenCycleComplete)

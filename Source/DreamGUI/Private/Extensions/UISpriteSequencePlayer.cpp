@@ -22,7 +22,11 @@ bool UUISpriteSequencePlayer::CanPlay()
 {
 	if (!Sprite.IsValid())
 	{
-		Sprite = Cast<UDreamSprite>(GetWidget()->GetVisual());
+		//No owning widget on the class default object.
+		if (auto Widget = GetWidget())
+		{
+			Sprite = Cast<UDreamSprite>(Widget->GetVisual());
+		}
 	}
 	if (!Sprite.IsValid())
 	{

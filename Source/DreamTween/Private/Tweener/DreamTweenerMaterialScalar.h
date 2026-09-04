@@ -35,7 +35,7 @@ protected:
 			if (getter.Execute(startValue))
 			{
 				this->changeValue = endValue - startValue;
-				this->originStartValue = this->changeValue;
+				this->originStartValue = this->startValue;
 			}
 			else
 			{
@@ -46,10 +46,11 @@ protected:
 	virtual void TweenAndApplyValue(float currentTime) override
 	{
 		auto value = tweenFunc.Execute(changeValue, startValue, currentTime, duration);
-		if (setter.Execute(parameterIndex, value) == false)
-		{
-			UE_LOG(DreamTween, Warning, TEXT("[UDreamTweenerMaterialScalar/TweenAndApplyValue]Set paramter value error!"));
-		}
+		if (setter.IsBound())
+			if (setter.Execute(parameterIndex, value) == false)
+			{
+				UE_LOG(DreamTween, Warning, TEXT("[UDreamTweenerMaterialScalar/TweenAndApplyValue]Set paramter value error!"));
+			}
 	}
 	virtual void SetValueForIncremental() override
 	{

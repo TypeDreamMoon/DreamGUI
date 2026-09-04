@@ -4,6 +4,7 @@
 
 #include "DreamTweener.h"
 #include "DreamSpring.h"
+#include "DreamTween.h"
 #include "Engine/World.h"
 #include "DreamTweenerSpring.generated.h"
 
@@ -68,11 +69,14 @@ protected:
 	}
 	virtual bool ToNext(float deltaTime, float unscaledDeltaTime) override
 	{
+		// A killed spring is finished whether or not the game is paused; answering the pause first left
+		// anything killed during a pause in the manager's list until the game resumed. Same order as
+		// UDreamTweener::ToNext, which this overrides.
+		if (isMarkedToKill)return false;
 		if (auto world = GetWorld())
 		{
 			if (world->IsPaused() && affectByGamePause)return true;
 		}
-		if (isMarkedToKill)return false;
 		if (isMarkedPause)return true;
 		const float Dt = affectByTimeDilation ? deltaTime : unscaledDeltaTime;
 		elapseTime += Dt;
@@ -108,7 +112,7 @@ protected:
 	virtual void SetOriginValueForRestart() override {}
 	virtual UDreamTweener* SetLoop(EDreamTweenLoop newLoopType, int32 newLoopCount = 1) override
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[UDreamTweenerSpring::SetLoop] A spring has no cycle to loop; ignored."));
+		UE_LOG(DreamTween, Warning, TEXT("[UDreamTweenerSpring::SetLoop] A spring has no cycle to loop; ignored."));
 		return this;
 	}
 	virtual float GetProgress() const override

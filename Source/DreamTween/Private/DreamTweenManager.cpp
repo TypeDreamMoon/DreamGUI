@@ -191,26 +191,39 @@ void UDreamTweenManager::OnTick(EDreamTweenTickType TickType, float DeltaTime, f
 {
 	SCOPE_CYCLE_COUNTER(STAT_Update);
 	
-	auto count = tweenerList.Num();
-	for (int32 i = 0; i < count; i++)
+	// A tween's own callbacks run inside ToNext, and they are free to start a tween, kill every tween, or
+	// remove this one -- so the list can be grown, emptied or reordered underneath the walk. Walking it by
+	// index meant the removal below used an index that no longer named the tween that had just finished:
+	// it deleted whatever had shifted into that slot, or ran off the end of a list a callback had emptied.
+	// So the walk is over a snapshot, and the finished ones come out afterwards by identity.
+	TArray<TObjectPtr<UDreamTweener>> tweenersToTick = tweenerList;
+	TArray<TObjectPtr<UDreamTweener>> tweenersToRemove;
+	TArray<UDreamTweener*> tweenersToDestroy;
+	for (auto& tweener : tweenersToTick)
 	{
-		auto tweener = tweenerList[i];
 		if (!IsValid(tweener))
 		{
-			tweenerList.RemoveAt(i);
-			i--;
-			count--;
+			tweenersToRemove.Add(tweener);
 		}
 		else
 		{
 			if (tweener->GetTickType() != TickType)continue;
 			if (tweener->ToNext(DeltaTime, UnscaledDeltaTime) == false)
 			{
-				tweenerList.RemoveAt(i);
-				tweener->ConditionalBeginDestroy();
-				i--;
-				count--;
+				tweenersToRemove.Add(tweener);
+				tweenersToDestroy.Add(tweener);
 			}
+		}
+	}
+	for (auto& tweener : tweenersToRemove)
+	{
+		tweenerList.RemoveSingle(tweener);
+	}
+	for (auto tweener : tweenersToDestroy)
+	{
+		if (IsValid(tweener))
+		{
+			tweener->ConditionalBeginDestroy();
 		}
 	}
 	if (TickType == EDreamTweenTickType::DuringPhysics)
@@ -234,21 +247,28 @@ void UDreamTweenManager::ManualTick(float DeltaTime)
 }
 void UDreamTweenManager::KillAllTweens(bool callComplete)
 {
-	for (auto item : tweenerList)
+	// Kill runs the tween's OnComplete, and a completion handler is free to start a new tween -- which
+	// reallocates the array this used to walk by reference, and which the trailing Reset() then threw
+	// away along with the dead ones. Take the list first, then walk the copy: tweens created from a
+	// completion handler land in the now-empty member and survive, as they would from anywhere else.
+	TArray<TObjectPtr<UDreamTweener>> tweenersToKill = MoveTemp(tweenerList);
+	tweenerList.Reset();
+	for (auto item : tweenersToKill)
 	{
 		if (IsValid(item))
 		{
 			item->Kill(callComplete);
 		}
 	}
-	tweenerList.Reset();
 }
 
 void UDreamTweenManager::KillAllTweensOnTarget(UObject* WorldContextObject, UObject* TargetObject, bool callComplete)
 {
 	auto Instance = GetDreamTweenInstance(WorldContextObject);
 	if (!IsValid(Instance))return;
-	for (auto item : Instance->tweenerList)
+	// Kill runs the tween's OnComplete, which may start new tweens and reallocate the list mid-walk.
+	TArray<TObjectPtr<UDreamTweener>> tweenersToKill = Instance->tweenerList;
+	for (auto item : tweenersToKill)
 	{
 		if (IsValid(item))
 		{

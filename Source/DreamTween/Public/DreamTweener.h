@@ -155,6 +155,14 @@ protected:
 	int32 maxLoopCount = 0;
 	/** current completed cycle count */
 	int32 loopCycleCount = 0;
+	/**
+	 * How many of those completed cycles have had their time folded out of elapseTime. An infinite loop
+	 * would otherwise run its clock up without bound, and a float that large can no longer hold a frame's
+	 * delta: the cycle phase drifts and the tween eventually stops advancing at all. Whole cycles are
+	 * subtracted from the clock instead, and counted here, so that the phase this counts back out of
+	 * elapseTime is exact and loopCycleCount -- which callers read -- still means what it always did.
+	 */
+	int32 foldedCycleCount = 0;
 	/** how this tween update */
 	EDreamTweenTickType tickType = EDreamTweenTickType::DuringPhysics;
 
@@ -183,6 +191,15 @@ protected:
 
 	/** tween function */
 	FDreamTweenFunction tweenFunc;
+	/**
+	 * The curve SetCurveFloat bound the tween function to, held for as long as this tween lives. The
+	 * binding is a WEAK lambda over the curve, and every subclass calls tweenFunc.Execute unconditionally:
+	 * once the curve is collected the delegate reports itself unbound, but Execute on a dead weak binding
+	 * only checkSlow's before running the lambda over the freed curve. Owning a reference is what keeps
+	 * the curve alive for exactly as long as something can still evaluate it.
+	 */
+	UPROPERTY(Transient)
+	TObjectPtr<UCurveFloat> curveFloat = nullptr;
 
 	/** call once after animation complete */
 	FSimpleDelegate onCompleteCpp;

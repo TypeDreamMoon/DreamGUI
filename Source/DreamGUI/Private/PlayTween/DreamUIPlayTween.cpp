@@ -46,31 +46,40 @@ void UDreamUIPlayTween::Start()
 		NewTweener->SetCurveFloat(EaseCurve);
 	}
 
+	// The tween outlives this object: it is owned by the game instance's tween manager, and with the
+	// default LoopType it never ends on its own. These callbacks are plain lambdas -- BindLambda, not
+	// BindWeakLambda -- so a bare this would still be called, and would still fire this object's events
+	// over a destroyed widget tree, long after the play tween itself was gone.
+	const TWeakObjectPtr<UDreamUIPlayTween> WeakThis(this);
 	NewTweener
-		->OnStart([this] {
-			OnStart.FireEvent();
-			OnStartCPP.Broadcast();
-			OnStartBP.Broadcast();
+		->OnStart([WeakThis] {
+			if (!WeakThis.IsValid())return;
+			WeakThis->OnStart.FireEvent();
+			WeakThis->OnStartCPP.Broadcast();
+			WeakThis->OnStartBP.Broadcast();
 		})
-		->OnUpdate([this](float progress) {
-			OnUpdateProgress.FireEvent(progress);
-			OnUpdateProgressCPP.Broadcast(progress);
-			OnUpdateProgressBP.Broadcast(progress);
+		->OnUpdate([WeakThis](float progress) {
+			if (!WeakThis.IsValid())return;
+			WeakThis->OnUpdateProgress.FireEvent(progress);
+			WeakThis->OnUpdateProgressCPP.Broadcast(progress);
+			WeakThis->OnUpdateProgressBP.Broadcast(progress);
 		})
-		->OnCycleComplete([this, NewTweener] {
+		->OnCycleComplete([WeakThis, NewTweener] {
 			// OnCycleComplete is declared to carry the cycle number, and a DreamUI event checks the
 			// value it is handed against that declaration: firing it empty did not call the bound
 			// functions at all, it logged a type error instead, so anything a designer wired to this
 			// event silently never ran.
+			if (!WeakThis.IsValid())return;
 			const int32 CycleCompleteCount = NewTweener->GetLoopCycleCount();
-			OnCycleComplete.FireEvent(CycleCompleteCount);
-			OnCycleCompleteCPP.Broadcast(CycleCompleteCount);
-			OnCycleCompleteBP.Broadcast(CycleCompleteCount);
+			WeakThis->OnCycleComplete.FireEvent(CycleCompleteCount);
+			WeakThis->OnCycleCompleteCPP.Broadcast(CycleCompleteCount);
+			WeakThis->OnCycleCompleteBP.Broadcast(CycleCompleteCount);
 		})
-		->OnComplete([this] {
-			OnComplete.FireEvent();
-			OnCompleteCPP.Broadcast();
-			OnCompleteBP.Broadcast();
+		->OnComplete([WeakThis] {
+			if (!WeakThis.IsValid())return;
+			WeakThis->OnComplete.FireEvent();
+			WeakThis->OnCompleteCPP.Broadcast();
+			WeakThis->OnCompleteBP.Broadcast();
 		})
 		->SetAffectByGamePause(bAffectByGamePause)
 		->SetAffectByTimeDilation(bAffectByTimeDilation);

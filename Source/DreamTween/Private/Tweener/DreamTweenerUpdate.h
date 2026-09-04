@@ -22,11 +22,13 @@ protected:
 	}
 	virtual bool ToNext(float deltaTime, float unscaledDeltaTime) override
 	{
+		// Killed comes before paused, as in UDreamTweener::ToNext: a tween killed while the game is
+		// paused is finished, and answering "still running" kept it in the manager's list for good.
+		if (isMarkedToKill)return false;
 		if (auto world = GetWorld())
 		{
 			if (world->IsPaused() && affectByGamePause)return true;
 		}
-		if (isMarkedToKill)return false;
 		if (isMarkedPause)return true;//no need to tick time if pause
 		onUpdateCpp.ExecuteIfBound(affectByTimeDilation ? deltaTime : unscaledDeltaTime);
 		return true;

@@ -501,16 +501,26 @@ bool UDreamUIRenderTargetGeometrySource::CheckStaticMesh()const
 #if WITH_EDITOR
 						if (!DreamUI::IsGameWorld(this))
 						{
-							UDreamUIManagerObject::AddOneShotTickFunction([this] {
-								StaticMeshComp->SetMaterial(0, MaterialInstance);
+							UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = TWeakObjectPtr<const UDreamUIRenderTargetGeometrySource>(this)] {
+								if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+								{
+									WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+								}
 								}, 1);
 						}
 						else
 #endif
-						//delay call, or the bPostTickComponentUpdate check will break
-						UDreamTweenBPLibrary::DelayFrameCall(this->GetWorld(), 1, [this] {
-							StaticMeshComp->SetMaterial(0, MaterialInstance);
-							})->SetAffectByGamePause(false);
+						//delay call, or the bPostTickComponentUpdate check will break.
+						//A frame is long enough for this component to be torn down, so the callback holds a weak
+						//reference rather than a bare this. And there is no return value to dereference: DelayFrameCall
+						//hands back null wherever there is no game instance to run a tween -- every cook, commandlet and
+						//shutdown -- so the pause flag goes in as an argument instead.
+						UDreamTweenBPLibrary::DelayFrameCall(this->GetWorld(), 1, [WeakThis = TWeakObjectPtr<const UDreamUIRenderTargetGeometrySource>(this)] {
+							if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+							{
+								WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+							}
+							}, false);
 					}
 				}
 				return true;
@@ -1184,16 +1194,23 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstance()
 #if WITH_EDITOR
 					if (!DreamUI::IsGameWorld(this))
 					{
-						UDreamUIManagerObject::AddOneShotTickFunction([this] {
-							StaticMeshComp->SetMaterial(0, MaterialInstance);
+						UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
+							if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+							{
+								WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+							}
 							}, 1);
 					}
 					else
 #endif
-					//delay call, or the bPostTickComponentUpdate check will break
-					UDreamTweenBPLibrary::DelayFrameCall(this, 1, [this] {
-						StaticMeshComp->SetMaterial(0, MaterialInstance);
-						})->SetAffectByGamePause(false);
+					//delay call, or the bPostTickComponentUpdate check will break.
+					//Weak capture and no dereference of the return value, for the reasons given in CheckStaticMesh.
+					UDreamTweenBPLibrary::DelayFrameCall(this, 1, [WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
+						if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+						{
+							WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+						}
+						}, false);
 				}
 			}
 		}

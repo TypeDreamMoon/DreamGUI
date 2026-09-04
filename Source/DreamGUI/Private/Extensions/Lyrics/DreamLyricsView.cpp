@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Extensions/Lyrics/DreamLyricsView.h"
+#include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
 #include "Core/DreamUIFontData_BaseObject.h"
@@ -64,7 +65,7 @@ bool UDreamLyricsView::LoadTTML(const FString& Xml)
 	FString Error;
 	if (!UDreamLyricsLibrary::ParseTTML(Xml, Parsed, Error))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[UDreamLyricsView::LoadTTML] %s"), *Error);
+		UE_LOG(DreamGUI, Warning, TEXT("[UDreamLyricsView::LoadTTML] %s"), *Error);
 		return false;
 	}
 	SetLyrics(Parsed);

@@ -165,6 +165,7 @@ void UDreamTweenerSequence::SetOriginValueForRestart()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		item->reverseTween = false;
 	}
 }
@@ -177,6 +178,7 @@ void UDreamTweenerSequence::SetValueForIncremental()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		item->reverseTween = false;
 		item->TweenAndApplyValue(0);
 
@@ -198,6 +200,7 @@ void UDreamTweenerSequence::SetValueForYoyo()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		//flip tweener
 		int loopCount = item->loopType == EDreamTweenLoop::Once ? 1 : item->maxLoopCount;
 		float tweenerDelay = duration - (item->delay + item->duration * loopCount);
@@ -215,6 +218,7 @@ void UDreamTweenerSequence::SetValueForRestart()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		item->reverseTween = false;
 		item->TweenAndApplyValue(0);
 
@@ -253,6 +257,7 @@ void UDreamTweenerSequence::Restart()
 		}
 		finishedTweenerList.Reset();
 		this->loopCycleCount = 0;
+		this->foldedCycleCount = 0;
 
 		//sort it, so later tweener can do "SetOriginValueForRestart" ealier, so ealier tweener will get correct start state
 		tweenerList.Sort([=](const UDreamTweener& A, const UDreamTweener& B) {
@@ -269,6 +274,7 @@ void UDreamTweenerSequence::Restart()
 			//set parameter to initial
 			item->elapseTime = 0;
 			item->loopCycleCount = 0;
+			item->foldedCycleCount = 0;
 			item->reverseTween = false;
 		}
 	}
@@ -301,6 +307,7 @@ void UDreamTweenerSequence::Goto(float timePoint)
 		}
 		finishedTweenerList.Reset();
 		this->loopCycleCount = 0;
+		this->foldedCycleCount = 0;
 
 		//sort it, so later tweener can do "SetOriginValueForRestart" ealier, so ealier tweener will get correct start state
 		tweenerList.Sort([=](const UDreamTweener& A, const UDreamTweener& B) {
@@ -317,6 +324,7 @@ void UDreamTweenerSequence::Goto(float timePoint)
 			//set parameter to initial
 			item->elapseTime = 0;
 			item->loopCycleCount = 0;
+			item->foldedCycleCount = 0;
 			item->reverseTween = false;
 		}
 	}

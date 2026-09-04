@@ -14,7 +14,11 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 	{
 		if (!Texture.IsValid())
 		{
-			Texture = Cast<UDreamTexture>(GetWidget()->GetVisual());
+			//No owning widget on the class default object, which is where the details panel edits a default.
+			if (auto Widget = GetWidget())
+			{
+				Texture = Cast<UDreamTexture>(Widget->GetVisual());
+			}
 		}
 		if (Texture.IsValid())
 		{
@@ -30,7 +34,10 @@ bool UUISpriteSheetTexturePlayer::CanPlay()
 {
 	if (!Texture.IsValid())
 	{
-		Texture = Cast<UDreamTexture>(GetWidget()->GetVisual());
+		if (auto Widget = GetWidget())
+		{
+			Texture = Cast<UDreamTexture>(Widget->GetVisual());
+		}
 	}
 	if (!Texture.IsValid())
 	{

@@ -152,8 +152,12 @@ UDreamTweener* UDreamTweener::SetCurveFloat(UCurveFloat* newCurveFloat)
 		}
 		return this;
 	}
+	// Hold the curve: the binding below is weak, but the tweener subclasses evaluate tweenFunc without
+	// asking whether it is still bound, so a collected curve would be read through a dangling capture.
+	curveFloat = newCurveFloat;
 	tweenFunc.BindWeakLambda(newCurveFloat, [newCurveFloat](float c, float b, float t, float d) {
 		if (d < KINDA_SMALL_NUMBER)return c + b;
+		if (!IsValid(newCurveFloat))return Linear(c, b, t, d);
 		return newCurveFloat->GetFloatValue(t / d) * c + b;
 	});
 	return this;
@@ -186,13 +190,32 @@ UDreamTweener* UDreamTweener::SetAffectByTimeDilation(bool value)
 
 bool UDreamTweener::ToNext(float deltaTime, float unscaledDeltaTime)
 {
+	// A killed tween is finished whether or not the game is paused. Answering "still running" for the
+	// pause first meant anything killed during a pause stayed in the manager's list -- ticked, and kept
+	// alive with everything it references -- until the game resumed, which for a paused menu is never.
+	if (isMarkedToKill)return false;
 	if (auto world = GetWorld())
 	{
 		if (world->IsPaused() && affectByGamePause)return true;
 	}
-	if (isMarkedToKill)return false;
 	if (isMarkedPause)return true;//no need to tick time if pause
-	return this->ToNextWithElapsedTime(elapseTime + (affectByTimeDilation ? deltaTime : unscaledDeltaTime));
+	float newElapseTime = elapseTime + (affectByTimeDilation ? deltaTime : unscaledDeltaTime);
+	// A loop with no end has no end to its clock either: elapseTime would climb until a float can no
+	// longer resolve a frame's delta, and the cycle phase drifts and then stops advancing altogether.
+	// The cycles that are over are folded out of the clock here, where the clock is the tween's OWN --
+	// a sequence hands its children an elapsed time it computes itself, so those are left alone -- and
+	// counted in foldedCycleCount, which the cycle arithmetic subtracts back out. currentTime is
+	// therefore exactly what it was before the fold; only the magnitude of the clock changes.
+	if (loopType != EDreamTweenLoop::Once && maxLoopCount <= -1 && duration > 0)
+	{
+		const int32 pendingFoldCycleCount = loopCycleCount - foldedCycleCount;
+		if (pendingFoldCycleCount > 0)
+		{
+			newElapseTime -= duration * pendingFoldCycleCount;
+			foldedCycleCount = loopCycleCount;
+		}
+	}
+	return this->ToNextWithElapsedTime(newElapseTime);
 }
 bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 {
@@ -210,7 +233,7 @@ bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 		}
 
 		float elapseTimeWithoutDelay = elapseTime - delay;
-		float currentTime = elapseTimeWithoutDelay - duration * loopCycleCount;
+		float currentTime = elapseTimeWithoutDelay - duration * (loopCycleCount - foldedCycleCount);
 		if (currentTime >= duration)
 		{
 			bool returnValue = true;
@@ -307,6 +330,7 @@ void UDreamTweener::Restart()
 	isMarkedPause = false;//incase it is paused.
 	//reset parameter to initial
 	loopCycleCount = 0;
+	foldedCycleCount = 0;
 	reverseTween = false;
 	SetOriginValueForRestart();
 
@@ -318,6 +342,7 @@ void UDreamTweener::Goto(float timePoint)
 	timePoint = FMath::Clamp(timePoint, 0.0f, duration);
 	//reset parameter to initial
 	loopCycleCount = 0;
+	foldedCycleCount = 0;
 	reverseTween = false;
 
 	this->ToNextWithElapsedTime(timePoint);
@@ -328,7 +353,7 @@ float UDreamTweener::GetProgress()const
 	if (elapseTime > delay)
 	{
 		float elapseTimeWithoutDelay = elapseTime - delay;
-		float currentTime = elapseTimeWithoutDelay - duration * loopCycleCount;
+		float currentTime = elapseTimeWithoutDelay - duration * (loopCycleCount - foldedCycleCount);
 		if (currentTime >= duration)
 		{
 			return 1;

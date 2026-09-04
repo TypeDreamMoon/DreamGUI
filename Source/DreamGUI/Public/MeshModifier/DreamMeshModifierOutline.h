@@ -25,6 +25,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (DisplayName = "Use 8 Direction"))
 		bool bUse8Direction = false;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha);
+	/** Set once the direction count has been reported as beyond what the index buffer can address, so a
+	 * rebuild every frame does not repeat the message. */
+	bool bLoggedVertexLimitWarning = false;
 public:
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged

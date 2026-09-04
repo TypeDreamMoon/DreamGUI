@@ -37,7 +37,36 @@ void UDreamMeshModifierOutline::ModifyUIGeometry(
 
 	const int32 singleChannelTriangleIndicesCount = triangleCount;
 	const int32 singleChannelVerticesCount = vertexCount;
-	const int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (bUse8Direction ? 8 : 4);
+
+	// Each direction is one more whole copy of the mesh -- the copies plus the original come to 9 (or 5)
+	// times the vertex count -- and a triangle index cannot address past LEXUI_MAX_VERTEX_COUNT. Going
+	// past it does not fail: the indices wrap inside the index type and the outline draws itself out of
+	// whatever vertices those wrapped numbers name. Fall back to four directions where eight will not
+	// fit, and draw no outline at all where four will not either.
+	const int32 maxDirectionCount = (LEXUI_MAX_VERTEX_COUNT / singleChannelVerticesCount) - 1;
+	if (maxDirectionCount < 4)
+	{
+		if (!bLoggedVertexLimitWarning)
+		{
+			bLoggedVertexLimitWarning = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d mesh is too large to outline (%d vertices, limit %d); no outline drawn.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, singleChannelVerticesCount, LEXUI_MAX_VERTEX_COUNT);
+		}
+		return;
+	}
+	bool bUse8DirectionThisPass = bUse8Direction;
+	if (bUse8DirectionThisPass && maxDirectionCount < 8)
+	{
+		bUse8DirectionThisPass = false;
+		if (!bLoggedVertexLimitWarning)
+		{
+			bLoggedVertexLimitWarning = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d 8-direction outline needs more vertices than an index can address (%d per copy, limit %d); using 4 directions.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, singleChannelVerticesCount, LEXUI_MAX_VERTEX_COUNT);
+		}
+	}
+
+	const int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (bUse8DirectionThisPass ? 8 : 4);
 
 	triangles.AddUninitialized(additionalTriangleIndicesCount);
 	//put orgin triangles on last pass, this will make the origin triangle render at top
@@ -75,7 +104,7 @@ void UDreamMeshModifierOutline::ModifyUIGeometry(
 			triangles[channelTriangleIndex2] = originTriangleIndex + channelIndicesOffset2;
 			triangles[channelTriangleIndex3] = originTriangleIndex + channelIndicesOffset3;
 			triangles[channelTriangleIndex4] = originTriangleIndex + channelIndicesOffset4;
-			if (bUse8Direction)
+			if (bUse8DirectionThisPass)
 			{
 				triangles[channelTriangleIndex5] = originTriangleIndex + channelIndicesOffset5;
 				triangles[channelTriangleIndex6] = originTriangleIndex + channelIndicesOffset6;
@@ -88,7 +117,7 @@ void UDreamMeshModifierOutline::ModifyUIGeometry(
 		}
 	}
 
-	int additionalVertCount = singleChannelVerticesCount * (bUse8Direction ? 8 : 4);
+	int additionalVertCount = singleChannelVerticesCount * (bUse8DirectionThisPass ? 8 : 4);
 	vertexCount = singleChannelVerticesCount + additionalVertCount;
 	originVertices.AddDefaulted(additionalVertCount);
 	vertices.AddDefaulted(additionalVertCount);
@@ -114,7 +143,7 @@ void UDreamMeshModifierOutline::ModifyUIGeometry(
 				vertices[channelVertIndex2].TextureCoordinate[i] = originUV;
 				vertices[channelVertIndex3].TextureCoordinate[i] = originUV;
 				vertices[channelVertIndex4].TextureCoordinate[i] = originUV;
-				if (bUse8Direction)
+				if (bUse8DirectionThisPass)
 				{
 					vertices[channelVertIndex5].TextureCoordinate[i] = originUV;
 					vertices[channelVertIndex6].TextureCoordinate[i] = originUV;
@@ -128,7 +157,7 @@ void UDreamMeshModifierOutline::ModifyUIGeometry(
 			ApplyColorAndAlpha(vertices[channelVertIndex2].Color, originAlpha);
 			ApplyColorAndAlpha(vertices[channelVertIndex3].Color, originAlpha);
 			ApplyColorAndAlpha(vertices[channelVertIndex4].Color, originAlpha);
-			if (bUse8Direction)
+			if (bUse8DirectionThisPass)
 			{
 				ApplyColorAndAlpha(vertices[channelVertIndex5].Color, originAlpha);
 				ApplyColorAndAlpha(vertices[channelVertIndex6].Color, originAlpha);
@@ -153,7 +182,7 @@ void UDreamMeshModifierOutline::ModifyUIGeometry(
 			channel4Vert = originVert;
 			channel4Vert.Y -= OutlineSize.X;
 			channel4Vert.Z -= OutlineSize.Y;
-			if (bUse8Direction)
+			if (bUse8DirectionThisPass)
 			{
 				auto& channel5Vert = originVertices[channelVertIndex5].Position;
 				channel5Vert = originVert;

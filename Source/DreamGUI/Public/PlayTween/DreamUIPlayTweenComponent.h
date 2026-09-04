@@ -18,6 +18,7 @@ protected:
 		TObjectPtr<class UDreamUIPlayTween> PlayTween;
 
 	virtual void Awake() override;
+	virtual void OnDestroy() override;
 public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		class UDreamUIPlayTween* GetPlayTween()const { return PlayTween; }

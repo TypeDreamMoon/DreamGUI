@@ -28,6 +28,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bMultiplySourceAlpha = true;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha);
+	/** Set once the segment count has been reported as beyond what the index buffer can address, so a
+	 * rebuild every frame does not repeat the message. */
+	bool bLoggedVertexLimitWarning = false;
 public:
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged

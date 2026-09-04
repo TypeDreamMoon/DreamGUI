@@ -3,7 +3,7 @@
 #pragma once
 #include "Stats/Stats.h"
 #include "Modules/ModuleInterface.h"
-DECLARE_LOG_CATEGORY_EXTERN(DreamTween, Log, All);
+DREAMTWEEN_API DECLARE_LOG_CATEGORY_EXTERN(DreamTween, Log, All);
 DECLARE_STATS_GROUP(TEXT("DreamTween"), STATGROUP_DreamTween, STATCAT_Advanced);
 class FDreamTweenModule : public IModuleInterface
 {
