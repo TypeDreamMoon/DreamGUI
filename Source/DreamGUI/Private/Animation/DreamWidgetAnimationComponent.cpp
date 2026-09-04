@@ -781,7 +781,7 @@ void UDreamWidgetAnimationComponent::SetSequenceByDisplayName(const FString& InN
 
 UDreamWidgetAnimation* UDreamWidgetAnimationComponent::AddNewAnimation()
 {
-	auto NewSequence = NewObject<UDreamWidgetAnimation>(this, NAME_None, RF_Public | RF_Transactional);
+	auto NewSequence = NewObject<UDreamWidgetAnimation>(this, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
 	auto MovieScene = NewSequence->GetMovieScene();
 	SequenceArray.Add(NewSequence);
 	return NewSequence;

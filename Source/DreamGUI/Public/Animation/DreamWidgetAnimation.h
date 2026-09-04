@@ -46,6 +46,21 @@ private:
 	//~ UObject interface
 	virtual void PostInitProperties() override;
 
+	/**
+	 * Point every binding's cached widget pointer at THIS animation's own tree, once.
+	 *
+	 * The other half of the fix PostInitProperties starts: there the stale pointers are dropped,
+	 * because the tree is still being instanced and there is nothing yet to walk; here they are
+	 * refilled, at the first resolve that arrives with a live hierarchy. Once, because after that the
+	 * pointers name this tree and re-walking every path per resolve would be a cost for nothing.
+	 */
+	void RebindObjectReferencesOnce(UDreamWidget* InContextWidget) const;
+	/**
+	 * Latch for the above. Deliberately NOT a UPROPERTY: an instanced copy has to start life
+	 * un-rebound, and a reflected field would be copied from a template that had already done it.
+	 */
+	mutable bool bObjectReferencesRebound = false;
+
 private:
 	
 	/** Pointer to the movie scene that controls this animation. */

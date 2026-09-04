@@ -4,7 +4,11 @@
 #include "Animation/DreamWidgetAnimation.h"
 #include "MovieScene.h"
 #include "MovieSceneSection.h"
+#include "Generators/MovieSceneEasingFunction.h"
+#include "UObject/UObjectGlobals.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamWidgetTree.h"
+#include "DreamGUI.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Tracks/MovieSceneAudioTrack.h"
 #include "Tracks/MovieSceneEventTrack.h"
@@ -15,6 +19,62 @@
 #if WITH_EDITOR
 UDreamWidgetAnimation::FOnInitialize UDreamWidgetAnimation::OnInitializeSequenceEvent;
 #endif
+
+namespace DreamWidgetAnimationLocal
+{
+	/**
+	 * Aim one of a section's two easing functions at an object that section OWNS.
+	 *
+	 * The same hole the empty channel proxy came out of, one property along. An instance of a widget
+	 * class gets its animations by TEMPLATE INSTANCING, and FObjectInstancingGraph re-points only
+	 * FObjectProperty members carrying CPF_InstancedReference. FMovieSceneEasingSettings::EaseIn is a
+	 * TScriptInterface -- an FInterfaceProperty -- so it is copied verbatim: the new section arrives
+	 * with an EaseIn still naming the TEMPLATE's "EaseInFunction", which lives inside the authoring
+	 * tree the rebuild was supposed to replace.
+	 *
+	 * Two costs, and the second is the one that was visible. Editing the ease writes the template's
+	 * object rather than this section's; and the pointer keeps the whole old tree reachable, so a
+	 * .dui rebuilt N times leaves N authoring trees in the package -- WBP_ControlsGallery had
+	 * accumulated DreamWidgetTree_0/1/2/7 by the time anyone counted.
+	 *
+	 * The section's OWN default subobject is preferred over a duplicate, and that is not a
+	 * micro-optimisation: UMovieSceneSection's constructor makes "EaseInFunction"/"EaseOutFunction"
+	 * with ObjectInitializer::CreateDefaultSubobject, so on a template instantiation the engine has
+	 * ALREADY created it here with the archetype's one as its archetype -- values and all. Re-aiming
+	 * is the whole fix, and it leaves no second object behind. Duplicating is the fallback for a
+	 * section whose easing function is not one of those two subobjects.
+	 */
+	void ReHomeEasingFunction(UMovieSceneSection* InSection, TScriptInterface<IMovieSceneEasingFunction>& InOutEasing)
+	{
+		UObject* Source = InOutEasing.GetObject();
+		if (Source == nullptr || Source->IsIn(InSection))
+		{
+			return;
+		}
+
+		// ...Safe, not the plain one: the plain StaticFindObjectFast is fatal if it is ever reached
+		// while a package is saving or the object hash is locked for GC, and this runs from
+		// PostInitProperties, which is a hook neither of those states is supposed to reach but
+		// neither of them announces either. The Safe variant answers null instead, and null here
+		// falls through to the duplicate.
+		UObject* Local = StaticFindObjectFastSafe(Source->GetClass(), InSection, Source->GetFName());
+		if (Local == nullptr)
+		{
+			// An explicit unique name rather than NAME_None: the section usually already holds an
+			// object under the source's name, and asking the duplicator for that name again is how a
+			// re-home turns into a name collision.
+			Local = DuplicateObject<UObject>(Source, InSection,
+				MakeUniqueObjectName(InSection, Source->GetClass(), Source->GetFName()));
+		}
+		if (Local == nullptr)
+		{
+			return;
+		}
+
+		InOutEasing.SetObject(Local);
+		InOutEasing.SetInterface(Cast<IMovieSceneEasingFunction>(Local));
+	}
+}
 
 static TAutoConsoleVariable<int32> CVarDefaultEvaluationType(
 	TEXT("DreamWidgetAnimation.DefaultEvaluationType"),
@@ -93,17 +153,85 @@ void UDreamWidgetAnimation::PostInitProperties()
 	// float and rotator track (whose proxies are built in their constructors) played fine.
 	// PostEditImport is the engine's own "rebuild your proxy" hook and is harmless on the rest.
 	// Loading is excluded because Serialize does this itself, and the CDO has nothing to play.
-	if (!HasAnyFlags(RF_ClassDefaultObject | RF_NeedLoad | RF_WasLoaded) && MovieScene != nullptr)
+	if (!HasAnyFlags(RF_ClassDefaultObject | RF_NeedLoad | RF_WasLoaded))
 	{
-		for (UMovieSceneSection* Section : MovieScene->GetAllSections())
+		if (MovieScene != nullptr)
 		{
-			if (IsValid(Section))
+			for (UMovieSceneSection* Section : MovieScene->GetAllSections())
 			{
-				// UMovieSceneSection re-declares the hook protected; UObject's is public and the
-				// dispatch is virtual, so the base pointer reaches the section's own override.
-				static_cast<UObject*>(Section)->PostEditImport();
+				if (IsValid(Section))
+				{
+					// UMovieSceneSection re-declares the hook protected; UObject's is public and the
+					// dispatch is virtual, so the base pointer reaches the section's own override.
+					static_cast<UObject*>(Section)->PostEditImport();
+					// The other half of the same instancing gap: the proxy is not a property at all, and
+					// these two ARE properties that the instancing graph does not follow. See
+					// DreamWidgetAnimationLocal::ReHomeEasingFunction.
+					DreamWidgetAnimationLocal::ReHomeEasingFunction(Section, Section->Easing.EaseIn);
+					DreamWidgetAnimationLocal::ReHomeEasingFunction(Section, Section->Easing.EaseOut);
+				}
 			}
 		}
+
+		// The third property the instancing graph leaves pointing at the template, and the one that
+		// outlives the other two. FDreamWidgetAnimationObjectReference::HelperWidget is a plain
+		// TObjectPtr<UDreamWidget>, so an instanced animation arrives holding the CLASS TEMPLATE's
+		// widget. Playback itself survives that -- LocateBoundObjects resolves by PATH against its
+		// context and never reads the pointer -- but the pointer is a strong reference from a live
+		// instance into the authoring tree, and it is what keeps a rebuilt .dui's superseded trees
+		// reachable, the same accumulation ReHomeEasingFunction describes above.
+		//
+		// CLEARED HERE, NOT RE-RESOLVED, because there is nothing yet to resolve against: this runs
+		// from inside NewObject while the tree is still being instanced, and
+		// UDreamWidgetGeneratedClass::InitializeWidgetStatic does not link Parent or finish the
+		// hierarchy until its step 2, after that NewObject returns. Walking a path down from the
+		// context widget now would meet a half-built tree and answer wrongly, which is worse than
+		// answering nothing: the path is the binding and survives untouched, and the pointer is
+		// refilled at the first resolve that arrives with a live tree (RebindObjectReferencesOnce).
+		//
+		// Keyed on the widget TREE rather than on the widget, and reached through the outer chain
+		// rather than through Parent, because outers exist from the moment an object is constructed
+		// and Parent does not.
+		if (const UDreamWidgetTree* OwnTree = GetTypedOuter<UDreamWidgetTree>())
+		{
+			const int32 DetachedCount = ObjectReferences.DetachHelpersOutsideTree(OwnTree);
+			UE_CLOG(DetachedCount > 0, DreamGUI, Verbose,
+				TEXT("[%s].%d Animation '%s' dropped %d binding pointer(s) that named another widget tree; the recorded paths are unchanged."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName(), DetachedCount);
+		}
+	}
+}
+
+void UDreamWidgetAnimation::RebindObjectReferencesOnce(UDreamWidget* InContextWidget) const
+{
+	if (bObjectReferencesRebound)
+	{
+		return;
+	}
+	// ONLY this animation's own widget, and this guard is load-bearing rather than tidy. The animation
+	// editor scrubs the AUTHORED animation against a PREVIEW instance, and parks it on a childless
+	// sentinel widget for the length of an evacuation (see SDreamWidgetAnimationEditorWidget); both
+	// arrive here as a context that is not this animation's owner. Re-homing an asset's stored
+	// pointers at either would be an edit nobody asked for -- and against the sentinel, under which
+	// every path resolves to nothing on purpose, it would be one that erased them.
+	if (InContextWidget == nullptr || InContextWidget != GetTypedOuter<UDreamWidget>())
+	{
+		return;
+	}
+	bObjectReferencesRebound = true;
+
+	TArray<FString> UnresolvedPaths;
+	const int32 ReboundCount = ObjectReferences.RebindHelpersToContext(InContextWidget, UnresolvedPaths);
+	UE_CLOG(ReboundCount > 0, DreamGUI, Verbose,
+		TEXT("[%s].%d Animation '%s' re-pointed %d binding(s) at its own widget tree."),
+		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName(), ReboundCount);
+	for (const FString& Path : UnresolvedPaths)
+	{
+		// Warning, not Verbose: this binding will find nothing when the animation plays, and the
+		// recorded path is the only thing that can say which widget was meant.
+		UE_LOG(DreamGUI, Warning,
+			TEXT("[%s].%d Animation '%s' has a binding whose path '%s' names no widget under '%s'; that track will not play."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName(), *Path, *InContextWidget->GetPathDisplayName());
 	}
 }
 
@@ -171,6 +299,11 @@ void UDreamWidgetAnimation::LocateBoundObjects(const FGuid& ObjectId,
 	// re-instancing rewrites the world (see SDreamWidgetAnimationEditorWidget).
 	if (UDreamWidget* ContextWidget = Cast<UDreamWidget>(ResolveParams.Context))
 	{
+		// The first resolve is also the first moment a live hierarchy exists to resolve against, so it
+		// is where the pointers PostInitProperties had to drop get refilled. Resolution below does not
+		// need them -- it walks the path -- but Resolve(), the no-context fallback, and the editor's
+		// IsObjectReferenceGood all read the pointer, and on an instance it must name the instance.
+		RebindObjectReferencesOnce(ContextWidget);
 		ObjectReferences.ResolveBindingInContext(ObjectId, ContextWidget, OutObjects);
 		return;
 	}

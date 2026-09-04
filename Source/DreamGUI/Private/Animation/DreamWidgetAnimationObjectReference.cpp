@@ -8,6 +8,7 @@
 #include "UObject/Package.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamWidgetTree.h"
 
 
 FString FDreamWidgetAnimationObjectReference::GetWidgetPathRelativeToContextWidget(UDreamWidget* InContextWidget, UDreamWidget* InWidget)
@@ -86,9 +87,14 @@ UDreamWidget* FDreamWidgetAnimationObjectReference::GetWidgetFromContextWidgetBy
 	}
 	return nullptr;
 }
+// Everything from here to the #endif below is editor-only, and the guard has to sit OUTSIDE the
+// first signature rather than inside its body: these functions are declared under #if WITH_EDITOR
+// in the header, so in a non-editor build a definition left outside the guard has no declaration to
+// match -- and with the body elided its opening brace swallowed the next function whole. This
+// translation unit did not compile for Game or Shipping until the guard moved up one line.
+#if WITH_EDITOR
 bool FDreamWidgetAnimationObjectReference::FixObjectReferenceFromEditorHelpers(UDreamWidget* InContextWidget)
 {
-#if WITH_EDITOR
 	if (auto FoundHelper = GetWidgetFromContextWidgetByRelativePath(InContextWidget, this->HelperWidgetPath))
 	{
 		HelperWidget = FoundHelper;
@@ -259,6 +265,64 @@ UObject* FDreamWidgetAnimationObjectReference::ResolveInContext(UDreamWidget* In
 	return SubObjectPath.ResolveObject();
 }
 
+bool FDreamWidgetAnimationObjectReference::DetachHelperOutsideTree(const UDreamWidgetTree* InOwnTree) const
+{
+	// A null tree is not evidence of anything. A widget built outside any tree -- a test fixture, a
+	// native control before its hierarchy exists -- reports null, and treating that as "a different
+	// tree" would clear pointers that were never cross-tree at all.
+	if (InOwnTree == nullptr)
+	{
+		return false;
+	}
+	// The resolve cache first and on its own terms. It is only ever built FROM HelperWidget, but it
+	// outlives a HelperWidget that has since been cleared, and an object held here from another tree
+	// is the same strong reference into the same tree. Transient and rebuilt on demand by
+	// CheckTargetObject, so dropping it costs nothing.
+	if (Object != nullptr && (!IsValid(Object) || Object->GetTypedOuter<UDreamWidgetTree>() != InOwnTree))
+	{
+		Object = nullptr;
+	}
+	// Outer, not the Parent chain: every widget in a tree is outered flat to its UDreamWidgetTree
+	// (UDreamWidgetTree::ConstructWidget, and the instancing graph maps the source root to the
+	// destination one), and the outer is set the moment an object is constructed -- while Parent is
+	// DuplicateTransient and is only rebuilt once the whole tree has been instanced. This has to
+	// answer before that, so it may not depend on it.
+	if (!IsValid(HelperWidget) || HelperWidget->GetTypedOuter<UDreamWidgetTree>() == InOwnTree)
+	{
+		return false;
+	}
+	HelperWidget = nullptr;
+	Object = nullptr;
+	return true;
+}
+
+bool FDreamWidgetAnimationObjectReference::RebindHelperToContext(UDreamWidget* InContextWidget, bool& OutResolvedByPath) const
+{
+	OutResolvedByPath = false;
+	if (!IsValid(InContextWidget) || HelperWidgetPath.IsEmpty())
+	{
+		return false;
+	}
+	UDreamWidget* Resolved = GetWidgetFromContextWidgetByRelativePath(InContextWidget, HelperWidgetPath);
+	if (Resolved == nullptr)
+	{
+		// The path is the binding and playback resolves through it, so a path this context cannot walk
+		// is a broken binding whatever the pointer says. All that can be done here is refuse to keep a
+		// pointer into somebody else's tree; a stale path over a pointer of our OWN is a rename, and
+		// FixEditorHelpers repairs the path from exactly that pointer.
+		return DetachHelperOutsideTree(InContextWidget->GetTypedOuter<UDreamWidgetTree>());
+	}
+	OutResolvedByPath = true;
+	if (Resolved == HelperWidget)
+	{
+		return false;
+	}
+	HelperWidget = Resolved;
+	// Resolved from the old pointer, so it names the old tree's object.
+	Object = nullptr;
+	return true;
+}
+
 bool FDreamWidgetAnimationObjectReferenceMap::HasBinding(const FGuid& ObjectId) const
 {
 	const int32 Index = BindingIds.IndexOfByKey(ObjectId);
@@ -322,6 +386,46 @@ void FDreamWidgetAnimationObjectReferenceMap::ResolveBindingInContext(const FGui
 			OutObjects.Add(Object);
 		}
 	}
+}
+
+int32 FDreamWidgetAnimationObjectReferenceMap::DetachHelpersOutsideTree(const UDreamWidgetTree* InOwnTree) const
+{
+	int32 DetachedCount = 0;
+	for (const FDreamWidgetAnimationObjectReferences& Reference : References)
+	{
+		for (const FDreamWidgetAnimationObjectReference& RefItem : Reference.Array)
+		{
+			if (RefItem.DetachHelperOutsideTree(InOwnTree))
+			{
+				++DetachedCount;
+			}
+		}
+	}
+	return DetachedCount;
+}
+
+int32 FDreamWidgetAnimationObjectReferenceMap::RebindHelpersToContext(UDreamWidget* InContextWidget, TArray<FString>& OutUnresolvedPaths) const
+{
+	int32 ReboundCount = 0;
+	for (const FDreamWidgetAnimationObjectReferences& Reference : References)
+	{
+		for (const FDreamWidgetAnimationObjectReference& RefItem : Reference.Array)
+		{
+			bool bResolvedByPath = false;
+			if (RefItem.RebindHelperToContext(InContextWidget, bResolvedByPath))
+			{
+				++ReboundCount;
+			}
+			// A reference that never recorded a path is not a path this context failed to walk -- it
+			// resolves in no context at all and always did, and reporting it here would say "broken
+			// binding" about references the older editor paths simply never filled in.
+			if (!bResolvedByPath && !RefItem.GetHelperWidgetPath().IsEmpty())
+			{
+				OutUnresolvedPaths.AddUnique(RefItem.GetHelperWidgetPath());
+			}
+		}
+	}
+	return ReboundCount;
 }
 
 #if WITH_EDITOR
