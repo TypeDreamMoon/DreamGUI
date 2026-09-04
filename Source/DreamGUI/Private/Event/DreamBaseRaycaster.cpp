@@ -9,6 +9,53 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Engine/World.h"
 
+namespace DreamBaseRaycasterLocal
+{
+	/**
+	 * Could this ray reach this visual at all? A coarse reject, run before the exact hit test.
+	 *
+	 * Every active raycaster walks EVERY visual under the root canvas on every pointer update, and the
+	 * exact test is not cheap: UDreamVisual::LineTraceUIRect inverts the widget's FTransform -- a
+	 * quaternion conjugate and three reciprocals -- then transforms two points before it has anything
+	 * to compare. A segment-to-point distance is a dot product and a subtraction, and on a real screen
+	 * almost every widget is nowhere near the cursor, so almost every visual can be answered with it.
+	 *
+	 * IT RETURNS FALSE ONLY WHEN THE MISS IS PROVEN. Everything it cannot prove comes back true and
+	 * takes the old path unchanged -- a custom raycast shape, a mesh whose vertices are not bound by
+	 * the rect, a widget under a perspective scope, a rect with no measured size. The filter is
+	 * allowed to cost time; it is not allowed to lose a hit.
+	 */
+	FORCEINLINE bool CouldRayReachVisual(const UDreamVisual* InVisual, const UDreamWidget* InWidget, const FVector& InRayOrigin, const FVector& InRayEnd)
+	{
+		// Whether the hit shape is inside the rect is the VISUAL's question (raycast type, custom
+		// raycast object); where that rect is in the world is the WIDGET's. Neither knows the other's
+		// half, so both are asked.
+		if (!InVisual->GetHitGeometryFitsWidgetRect())
+		{
+			return true;
+		}
+		FVector Center;
+		double Radius = 0.0;
+		if (!InWidget->GetWorldRectBoundingSphere(Center, Radius))
+		{
+			return true;
+		}
+		// A SEGMENT, matching how the exact test reads the same two points: it requires the widget's
+		// plane to be crossed BETWEEN start and end, so a widget past the raycaster's reach is already
+		// a miss there and clamping the parameter here reproduces that for free.
+		const FVector Segment = InRayEnd - InRayOrigin;
+		const FVector ToCenter = Center - InRayOrigin;
+		const double SegmentLengthSquared = Segment.SizeSquared();
+		const double T = SegmentLengthSquared > 0.0
+			? FMath::Clamp(FVector::DotProduct(ToCenter, Segment) / SegmentLengthSquared, 0.0, 1.0)
+			: 0.0;
+		const double DistanceSquared = (ToCenter - Segment * T).SizeSquared();
+		// Negated so a NaN anywhere in the ray answers "could reach" and defers to the exact test,
+		// rather than quietly culling the widget.
+		return !(DistanceSquared > Radius * Radius);
+	}
+}
+
 UDreamBaseRaycaster::UDreamBaseRaycaster()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -93,6 +140,7 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 				Widget->GetRaycastableInHierarchy()
 				&& Widget->GetHitTestVisibleInHierarchy()
 				&& Visual->GetRaycastTarget()
+				&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, OutRayOrigin, OutRayEnd)
 				&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 				)
 			{
@@ -117,6 +165,10 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 					Widget->GetRaycastableInHierarchy()
 					&& Widget->GetHitTestVisibleInHierarchy()
 					&& Visual->GetRaycastTarget()
+					// Ordered last of the cheap tests and first of the expensive ones: the three above
+					// are field reads, this one is arithmetic on a cached sphere, and LineTraceUI below
+					// inverts a transform.
+					&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, OutRayOrigin, OutRayEnd)
 					&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 					)
 				{
@@ -157,12 +209,20 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 
 void UDreamBaseRaycaster::RaycastWorld(UDreamPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
 {
-	check(0);
+	// Not implemented, and the commented-out body below cannot simply be uncommented: it hands
+	// OutHitResultArray straight to LineTraceMultiByChannel, which fills TArray<FHitResult> -- while
+	// this is TArray<FDreamUIHitResult>, a different struct whose payload is a UDreamWidget the
+	// engine trace has no way to produce. Everything downstream (Widget, GetInteractableInHierarchy,
+	// canvas sort order) is defined only for widgets, so a world-object hit path is a design job,
+	// not a revert. Until someone does it, this degrades to "hit nothing" instead of taking the
+	// process down: UDreamWorldSpaceRaycasterForWorldTrigger is a placeable component and reaching
+	// here needed nothing more than adding it to an actor.
+	ensureMsgf(false, TEXT("UDreamBaseRaycaster::RaycastWorld is not implemented; world-trigger raycasting will find nothing."));
 	// if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
 	// {
 	// 	CurrentRayOrigin = OutRayOrigin;
 	// 	CurrentRayDirection = OutRayDirection;
-	// 	
+	//
 	// 	FCollisionQueryParams queryParams = FCollisionQueryParams::DefaultQueryParam;
 	// 	queryParams.bReturnFaceIndex = InRequireFaceIndex;
 	// 	this->GetWorld()->LineTraceMultiByChannel(OutHitResultArray, OutRayOrigin, OutRayEnd, UEngineTypes::ConvertToCollisionChannel(InTraceChannel), queryParams);

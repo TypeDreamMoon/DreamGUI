@@ -85,6 +85,16 @@ private:
 	};
 
 	void ShowNow(FPendingModal&& InModal);
+	/**
+	 * Deliver InResult for a modal that never got on screen, and let the queue carry on.
+	 *
+	 * ShowNow can fail three ways -- no dialog class, no screen root, a class that will not
+	 * instantiate -- and "OnResult fires exactly once" has to hold for all of them, as does the
+	 * queue: a modal that fails to open is not a modal that is up, and nothing else pumps the queue.
+	 */
+	void FailPendingModal(FPendingModal& InModal, FName InResult);
+	/** Show queued modals until one actually opens, or the queue runs dry. Re-entrancy-safe. */
+	void ShowNextQueuedModal();
 	void DestroyActiveModal();
 
 	TArray<FPendingModal> Queue;
@@ -101,4 +111,6 @@ private:
 	TObjectPtr<UDreamUIModalScope> ActiveScope;
 	/** Re-entrancy latch: a result callback that opens another modal must land in the queue. */
 	bool bClosingModal = false;
+	/** Latch for ShowNextQueuedModal: a ShowNow that fails asks for the next one from inside the pump. */
+	bool bPumpingQueue = false;
 };

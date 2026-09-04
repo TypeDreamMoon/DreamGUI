@@ -69,6 +69,29 @@ public:
 	static UClass* GetObjectParameterClass(const UFunction* InFunction);
 	static UEnum* GetEnumParameter(const UFunction* InFunction);
 	static UClass* GetClassParameterClass(const UFunction* InFunction);
+
+	/**
+	 * How many bytes a parameter of this type occupies in FDreamUIEventDelegateData::ParamBuffer.
+	 * The buffer is NOT a serialization format: ExecuteTargetFunction hands it straight to
+	 * UObject::ProcessEvent as the target function's parameter frame, so the only correct length is
+	 * sizeof() of the parameter type as the compiler lays it out.
+	 * @return the size, or 0 for the types that never travel through the raw buffer (None/Empty,
+	 *		   String/Name/Text which are serialized at their own length, PointerEvent, and the
+	 *		   reference types which live in ReferenceObject)
+	 */
+	static int32 GetParameterBufferSize(EDreamUIEventDelegateParameterType InParamType);
+	/**
+	 * How many bytes the same parameter occupied while the engine math types were single precision.
+	 * @return the old size, or 0 for the types whose layout never changed
+	 */
+	static int32 GetLegacyParameterBufferSize(EDreamUIEventDelegateParameterType InParamType);
+	/**
+	 * Bring a stored buffer up to GetParameterBufferSize. A buffer saved at the single precision
+	 * length holds real values, so it is widened component by component rather than thrown away;
+	 * a buffer of any other unexpected length is zero-padded or truncated to fit.
+	 * @return true if InOutBuffer was changed
+	 */
+	static bool UpgradeParameterBuffer(EDreamUIEventDelegateParameterType InParamType, TArray<uint8>& InOutBuffer);
 private:
 	static bool IsFunctionCompatible(const UFunction* InFunction, EDreamUIEventDelegateParameterType& OutParameterType);
 	static bool IsPropertyCompatible(const FProperty* InFunctionProperty, EDreamUIEventDelegateParameterType& OutParameterType);

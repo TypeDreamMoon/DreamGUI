@@ -179,13 +179,13 @@ private:
 	 * If keep pressing the navigate button for a while, then will trigger the process of continuous navigation.
 	 * This is the time to trigger the process.
 	 */
-	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI)
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float NavigateInputIntervalForFirstTime = 0.5f;
 	/**
 	 * If keep pressing the navigate button for a while, then will trigger the process of continuous navigation.
 	 * This is the interval trigger time of continuous navigation
 	 */
-	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI)
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float NavigateInputInterval = 0.2f;
 	/**
 	 * Scroll the containers around a navigated-to widget until it is on screen. Off, navigation can
@@ -211,10 +211,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetDefaultInputType(EDreamUIPointerInputType Value){ DefaultInputType = Value;}
+	/**
+	 * Both navigation intervals are floored rather than taken as given: they are the step of the
+	 * continuous-navigation timer, and zero (or a negative) there is not "as fast as possible", it is
+	 * a deadline that can never be pushed past the current time.
+	 */
+	static constexpr float MinNavigateInputInterval = 0.01f;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-	void SetNavigateInputIntervalForFirstTime(float Value){ NavigateInputIntervalForFirstTime = Value;}
+	void SetNavigateInputIntervalForFirstTime(float Value){ NavigateInputIntervalForFirstTime = FMath::Max(Value, MinNavigateInputInterval);}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-	void SetNavigateInputInterval(float Value){ NavigateInputInterval = Value;}
+	void SetNavigateInputInterval(float Value){ NavigateInputInterval = FMath::Max(Value, MinNavigateInputInterval);}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetScrollNavigationTargetIntoView(bool Value){ bScrollNavigationTargetIntoView = Value;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
@@ -248,8 +254,13 @@ public:
 		bool AllowEventBubbleUp)
 	{
 		bool TempAllowEventBubbleUp = AllowEventBubbleUp;
-		for (auto& Comp : Widget->GetAllComponents())
+		// A copy, not the live array: InterfaceFunction runs game code, and a handler that adds or
+		// removes a behaviour on the widget it was just dispatched to -- a click that swaps a
+		// component, a widget that destroys itself -- reallocates the very array being walked.
+		TArray<UDreamUIBehaviour*> ComponentArray = Widget->GetAllComponents();
+		for (auto& Comp : ComponentArray)
 		{
+			if (!IsValid(Comp))continue;
 			if (Comp->GetClass()->ImplementsInterface(InterfaceClass))
 			{
 				if (InterfaceFunction(Comp, EventData) == false)
@@ -274,8 +285,12 @@ public:
 		UInterfaceFunction InterfaceFunction, UBubbleUpFunction BubbleUpFunction)
 	{
 		bool TempAllowEventBubbleUp = true;
-		for (auto& Comp : Widget->GetAllComponents())
+		// Same reason as ExecuteDreamUIInterface above: InterfaceFunction dispatches into game code
+		// that is free to change this widget's component list while we are walking it.
+		TArray<UDreamUIBehaviour*> ComponentArray = Widget->GetAllComponents();
+		for (auto& Comp : ComponentArray)
 		{
+			if (!IsValid(Comp))continue;
 			if (Comp->GetClass()->ImplementsInterface(InterfaceClass))
 			{
 				if (InterfaceFunction(Comp, EventData) == false)

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "UObject/ObjectKey.h"
 #include "DreamUIPopupLayer.generated.h"
 
 class UDreamWidget;
@@ -48,7 +49,15 @@ public:
 	void Restore(UDreamWidget* InWidget);
 
 private:
-	/** Who a lifted widget belongs to, for the trip home. */
-	UPROPERTY(Transient)
-	TMap<TObjectPtr<UDreamWidget>, TWeakObjectPtr<UDreamWidget>> ElevatedHomes;
+	/**
+	 * Who a lifted widget belongs to, for the trip home.
+	 *
+	 * Keyed by FObjectKey rather than by the widget itself: the key used to be a TObjectPtr in a
+	 * UPROPERTY map, which is a STRONG reference, so a popup destroyed without a Restore -- its
+	 * owner torn down while the list was open -- stayed alive for as long as the world subsystem
+	 * did, with nothing left that could ever come and collect it. Both halves are non-owning now
+	 * (an FObjectKey is an identity, not a reference), which also means the map no longer needs to
+	 * be reflected at all.
+	 */
+	TMap<FObjectKey, TWeakObjectPtr<UDreamWidget>> ElevatedHomes;
 };

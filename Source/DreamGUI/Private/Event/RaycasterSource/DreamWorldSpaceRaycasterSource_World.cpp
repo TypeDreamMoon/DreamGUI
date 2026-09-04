@@ -2,6 +2,7 @@
 
 #include "Event/RaycasterSource/DreamWorldSpaceRaycasterSource_World.h"
 #include "GameFramework/Actor.h"
+#include "Core/DreamUIWorldContext.h"
 
 bool UDreamWorldSpaceRaycasterSource_World::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
@@ -32,9 +33,10 @@ bool UDreamWorldSpaceRaycasterSource_World::GenerateRay(UDreamPointerEventData* 
 }
 bool UDreamWorldSpaceRaycasterSource_World::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
-	if (bHoldToDrag)
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (bHoldToDrag && World != nullptr)
 	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		if (World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}

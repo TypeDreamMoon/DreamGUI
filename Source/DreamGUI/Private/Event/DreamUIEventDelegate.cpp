@@ -230,6 +230,81 @@ UEnum* UDreamUIEventDelegateParameterHelper::GetEnumParameter(const UFunction* I
 	}
 	return nullptr;
 }
+int32 UDreamUIEventDelegateParameterHelper::GetParameterBufferSize(EDreamUIEventDelegateParameterType InParamType)
+{
+	//No literals here on purpose. ParamBuffer is the parameter frame ProcessEvent reads, so every one
+	//of these has to be the compiler's sizeof for the type the target function actually declares.
+	switch (InParamType)
+	{
+	case EDreamUIEventDelegateParameterType::Bool:			return (int32)sizeof(uint8);//a bool parameter is one byte in the frame, and the buffer stores 0/1
+	case EDreamUIEventDelegateParameterType::Float:			return (int32)sizeof(float);
+	case EDreamUIEventDelegateParameterType::Double:		return (int32)sizeof(double);
+	case EDreamUIEventDelegateParameterType::Int8:			return (int32)sizeof(int8);
+	case EDreamUIEventDelegateParameterType::UInt8:			return (int32)sizeof(uint8);
+	case EDreamUIEventDelegateParameterType::Int16:			return (int32)sizeof(int16);
+	case EDreamUIEventDelegateParameterType::UInt16:		return (int32)sizeof(uint16);
+	case EDreamUIEventDelegateParameterType::Int32:			return (int32)sizeof(int32);
+	case EDreamUIEventDelegateParameterType::UInt32:		return (int32)sizeof(uint32);
+	case EDreamUIEventDelegateParameterType::Int64:			return (int32)sizeof(int64);
+	case EDreamUIEventDelegateParameterType::UInt64:		return (int32)sizeof(uint64);
+	case EDreamUIEventDelegateParameterType::Vector2:		return (int32)sizeof(FVector2D);
+	case EDreamUIEventDelegateParameterType::Vector3:		return (int32)sizeof(FVector);
+	case EDreamUIEventDelegateParameterType::Vector4:		return (int32)sizeof(FVector4);
+	case EDreamUIEventDelegateParameterType::Quaternion:	return (int32)sizeof(FQuat);
+	case EDreamUIEventDelegateParameterType::Color:			return (int32)sizeof(FColor);
+	case EDreamUIEventDelegateParameterType::LinearColor:	return (int32)sizeof(FLinearColor);
+	case EDreamUIEventDelegateParameterType::Rotator:		return (int32)sizeof(FRotator);
+	default:												return 0;//not carried in the raw buffer
+	}
+}
+int32 UDreamUIEventDelegateParameterHelper::GetLegacyParameterBufferSize(EDreamUIEventDelegateParameterType InParamType)
+{
+	//UE5 widened the engine math types to double; buffers written before that are this long. Only the
+	//types that actually changed belong here - FLinearColor is four floats then and now.
+	switch (InParamType)
+	{
+	case EDreamUIEventDelegateParameterType::Vector2:		return 2 * (int32)sizeof(float);
+	case EDreamUIEventDelegateParameterType::Vector3:		return 3 * (int32)sizeof(float);
+	case EDreamUIEventDelegateParameterType::Vector4:		return 4 * (int32)sizeof(float);
+	case EDreamUIEventDelegateParameterType::Quaternion:	return 4 * (int32)sizeof(float);
+	case EDreamUIEventDelegateParameterType::Rotator:		return 3 * (int32)sizeof(float);
+	default:												return 0;//layout never changed
+	}
+}
+bool UDreamUIEventDelegateParameterHelper::UpgradeParameterBuffer(EDreamUIEventDelegateParameterType InParamType, TArray<uint8>& InOutBuffer)
+{
+	const int32 RequiredSize = GetParameterBufferSize(InParamType);
+	if (RequiredSize <= 0 || InOutBuffer.Num() == RequiredSize)
+	{
+		return false;
+	}
+
+	const int32 LegacySize = GetLegacyParameterBufferSize(InParamType);
+	const int32 ComponentCount = LegacySize / (int32)sizeof(float);
+	if (LegacySize > 0
+		&& InOutBuffer.Num() == LegacySize
+		&& ComponentCount * (int32)sizeof(double) == RequiredSize)
+	{
+		//Saved while these were single precision. The values are real, they are just half as wide, so
+		//widen them component by component instead of silently losing what the author entered.
+		TArray<uint8> WidenedBuffer;
+		WidenedBuffer.SetNumUninitialized(RequiredSize);
+		for (int32 ComponentIndex = 0; ComponentIndex < ComponentCount; ++ComponentIndex)
+		{
+			float NarrowComponent = 0.0f;
+			FMemory::Memcpy(&NarrowComponent, InOutBuffer.GetData() + ComponentIndex * sizeof(float), sizeof(float));
+			const double WideComponent = (double)NarrowComponent;
+			FMemory::Memcpy(WidenedBuffer.GetData() + ComponentIndex * sizeof(double), &WideComponent, sizeof(double));
+		}
+		InOutBuffer = MoveTemp(WidenedBuffer);
+		return true;
+	}
+
+	//Any other length is a buffer we can not interpret. Fitting it to the size ProcessEvent will read
+	//is the difference between a wrong value and a read off the end of the allocation.
+	InOutBuffer.SetNumZeroed(RequiredSize);
+	return true;
+}
 UClass* UDreamUIEventDelegateParameterHelper::GetClassParameterClass(const UFunction* InFunction)
 {
 	TFieldIterator<FProperty> paramsIterator(InFunction);
@@ -703,6 +778,23 @@ void FDreamUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 	}
 }
+namespace DreamUIEventDelegateParamBuffer
+{
+	/** Read a fixed size parameter out of the stored buffer, upgrading a legacy one on the way. */
+	template<typename T>
+	static T ReadValue(EDreamUIEventDelegateParameterType InParamType, const TArray<uint8>& InBuffer)
+	{
+		T Value;
+		FMemory::Memzero(&Value, sizeof(T));
+		TArray<uint8> Bytes(InBuffer);
+		UDreamUIEventDelegateParameterHelper::UpgradeParameterBuffer(InParamType, Bytes);
+		if (Bytes.Num() == (int32)sizeof(T))
+		{
+			FMemory::Memcpy(&Value, Bytes.GetData(), sizeof(T));
+		}
+		return Value;
+	}
+}
 void FDreamUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* Func)
 {
 	switch (ParamType)
@@ -738,9 +830,56 @@ void FDreamUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction
 		Target->ProcessEvent(Func, &ReferenceObject);
 	}
 	break;
+	//The engine math types went double precision in UE5, so a buffer saved before that is both the
+	//wrong length and the wrong encoding. Decoding into a local also gives ProcessEvent a parameter
+	//frame with the type's own alignment, which TArray<uint8> storage does not promise for the
+	//16-byte-aligned ones.
+	case EDreamUIEventDelegateParameterType::Vector2:
+	{
+		FVector2D TempVector2 = DreamUIEventDelegateParamBuffer::ReadValue<FVector2D>(ParamType, ParamBuffer);
+		Target->ProcessEvent(Func, &TempVector2);
+	}
+	break;
+	case EDreamUIEventDelegateParameterType::Vector3:
+	{
+		FVector TempVector3 = DreamUIEventDelegateParamBuffer::ReadValue<FVector>(ParamType, ParamBuffer);
+		Target->ProcessEvent(Func, &TempVector3);
+	}
+	break;
+	case EDreamUIEventDelegateParameterType::Vector4:
+	{
+		FVector4 TempVector4 = DreamUIEventDelegateParamBuffer::ReadValue<FVector4>(ParamType, ParamBuffer);
+		Target->ProcessEvent(Func, &TempVector4);
+	}
+	break;
+	case EDreamUIEventDelegateParameterType::Quaternion:
+	{
+		FQuat TempQuat = DreamUIEventDelegateParamBuffer::ReadValue<FQuat>(ParamType, ParamBuffer);
+		Target->ProcessEvent(Func, &TempQuat);
+	}
+	break;
+	case EDreamUIEventDelegateParameterType::Rotator:
+	{
+		FRotator TempRotator = DreamUIEventDelegateParamBuffer::ReadValue<FRotator>(ParamType, ParamBuffer);
+		Target->ProcessEvent(Func, &TempRotator);
+	}
+	break;
 	default:
 	{
-		Target->ProcessEvent(Func, ParamBuffer.GetData());
+		//ProcessEvent reads GetParameterBufferSize() bytes out of whatever is handed to it, so a short
+		//buffer - an event whose function was picked but whose value was never edited, say - used to be
+		//a read off the end of the allocation.
+		const int32 RequiredSize = UDreamUIEventDelegateParameterHelper::GetParameterBufferSize(ParamType);
+		if (RequiredSize > 0 && ParamBuffer.Num() != RequiredSize)
+		{
+			TArray<uint8> FittedBuffer(ParamBuffer);
+			UDreamUIEventDelegateParameterHelper::UpgradeParameterBuffer(ParamType, FittedBuffer);
+			Target->ProcessEvent(Func, FittedBuffer.GetData());
+		}
+		else
+		{
+			Target->ProcessEvent(Func, ParamBuffer.GetData());
+		}
 	}
 	break;
 	}

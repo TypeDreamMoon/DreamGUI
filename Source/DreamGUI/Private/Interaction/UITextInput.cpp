@@ -14,6 +14,7 @@
 #include "Core/DreamUISpriteData.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Engine/GameViewportClient.h"
 
 
@@ -140,7 +141,9 @@ void UUITextInput::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 bool UUITextInput::CheckPlayerController()
 {
 	if (PlayerController != nullptr)return true;
-	PlayerController = this->GetWorld()->GetFirstPlayerController();
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (World == nullptr)return false;
+	PlayerController = World->GetFirstPlayerController();
 	if (PlayerController != nullptr)return true;
 	return false;
 }
@@ -653,7 +656,9 @@ bool UUITextInput::IsValidChar(TCHAR c)
 		static FString kEmailSpecialCharacters = "!#$%&'*+-/=?^_`{|}~";
 		if (StringContainsChar(c, kEmailSpecialCharacters, kEmailSpecialCharacters.Len()))
 		{
-			return false;
+			//true: this list is the set of specials an email address ALLOWS, exactly as
+			//EUITextInputType::EmailAddress documents it -- being in it was rejecting them
+			return true;
 		}
 		if (c == '.')
 		{
@@ -727,9 +732,16 @@ void UUITextInput::InsertStringAtCaretPosition(const FString& value)
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
 	auto CharIndex = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex);
 	Text.InsertAt(CharIndex, value);
+	//CharIndex now names the position just PAST the inserted string, so the caret index for it is
+	//already the answer -- the trailing +1 the single-character version needs (its CharIndex still
+	//names the position before the one character it inserted) put this one a glyph too far right
 	CharIndex += value.Len();
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
-	CaretPositionIndex = TextVisual->GetCaretIndexByCharIndex(CharIndex) + 1;
+	// The other half of the same defect: GetCaretIndexByCharIndex reads the laid-out text, so
+	// without the rebuild the SetText above is still pending and the mapping answers against the
+	// PREVIOUS layout. The single-character version has always had this line.
+	UDreamWidget::RebuildLayoutImmediately(TextVisual->GetWidget());
+	CaretPositionIndex = TextVisual->GetCaretIndexByCharIndex(CharIndex);
 	PressCaretPositionIndex = CaretPositionIndex;
 }
 
@@ -1221,19 +1233,26 @@ bool UUITextInput::OnPointerEnter_Implementation(UDreamPointerEventData* EventDa
 			ActivateInput(EventData);
 		}
 	}
-	if (APlayerController* pc = this->GetWorld()->GetFirstPlayerController())
+	// Claimed on the widget, not written straight into the player controller.
+	// UDreamPointerInputModule::ProcessPointerEnterExit resolves the cursor from the hover stack in
+	// an ON_SCOPE_EXIT -- so AFTER this handler -- and writes the result unconditionally, which
+	// meant a direct write here was replaced by Default before the frame was out and the I-beam
+	// never appeared at all. The widget's Cursor property is what that resolver reads.
+	//
+	// Nothing to undo on exit, and OnPointerExit accordingly no longer touches the cursor: a widget
+	// the pointer has left is not in the stack the resolver walks.
+	if (UDreamWidget* OwnWidget = this->GetWidget())
 	{
-		pc->CurrentMouseCursor = EMouseCursor::TextEditBeam;
+		if (OwnWidget->GetCursor() == EMouseCursor::Default)//Default is "no opinion"; an authored cursor wins
+		{
+			OwnWidget->SetCursor(EMouseCursor::TextEditBeam);
+		}
 	}
 	return AllowEventBubbleUp;
 }
 bool UUITextInput::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
 	Super::OnPointerExit_Implementation(EventData);
-	if (APlayerController* pc = this->GetWorld()->GetFirstPlayerController())
-	{
-		pc->CurrentMouseCursor = EMouseCursor::Default;
-	}
 	return AllowEventBubbleUp;
 }
 bool UUITextInput::OnPointerSelect_Implementation(UDreamBaseEventData* EventData)

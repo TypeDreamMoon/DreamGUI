@@ -19,7 +19,7 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 	{
 		return false;
 	}
-	if (ElevatedHomes.Contains(InWidget))
+	if (ElevatedHomes.Contains(FObjectKey(InWidget)))
 	{
 		// Already up. The owner opening twice without closing is a state question the owner settled;
 		// re-recording a home here would overwrite the real one with the screen root.
@@ -57,7 +57,7 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 	InWidget->SetPivot(Pivot);
 	const FVector LocalInRoot = ScreenRoot->GetLayoutWorldTransform().InverseTransformPosition(OldWorld.GetLocation());
 	InWidget->SetAnchoredPosition(FVector2D(LocalInRoot.Y, LocalInRoot.Z));
-	ElevatedHomes.Add(InWidget, Home);
+	ElevatedHomes.Add(FObjectKey(InWidget), Home);
 	return true;
 }
 
@@ -68,7 +68,7 @@ void UDreamUIPopupLayer::Restore(UDreamWidget* InWidget)
 		return;
 	}
 	TWeakObjectPtr<UDreamWidget> Home;
-	if (!ElevatedHomes.RemoveAndCopyValue(InWidget, Home))
+	if (!ElevatedHomes.RemoveAndCopyValue(FObjectKey(InWidget), Home))
 	{
 		return;
 	}

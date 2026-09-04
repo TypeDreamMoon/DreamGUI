@@ -7,9 +7,14 @@
 #include "DreamWorldSpaceRaycasterForWorldTrigger.generated.h"
 
 /**
- * Raycast on common world space objects like StaticMesh and Trigger
+ * Raycast on common world space objects like StaticMesh and Trigger.
+ *
+ * NOT spawnable, deliberately: its Raycast forwards to UDreamBaseRaycaster::RaycastWorld, which has
+ * no implementation -- it was a check(0) until this was noticed, so adding this component to an
+ * actor was enough to take the process down on the first pointer frame. It now finds nothing
+ * instead. The meta stays off until RaycastWorld exists, so nobody can place one by accident.
  */
-UCLASS(ClassGroup = DreamGUI, meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup = DreamGUI)
 class DREAMGUI_API UDreamWorldSpaceRaycasterForWorldTrigger : public UDreamWorldSpaceRaycasterBase
 {
 	GENERATED_BODY()

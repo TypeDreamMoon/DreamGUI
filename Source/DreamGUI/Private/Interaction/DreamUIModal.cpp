@@ -90,16 +90,44 @@ void UDreamUIModalSubsystem::ShowModalNative(TSubclassOf<UDreamUserWidget> InDia
 	ShowNow(MoveTemp(Modal));
 }
 
+void UDreamUIModalSubsystem::FailPendingModal(FPendingModal& InModal, FName InResult)
+{
+	// The result is taken out of the pending modal before anything runs, so a callback that shows
+	// another modal cannot see this one still holding a result to deliver.
+	FDreamUIModalResultDynamicDelegate DynamicResult = InModal.DynamicResult;
+	TFunction<void(FName)> NativeResult = MoveTemp(InModal.NativeResult);
+	InModal.DynamicResult.Clear();
+	InModal.NativeResult = nullptr;
+
+	DynamicResult.ExecuteIfBound(InResult);
+	if (NativeResult)
+	{
+		NativeResult(InResult);
+	}
+	ShowNextQueuedModal();
+}
+
+void UDreamUIModalSubsystem::ShowNextQueuedModal()
+{
+	// Looped rather than recursive, and latched: ShowNow calls back in here through
+	// FailPendingModal when it cannot open, so a queue of unopenable modals would otherwise nest
+	// one ShowNow inside the last. The latch turns that into an ordinary next turn of this loop.
+	if (bPumpingQueue)return;
+	TGuardValue<bool> PumpGuard(bPumpingQueue, true);
+	while (!IsModalActive() && !bClosingModal && Queue.Num() > 0)
+	{
+		FPendingModal Next = MoveTemp(Queue[0]);
+		Queue.RemoveAt(0);
+		ShowNow(MoveTemp(Next));
+	}
+}
+
 void UDreamUIModalSubsystem::ShowNow(FPendingModal&& InModal)
 {
 	if (InModal.DialogClass == nullptr)
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("[UDreamUIModalSubsystem] ShowModal with no dialog class; delivering 'Invalid' immediately."));
-		InModal.DynamicResult.ExecuteIfBound(TEXT("Invalid"));
-		if (InModal.NativeResult)
-		{
-			InModal.NativeResult(TEXT("Invalid"));
-		}
+		FailPendingModal(InModal, TEXT("Invalid"));
 		return;
 	}
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
@@ -107,6 +135,10 @@ void UDreamUIModalSubsystem::ShowNow(FPendingModal&& InModal)
 	if (!IsValid(ScreenRoot))
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("[UDreamUIModalSubsystem] No screen root; cannot show a modal."));
+		// Same 'Invalid' as a missing class, and for the same reason: from the caller's side both are
+		// "it never opened". Returning silently left an awaited OnResult unfired forever and left
+		// everything behind it in the queue with nothing to pump it.
+		FailPendingModal(InModal, TEXT("Invalid"));
 		return;
 	}
 
@@ -140,6 +172,7 @@ void UDreamUIModalSubsystem::ShowNow(FPendingModal&& InModal)
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("[UDreamUIModalSubsystem] Dialog class '%s' failed to instantiate."), *GetNameSafe(InModal.DialogClass));
 		DestroyActiveModal();
+		FailPendingModal(InModal, TEXT("Invalid"));
 		return;
 	}
 
@@ -188,12 +221,7 @@ void UDreamUIModalSubsystem::CloseTopModal(FName InResult)
 	}
 	bClosingModal = false;
 
-	if (Queue.Num() > 0)
-	{
-		FPendingModal Next = MoveTemp(Queue[0]);
-		Queue.RemoveAt(0);
-		ShowNow(MoveTemp(Next));
-	}
+	ShowNextQueuedModal();
 }
 
 void UDreamUIModalSubsystem::DestroyActiveModal()

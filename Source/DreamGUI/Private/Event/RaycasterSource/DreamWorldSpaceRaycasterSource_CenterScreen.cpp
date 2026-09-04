@@ -6,10 +6,13 @@
 #include "SceneView.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
+#include "Core/DreamUIWorldContext.h"
 
 bool UDreamWorldSpaceRaycasterSource_CenterScreen::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
-	if (auto playerController = this->GetWorld()->GetFirstPlayerController())
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (World == nullptr)return false;
+	if (auto playerController = World->GetFirstPlayerController())
 	{
 		ULocalPlayer* const LocalPlayer = playerController->GetLocalPlayer();
 		if (LocalPlayer && LocalPlayer->ViewportClient)
@@ -33,9 +36,10 @@ bool UDreamWorldSpaceRaycasterSource_CenterScreen::GenerateRay(UDreamPointerEven
 }
 bool UDreamWorldSpaceRaycasterSource_CenterScreen::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
-	if (bHoldToDrag)
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (bHoldToDrag && World != nullptr)
 	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		if (World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}

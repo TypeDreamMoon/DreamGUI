@@ -3,6 +3,7 @@
 #include "Event/InputModule/DreamPointerInputModule.h"
 #include "Event/DreamPointerEventData.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Event/DreamPointerPolicy.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
@@ -32,7 +33,9 @@ bool UDreamPointerInputModule::LineTrace(UDreamPointerEventData* InPointerEventD
 			if (RaycasterItem->GetPointerID() != INDEX_NONE && RaycasterItem->GetPointerID() != InPointerEventData->PointerID)continue;
 			if (bIsGamePaused && RaycasterItem->GetAffectByGamePause())continue;
 			
-			TArray<FDreamUIHitResult> HitResultArray;
+			// Reused rather than rebuilt: this is per raycaster per pointer per frame, and every one
+			// of those allocated and freed a fresh array whose capacity is the same every time.
+			HitResultArray.Reset();
 			RaycasterItem->Raycast(InPointerEventData, RayOrigin, RayDir, RayEnd, HitResultArray);
 			// A dragged widget is still raycastable and sits directly under the cursor, so without
 			// this it wins its own hit test every frame and the pointer never reaches what is
@@ -145,6 +148,11 @@ void UDreamPointerInputModule::ProcessPointerEnterExit(UDreamEventSystem* eventS
 {
 	ON_SCOPE_EXIT{ ApplyHoverCursor(EventData); };
 	if (oldObj == newObj)return;
+	// The flag reads "an Exit has already gone out this frame", and both exit loops below claim it
+	// before dispatching rather than after, so a handler that comes back in here through ClearEvent
+	// finds it already set. That means the loops cannot ask the flag whether THEY may dispatch --
+	// they would refuse their own first event -- so the answer from before this call is kept here.
+	const bool bExitAlreadyFiredBeforeThisCall = EventData->bIsExitFiredAtCurrentFrame;
 	if (IsValid(oldObj) && IsValid(newObj))
 	{
 		auto commonRoot = FindCommonRoot(oldObj, newObj);
@@ -152,13 +160,20 @@ void UDreamPointerInputModule::ProcessPointerEnterExit(UDreamEventSystem* eventS
 		UE_LOG(DreamGUI, Error, TEXT("-----begin exit 000, commonRoot:%s"), commonRoot != nullptr ? *(commonRoot->GetActorLabel()) : TEXT("null"));
 #endif
 		//exit old
+		// Claimed BEFORE the loop, not after it. An Exit handler is game code and can reach
+		// UDreamEventSystem::ClearEvent, which comes back through ClearEventByID into this same
+		// function and empties EnterWidgetStack -- and the outer loop then kept indexing it with a
+		// counter it captured from the old length. Setting the flag first makes the re-entrant pass
+		// dispatch nothing, and the index is re-checked against the live length every iteration.
+		EventData->bIsExitFiredAtCurrentFrame = true;
 		for (int i = EventData->EnterWidgetStack.Num() - 1; i >= 0; i--)
 		{
+			if (!EventData->EnterWidgetStack.IsValidIndex(i))continue;
 			if (commonRoot == EventData->EnterWidgetStack[i])
 			{
 				break;
 			}
-			if (!EventData->bIsExitFiredAtCurrentFrame)
+			if (!bExitAlreadyFiredBeforeThisCall)
 			{
 				if (eventSystem == nullptr)
 				{
@@ -175,7 +190,6 @@ void UDreamPointerInputModule::ProcessPointerEnterExit(UDreamEventSystem* eventS
 			EventData->EnterWidgetStack.RemoveAt(i);
 		}
 		EventData->EnterWidget = nullptr;
-		EventData->bIsExitFiredAtCurrentFrame = true;
 #if LOG_ENTER_EXIT
 		UE_LOG(DreamGUI, Error, TEXT("*****end exit, stack count:%d\n"), EventData->EnterWidgetStack.Num());
 #endif
@@ -235,11 +249,14 @@ void UDreamPointerInputModule::ProcessPointerEnterExit(UDreamEventSystem* eventS
 			UE_LOG(DreamGUI, Error, TEXT("-----begin exit 222"));
 #endif
 			//exit old
+			// Claimed before dispatching, for the same reason as the loop above.
+			EventData->bIsExitFiredAtCurrentFrame = true;
 			for (int i = EventData->EnterWidgetStack.Num() - 1; i >= 0; i--)
 			{
+				if (!EventData->EnterWidgetStack.IsValidIndex(i))continue;
 				if (IsValid(EventData->EnterWidgetStack[i]))
 				{
-					if (!EventData->bIsExitFiredAtCurrentFrame)
+					if (!bExitAlreadyFiredBeforeThisCall)
 					{
 						if (eventSystem == nullptr)
 						{
@@ -257,7 +274,6 @@ void UDreamPointerInputModule::ProcessPointerEnterExit(UDreamEventSystem* eventS
 				EventData->EnterWidgetStack.RemoveAt(i);
 			}
 			EventData->EnterWidget = nullptr;
-			EventData->bIsExitFiredAtCurrentFrame = true;
 #if LOG_ENTER_EXIT
 			UE_LOG(DreamGUI, Error, TEXT("*****end exit, stack count:%d\n"), EventData->EnterWidgetStack.Num());
 #endif
@@ -598,41 +614,42 @@ bool UDreamPointerInputModule::Navigate(EDreamUINavigationDirection InDirection,
 	return false;
 }
 
-void UDreamPointerInputModule::ProcessInputForNavigation()
-{
-	for (auto& keyValue : EventSystem->GetPointerEventDataMap())
-	{
-		ProcessInputForNavigation(keyValue.Value);
-	}
-}
 void UDreamPointerInputModule::ProcessInputForNavigation(UDreamPointerEventData* EventData)
 {
-	auto TimeSeconds = this->GetWorld()->GetTimeSeconds();
-	while (TimeSeconds > EventData->NavigateTickTime)
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (World == nullptr)return;
+	const auto TimeSeconds = World->GetTimeSeconds();
+	if (TimeSeconds <= EventData->NavigateTickTime)
 	{
-		bool bIsFirstPressInSequence = EventData->NavigateTickTime == 0.0f;
-		auto TimeInterval = bIsFirstPressInSequence ? EventSystem->GetNavigateInputIntervalForFirstTime() : EventSystem->GetNavigateInputInterval();
-		if (bIsFirstPressInSequence)
-		{
-			EventData->NavigateTickTime = TimeSeconds + TimeInterval;
-		}
-		else
-		{
-			EventData->NavigateTickTime += TimeInterval;
-		}
-		FDreamUIHitResultContainer DreamUIHitResult;
-		bool bSelectValid = Navigate(EventData->NavigateDirection, EventData, DreamUIHitResult);
-		bool bResultHitSomething = false;
-		FDreamUIHitResult HitResult;
-		ProcessPointerEvent(EventSystem.Get(), EventData, bSelectValid, DreamUIHitResult, bResultHitSomething, HitResult);
-		if (bResultHitSomething)
-		{
-			EventSystem->SetSelectWidget(HitResult.Widget.Get(), EventData);
-		}
-
-		auto TempHitComp = HitResult.Widget.Get();
-		EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
+		return;
 	}
+
+	// One navigation step per frame, and the next deadline measured from NOW.
+	//
+	// This was a while-loop that accumulated (NavigateTickTime += TimeInterval), which made it a
+	// catch-up loop for wall-clock time the frame never had: a single 3s hitch -- a level load, a
+	// shader compile -- came back and fired fifteen navigation steps inside the recovering frame,
+	// each one moving focus and firing select events. And with an interval of 0 the deadline can
+	// never be pushed past the current time at all, so the loop simply never ends; nothing clamped
+	// the interval, and it is an ordinary editable property.
+	const bool bIsFirstPressInSequence = EventData->NavigateTickTime == 0.0f;
+	const auto TimeInterval = bIsFirstPressInSequence
+		? EventSystem->GetNavigateInputIntervalForFirstTime()
+		: EventSystem->GetNavigateInputInterval();
+	EventData->NavigateTickTime = TimeSeconds + FMath::Max(TimeInterval, UDreamEventSystem::MinNavigateInputInterval);
+
+	FDreamUIHitResultContainer DreamUIHitResult;
+	bool bSelectValid = Navigate(EventData->NavigateDirection, EventData, DreamUIHitResult);
+	bool bResultHitSomething = false;
+	FDreamUIHitResult HitResult;
+	ProcessPointerEvent(EventSystem.Get(), EventData, bSelectValid, DreamUIHitResult, bResultHitSomething, HitResult);
+	if (bResultHitSomething)
+	{
+		EventSystem->SetSelectWidget(HitResult.Widget.Get(), EventData);
+	}
+
+	auto TempHitComp = HitResult.Widget.Get();
+	EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 }
 void UDreamPointerInputModule::ClearEventByID(int pointerID)
 {

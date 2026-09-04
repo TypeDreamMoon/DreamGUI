@@ -21,6 +21,7 @@ protected:
 	
 	bool LineTrace(UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& OutDreamHitResult);
 	TArray<FDreamUIHitResultContainer> MultiHitResult;//temp array for hit result
+	TArray<FDreamUIHitResult> HitResultArray;//temp array, one raycaster's hits; a member so its capacity survives the frame
 	/** Push the hovered widget's Cursor to the player controller. See DreamPointerPolicy. */
 	static void ApplyHoverCursor(class UDreamPointerEventData* EventData);
 	static void ProcessPointerEnterExit(UDreamEventSystem* eventSystem, UDreamPointerEventData* pointerEventData, UDreamWidget* oldObj, UDreamWidget* newObj);
@@ -28,7 +29,6 @@ protected:
 	static UDreamWidget* FindCommonRoot(UDreamWidget* A, UDreamWidget* B);
 
 	bool Navigate(EDreamUINavigationDirection InDirection, UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& hitResult);
-	void ProcessInputForNavigation();
 	void ProcessInputForNavigation(UDreamPointerEventData* InPointerEventData);
 	void ClearEventByID(int pointerID);
 	static bool CanHandleInterface(UDreamWidget* targetComp, UClass* targetInterfaceClass);

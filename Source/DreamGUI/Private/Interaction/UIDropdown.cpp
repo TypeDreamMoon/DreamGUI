@@ -370,7 +370,8 @@ void UUIDropdown::CreateListItems()
 }
 FUIDropdownOptionData UUIDropdown::GetOption(int index)const
 {
-	if (index >= Options.Num())
+	//IsValidIndex, not just the upper bound: a negative index indexed the array backwards
+	if (!Options.IsValidIndex(index))
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d index: %d out of range: %d!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, index, Options.Num());
 		return FUIDropdownOptionData();
@@ -379,7 +380,9 @@ FUIDropdownOptionData UUIDropdown::GetOption(int index)const
 }
 FUIDropdownOptionData UUIDropdown::GetCurrentOption()const
 {
-	if (Value >= Options.Num())
+	// Value is documented as -1 for "none selected", which is a state this asked about by indexing
+	// Options with it. The empty option data IS the answer for an unselected dropdown.
+	if (!Options.IsValidIndex(Value))
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s]Value: %d out of range: %d!"), ANSI_TO_TCHAR(__FUNCTION__), Value, Options.Num());
 		return FUIDropdownOptionData();
@@ -474,7 +477,12 @@ void UUIDropdown::SetOptions(const TArray<FUIDropdownOptionData>& InOptions)
 void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
 	bNeedRecreate = true;
-	Options.SetNumUninitialized(Options.Num() + InOptions.Num());
+	// Reserve, not SetNumUninitialized. FUIDropdownOptionData holds an FText and an
+	// FDreamUIImageBrush, so growing the array without constructing anything left N raw-garbage
+	// entries in front of the ones Add() then appended -- garbage that gets destructed (running
+	// FText's destructor over whatever was on the heap) at the next reallocation, and that every
+	// reader of Options walks straight into. Reserve buys the same capacity and adds no elements.
+	Options.Reserve(Options.Num() + InOptions.Num());
 	for (int i = 0; i < InOptions.Num(); i++)
 	{
 		Options.Add(InOptions[i]);
@@ -485,7 +493,8 @@ void UUIDropdown::SetUseInteractionBlock(bool InValue)
 {
 	if (bUseInteractionBlock != InValue)
 	{
-		bUseInteractionBlock = true;
+		//was assigned a literal true, so this setter could only ever turn the blocker ON
+		bUseInteractionBlock = InValue;
 		if (!bUseInteractionBlock)
 		{
 			if (BlockerWidget.IsValid())

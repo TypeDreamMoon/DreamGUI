@@ -269,9 +269,14 @@ void UUIScrollViewWithScrollbar::OnHorizontalScrollbar(float InScrollValue)
 	bAllowHorizontalScroll = true;
 
 	InScrollValue = FMath::Clamp(InScrollValue, 0.0f, 1.0f);
-	auto Position = Content->GetRelativeLocation();
-	Position.Y = FMath::Lerp(HorizontalRange.X, HorizontalRange.Y, 1.0f - InScrollValue);
-	Content->SetRelativeLocation(Position);
+	// Through the coordinate-mode pair, the way every other writer of the content position goes.
+	// HorizontalRange is a content position in whichever mode is ACTIVE -- the ranges are measured
+	// from GetStartAlignedPosition -- so writing a value from it straight into the relative location
+	// displaced the content by the whole difference between the two modes the moment CoordinateMode
+	// was AnchoredPosition, on every scrollbar drag.
+	FVector2D Position = GetContentPosition();
+	Position.X = FMath::Lerp(HorizontalRange.X, HorizontalRange.Y, 1.0f - InScrollValue);
+	SetContentPosition(Position);
 	Super::UpdateProgress();//use parent's function, skip the set scrollbar code
 }
 void UUIScrollViewWithScrollbar::OnVerticalScrollbar(float InScrollValue)
@@ -281,9 +286,10 @@ void UUIScrollViewWithScrollbar::OnVerticalScrollbar(float InScrollValue)
 	bAllowVerticalScroll = true;
 
 	InScrollValue = FMath::Clamp(InScrollValue, 0.0f, 1.0f);
-	auto Position = Content->GetRelativeLocation();
-	Position.Z = FMath::Lerp(VerticalRange.X, VerticalRange.Y, InScrollValue);
-	Content->SetRelativeLocation(Position);
+	//same as OnHorizontalScrollbar: VerticalRange speaks the active coordinate mode
+	FVector2D Position = GetContentPosition();
+	Position.Y = FMath::Lerp(VerticalRange.X, VerticalRange.Y, InScrollValue);
+	SetContentPosition(Position);
 	Super::UpdateProgress();//use parent's function, skip the set scrollbar code
 }
 void UUIScrollViewWithScrollbar::SetHorizontalScrollbarVisibility(EDreamUIScrollViewScrollbarVisibility value)

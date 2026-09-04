@@ -75,10 +75,25 @@ bool UDreamDataBinding::ApplyBinding()
 			return true;
 		}
 	}
+#if WITH_EDITOR
+	// Asked BEFORE the copy, because after it the two are identical by construction.
+	//
+	// PostEditChangeProperty is not a notification, it is the target's whole property-changed path:
+	// rebuilds, invalidations, whatever that class does on an edit. In EveryFrame mode ApplyBinding
+	// runs once per frame per binding and fired it unconditionally -- every frame, for a value that
+	// is the same one already sitting there on all but the frames it actually moves.
+	// (ArrayDim > 1 short-circuits to "changed": Identical compares one element, CopyCompleteValue
+	// copies them all, so a static array cannot be settled by asking about its first entry.)
+	const bool bValueChanged = TargetValueProperty->ArrayDim > 1
+		|| !TargetValueProperty->Identical(TargetValue, SourceValue);
+#endif
 	TargetValueProperty->CopyCompleteValue(TargetValue, SourceValue);
 #if WITH_EDITOR
-	FPropertyChangedEvent ChangeEvent(TargetValueProperty);
-	Target->PostEditChangeProperty(ChangeEvent);
+	if (bValueChanged)
+	{
+		FPropertyChangedEvent ChangeEvent(TargetValueProperty);
+		Target->PostEditChangeProperty(ChangeEvent);
+	}
 #endif
 	return true;
 }

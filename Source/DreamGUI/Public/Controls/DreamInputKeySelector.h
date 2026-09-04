@@ -156,6 +156,11 @@ public:
 	 * disarming, so nothing is intercepted at any other moment: a key binder that consumed keys
 	 * while idle would be a key binder nobody could play past.
 	 *
+	 * Keyboard and gamepad only -- not axes, and not mouse buttons. A click is how the player arms
+	 * this and how they disarm it again, so a mouse button reaching the capture would bind itself on
+	 * the way in and leave no way out. A project that wants mouse buttons bindable feeds them
+	 * through NotifyKeyPressed, which takes any key.
+	 *
 	 * Off, the control is state and visuals only and the project calls NotifyKeyPressed from
 	 * wherever it already sees keys. Both were true before this flag; only the default changed.
 	 */

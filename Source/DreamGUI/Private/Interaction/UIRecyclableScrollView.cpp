@@ -232,6 +232,10 @@ bool UUIRecyclableScrollView::GetCellItemByDataIndex(int Index, FUIRecyclableScr
 {
     auto MaxCellIndexInData = FMath::Min(Index + CacheCellList.Num() - 1, DataItemCount - 1);
     auto ValidMinCellDataIndex = GetValidCellDataIndex(MinCellDataIndex);
+    if (ValidMinCellDataIndex == INDEX_NONE)
+    {
+        return false;//no data, so no cell holds it
+    }
     if (Index < ValidMinCellDataIndex || Index > MaxCellIndexInData)
     {
         return false;
@@ -339,7 +343,7 @@ void UUIRecyclableScrollView::ScrollToByDataIndex(int InDataIndex, bool InEaseAn
         {
             for (int StartIndex = ValidMinCellDataIndex - 1; StartIndex >= InDataIndex; StartIndex -= Columns)
             {
-                TargetContentPos += CellHeight + Space.X;
+                TargetContentPos += CellHeight + Space.Y;//Y: this is the vertical branch, as three lines up
             }
         }
 
@@ -379,7 +383,9 @@ void UUIRecyclableScrollView::SetCellTemplateClass(TSubclassOf<UDreamUserWidget>
     if (CellTemplateClass != value)
     {
         CellTemplateClass = value;
-        if (WorkingCellTemplateType == EUIRecyclableScrollViewCellTemplateType::Prefab)//if WorkingCellTemplate is created by prefab, then we need to destroy it so a new one will be created from new prefab
+        //IsValid too: WorkingCellTemplate is a weak pointer and the type tag says only how it WAS
+        //made, not that it is still there -- calling through it once it had gone was the crash
+        if (WorkingCellTemplateType == EUIRecyclableScrollViewCellTemplateType::Prefab && WorkingCellTemplate.IsValid())//if WorkingCellTemplate is created by prefab, then we need to destroy it so a new one will be created from new prefab
         {
             WorkingCellTemplate->DestroyWidget();
             WorkingCellTemplate = nullptr;
@@ -419,7 +425,8 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
         }
         if (!WorkingCellTemplate.IsValid())
         {
-            WorkingCellTemplate->DestroyWidget();
+            // Creation failed, so there is nothing to destroy -- destroying it THROUGH the pointer
+            // that just tested invalid was the crash. Only the report is left to do.
             WorkingCellTemplate = nullptr;
             UE_LOG(DreamGUI, Error, TEXT("[%s] CellTemplateClass's root widget must be a UI actor!"), ANSI_TO_TCHAR(__FUNCTION__));
             return;
@@ -650,7 +657,11 @@ void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
                         }
                         else
                         {
-                            CellItem.Widget->SetWidgetActive(true);
+                            // Hidden, not shown: this cell has been recycled past the end of the data and
+                            // holds whatever the last row it displayed left in it. The other three recycle
+                            // loops all deactivate here; only this one activated, leaving stale rows on
+                            // screen at the edge of a horizontally scrolled list.
+                            CellItem.Widget->SetWidgetActive(false);
                         }
                     }
                     //decrease index
@@ -667,7 +678,9 @@ void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
         else if (ContentPosition.X < PrevContentPosition.X)//scroll from right to left
         {
             int RightCellIndexInData = GetValidCellDataIndex(MinCellDataIndex) + CacheCellList.Num() - 1;
-            while (RightCellIndexInData + 1 < DataItemCount || (bInfiniteLoop && Columns == 1))//check if right cell reach end data
+            //Rows, not Columns: this is the horizontal branch, where a single ROW is what makes the
+            //loop one-dimensional and wrappable -- the other three loops each test their own axis
+            while (RightCellIndexInData + 1 < DataItemCount || (bInfiniteLoop && Rows == 1))//check if right cell reach end data
             {
                 auto& LeftTopCellItem = CacheCellList[MinCellIndexInCacheCellList];
                 auto CellRightPointInScrollViewSpace = LeftTopCellItem.Widget->GetLocalSpaceRight() + LeftTopCellItem.Widget->GetRelativeLocation().Y + PointToScrollViewSpaceOffset;
@@ -813,7 +826,8 @@ void UUIRecyclableScrollView::UpdateCellData()
     IUIRecyclableScrollViewDataSource::Execute_BeforeSetCell(DataSource);
     auto CellDataIndex = GetValidCellDataIndex(MinCellDataIndex);
     FUIRecyclableScrollViewCellContainer CellContainer;
-    for (int i = 0; i < CacheCellList.Num(); i++)
+    //INDEX_NONE means the data source is empty; Before/AfterSetCell still bracket the (empty) pass
+    for (int i = 0; CellDataIndex != INDEX_NONE && i < CacheCellList.Num(); i++)
     {
         GetCellItemByDataIndex(CellDataIndex, CellContainer);
         IUIRecyclableScrollViewDataSource::Execute_SetCell(DataSource, CellContainer.CellComponent, CellDataIndex);
@@ -829,14 +843,17 @@ void UUIRecyclableScrollView::UpdateCellData()
 // Infinite loop could use out-of-range index, so use this to get a valid index
 int UUIRecyclableScrollView::GetValidCellDataIndex(int InMinCellDataIndex)const
 {
-    auto TempMinCellDataIndex = InMinCellDataIndex;
-    while (TempMinCellDataIndex < 0)
+    // An empty data source has no index to wrap into, and both loops below hang on it: adding or
+    // subtracting zero never moves the value across the bound, so `while (Temp >= 0)` spins forever.
+    // Two of the callers are reachable from Blueprint without ever passing a count check.
+    if (DataItemCount <= 0)
     {
-        TempMinCellDataIndex += DataItemCount;
+        return INDEX_NONE;
     }
-    while (TempMinCellDataIndex >= DataItemCount)
+    auto TempMinCellDataIndex = InMinCellDataIndex % DataItemCount;
+    if (TempMinCellDataIndex < 0)
     {
-        TempMinCellDataIndex -= DataItemCount;
+        TempMinCellDataIndex += DataItemCount;//C++ modulo keeps the sign of the dividend
     }
     return TempMinCellDataIndex;
 }

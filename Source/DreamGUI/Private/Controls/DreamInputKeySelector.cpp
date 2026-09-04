@@ -212,19 +212,34 @@ void UDreamInputKeySelector::BeginKeyCapture()
 
 	if (UInputComponent* Input = Agent->InputComponent)
 	{
-		// Highest priority and consuming: while a binder is armed, the key the player presses is
-		// FOR the binder and must not also fire whatever it is currently bound to.
+		// Highest priority, and each binding consumes its own key (FInputKeyBinding does by default):
+		// while a binder is armed the key the player presses is FOR the binder and must not also fire
+		// whatever it is currently bound to.
+		//
+		// bBlockInput is deliberately NOT set. It blocks every component below this one on the
+		// stack -- including the DreamGUI input actor -- so while a selector was armed the whole UI
+		// went deaf: no pointer events reached anything, which took out the one escape route this
+		// control documents (HandleClicked: "a click on an armed selector disarms it"). Consuming
+		// the keys this component actually bound is the narrower statement, and the correct one.
 		Input->Priority = TNumericLimits<int32>::Max();
-		Input->bBlockInput = true;
 
 		TArray<FKey> AllKeys;
 		EKeys::GetAllKeys(AllKeys);
 		for (const FKey& Key : AllKeys)
 		{
 			// Axes are excluded, not filtered later: an axis fires continuously from a resting stick
-			// and would bind itself the instant anything is armed. Everything a player can press --
-			// keyboard, mouse buttons, gamepad face buttons -- is a bindable non-axis key.
+			// and would bind itself the instant anything is armed. Everything else a player can press
+			// -- keyboard, gamepad face buttons -- is a bindable non-axis key.
 			if (!Key.IsBindableInBlueprints() || Key.IsAxis1D() || Key.IsAxis2D() || Key.IsAxis3D())
+			{
+				continue;
+			}
+			// Mouse buttons excluded for the same reason as axes, one step later: the click that
+			// arms this control is still going down when the agent appears, and the next click is
+			// how the player disarms it. Binding them meant the first click after arming bound Left
+			// Mouse Button -- and it was the only click the player could make, because there was no
+			// longer any way to reach the button again.
+			if (Key.IsMouseButton())
 			{
 				continue;
 			}

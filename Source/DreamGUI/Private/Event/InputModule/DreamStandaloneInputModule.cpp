@@ -5,6 +5,7 @@
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "Engine/GameViewportClient.h"
+#include "Core/DreamUIWorldContext.h"
 
 void UDreamStandaloneInputModule::ProcessInput()
 {
@@ -12,7 +13,14 @@ void UDreamStandaloneInputModule::ProcessInput()
 
 	if (StandaloneInputDataArray.Num() > 0)
 	{
-		for (auto& InputData : StandaloneInputDataArray)//handle multiple click in one frame
+		// Take the frame's queue by value first. ProcessPointerEvent below dispatches into game code,
+		// and game code that presses or releases anything reaches CommonInputTrigger, which both
+		// Add()s to this array and -- on an input-type change -- Reset()s it. Either one reallocates
+		// or empties the storage the range-for is walking. Anything queued from inside the loop is
+		// simply handled on the next frame, which is what the trailing Reset() did to it anyway.
+		TArray<StandaloneInputData> FrameInputDataArray = MoveTemp(StandaloneInputDataArray);
+		StandaloneInputDataArray.Reset();
+		for (auto& InputData : FrameInputDataArray)//handle multiple click in one frame
 		{
 			auto EventData = EventSystem->GetPointerEventData(InputData.PointerID, true);
 			EventData->PointerPosition = InputData.PointerPosition;
@@ -37,7 +45,6 @@ void UDreamStandaloneInputModule::ProcessInput()
 			auto TempHitComp = HitResult.Widget.Get();
 			EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 		}
-		StandaloneInputDataArray.Reset();
 	}
 	else
 	{
@@ -107,7 +114,9 @@ void UDreamStandaloneInputModule::GetMousePosition(FVector2D& OutMousePos)const
 		OutMousePos = OverridePointerPosition;
 		return;
 	}
-	if (auto Viewport = this->GetWorld()->GetGameViewport())
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (World == nullptr)return;
+	if (auto Viewport = World->GetGameViewport())
 	{
 		Viewport->GetMousePosition(OutMousePos);
 	}
@@ -124,7 +133,8 @@ void UDreamStandaloneInputModule::SetOverrideMousePosition(bool bInOverride)
 	{
 		// Start where the real mouse is, so the substituted pointer does not teleport.
 		FVector2D Current = FVector2D::ZeroVector;
-		if (auto Viewport = this->GetWorld()->GetGameViewport())
+		const UWorld* World = DreamUI::GetWorldSafe(this);
+		if (auto Viewport = World != nullptr ? World->GetGameViewport() : nullptr)
 		{
 			Viewport->GetMousePosition(Current);
 		}
@@ -169,19 +179,32 @@ void UDreamStandaloneInputModule::CommonInputTrigger(const FVector& InPointerPos
 
 void UDreamStandaloneInputModule::InputMouseMove(const FVector& InMousePosition)
 {
-	// The guard every other entry point here has, and the only one that was missing: this runs from
-	// a bound axis delegate that keeps firing while the world tears down.
+	// This runs from a bound axis delegate that keeps firing while the world tears down, so it needs
+	// the same guard the trigger entry points have. (It was not the only one missing it -- the two
+	// navigation entry points below were bare too, and are bound to keys that outlive a world just
+	// as happily.)
 	if (!EventSystem.IsValid())return;
 
 	auto EventData = EventSystem->GetPointerEventData(0, true);
-	// Moving the mouse IS pointer input, and saying so is not decoration: InputType is a sticky
+	// MOVING the mouse IS pointer input, and saying so is not decoration: InputType is a sticky
 	// mode bit, ProcessInput's per-frame branch skips the line trace entirely while it reads
 	// Navigation, and only a press ever reset it. So one arrow key, Enter or stick nudge --
 	// InputNavigation / InputTriggerForNavigation flip pointer 0 -- and hover died for the rest of
 	// the session: the position kept updating, nothing re-traced with it, EnterWidget froze on
 	// whatever navigation last highlighted. Clicks went on working (the queued branch ignores the
 	// mode and resets it), which is exactly the "click fine, hover dead" shape this was reported as.
-	EventSystem->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
+	//
+	// But it has to be an ACTUAL move. Both preset actors call this every single frame regardless:
+	// the legacy one from a bound Mouse2D vector axis, which fires whether or not the mouse moved,
+	// and the Enhanced Input one from Tick, because Enhanced Input has no absolute-position axis to
+	// bind. Claiming Pointer unconditionally therefore re-pinned the mode every frame and nothing
+	// could hold Navigation for longer than one: arrow keys never moved focus, and Enter or the
+	// gamepad face button arrived at the Pointer branch and read as a mouse press at the cursor.
+	// The position is still carried across either way -- it is the mode claim that is the statement.
+	if (!InMousePosition.Equals(EventData->PointerPosition))
+	{
+		EventSystem->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
+	}
 	EventData->PointerPosition = InMousePosition;
 }
 
@@ -204,6 +227,8 @@ void UDreamStandaloneInputModule::InputTouchMoved(int InTouchID, const FVector& 
 
 void UDreamStandaloneInputModule::InputNavigation(EDreamUINavigationDirection InDirection, bool InPressOrRelease, int InPointerID)
 {
+	if (!EventSystem.IsValid())return;
+
 	auto EventData = EventSystem->GetPointerEventData(InPointerID, true);
 	if (InPressOrRelease)
 	{
@@ -218,6 +243,8 @@ void UDreamStandaloneInputModule::InputNavigation(EDreamUINavigationDirection In
 }
 void UDreamStandaloneInputModule::InputTriggerForNavigation(bool InTriggerPress, int InPointerID)
 {
+	if (!EventSystem.IsValid())return;
+
 	auto EventData = EventSystem->GetPointerEventData(InPointerID, true);
 	if (InTriggerPress)
 	{

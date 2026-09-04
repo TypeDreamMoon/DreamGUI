@@ -172,6 +172,12 @@ void UDreamUIActionRouter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Advance every hold first, then dispatch. Execute runs a game callback, and what a UI callback
+	// most often does is register or unregister actions: RegisterAction appends to Bindings and can
+	// reallocate it, UnregisterAction and UnregisterScope RemoveAll from it. Either one leaves this
+	// range-for walking freed storage with a dangling FBindingEntry&, and a hold-to-confirm that
+	// closes its own screen is the ordinary case, not an exotic one.
+	TArray<int32, TInlineAllocator<4>> DueBindingIds;
 	for (FBindingEntry& Entry : Bindings)
 	{
 		if (!Entry.bHeld || Entry.bHoldFired)continue;
@@ -189,7 +195,18 @@ void UDreamUIActionRouter::Tick(float DeltaTime)
 			// Fires when the time is up, not when the player lets go: a hold-to-confirm that waits for
 			// the release cannot show a filled ring and then act on it.
 			Entry.bHoldFired = true;
-			Execute(Entry);
+			DueBindingIds.Add(Entry.Id);
+		}
+	}
+	// Re-looked-up by id rather than kept as pointers, so a callback that unregisters one of the
+	// others simply finds nothing to run instead of firing through a removed entry.
+	for (const int32 DueId : DueBindingIds)
+	{
+		FDreamUIActionHandle Handle;
+		Handle.Id = DueId;
+		if (FBindingEntry* Entry = FindBinding(Handle))
+		{
+			Execute(*Entry);
 		}
 	}
 }

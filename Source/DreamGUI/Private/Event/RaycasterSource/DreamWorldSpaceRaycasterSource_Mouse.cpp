@@ -6,6 +6,7 @@
 #include "SceneView.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
+#include "Core/DreamUIWorldContext.h"
 
 #if BUILD_VP_MATRIX_FROM_CAMERA_MANAGER
 void DreamGUIWorldSpaceRaycasterSource_Mouse_BuildProjectionMatrix(FIntPoint RenderTargetSize, ECameraProjectionMode::Type ProjectionType, float FOV, float InOrthoWidth, FMatrix& ProjectionMatrix)
@@ -139,8 +140,10 @@ void UDreamGUIWorldSpaceRaycasterSource_Mouse::DeprojectViewPointToWorldForMainV
 
 bool UDreamWorldSpaceRaycasterSource_Mouse::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (World == nullptr)return false;
 #if BUILD_VP_MATRIX_FROM_CAMERA_MANAGER
-	if (auto pc = GetWorld()->GetFirstPlayerController())
+	if (auto pc = World->GetFirstPlayerController())
 	{
 		FIntPoint ScreenSize;
 		pc->GetViewportSize(ScreenSize.X, ScreenSize.Y);
@@ -155,7 +158,7 @@ bool UDreamWorldSpaceRaycasterSource_Mouse::GenerateRay(UDreamPointerEventData* 
 		return true;
 	}
 #else
-	if (auto playerController = this->GetWorld()->GetFirstPlayerController())
+	if (auto playerController = World->GetFirstPlayerController())
 	{
 		ULocalPlayer* const LocalPlayer = playerController->GetLocalPlayer();
 		if (LocalPlayer && LocalPlayer->ViewportClient)
@@ -179,9 +182,10 @@ bool UDreamWorldSpaceRaycasterSource_Mouse::GenerateRay(UDreamPointerEventData* 
 }
 bool UDreamWorldSpaceRaycasterSource_Mouse::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
-	if (bHoldToDrag)
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (bHoldToDrag && World != nullptr)
 	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		if (World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}
