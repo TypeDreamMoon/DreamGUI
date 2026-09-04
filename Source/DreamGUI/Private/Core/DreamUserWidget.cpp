@@ -796,6 +796,17 @@ void UDreamUserWidget::ResolvePropertyBindings()
 
 void UDreamUserWidget::EvaluateBinding(const FResolvedBinding& Binding)
 {
+	// A `<->` binding's push can come straight back: the control's setter fires OnValueChanged,
+	// the generated setter writes the variable, the FieldNotify broadcast re-enters here for the
+	// very same binding with the value it was just handed. Controls without a ...WithoutNotify
+	// setter only break that loop by early-outing on an equal value, and not all of them do.
+	// Refusing to re-enter a binding that is mid-push ends the echo regardless of the control.
+	if (Binding.bEvaluating)
+	{
+		return;
+	}
+	TGuardValue<bool> EvaluatingGuard(Binding.bEvaluating, true);
+
 	UObject* Target = Binding.Target.Get();
 	if (!IsValid(Target) || Binding.SourceFunction == nullptr || Binding.Setter == nullptr)
 	{

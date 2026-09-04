@@ -530,6 +530,36 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FTransform& GetWorldTransform()const;
 
+	/**
+	 * A world-space sphere containing this widget's own rect -- the shape a Rect hit test is decided
+	 * inside -- so a caller sweeping many widgets can throw most of them out before paying for the
+	 * exact test. UDreamBaseRaycaster does exactly that on every pointer update.
+	 *
+	 * FALSE MEANS "NO USABLE BOUND", and a caller must then run the exact test rather than skip the
+	 * widget. Two reasons it says so, both erring the safe way:
+	 *   - a perspective applies. The drawn transform is then GetWorldMatrix(), which folds in a remap
+	 *     built from the render canvas's eye; that eye moves with the canvas and tells this widget
+	 *     nothing, so there is no moment at which a cached sphere could be invalidated.
+	 *   - the rect is degenerate -- zero-sized, or not laid out yet. A zero radius would reject the
+	 *     widget outright, and "not measured" is not the same claim as "nothing there".
+	 *
+	 * The sphere is a pure function of ObjectToWorldTransform, GetWidth(), GetHeight() and the pivot,
+	 * and is cached against exactly those; see MarkWorldRectBoundsDirty.
+	 */
+	bool GetWorldRectBoundingSphere(FVector& OutCenter, double& OutRadius)const;
+	/**
+	 * Drop the cached bounding sphere.
+	 *
+	 * Called from the three places its inputs can change: MarkTransformChanged (the single funnel for
+	 * every ObjectToWorldTransform write, including the cascade a parent's move sends down),
+	 * MarkDimensionChanged (size and pivot, unconditionally -- the flags it is handed say WHAT
+	 * changed, and trusting them would make this cache depend on every caller passing them right),
+	 * and the resolve branch inside GetWidth/GetHeight, which catches the paths that dirty the size
+	 * cache without announcing anything (MarkAllDirty, and a stretched child resolving lazily against
+	 * a parent that has since moved).
+	 */
+	void MarkWorldRectBoundsDirty()const { bWorldRectBoundsDirty = true; }
+
 	void SetWorldTransform(const FTransform& InWorldTransform);
 	/**
 	 * Attach without the register-time side effects, for a hierarchy that is still being assembled:
@@ -922,6 +952,12 @@ protected:
 	bCacheAnchorOffsetLeftDirty : 1 = true, bCacheAnchorOffsetRightDirty : 1 = true,
 	bCacheAnchorOffsetTopDirty : 1 = true, bCacheAnchorOffsetBottomDirty : 1 = true;
 	uint8 bCanSetAnchorFromTransform : 1 = false;
+
+	/** World-space rect bounds, for the raycaster's coarse reject. See GetWorldRectBoundingSphere. */
+	mutable FVector CacheWorldRectCenter = FVector::ZeroVector;
+	/** Zero means "no usable bound" -- a degenerate rect, never a legitimate answer of nothing. */
+	mutable double CacheWorldRectRadius = 0.0;
+	mutable uint8 bWorldRectBoundsDirty : 1 = true;
 	
 #pragma region AnchorData
 public:

@@ -130,7 +130,13 @@ enum class EDreamRenderMode : uint8;
 class FDreamUILayoutTree
 {
 public:
-	TArray<TObjectPtr<UDreamWidget>> WidgetArray;
+	/**
+	 * Weak on purpose. This cache lives outside UPROPERTY reflection, so a TObjectPtr here is invisible
+	 * to the garbage collector: it neither keeps a widget alive nor gets cleared when one goes away,
+	 * which left IsValid() being asked about memory that may already have been recycled. Everything
+	 * listed here is kept alive by UDreamUIManagerWorldSubsystem::AllWidgetArray while it is registered.
+	 */
+	TArray<TWeakObjectPtr<UDreamWidget>> WidgetArray;
 };
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient)
@@ -218,8 +224,9 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamWidget>> LayoutDirtyWidgetArray;
 	
-	TMap<TObjectPtr<UDreamWidget>, FDreamUILayoutTree> MapWidgetToLayoutTree;
-	TSet<TObjectPtr<class UDreamLayoutContainer>> LayoutContainerArrayWhichHasSnapshot;
+	/** Weak for the same reason as FDreamUILayoutTree::WidgetArray: neither container is a UPROPERTY. */
+	TMap<TWeakObjectPtr<UDreamWidget>, FDreamUILayoutTree> MapWidgetToLayoutTree;
+	TSet<TWeakObjectPtr<class UDreamLayoutContainer>> LayoutContainerArrayWhichHasSnapshot;
 
 	bool bIsExecutingStart = false;
 	bool bIsExecutingTick = false;

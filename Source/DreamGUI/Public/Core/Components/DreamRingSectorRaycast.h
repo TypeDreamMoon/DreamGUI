@@ -30,9 +30,12 @@
  * ZERO OUTER RADIUS MEANS UNBOUNDED
  * ---------------------------------
  * The weapon-wheel feel -- flick the mouse anywhere and the nearest slice lights up -- is a sector
- * with no far edge, and it is reachable here precisely because nothing culls a widget by its bounds
- * before the trace (FDreamBaseRaycaster traces every visual it collects). A clipping ancestor still
- * bounds it, via IsPointVisibleOnClip, which is the correct answer for a menu inside a panel.
+ * with no far edge, and it is reachable here because a custom raycast is EXPLICITLY EXCLUDED from
+ * the raycaster's coarse reject: UDreamVisual::GetHitGeometryFitsWidgetRect answers false for
+ * RaycastType Custom, so FDreamBaseRaycaster tests no bounds of its own and hands the ray straight
+ * to Raycast below. Anything that teaches that function to answer true for a custom raycast takes
+ * this sector's far half away with it. A clipping ancestor still bounds it, via
+ * IsPointVisibleOnClip, which is the correct answer for a menu inside a panel.
  */
 UCLASS(BlueprintType, EditInlineNew, DisplayName = "Dream Ring Sector Raycast")
 class DREAMGUI_API UDreamRingSectorRaycast : public UDreamVisualCustomRaycast

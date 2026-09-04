@@ -174,6 +174,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamUI")
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
 
+	/**
+	 * True when every hit LineTraceUI can report is guaranteed to lie inside the WIDGET's own rect, so
+	 * a caller may reject this element by that rect alone -- see UDreamWidget::GetWorldRectBoundingSphere,
+	 * which is what a raycaster tests against before paying for the exact trace.
+	 *
+	 * The base answer is yes only for the Rect raycast type, and deliberately so. Rect is the one type
+	 * every LineTraceUI in the family resolves the same way: a crossing of the local X = 0 plane,
+	 * compared against GetLocalSpaceLeft/Right/Bottom/Top, which UDreamRectBlock's override only
+	 * narrows further with its corner radii. The other three cannot promise it:
+	 *
+	 *  - Mesh and VisiblePixel test the built geometry, whose vertices are not bound by the rect --
+	 *    UDreamVisualPostProcess with bUseFullSize builds its quad from the ROOT canvas's size, so its
+	 *    hit shape can be the whole screen while its widget is a button.
+	 *  - Custom hands the ray to a UDreamVisualCustomRaycast and does NO rect test of its own, so the
+	 *    hit shape is whatever that object says. UDreamRingSectorRaycast's unbounded sector claims
+	 *    more than the rect it is drawn in on purpose; that is the weapon-wheel feel.
+	 *
+	 * An element that knows its own geometry stays inside the rect may override this and say so. The
+	 * cost of answering false is only that the exact test runs, so a subclass in doubt should not.
+	 */
+	virtual bool GetHitGeometryFitsWidgetRect()const;
+
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;
 

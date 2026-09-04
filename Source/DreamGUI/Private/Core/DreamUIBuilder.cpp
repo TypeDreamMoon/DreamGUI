@@ -205,7 +205,7 @@ UDreamWidget* DreamUI::Realize(UDreamUserWidget* InOwner, FDreamUINodeSpec&& InR
 		// A class that declares its hierarchy in code gets no archetype, so InitializeWidgetStatic
 		// returned before making one. Everything below the user widget still has to live in a tree:
 		// that indirection is what separates "the class of a widget" from "the class of a hierarchy".
-		InOwner->WidgetTree = NewObject<UDreamWidgetTree>(InOwner, NAME_None, RF_Transactional);
+		InOwner->WidgetTree = NewObject<UDreamWidgetTree>(InOwner, NAME_None, InOwner->GetMaskedFlags(RF_Transactional));
 	}
 	// The owner goes in as the parent rather than being attached afterwards: the root's own anchors
 	// are set while the walk is inside it, and a widget with no parent is told nothing.

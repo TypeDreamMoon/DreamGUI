@@ -738,6 +738,12 @@ private:
 		 * binding is subscription-driven; an invalid one means it stays on the per-frame poll.
 		 */
 		UE::FieldNotification::FFieldId SourceFieldId;
+		/**
+		 * True while EvaluateBinding is pushing this binding's value into its target. A two-way
+		 * control echoes that push back through OnValueChanged -> generated setter -> FieldNotify,
+		 * which lands here again for the same binding; the flag is what stops that echo.
+		 */
+		mutable bool bEvaluating = false;
 	};
 	TArray<FResolvedBinding> ResolvedBindings;
 

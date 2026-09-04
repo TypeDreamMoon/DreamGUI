@@ -188,10 +188,26 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 
 	// 1. Instance the template. The instancing graph follows Instanced properties -- UDreamWidgetTree
 	//    ::RootWidget and UDreamWidget::Children -- which is what carries the whole hierarchy across.
+	//
+	//    The flags come from the HOST rather than being a constant, and RF_Transactional is the one
+	//    that matters. It is in RF_PropagateToSubObjects, so whatever this tree is created with is
+	//    what FObjectInstancingGraph hands to every widget, visual, behaviour and slot below it --
+	//    a hard-coded RF_Transactional therefore made the DESIGNER's preview undoable, and a preview
+	//    in the transaction buffer lets an undo restore objects the next rebuild has already
+	//    destroyed. The designer builds its preview widget RF_Transient and non-transactional
+	//    exactly so this can read that back off it; a runtime instance, whose host CreateDreamWidget
+	//    makes RF_Transactional, is unchanged.
 	FObjectInstancingGraph InstancingGraph;
 	UDreamWidgetTree* InstancedTree = NewObject<UDreamWidgetTree>(
-		InUserWidget, InWidgetTreeArchetype->GetClass(), NAME_None, RF_Transactional,
+		InUserWidget, InWidgetTreeArchetype->GetClass(), NAME_None,
+		InUserWidget->GetMaskedFlags(RF_Transactional),
 		InWidgetTreeArchetype, /*bCopyTransientsFromClassDefaults*/false, &InstancingGraph);
+	// Transient on the tree OBJECT and not on its contents, which is why it is set here rather than
+	// passed above: propagating it would mark every behaviour in the designer's preview transient,
+	// and there are editor pickers that read that flag as "engine-made, do not offer". Same shape as
+	// UMG's UUserWidget::DuplicateAndInitializeFromWidgetTree, which sets RF_Transient on the tree
+	// after the instancing call for the same reason. Zero for a runtime host, so a no-op there.
+	InstancedTree->SetFlags(InUserWidget->GetMaskedFlags(RF_Transient));
 	InUserWidget->WidgetTree = InstancedTree;
 
 	// 2. Parent is DuplicateTransient, so the instanced tree arrives with the structure intact and

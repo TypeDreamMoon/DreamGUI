@@ -438,6 +438,15 @@ bool UDreamVisual::LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, 
 	return LineTraceUIRect(OutHit, Start, End);
 }
 
+bool UDreamVisual::GetHitGeometryFitsWidgetRect()const
+{
+	// Keyed on the AUTHORED type rather than on what this class happens to do with it. This base
+	// LineTraceUI ignores RaycastType and always traces the rect, so answering yes for Mesh here
+	// would be true of this class and false of the moment a subclass honours the field -- the
+	// difference between a filter that is conservative and one that is conservative today.
+	return RaycastType == EDreamVisualRaycastType::Rect;
+}
+
 DECLARE_CYCLE_STAT(TEXT("DreamVisual FillWidgetPropertyDataForMaterial"), STAT_FillWidgetPropertyData, STATGROUP_DreamGUI);
 int UDreamVisual::WidgetPropertyDataLength =
 	sizeof(float)//1st pixel, byte1- font mark, byte2- extra marks

@@ -26,6 +26,14 @@
 
 namespace
 {
+	/**
+	 * Recursion / ancestor-walk guard for the geometry hot path. MarkLayoutForRebuild runs from every
+	 * SetWidth, SetHeight, SetSizeDelta and SetAnchoredPosition -- once per tweened frame per widget --
+	 * and a default TSet heap-allocates on its first insertion. Inline storage covers a normal
+	 * hierarchy depth without touching the allocator; deeper trees spill to the heap as before.
+	 */
+	using FDreamVisitedWidgetSet = TSet<const UDreamWidget*, DefaultKeyFuncs<const UDreamWidget*>, TInlineSetAllocator<16>>;
+
 	void RemovePanelSlotFromChild(UDreamWidget* ChildWidget)
 	{
 		if (!IsValid(ChildWidget) || !IsValid(ChildWidget->GetPanelSlot()))
@@ -149,7 +157,12 @@ void UDreamWidget::EndPlay()
 {
 	bHasBegunPlay = false;
 
-	for (auto Component : Components)
+	// Iterate a snapshot, exactly as BeginPlay/OnRegister/OnUnregister do. A component's EndPlay runs
+	// its OnDisable and OnDestroy, and behaviour code there is free to DestroyComponent() -- which
+	// goes RemoveComponent -> Components.RemoveAt and invalidates a live ranged-for.
+	// UUIScrollView::OnDestroy releases its range helper exactly that way.
+	const TArray<TObjectPtr<UDreamUIBehaviour>> ComponentsToEndPlay = Components;
+	for (auto Component : ComponentsToEndPlay)
 	{
 		if (IsValid(Component))
 		{
@@ -390,6 +403,7 @@ UDreamWidget* UDreamWidget::FindChildByDisplayName(const FString& InName, bool I
 		auto firstLayerName = InName.Left(indexOfFirstSlash);
 		for (auto& childItem : Children)
 		{
+			if (!IsValid(childItem)) continue;//Children can hold nulls between a teardown and the next tidy-up
 			if (childItem->DisplayName.Equals(firstLayerName, ESearchCase::CaseSensitive))
 			{
 				auto restName = InName.Right(InName.Len() - indexOfFirstSlash - 1);
@@ -407,6 +421,7 @@ UDreamWidget* UDreamWidget::FindChildByDisplayName(const FString& InName, bool I
 		{
 			for (auto& childItem : Children)
 			{
+				if (!IsValid(childItem)) continue;//Children can hold nulls between a teardown and the next tidy-up
 				if (childItem->DisplayName.Equals(InName, ESearchCase::CaseSensitive))
 				{
 					return childItem;
@@ -420,6 +435,7 @@ UDreamWidget* UDreamWidget::FindChildByDisplayNameWithChildren_Internal(const FS
 {
 	for (auto& childItem : Children)
 	{
+		if (!IsValid(childItem)) continue;//Children can hold nulls between a teardown and the next tidy-up
 		if (childItem->DisplayName.Equals(InName, ESearchCase::CaseSensitive))
 		{
 			return childItem;
@@ -460,6 +476,7 @@ TArray<UDreamWidget*> UDreamWidget::FindChildArrayByDisplayName(const FString& I
 			EnsureUIChildrenSorted();//make sure sorted, so result is predictable
 			for (auto& childItem : Children)
 			{
+				if (!IsValid(childItem)) continue;//Children can hold nulls between a teardown and the next tidy-up
 				if (childItem->DisplayName.Equals(InName, ESearchCase::CaseSensitive))
 				{
 					resultArray.Add(childItem);
@@ -474,6 +491,7 @@ void UDreamWidget::FindChildArrayByDisplayNameWithChildren_Internal(const FStrin
 	EnsureUIChildrenSorted();//make sure sorted, so result is predictable
 	for (auto& childItem : Children)
 	{
+		if (!IsValid(childItem)) continue;//Children can hold nulls between a teardown and the next tidy-up
 		if (childItem->DisplayName.Equals(InName, ESearchCase::CaseSensitive))
 		{
 			OutResultArray.Add(childItem);
@@ -502,6 +520,7 @@ void UDreamWidget::MarkAllDirty()
 {
 	bFlattenHierarchyIndexDirty = true;
 	bClipDirty = true;
+	MarkWorldRectBoundsDirty();
 
 	bCacheWidthDirty = true;
 	bCacheHeightDirty = true;
@@ -1654,6 +1673,51 @@ const FTransform& UDreamWidget::GetWorldTransform()const
 	return ObjectToWorldTransform;
 }
 
+bool UDreamWidget::GetWorldRectBoundingSphere(FVector& OutCenter, double& OutRadius)const
+{
+	// A perspective scope never reaches ObjectToWorldTransform: LineTraceUIRect switches to
+	// GetWorldMatrix() when one applies, and that folds in GetInheritedPerspectiveRemap, which is
+	// built from the root canvas's eye position. The eye moves with the canvas and nothing tells this
+	// widget when it does, so no invalidation hook could keep a sphere honest here -- and a stale one
+	// would silently make a foreshortened widget unclickable. Refuse instead; it is a rare feature and
+	// the exact test is still correct.
+	if (HasPerspectiveApplied())
+	{
+		return false;
+	}
+	if (bWorldRectBoundsDirty)
+	{
+		// GetWidth/GetHeight resolve a stretched size against the parent and dirty THIS cache while
+		// doing it, so the flag is cleared only after both have been asked.
+		const double Width = GetWidth();
+		const double Height = GetHeight();
+		const FVector2D LocalCenter = GetLocalSpaceCenter();
+		// The rect lies on local X = 0, so only the two in-plane scales can stretch it. FTransform
+		// scales before it rotates, so a local (0, y, z) lands at R * (0, Sy*y, Sz*z) + T, whose
+		// distance from the transformed centre is at most Max(|Sy|, |Sz|) times the local one --
+		// exact under uniform scale, an over-estimate otherwise, which is the direction to err in.
+		const FVector Scale = ObjectToWorldTransform.GetScale3D();
+		const double MaxPlaneScale = FMath::Max(FMath::Abs(Scale.Y), FMath::Abs(Scale.Z));
+		const double HalfDiagonal = 0.5 * FMath::Sqrt(Width * Width + Height * Height) * MaxPlaneScale;
+		CacheWorldRectCenter = ObjectToWorldTransform.TransformPosition(FVector(0.0, LocalCenter.X, LocalCenter.Y));
+		// A hair of slack on a real rect, so a click landing exactly on a corner cannot be thrown out
+		// by the last bit of a square root: a coarse test that is tighter than the exact test it
+		// stands in front of is a lost hit, which is the one failure mode this must not have. A
+		// degenerate rect gets no slack and is reported as no bound at all.
+		CacheWorldRectRadius = HalfDiagonal > 0.0 ? HalfDiagonal * 1.001 + UE_KINDA_SMALL_NUMBER : 0.0;
+		bWorldRectBoundsDirty = false;
+	}
+	// Spelt as a negation so a NaN radius -- from a width nobody has measured -- answers "no bound"
+	// rather than sailing through as a sphere no ray can ever be inside.
+	if (!(CacheWorldRectRadius > 0.0))
+	{
+		return false;
+	}
+	OutCenter = CacheWorldRectCenter;
+	OutRadius = CacheWorldRectRadius;
+	return true;
+}
+
 void UDreamWidget::SetWorldTransform(const FTransform& InWorldTransform)
 {
 	const FVector PreviousAuthoredScale = RelativeScale;
@@ -1735,7 +1799,15 @@ UDreamUIBehaviour* UDreamWidget::AddComponent(TSubclassOf<UDreamUIBehaviour> Com
 		return nullptr;
 	}
 
-	EObjectFlags NewComponentFlags = RF_Public | RF_Transactional;
+	// RF_Transactional taken from the OWNER rather than forced on, because that flag is what
+	// decides whether an object can enter the transaction buffer -- and a behaviour hung on a
+	// DESIGNER PREVIEW must not. The preview is a projection of the authoring tree that is thrown
+	// away and rebuilt, so an undo that restored one of its objects would be restoring something
+	// that no longer exists. An authored widget is transactional, so its behaviours still are.
+	// UDreamWidgetGeneratedClass::InitializeWidgetStatic applies the same rule one level up, to the
+	// tree, and this is the other half of it: what INSTANCING carries and what RUNTIME creates have
+	// to agree, or a preview comes out half undoable.
+	EObjectFlags NewComponentFlags = RF_Public | GetMaskedFlags(RF_Transactional);
 	if (HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
 	{
 		// Components created while building class defaults must be archetype/default-subobjects.
@@ -1949,7 +2021,12 @@ bool UDreamWidget::TrySetParentInternal(UDreamWidget* InParent, bool InKeepWorld
 			{
 				SetSiblingIndex(InSiblingIndex);
 			}
-			SynchronizePanelSlotForParent(InParent, this, true);
+			// A reorder, not a move, so the authored geometry is NOT recaptured. Forcing it promoted
+			// whatever the last layout pass had squeezed the child into to "what the author asked for"
+			// -- silently, and from there into the saved asset. AddChild's same-parent branch refuses to
+			// route through here for exactly this reason; the unforced call still creates a slot if the
+			// parent has since become a panel, and is a no-op on a slot that already has its geometry.
+			SynchronizePanelSlotForParent(InParent, this, /*bRecaptureDesiredSize*/false);
 			return true;
 		}
 		if (InParent->IsChildOf(this))return false;
@@ -2081,7 +2158,7 @@ void UDreamWidget::SetSiblingIndex(int32 InInt)
 bool UDreamWidget::IsChildOf(const UDreamWidget* InTarget)const
 {
 	auto TempParent = this->Parent;
-	TSet<const UDreamWidget*> VisitedWidgets;
+	FDreamVisitedWidgetSet VisitedWidgets;
 	while (TempParent.IsValid())
 	{
 		if (TempParent == InTarget)
@@ -2182,12 +2259,14 @@ bool UDreamWidget::SyncRequiredBehavioursForLayoutContainer(const UDreamLayoutCo
 	}
 
 #if WITH_EDITOR
+	// Modify, without forcing RF_Transactional on first. Whether these objects belong in the undo
+	// buffer is a property OF THEM: an authoring tree and its widgets are transactional and are
+	// recorded here, a designer preview is not and these calls then cost nothing. Forcing the flag
+	// put preview objects into the history, and an undo restored objects a rebuild had destroyed.
 	if (UObject* WidgetOuter = GetOuter())
 	{
-		WidgetOuter->SetFlags(RF_Transactional);
 		WidgetOuter->Modify();
 	}
-	SetFlags(RF_Transactional);
 	Modify();
 #endif
 	for (UDreamUIBehaviour* Component : ComponentsToRemove)
@@ -2202,7 +2281,7 @@ bool UDreamWidget::SyncRequiredBehavioursForLayoutContainer(const UDreamLayoutCo
 		if (UDreamUIBehaviour* NewComponent = AddComponent(Class))
 		{
 #if WITH_EDITOR
-			NewComponent->SetFlags(RF_Transactional);
+			// AddComponent already gave it this widget's own RF_Transactional; see the note there.
 			NewComponent->Modify();
 #endif
 		}
@@ -2267,6 +2346,11 @@ void UDreamWidget::OnChildAttached(UDreamWidget* ChildWidget)
 	//make sure SiblingIndex all good
 	if (ChildWidget->SiblingIndex == INDEX_NONE)
 	{
+		// Drop the dead slots before renumbering, the same way OnChildDetached does: a widget deleted
+		// in the designer leaves a null behind in its parent's Children, and reading SiblingIndex off
+		// it is an access violation. Removing rather than skipping is also what keeps the numbering
+		// meaningful -- a hole would leave every sibling after it numbered one past its own position.
+		EnsureUIChildrenValid();
 		for (int i = 0; i < Children.Num(); i++)
 		{
 			auto& UIChild = Children[i];
@@ -2428,12 +2512,12 @@ void UDreamWidget::OnAttachedToParent()
 
 void UDreamWidget::OnChildDetached(UDreamWidget* ChildWidget)
 {
-	// Drop the dead slots before renumbering. This ran unguarded and was the only Children loop in
-	// this file that did: deleting a widget blueprint instance from the designer tears its contents
-	// down first, and the detach that follows walked a Children array holding an entry the teardown
-	// had already emptied -- an access violation reading SiblingIndex off a null, taking the editor
-	// with it. Removing rather than skipping is also what makes the renumbering below mean anything:
-	// a hole would leave every sibling after it numbered one past its own position.
+	// Drop the dead slots before renumbering. This loop once ran unguarded: deleting a widget
+	// blueprint instance from the designer tears its contents down first, and the detach that
+	// follows walked a Children array holding an entry the teardown had already emptied -- an
+	// access violation reading SiblingIndex off a null, taking the editor with it. Removing rather
+	// than skipping is also what makes the renumbering below mean anything: a hole would leave
+	// every sibling after it numbered one past its own position. OnChildAttached does the same.
 	EnsureUIChildrenValid();
 	for (int i = 0; i < Children.Num(); i++)
 	{
@@ -2932,6 +3016,11 @@ float UDreamWidget::GetWidth() const
 	if (bCacheWidthDirty)
 	{
 		bCacheWidthDirty = false;
+		// The backstop for the world-rect cache. MarkDimensionChanged covers the announced paths, but
+		// several do not announce -- MarkAllDirty simply dirties this flag, and a stretched child
+		// resolves against its parent lazily, here, long after the parent moved. Whatever reached this
+		// branch is a width nobody had, so the sphere built from the old one is gone too.
+		MarkWorldRectBoundsDirty();
 		SyncAnimatableGeometryMirrors();
 		if (Parent.IsValid())
 		{
@@ -2956,6 +3045,8 @@ float UDreamWidget::GetHeight() const
 	if (bCacheHeightDirty)
 	{
 		bCacheHeightDirty = false;
+		// The vertical twin of the backstop in GetWidth.
+		MarkWorldRectBoundsDirty();
 		SyncAnimatableGeometryMirrors();
 		if (Parent.IsValid())
 		{
@@ -3673,11 +3764,14 @@ void UDreamWidget::RefreshInheritedStateFromParentChain()
 
 void UDreamWidget::RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas)
 {
+	// The self-canvas branch below used to be unreachable: a bare `ThisRenderCanvas = nullptr` sat
+	// between the lookup and the test. It is what is left of an `&& !ThisRenderCanvas->IsRegistered()`
+	// guard whose condition was dropped during the port -- UDreamUIBehaviour is a plain UObject and has
+	// no such state to test, so the guard has no meaning here and the assignment is simply wrong.
+	// With it in place a nested canvas kept none of its subtree: RegisterRenderCanvas,
+	// UnregisterRenderCanvas and RefreshRenderCanvasFromParentChain all repointed the whole thing at
+	// the ancestor canvas, losing the child canvas's own sorting, batching and clipping.
 	auto ThisRenderCanvas = this->GetComponent<UDreamCanvas>();
-	if (ThisRenderCanvas != nullptr)
-	{
-		ThisRenderCanvas = nullptr;
-	}
 	if (ThisRenderCanvas != nullptr)
 	{
 		if (InParentRenderCanvas != ThisRenderCanvas)
@@ -4180,6 +4274,10 @@ float UDreamWidget::GetLocalSpaceTop()const
 
 void UDreamWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
 {
+	// Unconditional, and pointedly not gated on the three flags: they say what the CALLER believes
+	// changed, and several callers pass a size change through as false because the value they diffed
+	// was an anchor offset. A cache that trusted them would go stale on exactly those paths.
+	MarkWorldRectBoundsDirty();
 	// No clip invalidation here: clip rectangles are recomputed and diffed every tick from the owner's world
 	// transform (see FDreamUIClipData::UpdateData), so there is nothing to mark.
 	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
@@ -4210,6 +4308,11 @@ void UDreamWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged
 
 void UDreamWidget::MarkTransformChanged()
 {
+	// UpdateObjectToWorldTransform is the ONLY writer of ObjectToWorldTransform and it ends here, so
+	// this one line covers every move -- including the cascade CalculateObjectToWorldTransform sends
+	// down, which reaches each descendant through its own UpdateObjectToWorldTransform. That is what
+	// makes the cached sphere never staler than the transform it is derived from.
+	MarkWorldRectBoundsDirty();
 	if (this->RenderCanvas.IsValid())
 	{
 		this->RenderCanvas->MarkCanvasUpdate(true);//mark canvas to update
@@ -4539,7 +4642,7 @@ void UDreamWidget::MarkLayoutForRebuild(UDreamWidget* InWidget, EDreamLayoutInva
 	UDreamWidget* TargetWidget = InWidget;
 	UDreamWidget* RebuildRoot = nullptr;
 	bool bStoppedAtLayoutWriter = false;
-	TSet<const UDreamWidget*> VisitedWidgets;
+	FDreamVisitedWidgetSet VisitedWidgets;
 	// Desired-size dependencies may cross plain wrapper widgets, so dirty every layout on the ancestor chain.
 	while (IsValid(TargetWidget) && !VisitedWidgets.Contains(TargetWidget))
 	{
@@ -4633,7 +4736,7 @@ void UDreamWidget::MarkClipDirty(bool InClipTypeChanged) const
 	MarkCanvasUpdate(true);
 	struct LOCAL
 	{
-		static void MarkDirty(const UDreamWidget* Widget, bool InClipTypeChanged, TSet<const UDreamWidget*>& VisitedWidgets)
+		static void MarkDirty(const UDreamWidget* Widget, bool InClipTypeChanged, FDreamVisitedWidgetSet& VisitedWidgets)
 		{
 			if (!IsValid(Widget) || VisitedWidgets.Contains(Widget))
 			{
@@ -4660,7 +4763,7 @@ void UDreamWidget::MarkClipDirty(bool InClipTypeChanged) const
 			}
 		}
 	};
-	TSet<const UDreamWidget*> VisitedWidgets;
+	FDreamVisitedWidgetSet VisitedWidgets;
 	VisitedWidgets.Add(this);
 	for (const UDreamWidget* Child : this->GetChildren())
 	{
@@ -4749,6 +4852,12 @@ void UDreamWidget::SetRenderOpacity(float Value)
 		{
 			static void MarkDirty(const UDreamWidget* Widget)
 			{
+				//Children can hold nulls between a teardown and the next tidy-up: a tween still running
+				//on the parent walks straight into one on the frame after a child is deleted.
+				if (!IsValid(Widget))
+				{
+					return;
+				}
 				if (Widget->Visual)
 				{
 					Widget->Visual->MarkColorDirty();
@@ -4790,6 +4899,11 @@ void UDreamWidget::SetPixelSnapping(EWidgetPixelSnapping Value)
 		{
 			static void MarkChanged(const UDreamWidget* Widget)
 			{
+				//Children can hold nulls between a teardown and the next tidy-up.
+				if (!IsValid(Widget))
+				{
+					return;
+				}
 				if (Widget->Visual)
 				{
 					Widget->Visual->OnPixelSnappingChanged();
@@ -4997,7 +5111,8 @@ void UDreamWidget::SetNavigationBoundaryRule(EDreamUINavigationBoundaryRule Valu
 UDreamVisual* UDreamWidget::CreateNewVisual(TSubclassOf<UDreamVisual> VisualClass)
 {
 	auto OldVisual = Visual;
-	auto NewVisual = NewObject<UDreamVisual>(this, VisualClass, NAME_None, RF_Public | RF_Transactional);
+	// Undoability from the owner, never a constant. See the note in AddComponent.
+	auto NewVisual = NewObject<UDreamVisual>(this, VisualClass, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
 	if (RenderCanvas.IsValid())
 	{
 		if (IsValid(OldVisual))
@@ -5075,7 +5190,8 @@ UDreamLayoutContainer* UDreamWidget::CreateNewLayoutContainer(TSubclassOf<UDream
 		}
 	}
 	auto OldLayout = LayoutContainer;
-	auto NewLayout = NewObject<UDreamLayoutContainer>(this, RequestedClass, NAME_None, RF_Public | RF_Transactional);
+	// Undoability from the owner, never a constant. See the note in AddComponent.
+	auto NewLayout = NewObject<UDreamLayoutContainer>(this, RequestedClass, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
 	if (!IsValid(NewLayout))
 	{
 		return nullptr;
@@ -5176,7 +5292,8 @@ UDreamLayoutSelf* UDreamWidget::CreateNewLayoutSelf(TSubclassOf<UDreamLayoutSelf
 		return nullptr;
 	}
 	auto OldLayout = LayoutSelf;
-	auto NewLayout = NewObject<UDreamLayoutSelf>(this, RequestedClass, NAME_None, RF_Public | RF_Transactional);
+	// Undoability from the owner, never a constant. See the note in AddComponent.
+	auto NewLayout = NewObject<UDreamLayoutSelf>(this, RequestedClass, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
 	if (!IsValid(NewLayout))
 	{
 		return nullptr;
@@ -5237,7 +5354,12 @@ UDreamPanelSlot* UDreamWidget::CreateNewPanelSlot(TSubclassOf<UDreamPanelSlot> S
 		return nullptr;
 	}
 	UDreamPanelSlot* OldSlot = PanelSlot;
-	UDreamPanelSlot* NewSlot = NewObject<UDreamPanelSlot>(this, RequestedClass, NAME_None, RF_Public | RF_Transactional);
+	// Undoability from the owner, and this is the site that made the rule necessary. A panel slot is
+	// not authored -- it is per-child data the PARENT's layout hands out, minted here at registration
+	// for any child whose authored counterpart has none, which the designer's content root always is.
+	// So a preview grew slots that instancing never touched, they arrived RF_Transactional, and a
+	// slot's Padding and alignments are among the most-edited rows in the details panel.
+	UDreamPanelSlot* NewSlot = NewObject<UDreamPanelSlot>(this, RequestedClass, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
 	if (!IsValid(NewSlot))
 	{
 		return nullptr;

@@ -46,6 +46,28 @@ void UDreamWidgetPresenterComponentBase::BeginPlay()
 void UDreamWidgetPresenterComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+
+	// The loaded tree is outered to the World and held by the manager's AllWidgetArray, so nothing
+	// released it when the owning actor went away: only the edit-mode branch of OnUnregister ever
+	// destroyed it. A world-space health bar therefore outlived every enemy that died -- still
+	// registered, still ticking, still drawing -- one live tree per corpse until the world ended.
+	// EndPlay and not OnUnregister, because a component unregisters for reasons that are not a
+	// teardown (a reregister context, for one) and throwing the tree away there would take it out
+	// from under a live actor.
+	//
+	// Skipped while garbage collection is already destroying this component -- UActorComponent's
+	// BeginDestroy routes here too, and the widget is unreachable by then, so the weak pointer
+	// answers null anyway. A whole-world shutdown is safe as it stands: UWorld::EndPlay routes every
+	// actor before it reaches the subsystems, so DestroyRegisteredWidgetTrees finds this tree already
+	// gone, and DestroyWidget tolerates a second call regardless.
+	if (!HasAnyFlags(RF_BeginDestroyed))
+	{
+		if (UDreamWidget* Widget = LoadedWidget.Get(); IsValid(Widget))
+		{
+			Widget->DestroyWidget();
+		}
+	}
+	LoadedWidget = nullptr;
 }
 
 void UDreamWidgetPresenterComponentBase::OnRegister()

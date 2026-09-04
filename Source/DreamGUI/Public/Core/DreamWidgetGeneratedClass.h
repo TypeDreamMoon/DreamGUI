@@ -91,6 +91,12 @@ public:
 	 * the whole step is testable without compiling a Blueprint. Mirrors
 	 * UWidgetBlueprintGeneratedClass::InitializeWidgetStatic, whose three steps this follows:
 	 * instance the tree, bind each widget to the same-named class property, then hand over.
+	 *
+	 * The contents are instanced with InUserWidget's own RF_Transactional, because that flag
+	 * propagates to sub-objects and so decides whether the whole hierarchy is undoable. An
+	 * RF_Transient, non-transactional host -- which is what the designer builds its preview as --
+	 * therefore gets a hierarchy no transaction can record, which is the rule the designer's undo
+	 * model rests on: the authoring tree is the only undoable half.
 	 */
 	static void InitializeWidgetStatic(UDreamUserWidget* InUserWidget, const UClass* InClass, UDreamWidgetTree* InWidgetTreeArchetype);
 

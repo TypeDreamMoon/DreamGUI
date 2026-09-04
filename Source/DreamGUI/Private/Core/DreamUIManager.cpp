@@ -97,16 +97,20 @@ void UDreamUIManagerObject::Tick(float DeltaTime)
 	{
 		for (int i = 0; i < OneShotFunctionsToExecuteInTick.Num(); i++)
 		{
-			auto& Item = OneShotFunctionsToExecuteInTick[i];
-			if (Item.Key <= 0)
+			if (OneShotFunctionsToExecuteInTick[i].Key <= 0)
 			{
-				Item.Value();
+				// Move the function out and drop its entry BEFORE calling it. A one-shot is free to
+				// queue another one -- OnBlueprintCompiled -> RefreshAllUI -> EnsureDataForRebuild does
+				// exactly that -- and the resulting reallocation used to happen underneath both the
+				// reference held here and the TFunction object being executed.
+				TFunction<void()> Function = MoveTemp(OneShotFunctionsToExecuteInTick[i].Value);
 				OneShotFunctionsToExecuteInTick.RemoveAt(i);
 				i--;
+				Function();
 			}
 			else
 			{
-				Item.Key--;
+				OneShotFunctionsToExecuteInTick[i].Key--;
 			}
 		}
 	}
@@ -1003,9 +1007,17 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		if (bShouldUpdateOnCultureChanged)
 		{
 			bShouldUpdateOnCultureChanged = false;
-			for (auto& Culture : AllCultureChangedArray)
+			// Sweep first, then walk a snapshot. The entries are weak and a registrant can have been
+			// destroyed since it registered -- the generated Execute_OnCultureChanged thunk checks its
+			// target against null -- and a handler is free to register or unregister listeners as it runs.
+			AllCultureChangedArray.RemoveAll([](const TWeakObjectPtr<UObject>& Item) { return !Item.IsValid(); });
+			const TArray<TWeakObjectPtr<UObject>> CultureChangedListeners = AllCultureChangedArray;
+			for (auto& Culture : CultureChangedListeners)
 			{
-				IDreamUICultureChangedInterface::Execute_OnCultureChanged(Culture.Get());
+				if (UObject* CultureObject = Culture.Get(); IsValid(CultureObject))
+				{
+					IDreamUICultureChangedInterface::Execute_OnCultureChanged(CultureObject);
+				}
 			}
 		}
 	}
@@ -1040,7 +1052,13 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 				if (item.IsValid())
 				{
 					item->Call_Start();
-					if (item->bCanExecuteTick)
+					// Re-checked after Start, because Start is allowed to switch its own widget off or
+					// destroy it. bIsStartCalled is set BEFORE Start() runs, so the Call_OnDisable that
+					// follows takes the "already started" branch and calls RemoveDreamUIBehavioursFromTick
+					// on a list this behaviour is not in yet (it logs "Not exist" and does nothing).
+					// Adding it unconditionally here then ticked a disabled behaviour every frame, and
+					// the next enable reported "Already exist".
+					if (item.IsValid() && item->bIsEnableCalled && item->bCanExecuteTick)
 					{
 						DreamUIBehavioursForTick.AddUnique(item);
 					}
@@ -1060,7 +1078,15 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		for (int i = 0; i < DreamUIBehavioursForTick.Num(); i++)
 		{
 			CurrentExecutingTickIndex = i;
-			auto Behaviour = DreamUIBehavioursForTick[i];
+			UDreamUIBehaviour* Behaviour = DreamUIBehavioursForTick[i].Get();
+			if (!IsValid(Behaviour))
+			{
+				// Destroyed since the list was built. Not removed here: the index is what
+				// RemoveDreamUIBehavioursFromTick compares against CurrentExecutingTickIndex to decide
+				// whether a removal is safe, so renumbering mid-walk would make it drop the wrong entry.
+				// The sweep below the loop drops it instead.
+				continue;
+			}
 			if (auto Widget = Behaviour->GetWidget())
 			{
 				bool bAffectByGamePause;
@@ -1096,6 +1122,8 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 			}
 			DreamUIBehavioursNeedToRemoveFromTick.Reset();
 		}
+		//and the entries whose behaviour was destroyed while the list was being walked
+		DreamUIBehavioursForTick.RemoveAll([](const TWeakObjectPtr<UDreamUIBehaviour>& Item) { return !Item.IsValid(); });
 	}
 
 	//update layout
@@ -1175,9 +1203,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		}
 		for (auto& SnapshotLayout : LayoutContainerArrayWhichHasSnapshot)
 		{
-			if (IsValid(SnapshotLayout))
+			if (UDreamLayoutContainer* Layout = SnapshotLayout.Get(); IsValid(Layout))
 			{
-				SnapshotLayout->ApplyLayoutResult();
+				Layout->ApplyLayoutResult();
 			}
 		}
 #if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
@@ -1807,7 +1835,7 @@ void UDreamUIManagerWorldSubsystem::CalculateLayoutTree(UDreamWidget* RootLayout
 
 	struct LOCAL
 	{
-		static void CollectLayoutTree(UDreamWidget* Widget, TArray<TObjectPtr<UDreamWidget>>& LayoutTreeArray,
+		static void CollectLayoutTree(UDreamWidget* Widget, TArray<TWeakObjectPtr<UDreamWidget>>& LayoutTreeArray,
 			TSet<const UDreamWidget*>& VisitedWidgets)
 		{
 			if (!IsValid(Widget))return;
@@ -1834,10 +1862,10 @@ void UDreamUIManagerWorldSubsystem::CalculateLayoutTree(UDreamWidget* RootLayout
 	}
 	//Iterate a copy: UpdateLayout can re-enter CalculateLayoutTree through RebuildLayoutImmediately, and the
 	//FindOrAdd there may rehash the map out from under a reference into it.
-	const TArray<TObjectPtr<UDreamWidget>> LayoutTreeArray = LayoutTree.WidgetArray;
+	const TArray<TWeakObjectPtr<UDreamWidget>> LayoutTreeArray = LayoutTree.WidgetArray;
 	for (int i = 0; i < LayoutTreeArray.Num(); i++)
 	{
-		auto Widget = LayoutTreeArray[i];
+		UDreamWidget* Widget = LayoutTreeArray[i].Get();
 		if (!IsValid(Widget))
 		{
 			continue;

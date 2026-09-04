@@ -215,7 +215,7 @@ void UDreamLayoutContainer::SetLayoutAnimation(UDreamLayoutAnimation* Value)
 
 UDreamLayoutAnimation* UDreamLayoutContainer::CreateNewLayoutAnimation(TSubclassOf<UDreamLayoutAnimation> Class)
 {
-	auto NewAnimationHandler = NewObject<UDreamLayoutAnimation>(this, Class, NAME_None, RF_Public | RF_Transactional);
+	auto NewAnimationHandler = NewObject<UDreamLayoutAnimation>(this, Class, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
 	AnimationHandler = NewAnimationHandler;
 	return AnimationHandler;
 }
