@@ -421,7 +421,15 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 			UClass* ClassValue = Cast<UClass>(ClassObject);
 			if (ClassValue == UDreamWidget::StaticClass())
 			{
-				TargetObjectHandle->SetValue(HelperWidget);
+				// Only when it is actually out of date, and never into the undo buffer. This whole block
+				// re-derives TargetObject from HelperWidget while the panel is being BUILT: with a plain
+				// SetValue, opening the details panel on a widget that has events opened a transaction,
+				// pushed an undo entry and dirtied the asset before the author touched anything.
+				if (TargetObject != HelperWidget)
+				{
+					TargetObjectHandle->SetValue(HelperWidget, EPropertyValueSetFlags::NotTransactable);
+					TargetObject = HelperWidget;
+				}
 			}
 			else if (ClassValue->IsChildOf(UDreamUIBehaviour::StaticClass()) || ClassValue->IsChildOf(UDreamWidgetSubObjectBehaviour::StaticClass()))
 			{
@@ -467,7 +475,8 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 					}
 					if (FoundTargetObject != TargetObject)
 					{
-						TargetObjectHandle->SetValue(FoundTargetObject);
+						//re-derived during layout, so not an edit; see the note above
+						TargetObjectHandle->SetValue(FoundTargetObject, EPropertyValueSetFlags::NotTransactable);
 						TargetObject = FoundTargetObject;
 					}
 				}
@@ -475,7 +484,8 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 				{
 					if (TargetObject != nullptr)
 					{
-						TargetObjectHandle->SetValue((UObject*)nullptr);
+						TargetObjectHandle->SetValue((UObject*)nullptr, EPropertyValueSetFlags::NotTransactable);
+						TargetObject = nullptr;
 					}
 				}
 			}
@@ -484,7 +494,8 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 		{
 			if (TargetObject != nullptr)
 			{
-				TargetObjectHandle->SetValue((UObject*)nullptr);
+				TargetObjectHandle->SetValue((UObject*)nullptr, EPropertyValueSetFlags::NotTransactable);
+				TargetObject = nullptr;
 			}
 		}
 
@@ -517,7 +528,8 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 				if (bUseNativeParameter)
 				{
 					bUseNativeParameter = false;
-					UseNativeParameterHandle->SetValue(bUseNativeParameter);
+					//a correction made while drawing the row, not an edit; see the note above
+					UseNativeParameterHandle->SetValue(bUseNativeParameter, EPropertyValueSetFlags::NotTransactable);
 				}
 			}
 			if ((EventParameterType == FunctionParameterType) && bUseNativeParameter)//support native parameter
@@ -1302,18 +1314,27 @@ FReply FDreamUIEventDelegateCustomization::OnClickMoveUpDown(bool UpOrDown, int3
 }
 
 
+// NotTransactable, deliberately: this only copies the SERIALIZED parameter buffer into the typed
+// field the editor widget reads, and it runs while the row is being drawn. A plain SetValue put an
+// undo entry on the stack every time the panel was built. (The property system already skips the
+// write entirely when the value is unchanged, so the common case costs nothing either way.)
 #define SET_VALUE_ON_BUFFER(type)\
 auto ParamBuffer = GetBuffer(ParamBufferHandle);\
 FMemoryReader Reader(ParamBuffer);\
 type Value;\
 Reader << Value;\
-ValueHandle->SetValue(Value);
+ValueHandle->SetValue(Value, EPropertyValueSetFlags::NotTransactable);
 
 TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, EDreamUIEventDelegateParameterType InFunctionParameterType, UFunction* InFunction)
 {
 	auto ParamBufferHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ParamBuffer));
 	if (InFunctionParameterType != EDreamUIEventDelegateParameterType::None)//None means not select function yet
 	{
+		//One call, one table. The length used to be a literal per case, and those literals were still
+		//the UE4 single precision sizes: Vector3 was pinned to 12 bytes while FVector is 24, so every
+		//redraw truncated a correct 24 byte buffer back to 12 zero bytes, and the reader below then ran
+		//off the end of it. The length now comes from the runtime that consumes the buffer.
+		PrepareParameterBuffer(ParamBufferHandle, InFunctionParameterType);
 		switch (InFunctionParameterType)
 		{
 		default:
@@ -1336,11 +1357,11 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Bool:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 1);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, BoolValue));
 			auto ParamBuffer = GetBuffer(ParamBufferHandle);
-			bool Value = ParamBuffer[0] == 1;
-			ValueHandle->SetValue(Value);
+			bool Value = ParamBuffer.Num() > 0 && ParamBuffer[0] == 1;
+			//mirror of the serialized buffer, drawn not edited; see SET_VALUE_ON_BUFFER
+			ValueHandle->SetValue(Value, EPropertyValueSetFlags::NotTransactable);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::BoolValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
@@ -1348,7 +1369,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Float:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 4);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, FloatValue));
 			SET_VALUE_ON_BUFFER(float);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::FloatValueChange, ValueHandle, ParamBufferHandle));
@@ -1358,7 +1378,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Double:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 8);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, DoubleValue));
 			SET_VALUE_ON_BUFFER(double);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::DoubleValueChange, ValueHandle, ParamBufferHandle));
@@ -1368,7 +1387,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Int8:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 1);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, Int8Value));
 			SET_VALUE_ON_BUFFER(int8);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::Int8ValueChange, ValueHandle, ParamBufferHandle));
@@ -1378,7 +1396,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::UInt8:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 1);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, UInt8Value));
 			SET_VALUE_ON_BUFFER(uint8);
 			if (auto enumValue = UDreamUIEventDelegateParameterHelper::GetEnumParameter(InFunction))
@@ -1410,7 +1427,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Int16:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 2);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, Int16Value));
 			SET_VALUE_ON_BUFFER(int16);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::Int16ValueChange, ValueHandle, ParamBufferHandle));
@@ -1420,7 +1436,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::UInt16:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 2);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, UInt16Value));
 			SET_VALUE_ON_BUFFER(uint16);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::UInt16ValueChange, ValueHandle, ParamBufferHandle));
@@ -1430,7 +1445,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Int32:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 4);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, Int32Value));
 			SET_VALUE_ON_BUFFER(int32);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::Int32ValueChange, ValueHandle, ParamBufferHandle));
@@ -1440,7 +1454,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::UInt32:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 4);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, UInt32Value));
 			SET_VALUE_ON_BUFFER(uint32);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::UInt32ValueChange, ValueHandle, ParamBufferHandle));
@@ -1450,7 +1463,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Int64:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 8);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, Int64Value));
 			SET_VALUE_ON_BUFFER(int64);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::Int64ValueChange, ValueHandle, ParamBufferHandle));
@@ -1460,7 +1472,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::UInt64:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 8);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, UInt64Value));
 			SET_VALUE_ON_BUFFER(uint64);
 			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::UInt64ValueChange, ValueHandle, ParamBufferHandle));
@@ -1470,7 +1481,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Vector2:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 8);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, Vector2Value));
 			SET_VALUE_ON_BUFFER(FVector2D);
 			return SNew(SHorizontalBox)
@@ -1497,7 +1507,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Vector3:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 12);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, Vector3Value));
 			SET_VALUE_ON_BUFFER(FVector);
 			return SNew(SHorizontalBox)
@@ -1528,7 +1537,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Vector4:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 16);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, Vector4Value));
 			SET_VALUE_ON_BUFFER(FVector4);
 			return SNew(SHorizontalBox)
@@ -1563,13 +1571,13 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Color:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 4);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ColorValue));
 			auto ParamBuffer = GetBuffer(ParamBufferHandle);
 			FMemoryReader Reader(ParamBuffer);
 			FColor Value;
 			Reader << Value;
-			ValueHandle->SetValueFromFormattedString(Value.ToString());
+			//mirror of the serialized buffer, drawn not edited; see SET_VALUE_ON_BUFFER
+			ValueHandle->SetValueFromFormattedString(Value.ToString(), EPropertyValueSetFlags::NotTransactable);
 			return SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot()
 				.VAlign(VAlign_Center)
@@ -1601,7 +1609,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::LinearColor:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 16);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, LinearColorValue));
 			SET_VALUE_ON_BUFFER(FLinearColor);
 			return SNew(SHorizontalBox)
@@ -1635,7 +1642,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Quaternion:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 16);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, QuatValue));
 			SET_VALUE_ON_BUFFER(FQuat);
 			return SNew(SHorizontalBox)
@@ -1742,7 +1748,6 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 		case EDreamUIEventDelegateParameterType::Rotator:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			SetBufferLength(ParamBufferHandle, 12);
 			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, RotatorValue));
 			SET_VALUE_ON_BUFFER(FRotator);
 			TSharedPtr<INumericTypeInterface<float>> TypeInterface;
@@ -2125,48 +2130,153 @@ void FDreamUIEventDelegateCustomization::SetBufferValue(TSharedPtr<IPropertyHand
 	}
 }
 
+namespace DreamUIEventDelegateBuffer
+{
+	/**
+	 * ParamBuffer is scratch storage the panel keeps in sync while it lays itself out: before a mirror
+	 * value can be decoded the buffer has to be exactly as long as the selected function's parameter
+	 * needs. That bookkeeping must not go through IPropertyHandleArray - AddItem()/EmptyArray() reach
+	 * FPropertyValueImpl::AddChild/ClearChildren (PropertyHandleImpl.cpp:1272/1487), both of which open
+	 * their own FScopedTransaction and take no EPropertyValueSetFlags, so merely drawing the panel
+	 * dirtied the asset and pushed an "Add Child" entry onto the undo stack. Reaching the raw TArray
+	 * has none of those side effects; genuine user edits still go through the property handles.
+	 */
+	static const FArrayProperty* ResolveByteArrayProperty(const TSharedPtr<IPropertyHandle>& BufferHandle)
+	{
+		const FArrayProperty* ArrayProperty = BufferHandle.IsValid() ? CastField<FArrayProperty>(BufferHandle->GetProperty()) : nullptr;
+		if (ArrayProperty == nullptr || ArrayProperty->Inner == nullptr || ArrayProperty->Inner->GetElementSize() != (int32)sizeof(uint8))
+		{
+			return nullptr;
+		}
+		return ArrayProperty;
+	}
+
+	/**
+	 * Read the buffer straight out of the raw TArray. SetBufferLength resizes it without going through
+	 * the property tree, so the cached element handles can still be one layout pass behind.
+	 */
+	static TArray<uint8> ReadBytes(const TSharedPtr<IPropertyHandle>& BufferHandle)
+	{
+		TArray<uint8> ResultBuffer;
+		const FArrayProperty* ArrayProperty = ResolveByteArrayProperty(BufferHandle);
+		if (ArrayProperty == nullptr)
+		{
+			return ResultBuffer;
+		}
+
+		TArray<void*> RawDatas;
+		BufferHandle->AccessRawData(RawDatas);
+		if (RawDatas.Num() > 0 && RawDatas[0] != nullptr)
+		{
+			FScriptArrayHelper ArrayHelper(ArrayProperty, RawDatas[0]);
+			const int32 NumBytes = ArrayHelper.Num();
+			if (NumBytes > 0)
+			{
+				ResultBuffer.Append(ArrayHelper.GetRawPtr(0), NumBytes);
+			}
+		}
+		return ResultBuffer;
+	}
+}
+
 void FDreamUIEventDelegateCustomization::SetBufferLength(TSharedPtr<IPropertyHandle> BufferHandle, int32 Count)
 {
-	auto BufferArrayHandle = BufferHandle->AsArray();
-	uint32 bufferHandleCount;
-	BufferArrayHandle->GetNumElements(bufferHandleCount);
-	if (Count != (int32)bufferHandleCount)
+	const FArrayProperty* ArrayProperty = DreamUIEventDelegateBuffer::ResolveByteArrayProperty(BufferHandle);
+	if (ArrayProperty == nullptr)
 	{
-		BufferArrayHandle->EmptyArray();
-		for (int i = 0; i < Count; i++)
+		return;
+	}
+
+	TArray<void*> RawDatas;
+	BufferHandle->AccessRawData(RawDatas);
+
+	bool bResized = false;
+	for (void* RawData : RawDatas)
+	{
+		if (RawData == nullptr)
 		{
-			BufferArrayHandle->AddItem();
+			continue;
 		}
+		FScriptArrayHelper ArrayHelper(ArrayProperty, RawData);
+		if (ArrayHelper.Num() == Count)
+		{
+			continue;
+		}
+		//same outcome as the old EmptyArray()+AddItem() loop: every byte of a re-sized buffer starts at zero
+		ArrayHelper.EmptyAndAddValues(Count);
+		bResized = true;
+	}
+
+	if (bResized)
+	{
+		//the element nodes cached by the property tree no longer match the array. GetBuffer reads the raw
+		//array so THIS layout pass is already consistent; this only keeps the tree honest afterwards.
+		BufferHandle->RequestRebuildChildren();
+	}
+}
+
+void FDreamUIEventDelegateCustomization::PrepareParameterBuffer(TSharedPtr<IPropertyHandle> BufferHandle, EDreamUIEventDelegateParameterType InParamType)
+{
+	const int32 RequiredSize = UDreamUIEventDelegateParameterHelper::GetParameterBufferSize(InParamType);
+	if (RequiredSize <= 0)
+	{
+		//String/Name/Text are serialized at whatever length their value needs, and the reference types
+		//keep their value in ReferenceObject. Resizing either would destroy what is stored.
+		return;
+	}
+
+	const FArrayProperty* ArrayProperty = DreamUIEventDelegateBuffer::ResolveByteArrayProperty(BufferHandle);
+	if (ArrayProperty == nullptr)
+	{
+		return;
+	}
+
+	TArray<void*> RawDatas;
+	BufferHandle->AccessRawData(RawDatas);
+
+	bool bResized = false;
+	for (void* RawData : RawDatas)
+	{
+		if (RawData == nullptr)
+		{
+			continue;
+		}
+		FScriptArrayHelper ArrayHelper(ArrayProperty, RawData);
+		if (ArrayHelper.Num() == RequiredSize)
+		{
+			continue;
+		}
+		//Read what is stored BEFORE resizing: a buffer written while the math types were single
+		//precision holds the author's real value, and clearing it would throw that away silently.
+		TArray<uint8> Bytes;
+		if (ArrayHelper.Num() > 0)
+		{
+			Bytes.Append(ArrayHelper.GetRawPtr(0), ArrayHelper.Num());
+		}
+		UDreamUIEventDelegateParameterHelper::UpgradeParameterBuffer(InParamType, Bytes);
+		ArrayHelper.EmptyAndAddValues(RequiredSize);
+		if (Bytes.Num() == RequiredSize)
+		{
+			FMemory::Memcpy(ArrayHelper.GetRawPtr(0), Bytes.GetData(), RequiredSize);
+		}
+		bResized = true;
+	}
+
+	if (bResized)
+	{
+		//see SetBufferLength: the cached element nodes no longer match, and GetBuffer reads raw
+		BufferHandle->RequestRebuildChildren();
 	}
 }
 
 TArray<uint8> FDreamUIEventDelegateCustomization::GetBuffer(TSharedPtr<IPropertyHandle> BufferHandle)
 {
-	auto BufferArrayHandle = BufferHandle->AsArray();
-	uint32 bufferHandleCount;
-	BufferArrayHandle->GetNumElements(bufferHandleCount);
-	TArray<uint8> resultBuffer;
-	resultBuffer.Reserve(bufferHandleCount);
-	for (uint32 i = 0; i < bufferHandleCount; i++)
-	{
-		auto elementHandle = BufferArrayHandle->GetElement(i);
-		resultBuffer.Add(DreamDetailsMultiSelect::ValueOr<uint8>(elementHandle, 0));
-	}
-	return resultBuffer;
+	return DreamUIEventDelegateBuffer::ReadBytes(BufferHandle);
 }
 
 TArray<uint8> FDreamUIEventDelegateCustomization::GetPropertyBuffer(TSharedPtr<IPropertyHandle> BufferHandle) const
 {
-	auto paramBufferArrayHandle = BufferHandle->AsArray();
-	uint32 bufferCount;
-	paramBufferArrayHandle->GetNumElements(bufferCount);
-	TArray<uint8> paramBuffer;
-	for (uint32 i = 0; i < bufferCount; i++)
-	{
-		auto bufferHandle = paramBufferArrayHandle->GetElement(i);
-		paramBuffer.Add(DreamDetailsMultiSelect::ValueOr<uint8>(bufferHandle, 0));
-	}
-	return paramBuffer;
+	return DreamUIEventDelegateBuffer::ReadBytes(BufferHandle);
 }
 int32 FDreamUIEventDelegateCustomization::GetEnumValue(TSharedPtr<IPropertyHandle> ValueHandle)const
 {
@@ -2187,12 +2297,10 @@ void FDreamUIEventDelegateCustomization::SetTextValue(const FText& InText, EText
 
 void FDreamUIEventDelegateCustomization::ClearValueBuffer(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
 {
-	auto handle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ParamBuffer))->AsArray();
-	uint32 NumElements = 0;
-	if (handle->GetNumElements(NumElements) == FPropertyAccess::Result::Success && NumElements > 0)
-	{
-		handle->EmptyArray();
-	}
+	//layout-time bookkeeping just like SetBufferLength, so it takes the same non-transactional route:
+	//emptying through IPropertyHandleArray would open a "Clear Children" transaction for merely drawing
+	auto handle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ParamBuffer));
+	SetBufferLength(handle, 0);
 }
 void FDreamUIEventDelegateCustomization::ClearReferenceValue(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
 {
@@ -2204,7 +2312,9 @@ void FDreamUIEventDelegateCustomization::ClearObjectValue(TSharedPtr<IPropertyHa
 	UObject* Obj = nullptr;
 	if (handle->GetValue(Obj) == FPropertyAccess::Result::Success && Obj != nullptr)
 	{
-		handle->ResetToDefault();
+		//ResetToDefault() opens its own "Reset to Default" transaction and this runs while the panel is
+		//being drawn, not on an edit; clearing the reference is what "reset" means here anyway
+		handle->SetValue((UObject*)nullptr, EPropertyValueSetFlags::NotTransactable);
 	}
 }
 

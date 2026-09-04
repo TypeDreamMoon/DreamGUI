@@ -130,6 +130,11 @@ private:
 	void RotatorValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle);
 	void SetBufferValue(TSharedPtr<IPropertyHandle> BufferHandle, const TArray<uint8>& BufferArray);
 	void SetBufferLength(TSharedPtr<IPropertyHandle> BufferHandle, int32 Count);
+	/**
+	 * Make the stored buffer the length the runtime needs for InParamType, migrating what is already
+	 * there rather than clearing it. Does nothing for the types that do not use the raw buffer.
+	 */
+	void PrepareParameterBuffer(TSharedPtr<IPropertyHandle> BufferHandle, EDreamUIEventDelegateParameterType InParamType);
 	TArray<uint8> GetBuffer(TSharedPtr<IPropertyHandle> BufferHandle);
 	TArray<uint8> GetPropertyBuffer(TSharedPtr<IPropertyHandle> BufferHandle) const;
 	int32 GetEnumValue(TSharedPtr<IPropertyHandle> ValueHandle)const;

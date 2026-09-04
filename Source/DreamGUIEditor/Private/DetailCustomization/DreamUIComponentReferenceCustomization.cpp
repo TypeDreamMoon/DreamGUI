@@ -7,8 +7,40 @@
 #include "DreamUIComponentReference.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
+#include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIComponentRefereceHelperCustomization"
+
+namespace DreamUIComponentReferenceCustomizationLocal
+{
+	/**
+	 * A value the row FILLS IN on the author's behalf, not one the author picked.
+	 *
+	 * It goes in through the handle's own addresses -- resolved here and now, rather than the raw
+	 * pointers cached when the header was built, which are only good for as long as nothing
+	 * reallocates the container the struct lives in -- and deliberately without the notify pair:
+	 * this runs while the row is being DRAWN, and a notified write there pushes an undo entry and
+	 * dirties the package for merely looking at the property. A real pick goes through
+	 * OnSelectComponent, which does announce itself.
+	 */
+	template<typename ValueType>
+	void FillDerivedValue(const TSharedPtr<IPropertyHandle>& InHandle, const ValueType& InValue)
+	{
+		if (!InHandle.IsValid())
+		{
+			return;
+		}
+		TArray<void*> Addresses;
+		InHandle->AccessRawData(Addresses);
+		for (void* Address : Addresses)
+		{
+			if (Address != nullptr)
+			{
+				*static_cast<ValueType*>(Address) = InValue;
+			}
+		}
+	}
+}
 
 TWeakObjectPtr<AActor> FDreamUIComponentReferenceCustomization::CopiedHelperActor;
 TWeakObjectPtr<UActorComponent> FDreamUIComponentReferenceCustomization::CopiedTargetComp;
@@ -101,7 +133,8 @@ void FDreamUIComponentReferenceCustomization::RegenerateContentWidget()
 		if (AllowedComponentClassFilters.Num() > 0)
 		{
 			HelperClass = UActorComponent::StaticClass();
-			HelperClassHandle->SetValue(HelperClass);
+			//a default filled in while the row is built is not an edit; see the note further down
+			HelperClassHandle->SetValue((UObject*)HelperClass, EPropertyValueSetFlags::NotTransactable);
 		}
 	}
 
@@ -181,11 +214,17 @@ void FDreamUIComponentReferenceCustomization::RegenerateContentWidget()
 				else if (Components.Num() == 1)
 				{
 					auto Comp = Components[0];
-					for (auto& Item : ComponentReferenceInstances)
-					{
-						Item->HelperClass = Comp->GetClass();
-						Item->HelperComponentName = Comp != nullptr ? Comp->GetFName() : NAME_None;
-					}
+					// The only candidate, so it is filled in implicitly. Addresses resolved from the
+					// handles here and now, not the raw pointers cached back in CustomizeHeader, which
+					// are only good for as long as nothing reallocates the container holding the struct.
+					//
+					// Deliberately silent: this runs while the row is being BUILT, and nobody edited
+					// anything, so a notified write would push an undo entry and dirty the package just
+					// for looking at the property. OnSelectComponent is where a real pick is announced.
+					DreamUIComponentReferenceCustomizationLocal::FillDerivedValue(
+						HelperClassHandle, TSubclassOf<UActorComponent>(Comp->GetClass()));
+					DreamUIComponentReferenceCustomizationLocal::FillDerivedValue(
+						HelperComponentNameHandle, Comp->GetFName());
 					ContentWidget = HelperActorHandle->CreatePropertyValueWidget();
 				}
 				else
@@ -352,7 +391,7 @@ TSharedRef<SWidget> FDreamUIComponentReferenceCustomization::OnGetMenu(TSharedPt
 			FText::FromName(FName(NAME_None)),
 			FText(LOCTEXT("Tip", "Clear component selection, will use first one.")),
 			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateRaw(this, &FDreamUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, (UActorComponent*)nullptr))
+			FUIAction(FExecuteAction::CreateSP(this, &FDreamUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, (UActorComponent*)nullptr))
 		);
 		for (auto Comp : Components)
 		{
@@ -361,7 +400,7 @@ TSharedRef<SWidget> FDreamUIComponentReferenceCustomization::OnGetMenu(TSharedPt
 				FText::FromString(Comp->GetName()),
 				FText(),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateRaw(this, &FDreamUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, Comp))
+				FUIAction(FExecuteAction::CreateSP(this, &FDreamUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, Comp))
 			);
 		}
 	}
@@ -370,10 +409,33 @@ TSharedRef<SWidget> FDreamUIComponentReferenceCustomization::OnGetMenu(TSharedPt
 }
 void FDreamUIComponentReferenceCustomization::OnSelectComponent(TSharedPtr<IPropertyHandle> TargetCompHandle, TSharedPtr<IPropertyHandle> CompNameProperty, UActorComponent* Comp)
 {
-	for (auto& Item : ComponentReferenceInstances)
+	// Through the handles, not the raw struct pointers cached in CustomizeHeader. Writing the fields
+	// directly skipped the transaction, the PostEditChange and the package dirty flag -- so the pick
+	// could not be undone and the owning asset never asked to be saved -- and the cached addresses are
+	// only valid for as long as nothing reallocates the container holding the struct.
+	const FName CompName = Comp != nullptr ? Comp->GetFName() : FName(NAME_None);
+	FScopedTransaction Transaction(LOCTEXT("SelectComponent_Transaction", "Select Component Reference"));
+	if (TargetCompHandle.IsValid())
 	{
-		Item->TargetComp = Comp;
-		Item->HelperComponentName = Comp != nullptr ? Comp->GetFName() : NAME_None;
+		TargetCompHandle->SetValue((UObject*)Comp);
+	}
+	// HelperComponentName is VisibleAnywhere, so a handle SetValue on it is refused as edit-const --
+	// and it is the half of the pick that survives a save, so it cannot simply be dropped. Written
+	// through the handle's OWN addresses instead, freshly resolved and bracketed by the notify pair,
+	// which is what supplies the Modify, the dirty flag and the PostEditChange that SetValue would have.
+	if (CompNameProperty.IsValid())
+	{
+		CompNameProperty->NotifyPreChange();
+		TArray<void*> NameAddresses;
+		CompNameProperty->AccessRawData(NameAddresses);
+		for (void* NameAddress : NameAddresses)
+		{
+			if (NameAddress != nullptr)
+			{
+				*static_cast<FName*>(NameAddress) = CompName;
+			}
+		}
+		CompNameProperty->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -405,8 +467,10 @@ void FDreamUIComponentReferenceCustomization::OnHelperActorValueChange()
 	UClass* HelperClass = nullptr;
 	HelperClassHandle->GetValue(*(UObject**)&HelperClass);
 
-	auto HelperComponentNameHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIComponentReference, HelperClass));
-	
+	//HelperComponentName, not HelperClass: the three writes below aimed at the name were resetting and
+	//overwriting the CLASS instead, which is what the picker then filters the actor's components by
+	auto HelperComponentNameHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIComponentReference, HelperComponentName));
+
 	if (HelperActor)
 	{
 		if (HelperClass)
@@ -416,20 +480,21 @@ void FDreamUIComponentReferenceCustomization::OnHelperActorValueChange()
 			if (Components.Num() == 1)
 			{
 				TargetCompHandle->SetValue((UObject*)Components[0]);
-				HelperComponentNameHandle->SetValue(Components[0]->GetFName());
+				//edit-const, so SetValue/ResetToDefault are refused on it; see FillDerivedValue
+				DreamUIComponentReferenceCustomizationLocal::FillDerivedValue(HelperComponentNameHandle, Components[0]->GetFName());
 			}
 			else if (Components.Num() == 0)
 			{
 				TargetCompHandle->ResetToDefault();
 				HelperActorHandle->ResetToDefault();
-				HelperComponentNameHandle->ResetToDefault();
+				DreamUIComponentReferenceCustomizationLocal::FillDerivedValue(HelperComponentNameHandle, FName(NAME_None));
 			}
 		}
 	}
 	else
 	{
 		TargetCompHandle->ResetToDefault();
-		HelperComponentNameHandle->ResetToDefault();
+		DreamUIComponentReferenceCustomizationLocal::FillDerivedValue(HelperComponentNameHandle, FName(NAME_None));
 	}
 
 	RegenerateContentWidget();

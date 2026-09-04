@@ -53,6 +53,21 @@ private:
 	TArray<TWeakObjectPtr<class UDreamWidget>> TargetScriptArray;
 	static TArray<float> ValueRangeArray;
 
+	/**
+	 * Announcing an anchor edit that did NOT go through a property handle.
+	 *
+	 * These rows write through the widget's own setters -- one number can land on AnchoredPosition or
+	 * on an anchor offset depending on the widget, and an anchor preset moves pivot, both anchors,
+	 * position and size at once -- so no property node hears about the write, and the details view's
+	 * FNotifyHook (which is what mirrors a PREVIEW widget onto the blueprint's template) has to be
+	 * called by hand. Without it the edit was visible until the next compile and then snapped back.
+	 * See DreamDetailsTemplateMirror.
+	 */
+	void NotifyAnchorGeometryPreChange() const;
+	void NotifyAnchorGeometryPostChange() const;
+	/** Held only to reach the hook above; the layout builder does not outlive a refresh. */
+	TSharedPtr<class IPropertyUtilities> PropertyUtilities;
+
 	FText GetAnchorsTooltipText()const;
 	
 	void ForceUpdateUI();

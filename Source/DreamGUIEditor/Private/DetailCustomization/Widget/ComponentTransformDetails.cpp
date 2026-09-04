@@ -95,6 +95,8 @@ FComponentTransformDetails::FComponentTransformDetails( const TArray< TWeakObjec
 	, NotifyHook( InNotifyHook )
 	, bPreserveScaleRatio( false )
 	, bEditingRotationInUI( false )
+	//was left uninitialised, and OnSetTransform reads it to decide whether a committed slider counts
+	, bIsSliderTransaction( false )
 {
 	GConfig->GetBool(TEXT("SelectionDetails"), TEXT("PreserveScaleRatio"), bPreserveScaleRatio, GEditorPerProjectIni);
 
@@ -284,7 +286,7 @@ void FComponentTransformDetails::GenerateChildContent( IDetailChildrenBuilder& C
 		.CopyAction( CreateCopyAction( ETransformField::Location ) )
 		.PasteAction( CreatePasteAction( ETransformField::Location ) )
 		.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>(this, &FComponentTransformDetails::GetLocationResetVisibility), FSimpleDelegate::CreateSP(this, &FComponentTransformDetails::OnLocationResetClicked)))
-		.PropertyHandleList({ GeneratePropertyHandle(USceneComponent::GetRelativeLocationPropertyName(), ChildrenBuilder) })
+		.PropertyHandleList({ GeneratePropertyHandle(UDreamWidget::GetPropertyName_RelativeLocation(), ChildrenBuilder) })
 		.NameContent()
 		.VAlign(VAlign_Center)
 		[
@@ -335,7 +337,7 @@ void FComponentTransformDetails::GenerateChildContent( IDetailChildrenBuilder& C
 		.CopyAction( CreateCopyAction(ETransformField::Rotation) )
 		.PasteAction( CreatePasteAction(ETransformField::Rotation) )
 		.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>(this, &FComponentTransformDetails::GetRotationResetVisibility), FSimpleDelegate::CreateSP(this, &FComponentTransformDetails::OnRotationResetClicked)))
-		.PropertyHandleList({ GeneratePropertyHandle(USceneComponent::GetRelativeRotationPropertyName(), ChildrenBuilder) })
+		.PropertyHandleList({ GeneratePropertyHandle(UDreamWidget::GetPropertyName_RelativeRotation(), ChildrenBuilder) })
 		.NameContent()
 		.VAlign(VAlign_Center)
 		[
@@ -372,7 +374,7 @@ void FComponentTransformDetails::GenerateChildContent( IDetailChildrenBuilder& C
 		.CopyAction( CreateCopyAction(ETransformField::Scale) )
 		.PasteAction( CreatePasteAction(ETransformField::Scale) )
 		.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>(this, &FComponentTransformDetails::GetScaleResetVisibility), FSimpleDelegate::CreateSP(this, &FComponentTransformDetails::OnScaleResetClicked)))
-		.PropertyHandleList({ GeneratePropertyHandle(USceneComponent::GetRelativeScale3DPropertyName(), ChildrenBuilder) })
+		.PropertyHandleList({ GeneratePropertyHandle(UDreamWidget::GetPropertyName_RelativeScale(), ChildrenBuilder) })
 		.NameContent()
 		.VAlign(VAlign_Center)
 		[
@@ -435,16 +437,31 @@ void FComponentTransformDetails::CacheCommonLocationUnits()
 
 TSharedPtr<IPropertyHandle> FComponentTransformDetails::GeneratePropertyHandle(FName PropertyName, IDetailChildrenBuilder& ChildrenBuilder)
 {
+	// UDreamWidget, not USceneComponent. This is a port of the engine's actor transform section and the
+	// ported lookups still named the class the original one edited, so all three of these came back
+	// empty: the map has no entry under a class no selected object is, and the fallback then built a
+	// property node over a list of nulls, because GetSceneComponentFromDetailsObject answers null for
+	// every widget. The rows carried no property handle at all.
+	//
 	// Try finding the property handle in the details panel's property map first.
 	IDetailLayoutBuilder& LayoutBuilder = ChildrenBuilder.GetParentCategory().GetParentLayout();
-	TSharedPtr<IPropertyHandle> PropertyHandle = LayoutBuilder.GetProperty(PropertyName, USceneComponent::StaticClass());
+	TSharedPtr<IPropertyHandle> PropertyHandle = LayoutBuilder.GetProperty(PropertyName, UDreamWidget::StaticClass());
 	if (!PropertyHandle || !PropertyHandle->IsValidHandle())
 	{
-		// If it wasn't found, add a collapsed row which contains the property node.
-		TArray<UObject*> SceneComponents;
-		Algo::Transform(SelectedObjects, SceneComponents, [](TWeakObjectPtr<UObject> Obj) { return GetSceneComponentFromDetailsObject(Obj.Get()); });
-		PropertyHandle = LayoutBuilder.AddObjectPropertyData(SceneComponents, PropertyName);
-		//CachedHandlesObjects.Append(SceneComponents);
+		// If it wasn't found, add a collapsed row which contains the property node. These three are not
+		// EditAnywhere, which is fine: AddObjectPropertyData names the property explicitly and the
+		// visibility filter is bypassed for a single named child.
+		TArray<UObject*> Widgets;
+		Widgets.Reserve(SelectedObjects.Num());
+		for (const TWeakObjectPtr<UDreamWidget>& Object : SelectedObjects)
+		{
+			if (UDreamWidget* Widget = Object.Get())
+			{
+				Widgets.Add(Widget);
+			}
+		}
+		PropertyHandle = LayoutBuilder.AddObjectPropertyData(Widgets, PropertyName);
+		//CachedHandlesObjects.Append(Widgets);
 	}
 
 	//PropertyHandles.Add(PropertyHandle);
@@ -554,6 +571,17 @@ void FComponentTransformDetails::OnScaleResetClicked()
 
 void FComponentTransformDetails::CacheTransform()
 {
+	// Nothing else ever removes from this map, and its keys can die under it -- a designer preview is
+	// rebuilt whole. Weak keys make a dead entry unfindable rather than a wrong answer; this drops them
+	// so the map cannot carry corpses for the life of the panel.
+	for (auto It = ObjectToRelativeRotationMap.CreateIterator(); It; ++It)
+	{
+		if (!It.Key().IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+
 	FVector CurLoc = FVector(EForceInit::ForceInitToZero);
 	FRotator CurRot = FRotator(EForceInit::ForceInitToZero);
 	FVector CurScale = FVector(EForceInit::ForceInitToZero);
@@ -784,8 +812,14 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 				// lands in serialized anchor data via CalculateAnchorFromTransform.
 				NewComponentValue = GetAxisFilteredVector(Axis, NewValue, OldComponentValue);
 
-				// If we're committing during a rotation edit then we need to force it
-				if (OldComponentValue != NewComponentValue || (bCommitted && bEditingRotationInUI))
+				// If we're committing during a rotation edit, or during a slider transaction, then we need
+				// to force it, in order that PostEditChangeChainProperty be called -- even though the
+				// slider has usually NOT changed the value here, because the interactive ticks already
+				// wrote it. Without the slider half (the engine's own condition, dropped in the port) the
+				// committing pass found nothing to do, ModifiedObjects stayed empty, and neither the
+				// PostEditChange below nor the notify hook that mirrors onto the template ever ran: drag a
+				// transform slider, watch the preview move, find the asset unchanged.
+				if (OldComponentValue != NewComponentValue || (bCommitted && (bEditingRotationInUI || bIsSliderTransaction)))
 				{
 					if (!bBeganTransaction && bCommitted)
 					{
@@ -892,6 +926,54 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 	{
 		for (UObject* Object : ModifiedObjects)
 		{
+			// The widget itself is what was written, and PreEditChange above was handed the chain, so a
+			// matching PostEditChangeChainProperty has to follow it. The ported loop asked
+			// GetSceneComponentFromDetailsObject first and did EVERYTHING inside "if (SceneComponent)" --
+			// which for a UDreamWidget is never true, so this whole tail was dead code: no PostEditChange
+			// (the widget never recomputed anything from its new transform), no quaternion restore, no
+			// end-of-move broadcast. The scene-component-specific work below is left where it was.
+			if (UDreamWidget* Widget = Cast<UDreamWidget>(Object))
+			{
+				FScopedSwitchWorldForObject WorldSwitcher(Widget);
+
+				if (bCommitted)
+				{
+					// We don't call PostEditChange for non commit changes because most classes implement the version that doesn't check the interaction type
+					Widget->PostEditChangeChainProperty(PropertyChangedChainEvent);
+				}
+				else
+				{
+					SnapshotTransactionBuffer(Widget);
+				}
+
+				if (!Widget->IsTemplate())
+				{
+					if (TransformField == ETransformField::Rotation || TransformField == ETransformField::Location)
+					{
+						if (const FRotator* FoundRotator = ObjectToRelativeRotationMap.Find(Widget))
+						{
+							const FQuat OldQuat = FoundRotator->GetDenormalized().Quaternion();
+							//already a quaternion here, unlike the scene component's FRotator below
+							const FQuat NewQuat = Widget->GetRelativeRotation();
+
+							if (OldQuat.Equals(NewQuat))
+							{
+								// Need to restore the manually set rotation as it was modified by quat
+								// conversion. Through the euler face, which is the one that stores angles
+								// verbatim -- a widget keeps the quaternion as its serialized truth.
+								Widget->SetRelativeRotationEuler(*FoundRotator);
+							}
+						}
+					}
+
+					if (bCommitted)
+					{
+						// Broadcast when the object is done moving
+						GEditor->BroadcastEndObjectMovement(*Widget);
+					}
+				}
+			}
+
 			USceneComponent* SceneComponent = GetSceneComponentFromDetailsObject(Object);
 			USceneComponent* OldSceneComponent = SceneComponent;
 
@@ -930,7 +1012,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 				{
 					if (TransformField == ETransformField::Rotation || TransformField == ETransformField::Location)
 					{
-						FRotator* FoundRotator = ObjectToRelativeRotationMap.Find(OldSceneComponent);
+						FRotator* FoundRotator = ObjectToRelativeRotationMap.Find(Cast<UDreamWidget>(Object));
 
 						if (FoundRotator)
 						{
@@ -1030,20 +1112,19 @@ void FComponentTransformDetails::BeginSliderTransaction(FText ActorTransaction, 
 				bBeganTransaction = true;
 			}
 
-			USceneComponent* SceneComponent = GetSceneComponentFromDetailsObject(Object);
-			if (SceneComponent)
+			// The selection is UDreamWidgets, which are plain UObjects, so the ported
+			// GetSceneComponentFromDetailsObject answered null for every one of them and this snapshot --
+			// the only reason the transaction is opened here at all -- was never taken.
+			FScopedSwitchWorldForObject WorldSwitcher(Object);
+
+			if (Object->HasAnyFlags(RF_DefaultSubObject))
 			{
-				FScopedSwitchWorldForObject WorldSwitcher(Object);
-
-				if (SceneComponent->HasAnyFlags(RF_DefaultSubObject))
-				{
-					// Default subobjects must be included in any undo/redo operations
-					SceneComponent->SetFlags(RF_Transactional);
-				}
-
-				// Call modify but not PreEdit, we don't do the proper "Edit" until it's committed
-				SceneComponent->Modify();
+				// Default subobjects must be included in any undo/redo operations
+				Object->SetFlags(RF_Transactional);
 			}
+
+			// Call modify but not PreEdit, we don't do the proper "Edit" until it's committed
+			Object->Modify();
 		}
 	}
 
@@ -1063,20 +1144,15 @@ void FComponentTransformDetails::OnBeginRotationSlider()
 	bEditingRotationInUI = true;
 	bIsSliderTransaction = true;
 
-	for (TWeakObjectPtr<UObject> ObjectPtr : SelectedObjects)
+	for (TWeakObjectPtr<UDreamWidget> ObjectPtr : SelectedObjects)
 	{
-		if (ObjectPtr.IsValid())
+		//the widget, not GetSceneComponentFromDetailsObject, which answers null for every one of them
+		if (UDreamWidget* Widget = ObjectPtr.Get())
 		{
-			UObject* Object = ObjectPtr.Get();
+			FScopedSwitchWorldForObject WorldSwitcher(Widget);
 
-			USceneComponent* SceneComponent = GetSceneComponentFromDetailsObject(Object);
-			if (SceneComponent)
-			{
-				FScopedSwitchWorldForObject WorldSwitcher(Object);
-
-				// Add/update cached rotation value prior to slider interaction
-				ObjectToRelativeRotationMap.FindOrAdd(SceneComponent) = SceneComponent->GetRelativeRotation();
-			}
+			// Add/update cached rotation value prior to slider interaction
+			ObjectToRelativeRotationMap.FindOrAdd(Widget) = Widget->GetRelativeRotation().Rotator();
 		}
 	}
 }

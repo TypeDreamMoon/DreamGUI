@@ -151,7 +151,13 @@ void FDreamWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRo
 					SNew(SDreamWidgetHierarchyPickerView, World.Get(), ObjectClass)
 					.OnSelectItem_Lambda([=, this](UObject* InItem)
 					{
-						InPropertyHandle->SetValueFromFormattedString(InItem->GetPathName());
+						// The menu entries hold weak references and are built once, so a widget destroyed
+						// between opening the menu and clicking it answers null here. Closing the menu
+						// without writing is the whole of what that click can honestly mean.
+						if (InItem != nullptr)
+						{
+							InPropertyHandle->SetValueFromFormattedString(InItem->GetPathName());
+						}
 						(*PickerButton)->SetIsOpen(false);
 					})
 				]

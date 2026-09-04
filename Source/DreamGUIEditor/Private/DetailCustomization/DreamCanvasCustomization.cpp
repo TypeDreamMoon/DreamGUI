@@ -437,8 +437,15 @@ void FDreamCanvasCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder
 
 FText FDreamCanvasCustomization::GetDrawcallInfo()const
 {
+	// Slate polls this every frame, including the frames after the canvas it names has gone: the
+	// selection outlives the object during a preview rebuild. The check was here, but the read that
+	// fed it happened first.
+	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())
+	{
+		return FText::FromString(FString::Printf(TEXT("0/0")));
+	}
 	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
-	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid() && DreamUIManager)
+	if (DreamUIManager)
 	{
 		auto CanvasArray = DreamUIManager->GetCanvasArrayByRenderMode(TargetScriptArray[0]->GetRenderMode());
 		int AllDrawcallCount = 0;
@@ -462,6 +469,11 @@ FText FDreamCanvasCustomization::GetDrawcallInfo()const
 }
 FText FDreamCanvasCustomization::GetDrawcallInfoTooltip()const
 {
+	// Same polling, same lifetime; this one never checked at all.
+	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())
+	{
+		return FText::GetEmpty();
+	}
 	FString spaceText;
 	switch (TargetScriptArray[0]->GetActualRenderMode())
 	{

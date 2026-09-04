@@ -2,6 +2,7 @@
 
 #include "DetailCustomization/DreamSpriteBaseCustomization.h"
 #include "DreamUIEditorUtils.h"
+#include "DreamDetailsTemplateMirror.h"
 #include "DreamGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
@@ -46,6 +47,12 @@ void FDreamSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
+
+	// The panel edits a visual, but "Snap Size" changes its WIDGET's geometry. Both of these are
+	// captured by the button lambdas below; see DreamDetailsTemplateMirror for why the hook is
+	// called by hand at all.
+	FNotifyHook* NotifyHook = DetailBuilder.GetPropertyUtilities()->GetNotifyHook();
+	FProperty* AnchorDataProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_AnchorData());
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI");
 
@@ -125,16 +132,30 @@ void FDreamSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 			.OnClicked_Lambda([=, this]()
 			{
 				GEditor->BeginTransaction(LOCTEXT("SpriteSnapSize_Transaction", "UISprite snap size"));
+				// The size lands on the WIDGET's AnchorData, not on anything this panel owns, so that
+				// is the property the mirror has to be told about and the widget is the object.
+				TArray<UObject*> ResizedWidgets;
+				DreamDetailsTemplateMirror::NotifyPreChange(NotifyHook, AnchorDataProperty);
 				for (auto item : TargetScriptArray)
 				{
 					if (item.IsValid())
 					{
 						item->Modify();
 						item->SetSizeFromSpriteData();
-						FDreamUIUtils::NotifyPropertyChanged(item.Get(), UDreamWidget::GetPropertyName_AnchorData());
-						item->GetWidget()->MarkCanvasUpdate(true);
+						if (UDreamWidget* Widget = item->GetWidget())
+						{
+							Widget->Modify();
+							FDreamUIUtils::NotifyPropertyChanged(Widget, UDreamWidget::GetPropertyName_AnchorData());
+							Widget->MarkCanvasUpdate(true);
+							ResizedWidgets.Add(Widget);
+						}
 					}
 				}
+				// A widget setter, not a property handle, so the details view's FNotifyHook hears nothing
+				// on its own -- and that hook is the only thing that carries a value from the PREVIEW
+				// widget onto the blueprint's template. Without it the new size showed up, lasted until
+				// the next compile, and then snapped back.
+				DreamDetailsTemplateMirror::NotifyPostChange(NotifyHook, AnchorDataProperty, ResizedWidgets);
 				GEditor->EndTransaction();
 				return FReply::Handled();
 			})

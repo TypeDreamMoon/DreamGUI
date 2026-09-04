@@ -244,8 +244,14 @@ private:
 	FNotifyHook* NotifyHook;
 	/** Whether or not to preserve scale ratios */
 	bool bPreserveScaleRatio;
-	/** Mapping from object to relative rotation values which are not affected by Quat->Rotator conversions during transform calculations */
-	TMap< UObject*, FRotator > ObjectToRelativeRotationMap;
+	/**
+	 * Mapping from object to relative rotation values which are not affected by Quat->Rotator conversions during transform calculations.
+	 *
+	 * Weak keys, not raw pointers: a preview rebuild destroys every widget this was keyed on, and a raw
+	 * key would go on matching whatever the allocator hands out at the same address next -- restoring
+	 * one widget's remembered rotation onto an unrelated one. CacheTransform drops the dead entries.
+	 */
+	TMap< TWeakObjectPtr<UDreamWidget>, FRotator > ObjectToRelativeRotationMap;
 	/** Flag to indicate we are currently editing the rotation in the UI, so we should rely on the cached value in objectToRelativeRotationMap, not the value from the object */
 	bool bEditingRotationInUI;
 	/** Flag to indicate we are currently performing a slider transaction */

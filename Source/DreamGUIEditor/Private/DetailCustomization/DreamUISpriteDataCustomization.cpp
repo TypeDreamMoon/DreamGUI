@@ -435,6 +435,9 @@ FText FDreamUISpriteDataCustomization::GetPackingTagText(TSharedRef<IPropertyHan
 
 FOptionalSize FDreamUISpriteDataCustomization::GetImageWidth()const
 {
+	// Slate polls the size every frame; the asset can lose its texture (or be collected) between two
+	// of them, and both reads below go straight through SpriteTexture.
+	if (TargetScriptPtr.Get() == nullptr || !IsValid(TargetScriptPtr->SpriteTexture))return 0;
 	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
@@ -449,6 +452,7 @@ FOptionalSize FDreamUISpriteDataCustomization::GetImageWidth()const
 }
 FOptionalSize FDreamUISpriteDataCustomization::GetImageHeight()const
 {
+	if (TargetScriptPtr.Get() == nullptr || !IsValid(TargetScriptPtr->SpriteTexture))return 0;
 	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
@@ -467,7 +471,7 @@ FOptionalSize FDreamUISpriteDataCustomization::GetMinDesiredHeight(IDetailLayout
 }
 FOptionalSize FDreamUISpriteDataCustomization::GetBorderLeftSize()const
 {
-	if (TargetScriptPtr.Get() == nullptr)return 0;
+	if (TargetScriptPtr.Get() == nullptr || !IsValid(TargetScriptPtr->SpriteTexture))return 0;
 	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
@@ -482,7 +486,7 @@ FOptionalSize FDreamUISpriteDataCustomization::GetBorderLeftSize()const
 }
 FOptionalSize FDreamUISpriteDataCustomization::GetBorderRightSize()const
 {
-	if (TargetScriptPtr.Get() == nullptr)return 0;
+	if (TargetScriptPtr.Get() == nullptr || !IsValid(TargetScriptPtr->SpriteTexture))return 0;
 	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
@@ -497,7 +501,7 @@ FOptionalSize FDreamUISpriteDataCustomization::GetBorderRightSize()const
 }
 FOptionalSize FDreamUISpriteDataCustomization::GetBorderTopSize()const
 {
-	if (TargetScriptPtr.Get() == nullptr)return 0;
+	if (TargetScriptPtr.Get() == nullptr || !IsValid(TargetScriptPtr->SpriteTexture))return 0;
 	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
@@ -512,7 +516,7 @@ FOptionalSize FDreamUISpriteDataCustomization::GetBorderTopSize()const
 }
 FOptionalSize FDreamUISpriteDataCustomization::GetBorderBottomSize()const
 {
-	if (TargetScriptPtr.Get() == nullptr)return 0;
+	if (TargetScriptPtr.Get() == nullptr || !IsValid(TargetScriptPtr->SpriteTexture))return 0;
 	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);

@@ -52,6 +52,9 @@ void FDreamUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutB
 				.Text(LOCTEXT("CleanupButtonText", "Cleanup"))
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.OnClicked_Lambda([this, &DetailBuilder] {
+					// The button outlives the asset it was built for: the row is still clickable after a
+					// reimport or a GC has taken the atlas out from under the panel.
+					if (!TargetScriptPtr.IsValid())return FReply::Handled();
 					TargetScriptPtr->CleanupInvalidSpriteData();
 					DetailBuilder.ForceRefreshDetails();
 					return FReply::Handled();
@@ -67,6 +70,7 @@ void FDreamUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutB
 			.Text(LOCTEXT("PackAtlasButton", "Pack Atlas"))
 			.HAlign(EHorizontalAlignment::HAlign_Center)
 			.OnClicked_Lambda([this] {
+				if (!TargetScriptPtr.IsValid())return FReply::Handled();
 				TargetScriptPtr->MarkNotInitialized();
 				TargetScriptPtr->MarkAtlasPackDirty();
 				TargetScriptPtr->InitCheck();

@@ -4,6 +4,7 @@
 #include "DetailCustomization/DreamWidgetCustomization.h"
 #include "Core/DreamUIWorldContext.h"
 #include "DreamDetailsMultiSelect.h"
+#include "DreamDetailsTemplateMirror.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "IDetailGroup.h"
 #include "DreamGUIEditorStyle.h"
@@ -281,6 +282,9 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
+	// Kept because the rows below write through the widget's setters rather than through a property
+	// handle, and this is how they reach the details view's FNotifyHook afterwards.
+	PropertyUtilities = DetailBuilder.GetPropertyUtilities();
 
 	DetailBuilder.HideCategory("DreamGUI");
 	DetailBuilder.HideCategory("Interaction");
@@ -1279,6 +1283,10 @@ void FDreamWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilde
 		// transaction, so Ctrl+Z rolled back whatever came before it instead. Same shape as
 		// OnSelectAnchor below.
 		GEditor->BeginTransaction(LOCTEXT("PasteAnchor_Transaction", "Paste DreamGUI Anchor"));
+		// SetAnchorData is a setter, not a property write, so nothing tells the details view's
+		// FNotifyHook -- and that hook is what carries the paste from the PREVIEW widget onto the
+		// blueprint's template. Without the pair the pasted rect lasted until the next compile.
+		NotifyAnchorGeometryPreChange();
 		for (auto item : TargetScriptArray)
 		{
 			if (item.IsValid())
@@ -1289,6 +1297,7 @@ void FDreamWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilde
 				item->MarkPackageDirty();
 			}
 		}
+		NotifyAnchorGeometryPostChange();
 		GEditor->EndTransaction();
 		ForceUpdateUI();
 		DetailBuilder->ForceRefreshDetails();
@@ -1650,11 +1659,17 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 	GEditor->BeginTransaction(LOCTEXT("ChangeAnchor_Transaction", "Change DreamGUI Anchor"));
 	for (auto& UIItem : TargetScriptArray)
 	{
+		//only [0] was ever checked, and a multi-selection outlives its members one at a time
+		if (!UIItem.IsValid())continue;
 		UIItem->Modify();
 	}
+	// A preset moves pivot, both anchors, position and size at once, all through setters, so the
+	// details view's FNotifyHook is the only thing that can carry it onto the template.
+	NotifyAnchorGeometryPreChange();
 
 	for (auto& Widget : TargetScriptArray)
 	{
+		if (!Widget.IsValid())continue;
 		FVector2D DesiredPivot = Widget->GetPivot();
 		auto AnchorMin = Widget->GetAnchorMin();
 		auto AnchorMax = Widget->GetAnchorMax();
@@ -1790,9 +1805,69 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 		SyncPanelSlotAfterAnchorEdit(Widget.Get());
 		FDreamUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData));
 	}
+	NotifyAnchorGeometryPostChange();
 	TargetScriptArray[0]->MarkCanvasUpdate(true);
 	DetailBuilder->GetPropertyUtilities()->RequestForceRefresh();
 	GEditor->EndTransaction();
+}
+
+namespace DreamWidgetCustomizationLocal
+{
+	/**
+	 * What an anchor edit actually writes: the anchor block itself, plus the transform every one of
+	 * these rows recomputes from it. The viewport's own commit path mirrors the same pair (see
+	 * FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate), which is where this list came from.
+	 */
+	void CollectAnchorGeometryProperties(TArray<FProperty*>& OutProperties)
+	{
+		if (FProperty* AnchorProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_AnchorData()))
+		{
+			OutProperties.Add(AnchorProperty);
+		}
+		if (FProperty* LocationProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeLocation()))
+		{
+			OutProperties.Add(LocationProperty);
+		}
+	}
+}
+
+void FDreamWidgetCustomization::NotifyAnchorGeometryPreChange() const
+{
+	FNotifyHook* NotifyHook = PropertyUtilities.IsValid() ? PropertyUtilities->GetNotifyHook() : nullptr;
+	if (NotifyHook == nullptr)
+	{
+		return;
+	}
+	TArray<FProperty*> Properties;
+	DreamWidgetCustomizationLocal::CollectAnchorGeometryProperties(Properties);
+	for (FProperty* Property : Properties)
+	{
+		DreamDetailsTemplateMirror::NotifyPreChange(NotifyHook, Property);
+	}
+}
+
+void FDreamWidgetCustomization::NotifyAnchorGeometryPostChange() const
+{
+	FNotifyHook* NotifyHook = PropertyUtilities.IsValid() ? PropertyUtilities->GetNotifyHook() : nullptr;
+	if (NotifyHook == nullptr)
+	{
+		return;
+	}
+	TArray<UObject*> ChangedWidgets;
+	ChangedWidgets.Reserve(TargetScriptArray.Num());
+	for (const TWeakObjectPtr<UDreamWidget>& Item : TargetScriptArray)
+	{
+		if (Item.IsValid())
+		{
+			ChangedWidgets.Add(Item.Get());
+		}
+	}
+	TArray<FProperty*> Properties;
+	DreamWidgetCustomizationLocal::CollectAnchorGeometryProperties(Properties);
+	for (FProperty* Property : Properties)
+	{
+		DreamDetailsTemplateMirror::NotifyPostChange(NotifyHook, Property, ChangedWidgets);
+	}
 }
 
 void FDreamWidgetCustomization::SyncPanelSlotAfterAnchorEdit(UDreamWidget* Widget)
@@ -2201,6 +2276,13 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return;
 
+	// A committed edit is the one the asset should keep; the interactive ticks in between still move
+	// the preview, and the hook drops them on purpose (see SDreamWidgetDesignerDetails::NotifyPostChange).
+	if (Commited)
+	{
+		NotifyAnchorGeometryPreChange();
+	}
+
 	ApplyAnchorValueToWidgets(TargetScriptArray, Value, AnchorValueIndex);
 
 	GUnrealEd->UpdatePivotLocationForSelection();
@@ -2209,11 +2291,18 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 	GUnrealEd->RedrawLevelEditingViewports();
 
 	auto AnchorProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_AnchorData());
-	auto RelativeLocationProperty = FindFProperty<FProperty>(USceneComponent::StaticClass(), FName(TEXT("RelativeLocation")));
+	// UDreamWidget's own RelativeLocation, not USceneComponent's: a widget is a plain UObject, and the
+	// ported lookup named the class the original panel edited.
+	auto RelativeLocationProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeLocation());
 	for (auto& Item : TargetScriptArray)
 	{
+		if (!Item.IsValid())continue;
 		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), AnchorProperty);
 		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), RelativeLocationProperty);
+	}
+	if (Commited)
+	{
+		NotifyAnchorGeometryPostChange();
 	}
 }
 void FDreamWidgetCustomization::OnAnchorValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
@@ -2225,6 +2314,8 @@ void FDreamWidgetCustomization::OnAnchorValueCommitted(float Value, ETextCommit:
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetAnchor_Transaction", "Change Widget Anchor"));
 	for (auto& Item : TargetScriptArray)
 	{
+		//only [0] was ever checked, and a multi-selection outlives its members one at a time
+		if (!Item.IsValid())continue;
 		Item->Modify();
 	}
 	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex, true);
@@ -2236,6 +2327,7 @@ void FDreamWidgetCustomization::OnAnchorValueSliderMovementBegin()
 	GEditor->BeginTransaction(LOCTEXT("SlideChangeWidgetAnchor_Transaction", "Change Widget Anchor"));
 	for (auto& Item : TargetScriptArray)
 	{
+		if (!Item.IsValid())continue;
 		Item->Modify();
 	}
 }
