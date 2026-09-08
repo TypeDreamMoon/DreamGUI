@@ -112,13 +112,13 @@ bool UDreamUINavigationScope::HandleBackAction_Implementation()
 void UDreamUINavigationScope::NotifyScopeActivated()
 {
 	bIsScopeActive = true;
-	ReceiveOnScopeActivated();
+	ReceiveScopeActivated();
 	OnScopeActivated.Broadcast(this);
 }
 
 void UDreamUINavigationScope::NotifyScopeDeactivated()
 {
 	bIsScopeActive = false;
-	ReceiveOnScopeDeactivated();
+	ReceiveScopeDeactivated();
 	OnScopeDeactivated.Broadcast(this);
 }
