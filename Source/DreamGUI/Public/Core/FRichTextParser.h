@@ -33,7 +33,12 @@ namespace DreamUIRichTextParser
 
 		ECustomTagMode CustomTagMode = ECustomTagMode::None;
 		FName CustomTag;
+		/** The custom tag above came from `<a=Id>`: it is a hyperlink, and something may be clicked on it. */
+		bool bHyperlink = false;
 		FName ImageTag;
+		/** Size the `<img=Tag,W,H/>` asked for, in the same units as the font size; 0 means "the font size". */
+		float ImageWidth = 0.0f;
+		float ImageHeight = 0.0f;
 
 		int CharIndex = 0;
 	};
@@ -49,13 +54,20 @@ namespace DreamUIRichTextParser
 		TArray<FColor>			ColorArray;
 		TArray<ESupOrSubMode>	SupOrSubArray;
 		TArray<FName>			CustomTagArray;
+		/** Open `<a=Id>` tags, innermost last: `</a>` names no id, so it closes the one most recently opened. */
+		TArray<FName>			HyperlinkTags;
 		FName ImageTag = NAME_None;
+		float ImageWidth = 0.0f;
+		float ImageHeight = 0.0f;
 
-		int OriginSize = 0;
+		/** Float, because font sizes are: an int here quantised every size a tag computed against it. */
+		float OriginSize = 0.0f;
 		FColor OriginColor = FColor::White;
-		uint8 OriginRenderOpacity = 255;
 		bool OriginBold = false;
 		bool OriginItalic = false;
+		/** The text's own underline / strike, which `<u>` and `<s>` nest on top of rather than replace. */
+		bool OriginUnderline = false;
+		bool OriginStrikethrough = false;
 
 		bool
 		bEnableBold = false
@@ -68,22 +80,32 @@ namespace DreamUIRichTextParser
 		, bEnableSubscript = false
 		, bEnableCustomTag = false
 		, bEnableImage = false
+		, bEnableHyperlink = false
 		;
 	public:
 		void ClearImageTag()
 		{
 			ImageTag = NAME_None;
+			ImageWidth = ImageHeight = 0.0f;
 		}
-		void Prepare(float inOriginSize, FColor inOriginColor, uint8 inRenderOpacity, bool inBold, bool inItalic, int32 inFlags, FRichTextParseResult& result)
+		/**
+		 * Tag colours come out with the alpha the author wrote. Render opacity is applied by the painter
+		 * (FDreamTextPaintParams::RichTextTagOpacity) instead of being baked in here, so that fading a
+		 * rich text does not invalidate its layout.
+		 */
+		void Prepare(float inOriginSize, FColor inOriginColor, bool inBold, bool inItalic, bool inUnderline, bool inStrikethrough, int32 inFlags, FRichTextParseResult& result)
 		{
 			OriginSize = inOriginSize;
 			OriginColor = inOriginColor;
-			OriginRenderOpacity = inRenderOpacity;
 			OriginBold = inBold;
 			OriginItalic = inItalic;
+			OriginUnderline = inUnderline;
+			OriginStrikethrough = inStrikethrough;
 
 			result.Bold = inBold;
 			result.Italic = inItalic;
+			result.Underline = inUnderline;
+			result.Strikethrough = inStrikethrough;
 			result.Size = inOriginSize;
 			result.Color = inOriginColor;
 
@@ -97,6 +119,7 @@ namespace DreamUIRichTextParser
 			bEnableSubscript = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Subscript);
 			bEnableCustomTag = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::CustomTag);
 			bEnableImage = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Image);
+			bEnableHyperlink = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Hyperlink);
 		}
 		void Clear()
 		{
@@ -108,7 +131,91 @@ namespace DreamUIRichTextParser
 			ColorArray.Reset();
 			SupOrSubArray.Reset();
 			CustomTagArray.Reset();
+			HyperlinkTags.Reset();
 			ImageTag = NAME_None;
+			ImageWidth = ImageHeight = 0.0f;
+		}
+		/**
+		 * A character reference, which is how a rich text writes a character the markup would otherwise
+		 * eat: `&lt; &gt; &amp; &quot; &apos; &nbsp;`, and the numeric forms `&#1234;` / `&#x1F600;`.
+		 * Same set a UMG RichTextBlock understands. Without one there was no way at all to show a
+		 * literal '<' -- the only "escape" was to misspell the tag so that parsing failed.
+		 *
+		 * Only rich text unescapes: a plain text draws every character as itself, as UMG's TextBlock
+		 * does, so `&amp;` in a plain text is four characters and means them.
+		 *
+		 * @return true when a reference starts at Index; OutLength is how many code units it spans.
+		 */
+		static bool ReadEscape(const FString& Text, int TextLength, int Index, uint32& OutCodepoint, int32& OutLength)
+		{
+			if (Index < 0 || Index >= TextLength || Text[Index] != '&')return false;
+			// The longest thing accepted is "&#x10FFFF;", ten units; anything longer is not a reference.
+			const int MaxEnd = FMath::Min(TextLength, Index + 12);
+			int End = -1;
+			for (int i = Index + 1; i < MaxEnd; i++)
+			{
+				const TCHAR c = Text[i];
+				if (c == ';') { End = i; break; }
+				if (c == '&' || c == '<' || c == '>' || c == ' ' || c == '\n' || c == '\t')break;
+			}
+			if (End == -1 || End == Index + 1)return false;
+			const TCHAR* Body = Text.GetCharArray().GetData() + Index + 1;
+			const int BodyLen = End - Index - 1;
+			auto NameIs = [Body, BodyLen](const TCHAR* Lit) -> bool
+			{
+				const int LitLen = (int)FCString::Strlen(Lit);
+				return BodyLen == LitLen && FCString::Strncmp(Body, Lit, LitLen) == 0;
+			};
+			uint32 Codepoint = 0;
+			if (Body[0] == '#')
+			{
+				if (BodyLen < 2)return false;
+				const bool bHex = Body[1] == 'x' || Body[1] == 'X';
+				const int DigitStart = bHex ? 2 : 1;
+				if (BodyLen <= DigitStart)return false;
+				uint32 Value = 0;
+				for (int i = DigitStart; i < BodyLen; i++)
+				{
+					const int Digit = bHex ? HexDigit(Body[i]) : ((Body[i] >= '0' && Body[i] <= '9') ? (int)(Body[i] - '0') : -1);
+					if (Digit == -1)return false;
+					Value = Value * (bHex ? 16u : 10u) + (uint32)Digit;
+					if (Value > 0x10FFFF)return false;
+				}
+				// U+0000 and the surrogate range are not characters anyone can mean.
+				if (Value == 0 || (Value >= 0xD800 && Value <= 0xDFFF))return false;
+				Codepoint = Value;
+			}
+			else if (NameIs(TEXT("lt")))Codepoint = '<';
+			else if (NameIs(TEXT("gt")))Codepoint = '>';
+			else if (NameIs(TEXT("amp")))Codepoint = '&';
+			else if (NameIs(TEXT("quot")))Codepoint = '"';
+			else if (NameIs(TEXT("apos")))Codepoint = '\'';
+			else if (NameIs(TEXT("nbsp")))Codepoint = 0x00A0;
+			else return false;
+			OutCodepoint = Codepoint;
+			OutLength = End - Index + 1;
+			return true;
+		}
+		/**
+		 * Turns plain text into markup that renders as itself -- the inverse of ReadEscape, and what a
+		 * caller needs before pushing user-typed text into a rich text.
+		 */
+		static FString EscapeText(const FString& InPlainText)
+		{
+			FString Out;
+			Out.Reserve(InPlainText.Len());
+			for (int32 i = 0; i < InPlainText.Len(); i++)
+			{
+				const TCHAR c = InPlainText[i];
+				switch (c)
+				{
+				case '&': Out += TEXT("&amp;"); break;
+				case '<': Out += TEXT("&lt;"); break;
+				case '>': Out += TEXT("&gt;"); break;
+				default: Out.AppendChar(c); break;
+				}
+			}
+			return Out;
 		}
 		bool Parse(const FString& Text, int TextLength, int& InOutStartIndex, FRichTextParseResult& ParseResult)
 		{
@@ -242,10 +349,37 @@ namespace DreamUIRichTextParser
 					if (bEnableImage)
 					{
 						int charEndIndex;
-						if (GetImageTag(Text, TextLength, CharIndex + 5, charEndIndex, ImageTag))
+						if (GetImageTag(Text, TextLength, CharIndex + 5, charEndIndex, ImageTag, ImageWidth, ImageHeight))
 						{
 							InOutStartIndex += charEndIndex - CharIndex + 1;
 							bHaveSymbol = true;
+						}
+					}
+				}
+				else if (CharIndex + 3 < TextLength
+					&& Text[CharIndex + 1] == 'a'
+					&& Text[CharIndex + 2] == '='
+					)//begin a= (hyperlink)
+				{
+					if (bEnableHyperlink)
+					{
+						int charEndIndex;
+						FName tag;
+						if (GetCustomTag(Text, TextLength, CharIndex + 3, charEndIndex, tag))
+						{
+							// A hyperlink IS a custom tag -- a named range of characters -- with one
+							// thing added: something may be clicked on it. Sharing the machinery is what
+							// makes `<a=Id>` work with TextAnimation and the custom style data for free.
+							if (CustomTagArray.IndexOfByKey(tag) == -1)
+							{
+								InOutStartIndex += charEndIndex - CharIndex + 1;
+								CustomTagArray.Add(tag);
+								HyperlinkTags.Add(tag);
+								ParseResult.CustomTag = tag;
+								ParseResult.CustomTagMode = ECustomTagMode::Start;
+								ParseResult.bHyperlink = true;
+								bHaveSymbol = true;
+							}
 						}
 					}
 				}
@@ -286,6 +420,21 @@ namespace DreamUIRichTextParser
 							{
 								InOutStartIndex += 4;
 								StrikethroughCount--;
+								bHaveSymbol = true;
+							}
+						}
+						else if (Text[CharIndex + 2] == 'a' && HyperlinkTags.Num() > 0)//end a (hyperlink)
+						{
+							if (bEnableHyperlink)
+							{
+								// `</a>` names no id, so it closes the innermost open one -- which is
+								// also what lets one link nest inside another.
+								const FName tag = HyperlinkTags.Pop();
+								CustomTagArray.Remove(tag);
+								InOutStartIndex += 4;
+								ParseResult.CustomTag = tag;
+								ParseResult.CustomTagMode = ECustomTagMode::End;
+								ParseResult.bHyperlink = true;
 								bHaveSymbol = true;
 							}
 						}
@@ -401,8 +550,8 @@ namespace DreamUIRichTextParser
 			{
 				ParseResult.Bold = BoldCount > 0 || OriginBold;
 				ParseResult.Italic = ItalicCount > 0 || OriginItalic;
-				ParseResult.Underline = UnderlineCount > 0;
-				ParseResult.Strikethrough = StrikethroughCount > 0;
+				ParseResult.Underline = UnderlineCount > 0 || OriginUnderline;
+				ParseResult.Strikethrough = StrikethroughCount > 0 || OriginStrikethrough;
 				ParseResult.Size = SizeArray.Num() > 0 ? SizeArray[SizeArray.Num() - 1] : OriginSize;
 				ParseResult.Size = FMath::Max(ParseResult.Size, 0.0f);
 				ParseResult.HasColor = ColorArray.Num() > 0;
@@ -413,6 +562,8 @@ namespace DreamUIRichTextParser
 					ParseResult.Size *= 0.8f;//sup or sub size
 				}
 				ParseResult.ImageTag = ImageTag;
+				ParseResult.ImageWidth = ImageWidth;
+				ParseResult.ImageHeight = ImageHeight;
 			}
 			return bHaveSymbol;
 		}
@@ -517,133 +668,264 @@ namespace DreamUIRichTextParser
 			}
 			return false;
 		}
-		static bool GetImageTag(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FName& OutTag)
+		/**
+		 * `<img=Tag/>`, `<img=Tag,Size/>` or `<img=Tag,Width,Height/>`. One size sets the height and lets
+		 * the width follow the image's aspect ratio, which is what the default -- the font size -- does;
+		 * two set both. Sizes are in the same units as the font size. A malformed size is not a size, and
+		 * the whole tag is then literal text rather than a silently mis-sized image.
+		 */
+		static bool GetImageTag(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FName& OutTag, float& OutWidth, float& OutHeight)
 		{
+			OutWidth = OutHeight = 0.0f;
 			//image is a self-closing tag, must end with '/>'; scan from the char after the first tag char
 			int EndIndex = FindTokenEnd(Text, TextLength, StartIndex + 1);
-			if (EndIndex != -1 && EndIndex > StartIndex && Text[EndIndex] == '>' && Text[EndIndex - 1] == '/')//found end
+			if (EndIndex == -1 || EndIndex <= StartIndex || Text[EndIndex] != '>' || Text[EndIndex - 1] != '/')//no valid end
 			{
-				OutTag = FName(FStringView(Text.GetCharArray().GetData() + StartIndex, EndIndex - StartIndex - 1));
-				OutEndIndex = EndIndex;
-				return true;
+				return false;
 			}
-			return false;
+			const TCHAR* TokenPtr = Text.GetCharArray().GetData() + StartIndex;
+			const int TokenLen = EndIndex - StartIndex - 1;//without the '/'
+			int NameLen = TokenLen;
+			for (int i = 0; i < TokenLen; i++)
+			{
+				if (TokenPtr[i] == ',') { NameLen = i; break; }
+			}
+			if (NameLen <= 0)return false;
+			float Sizes[2] = { 0.0f, 0.0f };
+			int SizeCount = 0;
+			int Cursor = NameLen;
+			while (Cursor < TokenLen && SizeCount < 2)
+			{
+				if (TokenPtr[Cursor] != ',')return false;
+				const int NumberStart = ++Cursor;
+				while (Cursor < TokenLen && TokenPtr[Cursor] != ',')Cursor++;
+				if (Cursor <= NumberStart)return false;
+				if (!ParseFloat(TokenPtr + NumberStart, Cursor - NumberStart, Sizes[SizeCount]))return false;
+				if (Sizes[SizeCount] < 0.0f)return false;
+				SizeCount++;
+			}
+			if (Cursor != TokenLen)return false;//a third size, or a trailing comma
+			OutTag = FName(FStringView(TokenPtr, NameLen));
+			if (SizeCount == 1)
+			{
+				OutHeight = Sizes[0];
+			}
+			else if (SizeCount == 2)
+			{
+				OutWidth = Sizes[0];
+				OutHeight = Sizes[1];
+			}
+			OutEndIndex = EndIndex;
+			return true;
 		}
-		//get color from 'color=red' or 'color=#ffffff', end with '>'
-		//return true if is valid
+		/** One entry of the colour-name table: the CSS name and what it means. */
+		struct FNamedColor { const TCHAR* Name; uint8 R, G, B; };
+		/**
+		 * The colour names a tag may use. The HTML/CSS basic sixteen plus the handful this plugin
+		 * already shipped, so nothing that used to parse stops parsing: `green` keeps the (0,255,0) it
+		 * has always meant here -- CSS calls that `lime`, and `lime` is an alias for it rather than a
+		 * second, conflicting definition.
+		 */
+		static const FNamedColor* GetNamedColorTable(int& OutCount)
+		{
+			static const FNamedColor Table[] =
+			{
+				{ TEXT("black"),       0,   0,   0 },
+				{ TEXT("white"),     255, 255, 255 },
+				{ TEXT("gray"),      128, 128, 128 },
+				{ TEXT("grey"),      128, 128, 128 },
+				{ TEXT("silver"),    192, 192, 192 },
+				{ TEXT("red"),       255,   0,   0 },
+				{ TEXT("green"),       0, 255,   0 },
+				{ TEXT("lime"),        0, 255,   0 },
+				{ TEXT("blue"),        0,   0, 255 },
+				{ TEXT("orange"),    255, 165,   0 },
+				{ TEXT("purple"),    128,   0, 128 },
+				{ TEXT("yellow"),    255, 255,   0 },
+				{ TEXT("cyan"),        0, 255, 255 },
+				{ TEXT("aqua"),        0, 255, 255 },
+				{ TEXT("magenta"),   255,   0, 255 },
+				{ TEXT("fuchsia"),   255,   0, 255 },
+				{ TEXT("maroon"),    128,   0,   0 },
+				{ TEXT("navy"),        0,   0, 128 },
+				{ TEXT("olive"),     128, 128,   0 },
+				{ TEXT("teal"),        0, 128, 128 },
+				{ TEXT("pink"),      255, 192, 203 },
+				{ TEXT("brown"),     165,  42,  42 },
+				{ TEXT("gold"),      255, 215,   0 },
+			};
+			OutCount = (int)UE_ARRAY_COUNT(Table);
+			return Table;
+		}
+
+		static int HexDigit(TCHAR c)
+		{
+			if (c >= '0' && c <= '9')return c - '0';
+			if (c >= 'a' && c <= 'f')return c - 'a' + 10;
+			if (c >= 'A' && c <= 'F')return c - 'A' + 10;
+			return -1;
+		}
+
+		/**
+		 * `rgb(r,g,b)` / `rgba(r,g,b,a)`, ending at ')'. Channels are 0-255; the alpha is 0-255 too
+		 * unless it is written with a decimal point, in which case it is CSS's 0..1. Whitespace around
+		 * the commas is allowed -- which is why this scans for the ')' itself instead of going through
+		 * FindTokenEnd, whose token stops at the first space.
+		 * @return false when it is not an rgb() at all, or is malformed (the tag is then literal text).
+		 */
+		static bool ParseRgbFunction(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FColor& OutColor)
+		{
+			const TCHAR* Ptr = Text.GetCharArray().GetData() + StartIndex;
+			const int Remaining = TextLength - StartIndex;
+			int Consumed = 0;
+			bool bHasAlpha = false;
+			if (Remaining >= 5 && FCString::Strnicmp(Ptr, TEXT("rgba("), 5) == 0)
+			{
+				Consumed = 5;
+				bHasAlpha = true;
+			}
+			else if (Remaining >= 4 && FCString::Strnicmp(Ptr, TEXT("rgb("), 4) == 0)
+			{
+				Consumed = 4;
+			}
+			else
+			{
+				return false;
+			}
+			// The closing bracket, and then the tag's own end immediately after it.
+			int Close = -1;
+			for (int i = StartIndex + Consumed; i < TextLength; i++)
+			{
+				const TCHAR c = Text[i];
+				if (c == ')') { Close = i; break; }
+				if (c == '<' || c == '>' || c == '\n')break;
+			}
+			if (Close == -1 || Close + 1 >= TextLength || Text[Close + 1] != '>')
+			{
+				return false;
+			}
+
+			const int ExpectedCount = bHasAlpha ? 4 : 3;
+			float Channels[4] = { 0.0f, 0.0f, 0.0f, 255.0f };
+			bool bFraction[4] = { false, false, false, false };
+			int Count = 0;
+			int Cursor = StartIndex + Consumed;
+			while (Count < ExpectedCount)
+			{
+				while (Cursor < Close && (Text[Cursor] == ' ' || Text[Cursor] == '\t'))Cursor++;
+				const int NumberStart = Cursor;
+				while (Cursor < Close && Text[Cursor] != ',')Cursor++;
+				int NumberEnd = Cursor;
+				while (NumberEnd > NumberStart && (Text[NumberEnd - 1] == ' ' || Text[NumberEnd - 1] == '\t'))NumberEnd--;
+				if (NumberEnd <= NumberStart)return false;
+				for (int i = NumberStart; i < NumberEnd; i++)
+				{
+					if (Text[i] == '.')bFraction[Count] = true;
+				}
+				if (!ParseFloat(Text.GetCharArray().GetData() + NumberStart, NumberEnd - NumberStart, Channels[Count]))
+				{
+					return false;
+				}
+				Count++;
+				if (Cursor < Close && Text[Cursor] == ',')
+				{
+					Cursor++;
+					continue;
+				}
+				break;
+			}
+			if (Count != ExpectedCount)return false;
+			// A trailing comma, or a channel too many, is malformed rather than quietly ignored.
+			while (Cursor < Close && (Text[Cursor] == ' ' || Text[Cursor] == '\t'))Cursor++;
+			if (Cursor != Close)return false;
+
+			auto ToByte = [](float Value) -> uint8
+			{
+				return (uint8)FMath::Clamp(FMath::RoundToInt(Value), 0, 255);
+			};
+			OutColor.R = ToByte(Channels[0]);
+			OutColor.G = ToByte(Channels[1]);
+			OutColor.B = ToByte(Channels[2]);
+			OutColor.A = bHasAlpha
+				? (bFraction[3] ? ToByte(Channels[3] * 255.0f) : ToByte(Channels[3]))
+				: (uint8)255;
+			OutEndIndex = Close + 1;
+			return true;
+		}
+
+		/**
+		 * Colour of a `<color=...>` tag, ending at '>'. Accepts:
+		 *   a name from GetNamedColorTable, or `transparent`
+		 *   `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`
+		 *   `rgb(r,g,b)`, `rgba(r,g,b,a)`
+		 * Anything else is not a colour, and the whole tag is then rendered as literal text -- write
+		 * `&lt;` for a literal '<' if that is what you meant (see FRichTextParser::ReadEscape).
+		 * The alpha is the author's; the hierarchy's fade is applied by the painter.
+		 */
 		bool GetColor(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FColor& OutColor)
 		{
+			if (ParseRgbFunction(Text, TextLength, StartIndex, OutEndIndex, OutColor))
+			{
+				return true;
+			}
 			int EndIndex = FindTokenEnd(Text, TextLength, StartIndex);
 			if (EndIndex == -1 || EndIndex <= StartIndex || Text[EndIndex] != '>')//no valid end
 			{
 				return false;
 			}
-			OutEndIndex = EndIndex;
 			const TCHAR* TokenPtr = Text.GetCharArray().GetData() + StartIndex;
 			const int TokenLen = EndIndex - StartIndex;
+
+			if (TokenPtr[0] == '#')
+			{
+				// #rgb / #rgba double each digit, as CSS does; #rrggbb / #rrggbbaa take them as written.
+				const int DigitCount = TokenLen - 1;
+				if (DigitCount != 3 && DigitCount != 4 && DigitCount != 6 && DigitCount != 8)
+				{
+					return false;
+				}
+				const bool bShort = DigitCount <= 4;
+				const int PerChannel = bShort ? 1 : 2;
+				uint8 Channels[4] = { 0, 0, 0, 255 };
+				for (int Channel = 0; Channel * PerChannel < DigitCount; Channel++)
+				{
+					const int First = HexDigit(TokenPtr[1 + Channel * PerChannel]);
+					if (First == -1)return false;
+					if (bShort)
+					{
+						Channels[Channel] = (uint8)(First * 16 + First);
+					}
+					else
+					{
+						const int Second = HexDigit(TokenPtr[2 + Channel * PerChannel]);
+						if (Second == -1)return false;
+						Channels[Channel] = (uint8)(First * 16 + Second);
+					}
+				}
+				OutColor = FColor(Channels[0], Channels[1], Channels[2], Channels[3]);
+				OutEndIndex = EndIndex;
+				return true;
+			}
 
 			auto EqualsIC = [&TokenPtr, &TokenLen](const TCHAR* Lit) -> bool
 			{
 				const int LitLen = (int)FCString::Strlen(Lit);
 				return TokenLen == LitLen && FCString::Strnicmp(TokenPtr, Lit, LitLen) == 0;
 			};
-
-			if (EqualsIC(TEXT("black")))
+			if (EqualsIC(TEXT("transparent")))
 			{
-				OutColor = FColor::Black;
-				OutColor.A = OriginRenderOpacity;
+				OutColor = FColor(0, 0, 0, 0);
+				OutEndIndex = EndIndex;
 				return true;
 			}
-			else if (EqualsIC(TEXT("white")))
+			int NamedCount = 0;
+			const FNamedColor* Named = GetNamedColorTable(NamedCount);
+			for (int i = 0; i < NamedCount; i++)
 			{
-				OutColor = FColor::White;
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("gray")))
-			{
-				OutColor = FColor(128, 128, 128);
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("silver")))
-			{
-				OutColor = FColor(192, 192, 192);
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("red")))
-			{
-				OutColor = FColor::Red;
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("green")))
-			{
-				OutColor = FColor::Green;
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("blue")))
-			{
-				OutColor = FColor::Blue;
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("orange")))
-			{
-				OutColor = FColor(255, 165, 0);
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("purple")))
-			{
-				OutColor = FColor(128, 0, 128);
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (EqualsIC(TEXT("yellow")))
-			{
-				OutColor = FColor(255, 255, 0);
-				OutColor.A = OriginRenderOpacity;
-				return true;
-			}
-			else if (TokenPtr[0] == '#')
-			{
-				auto HexValue = [](TCHAR c) -> int
+				if (EqualsIC(Named[i].Name))
 				{
-					if (c >= '0' && c <= '9')return c - '0';
-					if (c >= 'a' && c <= 'f')return c - 'a' + 10;
-					if (c >= 'A' && c <= 'F')return c - 'A' + 10;
-					return -1;
-				};
-				if (TokenLen == 7 || TokenLen == 9)//#ffffff/#ffffff00
-				{
-					OutColor.A = OriginRenderOpacity;
-					for (int i = 1; i < TokenLen; i += 2)
-					{
-						int FirstIndex = HexValue(TokenPtr[i]);
-						int SecondIndex = HexValue(TokenPtr[i + 1]);
-						if (FirstIndex != -1 && SecondIndex != -1)//valid
-						{
-							uint8 value = (uint8)(FirstIndex * 16 + SecondIndex);
-							switch (i)
-							{
-							case 1:OutColor.R = value; break;
-							case 3:OutColor.G = value; break;
-							case 5:OutColor.B = value; break;
-							case 7:
-							{
-								OutColor.A = (uint8)(FDreamUIUtils::ByteToFloat01(OriginRenderOpacity) * value);
-							}
-							break;
-							}
-						}
-						else
-						{
-							return false;
-						}
-					}
+					OutColor = FColor(Named[i].R, Named[i].G, Named[i].B, 255);
+					OutEndIndex = EndIndex;
 					return true;
 				}
 			}
