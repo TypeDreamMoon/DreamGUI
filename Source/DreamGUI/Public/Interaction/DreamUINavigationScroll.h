@@ -33,4 +33,29 @@ public:
 	 * started. Returns true when anything moved.
 	 */
 	static bool RevealWidget(UDreamWidget* InWidget, bool bAnimate = true);
+
+	/**
+	 * Scroll the innermost scrolling ancestor of InWidget by InPages screenfuls; negative goes back
+	 * towards the start. What PageUp and PageDown do, and what the right stick does in fractions.
+	 *
+	 * A screenful is the container's own visible extent along the axis it scrolls, which is the only
+	 * definition that stays right when the rows are not all the same height -- paging by a row count
+	 * would step past a tall entry and stop short of a run of short ones.
+	 *
+	 * @return true when something actually moved. False at a limit, and for a widget with no
+	 *         scrolling ancestor at all -- which the caller must not treat as an error: most widgets
+	 *         are not in a list, and a page key pressed over one simply does nothing.
+	 */
+	static bool ScrollByPages(UDreamWidget* InWidget, float InPages, bool bAnimate = true);
+	/** Jump the innermost scrolling ancestor of InWidget to its start or its end. Home and End. */
+	static bool ScrollToExtent(UDreamWidget* InWidget, bool bToStart);
+	/**
+	 * Scroll the innermost scrolling ancestor by a raw local-space delta, without animation.
+	 *
+	 * For an analog stick, which is already a continuous per-frame value: routing one through the
+	 * animated path would restart an interpolation every frame and never arrive.
+	 */
+	static bool ScrollByDelta(UDreamWidget* InWidget, const FVector2D& InDelta);
+	/** True when InWidget has a scrolling ancestor that could move at all. */
+	static bool HasScrollableAncestor(const UDreamWidget* InWidget);
 };
