@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+//for EUITextInputType / EUITextInputDisplayType / UDreamTextInputCustomValidation, which this
+//control now carries as authored properties rather than leaving them reachable only in C++
+#include "Interaction/UITextInput.h"
 #include "DreamTextInput.generated.h"
 
 class UDreamText;
 class UDreamWidget;
-class UUITextInput;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamTextInputChangedEvent, const FString&, Text);
 
@@ -38,17 +40,81 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
 	FDreamTextInputStyle Style;
 
-	/** Authored text in; mirror of the field's out. A property so .dui and bindings can see it. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	/**
+	 * Authored text in; mirror of the field's out. A property so .dui and bindings can see it.
+	 *
+	 * BlueprintSetter, like the two below it: nothing in this family re-derives a control from a
+	 * property that moved (the SynchronizeProperties tax UDreamUIControl documents), so a runtime
+	 * write straight onto the variable changed the string and left the field showing the old one.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetText", BlueprintSetter = "SetText", Category = "Text Input")
 	FString Text;
 
 	/** Shown while Text is empty and the field is not being edited. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetPlaceholder", BlueprintSetter = "SetPlaceholder", Category = "Text Input")
 	FText Placeholder;
 
 	/** One property where the presets are two assets. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMultiLine", BlueprintSetter = "SetMultiLine", Category = "Text Input")
 	bool bMultiLine = false;
+
+	/*
+	 * Everything below is the behaviour's, surfaced.
+	 *
+	 * UUITextInput has had all of it since the beginning; the control exposed Text, Placeholder and
+	 * bMultiLine, so a password field could not be written as Native.TextInput at all and a .dui
+	 * author had no way to reach a validator, a length cap or the read-only flag. These are pushed
+	 * in ApplyStyle alongside the rest, so a .dui line, a Blueprint default and a live SetX all land
+	 * in the same place.
+	 */
+
+	/** Which characters the field accepts. Standard accepts anything. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	EUITextInputType InputType = EUITextInputType::Standard;
+
+	/** Only consulted when InputType is Custom. */
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, Category = "Text Input", meta = (EditCondition = "InputType==EUITextInputType::Custom"))
+	TObjectPtr<UDreamTextInputCustomValidation> CustomValidation = nullptr;
+
+	/** Password draws every character as PasswordChar; it does not change what the field accepts. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	EUITextInputDisplayType DisplayType = EUITextInputDisplayType::Standard;
+
+	/** The character a password field draws. One character; anything longer keeps its first. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	FString PasswordChar = TEXT("*");
+
+	/** Selectable and copyable, not editable. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	bool bReadOnly = false;
+
+	/** Longest text the field will hold. 0 means no limit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input", meta = (ClampMin = "0"))
+	int32 MaxLength = 0;
+
+	/** Keys the field must not swallow -- put navigation keys here, e.g. Tab and the arrows. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	TArray<FKey> IgnoreKeys;
+
+	/** In multiline mode, Enter with one of these held submits instead of adding a line. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input", meta = (EditCondition = "bMultiLine"))
+	TArray<FKey> MultiLineSubmitFunctionKeys;
+
+	/** Select the whole value when the field starts being edited. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	bool bSelectAllWhenActivateInput = true;
+
+	/** Start editing as soon as gamepad/keyboard navigation lands on the field. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	bool bAutoActivateInputWhenNavigateIn = false;
+
+	/** Commit the value when the edit ends without an Enter -- clicking away, navigating away. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	bool bSubmitWhenDeactivate = true;
+
+	/** The edit menu on right click / long press / the pad's Menu button. UMG's AllowContextMenu. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input")
+	bool bAllowContextMenu = true;
 
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Text Input")
@@ -82,6 +148,24 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Text Input")
 	void SetText(const FString& InText);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	FText GetPlaceholder() const { return Placeholder; }
+
+	/** The greyed words shown while the field is empty, re-pushed at once. */
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetPlaceholder(const FText& InPlaceholder);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	bool GetMultiLine() const { return bMultiLine; }
+
+	/**
+	 * Single- or multi-line, re-pushed at once. A whole style push rather than one flag on the
+	 * behaviour: the line count decides the field's height and what its clip has to allow, both of
+	 * which are written there.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetMultiLine(bool bInMultiLine);
 
 	virtual void ApplyStyle() override;
 

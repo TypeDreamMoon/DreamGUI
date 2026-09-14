@@ -98,6 +98,28 @@ void UDreamTextInput::ApplyStyle()
 		PushSelectableState(InputBehaviour, Active.Background, Active.BackgroundHovered, Active.Background,
 			Active.BackgroundDisabled, Active.BackgroundFocused, Active.TransitionDuration);
 		InputBehaviour->SetAllowMultiLine(bMultiLine);
+		// The caret and the selection highlight, which the sheet now describes. Left alone they came
+		// from the behaviour's own defaults and had no way to follow a theme -- a caret four values
+		// away from this style's own Background.
+		InputBehaviour->SetCaretColor(Active.CaretColor);
+		InputBehaviour->SetSelectionColor(Active.SelectionColor);
+		InputBehaviour->SetCaretWidth(Active.CaretWidth);
+		InputBehaviour->SetCaretBlinkRate(Active.CaretBlinkRate);
+		// The behaviour's own settings, authored on the control. Order matters for exactly one pair:
+		// the validation rules go in before the text does, or the text is checked against the rules
+		// the field had a moment ago.
+		InputBehaviour->SetPasswordChar(PasswordChar);
+		InputBehaviour->SetDisplayType(DisplayType);
+		InputBehaviour->SetCustomValidation(CustomValidation);
+		InputBehaviour->SetInputType(InputType);
+		InputBehaviour->SetMaxLength(MaxLength);
+		InputBehaviour->SetReadOnly(bReadOnly);
+		InputBehaviour->SetIgnoreKeys(IgnoreKeys);
+		InputBehaviour->SetMultiLineSubmitFunctionKeys(MultiLineSubmitFunctionKeys);
+		InputBehaviour->SetSelectAllWhenActivateInput(bSelectAllWhenActivateInput);
+		InputBehaviour->SetAutoActivateInputWhenNavigateIn(bAutoActivateInputWhenNavigateIn);
+		InputBehaviour->SetSubmitWhenDeactivate(bSubmitWhenDeactivate);
+		InputBehaviour->SetAllowContextMenu(bAllowContextMenu);
 		// Without an event: pushing the authored text in is not the user typing.
 		InputBehaviour->SetTextWithoutNotify(Text);
 	}
@@ -116,6 +138,26 @@ void UDreamTextInput::SetText(const FString& InText)
 	{
 		InputBehaviour->SetText(InText);
 	}
+}
+
+void UDreamTextInput::SetPlaceholder(const FText& InPlaceholder)
+{
+	Placeholder = InPlaceholder;
+	// The whole style push, because the placeholder is not merely a string on a visual: whether it is
+	// AWAKE is decided against the field's emptiness in the same pass that writes it.
+	ApplyStyle();
+}
+
+void UDreamTextInput::SetMultiLine(bool bInMultiLine)
+{
+	if (bMultiLine == bInMultiLine)
+	{
+		return;
+	}
+	bMultiLine = bInMultiLine;
+	// The line count decides the field's height and what its clip must allow, both written in the
+	// style push -- so pushing the behaviour's flag alone would leave a multi-line field one line tall.
+	ApplyStyle();
 }
 
 void UDreamTextInput::HandleTextChanged(const FString& InText)
