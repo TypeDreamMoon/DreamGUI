@@ -28,6 +28,7 @@
 #include "DreamUIBehaviourEditorBackend.h"
 
 #include "Thumbnail/DreamUISpriteThumbnailRenderer.h"
+#include "Thumbnail/DreamWidgetBlueprintThumbnailRenderer.h"
 #include "Thumbnail/DreamUISpriteDataBaseObjectThumbnailRenderer.h"
 #include "ContentBrowserExtensions/DreamUIContentBrowserExtensions.h"
 #include "Window/DreamUIDynamicSpriteAtlasViewer.h"
@@ -54,6 +55,8 @@
 #include "DetailCustomization/DreamUISpriteDataCustomization.h"
 #include "DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.h"
 #include "DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.h"
+#include "Controls/DreamUIControl.h"
+#include "DetailCustomization/DreamUIControlCustomization.h"
 #include "DetailCustomization/UISelectableCustomization.h"
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "DetailCustomization/UITextInputCustomization.h"
@@ -129,6 +132,8 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Styling/SlateIconFinder.h"
 #include "Window/DreamUIWidgetInspector.h"
+#include "ToolMenus.h"//ShutdownModule takes the designer viewport toolbar back out of the registry
+#include "Designer/SDreamWidgetDesignerViewportToolbar.h"
 
 const FName FDreamGUIEditorModule::DreamUIDynamicSpriteAtlasViewerTabName(TEXT("DreamUIDynamicSpriteAtlasViewerName"));
 const FName FDreamGUIEditorModule::DreamUIWidgetInspectorTabName(TEXT("DreamUIWidgetInspectorTabName"));
@@ -225,7 +230,12 @@ void FDreamGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUIToggle::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUITextInput::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextInputCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIScrollViewWithScrollbar::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIScrollViewWithScrollBarCustomization::MakeInstance));
-		
+		// ONE registration for every native control, on the base they all share: a class layout is
+		// found by walking up the superclass chain, so UDreamUIControl covers UDreamButton,
+		// UDreamRingMenu and the twenty-odd others -- and covers the next one for free. The four
+		// registrations above are BEHAVIOUR components, which is a different panel entirely.
+		PropertyModule.RegisterCustomClassLayout(UDreamUIControl::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIControlCustomization::MakeInstance));
+
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
 
@@ -323,6 +333,10 @@ void FDreamGUIEditorModule::StartupModule()
 	{
 		UThumbnailManager::Get().RegisterCustomRenderer(UDreamUISpriteData::StaticClass(), UDreamUISpriteThumbnailRenderer::StaticClass());
 		UThumbnailManager::Get().RegisterCustomRenderer(UDreamUISpriteData_BaseObject::StaticClass(), UDreamUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
+		// A wireframe of the screen each hierarchy authors. Without it every DreamUI Widget Blueprint
+		// in the browser was the same generic Blueprint icon, so a folder of screens was a column of
+		// identical tiles with only the names to tell them apart.
+		UThumbnailManager::Get().RegisterCustomRenderer(UDreamWidgetBlueprint::StaticClass(), UDreamWidgetBlueprintThumbnailRenderer::StaticClass());
 	}
 	//register right mouse button in content browser
 	{
@@ -333,7 +347,13 @@ void FDreamGUIEditorModule::StartupModule()
 	}
 	//register setting
 	{
-#define DREAM_PLUGIN "DreamPlugin"
+// "Plugins", not a category of our own: UDreamGUISettings is a UDeveloperSettings and registers
+// itself under Project Settings > Plugins > Dream GUI, which is where every error message in the
+// runtime module sends the reader. These two used to land in a separate "DreamPlugin" category, so a
+// user told to open the plugin's settings found half of them -- MSAA, the atlas knobs and the
+// built-in shader switches were one category away with nothing pointing at them. Section ids are
+// unchanged, and settings persist by class, so this moves the page without moving anyone's values.
+#define DREAM_PLUGIN "Plugins"
 		if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 		{
 			SettingsModule->RegisterSettings("Project", DREAM_PLUGIN, "DreamGUI",
@@ -462,6 +482,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UUIToggle::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUITextInput::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIScrollViewWithScrollbar::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(UDreamUIControl::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName());
@@ -527,6 +548,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 	{
 		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamUISpriteData::StaticClass());
 		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamUISpriteData_BaseObject::StaticClass());
+		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamWidgetBlueprint::StaticClass());
 	}
 	//unregister right mouse button in content browser
 	{
@@ -548,7 +570,30 @@ void FDreamGUIEditorModule::ShutdownModule()
 
 	FKismetEditorUtilities::UnregisterAutoBlueprintNodeCreation(this);
 
-	USelection::SelectionChangedEvent.RemoveAll(this);
+	// The designer viewport toolbar registers itself into the process-wide UToolMenus registry the
+	// first time a designer opens one, and the registry outlives this module. Left behind, the
+	// entries keep delegates bound into code that is being unloaded -- and on the next load the
+	// IsMenuRegistered guard sees the stale menu and never rebuilds it, so the toolbar comes back
+	// empty. Nothing to do when no designer was ever opened; RemoveMenu on an unregistered name is
+	// a no-op.
+	if (UObjectInitialized() && UToolMenus::IsToolMenuUIEnabled())
+	{
+		UToolMenus::Get()->RemoveMenu(SDreamWidgetDesignerViewportToolbar::GetViewportToolbarMenuName());
+	}
+
+	// USelection::SelectionChangedEvent.RemoveAll(this) used to be here. StartupModule never
+	// subscribed to it, so it unhooked nothing and read as though the module listened to the level
+	// editor's selection -- which it does not; the designer's selection is UDreamUISelection's.
+	//
+	// FKismetCompilerContext::RegisterCompilerForBP (StartupModule) deliberately has no counterpart,
+	// and this is not an oversight left standing. UMG does the identical thing -- UMGEditorModule.cpp
+	// registers UWidgetBlueprint::GetCompilerForWidgetBP on startup and never takes it out -- because
+	// the engine exposes no UnregisterCompilerForBP: CustomCompilerMap is a translation-unit global
+	// in KismetCompiler.cpp reachable only through that one Add. What the entry would outlive is its
+	// own key: the map is keyed by UDreamWidgetBlueprint::StaticClass(), a UClass this module owns, so
+	// an unloaded module leaves an entry nothing can look up. The removable registration UMG does have
+	// is the IBlueprintCompiler in IKismetCompilerInterface::GetCompilers(), which this plugin does
+	// not use -- its compiler context is reached through the factory above.
 }
 
 void FDreamGUIEditorModule::AddReferencedObjects(FReferenceCollector& Collector)
@@ -584,10 +629,6 @@ TSharedRef<SDockTab> FDreamGUIEditorModule::HandleSpawnDreamUIInspectorTab(const
 TSharedRef<SWidget> FDreamGUIEditorModule::MakeEditorToolsMenu(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
 {
 	FMenuBuilder MenuBuilder(true, PluginCommands);
-
-	//prefab
-	{
-	}
 
 	MenuBuilder.BeginSection("DreamUI Widget", LOCTEXT("DreamUI Widget", "DreamUI Widget Operations"));
 	{
@@ -634,6 +675,11 @@ TSharedRef<SWidget> FDreamGUIEditorModule::MakeEditorToolsMenu(TFunction<UDreamW
 
 void FDreamGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
 {
+	// The categorised loop at the bottom of this function reads the registry, so a control class
+	// authored as a Blueprint and compiled during this session has to be rescanned for first -- the
+	// Post Process submenu already did, and this one did not, which is why the same new class
+	// appeared in one menu and not the other.
+	FDreamUIControlRegistry::Get().RefreshDynamicClasses();
 	struct FunctionContainer
 	{
 		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString Name, UClass* InVisualClass, TFunction<void(UDreamWidget*)> Callback)
@@ -725,6 +771,7 @@ return FSlateIconFinder::FindIconBrushForClass(Class::StaticClass());\
 	RETURN_BRUSH(UUIScrollbar);
 	RETURN_BRUSH(UUIDropdown);
 	RETURN_BRUSH(UUIScrollView);
+#undef RETURN_BRUSH
 	return nullptr;
 }
 
@@ -787,6 +834,10 @@ void FDreamGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder
 
 void FDreamGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<UDreamWidget*()> GetSelectedWidgetFunction)
 {
+	// Same first line as the Post Process submenu below, for the same reason: a Blueprint subclass
+	// that the author compiled since this editor started is only in the registry once the dynamic
+	// scan has run, and a menu built without it silently offers the built-ins alone.
+	FDreamUIControlRegistry::Get().RefreshDynamicClasses();
 	MenuBuilder.BeginSection("UIExtension");
 	{
 		for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
