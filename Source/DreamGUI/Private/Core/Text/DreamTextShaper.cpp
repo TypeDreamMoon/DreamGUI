@@ -1,7 +1,9 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/Text/DreamTextShaper.h"
 #include "Core/DreamUIFontData_BaseObject.h"
+#include "Internationalization/Culture.h"
+#include "Internationalization/Internationalization.h"
 #include "Internationalization/Text.h"
 
 #if WITH_HARFBUZZ
@@ -42,7 +44,7 @@ namespace DreamTextShaperLocal
 	}
 
 	/** Direction per element, from the engine's bidi over the paragraph as UTF-16. */
-	void ResolveDirections(const TArray<FDreamShapeElement>& Elements, TArray<bool>& OutRightToLeft, bool& OutBaseRightToLeft)
+	void ResolveDirections(const TArray<FDreamShapeElement>& Elements, EDreamTextFlowDirection FlowDirection, TArray<bool>& OutRightToLeft, bool& OutBaseRightToLeft)
 	{
 		FString Plain;
 		TArray<int32> PlainStart;
@@ -64,8 +66,15 @@ namespace DreamTextShaperLocal
 		}
 
 		OutRightToLeft.Init(false, Elements.Num());
-		const TextBiDi::ETextDirection Base = TextBiDi::ComputeBaseDirection(Plain);
-		OutBaseRightToLeft = Base == TextBiDi::ETextDirection::RightToLeft;
+		// Auto asks the bidi algorithm, which reads the first strong character and answers left-to-right
+		// for a string that has none. A forced direction says so instead, which is what a UI whose
+		// direction is the game's setting rather than the string's content needs.
+		switch (FlowDirection)
+		{
+		case EDreamTextFlowDirection::LeftToRight: OutBaseRightToLeft = false; break;
+		case EDreamTextFlowDirection::RightToLeft: OutBaseRightToLeft = true; break;
+		default: OutBaseRightToLeft = TextBiDi::ComputeBaseDirection(Plain) == TextBiDi::ETextDirection::RightToLeft; break;
+		}
 		TArray<TextBiDi::FTextDirectionInfo> Infos;
 		TextBiDi::ComputeTextDirection(Plain, OutBaseRightToLeft ? TextBiDi::ETextDirection::RightToLeft : TextBiDi::ETextDirection::LeftToRight, Infos);
 		// The engine reports the runs in VISUAL order (ubidi_getVisualRun), so each one is mapped
@@ -93,7 +102,7 @@ namespace DreamTextShaperLocal
 }
 #endif
 
-bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements, UDreamUIFontData_BaseObject* Font, bool bUseKerning, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft)
+bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements, UDreamUIFontData_BaseObject* Font, bool bUseKerning, EDreamTextFlowDirection FlowDirection, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft)
 {
 	OutRuns.Reset();
 	OutBaseRightToLeft = false;
@@ -109,7 +118,7 @@ bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements
 	// Itemize: direction, script, face, style, per element.
 	TArray<bool> RightToLeft;
 	bool bBaseRightToLeft = false;
-	ResolveDirections(Elements, RightToLeft, bBaseRightToLeft);
+	ResolveDirections(Elements, FlowDirection, RightToLeft, bBaseRightToLeft);
 	OutBaseRightToLeft = bBaseRightToLeft;
 
 	hb_unicode_funcs_t* Unicode = hb_unicode_funcs_get_default();
@@ -186,6 +195,13 @@ bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements
 
 	// Cut runs and shape each.
 	const float BoldRatio = Font->GetBoldRatio();
+	// 'locl' picks between the forms a script shares across languages -- the Han glyphs Chinese and
+	// Japanese draw differently, Serbian Cyrillic italics. That choice has to follow the culture the
+	// GAME is running in; hb_language_get_default() reads the process locale, which is the machine's.
+	const FString LanguageName = FInternationalization::Get().GetCurrentLanguage()->GetName();
+	const hb_language_t GameLanguage = LanguageName.IsEmpty()
+		? hb_language_get_default()
+		: hb_language_from_string(TCHAR_TO_UTF8(*LanguageName), -1);
 	hb_buffer_t* Buffer = hb_buffer_create();
 	TArray<hb_codepoint_t> Codepoints;
 	int32 RunStart = 0;
@@ -223,7 +239,7 @@ bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements
 				hb_buffer_clear_contents(Buffer);
 				hb_buffer_set_direction(Buffer, Item.bRightToLeft ? HB_DIRECTION_RTL : HB_DIRECTION_LTR);
 				hb_buffer_set_script(Buffer, Item.Script);
-				hb_buffer_set_language(Buffer, hb_language_get_default());
+				hb_buffer_set_language(Buffer, GameLanguage);
 				hb_buffer_set_cluster_level(Buffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES);
 				// Clusters are indices into this array, so a glyph's cluster + RunStart is its element.
 				hb_buffer_add_codepoints(Buffer, Codepoints.GetData(), Codepoints.Num(), 0, Codepoints.Num());
@@ -248,7 +264,8 @@ bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements
 					Glyph.GlyphIndex = Infos[g].codepoint;
 					Glyph.ElementIndex = RunStart + (int32)Infos[g].cluster;
 					Glyph.XAdvance = Positions[g].x_advance / 64.0f + BoldAdvance;
-					Glyph.YAdvance = Positions[g].y_advance / 64.0f;
+					// y_advance is deliberately dropped: the layout is horizontal only, so it is zero
+					// for every run it ever asks for. It comes back with vertical text, not before.
 					Glyph.XOffset = Positions[g].x_offset / 64.0f;
 					Glyph.YOffset = Positions[g].y_offset / 64.0f;
 					Run.Glyphs.Add(Glyph);

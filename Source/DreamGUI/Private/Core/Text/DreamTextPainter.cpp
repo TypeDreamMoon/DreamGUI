@@ -129,6 +129,21 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	// compiled in: past the limit every index wraps and the whole block draws as garbage. Stop adding
 	// glyphs at the limit instead, keeping each item's quads together so the cursors stay in step.
 	const int32 QuadsPerGlyph = bSeparateEffectLayer ? 2 : 1;
+	// A bitmap font's shadow and outline are more copies of the same quads, drawn under the face: one
+	// for the shadow, eight around the glyph for the outline. They cost quads, so they are counted here
+	// with everything else -- the index limit below has to see them.
+	const bool bBitmapShadow = !Params.bDistanceField && Params.BitmapShadowColor.A > 0
+		&& !Params.BitmapShadowOffsetEm.IsNearlyZero();
+	const bool bBitmapOutline = !Params.bDistanceField && Params.BitmapOutlineColor.A > 0
+		&& Params.BitmapOutlineWidthEm > 0.0f;
+	// Eight taps: the four sides and the four diagonals, which is what makes a round-ish outline out of
+	// offset copies rather than a plus sign.
+	static const FVector2f OutlineTaps[8] =
+	{
+		FVector2f(1.0f, 0.0f), FVector2f(-1.0f, 0.0f), FVector2f(0.0f, 1.0f), FVector2f(0.0f, -1.0f),
+		FVector2f(0.7071f, 0.7071f), FVector2f(-0.7071f, 0.7071f), FVector2f(0.7071f, -0.7071f), FVector2f(-0.7071f, -0.7071f),
+	};
+	const int32 UnderPasses = (bBitmapShadow ? 1 : 0) + (bBitmapOutline ? UE_ARRAY_COUNT(OutlineTaps) : 0);
 	const int32 MaxFaceQuads = (LEXUI_MAX_VERTEX_COUNT / 4) / QuadsPerGlyph;
 	int32 FaceQuads = 0;
 	int32 EmitItemCount = DisplayList.Items.Num();
@@ -139,6 +154,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		int32 ItemQuads = 1;
 		if (Item.Style.bUnderline)ItemQuads++;
 		if (Item.Style.bStrikethrough)ItemQuads++;
+		ItemQuads *= 1 + UnderPasses;
 		if (FaceQuads + ItemQuads > MaxFaceQuads)
 		{
 			EmitItemCount = ItemIndex;
@@ -257,52 +273,91 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	for (int32 ItemIndex = 0; ItemIndex < EmitItemCount; ItemIndex++)
 	{
 		const auto& Item = DisplayList.Items[ItemIndex];
-		if (!Item.bEmit)continue;
+		// An item that counts but does not emit is a character whose glyph has not landed yet: it takes
+		// its place in OutCharProperties with an empty vertex range so the numbering does not move when
+		// the rasterizer's worker finishes.
+		if (!Item.bEmit && !Item.bCountsAsVisible)continue;
 
 		const int32 StartVertIndex = Writer.VertexCursor;
 		const int32 StartFaceIndex = Writer.FaceIndexCursor;
 
-		FVector2f Pen = Item.Pen;
-		if (Item.Style.SupOrSub == 1)
+		if (Item.bEmit)
 		{
-			Pen.Y += Item.Style.Size * 0.5f;
-		}
-		else if (Item.Style.SupOrSub == 2)
-		{
-			Pen.Y -= Item.Style.Size * 0.5f;
-		}
-		const FColor Color = Item.Style.bHasColor ? Item.Style.Color : Params.BaseColor;
-		// Fonts without a multi-channel field leave UV2.x at zero.
-		const float LegacyUV2X = 0.0f;
-		// Shader-side bold dilates the regular glyph by BoldDilateEm per side. The layout already gave
-		// the glyph twice that much extra advance; shifting the quad right by one side's worth keeps
-		// the left bearing where it was and spends the whole extra advance on the right.
-		const bool bShaderBold = Item.Style.bBold && Params.bDistanceField && Params.BoldDilateEm > 0.0f;
-		const float DilateEm = bShaderBold ? Params.BoldDilateEm : 0.0f;
-		const float BoldShift = bShaderBold ? Params.BoldDilateEm * Item.Style.Size : 0.0f;
+			FVector2f Pen = Item.Pen;
+			if (Item.Style.SupOrSub == 1)
+			{
+				Pen.Y += Item.Style.Size * 0.5f;
+			}
+			else if (Item.Style.SupOrSub == 2)
+			{
+				Pen.Y -= Item.Style.Size * 0.5f;
+			}
+			// A <color> tag's colour keeps the alpha the author wrote; the hierarchy's fade is applied
+			// here, at paint time, so changing it never invalidates the layout. BaseColor carries it.
+			FColor Color = Params.BaseColor;
+			if (Item.Style.bHasColor)
+			{
+				Color = Item.Style.Color;
+				Color.A = (uint8)FMath::Clamp(FMath::RoundToInt(Color.A * Params.RichTextTagOpacity), 0, 255);
+			}
+			// Fonts without a multi-channel field leave UV2.x at zero.
+			const float LegacyUV2X = 0.0f;
+			// Shader-side bold dilates the regular glyph by BoldDilateEm per side. The layout already gave
+			// the glyph twice that much extra advance; shifting the quad right by one side's worth keeps
+			// the left bearing where it was and spends the whole extra advance on the right.
+			const bool bShaderBold = Item.Style.bBold && Params.bDistanceField && Params.BoldDilateEm > 0.0f;
+			const float DilateEm = bShaderBold ? Params.BoldDilateEm : 0.0f;
+			const float BoldShift = bShaderBold ? Params.BoldDilateEm * Item.Style.Size : 0.0f;
 
-		//glyph
-		{
-			const float OffsetX = Pen.X + Item.Glyph.XOffset + BoldShift;
-			const float OffsetY = Pen.Y + Item.Glyph.YOffset;
-			WriteGlyphQuads(ItemIndex, Item.Glyph, OffsetX, OffsetX + Item.Glyph.Width, OffsetY - Item.Glyph.Height, OffsetY,
-				Color, DilateEm, Item.Style.bItalic, Pen.Y, LegacyUV2X);
-		}
-		//underline
-		if (Item.Style.bUnderline)
-		{
-			const float OffsetX = Pen.X;
-			const float OffsetY = Pen.Y + Item.UnderlineGlyph.YOffset;
-			WriteGlyphQuads(ItemIndex, Item.UnderlineGlyph, OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.UnderlineGlyph.Height, OffsetY,
-				Color, DilateEm, false, Pen.Y, LegacyUV2X);
-		}
-		//strikethrough
-		if (Item.Style.bStrikethrough)
-		{
-			const float OffsetX = Pen.X;
-			const float OffsetY = Pen.Y + Item.StrikethroughGlyph.YOffset;
-			WriteGlyphQuads(ItemIndex, Item.StrikethroughGlyph, OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.StrikethroughGlyph.Height, OffsetY,
-				Color, DilateEm, false, Pen.Y, LegacyUV2X);
+			// One pass of everything this item draws, shifted and recoloured. The shadow and the outline
+			// of a bitmap font are exactly that: the same glyphs again, underneath.
+			auto WritePass = [&](const FVector2f& PassOffset, const FColor& PassColor)
+			{
+				//glyph
+				{
+					const float OffsetX = Pen.X + Item.Glyph.XOffset + BoldShift + PassOffset.X;
+					const float OffsetY = Pen.Y + Item.Glyph.YOffset + PassOffset.Y;
+					WriteGlyphQuads(ItemIndex, Item.Glyph, OffsetX, OffsetX + Item.Glyph.Width, OffsetY - Item.Glyph.Height, OffsetY,
+						PassColor, DilateEm, Item.Style.bItalic, Pen.Y + PassOffset.Y, LegacyUV2X);
+				}
+				//underline
+				if (Item.Style.bUnderline)
+				{
+					const float OffsetX = Pen.X + PassOffset.X;
+					const float OffsetY = Pen.Y + Item.UnderlineGlyph.YOffset + PassOffset.Y;
+					WriteGlyphQuads(ItemIndex, Item.UnderlineGlyph, OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.UnderlineGlyph.Height, OffsetY,
+						PassColor, DilateEm, false, Pen.Y + PassOffset.Y, LegacyUV2X);
+				}
+				//strikethrough
+				if (Item.Style.bStrikethrough)
+				{
+					const float OffsetX = Pen.X + PassOffset.X;
+					const float OffsetY = Pen.Y + Item.StrikethroughGlyph.YOffset + PassOffset.Y;
+					WriteGlyphQuads(ItemIndex, Item.StrikethroughGlyph, OffsetX, OffsetX + Item.AdvanceWithSpace, OffsetY - Item.StrikethroughGlyph.Height, OffsetY,
+						PassColor, DilateEm, false, Pen.Y + PassOffset.Y, LegacyUV2X);
+				}
+			};
+			// Furthest back first: the shadow, then the outline ring, then the face on top. They share
+			// the item's alpha so a faded text fades whole.
+			const float Em = Item.Style.Size;
+			if (bBitmapShadow)
+			{
+				FColor ShadowColor = Params.BitmapShadowColor;
+				ShadowColor.A = (uint8)FMath::Clamp(FMath::RoundToInt(ShadowColor.A * (Color.A / 255.0f)), 0, 255);
+				// +Y is down in FDreamTextStyle's offset, and up in the text's own space.
+				WritePass(FVector2f(Params.BitmapShadowOffsetEm.X * Em, -Params.BitmapShadowOffsetEm.Y * Em), ShadowColor);
+			}
+			if (bBitmapOutline)
+			{
+				FColor OutlineColor = Params.BitmapOutlineColor;
+				OutlineColor.A = (uint8)FMath::Clamp(FMath::RoundToInt(OutlineColor.A * (Color.A / 255.0f)), 0, 255);
+				const float Width = Params.BitmapOutlineWidthEm * Em;
+				for (int32 Tap = 0; Tap < UE_ARRAY_COUNT(OutlineTaps); Tap++)
+				{
+					WritePass(OutlineTaps[Tap] * Width, OutlineColor);
+				}
+			}
+			WritePass(FVector2f::ZeroVector, Color);
 		}
 
 		if (Item.bCountsAsVisible)

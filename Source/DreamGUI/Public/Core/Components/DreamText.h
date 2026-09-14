@@ -21,6 +21,10 @@ struct FDreamTextPaintParams;
  *		UV1: Default DreamCanvas use, check DreamCanvas
  *		UV2: X- font-size * object-scale, Y- not used
  */
+/** A `<a=Id>` range was clicked; Id is what the markup named it. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamTextHyperlinkEvent, FName, Id);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDreamTextHyperlinkCppEvent, FName);
+
 UCLASS(ClassGroup = (DreamGUI), Blueprintable)
 class DREAMGUI_API UDreamText : public UDreamVisualBatchMesh, public IDreamUICultureChangedInterface
 {
@@ -67,6 +71,11 @@ protected:
 		TObjectPtr<UDreamUIFontData_BaseObject> Font;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (MultiLine="true"))
 		FText Text = FText::FromString(TEXT("New Text"));
+	/**
+	 * The font has the last word: a rasterizing font (bitmap, and the FreeType base) caps the size it
+	 * will render at GetFontSizeLimit(), 200 by default, and lays out at the cap. A distance-field font
+	 * has no cap, which is why this metadata's ceiling is the higher of the two.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "2", ClampMax = "500"))
 		float FontSize = 16;
 	/** use font kerning for better text layout. */
@@ -137,6 +146,39 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
 	float WrapTextAt = 0.0f;
 	/**
+	 * Floor under the width this text reports to a content-sized parent, UMG's MinDesiredWidth. Keeps a
+	 * label that is momentarily short (a number counting down, a name that has not arrived) from
+	 * collapsing the row around it. Zero means no floor. It is a layout request only: nothing here
+	 * clips or stretches the glyphs, and the text still draws inside whatever box the parent gives it.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+	float MinDesiredWidth = 0.0f;
+	/**
+	 * Wrap the text even when the overflow policy is not VerticalOverflow -- UMG's AutoWrapText, which
+	 * it keeps separate from its overflow policy for exactly this reason. With Ellipsis it is what
+	 * turns a single elided line into a wrapped paragraph whose LAST visible line is elided; with
+	 * Truncate, a paragraph cut off at the bottom of the box. VerticalOverflow always wraps, so this
+	 * changes nothing there.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter = "GetAutoWrapText", Setter = "SetAutoWrapText", meta = (AllowPrivateAccess = true))
+	bool bAutoWrapText = false;
+	/** Case the text is drawn in. The Text property keeps what was authored; this is presentation only. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamUITextTransformPolicy TextTransform = EDreamUITextTransformPolicy::None;
+	/** Which way the paragraph reads. Auto asks the bidi algorithm, which is what it always did. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamTextFlowDirection FlowDirection = EDreamTextFlowDirection::Auto;
+	/**
+	 * Underline the whole text, the way UMG puts it on a text's style rather than only in markup.
+	 * Rich text's `<u>` still works and nests on top of it: a style is where the run starts, a tag is
+	 * what it does from there.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter = "GetUnderline", Setter = "SetUnderline", meta = (AllowPrivateAccess = true))
+	bool bUnderline = false;
+	/** Strike the whole text through; `<s>` nests on top of it, as `<u>` does over bUnderline. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter = "GetStrikethrough", Setter = "SetStrikethrough", meta = (AllowPrivateAccess = true))
+	bool bStrikethrough = false;
+	/**
 	 * Shrink the font until the text fits the content box, uGUI's Best Fit. FontSize becomes the
 	 * size the text is allowed to reach rather than the size it is drawn at, and BestFitMinSize is
 	 * how small it may go before the text is simply allowed to overflow.
@@ -152,7 +194,7 @@ protected:
 	mutable float RenderedFontSize = 0.0f;
 	/** Use a custom material to render this text */
     UPROPERTY(EditAnywhere, Category = "DreamUI")
-    UMaterialInterface* OverrideMaterial = nullptr;
+    TObjectPtr<UMaterialInterface> OverrideMaterial = nullptr;
 	/**
 	 * Expand character's rect area to generate bigger mesh, useful for effects of OverrideMaterial.
 	 * Only valid for SDF font.
@@ -170,12 +212,20 @@ protected:
 	 * <size=48>Point size 48</size>
 	 * <size=+18>Point size increased by 18</size>
 	 * <size=-18>Point size decreased by 18</size>
-	 * <color=yellow>Yellow text</color> support color name: black, blue, green, orange, purple, red, white, and yellow
-	 * <color=#00ff00>Green text</color>
+	 * <color=yellow>Yellow text</color> names: black white gray/grey silver red green/lime blue orange
+	 *     purple yellow cyan/aqua magenta/fuchsia maroon navy olive teal pink brown gold transparent
+	 * <color=#0f0>, <color=#0f08>, <color=#00ff00>, <color=#00ff0080> hex, short or long, with or without alpha
+	 * <color=rgb(0,255,0)>, <color=rgba(0,255,0,0.5)> the CSS functional forms; the alpha is 0..1 when
+	 *     it is written with a decimal point, 0..255 otherwise
 	 * <sup>Superscript</sup>
 	 * <sub>Subscript</sub>
 	 * <MyTag>Custom tag</MyTag> use any string as custom tag. custom tag can use for char selection (check TextAnimation usage), and for custom style (check RichTextCustomStyleData)
-	 * <img=smile/> display a image with key "smile" which defined in RichTextImageData property, can be used for emoji. @todo: image size option
+	 * <a=Buy>Clickable</a> a custom tag that can also be clicked: put a UUITextHyperlink on the widget
+	 *     and it broadcasts UDreamText::OnHyperlinkClicked with the id
+	 * <img=smile/> display a image with key "smile" which defined in RichTextImageData property, can be used for emoji
+	 * <img=smile,24/> the same image 24 tall, as wide as its aspect ratio makes it; <img=smile,24,24/> sets both
+	 * &lt; &gt; &amp; &quot; &apos; &nbsp; and &#1234; / &#x1F600; write a character the markup would
+	 *     otherwise eat -- the only way to show a literal '<'. Plain text does NOT unescape, as in UMG.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bRichText = false;
@@ -270,6 +320,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") const FMargin& GetMargin()const { return Margin; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetLineHeightPercentage()const { return LineHeightPercentage; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetWrapTextAt()const { return WrapTextAt; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetMinDesiredWidth()const { return MinDesiredWidth; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetAutoWrapText()const { return bAutoWrapText; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamUITextTransformPolicy GetTextTransform()const { return TextTransform; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextFlowDirection GetFlowDirection()const { return FlowDirection; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetUnderline()const { return bUnderline; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetStrikethrough()const { return bStrikethrough; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetBestFit()const { return bBestFit; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetBestFitMinSize()const { return BestFitMinSize; }
 	/** The size Best Fit actually drew at, which is GetFontSize() when Best Fit is off. */
@@ -332,6 +388,18 @@ public:
 	void SetLineHeightPercentage(float Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetWrapTextAt(float Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetMinDesiredWidth(float Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetAutoWrapText(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetTextTransform(EDreamUITextTransformPolicy Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFlowDirection(EDreamTextFlowDirection Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetUnderline(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetStrikethrough(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetBestFit(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -406,6 +474,31 @@ public:
 
 	/** range selection */
 	void GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FDreamUITextSelectionProperty>& OutSelectionProeprtyArray);
-	const FDreamUITextGeometryCache& GetCacheTextGeometryData()const { UpdateCacheTextGeometry(); return CacheTextGeometryData; }
 #pragma endregion UITextInputComponent
+
+#pragma region Hyperlink
+	/**
+	 * The `<a=Id>...</a>` ranges in this text, as character ranges with their ids. A hyperlink is a
+	 * custom tag that can also be clicked, so these are a filtered view of GetRichTextCustomTagArray.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	TArray<FDreamUIText_RichTextCustomTag> GetHyperlinks()const;
+	/**
+	 * The id of the hyperlink under a world-space point, if any. The clickable area is each character's
+	 * painted quad opened up by a quarter of the font size, so the gaps between letters and the room
+	 * above the x-height belong to the link rather than falling through it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool FindHyperlinkByWorldPosition(FVector InWorldPosition, FName& OutId)const;
+	/** Hit-tests the point and, on a hit, broadcasts OnHyperlinkClicked. True when a link was hit. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool TryClickHyperlinkAtWorldPosition(FVector InWorldPosition);
+	/** Broadcast by TryClickHyperlinkAtWorldPosition; UUITextHyperlink is what routes pointer clicks into it. */
+	UPROPERTY(BlueprintAssignable, Category = "DreamGUI", DisplayName = "OnHyperlinkClicked")
+	FDreamTextHyperlinkEvent OnHyperlinkClickedBP;
+	/** The C++ side of the same event, for a native control that cannot bind a dynamic delegate. */
+	FDreamTextHyperlinkCppEvent OnHyperlinkClickedCPP;
+#pragma endregion Hyperlink
+
+	const FDreamUITextGeometryCache& GetCacheTextGeometryData()const { UpdateCacheTextGeometry(); return CacheTextGeometryData; }
 };

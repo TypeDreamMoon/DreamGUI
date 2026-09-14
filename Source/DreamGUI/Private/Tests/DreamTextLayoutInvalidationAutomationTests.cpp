@@ -7,6 +7,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Text/DreamTextLayout.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/World.h"
 #include "Tests/DreamLayoutInvalidationTestTypes.h"
@@ -174,6 +175,98 @@ bool FDreamTextSetFontReflowsPanelTest::RunTest(const FString& Parameters)
 	Manager->TickDreamUI(0.016f);
 	TestNotEqual(TEXT("The font actually changed"), (void*)Fixture.Text->GetFont(), (void*)OriginalFont);
 	TestEqual(TEXT("SetFont reflows the parent panel"), Fixture.Overlay->PassCount, 1);
+
+	Fixture.Root->DestroyWidget();
+	return true;
+}
+
+/*
+ * UpdateCacheTextGeometry gives up without a render canvas -- the canvas is where the root scale and
+ * the world-space flag come from -- so a text in a headless test or in a Blueprint authoring tree has
+ * no lines at all, however much text it holds. FindCaretByIndex has always known that; the rest of the
+ * caret family indexed straight into the empty array, and UUITextInput calls them on every edit.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCaretQueriesSurviveNoLayoutTest,
+	"DreamGUI.Text.Caret.QueriesAnswerOnATextThatWasNeverLaidOut",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextCaretQueriesSurviveNoLayoutTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutInvalidationTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	FTextInPanelFixture Fixture;
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager) || !Fixture.Build(TestWorld.World))
+	{
+		return false;
+	}
+	// Non-empty text is what makes this interesting: the two functions that had a guard were guarded on
+	// the text being empty, which this is not.
+	Fixture.Text->SetText(FText::FromString(TEXT("not empty")));
+	Manager->TickDreamUI(0.016f);
+
+	TestEqual(TEXT("a caret index maps to the start of the text"), Fixture.Text->GetCharIndexByCaretIndex(4), 0);
+	TestEqual(TEXT("and so does one past the end"), Fixture.Text->GetCharIndexByCaretIndex(999), 0);
+
+	FVector2f CaretPosition(12.0f, 0.0f);
+	int32 CaretIndex = 7;
+	Fixture.Text->FindCaret(CaretPosition, 0, CaretIndex);
+	TestEqual(TEXT("FindCaret answers rather than indexing a line that is not there"), CaretIndex, 0);
+	Fixture.Text->FindCaret(CaretPosition, 5, CaretIndex);
+	TestEqual(TEXT("including for a line index out of range"), CaretIndex, 0);
+
+	FVector2f FoundPosition(0.0f, 0.0f);
+	int32 FoundLine = 3;
+	int32 FoundIndex = 3;
+	Fixture.Text->FindCaretByWorldPosition(FVector::ZeroVector, FoundPosition, FoundLine, FoundIndex);
+	TestEqual(TEXT("a hit test falls back to the first caret"), FoundIndex, 0);
+	TestEqual(TEXT("on the first line"), FoundLine, 0);
+
+	TArray<FDreamUITextSelectionProperty> Selection;
+	Fixture.Text->GetSelectionProperty(0, 9, Selection);
+	TestEqual(TEXT("a selection over an unlaid-out text is one empty run"), Selection.Num(), 1);
+
+	Fixture.Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextTransformIsPresentationOnlyTest,
+	"DreamGUI.Text.Pipeline.TextTransformChangesWhatIsDrawnAndNotWhatIsStored",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextTransformIsPresentationOnlyTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutInvalidationTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	FTextInPanelFixture Fixture;
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager) || !Fixture.Build(TestWorld.World))
+	{
+		return false;
+	}
+	Fixture.Text->SetText(FText::FromString(TEXT("Mixed Case")));
+
+	// UMG transforms at the same point, and for the same reason: a caret index, a copy and anything
+	// reading the text back must still see what the author wrote.
+	Fixture.Text->SetTextTransform(EDreamUITextTransformPolicy::ToUpper);
+	const FDreamTextLayoutInput Upper = UDreamText::MakeLayoutInput(Fixture.Text, Fixture.Text->GetFontSize());
+	TestEqual(TEXT("the layout is given upper case"), Upper.Content, FString(TEXT("MIXED CASE")));
+
+	Fixture.Text->SetTextTransform(EDreamUITextTransformPolicy::ToLower);
+	const FDreamTextLayoutInput Lower = UDreamText::MakeLayoutInput(Fixture.Text, Fixture.Text->GetFontSize());
+	TestEqual(TEXT("and lower case"), Lower.Content, FString(TEXT("mixed case")));
+
+	Fixture.Text->SetTextTransform(EDreamUITextTransformPolicy::None);
+	const FDreamTextLayoutInput None = UDreamText::MakeLayoutInput(Fixture.Text, Fixture.Text->GetFontSize());
+	TestEqual(TEXT("None leaves it alone"), None.Content, FString(TEXT("Mixed Case")));
+	TestEqual(TEXT("and the Text property never changed"), Fixture.Text->GetText().ToString(), FString(TEXT("Mixed Case")));
+
+	// The transform is part of what the layout is keyed on, or changing it would draw the old case.
+	FDreamTextLayoutInput Changed = None;
+	Changed.TextTransform = EDreamUITextTransformPolicy::ToUpper;
+	TestTrue(TEXT("a different transform is a different layout input"), Changed != None);
 
 	Fixture.Root->DestroyWidget();
 	return true;

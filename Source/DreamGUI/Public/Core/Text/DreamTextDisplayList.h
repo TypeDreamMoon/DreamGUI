@@ -87,7 +87,12 @@ struct DREAMGUI_API FDreamTextDisplayList
 	bool bTruncated = false;
 	/** Some glyphs were still on the font's worker: their quads are missing until the font's OnGlyphsReady. */
 	bool bHasPendingGlyphs = false;
-	/** Number of items that count as visible characters. */
+	/**
+	 * Visible characters, counted per ELEMENT: two glyphs out of one code point are one character, and
+	 * a character whose glyph has not landed yet still has its place. Equal, by construction, to the
+	 * number of FDreamUITextCharProperty entries the painter writes -- which is what TextAnimation and
+	 * the rich-text tag ranges address.
+	 */
 	int32 VisibleCharCount = 0;
 
 	void Reset()
