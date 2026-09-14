@@ -9,6 +9,8 @@
 #include "Core/DreamVisualPostProcessRenderProxy.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "TextureResource.h"
+#include "Rendering/Texture2DResource.h"
 
 
 
@@ -163,7 +165,7 @@ void UDreamVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVe
 		{
 			if (InVertexPositionChanged)
 			{
-				auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetWidget() : this->GetWidget();
+				auto Widget = GetSizeSourceWidget();
 				//offset and size
 				float pivotOffsetX = 0, pivotOffsetY = 0;
 				FDreamUIGeometry::CalculatePivotOffset(Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
@@ -249,8 +251,8 @@ void UDreamVisualPostProcess::UpdateGeometryClipData(FDreamUIGeometry& InMesh, i
 
 void UDreamVisualPostProcess::SendRegionVertexDataToRenderProxy()
 {
-	auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetWidget() : this->GetWidget();
-	auto RenderCanvas = Widget->GetRenderCanvas();
+	auto Widget = GetSizeSourceWidget();
+	auto RenderCanvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
 	if (RenderProxy.IsValid() && RenderCanvas)
 	{
 		// Copied, not borrowed: the command below runs later and must not care whether this visual
@@ -390,7 +392,21 @@ void UDreamVisualPostProcess::SendMaskTextureToRenderProxy()
 		ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateMaskTexture)
 			([TempRenderProxy, MaskTextureResource](FRHICommandListImmediate& RHICmdList)
 				{
-					TempRenderProxy->MaskTexture = MaskTextureResource;
+					// Read the resource here, on the render thread, and keep only ref-counted handles:
+					// the resource itself is deleted whenever the texture's resource is rebuilt, with
+					// no notification to this proxy. Dereferencing it now is safe because the pointer
+					// was taken from the texture on the game thread just before this command was
+					// enqueued, and the delete for it can only be enqueued after.
+					if (MaskTextureResource != nullptr)
+					{
+						TempRenderProxy->MaskTextureRHI = MaskTextureResource->TextureRHI;
+						TempRenderProxy->MaskTextureSamplerState = MaskTextureResource->SamplerStateRHI;
+					}
+					else
+					{
+						TempRenderProxy->MaskTextureRHI = nullptr;
+						TempRenderProxy->MaskTextureSamplerState = nullptr;
+					}
 				});
 	}
 }
@@ -436,6 +452,52 @@ bool UDreamVisualPostProcess::LineTraceUI(FDreamUIHitResult& OutHit, const FVect
 	{
 		return LineTraceUICustom(OutHit, Start, End);
 	}
+}
+
+UDreamWidget* UDreamVisualPostProcess::GetSizeSourceWidget()const
+{
+	auto Widget = GetWidget();
+	if (bUseFullSize && Widget != nullptr)
+	{
+		if (auto RenderCanvas = Widget->GetRenderCanvas())
+		{
+			if (auto RootCanvas = RenderCanvas->GetRootCanvas())
+			{
+				if (auto RootWidget = RootCanvas->GetWidget())
+				{
+					return RootWidget;
+				}
+			}
+		}
+	}
+	return Widget;
+}
+
+void UDreamVisualPostProcess::GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const
+{
+	auto SizeWidget = GetSizeSourceWidget();
+	if (SizeWidget == nullptr || SizeWidget == GetWidget())
+	{
+		Super::GetGeometryBoundsInLocalSpace(OutMinPoint, OutMaxPoint);
+		return;
+	}
+	// Same rect OnUpdateGeometry builds the quad from, expressed the same way, so the bounds and the
+	// vertices cannot drift apart.
+	float PivotOffsetX = 0, PivotOffsetY = 0;
+	FDreamUIGeometry::CalculatePivotOffset(SizeWidget->GetWidth(), SizeWidget->GetHeight(), FVector2f(SizeWidget->GetPivot()), PivotOffsetX, PivotOffsetY);
+	const float HalfW = SizeWidget->GetWidth() * 0.5f;
+	const float HalfH = SizeWidget->GetHeight() * 0.5f;
+	OutMinPoint = FVector2D(-HalfW + PivotOffsetX, -HalfH + PivotOffsetY);
+	OutMaxPoint = FVector2D(HalfW + PivotOffsetX, HalfH + PivotOffsetY);
+}
+
+void UDreamVisualPostProcess::GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const
+{
+	FVector2D MinPoint2D, MaxPoint2D;
+	GetGeometryBoundsInLocalSpace(MinPoint2D, MaxPoint2D);
+	//same depth convention as UDreamVisual::GetGeometryBounds3DInLocalSpace
+	OutMinPoint = FVector(0.1f, MinPoint2D.X, MinPoint2D.Y);
+	OutMaxPoint = FVector(0.1f, MaxPoint2D.X, MaxPoint2D.Y);
 }
 
 void UDreamVisualPostProcess::UpdateRenderTarget()

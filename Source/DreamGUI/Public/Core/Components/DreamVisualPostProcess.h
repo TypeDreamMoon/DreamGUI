@@ -150,6 +150,22 @@ public:
 	virtual bool HaveValidData()const;
 
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+
+	/**
+	 * bUseFullSize draws the quad at the ROOT CANVAS's rect while keeping this widget's transform
+	 * (see OnUpdateGeometry), so the bounds must be built from that same rect. Inheriting the base
+	 * version -- which answers with this widget's own rect -- is what let a full-screen blur be
+	 * batched and culled as if it only covered the handful of pixels its own widget occupies.
+	 */
+	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;
+	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const override;
+
+	/**
+	 * The widget whose rect this effect is drawn at: the root canvas's widget when bUseFullSize,
+	 * this visual's own widget otherwise (and as a fallback whenever there is no root canvas to ask,
+	 * which is the case in the moments before this visual is attached to one).
+	 */
+	UDreamWidget* GetSizeSourceWidget()const;
 private:
 	/** local vertex position changed */
 	uint8 bLocalVertexPositionChanged : 1;

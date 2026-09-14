@@ -69,7 +69,17 @@ public:
 	TArray<FDreamUIPostProcessCopyMeshRegionVertex> RenderScreenToMeshRegionVertexArray;
 	TArray<FDreamUIPostProcessVertex> RenderMeshRegionToScreenVertexArray;
 	FVector2f RectSize;
-	FTexture2DResource* MaskTexture = nullptr;
+	/**
+	 * The mask, held as RHI handles rather than as the FTexture2DResource* it came from.
+	 *
+	 * That resource belongs to the UTexture2D and is deleted on the render thread whenever the
+	 * texture's resource is rebuilt -- a re-import, a compression or size change, any UpdateResource,
+	 * a streaming rebuild -- and nothing informs this proxy, which then draws through a freed
+	 * pointer. These two are ref-counted, so the worst case is drawing with the mask as it was when
+	 * it was last sent instead of a use-after-free; the visual re-sends on every change it knows about.
+	 */
+	FTextureRHIRef MaskTextureRHI;
+	FSamplerStateRHIRef MaskTextureSamplerState;
 	bool bUseFullSize = false;
 	FBox BoundingBox;
 	//output target
