@@ -49,6 +49,12 @@ void UDreamCanvasRenderTargetPreviewer::OnUnregister()
 void UDreamCanvasRenderTargetPreviewer::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	Super::PreEditChange(PropertyAboutToChange);
+	// Null means "an undo is about to restore everything", which no per-property branch below can
+	// answer. See the note on UDreamWidget::PreEditChange.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
 	auto PropName = PropertyAboutToChange->GetFName();
 	if (PropName == GET_MEMBER_NAME_CHECKED(UDreamCanvasRenderTargetPreviewer, Canvas))
 	{
@@ -158,6 +164,30 @@ UTexture* UDreamCanvasRenderTargetPreviewer::GetTextureToCreateGeometry()
 UMaterialInterface* UDreamCanvasRenderTargetPreviewer::GetMaterialToCreateGeometry()
 {
 	return Material;
+}
+
+void UDreamCanvasRenderTargetPreviewer::SetPreviewCanvas(UDreamCanvas* Value)
+{
+	if (Canvas.Get() == Value)
+	{
+		return;
+	}
+	//the change event is registered against the OLD canvas's render target, so it has to come off
+	//before the pointer moves and go back on after -- the same order PostEditChangeProperty uses
+	UnregisterRenderTargetChangedEvent();
+	Canvas = Value;
+	RegisterRenderTargetChangedEvent();
+	MarkTextureDirty();
+	UpdateSpriteData();
+}
+
+void UDreamCanvasRenderTargetPreviewer::SetPreviewMaterial(UMaterialInterface* Value)
+{
+	if (Material != Value)
+	{
+		Material = Value;
+		MarkMaterialDirty();
+	}
 }
 
 void UDreamCanvasRenderTargetPreviewer::OnBeforeCreateOrUpdateGeometry()

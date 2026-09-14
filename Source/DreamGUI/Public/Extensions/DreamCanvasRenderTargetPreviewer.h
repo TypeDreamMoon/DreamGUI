@@ -16,6 +16,20 @@ UCLASS(ClassGroup = (DreamGUI), Blueprintable)
 class DREAMGUI_API UDreamCanvasRenderTargetPreviewer : public UDreamVisualBatchMesh
 {
 	GENERATED_BODY()
+public:
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		UDreamCanvas* GetPreviewCanvas()const { return Canvas.Get(); }
+	/** Which canvas's render target to display. Re-registers the change event and re-reads the texture. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetPreviewCanvas(UDreamCanvas* Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		UMaterialInterface* GetPreviewMaterial()const { return Material; }
+	/**
+	 * Material the render target is drawn through, or null for the default. This is the hook
+	 * UDreamRetainerBox uses for its effect material.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetPreviewMaterial(UMaterialInterface* Value);
 protected:
 	virtual void BeginPlay()override;
 	virtual void EndPlay() override;

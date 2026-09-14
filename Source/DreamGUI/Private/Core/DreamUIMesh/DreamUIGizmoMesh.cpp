@@ -2,6 +2,8 @@
 
 #include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
 
+#include "RenderingThread.h"
+#include "RenderResource.h"
 #include "Core/DreamUIRender/DreamUIRenderer.h"
 
 FDreamUIGizmoMesh::FDreamUIGizmoMesh(const TArray<FDreamUIMeshVertex>& InVertexArray, const TArray<FDreamUIMeshIndex>& InIndexArray, EDreamUIGizmoMeshPrimitiveType InPrimitiveType)
@@ -23,8 +25,22 @@ FDreamUIGizmoMesh::FDreamUIGizmoMesh(const TArray<FDreamUIMeshVertex>& InVertexA
 
 FDreamUIGizmoMesh::~FDreamUIGizmoMesh()
 {
-	IndexBuffer.ReleaseResource();
-	VertexBuffer.ReleaseResource();
+	/**
+	 * FRenderResource::ReleaseResource is render-thread only, and this destructor runs wherever the
+	 * last shared pointer to the mesh is dropped -- which for the editor gizmo lists is the game
+	 * thread. The buffers are members, so they cannot be handed to a deferred release and left to
+	 * outlive the object: the release has to be enqueued and waited for.
+	 */
+	if (IsInRenderingThread())
+	{
+		IndexBuffer.ReleaseResource();
+		VertexBuffer.ReleaseResource();
+	}
+	else
+	{
+		ReleaseResourceAndFlush(&IndexBuffer);
+		ReleaseResourceAndFlush(&VertexBuffer);
+	}
 }
 
 void FDreamUIGizmoMesh::UpdateVertices(TArray<FDreamUIMeshVertex> InVertexArray)

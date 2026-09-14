@@ -110,6 +110,12 @@ public:
 private:
 	void UpdateMeshSectionRenderData(FDreamUIRenderSection_Mesh* InMeshSection, bool InRequireNormalAndTangent);
 	void ExpandMeshSectionRenderData(FDreamUIRenderSection_Mesh* InMeshSection);
+	/**
+	 * Point this frame's not-yet-flushed updates at a replacement section proxy (or drop them if there
+	 * is none). Needed because a section proxy can be destroyed, from a render command enqueued
+	 * immediately, while updates naming it are still waiting for FlushRenderCommand.
+	 */
+	void RetargetPendingRenderCommands(FDreamUIRenderSectionProxy* InOldSectionProxy, FDreamUIRenderSectionProxy* InNewSectionProxy);
 public:
 	TSharedPtr<FDreamUIRenderSection> SetupRenderSection(EDreamUIRenderSectionType InType, FDreamUIDrawCall* InDrawCallData);
 	void UpdateMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData);

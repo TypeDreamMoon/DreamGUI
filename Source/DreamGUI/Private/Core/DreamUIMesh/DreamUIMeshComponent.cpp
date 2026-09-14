@@ -231,14 +231,17 @@ public:
 			auto IsRenderToWorld = bIsDreamUIRenderToWorld;
 			auto BlendDepth = InCanvasPtr->GetActualBlendDepth();
 			auto DepthFade = InCanvasPtr->GetActualDepthFade();
+			//the renderer only ever compares this, never dereferences it, and an FObjectKey stays
+			//distinct from a later object that happens to reuse the same address
+			const FObjectKey CanvasKey(InCanvasPtr);
 			ENQUEUE_RENDER_COMMAND(FDreamUIRenderSceneProxy_AddPrimitive)(
-				[TempRenderer, SceneProxy, InCanvasPtr, BlendDepth, DepthFade, IsRenderToWorld](FRHICommandListImmediate& RHICmdList)
+				[TempRenderer, SceneProxy, CanvasKey, BlendDepth, DepthFade, IsRenderToWorld](FRHICommandListImmediate& RHICmdList)
 				{
 					if (TempRenderer.IsValid())
 					{
 						if (IsRenderToWorld)
 						{
-							TempRenderer.Pin()->AddWorldSpacePrimitive_RenderThread(InCanvasPtr, BlendDepth, DepthFade, SceneProxy);
+							TempRenderer.Pin()->AddWorldSpacePrimitive_RenderThread(CanvasKey, BlendDepth, DepthFade, SceneProxy);
 						}
 						else
 						{
@@ -281,8 +284,21 @@ public:
 		check(NewSection);
 		ENQUEUE_RENDER_COMMAND(FDreamUIRenderSceneProxy_ReplaceSectionData)(
 			[this, OldSection, NewSection](FRHICommandListImmediate& RHICmdList) {
-				auto SectionIndex = SectionArray.IndexOfByKey(OldSection);
-				SectionArray[SectionIndex] = NewSection;
+				const auto SectionIndex = SectionArray.IndexOfByKey(OldSection);
+				if (SectionIndex == INDEX_NONE)
+				{
+					/**
+					 * The old proxy is not in the array: it was never added (the section was created
+					 * after this proxy, and its AddSectionData command has not run yet), or a pool pass
+					 * took it out. SectionArray[INDEX_NONE] = NewSection wrote one slot before the
+					 * array. Add the replacement instead, which is what an absent old one means.
+					 */
+					SectionArray.Add(NewSection);
+				}
+				else
+				{
+					SectionArray[SectionIndex] = NewSection;
+				}
 				delete OldSection;
 			});
 	}
@@ -333,8 +349,11 @@ public:
 				auto SrcSection = static_cast<FDreamUIRenderSection_Mesh*>(InSrcSection);
 				if (SrcSection->Vertices.Num() == 0 || SrcSection->TriangleIndices.Num() == 0)
 				{
+					// An empty mesh section is a state the walkers of SectionArray already expect --
+					// see PoolAllSectionData_RenderThread -- and `return nullptr` is this branch
+					// saying so. check(0) contradicted it: the same state crashed a Development or
+					// Test package and returned quietly in Shipping, where DO_CHECK is 0.
 					SrcSection->RenderProxy = nullptr;
-					check(0);
 					return nullptr;
 				}
 				auto NewSectionProxy = new FDreamUISectionProxy_Mesh(GetScene().GetFeatureLevel()
@@ -409,12 +428,18 @@ public:
 				auto SrcSection = static_cast<FDreamUIRenderSection_ChildCanvas*>(InSrcSection);
 				auto NewSectionProxy = new FDreamUIRenderSectionProxy_ChildCanvas();
 				auto& ChildCanvasMeshItem = SrcSection->ChildCanvasMeshComponent;
-				NewSectionProxy->PrimitiveComponentID = ChildCanvasMeshItem->GetPrimitiveSceneId();
-				if (ChildCanvasMeshItem->SceneProxy != nullptr)
+				//the same reasoning as the post-process branch above: the mesh is held weakly and can
+				//already be gone. The section still gets a proxy -- it just has no child to draw until
+				//SetChildCanvasSectionData_RenderThread fills one in.
+				if (ChildCanvasMeshItem.IsValid())
 				{
-					auto ChildSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(ChildCanvasMeshItem->SceneProxy);
-					NewSectionProxy->ChildCanvasSceneProxy = ChildSceneProxy;
-					ChildSceneProxy->OnRelease.AddRaw(this, &FDreamUIRenderSceneProxy::ClearChildCanvasSectionData_RenderThread);
+					NewSectionProxy->PrimitiveComponentID = ChildCanvasMeshItem->GetPrimitiveSceneId();
+					if (ChildCanvasMeshItem->SceneProxy != nullptr)
+					{
+						auto ChildSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(ChildCanvasMeshItem->SceneProxy);
+						NewSectionProxy->ChildCanvasSceneProxy = ChildSceneProxy;
+						ChildSceneProxy->OnRelease.AddRaw(this, &FDreamUIRenderSceneProxy::ClearChildCanvasSectionData_RenderThread);
+					}
 				}
 
 				// Copy info
@@ -424,7 +449,11 @@ public:
 				return NewSectionProxy;
 			}
 		}
-		check(0);
+		// A section type this switch does not know about. The `return nullptr` is the recoverable
+		// answer -- one section does not get a proxy -- and check(0) disagreed with it in exactly
+		// the configurations that ship to players: a crash in Development and Test, a quiet return
+		// in Shipping. Logged instead, so it is findable rather than silent.
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Unhandled render section type %d; that section will not be drawn."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, static_cast<int32>(InSrcSection->Type));
 		return nullptr;
 	}
 	void SetChildCanvasSectionData_RenderThread(FPrimitiveComponentId CompID, FDreamUIRenderSceneProxy* SceneProxy)
@@ -1325,8 +1354,61 @@ void UDreamUIMeshComponent::ExpandMeshSectionRenderData(FDreamUIRenderSection_Me
 {
 	if (SceneProxy)
 	{
+		/**
+		 * RecreateSectionData enqueues the delete of the old section proxy right now, while the
+		 * frame's pending updates are not enqueued until FlushRenderCommand at the end of the frame --
+		 * so any pending update still addressing the old proxy ran after it had been deleted. Repoint
+		 * them at the proxy that replaces it (dropping them would lose this frame's vertex data,
+		 * material or priority for that section).
+		 */
+		FDreamUIRenderSectionProxy* OldSectionProxy = InMeshSection->RenderProxy;
 		auto ThisSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
 		ThisSceneProxy->RecreateSectionData(InMeshSection);
+		if (OldSectionProxy != nullptr && OldSectionProxy != InMeshSection->RenderProxy)
+		{
+			RetargetPendingRenderCommands(OldSectionProxy, InMeshSection->RenderProxy);
+		}
+	}
+}
+
+void UDreamUIMeshComponent::RetargetPendingRenderCommands(FDreamUIRenderSectionProxy* InOldSectionProxy, FDreamUIRenderSectionProxy* InNewSectionProxy)
+{
+	if (InNewSectionProxy == nullptr)
+	{
+		//nothing to point them at: the section has no proxy, so the updates have nowhere to land
+		PendingUpdateMeshSectionDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionDataStruct& Item) { return Item.Section == InOldSectionProxy; });
+		PendingUpdateRenderSectionPriorityArray.RemoveAll([InOldSectionProxy](const UpdateRenderSectionPriority& Item) { return Item.SectionProxy == InOldSectionProxy; });
+		PendingUpdateMeshSectionMaterialDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionMaterialDataStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
+		PendingUpdateMeshSectionBuiltInDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionBuiltInDataStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
+		return;
+	}
+	for (auto& Item : PendingUpdateMeshSectionDataArray)
+	{
+		if (Item.Section == InOldSectionProxy)
+		{
+			Item.Section = static_cast<FDreamUISectionProxy_Mesh*>(InNewSectionProxy);
+		}
+	}
+	for (auto& Item : PendingUpdateRenderSectionPriorityArray)
+	{
+		if (Item.SectionProxy == InOldSectionProxy)
+		{
+			Item.SectionProxy = InNewSectionProxy;
+		}
+	}
+	for (auto& Item : PendingUpdateMeshSectionMaterialDataArray)
+	{
+		if (Item.SectionProxy == InOldSectionProxy)
+		{
+			Item.SectionProxy = InNewSectionProxy;
+		}
+	}
+	for (auto& Item : PendingUpdateMeshSectionBuiltInDataArray)
+	{
+		if (Item.SectionProxy == InOldSectionProxy)
+		{
+			Item.SectionProxy = InNewSectionProxy;
+		}
 	}
 }
 
@@ -1511,6 +1593,9 @@ void UDreamUIMeshComponent::VerifyMaterials()
 		case EDreamUIRenderSectionType::ChildCanvas:
 			{
 				auto ChildCanvasSection = static_cast<FDreamUIRenderSection_ChildCanvas*>(RenderSectionItem.Get());
+				//the child canvas's mesh is held weakly and dies on its own schedule, while this section
+				//only goes away on the next pool pass -- a stale weak pointer here is normal
+				if (!ChildCanvasSection->ChildCanvasMeshComponent.IsValid())continue;
 				for (auto ChildMat : ChildCanvasSection->ChildCanvasMeshComponent->OverrideMaterials)
 				{
 					SetMaterialForUI(MatIndex++, ChildMat);
@@ -1670,22 +1755,6 @@ void UDreamUIMeshComponent::UpdateLocalBounds()
 	MarkRenderTransformDirty();// Need to send to render thread
 }
 
-struct FDreamUIPrimitiveComponentIdTemporaryModifier
-{
-	UDreamUIMeshComponent* Comp = nullptr;
-	FPrimitiveComponentId OriginId;
-	FDreamUIPrimitiveComponentIdTemporaryModifier(UDreamUIMeshComponent* InComp, FPrimitiveComponentId InNewId)
-	{
-		Comp = InComp;
-		OriginId = Comp->GetPrimitiveSceneId();
-		Comp->GetPrimitiveSceneId() = InNewId;
-	}
-	~FDreamUIPrimitiveComponentIdTemporaryModifier()
-	{
-		Comp->GetPrimitiveSceneId() = OriginId;
-	}
-};
-
 DECLARE_CYCLE_STAT(TEXT("DreamUIMesh CreateSceneProxy"), STAT_DreamUIMesh_CreateSceneProxy, STATGROUP_DreamGUI);
 FPrimitiveSceneProxy* UDreamUIMeshComponent::CreateSceneProxy()
 {
@@ -1767,6 +1836,22 @@ DECLARE_CYCLE_STAT(TEXT("DreamUIMesh FlushRenderCommand"), STAT_DreamUIMesh_Flus
 void UDreamUIMeshComponent::FlushRenderCommand()
 {
 	SCOPE_CYCLE_COUNTER(STAT_DreamUIMesh_FlushRenderCommand)
+	if (SceneProxy == nullptr)
+	{
+		/**
+		 * No proxy to send them to. The updates were collected while one existed (each collector checks
+		 * SceneProxy) and it has since been dropped -- MarkRenderStateDirty, a visibility change, a
+		 * hierarchy move. Every section proxy they name died with it, so this is not a case of waiting:
+		 * the pointers are already stale and the recreated proxy builds its sections from the render
+		 * sections anyway. Casting null to FDreamUIRenderSceneProxy* and sending it into a render
+		 * command, which is what used to happen, dereferenced null on the render thread.
+		 */
+		PendingUpdateMeshSectionDataArray.Reset();
+		PendingUpdateRenderSectionPriorityArray.Reset();
+		PendingUpdateMeshSectionMaterialDataArray.Reset();
+		PendingUpdateMeshSectionBuiltInDataArray.Reset();
+		return;
+	}
 	if (PendingUpdateMeshSectionDataArray.Num() > 0)
 	{
 		//update data
@@ -1836,7 +1921,11 @@ int32 UDreamUIMeshComponent::GetNumMaterials() const
 			break;
 		case EDreamUIRenderSectionType::ChildCanvas:
 			auto ChildCanvasSection = static_cast<FDreamUIRenderSection_ChildCanvas*>(RenderSectionItem.Get());
-			Result += ChildCanvasSection->ChildCanvasMeshComponent->GetNumMaterials();
+			//weak, and legitimately stale between the child canvas going away and the next pool pass
+			if (ChildCanvasSection->ChildCanvasMeshComponent.IsValid())
+			{
+				Result += ChildCanvasSection->ChildCanvasMeshComponent->GetNumMaterials();
+			}
 			break;
 		}
 	}

@@ -7,6 +7,8 @@
 #include "RendererInterface.h"
 #include "RenderGraphUtils.h"
 #include "RenderResource.h"
+#include "UObject/ObjectKey.h"
+#include "Core/DreamUIBlendMode.h"
 #include "Core/DreamUIRender/IDreamUIRendererPrimitive.h"
 
 class FDreamUIGizmoMesh;
@@ -59,18 +61,20 @@ public:
 	//end ISceneViewExtension interfaces
 
 	//
-	void AddWorldSpacePrimitive_RenderThread(void* InCanvasPtr, float InBlendDepth, int InDepthFade, IDreamUIRendererPrimitive* InPrimitive);
+	void AddWorldSpacePrimitive_RenderThread(FObjectKey InCanvasKey, float InBlendDepth, int InDepthFade, IDreamUIRendererPrimitive* InPrimitive);
 	void RemoveWorldSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive);
 
 	void AddScreenSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive);
 	void RemoveScreenSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive);
 
 	void MarkNeedToSortScreenSpacePrimitiveRenderPriority();
-	void MarkNeedToSortWorldSpacePrimitiveRenderPriority();
+	//there is deliberately no world-space counterpart: that sequence is rebuilt and resorted every
+	//frame because its ordering depends on distance to this frame's camera. See RenderDreamUI_RenderThread.
 	void SetRenderCanvasDepthParameter(UDreamCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
 
 	void SetScreenSpaceRootCanvas(UDreamCanvas* InCanvas);
-	void ClearScreenSpaceRootCanvas();
+	/** Removes only InCanvas; the other registered root canvases keep rendering. */
+	void ClearScreenSpaceRootCanvas(UDreamCanvas* InCanvas);
 
 	void UpdateRenderTargetRenderer(class UTextureRenderTarget2D* InRenderTarget, FColor InClearColor);
 
@@ -125,7 +129,9 @@ private:
 	 * Draw one batch with the built-in UI shader (no material). Used for both screen-space and world-space
 	 * canvases; bBlendDepth selects the world-space depth blend / fade permutation.
 	 */
-	static void DrawBuiltInBatch(FRHICommandListImmediate& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
+	/** The blend state one of DreamGUI's own blend modes maps to, for the built-in (material-less) path. */
+	static FRHIBlendState* GetBuiltInBlendState(EDreamUIBlendMode InBlendMode);
+	static void DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
 		, const FSceneView& View, const FIntRect& ViewRect, const struct FDreamUIMeshBatchContainer& Batch
 		, uint8 NumSamples, float GammaValue, bool bIsDepthValid
 		, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
@@ -133,10 +139,14 @@ private:
 	struct FWorldSpaceRenderParameter
 	{
 		/*
-		 * CAUTION! use this uobject pointer only in game-thread!
-		 * I use it in render-thread just as a pointer or a key, so it is safe here.
+		 * Which canvas registered this primitive, as an identity the render thread can compare without
+		 * ever dereferencing it. It used to be the raw UDreamCanvas* -- and a raw address is not an
+		 * identity: once a canvas is destroyed, the next UObject allocated at that address answers to
+		 * the same key, so SetRenderCanvasDepthFade_RenderThread would apply one canvas's blend depth
+		 * and depth fade to another's primitives. FObjectKey carries the serial number that tells the
+		 * two apart.
 		 */
-		void* RenderCanvasPtr = nullptr;
+		FObjectKey RenderCanvasKey;
 		//blend depth, 0-occlude by depth, 1-all visible
 		float BlendDepth = 0.0f;
 		//depth fade effect
@@ -160,29 +170,42 @@ private:
 		bool bFrustumCulling = true;
 		//sample count for MSAA
 		uint8 NumSamples_MSAA = 1;
+		/** Fraction of the viewport the screen-space UI is drawn at; 1 is full resolution. */
+		float ScreenSpaceRenderScale = 1.0f;
 	};
 	struct FScreenSpaceRenderParameter
 	{
 		bool bNeedSortRenderPriority = true;
 
-		TWeakObjectPtr<UDreamCanvas> RootCanvas = nullptr;
+		/**
+		 * Every root canvas currently rendering into this view extension, in registration order.
+		 *
+		 * There used to be a single slot here. A second ScreenSpaceOverlay root canvas in the same
+		 * world silently took it over, and -- worse -- whichever of them unregistered first cleared it,
+		 * leaving the survivor drawing with no view parameters at all. The view can still only be set
+		 * up from one canvas (see GetScreenSpaceViewCanvas), but which one is now stable and
+		 * unregistering one no longer breaks the others.
+		 */
+		TArray<TWeakObjectPtr<UDreamCanvas>> RootCanvasArray;
 		TArray<IDreamUIRendererPrimitive*> PrimitiveArray;
 	};
+	/** The registered root canvas the screen-space view parameters are taken from, or null. */
+	UDreamCanvas* GetScreenSpaceViewCanvas()const;
 	TArray<FWorldSpaceRenderParameter> WorldSpaceRenderCanvasParameterArray;
-	TMap<UDreamCanvas*, bool> WorldSpaceCanvasVisibilityMap;
-	bool bNeedSortWorldSpaceRenderCanvas = true;
 	FScreenSpaceRenderParameter ScreenSpaceRenderParameter;
 	/** Written by SetupView on the game thread; never read there. */
 	FScreenSpaceViewParameter GameThreadViewParameter;
 	/** The render thread's own copy, replaced by the command SetupView enqueues. */
 	FScreenSpaceViewParameter RenderThreadViewParameter;
 	TWeakObjectPtr<UWorld> World;
-	TArray<FDreamUIMeshBatchContainer> MeshBatchArray;
+	//no MeshBatchArray member: mesh batches are collected into a pass-local array inside each RDG
+	//pass. A shared one was only safe because every pass here takes FRHICommandListImmediate& and is
+	//therefore serialised, which is also what stops these passes being recorded in parallel.
 	//if 'bIsRenderToRenderTarget' is true then we need a render target
 	class FTextureRenderTargetResource* RenderTargetResource = nullptr;
 	FColor RenderTargetClearColor = FColor::Transparent;
 	void SortScreenSpacePrimitiveRenderPriority_RenderThread();
-	void SetRenderCanvasDepthFade_RenderThread(UDreamCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
+	void SetRenderCanvasDepthFade_RenderThread(FObjectKey InRenderCanvasKey, float InBlendDepth, int InDepthFade);
 	EDreamUIRendererType RendererType = EDreamUIRendererType::ScreenSpace_and_WorldSpace;
 
 	void RenderDreamUI_RenderThread(
