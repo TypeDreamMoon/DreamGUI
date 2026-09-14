@@ -5,6 +5,11 @@
 
 void UDreamUIPlayTweenComponent::Awake()
 {
+	// UDreamUIBehaviour::Awake is what raises the blueprint's Event Awake, so a blueprint subclass of
+	// this component never got one. OnDestroy below already calls its Super for the same reason; this
+	// was simply missed. It comes first, mirroring OnDestroy's order, so the blueprint's own setup has
+	// run before an auto-started tween begins writing over the values it just set.
+	Super::Awake();
 	if (bPlayOnStart)
 	{
 		if (IsValid(PlayTween))

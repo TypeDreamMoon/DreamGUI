@@ -61,11 +61,21 @@ protected:
 
 	virtual void OnUpdate(float progress)override
 	{
+		// progress arrives already shaped by the tween's ease, and the overshooting eases -- Back,
+		// Elastic -- hand over values below 0 and above 1 on purpose. A uint8 channel has nowhere to
+		// put that: FMath::Lerp does the arithmetic in float and then casts, so an overshoot wrapped
+		// round and flashed the colour to the opposite end for a frame. Held in a type that can carry
+		// the overshoot and clamped, which is what "overshoot" means for a channel with a ceiling.
+		const auto LerpChannel = [progress](uint8 A, uint8 B)
+		{
+			const float Value = FMath::Lerp(static_cast<float>(A), static_cast<float>(B), progress);
+			return static_cast<uint8>(FMath::Clamp(static_cast<int32>(Value), 0, 255));
+		};
 		FColor color;
-		color.R = FMath::Lerp(From.R, To.R, progress);
-		color.G = FMath::Lerp(From.G, To.G, progress);
-		color.B = FMath::Lerp(From.B, To.B, progress);
-		color.A = FMath::Lerp(From.A, To.A, progress);
+		color.R = LerpChannel(From.R, To.R);
+		color.G = LerpChannel(From.G, To.G);
+		color.B = LerpChannel(From.B, To.B);
+		color.A = LerpChannel(From.A, To.A);
 		OnUpdateValue.FireEvent(color);
 	}
 };

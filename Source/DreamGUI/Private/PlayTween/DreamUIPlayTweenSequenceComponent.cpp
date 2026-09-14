@@ -6,6 +6,9 @@
 
 void UDreamUIPlayTweenSequenceComponent::Awake()
 {
+	// Same omission as UDreamUIPlayTweenComponent::Awake: the base is where a blueprint subclass's
+	// Event Awake is raised, and without this call it never ran at all.
+	Super::Awake();
 	if (bPlayOnStart)
 	{
 		Play();
