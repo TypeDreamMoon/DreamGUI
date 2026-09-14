@@ -4,9 +4,41 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Core/DreamWidgetNavigation.h"
 #include "Interaction/DreamUIActionBar.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "DreamNavigationTestTypes.generated.h"
+
+class UDreamWidget;
+
+/**
+ * Somewhere for a Custom navigation rule to ask.
+ *
+ * FDreamCustomWidgetNavigationDelegate is a dynamic delegate with a return value, so binding one
+ * needs a UFUNCTION on a real UObject -- and the direction it was asked about is worth recording,
+ * because "the delegate ran" and "the delegate was told which way the player pressed" are different
+ * claims and only the second one makes a grid's own neighbour arithmetic possible.
+ */
+UCLASS()
+class UDreamNavigationTargetProvider : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UFUNCTION()
+	UDreamWidget* Provide(EDreamUINavigationDirection Direction)
+	{
+		LastDirection = Direction;
+		++CallCount;
+		return Target;
+	}
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> Target = nullptr;
+
+	EDreamUINavigationDirection LastDirection = EDreamUINavigationDirection::None;
+	int32 CallCount = 0;
+};
 
 /**
  * Something for an action binding to call. A dynamic delegate can only bind a UFUNCTION on a UObject,

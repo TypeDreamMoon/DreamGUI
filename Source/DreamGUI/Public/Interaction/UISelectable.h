@@ -27,6 +27,52 @@ enum class EUISelectableTransitionType:uint8
 	/** You can implement custom UISelectableTransition to do the transition */
 	Custom,
 };
+/**
+ * WHEN a mouse click counts -- UMG's EButtonClickMethod, spelled in our own enum because this header
+ * must not include UMG and because .dui, the designer and Blueprint all see a UENUM the same way.
+ *
+ * The distinction is not pedantry: a press-and-drag-away is how a player CANCELS a click on every
+ * desktop, and DownAndUp is the only method that honours it. The other three exist for the cases
+ * that genuinely want something else -- a key on a virtual keyboard repeating on press, a button
+ * under a scrolling list that must not fire when the finger was really scrolling.
+ */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamUIClickMethod : uint8
+{
+	/** Press on it and release on it. The desktop's rule, and the default. */
+	DownAndUp,
+	/** The press alone fires it; the release is nothing. */
+	MouseDown,
+	/** The release alone fires it, wherever the press happened to land. */
+	MouseUp,
+	/** DownAndUp, and additionally refused once the pointer has begun dragging. */
+	PreciseClick,
+};
+
+/** WHEN a touch counts -- UMG's EButtonTouchMethod. Consulted while the active device is Touch. */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamUITouchMethod : uint8
+{
+	/** Touch it and lift off it. */
+	DownAndUp,
+	/** The touch alone fires it -- the responsive answer, and the wrong one inside a scroll view. */
+	Down,
+	/** DownAndUp, and additionally refused once the finger has begun dragging. */
+	PreciseTap,
+};
+
+/** WHEN a gamepad or keyboard press counts -- UMG's EButtonPressMethod. */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamUIPressMethod : uint8
+{
+	/** Press and release, both on this control. */
+	DownAndUp,
+	/** The press alone. */
+	ButtonPress,
+	/** The release alone. */
+	ButtonRelease,
+};
+
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EUISelectableSelectionState :uint8
 {
@@ -183,6 +229,14 @@ protected:
 	/** inherited events of this component can bubble up? */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
 		bool AllowEventBubbleUp = false;
+	/**
+	 * This control's own enabled flag. False draws it Disabled and refuses press, select, click and
+	 * click feedback; hover enter/exit still arrive, so a tooltip can say why it is off.
+	 *
+	 * Distinct from UDreamWidget::SetInteractable, which turns the RAYCAST off for a whole subtree.
+	 * This one leaves the widget hit-testable -- a disabled button still stops a click reaching the
+	 * panel behind it, which is what a disabled button is for.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
 		bool bInteractable = true;
 
@@ -254,6 +308,22 @@ protected:
 	bool CheckNavigationSelectionState();
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 #pragma endregion
+	/**
+	 * WHEN this control's click fires, per input kind -- UMG's three, and resolved the way UMG's
+	 * SButton resolves them: the active input device picks which of the three is asked.
+	 *
+	 * Held here rather than on UUIButton because a check box, a tab and a list row all want the same
+	 * answer and none of them is a UUIButton; the CLICKERS (UUIButton, UUIToggle) are what consult
+	 * them, through ShouldClickOn* below. A selectable that does not click (a slider, a scroll bar)
+	 * simply never asks.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+		EDreamUIClickMethod ClickMethod = EDreamUIClickMethod::DownAndUp;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+		EDreamUITouchMethod TouchMethod = EDreamUITouchMethod::DownAndUp;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+		EDreamUIPressMethod PressMethod = EDreamUIPressMethod::DownAndUp;
+
 	/**
 	 * Can we navigate from other selectable object to this one?
 	 * If other selectable use EUISelectableNavigationMode.Explicit and use this selectable as specific one, then this selectable can still be navigate to.
@@ -366,8 +436,54 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		void SetSelectionState(EUISelectableSelectionState NewState);
 
+	/**
+	 * True only when this control AND the tree above it are all enabled and visible. What the look,
+	 * the navigation scan and the pointer handlers all ask.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		bool IsInteractable()const;
+	/**
+	 * This control's OWN flag, without the hierarchy. Read it to find out what was authored here;
+	 * read IsInteractable to find out whether the player can use the thing.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
+		bool GetInteractable()const { return bInteractable; }
+	/**
+	 * Turn this control on or off at runtime, and repaint it.
+	 *
+	 * There was no setter at all: bInteractable was EditAnywhere and nothing else, so the only way to
+	 * disable a control from game code was UDreamWidget::SetInteractable, which takes the whole
+	 * subtree out of the raycast -- a different thing, and the wrong one for a button that must stay
+	 * visible, keep its tooltip and keep blocking what is behind it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		void SetInteractable(bool Value);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		EDreamUIClickMethod GetClickMethod()const { return ClickMethod; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		void SetClickMethod(EDreamUIClickMethod Value) { ClickMethod = Value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		EDreamUITouchMethod GetTouchMethod()const { return TouchMethod; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		void SetTouchMethod(EDreamUITouchMethod Value) { TouchMethod = Value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		EDreamUIPressMethod GetPressMethod()const { return PressMethod; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		void SetPressMethod(EDreamUIPressMethod Value) { PressMethod = Value; }
+
+	/**
+	 * Whether InEventData's DOWN should fire this control's click, whether its UP should, and whether
+	 * the event system's own click (down and up both on this widget) still should.
+	 *
+	 * One resolution, shared by every clicker, because "which of the three enums applies" is a
+	 * question all of them have and none should answer twice. Which one applies is decided the way
+	 * UMG's SButton decides it: a NAVIGATION event is the gamepad's, so PressMethod; a pointer event
+	 * while the event system's current device is Touch is TouchMethod; everything else is the mouse's.
+	 */
+	bool ShouldClickOnDown(const UDreamPointerEventData* InEventData)const;
+	bool ShouldClickOnUp(const UDreamPointerEventData* InEventData)const;
+	bool ShouldClickOnClick(const UDreamPointerEventData* InEventData)const;
 
 #pragma region Navigation
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
@@ -437,18 +553,51 @@ public:
 protected:
 	/** How many nested areas a single Escape move may climb out of before it gives up. */
 	static constexpr int32 MaxNavigationEscapeDepth = 8;
+public:
 	/**
-	 * The plain directional scan: the nearest interactable selectable in InDirection, restricted to
-	 * children of InParent and of RestrictNavNode. Returns this when there is nothing that way.
+	 * Where InDirection leads, as the BEHAVIOUR that will receive the move.
 	 *
-	 * Split out from FindSelectable so the boundary rules can re-run the identical scan against a
-	 * different area, or from a different selectable, without the rules leaking into the scoring.
+	 * The real navigation entry point, and the reason the six FindSelectableOnX finders are now thin
+	 * views onto it: a move can land on a widget whose only navigation is a UDreamWidgetNavigation,
+	 * and a return type of UUISelectable* cannot say so. Rules are consulted in one fixed order --
+	 * the widget's own navigation panel, then this component's per-direction mode -- so the answer
+	 * never depends on which component the pipeline's walk happened to reach first.
+	 *
+	 * Returns this when there is nothing that way, and null when navigation is switched off for that
+	 * direction; the two are different and the caller is expected to tell them apart.
 	 */
-	UUISelectable* ScanForSelectable(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* RestrictNavNode);
+	virtual UDreamUIBehaviour* FindNavigableOn(EDreamUINavigationDirection InDirection);
+	/**
+	 * The directional scan with the boundary rules applied, answering behaviours rather than only
+	 * selectables. FindSelectable is this with the result cast.
+	 * @param bResolveCanvasParent  ignore InParent and derive it from this widget's root canvas.
+	 */
+	UDreamUIBehaviour* FindNavigableIn(FVector InDirection, UDreamWidget* InParent, bool bResolveCanvasParent = false);
+protected:
 	/** Scan, and when it finds nothing let InRestrictNode's boundary rule decide what happens next. */
-	UUISelectable* FindSelectableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth);
-	/** The selectable at the far side of InRestrictNode along InDirection, for the Wrap rule. */
-	UUISelectable* FindWrapTarget(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode);
+	UDreamUIBehaviour* FindNavigableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth);
+	/**
+	 * Where an EXPLICIT link in InDirection actually lands: InTarget when it can be navigated to, or
+	 * the next hop of the author's own chain when it cannot, or null when the chain runs out.
+	 *
+	 * The Auto scan has always skipped anything not interactable, not visible or not navigable-to;
+	 * the explicit path skipped every one of those tests and handed back whatever was wired. A
+	 * gamepad could therefore land on a button disabled because the save is not unlocked, wear the
+	 * Disabled look, and be unable to leave -- the next hop was computed from that same dead control.
+	 * Following the chain rather than refusing outright keeps a hand-authored row usable when one of
+	 * its entries is conditionally hidden, which is the ordinary reason for one to be.
+	 */
+	static UUISelectable* ResolveExplicitTarget(UUISelectable* InTarget, EDreamUINavigationDirection InDirection);
+	/**
+	 * The Prev target this control WOULD have under Auto, whatever its authored navigation modes say.
+	 *
+	 * Exists because the default-focus walk wants the positional answer and nothing else, and the way
+	 * it used to get one was to write Auto into three of ANOTHER selectable's navigation UPROPERTYs,
+	 * call the ordinary finder, and write the originals back. Any early return or exception in
+	 * between left that authored data permanently rewritten, and in an editor world the write marked
+	 * the asset dirty for a query that was supposed to change nothing.
+	 */
+	UUISelectable* FindAutoPrev();
 public:
 	/**
      * Default selectable is the most "Prev" one (left top most).

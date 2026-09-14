@@ -27,6 +27,37 @@ UDreamTweener* UUINavigationInputSelectionHandler::FadeCursorTo(UDreamWidget* In
 	return nullptr;
 }
 
+void UUINavigationInputSelectionHandler::MoveCursorTo(UDreamWidget* InWidget, const FVector& InLocation, const FVector2D& InSize)
+{
+	if (UDreamTweener* PositionTween = InWidget->LocalPositionTo(InLocation, AnimDuration, 0, EDreamTweenEase::InOutSine))
+	{
+		TweenerCollection.Add(PositionTween);
+	}
+	else
+	{
+		InWidget->SetRelativeLocation(InLocation);
+	}
+	if (UDreamTweener* SizeTween = InWidget->SizeDeltaTo(InSize, AnimDuration, 0, EDreamTweenEase::InOutSine))
+	{
+		TweenerCollection.Add(SizeTween);
+	}
+	else
+	{
+		InWidget->SetSizeDelta(InSize);
+	}
+	// The rotation is unwound rather than animated for its own sake: the cursor inherits whatever
+	// rotation its new parent carries, and Identity here is what keeps a highlight square on a
+	// rotated button instead of doubling the button's tilt.
+	if (UDreamTweener* RotationTween = InWidget->LocalRotationQuaternionTo(FQuat::Identity, AnimDuration, 0, EDreamTweenEase::InOutSine))
+	{
+		TweenerCollection.Add(RotationTween);
+	}
+	else
+	{
+		InWidget->SetRelativeRotation(FQuat::Identity);
+	}
+}
+
 void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
 {
 	// UDreamUIBehaviour settled this in its constructor and the answer cannot change afterwards --
@@ -52,14 +83,9 @@ void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
 	if (InSelected != nullptr && PrevSelected.IsValid())
 	{
 		Widget->SetParent(InSelected, true);
-		auto Pos2D = InSelected->GetLocalSpaceCenter();
-		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
-		// auto Tweener = UDreamTweenBPLibrary::LocalPositionTo(Widget, Pos3D, AnimDuration, 0, EDreamTweenEase::InOutSine);
-		// TweenerCollection.Add(Tweener);
-		// Tweener = Widget->SizeDeltaTo(InSelected->GetSize(), AnimDuration, 0, EDreamTweenEase::InOutSine);
-		// TweenerCollection.Add(Tweener);
-		// Tweener = UDreamTweenBPLibrary::LocalRotationQuaternionTo(Widget, FQuat::Identity, AnimDuration, 0, EDreamTweenEase::InOutSine);
-		// TweenerCollection.Add(Tweener);
+		const FVector2D Pos2D = InSelected->GetLocalSpaceCenter();
+		const FVector Pos3D(0, Pos2D.X, Pos2D.Y);
+		MoveCursorTo(Widget, Pos3D, InSelected->GetSize());
 
 		if (ThisCanvas.IsValid())
 		{

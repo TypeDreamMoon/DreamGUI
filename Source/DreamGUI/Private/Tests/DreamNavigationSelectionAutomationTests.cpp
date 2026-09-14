@@ -233,4 +233,80 @@ bool FDreamNavigationSelectWidgetWithoutTweenTest::RunTest(const FString& Parame
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationSelectionMovesTheCursorTest,
+	"DreamGUI.Navigation.Selection.MovingToANewWidgetTakesTheCursorsPositionAndSizeWithIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNavigationSelectionMovesTheCursorTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * The branch every navigation step after the first goes through.
+	 *
+	 * Appearing from nothing set the cursor's position, size and rotation outright and always worked.
+	 * MOVING -- one selected widget to the next, which is what holding a direction does -- had all
+	 * three of those commented out, so the step did nothing but reparent: the cursor kept the offset
+	 * and the size it had under its previous parent and marked the wrong rectangle from then on. The
+	 * position it should have gone to was still being computed and then dropped as an unused local,
+	 * which is what the dead variable in that function was the fossil of.
+	 */
+	using namespace DreamNavigationSelectionTestLocal;
+
+	UDreamWidgetTree* Tree = NewObject<UDreamWidgetTree>(GetTransientPackage());
+	UDreamWidget* First = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("First"));
+	UDreamWidget* Second = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Second"));
+	UDreamWidget* CursorWidget = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Cursor"));
+	if (!TestNotNull(TEXT("a widget to select first"), First)
+		|| !TestNotNull(TEXT("a widget to move to"), Second)
+		|| !TestNotNull(TEXT("a widget to be the cursor"), CursorWidget))
+	{
+		return false;
+	}
+	Tree->RootWidget = First;
+
+	// Deliberately different in every way the cursor is supposed to copy, and the second one is given
+	// an off-centre pivot so its local centre is a number rather than the origin -- with both at the
+	// default pivot the position assertion would pass on a cursor that never moved.
+	First->SetWidth(200.0f);
+	First->SetHeight(100.0f);
+	Second->SetWidth(64.0f);
+	Second->SetHeight(32.0f);
+	Second->SetPivot(FVector2D::ZeroVector);
+
+	UUINavigationInputSelectionHandler* Cursor =
+		CursorWidget->AddComponent<UUINavigationInputSelectionHandler>();
+	if (!TestNotNull(TEXT("the cursor widget carries a selection handler"), Cursor))
+	{
+		return false;
+	}
+	TestTrue(TEXT("no tween can be made here, so destinations are applied outright"),
+		CursorWidget->RenderOpacityTo(0.5f) == nullptr);
+
+	// Appearing. This half was never broken; it is here to establish the state the move starts from,
+	// and to make the "kept the OLD size" failure legible when the move regresses.
+	Cursor->SelectWidget(First);
+	TestTrue(TEXT("the cursor is on the first widget"), CursorWidget->GetParent() == First);
+	TestEqual(TEXT("...at the first widget's size"), CursorWidget->GetSizeDelta(), First->GetSize());
+
+	// The move.
+	Cursor->SelectWidget(Second);
+	TestTrue(TEXT("the cursor is reparented onto the new widget"), CursorWidget->GetParent() == Second);
+	TestEqual(TEXT("...and resized to it, rather than keeping the size of the one it left"),
+		CursorWidget->GetSizeDelta(), Second->GetSize());
+
+	const FVector2D Centre = Second->GetLocalSpaceCenter();
+	const FVector Expected(0.0f, Centre.X, Centre.Y);
+	TestTrue(TEXT("...and placed on the new widget's centre, rather than at the offset it had under the old parent"),
+		CursorWidget->GetRelativeLocation().Equals(Expected, 0.01f));
+
+	// Still nothing recorded: the collection is a list of animations in flight, and none could start.
+	TestEqual(TEXT("no animation was recorded, because none could be started"),
+		ArrayNum(*this, Cursor, TEXT("TweenerCollection")), 0);
+
+	CursorWidget->DestroyWidget();
+	Second->DestroyWidget();
+	First->DestroyWidget();
+	return true;
+}
+
 #endif
