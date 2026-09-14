@@ -8,6 +8,9 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Serialization/MemoryReader.h"
+// A `Struct` parameter is stored as exported text and imported into a real instance before it is
+// fired; UScriptStruct::ImportText reports what it could not read through one of these.
+#include "Misc/StringOutputDevice.h"
 #if WITH_EDITOR
 #include "Utils/DreamUIUtils.h"
 #endif
@@ -115,8 +118,19 @@ bool UDreamUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty*
 	}
 	case NAME_EnumProperty:
 	{
-		OutParameterType = EDreamUIEventDelegateParameterType::UInt8;
-		return true;
+		// An `enum class` may be declared on any integer base, and the width is what matters here:
+		// ParamBuffer is the parameter FRAME ProcessEvent reads, so answering UInt8 for an
+		// `enum class E : int32` handed the callee a one byte buffer for a four byte argument and it
+		// read three bytes past the end of it. The underlying property knows its own width, so the
+		// question is asked of that rather than assumed. (For the common `: uint8` case this still
+		// answers UInt8, and the enum dropdown the editor draws for that is unchanged.)
+		const FEnumProperty* EnumProperty = (const FEnumProperty*)InFunctionProperty;
+		const FNumericProperty* UnderlyingProperty = EnumProperty->GetUnderlyingProperty();
+		if (UnderlyingProperty == nullptr)
+		{
+			return false;
+		}
+		return IsPropertyCompatible(UnderlyingProperty, OutParameterType);
 	}
 	case NAME_StructProperty:
 	{
@@ -150,7 +164,13 @@ bool UDreamUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty*
 		{
 			OutParameterType = EDreamUIEventDelegateParameterType::Rotator; return true;
 		}
-		return false;
+		// Anything else. The named cases above keep their own types -- they have dedicated editors and,
+		// more importantly, dedicated SERIALIZED numbers that saved bindings already use -- and every
+		// other USTRUCT is carried generically, by exported text. What used to happen here was a plain
+		// `return false`, which took the function off the selector entirely: a handler taking an
+		// FMargin, an FSlateColor or a game's own settings struct simply could not be bound.
+		OutParameterType = EDreamUIEventDelegateParameterType::Struct;
+		return true;
 	}
 
 	case NAME_ObjectProperty:
@@ -209,6 +229,20 @@ UClass* UDreamUIEventDelegateParameterHelper::GetObjectParameterClass(const UFun
 	if (auto objProperty = CastField<FObjectProperty>(firstProperty))
 	{
 		return objProperty->PropertyClass;
+	}
+	return nullptr;
+}
+
+UScriptStruct* UDreamUIEventDelegateParameterHelper::GetStructParameter(const UFunction* InFunction)
+{
+	if (InFunction == nullptr)
+	{
+		return nullptr;
+	}
+	TFieldIterator<FProperty> ParamsIterator(InFunction);
+	if (const FStructProperty* StructProperty = CastField<FStructProperty>(*ParamsIterator))
+	{
+		return StructProperty->Struct;
 	}
 	return nullptr;
 }
@@ -305,6 +339,117 @@ bool UDreamUIEventDelegateParameterHelper::UpgradeParameterBuffer(EDreamUIEventD
 	InOutBuffer.SetNumZeroed(RequiredSize);
 	return true;
 }
+UObject* UDreamUIEventDelegateParameterHelper::ResolveBindingTarget(const UDreamWidget* InHelperWidget, const UClass* InHelperClass,
+	int32 InHelperComponentIndex, FName InHelperComponentName, int32* OutResolvedComponentIndex, FString* OutError)
+{
+	auto Fail = [OutError](FString&& InMessage) -> UObject*
+	{
+		if (OutError != nullptr)
+		{
+			*OutError = MoveTemp(InMessage);
+		}
+		return nullptr;
+	};
+	if (OutResolvedComponentIndex != nullptr)
+	{
+		*OutResolvedComponentIndex = INDEX_NONE;
+	}
+	if (OutError != nullptr)
+	{
+		OutError->Reset();
+	}
+	if (!IsValid(InHelperWidget))
+	{
+		return Fail(TEXT("target widget is missing"));
+	}
+	if (!IsValid(InHelperClass))
+	{
+		return Fail(TEXT("target class is missing"));
+	}
+	//const only because callers hold const widgets; the binding hands the result to ProcessEvent
+	UDreamWidget* Widget = const_cast<UDreamWidget*>(InHelperWidget);
+
+	if (InHelperClass == UDreamWidget::StaticClass())
+	{
+		return Widget;
+	}
+	if (InHelperClass->IsChildOf(UDreamVisual::StaticClass()))
+	{
+		UObject* Result = Widget->GetVisual();
+		return IsValid(Result) && Result->IsA(InHelperClass) ? Result
+			: Fail(FString::Printf(TEXT("widget '%s' no longer has visual '%s'"), *Widget->GetDisplayName(), *InHelperClass->GetName()));
+	}
+	if (InHelperClass->IsChildOf(UDreamLayoutContainer::StaticClass()))
+	{
+		UObject* Result = Widget->GetLayoutContainer();
+		return IsValid(Result) && Result->IsA(InHelperClass) ? Result
+			: Fail(FString::Printf(TEXT("widget '%s' no longer has layout container '%s'"), *Widget->GetDisplayName(), *InHelperClass->GetName()));
+	}
+	if (InHelperClass->IsChildOf(UDreamLayoutSelf::StaticClass()))
+	{
+		UObject* Result = Widget->GetLayoutSelf();
+		return IsValid(Result) && Result->IsA(InHelperClass) ? Result
+			: Fail(FString::Printf(TEXT("widget '%s' no longer has layout self '%s'"), *Widget->GetDisplayName(), *InHelperClass->GetName()));
+	}
+	if (!InHelperClass->IsChildOf(UDreamUIBehaviour::StaticClass()))
+	{
+		return Fail(FString::Printf(TEXT("target class '%s' is not supported"), *InHelperClass->GetName()));
+	}
+
+	// Position first. GetAllComponents() is the array positions are counted in -- the same one the
+	// property-binding resolver walks -- so the two kinds of binding address a behaviour identically.
+	const TArray<UDreamUIBehaviour*>& AllComponents = Widget->GetAllComponents();
+	if (AllComponents.IsValidIndex(InHelperComponentIndex))
+	{
+		UDreamUIBehaviour* AtIndex = AllComponents[InHelperComponentIndex];
+		if (IsValid(AtIndex) && AtIndex->IsA(InHelperClass))
+		{
+			if (OutResolvedComponentIndex != nullptr)
+			{
+				*OutResolvedComponentIndex = InHelperComponentIndex;
+			}
+			return AtIndex;
+		}
+		return Fail(FString::Printf(TEXT("behaviour %d on widget '%s' is no longer a '%s'"),
+			InHelperComponentIndex, *Widget->GetDisplayName(), *InHelperClass->GetName()));
+	}
+	if (InHelperComponentIndex != INDEX_NONE)
+	{
+		return Fail(FString::Printf(TEXT("widget '%s' no longer has a behaviour at position %d"),
+			*Widget->GetDisplayName(), InHelperComponentIndex));
+	}
+
+	// Nothing recorded: an asset saved before the index existed, or a class with only one candidate.
+	TArray<UDreamUIBehaviour*> Candidates = Widget->GetComponents(const_cast<UClass*>(InHelperClass));
+	if (!InHelperComponentName.IsNone())
+	{
+		for (UDreamUIBehaviour* Candidate : Candidates)
+		{
+			if (IsValid(Candidate) && Candidate->GetFName() == InHelperComponentName)
+			{
+				if (OutResolvedComponentIndex != nullptr)
+				{
+					*OutResolvedComponentIndex = AllComponents.IndexOfByKey(Candidate);
+				}
+				return Candidate;
+			}
+		}
+		return Fail(FString::Printf(TEXT("component '%s' of class '%s' is missing on widget '%s'"),
+			*InHelperComponentName.ToString(), *InHelperClass->GetName(), *Widget->GetDisplayName()));
+	}
+	if (Candidates.Num() == 1)
+	{
+		if (OutResolvedComponentIndex != nullptr)
+		{
+			*OutResolvedComponentIndex = AllComponents.IndexOfByKey(Candidates[0]);
+		}
+		return Candidates[0];
+	}
+	return Fail(Candidates.IsEmpty()
+		? FString::Printf(TEXT("component class '%s' is missing on widget '%s'"), *InHelperClass->GetName(), *Widget->GetDisplayName())
+		: FString::Printf(TEXT("component class '%s' is ambiguous on widget '%s'"), *InHelperClass->GetName(), *Widget->GetDisplayName()));
+}
+
 UClass* UDreamUIEventDelegateParameterHelper::GetClassParameterClass(const UFunction* InFunction)
 {
 	TFieldIterator<FProperty> paramsIterator(InFunction);
@@ -460,6 +605,13 @@ FString UDreamUIEventDelegateParameterHelper::ParameterTypeToName(EDreamUIEventD
 	case EDreamUIEventDelegateParameterType::Text:
 		ParamTypeString = "Text";
 		break;
+	case EDreamUIEventDelegateParameterType::Struct:
+	{
+		//named, because "Struct" in a function selector tells the author nothing they can act on
+		const UScriptStruct* StructValue = GetStructParameter(InFunction);
+		ParamTypeString = StructValue != nullptr ? StructValue->GetName() : TEXT("Struct");
+	}
+		break;
 	default:
 		break;
 	}
@@ -490,7 +642,7 @@ void FDreamUIEventDelegateData::Execute()
 	}
 	if (CheckTargetObject())
 	{
-		if (CacheFunction != nullptr)
+		if (IsCacheFunctionValidFor(TargetObject))
 		{
 			ExecuteTargetFunction(TargetObject, CacheFunction);
 		}
@@ -514,13 +666,15 @@ void FDreamUIEventDelegateData::Execute(void* InParam, EDreamUIEventDelegatePara
 
 	if (bUseNativeParameter)//should use native parameter (pass in param)
 	{
+		//conversion storage must outlive the branch below, because InParam is dereferenced after CheckTargetObject()
+		float ConvertedFloatValue = 0.0f;
+		double ConvertedDoubleValue = 0.0;
 		if (ParamType != InParameterType)//function's supported parameter is equal to event's parameter
 		{
 			if (InParameterType == EDreamUIEventDelegateParameterType::Double && ParamType == EDreamUIEventDelegateParameterType::Float)
 			{
-				auto InValue = *((double*)InParam);
-				auto ConvertValue = (float)InValue;
-				InParam = &ConvertValue;
+				ConvertedFloatValue = (float)(*((double*)InParam));
+				InParam = &ConvertedFloatValue;
 				auto errMsg = LOCTEXT("ParameterTypeNotEqual_DoubleToFloat", "DreamGUIEventDelegateData.Execute, Parameter type not equal, DreamGUI will automatic convert it from double to float.");
 #if WITH_EDITOR
 				FDreamUIUtils::EditorNotification(errMsg, false, 10);
@@ -529,9 +683,8 @@ void FDreamUIEventDelegateData::Execute(void* InParam, EDreamUIEventDelegatePara
 			}
 			else if (InParameterType == EDreamUIEventDelegateParameterType::Float && ParamType == EDreamUIEventDelegateParameterType::Double)
 			{
-				auto InValue = *((float*)InParam);
-				auto ConvertValue = (double)InValue;
-				InParam = &ConvertValue;
+				ConvertedDoubleValue = (double)(*((float*)InParam));
+				InParam = &ConvertedDoubleValue;
 				auto errMsg = LOCTEXT("ParameterTypeNotEqual_FloatToDouble", "DreamGUIEventDelegateData.Execute, Parameter type not equal, DreamGUI will automatic convert it from float to double.");
 #if WITH_EDITOR
 				FDreamUIUtils::EditorNotification(errMsg, false, 10);
@@ -550,7 +703,7 @@ void FDreamUIEventDelegateData::Execute(void* InParam, EDreamUIEventDelegatePara
 		}
 		if (CheckTargetObject())
 		{
-			if (CacheFunction != nullptr)
+			if (IsCacheFunctionValidFor(TargetObject))
 			{
 				ExecuteTargetFunction(TargetObject, CacheFunction, InParam);
 			}
@@ -564,7 +717,7 @@ void FDreamUIEventDelegateData::Execute(void* InParam, EDreamUIEventDelegatePara
 	{
 		if (CheckTargetObject())
 		{
-			if (CacheFunction != nullptr)
+			if (IsCacheFunctionValidFor(TargetObject))
 			{
 				ExecuteTargetFunction(TargetObject, CacheFunction);
 			}
@@ -579,79 +732,9 @@ void FDreamUIEventDelegateData::Execute(void* InParam, EDreamUIEventDelegatePara
 #if WITH_EDITOR
 UObject* FDreamUIEventDelegateData::ResolveTargetForValidation(FString& OutError) const
 {
-	OutError.Reset();
-	if (!IsValid(HelperWidget))
-	{
-		OutError = TEXT("target widget is missing");
-		return nullptr;
-	}
-	if (!IsValid(HelperClass))
-	{
-		OutError = TEXT("target class is missing");
-		return nullptr;
-	}
-
-	if (HelperClass == UDreamWidget::StaticClass())
-	{
-		return HelperWidget;
-	}
-	if (HelperClass->IsChildOf(UDreamVisual::StaticClass()))
-	{
-		UObject* Result = HelperWidget->GetVisual();
-		if (!IsValid(Result) || !Result->IsA(HelperClass))
-		{
-			OutError = FString::Printf(TEXT("widget '%s' no longer has visual '%s'"), *HelperWidget->GetDisplayName(), *HelperClass->GetName());
-			return nullptr;
-		}
-		return Result;
-	}
-	if (HelperClass->IsChildOf(UDreamLayoutContainer::StaticClass()))
-	{
-		UObject* Result = HelperWidget->GetLayoutContainer();
-		if (!IsValid(Result) || !Result->IsA(HelperClass))
-		{
-			OutError = FString::Printf(TEXT("widget '%s' no longer has layout container '%s'"), *HelperWidget->GetDisplayName(), *HelperClass->GetName());
-			return nullptr;
-		}
-		return Result;
-	}
-	if (HelperClass->IsChildOf(UDreamLayoutSelf::StaticClass()))
-	{
-		UObject* Result = HelperWidget->GetLayoutSelf();
-		if (!IsValid(Result) || !Result->IsA(HelperClass))
-		{
-			OutError = FString::Printf(TEXT("widget '%s' no longer has layout self '%s'"), *HelperWidget->GetDisplayName(), *HelperClass->GetName());
-			return nullptr;
-		}
-		return Result;
-	}
-	if (!HelperClass->IsChildOf(UDreamUIBehaviour::StaticClass()))
-	{
-		OutError = FString::Printf(TEXT("target class '%s' is not supported"), *HelperClass->GetName());
-		return nullptr;
-	}
-
-	TArray<UDreamUIBehaviour*> Components = HelperWidget->GetComponents(HelperClass);
-	if (!HelperComponentName.IsNone())
-	{
-		for (UDreamUIBehaviour* Component : Components)
-		{
-			if (IsValid(Component) && Component->GetFName() == HelperComponentName)
-			{
-				return Component;
-			}
-		}
-		OutError = FString::Printf(TEXT("component '%s' of class '%s' is missing on widget '%s'"), *HelperComponentName.ToString(), *HelperClass->GetName(), *HelperWidget->GetDisplayName());
-		return nullptr;
-	}
-	if (Components.Num() == 1)
-	{
-		return Components[0];
-	}
-	OutError = Components.IsEmpty()
-		? FString::Printf(TEXT("component class '%s' is missing on widget '%s'"), *HelperClass->GetName(), *HelperWidget->GetDisplayName())
-		: FString::Printf(TEXT("component class '%s' is ambiguous on widget '%s'"), *HelperClass->GetName(), *HelperWidget->GetDisplayName());
-	return nullptr;
+	// The shared resolver, so validation cannot disagree with what the runtime will actually reach.
+	return UDreamUIEventDelegateParameterHelper::ResolveBindingTarget(
+		HelperWidget, HelperClass, HelperComponentIndex, HelperComponentName, nullptr, &OutError);
 }
 
 bool FDreamUIEventDelegateData::CheckFunctionParameter()const
@@ -688,60 +771,47 @@ bool FDreamUIEventDelegateData::CheckTargetObject()
 	{
 		return true;
 	}
-	else
-	{
-		if (IsValid(HelperWidget))
-		{
-			if (IsValid(HelperClass))
-			{
-				if (HelperClass == UDreamWidget::StaticClass())
-				{
-					TargetObject = HelperWidget;
-				}
-				else
-				{
-					if (HelperClass->IsChildOf(UDreamVisual::StaticClass()))
-					{
-						TargetObject = HelperWidget->GetVisual();
-					}
-					else if (HelperClass->IsChildOf(UDreamLayoutContainer::StaticClass()))
-					{
-						TargetObject = HelperWidget->GetLayoutContainer();
-					}
-					else if (HelperClass->IsChildOf(UDreamLayoutSelf::StaticClass()))
-					{
-						TargetObject = HelperWidget->GetLayoutSelf();
-					}
-					else if (HelperClass->IsChildOf(UDreamUIBehaviour::StaticClass()))
-					{
-						auto Components = HelperWidget->GetComponents(HelperClass);
-						if (Components.Num() == 1)
-						{
-							TargetObject = Components[0];
-						}
-						else if (Components.Num() > 1)
-						{
-							if (!HelperComponentName.IsNone())
-							{
-								for (auto& Comp : Components)
-								{
-									if (IsValid(Comp) && Comp->GetFName() == HelperComponentName)
-									{
-										TargetObject = Comp;
-										return true;
-									}
-								}
-								FString WidgetName = HelperWidget->GetDisplayName();
-								UE_LOG(DreamGUI, Error, TEXT("[%s].%d Can't find component of name '%s' on widget '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *HelperComponentName.ToString(), *WidgetName);
-							}
-						}
-					}
-				}
-			}
-		}
 
-		return IsValid(TargetObject);
+	// One resolver for the runtime, the editor panel and validation. The old copy here disagreed with
+	// the other two in the case that mattered: it only consulted HelperComponentName when there was
+	// more than one candidate, and it addressed behaviours by name at all -- a key UE re-numbers on
+	// every preview rebuild, so the author's choice was silently lost and the target cleared.
+	FString ResolveError;
+	int32 ResolvedComponentIndex = INDEX_NONE;
+	TargetObject = UDreamUIEventDelegateParameterHelper::ResolveBindingTarget(
+		HelperWidget, HelperClass, HelperComponentIndex, HelperComponentName, &ResolvedComponentIndex, &ResolveError);
+	if (!IsValid(TargetObject))
+	{
+		// Only when there was something to resolve: an unset binding (no widget picked yet) is the
+		// ordinary state of a freshly added row and is not worth a line in the log.
+		if (IsValid(HelperWidget) && IsValid(HelperClass))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot resolve this event's target: %s"),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ResolveError);
+		}
+		return false;
 	}
+	// Recorded the first time a legacy name resolves, so the binding stops depending on the name.
+	// In memory only until something else saves the asset, which is the point: an upgrade nobody has
+	// to run, and a package this does not dirty on its own.
+	if (HelperComponentIndex != ResolvedComponentIndex)
+	{
+		HelperComponentIndex = ResolvedComponentIndex;
+	}
+	return true;
+}
+bool FDreamUIEventDelegateData::IsCacheFunctionValidFor(const UObject* Target) const
+{
+	if (!IsValid(CacheFunction) || !IsValid(Target))
+	{
+		return false;
+	}
+	const UClass* OwnerClass = CacheFunction->GetOwnerClass();
+	if (!IsValid(OwnerClass) || OwnerClass->HasAnyClassFlags(CLASS_NewerVersionExists))
+	{
+		return false;//blueprint recompiled, the cached function now lives on a REINST_/TRASHCLASS_ class
+	}
+	return Target->GetClass()->IsChildOf(OwnerClass);//target was re-resolved to an unrelated class
 }
 void FDreamUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 {
@@ -830,6 +900,49 @@ void FDreamUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction
 		Target->ProcessEvent(Func, &ReferenceObject);
 	}
 	break;
+	case EDreamUIEventDelegateParameterType::Struct:
+	{
+		// A REAL instance, constructed and destroyed by the struct's own operations. A struct
+		// parameter may own heap memory (an FString member, a TArray), so the raw-buffer path below
+		// cannot carry one: it would hand ProcessEvent a copy of somebody else's pointers, and the
+		// callee's destructor would free them a second time. The type is the function's own
+		// declaration rather than anything stored, so a signature change is a mismatch the checks
+		// above catch instead of a stale type nobody notices.
+		UScriptStruct* ParameterStruct = UDreamUIEventDelegateParameterHelper::GetStructParameter(Func);
+		if (!IsValid(ParameterStruct))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' takes a struct this build cannot identify; the event was not fired."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FunctionName.ToString());
+			break;
+		}
+		void* Storage = FMemory::Malloc(FMath::Max(1, ParameterStruct->GetStructureSize()), ParameterStruct->GetMinAlignment());
+		ParameterStruct->InitializeStruct(Storage);
+		if (!StructValue.IsEmpty() && StructValueType != ParameterStruct)
+		{
+			// The stored literal belongs to a different struct -- the handler's signature changed under
+			// it. Defaults are sent instead of a partial parse, and it is said out loud: two structs
+			// can share a member name, and half a value that looks plausible is the worst outcome here.
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' now takes a '%s', but its stored value was written for '%s'; the struct's defaults were sent. Re-enter the value."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FunctionName.ToString(), *ParameterStruct->GetName(), *GetNameSafe(StructValueType));
+		}
+		else if (!StructValue.IsEmpty())
+		{
+			// Errors to the log, not swallowed: a value that no longer parses (a member renamed out
+			// from under it) leaves the struct at its defaults, and silently sending defaults is the
+			// kind of wrong that looks like the handler being broken.
+			FStringOutputDevice ImportErrors;
+			ParameterStruct->ImportText(*StructValue, Storage, nullptr, PPF_None, &ImportErrors, ParameterStruct->GetName());
+			if (!ImportErrors.IsEmpty())
+			{
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot read the stored '%s' value for '%s': %s"),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ParameterStruct->GetName(), *FunctionName.ToString(), *ImportErrors);
+			}
+		}
+		Target->ProcessEvent(Func, Storage);
+		ParameterStruct->DestroyStruct(Storage);
+		FMemory::Free(Storage);
+	}
+	break;
 	//The engine math types went double precision in UE5, so a buffer saved before that is both the
 	//wrong length and the wrong encoding. Decoding into a local also gives ProcessEvent a parameter
 	//frame with the type's own alignment, which TArray<uint8> storage does not promise for the
@@ -900,6 +1013,30 @@ FDreamUIEventDelegate::FDreamUIEventDelegate(EDreamUIEventDelegateParameterType 
 bool FDreamUIEventDelegate::IsBound()const
 {
 	return EventList.Num() != 0;
+}
+void FDreamUIEventDelegate::AddRuntimeRoute(UObject* InHandlerObject, FName InFunctionName)
+{
+	if (!IsValid(InHandlerObject) || InFunctionName.IsNone())
+	{
+		return;
+	}
+	// Already routed. BindEventBindings runs again on a re-initialise (and on the designer's preview
+	// rebuild), and one route in the file must mean one call, not one per initialise.
+	const bool bAlreadyRouted = EventList.ContainsByPredicate([InHandlerObject, InFunctionName](const FDreamUIEventDelegateData& Candidate)
+		{ return Candidate.TargetObject == InHandlerObject && Candidate.FunctionName == InFunctionName; });
+	if (bAlreadyRouted)
+	{
+		return;
+	}
+	FDreamUIEventDelegateData& Data = EventList.AddDefaulted_GetRef();
+	// The target directly, with no helper fields: this route names an object, not a place in a widget
+	// hierarchy, and CheckTargetObject takes a valid TargetObject as the answer without resolving.
+	Data.TargetObject = InHandlerObject;
+	Data.FunctionName = InFunctionName;
+	Data.ParamType = SupportParameterType;
+	// An Empty event fires through Execute() with no parameter at all, and that overload refuses
+	// bUseNativeParameter outright; every other one forwards what the event was fired with.
+	Data.bUseNativeParameter = SupportParameterType != EDreamUIEventDelegateParameterType::Empty;
 }
 void FDreamUIEventDelegate::FireEvent()const
 {
@@ -1246,6 +1383,9 @@ void FDreamUIEventDelegate::ReplaceBindingTarget(UDreamUIBehaviour* InOldTarget,
 			Item.TargetObject = InNewTarget;
 			Item.HelperWidget = InNewTarget->GetWidget();
 			Item.HelperClass = InNewTarget->GetClass();
+			//position is the key; the name is written alongside it only so an older build still reads it
+			Item.HelperComponentIndex = IsValid(Item.HelperWidget)
+				? Item.HelperWidget->GetAllComponents().IndexOfByKey(InNewTarget) : INDEX_NONE;
 			Item.HelperComponentName = InNewTarget->GetFName();
 			Item.CacheFunction = nullptr;
 		}
@@ -1276,12 +1416,25 @@ void FDreamUIEventDelegate::AddFunctionBinding(UDreamWidget* InHelperWidget, UDr
 	FDreamUIEventDelegateData Data;
 	Data.HelperWidget = InHelperWidget;
 	Data.HelperClass = InTargetComponent->GetClass();
+	//position is the key; the name is written alongside it only so an older build still reads it
+	Data.HelperComponentIndex = IsValid(InHelperWidget)
+		? InHelperWidget->GetAllComponents().IndexOfByKey(InTargetComponent) : INDEX_NONE;
 	Data.HelperComponentName = InTargetComponent->GetFName();
 	Data.TargetObject = InTargetComponent;
 	Data.FunctionName = InFunctionName;
 	Data.ParamType = InParamType;
 	Data.bUseNativeParameter = bInUseNativeParameter;
 	EventList.Add(Data);
+}
+void FDreamUIEventDelegate::SetStructParameterValue(int32 InBindingIndex, UScriptStruct* InStruct, const FString& InExportedText)
+{
+	if (!EventList.IsValidIndex(InBindingIndex))
+	{
+		return;
+	}
+	FDreamUIEventDelegateData& Data = EventList[InBindingIndex];
+	Data.StructValue = InExportedText;
+	Data.StructValueType = InStruct;
 }
 #endif
 
