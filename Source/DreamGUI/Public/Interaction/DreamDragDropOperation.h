@@ -64,4 +64,30 @@ public:
 	/** Fired by the source when the drag ended with no target accepting. */
 	UPROPERTY(BlueprintAssignable, Category = DreamGUI)
 	FDreamUIDragDropOperationEvent OnDragCancelled;
+
+	/**
+	 * Tell this operation its drag ended with nothing accepting it. Fires OnDragCancelled at most
+	 * once, whoever notices the end first.
+	 *
+	 * Two things can notice, and only one of them used to: the source's own OnPointerEndDrag, and
+	 * the pointer pipeline clearing a drag directly. The pipeline's path only ran the source's, and
+	 * only when the source widget was still alive -- so a drag whose source was destroyed mid-flight
+	 * (a recycled list row, a screen closed under the pointer) ended with no cancel at all and every
+	 * OnDragCancelled handler waiting for a call that could no longer come. The cancel belongs to
+	 * the OPERATION, which outlives the widget that made it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void NotifyDragCancelled()
+	{
+		if (bDropWasHandled || bCancelledWasBroadcast)
+		{
+			return;
+		}
+		bCancelledWasBroadcast = true;
+		OnDragCancelled.Broadcast(this);
+	}
+
+private:
+	/** Latch for NotifyDragCancelled. Not saved: an operation lives exactly as long as its drag. */
+	bool bCancelledWasBroadcast = false;
 };
