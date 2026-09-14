@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUIExpressionThunks.h"
 
@@ -64,10 +64,29 @@ namespace DreamUIExpressionThunksLocal
 		return Type;
 	}
 
+	/**
+	 * The tree Generate is lowering, for the whole of one call.
+	 *
+	 * A file-scope pointer under a TGuardValue rather than a sixth parameter threaded through
+	 * LowerWornStyles, WalkNode, LowerPropertyList, LowerProperty and LowerTwoWay -- five signatures
+	 * that would exist to carry one thing none of them reads. This pass runs on the game thread from
+	 * inside one compile and never re-enters; the guard is what says so out loud, and the alternative
+	 * was five call sites to keep in step for a value constant across all of them.
+	 */
+	const FDreamUIAst* GLoweringAst = nullptr;
+
 	struct FThunkContext
 	{
 		UDreamWidgetBlueprint* Blueprint = nullptr;
 		FDreamUIDiagnosticBag* Diagnostics = nullptr;
+		/**
+		 * The tree the expression came out of, for `@Name`.
+		 *
+		 * A resource is resolved HERE rather than substituted into the AST, and the difference is not
+		 * style: the patcher owns this tree's byte offsets, so replacing `@Accent` with `#FF6600`
+		 * inside it would leave every later edit measured against columns that no longer exist.
+		 */
+		const FDreamUIAst* Ast = nullptr;
 		UEdGraph* Graph = nullptr;
 		/** The exec chain's current tail; impure calls thread themselves onto it. */
 		UEdGraphPin* LastExecPin = nullptr;
@@ -268,11 +287,39 @@ namespace DreamUIExpressionThunksLocal
 		return nullptr;
 	}
 
-	FEmitted EmitLiteral(const FDreamUIExpression& InExpression)
+	FEmitted EmitLiteral(const FDreamUIExpression& InExpression, FThunkContext& InContext)
 	{
 		FEmitted Literal;
 		Literal.LiteralDefault = InExpression.LiteralRaw;
-		switch (InExpression.LiteralKind)
+		EDreamUIValueKind Kind = InExpression.LiteralKind;
+
+		if (Kind == EDreamUIValueKind::ResourceRef)
+		{
+			// `@Accent` in an expression: the entry's own literal, taken at emit time. Only the two
+			// declared types a thunk pin can BE -- a Number and a String -- because an expression is
+			// arithmetic and comparison, and a colour or a vector has no operator in this grammar to
+			// take part in one. Refusing the rest here beats emitting a pin whose default reads
+			// "#FF6600" and watching K2 get 0 out of it.
+			const FDreamUIResource* Entry = InContext.Ast != nullptr
+				? InContext.Ast->FindResource(InExpression.LiteralRaw) : nullptr;
+			if (Entry == nullptr)
+			{
+				InContext.Fail(InExpression.Location, FString::Printf(
+					TEXT("'@%s' names no entry in a resources block"), *InExpression.LiteralRaw));
+				return FEmitted();
+			}
+			if (Entry->Value.Kind != EDreamUIValueKind::Number && Entry->Value.Kind != EDreamUIValueKind::String)
+			{
+				InContext.Fail(InExpression.Location, FString::Printf(
+					TEXT("'@%s' is declared %s, and an expression can only carry a Number or a String -- assign it instead"),
+					*InExpression.LiteralRaw, *Entry->TypeName));
+				return FEmitted();
+			}
+			Literal.LiteralDefault = Entry->Value.Raw;
+			Kind = Entry->Value.Kind;
+		}
+
+		switch (Kind)
 		{
 		case EDreamUIValueKind::Number:
 			Literal.PinType = MakeScalarPinType(EScalarKind::Real);
@@ -416,10 +463,16 @@ namespace DreamUIExpressionThunksLocal
 	{
 		// Unary minus on a literal folds into the literal, which is also the only spelling that
 		// reaches negative literals here (the lexer keeps `= -5` and tuples on the old path).
+		//
+		// Gated on Number and NOT on "is a literal", which now matters: a ResourceRef literal
+		// (`-@Gain`) carries the resource's NAME in LiteralRaw, so folding a '-' onto it would
+		// produce "-Gain" and look the entry up under a name nothing declares. Those fall through
+		// to the general path below, where EmitLiteral resolves the entry first and the math
+		// library does the negating -- one node more, and right.
 		if (InExpression.Symbol == TEXT("-") && InExpression.Operands[0].Kind == FDreamUIExpression::EKind::Literal
 			&& InExpression.Operands[0].LiteralKind == EDreamUIValueKind::Number)
 		{
-			FEmitted Folded = EmitLiteral(InExpression.Operands[0]);
+			FEmitted Folded = EmitLiteral(InExpression.Operands[0], InContext);
 			Folded.LiteralDefault = TEXT("-") + Folded.LiteralDefault;
 			return Folded;
 		}
@@ -506,7 +559,7 @@ namespace DreamUIExpressionThunksLocal
 	{
 		switch (InExpression.Kind)
 		{
-		case FDreamUIExpression::EKind::Literal: return EmitLiteral(InExpression);
+		case FDreamUIExpression::EKind::Literal: return EmitLiteral(InExpression, InContext);
 		case FDreamUIExpression::EKind::VariableRef: return EmitVariableRef(InExpression, InContext);
 		case FDreamUIExpression::EKind::Call: return EmitCall(InExpression, InContext);
 		case FDreamUIExpression::EKind::Unary: return EmitUnary(InExpression, InContext);
@@ -672,6 +725,7 @@ namespace DreamUIExpressionThunksLocal
 		FThunkContext Context;
 		Context.Blueprint = InBlueprint;
 		Context.Diagnostics = &InDiagnostics;
+		Context.Ast = GLoweringAst;
 		Context.Graph = Graph;
 		Context.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
 
@@ -711,6 +765,7 @@ namespace DreamUIExpressionThunksLocal
 			FThunkContext Context;
 			Context.Blueprint = InBlueprint;
 			Context.Diagnostics = &InDiagnostics;
+			Context.Ast = GLoweringAst;
 			Context.Graph = Graph;
 			Context.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
 
@@ -797,24 +852,39 @@ namespace DreamUIExpressionThunksLocal
 		Route.Location = InProperty.Location;
 	}
 
+	/**
+	 * Lower every `<-` expression and every `<->` in one property list, under one owner name.
+	 *
+	 * The owner name is whatever the thunk names itself after: a node id for a node's own lines, and
+	 * `Style_<name>` for a style block's. It is a parameter rather than the node because a style is
+	 * NOT a node -- it is one declaration several nodes wear -- and lowering it once per wearer would
+	 * claim one graph name several times over.
+	 */
+	void LowerPropertyList(UDreamWidgetBlueprint* InBlueprint, const FString& InOwnerName,
+		TArray<FDreamUIProperty>& InOutProperties, FDreamUIDiagnosticBag& InDiagnostics,
+		TSet<FString>& InOutClaimedNames)
+	{
+		TArray<FDreamUIProperty> Synthesized;
+		for (FDreamUIProperty& Property : InOutProperties)
+		{
+			if (Property.BindingExpression.IsSet())
+			{
+				LowerProperty(InBlueprint, InOwnerName, Property, InDiagnostics, InOutClaimedNames);
+			}
+			else if (!Property.TwoWayProperty.IsEmpty())
+			{
+				LowerTwoWay(InBlueprint, InOwnerName, Property, Synthesized, InDiagnostics, InOutClaimedNames);
+			}
+		}
+		InOutProperties.Append(MoveTemp(Synthesized));
+	}
+
 	void WalkNode(UDreamWidgetBlueprint* InBlueprint, FDreamUINode& InNode, FDreamUIDiagnosticBag& InDiagnostics,
 		TSet<FString>& InOutClaimedNames)
 	{
 		auto LowerAll = [InBlueprint, &InNode, &InDiagnostics, &InOutClaimedNames](TArray<FDreamUIProperty>& InProperties)
 		{
-			TArray<FDreamUIProperty> Synthesized;
-			for (FDreamUIProperty& Property : InProperties)
-			{
-				if (Property.BindingExpression.IsSet())
-				{
-					LowerProperty(InBlueprint, InNode.Id, Property, InDiagnostics, InOutClaimedNames);
-				}
-				else if (!Property.TwoWayProperty.IsEmpty())
-				{
-					LowerTwoWay(InBlueprint, InNode.Id, Property, Synthesized, InDiagnostics, InOutClaimedNames);
-				}
-			}
-			InProperties.Append(MoveTemp(Synthesized));
+			LowerPropertyList(InBlueprint, InNode.Id, InProperties, InDiagnostics, InOutClaimedNames);
 		};
 		LowerAll(InNode.Properties);
 		LowerAll(InNode.SlotProperties);
@@ -832,6 +902,78 @@ namespace DreamUIExpressionThunksLocal
 				continue;
 			}
 			WalkNode(InBlueprint, Child, InDiagnostics, InOutClaimedNames);
+		}
+	}
+
+	/** The style declaration InName resolves to, mutably, with FDreamUIAst::FindStyle's precedence. */
+	FDreamUIStyle* FindMutableStyle(FDreamUIAst& InAst, const FString& InName)
+	{
+		for (FDreamUIStyle& Style : InAst.Styles)
+		{
+			if (Style.Name == InName)
+			{
+				return &Style;
+			}
+		}
+		for (FDreamUIStyle& Style : InAst.ImportedStyles)
+		{
+			if (Style.Name == InName)
+			{
+				return &Style;
+			}
+		}
+		return nullptr;
+	}
+
+	/**
+	 * The half of this pass that was missing: the expressions written inside `style` blocks.
+	 *
+	 * A style property is a property like any other, and `<-` in one was the single place in the
+	 * language where a binding could be written and then simply not exist. The walk above only ever
+	 * saw nodes, so a style's expression reached the builder un-lowered, the builder's empty-name
+	 * guard skipped it without a word, and the file compiled green with the property never driven --
+	 * while a bare `<- F()` in the same block worked, because the parser fills BindingFunction for
+	 * that shape at parse time. Sharing the bindings of a whole family of controls is what a style is
+	 * FOR, so the silence was exactly where it was least affordable.
+	 *
+	 * One thunk per style property, not per wearer, and the name says `Style_<name>` for that reason:
+	 * the graph belongs to the class, every node wearing the style binds to the same function, and
+	 * lowering per wearer would claim one name several times and leave displaced graphs behind.
+	 *
+	 * Only styles a node actually WEARS. A declared-but-unworn style applies to nothing, so lowering
+	 * it would add a graph nothing calls and could fail a compile over a line that changes no tree.
+	 * The base chain is followed because the builder applies it (`style Danger : Button` runs
+	 * Button's lines first), and the Lowered set is also what stops the cycle the builder reports at
+	 * the wearing node.
+	 */
+	void LowerWornStyles(UDreamWidgetBlueprint* InBlueprint, FDreamUIAst& InAst,
+		FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
+	{
+		TArray<FString> Worn;
+		InAst.ForEachNode([&Worn](const FDreamUINode& InNode)
+		{
+			if (!InNode.StyleName.IsEmpty())
+			{
+				Worn.AddUnique(InNode.StyleName);
+			}
+		});
+
+		TSet<const FDreamUIStyle*> Lowered;
+		for (const FString& WornName : Worn)
+		{
+			FString Link = WornName;
+			while (!Link.IsEmpty())
+			{
+				FDreamUIStyle* Style = FindMutableStyle(InAst, Link);
+				if (Style == nullptr || Lowered.Contains(Style))
+				{
+					break;
+				}
+				Lowered.Add(Style);
+				LowerPropertyList(InBlueprint, FString(TEXT("Style_")) + Style->Name, Style->Properties,
+					InDiagnostics, InOutClaimedNames);
+				Link = Style->BaseName;
+			}
 		}
 	}
 }
@@ -861,6 +1003,14 @@ void DreamUIExpressionThunks::Generate(UDreamWidgetBlueprint* InBlueprint, FDrea
 		// Fresh per compile, like the graphs themselves. Its only job is that no two properties in
 		// ONE file claim one graph name; nothing about it has to survive to the next compile.
 		TSet<FString> ClaimedNames;
+		// The AST, for the whole of the lowering: `@Name` inside an expression resolves against the
+		// resources block of the file the expression was written in, and the guard is what scopes it.
+		TGuardValue<const FDreamUIAst*> LoweringAstGuard(GLoweringAst, &InAst);
+		// Styles first, and sharing the node walk's claim set: a style thunk is named after the
+		// style, so the only way it can meet a node's name is a node literally called Style_<name>,
+		// and one set across both passes is what makes MakeThunkName disambiguate that instead of
+		// letting CreateNewGraph displace the first graph silently.
+		LowerWornStyles(InBlueprint, InAst, InDiagnostics, ClaimedNames);
 		WalkNode(InBlueprint, InAst.Root, InDiagnostics, ClaimedNames);
 	}
 }

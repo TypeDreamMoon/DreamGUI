@@ -286,8 +286,16 @@ namespace DreamUIWriteBackLocal
 	 * more than a missing feature. The one place it matters is the details panel, which will show
 	 * such a property as editable until P6 greys it out -- an edit there is silently not persisted,
 	 * which is why it is on the handover list rather than buried here.
+	 *
+	 * OutValueIsUnrepresentable splits that false in two, and the split is what gives DUI7003 a place
+	 * to be raised from. "This TYPE has no literal" (an array, a node reference) is a property of the
+	 * schema, true forever, and nobody wants it in the Problems panel on every flush. "This VALUE has
+	 * no literal" -- a NaN in a float, a byte in an enum the enum does not declare -- is a state
+	 * somebody should chase: the row is grey, the drag does nothing, and before this the only trace
+	 * was one Output Log line. Set only for the second kind; left alone for the first.
 	 */
-	bool PrintLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText)
+	bool PrintLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText,
+		bool* OutValueIsUnrepresentable = nullptr)
 	{
 		if (InLeaf == nullptr || InValuePtr == nullptr)
 		{
@@ -307,7 +315,9 @@ namespace DreamUIWriteBackLocal
 
 		if (DreamUIValueFormat::HasShortForm(InLeaf))
 		{
-			return DreamUIValueFormat::Print(InLeaf, InValuePtr, OutText);
+			// The short-form printer refuses exactly one thing: a non-finite component. That is the
+			// VALUE kind of refusal, so it earns the flag.
+			return DreamUIValueFormat::Print(InLeaf, InValuePtr, OutText, OutValueIsUnrepresentable);
 		}
 
 		if (UEnum* Enum = GetEnumForProperty(InLeaf))
@@ -316,16 +326,29 @@ namespace DreamUIWriteBackLocal
 				? CastField<FEnumProperty>(InLeaf)->GetUnderlyingProperty()->GetSignedIntPropertyValue(InValuePtr)
 				: CastFieldChecked<FByteProperty>(InLeaf)->GetSignedIntPropertyValue(InValuePtr);
 			// The short spelling -- `Left`, not `EDreamAlign::Left` -- which is what an author writes
-			// and what UEnum::GetValueByNameString reads back. Empty means the number is not one of
-			// the enum's entries (a flag combination, or a byte somebody set directly), and there is
-			// no identifier for it.
+			// and what UEnum::GetValueByNameString reads back.
 			const FString Name = Enum->GetNameStringByValue(Value);
-			if (Name.IsEmpty())
+			if (!Name.IsEmpty())
 			{
-				return false;
+				OutText = Name;
+				return true;
 			}
-			OutText = Name;
-			return true;
+			// No identifier for it: a flag combination, since the grammar has no '|'. The NUMBER is
+			// still a spelling the language reads, and WriteValue validates one against this same
+			// UEnum with IsValidEnumValueOrBitfield -- so a combination round trips instead of being
+			// the one property class the designer could never write back at all. Refused only when
+			// the number is not even a combination of declared flags, which is a value nobody can
+			// spell and therefore a DUI7003.
+			if (Enum->IsValidEnumValueOrBitfield(Value))
+			{
+				OutText = LexToString(Value);
+				return true;
+			}
+			if (OutValueIsUnrepresentable != nullptr)
+			{
+				*OutValueIsUnrepresentable = true;
+			}
+			return false;
 		}
 
 		if (const FBoolProperty* AsBool = CastField<FBoolProperty>(InLeaf))
@@ -343,9 +366,13 @@ namespace DreamUIWriteBackLocal
 				{
 					// DUI7003: printf's "inf"/"nan" would lex as a bare identifier and fail the next
 					// compile on a line nobody edited. No spelling means no edit; the row greys.
-					UE_LOG(DreamGUIEditor, Warning,
-						TEXT("DUI7003: '%s' holds a non-finite float, which has no text spelling; its line is left untouched."),
-						*InLeaf->GetName());
+					// Flagged rather than logged from here now -- the caller has the bag and the
+					// node, so the refusal reaches the Problems panel with a file and a line instead
+					// of one Output Log entry an author has no reason to be reading.
+					if (OutValueIsUnrepresentable != nullptr)
+					{
+						*OutValueIsUnrepresentable = true;
+					}
 					return false;
 				}
 				OutText = PrintScalar(Value, InLeaf->IsA<FFloatProperty>());
@@ -603,6 +630,8 @@ namespace DreamUIWriteBackLocal
 		FString PropertyName;
 		TArray<const UObject*> LiveCandidates;
 		TArray<const UObject*> TextCandidates;
+		/** The node's own line, so a DUI7003 raised about this property names a place in the file. */
+		FDreamUISourceLocation Location;
 	};
 
 	/**
@@ -621,7 +650,8 @@ namespace DreamUIWriteBackLocal
 	 * a picked colour is never bit-equal to the colour its own hex reads back as and would report a
 	 * change forever. Printing folds both away, once.
 	 */
-	void CompareAndAppend(const FComparison& InComparison, TArray<FDreamUIPropertyEdit>& OutEdits)
+	void CompareAndAppend(const FComparison& InComparison, TArray<FDreamUIPropertyEdit>& OutEdits,
+		FDreamUIDiagnosticBag& OutDiagnostics)
 	{
 		FResolvedValue Live;
 		FResolvedValue Text;
@@ -644,9 +674,22 @@ namespace DreamUIWriteBackLocal
 
 		FString LiveText;
 		FString TextText;
-		if (!PrintLiteral(Live.Leaf, Live.ValuePtr, LiveText) || !PrintLiteral(Text.Leaf, Text.ValuePtr, TextText))
+		bool bLiveIsUnrepresentable = false;
+		if (!PrintLiteral(Live.Leaf, Live.ValuePtr, LiveText, &bLiveIsUnrepresentable)
+			|| !PrintLiteral(Text.Leaf, Text.ValuePtr, TextText))
 		{
 			// No spelling for this type. Leaving the line alone is the answer; see PrintLiteral.
+			// The exception is a live value with no spelling of its OWN -- a NaN, an undeclared enum
+			// byte. That is the code DUI7003 was reserved for and never once raised from: the row
+			// greys, the drag does nothing, and until now the only trace was an Output Log line.
+			// Said once per flush per property, at the node's line, and never for the ordinary
+			// "this type has no literal" case, which is true of half the reflection sweep.
+			if (bLiveIsUnrepresentable)
+			{
+				OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchValueNotRepresentable, InComparison.Location,
+					FString::Printf(TEXT("'%s' on '%s' holds a value this language cannot spell (a non-finite number, or an enum byte the enum does not declare), so its line was left untouched"),
+						*InComparison.PropertyName, *InComparison.NodeId));
+			}
 			return;
 		}
 
@@ -677,7 +720,7 @@ namespace DreamUIWriteBackLocal
 	 * happened, and neither is something a flush can act on.
 	 */
 	void CollectResourceEdits(const FDreamUIAst& InAst, const UObject* InLiveDefaults,
-		TArray<FDreamUIPropertyEdit>& OutEdits)
+		TArray<FDreamUIPropertyEdit>& OutEdits, FDreamUIDiagnosticBag& OutDiagnostics)
 	{
 		if (InLiveDefaults == nullptr)
 		{
@@ -723,13 +766,24 @@ namespace DreamUIWriteBackLocal
 
 			FString LiveText;
 			FString ReferenceText;
+			bool bLiveIsUnrepresentable = false;
 			const bool bComparable = bFilled
-				&& PrintLiteral(Property, Property->ContainerPtrToValuePtr<const void>(InLiveDefaults), LiveText)
+				&& PrintLiteral(Property, Property->ContainerPtrToValuePtr<const void>(InLiveDefaults), LiveText,
+					&bLiveIsUnrepresentable)
 				&& PrintLiteral(Property, Scratch, ReferenceText);
 
 			Property->DestroyValue(Scratch);
 			FMemory::Free(Scratch);
 
+			if (bLiveIsUnrepresentable)
+			{
+				// The entry's own line, which is where the reader has to go: a resource compiles into
+				// a class variable, so a NaN in it came from the Class Defaults panel and the `.dui`
+				// line is the thing that would have to change.
+				OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchValueNotRepresentable, Entry.Location,
+					FString::Printf(TEXT("resource '%s' holds a value this language cannot spell, so its line was left untouched"),
+						*Entry.Name));
+			}
 			if (!bComparable || LiveText.Equals(ReferenceText, ESearchCase::CaseSensitive))
 			{
 				continue;
@@ -740,6 +794,45 @@ namespace DreamUIWriteBackLocal
 			Edit.PropertyName = Entry.Name;
 			Edit.NewValueText = MoveTemp(LiveText);
 		}
+	}
+
+	/**
+	 * How a `.dui` would write this widget's TYPE: a built-in tag, or the class path it nests.
+	 *
+	 * Through FDreamUITextBuilder::GetVisualTags rather than a table of its own, for the reason that
+	 * function was exported: the completion list, the compiler and this all have to offer exactly the
+	 * tags the builder accepts, and a second copy is how "the designer wrote RectBlock and the
+	 * compile rejected it" happens.
+	 */
+	FString DescribeWidgetForText(const UDreamWidget* InWidget)
+	{
+		if (!IsValid(InWidget))
+		{
+			return FString();
+		}
+		if (InWidget->IsA<UDreamUserWidget>())
+		{
+			// A nested widget blueprint is named by its asset path, `_C` stripped -- the spelling the
+			// parser reads back and ResolveNodeClasses loads.
+			FString Path = InWidget->GetClass()->GetPathName();
+			Path.RemoveFromEnd(TEXT("_C"));
+			return Path;
+		}
+		const UDreamVisual* Visual = InWidget->GetVisual();
+		const UClass* VisualClass = Visual != nullptr ? Visual->GetClass() : nullptr;
+		TArray<TPair<FString, UClass*>> Tags;
+		FDreamUITextBuilder::GetVisualTags(Tags);
+		for (const TPair<FString, UClass*>& Tag : Tags)
+		{
+			if (Tag.Value == VisualClass)
+			{
+				return Tag.Key;
+			}
+		}
+		// A visual no tag names. `Widget` is wrong about the visual and right about everything else,
+		// and the compile will say so on the line this produced rather than silently building
+		// something different -- which is the better of the two ways to be wrong here.
+		return TEXT("Widget");
 	}
 
 	/** Add a property path once, keeping the order it was first seen in. */
@@ -757,6 +850,44 @@ namespace DreamUIWriteBackLocal
 // -------------------------------------------------------------------------------------------------
 // The pure half
 // -------------------------------------------------------------------------------------------------
+
+namespace DreamUIWriteBackDirtyLocal
+{
+	/**
+	 * One property, spelled the way a flush addresses one. Node id, which object on it, and the path.
+	 *
+	 * A string rather than a struct with a hash, because the set is tiny (a gesture dirties one to
+	 * three properties), it is read once per flush, and the alternative is a GetTypeHash nobody would
+	 * ever have a reason to read.
+	 */
+	FString MakeKey(const FString& InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
+		const FString& InPropertyName)
+	{
+		return FString::Printf(TEXT("%s|%d|%d|%s"), *InNodeId, static_cast<int32>(InTarget),
+			InComponentIndex, *InPropertyName);
+	}
+
+	/**
+	 * Per tree, weakly keyed, pruned as it is read.
+	 *
+	 * Weak because nothing here should keep an authoring tree alive: a designer that closes drops its
+	 * tree and this map must not be the reason it survives. Pruning on read rather than on a callback
+	 * for the same reason the document registry prunes in NumTracked -- there is no moment anybody
+	 * could be trusted to call.
+	 */
+	TMap<TWeakObjectPtr<const UDreamWidgetTree>, TSet<FString>>& GetDirtyMap()
+	{
+		static TMap<TWeakObjectPtr<const UDreamWidgetTree>, TSet<FString>> Map;
+		for (auto It = Map.CreateIterator(); It; ++It)
+		{
+			if (!It.Key().IsValid())
+			{
+				It.RemoveCurrent();
+			}
+		}
+		return Map;
+	}
+}
 
 bool FDreamUITextWriteBack::CanSpellAsLiteral(const FProperty* InLeaf, const void* InValuePtr)
 {
@@ -785,12 +916,22 @@ UDreamWidgetTree* FDreamUITextWriteBack::BuildReferenceTree(const FString& InTex
 	// "this property has no literal in the file" -- which the tree already expresses, by holding the
 	// class default for it.
 	TArray<FDreamWidgetPropertyBinding> Bindings;
-	return FDreamUITextBuilder::Build(OutAst, GetTransientPackage(), OutDiagnostics, Bindings);
+	// The `each` sink is NOT discardable, and leaving it null is what made a designer edit inside a
+	// loop body disappear. Without it BuildEachLoop never runs: the block degrades to a DUI5007 that
+	// this bag swallows, the template widget is never constructed, and CollectEdits -- which walks
+	// loop bodies like any other children -- finds the node in the AST, finds it in the LIVE tree,
+	// and finds nothing in this one, so it returns before producing a single edit. Every cell
+	// property the author dragged looked applied in the preview and was written back over by the
+	// next compile. The builder is given the same sink the real compile gives it, so the reference
+	// tree is the same tree; the bindings themselves are dropped here like the property ones.
+	TArray<FDreamWidgetEachBinding> EachBindings;
+	return FDreamUITextBuilder::Build(OutAst, GetTransientPackage(), OutDiagnostics, Bindings,
+		/*OutEventBindings*/nullptr, &EachBindings);
 }
 
 void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 	const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
-	FDreamUIDiagnosticBag& OutDiagnostics)
+	FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet)
 {
 	using namespace DreamUIWriteBackLocal;
 
@@ -798,6 +939,22 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 	{
 		return;
 	}
+
+	// What the designer says it touched, when anything did. Null means nobody reported, and then the
+	// sweep runs exactly as it always has -- see NoteDirtyProperty for why that is the fallback and
+	// not the bug.
+	const TSet<FString>* Dirty = bInUseDirtySet
+		? DreamUIWriteBackDirtyLocal::GetDirtyMap().Find(InLiveTree) : nullptr;
+	if (Dirty != nullptr && Dirty->IsEmpty())
+	{
+		Dirty = nullptr;
+	}
+	auto KeepName = [Dirty](const FString& InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
+		const FString& InName)
+	{
+		return Dirty == nullptr
+			|| Dirty->Contains(DreamUIWriteBackDirtyLocal::MakeKey(InNodeId, InTarget, InComponentIndex, InName));
+	};
 
 	// Const only ever came off a read: the collectors and FindFProperty want non-const containers,
 	// and nothing below writes to either tree. The trees are the caller's and stay untouched.
@@ -836,6 +993,7 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 		{
 			FComparison Comparison;
 			Comparison.NodeId = InNode.Id;
+			Comparison.Location = InNode.Location;
 			Comparison.Target = EDreamUIPatchTarget::Node;
 			Comparison.LiveCandidates = { LiveWidget, LiveWidget->GetVisual() };
 			Comparison.TextCandidates = { TextWidget, TextWidget->GetVisual() };
@@ -878,8 +1036,15 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 
 			for (const FString& Name : Names)
 			{
+				// The dirty set narrows the sweep when somebody reported; see NoteDirtyProperty. The
+				// list above is still built in full, so the ORDER a name would be written in does not
+				// depend on what happened to be touched this session.
+				if (!KeepName(InNode.Id, EDreamUIPatchTarget::Node, INDEX_NONE, Name))
+				{
+					continue;
+				}
 				Comparison.PropertyName = Name;
-				CompareAndAppend(Comparison, OutEdits);
+				CompareAndAppend(Comparison, OutEdits, OutDiagnostics);
 			}
 		}
 
@@ -897,6 +1062,7 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 		{
 			FComparison Comparison;
 			Comparison.NodeId = InNode.Id;
+			Comparison.Location = InNode.Location;
 			Comparison.Target = EDreamUIPatchTarget::Slot;
 			Comparison.LiveCandidates = { LiveWidget->GetPanelSlot() };
 			Comparison.TextCandidates = { TextWidget->GetPanelSlot() };
@@ -913,8 +1079,12 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 			}
 			for (const FString& Name : Names)
 			{
+				if (!KeepName(InNode.Id, EDreamUIPatchTarget::Slot, INDEX_NONE, Name))
+				{
+					continue;
+				}
 				Comparison.PropertyName = Name;
-				CompareAndAppend(Comparison, OutEdits);
+				CompareAndAppend(Comparison, OutEdits, OutDiagnostics);
 			}
 		}
 
@@ -936,6 +1106,7 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 
 				FComparison Comparison;
 				Comparison.NodeId = InNode.Id;
+				Comparison.Location = InNode.Location;
 				Comparison.Target = EDreamUIPatchTarget::Component;
 				Comparison.ComponentIndex = ComponentIndex;
 				Comparison.LiveCandidates = { LiveObjects[ComponentIndex] };
@@ -956,21 +1127,150 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 				}
 				for (const FString& Name : Names)
 				{
+					if (!KeepName(InNode.Id, EDreamUIPatchTarget::Component, ComponentIndex, Name))
+					{
+						continue;
+					}
 					Comparison.PropertyName = Name;
-					CompareAndAppend(Comparison, OutEdits);
+					CompareAndAppend(Comparison, OutEdits, OutDiagnostics);
 				}
 			}
 		}
 	});
 
-	// Deliberately silent. Everything worth saying about this pass is already said on one side of it
-	// or the other: the builder reported the unknown properties and unloadable assets while making
-	// the reference tree, and the patcher reports every refusal by name and location while applying
-	// what comes out. A complaint raised here would be a third voice for causes those two already
-	// own, and it would repeat on every flush for the life of the file. The parameter stays so that
-	// the day this DOES have a refusal of its own -- a node whose class changed under a live tree,
-	// say -- adding it is not a signature change through every caller.
-	(void)OutDiagnostics;
+	// Almost silent, and the exception is the one refusal this pass genuinely owns. Everything else
+	// worth saying is already said on one side of it or the other: the builder reported the unknown
+	// properties and unloadable assets while making the reference tree, and the patcher reports every
+	// refusal by name and location while applying what comes out. A complaint raised here for those
+	// would be a third voice for causes those two already own, and it would repeat on every flush for
+	// the life of the file.
+	//
+	// DUI7003 is not one of those. "The live value has no spelling in this language" is visible ONLY
+	// here -- the builder never saw the value and the patcher is never handed an edit for it -- which
+	// is why the code sat declared, documented and raised from nowhere while a NaN in a property just
+	// greyed a row. See CompareAndAppend.
+}
+
+// -------------------------------------------------------------------------------------------------
+// The dirty set, and the structural half of a flush
+// -------------------------------------------------------------------------------------------------
+
+void FDreamUITextWriteBack::NoteDirtyProperty(const UDreamWidgetTree* InTree, const FString& InNodeId,
+	EDreamUIPatchTarget InTarget, int32 InComponentIndex, const FString& InPropertyName)
+{
+	if (InTree == nullptr || InNodeId.IsEmpty() || InPropertyName.IsEmpty())
+	{
+		return;
+	}
+	DreamUIWriteBackDirtyLocal::GetDirtyMap().FindOrAdd(InTree).Add(
+		DreamUIWriteBackDirtyLocal::MakeKey(InNodeId, InTarget, InComponentIndex, InPropertyName));
+}
+
+void FDreamUITextWriteBack::ClearDirtyProperties(const UDreamWidgetTree* InTree)
+{
+	if (InTree != nullptr)
+	{
+		DreamUIWriteBackDirtyLocal::GetDirtyMap().Remove(InTree);
+	}
+}
+
+int32 FDreamUITextWriteBack::NumDirtyProperties(const UDreamWidgetTree* InTree)
+{
+	const TSet<FString>* Found = InTree != nullptr
+		? DreamUIWriteBackDirtyLocal::GetDirtyMap().Find(InTree) : nullptr;
+	return Found != nullptr ? Found->Num() : 0;
+}
+
+void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
+	const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits)
+{
+	using namespace DreamUIWriteBackLocal;
+
+	if (InLiveTree == nullptr || InTextTree == nullptr || !InAst.bHasRoot)
+	{
+		return;
+	}
+
+	TMap<FString, UDreamWidget*> LiveWidgets;
+	TMap<FString, UDreamWidget*> TextWidgets;
+	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveWidgets);
+	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InTextTree), TextWidgets);
+
+	// Only nodes the FILE declares can be removed or reordered: a widget the builder synthesised is
+	// in both trees and is nobody's line to move.
+	TSet<FString> AuthoredIds;
+	InAst.ForEachNode([&AuthoredIds](const FDreamUINode& InNode)
+	{
+		if (InNode.Kind != EDreamUINodeKind::Widget && InNode.Kind != EDreamUINodeKind::NamedSlot)
+		{
+			return;
+		}
+		if (!InNode.Id.IsEmpty())
+		{
+			AuthoredIds.Add(InNode.Id);
+		}
+	});
+
+	// ---- removed: in the file, built into the reference tree, gone from the live one --------------
+	InAst.ForEachNode([&](const FDreamUINode& InNode)
+	{
+		if (InNode.Id.IsEmpty()
+			|| (InNode.Kind != EDreamUINodeKind::Widget && InNode.Kind != EDreamUINodeKind::NamedSlot))
+		{
+			return;
+		}
+		if (TextWidgets.Contains(InNode.Id) && !LiveWidgets.Contains(InNode.Id))
+		{
+			FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
+			Edit.Kind = EDreamUIStructuralEditKind::RemoveNode;
+			Edit.NodeId = InNode.Id;
+		}
+	});
+
+	// ---- added: on the live tree and on neither the file nor the reference tree -------------------
+	//
+	// Parents first, so a subtree dropped in at once is written outermost-in and each insert finds a
+	// block its parent's insert has already created. The walk is depth-first from the root, which is
+	// that order by construction.
+	TArray<UDreamWidget*> LiveWidgetsInOrder;
+	if (IsValid(InLiveTree->RootWidget))
+	{
+		UDreamWidget::CollectChildrenWidgets(InLiveTree->RootWidget, LiveWidgetsInOrder, /*IncludeTarget*/true);
+	}
+	TSet<FString> Inserted;
+	for (UDreamWidget* LiveWidget : LiveWidgetsInOrder)
+	{
+		if (!IsValid(LiveWidget))
+		{
+			continue;
+		}
+		const FString Id = LiveWidget->GetDisplayName();
+		if (Id.IsEmpty() || TextWidgets.Contains(Id) || AuthoredIds.Contains(Id))
+		{
+			continue;
+		}
+		UDreamWidget* Parent = LiveWidget->GetParent();
+		if (!IsValid(Parent))
+		{
+			// A new ROOT is not an insert, it is a different file. Nothing sensible to write.
+			continue;
+		}
+		const FString ParentId = Parent->GetDisplayName();
+		if (!AuthoredIds.Contains(ParentId) && !Inserted.Contains(ParentId))
+		{
+			// The parent is a synthesised widget (an `each` content holder) or a node the file does
+			// not declare. Writing into it would be writing into machinery the author never typed.
+			continue;
+		}
+
+		FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
+		Edit.Kind = EDreamUIStructuralEditKind::InsertNode;
+		Edit.ParentId = Parent == InLiveTree->RootWidget ? FString() : ParentId;
+		Edit.NewId = Id;
+		Edit.ChildIndex = Parent->GetChildIndex(LiveWidget);
+		Edit.TypeName = DescribeWidgetForText(LiveWidget);
+		Inserted.Add(Id);
+	}
 }
 
 bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
@@ -999,24 +1299,55 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 		return false;
 	}
 
+	// ---- phase one: SHAPE ---------------------------------------------------------------------
+	//
+	// Structure before values, and with its own parse in between, because a structural splice moves
+	// every location after it -- the property pass has to be planned against the file it will land
+	// in, not the one that came in. This is the "a caller that wants two edits re-parses in between"
+	// rule from FDreamUITextPatcher's own comment, and this is the caller.
+	FString Working = InText;
+	TArray<FDreamUIStructuralEdit> StructuralEdits;
+	CollectStructuralEdits(Ast, InLiveTree, TextTree.Get(), StructuralEdits);
+	if (StructuralEdits.Num() > 0)
+	{
+		FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, StructuralEdits, OutDiagnostics);
+
+		FDreamUIAst Rebuilt;
+		TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, OutDiagnostics));
+		if (!RebuiltTree.IsValid())
+		{
+			// The shape pass produced a file that does not build. Nothing is written at all -- half a
+			// structural change is worse than none, and the diagnostics say which line went wrong.
+			OutText = InText;
+			return false;
+		}
+		Ast = MoveTemp(Rebuilt);
+		TextTree = MoveTemp(RebuiltTree);
+	}
+
+	// ---- phase two: VALUES ----------------------------------------------------------------------
 	TArray<FDreamUIPropertyEdit> Edits;
-	CollectEdits(Ast, InLiveTree, TextTree.Get(), Edits, OutDiagnostics);
-	DreamUIWriteBackLocal::CollectResourceEdits(Ast, InLiveDefaults, Edits);
+	// The dirty set is skipped for a flush that changed the shape: a node that has just been written
+	// into the file has no dirty entries, and its authored values would go unwritten. Sweeping is the
+	// fallback the set is layered over, and this is one of the cases it exists for.
+	CollectEdits(Ast, InLiveTree, TextTree.Get(), Edits, OutDiagnostics,
+		/*bInUseDirtySet*/StructuralEdits.IsEmpty());
+	DreamUIWriteBackLocal::CollectResourceEdits(Ast, InLiveDefaults, Edits, OutDiagnostics);
 	if (OutEdits != nullptr)
 	{
 		*OutEdits = Edits;
 	}
 	if (Edits.IsEmpty())
 	{
+		OutText = MoveTemp(Working);
 		return true;
 	}
 
-	// One batch, because every location in Ast describes InText as it is right now and the first
+	// One batch, because every location in Ast describes Working as it is right now and the first
 	// splice invalidates the ones after it. SetProperties plans them all against this one state and
 	// applies them backwards; its false only means something was refused, and the rest still landed.
-	FString Patched = InText;
-	FDreamUITextPatcher::SetProperties(Patched, Ast, Edits, OutDiagnostics);
-	OutText = MoveTemp(Patched);
+	FDreamUITextPatcher::SetProperties(Working, Ast, Edits, OutDiagnostics);
+	OutText = MoveTemp(Working);
 	return true;
 }
 
@@ -1148,6 +1479,24 @@ bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FStrin
 	}
 	LastEditCount = Edits.Num();
 
+	// A flush that SUCCEEDED can still have refused things -- a patch target that moved, a value with
+	// no spelling -- and those landed in a bag nothing reads: GetLastDiagnostics has no callers, so a
+	// DUI7001 or a DUI7003 inside an otherwise working flush was written down and shown to nobody,
+	// which is the same silence the code table exists to end.
+	//
+	// The 7xxx band ONLY. The bag also carries whatever the reference-tree build had to say, and
+	// those causes belong to the compiler, which reports them into the message log and the mailbox
+	// where a reader can act on them; repeating them here would put a copy of every compile warning
+	// in the Output Log on every gesture the designer ends.
+	for (const FDreamUIDiagnostic& Diagnostic : LastDiagnostics.Diagnostics)
+	{
+		if (static_cast<int32>(Diagnostic.Code) >= 7000)
+		{
+			UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s"),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Diagnostic.ToString());
+		}
+	}
+
 	if (Updated.Equals(Current, ESearchCase::CaseSensitive))
 	{
 		// THE CASE THIS CLASS IS MOSTLY FOR. Not an early-out for speed: calling SetContent here
@@ -1170,6 +1519,11 @@ bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FStrin
 	// So the broadcast our own SetContent causes is not read as somebody else's edit and answered
 	// with a regeneration of the tree we just derived this text from.
 	TGuardValue<bool> WritingBack(bIsWritingBack, true);
+
+	// Consumed. The set describes what has happened SINCE the last write, so carrying it past one
+	// would make a later flush write values nobody touched that time -- which is the sweep's
+	// behaviour, and the whole point of the set is not to have it.
+	ClearDirtyProperties(InLiveTree);
 
 	const bool bSet = Document->SetContent(Updated, OutError);
 	if (Document->GetContent().Equals(Updated, ESearchCase::CaseSensitive))

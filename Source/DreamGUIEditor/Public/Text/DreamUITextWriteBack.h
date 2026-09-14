@@ -241,9 +241,15 @@ public:
 	 * FDreamUINode::Id -- and the walk stops at each nested widget blueprint instance, whose
 	 * contents belong to another file.
 	 */
+	/*
+	 * bInUseDirtySet: honour what NoteDirtyProperty was told about InLiveTree, when anything was.
+	 * False sweeps everything regardless, which is what a flush that has just changed the file's
+	 * SHAPE needs -- a node written into the file a moment ago has no dirty entries and its authored
+	 * values would go unwritten.
+	 */
 	static void CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 		const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
-		FDreamUIDiagnosticBag& OutDiagnostics);
+		FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet = true);
 
 	/**
 	 * InText with the live tree's values in it. OutText equals InText when nothing had changed.
@@ -261,6 +267,57 @@ public:
 	static bool ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
 		FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits = nullptr,
 		const UObject* InLiveDefaults = nullptr);
+
+	/**
+	 * How the two trees DISAGREE ABOUT SHAPE, as patcher commands: added, removed and reordered nodes.
+	 *
+	 * The comparison is the same one every value goes through, and that is what makes it safe. Both
+	 * trees come out of the same builder, so everything the builder synthesises -- an `each` block's
+	 * content widget, the list entry it adds to a template, the behaviours a layout container pulls
+	 * in -- is present in BOTH and cancels out. A widget that exists only in the live tree can
+	 * therefore only be one the designer made; one that exists only in the reference tree can only be
+	 * one the designer deleted. Diffing the live tree against the FILE instead would report every
+	 * synthesised object as a missing line.
+	 *
+	 * A rename is deliberately not inferred: from a diff it is a delete plus an insert, and guessing
+	 * which pairs with which would write `(was:)` clauses that migrate the wrong thing. A caller that
+	 * KNOWS a rename happened issues FDreamUIStructuralEdit directly.
+	 */
+	static void CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
+		const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits);
+
+	// -------------------------------------------------------------------------------------------
+	// The dirty set: what the designer says it touched
+	// -------------------------------------------------------------------------------------------
+
+	/**
+	 * Note that something wrote InPropertyName on InNodeId's InTarget, so the next flush writes THAT.
+	 *
+	 * WHY THIS EXISTS. The flush compares every property reflection can reach on both trees and
+	 * writes the ones that differ. That fails CLOSED -- a property nobody listed is still written --
+	 * which is why it was chosen over a table, and it has one hole that is not a matter of taste: a
+	 * value can differ for a reason that is not an edit. The anchor block of a widget inside a layout
+	 * container is the case that bit -- the panel ARRANGES it, so the live value is layout output,
+	 * and every flush wrote the panel's arithmetic into the author's file as if they had typed it.
+	 *
+	 * So the rule is now: if anything has told this tree what it touched, the flush writes only
+	 * those; if nothing has, the full sweep runs exactly as before. Both halves are deliberate. The
+	 * first makes the common path say what it means. The second keeps the sweep as the fallback for
+	 * every caller that does not report -- a commandlet, a test, a tool -- because losing an edit is
+	 * worse than writing a line twice, which is the trade the sweep was chosen for.
+	 *
+	 * Keyed on the TREE rather than kept per write-back, because the reporters (the preview host's
+	 * two migration paths) reach a tree long before they could reach a write-back, and because two
+	 * designers open at once then cannot see each other's edits.
+	 */
+	static void NoteDirtyProperty(const UDreamWidgetTree* InTree, const FString& InNodeId,
+		EDreamUIPatchTarget InTarget, int32 InComponentIndex, const FString& InPropertyName);
+
+	/** Forget one tree's set. The flush calls it once it has written; a closing designer too. */
+	static void ClearDirtyProperties(const UDreamWidgetTree* InTree);
+
+	/** How many properties this tree is carrying as dirty. For tests and for the log. */
+	static int32 NumDirtyProperties(const UDreamWidgetTree* InTree);
 
 
 

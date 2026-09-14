@@ -1000,4 +1000,415 @@ bool FDreamUIPatcherBatchTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIPatcherResourceRefAndHexSpellingTest,
+	"DreamGUI.Text.Patcher.AResourceReferenceIsVerifiedAndAShortHexKeepsItsSpelling",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Two things the value path treated as special cases and then did not handle.
+ *
+ * THE STALE CHECK. Every value kind is verified against the text under its recorded location before
+ * anything is spliced -- that is what converts "the AST is out of date" from silent corruption of
+ * somebody's open file into a refusal. The switch had no ResourceRef branch, and bSliceAgrees starts
+ * TRUE, so `@Accent` was the one spelling that skipped the check entirely.
+ *
+ * THE HEX SPELLING. The printer only writes six or eight digits, so the first write-back to touch a
+ * `#ABC` line expanded it -- a diff hunk on a line whose meaning did not change. The answer is read
+ * off the file being patched, not remembered: if the new colour is the same doubled-nibble shape and
+ * the line already had that many digits, the author's spelling stands.
+ */
+bool FDreamUIPatcherResourceRefAndHexSpellingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIPatcherTestLocal;
+
+	// ---- @Ref: an edit lands on the reference, and a stale location is refused ----------------
+	{
+		const TArray<FString> Lines = {
+			TEXT("resources {"),
+			TEXT("    Color Accent = #FF6600"),
+			TEXT("}"),
+			TEXT(""),
+			TEXT("Widget Root {"),
+			TEXT("    Text Title {"),
+			TEXT("        Brush.TintColor = @Accent"),
+			TEXT("    }"),
+			TEXT("}")
+		};
+		FString Text = MakeSource(Lines);
+		TestTrue(TEXT("baking a resource reference down to a literal is allowed"),
+			Patch(Text, TEXT("Title"), EDreamUIPatchTarget::Node, INDEX_NONE,
+				TEXT("Brush.TintColor"), TEXT("#101010")));
+		TArray<FString> Expected = Lines;
+		Expected[6] = TEXT("        Brush.TintColor = #101010");
+		TestEqual(TEXT("and replaces the whole reference, sigil included"), Text, MakeSource(Expected));
+	}
+	{
+		// The AST describes a file that no longer exists: the line the location names now holds a
+		// different reference. Without the ResourceRef branch this spliced over whatever was there.
+		const TArray<FString> Lines = {
+			TEXT("resources {"),
+			TEXT("    Color Accent = #FF6600"),
+			TEXT("    Color Other  = #00FF00"),
+			TEXT("}"),
+			TEXT(""),
+			TEXT("Widget Root {"),
+			TEXT("    Text Title {"),
+			TEXT("        Brush.TintColor = @Accent"),
+			TEXT("    }"),
+			TEXT("}")
+		};
+		FDreamUIAst StaleAst;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		if (!TestTrue(TEXT("the original parses"), Parse(MakeSource(Lines), StaleAst, ParseDiagnostics)))
+		{
+			return false;
+		}
+
+		TArray<FString> Moved = Lines;
+		Moved[7] = TEXT("        Brush.TintColor = @Other");
+		const FString Original = MakeSource(Moved);
+		FString Text = Original;
+
+		FDreamUIDiagnosticBag Diagnostics;
+		const bool bWritten = FDreamUITextPatcher::SetProperty(Text, StaleAst, TEXT("Title"),
+			EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("Brush.TintColor"), TEXT("#101010"), Diagnostics);
+		ExpectRefusal(*this, TEXT("a resource reference that changed under the tree"), Original, Text,
+			bWritten, Diagnostics, EDreamUIDiagnosticCode::SourceFileChangedUnderEdit);
+	}
+
+	// ---- hex spelling -------------------------------------------------------------------------
+	{
+		const TArray<FString> Lines = {
+			TEXT("Widget Root {"),
+			TEXT("    Image Bg {"),
+			TEXT("        Brush.TintColor = #ABC"),
+			TEXT("    }"),
+			TEXT("}")
+		};
+		FString Text = MakeSource(Lines);
+		// The printer's long form, written onto a line that chose the short one and can still wear it.
+		TestTrue(TEXT("a new colour is written"),
+			Patch(Text, TEXT("Bg"), EDreamUIPatchTarget::Node, INDEX_NONE,
+				TEXT("Brush.TintColor"), TEXT("#DDEEFF")));
+		TArray<FString> Expected = Lines;
+		Expected[2] = TEXT("        Brush.TintColor = #DEF");
+		TestEqual(TEXT("in the spelling the author chose"), Text, MakeSource(Expected));
+	}
+	{
+		// ...and only when nothing is lost by it. #DDEEF0 has no three-digit form, so it is written
+		// long -- a shortening that rounded would be the patcher changing a value nobody asked it to.
+		const TArray<FString> Lines = {
+			TEXT("Widget Root {"),
+			TEXT("    Image Bg {"),
+			TEXT("        Brush.TintColor = #ABC"),
+			TEXT("    }"),
+			TEXT("}")
+		};
+		FString Text = MakeSource(Lines);
+		TestTrue(TEXT("a colour with no short form is written"),
+			Patch(Text, TEXT("Bg"), EDreamUIPatchTarget::Node, INDEX_NONE,
+				TEXT("Brush.TintColor"), TEXT("#DDEEF0")));
+		TArray<FString> Expected = Lines;
+		Expected[2] = TEXT("        Brush.TintColor = #DDEEF0");
+		TestEqual(TEXT("long, as it must be"), Text, MakeSource(Expected));
+	}
+	{
+		// A three-digit line must not silently grow an alpha: the digit COUNT has to match too.
+		const TArray<FString> Lines = {
+			TEXT("Widget Root {"),
+			TEXT("    Image Bg {"),
+			TEXT("        Brush.TintColor = #ABC"),
+			TEXT("    }"),
+			TEXT("}")
+		};
+		FString Text = MakeSource(Lines);
+		TestTrue(TEXT("a colour that gained an alpha is written"),
+			Patch(Text, TEXT("Bg"), EDreamUIPatchTarget::Node, INDEX_NONE,
+				TEXT("Brush.TintColor"), TEXT("#DDEEFF88")));
+		TArray<FString> Expected = Lines;
+		Expected[2] = TEXT("        Brush.TintColor = #DDEEFF88");
+		TestEqual(TEXT("long, because the short form would be four digits and the line had three"),
+			Text, MakeSource(Expected));
+	}
+
+	// A line that already spells the colour long keeps the long form: nothing here shortens a
+	// spelling the author did not choose.
+	{
+		const TArray<FString> Lines = {
+			TEXT("Widget Root {"),
+			TEXT("    Image Bg {"),
+			TEXT("        Brush.TintColor = #AABBCC"),
+			TEXT("    }"),
+			TEXT("}")
+		};
+		FString Text = MakeSource(Lines);
+		TestTrue(TEXT("a new colour is written"),
+			Patch(Text, TEXT("Bg"), EDreamUIPatchTarget::Node, INDEX_NONE,
+				TEXT("Brush.TintColor"), TEXT("#DDEEFF")));
+		TArray<FString> Expected = Lines;
+		Expected[2] = TEXT("        Brush.TintColor = #DDEEFF");
+		TestEqual(TEXT("still long"), Text, MakeSource(Expected));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIPatcherStructuralEditsTest,
+	"DreamGUI.Text.Patcher.StructureIsEditableAndStillParsesAfterwards",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The capability this component spent its first year disclaiming.
+ *
+ * The disclaimer was right about the consequence -- a designer gesture nothing can write back is a
+ * gesture that vanishes at the next compile -- and wrong about the cause, which was never a property
+ * of text authoring but a function nobody had written. These are that function's terms: whole
+ * statements, anchors confirmed against the text, and the ONE rule the value path already lives
+ * under, which is that whatever comes out of here parses.
+ *
+ * Every case therefore asserts the whole file byte for byte AND re-parses the result. A structural
+ * edit that produced the right shape and an unparseable file would pass the first assertion alone,
+ * and that is the only failure mode here worth being afraid of.
+ */
+bool FDreamUIPatcherStructuralEditsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIPatcherTestLocal;
+
+	auto Structural = [](EDreamUIStructuralEditKind InKind)
+	{
+		FDreamUIStructuralEdit Edit;
+		Edit.Kind = InKind;
+		return Edit;
+	};
+
+	auto ApplyOne = [this](FString& InOutText, const FDreamUIStructuralEdit& InEdit, FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		if (!Parse(InOutText, Ast, ParseDiagnostics))
+		{
+			AddError(TEXT("the fixture did not parse"));
+			return false;
+		}
+		const TArray<FDreamUIStructuralEdit> Batch = { InEdit };
+		return FDreamUITextPatcher::ApplyStructuralEdits(InOutText, Ast, Batch, OutDiagnostics);
+	};
+
+	auto Reparses = [this](const FString& InText, const TCHAR* InWhat)
+	{
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		const bool bParsed = Parse(InText, Ast, Diagnostics);
+		return TestTrue(*FString::Printf(TEXT("%s leaves a file that still parses (%s)"),
+			InWhat, *Diagnostics.ToString()), bParsed);
+	};
+
+	// ---- insert ---------------------------------------------------------------------------------
+	{
+		FString Text = SavePanel();
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::InsertNode);
+		Edit.ParentId = TEXT("Title");
+		Edit.TypeName = TEXT("Image");
+		Edit.NewId = TEXT("Underline");
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a node is inserted"), ApplyOne(Text, Edit, Diagnostics));
+		TestEqual(TEXT("into the block, after the properties already there"), Text,
+			SavePanelInserting(9, { TEXT("        Image Underline {"), TEXT("        }") }));
+		Reparses(Text, TEXT("an insert"));
+	}
+	{
+		// Into a node written with no block at all: the brace is created with the child inside it.
+		FString Text = SavePanel();
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::InsertNode);
+		Edit.ParentId = TEXT("OkText");
+		Edit.TypeName = TEXT("Image");
+		Edit.NewId = TEXT("Tick");
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a blockless node grows a block"), ApplyOne(Text, Edit, Diagnostics));
+		TestEqual(TEXT("with the child in it"), Text,
+			SavePanelInserting(17, { TEXT("            Image Tick {"), TEXT("            }"), TEXT("        }") })
+				.Replace(TEXT("        Text OkText"), TEXT("        Text OkText {")));
+		Reparses(Text, TEXT("an insert into a blockless node"));
+	}
+
+	// ---- remove ---------------------------------------------------------------------------------
+	{
+		FString Text = SavePanel();
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::RemoveNode);
+		Edit.NodeId = TEXT("Bg");
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a node is removed"), ApplyOne(Text, Edit, Diagnostics));
+		TArray<FString> Expected = SavePanelLines();
+		Expected.RemoveAt(19, 2); // lines 20-21, the Image Bg block
+		TestEqual(TEXT("with its whole block and the line it stood on"), Text, MakeSource(Expected));
+		Reparses(Text, TEXT("a remove"));
+	}
+	{
+		// The root is the one node that cannot go: a .dui holds exactly one.
+		FString Text = SavePanel();
+		const FString Original = Text;
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::RemoveNode);
+		Edit.NodeId = TEXT("Root");
+		FDreamUIDiagnosticBag Diagnostics;
+		const bool bWritten = ApplyOne(Text, Edit, Diagnostics);
+		ExpectRefusal(*this, TEXT("removing the root"), Original, Text, bWritten,
+			Diagnostics, EDreamUIDiagnosticCode::PatchTargetNotFound);
+	}
+
+	// ---- rename ---------------------------------------------------------------------------------
+	{
+		FString Text = SavePanel();
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::RenameNode);
+		Edit.NodeId = TEXT("Title");
+		Edit.NewId = TEXT("Heading");
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a node is renamed"), ApplyOne(Text, Edit, Diagnostics));
+		// The clause is the point: the id is the class member variable, the animation binding path
+		// and the localization key, and `(was:)` is how the next compile carries all three across.
+		TestEqual(TEXT("carrying the clause the compile migrates through"), Text,
+			SavePanelWith(7, TEXT("    Text Heading (was: Title) {")));
+		Reparses(Text, TEXT("a rename"));
+
+		// A second rename keeps naming where the node STARTED. Rewriting the clause to the name we
+		// are leaving would strand everything that still points at the first.
+		FDreamUIStructuralEdit Again = Structural(EDreamUIStructuralEditKind::RenameNode);
+		Again.NodeId = TEXT("Heading");
+		Again.NewId = TEXT("Banner");
+		FDreamUIDiagnosticBag SecondDiagnostics;
+		TestTrue(TEXT("and renamed again"), ApplyOne(Text, Again, SecondDiagnostics));
+		TestEqual(TEXT("still migrating from the original id"), Text,
+			SavePanelWith(7, TEXT("    Text Banner (was: Title) {")));
+		Reparses(Text, TEXT("a second rename"));
+	}
+
+	// ---- components -----------------------------------------------------------------------------
+	{
+		FString Text = SavePanel();
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::InsertComponent);
+		Edit.NodeId = TEXT("Bg");
+		Edit.ComponentClassName = TEXT("UIButton");
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a '+' block is inserted"), ApplyOne(Text, Edit, Diagnostics));
+		TestEqual(TEXT("inside the node's block"), Text,
+			SavePanelInserting(20, { TEXT("        + UIButton { }") }));
+		Reparses(Text, TEXT("a component insert"));
+	}
+	{
+		FString Text = SavePanel();
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::RemoveComponent);
+		Edit.NodeId = TEXT("OkBtn");
+		Edit.ComponentIndex = 0;
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a '+' block is removed"), ApplyOne(Text, Edit, Diagnostics));
+		TArray<FString> Expected = SavePanelLines();
+		Expected.RemoveAt(12, 3); // lines 13-15, the + UIButton block
+		TestEqual(TEXT("with its whole block"), Text, MakeSource(Expected));
+		Reparses(Text, TEXT("a component remove"));
+	}
+
+	// ---- move -----------------------------------------------------------------------------------
+	{
+		FString Text = SavePanel();
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::MoveNode);
+		Edit.NodeId = TEXT("Bg");
+		Edit.ParentId = TEXT("OkBtn");
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("a node is moved"), ApplyOne(Text, Edit, Diagnostics));
+		Reparses(Text, TEXT("a move"));
+
+		// The subtree is somewhere else and nowhere twice, which is the whole contract of a move.
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		if (TestTrue(TEXT("the moved file parses"), Parse(Text, Ast, ParseDiagnostics)))
+		{
+			int32 Count = 0;
+			Ast.ForEachNode([&Count](const FDreamUINode& InNode) { Count += InNode.Id == TEXT("Bg") ? 1 : 0; });
+			TestEqual(TEXT("exactly one 'Bg' in the file"), Count, 1);
+
+			const FDreamUINode* OkBtn = Ast.Root.Children.FindByPredicate(
+				[](const FDreamUINode& InNode) { return InNode.Id == TEXT("OkBtn"); });
+			if (TestNotNull(TEXT("OkBtn is still there"), OkBtn))
+			{
+				TestTrue(TEXT("and now holds it"), OkBtn->Children.ContainsByPredicate(
+					[](const FDreamUINode& InNode) { return InNode.Id == TEXT("Bg"); }));
+			}
+		}
+	}
+	{
+		// Into itself: the splices would overlap and the subtree would be lost.
+		FString Text = SavePanel();
+		const FString Original = Text;
+		FDreamUIStructuralEdit Edit = Structural(EDreamUIStructuralEditKind::MoveNode);
+		Edit.NodeId = TEXT("OkBtn");
+		Edit.ParentId = TEXT("OkBtn");
+		FDreamUIDiagnosticBag Diagnostics;
+		const bool bWritten = ApplyOne(Text, Edit, Diagnostics);
+		ExpectRefusal(*this, TEXT("moving a node inside itself"), Original, Text, bWritten,
+			Diagnostics, EDreamUIDiagnosticCode::PatchTargetNotFound);
+	}
+
+	// ---- a stale tree is refused, not guessed at -------------------------------------------------
+	{
+		const FString Original = SavePanel();
+		FDreamUIAst StaleAst;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		if (TestTrue(TEXT("the original parses"), Parse(Original, StaleAst, ParseDiagnostics)))
+		{
+			// The file moved on: `Text Title` is now an `Image`, so the tree's idea of line 7 is
+			// wrong. The anchor check is what turns that into a refusal rather than a cut.
+			FString Moved = SavePanelWith(7, TEXT("    Image Title {"));
+			const FString Before = Moved;
+			FDreamUIStructuralEdit Edit;
+			Edit.Kind = EDreamUIStructuralEditKind::RemoveNode;
+			Edit.NodeId = TEXT("Title");
+			FDreamUIDiagnosticBag Diagnostics;
+			const TArray<FDreamUIStructuralEdit> Batch = { Edit };
+			const bool bWritten = FDreamUITextPatcher::ApplyStructuralEdits(Moved, StaleAst, Batch, Diagnostics);
+			ExpectRefusal(*this, TEXT("a structural edit against a stale tree"), Before, Moved, bWritten,
+				Diagnostics, EDreamUIDiagnosticCode::SourceFileChangedUnderEdit);
+		}
+	}
+
+	// ---- a style block is a patch target like any other -------------------------------------------
+	{
+		const TArray<FString> Lines = {
+			TEXT("style Card {"),
+			TEXT("    FontSize = 18"),
+			TEXT("}"),
+			TEXT(""),
+			TEXT("Widget Root { }")
+		};
+		FString Text = MakeSource(Lines);
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		if (TestTrue(TEXT("the style fixture parses"), Parse(Text, Ast, ParseDiagnostics)))
+		{
+			FDreamUIDiagnosticBag Diagnostics;
+			TestTrue(TEXT("an existing style property is replaced"),
+				FDreamUITextPatcher::SetProperty(Text, Ast, TEXT("Card"), EDreamUIPatchTarget::Style,
+					INDEX_NONE, TEXT("FontSize"), TEXT("22"), Diagnostics));
+			TArray<FString> Expected = Lines;
+			Expected[1] = TEXT("    FontSize = 22");
+			TestEqual(TEXT("in the block that declares it"), Text, MakeSource(Expected));
+		}
+	}
+	{
+		// An imported style is written in the file that DECLARES it, which is not this one.
+		FString Text = MakeSource({ TEXT("Widget Root { }") });
+		const FString Original = Text;
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		if (TestTrue(TEXT("the fixture parses"), Parse(Text, Ast, ParseDiagnostics)))
+		{
+			FDreamUIDiagnosticBag Diagnostics;
+			const bool bWritten = FDreamUITextPatcher::SetProperty(Text, Ast, TEXT("Heading"),
+				EDreamUIPatchTarget::Style, INDEX_NONE, TEXT("FontSize"), TEXT("22"), Diagnostics);
+			ExpectRefusal(*this, TEXT("a style this file does not declare"), Original, Text, bWritten,
+				Diagnostics, EDreamUIDiagnosticCode::PatchTargetNotFound);
+		}
+	}
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

@@ -5,6 +5,7 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Engine/Texture2D.h"
+#include "Templates/SubclassOf.h"
 #include "DreamWidgetBehaviourTestTypes.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDreamUIEventTestPoked);
@@ -53,6 +54,52 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float Plain = 0.0f;
+};
+
+/** Three states, so an enum property has both a legal number and an illegal one to be written. */
+UENUM()
+enum class EDreamUITypedValueTestState : uint8
+{
+	Idle,
+	Busy,
+	Done,
+};
+
+/**
+ * The two value kinds the builder has to judge by TYPE rather than by literal shape.
+ *
+ * A TSubclassOf carries its bound in FClassProperty::MetaClass and NOT in PropertyClass -- which is
+ * UClass for every one of them -- so a check written against PropertyClass accepts any class that
+ * loads. An enum written as a NUMBER used to fall past the enum branch entirely and be written by
+ * ImportText, which takes any integer at all. Both produced a green compile and a value the type
+ * does not have; both are checked here through the real builder, off a real reflected property,
+ * because a hand-made FProperty would be testing the fixture.
+ */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class UDreamUITypedValueTestBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UDreamWidget> WidgetClass;
+
+	UPROPERTY(EditAnywhere)
+	EDreamUITypedValueTestState State = EDreamUITypedValueTestState::Idle;
+
+	/**
+	 * A DOUBLE, which nothing bindable in the framework is -- and which is the point.
+	 *
+	 * The compiler paired a bound function's return with its target using FProperty::SameType, so a
+	 * project's own behaviour declaring a double (or an int64, or a uint8) could not be bound at all;
+	 * and because 5004 covers "no such function" as well as "wrong shape", the refusal read as a
+	 * misspelling that was not there. The setter is what makes the property bindable in the first
+	 * place (FindDreamWidgetSetterFor), so it is part of the fixture, not decoration.
+	 */
+	UPROPERTY(EditAnywhere)
+	double Precise = 0.0;
+
+	UFUNCTION()
+	void SetPrecise(double InValue) { Precise = InValue; }
 };
 
 /** An assignable event and a way to fire it, for `OnPoked -> Handler` routes to land on. */

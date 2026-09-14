@@ -1,10 +1,11 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
 
 #include "DreamWidgetBlueprint.h"
+#include "DreamWidgetBehaviourTestTypes.h"
 #include "DreamWidgetBlueprintTestTypes.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
@@ -159,6 +160,164 @@ bool FDreamUIExpressionThunkCompilesTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("The recompile has no errors"), SecondResults.NumErrors, 0);
 	TestEqual(TEXT("Still exactly one generated graph"), CountGeneratedGraphs(Fixture.Blueprint), 1);
 	TestTrue(TEXT("...still findable by its deterministic name"),
+		Fixture.Blueprint->GeneratedClass->FindFunctionByName(ThunkName) != nullptr);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIBindingNumericWidthTest,
+	"DreamGUI.Text.Binding.AFloatSourceBindsADoubleTargetAndAnEnumStillDoesNot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A project's own behaviour, declaring a double, being bindable.
+ *
+ * The compile paired the bound function's return with the target using FProperty::SameType, and
+ * every `<-` in the language lands on one of two things: a framework property (all of which are
+ * float, which is why the thunk generator narrows its return pin) or somebody's own. The second kind
+ * was simply unbindable if it was a double, an int64 or a uint8 -- and the refusal shares its code
+ * with "this Blueprint has no such function", so the author went looking for a misspelling.
+ *
+ * The runtime copies through the same rule, which is the part that makes the widening safe rather
+ * than merely permissive: the old CopyCompleteValue between two widths is a memcpy reading the wrong
+ * bytes. Enums stay excluded, because an enum's value is a NAME written as a number.
+ */
+bool FDreamUIBindingNumericWidthTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	FScopedDuiFile File(TEXT("NumericBindFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_NumericBind"),
+		TEXT("Widget Root {"),
+		TEXT("    + /Script/DreamGUIEditor.DreamUITypedValueTestBehaviour {"),
+		TEXT("        Precise <- GetScale()"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_NumericBind"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("a float source onto a double target compiles"), Results.NumErrors, 0);
+
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectPropertyBindings(Fixture.Blueprint->GeneratedClass, Bindings);
+	TestTrue(TEXT("and the binding survived resolution"), Bindings.ContainsByPredicate(
+		[](const FDreamWidgetPropertyBinding& InBinding)
+	{
+		return InBinding.PropertyName == FName(TEXT("Precise"))
+			&& InBinding.SetterName == FName(TEXT("SetPrecise"));
+	}));
+
+	// The rule itself, both ways, off real reflected properties: an enum is numeric by reflection
+	// and not by meaning, so a plain int must never flow into one.
+	const UClass* Behaviour = UDreamUITypedValueTestBehaviour::StaticClass();
+	const FProperty* Precise = Behaviour->FindPropertyByName(TEXT("Precise"));
+	const FProperty* State = Behaviour->FindPropertyByName(TEXT("State"));
+	UFunction* GetScale = UDreamTextUserWidgetBindingBase::StaticClass()->FindFunctionByName(TEXT("GetScale"));
+	const FProperty* Source = GetScale != nullptr ? GetScale->GetReturnProperty() : nullptr;
+	if (TestTrue(TEXT("the fixture's properties are reachable"),
+		Precise != nullptr && State != nullptr && Source != nullptr))
+	{
+		TestTrue(TEXT("float to double converts"), CanDreamWidgetBoundValueConvert(Source, Precise));
+		TestFalse(TEXT("float to an enum does not"), CanDreamWidgetBoundValueConvert(Source, State));
+
+		// And the copy agrees with the check, which is the invariant the pair exists for.
+		double Destination = 0.0;
+		const float Value = 2.5f;
+		TestTrue(TEXT("the copy runs"), CopyDreamWidgetBoundValue(Source, &Value, Precise, &Destination));
+		TestEqual(TEXT("converting rather than reinterpreting the bytes"), Destination, 2.5);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIExpressionThunkInStyleTest,
+	"DreamGUI.Text.Expression.AnExpressionInsideAStyleIsLoweredOnceAndDrivesEveryNodeWearingIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The one place in the language where a binding could be written and then simply not exist.
+ *
+ * The thunk pass walked NODES only, so `<- expression` inside a `style` block reached the builder
+ * un-lowered; the builder's empty-name guard skipped it without a word and the file compiled green
+ * with the property never driven. A bare `<- F()` in the same block worked -- the parser fills
+ * BindingFunction for that shape -- which is exactly what made the gap so hard to see.
+ *
+ * Two nodes wear the style, because that is the half a naive fix gets wrong: lowering per wearer
+ * would claim one graph name twice, and CreateNewGraph answers a name collision by renaming the
+ * FIRST graph out of the way rather than refusing.
+ */
+bool FDreamUIExpressionThunkInStyleTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	FScopedDuiFile File(TEXT("ThunkStyleFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_ThunkStyle"),
+		TEXT("style Idle {"),
+		TEXT("    bWidgetActive <- !IsBusy()"),
+		TEXT("}"),
+		TEXT("Widget Root {"),
+		TEXT("    Text Title : Idle {"),
+		TEXT("    }"),
+		TEXT("    Text Subtitle : Idle {"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_ThunkStyle"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("The style compile has no errors"), Results.NumErrors, 0);
+
+	// Named after the STYLE, not after either node: one function on the class, shared, which is what
+	// a style means. A per-wearer name would also be undecidable for the write-back later.
+	const FName ThunkName(TEXT("__DreamBinding_Style_Idle_bWidgetActive"));
+	UFunction* Thunk = Fixture.Blueprint->GeneratedClass->FindFunctionByName(ThunkName);
+	if (!TestTrue(TEXT("The generated function exists on the class"), Thunk != nullptr))
+	{
+		return false;
+	}
+	TestTrue(TEXT("It returns a bool"), CastField<FBoolProperty>(Thunk->GetReturnProperty()) != nullptr);
+	TestTrue(TEXT("It is pure"), Thunk->HasAnyFunctionFlags(FUNC_BlueprintPure));
+	TestEqual(TEXT("And there is exactly one of it, for two wearers"), CountGeneratedGraphs(Fixture.Blueprint), 1);
+
+	// Both nodes are driven. Before this, NEITHER was: the binding was dropped where the builder
+	// found a name-less one, and nothing anywhere said so.
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectPropertyBindings(Fixture.Blueprint->GeneratedClass, Bindings);
+	int32 Driven = 0;
+	for (const FDreamWidgetPropertyBinding& Binding : Bindings)
+	{
+		if (Binding.FunctionName == ThunkName)
+		{
+			++Driven;
+		}
+	}
+	TestEqual(TEXT("Both nodes wearing the style carry the binding"), Driven, 2);
+
+	// Regenerate-each-compile holds for a style's thunk too: still one graph, still the same name.
+	FCompilerResultsLog SecondResults;
+	Compile(Fixture.Blueprint, SecondResults);
+	TestEqual(TEXT("The recompile has no errors"), SecondResults.NumErrors, 0);
+	TestEqual(TEXT("Still exactly one generated graph"), CountGeneratedGraphs(Fixture.Blueprint), 1);
+	TestTrue(TEXT("...under the same deterministic name"),
 		Fixture.Blueprint->GeneratedClass->FindFunctionByName(ThunkName) != nullptr);
 	return true;
 }
@@ -454,6 +613,152 @@ bool FDreamUIEachMisplacedTest::RunTest(const FString& Parameters)
 	TArray<FDreamWidgetEachBinding> EachBindings;
 	UDreamWidgetGeneratedClass::CollectEachBindings(Fixture.Blueprint->GeneratedClass, EachBindings);
 	TestEqual(TEXT("Nothing half-made reaches the class"), EachBindings.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIResourceInExpressionTest,
+	"DreamGUI.Text.Expression.AResourceReferenceIsReadableInsideABindingExpression",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * `@Accent` on the right of `<-`.
+ *
+ * No new spelling: `@Name` is what a `resources` block has always been referred to by, and the only
+ * thing that changed is that the one place it could not be written now reads it. A named constant
+ * that can be assigned but not multiplied is a constant with a rule nobody can remember.
+ *
+ * Resolved where the expression is LOWERED and never by rewriting the tree, which is the part worth
+ * pinning: the patcher owns this AST's byte offsets, so substituting a longer literal into it would
+ * leave every later edit measured against columns that no longer exist.
+ */
+bool FDreamUIResourceInExpressionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	FScopedDuiFile File(TEXT("ResourceExpressionFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_ResourceExpression"),
+		TEXT("resources {"),
+		TEXT("    Number Gain = 0.5"),
+		TEXT("}"),
+		TEXT("Widget Root {"),
+		TEXT("    Text Title {"),
+		TEXT("        RenderOpacity <- GetScale() * @Gain"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_ResourceExpression"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("an expression carrying a resource compiles"), Results.NumErrors, 0);
+
+	UFunction* Thunk = Fixture.Blueprint->GeneratedClass->FindFunctionByName(TEXT("__DreamBinding_Title_RenderOpacity"));
+	TestTrue(TEXT("and lowered into a thunk like any other expression"), Thunk != nullptr);
+
+	// A colour is refused, and the refusal is the honest half of this: an expression is arithmetic
+	// and comparison, and there is no operator in the grammar a colour could take part in.
+	FScopedDuiFile ColorFile(TEXT("ResourceExpressionColorFixture.dui"));
+	if (!TestTrue(TEXT("Second fixture written"), ColorFile.Write({
+		TEXT("class /Temp/DreamGUITests/BP_ResourceExpressionColor"),
+		TEXT("resources {"),
+		TEXT("    Color Accent = #FF6600"),
+		TEXT("}"),
+		TEXT("Widget Root {"),
+		TEXT("    Text Title {"),
+		TEXT("        RenderOpacity <- GetScale() * @Accent"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	AddExpectedError(TEXT("DUI5011"), EAutomationExpectedErrorFlags::Contains, 0);
+	FScopedBlueprint ColorFixture(TEXT("BP_ResourceExpressionColor"));
+	if (!TestTrue(TEXT("Blueprint created"), ColorFixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), ColorFixture.SetDuiFilePath(ColorFile.FilePath)))
+	{
+		return false;
+	}
+	FCompilerResultsLog ColorResults;
+	Compile(ColorFixture.Blueprint, ColorResults);
+	TestTrue(TEXT("a colour resource in an expression is refused rather than lowered"), ColorResults.NumErrors > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIImportedResourceVariableTest,
+	"DreamGUI.Text.AnImportedResourceGetsItsClassVariableToo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * `use "Palette.dui"` giving this class a variable per imported entry.
+ *
+ * The rule it replaces was written down as deliberate -- "imported resources become nobody's class
+ * variables" -- on the reasoning that a variable belongs to one class and an entry belongs to a
+ * library. True, and not an argument for declaring nothing: `@Accent` already RESOLVED through the
+ * import chain on every line that wrote it, so the file could spell an imported resource everywhere
+ * except in the one place a graph or the Class Defaults panel could see it.
+ */
+bool FDreamUIImportedResourceVariableTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	FScopedDuiFile Library(TEXT("ImportedResourceLibrary.dui"));
+	if (!TestTrue(TEXT("Library written"), Library.Write({
+		TEXT("resources {"),
+		TEXT("    Number LibraryGap = 7"),
+		TEXT("    Number Shared = 1"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+
+	FScopedDuiFile File(TEXT("ImportedResourceFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_ImportedResource"),
+		FString::Printf(TEXT("use \"%s\""), *Library.FilePath),
+		TEXT("resources {"),
+		TEXT("    Number Shared = 2"),
+		TEXT("}"),
+		TEXT("Widget Root { }")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_ImportedResource"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestEqual(TEXT("the importing class compiles"), Results.NumErrors, 0);
+
+	UClass* Generated = Fixture.Blueprint->GeneratedClass;
+	if (!TestNotNull(TEXT("the class was generated"), Generated))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("the imported entry has its variable"), Generated->FindPropertyByName(TEXT("LibraryGap")));
+	TestNotNull(TEXT("and so does the local one"), Generated->FindPropertyByName(TEXT("Shared")));
+
+	// Exactly one `Shared`, and it is the LOCAL value: the shadowing rule the variables follow is
+	// the one FindResource already follows, so `@Shared` and the variable cannot mean two things.
+	int32 SharedCount = 0;
+	for (const FBPVariableDescription& Variable : Fixture.Blueprint->GeneratedVariables)
+	{
+		SharedCount += Variable.VarName == FName(TEXT("Shared")) ? 1 : 0;
+	}
+	TestEqual(TEXT("a local entry shadows the imported one rather than doubling it"), SharedCount, 1);
 	return true;
 }
 

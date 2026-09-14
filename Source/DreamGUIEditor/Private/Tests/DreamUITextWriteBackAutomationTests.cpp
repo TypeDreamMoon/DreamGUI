@@ -935,4 +935,313 @@ bool FDreamUIResourceRefusalsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIBuilderTypedValueTest,
+	"DreamGUI.Text.ASubclassOfIsCheckedAgainstItsBoundAndAnEnumNumberAgainstItsEnum",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The two writes that used to compile green and produce a value the type does not have.
+ *
+ * A TSubclassOf<T> keeps its T in FClassProperty::MetaClass; PropertyClass is UClass for every one
+ * of them, so `Loaded->IsA(PropertyClass)` asks only "is this a class" and any class that loads
+ * passed. And an enum written as a NUMBER fell past the enum branch entirely into ImportText, which
+ * writes any integer at all -- so `State = 99` was a widget in a state with no name.
+ *
+ * Through the real builder off a real reflected property, because both refusals are facts about
+ * reflection: a hand-made FProperty would be testing the fixture instead.
+ */
+bool FDreamUIBuilderTypedValueTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	auto BuildWith = [](const TCHAR* InLine)
+	{
+		return BuildTree(Join({
+			TEXT("Widget Root {"),
+			FString::Printf(TEXT("    + /Script/DreamGUIEditor.DreamUITypedValueTestBehaviour { %s }"), InLine),
+			TEXT("}")
+		}));
+	};
+
+	// ---- TSubclassOf ------------------------------------------------------------------------
+	{
+		const FBuiltTree Good = BuildWith(TEXT("WidgetClass = /Script/DreamGUI.DreamWidget"));
+		TestFalse(TEXT("a widget class inside the bound is accepted"), Good.Diagnostics.HasErrors());
+	}
+	{
+		// A real class that loads and is not a UDreamWidget. Before the MetaClass check this was a
+		// clean compile and a material's class sitting in a property that will be instanced.
+		const FBuiltTree Bad = BuildWith(TEXT("WidgetClass = /Script/Engine.Texture2D"));
+		TestTrue(TEXT("a class outside the bound is refused"),
+			HasDiagnostic(Bad.Diagnostics, EDreamUIDiagnosticCode::ValueTypeMismatch));
+	}
+
+	// ---- enum written as a number -----------------------------------------------------------
+	{
+		const FBuiltTree Named = BuildWith(TEXT("State = Busy"));
+		TestFalse(TEXT("the name spelling still works"), Named.Diagnostics.HasErrors());
+	}
+	{
+		const FBuiltTree Numeric = BuildWith(TEXT("State = 1"));
+		TestFalse(TEXT("and a number the enum does declare is accepted"), Numeric.Diagnostics.HasErrors());
+	}
+	{
+		const FBuiltTree OutOfRange = BuildWith(TEXT("State = 99"));
+		TestTrue(TEXT("a number the enum does not declare is DUI4005, not a silent write"),
+			HasDiagnostic(OutOfRange.Diagnostics, EDreamUIDiagnosticCode::UnknownEnumValue));
+	}
+	{
+		// A real where a state belongs: truncating it would pick a state for the author.
+		const FBuiltTree Real = BuildWith(TEXT("State = 1.5"));
+		TestTrue(TEXT("a non-integer on an enum is a type mismatch"),
+			HasDiagnostic(Real.Diagnostics, EDreamUIDiagnosticCode::ValueTypeMismatch));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackEachBodyTest,
+	"DreamGUI.Text.WriteBack.AnEditInsideAnEachBodyReachesTheFile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The cell the designer can see, edit, and never save.
+ *
+ * BuildReferenceTree used to pass no `each` sink, so the reference build degraded the block to a
+ * swallowed DUI5007 and never constructed the template widget. CollectEdits then found the node in
+ * the AST (ForEachNode walks loop bodies), found it in the LIVE tree, found nothing in the reference
+ * tree -- and returned before producing a single edit. The cell's font size moved in the preview,
+ * looked applied, and was overwritten by the next compile. ControlsGallery and MediaConsole both use
+ * `each`, so this was every list in the project.
+ *
+ * The patcher needed no change at all: FindNodeById has walked loop bodies since it was written.
+ */
+bool FDreamUIWriteBackEachBodyTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const TArray<FString> Lines = {
+		TEXT("Widget Root {"),                    // 1
+		TEXT("    + UIListView { }"),             // 2
+		TEXT(""),                                 // 3
+		TEXT("    each Track in GetRows() {"),    // 4
+		TEXT("        Widget Cell {"),            // 5
+		TEXT("            RenderOpacity = 0.5"),  // 6
+		TEXT("        }"),                        // 7
+		TEXT("    }"),                            // 8
+		TEXT("}")                                 // 9
+	};
+	const FString Text = Join(Lines);
+
+	// The live tree is built the way the real compile builds one -- WITH somewhere to record the
+	// `each` -- because that is the whole of what decides whether a template widget exists.
+	FDreamUIAst LiveAst;
+	FDreamUIDiagnosticBag LiveDiagnostics;
+	LiveDiagnostics.SourceName = TEXT("WriteBackEach.dui");
+	if (!TestTrue(TEXT("the fixture parses"),
+		FDreamUISourceFile::Parse(Text, LiveDiagnostics.SourceName, LiveAst, LiveDiagnostics)))
+	{
+		return false;
+	}
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	TArray<FDreamWidgetEachBinding> EachBindings;
+	TStrongObjectPtr<UDreamWidgetTree> LiveTree(FDreamUITextBuilder::Build(LiveAst, GetTransientPackage(),
+		LiveDiagnostics, Bindings, /*OutEventBindings*/nullptr, &EachBindings));
+	if (!TestTrue(TEXT("and builds, with the each recorded"), LiveTree.IsValid())
+		|| !TestEqual(TEXT("as one each binding"), EachBindings.Num(), 1))
+	{
+		return false;
+	}
+
+	UDreamWidget* Cell = nullptr;
+	LiveTree->ForEachWidget([&Cell](UDreamWidget* InWidget)
+	{
+		if (Cell == nullptr && IsValid(InWidget) && InWidget->GetDisplayName() == TEXT("Cell"))
+		{
+			Cell = InWidget;
+		}
+	});
+	if (!TestNotNull(TEXT("the template widget is on the live tree"), Cell)
+		|| !TestTrue(TEXT("and its opacity can be poked, as a designer gesture would"),
+			PokeFloat(Cell, TEXT("RenderOpacity"), 0.25f)))
+	{
+		return false;
+	}
+
+	FString Updated;
+	FDreamUIDiagnosticBag Diagnostics;
+	TArray<FDreamUIPropertyEdit> Edits;
+	if (!TestTrue(TEXT("the write-back produced text"),
+		FDreamUITextWriteBack::ProduceText(Text, LiveTree.Get(), Updated, Diagnostics, &Edits)))
+	{
+		return false;
+	}
+	TestEqual(TEXT("with exactly one edit"), Edits.Num(), 1);
+
+	TArray<FString> Expected = Lines;
+	Expected[5] = TEXT("            RenderOpacity = 0.25");
+	TestEqual(TEXT("the cell's line is the only thing that moved"), Updated, Join(Expected));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackDirtySetTest,
+	"DreamGUI.Text.WriteBack.AFlushWritesWhatWasTouchedWhenAnythingSaidSo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The half of the sweep that was never true: a value can differ without having been edited.
+ *
+ * The write-back compares every property reflection can reach and writes what differs, which fails
+ * CLOSED and is why it was chosen over a table. Its one hole is not a matter of taste -- the anchor
+ * block of a widget inside a layout container is that container's OUTPUT, so the live value differs
+ * on every arrange and the flush wrote the panel's arithmetic into the author's file.
+ *
+ * So: if anything reported what it touched, the flush writes that; if nothing did, the sweep runs
+ * exactly as before. Both halves are asserted here, because dropping either is a silent data loss in
+ * one direction or the other.
+ */
+bool FDreamUIWriteBackDirtySetTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const FString Source = Fixture();
+	FBuiltTree Live = BuildTree(Source);
+	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid()))
+	{
+		return false;
+	}
+	FDreamUITextWriteBack::ClearDirtyProperties(Live.Tree.Get());
+
+	FDreamUIAnchorData* RootAnchor = AnchorDataOf(Live.Find(TEXT("Root")));
+	FDreamUIAnchorData* TitleAnchor = AnchorDataOf(Live.Find(TEXT("Title")));
+	if (!TestTrue(TEXT("both nodes have anchor blocks"), RootAnchor != nullptr && TitleAnchor != nullptr))
+	{
+		return false;
+	}
+	RootAnchor->SizeDelta = FVector2D(800.0, 480.0);
+	TitleAnchor->SizeDelta = FVector2D(300.0, 60.0);
+
+	// ---- nobody reported: the sweep, unchanged ----------------------------------------------------
+	{
+		FString Updated;
+		FDreamUIDiagnosticBag Diagnostics;
+		TArray<FDreamUIPropertyEdit> Edits;
+		TestTrue(TEXT("the write-back ran"),
+			FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics, &Edits));
+		TestEqual(TEXT("with nothing reported, both changes are written"), Edits.Num(), 2);
+	}
+
+	// ---- one property reported: only that one -----------------------------------------------------
+	{
+		FDreamUITextWriteBack::NoteDirtyProperty(Live.Tree.Get(), TEXT("Title"),
+			EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("AnchorData.SizeDelta"));
+		TestEqual(TEXT("the tree carries one dirty property"),
+			FDreamUITextWriteBack::NumDirtyProperties(Live.Tree.Get()), 1);
+
+		FString Updated;
+		FDreamUIDiagnosticBag Diagnostics;
+		TArray<FDreamUIPropertyEdit> Edits;
+		TestTrue(TEXT("the write-back ran"),
+			FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics, &Edits));
+		if (TestEqual(TEXT("only the reported property is written"), Edits.Num(), 1))
+		{
+			TestEqual(TEXT("and it is the one that was reported"), Edits[0].NodeId, FString(TEXT("Title")));
+		}
+		// Root's value differs just as much and is left alone, which is the entire point: a value
+		// that differs is not the same thing as a value somebody edited.
+		TestEqual(TEXT("the untouched node's line is untouched"), Updated, FixtureWith(8,
+			TEXT("        AnchorData.SizeDelta = (300, 60)   // 标题")));
+
+		FDreamUITextWriteBack::ClearDirtyProperties(Live.Tree.Get());
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackStructureTest,
+	"DreamGUI.Text.WriteBack.ANodeAddedOrRemovedOnTheTreeReachesTheFile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Structure, which the designer refused to let anyone edit because nothing could write it back.
+ *
+ * The comparison is the same two-tree one every value goes through, and that is what makes it safe:
+ * both trees come out of the same builder, so everything the builder synthesises is in both and
+ * cancels out. A widget present only in the LIVE tree can therefore only be one somebody made.
+ */
+bool FDreamUIWriteBackStructureTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	// ---- added ------------------------------------------------------------------------------------
+	{
+		const FString Source = Fixture();
+		FBuiltTree Live = BuildTree(Source);
+		if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid()))
+		{
+			return false;
+		}
+		UDreamWidget* Title = Live.Find(TEXT("Title"));
+		if (!TestNotNull(TEXT("Title is there to hang something off"), Title))
+		{
+			return false;
+		}
+		UDreamWidget* Added = Live.Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Underline"), FGuid::NewGuid());
+		if (!TestNotNull(TEXT("a widget was made"), Added))
+		{
+			return false;
+		}
+		Added->SetDisplayName(TEXT("Underline"));
+		Added->TrySetParent(Title, false);
+
+		FString Updated;
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("the write-back ran"),
+			FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
+		TestTrue(TEXT("the new node is in the file"), Updated.Contains(TEXT("Widget Underline")));
+
+		// And the file still parses AND still builds, which is the rule the patcher may not break.
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		ParseDiagnostics.SourceName = TEXT("WriteBack.dui");
+		if (TestTrue(TEXT("the written file parses"),
+			FDreamUISourceFile::Parse(Updated, ParseDiagnostics.SourceName, Ast, ParseDiagnostics)))
+		{
+			const FDreamUINode* TitleNode = Ast.Root.Children.FindByPredicate(
+				[](const FDreamUINode& InNode) { return InNode.Id == TEXT("Title"); });
+			if (TestNotNull(TEXT("Title survived"), TitleNode))
+			{
+				TestTrue(TEXT("and now holds the new node"), TitleNode->Children.ContainsByPredicate(
+					[](const FDreamUINode& InNode) { return InNode.Id == TEXT("Underline"); }));
+			}
+		}
+	}
+
+	// ---- removed ----------------------------------------------------------------------------------
+	{
+		const FString Source = Fixture();
+		FBuiltTree Live = BuildTree(Source);
+		if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid()))
+		{
+			return false;
+		}
+		UDreamWidget* Title = Live.Find(TEXT("Title"));
+		if (!TestNotNull(TEXT("Title is there to remove"), Title))
+		{
+			return false;
+		}
+		Title->DestroyWidget();
+
+		FString Updated;
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("the write-back ran"),
+			FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
+		TestFalse(TEXT("the node is gone from the file"), Updated.Contains(TEXT("Text Title")));
+		TestTrue(TEXT("and the rest of the file is not"), Updated.Contains(TEXT("AnchorData.SizeDelta = (400,240)")));
+	}
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

@@ -35,6 +35,67 @@ enum class EDreamUIPatchTarget : uint8
 	 * component from the same AST it is patching against always has the right number.
 	 */
 	Component,
+	/**
+	 * A property inside a `style Name { }` block, addressed by NodeId = the style's name.
+	 *
+	 * Replace-or-insert like a node's, and deliberately NOT what the designer's flush uses: a style
+	 * is worn by every node that names it, so one drag writing into the block would move all of them.
+	 * The write-back turns a styled property into an override on the NODE for that reason. This
+	 * target exists for a caller whose subject genuinely is the style -- a style editor, a rename, a
+	 * tool retargeting a palette -- and because the patcher takes a TEXT rather than a document, it
+	 * is also how a caller that has opened an imported library's file writes into that library.
+	 */
+	Style,
+};
+
+/** What ApplyStructuralEdits can do to the shape of a file. One kind per act, never a guess. */
+enum class EDreamUIStructuralEditKind : uint8
+{
+	/** A new `Type Id { }` under ParentId, at ChildIndex among that parent's authored children. */
+	InsertNode,
+	/** NodeId and everything under it, taken out with its line. */
+	RemoveNode,
+	/** NodeId moved to ChildIndex under ParentId -- its text lifted whole and put back elsewhere. */
+	MoveNode,
+	/** NodeId renamed to NewId, carrying `(was: <old id>)` so the compile migrates what it owned. */
+	RenameNode,
+	/** A new `+ ComponentClassName { }` inside NodeId's block, after the ones already there. */
+	InsertComponent,
+	/** The ComponentIndex'th `+` block of NodeId, taken out with its line. */
+	RemoveComponent,
+};
+
+/**
+ * One change to the SHAPE of a `.dui`. See FDreamUITextPatcher::ApplyStructuralEdits.
+ *
+ * Every field is read by some kinds and ignored by the rest, which is the usual shape of a command
+ * struct and is stated per field rather than split into six structs -- the caller builds these in
+ * one array and the reader wants one table to look at.
+ */
+struct FDreamUIStructuralEdit
+{
+	EDreamUIStructuralEditKind Kind = EDreamUIStructuralEditKind::InsertNode;
+
+	/** The node being acted on. Unused by InsertNode, which is creating one. */
+	FString NodeId;
+
+	/** InsertNode / MoveNode: the node whose block receives it. Empty means the root. */
+	FString ParentId;
+
+	/** InsertNode / MoveNode: position among the parent's authored children. INDEX_NONE means last. */
+	int32 ChildIndex = INDEX_NONE;
+
+	/** InsertNode: the tag or asset path, exactly as a .dui writes it -- "Text", "/Game/UI/WBP_X". */
+	FString TypeName;
+
+	/** InsertNode: the id of the new node. RenameNode: the id it becomes. */
+	FString NewId;
+
+	/** RemoveComponent: which `+` block, 0-based in author order. */
+	int32 ComponentIndex = INDEX_NONE;
+
+	/** InsertComponent: the behaviour's spelling -- "UIButton", "VerticalBox". */
+	FString ComponentClassName;
 };
 
 /** One property write. See FDreamUITextPatcher::SetProperties for what a batch of these means. */
@@ -137,5 +198,38 @@ struct DREAMGUIEDITOR_API FDreamUITextPatcher
 	 */
 	static bool SetProperties(FString& InOutText, const FDreamUIAst& InAst,
 		TArrayView<const FDreamUIPropertyEdit> InEdits,
+		FDreamUIDiagnosticBag& OutDiagnostics);
+
+	/**
+	 * Change the SHAPE of the file: add, remove, move or rename a node; add or remove a `+` block.
+	 *
+	 * THIS IS THE CAPABILITY THE CLASS COMMENT ABOVE USED TO DISCLAIM, and the disclaimer was not
+	 * wrong when it was written -- it was the reason the designer refused every structural gesture.
+	 * What changed is that the refusal had no expiry: "the designer cannot create a widget" is not a
+	 * property of text authoring, it is a missing function. This is the function.
+	 *
+	 * The ONE RULE is unchanged and is what every line below is shaped by: this may not produce a
+	 * .dui that no longer parses. So each edit is composed of whole STATEMENTS -- a node's text runs
+	 * from the start of its header line to the end of its closing brace's line, a `+` block likewise
+	 * -- and an edit whose anchor the text does not confirm is refused (DUI7002) rather than
+	 * attempted. Nothing is reflowed, nothing is re-indented, and a node moved keeps its own text
+	 * byte for byte except for the indentation of its lines.
+	 *
+	 * The batching rule is SetProperties': every edit is resolved against InOutText as it arrives and
+	 * the splices are applied from the end backwards, so no edit ever moves another's anchor. Two
+	 * edits that overlap are refused as a pair, because the second would be planned against text the
+	 * first is removing. A caller doing structure AND values re-parses in between -- structure moves
+	 * every location after it, and the AST for the values has to describe the file they will land in.
+	 *
+	 * A RENAME writes `(was: OldId)` onto the header, which is not decoration: the id is the class
+	 * member variable, the animation binding path and the localization key, and the clause is how the
+	 * next compile carries all three across. A node that already has one keeps the ORIGINAL old id --
+	 * two renames in a row are one migration from where it started, and rewriting the clause to the
+	 * intermediate name would strand everything that still points at the first.
+	 *
+	 * @return false when anything was refused; the rest still applied, as SetProperties does.
+	 */
+	static bool ApplyStructuralEdits(FString& InOutText, const FDreamUIAst& InAst,
+		TArrayView<const FDreamUIStructuralEdit> InEdits,
 		FDreamUIDiagnosticBag& OutDiagnostics);
 };
