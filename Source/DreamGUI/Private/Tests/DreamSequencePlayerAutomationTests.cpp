@@ -883,4 +883,60 @@ bool FDreamProgressBarDetachedFillTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSpriteSheetGridChangeTest,
+	"DreamGUI.Extensions.ChangingTheSheetGridReDerivesEverythingTheTwoCountsDecide",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamSpriteSheetGridChangeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSequencePlayerTestLocal;
+
+	// SetWidthCount and SetHeightCount were assignments and nothing else, and the two counts are the
+	// whole animation: the cell's size in UV space is 1/count per axis (derived once, by
+	// PrepareForPlay) and one cycle is WidthCount * HeightCount frames (captured once, by Play). So a
+	// grid moved under a running animation kept sampling the OLD cell -- every frame part of one
+	// sprite and part of its neighbour -- and looping at the old frame count. The sibling player's
+	// SetSpriteSequence has done both of these since it was written; this is the same call.
+	FPlayerFixture Fixture;
+	if (!TestNotNull(TEXT("the widget was constructed"), Fixture.Widget))
+	{
+		return false;
+	}
+	UDreamTexture* TextureVisual =
+		Cast<UDreamTexture>(Fixture.Widget->CreateNewVisual(UDreamTexture::StaticClass()));
+	UUISpriteSheetTexturePlayer* Player = Fixture.Widget->AddComponent<UUISpriteSheetTexturePlayer>();
+	if (!TestNotNull(TEXT("the texture visual was created"), TextureVisual) ||
+		!TestNotNull(TEXT("the sprite sheet player was added"), Player))
+	{
+		Fixture.Teardown();
+		return false;
+	}
+
+	TextureVisual->SetTexture(UTexture2D::CreateTransient(8, 8));
+	Player->SetWidthCount(4);
+	Player->SetHeightCount(2);
+	Player->SetFps(8.0f);
+	Player->Play();
+	TestTrue(TEXT("a four by two sheet at eight frames a second plays"), Player->GetIsPlaying());
+	TestEqual(TEXT("for one second"), DurationOf(Player), 1.0f);
+
+	// Half the columns is half the frames and twice the cell.
+	Player->SetWidthCount(2);
+	TestTrue(TEXT("changing the grid does not interrupt the animation"), Player->GetIsPlaying());
+	TestEqual(TEXT("and the cycle follows the new frame count"), DurationOf(Player), 0.5f);
+	Player->SeekFrame(1);
+	TestEqual(TEXT("the cell is half the sheet wide now"), TextureVisual->GetUVRect().Z, 0.5f);
+	TestEqual(TEXT("and the second frame starts halfway across it"), TextureVisual->GetUVRect().X, 0.5f);
+
+	// A grid with no cells is a legitimate way to end an animation -- CanPlay refuses to start one --
+	// so it stops rather than ticking a clock over a sheet it cannot index. Silently, for
+	// SetSpriteSequence's reason: clearing is not an authoring error.
+	Player->SetWidthCount(0);
+	TestFalse(TEXT("a grid with no columns stops the player"), Player->GetIsPlaying());
+
+	Fixture.Teardown();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

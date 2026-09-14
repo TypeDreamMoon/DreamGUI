@@ -94,11 +94,38 @@ void UUISpriteSheetTexturePlayer::OnUpdateAnimation(int FrameNumber)
 	Texture->SetUVRect(FVector4f(WidthUVInterval * horizontalFrame, HeightUVInterval * verticalFrame, WidthUVInterval, HeightUVInterval));
 }
 
+/*
+ * The grid IS the animation: one cell's size in UV space is 1/count on each axis, and the length of
+ * one cycle is WidthCount * HeightCount frames at Fps. Both were derived once, by PrepareForPlay,
+ * from counts that these two setters then moved underneath them -- so a grid changed while playing
+ * kept sampling the OLD cell size (every frame drawn off-grid, part of one sprite and part of its
+ * neighbour) against the OLD duration (a loop point in the middle of the sheet).
+ *
+ * Stopping on a degenerate grid rather than logging an error, because zero columns is a legitimate
+ * way to end an animation and CanPlay already refuses to start one -- the same call, and the same
+ * reasoning, as UUISpriteSequencePlayer::SetSpriteSequence with an empty array.
+ */
+void UUISpriteSheetTexturePlayer::RefreshGridDerivedState()
+{
+	if (WidthCount <= 0 || HeightCount <= 0)
+	{
+		Stop();
+		return;
+	}
+	PrepareForPlay();
+	if (bIsPlaying)
+	{
+		Duration = GetDuration();
+	}
+}
+
 void UUISpriteSheetTexturePlayer::SetWidthCount(int value)
 {
 	WidthCount = value;
+	RefreshGridDerivedState();
 }
 void UUISpriteSheetTexturePlayer::SetHeightCount(int value)
 {
 	HeightCount = value;
+	RefreshGridDerivedState();
 }

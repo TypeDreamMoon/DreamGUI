@@ -37,15 +37,22 @@ protected:
 	virtual float GetDuration()const override;
 	virtual void PrepareForPlay()override;
 	virtual void OnUpdateAnimation(int FrameNumber)override;
+	/**
+	 * Re-derive everything the two counts decide -- the cell's size in UV space and the length of one
+	 * cycle -- and stop on a grid that has neither. Called by both setters, because a count moved
+	 * without it leaves the running animation sampling the old cell size and looping at the old
+	 * frame count.
+	 */
+	void RefreshGridDerivedState();
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		int GetWidthCount()const { return WidthCount; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		int GetHeightCount()const { return HeightCount; }
-	/** Will take effect on next cycle. */
+	/** Takes effect at once: the cell size and the cycle length are both re-derived. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetWidthCount(int value);
-	/** Will take effect on next cycle. */
+	/** Takes effect at once: the cell size and the cycle length are both re-derived. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetHeightCount(int value);
 };

@@ -8,16 +8,6 @@
 #include "Core/Components/DreamSpriteBase.h"
 #include "Core/Components/DreamWidget.h"
 
-#if WITH_EDITOR
-void UUISpriteSequencePlayer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (auto Property = PropertyChangedEvent.Property)
-	{
-
-	}
-}
-#endif
 bool UUISpriteSequencePlayer::CanPlay()
 {
 	if (!Sprite.IsValid())
