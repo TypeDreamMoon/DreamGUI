@@ -19,9 +19,15 @@ class UTexture2D;
  *
  * These used to be path literals passed to LoadObject at the point of use. A path literal is worse
  * than a hard reference: it creates no package dependency at all, so renaming or moving the asset
- * compiles clean and turns into a silent null at runtime, and a packaged build has no reason to cook
- * the asset in the first place. Soft pointers here fix both -- the cooker sees them, and the editor
- * fixes them up on a rename.
+ * compiles clean and turns into a silent null at runtime. Soft pointers fix the rename half -- the
+ * editor fixes them up -- and they are a declared reference a tool can read.
+ *
+ * They do NOT make the assets cookable. A soft pointer assigned to a native CDO produces no asset
+ * registry dependency, because the CDO lives in /Script/DreamGUI rather than in a package the
+ * registry scans. These assets survive a normal cook only because UE cooks all mounted content by
+ * default. What covers an explicit-package-list cook is the plugin's own Config/Game.ini, which puts
+ * /DreamGUI into DirectoriesToAlwaysCook -- it ships with the plugin, so a project gets it by
+ * enabling the plugin. See that file for why it is named Game.ini, and the constructor below.
  *
  * Everything is a fallback. A UDreamCanvas with its own DefaultMaterial set never reads this; the
  * settings only answer the question "what should this be when nobody said".
@@ -122,7 +128,15 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> WorldSpaceRaycasterSourceClass;
 
-	/** Root actor placed for a screen-space widget. */
+	/**
+	 * Root actor placed for a screen-space widget by an actor factory.
+	 *
+	 * Reachable only through GetRootClassForRenderMode, and no factory asks it for the screen-space
+	 * mode today: UDreamScreenUISubsystem::GetOrCreateScreenRoot builds its 1920x1080 transient root
+	 * in code instead, because it has to run in a cooked game where placing an actor from a Blueprint
+	 * class is not what "add this widget to the viewport" should mean. Kept as the answer for the
+	 * screen-space branch of that switch, which is one factory away.
+	 */
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> ScreenSpaceRootClass;
 
@@ -138,8 +152,9 @@ public:
 	 * The root class for one render mode, so two actor factories cannot disagree about it.
 	 *
 	 * Took a bMarkup flag until the markup pipeline was retired; the second set of root classes it
-	 * chose between went with it. Nothing calls this today -- the prefab factory that did was removed
-	 * with the prefab asset model -- so it is kept for the next factory rather than for a caller.
+	 * chose between went with it. The prefab factory that called it went with the prefab asset model,
+	 * but it is live again: UDreamWidgetBlueprintActorFactory::GetDefaultActorClass asks it for
+	 * WorldSpace_DreamUI on every widget-Blueprint drop into a level.
 	 */
 	TSoftClassPtr<AActor> GetRootClassForRenderMode(EDreamRenderMode RenderMode) const;
 

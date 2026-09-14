@@ -130,6 +130,18 @@ public:
 	/** How many new glyphs a frame may generate on the game thread before the rest go to the worker. */
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization"))
 		int32 AsyncGlyphSyncBudgetPerFrame = 24;
+	/**
+	 * How many Texture2DArray slices a font's glyph atlas may grow to. The atlas only grows -- a
+	 * rect-packed atlas cannot hand one glyph's rectangle to a glyph of another size without repacking,
+	 * so there is no "evict one glyph" -- and when it reaches this budget the whole cache is thrown away
+	 * and refilled on demand, which is what Slate's own font cache does when its atlas fills. Every text
+	 * using the font is re-laid-out on the spot, so a flush costs one frame; if that happens repeatedly,
+	 * raise this or the atlas texture size, or use fewer distinct font sizes (a bitmap font caches a
+	 * separate glyph per size, and Best Fit walks several sizes per search).
+	 * Clamped to what the RHI can address (GMaxTextureArrayLayers).
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "1", UIMin = "1", UIMax = "64"))
+		int32 MaxFontAtlasSlices = 8;
 
 	/** If false, ScreenSpaceUI can still do interaction and animation when GamePause */
 	UPROPERTY(EditAnywhere, config, Category = "Game", meta = (DisplayName="ScreenSpaceUI Affect by GamePause"))
@@ -144,12 +156,22 @@ public:
 	/**
 	 * This will affect all DreamUI-Renderer (ScreenSpaceOverlay, WorldSpace-DreamUIRenderer, RenderTarget).
 	 * Tested on Windows DX11 & DX12, Mac (intel), Android (vulkan), not valid on Android (gles).
+	 *
+	 * "Not valid" is enforced rather than merely stated: FDreamUIRenderer asks the RHI whether the
+	 * running shader platform supports MSAA and falls back to no anti-aliasing when it does not,
+	 * warning once. That keeps a project that turns MSAA on globally -- the ordinary thing to do --
+	 * from carrying it onto a platform that cannot honour it. Override this per platform
+	 * (a [/Script/DreamGUI.DreamUISettings] section in the platform config) to make the choice
+	 * explicit rather than letting the fallback make it.
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName="Anti-Aliasing Method"))
 		EDreamUIRendererAntiAliasingMethod AntiAliasingMethod = EDreamUIRendererAntiAliasingMethod::None;
 	/**
 	 * This will affect all DreamUI-Renderer (ScreenSpaceOverlay, WorldSpace-DreamUIRenderer, RenderTarget).
 	 * Tested on Windows DX11 & DX12, Mac (intel), Android (vulkan), not valid on Android (gles).
+	 *
+	 * Ignored, with the same one-time warning, wherever the RHI reports no MSAA support -- see
+	 * AntiAliasingMethod above.
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName="MSAA Sample Count"))
 		EDreamUIRendererMSAASampleCount MSAASampleCount = EDreamUIRendererMSAASampleCount::Four;
@@ -173,6 +195,8 @@ public:
 	static bool GetUseBuiltInUIShader();
 	static bool GetAsyncGlyphRasterization();
 	static int32 GetAsyncGlyphSyncBudgetPerFrame();
+	/** The configured atlas slice budget, clamped to what the RHI can address. */
+	static int32 GetMaxFontAtlasSlices();
 private:
 	static const FDreamUIAtlasSettings& GetAtlasSettings(const FName& InPackingTag);
 };
