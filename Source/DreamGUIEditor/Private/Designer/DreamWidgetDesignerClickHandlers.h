@@ -20,7 +20,9 @@ namespace DreamWidgetDesignerClickHandlers
 {
 	bool ClickViewport(FDreamWidgetDesignerViewportClient* ViewportClient, const FViewportClick& Click);
 
-	bool ClickElement(FDreamWidgetDesignerViewportClient* ViewportClient, const FTypedElementHandle& HitElement, const FViewportClick& Click);
+	// ClickElement is deliberately absent; see the note where it used to live in the .cpp. The
+	// designer's selection is UDreamUISelection's, not the level editor's typed-element set, and the
+	// implementation here could never reach past its first line.
 
 	bool ClickActor(FDreamWidgetDesignerViewportClient* ViewportClient,AActor* Actor,const FViewportClick& Click,bool bAllowSelectionChange);
 

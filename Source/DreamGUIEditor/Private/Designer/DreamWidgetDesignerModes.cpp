@@ -163,6 +163,21 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 			}
 		};
 	}
+	// Compile errors, in the mode the author is standing in when they press Compile.
+	//
+	// This mode used to register no factory for it and the layout said so in a comment: the engine's
+	// FCompilerResultsSummoner is in a Kismet private header, so naming the tab asked the tab manager
+	// for a spawner nobody had. The summoner was never the point -- the LISTING is, and
+	// FBlueprintEditor builds it and hands it out through a public accessor. One factory of our own
+	// around the base class's widget is the whole feature, and because it IS the base class's widget,
+	// Designer and Graph show the same results rather than two logs that can disagree.
+	AddPanel(FBlueprintEditorTabs::CompilerResultsID, LOCTEXT("CompilerResultsTab", "Compiler Results"),
+		FSlateIcon(AppStyle, "Kismet.Tabs.CompilerResults"),
+		[](FDreamWidgetBlueprintEditor& Editor) -> TSharedRef<SWidget>
+		{
+			TSharedPtr<SWidget> Widget = Editor.GetCompilerResultsWidget();
+			return Widget.IsValid() ? Widget.ToSharedRef() : SNullWidget::NullWidget;
+		});
 	// Spawned empty on purpose: the sequencer invokes this id itself and fills it with the curve
 	// editor. Without a home here it would dock into whatever window the tab manager guesses.
 	AddPanel(FDreamWidgetDesignerTabs::SequencerCurvesID,
@@ -180,7 +195,8 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 	constexpr float LeftColumnWidth = 0.15f;
 	constexpr float ViewportWidth = 0.75f;
 	constexpr float BottomDrawerHeight = 0.3f;
-	TabLayout = FTabManager::NewLayout("DreamWidgetBlueprintEditor_Designer_Layout_v1")
+	// _v2: the Compiler Results tab joined the bottom stack, and a saved _v1 layout has no slot for it.
+	TabLayout = FTabManager::NewLayout("DreamWidgetBlueprintEditor_Designer_Layout_v2")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()
@@ -236,13 +252,11 @@ FDreamWidgetDesignerApplicationMode::FDreamWidgetDesignerApplicationMode(TShared
 					->SetForegroundTab(FDreamWidgetDesignerTabs::AnimationsID)
 					->AddTab(FDreamWidgetDesignerTabs::AnimationsID, ETabState::ClosedTab)
 					->AddTab(FDreamWidgetDesignerTabs::SequencerCurvesID, ETabState::ClosedTab)
-					// NOT the compiler results: this mode registers only its own panels (see
-					// RegisterTabFactories), and FCompilerResultsSummoner lives in Kismet private
-					// headers a plugin cannot reach -- so naming that tab here asked the tab manager
-					// for a spawner nobody had. It said so on every open: "Cannot spawn tab because no
-					// spawner is registered for Document", then a tab called "Unknown" failing to
-					// appear in this layout. Compile results reach the author through the toolbar
-					// badge and the Message Log.
+					// The compiler results now have a factory of this mode's own (see the ctor), so
+					// naming the tab here reaches a spawner instead of the "no spawner is registered
+					// for Document" this layout used to log on every open. Closed by default, like the
+					// other two: it is opened by a failed compile and by the Window menu.
+					->AddTab(FBlueprintEditorTabs::CompilerResultsID, ETabState::ClosedTab)
 				)
 			)
 		);

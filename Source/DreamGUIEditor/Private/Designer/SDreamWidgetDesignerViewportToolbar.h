@@ -16,9 +16,18 @@ public:
 
 	void Construct(const FArguments& InArgs, TSharedPtr<class ICommonEditorViewportToolbarInfoProvider> InInfoProvider);
 
-	// SCommonEditorViewportToolbarBase interface
-	virtual TSharedRef<SWidget> GenerateShowMenu() const override;
-	// End of SCommonEditorViewportToolbarBase
+	/**
+	 * The name this toolbar registers into the process-wide UToolMenus registry.
+	 *
+	 * Shared with the editor module so ShutdownModule can take the menu back out again: the registry
+	 * outlives this module, and the entries hold delegates bound into it.
+	 */
+	static FName GetViewportToolbarMenuName();
+
+	// GenerateShowMenu is deliberately NOT overridden. The override used to return an empty
+	// FMenuBuilder, so anything that did reach it -- the base class builds a Show button for
+	// toolbars it populates itself -- got a popup with nothing in it. The base's own implementation
+	// is a real menu; this toolbar simply does not offer the button.
 
 protected:
 	// We override Construct (the base version is non-virtual and registers a globally-shared

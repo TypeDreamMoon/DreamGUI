@@ -37,38 +37,26 @@
 
 namespace DreamWidgetDesignerClickHandlers
 {
-	static const UTypedElementSelectionSet* PrivateGetElementSelectionSet(FDreamWidgetDesignerViewportClient* ViewportClient)
-	{
-		//if (TSharedPtr<ILevelEditor> LevelEditor = ViewportClient->ParentLevelEditor.Pin())
-		//{
-		//	return LevelEditor->GetElementSelectionSet();
-		//}
-		return nullptr;
-	}
+	/*
+	 * The three selection-set helpers this file used to carry (PrivateGetElementSelectionSet,
+	 * PrivateGetMutableElementSelectionSet and the typed-element ClickElement that read them) are
+	 * gone. Each was a function whose body was commented out and which returned nullptr, so
+	 * ClickElement could not do anything but bail on its first line -- the whole typed-element
+	 * click path in the designer was unreachable code pretending to be a feature. They read the
+	 * LEVEL EDITOR's selection set, which is not this viewport's: the designer selects
+	 * UDreamWidgets through UDreamUISelection, and FDreamWidgetDesignerViewportClient::ProcessClick
+	 * does that directly.
+	 */
 
-	static UTypedElementSelectionSet* PrivateGetMutableElementSelectionSet(FDreamWidgetDesignerViewportClient* ViewportClient)
+	/** The designer's viewport menu. The level editor asks its parent ILevelEditor; there is none here. */
+	static void PrivateSummonContextMenu(FDreamWidgetDesignerViewportClient* ViewportClient, const FTypedElementHandle& HitProxyElement = FTypedElementHandle())
 	{
-		//if (TSharedPtr<ILevelEditor> LevelEditor = ViewportClient->ParentLevelEditor.Pin())
-		//{
-		//	return LevelEditor->GetMutableElementSelectionSet();
-		//}
-		return nullptr;
-	}
-
-	static void PrivateSummonContextMenu( FDreamWidgetDesignerViewportClient* ViewportClient, const FTypedElementHandle& HitProxyElement = FTypedElementHandle())
-	{
-		//if( ViewportClient->ParentLevelEditor.IsValid() )
-		//{
-		//	ViewportClient->ParentLevelEditor.Pin()->SummonLevelViewportContextMenu(HitProxyElement);
-		//}
-	}	
-
-	static void PrivateSummonViewportMenu( FDreamWidgetDesignerViewportClient* ViewportClient )
-	{
-		//if (ViewportClient->ParentLevelEditor.IsValid())
-		//{
-		//	ViewportClient->ParentLevelEditor.Pin()->SummonLevelViewportViewOptionMenu(LVT_Perspective);
-		//}
+		// The handle is ignored on purpose: the designer's menu is built around the widget selection,
+		// not around a typed element. This too used to be an empty body.
+		if (ViewportClient != nullptr)
+		{
+			ViewportClient->SummonDesignerContextMenu();
+		}
 	}
 
 	/*
@@ -89,99 +77,25 @@ namespace DreamWidgetDesignerClickHandlers
 	{
 		if (Click.GetKey() == EKeys::MiddleMouseButton && Click.IsControlDown())
 		{
-			PrivateSummonViewportMenu(ViewportClient);
-			return true;
+			// Used to call a function whose body was commented out and then report "handled", so
+			// Ctrl+middle-click in the design viewport consumed the click and did nothing whatsoever.
+			// The level editor's answer here is its view-options menu, reached through a parent
+			// ILevelEditor that a designer viewport does not have; the menu this viewport does have
+			// is the designer's own, so the gesture opens that. Handled only if it really opened.
+			return ViewportClient != nullptr && ViewportClient->SummonDesignerContextMenu();
 		}
 		return false;
 	}
 
-	bool ClickElement(FDreamWidgetDesignerViewportClient* ViewportClient, const FTypedElementHandle& HitElement, const FViewportClick& Click)
-	{
-		// Pivot snapping
-		if (Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown())
-		{
-			//GEditor->SetPivot(GEditor->ClickLocation, true, false, true); // TODO: This last param is only for actor pivots
-			//return true;
-			return false; // Let actor and component clicks handle pivots for now
-		}
-
-		UTypedElementSelectionSet* LevelEditorElementSelectionSet = PrivateGetMutableElementSelectionSet(ViewportClient);
-		if (!LevelEditorElementSelectionSet)
-		{
-			return false;
-		}
-
-		bool bHandledClick = false;
-
-		const bool bIsLeftClickSelection = Click.GetKey() == EKeys::LeftMouseButton && !(ViewportClient->Viewport->KeyState(EKeys::T) || ViewportClient->Viewport->KeyState(EKeys::L) || ViewportClient->Viewport->KeyState(EKeys::S) || ViewportClient->Viewport->KeyState(EKeys::A));
-		const bool bIsRightClickSelection = Click.GetKey() == EKeys::RightMouseButton && !Click.IsControlDown() && !ViewportClient->Viewport->KeyState(EKeys::LeftMouseButton);
-
-		if (bIsLeftClickSelection || bIsRightClickSelection)
-		{
-			const ETypedElementSelectionMethod SelectionMethod = Click.GetEvent() == IE_DoubleClick ? ETypedElementSelectionMethod::Secondary : ETypedElementSelectionMethod::Primary;
-			if (const FTypedElementHandle ResolvedElement = LevelEditorElementSelectionSet->GetSelectionElement(HitElement, SelectionMethod))
-			{
-				bHandledClick = true;
-
-				const FTypedElementSelectionOptions SelectionOptions = FTypedElementSelectionOptions()
-					.SetAllowHidden(true)
-					.SetWarnIfLocked(true);
-
-				bool bNeedViewportRefresh = false;
-
-				if (LevelEditorElementSelectionSet->CanSelectElement(ResolvedElement, SelectionOptions))
-				{
-					const FScopedTransaction Transaction(NSLOCTEXT("UnrealEd", "ClickingOnElements", "Clicking on Elements"));
-
-					const bool bAllowSelectionModifiers = bIsLeftClickSelection && LevelEditorElementSelectionSet->AllowSelectionModifiers(ResolvedElement);
-					if (Click.IsControlDown() && bAllowSelectionModifiers)
-					{
-						if (LevelEditorElementSelectionSet->IsElementSelected(ResolvedElement, FTypedElementIsSelectedOptions().SetAllowIndirect(true)))
-						{
-							LevelEditorElementSelectionSet->DeselectElement(ResolvedElement, SelectionOptions);
-						}
-						else
-						{
-							LevelEditorElementSelectionSet->SelectElement(ResolvedElement, SelectionOptions);
-						}
-					}
-					else if (Click.IsShiftDown() && bAllowSelectionModifiers)
-					{
-						LevelEditorElementSelectionSet->SelectElement(ResolvedElement, SelectionOptions);
-					}
-					else
-					{
-						// Skip the clear if we're doing a RMB select and this actor is already selected, as we want to summon the menu for the current selection
-						if (bIsLeftClickSelection || !LevelEditorElementSelectionSet->IsElementSelected(ResolvedElement, FTypedElementIsSelectedOptions().SetAllowIndirect(true)))
-						{
-							bNeedViewportRefresh = bIsRightClickSelection; // Refresh the viewport so the user will see what they just clicked while the menu is open
-							GEditor->DeselectAllSurfaces();
-							LevelEditorElementSelectionSet->ClearSelection(SelectionOptions);
-						}
-						LevelEditorElementSelectionSet->SelectElement(ResolvedElement, SelectionOptions);
-					}
-
-					// Notify any pending selection change now, as this avoids the visual pivot location "lagging" behind the actual selection,
-					// and also ensures that the pivot is at the correct location prior to opening any context menus (which block the update)
-					LevelEditorElementSelectionSet->NotifyPendingChanges();
-				}
-
-				if (bNeedViewportRefresh)
-				{
-					// Redraw the viewport so the user can see which object was clicked on
-					ViewportClient->Viewport->Draw();
-					FlushRenderingCommands();
-				}
-
-				if (bIsRightClickSelection)
-				{
-					PrivateSummonContextMenu(ViewportClient, ResolvedElement);
-				}
-			}
-		}
-
-		return bHandledClick;
-	}
+	/*
+	 * ClickElement is gone with them. It began by asking PrivateGetMutableElementSelectionSet for
+	 * the level editor's selection set, got nullptr, and returned false -- every time, from the
+	 * first line. What followed was a verbatim copy of FLevelEditorViewportClient's element
+	 * selection, unreachable in a designer and describing a selection model this editor does not
+	 * use. Its one live idea, that a right-click on an already-selected thing keeps the selection
+	 * instead of collapsing it, now lives where the designer actually selects: ProcessClick in
+	 * FDreamWidgetDesignerViewportClient.
+	 */
 
 	bool ClickActor(FDreamWidgetDesignerViewportClient* ViewportClient,AActor* Actor,const FViewportClick& Click,bool bAllowSelectionChange)
 	{
