@@ -4,6 +4,7 @@
 #include "DreamUIAnimEventTrackEditor.h"
 #include "Animation/DreamUIAnimEventTrack.h"
 #include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamUISequence.h"
 #include "MovieScene.h"
 #include "ISequencerSection.h"
 #include "SequencerSectionPainter.h"
@@ -24,9 +25,12 @@ FDreamUIAnimEventTrackEditor::FDreamUIAnimEventTrackEditor(TSharedRef<ISequencer
 
 bool FDreamUIAnimEventTrackEditor::SupportsSequence(UMovieSceneSequence* InSequence) const
 {
-	// The trigger resolves through the hosting sequence component, which only a DreamUI prefab
-	// sequence has; showing the track anywhere else would author sections nothing can fire.
-	return InSequence != nullptr && InSequence->IsA<UDreamWidgetAnimation>();
+	// Both DreamUI sequence forms. The trigger resolves through the hosting sequence component, and a
+	// standalone .DreamUISequence asset reaches one just as an embedded animation does: it is played
+	// by a component, whose widget is the playback context, and UDreamUIAnimEventSection::Trigger
+	// falls back to that context for exactly this case. Refusing the asset form here is what made
+	// that fallback unreachable -- a branch written for a shape the editor would not author.
+	return InSequence != nullptr && (InSequence->IsA<UDreamWidgetAnimation>() || InSequence->IsA<UDreamUISequence>());
 }
 
 bool FDreamUIAnimEventTrackEditor::SupportsType(TSubclassOf<UMovieSceneTrack> Type) const

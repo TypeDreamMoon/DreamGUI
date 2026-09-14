@@ -3,6 +3,8 @@
 
 #include "SDreamWidgetAnimationEditor.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamWidget.h"
 #include "K2Node_CallFunction.h"
 #include "Animation/DreamUISequence.h"
 #include "Animation/DreamUIWidgetBinding.h"
@@ -96,23 +98,46 @@ private:
 
 	bool OnVerifyNameTextChanged(const FText& InText, FText& OutErrorMessage)
 	{
-		auto Animation = ListItem.Pin()->Animation;
+		TSharedPtr<FWidgetAnimationListItem> PinnedItem = ListItem.Pin();
+		if (!PinnedItem.IsValid())
+		{
+			return false;
+		}
+		const UDreamWidgetAnimation* Animation = PinnedItem->Animation;
 
+		// Compared the way the COMPILER compares it -- sanitized to an identifier -- and against widget
+		// names as well as animation names. "My Anim" and "My_Anim" are two display names that become
+		// one variable name, so this dialog used to accept the second happily and the compiler then
+		// exposed only the first, with a warning nobody reads at the moment they could have fixed it in
+		// one keystroke. Widgets go into the same set because the compiler declares them first and a
+		// collision there costs the animation its variable outright.
+		const FName ProposedName = FName(*UDreamWidgetTree::SanitizeIdentifier(InText.ToString()));
 		auto SequenceComp = Editor->GetSequenceComponent();
 		if (SequenceComp)
 		{
 			auto& SequenceArray = SequenceComp->GetSequenceArray();
-			auto ExistIndex = SequenceArray.IndexOfByPredicate([InText, this](const UDreamWidgetAnimation* Item) {
-				if (ListItem.Pin()->Animation == Item)
+			auto ExistIndex = SequenceArray.IndexOfByPredicate([ProposedName, Animation](const UDreamWidgetAnimation* Item) {
+				if (!IsValid(Item) || Animation == Item)
 				{
 					return false;
 				}
-				return Item->GetDisplayName().EqualTo(InText);
+				return UDreamWidgetTree::MakeAnimationVariableName(Item) == ProposedName;
 				});
 			if (ExistIndex != INDEX_NONE)
 			{
-				OutErrorMessage = LOCTEXT("NameInUseByAnimation", "An animation with this name already exists");
+				OutErrorMessage = LOCTEXT("NameInUseByAnimation", "An animation with this name already exists, or becomes the same variable name as one that does");
 				return false;
+			}
+			if (UDreamWidget* HostWidget = SequenceComp->GetWidget())
+			{
+				if (const UDreamWidgetTree* Tree = HostWidget->GetTypedOuter<UDreamWidgetTree>())
+				{
+					if (Tree->FindWidgetByVariableName(ProposedName) != nullptr)
+					{
+						OutErrorMessage = LOCTEXT("NameInUseByWidget", "A widget in this hierarchy already uses this name; the widget would win and this animation would get no variable");
+						return false;
+					}
+				}
 			}
 		}
 		return true;

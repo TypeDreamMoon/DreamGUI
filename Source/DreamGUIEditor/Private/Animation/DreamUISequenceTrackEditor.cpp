@@ -4,6 +4,8 @@
 #include "DreamUISequenceTrackEditor.h"
 #include "Animation/DreamUISequence.h"
 #include "Animation/DreamUISequenceTrack.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "MovieScene.h"
@@ -72,6 +74,10 @@ void FDreamUISequenceTrackEditor::BuildObjectBindingTrackMenu(FMenuBuilder& Menu
 		LOCTEXT("AddDreamUISequence", "DreamUI Animation"),
 		LOCTEXT("AddDreamUISequenceTooltip", "Play a DreamUI animation asset on this widget: the asset's root binding resolves as this binding's object."),
 		FNewMenuDelegate::CreateRaw(this, &FDreamUISequenceTrackEditor::AddAssetSubMenu, TArray<FGuid>(ObjectBindings)));
+	MenuBuilder.AddSubMenu(
+		LOCTEXT("AddEmbeddedAnimation", "Embedded Animation"),
+		LOCTEXT("AddEmbeddedAnimationTooltip", "Play another animation of this component as a section of this one. It animates its own widgets, at the time this section sits at -- a long animation assembled out of short ones."),
+		FNewMenuDelegate::CreateRaw(this, &FDreamUISequenceTrackEditor::AddEmbeddedSubMenu, TArray<FGuid>(ObjectBindings)));
 }
 
 TSharedRef<ISequencerSection> FDreamUISequenceTrackEditor::MakeSectionInterface(UMovieSceneSection& SectionObject, UMovieSceneTrack& Track, FGuid ObjectBinding)
@@ -221,10 +227,56 @@ void FDreamUISequenceTrackEditor::AddAssetSubMenu(FMenuBuilder& MenuBuilder, TAr
 void FDreamUISequenceTrackEditor::HandleAssetSelected(const FAssetData& AssetData, TArray<FGuid> ObjectBindings)
 {
 	FSlateApplication::Get().DismissAllMenus();
+	AddSequenceToBindings(Cast<UDreamUISequence>(AssetData.GetAsset()), ObjectBindings);
+}
 
-	UDreamUISequence* Asset = Cast<UDreamUISequence>(AssetData.GetAsset());
+void FDreamUISequenceTrackEditor::AddEmbeddedSubMenu(FMenuBuilder& MenuBuilder, TArray<FGuid> ObjectBindings)
+{
+	const TSharedPtr<ISequencer> SequencerPtr = GetSequencer();
+	UDreamWidgetAnimation* OuterAnimation = SequencerPtr.IsValid()
+		? Cast<UDreamWidgetAnimation>(SequencerPtr->GetFocusedMovieSceneSequence()) : nullptr;
+	UDreamWidgetAnimationComponent* Component = OuterAnimation != nullptr
+		? OuterAnimation->GetTypedOuter<UDreamWidgetAnimationComponent>() : nullptr;
+
+	int32 Offered = 0;
+	if (Component != nullptr)
+	{
+		for (UDreamWidgetAnimation* Animation : Component->GetSequenceArray())
+		{
+			// Not itself: a sequence that contains itself has no length and no end, and the engine
+			// would be the one to find that out.
+			if (!IsValid(Animation) || Animation == OuterAnimation)
+			{
+				continue;
+			}
+			++Offered;
+			MenuBuilder.AddMenuEntry(
+				FText::FromString(Animation->GetDisplayNameString()),
+				LOCTEXT("AddEmbeddedEntryTooltip", "Play this animation as a section of the one being edited."),
+				FSlateIcon(),
+				FUIAction(FExecuteAction::CreateRaw(this, &FDreamUISequenceTrackEditor::HandleEmbeddedSelected,
+					TWeakObjectPtr<UDreamWidgetAnimation>(Animation), TArray<FGuid>(ObjectBindings))));
+		}
+	}
+	if (Offered == 0)
+	{
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("NoEmbeddedAnimations", "No other animations on this component"),
+			LOCTEXT("NoEmbeddedAnimationsTooltip", "Only the embedded animations of the component this one belongs to can be nested; a standalone asset is offered under DreamUI Animation instead."),
+			FSlateIcon(), FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([] { return false; })));
+	}
+}
+
+void FDreamUISequenceTrackEditor::HandleEmbeddedSelected(TWeakObjectPtr<UDreamWidgetAnimation> InAnimation, TArray<FGuid> ObjectBindings)
+{
+	FSlateApplication::Get().DismissAllMenus();
+	AddSequenceToBindings(InAnimation.Get(), ObjectBindings);
+}
+
+void FDreamUISequenceTrackEditor::AddSequenceToBindings(UMovieSceneSequence* InSequence, const TArray<FGuid>& ObjectBindings)
+{
 	UMovieScene* MovieScene = GetFocusedMovieScene();
-	if (Asset == nullptr || MovieScene == nullptr || MovieScene->IsReadOnly())
+	if (InSequence == nullptr || InSequence->GetMovieScene() == nullptr || MovieScene == nullptr || MovieScene->IsReadOnly())
 	{
 		return;
 	}
@@ -232,11 +284,11 @@ void FDreamUISequenceTrackEditor::HandleAssetSelected(const FAssetData& AssetDat
 	const FScopedTransaction Transaction(LOCTEXT("AddDreamUISequence_Transaction", "Add DreamUI Animation"));
 	MovieScene->Modify();
 
-	// The asset's own range, expressed in the outer sequence's resolution.
-	const TRange<FFrameNumber> InnerRange = Asset->GetMovieScene()->GetPlaybackRange();
+	// The inner sequence's own range, expressed in the outer sequence's resolution.
+	const TRange<FFrameNumber> InnerRange = InSequence->GetMovieScene()->GetPlaybackRange();
 	const FFrameTime InnerDuration = FFrameRate::TransformTime(
 		UE::MovieScene::DiscreteSize(InnerRange),
-		Asset->GetMovieScene()->GetTickResolution(), MovieScene->GetTickResolution());
+		InSequence->GetMovieScene()->GetTickResolution(), MovieScene->GetTickResolution());
 
 	for (const FGuid& ObjectBinding : ObjectBindings)
 	{
@@ -248,7 +300,7 @@ void FDreamUISequenceTrackEditor::HandleAssetSelected(const FAssetData& AssetDat
 		if (Track != nullptr)
 		{
 			const FFrameNumber StartTime = GetSequencer().IsValid() ? GetSequencer()->GetLocalTime().Time.FrameNumber : FFrameNumber(0);
-			Track->AddSequence(Asset, StartTime, FMath::Max(1, InnerDuration.CeilToFrame().Value));
+			Track->AddSequence(InSequence, StartTime, FMath::Max(1, InnerDuration.CeilToFrame().Value));
 		}
 	}
 	if (const TSharedPtr<ISequencer> SequencerPtr = GetSequencer())

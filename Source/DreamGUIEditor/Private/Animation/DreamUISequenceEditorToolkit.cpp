@@ -39,12 +39,17 @@ FDreamUISequenceEditorToolkit::~FDreamUISequenceEditorToolkit()
 	{
 		FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangedHandle);
 	}
-	DestroyPreviewTree();
+	// The sequencer closes FIRST, while the widgets it has bound are still alive. Its entity groups
+	// are keyed on raw bound-object pointers and nothing repairs those keys when the objects go, so
+	// destroying the preview tree under a live sequencer left it holding keys that named freed
+	// widgets -- the same failure the embedded animation editor evacuates around.
 	if (Sequencer.IsValid())
 	{
 		FLevelEditorSequencerIntegration::Get().RemoveSequencer(Sequencer.ToSharedRef());
 		Sequencer->Close();
+		Sequencer.Reset();
 	}
+	DestroyPreviewTree();
 	// PreviewScene is declared first in the class, so it goes down after the viewport client that
 	// renders it -- no member here may outlive it except the ones declared above it.
 }
@@ -68,12 +73,58 @@ void FDreamUISequenceEditorToolkit::DestroyPreviewTree()
 	SelectedPreviewWidgets.Reset();
 }
 
+void FDreamUISequenceEditorToolkit::EvacuateSequencerEntities()
+{
+	if (!Sequencer.IsValid() || bPlaybackContextSuppressed || Sequence == nullptr)
+	{
+		return;
+	}
+	if (!SuppressionContext.IsValid())
+	{
+		SuppressionContext = TStrongObjectPtr<UObject>(
+			NewObject<UDreamWidget>(GetTransientPackage(), NAME_None, RF_Transient));
+	}
+	// Before the evaluation, not after: writing saved values back needs the objects they were saved
+	// onto, and a moment later those objects are gone.
+	Sequencer->RestorePreAnimatedState();
+	bPlaybackContextSuppressed = true;
+	// A childless root is what makes every path in this sequence resolve to nothing; the forced
+	// evaluation below is what makes the engine unlink the entities keyed on the old tree.
+	Sequence->SetPreviewRoot(Cast<UDreamWidget>(SuppressionContext.Get()));
+	Sequencer->ForceEvaluate();
+}
+
+void FDreamUISequenceEditorToolkit::ResumeSequencerEvaluation()
+{
+	if (!bPlaybackContextSuppressed)
+	{
+		return;
+	}
+	bPlaybackContextSuppressed = false;
+	if (Sequence != nullptr && Sequence->GetPreviewRoot() == Cast<UDreamWidget>(SuppressionContext.Get()))
+	{
+		// Nothing put a real tree back -- the class is unset, or instantiation failed -- so the
+		// sentinel must not be left standing in for one.
+		Sequence->SetPreviewRoot(PreviewRoot.Get());
+	}
+	if (Sequencer.IsValid())
+	{
+		// Resolved bindings still name the tree that has just been destroyed.
+		Sequencer->GetEvaluationState()->ClearObjectCaches(*Sequencer);
+		Sequencer->ForceEvaluate();
+	}
+}
+
 void FDreamUISequenceEditorToolkit::RebuildPreviewTree()
 {
+	// Every widget this sequencer has bound is about to be destroyed; step its entity runtime out
+	// first. No-op when an outer window (a PreviewWidgetClass change) has already evacuated.
+	EvacuateSequencerEntities();
 	DestroyPreviewTree();
 	UClass* WidgetClass = Sequence != nullptr ? Sequence->PreviewWidgetClass.LoadSynchronous() : nullptr;
 	if (WidgetClass == nullptr || !PreviewScene.IsValid())
 	{
+		ResumeSequencerEvaluation();
 		return;
 	}
 	// The root agent carries the canvas (design size, render mode) exactly the way the designer sets
@@ -87,6 +138,7 @@ void FDreamUISequenceEditorToolkit::RebuildPreviewTree()
 	UDreamWidget* Root = Instance;
 	if (Root == nullptr)
 	{
+		ResumeSequencerEvaluation();
 		return;
 	}
 	// Scratch objects: they must never be saved anywhere.
@@ -99,6 +151,10 @@ void FDreamUISequenceEditorToolkit::RebuildPreviewTree()
 	PreviewRoot = Root;
 	Sequence->SetPreviewRoot(Root);
 	UDreamUIManagerWorldSubsystem::RefreshAllUI();
+	// The tree the bindings resolve against exists again, so the sequencer may hold entities keyed on
+	// it once more. Before NotifyMovieSceneDataChanged, so the structure change is told about the new
+	// tree rather than about the sentinel.
+	ResumeSequencerEvaluation();
 	if (Sequencer.IsValid())
 	{
 		Sequencer->NotifyMovieSceneDataChanged(EMovieSceneDataChangeType::MovieSceneStructureItemsChanged);
@@ -114,6 +170,10 @@ void FDreamUISequenceEditorToolkit::OnObjectPropertyChanged(UObject* InObject, F
 	if (InObject == Sequence
 		&& InEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UDreamUISequence, PreviewWidgetClass))
 	{
+		// The whole scene goes here, preview tree included, so the sequencer has to be stepped out of
+		// its entities BEFORE the destruction starts -- RebuildPreviewTree's own evacuation at the end
+		// of this function would come too late for the widgets destroyed on the next line.
+		EvacuateSequencerEntities();
 		// EnsureRootAgent is idempotent -- it hands back the agent it already made -- so the scene has
 		// to go for the new class to get a canvas of its own rather than the last one's.
 		DestroyPreviewTree();
@@ -360,36 +420,6 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 
 	Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &FDreamUISequenceEditorToolkit::HandleSequencerSelectionChanged);
 
-	// Open-time audit of every widget binding against the live preview tree. A path this cannot
-	// resolve is a track that will silently drive nothing -- the classic aftermath of a widget
-	// rename that this asset was not loaded for -- and the moment the asset is opened is the one
-	// moment someone is looking.
-	if (Sequence != nullptr && PreviewRoot.IsValid())
-	{
-		TArray<FString> DeadPaths;
-		if (const FMovieSceneBindingReferences* References = Sequence->GetBindingReferences())
-		{
-			for (const FMovieSceneBindingReference& Reference : References->GetAllReferences())
-			{
-				const UDreamUIWidgetBinding* WidgetBinding = Cast<UDreamUIWidgetBinding>(Reference.CustomBinding);
-				if (WidgetBinding != nullptr && !WidgetBinding->WidgetPath.IsEmpty()
-					&& UDreamUIWidgetBinding::ResolveWidgetPath(PreviewRoot.Get(), WidgetBinding->WidgetPath) == nullptr)
-				{
-					DeadPaths.Add(WidgetBinding->WidgetPath);
-				}
-			}
-		}
-		if (DeadPaths.Num() > 0)
-		{
-			FNotificationInfo Info(FText::Format(
-				NSLOCTEXT("DreamUISequenceEditor", "UnresolvableBindings",
-					"{0} binding(s) in this sequence name widgets the preview tree does not have: {1}. A rename in the widget class probably happened while this asset was unloaded -- repoint them, or re-add the '(was:)' line and recompile the class with this asset open."),
-				DeadPaths.Num(), FText::FromString(FString::Join(DeadPaths, TEXT(", ")))));
-			Info.ExpireDuration = 12.0f;
-			FSlateNotificationManager::Get().AddNotification(Info);
-		}
-	}
-
 	// The tab may have spawned before the sequencer existed; fill it now.
 	if (const TSharedPtr<SDockTab> Tab = TabManager->FindExistingLiveTab(SequencerMainTabId))
 	{
@@ -402,7 +432,69 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 
 	// The preview tree makes the bindings real while editing; rebuild it when the prefab changes.
 	RebuildPreviewTree();
+	// AFTER the rebuild, which is the only thing that ever assigns PreviewRoot. Run before it, the
+	// audit's own "is there a preview tree" guard was false every single time an asset was opened,
+	// so the one diagnostic a broken binding has never once appeared.
+	ReportUnresolvableBindings();
 	PropertyChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FDreamUISequenceEditorToolkit::OnObjectPropertyChanged);
+}
+
+void FDreamUISequenceEditorToolkit::ReportUnresolvableBindings()
+{
+	// An audit of every widget binding against the live preview tree. A path this cannot resolve is a
+	// track that will silently drive nothing -- the classic aftermath of a widget rename that this
+	// asset was not loaded for -- and the moment the asset is opened is the one moment someone is
+	// looking at it.
+	if (Sequence == nullptr || !PreviewRoot.IsValid())
+	{
+		return;
+	}
+	TArray<FString> DeadPaths;
+	TArray<FString> HealedPaths;
+	for (FMovieSceneBindingReference& Reference : Sequence->BindingReferences.GetAllReferences())
+	{
+		UDreamUIWidgetBinding* WidgetBinding = Cast<UDreamUIWidgetBinding>(Reference.CustomBinding.Get());
+		if (WidgetBinding == nullptr || WidgetBinding->WidgetPath.IsEmpty())
+		{
+			continue;
+		}
+		UDreamWidget* Resolved = UDreamUIWidgetBinding::ResolveWidgetPath(PreviewRoot.Get(), WidgetBinding->WidgetPath);
+		if (Resolved == nullptr)
+		{
+			DeadPaths.Add(WidgetBinding->WidgetPath);
+			continue;
+		}
+		// Resolution is move-tolerant -- it falls back to the widget's own name when the path stops
+		// walking -- so a path that resolved may still be the OLD path. Record the new one while the
+		// tree that proves it is in front of us: an asset holds no pointer to heal from later, and
+		// the fallback only works while the name stays unique.
+		const FString CurrentPath = UDreamUIWidgetBinding::BuildWidgetPathFromRoot(PreviewRoot.Get(), Resolved);
+		if (!CurrentPath.IsEmpty() && CurrentPath != WidgetBinding->WidgetPath)
+		{
+			HealedPaths.Add(FString::Printf(TEXT("%s -> %s"), *WidgetBinding->WidgetPath, *CurrentPath));
+			WidgetBinding->Modify();
+			WidgetBinding->WidgetPath = CurrentPath;
+		}
+	}
+	if (HealedPaths.Num() > 0)
+	{
+		Sequence->MarkPackageDirty();
+		FNotificationInfo Info(FText::Format(
+			NSLOCTEXT("DreamUISequenceEditor", "HealedBindings",
+				"{0} binding(s) in this sequence named widgets that have since been moved, and have been repointed: {1}. Save the asset to keep the repair."),
+			HealedPaths.Num(), FText::FromString(FString::Join(HealedPaths, TEXT(", ")))));
+		Info.ExpireDuration = 10.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+	}
+	if (DeadPaths.Num() > 0)
+	{
+		FNotificationInfo Info(FText::Format(
+			NSLOCTEXT("DreamUISequenceEditor", "UnresolvableBindings",
+				"{0} binding(s) in this sequence name widgets the preview tree does not have: {1}. A rename in the widget class probably happened while this asset was unloaded -- repoint them, or re-add the '(was:)' line and recompile the class with this asset open."),
+			DeadPaths.Num(), FText::FromString(FString::Join(DeadPaths, TEXT(", ")))));
+		Info.ExpireDuration = 12.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+	}
 }
 
 FText FDreamUISequenceEditorToolkit::GetBaseToolkitName() const

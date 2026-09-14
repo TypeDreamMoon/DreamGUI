@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "SDreamWidgetAnimationEditorWidget.h"
+// For the log category the read-only notice below uses; a unity blob always had it from a neighbour.
+#include "DreamGUIEditorModule.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamUserWidget.h"
 
@@ -372,7 +374,17 @@ public:
 				FMenuExtensionDelegate::CreateRaw(this, &SDreamWidgetAnimationEditorWidgetImpl::AddPossessMenuExtensions)
 			);
 
+			// False for a `timeline` block's sequence, which the .dui owns and every compile rebuilds
+			// -- see UDreamWidgetAnimation::IsEditable. Said out loud as well as enforced: a
+			// read-only Sequencer with no explanation reads as a broken editor.
 			SequencerInitParams.ViewParams.bReadOnly = !NewSequence->IsEditable();
+			if (SequencerInitParams.ViewParams.bReadOnly && NewSequence->IsLanguageOwned())
+			{
+				UE_LOG(DreamGUIEditor, Display,
+					TEXT("[%s].%d Animation \"%s\" is built from a 'timeline' block in this class's .dui, so the animation editor opens it read-only. Edit the .dui, or change the block to 'timeline %s external' to hand the animation to Sequencer for good."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					*NewSequence->GetDisplayNameString(), *NewSequence->GetDisplayNameString());
+			}
 			SequencerInitParams.ViewParams.AddMenuExtender = AddMenuExtender;
 			SequencerInitParams.ViewParams.UniqueName = "EmbeddedDreamWidgetAnimationEditor";
 			SequencerInitParams.ViewParams.ScrubberStyle = ESequencerScrubberStyle::FrameBlock;
@@ -710,7 +722,30 @@ public:
 		{
 			return;
 		}
+		// The children come across too. MoveBindingContents moves TRACKS; a possessable's sub-object
+		// bindings -- which is how every visual, layout and behaviour of a DreamUI widget is bound,
+		// parented to their widget by UDreamWidgetAnimation::GetParentObject -- are separate
+		// possessables that name their parent by GUID. Left alone, they went on naming the GUID this
+		// function is about to delete, and the whole sub-tree of tracks stopped resolving.
+		TArray<FGuid> ChildBindings;
+		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)
+		{
+			const FMovieScenePossessable& Possessable = MovieScene->GetPossessable(Index);
+			if (Possessable.GetParent() == ObjectBinding)
+			{
+				ChildBindings.Add(Possessable.GetGuid());
+			}
+		}
 		MovieScene->MoveBindingContents(ObjectBinding, NewGuid);
+		for (const FGuid& ChildGuid : ChildBindings)
+		{
+			// Looked up again by GUID rather than held by pointer: the array of possessables is what
+			// MoveBindingContents above may have reallocated.
+			if (FMovieScenePossessable* Child = MovieScene->FindPossessable(ChildGuid))
+			{
+				Child->SetParent(NewGuid, MovieScene);
+			}
+		}
 		MovieScene->RemovePossessable(ObjectBinding);
 		Sequence->UnbindPossessableObjects(ObjectBinding);
 		Sequencer->NotifyMovieSceneDataChanged(EMovieSceneDataChangeType::MovieSceneStructureItemsChanged);
@@ -785,7 +820,17 @@ public:
 				FNewMenuDelegate::CreateSPLambda(this, [this](FMenuBuilder& SubMenuBuilder)
 				{
 					SubMenuBuilder.BeginSection("ChooseWidgetSection", LOCTEXT("ChooseWidget", "Choose Widget:"));
-					auto Widget = WeakSequence->GetTypedOuter<UDreamWidget>();
+					// Re-checked here, not only at the top of AddPossessMenuExtensions: this delegate runs
+					// when the author opens the sub-menu, which can be long after the menu was built and
+					// after an undo or a delete has taken the animation away. The outer widget is checked
+					// for the same reason plus one of its own -- an animation need not live on a widget.
+					UDreamWidgetAnimation* PinnedSequence = WeakSequence.Get();
+					UDreamWidget* Widget = PinnedSequence != nullptr ? PinnedSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+					if (Widget == nullptr)
+					{
+						SubMenuBuilder.EndSection();
+						return;
+					}
 					SubMenuBuilder.AddWidget(
 						SNew(SBox)
 						.Padding(4, 0)

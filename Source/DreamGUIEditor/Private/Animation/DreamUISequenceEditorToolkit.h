@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "Toolkits/AssetEditorToolkit.h"
+#include "UObject/StrongObjectPtr.h"
 
 class ISequencer;
 class UDreamUISequence;
@@ -55,6 +56,26 @@ private:
 	/** Bindings created outside the parenting-aware paths float free; adopt them under the root. */
 	void HealStrayBindings();
 	void HandleSequencerSelectionChanged(TArray<FGuid> InObjectGuids);
+	/**
+	 * Step the sequencer's entity runtime out of the window in which its bound objects die.
+	 *
+	 * Sequencer groups animation entities under raw bound-object pointers and keeps two maps of those
+	 * keys in lockstep; nothing repairs them when the objects behind the keys are destroyed, and once
+	 * the two disagree the next empty-group free fails an ensure deep in engine code. Rebuilding the
+	 * preview tree destroys every widget this sequencer has bound, so the tree may only be pulled out
+	 * from under it while it holds no object-keyed entities at all.
+	 *
+	 * The asset's bindings resolve by PATH from the sequence's preview root, so parking that root on a
+	 * childless sentinel and forcing one evaluation makes the engine unlink every entity and free
+	 * every group through its own context-switch path, while everything is still coherent -- and for
+	 * the rest of the window every path resolves to nothing, so nothing new is keyed. The embedded
+	 * animation editor does the same across its own two windows (SDreamWidgetAnimationEditorWidget).
+	 */
+	void EvacuateSequencerEntities();
+	/** The other half of EvacuateSequencerEntities: re-resolve against whatever tree exists by now. */
+	void ResumeSequencerEvaluation();
+	/** Notify once about every widget binding whose path the live preview tree cannot walk. */
+	void ReportUnresolvableBindings();
 	/** The binding whose stored widget path names InWidget from the preview root, if any. */
 	FGuid FindBindingForWidget(const UDreamWidget* InWidget) const;
 
@@ -74,4 +95,10 @@ private:
 	/** Non-zero while this toolkit itself is pushing a selection, so the echo is not re-applied. */
 	int32 SelectionSyncGuard = 0;
 	FDelegateHandle PropertyChangedHandle;
+	/** True between EvacuateSequencerEntities and ResumeSequencerEvaluation. */
+	bool bPlaybackContextSuppressed = false;
+	/** The childless widget the preview root is parked on while evacuated. Strongly held: the window
+	 *  it spans can run a garbage collection, and it must still be there to resume from. Typed as
+	 *  UObject so this header keeps its forward declaration of UDreamWidget. */
+	TStrongObjectPtr<UObject> SuppressionContext;
 };
