@@ -35,6 +35,7 @@
 #include "HAL/PlatformApplicationMisc.h"
 
 #include "Core/Components/DreamWidget.h"
+#include "DreamGUIEditorModule.h"
 
 #include "DetailCategoryBuilder.h"
 #include "Algo/Transform.h"
@@ -316,12 +317,29 @@ void FComponentTransformDetails::GenerateChildContent( IDetailChildrenBuilder& C
 			.OnBeginSliderMovement(this, &FComponentTransformDetails::OnBeginLocationSlider)
 			.OnEndSliderMovement(this, &FComponentTransformDetails::OnEndLocationSlider)
 		];
-		//Disable Y&Z for UIItem
+		// Y and Z belong to the parent's layout for a parented widget, and to the author for a root one.
+		//
+		// Two things used to be wrong here. The state was written ONCE, unconditionally false, so the
+		// root's own depth was permanently uneditable and IsLocationYEnable / IsLocationZEnable -- which
+		// exist to answer exactly this -- were dead code. And it reached the boxes by casting the vector
+		// input's first child to SHorizontalBox with no check at all: the cast is unchecked, so the day
+		// an engine update wraps that row in anything else this writes through a pointer to the wrong
+		// type. The components are reached polymorphically instead, and the state is an ATTRIBUTE, so
+		// re-parenting the widget while the panel is up re-answers the question.
 		{
-			auto Child = LocationWidget->GetChildren()->GetChildAt(0);
-			auto HorizontalBox = StaticCastSharedRef<SHorizontalBox>(Child);
-			HorizontalBox->GetSlot(1).GetWidget()->SetEnabled(false);
-			HorizontalBox->GetSlot(2).GetWidget()->SetEnabled(false);
+			FChildren* VectorChildren = LocationWidget->GetChildren();
+			FChildren* Components = (VectorChildren != nullptr && VectorChildren->Num() > 0)
+				? VectorChildren->GetChildAt(0)->GetChildren() : nullptr;
+			if (Components != nullptr && Components->Num() >= 3)
+			{
+				Components->GetChildAt(1)->SetEnabled(TAttribute<bool>::CreateSP(this, &FComponentTransformDetails::IsLocationYEnable));
+				Components->GetChildAt(2)->SetEnabled(TAttribute<bool>::CreateSP(this, &FComponentTransformDetails::IsLocationZEnable));
+			}
+			else
+			{
+				UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d SNumericVectorInputBox no longer lays its components out as one flat row; the Y/Z lock for a parented widget was not applied."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			}
 		}
 	}
 	
@@ -407,32 +425,11 @@ void FComponentTransformDetails::GenerateChildContent( IDetailChildrenBuilder& C
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
-void FComponentTransformDetails::Tick( float DeltaTime ) 
+void FComponentTransformDetails::Tick( float DeltaTime )
 {
+	// A DreamUI transform is always in the canvas's own pixel units, so there is no unit to pick and
+	// the engine original's per-tick CacheCommonLocationUnits pass has nothing to do here.
 	CacheTransform();
-	/*if (!FixedDisplayUnits.IsSet())
-	{
-		CacheCommonLocationUnits();
-	}*/
-}
-
-void FComponentTransformDetails::CacheCommonLocationUnits()
-{
-	float LargestValue = 0.f;
-	if (CachedLocation.X.IsSet() && CachedLocation.X.GetValue() > LargestValue)
-	{
-		LargestValue = CachedLocation.X.GetValue();
-	}
-	if (CachedLocation.Y.IsSet() && CachedLocation.Y.GetValue() > LargestValue)
-	{
-		LargestValue = CachedLocation.Y.GetValue();
-	}
-	if (CachedLocation.Z.IsSet() && CachedLocation.Z.GetValue() > LargestValue)
-	{
-		LargestValue = CachedLocation.Z.GetValue();
-	}
-
-	SetupFixedDisplay(LargestValue);
 }
 
 TSharedPtr<IPropertyHandle> FComponentTransformDetails::GeneratePropertyHandle(FName PropertyName, IDetailChildrenBuilder& ChildrenBuilder)
@@ -489,24 +486,34 @@ void FComponentTransformDetails::OnPreserveScaleRatioToggled( ECheckBoxState New
 	GConfig->SetBool(TEXT("SelectionDetails"), TEXT("PreserveScaleRatio"), bPreserveScaleRatio, GEditorPerProjectIni);
 }
 
+EAxisList::Type FComponentTransformDetails::GetEditableLocationAxes() const
+{
+	int32 Axes = EAxisList::None;
+	if (IsLocationXEnable())Axes |= EAxisList::X;
+	if (IsLocationYEnable())Axes |= EAxisList::Y;
+	if (IsLocationZEnable())Axes |= EAxisList::Z;
+	return (EAxisList::Type)Axes;
+}
+
 bool FComponentTransformDetails::GetLocationResetVisibility() const
 {
-	const auto* Archetype = SelectedObjects[0].Get();
-	if (!IsValid(Archetype))return false;
-	FVector targetLocation = FVector::ZeroVector;
-	if (!IsLocationXEnable())
+	// Asked of the whole selection: the button resets every selected widget, so it has to offer itself
+	// while ANY of them still has something to reset. Only the axes this panel lets the author edit
+	// count -- a parented widget's Y and Z are the layout's, and "reset" cannot mean zeroing those.
+	const EAxisList::Type Axes = GetEditableLocationAxes();
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : SelectedObjects)
 	{
-		targetLocation.X = Archetype->GetRelativeLocation().X;
+		const UDreamWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget))continue;
+		const FVector Location = Widget->GetRelativeLocation();
+		if (((Axes & EAxisList::X) && Location.X != 0.0)
+			|| ((Axes & EAxisList::Y) && Location.Y != 0.0)
+			|| ((Axes & EAxisList::Z) && Location.Z != 0.0))
+		{
+			return true;
+		}
 	}
-	if (!IsLocationYEnable())
-	{
-		targetLocation.Y = Archetype->GetRelativeLocation().Y;
-	}
-	if (!IsLocationZEnable())
-	{
-		targetLocation.Z = Archetype->GetRelativeLocation().Z;
-	}
-	return Archetype->GetRelativeLocation() != targetLocation;
+	return false;
 }
 
 void FComponentTransformDetails::OnLocationResetClicked()
@@ -514,30 +521,27 @@ void FComponentTransformDetails::OnLocationResetClicked()
 	const FText TransactionName = LOCTEXT("ResetLocation", "Reset Location");
 	FScopedTransaction Transaction(TransactionName);
 
-	UDreamWidget* Archetype = SelectedObjects[0].Get();
-	if (!IsValid(Archetype))return;
-	FVector targetLocation = FVector::ZeroVector;
-	if (!IsLocationXEnable())
-	{
-		targetLocation.X = Archetype->GetRelativeLocation().X;
-	}
-	if (!IsLocationYEnable())
-	{
-		targetLocation.Y = Archetype->GetRelativeLocation().Y;
-	}
-	if (!IsLocationZEnable())
-	{
-		targetLocation.Z = Archetype->GetRelativeLocation().Z;
-	}
-
-	OnSetTransform(ETransformField::Location, EAxisList::All, targetLocation, true);
+	// The AXES are what this reset is about, not a vector. It used to build one vector out of
+	// SelectedObjects[0] -- its own values on the axes the panel does not edit -- and write that
+	// across the whole selection, so resetting a multi-selection stamped the first widget's locked
+	// depth onto every other one. OnSetTransform already keeps each object's own value on any axis
+	// outside the mask, so naming the mask is the whole fix.
+	const EAxisList::Type Axes = GetEditableLocationAxes();
+	if (Axes == EAxisList::None)return;
+	OnSetTransform(ETransformField::Location, Axes, FVector::ZeroVector, true);
 }
 
 bool FComponentTransformDetails::GetRotationResetVisibility() const
 {
-	const auto* Archetype = SelectedObjects[0].Get();
-	if (!IsValid(Archetype))return false;
-	return Archetype->GetRelativeRotation().Euler() != FVector::ZeroVector;
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : SelectedObjects)
+	{
+		const UDreamWidget* Widget = WeakWidget.Get();
+		if (IsValid(Widget) && Widget->GetRelativeRotation().Euler() != FVector::ZeroVector)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void FComponentTransformDetails::OnRotationResetClicked()
@@ -545,26 +549,26 @@ void FComponentTransformDetails::OnRotationResetClicked()
 	const FText TransactionName = LOCTEXT("ResetRotation", "Reset Rotation");
 	FScopedTransaction Transaction(TransactionName);
 
-	UDreamWidget* Archetype = SelectedObjects[0].Get();
-	if (!IsValid(Archetype))return;
-
 	OnSetTransform(ETransformField::Rotation, EAxisList::All, FVector::ZeroVector, true);
 }
 
 bool FComponentTransformDetails::GetScaleResetVisibility() const
 {
-	const auto* Archetype = SelectedObjects[0].Get();
-	if (!IsValid(Archetype))return false;
-	return Archetype->GetRelativeScale() != FVector::OneVector;
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : SelectedObjects)
+	{
+		const UDreamWidget* Widget = WeakWidget.Get();
+		if (IsValid(Widget) && Widget->GetRelativeScale() != FVector::OneVector)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void FComponentTransformDetails::OnScaleResetClicked()
 {
 	const FText TransactionName = LOCTEXT("ResetScale", "Reset Scale");
 	FScopedTransaction Transaction(TransactionName);
-
-	UDreamWidget* Archetype = SelectedObjects[0].Get();
-	if (!IsValid(Archetype))return;
 
 	OnSetTransform(ETransformField::Scale, EAxisList::All, FVector(1.0f), true);
 }
@@ -644,35 +648,21 @@ void FComponentTransformDetails::CacheTransform()
 
 bool FComponentTransformDetails::IsLocationYEnable()const
 {
-	if (SelectedObjects.Num() > 0)
+	//every selected widget has to own its depth, or the row would edit one the hierarchy owns
+	bool bAnyWidget = false;
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : SelectedObjects)
 	{
-		TWeakObjectPtr<UDreamWidget> uiItem = SelectedObjects[0];
-		if (uiItem.IsValid())
-		{
-			if (uiItem->GetParent() == nullptr)
-			{
-				return true;
-			}
-			return false;
-		}
+		const UDreamWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget))continue;
+		if (Widget->GetParent() != nullptr)return false;
+		bAnyWidget = true;
 	}
-	return false;
+	return bAnyWidget;
 }
 bool FComponentTransformDetails::IsLocationZEnable()const
 {
-	if (SelectedObjects.Num() > 0)
-	{
-		TWeakObjectPtr<UDreamWidget> uiItem = SelectedObjects[0];
-		if (uiItem.IsValid())
-		{
-			if (uiItem->GetParent() == nullptr)
-			{
-				return true;
-			}
-			return false;
-		}
-	}
-	return false;
+	//same question as Y: a widget either has a parent or it does not
+	return IsLocationYEnable();
 }
 
 FVector FComponentTransformDetails::GetAxisFilteredVector(EAxisList::Type Axis, const FVector& NewValue, const FVector& OldValue)
@@ -1042,7 +1032,15 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 
 		if (NotifyHook)
 		{
-			NotifyHook->NotifyPostChange(PropertyChangedEvent, ValueProperty);
+			// Rebuilt now that ModifiedObjects is filled. The event above was constructed BEFORE the
+			// loop, so MakeArrayView captured an empty array -- the hook that mirrors onto the
+			// blueprint template was handed an event naming zero objects and had to fall back to
+			// whatever the panel happened to have selected, which is right for this section only by
+			// accident and wrong the moment the selection and the written objects differ.
+			FPropertyChangedEvent FinishedEvent(ValueProperty,
+				!bCommitted ? EPropertyChangeType::Interactive : EPropertyChangeType::ValueSet,
+				MakeArrayView(ModifiedObjects));
+			NotifyHook->NotifyPostChange(FinishedEvent, ValueProperty);
 		}
 	}
 
@@ -1052,10 +1050,16 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 		CacheTransform();
 	}
 
-	GUnrealEd->UpdatePivotLocationForSelection();
-	GUnrealEd->SetPivotMovedIndependently(false);
-	// Redraw
-	GUnrealEd->RedrawLevelEditingViewports();
+	// Only on the finished gesture: this is level-editor housekeeping (the gizmo pivot for the ACTOR
+	// selection, then a repaint of every level viewport) and the interactive path fires once per mouse
+	// move, so dragging a transform spinner redrew the whole level editor tens of times a second.
+	if (bCommitted)
+	{
+		GUnrealEd->UpdatePivotLocationForSelection();
+		GUnrealEd->SetPivotMovedIndependently(false);
+		// Redraw
+		GUnrealEd->RedrawLevelEditingViewports();
+	}
 }
 
 void FComponentTransformDetails::OnSetTransformAxis(FVector::FReal NewValue, ETextCommit::Type CommitInfo, ETransformField::Type TransformField, EAxisList::Type Axis, bool bCommitted)

@@ -36,6 +36,15 @@ public:
 	TArray<UObject*> GetEditedObjects() const;
 
 	virtual void NotifyPreChange(FEditPropertyChain* PropertyAboutToChange) override;
+	/**
+	 * The chainless PRE-change overload, the twin of the post-change one below.
+	 *
+	 * The transform section notifies through this one (it has no property node, so it has no chain),
+	 * and the base class's body is empty -- so the destination was written without ever being
+	 * snapshotted first, and undoing a transform typed into the panel restored the preview and left
+	 * the template holding the new value.
+	 */
+	virtual void NotifyPreChange(FProperty* PropertyAboutToChange) override;
 	virtual void NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FEditPropertyChain* PropertyThatChanged) override;
 	/** The chainless overload custom sections notify through; forwards into the one above. */
 	virtual void NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged) override;

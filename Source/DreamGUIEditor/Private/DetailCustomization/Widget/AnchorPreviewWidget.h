@@ -57,9 +57,6 @@ namespace DreamGUIAnchorPreviewWidget
 			EHorizontalAlignment anchorDotRightBottomHAlign = EHorizontalAlignment::HAlign_Right;
 			EVerticalAlignment anchorDotRightBottomVAlign = EVerticalAlignment::VAlign_Bottom;
 			int anchorDotSize = 5;
-			//EHorizontalAlignment pivotDotHAlign = EHorizontalAlignment::HAlign_Left;
-			//EVerticalAlignment pivotDotVAlign = EVerticalAlignment::VAlign_Top;
-			int pivotDotSize = 5;
 
 			EHorizontalAlignment hAlign = EHorizontalAlignment::HAlign_Center;
 			switch (InArgs._PersistentHAlign.Get())
@@ -68,7 +65,6 @@ namespace DreamGUIAnchorPreviewWidget
 			{
 				anchorDotSize = 0;
 				anchorLineVerticalHeight = 0;
-				//pivotDotHAlign = EHorizontalAlignment::HAlign_Center;
 			}
 			break;
 			case UIAnchorHorizontalAlign::Left:
@@ -78,7 +74,6 @@ namespace DreamGUIAnchorPreviewWidget
 				anchorDotLeftBottomHAlign = hAlign;
 				anchorDotRightTopHAlign = hAlign;
 				anchorDotRightBottomHAlign = hAlign;
-				//pivotDotHAlign = hAlign;
 			}break;
 			case UIAnchorHorizontalAlign::Center:
 			{
@@ -87,7 +82,6 @@ namespace DreamGUIAnchorPreviewWidget
 				anchorDotLeftBottomHAlign = hAlign;
 				anchorDotRightTopHAlign = hAlign;
 				anchorDotRightBottomHAlign = hAlign;
-				//pivotDotHAlign = hAlign;
 			} break;
 			case UIAnchorHorizontalAlign::Right:
 			{
@@ -96,13 +90,11 @@ namespace DreamGUIAnchorPreviewWidget
 				anchorDotLeftBottomHAlign = hAlign;
 				anchorDotRightTopHAlign = hAlign;
 				anchorDotRightBottomHAlign = hAlign;
-				//pivotDotHAlign = hAlign;
 			} break;
 			case UIAnchorHorizontalAlign::Stretch:
 			{
 				hAlign = EHorizontalAlignment::HAlign_Fill;
 				anchorLineVerticalHeight = 1;
-				//pivotDotHAlign = EHorizontalAlignment::HAlign_Center;
 			}
 			break;
 			}
@@ -113,7 +105,6 @@ namespace DreamGUIAnchorPreviewWidget
 			{
 				anchorDotSize = 0;
 				anchorLineHorizontalWidth = 0;
-				//pivotDotVAlign = EVerticalAlignment::VAlign_Center;
 			}
 			break;
 			case UIAnchorVerticalAlign::Top:
@@ -123,7 +114,6 @@ namespace DreamGUIAnchorPreviewWidget
 				anchorDotLeftBottomVAlign = vAlign;
 				anchorDotRightTopVAlign = vAlign;
 				anchorDotRightBottomVAlign = vAlign;
-				//pivotDotVAlign = vAlign;
 			}
 			break;
 			case UIAnchorVerticalAlign::Middle:
@@ -133,7 +123,6 @@ namespace DreamGUIAnchorPreviewWidget
 				anchorDotLeftBottomVAlign = vAlign;
 				anchorDotRightTopVAlign = vAlign;
 				anchorDotRightBottomVAlign = vAlign;
-				//pivotDotVAlign = vAlign;
 			}
 			break;
 			case UIAnchorVerticalAlign::Bottom:
@@ -143,14 +132,12 @@ namespace DreamGUIAnchorPreviewWidget
 				anchorDotLeftBottomVAlign = vAlign;
 				anchorDotRightTopVAlign = vAlign;
 				anchorDotRightBottomVAlign = vAlign;
-				//pivotDotVAlign = vAlign;
 			}
 			break;
 			case UIAnchorVerticalAlign::Stretch:
 			{
 				vAlign = EVerticalAlignment::VAlign_Fill;
 				anchorLineHorizontalWidth = 1;
-				//pivotDotVAlign = EVerticalAlignment::VAlign_Center;
 			}
 			break;
 			}
@@ -323,36 +310,6 @@ namespace DreamGUIAnchorPreviewWidget
 												]
 											]
 										]
-										//pivot point//@todo: why commet? because not the desired behaviour i want
-										//+ SOverlay::Slot()
-										//[
-										//	SNew(SBox)
-										//	.WidthOverride(Size.X)
-										//	.HeightOverride(Size.Y)
-										//	.Padding(this, &SAnchorPreviewWidget::GetInnerRectMargin, Size, InArgs._PersistentHAlign.Get(), InArgs._PersistentVAlign.Get(), InArgs._ButtonEnable.Get())
-										//	.Visibility(this, &SAnchorPreviewWidget::GetPivotDotVisibility, InArgs._PersistentHAlign.Get(), InArgs._PersistentVAlign.Get(), InArgs._ButtonEnable.Get())
-										//	[
-										//		SNew(SBox)
-										//		.WidthOverride(Size.X * 0.5f)
-										//		.HeightOverride(Size.Y * 0.5f)
-										//		[
-										//			SNew(SBox)
-										//			.HAlign(pivotDotHAlign)
-										//			.VAlign(pivotDotVAlign)
-										//			[
-										//				SNew(SBox)
-										//				.WidthOverride(pivotDotSize)
-										//				.HeightOverride(pivotDotSize)
-										//				[
-										//					SNew(SImage)
-										//					.Image(FDreamGUIEditorStyle::Get().GetBrush("DreamGUIEditor.AnchorData_Dot"))
-										//					.ColorAndOpacity(FLinearColor(FColor(50, 255, 200, 128)))
-										//					.Visibility(EVisibility::HitTestInvisible)
-										//				]
-										//			]
-										//		]
-										//	]
-										//]
 										//left top anchor point
 										+ SOverlay::Slot()
 										[
@@ -444,13 +401,6 @@ namespace DreamGUIAnchorPreviewWidget
 
 	private:
 
-		EVisibility GetPivotDotVisibility(UIAnchorHorizontalAlign PivotHAlign, UIAnchorVerticalAlign PivotVAlign, bool IsInteractable)const
-		{
-			return (
-				IsInteractable && FSlateApplication::Get().GetModifierKeys().IsShiftDown()
-				&& PivotHAlign != UIAnchorHorizontalAlign::None && PivotVAlign != UIAnchorVerticalAlign::None
-				) ? EVisibility::HitTestInvisible : EVisibility::Hidden;
-		}
 		FOptionalSize GetInnerRectWidth(float Size, UIAnchorHorizontalAlign hAlign, bool IsInteractable) const
 		{
 			bool snapAnchor = FSlateApplication::Get().GetModifierKeys().IsAltDown();

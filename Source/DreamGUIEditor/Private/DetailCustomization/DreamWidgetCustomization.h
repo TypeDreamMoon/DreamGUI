@@ -73,7 +73,16 @@ private:
 	void ForceUpdateUI();
 
 	bool OnCanCopyAnchor()const;
+	/**
+	 * Slate polls this every frame for as long as the anchor row is on screen, and the honest answer
+	 * needs the system clipboard -- which on Windows means opening it and copying whatever is in it,
+	 * however big, sixty times a second. The answer is cached for a fraction of a second instead:
+	 * short enough that a copy made in another window is picked up before anyone can reach the paste
+	 * button, long enough that idling on the panel costs nothing.
+	 */
 	bool OnCanPasteAnchor()const;
+	mutable double LastAnchorClipboardPollSeconds = 0.0;
+	mutable bool bAnchorClipboardHoldsAnchorData = false;
 	void OnCopyAnchor();
 	void OnPasteAnchor(IDetailLayoutBuilder* DetailBuilder);
 	EVisibility GetAnchorPresetButtonVisibility()const;
@@ -100,7 +109,6 @@ private:
 	bool IsSizeDeltaRowEnabled()const;
 	FText GetArrangedByBannerText()const;
 	EVisibility GetArrangedByBannerVisibility()const;
-	TSharedPtr<IPropertyHandle> GetAnchorPropertyHandle(IDetailLayoutBuilder* DetailBuilder, TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int Index)const;
 	/** A mixed selection leaves the handle's out-param untouched, so the rows read the primary selection instead of stack garbage. */
 	void GetAnchorMinMaxForDisplay(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, FVector2D& OutAnchorMin, FVector2D& OutAnchorMax)const;
 	FText GetAnchorLabelText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int LabelIndex)const;

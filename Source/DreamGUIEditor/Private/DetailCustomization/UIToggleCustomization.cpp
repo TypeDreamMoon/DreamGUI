@@ -22,7 +22,10 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UUIToggle>(targetObjects[0].Get());
+	// An empty list is a real state, not a can't-happen: a details panel rebuilds while a selection
+	// is being cleared, and a customization registered for a class is also constructed for rows the
+	// panel has no object behind. Indexing [0] there reads off the end of an empty array.
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<UUIToggle>(targetObjects[0].Get()) : nullptr;
 	if (TargetScriptPtr != nullptr)
 	{
 		

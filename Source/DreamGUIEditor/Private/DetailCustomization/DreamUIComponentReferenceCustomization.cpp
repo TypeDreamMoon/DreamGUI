@@ -65,18 +65,25 @@ void FDreamUIComponentReferenceCustomization::CustomizeHeader(TSharedRef<IProper
 		break;
 	}
 
-	// copy all EventDelegate I'm accessing right now
+	// Re-resolve every reference before the row is drawn from it. A handle that cannot reach its data
+	// is a state this panel can be in -- a details refresh mid-teardown -- and taking the editor down
+	// with a check() for it helps nobody; there is simply nothing to draw from.
 	TArray<void*> StructPtrs;
 	PropertyHandle->AccessRawData(StructPtrs);
-	check(StructPtrs.Num() != 0);
-
-	ComponentReferenceInstances.AddZeroed(StructPtrs.Num());
-	for (auto Iter = StructPtrs.CreateIterator(); Iter; ++Iter)
+	if (StructPtrs.IsEmpty())
 	{
-		check(*Iter);
-		auto Item = (FDreamUIComponentReference*)(*Iter);
-		ComponentReferenceInstances[Iter.GetIndex()] = Item;
-		Item->CheckTargetObject();
+		return;
+	}
+
+	for (void* StructPtr : StructPtrs)
+	{
+		if (StructPtr == nullptr)
+		{
+			continue;
+		}
+		//the raw addresses are not kept: nothing read them back, and a struct pointer held across a
+		//details refresh is how a panel ends up writing into freed memory
+		((FDreamUIComponentReference*)StructPtr)->CheckTargetObject();
 	}
 
 	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIComponentReference, HelperActor));

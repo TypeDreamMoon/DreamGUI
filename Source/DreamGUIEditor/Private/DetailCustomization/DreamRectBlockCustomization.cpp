@@ -115,8 +115,32 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 			UnitModePropertyHandle->GetValue(*(uint8*)&UnitMode);
 			return UnitMode;
 		};
+		// One undo entry per gesture, not per mouse tick.
+		//
+		// These rows spin, and a spin box fires OnValueChanged on every mouse move. A plain SetValue
+		// there is a full edit each time: its own transaction on the undo stack, its own mirror of the
+		// value onto the blueprint template, and its own write-back flush of the `.dui` -- dozens per
+		// drag, and Ctrl+Z afterwards undid one mouse move. Marked InteractiveChange while the slider
+		// is down instead, which is the flag the property system, the undo buffer and the designer's
+		// notify hook all read as "not finished yet"; the end of the drag writes it properly once.
+		TSharedRef<bool> bIsSliding = MakeShared<bool>(false);
 		return
 			SNew(SNumericEntryBox<float>)
+			.OnBeginSliderMovement_Lambda([bIsSliding]()
+			{
+				*bIsSliding = true;
+			})
+			.OnEndSliderMovement_Lambda([=](float Value)
+			{
+				*bIsSliding = false;
+				Value = GetUnitMode() == EDreamRectBlockUnitMode::Percentage ? Value * 0.01f : Value;
+				PropertyHandle->SetValue(Value);
+			})
+			.OnValueCommitted_Lambda([=](float Value, ETextCommit::Type)
+			{
+				Value = GetUnitMode() == EDreamRectBlockUnitMode::Percentage ? Value * 0.01f : Value;
+				PropertyHandle->SetValue(Value);
+			})
 			.MinValue(EnableMinMax ? 0 : TOptional<float>())
 			.MaxValue_Lambda([=]()
 			{
@@ -133,7 +157,8 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 			.OnValueChanged_Lambda([=](float Value)
 			{
 				Value = GetUnitMode() == EDreamRectBlockUnitMode::Percentage ? Value * 0.01f : Value;
-				PropertyHandle->SetValue(Value);
+				PropertyHandle->SetValue(Value, *bIsSliding
+					? EPropertyValueSetFlags::InteractiveChange : EPropertyValueSetFlags::DefaultFlags);
 			})
 			.Value_Lambda([=]()
 			{

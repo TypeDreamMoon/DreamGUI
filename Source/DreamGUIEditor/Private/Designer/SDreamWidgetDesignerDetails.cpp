@@ -211,6 +211,22 @@ void SDreamWidgetDesignerDetails::NotifyPreChange(FEditPropertyChain* PropertyAb
 	}
 }
 
+void SDreamWidgetDesignerDetails::NotifyPreChange(FProperty* PropertyAboutToChange)
+{
+	// Same shape as the chainless post-change overload below, and for the same caller: a section with
+	// no property node has only a property to name, and a one-link chain is exactly what the mirror
+	// wants from it. Without this the pre-change half of every transform edit fell into FNotifyHook's
+	// empty default -- the template was written by the post-change pass without having been put into
+	// the transaction first.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
+	FEditPropertyChain Chain;
+	Chain.AddHead(PropertyAboutToChange);
+	NotifyPreChange(&Chain);
+}
+
 void SDreamWidgetDesignerDetails::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FEditPropertyChain* PropertyThatChanged)
 {
 	// Not while a slider is being dragged. Every interactive tick would otherwise copy the value

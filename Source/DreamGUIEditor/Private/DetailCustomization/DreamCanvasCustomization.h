@@ -17,7 +17,8 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
 	TArray<TWeakObjectPtr<class UDreamCanvas>> TargetScriptArray;
-	void ForceRefresh(class IDetailLayoutBuilder* DetailBuilder);
+	/** Weak, because the delegate that calls this outlives the layout that registered it. */
+	void ForceRefresh(TWeakPtr<class IPropertyUtilities> InPropertyUtilities);
 	FText GetDrawcallInfo()const;
 	FText GetDrawcallInfoTooltip()const;
 	void OnCopySortOrder();

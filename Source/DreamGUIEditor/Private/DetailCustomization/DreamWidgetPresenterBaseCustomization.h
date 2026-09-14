@@ -17,5 +17,4 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
 	TArray<TWeakObjectPtr<class UDreamWidgetPresenterComponentBase>> TargetScriptArray;
-	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
 };

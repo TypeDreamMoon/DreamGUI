@@ -12,6 +12,35 @@
 #include "Window/DreamUIWidgetInspector.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetPresenterBaseCustomization"
+
+namespace DreamWidgetPresenterBaseCustomizationLocal
+{
+	/**
+	 * The inspector inside a dock tab, or nothing.
+	 *
+	 * A tab found by ID in a global registry contains whatever its spawner put there: a layout
+	 * restored from an older config, or a spawner that failed and left a placeholder, hands back some
+	 * other widget entirely. The two sites below used to StaticCastSharedRef the content with no
+	 * check at all and then call through the result, which is a call into an unrelated object's
+	 * vtable. Slate's own type name is the only identity a widget carries, so that is what is asked.
+	 */
+	TSharedPtr<SDreamUIWidgetInspector> GetInspectorIn(const TSharedPtr<SDockTab>& InTab)
+	{
+		if (!InTab.IsValid())
+		{
+			return nullptr;
+		}
+		//the name SNew stamps on the widget; keep it spelled the same as the class
+		static const FName InspectorTypeName = TEXT("SDreamUIWidgetInspector");
+		TSharedRef<SWidget> Content = InTab->GetContent();
+		if (Content->GetType() != InspectorTypeName)
+		{
+			return nullptr;
+		}
+		return StaticCastSharedRef<SDreamUIWidgetInspector>(Content);
+	}
+}
+
 FDreamWidgetPresenterBaseCustomization::FDreamWidgetPresenterBaseCustomization()
 {
 }
@@ -91,9 +120,9 @@ void FDreamWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuild
 	bool bIsExternalTabAlreadyOpened = false;
 
 	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FDreamGUIEditorModule:: DreamUIWidgetInspectorTabName);
-	if (ExistingTab.IsValid())
+	if (TSharedPtr<SDreamUIWidgetInspector> WidgetInspector =
+		DreamWidgetPresenterBaseCustomizationLocal::GetInspectorIn(ExistingTab))
 	{
-		auto WidgetInspector = StaticCastSharedRef<SDreamUIWidgetInspector>(ExistingTab->GetContent());
 		bIsExternalTabAlreadyOpened = TargetWorld.IsValid() && WidgetInspector->GetWorld() == TargetWorld.Get();
 	}
 	Category.AddCustomRow(FText())
@@ -121,9 +150,11 @@ void FDreamWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuild
 				UDreamWidgetPresenterComponentBase* Target = PrimaryTarget.Get();
 				if (Target && IsValid(Target->GetWorld()))
 				{
-					if (auto Tab = FGlobalTabmanager::Get()->TryInvokeTab(FDreamGUIEditorModule::DreamUIWidgetInspectorTabName))
+					TSharedPtr<SDockTab> Tab = FGlobalTabmanager::Get()->TryInvokeTab(FDreamGUIEditorModule::DreamUIWidgetInspectorTabName);
+					if (TSharedPtr<SDreamUIWidgetInspector> WidgetInspector =
+						DreamWidgetPresenterBaseCustomizationLocal::GetInspectorIn(Tab))
 					{
-						StaticCastSharedRef<SDreamUIWidgetInspector>(Tab->GetContent())->AssignWorld(Target->GetWorld());
+						WidgetInspector->AssignWorld(Target->GetWorld());
 					}
 				}
 				return FReply::Handled();
@@ -156,13 +187,6 @@ void FDreamWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuild
 				DetailBuilder.HideProperty(CanvasTemplate_PH);
 			}
 		}
-	}
-}
-void FDreamWidgetPresenterBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
-{
-	if (DetailBuilder)
-	{
-		DetailBuilder->ForceRefreshDetails();
 	}
 }
 #undef LOCTEXT_NAMESPACE

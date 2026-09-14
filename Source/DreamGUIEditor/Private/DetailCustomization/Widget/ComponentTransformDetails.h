@@ -130,8 +130,15 @@ private:
 	bool OnCanCopy( ETransformField::Type TransformField ) const;
 
 	bool IsLocationXEnable()const { return true; };
+	/**
+	 * Depth belongs to the author only while nobody else owns it: a parented widget's Y and Z come out
+	 * of the hierarchy's own layout pass. Asked of the WHOLE selection, because one row drives all of
+	 * it and a row enabled on the root's behalf would write depth onto every parented widget with it.
+	 */
 	bool IsLocationYEnable()const;
 	bool IsLocationZEnable()const;
+	/** X, plus whichever of Y/Z the selection currently owns. */
+	EAxisList::Type GetEditableLocationAxes()const;
 
 	/**
 	 * Copies the specified transform field to the clipboard
@@ -188,9 +195,6 @@ private:
 	TOptional<FVector::FReal> GetScaleZ() const { return CachedScale.Z; }
 	/** @return The visibility of the "Reset to Default" button for the scale component */
 	bool GetScaleResetVisibility() const;
-
-	/** Cache a single unit to display all location comonents in */
-	void CacheCommonLocationUnits();
 
 	/** Generate a property handle from a property name. */
 	TSharedPtr<IPropertyHandle> GeneratePropertyHandle(FName PropertyName, IDetailChildrenBuilder& ChildrenBuilder);

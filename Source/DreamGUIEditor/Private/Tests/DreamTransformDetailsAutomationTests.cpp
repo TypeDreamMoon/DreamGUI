@@ -31,6 +31,26 @@ struct FDreamTransformDetailsTestAccess
 	{
 		Details.bPreserveScaleRatio = bValue;
 	}
+
+	static bool IsDepthEditable(const FComponentTransformDetails& Details)
+	{
+		return Details.IsLocationYEnable();
+	}
+
+	static EAxisList::Type EditableLocationAxes(const FComponentTransformDetails& Details)
+	{
+		return Details.GetEditableLocationAxes();
+	}
+
+	static void ResetLocation(FComponentTransformDetails& Details)
+	{
+		Details.OnLocationResetClicked();
+	}
+
+	static bool LocationResetOffered(const FComponentTransformDetails& Details)
+	{
+		return Details.GetLocationResetVisibility();
+	}
 };
 
 namespace DreamTransformDetailsTestLocal
@@ -48,6 +68,17 @@ namespace DreamTransformDetailsTestLocal
 		Widget->SetDisplayName(Name);
 		Widget->SetWidth(100.0f);
 		Widget->SetHeight(100.0f);
+		return Widget;
+	}
+
+	/** A parent to hang widgets under, so "does a layout own this widget's depth" has a real answer. */
+	UDreamWidget* MakeParented(UWorld* World, UDreamWidget* Parent, const TCHAR* Name)
+	{
+		UDreamWidget* Widget = NewObject<UDreamWidget>(World);
+		Widget->SetDisplayName(Name);
+		Widget->SetWidth(100.0f);
+		Widget->SetHeight(100.0f);
+		Widget->TrySetParent(Parent, false);
 		return Widget;
 	}
 
@@ -179,6 +210,87 @@ bool FDreamTransformDetailsAllAxesStillWritesWholeVectorTest::RunTest(const FStr
 
 	TestEqual(TEXT("the first widget takes the whole pasted vector"), First->GetRelativeScale(), FVector(5.0, 6.0, 7.0));
 	TestEqual(TEXT("so does the second"), Second->GetRelativeScale(), FVector(5.0, 6.0, 7.0));
+	return true;
+}
+
+// Depth is the parent layout's for a parented widget and the author's for a root one. The panel used
+// to answer that question once, at construction, with a hard-coded "no" written straight onto the Y
+// and Z boxes -- so IsLocationYEnable/IsLocationZEnable, which exist to answer it, were dead code and
+// a root widget could never be moved in depth at all. They also read only SelectedObjects[0], which
+// is the half that matters here: one row drives the whole selection.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTransformDetailsDepthFollowsTheWholeSelectionTest,
+	"DreamGUI.Editor.TransformDetails.DepthIsEditableOnlyWhileNoSelectedWidgetHasAParent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTransformDetailsDepthFollowsTheWholeSelectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTransformDetailsTestLocal;
+	FScopedTestWorld TestWorld;
+
+	UDreamWidget* RootA = MakeWidget(TestWorld.World, TEXT("RootA"));
+	UDreamWidget* RootB = MakeWidget(TestWorld.World, TEXT("RootB"));
+	UDreamWidget* Child = MakeParented(TestWorld.World, RootB, TEXT("Child"));
+	if (!TestTrue(TEXT("the fixture child really is parented"), Child->GetParent() == RootB))return true;
+
+	TSharedRef<FComponentTransformDetails> BothRoots = MakeDetails(RootA, RootB);
+	TestTrue(TEXT("two parentless widgets own their own depth"),
+		FDreamTransformDetailsTestAccess::IsDepthEditable(*BothRoots));
+	TestEqual(TEXT("...so all three axes are the panel's to edit"),
+		(int32)FDreamTransformDetailsTestAccess::EditableLocationAxes(*BothRoots), (int32)EAxisList::XYZ);
+
+	// The mixed case, which is the one a per-[0] answer gets wrong: the row is one control, so a
+	// selection containing anything the hierarchy arranges must not offer to write depth across it.
+	TSharedRef<FComponentTransformDetails> Mixed = MakeDetails(RootA, Child);
+	TestFalse(TEXT("one parented widget in the selection is enough to take depth away"),
+		FDreamTransformDetailsTestAccess::IsDepthEditable(*Mixed));
+	TestEqual(TEXT("...leaving only X"),
+		(int32)FDreamTransformDetailsTestAccess::EditableLocationAxes(*Mixed), (int32)EAxisList::X);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTransformDetailsResetLocationKeepsLockedAxesTest,
+	"DreamGUI.Editor.TransformDetails.ResetLocationLeavesEachWidgetsArrangedDepthAlone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTransformDetailsResetLocationKeepsLockedAxesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTransformDetailsTestLocal;
+	FScopedTestWorld TestWorld;
+
+	UDreamWidget* Root = MakeWidget(TestWorld.World, TEXT("Root"));
+	UDreamWidget* First = MakeParented(TestWorld.World, Root, TEXT("First"));
+	UDreamWidget* Second = MakeParented(TestWorld.World, Root, TEXT("Second"));
+	// Different depths, and neither of them zero: a reset that took its "keep this" values from the
+	// first selected widget would stamp First's Y and Z onto Second, and equal values would hide it.
+	First->SetRelativeLocation(FVector(11.0, 3.0, 4.0));
+	Second->SetRelativeLocation(FVector(22.0, 7.0, 9.0));
+	// Read back rather than assumed: for a parented widget the in-plane axes go through the anchor
+	// data, so what the widget holds afterwards is the only honest "its own value".
+	const FVector FirstBefore = First->GetRelativeLocation();
+	const FVector SecondBefore = Second->GetRelativeLocation();
+	if (!TestTrue(TEXT("the two fixture widgets sit at different in-plane positions"),
+		!FMath::IsNearlyEqual(FirstBefore.Y, SecondBefore.Y) && !FMath::IsNearlyEqual(FirstBefore.Z, SecondBefore.Z)))return true;
+
+	TSharedRef<FComponentTransformDetails> Details = MakeDetails(First, Second);
+	TestTrue(TEXT("the reset button offers itself while anything is off zero"),
+		FDreamTransformDetailsTestAccess::LocationResetOffered(*Details));
+
+	FDreamTransformDetailsTestAccess::ResetLocation(*Details);
+
+	TestEqual(TEXT("the first widget's editable axis is zeroed"), First->GetRelativeLocation().X, 0.0, 0.01);
+	TestEqual(TEXT("so is the second's"), Second->GetRelativeLocation().X, 0.0, 0.01);
+	// The defect: the axes the panel does not edit used to be taken from SelectedObjects[0] and
+	// written across the whole selection, and for a parented widget that write is serialized through
+	// CalculateAnchorFromTransform -- so a reset silently moved everything onto the first widget.
+	TestEqual(TEXT("the first widget keeps its own arranged position"), First->GetRelativeLocation().Y, FirstBefore.Y, 0.01);
+	TestEqual(TEXT("...on both in-plane axes"), First->GetRelativeLocation().Z, FirstBefore.Z, 0.01);
+	TestEqual(TEXT("and the second keeps its own, not the first's"), Second->GetRelativeLocation().Y, SecondBefore.Y, 0.01);
+	TestEqual(TEXT("...on both in-plane axes"), Second->GetRelativeLocation().Z, SecondBefore.Z, 0.01);
+
+	TestFalse(TEXT("with every editable axis at zero the button withdraws"),
+		FDreamTransformDetailsTestAccess::LocationResetOffered(*Details));
 	return true;
 }
 
