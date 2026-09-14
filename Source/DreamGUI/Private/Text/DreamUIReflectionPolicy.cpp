@@ -11,13 +11,6 @@ namespace DreamUIReflection
 {
 	namespace Local
 	{
-		/** Owner-name + property-name pairs excluded by code rather than by meta. */
-		TSet<TPair<FName, FName>>& GetExclusions()
-		{
-			static TSet<TPair<FName, FName>> Exclusions;
-			return Exclusions;
-		}
-
 		bool IsContainer(const FProperty* InProperty)
 		{
 			return InProperty->IsA<FArrayProperty>() || InProperty->IsA<FMapProperty>()
@@ -65,20 +58,15 @@ namespace DreamUIReflection
 		{
 			return true;
 		}
+		// WITH_EDITORONLY_DATA, and that is not a hole even though it reads like one: every consumer
+		// of this whole namespace lives in DreamGUIEditor -- the write-back sweep, the symbol export
+		// and the details gate -- so a packaged build never asks the question. The guard is what the
+		// engine requires (FProperty::HasMetaData does not exist without it), not a policy.
 #if WITH_EDITORONLY_DATA
-		if (InProperty->HasMetaData(MetaHidden))
-		{
-			return true;
-		}
+		return InProperty->HasMetaData(MetaHidden);
+#else
+		return false;
 #endif
-		const UStruct* Owner = InProperty->GetOwnerStruct();
-		return Owner != nullptr
-			&& Local::GetExclusions().Contains(TPair<FName, FName>(Owner->GetFName(), InProperty->GetFName()));
-	}
-
-	void AddExclusion(const FName InOwnerName, const FName InPropertyName)
-	{
-		Local::GetExclusions().Add(TPair<FName, FName>(InOwnerName, InPropertyName));
 	}
 
 	bool IsSweepRoot(const FProperty* InProperty)

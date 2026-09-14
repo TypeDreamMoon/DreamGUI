@@ -29,8 +29,8 @@ class FProperty;
  *   Hidden covers the properties whose VALUE another property already carries, where flags cannot:
  *   RelativeLocation is recomputed into the anchors and the anchors are what the file spells, so
  *   spelling location too would put one position in the file twice and let the copies argue at
- *   every compile. Marked meta=(DuiHidden) on our own declarations; the table is the escape hatch
- *   for properties on structs and classes whose headers are not ours to edit.
+ *   every compile. Marked meta=(DuiHidden) on our own declarations, which is now the only
+ *   mechanism -- see IsHidden for why the code-side escape hatch was removed rather than wired up.
  *
  * THE LEAF RULE: a struct with a short form is one leaf, printed whole; a struct without one is
  * recursed into, which is what makes an arbitrary USTRUCT authorable with no new syntax -- the
@@ -49,15 +49,19 @@ namespace DreamUIReflection
 	 */
 	inline const TCHAR* MetaHidden = TEXT("DuiHidden");
 
-	/** Hidden by meta or by the exclusion table. Null is hidden: there is nothing to write. */
-	DREAMGUI_API bool IsHidden(const FProperty* InProperty);
-
 	/**
-	 * Excludes one property by its owner struct/class name and its own, for headers that are not
-	 * ours to tag. Additive and process-wide; there is deliberately no removal, because a property
-	 * excluded somewhere and swept somewhere else would sync or not depending on module load order.
+	 * Hidden by meta. Null is hidden: there is nothing to write.
+	 *
+	 * There WAS a second mechanism here -- AddExclusion, an additive process-wide table of
+	 * owner+property pairs "for headers that are not ours to tag". It is gone, and not for tidiness:
+	 * it had no call site anywhere in the plugin and could not have grown one safely, because
+	 * GetWritableLeafPaths caches its answer per class for the life of the session. Any exclusion
+	 * added after the first sweep of a class would have been ignored for that class and honoured for
+	 * every other one, which is a difference no test would show and no reader would predict. An
+	 * engine struct that genuinely needs hiding wants a rule this policy can state from reflection,
+	 * or a wrapper we do own -- not a table somebody has to remember to fill before the first flush.
 	 */
-	DREAMGUI_API void AddExclusion(FName InOwnerName, FName InPropertyName);
+	DREAMGUI_API bool IsHidden(const FProperty* InProperty);
 
 	/**
 	 * Whether this property, sitting directly on a widget/visual/slot/behaviour, starts a writable

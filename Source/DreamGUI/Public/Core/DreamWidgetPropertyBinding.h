@@ -208,3 +208,34 @@ DREAMGUI_API FName MakeDreamWidgetSetterName(const FProperty* InProperty);
  * offers Bind on a property the compiler then refuses is worse than no panel entry at all.
  */
 DREAMGUI_API UFunction* FindDreamWidgetSetterFor(const UClass* InClass, const FProperty* InProperty);
+
+/**
+ * Whether a bound function returning InReturn can drive a property of type InTarget.
+ *
+ * SameType, WIDENED BY ONE RULE: two plain numeric properties bind, whatever their width or
+ * signedness. Everything else -- structs, objects, enums, bools, text -- still has to match exactly.
+ *
+ * The widening is not a convenience. `<-` lowers into a generated Blueprint function, and K2's math
+ * library computes reals in DOUBLE while every bindable real UPROPERTY in this framework is a float;
+ * the thunk generator narrows its return pin to float for that reason alone. A project that declares
+ * its own behaviour with a `double`, an `int64` or a `uint8` property was then unbindable -- and the
+ * refusal read "this Blueprint has no such function" (DUI5004), which sends the author looking for a
+ * misspelling that is not there. Enums are deliberately outside the rule: an FByteProperty carrying
+ * a UEnum is a NAME written as a number, and letting an int32 flow into one would bind a value the
+ * enum does not declare.
+ *
+ * Paired with CopyDreamWidgetBoundValue, which is the only copy allowed to act on a true from here:
+ * a raw CopyCompleteValue between two different widths is a memcpy that reads the wrong bytes.
+ */
+DREAMGUI_API bool CanDreamWidgetBoundValueConvert(const FProperty* InReturn, const FProperty* InTarget);
+
+/**
+ * Move one bound value from a function's return slot into a setter's parameter slot.
+ *
+ * An exact type is copied whole, the numeric pair goes through double or int64, and anything
+ * CanDreamWidgetBoundValueConvert refuses is not copied at all (false). Shared by the runtime's
+ * evaluation and by any test that wants to prove the pairing, so the conversion rule and the copy
+ * rule can never be two different opinions.
+ */
+DREAMGUI_API bool CopyDreamWidgetBoundValue(const FProperty* InReturn, const void* InReturnValue,
+	const FProperty* InTarget, void* OutTargetValue);

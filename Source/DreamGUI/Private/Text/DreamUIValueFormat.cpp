@@ -32,11 +32,13 @@
  *                                     one code point spans 0.0089 of linear range). A test that
  *                                     asserts "within 1/255 linear" is asserting something false.
  *
- * The single thing FLinearColor cannot carry is a channel outside [0,1]: an HDR tint of 2.0 comes
- * back as 1.0, clamped, permanently. That is a table-level decision, not an implementation accident
- * -- hex is what the header chose for colours -- but it is the one case where the short form loses
- * information a designer could have meant, and it is the first thing to revisit if DreamGUI ever
- * ships glow tints. See the note on Print below for why the escape hatch is not "return false".
+ * The single thing FLinearColor cannot carry is a channel outside [0,1] -- hex is what the header
+ * chose for colours, and no `#RRGGBB` names an HDR tint. That is a table-level decision and giving
+ * HDR a spelling stays one (a longer short form is the shape it would take). What changed is what
+ * happens MEANWHILE: Print refuses such a colour instead of clamping it to 1.0 and returning true.
+ * Clamping was silent data loss in the only direction that matters -- the write-back saves what it
+ * printed, so a glow tint became #FFFFFF in the author's file -- and refusing leaves their line
+ * alone with DUI7003 to say why. See the note on Print below.
  */
 
 namespace DreamUIValueFormatLocal
@@ -383,15 +385,23 @@ int32 DreamUIValueFormat::GetExpectedTupleArity(const FProperty* InProperty)
 }
 
 /**
- * Note on the one thing this function will NOT do: refuse a value it cannot represent.
+ * Note on what this function does with a value it cannot represent: it REFUSES, and says which kind
+ * of refusal it was through OutValueIsUnrepresentable.
  *
- * It is tempting to have an HDR FLinearColor return false and let the caller fall back to
- * ExportTextItem, which would keep it exactly. It does not work, because the fallback has to be
- * symmetric and Parse's false means "raise a diagnostic", not "try ImportText" -- a colour written
- * long-hand would print fine and then fail to read back, which is worse than the clamp. If HDR tints
- * ever need to survive, the fix is a longer short form, not a per-value escape.
+ * It does not fall back to ExportTextItem, and that is the part worth keeping straight: the fallback
+ * would have to be symmetric, and Parse's false means "raise a diagnostic", not "try ImportText" --
+ * a colour written long-hand would print fine and then fail to read back, which is worse than not
+ * writing it. So refusing is the whole answer, and the caller's answer to a refusal is to leave the
+ * author's line exactly as they wrote it.
+ *
+ * It used to CLAMP the HDR case instead, quantising through FColor and returning true. That is fine
+ * for a value being shown and destructive for one being saved: the write-back writes whatever it
+ * printed, so a glow tint of (2.4, 1.8, 1.0) was rewritten to #FFFFFF in the author's own file the
+ * first time any flush touched the line. Giving HDR a spelling is a language decision -- a longer
+ * short form -- and remains one; refusing is what stops the gap from eating data in the meantime.
  */
-bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValuePtr, FString& OutText)
+bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValuePtr, FString& OutText,
+	bool* OutValueIsUnrepresentable)
 {
 	using namespace DreamUIValueFormatLocal;
 
@@ -403,15 +413,23 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 	// A non-finite component has no text spelling: PrintScalar would produce printf's "inf"/"nan",
 	// which lexes as a bare identifier and fails the NEXT compile on a line nobody edited. Refusing
 	// here makes "no spelling for this value" the answer, which every caller already handles by
-	// leaving the line alone. DUI7003 (PatchValueNotRepresentable) raised at the refusal so the
-	// value's existence is not silent -- a NaN in a UI property is an error someone should chase.
-	auto AllFinite = [InProperty](std::initializer_list<double> InComponents) -> bool
+	// leaving the line alone.
+	//
+	// The refusal is FLAGGED as well as logged, because the log line was the whole of DUI7003's
+	// existence: the code was declared, documented and raised from nowhere, so a NaN in a UI property
+	// greyed a row in the details panel and said nothing anybody was reading. The caller that owns a
+	// diagnostic bag and a source location -- the write-back -- turns this flag into the real one.
+	auto AllFinite = [InProperty, OutValueIsUnrepresentable](std::initializer_list<double> InComponents) -> bool
 	{
 		for (const double Component : InComponents)
 		{
 			if (!FMath::IsFinite(Component))
 			{
-				UE_LOG(DreamGUI, Warning,
+				if (OutValueIsUnrepresentable != nullptr)
+				{
+					*OutValueIsUnrepresentable = true;
+				}
+				UE_LOG(DreamGUI, Verbose,
 					TEXT("DUI7003: '%s' holds a non-finite float, which has no text spelling; its line is left untouched."),
 					InProperty != nullptr ? *InProperty->GetName() : TEXT("<null>"));
 				return false;
@@ -471,7 +489,41 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 	}
 	case EShortForm::LinearColor:
 	{
-		OutText = PrintColorHex(*static_cast<const FLinearColor*>(InValuePtr));
+		const FLinearColor& Value = *static_cast<const FLinearColor*>(InValuePtr);
+		if (!AllFinite({static_cast<double>(Value.R), static_cast<double>(Value.G),
+			static_cast<double>(Value.B), static_cast<double>(Value.A)}))
+		{
+			return false;
+		}
+		// An HDR channel is REFUSED rather than quantised, and this is the one place the old
+		// "quantise and move on" answer was actually destructive. PrintColorHex encodes through
+		// FColor, so a tint of (2.4, 1.8, 1.0, 1) came back #FFFFFF -- and because the write-back
+		// writes whatever it printed, an author's glow colour was silently rewritten to white in
+		// their own file the first time any flush touched that line. Clamping a value you are about
+		// to SHOW is fine; clamping one you are about to SAVE is data loss.
+		//
+		// Refusing means the line is left exactly as the author wrote it and DUI7003 says why, which
+		// is the honest answer while `#RRGGBB` is the only colour literal the grammar has. Giving HDR
+		// a spelling is a language decision (a longer short form -- see this file's header note), not
+		// something a printer may invent on its own: a spelling this printed and the parser could not
+		// read back would break the file on its next compile.
+		//
+		// The epsilon is there because a colour picked as pure white is 1.0 exactly and a colour that
+		// has been through a linear/sRGB round trip may be 1.0000001, and refusing the second while
+		// accepting the first would look like a random failure.
+		auto IsDisplayRange = [](const float InChannel)
+		{
+			return InChannel >= -UE_KINDA_SMALL_NUMBER && InChannel <= 1.0f + UE_KINDA_SMALL_NUMBER;
+		};
+		if (!IsDisplayRange(Value.R) || !IsDisplayRange(Value.G) || !IsDisplayRange(Value.B) || !IsDisplayRange(Value.A))
+		{
+			if (OutValueIsUnrepresentable != nullptr)
+			{
+				*OutValueIsUnrepresentable = true;
+			}
+			return false;
+		}
+		OutText = PrintColorHex(Value);
 		return true;
 	}
 	case EShortForm::Color:

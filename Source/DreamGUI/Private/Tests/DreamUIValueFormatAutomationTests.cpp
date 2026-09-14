@@ -681,17 +681,28 @@ bool FDreamUIValueFormatColorTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("in six, because its alpha byte is 255"), Text.Len(), 7);
 	}
 
-	// The one thing hex cannot carry, pinned so it stays a decision. An HDR tint clamps and does not
-	// come back; if DreamGUI ever ships glow tints this test is where the cost becomes visible.
+	// The one thing hex cannot carry, pinned so it stays a decision -- and the answer to it is now a
+	// REFUSAL rather than a clamp. It printed #FFFFFF and returned true, which meant the write-back
+	// happily saved that into the author's file: a glow tint they had picked became white the first
+	// time any flush touched the line, permanently, with nothing said. No spelling means no edit.
 	{
 		const FLinearColor Hdr(2.0f, 2.0f, 2.0f, 1.0f);
-		FString Text;
-		TestTrue(TEXT("an out-of-gamut colour still prints"), DreamUIValueFormat::Print(LinearColorProperty, &Hdr, Text));
-		TestEqual(TEXT("clamped to white"), Text, FString(TEXT("#FFFFFF")));
+		FString Text(TEXT("untouched"));
+		bool bUnrepresentable = false;
+		TestFalse(TEXT("an out-of-gamut colour has no spelling"),
+			DreamUIValueFormat::Print(LinearColorProperty, &Hdr, Text, &bUnrepresentable));
+		TestEqual(TEXT("and the caller's text is left alone"), Text, FString(TEXT("untouched")));
+		TestTrue(TEXT("reported as a VALUE with no spelling, which is what DUI7003 says"), bUnrepresentable);
 
-		FLinearColor Parsed = FLinearColor::Black;
-		TestTrue(TEXT("and reads back"), DreamUIValueFormat::ParseColorHex(Text, Parsed));
-		TestTrue(TEXT("as 1.0, not 2.0 -- the documented loss"), Parsed.R == 1.0f && Parsed.A == 1.0f);
+		// The boundary, so the refusal cannot creep into ordinary colours: pure white is 1.0 exactly,
+		// and a channel that has been through a round trip may sit a hair above it.
+		const FLinearColor White(1.0f, 1.0f, 1.0f, 1.0f);
+		TestTrue(TEXT("white still prints"), DreamUIValueFormat::Print(LinearColorProperty, &White, Text));
+		TestEqual(TEXT("as white"), Text, FString(TEXT("#FFFFFF")));
+
+		const FLinearColor JustOver(1.00001f, 1.0f, 1.0f, 1.0f);
+		TestTrue(TEXT("and so does a channel a rounding error above one"),
+			DreamUIValueFormat::Print(LinearColorProperty, &JustOver, Text));
 	}
 
 	return true;
