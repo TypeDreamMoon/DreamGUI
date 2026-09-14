@@ -6,10 +6,15 @@
 #include "Event/DreamPointerEventData.h"
 #include "Engine/GameViewportClient.h"
 #include "Core/DreamUIWorldContext.h"
+#include "Misc/ScopeExit.h"
 
 void UDreamStandaloneInputModule::ProcessInput()
 {
 	if (!EventSystem.IsValid())return;
+
+	// Whatever else this frame does, the pinch recognizer sees the pointers as they end up. Run on the
+	// way out rather than the way in, so it reads the positions this frame's input actually produced.
+	ON_SCOPE_EXIT{ ProcessPinchGesture(); };
 
 	if (StandaloneInputDataArray.Num() > 0)
 	{
@@ -44,6 +49,16 @@ void UDreamStandaloneInputModule::ProcessInput()
 
 			auto TempHitComp = HitResult.Widget.Get();
 			EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
+
+			// A lifted finger is not a pointer any more. Nothing ever retired one: it stayed in the
+			// event system's map holding whatever it last touched in hover, and the per-frame branch
+			// below kept line-tracing from the position where it left the glass. Ten fingers used once
+			// each is ten full raycasts a frame, for the rest of the session.
+			if (InputData.bIsTouch && !InputData.bTriggerPress && EventSystem.IsValid())
+			{
+				ClearEventByID(InputData.PointerID);//fires the Exit the release itself does not
+				EventSystem->RemovePointerEventData(InputData.PointerID);
+			}
 		}
 	}
 	else
@@ -87,11 +102,19 @@ void UDreamStandaloneInputModule::ProcessInput()
 		}
 	}
 }
-void UDreamStandaloneInputModule::InputScroll(const FVector2D& InAxisValue)
+void UDreamStandaloneInputModule::InputScroll(const FVector2D& InAxisValue, int InPointerID)
 {
 	if (!EventSystem.IsValid())return;
 
-	auto EventData = EventSystem->GetPointerEventData(0, true);
+	auto EventData = EventSystem->GetPointerEventData(InPointerID, true);
+	if (!InAxisValue.IsZero())
+	{
+		// Turning a wheel is pointer input, and saying so matters: InputType is a sticky mode bit and the
+		// per-frame branch of ProcessInput does not line-trace while it reads Navigation. A wheel turned
+		// after a gamepad had claimed the pointer was therefore dispatched to whatever EnterWidget
+		// navigation last left behind -- which may be nothing, or the wrong list entirely.
+		EventSystem->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
+	}
 	if (IsValid(EventData->EnterWidget))
 	{
 		if (InAxisValue != FVector2D::ZeroVector || EventData->ScrollAxisValue != InAxisValue)
@@ -109,6 +132,9 @@ void UDreamStandaloneInputModule::InputTrigger(const FVector& InMousePosition, b
 }
 void UDreamStandaloneInputModule::GetMousePosition(FVector2D& OutMousePos)const
 {
+	// Written before any early-out, because the documented contract is "(0,0) if the position is not
+	// valid" and an untouched out parameter is not that -- it is whatever the caller happened to have.
+	OutMousePos = FVector2D::ZeroVector;
 	if (bOverrideMousePosition)
 	{
 		OutMousePos = OverridePointerPosition;
@@ -152,7 +178,7 @@ void UDreamStandaloneInputModule::SetOverridePointerPosition(const FVector2D& In
 }
 
 void UDreamStandaloneInputModule::CommonInputTrigger(const FVector& InPointerPosition, bool InTriggerPress,
-	int InPointerID, EDreamUIMouseButtonType InMouseButtonType)
+	int InPointerID, EDreamUIMouseButtonType InMouseButtonType, bool bInIsTouch)
 {
 	auto EventData = EventSystem->GetPointerEventData(InPointerID, true);
 	if (EventSystem->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer))
@@ -165,6 +191,7 @@ void UDreamStandaloneInputModule::CommonInputTrigger(const FVector& InPointerPos
 	InputData.MouseButtonType = InMouseButtonType;
 	InputData.bTriggerPress = InTriggerPress;
 	InputData.PointerPosition = InPointerPosition;
+	InputData.bIsTouch = bInIsTouch;
 
 	if (InTriggerPress)
 	{
@@ -211,7 +238,7 @@ void UDreamStandaloneInputModule::InputMouseMove(const FVector& InMousePosition)
 void UDreamStandaloneInputModule::InputTouchTrigger(bool InTouchPress, int InTouchID, const FVector& InTouchPointPosition)
 {
 	if (!EventSystem.IsValid())return;
-	CommonInputTrigger(InTouchPointPosition, InTouchPress, InTouchID);
+	CommonInputTrigger(InTouchPointPosition, InTouchPress, InTouchID, EDreamUIMouseButtonType::Left, true);
 }
 
 void UDreamStandaloneInputModule::InputTouchMoved(int InTouchID, const FVector& InTouchPointPosition)

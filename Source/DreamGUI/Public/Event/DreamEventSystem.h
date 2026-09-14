@@ -6,12 +6,17 @@
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
 #include "DreamDelegateDeclaration.h"
+#include "GenericPlatform/ICursor.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamEventSystem.generated.h"
 
 class UDreamPointerEventData;
+class UDreamGestureEventData;
 class UDreamBaseInputModule;
+class UDreamUIManagerWorldSubsystem;
+class APlayerController;
+class ULocalPlayer;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FDreamUIPointerInputTypeChangedDelegate, int, EDreamUIPointerInputType);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDreamUIPointerInputChangedDynamicDelegate, int, PointID, EDreamUIPointerInputType, InputType);
@@ -31,8 +36,28 @@ enum class EDreamUIInputDevice : uint8
 	Touch,
 };
 
+/**
+ * Which pad the player is holding, for prompts that need to say A or Cross.
+ *
+ * Deliberately separate from EDreamUIInputDevice rather than more entries in it: the device answers
+ * "which prompt table", the model answers "which glyph within it", and folding the two together would
+ * renumber an enum that is already saved in project assets. Generic is the honest answer whenever the
+ * platform does not name the hardware, and every icon lookup falls back to it.
+ */
+UENUM(BlueprintType)
+enum class EDreamUIGamepadModel : uint8
+{
+	/** A pad the platform did not name, or no pad at all. Xbox-style glyphs are the usual fallback. */
+	Generic,
+	Xbox,
+	PlayStation,
+	Switch,
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamUIInputDeviceChangedDynamicDelegate, EDreamUIInputDevice, Device);
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIInputDeviceChangedDelegate, EDreamUIInputDevice);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamUIGamepadModelChangedDynamicDelegate, EDreamUIGamepadModel, Model);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIGamepadModelChangedDelegate, EDreamUIGamepadModel);
 
 /**
  * This is the place for manage DreamUI's input/raycast/event.
@@ -55,6 +80,14 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void BeginDestroy()override;
 
+	/** Drop this event system's registration from the UI manager. Idempotent; called from both ends. */
+	void UnregisterFromManager();
+	/**
+	 * The manager this registered with. Remembered rather than looked up again on the way out, because
+	 * GetWorld() is routinely null by BeginDestroy and the lookup would silently find nothing.
+	 */
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> RegisteredManager;
+
 protected:
 
 	UPROPERTY(EditAnywhere, Category = DreamGUI, Getter)
@@ -66,6 +99,18 @@ protected:
 #endif
 	UPROPERTY(VisibleAnywhere, Category = DreamGUI)
 		bool bRayEventEnable = true;
+	/**
+	 * Let hovered widgets drive the hardware cursor (UDreamWidget::Cursor).
+	 *
+	 * On by default, because a cursor that changes over a button is how a player learns what is
+	 * clickable. Off for a project that owns the cursor itself -- an RTS with a build cursor, a game
+	 * with a custom software cursor -- so the two do not write the same field on alternate frames.
+	 */
+	UPROPERTY(EditAnywhere, Getter = "GetApplyHoverCursor", Setter = "SetApplyHoverCursor", Category = DreamGUI)
+		bool bApplyHoverCursor = true;
+	/** What the controller's cursor was before a widget first claimed it, so it can be put back. */
+	TEnumAsByte<EMouseCursor::Type> CursorBeforeHoverOverride = EMouseCursor::Default;
+	bool bHoverCursorOverrideActive = false;
 
 	void ProcessInputEvent();
 
@@ -74,6 +119,50 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	int GetUserIndex()const{return UserIndex;}
+
+	/**
+	 * Point this event system at another player. Re-keys its registration with the UI manager, because
+	 * that map is keyed by user index -- changing the field without moving the entry would leave the
+	 * event system findable under the old player and invisible under the new one.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetUserIndex(int Value);
+
+	/**
+	 * The player controller this event system speaks for -- the local player at UserIndex, not "whoever
+	 * is first". Null when that local player does not exist, except for index 0, which falls back to the
+	 * first controller so a single-player game keeps working before any local player is registered.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	APlayerController* GetPlayerController()const;
+
+	/**
+	 * The player controller for a user index, without needing an event system in hand.
+	 *
+	 * This is the one place the "which player is this?" question is answered, so that a raycaster
+	 * source, a tooltip or a rumble call cannot quietly disagree with the pointer they were handed.
+	 * Every UDreamPointerEventData carries the index of the event system that made it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (WorldContext = "WorldContextObject"))
+	static APlayerController* GetPlayerControllerForUser(const UObject* WorldContextObject, int InUserIndex);
+	/** The local player for a user index. Same rule as GetPlayerControllerForUser. */
+	static ULocalPlayer* GetLocalPlayerForUser(const UObject* WorldContextObject, int InUserIndex);
+
+	/**
+	 * Push the cursor a hovered widget asked for onto this player's controller, or put back whatever
+	 * the project had when nothing asks for one.
+	 *
+	 * Restoring rather than writing EMouseCursor::Default is what keeps this from fighting the project:
+	 * a game that sets its own cursor for aiming, building or anything else outside the UI had it
+	 * erased on the next frame the pointer was over nothing. Turn bApplyHoverCursor off to leave the
+	 * cursor entirely alone.
+	 * @param bWidgetClaimedCursor	False when no widget in the hover stack claimed a cursor.
+	 */
+	void ApplyHoverCursorToPlayer(bool bWidgetClaimedCursor, EMouseCursor::Type InCursor);
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool GetApplyHoverCursor()const{ return bApplyHoverCursor; }
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetApplyHoverCursor(bool Value);
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	UDreamBaseInputModule* GetCurrentInputModule()const{return CurrentInputModule.Get();}
@@ -134,6 +223,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = DreamGUI, AdvancedDisplay)
 	EDreamUIInputDevice CurrentInputDevice = EDreamUIInputDevice::MouseAndKeyboard;
 	FDreamUIInputDeviceChangedDelegate InputDeviceChangedEvent;
+
+	/** Which pad, once one has been used. Generic until then, and whenever the platform does not say. */
+	UPROPERTY(VisibleAnywhere, Category = DreamGUI, AdvancedDisplay)
+	EDreamUIGamepadModel CurrentGamepadModel = EDreamUIGamepadModel::Generic;
+	/** While set, detection is not consulted at all -- see SetGamepadModelOverride. */
+	UPROPERTY(VisibleAnywhere, Category = DreamGUI, AdvancedDisplay)
+	bool bGamepadModelOverridden = false;
+	FDreamUIGamepadModelChangedDelegate GamepadModelChangedEvent;
 public:
 	const TMap<int, TObjectPtr<UDreamPointerEventData>>& GetPointerEventDataMap()const{return PointerEventDataMap;}
 	
@@ -188,6 +285,37 @@ private:
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float NavigateInputInterval = 0.2f;
 	/**
+	 * How long after a click a second one on the same widget still counts as a double click. The
+	 * platform default is around a third of a second and this matches it; zero disables double clicks
+	 * entirely, which is a legitimate thing for a project to want.
+	 */
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float DoubleClickTime = 0.3f;
+	/**
+	 * How long the trigger must be held on one widget before a long press is dispatched. Zero turns
+	 * long press off. Half a second is the platform convention for press-and-hold on touch.
+	 *
+	 * A press that has already become a drag never produces one -- see IDreamPointerLongPressInterface.
+	 */
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float LongPressTime = 0.5f;
+	/**
+	 * How far a touch has to travel, in viewport pixels, before its release counts as a swipe, and how
+	 * long it may take. A slow drag across the screen is a drag, not a swipe, which is why there is a
+	 * time limit at all.
+	 */
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float SwipeMinDistance = 80.0f;
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float SwipeMaxDuration = 0.5f;
+	/**
+	 * How far the two fingers of a pinch must move apart or together, in viewport pixels, before the
+	 * gesture is reported at all. Below it, two fingers resting on the glass would emit a stream of
+	 * noise events.
+	 */
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float PinchMinDistanceChange = 12.0f;
+	/**
 	 * Scroll the containers around a navigated-to widget until it is on screen. Off, navigation can
 	 * only reach what is already visible, which turns any list longer than its viewport into a wall.
 	 */
@@ -205,6 +333,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	float GetNavigateInputInterval()const{return NavigateInputInterval;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	float GetDoubleClickTime()const{return DoubleClickTime;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	float GetLongPressTime()const{return LongPressTime;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	float GetSwipeMinDistance()const{return SwipeMinDistance;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	float GetSwipeMaxDuration()const{return SwipeMaxDuration;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	float GetPinchMinDistanceChange()const{return PinchMinDistanceChange;}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	bool GetScrollNavigationTargetIntoView()const{return bScrollNavigationTargetIntoView;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	bool GetAnimateNavigationScroll()const{return bAnimateNavigationScroll;}
@@ -221,6 +359,18 @@ public:
 	void SetNavigateInputIntervalForFirstTime(float Value){ NavigateInputIntervalForFirstTime = FMath::Max(Value, MinNavigateInputInterval);}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetNavigateInputInterval(float Value){ NavigateInputInterval = FMath::Max(Value, MinNavigateInputInterval);}
+	/** Floored at zero, which means "no double clicks" rather than "every click is one". */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetDoubleClickTime(float Value){ DoubleClickTime = FMath::Max(Value, 0.0f);}
+	/** Floored at zero, which means "no long press" rather than "every press is one". */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetLongPressTime(float Value){ LongPressTime = FMath::Max(Value, 0.0f);}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetSwipeMinDistance(float Value){ SwipeMinDistance = FMath::Max(Value, 0.0f);}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetSwipeMaxDuration(float Value){ SwipeMaxDuration = FMath::Max(Value, 0.0f);}
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetPinchMinDistanceChange(float Value){ PinchMinDistanceChange = FMath::Max(Value, 0.0f);}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetScrollNavigationTargetIntoView(bool Value){ bScrollNavigationTargetIntoView = Value;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
@@ -245,6 +395,38 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = DreamGUI, DisplayName = "InputDeviceChangedEvent")
 	FDreamUIInputDeviceChangedDynamicDelegate InputDeviceChangedEventBP;
 	FDreamUIInputDeviceChangedDelegate& GetInputDeviceChangedEvent(){ return InputDeviceChangedEvent; }
+
+	/**
+	 * Which pad the player is holding. Generic until one is used and named by the platform.
+	 *
+	 * Re-detected when the device becomes Gamepad rather than polled: the answer only changes when the
+	 * player picks up a different controller, which is exactly when a device change is reported.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	EDreamUIGamepadModel GetCurrentGamepadModel()const{ return CurrentGamepadModel; }
+	/**
+	 * Force the model, for a project that knows better than the platform does -- a console build, or a
+	 * game with a "controller type" option in its settings. Generic-with-override is still an override:
+	 * pass bInOverride false to go back to detection.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetGamepadModelOverride(bool bInOverride, EDreamUIGamepadModel InModel = EDreamUIGamepadModel::Generic);
+	/** Ask the platform again. Called automatically when the input device becomes Gamepad. */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	bool RefreshGamepadModel();
+	/**
+	 * The model a platform device name implies, as a pure function so it can be tested without hardware.
+	 *
+	 * Both halves of the descriptor are consulted because platforms disagree about which one carries the
+	 * brand: the interface name is "XInputInterface" on Windows while the hardware identifier is the
+	 * specific pad, and on other platforms it is the other way round.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	static EDreamUIGamepadModel GetGamepadModelForDeviceName(FName InInputDeviceName, FName InHardwareDeviceIdentifier);
+
+	UPROPERTY(BlueprintAssignable, Category = DreamGUI, DisplayName = "GamepadModelChangedEvent")
+	FDreamUIGamepadModelChangedDynamicDelegate GamepadModelChangedEventBP;
+	FDreamUIGamepadModelChangedDelegate& GetGamepadModelChangedEvent(){ return GamepadModelChangedEvent; }
 #pragma endregion
 public:
 	template<class UEventData, class UInterfaceFunction>
@@ -319,6 +501,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		static void ExecuteEvent_OnPointerClick(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp = true);
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+		static void ExecuteEvent_OnPointerDoubleClick(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp = true);
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+		static void ExecuteEvent_OnPointerLongPress(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp = true);
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+		static void ExecuteEvent_OnPointerPinch(UDreamWidget* TargetWidget, UDreamGestureEventData* GestureEventData, bool AllowEventBubbleUp = true);
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+		static void ExecuteEvent_OnPointerSwipe(UDreamWidget* TargetWidget, UDreamGestureEventData* GestureEventData, bool AllowEventBubbleUp = true);
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		static void ExecuteEvent_OnPointerBeginDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp = true);
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		static void ExecuteEvent_OnPointerDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp = true);
@@ -338,6 +528,10 @@ public:
 	void CallOnPointerDown(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
 	void CallOnPointerUp(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
 	void CallOnPointerClick(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
+	void CallOnPointerDoubleClick(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
+	void CallOnPointerLongPress(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
+	void CallOnPointerPinch(UDreamWidget* RootComponent, UDreamGestureEventData* EventData);
+	void CallOnPointerSwipe(UDreamWidget* RootComponent, UDreamGestureEventData* EventData);
 	void CallOnPointerBeginDrag(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
 	void CallOnPointerDrag(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
 	void CallOnPointerEndDrag(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);

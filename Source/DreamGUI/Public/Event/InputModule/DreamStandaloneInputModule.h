@@ -23,9 +23,11 @@ public:
 	/**
 	 * input for scroll
 	 * @param	InAxisValue		Use a 2d vector for scroll value. For mouse scroll just fill X&Y with mouse scroll value; For touchpad input use X for horizontal and Y for vertical.
+	 * @param	InPointerID		Which pointer scrolled. Defaults to the mouse; a touchpad gesture bound to
+	 *							its own pointer can say so rather than scrolling whatever pointer 0 hovers.
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		void InputScroll(const FVector2D& InAxisValue);
+		void InputScroll(const FVector2D& InAxisValue, int InPointerID = 0);
 	/**
 	 * see "bOverrideMousePosition" property
 	 */
@@ -63,15 +65,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void InputTriggerForNavigation(bool InTriggerPress, int InPointerID);
 protected:
-	void CommonInputTrigger(const FVector& InPointerPosition, bool InTriggerPress, int InPointerID, EDreamUIMouseButtonType InMouseButtonType = EDreamUIMouseButtonType::Left);
+	void CommonInputTrigger(const FVector& InPointerPosition, bool InTriggerPress, int InPointerID, EDreamUIMouseButtonType InMouseButtonType = EDreamUIMouseButtonType::Left, bool bInIsTouch = false);
 	struct StandaloneInputData
 	{
-		bool bTriggerPress;
-		float PressTime;
-		float ReleaseTime;
-		int PointerID;
-		EDreamUIMouseButtonType MouseButtonType;
-		FVector PointerPosition;
+		bool bTriggerPress = false;
+		float PressTime = 0;
+		float ReleaseTime = 0;
+		int PointerID = 0;
+		EDreamUIMouseButtonType MouseButtonType = EDreamUIMouseButtonType::Left;
+		FVector PointerPosition = FVector::ZeroVector;
+		/**
+		 * A finger rather than a mouse button. The distinction only matters on release: a finger that
+		 * comes off the glass ceases to exist, while a mouse button going up leaves the mouse where it
+		 * is, so only the touch pointer is retired once its release has been dispatched.
+		 */
+		bool bIsTouch = false;
 	};
 	TArray<StandaloneInputData> StandaloneInputDataArray;//collect input data into array in input event, and process these input data in ProcessInput. This can solve the condition: multiple mouse button input in one frame
 

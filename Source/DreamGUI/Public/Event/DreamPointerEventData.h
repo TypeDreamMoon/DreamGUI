@@ -122,6 +122,19 @@ public:
 	/** the last time when trigger click(time is get from GetWorld()->TimeSeconds), can be used to tell double click */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double ClickTime = 0;
+	/**
+	 * How many clicks this pointer has landed on the same widget in an unbroken run: 1 for a single
+	 * click, 2 for the second of a double, and so on. Reset to 1 by a click on a different widget or one
+	 * that came too late (see UDreamEventSystem::DoubleClickTime).
+	 *
+	 * A double-click event is dispatched on every even count, which is how a triple click reads as
+	 * click, double, click and a quadruple as two doubles -- the same shape as the desktop.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		int32 ClickCount = 0;
+	/** What the previous click landed on. A click elsewhere starts the count over rather than continuing it. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		TObjectPtr<UDreamWidget> LastClickWidget = nullptr;
 	/** the last time when trigger release(time is get from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double ReleaseTime = 0;
@@ -142,6 +155,14 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI")
 		TObjectPtr<UDreamDragDropOperation> DragOperation = nullptr;
+
+	/**
+	 * Has the long press already gone out for the press that is currently held?
+	 *
+	 * Long press fires once when the hold time is reached, not once a frame afterwards and not on
+	 * release. Cleared when the trigger goes down, which is what makes it per-press.
+	 */
+	bool bIsLongPressFiredForThisPress = false;
 
 	bool bIsUpFiredAtCurrentFrame = false;//PointerUp event is called at current frame?
 	bool bIsExitFiredAtCurrentFrame = false;//PointerExit event is called at current frame?
