@@ -253,6 +253,26 @@ public:
 
 	static int WidgetPropertyDataLength;
 
+	/**
+	 * The widget-property row, by pixel. Every reader of it is DreamUIWidgetProperty.ush (and
+	 * DreamUIText.ush for the style pixels, which index 4..12 by hand), so these constants and those
+	 * shaders are one layout described twice -- change either and change both.
+	 *
+	 * Pixels that carry a NUMBER carry it as a float value rather than as a bit pattern, because a
+	 * GPU that flushes denormals to zero does it on the load: see the note above
+	 * UDreamVisual::WidgetPropertyDataLength in the .cpp. Pixels that carry BIT FIELDS keep a
+	 * constant in the top byte for the same reason.
+	 */
+	static constexpr int32 WidgetMarksPixelStart = 0;
+	static constexpr int32 ClipDataCoordinatePixelStart = 1;
+	static constexpr int32 WidgetSizePixelStart = 2;//width, then height
+	/** After the text style block (4..12), so adding it did not shift the hand-indexed style pixels. */
+	static constexpr int32 WidgetCenterPixelStart = 13;//centre X, then centre Y
+	/** Top byte of the marks pixel: present only so the word is a normal float. */
+	static constexpr uint32 WidgetMarksNormalFloatMarker = 0x3f000000;
+	/** Pack the marks pixel: constant top byte, font mark, extra mark. Mirrored by DreamUI_ReadWidgetProperty. */
+	static uint32 PackWidgetMarks(uint8 InFontMark, uint8 InExtraMark);
+
 	void SetWidgetPropertyDataStartPosition(int InPosition);
 	bool IsRegisteredToCanvas()const{return WidgetPropertyDataStartPosition != INDEX_NONE;}
 	int GetWidgetPropertyDataStartPosition()const{return WidgetPropertyDataStartPosition;}

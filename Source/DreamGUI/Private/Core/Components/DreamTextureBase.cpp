@@ -64,18 +64,12 @@ bool UDreamTextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& 
 	{
 		if (auto texture2D = Cast<UTexture2D>(Texture))
 		{
-			auto PlatformData = texture2D->GetPlatformData();
-			if (PlatformData && PlatformData->Mips.Num() > 0)
-			{
-				if (auto Pixels = (FColor*)(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY)))
-				{
-					auto uvInFullSize = FIntPoint(InUV.X * texture2D->GetSizeX(), InUV.Y * texture2D->GetSizeY());
-					auto PixelIndex = uvInFullSize.Y * texture2D->GetSizeX() + uvInFullSize.X;
-					OutPixel = Pixels[PixelIndex];
-				}
-				PlatformData->Mips[0].BulkData.Unlock();
-				return true;
-			}
+			// The old code cast any top mip to FColor* and indexed it with an unclamped UV, so a
+			// compressed texture answered with nonsense and UV.Y == 1 read a row past the end; it
+			// also answered true when the lock failed, handing the caller an uninitialised colour.
+			// The shared reader refuses what it cannot read, and the pixel raycast falls back to
+			// the geometry test for those.
+			return FDreamUIUtils::ReadTexture2DPixel(texture2D, InUV, OutPixel);
 		}
 	}
 	return false;

@@ -60,21 +60,14 @@ bool UDreamVisualCustomRaycast::GetRaycastPixelFromUIBatchMeshVisual(const UDrea
 				auto& uv2 = vertices[vertIndex2].TextureCoordinate[0];
 				OutUV = FVector2D(baryCentric.X * uv0 + baryCentric.Y * uv1 + baryCentric.Z * uv2);
 				//get pixel
+				// The mip is only an FColor array when the texture is uncompressed BGRA8, and UV
+				// reaches 1.0 at the far edge, one row past the end. Both guards live in the shared
+				// reader, which answers false when the pixel cannot be known -- and a pixel that
+				// cannot be read is not a hit, rather than a hit with an uninitialised colour.
 				if (auto Texture2D = Cast<UTexture2D>(UIGeo->Texture.Get()))
 				{
-					auto PlatformData = Texture2D->GetPlatformData();
-					if (PlatformData && PlatformData->Mips.Num() > 0)
+					if (FDreamUIUtils::ReadTexture2DPixel(Texture2D, OutUV, OutPixel))
 					{
-						auto TexPosX = (int)(OutUV.X * PlatformData->SizeX);
-						auto TexPosY = (int)(OutUV.Y * PlatformData->SizeY);
-						auto TexPos = TexPosX + TexPosY * PlatformData->SizeX;
-
-						if (auto Pixels = (FColor*)(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY)))
-						{
-							OutPixel = Pixels[TexPos];
-						}
-						PlatformData->Mips[0].BulkData.Unlock();
-
 						return true;
 					}
 				}
@@ -449,20 +442,54 @@ bool UDreamVisual::GetHitGeometryFitsWidgetRect()const
 
 DECLARE_CYCLE_STAT(TEXT("DreamVisual FillWidgetPropertyDataForMaterial"), STAT_FillWidgetPropertyData, STATGROUP_DreamGUI);
 int UDreamVisual::WidgetPropertyDataLength =
-	sizeof(float)//1st pixel, byte1- font mark, byte2- extra marks
-	+ sizeof(float)//2nd pixel, clip data coordinate
-	+ sizeof(float)//3rd pixel, widget width & height, half precision float
-	+ sizeof(float)//4th pixel, widget rect center position in canvas space, half precision float
+	sizeof(float)//1st pixel, marks: constant top byte, then font mark, then extra marks (see PackWidgetMarks)
+	+ sizeof(float)//2nd pixel, clip data coordinate, as a float VALUE
+	+ sizeof(float)//3rd pixel, widget width, as a float VALUE
+	+ sizeof(float)//4th pixel, widget height, as a float VALUE
 	+ sizeof(float) * FDreamTextStyle::PackedPixelCount//5th..13th pixel, text style (FDreamTextStyle::Pack), texts only
+	+ sizeof(float)//14th pixel, widget rect centre X in canvas space, as a float VALUE
+	+ sizeof(float)//15th pixel, widget rect centre Y in canvas space, as a float VALUE
 ;
+
+/*
+ * WHY SO MUCH OF THIS ROW IS PLAIN FLOATS AND THE REST CARRIES A CONSTANT TOP BYTE.
+ *
+ * The row lives in an R32_FLOAT texture and every reader gets it back through a float sample. A word
+ * that is really a bit pattern therefore has to BE a valid normal float, because a GPU that flushes
+ * denormals to zero -- which is most mobile ones, and is not optional there -- flushes on the load,
+ * before asuint() ever sees it. The float exponent is bits 30..23, i.e. the top byte and one bit of
+ * the next, so any packing that leaves the top byte small and something further down non-zero is a
+ * value that reads back as 0 on those devices and as itself everywhere the author tested.
+ *
+ * Two answers are used here, and which one applies is a property of the field:
+ *  - numbers that are already numbers (the clip coordinate, the widget size, the centre position)
+ *    are stored as float VALUES. A float value only flushes when it is genuinely ~1e-38, which for a
+ *    size or a canvas-space coordinate is indistinguishable from the zero it flushes to.
+ *  - bit fields (the marks byte here, the colours and flags in UDreamRectBlock) keep a constant in
+ *    the top byte and carry their payload below it, so the exponent can never be all zeros.
+ *
+ * That is why the size and the centre are one component per pixel rather than two halves packed into
+ * one: a centred widget has centre X exactly 0, and a 0 in the high half with anything in the low
+ * half is precisely the denormal case. The centre moved to the END of the row instead of widening in
+ * place, so the text style pixels (4..12, indexed by hand in DreamUIText.ush) did not have to shift.
+ */
+uint32 UDreamVisual::PackWidgetMarks(uint8 InFontMark, uint8 InExtraMark)
+{
+	return WidgetMarksNormalFloatMarker
+		| ((uint32)InFontMark << 16)
+		| ((uint32)InExtraMark << 8)
+		;
+}
 void UDreamVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCenterPosition)const
 {
 	SCOPE_CYCLE_COUNTER(STAT_FillWidgetPropertyData);
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
 	if (StartPosition == INDEX_NONE)
 	{
+		// A visual whose block has not been allocated yet simply has nothing to write. The two
+		// sibling fillers below log and return; this one used to check(0) as well, which turned a
+		// recoverable ordering hiccup into a shipping-configuration crash.
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		check(0);
 		return;
 	}
 	auto Widget = this->GetWidget();
@@ -471,32 +498,30 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedC
 	if (!Canvas)return;
 	auto Data = Canvas->GetWidgetPropertyDataAsTexture();
 	if (!Data)return;
-	TArray<uint8> BlockBuffer;
-	BlockBuffer.SetNumUninitialized(8);
-	FMemory::Memzero(BlockBuffer.GetData(), 8);
-	int BlockBufferOffset = 0;
-	
-	//width & height
+
+	//width & height, one float VALUE per pixel -- see the note above WidgetPropertyDataLength
 	if (bNeedSize)
 	{
-		auto Size = FVector2DHalf(Widget->GetWidth(), Widget->GetHeight());
-		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &Size, sizeof(FVector2DHalf));
+		const float Size[2] = { Widget->GetWidth(), Widget->GetHeight() };
+		TArray<uint8> SizeBuffer;
+		SizeBuffer.SetNumUninitialized(sizeof(Size));
+		FMemory::Memcpy(SizeBuffer.GetData(), Size, sizeof(Size));
+		Data->UpdateBlock(WidgetSizePixelStart, StartPosition, MoveTemp(SizeBuffer), 2);
 	}
-	BlockBufferOffset += sizeof(FVector2DHalf);
-	
-	//widget rect center position in canvas space
+
+	//widget rect center position in canvas space, likewise
 	if (bNeedCenterPosition)
 	{
 		auto WidgetToWorldMatrix = Widget->GetWorldTransform().ToMatrixWithScale();
 		auto WidgetLocalSpaceCenter = Widget->GetLocalSpaceCenter();
 		auto CenterPositionInWorldSpace = WidgetToWorldMatrix.TransformPosition(FVector(0, WidgetLocalSpaceCenter.X, WidgetLocalSpaceCenter.Y));
 		auto CenterPositionInCanvasSpace = Canvas->GetWidget()->GetWorldTransform().InverseTransformPosition(CenterPositionInWorldSpace);
-		auto CenterPosition2D = FVector2DHalf(CenterPositionInCanvasSpace.Y, CenterPositionInCanvasSpace.Z);
-		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &CenterPosition2D, sizeof(FVector2DHalf));
+		const float CenterPosition[2] = { (float)CenterPositionInCanvasSpace.Y, (float)CenterPositionInCanvasSpace.Z };
+		TArray<uint8> CenterBuffer;
+		CenterBuffer.SetNumUninitialized(sizeof(CenterPosition));
+		FMemory::Memcpy(CenterBuffer.GetData(), CenterPosition, sizeof(CenterPosition));
+		Data->UpdateBlock(WidgetCenterPixelStart, StartPosition, MoveTemp(CenterBuffer), 2);
 	}
-	BlockBufferOffset += sizeof(FVector2DHalf);
-	
-	Data->UpdateBlock(2, StartPosition, MoveTemp(BlockBuffer), 2);
 }
 
 void UDreamVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(UDreamUIDataAsTexture* DataAsTexture)const
@@ -510,8 +535,15 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(UDreamUI
 	TArray<uint8> BlockBuffer;
 	BlockBuffer.SetNumUninitialized(4);
 
-	FMemory::Memcpy(BlockBuffer.GetData(), &this->ClipDataStartPosition, 4);
-	
+	// Written as a float VALUE, not as the int's bit pattern -- and DreamUIWidgetProperty.ush reads
+	// it back the same way, with no asuint(). A small integer's bit pattern reinterpreted as a float
+	// is a denormal (coordinate 5 is 7e-45), and mobile GPUs flush denormals to zero on load. Every
+	// element would then read clip coordinate 0, which DreamUIClip.ush treats as "no clip": clipping
+	// disappears wholesale on exactly the hardware nobody tests first. As a float the same number is
+	// ordinary, and the coordinate is an index far below the 2^24 a float represents exactly.
+	const float ClipDataStartPositionAsFloat = (float)this->ClipDataStartPosition;
+	FMemory::Memcpy(BlockBuffer.GetData(), &ClipDataStartPositionAsFloat, 4);
+
 	DataAsTexture->UpdateBlock(1, StartPosition, MoveTemp(BlockBuffer), 1);
 }
 
@@ -527,11 +559,8 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial_InitialMark(UDreamUIDataAsT
 	TArray<uint8> BlockBuffer;
 	BlockBuffer.SetNumUninitialized(4);
 
-	uint8 ExtraMark = 0;
-	uint32 Marks =
-		FontMark << 24
-		| ExtraMark << 16
-	;
+	const uint8 ExtraMark = 0;
+	const uint32 Marks = PackWidgetMarks(FontMark, ExtraMark);
 	FMemory::Memcpy(BlockBuffer.GetData(), &Marks, 4);
 	DataAsTexture->UpdateBlock(0, StartPosition, MoveTemp(BlockBuffer), 1);
 }

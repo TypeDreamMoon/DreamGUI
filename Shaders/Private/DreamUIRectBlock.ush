@@ -21,13 +21,17 @@
 #define INV_360 0.00277777777777f
 #endif
 
+// ARGB. Alpha is in the top byte so that the word, which travels here as the bit pattern of a float
+// in the data texture, is a normal float rather than a denormal: with red on top an opaque black is
+// 0x000000ff, and a GPU that flushes denormals to zero (most mobile ones) reads that back as a fully
+// transparent pixel. UDreamRectBlock::FillColorToData packs in this order; the two must ship together.
 HALF4_TYPE DreamUI_UnpackUintColor(uint colorUint)
 {
     HALF4_TYPE ResultColor;
-    ResultColor.r = ((colorUint >> 24) & 0x000000ff) * INV_255;
-    ResultColor.g = ((colorUint >> 16) & 0x000000ff) * INV_255;
-    ResultColor.b = ((colorUint >> 8) & 0x000000ff) * INV_255;
-    ResultColor.a = ((colorUint >> 0) & 0x000000ff) * INV_255;
+    ResultColor.a = ((colorUint >> 24) & 0x000000ff) * INV_255;
+    ResultColor.r = ((colorUint >> 16) & 0x000000ff) * INV_255;
+    ResultColor.g = ((colorUint >> 8) & 0x000000ff) * INV_255;
+    ResultColor.b = ((colorUint >> 0) & 0x000000ff) * INV_255;
     return ResultColor;
 }
 HALF4_TYPE DreamUI_ReadColor(float Data)
@@ -169,10 +173,15 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
         int3 Position = int3(0, Coordinate, 0);
 
         float4 PixelData = DataTex.Load(Position);Position.x += 1;
+        // The top byte is a constant written by UDreamRectBlock::Fill8BytesToData and is not read
+        // here: it is there so this word is a normal float rather than a denormal, because the flags
+        // used to occupy the float's exponent and a GPU that flushes denormals to zero (most mobile
+        // ones) read every flag back as 0 -- an element that draws nothing. The three payload bytes
+        // sit one byte lower than they used to; the shader and the C++ must ship together.
         uint ByteUint = asuint(PixelData.r);
-        uint BoolValues = (ByteUint >> 24) & 0x000000ff;
-        _TextureScaleMode = (ByteUint >> 16) & 0x000000ff;
-        _TextureDrawMode = (ByteUint >> 8) & 0x000000ff;
+        uint BoolValues = (ByteUint >> 16) & 0x000000ff;
+        _TextureScaleMode = (ByteUint >> 8) & 0x000000ff;
+        _TextureDrawMode = (ByteUint >> 0) & 0x000000ff;
         
         _EnableBody = (BoolValues >> 7) & 1;
         _EnableOuterShadow = (BoolValues >> 6) & 1;
@@ -412,8 +421,17 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
 
     //we do PremultiplyAlpha for color blending inside RectBlock.
     //because AlphaComposite(PremultiplyAlpha) do "color.rgb * color.a" at last step (DreamUIShader.usf), so we invert that operation here "color.rgb / color.a".
-    Color = color.rgb / color.a;
-    Alpha = color.a;
+    // color.a is exactly zero on every fully transparent pixel -- outside a rounded corner, outside
+    // the radial fill wedge, anywhere on a zero-size quad -- and the divide there is 0/0. The NaN it
+    // returns does not stay in this pixel: the AlphaComposite step multiplies it by the alpha again
+    // (NaN * 0 is still NaN), and an MSAA resolve averages it across the sample block, which is the
+    // black or white square that occasionally appears over a RectBlock.
+    // The comparisons also launder a NaN that reached the alpha itself -- normalize() of a zero
+    // vector when _RadialFillCenter sits exactly on the fragment, or a zero _QuadSize -- because
+    // every comparison against a NaN is false, so it falls to the transparent branch.
+    float unpremultiplyAlpha = (color.a > 0.0f) ? color.a : 0.0f;
+    Color = (unpremultiplyAlpha > 0.0f) ? color.rgb / unpremultiplyAlpha : float3(0.0f, 0.0f, 0.0f);
+    Alpha = unpremultiplyAlpha;
     
     return 1;
 }

@@ -239,7 +239,30 @@ static constexpr int DataCountInBytes();
 		, bool v6
 		, bool v7
 	);
-	void Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, uint8 InValue3, int& InOutDataOffset);
+	/**
+	 * Write three bytes into one pixel of the float data texture, under a constant top byte that
+	 * keeps the word a normal float (the shader reads it back with asuint(), and mobile GPUs flush a
+	 * denormal to zero on load). The fourth byte this used to take was never written.
+	 */
+	void Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, int& InOutDataOffset);
+public:
+	/**
+	 * The two bit-field packings this element puts in its float data texture, as pure functions so
+	 * that what the shader has to mirror can be stated once and tested.
+	 *
+	 * Both keep the float EXPONENT (bits 30..23) non-zero, because the data texture is R32_FLOAT and
+	 * every reader gets the word through a float load: a GPU with flush-to-zero -- most mobile ones,
+	 * and not optional there -- turns a denormal into 0 before asuint() ever runs. With the old
+	 * layouts an opaque black (0x000000ff as R,G,B,A) and "body enabled, nothing else, any non-default
+	 * texture mode" were both denormals, so the first drew as fully transparent and the second drew
+	 * nothing at all -- on devices only, with everything correct on the desktop the author tested on.
+	 * DreamUI_UnpackUintColor and the flag decode in DreamUIRectBlock.ush are the mirror of these.
+	 */
+	static uint32 PackColorForDataTexture(const FColor& InValue);
+	static uint32 PackFlagsForDataTexture(uint8 InBoolValues, uint8 InTextureScaleMode, uint8 InTextureDrawMode);
+	/** Top byte of the flags pixel: present only so the word is a normal float. */
+	static constexpr uint32 FlagsNormalFloatMarker = 0x3f000000;
+private:
 	void FillFloatToData(uint8* Data, const float& InValue, int& InOutDataOffset);
 	void FillVector2ToData(uint8* Data, const FVector2f& InValue, int& InOutDataOffset);
 	void FillVector4ToData(uint8* Data, const FVector4f& InValue, int& InOutDataOffset);

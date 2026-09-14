@@ -44,7 +44,6 @@ void UDreamRectBlock::FillData(uint8* Data, float width, float height)
 		// Forced back to Image when there is no plain texture to slice -- see GetBodySampledTexture.
 		, static_cast<uint8>(GetBodySampledTexture() != nullptr
 			? BodyTextureDrawMode : EDreamRectBlockTextureDrawMode::Image)
-		, 0
 		, DataOffset);
 
 	FillVector2ToData(Data, FVector2f(width, height), DataOffset);
@@ -215,9 +214,40 @@ constexpr int UDreamRectBlock::DataCountInBytes()
 	return result;
 }
 
+uint32 UDreamRectBlock::PackColorForDataTexture(const FColor& InValue)
+{
+	// ARGB, not RGBA, and the order matters for a reason that has nothing to do with colour:
+	// this word is stored in a float data texture and read back with asuint(), so its BIT PATTERN has
+	// to be a normal float. The exponent lives in the top byte, and with red there an opaque black
+	// (0x000000ff) is a denormal -- which mobile GPUs flush to zero on load, turning every dark
+	// opaque colour into a fully transparent one. With alpha on top, the only colours that can still
+	// flush are those with alpha 0, which read back as transparent either way.
+	// DreamUI_UnpackUintColor in DreamUIRectBlock.ush unpacks in this order; the two must ship together.
+	return
+		((uint32)InValue.A << 24)
+		| ((uint32)InValue.R << 16)
+		| ((uint32)InValue.G << 8)
+		| ((uint32)InValue.B << 0)
+		;
+}
+
+uint32 UDreamRectBlock::PackFlagsForDataTexture(uint8 InBoolValues, uint8 InTextureScaleMode, uint8 InTextureDrawMode)
+{
+	// The three payload bytes sit BELOW a constant top byte, which exists only to make the word a
+	// normal float: the flags used to occupy the float's exponent, so "body enabled, everything else
+	// off, any non-default texture mode" packed to a denormal and every flag read back as 0 -- an
+	// element that draws nothing at all. 0x3f as the exponent byte is ~0.5, which no payload can push
+	// back into denormal range.
+	return FlagsNormalFloatMarker
+		| ((uint32)InBoolValues << 16)
+		| ((uint32)InTextureScaleMode << 8)
+		| ((uint32)InTextureDrawMode << 0)
+		;
+}
+
 void UDreamRectBlock::FillColorToData(uint8* Data, const FColor& InValue, int& InOutDataOffset)
 {
-	auto ColorUint = InValue.ToPackedRGBA();
+	const uint32 ColorUint = PackColorForDataTexture(InValue);
 	int ByteCount = 4;
 	FMemory::Memcpy(Data + InOutDataOffset, &ColorUint, ByteCount);
 	InOutDataOffset += ByteCount;
@@ -245,15 +275,13 @@ uint8 UDreamRectBlock::PackBoolToByte(
 		;
 	return Result;
 }
-void UDreamRectBlock::Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, uint8 InValue3, int& InOutDataOffset)
+void UDreamRectBlock::Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, int& InOutDataOffset)
 {
 	int ByteCount = 8;//actually data only cover 4 bytes, but we need extra 4 bytes to make decode easier (because data texture is 16bytes per pixel)
-	uint32 DataAsUint =
-		(InValue0 << 24)
-		| (InValue1 << 16)
-		| (InValue2 << 8)
-		| (InValue3 << 0)
-		;
+	// Three payload bytes under a constant top byte -- see PackFlagsForDataTexture for why. The
+	// fourth byte this used to take is the one that no longer fits; it never carried anything.
+	// The decode in DreamUIRectBlock.ush shifts by the same amounts; the two must ship together.
+	uint32 DataAsUint = PackFlagsForDataTexture(InValue0, InValue1, InValue2);
 	FMemory::Memcpy(Data + InOutDataOffset, &DataAsUint, 4);
 	InOutDataOffset += ByteCount;
 }
@@ -327,11 +355,25 @@ void UDreamRectBlock::OnRegister()
 	if (RectBlockData == nullptr)
 	{
 		RectBlockData = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockData, TEXT("DefaultRectBlockData"));
-		check(RectBlockData != nullptr);
 	}
-	RectBlockData->Init(DataCountInBytes(), EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 32);
-	DataStartPosition = RectBlockData->RegisterBuffer();
-	OnDataTextureChangedDelegateHandle = RectBlockData->OnDataTextureChange.AddUObject(this, &UDreamRectBlock::OnDataTextureChanged);
+	// A settings default that does not resolve is a content problem, not a programmer error: it is a
+	// soft reference off a native CDO, so a cook driven by an explicit package list need never have
+	// pulled it in, and a commandlet whose project settings do not carry it lands here too (see the
+	// HEADLESS HAZARD note at the bottom of this file). check() made that a hard crash in Development
+	// and Test packages and a null dereference on the very next line in Shipping, where DO_CHECK is 0.
+	// LoadSetting has already logged which path failed; what is lost is the data block, so the rest of
+	// this class treats a null RectBlockData as "no data block" and leaves DataStartPosition at
+	// INDEX_NONE, which is what OnUnregister and the geometry update already key off.
+	if (RectBlockData != nullptr)
+	{
+		RectBlockData->Init(DataCountInBytes(), EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 32);
+		DataStartPosition = RectBlockData->RegisterBuffer();
+		OnDataTextureChangedDelegateHandle = RectBlockData->OnDataTextureChange.AddUObject(this, &UDreamRectBlock::OnDataTextureChanged);
+	}
+	else
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s has no RectBlockData, so it cannot upload its block and will draw with the canvas default material."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
+	}
 #if WITH_EDITOR
 	if (this->GetWorld() && this->GetWorld()->WorldType == EWorldType::Editor)
 	{
@@ -349,8 +391,18 @@ void UDreamRectBlock::OnRegister()
 void UDreamRectBlock::OnUnregister()
 {
 	Super::OnUnregister();
-	RectBlockData->UnregisterBuffer(DataStartPosition);
-	if (OnDataTextureChangedDelegateHandle.IsValid())
+	//hand the row back exactly once: leaving DataStartPosition pointing at it meant a second
+	//unregister (re-register/unregister sequences do happen) put the same row on the free list twice,
+	//and it would then be handed to two different rect blocks
+	// RectBlockData is null when OnRegister could not load the settings default, and DataStartPosition
+	// is then still its as-declared 0 rather than INDEX_NONE -- so the row test alone would call
+	// UnregisterBuffer on nothing.
+	if (RectBlockData != nullptr && DataStartPosition > INDEX_NONE)
+	{
+		RectBlockData->UnregisterBuffer(DataStartPosition);
+		DataStartPosition = INDEX_NONE;
+	}
+	if (RectBlockData != nullptr && OnDataTextureChangedDelegateHandle.IsValid())
 	{
 		RectBlockData->OnDataTextureChange.Remove(OnDataTextureChangedDelegateHandle);
 		OnDataTextureChangedDelegateHandle.Reset();
@@ -501,13 +553,18 @@ UMaterialInterface* UDreamRectBlock::GetMaterialToCreateGeometry()
 	}
 	else
 	{
-		check(RectBlockData);
-		return RectBlockData->GetMaterial();
+		// Null when the settings default did not load (see OnRegister). A null material here is the
+		// same answer UDreamImage gives for a brush that holds no material, and the canvas already
+		// falls back for it -- unlike check(), which crashed Development and Test packages over it.
+		return RectBlockData != nullptr ? RectBlockData->GetMaterial() : nullptr;
 	}
 }
-void UDreamRectBlock::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) 
+void UDreamRectBlock::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat)
 {
-	mat->SetTextureParameterValue(DataTextureParameterName, RectBlockData->GetDataTexture());
+	if (RectBlockData != nullptr)
+	{
+		mat->SetTextureParameterValue(DataTextureParameterName, RectBlockData->GetDataTexture());
+	}
 }
 
 void UDreamRectBlock::MarkAllDirty()
@@ -538,7 +595,10 @@ bool UDreamRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitP
 	TempCornerRadius.Y = FMath::Min(TempCornerRadius.Y, MinSize);
 	TempCornerRadius.Z = FMath::Min(TempCornerRadius.Z, MinSize);
 	TempCornerRadius.W = FMath::Min(TempCornerRadius.W, MinSize);
-	if (InLocalHitPoint.X > 0 && InLocalHitPoint.Y < 0)//right bottom area of rect
+	//the four tests below must cover the whole plane between them: with strict inequalities on both
+	//axes a point sitting exactly on X == 0 or Y == 0 matched no quadrant and fell through to the
+	//unconditional `return true` at the end, skipping the corner test entirely
+	if (InLocalHitPoint.X >= 0 && InLocalHitPoint.Y < 0)//right bottom area of rect
 	{
 		auto Radius = TempCornerRadius.X;
 		auto CenterPos = FVector2D(Widget->GetLocalSpaceRight() - Radius, Widget->GetLocalSpaceBottom() + Radius);
@@ -551,7 +611,7 @@ bool UDreamRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitP
 		}
 		return true;
 	}
-	else if (InLocalHitPoint.X > 0 && InLocalHitPoint.Y > 0)//right top area of rect
+	else if (InLocalHitPoint.X >= 0 && InLocalHitPoint.Y >= 0)//right top area of rect
 	{
 		auto Radius = TempCornerRadius.Y;
 		auto CenterPos = FVector2D(Widget->GetLocalSpaceRight() - Radius, Widget->GetLocalSpaceTop() - Radius);
@@ -564,7 +624,7 @@ bool UDreamRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitP
 		}
 		return true;
 	}
-	else if (InLocalHitPoint.X < 0 && InLocalHitPoint.Y > 0)//left top area of rect
+	else if (InLocalHitPoint.X < 0 && InLocalHitPoint.Y >= 0)//left top area of rect
 	{
 		auto Radius = TempCornerRadius.Z;
 		auto CenterPos = FVector2D(Widget->GetLocalSpaceLeft() + Radius, Widget->GetLocalSpaceTop() - Radius);
@@ -577,7 +637,7 @@ bool UDreamRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitP
 		}
 		return true;
 	}
-	else if (InLocalHitPoint.X < 0 && InLocalHitPoint.Y < 0)//left bottom area of rect
+	else//left bottom area of rect (X < 0 && Y < 0)
 	{
 		auto Radius = TempCornerRadius.W;
 		auto CenterPos = FVector2D(Widget->GetLocalSpaceLeft() + Radius, Widget->GetLocalSpaceBottom() + Radius);
@@ -590,7 +650,6 @@ bool UDreamRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitP
 		}
 		return true;
 	}
-	return true;
 }
 bool UDreamRectBlock::LineTraceUIRect(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
@@ -670,7 +729,8 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 		bNeedUpdateBlockData = true;
 	}
 
-	if (bNeedUpdateBlockData)
+	// No data block means there is nothing to upload into -- see OnRegister.
+	if (bNeedUpdateBlockData && RectBlockData != nullptr)
 	{
 		bNeedUpdateBlockData = false;
 
@@ -690,9 +750,19 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 void UDreamRectBlock::ApplyAtlasTextureChange_Implementation()
 {
 	if (BodyTextureMode != EDreamRectBlockTextureMode::Sprite)return;
-	check(BodySpriteTexture);
+	// The sprite is an authored property and the mode is another: an asset can be in Sprite mode
+	// with no sprite set, and this is reached from the atlas repack broadcast rather than from a
+	// setter that could have refused it. check() made that content state a crash in Development
+	// and Test packages and a null dereference on the next line in Shipping, where DO_CHECK is 0.
+	if (!IsValid(BodySpriteTexture))
+	{
+		return;
+	}
 	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
-	GetWidget()->MarkCanvasUpdate(true);
+	if (UDreamWidget* OwningWidget = GetWidget())
+	{
+		OwningWidget->MarkCanvasUpdate(true);
+	}
 }
 
 void UDreamRectBlock::SetCornerRadius(const FVector4& value)
@@ -724,7 +794,8 @@ void UDreamRectBlock::SetBodySpriteTexture(UDreamUISpriteData_BaseObject* value)
 {
 	if (this->BodySpriteTexture != value)
 	{
-		this->BodySpriteTexture = value;
+		// The atlas comparison and the RemoveUISprite below both need the *old* sprite, so the
+		// assignment happens once, after the registration hand-over.
 		if ((!IsValid(BodySpriteTexture) || !IsValid(value))
 			|| (BodySpriteTexture->GetAtlasTexture() != value->GetAtlasTexture()))
 		{
@@ -1094,8 +1165,8 @@ FunctionPropertyAnimation(OuterShadowDistance, float, Float);
 
 
 
-// HEADLESS HAZARD, kept with the class that has it: OnRegister checks RectBlockData, which it
-// loads from UDreamGUISettings. A commandlet whose project settings do not carry
-// DefaultRectBlockData asserts here rather than reporting a diagnostic, with the .dui nowhere
-// in the callstack. The tag stays -- it is a real visual and authors want it.
+// HEADLESS NOTE, kept with the class that has it: OnRegister loads RectBlockData from
+// UDreamGUISettings. A commandlet whose project settings do not carry DefaultRectBlockData used to
+// assert here rather than report a diagnostic, with the .dui nowhere in the callstack; it now logs
+// the failure and the rect block draws with the canvas default material instead.
 DECLARE_DREAM_GUI_VISUAL("RectBlock", UDreamRectBlock)

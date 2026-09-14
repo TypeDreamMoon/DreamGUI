@@ -43,11 +43,16 @@ void UDreamVisualDirectMesh::OnDimensionChanged(bool InPivotChange, bool InWidth
 
 void UDreamVisualDirectMesh::ClearMeshData()
 {
+	// Asking for a canvas update IS the release, and there is deliberately no per-section call here.
+	// UDreamCanvas::UpdateDrawCallMesh opens by pooling EVERY section
+	// (UDreamUIMeshComponent::PoolAllRenderSection) and then hands one back to each draw call it
+	// still has; a direct-mesh visual whose HaveValidData() is false produces no draw call
+	// (UDreamCanvas::GetRenderDataFromWidgets skips it), so its section stays in the pool and is
+	// reused by whoever asks next. Nothing is leaked and nothing stale is drawn.
+	// The weak pointers to the mesh and the section are left alone on purpose: a pooled section is
+	// handed to whoever asks next and refilled by its supplier, and this element gets its own again
+	// through OnSupplyMeshSection the next time it has data to draw.
 	GetWidget()->MarkCanvasUpdate(true);
-	if (Mesh.IsValid() && MeshSection.IsValid())
-	{
-		//@todo: maybe we should remove render section
-	}
 }
 void UDreamVisualDirectMesh::OnSupplyMeshSection(TWeakObjectPtr<UDreamUIMeshComponent> InMesh, TWeakPtr<FDreamUIRenderSection_DirectMesh> InSection)
 {
@@ -63,51 +68,65 @@ bool UDreamVisualDirectMesh::LineTraceUI(FDreamUIHitResult& OutHit, const FVecto
 	}
 	else if (RaycastType == EDreamVisualRaycastType::Mesh)
 	{
-		//@todo
-		// if (!DrawCall.IsValid())return false;
-		// if (!DrawCall->DrawCallRenderSection.IsValid())return false;
-
 		auto Widget = GetWidget();
-		auto inverseTf = Widget->GetWorldTransform().Inverse();
-		auto localSpaceRayOrigin = inverseTf.TransformPosition(Start);
-		auto localSpaceRayEnd = inverseTf.TransformPosition(End);
-
-		//DrawDebugLine(this->GetWorld(), Start, End, FColor::Red, false, 5.0f);//just for test
-		//check Line-Plane intersection first, then check Line-Triangle
-		//start and end point must be different side of X plane
-		if (FMath::Sign(localSpaceRayOrigin.X) != FMath::Sign(localSpaceRayEnd.X))
+		auto Section = MeshSection.Pin();
+		if (!Section.IsValid())
 		{
-			auto IntersectionPoint = FMath::LinePlaneIntersection(localSpaceRayOrigin, localSpaceRayEnd, FVector::ZeroVector, FVector(1, 0, 0));
-			//hit point inside rect area
-			if (IntersectionPoint.Y > Widget->GetLocalSpaceLeft() && IntersectionPoint.Y < Widget->GetLocalSpaceRight() && IntersectionPoint.Z > Widget->GetLocalSpaceBottom() && IntersectionPoint.Z < Widget->GetLocalSpaceTop())
+			//nothing has been supplied to trace against yet; the rect is all that is known about this element
+			return LineTraceUIRect(OutHit, Start, End);
+		}
+		auto RenderCanvas = Widget->GetRenderCanvas();
+		auto CanvasWidget = RenderCanvas != nullptr ? RenderCanvas->GetWidget() : nullptr;
+		if (CanvasWidget == nullptr)
+		{
+			return LineTraceUIRect(OutHit, Start, End);
+		}
+		const auto& Vertices = Section->Vertices;
+		const auto& TriangleIndices = Section->TriangleIndices;
+		const int32 ValidTriangleIndicesNum = FMath::Min(Section->ValidTriangleIndicesNum, TriangleIndices.Num());
+		const int32 ValidVerticesNum = FMath::Min(Section->ValidVerticesNum, Vertices.Num());
+		if (ValidTriangleIndicesNum < 3 || ValidVerticesNum <= 0)
+		{
+			return LineTraceUIRect(OutHit, Start, End);
+		}
+
+		// Every vertex in a direct-mesh section is stored in CANVAS space -- the supplier transforms
+		// by ItemToCanvas before writing (see UDreamStaticMesh::CreateGeometry) -- so the ray is
+		// brought into canvas space through the same transform, not into this widget's local space.
+		// There is deliberately no plane-crossing or rect pre-filter either: this geometry is the
+		// reason DirectMesh exists, it is three-dimensional and it is not bound by the widget rect,
+		// which is exactly what GetHitGeometryFitsWidgetRect() answers false to.
+		const FTransform& CanvasToWorldTf = CanvasWidget->GetWorldTransform();
+		const FVector CanvasSpaceRayStart = CanvasToWorldTf.InverseTransformPosition(Start);
+		const FVector CanvasSpaceRayEnd = CanvasToWorldTf.InverseTransformPosition(End);
+
+		const int32 TriangleCount = ValidTriangleIndicesNum / 3;
+		int32 Index = 0;
+		for (int32 i = 0; i < TriangleCount; i++)
+		{
+			const int32 VertIndex0 = (int32)TriangleIndices[Index++];
+			const int32 VertIndex1 = (int32)TriangleIndices[Index++];
+			const int32 VertIndex2 = (int32)TriangleIndices[Index++];
+			if (VertIndex0 >= ValidVerticesNum || VertIndex1 >= ValidVerticesNum || VertIndex2 >= ValidVerticesNum)
 			{
-				//@todo
-				//triangle hit test
-				// auto MeshSection = (FDreamUIRenderSection_Mesh*)DrawCall->DrawCallRenderSection.Pin().Get();
-				// auto& vertices = MeshSection->vertices;
-				// auto& triangleIndices = MeshSection->triangleIndices;
-				// int triangleCount = triangleIndices.Num() / 3;
-				// int index = 0;
-				// for (int i = 0; i < triangleCount; i++)
-				// {
-				// 	auto point0 = (FVector)(vertices[triangleIndices[index++]].Position);
-				// 	auto point1 = (FVector)(vertices[triangleIndices[index++]].Position);
-				// 	auto point2 = (FVector)(vertices[triangleIndices[index++]].Position);
-				// 	FVector HitPoint, HitNormal;
-				// 	if (FMath::SegmentTriangleIntersection(localSpaceRayOrigin, localSpaceRayEnd, point0, point1, point2, HitPoint, HitNormal))
-				// 	{
-				// 		OutHit.TraceStart = Start;
-				// 		OutHit.TraceEnd = End;
-				// 		OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
-				// 		OutHit.Location = Widget->GetComponentTransform().TransformPosition(HitPoint);
-				// 		OutHit.Normal = Widget->GetComponentTransform().TransformVector(HitNormal);
-				// 		OutHit.Normal.Normalize();
-				// 		OutHit.Distance = FVector::Distance(Start, OutHit.Location);
-				// 		OutHit.ImpactPoint = OutHit.Location;
-				// 		OutHit.ImpactNormal = OutHit.Normal;
-				// 		return true;
-				// 	}
-				// }
+				continue;
+			}
+			const FVector Point0 = (FVector)(Vertices[VertIndex0].Position);
+			const FVector Point1 = (FVector)(Vertices[VertIndex1].Position);
+			const FVector Point2 = (FVector)(Vertices[VertIndex2].Position);
+			FVector HitPoint, HitNormal;
+			if (FMath::SegmentTriangleIntersection(CanvasSpaceRayStart, CanvasSpaceRayEnd, Point0, Point1, Point2, HitPoint, HitNormal))
+			{
+				OutHit.TraceStart = Start;
+				OutHit.TraceEnd = End;
+				OutHit.Widget = Widget;
+				OutHit.Location = CanvasToWorldTf.TransformPosition(HitPoint);
+				OutHit.Normal = CanvasToWorldTf.TransformVector(HitNormal);
+				OutHit.Normal.Normalize();
+				OutHit.Distance = FVector::Distance(Start, OutHit.Location);
+				OutHit.ImpactPoint = OutHit.Location;
+				OutHit.FaceIndex = i;
+				return true;
 			}
 		}
 		return false;
