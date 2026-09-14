@@ -38,6 +38,13 @@ UDreamWidget* UDreamWidgetSubObjectBehaviour::GetWidget() const
 
 FString UDreamWidgetSubObjectBehaviour::GetPathDisplayName(const UObject* StopOuter) const
 {
-	return GetWidget()->GetPathDisplayName(StopOuter) / this->GetName();
+	// GetWidget() answers null whenever GetTypedOuter finds no widget -- a sub-object built outside a
+	// widget, or one whose outer chain is already coming apart. This function is what the logging and
+	// error paths call to name the thing they are complaining about, so it is asked precisely when the
+	// hierarchy is in that state, and it dereferenced the answer unguarded.
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget)
+		? Widget->GetPathDisplayName(StopOuter) / this->GetName()
+		: FString::Printf(TEXT("<orphan>/%s"), *this->GetName());
 }
 

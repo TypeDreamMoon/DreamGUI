@@ -209,6 +209,14 @@ public:
 	/** Register a user widget whose class carries property bindings, so they are evaluated per frame. */
 	void AddPropertyBindingUser(class UDreamUserWidget* InUserWidget);
 	void RemovePropertyBindingUser(class UDreamUserWidget* InUserWidget);
+	/**
+	 * How many user widgets are on the per-frame polled-binding visit.
+	 *
+	 * Exposed because "is this widget still being polled after it was destroyed" is otherwise
+	 * unobservable: DestroyWidget does not mark the object garbage, so the list's own IsValid sweep
+	 * cannot answer it and neither can a test.
+	 */
+	int32 GetPropertyBindingUserCount() const { return PropertyBindingUsers.Num(); }
 private:
 	/** Weak, and swept as it is walked: a widget can be destroyed between two frames. */
 	TArray<TWeakObjectPtr<class UDreamUserWidget>> PropertyBindingUsers;
@@ -231,6 +239,8 @@ private:
 	bool bIsExecutingStart = false;
 	bool bIsExecutingTick = false;
 	bool bIsExecutingLayout = false;
+	/** A tree rebuild was asked for while a pass was running, and is owed as soon as it ends. */
+	bool bPendingLayoutTreeRebuild = false;
 	/**
 	 * Passes the layout loop needed on the most recent tick that had anything to do.
 	 *
@@ -242,8 +252,11 @@ private:
 	int32 LastLayoutPassCount = 0;
 	int32 CurrentExecutingTickIndex = -1;
 	UPROPERTY(Transient) TArray<UDreamUIBehaviour*> DreamUIBehavioursNeedToRemoveFromTick;
-#if WITH_EDITORONLY_DATA
+#if !UE_BUILD_SHIPPING
+	/** Paired with the per-frame "only one ScreenSpaceOverlay canvas" check, which is not editor-only. */
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
+#endif
+#if WITH_EDITORONLY_DATA
 	TMap<FString, int> LayoutCalculationCounterMap;
 #endif
 	void OnCultureChanged();
@@ -261,15 +274,16 @@ public:
 	void AddCanvas(UDreamCanvas* InCanvas);
 	void RemoveCanvas(UDreamCanvas* InCanvas);
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;
-#if WITH_EDITOR
 	/**
 	 * Root canvases in ScreenSpaceOverlay mode that are actually competing for the screen. Inactive
 	 * ones are excluded: a parked widget draws nothing (DreamCanvas gates UpdateVisual on
 	 * GetRenderVisibleInHierarchy), so counting it would report a conflict that does not exist.
 	 * Extracted from the per-frame check so the rule can be asserted directly.
+	 *
+	 * Available outside the editor because the rule it checks is a runtime one -- two overlay
+	 * canvases in one world make one of the two UIs disappear in a packaged game just as surely.
 	 */
 	int32 CountCompetingScreenSpaceOverlayCanvases()const;
-#endif
 
 	const TArray<TObjectPtr<UDreamWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
 	/**
@@ -299,9 +313,13 @@ public:
 	/** Tears down registered widgets once per hierarchy root. Safe to call repeatedly during world shutdown. */
 	void DestroyRegisteredWidgetTrees();
 
+	/** Ask for a layout pass on this widget next frame -- UMG's InvalidateLayoutAndVolatility. */
 	void AddLayoutDirtyWidget(UDreamWidget* InWidget);
 	void MarkRebuildLayoutTree(UDreamWidget* InWidget);
 	void MarkRebuildAllLayoutTree();
+	/** Do the tree rebuild a mid-pass caller was made to wait for. Called once the pass is over. */
+	void FlushPendingLayoutTreeRebuild();
+	/** Lay this widget's tree out NOW rather than next frame -- UMG's ForceLayoutPrepass. */
 	void RebuildLayoutImmediately(UDreamWidget* InWidget);
 	void CalculateLayoutTree(UDreamWidget* RootLayoutWidget);
 #if WITH_EDITOR

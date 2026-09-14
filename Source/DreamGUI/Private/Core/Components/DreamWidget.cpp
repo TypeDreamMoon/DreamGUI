@@ -7,6 +7,8 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamScreenUISubsystem.h"
+#include "Engine/World.h"
 #include "DreamTweenManager.h"
 #include "Core/DreamUIClipData.h"
 #include "Core/Components/DreamLayout.h"
@@ -20,7 +22,9 @@
 #endif
 #include "Components/SceneComponent.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamWidgetNavigation.h"
 #if WITH_EDITOR
+#include "UObject/GarbageCollection.h"
 #include "UObject/UnrealType.h"
 #endif
 
@@ -328,8 +332,16 @@ void UDreamWidget::ApplySiblingIndex()
 		{
 			Parent->EnsureUIChildrenValid();
 			Parent->EnsureUIChildrenSorted();
-			SiblingIndex = FMath::Clamp(SiblingIndex, 0, Parent->Children.Num() - 1);
+			// Clamp AFTER the remove and against Num(), not before it and against Num()-1, which is how
+			// PostEditUndo has always spelled the same operation. EnsureUIChildrenValid can empty the
+			// array outright -- an abnormally deleted actor or an undo leaves a parent whose every child
+			// slot is invalid, this widget included -- and FMath::Clamp(x, 0, -1) answers -1 for any
+			// x >= 0. TArray::Insert only checkSlow's its index, so Development and Shipping went on to
+			// memmove from Data - 1 and store the pointer there: an out-of-bounds write into the heap.
+			// With this widget present in the array the two spellings agree exactly (the remove drops
+			// Num() by one), so nothing else about the ordering changes.
 			Parent->Children.Remove(this);
+			SiblingIndex = FMath::Clamp(SiblingIndex, 0, Parent->Children.Num());
 			Parent->Children.Insert(this, SiblingIndex);
 			bool anythingChange = false;
 			for (int i = 0; i < Parent->Children.Num(); i++)
@@ -535,8 +547,11 @@ void UDreamWidget::MarkAllDirty()
 	}
 }
 
-void UDreamWidget::MarkRenderModeChangeRecursive(UDreamCanvas* Canvas, EDreamRenderMode OldRenderMode, EDreamRenderMode NewRenderMode)
+void UDreamWidget::MarkRenderModeChangeRecursive(UDreamCanvas* Canvas)
 {
+	// The old and new render modes used to be carried through here as parameters and were never read by
+	// anything: the whole subtree is dirtied wholesale either way, because UE and DreamGUI mesh data are
+	// not compatible in either direction. Dropped rather than left as a promise the signature cannot keep.
 	if (this->RenderCanvas == Canvas)
 	{
 		MarkAllDirty();
@@ -544,7 +559,7 @@ void UDreamWidget::MarkRenderModeChangeRecursive(UDreamCanvas* Canvas, EDreamRen
 		{
 			if (IsValid(uiChild))
 			{
-				uiChild->MarkRenderModeChangeRecursive(Canvas, OldRenderMode, NewRenderMode);
+				uiChild->MarkRenderModeChangeRecursive(Canvas);
 			}
 		}
 	}
@@ -720,6 +735,71 @@ void UDreamWidget::DestroyWidget()
 			Widget->EndPlay();
 		}
 		LOCAL::AppendCurrentChildren(Widget, TeardownWidgets, ScheduledWidgets);
+	}
+
+	/**
+	 * And now it is actually destroyed.
+	 *
+	 * Until this loop existed the word meant "unregistered and detached": IsValid() still answered true
+	 * for a widget DestroyChild had just taken apart, so the several hundred IsValid checks in this
+	 * plugin -- every one of them written to mean "is this still there" -- answered yes about a corpse
+	 * for as long as anything happened to hold a reference. The header had to explain that away rather
+	 * than the code being right.
+	 *
+	 * Two gates, and they are the whole reason this was not done sooner.
+	 *
+	 * GC. BeginDestroy reaches this function from inside a collection, and marking there would be
+	 * writing into the object array the collector is walking -- for an object already being destroyed,
+	 * so there is nothing the mark could still accomplish. IsGarbageCollecting() is exactly that
+	 * question. IsRooted is skipped for the same kind of reason: UObjectBaseUtility::MarkAsGarbage
+	 * check()s against it.
+	 *
+	 * Undo. The transaction buffer DOES carry a garbage transition across an undo -- FObjectRecord
+	 * diffs the state Modify() captured against the state at the end of the transaction, records
+	 * AliveToDead, and calls ClearGarbage() when the undo runs (UnrealEd's FTransaction::Apply). What
+	 * it cannot do is carry one for an object it was never told about, and the designer's delete
+	 * Modify()s only the widget the user picked, not the subtree under it. Modify() here, per widget,
+	 * is what puts every one of them in the record -- so undoing a delete brings back live widgets
+	 * rather than a tree of tombstones.
+	 *
+	 * And a third thing this has to get right, which is not a gate but a question of WHICH widgets:
+	 * teardown is re-entrant by design. OnUnregister and EndPlay run with the hierarchy still writable,
+	 * and a behaviour is allowed to move a widget out of the doomed subtree there (UUIScrollView re-homes
+	 * its content; the lifecycle suite has a behaviour that does exactly this). Such a widget has a LIVE
+	 * parent by the time the teardown finishes, so marking it would leave a garbage widget sitting in a
+	 * hierarchy still in use, which the next collection would silently empty out of that parent's
+	 * Children. It was still unregistered and ended -- the caller asked for that and got it -- it is
+	 * simply no longer this subtree's to destroy. A widget moved the other way, INTO the subtree while it
+	 * came down, is the mirror image and IS destroyed with it: that is already what the unregister loop
+	 * does with it, and AppendCurrentChildren exists to catch it.
+	 */
+	if (!IsGarbageCollecting())
+	{
+		// Decide first, mark afterwards. The test below walks parent chains, and a TWeakObjectPtr stops
+		// handing back an object the instant it is garbage -- marking as we went would make a widget's
+		// own ancestors vanish from under the widgets after it in the list, and every one of those would
+		// then look like it had been moved out.
+		TArray<UDreamWidget*> WidgetsToMark;
+		WidgetsToMark.Reserve(TeardownWidgets.Num());
+		for (const TObjectPtr<UDreamWidget>& TornDown : TeardownWidgets)
+		{
+			UDreamWidget* Widget = TornDown.Get();
+			if (Widget == nullptr || !IsValid(Widget) || Widget->IsRooted()
+				|| Widget->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+			{
+				continue;
+			}
+			if (Widget != this && !Widget->IsChildOf(this))
+			{
+				continue;//moved out from under us while we were coming down; see above
+			}
+			WidgetsToMark.Add(Widget);
+		}
+		for (UDreamWidget* Widget : WidgetsToMark)
+		{
+			Widget->Modify();
+			Widget->MarkAsGarbage();
+		}
 	}
 }
 
@@ -967,6 +1047,15 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 			{
 				static void MarkDirty(const UDreamWidget* Widget)
 				{
+					// Children can hold nulls between a teardown and the next tidy-up -- deleting a widget
+					// in the designer, undoing, or rebuilding the preview all leave one behind, and this
+					// runs from the details panel right after any of them. The two runtime twins of this
+					// lambda (SetRenderOpacity, SetPixelSnapping) have always guarded; the editor copy
+					// dereferenced the null on its first line.
+					if (!IsValid(Widget))
+					{
+						return;
+					}
 					if (Widget->Visual)
 					{
 						Widget->Visual->MarkColorDirty();
@@ -992,6 +1081,18 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 void UDreamWidget::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	Super::PreEditChange(PropertyAboutToChange);
+
+	// NULL is an ordinary argument here, not a broken caller: UObject::PreEditUndo() is literally
+	// `PreEditChange(NULL)` (CoreUObject/Private/UObject/Obj.cpp), and the transaction buffer calls
+	// it on every object in a transaction it replays -- so every Ctrl+Z that touched a widget comes
+	// through this line. It survives today only because FField::GetFName() has a null-this
+	// compatibility guard (CoreUObject/Public/UObject/Field.h), which is deprecated; when it goes,
+	// an unguarded dereference here is "undo crashes the editor". "Which property?" has no answer
+	// for an undo, and Super has already done the part that applies to all of them.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
 
 	const FName MemberName = PropertyAboutToChange->GetFName();
 	if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, Visual))
@@ -1775,6 +1876,15 @@ void UDreamWidget::SetParentBeforeRegister(UDreamWidget* InParent)
 		if (Parent.IsValid())
 		{
 			Parent->Children.Add(this);
+			// Say the index the append just produced, exactly as TrySetParentInternal's append branch
+			// does. Without it a widget attached this way kept SiblingIndex == INDEX_NONE while sitting
+			// LAST in Children -- the two disagreeing about the same thing, with the array (last = drawn
+			// on top) saying what the callers wanted and the index (-1) saying the opposite. Nothing read
+			// the index until something re-sorted the parent (RestoreParentLinksRecursive,
+			// EnsureDataForRebuild -- a preview rebuild or an undo in the designer), and then -1 sorted
+			// FIRST: the modal dim, the tooltip, the drag visual and the virtual cursor all went to the
+			// bottom of the stack, and the renumber that followed made it permanent.
+			this->SiblingIndex = Parent->Children.Num() - 1;
 		}
 	}
 }
@@ -2155,6 +2265,71 @@ void UDreamWidget::SetSiblingIndex(int32 InInt)
 	}
 }
 
+bool UDreamWidget::ReorderChildrenToPaintOrder(const TArray<UDreamWidget*>& InDesiredOrder)
+{
+	// A permutation of exactly the current array, or nothing: this bypasses the invalidation the normal
+	// reorder raises, so it must not be usable to add, drop or substitute a child by accident.
+	if (InDesiredOrder.Num() != Children.Num())
+	{
+		return false;
+	}
+	bool bOrderChanged = false;
+	for (int32 Index = 0; Index < InDesiredOrder.Num(); ++Index)
+	{
+		if (Children[Index] != InDesiredOrder[Index])
+		{
+			bOrderChanged = true;
+			break;
+		}
+	}
+	if (!bOrderChanged)
+	{
+		return false;
+	}
+	{
+		TSet<const UDreamWidget*> Requested;
+		Requested.Reserve(InDesiredOrder.Num());
+		for (const UDreamWidget* Child : InDesiredOrder)
+		{
+			Requested.Add(Child);
+		}
+		if (Requested.Num() != InDesiredOrder.Num())
+		{
+			return false;//a duplicate, so not a permutation
+		}
+		for (const TObjectPtr<UDreamWidget>& Child : Children)
+		{
+			if (!Requested.Contains(Child.Get()))
+			{
+				return false;
+			}
+		}
+	}
+
+	// Same reason ApplySiblingIndex snapshots the parent: Children is persistent, and this rewrites it.
+	Modify();
+	Children.Reset(InDesiredOrder.Num());
+	for (UDreamWidget* Child : InDesiredOrder)
+	{
+		Children.Add(Child);
+	}
+	// The array is now exactly the order the indices are about to state, so nothing is owed a sort.
+	bNeedSortUIChildren = false;
+	for (int32 Index = 0; Index < Children.Num(); ++Index)
+	{
+		UDreamWidget* Child = Children[Index];
+		if (!IsValid(Child) || Child->SiblingIndex == Index)
+		{
+			continue;
+		}
+		Child->SiblingIndex = Index;
+		Child->Call_SiblingIndexChanged();
+	}
+	// Draw order is derived from the flattened hierarchy index, and that is what actually moved.
+	MarkFlattenHierarchyIndexDirty();
+	return true;
+}
+
 bool UDreamWidget::IsChildOf(const UDreamWidget* InTarget)const
 {
 	auto TempParent = this->Parent;
@@ -2343,24 +2518,10 @@ void UDreamWidget::OnUpdateTransform()
 
 void UDreamWidget::OnChildAttached(UDreamWidget* ChildWidget)
 {
-	//make sure SiblingIndex all good
-	if (ChildWidget->SiblingIndex == INDEX_NONE)
-	{
-		// Drop the dead slots before renumbering, the same way OnChildDetached does: a widget deleted
-		// in the designer leaves a null behind in its parent's Children, and reading SiblingIndex off
-		// it is an access violation. Removing rather than skipping is also what keeps the numbering
-		// meaningful -- a hole would leave every sibling after it numbered one past its own position.
-		EnsureUIChildrenValid();
-		for (int i = 0; i < Children.Num(); i++)
-		{
-			auto& UIChild = Children[i];
-			if (UIChild->SiblingIndex != i)
-			{
-				UIChild->SiblingIndex = i;
-				UIChild->Call_SiblingIndexChanged();
-			}
-		}
-	}
+	// No "if SiblingIndex == INDEX_NONE then renumber everything" fallback here any more: the sole
+	// caller is TrySetParentInternal, and both of its attach branches assign the child's SiblingIndex
+	// before calling this, so the condition could not be true. It read as a safety net that was in fact
+	// never armed, which is worse than not having one.
 	for (UDreamUIBehaviour* Component : Components)
 	{
 		if (IsValid(Component)) Component->OnWidgetChildAttached(ChildWidget);
@@ -2416,6 +2577,25 @@ bool UDreamWidget::RemoveChild(UDreamWidget* InChild)
 		DreamUIManager->ParkWidget(InChild);
 	}
 	return true;
+}
+
+bool UDreamWidget::RemoveFromParent()
+{
+	// A tracked screen page first: it has a NAME in the subsystem as well as a parent, and detaching
+	// it without giving the name back leaves an entry pointing at a page that is registered, alive
+	// and nowhere. ForgetPage keeps the widget, unlike RemoveFromViewport.
+	if (UWorld* World = GetWorld())
+	{
+		if (UDreamScreenUISubsystem* Screen = World->GetSubsystem<UDreamScreenUISubsystem>())
+		{
+			if (Screen->IsInViewport(this))
+			{
+				Screen->ForgetPage(this);
+			}
+		}
+	}
+	UDreamWidget* CurrentParent = GetParent();
+	return CurrentParent != nullptr ? CurrentParent->RemoveChild(this) : false;
 }
 
 bool UDreamWidget::RemoveChildAt(int32 InIndex)
@@ -2825,22 +3005,26 @@ UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InS
 			static void Walk(UDreamWidget* InFrom, UDreamWidget* InTo, TMap<UObject*, UObject*>& OutMap)
 			{
 				DreamWidgetDuplicateLocal::MapCounterparts(InFrom, InTo, OutMap);
-				const TArray<UDreamWidget*>& FromChildren = InFrom->GetChildren();
-				const TArray<UDreamWidget*>& ToChildren = InTo->GetChildren();
-				// The copy's array skips the source's invalid entries, so walk the source's VALID ones
-				// in step with the copy's.
+				// Both sides are read as RAW arrays, because that is how the copy was built: Walk above
+				// appends to Copy->Children while iterating InSource->Children, unsorted, skipping the
+				// source's invalid entries. Pairing used to ask GetChildren() instead, which sorts BOTH
+				// sides by SiblingIndex -- and SiblingIndex is not unique: EnsureUIChildrenSorted's own
+				// comment records duplicates in legacy data and transiently during a prefab refresh. A
+				// stable sort preserves the incoming order for equal keys, the two incoming orders are
+				// different (one sorted, one not), so the walks diverged and paired a copy with the wrong
+				// original -- after which RemapReferencesOn aimed every intra-subtree reference at it.
 				int32 ToIndex = 0;
-				for (UDreamWidget* FromChild : FromChildren)
+				for (const TObjectPtr<UDreamWidget>& FromChild : InFrom->Children)
 				{
 					if (!IsValid(FromChild))
 					{
 						continue;
 					}
-					if (!ToChildren.IsValidIndex(ToIndex))
+					if (!InTo->Children.IsValidIndex(ToIndex))
 					{
 						break;
 					}
-					Walk(FromChild, ToChildren[ToIndex++], OutMap);
+					Walk(FromChild, InTo->Children[ToIndex++], OutMap);
 				}
 			}
 		};
@@ -3038,7 +3222,16 @@ float UDreamWidget::GetWidth() const
 			CacheWidth = AnchorData.SizeDelta.X;
 		}
 	}
-	return CacheWidth;
+	// A resolved size is never negative. Offsets that cross -- a stretched child whose left and right
+	// padding together exceed the parent's span, or a plainly authored negative -- describe an EMPTY
+	// rect, not an inverted one, and every consumer here multiplies the width straight through:
+	// GetLocalSpaceLeft is -W*Pivot and GetLocalSpaceRight is W*(1-Pivot), so a negative W swaps the two
+	// edges and turns the hit rect inside out, while GetWorldRectBoundingSphere's W*W + H*H keeps
+	// reporting a healthy positive radius over it. Panels already floor their own output
+	// (DreamPanelLayoutLocal::CleanSize); this is that floor for every other path into the tree.
+	// AnchorData keeps the true, possibly negative, SizeDelta -- only the resolved answer is floored, so
+	// anchor offsets still round-trip exactly.
+	return FMath::Max(0.0f, CacheWidth);
 }
 float UDreamWidget::GetHeight() const
 {
@@ -3064,7 +3257,8 @@ float UDreamWidget::GetHeight() const
 			CacheHeight = AnchorData.SizeDelta.Y;
 		}
 	}
-	return CacheHeight;
+	/** The vertical twin of the floor in GetWidth. */
+	return FMath::Max(0.0f, CacheHeight);
 }
 
 void UDreamWidget::SetAnchorData(const FDreamUIAnchorData& Value)
@@ -3109,30 +3303,21 @@ void UDreamWidget::SetAnchorMin(FVector2D Value)
 	{
 		if (!AnchorData.AnchorMin.Equals(Value, 0.0f))
 		{
-			auto CurrentLeft = this->GetAnchorOffsetLeft();
-			auto CurrentBottom = this->GetAnchorOffsetBottom();
-
 			AnchorData.AnchorMin = Value;
-			
-			//SetAnchorLeft
-			{
-				auto CurrentRight = this->GetAnchorOffsetRight();
-				CacheWidth = -CurrentRight - CurrentLeft;
-				//SetWidth
-				AnchorData.SizeDelta.X = CacheWidth;
-				this->AnchorData.AnchoredPosition.X = CurrentLeft + CacheWidth * this->AnchorData.Pivot.X;
-			}
-
-			//SetAnchorBottom
-			{
-				auto CurrentTop = this->GetAnchorOffsetTop();
-				CacheHeight = -CurrentTop - CurrentBottom;
-				//SetHeight
-				AnchorData.SizeDelta.Y = CacheHeight;
-				this->AnchorData.AnchoredPosition.Y = CurrentBottom + CacheHeight * this->AnchorData.Pivot.Y;
-			}
-
-			MarkAnchorDataChanged_Recursive(false, true, true, false);
+			// Moving an anchor line moves the reference the rect is expressed against; it does not move
+			// the rect relative to that reference. Both anchor offsets are functions of AnchoredPosition,
+			// SizeDelta and Pivot alone (GetAnchorOffsetLeft/Right never read an anchor), so keeping them
+			// costs nothing and the arithmetic that used to stand here was an identity: -Right - Left IS
+			// SizeDelta.X, and CurrentLeft + SizeDelta.X * Pivot.X IS AnchoredPosition.X. Its one net
+			// effect was to publish the size DELTA as the RESOLVED width and leave bCacheWidthDirty
+			// clear, so a point-anchored widget turned stretched by this setter answered GetWidth() with
+			// the delta until some unrelated path happened to dirty the cache.
+			//
+			// What genuinely changes is the resolved size: a stretched axis resolves to the delta PLUS
+			// the parent's span across the anchors, and that span just moved. Hence InDiscardCache=true,
+			// which is exactly how the 2026-09-01 fixes to SetWidth/SetHeight/SetAnchoredPositionAndSizeDelta
+			// spell the same thing; these two setters were the ones that pass missed.
+			MarkAnchorDataChanged_Recursive(false, true, true, true);
 			MarkLayoutForRebuild(this);
 		}
 	}
@@ -3147,30 +3332,10 @@ void UDreamWidget::SetAnchorMax(FVector2D Value)
 	{
 		if (!AnchorData.AnchorMax.Equals(Value, 0.0f))
 		{
-			auto CurrentRight = this->GetAnchorOffsetRight();
-			auto CurrentTop = this->GetAnchorOffsetTop();
-
 			AnchorData.AnchorMax = Value;
-
-			//SetAnchorRight
-			{
-				auto CurrentLeft = this->GetAnchorOffsetLeft();
-				CacheWidth = -CurrentRight - CurrentLeft;
-				//SetWidth
-				AnchorData.SizeDelta.X = CacheWidth;
-				this->AnchorData.AnchoredPosition.X = CurrentLeft + CacheWidth * this->AnchorData.Pivot.X;
-			}
-			//SetAnchorTop
-			{
-				auto CurrentBottom = this->GetAnchorOffsetBottom();
-				CacheHeight = -CurrentTop - CurrentBottom;
-				//SetHeight
-				AnchorData.SizeDelta.Y = CacheHeight;
-				this->AnchorData.AnchoredPosition.Y = CurrentBottom + CacheHeight * this->AnchorData.Pivot.Y;
-			}
-
-			MarkAnchorDataChanged_Recursive(false, true, true, false);
-			MarkLayoutForRebuild(this);;
+			// The AnchorMax twin of SetAnchorMin, defect included and removed the same way.
+			MarkAnchorDataChanged_Recursive(false, true, true, true);
+			MarkLayoutForRebuild(this);
 		}
 	}
 	else
@@ -3179,42 +3344,61 @@ void UDreamWidget::SetAnchorMax(FVector2D Value)
 	}
 }
 
+/**
+ * The four-in-one form of SetAnchorOffsetLeft/Right/Top/Bottom, and now written the same way they are.
+ *
+ * Three separate defects lived in the old shape. CacheWidth was assigned `-Right - Left`, which is the
+ * size DELTA and not the resolved width (they differ by the parent's span on a stretched axis), and no
+ * branch in the function touched bCacheWidthDirty -- so DreamTextInput's `SetHorizontalAndVerticalAnchorMinMax
+ * (stretch) + SetAnchorOffset(Padding)` pair left its clip and placeholder nodes answering GetWidth()
+ * with the negated padding sum. The change test compared possibly-stale caches without first asking
+ * whether they were dirty. And the early-exit tail cleared bCacheAnchorOffsetLeftDirty alone, leaving
+ * Left holding a freshly written value while Right/Top/Bottom were still owed a resolve against
+ * AnchorData -- a set the next getter would resolve into something inconsistent with it.
+ *
+ * Here the offsets are the authored intent, the resolved size follows from them plus the parent's span,
+ * and the delta is what is left of that size once the span is subtracted (stretched axes only). Every
+ * cache written is a value this function actually computed, so InDiscardCache stays false, exactly as
+ * in the four single-axis setters.
+ */
 void UDreamWidget::SetAnchorOffset(FMargin Value)
 {
 	if (this->Parent.IsValid())
 	{
-		bool bWidthChange = CacheAnchorOffsetLeft != Value.Left || CacheAnchorOffsetRight != Value.Right;
-		bool bHeightChange = CacheAnchorOffsetBottom != Value.Bottom || CacheAnchorOffsetTop != Value.Top;
-		if (bCacheAnchorOffsetLeftDirty || bCacheAnchorOffsetRightDirty || bWidthChange || bHeightChange)
+		const bool bWidthChange = bCacheAnchorOffsetLeftDirty || bCacheAnchorOffsetRightDirty
+			|| CacheAnchorOffsetLeft != Value.Left || CacheAnchorOffsetRight != Value.Right;
+		const bool bHeightChange = bCacheAnchorOffsetBottomDirty || bCacheAnchorOffsetTopDirty
+			|| CacheAnchorOffsetBottom != Value.Bottom || CacheAnchorOffsetTop != Value.Top;
+		if (!bWidthChange && !bHeightChange)
 		{
-			bCacheAnchorOffsetLeftDirty = false;
-			SyncAnimatableGeometryMirrors();
-			bCacheAnchorOffsetRightDirty = false;
-			SyncAnimatableGeometryMirrors();
-			bCacheAnchorOffsetBottomDirty = false;
-			SyncAnimatableGeometryMirrors();
-			bCacheAnchorOffsetTopDirty = false;
-			CacheAnchorOffsetLeft = Value.Left;
-			CacheAnchorOffsetRight = Value.Right;
-			CacheAnchorOffsetBottom = Value.Bottom;
-			CacheAnchorOffsetTop = Value.Top;
-			SyncAnimatableGeometryMirrors();
-			
-			CacheWidth = -Value.Right - Value.Left;
-			//SetWidth
-			AnchorData.SizeDelta.X = CacheWidth;
-			AnchorData.AnchoredPosition.X = Value.Left + CacheWidth * AnchorData.Pivot.X;
-
-			CacheHeight = -Value.Top - Value.Bottom;
-			//SetHeight
-			AnchorData.SizeDelta.Y = CacheHeight;
-			AnchorData.AnchoredPosition.Y = Value.Bottom + CacheHeight * AnchorData.Pivot.Y;
-			
-			MarkAnchorDataChanged_Recursive(false, bWidthChange, bHeightChange, false);
-			MarkLayoutForRebuild(this);
+			return;//every offset already says what was asked for, and none of them is owed a resolve
 		}
+
+		const float ParentSpanX = this->Parent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X);
+		const float ParentSpanY = this->Parent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y);
+
+		CacheAnchorOffsetLeft = Value.Left;
+		CacheAnchorOffsetRight = Value.Right;
+		CacheAnchorOffsetBottom = Value.Bottom;
+		CacheAnchorOffsetTop = Value.Top;
 		bCacheAnchorOffsetLeftDirty = false;
+		bCacheAnchorOffsetRightDirty = false;
+		bCacheAnchorOffsetBottomDirty = false;
+		bCacheAnchorOffsetTopDirty = false;
+
+		CacheWidth = ParentSpanX - Value.Right - Value.Left;
+		bCacheWidthDirty = false;
+		AnchorData.SizeDelta.X = AnchorData.IsHorizontalStretched() ? CacheWidth - ParentSpanX : CacheWidth;
+		AnchorData.AnchoredPosition.X = FMath::Lerp(Value.Left, -Value.Right, AnchorData.Pivot.X);
+
+		CacheHeight = ParentSpanY - Value.Top - Value.Bottom;
+		bCacheHeightDirty = false;
+		AnchorData.SizeDelta.Y = AnchorData.IsVerticalStretched() ? CacheHeight - ParentSpanY : CacheHeight;
+		AnchorData.AnchoredPosition.Y = FMath::Lerp(Value.Bottom, -Value.Top, AnchorData.Pivot.Y);
+
 		SyncAnimatableGeometryMirrors();
+		MarkAnchorDataChanged_Recursive(false, bWidthChange, bHeightChange, false);
+		MarkLayoutForRebuild(this);
 	}
 	else
 	{
@@ -3675,6 +3859,10 @@ void UDreamWidget::SetAnchorOffsetBottom(float Value)
  */
 void UDreamWidget::SetWidth(float Value)
 {
+	// The argument is a RESOLVED width, and a resolved width has no negative branch -- see the floor in
+	// GetWidth(). Flooring the authored intent as well keeps the stored SizeDelta and the answer the
+	// getter gives consistent instead of silently diverging by the negative part.
+	Value = FMath::Max(0.0f, Value);
 	if (GetWidth() == Value)
 	{
 		return;
@@ -3691,6 +3879,7 @@ void UDreamWidget::SetWidth(float Value)
 /** The vertical twin of SetWidth, defect included and fixed the same way. */
 void UDreamWidget::SetHeight(float Value)
 {
+	Value = FMath::Max(0.0f, Value);
 	if (GetHeight() == Value)
 	{
 		return;
@@ -3826,7 +4015,10 @@ void UDreamWidget::UpdateLayout()
 	// IsLayoutWriting.
 	++LayoutPassDepth;
 	ON_SCOPE_EXIT{ --LayoutPassDepth; };
-	if (IsValid(LayoutSelf))
+	// Both halves are gated on the dirty flag now. The container half always was (BeginLayoutPass inside
+	// CalculateLayout); the LayoutSelf half read nothing and re-solved on every pass for every widget
+	// carrying one. See UDreamLayoutSelf::BeginLayoutPass.
+	if (IsValid(LayoutSelf) && LayoutSelf->BeginLayoutPass())
 	{
 		LayoutSelf->CalculateSize();
 	}
@@ -4013,9 +4205,18 @@ void UDreamWidget::CheckRootWidget(UDreamWidget* RootWidgetInParent)
 
 void UDreamWidget::CalculateWidgetActive_Recursive()
 {
+	// MarkRebuildAllLayoutTree empties the WHOLE MapWidgetToLayoutTree, so it says nothing about which
+	// widget raised it and one call covers every change this walk can make. It used to be raised from
+	// inside the recursion, once per descendant whose cached value moved: deactivating a page of a few
+	// hundred widgets wiped the map a few hundred times over, each wipe costing the rebuild of every
+	// cached layout tree in the world. Hoisted here it is one wipe for the whole subtree. The
+	// MarkLayoutForRebuild below stays per widget on purpose -- unlike the wipe it is about a specific
+	// widget, dirtying the containers on its own ancestor chain, and collapsing it to the root would
+	// leave nested containers inside the subtree never re-arranging.
+	bool bAnyActiveChanged = false;
 	struct LOCAL
 	{
-		static void CalculateWidgetActive(UDreamWidget* Widget)
+		static void CalculateWidgetActive(UDreamWidget* Widget, bool& bOutAnyChanged)
 		{
 			bool bResultActive = true;
 			if (!Widget->bWidgetActive || Widget->bParked)
@@ -4028,15 +4229,11 @@ void UDreamWidget::CalculateWidgetActive_Recursive()
 			if (Widget->bCacheWidgetActiveInHierarchy != bResultActive)
 			{
 				Widget->bCacheWidgetActiveInHierarchy = bResultActive;
+				bOutAnyChanged = true;
 				//callback
 				Widget->Call_WidgetActiveChanged();
 				//canvas update
 				Widget->MarkCanvasUpdate(true);
-				//refresh layout tree
-				if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(Widget->GetWorld()))
-				{
-					DreamUIManager->MarkRebuildAllLayoutTree();
-				}
 				//tell layout
 				MarkLayoutForRebuild(Widget);
 			}
@@ -4048,19 +4245,28 @@ void UDreamWidget::CalculateWidgetActive_Recursive()
 				// this one did not, and dereferenced the null on its first line.
 				if (IsValid(Child))
 				{
-					CalculateWidgetActive(Child);
+					CalculateWidgetActive(Child, bOutAnyChanged);
 				}
 			}
 		}
 	};
-	LOCAL::CalculateWidgetActive(this);
+	LOCAL::CalculateWidgetActive(this, bAnyActiveChanged);
+	if (bAnyActiveChanged)
+	{
+		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+		{
+			DreamUIManager->MarkRebuildAllLayoutTree();
+		}
+	}
 }
 
 void UDreamWidget::CalculateVisibility_Recursive()
 {
+	/** The same hoist as in CalculateWidgetActive_Recursive, and for the same reason. */
+	bool bAnyLayoutVisibilityChanged = false;
 	struct FVisibilityCalculator
 	{
-		static void Calculate(UDreamWidget* Widget)
+		static void Calculate(UDreamWidget* Widget, bool& bOutAnyLayoutChanged)
 		{
 			const bool bParentLayoutVisible = !Widget->Parent.IsValid() || Widget->Parent->bCacheLayoutVisibleInHierarchy;
 			const bool bParentRenderVisible = !Widget->Parent.IsValid() || Widget->Parent->bCacheRenderVisibleInHierarchy;
@@ -4097,13 +4303,11 @@ void UDreamWidget::CalculateVisibility_Recursive()
 
 			if (bLayoutChanged)
 			{
-				// Cached layout trees keep collapsed subtrees and filter at update time, so this wipe is
-				// belt-and-braces (it is also swallowed while a layout pass is executing); the layout pass
-				// itself no longer depends on it to see a revealed subtree.
-				if (UDreamUIManagerWorldSubsystem* DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(Widget->GetWorld()))
-				{
-					DreamUIManager->MarkRebuildAllLayoutTree();
-				}
+				// Cached layout trees keep collapsed subtrees and filter at update time, so the wipe this
+				// raises is belt-and-braces (it is also swallowed while a layout pass is executing); the
+				// layout pass itself no longer depends on it to see a revealed subtree. It is raised once
+				// for the whole walk, outside the recursion, rather than once per changed descendant.
+				bOutAnyLayoutChanged = true;
 				UDreamWidget::MarkLayoutForRebuild(Widget->Parent.IsValid() ? Widget->Parent.Get() : Widget);
 			}
 			if (bRenderChanged || bHitTestChanged)
@@ -4115,12 +4319,19 @@ void UDreamWidget::CalculateVisibility_Recursive()
 			{
 				if (IsValid(Child))
 				{
-					Calculate(Child);
+					Calculate(Child, bOutAnyLayoutChanged);
 				}
 			}
 		}
 	};
-	FVisibilityCalculator::Calculate(this);
+	FVisibilityCalculator::Calculate(this, bAnyLayoutVisibilityChanged);
+	if (bAnyLayoutVisibilityChanged)
+	{
+		if (UDreamUIManagerWorldSubsystem* DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+		{
+			DreamUIManager->MarkRebuildAllLayoutTree();
+		}
+	}
 }
 void UDreamWidget::CalculateInteractable_Recursive()
 {
@@ -4278,6 +4489,23 @@ void UDreamWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged
 	// changed, and several callers pass a size change through as false because the value they diffed
 	// was an anchor offset. A cache that trusted them would go stale on exactly those paths.
 	MarkWorldRectBoundsDirty();
+	// A render transform turns about a pivot POINT, and that point is resolved from the current size:
+	// GetLocalSpaceLeft() + GetWidth() * RenderTransformPivot.X. So a resize moves the point, which moves
+	// the bracketed transform, which moves ObjectToWorldTransform -- and nothing else here recomputes it.
+	// CalculateTransformFromAnchor only writes RelativeLocation, and for a point-anchored widget a pure
+	// resize leaves that untouched, so SetRelativeLocation early-outs and the transform cascade never
+	// runs: the widget goes on being drawn (and hit-tested, GetWorldRectBoundingSphere reads the same
+	// matrix) about the pivot point of its OLD size, off by (I - ScaleAndRotate) * (P_new - P_old).
+	// A card that hover-scales while its text changes width, a spinner resized by a SizeBox mid-rotation.
+	// Centre pivots are immune (the point is the origin) and so are pure translations, which is why this
+	// survived; the bit test keeps every widget without a render transform on the old path.
+	if (bHasRenderTransform && (InPivotChanged || InWidthChanged || InHeightChanged))
+	{
+		// Propagating is required rather than tidy: descendants compose their world transform from this
+		// one, and a descendant whose own relative location did not change would otherwise keep a world
+		// transform built from the pre-resize parent.
+		CalculateObjectToWorldTransform(true);
+	}
 	// No clip invalidation here: clip rectangles are recomputed and diffed every tick from the owner's world
 	// transform (see FDreamUIClipData::UpdateData), so there is nothing to mark.
 	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
@@ -4404,9 +4632,12 @@ void UDreamWidget::SetPositionAndSizeForLayoutAnimation(FVector2D Position, FVec
 	if (!AnchorData.SizeDelta.Equals(Size, 0.0f))
 	{
 		AnyChanged = true;
+		// No CacheWidth/CacheHeight assignment: the argument is a size DELTA, the caches hold RESOLVED
+		// sizes, and the two are the same number only on a point-anchored axis. The assignment that used
+		// to stand here was dead rather than wrong -- the InDiscardCache=true below dirties both flags a
+		// few lines later -- but it is the exact shape of the defect fixed in SetWidth and
+		// SetAnchoredPositionAndSizeDelta, and it was there to be copied.
 		AnchorData.SizeDelta = Size;
-		CacheWidth = Size.X;
-		CacheHeight = Size.Y;
 	}
 	if (AnyChanged)
 	{
@@ -4435,9 +4666,8 @@ void UDreamWidget::SetSizeForLayoutAnimation(FVector2D Size)
 {
 	if (!AnchorData.SizeDelta.Equals(Size, 0.0f))
 	{
+		/** Same as in SetPositionAndSizeForLayoutAnimation: a delta is not a resolved size. */
 		AnchorData.SizeDelta = Size;
-		CacheWidth = Size.X;
-		CacheHeight = Size.Y;
 
 		bCacheAnchorOffsetBottomDirty = true;
 		bCacheAnchorOffsetTopDirty = true;
@@ -4977,6 +5207,22 @@ void UDreamWidget::SetLayoutVisibilitySuppressed(bool bSuppressed)
 	}
 }
 
+void UDreamWidget::SetIsFocusable(bool Value)
+{
+	if (bIsFocusable == Value)
+	{
+		return;
+	}
+	bIsFocusable = Value;
+	if (!bIsFocusable)
+	{
+		// A widget that can no longer take focus must not keep the focus it already has. ClearFocus
+		// is a no-op unless this widget IS the selected one, and answers nothing at all outside a
+		// live game world, so this is safe on every path a property setter can arrive from.
+		ClearFocus();
+	}
+}
+
 bool UDreamWidget::SetFocus(int32 UserIndex, int32 PointerId)
 {
 	if (!bIsFocusable || !GetRenderVisibleInHierarchy() || !GetInteractableInHierarchy())
@@ -4987,6 +5233,10 @@ bool UDreamWidget::SetFocus(int32 UserIndex, int32 PointerId)
 	{
 		UDreamBaseEventData* EventData = EventSystem->GetPointerEventData(PointerId, true);
 		EventSystem->SetSelectWidget(this, EventData);
+		// The navigation cursor has to move with focus, or the next directional press starts from
+		// wherever focus USED to be and appears to teleport. UDreamUINavigationStack::FocusSelectable
+		// already does both halves for the same reason; this entry point only ever did the first.
+		EventSystem->SetHighlightedComponentForNavigation(this, PointerId);
 		return true;
 	}
 	return false;
@@ -5083,6 +5333,20 @@ void UDreamWidget::SetIgnoreLayout(bool Value)
 			DreamUIManager->MarkRebuildAllLayoutTree();
 		}
 	}
+}
+
+UDreamWidgetNavigation* UDreamWidget::GetNavigation() const
+{
+	return GetComponent<UDreamWidgetNavigation>();
+}
+
+UDreamWidgetNavigation* UDreamWidget::GetOrCreateNavigation()
+{
+	if (UDreamWidgetNavigation* Existing = GetComponent<UDreamWidgetNavigation>())
+	{
+		return Existing;
+	}
+	return Cast<UDreamWidgetNavigation>(AddComponent(UDreamWidgetNavigation::StaticClass()));
 }
 
 const UDreamWidget* UDreamWidget::GetRestrictNavigationAreaWidget() const
