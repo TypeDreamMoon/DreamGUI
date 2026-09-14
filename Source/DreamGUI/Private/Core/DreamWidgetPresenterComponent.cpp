@@ -44,7 +44,9 @@ void UDreamWidgetPresenterComponent::LoadWidget()
 #endif
 	if (IsValid(WidgetClass))
 	{
-		if (auto World = GetWorld())
+		// IsValid, not just non-null: OnRegister runs during level transitions too, and
+		// CreateDreamWidget answers null for a world that is on its way out.
+		if (UWorld* World = GetWorld(); IsValid(World))
 		{
 			// The canvas swap runs before the hierarchy comes alive, as it did under the prefab
 			// loader's CallbackBeforeAwake: a behaviour that woke up first could have cached the
@@ -56,24 +58,44 @@ void UDreamWidgetPresenterComponent::LoadWidget()
 					RootWidget->RemoveComponent(Canvas);
 				}
 				RootCanvas = RootWidget->AddComponentByTemplate<UDreamCanvas>(CanvasTemplate);
+				if (RootCanvas == nullptr)
+				{
+					// An empty or unusable CanvasTemplate. Without a canvas the tree renders nothing,
+					// which is worth a line: the alternative was a null dereference one statement later.
+					UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s could not create its root canvas from CanvasTemplate; the widget will not render."),
+						ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName());
+					return;
+				}
 				RootCanvas->AttachToSceneComponent(this);
 			});
-			LoadedWidget->CalculateObjectToWorldTransform(true);
-			ApplyWidgetOverridesToLoadedWidget();
-			NotifyWidgetLoaded();
-#if WITH_EDITOR
-			TArray<UDreamWidget*> AllLoadedWidgets;
-			UDreamWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
-			if (World->WorldType == EWorldType::Editor)
+			// CreateDreamWidget answers null for an invalid world or an unusable class. Everything
+			// below dereferences the result -- LoadedWidget is a weak pointer whose operator-> is a
+			// bare Get() -- and the two calls after it already checked, which is what made these
+			// two read like the lines that were forgotten.
+			if (!LoadedWidget.IsValid())
 			{
-				for (auto Widget : AllLoadedWidgets)
-				{
-					//set transient in edit mode because we don't want to save these widgets in level, not set in game mode because no need to
-					//skip EditorPreview mode because we need full transactional
-					Widget->SetFlags(RF_Transient);
-				}
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s failed to create a widget of class %s."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName(), *GetNameSafe(WidgetClass));
 			}
+			else
+			{
+				LoadedWidget->CalculateObjectToWorldTransform(true);
+				ApplyWidgetOverridesToLoadedWidget();
+				NotifyWidgetLoaded();
+#if WITH_EDITOR
+				TArray<UDreamWidget*> AllLoadedWidgets;
+				UDreamWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
+				if (World->WorldType == EWorldType::Editor)
+				{
+					for (auto Widget : AllLoadedWidgets)
+					{
+						//set transient in edit mode because we don't want to save these widgets in level, not set in game mode because no need to
+						//skip EditorPreview mode because we need full transactional
+						Widget->SetFlags(RF_Transient);
+					}
+				}
 #endif
+			}
 		}
 	}
 #if WITH_EDITOR

@@ -82,6 +82,20 @@ class DREAMGUI_API UDreamUIControl : public UDreamUserWidget
 	GENERATED_BODY()
 
 public:
+	/**
+	 * The control is fully built: its tree exists, its parts are bound, its behaviours are wired and
+	 * its style has been pushed once.
+	 *
+	 * This -- not On Initialized -- is the moment a Blueprint subclass of a native control can touch
+	 * the control's parts. On Initialized fires from UDreamUserWidget::Initialize, which is BEFORE
+	 * this class's NativeOnInitialized has run any of the four steps, so a graph that reaches for a
+	 * part there finds nothing. Moving On Initialized would change when an existing graph's style
+	 * edits land relative to ApplyStyle, so the missing moment is added rather than the existing one
+	 * moved.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|Control", meta = (DisplayName = "On Control Ready"))
+	void OnControlReady();
+
 	/** See EDreamUIStyleSource: the sheet is the default because one-place-changes-all is the point. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Style")
 	EDreamUIStyleSource StyleSource = EDreamUIStyleSource::ProjectStyleSheet;
@@ -135,6 +149,9 @@ public:
 		{
 			ApplyStyle();
 		}
+		// After the style, so a Blueprint subclass reacting to its slot content sees the pushed look
+		// rather than the one it is about to replace.
+		Super::NativeOnSlotContentAttached();
 	}
 
 	/** The widget of that display name among this control's OWN contents, or null. */

@@ -5,13 +5,28 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamScreenUISubsystem.h"
+#include "Core/Components/DreamCanvas.h"
+#include "Event/DreamEventSystem.h"
+#include "Event/DreamGestureEventData.h"
+#include "Event/DreamKeyEventData.h"
+#include "Interaction/DreamDragDropOperation.h"
+#include "Interaction/DreamUINavigationScope.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamWidgetAnimationPlayer.h"
 #include "Animation/DreamUISequence.h"
 #include "Interaction/DreamContentWidget.h"
+// BindEventBindings routes to FDreamUIEventDelegate events as well as to multicast delegates.
+#include "Event/DreamUIEventDelegate.h"
 #include "DreamGUI.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#include "Engine/GameInstance.h"
+#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 
 /**
  * Bring a freshly built hierarchy to life, exactly as the prefab loader does at the end of a load.
@@ -170,6 +185,102 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 	}
 }
 
+namespace DreamUserWidgetDuplicateLocal
+{
+	/**
+	 * Hand every DUPLICATED user widget the copy it was actually given.
+	 *
+	 * UDreamWidget::DuplicateSubtree deep-copies contents and re-aims intra-subtree references, but a
+	 * nested user widget's WidgetTree is neither: it is a plain object property holding a
+	 * UDreamWidgetTree, which the counterpart map does not cover, so the copy came out pointing at
+	 * the SOURCE's tree -- and nothing ever initialized it. The consequences were all silent:
+	 * GetContentRoot, FindSlotWidget and every animation verb answered about the template instead of
+	 * the copy, and the copy's own `<-`, `->` and `each` bindings were never resolved at all, which
+	 * is every Prefab list cell, dropdown row and ring-menu wedge.
+	 *
+	 * Pairs are found structurally, walking both hierarchies in step. Both sides are read through
+	 * GetChildren(), which sorts by SiblingIndex: the copy's array starts out as the source's array
+	 * minus its invalid entries, the keys are the same values on both sides, and a stable sort of a
+	 * subsequence is the subsequence of the sorted sequence -- so the two walks stay aligned whether
+	 * or not the source had been sorted before it was copied.
+	 *
+	 * Collected first and initialized afterwards: initializing resolves `each` blocks, which build
+	 * list cells, which adds children to a hierarchy this walk would otherwise still be iterating.
+	 */
+	void AdoptDuplicatedUserWidgets(UDreamWidget* InSource, UDreamWidget* InCopy)
+	{
+		if (!IsValid(InSource) || !IsValid(InCopy))
+		{
+			return;
+		}
+		TMap<const UDreamWidget*, UDreamWidget*> SourceToCopy;
+		TArray<TPair<TWeakObjectPtr<UDreamUserWidget>, TWeakObjectPtr<UDreamUserWidget>>> Pairs;
+		struct FPairWalk
+		{
+			static void Walk(UDreamWidget* InFrom, UDreamWidget* InTo,
+				TMap<const UDreamWidget*, UDreamWidget*>& OutMap,
+				TArray<TPair<TWeakObjectPtr<UDreamUserWidget>, TWeakObjectPtr<UDreamUserWidget>>>& OutPairs)
+			{
+				OutMap.Add(InFrom, InTo);
+				UDreamUserWidget* FromUserWidget = Cast<UDreamUserWidget>(InFrom);
+				UDreamUserWidget* ToUserWidget = Cast<UDreamUserWidget>(InTo);
+				if (FromUserWidget != nullptr && ToUserWidget != nullptr)
+				{
+					OutPairs.Emplace(FromUserWidget, ToUserWidget);
+				}
+				const TArray<UDreamWidget*> FromChildren = InFrom->GetChildren();
+				const TArray<UDreamWidget*> ToChildren = InTo->GetChildren();
+				int32 ToIndex = 0;
+				for (UDreamWidget* FromChild : FromChildren)
+				{
+					if (!IsValid(FromChild))
+					{
+						continue;
+					}
+					while (ToChildren.IsValidIndex(ToIndex) && !IsValid(ToChildren[ToIndex]))
+					{
+						++ToIndex;
+					}
+					if (!ToChildren.IsValidIndex(ToIndex))
+					{
+						break;
+					}
+					Walk(FromChild, ToChildren[ToIndex++], OutMap, OutPairs);
+				}
+			}
+		};
+		FPairWalk::Walk(InSource, InCopy, SourceToCopy, Pairs);
+
+		for (const TPair<TWeakObjectPtr<UDreamUserWidget>, TWeakObjectPtr<UDreamUserWidget>>& Pair : Pairs)
+		{
+			UDreamUserWidget* SourceUserWidget = Pair.Key.Get();
+			UDreamUserWidget* CopyUserWidget = Pair.Value.Get();
+			if (!IsValid(SourceUserWidget) || !IsValid(CopyUserWidget))
+			{
+				continue;
+			}
+			// A source with no tree of its own is a NATIVE control, whose contents are code-built
+			// children rather than an instanced hierarchy. The copy of one already works, and
+			// running the class's build road over it would give it a second set of contents.
+			const UDreamWidgetTree* SourceTree = SourceUserWidget->GetWidgetTree();
+			const UDreamWidget* SourceContentRoot = IsValid(SourceTree) ? SourceTree->RootWidget.Get() : nullptr;
+			if (!IsValid(SourceContentRoot))
+			{
+				continue;
+			}
+			UDreamWidget** ContentRootCopy = SourceToCopy.Find(SourceContentRoot);
+			if (ContentRootCopy == nullptr || !IsValid(*ContentRootCopy))
+			{
+				UE_LOG(DreamGUI, Warning,
+					TEXT("[%s].%d Duplicated '%s' has no counterpart for its content root; it keeps the template's tree."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *SourceUserWidget->GetPathDisplayName());
+				continue;
+			}
+			CopyUserWidget->InitializeAsDuplicate(*ContentRootCopy);
+		}
+	}
+}
+
 UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDreamWidget* InTemplate, UDreamWidget* InParent)
 {
 	if (!IsValid(InTemplate))
@@ -188,6 +299,8 @@ UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDreamWidget* InTe
 	{
 		return nullptr;
 	}
+	// Before parenting and before registration, which is where Initialize sits on the other road.
+	DreamUserWidgetDuplicateLocal::AdoptDuplicatedUserWidgets(InTemplate, Copy);
 	if (InParent != nullptr)
 	{
 		Copy->SetParentBeforeRegister(InParent);
@@ -214,6 +327,11 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 		return;
 	}
 	bInitialized = true;
+
+	// UMG's PreConstruct: the moment before this widget has any contents, which is where a graph sets
+	// the properties those contents are about to be built from. It runs in the designer preview too,
+	// and unlike On Initialized it is told which one it is in.
+	PreConstruct(IsDesignTime());
 
 	// What the HOST hung on this widget, taken before this widget makes anything of its own. Both
 	// roads that produce contents run below -- InitializeWidgetStatic instances an archetype,
@@ -243,6 +361,7 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 		const UFunction* TickFunction = GetClass()->FindFunctionByName(OnTickName);
 		bHasBlueprintOnTick = TickFunction != nullptr
 			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+		ProbeBlueprintPointerMove();
 	}
 
 	// UMG's TickFrequency=Auto, translated: implementing On Tick IS opting in. bWantsTick stays
@@ -250,7 +369,10 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// put the event in its graph means it -- without this the graph compiles, PIE runs, and nothing
 	// fires, with no line anywhere saying why. Before NativeOnInitialized, so an OnInitialized that
 	// explicitly calls SetWantsTick(false) still wins.
-	if (bHasBlueprintOnTick && !bWantsTick)
+	// On Mouse Move opts a widget in as surely as On Tick does: it is derived from the pointer on the
+	// bridge's own tick, so without a tick it would never fire and the graph would compile, run and do
+	// nothing with no line anywhere saying why.
+	if ((bHasBlueprintOnTick || bHasBlueprintPointerMove) && !bWantsTick)
 	{
 		SetWantsTick(true);
 	}
@@ -292,6 +414,201 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	}
 }
 
+void UDreamUserWidget::InitializeAsDuplicate(UDreamWidget* InContentRoot)
+{
+	if (bInitialized || IsTemplate() || !IsValid(InContentRoot))
+	{
+		return;
+	}
+	bInitialized = true;
+
+	// A duplicate's contents already exist -- they were deep-copied with it -- so the one thing
+	// missing is a tree OBJECT of its own to call them. Built the same shape InitializeWidgetStatic
+	// builds one: outered to this widget, transactional and transient taken from this widget, so a
+	// copy of a preview does not become saveable and a copy of an authored widget stays undoable.
+	UDreamWidgetTree* OwnTree = NewObject<UDreamWidgetTree>(this, UDreamWidgetTree::StaticClass(), NAME_None,
+		GetMaskedFlags(RF_Transactional));
+	OwnTree->SetFlags(GetMaskedFlags(RF_Transient));
+	OwnTree->RootWidget = InContentRoot;
+	WidgetTree = OwnTree;
+
+	// Transient and therefore copied verbatim from the source, where they drive the SOURCE's list
+	// views. ResolveEachBindings below makes this widget's own.
+	EachAdapters.Reset();
+
+	// The same wiring Initialize does, for the same reasons, minus the two steps that only make
+	// sense for freshly built contents: nothing here instances an archetype, and the host's named
+	// slot content came across with the copy already placed, so re-attaching it would move widgets
+	// that are exactly where they belong.
+	EnsureEventBridge();
+	OnFocusReceived.AddUniqueDynamic(this, &UDreamUserWidget::HandleFocusReceivedBroadcast);
+	OnFocusLost.AddUniqueDynamic(this, &UDreamUserWidget::HandleFocusLostBroadcast);
+	{
+		static const FName OnTickName(TEXT("OnTick"));
+		const UFunction* TickFunction = GetClass()->FindFunctionByName(OnTickName);
+		bHasBlueprintOnTick = TickFunction != nullptr
+			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+		ProbeBlueprintPointerMove();
+	}
+	// On Mouse Move opts a widget in as surely as On Tick does: it is derived from the pointer on the
+	// bridge's own tick, so without a tick it would never fire and the graph would compile, run and do
+	// nothing with no line anywhere saying why.
+	if ((bHasBlueprintOnTick || bHasBlueprintPointerMove) && !bWantsTick)
+	{
+		SetWantsTick(true);
+	}
+
+	NativeOnInitialized();
+
+	// After the tree exists: the bindings name widgets in it. This is the whole point of the
+	// exercise -- a duplicated cell used to resolve none of them.
+	ResolvePropertyBindings();
+	BindEventBindings();
+	ResolveEachBindings();
+	if (ResolvedBindings.Num() > 0)
+	{
+		EvaluatePropertyBindings();
+		if (HasPolledPropertyBindings())
+		{
+			if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+			{
+				Manager->AddPropertyBindingUser(this);
+			}
+		}
+	}
+}
+
+void UDreamUserWidget::NativeOnSlotContentAttached()
+{
+	OnSlotContentAttached();
+}
+
+bool UDreamUserWidget::NeedsReinitializeFromClass() const
+{
+	// The signature of a reinstanced survivor: contents underneath, no tree to call them, and no
+	// record of ever having been initialized. A widget that simply has not been initialized yet has
+	// no children either, which is what keeps this from firing on one.
+	return !bInitialized
+		&& !IsValid(WidgetTree)
+		&& !IsTemplate()
+		&& GetChildrenCount() > 0
+		&& UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(GetClass()) != nullptr;
+}
+
+void UDreamUserWidget::ReinitializeFromClass()
+{
+	ReinitializeFromArchetype(UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(GetClass()));
+}
+
+void UDreamUserWidget::ReinitializeFromArchetype(UDreamWidgetTree* InArchetype)
+{
+	if (IsTemplate())
+	{
+		return;
+	}
+	// Nothing to rebuild FROM. Destroying the contents anyway would turn a widget that still works
+	// into an empty one -- strictly worse than the half-dead state this exists to repair -- and the
+	// two ways to get here are both ordinary: a class that declares no hierarchy of its own (a
+	// logic-only subclass, a native class) and one whose Blueprint has not compiled yet.
+	if (!IsValid(InArchetype))
+	{
+		UE_LOG(DreamGUI, Warning,
+			TEXT("[%s].%d '%s' has no hierarchy to rebuild from, so its contents are left as they are."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
+		return;
+	}
+	// The host's widgets, which are not this class's to destroy. NamedSlotContent is a persistent
+	// Instanced map and therefore the one thing that survives reinstancing intact, which is exactly
+	// what makes "mine" and "the host's" separable here at all.
+	TSet<const UDreamWidget*> HostContent;
+	for (const TPair<FName, TObjectPtr<UDreamWidget>>& SlotPair : NamedSlotContent)
+	{
+		if (IsValid(SlotPair.Value))
+		{
+			HostContent.Add(SlotPair.Value);
+		}
+	}
+
+	// Everything else under this widget came from the OLD class's tree. Detach the host's content
+	// first so destroying the rest cannot take it down with it -- AttachNamedSlotContent puts it back
+	// into the new tree's slots a moment later.
+	//
+	// Through whichever door matches the widget's state, the same pair AttachNamedSlotContent uses on
+	// the way back in: SetParentBeforeRegister asserts !bIsRegistered, and the host content of a LIVE
+	// instance -- which is every instance this function exists for -- is registered.
+	const TArray<UDreamWidget*> PreviousChildren = GetChildren();
+	for (UDreamWidget* Child : PreviousChildren)
+	{
+		if (IsValid(Child) && HostContent.Contains(Child))
+		{
+			if (Child->HasRegistered())
+			{
+				Child->TrySetParent(nullptr, false);
+			}
+			else
+			{
+				Child->SetParentBeforeRegister(nullptr);
+			}
+		}
+	}
+	for (UDreamWidget* Child : PreviousChildren)
+	{
+		if (IsValid(Child) && !HostContent.Contains(Child))
+		{
+			Child->DestroyWidget();
+		}
+	}
+
+	// Back to the pre-Initialize state, then through the ordinary road: the archetype is instanced,
+	// the by-name bindings resolve against it, and the host's slot content is re-attached.
+	//
+	// InitializeFromArchetype rather than Initialize, for the same reason InitializeWidgetStatic takes
+	// its archetype as a parameter: the caller may know which hierarchy this instance is being rebuilt
+	// from -- the designer's authoring tree, a test's fixture -- and re-deriving it from the class here
+	// would silently rebuild the wrong one, or nothing at all for a class that declares none.
+	EachAdapters.Reset();
+	ResolvedBindings.Reset();
+	PolledBindingCount = 0;
+	bInitialized = false;
+	WidgetTree = nullptr;
+	InitializeFromArchetype(InArchetype);
+	// Registration is what makes the new subtree lay out and draw; nothing else re-registers it.
+	RegisterDreamWidgetHierarchy(this);
+}
+
+UDreamWidget* UDreamUserWidget::GetWidgetFromName(FName InVariableName) const
+{
+	// The tree's own resolver, which is the same one the compiler declares variables with -- so a
+	// graph asking by name and a binding resolving by name cannot disagree.
+	if (IsValid(WidgetTree))
+	{
+		if (UDreamWidget* Found = WidgetTree->FindWidgetByVariableName(InVariableName))
+		{
+			return Found;
+		}
+	}
+	// A native control has no tree; its contents are its own children, and display name is the only
+	// name they have.
+	return FindChildByDisplayName(InVariableName.ToString(), true);
+}
+
+TArray<FName> UDreamUserWidget::K2_GetDeclaredSlotNames() const
+{
+	TArray<FName> Names;
+	CollectDeclaredSlotNames(GetClass(), Names);
+	return Names;
+}
+
+void UDreamUserWidget::ProbeBlueprintPointerMove()
+{
+	// Same probe as On Tick, and for the same reason: the UFunction on a Blueprint-compiled class is
+	// an override, the one on this native class is the empty stub.
+	static const FName OnMouseMoveName(TEXT("OnMouseMove"));
+	const UFunction* MoveFunction = GetClass()->FindFunctionByName(OnMouseMoveName);
+	bHasBlueprintPointerMove = MoveFunction != nullptr
+		&& MoveFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+}
+
 void UDreamUserWidget::NativeOnInitialized()
 {
 	OnInitialized();
@@ -325,6 +642,11 @@ void UDreamUserWidget::EnsureEventBridge()
 void UDreamUserWidget::NativeOnConstruct()
 {
 	bConstructed = true;
+	// Paired with the unregister in NativeOnDestruct. Construct/destruct is the window in which the
+	// widget is live on screen, which is exactly when a culture change is worth hearing about, and
+	// pairing it here is what spares every Blueprint the manual register/unregister the interface
+	// used to demand.
+	UDreamUIManagerWorldSubsystem::RegisterDreamUICultureChangedEvent(this);
 	OnConstruct();
 }
 
@@ -332,7 +654,265 @@ void UDreamUserWidget::NativeOnDestruct()
 {
 	bConstructed = false;
 	OnDestruct();
+	// Input action bindings die with the widget that asked for them. Leaving them would fire a
+	// callback into a destroyed widget the next time the key was pressed -- the same defect the
+	// polled bindings had below, in the one other list this widget puts itself on.
+	StopListeningForAllInputActions();
+	UDreamUIManagerWorldSubsystem::UnregisterDreamUICultureChangedEvent(this);
+	// Stop being polled. DestroyWidget unregisters, ends play and detaches without ever marking the
+	// object garbage, so the manager's own !IsValid sweep never sees this widget go -- it would keep
+	// calling the binding source functions of a widget that has run EndPlay until the next full GC.
+	// The manager drops it on unregister as well; this covers a widget that ends play without ever
+	// having been registered.
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		Manager->RemovePropertyBindingUser(this);
+	}
 }
+
+void UDreamUserWidget::OnCultureChanged_Implementation()
+{
+}
+
+#pragma region OwningPlayer
+int32 UDreamUserWidget::GetLocalPlayerIndexOf(const APlayerController* InPlayerController)
+{
+	// The same index UDreamEventSystem::GetPlayerController reads back, so "this widget's player" and
+	// "this event system's player" cannot drift apart: the position of the local player in the game
+	// instance's list, which is what UserIndex has always meant here.
+	if (!IsValid(InPlayerController))
+	{
+		return 0;
+	}
+	const ULocalPlayer* LocalPlayer = InPlayerController->GetLocalPlayer();
+	if (LocalPlayer == nullptr)
+	{
+		return 0;
+	}
+	const UGameInstance* GameInstance = LocalPlayer->GetGameInstance();
+	if (GameInstance == nullptr)
+	{
+		return 0;
+	}
+	const int32 Index = GameInstance->GetLocalPlayers().IndexOfByKey(LocalPlayer);
+	return Index != INDEX_NONE ? Index : 0;
+}
+
+APlayerController* UDreamUserWidget::GetOwningPlayer() const
+{
+	if (APlayerController* Explicit = OwningPlayer.Get(); IsValid(Explicit))
+	{
+		return Explicit;
+	}
+	// Inherit from whoever hosts this widget. A nested instance, a list cell and a dialog pushed on a
+	// player's stack all belong to the player whose hierarchy they are in, and saying so once here
+	// spares every one of them a SetOwningPlayer call.
+	for (const UDreamWidget* Ancestor = GetParent(); Ancestor != nullptr; Ancestor = Ancestor->GetParent())
+	{
+		if (const UDreamUserWidget* HostUserWidget = Cast<const UDreamUserWidget>(Ancestor))
+		{
+			if (APlayerController* Inherited = HostUserWidget->OwningPlayer.Get(); IsValid(Inherited))
+			{
+				return Inherited;
+			}
+		}
+	}
+	// The whole answer in a single-player game, and what UMG's CreateWidget defaults to.
+	const UWorld* World = GetWorld();
+	return World != nullptr ? World->GetFirstPlayerController() : nullptr;
+}
+
+void UDreamUserWidget::SetOwningPlayer(APlayerController* InPlayerController)
+{
+	OwningPlayer = InPlayerController;
+}
+
+ULocalPlayer* UDreamUserWidget::GetOwningLocalPlayer() const
+{
+	const APlayerController* PlayerController = GetOwningPlayer();
+	return IsValid(PlayerController) ? PlayerController->GetLocalPlayer() : nullptr;
+}
+
+APawn* UDreamUserWidget::GetOwningPlayerPawn() const
+{
+	const APlayerController* PlayerController = GetOwningPlayer();
+	return IsValid(PlayerController) ? PlayerController->GetPawn() : nullptr;
+}
+
+int32 UDreamUserWidget::GetOwningPlayerIndex() const
+{
+	return GetLocalPlayerIndexOf(GetOwningPlayer());
+}
+
+bool UDreamUserWidget::SetKeyboardFocus()
+{
+	return SetFocus(GetOwningPlayerIndex());
+}
+
+bool UDreamUserWidget::HasKeyboardFocus() const
+{
+	return HasFocus(GetOwningPlayerIndex());
+}
+
+bool UDreamUserWidget::HasUserFocus(APlayerController* InPlayerController) const
+{
+	return HasFocus(GetLocalPlayerIndexOf(InPlayerController));
+}
+
+void UDreamUserWidget::ClearKeyboardFocus()
+{
+	ClearFocus(GetOwningPlayerIndex());
+}
+
+void UDreamUserWidget::PlaySound(USoundBase* InSound, float InVolumeMultiplier, float InPitchMultiplier)
+{
+	// The same gate the controls' own hover and click sounds use: nothing outside a game world, so a
+	// designer preview stays silent whatever it instances.
+	UWorld* World = GetWorld();
+	if (!IsValid(InSound) || !IsValid(World) || !World->IsGameWorld())
+	{
+		return;
+	}
+	UGameplayStatics::PlaySound2D(World, InSound, InVolumeMultiplier, InPitchMultiplier);
+}
+#pragma endregion
+
+#pragma region ViewportPlacementAndGeometry
+FVector2D UDreamUserWidget::GetLocalSize() const
+{
+	return FVector2D(GetWidth(), GetHeight());
+}
+
+FBox2D UDreamUserWidget::GetScreenSpaceRect() const
+{
+	// The root canvas is the screen's space; without one there is no screen rectangle to report and an
+	// empty box is the honest answer rather than a rectangle at the origin.
+	const UDreamCanvas* RootCanvas = GetRenderCanvas();
+	if (!IsValid(RootCanvas))
+	{
+		return FBox2D(ForceInit);
+	}
+	// The widget's own rectangle, pivot included -- not a half-size guess around the origin.
+	const FVector2D LeftBottom = GetLocalSpaceLeftBottomPoint();
+	const FVector2D RightTop = GetLocalSpaceRightTopPoint();
+	const FTransform& WidgetToWorld = GetWorldTransform();
+	// The four corners rather than two, because a rotated widget's screen rectangle is the bounds of
+	// its corners and not the transform of its min and max. X is depth in this framework's UI space;
+	// the plane is YZ, which is what every other local-to-world conversion here assumes.
+	FBox2D Result(ForceInit);
+	const FVector2D LocalCorners[4] = {
+		LeftBottom, FVector2D(RightTop.X, LeftBottom.Y), RightTop, FVector2D(LeftBottom.X, RightTop.Y) };
+	for (const FVector2D& LocalCorner : LocalCorners)
+	{
+		const FVector WorldCorner = WidgetToWorld.TransformPosition(FVector(0.0, LocalCorner.X, LocalCorner.Y));
+		Result += FVector2D(WorldCorner.Y, WorldCorner.Z);
+	}
+	return Result;
+}
+
+void UDreamUserWidget::SetPositionInViewport(FVector2D InPosition)
+{
+	MarkViewportPlacementCustom();
+	SetAnchoredPosition(InPosition);
+}
+
+void UDreamUserWidget::SetDesiredSizeInViewport(FVector2D InSize)
+{
+	MarkViewportPlacementCustom();
+	SetSizeDelta(InSize);
+}
+
+void UDreamUserWidget::SetAlignmentInViewport(FVector2D InAlignment)
+{
+	MarkViewportPlacementCustom();
+	SetPivot(InAlignment);
+}
+
+void UDreamUserWidget::SetAnchorsInViewport(FVector2D InAnchorMin, FVector2D InAnchorMax)
+{
+	MarkViewportPlacementCustom();
+	SetHorizontalAndVerticalAnchorMinMax(InAnchorMin, InAnchorMax, false, false);
+}
+
+void UDreamUserWidget::ClearPlacementInViewport()
+{
+	if (UDreamScreenUISubsystem* Screen = UDreamScreenUISubsystem::Get(GetWorld()))
+	{
+		Screen->SetPageHasCustomPlacement(this, false);
+	}
+}
+
+void UDreamUserWidget::MarkViewportPlacementCustom()
+{
+	// Tell the screen subsystem to stop re-applying full-bleed to this page. Without it the stack
+	// restored anchors 0..1 and a zero inset on its next refresh, which is what made "a window that is
+	// not full screen" impossible to keep on the page stack.
+	if (UDreamScreenUISubsystem* Screen = UDreamScreenUISubsystem::Get(GetWorld()))
+	{
+		Screen->SetPageHasCustomPlacement(this, true);
+	}
+}
+#pragma endregion
+
+#pragma region InputActions
+FDreamUIActionHandle UDreamUserWidget::ListenForInputAction(const FDataTableRowHandle& InAction,
+	FDreamUIActionExecutedDelegate InCallback, bool bDisplayInActionBar)
+{
+	FDreamUIActionHandle Handle;
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
+	if (Router == nullptr)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d No action router in this world; '%s' heard nothing."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
+		return Handle;
+	}
+	// Scoped to the screen this widget is inside, so the binding is live only while that screen is in
+	// front. A widget with no scope above it binds globally, which is the honest reading of "there is
+	// no screen this belongs to".
+	UDreamUINavigationScope* Scope = nullptr;
+	for (UDreamWidget* Walker = this; IsValid(Walker) && Scope == nullptr; Walker = Walker->GetParent())
+	{
+		Scope = Walker->GetComponent<UDreamUINavigationScope>();
+	}
+	Handle = Router->RegisterAction(Scope, InAction, InCallback, GetOwningPlayerIndex(), bDisplayInActionBar);
+	if (Handle.IsValidHandle())
+	{
+		ListenedInputActions.Add(Handle);
+	}
+	return Handle;
+}
+
+void UDreamUserWidget::StopListeningForInputAction(const FDreamUIActionHandle& InHandle)
+{
+	if (UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this))
+	{
+		Router->UnregisterAction(InHandle);
+	}
+	ListenedInputActions.RemoveAll([&InHandle](const FDreamUIActionHandle& Held) { return Held == InHandle; });
+}
+
+void UDreamUserWidget::StopListeningForAllInputActions()
+{
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
+	// A copy: UnregisterAction is free to do anything, and the array is this widget's own bookkeeping.
+	const TArray<FDreamUIActionHandle> Held = ListenedInputActions;
+	ListenedInputActions.Reset();
+	if (Router == nullptr)
+	{
+		return;
+	}
+	for (const FDreamUIActionHandle& Handle : Held)
+	{
+		Router->UnregisterAction(Handle);
+	}
+}
+
+bool UDreamUserWidget::IsListeningForInputAction(const FDreamUIActionHandle& InHandle) const
+{
+	return ListenedInputActions.ContainsByPredicate(
+		[&InHandle](const FDreamUIActionHandle& Held) { return Held == InHandle; });
+}
+#pragma endregion
 
 void UDreamUserWidget::NativeOnEnable()
 {
@@ -412,6 +992,16 @@ bool UDreamUserWidget::NativeOnDrag(UDreamPointerEventData* EventData)
 bool UDreamUserWidget::NativeOnEndDrag(UDreamPointerEventData* EventData)
 {
 	OnEndDrag(EventData);
+	// UMG's OnDragCancelled, on the widget that STARTED the drag: the drop has already run by the time
+	// the drag ends, so an operation nobody handled is a drag that was cancelled. Same reading
+	// UDreamUIDragSource makes one line later when it tells the operation the same thing.
+	if (UDreamDragDropOperation* Operation = EventData != nullptr ? EventData->DragOperation.Get() : nullptr)
+	{
+		if (!Operation->bDropWasHandled)
+		{
+			NativeOnDragCancelled(Operation);
+		}
+	}
 	return bAllowEventBubbleUp;
 }
 
@@ -419,6 +1009,84 @@ bool UDreamUserWidget::NativeOnDrop(UDreamPointerEventData* EventData)
 {
 	OnDrop(EventData);
 	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerScroll(UDreamPointerEventData* EventData)
+{
+	OnMouseWheel(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerDoubleClick(UDreamPointerEventData* EventData)
+{
+	OnDoubleClick(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerLongPress(UDreamPointerEventData* EventData)
+{
+	OnLongPress(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerPinch(UDreamGestureEventData* EventData)
+{
+	OnPinch(EventData);
+	return bAllowEventBubbleUp;
+}
+
+bool UDreamUserWidget::NativeOnPointerSwipe(UDreamGestureEventData* EventData)
+{
+	OnSwipe(EventData);
+	return bAllowEventBubbleUp;
+}
+
+void UDreamUserWidget::NativeOnPointerMove(UDreamPointerEventData* EventData)
+{
+	OnMouseMove(EventData);
+}
+
+void UDreamUserWidget::NativeOnDragEnter(UDreamPointerEventData* EventData, UDreamDragDropOperation* Operation)
+{
+	OnDragEnter(EventData, Operation);
+}
+
+void UDreamUserWidget::NativeOnDragOver(UDreamPointerEventData* EventData, UDreamDragDropOperation* Operation)
+{
+	OnDragOver(EventData, Operation);
+}
+
+void UDreamUserWidget::NativeOnDragLeave(UDreamPointerEventData* EventData, UDreamDragDropOperation* Operation)
+{
+	OnDragLeave(EventData, Operation);
+}
+
+void UDreamUserWidget::NativeOnDragCancelled(UDreamDragDropOperation* Operation)
+{
+	OnDragCancelled(Operation);
+}
+
+// The key channels answer HANDLED rather than "may this bubble": a key somebody kept must not also be
+// read as navigation or fire a bound action, so the Blueprint event's own return value is the answer
+// and EventData->bHandled is the other way to say the same thing.
+bool UDreamUserWidget::NativeOnKeyDown(UDreamKeyEventData* EventData)
+{
+	return ReceiveKeyDown(EventData);
+}
+
+bool UDreamUserWidget::NativeOnKeyUp(UDreamKeyEventData* EventData)
+{
+	return ReceiveKeyUp(EventData);
+}
+
+bool UDreamUserWidget::NativeOnKeyChar(UDreamKeyEventData* EventData)
+{
+	return ReceiveKeyChar(EventData);
+}
+
+bool UDreamUserWidget::NativeOnAnalogValueChanged(UDreamKeyEventData* EventData)
+{
+	return ReceiveAnalogValueChanged(EventData);
 }
 
 void UDreamUserWidget::NativeOnFocusReceived(int32 UserIndex, int32 PointerId)
@@ -511,6 +1179,8 @@ void UDreamUserWidgetEventBridge::Tick(float DeltaTime)
 		UserWidget->NativeOnTick(DeltaTime);
 		++TickForwardCount;
 	}
+	// The derived mouse-move event. Costs one flag read on a widget that did not ask for it.
+	TickPointerMoveWatch();
 }
 
 void UDreamUserWidgetEventBridge::OnDisable()
@@ -533,16 +1203,44 @@ void UDreamUserWidgetEventBridge::OnDestroy()
 	}
 }
 
+namespace DreamUserWidgetBridgeLocal
+{
+	/** The operation a pointer is carrying, or null when this pointer is not a live, meaningful drag. */
+	UDreamDragDropOperation* LiveDragOperation(const UDreamPointerEventData* InEventData)
+	{
+		return InEventData != nullptr && InEventData->bIsDragging ? InEventData->DragOperation.Get() : nullptr;
+	}
+}
+
 bool UDreamUserWidgetEventBridge::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	UDreamUserWidget* UserWidget = GetUserWidget();
-	return UserWidget != nullptr ? UserWidget->NativeOnPointerEnter(EventData) : true;
+	if (UserWidget == nullptr)
+	{
+		return true;
+	}
+	// A pointer entering while it carries a drag IS the drag entering -- UMG's OnDragEnter, which
+	// arrives on the widget under the pointer rather than on the one being dragged. The enter/exit
+	// channel keeps running through a drag, so this needs no second dispatch of its own.
+	if (UDreamDragDropOperation* Operation = DreamUserWidgetBridgeLocal::LiveDragOperation(EventData))
+	{
+		UserWidget->NativeOnDragEnter(EventData, Operation);
+	}
+	return UserWidget->NativeOnPointerEnter(EventData);
 }
 
 bool UDreamUserWidgetEventBridge::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
 	UDreamUserWidget* UserWidget = GetUserWidget();
-	return UserWidget != nullptr ? UserWidget->NativeOnPointerExit(EventData) : true;
+	if (UserWidget == nullptr)
+	{
+		return true;
+	}
+	if (UDreamDragDropOperation* Operation = DreamUserWidgetBridgeLocal::LiveDragOperation(EventData))
+	{
+		UserWidget->NativeOnDragLeave(EventData, Operation);
+	}
+	return UserWidget->NativeOnPointerExit(EventData);
 }
 
 bool UDreamUserWidgetEventBridge::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
@@ -625,6 +1323,115 @@ bool UDreamUserWidgetEventBridge::OnNavigate_Implementation(EDreamUINavigationDi
 	// True with a null result keeps the highlight here: an opted-in widget that names no successor
 	// is a navigation sink, which is what it opted in to be.
 	return true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerScroll_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerScroll(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerDoubleClick(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerLongPress_Implementation(UDreamPointerEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerLongPress(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerPinch_Implementation(UDreamGestureEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerPinch(EventData) : true;
+}
+
+bool UDreamUserWidgetEventBridge::OnPointerSwipe_Implementation(UDreamGestureEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	return UserWidget != nullptr ? UserWidget->NativeOnPointerSwipe(EventData) : true;
+}
+
+void UDreamUserWidgetEventBridge::OnKeyDown_Implementation(UDreamKeyEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	if (UserWidget != nullptr && EventData != nullptr && UserWidget->NativeOnKeyDown(EventData))
+	{
+		EventData->bHandled = true;
+	}
+}
+
+void UDreamUserWidgetEventBridge::OnKeyUp_Implementation(UDreamKeyEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	if (UserWidget != nullptr && EventData != nullptr && UserWidget->NativeOnKeyUp(EventData))
+	{
+		EventData->bHandled = true;
+	}
+}
+
+void UDreamUserWidgetEventBridge::OnKeyChar_Implementation(UDreamKeyEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	if (UserWidget != nullptr && EventData != nullptr && UserWidget->NativeOnKeyChar(EventData))
+	{
+		EventData->bHandled = true;
+	}
+}
+
+void UDreamUserWidgetEventBridge::OnAnalogValueChanged_Implementation(UDreamKeyEventData* EventData)
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	if (UserWidget != nullptr && EventData != nullptr && UserWidget->NativeOnAnalogValueChanged(EventData))
+	{
+		EventData->bHandled = true;
+	}
+}
+
+void UDreamUserWidgetEventBridge::TickPointerMoveWatch()
+{
+	UDreamUserWidget* UserWidget = GetUserWidget();
+	if (UserWidget == nullptr || !UserWidget->HasBlueprintPointerMove())
+	{
+		bHasWatchedPointerPoint = false;
+		return;
+	}
+	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(
+		UserWidget, UserWidget->GetOwningPlayerIndex());
+	UDreamPointerEventData* PointerEvent = IsValid(EventSystem) ? EventSystem->GetPointerEventData(0, false) : nullptr;
+	// Over this widget means over it or anything inside it, which is what the enter stack records and
+	// what "the mouse is over my button" means to the widget that owns the button.
+	const bool bIsOverThisWidget = PointerEvent != nullptr
+		&& PointerEvent->EnterWidgetStack.ContainsByPredicate(
+			[UserWidget](const UDreamWidget* Entry) { return Entry == UserWidget; });
+	if (!bIsOverThisWidget)
+	{
+		bHasWatchedPointerPoint = false;
+		return;
+	}
+	const FVector CurrentPoint = PointerEvent->WorldPoint;
+	if (bHasWatchedPointerPoint && CurrentPoint.Equals(LastWatchedPointerWorldPoint))
+	{
+		return;
+	}
+	const bool bWasMove = bHasWatchedPointerPoint;
+	LastWatchedPointerWorldPoint = CurrentPoint;
+	bHasWatchedPointerPoint = true;
+	if (bWasMove)
+	{
+		// The first frame over the widget is the ENTER, which has its own event; a move needs a
+		// previous position to be a move at all.
+		UserWidget->NativeOnPointerMove(PointerEvent);
+		// And the same move while a drag is overhead is UMG's OnDragOver -- the middle of a hover,
+		// never its start, which is why it rides the move and not the enter.
+		if (UDreamDragDropOperation* Operation = DreamUserWidgetBridgeLocal::LiveDragOperation(PointerEvent))
+		{
+			UserWidget->NativeOnDragOver(PointerEvent, Operation);
+		}
+	}
 }
 #pragma endregion
 
@@ -710,8 +1517,22 @@ void UDreamUserWidget::BindEventBindings()
 			// which is the property bindings' rule too: skip, never guess.
 			continue;
 		}
-		FMulticastDelegateProperty* Event = CastField<FMulticastDelegateProperty>(
-			Target->GetClass()->FindPropertyByName(Binding.EventName));
+		FProperty* EventProperty = Target->GetClass()->FindPropertyByName(Binding.EventName);
+		// The OTHER kind of event this plugin has. `Controls/*` declares BlueprintAssignable dynamic
+		// multicast delegates; the older `Interaction/*` behaviours declare FDreamUIEventDelegate
+		// struct properties instead, and until this branch existed a `->` route could not name one --
+		// which left that whole family of controls with no canonical way to be handled at all, and the
+		// legacy per-instance event list as the only option. Both are routed the same way now.
+		if (FStructProperty* StructEvent = CastField<FStructProperty>(EventProperty);
+			StructEvent != nullptr && StructEvent->Struct == FDreamUIEventDelegate::StaticStruct())
+		{
+			if (FDreamUIEventDelegate* Delegate = StructEvent->ContainerPtrToValuePtr<FDreamUIEventDelegate>(Target))
+			{
+				Delegate->AddRuntimeRoute(this, Binding.FunctionName);
+			}
+			continue;
+		}
+		FMulticastDelegateProperty* Event = CastField<FMulticastDelegateProperty>(EventProperty);
 		if (Event == nullptr)
 		{
 			continue;
@@ -825,17 +1646,23 @@ void UDreamUserWidget::EvaluateBinding(const FResolvedBinding& Binding)
 		SetterParameter = *It;
 		break;
 	}
-	if (ReturnProperty == nullptr || SetterParameter == nullptr
-		|| !ReturnProperty->SameType(SetterParameter))
+	if (ReturnProperty == nullptr || SetterParameter == nullptr)
 	{
 		// The compiler checked this pairing; reaching here means the class moved underneath us.
 		return;
 	}
 
 	FStructOnScope SetterFrame(Binding.Setter);
-	SetterParameter->CopyCompleteValue(
-		SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory()),
-		ReturnProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory()));
+	// Through the shared conversion rather than a raw CopyCompleteValue, which is what makes the
+	// compiler's widened check safe: an exact pair is still copied whole, and a numeric pair of two
+	// different widths is converted instead of memcpy'd. Its false is the old SameType refusal --
+	// the class moved underneath us -- and leaves the setter uncalled.
+	if (!CopyDreamWidgetBoundValue(ReturnProperty,
+		ReturnProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory()),
+		SetterParameter, SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory())))
+	{
+		return;
+	}
 	Target->ProcessEvent(Binding.Setter, SetterFrame.GetStructMemory());
 }
 
@@ -1254,9 +2081,35 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 
 void UDreamUserWidget::CollectAnimationComponents(TArray<UDreamWidgetAnimationComponent*>& OutComponents) const
 {
+	// This widget's OWN components first. GetContentRoot is the root of the tree this widget builds
+	// and is never the widget itself, so an animation component placed directly on the user widget was
+	// invisible to everything routed through here -- StopAllAnimations, IsAnyAnimationPlaying,
+	// FlushAnimations, QueueStopAllAnimations, PlayAnimationByName -- even though PlayAnimation finds
+	// it through the outer chain and GetOwningUserWidget recognises that placement on purpose.
+	for (UDreamUIBehaviour* Component : GetAllComponents())
+	{
+		if (UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component))
+		{
+			OutComponents.Add(Animator);
+		}
+	}
+
 	UDreamWidget* ContentRoot = GetContentRoot();
 	if (!IsValid(ContentRoot))
 	{
+		// Every animation verb on this widget routes through here, so with no contents of its own
+		// all six of them are no-ops -- and five of the six did that in complete silence, which is
+		// how "my list cell's animation never plays" became unanswerable from a log. Two ways to
+		// land here: a widget that was never initialized (a hand-made NewObject, or a duplicate
+		// that has not been through Initialize), and a native control, whose tree is null by design
+		// and whose animations live on the control's own components rather than in a tree.
+		if (!bWarnedMissingAnimationRoot)
+		{
+			bWarnedMissingAnimationRoot = true;
+			UE_LOG(DreamGUI, Warning,
+				TEXT("Animation API used on '%s', which has no content root, so it does nothing. Initialized: %s."),
+				*GetPathName(), bInitialized ? TEXT("yes, this class declares no hierarchy of its own") : TEXT("no"));
+		}
 		return;
 	}
 	// To the nested boundary: a nested instance's animations are its own to stop and to name, and
@@ -1306,6 +2159,29 @@ UDreamWidgetAnimationComponent* UDreamUserWidget::FindAnimationComponentFor(UMov
 		if (Component->GetSequenceAssets().Contains(Asset))
 		{
 			return Component;
+		}
+	}
+	return nullptr;
+}
+
+UMovieSceneSequence* UDreamUserWidget::GetAnimationByName(const FString& Name) const
+{
+	// The same two-step lookup PlayAnimationByName does: embedded animations answer to their display
+	// name, standalone sequence assets to their asset name.
+	TArray<UDreamWidgetAnimationComponent*> Animators;
+	CollectAnimationComponents(Animators);
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		if (UDreamWidgetAnimation* Embedded = Component->GetSequenceByDisplayName(Name))
+		{
+			return Embedded;
+		}
+		for (UDreamUISequence* Asset : Component->GetSequenceAssets())
+		{
+			if (IsValid(Asset) && Asset->GetName() == Name)
+			{
+				return Asset;
+			}
 		}
 	}
 	return nullptr;

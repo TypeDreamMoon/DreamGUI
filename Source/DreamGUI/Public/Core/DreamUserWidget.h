@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamFieldNotification.h"
+#include "Core/DreamUIWorldContext.h"
+#include "Core/IDreamUICultureChangedInterface.h"
 #include "INotifyFieldValueChanged.h"
 // The event bridge declared at the bottom of this header is a behaviour and SPEAKS the pointer
 // interfaces, so these are base classes here, not forward-declarable references.
@@ -13,17 +15,28 @@
 #include "Event/Interface/DreamNavigationInterface.h"
 #include "Event/Interface/DreamPointerClickInterface.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
+#include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerDragDropInterface.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
+#include "Event/Interface/DreamPointerGestureInterface.h"
+#include "Event/Interface/DreamPointerLongPressInterface.h"
+#include "Event/Interface/DreamPointerScrollInterface.h"
+#include "Event/Interface/DreamKeyInterface.h"
 // FDreamUIAnimationHandle is passed and returned by value below, so it is a definition here rather
 // than a forward declaration.
 #include "Animation/DreamWidgetAnimationComponent.h"
+// FDreamUIActionHandle and FDreamUIActionExecutedDelegate cross the ListenForInputAction surface by
+// value, so definitions rather than forward declarations.
+#include "Interaction/DreamUIActionRouter.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;
 class UDreamUserWidget;
 class UDreamUserWidgetEventBridge;
+class APlayerController;
+class APawn;
+class ULocalPlayer;
 
 /** Blueprint-facing counterpart of CreateDreamWidget's before-alive hook. */
 DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamUIWidgetCreatedCallback, UDreamUserWidget*, CreatedWidget);
@@ -47,11 +60,25 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamUIWidgetCreatedCallback, UDreamUserWidge
  * Initialize, from the class, every time.
  */
 UCLASS(ClassGroup = (DreamGUI), BlueprintType, Blueprintable, DisplayName = "DreamUI User Widget")
-class DREAMGUI_API UDreamUserWidget : public UDreamWidget, public INotifyFieldValueChanged
+class DREAMGUI_API UDreamUserWidget : public UDreamWidget, public INotifyFieldValueChanged, public IDreamUICultureChangedInterface
 {
 	GENERATED_BODY()
 
 public:
+	/**
+	 * Culture changes reach every user widget, with no registration to remember.
+	 *
+	 * The interface existed and worked, but the only way in was a static Blueprint call the author
+	 * had to make from On Initialized and undo from On Destruct -- and forgetting the second half
+	 * left the manager broadcasting into a widget that was gone. Registration is now paired with
+	 * construct/destruct, the same window in which the widget is on screen at all, so a Blueprint
+	 * only has to implement the event.
+	 *
+	 * The native body does nothing: a user widget owns no text of its own, and the widgets that do
+	 * (UDreamText) refresh themselves through the same broadcast. Override, or implement the
+	 * Blueprint event, to re-read anything the widget caches per culture.
+	 */
+	virtual void OnCultureChanged_Implementation() override;
 	/**
 	 * No native fields yet: everything notifiable on a user widget today is authored in the
 	 * Blueprint, where the kismet compiler records it -- but only for classes that implement
@@ -83,6 +110,24 @@ public:
 	 */
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TObjectPtr<UDreamWidgetTree> WidgetTree = nullptr;
+
+	/**
+	 * Set by SetOwningPlayer; empty means "work it out" (see GetOwningPlayer).
+	 *
+	 * Weak and Transient for the same reason UMG's is: a widget must not keep a controller alive, and
+	 * a seamless travel replaces the controller under a widget that outlives it.
+	 */
+	UPROPERTY(Transient)
+	TWeakObjectPtr<APlayerController> OwningPlayer;
+
+	/** Bindings made through ListenForInputAction, so destruct can take them all back down. */
+	TArray<FDreamUIActionHandle> ListenedInputActions;
+
+	/** Marks this page as hand-placed, so the page stack stops re-applying full-bleed geometry to it. */
+	void MarkViewportPlacementCustom();
+
+	/** Cache whether the Blueprint implemented On Mouse Move. Run once, from Initialize. */
+	void ProbeBlueprintPointerMove();
 
 	/**
 	 * What the HOST authored for the slots this widget's class declares, keyed by slot name.
@@ -138,6 +183,59 @@ public:
 	void InitializeFromArchetype(UDreamWidgetTree* InArchetype);
 
 	/**
+	 * Adopt contents that were DUPLICATED onto this widget rather than instanced from its class --
+	 * the list-cell road, and the counterpart of InitializeFromArchetype for it.
+	 *
+	 * A duplicate arrives with the copied hierarchy already under it and with the SOURCE's tree
+	 * object still in WidgetTree (a plain object property that subtree duplication has no
+	 * counterpart for). It therefore answered every "what are my contents" question about the
+	 * template, and, never having been initialized, resolved none of its own bindings.
+	 *
+	 * InContentRoot is the copy's own content root -- the counterpart of the source tree's
+	 * RootWidget. Idempotent and a no-op on a class template, like the other two entry points; call
+	 * it only when this widget's children ARE the duplicated contents, which is what
+	 * DuplicateDreamWidgetHierarchy guarantees.
+	 */
+	void InitializeAsDuplicate(UDreamWidget* InContentRoot);
+
+	/**
+	 * Rebuild this instance's contents from its (just recompiled) class.
+	 *
+	 * Recompiling a Blueprint replaces every live instance with a fresh copy of the new class, and the
+	 * copy arrives HALF DEAD: WidgetTree is DuplicateTransient so it comes across null, bInitialized
+	 * and the resolved bindings are plain members that come across empty, and the old contents are
+	 * still hanging underneath because Children is Instanced. Nothing re-ran Initialize, so the widget
+	 * on screen had contents, a null content root, no bindings and silently inert animation verbs --
+	 * and a later Initialize would have hung a SECOND hierarchy on it.
+	 *
+	 * What survives on purpose is NamedSlotContent, which is a persistent Instanced map: the host's
+	 * widgets are the host's and are re-attached rather than thrown away. Everything else under this
+	 * widget came from the old class's tree and is destroyed, because the new class is what the author
+	 * just asked for -- the same choice UMG makes when it rebuilds its preview from the new class.
+	 *
+	 * Editor-only in practice (it is the recompile path), idempotent, and a no-op on a class template
+	 * or on a class that declares no hierarchy -- destroying contents it cannot rebuild would turn a
+	 * widget that still works into an empty one.
+	 */
+	void ReinitializeFromClass();
+
+	/**
+	 * ReinitializeFromClass against a NAMED hierarchy rather than the one the class resolves to.
+	 *
+	 * The same split, and for the same reason, as Initialize / InitializeFromArchetype: the designer
+	 * rebuilds its preview from the Blueprint's authoring tree, which is not what the class holds
+	 * until the next compile, and a test can prove the whole road before a generated class exists.
+	 */
+	void ReinitializeFromArchetype(UDreamWidgetTree* InArchetype);
+
+	/**
+	 * Whether this instance is in the half-dead state ReinitializeFromClass repairs: it has contents
+	 * but no tree and has not been initialized.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	bool NeedsReinitializeFromClass() const;
+
+	/**
 	 * The tree exists and every by-name widget binding points into it; nothing has read this widget's
 	 * own data yet.
 	 *
@@ -147,6 +245,11 @@ public:
 	 * already asked and been told there is nothing.
 	 *
 	 * Runs in the designer preview too, which instances the same way.
+	 *
+	 * On a NATIVE CONTROL (UDreamUIControl and everything under it) this fires before the control
+	 * has built its tree, bound its parts, wired their behaviours or pushed its style -- the control
+	 * does all four in its own NativeOnInitialized, after calling this. A Blueprint subclass of a
+	 * control that wants to touch parts wants On Control Ready instead.
 	 */
 	virtual void NativeOnInitialized();
 
@@ -156,6 +259,168 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	bool IsInitialized() const { return bInitialized; }
+
+	/**
+	 * True in the designer's preview, false in PIE and in a cooked game -- UMG's IsDesignTime.
+	 *
+	 * OnInitialized runs in the preview as well as at runtime, by design, and until now a graph had
+	 * no way to tell the two apart: the rule was a C++ inline with no reflected face, so "do not do
+	 * this while the designer is showing me" was unwriteable in Blueprint.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	bool IsDesignTime() const { return !DreamUI::IsGameWorld(this); }
+
+	// ---------------------------------------------------------------------------- owning player
+
+	/**
+	 * The local player this widget belongs to -- UMG's UUserWidget::OwningPlayer, and the answer that
+	 * decides which screen it is added to, which event system's focus it takes, and whose input it
+	 * listens for.
+	 *
+	 * Resolved in UMG's order: an explicitly set controller first; then the nearest ancestor user
+	 * widget's, so a nested widget belongs to whoever hosts it without anybody having to say so; then
+	 * the world's first local player, which is the whole answer in a single-player game.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	APlayerController* GetOwningPlayer() const;
+
+	/** Point this widget (and everything it goes on to create) at a different local player. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Player")
+	void SetOwningPlayer(APlayerController* InPlayerController);
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	ULocalPlayer* GetOwningLocalPlayer() const;
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	APawn* GetOwningPlayerPawn() const;
+
+	/**
+	 * The local player INDEX this widget's screen, focus and input use -- the same number
+	 * UDreamEventSystem::UserIndex and UDreamBaseRaycaster::UserIndex are keyed by, so a widget owned
+	 * by the second local player is driven by the second player's event system without any caller
+	 * passing the number around.
+	 *
+	 * 0 whenever the owning player cannot be resolved, which is the single-player answer.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	int32 GetOwningPlayerIndex() const;
+
+	/** The local player index InPlayerController belongs to, or 0. Shared by everything that keys on it. */
+	static int32 GetLocalPlayerIndexOf(const APlayerController* InPlayerController);
+
+	// ---------------------------------------------------------------------------- focus, UMG's names
+
+	/** UMG's SetKeyboardFocus: take focus on the OWNING player's event system rather than on player 0. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Focus")
+	bool SetKeyboardFocus();
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Focus")
+	bool HasKeyboardFocus() const;
+
+	/** UMG's HasUserFocus: does the named player's focus sit on this widget? */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Focus")
+	bool HasUserFocus(APlayerController* InPlayerController) const;
+
+	/** Give up focus if this widget holds the owning player's. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Focus")
+	void ClearKeyboardFocus();
+
+	// ---------------------------------------------------------------------------- viewport placement
+
+	/**
+	 * UMG's SetPositionInViewport, and the three that go with it.
+	 *
+	 * A page is laid out full-bleed by default -- anchors 0..1, no inset -- and the stack re-applies
+	 * that on every refresh, so a widget positioned by hand was moved back the next time anything was
+	 * pushed. Calling any of these four marks the page as HAND-PLACED, and the stack then leaves its
+	 * geometry alone while still owning its sort order and its shown/hidden state. That is the only
+	 * way "a floating window that is not full screen" can exist on the page stack at all.
+	 *
+	 * Positions are in the screen canvas's space, which is the space the screen root is sized in.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Viewport")
+	void SetPositionInViewport(FVector2D InPosition);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Viewport")
+	void SetDesiredSizeInViewport(FVector2D InSize);
+
+	/** Pivot, in 0..1 of this widget's own box. UMG calls it alignment. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Viewport")
+	void SetAlignmentInViewport(FVector2D InAlignment);
+
+	/** Anchors against the screen, min and max in 0..1. Both equal is a point anchor. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Viewport")
+	void SetAnchorsInViewport(FVector2D InAnchorMin, FVector2D InAnchorMax);
+
+	/** Hand the page's geometry back to the stack, which means full-bleed again from the next refresh. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Viewport")
+	void ClearPlacementInViewport();
+
+	// ---------------------------------------------------------------------------- geometry
+
+	/**
+	 * This widget's own box, in its own space -- the local half of UMG's GetCachedGeometry.
+	 *
+	 * There is no FGeometry here and there should not be: this framework composes meshes rather than
+	 * painting Slate, so "paint space" and "tick space" are the same space and the honest answer is a
+	 * size and a screen rectangle rather than a transform nobody can use.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Geometry")
+	FVector2D GetLocalSize() const;
+
+	/**
+	 * Where this widget lands on the screen, in the root canvas's space -- the absolute half of UMG's
+	 * GetCachedGeometry / GetPaintSpaceGeometry. Zero-sized when the widget is not under a canvas.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Geometry")
+	FBox2D GetScreenSpaceRect() const;
+
+	// ---------------------------------------------------------------------------- sound
+
+	/**
+	 * UMG's PlaySound: a 2D sound for the owning player, with no attenuation and no world position.
+	 *
+	 * A no-op outside a game world, so a designer preview stays silent -- the same gate the controls'
+	 * own hover and click sounds use.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
+	void PlaySound(class USoundBase* InSound, float InVolumeMultiplier = 1.0f, float InPitchMultiplier = 1.0f);
+
+	// ---------------------------------------------------------------------------- input actions
+
+	/**
+	 * UMG's ListenForInputAction, on this framework's own action layer.
+	 *
+	 * The binding lives as long as this widget does -- it is unregistered on destruct -- and is scoped
+	 * to the navigation scope this widget is inside, so it only fires while that screen is the one in
+	 * front. That is the difference from UMG, and it is the point: UMG binds to the player's input
+	 * component and leaves "is my screen even open" to the caller.
+	 *
+	 * @param InAction  A row of the project's input action table; see FDreamUIInputActionData.
+	 * @param bDisplayInActionBar  And-ed with the row's own flag; a caller can hide but not reveal.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Input")
+	FDreamUIActionHandle ListenForInputAction(const FDataTableRowHandle& InAction,
+		FDreamUIActionExecutedDelegate InCallback, bool bDisplayInActionBar = true);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Input")
+	void StopListeningForInputAction(const FDreamUIActionHandle& InHandle);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Input")
+	void StopListeningForAllInputActions();
+
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Input")
+	bool IsListeningForInputAction(const FDreamUIActionHandle& InHandle) const;
+
+	/**
+	 * UMG's PreConstruct, with the flag it is named for.
+	 *
+	 * Runs at the top of Initialize, in the designer preview and at runtime alike, before the contents
+	 * exist -- which is exactly what it is for: setting the properties the contents will be built
+	 * from. On Initialized is the moment AFTER, when the tree is there to read.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "Pre Construct"))
+	void PreConstruct(bool bIsDesignTime);
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
 	UDreamWidgetTree* GetWidgetTree() const { return WidgetTree; }
@@ -357,6 +622,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
 	UDreamWidgetAnimationComponent* FindAnimationComponentFor(UMovieSceneSequence* InAnimation) const;
 
+	/**
+	 * The animation of this widget's hierarchy with that display name, or null. The counterpart of
+	 * PlayAnimationByName for callers that want the animation OBJECT -- to bind an event to it, to
+	 * ask whether it is playing, to hand it to a handle-taking call -- rather than to play it. Names
+	 * an embedded animation by its display name and a standalone sequence asset by its asset name,
+	 * exactly as PlayAnimationByName does.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Animation")
+	UMovieSceneSequence* GetAnimationByName(const FString& Name) const;
+
 	/** The animation components on this widget's own contents, nested instances excluded. */
 	void CollectAnimationComponents(TArray<UDreamWidgetAnimationComponent*>& OutComponents) const;
 
@@ -384,7 +659,22 @@ public:
 	 * its contents; it built them under itself in NativeOnInitialized -- so the walk is its own
 	 * children, stopping at any nested instance, whose slots belong to that instance.
 	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Slots")
 	UDreamWidget* FindSlotWidget(FName InSlotName) const;
+
+	/**
+	 * The widget of that variable name inside this instance -- UMG's GetWidgetFromName.
+	 *
+	 * The class model's answer to "reach a widget by name from a graph". The generated class is a
+	 * UClass and has no useful Blueprint form of its own, so the information it holds is reached
+	 * through the instance, which is the only place a graph ever has one -- exactly how UMG does it.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
+	UDreamWidget* GetWidgetFromName(FName InVariableName) const;
+
+	/** The named slots this instance declares, in the order its class declares them. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Slots", meta = (DisplayName = "Get Declared Slot Names"))
+	TArray<FName> K2_GetDeclaredSlotNames() const;
 
 	/**
 	 * The holes this CLASS opens, for a class whose contents are code rather than an archetype.
@@ -423,6 +713,7 @@ public:
 	 * Returns false, loudly, when the slot is not declared or the content is not the caller's to
 	 * give. Editor-facing: the designer's drop into a slot row is this call.
 	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Slots")
 	bool SetContentForNamedSlot(FName InSlotName, UDreamWidget* InContent);
 
 	/** Every slot name InTree declares, in tree order. Static because the compiler asks before any instance exists. */
@@ -456,8 +747,19 @@ public:
 	 * content arrives after it. Anything that has to react to what a host supplied -- a stock label
 	 * standing down for a supplied one, a header sizing itself around what is in it -- belongs here
 	 * rather than in a first pass that is structurally too early to be right.
+	 *
+	 * The default body raises the Blueprint event; an override that wants it must call Super.
 	 */
-	virtual void NativeOnSlotContentAttached() {}
+	virtual void NativeOnSlotContentAttached();
+
+	/**
+	 * The Blueprint half of NativeOnSlotContentAttached: the host's content is in place.
+	 *
+	 * This hook existed and was reachable only from C++, so the whole point of it -- "react to what my
+	 * host put in my slots" -- was closed to the Blueprint authors it was written for.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget", meta = (DisplayName = "On Content Ready"))
+	void OnSlotContentAttached();
 
 	/**
 	 * Run ALL of this widget's property bindings once: call each bound function, hand the result to
@@ -645,6 +947,96 @@ public:
 	void OnDrop(UDreamPointerEventData* EventData);
 
 	/*
+	 * The rest of UMG's pointer surface, each on the event channel this framework already had and the
+	 * bridge simply never spoke for.
+	 */
+
+	/** UMG's OnMouseWheel. The bridge used to refuse the scroll interface outright, so a user widget could not hear the wheel at all. */
+	virtual bool NativeOnPointerScroll(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Mouse Wheel"))
+	void OnMouseWheel(UDreamPointerEventData* EventData);
+
+	/** UMG's OnMouseButtonDoubleClick. The single click still arrives first; tell them apart with ClickCount. */
+	virtual bool NativeOnPointerDoubleClick(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Double Click"))
+	void OnDoubleClick(UDreamPointerEventData* EventData);
+
+	/** The press held in place -- what a touch UI means by "long press", and what UMG has no event for. */
+	virtual bool NativeOnPointerLongPress(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Long Press"))
+	void OnLongPress(UDreamPointerEventData* EventData);
+
+	/** UMG's OnTouchGesture, split the way this framework's gesture channel already splits it. */
+	virtual bool NativeOnPointerPinch(class UDreamGestureEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Pinch"))
+	void OnPinch(class UDreamGestureEventData* EventData);
+
+	virtual bool NativeOnPointerSwipe(class UDreamGestureEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Swipe"))
+	void OnSwipe(class UDreamGestureEventData* EventData);
+
+	/**
+	 * UMG's OnMouseMove: the pointer moved while over this widget.
+	 *
+	 * Derived rather than dispatched, because the input module only announces enter and exit -- it
+	 * updates the pointer every frame and says nothing while the hit widget is unchanged. The bridge
+	 * watches for that on its own tick and only when the Blueprint implemented this event, so a widget
+	 * that does not ask pays nothing.
+	 */
+	virtual void NativeOnPointerMove(UDreamPointerEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Mouse Move"))
+	void OnMouseMove(UDreamPointerEventData* EventData);
+
+	/** Whether the Blueprint actually implemented On Mouse Move. Cached at Initialize; see bHasBlueprintOnTick. */
+	bool HasBlueprintPointerMove() const { return bHasBlueprintPointerMove; }
+
+	/*
+	 * Drag hover, from the drop target's side -- UMG's OnDragEnter/Over/Leave/Cancelled.
+	 *
+	 * OnDrop above is the drop itself; these four are the hover around it, and they arrive on the
+	 * widget the drag is over rather than on the one being dragged. The drag-drop subsystem already
+	 * tracked every one of these states; nothing carried them to a user widget.
+	 */
+	virtual void NativeOnDragEnter(UDreamPointerEventData* EventData, class UDreamDragDropOperation* Operation);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On Drag Enter"))
+	void OnDragEnter(UDreamPointerEventData* EventData, class UDreamDragDropOperation* Operation);
+
+	virtual void NativeOnDragOver(UDreamPointerEventData* EventData, class UDreamDragDropOperation* Operation);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On Drag Over"))
+	void OnDragOver(UDreamPointerEventData* EventData, class UDreamDragDropOperation* Operation);
+
+	virtual void NativeOnDragLeave(UDreamPointerEventData* EventData, class UDreamDragDropOperation* Operation);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On Drag Leave"))
+	void OnDragLeave(UDreamPointerEventData* EventData, class UDreamDragDropOperation* Operation);
+
+	virtual void NativeOnDragCancelled(class UDreamDragDropOperation* Operation);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Drag", meta = (DisplayName = "On Drag Cancelled"))
+	void OnDragCancelled(class UDreamDragDropOperation* Operation);
+
+	/*
+	 * Keys, characters and analog samples -- UMG's OnKeyDown/OnKeyUp/OnKeyChar/OnAnalogValueChanged.
+	 *
+	 * Delivered to the FOCUSED widget and bubbled up from there (see IDreamKeyInterface), ahead of the
+	 * action router's named bindings. Set EventData->Handled, or return true from the Blueprint event,
+	 * to keep the key: a kept key is not offered to a binding and is not read as navigation.
+	 */
+	virtual bool NativeOnKeyDown(class UDreamKeyEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Key", meta = (DisplayName = "On Key Down"))
+	bool ReceiveKeyDown(class UDreamKeyEventData* EventData);
+
+	virtual bool NativeOnKeyUp(class UDreamKeyEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Key", meta = (DisplayName = "On Key Up"))
+	bool ReceiveKeyUp(class UDreamKeyEventData* EventData);
+
+	virtual bool NativeOnKeyChar(class UDreamKeyEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Key", meta = (DisplayName = "On Key Char"))
+	bool ReceiveKeyChar(class UDreamKeyEventData* EventData);
+
+	virtual bool NativeOnAnalogValueChanged(class UDreamKeyEventData* EventData);
+	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Key", meta = (DisplayName = "On Analog Value Changed"))
+	bool ReceiveAnalogValueChanged(class UDreamKeyEventData* EventData);
+
+	/*
 	 * Focus. UDreamWidget already broadcasts OnFocusReceived/OnFocusLost delegates from
 	 * NotifyFocusReceived/NotifyFocusLost; this class listens to its own broadcasts and forwards.
 	 * The Blueprint events carry Receive* C++ names because the delegate PROPERTIES of those names
@@ -778,6 +1170,19 @@ private:
 	 * event nobody wrote is pure cost. Cached at Initialize.
 	 */
 	uint8 bHasBlueprintOnTick : 1 = false;
+	/**
+	 * The Blueprint implemented On Mouse Move, which is the only reason the bridge watches the pointer
+	 * at all. Probed the same way and for the same reason as bHasBlueprintOnTick: a per-frame check of
+	 * a hover position nobody asked about is pure cost.
+	 */
+	uint8 bHasBlueprintPointerMove : 1 = false;
+	/**
+	 * One "the animation verbs on this widget do nothing" warning per widget, not one per call.
+	 *
+	 * Mutable because CollectAnimationComponents is const and is the one place all six verbs pass
+	 * through; a per-call log would fire every frame from a tick.
+	 */
+	mutable uint8 bWarnedMissingAnimationRoot : 1 = false;
 };
 
 /**
@@ -792,9 +1197,13 @@ private:
  * at Initialize, transient, and the designer's edit worlds never get one. Every callback is a
  * one-line forward to the owning widget's Native* twin; every pointer callback returns the widget's
  * bAllowEventBubbleUp so a widget with no Blueprint bodies is routing-identical to one without a
- * bridge. It implements neither IDreamPointerSelectDeselectInterface (GetEventHandle searches by that
- * one, and finding the bridge would move focus/deselect decisions onto every user widget) nor the
- * scroll interface; navigation is present but answers CanNavigateHere false until the widget opts in.
+ * bridge. The one interface it deliberately does NOT implement is
+ * IDreamPointerSelectDeselectInterface: GetEventHandle searches by that one, and finding the bridge
+ * would move focus and deselect decisions onto every user widget. Navigation is present but answers
+ * CanNavigateHere false until the widget opts in. Scroll, double click, long press, gesture and the
+ * key channel are all spoken for now -- they were the difference between this surface and UUserWidget's
+ * (OnMouseWheel, OnMouseButtonDoubleClick, OnTouchGesture, OnKeyDown and friends), and each of them was
+ * a channel the framework already dispatched with nobody on the user-widget end of it.
  *
  * The ForwardCount fields are introspection for tests and diagnostics -- they count forwards that
  * COMPLETED, so a count is proof the widget-side Native* ran.
@@ -807,6 +1216,11 @@ class DREAMGUI_API UDreamUserWidgetEventBridge : public UDreamUIBehaviour
 	, public IDreamPointerDragInterface
 	, public IDreamPointerDragDropInterface
 	, public IDreamNavigationInterface
+	, public IDreamPointerScrollInterface
+	, public IDreamPointerDoubleClickInterface
+	, public IDreamPointerLongPressInterface
+	, public IDreamPointerGestureInterface
+	, public IDreamKeyInterface
 {
 	GENERATED_BODY()
 public:
@@ -856,6 +1270,30 @@ protected:
 	//~ IDreamNavigationInterface
 	virtual bool CanNavigateHere_Implementation() const override;
 	virtual bool OnNavigate_Implementation(EDreamUINavigationDirection direction, TScriptInterface<IDreamNavigationInterface>& result) override;
+	//~ IDreamPointerScrollInterface
+	virtual bool OnPointerScroll_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamPointerDoubleClickInterface
+	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamPointerLongPressInterface
+	virtual bool OnPointerLongPress_Implementation(UDreamPointerEventData* EventData) override;
+	//~ IDreamPointerGestureInterface
+	virtual bool OnPointerPinch_Implementation(class UDreamGestureEventData* EventData) override;
+	virtual bool OnPointerSwipe_Implementation(class UDreamGestureEventData* EventData) override;
+	//~ IDreamKeyInterface
+	virtual void OnKeyDown_Implementation(class UDreamKeyEventData* EventData) override;
+	virtual void OnKeyUp_Implementation(class UDreamKeyEventData* EventData) override;
+	virtual void OnKeyChar_Implementation(class UDreamKeyEventData* EventData) override;
+	virtual void OnAnalogValueChanged_Implementation(class UDreamKeyEventData* EventData) override;
+
+private:
+	/**
+	 * The derived "pointer moved over me" watch. Only armed when the Blueprint implemented On Mouse
+	 * Move, so nothing else pays for it; see UDreamUserWidget::NativeOnPointerMove for why this is a
+	 * watch at all rather than a dispatched event.
+	 */
+	void TickPointerMoveWatch();
+	FVector LastWatchedPointerWorldPoint = FVector::ZeroVector;
+	bool bHasWatchedPointerPoint = false;
 };
 
 /**

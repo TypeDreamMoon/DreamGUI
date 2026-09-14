@@ -52,5 +52,4 @@ private:
 	TArray<TObjectPtr<UObject>> Items;
 
 	FDreamWidgetEachBinding Binding;
-	bool bViewInitialized = false;
 };

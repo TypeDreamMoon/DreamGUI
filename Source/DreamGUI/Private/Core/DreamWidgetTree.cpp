@@ -118,6 +118,13 @@ int32 UDreamWidgetTree::CountWidgets() const
 	return Count;
 }
 
+TArray<UDreamWidget*> UDreamWidgetTree::GetAllWidgets() const
+{
+	TArray<UDreamWidget*> Widgets;
+	ForEachWidget([&Widgets](UDreamWidget* Widget) { Widgets.Add(Widget); });
+	return Widgets;
+}
+
 UDreamWidget* UDreamWidgetTree::FindWidgetByVariableName(FName InVariableName) const
 {
 	UDreamWidget* Found = nullptr;

@@ -23,6 +23,10 @@ void UDreamUIControl::NativeOnInitialized()
 	WireParts();
 	OnPartsReady();
 	ApplyStyle();
+	// The Blueprint's turn, last. Super::NativeOnInitialized above has already run the graph's On
+	// Initialized -- before this control had a tree, parts, behaviours or a style -- so this is the
+	// only moment at which a Blueprint subclass of a native control can read what it drives.
+	OnControlReady();
 }
 
 bool UDreamUIControl::RealizeTemplate()

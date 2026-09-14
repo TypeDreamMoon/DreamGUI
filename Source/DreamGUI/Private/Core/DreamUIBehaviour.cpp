@@ -181,8 +181,16 @@ void UDreamUIBehaviour::Call_Awake()
 			CallbackFunc();
 		}
 	}
-	CallbacksBeforeAwake.Empty();
-	
+	// Clear the SLOTS, not the array. It is sized once in the constructor to
+	// ECallbackFunctionType::COUNT and every pre-Awake path writes it BY INDEX, so emptying it left
+	// a zero-length array that the next such write indexes out of bounds -- an assertion in
+	// Development and a plain out-of-bounds store in Shipping, where RangeCheck is compiled out.
+	// Call_OnDestroy puts bIsAwakeCalled back to false, so that next write is reachable.
+	for (TFunction<void()>& CallbackFunc : CallbacksBeforeAwake)
+	{
+		CallbackFunc = nullptr;
+	}
+
 #if WITH_EDITOR
 	if (!DreamUI::IsGameWorld(this))//edit mode
 	{

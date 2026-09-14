@@ -26,7 +26,7 @@ class UDreamWidget;
  * never registers (registration is an explicit OnRegister call, never PostInitProperties) and is
  * never ticked.
  */
-UCLASS(ClassGroup = (DreamGUI), DisplayName = "DreamUI Widget Tree")
+UCLASS(ClassGroup = (DreamGUI), BlueprintType, DisplayName = "DreamUI Widget Tree")
 class DREAMGUI_API UDreamWidgetTree : public UObject
 {
 	GENERATED_BODY()
@@ -70,10 +70,27 @@ public:
 	/** Visit every widget in the tree, root first, parents before children. Skips nothing. */
 	void ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredicate) const;
 
+	/**
+	 * Every widget in the tree, root first, parents before children -- UMG's
+	 * UWidgetTree::GetAllWidgets, and the Blueprint face of ForEachWidget, which takes a C++
+	 * predicate no graph can supply.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
+	TArray<UDreamWidget*> GetAllWidgets() const;
+
+	/** The tree's root widget, or null for a tree nothing has been authored into. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
+	UDreamWidget* GetRootWidget() const { return RootWidget; }
+
 	/** Total widget count, root included. Walks the tree; not cached. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
 	int32 CountWidgets() const;
 
-	/** The first widget whose variable name matches, or null. Used to resolve a binding by name. */
+	/**
+	 * The first widget whose variable name matches, or null. Used to resolve a binding by name --
+	 * UMG's UWidgetTree::GetWidgetFromName, and the same name the compiler declares variables from.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
 	UDreamWidget* FindWidgetByVariableName(FName InVariableName) const;
 
 	/**

@@ -13,6 +13,10 @@
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/InputModule/DreamPointerInputModule.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
+#include "Event/Interface/DreamKeyInterface.h"
+#include "Event/Interface/DreamPointerDoubleClickInterface.h"
+#include "Event/Interface/DreamPointerGestureInterface.h"
+#include "Event/Interface/DreamPointerLongPressInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "GameFramework/Actor.h"
@@ -254,10 +258,20 @@ bool FDreamUserWidgetBridgeAttachmentTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("the bridge instance is transient"), Bridge->HasAnyFlags(RF_Transient));
 		TestEqual(TEXT("and outered to its widget, as behaviours are"), Bridge->GetWidget(), (UDreamWidget*)Widget);
 
-		// The interface roster IS the routing contract: what it speaks it may receive, and the two it
-		// must NOT speak are the ones whose mere presence changes routing decisions --
-		// select/deselect drives GetEventHandle (focus and deselect targeting), and scroll belongs
-		// to scroll views.
+		// The interface roster IS the routing contract: what it speaks it may receive.
+		//
+		// It speaks every channel a UUserWidget has an event for, which is the whole point of the
+		// bridge -- scroll, double click, long press, gesture and keys were added when the surface was
+		// brought level with UMG's (OnMouseWheel, OnMouseButtonDoubleClick, OnTouchGesture, OnKeyDown
+		// and friends), each of them a channel the framework already dispatched with nobody on the
+		// user-widget end of it. Scroll used to be on the "must not speak" list below on the grounds
+		// that it belongs to scroll views; that was never a routing constraint -- a scroll view takes
+		// the event through its own behaviour and a user widget hearing it changes nothing about
+		// where it goes -- and it cost every user widget the mouse wheel.
+		//
+		// ONE interface is still forbidden, and for a real routing reason: select/deselect is what
+		// GetEventHandle searches by, so a bridge that spoke it would move focus and deselect
+		// targeting onto every user widget in the hierarchy.
 		UClass* BridgeClass = Bridge->GetClass();
 		TestTrue(TEXT("speaks enter/exit"), BridgeClass->ImplementsInterface(UDreamPointerEnterExitInterface::StaticClass()));
 		TestTrue(TEXT("speaks down/up"), BridgeClass->ImplementsInterface(UDreamPointerDownUpInterface::StaticClass()));
@@ -265,10 +279,18 @@ bool FDreamUserWidgetBridgeAttachmentTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("speaks drag"), BridgeClass->ImplementsInterface(UDreamPointerDragInterface::StaticClass()));
 		TestTrue(TEXT("speaks drop"), BridgeClass->ImplementsInterface(UDreamPointerDragDropInterface::StaticClass()));
 		TestTrue(TEXT("speaks navigation"), BridgeClass->ImplementsInterface(UDreamNavigationInterface::StaticClass()));
+		TestTrue(TEXT("speaks scroll -- UMG's OnMouseWheel"),
+			BridgeClass->ImplementsInterface(UDreamPointerScrollInterface::StaticClass()));
+		TestTrue(TEXT("speaks double click -- UMG's OnMouseButtonDoubleClick"),
+			BridgeClass->ImplementsInterface(UDreamPointerDoubleClickInterface::StaticClass()));
+		TestTrue(TEXT("speaks long press"),
+			BridgeClass->ImplementsInterface(UDreamPointerLongPressInterface::StaticClass()));
+		TestTrue(TEXT("speaks gesture -- UMG's OnTouchGesture"),
+			BridgeClass->ImplementsInterface(UDreamPointerGestureInterface::StaticClass()));
+		TestTrue(TEXT("speaks keys -- UMG's OnKeyDown and friends"),
+			BridgeClass->ImplementsInterface(UDreamKeyInterface::StaticClass()));
 		TestFalse(TEXT("does NOT speak select/deselect -- GetEventHandle must not find it"),
 			BridgeClass->ImplementsInterface(UDreamPointerSelectDeselectInterface::StaticClass()));
-		TestFalse(TEXT("does NOT speak scroll"),
-			BridgeClass->ImplementsInterface(UDreamPointerScrollInterface::StaticClass()));
 
 		// Focus is bound at Initialize; a broadcast reaching the handlers must be safe with no
 		// Blueprint bodies. (The observable end of this seam needs a Blueprint, so this is a smoke
