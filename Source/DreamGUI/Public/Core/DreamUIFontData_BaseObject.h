@@ -16,6 +16,8 @@ struct FDreamUICharData
 	FVector2f MinUV;
 	FVector2f MaxUV;
 	int32 SliceIndex = 0;//texture index in Texture2DArray
+	/** Which face of the family the glyph came from: 0 is the font itself, then its fallbacks. */
+	int32 FaceIndex = 0;
 	/** The glyph is being rasterized off-thread: advance is right, the quad is empty until the font's OnGlyphsReady. */
 	bool bPending = false;
 
@@ -127,6 +129,21 @@ public:
 	/** Baseline to the bottom of the font's box, at this size, as a positive distance. */
 	virtual float GetDescent(float FontSize) { return GetLineHeight(FontSize) * 0.5f + GetVerticalOffset(FontSize); }
 	virtual float GetFontSizeLimit() { return MAX_FLT; }
+	/**
+	 * Metrics of one face of the family: 0 is this font, then its fallbacks in lookup order. A line box
+	 * has to fit every face the line actually used -- a CJK fallback under a Latin primary has a taller
+	 * em, and measuring the line from the primary alone is what pushes its glyphs out of the box.
+	 * False when the face does not exist, or when the font has nothing per-face to say, and the caller
+	 * then falls back to GetAscent/GetDescent/GetLineHeight.
+	 */
+	virtual bool GetFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)
+	{
+		if (FaceIndex != 0)return false;
+		OutAscent = GetAscent(FontSize);
+		OutDescent = GetDescent(FontSize);
+		OutLineHeight = GetLineHeight(FontSize);
+		return true;
+	}
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }
 	virtual bool GetSupportDynamicPixelsPerUnit() { return false; }
 	virtual EDreamUIFontTextureMark GetFontTextureMark() { return EDreamUIFontTextureMark::None; }
@@ -137,8 +154,13 @@ public:
 	 * changes what a glyph measures (SDF fonts grow their quads by it).
 	 */
 	virtual void PrepareForLayout(float InExpandMeshSize) {}
-	/** How the painter should build this font's quads. InWorldScale is the text widget's world scale. */
-	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const { return FDreamTextGlyphPaintStyle(); }
+	/**
+	 * How the painter should build this font's quads. InWorldScale is the text widget's world scale,
+	 * InExpandMeshSize the asking text's own expand size -- passed in rather than read off the font,
+	 * because a font asset is shared and paint does not run in step with layout: a text whose layout is
+	 * still clean would otherwise paint with whichever text laid out last.
+	 */
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale, float InExpandMeshSize) const { return FDreamTextGlyphPaintStyle(); }
 
 
 	virtual void AddUIText(UDreamText* InText) {}

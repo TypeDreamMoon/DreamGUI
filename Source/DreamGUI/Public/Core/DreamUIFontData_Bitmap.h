@@ -47,13 +47,12 @@ protected:
 		float BoldRatio = 0.06f;
 public:
 	//Begin UDreamUIFontData_FreeTypeRender interface
-	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale, float InExpandMeshSize) const override;
 	//End UDreamUIFontData_FreeTypeRender interface
 protected:
 	TMap<FDreamUIBitmapCharKey, FDreamUICharData> CharDataMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
 	virtual void InitializeFontTextureAtlasSlice(uint8* SliceData, int64 SliceDataSize) const override;
-	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
 	virtual bool GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
 	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)override;

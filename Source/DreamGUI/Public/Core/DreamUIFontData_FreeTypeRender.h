@@ -19,6 +19,7 @@ struct FDreamUIFontAtlasStagingPool;
 struct FT_GlyphSlotRec_;
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
+struct FT_Bitmap_;
 #endif
 struct hb_font_t;
 
@@ -140,6 +141,34 @@ public:
 	/** Face and glyph index a code point resolves to, searching this font then its fallbacks; false when no face has it. */
 	bool ResolveCodepoint(uint32 Codepoint, FDreamUIGlyphKey& OutKey);
 	virtual float GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)override;
+	virtual bool GetFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)override;
+	/**
+	 * This class's own face metrics, NOT virtual: GetAscent/GetDescent/GetLineHeight go through it so
+	 * that a subclass which scales them (the distance-field font does, from its sample size) cannot
+	 * have its own scaling applied twice by a virtual call that came back down into it.
+	 */
+	bool ComputeFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight);
+protected:
+	/**
+	 * Face metrics, per face and per size. Reading them costs an FT size request and a metrics read,
+	 * and a line asks for every face on it every time it is laid out; a fallback face used to pay that
+	 * on every miss. Dropped whenever the font is reloaded, since that is when the faces change.
+	 */
+	struct FFaceMetricsKey
+	{
+		int32 FaceIndex = 0;
+		float FontSize = 0.0f;
+		bool operator==(const FFaceMetricsKey& Other) const { return FaceIndex == Other.FaceIndex && FontSize == Other.FontSize; }
+		friend FORCEINLINE uint32 GetTypeHash(const FFaceMetricsKey& Key) { return HashCombine(::GetTypeHash(Key.FaceIndex), ::GetTypeHash(Key.FontSize)); }
+	};
+	struct FFaceMetricsValue
+	{
+		float Ascent = 0.0f;
+		float Descent = 0.0f;
+		float LineHeight = 0.0f;
+	};
+	TMap<FFaceMetricsKey, FFaceMetricsValue> FaceMetricsCache;
+public:
 	virtual float GetLineHeight(float FontSize)override;
 	virtual float GetVerticalOffset(float FontSize)override;
 	virtual float GetAscent(float FontSize)override;
@@ -172,7 +201,16 @@ protected:
 		TArray<uint8> FontBinaryArray;
 	/** temp array for storing font binary data, because freetype need to load font from it so we need keep it alive */
 	TArray<uint8> TempFontBinaryArray;
-	FDelegateHandle PackingAtlasTextureExpandDelegateHandle;
+	/**
+	 * This font file's bytes as one immutable buffer, shared by every rasterizer that reads this face:
+	 * this font's own worker and the worker of every font that lists this one as a fallback. Taken once
+	 * rather than pointing straight at FontBinaryArray, because a reload refills that array while a
+	 * worker may still be reading it; dropped on reload so the next worker takes the new bytes and the
+	 * running one keeps the old buffer alive through its own reference.
+	 */
+	TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> SharedFaceBytes;
+	/** The shared buffer above, creating it on first use; null when this font has no bytes anywhere. */
+	TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> GetOrCreateSharedFaceBytes();
 
 	/** for rect packing */
 	rbp::MaxRectsBinPack BinPack;
@@ -188,6 +226,14 @@ protected:
 	/** Loads and rasterizes one glyph of a face at CharSize, synthetic bold by BoldSize pixels. */
 	FT_GlyphSlotRec_* RenderGlyphOnFreeType(FT_FaceRec_* InFace, uint32 GlyphIndex, float CharSize, float BoldSize);
 public:
+	/**
+	 * One row of a rasterized glyph as 8-bit coverage. FreeType's rows are `pitch` bytes apart, not
+	 * `width`, and the pitch is signed -- negative means the rows run bottom-up. The pixel mode is not
+	 * always 8-bit grey either: an embedded bitmap strike, which CJK fonts carry at small sizes, comes
+	 * back 1 bit per pixel. Reading buffer[Row * width + x] was none of those things.
+	 * Writes InCount bytes; anything past the glyph's width is zero.
+	 */
+	static void ReadGlyphRow(const FT_Bitmap_& InBitmap, int32 InRow, uint8* OutCoverage, int32 InCount);
 	/** The FreeType face behind a face index (this font or a fallback), initializing it on demand; null when missing. */
 	FT_FaceRec_* GetFreeTypeFace(int32 FaceIndex);
 protected:
@@ -227,11 +273,19 @@ protected:
 	bool EnsureFontTextureAtlasData(int32 SliceCount, int32 BytesPerPixel);
 	void ReleaseFontTexture();
 	void RenewFontTexture();
+public:
+	/**
+	 * Throws the glyph atlas away and starts it again at one slice: the cache is cleared, the packer is
+	 * reset, and every text using this font is told its atlas changed so it re-lays-out. This is how
+	 * the atlas is bounded -- a rect-packed atlas has no way to free one glyph for another of a
+	 * different size, so growth is capped and the whole thing is refilled, as Slate's font cache does.
+	 */
+	void FlushGlyphAtlas();
+protected:
 	bool CopyFontTextureAtlasData(void* DestData, int64 DataSize) const;
 	virtual void InitializeFontTextureAtlasSlice(uint8* SliceData, int64 SliceDataSize) const;
 
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)PURE_VIRTUAL(UDreamUIFontData_FreeTypeRender::CreateFontTexture, return nullptr;);
-	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize);
 
 	virtual bool GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult) { return false; };
 	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData) {};

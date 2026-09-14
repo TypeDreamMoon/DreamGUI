@@ -276,17 +276,25 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 		bHasKerning = FT_HAS_KERNING(Face) != 0;
 		InitHarfBuzz();
 
-		ReleaseFontTexture();
-		CurrentTextureSlice = 0;
-		auto RectPackCellSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType);
-		BinPack = rbp::MaxRectsBinPack(RectPackCellSize, RectPackCellSize);
-		auto TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
-		BinPack.PrepareRectCellsForText(TextureSize, TextureSize, FreeRectCells, RectPackCellSize, false);
-		RenewFontTexture();
-		OneDivideTextureSize = 1.0f / TextureSize;
-
-		ClearCharDataCache();
+		FlushGlyphAtlas();
 	}
+}
+
+void UDreamUIFontData_FreeTypeRender::FlushGlyphAtlas()
+{
+	check(IsInGameThread());
+	ReleaseFontTexture();
+	CurrentTextureSlice = 0;
+	const int32 RectPackCellSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType);
+	BinPack = rbp::MaxRectsBinPack(RectPackCellSize, RectPackCellSize);
+	const int32 TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
+	BinPack.PrepareRectCellsForText(TextureSize, TextureSize, FreeRectCells, RectPackCellSize, false);
+	// RenewFontTexture tells every text using this font that its atlas changed, which is what makes
+	// them re-lay-out: a display list caches each glyph's UVs, and those all just moved.
+	RenewFontTexture();
+	OneDivideTextureSize = 1.0f / TextureSize;
+
+	ClearCharDataCache();
 }
 
 void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
@@ -294,8 +302,11 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 	bAlreadyInitialized = false;
 	bInitFailed = false;
 	// The worker keeps itself (and the font bytes it reads) alive until its task ends; results for
-	// this font are simply dropped with it.
+	// this font are simply dropped with it. Dropping our reference to the shared bytes here is what
+	// makes the next rasterizer take the reloaded file rather than the one that was just replaced.
 	Rasterizer.Reset();
+	SharedFaceBytes.Reset();
+	FaceMetricsCache.Reset();
 	PendingAsyncGlyphs.Reset();
 	FontsWithAsyncGlyphs.Remove(this);
 	DeinitHarfBuzz();
@@ -364,6 +375,56 @@ FT_GlyphSlot UDreamUIFontData_FreeTypeRender::RenderGlyphOnFreeType(FT_FaceRec_*
 		slot->metrics.horiAdvance += BoldSize * 64.0f;
 	}
 	return slot;
+}
+
+void UDreamUIFontData_FreeTypeRender::ReadGlyphRow(const FT_Bitmap_& InBitmap, int32 InRow, uint8* OutCoverage, int32 InCount)
+{
+	if (OutCoverage == nullptr || InCount <= 0)return;
+	FMemory::Memzero(OutCoverage, InCount);
+	if (InBitmap.buffer == nullptr)return;
+	if (InRow < 0 || InRow >= (int32)InBitmap.rows)return;
+	// A negative pitch means row 0 is the LAST row in memory and the rows walk backwards from there.
+	const uint8* Row = InBitmap.pitch >= 0
+		? InBitmap.buffer + (int64)InRow * InBitmap.pitch
+		: InBitmap.buffer + (int64)((int32)InBitmap.rows - 1 - InRow) * (-InBitmap.pitch);
+	const int32 Width = FMath::Min(InCount, (int32)InBitmap.width);
+	switch (InBitmap.pixel_mode)
+	{
+	case FT_PIXEL_MODE_GRAY:
+		FMemory::Memcpy(OutCoverage, Row, Width);
+		break;
+	case FT_PIXEL_MODE_MONO:
+		// 1 bit per pixel, most significant bit first: the strikes CJK fonts embed at small sizes.
+		for (int32 x = 0; x < Width; x++)
+		{
+			OutCoverage[x] = (Row[x >> 3] & (0x80 >> (x & 7))) ? 255 : 0;
+		}
+		break;
+	case FT_PIXEL_MODE_GRAY2:
+	case FT_PIXEL_MODE_GRAY4:
+	{
+		const int32 BitsPerPixel = InBitmap.pixel_mode == FT_PIXEL_MODE_GRAY2 ? 2 : 4;
+		const int32 MaxValue = (1 << BitsPerPixel) - 1;
+		const int32 PixelsPerByte = 8 / BitsPerPixel;
+		for (int32 x = 0; x < Width; x++)
+		{
+			const int32 Shift = 8 - BitsPerPixel * ((x % PixelsPerByte) + 1);
+			const int32 Value = (Row[x / PixelsPerByte] >> Shift) & MaxValue;
+			OutCoverage[x] = (uint8)(Value * 255 / MaxValue);
+		}
+		break;
+	}
+	case FT_PIXEL_MODE_BGRA:
+		// A colour strike: take its alpha, which is the coverage the atlas stores.
+		for (int32 x = 0; x < Width; x++)
+		{
+			OutCoverage[x] = Row[x * 4 + 3];
+		}
+		break;
+	default:
+		// LCD modes are not asked for anywhere here; leaving the row blank beats reading it as grey.
+		break;
+	}
 }
 
 FT_FaceRec_* UDreamUIFontData_FreeTypeRender::GetFreeTypeFace(int32 FaceIndex)
@@ -561,19 +622,44 @@ void UDreamUIFontData_FreeTypeRender::InitFont()
 #endif
 }
 
+#if WITH_FREETYPE
+namespace DreamFreeTypeMetricsLocal
+{
+	/**
+	 * FT_Set_Pixel_Sizes takes whole pixels, so a 16.9pt text was measured at 16: line height, ascent
+	 * and descent moved in steps under a scaled canvas instead of following the size. FT_Set_Char_Size
+	 * at 72dpi is the same request in 26.6 fixed point, which keeps the fraction. Sizes under a pixel
+	 * are clamped instead of reported: a widget that is momentarily zero-sized asks for one every
+	 * frame, and FreeType answers Invalid_Pixel_Size to every one of them.
+	 */
+	FT_Error SetMetricSize(FT_FaceRec_* InFace, float InFontSize)
+	{
+		const float Clamped = FMath::Max(InFontSize, 1.0f);
+		return FT_Set_Char_Size(InFace, 0, (FT_F26Dot6)FMath::RoundToInt(Clamped * 64.0f), 72, 72);
+	}
+}
+#endif
+
 float UDreamUIFontData_FreeTypeRender::GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)
 {
 #if WITH_FREETYPE
-	if (Face == nullptr)return 0;
 	if (!bHasKerning)return 0;
-	auto error = FT_Set_Pixel_Sizes(Face, 0, CharSize);
+	// Kerning is a property of one face: a pair is only kerned when both characters come from the same
+	// one. Asking the primary face for a pair it does not have (the CJK case, where both glyphs are on
+	// a fallback) used to return the primary's kerning for two .notdefs.
+	FDreamUIGlyphKey LeftKey, RightKey;
+	if (!ResolveCodepoint(LeftCharCode, LeftKey) || !ResolveCodepoint(RightCharCode, RightKey))return 0;
+	if (LeftKey.FaceIndex != RightKey.FaceIndex)return 0;
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(LeftKey.FaceIndex);
+	if (TargetFace == nullptr)return 0;
+	auto error = DreamFreeTypeMetricsLocal::SetMetricSize(TargetFace, CharSize);
 	if (error)
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Char_Size error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
 	FT_Vector kerning;
-	error = FT_Get_Kerning(Face, FT_Get_Char_Index(Face, LeftCharCode), FT_Get_Char_Index(Face, RightCharCode), FT_KERNING_DEFAULT, &kerning);
+	error = FT_Get_Kerning(TargetFace, LeftKey.GlyphIndex, RightKey.GlyphIndex, FT_KERNING_DEFAULT, &kerning);
 	if (error)
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Get_Kerning error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -584,40 +670,68 @@ float UDreamUIFontData_FreeTypeRender::GetKerning(uint32 LeftCharCode, uint32 Ri
 	return 0;
 #endif
 }
+
+bool UDreamUIFontData_FreeTypeRender::GetFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)
+{
+	return ComputeFaceMetrics(FaceIndex, FontSize, OutAscent, OutDescent, OutLineHeight);
+}
+
+bool UDreamUIFontData_FreeTypeRender::ComputeFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)
+{
+#if WITH_FREETYPE
+	// Every line asks for every face on it, every layout. The answer only changes when the font is
+	// reloaded, and DeinitFreeType drops the cache then.
+	const FFaceMetricsKey CacheKey{ FaceIndex, FontSize };
+	if (const FFaceMetricsValue* Cached = FaceMetricsCache.Find(CacheKey))
+	{
+		OutAscent = Cached->Ascent;
+		OutDescent = Cached->Descent;
+		OutLineHeight = Cached->LineHeight;
+		return true;
+	}
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+	if (TargetFace == nullptr)return false;
+	if (DreamFreeTypeMetricsLocal::SetMetricSize(TargetFace, FontSize))return false;
+	const float Ascender = TargetFace->size->metrics.ascender * ONE_DIVIDE_64;
+	const float Descender = -TargetFace->size->metrics.descender * ONE_DIVIDE_64;
+	// FontSizeAsLineHeight keeps the font's own proportions inside the smaller box.
+	if (LineHeightType == EDreamUIDynamicFontLineHeightType::FontSizeAsLineHeight)
+	{
+		const float Sum = Ascender + Descender;
+		OutAscent = Sum > 0.0f ? FontSize * (Ascender / Sum) : FontSize * 0.8f;
+		OutDescent = Sum > 0.0f ? FontSize * (Descender / Sum) : FontSize * 0.2f;
+		OutLineHeight = FontSize;
+	}
+	else
+	{
+		OutAscent = Ascender;
+		OutDescent = Descender;
+		OutLineHeight = LineHeightType == EDreamUIDynamicFontLineHeightType::FromFontFace
+			? (TargetFace->size->metrics.height * ONE_DIVIDE_64) : FontSize;
+	}
+	FaceMetricsCache.Add(CacheKey, FFaceMetricsValue{ OutAscent, OutDescent, OutLineHeight });
+	return true;
+#else
+	return false;
+#endif
+}
+
 float UDreamUIFontData_FreeTypeRender::GetLineHeight(float FontSize)
 {
 #if WITH_FREETYPE
-	if (Face == nullptr)return FontSize;
-	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
-	if (error)
-	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
-		return FontSize;
-	}
-	return LineHeightType == EDreamUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height * ONE_DIVIDE_64) : FontSize;
+	float Ascent = 0.0f, Descent = 0.0f, LineHeightValue = 0.0f;
+	if (!ComputeFaceMetrics(0, FontSize, Ascent, Descent, LineHeightValue))return FontSize;
+	return LineHeightValue;
 #else
-	return fontSize;
+	return FontSize;
 #endif
 }
 float UDreamUIFontData_FreeTypeRender::GetAscent(float FontSize)
 {
 #if WITH_FREETYPE
-	if (Face == nullptr)return Super::GetAscent(FontSize);
-	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
-	if (error)
-	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
-		return Super::GetAscent(FontSize);
-	}
-	// FontSizeAsLineHeight keeps the font's own proportions inside the smaller box.
-	const float Ascender = Face->size->metrics.ascender * ONE_DIVIDE_64;
-	if (LineHeightType == EDreamUIDynamicFontLineHeightType::FontSizeAsLineHeight)
-	{
-		const float Descender = -Face->size->metrics.descender * ONE_DIVIDE_64;
-		const float Sum = Ascender + Descender;
-		return Sum > 0.0f ? FontSize * (Ascender / Sum) : FontSize * 0.8f;
-	}
-	return Ascender;
+	float Ascent = 0.0f, Descent = 0.0f, LineHeightValue = 0.0f;
+	if (!ComputeFaceMetrics(0, FontSize, Ascent, Descent, LineHeightValue))return Super::GetAscent(FontSize);
+	return Ascent;
 #else
 	return Super::GetAscent(FontSize);
 #endif
@@ -626,21 +740,9 @@ float UDreamUIFontData_FreeTypeRender::GetAscent(float FontSize)
 float UDreamUIFontData_FreeTypeRender::GetDescent(float FontSize)
 {
 #if WITH_FREETYPE
-	if (Face == nullptr)return Super::GetDescent(FontSize);
-	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
-	if (error)
-	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
-		return Super::GetDescent(FontSize);
-	}
-	const float Descender = -Face->size->metrics.descender * ONE_DIVIDE_64;
-	if (LineHeightType == EDreamUIDynamicFontLineHeightType::FontSizeAsLineHeight)
-	{
-		const float Ascender = Face->size->metrics.ascender * ONE_DIVIDE_64;
-		const float Sum = Ascender + Descender;
-		return Sum > 0.0f ? FontSize * (Descender / Sum) : FontSize * 0.2f;
-	}
-	return Descender;
+	float Ascent = 0.0f, Descent = 0.0f, LineHeightValue = 0.0f;
+	if (!ComputeFaceMetrics(0, FontSize, Ascent, Descent, LineHeightValue))return Super::GetDescent(FontSize);
+	return Descent;
 #else
 	return Super::GetDescent(FontSize);
 #endif
@@ -650,15 +752,15 @@ float UDreamUIFontData_FreeTypeRender::GetVerticalOffset(float FontSize)
 {
 #if WITH_FREETYPE
 	if (Face == nullptr)return FontSize;
-	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
+	auto error = DreamFreeTypeMetricsLocal::SetMetricSize(Face, FontSize);
 	if (error)
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d FT_Set_Char_Size error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
 	return -((Face->size->metrics.ascender + Face->size->metrics.descender) * ONE_DIVIDE_64) * 0.5f;
 #else
-	return fontSize;
+	return FontSize;
 #endif
 }
 
@@ -710,6 +812,18 @@ void UDreamUIFontData_FreeTypeRender::SetEngineFont(UFontFace* Value)
 
 FDreamUICharData UDreamUIFontData_FreeTypeRender::GetCharData(uint32 CharCode, float CharSize, bool IsBold)
 {
+#if !WITH_FREETYPE
+	// Without FreeType every glyph is zero-sized and a whole run of text measures zero by zero. On a
+	// dedicated server that is the intended trade (DreamGUI.Build.cs), but it used to be entirely
+	// silent, so anyone who hit it on a client target had nothing to go on.
+	static bool bLoggedNoFreeType = false;
+	if (!bLoggedNoFreeType)
+	{
+		bLoggedNoFreeType = true;
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d This target was built without FreeType (WITH_FREETYPE=0), so no glyph has a size and every text measures zero by zero. (reported once)")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+	}
+#endif
 	FDreamUIGlyphKey Key;
 	if (!ResolveCodepoint(CharCode, Key))
 	{
@@ -781,11 +895,14 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 	{
 		Result.XAdvance += CharSize * GetBoldRatio();
 	}
+	// Which face answered, so the layout can size the line box against the face that is actually on it.
+	Result.FaceIndex = FaceIndex;
 	return Result;
 }
 
 bool UDreamUIFontData_FreeTypeRender::InsertGlyphBitmap(const FGlyphBitmap& InGlyphBitmap, FDreamUICharData& OutResult)
 {
+	bool bFlushedForThisGlyph = false;
 	for (int32 Attempt = 0; Attempt < 64; Attempt++)
 	{
 		if (PackRectAndInsertChar(InGlyphBitmap, BinPack, OutResult))
@@ -799,6 +916,28 @@ bool UDreamUIFontData_FreeTypeRender::InsertGlyphBitmap(const FGlyphBitmap& InGl
 		}
 		else//no free cells, move to next slice of Texture2DArray
 		{
+			const int32 MaxSlices = UDreamUISettings::GetMaxFontAtlasSlices();
+			if (Texture != nullptr && Texture->GetArraySize() >= MaxSlices)
+			{
+				// The atlas is as large as it is allowed to get. It used to fail the glyph from here
+				// on, for the rest of the session, because it only ever grew. A rect-packed atlas
+				// cannot give one glyph's rectangle to a glyph of another size without repacking, so
+				// there is no "evict the least recently used glyph" to do; what there is -- and what
+				// Slate's own font cache does when its atlas fills -- is to throw the whole cache away
+				// and let it refill on demand. Every text using this font re-lays-out, so this costs
+				// one frame and bounds the atlas for good.
+				if (bFlushedForThisGlyph)
+				{
+					UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, a %dx%d glyph does not fit an empty %d-slice atlas. Raise DreamUI's atlas texture size, or the font's rect-pack cell size.")
+						, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), (int32)InGlyphBitmap.width, (int32)InGlyphBitmap.height, MaxSlices);
+					return false;
+				}
+				bFlushedForThisGlyph = true;
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font:%s, the glyph atlas reached its %d-slice budget (DreamUI settings: Max Font Atlas Slices); flushing it and refilling on demand. Repeated flushes mean too many distinct glyphs or font sizes are live at once -- a bitmap font caches a separate glyph per size, and Best Fit walks several sizes per search.")
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), MaxSlices);
+				FlushGlyphAtlas();
+				continue;
+			}
 			CurrentTextureSlice++;
 			UE_LOG(DreamGUI, Log, TEXT("[%s].%d Expend Texture2DArray slice to: %d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Texture->GetArraySize() + 1);
 			//add new slice to Texture2DArray
@@ -821,6 +960,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::MakePendingCharData(const FDre
 {
 	FDreamUICharData Result;
 	Result.bPending = true;
+	Result.FaceIndex = Glyph.FaceIndex;
 #if WITH_FREETYPE
 	// The advance alone, unscaled, so the line lays out where it will end up once the quad lands.
 	if (FT_FaceRec_* TargetFace = GetFreeTypeFace(Glyph.FaceIndex))
@@ -860,6 +1000,39 @@ void UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(int32 Budg
 	SyncGlyphBudgetFrame = 0;
 }
 
+TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> UDreamUIFontData_FreeTypeRender::GetOrCreateSharedFaceBytes()
+{
+	if (SharedFaceBytes.IsValid())
+	{
+		return SharedFaceBytes;
+	}
+	const TArray<uint8>* Bytes = nullptr;
+	if (TempFontBinaryArray.Num() > 0)
+	{
+		Bytes = &TempFontBinaryArray;
+	}
+	else if (FontBinaryArray.Num() > 0)
+	{
+		Bytes = &FontBinaryArray;
+	}
+#if WITH_EDITOR
+	// In the editor an EngineFont keeps its bytes in the face asset and nowhere else -- both binary
+	// arrays are empty -- so the worker used to open no face at all and fail every job it was handed,
+	// silently, and the glyph never arrived.
+	else if (FontType == EDreamUIDynamicFontDataType::EngineFont
+		&& IsValid(EngineFont) && EngineFont->GetFontFaceData()->HasData())
+	{
+		Bytes = &EngineFont->GetFontFaceData()->GetData();
+	}
+#endif
+	if (Bytes == nullptr)
+	{
+		return nullptr;
+	}
+	SharedFaceBytes = MakeShared<const TArray<uint8>, ESPMode::ThreadSafe>(*Bytes);
+	return SharedFaceBytes;
+}
+
 FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
 {
 #if WITH_FREETYPE
@@ -884,27 +1057,11 @@ FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
 				if (Owner == nullptr || Owner == this)continue;
 				Owner->InitFreeType();
 			}
-			const TArray<uint8>* Bytes = nullptr;
-			if (Owner->TempFontBinaryArray.Num() > 0)
-			{
-				Bytes = &Owner->TempFontBinaryArray;
-			}
-			else if (Owner->FontBinaryArray.Num() > 0)
-			{
-				Bytes = &Owner->FontBinaryArray;
-			}
-#if WITH_EDITOR
-			// In the editor an EngineFont keeps its bytes in the face asset and nowhere else -- both
-			// binary arrays are empty -- so the worker used to open no face at all and fail every job
-			// it was handed, silently, and the glyph never arrived.
-			else if (Owner->FontType == EDreamUIDynamicFontDataType::EngineFont
-				&& IsValid(Owner->EngineFont) && Owner->EngineFont->GetFontFaceData()->HasData())
-			{
-				Bytes = &Owner->EngineFont->GetFontFaceData()->GetData();
-			}
-#endif
-			if (Bytes == nullptr)continue;
-			NewRasterizer->SetFaceSource(FaceIndex, MakeShared<const TArray<uint8>, ESPMode::ThreadSafe>(*Bytes), Owner->FontFace);
+			// One buffer per font asset, shared: this used to deep-copy the whole font file per face per
+			// rasterizer, and a CJK face is tens of megabytes.
+			const TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> Bytes = Owner->GetOrCreateSharedFaceBytes();
+			if (!Bytes.IsValid())continue;
+			NewRasterizer->SetFaceSource(FaceIndex, Bytes.ToSharedRef(), Owner->FontFace);
 			RegisteredFaces++;
 		}
 		if (RegisteredFaces == 0)
@@ -1054,11 +1211,6 @@ bool UDreamUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& 
 		return true;
 	}
 }
-void UDreamUIFontData_FreeTypeRender::ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)
-{
-
-}
-
 bool UDreamUIFontData_FreeTypeRender::EnsureFontTextureAtlasData(int32 SliceCount, int32 BytesPerPixel)
 {
 	if (SliceCount <= 0 || BytesPerPixel <= 0)

@@ -74,6 +74,12 @@ void UDreamUIFontData_BaseObject::PostEditChangeProperty(FPropertyChangedEvent& 
 void UDreamUIFontData_BaseObject::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	UObject::PreEditChange(PropertyAboutToChange);
+	// Null means "an undo is about to restore everything", which no per-property branch below can
+	// answer. See the note on UDreamWidget::PreEditChange.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
 	auto PropertyName = PropertyAboutToChange->GetFName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_BaseObject, EmojiData))
 	{

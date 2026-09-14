@@ -39,7 +39,8 @@ bool UDreamUIFontData_DistanceField::GetCharDataFromCache(const FDreamUIGlyphKey
 	if (auto charData = CharDataMap.Find(CharKey))
 	{
 		OutResult = FDreamUICharData(*charData);
-		const float vertexOffset = GetQuadShrinkTexels();
+		// Layout time: PrepareForLayout has just put the laying-out text's expand size on the font.
+		const float vertexOffset = GetQuadShrinkTexels(ExpandMeshSize);
 		OutResult.Width -= vertexOffset + vertexOffset;
 		OutResult.Height -= vertexOffset + vertexOffset;
 		OutResult.XOffset += vertexOffset;
@@ -92,8 +93,11 @@ bool UDreamUIFontData_DistanceField::RenderGlyph(const FDreamUIGlyphKey& Glyph, 
 	//auto time = FDateTime::Now();
 	int glyphWidth = slot->bitmap.width + SDFRadius + SDFRadius;
 	int glyphHeight = slot->bitmap.rows + SDFRadius + SDFRadius;
-	static TArray<unsigned char> sourceBuffer;
-	static TArray<unsigned char> sdfTemp;
+	// Locals, not statics: a static here is shared state that nothing serialises (the game-thread check
+	// in GetGlyphData is all that ever made it safe) and that stays resident at the largest glyph the
+	// process ever drew. The distance field build below dwarfs the allocation.
+	TArray<unsigned char> sourceBuffer;
+	TArray<unsigned char> sdfTemp;
 	sourceBuffer.SetNumUninitialized(glyphWidth * glyphHeight);
 	sdfTemp.SetNumUninitialized(sourceBuffer.Num() * sizeof(float) * 3);
 	TArray<unsigned char> sdfResult;
@@ -101,12 +105,12 @@ bool UDreamUIFontData_DistanceField::RenderGlyph(const FDreamUIGlyphKey& Glyph, 
 	FMemory::Memzero(sourceBuffer.GetData(), sourceBuffer.Num());
 	FMemory::Memzero(sdfResult.GetData(), sourceBuffer.Num());
 	int sourceBufferOffset = SDFRadius * glyphWidth + SDFRadius;
-	int freetypeBufferOffset = 0;
+	// Through ReadGlyphRow: the rows are `pitch` bytes apart (a negative pitch runs them bottom-up) and
+	// a strike embedded in the font is 1 bit per pixel, neither of which a flat memcpy of width bytes is.
 	for (int h = 0, maxH = slot->bitmap.rows, maxW = slot->bitmap.width; h < maxH; h++)
 	{
-		FMemory::Memcpy(sourceBuffer.GetData() + sourceBufferOffset, slot->bitmap.buffer + freetypeBufferOffset, maxW);
+		UDreamUIFontData_FreeTypeRender::ReadGlyphRow(slot->bitmap, h, sourceBuffer.GetData() + sourceBufferOffset, maxW);
 		sourceBufferOffset += glyphWidth;
-		freetypeBufferOffset += maxW;
 	}
 	sdfBuildDistanceFieldNoAlloc(sdfResult.GetData(), glyphWidth, SDFRadius, sourceBuffer.GetData(), glyphWidth, glyphHeight, glyphWidth, sdfTemp.GetData());
 	//UE_LOG(DreamGUI, Error, TEXT("Gen sdf time: %f(ms)"), (FDateTime::Now() - time).GetTotalMilliseconds());
@@ -128,8 +132,9 @@ void UDreamUIFontData_DistanceField::ClearCharDataCache()
 	// Kerning is cached at SampleFontSize off the same face the char data came from, so it goes stale
 	// with it: a reloaded or re-faced font kept the old pairs forever.
 	KerningPairsMap.Empty();
+	// Ascent and descent are no longer cached here: they come from the base class's per-face cache,
+	// which DeinitFreeType drops, so they cannot survive a reload the way these two used to.
 	LineHeight = VerticalOffset = -1;
-	CachedAscent = CachedDescent = -1.0f;
 }
 
 UTexture2DArray* UDreamUIFontData_DistanceField::CreateFontTexture(int InTextureSize, int InSliceCount)
@@ -172,35 +177,21 @@ UTexture2DArray* UDreamUIFontData_DistanceField::CreateFontTexture(int InTexture
 	return NewTexture;
 }
 
-void UDreamUIFontData_DistanceField::ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)
-{
-	Super::ApplyPackingAtlasTextureExpand(newTexture, newTextureSize);
-	//scale down uv of prev chars
-	for (auto& charDataItem : CharDataMap)
-	{
-		auto& mapValue = charDataItem.Value;
-		mapValue.MinUV.X *= 0.5f;
-		mapValue.MaxUV.Y *= 0.5f;
-		mapValue.MaxUV.X *= 0.5f;
-		mapValue.MinUV.Y *= 0.5f;
-	}
-}
-
 void UDreamUIFontData_DistanceField::PrepareForLayout(float InExpandMeshSize)
 {
 	OneDivideFontSize = 1.0f / SampleFontSize;
 	ExpandMeshSize = InExpandMeshSize;
 }
 
-float UDreamUIFontData_DistanceField::GetQuadShrinkTexels() const
+float UDreamUIFontData_DistanceField::GetQuadShrinkTexels(float InExpandMeshSize) const
 {
 	// Shrink the quad to the glyph to cut the empty area of the spread; 0.02 em stays so an edge
 	// right at the bounds still has its anti-aliasing band. ExpandMeshSize keeps that much of the spread.
-	const float Keep = ExpandMeshSize > 0 ? ExpandMeshSize : 0.0f;
+	const float Keep = InExpandMeshSize > 0 ? InExpandMeshSize : 0.0f;
 	return (SDFRadius - Keep) - SampleFontSize * 0.02f;
 }
 
-FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(const FVector2f& InWorldScale) const
+FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(const FVector2f& InWorldScale, float InExpandMeshSize) const
 {
 	FDreamTextGlyphPaintStyle Style;
 	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
@@ -210,7 +201,7 @@ FDreamTextGlyphPaintStyle UDreamUIFontData_DistanceField::GetGlyphPaintStyle(con
 	Style.bDistanceField = true;
 	Style.EmTexels = (float)SampleFontSize;
 	Style.FieldSpreadTexels = (float)SDFRadius;
-	Style.QuadMarginTexels = SDFRadius - GetQuadShrinkTexels();
+	Style.QuadMarginTexels = SDFRadius - GetQuadShrinkTexels(InExpandMeshSize);
 	Style.TexelToUV = OneDivideTextureSize;
 	Style.BoldDilateEm = BoldRatio * 0.5f;
 	return Style;
@@ -232,11 +223,13 @@ float UDreamUIFontData_DistanceField::GetKerning(uint32 leftCharIndex, uint32 ri
 }
 float UDreamUIFontData_DistanceField::GetLineHeight(float fontSize)
 {
-	if (LineHeight == -1)
-	{
-		LineHeight = Super::GetLineHeight(SampleFontSize);
-	}
-	return LineHeight * fontSize * OneDivideFontSize;
+	// Through GetFaceMetrics, which is where the sample-size-to-font-size scaling lives and which the
+	// base class caches per face and size. The three members that used to cache these were never
+	// dropped on a reload, so a font swapped in the editor kept the old face's metrics.
+	float Ascent = 0.0f, Descent = 0.0f, LineHeightValue = 0.0f;
+	if (!GetFaceMetrics(0, fontSize, Ascent, Descent, LineHeightValue))return fontSize;
+	LineHeight = LineHeightValue;//shown in the details panel
+	return LineHeightValue;
 }
 float UDreamUIFontData_DistanceField::GetVerticalOffset(float fontSize)
 {
@@ -248,21 +241,34 @@ float UDreamUIFontData_DistanceField::GetVerticalOffset(float fontSize)
 }
 float UDreamUIFontData_DistanceField::GetAscent(float fontSize)
 {
-	if (CachedAscent < 0.0f)
-	{
-		CachedAscent = Super::GetAscent(SampleFontSize);
-	}
 	// A positive AdditionalVerticalOffset lifts the glyphs: the baseline moves up inside the same box.
-	return (CachedAscent - AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
+	// GetFaceMetrics applies it, and the base class's cache is the one that survives a reload.
+	float Ascent = 0.0f, Descent = 0.0f, LineHeightValue = 0.0f;
+	if (!GetFaceMetrics(0, fontSize, Ascent, Descent, LineHeightValue))return Super::GetAscent(fontSize);
+	return Ascent;
 }
 float UDreamUIFontData_DistanceField::GetDescent(float fontSize)
 {
-	if (CachedDescent < 0.0f)
-	{
-		CachedDescent = Super::GetDescent(SampleFontSize);
-	}
-	return (CachedDescent + AdditionalVerticalOffset) * fontSize * OneDivideFontSize;
+	float Ascent = 0.0f, Descent = 0.0f, LineHeightValue = 0.0f;
+	if (!GetFaceMetrics(0, fontSize, Ascent, Descent, LineHeightValue))return Super::GetDescent(fontSize);
+	return Descent;
 }
+bool UDreamUIFontData_DistanceField::GetFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)
+{
+	// The field is rasterized once, at SampleFontSize, so every metric of every face is that one scaled
+	// linearly -- the same arithmetic GetAscent/GetDescent/GetLineHeight do for the primary face.
+	float SampleAscent = 0.0f, SampleDescent = 0.0f, SampleLineHeight = 0.0f;
+	if (!Super::GetFaceMetrics(FaceIndex, (float)SampleFontSize, SampleAscent, SampleDescent, SampleLineHeight))
+	{
+		return false;
+	}
+	const float Scale = FontSize * OneDivideFontSize;
+	OutAscent = (SampleAscent - AdditionalVerticalOffset) * Scale;
+	OutDescent = (SampleDescent + AdditionalVerticalOffset) * Scale;
+	OutLineHeight = SampleLineHeight * Scale;
+	return true;
+}
+
 UMaterialInterface* UDreamUIFontData_DistanceField::GetFontMaterial()
 {
 	return nullptr;

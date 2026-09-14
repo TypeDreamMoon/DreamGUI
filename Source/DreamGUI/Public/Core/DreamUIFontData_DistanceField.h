@@ -99,8 +99,6 @@ private:
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI", Transient)
 		float VerticalOffset = -1;
 	/** Ascent and descent at SampleFontSize; negative means not cached yet. */
-	float CachedAscent = -1.0f;
-	float CachedDescent = -1.0f;
 	UPROPERTY(EditAnywhere, Transient, Category = "DreamGUI", Transient)
 	float AdditionalVerticalOffset = 0.0f;
 
@@ -108,10 +106,11 @@ public:
 	//Begin UDreamUIFontData_BaseObject interface
 	virtual UMaterialInterface* GetFontMaterial()override;
 	virtual void PrepareForLayout(float InExpandMeshSize)override;
-	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale) const override;
+	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale, float InExpandMeshSize) const override;
 	virtual float GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize) override;
 	virtual float GetLineHeight(float fontSize) override;
 	virtual float GetVerticalOffset(float fontSize) override;
+	virtual bool GetFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight) override;
 	virtual float GetAscent(float fontSize) override;
 	virtual float GetDescent(float fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
@@ -130,10 +129,16 @@ public:
 		return true;
 	}
 	virtual bool IsGlyphCacheSizeIndependent() const override { return true; }
+	/**
+	 * No cap. The 200 the rasterizing base class imposes exists because a large size means a large
+	 * bitmap; a field is rasterized once at SampleFontSize and scaled linearly from there, so the cap
+	 * bought nothing and cost a silently smaller glyph for every size above it.
+	 */
+	virtual float GetFontSizeLimit() override { return MAX_FLT; }
 	/** Both fields render bold as a dilation; the atlas holds one glyph per face. */
 	virtual bool IsBoldSynthesizedInShader() const override { return true; }
 	/** How far the layout's glyph quads sit inside the field's spread, in texels at SampleFontSize (see GetCharDataFromCache). */
-	float GetQuadShrinkTexels() const;
+	float GetQuadShrinkTexels(float InExpandMeshSize) const;
 	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}
@@ -144,7 +149,6 @@ protected:
 	// those to zero, and the first (uncached) call disagreed with every later one. Not serialized.
 	TMap<FDreamUIDistanceFieldFontKerningPair, float> KerningPairsMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
-	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
 	virtual bool GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)override;
 	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
