@@ -4,12 +4,37 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Interaction/DreamUINavigationScope.h"
 #include "DreamDialog.generated.h"
 
 class UDreamButton;
+class UDreamDialog;
 class UDreamWidget;
+class UUIButton;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamDialogResultEvent, FName, Result);
+
+/**
+ * The navigation scope a STANDALONE dialog wears, so Back closes it.
+ *
+ * Only ever added when no host is already scrimming -- see UDreamDialog::RefreshDimmer. Under
+ * UDreamUIModalSubsystem the LAYER carries UDreamUIModalScope and that scope's contract ("Back means
+ * close with the Back result") is the one in force; putting a second scope on top of it would
+ * silently change which result a hosted dialog answers Back with, which is a promise the subsystem
+ * makes to whoever called ShowModal and not this control's to break.
+ */
+UCLASS(NotBlueprintable, HideDropdown)
+class DREAMGUI_API UDreamDialogScope : public UDreamUINavigationScope
+{
+	GENERATED_BODY()
+
+public:
+	virtual bool HandleBackAction_Implementation() override;
+
+	/** The dialog this scope belongs to. Set by it, right after the scope is added. */
+	UPROPERTY(Transient)
+	TWeakObjectPtr<UDreamDialog> OwnerDialog;
+};
 
 /**
  * One button in a dialog's row: what it says, what it answers, and whether it is the loud one.
@@ -103,17 +128,75 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
 	FDreamDialogStyle Style;
 
-	/** Empty puts the title away entirely rather than reserving a blank line for it. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	/**
+	 * Empty puts the title away entirely rather than reserving a blank line for it.
+	 *
+	 * BlueprintSetter, like every writable knob on this control: nothing re-derives a control from a
+	 * property that changed (the SynchronizeProperties tax UDreamUIControl documents), so a runtime
+	 * write straight onto the variable moved the text and left the panel saying the old thing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTitle", BlueprintSetter = "SetTitle", Category = "Dialog")
 	FText Title;
 
 	/** The built-in occupant of the content area. Empty puts it away; the area stays for other content. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMessage", BlueprintSetter = "SetMessage", Category = "Dialog")
 	FText Message;
 
-	/** One Native.Button per entry, left to right. Seeded with Cancel + OK; see the class comment. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	/**
+	 * One Native.Button per entry, left to right. Seeded with Cancel + OK; see the class comment.
+	 *
+	 * BlueprintReadOnly rather than a BlueprintSetter pair, which is the other half of the same
+	 * rule: the specs are what the button WIDGETS are made from, so a Blueprint writing this array
+	 * in place used to change the data and leave the row built from the old copy -- a dialog showing
+	 * buttons it no longer has. SetButtons is the way in, and it reconciles the widgets. The designer
+	 * and .dui still author it directly (EditAnywhere), where PostEditChangeProperty does the same.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dialog")
 	TArray<FDreamDialogButton> Buttons;
+
+	/**
+	 * What Close is called with when the dialog is cancelled rather than answered -- RequestCancel,
+	 * and whatever a project routes Escape or Back to.
+	 *
+	 * None (the default) resolves it from the button row instead of guessing: the first NON-primary
+	 * button's result, because that is what "Cancel" is in every row this control builds, falling
+	 * back to the last button's and finally to "Cancel". Naming it explicitly wins over all of that.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	FName CancelResult;
+
+	/**
+	 * Put focus on the default button when the dialog appears.
+	 *
+	 * The default button is the PRIMARY one (the confirming one, by convention), or the last in the
+	 * row when none is marked. Without this a dialog opened with a gamepad came up with focus
+	 * wherever the previous screen left it, so the first press went to a control behind the scrim.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	bool bFocusDefaultButton = true;
+
+	/**
+	 * Back (Escape, or the pad's B) closes this dialog with its cancel result.
+	 *
+	 * Only while STANDALONE. Hosted by UDreamUIModalSubsystem the modal layer's own scope already
+	 * answers Back -- with the "Back" result its header promises whoever called ShowModal -- and a
+	 * second scope on top of it would quietly change that answer. So this fills the hole the
+	 * subsystem does not cover rather than overruling the half it does.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	bool bCloseOnBack = true;
+
+	/**
+	 * Clicking the dimmer closes the dialog with its cancel result -- the "click outside to dismiss"
+	 * every desktop dialog has.
+	 *
+	 * Off by default, and deliberately: a dialog asking a question that MATTERS ("delete this save?")
+	 * must not be dismissable by a stray click, which is why UMG's own dialogs make this opt-in too.
+	 * Only ever reachable while the dialog's own dimmer is up -- under the modal subsystem the layer
+	 * is what eats clicks, and it is not this control's to put a button on.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	bool bCloseOnDimmerClick = false;
 
 	/**
 	 * Whether this dialog darkens the screen itself.
@@ -122,7 +205,7 @@ public:
 	 * subsystem's layer) is honoured automatically at construct time, so leaving this on costs a
 	 * modal dialog nothing. False is the opt-out for a dialog deliberately shown over a live screen.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShowDimmer", BlueprintSetter = "SetShowDimmer", Category = "Dialog")
 	bool bShowDimmer = true;
 
 	/** The dialog closed, however it closed. Fires exactly once, BEFORE the modal host tears it down. */
@@ -134,14 +217,73 @@ public:
 	FDreamDialogResultEvent OnButtonClicked;
 
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	FText GetTitle() const { return Title; }
+
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	void SetTitle(const FText& InTitle);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	FText GetMessage() const { return Message; }
 
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	void SetMessage(const FText& InMessage);
 
+	UFUNCTION(BlueprintPure, Category = "Dialog")
+	TArray<FDreamDialogButton> GetButtons() const { return Buttons; }
+
 	/** Replace the button row wholesale; the widgets are rebuilt from the new specs at once. */
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	void SetButtons(const TArray<FDreamDialogButton>& InButtons);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	bool GetShowDimmer() const { return bShowDimmer; }
+
+	/**
+	 * Whether this dialog darkens the screen itself, re-decided at once.
+	 *
+	 * A setter because the knob used to be read in exactly one place -- the construct-time host
+	 * arrangement -- so turning it off in the designer or at runtime changed nothing anyone could
+	 * see until the next time the dialog was built.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void SetShowDimmer(bool bInShowDimmer);
+
+	/**
+	 * The result this dialog answers with when it is cancelled rather than answered: CancelResult
+	 * when it names one, and otherwise the button row's own cancel (see CancelResult).
+	 */
+	UFUNCTION(BlueprintPure, Category = "Dialog")
+	FName ResolveCancelResult() const;
+
+	/**
+	 * Close with that result. What a project's Escape or Back handler calls, and what a scrim click
+	 * would call -- this control does not route either itself (see the class comment).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void RequestCancel();
+
+	/**
+	 * Put focus on the default button now. Called for you at construct while bFocusDefaultButton is
+	 * on; public because a dialog whose buttons were replaced after it appeared has a new default.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void FocusDefaultButton();
+
+	/** The primary button, or the last one when none is marked, or null for an empty row. */
+	UFUNCTION(BlueprintPure, Category = "Dialog")
+	UDreamButton* GetDefaultButton() const;
+
+	/**
+	 * Answer as the default button would -- UMG's "Enter presses the default".
+	 *
+	 * Enter already reaches a FOCUSED button as a click (it is one of the standalone input actor's
+	 * navigation trigger keys), and bFocusDefaultButton puts focus there when the dialog opens, so
+	 * the ordinary case needs nothing. This is the same answer for the case where focus has since
+	 * moved somewhere that is not a button at all -- a body slot's text field, say -- and for code
+	 * that wants to confirm without a pointer.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void SubmitDefaultButton();
 
 	/**
 	 * End the dialog with InResult.
@@ -193,6 +335,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
 	TArray<TObjectPtr<UDreamButton>> ButtonWidgets;
 
+	/** The dimmer's click surface, added only while bCloseOnDimmerClick asks for one. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
+	TObjectPtr<UUIButton> DimmerBehaviour = nullptr;
+
+	/** The Back handler, added only while standalone. See UDreamDialogScope. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
+	TObjectPtr<UDreamDialogScope> BackScope = nullptr;
+
 protected:
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
 	virtual void RealizeBuiltIn() override;
@@ -214,12 +364,35 @@ private:
 	/** Destroy the current button widgets and build one Native.Button per spec. */
 	void RebuildButtons();
 
+	/**
+	 * Whether the built widgets still answer the specs -- a different COUNT, or a button whose result
+	 * moved (the click binding carries the result it was built with, so that name is structural).
+	 *
+	 * The gate on rebuilding. Everything else a spec can say -- the label, which one is primary -- is
+	 * re-pushed by PushButtonStyles without destroying anything, and destroying widgets is what the
+	 * list measured at ~40ms a keystroke: it dirties the outliner and the designer force-refreshes
+	 * its details view on top of that. Dragging a colour slider must not rebuild a button row.
+	 */
+	bool ButtonWidgetsAreStale() const;
+
 	/** Push the resolved dialog style's Button/PrimaryButton into the built buttons. */
 	void PushButtonStyles(const FDreamDialogStyle& InActive);
 
 	/** Fill the parent (when nothing else is arranging us) and decide whether our dimmer is needed. */
 	void RefreshHostArrangement();
 
+	/**
+	 * The dimmer half of that, alone: bShowDimmer, narrowed by whether a host is already scrimming.
+	 *
+	 * Separate because the style push calls it on every restyle and the other half WRITES this
+	 * widget's anchors -- re-stretching a dialog somebody had since positioned is not a thing a
+	 * colour edit may do.
+	 */
+	void RefreshDimmer();
+
 	/** Bound per button with its result as the payload; the control-level event carries none. */
 	void HandleButtonClicked(FName InResult);
+
+	/** A click on the scrim, while bCloseOnDimmerClick asked for one to mean something. */
+	void HandleDimmerClicked();
 };

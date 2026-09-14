@@ -18,6 +18,7 @@
 #include "Interaction/UIToggleGroup.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
+#include "UObject/UnrealType.h"
 
 /*
  * The tab view, aimed the same way as the rest of the control suite: at the wiring that fails
@@ -469,6 +470,141 @@ bool FDreamControlTabViewStyleTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("and so is a tab"), TabRect->GetCornerRadius().X, 3.0f);
 	}
+	return true;
+}
+
+/**
+ * An index past the end of the strip must not survive in the property.
+ *
+ * It was clamped at the floor only. Every READER then clamped the top for its own pass -- the strip
+ * lights a real tab, the switcher resolves against its child count -- so nothing looked wrong while
+ * the property, the OnTabChanged broadcast and any two-way binding all carried a number no tab has.
+ * Two ways that bites: a caller reading the index back gets a lie, and adding a page later makes the
+ * selection jump to it for no reason a reader can see.
+ *
+ * The FLOOR-only half of the old rule stays where there is no strip yet, and that is not an
+ * oversight: this property is documented as a REQUEST, because an index is routinely authored before
+ * the pages attach and the switcher resolves it at layout time. Clamping against an empty strip
+ * would turn every such author into a zero.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlTabViewIndexClampTest,
+	"DreamGUI.Controls.TabView.AnIndexPastTheStripSettlesOnTheLastTabInsteadOfLivingInTheProperty",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlTabViewIndexClampTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTabViewTestLocal;
+
+	// No labels and no pages, so no strip: the request is stored untouched, which is the contract the
+	// switcher relies on for an index authored before the pages attach.
+	TDreamTestControl<UDreamTabView> Early(NewObject<UDreamTabView>(GetTransientPackage()));
+	Early->Initialize();
+	if (!TestEqual(TEXT("an empty tab view has no strip"), Early->Tabs.Num(), 0))
+	{
+		return false;
+	}
+	Early->SetActiveTabIndexWithoutNotify(4);
+	TestEqual(TEXT("with no tabs yet the request is kept"), Early->GetActiveTabIndex(), 4);
+
+	TDreamTestControl<UDreamTabView> View(NewObject<UDreamTabView>(GetTransientPackage()));
+	View->TabLabels = { MakeLabel(TEXT("Video")), MakeLabel(TEXT("Audio")), MakeLabel(TEXT("Controls")) };
+	View->Initialize();
+	if (!TestEqual(TEXT("three labels made three tabs"), View->Tabs.Num(), 3))
+	{
+		return false;
+	}
+
+	View->SetActiveTabIndex(99);
+	TestEqual(TEXT("an index past the strip settles on the last tab"), View->GetActiveTabIndex(), 2);
+	TestTrue(TEXT("and that tab is the lit one"),
+		View->Tabs[2].Toggle != nullptr && View->Tabs[2].Toggle->GetValue());
+
+	View->SetActiveTabIndex(-3);
+	TestEqual(TEXT("and a negative one settles on the first"), View->GetActiveTabIndex(), 0);
+
+	// The strip shrinking is an upper bound moving. A request that was legal must not be left
+	// pointing past the end of the row that replaced it.
+	View->SetActiveTabIndex(2);
+	View->SetTabLabels({ MakeLabel(TEXT("Only")) });
+	TestEqual(TEXT("a shorter strip brings the index back into it"), View->GetActiveTabIndex(), 0);
+	return true;
+}
+
+/**
+ * A details-panel edit must not destroy and re-create the strip.
+ *
+ * The same claim, and the same ~40ms, as the list's and the dialog's: widget churn dirties the UI
+ * outliner and the designer force-refreshes its details view on top of it. This control rebuilt on
+ * EVERY PostEditChangeProperty, so dragging TabSpacing re-created every tab a frame at a time -- and
+ * threw away whatever a consumer had hung on a tab from OnTabGenerated each time.
+ *
+ * A strip of the wrong LENGTH is the case that does need rebuilding, and it still does.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlTabViewEditKeepsItsTabs,
+	"DreamGUI.Controls.TabView.EditingAPropertyRestylesTheStripWithoutRebuildingIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlTabViewEditKeepsItsTabs::RunTest(const FString& Parameters)
+{
+	using namespace DreamTabViewTestLocal;
+
+	TDreamTestControl<UDreamTabView> View(NewObject<UDreamTabView>(GetTransientPackage()));
+	View->StyleSource = EDreamUIStyleSource::Inline;
+	View->TabLabels = { MakeLabel(TEXT("Video")), MakeLabel(TEXT("Audio")) };
+	View->Initialize();
+	if (!TestEqual(TEXT("two labels made two tabs"), View->Tabs.Num(), 2))
+	{
+		return false;
+	}
+	TArray<UDreamWidget*> Before;
+	for (const FDreamTabViewTab& Tab : View->Tabs)
+	{
+		Before.Add(Tab.TabNode.Get());
+	}
+
+	// One details-panel edit, on a property that says nothing about how many tabs there are.
+	View->Style.TabSpacing = 11.0f;
+	FProperty* StyleProperty = UDreamTabView::StaticClass()->FindPropertyByName(
+		GET_MEMBER_NAME_CHECKED(UDreamTabView, Style));
+	if (!TestNotNull(TEXT("the style property is reflected"), StyleProperty))
+	{
+		return false;
+	}
+	FPropertyChangedEvent StyleEdit(StyleProperty);
+	// Through the BASE pointer, the road the editor takes.
+	static_cast<UObject*>(View.Get())->PostEditChangeProperty(StyleEdit);
+
+	if (!TestEqual(TEXT("the strip did not change length"), View->Tabs.Num(), Before.Num()))
+	{
+		return false;
+	}
+	for (int32 Index = 0; Index < Before.Num(); ++Index)
+	{
+		TestTrue(FString::Printf(TEXT("tab %d is the same widget it was"), Index),
+			(UObject*)View->Tabs[Index].TabNode.Get() == (UObject*)Before[Index]);
+	}
+
+	// Re-wording a caption is a push, not a rebuild -- ApplyStyle re-reads every label.
+	View->TabLabels[0] = MakeLabel(TEXT("Display"));
+	FProperty* LabelsProperty = UDreamTabView::StaticClass()->FindPropertyByName(
+		GET_MEMBER_NAME_CHECKED(UDreamTabView, TabLabels));
+	FPropertyChangedEvent LabelEdit(LabelsProperty);
+	static_cast<UObject*>(View.Get())->PostEditChangeProperty(LabelEdit);
+	TestTrue(TEXT("re-wording a caption does not rebuild its tab"),
+		(UObject*)View->Tabs[0].TabNode.Get() == (UObject*)Before[0]);
+	if (UDreamText* Caption = Cast<UDreamText>(View->Tabs[0].LabelNode->GetVisual()))
+	{
+		TestEqual(TEXT("but the new caption arrived"),
+			Caption->GetText().ToString(), FString(TEXT("Display")));
+	}
+
+	// A caption ADDED is a strip of a different length, and that does rebuild.
+	View->TabLabels.Add(MakeLabel(TEXT("Controls")));
+	FPropertyChangedEvent CountEdit(LabelsProperty);
+	static_cast<UObject*>(View.Get())->PostEditChangeProperty(CountEdit);
+	TestEqual(TEXT("adding a caption grows the strip"), View->Tabs.Num(), 3);
 	return true;
 }
 

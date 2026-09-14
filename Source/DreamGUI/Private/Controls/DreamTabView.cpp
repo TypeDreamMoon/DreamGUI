@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Controls/DreamTabView.h"
+#include "DreamGUI.h"
 
 #include "Core/DreamUIWidgetRegistry.h"
 
@@ -14,6 +15,10 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamEventSystem.h"
+#include "Event/DreamPointerEventData.h"
+#include "Interaction/UIButton.h"
+#include "Interaction/UISelectable.h"
 #include "Interaction/UIToggle.h"
 #include "Interaction/UIToggleGroup.h"
 
@@ -194,6 +199,7 @@ void UDreamTabView::RebuildTabs()
 		UDreamWidget* TabRoot = nullptr;
 		UDreamWidget* SelectedPlate = nullptr;
 		UDreamWidget* Label = nullptr;
+		UDreamWidget* CloseFace = nullptr;
 		UUIToggle* Toggle = nullptr;
 
 		// Realized into this control's own tree and parented to the strip: the builder attaches with
@@ -234,7 +240,37 @@ void UDreamTabView::RebuildTabs()
 						{
 							InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 							InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
-						})),
+						}),
+					// The close button, asleep unless the view offers closing. Last in the overlay so
+					// it draws over the label, and right-aligned inside it so it sits in the corner
+					// every browser puts it in rather than over the caption's middle.
+					Node<UDreamRectBlock>(FName(*FString::Printf(TEXT("Tab_%d_Close"), Index))).Out(CloseFace)
+						.Self([](UDreamWidget& InClose) { InClose.SetWidgetActive(false); })
+						.With<UDreamLayoutContainerOverlay>()
+						.Slot([](UDreamPanelSlot& InSlot)
+						{
+							InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Right);
+							InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
+						})
+						.Children(
+							DreamUI::Text(FName(*FString::Printf(TEXT("Tab_%d_CloseGlyph"), Index)))
+								.Visual([](UDreamText& InText)
+								{
+									// ASCII, and for the reason the spin box's minus is: U+2715 and
+									// its neighbours are not proven to exist in the default SDF font
+									// and a missing code point draws a tofu box rather than nothing.
+									// A lowercase x reads as a close button at this size and cannot
+									// be missing. A project wanting a real glyph supplies a tab
+									// template.
+									InText.SetText(FText::AsCultureInvariant(TEXT("x")));
+									InText.SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
+									InText.SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
+								})
+								.Slot([](UDreamPanelSlot& InSlot)
+								{
+									InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
+									InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
+								}))),
 			StripNode);
 
 		FDreamTabViewTab& Entry = Tabs.AddDefaulted_GetRef();
@@ -242,6 +278,21 @@ void UDreamTabView::RebuildTabs()
 		Entry.SelectedNode = SelectedPlate;
 		Entry.LabelNode = Label;
 		Entry.Toggle = Toggle;
+		Entry.CloseNode = CloseFace;
+		if (CloseFace != nullptr)
+		{
+			Entry.CloseBehaviour = EnsureComponent<UUIButton>(CloseFace);
+			if (Entry.CloseBehaviour != nullptr)
+			{
+				Entry.CloseBehaviour->SetTransitionTarget(CloseFace->GetVisual());
+				// The INDEX as the payload, captured at build time -- and safe to capture precisely
+				// because the strip is rebuilt whenever its length changes, so no binding outlives
+				// the numbering it was made under. (The dialog's buttons capture a result NAME for
+				// the opposite reason: its row is rebound rather than rebuilt.)
+				Entry.CloseBehaviour->GetOnClickEvent().AddUObject(
+					this, &UDreamTabView::HandleCloseClicked, Index);
+			}
+		}
 
 		if (Toggle != nullptr)
 		{
@@ -265,8 +316,10 @@ void UDreamTabView::RebuildTabs()
 		// Before registration, so the whole tab registers once as a piece.
 		if (TabTemplateClass != nullptr && GetWorld() != nullptr && IsValid(TabRoot))
 		{
+			bool bHasAuthoredContent = false;
 			if (UDreamUserWidget* Content = CreateDreamWidget(GetWorld(), TabTemplateClass, TabRoot))
 			{
+				bHasAuthoredContent = true;
 				Content->SetDisplayName(TEXT("TabContent"));
 				if (UDreamPanelSlot* ContentSlot = Content->GetPanelSlot())
 				{
@@ -275,8 +328,12 @@ void UDreamTabView::RebuildTabs()
 				}
 			}
 			// The stock label and the supplied content are two answers to what is on this tab, laid
-			// over each other in the same overlay -- the same rule the content slots follow.
-			if (Label != nullptr)
+			// over each other in the same overlay -- the same rule the content slots follow. Gated on
+			// the content EXISTING rather than on having meant to make it: instancing can fail (an
+			// abstract class, a class that would be its own template), and a tab that answered "a
+			// template drew this one" while holding nothing is a blank page tab. UDreamListViewBase's
+			// BindRow and UDreamDropdown's item hook decide the same question the same way.
+			if (bHasAuthoredContent && Label != nullptr)
 			{
 				Label->SetWidgetActive(false);
 			}
@@ -289,6 +346,12 @@ void UDreamTabView::RebuildTabs()
 
 		OnTabGenerated.Broadcast(Index, TabRoot);
 	}
+
+	// A strip that just changed length is an upper bound that just changed, so a request that is now
+	// out of range settles HERE -- before ApplyStyle pushes it into the switcher and the toggles.
+	// The field rather than the setter, because ApplyStyle ends in the ApplyActiveTab the setter
+	// would have made, and pushing the same index twice is work nobody asked for.
+	ActiveTabIndex = SanitizeTabIndex(ActiveTabIndex);
 
 	ApplyStyle();
 }
@@ -341,11 +404,31 @@ void UDreamTabView::ApplyStyle()
 			// The padding is the LABEL's, which is what makes the tab's Auto width hug its text.
 			LabelSlot->SetPadding(Active.TabPadding);
 		}
+		// The close button wakes with the view's own offer, and wears the tab's colours: it is the
+		// same furniture, and a second set of style fields for it would say the same thing again.
+		if (Tab.CloseNode != nullptr)
+		{
+			Tab.CloseNode->SetWidgetActive(bTabsClosable);
+			if (bTabsClosable)
+			{
+				SizeFace(Tab.CloseNode, FVector2D(Active.TabHeight * 0.5, Active.TabHeight * 0.5));
+				ShapeFace(Tab.CloseNode, Active.CornerRadius);
+				if (Tab.CloseBehaviour != nullptr)
+				{
+					PushSelectableState(Tab.CloseBehaviour, Active.TabNormal, Active.TabHovered,
+						Active.TabPressed, Active.TabDisabled, Active.TabFocused, Active.TransitionDuration);
+				}
+			}
+		}
 		if (Tab.Toggle != nullptr)
 		{
 			// A selectable left without explicit colours ships white -- these are never optional.
 			PushSelectableState(Tab.Toggle, Active.TabNormal, Active.TabHovered, Active.TabPressed,
 				Active.TabDisabled, Active.TabFocused, Active.TransitionDuration);
+			// A disabled tab cannot be CLICKED into, and wears TabDisabled because the selectable
+			// re-derives its own state from this flag. Code may still open it -- an interactable flag
+			// stops the player, not the program, which is this library's rule everywhere.
+			Tab.Toggle->SetInteractable(IsTabEnabled(Index));
 			// The plate: opaque in the selected colour while this tab is open, and the same colour at
 			// zero alpha otherwise, so an unselected tab shows the face's own pointer tint through it.
 			Tab.Toggle->SetOnColor(Active.TabSelected);
@@ -422,21 +505,46 @@ void UDreamTabView::SetTabLabels(const TArray<FText>& InLabels)
 	RebuildTabs();
 }
 
+int32 UDreamTabView::SanitizeTabIndex(int32 InIndex) const
+{
+	// The floor always: there is no tab before the first one, whatever the strip holds.
+	const int32 Floored = FMath::Max(0, InIndex);
+	if (Tabs.Num() <= 0)
+	{
+		// No strip yet, so no upper bound is KNOWABLE -- and the index is routinely authored before
+		// the pages attach, which is the whole reason this property is documented as a request the
+		// switcher resolves at layout time. Storing it untouched is what makes that work.
+		return Floored;
+	}
+	// A strip that exists is an upper bound that exists. Without this, an index past the end stayed
+	// in the property for good: every reader clamped it FOR THIS PASS ONLY (see ApplyActiveTab), so
+	// the strip lit the last tab while the property, the broadcast and any two-way binding all went
+	// on carrying a number no tab has -- and adding a tab later silently jumped the selection to it.
+	return FMath::Min(Floored, Tabs.Num() - 1);
+}
+
 void UDreamTabView::SetActiveTabIndex(int32 InIndex)
 {
-	const int32 Sanitized = FMath::Max(0, InIndex);
+	const int32 Sanitized = SanitizeTabIndex(InIndex);
 	const bool bChanged = ActiveTabIndex != Sanitized;
 	ActiveTabIndex = Sanitized;
 	ApplyActiveTab();
 	if (bChanged)
 	{
 		OnTabChanged.Broadcast(Sanitized), OnValueChangedBP.Broadcast(Sanitized);
+		if (bFocusPageOnTabChange && bTabChangeFromUser)
+		{
+			// AFTER the broadcast, so a consumer that rearranges the page from its handler has already
+			// done so and focus lands in the page as it now stands. Only for a user switch -- see
+			// bTabChangeFromUser.
+			FocusActivePage();
+		}
 	}
 }
 
 void UDreamTabView::SetActiveTabIndexWithoutNotify(int32 InIndex)
 {
-	ActiveTabIndex = FMath::Max(0, InIndex);
+	ActiveTabIndex = SanitizeTabIndex(InIndex);
 	ApplyActiveTab();
 }
 
@@ -543,6 +651,11 @@ void UDreamTabView::HandleTabValueChanged(bool bInIsOn)
 	{
 		if (Tabs[Index].Toggle != nullptr && Tabs[Index].Toggle->GetValue())
 		{
+			// THE user road, and the only one: a toggle only speaks when something toggled it, which
+			// is a click or the group answering one. Marked as such so focus may follow -- an
+			// authored index or a binding pushing a value in reaches SetActiveTabIndex without this
+			// flag and must not steal focus from wherever the player actually is.
+			TGuardValue<bool> UserChange(bTabChangeFromUser, true);
 			// Re-entrant only in the harmless direction: SetActiveTabIndex pushes the same value back
 			// into this same toggle, and UUIToggle::SetValue early-outs when nothing changed.
 			SetActiveTabIndex(Index);
@@ -551,15 +664,268 @@ void UDreamTabView::HandleTabValueChanged(bool bInIsOn)
 	}
 }
 
+bool UDreamTabView::IsTabEnabled(int32 InIndex) const
+{
+	// A missing entry is ENABLED, which is what makes the empty default disable nothing and a short
+	// list an ordinary state rather than an error.
+	return !TabEnabled.IsValidIndex(InIndex) || TabEnabled[InIndex];
+}
+
+void UDreamTabView::SetTabEnabled(int32 InIndex, bool bInEnabled)
+{
+	if (InIndex < 0)
+	{
+		return;
+	}
+	if (!TabEnabled.IsValidIndex(InIndex))
+	{
+		if (bInEnabled)
+		{
+			// Already the answer a missing entry gives. Growing the array to store it would be a
+			// write that changes nothing.
+			return;
+		}
+		// Grown with the default that a missing entry already meant, so the tabs in between keep
+		// answering exactly as they did.
+		TabEnabled.SetNum(InIndex + 1);
+		for (int32 Fill = 0; Fill < TabEnabled.Num(); ++Fill)
+		{
+			TabEnabled[Fill] = true;
+		}
+	}
+	if (TabEnabled[InIndex] == bInEnabled)
+	{
+		return;
+	}
+	TabEnabled[InIndex] = bInEnabled;
+	// The flag is pushed onto the toggles in the style loop, which is also where the disabled colour
+	// comes from -- so this is a restyle and never a rebuild.
+	ApplyStyle();
+}
+
+void UDreamTabView::CloseTab(int32 InIndex)
+{
+	if (!Tabs.IsValidIndex(InIndex))
+	{
+		return;
+	}
+	// BEFORE anything is destroyed, so a consumer that wants to keep the page can take it out of the
+	// switcher from the handler -- the order UDreamDialog::Close broadcasts in, and its reason.
+	OnTabClosed.Broadcast(InIndex);
+
+	if (UDreamWidget* Page = GetPage(InIndex))
+	{
+		// Still ours after the broadcast? A handler that re-parented it away is honoured by asking
+		// again rather than by remembering the answer from before the broadcast.
+		if (PageHostNode != nullptr && Page->GetParent() == PageHostNode)
+		{
+			Page->DestroyWidget();
+		}
+	}
+	if (TabLabels.IsValidIndex(InIndex))
+	{
+		TabLabels.RemoveAt(InIndex);
+	}
+	if (TabEnabled.IsValidIndex(InIndex))
+	{
+		TabEnabled.RemoveAt(InIndex);
+	}
+	// The browser's rule: closing a tab BEFORE the open one shifts the index down so the same page
+	// stays open; closing the open one itself leaves the index where it is, which is now its right
+	// neighbour -- and SanitizeTabIndex pulls it back when the closed tab was the last.
+	if (InIndex < ActiveTabIndex)
+	{
+		--ActiveTabIndex;
+	}
+	RebuildTabs();
+}
+
+void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
+{
+	if (InFromIndex == InToIndex || !Tabs.IsValidIndex(InFromIndex) || !Tabs.IsValidIndex(InToIndex))
+	{
+		return;
+	}
+	// The PAGE moves with its tab, because a tab IS its page's handle: the switcher resolves by
+	// index, so a strip reordered without its pages would put every caption over the wrong content.
+	//
+	// EVERY page is renumbered rather than just the moved one: a sibling index is a number each child
+	// carries, so writing one child's without touching the rest would leave two pages claiming the
+	// same place and the lazy sort free to pick either. RestoreSiblingIndex is the door -- it writes
+	// the number and raises the parent's sort flag, which is precisely what a reorder is.
+	if (PageHostNode != nullptr)
+	{
+		TArray<UDreamWidget*> Pages = PageHostNode->GetChildren();
+		if (Pages.IsValidIndex(InFromIndex) && Pages.IsValidIndex(InToIndex))
+		{
+			UDreamWidget* Moved = Pages[InFromIndex];
+			Pages.RemoveAt(InFromIndex);
+			Pages.Insert(Moved, InToIndex);
+			for (int32 Place = 0; Place < Pages.Num(); ++Place)
+			{
+				if (IsValid(Pages[Place]))
+				{
+					Pages[Place]->RestoreSiblingIndex(Place);
+				}
+			}
+		}
+	}
+	auto MoveEntry = [InFromIndex, InToIndex](auto& InArray)
+	{
+		if (InArray.IsValidIndex(InFromIndex) && InArray.IsValidIndex(InToIndex))
+		{
+			auto Moved = InArray[InFromIndex];
+			InArray.RemoveAt(InFromIndex);
+			InArray.Insert(Moved, InToIndex);
+		}
+	};
+	MoveEntry(TabLabels);
+	MoveEntry(TabEnabled);
+
+	// The open PAGE stays open wherever it went, which is the only reading of a reorder that does not
+	// surprise: dragging a tab must not switch tabs.
+	if (ActiveTabIndex == InFromIndex)
+	{
+		ActiveTabIndex = InToIndex;
+	}
+	else if (InFromIndex < ActiveTabIndex && InToIndex >= ActiveTabIndex)
+	{
+		--ActiveTabIndex;
+	}
+	else if (InFromIndex > ActiveTabIndex && InToIndex <= ActiveTabIndex)
+	{
+		++ActiveTabIndex;
+	}
+	OnTabReordered.Broadcast(InFromIndex, InToIndex);
+	RebuildTabs();
+}
+
+int32 UDreamTabView::TabIndexAtPointer(const UDreamPointerEventData* InEventData) const
+{
+	if (InEventData == nullptr)
+	{
+		return INDEX_NONE;
+	}
+	for (int32 Index = 0; Index < Tabs.Num(); ++Index)
+	{
+		const UDreamWidget* TabNode = Tabs[Index].TabNode.Get();
+		if (!IsValid(TabNode))
+		{
+			continue;
+		}
+		// The pointer in the TAB's own space, against the tab's own rect -- the same reading every
+		// hit test in this library makes, and the only one that survives a rotated strip.
+		const FVector Local = TabNode->GetWorldTransform().InverseTransformPosition(
+			InEventData->GetWorldPointInPlane());
+		if (Local.Y >= TabNode->GetLocalSpaceLeft() && Local.Y <= TabNode->GetLocalSpaceRight()
+			&& Local.Z >= TabNode->GetLocalSpaceBottom() && Local.Z <= TabNode->GetLocalSpaceTop())
+		{
+			return Index;
+		}
+	}
+	return INDEX_NONE;
+}
+
+bool UDreamTabView::NativeOnBeginDrag(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::NativeOnBeginDrag(EventData);
+	if (!bTabsDraggable || EventData == nullptr
+		|| EventData->InputType != EDreamUIPointerInputType::Pointer)
+	{
+		return bBubble;
+	}
+	// Which tab the drag PICKED UP. Answered from the pointer rather than from the press target,
+	// because the press landed on whichever of the tab's children was on top (the label, the plate)
+	// and the tab is what moves.
+	DraggingTabIndex = TabIndexAtPointer(EventData);
+	return bBubble;
+}
+
+bool UDreamTabView::NativeOnDrag(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::NativeOnDrag(EventData);
+	if (DraggingTabIndex == INDEX_NONE)
+	{
+		return bBubble;
+	}
+	const int32 Over = TabIndexAtPointer(EventData);
+	if (Over != INDEX_NONE && Over != DraggingTabIndex)
+	{
+		// LIVE, one neighbour at a time: the tab under the pointer changes place with the dragged one
+		// the moment it is passed, which is what every browser does and what makes the gesture
+		// readable without a ghost widget following the cursor. MoveTab rebuilds the strip, so the
+		// dragged tab's new index is the one the pointer is now over.
+		MoveTab(DraggingTabIndex, Over);
+		DraggingTabIndex = Over;
+	}
+	return bBubble;
+}
+
+bool UDreamTabView::NativeOnEndDrag(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::NativeOnEndDrag(EventData);
+	DraggingTabIndex = INDEX_NONE;
+	return bBubble;
+}
+
+void UDreamTabView::HandleCloseClicked(int32 InIndex)
+{
+	if (!bTabsClosable)
+	{
+		// The offer can be withdrawn between the binding and the click; the click is the last place
+		// that can still honour it.
+		return;
+	}
+	CloseTab(InIndex);
+}
+
+void UDreamTabView::FocusActivePage()
+{
+	UDreamWidget* Page = GetActivePage();
+	if (!IsValid(Page) || GetWorld() == nullptr)
+	{
+		// No world means no event system -- an initialize-time switch, or a headless test.
+		return;
+	}
+	UUISelectable* First = UUISelectable::FindDefaultSelectableIn(this, Page);
+	if (First == nullptr || First->GetWidget() == nullptr)
+	{
+		// A page with nothing navigable in it (a wall of text) keeps focus where it is rather than
+		// dropping it somewhere arbitrary.
+		return;
+	}
+	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, 0))
+	{
+		Events->SetSelectComponentWithDefault(First->GetWidget());
+	}
+}
+
 #if WITH_EDITOR
 void UDreamTabView::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
-	// The base re-applies the style; the label list lives OUTSIDE ApplyStyle, so without this an
-	// edit that adds or removes a caption is silently nothing until the next initialize. Rebuilding
-	// unconditionally is fine -- the tabs are generated either way, and RebuildTabs ends in the
-	// ApplyStyle the base just ran.
+	// A REBUILD is for the two things the style push cannot reach: a strip of the wrong LENGTH, and
+	// a tab template whose class changed (the template is instanced once, into the tab, at build).
+	// It used to run on every edit, and that is the ~40ms-a-keystroke cost the list was rewritten to
+	// stop paying: destroying and re-creating widgets dirties the outliner and the designer
+	// force-refreshes its details view on top of it. It also threw away anything a consumer had hung
+	// on a generated tab from OnTabGenerated, on every frame of a slider drag.
+	const FName MemberName = PropertyChangedEvent.GetMemberPropertyName();
+	const bool bTemplateChanged = (MemberName == GET_MEMBER_NAME_CHECKED(UDreamTabView, TabTemplateClass));
+	if (bTemplateChanged || GetTabCount() != Tabs.Num())
+	{
+		// The GRANDPARENT's, deliberately: UDreamUIControl::PostEditChangeProperty ends in an
+		// ApplyStyle, and RebuildTabs ends in one of its own -- so taking the ordinary road here
+		// pushed the whole style twice for one edit, once against the strip that is about to be
+		// destroyed. Skipping the base's push and letting the rebuild's be the edit's only one is the
+		// difference between two full style walks and one; everything else the base does on an edit
+		// (the transaction, the property notification) still happens.
+		UDreamUserWidget::PostEditChangeProperty(PropertyChangedEvent);
+		RebuildTabs();
+		return;
+	}
+	// The base re-applies the style, which re-pushes every tab's label, padding, colours and the
+	// indicator -- so the great majority of edits need nothing else at all.
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	RebuildTabs();
 }
 #endif
 

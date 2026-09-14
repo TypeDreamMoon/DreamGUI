@@ -13,6 +13,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "InputCoreTypes.h"
 #include "Interaction/UIButton.h"
@@ -192,10 +193,29 @@ bool FDreamControlExpandableAreaTest::RunTest(const FString& Parameters)
 
 	if (!TestNotNull(TEXT("the header exists"), Area->HeaderNode.Get()) ||
 		!TestNotNull(TEXT("the content column exists"), Area->ContentNode.Get()) ||
+		!TestNotNull(TEXT("the stock label exists"), Area->LabelNode.Get()) ||
+		!TestNotNull(TEXT("the header hole exists"), Area->HeaderSlotNode.Get()) ||
 		!TestNotNull(TEXT("the header behaviour is always there"), Area->HeaderBehaviour.Get()))
 	{
 		return false;
 	}
+
+	// The header FACE and the header HOLE are two nodes, and nothing but their names keeps them
+	// apart. They were both called "Header" once: parts bind by display name through a walk that
+	// meets ancestors before descendants, so both fields resolved to the face, and the swap that
+	// puts the stock label away when the hole is filled read the FACE's children -- empty hole,
+	// therefore sleep the face. Every expander with a plain text title came up with no header at
+	// all, and nothing was null, missing or logged to say so. The face is "HeaderFace" now.
+	TestTrue(TEXT("the header hole is not the header face"),
+		(UObject*)Area->HeaderSlotNode.Get() != (UObject*)Area->HeaderNode.Get());
+	TestTrue(TEXT("the hole the slot name finds is the hole field"),
+		(UObject*)Area->FindSlotWidget(UDreamExpandableArea::HeaderSlotName) == (UObject*)Area->HeaderSlotNode.Get());
+	// In HIERARCHY, which is the assertion that would have caught it: the face's own flag was never
+	// what went wrong for the row and the label under it -- their ancestor's was.
+	TestTrue(TEXT("with no header content, the header is still awake"),
+		Area->HeaderNode->GetWidgetActiveInHierarchy());
+	TestTrue(TEXT("and so is the label on it"), Area->LabelNode->GetWidgetActiveInHierarchy());
+	TestFalse(TEXT("while the empty hole stays asleep"), Area->HeaderSlotNode->GetWidgetActive());
 
 	// The header IS a button: the pointer transition tints the face it is standing on, and the white
 	// trap applies here as everywhere -- a selectable-hosted face with no explicit colours ships white.
@@ -256,6 +276,54 @@ bool FDreamControlExpandableAreaTest::RunTest(const FString& Parameters)
 	const FString ExpandedGlyph = TextOf(Area->ArrowNode);
 	Area->SetIsExpanded(false);
 	TestTrue(TEXT("the two states wear different glyphs"), TextOf(Area->ArrowNode) != ExpandedGlyph);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlExpandableAreaHeaderSlotTest,
+	"DreamGUI.Controls.ExpandableArea.AFilledHeaderHoleReplacesTheLabelAndLeavesTheHeaderStanding",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlExpandableAreaHeaderSlotTest::RunTest(const FString& Parameters)
+{
+	// The other half of the swap, and the half that always looked right: with the hole FILLED the
+	// header stands either way, so the face and the hole being one node showed up only on the empty
+	// case -- which is every expander that takes the stock label.
+	//
+	// Bound BEFORE Initialize, the way a host's binding actually arrives: the filling step runs at
+	// the end of Initialize, after NativeOnInitialized, which is the first moment the control's own
+	// contents and the host's both exist. The title is outered to the transient package rather than
+	// to the control's tree because SetContentForNamedSlot compares typed outers and the control has
+	// none either -- the dialog's slot test binds the same way.
+	TDreamTestControl<UDreamExpandableArea> Area(NewObject<UDreamExpandableArea>(GetTransientPackage()));
+	UDreamWidget* Title = NewObject<UDreamWidget>(GetTransientPackage());
+	Title->SetDisplayName(TEXT("CustomTitle"));
+
+	if (!TestTrue(TEXT("the host can bind a title to the header hole"),
+		Area->SetContentForNamedSlot(UDreamExpandableArea::HeaderSlotName, Title)))
+	{
+		return false;
+	}
+	Area->Initialize();
+
+	if (!TestNotNull(TEXT("the header exists"), Area->HeaderNode.Get()) ||
+		!TestNotNull(TEXT("the header hole exists"), Area->HeaderSlotNode.Get()) ||
+		!TestNotNull(TEXT("the stock label exists"), Area->LabelNode.Get()))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("the bound title went into the hole"),
+		(UObject*)Title->GetParent() == (UObject*)Area->HeaderSlotNode.Get());
+	TestFalse(TEXT("the stock label stood down"), Area->LabelNode->GetWidgetActive());
+	TestTrue(TEXT("and the hole woke up"), Area->HeaderSlotNode->GetWidgetActive());
+
+	// What the two of them are ON is untouched. A filled hole is a different TITLE, not a header
+	// that goes away -- and the title is only drawn if its ancestors are awake, which is the whole
+	// difference between reading the node's own flag and reading the hierarchy's.
+	TestTrue(TEXT("the header itself is still awake"), Area->HeaderNode->GetWidgetActiveInHierarchy());
+	TestTrue(TEXT("so the supplied title is drawn"), Title->GetWidgetActiveInHierarchy());
+
 	return true;
 }
 
@@ -345,6 +413,154 @@ bool FDreamControlInputKeySelectorTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("the authored unbound words win"), TextOf(Selector->LabelNode), FString(TEXT("--")));
 	Selector->BeginListening();
 	TestEqual(TEXT("and the authored prompt wins"), TextOf(Selector->LabelNode), FString(TEXT("waiting")));
+	return true;
+}
+
+/**
+ * A selector that is destroyed, or merely put away, while it is armed must stand down.
+ *
+ * The state is not cosmetic: arming spawns an actor whose InputComponent sits at
+ * TNumericLimits<int32>::Max() and binds every non-axis key, so a screen closed mid-listen left that
+ * actor in the world consuming the whole game's keyboard -- with nothing on screen left to click and
+ * disarm it. There was no destruct hook of any kind on this class, which is what the claim below is
+ * really about; the armed flag is the observable half of it under a headless test, where there is no
+ * world for an agent to be spawned into in the first place.
+ *
+ * Both hooks are driven directly rather than through DestroyWidget, because the forwarder that calls
+ * them (UDreamUserWidgetEventBridge) is only added in GAME worlds -- so with no world nothing would
+ * call them at all, and the thing under test is whether the overrides exist and disarm.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlInputKeySelectorLifecycleTest,
+	"DreamGUI.Controls.InputKeySelector.BeingDestroyedOrDisabledWhileArmedStandsTheCaptureDown",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlInputKeySelectorLifecycleTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamAuxControlsTestLocal;
+
+	{
+		TDreamTestControl<UDreamInputKeySelector> Selector(Make<UDreamInputKeySelector>());
+		Selector->BeginListening();
+		if (!TestTrue(TEXT("it is armed"), Selector->GetIsListening()))
+		{
+			return false;
+		}
+		// Through the BASE pointer, which is the road the bridge takes: UDreamUserWidget declares
+		// these public and virtual and the override is protected, so this is the same dispatch a
+		// real teardown performs rather than a shortcut around it.
+		static_cast<UDreamUserWidget*>(Selector.Get())->NativeOnDestruct();
+		TestFalse(TEXT("being destroyed disarms it"), Selector->GetIsListening());
+	}
+
+	{
+		TDreamTestControl<UDreamInputKeySelector> Selector(Make<UDreamInputKeySelector>());
+		Selector->BeginListening();
+		// A selector nobody can see is a selector nobody can click, and clicking it is the documented
+		// way out of the armed state.
+		static_cast<UDreamUserWidget*>(Selector.Get())->NativeOnDisable();
+		TestFalse(TEXT("being put away disarms it too"), Selector->GetIsListening());
+	}
+	return true;
+}
+
+/**
+ * The binding is a CHORD, and the bare key is its compatibility spelling.
+ *
+ * "Ctrl+S" is one binding; a rebinder that could only keep the key silently dropped the half the
+ * player was holding, and then showed "S" for something the game never fires on a bare S. The two
+ * spellings mirror each other through every path, which is the same bargain UDreamToggle's
+ * bIsOn/CheckedState pair strikes and is asserted here the same way: authored disagreements resolve,
+ * and neither setter can leave the other saying something else.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlInputKeySelectorChordTest,
+	"DreamGUI.Controls.InputKeySelector.TheBindingKeepsItsModifiersAndTheBareKeySpellingFollowsIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlInputKeySelectorChordTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamAuxControlsTestLocal;
+
+	TDreamTestControl<UDreamInputKeySelector> Selector(Make<UDreamInputKeySelector>());
+
+	// A chord fed in while armed: both modifiers and key survive, and the label spells all of it.
+	Selector->BeginListening();
+	TestTrue(TEXT("an armed selector takes a chord"),
+		Selector->NotifyChordPressed(FInputChord(EKeys::S, /*bShift*/false, /*bCtrl*/true, /*bAlt*/false, /*bCmd*/false)));
+	TestTrue(TEXT("the modifier survived"), Selector->GetSelectedChord().bCtrl != 0);
+	TestTrue(TEXT("the key survived"), Selector->GetSelectedChord().Key == EKeys::S);
+	TestTrue(TEXT("and the bare spelling mirrors the key"), Selector->GetSelectedKey() == EKeys::S);
+	TestTrue(TEXT("the label spells the whole chord"),
+		TextOf(Selector->LabelNode) != EKeys::S.GetDisplayName().ToString());
+
+	// The key-shaped setter says "bind exactly this key", so it CLEARS what it does not mention.
+	Selector->SetSelectedKey(EKeys::S);
+	TestTrue(TEXT("the bare setter drops the modifiers"), Selector->GetSelectedChord().bCtrl == 0);
+	TestEqual(TEXT("and the label is the bare key's name again"),
+		TextOf(Selector->LabelNode), EKeys::S.GetDisplayName().ToString());
+
+	// A modifier pressed on its own is the first half of a chord, not a binding: consumed, still
+	// armed. Without that rule, holding Ctrl to bind Ctrl+S binds Ctrl.
+	Selector->BeginListening();
+	TestTrue(TEXT("a lone modifier is consumed"), Selector->NotifyKeyPressed(EKeys::LeftControl));
+	TestTrue(TEXT("and leaves it armed, waiting for the real key"), Selector->GetIsListening());
+	TestTrue(TEXT("and binds nothing"), Selector->GetSelectedKey() == EKeys::S);
+	Selector->CancelListening();
+
+	// The .dui compatibility path: only the bare key is authored, and the chord is still empty.
+	// ApplyStyle reconciles, and the chord adopts it rather than the other way round.
+	Selector->SelectedChord = FInputChord();
+	Selector->SelectedKey = EKeys::G;
+	Selector->ApplyStyle();
+	TestTrue(TEXT("an authored bare key fills the empty chord"), Selector->GetSelectedChord().Key == EKeys::G);
+	return true;
+}
+
+/**
+ * The fill is absolute pixels off the track's live rect, so it has to follow the track being resized.
+ *
+ * Nothing re-derives it: the fill is point-anchored precisely so that no anchor setter resolves a
+ * stretched parent's span at write time (the "walking dot" flicker this control was rewritten to
+ * stop). The price of feeding numbers in is that they are the numbers that were true when they were
+ * fed, and a bar stretched by a window resize kept the length it had at the old width -- correct
+ * again only if something happened to call SetPercent.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlProgressBarResizeTest,
+	"DreamGUI.Controls.ProgressBar.TheFillFollowsTheControlBeingResized",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlProgressBarResizeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamAuxControlsTestLocal;
+
+	TDreamTestControl<UDreamProgressBar> Bar(Make<UDreamProgressBar>());
+	Bar->SetPercent(0.5f);
+	if (!TestNotNull(TEXT("the track exists"), Bar->TrackNode.Get()) ||
+		!TestNotNull(TEXT("the fill exists"), Bar->FillNode.Get()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the fill starts at half the track"),
+		static_cast<float>(Bar->FillNode->GetSizeDelta().X),
+		static_cast<float>(Bar->TrackNode->GetWidth() * 0.5));
+
+	// The resize. The track stretches to the control, so this is what a window resize or a Fill slot
+	// does to it -- and it is the only thing that happens: nothing here touches Percent.
+	Bar->SetWidth(320.0f);
+	TestEqual(TEXT("the track followed the control"),
+		static_cast<float>(Bar->TrackNode->GetWidth()), 320.0f);
+	TestEqual(TEXT("and the fill followed the track"),
+		static_cast<float>(Bar->FillNode->GetSizeDelta().X), 160.0f);
+
+	// The ring reads the same rect for its own square, so it follows for the same reason.
+	Bar->SetShape(EDreamProgressShape::Radial);
+	Bar->SetWidth(64.0f);
+	Bar->SetHeight(64.0f);
+	TestEqual(TEXT("the ring's fill is the track's square"),
+		static_cast<float>(Bar->FillNode->GetSizeDelta().X),
+		static_cast<float>(Bar->TrackNode->GetWidth()));
 	return true;
 }
 

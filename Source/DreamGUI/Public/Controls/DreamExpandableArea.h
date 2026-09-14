@@ -41,6 +41,26 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamExpandableAreaExpansionChanged
  * hierarchy by hand can still call SetContent; the designer's drag into this control lands as a
  * child, which is the same road as the .dui above.
  *
+ * THE PART NAMES, which a Template's author has to spell exactly, because parts are bound by
+ * DISPLAY NAME and nothing checks the spelling but the missing-part log line:
+ *
+ *     ExpandableArea   the outer column
+ *     HeaderFace       the clickable header face; the node whose height IS HeaderHeight
+ *     HeaderRow        the indicator-and-label row inside the face
+ *     Arrow            the glyph indicator          (optional)
+ *     ArrowMark        the image indicator          (optional)
+ *     Label            the stock header text
+ *     Header           the header HOLE -- a UDreamNamedSlot  (optional)
+ *     Content          the body, and this control's default UDreamNamedSlot
+ *
+ * The face is "HeaderFace" and NOT "Header" on purpose. A named slot's name is its host node's
+ * display name (UDreamNamedSlot::GetSlotName), so the hole must be called Header -- that string is
+ * HeaderSlotName, a public binding key, and one of the two names GetNativeSlotNames promises. A
+ * part walk meets ancestors before descendants, so a face also called Header answers for BOTH, and
+ * the swap that puts the stock label away when the hole is filled then reads an empty hole and
+ * sleeps the entire header. A template that names its own header face Header re-creates exactly
+ * that: the header disappears, and the only trace is one missing-part line for HeaderFace.
+ *
  * UMG parity is UExpandableArea's core: bIsExpanded, SetIsExpanded, OnExpansionChanged -- plus the
  * library's OnValueChangedBP, because the expanded flag is a value and `<->` binds against it.
  *
@@ -74,6 +94,27 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area")
 	bool bIsExpanded = true;
 
+	/**
+	 * A ceiling on the CONTENT's share of the control's height, in local units -- UMG's MaxHeight.
+	 *
+	 * Zero (the default) is no ceiling, which is what this control has always done: expanded, it is
+	 * as tall as its header plus whatever is inside it. A non-zero value caps that and clips the
+	 * column to it, which is the only honest way to put a section of unknown length inside a page
+	 * that has a length.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMaxHeight", BlueprintSetter = "SetMaxHeight", Category = "Expandable Area", meta = (ClampMin = "0.0"))
+	float MaxHeight = 0.0f;
+
+	/**
+	 * How long the open and close take, in seconds. Zero (the default) is instant.
+	 *
+	 * Instant by DEFAULT and not by preference: every expander already authored against this plugin
+	 * opens instantly, the suite asserts the control's height in the same breath as the flag, and a
+	 * silently animated open would make both of those wrong. Opting in is one number.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area", meta = (ClampMin = "0.0"))
+	float ExpansionDuration = 0.0f;
+
 	/** Fired whenever the expanded flag moves, from a click or from code. */
 	UPROPERTY(BlueprintAssignable, Category = "Expandable Area")
 	FDreamExpandableAreaExpansionChangedEvent OnExpansionChanged;
@@ -84,6 +125,13 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Expandable Area")
 	FDreamExpandableAreaExpansionChangedEvent OnValueChangedBP;
+
+	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
+	float GetMaxHeight() const { return MaxHeight; }
+
+	/** Re-measures at once: the ceiling is part of the height this control claims. */
+	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
+	void SetMaxHeight(float InMaxHeight);
 
 	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
 	bool GetIsExpanded() const;
@@ -114,7 +162,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Expandable Area")
 	TObjectPtr<UDreamWidget> RootNode = nullptr;
 
-	/** The clickable face, and the node whose height IS the style's HeaderHeight. */
+	/**
+	 * The clickable face, and the node whose height IS the style's HeaderHeight. Bound from the
+	 * part named "HeaderFace" -- the FIELD keeps its name, the part does not; see the class comment
+	 * for why the two differ.
+	 */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Expandable Area")
 	TObjectPtr<UDreamWidget> HeaderNode = nullptr;
 
@@ -161,6 +213,17 @@ protected:
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
 
+public:
+	/**
+	 * Something in the content column changed size: re-take the expanded height.
+	 *
+	 * Bound to the column's CHILD dimension event. Public because it is a delegate target; nothing
+	 * else should call it -- ApplyStyle and the expanded flag both end in PushExpansionVisuals,
+	 * which takes the same measurement as part of a larger push.
+	 */
+	void HandleContentDimensionsChanged(UDreamWidget* Child, bool bPivotChanged, bool bWidthChanged,
+		bool bHeightChanged);
+
 private:
 	void HandleHeaderClicked();
 
@@ -176,4 +239,23 @@ private:
 
 	/** How tall the content wants to be, asked of the layout rather than read off an arranged rect. */
 	float MeasureContentExtent();
+
+	/**
+	 * The content's share of the control's height, ceiling applied: MeasureContentExtent capped by
+	 * MaxHeight. The one place both numbers meet, so the clip below and the height above cannot
+	 * disagree about how much room there is.
+	 */
+	float ResolveContentExtent();
+
+	/** Where a running open or close currently stands, 0 collapsed to 1 expanded. */
+	UPROPERTY(Transient)
+	float ExpansionAlpha = 1.0f;
+
+	/** True while an open or close is still travelling. Transient: an animation is a live gesture. */
+	UPROPERTY(Transient)
+	bool bExpansionAnimating = false;
+
+public:
+	/** Drives the open/close travel, and is opted into only while one is running. */
+	virtual void NativeOnTick(float DeltaTime) override;
 };

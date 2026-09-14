@@ -20,6 +20,7 @@
 #include "Tests/DreamDialogTestTypes.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
+#include "UObject/UnrealType.h"
 
 /*
  * A dialog, aimed the same way as the rest of the control suite: at the wiring that fails SILENTLY.
@@ -400,6 +401,167 @@ bool FDreamControlDialogStyleTest::RunTest(const FString& Parameters)
 	{
 		AddError(TEXT("the seeded pair of buttons was built with behaviours"));
 	}
+	return true;
+}
+
+/**
+ * A details-panel edit must not destroy and re-create the button row.
+ *
+ * The same correctness claim the list makes (see DreamListRestyleIdentityAutomationTests): creating
+ * or destroying a widget dirties the UI outliner, the designer answers an outliner change by
+ * force-refreshing the engine's details view, and the pair was measured at ~40ms charged to every
+ * click in the panel. This control rebuilt UNCONDITIONALLY on every PostEditChangeProperty, so
+ * dragging a colour slider re-created every button in the dialog a frame at a time -- and took with
+ * it anything a consumer had hung on one of those buttons at runtime.
+ *
+ * What the edit must still DO is the other half: the wording and the per-button style live in the
+ * specs and have to arrive in the standing widgets. Rebinding, not rebuilding.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlDialogEditKeepsItsButtons,
+	"DreamGUI.Controls.Dialog.EditingAPropertyRestylesTheButtonRowWithoutRebuildingIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlDialogEditKeepsItsButtons::RunTest(const FString& Parameters)
+{
+	TDreamTestControl<UDreamDialog> Dialog(NewObject<UDreamDialog>(GetTransientPackage()));
+	Dialog->StyleSource = EDreamUIStyleSource::Inline;
+	Dialog->Initialize();
+
+	if (!TestEqual(TEXT("the seeded pair was built"), Dialog->ButtonWidgets.Num(), 2))
+	{
+		return false;
+	}
+	TArray<UDreamButton*> Before;
+	for (const TObjectPtr<UDreamButton>& Button : Dialog->ButtonWidgets)
+	{
+		Before.Add(Button.Get());
+	}
+
+	// One details-panel edit, on a property that says nothing about how many buttons there are.
+	Dialog->Style.PanelBackground = FColor(9, 8, 7, 255);
+	FProperty* StyleProperty = UDreamDialog::StaticClass()->FindPropertyByName(
+		GET_MEMBER_NAME_CHECKED(UDreamDialog, Style));
+	if (!TestNotNull(TEXT("the style property is reflected"), StyleProperty))
+	{
+		return false;
+	}
+	FPropertyChangedEvent StyleEdit(StyleProperty);
+	// Through the BASE pointer, which is the road the editor takes: UObject declares this public and
+	// virtual and the override is protected, so this is the same dispatch, not a shortcut.
+	static_cast<UObject*>(Dialog.Get())->PostEditChangeProperty(StyleEdit);
+
+	if (!TestEqual(TEXT("the row did not change size"), Dialog->ButtonWidgets.Num(), Before.Num()))
+	{
+		return false;
+	}
+	for (int32 Index = 0; Index < Before.Num(); ++Index)
+	{
+		TestTrue(FString::Printf(TEXT("button %d is the same widget it was"), Index),
+			(UObject*)Dialog->ButtonWidgets[Index].Get() == (UObject*)Before[Index]);
+	}
+
+	// A WORDING change is still an edit that has to land -- through the standing widgets.
+	Dialog->Buttons[0].Label = FText::AsCultureInvariant(TEXT("Nope"));
+	FProperty* ButtonsProperty = UDreamDialog::StaticClass()->FindPropertyByName(
+		GET_MEMBER_NAME_CHECKED(UDreamDialog, Buttons));
+	FPropertyChangedEvent LabelEdit(ButtonsProperty);
+	static_cast<UObject*>(Dialog.Get())->PostEditChangeProperty(LabelEdit);
+	TestTrue(TEXT("re-wording a button does not rebuild it"),
+		(UObject*)Dialog->ButtonWidgets[0].Get() == (UObject*)Before[0]);
+
+	// A button whose RESULT moved is structural: the click binding carries the result it was built
+	// with as a payload, so that widget cannot be reused.
+	Dialog->Buttons[0].Result = TEXT("Dismiss");
+	FPropertyChangedEvent ResultEdit(ButtonsProperty);
+	static_cast<UObject*>(Dialog.Get())->PostEditChangeProperty(ResultEdit);
+	TestTrue(TEXT("but changing its result does"),
+		(UObject*)Dialog->ButtonWidgets[0].Get() != (UObject*)Before[0]);
+	return true;
+}
+
+/**
+ * bShowDimmer decides something, and it decides it now.
+ *
+ * It used to be read in exactly one place -- the construct-time host arrangement -- so unticking it
+ * in the designer changed nothing anyone could see until the dialog was built again, and a runtime
+ * write changed nothing at all. Both roads onto the flag are asserted: the style push (which is what
+ * every details-panel edit ends in) and the setter.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlDialogDimmerKnobTest,
+	"DreamGUI.Controls.Dialog.TurningTheDimmerOffPutsItAwayWithoutRebuildingTheDialog",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlDialogDimmerKnobTest::RunTest(const FString& Parameters)
+{
+	TDreamTestControl<UDreamDialog> Dialog(NewObject<UDreamDialog>(GetTransientPackage()));
+	Dialog->StyleSource = EDreamUIStyleSource::Inline;
+	Dialog->Initialize();
+
+	if (!TestNotNull(TEXT("the dimmer exists"), Dialog->DimmerNode.Get()))
+	{
+		return false;
+	}
+	// Nothing above this dialog is scrimming (it has no parent at all), so the flag is the whole of
+	// the decision.
+	TestTrue(TEXT("a dialog dims by default"), Dialog->DimmerNode->GetWidgetActive());
+
+	Dialog->SetShowDimmer(false);
+	TestFalse(TEXT("the setter puts it away at once"), Dialog->DimmerNode->GetWidgetActive());
+
+	// The designer's road: write the property raw, then re-push the style, which is what
+	// PostEditChangeProperty does.
+	Dialog->bShowDimmer = true;
+	static_cast<UDreamUIControl*>(Dialog.Get())->ApplyStyle();
+	TestTrue(TEXT("and a style push re-decides it"), Dialog->DimmerNode->GetWidgetActive());
+	return true;
+}
+
+/**
+ * Cancelling answers with the row's own cancel button, not with a name this control invented.
+ *
+ * A dialog needs one result to mean "the player backed out", and the caller has to be able to switch
+ * on it -- but hard-coding "Cancel" would be wrong for a row that spells it "Discard". The row is
+ * read instead: the first non-primary button, which is what cancel IS in every row this control
+ * builds, with an explicit CancelResult overriding all of it.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlDialogCancelResultTest,
+	"DreamGUI.Controls.Dialog.CancellingAnswersWithTheRowsOwnCancelButton",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlDialogCancelResultTest::RunTest(const FString& Parameters)
+{
+	TDreamTestControl<UDreamDialog> Dialog(NewObject<UDreamDialog>(GetTransientPackage()));
+	Dialog->StyleSource = EDreamUIStyleSource::Inline;
+	Dialog->Buttons.Reset();
+	Dialog->Buttons.Emplace(FText::AsCultureInvariant(TEXT("Keep editing")), TEXT("Stay"), false);
+	Dialog->Buttons.Emplace(FText::AsCultureInvariant(TEXT("Discard")), TEXT("Discard"), true);
+	Dialog->Initialize();
+
+	TestEqual(TEXT("the first non-primary button is the cancel"),
+		Dialog->ResolveCancelResult(), FName(TEXT("Stay")));
+
+	// The default button is the PRIMARY one -- what focus lands on, and what Enter would mean.
+	UDreamButton* Default = Dialog->GetDefaultButton();
+	if (TestNotNull(TEXT("there is a default button"), Default))
+	{
+		TestEqual(TEXT("and it is the primary one"), Default->GetDisplayName(), FString(TEXT("Discard")));
+	}
+
+	// An explicit name wins over the convention.
+	Dialog->CancelResult = TEXT("Back");
+	TestEqual(TEXT("an authored cancel result wins"),
+		Dialog->ResolveCancelResult(), FName(TEXT("Back")));
+
+	// And it is what a cancel closes with. Standalone (no world, so no modal subsystem), Close puts
+	// the dialog to sleep after broadcasting -- which is the branch a headless test can pin.
+	UDreamDialogResultProbe* Probe = NewObject<UDreamDialogResultProbe>(GetTransientPackage());
+	Dialog->OnDialogClosed.AddDynamic(Probe, &UDreamDialogResultProbe::Record);
+	Dialog->RequestCancel();
+	TestEqual(TEXT("cancelling closed the dialog once"), Probe->CallCount, 1);
+	TestEqual(TEXT("with the cancel result"), Probe->LastResult, FName(TEXT("Back")));
 	return true;
 }
 

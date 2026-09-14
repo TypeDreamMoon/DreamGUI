@@ -8,11 +8,14 @@
 
 class UDreamLayoutContainerWidgetSwitcher;
 class UDreamWidget;
+class UUIButton;
 class UUIToggle;
 class UUIToggleGroup;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamTabViewChangedEvent, int32, ActiveTabIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDreamTabViewTabEvent, int32, TabIndex, UDreamWidget*, Tab);
+/** A tab moved from one place in the strip to another. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDreamTabViewReorderEvent, int32, FromIndex, int32, ToIndex);
 
 /**
  * One generated tab's parts.
@@ -39,6 +42,13 @@ struct DREAMGUI_API FDreamTabViewTab
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Tab View")
 	TObjectPtr<UUIToggle> Toggle = nullptr;
+
+	/** The close button, present only while the view offers closing. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Tab View")
+	TObjectPtr<UDreamWidget> CloseNode = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Tab View")
+	TObjectPtr<UUIButton> CloseBehaviour = nullptr;
 };
 
 /**
@@ -148,6 +158,51 @@ public:
 	TSubclassOf<UDreamUserWidget> TabTemplateClass;
 
 	/**
+	 * Which tabs can be picked, index-matched to the strip -- the same parallel-array idiom TabLabels
+	 * uses, and for the same reason: a struct per tab would make the common case (no opinion at all)
+	 * cost an array literal the language cannot write.
+	 *
+	 * A missing entry means ENABLED, so a shorter list than the strip is an ordinary state and the
+	 * default empty one disables nothing. A disabled tab is drawn in the style's TabDisabled colour
+	 * and cannot be clicked; code may still open it through SetActiveTabIndex, which is the rule
+	 * everywhere else in this library -- an interactable flag stops the PLAYER, not the program.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	TArray<bool> TabEnabled;
+
+	/**
+	 * Every tab carries a close button, and clicking one closes that tab -- the browser's arrangement.
+	 *
+	 * Off by default: a settings view's tabs are its structure and must not be dismissable. Closing
+	 * DESTROYS the page (it is the tab's content and nothing else holds it) and drops the caption,
+	 * after OnTabClosed has been broadcast with the index -- so a consumer that wants to keep the
+	 * page takes it out of the switcher from that handler.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	bool bTabsClosable = false;
+
+	/**
+	 * Tabs can be dragged along the strip to reorder them, carrying their pages with them.
+	 *
+	 * Off by default, for the same reason: a strip whose order is structure must not shuffle under a
+	 * stray drag. The reorder is LIVE -- the tab under the pointer swaps with the dragged one as it
+	 * passes, which is what every browser does and what makes the gesture readable without a ghost.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	bool bTabsDraggable = false;
+
+	/**
+	 * Switching tabs moves focus into the new page.
+	 *
+	 * What a gamepad needs and a pointer does not care about: without it, opening a tab leaves focus
+	 * on the tab itself, so the next stick press walks along the strip rather than into the page the
+	 * player just opened. Only for a switch the USER made -- an authored index or a two-way binding
+	 * pushing a value in must not steal focus from wherever it is.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	bool bFocusPageOnTabChange = false;
+
+	/**
 	 * One per tab, as the strip is built. The hook for a consumer whose tabs are richer than a word
 	 * but who would rather not author a whole class: everything under the tab is reachable from here
 	 * by display name. The tab view's counterpart of the list's OnRowGenerated.
@@ -165,6 +220,18 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
 	FDreamTabViewChangedEvent OnValueChangedBP;
+
+	/**
+	 * A tab is closing. Fired BEFORE the page is destroyed and the caption dropped, so a consumer
+	 * that wants to keep the page can take it out of the switcher from here -- the same order
+	 * UDreamDialog::Close broadcasts in, and for the same reason.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Tab View")
+	FDreamTabViewChangedEvent OnTabClosed;
+
+	/** A tab was dragged to a new place. Both indices are into the strip as it was before the move. */
+	UPROPERTY(BlueprintAssignable, Category = "Tab View")
+	FDreamTabViewReorderEvent OnTabReordered;
 
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	int32 GetActiveTabIndex() const { return ActiveTabIndex; }
@@ -203,7 +270,36 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void AddPage(UDreamWidget* InPage);
 
+	/** A missing entry means enabled -- see TabEnabled. */
+	UFUNCTION(BlueprintPure, Category = "Tab View")
+	bool IsTabEnabled(int32 InIndex) const;
+
+	/** Grows TabEnabled to reach InIndex when it has to, then re-pushes the strip's colours. */
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void SetTabEnabled(int32 InIndex, bool bInEnabled);
+
+	/**
+	 * Close a tab: broadcast, then drop its caption and destroy its page, then regrow the strip.
+	 *
+	 * The active index follows the way a browser's does -- closing the open tab opens its neighbour,
+	 * closing one before it shifts the index down so the SAME page stays open.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void CloseTab(int32 InIndex);
+
+	/** Move a tab, carrying its page. Both indices are into the strip as it stands. */
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void MoveTab(int32 InFromIndex, int32 InToIndex);
+
 	virtual void ApplyStyle() override;
+
+	/**
+	 * The reorder drag. Reaches this control because a tab's UUIToggle does not implement the drag
+	 * interfaces at all, so a drag that starts on one bubbles straight up here.
+	 */
+	virtual bool NativeOnBeginDrag(UDreamPointerEventData* EventData) override;
+	virtual bool NativeOnDrag(UDreamPointerEventData* EventData) override;
+	virtual bool NativeOnEndDrag(UDreamPointerEventData* EventData) override;
 
 	/**
 	 * The parts, in the shape the rest of the framework expects to find them.
@@ -267,9 +363,43 @@ private:
 	/** TabLabels[i] if it says anything, else page i's node id, else the 1-based ordinal. */
 	FText ResolveTabLabel(int32 InIndex) const;
 
+	/**
+	 * InIndex brought into range: never below zero, and never past the last tab ONCE THERE IS ONE.
+	 *
+	 * The upper half is conditional on purpose. This property is documented as the REQUEST, because
+	 * an index is routinely authored before the pages attach and the switcher resolves it at layout
+	 * time -- clamping against an empty strip would turn every such author into a zero. A strip that
+	 * exists, though, is a bound that exists, and an index past it used to live in the property for
+	 * good while every reader quietly clamped it for its own pass.
+	 */
+	int32 SanitizeTabIndex(int32 InIndex) const;
+
 	/** How many tabs the strip should show: labels or pages, whichever is more. */
 	int32 GetTabCount() const;
 
 	/** A tab was switched on or off. The group's promise makes "which one is on" the whole news. */
 	void HandleTabValueChanged(bool bInIsOn);
+
+	/** A close button was clicked; the index is the payload it was bound with. */
+	void HandleCloseClicked(int32 InIndex);
+
+	/** Put focus on the first navigable thing inside the open page. See bFocusPageOnTabChange. */
+	void FocusActivePage();
+
+	/** Which tab the pointer is over right now, or INDEX_NONE. The reorder drag's whole hit test. */
+	int32 TabIndexAtPointer(const UDreamPointerEventData* InEventData) const;
+
+	/** The tab a reorder drag picked up, or INDEX_NONE while none is being dragged. */
+	UPROPERTY(Transient)
+	int32 DraggingTabIndex = INDEX_NONE;
+
+	/**
+	 * True while a tab change came from the USER rather than from a push.
+	 *
+	 * The only thing that separates "the player opened this tab" from "a binding wrote the index",
+	 * and focus may only follow the first -- a two-way binding echoing a value back must not take
+	 * focus away from whatever the player is actually on.
+	 */
+	UPROPERTY(Transient)
+	bool bTabChangeFromUser = false;
 };

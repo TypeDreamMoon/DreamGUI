@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "InputCoreTypes.h"
+#include "Framework/Commands/InputChord.h"
 #include "Controls/DreamUIControl.h"
 #include "DreamInputKeySelector.generated.h"
 
@@ -11,6 +12,7 @@ class UDreamWidget;
 class UUIButton;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamInputKeySelectorKeyEvent, FKey, SelectedKey);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamInputKeySelectorChordEvent, FInputChord, SelectedChord);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamInputKeySelectorListeningEvent, bool, bIsListening);
 
 /**
@@ -40,8 +42,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamInputKeySelectorListeningEvent
  * overriding BindActionRouting (which is virtual for exactly this kind of extension). SetSelectedKey
  * writes the value with no listening involved, for a settings screen restoring saved bindings.
  *
- * UMG parity is UInputKeySelector's core: SelectedKey, bIsListening, OnKeySelected, OnIsSelectingKey
- * -- plus the library's OnValueChangedBP, because the key is a value and `<->` binds against it.
+ * UMG parity is UInputKeySelector's core: SelectedChord (with SelectedKey as its bare-key spelling),
+ * bIsListening, OnKeySelected, OnIsSelectingKey -- plus the library's OnValueChangedBP, because the
+ * key is a value and `<->` binds against it.
  *
  *     /Script/DreamGUI.DreamInputKeySelector JumpBinding {
  *         SelectedKey = (KeyName="SpaceBar")
@@ -63,8 +66,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
 	FDreamInputKeySelectorStyle Style;
 
-	/** The bound key, and the control's value. The label is this key's display name. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	/**
+	 * The bound key WITH its modifiers -- UMG's FInputChord, and the control's real value.
+	 *
+	 * A chord rather than a bare key because "Ctrl+S" is one binding and not two: a rebinder that
+	 * could only store the key would silently drop the half the player was holding down, and the
+	 * screen would show "S" for a chord the game never fires on a bare S.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectedChord", BlueprintSetter = "SetSelectedChord", Category = "Input Key Selector")
+	FInputChord SelectedChord;
+
+	/**
+	 * The compatibility spelling: the chord's KEY alone, with its modifiers dropped. Kept as a
+	 * property because existing .dui authors it (`SelectedKey = (KeyName="SpaceBar")`) and binds
+	 * against it, and because `<->` resolves a property; kept coherent with SelectedChord through
+	 * every path. Where the two are authored to disagree see ReconcileKeySpellings.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectedKey", BlueprintSetter = "SetSelectedKey", Category = "Input Key Selector")
 	FKey SelectedKey;
 
 	/** Shown while nothing is bound. Empty keeps the built-in words, as an empty brush keeps a glyph. */
@@ -83,9 +101,41 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
 	bool bEscapeCancels = true;
 
-	/** Fired when a key is bound, from a listen or from SetSelectedKey. */
+	/**
+	 * WHICH keys are the way out -- UMG's EscapeKeys, a list rather than the one hard-coded Escape
+	 * this control used to reserve.
+	 *
+	 * A list because the way out has to exist on every device the screen can be reached with: a
+	 * player rebinding on a pad has no Escape key, and before this there was no key they could press
+	 * that did not become the new binding. Seeded with Escape and the pad's B, which are the two the
+	 * standalone input actor already treats as Back.
+	 *
+	 * Emptying it is legal and means "no reserved key" -- and then the click is the only way out,
+	 * which is the state this control documents as a trap. Left non-empty by default for that reason.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector", meta = (EditCondition = "bEscapeCancels"))
+	TArray<FKey> EscapeKeys = { EKeys::Escape, EKeys::Gamepad_FaceButton_Right };
+
+	/**
+	 * Whether a captured key takes the modifiers held with it.
+	 *
+	 * On, Ctrl held while G is pressed binds Ctrl+G, and a modifier pressed ALONE binds nothing --
+	 * it is consumed and the control stays armed, waiting for the key the player is reaching for.
+	 * Off, every capture is the bare key and a modifier binds itself like any other.
+	 *
+	 * Only the CAPTURE path reads this. NotifyKeyPressed and NotifyChordPressed are fed by a project
+	 * that already knows what was held, so they say so themselves rather than being second-guessed.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	bool bAllowModifierKeys = true;
+
+	/** Fired when a key is bound, from a listen or from SetSelectedKey. Carries the chord's KEY. */
 	UPROPERTY(BlueprintAssignable, Category = "Input Key Selector")
 	FDreamInputKeySelectorKeyEvent OnKeySelected;
+
+	/** The same moment, carrying the whole chord. Fires alongside OnKeySelected. */
+	UPROPERTY(BlueprintAssignable, Category = "Input Key Selector")
+	FDreamInputKeySelectorChordEvent OnChordSelected;
 
 	/** Fired when the armed state moves, so a screen can dim the rest of itself while one is armed. */
 	UPROPERTY(BlueprintAssignable, Category = "Input Key Selector")
@@ -101,9 +151,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
 	FKey GetSelectedKey() const;
 
-	/** Writes the value and re-labels; broadcasts only when the key actually moves. Never listens. */
+	/**
+	 * Writes the value and re-labels; broadcasts only when the binding actually moves. Never listens.
+	 *
+	 * A bare key, so this CLEARS any modifiers the binding carried -- "bind exactly this key" is what
+	 * a caller of the key-shaped setter is saying.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
 	void SetSelectedKey(FKey InKey);
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	FInputChord GetSelectedChord() const;
+
+	/** The whole binding, modifiers included. The one writer both spellings go through. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetSelectedChord(const FInputChord& InChord);
 
 	UFUNCTION(BlueprintPure, Category = "Input Key Selector")
 	bool GetIsListening() const;
@@ -127,6 +189,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
 	bool NotifyKeyPressed(FKey InKey);
+
+	/**
+	 * The chord-shaped twin, for a project whose input layer knows which modifiers were down.
+	 * NotifyKeyPressed is exactly this with no modifiers, so the two cannot come to mean different
+	 * things: it forwards here.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	bool NotifyChordPressed(const FInputChord& InChord);
 
 	virtual void ApplyStyle() override;
 
@@ -172,8 +242,38 @@ protected:
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
 
+	/**
+	 * Disarm on the way out. THE reason this class has a destruct hook at all: the capture agent's
+	 * lifetime is the armed state's, and a selector destroyed while armed left an actor in the world
+	 * whose InputComponent still sat at TNumericLimits<int32>::Max() consuming every non-axis key --
+	 * the whole game went deaf, with nothing left on screen to click and disarm it. UUITextInput,
+	 * which spawns the same kind of agent, releases it in OnDestroy for the same reason.
+	 */
+	virtual void NativeOnDestruct() override;
+
+	/**
+	 * And on the way to invisible. A deactivated selector cannot be clicked, so a selector that kept
+	 * listening while its screen was put away would be a key binder with no way out of its own state
+	 * -- the trap HandleClicked exists to prevent, arrived at from the other side.
+	 */
+	virtual void NativeOnDisable() override;
+
+#if WITH_EDITOR
+	/** Mirror in the direction of the EDIT before the base re-applies; see ReconcileKeySpellings. */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 private:
 	void HandleClicked();
+
+	/**
+	 * A raw property write (an authored .dui value, a direct C++ member write) can leave the chord
+	 * and the key spelling disagreeing; every setter keeps them coherent, so a disagreement is
+	 * always a raw write. The CHORD wins where it can be told apart -- a chord whose key is valid
+	 * was authored deliberately -- and the bare key wins against a still-empty chord, which is
+	 * exactly the shape existing .dui writes.
+	 */
+	void ReconcileKeySpellings();
 
 	/** The armed flag's one writer, so the visual and the event can never disagree with the state. */
 	void SetIsListening(bool bInIsListening);

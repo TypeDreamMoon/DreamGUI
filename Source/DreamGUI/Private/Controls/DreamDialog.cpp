@@ -13,6 +13,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamEventSystem.h"
 #include "Interaction/DreamContentWidget.h"
 #include "Interaction/DreamUIModal.h"
 #include "Interaction/UIButton.h"
@@ -158,13 +159,20 @@ void UDreamDialog::RealizeBuiltIn()
 								InSlot.SetSizeRule(EDreamPanelSizeRule::Auto);
 							}))));
 
-	// Before ApplyStyle: the style push walks the button widgets, so they have to exist first.
-	RebuildButtons();
+	// NOT a RebuildButtons() call, and the absence is deliberate. This function builds the tree; the
+	// PARTS are bound after it (UDreamUIControl::NativeOnInitialized runs RealizeBuiltIn, BindParts,
+	// WireParts, OnPartsReady, ApplyStyle in that order), so ButtonRowNode is still null here and a
+	// rebuild would early-return without making anything -- which is exactly what it used to do. The
+	// comment that stood here claimed the opposite and named the wrong step: the call that actually
+	// builds the buttons is OnPartsReady's, and the template road -- where this function never runs
+	// at all -- has always depended on that one.
 }
 
 void UDreamDialog::OnPartsReady()
 {
-	// Before the first style push, which walks the button widgets, so they have to exist first.
+	// Before the first style push, which walks the button widgets, so they have to exist first. This
+	// is the ONLY place the buttons are first built, on both roads: see RealizeBuiltIn for why a
+	// second call from there is a call that cannot work.
 	RebuildButtons();
 }
 
@@ -172,6 +180,12 @@ void UDreamDialog::NativeOnConstruct()
 {
 	Super::NativeOnConstruct();
 	RefreshHostArrangement();
+	if (bFocusDefaultButton)
+	{
+		// At CONSTRUCT and not at initialize: focus is an event-system idea and the event system
+		// reaches a widget through its world, which a dialog does not have until it is attached.
+		FocusDefaultButton();
+	}
 }
 
 void UDreamDialog::RefreshHostArrangement()
@@ -188,18 +202,119 @@ void UDreamDialog::RefreshHostArrangement()
 		SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D::ZeroVector);
 	}
 
+	RefreshDimmer();
+}
+
+bool UDreamDialogScope::HandleBackAction_Implementation()
+{
+	UDreamDialog* Dialog = OwnerDialog.Get();
+	if (!IsValid(Dialog))
+	{
+		// The dialog went away and left its scope behind for a frame. Hand Back on rather than
+		// swallowing it, which would leave the screen underneath unable to close either.
+		return false;
+	}
+	Dialog->RequestCancel();
+	// TRUE: taken, and Back must go no further down the stack -- one Back, one dialog closed, never
+	// the dialog AND the page behind it.
+	return true;
+}
+
+void UDreamDialog::RefreshDimmer()
+{
 	// Whoever is scrimming above us is scrimming for us. UDreamUIModalSubsystem's modal layer carries
 	// a UUIEventBlocker -- that behaviour is what makes the layer eat the world's clicks -- so a
 	// blocker anywhere up the parent chain is precisely the signal "the screen is already covered and
 	// already dark". Darkening it a second time is the duplication a dialog composing with the
-	// subsystem must not commit. Nothing here can be answered earlier than construct: Initialize runs
-	// before CreateDreamWidget attaches the dialog, so at NativeOnInitialized there is no parent to
-	// ask.
+	// subsystem must not commit. The HOST half of that cannot be answered earlier than construct:
+	// Initialize runs before CreateDreamWidget attaches the dialog, so at NativeOnInitialized there is
+	// no parent to ask -- but asking again later is free, and is what makes bShowDimmer a live knob.
+	//
+	// Split out of RefreshHostArrangement deliberately: the other half of that function WRITES this
+	// widget's anchors, and re-stretching the dialog on every style push would overrule anything that
+	// had since positioned it. This half only decides one node's activity.
 	const bool bHostAlreadyScrims = GetComponentInParent<UUIEventBlocker>(false) != nullptr;
+	const bool bDimmerUp = bShowDimmer && !bHostAlreadyScrims;
 	if (DimmerNode != nullptr)
 	{
-		DimmerNode->SetWidgetActive(bShowDimmer && !bHostAlreadyScrims);
+		DimmerNode->SetWidgetActive(bDimmerUp);
+		if (bCloseOnDimmerClick && bDimmerUp)
+		{
+			// A button ON the scrim, which is what "click outside to dismiss" is: the blocker already
+			// eats the click, and this is what makes eating it MEAN something. Added on demand rather
+			// than in the built-in tree, so a dialog that does not offer the gesture carries no
+			// selectable it never uses -- and so the scrim is not quietly navigable furniture.
+			DimmerBehaviour = EnsureComponent<UUIButton>(DimmerNode);
+			if (DimmerBehaviour != nullptr)
+			{
+				// FIVE states, one colour -- the scrim's own. A selectable always tints its target
+				// (and re-points that target at its widget's own visual on register, so simply
+				// leaving it null would not hold), so the way to make a scrim not react to the
+				// pointer is to give it nothing to react WITH. Zero duration for the same reason:
+				// there is no transition to watch.
+				const FDreamDialogStyle& DimmerStyle = ResolveStyle(Style, &UDreamUIStyleSheet::DialogStyle);
+				PushSelectableState(DimmerBehaviour, DimmerStyle.DimmerColor, DimmerStyle.DimmerColor,
+					DimmerStyle.DimmerColor, DimmerStyle.DimmerColor, DimmerStyle.DimmerColor, 0.0f);
+				// And not a place focus can land: a scrim is not furniture a gamepad should reach.
+				DimmerBehaviour->SetCanNavigateHere(false);
+				// Cleared first: RefreshDimmer runs on every style push, and an unguarded Add would
+				// bind the same handler again on each of them.
+				DimmerBehaviour->GetOnClickEvent().RemoveAll(this);
+				DimmerBehaviour->GetOnClickEvent().AddUObject(this, &UDreamDialog::HandleDimmerClicked);
+			}
+		}
+		else if (DimmerBehaviour != nullptr)
+		{
+			// Turned off again: the binding goes rather than the component, because destroying a
+			// behaviour mid-style-push is a lifecycle event for the sake of a flag.
+			DimmerBehaviour->GetOnClickEvent().RemoveAll(this);
+		}
 	}
+
+	// The Back handler is the STANDALONE arrangement's, for the reason UDreamDialogScope states: the
+	// modal layer above a hosted dialog already answers Back, with the result its own header
+	// promises. Decided here because this is the one place that knows which arrangement we are in.
+	const bool bWantsBackScope = bCloseOnBack && !bHostAlreadyScrims;
+	if (bWantsBackScope && BackScope == nullptr)
+	{
+		BackScope = EnsureComponent<UDreamDialogScope>(GetContentRoot());
+		if (BackScope != nullptr)
+		{
+			BackScope->OwnerDialog = this;
+			// The scope's own close behaviour must not ALSO run: this dialog answers Back itself and
+			// returns true, and a scope that then closed something else would be two answers to one
+			// press.
+			BackScope->SetCloseOnBack(false);
+		}
+	}
+	else if (!bWantsBackScope && BackScope != nullptr)
+	{
+		BackScope->OwnerDialog = nullptr;
+	}
+}
+
+void UDreamDialog::HandleDimmerClicked()
+{
+	if (!bCloseOnDimmerClick)
+	{
+		// The flag can go off between the binding and the click; the click is the last place that can
+		// still honour it.
+		return;
+	}
+	RequestCancel();
+}
+
+void UDreamDialog::SubmitDefaultButton()
+{
+	UDreamButton* Default = GetDefaultButton();
+	if (Default == nullptr || Default->ButtonBehaviour == nullptr)
+	{
+		return;
+	}
+	// Through the button's own click seam, so a confirm from here and a confirm from the pointer take
+	// exactly one road: the result payload, the control-level re-broadcast and the close all follow
+	// from that one broadcast.
+	Default->ButtonBehaviour->GetOnClickEvent().Broadcast();
 }
 
 void UDreamDialog::ApplyStyle()
@@ -288,6 +403,92 @@ void UDreamDialog::ApplyStyle()
 	}
 
 	PushButtonStyles(Active);
+
+	// LAST, and it is the whole of what made bShowDimmer a dead knob: the only reader of that flag
+	// used to be the construct-time host arrangement, so a designer unticking it -- or a runtime
+	// write -- decided nothing until the dialog was built again. Re-asking here costs one parent-chain
+	// walk and puts the flag on the same footing as every other knob a style push re-states. The
+	// dimmer half ONLY: re-stretching the dialog on every restyle would overrule whoever placed it.
+	RefreshDimmer();
+}
+
+void UDreamDialog::SetShowDimmer(bool bInShowDimmer)
+{
+	if (bShowDimmer == bInShowDimmer)
+	{
+		return;
+	}
+	bShowDimmer = bInShowDimmer;
+	// Only the dimmer, not the whole style: the flag decides one widget's activity and nothing about
+	// how anything is drawn.
+	RefreshDimmer();
+}
+
+FName UDreamDialog::ResolveCancelResult() const
+{
+	if (!CancelResult.IsNone())
+	{
+		return CancelResult;
+	}
+	for (const FDreamDialogButton& Spec : Buttons)
+	{
+		// The first NON-primary button. In every row this control builds -- and in the pair its own
+		// constructor seeds -- that is the cancelling one, which is why the convention can be read
+		// rather than configured.
+		if (!Spec.bIsPrimary && !Spec.Result.IsNone())
+		{
+			return Spec.Result;
+		}
+	}
+	if (Buttons.Num() > 0 && !Buttons.Last().Result.IsNone())
+	{
+		return Buttons.Last().Result;
+	}
+	// A dialog with no buttons at all still has to answer with something a caller can switch on.
+	return TEXT("Cancel");
+}
+
+void UDreamDialog::RequestCancel()
+{
+	Close(ResolveCancelResult());
+}
+
+UDreamButton* UDreamDialog::GetDefaultButton() const
+{
+	for (int32 Index = 0; Index < ButtonWidgets.Num(); ++Index)
+	{
+		if (Buttons.IsValidIndex(Index) && Buttons[Index].bIsPrimary && IsValid(ButtonWidgets[Index]))
+		{
+			return ButtonWidgets[Index].Get();
+		}
+	}
+	// None marked: the LAST one, because this control builds its rows cancel-first and the confirming
+	// button is the one on the right -- the same order the seeded pair is in.
+	for (int32 Index = ButtonWidgets.Num() - 1; Index >= 0; --Index)
+	{
+		if (IsValid(ButtonWidgets[Index]))
+		{
+			return ButtonWidgets[Index].Get();
+		}
+	}
+	return nullptr;
+}
+
+void UDreamDialog::FocusDefaultButton()
+{
+	UDreamButton* Default = GetDefaultButton();
+	// The FACE, not the button control: the selectable lives on the face, and focus is a selectable's.
+	UDreamWidget* Target = Default != nullptr ? Default->FaceNode.Get() : nullptr;
+	if (!IsValid(Target) || GetWorld() == nullptr)
+	{
+		// No world means no event system -- an initialize-time call, or a headless test. A dialog
+		// without buttons has nothing to focus and says so by doing nothing.
+		return;
+	}
+	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, 0))
+	{
+		Events->SetSelectComponentWithDefault(Target);
+	}
 }
 
 void UDreamDialog::SetTitle(const FText& InTitle)
@@ -305,7 +506,12 @@ void UDreamDialog::SetMessage(const FText& InMessage)
 void UDreamDialog::SetButtons(const TArray<FDreamDialogButton>& InButtons)
 {
 	Buttons = InButtons;
-	RebuildButtons();
+	// The same gate the editor path uses: a row whose shape did not move keeps its widgets, and with
+	// them anything a consumer hung on one. Re-wording every label is a push, not a rebuild.
+	if (ButtonWidgetsAreStale())
+	{
+		RebuildButtons();
+	}
 	ApplyStyle();
 }
 
@@ -461,15 +667,53 @@ void UDreamDialog::HandleButtonClicked(FName InResult)
 	Close(InResult);
 }
 
+bool UDreamDialog::ButtonWidgetsAreStale() const
+{
+	if (ButtonWidgets.Num() != Buttons.Num())
+	{
+		return true;
+	}
+	for (int32 Index = 0; Index < ButtonWidgets.Num(); ++Index)
+	{
+		const UDreamButton* Button = ButtonWidgets[Index].Get();
+		if (!IsValid(Button))
+		{
+			return true;
+		}
+		// The RESULT is structural rather than cosmetic: it is baked into the click binding as a
+		// payload at build time and into the widget's display name, so a spec whose result moved has
+		// a widget that would still answer with the old one. Read back off the name this control
+		// wrote there, which is where RebuildButtons put it -- no second array to fall out of step.
+		const FName Expected = Buttons[Index].Result;
+		const FString WantedName = Expected.IsNone() ? FString(TEXT("DialogButton")) : Expected.ToString();
+		if (Button->GetDisplayName() != WantedName)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 #if WITH_EDITOR
 void UDreamDialog::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	// Rebuild BEFORE the base re-applies the style, which is the opposite order from the dropdown's
 	// options push -- and for a reason. Options are data the behaviour re-reads; buttons are WIDGETS,
 	// and a button built after ApplyStyle ran would be wearing the default button style with nothing
-	// scheduled to correct it. Rebuilding unconditionally is fine: the specs are the only source the
-	// widgets are made from.
-	RebuildButtons();
+	// scheduled to correct it.
+	//
+	// But only when the widgets no longer answer the specs. It used to rebuild on EVERY edit, which
+	// meant dragging a colour slider destroyed and re-created the whole row a frame at a time -- the
+	// exact cost the list measured at ~40ms a change (widget churn dirties the outliner, and the
+	// designer force-refreshes its details view on top of it) and the exact reason the list stopped
+	// doing it. Everything else a spec says -- the wording, which button is primary -- PushButtonStyles
+	// re-pushes into the standing widgets on the style push the base is about to make, and going
+	// through the widgets rather than past them is also what keeps any runtime state hung on a
+	// generated button (an animation, an extra component) alive across an edit.
+	if (ButtonWidgetsAreStale())
+	{
+		RebuildButtons();
+	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif

@@ -22,7 +22,12 @@ const FName UDreamExpandableArea::HeaderSlotName(TEXT("Header"));
 void UDreamExpandableArea::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
 	OutParts.Emplace(TEXT("ExpandableArea"), RootNode);
-	OutParts.Emplace(TEXT("Header"), HeaderNode);
+	// "HeaderFace", not "Header": the header HOLE is named Header (a slot's name is its host node's
+	// display name), and FindPart walks ancestors before descendants -- so while the face carried
+	// that name too, both fields bound to the FACE and SwapBuiltInForSlot put the whole header row
+	// to sleep every time the hole was empty, which is every expander that does not want a custom
+	// title. Two nodes, two names. A template author renaming this one back to Header re-creates it.
+	OutParts.Emplace(TEXT("HeaderFace"), HeaderNode);
 	OutParts.Emplace(TEXT("HeaderRow"), HeaderRowNode);
 	OutParts.Emplace(TEXT("Content"), ContentNode);
 	OutParts.Emplace(TEXT("Label"), LabelNode);
@@ -58,7 +63,13 @@ void UDreamExpandableArea::RealizeBuiltIn()
 			.Children(
 				// The header IS a button, face and all: DreamButton's argument, that a control which
 				// always carries its own UIButton has no state in which clicking does nothing.
-				Node<UDreamRectBlock>("Header")
+				//
+				// "HeaderFace" rather than "Header", and the name is load-bearing: the header HOLE
+				// further down has to be called Header (a named slot IS its host node's display
+				// name, and HeaderSlotName is a public binding key), and a part list is matched by
+				// name against a walk that meets ancestors first. Two nodes wearing one name meant
+				// HeaderSlotNode resolved to this face and the empty-hole swap slept the header.
+				Node<UDreamRectBlock>("HeaderFace")
 					.With<UDreamLayoutContainerSizeBox>([](UDreamLayoutContainerSizeBox& InBox)
 					{
 						// The override is structural; WHICH height it is, is the style's, pushed in
@@ -157,6 +168,37 @@ void UDreamExpandableArea::WireParts()
 		HeaderBehaviour->SetTransitionTarget(HeaderNode->GetVisual());
 		HeaderBehaviour->GetOnClickEvent().AddUObject(this, &UDreamExpandableArea::HandleHeaderClicked);
 	}
+	if (ContentNode != nullptr)
+	{
+		// The expanded height is a MEASUREMENT of what is in the column, and it was only ever taken
+		// when the expanded flag moved -- so content that grew afterwards (a list that gained rows, a
+		// text that wrapped onto another line, a nested section that opened) drew past the bottom of
+		// a control still claiming its old height, and the Auto slot above it still reserved the old
+		// room. The column's CHILD dimension event is exactly "what is in here changed size".
+		ContentNode->GetChildDimensionChangedEvent().AddUObject(
+			this, &UDreamExpandableArea::HandleContentDimensionsChanged);
+	}
+}
+
+void UDreamExpandableArea::HandleContentDimensionsChanged(UDreamWidget* Child, bool bPivotChanged,
+	bool bWidthChanged, bool bHeightChanged)
+{
+	if (!bHeightChanged || !bIsExpanded)
+	{
+		// A collapsed section measures its header and nothing else, so nothing under it is news; and
+		// only the long axis is -- the width is whoever placed this control's to decide.
+		return;
+	}
+	const FDreamExpandableAreaStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ExpandableAreaStyle);
+	// The height alone, not the whole of PushExpansionVisuals: the indicator and the column's
+	// activity are decided by the FLAG, which has not moved, and re-pushing them would restate the
+	// style on every keystroke into a text field down there.
+	//
+	// Re-entrant only in the harmless direction: writing this control's height cascades to stretched
+	// descendants, which can bring the news back here -- and MeasureContentExtent asks the LAYOUT
+	// (GetDesiredSize walks the fitter and the authored snapshots, never a rect a panel pass wrote),
+	// so the second answer is the first answer and SetHeight's equality gate ends it there.
+	SizeControlHeight(Active.HeaderHeight + ResolveContentExtent());
 }
 
 void UDreamExpandableArea::ApplyStyle()
@@ -240,9 +282,57 @@ void UDreamExpandableArea::SetIsExpanded(bool bInIsExpanded)
 		return;
 	}
 	bIsExpanded = bInIsExpanded;
+	if (ExpansionDuration > KINDA_SMALL_NUMBER)
+	{
+		// Travel FROM WHERE IT IS, not from the end it was last at: a section toggled again mid-open
+		// must turn round from the height it is showing rather than snapping to the other end first.
+		bExpansionAnimating = true;
+		SetWantsTick(true);
+	}
+	else
+	{
+		ExpansionAlpha = bIsExpanded ? 1.0f : 0.0f;
+	}
 	PushExpansionVisuals();
 	OnExpansionChanged.Broadcast(bIsExpanded);
 	OnValueChangedBP.Broadcast(bIsExpanded);
+}
+
+void UDreamExpandableArea::SetMaxHeight(float InMaxHeight)
+{
+	const float Clamped = FMath::Max(0.0f, InMaxHeight);
+	if (MaxHeight == Clamped)
+	{
+		return;
+	}
+	MaxHeight = Clamped;
+	// The ceiling is part of the height this control claims AND of what the column clips to, both of
+	// which are written by the expansion push.
+	PushExpansionVisuals();
+}
+
+void UDreamExpandableArea::NativeOnTick(float DeltaTime)
+{
+	Super::NativeOnTick(DeltaTime);
+	if (!bExpansionAnimating)
+	{
+		return;
+	}
+	const float Target = bIsExpanded ? 1.0f : 0.0f;
+	const float Duration = FMath::Max(ExpansionDuration, KINDA_SMALL_NUMBER);
+	// Linear, deliberately: a section opening is a reveal rather than a flourish, and an eased one
+	// reads as sluggish at the sizes a settings page uses. A project wanting a curve animates the
+	// control's own height from a sequence instead.
+	ExpansionAlpha = FMath::Clamp(ExpansionAlpha + (bIsExpanded ? DeltaTime : -DeltaTime) / Duration, 0.0f, 1.0f);
+	if (FMath::IsNearlyEqual(ExpansionAlpha, Target))
+	{
+		ExpansionAlpha = Target;
+		bExpansionAnimating = false;
+		// The tick is the animation's only cost and it leaves with it: a settled expander joins no
+		// tick list at all.
+		SetWantsTick(false);
+	}
+	PushExpansionVisuals();
 }
 
 void UDreamExpandableArea::ToggleExpansion()
@@ -297,7 +387,17 @@ void UDreamExpandableArea::PushExpansionVisuals()
 	{
 		// Inactive, not merely invisible: an inactive widget takes no layout space, is not drawn and
 		// is not hit-testable, which is the whole of what "collapsed" means.
-		ContentNode->SetWidgetActive(bIsExpanded);
+		//
+		// While an open or close is TRAVELLING the column stays awake even at alpha zero, because a
+		// sleeping widget measures and draws nothing and the travel would be a jump with extra steps.
+		// It goes to sleep on arrival, which is the frame the alpha settles.
+		ContentNode->SetWidgetActive(bIsExpanded || bExpansionAnimating);
+		// Clipped whenever there is a ceiling to clip to, or whenever the column is mid-travel and
+		// therefore showing less than it measures. Off again once it is settled and uncapped, so an
+		// ordinary expander keeps the clip-free tree it has always had.
+		ContentNode->SetClipping((MaxHeight > 0.0f || bExpansionAnimating)
+			? EDreamWidgetClipping::ClipToBounds
+			: EDreamWidgetClipping::Inherit);
 	}
 
 	// Which indicator shows is decided per STATE, by whether that state's brush holds an image -- the
@@ -332,8 +432,13 @@ void UDreamExpandableArea::PushExpansionVisuals()
 
 	// The control's own measured height, which is the collapsed contract: a consumer's Auto slot asks
 	// the CONTROL how tall it is, so a collapsed expander must answer with the header alone. Expanded
-	// it answers header plus whatever the content column wants.
-	const float ContentExtent = bIsExpanded ? MeasureContentExtent() : 0.0f;
+	// it answers header plus whatever the content column wants, capped by MaxHeight.
+	//
+	// The ALPHA is what makes an animated open a real one rather than a fade: the control's claimed
+	// height is what the page around it lays out against, so travelling it is the only way the page
+	// moves with the section. Instant mode leaves the alpha pinned at the ends, so this line reads
+	// exactly as it did.
+	const float ContentExtent = ResolveContentExtent() * (bExpansionAnimating ? ExpansionAlpha : (bIsExpanded ? 1.0f : 0.0f));
 	SizeControlHeight(Active.HeaderHeight + ContentExtent);
 }
 
@@ -358,6 +463,15 @@ void UDreamExpandableArea::MoveIntoContent(UDreamWidget* InWidget)
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' refused '%s' as content."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ContentNode->GetDisplayName(), *InWidget->GetDisplayName());
 	}
+}
+
+float UDreamExpandableArea::ResolveContentExtent()
+{
+	const float Measured = MeasureContentExtent();
+	// Zero is NO ceiling rather than a ceiling of zero -- the same reading MinHandleLength and every
+	// other optional number in this family gets, and the one that keeps an unconfigured control
+	// behaving as it always has.
+	return MaxHeight > 0.0f ? FMath::Min(Measured, MaxHeight) : Measured;
 }
 
 float UDreamExpandableArea::MeasureContentExtent()
