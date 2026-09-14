@@ -9,6 +9,10 @@
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUIInputAction.h"
 #include "Tests/DreamNavigationTestTypes.h"
+#include "Tests/DreamPointerEventTestTypes.h"
+#include "Interaction/UIEventTrigger.h"
+#include "Event/DreamPointerEventData.h"
+#include "InputAction.h"
 #include "Engine/DataTable.h"
 #include "Engine/World.h"
 
@@ -261,6 +265,263 @@ bool FDreamActionRouterDisplayTest::RunTest(const FString& Parameters)
 	Page->DeactivateScope();
 	Router->GetDisplayBindings(0, Prompts);
 	TestEqual(TEXT("Closing the screen takes its prompts with it"), Prompts.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamActionRouterModifierTest,
+	"DreamGUI.Navigation.Actions.AChordIsADifferentActionFromItsBareKey",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamActionRouterModifierTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamActionRouterTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIActionRouter* Router = TestWorld.World->GetSubsystem<UDreamUIActionRouter>();
+	if (!TestNotNull(TEXT("Action router subsystem exists"), Router))
+	{
+		return false;
+	}
+
+	// Ctrl+S and S. Until actions could carry modifiers there was no way to spell the first of these:
+	// MatchesKey compared the FKey alone, so the two were the same binding and one of them had to go.
+	UDataTable* Table = MakeActionTable();
+	AddAction(Table, TEXT("Save"), EKeys::S, FKey());
+	AddAction(Table, TEXT("SaveAs"), EKeys::S, FKey());
+	FDreamUIInputActionData* SaveAsRow = Table->FindRow<FDreamUIInputActionData>(TEXT("SaveAs"), TEXT("test"));
+	if (!TestNotNull(TEXT("The chord row exists"), SaveAsRow))
+	{
+		return false;
+	}
+	SaveAsRow->bRequiresCtrl = true;
+
+	UDreamActionCallCounter* Save = NewObject<UDreamActionCallCounter>();
+	UDreamActionCallCounter* SaveAs = NewObject<UDreamActionCallCounter>();
+	// Plain S registered LAST on purpose: newest wins on a tie, so if specificity were not consulted
+	// this is the one that would answer a Ctrl+S.
+	Router->RegisterAction(nullptr, MakeHandle(Table, TEXT("SaveAs")), BindTo(SaveAs));
+	Router->RegisterAction(nullptr, MakeHandle(Table, TEXT("Save")), BindTo(Save));
+
+	// The modifiers are stated rather than read off a player controller, because a bare test world has
+	// none -- which is the whole reason HandleKeyWithModifiers exists next to HandleKey.
+	TestTrue(TEXT("S alone is taken"), Router->HandleKeyWithModifiers(0, EKeys::S, true, false, false, false, false));
+	TestEqual(TEXT("...by the bare-key action"), Save->CallCount, 1);
+	TestEqual(TEXT("...and not by the chord"), SaveAs->CallCount, 0);
+
+	TestTrue(TEXT("Ctrl+S is taken"), Router->HandleKeyWithModifiers(0, EKeys::S, true, false, true, false, false));
+	TestEqual(TEXT("...by the chord, which is the more specific spelling"), SaveAs->CallCount, 1);
+	TestEqual(TEXT("...not by the bare key, though it was registered later"), Save->CallCount, 1);
+
+	// A modifier the action does not ask for does not disqualify it. Existing bindings were authored
+	// before modifiers existed at all, and Shift resting under a finger must not silence them.
+	TestTrue(TEXT("Shift+S is still S"), Router->HandleKeyWithModifiers(0, EKeys::S, true, true, false, false, false));
+	TestEqual(TEXT("...and reaches the bare-key action"), Save->CallCount, 2);
+	TestEqual(TEXT("...while the Ctrl chord stays out of it"), SaveAs->CallCount, 1);
+
+	// And the plain HandleKey path still works, modifier-free, for everything that was already bound.
+	TestTrue(TEXT("The modifier-free entry point still routes"), Router->HandleKey(0, EKeys::S, true));
+	TestEqual(TEXT("...to the bare-key action"), Save->CallCount, 3);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamActionRouterHoldProgressBroadcastTest,
+	"DreamGUI.Navigation.Actions.HoldProgressIsPushedToWhoeverIsDrawingIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamActionRouterHoldProgressBroadcastTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamActionRouterTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIActionRouter* Router = TestWorld.World->GetSubsystem<UDreamUIActionRouter>();
+	if (!TestNotNull(TEXT("Action router subsystem exists"), Router))
+	{
+		return false;
+	}
+
+	UDataTable* Table = MakeActionTable();
+	AddAction(Table, TEXT("HoldToDelete"), EKeys::X, EKeys::Gamepad_FaceButton_Left, 1.0f);
+	UDreamActionCallCounter* Counter = NewObject<UDreamActionCallCounter>();
+	const FDreamUIActionHandle Handle = Router->RegisterAction(nullptr, MakeHandle(Table, TEXT("HoldToDelete")), BindTo(Counter));
+
+	// The progress was computed into FDreamUIActionBinding::HoldProgress from the beginning, and the
+	// only thing that ever read it was a full prompt-bar rebuild -- which happens when bindings change
+	// or the device changes, and never during a hold. So the ring on a hold-to-confirm sat at zero.
+	int32 Updates = 0;
+	float LastProgress = -1.0f;
+	FDreamUIActionHandle LastHandle;
+	Router->GetHoldProgressEvent().AddLambda(
+		[&Updates, &LastProgress, &LastHandle](FDreamUIActionHandle InHandle, float InProgress)
+		{
+			++Updates;
+			LastHandle = InHandle;
+			LastProgress = InProgress;
+		});
+
+	Router->Tick(0.5f);
+	TestEqual(TEXT("Nothing is held, so nothing is pushed"), Updates, 0);
+
+	Router->HandleKey(0, EKeys::X, true);
+	Router->Tick(0.25f);
+	TestEqual(TEXT("A frame of a live hold pushes its progress"), Updates, 1);
+	TestEqual(TEXT("...naming the binding it belongs to"), LastHandle.Id, Handle.Id);
+	TestEqual(TEXT("...and how far through it is"), LastProgress, 0.25f);
+
+	Router->Tick(0.25f);
+	TestEqual(TEXT("...again on the next frame"), Updates, 2);
+	TestEqual(TEXT("...with the new value"), LastProgress, 0.5f);
+
+	// Letting go early has to empty the ring, not leave it stranded half full.
+	Router->HandleKey(0, EKeys::X, false);
+	TestEqual(TEXT("Releasing pushes one last update"), Updates, 3);
+	TestEqual(TEXT("...back to nothing"), LastProgress, 0.0f);
+
+	Router->Tick(1.0f);
+	TestEqual(TEXT("...and a released hold pushes nothing further"), Updates, 3);
+	TestEqual(TEXT("...and never fired"), Counter->CallCount, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamActionTriggerTest,
+	"DreamGUI.Navigation.Actions.AnActionBoundToAWidgetClicksItAndDiesWithIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamActionTriggerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamActionRouterTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIActionRouter* Router = TestWorld.World->GetSubsystem<UDreamUIActionRouter>();
+	if (!TestNotNull(TEXT("Action router subsystem exists"), Router))
+	{
+		return false;
+	}
+
+	UDataTable* Table = MakeActionTable();
+	AddAction(Table, TEXT("Confirm"), EKeys::Enter, EKeys::Gamepad_FaceButton_Bottom);
+
+	UDreamWidget* Button = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Button->SetDisplayName(TEXT("Button"));
+	Button->SetWidth(100.0f);
+	Button->SetHeight(40.0f);
+	Button->OnRegister();
+
+	// The click is counted by the production component that exists for it, on the widget the action is
+	// supposed to press -- so what is being asserted is delivery, not a flag somewhere.
+	UUIEventTrigger* ClickWatcher = Button->AddComponent<UUIEventTrigger>();
+	UDreamTestActionTrigger* ActionTrigger = Button->AddComponent<UDreamTestActionTrigger>();
+	if (!TestTrue(TEXT("A button with a click watcher and an action trigger"),
+		ClickWatcher != nullptr && ActionTrigger != nullptr))
+	{
+		return false;
+	}
+	int32 ClickCount = 0;
+	ClickWatcher->GetOnPointerClickEvent().AddLambda([&ClickCount](UDreamPointerEventData*) { ++ClickCount; });
+	ActionTrigger->SetAction(MakeHandle(Table, TEXT("Confirm")));
+
+	// Nothing is bound until the widget goes live: a button that has not been shown yet cannot be the
+	// thing a key presses.
+	TestFalse(TEXT("An action trigger on a widget that is not live binds nothing"), ActionTrigger->IsActionBound());
+	TestFalse(TEXT("...so the key goes unclaimed"), Router->HandleKey(0, EKeys::Enter, true));
+
+	ActionTrigger->ForceEnable();
+	TestTrue(TEXT("Going live binds the action"), ActionTrigger->IsActionBound());
+	TestTrue(TEXT("The key is taken"), Router->HandleKey(0, EKeys::Enter, true));
+	TestEqual(TEXT("...and the button is clicked by it"), ClickCount, 1);
+	// The gamepad spelling of the same row reaches it too, which is the point of binding an action
+	// rather than a key.
+	Router->HandleKey(0, EKeys::Gamepad_FaceButton_Bottom, true);
+	TestEqual(TEXT("...from either device"), ClickCount, 2);
+
+	// The prompt bar learns about it for free, which is the other half of what CommonUI's
+	// TriggeringInputAction buys: the key and the hint cannot drift apart because they are one binding.
+	TArray<FDreamUIActionBinding> Prompts;
+	Router->GetDisplayBindings(0, Prompts);
+	TestEqual(TEXT("The bound action is advertised"), Prompts.Num(), 1);
+
+	// A greyed-out button is not clickable, so its key must stop working -- and the prompt must go with
+	// it. OnDisable does not run for a merely uninteractable widget, which is why this is its own path.
+	ActionTrigger->ForceInteractableChanged(false);
+	TestFalse(TEXT("An uninteractable button drops its binding"), ActionTrigger->IsActionBound());
+	TestFalse(TEXT("...and the key is unclaimed again"), Router->HandleKey(0, EKeys::Enter, true));
+	TestEqual(TEXT("...and nothing was clicked"), ClickCount, 2);
+	Router->GetDisplayBindings(0, Prompts);
+	TestEqual(TEXT("...and nothing is advertised"), Prompts.Num(), 0);
+
+	ActionTrigger->ForceInteractableChanged(true);
+	TestTrue(TEXT("Becoming interactable again binds it again"), ActionTrigger->IsActionBound());
+	Router->HandleKey(0, EKeys::Enter, true);
+	TestEqual(TEXT("...and the key works again"), ClickCount, 3);
+
+	// And hiding the widget takes it away for the same reason.
+	ActionTrigger->ForceDisable();
+	TestFalse(TEXT("A hidden button drops its binding"), ActionTrigger->IsActionBound());
+	TestFalse(TEXT("...and its key with it"), Router->HandleKey(0, EKeys::Enter, true));
+	TestEqual(TEXT("...clicking nothing"), ClickCount, 3);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamActionRouterInputActionBridgeTest,
+	"DreamGUI.Navigation.Actions.AnInputActionIsAnExtraKeySourceAndNeverBeatsTheTable",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamActionRouterInputActionBridgeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamActionRouterTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIActionRouter* Router = TestWorld.World->GetSubsystem<UDreamUIActionRouter>();
+	if (!TestNotNull(TEXT("Action router subsystem exists"), Router))
+	{
+		return false;
+	}
+
+	UDataTable* Table = MakeActionTable();
+	AddAction(Table, TEXT("Typed"), EKeys::J, FKey());
+	// A row that names an Input Action instead of a key. Which keys that action stands for can only be
+	// answered by a local player's mapping contexts, and a headless world has neither -- so what this
+	// pins down is the part that does not need them: an unresolvable action claims nothing, and it
+	// never takes a key away from a row that names it outright.
+	AddAction(Table, TEXT("Enhanced"), FKey(), FKey());
+	FDreamUIInputActionData* EnhancedRow = Table->FindRow<FDreamUIInputActionData>(TEXT("Enhanced"), TEXT("test"));
+	if (!TestNotNull(TEXT("The Enhanced Input row exists"), EnhancedRow))
+	{
+		return false;
+	}
+	// Any non-empty path does: resolution gives up at "this world has no local player" long before it
+	// would try to load the asset, which is what makes this branch reachable at all without hardware.
+	EnhancedRow->InputAction = TSoftObjectPtr<UInputAction>(FSoftObjectPath(TEXT("/Game/DreamGUITests/IA_NeverLoadedHeadless.IA_NeverLoadedHeadless")));
+
+	UDreamActionCallCounter* Typed = NewObject<UDreamActionCallCounter>();
+	UDreamActionCallCounter* Enhanced = NewObject<UDreamActionCallCounter>();
+	Router->RegisterAction(nullptr, MakeHandle(Table, TEXT("Typed")), BindTo(Typed));
+	Router->RegisterAction(nullptr, MakeHandle(Table, TEXT("Enhanced")), BindTo(Enhanced));
+
+	TestTrue(TEXT("The typed key still routes"), Router->HandleKey(0, EKeys::J, true));
+	TestEqual(TEXT("...to the row that names it"), Typed->CallCount, 1);
+	TestEqual(TEXT("...and not to the Input Action row"), Enhanced->CallCount, 0);
+
+	// An unresolvable action is silent rather than greedy: it must not answer for keys it cannot prove
+	// belong to it.
+	TestFalse(TEXT("An unbound key is still unbound"), Router->HandleKey(0, EKeys::K, true));
+	TestEqual(TEXT("...and the Input Action row did not take it"), Enhanced->CallCount, 0);
+
+	// Prompts: a row with neither a key nor resolvable action keys draws nothing, rather than a blank.
+	TArray<FDreamUIActionBinding> Prompts;
+	Router->GetDisplayBindings(0, Prompts);
+	TestEqual(TEXT("Only the row with a real key is advertised"), Prompts.Num(), 1);
+	if (Prompts.Num() == 1)
+	{
+		TestEqual(TEXT("...with that key"), Prompts[0].Key, EKeys::J);
+	}
+
+	// Re-resolving is the escape hatch for a project that swaps mapping contexts while screens are
+	// open. It must tell the prompt bars, or they keep drawing the keys from before the swap.
+	int32 BindingsChanged = 0;
+	Router->GetBindingsChangedEvent().AddLambda([&BindingsChanged](int32) { ++BindingsChanged; });
+	Router->RefreshInputActionKeys();
+	TestEqual(TEXT("Refreshing tells the prompt bars once"), BindingsChanged, 1);
+	TestTrue(TEXT("...and routing still works afterwards"), Router->HandleKey(0, EKeys::J, true));
 	return true;
 }
 

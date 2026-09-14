@@ -51,18 +51,24 @@ void UDreamUINavigationScope::ActivateScope()
 {
 	if (UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(this))
 	{
-		bIsScopeActive = true;
+		//the flag is set by the notification the push sends, so that claiming it here cannot swallow it
 		Stack->PushScope(this);
 	}
 }
 
 void UDreamUINavigationScope::DeactivateScope()
 {
-	if (!bIsScopeActive)return;
-	bIsScopeActive = false;
+	// No "am I active?" guard any more. Active now means "is the scope in front", and a scope covered by
+	// a dialog is not -- but it is still ON the stack, and refusing to pop it would strand it there
+	// forever. PopScope already ignores a scope that was never pushed, which is the case the guard was
+	// really protecting against.
 	if (UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(this))
 	{
 		Stack->PopScope(this);
+	}
+	else if (bIsScopeActive)
+	{
+		NotifyScopeDeactivated();//no stack in this world, but the scope still stops being the active one
 	}
 }
 
@@ -111,6 +117,10 @@ bool UDreamUINavigationScope::HandleBackAction_Implementation()
 
 void UDreamUINavigationScope::NotifyScopeActivated()
 {
+	// Edge-triggered. Now that being covered and being uncovered are reported too, the same scope can be
+	// told it is active more than once in a row -- re-pushing the scope already in front is the ordinary
+	// case -- and a screen that plays its opening animation from this event must not replay it.
+	if (bIsScopeActive)return;
 	bIsScopeActive = true;
 	ReceiveScopeActivated();
 	OnScopeActivated.Broadcast(this);
@@ -118,6 +128,7 @@ void UDreamUINavigationScope::NotifyScopeActivated()
 
 void UDreamUINavigationScope::NotifyScopeDeactivated()
 {
+	if (!bIsScopeActive)return;
 	bIsScopeActive = false;
 	ReceiveScopeDeactivated();
 	OnScopeDeactivated.Broadcast(this);

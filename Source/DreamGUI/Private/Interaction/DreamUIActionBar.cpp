@@ -8,9 +8,77 @@
 #include "Event/DreamEventSystem.h"
 #include "Engine/Texture2D.h"
 
+// Defined out of line on purpose: the header only forward-declares the visual classes, and assigning a
+// forward-declared pointer into a TWeakObjectPtr needs the complete type (the generated .cpp includes
+// the header alone and cannot see that UDreamImage is a UObject).
+void UDreamUIActionBarEntry::SetLabelText(UDreamText* Value)
+{
+	LabelText = Value;
+}
+
+void UDreamUIActionBarEntry::SetIconImage(UDreamImage* Value)
+{
+	IconImage = Value;
+}
+
+void UDreamUIActionBarEntry::SetKeyText(UDreamText* Value)
+{
+	KeyText = Value;
+}
+
+
 UDreamUIActionBarEntry::UDreamUIActionBarEntry()
 {
 	bStartWithTickEnabled = false;
+}
+
+void UDreamUIActionBarEntry::OnEnable()
+{
+	Super::OnEnable();
+	SubscribeToRouter();
+}
+
+void UDreamUIActionBarEntry::OnDisable()
+{
+	UnsubscribeFromRouter();
+	Super::OnDisable();
+}
+
+void UDreamUIActionBarEntry::OnUnregister()
+{
+	UnsubscribeFromRouter();
+	Super::OnUnregister();
+}
+
+void UDreamUIActionBarEntry::SubscribeToRouter()
+{
+	UnsubscribeFromRouter();
+	// Subscribed rather than ticked, and subscribed for every entry rather than only the ones with a
+	// hold: which action this entry shows changes under it (SetBinding is called again on a rebuild),
+	// and the filter is one integer compare in a delegate that only fires while a key is actually down.
+	if (UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this))
+	{
+		SubscribedHoldRouter = Router;
+		HoldProgressHandle = Router->GetHoldProgressEvent().AddUObject(this, &UDreamUIActionBarEntry::HandleHoldProgressChanged);
+	}
+}
+
+void UDreamUIActionBarEntry::UnsubscribeFromRouter()
+{
+	if (UDreamUIActionRouter* Router = SubscribedHoldRouter.Get(); Router != nullptr && HoldProgressHandle.IsValid())
+	{
+		Router->GetHoldProgressEvent().Remove(HoldProgressHandle);
+	}
+	HoldProgressHandle.Reset();
+	SubscribedHoldRouter.Reset();
+}
+
+void UDreamUIActionBarEntry::HandleHoldProgressChanged(FDreamUIActionHandle InHandle, float InProgress)
+{
+	if (!(InHandle == Binding.Handle))return;//some other action's hold
+	if (FMath::IsNearlyEqual(Binding.HoldProgress, InProgress))return;
+	Binding.HoldProgress = InProgress;
+	ReceiveOnHoldProgressChanged(InProgress);
 }
 
 void UDreamUIActionBarEntry::SetBinding(const FDreamUIActionBinding& InBinding)

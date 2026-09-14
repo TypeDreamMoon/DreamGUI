@@ -185,4 +185,56 @@ bool FDreamNavigationScopeFocusMemoryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationScopeCoverageNotificationTest,
+	"DreamGUI.Navigation.Scope.BeingCoveredAndUncoveredCountAsDeactivationAndActivation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNavigationScopeCoverageNotificationTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNavigationScopeTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUINavigationStack* Stack = TestWorld.World->GetSubsystem<UDreamUINavigationStack>();
+	if (!TestNotNull(TEXT("Navigation stack subsystem exists"), Stack))
+	{
+		return false;
+	}
+
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 0.0f, 0.0f, 800.0f, 600.0f);
+	UDreamUINavigationScope* Page = MakeScope(MakeWidget(TestWorld.World, Root, TEXT("Page"), 0.0f, 0.0f, 400.0f, 400.0f));
+	UDreamUINavigationScope* Dialog = MakeScope(MakeWidget(TestWorld.World, Root, TEXT("Dialog"), 0.0f, 0.0f, 200.0f, 200.0f));
+
+	TestFalse(TEXT("A scope that has never been pushed is not active"), Page->IsScopeActive());
+
+	Page->ActivateScope();
+	TestTrue(TEXT("Pushing it makes it active"), Page->IsScopeActive());
+
+	// The half that was missing. "Active" only ever meant "I was pushed", so a page kept claiming to be
+	// active -- and kept its OnScopeDeactivated silent -- while a dialog sat in front of it. A screen
+	// that dims itself, stops an animation or drops a poll while it is covered had nothing to hang that
+	// on; CommonUI's ActivatableWidget reports all four of these transitions.
+	Dialog->ActivateScope();
+	TestFalse(TEXT("A covered scope is no longer the active one"), Page->IsScopeActive());
+	TestTrue(TEXT("...and the one in front is"), Dialog->IsScopeActive());
+
+	// ...and the other half: being uncovered is being activated again.
+	Dialog->DeactivateScope();
+	TestFalse(TEXT("The closed dialog is not active"), Dialog->IsScopeActive());
+	TestTrue(TEXT("...and the page underneath is active again"), Page->IsScopeActive());
+	TestEqual(TEXT("...which is also what the stack says"), Stack->GetActiveScope(0), Page);
+
+	// A covered scope is still ON the stack, so closing it from underneath has to work -- the guard that
+	// used to skip the pop for a scope reading as inactive would have stranded it there forever.
+	Dialog->ActivateScope();
+	TestFalse(TEXT("The page is covered again"), Page->IsScopeActive());
+	Page->DeactivateScope();
+	TestEqual(TEXT("A covered scope can still close itself"), Stack->GetActiveScope(0), Dialog);
+	Dialog->DeactivateScope();
+	TestNull(TEXT("...and nothing comes back, because nothing is left"), Stack->GetActiveScope(0));
+	TestFalse(TEXT("...with no scope claiming to be active"), Page->IsScopeActive());
+
+	Root->DestroyWidget();
+	return true;
+}
+
 #endif
