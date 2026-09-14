@@ -58,6 +58,12 @@ void UDreamSlider::WireParts()
 	// The pointer transition rides the handle, the way the toggle's rides its box.
 	SliderBehaviour->SetTransitionTarget(HandleNode != nullptr ? HandleNode->GetVisual() : nullptr);
 	SliderBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamSlider::HandleValueChanged);
+	// The four capture moments, re-broadcast at the control the way the value change is: a consumer
+	// binds to this control, never to the behaviour sitting on one of its parts.
+	SliderBehaviour->GetOnMouseCaptureBeginEvent().AddUObject(this, &UDreamSlider::HandleMouseCaptureBegin);
+	SliderBehaviour->GetOnMouseCaptureEndEvent().AddUObject(this, &UDreamSlider::HandleMouseCaptureEnd);
+	SliderBehaviour->GetOnControllerCaptureBeginEvent().AddUObject(this, &UDreamSlider::HandleControllerCaptureBegin);
+	SliderBehaviour->GetOnControllerCaptureEndEvent().AddUObject(this, &UDreamSlider::HandleControllerCaptureEnd);
 }
 
 void UDreamSlider::ApplyStyle()
@@ -120,11 +126,101 @@ void UDreamSlider::ApplyStyle()
 		PushSelectableState(SliderBehaviour, Active.HandleNormal, Active.HandleHovered, Active.HandlePressed,
 			Active.HandleDisabled, Active.HandleFocused, Active.TransitionDuration);
 		SliderBehaviour->SetDirectionType(Direction);
+		// The two rules the behaviour has always carried and the control never stated. Before the
+		// value, because whole numbers snap whatever it is holding.
+		SliderBehaviour->SetWholeNumbers(bWholeNumbers);
+		SliderBehaviour->SetNavigationChangeInterval(NavigationChangeInterval);
+		SliderBehaviour->SetStepSize(StepSize);
+		SliderBehaviour->SetMouseUsesStep(bMouseUsesStep);
+		SliderBehaviour->SetRequiresControllerLock(bRequiresControllerLock);
 		// Range before value, so the value is clamped against the authored range and not the default
 		// one; both without events, since pushing authored state is not the user dragging.
 		SliderBehaviour->SetMinValue(MinValue, false, false);
 		SliderBehaviour->SetMaxValue(MaxValue, false, false);
 		SliderBehaviour->SetValueWithoutNotify(Value);
+		// Read back, so the property never claims a value the behaviour refused: an authored Value
+		// outside [Min, Max] -- or a fractional one on a whole-number slider -- is clamped there, and
+		// a property that kept the raw number would be a second answer to "what is this slider set to".
+		Value = SliderBehaviour->GetValue();
+	}
+}
+
+EUISliderDirectionType UDreamSlider::GetDirection() const
+{
+	return Direction;
+}
+
+void UDreamSlider::SetDirection(EUISliderDirectionType InDirection)
+{
+	if (Direction == InDirection)
+	{
+		return;
+	}
+	Direction = InDirection;
+	// The whole style, not just the behaviour's flag: the direction decides which axis every part is
+	// anchored along, and those anchors are written in ApplyStyle.
+	ApplyStyle();
+}
+
+float UDreamSlider::GetMinValue() const
+{
+	return SliderBehaviour != nullptr ? SliderBehaviour->GetMinValue() : MinValue;
+}
+
+void UDreamSlider::SetMinValue(float InMinValue)
+{
+	MinValue = InMinValue;
+	if (SliderBehaviour != nullptr)
+	{
+		// Without keeping the relative value and without an event: this is the author restating the
+		// range, not the player moving the handle. The behaviour re-clamps the value, so the mirror
+		// is read back rather than assumed.
+		SliderBehaviour->SetMinValue(InMinValue, false, false);
+		Value = SliderBehaviour->GetValue();
+	}
+}
+
+float UDreamSlider::GetMaxValue() const
+{
+	return SliderBehaviour != nullptr ? SliderBehaviour->GetMaxValue() : MaxValue;
+}
+
+void UDreamSlider::SetMaxValue(float InMaxValue)
+{
+	MaxValue = InMaxValue;
+	if (SliderBehaviour != nullptr)
+	{
+		SliderBehaviour->SetMaxValue(InMaxValue, false, false);
+		Value = SliderBehaviour->GetValue();
+	}
+}
+
+bool UDreamSlider::GetWholeNumbers() const
+{
+	return bWholeNumbers;
+}
+
+void UDreamSlider::SetWholeNumbers(bool bInWholeNumbers)
+{
+	bWholeNumbers = bInWholeNumbers;
+	if (SliderBehaviour != nullptr)
+	{
+		SliderBehaviour->SetWholeNumbers(bInWholeNumbers);
+		Value = SliderBehaviour->GetValue();
+	}
+}
+
+float UDreamSlider::GetNavigationChangeInterval() const
+{
+	return NavigationChangeInterval;
+}
+
+void UDreamSlider::SetNavigationChangeInterval(float InInterval)
+{
+	NavigationChangeInterval = InInterval;
+	if (SliderBehaviour != nullptr)
+	{
+		SliderBehaviour->SetNavigationChangeInterval(InInterval);
 	}
 }
 
@@ -140,6 +236,75 @@ void UDreamSlider::SetValue(float InValue)
 	{
 		SliderBehaviour->SetValue(InValue);
 	}
+}
+
+float UDreamSlider::GetStepSize() const
+{
+	return StepSize;
+}
+
+void UDreamSlider::SetStepSize(float InStepSize)
+{
+	StepSize = FMath::Max(0.0f, InStepSize);
+	if (SliderBehaviour != nullptr)
+	{
+		// Straight to the behaviour: the step is spent where a drag becomes a value and nothing about
+		// the slider's geometry or colours depends on it.
+		SliderBehaviour->SetStepSize(StepSize);
+	}
+}
+
+bool UDreamSlider::GetMouseUsesStep() const
+{
+	return bMouseUsesStep;
+}
+
+void UDreamSlider::SetMouseUsesStep(bool bInMouseUsesStep)
+{
+	bMouseUsesStep = bInMouseUsesStep;
+	if (SliderBehaviour != nullptr)
+	{
+		SliderBehaviour->SetMouseUsesStep(bInMouseUsesStep);
+	}
+}
+
+bool UDreamSlider::GetRequiresControllerLock() const
+{
+	return bRequiresControllerLock;
+}
+
+void UDreamSlider::SetRequiresControllerLock(bool bInRequiresControllerLock)
+{
+	bRequiresControllerLock = bInRequiresControllerLock;
+	if (SliderBehaviour != nullptr)
+	{
+		SliderBehaviour->SetRequiresControllerLock(bInRequiresControllerLock);
+	}
+}
+
+bool UDreamSlider::IsControllerCaptured() const
+{
+	return SliderBehaviour != nullptr && SliderBehaviour->IsControllerCaptured();
+}
+
+void UDreamSlider::HandleMouseCaptureBegin()
+{
+	OnMouseCaptureBegin.Broadcast();
+}
+
+void UDreamSlider::HandleMouseCaptureEnd()
+{
+	OnMouseCaptureEnd.Broadcast();
+}
+
+void UDreamSlider::HandleControllerCaptureBegin()
+{
+	OnControllerCaptureBegin.Broadcast();
+}
+
+void UDreamSlider::HandleControllerCaptureEnd()
+{
+	OnControllerCaptureEnd.Broadcast();
 }
 
 void UDreamSlider::HandleValueChanged(float InValue)

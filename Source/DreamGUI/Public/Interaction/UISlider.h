@@ -35,6 +35,12 @@ protected:
 #endif
 protected:
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
+	/**
+	 * The fill and the handle are placed in ABSOLUTE numbers read off their areas, so an area that
+	 * was re-arranged is news this component has to hear. See the definition for why the two parts
+	 * themselves are deliberately ignored here.
+	 */
+	virtual void OnChildDimensionsChanged(UDreamWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider")
 		float Value = 0;
@@ -56,6 +62,47 @@ protected:
 	/** When use navigation input to change the slider value, each press will change value as (MaxValue - MinValue) * NavigationChangeInterval. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider", meta=(ClampMin = "0.0", ClampMax = "1.0"))
 		float NavigationChangeInterval = 0.1f;
+	/**
+	 * The quantum a MOUSE drag moves the value in, while MouseUsesStep is on -- UMG's StepSize.
+	 *
+	 * Deliberately NOT the keyboard's: this library already states the navigation step as
+	 * NavigationChangeInterval, a FRACTION of the range, and every slider authored against this
+	 * plugin means that number when it says "one press". Re-pointing navigation at StepSize would
+	 * silently re-scale every one of them, so the two live side by side and each says which input it
+	 * governs. StepSize is an ABSOLUTE value step; NavigationChangeInterval is a fraction.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider", meta=(ClampMin = "0.0"))
+		float StepSize = 0.01f;
+	/** Quantise a mouse drag to StepSize. Off, a drag is continuous -- which is this library's default. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider")
+		bool MouseUsesStep = false;
+	/**
+	 * A gamepad must CAPTURE this slider before its directions move the value -- UMG's
+	 * RequiresControllerLock, and on for the same reason it is on there: a row of sliders the stick
+	 * moves THROUGH is unusable if the first slider swallows every left and right.
+	 *
+	 * The capture is taken and released by the navigation TRIGGER (the key a focused control is
+	 * activated with), which arrives here as a pointer down carrying InputType Navigation. While
+	 * captured the directions change the value; while not, they fall through to the navigation
+	 * search and move focus to the next control.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider")
+		bool RequiresControllerLock = true;
+
+	/** Whether the gamepad currently holds this slider. Transient: a capture is a live gesture. */
+	UPROPERTY(Transient)
+		bool bControllerCaptured = false;
+
+	/**
+	 * The four capture moments UMG's slider speaks, in C++ only -- the control re-broadcasts them to
+	 * Blueprint. Mouse begin/end are the press and the release; controller begin/end are the lock
+	 * being taken and given back. What a consumer needs them for is the same thing UMG does: pause
+	 * the game's own reaction to the value while the player is still dragging.
+	 */
+	FSimpleMulticastDelegate OnMouseCaptureBeginCPP;
+	FSimpleMulticastDelegate OnMouseCaptureEndCPP;
+	FSimpleMulticastDelegate OnControllerCaptureBeginCPP;
+	FSimpleMulticastDelegate OnControllerCaptureEndCPP;
 
 	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> FillArea;
 	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> HandleArea;
@@ -78,6 +125,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
 		bool GetWholeNumber()const { return WholeNumbers; }
+	/**
+	 * Settable, like the parts and the direction beside it and for the same reason: the property is
+	 * EditAnywhere, so the designer and .dui have always reached it by reflection while no caller
+	 * could -- and a slider assembled in code (every UDreamSlider) is exactly such a caller.
+	 *
+	 * Turning it ON snaps the value it is holding, because a whole-number slider showing 2.5 is a
+	 * control disagreeing with its own rule.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		void SetWholeNumbers(bool InValue);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
 		UDreamWidget* GetFill()const { return Fill.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
@@ -122,7 +179,32 @@ public:
 	void SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireEvent = true);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
 	void SetNavigationChangeInterval(float InValue);
-	
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		float GetStepSize()const { return StepSize; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		void SetStepSize(float InValue) { StepSize = FMath::Max(0.0f, InValue); }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		bool GetMouseUsesStep()const { return MouseUsesStep; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		void SetMouseUsesStep(bool InValue) { MouseUsesStep = InValue; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		bool GetRequiresControllerLock()const { return RequiresControllerLock; }
+	/** Turning it OFF releases a capture that is standing, so the lock cannot outlive its own rule. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		void SetRequiresControllerLock(bool InValue);
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		bool IsControllerCaptured()const { return bControllerCaptured; }
+	/** The one writer of the capture flag, so the flag and the two events can never disagree. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		void SetControllerCaptured(bool InValue);
+
+	FSimpleMulticastDelegate& GetOnMouseCaptureBeginEvent(){ return OnMouseCaptureBeginCPP; }
+	FSimpleMulticastDelegate& GetOnMouseCaptureEndEvent(){ return OnMouseCaptureEndCPP; }
+	FSimpleMulticastDelegate& GetOnControllerCaptureBeginEvent(){ return OnControllerCaptureBeginCPP; }
+	FSimpleMulticastDelegate& GetOnControllerCaptureEndEvent(){ return OnControllerCaptureEndCPP; }
+
 	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData)override;
@@ -136,4 +218,17 @@ private:
 	void SetValue(float InValue, bool FireEvent);
 	void ApplyValueToVisual();
 
+	/** LeftToRight or RightToLeft: which axis the value travels along. */
+	bool IsHorizontal() const;
+	/** RightToLeft or TopToBottom: the two that put the ZERO end at the far edge. */
+	bool IsReversed() const;
+	/**
+	 * The value as 0..1, clamped, and ZERO when the range is empty.
+	 *
+	 * The one reader of (MaxValue - MinValue), because that division was unguarded in three places
+	 * and MinValue == MaxValue is an ordinary authored state (a range left at its defaults, a slider
+	 * deliberately locked): 0/0 is NaN, FMath::Clamp answers NaN with NaN -- both of its comparisons
+	 * are false -- and the NaN reached an anchor, where nothing downstream can recover from it.
+	 */
+	float GetValue01() const;
 };

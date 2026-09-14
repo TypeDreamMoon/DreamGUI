@@ -6,6 +6,7 @@
 
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
@@ -33,6 +34,36 @@ void UDreamProgressBar::RealizeBuiltIn()
 				Node<UDreamRectBlock>("Fill").Stretch()));
 }
 
+void UDreamProgressBar::WireParts()
+{
+	// The fill's rect is written in ABSOLUTE numbers read off the track's live size (see
+	// ApplyPercent), and absolute numbers go stale the moment the track is arranged to a new one.
+	// Nothing re-derives them: the fill is point-anchored precisely so that no setter resolves a
+	// span, which is the same trade the scroll box and the list make -- and both of them pay for it
+	// with exactly this subscription.
+	//
+	// On the TRACK rather than on the control: the track is what ApplyPercent measures, and it is
+	// stretched to the control, so a control that was resized reaches here one hop later with the
+	// number already resolved. Subscribing to the control instead would fire while the track still
+	// held the old width.
+	if (TrackNode != nullptr)
+	{
+		TrackNode->GetDimensionChangedEvent().AddUObject(this, &UDreamProgressBar::HandleTrackDimensionsChanged);
+	}
+}
+
+void UDreamProgressBar::HandleTrackDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged)
+{
+	if (!bWidthChanged && !bHeightChanged)
+	{
+		return;
+	}
+	// Only the fill's rect, never the whole style: a style push writes the control's own size, and
+	// answering a resize by resizing would be a loop rather than a refresh. ApplyPercent writes the
+	// FILL, whose own dimension event is a different one from the track's, so this cannot re-enter.
+	ApplyPercent();
+}
+
 void UDreamProgressBar::ApplyStyle()
 {
 	const FDreamProgressBarStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ProgressBarStyle);
@@ -56,9 +87,12 @@ void UDreamProgressBar::ApplyStyle()
 	if (Shape == EDreamProgressShape::Radial)
 	{
 		// A ring is square and states BOTH axes -- there is no "length comes from whoever placed it"
-		// for a circle. SizeFace rather than SizeControlHeight for that reason (the toggle's box
-		// sizes itself the same way), and the track stretches to it.
-		SizeFace(this, Active.RadialSize);
+		// for a circle. SizeControl rather than SizeControlHeight for that reason, and the track
+		// stretches to it. NOT SizeFace: that helper is for PARTS, because it re-captures the whole
+		// authored rect, and this control's live anchors may already be holding layout output -- see
+		// SizeControl's own note, which spells out why enshrining that as the restore target is the
+		// one thing a control must not do to itself.
+		SizeControl(Active.RadialSize);
 	}
 	else
 	{
@@ -66,6 +100,10 @@ void UDreamProgressBar::ApplyStyle()
 		// whoever placed the control.
 		SizeControlHeight(Active.Height);
 	}
+	// Re-stated here as well as in the setter, because the flag is also arrived at by authoring: a
+	// .dui line or a details-panel edit writes it raw, and the tick has to follow whichever road it
+	// came down. Shape is part of the answer -- a ring has no sweep.
+	SetWantsTick(bIsMarquee && Shape == EDreamProgressShape::Bar);
 	ApplyPercent();
 }
 
@@ -154,12 +192,98 @@ void UDreamProgressBar::ApplyPercent()
 	// at zero width, rendered as a round dot walking the track (the flicker). The same family as
 	// the dropdown list's stale width and this fill's own stale height: an anchor-driven child's
 	// geometry is only as fresh as the last time ITS OWN data changed, so the control feeds it
-	// values with no spans left to resolve. Pivot and point anchor sit on the track's left edge,
-	// so the width grows rightward, exactly as the ratio anchor drew it.
-	FillNode->SetPivot(FVector2D(0.0, 0.5));
-	FillNode->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0, 0.5), FVector2D(0.0, 0.5), false, false);
+	// values with no spans left to resolve.
+	//
+	// WHICH edge it grows from is FillType's, and the whole of that is three numbers: the pivot (and
+	// the point anchor under it) sits on the growing edge, the length is spent along one axis, and
+	// the sweep -- when there is one -- travels in the direction that edge points.
+	const bool bHorizontal = (FillType == EDreamProgressFillType::LeftToRight
+		|| FillType == EDreamProgressFillType::RightToLeft);
+	const bool bFromFarEdge = (FillType == EDreamProgressFillType::RightToLeft
+		|| FillType == EDreamProgressFillType::TopToBottom);
+	// The anchor's own coordinates: X runs right, Y runs UP, so the far edge is 1 on both axes and
+	// TopToBottom grows downward from a Y of 1.
+	const FVector2D Anchor = bHorizontal
+		? FVector2D(bFromFarEdge ? 1.0 : 0.0, 0.5)
+		: FVector2D(0.5, bFromFarEdge ? 1.0 : 0.0);
+	const double TrackLength = bHorizontal ? TrackSize.X : TrackSize.Y;
+	const double TrackThickness = bHorizontal ? TrackSize.Y : TrackSize.X;
+
+	// Indeterminate: the fill is a fixed SHORT length and the percent decides nothing -- what moves
+	// is where it is. One cycle carries it from entirely off the near edge to entirely off the far
+	// one, which is why the travel is the track plus the fill rather than the track alone.
+	double FillLength = Clamped * TrackLength;
+	double Offset = 0.0;
+	if (bIsMarquee)
+	{
+		FillLength = FMath::Clamp(MarqueeFraction, 0.01f, 1.0f) * TrackLength;
+		const double Phase = MarqueeDuration > KINDA_SMALL_NUMBER
+			? FMath::Fmod(MarqueeTime / MarqueeDuration, 1.0)
+			: 0.0;
+		// Measured from the growing edge, so it is positive in the direction the fill grows; the sign
+		// that turns it into an anchored position is applied below, with the axis.
+		Offset = Phase * (TrackLength + FillLength) - FillLength;
+	}
+	const double Signed = bFromFarEdge ? -Offset : Offset;
+
+	FillNode->SetPivot(Anchor);
+	FillNode->SetHorizontalAndVerticalAnchorMinMax(Anchor, Anchor, false, false);
 	FillNode->SetAnchoredPositionAndSizeDelta(
-		FVector2D::ZeroVector, FVector2D(Clamped * TrackSize.X, TrackSize.Y));
+		bHorizontal ? FVector2D(Signed, 0.0) : FVector2D(0.0, Signed),
+		bHorizontal ? FVector2D(FillLength, TrackThickness) : FVector2D(TrackThickness, FillLength));
+}
+
+EDreamProgressFillType UDreamProgressBar::GetFillType() const
+{
+	return FillType;
+}
+
+void UDreamProgressBar::SetFillType(EDreamProgressFillType InFillType)
+{
+	if (FillType == InFillType)
+	{
+		return;
+	}
+	FillType = InFillType;
+	// The fill's rect alone: the direction decides which edge it hangs from and which axis it spends,
+	// and both of those are written by ApplyPercent. Nothing about the style changes with it.
+	ApplyPercent();
+}
+
+bool UDreamProgressBar::GetIsMarquee() const
+{
+	return bIsMarquee;
+}
+
+void UDreamProgressBar::SetIsMarquee(bool bInIsMarquee)
+{
+	if (bIsMarquee == bInIsMarquee)
+	{
+		return;
+	}
+	bIsMarquee = bInIsMarquee;
+	// The sweep starts from the near edge every time it is turned on, rather than resuming wherever
+	// the last one happened to stop -- a bar that appears mid-stride reads as a glitch.
+	MarqueeTime = 0.0f;
+	// The tick is the marquee's ONLY cost and it is opted in and out with it: a determinate bar joins
+	// no tick list at all. SetWantsTick is safe before begin play -- the flag is read by the start
+	// pass -- which is what lets ApplyStyle state it during initialize.
+	SetWantsTick(bIsMarquee && Shape == EDreamProgressShape::Bar);
+	ApplyPercent();
+}
+
+void UDreamProgressBar::NativeOnTick(float DeltaTime)
+{
+	Super::NativeOnTick(DeltaTime);
+	if (!bIsMarquee || Shape != EDreamProgressShape::Bar)
+	{
+		return;
+	}
+	// Wrapped rather than left to grow: a bar left running for a long session would otherwise reach
+	// the float range where a delta of a sixtieth of a second stops changing the number at all.
+	const float Cycle = FMath::Max(MarqueeDuration, KINDA_SMALL_NUMBER);
+	MarqueeTime = FMath::Fmod(MarqueeTime + DeltaTime, Cycle);
+	ApplyPercent();
 }
 
 void UDreamProgressBar::ApplyShape(const FDreamProgressBarStyle& InActive)

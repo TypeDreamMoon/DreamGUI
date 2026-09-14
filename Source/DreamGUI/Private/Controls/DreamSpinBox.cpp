@@ -12,6 +12,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamPointerEventData.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UITextInput.h"
 #include "Text/DreamUIValueFormat.h"
@@ -207,12 +208,14 @@ void UDreamSpinBox::SetValue(float InValue)
 
 void UDreamSpinBox::Increment()
 {
-	ApplyValueChange(Value + StepSize);
+	// A step is a COMMIT: one click, one settled value, which is what USpinBox's arrows do and what a
+	// consumer writing to a setting needs to hear about exactly once.
+	CommitValue(Value + StepSize);
 }
 
 void UDreamSpinBox::Decrement()
 {
-	ApplyValueChange(Value - StepSize);
+	CommitValue(Value - StepSize);
 }
 
 void UDreamSpinBox::HandleDecrementClicked()
@@ -230,7 +233,9 @@ void UDreamSpinBox::HandleSubmitted(const FString& InText)
 	float Parsed = 0.0f;
 	if (LexTryParseString(Parsed, *InText))
 	{
-		ApplyValueChange(Parsed);
+		// A typed entry is a COMMIT, not an intermediate value -- it is the moment USpinBox fires
+		// OnValueCommitted from, and the moment the two focus knobs act on.
+		CommitValue(Parsed);
 	}
 	else
 	{
@@ -240,9 +245,115 @@ void UDreamSpinBox::HandleSubmitted(const FString& InText)
 	}
 }
 
+float UDreamSpinBox::GetSliderMinValue() const
+{
+	return bOverride_MinSliderValue ? MinSliderValue : MinValue;
+}
+
+float UDreamSpinBox::GetSliderMaxValue() const
+{
+	return bOverride_MaxSliderValue ? MaxSliderValue : MaxValue;
+}
+
+float UDreamSpinBox::SnapToStep(float InValue) const
+{
+	if (!bAlwaysUsesDeltaSnap || StepSize <= KINDA_SMALL_NUMBER)
+	{
+		return InValue;
+	}
+	// Measured FROM MinValue rather than from zero, for the reason the slider's mouse step is: a
+	// range of 3..10 snapped by 2 must offer the ends the author stated, not 4, 6, 8, 10.
+	return MinValue + FMath::RoundToFloat((InValue - MinValue) / StepSize) * StepSize;
+}
+
+float UDreamSpinBox::ValueToSliderFraction(float InValue) const
+{
+	const float SliderMin = GetSliderMinValue();
+	const float SliderMax = GetSliderMaxValue();
+	const float Span = SliderMax - SliderMin;
+	if (FMath::Abs(Span) <= KINDA_SMALL_NUMBER)
+	{
+		// An empty scrub range is a scrub that can go nowhere -- and, unguarded, a division that
+		// hands a NaN to the drag arithmetic the way the slider's range once did.
+		return 0.0f;
+	}
+	const float Linear = FMath::Clamp((InValue - SliderMin) / Span, 0.0f, 1.0f);
+	const float Exponent = FMath::Max(SliderExponent, KINDA_SMALL_NUMBER);
+	// The inverse of the bend the forward direction applies, so a fraction round-trips: a scrub that
+	// starts where the value already is must not jump on its first frame.
+	return FMath::Pow(Linear, 1.0f / Exponent);
+}
+
+float UDreamSpinBox::SliderFractionToValue(float InFraction) const
+{
+	const float SliderMin = GetSliderMinValue();
+	const float SliderMax = GetSliderMaxValue();
+	const float Exponent = FMath::Max(SliderExponent, KINDA_SMALL_NUMBER);
+	const float Bent = FMath::Pow(FMath::Clamp(InFraction, 0.0f, 1.0f), Exponent);
+	return SliderMin + (SliderMax - SliderMin) * Bent;
+}
+
+bool UDreamSpinBox::NativeOnBeginDrag(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::NativeOnBeginDrag(EventData);
+	if (!bEnableSlider || EventData == nullptr
+		|| EventData->InputType != EDreamUIPointerInputType::Pointer)
+	{
+		return bBubble;
+	}
+	bSliderMoving = true;
+	// Where the value already is, in the scrub's own coordinates. Every drag frame is an OFFSET from
+	// this rather than an absolute read of the pointer, which is what keeps the number from jumping
+	// to wherever in the field the drag happened to start.
+	SliderPressFraction = ValueToSliderFraction(Value);
+	OnBeginSliderMovement.Broadcast(Value);
+	return bBubble;
+}
+
+bool UDreamSpinBox::NativeOnDrag(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::NativeOnDrag(EventData);
+	if (!bSliderMoving || EventData == nullptr)
+	{
+		return bBubble;
+	}
+	const float ScrubWidth = GetWidth();
+	if (ScrubWidth <= KINDA_SMALL_NUMBER)
+	{
+		// A control with no width has no travel to measure against, and dividing by it would hand the
+		// value a NaN it can never come back from.
+		return bBubble;
+	}
+	// The cumulative travel since the press, in the PRESSED widget's local frame -- the same reading
+	// UUIScrollbar takes for its handle, including the detail that a widget's local X is the engine's
+	// Y (the UI plane is YZ).
+	const FVector LocalDelta = EventData->PressWorldToLocalTransform.TransformVector(
+		EventData->GetWorldPointInPlane() - EventData->PressWorldPoint);
+	const float Fraction = SliderPressFraction + static_cast<float>(LocalDelta.Y) / ScrubWidth;
+	// Through the ordinary road, which clamps to the HARD range: the scrub range decides how far the
+	// travel reaches, never what the value is allowed to be.
+	ApplyValueChange(SnapToStep(SliderFractionToValue(Fraction)));
+	return bBubble;
+}
+
+bool UDreamSpinBox::NativeOnEndDrag(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::NativeOnEndDrag(EventData);
+	if (!bSliderMoving)
+	{
+		return bBubble;
+	}
+	bSliderMoving = false;
+	OnEndSliderMovement.Broadcast(Value);
+	// Letting go is the COMMIT. Everything the drag passed through was OnValueChanged; this is the
+	// one moment a consumer writing to a setting or a server should act on.
+	CommitValue(Value);
+	return bBubble;
+}
+
 void UDreamSpinBox::ApplyValueChange(float InValue)
 {
-	const float Clamped = FMath::Clamp(InValue, MinValue, MaxValue);
+	const float Clamped = FMath::Clamp(SnapToStep(InValue), MinValue, MaxValue);
 	const bool bChanged = Clamped != Value;
 	Value = Clamped;
 	// Push even when nothing changed: a submit of "00100" or a step against the stop should still
@@ -251,6 +362,29 @@ void UDreamSpinBox::ApplyValueChange(float InValue)
 	if (bChanged)
 	{
 		OnValueChangedBP.Broadcast(Value), OnValueChanged.Broadcast(Value);
+	}
+}
+
+void UDreamSpinBox::CommitValue(float InValue)
+{
+	ApplyValueChange(InValue);
+	OnValueCommitted.Broadcast(Value);
+	if (InputBehaviour == nullptr)
+	{
+		return;
+	}
+	if (bClearKeyboardFocusOnCommit)
+	{
+		// Without firing the behaviour's own submit again: the value has already been committed, and
+		// a second submit would re-enter this function through HandleSubmitted.
+		InputBehaviour->DeactivateInput(false);
+	}
+	else if (bSelectAllTextOnCommit)
+	{
+		// Ready to be typed over, which is what makes a spin box usable for a run of entries. Only
+		// when focus was KEPT -- selecting the contents of a field nobody is editing shows a
+		// highlight with no caret in it.
+		InputBehaviour->SelectAll();
 	}
 }
 
@@ -280,11 +414,31 @@ void UDreamSpinBox::PushValueToParts()
 
 FString UDreamSpinBox::FormatValue() const
 {
-	// The project's one scalar printer: shortest spelling that reads back to exactly this float,
-	// always '.' for the decimal point. FString::SanitizeFloat is six fixed decimals and drifts;
-	// FText::AsNumber is culture-dependent, and a value the parser cannot read back is a value the
-	// field destroys on the next submit.
-	return DreamUIValueFormat::PrintScalar(Value, /*bSinglePrecision*/ true);
+	// At most MaxFractionalDigits, then trailing zeros trimmed back to MinFractionalDigits -- UMG's
+	// rule, and it is two knobs rather than one because the two cases it answers are opposite: a
+	// currency field must show "2.50" (a MINIMUM) and a count field must not show "3.0000001" (a
+	// MAXIMUM). Always '.' for the decimal point: FText::AsNumber is culture-dependent, and a value
+	// the parser cannot read back is a value the field destroys on the next submit.
+	const int32 MaxDigits = FMath::Clamp(MaxFractionalDigits, 0, 9);
+	const int32 MinDigits = FMath::Clamp(MinFractionalDigits, 0, MaxDigits);
+	FString Spelled = FString::Printf(TEXT("%.*f"), MaxDigits, Value);
+	if (MaxDigits > MinDigits && Spelled.Contains(TEXT(".")))
+	{
+		int32 Last = Spelled.Len() - 1;
+		// The floor is the point itself plus MinDigits after it, so a Min of zero can strip the point
+		// as well and "3.000000" becomes "3" rather than "3.".
+		const int32 Floor = Spelled.Find(TEXT(".")) + (MinDigits > 0 ? MinDigits : -1);
+		while (Last > Floor && Spelled[Last] == TEXT('0'))
+		{
+			--Last;
+		}
+		if (Last >= 0 && Spelled[Last] == TEXT('.'))
+		{
+			--Last;
+		}
+		Spelled.LeftInline(Last + 1);
+	}
+	return Spelled;
 }
 
 // The tag this class answers to in .dui.
