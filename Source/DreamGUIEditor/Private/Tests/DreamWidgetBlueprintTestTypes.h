@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Animation/DreamWidgetAnimation.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "DreamWidgetBlueprintTestTypes.generated.h"
@@ -37,6 +38,31 @@ public:
 	 */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindWidget))
 	TObjectPtr<UDreamWidget> UMGSpelledBinding = nullptr;
+};
+
+/**
+ * A native base that claims one animation and mentions another without claiming it.
+ *
+ * The same pair as the widget bindings above, for the same reason: only the marked property is a
+ * claim the compiler may check, and an animation-typed member with no marker is somebody's own
+ * reference. The optional one is the third state -- claimed, but a missing animation is not an error.
+ */
+UCLASS(NotBlueprintType, HideDropdown)
+class UDreamWidgetBlueprintAnimBindingBase : public UDreamUserWidget
+{
+	GENERATED_BODY()
+public:
+	/** Says it is a binding, so a hierarchy without an animation of this name is a compile error. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindDreamWidgetAnim))
+	TObjectPtr<UDreamWidgetAnimation> RequiredIntro = nullptr;
+
+	/** Claimed, but absence is allowed: the class is expected to test the pointer. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindDreamWidgetAnimOptional))
+	TObjectPtr<UDreamWidgetAnimation> OptionalOutro = nullptr;
+
+	/** Animation-typed and transient, but claims nothing. Must never be reported as missing. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test")
+	TObjectPtr<UDreamWidgetAnimation> UnmarkedAnimation = nullptr;
 };
 
 /**

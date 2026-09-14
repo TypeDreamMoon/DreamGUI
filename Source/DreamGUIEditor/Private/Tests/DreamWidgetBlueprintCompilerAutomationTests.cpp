@@ -742,5 +742,130 @@ bool FDreamWidgetBlueprintFactoryRootTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetBlueprintSubclassInheritsHierarchyTest,
+	"DreamGUI.WidgetBlueprint.ASubclassThatAuthorsNothingStillInheritsItsParentsHierarchy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetBlueprintSubclassInheritsHierarchyTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	// The workflow the runtime always claimed to support and the editor made unreachable: author a
+	// BaseDialog, derive ConfirmDialog, change only logic. Opening the derived asset's designer calls
+	// GetOrCreateWidgetTree(bEnsureRootWidget = true), which leaves it owning a tree that holds one
+	// bare "Root" -- and that used to become the class's archetype, so the subclass instantiated as
+	// an empty screen. The existing coverage used a hand-built subclass whose tree was null, which
+	// is the one state this path never produces.
+	FScopedBlueprint Base(TEXT("BP_BaseDialog"));
+	Base.AddWidget(TEXT("Header"));
+	FCompilerResultsLog BaseResults;
+	Compile(Base.Blueprint, BaseResults);
+	UDreamWidgetGeneratedClass* BaseClass = Cast<UDreamWidgetGeneratedClass>(Base.Blueprint->GeneratedClass);
+	if (!TestNotNull(TEXT("the base compiled to a class"), BaseClass)
+		|| !TestNotNull(TEXT("which declares a hierarchy"), BaseClass->GetWidgetTreeArchetype()))
+	{
+		return false;
+	}
+
+	FScopedBlueprint Derived(TEXT("BP_ConfirmDialog"), BaseClass);
+	// Exactly what opening the designer on it does, and nothing else.
+	Derived.Blueprint->GetOrCreateWidgetTree(/*bEnsureRootWidget*/true);
+	TestNotNull(TEXT("the derived asset does hold a placeholder tree"), Derived.Blueprint->WidgetTree.Get());
+
+	FCompilerResultsLog DerivedResults;
+	Compile(Derived.Blueprint, DerivedResults);
+	UDreamWidgetGeneratedClass* DerivedClass = Cast<UDreamWidgetGeneratedClass>(Derived.Blueprint->GeneratedClass);
+	if (!TestNotNull(TEXT("the subclass compiled to a class"), DerivedClass))
+	{
+		return false;
+	}
+	TestEqual(TEXT("compiling the subclass raised no errors"), DerivedResults.NumErrors, 0);
+	TestNull(TEXT("an unauthored placeholder does not become the subclass's own archetype"),
+		DerivedClass->GetWidgetTreeArchetype());
+	TestEqual(TEXT("so the subclass resolves to its parent's hierarchy"),
+		(const UDreamWidgetTree*)UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(DerivedClass),
+		(const UDreamWidgetTree*)BaseClass->GetWidgetTreeArchetype());
+
+	// And authoring ANYTHING into the subclass's tree takes the hierarchy over, whole -- the other
+	// half of the rule, and the one that keeps the placeholder test from being a trapdoor.
+	Derived.AddWidget(TEXT("Footer"));
+	FCompilerResultsLog OverrideResults;
+	Compile(Derived.Blueprint, OverrideResults);
+	DerivedClass = Cast<UDreamWidgetGeneratedClass>(Derived.Blueprint->GeneratedClass);
+	if (TestNotNull(TEXT("it still compiles"), DerivedClass))
+	{
+		TestNotNull(TEXT("a subclass that authored something owns its hierarchy"),
+			DerivedClass->GetWidgetTreeArchetype());
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetBlueprintAnimationBindingTest,
+	"DreamGUI.WidgetBlueprint.AClaimedAnimationThatIsNotThereFailsTheCompile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetBlueprintAnimationBindingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	// The animation half of the binding contract. A parent class that plays "RequiredIntro" has no
+	// other way of finding out that the hierarchy under it has no such animation: the variable it
+	// declares is simply never filled, and the class runs with a null.
+	{
+		// Declared BEFORE the fixture exists, not merely before the explicit compile: creating a
+		// Blueprint compiles it, and an expected error only covers what is logged after it is
+		// registered. The failure is the point either way -- the compiler logs through LogBlueprint
+		// and automation counts any logged error as a failed test. Occurrences 0 because the message
+		// is emitted once by the compiler and replayed once by the results log.
+		AddExpectedError(TEXT("must contain an animation named"), EAutomationExpectedErrorFlags::Contains, 0);
+
+		FScopedBlueprint Fixture(TEXT("BP_MissingAnimBinding"), UDreamWidgetBlueprintAnimBindingBase::StaticClass());
+		UDreamWidget* Target = Fixture.AddWidget(TEXT("Header"));
+		UDreamWidgetAnimation* Sequence = nullptr;
+		BindAnimationToWidget(Fixture, Target, Sequence);
+		if (TestNotNull(TEXT("the fixture has an animation to rename"), Sequence))
+		{
+			Sequence->SetDisplayNameString(TEXT("SomethingElse"));
+		}
+
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestTrue(TEXT("a claimed animation that is not there fails the compile"), Results.NumErrors > 0);
+
+		// WHICH property was reported: the base class declares three animation-typed members, one
+		// claimed, one claimed-but-optional, one unmarked, and none of the three is answered here.
+		FString AllMessages;
+		for (const TSharedRef<FTokenizedMessage>& Message : Results.Messages)
+		{
+			AllMessages += Message->ToText().ToString() + TEXT(" | ");
+		}
+		TestTrue(*FString::Printf(TEXT("the claimed one is named, saw [%s]"), *AllMessages),
+			AllMessages.Contains(TEXT("RequiredIntro")));
+		TestFalse(*FString::Printf(TEXT("the optional one is not, saw [%s]"), *AllMessages),
+			AllMessages.Contains(TEXT("OptionalOutro")));
+		TestFalse(*FString::Printf(TEXT("nor the unmarked one, saw [%s]"), *AllMessages),
+			AllMessages.Contains(TEXT("UnmarkedAnimation")));
+	}
+
+	// And naming it what the claim asks for settles it -- while the optional claim and the unmarked
+	// member, neither of which this hierarchy answers, stay quiet.
+	{
+		FScopedBlueprint Fixture(TEXT("BP_PresentAnimBinding"), UDreamWidgetBlueprintAnimBindingBase::StaticClass());
+		UDreamWidget* Target = Fixture.AddWidget(TEXT("Header"));
+		UDreamWidgetAnimation* Sequence = nullptr;
+		BindAnimationToWidget(Fixture, Target, Sequence);
+		if (TestNotNull(TEXT("the fixture has an animation to name"), Sequence))
+		{
+			Sequence->SetDisplayNameString(TEXT("RequiredIntro"));
+		}
+
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestEqual(TEXT("an animation of that name satisfies the claim"), Results.NumErrors, 0);
+	}
+	return true;
+}
 
 #endif
