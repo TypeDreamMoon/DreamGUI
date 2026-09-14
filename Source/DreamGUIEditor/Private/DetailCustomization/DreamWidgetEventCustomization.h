@@ -69,7 +69,7 @@ private:
 	};
 
 	/** Add one row: event icon, display name, and the Add / View switcher button -- UMG's row, verbatim. */
-	void AddEventRow(class IDetailCategoryBuilder& InCategory, const FMulticastDelegateProperty* InDelegate,
+	void AddEventRow(class IDetailCategoryBuilder& InCategory, const FProperty* InDelegate,
 		bool bInEnabled, const FText& InDisabledReason);
 
 	/** The click. Focuses the existing handler when the route exists, creates both otherwise. */

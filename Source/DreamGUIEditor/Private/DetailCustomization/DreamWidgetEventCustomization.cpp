@@ -14,8 +14,13 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamWidgetTree.h"
+// The Events section lists FDreamUIEventDelegate properties as well as multicast delegates.
+#include "Event/DreamUIEventDelegate.h"
+#include "Event/DreamPointerEventData.h"
 
+#include "Settings/EditorStyleSettings.h"
 #include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
 #include "K2Node_CustomEvent.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -72,18 +77,152 @@ namespace
 		}
 	}
 
-	/** The BlueprintAssignable dynamic multicast delegates of one class, in declaration order. */
-	void CollectAssignableEvents(const UClass* InClass, TArray<const FMulticastDelegateProperty*>& OutEvents)
+	/**
+	 * Every event of one class a `->` route can name, in declaration order.
+	 *
+	 * TWO kinds, because the plugin has two. `Controls/*` declares BlueprintAssignable dynamic
+	 * multicast delegates; the older `Interaction/*` behaviours declare FDreamUIEventDelegate struct
+	 * properties. Listing only the first left that whole family of controls with no canonical way to
+	 * be handled at all -- which is what kept its per-instance legacy event list alive as a second,
+	 * competing event UI. Both are routed identically now: the compiler validates either and
+	 * UDreamUserWidget::BindEventBindings attaches to either.
+	 */
+	void CollectAssignableEvents(const UClass* InClass, TArray<const FProperty*>& OutEvents)
 	{
-		for (TFieldIterator<FMulticastDelegateProperty> It(InClass, EFieldIteratorFlags::IncludeSuper); It; ++It)
+		for (TFieldIterator<FProperty> It(InClass, EFieldIteratorFlags::IncludeSuper); It; ++It)
 		{
 			// BlueprintAssignable is the same test the text pipeline applies before writing a `->`
 			// route (DreamUITextBuilder): it is what guarantees a UFUNCTION can be bound by name.
-			if (It->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+			if (const FMulticastDelegateProperty* AsDelegate = CastField<FMulticastDelegateProperty>(*It))
 			{
-				OutEvents.Add(*It);
+				if (AsDelegate->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+				{
+					OutEvents.Add(*It);
+				}
+				continue;
+			}
+			//an FDreamUIEventDelegate the author exposed; a hidden one is not part of the surface
+			if (const FStructProperty* AsStruct = CastField<FStructProperty>(*It))
+			{
+				if (AsStruct->Struct == FDreamUIEventDelegate::StaticStruct() && AsStruct->HasAnyPropertyFlags(CPF_Edit))
+				{
+					OutEvents.Add(*It);
+				}
 			}
 		}
+	}
+
+	/** The FDreamUIEventDelegate this property is, or null when it is a multicast delegate instead. */
+	const FDreamUIEventDelegate* AsDreamEvent(const FProperty* InProperty, const UObject* InSubject)
+	{
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InProperty);
+		if (AsStruct == nullptr || AsStruct->Struct != FDreamUIEventDelegate::StaticStruct() || InSubject == nullptr)
+		{
+			return nullptr;
+		}
+		return AsStruct->ContainerPtrToValuePtr<FDreamUIEventDelegate>(InSubject);
+	}
+
+	/**
+	 * The Blueprint pin an FDreamUIEventDelegate of this parameter type hands its handler.
+	 *
+	 * Returns false for the types a Blueprint graph has no pin for -- the narrow and unsigned
+	 * integers, and a `Struct` event whose struct is not known until a function is picked. Those
+	 * events are real and fire; they just cannot be handled by a custom event node, so the row says
+	 * so instead of making a handler the compiler would immediately reject.
+	 */
+	bool MakeHandlerPinType(EDreamUIEventDelegateParameterType InParameterType, FEdGraphPinType& OutPinType)
+	{
+		auto AsStruct = [&OutPinType](UScriptStruct* InStruct)
+		{
+			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+			OutPinType.PinSubCategoryObject = InStruct;
+			return true;
+		};
+		auto AsObject = [&OutPinType](UClass* InClass, FName InCategory)
+		{
+			OutPinType.PinCategory = InCategory;
+			OutPinType.PinSubCategoryObject = InClass;
+			return true;
+		};
+		switch (InParameterType)
+		{
+		case EDreamUIEventDelegateParameterType::Bool:			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean; return true;
+		case EDreamUIEventDelegateParameterType::Float:
+			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+			OutPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+			return true;
+		case EDreamUIEventDelegateParameterType::Double:
+			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+			OutPinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
+			return true;
+		case EDreamUIEventDelegateParameterType::UInt8:			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Byte; return true;
+		case EDreamUIEventDelegateParameterType::Int32:			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Int; return true;
+		case EDreamUIEventDelegateParameterType::Int64:			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Int64; return true;
+		case EDreamUIEventDelegateParameterType::String:		OutPinType.PinCategory = UEdGraphSchema_K2::PC_String; return true;
+		case EDreamUIEventDelegateParameterType::Name:			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Name; return true;
+		case EDreamUIEventDelegateParameterType::Text:			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Text; return true;
+		case EDreamUIEventDelegateParameterType::Vector2:		return AsStruct(TBaseStructure<FVector2D>::Get());
+		case EDreamUIEventDelegateParameterType::Vector3:		return AsStruct(TBaseStructure<FVector>::Get());
+		case EDreamUIEventDelegateParameterType::Vector4:		return AsStruct(TBaseStructure<FVector4>::Get());
+		case EDreamUIEventDelegateParameterType::Quaternion:	return AsStruct(TBaseStructure<FQuat>::Get());
+		case EDreamUIEventDelegateParameterType::Rotator:		return AsStruct(TBaseStructure<FRotator>::Get());
+		case EDreamUIEventDelegateParameterType::Color:			return AsStruct(TBaseStructure<FColor>::Get());
+		case EDreamUIEventDelegateParameterType::LinearColor:	return AsStruct(TBaseStructure<FLinearColor>::Get());
+		case EDreamUIEventDelegateParameterType::Asset:			return AsObject(UObject::StaticClass(), UEdGraphSchema_K2::PC_Object);
+		case EDreamUIEventDelegateParameterType::DreamWidget:	return AsObject(UDreamWidget::StaticClass(), UEdGraphSchema_K2::PC_Object);
+		case EDreamUIEventDelegateParameterType::PointerEvent:	return AsObject(UDreamPointerEventData::StaticClass(), UEdGraphSchema_K2::PC_Object);
+		case EDreamUIEventDelegateParameterType::Class:			return AsObject(UObject::StaticClass(), UEdGraphSchema_K2::PC_Class);
+		default:												return false;
+		}
+	}
+
+	/** A custom event node with one pin of InParameterType, the counterpart of CreateFromFunction. */
+	UK2Node_CustomEvent* CreateHandlerForDreamEvent(UEdGraph* InGraph, const FVector2D& InPosition,
+		const FString& InName, EDreamUIEventDelegateParameterType InParameterType)
+	{
+		if (InGraph == nullptr)
+		{
+			return nullptr;
+		}
+		// The engine's own CreateFromFunction, minus the UFunction it copies pins from: an
+		// FDreamUIEventDelegate has no signature function, only the single value it declares.
+		UK2Node_CustomEvent* Node = NewObject<UK2Node_CustomEvent>(InGraph);
+		Node->CustomFunctionName = FName(*InName);
+		Node->SetFlags(RF_Transactional);
+		InGraph->Modify();
+		InGraph->AddNode(Node, true, /*bSelectNewNode*/true);
+		Node->CreateNewGuid();
+		Node->PostPlacedNewNode();
+		Node->AllocateDefaultPins();
+		FEdGraphPinType PinType;
+		if (InParameterType != EDreamUIEventDelegateParameterType::Empty && MakeHandlerPinType(InParameterType, PinType))
+		{
+			Node->CreateUserDefinedPin(TEXT("Value"), PinType, EGPD_Output);
+		}
+		Node->NodePosX = (int32)InPosition.X;
+		Node->NodePosY = (int32)InPosition.Y;
+		Node->SnapToGrid(GetDefault<UEditorStyleSettings>()->GridSnapSize);
+		return Node;
+	}
+
+	/** Whether a Blueprint handler can be generated for this event at all. */
+	bool CanGenerateHandlerFor(const FProperty* InEventProperty, const UObject* InSubject, FText& OutReason)
+	{
+		const FDreamUIEventDelegate* DreamEvent = AsDreamEvent(InEventProperty, InSubject);
+		if (DreamEvent == nullptr)
+		{
+			return true;//a multicast delegate always has a signature function to copy
+		}
+		const EDreamUIEventDelegateParameterType ParameterType = DreamEvent->GetNativeParameterType();
+		FEdGraphPinType Unused;
+		if (ParameterType == EDreamUIEventDelegateParameterType::Empty || MakeHandlerPinType(ParameterType, Unused))
+		{
+			return true;
+		}
+		OutReason = LOCTEXT("Disabled_NoBlueprintPin",
+			"This event carries a value a Blueprint graph has no pin for (a narrow or unsigned integer, or a struct chosen per binding). Handle it from C++.");
+		return false;
 	}
 }
 
@@ -147,7 +286,7 @@ void FDreamWidgetEventCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 		return;
 	}
 
-	TArray<const FMulticastDelegateProperty*> Events;
+	TArray<const FProperty*> Events;
 	CollectAssignableEvents(SubjectClass.Get(), Events);
 	if (Events.Num() == 0)
 	{
@@ -206,14 +345,22 @@ void FDreamWidgetEventCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 	// object, and one place to look beats five.
 	IDetailCategoryBuilder& EventCategory = DetailBuilder.EditCategory(
 		TEXT("Events"), LOCTEXT("EventsCategory", "Events"), ECategoryPriority::Uncommon);
-	for (const FMulticastDelegateProperty* Event : Events)
+	for (const FProperty* Event : Events)
 	{
-		AddEventRow(EventCategory, Event, bEnabled, DisabledReason);
+		// Per row, on top of the whole-panel reasons above: an event whose value no Blueprint pin can
+		// carry is real and fires, it just cannot be handed to a custom event node.
+		bool bRowEnabled = bEnabled;
+		FText RowDisabledReason = DisabledReason;
+		if (bRowEnabled && !CanGenerateHandlerFor(Event, Objects[0].Get(), RowDisabledReason))
+		{
+			bRowEnabled = false;
+		}
+		AddEventRow(EventCategory, Event, bRowEnabled, RowDisabledReason);
 	}
 }
 
 void FDreamWidgetEventCustomization::AddEventRow(IDetailCategoryBuilder& InCategory,
-	const FMulticastDelegateProperty* InDelegate, bool bInEnabled, const FText& InDisabledReason)
+	const FProperty* InDelegate, bool bInEnabled, const FText& InDisabledReason)
 {
 	const FName EventName = InDelegate->GetFName();
 	const FText EventText = InDelegate->GetDisplayNameText();
@@ -351,10 +498,14 @@ FReply FDreamWidgetEventCustomization::HandleAddOrViewEvent(FName InEventName)
 	// been rebuilt any number of times since, and the template tree is the copy that matters anyway.
 	const UObject* Subject = ResolveTemplateSubject(*Blueprint, Context.WidgetVariableName,
 		Context.Target, Context.BehaviourIndex);
-	const FMulticastDelegateProperty* Delegate = Subject != nullptr
-		? CastField<FMulticastDelegateProperty>(Subject->GetClass()->FindPropertyByName(InEventName))
-		: nullptr;
-	if (Delegate == nullptr)
+	const FProperty* EventProperty = Subject != nullptr ? Subject->GetClass()->FindPropertyByName(InEventName) : nullptr;
+	const FMulticastDelegateProperty* Delegate = CastField<FMulticastDelegateProperty>(EventProperty);
+	// The other kind: an FDreamUIEventDelegate has no signature function, only the single value it
+	// declares, so its handler is built from that instead of copied from a UFunction.
+	const FDreamUIEventDelegate* DreamEvent = AsDreamEvent(EventProperty, Subject);
+	const EDreamUIEventDelegateParameterType DreamParameterType = DreamEvent != nullptr
+		? DreamEvent->GetNativeParameterType() : EDreamUIEventDelegateParameterType::None;
+	if (Delegate == nullptr && DreamEvent == nullptr)
 	{
 		return FReply::Handled();
 	}
@@ -396,8 +547,10 @@ FReply FDreamWidgetEventCustomization::HandleAddOrViewEvent(FName InEventName)
 		}
 		const FScopedTransaction Transaction(LOCTEXT("RecreateEventHandler", "Recreate Event Handler"));
 		const FVector2D Position = EventGraph->GetGoodPlaceForNewNode();
-		UK2Node_CustomEvent* NewHandler = UK2Node_CustomEvent::CreateFromFunction(
-			Position, EventGraph, Route->FunctionName.ToString(), Delegate->SignatureFunction, /*bSelectNewNode*/true);
+		UK2Node_CustomEvent* NewHandler = Delegate != nullptr
+			? UK2Node_CustomEvent::CreateFromFunction(
+				Position, EventGraph, Route->FunctionName.ToString(), Delegate->SignatureFunction, /*bSelectNewNode*/true)
+			: CreateHandlerForDreamEvent(EventGraph, Position, Route->FunctionName.ToString(), DreamParameterType);
 		if (NewHandler == nullptr)
 		{
 			return FReply::Handled();
@@ -421,13 +574,15 @@ FReply FDreamWidgetEventCustomization::HandleAddOrViewEvent(FName InEventName)
 	// anything else on the Blueprint.
 	const FString HandlerBase = FString::Printf(TEXT("%s_%s"),
 		*Context.WidgetVariableName.ToString(),
-		*UDreamWidgetTree::SanitizeIdentifier(Delegate->GetDisplayNameText().ToString()));
+		*UDreamWidgetTree::SanitizeIdentifier(EventProperty->GetDisplayNameText().ToString()));
 	const FName HandlerName = FBlueprintEditorUtils::FindUniqueKismetName(Blueprint, HandlerBase);
 
 	const FScopedTransaction Transaction(LOCTEXT("AddEventRoute", "Add Event Handler"));
 	const FVector2D Position = EventGraph->GetGoodPlaceForNewNode();
-	UK2Node_CustomEvent* Handler = UK2Node_CustomEvent::CreateFromFunction(
-		Position, EventGraph, HandlerName.ToString(), Delegate->SignatureFunction, /*bSelectNewNode*/true);
+	UK2Node_CustomEvent* Handler = Delegate != nullptr
+		? UK2Node_CustomEvent::CreateFromFunction(
+			Position, EventGraph, HandlerName.ToString(), Delegate->SignatureFunction, /*bSelectNewNode*/true)
+		: CreateHandlerForDreamEvent(EventGraph, Position, HandlerName.ToString(), DreamParameterType);
 	if (Handler == nullptr)
 	{
 		return FReply::Handled();

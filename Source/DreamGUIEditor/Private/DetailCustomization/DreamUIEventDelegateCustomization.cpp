@@ -17,6 +17,12 @@
 #include "STextPropertyEditableTextBox.h"
 #include "SEnumCombo.h"
 #include "Serialization/BufferArchive.h"
+#include "ScopedTransaction.h"
+// A `Struct` parameter is edited by a real nested details view over a real instance of the struct.
+#include "IStructureDetailsView.h"
+#include "Misc/StringOutputDevice.h"
+#include "Modules/ModuleManager.h"
+#include "PropertyEditorModule.h"
 #include "DreamUIEditableTextPropertyHandle.h"
 #include "DreamGUIEditorModule.h"
 #include "Core/Components/DreamLayout.h"
@@ -45,6 +51,13 @@ void FDreamUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyH
 	bool bIsInWorld = false;
 	TArray<UObject*> NodeSet;
 	PropertyHandle->GetOuterObjects(NodeSet);
+	if (NodeSet.IsEmpty())
+	{
+		// A struct reached through something that is not an object -- a data-table row, a detached
+		// handle during a refresh. There is no world to pick widgets from and no object to bind to, so
+		// there is nothing honest to draw. NodeSet[0] below used to read off the end of it.
+		return;
+	}
 	if (NodeSet.Num() > 1)
 	{
 		auto TipText = LOCTEXT("NotSupportMultipleEdit_Content", "(Not support multiple edit)");
@@ -68,6 +81,10 @@ void FDreamUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyH
 		return;
 	}
 	auto OutObject = NodeSet[0];
+	if (!IsValid(OutObject))
+	{
+		return;
+	}
 	bIsInWorld = OutObject->GetWorld() != nullptr;
 	if (!bIsInWorld)
 	{
@@ -78,17 +95,26 @@ void FDreamUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyH
 		return;
 	}
 
-	// copy all EventDelegate I'm accessing right now
+	// Re-resolve every event's target before the rows are drawn from it.
+	//
+	// The raw pointers used to be kept in a member array as well, which nothing ever read back -- and
+	// keeping raw struct addresses across a details refresh is exactly how a panel ends up writing
+	// into freed memory, so they are not kept. The hard check()s are gone with them: a handle that
+	// cannot reach its data is a state this panel can be in (a refresh mid-teardown), and taking the
+	// editor down for it is not a service to anyone.
 	TArray<void*> StructPtrs;
 	PropertyHandle->AccessRawData(StructPtrs);
-	check(StructPtrs.Num() != 0);
-
-	EventDelegateInstances.AddZeroed(StructPtrs.Num());
-	for (auto Iter = StructPtrs.CreateIterator(); Iter; ++Iter)
+	if (StructPtrs.IsEmpty())
 	{
-		check(*Iter);
-		auto Item = (FDreamUIEventDelegate*)(*Iter);
-		EventDelegateInstances[Iter.GetIndex()] = Item;
+		return;
+	}
+	for (void* StructPtr : StructPtrs)
+	{
+		if (StructPtr == nullptr)
+		{
+			continue;
+		}
+		auto Item = (FDreamUIEventDelegate*)StructPtr;
 		for (auto& listItem : Item->EventList)
 		{
 			listItem.CheckTargetObject();
@@ -104,7 +130,35 @@ void FDreamUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyH
 	NativeParameterTypeHandle->SetOnPropertyValueChanged(RefreshDelegate);
 
 	auto EventParameterType = GetNativeParameterType();
-	
+
+	// Why this panel is mostly grey. Said before the author finds a picker that does not open.
+	ChildBuilder.AddCustomRow(LOCTEXT("LegacyEventBanner_Filter", "Legacy Event List"))
+		.WholeRowContent()
+		[
+			SNew(SBox)
+			.Padding(FMargin(4, 4))
+			[
+				// The same shape as the "Arranged By" and text-authored banners the other panels draw,
+				// deliberately: all three say "these fields are not yours to set, and here is what to
+				// use instead", and they should not look like three unrelated kinds of notice.
+				SNew(STextBlock)
+				.Text(LOCTEXT("LegacyEventBanner",
+					"Legacy event list. Existing entries still fire, and can be removed here, but new ones are authored as a route instead: use the Events section of this panel, or write EventName -> YourHandler on the widget in the .dui. A route calls a function on the user widget, which is where UMG puts event handling too."))
+				.ColorAndOpacity(FLinearColor(1.0f, 0.78f, 0.30f))
+				.AutoWrapText(true)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		];
+	if (HasAuthoredBindings())
+	{
+		// One line per delegate when the panel opens, so an asset carrying legacy bindings says so in
+		// the log as well as on screen -- the log is what a project-wide audit greps for.
+		UE_LOG(DreamGUIEditor, Warning,
+			TEXT("[%s].%d '%s' on '%s' still carries %d legacy event binding(s). They fire, but the supported way to handle this event is a route: EventName -> YourHandler."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *PropertyHandle->GetPropertyDisplayName().ToString(),
+			*GetNameSafe(OutObject), GetAuthoredBindingCount());
+	}
+
 	ChildBuilder.AddCustomRow(LOCTEXT("EventDelegate", "EventDelegate"))
 		.WholeRowContent()
 		[
@@ -164,10 +218,15 @@ void FDreamUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyH
 										SNew(SHorizontalBox)
 										+ SHorizontalBox::Slot()
 										[
-											PropertyCustomizationHelpers::MakeAddButton(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::OnClickListAdd))
+											//adding is authoring; see CanAuthorLegacyBinding
+											PropertyCustomizationHelpers::MakeAddButton(
+												FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::OnClickListAdd),
+												LOCTEXT("AddLegacyBindingTooltip", "Legacy list: new bindings are authored as a route instead. See the Events section."),
+												TAttribute<bool>::CreateSP(this, &FDreamUIEventDelegateCustomization::CanAuthorLegacyBinding))
 										]
 										+ SHorizontalBox::Slot()
 										[
+											//emptying REMOVES; a list no UI can clear is the worse failure
 											PropertyCustomizationHelpers::MakeEmptyButton(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::OnClickListEmpty))
 										]
 									]
@@ -396,7 +455,9 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 	auto EventListHandle = GetEventListHandle();
 
 	auto EventsVerticalLayout = SNew(SVerticalBox);
-	EventParameterWidgetArray.Empty(); 
+	EventParameterWidgetArray.Empty();
+	//the rows are rebuilt wholesale, and a struct parameter's view lives exactly as long as its row
+	StructParameterViews.Empty();
 	uint32 arrayCount;
 	EventListHandle->GetNumElements(arrayCount);
 	for (int32 EventItemIndex = 0; EventItemIndex < (int32)arrayCount; EventItemIndex++)
@@ -408,96 +469,8 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 		HelperWidgetHandle->GetValue(HelperWidgetObject);
 		auto HelperWidget = Cast<UDreamWidget>(HelperWidgetObject);
 
-		//TargetObject
-		auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, TargetObject));
-		UObject* TargetObject = nullptr;
-		TargetObjectHandle->GetValue(TargetObject);
-
-		UObject* ClassObject = nullptr;
-		auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperClass));
-		HelperClassHandle->GetValue(ClassObject);
-		if (ClassObject != nullptr)
-		{
-			UClass* ClassValue = Cast<UClass>(ClassObject);
-			if (ClassValue == UDreamWidget::StaticClass())
-			{
-				// Only when it is actually out of date, and never into the undo buffer. This whole block
-				// re-derives TargetObject from HelperWidget while the panel is being BUILT: with a plain
-				// SetValue, opening the details panel on a widget that has events opened a transaction,
-				// pushed an undo entry and dirtied the asset before the author touched anything.
-				if (TargetObject != HelperWidget)
-				{
-					TargetObjectHandle->SetValue(HelperWidget, EPropertyValueSetFlags::NotTransactable);
-					TargetObject = HelperWidget;
-				}
-			}
-			else if (ClassValue->IsChildOf(UDreamUIBehaviour::StaticClass()) || ClassValue->IsChildOf(UDreamWidgetSubObjectBehaviour::StaticClass()))
-			{
-				if (HelperWidget != nullptr)
-				{
-					UObject* FoundTargetObject = nullptr;
-					if (ClassValue->IsChildOf(UDreamUIBehaviour::StaticClass()))
-					{
-						auto CompArray = HelperWidget->GetComponents(ClassValue);
-						if (CompArray.Num() == 1)
-						{
-							FoundTargetObject = CompArray[0];
-						}
-						else if (CompArray.Num() > 1)
-						{
-							FName HelperComponentName = NAME_None;
-							auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentName));
-							HelperComponentNameHandle->GetValue(HelperComponentName);
-							if (!HelperComponentName.IsNone())
-							{
-								for (auto& Comp : CompArray)
-								{
-									if (Comp->GetFName() == HelperComponentName)
-									{
-										FoundTargetObject = Comp;
-										break;
-									}
-								}
-							}
-						}
-					}
-					else if (ClassValue->IsChildOf(UDreamVisual::StaticClass()))
-					{
-						FoundTargetObject = HelperWidget->GetVisual();
-					}
-					else if (ClassValue->IsChildOf(UDreamLayoutContainer::StaticClass()))
-					{
-						FoundTargetObject = HelperWidget->GetLayoutContainer();
-					}
-					else if (ClassValue->IsChildOf(UDreamLayoutSelf::StaticClass()))
-					{
-						FoundTargetObject = HelperWidget->GetLayoutSelf();
-					}
-					if (FoundTargetObject != TargetObject)
-					{
-						//re-derived during layout, so not an edit; see the note above
-						TargetObjectHandle->SetValue(FoundTargetObject, EPropertyValueSetFlags::NotTransactable);
-						TargetObject = FoundTargetObject;
-					}
-				}
-				else
-				{
-					if (TargetObject != nullptr)
-					{
-						TargetObjectHandle->SetValue((UObject*)nullptr, EPropertyValueSetFlags::NotTransactable);
-						TargetObject = nullptr;
-					}
-				}
-			}
-		}
-		else
-		{
-			if (TargetObject != nullptr)
-			{
-				TargetObjectHandle->SetValue((UObject*)nullptr, EPropertyValueSetFlags::NotTransactable);
-				TargetObject = nullptr;
-			}
-		}
+		//TargetObject, re-derived from the helper fields by the runtime's own resolver
+		UObject* TargetObject = RefreshTargetObject(ItemPropertyHandle);
 
 		HelperWidgetHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIEventDelegateCustomization::OnHelperWidgetParameterChanged, ItemPropertyHandle));
 			
@@ -613,7 +586,9 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("P", "P"))
 							.OnClicked(this, &FDreamUIEventDelegateCustomization::OnClickCopyPaste, false, EventItemIndex)
-							.ToolTipText(LOCTEXT("Paste", "Paste copied function to this function"))
+							//pasting is authoring; see CanAuthorLegacyBinding
+							.IsEnabled(this, &FDreamUIEventDelegateCustomization::CanAuthorLegacyBinding)
+							.ToolTipText(LOCTEXT("Paste", "Legacy list: new bindings are authored as a route instead. See the Events section."))
 						]
 					]
 				]
@@ -632,7 +607,8 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("D", "D"))
 							.OnClicked(this, &FDreamUIEventDelegateCustomization::OnClickDuplicate, EventItemIndex)
-							.ToolTipText(LOCTEXT("Duplicate", "Duplicate this function"))
+							.IsEnabled(this, &FDreamUIEventDelegateCustomization::CanAuthorLegacyBinding)
+							.ToolTipText(LOCTEXT("Duplicate", "Legacy list: new bindings are authored as a route instead. See the Events section."))
 						]
 					]
 				]
@@ -651,7 +627,8 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("+", "+"))
 							.OnClicked(this, &FDreamUIEventDelegateCustomization::OnClickAddRemove, true, EventItemIndex, (int32)arrayCount)
-							.ToolTipText(LOCTEXT("Add", "Add new one"))
+							.IsEnabled(this, &FDreamUIEventDelegateCustomization::CanAuthorLegacyBinding)
+							.ToolTipText(LOCTEXT("Add", "Legacy list: new bindings are authored as a route instead. See the Events section."))
 						]
 					]
 				]
@@ -756,9 +733,10 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 									SNew(SHorizontalBox)
 									+SHorizontalBox::Slot()
 									[
-										//HelperWidget
+										//HelperWidget; re-pointing a binding is authoring, so it is off here too
 										SNew(SBox)
 										.Padding(FMargin(0, 0, 6, 0))
+										.IsEnabled(this, &FDreamUIEventDelegateCustomization::CanAuthorLegacyBinding)
 										[
 											DrawDreamWidgetSelectorForDesigner(EventItemIndex)
 										]
@@ -779,10 +757,12 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 												.Text(this, &FDreamUIEventDelegateCustomization::GetComponentDisplayName, ItemPropertyHandle)
 												.Font(IDetailLayoutBuilder::GetDetailFont())
 											]
-											.MenuContent()
-											[
-												MakeComponentSelectorMenu(EventItemIndex)
-											]
+											// On demand, not at layout time: MenuContent builds the menu for
+											// every row of every event while the panel is merely being
+											// drawn, and this one walks the widget's whole component
+											// list. Most of those menus are never opened.
+											.OnGetMenuContent(FOnGetContent::CreateSP(
+												this, &FDreamUIEventDelegateCustomization::MakeComponentSelectorMenu, EventItemIndex))
 										]
 									]
 								]
@@ -813,17 +793,21 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 													.Text(this, &FDreamUIEventDelegateCustomization::GetEventItemFunctionName, ItemPropertyHandle)
 													.Font(IDetailLayoutBuilder::GetDetailFont())
 												]
-												.MenuContent()
-												[
-													MakeFunctionSelectorMenu(EventItemIndex)
-												]
+												// Same reason as the component menu above, and more so: this
+												// one iterates every UFunction on the target's class.
+												.OnGetMenuContent(FOnGetContent::CreateSP(
+													this, &FDreamUIEventDelegateCustomization::MakeFunctionSelectorMenu, EventItemIndex))
 											]
 										]
 									]
 									+SHorizontalBox::Slot()
 									[
-										//parameter
-										ParameterWidget
+										//parameter; changing what a legacy binding sends is authoring
+										SNew(SBox)
+										.IsEnabled(this, &FDreamUIEventDelegateCustomization::CanAuthorLegacyBinding)
+										[
+											ParameterWidget
+										]
 									]
 								]
 							]
@@ -840,76 +824,77 @@ void FDreamUIEventDelegateCustomization::UpdateEventsLayout()
 	EventsWidget->SetContent(EventsVerticalLayout);
 }
 
+UObject* FDreamUIEventDelegateCustomization::RefreshTargetObject(TSharedRef<IPropertyHandle> InItemPropertyHandle) const
+{
+	TSharedPtr<IPropertyHandle> HelperWidgetHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperWidget));
+	TSharedPtr<IPropertyHandle> HelperClassHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperClass));
+	TSharedPtr<IPropertyHandle> ComponentIndexHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentIndex));
+	TSharedPtr<IPropertyHandle> ComponentNameHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentName));
+	TSharedPtr<IPropertyHandle> TargetObjectHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, TargetObject));
+	if (!HelperWidgetHandle.IsValid() || !HelperClassHandle.IsValid() || !TargetObjectHandle.IsValid())
+	{
+		return nullptr;
+	}
+
+	UObject* HelperWidgetObject = nullptr;
+	HelperWidgetHandle->GetValue(HelperWidgetObject);
+	UObject* ClassObject = nullptr;
+	HelperClassHandle->GetValue(ClassObject);
+	int32 ComponentIndex = INDEX_NONE;
+	if (ComponentIndexHandle.IsValid())
+	{
+		ComponentIndexHandle->GetValue(ComponentIndex);
+	}
+	FName ComponentName = NAME_None;
+	if (ComponentNameHandle.IsValid())
+	{
+		ComponentNameHandle->GetValue(ComponentName);
+	}
+
+	FString ResolveError;
+	int32 ResolvedComponentIndex = INDEX_NONE;
+	UObject* Resolved = UDreamUIEventDelegateParameterHelper::ResolveBindingTarget(
+		Cast<UDreamWidget>(HelperWidgetObject), Cast<UClass>(ClassObject),
+		ComponentIndex, ComponentName, &ResolvedComponentIndex, &ResolveError);
+
+	if (!IsValid(Resolved) && IsValid(HelperWidgetObject) && IsValid(ClassObject))
+	{
+		// Said out loud, because the write below puts null over the author's choice while the panel is
+		// merely being drawn -- after which the row reads "(NotValid)" as though nothing was ever
+		// picked. Clearing IS the safe answer: any other behaviour of the class would be the WRONG
+		// function, silently. The runtime says the same sentence at its own resolve.
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Cannot resolve this event's target: %s"),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ResolveError);
+	}
+
+	UObject* CurrentTarget = nullptr;
+	TargetObjectHandle->GetValue(CurrentTarget);
+	if (CurrentTarget != Resolved)
+	{
+		// Re-derived while drawing, so not an edit. With a plain SetValue, opening the details panel on
+		// a widget that has events opened a transaction, pushed an undo entry and dirtied the asset
+		// before the author touched anything.
+		TargetObjectHandle->SetValue(Resolved, EPropertyValueSetFlags::NotTransactable);
+	}
+	if (IsValid(Resolved) && ComponentIndexHandle.IsValid() && ComponentIndex != ResolvedComponentIndex)
+	{
+		//a legacy name just resolved: record the position so the name stops being load-bearing
+		ComponentIndexHandle->SetValue(ResolvedComponentIndex, EPropertyValueSetFlags::NotTransactable);
+	}
+	return Resolved;
+}
+
 void FDreamUIEventDelegateCustomization::OnHelperWidgetParameterChanged(TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
-	UObject* HelperWidgetObject = nullptr;
-	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperWidget));
-	HelperWidgetHandle->GetValue(HelperWidgetObject);
-	auto HelperWidget = Cast<UDreamWidget>(HelperWidgetObject);
-
-	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, TargetObject));
-	UObject* TargetObject = nullptr;
-	TargetObjectHandle->GetValue(TargetObject);
-
-	UObject* ClassObject = nullptr;
-	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperClass));
-	HelperClassHandle->GetValue(ClassObject);
-	if (ClassObject != nullptr)
+	// Picking a different widget invalidates the behaviour POSITION as well: index 2 on the old widget
+	// means nothing on the new one. Cleared here so the resolve below re-derives from the class, which
+	// is what the author expects after moving a binding to another widget.
+	if (TSharedPtr<IPropertyHandle> ComponentIndexHandle =
+		ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentIndex)))
 	{
-		UClass* ClassValue = Cast<UClass>(ClassObject);
-		if (ClassValue == UDreamWidget::StaticClass())
-		{
-			TargetObjectHandle->SetValue(HelperWidget);
-		}
-		else if (ClassValue->IsChildOf(UDreamUIBehaviour::StaticClass()))
-		{
-			if (HelperWidget != nullptr)
-			{
-				UDreamUIBehaviour* FoundHelperComp = nullptr;
-				auto CompArray = HelperWidget->GetComponents(ClassValue);
-				if (CompArray.Num() == 1)
-				{
-					FoundHelperComp = CompArray[0];
-				}
-				else if (CompArray.Num() > 1)
-				{
-					FName HelperComponentName = NAME_None;
-					auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentName));
-					HelperComponentNameHandle->GetValue(HelperComponentName);
-					if (!HelperComponentName.IsNone())
-					{
-						for (auto& Comp : CompArray)
-						{
-							if (Comp->GetFName() == HelperComponentName)
-							{
-								FoundHelperComp = Comp;
-								break;
-							}
-						}
-					}
-				}
-				if (FoundHelperComp != TargetObject)
-				{
-					TargetObjectHandle->SetValue(FoundHelperComp);
-				}
-			}
-			else
-			{
-				if (TargetObject != nullptr)
-				{
-					TargetObjectHandle->SetValue((UObject*)nullptr);
-				}
-			}
-		}
+		ComponentIndexHandle->SetValue((int32)INDEX_NONE);
 	}
-	else
-	{
-		if (TargetObject != nullptr)
-		{
-			TargetObjectHandle->SetValue((UObject*)nullptr);
-		}
-	}
-
+	RefreshTargetObject(ItemPropertyHandle);
 	UpdateEventsLayout();
 }
 
@@ -921,6 +906,10 @@ void FDreamUIEventDelegateCustomization::OnSelectWidgetSubObject(UDreamWidgetSub
 	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperClass));
 	HelperClassHandle->SetValue(SubObj->GetClass());
 
+	//a visual / layout sub-object is reached by kind, not by position in the component array
+	ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentIndex))->SetValue((int32)INDEX_NONE);
+	ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentName))->SetValue(NAME_None);
+
 	UpdateEventsLayout();
 }
 
@@ -931,6 +920,15 @@ void FDreamUIEventDelegateCustomization::OnSelectComponent(UDreamUIBehaviour* Co
 
 	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperClass));
 	HelperClassHandle->SetValue(Comp->GetClass());
+
+	// POSITION is the key. An instanced sub-object's FName is assigned by UE's auto-numbering, so the
+	// preview rebuilt from the authoring tree does not get the same one back and a name-keyed choice
+	// was silently lost on the next rebuild. The name is written alongside it purely so that a build
+	// without HelperComponentIndex still reads the asset.
+	auto HelperComponentIndexHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentIndex));
+	UDreamWidget* OwnerWidget = Comp->GetWidget();
+	HelperComponentIndexHandle->SetValue(IsValid(OwnerWidget)
+		? OwnerWidget->GetAllComponents().IndexOfByKey(Comp) : (int32)INDEX_NONE);
 
 	auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentName));
 	HelperComponentNameHandle->SetValue(Comp->GetFName());
@@ -949,6 +947,8 @@ void FDreamUIEventDelegateCustomization::OnSelectWidgetSelf(TSharedRef<IProperty
 	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperClass));
 	HelperClassHandle->SetValue(UDreamWidget::StaticClass());
 
+	//the widget itself: neither key applies
+	ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentIndex))->SetValue((int32)INDEX_NONE);
 	auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperComponentName));
 	HelperComponentNameHandle->SetValue(NAME_None);
 
@@ -1076,6 +1076,13 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawDreamWidgetSelectorF
 TSharedRef<SWidget> FDreamUIEventDelegateCustomization::MakeComponentSelectorMenu(int32 itemIndex)
 {
 	auto EventListHandle = GetEventListHandle();
+	//built when the button is clicked, so the list can have shrunk since the row was laid out
+	uint32 ElementCount = 0;
+	EventListHandle->GetNumElements(ElementCount);
+	if (itemIndex < 0 || itemIndex >= (int32)ElementCount)
+	{
+		return SNew(SBox);
+	}
 	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);
 	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperWidget));
 	UObject* HelperWidgetObject = nullptr;
@@ -1161,6 +1168,13 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::MakeFunctionSelectorMenu
 {
 	auto EventListHandle = GetEventListHandle();
 	auto EventParameterType = GetNativeParameterType();
+	//built when the button is clicked, so the list can have shrunk since the row was laid out
+	uint32 ElementCount = 0;
+	EventListHandle->GetNumElements(ElementCount);
+	if (itemIndex < 0 || itemIndex >= (int32)ElementCount)
+	{
+		return SNew(SBox);
+	}
 	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);
 	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, TargetObject));
 	UObject* TargetObject = nullptr;
@@ -1175,6 +1189,18 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::MakeFunctionSelectorMenu
 	auto FunctionField = TFieldRange<UFunction>(TargetObject->GetClass());
 	for (auto Func : FunctionField)
 	{
+		// What an author is allowed to route an event to, which is not "every UFUNCTION on the class".
+		// Without this the menu listed OnRep_ notifies, internal native handlers, delegate signatures
+		// and every other reflected function whose parameter list happens to be compatible -- picking
+		// one is an event that calls something nobody meant to expose. BlueprintCallable is the same
+		// line the graph editor draws, and it is the author's own declaration that a function is part
+		// of the class's surface.
+		if (Func == nullptr
+			|| !Func->HasAnyFunctionFlags(FUNC_BlueprintCallable)
+			|| Func->HasAnyFunctionFlags(FUNC_Delegate | FUNC_EditorOnly))
+		{
+			continue;
+		}
 		EDreamUIEventDelegateParameterType ParamType;
 		if (UDreamUIEventDelegateParameterHelper::IsSupportedFunction(Func, ParamType))//show only supported type
 		{
@@ -1211,8 +1237,28 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::MakeFunctionSelectorMenu
 	return MenuBuilder.MakeWidget();
 }
 
+int32 FDreamUIEventDelegateCustomization::GetAuthoredBindingCount()const
+{
+	if (!PropertyHandle.IsValid())
+	{
+		return 0;
+	}
+	TSharedPtr<IPropertyHandleArray> EventListHandle = GetEventListHandle();
+	uint32 ElementCount = 0;
+	if (EventListHandle.IsValid())
+	{
+		EventListHandle->GetNumElements(ElementCount);
+	}
+	return (int32)ElementCount;
+}
+
 bool FDreamUIEventDelegateCustomization::IsComponentSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
 {
+	//authoring, not removal: picking a different component re-points a binding at something new
+	if (!CanAuthorLegacyBinding())
+	{
+		return false;
+	}
 	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperWidget));
 	UObject* HelperWidgetObject = nullptr;
 	HelperWidgetHandle->GetValue(HelperWidgetObject);
@@ -1220,6 +1266,10 @@ bool FDreamUIEventDelegateCustomization::IsComponentSelectorMenuEnabled(TSharedR
 }
 bool FDreamUIEventDelegateCustomization::IsFunctionSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
 {
+	if (!CanAuthorLegacyBinding())
+	{
+		return false;
+	}
 	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, HelperWidget));
 	UObject* HelperWidgetObject = nullptr;
 	HelperWidgetHandle->GetValue(HelperWidgetObject);
@@ -1287,8 +1337,9 @@ FReply FDreamUIEventDelegateCustomization::OnClickCopyPaste(bool CopyOrPaste, in
 FReply FDreamUIEventDelegateCustomization::OnClickDuplicate(int32 Index)
 {
 	auto EventListHandle = GetEventListHandle();
-	auto EventDataHandle = EventListHandle->GetElement(Index);
 	EventListHandle->DuplicateItem(Index);
+	//the rows are built by hand, so they only change when this says so
+	UpdateEventsLayout();
 	return FReply::Handled();
 }
 FReply FDreamUIEventDelegateCustomization::OnClickMoveUpDown(bool UpOrDown, int32 Index)
@@ -1310,6 +1361,11 @@ FReply FDreamUIEventDelegateCustomization::OnClickMoveUpDown(bool UpOrDown, int3
 
 		EventListHandle->SwapItems(Index, Index + 1);
 	}
+	// A swap changes no element COUNT, so the num-changed delegate that rebuilds these rows never
+	// fired: the two rows kept the parameter editors built for their old contents. Editing one of them
+	// afterwards serialized a value of the old row's type into the new row's ParamBuffer, which
+	// ProcessEvent then reads as the new function's parameter frame.
+	UpdateEventsLayout();
 	return FReply::Handled();
 }
 
@@ -1661,16 +1717,32 @@ TSharedRef<SWidget> FDreamUIEventDelegateCustomization::DrawFunctionParameter(TS
 					.ShowY(true)
 					.ShowZ(true)
 					.ShowW(true)
-					.X(this, &FDreamUIEventDelegateCustomization::Vector4GetItemValue, 0, ValueHandle, ParamBufferHandle)
-					.Y(this, &FDreamUIEventDelegateCustomization::Vector4GetItemValue, 1, ValueHandle, ParamBufferHandle)
-					.Z(this, &FDreamUIEventDelegateCustomization::Vector4GetItemValue, 2, ValueHandle, ParamBufferHandle)
-					.W(this, &FDreamUIEventDelegateCustomization::Vector4GetItemValue, 3, ValueHandle, ParamBufferHandle)
-					.OnXCommitted(this, &FDreamUIEventDelegateCustomization::Vector4ItemValueChange, 0, ValueHandle, ParamBufferHandle)
-					.OnYCommitted(this, &FDreamUIEventDelegateCustomization::Vector4ItemValueChange, 1, ValueHandle, ParamBufferHandle)
-					.OnZCommitted(this, &FDreamUIEventDelegateCustomization::Vector4ItemValueChange, 2, ValueHandle, ParamBufferHandle)
-					.OnWCommitted(this, &FDreamUIEventDelegateCustomization::Vector4ItemValueChange, 3, ValueHandle, ParamBufferHandle)
+					.X(this, &FDreamUIEventDelegateCustomization::QuatGetItemValue, 0, ValueHandle, ParamBufferHandle)
+					.Y(this, &FDreamUIEventDelegateCustomization::QuatGetItemValue, 1, ValueHandle, ParamBufferHandle)
+					.Z(this, &FDreamUIEventDelegateCustomization::QuatGetItemValue, 2, ValueHandle, ParamBufferHandle)
+					.W(this, &FDreamUIEventDelegateCustomization::QuatGetItemValue, 3, ValueHandle, ParamBufferHandle)
+					.OnXCommitted(this, &FDreamUIEventDelegateCustomization::QuatItemValueChange, 0, ValueHandle, ParamBufferHandle)
+					.OnYCommitted(this, &FDreamUIEventDelegateCustomization::QuatItemValueChange, 1, ValueHandle, ParamBufferHandle)
+					.OnZCommitted(this, &FDreamUIEventDelegateCustomization::QuatItemValueChange, 2, ValueHandle, ParamBufferHandle)
+					.OnWCommitted(this, &FDreamUIEventDelegateCustomization::QuatItemValueChange, 3, ValueHandle, ParamBufferHandle)
 				]
 			;
+		}
+		break;
+		case EDreamUIEventDelegateParameterType::Struct:
+		{
+			// Any USTRUCT the named cases above do not cover. The value is exported text rather than
+			// raw bytes, and this is a real editor over a real instance of the struct -- nested
+			// members, the struct's own customizations, all of it -- which is the only honest way to
+			// edit something whose shape is not known until the function is picked.
+			ClearValueBuffer(InDataContainerHandle);
+			ClearReferenceValue(InDataContainerHandle);
+			auto StructValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, StructValue));
+			return SNew(SBox)
+				.MinDesiredWidth(500)
+				[
+					MakeStructParameterEditor(StructValueHandle, UDreamUIEventDelegateParameterHelper::GetStructParameter(InFunction))
+				];
 		}
 		break;
 		case EDreamUIEventDelegateParameterType::String:
@@ -2024,6 +2096,124 @@ TOptional<float> FDreamUIEventDelegateCustomization::Vector4GetItemValue(int Axi
 	case 3: return	Value.W;
 	}
 }
+void FDreamUIEventDelegateCustomization::QuatItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+{
+	//FQuat, not FVector4: the handle refuses the other type outright, so every edit used to be dropped
+	FQuat Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FQuat::Identity);
+	switch (AxisType)
+	{
+	case 0:	Value.X = NewValue; break;
+	case 1:	Value.Y = NewValue; break;
+	case 2:	Value.Z = NewValue; break;
+	case 3:	Value.W = NewValue; break;
+	}
+	ValueHandle->SetValue(Value);
+	FBufferArchive ToBinary;
+	ToBinary << Value;
+	SetBufferValue(BufferHandle, ToBinary);
+}
+TOptional<float> FDreamUIEventDelegateCustomization::QuatGetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
+{
+	const FQuat Value = DreamDetailsMultiSelect::ValueOr(ValueHandle, FQuat::Identity);
+	switch (AxisType)
+	{
+	default:
+	case 0: return	Value.X;
+	case 1: return	Value.Y;
+	case 2: return	Value.Z;
+	case 3: return	Value.W;
+	}
+}
+
+TSharedRef<SWidget> FDreamUIEventDelegateCustomization::MakeStructParameterEditor(TSharedPtr<IPropertyHandle> InStructValueHandle, UScriptStruct* InStruct)
+{
+	if (!InStructValueHandle.IsValid() || !IsValid(InStruct))
+	{
+		return SNew(STextBlock)
+			.Text(LOCTEXT("StructParameterUnavailable", "(Struct)"))
+			.Font(IDetailLayoutBuilder::GetDetailFont());
+	}
+
+	// A real instance of the struct, so the property editor has something with the struct's own
+	// construction and destruction to edit -- which is also why the value cannot live in ParamBuffer.
+	TSharedPtr<FStructOnScope> Scope = MakeShared<FStructOnScope>(InStruct);
+	// Only a literal written for THIS struct is read back. The panel is where the mismatch is cheapest
+	// to notice, and importing another struct's text would show the author a value they never entered.
+	TSharedPtr<IPropertyHandle> StructTypeHandle =
+		InStructValueHandle->GetParentHandle().IsValid()
+		? InStructValueHandle->GetParentHandle()->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, StructValueType))
+		: nullptr;
+	UObject* StoredType = nullptr;
+	if (StructTypeHandle.IsValid())
+	{
+		StructTypeHandle->GetValue(StoredType);
+	}
+	FString StoredText;
+	InStructValueHandle->GetValue(StoredText);
+	if (!StoredText.IsEmpty() && StoredType != InStruct)
+	{
+		StoredText.Reset();
+	}
+	if (!StoredText.IsEmpty())
+	{
+		FStringOutputDevice ImportErrors;
+		InStruct->ImportText(*StoredText, Scope->GetStructMemory(), nullptr, PPF_None, &ImportErrors, InStruct->GetName());
+		if (!ImportErrors.IsEmpty())
+		{
+			// Left at the struct's defaults, and said so: a stored value that no longer parses (a
+			// member renamed out from under it) would otherwise look like the author's own value.
+			UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Cannot read the stored '%s' value: %s"),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InStruct->GetName(), *ImportErrors);
+		}
+	}
+
+	FPropertyEditorModule& PropertyEditorModule =
+		FModuleManager::LoadModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
+	FDetailsViewArgs ViewArgs;
+	ViewArgs.bAllowSearch = false;
+	ViewArgs.bShowOptions = false;
+	ViewArgs.bHideSelectionTip = true;
+	ViewArgs.bShowScrollBar = false;
+	ViewArgs.NameAreaSettings = FDetailsViewArgs::HideNameArea;
+	FStructureDetailsViewArgs StructArgs;
+	TSharedRef<IStructureDetailsView> View =
+		PropertyEditorModule.CreateStructureDetailView(ViewArgs, StructArgs, Scope, FText::GetEmpty());
+	View->GetOnFinishedChangingPropertiesDelegate().AddSP(
+		this, &FDreamUIEventDelegateCustomization::OnStructParameterChanged, InStructValueHandle, Scope, StructTypeHandle);
+	// The widget below is held by the row; the VIEW is held by nobody else and would be destroyed on
+	// the way out of this function, taking its layout with it. Emptied by UpdateEventsLayout.
+	StructParameterViews.Add(View);
+
+	TSharedPtr<SWidget> ViewWidget = View->GetWidget();
+	return ViewWidget.IsValid() ? ViewWidget.ToSharedRef() : StaticCastSharedRef<SWidget>(SNew(SBox));
+}
+
+void FDreamUIEventDelegateCustomization::OnStructParameterChanged(const FPropertyChangedEvent& InEvent,
+	TSharedPtr<IPropertyHandle> InStructValueHandle, TSharedPtr<FStructOnScope> InScope,
+	TSharedPtr<IPropertyHandle> InStructTypeHandle)
+{
+	if (!InStructValueHandle.IsValid() || !InScope.IsValid())
+	{
+		return;
+	}
+	const UScriptStruct* EditedStruct = Cast<const UScriptStruct>(InScope->GetStruct());
+	if (EditedStruct == nullptr || InScope->GetStructMemory() == nullptr)
+	{
+		return;
+	}
+	// Defaults of nullptr, so every member is written out: "same as the default" is not the same
+	// question as "what should this event send", and a partial export would silently take the
+	// difference from whatever the struct's defaults become later.
+	FString Exported;
+	EditedStruct->ExportText(Exported, InScope->GetStructMemory(), nullptr, nullptr, PPF_None, nullptr);
+	InStructValueHandle->SetValue(Exported);
+	if (InStructTypeHandle.IsValid())
+	{
+		//written with the value, so the text is never read back as another struct's
+		UObject* EditedStructObject = const_cast<UScriptStruct*>(EditedStruct);
+		InStructTypeHandle->SetValue(EditedStructObject);
+	}
+}
 FLinearColor FDreamUIEventDelegateCustomization::LinearColorGetValue(bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
 	if (bIsLinearColor)
@@ -2320,6 +2510,14 @@ void FDreamUIEventDelegateCustomization::ClearObjectValue(TSharedPtr<IPropertyHa
 
 void FDreamUIEventDelegateCustomization::OnParameterTypeChange(TSharedRef<IPropertyHandle> InItemPropertyHandle)
 {
+	// One transaction for the whole clear, and every field in it.
+	//
+	// Two things were wrong. Each ResetToDefault opens its own "Reset to Default" transaction, so
+	// changing a parameter type pushed eighteen separate entries onto the undo stack and Ctrl+Z put
+	// one typed value back. And the list stopped at the numeric and vector fields: String, Name, Text,
+	// the object reference and the raw ParamBuffer were left holding the OLD type's value, which is
+	// what the next draw reads back and what the runtime hands to ProcessEvent.
+	const FScopedTransaction Transaction(LOCTEXT("ChangeParameterType_Transaction", "Change Event Parameter Type"));
 	auto ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, BoolValue)); ValueHandle->ResetToDefault();
 	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, FloatValue)); ValueHandle->ResetToDefault();
 	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, DoubleValue)); ValueHandle->ResetToDefault();
@@ -2338,6 +2536,16 @@ void FDreamUIEventDelegateCustomization::OnParameterTypeChange(TSharedRef<IPrope
 	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ColorValue)); ValueHandle->ResetToDefault();
 	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, LinearColorValue)); ValueHandle->ResetToDefault();
 	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, RotatorValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, StringValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, NameValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, TextValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ReferenceObject)); ValueHandle->ResetToDefault();
+	//a struct literal written for one struct is not a shorter version of another one's
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, StructValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, StructValueType)); ValueHandle->ResetToDefault();
+	//the serialized parameter frame itself: a buffer written for the old type is not a short version
+	//of the new one, it is a different type's bytes, and PrepareParameterBuffer would keep them
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIEventDelegateData, ParamBuffer)); ValueHandle->ResetToDefault();
 }
 
 

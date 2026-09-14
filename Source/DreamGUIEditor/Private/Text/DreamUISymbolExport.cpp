@@ -8,6 +8,8 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIWidgetRegistry.h"
+// DescribeEvents lists FDreamUIEventDelegate properties as well as multicast delegates.
+#include "Event/DreamUIEventDelegate.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUIReflectionPolicy.h"
 #include "Text/DreamUITextBuilder.h"
@@ -161,14 +163,26 @@ namespace DreamUISymbolExportLocal
 		return Out;
 	}
 
-	/** BlueprintAssignable delegate names on a class: what `->` can route. */
+	/**
+	 * Event names on a class: what `->` can route.
+	 *
+	 * Both kinds, matching DreamUITextBuilder's own test. `Controls/*` declares BlueprintAssignable
+	 * dynamic multicast delegates; the older `Interaction/*` behaviours declare FDreamUIEventDelegate
+	 * struct properties, and completion that offered only the first left half the plugin's events
+	 * looking unroutable in VSCode even after they became routable.
+	 */
 	TArray<TSharedPtr<FJsonValue>> DescribeEvents(const UStruct* InScope)
 	{
 		TArray<TSharedPtr<FJsonValue>> Out;
 		for (TFieldIterator<FProperty> It(InScope); It; ++It)
 		{
-			if (CastField<FMulticastDelegateProperty>(*It) != nullptr
-				&& It->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+			const bool bIsAssignableDelegate = CastField<FMulticastDelegateProperty>(*It) != nullptr
+				&& It->HasAnyPropertyFlags(CPF_BlueprintAssignable);
+			const FStructProperty* AsDreamEvent = CastField<FStructProperty>(*It);
+			const bool bIsDreamEvent = AsDreamEvent != nullptr
+				&& AsDreamEvent->Struct == FDreamUIEventDelegate::StaticStruct()
+				&& AsDreamEvent->HasAnyPropertyFlags(CPF_Edit);
+			if (bIsAssignableDelegate || bIsDreamEvent)
 			{
 				Out.Add(MakeShared<FJsonValueString>(It->GetName()));
 			}

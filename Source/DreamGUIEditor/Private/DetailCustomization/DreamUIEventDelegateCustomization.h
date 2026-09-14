@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "IPropertyTypeCustomization.h"
 #include "Event/DreamUIEventDelegate.h"
+#include "UObject/StructOnScope.h"
 #include "Widgets/Input/SComboButton.h"
 #pragma once
 
@@ -20,7 +21,6 @@ protected:
 	TSharedPtr<SWidget> ColorPickerParentWidget;
 	TArray<TSharedRef<SWidget>> EventParameterWidgetArray;
 	TSharedPtr<SBox> EventsWidget;
-	TArray<FDreamUIEventDelegate*> EventDelegateInstances;
 private:
 	bool CanChangeParameterType = true;
 	bool IsParameterTypeValid(EDreamUIEventDelegateParameterType InParamType)
@@ -48,7 +48,12 @@ public:
 	{
 		return MakeShareable(new FDreamUIEventDelegateCustomization(true));
 	}
-	/** IDetailCustomization interface */
+	/**
+	 * IPropertyTypeCustomization interface.
+	 *
+	 * Deliberately empty: this type draws its whole UI as CHILDREN, and a header row would put the
+	 * struct's name above a list that already names itself. CustomizeChildren is the real entry point.
+	 */
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> InPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils) override {};
 
 	EDreamUIEventDelegateParameterType GetNativeParameterType()const;
@@ -62,9 +67,30 @@ private:
 
 	void UpdateEventsLayout();
 
+	/**
+	 * Re-derive one row's TargetObject from its helper fields, and hand it back.
+	 *
+	 * The walk is the runtime's own (UDreamUIEventDelegateParameterHelper::ResolveBindingTarget), so
+	 * the panel cannot show a target the runtime will not reach -- this panel used to carry its own
+	 * copy of it, in two places, and both keyed behaviours by the instance FName that UE re-numbers
+	 * on every preview rebuild. What is local is the write-back: it runs while the row is being DRAWN,
+	 * so it goes in non-transactionally or merely opening the panel would dirty the asset.
+	 *
+	 * Also backfills HelperComponentIndex the first time a legacy name resolves.
+	 */
+	UObject* RefreshTargetObject(TSharedRef<IPropertyHandle> InItemPropertyHandle) const;
+
 	TSharedPtr<IPropertyHandleArray> GetEventListHandle()const;
 	FOptionalSize GetEventItemHeight(int itemIndex)const
 	{
+		// Bound-checked because this is an ATTRIBUTE on a row that outlives the array behind it: the
+		// row widgets built for the old list are still in the tree, and still asked for their height,
+		// during the frame in which a delete rebuilds EventParameterWidgetArray shorter. The last
+		// row's index then reads off the end of the allocation.
+		if (!EventParameterWidgetArray.IsValidIndex(itemIndex))
+		{
+			return 60;//the fixed part of a row; the row is about to be replaced anyway
+		}
 		return EventParameterWidgetArray[itemIndex]->GetCachedGeometry().Size.Y + 60;//60 is other's size
 	}
 	FOptionalSize GetEventTotalHeight()const
@@ -88,6 +114,27 @@ private:
 	void OnSelectFunction(FName FuncName, EDreamUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	bool IsComponentSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const;
 	bool IsFunctionSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const;
+	/**
+	 * Whether this panel may AUTHOR a binding. It may not.
+	 *
+	 * The plugin has one event mechanism now: `EventName -> Handler`, resolved by the compiler into
+	 * UDreamWidgetBlueprint::EventBindings and bound by UDreamUserWidget::BindEventBindings -- which
+	 * since this change attaches to FDreamUIEventDelegate events as well as to multicast delegates,
+	 * so every event in the plugin is routable and this list is no longer the only way to handle one.
+	 * A route names a function on the USER WIDGET, which is where UMG puts event handling; a binding
+	 * here names an arbitrary object and carries a literal argument, which UMG has no equivalent of
+	 * and the `.dui` has no syntax for.
+	 *
+	 * Serialized bindings still fire, and are still REMOVABLE from here -- a record no UI can clear is
+	 * the worse failure of the two. Only the controls that would create or widen one are off.
+	 *
+	 * One function rather than a scattering of `false`s so that the decision has exactly one place to
+	 * be read, and one place to be changed if it is ever revisited.
+	 */
+	bool CanAuthorLegacyBinding()const { return false; }
+	/** How many bindings this delegate carries, for the notice the panel logs when it opens. */
+	int32 GetAuthoredBindingCount()const;
+	bool HasAuthoredBindings()const { return GetAuthoredBindingCount() > 0; }
 	void OnClickListAdd();
 	void OnClickListEmpty();
 	FReply OnClickAddRemove(bool AddOrRemove, int32 Index, int32 Count);
@@ -123,6 +170,28 @@ private:
 	TOptional<float> Vector3GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const;
 	void Vector4ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle);
 	TOptional<float> Vector4GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const;
+	/**
+	 * FQuat's own pair.
+	 *
+	 * The row used to borrow the FVector4 pair, and IPropertyHandle::GetValue(FVector4&) REFUSES an
+	 * FQuat property -- so the four boxes read the fallback and always showed 0,0,0,0, and every edit
+	 * wrote an FVector4 the handle rejected. The buffer happened to be the right length, which is why
+	 * nothing ever reported it as a crash.
+	 */
+	void QuatItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle);
+	TOptional<float> QuatGetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const;
+	/**
+	 * A full nested editor for an arbitrary USTRUCT parameter, over a real instance of it.
+	 *
+	 * The value travels as exported text (FDreamUIEventDelegateData::StructValue), so this imports it
+	 * into an FStructOnScope, lets the property editor edit that, and exports it back on every
+	 * committed change. The view has to be kept alive for as long as its widget is on screen, which is
+	 * what StructParameterViews is for -- both it and EventParameterWidgetArray are emptied by
+	 * UpdateEventsLayout, because the rows are rebuilt wholesale.
+	 */
+	TSharedRef<SWidget> MakeStructParameterEditor(TSharedPtr<IPropertyHandle> InStructValueHandle, UScriptStruct* InStruct);
+	void OnStructParameterChanged(const FPropertyChangedEvent& InEvent, TSharedPtr<IPropertyHandle> InStructValueHandle, TSharedPtr<FStructOnScope> InScope, TSharedPtr<IPropertyHandle> InStructTypeHandle);
+	TArray<TSharedRef<class IStructureDetailsView>> StructParameterViews;
 	FLinearColor LinearColorGetValue(bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const;
 	void LinearColorValueChange(FLinearColor NewValue, bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle);
 	FReply OnMouseButtonDownColorBlock(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle);
