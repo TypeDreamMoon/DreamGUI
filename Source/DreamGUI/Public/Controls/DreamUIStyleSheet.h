@@ -120,6 +120,31 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ring Menu")
 	TMap<FName, FDreamRingMenuStyle> RingMenuVariants;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tile View")
+	FDreamTileViewStyle TileView;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tile View")
+	TMap<FName, FDreamTileViewStyle> TileViewVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Throbber")
+	FDreamThrobberStyle Throbber;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Throbber")
+	TMap<FName, FDreamThrobberStyle> ThrobberVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Border")
+	FDreamBorderStyle Border;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Border")
+	TMap<FName, FDreamBorderStyle> BorderVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rich Text")
+	FDreamRichTextStyle RichText;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rich Text")
+	TMap<FName, FDreamRichTextStyle> RichTextVariants;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Menu Anchor")
+	FDreamMenuAnchorStyle MenuAnchor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Menu Anchor")
+	TMap<FName, FDreamMenuAnchorStyle> MenuAnchorVariants;
+
 	/**
 	 * The named variant, or the family default when the name is none or matches nothing.
 	 *
@@ -144,6 +169,11 @@ public:
 	FDreamExpandableAreaStyle ExpandableAreaStyle(FName InVariant) const { return Pick(ExpandableArea, ExpandableAreaVariants, InVariant); }
 	FDreamInputKeySelectorStyle InputKeySelectorStyle(FName InVariant) const { return Pick(InputKeySelector, InputKeySelectorVariants, InVariant); }
 	FDreamRingMenuStyle RingMenuStyle(FName InVariant) const { return Pick(RingMenu, RingMenuVariants, InVariant); }
+	FDreamTileViewStyle TileViewStyle(FName InVariant) const { return Pick(TileView, TileViewVariants, InVariant); }
+	FDreamThrobberStyle ThrobberStyle(FName InVariant) const { return Pick(Throbber, ThrobberVariants, InVariant); }
+	FDreamBorderStyle BorderStyle(FName InVariant) const { return Pick(Border, BorderVariants, InVariant); }
+	FDreamRichTextStyle RichTextStyle(FName InVariant) const { return Pick(RichText, RichTextVariants, InVariant); }
+	FDreamMenuAnchorStyle MenuAnchorStyle(FName InVariant) const { return Pick(MenuAnchor, MenuAnchorVariants, InVariant); }
 
 private:
 	template<class T>
