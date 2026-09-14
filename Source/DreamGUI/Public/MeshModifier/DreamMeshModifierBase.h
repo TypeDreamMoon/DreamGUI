@@ -124,6 +124,16 @@ public:
 		OutUV = true;
 		OutColor = true;
 	}
+	/**
+	 * Does this modifier append whole copies of the mesh (outline, shadow, long shadow)?
+	 *
+	 * A copy is a photograph: it freezes whatever the modifiers before it produced, and the vertices
+	 * it appends are outside every char vertex range a text animation addresses. So one that answers
+	 * true is run after every one that answers false, whatever order the components sit in on the
+	 * widget -- otherwise whether an outline follows an animated character comes down to which
+	 * component happened to be added first, with nothing on screen to say so.
+	 */
+	virtual bool GetDuplicatesMesh()const { return false; }
 protected:
 	UPROPERTY(Transient) TObjectPtr<UDreamVisualBatchMeshModifierHelper> GeometryModifierHelper = nullptr;
 	/**

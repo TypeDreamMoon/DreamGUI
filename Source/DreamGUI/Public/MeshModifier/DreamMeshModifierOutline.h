@@ -32,6 +32,8 @@ public:
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
+	//four or eight whole copies of the mesh; see UDreamMeshModifierBase::GetDuplicatesMesh
+	virtual bool GetDuplicatesMesh()const override { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetOutlineColor()const { return OutlineColor; }

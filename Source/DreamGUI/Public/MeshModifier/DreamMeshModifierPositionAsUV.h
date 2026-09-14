@@ -24,9 +24,17 @@ protected:
 	 * both and DreamRectBlock uses UV3, while a plain image leaves them alone. Only UV0 is
 	 * unconditionally the caller's, and it is the texture coordinate, so writing it replaces the
 	 * image. Pick the channel against the visual this sits on.
+	 *
+	 * UV1 is refused outright -- by the setter and by the write -- rather than merely discouraged,
+	 * and the default is UV0 for the same reason. The canvas-owned channel used to be the default,
+	 * which meant the out-of-the-box configuration of this modifier corrupted glyph lookup.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta=(UIMin=0, UIMax=3))
-	uint8 UVChannel = 1;
+	uint8 UVChannel = 0;
+	/** The texture coordinate the canvas writes into during the rebuild; see UVChannel. */
+	static constexpr uint8 CanvasOwnedUVChannel = 1;
+	/** Transient, and not a property: one complaint per modifier is enough for a per-rebuild path. */
+	bool bHasWarnedAboutCanvasChannel = false;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	FVector2f Scale = FVector2f::One();
 public:

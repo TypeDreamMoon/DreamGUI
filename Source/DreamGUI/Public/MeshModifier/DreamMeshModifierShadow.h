@@ -25,6 +25,8 @@ public:
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
+	//one whole copy of the mesh; see UDreamMeshModifierBase::GetDuplicatesMesh
+	virtual bool GetDuplicatesMesh()const override { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetShadowColor()const { return ShadowColor; }

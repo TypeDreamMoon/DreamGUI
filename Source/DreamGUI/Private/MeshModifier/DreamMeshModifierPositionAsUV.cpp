@@ -21,6 +21,20 @@ void UDreamMeshModifierPositionAsUV::ModifyUIGeometry(
 	// is the right answer rather than logging, because this runs once per rebuild and a complaint
 	// here would repeat for as long as the widget is on screen.
 	if (UVChannel >= LEXUI_VERTEX_TEXCOORDINATE_COUNT)return;
+	// UV1 is not the caller's to write. The canvas stamps the widget-property data coordinate into
+	// its X and font rendering reads the texture-array slice out of its Y, both later in the same
+	// rebuild, so a position written here is half overwritten and half poison. Refused rather than
+	// written, and said out loud once per modifier: silence would look like the modifier is off.
+	if (UVChannel == CanvasOwnedUVChannel)
+	{
+		if (!bHasWarnedAboutCanvasChannel)
+		{
+			bHasWarnedAboutCanvasChannel = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d PositionAsUV on [%s] is set to UVChannel 1, which belongs to the canvas (widget property data coordinate and font texture slice). Nothing is written. Pick another channel.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName());
+		}
+		return;
+	}
 
 	// There used to be a render-canvas gate on channels 1 to 3 here, and it is gone rather than
 	// extended to channel 0. It was never an availability check -- DreamGUI has no per-canvas shader
@@ -44,6 +58,13 @@ void UDreamMeshModifierPositionAsUV::ModifyUIGeometry(
 
 void UDreamMeshModifierPositionAsUV::SetUVChannel(uint8 Value)
 {
+	if (Value == CanvasOwnedUVChannel)
+	{
+		//refused at the door as well as at the write, so a Blueprint gets told where the problem is
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d UVChannel 1 belongs to the canvas and cannot be used by PositionAsUV. Channel unchanged.")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
 	if (UVChannel != Value)
 	{
 		// Marking the UV stream matters more here than it looks: the channel being abandoned still

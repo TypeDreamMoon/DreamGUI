@@ -21,6 +21,7 @@
 #include "MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h"
 #include "MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h"
 #include "UObject/Package.h"
+#include "UObject/UnrealType.h"
 
 /*
  * Mesh modifiers: what a test can hold onto, and what it cannot.
@@ -928,16 +929,21 @@ bool FDreamMeshModifierPositionAsUVGateTest::RunTest(const FString& Parameters)
 			return false;
 		}
 		TestEqual(TEXT("and it can see the mesh"), Modifier->GetVisualBatchMesh(), Mesh);
-		TestEqual(TEXT("channel 1 is where it points out of the box"), (int32)Modifier->GetUVChannel(), 1);
+		// UV0 out of the box, and the default matters as much as the refusal below: this modifier
+		// used to point at UV1 by default, so its out-of-the-box configuration wrote over the
+		// canvas's own channel -- the widget-property coordinate in X and the font texture slice in
+		// Y -- for every element anyone dropped it on.
+		TestEqual(TEXT("channel 0 is where it points out of the box"), (int32)Modifier->GetUVChannel(), 0);
 
 		// BuildQuads puts the top-left corner of the first quad at Y = 0, Z = 10, and the position is
 		// read across (Y) and up (Z) because that is the plane a UI vertex lives in.
+		Modifier->SetUVChannel(2);
 		FDreamUIGeometry Geo;
 		BuildQuads(Geo, 1);
 		Modifier->ModifyUIGeometry(Geo, true, true, true, true);
 		TestEqual(TEXT("the position lands in the authored channel, canvas or no canvas"),
-			Geo.Vertices[2].TextureCoordinate[1].X, 0.0f);
-		TestEqual(TEXT("on both axes"), Geo.Vertices[2].TextureCoordinate[1].Y, 10.0f);
+			Geo.Vertices[2].TextureCoordinate[2].X, 0.0f);
+		TestEqual(TEXT("on both axes"), Geo.Vertices[2].TextureCoordinate[2].Y, 10.0f);
 		// Every other channel keeps the coordinate the emitter put there, which is the difference
 		// between a modifier that adds a channel and one that flattens the vertex.
 		TestEqual(TEXT("the channels it was not pointed at keep the emitter's coordinate"),
@@ -959,6 +965,32 @@ bool FDreamMeshModifierPositionAsUVGateTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("and up, independently"), Scaled.Vertices[3].TextureCoordinate[0].Y, 5.0f);
 			TestEqual(TEXT("and the channel it moved away from is back to the emitter's coordinate"),
 				Scaled.Vertices[3].TextureCoordinate[1].X, 3.0f);
+		}
+
+		// UV1 is the canvas's, and it is refused rather than discouraged. The canvas stamps the
+		// widget-property data coordinate into its X later in the same rebuild and font rendering
+		// reads the texture-array slice out of its Y, so a position written here is half overwritten
+		// and half poison -- glyphs look up the wrong page of the font atlas.
+		AddExpectedError(TEXT("UVChannel 1 belongs to the canvas"), EAutomationExpectedErrorFlags::Contains, 1);
+		Modifier->SetUVChannel(1);
+		TestEqual(TEXT("the setter refuses the canvas's channel and keeps the one it had"),
+			(int32)Modifier->GetUVChannel(), 0);
+
+		// And an asset saved before the refusal existed still has 1 in it, which is the case the
+		// write-path guard is for. Written through reflection because that is exactly what loading
+		// such an asset does.
+		if (FProperty* ChannelProperty = UDreamMeshModifierPositionAsUV::StaticClass()->FindPropertyByName(TEXT("UVChannel")))
+		{
+			*ChannelProperty->ContainerPtrToValuePtr<uint8>(Modifier) = 1;
+			TestEqual(TEXT("the serialized value is what an old asset carries"), (int32)Modifier->GetUVChannel(), 1);
+			AddExpectedMessage(TEXT("which belongs to the canvas"),
+				ELogVerbosity::Warning, EAutomationExpectedErrorFlags::Contains, -1);
+			FDreamUIGeometry Legacy;
+			BuildQuads(Legacy, 1);
+			Modifier->ModifyUIGeometry(Legacy, true, true, true, true);
+			TestEqual(TEXT("and the write is refused, leaving the canvas's channel as the emitter left it"),
+				Legacy.Vertices[2].TextureCoordinate[1].X, 2.0f);
+			TestEqual(TEXT("on both axes"), Legacy.Vertices[2].TextureCoordinate[1].Y, 1.0f);
 		}
 
 		// UIMin and UIMax on the property are a slider hint, not a clamp, so a channel the vertex does
@@ -1412,6 +1444,98 @@ bool FDreamMeshModifierWavePropertyLifecycleTest::RunTest(const FString& Paramet
 	TestEqual(TEXT("and the filled one still at its index"), Animation->GetProperty(1),
 		(UDreamMeshModifierTextAnimation_Property*)Wave);
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamMeshModifierDuplicatingRunsLastTest,
+	"DreamGUI.MeshModifier.AnOutlineIsBuiltFromWhatTheOtherModifiersProducedWhicheverOrderTheyWereAddedIn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMeshModifierDuplicatingRunsLastTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamMeshModifierTestLocal;
+
+	// Outline, Shadow and LongShadow do not tint anything: they append whole COPIES of the mesh. A
+	// copy is a photograph -- it freezes whatever the modifiers before it produced -- and the
+	// vertices it appends lie outside every char vertex range a text animation addresses. So a
+	// modifier that ran after one of them reached the original and not the copies, and whether an
+	// outline followed an animated character came down to which component happened to be added
+	// first, with nothing on screen to say which way round it was.
+	//
+	// The run order is now component index with the duplicating modifiers last, so the copies are
+	// always taken from the finished original. PositionAsUV is the witness: it writes each vertex's
+	// own position into a UV channel, so a copy carries the ORIGINAL's coordinate when it was taken
+	// after the write, and its own offset position when it was taken before.
+	FScopedVisualWidget Fixture(UDreamImage::StaticClass(), TEXT("Ordered"));
+	// REGISTERED, which is what makes this a mounting path at all: UDreamWidget::AddComponent only
+	// calls OnRegister on the new behaviour when the widget itself is registered, and a modifier
+	// that never registers never joins the mesh's modifier list. Every other test in this file
+	// drives ModifyUIGeometry directly and so never needed the widget to be live; this one is about
+	// the LIST, so it has to be built the way the running pipeline builds it.
+	Fixture.Widget->OnRegister();
+	UDreamVisualBatchMesh* Mesh = Fixture.Mesh();
+	if (!TestNotNull(TEXT("the image visual is a batch mesh"), Mesh))
+	{
+		return false;
+	}
+
+	// Added FIRST, which is the order that used to lose: by component index the outline ran before
+	// everything else on the widget.
+	UDreamMeshModifierOutline* Outline = Cast<UDreamMeshModifierOutline>(
+		Mesh->AddMeshModifier(UDreamMeshModifierOutline::StaticClass()));
+	UDreamMeshModifierPositionAsUV* PositionAsUV = Cast<UDreamMeshModifierPositionAsUV>(
+		Mesh->AddMeshModifier(UDreamMeshModifierPositionAsUV::StaticClass()));
+	if (!TestNotNull(TEXT("the outline was added"), Outline)
+		|| !TestNotNull(TEXT("and the position-as-uv after it"), PositionAsUV))
+	{
+		return false;
+	}
+	// Both mounted on THIS mesh: the resolve is what performs the registration, so a modifier that
+	// cannot see the mesh is also a modifier the mesh will never run. Asserted before the geometry,
+	// so a regression in the mounting path says so instead of reporting a vertex count.
+	if (!TestEqual(TEXT("the outline is mounted on the mesh"), Outline->GetVisualBatchMesh(), Mesh)
+		|| !TestEqual(TEXT("and so is the other modifier"), PositionAsUV->GetVisualBatchMesh(), Mesh))
+	{
+		return false;
+	}
+	TestTrue(TEXT("the outline says it duplicates the mesh"), Outline->GetDuplicatesMesh());
+	TestFalse(TEXT("and a modifier that only writes a channel says it does not"),
+		PositionAsUV->GetDuplicatesMesh());
+	TestTrue(TEXT("the outline sorts before nothing and after the other one"),
+		Outline->GetComponentIndexInWidget() < PositionAsUV->GetComponentIndexInWidget());
+
+	Outline->SetUse8Direction(false);
+	Outline->SetOutlineSize(FVector2f(5.0f, 5.0f));
+
+	FDreamUIGeometry* Geo = Mesh->GetGeometry();
+	if (!TestNotNull(TEXT("the mesh has a geometry to modify"), Geo))
+	{
+		return false;
+	}
+	BuildQuads(*Geo, 1);
+	Mesh->ApplyGeometryModifier(true, true, true, true);
+
+	// One quad plus four copies of it.
+	if (!TestEqual(TEXT("the outline appended four copies of the quad"),
+		Geo->Vertices.Num(), VertsPerQuad * 5))
+	{
+		return false;
+	}
+
+	// Vertex 0 sits at Y = 0, Z = 0, so PositionAsUV writes (0, 0) into UV0 there. The first copy is
+	// that vertex offset by the outline size; if the copy was taken AFTER the UV write it carries the
+	// original's (0, 0), and if it was taken before, PositionAsUV reached it too and wrote its own
+	// offset position instead.
+	TestEqual(TEXT("the original carries its own position in UV0"),
+		Geo->Vertices[0].TextureCoordinate[0].X, 0.0f);
+	TestEqual(TEXT("on both axes"), Geo->Vertices[0].TextureCoordinate[0].Y, 0.0f);
+	TestEqual(TEXT("and the outline copy carries the original's, not its own offset one"),
+		Geo->Vertices[VertsPerQuad].TextureCoordinate[0].X, 0.0f);
+	TestEqual(TEXT("on both axes"), Geo->Vertices[VertsPerQuad].TextureCoordinate[0].Y, 0.0f);
+	// The copy really is offset -- otherwise the assertion above would hold for the wrong reason.
+	TestEqual(TEXT("the copy is where the outline put it"),
+		AsVector(Geo->OriginVertices[VertsPerQuad].Position), FVector(0.0, 5.0, 5.0));
 	return true;
 }
 
