@@ -198,14 +198,26 @@ void UDreamUIVirtualCursorSubsystem::Tick(float DeltaTime)
 		UpdateCursorVisualPosition();
 	}
 
-	// Confirm button = left mouse button, delivered on edges only.
-	const bool bConfirmNow = PlayerController->IsInputKeyDown(EKeys::Gamepad_FaceButton_Bottom)
-		|| PlayerController->IsInputKeyDown(EKeys::Virtual_Accept);
-	if (bConfirmNow != bConfirmDown)
+	// The confirm button is NOT polled here any more. Polling IsInputKeyDown put this beside the
+	// action router instead of behind it -- a screen that bound the confirm key to an action had the
+	// router consume the press, and the cursor still clicked whatever was under it: one keypress,
+	// two outcomes. The preset actor pushes the state through SetConfirmPressed after offering the
+	// key to the router, so a claimed confirm never becomes a click.
+}
+
+void UDreamUIVirtualCursorSubsystem::SetConfirmPressed(bool bInPressed)
+{
+	if (!bActive || bInPressed == bConfirmDown)
 	{
-		bConfirmDown = bConfirmNow;
-		Module->InputTrigger(FVector(CursorPosition.X, CursorPosition.Y, 0.0f), bConfirmNow);
+		return;
 	}
+	UDreamStandaloneInputModule* Module = GetInputModule();
+	if (Module == nullptr)
+	{
+		return;
+	}
+	bConfirmDown = bInPressed;
+	Module->InputTrigger(FVector(CursorPosition.X, CursorPosition.Y, 0.0f), bInPressed);
 }
 
 void UDreamUIVirtualCursorSubsystem::UpdateCursorVisualPosition()

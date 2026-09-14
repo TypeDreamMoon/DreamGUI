@@ -36,6 +36,12 @@ public:
 	virtual void Deinitialize() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
+	/**
+	 * Ticks while the game is paused. A gamepad player in a pause menu has no other pointer at all,
+	 * so a cursor that stops integrating the stick is a menu that cannot be used -- and the rest of
+	 * the framework (UDreamUIManagerWorldSubsystem, the event system component) already ticks there.
+	 */
+	virtual bool IsTickableWhenPaused() const override { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|VirtualCursor")
 	void ActivateVirtualCursor();
@@ -45,6 +51,23 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|VirtualCursor")
 	bool IsVirtualCursorActive() const { return bActive; }
+
+	/**
+	 * Push the confirm button's state, as a left mouse button at the cursor. Edge-triggered: only a
+	 * change from what was last pushed is delivered.
+	 *
+	 * The cursor used to poll IsInputKeyDown for this every tick, which put it beside the action
+	 * router rather than behind it: a screen that bound the confirm key to an action had that action
+	 * consume the press, and the cursor clicked anyway. Now the preset actor -- the one place a real
+	 * key is still in hand, and the place that already offers every key to the router first -- calls
+	 * this, so a confirm the router claimed never reaches the cursor at all.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|VirtualCursor")
+	void SetConfirmPressed(bool bInPressed);
+
+	/** Where the cursor is, in viewport coordinates. Meaningless while the cursor is inactive. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|VirtualCursor")
+	FVector2D GetVirtualCursorPosition() const { return CursorPosition; }
 
 private:
 	UDreamStandaloneInputModule* GetInputModule() const;

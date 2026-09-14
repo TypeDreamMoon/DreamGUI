@@ -49,6 +49,16 @@ namespace DreamUITooltipPolicy
 	DREAMGUI_API UDreamWidget* ResolveTooltipSource(UDreamWidget* InEnterWidget);
 
 	/**
+	 * The widget the bubble should be parented to for a tooltip about InSource.
+	 *
+	 * The screen root for screen-space and render-target UI, and the SOURCE's own root canvas widget
+	 * for world-space UI. The screen root was the only answer this ever had, which put the tooltip of
+	 * a panel welded to a machine in the level onto the player's HUD, at a position computed from a
+	 * pointer position no world-space raycaster fills in meaningfully.
+	 */
+	DREAMGUI_API UDreamWidget* ResolveTooltipHost(UDreamWidget* InSource, UDreamWidget* InScreenRoot);
+
+	/**
 	 * Where the bubble's PIVOT goes, in the same 2D space the inputs are in (X right, Y up).
 	 * Prefers below-right of the pointer by InOffset (a negative Y offset reads "below"); flips to
 	 * the other side of the pointer on the axes where the bubble would leave InCanvasMin..Max, then
@@ -83,10 +93,31 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
+	/**
+	 * Ticks while the game is paused, because a pause menu is exactly where tooltips are read.
+	 *
+	 * FTickableGameObject answers false by default, which silently opted this service out of the
+	 * contract the rest of the framework keeps: the event system component sets bTickEvenWhenPaused,
+	 * the screen-space raycaster has a setting for it, and UDreamUIManagerWorldSubsystem overrides
+	 * this very function to true. Input kept arriving while paused and only the dwell timer stopped,
+	 * so the bubble never appeared.
+	 */
+	virtual bool IsTickableWhenPaused() const override { return true; }
 
 	/** Hide whatever is showing and restart the dwell. For code that just changed what is under the pointer. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tooltip")
 	void HideTooltip();
+
+	/**
+	 * Show InSource's tooltip right now, as though its dwell had just elapsed. Does nothing for a
+	 * source that offers neither ToolTipText nor a tooltip widget class.
+	 *
+	 * The dwell path is the ordinary one; this exists for code that already knows the player is
+	 * asking for help on something -- a help key, a focus change -- and for tests, which otherwise
+	 * have no way to put a bubble on screen.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tooltip")
+	void ShowTooltipFor(UDreamWidget* InSource);
 
 	/** The widget the visible tooltip belongs to, or null while none shows. */
 	UDreamWidget* GetShownFor() const { return ShownFor.Get(); }
@@ -99,6 +130,15 @@ private:
 	/** Size the built-in bubble to its text's preferred size; safe to call before the text can answer. */
 	void SizeBubbleToText();
 	void UpdateTooltipPosition();
+	/**
+	 * Where the bubble points, in InHost's own local 2D space.
+	 *
+	 * The pointer's position when a pointer armed this tooltip and the host is a screen overlay; the
+	 * SOURCE widget's own rect otherwise -- which covers both the gamepad, where there is no pointer,
+	 * and a world-space canvas, where viewport pixels mean nothing.
+	 * @return false when there is nothing to point at, in which case the bubble is left where it was.
+	 */
+	bool ResolveTooltipAnchor(UDreamWidget* InHost, UDreamWidget* InSource, FVector2D& OutAnchor) const;
 	void DestroyTooltipWidgets();
 
 	/** The event system observed, so a late-spawned or replaced one is picked up. */
@@ -111,9 +151,19 @@ private:
 	float HoverSeconds = 0.0f;
 	/** Set from press/drag; a new hover-enter re-arms. */
 	bool bSuppressed = false;
+	/**
+	 * Whether the current candidate was armed by navigation rather than by a pointer.
+	 *
+	 * Kept because it is the only thing that separates the two afterwards: both arrive as an enter on
+	 * the same path, and the difference shows up in where the bubble is placed -- against the focused
+	 * widget for a gamepad, against the pointer for a mouse.
+	 */
+	bool bArmedByNavigation = false;
 
 	/** What the visible tooltip belongs to. */
 	TWeakObjectPtr<UDreamWidget> ShownFor;
+	/** The canvas widget the bubble is parented to: a screen root, or a world-space canvas. */
+	TWeakObjectPtr<UDreamWidget> TooltipHost;
 
 	/** The positioned widget: its own canvas, raycast-disabled, parented to the screen root. */
 	UPROPERTY(Transient)

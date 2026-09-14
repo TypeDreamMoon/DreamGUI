@@ -4,8 +4,11 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Engine/World.h"
 #include "Interaction/DreamUITooltip.h"
+#include "UObject/UnrealType.h"
 
 /*
  * The tooltip's pure half: which widget on the hover path owns the tooltip, and where the bubble
@@ -93,6 +96,154 @@ bool FDreamUITooltipPlacementTest::RunTest(const FString& Parameters)
 		CanvasMin, CanvasMax, FVector2D(2000.0f, 2000.0f), FVector2D::ZeroVector, Offset);
 	TestEqual(TEXT("An oversized bubble pins to the left edge"), Clamped.X, CanvasMin.X);
 	TestEqual(TEXT("An oversized bubble pins to the top edge"), Clamped.Y, CanvasMax.Y);
+	return true;
+}
+
+/*
+ * The bubble's lifetime, which used to be tied to the wrong thing.
+ *
+ * A tooltip is shown FOR a widget, and the subsystem kept that widget in a weak pointer. The tick
+ * then asked "is the source still valid?" to decide whether it had a bubble to look after -- so the
+ * moment the source went away, the answer became "no bubble", both branches of the tick returned
+ * early, and nothing ever called HideTooltip. The bubble stayed parked on the screen root, at the
+ * last position it had, describing a widget that no longer existed, until some LATER tooltip's
+ * ShowFor happened to destroy it on its way past.
+ *
+ * Sources go away constantly. UIRecyclableScrollView recycles the hovered row out from under the
+ * pointer; a screen closes while its button is hovered. Both leave a bubble on screen for good.
+ */
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITooltipOutlivesItsSourceTest,
+	"DreamGUI.Tooltip.ABubbleWhoseSourceIsDestroyedIsTakenDownWithIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUITooltipOutlivesItsSourceTest::RunTest(const FString& Parameters)
+{
+	struct FScopedGameWorld
+	{
+		UWorld* World = nullptr;
+		FScopedGameWorld() { World = UWorld::CreateWorld(EWorldType::Game, false); }
+		~FScopedGameWorld() { if (World) { World->DestroyWorld(false); } }
+	} TestWorld;
+
+	UDreamUITooltipSubsystem* Tooltip = TestWorld.World->GetSubsystem<UDreamUITooltipSubsystem>();
+	if (!TestNotNull(TEXT("the tooltip subsystem exists in a game world"), Tooltip))
+	{
+		return false;
+	}
+
+	// The holder is the bubble: everything drawn hangs off it, and it is what HideTooltip destroys.
+	// Reaching it by reflection rather than by a query is deliberate -- the subsystem deliberately
+	// exposes no handle on its own widgets, and a test that asserted only on GetShownFor would have
+	// passed all along, because ShownFor going stale IS the bug rather than a symptom of it.
+	FProperty* HolderProperty = UDreamUITooltipSubsystem::StaticClass()->FindPropertyByName(TEXT("TooltipHolder"));
+	if (!TestNotNull(TEXT("the subsystem still has a TooltipHolder property to assert against"), HolderProperty))
+	{
+		return false;
+	}
+	const TObjectPtr<UDreamWidget>* Holder = HolderProperty->ContainerPtrToValuePtr<TObjectPtr<UDreamWidget>>(Tooltip);
+
+	UDreamWidget* Source = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	Source->SetDisplayName(TEXT("TooltipSource"));
+	Source->SetWidth(120.0f);
+	Source->SetHeight(40.0f);
+	Source->SetToolTipText(FText::FromString(TEXT("Explains what this does")));
+	Source->OnRegister();
+
+	Tooltip->ShowTooltipFor(Source);
+	TestEqual(TEXT("the bubble belongs to the widget it was shown for"), Tooltip->GetShownFor(), Source);
+	if (!TestNotNull(TEXT("...and a bubble was actually built"), Holder->Get()))
+	{
+		Source->DestroyWidget();
+		return false;
+	}
+
+	// A tick with the source still alive changes nothing: the bubble is re-measured and repositioned,
+	// which is the state this test has to distinguish "tore it down" from.
+	Tooltip->Tick(0.016f);
+	TestNotNull(TEXT("an ordinary tick leaves a live tooltip alone"), Holder->Get());
+
+	// The recycled row / closed screen. Both halves are needed to reproduce it: DestroyWidget tears
+	// the widget down but leaves the object addressable, and it is the COLLECTION that follows -- a
+	// recycled row dropping its last reference -- that turns the subsystem's weak ShownFor into a
+	// null, which is the exact state both branches of the tick used to walk straight past.
+	Source->DestroyWidget();
+	Source->MarkAsGarbage();
+	TestNull(TEXT("the source really is gone"), Tooltip->GetShownFor());
+
+	Tooltip->Tick(0.016f);
+	TestNull(TEXT("the bubble is destroyed rather than left parked on the screen root"), Holder->Get());
+
+	// And the subsystem is left in a state a later tooltip can use, rather than one where it believes
+	// a bubble is still up.
+	Tooltip->Tick(0.016f);
+	TestNull(TEXT("a second tick has nothing left to do"), Holder->Get());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITooltipWorldSpaceHostTest,
+	"DreamGUI.Tooltip.Policy.AWorldSpacePanelsTooltipStaysOnItsOwnCanvas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUITooltipWorldSpaceHostTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * The screen overlay was the only host a tooltip ever had. For a panel welded to a machine in the
+	 * level that put the bubble on the player's HUD instead -- and positioned it from a pointer
+	 * position no world-space raycaster fills in meaningfully, so it landed wherever the last mouse
+	 * event happened to have been. A tooltip belongs on the same canvas as the thing it is about.
+	 */
+	struct FScopedGameWorld
+	{
+		UWorld* World = nullptr;
+		FScopedGameWorld() { World = UWorld::CreateWorld(EWorldType::Game, false); }
+		~FScopedGameWorld() { if (World) { World->DestroyWorld(false); } }
+	} TestWorld;
+
+	UDreamWidget* ScreenRoot = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	ScreenRoot->SetDisplayName(TEXT("ScreenRootStandIn"));
+	ScreenRoot->OnRegister();
+
+	// No source at all is the screen root: that is what a tooltip with nothing to be about would get,
+	// and the policy must not answer null for it.
+	TestEqual(TEXT("with no source, the screen root hosts"),
+		DreamUITooltipPolicy::ResolveTooltipHost(nullptr, ScreenRoot), ScreenRoot);
+
+	UDreamWidget* WorldRoot = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	WorldRoot->SetDisplayName(TEXT("WorldCanvas"));
+	WorldRoot->SetWidth(400.0f);
+	WorldRoot->SetHeight(300.0f);
+	WorldRoot->OnRegister();
+	UDreamCanvas* Canvas = WorldRoot->AddComponent<UDreamCanvas>();
+	if (!TestNotNull(TEXT("a canvas for the world-space tree"), Canvas))
+	{
+		return false;
+	}
+	Canvas->SetRenderMode(EDreamRenderMode::WorldSpace);
+
+	UDreamWidget* Panel = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	Panel->SetDisplayName(TEXT("Panel"));
+	Panel->SetWidth(120.0f);
+	Panel->SetHeight(60.0f);
+	Panel->TrySetParent(WorldRoot, false);
+
+	// The precondition, asserted rather than assumed: the policy falls back to the screen root when a
+	// source has no canvas, and a fixture that quietly had none would make the next line meaningless.
+	if (!TestFalse(TEXT("the panel is not screen-space UI"), Panel->IsScreenSpaceOverlayUI())
+		|| !TestNotNull(TEXT("...and it does have a root canvas"), Panel->GetRootCanvas()))
+	{
+		WorldRoot->DestroyWidget();
+		ScreenRoot->DestroyWidget();
+		return false;
+	}
+
+	TestEqual(TEXT("a world-space panel's tooltip is hosted by its own canvas"),
+		DreamUITooltipPolicy::ResolveTooltipHost(Panel, ScreenRoot), WorldRoot);
+
+	WorldRoot->DestroyWidget();
+	ScreenRoot->DestroyWidget();
 	return true;
 }
 

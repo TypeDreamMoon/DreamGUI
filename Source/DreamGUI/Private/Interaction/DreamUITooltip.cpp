@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUITooltip.h"
 
@@ -47,6 +47,26 @@ UDreamWidget* DreamUITooltipPolicy::ResolveTooltipSource(UDreamWidget* InEnterWi
 		}
 	}
 	return nullptr;
+}
+
+UDreamWidget* DreamUITooltipPolicy::ResolveTooltipHost(UDreamWidget* InSource, UDreamWidget* InScreenRoot)
+{
+	if (!IsValid(InSource))
+	{
+		return InScreenRoot;
+	}
+	// Screen-space and render-target UI both live under a screen root, and the screen root is where a
+	// bubble has to go for them: it is above every page, and a pointer position means something there.
+	if (InSource->IsScreenSpaceOverlayUI() || InSource->IsRenderTargetUI())
+	{
+		return InScreenRoot;
+	}
+	// World space: the bubble belongs on the same canvas as the thing it describes. Hosting it on the
+	// screen overlay instead put a panel's tooltip on the player's HUD, positioned from a pointer
+	// position a world-space raycaster had no reason to fill in.
+	UDreamCanvas* RootCanvas = InSource->GetRootCanvas();
+	UDreamWidget* CanvasWidget = IsValid(RootCanvas) ? RootCanvas->GetWidget() : nullptr;
+	return IsValid(CanvasWidget) ? CanvasWidget : InScreenRoot;
 }
 
 FVector2D DreamUITooltipPolicy::ComputeTooltipTopLeft(const FVector2D& InCanvasMin, const FVector2D& InCanvasMax,
@@ -130,13 +150,12 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 	}
 	LastPointerEvent = PointerEvent;
 
-	// v1 is pointer-only; the focus-driven gamepad tooltip is a later, separate arming path.
-	if (PointerEvent->InputType != EDreamUIPointerInputType::Pointer)
-	{
-		HideTooltip();
-		Candidate.Reset();
-		return;
-	}
+	// Navigation arms a tooltip too, and used to do the opposite: any non-pointer event hid whatever
+	// was showing and cleared the candidate, so a gamepad player could never see one at all. The two
+	// arrive through the same enter/exit path -- that is what makes the confirm button press whatever
+	// navigation landed on -- so the only difference worth keeping is WHERE the bubble goes: a pointer
+	// position is meaningless in navigation mode, and the bubble is placed against the focused widget.
+	const bool bIsNavigation = PointerEvent->InputType == EDreamUIPointerInputType::Navigation;
 
 	switch (PointerEvent->EventType)
 	{
@@ -144,9 +163,10 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 	case EDreamUIPointerEventType::Exit:
 	{
 		UDreamWidget* NewCandidate = DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget);
-		if (NewCandidate != Candidate.Get())
+		if (NewCandidate != Candidate.Get() || bIsNavigation != bArmedByNavigation)
 		{
 			Candidate = NewCandidate;
+			bArmedByNavigation = bIsNavigation;
 			HoverSeconds = 0.0f;
 			// A press suppresses only the CURRENT target; moving to a new one re-arms.
 			bSuppressed = false;
@@ -154,6 +174,7 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 			{
 				HideTooltip();
 				Candidate = NewCandidate;
+				bArmedByNavigation = bIsNavigation;
 			}
 		}
 		break;
@@ -173,9 +194,15 @@ void UDreamUITooltipSubsystem::Tick(float DeltaTime)
 {
 	EnsureSubscribed();
 
-	if (ShownFor.IsValid())
+	// The bubble's lifetime is the HOLDER's, not the source's. Asking ShownFor.IsValid() here left a
+	// bubble whose source had been destroyed -- a recycled list row, a closed screen -- unreachable
+	// by both branches: this one was skipped because the weak pointer had gone stale, and the dwell
+	// branch below returned early on the equally-stale Candidate. Nothing called HideTooltip, so the
+	// bubble stayed parked on the screen root until the next tooltip's ShowFor happened to clear it.
+	if (IsValid(TooltipHolder))
 	{
-		if (!Candidate.IsValid() || Candidate.Get() != ShownFor.Get())
+		UDreamWidget* Source = ShownFor.Get();
+		if (Source == nullptr || Candidate.Get() != Source)
 		{
 			HideTooltip();
 			return;
@@ -204,8 +231,27 @@ void UDreamUITooltipSubsystem::Tick(float DeltaTime)
 void UDreamUITooltipSubsystem::HideTooltip()
 {
 	ShownFor.Reset();
+	TooltipHost.Reset();
 	HoverSeconds = 0.0f;
 	DestroyTooltipWidgets();
+}
+
+void UDreamUITooltipSubsystem::ShowTooltipFor(UDreamWidget* InSource)
+{
+	if (!IsValid(InSource))
+	{
+		return;
+	}
+	// The candidate moves with the bubble, not just the bubble: the tick keeps a visible tooltip only
+	// while the two agree, so showing one without arming the candidate would hide it again next frame.
+	Candidate = InSource;
+	// Anchored to the widget rather than to the pointer, because a caller asking for a specific
+	// widget's help is not telling us anything about where a pointer is -- and the last pointer event
+	// may be from somewhere else entirely, or from a previous screen.
+	bArmedByNavigation = true;
+	HoverSeconds = 0.0f;
+	bSuppressed = false;
+	ShowFor(InSource);
 }
 
 void UDreamUITooltipSubsystem::DestroyTooltipWidgets()
@@ -222,11 +268,18 @@ void UDreamUITooltipSubsystem::DestroyTooltipWidgets()
 void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 {
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
-	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRoot() : nullptr;
-	if (!IsValid(ScreenRoot))
+	// A tooltip belongs on the same screen as the widget it is about.
+	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForWidget(InSource) : nullptr;
+	// ...and, for a world-space or render-target UI, on the same CANVAS. The screen overlay was the
+	// only host this ever had, so a tooltip on a panel welded to a machine in the level landed on the
+	// player's HUD instead -- at a position derived from a pointer position that a world-space
+	// raycaster never had any reason to fill in meaningfully.
+	UDreamWidget* Host = DreamUITooltipPolicy::ResolveTooltipHost(InSource, ScreenRoot);
+	if (!IsValid(Host))
 	{
 		return;
 	}
+	TooltipHost = Host;
 
 	// Which of the two content paths this source wants: a custom widget class beats the text.
 	TSubclassOf<UDreamUserWidget> CustomClass = nullptr;
@@ -265,7 +318,7 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 
 	if (CustomClass != nullptr)
 	{
-		TooltipHolder->SetParentBeforeRegister(ScreenRoot);
+		TooltipHolder->SetParentBeforeRegister(Host);
 		RegisterDreamWidgetHierarchy(TooltipHolder);
 		CustomTooltip = CreateDreamWidget(GetWorld(), CustomClass, TooltipHolder);
 		if (IsValid(CustomTooltip))
@@ -290,7 +343,7 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 		Background->SetColor(TooltipBackgroundColor);
 
 		TextWidget->SetParentBeforeRegister(TooltipHolder);
-		TooltipHolder->SetParentBeforeRegister(ScreenRoot);
+		TooltipHolder->SetParentBeforeRegister(Host);
 		RegisterDreamWidgetHierarchy(TooltipHolder);
 	}
 
@@ -344,34 +397,69 @@ void UDreamUITooltipSubsystem::SizeBubbleToText()
 
 void UDreamUITooltipSubsystem::UpdateTooltipPosition()
 {
-	UDreamPointerEventData* PointerEvent = LastPointerEvent.Get();
-	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
-	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRoot() : nullptr;
-	if (!IsValid(TooltipHolder) || !IsValid(ScreenRoot) || PointerEvent == nullptr)
-	{
-		return;
-	}
-	UDreamCanvas* RootCanvas = ScreenRoot->GetComponent<UDreamCanvas>();
-	if (!IsValid(RootCanvas))
+	UDreamWidget* Host = TooltipHost.Get();
+	UDreamWidget* Source = ShownFor.Get();
+	if (!IsValid(TooltipHolder) || !IsValid(Host))
 	{
 		return;
 	}
 
-	FVector2D PointerInCanvas = FVector2D::ZeroVector;
-	if (!RootCanvas->ConvertPositionFromViewportToCanvas(FVector2D(PointerEvent->PointerPosition.X, PointerEvent->PointerPosition.Y), PointerInCanvas))
+	// Where the bubble points, in the HOST's own local 2D space -- which is the space anchored
+	// positions and the policy's bounds are both already in.
+	FVector2D AnchorInHost = FVector2D::ZeroVector;
+	if (!ResolveTooltipAnchor(Host, Source, AnchorInHost))
 	{
 		return;
 	}
 
-	const FVector2D HalfCanvas(ScreenRoot->GetWidth() * 0.5f, ScreenRoot->GetHeight() * 0.5f);
-	// The conversion answers in the canvas's BOTTOM-LEFT origin (x right, y up from the corner);
-	// anchored positions -- and the policy's ±HalfCanvas bounds -- are CENTER-origin. The
-	// walkthrough caught the bubble parked in a corner: this shift was missing, so a corner-origin
-	// number was fed to a center-origin consumer.
-	PointerInCanvas -= HalfCanvas;
+	const FVector2D HalfCanvas(Host->GetWidth() * 0.5f, Host->GetHeight() * 0.5f);
 	const FVector2D TopLeft = DreamUITooltipPolicy::ComputeTooltipTopLeft(
 		-HalfCanvas, HalfCanvas,
 		FVector2D(TooltipHolder->GetWidth(), TooltipHolder->GetHeight()),
-		PointerInCanvas, UDreamGUISettings::Get()->TooltipOffset);
+		AnchorInHost, UDreamGUISettings::Get()->TooltipOffset);
 	TooltipHolder->SetAnchoredPosition(TopLeft);
+}
+
+bool UDreamUITooltipSubsystem::ResolveTooltipAnchor(UDreamWidget* InHost, UDreamWidget* InSource, FVector2D& OutAnchor) const
+{
+	UDreamPointerEventData* PointerEvent = LastPointerEvent.Get();
+	// A pointer position is only an answer when a pointer put it there AND the host is the screen
+	// overlay that position is measured in. Navigation has no pointer, and a world-space canvas has
+	// no relationship to viewport pixels at all; both fall through to the source widget's own rect,
+	// which is the thing the bubble is about and is expressed in the host's space by construction.
+	const bool bPointerIsMeaningful = PointerEvent != nullptr
+		&& !bArmedByNavigation
+		&& PointerEvent->InputType == EDreamUIPointerInputType::Pointer
+		&& !InHost->IsWorldSpaceUI();
+	if (bPointerIsMeaningful)
+	{
+		UDreamCanvas* HostCanvas = InHost->GetComponent<UDreamCanvas>();
+		FVector2D PointerInCanvas = FVector2D::ZeroVector;
+		if (IsValid(HostCanvas)
+			&& HostCanvas->ConvertPositionFromViewportToCanvas(
+				FVector2D(PointerEvent->PointerPosition.X, PointerEvent->PointerPosition.Y), PointerInCanvas))
+		{
+			// The conversion answers in the canvas's BOTTOM-LEFT origin (x right, y up from the
+			// corner); anchored positions -- and the policy's bounds -- are CENTER-origin. The
+			// walkthrough caught the bubble parked in a corner: this shift was missing, so a
+			// corner-origin number was fed to a center-origin consumer.
+			OutAnchor = PointerInCanvas - FVector2D(InHost->GetWidth() * 0.5f, InHost->GetHeight() * 0.5f);
+			return true;
+		}
+	}
+
+	if (!IsValid(InSource))
+	{
+		return false;
+	}
+	// The source's bottom-right corner, carried into the host's space through world space, so the
+	// bubble hangs off the focused widget exactly the way it hangs off a pointer. Rotation and scale
+	// on anything in between are handled by the transforms rather than assumed away.
+	const FVector2D Centre = InSource->GetLocalSpaceCenter();
+	const FVector2D Half(InSource->GetWidth() * 0.5f, InSource->GetHeight() * 0.5f);
+	const FVector2D CornerLocal = Centre + FVector2D(Half.X, -Half.Y);
+	const FVector CornerWorld = InSource->GetWorldTransform().TransformPosition(FVector(0.0f, CornerLocal.X, CornerLocal.Y));
+	const FVector CornerInHost = InHost->GetWorldTransform().InverseTransformPosition(CornerWorld);
+	OutAnchor = FVector2D(CornerInHost.Y, CornerInHost.Z);
+	return true;
 }
