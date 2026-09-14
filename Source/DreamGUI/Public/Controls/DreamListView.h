@@ -6,6 +6,7 @@
 #include "Controls/DreamScrollBar.h"
 #include "Controls/DreamUIControl.h"
 #include "Core/Components/DreamPanelLayouts.h"
+#include "Interaction/UIListView.h"
 #include "Interaction/UIScrollView.h"
 #include "DreamListView.generated.h"
 
@@ -13,6 +14,8 @@ class UDreamWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamListSelectionChangedEvent, int32, SelectedIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDreamListRowEvent, int32, ItemIndex, UDreamWidget*, Row, UObject*, Item);
+/** An item something happened TO, with its object when the source has one. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDreamListItemEvent, int32, ItemIndex, UObject*, Item);
 
 /**
  * Everything a list and a tree have in common, which is nearly all of it.
@@ -135,20 +138,49 @@ public:
 	 * The selected row, as an index into the SOURCE -- not into the rows on screen. For a list the
 	 * two are the same; for a tree they are not, and an index that survives a collapse is the one
 	 * worth handing to a binding. -1 is none.
+	 *
+	 * With SelectionMode at Multi this is the ANCHOR -- the row the last selection landed on -- and
+	 * SelectedIndices is the whole answer. The two are kept in step: writing this one (a .dui line, a
+	 * details-panel edit, a `<->` binding) is read as "that row is selected", and a set that empties
+	 * puts this back to -1.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectedIndex", BlueprintSetter = "SetSelectedIndex", Category = "List")
 	int32 SelectedIndex = INDEX_NONE;
 
-	/** Every other row wears FDreamListStyle::RowAlternate. Off is the dense list UMG draws. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List")
+	/**
+	 * How many rows can be selected at once, in UUIListView's four modes -- the same enum, because
+	 * they are the same four answers and a second one spelling them again is a second thing to keep
+	 * true. None ignores clicks; Single always leaves exactly one chosen; SingleToggle lets a second
+	 * click on the chosen row clear it; Multi accumulates.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectionMode", BlueprintSetter = "SetSelectionMode", Category = "List")
+	EUIListSelectionMode SelectionMode = EUIListSelectionMode::Single;
+
+	/**
+	 * Every selected row, as source indices, in the order they were chosen. Authorable, but the
+	 * ordinary road is SetItemSelection / SetSelectedIndex -- those keep SelectedIndex in step and
+	 * repaint; a raw write here is picked up on the next rebuild.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "List")
+	TArray<int32> SelectedIndices;
+
+	/**
+	 * Every other row wears FDreamListStyle::RowAlternate. Off is the dense list UMG draws.
+	 *
+	 * BlueprintSetter, like every writable knob on this control: nothing in this family re-derives a
+	 * control from a property that moved -- the SynchronizeProperties tax UDreamUIControl documents --
+	 * so a runtime write straight onto the variable used to change the number and leave the list
+	 * exactly as it was, with nothing anywhere saying why.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAlternatingRowColors", BlueprintSetter = "SetAlternatingRowColors", Category = "List")
 	bool bAlternatingRowColors = false;
 
 	/** Off means no bar at all, and the viewport keeps the gutter it would have cost. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShowScrollBar", BlueprintSetter = "SetShowScrollBar", Category = "List")
 	bool bShowScrollBar = true;
 
 	/** Whether the bar stays put or disappears while every row already fits. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List", meta = (EditCondition = "bShowScrollBar"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollBarVisibility", BlueprintSetter = "SetScrollBarVisibility", Category = "List", meta = (EditCondition = "bShowScrollBar"))
 	EDreamScrollBoxScrollbarVisibility ScrollBarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
 
 	/**
@@ -159,12 +191,21 @@ public:
 	 * asking "give me the widget for item 7" all want; above it a list of a hundred thousand is a
 	 * pool of thirty. Zero recycles always; a very large number never does.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List", meta = (ClampMin = "0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetVirtualizationThreshold", BlueprintSetter = "SetVirtualizationThreshold", Category = "List", meta = (ClampMin = "0"))
 	int32 VirtualizationThreshold = 200;
 
 	/** Extra rows kept realized past each edge of the window, so a fast scroll never shows a gap. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List", meta = (ClampMin = "0", ClampMax = "16"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetVirtualizationOverscan", BlueprintSetter = "SetVirtualizationOverscan", Category = "List", meta = (ClampMin = "0", ClampMax = "16"))
 	int32 VirtualizationOverscan = 2;
+
+	/**
+	 * How many ROWS a wheel notch travels. One is the only sensitivity a list can state without
+	 * guessing -- it is the unit the content is made of -- and this is the multiplier on it, for a
+	 * long list where a row at a time is too slow. Zero stops the wheel.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetWheelScrollMultiplier", BlueprintSetter = "SetWheelScrollMultiplier", Category = "List", meta = (ClampMin = "0.0"))
+	float WheelScrollMultiplier = 1.0f;
+
 
 	/** Re-broadcast from the rows, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "List")
@@ -185,6 +226,37 @@ public:
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnRowGenerated;
+
+	/**
+	 * The counterpart of OnRowGenerated: a pool row is about to stop standing for this item, either
+	 * because it was re-bound to another one or because it was parked. UMG's OnEntryReleased, and
+	 * the hook for undoing whatever OnRowGenerated did to that row.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "List")
+	FDreamListRowEvent OnRowReleased;
+
+	/**
+	 * A row was clicked -- every click, whatever the selection mode did with it. Separate from
+	 * OnSelectionChanged because a click on the already-selected row is still a click, and because a
+	 * list whose SelectionMode is None still wants to know.
+	 *
+	 * Fires AFTER the selection has moved, so a handler asking GetSelectedIndex sees the answer the
+	 * user just gave.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "List")
+	FDreamListItemEvent OnItemClicked;
+
+	/**
+	 * Two clicks on the same row inside the event system's DoubleClickTime.
+	 *
+	 * That clock and no other: the pointer input module already decides what a double click is (it is
+	 * what UUITextInput's select-the-word gesture uses), and a list measuring its own would disagree
+	 * with the field beside it -- and would be counting click EVENTS rather than pointer presses.
+	 * The single click still fires first, so a row that opens on a double click also selects on the
+	 * way there.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "List")
+	FDreamListItemEvent OnItemDoubleClicked;
 
 	/** The face: the list's own look, and what cuts everything off at its rounded edge. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "List")
@@ -243,13 +315,107 @@ public:
 	UFUNCTION(BlueprintPure, Category = "List")
 	int32 GetSelectedIndex() const { return SelectedIndex; }
 
-	/** Moves the highlight and fires both selection events. Out of range selects nothing. */
+	/**
+	 * Moves the highlight and fires both selection events. Out of range selects nothing.
+	 *
+	 * Selects exactly ONE row whatever the mode -- this is the single-selection road, and the name
+	 * says so. SetItemSelection is the one that can add to a Multi selection.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetSelectedIndex(int32 InIndex);
 
 	/** The same move, silently: for pushing an authored value in, which is not the user choosing. */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetSelectedIndexWithoutNotify(int32 InIndex);
+
+	/** Which mode decides how many rows can be chosen. Re-narrows the selection when it has to. */
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetSelectionMode(EUIListSelectionMode InMode);
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	bool GetAlternatingRowColors() const { return bAlternatingRowColors; }
+
+	/**
+	 * The five knobs below are read only by the style push or the row build, so each setter writes
+	 * the field and then makes that push itself -- which is the whole of what a BlueprintSetter buys
+	 * here. Restyling never creates or destroys a row (see the list's restyle-identity test), so the
+	 * first three are cheap; the two virtualization knobs change how many rows there ARE, and go
+	 * through RebuildRows for that reason.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetAlternatingRowColors(bool bInAlternating);
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	bool GetShowScrollBar() const { return bShowScrollBar; }
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetShowScrollBar(bool bInShowScrollBar);
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	EDreamScrollBoxScrollbarVisibility GetScrollBarVisibility() const { return ScrollBarVisibility; }
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetScrollBarVisibility(EDreamScrollBoxScrollbarVisibility InVisibility);
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	int32 GetVirtualizationThreshold() const { return VirtualizationThreshold; }
+
+	/** Crossing the threshold changes whether the list pools, so this rebuilds rather than restyles. */
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetVirtualizationThreshold(int32 InThreshold);
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	int32 GetVirtualizationOverscan() const { return VirtualizationOverscan; }
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetVirtualizationOverscan(int32 InOverscan);
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	float GetWheelScrollMultiplier() const { return WheelScrollMultiplier; }
+
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetWheelScrollMultiplier(float InMultiplier);
+
+	UFUNCTION(BlueprintPure, Category = "List")
+	EUIListSelectionMode GetSelectionMode() const { return SelectionMode; }
+
+	UFUNCTION(BlueprintPure, Category = "List")
+	bool IsItemSelected(int32 InItemIndex) const;
+
+	/**
+	 * Add or remove ONE row from the selection, which is the only call that can express a multi
+	 * selection. bInClearOthers is implied by every mode except Multi.
+	 *
+	 * Fires both selection events whenever the selection actually moved -- including the case where
+	 * THIS row's state did not change but others were cleared, which is where the behaviour-side
+	 * version left rows painted as selected after they had been dropped.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetItemSelection(int32 InItemIndex, bool bInSelected, bool bInClearOthers = true);
+
+	/** Nothing selected. Announced, unless there was nothing selected to begin with. */
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void ClearSelection();
+
+	/** Every selected row, as source indices, in the order they were chosen. */
+	UFUNCTION(BlueprintPure, Category = "List")
+	TArray<int32> GetSelectedIndices() const { return SelectedIndices; }
+
+	/**
+	 * The selected rows as their item OBJECTS, for a source that has them -- UMG's GetSelectedItems.
+	 * A text-only source has no objects to answer with, so this comes back empty there and
+	 * GetSelectedIndices is the question to ask instead.
+	 */
+	UFUNCTION(BlueprintPure, Category = "List")
+	TArray<UObject*> GetSelectedItems() const;
+
+	/** How far down the column the viewport currently sits, in local units. */
+	UFUNCTION(BlueprintPure, Category = "List")
+	float GetScrollOffset() const;
+
+	/** Put the viewport at an offset down the column, in local units. Clamped by the scroll range. */
+	UFUNCTION(BlueprintCallable, Category = "List")
+	void SetScrollOffset(float InOffset);
 
 	/**
 	 * How many rows the list is SHOWING -- for a tree the visible count, which is the point of a
@@ -316,6 +482,39 @@ protected:
 	/** Which source items get rows, in order. All of them, for a flat list. */
 	virtual void CollectVisibleItemIndices(TArray<int32>& OutIndices) const;
 
+	/**
+	 * How many rows sit side by side. One, for anything that is a LIST.
+	 *
+	 * The tile view is the same control with this answering more than one, and everything that has to
+	 * agree about it reads it from here: how tall the scrolled column is (lines, not rows), where a
+	 * row's line starts, and how many widgets a window holds. A second place computing it is a second
+	 * chance for the column's height and the rows' positions to stop agreeing -- which is exactly the
+	 * equation-in-two-places this control's row placement was rewritten to remove.
+	 */
+	virtual int32 ResolveColumnCount() const { return 1; }
+
+	/**
+	 * Put a row where its DISPLAY index says it goes.
+	 *
+	 * A list stretches a row across the column and offsets it by its line; a tile view gives it a
+	 * width and a place along the line as well. Always from the display index and never from the pool
+	 * index or a sibling, which is what makes recycling possible: placing row N costs nothing and
+	 * depends on nothing.
+	 */
+	virtual void PlaceRow(UDreamWidget& InRow, int32 InDisplayIndex, const FDreamListStyle& InStyle);
+
+	/**
+	 * The source was just replaced, and anything a subclass keys BY INDEX is now pointing at whatever
+	 * landed in that slot. Re-locate it or drop it here.
+	 *
+	 * Runs after the new source is in place and before the rows are rebuilt. The outgoing object
+	 * array comes along because that is the only thing that can turn an INDEX the subclass was
+	 * holding back into the ITEM it meant -- a lookup that stops being possible the moment ItemObjects
+	 * is overwritten. The base's own index-keyed state (the selection) is settled by the setters
+	 * themselves, for the same reason and at the same moment.
+	 */
+	virtual void OnSourceChanged(const TArray<TObjectPtr<UObject>>& InPreviousItemObjects) {}
+
 	/** A source item's depth. Always zero here; the tree is the only thing that indents. */
 	virtual int32 GetItemDepth(int32 InItemIndex) const { return 0; }
 
@@ -360,13 +559,30 @@ protected:
 	/** Where a row sits in the column, as an offset from the column's top edge. */
 	float GetRowTopOffset(int32 InDisplayIndex) const;
 
+	/** How many LINES the visible rows make: the row count over the column count, rounded up. */
+	int32 GetLineCount() const;
+
+	/** The scrolled column's height -- the scroll range -- stated from the lines and the style. */
+	void RefreshContentHeight(const FDreamListStyle& InStyle);
+
 	/** The display positions of the items the source is showing, in order. */
 	UPROPERTY(Transient)
 	TArray<int32> VisibleItemIndices;
 
 private:
 	void HandleRowClicked(int32 InPoolIndex);
+	void HandleRowDoubleClicked(int32 InPoolIndex);
 	void HandleScrollViewMoved(FVector2D InProgress);
+
+	/**
+	 * Make the selection agree with the source, the mode and the authored anchor -- once per rebuild,
+	 * which is the only place all three are known to have settled.
+	 *
+	 * Indices the source no longer answers to are dropped; an anchor an author wrote is taken as a
+	 * selection; a single mode holding several rows keeps the anchor; and the anchor is re-derived
+	 * from the set last, so SelectedIndex always names a row that is actually selected.
+	 */
+	void ReconcileSelection();
 
 	/** Duplicate one row widget out of the template and wire what it keeps for life. */
 	UDreamWidget* CreatePoolRow(int32 InPoolIndex);

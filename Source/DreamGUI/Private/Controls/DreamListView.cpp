@@ -212,8 +212,9 @@ void UDreamListViewBase::ApplyStyle()
 		ScrollBehaviour->SetHorizontal(false);
 		ScrollBehaviour->SetVertical(true);
 		ScrollBehaviour->SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
-		// One notch is one row, which is the only sensitivity a list can state without guessing.
-		ScrollBehaviour->SetScrollSensitivity(GetRowPitch());
+		// One notch is one row, which is the only sensitivity a list can state without guessing --
+		// times the multiplier, for a long list where a row at a time is too slow.
+		ScrollBehaviour->SetScrollSensitivity(GetRowPitch() * FMath::Max(0.0f, WheelScrollMultiplier));
 	}
 
 	// The template only. Every row is a copy of it and every rebuild re-copies, so a style edit
@@ -245,7 +246,31 @@ float UDreamListViewBase::GetRowPitch() const
 
 float UDreamListViewBase::GetRowTopOffset(int32 InDisplayIndex) const
 {
-	return ResolveListStyle().Padding.Top + InDisplayIndex * GetRowPitch();
+	// The LINE a row is on, not the row: with one column those are the same number, and with several
+	// they are not -- which is the whole of what a tile view adds.
+	const int32 Columns = FMath::Max(1, ResolveColumnCount());
+	return ResolveListStyle().Padding.Top + (InDisplayIndex / Columns) * GetRowPitch();
+}
+
+int32 UDreamListViewBase::GetLineCount() const
+{
+	const int32 Columns = FMath::Max(1, ResolveColumnCount());
+	return FMath::DivideAndRoundUp(VisibleItemIndices.Num(), Columns);
+}
+
+void UDreamListViewBase::RefreshContentHeight(const FDreamListStyle& InStyle)
+{
+	if (!IsValid(ColumnNode))
+	{
+		return;
+	}
+	// The column's height is the scroll range, stated rather than measured: lines, gaps and the
+	// viewport's own inset. The column is point-anchored vertically, so SetHeight writes SizeDelta.Y
+	// straight through and leaves the anchored position -- where the scroll offset lives -- alone.
+	const int32 LineCount = GetLineCount();
+	ColumnNode->SetHeight(InStyle.Padding.Top + InStyle.Padding.Bottom
+		+ LineCount * InStyle.RowHeight
+		+ FMath::Max(0, LineCount - 1) * InStyle.RowSpacing);
 }
 
 int32 UDreamListViewBase::ResolveWindowSize() const
@@ -258,7 +283,10 @@ int32 UDreamListViewBase::ResolveWindowSize() const
 	const int32 FromViewport = ViewportHeight > KINDA_SMALL_NUMBER
 		? FMath::CeilToInt(ViewportHeight / GetRowPitch()) + 1
 		: 16;
-	return FMath::Max(1, FromViewport + FMath::Max(0, VirtualizationOverscan) * 2);
+	// LINES times the column count: the arithmetic above is about how far there is to scroll, and a
+	// line of a tile view holds several widgets.
+	const int32 Lines = FMath::Max(1, FromViewport + FMath::Max(0, VirtualizationOverscan) * 2);
+	return Lines * FMath::Max(1, ResolveColumnCount());
 }
 
 void UDreamListViewBase::RebuildRows()
@@ -269,20 +297,19 @@ void UDreamListViewBase::RebuildRows()
 	}
 
 	const FDreamListStyle& Active = ResolveListStyle();
+	// Before the rows, not after: what a row is PAINTED as depends on whether it is selected, and an
+	// index the source no longer answers to (or an anchor an author just wrote into the details
+	// panel) has to be settled where every road into this control passes through.
+	ReconcileSelection();
 	CollectVisibleItemIndices(VisibleItemIndices);
 	const int32 RowCount = VisibleItemIndices.Num();
 
-	// The column's height is the scroll range, stated rather than measured: rows, gaps and the
-	// viewport's own inset. The column is point-anchored vertically, so SetHeight writes SizeDelta.Y
-	// straight through and leaves the anchored position -- where the scroll offset lives -- alone.
-	const float ContentHeight = Active.Padding.Top + Active.Padding.Bottom
-		+ RowCount * Active.RowHeight
-		+ FMath::Max(0, RowCount - 1) * Active.RowSpacing;
-	ColumnNode->SetHeight(ContentHeight);
+	RefreshContentHeight(Active);
 
 	// The threshold decision, taken here and nowhere else. Everything downstream reads bVirtualizing
 	// rather than re-deciding, so the pool size and the bind loop cannot disagree about which list
 	// this is.
+	const bool bWasVirtualizing = bVirtualizing;
 	bVirtualizing = RowCount > FMath::Max(0, VirtualizationThreshold);
 	WindowStart = 0;
 
@@ -310,13 +337,26 @@ void UDreamListViewBase::RebuildRows()
 		ResizePool(0);
 	}
 
+	// And while recycling the pool GROWS here but never shrinks, which is the same designer argument
+	// one step further in. The window size is Ceil(viewport / pitch), and the pitch is RowHeight +
+	// RowSpacing -- so dragging the RowHeight slider moves the window, and a pool sized exactly to it
+	// tore itself down and rebuilt on EVERY FRAME of that drag, at the ~40 ms a click costs above.
+	// A spare row is parked by RefreshVisibleWindow and costs nothing; the trim happens on a real
+	// resize (HandleDimensionsChanged), where the widget count is genuinely wrong rather than merely
+	// generous. A list crossing the virtualization threshold still resizes exactly, because that is
+	// a change of KIND -- one widget per item to a window of them -- and carrying two hundred spare
+	// rows past it would be the opposite of what the threshold is for.
+	const int32 PoolSize = (bVirtualizing && bWasVirtualizing)
+		? FMath::Max(RowNodes.Num(), WantedPoolSize)
+		: WantedPoolSize;
+
 	// The template goes AWAKE for the duration. bWidgetActive is an ordinary property and the copy
 	// inherits it, so duplicating a sleeping template yields a list of sleeping rows: present in the
 	// tree, arranged by nobody, drawn by nobody. UUIDropdown::CreateListItems does the same dance.
-	if (RowNodes.Num() != WantedPoolSize)
+	if (RowNodes.Num() != PoolSize)
 	{
 		RowTemplateNode->SetWidgetActive(true);
-		ResizePool(WantedPoolSize);
+		ResizePool(PoolSize);
 		RowTemplateNode->SetWidgetActive(false);
 	}
 
@@ -373,10 +413,14 @@ void UDreamListViewBase::RefreshVisibleWindow()
 		const float Offset = ScrollBehaviour != nullptr
 			? static_cast<float>(ScrollBehaviour->GetScrollOffset().Y)
 			: 0.0f;
-		// The first row whose bottom edge is still below the window's top, less the overscan. Clamped
-		// so the LAST window is a full one rather than a short one with blank rows under it.
-		const int32 FirstVisible = FMath::FloorToInt(FMath::Max(0.0f, Offset - Active.Padding.Top) / GetRowPitch());
-		FirstDisplayIndex = FMath::Clamp(FirstVisible - FMath::Max(0, VirtualizationOverscan),
+		// The first LINE whose bottom edge is still below the window's top, less the overscan, times
+		// the column count. Clamped so the LAST window is a full one rather than a short one with
+		// blank rows under it -- and the clamp is allowed to land mid-line, because a row's place is
+		// computed from its own display index rather than from where the window happens to start.
+		const int32 Columns = FMath::Max(1, ResolveColumnCount());
+		const int32 FirstVisibleLine = FMath::FloorToInt(FMath::Max(0.0f, Offset - Active.Padding.Top) / GetRowPitch());
+		const int32 FirstLine = FMath::Max(0, FirstVisibleLine - FMath::Max(0, VirtualizationOverscan));
+		FirstDisplayIndex = FMath::Clamp(FirstLine * Columns,
 			0, FMath::Max(0, RowCount - RowNodes.Num()));
 	}
 	WindowStart = FirstDisplayIndex;
@@ -408,6 +452,10 @@ void UDreamListViewBase::HandleDimensionsChanged(bool bPivotChanged, bool bWidth
 		return;
 	}
 	const FDreamListStyle& Active = ResolveListStyle();
+	// A WIDER viewport is a different number of columns for a grid, which is a different number of
+	// lines, which is a different scroll range. A list's answer does not move, so this costs it the
+	// arithmetic and nothing else.
+	RefreshContentHeight(Active);
 	RefreshScrollFurniture(Active);
 	if (bVirtualizing)
 	{
@@ -534,6 +582,13 @@ UDreamWidget* UDreamListViewBase::CreatePoolRow(int32 InPoolIndex)
 		{
 			HandleRowClicked(InPoolIndex);
 		});
+		// Once, for the life of this widget, like the click above: the event system decides what a
+		// double click is and the button re-broadcasts it, so the list neither keeps a clock nor
+		// disagrees with the text field beside it about the interval.
+		RowButton->GetOnDoubleClickEvent().AddWeakLambda(this, [this, InPoolIndex]()
+		{
+			HandleRowDoubleClicked(InPoolIndex);
+		});
 	}
 
 	DecorateNewRow(*Row, InPoolIndex);
@@ -547,6 +602,14 @@ void UDreamListViewBase::BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 
 	{
 		return;
 	}
+	// The row is about to stop standing for whatever it was showing -- UMG's OnEntryReleased, and the
+	// place a consumer undoes what OnRowGenerated did to this widget. Before the new index is written,
+	// so a handler asking GetRowItemIndex is still told the one being released.
+	const int32 ReleasedItemIndex = RowSourceIndices[InPoolIndex];
+	if (ReleasedItemIndex != INDEX_NONE && ReleasedItemIndex != InItemIndex)
+	{
+		OnRowReleased.Broadcast(ReleasedItemIndex, Row, GetItemObject(ReleasedItemIndex));
+	}
 	RowSourceIndices[InPoolIndex] = InItemIndex;
 	Row->SetWidgetActive(true);
 
@@ -556,16 +619,9 @@ void UDreamListViewBase::BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 
 	// list's own rounded edge, the way the dropdown's items do.
 	SkinFace(Row, InStyle.RowBrush);
 
-	// The rect, stated from the index. Top-anchored and stretched across, so a row is as wide as the
-	// column whatever the column turns out to be, and as tall as the style says whatever its content
-	// measures to. The horizontal inset is the viewport's Padding, applied as a negative delta the
-	// way every stretched axis in this library states an inset.
-	const float Inset = InStyle.Padding.Left + InStyle.Padding.Right;
-	Row->SetPivot(FVector2D(0.5, 1.0));
-	Row->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0, 1.0), FVector2D(1.0, 1.0), false, false);
-	Row->SetAnchoredPositionAndSizeDelta(
-		FVector2D((InStyle.Padding.Left - InStyle.Padding.Right) * 0.5, -GetRowTopOffset(InDisplayIndex)),
-		FVector2D(-Inset, InStyle.RowHeight));
+	// The rect, stated from the display index and from nothing else. What that means differs between
+	// a list and a grid, which is why it is a hook rather than four lines here.
+	PlaceRow(*Row, InDisplayIndex, InStyle);
 
 	// Where a row's content starts: the row's own inset, plus whatever the subclass wants in front
 	// of it (for a tree, the indent and room for the twisty).
@@ -601,13 +657,8 @@ void UDreamListViewBase::BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 
 		}
 	}
 
-	if (UUIButton* RowButton = Row->GetComponent<UUIButton>())
-	{
-		RowButton->SetHoveredColor(InStyle.RowHovered);
-		// There is no RowPressed in the style, deliberately: pressing a row is the beginning of
-		// selecting it, so it previews the selected colour rather than inventing a fourth one.
-		RowButton->SetPressedColor(InStyle.RowSelected);
-	}
+	// The whole state set, including the resting colour, is ApplyRowColor's -- see it for why a row
+	// goes through PushSelectableState rather than setting two colours here.
 	ApplyRowColor(Row, InDisplayIndex, InItemIndex, InStyle);
 
 	// The subclass's turn (the tree's twisty), then the consumer's. Both run on every BIND, which is
@@ -616,13 +667,34 @@ void UDreamListViewBase::BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 
 	OnRowGenerated.Broadcast(InItemIndex, Row, GetItemObject(InItemIndex));
 }
 
+void UDreamListViewBase::PlaceRow(UDreamWidget& InRow, int32 InDisplayIndex, const FDreamListStyle& InStyle)
+{
+	// Top-anchored and stretched across, so a row is as wide as the column whatever the column turns
+	// out to be, and as tall as the style says whatever its content measures to. The horizontal inset
+	// is the viewport's Padding, applied as a negative delta the way every stretched axis in this
+	// library states an inset.
+	const float Inset = InStyle.Padding.Left + InStyle.Padding.Right;
+	InRow.SetPivot(FVector2D(0.5, 1.0));
+	InRow.SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0, 1.0), FVector2D(1.0, 1.0), false, false);
+	InRow.SetAnchoredPositionAndSizeDelta(
+		FVector2D((InStyle.Padding.Left - InStyle.Padding.Right) * 0.5, -GetRowTopOffset(InDisplayIndex)),
+		FVector2D(-Inset, InStyle.RowHeight));
+}
+
 void UDreamListViewBase::ParkRow(int32 InPoolIndex)
 {
 	if (!RowNodes.IsValidIndex(InPoolIndex))
 	{
 		return;
 	}
+	const int32 ReleasedItemIndex = RowSourceIndices[InPoolIndex];
 	RowSourceIndices[InPoolIndex] = INDEX_NONE;
+	if (ReleasedItemIndex != INDEX_NONE)
+	{
+		// Parking is a release too: the row stops standing for its item, and a consumer that hung
+		// something on it at generation time has to hear about that on both roads out.
+		OnRowReleased.Broadcast(ReleasedItemIndex, RowNodes[InPoolIndex].Get(), GetItemObject(ReleasedItemIndex));
+	}
 	if (UDreamWidget* Row = RowNodes[InPoolIndex].Get())
 	{
 		// Asleep rather than destroyed: a parked row is the pool's spare, and the next scroll wants
@@ -640,7 +712,7 @@ void UDreamListViewBase::ApplyRowColor(UDreamWidget* InRow, int32 InDisplayIndex
 	// Selection is not a pointer state -- it has to survive the pointer leaving -- so it rides the
 	// selectable's NORMAL colour rather than a fourth transition it does not have. FDreamTabViewStyle
 	// makes the same call in the same words.
-	const bool bSelected = (InItemIndex == SelectedIndex);
+	const bool bSelected = IsItemSelected(InItemIndex);
 	const FColor Resting = bSelected
 		? InStyle.RowSelected
 		// Striped by DISPLAY position, not by pool position: a recycled row that landed in slot 0
@@ -649,7 +721,13 @@ void UDreamListViewBase::ApplyRowColor(UDreamWidget* InRow, int32 InDisplayIndex
 
 	if (UUIButton* RowButton = InRow->GetComponent<UUIButton>())
 	{
-		RowButton->SetNormalColor(Resting);
+		// All five states and the speed, in one call, rather than the three pointer colours the rows
+		// used to push: the two left out were a flat grey belonging to no theme and focus visuals
+		// that ship OFF, so a keyboard or a pad landing on a row showed nothing at all. There is no
+		// RowPressed in the style, deliberately -- pressing a row is the beginning of selecting it,
+		// so it previews the selected colour rather than inventing a sixth one.
+		PushSelectableState(RowButton, Resting, InStyle.RowHovered, InStyle.RowSelected,
+			InStyle.RowDisabled, InStyle.RowFocused, InStyle.TransitionDuration);
 	}
 	// And onto the visual directly. SetNormalColor repaints only while the row is in its Normal
 	// state AND a transition can actually run -- the tween manager needs a world -- so a row's
@@ -678,35 +756,106 @@ void UDreamListViewBase::HandleRowClicked(int32 InPoolIndex)
 	// Asked at the moment of the click, never captured: which item this slot shows changes every
 	// time the list scrolls past it.
 	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
-	if (ItemIndex != INDEX_NONE)
+	if (ItemIndex == INDEX_NONE)
 	{
-		SetSelectedIndex(ItemIndex);
+		return;
 	}
+	// What the mode makes of the click, in UUIListView's four answers. None still reports the click:
+	// a list nobody can select from is a perfectly ordinary menu.
+	switch (SelectionMode)
+	{
+	case EUIListSelectionMode::Single:
+		SetItemSelection(ItemIndex, true, true);
+		break;
+	case EUIListSelectionMode::SingleToggle:
+		SetItemSelection(ItemIndex, !IsItemSelected(ItemIndex), true);
+		break;
+	case EUIListSelectionMode::Multi:
+		SetItemSelection(ItemIndex, !IsItemSelected(ItemIndex), false);
+		break;
+	default:
+		break;
+	}
+
+	// After the selection, so a handler asking GetSelectedIndex sees the answer the user just gave.
+	OnItemClicked.Broadcast(ItemIndex, GetItemObject(ItemIndex));
+}
+
+void UDreamListViewBase::HandleRowDoubleClicked(int32 InPoolIndex)
+{
+	// Which item this slot shows, asked now: the pool row that was double clicked may have come round
+	// to a different item since the pair started, and the second click is the one that counts.
+	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
+	if (ItemIndex == INDEX_NONE)
+	{
+		return;
+	}
+	// No selection work here: the single click that came with this pair already did it. The event
+	// system delivers the click first and the double click after (see IDreamPointerDoubleClickInterface),
+	// which is what lets a row select on the way to opening.
+	OnItemDoubleClicked.Broadcast(ItemIndex, GetItemObject(ItemIndex));
 }
 
 void UDreamListViewBase::SetItems(const TArray<FText>& InItems)
 {
 	Items = InItems;
-	// A selection that no longer names anything is dropped SILENTLY: replacing the source is
-	// authoring, not the user choosing, and nothing downstream should hear a selection event for it.
-	if (SelectedIndex >= GetItemCount())
+	// A text source has no identity to move a selection by -- index 2 of the new source is a
+	// different line than index 2 of the old one -- so the selection is dropped rather than left
+	// pointing at a row nobody chose. SILENTLY: replacing the source is authoring, not the user
+	// choosing, and nothing downstream should hear a selection event for it. A source that DOES have
+	// identity keeps its selection; see SetItemObjects.
+	if (ItemObjects.Num() == 0)
 	{
+		SelectedIndices.Reset();
 		SelectedIndex = INDEX_NONE;
 	}
+	// The object source did not move, so it is its own "previous" -- a tree whose rows are objects
+	// keeps everything it keyed by them when only the LABELS are replaced.
+	OnSourceChanged(ItemObjects);
 	RebuildRows();
 }
 
 void UDreamListViewBase::SetItemObjects(const TArray<UObject*>& InItems)
 {
+	// The selection as OBJECTS, before the source moves underneath it. An object is what a selection
+	// means; the index is only where that object happened to be, and keeping the number across a
+	// re-order silently hands the consumer a different row.
+	TArray<UObject*> PreviouslySelected;
+	PreviouslySelected.Reserve(SelectedIndices.Num());
+	for (int32 Index : SelectedIndices)
+	{
+		if (UObject* Item = GetItemObject(Index))
+		{
+			PreviouslySelected.Add(Item);
+		}
+	}
+	UObject* PreviousAnchor = GetItemObject(SelectedIndex);
+	// The outgoing array, kept whole for OnSourceChanged: a subclass holding INDICES can only turn
+	// them back into items while this still exists.
+	const TArray<TObjectPtr<UObject>> PreviousItemObjects = ItemObjects;
+
 	ItemObjects.Reset(InItems.Num());
 	for (UObject* Item : InItems)
 	{
 		ItemObjects.Add(Item);
 	}
-	if (SelectedIndex >= GetItemCount())
+
+	// Re-located rather than re-used: an object still in the source keeps its selection wherever it
+	// landed, and one that left loses it. Silently, for SetItems' reason.
+	SelectedIndices.Reset();
+	for (UObject* Item : PreviouslySelected)
 	{
-		SelectedIndex = INDEX_NONE;
+		const int32 Found = ItemObjects.IndexOfByKey(Item);
+		if (Found != INDEX_NONE)
+		{
+			SelectedIndices.AddUnique(Found);
+		}
 	}
+	const int32 Anchor = PreviousAnchor != nullptr ? ItemObjects.IndexOfByKey(PreviousAnchor) : INDEX_NONE;
+	SelectedIndex = SelectedIndices.Contains(Anchor)
+		? Anchor
+		: (SelectedIndices.Num() > 0 ? SelectedIndices[0] : INDEX_NONE);
+	OnSourceChanged(PreviousItemObjects);
 	RebuildRows();
 }
 
@@ -753,7 +902,246 @@ void UDreamListViewBase::SetSelectedIndexWithoutNotify(int32 InIndex)
 	// Clamped where it becomes a selection, not where it is stored by an author: an index nothing
 	// answers to is no selection at all.
 	SelectedIndex = (InIndex >= 0 && InIndex < GetItemCount()) ? InIndex : INDEX_NONE;
+	// "The selected row" is exactly one row, whatever the mode: this is the single-selection road,
+	// and a multi selection that survived it would leave rows highlighted that this call did not name.
+	SelectedIndices.Reset();
+	if (SelectedIndex != INDEX_NONE)
+	{
+		SelectedIndices.Add(SelectedIndex);
+	}
 	RefreshRowColors();
+}
+
+void UDreamListViewBase::SetSelectionMode(EUIListSelectionMode InMode)
+{
+	if (SelectionMode == InMode)
+	{
+		return;
+	}
+	SelectionMode = InMode;
+	// Narrowing the mode narrows the selection -- ReconcileSelection is where that rule lives, and
+	// the repaint has to follow it or rows stay painted as selected after the mode says they are not.
+	ReconcileSelection();
+	RefreshRowColors();
+}
+
+void UDreamListViewBase::SetAlternatingRowColors(bool bInAlternating)
+{
+	if (bAlternatingRowColors == bInAlternating)
+	{
+		return;
+	}
+	bAlternatingRowColors = bInAlternating;
+	// The one thing it decides, and nothing else: which colour each row wears. Not ApplyStyle, which
+	// would re-push the whole sheet to answer a question about stripes.
+	RefreshRowColors();
+}
+
+void UDreamListViewBase::SetShowScrollBar(bool bInShowScrollBar)
+{
+	if (bShowScrollBar == bInShowScrollBar)
+	{
+		return;
+	}
+	bShowScrollBar = bInShowScrollBar;
+	// The gutter moves with the bar, so this is a re-layout rather than a visibility flip -- and the
+	// gutter is cut in the style push.
+	ApplyStyle();
+}
+
+void UDreamListViewBase::SetScrollBarVisibility(EDreamScrollBoxScrollbarVisibility InVisibility)
+{
+	if (ScrollBarVisibility == InVisibility)
+	{
+		return;
+	}
+	ScrollBarVisibility = InVisibility;
+	ApplyStyle();
+}
+
+void UDreamListViewBase::SetVirtualizationThreshold(int32 InThreshold)
+{
+	const int32 Clamped = FMath::Max(0, InThreshold);
+	if (VirtualizationThreshold == Clamped)
+	{
+		return;
+	}
+	VirtualizationThreshold = Clamped;
+	// Whether the list POOLS is decided against this number, and the pool's size with it, so the rows
+	// themselves are the thing that has to be re-derived. The only knob on this control for which
+	// that is true -- which is why the other four restyle instead.
+	RebuildRows();
+}
+
+void UDreamListViewBase::SetVirtualizationOverscan(int32 InOverscan)
+{
+	const int32 Clamped = FMath::Clamp(InOverscan, 0, 16);
+	if (VirtualizationOverscan == Clamped)
+	{
+		return;
+	}
+	VirtualizationOverscan = Clamped;
+	RebuildRows();
+}
+
+void UDreamListViewBase::SetWheelScrollMultiplier(float InMultiplier)
+{
+	const float Clamped = FMath::Max(0.0f, InMultiplier);
+	if (WheelScrollMultiplier == Clamped)
+	{
+		return;
+	}
+	WheelScrollMultiplier = Clamped;
+	// Pushed onto the scroll behaviour by the style push, which is where the wheel's units are
+	// turned from rows into local units.
+	ApplyStyle();
+}
+
+bool UDreamListViewBase::IsItemSelected(int32 InItemIndex) const
+{
+	return InItemIndex != INDEX_NONE && SelectedIndices.Contains(InItemIndex);
+}
+
+void UDreamListViewBase::SetItemSelection(int32 InItemIndex, bool bInSelected, bool bInClearOthers)
+{
+	if (SelectionMode == EUIListSelectionMode::None)
+	{
+		return;
+	}
+	if (InItemIndex < 0 || InItemIndex >= GetItemCount())
+	{
+		return;
+	}
+	const int32 PreviousAnchor = SelectedIndex;
+	bool bSelectionMoved = false;
+
+	// Every mode but Multi means one row, whatever the caller asked for.
+	const bool bMustClearOthers = bInSelected
+		&& (bInClearOthers || SelectionMode != EUIListSelectionMode::Multi);
+	if (bMustClearOthers)
+	{
+		for (int32 Slot = SelectedIndices.Num() - 1; Slot >= 0; --Slot)
+		{
+			if (SelectedIndices[Slot] != InItemIndex)
+			{
+				SelectedIndices.RemoveAt(Slot);
+				bSelectionMoved = true;
+			}
+		}
+	}
+
+	const bool bWasSelected = SelectedIndices.Contains(InItemIndex);
+	if (bInSelected && !bWasSelected)
+	{
+		SelectedIndices.Add(InItemIndex);
+		bSelectionMoved = true;
+	}
+	else if (!bInSelected && bWasSelected)
+	{
+		SelectedIndices.Remove(InItemIndex);
+		bSelectionMoved = true;
+	}
+
+	// The anchor: the row this call landed on while it is still selected, else whatever is left.
+	SelectedIndex = SelectedIndices.Contains(InItemIndex) && bInSelected
+		? InItemIndex
+		: (SelectedIndices.Contains(SelectedIndex)
+			? SelectedIndex
+			: (SelectedIndices.Num() > 0 ? SelectedIndices[0] : INDEX_NONE));
+
+	// Repainted whenever the SET moved, not only when the anchor did: clicking the already-selected
+	// row in Single mode leaves the anchor where it was while dropping every other row, and a repaint
+	// gated on the anchor leaves those rows painted as selected. (UUIListView::SetItemSelection had
+	// exactly this gate, and exactly that symptom.)
+	if (bSelectionMoved || SelectedIndex != PreviousAnchor)
+	{
+		RefreshRowColors();
+		OnSelectionChanged.Broadcast(SelectedIndex);
+		OnValueChangedBP.Broadcast(SelectedIndex);
+	}
+}
+
+void UDreamListViewBase::ClearSelection()
+{
+	if (SelectedIndices.Num() == 0 && SelectedIndex == INDEX_NONE)
+	{
+		return;
+	}
+	SelectedIndices.Reset();
+	SelectedIndex = INDEX_NONE;
+	RefreshRowColors();
+	OnSelectionChanged.Broadcast(INDEX_NONE);
+	OnValueChangedBP.Broadcast(INDEX_NONE);
+}
+
+TArray<UObject*> UDreamListViewBase::GetSelectedItems() const
+{
+	TArray<UObject*> Result;
+	Result.Reserve(SelectedIndices.Num());
+	for (int32 Index : SelectedIndices)
+	{
+		if (UObject* Item = GetItemObject(Index))
+		{
+			Result.Add(Item);
+		}
+	}
+	return Result;
+}
+
+float UDreamListViewBase::GetScrollOffset() const
+{
+	return ScrollBehaviour != nullptr ? static_cast<float>(ScrollBehaviour->GetScrollOffset().Y) : 0.0f;
+}
+
+void UDreamListViewBase::SetScrollOffset(float InOffset)
+{
+	if (ScrollBehaviour != nullptr)
+	{
+		// The horizontal half stays zero rather than being preserved: a list scrolls one way, and
+		// the behaviour is told so on every style push.
+		ScrollBehaviour->SetScrollOffset(FVector2D(0.0, InOffset));
+	}
+}
+
+void UDreamListViewBase::ReconcileSelection()
+{
+	const int32 Count = GetItemCount();
+	// An index the source no longer answers to is no selection at all.
+	SelectedIndices.RemoveAll([Count](int32 InIndex)
+	{
+		return InIndex < 0 || InIndex >= Count;
+	});
+
+	if (SelectionMode == EUIListSelectionMode::None)
+	{
+		SelectedIndices.Reset();
+		SelectedIndex = INDEX_NONE;
+		return;
+	}
+
+	// An author who wrote SelectedIndex -- a .dui line, a details-panel edit, a `<->` binding -- means
+	// that row selected, and the set is what the rows are painted from.
+	if (SelectedIndex >= 0 && SelectedIndex < Count && !SelectedIndices.Contains(SelectedIndex))
+	{
+		if (SelectionMode != EUIListSelectionMode::Multi)
+		{
+			SelectedIndices.Reset();
+		}
+		SelectedIndices.Add(SelectedIndex);
+	}
+	if (SelectionMode != EUIListSelectionMode::Multi && SelectedIndices.Num() > 1)
+	{
+		// Narrowed from Multi with several rows already chosen: the anchor is the one that survives.
+		const int32 Keep = SelectedIndices.Contains(SelectedIndex) ? SelectedIndex : SelectedIndices[0];
+		SelectedIndices.Reset();
+		SelectedIndices.Add(Keep);
+	}
+	// The mirror, last: SelectedIndex must name a row that is actually selected, because it is what a
+	// two-way binding reads back out.
+	if (!SelectedIndices.Contains(SelectedIndex))
+	{
+		SelectedIndex = SelectedIndices.Num() > 0 ? SelectedIndices[0] : INDEX_NONE;
+	}
 }
 
 UDreamWidget* UDreamListViewBase::GetRowWidget(int32 InItemIndex) const

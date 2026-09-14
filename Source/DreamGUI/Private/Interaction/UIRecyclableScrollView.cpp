@@ -532,11 +532,27 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
     while (CacheCellList.Num() < VisibleCellCount)
     {
         auto CopiedCell = UDreamUIBPLibrary::DuplicateWidgetWithPreparedData(this, DuplicateData, Content.Get());
+        if (!IsValid(CopiedCell))
+        {
+            //Going round again would spin: the loop is bounded by how many cells are in the list, and
+            //nothing here adds one. Stop with a short pool rather than never returning.
+            UE_LOG(DreamGUI, Error, TEXT("[%s].%d Failed to duplicate the cell template; the list stops at %d cells."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, CacheCellList.Num());
+            break;
+        }
         auto CellInterfaceComponent = CopiedCell->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass());
+        if (CellInterfaceComponent == nullptr)
+        {
+            //An authoring mistake -- a CellTemplate with no cell component on it -- and an assertion
+            //is the wrong answer to one: check() takes the whole editor down in every configuration
+            //but Shipping, on a mistake a details panel makes in one click. The same condition is
+            //already an error log everywhere else this class checks it (see InitializeOnDataSource).
+            UE_LOG(DreamGUI, Error, TEXT("[%s].%d CellTemplate's root widget must have a component which implements the UIRecyclableScrollViewCell interface!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+            CopiedCell->DestroyWidget();
+            break;
+        }
         FUIRecyclableScrollViewCellContainer CellContainer;
         CellContainer.Widget = CopiedCell;
         CellContainer.CellComponent = CellInterfaceComponent;
-        check(CellInterfaceComponent != nullptr);
         IUIRecyclableScrollViewDataSource::Execute_InitOnCreate(DataSource, CellInterfaceComponent);
         CacheCellList.Add(CellContainer);
     }

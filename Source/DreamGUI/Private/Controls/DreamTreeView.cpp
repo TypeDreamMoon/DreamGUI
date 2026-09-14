@@ -13,6 +13,8 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIButton.h"
+//for IUITreeViewItem, the children interface the behaviour-side tree already speaks
+#include "Interaction/UIListView.h"
 
 namespace DreamTreeViewLocal
 {
@@ -20,9 +22,28 @@ namespace DreamTreeViewLocal
 	static constexpr float TwistyGap = 4.0f;
 }
 
+void UDreamTreeView::CollectParts(TArray<FDreamControlPart>& OutParts)
+{
+	Super::CollectParts(OutParts);
+	// Optional, because on the BUILT-IN road neither exists yet: BindParts runs before OnPartsReady,
+	// and DecorateRowTemplate is what makes them. On the TEMPLATE road they are what a tree an author
+	// drew hands over, and binding them by name here is what tells DecorateRowTemplate not to build a
+	// second twisty on top of the one already in the row.
+	OutParts.Emplace(TEXT("Twisty"), TwistyTemplateNode, /*bRequired*/false);
+	OutParts.Emplace(TEXT("TwistyGlyph"), TwistyGlyphTemplateNode, /*bRequired*/false);
+}
+
 void UDreamTreeView::DecorateRowTemplate(UDreamWidget& InTemplate)
 {
 	using namespace DreamUI;
+
+	if (InTemplate.FindChildByDisplayName(TEXT("Twisty")) != nullptr)
+	{
+		// An authored template already drew one, and CollectParts has bound it. Building the code
+		// twisty on top would give every row two of them -- one drawn where the author put it and one
+		// this control then indents and skins.
+		return;
+	}
 
 	// Added to the TEMPLATE, so every row is copied with a twisty already in it. Building into an
 	// existing parent is what the three-argument Realize is for; the base has already made the tree
@@ -243,6 +264,19 @@ void UDreamTreeView::SetItemExpanded(int32 InItemIndex, bool bInExpanded)
 	{
 		CollapsedItems.Add(InItemIndex);
 	}
+	// And the identity half, so the fold follows the ITEM through the next source change rather than
+	// staying on whatever lands at this index.
+	if (UObject* Item = GetItemObject(InItemIndex))
+	{
+		if (bInExpanded)
+		{
+			CollapsedItemObjects.Remove(Item);
+		}
+		else
+		{
+			CollapsedItemObjects.Add(Item);
+		}
+	}
 	// Rows first, event second: a handler that asks which rows exist should be told about the tree
 	// it is being notified of, not the one before it.
 	RebuildRows();
@@ -260,27 +294,166 @@ void UDreamTreeView::ExpandAll()
 	{
 		return;
 	}
+	// The indices that actually move, kept so each one can be announced: a consumer bound to
+	// OnItemExpansionChanged used to hear every single toggle and nothing at all from the batch
+	// operations, which left it holding a picture of the tree that quietly stopped being true.
+	TArray<int32> Changed = CollapsedItems.Array();
+	Changed.Sort();
 	CollapsedItems.Reset();
+	CollapsedItemObjects.Reset();
+	// Rows first, events second -- SetItemExpanded's order, for its reason.
 	RebuildRows();
+	for (int32 Index : Changed)
+	{
+		OnItemExpansionChanged.Broadcast(Index, true);
+	}
 }
 
 void UDreamTreeView::CollapseAll()
 {
 	const int32 Count = GetItemCount();
-	const int32 Previous = CollapsedItems.Num();
+	TArray<int32> Changed;
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		// Only the parents: a leaf in the collapsed set is a state nothing can undo from the screen,
 		// because a leaf never draws a twisty to undo it with.
-		if (ItemHasChildren(Index))
+		if (!ItemHasChildren(Index) || CollapsedItems.Contains(Index))
+		{
+			continue;
+		}
+		CollapsedItems.Add(Index);
+		if (UObject* Item = GetItemObject(Index))
+		{
+			CollapsedItemObjects.Add(Item);
+		}
+		Changed.Add(Index);
+	}
+	if (Changed.Num() == 0)
+	{
+		return;
+	}
+	RebuildRows();
+	for (int32 Index : Changed)
+	{
+		OnItemExpansionChanged.Broadcast(Index, false);
+	}
+}
+
+void UDreamTreeView::OnSourceChanged(const TArray<TObjectPtr<UObject>>& InPreviousItemObjects)
+{
+	// Identity for whatever the INDEX set still names in the outgoing source. The index set is what a
+	// details panel writes and what the first source arrives against, so without this an authored
+	// fold -- or one taken before any object source was bound -- would be dropped the first time the
+	// items moved, which is the case this whole mechanism exists for.
+	for (int32 Index : CollapsedItems)
+	{
+		if (InPreviousItemObjects.IsValidIndex(Index) && InPreviousItemObjects[Index] != nullptr)
+		{
+			CollapsedItemObjects.Add(InPreviousItemObjects[Index]);
+		}
+	}
+
+	if (ItemObjects.Num() == 0)
+	{
+		// Nothing to be identical TO. A flat text source is a different tree every time it is
+		// replaced, so everything opens -- which is what a freshly authored tree means, and the one
+		// answer that cannot fold a subtree nobody asked to fold.
+		CollapsedItems.Reset();
+		CollapsedItemObjects.Reset();
+		return;
+	}
+	// Objects that left the source take their state with them; the ones still here bring theirs to
+	// wherever they landed.
+	for (auto It = CollapsedItemObjects.CreateIterator(); It; ++It)
+	{
+		if (!ItemObjects.Contains(*It))
+		{
+			It.RemoveCurrent();
+		}
+	}
+	CollapsedItems.Reset();
+	for (int32 Index = 0; Index < ItemObjects.Num(); ++Index)
+	{
+		UObject* Item = ItemObjects[Index].Get();
+		if (Item != nullptr && CollapsedItemObjects.Contains(Item))
 		{
 			CollapsedItems.Add(Index);
 		}
 	}
-	if (CollapsedItems.Num() != Previous)
+}
+
+void UDreamTreeView::SetRootItems(const TArray<UObject*>& InRootItems)
+{
+	RootItems.Reset(InRootItems.Num());
+	for (UObject* Root : InRootItems)
 	{
-		RebuildRows();
+		if (IsValid(Root))
+		{
+			RootItems.Add(Root);
+		}
 	}
+	RefreshTree();
+}
+
+void UDreamTreeView::GetChildrenOf(UObject* InItem, TArray<UObject*>& OutChildren) const
+{
+	OutChildren.Reset();
+	if (!IsValid(InItem))
+	{
+		return;
+	}
+	if (OnGetItemChildren.IsBound())
+	{
+		// The delegate wins where both are available: a consumer that bound one said what it wanted,
+		// and an interface on the item class is a default rather than an instruction.
+		OnGetItemChildren.Execute(InItem, OutChildren);
+		return;
+	}
+	if (InItem->GetClass()->ImplementsInterface(UUITreeViewItem::StaticClass()))
+	{
+		IUITreeViewItem::Execute_GetTreeChildren(InItem, OutChildren);
+	}
+}
+
+void UDreamTreeView::AppendItemAndChildren(UObject* InItem, int32 InDepth, TArray<UObject*>& OutItems,
+	TArray<int32>& OutDepths, TSet<UObject*>& InOutVisited) const
+{
+	if (!IsValid(InItem) || InOutVisited.Contains(InItem))
+	{
+		return;
+	}
+	InOutVisited.Add(InItem);
+	OutItems.Add(InItem);
+	OutDepths.Add(InDepth);
+
+	// The WHOLE subtree, collapsed or not. A collapsed node's children stay in the source and are
+	// skipped at display time (CollectVisibleItemIndices) -- which is what keeps every index stable
+	// across a fold, and what lets ItemHasChildren still see a twisty's worth of children under a
+	// node that is currently shut. See the class header for the cost of that decision.
+	TArray<UObject*> ChildItems;
+	GetChildrenOf(InItem, ChildItems);
+	for (UObject* Child : ChildItems)
+	{
+		AppendItemAndChildren(Child, InDepth + 1, OutItems, OutDepths, InOutVisited);
+	}
+}
+
+void UDreamTreeView::RefreshTree()
+{
+	TArray<UObject*> Flat;
+	TArray<int32> Depths;
+	TSet<UObject*> Visited;
+	for (const TObjectPtr<UObject>& Root : RootItems)
+	{
+		AppendItemAndChildren(Root.Get(), 0, Flat, Depths, Visited);
+	}
+	// Depths first: SetItemObjects rebuilds, and a rebuild that ran against the old depths would draw
+	// the new items at the old indents for exactly one frame -- and forever, in a headless caller.
+	// SetItemsWithDepths states the same ordering for the flat road.
+	ItemDepths = Depths;
+	// Through the base's setter rather than by assignment, so the fold re-location and the selection
+	// re-location both run: a re-walk is a source change like any other.
+	SetItemObjects(Flat);
 }
 
 void UDreamTreeView::SetItemsWithDepths(const TArray<FText>& InItems, const TArray<int32>& InDepths)

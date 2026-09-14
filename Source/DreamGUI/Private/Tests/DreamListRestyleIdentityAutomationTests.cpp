@@ -102,4 +102,82 @@ bool FDreamListRestyleKeepsItsWidgets::RunTest(const FString& Parameters)
 	return true;
 }
 
+/**
+ * And the same guarantee one step further in: the ROW HEIGHT is a style property too.
+ *
+ * The test above changes colours, which never moved the pool. Row height does: while the list is
+ * recycling, the pool is sized to the WINDOW -- Ceil(viewport / pitch) plus an overscan -- and the
+ * pitch is RowHeight + RowSpacing. So dragging the RowHeight slider in the details panel changed
+ * the window on every frame of the drag, and a pool sized exactly to it tore itself down and built
+ * itself again each time, at the ~40 ms per edit the test above exists to prevent. The pool grows
+ * here and is trimmed only on a real resize, where the widget count is genuinely wrong rather than
+ * merely generous; a spare row is parked and draws nothing.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListRowHeightKeepsThePool,
+	"DreamGUI.Controls.List.DraggingTheRowHeightWhileRecyclingDoesNotRebuildThePool",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamListRowHeightKeepsThePool::RunTest(const FString& Parameters)
+{
+	// A two hundred tall viewport and twenty-unit rows, with the threshold low enough that forty
+	// items is a recycling list: the window is Ceil(200 / 20) + 1 + 2 * 2 == 15 widgets for forty
+	// rows, and doubling the row height would take it to Ceil(200 / 40) + 1 + 4 == 10.
+	UDreamListView* List = NewObject<UDreamListView>(GetTransientPackage());
+	List->StyleSource = EDreamUIStyleSource::Inline;
+	List->SetWidth(300.0f);
+	List->SetHeight(200.0f);
+	List->VirtualizationThreshold = 4;
+	List->bShowScrollBar = false;
+	List->Style.RowHeight = 20.0f;
+	List->Style.RowSpacing = 0.0f;
+	for (int32 Index = 0; Index < 40; ++Index)
+	{
+		List->Items.Add(FText::AsCultureInvariant(FString::Printf(TEXT("Row %d"), Index)));
+	}
+	List->Initialize();
+	TDreamTestControl<UDreamListView> Owned(List);
+
+	if (!TestTrue(TEXT("forty rows past a threshold of four is a recycling list"), List->IsVirtualizing()) ||
+		!TestTrue(TEXT("and the viewport has a height for the window arithmetic to use"),
+			List->ViewportNode != nullptr && List->ViewportNode->GetHeight() > KINDA_SMALL_NUMBER))
+	{
+		return false;
+	}
+	const int32 PoolBefore = List->GetRealizedRowCount();
+	if (!TestEqual(TEXT("the pool is the window, not the source"), PoolBefore, 15))
+	{
+		return false;
+	}
+	TArray<UDreamWidget*> Before;
+	for (const TObjectPtr<UDreamWidget>& Row : List->RowNodes)
+	{
+		Before.Add(Row.Get());
+	}
+
+	// One frame of a slider drag.
+	List->Style.RowHeight = 40.0f;
+	static_cast<UDreamUIControl*>(List)->ApplyStyle();
+
+	TestEqual(TEXT("a taller row does not shrink the pool"), List->GetRealizedRowCount(), PoolBefore);
+	for (int32 Index = 0; Index < Before.Num(); ++Index)
+	{
+		TestTrue(FString::Printf(TEXT("row %d is the same widget it was"), Index),
+			(UObject*)List->RowNodes[Index].Get() == (UObject*)Before[Index]);
+	}
+	// And the new pitch still reached the rows, which is the half a "keep everything" rule is most
+	// likely to break.
+	TestEqual(TEXT("a row is the new height"), List->RowNodes[0]->GetHeight(), 40.0f);
+	TestEqual(TEXT("and the second one sits one new pitch below the first"),
+		static_cast<float>(List->RowNodes[1]->GetAnchoredPosition().Y), -40.0f);
+
+	// A list that crosses the threshold the other way IS re-sized exactly: that is a change of kind,
+	// not a change of pitch, and carrying a window's worth of spares past it defeats the threshold.
+	List->VirtualizationThreshold = 200;
+	static_cast<UDreamUIControl*>(List)->ApplyStyle();
+	TestFalse(TEXT("forty rows under a threshold of two hundred stops recycling"), List->IsVirtualizing());
+	TestEqual(TEXT("and the pool becomes one widget per item"), List->GetRealizedRowCount(), 40);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

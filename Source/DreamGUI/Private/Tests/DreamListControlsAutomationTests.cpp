@@ -7,6 +7,7 @@
 #include "Demo/DreamUIShowcase.h"
 
 #include "DreamControlTestScope.h"
+#include "DreamListControlsTestTypes.h"
 
 #include "Controls/DreamListView.h"
 #include "Controls/DreamTreeView.h"
@@ -549,6 +550,326 @@ bool FDreamControlTreeViewCollapseTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("collapsing everything leaves the roots"), Tree->GetRowCount(), 2);
 	Tree->ExpandAll();
 	TestEqual(TEXT("and expanding everything brings it all back"), Tree->GetRowCount(), 4);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlListViewRowStateColoursTest,
+	"DreamGUI.Controls.List.ARowCarriesEveryStateColourAndNotJustThePointerThree",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlListViewRowStateColoursTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListControlsTestLocal;
+
+	// The rows used to push three pointer colours -- normal, hovered, pressed -- and leave the other
+	// two to the selectable's library defaults: a flat grey belonging to no theme, and focus visuals
+	// that ship OFF. So a row that was switched off wore a colour no sheet could describe, and a
+	// keyboard or a pad landing on one showed nothing at all. Values no default could be confused
+	// with, so "the style reached it" and "the library default survived" cannot look alike.
+	TDreamTestControl<UDreamListView> List(Author<UDreamListView>());
+	List->Style.RowDisabled = FColor(11, 12, 13, 255);
+	List->Style.RowFocused = FColor(21, 22, 23, 255);
+	List->Style.TransitionDuration = 0.33f;
+	List->Items = Labels({ TEXT("Alpha"), TEXT("Beta") });
+	List->Initialize();
+
+	UUIButton* RowButton = List->GetRowCount() > 0 && IsValid(List->RowNodes[0])
+		? List->RowNodes[0]->GetComponent<UUIButton>()
+		: nullptr;
+	if (!TestNotNull(TEXT("the first row has a selectable"), RowButton))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the style's disabled colour reached the row"),
+		RowButton->GetDisabledColor(), FColor(11, 12, 13, 255));
+	TestEqual(TEXT("and its focus colour"),
+		RowButton->GetFocusedColor(), FColor(21, 22, 23, 255));
+	// Pushing a focus colour is what switches the visuals on -- a control that states one means it.
+	TestTrue(TEXT("stating a focus colour turns the focus visuals on"),
+		RowButton->GetUseFocusedVisuals());
+	TestEqual(TEXT("and the transition speed is the style's, not the library's"),
+		RowButton->GetAnimDuration(), 0.33f);
+	// The three that were already right stay right.
+	TestEqual(TEXT("the hover colour is still the style's"),
+		RowButton->GetHoveredColor(), FDreamListStyle().RowHovered);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlListViewMultiSelectionTest,
+	"DreamGUI.Controls.List.MultiSelectionHoldsEveryChosenRowAndNarrowingTheModeKeepsTheAnchor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlListViewMultiSelectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListControlsTestLocal;
+
+	// UUIListView has had four selection modes since it was written and the CONTROL had one index,
+	// so a Native.List could never express "these three" -- the four answers existed one layer down
+	// and no road reached them.
+	TDreamTestControl<UDreamListView> List(Author<UDreamListView>());
+	List->SelectionMode = EUIListSelectionMode::Multi;
+	List->Items = Labels({ TEXT("Alpha"), TEXT("Beta"), TEXT("Gamma"), TEXT("Delta") });
+	List->Initialize();
+
+	auto RowNormalColor = [&List](int32 InRowIndex) -> FColor
+	{
+		UDreamWidget* Row = List->RowNodes.IsValidIndex(InRowIndex) ? List->RowNodes[InRowIndex].Get() : nullptr;
+		UUIButton* Button = IsValid(Row) ? Row->GetComponent<UUIButton>() : nullptr;
+		return Button != nullptr ? Button->GetNormalColor() : FColor::White;
+	};
+
+	List->SetItemSelection(0, true, false);
+	List->SetItemSelection(2, true, false);
+	TestEqual(TEXT("both chosen rows are held"), List->GetSelectedIndices().Num(), 2);
+	TestTrue(TEXT("the first one"), List->IsItemSelected(0));
+	TestTrue(TEXT("and the third"), List->IsItemSelected(2));
+	TestFalse(TEXT("and nothing else"), List->IsItemSelected(1));
+	// The anchor is the row the last selection landed on, and it is what a `<->` binding reads.
+	TestEqual(TEXT("the anchor names the last row chosen"), List->GetSelectedIndex(), 2);
+	TestEqual(TEXT("and both are drawn as selected -- the first"),
+		RowNormalColor(0), FDreamListStyle().RowSelected);
+	TestEqual(TEXT("-- and the third"),
+		RowNormalColor(2), FDreamListStyle().RowSelected);
+
+	// Narrowing the mode narrows the selection, and the rows it dropped have to be REPAINTED. A
+	// repaint gated on "did the anchor move" leaves them lit, which is the defect the behaviour-side
+	// SetItemSelection carried in exactly this shape.
+	List->SetSelectionMode(EUIListSelectionMode::Single);
+	TestEqual(TEXT("a single mode keeps one row"), List->GetSelectedIndices().Num(), 1);
+	TestEqual(TEXT("and it is the anchor"), List->GetSelectedIndex(), 2);
+	TestEqual(TEXT("the row it dropped went back to normal"),
+		RowNormalColor(0), FDreamListStyle().RowNormal);
+
+	// And moving a single selection repaints the row it LEFT, not only the one it arrived at -- the
+	// other half of the same rule, and the half a repaint gated on "did this item change" gets wrong.
+	List->SetItemSelection(0, true, false);
+	List->SetItemSelection(2, true, true);
+	TestEqual(TEXT("re-selecting the chosen row clears the other"), List->GetSelectedIndices().Num(), 1);
+	TestEqual(TEXT("and the cleared row is drawn as cleared"),
+		RowNormalColor(0), FDreamListStyle().RowNormal);
+
+	List->ClearSelection();
+	TestEqual(TEXT("clearing leaves nothing selected"), List->GetSelectedIndex(), INDEX_NONE);
+	TestEqual(TEXT("and no indices"), List->GetSelectedIndices().Num(), 0);
+	TestEqual(TEXT("a text source has no objects to answer GetSelectedItems with"),
+		List->GetSelectedItems().Num(), 0);
+
+	// None ignores the selection entirely, and says so by dropping what was there.
+	List->SetItemSelection(1, true, true);
+	List->SetSelectionMode(EUIListSelectionMode::None);
+	TestEqual(TEXT("a list nobody can select from holds nothing"), List->GetSelectedIndices().Num(), 0);
+	List->SetItemSelection(1, true, true);
+	TestEqual(TEXT("and refuses to start"), List->GetSelectedIndex(), INDEX_NONE);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlListViewSourceChangeTest,
+	"DreamGUI.Controls.List.ReplacingTheSourceMovesASelectionWithItsObjectAndDropsATextOne",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlListViewSourceChangeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListControlsTestLocal;
+
+	// A selection meant an INDEX and nothing else, so handing the list a re-ordered source of the
+	// same length left the highlight exactly where it was on screen -- pointing at a different item,
+	// silently, with no event to say the choice had changed underneath its consumer.
+	UObject* A = NewObject<UDreamUIShowcaseTrack>(GetTransientPackage());
+	UObject* B = NewObject<UDreamUIShowcaseTrack>(GetTransientPackage());
+	UObject* C = NewObject<UDreamUIShowcaseTrack>(GetTransientPackage());
+
+	TDreamTestControl<UDreamListView> List(Author<UDreamListView>());
+	List->Initialize();
+	List->SetItemObjects({ A, B, C });
+	List->SetSelectedIndex(2);
+	TestEqual(TEXT("the third object is chosen"), List->GetSelectedIndex(), 2);
+	if (!TestEqual(TEXT("and GetSelectedItems answers with the object itself"),
+		List->GetSelectedItems().Num(), 1))
+	{
+		return false;
+	}
+	TestTrue(TEXT("-- that object"), (UObject*)List->GetSelectedItems()[0] == C);
+
+	// Same three objects, different order. The selection follows the OBJECT.
+	List->SetItemObjects({ C, A, B });
+	TestEqual(TEXT("the selection moved with the object it names"), List->GetSelectedIndex(), 0);
+	TestTrue(TEXT("and still answers with the same object"),
+		List->GetSelectedItems().Num() == 1 && (UObject*)List->GetSelectedItems()[0] == C);
+
+	// An object that left the source takes its selection with it.
+	List->SetItemObjects({ A, B });
+	TestEqual(TEXT("an object that left loses its selection"), List->GetSelectedIndex(), INDEX_NONE);
+
+	// A text source has no identity at all, so index 1 of the new lines is a different line. Dropped
+	// rather than drifted: an index nobody chose is worse than no choice.
+	TDreamTestControl<UDreamListView> TextList(Author<UDreamListView>());
+	TextList->Items = Labels({ TEXT("Alpha"), TEXT("Beta"), TEXT("Gamma") });
+	TextList->Initialize();
+	TextList->SetSelectedIndex(1);
+	TextList->SetItems(Labels({ TEXT("Delta"), TEXT("Epsilon"), TEXT("Zeta") }));
+	TestEqual(TEXT("a replaced text source leaves nothing selected"),
+		TextList->GetSelectedIndex(), INDEX_NONE);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlListViewClickEventsTest,
+	"DreamGUI.Controls.List.AClickIsAnnouncedOnceAndASecondOneOnTheSameRowIsADoubleClick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlListViewClickEventsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListControlsTestLocal;
+
+	// A click used to do exactly one thing -- move the selection -- so a consumer could not tell a
+	// click on the already-chosen row from no click at all, and had no road to a double click
+	// whatever (the event system has none of its own).
+	TDreamTestControl<UDreamListView> List(Author<UDreamListView>());
+	List->Items = Labels({ TEXT("Alpha"), TEXT("Beta"), TEXT("Gamma") });
+	List->Initialize();
+
+	TStrongObjectPtr<UDreamListControlsProbe> Probe(NewObject<UDreamListControlsProbe>(GetTransientPackage()));
+	List->OnItemClicked.AddDynamic(Probe.Get(), &UDreamListControlsProbe::RecordItem);
+	List->OnItemDoubleClicked.AddDynamic(Probe.Get(), &UDreamListControlsProbe::RecordSecondItem);
+
+	UUIButton* SecondRow = List->RowNodes.IsValidIndex(1) && IsValid(List->RowNodes[1])
+		? List->RowNodes[1]->GetComponent<UUIButton>()
+		: nullptr;
+	if (!TestNotNull(TEXT("the second row has a selectable to click"), SecondRow))
+	{
+		return false;
+	}
+
+	SecondRow->GetOnClickEvent().Broadcast();
+	TestEqual(TEXT("one click, announced once"), Probe->ItemIndices.Num(), 1);
+	TestEqual(TEXT("naming the row that was clicked"), Probe->ItemIndices[0], 1);
+	TestEqual(TEXT("and it moved the selection first, so a handler sees the new answer"),
+		List->GetSelectedIndex(), 1);
+	TestEqual(TEXT("one click is not a double click"), Probe->SecondItemIndices.Num(), 0);
+
+	// The second click of a pair arrives as BOTH -- the click first, then the double click -- which
+	// is the event system's stated contract, and what lets a row select on the way to opening. The
+	// list keeps no clock of its own: the interval belongs to the event system, so a list and the
+	// text field beside it cannot disagree about what a double click is.
+	SecondRow->GetOnClickEvent().Broadcast();
+	SecondRow->GetOnDoubleClickEvent().Broadcast();
+	TestEqual(TEXT("the second click is announced as a click too"), Probe->ItemIndices.Num(), 2);
+	if (!TestEqual(TEXT("and as a double click"), Probe->SecondItemIndices.Num(), 1))
+	{
+		return false;
+	}
+	TestEqual(TEXT("on the same row"), Probe->SecondItemIndices[0], 1);
+
+	// A plain click on its own is never a double click, whatever came before it.
+	SecondRow->GetOnClickEvent().Broadcast();
+	TestEqual(TEXT("a lone click adds no double click"), Probe->SecondItemIndices.Num(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlTreeViewFoldIdentityTest,
+	"DreamGUI.Controls.TreeView.AFoldFollowsItsItemThroughAReorderedSource",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlTreeViewFoldIdentityTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListControlsTestLocal;
+
+	// The collapsed set was a set of INDICES and nothing re-mapped it, so replacing the source left
+	// the fold on whatever landed at that number -- another subtree, or a leaf that draws no twisty
+	// and therefore cannot be opened again from the screen.
+	UObject* Folder = NewObject<UDreamUIShowcaseTrack>(GetTransientPackage());
+	UObject* ChildA = NewObject<UDreamUIShowcaseTrack>(GetTransientPackage());
+	UObject* ChildB = NewObject<UDreamUIShowcaseTrack>(GetTransientPackage());
+	UObject* Other = NewObject<UDreamUIShowcaseTrack>(GetTransientPackage());
+
+	TDreamTestControl<UDreamTreeView> Tree(Make<UDreamTreeView>());
+	Tree->SetItemDepths({ 0, 0, 1, 1 });
+	Tree->SetItemObjects({ Other, Folder, ChildA, ChildB });
+	TestEqual(TEXT("four rows to begin with"), Tree->GetRowCount(), 4);
+
+	Tree->SetItemExpanded(1, false);
+	TestEqual(TEXT("folding the folder hides its two children"), Tree->GetRowCount(), 2);
+
+	// The same four objects, the folder first. Index 1 is now a CHILD, so an index-keyed fold would
+	// land on it -- and a child with nothing under it draws no twisty to undo the fold with.
+	Tree->SetItemDepths({ 0, 1, 1, 0 });
+	Tree->SetItemObjects({ Folder, ChildA, ChildB, Other });
+	TestTrue(TEXT("the fold followed the folder to its new index"), !Tree->IsItemExpanded(0));
+	TestTrue(TEXT("and did not land on the child that took its old one"), Tree->IsItemExpanded(1));
+	TestEqual(TEXT("so the tree still shows exactly two rows"), Tree->GetRowCount(), 2);
+
+	// An item that leaves the source takes its fold with it rather than leaving a number behind.
+	Tree->SetItemDepths({ 0, 0 });
+	Tree->SetItemObjects({ ChildA, Other });
+	TestTrue(TEXT("a source without the folder is fully open"), Tree->IsItemExpanded(0));
+	TestEqual(TEXT("and shows both of its rows"), Tree->GetRowCount(), 2);
+
+	// A text source has no identity to carry a fold by, so a replacement opens everything rather
+	// than folding whatever arrives at the remembered index.
+	TDreamTestControl<UDreamTreeView> TextTree(Make<UDreamTreeView>());
+	TextTree->SetItemsWithDepths(
+		Labels({ TEXT("Folder"), TEXT("A"), TEXT("B"), TEXT("Other") }), { 0, 1, 1, 0 });
+	TextTree->SetItemExpanded(0, false);
+	TestEqual(TEXT("the text tree folds too"), TextTree->GetRowCount(), 2);
+	TextTree->SetItemsWithDepths(
+		Labels({ TEXT("One"), TEXT("Two"), TEXT("Three"), TEXT("Four") }), { 0, 1, 1, 0 });
+	TestEqual(TEXT("and a replaced text source opens everything"), TextTree->GetRowCount(), 4);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlTreeViewBatchExpansionEventTest,
+	"DreamGUI.Controls.TreeView.ExpandingOrCollapsingEverythingAnnouncesEachRowItMoved",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlTreeViewBatchExpansionEventTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListControlsTestLocal;
+
+	// SetItemExpanded announced every toggle and the two batch operations announced nothing, so a
+	// consumer keeping its own picture of which nodes are open was silently wrong after either of
+	// them -- and had no way to notice.
+	TDreamTestControl<UDreamTreeView> Tree(Make<UDreamTreeView>());
+	Tree->SetItemsWithDepths(
+		Labels({ TEXT("First"), TEXT("A"), TEXT("Second"), TEXT("B"), TEXT("Leaf") }),
+		{ 0, 1, 0, 1, 0 });
+
+	TStrongObjectPtr<UDreamListControlsProbe> Probe(NewObject<UDreamListControlsProbe>(GetTransientPackage()));
+	Tree->OnItemExpansionChanged.AddDynamic(Probe.Get(), &UDreamListControlsProbe::RecordExpansion);
+
+	Tree->CollapseAll();
+	// The two parents, and only them: a leaf in the collapsed set is a fold nothing can undo from
+	// the screen, so CollapseAll never takes one -- and must not announce one either.
+	if (!TestEqual(TEXT("collapsing everything announces both parents"), Probe->ExpansionIndices.Num(), 2))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the first one"), Probe->ExpansionIndices[0], 0);
+	TestEqual(TEXT("and the second"), Probe->ExpansionIndices[1], 2);
+	TestFalse(TEXT("both as collapsed"), Probe->ExpansionStates[0]);
+	TestEqual(TEXT("and the rows agree"), Tree->GetRowCount(), 3);
+
+	// A second CollapseAll moves nothing, so it says nothing.
+	Tree->CollapseAll();
+	TestEqual(TEXT("collapsing an already-collapsed tree announces nothing"),
+		Probe->ExpansionIndices.Num(), 2);
+
+	Tree->ExpandAll();
+	if (!TestEqual(TEXT("expanding everything announces the two it opened"),
+		Probe->ExpansionIndices.Num(), 4))
+	{
+		return false;
+	}
+	TestTrue(TEXT("as expanded"), Probe->ExpansionStates[2] && Probe->ExpansionStates[3]);
+	TestEqual(TEXT("and every row is back"), Tree->GetRowCount(), 5);
+
+	Tree->ExpandAll();
+	TestEqual(TEXT("expanding an already-open tree announces nothing"),
+		Probe->ExpansionIndices.Num(), 4);
 	return true;
 }
 
