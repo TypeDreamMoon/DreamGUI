@@ -97,6 +97,17 @@ public:
 	static void QueueFile(const FString& InFilePath, bool bAnnounceSuccess = false);
 
 	/**
+	 * Queues one file as if it had just been deleted or renamed away.
+	 *
+	 * Nothing is recompiled -- there is nothing left to compile from, which is the entire problem.
+	 * What the drain does instead is SAY SO: every loaded class still naming that path now holds the
+	 * last hierarchy it built and will fail its next compile with DUI6001, and without this the
+	 * author meets that failure much later, with nothing connecting it to the file they moved.
+	 * Removal events used to be dropped where the directory watcher reported them.
+	 */
+	static void QueueRemoval(const FString& InFilePath);
+
+	/**
 	 * Recompiles every text-backed widget Blueprint in the project, loading the ones that are not.
 	 *
 	 * The deliberate opposite of the watcher's own scope, and the reason it can afford to be: this is

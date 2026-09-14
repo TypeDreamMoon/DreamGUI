@@ -916,6 +916,24 @@ void FDreamUIBridgeService::Register()
 		IFileManager::Get().Delete(*(BridgeRoot / TEXT("Responses") / FileName));
 	}
 
+	// And yesterday's REQUESTS are nobody's instructions, which is the half this did not do. A
+	// request file survives the editor that failed to answer it -- a crash, a kill, a close mid-flight
+	// -- and the first tick of the NEXT session picked it up and ran it: a compile, a reveal, a write
+	// aimed at a workspace state that no longer exists, arriving out of nowhere seconds after
+	// startup. The symmetry with responses is also the client contract: absence of status.json means
+	// the editor is closed, so a correctly written request cannot already be here when this runs.
+	TArray<FString> Abandoned;
+	// The same glob ProcessPendingNow reads, so exactly the files that WOULD have been executed are
+	// the files discarded -- a partially written `.tmp` a client is still producing is not one.
+	IFileManager::Get().FindFiles(Abandoned, *(BridgeRoot / TEXT("Requests") / TEXT("*.request.json")), true, false);
+	for (const FString& FileName : Abandoned)
+	{
+		UE_LOG(DreamGUIEditor, Verbose,
+			TEXT("[%s].%d Discarding '%s': it was written for an editor session that never answered it."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FileName);
+		IFileManager::Get().Delete(*(BridgeRoot / TEXT("Requests") / FileName));
+	}
+
 	WriteStatus(BridgeRoot, /*bBusy*/false, FString());
 	GLastHeartbeat = FPlatformTime::Seconds();
 

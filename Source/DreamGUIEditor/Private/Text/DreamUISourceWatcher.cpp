@@ -49,6 +49,16 @@ namespace DreamUISourceWatcherLocal
 	TMap<FString, FDelegateHandle> GWatchHandles;
 	FTSTicker::FDelegateHandle GTickerHandle;
 	TSet<FString> GPendingFiles;
+	/**
+	 * Files the watcher saw GO AWAY, which used to be dropped where the event arrived.
+	 *
+	 * A deletion or a rename is the one change to a .dui that leaves its class with no way to notice:
+	 * there is nothing to recompile from, so the class keeps the tree it last built and stays wrong
+	 * until somebody presses Compile by hand and finally meets DUI6001 -- by which time the file has
+	 * been gone long enough that nothing connects the two. Kept in their own set rather than in
+	 * GPendingFiles because the answer is a report, not a rebuild.
+	 */
+	TSet<FString> GPendingRemovals;
 	double GLastChangeTime = 0.0;
 
 	/** A batch too large to compile unasked. Held rather than dropped -- see OfferDeferredBatch. */
@@ -262,11 +272,240 @@ namespace DreamUISourceWatcherLocal
 		return Key.ToLower();
 	}
 
+	/** False until the on-disk sweep below has run once this session. */
+	bool GbImportIndexSeeded = false;
+
+	/**
+	 * Every `use "..."` spelling in one file's text, without parsing it.
+	 *
+	 * Comments are stripped properly because a commented-out `use` is exactly the shape an author
+	 * leaves behind, and an edge from one means saving a library recompiles a screen that no longer
+	 * wears it -- harmless but confusing, which is worse than it sounds when the question being asked
+	 * is "why did that recompile". Everything else is deliberately crude: this only has to find the
+	 * keyword and the quoted string after it, and a spelling that resolves to nothing is dropped by
+	 * the caller rather than reported. The parser remains the authority; this is an INDEX.
+	 */
+	void ScanImportSpellings(const FString& InText, TArray<FString>& OutSpellings)
+	{
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		for (int32 Offset = 0; Offset < Length; ++Offset)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (Char == TEXT('/') && Offset + 1 < Length && Chars[Offset + 1] == TEXT('/'))
+			{
+				while (Offset < Length && Chars[Offset] != TEXT('\n'))
+				{
+					++Offset;
+				}
+				continue;
+			}
+			if (Char == TEXT('/') && Offset + 1 < Length && Chars[Offset + 1] == TEXT('*'))
+			{
+				Offset += 2;
+				while (Offset + 1 < Length && !(Chars[Offset] == TEXT('*') && Chars[Offset + 1] == TEXT('/')))
+				{
+					++Offset;
+				}
+				++Offset;
+				continue;
+			}
+			if (Char == TEXT('"'))
+			{
+				// Skipped whole, so a path that happens to contain the word `use` cannot be read as
+				// a second directive.
+				++Offset;
+				while (Offset < Length && Chars[Offset] != TEXT('"') && Chars[Offset] != TEXT('\n'))
+				{
+					++Offset;
+				}
+				continue;
+			}
+			if (Char != TEXT('u') || Offset + 3 >= Length)
+			{
+				continue;
+			}
+			if (Chars[Offset + 1] != TEXT('s') || Chars[Offset + 2] != TEXT('e'))
+			{
+				continue;
+			}
+			// A whole word, so `used` and `Reuse` are not directives. The keyword is matched case
+			// sensitively because the grammar matches keywords case sensitively.
+			const bool bBoundedLeft = Offset == 0 || !(FChar::IsAlnum(Chars[Offset - 1]) || Chars[Offset - 1] == TEXT('_'));
+			const TCHAR After = Chars[Offset + 3];
+			if (!bBoundedLeft || FChar::IsAlnum(After) || After == TEXT('_'))
+			{
+				continue;
+			}
+			int32 Cursor = Offset + 3;
+			while (Cursor < Length && (Chars[Cursor] == TEXT(' ') || Chars[Cursor] == TEXT('\t')))
+			{
+				++Cursor;
+			}
+			if (Cursor >= Length || Chars[Cursor] != TEXT('"'))
+			{
+				continue;
+			}
+			const int32 Start = ++Cursor;
+			while (Cursor < Length && Chars[Cursor] != TEXT('"') && Chars[Cursor] != TEXT('\n'))
+			{
+				++Cursor;
+			}
+			if (Cursor < Length && Chars[Cursor] == TEXT('"') && Cursor > Start)
+			{
+				OutSpellings.Add(InText.Mid(Start, Cursor - Start));
+			}
+			Offset = Cursor;
+		}
+	}
+
+	/** Republish one file's `use` edges from what is on disk right now. */
+	void NoteImportsFromDisk(const FString& InFilePath)
+	{
+		FString Text;
+		if (!FFileHelper::LoadFileToString(Text, *InFilePath))
+		{
+			return;
+		}
+		TArray<FString> Spellings;
+		ScanImportSpellings(Text, Spellings);
+
+		TArray<FString> Resolved;
+		Resolved.Reserve(Spellings.Num());
+		for (const FString& Spelling : Spellings)
+		{
+			const FString Path = DreamUIPaths::Resolve(Spelling);
+			if (!Path.IsEmpty())
+			{
+				Resolved.AddUnique(Path);
+			}
+		}
+		FDreamUISourceWatcher::NoteImports(InFilePath, Resolved);
+	}
+
+	/**
+	 * Fill the dependency table from DISK, once, before the first drain uses it.
+	 *
+	 * Until this existed the table was written by exactly one author -- the compiler, after a parse --
+	 * so on a freshly opened editor it was EMPTY, and saving a style library recompiled nothing
+	 * whatsoever. The workaround was to compile every importer by hand first, which is the state of
+	 * affairs the watcher exists to abolish; worse, it failed silently, because "no importers" and
+	 * "no importers known yet" look identical from the drain.
+	 *
+	 * Direct edges only, and that is enough: the drain expands the worklist through the table
+	 * repeatedly, so A-uses-B and B-uses-C reaches A from a change to C without anybody storing the
+	 * closure. The compiler's own NoteImports publishes the transitive list instead; the two coexist
+	 * because an extra edge only ever means an extra hop the worklist would have taken anyway.
+	 *
+	 * Lazy rather than at Register(), so the cost lands on the first save rather than on editor
+	 * startup, and so a DUI root created after startup (Open Workspace does this) is included.
+	 */
+	void EnsureImportIndexSeeded()
+	{
+		if (GbImportIndexSeeded)
+		{
+			return;
+		}
+		GbImportIndexSeeded = true;
+
+		TArray<FString> Sources;
+		DreamUIPaths::FindSourceFiles(Sources);
+		for (const FString& Source : Sources)
+		{
+			// Left alone when the compiler already published this file's edges: its list is the
+			// authoritative one (it comes from a real parse, with `use` failures resolved the way the
+			// build resolved them), and replacing it with a text scan would be a downgrade.
+			bool bAlreadyKnown = false;
+			for (auto It = GImportEdges.CreateConstIterator(); It; ++It)
+			{
+				if (It.Value().Equals(Source, ESearchCase::IgnoreCase))
+				{
+					bAlreadyKnown = true;
+					break;
+				}
+			}
+			if (!bAlreadyKnown)
+			{
+				NoteImportsFromDisk(Source);
+			}
+		}
+	}
+
+	/**
+	 * Say that a .dui the classes depend on is gone.
+	 *
+	 * Both a delete and a rename arrive here (a rename is a removal plus a creation), and after
+	 * either one every loaded class still naming that path is stale with no way to find out: there is
+	 * nothing left to rebuild it from, so it keeps the last tree it built and the author meets
+	 * DUI6001 at some unrelated compile later. A warning at the moment it happens is the whole fix;
+	 * nothing is recompiled, because recompiling is precisely what cannot be done.
+	 */
+	void ReportRemovals(const TArray<FString>& InRemoved)
+	{
+		TArray<FString> Orphaned;
+		for (const FString& File : InRemoved)
+		{
+			if (FPaths::FileExists(File))
+			{
+				// Back already: a save-through-rename, or an author who undid the delete inside the
+				// debounce window. The change event for the new contents is in GPendingFiles.
+				continue;
+			}
+			TArray<UDreamWidgetBlueprint*> Blueprints;
+			FindBlueprints(File, Blueprints);
+			if (Blueprints.Num() == 0)
+			{
+				UE_LOG(DreamGUI, Verbose, TEXT("[%s].%d '%s' is gone, and no loaded class is built from it."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *File);
+				continue;
+			}
+			for (const UDreamWidgetBlueprint* Blueprint : Blueprints)
+			{
+				UE_LOG(DreamGUI, Warning,
+					TEXT("[%s].%d '%s' is gone from disk, and '%s' is built from it -- that class now holds the last hierarchy it compiled, and its next compile will fail with DUI6001."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *File, *GetNameSafe(Blueprint));
+				Orphaned.AddUnique(GetNameSafe(Blueprint));
+			}
+		}
+
+		if (Orphaned.Num() == 0)
+		{
+			return;
+		}
+		FNotificationInfo Info(FText::Format(
+			LOCTEXT("DreamUISourceRemoved",
+				"DreamUI: a source file was deleted or renamed. {0} class(es) are now built from nothing: {1}"),
+			FText::AsNumber(Orphaned.Num()), FText::FromString(FString::Join(Orphaned, TEXT(", ")))));
+		Info.ExpireDuration = 12.0f;
+		Info.bFireAndForget = true;
+		const TSharedPtr<SNotificationItem> Notification = FSlateNotificationManager::Get().AddNotification(Info);
+		if (Notification.IsValid())
+		{
+			Notification->SetCompletionState(SNotificationItem::CS_Fail);
+		}
+	}
+
 	void DrainQueue()
 	{
 		TArray<FString> Files = GPendingFiles.Array();
 		GPendingFiles.Reset();
 		Files.Sort();
+
+		const TArray<FString> Removed = GPendingRemovals.Array();
+		GPendingRemovals.Reset();
+
+		// Before the table is read, never at Register(): see EnsureImportIndexSeeded.
+		EnsureImportIndexSeeded();
+		// And re-read the edges of the files that just changed, because a `use` line added to a file
+		// with no class of its own is published by nobody -- the compiler only republishes for files
+		// it compiles, and that file is never compiled.
+		for (const FString& File : Files)
+		{
+			if (FPaths::FileExists(File))
+			{
+				NoteImportsFromDisk(File);
+			}
+		}
 
 		const bool bAnnounceSuccess = GAnnounceSuccess;
 		GAnnounceSuccess = false;
@@ -310,6 +549,9 @@ namespace DreamUISourceWatcherLocal
 			RecompileFor(File, Batch);
 		}
 		ReportBatch(Batch, bAnnounceSuccess);
+		// After the rebuilds, so a rename whose two halves landed in one batch reports the new file's
+		// compile first and does not then warn about the name it arrived under.
+		ReportRemovals(Removed);
 	}
 
 	/**
@@ -347,7 +589,7 @@ namespace DreamUISourceWatcherLocal
 
 	bool Tick(float /*DeltaTime*/)
 	{
-		if (GPendingFiles.Num() == 0)
+		if (GPendingFiles.Num() == 0 && GPendingRemovals.Num() == 0)
 		{
 			return true;
 		}
@@ -396,18 +638,29 @@ namespace DreamUISourceWatcherLocal
 	{
 		for (const FFileChangeData& Change : InChanges)
 		{
-			if (Change.Action == FFileChangeData::FCA_Removed)
-			{
-				continue;
-			}
 			if (!FPaths::GetExtension(Change.Filename, /*bIncludeDot*/true)
 				.Equals(DreamUIPaths::SourceExtension, ESearchCase::IgnoreCase))
 			{
 				continue;
 			}
-			GPendingFiles.Add(FDreamUIDocumentRegistry::NormalizePath(Change.Filename));
+			// The extension test comes FIRST now, which is what makes keeping removals affordable: an
+			// editor's save-through-temp-file produces a removal for something that is not a .dui, and
+			// those are the events that would make this noisy. A removal of a real .dui is queued for
+			// the report pass -- both a delete and a rename arrive this way, and after either one a
+			// class still naming that path is a class whose next compile cannot work.
+			if (Change.Action == FFileChangeData::FCA_Removed)
+			{
+				GPendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(Change.Filename));
+				continue;
+			}
+			const FString Normalized = FDreamUIDocumentRegistry::NormalizePath(Change.Filename);
+			// A rename shows up as removed-then-added within one batch often enough that dropping the
+			// stale removal here is worth the two lines: reporting a file gone and rebuilt in the same
+			// drain would be a warning about nothing.
+			GPendingRemovals.Remove(Normalized);
+			GPendingFiles.Add(Normalized);
 		}
-		if (GPendingFiles.Num() > 0)
+		if (GPendingFiles.Num() > 0 || GPendingRemovals.Num() > 0)
 		{
 			GLastChangeTime = FPlatformTime::Seconds();
 		}
@@ -496,8 +749,13 @@ void FDreamUISourceWatcher::Unregister()
 	}
 	GWatchHandles.Reset();
 	GPendingFiles.Reset();
+	GPendingRemovals.Reset();
 	GDeferredBulkFiles.Reset();
 	GAnnounceSuccess = false;
+	// So a module reload re-reads the dependency table from disk. The edges themselves are kept:
+	// the compiler republishes its own on every parse, and dropping them here would put the editor
+	// back in exactly the state the seed exists to fix.
+	GbImportIndexSeeded = false;
 }
 
 void FDreamUISourceWatcher::EnsureWatching(const FString& InDirectory)
@@ -544,6 +802,14 @@ void FDreamUISourceWatcher::QueueFile(const FString& InFilePath, const bool bAnn
 	GPendingFiles.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
 	GLastChangeTime = FPlatformTime::Seconds();
 	GAnnounceSuccess |= bAnnounceSuccess;
+}
+
+void FDreamUISourceWatcher::QueueRemoval(const FString& InFilePath)
+{
+	using namespace DreamUISourceWatcherLocal;
+
+	GPendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
+	GLastChangeTime = FPlatformTime::Seconds();
 }
 
 void FDreamUISourceWatcher::FlushPending()

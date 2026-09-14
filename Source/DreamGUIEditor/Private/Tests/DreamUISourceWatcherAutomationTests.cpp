@@ -214,4 +214,61 @@ bool FDreamUIWatcherOwnWriteDoesNotRebuildTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWatcherDeletedSourceIsReportedTest,
+	"DreamGUI.Text.ADeletedSourceSaysWhichClassesItLeftBuiltFromNothing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The one change to a .dui that the class can never find out about on its own.
+ *
+ * A delete (and a rename, which arrives as one) leaves nothing to rebuild from, so the class keeps
+ * the tree it last compiled and is wrong from then on -- silently, until somebody presses Compile by
+ * hand and meets DUI6001 with no memory of having moved the file. The watcher used to drop
+ * FCA_Removed where the event arrived, so there was not even a log line.
+ *
+ * Asserted on the warning, because the warning IS the fix: nothing is rebuilt and nothing can be.
+ */
+bool FDreamUIWatcherDeletedSourceIsReportedTest::RunTest(const FString&)
+{
+	using namespace DreamUISourceWatcherTestLocal;
+
+	FScopedDuiFile File(TEXT("WatcherRemoved.dui"));
+	if (!TestTrue(TEXT("the .dui was written"), File.WriteWith(TEXT("Title"))))
+	{
+		return false;
+	}
+
+	FScopedTextBlueprint Fixture(TEXT("WatcherRemoved"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)
+		|| !TestTrue(TEXT("and points at the file"),
+			DreamUITextAuthoring::SetAuthoredSourcePath(Fixture.Blueprint, File.FilePath)))
+	{
+		return false;
+	}
+	if (!TestNotNull(TEXT("which built the file's hierarchy"), Fixture.FindTemplate(TEXT("Title"))))
+	{
+		return false;
+	}
+
+	// Gone, the way a delete or a rename leaves it. The queue is filled directly for the same reason
+	// the rebuild tests fill it directly: what is under test is the drain, not DirectoryWatcher.
+	IFileManager::Get().Delete(*File.FilePath, /*RequireExists*/false, /*EvenReadOnly*/true, /*Quiet*/true);
+	if (!TestFalse(TEXT("the file is really gone"), FPaths::FileExists(File.FilePath)))
+	{
+		return false;
+	}
+
+	AddExpectedMessagePlain(TEXT("is gone from disk"), ELogVerbosity::Warning,
+		EAutomationExpectedMessageFlags::Contains, 1);
+
+	FDreamUISourceWatcher::QueueRemoval(File.FilePath);
+	FDreamUISourceWatcher::FlushPending();
+
+	// Nothing was rebuilt, because nothing could be: the hierarchy the class last compiled is still
+	// there. The point of the pass is that the author has been told, not that anything changed.
+	TestNotNull(TEXT("the class keeps the tree it last built"), Fixture.FindTemplate(TEXT("Title")));
+	return true;
+}
+
 #endif
