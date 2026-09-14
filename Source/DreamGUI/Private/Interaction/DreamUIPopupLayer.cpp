@@ -26,7 +26,8 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 		return true;
 	}
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(InWidget->GetWorld());
-	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRoot() : nullptr;
+	// The popup goes up on the screen its owner is already on, not always the first player's.
+	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForWidget(InWidget) : nullptr;
 	if (!IsValid(ScreenRoot))
 	{
 		return false;
