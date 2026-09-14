@@ -7,6 +7,7 @@
 #include "DreamGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 
 #define LOCTEXT_NAMESPACE "UITextComponentDetails"
 FUITextInputCustomization::FUITextInputCustomization()
@@ -25,17 +26,24 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UUITextInput>(targetObjects[0].Get());
+	// An empty list is a real state -- the panel rebuilds while a selection is being cleared -- and
+	// indexing [0] there reads off the end of an empty array. The null branch below already handles
+	// "no target", so this only has to reach it.
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<UUITextInput>(targetObjects[0].Get()) : nullptr;
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 
+	// The layout builder is owned by the details view and is thrown away by the very refresh these
+	// delegates ask for, so a delegate must not capture it. IPropertyUtilities outlives a refresh.
+	const TSharedPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
+
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI-Input");
 
 	auto InputTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, InputType));
-	InputTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
+	InputTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextInputCustomization::ForceRefresh, PropertyUtilities));
 	// Custom as the fallback because it is the value that hides NOTHING: a selection that disagrees
 	// still has objects using CustomValidation, and hiding it would hide a live property from them.
 	const auto InputType = (EUITextInputType)DreamDetailsMultiSelect::ValueOr<uint8>(
@@ -45,7 +53,7 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, CustomValidation));
 	}
 	auto DisplayTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, DisplayType));
-	DisplayTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
+	DisplayTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextInputCustomization::ForceRefresh, PropertyUtilities));
 	// Password for the same reason: it is the branch that hides nothing.
 	const auto DisplayType = (EUITextInputDisplayType)DreamDetailsMultiSelect::ValueOr<uint8>(
 		DisplayTypeHandle, (uint8)EUITextInputDisplayType::Password);
@@ -59,17 +67,17 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 
 	auto AllowMultilineHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, bAllowMultiLine));
-	AllowMultilineHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
+	AllowMultilineHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextInputCustomization::ForceRefresh, PropertyUtilities));
 	if (DreamDetailsMultiSelect::AllEqual(AllowMultilineHandle, false))
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, MultiLineSubmitFunctionKeys));
 	}
 }
-void FUITextInputCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FUITextInputCustomization::ForceRefresh(TSharedPtr<IPropertyUtilities> PropertyUtilities)
 {
-	if (TargetScriptPtr.IsValid())
+	if (TargetScriptPtr.IsValid() && PropertyUtilities.IsValid())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		PropertyUtilities->ForceRefresh();
 	}
 }
 #undef LOCTEXT_NAMESPACE

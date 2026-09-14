@@ -20,5 +20,6 @@ public:
 private:
 	TWeakObjectPtr<class UDreamText> TargetScriptPtr;
 	TArray<TWeakObjectPtr<UMaterialInterface>> PresetMaterials;
-	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
+	/** Takes the utilities, not the layout builder: the builder does not survive the refresh it asks for. */
+	void ForceRefresh(TSharedPtr<class IPropertyUtilities> PropertyUtilities);
 };
