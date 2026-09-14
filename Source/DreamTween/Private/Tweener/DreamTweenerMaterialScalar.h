@@ -62,4 +62,11 @@ protected:
 		startValue = originStartValue;
 		endValue = originStartValue + changeValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		originStartValue = startValue;
+		changeValue = endValue - startValue;
+	}
+	virtual float GetValueDistance()const override { return FMath::Abs(endValue - startValue); }
 };

@@ -55,4 +55,11 @@ protected:
 		startValue = originStartValue;
 		endValue = originStartValue + diffValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		originStartValue = startValue;
+	}
+	/** Degrees, the unit this tweener interpolates in. */
+	virtual float GetValueDistance()const override { return static_cast<float>((endValue - startValue).Euler().Size()); }
 };

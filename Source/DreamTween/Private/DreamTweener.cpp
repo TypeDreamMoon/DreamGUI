@@ -166,7 +166,15 @@ UDreamTweener* UDreamTweener::SetCurveFloat(UCurveFloat* newCurveFloat)
 UDreamTweener* UDreamTweener::SetRuntimeFloatCurve(const FRuntimeFloatCurve& Value)
 {
 	if (elapseTime > 0 || startToTween)return this;
-	tweenFunc.BindLambda([=](float c, float b, float t, float d) {
+	// The asset a runtime curve may point at, held for as long as this tween lives -- the same reason
+	// SetCurveFloat holds curveFloat. The lambda below carries a COPY of the struct, and a TObjectPtr
+	// inside a lambda capture is invisible to the collector. Inline curve data (EditorCurveData) is
+	// owned by that copy and safe either way; an ExternalCurve became a read through freed memory as
+	// soon as the asset was collected, since GetRichCurveConst hands back a pointer into it.
+	runtimeExternalCurve = Value.ExternalCurve;
+	// Weak to this tween, as SetCurveFloat is weak to its curve: an evaluation can only ever reach a
+	// tween that is still alive, and BindLambda kept no such guarantee.
+	tweenFunc.BindWeakLambda(this, [Value](float c, float b, float t, float d) {
 		if (d < KINDA_SMALL_NUMBER)return c + b;
 		if (const FRichCurve* RichCurve = Value.GetRichCurveConst())
 		{
@@ -187,6 +195,58 @@ UDreamTweener* UDreamTweener::SetAffectByTimeDilation(bool value)
 	affectByTimeDilation = value;
 	return this;
 }
+UDreamTweener* UDreamTweener::SetTimeScale(float value)
+{
+	timeScale = value;
+	return this;
+}
+UDreamTweener* UDreamTweener::SetAutoKill(bool value)
+{
+	if (elapseTime > 0 || startToTween)return this;
+	bAutoKill = value;
+	return this;
+}
+UDreamTweener* UDreamTweener::SetFrom(bool value)
+{
+	if (elapseTime > 0 || startToTween)return this;
+	bFromMode = value;
+	return this;
+}
+UDreamTweener* UDreamTweener::SetSpeedBased(bool value)
+{
+	if (elapseTime > 0 || startToTween)return this;
+	bSpeedBased = value;
+	return this;
+}
+UDreamTweener* UDreamTweener::SetAutoPlay(bool value)
+{
+	// Only ever the pause flag: "not playing yet" and "paused" are the same state to everything that
+	// reads it, and giving a tween a second way of standing still is how the two drift apart.
+	isMarkedPause = !value;
+	return this;
+}
+
+void UDreamTweener::ApplySpeedBasedDuration()
+{
+	if (!bSpeedBased)
+	{
+		return;
+	}
+	// Once only: duration is rewritten in place, and a second pass would divide the distance by a
+	// duration instead of by the speed it was.
+	bSpeedBased = false;
+	const float Speed = duration;
+	const float Distance = GetValueDistance();
+	if (Speed <= UE_SMALL_NUMBER || Distance <= UE_SMALL_NUMBER)
+	{
+		// No distance to cover, or no speed to cover it at. The authored duration stands, and the
+		// tween types that cannot measure a distance at all (Virtual, Update, DelayFrame, Sequence)
+		// land here by returning zero from GetValueDistance.
+		UE_LOG(DreamTween, Warning, TEXT("[UDreamTweener::ApplySpeedBasedDuration] %s has no measurable distance (%.3f) or no speed (%.3f), so SetSpeedBased left its duration alone."), *GetClass()->GetName(), Distance, Speed);
+		return;
+	}
+	duration = Distance / Speed;
+}
 
 bool UDreamTweener::ToNext(float deltaTime, float unscaledDeltaTime)
 {
@@ -199,7 +259,8 @@ bool UDreamTweener::ToNext(float deltaTime, float unscaledDeltaTime)
 		if (world->IsPaused() && affectByGamePause)return true;
 	}
 	if (isMarkedPause)return true;//no need to tick time if pause
-	float newElapseTime = elapseTime + (affectByTimeDilation ? deltaTime : unscaledDeltaTime);
+	// The tween's own time scale, on top of whichever world clock it was told to follow.
+	float newElapseTime = elapseTime + (affectByTimeDilation ? deltaTime : unscaledDeltaTime) * timeScale;
 	// A loop with no end has no end to its clock either: elapseTime would climb until a float can no
 	// longer resolve a frame's delta, and the cycle phase drifts and then stops advancing altogether.
 	// The cycles that are over are folded out of the clock here, where the clock is the tween's OWN --
@@ -215,7 +276,7 @@ bool UDreamTweener::ToNext(float deltaTime, float unscaledDeltaTime)
 			foldedCycleCount = loopCycleCount;
 		}
 	}
-	return this->ToNextWithElapsedTime(newElapseTime);
+	return FinishOrHold(this->ToNextWithElapsedTime(newElapseTime));
 }
 bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 {
@@ -227,9 +288,21 @@ bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 			startToTween = true;
 			//set initialize value
 			OnStartGetValue();
+			// From() and SetSpeedBased both need the start value first: one turns the tween around
+			// between where the value is and where it was told to go, the other measures the distance
+			// between exactly those two. Neither is knowable before the getter has been asked.
+			if (bFromMode)
+			{
+				// One-shot, like the speed-based rewrite below: after the swap the stored start and
+				// end ARE the from-configuration, and SetOriginValueForRestart restores exactly that.
+				// Swapping again on a restart would turn the tween back the way it came.
+				bFromMode = false;
+				SwapStartAndEndValues();
+			}
+			ApplySpeedBasedDuration();
 			//execute callback
-			onCycleStartCpp.ExecuteIfBound();
-			onStartCpp.ExecuteIfBound();
+			onCycleStartCpp.Broadcast();
+			onStartCpp.Broadcast();
 		}
 
 		float elapseTimeWithoutDelay = elapseTime - delay;
@@ -240,28 +313,28 @@ bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 			loopCycleCount++;
 
 			TweenAndApplyValue(reverseTween ? 0 : duration);
-			onUpdateCpp.ExecuteIfBound(1.0f);
-			onCycleCompleteCpp.ExecuteIfBound();
+			onUpdateCpp.Broadcast(1.0f);
+			onCycleCompleteCpp.Broadcast();
 			if (loopType == EDreamTweenLoop::Once)
 			{
-				onCompleteCpp.ExecuteIfBound();
+				onCompleteCpp.Broadcast();
 				returnValue = false;
 			}
 			else if (maxLoopCount <= -1)//infinite loop
 			{
-				onCycleStartCpp.ExecuteIfBound();//start new cycle callback
+				onCycleStartCpp.Broadcast();//start new cycle callback
 				returnValue = true;
 			}
 			else
 			{
 				if (loopCycleCount >= maxLoopCount)//reach end cycle
 				{
-					onCompleteCpp.ExecuteIfBound();
+					onCompleteCpp.Broadcast();
 					returnValue = false;
 				}
 				else//not reach end cycle
 				{
-					onCycleStartCpp.ExecuteIfBound();//start new cycle callback
+					onCycleStartCpp.Broadcast();//start new cycle callback
 					returnValue = true;
 				}
 			}
@@ -293,7 +366,7 @@ bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 				currentTime = duration - currentTime;
 			}
 			TweenAndApplyValue(currentTime);
-			onUpdateCpp.ExecuteIfBound(currentTime / duration);
+			onUpdateCpp.Broadcast(currentTime / duration);
 			return true;
 		}
 	}
@@ -305,20 +378,41 @@ bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 
 void UDreamTweener::Kill(bool callComplete)
 {
+	// The flag goes up BEFORE the callback runs. A completion handler is free to Restart this very
+	// tween -- a perfectly ordinary "loop it until something says stop" -- and with the assignment
+	// afterwards it landed on top of the restart and killed a tween that had just been brought back
+	// to life, with nothing anywhere saying so. Restart clears the flag again, so a handler that
+	// restarts wins and a handler that does not leaves the tween killed, which is what each asked for.
+	isMarkedToKill = true;
 	if (callComplete)
 	{
-		onCompleteCpp.ExecuteIfBound();
+		onCompleteCpp.Broadcast();
 	}
-	isMarkedToKill = true;
+	// After the completion, and only if the tween is still on its way out: a completion handler that
+	// restarted this very tween has un-killed it (see the flag above), and announcing a kill for a
+	// tween that is running again would be a lie to everything listening.
+	if (isMarkedToKill)
+	{
+		onKillCpp.Broadcast();
+	}
 }
 
 void UDreamTweener::ForceComplete()
 {
 	isMarkedToKill = true;
 	elapseTime = delay + duration;
-	TweenAndApplyValue(duration);
-	onUpdateCpp.ExecuteIfBound(1.0f);
-	onCompleteCpp.ExecuteIfBound();
+	// The end of a cycle that is running backwards is time 0, not duration -- the same choice the
+	// natural completion in ToNextWithElapsedTime makes. Completing a yoyo on its way back used to
+	// throw the value to the end it had already left, the opposite of where it was heading.
+	TweenAndApplyValue(reverseTween ? 0 : duration);
+	onUpdateCpp.Broadcast(1.0f);
+	onCompleteCpp.Broadcast();
+	// This ends the tween as well as completing it, so the kill listeners hear it too -- unless a
+	// completion handler brought it back, exactly as in Kill.
+	if (isMarkedToKill)
+	{
+		onKillCpp.Broadcast();
+	}
 }
 
 void UDreamTweener::Restart()
@@ -328,11 +422,27 @@ void UDreamTweener::Restart()
 		return;
 	}
 	isMarkedPause = false;//incase it is paused.
+	// A tween that was killed is restartable again. The flag is the only thing that tells the manager
+	// to drop this tween, and nothing ever cleared it, so Restart on a killed tween did all its work
+	// and then had it thrown away on the next tick -- silently, since Restart reports nothing.
+	isMarkedToKill = false;
 	//reset parameter to initial
 	loopCycleCount = 0;
 	foldedCycleCount = 0;
 	reverseTween = false;
-	SetOriginValueForRestart();
+	if (startToTween)
+	{
+		SetOriginValueForRestart();
+		// And put the value back at the beginning NOW, the way a sequence does for its children
+		// (UDreamTweenerSequence::SetOriginValueForRestart). Restoring only the bookkeeping leaves the
+		// animated object sitting at the end value, and the fresh OnStartGetValue below would read
+		// THAT back as the new origin -- a restart that interpolates from the end to the end.
+		TweenAndApplyValue(0);
+	}
+	// Starting again is starting: OnStart and OnCycleStart belong to a restarted tween as much as to
+	// a new one, and OnStartGetValue is how a tween that was told to run "from wherever the value is"
+	// picks its origin up. Leaving this flag raised is what kept both from ever happening twice.
+	startToTween = false;
 
 	this->ToNextWithElapsedTime(0);
 }
@@ -345,7 +455,10 @@ void UDreamTweener::Goto(float timePoint)
 	foldedCycleCount = 0;
 	reverseTween = false;
 
-	this->ToNextWithElapsedTime(timePoint);
+	// timePoint is a position in the ANIMATION; elapseTime counts the delay before it. Handing the
+	// raw time point over landed the tween at timePoint - delay, and for a tween whose delay is at
+	// least its duration, Goto(duration) left it still waiting out the delay with nothing applied.
+	this->ToNextWithElapsedTime(delay + timePoint);
 }
 
 float UDreamTweener::GetProgress()const

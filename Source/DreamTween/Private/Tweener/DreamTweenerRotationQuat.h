@@ -60,16 +60,36 @@ protected:
 		auto value = FQuat::Slerp(startValue, endValue, lerpValue);
 		setter.ExecuteIfBound(value, sweep, sweep ? &sweepHitResult : nullptr, teleportType);
 	}
+	/**
+	 * diffValue is the rotation that carried start to end, and it is applied on the LEFT: in UE,
+	 * A * B applies B first and then A, so diff * end is "end, then the same turn again" -- the
+	 * world-frame increment the enum promises. end * diff would apply the turn in end's own frame,
+	 * which agrees only for rotations sharing an axis, and would disagree with the restart below.
+	 */
 	virtual void SetValueForIncremental() override
 	{
-		auto diffValue = endValue * startValue.Inverse();
+		const FQuat diffValue = endValue * startValue.Inverse();
 		startValue = endValue;
-		endValue = endValue * diffValue;
+		endValue = (diffValue * endValue).GetNormalized();
 	}
 	virtual void SetOriginValueForRestart() override
 	{
-		auto diffValue = endValue - startValue;
+		// Quaternion algebra, not component arithmetic: subtracting two unit quaternions leaves one
+		// that is not unit, Slerp then interpolates along the wrong arc, and two nearly opposite
+		// rotations leave a near-zero quaternion that normalises to NaN. Restoring the first start
+		// value and re-applying the same relative rotation puts the end back exactly where it was.
+		const FQuat diffValue = endValue * startValue.Inverse();
 		startValue = originStartValue;
-		endValue = originStartValue + diffValue;
+		endValue = (diffValue * originStartValue).GetNormalized();
+	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		originStartValue = startValue;
+	}
+	/** Degrees of rotation between the two ends, the unit a rotation speed is quoted in. */
+	virtual float GetValueDistance()const override
+	{
+		return FMath::RadiansToDegrees(static_cast<float>(startValue.AngularDistance(endValue)));
 	}
 };

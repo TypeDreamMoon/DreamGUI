@@ -30,7 +30,9 @@ protected:
 			if (world->IsPaused() && affectByGamePause)return true;
 		}
 		if (isMarkedPause)return true;//no need to tick time if pause
-		onUpdateCpp.ExecuteIfBound(affectByTimeDilation ? deltaTime : unscaledDeltaTime);
+		// The tween's own time scale applies to the delta this hands out, as it does to every other
+		// tween's clock: a caller that has slowed this tween down means the work it drives too.
+		onUpdateCpp.Broadcast((affectByTimeDilation ? deltaTime : unscaledDeltaTime) * timeScale);
 		return true;
 	}
 	virtual void TweenAndApplyValue(float currentTime) override

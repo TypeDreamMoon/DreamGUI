@@ -12,6 +12,13 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = DreamTween)TArray<TObjectPtr<UDreamTweener>> tweenerList;
 	UPROPERTY(VisibleAnywhere, Category = DreamTween)TArray<TObjectPtr<UDreamTweener>> finishedTweenerList;
 	float lastTweenStartTime = 0;
+	/**
+	 * Put a tween that is joining this sequence onto the sequence's clock, so it plays from the
+	 * position the sequence just gave it rather than from wherever its own run had got to.
+	 */
+	void AdoptTweenerClock(UDreamTweener* tweener);
+	/** The one implementation behind all four callback entry points. */
+	UDreamTweenerSequence* InsertCallbackInternal(float timePosition, const TFunction<void()>& callback);
 public:
 	/**
 	 * Adds the given tween to the end of the Sequence.
@@ -57,6 +64,25 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = DreamTween)
 		UDreamTweenerSequence* Join(UObject* WorldContextObject, UDreamTweener* tweener);
+
+	/**
+	 * Fires a callback when the sequence reaches the end of what it holds so far. DOTween's
+	 * AppendCallback: "slide out, THEN hide the panel" is one sequence rather than a sequence plus an
+	 * OnComplete that has to know how long the sequence turned out to be.
+	 * Has no effect if the Sequence has already started.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamTween)
+		UDreamTweenerSequence* AppendCallback(const FDreamTweenSimpleDynamicDelegate& callback);
+	/**
+	 * Fires a callback at a time position in the sequence, wherever that falls among the tweens.
+	 * Has no effect if the Sequence has already started.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamTween)
+		UDreamTweenerSequence* InsertCallback(float timePosition, const FDreamTweenSimpleDynamicDelegate& callback);
+	/** AppendCallback for C++ callers. */
+	UDreamTweenerSequence* AppendCallback(const TFunction<void()>& callback);
+	/** InsertCallback for C++ callers. */
+	UDreamTweenerSequence* InsertCallback(float timePosition, const TFunction<void()>& callback);
 
 protected:
 	virtual void OnStartGetValue() override {};

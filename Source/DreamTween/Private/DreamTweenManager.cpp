@@ -92,7 +92,22 @@ void ADreamTweenTickHelperActor::EndPlay(EEndPlayReason::Type EndPlayReason)
 }
 void ADreamTweenTickHelperActor::OnDreamTweenManagerCreated(UDreamTweenManager* DreamTweenManager)
 {
-	SetupTick(DreamTweenManager);
+	// The event is static, so EVERY helper actor in every PIE instance hears EVERY manager being
+	// created. Taking the one that was broadcast on trust would let a second PIE client's manager
+	// drive this world's actor -- every tween in one instance stepped by the other's clock. Ask for
+	// the manager of this actor's own game instance instead; if it is not up yet, this was somebody
+	// else's news and the subscription stays open for our own.
+	UDreamTweenManager* MyManager = UDreamTweenManager::GetDreamTweenInstance(this);
+	if (MyManager == nullptr)
+	{
+		return;
+	}
+	SetupTick(MyManager);
+	if (OnDreamTweenManagerCreatedDelegateHandle.IsValid())
+	{
+		UDreamTweenManager::OnDreamTweenManagerCreated.Remove(OnDreamTweenManagerCreatedDelegateHandle);
+		OnDreamTweenManagerCreatedDelegateHandle.Reset();
+	}
 }
 void ADreamTweenTickHelperActor::SetupTick(UDreamTweenManager* DreamTweenManager)
 {
@@ -144,11 +159,23 @@ void UDreamTweenManager::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	const UGameInstance* LocalGameInstance = GetGameInstance();
 	check(LocalGameInstance);
+	// The one place this event can mean anything. ADreamTweenTickHelperActor::BeginPlay subscribes to
+	// it as its only fallback for "the subsystem is not up yet", and nothing in the plugin ever fired
+	// it: on the day that fallback was actually needed, SetupTick would never run and every tween in
+	// that world would stop being ticked, without a line of log to say why. The subsystem is already
+	// in the collection's map by the time Initialize runs, so a listener can resolve us from here.
+	OnDreamTweenManagerCreated.Broadcast(this);
 }
 
 void UDreamTweenManager::Deinitialize()
 {
 	Super::Deinitialize();
+	// Killed, not merely forgotten. Dropping the array left every tween believing it was still
+	// running: callers holding a tweener got "not tweening" from the manager while the tween itself
+	// reported otherwise, and nothing that was waiting on a completion ever heard one. callComplete
+	// stays false on purpose -- the game instance is going away, and running author completion
+	// handlers into a world being torn down is how a "finish" handler reaches a half-destroyed widget.
+	KillAllTweens(false);
 	tweenerList.Empty();
 }
 
@@ -205,6 +232,15 @@ void UDreamTweenManager::OnTick(EDreamTweenTickType TickType, float DeltaTime, f
 		{
 			tweenersToRemove.Add(tweener);
 		}
+		else if (tweener->IsMarkedToKill())
+		{
+			// Ahead of the tick-type filter, deliberately. Kill only raises a flag; the list entry goes
+			// away when a tick sees it. A tween set to Manual tick is only ever seen by ManualTick, so
+			// a killed one that nobody ticks again stayed in this list forever -- holding its outer,
+			// which is usually the very widget it was animating, alive for the rest of the run.
+			tweenersToRemove.Add(tweener);
+			tweenersToDestroy.Add(tweener);
+		}
 		else
 		{
 			if (tweener->GetTickType() != TickType)continue;
@@ -225,11 +261,6 @@ void UDreamTweenManager::OnTick(EDreamTweenTickType TickType, float DeltaTime, f
 		{
 			tweener->ConditionalBeginDestroy();
 		}
-	}
-	if (TickType == EDreamTweenTickType::DuringPhysics)
-	{
-		if (updateEvent.IsBound())
-			updateEvent.Broadcast(DeltaTime);
 	}
 }
 

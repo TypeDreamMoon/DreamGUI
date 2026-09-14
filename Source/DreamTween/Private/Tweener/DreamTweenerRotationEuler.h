@@ -68,4 +68,15 @@ protected:
 	{
 		startValue = originStartValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		// This tweener has no end value: it turns BY eulerAngle from wherever it starts. Reversing it
+		// therefore means starting already turned and unwinding -- begin at start*euler, and negate
+		// the angle so the tween arrives back where the value is now.
+		startValue = startValue * FQuat::MakeFromEuler(eulerAngle);
+		eulerAngle = -eulerAngle;
+		originStartValue = startValue;
+	}
+	/** Degrees, the unit this tweener turns in. */
+	virtual float GetValueDistance()const override { return static_cast<float>(eulerAngle.Size()); }
 };

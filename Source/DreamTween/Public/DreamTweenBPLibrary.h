@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "DreamTweenManager.h"
+#include "DreamTweenerSpring.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "DreamTweenDelegateHandleWrapper.h"
 #include "DreamTweenBPLibrary.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamTweenFloatSetterDynamic, float, value);
@@ -52,12 +52,17 @@ public:
 		static UDreamTweener* LocalPositionYTo(USceneComponent* target, double endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position Z To"), Category = "DreamTween")
 		static UDreamTweener* LocalPositionZTo(USceneComponent* target, double endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+	// The _Sweep nodes carry no hit-result pin. They used to take one as an out-parameter, and it was
+	// never written: a sweep happens on every tick for as long as the tween runs, while the node's
+	// stack frame -- and with it that parameter -- is gone the moment the node returns. The tween now
+	// owns the FHitResult it sweeps into (see UDreamTweenerPosition::sweepHitResult); a pin that could
+	// only ever hand back a default-constructed result was worse than no pin at all.
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position X To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* LocalPositionXTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* LocalPositionXTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position Y To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* LocalPositionYTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* LocalPositionYTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position Z To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* LocalPositionZTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* LocalPositionZTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position X To"), Category = "DreamTween")
 		static UDreamTweener* WorldPositionXTo(USceneComponent* target, double endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
@@ -66,11 +71,11 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position Z To"), Category = "DreamTween")
 		static UDreamTweener* WorldPositionZTo(USceneComponent* target, double endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position X To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* WorldPositionXTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* WorldPositionXTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position Y To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* WorldPositionYTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* WorldPositionYTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position Z To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* WorldPositionZTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* WorldPositionZTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 #pragma endregion
 
 
@@ -78,11 +83,11 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTween")
 		static UDreamTweener* LocalPositionTo(USceneComponent* target, FVector endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* LocalPositionTo_Sweep(USceneComponent* target, FVector endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* LocalPositionTo_Sweep(USceneComponent* target, FVector endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTween")
 		static UDreamTweener* WorldPositionTo(USceneComponent* target, FVector endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position To (Sweep)"), Category = DreamTween)
-		static UDreamTweener* WorldPositionTo_Sweep(USceneComponent* target, FVector endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* WorldPositionTo_Sweep(USceneComponent* target, FVector endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 #pragma endregion Position
 
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = DreamTween)
@@ -96,11 +101,11 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", ToolTip = "Rotate absolute rotator value"), Category = "DreamTween")
 		static UDreamTweener* LocalRotatorTo(USceneComponent* target, FRotator endValue, bool shortestPath, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Rotate Euler Angle To (Sweep)", ToolTip = "Rotate eulerAngle relative to current rotation value"), Category = "DreamTween")
-		static UDreamTweener* LocalRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* LocalRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Rotation Quaternion To (Sweep)", ToolTip = "Rotate absolute quaternion rotation value"), Category = "DreamTween")
-		static UDreamTweener* LocalRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* LocalRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Rotator To (Sweep)", ToolTip = "Rotate absolute rotator value"), Category = "DreamTween")
-		static UDreamTweener* LocalRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* LocalRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", ToolTip = "Rotate eulerAngle relative to current rotation value"), Category = "DreamTween")
 		static UDreamTweener* WorldRotateEulerAngleTo(USceneComponent* target, FVector eulerAngle, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
@@ -109,11 +114,11 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", ToolTip = "Rotate absolute rotator value"), Category = "DreamTween")
 		static UDreamTweener* WorldRotatorTo(USceneComponent* target, FRotator endValue, bool shortestPath, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Rotate Euler Angle To (Sweep)", ToolTip = "Rotate eulerAngle relative to current rotation value"), Category = "DreamTween")
-		static UDreamTweener* WorldRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* WorldRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Rotation Quaternion To (Sweep)", ToolTip = "Rotate absolute quaternion rotation value"), Category = "DreamTween")
-		static UDreamTweener* WorldRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* WorldRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Rotator To (Sweep)", ToolTip = "Rotate absolute rotator value"), Category = "DreamTween")
-		static UDreamTweener* WorldRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+		static UDreamTweener* WorldRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, bool sweep, bool teleport, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 #pragma endregion Rotation
 
 #pragma region Material
@@ -164,6 +169,37 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", WorldContext = "WorldContextObject"), Category = DreamTween)
 		static UDreamTweener* UMG_Border_ContentColorAndOpacityTo(UObject* WorldContextObject, class UBorder* target, const FLinearColor& endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 #pragma endregion
+
+	/**
+	 * Drives a float with a damped spring instead of a curve: no duration, no ease, and it finishes
+	 * when it comes to rest. SetTarget on the returned spring moves the goal at any time and the
+	 * velocity carries over, which is what makes a list of items glide to a new position instead of
+	 * restarting from it.
+	 *
+	 * The spring math and the tween have been here all along (FDreamSpring, UDreamTweenerSpring); this
+	 * node is what a graph reaches them through. The value lives with the node -- a spring drives a
+	 * number, and the setter is what the graph does with it.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (ToolTip = "Drive a float with a damped spring; completes at rest", WorldContext = "WorldContextObject", AdvancedDisplay = "params"), Category = DreamTween)
+		static UDreamTweenerSpring* SpringFloat(UObject* WorldContextObject, float startValue, float target, const FDreamTweenFloatSetterDynamic& setter, const FDreamSpringParams& params)
+	{
+		// Shared, so the getter reads back exactly what the setter last wrote: a spring asks where the
+		// value is now every time it is retargeted, and a graph's float has no address to ask.
+		TSharedRef<float> Value = MakeShared<float>(startValue);
+		return UDreamTweenManager::SpringTo(WorldContextObject,
+			FDreamTweenFloatGetterFunction::CreateLambda([Value] { return *Value; }),
+			FDreamTweenFloatSetterFunction::CreateLambda([Value, setter](float NewValue)
+			{
+				*Value = NewValue;
+				setter.ExecuteIfBound(NewValue);
+			}),
+			target, params);
+	}
+	/** SpringFloat for C++ callers, driving a value the caller already owns. */
+	static UDreamTweenerSpring* SpringFloat(UObject* WorldContextObject, const FDreamTweenFloatGetterFunction& getter, const FDreamTweenFloatSetterFunction& setter, float target, const FDreamSpringParams& params)
+	{
+		return UDreamTweenManager::SpringTo(WorldContextObject, getter, setter, target, params);
+	}
 
 	UFUNCTION(BlueprintCallable, meta = (ToolTip = "Assign start or update or omplete functions", WorldContext = "WorldContextObject", AutoCreateRefTerm="start,update,complete"), Category = DreamTween)
 		static UDreamTweener* VirtualCall(UObject* WorldContextObject, float duration, float delay, const FDreamTweenSimpleDynamicDelegate& start, const FDreamTweenFloatDynamicDelegate& update, const FDreamTweenSimpleDynamicDelegate& complete)

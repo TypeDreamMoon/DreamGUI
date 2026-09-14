@@ -232,7 +232,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionZTo(USceneComponent* target, d
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionXTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionXTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -253,7 +253,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionXTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionYTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionYTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -274,7 +274,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionYTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionZTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionZTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -361,7 +361,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionZTo(USceneComponent* target, d
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionXTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionXTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -382,7 +382,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionXTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionYTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionYTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -403,7 +403,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionYTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionZTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionZTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -464,7 +464,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo(USceneComponent* target, FV
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionTo_Sweep(USceneComponent* target, FVector endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionTo_Sweep(USceneComponent* target, FVector endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -474,14 +474,14 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionTo_Sweep(USceneComponent* targ
 	auto Tweener = UDreamTweenManager::To(target
 	, FDreamTweenVectorGetterFunction::CreateUObject(target, &USceneComponent::GetRelativeLocation)
 	, FDreamTweenPositionSetterFunction::CreateUObject(target, &USceneComponent::SetRelativeLocation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo_Sweep(USceneComponent* target, FVector endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo_Sweep(USceneComponent* target, FVector endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -491,7 +491,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo_Sweep(USceneComponent* targ
 	auto Tweener = UDreamTweenManager::To(target
 	, FDreamTweenPositionGetterFunction::CreateUObject(target, &USceneComponent::GetComponentLocation)
 	, FDreamTweenPositionSetterFunction::CreateUObject(target, &USceneComponent::SetWorldLocation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
@@ -558,7 +558,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo(USceneComponent* 
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -569,14 +569,14 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotateEulerAngleTo_Sweep(USceneCompone
 	{ 
 		return target->GetRelativeRotationCache().GetCachedQuat();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetRelativeRotation)
-	, eulerAngle, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, eulerAngle, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -587,7 +587,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo_Sweep(USceneCompo
 	{
 		return target->GetRelativeRotationCache().GetCachedQuat();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetRelativeRotation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
@@ -620,7 +620,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo(USceneComponent* target, FRo
 		return Tweener;
 	}
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -629,7 +629,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo_Sweep(USceneComponent* targe
 	}
 	if (shortestPath)
 	{
-		return LocalRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweepHitResult, sweep, teleport, duration, delay, ease);
+		return LocalRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweep, teleport, duration, delay, ease);
 	}
 	else
 	{
@@ -685,7 +685,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo(USceneComponent* 
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -696,14 +696,14 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotateEulerAngleTo_Sweep(USceneCompone
 	{
 		return target->GetComponentRotation().Quaternion();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetWorldRotation)
-	, eulerAngle, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, eulerAngle, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -714,7 +714,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo_Sweep(USceneCompo
 	{
 		return target->GetComponentRotation().Quaternion();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetWorldRotation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
@@ -747,7 +747,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo(USceneComponent* target, FRo
 		return Tweener;
 	}
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -756,7 +756,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo_Sweep(USceneComponent* targe
 	}
 	if (shortestPath)
 	{
-		return WorldRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweepHitResult, sweep, teleport, duration, delay, ease);
+		return WorldRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweep, teleport, duration, delay, ease);
 	}
 	else
 	{

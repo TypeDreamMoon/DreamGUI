@@ -58,4 +58,16 @@ protected:
 		startValue = originStartValue;
 		endValue = originStartValue + diffValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		originStartValue = startValue;
+	}
+	virtual float GetValueDistance()const override
+	{
+		// The channel with furthest to go, in 0-1 units; a speed for a colour is a speed per channel.
+		const FLinearColor Delta = endValue - startValue;
+		return FMath::Max(FMath::Max(FMath::Abs(Delta.R), FMath::Abs(Delta.G)),
+			FMath::Max(FMath::Abs(Delta.B), FMath::Abs(Delta.A)));
+	}
 };

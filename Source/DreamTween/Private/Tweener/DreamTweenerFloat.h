@@ -48,4 +48,13 @@ protected:
 		startValue = originStartValue;
 		endValue = startValue + changeValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		// The origin is what a restart restores, so it has to follow the swap; changeValue is derived
+		// and would otherwise still describe the direction the tween was authored in.
+		originStartValue = startValue;
+		changeValue = endValue - startValue;
+	}
+	virtual float GetValueDistance()const override { return FMath::Abs(endValue - startValue); }
 };

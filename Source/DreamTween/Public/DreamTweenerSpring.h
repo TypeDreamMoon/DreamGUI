@@ -14,7 +14,11 @@
  * time, including mid-flight -- the velocity carries over, which is what makes a list of lyric
  * lines glide instead of restarting.
  */
-UCLASS(NotBlueprintType)
+// BlueprintType, unlike its siblings: every one of its setters below is already BlueprintCallable,
+// and a spring is steered AFTER it starts (SetTarget mid-flight is the whole point of it), so a
+// graph has to be able to hold one. The other tweener types are configured before they run and are
+// handed back as the base UDreamTweener, which is where their blueprint surface lives.
+UCLASS(BlueprintType)
 class DREAMTWEEN_API UDreamTweenerSpring : public UDreamTweener
 {
 	GENERATED_BODY()
@@ -78,7 +82,7 @@ protected:
 			if (world->IsPaused() && affectByGamePause)return true;
 		}
 		if (isMarkedPause)return true;
-		const float Dt = affectByTimeDilation ? deltaTime : unscaledDeltaTime;
+		const float Dt = (affectByTimeDilation ? deltaTime : unscaledDeltaTime) * timeScale;
 		elapseTime += Dt;
 		if (elapseTime <= delay)
 		{
@@ -88,17 +92,18 @@ protected:
 		{
 			startToTween = true;
 			OnStartGetValue();
-			onCycleStartCpp.ExecuteIfBound();
-			onStartCpp.ExecuteIfBound();
+			onCycleStartCpp.Broadcast();
+			onStartCpp.Broadcast();
 		}
 		const bool bMoving = FDreamSpring::Step(Params, State, Dt);
 		Setter.ExecuteIfBound(State.Value);
-		onUpdateCpp.ExecuteIfBound(bMoving ? 0.0f : 1.0f);
+		onUpdateCpp.Broadcast(bMoving ? 0.0f : 1.0f);
 		if (!bMoving)
 		{
-			onCycleCompleteCpp.ExecuteIfBound();
-			onCompleteCpp.ExecuteIfBound();
-			return false;
+			onCycleCompleteCpp.Broadcast();
+			onCompleteCpp.Broadcast();
+			// Through FinishOrHold, as every ToNext does; see UDreamTweener::SetAutoKill.
+			return FinishOrHold(false);
 		}
 		return true;
 	}
@@ -110,6 +115,25 @@ protected:
 	}
 	virtual void SetValueForIncremental() override {}
 	virtual void SetOriginValueForRestart() override {}
+	virtual void Restart() override
+	{
+		// A spring has no curve to rewind to, so restarting one means letting it chase its goal again
+		// from where it stands. The inherited Restart would call TweenAndApplyValue to put the value
+		// back at the start of the animation, and for a spring that call means "settle at the goal" --
+		// the exact opposite. The clock, the pause and the kill flag still reset, and dropping the
+		// velocity is what makes the chase start over rather than continue.
+		if (elapseTime == 0)
+		{
+			return;
+		}
+		isMarkedPause = false;
+		isMarkedToKill = false;
+		elapseTime = 0;
+		loopCycleCount = 0;
+		foldedCycleCount = 0;
+		startToTween = false;
+		State.Velocity = 0.0f;
+	}
 	virtual UDreamTweener* SetLoop(EDreamTweenLoop newLoopType, int32 newLoopCount = 1) override
 	{
 		UE_LOG(DreamTween, Warning, TEXT("[UDreamTweenerSpring::SetLoop] A spring has no cycle to loop; ignored."));

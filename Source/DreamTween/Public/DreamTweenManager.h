@@ -77,7 +77,6 @@ private:
 	/** current active tweener collection*/
 	UPROPERTY(VisibleAnywhere, Category=DreamTween)TArray<TObjectPtr<UDreamTweener>> tweenerList;
 	void OnTick(EDreamTweenTickType TickType, float DeltaTime, float UnscaledDeltaTime);
-	FDreamTweenUpdateMulticastDelegate updateEvent;
 	bool bTickPaused = false;
 public:
 	UE_DEPRECATED(5.1, "Use Tweener->SetTickType(EDreamTweenTickType::Manual) then call this->ManualTick.")

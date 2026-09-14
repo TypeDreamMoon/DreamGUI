@@ -37,18 +37,20 @@ protected:
 		if (!startToTween)
 		{
 			startToTween = true;
-			onStartCpp.ExecuteIfBound();
+			onStartCpp.Broadcast();
 		}
 
 		if (GFrameNumber >= endFrameNumber)
 		{
-			onUpdateCpp.ExecuteIfBound(1.0f);
-			onCompleteCpp.ExecuteIfBound();
-			return false;
+			onUpdateCpp.Broadcast(1.0f);
+			onCompleteCpp.Broadcast();
+			// Through FinishOrHold, as every ToNext does: with auto-kill off the tween stays in the
+			// manager's list, paused at its end, until something restarts or kills it.
+			return FinishOrHold(false);
 		}
 		else
 		{
-			onUpdateCpp.ExecuteIfBound((float)(GFrameNumber - startFrameNumber) / (endFrameNumber - startFrameNumber));
+			onUpdateCpp.Broadcast((float)(GFrameNumber - startFrameNumber) / (endFrameNumber - startFrameNumber));
 			return true;
 		}
 	}
