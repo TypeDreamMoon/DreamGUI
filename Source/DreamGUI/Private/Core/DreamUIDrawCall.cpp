@@ -15,18 +15,25 @@ void FDreamUIDrawCall::CopyBatchMeshGeometry()
 	 */
 	const int32 CombinedVertexCount = CombinedBatchMeshGeometryVertices.Num();
 	auto CombinedVertexData = CombinedBatchMeshGeometryVertices.GetData();
+	//the multi-geometry branch of ApplyBatchMeshGeometryToCombined leaves out anything with no
+	//triangles, so a refresh that walked every geometry wrote each later one at the wrong offset
+	const bool bSkipTrianglelessGeometry = BatchMeshGeometryArray.Num() != 1;
 	int PrevVertCount = 0;
 	for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 	{
+		const auto& BuiltGeo = BatchMeshGeometryArray[geoIndex];
+		if (bSkipTrianglelessGeometry && BuiltGeo.Triangles.Num() <= 0)continue;
 		if (!BatchMeshVisualArray.IsValidIndex(geoIndex))return;
 		auto BatchMeshVisual = BatchMeshVisualArray[geoIndex].Get();
 		if (BatchMeshVisual == nullptr)return;
 		auto uiGeo = BatchMeshVisual->GetGeometry();
 		if (uiGeo == nullptr)return;
-		const int32 VertexCount = uiGeo->Vertices.Num();
-		if (!ensureMsgf(PrevVertCount + VertexCount <= CombinedVertexCount
-			, TEXT("[FDreamUIDrawCall::CopyBatchMeshGeometry] Geometry grew since the draw-call was built (%d + %d > %d), skipping the refresh; the draw-call rebuild will pick it up.")
-			, PrevVertCount, VertexCount, CombinedVertexCount))
+		//the destination slot is the size the batch was built with, so that -- not the live count --
+		//is what the layout says; a count that no longer matches means the layout itself is stale
+		const int32 VertexCount = BuiltGeo.Vertices.Num();
+		if (!ensureMsgf(uiGeo->Vertices.Num() == VertexCount && PrevVertCount + VertexCount <= CombinedVertexCount
+			, TEXT("[FDreamUIDrawCall::CopyBatchMeshGeometry] Geometry changed since the draw-call was built (%d vertices now, %d then; %d + %d > %d), skipping the refresh; the draw-call rebuild will pick it up.")
+			, uiGeo->Vertices.Num(), VertexCount, PrevVertCount, VertexCount, CombinedVertexCount))
 		{
 			return;
 		}
@@ -70,8 +77,12 @@ void FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined()
 			auto TriangleData = uiGeo.Triangles.GetData();
 			for (int geomTriangleIndicesIndex = 0; geomTriangleIndicesIndex < triangleCount; geomTriangleIndicesIndex++)
 			{
-				auto triangleIndex = TriangleData[geomTriangleIndicesIndex] + prevVertexCount;
-				CombinedTriangleData[triangleIndicesIndex++] = triangleIndex;
+				//in int32 first, then narrowed once, on purpose: the operands promote differently in the
+				//16-bit build (int) and the 32-bit one (uint32), and the guards that keep the result in
+				//range are all written in int32 (LEXUI_MAX_VERTEX_COUNT, TArray::Num)
+				const int32 triangleIndex = (int32)TriangleData[geomTriangleIndicesIndex] + prevVertexCount;
+				checkSlow(triangleIndex >= 0 && triangleIndex < LEXUI_MAX_VERTEX_COUNT);
+				CombinedTriangleData[triangleIndicesIndex++] = (FDreamUIMeshIndex)triangleIndex;
 			}
 
 			CombinedBounds += FVector(0.1f, uiGeo.BoundsMin2DInCanvasSpace.X, uiGeo.BoundsMin2DInCanvasSpace.Y);
@@ -86,6 +97,9 @@ bool FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& 
 {
 	if (this->Type != EDreamUIDrawCallType::BatchMesh)return false;
 	if (this->Material != geo.Material)return false;
+	//the blend state is chosen once for the whole draw-call, so elements that composite differently
+	//cannot share one however identical everything else is
+	if (this->BlendMode != geo.BlendMode)return false;
 	if (geo.bIsFont)
 	{
 		if (this->FontTexture != nullptr && this->FontTexture != geo.Texture)//draw-call also contains font but different of geo's

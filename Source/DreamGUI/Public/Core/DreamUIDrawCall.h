@@ -75,7 +75,6 @@ public:
 	TWeakObjectPtr<UTexture> FontTexture = nullptr;//draw-call use this texture to render font
 	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;//the font FontTexture belongs to
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//draw-call use this material to render, can be null to use default material
-	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//actual material that render this draw-call
 
 	TWeakObjectPtr<UDreamVisualPostProcess> PostProcessVisualObject;//post process object
 	/** Canvas-space bounds carried over from FDreamUIRenderData so the batching worker thread never has to touch the visual. */
@@ -97,12 +96,13 @@ public:
 	TArray<FDreamUIMeshVertex> CombinedBatchMeshGeometryVertices;
 	TArray<FDreamUIMeshIndex> CombinedBatchMeshGeometryTriangles;
 	FBox CombinedBounds;
-	bool bNeedToSortBatchMeshVisualObjectList = false;//need to sort BatchMeshRenderObjectList?
 	TSharedPtr<DreamUIQuadTree::Node> BatchMeshTreeNode = nullptr;
 	int32 VerticesCount = 0;//vertices count of all BatchMeshRenderObjectList
 	int32 IndicesCount = 0;//triangle indices count of all BatchMeshRenderObjectList
 
 	bool bIs2DSpace = false;//transform relative to canvas is 2d or not? only 2d draw-call can batch
+	/** The blend mode every element in this draw-call shares; the blend state is set once per draw-call. */
+	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 
 	TWeakObjectPtr<class UDreamCanvas> ChildCanvas;//insert point to sort child canvas
 public:

@@ -21,9 +21,13 @@ FORCEINLINE float RoundToFloat(float value)
 
 DECLARE_CYCLE_STAT(TEXT("UIGeometry TransformPixelPerfectVertices"), STAT_TransformPixelPerfectVertices, STATGROUP_DreamGUI);
 
-void FDreamUIGeometry::AdjustPixelPerfectPos(TArray<FDreamUIOriginVertexData>& originVertices, int startIndex, int count, UDreamCanvas* RenderCanvas, UDreamVisual* Visual)
+void FDreamUIGeometry::AdjustPixelPerfectPos(TArray<FDreamUIOriginVertexData>& originVertices, int startIndex, int endIndex, UDreamCanvas* RenderCanvas, UDreamVisual* Visual)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
+	//the third parameter was named `count` but has always been used, here and by every caller, as the
+	//index to stop before. Renamed rather than reinterpreted: reinterpreting it would silently change
+	//what every existing call snaps.
+	endIndex = FMath::Min(endIndex, originVertices.Num());
 	auto CanvasWidget = RenderCanvas->GetRootCanvas()->GetWidget();
 	auto ComponentToCanvasTransform = Visual->GetWidget()->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
 	if (!UDreamCanvas::Is2DUITransform(ComponentToCanvasTransform))return;//only 2d UI can do pixel perfect
@@ -34,7 +38,7 @@ void FDreamUIGeometry::AdjustPixelPerfectPos(TArray<FDreamUIOriginVertexData>& o
 	float rootCanvasScale = RenderCanvas->GetRootCanvas()->GetCanvasScale();
 	float inv_RootCanvasScale = 1.0f / rootCanvasScale;
 
-	for (int i = startIndex; i < count; i++)
+	for (int i = startIndex; i < endIndex; i++)
 	{
 		auto item = originVertices[i].Position;
 
@@ -2244,7 +2248,29 @@ void FDreamUIGeometry::CalculateOffsetAndSize(
 }
 
 
+FDreamUIGeometry::FTransformVerticesParams FDreamUIGeometry::MakeTransformVerticesParams(UDreamCanvas* canvas, UDreamVisual* item)
+{
+	//every UObject read in the whole transform happens here, on the game thread
+	FTransformVerticesParams Params;
+	Params.InverseCanvasTransform = canvas->GetWidget()->GetWorldTransform().Inverse();
+	Params.ItemWorldTransform = item->GetWidget()->GetWorldTransform();
+	Params.bHasPerspectiveApplied = item->GetWidget()->HasPerspectiveApplied();
+	if (Params.bHasPerspectiveApplied)
+	{
+		Params.ItemWorldMatrix = item->GetWidget()->GetWorldMatrix();
+	}
+	//read after CalculateLocalBounds has run, which is why that call has to stay on the game thread too
+	item->GetGeometryBoundsInLocalSpace(Params.LocalBoundsMin, Params.LocalBoundsMax);
+	Params.bRequireNormalAndTangent = canvas->GetActualRequireNormalAndTangent();
+	return Params;
+}
+
 void FDreamUIGeometry::TransformVertices(UDreamCanvas* canvas, UDreamVisual* item, FDreamUIGeometry* uiGeo)
+{
+	TransformVertices(MakeTransformVerticesParams(canvas, item), uiGeo);
+}
+
+void FDreamUIGeometry::TransformVertices(const FTransformVerticesParams& Params, FDreamUIGeometry* uiGeo)
 {
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
@@ -2259,24 +2285,24 @@ void FDreamUIGeometry::TransformVertices(UDreamCanvas* canvas, UDreamVisual* ite
 		originVertices.AddDefaulted(vertexCount - originVertexCount);
 	}
 
-	auto inverseCanvasTf = canvas->GetWidget()->GetWorldTransform().Inverse();
-	const auto& itemTf = item->GetWidget()->GetWorldTransform();
+	const FTransform& inverseCanvasTf = Params.InverseCanvasTransform;
+	const FTransform& itemTf = Params.ItemWorldTransform;
 	FTransform itemToCanvasTf;
 	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
 	uiGeo->TransformRelativeToCanvas = itemToCanvasTf;
 	auto itemToCanvasTf2D = UDreamCanvas::ConvertTo2DTransform(itemToCanvasTf);
 	FVector2D itemMin, itemMax;
-	UDreamCanvas::CalculateVisual2DBounds(item, itemToCanvasTf2D, itemMin, itemMax);
+	UDreamCanvas::CalculateVisual2DBounds(Params.LocalBoundsMin, Params.LocalBoundsMax, itemToCanvasTf2D, itemMin, itemMax);
 	uiGeo->BoundsMin2DInCanvasSpace = itemMin;
 	uiGeo->BoundsMax2DInCanvasSpace = itemMax;
 
-	if (item->GetWidget()->HasPerspectiveApplied())
+	if (Params.bHasPerspectiveApplied)
 	{
 		// Inside a perspective scope the widget is drawn somewhere its FTransform does not describe,
 		// so the positions and the bounds both have to come from the remapped geometry. The bounds
 		// matter as much as the vertices: they drive batching overlap and culling, and bounds that
 		// still described the un-foreshortened rect would cull widgets that are plainly on screen.
-		const FMatrix ItemToCanvasMatrix = item->GetWidget()->GetWorldMatrix() * inverseCanvasTf.ToMatrixWithScale();
+		const FMatrix ItemToCanvasMatrix = Params.ItemWorldMatrix * inverseCanvasTf.ToMatrixWithScale();
 		FVector2D RemappedMin(TNumericLimits<double>::Max(), TNumericLimits<double>::Max());
 		FVector2D RemappedMax(TNumericLimits<double>::Lowest(), TNumericLimits<double>::Lowest());
 		for (int i = 0; i < vertexCount; i++)
@@ -2304,7 +2330,7 @@ void FDreamUIGeometry::TransformVertices(UDreamCanvas* canvas, UDreamVisual* ite
 		}
 	}
 
-	if (canvas->GetActualRequireNormalAndTangent())
+	if (Params.bRequireNormalAndTangent)
 	{
 		for (int i = 0; i < vertexCount; i++)
 		{

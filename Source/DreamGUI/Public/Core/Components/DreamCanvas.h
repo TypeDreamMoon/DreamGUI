@@ -309,6 +309,28 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	bool bForceRenderToTarget = false;
+	/**
+	 * Leave elements that are entirely outside this canvas's rect out of the draw-call list.
+	 *
+	 * Only has an effect when this canvas's rect is the surface being drawn -- a root canvas, or one
+	 * with bForceRenderToTarget. A plain child canvas draws into its parent's surface and a canvas is
+	 * not a clipper, so its own rect says nothing about what is visible; culling is skipped there
+	 * whatever this says. Turn it off if you rely on off-screen elements still being assembled (for
+	 * instance to read a draw-call's vertex data for something other than drawing).
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	bool bCullElementsOutsideCanvas = true;
+	/**
+	 * Resolution this canvas's screen-space UI is rendered at, as a fraction of the viewport.
+	 *
+	 * 1 draws at full resolution. Below 1 draws into a smaller intermediate target and upscales, which
+	 * trades UI sharpness for fill rate -- the usual knob on mobile and on a lower-end console profile.
+	 * Only applies to a root canvas rendering ScreenSpaceOverlay through DreamGUI's own renderer;
+	 * RenderTarget mode already has RenderTargetResolutionScale, and WorldSpace UI is scaled by the
+	 * scene's own resolution settings.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "0.1", ClampMax = "1.0", UIMin = "0.1", UIMax = "1.0"))
+	float ScreenSpaceRenderScale = 1.0f;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		EDreamRenderMode RenderMode = EDreamRenderMode::WorldSpace;
 	/**
@@ -518,6 +540,38 @@ public:
 		EDreamRenderMode GetRenderMode()const { return RenderMode; }
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	bool GetForceRenderToTarget()const{return bForceRenderToTarget;}
+	/**
+	 * Hold this canvas's draw-call list as it is, however dirty its contents become.
+	 *
+	 * What UInvalidationBox does for Slate's cached draw elements, for DreamGUI's equivalent: the
+	 * draw-call list. Vertex refreshes still run (a widget that only moves or changes colour keeps
+	 * updating); what is suspended is the rebuild that re-batches the subtree. Any rebuild requested
+	 * while suspended is remembered and happens the moment it is released, so nothing is lost -- only
+	 * deferred. UDreamInvalidationBox drives this; setting it by hand is for code that knows a subtree
+	 * is structurally frozen.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetDrawCallRebuildSuspended(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		bool GetDrawCallRebuildSuspended()const { return bDrawCallRebuildSuspended; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		bool GetCullElementsOutsideCanvas()const { return bCullElementsOutsideCanvas; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetCullElementsOutsideCanvas(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		float GetScreenSpaceRenderScale()const { return ScreenSpaceRenderScale; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetScreenSpaceRenderScale(float Value);
+	/**
+	 * The size a screen-space pass renders at for a given viewport size and render scale, and the
+	 * scale that was actually used (the request, clamped).
+	 *
+	 * Separate from the RDG work on purpose: this is the whole decision, it is pure arithmetic, and it
+	 * is where the rules live -- never larger than the viewport, never smaller than one pixel on
+	 * either axis, and a scale of exactly 1 must give back the viewport size unchanged so that the
+	 * ordinary case cannot drift by a rounding error.
+	 */
+	static FIntPoint CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale);
 	/** Get actual render target of this canvas if actual render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		UTextureRenderTarget2D* GetActualRenderTarget()const;
@@ -741,6 +795,8 @@ public:
 private:
 	uint32 bCanTickUpdate : 1 = true;//if Canvas can update from tick
 	uint32 bShouldRebuildDrawCall : 1 = true;
+	/** See SetDrawCallRebuildSuspended. The request above is kept, not dropped, while this is set. */
+	uint32 bDrawCallRebuildSuspended : 1 = false;
 	uint32 bHasPendingUpdateData : 1 = false;
 	uint32 bNeedToSortRenderPriority : 1 = true;
 	uint32 bHasAddToDreamScreenSpaceRenderer : 1 = false;//is this canvas added to DreamGUI screen space renderer
@@ -764,6 +820,8 @@ private:
 	mutable float LastRenderTime = 0;
 	friend class FDreamUIRenderSceneProxy;
 	friend class FDreamCanvasHierarchyOrderTest;
+	friend class FDreamCanvasVisualChangeRebuildsDrawCallTest;
+	friend class FDreamCanvasSuspendedRebuildKeepsTheRequestTest;
 	/**
 	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's built-in renderer, others use DreamGUI's renderer. Different renderers cannot share same render data.
 	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
@@ -831,6 +889,8 @@ public:
 	
 	static FTransform2D ConvertTo2DTransform(const FTransform& Transform);
 	static void CalculateVisual2DBounds(UDreamVisual* Visual, const FTransform2D& OutTransform2D, FVector2D& OutMin, FVector2D& OutMax);
+	/** Same, from the visual's local bounds as plain data -- safe to call off the game thread. */
+	static void CalculateVisual2DBounds(const FVector2D& InLocalMin, const FVector2D& InLocalMax, const FTransform2D& OutTransform2D, FVector2D& OutMin, FVector2D& OutMax);
 private:
 
 	/** canvas array belong to this canvas in hierarchy. */
@@ -864,7 +924,13 @@ private:
 	void UpdateDrawCallMaterial();
 	void SortDrawCall();
 public:
-	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList);
+	/**
+	 * @param bCullElementsOutsideCanvasRect	Leave out flat elements whose canvas-space bounds do not
+	 *		touch the canvas rect. Only pass true when this canvas's rect IS the surface being drawn --
+	 *		a root canvas, or one rendering to its own target. A plain child canvas draws into its
+	 *		parent's surface, and a canvas is not a clipper, so its rect says nothing about visibility.
+	 */
+	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false);
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
 	void CheckUIMesh()const;

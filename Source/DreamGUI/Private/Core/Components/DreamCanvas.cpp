@@ -387,14 +387,15 @@ void UDreamCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
 		bHasAddToDreamScreenSpaceRenderer = false;
 		if (RenderTargetViewExtension.IsValid())//could be RenderTarget mode
 		{
-			RenderTargetViewExtension->ClearScreenSpaceRootCanvas();
+			RenderTargetViewExtension->ClearScreenSpaceRootCanvas(this);
 		}
 		else//if not RenderTarget mode, then should be ScreenSpaceOverlay
 		{
 			auto ViewExtension = UDreamUIManagerWorldSubsystem::GetViewExtension(GetWorld(), false);
 			if (ViewExtension.IsValid())
 			{
-				ViewExtension->ClearScreenSpaceRootCanvas();
+				//only this canvas: the world's view extension is shared with every other root canvas
+				ViewExtension->ClearScreenSpaceRootCanvas(this);
 			}
 		}
 	}
@@ -511,7 +512,7 @@ void UDreamCanvas::CheckRenderMode(bool PropagateToChildrenCanvas)
 	{
 		if (auto DreamWidget = GetWidget())
 		{
-			DreamWidget->MarkRenderModeChangeRecursive(this, OldRenderMode, CurrentRenderMode);
+			DreamWidget->MarkRenderModeChangeRecursive(this);
 		}
 		//clear drawcall, delete mesh, because UE/DreamGUI render's mesh data not compatible
 		this->ClearDrawCall();
@@ -824,7 +825,16 @@ void UDreamCanvas::BeginDestroy()
 
 void UDreamCanvas::MarkVisualWillChange(UDreamVisual* InOldVisual)
 {
-	MarkCanvasUpdate(false);
+	/**
+	 * A visual leaving this canvas invalidates the draw-call list itself, not just the vertex data:
+	 * the geometry it contributed has to come out of whatever draw-call it was batched into, and the
+	 * draw-call may no longer exist at all. Marking a plain tick update only re-runs the cheap refresh
+	 * path, which copies vertices into the layout built for the visual that is going away. In the
+	 * editor this was invisible because PostReinitProperties marks everything dirty; at runtime
+	 * (Blueprint swapping a visual type, or an object pool reusing a widget) the old visual kept
+	 * drawing.
+	 */
+	MarkCanvasUpdate(true);
 }
 
 void UDreamCanvas::RegisterVisual(UDreamVisual* InVisual)
@@ -842,6 +852,9 @@ void UDreamCanvas::RegisterVisual(UDreamVisual* InVisual)
 	VisualList.AddUnique(InVisual);
 	CheckWidgetPropertyData();
 	if (bAlreadyRegisteredHere)return;
+	//a visual arriving needs a draw-call of its own (or a place in someone else's), which only the
+	//rebuild pass can work out -- the refresh path just re-copies vertices into the existing layout.
+	MarkCanvasUpdate(true);
 	InVisual->SetWidgetPropertyDataStartPosition(WidgetPropertyDataAsTexture->RegisterBuffer());
 }
 
@@ -998,6 +1011,17 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 {
 	SCOPE_CYCLE_COUNTER(STAT_PrepareDrawCallBatching);
 	OutRenderDataArray.Reset();
+	/**
+	 * Drain the vertex-transform work once, here, before reading any geometry: CopyDataForPrepare
+	 * below must not read a geometry that is still being written. This used to be a per-geometry
+	 * `while (bIsCalculating) Sleep(1ms)` inside the loop -- one game-thread sleep per unfinished
+	 * element, each rounded up to the scheduler's granularity. One wait covers the whole list, and it
+	 * can run the outstanding transforms on this thread rather than waiting to be scheduled.
+	 */
+	if (TransformVerticesAsyncFunctionRunnable.IsValid())
+	{
+		TransformVerticesAsyncFunctionRunnable->WaitForAllFunctions();
+	}
 	for (int i = 0; i < WidgetList.Num(); i++)
 	{
 		auto& Widget = WidgetList[i];
@@ -1030,10 +1054,28 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 					if (ItemGeo == nullptr)continue;
 					while (ItemGeo->bIsCalculating)
 					{
-						FPlatformProcess::Sleep(0.001f);//we must wait until geometry calculation finish, or CopyDataForPrepare will get wrong data
+						//should not be reached: the transform queue was drained before this loop began.
+						//Kept as the correctness backstop -- CopyDataForPrepare must never read a
+						//half-written geometry -- but yielding rather than sleeping a millisecond.
+						FPlatformProcess::Sleep(0.0f);
 					}
 					if (ItemGeo->Vertices.Num() == 0)continue;
-					if (ItemGeo->Vertices.Num() > LEXUI_MAX_VERTEX_COUNT)continue;
+					/**
+					 * One element that does not fit in an index buffer cannot be drawn, but it used to
+					 * disappear without a word -- a long text block or a big tiled image simply stopped
+					 * rendering, with nothing in the log to connect it to a vertex budget. Say so.
+					 *
+					 * The comparison is >=, not >: PushSingleDrawCall asserts VerticesCount is strictly
+					 * below the budget, so a geometry sitting exactly on it passed this gate and then
+					 * tripped the check one step later.
+					 */
+					if (ItemGeo->Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
+					{
+						UE_LOG(DreamGUI, Error, TEXT("[%s].%d Widget '%s' has %d vertices, at or past the %d a single draw-call can index, so it cannot be drawn. Split it into several widgets, or build with a 32-bit index buffer (LEXUI_USE_32BIT_INDEXBUFFER in DreamGUI.Build.cs).")
+							, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
+							, *Widget->GetDisplayName(), ItemGeo->Vertices.Num(), LEXUI_MAX_VERTEX_COUNT);
+						continue;
+					}
 					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::BatchMesh);
 					RenderData.BatchMeshGeometry.CopyDataForPrepare(*ItemGeo);
 					RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
@@ -1074,13 +1116,42 @@ DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCallAsync"), STAT_BatchDrawCall, STATGR
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/OverlapTest"), STAT_OverlapTest, STATGROUP_DreamGUI);
 
 void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop,
-	const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList)
+	const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
+	bool bCullElementsOutsideCanvasRect)
 {
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
 
 	InOutUIDrawCallList.Reset();
-	
+
 	auto CanvasRect = DreamUIQuadTree::Rectangle(InCanvasLeftBottom, InCanvasRightTop);
+
+	/**
+	 * Element-level culling. An element whose canvas-space bounds do not touch the canvas rect cannot
+	 * put a pixel on screen, so it is left out of the draw-call list entirely -- it costs no vertices,
+	 * no index range, and (more importantly) it no longer sits between two elements that would
+	 * otherwise batch together. Long scrolling lists are the case this is for: without it, every row
+	 * ever spawned is still assembled, transformed and uploaded.
+	 *
+	 * Bounds are inclusive-of-touching on purpose: an element exactly on the boundary is kept, because
+	 * a half-pixel of antialiasing or a rounding difference on the GPU side would show it. Only
+	 * elements that are wholly past an edge are dropped.
+	 *
+	 * Off unless the caller says otherwise, and the caller only says so when THIS canvas's rect is the
+	 * surface being drawn (a root canvas, or one rendering to its own target). A plain child canvas
+	 * draws into its parent's surface and its own rect says nothing about what is visible -- a canvas
+	 * is not a clipper, and children are free to sit outside it.
+	 *
+	 * Post-process and direct-mesh elements are never culled: a post process reads what is behind it
+	 * and a direct mesh's 2D bounds are not meaningful (particles, static meshes), which is the same
+	 * reason OverlapWithOtherDrawCall answers "always overlaps" for them.
+	 */
+	auto IsOutsideCanvas = [&](const FVector2D& InBoundsMin, const FVector2D& InBoundsMax) {
+		if (!bCullElementsOutsideCanvasRect)return false;
+		return InBoundsMax.X < InCanvasLeftBottom.X
+			|| InBoundsMin.X > InCanvasRightTop.X
+			|| InBoundsMax.Y < InCanvasLeftBottom.Y
+			|| InBoundsMin.Y > InCanvasRightTop.Y;
+	};
 
 	auto IntersectBounds = [](FVector2D aMin, FVector2D aMax, FVector2D bMin, FVector2D bMax) {
 		return !(bMin.X >= aMax.X
@@ -1130,7 +1201,14 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 
 		if (!InIs2DUI)
 		{
-			//3d UI can only batch into last draw-call
+			/**
+			 * 3d UI can only batch into last draw-call: its depth ordering against anything further back is
+			 * not something the 2D bounds can answer, so only the neighbour it is already adjacent to in sort
+			 * order is safe. That is also why this path can skip FitInDrawCallMinIndex without crossing a
+			 * barrier: a post-process/direct-mesh/child-canvas draw-call raises that floor to Num() as it is
+			 * pushed, so whenever the floor is above the last index the last draw-call IS the barrier, and
+			 * CanConsumeUIGeometryForBatchMesh rejects every draw-call that is not a BatchMesh.
+			 */
 			const auto& LastDrawCall = InOutUIDrawCallList[LastDrawCallIndex];
 			if (LastDrawCall.CanConsumeUIGeometryForBatchMesh(InGeo))
 			{
@@ -1144,8 +1222,22 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 		for (int i = LastDrawCallIndex; i >= FitInDrawCallMinIndex; i--)//from tail to head
 		{
 			const auto& OtherDrawCall = InOutUIDrawCallList[i];
-			if (!OtherDrawCall.bIs2DSpace)//draw-call is 3d, can't batch
+			if (!OtherDrawCall.bIs2DSpace)//draw-call is 3d, can't batch into it and can't look past it
 			{
+				/**
+				 * A 3D draw-call is a floor, not a dead end. Every draw-call already walked between here and
+				 * the tail was proven not to overlap this geometry (that is the only way the loop gets this
+				 * deep), so a candidate collected above the floor is still a legal place to put the item and
+				 * the search never crosses the 3D draw-call -- exactly the reasoning the overlap bail-out
+				 * below uses. Returning false outright would open a new draw-call for nothing. Before
+				 * CopyDataForPrepare carried TransformRelativeToCanvas, bIs2DSpace was always true and this
+				 * whole branch was unreachable.
+				 */
+				if (CanFitinDrawCallIndexArray.Num() > 0)
+				{
+					OutDrawCallIndexToFitin = CanFitinDrawCallIndexArray[CanFitinDrawCallIndexArray.Num() - 1];
+					return true;
+				}
 				return false;
 			}
 
@@ -1196,6 +1288,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 					DrawCallItem.Texture = InItemGeo.Texture;
 				}
 				DrawCallItem.Material = InItemGeo.Material.Get();
+				DrawCallItem.BlendMode = InItemGeo.BlendMode;
 				DrawCallItem.BatchMeshGeometryArray.Add(InItemGeo);
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
@@ -1260,6 +1353,12 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				}
 
 				bool is2DUIItem = Is2DUITransform(ItemGeo.TransformRelativeToCanvas);
+				//a 3D element's 2D bounds do not describe where it ends up on screen, so only flat
+				//elements are culled by them
+				if (is2DUIItem && IsOutsideCanvas(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace))
+				{
+					continue;
+				}
 				int DrawCallIndexToFitin;
 				if (ItemGeo.bSupportDrawcallBatching && CanFitInDrawCall(ItemGeo, is2DUIItem, DrawCallIndexToFitin))
 				{
@@ -1407,7 +1506,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		}
 		WidgetPropertyDataAsTexture->Flush();
 		
-		if (bShouldRebuildDrawCall)
+		if (bShouldRebuildDrawCall && !bDrawCallRebuildSuspended)
 		{
 			bShouldRebuildDrawCall = false;
 			NewestDrawCallFrameNumber = GFrameCounter;
@@ -1428,6 +1527,10 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				PreparedDrawCallData.LeftBottomPoint = LeftBottomPoint;
 				PreparedDrawCallData.RightTopPoint = RightTopPoint;
 				PreparedDrawCallData.FrameNumber = GFrameCounter;
+				//only when this canvas's rect is the surface being drawn: a root canvas, or one that
+				//renders to its own target. See BatchDrawCallAsync.
+				PreparedDrawCallData.bCullElementsOutsideCanvasRect = bCullElementsOutsideCanvas
+					&& (this->IsRootCanvas() || this->bForceRenderToTarget);
 				PrepareDrawCallBatchingData(PreparedDrawCallData.DataArray);
 				//push to async thread
 				DrawCallProcessingRunnable->PushPreparedDrawCallData(MoveTemp(PreparedDrawCallData));
@@ -1460,10 +1563,10 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 
 	if (!bAllowDropFrame)
 	{
-		while (DrawCallProcessingRunnable->IsBatching())
-		{
-			FPlatformProcess::Sleep(0.001f);
-		}
+		//this frame must show this frame's batching, so wait for it. The wait is not a sleep loop any
+		//more: it can retract a batch the worker pool has not started and run it here, which is both
+		//sooner than the old 1ms granularity and work the game thread was going to wait for anyway.
+		DrawCallProcessingRunnable->WaitForBatchingToFinish();
 	}
 
 	if (DrawCallProcessingRunnable->TryGetDrawCallData(CurrentDrawCallData))
@@ -1705,9 +1808,8 @@ void UDreamCanvas::SortDrawCall()
 		case EDreamRenderMode::RenderTarget:
 			GetRenderTargetViewExtension()->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
 			break;
-		case EDreamRenderMode::WorldSpace_DreamUI:
-			UDreamUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortWorldSpacePrimitiveRenderPriority();
-			break;
+		//WorldSpace_DreamUI needs no request: the renderer rebuilds and resorts its world-space
+		//sequence every frame, because that order depends on distance to the current camera.
 		}
 	}
 }
@@ -1739,8 +1841,15 @@ FVector4f UDreamCanvas::MakeFontAtlasInfo(const FDreamUIDrawCall& DrawCallItem)
 
 bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* InMaterial)
 {
-	static TArray<FMaterialParameterInfo> ParameterInfos;
-	static TArray<FGuid> ParameterIds;
+	/**
+	 * Locals, not function-level statics. This is called from the draw-call update of every canvas
+	 * (and from the editor), so two callers sharing one scratch buffer is a data race, and a static
+	 * one also holds on to the high-water-mark allocation of the worst material ever inspected for
+	 * the rest of the process. (GetAllTextureParameterInfo takes default-allocator arrays, so these
+	 * cannot be inline-allocated.)
+	 */
+	TArray<FMaterialParameterInfo> ParameterInfos;
+	TArray<FGuid> ParameterIds;
 	InMaterial->GetAllTextureParameterInfo(ParameterInfos, ParameterIds);
 	auto FoundIndex = ParameterInfos.IndexOfByPredicate([](const FMaterialParameterInfo& Item)
 		{
@@ -1919,6 +2028,9 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 					BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 					BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
 					BuiltIn.FontEmTexels = AtlasInfo.W;
+					//every element in this draw-call agreed on it; CanConsumeUIGeometryForBatchMesh is
+					//what makes that true
+					BuiltIn.BlendMode = DrawCallItem.BlendMode;
 					UIMesh->SetMeshSectionBuiltIn(SectionIndex, BuiltIn);
 					UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
 					break;
@@ -2017,7 +2129,68 @@ void UDreamCanvas::SetRenderTargetResolutionScale(float Value)
 	{
 		RenderTargetResolutionScale = Value;
 		bAnythingChangedForRenderTarget = true;
+		//this is a divisor of the render target size in CheckAndApplyViewportParameter, so it changes
+		//the canvas's notion of its viewport; nothing else would re-derive that outside the editor
+		CheckAndApplyViewportParameter();
 	}
+}
+
+void UDreamCanvas::SetDrawCallRebuildSuspended(bool Value)
+{
+	if (bDrawCallRebuildSuspended != Value)
+	{
+		bDrawCallRebuildSuspended = Value;
+		if (!bDrawCallRebuildSuspended)
+		{
+			/**
+			 * Releasing is what makes the deferral safe: bShouldRebuildDrawCall was never cleared while
+			 * suspended, so anything that went dirty in the meantime is still asking for its rebuild.
+			 * bCanTickUpdate is what actually gets the update pass to look, and it may well have been
+			 * consumed by a vertex-only refresh since.
+			 */
+			bCanTickUpdate = true;
+		}
+	}
+}
+
+void UDreamCanvas::SetCullElementsOutsideCanvas(bool Value)
+{
+	if (bCullElementsOutsideCanvas != Value)
+	{
+		bCullElementsOutsideCanvas = Value;
+		//which elements reach the draw-call list changes, so the list itself has to be rebuilt
+		MarkCanvasUpdate(true);
+	}
+}
+
+void UDreamCanvas::SetScreenSpaceRenderScale(float Value)
+{
+	Value = FMath::Clamp(Value, 0.1f, 1.0f);
+	if (ScreenSpaceRenderScale != Value)
+	{
+		ScreenSpaceRenderScale = Value;
+		bAnythingChangedForRenderTarget = true;
+	}
+}
+
+FIntPoint UDreamCanvas::CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale)
+{
+	const FIntPoint ClampedViewport(FMath::Max(InViewportSize.X, 1), FMath::Max(InViewportSize.Y, 1));
+	//1 means "leave it alone", and it has to mean that exactly: rounding a full-size pass through the
+	//arithmetic below could come back one pixel short and quietly make every UI a rescale
+	const float RequestedScale = FMath::Clamp(InRequestedScale, 0.1f, 1.0f);
+	if (RequestedScale >= 1.0f)
+	{
+		OutAppliedScale = 1.0f;
+		return ClampedViewport;
+	}
+	const FIntPoint ScaledSize(
+		FMath::Max(FMath::RoundToInt(ClampedViewport.X * RequestedScale), 1),
+		FMath::Max(FMath::RoundToInt(ClampedViewport.Y * RequestedScale), 1));
+	//report what was actually rendered at, not what was asked for: the pixel rounding and the
+	//one-pixel floor both move it, and the upscale has to use the size that exists
+	OutAppliedScale = (float)ScaledSize.X / (float)ClampedViewport.X;
+	return ScaledSize;
 }
 
 void UDreamCanvas::SetRenderTargetSizeMode(EDreamCanvasRenderTargetSizeMode Value)
@@ -2026,6 +2199,7 @@ void UDreamCanvas::SetRenderTargetSizeMode(EDreamCanvasRenderTargetSizeMode Valu
 	{
 		RenderTargetSizeMode = Value;
 		bAnythingChangedForRenderTarget = true;
+		CheckAndApplyViewportParameter();
 	}
 }
 
@@ -2492,6 +2666,14 @@ void UDreamCanvas::SetRenderTarget(UTextureRenderTarget2D* Value)
 		if (CheckRootCanvas() && RootCanvas == this)
 		{
 			UpdateRenderTarget(false);
+			/**
+			 * In RenderTarget mode ViewportSize is derived from the render target's size, not from the
+			 * game viewport -- which is why RegisterCanvasScaler binds the viewport resize event only
+			 * for ScreenSpaceOverlay. Nothing else told this canvas that its "viewport" had changed
+			 * size, so outside the editor (where the editor tick happened to re-derive it) the canvas
+			 * scale and projection kept the size of the previous render target for good.
+			 */
+			CheckAndApplyViewportParameter();
 		}
 		OnRenderTargetChanged.Broadcast(RenderTarget);
 	}
@@ -2639,7 +2821,15 @@ void UDreamCanvas::CheckWidgetPropertyData()
 
 void UDreamCanvas::PushAsyncFunction_TransformVertices(TFunction<void()> InFunction)
 {
-	TransformVerticesAsyncFunctionRunnable->PushFunction(MoveTemp(InFunction));
+	//if there is no worker to take it, run it here. The caller has already flagged its geometry as
+	//being calculated, and a function that is silently dropped leaves that flag set for ever, so
+	//every later wait on that geometry would never return.
+	if (TransformVerticesAsyncFunctionRunnable.IsValid() && TransformVerticesAsyncFunctionRunnable->IsRunning())
+	{
+		TransformVerticesAsyncFunctionRunnable->PushFunction(MoveTemp(InFunction));
+		return;
+	}
+	InFunction();
 }
 
 void UDreamCanvas::RemoveClipData(const TSharedPtr<FDreamUIClipData>& InClipData)
@@ -2673,6 +2863,15 @@ void UDreamCanvas::CalculateVisual2DBounds(UDreamVisual* Visual, const FTransfor
 {
 	FVector2D LocalPoint1, LocalPoint2;
 	Visual->GetGeometryBoundsInLocalSpace(LocalPoint1, LocalPoint2);
+	CalculateVisual2DBounds(LocalPoint1, LocalPoint2, OutTransform2D, OutMin, OutMax);
+}
+
+void UDreamCanvas::CalculateVisual2DBounds(const FVector2D& InLocalMin, const FVector2D& InLocalMax, const FTransform2D& OutTransform2D, FVector2D& OutMin, FVector2D& OutMax)
+{
+	//takes the local bounds as data rather than reading them off the visual, so the vertex-transform
+	//worker task can call it without dereferencing a UObject
+	const FVector2D LocalPoint1 = InLocalMin;
+	const FVector2D LocalPoint2 = InLocalMax;
 	const auto Point1 = OutTransform2D.TransformPoint(LocalPoint1);
 	const auto Point2 = OutTransform2D.TransformPoint(LocalPoint2);
 	const auto Point3 = OutTransform2D.TransformPoint(FVector2D(LocalPoint2.X, LocalPoint1.Y));
@@ -2795,6 +2994,10 @@ void UDreamCanvas::UnregisterCanvasScaler()
 		{
 			DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
 		}
+		//reset whether or not the manager was still there to remove it from: a handle kept after
+		//unregistering reads as "still bound", so the next RegisterCanvasScaler overwrites it and any
+		//binding it did name is never removable again
+		EditorTickDelegateHandle.Reset();
 	}
 #endif
 	//reset the canvasScale to default
@@ -2812,6 +3015,7 @@ void UDreamCanvas::UnregisterCanvasScaler()
 				}
 			}
 		}
+		ViewportResizeDelegateHandle.Reset();
 	}
 }
 
@@ -3171,7 +3375,7 @@ void UDreamCanvas::SetProjectionType(TEnumAsByte<ECameraProjectionMode::Type> Va
 {
 	if (ProjectionType != Value)
 	{
-		ProjectionType = ProjectionType = Value;
+		ProjectionType = Value;
 		bIsViewProjectionMatrixDirty = true;
 		OnViewportParameterChanged();
 	}
@@ -3180,7 +3384,7 @@ void UDreamCanvas::SetFieldOfView(float Value)
 {
 	if (FieldOfView != Value)
 	{
-		FieldOfView = FieldOfView = Value;
+		FieldOfView = Value;
 		bIsViewProjectionMatrixDirty = true;
 		OnViewportParameterChanged();
 	}

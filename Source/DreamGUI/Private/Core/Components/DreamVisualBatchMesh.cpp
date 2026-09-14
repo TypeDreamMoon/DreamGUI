@@ -26,7 +26,12 @@ UDreamVisualBatchMesh::UDreamVisualBatchMesh(const FObjectInitializer& ObjectIni
 	bTriangleChanged = true;
 	bTextureChanged = true;
 	bMaterialChanged = true;
-	bMeshModifierOrderChanged = false;
+	// Raised, not cleared: the run order (component index, mesh-duplicating modifiers last) has to
+	// hold on the FIRST geometry build whichever way the list got filled -- modifiers registering
+	// with the widget, a modifier moving here from a visual that was swapped out, or one added at
+	// runtime. Each of those marks the order dirty on its own, and starting clean made that a
+	// property of every one of them remembering to; starting dirty makes it a property of the list.
+	bMeshModifierOrderChanged = true;
 }
 
 void UDreamVisualBatchMesh::BeginPlay()
@@ -160,7 +165,21 @@ void UDreamVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvC
 			{
 				return bAValid;
 			}
-			return bAValid && A->GetComponentIndexInWidget() < B->GetComponentIndexInWidget();
+			if (!bAValid)
+			{
+				return false;
+			}
+			// A modifier that appends whole copies of the mesh (outline, shadow) copies whatever the
+			// modifiers before it produced, and its copies lie outside every char vertex range a text
+			// animation addresses. Running those last makes the result independent of which component
+			// was added first, instead of an outline that silently stops following an animated
+			// character when the two components happen to be in the other order.
+			const bool bADuplicates = A->GetDuplicatesMesh();
+			if (bADuplicates != B->GetDuplicatesMesh())
+			{
+				return !bADuplicates;
+			}
+			return A->GetComponentIndexInWidget() < B->GetComponentIndexInWidget();
 		});
 	}
 	for (auto& ModifierComp : MeshModifierArray)
@@ -198,6 +217,9 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 			bMaterialChanged = false;
 			UIGeometry->Material = GetMaterialToCreateGeometry();
 		}
+		//cheap, and unconditional so that it cannot go stale: the geometry is what the batcher sees,
+		//and the blend mode is part of a draw-call's identity there
+		UIGeometry->BlendMode = BlendMode;
 	}
 	
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
@@ -247,12 +269,27 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 #if 1
 			check(!UIGeometry->bIsCalculating);//this should not happen
 			UIGeometry->bIsCalculating = true;
+			/**
+			 * Everything the transform needs off a UObject is read here, on the game thread, exactly as
+			 * the draw-call batching worker was taught to do: the task below used to capture Canvas and
+			 * this as bare pointers and call GetWorldTransform / GetGeometryBoundsInLocalSpace /
+			 * GetActualRequireNormalAndTangent on them from a worker thread, which races with garbage
+			 * collection and with the game thread's own writes.
+			 *
+			 * CalculateLocalBounds stays on the game thread for the same reason: it writes the visual's
+			 * LocalMinPoint3D/LocalMaxPoint3D, which hit testing and layout read from the game thread,
+			 * and MakeTransformVerticesParams needs its result.
+			 *
+			 * The geometry travels as a shared pointer so it outlives this visual if the visual is
+			 * destroyed while the task is in flight.
+			 */
+			CalculateLocalBounds();
 			//it is safe to do async calculation because we can be sure it finish in same frame
-			Canvas->PushAsyncFunction_TransformVertices([=, this]()
+			Canvas->PushAsyncFunction_TransformVertices(
+				[Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this), Geometry = this->UIGeometry]()
 			{
-				CalculateLocalBounds();
-				FDreamUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
-				UIGeometry->bIsCalculating = false;
+				FDreamUIGeometry::TransformVertices(Params, Geometry.Get());
+				Geometry->bIsCalculating = false;
 			});
 #else
 			CalculateLocalBounds();
@@ -314,12 +351,27 @@ bool UDreamVisualBatchMesh::GetAnythingDirty()const
 void UDreamVisualBatchMesh::AddMeshModifier(UDreamMeshModifierBase* InModifier)
 {
 	MeshModifierArray.AddUnique(InModifier);
-	MarkVerticesDirty(true, true, true, true);
+	// A new entry lands at the end of the array, which is not where it necessarily runs: the order is
+	// component index, with the mesh-duplicating modifiers last. Registration order used to stand in
+	// for that until something else asked for a re-sort.
+	MarkMeshModifierOrderChanged();
 }
 void UDreamVisualBatchMesh::RemoveMeshModifier(UDreamMeshModifierBase* InModifier)
 {
 	MeshModifierArray.Remove(InModifier);
 	MarkVerticesDirty(true, true, true, true);
+}
+
+void UDreamVisualBatchMesh::SetBlendMode(EDreamUIBlendMode Value)
+{
+	if (BlendMode != Value)
+	{
+		BlendMode = Value;
+		//the draw-call list itself changes: this element can no longer sit in a draw-call with the old
+		//blend mode, so a vertex refresh would draw it with the wrong blend state. MarkMaterialDirty
+		//is what re-reads the geometry's render state and asks for the rebuild.
+		MarkMaterialDirty();
+	}
 }
 
 void UDreamVisualBatchMesh::MarkMeshModifierOrderChanged()
