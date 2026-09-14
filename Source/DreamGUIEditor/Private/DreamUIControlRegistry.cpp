@@ -39,6 +39,13 @@
 #include "Controls/DreamListView.h"
 #include "Controls/DreamProgressBar.h"
 #include "Controls/DreamTreeView.h"
+#include "Controls/DreamBorder.h"
+#include "Controls/DreamEditableText.h"
+#include "Controls/DreamMenuAnchor.h"
+#include "Controls/DreamNativeWidgetHost.h"
+#include "Controls/DreamRichTextBlock.h"
+#include "Controls/DreamThrobber.h"
+#include "Controls/DreamTileView.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUISettings.h"
@@ -235,6 +242,23 @@ namespace DreamUIControlRegistryLocal
 		if (UDreamTextInput* Input = Cast<UDreamTextInput>(Root))
 		{
 			Input->bMultiLine = true;
+		}
+	}
+
+	/** UMG's Throbber and CircularThrobber are one class and one property here, like the two sliders. */
+	static void ConfigureThrobberLinear(UDreamWidget* Root)
+	{
+		if (UDreamThrobber* Throbber = Cast<UDreamThrobber>(Root))
+		{
+			Throbber->Shape = EDreamThrobberShape::Linear;
+		}
+	}
+
+	static void ConfigureThrobberCircular(UDreamWidget* Root)
+	{
+		if (UDreamThrobber* Throbber = Cast<UDreamThrobber>(Root))
+		{
+			Throbber->Shape = EDreamThrobberShape::Circular;
 		}
 	}
 
@@ -776,17 +800,29 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	Register(MakeFrameworkPanel(TEXT("SizeBox"), UDreamLayoutContainerSizeBox::StaticClass(), TEXT("ClassIcon.Sizebox"), true));
 	Register(MakeFrameworkPanel(TEXT("WidgetSwitcher"), UDreamLayoutContainerWidgetSwitcher::StaticClass(), TEXT("ClassIcon.WidgetSwitcher"), true));
 	Register(MakeFrameworkPanel(TEXT("LayoutScrollBox"), UDreamLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), true));
+	// Border is the real container now, and it keeps the plain key. The entry that used to hold it was
+	// an emulation -- an Overlay with an image visual and a ContentWidget -- built when there was no
+	// UDreamLayoutContainerBorder to register; the image and its configure step come across so that
+	// dropping a Border still arrives with a background to colour, while the alignment that only a
+	// border has now has somewhere to live. The ContentWidget does NOT come across: the container
+	// asks for it through GetRequiredBehaviourClasses, and listing it here as well would add a second.
+	FDreamUIControlDescriptor Border = MakeFrameworkPanel(TEXT("Border"), UDreamLayoutContainerBorder::StaticClass(), TEXT("ClassIcon.Border"), true);
+	Border.VisualClass = UDreamImage::StaticClass();
+	Border.NativeConfigure = ConfigureImage;
+	Register(Border);
+	// MenuAnchor keeps the plain key for the same reason NativeBorder gave it up further down: this is
+	// the placement arithmetic, and UDreamMenuAnchor (registered as NativeMenuAnchor) is the popup
+	// lifetime built on top of it.
+	Register(MakeFrameworkPanel(TEXT("MenuAnchor"), UDreamLayoutContainerMenuAnchor::StaticClass(), TEXT("ClassIcon.MenuAnchor"), true));
 
 	FDreamUIControlDescriptor ScrollBox = MakeBehaviour(TEXT("ScrollBox"), UUIScrollView::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBox);
 	ScrollBox.DisplayName = FText::FromString(TEXT("Dream Scroll Box"));
 	// The Dream scroll view is a behaviour, not a panel layout; keep it out of the panel list.
 	ScrollBox.Category = TEXT("Legacy DreamGUI Panels");
 	Register(ScrollBox);
-	FDreamUIControlDescriptor Border = MakePanel(TEXT("Border"), UDreamLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Border"));
-	Border.VisualClass = UDreamImage::StaticClass();
-	Border.BehaviourClass = UDreamContentWidget::StaticClass();
-	Border.NativeConfigure = ConfigureImage;
-	Register(Border);
+	// The Overlay-plus-image emulation of a Border used to be registered here, under the same "Border"
+	// key the real container now holds. Two registrations for one key is a palette collision, and the
+	// emulation was only ever standing in for the class that exists above.
 
 	FDreamUIControlDescriptor Spacer;
 	Spacer.Name = TEXT("Spacer");
@@ -813,6 +849,48 @@ void FDreamUIControlRegistry::RegisterDefaults()
 		UDreamListView::StaticClass(), TEXT("ClassIcon.ListView")));
 	Register(MakeControlClass(TEXT("NativeTreeView"), TEXT("Tree View"),
 		UDreamTreeView::StaticClass(), TEXT("ClassIcon.TreeView")));
+	// And the fourth: a tile view is the list with more than one column, so the control it registers
+	// is UDreamListViewBase's other subclass rather than the legacy recycling behaviour below.
+	Register(MakeControlClass(TEXT("NativeTileView"), TEXT("Tile View"),
+		UDreamTileView::StaticClass(), TEXT("ClassIcon.TileView")));
+
+	// THE SEVEN UMG CONTROLS THIS LIBRARY DID NOT HAVE.
+	//
+	// Each one is a class, a style family and a `.dui` tag, and each is written against the same
+	// question: what does UMG's version of this actually DO, and which of the pieces this plugin
+	// already owns can do it. None of them is new machinery -- the throbber ticks with the widget
+	// tick that already existed, the menu anchor is the popup layer plus the dropdown's blocker, the
+	// rich text block is UDreamText::bRichText, the host is UDreamUMGWidget, the borderless fields
+	// are UDreamTextInput with its box switched off. What was missing was the assembly and the tag.
+	//
+	// Two rows for the throbber and one class, the call this palette already makes for the two
+	// sliders, the two scrollbars and the two scroll boxes: an asset cannot branch on a property, and
+	// an entry can.
+	Register(MakeControlClass(TEXT("Throbber"), TEXT("Throbber"),
+		UDreamThrobber::StaticClass(), TEXT("ClassIcon.Throbber"), ConfigureThrobberLinear));
+	Register(MakeControlClass(TEXT("CircularThrobber"), TEXT("Circular Throbber"),
+		UDreamThrobber::StaticClass(), TEXT("ClassIcon.CircularThrobber"), ConfigureThrobberCircular));
+	// NativeBorder rather than Border: the panel entry below took the plain key first, and a favourite
+	// or a layout preference pointing at it should keep meaning what it meant.
+	Register(MakeControlClass(TEXT("NativeBorder"), TEXT("Border (Control)"),
+		UDreamBorder::StaticClass(), TEXT("ClassIcon.Border")));
+	// NativeMenuAnchor rather than MenuAnchor, for the reason NativeBorder is not Border: the layout
+	// panel above took the plain key first, and a favourite or a layout preference pointing at it
+	// should keep meaning what it meant. The two are not rivals -- the panel is the placement
+	// arithmetic (and this control uses it), the control is the popup's lifetime on top of it.
+	Register(MakeControlClass(TEXT("NativeMenuAnchor"), TEXT("Menu Anchor (Control)"),
+		UDreamMenuAnchor::StaticClass(), TEXT("ClassIcon.MenuAnchor")));
+	Register(MakeControlClass(TEXT("RichTextBlock"), TEXT("Rich Text Block"),
+		UDreamRichTextBlock::StaticClass(), TEXT("ClassIcon.RichTextBlock")));
+	Register(MakeControlClass(TEXT("NativeWidgetHost"), TEXT("Native Widget Host"),
+		UDreamNativeWidgetHost::StaticClass(), TEXT("ClassIcon.NativeWidgetHost")));
+	// The borderless pair. The BOXED pair is Native.TextInput and its multiline palette row above --
+	// UMG's four classes are two classes and one property here, and the axis that needed a class is
+	// the one this library could not express as a property.
+	Register(MakeControlClass(TEXT("EditableText"), TEXT("Editable Text"),
+		UDreamEditableText::StaticClass(), TEXT("ClassIcon.EditableText")));
+	Register(MakeControlClass(TEXT("MultiLineEditableText"), TEXT("Multi Line Editable Text"),
+		UDreamMultiLineEditableText::StaticClass(), TEXT("ClassIcon.MultiLineEditableText")));
 
 	FDreamUIControlDescriptor Progress = MakeBehaviour(TEXT("ProgressBar"), UUIProgressBar::StaticClass(), TEXT("ClassIcon.ProgressBar"), ConfigureProgressBar);
 	Progress.VisualClass = UDreamImage::StaticClass();
@@ -837,6 +915,22 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	TreeView.DisplayName = FText::FromString(TEXT("Tree View (Behaviour)"));
 	TreeView.Category = LegacyControlsCategory;
 	Register(TreeView);
+
+	/*
+	 * WHAT UMG HAS THAT THIS PALETTE STILL DOES NOT, now that the seven above landed.
+	 *
+	 * Recorded here because this function IS the list of what the library offers, and the reader who
+	 * comes looking for a control reads it. Both entries are deliberate, not pending:
+	 *
+	 *  - InvalidationBox and RetainerBox. Both are RENDERING decisions -- cache this subtree's
+	 *    geometry, render this subtree to a target and reuse it -- and neither is a control: they own
+	 *    no parts, read no style and answer no pointer. They belong to the draw pipeline, and that is
+	 *    where they are being built.
+	 *  - UMG's four editable-text classes are two here, and that is the whole difference: the
+	 *    box/no-box axis is the two classes (Native.TextInput, Native.EditableText) and the
+	 *    one-line/many-lines axis is a property on both, offered as its own palette row. Four classes
+	 *    for a two-by-two grid is UMG's shape, not a feature.
+	 */
 
 	Register(MakeVisual(TEXT("Polygon"), TEXT("Polygon"), TEXT("Extensions"), UDreamPolygon::StaticClass()));
 	Register(MakeVisual(TEXT("PolygonLine"), TEXT("Polygon Line"), TEXT("Extensions"), UDreamPolygonLine::StaticClass()));

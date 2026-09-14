@@ -285,4 +285,202 @@ bool FDreamControlDropdownTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlDropdownEmptyCaptionTest,
+	"DreamGUI.Controls.Dropdown.ClearingTheOptionsClearsTheCaptionRatherThanLeavingTheOldWord",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlDropdownEmptyCaptionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamControlLibraryTestLocal;
+
+	// ApplyValueToVisual returned early on an index the options do not answer to, and that is not an
+	// impossible state -- it is BOTH of the two "nothing is chosen" states the class documents: an
+	// index of -1, and an options array a filter emptied. So the caption kept showing the last word
+	// it had been given, naming a choice the dropdown could no longer make.
+	TStrongObjectPtr<UDreamDropdown> Dropdown(NewObject<UDreamDropdown>(GetTransientPackage()));
+	Dropdown->Options = { FText::FromString(TEXT("Low")), FText::FromString(TEXT("High")) };
+	Dropdown->SelectedIndex = 1;
+	Dropdown->Initialize();
+
+	UDreamText* Caption = Cast<UDreamText>(
+		Dropdown->CaptionNode != nullptr ? Dropdown->CaptionNode->GetVisual() : nullptr);
+	if (!TestNotNull(TEXT("the caption exists"), Caption))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the caption starts on the chosen option"),
+		Caption->GetText().ToString(), FString(TEXT("High")));
+
+	// Nothing chosen. -1 is the documented "none", so the caption has to say nothing.
+	Dropdown->SetSelectedIndex(INDEX_NONE);
+	TestEqual(TEXT("selecting nothing empties the caption"),
+		Caption->GetText().ToString(), FString());
+
+	// And the other road to the same state: the options themselves going away.
+	Dropdown->SetSelectedIndex(0);
+	TestEqual(TEXT("choosing again fills it back in"),
+		Caption->GetText().ToString(), FString(TEXT("Low")));
+	Dropdown->SetOptions(TArray<FText>());
+	TestEqual(TEXT("and emptying the options empties the caption too"),
+		Caption->GetText().ToString(), FString());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlDropdownMaxHeightTest,
+	"DreamGUI.Controls.Dropdown.TheControlOwnsTheListHeightItsVisibleItemCountAsksFor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlDropdownMaxHeightTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamControlLibraryTestLocal;
+
+	// MaxVisibleItems is the control's way of spelling UMG's MaxListHeight, and ApplyStyle turns it
+	// into the behaviour's MaxHeight. The behaviour's Awake then derived MaxHeight from the list
+	// root's CURRENT height and overwrote it -- ApplyStyle runs at NativeOnInitialized and Awake at
+	// begin play, so the guess won. The built-in tree escaped by coincidence (its resting height is
+	// the same arithmetic); on the template road, where the list root is whatever a template author
+	// drew, MaxVisibleItems was silently discarded. SetMaxHeight now marks the value as authored.
+	TStrongObjectPtr<UDreamDropdown> Dropdown(NewObject<UDreamDropdown>(GetTransientPackage()));
+	Dropdown->StyleSource = EDreamUIStyleSource::Inline;
+	Dropdown->Style.ItemHeight = 30.0f;
+	Dropdown->MaxVisibleItems = 7;
+	Dropdown->Options = { FText::FromString(TEXT("Low")), FText::FromString(TEXT("High")) };
+	Dropdown->Initialize();
+
+	if (!TestNotNull(TEXT("the behaviour is always there"), Dropdown->DropdownBehaviour.Get()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the control's visible-item count decided the list height"),
+		Dropdown->DropdownBehaviour->GetMaxHeight(), 7.0f * 30.0f);
+
+	// And a restyle moves it, because the number is a product of two style inputs.
+	Dropdown->Style.ItemHeight = 20.0f;
+	static_cast<UDreamUIControl*>(Dropdown.Get())->ApplyStyle();
+	TestEqual(TEXT("and a restyle moves it"),
+		Dropdown->DropdownBehaviour->GetMaxHeight(), 7.0f * 20.0f);
+	return true;
+}
+
+/**
+ * The slider's handle and fill are ABSOLUTE rects against POINT anchors -- the last ratio-anchor
+ * consumer in the library, brought onto the road every one of its siblings already took.
+ *
+ * A ratio anchor asks the SETTER to resolve the parent's span at write time, and both areas here are
+ * STRETCHED along the long axis, so their SizeDelta is zero on every frame but a full-layout one.
+ * That is the progress fill's walking dot, the dropdown list's zero width and the tab indicator's
+ * vanishing underline; the fix in each case was to feed numbers in and leave nothing to resolve. The
+ * assertions are therefore about the SHAPE of the geometry (a point anchor, a size in pixels), not
+ * merely about the handle ending up somewhere near the middle -- "near the middle" was true of the
+ * broken version too, on the frames it happened to be laid out on.
+ *
+ * The handle's SIZE stays the control's to state: the style writes it, and this rewrite had to place
+ * the handle without overwriting it.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlSliderGeometryTest,
+	"DreamGUI.Controls.Slider.TheHandleAndFillArePlacedAsAbsoluteRectsAgainstPointAnchors",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlSliderGeometryTest::RunTest(const FString& Parameters)
+{
+	TStrongObjectPtr<UDreamSlider> Slider(NewObject<UDreamSlider>(GetTransientPackage()));
+	Slider->MinValue = 0.0f;
+	Slider->MaxValue = 10.0f;
+	Slider->Value = 5.0f;
+	Slider->Initialize();
+
+	if (!TestNotNull(TEXT("the handle exists"), Slider->HandleNode.Get()) ||
+		!TestNotNull(TEXT("the fill exists"), Slider->FillNode.Get()) ||
+		!TestNotNull(TEXT("the handle area exists"), Slider->HandleAreaNode.Get()) ||
+		!TestNotNull(TEXT("the fill area exists"), Slider->FillAreaNode.Get()))
+	{
+		return false;
+	}
+
+	// With no project sheet under a test, ResolveStyle falls back to the inline Style -- so the
+	// struct's defaults ARE the style in effect, and the default brush states no size of its own.
+	const FVector2D HandleSize = FDreamSliderStyle().HandleSize;
+
+	// A POINT anchor on the area's start edge, on both bounds: nothing for a setter to resolve.
+	TestEqual(TEXT("the handle's horizontal anchor is a point"),
+		static_cast<float>(Slider->HandleNode->GetAnchorMin().X),
+		static_cast<float>(Slider->HandleNode->GetAnchorMax().X));
+	TestEqual(TEXT("and it sits on the area's start edge"),
+		static_cast<float>(Slider->HandleNode->GetAnchorMin().X), 0.0f);
+	// Half the range, so half the travel -- measured from that start edge.
+	TestEqual(TEXT("the handle is half way along its area"),
+		static_cast<float>(Slider->HandleNode->GetAnchoredPosition().X),
+		static_cast<float>(Slider->HandleAreaNode->GetWidth() * 0.5));
+	// The size the STYLE wrote, not something the placement invented.
+	TestEqual(TEXT("the handle kept the size the style gave it"),
+		static_cast<float>(Slider->HandleNode->GetSizeDelta().X), static_cast<float>(HandleSize.X));
+
+	TestEqual(TEXT("the fill's horizontal anchor is a point on the start edge"),
+		static_cast<float>(Slider->FillNode->GetAnchorMin().X), 0.0f);
+	TestEqual(TEXT("the fill's vertical anchor is a point too"),
+		static_cast<float>(Slider->FillNode->GetAnchorMin().Y),
+		static_cast<float>(Slider->FillNode->GetAnchorMax().Y));
+	TestEqual(TEXT("the fill is half the area long"),
+		static_cast<float>(Slider->FillNode->GetSizeDelta().X),
+		static_cast<float>(Slider->FillAreaNode->GetWidth() * 0.5));
+	TestEqual(TEXT("and as thick as the area across it"),
+		static_cast<float>(Slider->FillNode->GetSizeDelta().Y),
+		static_cast<float>(Slider->FillAreaNode->GetHeight()));
+
+	// An EMPTY range is an authored state, not an exotic one: a locked slider, or a range left at
+	// its defaults. It used to divide by zero, and FMath::Clamp answers a NaN with a NaN -- both of
+	// its comparisons being false -- so the NaN went straight into an anchor, where nothing
+	// downstream recovers from it.
+	Slider->SetMaxValue(0.0f);
+	TestTrue(TEXT("an empty range leaves the fill a real number"),
+		FMath::IsFinite(Slider->FillNode->GetSizeDelta().X));
+	TestEqual(TEXT("and spends none of the track"),
+		static_cast<float>(Slider->FillNode->GetSizeDelta().X), 0.0f);
+	TestTrue(TEXT("and the handle's position is a real number too"),
+		FMath::IsFinite(Slider->HandleNode->GetAnchoredPosition().X));
+	return true;
+}
+
+/**
+ * The two behaviour rules the control never stated: whole numbers, and the navigation step.
+ *
+ * Both have been on UUISlider since it was written and neither was ever pushed, so a .dui asking for
+ * an integer picker got 3.7215 and every slider in a project stepped by the library's default
+ * whatever it said. Bounded the moment there is a setter for them -- which is the other half of
+ * this: WholeNumbers had no setter at all, so a code-assembled slider could not reach it.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamControlSliderBehaviourKnobsTest,
+	"DreamGUI.Controls.Slider.WholeNumbersAndTheNavigationStepReachTheBehaviour",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamControlSliderBehaviourKnobsTest::RunTest(const FString& Parameters)
+{
+	TStrongObjectPtr<UDreamSlider> Slider(NewObject<UDreamSlider>(GetTransientPackage()));
+	Slider->MaxValue = 10.0f;
+	Slider->bWholeNumbers = true;
+	Slider->NavigationChangeInterval = 0.25f;
+	Slider->Initialize();
+
+	if (!TestNotNull(TEXT("the behaviour is always there"), Slider->SliderBehaviour.Get()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("the authored whole-number rule arrived"), Slider->SliderBehaviour->GetWholeNumber());
+	TestEqual(TEXT("and so did the navigation step"),
+		Slider->SliderBehaviour->GetNavigationChangeInterval(), 0.25f);
+
+	// Turning the rule on snaps what the slider is holding: a whole-number slider showing 2.5 is a
+	// control disagreeing with itself.
+	Slider->SetWholeNumbers(false);
+	Slider->SetValue(2.5f);
+	TestEqual(TEXT("fractional values stand while the rule is off"), Slider->GetValue(), 2.5f);
+	Slider->SetWholeNumbers(true);
+	TestEqual(TEXT("and are snapped when it comes on"), Slider->GetValue(), 2.0f);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
