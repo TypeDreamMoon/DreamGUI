@@ -79,6 +79,20 @@ const FDreamUIResource* FDreamUIAst::FindResource(const FString& InName) const
 	return nullptr;
 }
 
+const FDreamUITimeline* FDreamUIAst::FindTimeline(const FString& InName) const
+{
+	// No import chain to fall through to, on purpose -- see the field's own note: a timeline is an
+	// identity (an object on this tree, a variable on this class), not a bag of values that copies.
+	for (const FDreamUITimeline& Timeline : Timelines)
+	{
+		if (Timeline.Name == InName)
+		{
+			return &Timeline;
+		}
+	}
+	return nullptr;
+}
+
 void FDreamUIAst::ForEachNode(TFunctionRef<void(const FDreamUINode&)> InPredicate) const
 {
 	// bHasRoot rather than "is Root default constructed", because a parse that failed early leaves a

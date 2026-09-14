@@ -66,6 +66,16 @@ namespace DreamUIText
 		Dot,
 		Colon,
 		Equals,
+		/**
+		 * `/` between two node ids, as `Row/Title` in a timeline track line.
+		 *
+		 * Emitted only when the '/' ABUTS a preceding identifier, which is a position no asset path
+		 * can occupy: a path always begins a value or a node type, so it always follows `=`, `,`,
+		 * `{`, a separator, or whitespace. Without the abutment rule `Row/Title` lexed as the
+		 * identifier `Row` followed by the asset path `/Title`, and the timeline grammar had no way
+		 * to say "the node inside the node" at all.
+		 */
+		Slash,
 		/** `->` -- routes an event to a handler, the way `<-` (Arrow) drives a value from a function. */
 		EventArrow,
 		/** `<-`, the binding arrow. */
@@ -194,7 +204,7 @@ namespace DreamUIText
 	/** Keywords, and therefore the words a node id may not be. Case sensitive, see the file comment. */
 	bool IsReservedWord(const FString& InWord)
 	{
-		static const TCHAR* Reserved[] = { TEXT("class"), TEXT("style"), TEXT("resources"), TEXT("slot"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("was"), TEXT("use") };
+		static const TCHAR* Reserved[] = { TEXT("class"), TEXT("style"), TEXT("resources"), TEXT("slot"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("was"), TEXT("use"), TEXT("timeline"), TEXT("external"), TEXT("ease") };
 		for (const TCHAR* Word : Reserved)
 		{
 			if (InWord.Equals(Word, ESearchCase::CaseSensitive))
@@ -257,6 +267,20 @@ namespace DreamUIText
 					if (Next == TEXT('*'))
 					{
 						SkipBlockComment(OutTokens);
+						continue;
+					}
+					// ... and after the comments, the third reading: a '/' that ABUTS the identifier
+					// before it separates two node ids (`Row/Title`), which is how a timeline track
+					// line names a widget inside a widget. An asset path can never sit here -- it
+					// always begins a value or a node type, so something non-identifier always
+					// precedes it, and `class /Game/UI/X` has the space that keeps it a path.
+					// Without this the parser saw `Row` and `/Title.RenderOpacity` and had no way to
+					// know they were one path.
+					if (OutTokens.Num() > 0
+						&& OutTokens.Last().Kind == ETokenKind::Identifier
+						&& OutTokens.Last().End == Offset)
+					{
+						EmitPunctuation(OutTokens, ETokenKind::Slash, 1);
 						continue;
 					}
 					LexAssetPath(OutTokens);
@@ -907,6 +931,14 @@ namespace DreamUIText
 					// convention for readers, not a rule for the parser.
 					ParseStyleDeclaration(OutAst);
 				}
+				else if (CheckKeyword(TEXT("timeline")))
+				{
+					// File scope, level with `style`, and that is the proposal's ruling ⑤: a track
+					// line's path already reaches any node in the tree, so nesting a timeline under a
+					// node would give one animation two ways to name its target and no rule for which
+					// wins.
+					ParseTimelineDeclaration(OutAst);
+				}
 				else if (CheckKeyword(TEXT("slot")) || CheckKeyword(TEXT("for")) || CheckKeyword(TEXT("each")))
 				{
 					// Caught here rather than left to fall through as a node header, which is what it
@@ -1238,6 +1270,29 @@ namespace DreamUIText
 					FString::Printf(TEXT("'%s' is already being imported further up this chain -- the imports form a cycle"), *Spelling));
 				return;
 			}
+			// A file THIS one has already pulled in -- directly, or through something else it uses --
+			// contributes nothing a second time, so it is not parsed a second time either. A diamond
+			// (A uses B and C, both of which use D) otherwise merged D's styles and resources into A
+			// twice and paid a full recursive parse of D for the privilege; deeper graphs multiply,
+			// which is how a handful of layered style libraries turn one write-back flush into
+			// exponential work. Silent rather than diagnosed, because writing `use` twice for a
+			// library you reach two ways is not a mistake -- first declaration wins in FindStyle
+			// either way, so the duplicates never changed an answer, only the cost of finding it.
+			bool bAlreadyMerged = false;
+			for (const FString& Already : OutAst.Imports)
+			{
+				FString AlreadyNormalized = Already;
+				FPaths::NormalizeFilename(AlreadyNormalized);
+				if (AlreadyNormalized.ToLower() == Normalized)
+				{
+					bAlreadyMerged = true;
+					break;
+				}
+			}
+			if (bAlreadyMerged)
+			{
+				return;
+			}
 
 			FDreamUIAst Imported;
 			FDreamUIDiagnosticBag ImportedDiagnostics;
@@ -1251,12 +1306,64 @@ namespace DreamUIText
 				return;
 			}
 
+			// Whether a FILE has already put its declarations into this AST, asked of the resolved
+			// path each declaration was read from (FDreamUIStyle::SourceName). This is what closes
+			// the diamond properly: skipping the second `use` of the same spelling (above) only
+			// catches the shallow case, while A-uses-B-and-C with both using D arrives here as C's
+			// TRANSITIVE list carrying D's styles a second time. Duplicates never changed an answer
+			// -- FindStyle takes the first -- but they grow both arrays, and every lookup through
+			// them, with the shape of the import graph rather than with the number of styles.
+			auto AlreadyMerged = [&OutAst](const FString& InPath) -> bool
+			{
+				if (InPath.IsEmpty())
+				{
+					return false;
+				}
+				FString Key = InPath;
+				FPaths::NormalizeFilename(Key);
+				Key.ToLowerInline();
+				for (const FString& Existing : OutAst.Imports)
+				{
+					FString ExistingKey = Existing;
+					FPaths::NormalizeFilename(ExistingKey);
+					ExistingKey.ToLowerInline();
+					if (ExistingKey == Key)
+					{
+						return true;
+					}
+				}
+				return false;
+			};
+
+			// The imported file's OWN declarations go in whole: this is the first time it has been
+			// merged, or the early-out above would have fired.
 			OutAst.ImportedStyles.Append(MoveTemp(Imported.Styles));
-			OutAst.ImportedStyles.Append(MoveTemp(Imported.ImportedStyles));
 			OutAst.ImportedResources.Append(MoveTemp(Imported.Resources));
-			OutAst.ImportedResources.Append(MoveTemp(Imported.ImportedResources));
+			for (FDreamUIStyle& Style : Imported.ImportedStyles)
+			{
+				if (!AlreadyMerged(Style.SourceName))
+				{
+					OutAst.ImportedStyles.Add(MoveTemp(Style));
+				}
+			}
+			for (FDreamUIResource& Resource : Imported.ImportedResources)
+			{
+				if (!AlreadyMerged(Resource.SourceName))
+				{
+					OutAst.ImportedResources.Add(MoveTemp(Resource));
+				}
+			}
 			OutAst.Imports.Add(Resolved);
-			OutAst.Imports.Append(MoveTemp(Imported.Imports));
+			for (FString& Import : Imported.Imports)
+			{
+				// Read against the list as it grows, so a duplicate inside this one list is caught
+				// too. The watcher's dependency table eats this array; naming a file twice there
+				// would recompile the importer once per path the graph reaches it by.
+				if (!AlreadyMerged(Import))
+				{
+					OutAst.Imports.Add(MoveTemp(Import));
+				}
+			}
 		}
 
 		/**
@@ -1412,6 +1519,352 @@ namespace DreamUIText
 				return;
 			}
 			OutAst.Styles.Add(MoveTemp(Style));
+		}
+
+		// --- timelines ----------------------------------------------------------------------------
+
+		/** A time in seconds: `0.3`, or `-0` nonsense refused. Shared by key lines and `@` lines. */
+		bool ParseTimelineTime(double& OutTime, const TCHAR* InWhatItIs)
+		{
+			if (!Check(ETokenKind::Number))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+					FString::Printf(TEXT("%s takes a time in seconds, found '%s'"), InWhatItIs, *DescribeCurrent()));
+				return false;
+			}
+			OutTime = FCString::Atod(*Current().Text);
+			if (OutTime < 0.0)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+					FString::Printf(TEXT("a timeline starts at 0, so '%s' is not a time on it"), *Current().Text));
+				Advance();
+				return false;
+			}
+			Advance();
+			return true;
+		}
+
+		/**
+		 * `@0.3 -> Landed` -- one key on the block's event track.
+		 *
+		 * The proposal's ruling ③, and shaped like the event BINDING it borrows its arrow from. What
+		 * travels is a NAME, not a function reference, because that is what the runtime track already
+		 * broadcasts (UDreamUIAnimEventSection holds an FMovieSceneStringChannel and fires it through
+		 * the component's OnAnimationEvent): anything may listen, including a widget the file has
+		 * never heard of, which is exactly why the track is unbound.
+		 */
+		bool ParseTimelineEventLine(FDreamUITimeline& OutTimeline)
+		{
+			const FDreamUISourceLocation AtLocation = Current().Location;
+			Advance(); // '@'
+
+			double Time = 0.0;
+			if (!ParseTimelineTime(Time, TEXT("'@' on a timeline line")))
+			{
+				RecoverToStatementBoundary();
+				return false;
+			}
+			if (!Check(ETokenKind::EventArrow))
+			{
+				RaiseUnexpectedToken(TEXT("a timeline event key is written '@<time> -> EventName'"));
+				RecoverToStatementBoundary();
+				return false;
+			}
+			Advance();
+			if (!Check(ETokenKind::Identifier))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+					FString::Printf(TEXT("'->' on a timeline line needs an event name, found '%s'"), *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return false;
+			}
+
+			// One event TRACK per block, however many `@` lines there are: the runtime track is a
+			// single unbound row of named keys, so a track per line would be N rows each holding one
+			// key and firing in an order nothing pins down.
+			FDreamUITimelineTrack* EventTrack = OutTimeline.Tracks.FindByPredicate(
+				[](const FDreamUITimelineTrack& InTrack) { return InTrack.bIsEvent; });
+			if (EventTrack == nullptr)
+			{
+				EventTrack = &OutTimeline.Tracks.AddDefaulted_GetRef();
+				EventTrack->bIsEvent = true;
+				EventTrack->Location = AtLocation;
+			}
+
+			FDreamUITimelineKey& Key = EventTrack->Keys.AddDefaulted_GetRef();
+			Key.Time = Time;
+			Key.EventName = Current().Text;
+			Key.Location = AtLocation;
+			Advance();
+			return true;
+		}
+
+		/** `Row/Title.RenderOpacity : 0.0 = 0, 0.2 = 1 ease OutCubic` */
+		bool ParseTimelineTrackLine(FDreamUITimeline& OutTimeline)
+		{
+			FDreamUITimelineTrack Track;
+			Track.Location = Current().Location;
+
+			// The dotted-and-slashed left side, read as one run. A node id and a property name are
+			// the same shape of word, so the split is positional and stated in two rules: a '/' only
+			// ever extends the node path, and the first '.' ends it -- everything after is the
+			// property. A run with no '.' at all is the property, on the animation's own host.
+			TArray<FString> PathSegments;
+			TArray<FString> PropertySegments;
+			bool bInProperty = false;
+			for (;;)
+			{
+				if (!Check(ETokenKind::Identifier))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+						FString::Printf(TEXT("a timeline track line starts with '<node path>.<Property>', found '%s'"), *DescribeCurrent()));
+					RecoverToStatementBoundary();
+					return false;
+				}
+				(bInProperty ? PropertySegments : PathSegments).Add(Current().Text);
+				Advance();
+
+				if (Check(ETokenKind::Slash) && !bInProperty)
+				{
+					Advance();
+					continue;
+				}
+				if (Check(ETokenKind::Dot))
+				{
+					Advance();
+					bInProperty = true;
+					continue;
+				}
+				break;
+			}
+			if (PropertySegments.Num() == 0)
+			{
+				if (PathSegments.Num() == 1)
+				{
+					// ONE BARE WORD IS THE PROPERTY, on the widget that hosts the animation -- the
+					// same empty path FDreamWidgetAnimationObjectReference records for the context
+					// widget, and what `RenderScale : 0 = (1, 1, 1)` has to mean for the commonest
+					// timeline there is (one that animates the thing it is written on).
+					//
+					// Nothing lexical tells a node id from a property name, so the rule is positional
+					// and it is this way round because only one of the two readings is ever useful: a
+					// path with no property is not a track at all, while a property with no path is
+					// most of them.
+					PropertySegments = MoveTemp(PathSegments);
+					PathSegments.Reset();
+				}
+				else
+				{
+					// `Row/Icon : …`. A '/' can only have been written to reach INTO the tree, so
+					// this one really is a line that stopped before its property -- reported here
+					// rather than left to the builder, because the file alone is enough to see it.
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Track.Location,
+						FString::Printf(TEXT("'%s' names a node and no property -- a track line is '<node path>.<Property> : …'"),
+							*FString::Join(PathSegments, TEXT("/"))));
+					RecoverToStatementBoundary();
+					return false;
+				}
+			}
+			// The node path may be empty, and legitimately -- see above. When it is not, the split is
+			// the one genuinely ambiguous spelling in this grammar and it reads the way the rest of
+			// the language reads dots: the FIRST run is the node path (only a '/' extends it) and
+			// everything after the first '.' is the property, so `Icon.Brush.TintColor` drives Icon's
+			// `Brush.TintColor` rather than `Icon/Brush`'s `TintColor`.
+			Track.NodePath = FString::Join(PathSegments, TEXT("/"));
+			Track.PropertyName = FString::Join(PropertySegments, TEXT("."));
+
+			if (!Check(ETokenKind::Colon))
+			{
+				// The target quoted back the way the author wrote it: a bare property has no path to
+				// print, and a leading '.' in the example would be a spelling the grammar refuses.
+				const FString Target = Track.NodePath.IsEmpty()
+					? Track.PropertyName
+					: Track.NodePath + TEXT(".") + Track.PropertyName;
+				RaiseUnexpectedToken(FString::Printf(
+					TEXT("a timeline track line separates its target from its keys with ':', as in '%s : 0 = …'"),
+					*Target));
+				RecoverToStatementBoundary();
+				return false;
+			}
+			Advance();
+
+			for (;;)
+			{
+				FDreamUITimelineKey Key;
+				Key.Location = Current().Location;
+				if (!ParseTimelineTime(Key.Time, TEXT("a timeline key")))
+				{
+					RecoverToStatementBoundary();
+					return false;
+				}
+				if (!Check(ETokenKind::Equals))
+				{
+					RaiseUnexpectedToken(TEXT("a timeline key is written '<time> = <value>'"));
+					RecoverToStatementBoundary();
+					return false;
+				}
+				Advance();
+				if (!ParseValue(Key.Value))
+				{
+					RecoverToStatementBoundary();
+					return false;
+				}
+				if (CheckKeyword(TEXT("ease")))
+				{
+					Advance();
+					if (!Check(ETokenKind::Identifier))
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+							FString::Printf(TEXT("'ease' needs a curve name, found '%s'"), *DescribeCurrent()));
+						RecoverToStatementBoundary();
+						return false;
+					}
+					// Checked for MEMBERSHIP by the builder, not here: the word list is the tween
+					// library's, which is reflection this stage deliberately does not touch.
+					Key.EaseName = Current().Text;
+					Advance();
+				}
+				Track.Keys.Add(MoveTemp(Key));
+
+				if (!Check(ETokenKind::Comma))
+				{
+					break;
+				}
+				Advance();
+				// A comma at the end of a line continues the track onto the next, which is how a
+				// long track stays readable. SkipSeparators, so the newline after it is not a key.
+				SkipSeparators();
+			}
+
+			OutTimeline.Tracks.Add(MoveTemp(Track));
+			return true;
+		}
+
+		void ParseTimelineBody(FDreamUITimeline& OutTimeline, const FDreamUISourceLocation& InOpenLocation)
+		{
+			for (;;)
+			{
+				SkipSeparators();
+				if (Check(ETokenKind::CloseBrace))
+				{
+					Advance();
+					return;
+				}
+				if (IsAtEnd())
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnclosedBlock, InOpenLocation,
+						FString::Printf(TEXT("timeline '%s' was opened here and never closed"), *OutTimeline.Name));
+					return;
+				}
+
+				const int32 IndexBefore = Index;
+
+				if (Check(ETokenKind::At))
+				{
+					ParseTimelineEventLine(OutTimeline);
+				}
+				else if (CheckKeyword(TEXT("duration")) && Peek(1).Kind == ETokenKind::Equals)
+				{
+					Advance();
+					Advance();
+					ParseTimelineTime(OutTimeline.Duration, TEXT("'duration'"));
+				}
+				else if (CheckKeyword(TEXT("loop")) && Peek(1).Kind == ETokenKind::Equals)
+				{
+					Advance();
+					Advance();
+					if (!Check(ETokenKind::Identifier))
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+							FString::Printf(TEXT("'loop' takes Once, Loop or PingPong, found '%s'"), *DescribeCurrent()));
+						RecoverToStatementBoundary();
+					}
+					else
+					{
+						// The three spellings are checked HERE and not in the builder, because unlike
+						// an ease name this set is the language's own and needs no reflection to know.
+						const FString Mode = Current().Text;
+						if (!Mode.Equals(TEXT("Once")) && !Mode.Equals(TEXT("Loop")) && !Mode.Equals(TEXT("PingPong")))
+						{
+							Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+								FString::Printf(TEXT("'%s' is not a loop mode; write Once, Loop or PingPong"), *Mode));
+						}
+						else
+						{
+							OutTimeline.LoopMode = Mode;
+						}
+						Advance();
+					}
+				}
+				else
+				{
+					ParseTimelineTrackLine(OutTimeline);
+				}
+
+				if (Index == IndexBefore)
+				{
+					Advance();
+				}
+			}
+		}
+
+		void ParseTimelineDeclaration(FDreamUIAst& OutAst)
+		{
+			const FDreamUISourceLocation KeywordLocation = Current().Location;
+			Advance(); // 'timeline'
+
+			if (!Check(ETokenKind::Identifier))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+					FString::Printf(TEXT("'timeline' takes a name, found '%s'"), *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			FDreamUITimeline Timeline;
+			Timeline.Location = KeywordLocation;
+			Timeline.SourceName = Diagnostics.SourceName;
+			Timeline.Name = Current().Text;
+			Advance();
+
+			if (CheckKeyword(TEXT("external")))
+			{
+				// Layer two: the animation lives in the asset, Sequencer owns it, and the language
+				// records only that it exists -- which is what makes "what animations does this class
+				// have" answerable from the file. A block after it would be the file claiming to
+				// describe contents it has explicitly disclaimed.
+				Timeline.bExternal = true;
+				Advance();
+				if (Check(ETokenKind::OpenBrace))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+						FString::Printf(TEXT("timeline '%s' is external, so its contents live in the asset and it takes no block"), *Timeline.Name));
+					SkipBalancedBlock();
+				}
+			}
+			else
+			{
+				if (!Check(ETokenKind::OpenBrace))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTimeline, Current().Location,
+						FString::Printf(TEXT("timeline '%s' needs a '{ ... }' block, or the word 'external'"), *Timeline.Name));
+					RecoverToStatementBoundary();
+					return;
+				}
+				const FDreamUISourceLocation OpenLocation = Current().Location;
+				Advance();
+				ParseTimelineBody(Timeline, OpenLocation);
+			}
+
+			const bool bAlreadyDeclared = OutAst.Timelines.ContainsByPredicate(
+				[&Timeline](const FDreamUITimeline& InExisting) { return InExisting.Name == Timeline.Name; });
+			if (bAlreadyDeclared)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateTimeline, Timeline.Location,
+					FString::Printf(TEXT("timeline '%s' is declared twice"), *Timeline.Name));
+				return;
+			}
+			OutAst.Timelines.Add(MoveTemp(Timeline));
 		}
 
 		// --- nodes --------------------------------------------------------------------------------
@@ -1706,6 +2159,22 @@ namespace DreamUIText
 					FString::Printf(TEXT("'%s' is a keyword and cannot name a slot"), *Slot.Id));
 			}
 			Advance();
+
+			// `(was: OldId)`, the same clause a widget node takes, and for a reason that is not
+			// symmetry: a slot's id becomes a class member variable exactly like a widget's (it is
+			// why two slots colliding is DuplicateNodeId and not a code of its own), so a renamed
+			// slot orphaned every graph reference, binding and animation track that named it with no
+			// way to say what it used to be called. Migration is the whole point of the clause, and a
+			// slot is the one declaration that could not use it.
+			//
+			// No `: Style` here, and that is not an oversight either: a style is a bag of PROPERTIES
+			// and a slot declaration has no properties to give them to -- the grammar refuses it a
+			// block for the same reason. Accepting the clause would parse a promise nothing could
+			// keep.
+			if (Check(ETokenKind::OpenParen))
+			{
+				ParseWasClause(Slot);
+			}
 
 			if (Check(ETokenKind::OpenBrace))
 			{
@@ -2177,6 +2646,30 @@ namespace DreamUIText
 			{
 				OutExpression.Kind = FDreamUIExpression::EKind::Literal;
 				OutExpression.LiteralKind = EDreamUIValueKind::String;
+				OutExpression.LiteralRaw = Current().Text;
+				Advance();
+				return true;
+			}
+			case ETokenKind::At:
+			{
+				// `@Accent` inside an expression, which is the same word the same `resources` block
+				// already defines for an assignment -- no new spelling, just the one that existed
+				// being readable in the one place it was not. A named constant that can be assigned
+				// but not multiplied is a constant with a rule nobody can remember.
+				//
+				// Recorded as a LITERAL of kind ResourceRef and resolved where the expression is
+				// lowered, never by rewriting the AST: the patcher owns this tree's byte offsets, and
+				// substituting a longer literal under it would splice later edits into wrong columns.
+				Advance();
+				if (!Check(ETokenKind::Identifier))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+						TEXT("expected a resource name after '@'"));
+					RecoverToStatementBoundary();
+					return false;
+				}
+				OutExpression.Kind = FDreamUIExpression::EKind::Literal;
+				OutExpression.LiteralKind = EDreamUIValueKind::ResourceRef;
 				OutExpression.LiteralRaw = Current().Text;
 				Advance();
 				return true;

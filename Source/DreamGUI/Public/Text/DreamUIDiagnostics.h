@@ -107,6 +107,16 @@ enum class EDreamUIDiagnosticCode : int32
 	 * meeting it means a file that is malformed or hostile rather than merely deep.
 	 */
 	NestingTooDeep = 2013,
+	/**
+	 * A `timeline` block or one of its lines that is not the grammar.
+	 *
+	 * One code for the whole block rather than one per shape, because every one of them is the same
+	 * reader move -- look at the line and write it the way the docs show -- and the message names
+	 * which part was wrong. The shapes: a header without a name, `external` followed by a block,
+	 * `duration`/`loop` without a value, a track line with no `:`, a key without its `=`, an `ease`
+	 * with no name after it, an `@time` without its `->`.
+	 */
+	MalformedTimeline = 2014,
 
 	// --- 3xxx semantic ---
 	/**
@@ -181,6 +191,14 @@ enum class EDreamUIDiagnosticCode : int32
 	DuplicateResource = 3014,
 	/** `style A : B` where following the bases comes back to A. Nothing applies; the node errors. */
 	StyleCycle = 3015,
+	/**
+	 * Two `timeline` blocks share a name.
+	 *
+	 * The same cause as DuplicateStyle and refused the same way -- a timeline's name becomes the
+	 * animation's display name AND a class member variable (the compiler declares one per animation,
+	 * as UMG does for UWidgetAnimation), so two of them is a variable nobody can address.
+	 */
+	DuplicateTimeline = 3016,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */
@@ -270,6 +288,30 @@ enum class EDreamUIDiagnosticCode : int32
 	 * expression is fine and the PLACE is not, which is a different fix and a temporary limit.
 	 */
 	LoopBodyBindingUnsupported = 5014,
+	/**
+	 * A `timeline` track line whose node path names nothing in this file's tree.
+	 *
+	 * The path is a chain of node ids -- the same display-name path an animation binding resolves
+	 * through -- so this is the animation twin of NodeReferenceNotFound, and split from it for the
+	 * same reason: "no node called Icon" and "Icon has no such property" are different mistakes.
+	 */
+	TimelineTargetNotFound = 5015,
+	/**
+	 * A `timeline` track line whose property cannot be animated by a MovieScene track.
+	 *
+	 * Either the property does not exist on the node (nor on its visual or a behaviour), or its TYPE
+	 * has no track: layer one animates floats, doubles, two- and three-component vectors, rotators
+	 * and colours, because those are the property tracks this sequence supports. A material parameter
+	 * is deliberately NOT one -- see the proposal's ruling: those stay `external`.
+	 */
+	TimelinePropertyNotAnimatable = 5016,
+	/**
+	 * An `ease` name the curve library does not declare.
+	 *
+	 * The set is EDreamTweenEase's, minus CurveFloat (which names an asset, and a timeline key has
+	 * nowhere to put one). One word list for the whole plugin was the point of borrowing it.
+	 */
+	UnknownEaseName = 5017,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */

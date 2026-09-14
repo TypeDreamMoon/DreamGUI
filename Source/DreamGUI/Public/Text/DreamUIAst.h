@@ -271,6 +271,78 @@ struct DREAMGUI_API FDreamUIResource
 	FString SourceName;
 };
 
+/**
+ * One key on a `timeline` track line: `0.3 = (1.25, 1.25) ease InOutQuad`.
+ *
+ * Time is SECONDS, as written, and stays a double all the way to the builder -- the frame number a
+ * MovieScene channel wants is derived there from the sequence's tick resolution, and an AST that
+ * carried frames would have to know a resolution the file never mentions.
+ */
+struct DREAMGUI_API FDreamUITimelineKey
+{
+	double Time = 0.0;
+	/** The value at this time, in the same spellings every other value uses. Unused on an event key. */
+	FDreamUIValue Value;
+	/**
+	 * The named curve from this key to the NEXT one -- Linear when the author wrote no `ease`.
+	 *
+	 * A NAME and never a tangent quadruple, which is the whole reason a timeline is writable: the
+	 * proposal's first load-bearing fact is that FRichCurve tangents are stored data, so expressing
+	 * them in text means either four numbers nobody can hand-write or a lossy round trip. A name
+	 * re-derives the same tangents on every compile from one word.
+	 */
+	FString EaseName;
+	/** Event key only: the name broadcast when playback crosses this time. */
+	FString EventName;
+	FDreamUISourceLocation Location;
+};
+
+/**
+ * One line of a `timeline` block: a property track, or the block's event track.
+ *
+ * `Icon.RenderScale : 0.0 = (1, 1), 0.3 = (1.25, 1.25) ease InOutQuad`
+ * `@0.3 -> Landed`
+ */
+struct DREAMGUI_API FDreamUITimelineTrack
+{
+	/**
+	 * `Row/Title` -- the chain of node ids from the animated widget down to the bound one, '/'
+	 * separated, empty when the track drives the animation's own host. Identical in shape to
+	 * FDreamWidgetAnimationObjectReference's path, deliberately: a node id IS its display name, so
+	 * the language needed no path model of its own.
+	 */
+	FString NodePath;
+	/** The property that path's node drives, dotted paths included. Empty on the event track. */
+	FString PropertyName;
+	/** True for `@time -> Name` lines, which bind to nothing and broadcast a name. */
+	bool bIsEvent = false;
+	TArray<FDreamUITimelineKey> Keys;
+	FDreamUISourceLocation Location;
+};
+
+/**
+ * `timeline Pulse { … }` -- an animation the language owns, or `timeline Celebrate external`.
+ *
+ * The two forms are the proposal's two layers. A language-owned timeline is rebuilt from this text
+ * on every compile, exactly like the tree; an `external` one names an animation that lives in the
+ * asset and is edited in Sequencer, so the language records only that it EXISTS -- which is what
+ * makes "what animations does this class have" answerable from the file alone.
+ */
+struct DREAMGUI_API FDreamUITimeline
+{
+	FString Name;
+	/** `timeline X external`: Sequencer's, not the language's. No block, no tracks. */
+	bool bExternal = false;
+	/** Seconds. Zero means "as long as the last key", resolved by the builder. */
+	double Duration = 0.0;
+	/** `Once` | `Loop` | `PingPong`, as written. Empty means Once. */
+	FString LoopMode;
+	TArray<FDreamUITimelineTrack> Tracks;
+	FDreamUISourceLocation Location;
+	/** The file this was read from; see FDreamUIStyle::SourceName. */
+	FString SourceName;
+};
+
 struct DREAMGUI_API FDreamUIAst
 {
 	/** `class /Game/UI/WBP_SavePanel` -- which blueprint this tree compiles into. */
@@ -279,10 +351,14 @@ struct DREAMGUI_API FDreamUIAst
 
 	TArray<FDreamUIStyle> Styles;
 	/**
-	 * What `use "…"` pulled in, kept apart from the file's own declarations: the compiler's
-	 * resources leg reads Styles/Resources for what THIS file owns (imported resources become
-	 * nobody's class variables), while FindStyle/FindResource chain into these -- own first, so a
-	 * local name shadows an imported one.
+	 * What `use "…"` pulled in, kept apart from the file's own declarations, so that FindStyle and
+	 * FindResource can chain -- own first, so a local name shadows an imported one.
+	 *
+	 * Imported RESOURCES do become class variables, now: an entry is a constant, `@Accent` already
+	 * resolved through this chain on every line that wrote it, and declaring nothing for it meant a
+	 * file could spell an imported resource everywhere except where a graph or a designer could see
+	 * it. Two importers each declare their own, which is not a conflict -- they are two classes.
+	 * Imported STYLES stay what they were: a bag of values applied by name, never an identity.
 	 */
 	TArray<FDreamUIStyle> ImportedStyles;
 
@@ -290,6 +366,19 @@ struct DREAMGUI_API FDreamUIAst
 	TArray<FDreamUIResource> ImportedResources;
 	/** Every `use` path, RESOLVED, in encounter order -- what the watcher's dependency table eats. */
 	TArray<FString> Imports;
+
+	/**
+	 * `timeline` blocks, in declaration order.
+	 *
+	 * NOT merged across a `use`, unlike styles and resources, and the difference is not an oversight:
+	 * a timeline compiles into an object on THIS class's widget tree and into a class member variable
+	 * named after it, so importing one would mean two classes owning one animation. A style is a bag
+	 * of values and copies harmlessly; an animation is an identity.
+	 */
+	TArray<FDreamUITimeline> Timelines;
+
+	/** The timeline of this name, or null. First declaration wins, like styles. */
+	const FDreamUITimeline* FindTimeline(const FString& InName) const;
 
 	/** Exactly one root. bHasRoot is false when parsing failed before one was produced. */
 	FDreamUINode Root;

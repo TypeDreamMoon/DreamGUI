@@ -1409,4 +1409,157 @@ bool FDreamUITextPrintedNumberRoundTripTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIParserSlotRenameTest,
+	"DreamGUI.Text.ASlotTakesARenameClauseBecauseItsIdIsAClassMemberToo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * `slot Footer (was: Bottom)`.
+ *
+ * A slot's id becomes a member variable on the generated class exactly like a widget's -- it is why
+ * two slots colliding is DuplicateNodeId rather than a code of its own -- so renaming one orphaned
+ * every graph reference, binding and animation track that named it, with no way in the grammar to
+ * say what it used to be called. The migration pass itself needed nothing: it walks ForEachNode and
+ * never asked what kind of node it was holding.
+ *
+ * A style clause is still refused, and that is the other half of the fix: a style is a bag of
+ * PROPERTIES and a slot declaration has none to give them to (the grammar denies it a block for the
+ * same reason), so accepting `: Card` would parse a promise nothing could keep.
+ */
+bool FDreamUIParserSlotRenameTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIParserTestLocal;
+
+	FDreamUIAst Ast;
+	FDreamUIDiagnosticBag Diagnostics;
+	const bool bParsed = Parse(MakeSource({
+		TEXT("Widget Root {"),
+		TEXT("    slot Footer (was: Bottom)"),
+		TEXT("}")
+	}), Ast, Diagnostics);
+
+	if (!TestTrue(TEXT("a slot with a rename clause parses"), bParsed)
+		|| !TestEqual(TEXT("with nothing to complain about"), Diagnostics.Diagnostics.Num(), 0))
+	{
+		AddError(Diagnostics.ToString());
+		return false;
+	}
+	const FDreamUINode* Footer = ChildById(Ast.Root, TEXT("Footer"));
+	if (!TestNotNull(TEXT("the slot survived"), Footer))
+	{
+		return false;
+	}
+	TestEqual(TEXT("it is still a named slot"), static_cast<int32>(Footer->Kind),
+		static_cast<int32>(EDreamUINodeKind::NamedSlot));
+	TestEqual(TEXT("and it carries the old id the migration pass reads"), Footer->WasId, FString(TEXT("Bottom")));
+
+	// Malformed, so the clause is held to the same shape a widget's is rather than quietly ignored.
+	ExpectOneDiagnostic(*this, TEXT("a slot rename clause missing its colon"), MakeSource({
+		TEXT("Widget Root {"),
+		TEXT("    slot Footer (was Bottom)"),
+		TEXT("}")
+	}), EDreamUIDiagnosticCode::MalformedWasClause, 2);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIParserTransitiveImportTest,
+	"DreamGUI.Text.AUseCarriesTheImportedFilesOwnImportsAndADiamondMergesOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Layered style libraries, which is the shape a `use` exists for.
+ *
+ * ParseUseDeclaration merges the imported file's OWN ImportedStyles and ImportedResources into the
+ * importer alongside its local ones, so `A uses B` and `B uses C` puts C's styles in A's scope --
+ * asserted here because nothing did, and because the VSCode extension's mirror of this rule was
+ * following exactly one hop and painting every second-hand name as a false DUI3004.
+ *
+ * The diamond is the second half. A uses B and C, both of which use D: D used to be parsed twice and
+ * merged twice, which changed no answer (first declaration wins in FindStyle) and multiplied the work
+ * with the shape of the graph. One entry is the assertion that the dedupe is there.
+ *
+ * The reader is a lambda over an in-memory map rather than files on disk: what is under test is the
+ * MERGE, and a temp directory would only add a way for the test to fail for a reason of its own.
+ */
+bool FDreamUIParserTransitiveImportTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIParserTestLocal;
+
+	TMap<FString, FString> Files;
+	Files.Add(TEXT("D.dui"), MakeSource({
+		TEXT("style Deep { }"),
+		TEXT("resources { Number DeepGap = 4 }")
+	}));
+	Files.Add(TEXT("B.dui"), MakeSource({
+		TEXT("use \"D.dui\""),
+		TEXT("style FromB { }")
+	}));
+	Files.Add(TEXT("C.dui"), MakeSource({
+		TEXT("use \"D.dui\""),
+		TEXT("style FromC { }")
+	}));
+
+	auto Reader = [&Files](const FString& InSpelling, FString& OutResolved, FString& OutText)
+	{
+		if (const FString* Found = Files.Find(InSpelling))
+		{
+			OutResolved = FString(TEXT("/fixtures/")) + InSpelling;
+			OutText = *Found;
+			return true;
+		}
+		return false;
+	};
+
+	FDreamUIAst Ast;
+	FDreamUIDiagnosticBag Diagnostics;
+	const bool bParsed = FDreamUISourceFile::Parse(MakeSource({
+		TEXT("use \"B.dui\""),
+		TEXT("use \"C.dui\""),
+		TEXT("Widget Root { }")
+	}), TEXT("A.dui"), Ast, Diagnostics, Reader);
+
+	if (!TestTrue(TEXT("the importer parses"), bParsed)
+		|| !TestEqual(TEXT("with nothing to complain about"), Diagnostics.Diagnostics.Num(), 0))
+	{
+		AddError(Diagnostics.ToString());
+		return false;
+	}
+
+	// The whole point: a style two hops away is in scope, resolved through the same FindStyle every
+	// node's `: Style` clause goes through.
+	TestNotNull(TEXT("a style from the direct import resolves"), Ast.FindStyle(TEXT("FromB")));
+	TestNotNull(TEXT("and one from the other direct import"), Ast.FindStyle(TEXT("FromC")));
+	TestNotNull(TEXT("and one from the file they both import"), Ast.FindStyle(TEXT("Deep")));
+	TestNotNull(TEXT("resources ride along the same way"), Ast.FindResource(TEXT("DeepGap")));
+
+	// Once each, however many ways the graph reaches them. Duplicates never changed an answer; they
+	// cost a full recursive re-parse per extra path, which is exponential in a deep graph.
+	int32 DeepStyles = 0;
+	for (const FDreamUIStyle& Style : Ast.ImportedStyles)
+	{
+		DeepStyles += Style.Name == TEXT("Deep") ? 1 : 0;
+	}
+	TestEqual(TEXT("the diamond merged the shared library exactly once"), DeepStyles, 1);
+
+	int32 DeepResources = 0;
+	for (const FDreamUIResource& Resource : Ast.ImportedResources)
+	{
+		DeepResources += Resource.Name == TEXT("DeepGap") ? 1 : 0;
+	}
+	TestEqual(TEXT("and its resources once"), DeepResources, 1);
+
+	// The dependency table the watcher eats lists each file once, which is what makes a save of the
+	// shared library recompile this importer exactly one time.
+	int32 DeepImports = 0;
+	for (const FString& Import : Ast.Imports)
+	{
+		DeepImports += Import.EndsWith(TEXT("D.dui")) ? 1 : 0;
+	}
+	TestEqual(TEXT("and the import list names it once"), DeepImports, 1);
+	return true;
+}
+
 #endif

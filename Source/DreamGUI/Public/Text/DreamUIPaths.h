@@ -65,8 +65,15 @@ namespace DreamUIPaths
 	 * When nothing exists, the project-root candidate comes back rather than an empty string: the
 	 * caller is about to report a file it could not read, and a diagnostic that names a path is worth
 	 * more than one that names nothing.
+	 *
+	 * OutRootTokenResolved, when given, is set false for the one case the returned path cannot say
+	 * anything about: `Plugin.X:…` where no enabled plugin X has a `DUI/` directory. The project's
+	 * own root stands in so that the answer is still an absolute filename -- every caller here opens
+	 * this string as well as printing it -- but the path then names a place that has nothing to do
+	 * with what the author wrote, and a diagnostic that quotes it alone sends them to the wrong
+	 * folder. A caller that reports a failure should say which plugin instead.
 	 */
-	DREAMGUI_API FString Resolve(const FString& InPath);
+	DREAMGUI_API FString Resolve(const FString& InPath, bool* OutRootTokenResolved = nullptr);
 
 	/**
 	 * The spelling to STORE for a file the user picked, given as an absolute path.

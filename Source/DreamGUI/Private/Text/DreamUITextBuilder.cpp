@@ -10,6 +10,8 @@
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetTree.h"
+// A `->` route may name an FDreamUIEventDelegate as well as a multicast delegate.
+#include "Event/DreamUIEventDelegate.h"
 #include "Interaction/UIListView.h"
 #include "Interaction/UIRecyclableScrollView.h"
 #include "Core/Components/DreamBackgroundBlur.h"
@@ -26,6 +28,26 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamContentWidget.h"
+
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamUIAnimEventTrack.h"
+#include "DreamTweener.h"
+
+#include "Channels/MovieSceneChannelProxy.h"
+#include "Channels/MovieSceneDoubleChannel.h"
+#include "Channels/MovieSceneFloatChannel.h"
+#include "Channels/MovieSceneStringChannel.h"
+#include "MovieScene.h"
+#include "MovieScenePossessable.h"
+#include "Sections/MovieSceneColorSection.h"
+#include "Sections/MovieSceneDoubleSection.h"
+#include "Sections/MovieSceneFloatSection.h"
+#include "Sections/MovieSceneVectorSection.h"
+#include "Tracks/MovieSceneColorTrack.h"
+#include "Tracks/MovieSceneDoubleTrack.h"
+#include "Tracks/MovieSceneFloatTrack.h"
+#include "Tracks/MovieSceneVectorTrack.h"
 
 #include "Misc/PackageName.h"
 #include "Misc/StringOutputDevice.h"
@@ -792,9 +814,19 @@ namespace DreamUITextBuilderLocal
 				const int64 EnumValue = Enum->GetValueByNameString(Value.Raw);
 				if (EnumValue == INDEX_NONE)
 				{
+					// A flags enum gets the extra sentence, because for one of those the reader's
+					// next thought is "then how do I write A and B" and the answer is not obvious:
+					// the grammar has no '|' (a single pipe is DUI1001) and is not getting one --
+					// adding an operator is a language decision nobody has taken. The NUMBER is the
+					// spelling, it is validated against this same enum, and the write-back prints it
+					// back, so the round trip is whole even though the spelling is not pretty.
+					const bool bIsFlags = Enum->HasAnyEnumFlags(EEnumFlags::Flags);
 					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownEnumValue, Value.Location,
-						FString::Printf(TEXT("'%s' is not a value of %s%s"), *Value.Raw, *Enum->GetName(),
-							*FormatSuggestion(SuggestNearestEnumValue(Value.Raw, Enum))));
+						FString::Printf(TEXT("'%s' is not a value of %s%s%s"), *Value.Raw, *Enum->GetName(),
+							*FormatSuggestion(SuggestNearestEnumValue(Value.Raw, Enum)),
+							bIsFlags
+								? TEXT(". This is a flags enum and the grammar has no '|', so a combination is written as the number its flags add up to")
+								: TEXT("")));
 					return false;
 				}
 				if (const FEnumProperty* AsEnum = CastField<FEnumProperty>(Leaf))
@@ -807,6 +839,56 @@ namespace DreamUITextBuilderLocal
 				}
 				return true;
 			}
+
+			// A NUMBER on an enum, which used to fall straight past this whole block into
+			// ImportText_Direct -- and that writes any integer at all, so `Visibility = 99` compiled
+			// green and produced a widget in a state the enum does not have. Checked here rather than
+			// left to the importer for the same reason the identifier spelling is: this is the one
+			// stage that knows both the literal and the UEnum it is landing on.
+			//
+			// OrBitfield, not IsValidEnumValue: a flags enum has no identifier for `A|B` -- the
+			// grammar has no '|' -- so a number is the ONLY spelling a combination has, and refusing
+			// it would make those properties unwritable rather than merely unvalidated. For an enum
+			// that is not a bitfield the two are the same call.
+			//
+			// Spelled out rather than handed to LexTryParseString, which answers true for "2.5" (it
+			// only reports a failure when the parse produced zero from no zero digit) -- and a real
+			// where an enum belongs is not a state the author meant, so truncating it would pick one
+			// for them.
+			const FString Trimmed = Value.Raw.TrimStartAndEnd();
+			bool bIsInteger = !Trimmed.IsEmpty();
+			for (int32 Index = 0; bIsInteger && Index < Trimmed.Len(); ++Index)
+			{
+				const TCHAR Char = Trimmed[Index];
+				if (Index == 0 && (Char == TEXT('-') || Char == TEXT('+')))
+				{
+					bIsInteger = Trimmed.Len() > 1;
+					continue;
+				}
+				bIsInteger = FChar::IsDigit(Char);
+			}
+			if (!bIsInteger)
+			{
+				RaiseTypeMismatch(InProperty, Leaf, InContext);
+				return false;
+			}
+			const int64 Numeric = FCString::Atoi64(*Trimmed);
+			if (!Enum->IsValidEnumValueOrBitfield(Numeric))
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownEnumValue, Value.Location,
+					FString::Printf(TEXT("%s declares no value %lld; write one of its names instead"),
+						*Enum->GetName(), Numeric));
+				return false;
+			}
+			if (const FEnumProperty* AsEnum = CastField<FEnumProperty>(Leaf))
+			{
+				AsEnum->GetUnderlyingProperty()->SetIntPropertyValue(ValuePtr, Numeric);
+			}
+			else
+			{
+				CastFieldChecked<FByteProperty>(Leaf)->SetIntPropertyValue(ValuePtr, Numeric);
+			}
+			return true;
 		}
 
 		// A quoted string is the author's exact bytes, delimiters already stripped. ImportText would
@@ -906,6 +988,28 @@ namespace DreamUITextBuilderLocal
 					FString::Printf(TEXT("'%s' is a %s, and '%s' takes a %s"), *Value.Raw, *Loaded->GetClass()->GetName(),
 						*InProperty.Name, *AsObject->PropertyClass->GetName()));
 				return false;
+			}
+			// The check above cannot see a TSubclassOf's bound at all, and that is not a subtlety of
+			// this code -- it is how FClassProperty is shaped. PropertyClass on one is UClass, for
+			// EVERY TSubclassOf<T> there is, so `Loaded->IsA(PropertyClass)` asks "is this a class",
+			// which any class that loaded already is. The T lives in MetaClass and nowhere else, so
+			// without this `WidgetClass = /Game/FX/M_Glow_C` compiled green and put a material's
+			// class into a property that will be instanced as a widget.
+			//
+			// Only when MetaClass is set: a bare `UClass*` UPROPERTY leaves it null and means exactly
+			// what it says, any class, and inventing a bound for it would refuse what the details
+			// panel accepts.
+			if (const FClassProperty* AsClass = CastField<FClassProperty>(Leaf))
+			{
+				const UClass* Resolved = Cast<UClass>(Loaded);
+				if (AsClass->MetaClass != nullptr && (Resolved == nullptr || !Resolved->IsChildOf(AsClass->MetaClass)))
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Value.Location,
+						FString::Printf(TEXT("'%s' is not a %s, and '%s' holds a subclass of %s"),
+							*Value.Raw, *AsClass->MetaClass->GetName(), *InProperty.Name,
+							*AsClass->MetaClass->GetName()));
+					return false;
+				}
 			}
 			AsObject->SetObjectPropertyValue(ValuePtr, Loaded);
 			return true;
@@ -1102,14 +1206,28 @@ namespace DreamUITextBuilderLocal
 				FString::Printf(TEXT("'%s' is a path into a struct, and an event is always a whole property"), *InProperty.Name));
 			return false;
 		}
-		// DYNAMIC multicast, specifically: it is the kind a UFUNCTION binds to by name and the kind
-		// UHT gives BlueprintAssignable events, and the two facts are why every OnSomething an author
-		// would reach for is one. A plain FMulticastDelegateProperty cannot be bound from a name.
-		if (CastField<FMulticastDelegateProperty>(InDestination.LeafProperty) == nullptr
-			|| !InDestination.LeafProperty->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+		// Either kind of event this plugin has, because a `->` route reaches both.
+		//
+		// DYNAMIC multicast, specifically, for the first: it is the kind a UFUNCTION binds to by name
+		// and the kind UHT gives BlueprintAssignable events, and the two facts are why every
+		// OnSomething in the `Controls/` family is one. A plain FMulticastDelegateProperty cannot be
+		// bound from a name.
+		//
+		// The second is an FDreamUIEventDelegate, which the older `Interaction/` behaviours declare
+		// instead (UIButton::OnClick, UISlider::OnValueChanged). Routes onto those used to be refused
+		// here, which left that whole family with no canonical way to be handled and kept its
+		// per-instance legacy event list alive as a second, competing mechanism.
+		// UDreamUserWidget::BindEventBindings attaches to either.
+		const bool bIsAssignableDelegate = CastField<FMulticastDelegateProperty>(InDestination.LeafProperty) != nullptr
+			&& InDestination.LeafProperty->HasAnyPropertyFlags(CPF_BlueprintAssignable);
+		const FStructProperty* AsDreamEvent = CastField<FStructProperty>(InDestination.LeafProperty);
+		const bool bIsDreamEvent = AsDreamEvent != nullptr
+			&& AsDreamEvent->Struct == FDreamUIEventDelegate::StaticStruct()
+			&& AsDreamEvent->HasAnyPropertyFlags(CPF_Edit);
+		if (!bIsAssignableDelegate && !bIsDreamEvent)
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
-				FString::Printf(TEXT("'%s' on %s is not an assignable event (a BlueprintAssignable dynamic multicast delegate)"),
+				FString::Printf(TEXT("'%s' on %s is not an event (a BlueprintAssignable dynamic multicast delegate, or an editable DreamUIEventDelegate)"),
 					*InProperty.Name, *InDestination.Owner->GetClass()->GetName()));
 			return false;
 		}
@@ -1582,14 +1700,29 @@ namespace DreamUITextBuilderLocal
 		{
 			return BuildEachLoop(InNode, InParent, InContext);
 		}
-		if (InNode.Kind == EDreamUINodeKind::ForLoop || InNode.Kind == EDreamUINodeKind::EachLoop)
+		if (InNode.Kind == EDreamUINodeKind::ForLoop)
 		{
-			// A warning rather than an error: the rest of the file is still a tree worth building, and
-			// an author previewing a screen wants to see the parts that do work. `each` only lands
-			// here for a caller that offered nowhere to record it -- a reference tree, most tests.
+			// An ERROR, and the split from `each` just below is the whole reason this branch is two
+			// branches. `for` means compile-time expansion and there is nothing to expand: the
+			// implementation plan's ruling is that its source is written as a no-argument UFUNCTION,
+			// which a compile cannot call, so the semantics -- a range? a literal list? -- were never
+			// decided. That is a decision nobody has taken, not a stage that has not run, and NOTHING
+			// a caller does makes the body appear. The grammar keeps accepting the keyword so a file
+			// written against a future version still parses; this is what stops such a file from
+			// silently producing a class missing a whole subtree, which is what a warning bought --
+			// one line in the Output Log against a preview that looks merely empty.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
+				TEXT("'for' is parsed but not implemented: compile-time expansion has no decided semantics yet, so everything under this one was skipped. Use 'each' for a run-time list, or write the copies out."));
+			return nullptr;
+		}
+		if (InNode.Kind == EDreamUINodeKind::EachLoop)
+		{
+			// Still a warning, and for a reason that has nothing to do with the one above: `each` IS
+			// implemented, and a block only reaches here when the CALLER offered nowhere to record it
+			// -- a hand-built AST, most tests. The rest of the file is a tree worth building, and an
+			// author previewing a screen wants to see the parts that do work.
 			InContext.Diagnostics->AddWarning(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
-				FString::Printf(TEXT("'%s' loops are parsed but not yet expanded, so everything under this one was skipped"),
-					InNode.Kind == EDreamUINodeKind::ForLoop ? TEXT("for") : TEXT("each")));
+				TEXT("this caller offered nowhere to record an 'each', so everything under this one was skipped"));
 			return nullptr;
 		}
 
@@ -1904,6 +2037,681 @@ namespace DreamUITextBuilderLocal
 			Pending.Property->SetObjectPropertyValue(Pending.LeafValuePtr, Resolved);
 		}
 	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Timelines
+	//
+	// The proposal's layer one, materialised. A `timeline` block becomes one UDreamWidgetAnimation in
+	// the root's UDreamWidgetAnimationComponent, marked language-owned, rebuilt from the text on every
+	// compile exactly as the tree is -- so the file stays the single truth and nothing in the editor
+	// can write a value the file does not contain.
+	//
+	// WHY EVERY EASED SEGMENT IS SAMPLED INTO LINEAR KEYS. The proposal's first load-bearing fact is
+	// that FRichCurve tangents are STORED data, so a text form has two choices: write the four
+	// numbers (unwritable by hand, and a lie about what an author edited) or write a NAME and derive
+	// the curve. Deriving it as a pair of endpoint tangents is only right for the curves a single
+	// cubic can be -- Elastic, Back and Bounce overshoot and oscillate, and a cubic silently smooths
+	// them into something else. Sampling at the sequence's own display rate is right for ALL of them,
+	// costs a handful of keys, needs no per-family table to drift, and is regenerated identically
+	// from one word on every compile. The curve library is called for the values, so there is exactly
+	// one definition of what `ease OutBounce` means in this plugin.
+	// ---------------------------------------------------------------------------------------------
+
+	/** The tick resolution and display rate every language-owned timeline is built at. */
+	constexpr int32 TimelineTickResolution = 24000;
+	constexpr int32 TimelineDisplayRate = 60;
+
+	FFrameNumber TimelineTimeToFrame(double InSeconds)
+	{
+		return FFrameNumber(static_cast<int32>(FMath::RoundToDouble(InSeconds * static_cast<double>(TimelineTickResolution))));
+	}
+
+	/**
+	 * The node a track line's '/'-separated path names, or null.
+	 *
+	 * An empty path is the animation's own host -- the same "" a binding records for the context
+	 * widget -- and every step after that is a DISPLAY NAME, matched case insensitively because ids
+	 * are FNames downstream and the parser already refuses two that differ only in case.
+	 */
+	UDreamWidget* FindWidgetByNodePath(UDreamWidget* InHost, const FString& InPath)
+	{
+		if (!IsValid(InHost))
+		{
+			return nullptr;
+		}
+		if (InPath.IsEmpty())
+		{
+			return InHost;
+		}
+		TArray<FString> Segments;
+		InPath.ParseIntoArray(Segments, TEXT("/"), /*InCullEmpty*/true);
+
+		UDreamWidget* Current = InHost;
+		for (const FString& Segment : Segments)
+		{
+			UDreamWidget* Next = nullptr;
+			for (UDreamWidget* Child : Current->GetChildren())
+			{
+				if (IsValid(Child) && Child->GetDisplayName() == Segment)
+				{
+					Next = Child;
+					break;
+				}
+			}
+			if (Next == nullptr)
+			{
+				return nullptr;
+			}
+			Current = Next;
+		}
+		return Current;
+	}
+
+	/** What a timeline track line resolved to: the object to possess, and the property path on it. */
+	struct FResolvedTimelineTarget
+	{
+		UObject* Object = nullptr;
+		/** The HEAD property, which is the one Sequencer's Interp rule is about. */
+		FProperty* HeadProperty = nullptr;
+		FProperty* LeafProperty = nullptr;
+		/** The dotted path as MovieScene wants it, which is the author's spelling verbatim. */
+		FString PropertyPath;
+	};
+
+	/**
+	 * The property a track line's head segment names on this class: the FIELD name, or the label the
+	 * animation editor puts on the row.
+	 *
+	 * The second reading is not a convenience, it is what makes the geometry animatable at all.
+	 * UDreamWidget carries six Interp mirrors of AnchorData that exist for precisely this -- their
+	 * own comment says "Interp mirrors of AnchorData for Sequencer" -- and they are FIELDS called
+	 * `AnimatableWidth` and `AnimatableHeight` wearing DisplayNames "Width" and "Height". The row an
+	 * author sees in the animation editor says Width; so does the details panel; so, therefore, does
+	 * a timeline line.
+	 *
+	 * This does NOT contradict the ruling that `Width = 400` on an assignment line is DUI4001 with a
+	 * hint pointing at `AnchorData.SizeDelta`. An assignment writes a PROPERTY and a timeline drives a
+	 * TRACK, and those are two questions with two naming systems that both already exist in the
+	 * engine. Writing the anchor block from a track is not even possible -- a struct has no property
+	 * track -- which is why the mirrors were added in the first place.
+	 *
+	 * Restricted to Interp properties so an alias can only ever name something animatable, and so a
+	 * DisplayName on some unrelated property cannot shadow a real field name. WITH_EDITORONLY_DATA,
+	 * because metadata is: a .dui compiled in a packaged build resolves the field name and not the
+	 * label, which is the honest degradation -- the label is an editor artefact.
+	 */
+	FProperty* FindTimelinePropertyOn(const UStruct* InScope, const FString& InName)
+	{
+		if (FProperty* Direct = InScope->FindPropertyByName(FName(*InName)))
+		{
+			return Direct;
+		}
+#if WITH_EDITORONLY_DATA
+		for (TFieldIterator<FProperty> It(InScope); It; ++It)
+		{
+			if (It->HasAnyPropertyFlags(CPF_Interp) && It->GetMetaData(TEXT("DisplayName")) == InName)
+			{
+				return *It;
+			}
+		}
+#endif
+		return nullptr;
+	}
+
+	/**
+	 * Which object on this node owns the property, and which property it is.
+	 *
+	 * The same candidate order every bare property name uses -- widget, its visual, then behaviours --
+	 * so `Color` on a Text node means the visual's Color in a timeline exactly as it does in an
+	 * assignment. Nothing here reports; the caller has the line and turns a false into DUI5016.
+	 */
+	bool ResolveTimelineTarget(UDreamWidget* InWidget, const FString& InPropertyPath, FResolvedTimelineTarget& OutTarget)
+	{
+		TArray<FString> Segments;
+		InPropertyPath.ParseIntoArray(Segments, TEXT("."), /*InCullEmpty*/true);
+		if (Segments.Num() == 0)
+		{
+			return false;
+		}
+
+		TArray<UObject*> Candidates;
+		Candidates.Add(InWidget);
+		if (UDreamVisual* Visual = InWidget->GetVisual())
+		{
+			Candidates.Add(Visual);
+		}
+		for (UDreamUIBehaviour* Behaviour : InWidget->GetAllComponents())
+		{
+			if (IsValid(Behaviour))
+			{
+				Candidates.Add(Behaviour);
+			}
+		}
+
+		for (UObject* Candidate : Candidates)
+		{
+			FProperty* Head = FindTimelinePropertyOn(Candidate->GetClass(), Segments[0]);
+			if (Head == nullptr)
+			{
+				continue;
+			}
+			// The RESOLVED spelling is accumulated as the walk goes, not copied from the author's
+			// text, because the two can differ: `Width` resolves to the field `AnimatableWidth`, and
+			// the path is what FTrackInstancePropertyBindings walks at run time. Handing it the label
+			// would build a track that resolves nothing and drives nothing, silently.
+			TArray<FString> ResolvedSegments;
+			ResolvedSegments.Add(Head->GetName());
+
+			FProperty* Leaf = Head;
+			for (int32 Index = 1; Index < Segments.Num() && Leaf != nullptr; ++Index)
+			{
+				const FStructProperty* AsStruct = CastField<FStructProperty>(Leaf);
+				// Field names only inside a struct: a label is something the animation editor puts on
+				// a track ROW, and a row is the head of the path, never a field within one.
+				Leaf = AsStruct != nullptr ? AsStruct->Struct->FindPropertyByName(FName(*Segments[Index])) : nullptr;
+				if (Leaf != nullptr)
+				{
+					ResolvedSegments.Add(Leaf->GetName());
+				}
+			}
+			if (Leaf == nullptr)
+			{
+				return false;
+			}
+			OutTarget.Object = Candidate;
+			OutTarget.HeadProperty = Head;
+			OutTarget.LeafProperty = Leaf;
+			OutTarget.PropertyPath = FString::Join(ResolvedSegments, TEXT("."));
+			return true;
+		}
+		return false;
+	}
+
+	/** How many float/double channels this property's track carries, or 0 when it has no track. */
+	int32 GetTimelineChannelCount(const FProperty* InProperty, bool& bOutIsColor, bool& bOutIsFloatChannel)
+	{
+		bOutIsColor = false;
+		bOutIsFloatChannel = false;
+		if (CastField<FFloatProperty>(InProperty) != nullptr)
+		{
+			bOutIsFloatChannel = true;
+			return 1;
+		}
+		if (CastField<FDoubleProperty>(InProperty) != nullptr)
+		{
+			return 1;
+		}
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InProperty);
+		if (AsStruct == nullptr)
+		{
+			return 0;
+		}
+		// FLinearColor and FColor, and deliberately not FSlateColor: a slate colour is a value OR a
+		// style-table lookup, and a track that drove the value half would silently turn a themed
+		// colour into a literal one. Nothing in the library declares an Interp FSlateColor anyway.
+		if (AsStruct->Struct == TBaseStructure<FLinearColor>::Get()
+			|| AsStruct->Struct == TBaseStructure<FColor>::Get())
+		{
+			bOutIsColor = true;
+			bOutIsFloatChannel = true;
+			return 4;
+		}
+		if (AsStruct->Struct == TBaseStructure<FVector2D>::Get())
+		{
+			return 2;
+		}
+		if (AsStruct->Struct == TBaseStructure<FVector>::Get())
+		{
+			return 3;
+		}
+		if (AsStruct->Struct == TBaseStructure<FVector4>::Get())
+		{
+			return 4;
+		}
+		return 0;
+	}
+
+	/**
+	 * The authored literal as up to four channel values, through the SAME parser every other value
+	 * uses -- so `(1, 1)`, `#FFC800` and `0.5` mean here exactly what they mean on a property line.
+	 *
+	 * Parsed into a scratch copy of the destination property rather than interpreted by shape, which
+	 * is what keeps colour quantisation, tuple arity and the short-form table in one place.
+	 */
+	bool ReadTimelineChannels(const FProperty* InLeaf, const FDreamUIValue& InValue, int32 InChannelCount,
+		bool bInIsColor, double OutChannels[4])
+	{
+		void* Scratch = FMemory::Malloc(InLeaf->GetSize(), InLeaf->GetMinAlignment());
+		InLeaf->InitializeValue(Scratch);
+		bool bParsed = false;
+		if (DreamUIValueFormat::HasShortForm(InLeaf))
+		{
+			bParsed = DreamUIValueFormat::Parse(InLeaf, InValue, Scratch);
+		}
+		else if (const FNumericProperty* AsNumeric = CastField<FNumericProperty>(InLeaf))
+		{
+			double Number = 0.0;
+			bParsed = InValue.Kind == EDreamUIValueKind::Number && LexTryParseString(Number, *InValue.Raw);
+			if (bParsed)
+			{
+				AsNumeric->SetFloatingPointPropertyValue(Scratch, Number);
+			}
+		}
+
+		if (bParsed)
+		{
+			if (bInIsColor)
+			{
+				// Through FLinearColor whatever the destination is: the colour track's four channels
+				// are linear floats, and FColor's bytes are sRGB. ParseColorHex/PrintColorHex own
+				// that conversion for the whole pipeline; reproducing it here is how the two drift.
+				FLinearColor Linear = FLinearColor::White;
+				const FStructProperty* AsStruct = CastField<FStructProperty>(InLeaf);
+				if (AsStruct->Struct == TBaseStructure<FLinearColor>::Get())
+				{
+					Linear = *static_cast<const FLinearColor*>(Scratch);
+				}
+				else
+				{
+					// FLinearColor(FColor) is the sRGB-decoding constructor -- the same pair
+					// ParseColorHex and PrintColorHex use, because the track's channels are linear.
+					Linear = FLinearColor(*static_cast<const FColor*>(Scratch));
+				}
+				OutChannels[0] = Linear.R;
+				OutChannels[1] = Linear.G;
+				OutChannels[2] = Linear.B;
+				OutChannels[3] = Linear.A;
+			}
+			else if (const FNumericProperty* AsNumeric = CastField<FNumericProperty>(InLeaf))
+			{
+				OutChannels[0] = AsNumeric->GetFloatingPointPropertyValue(Scratch);
+			}
+			else if (InChannelCount == 2)
+			{
+				const FVector2D& Value = *static_cast<const FVector2D*>(Scratch);
+				OutChannels[0] = Value.X;
+				OutChannels[1] = Value.Y;
+			}
+			else if (InChannelCount == 3)
+			{
+				const FVector& Value = *static_cast<const FVector*>(Scratch);
+				OutChannels[0] = Value.X;
+				OutChannels[1] = Value.Y;
+				OutChannels[2] = Value.Z;
+			}
+			else if (InChannelCount == 4)
+			{
+				const FVector4& Value = *static_cast<const FVector4*>(Scratch);
+				OutChannels[0] = Value.X;
+				OutChannels[1] = Value.Y;
+				OutChannels[2] = Value.Z;
+				OutChannels[3] = Value.W;
+			}
+		}
+
+		InLeaf->DestroyValue(Scratch);
+		FMemory::Free(Scratch);
+		return bParsed;
+	}
+
+	/** The ease of that name, or false. The word list is EDreamTweenEase's, read through reflection. */
+	bool FindEaseType(const FString& InName, EDreamTweenEase& OutEase)
+	{
+		const UEnum* EaseEnum = StaticEnum<EDreamTweenEase>();
+		const int64 Value = EaseEnum != nullptr ? EaseEnum->GetValueByNameString(InName) : INDEX_NONE;
+		if (Value == INDEX_NONE || static_cast<EDreamTweenEase>(Value) == EDreamTweenEase::CurveFloat)
+		{
+			// CurveFloat is excluded on purpose rather than missing: it names a curve ASSET, and a
+			// timeline key has nowhere to put one. An author who needs a hand-drawn curve marks the
+			// timeline `external` and draws it in Sequencer, which is the layer that exists for it.
+			return false;
+		}
+		OutEase = static_cast<EDreamTweenEase>(Value);
+		return true;
+	}
+
+	/** One channel's worth of keys, in frames, for one segment of one track. */
+	struct FTimelineSample
+	{
+		FFrameNumber Frame;
+		double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
+	};
+
+	/**
+	 * Every key a track line produces, eases resolved into sampled points.
+	 *
+	 * Returns false only when an ease name is not one; a track with a single key is fine and produces
+	 * one constant key, which is how an author pins a value for the whole animation.
+	 */
+	bool SampleTimelineTrack(const FDreamUITimelineTrack& InTrack, const TArray<TArray<double>>& InKeyChannels,
+		int32 InChannelCount, TArray<FTimelineSample>& OutSamples, FString& OutBadEaseName)
+	{
+		const double SecondsPerSample = 1.0 / static_cast<double>(TimelineDisplayRate);
+		for (int32 KeyIndex = 0; KeyIndex < InTrack.Keys.Num(); ++KeyIndex)
+		{
+			const FDreamUITimelineKey& Key = InTrack.Keys[KeyIndex];
+			FTimelineSample Start;
+			Start.Frame = TimelineTimeToFrame(Key.Time);
+			for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
+			{
+				Start.Channels[Channel] = InKeyChannels[KeyIndex][Channel];
+			}
+			OutSamples.Add(Start);
+
+			if (KeyIndex + 1 >= InTrack.Keys.Num())
+			{
+				break;
+			}
+			const FDreamUITimelineKey& NextKey = InTrack.Keys[KeyIndex + 1];
+			const double Span = NextKey.Time - Key.Time;
+			if (Span <= 0.0 || Key.EaseName.IsEmpty() || Key.EaseName.Equals(TEXT("Linear")))
+			{
+				// Linear needs no samples between: two keys and a straight line is exactly the curve.
+				continue;
+			}
+
+			EDreamTweenEase Ease = EDreamTweenEase::Linear;
+			if (!FindEaseType(Key.EaseName, Ease))
+			{
+				OutBadEaseName = Key.EaseName;
+				return false;
+			}
+			const FDreamTweenFunction Curve = UDreamTweener::GetEaseFunction(Ease);
+			if (!Curve.IsBound())
+			{
+				OutBadEaseName = Key.EaseName;
+				return false;
+			}
+
+			const int32 SampleCount = FMath::Clamp(FMath::CeilToInt(Span / SecondsPerSample) - 1, 0, 600);
+			for (int32 Sample = 1; Sample <= SampleCount; ++Sample)
+			{
+				const double Alpha = static_cast<double>(Sample) / static_cast<double>(SampleCount + 1);
+				// c = 1, b = 0, d = 1: the curve library's own normalised 0..1 shape, so `ease
+				// OutBounce` here and a DreamTween OutBounce are the same motion by construction.
+				const double Eased = static_cast<double>(Curve.Execute(1.0f, 0.0f, static_cast<float>(Alpha), 1.0f));
+				FTimelineSample Between;
+				Between.Frame = TimelineTimeToFrame(Key.Time + Span * Alpha);
+				for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
+				{
+					const double From = InKeyChannels[KeyIndex][Channel];
+					const double To = InKeyChannels[KeyIndex + 1][Channel];
+					Between.Channels[Channel] = From + (To - From) * Eased;
+				}
+				OutSamples.Add(Between);
+			}
+		}
+		return true;
+	}
+
+	/** Write one channel's samples into a float or double MovieScene channel. */
+	void FillTimelineFloatChannel(FMovieSceneFloatChannel& OutChannel, const TArray<FTimelineSample>& InSamples, int32 InChannel)
+	{
+		for (const FTimelineSample& Sample : InSamples)
+		{
+			OutChannel.AddLinearKey(Sample.Frame, static_cast<float>(Sample.Channels[InChannel]));
+		}
+	}
+
+	void FillTimelineDoubleChannel(FMovieSceneDoubleChannel& OutChannel, const TArray<FTimelineSample>& InSamples, int32 InChannel)
+	{
+		for (const FTimelineSample& Sample : InSamples)
+		{
+			OutChannel.AddLinearKey(Sample.Frame, Sample.Channels[InChannel]);
+		}
+	}
+
+	/** One property track line, built onto InAnimation. Reports and returns false on refusal. */
+	bool BuildTimelineTrack(const FDreamUITimeline& InTimeline, const FDreamUITimelineTrack& InTrack,
+		UDreamWidgetAnimation* InAnimation, UDreamWidget* InHost, FBuildContext& InContext)
+	{
+		UDreamWidget* Target = FindWidgetByNodePath(InHost, InTrack.NodePath);
+		if (!IsValid(Target))
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelineTargetNotFound, InTrack.Location,
+				FString::Printf(TEXT("timeline '%s' animates '%s', and this file declares no node on that path"),
+					*InTimeline.Name, *InTrack.NodePath));
+			return false;
+		}
+
+		FResolvedTimelineTarget Resolved;
+		if (!ResolveTimelineTarget(Target, InTrack.PropertyName, Resolved))
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelinePropertyNotAnimatable, InTrack.Location,
+				FString::Printf(TEXT("'%s' has no property '%s' on itself, its visual or any of its behaviours -- a track names what the animation editor shows, which is a property's own name or the label on its row"),
+					*Target->GetDisplayName(), *InTrack.PropertyName));
+			return false;
+		}
+		if (!Resolved.HeadProperty->HasAnyPropertyFlags(CPF_Interp))
+		{
+			// Sequencer's own rule, and the reason it is the rule here: a property track drives its
+			// target through the Interp machinery, so a property nobody marked Interp is one the
+			// animation editor does not offer either. Refusing with the reason beats compiling a
+			// track that exists and never writes.
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelinePropertyNotAnimatable, InTrack.Location,
+				FString::Printf(TEXT("'%s' is not marked Interp, so no animation track can drive it -- the animation editor does not offer it either"),
+					*InTrack.PropertyName));
+			return false;
+		}
+
+		bool bIsColor = false;
+		bool bIsFloatChannel = false;
+		const int32 ChannelCount = GetTimelineChannelCount(Resolved.LeafProperty, bIsColor, bIsFloatChannel);
+		if (ChannelCount == 0)
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelinePropertyNotAnimatable, InTrack.Location,
+				FString::Printf(TEXT("'%s' is a %s, and a timeline drives numbers, 2-, 3- and 4-component vectors and colours -- anything else belongs in an 'external' timeline"),
+					*InTrack.PropertyName, *Resolved.LeafProperty->GetCPPType()));
+			return false;
+		}
+
+		TArray<TArray<double>> KeyChannels;
+		KeyChannels.Reserve(InTrack.Keys.Num());
+		for (const FDreamUITimelineKey& Key : InTrack.Keys)
+		{
+			double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
+			if (!ReadTimelineChannels(Resolved.LeafProperty, Key.Value, ChannelCount, bIsColor, Channels))
+			{
+				AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::ValueTypeMismatch, Key.Location,
+					FString::Printf(TEXT("'%s' cannot be read as a value for '%s'"), *Key.Value.Raw, *InTrack.PropertyName));
+				return false;
+			}
+			KeyChannels.Add(TArray<double>({ Channels[0], Channels[1], Channels[2], Channels[3] }));
+		}
+
+		TArray<FTimelineSample> Samples;
+		FString BadEase;
+		if (!SampleTimelineTrack(InTrack, KeyChannels, ChannelCount, Samples, BadEase))
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::UnknownEaseName, InTrack.Location,
+				FString::Printf(TEXT("'%s' is not a curve name -- the set is EDreamTweenEase's, minus CurveFloat"), *BadEase));
+			return false;
+		}
+		if (Samples.Num() == 0)
+		{
+			return true;
+		}
+
+		UMovieScene* MovieScene = InAnimation->GetMovieScene();
+		// One possessable per bound OBJECT, reused across track lines: two tracks on one widget are
+		// two rows under one binding in Sequencer, which is what an author expects to see. A property
+		// that lives on the widget's VISUAL or on a behaviour is a different object and therefore a
+		// different binding -- the name says which, because otherwise two rows read "Icon" and only
+		// their contents tell them apart.
+		const FString BindingName = Resolved.Object == Target
+			? Target->GetDisplayName()
+			: FString::Printf(TEXT("%s.%s"), *Target->GetDisplayName(), *Resolved.Object->GetClass()->GetName());
+		FGuid Binding;
+		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)
+		{
+			const FMovieScenePossessable& Possessable = MovieScene->GetPossessable(Index);
+			if (Possessable.GetName() == BindingName
+				&& Possessable.GetPossessedObjectClass() == Resolved.Object->GetClass())
+			{
+				Binding = Possessable.GetGuid();
+				break;
+			}
+		}
+		if (!Binding.IsValid())
+		{
+			Binding = MovieScene->AddPossessable(BindingName, Resolved.Object->GetClass());
+			// Against the HOST, which is what the runtime resolves from -- see BindPossessableObject.
+			InAnimation->BindPossessableObject(Binding, *Resolved.Object, InHost);
+		}
+
+		const TRange<FFrameNumber> SectionRange(FFrameNumber(0), TimelineTimeToFrame(InTimeline.Duration) + 1);
+		if (bIsColor)
+		{
+			UMovieSceneColorTrack* Track = MovieScene->AddTrack<UMovieSceneColorTrack>(Binding);
+			Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+			UMovieSceneColorSection* Section = CastChecked<UMovieSceneColorSection>(Track->CreateNewSection());
+			Section->SetRange(SectionRange);
+			FillTimelineFloatChannel(Section->GetRedChannel(), Samples, 0);
+			FillTimelineFloatChannel(Section->GetGreenChannel(), Samples, 1);
+			FillTimelineFloatChannel(Section->GetBlueChannel(), Samples, 2);
+			FillTimelineFloatChannel(Section->GetAlphaChannel(), Samples, 3);
+			Track->AddSection(*Section);
+			return true;
+		}
+		if (ChannelCount == 1 && bIsFloatChannel)
+		{
+			UMovieSceneFloatTrack* Track = MovieScene->AddTrack<UMovieSceneFloatTrack>(Binding);
+			Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+			UMovieSceneFloatSection* Section = CastChecked<UMovieSceneFloatSection>(Track->CreateNewSection());
+			Section->SetRange(SectionRange);
+			TArrayView<FMovieSceneFloatChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneFloatChannel>();
+			if (Channels.Num() > 0)
+			{
+				FillTimelineFloatChannel(*Channels[0], Samples, 0);
+			}
+			Track->AddSection(*Section);
+			return true;
+		}
+		if (ChannelCount == 1)
+		{
+			UMovieSceneDoubleTrack* Track = MovieScene->AddTrack<UMovieSceneDoubleTrack>(Binding);
+			Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+			UMovieSceneDoubleSection* Section = CastChecked<UMovieSceneDoubleSection>(Track->CreateNewSection());
+			Section->SetRange(SectionRange);
+			TArrayView<FMovieSceneDoubleChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
+			if (Channels.Num() > 0)
+			{
+				FillTimelineDoubleChannel(*Channels[0], Samples, 0);
+			}
+			Track->AddSection(*Section);
+			return true;
+		}
+
+		UMovieSceneDoubleVectorTrack* Track = MovieScene->AddTrack<UMovieSceneDoubleVectorTrack>(Binding);
+		Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+		Track->SetNumChannelsUsed(ChannelCount);
+		UMovieSceneDoubleVectorSection* Section = CastChecked<UMovieSceneDoubleVectorSection>(Track->CreateNewSection());
+		Section->SetChannelsUsed(ChannelCount);
+		Section->SetRange(SectionRange);
+		TArrayView<FMovieSceneDoubleChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
+		for (int32 Index = 0; Index < ChannelCount && Index < Channels.Num(); ++Index)
+		{
+			FillTimelineDoubleChannel(*Channels[Index], Samples, Index);
+		}
+		Track->AddSection(*Section);
+		return true;
+	}
+
+	/** The block's `@time -> Name` lines as one unbound event row. */
+	void BuildTimelineEventTrack(const FDreamUITimeline& InTimeline, const FDreamUITimelineTrack& InTrack,
+		UDreamWidgetAnimation* InAnimation)
+	{
+		UMovieScene* MovieScene = InAnimation->GetMovieScene();
+		UDreamUIAnimEventTrack* Track = MovieScene->AddTrack<UDreamUIAnimEventTrack>();
+		UDreamUIAnimEventSection* Section = CastChecked<UDreamUIAnimEventSection>(Track->CreateNewSection());
+		Section->SetRange(TRange<FFrameNumber>(FFrameNumber(0), TimelineTimeToFrame(InTimeline.Duration) + 1));
+		for (const FDreamUITimelineKey& Key : InTrack.Keys)
+		{
+			Section->EventChannel.GetData().AddKey(TimelineTimeToFrame(Key.Time), Key.EventName);
+		}
+		Track->AddSection(*Section);
+	}
+
+	/**
+	 * Every `timeline` block in the file, onto the root's animation component.
+	 *
+	 * The root, because that is where the animations already live in practice and what the compiler's
+	 * carry, the class-variable pass and the runtime's playback entry all address. `external` blocks
+	 * build nothing at all -- their whole content is the statement that they exist, which the
+	 * compiler reads off the AST when it decides what to carry.
+	 */
+	void BuildTimelines(FBuildContext& InContext)
+	{
+		if (InContext.Ast == nullptr || InContext.Ast->Timelines.Num() == 0)
+		{
+			return;
+		}
+		UDreamWidget* Host = InContext.Tree != nullptr ? InContext.Tree->RootWidget.Get() : nullptr;
+		if (!IsValid(Host))
+		{
+			return;
+		}
+
+		UDreamWidgetAnimationComponent* Animator = nullptr;
+		for (const FDreamUITimeline& Timeline : InContext.Ast->Timelines)
+		{
+			if (Timeline.bExternal)
+			{
+				continue;
+			}
+			if (Animator == nullptr)
+			{
+				Animator = Host->GetComponent<UDreamWidgetAnimationComponent>();
+				if (Animator == nullptr)
+				{
+					Animator = Host->AddComponent<UDreamWidgetAnimationComponent>();
+				}
+			}
+			if (Animator == nullptr)
+			{
+				return;
+			}
+
+			UDreamWidgetAnimation* Animation = Animator->AddNewAnimation();
+			if (!IsValid(Animation))
+			{
+				continue;
+			}
+			Animation->SetDisplayNameString(Timeline.Name);
+			Animation->SetLanguageOwned(true);
+
+			// The longest key wins when the block declares no duration, so a timeline is never
+			// shorter than the motion written into it -- an author who wrote keys past `duration`
+			// meant the keys.
+			double Duration = Timeline.Duration;
+			for (const FDreamUITimelineTrack& Track : Timeline.Tracks)
+			{
+				for (const FDreamUITimelineKey& Key : Track.Keys)
+				{
+					Duration = FMath::Max(Duration, Key.Time);
+				}
+			}
+
+			UMovieScene* MovieScene = Animation->GetMovieScene();
+			MovieScene->SetTickResolutionDirectly(FFrameRate(TimelineTickResolution, 1));
+			MovieScene->SetDisplayRate(FFrameRate(TimelineDisplayRate, 1));
+			MovieScene->SetPlaybackRange(FFrameNumber(0), TimelineTimeToFrame(Duration).Value + 1);
+
+			FDreamUITimeline Resolved = Timeline;
+			Resolved.Duration = Duration;
+			for (const FDreamUITimelineTrack& Track : Timeline.Tracks)
+			{
+				if (Track.bIsEvent)
+				{
+					BuildTimelineEventTrack(Resolved, Track, Animation);
+				}
+				else
+				{
+					BuildTimelineTrack(Resolved, Track, Animation, Host, InContext);
+				}
+			}
+		}
+	}
 }
 
 UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* InOuter,
@@ -1951,6 +2759,10 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	// already passed. After the parent links rather than before, so what it resolves against is a
 	// tree with no half-set invariant left in it.
 	ResolveNodeReferences(Context);
+
+	// Last of all, because a track line's path is resolved against the FINISHED tree: a timeline may
+	// animate a node declared below the block that names it, exactly as a node reference may.
+	BuildTimelines(Context);
 
 	return OutDiagnostics.NumErrors() > ErrorsBefore ? nullptr : Context.Tree;
 }
