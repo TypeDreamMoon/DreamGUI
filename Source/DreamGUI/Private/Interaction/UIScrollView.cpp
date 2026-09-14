@@ -2,11 +2,19 @@
 // Modified by TypeDreamMoon.
 
 #include "Interaction/UIScrollView.h"
+#include "DreamGUI.h"
 #include "DreamTweenManager.h"
 #include "Core/Components/DreamWidget.h"
 
 namespace DreamScrollViewLocal
 {
+	/**
+	 * Under this many LOCAL UNITS per notch, a wheel cannot visibly move anything, so a value here is
+	 * almost certainly a MULTIPLIER left over from what this property used to mean (it shipped at 1,
+	 * multiplying the raw axis). Generous on purpose: nobody authors "three units a notch" on
+	 * purpose, and the whole point is to tell somebody whose wheel stopped working why.
+	 */
+	static constexpr float LegacyMultiplierCeiling = 5.0f;
 	/** Below this, an offset is at the boundary and a velocity is stopped. Local units, and units/s. */
 	static constexpr float SettleThreshold = 0.01f;
 	/** How hard the boundary pushes back against a fling that is already past it. Per unit of overshoot. */
@@ -50,6 +58,21 @@ void UUIScrollViewHelper::OnChildDimensionsChanged(UDreamWidget *Child, bool Piv
     else if (WidthChanged || HeightChanged)
     {
         TargetComp->RectRangeChanged();
+    }
+}
+
+void UUIScrollView::PostLoad()
+{
+    Super::PostLoad();
+    // Said once, when the asset carrying the number arrives, and never for a value nobody serialized:
+    // an asset that left ScrollSensitivity at the OLD default was saved with no delta at all and
+    // picks the new default up by itself. What reaches here is a number somebody wrote -- back when
+    // writing 1 meant "one times the axis" and now means "one unit a notch".
+    if (ScrollSensitivity > 0.0f && ScrollSensitivity < DreamScrollViewLocal::LegacyMultiplierCeiling)
+    {
+        UE_LOG(DreamGUI, Warning,
+            TEXT("[%s].%d '%s' has ScrollSensitivity %.3f. That is LOCAL UNITS travelled per wheel notch now (it used to be a multiplier on the raw axis), so this is a wheel that barely moves. The library default is 40."),
+            ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName(), ScrollSensitivity);
     }
 }
 
@@ -537,6 +560,24 @@ bool UUIScrollView::OnPointerScroll_Implementation(UDreamPointerEventData *Event
         // Nothing moved: already at that end, or this axis does not scroll. Hand it on.
         return true;
     }
+    if (bAnimateWheelScrolling)
+    {
+        // UMG's AnimateWheelScrolling: the notch GLIDES rather than teleporting, which is what makes
+        // a long list readable while the wheel is turning. The same easing ScrollTo uses, so a wheel
+        // notch and a programmatic scroll move the content in exactly one way.
+        //
+        // Converted to a content POSITION here rather than going through SetScrollOffset, because
+        // that setter kills the velocity and applies the position at once -- which is precisely the
+        // teleport this branch exists to avoid. The conversion is the setter's own arithmetic: the
+        // start-aligned position, less the offset on X and plus it on Y (the offset runs rightward
+        // and DOWNWARD, while the content's Y runs up).
+        const FVector2D Start = GetStartAlignedPosition();
+        FVector2D Target = GetContentPosition();
+        if (bGestureHorizontal) Target.X = Start.X - AfterOffset.X;
+        if (bGestureVertical)   Target.Y = Start.Y + AfterOffset.Y;
+        GlideContentTo(ClampToRange(Target), true, WheelScrollAnimationDuration);
+        return AllowEventBubbleUp;
+    }
     SetScrollOffset(AfterOffset);
     return AllowEventBubbleUp;
 }
@@ -771,15 +812,38 @@ bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVecto
 
     // An item larger than the viewport can never be framed, so show its leading edge -- the same
     // answer the scroll box layout gives, and the only one that does not look like an arbitrary crop.
-    auto DeltaAlongAxis = [](float ItemMin, float ItemMax, float ViewMin, float ViewMax)
+    // WHERE the item is meant to end up -- UMG's NavigationDestination, and the padding that goes
+    // with it. IntoView moves the least distance that reveals it (this view's original answer and
+    // still the default); TopOrLeft always parks it against the leading edge, which is what a menu
+    // stepping through equal rows wants; Center always frames it, which is what a carousel wants.
+    // The padding shrinks the box the item must fit inside, so a row never lands flush against the
+    // edge of the window with its neighbour cut in half beside it.
+    const float Pad = FMath::Max(0.0f, NavigationScrollPadding);
+    const EDreamUIScrollDestination Destination = NavigationDestination;
+    auto DeltaAlongAxis = [Pad, Destination](float ItemMin, float ItemMax, float ViewMin, float ViewMax,
+        bool bLeadingIsMaxEdge)
     {
-        if (ItemMin < ViewMin)
+        const float PaddedMin = ViewMin + Pad;
+        const float PaddedMax = ViewMax - Pad;
+        if (Destination == EDreamUIScrollDestination::TopOrLeft)
         {
-            return ViewMin - ItemMin;
+            // Which edge "leading" IS differs by axis, and the flag is the whole of that: X runs
+            // right, so a horizontal view leads at its MIN edge; Y runs UP, so a vertical view's top
+            // is its MAX edge. Spelled as a parameter rather than guessed from the numbers, because
+            // both callers hand their axis in as (min, max) and the pair looks identical here.
+            return bLeadingIsMaxEdge ? PaddedMax - ItemMax : PaddedMin - ItemMin;
         }
-        if (ItemMax > ViewMax)
+        if (Destination == EDreamUIScrollDestination::Center)
         {
-            return (ItemMax - ItemMin) > (ViewMax - ViewMin) ? ViewMin - ItemMin : ViewMax - ItemMax;
+            return ((PaddedMin + PaddedMax) - (ItemMin + ItemMax)) * 0.5f;
+        }
+        if (ItemMin < PaddedMin)
+        {
+            return PaddedMin - ItemMin;
+        }
+        if (ItemMax > PaddedMax)
+        {
+            return (ItemMax - ItemMin) > (PaddedMax - PaddedMin) ? PaddedMin - ItemMin : PaddedMax - ItemMax;
         }
         return 0.0f;
     };
@@ -787,12 +851,12 @@ bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVecto
     FVector2D Position = OutPosition;
     if (Horizontal)
     {
-        const float Delta = DeltaAlongAxis(ChildLeft, ChildRight, ViewLeft, ViewRight);
+        const float Delta = DeltaAlongAxis(ChildLeft, ChildRight, ViewLeft, ViewRight, /*bLeadingIsMaxEdge*/false);
         Position.X = FMath::Clamp(Position.X + Delta, HorizontalRange.X, HorizontalRange.Y);
     }
     if (Vertical)
     {
-        const float Delta = DeltaAlongAxis(ChildBottom, ChildTop, ViewBottom, ViewTop);
+        const float Delta = DeltaAlongAxis(ChildBottom, ChildTop, ViewBottom, ViewTop, /*bLeadingIsMaxEdge*/true);
         Position.Y = FMath::Clamp(Position.Y + Delta, VerticalRange.X, VerticalRange.Y);
     }
     if (Position.Equals(OutPosition))

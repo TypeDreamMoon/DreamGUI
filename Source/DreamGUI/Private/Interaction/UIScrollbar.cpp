@@ -202,6 +202,17 @@ void UUIScrollbar::SetMinHandleSize(float InValue)
     ApplyValueToVisual();
 }
 
+void UUIScrollbar::SetHandlePadding(float InValue)
+{
+    InValue = FMath::Max(0.0f, InValue);
+    if (HandlePadding == InValue)
+    {
+        return;
+    }
+    HandlePadding = InValue;
+    ApplyValueToVisual();
+}
+
 void UUIScrollbar::SetHandle(UDreamWidget* InHandle)
 {
     Handle = InHandle;
@@ -369,7 +380,11 @@ void UUIScrollbar::ApplyValueToVisual()
     UDreamWidget* Area = HandleArea.Get();
     const bool bHorizontal = IsHorizontal();
     const float AreaLength = bHorizontal ? Area->GetWidth() : Area->GetHeight();
-    const float AreaThickness = bHorizontal ? Area->GetHeight() : Area->GetWidth();
+    // Inset ACROSS the axis, never along it: the travel and the drag scale are the length's, so the
+    // groove costs the handle nothing but thickness. Floored at zero, because a padding larger than
+    // the bar is thick would otherwise ask for a negative rect.
+    const float AreaThickness = FMath::Max(
+        (bHorizontal ? Area->GetHeight() : Area->GetWidth()) - 2.0f * FMath::Max(HandlePadding, 0.0f), 0.0f);
     const float Length = FMath::Clamp(GetEffectiveSize() * AreaLength, 0.0f, FMath::Max(AreaLength, 0.0f));
     const float Travel = FMath::Max(AreaLength - Length, 0.0f);
     const float Offset = (IsReversed() ? 1.0f - FMath::Clamp(Value, 0.0f, 1.0f) : FMath::Clamp(Value, 0.0f, 1.0f)) * Travel;

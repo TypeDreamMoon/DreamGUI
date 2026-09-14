@@ -5,6 +5,23 @@
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIScrollbar.h"
 
+namespace DreamScrollViewWithScrollbarLocal
+{
+	/**
+	 * How much of the content the window shows, 0..1 -- and a FULL handle when there is no content
+	 * to divide by.
+	 *
+	 * Every visible-fraction division in this class goes through here. Unguarded they were 0/0 on the
+	 * first range calculation (nothing has been laid out yet, so both rects are zero) and on an empty
+	 * view. UUIScrollbar::SetValueAndSize clamps its argument, which rescues an infinity and does
+	 * nothing whatever for a NaN -- FMath::Clamp answers NaN with NaN, both comparisons being false --
+	 * so the NaN travelled on into GetEffectiveSize and the handle's rect, where nothing recovers.
+	 */
+	float VisibleFraction(float InWindow, float InContent)
+	{
+		return InContent > KINDA_SMALL_NUMBER ? InWindow / InContent : 1.0f;
+	}
+}
 
 UUIScrollViewWithScrollbar::UUIScrollViewWithScrollbar()
 {
@@ -77,11 +94,15 @@ void UUIScrollViewWithScrollbar::UpdateProgress(bool InFireEvent)
 		{
 			if (Progress.X > 1.0f)
 			{
-				HorizontalScrollbar->SetValueAndSize(1.0f, ContentParent->GetWidth() / (Content->GetWidth() + (HorizontalRange.Y - HorizontalRange.X) * (Progress.X - 1.0f)), false);
+				HorizontalScrollbar->SetValueAndSize(1.0f, DreamScrollViewWithScrollbarLocal::VisibleFraction(
+					ContentParent->GetWidth(),
+					Content->GetWidth() + (HorizontalRange.Y - HorizontalRange.X) * (Progress.X - 1.0f)), false);
 			}
 			else if (Progress.X < 0.0f)
 			{
-				HorizontalScrollbar->SetValueAndSize(0.0f, ContentParent->GetWidth() / (Content->GetWidth() + (HorizontalRange.Y - HorizontalRange.X) * (0.0f - Progress.X)), false);
+				HorizontalScrollbar->SetValueAndSize(0.0f, DreamScrollViewWithScrollbarLocal::VisibleFraction(
+					ContentParent->GetWidth(),
+					Content->GetWidth() + (HorizontalRange.Y - HorizontalRange.X) * (0.0f - Progress.X)), false);
 			}
 			else
 			{
@@ -92,11 +113,15 @@ void UUIScrollViewWithScrollbar::UpdateProgress(bool InFireEvent)
 		{
 			if (Progress.Y > 1.0f)
 			{
-				VerticalScrollbar->SetValueAndSize(1.0f, ContentParent->GetHeight() / (Content->GetHeight() + (VerticalRange.Y - VerticalRange.X) * (Progress.Y - 1.0f)), false);
+				VerticalScrollbar->SetValueAndSize(1.0f, DreamScrollViewWithScrollbarLocal::VisibleFraction(
+					ContentParent->GetHeight(),
+					Content->GetHeight() + (VerticalRange.Y - VerticalRange.X) * (Progress.Y - 1.0f)), false);
 			}
 			else if (Progress.Y < 0.0f)
 			{
-				VerticalScrollbar->SetValueAndSize(0.0f, ContentParent->GetHeight() / (Content->GetHeight() + (VerticalRange.Y - VerticalRange.X) * (0.0f - Progress.Y)), false);
+				VerticalScrollbar->SetValueAndSize(0.0f, DreamScrollViewWithScrollbarLocal::VisibleFraction(
+					ContentParent->GetHeight(),
+					Content->GetHeight() + (VerticalRange.Y - VerticalRange.X) * (0.0f - Progress.Y)), false);
 			}
 			else
 			{
@@ -217,7 +242,8 @@ void UUIScrollViewWithScrollbar::CalculateHorizontalRange()
 		}
 		if (HorizontalScrollbar.IsValid())
 		{
-			HorizontalScrollbar->SetValueAndSize(Progress.X, ParentWidth / ContentWidth, false);
+			HorizontalScrollbar->SetValueAndSize(Progress.X,
+				DreamScrollViewWithScrollbarLocal::VisibleFraction(ParentWidth, ContentWidth), false);
 		}
 	}
 }
@@ -257,7 +283,8 @@ void UUIScrollViewWithScrollbar::CalculateVerticalRange()
 		}
 		if (VerticalScrollbar.IsValid())
 		{
-			VerticalScrollbar->SetValueAndSize(Progress.Y, ParentHeight / ContentHeight, false);
+			VerticalScrollbar->SetValueAndSize(Progress.Y,
+				DreamScrollViewWithScrollbarLocal::VisibleFraction(ParentHeight, ContentHeight), false);
 		}
 	}
 }

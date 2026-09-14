@@ -2,6 +2,7 @@
 
 #include "Controls/DreamScrollBox.h"
 
+#include "DreamGUI.h"
 #include "Core/DreamUIWidgetRegistry.h"
 
 #include "Core/DreamUIBuilder.h"
@@ -14,6 +15,22 @@
 #include "Interaction/UIScrollView.h"
 
 const FName UDreamScrollBox::ContentSlotName(TEXT("Content"));
+
+void UDreamScrollBox::PostLoad()
+{
+	Super::PostLoad();
+	// ScrollSensitivity is LOCAL UNITS per notch now; it used to be documented as a multiplier on the
+	// raw wheel axis and shipped at 1. The arithmetic never changed, so an asset carrying a
+	// multiplier-era number still travels that many units a notch -- which reads as a broken wheel
+	// rather than as a setting, and nothing said so. Five units is the ceiling under which a notch
+	// cannot visibly move anything; the same number, for the same reason, as UUIScrollView's.
+	if (ScrollSensitivity > 0.0f && ScrollSensitivity < 5.0f)
+	{
+		UE_LOG(DreamGUI, Warning,
+			TEXT("[%s].%d '%s' has ScrollSensitivity %.3f. That is LOCAL UNITS travelled per wheel notch now (it used to be a multiplier on the raw axis), so this is a wheel that barely moves. The library default is 40."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName(), ScrollSensitivity);
+	}
+}
 
 void UDreamScrollBox::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
@@ -179,6 +196,13 @@ void UDreamScrollBox::ApplyStyle()
 		ScrollView->SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
 		ScrollView->SetScrollSensitivity(ScrollSensitivity);
 		ScrollView->SetDecelerateRate(DecelerateRate);
+		// The wheel's feel and where navigation parks a revealed child. Restated on every push like
+		// every other behaviour knob: on the TEMPLATE road the view is one this control just added,
+		// carrying the library's defaults rather than what the control was authored with.
+		ScrollView->SetAnimateWheelScrolling(bAnimateWheelScrolling);
+		ScrollView->SetWheelScrollAnimationDuration(WheelScrollAnimationDuration);
+		ScrollView->SetNavigationDestination(NavigationDestination);
+		ScrollView->SetNavigationScrollPadding(NavigationScrollPadding);
 	}
 
 	// Measured before the gutter is decided and again after it is applied. The circle is real -- the
@@ -243,6 +267,139 @@ void UDreamScrollBox::SetScrollProgress(float InProgress)
 {
 	ScrollProgress = InProgress;
 	PushScrollProgress();
+}
+
+void UDreamScrollBox::SetOrientation(EDreamPanelOrientation InOrientation)
+{
+	if (Orientation == InOrientation)
+	{
+		return;
+	}
+	Orientation = InOrientation;
+	// The whole style: the axis decides which way the view scrolls, which way the stack piles, which
+	// edge the bar sits on and where the gutter is cut -- all of it written in ApplyStyle.
+	ApplyStyle();
+}
+
+void UDreamScrollBox::SetShowScrollBar(bool bInShowScrollBar)
+{
+	if (bShowScrollBar == bInShowScrollBar)
+	{
+		return;
+	}
+	bShowScrollBar = bInShowScrollBar;
+	// The gutter moves with the bar, so this is a re-layout and not a visibility flip.
+	ApplyStyle();
+}
+
+void UDreamScrollBox::SetScrollBarVisibility(EDreamScrollBoxScrollbarVisibility InVisibility)
+{
+	if (ScrollBarVisibility == InVisibility)
+	{
+		return;
+	}
+	ScrollBarVisibility = InVisibility;
+	ApplyStyle();
+}
+
+void UDreamScrollBox::SetScrollSensitivity(float InSensitivity)
+{
+	ScrollSensitivity = InSensitivity;
+	if (ScrollView != nullptr)
+	{
+		// Straight to the behaviour: nothing about the box's geometry depends on it, so a whole style
+		// push would be work with one line of effect.
+		ScrollView->SetScrollSensitivity(InSensitivity);
+	}
+}
+
+void UDreamScrollBox::SetDecelerateRate(float InRate)
+{
+	DecelerateRate = InRate;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetDecelerateRate(InRate);
+	}
+}
+
+void UDreamScrollBox::SetAnimateWheelScrolling(bool bInAnimate)
+{
+	bAnimateWheelScrolling = bInAnimate;
+	if (ScrollView != nullptr)
+	{
+		// Straight to the behaviour: the wheel's feel is spent where a notch becomes a position, and
+		// nothing about the box's geometry depends on it.
+		ScrollView->SetAnimateWheelScrolling(bInAnimate);
+	}
+}
+
+void UDreamScrollBox::SetNavigationDestination(EDreamUIScrollDestination InDestination)
+{
+	NavigationDestination = InDestination;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetNavigationDestination(InDestination);
+	}
+}
+
+void UDreamScrollBox::SetNavigationScrollPadding(float InPadding)
+{
+	NavigationScrollPadding = FMath::Max(0.0f, InPadding);
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetNavigationScrollPadding(NavigationScrollPadding);
+	}
+}
+
+void UDreamScrollBox::ScrollToStart()
+{
+	if (ScrollView != nullptr)
+	{
+		ScrollView->ScrollToStart();
+	}
+}
+
+void UDreamScrollBox::ScrollToEnd()
+{
+	if (ScrollView != nullptr)
+	{
+		ScrollView->ScrollToEnd();
+	}
+}
+
+bool UDreamScrollBox::ScrollWidgetIntoView(UDreamWidget* InWidget, bool bInAnimate)
+{
+	return ScrollView != nullptr && ScrollView->ScrollWidgetIntoView(InWidget, bInAnimate);
+}
+
+float UDreamScrollBox::GetScrollOffset() const
+{
+	if (ScrollView == nullptr)
+	{
+		return 0.0f;
+	}
+	const FVector2D Offset = ScrollView->GetScrollOffset();
+	return static_cast<float>(IsHorizontal() ? Offset.X : Offset.Y);
+}
+
+void UDreamScrollBox::SetScrollOffset(float InOffset)
+{
+	if (ScrollView == nullptr)
+	{
+		return;
+	}
+	// The other axis is read back rather than zeroed: this control drives one, and the behaviour's
+	// setter takes both at once -- the same shape PushScrollProgress uses.
+	FVector2D Offset = ScrollView->GetScrollOffset();
+	if (IsHorizontal())
+	{
+		Offset.X = InOffset;
+	}
+	else
+	{
+		Offset.Y = InOffset;
+	}
+	ScrollView->SetScrollOffset(Offset);
 }
 
 UDreamWidget* UDreamScrollBox::GetContentNode() const

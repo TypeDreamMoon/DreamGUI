@@ -45,16 +45,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box")
 	FDreamScrollBoxStyle Style;
 
-	/** Which way it scrolls, and which way its content stacks. One property instead of two Blueprint assets. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box")
+	/**
+	 * Which way it scrolls, and which way its content stacks. One property instead of two Blueprint
+	 * assets.
+	 *
+	 * BlueprintSetter, like the four knobs below it: every one of these is read only by ApplyStyle,
+	 * so a runtime write straight onto the variable used to change the number and nothing else --
+	 * nothing in this family re-derives a control from a property that moved, which is the
+	 * SynchronizeProperties tax UDreamUIControl documents. Through the setter the re-push is not
+	 * something a caller has to know to make.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetOrientation", BlueprintSetter = "SetOrientation", Category = "Scroll Box")
 	EDreamPanelOrientation Orientation = EDreamPanelOrientation::Vertical;
 
 	/** Off means no bar at all, and the viewport keeps the gutter it would have cost. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShowScrollBar", BlueprintSetter = "SetShowScrollBar", Category = "Scroll Box")
 	bool bShowScrollBar = true;
 
 	/** Whether the bar stays put or disappears while the content already fits. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (EditCondition = "bShowScrollBar"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollBarVisibility", BlueprintSetter = "SetScrollBarVisibility", Category = "Scroll Box", meta = (EditCondition = "bShowScrollBar"))
 	EDreamScrollBoxScrollbarVisibility ScrollBarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
 
 	/**
@@ -63,18 +72,40 @@ public:
 	 * content one unit a notch -- a wheel that visibly did nothing. 40 is what
 	 * UDreamLayoutContainerScrollBox already uses for the same gesture.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollSensitivity", BlueprintSetter = "SetScrollSensitivity", Category = "Scroll Box", meta = (ClampMin = "0.0"))
 	float ScrollSensitivity = 40.0f;
 
 	/** How quickly a flick stops. Zero never slows down; larger stops sooner. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetDecelerateRate", BlueprintSetter = "SetDecelerateRate", Category = "Scroll Box", meta = (ClampMin = "0.0"))
 	float DecelerateRate = 0.135f;
+
+	/**
+	 * A wheel notch GLIDES instead of teleporting -- UMG's AnimateWheelScrolling. Off by default,
+	 * which is what every existing box already does.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAnimateWheelScrolling", BlueprintSetter = "SetAnimateWheelScrolling", Category = "Scroll Box")
+	bool bAnimateWheelScrolling = false;
+
+	/** How long one animated notch takes. Ignored while bAnimateWheelScrolling is off. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (ClampMin = "0.0", EditCondition = "bAnimateWheelScrolling"))
+	float WheelScrollAnimationDuration = 0.15f;
+
+	/**
+	 * Where a widget revealed by NAVIGATION ends up -- UMG's NavigationDestination. IntoView moves
+	 * the least distance that shows it; the other two always frame it the same way.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetNavigationDestination", BlueprintSetter = "SetNavigationDestination", Category = "Scroll Box")
+	EDreamUIScrollDestination NavigationDestination = EDreamUIScrollDestination::IntoView;
+
+	/** How much of the window to keep clear around it -- UMG's NavigationScrollPadding. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetNavigationScrollPadding", BlueprintSetter = "SetNavigationScrollPadding", Category = "Scroll Box", meta = (ClampMin = "0.0"))
+	float NavigationScrollPadding = 0.0f;
 
 	/**
 	 * Position along the scrolling axis, 0 to 1. Authored in; mirror of the behaviour's out, so a
 	 * `.dui` binding and the designer can both see it.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollProgress", BlueprintSetter = "SetScrollProgress", Category = "Scroll Box", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ScrollProgress = 0.0f;
 
 	/** Re-broadcast from the scroll behaviour, so a consumer binds to the control, not to a part of it. */
@@ -118,6 +149,81 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
 	void SetScrollProgress(float InProgress);
 
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	EDreamPanelOrientation GetOrientation() const { return Orientation; }
+
+	/** Re-states the axis on the view, the stack and the bar, and re-cuts the gutter. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetOrientation(EDreamPanelOrientation InOrientation);
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	bool GetShowScrollBar() const { return bShowScrollBar; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetShowScrollBar(bool bInShowScrollBar);
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	EDreamScrollBoxScrollbarVisibility GetScrollBarVisibility() const { return ScrollBarVisibility; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetScrollBarVisibility(EDreamScrollBoxScrollbarVisibility InVisibility);
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	float GetScrollSensitivity() const { return ScrollSensitivity; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetScrollSensitivity(float InSensitivity);
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	float GetDecelerateRate() const { return DecelerateRate; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetDecelerateRate(float InRate);
+
+	/**
+	 * The four scroll commands UMG's box offers, forwarded to the behaviour.
+	 *
+	 * Forwarded rather than left to GetScrollView(): the behaviour has had all of them since it was
+	 * written, and a consumer reaching through the accessor to call them is a consumer reaching past
+	 * the control into a part the control owns -- which is the one thing this whole family exists to
+	 * make unnecessary. GetScrollView() stays for everything genuinely beyond the control's surface.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	bool GetAnimateWheelScrolling() const { return bAnimateWheelScrolling; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetAnimateWheelScrolling(bool bInAnimate);
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	EDreamUIScrollDestination GetNavigationDestination() const { return NavigationDestination; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetNavigationDestination(EDreamUIScrollDestination InDestination);
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	float GetNavigationScrollPadding() const { return NavigationScrollPadding; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetNavigationScrollPadding(float InPadding);
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void ScrollToStart();
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void ScrollToEnd();
+
+	/** Scroll the least distance that brings InWidget fully into view; nothing when it already is. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	bool ScrollWidgetIntoView(UDreamWidget* InWidget, bool bInAnimate = true);
+
+	/** How far the window has travelled from the content's start edge, in local units. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetScrollOffset() const;
+
+	/** Clamped to how far there is to go. The absolute counterpart of SetScrollProgress. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetScrollOffset(float InOffset);
+
 	/** Where things go. Parent into this, or use AddContent, and the stack piles them up in order. */
 	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
 	UDreamWidget* GetContentNode() const;
@@ -149,6 +255,13 @@ protected:
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
+	/**
+	 * Says out loud what the ScrollSensitivity semantic change left silent -- see
+	 * UUIScrollView::PostLoad, which says it for the behaviour the same way and for the same reason.
+	 * This knob is the one an author actually edits, and it is pushed into the behaviour AFTER load,
+	 * so the behaviour's own check never sees the number a scroll box carries.
+	 */
+	virtual void PostLoad() override;
 
 private:
 	void HandleScrollViewChanged(FVector2D InProgress);

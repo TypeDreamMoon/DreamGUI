@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Interaction/UIButton.h"
 #include "Interaction/UIScrollbar.h"
 #include "Interaction/UIScrollView.h"
 #include "DreamScrollBar.generated.h"
@@ -77,6 +78,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float NavigationChangeInterval = 0.1f;
 
+	/**
+	 * A step button at each end of the track -- the desktop scroll bar's arrows.
+	 *
+	 * Off by default, which is what this bar has always drawn and what a touch-first or console UI
+	 * wants; on, an arrow is pinned to each end, the track is inset between them so the handle never
+	 * travels underneath one, and a click steps the value by ArrowStepSize.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShowArrows", BlueprintSetter = "SetShowArrows", Category = "Scroll Bar")
+	bool bShowArrows = false;
+
+	/** How far one arrow click moves the value, as a fraction of the whole range. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "bShowArrows"))
+	float ArrowStepSize = 0.1f;
+
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Bar")
 	FDreamScrollBarValueChangedEvent OnValueChanged;
@@ -96,6 +111,32 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
 	TObjectPtr<UUIScrollbar> BarBehaviour = nullptr;
+
+	/** The step buttons. Present in the built-in tree and asleep until bShowArrows wakes them. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
+	TObjectPtr<UDreamWidget> ArrowStartNode = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
+	TObjectPtr<UDreamWidget> ArrowEndNode = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
+	TObjectPtr<UDreamWidget> ArrowStartGlyphNode = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
+	TObjectPtr<UDreamWidget> ArrowEndGlyphNode = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
+	TObjectPtr<UUIButton> ArrowStartBehaviour = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Bar")
+	TObjectPtr<UUIButton> ArrowEndBehaviour = nullptr;
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
+	bool GetShowArrows() const { return bShowArrows; }
+
+	/** Wakes or sleeps the arrows AND re-insets the track, which is why it is a whole style push. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
+	void SetShowArrows(bool bInShowArrows);
 
 	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
 	float GetValue() const;
@@ -144,6 +185,12 @@ protected:
 
 private:
 	void HandleValueChanged(float InValue);
+
+	/** Wake or sleep the two step buttons, place them, and inset the track between them. */
+	void ApplyArrows(const FDreamScrollBarStyle& InActive);
+
+	void HandleArrowStartClicked();
+	void HandleArrowEndClicked();
 	void HandleScrollViewProgress(FVector2D InProgress);
 
 	/** The one writer of Value/HandleSize and the behaviour's copy of them. */

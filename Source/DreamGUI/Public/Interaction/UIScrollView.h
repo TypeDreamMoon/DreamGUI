@@ -12,6 +12,25 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollViewValueChangedEvent, FVector2D, InVector2);
 
+/**
+ * Where a revealed widget ends up -- UMG's EDescendantScrollDestination.
+ *
+ * IntoView is this view's original answer and stays the default: it moves the LEAST distance that
+ * reveals the widget, which is the only one that reads well under directional navigation (stepping
+ * one row down must not heave the whole list). The other two are for the cases that genuinely want a
+ * fixed frame -- a menu whose rows all sit in the same place, a carousel that centres its choice.
+ */
+UENUM(BlueprintType)
+enum class EDreamUIScrollDestination : uint8
+{
+	/** The least movement that brings it fully inside the window. */
+	IntoView,
+	/** Always parked against the leading edge -- the left of a horizontal view, the top of a vertical one. */
+	TopOrLeft,
+	/** Always centred in the window. */
+	Center,
+};
+
 UENUM(BlueprintType)
 enum class EDreamScrollCoordinateMode : uint8
 {
@@ -87,6 +106,17 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnUnregister() override;
 	virtual void OnDestroy() override;
+	/**
+	 * Says out loud what the ScrollSensitivity semantic change left silent.
+	 *
+	 * The number used to be documented as a MULTIPLIER on the raw wheel axis and shipped at 1; it is
+	 * LOCAL UNITS per notch now and ships at 40. The arithmetic never changed, so an asset carrying a
+	 * multiplier-era value still loads it and still travels that many units a notch -- one unit, on
+	 * the old default -- which reads as a wheel that does nothing rather than as a setting. Nothing
+	 * migrates it (a value equal to the old default was never serialized in the first place, so those
+	 * assets pick the new one up for free) and nothing said so, which is the part worth fixing.
+	 */
+	virtual void PostLoad() override;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -117,6 +147,31 @@ protected:
 	/** If greater than zero, mouse wheel input advances by this normalized progress instead of local units. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float WheelProgressStep = 0.0f;
+	/**
+	 * A wheel notch GLIDES to its destination instead of teleporting -- UMG's AnimateWheelScrolling.
+	 *
+	 * Off by default, which is the behaviour every existing view already has: turning it on for
+	 * everyone would change how every list in every project reads under the wheel. It uses the same
+	 * easing ScrollTo does, so a notch and a programmatic scroll move the content one way.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bAnimateWheelScrolling = false;
+	/** How long one animated notch takes. Ignored while bAnimateWheelScrolling is off. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView", meta = (ClampMin = "0.0", EditCondition = "bAnimateWheelScrolling"))
+		float WheelScrollAnimationDuration = 0.15f;
+	/**
+	 * Where a revealed widget is meant to END UP -- UMG's NavigationDestination, consulted by
+	 * ScrollWidgetIntoView and therefore by every navigation move (FDreamUINavigationScroll).
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		EDreamUIScrollDestination NavigationDestination = EDreamUIScrollDestination::IntoView;
+	/**
+	 * How much of the window to keep clear around a revealed widget, in local units -- UMG's
+	 * NavigationScrollPadding. Stops a row landing flush against the edge with its neighbour cut in
+	 * half beside it, which is the only cue a player has that the list continues.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView", meta = (ClampMin = "0.0"))
+		float NavigationScrollPadding = 0.0f;
 	/** Coordinate contract used to move Content. AnchoredPosition is recommended for layout-managed content. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
 		EDreamScrollCoordinateMode CoordinateMode = EDreamScrollCoordinateMode::RelativeLocation;
@@ -290,6 +345,22 @@ public:
 		void SetScrollSensitivity(float value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		void SetWheelProgressStep(float value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetAnimateWheelScrolling()const { return bAnimateWheelScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetAnimateWheelScrolling(bool value) { bAnimateWheelScrolling = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		float GetWheelScrollAnimationDuration()const { return WheelScrollAnimationDuration; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetWheelScrollAnimationDuration(float value) { WheelScrollAnimationDuration = FMath::Max(0.0f, value); }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		EDreamUIScrollDestination GetNavigationDestination()const { return NavigationDestination; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetNavigationDestination(EDreamUIScrollDestination value) { NavigationDestination = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		float GetNavigationScrollPadding()const { return NavigationScrollPadding; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetNavigationScrollPadding(float value) { NavigationScrollPadding = FMath::Max(0.0f, value); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		void SetCoordinateMode(EDreamScrollCoordinateMode value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")

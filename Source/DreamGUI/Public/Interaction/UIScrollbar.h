@@ -90,6 +90,14 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Scrollbar", meta = (ClampMin = "0.0"))
 		float MinHandleSize = 0.0f;
+	/**
+	 * How far the handle is inset from the area ACROSS the bar's axis -- the groove a real scroll bar
+	 * draws its pill in. Zero (the default) is the handle filling the track, which is what this
+	 * component has always drawn. It costs the handle nothing along its own axis: the travel and the
+	 * drag scale are the LENGTH's, and this is the thickness.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Scrollbar", meta = (ClampMin = "0.0"))
+		float HandlePadding = 0.0f;
 
 	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> HandleArea;
 
@@ -128,6 +136,11 @@ public:
 		void SetNavigationChangeInterval(float InValue);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Scrollbar")
 		void SetMinHandleSize(float InValue);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Scrollbar")
+		float GetHandlePadding()const { return HandlePadding; }
+	/** Re-lays the handle at once: the inset is part of the rect this component is the only writer of. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Scrollbar")
+		void SetHandlePadding(float InValue);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Scrollbar")
 		UDreamWidget* GetHandle()const { return Handle.Get(); }
