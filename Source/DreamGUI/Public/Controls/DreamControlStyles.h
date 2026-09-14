@@ -4,6 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Core/Components/DreamRectBlock.h"
+//for EDreamMenuPlacement, which FDreamMenuAnchorStyle carries. The enum belongs to the LAYOUT side
+//(UDreamLayoutContainerMenuAnchor owns it and the placement arithmetic that reads it), and the
+//control's style names that same enum rather than a second one meaning nearly the same thing.
+#include "Core/Components/DreamPanelLayouts.h"
 #include "DreamControlStyles.generated.h"
 
 /**
@@ -496,6 +500,34 @@ struct DREAMGUI_API FDreamTextInputStyle
 	bool bOverride_BackgroundBrush = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_BackgroundBrush"))
 	FDreamUIFaceBrush BackgroundBrush;
+
+	/**
+	 * The caret, and the highlight behind a selection. The one pair of colours a text field cannot
+	 * do without and the only ones this sheet did not describe: the behaviour's own defaults were
+	 * left to drive them, and its caret default sat four values away from Background above -- an
+	 * invisible caret on the library's own theme. They follow the text, as a caret does.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_CaretColor = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_CaretColor"))
+	FColor CaretColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_SelectionColor = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_SelectionColor"))
+	FColor SelectionColor = FColor(96, 140, 200, 128);
+
+	/** How wide the caret is drawn, in UI units. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_CaretWidth = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_CaretWidth", ClampMin = "0.0"))
+	float CaretWidth = 2.0f;
+
+	/** Seconds between caret blinks. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_CaretBlinkRate = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_CaretBlinkRate", ClampMin = "0.0"))
+	float CaretBlinkRate = 0.5f;
 };
 
 /** A dropdown: a button-shaped face, and the list it opens. */
@@ -576,6 +608,21 @@ struct DREAMGUI_API FDreamDropdownStyle
 	bool bOverride_ItemHovered = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_ItemHovered"))
 	FColor ItemHovered = FColor(74, 81, 98, 255);
+
+	/** An item that cannot be chosen. The face has FaceDisabled; the rows used to have nothing. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ItemDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_ItemDisabled"))
+	FColor ItemDisabled = FColor(44, 47, 56, 255);
+
+	/**
+	 * An item the keyboard or the pad has landed on. The face already had FaceFocused; without the
+	 * same answer for the rows, navigating INSIDE an open list showed nothing at all.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ItemFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_ItemFocused"))
+	FColor ItemFocused = FColor(96, 140, 200, 255);
 
 	/** The mark on the selected item. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
@@ -705,6 +752,17 @@ struct DREAMGUI_API FDreamScrollBarStyle
 	bool bOverride_Thickness = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_Thickness"))
 	float Thickness = 10.0f;
+
+	/**
+	 * How far the HANDLE is inset from the track, across the bar's axis -- Slate's
+	 * FScrollBarStyle::Thickness beside its track, and the reason a real scroll bar reads as a pill
+	 * running down a groove rather than as one solid slab. Zero (the default) is the handle filling
+	 * the track, which is what this bar has always drawn.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
+	bool bOverride_HandlePadding = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_HandlePadding", ClampMin = "0.0"))
+	float HandlePadding = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
 	bool bOverride_TrackColor = true;
@@ -857,6 +915,33 @@ struct DREAMGUI_API FDreamListStyle
 	bool bOverride_RowAlternate = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_RowAlternate"))
 	FColor RowAlternate = FColor(44, 49, 60, 255);
+
+	/**
+	 * A row that cannot be acted on. The rows used to push three pointer colours and leave this one
+	 * to the behaviour's library default -- a flat grey belonging to no theme, and the one state a
+	 * project sheet could not describe.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (InlineEditConditionToggle))
+	bool bOverride_RowDisabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_RowDisabled"))
+	FColor RowDisabled = FColor(44, 47, 56, 255);
+
+	/**
+	 * Focused by keyboard or gamepad, which is a different question from hovered: focus survives the
+	 * pointer moving away, and on a pad there is no pointer at all. Pushing a colour here is what
+	 * turns the selectable's focus visuals on -- they ship off, so before this a pad user watched
+	 * the navigation land on a row that showed nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (InlineEditConditionToggle))
+	bool bOverride_RowFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_RowFocused"))
+	FColor RowFocused = FColor(96, 140, 200, 255);
+
+	/** How long a row's state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (InlineEditConditionToggle))
 	bool bOverride_TextColor = true;
@@ -1667,6 +1752,22 @@ struct DREAMGUI_API FDreamRingMenuStyle
 	FColor WedgeDisabled = FColor(40, 43, 52, 140);
 
 	/**
+	 * Focused by keyboard or gamepad. A ring is the one control in the library a pad reaches FIRST,
+	 * and pushing a colour here is what turns the selectable's focus visuals on -- they ship off, so
+	 * stepping round the wheel with the stick used to move a highlight nothing drew.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors", meta = (InlineEditConditionToggle))
+	bool bOverride_WedgeFocused = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors", meta = (EditCondition = "bOverride_WedgeFocused"))
+	FColor WedgeFocused = FColor(96, 140, 200, 245);
+
+	/** How long a wedge's state change takes, in seconds. Zero snaps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Colors", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.12f;
+
+	/**
 	 * The unbroken ring behind the wedges, filling the gaps between them. Transparent to switch it
 	 * off; it is a separate node and costs nothing when it draws nothing.
 	 */
@@ -1752,4 +1853,238 @@ struct DREAMGUI_API FDreamRingMenuStyle
 	bool bOverride_OpenScaleFrom = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu Style|Open", meta = (EditCondition = "bOverride_OpenScaleFrom", ClampMin = "0.01"))
 	float OpenScaleFrom = 0.86f;
+};
+
+/**
+ * A tile view: a list whose rows are a grid of tiles.
+ *
+ * Built the way FDreamTreeViewStyle is -- carrying a whole FDreamListStyle rather than restating its
+ * fields -- because a tile view IS a list that wraps, and a project that styles its lists styles the
+ * tiles' faces, hover and selection with them. What it adds is the one thing a row does not have: a
+ * WIDTH of its own, because a tile is not as wide as the view.
+ *
+ * FDreamListStyle::RowHeight stays the tile's height, so there is exactly one place a tile's size is
+ * written down; TileWidth is its partner and lives here.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamTileViewStyle
+{
+	GENERATED_BODY()
+
+	/** The tiles and the viewport, shared whole with the list. RowHeight is the tile's height. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile View Style", meta = (InlineEditConditionToggle))
+	bool bOverride_List = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile View Style", meta = (EditCondition = "bOverride_List"))
+	FDreamListStyle List;
+
+	/** A tile's width. Its height is FDreamListStyle::RowHeight -- one tile, one size, two fields. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile View Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TileWidth = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile View Style", meta = (EditCondition = "bOverride_TileWidth", ClampMin = "1.0"))
+	float TileWidth = 96.0f;
+
+	/** Between tiles across a row. Down the column the gap is FDreamListStyle::RowSpacing. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile View Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TileSpacing = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile View Style", meta = (EditCondition = "bOverride_TileSpacing", ClampMin = "0.0"))
+	float TileSpacing = 4.0f;
+};
+
+/** Which silhouette a throbber draws. The progress bar's Bar/Radial split, for the same reason. */
+UENUM(BlueprintType)
+enum class EDreamThrobberShape : uint8
+{
+	/** A row of pieces, UMG's Throbber. */
+	Linear,
+	/** Pieces around a circle, UMG's CircularThrobber. */
+	Circular,
+};
+
+/**
+ * A throbber: N identical pieces, animating, saying only "something is happening".
+ *
+ * One control and one style for UMG's two, the call this library already made for the progress bar's
+ * Bar and Radial and the slider's Direction: the pieces, the period and the colours are identical,
+ * and the only thing that differs is where the pieces are put. The palette still offers two rows.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamThrobberStyle
+{
+	GENERATED_BODY()
+
+	/** How many pieces. UMG ships three. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_NumberOfPieces = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_NumberOfPieces", ClampMin = "1", ClampMax = "32"))
+	int32 NumberOfPieces = 3;
+
+	/** One piece's size. Square by default, which is what a dot is. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_PieceSize = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_PieceSize"))
+	FVector2D PieceSize = FVector2D(10.0, 10.0);
+
+	/** Between pieces, in the Linear shape. The circular one spreads them over its Radius instead. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_PieceSpacing = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_PieceSpacing", ClampMin = "0.0"))
+	float PieceSpacing = 6.0f;
+
+	/** Circular only: how far out the pieces ride, measured from the middle. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Radius = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_Radius", ClampMin = "1.0"))
+	float Radius = 16.0f;
+
+	/** How long one full cycle takes, in seconds. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Period = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_Period", ClampMin = "0.01"))
+	float Period = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_PieceColor = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_PieceColor"))
+	FColor PieceColor = FColor(230, 233, 240, 255);
+
+	/** How faint a piece gets at the bottom of its cycle. One keeps every piece solid. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_MinOpacity = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_MinOpacity", ClampMin = "0.0", ClampMax = "1.0"))
+	float MinOpacity = 0.15f;
+
+	/** A piece's corner rounding. Half the piece size is a dot; zero is a square. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_CornerRadius = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_CornerRadius", ClampMin = "0.0"))
+	float CornerRadius = 5.0f;
+
+	/** A piece's face. Empty is the plain rounded rect. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (InlineEditConditionToggle))
+	bool bOverride_PieceBrush = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber Style", meta = (EditCondition = "bOverride_PieceBrush"))
+	FDreamUIFaceBrush PieceBrush;
+};
+
+/**
+ * A border: a brush, a padding and one child.
+ *
+ * UMG's Border is a panel with a look, and this library already offers that shape as a PANEL entry
+ * (an overlay carrying an image). This is the CONTROL spelling of it -- the one that reads the
+ * project sheet, so every bordered box in a project restyles at once -- and it is the reason a
+ * control class exists beside the panel: a panel's brush is authored per instance, and a control's
+ * is authored once for the whole project.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamBorderStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Background = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (EditCondition = "bOverride_Background"))
+	FColor Background = FColor(44, 49, 60, 255);
+
+	/** Between the border's edge and whatever is inside it -- UMG's Padding. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Padding = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (EditCondition = "bOverride_Padding"))
+	FMargin Padding = FMargin(8.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (InlineEditConditionToggle))
+	bool bOverride_CornerRadius = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (EditCondition = "bOverride_CornerRadius", ClampMin = "0.0"))
+	float CornerRadius = 5.0f;
+
+	/** The border's own line. Zero draws no outline, which is UMG's default border. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BorderThickness = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (EditCondition = "bOverride_BorderThickness", ClampMin = "0.0"))
+	float BorderThickness = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BorderColor = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (EditCondition = "bOverride_BorderColor"))
+	FColor BorderColor = FColor(74, 81, 98, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BackgroundBrush = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Border Style", meta = (EditCondition = "bOverride_BackgroundBrush"))
+	FDreamUIFaceBrush BackgroundBrush;
+};
+
+/**
+ * A rich text block: one paragraph that reads markup.
+ *
+ * Only the text's own look, because that is all a rich text block is -- no face, no padding, no
+ * states. What makes it RICH is the two data assets the markup resolves against, and those are the
+ * control's properties rather than the style's: they are content (which tag means which sprite),
+ * not theme.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamRichTextStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TextColor = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (EditCondition = "bOverride_TextColor"))
+	FColor TextColor = FColor(230, 233, 240, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (InlineEditConditionToggle))
+	bool bOverride_FontSize = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (EditCondition = "bOverride_FontSize"))
+	float FontSize = 15.0f;
+};
+
+/**
+ * A menu anchor: the popup's look, and how it is placed against whatever opened it.
+ *
+ * Where UMG's MenuAnchor keeps Placement as a widget property, it lives here because it is the same
+ * kind of decision as a corner radius -- a project wants every menu to open the same way -- and
+ * because the control still exposes it per instance through the style's override bits.
+ *
+ * The placement ENUM is not declared here: it is EDreamMenuPlacement, which belongs to
+ * UDreamLayoutContainerMenuAnchor along with the arithmetic that reads it. One enum and one set of
+ * placement maths for the layout panel and the control, so a menu opened by either lands in the same
+ * place -- and so there is nothing to keep in step when a placement is added.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamMenuAnchorStyle
+{
+	GENERATED_BODY()
+
+	/** Where the menu opens relative to the widget that anchors it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Placement = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (EditCondition = "bOverride_Placement"))
+	EDreamMenuPlacement Placement = EDreamMenuPlacement::BelowAnchor;
+
+	/** Between the anchor's edge and the menu's. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Offset = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (EditCondition = "bOverride_Offset"))
+	float Offset = 2.0f;
+
+	/** The menu's own face, behind whatever the menu class draws. Transparent leaves it to the menu. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Background = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (EditCondition = "bOverride_Background"))
+	FColor Background = FColor(38, 42, 52, 255);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (InlineEditConditionToggle))
+	bool bOverride_CornerRadius = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (EditCondition = "bOverride_CornerRadius", ClampMin = "0.0"))
+	float CornerRadius = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BackgroundBrush = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (EditCondition = "bOverride_BackgroundBrush"))
+	FDreamUIFaceBrush BackgroundBrush;
+
+	/** How long the menu takes to fade in and out. Zero snaps, and so does a control with no world. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TransitionDuration = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu Anchor Style", meta = (EditCondition = "bOverride_TransitionDuration", ClampMin = "0.0"))
+	float TransitionDuration = 0.12f;
 };
