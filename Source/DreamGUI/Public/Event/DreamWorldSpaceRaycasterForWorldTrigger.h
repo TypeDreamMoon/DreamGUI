@@ -9,12 +9,15 @@
 /**
  * Raycast on common world space objects like StaticMesh and Trigger.
  *
- * NOT spawnable, deliberately: its Raycast forwards to UDreamBaseRaycaster::RaycastWorld, which has
- * no implementation -- it was a check(0) until this was noticed, so adding this component to an
- * actor was enough to take the process down on the first pointer frame. It now finds nothing
- * instead. The meta stays off until RaycastWorld exists, so nobody can place one by accident.
+ * What it produces are OCCLUDERS, not hits anything can handle: a world primitive has no widget, so
+ * these results take the pointer away from whatever UI is behind them rather than dispatching an
+ * event of their own. That is what makes a wall between the player and a world-space panel stop the
+ * click, and it is the whole contract -- see UDreamBaseRaycaster::RaycastWorld.
+ *
+ * Needs a ray source like any other world-space raycaster (RaycasterSourceActor / SourceObject), and
+ * its TraceChannel decides what counts as solid.
  */
-UCLASS(ClassGroup = DreamGUI)
+UCLASS(ClassGroup = DreamGUI, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UDreamWorldSpaceRaycasterForWorldTrigger : public UDreamWorldSpaceRaycasterBase
 {
 	GENERATED_BODY()

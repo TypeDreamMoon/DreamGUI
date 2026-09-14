@@ -7,12 +7,17 @@
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
 #include "Core/DreamUIWorldContext.h"
+#include "Event/DreamEventSystem.h"
 
 bool UDreamWorldSpaceRaycasterSource_CenterScreen::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
 	const UWorld* World = DreamUI::GetWorldSafe(this);
 	if (World == nullptr)return false;
-	if (auto playerController = World->GetFirstPlayerController())
+	// The pointer carries the player it belongs to; the first controller is only the same thing when
+	// there is one player. A centre-screen ray is aimed by a camera, and on a split screen each player
+	// has their own.
+	if (auto playerController = UDreamEventSystem::GetPlayerControllerForUser(
+		this, InPointerEventData != nullptr ? InPointerEventData->UserIndex : 0))
 	{
 		ULocalPlayer* const LocalPlayer = playerController->GetLocalPlayer();
 		if (LocalPlayer && LocalPlayer->ViewportClient)
@@ -44,9 +49,13 @@ bool UDreamWorldSpaceRaycasterSource_CenterScreen::ShouldStartDrag(UDreamPointer
 			return true;
 		}
 	}
-	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
-	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
-	return FVector2D::DistSquared(pressMousePos, mousePos) > this->GetDragThresholdSquare();
+	// Measured where this source's pointer actually moves. This was a line-for-line copy of the mouse
+	// source, comparing PointerPosition against PressPointerPosition -- but a centre-screen ray IS the
+	// middle of the screen, so those two are the same point forever and the distance is always zero. No
+	// aim, however wide, could start a drag; only the hold timer above ever could. What does move when
+	// the player turns is where the ray lands, so the threshold is held against that, in world units.
+	const double DragDistanceSquared = (InPointerEventData->GetWorldPointSpherical() - InPointerEventData->PressWorldPoint).SizeSquared();
+	return DragDistanceSquared > (double)this->GetDragThresholdSquare();
 }
 
 ADreamWorldSpaceRaycasterSource_CenterScreen_Actor::ADreamWorldSpaceRaycasterSource_CenterScreen_Actor()

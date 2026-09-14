@@ -89,10 +89,14 @@ bool UDreamWorldSpaceRaycasterBase::GenerateRay(UDreamPointerEventData* InPointe
 	return RaycasterSrc->GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd);
 }
 
-bool UDreamWorldSpaceRaycasterBase::ShouldStartDrag(UDreamPointerEventData* InPointerEventData) 
+bool UDreamWorldSpaceRaycasterBase::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
 	auto RaycasterSrc = GetRaycasterSourceObject();
-	if (!RaycasterSrc)return true;
+	// False, matching UDreamWorldSpaceRaycasterSource::ShouldStartDrag's own default for a source that
+	// does not answer. The two used to disagree -- no source at all began a drag on the first frame of
+	// every press, a native source that never overrode it began none ever -- and of the two, "a press
+	// is not a drag" is the answer that cannot eat a click.
+	if (!RaycasterSrc)return false;
 	return RaycasterSrc->ShouldStartDrag(InPointerEventData);
 }
 

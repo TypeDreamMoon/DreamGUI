@@ -15,6 +15,7 @@
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUIDragDrop.h"
 #include "Interaction/UIEventTrigger.h"
+#include "Tests/DreamPointerEventTestTypes.h"
 #include "UObject/StrongObjectPtr.h"
 
 /*
@@ -422,6 +423,231 @@ bool FDreamDragThresholdMotionlessPressClicksTest::RunTest(const FString& Parame
 	TestFalse(TEXT("Moving with the trigger released does not start a drag"), Rig.EventData->bIsDragging);
 	TestEqual(TEXT("...and sends no BeginDrag"), CardLog.BeginDrag, 0);
 	TestTrue(TEXT("...and presses nothing"), Rig.EventData->PressWidget == nullptr);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPointerDoubleClickTest,
+	"DreamGUI.Input.Click.TwoClicksOnTheSameWidgetInTimeAreADoubleClick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPointerDoubleClickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDragThresholdTestLocal;
+
+	FScopedGameWorld Scope;
+	if (!TestTrue(TEXT("A world to host the rig"), Scope.World != nullptr))
+	{
+		return false;
+	}
+	FPointerRig Rig(Scope.World);
+	if (!TestTrue(TEXT("The pointer rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+
+	UDreamWidget* Root = MakeWidget(Scope.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	UDreamWidget* Card = MakeWidget(Scope.World, Root, TEXT("Card"));
+	UDreamWidget* Other = MakeWidget(Scope.World, Root, TEXT("Other"));
+	UDreamDoubleClickCounter* CardCounter = Card->AddComponent<UDreamDoubleClickCounter>();
+	UDreamDoubleClickCounter* OtherCounter = Other->AddComponent<UDreamDoubleClickCounter>();
+	if (!TestTrue(TEXT("Both widgets are listening for double clicks"),
+		CardCounter != nullptr && OtherCounter != nullptr))
+	{
+		return false;
+	}
+
+	FWidgetEventLog CardLog;
+	CardLog.Observe(Card);
+
+	const FVector2D Pos(200.0, 200.0);
+	auto ClickOn = [&Rig, &Pos](UDreamWidget* Widget)
+	{
+		Rig.Press(Pos);
+		Rig.Frame(Widget);
+		Rig.Release(Pos);
+		Rig.Frame(Widget);
+	};
+
+	// ClickTime has been written on every click since the beginning, and its comment has said "can be
+	// used to tell double click" for just as long. Nothing read it, and there was no event to raise.
+	ClickOn(Card);
+	TestEqual(TEXT("One click is one click"), Rig.EventData->ClickCount, 1);
+	TestEqual(TEXT("...and is not a double click"), CardCounter->DoubleClickCount, 0);
+
+	ClickOn(Card);
+	TestEqual(TEXT("The second click on the same widget continues the run"), Rig.EventData->ClickCount, 2);
+	TestEqual(TEXT("...and is dispatched as a double click"), CardCounter->DoubleClickCount, 1);
+	TestEqual(TEXT("...telling the handler which click it was"), CardCounter->LastReportedClickCount, 2);
+	// Never instead of the single click: a row that opens on double click usually also selects on
+	// single, and making every handler re-implement that would be the cost of swallowing it.
+	TestEqual(TEXT("...on top of the ordinary click, not in place of it"), CardLog.Click, 2);
+
+	// A click elsewhere is a new run, not the third of this one.
+	ClickOn(Other);
+	TestEqual(TEXT("A click on another widget starts over"), Rig.EventData->ClickCount, 1);
+	TestEqual(TEXT("...and is nobody's double click"), OtherCounter->DoubleClickCount, 0);
+	TestEqual(TEXT("...least of all the first widget's"), CardCounter->DoubleClickCount, 1);
+
+	// And so is a click that comes too late. The world clock is what the window is measured against, so
+	// moving it past DoubleClickTime is exactly what a slow player does.
+	ClickOn(Card);
+	TestEqual(TEXT("Back on the card, a fresh run"), Rig.EventData->ClickCount, 1);
+	Scope.World->TimeSeconds += (double)Rig.EventSystem->GetDoubleClickTime() + 1.0;
+	ClickOn(Card);
+	TestEqual(TEXT("A click after the window starts a new run rather than completing a pair"),
+		Rig.EventData->ClickCount, 1);
+	TestEqual(TEXT("...and raises no double click"), CardCounter->DoubleClickCount, 1);
+
+	// Turning the window off is a supported way to say "this game has no double clicks".
+	Rig.EventSystem->SetDoubleClickTime(0.0f);
+	ClickOn(Card);
+	ClickOn(Card);
+	TestEqual(TEXT("With the window closed nothing is ever a double click"), CardCounter->DoubleClickCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPointerLongPressTest,
+	"DreamGUI.Input.Click.HoldingOnAWidgetIsALongPressUnlessItBecameADrag",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPointerLongPressTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDragThresholdTestLocal;
+
+	FScopedGameWorld Scope;
+	if (!TestTrue(TEXT("A world to host the rig"), Scope.World != nullptr))
+	{
+		return false;
+	}
+	FPointerRig Rig(Scope.World);
+	if (!TestTrue(TEXT("The pointer rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+
+	UDreamWidget* Root = MakeWidget(Scope.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	UDreamWidget* Card = MakeWidget(Scope.World, Root, TEXT("Card"));
+	UDreamLongPressCounter* Counter = Card->AddComponent<UDreamLongPressCounter>();
+	if (!TestNotNull(TEXT("The card is listening for long presses"), Counter))
+	{
+		return false;
+	}
+
+	const FVector2D PressPos(200.0, 200.0);
+	const float LongPressTime = Rig.EventSystem->GetLongPressTime();
+	if (!TestTrue(TEXT("Long press is on by default"), LongPressTime > 0.0f))
+	{
+		return false;
+	}
+
+	// Down, and held for less than the threshold.
+	Rig.Press(PressPos);
+	Rig.Frame(Card);
+	TestEqual(TEXT("A press is not yet a long press"), Counter->LongPressCount, 0);
+	Scope.World->TimeSeconds += (double)LongPressTime * 0.5;
+	Rig.Frame(Card);
+	TestEqual(TEXT("...halfway through, still not"), Counter->LongPressCount, 0);
+
+	// Past the threshold. It fires while the finger is still down, which is the whole point: a context
+	// menu that waits for the release cannot be the thing the player is still holding.
+	Scope.World->TimeSeconds += (double)LongPressTime;
+	Rig.Frame(Card);
+	TestEqual(TEXT("Held past the threshold, it fires"), Counter->LongPressCount, 1);
+	TestEqual(TEXT("...carrying the pointer that was held"), Counter->LastPointerID, 0);
+
+	Scope.World->TimeSeconds += (double)LongPressTime;
+	Rig.Frame(Card);
+	TestEqual(TEXT("...once per press, not once per frame"), Counter->LongPressCount, 1);
+
+	Rig.Release(PressPos);
+	Rig.Frame(Card);
+
+	// A press that turns into a drag is the same gesture read another way, and only one of the two
+	// readings may win. The drag does, because the player can see a drag happening.
+	const double Threshold = Rig.Raycaster->GetDragThreshold();
+	Rig.Press(PressPos);
+	Rig.Frame(Card);
+	Rig.MoveTo(PressPos + FVector2D(Threshold * 4.0, 0.0));
+	Rig.Frame(Card);
+	if (!TestTrue(TEXT("The second press became a drag"), Rig.EventData->bIsDragging))
+	{
+		return false;
+	}
+	Scope.World->TimeSeconds += (double)LongPressTime * 3.0;
+	Rig.Frame(Card);
+	TestEqual(TEXT("A drag being held is not a long press"), Counter->LongPressCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPointerSwipeGestureTest,
+	"DreamGUI.Input.Gesture.AFastTravelAcrossAWidgetIsASwipe",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPointerSwipeGestureTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDragThresholdTestLocal;
+
+	FScopedGameWorld Scope;
+	if (!TestTrue(TEXT("A world to host the rig"), Scope.World != nullptr))
+	{
+		return false;
+	}
+	FPointerRig Rig(Scope.World);
+	if (!TestTrue(TEXT("The pointer rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+
+	UDreamWidget* Root = MakeWidget(Scope.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
+	UDreamWidget* Card = MakeWidget(Scope.World, Root, TEXT("Card"));
+	UDreamGestureCounter* Counter = Card->AddComponent<UDreamGestureCounter>();
+	if (!TestNotNull(TEXT("The card is listening for gestures"), Counter))
+	{
+		return false;
+	}
+
+	const FVector2D PressPos(200.0, 200.0);
+	const float MinDistance = Rig.EventSystem->GetSwipeMinDistance();
+
+	// A short movement is not a swipe, however fast.
+	Rig.Press(PressPos);
+	Rig.Frame(Card);
+	Rig.MoveTo(PressPos + FVector2D(MinDistance * 0.25, 0.0));
+	Rig.Release(PressPos + FVector2D(MinDistance * 0.25, 0.0));
+	Rig.Frame(Card);
+	TestEqual(TEXT("A short travel is not a swipe"), Counter->SwipeCount, 0);
+
+	// Far enough, fast enough, to the right.
+	Rig.Press(PressPos);
+	Rig.Frame(Card);
+	const FVector2D EndPos = PressPos + FVector2D(MinDistance * 3.0, 0.0);
+	Rig.MoveTo(EndPos);
+	Rig.Release(EndPos);
+	Rig.Frame(Card);
+	TestEqual(TEXT("A long, fast travel is a swipe"), Counter->SwipeCount, 1);
+	TestEqual(TEXT("...snapped to the dominant axis"), Counter->LastSwipeDirection, EDreamUINavigationDirection::Right);
+	TestTrue(TEXT("...carrying how far it went"), Counter->LastSwipeDelta.X >= MinDistance);
+
+	// Downward, to prove the axis and the sign are both read. Viewport Y grows downward.
+	Rig.Press(PressPos);
+	Rig.Frame(Card);
+	const FVector2D DownPos = PressPos + FVector2D(0.0, MinDistance * 3.0);
+	Rig.MoveTo(DownPos);
+	Rig.Release(DownPos);
+	Rig.Frame(Card);
+	TestEqual(TEXT("A downward travel swipes down"), Counter->LastSwipeDirection, EDreamUINavigationDirection::Down);
+
+	// The same movement taken slowly is a drag, not a swipe. This is the only thing separating them.
+	Rig.Press(PressPos);
+	Rig.Frame(Card);
+	Scope.World->TimeSeconds += (double)Rig.EventSystem->GetSwipeMaxDuration() + 1.0;
+	Rig.MoveTo(EndPos);
+	Rig.Release(EndPos);
+	Rig.Frame(Card);
+	TestEqual(TEXT("A slow travel is a drag, not a swipe"), Counter->SwipeCount, 2);
 	return true;
 }
 

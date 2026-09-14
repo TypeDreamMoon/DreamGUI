@@ -78,6 +78,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	float GetHoldToDragTime()const { return HoldToDragTime; }
 	float GetDragThresholdSquare()const { return DragThresholdSquare; }
+	/**
+	 * DragThresholdSquare taken into the pointer's own units: the authored threshold is in canvas units
+	 * and the pointer is measured in viewport pixels, which differ by exactly the root canvas's scale.
+	 * This is what ShouldStartDrag compares against.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	float GetScaledDragThresholdSquare()const;
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetRayLength(float Value);

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Event/DreamBaseRaycaster.h"
+#include "DreamGUI.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamVisual.h"
@@ -209,24 +210,63 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 
 void UDreamBaseRaycaster::RaycastWorld(UDreamPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
 {
-	// Not implemented, and the commented-out body below cannot simply be uncommented: it hands
-	// OutHitResultArray straight to LineTraceMultiByChannel, which fills TArray<FHitResult> -- while
-	// this is TArray<FDreamUIHitResult>, a different struct whose payload is a UDreamWidget the
-	// engine trace has no way to produce. Everything downstream (Widget, GetInteractableInHierarchy,
-	// canvas sort order) is defined only for widgets, so a world-object hit path is a design job,
-	// not a revert. Until someone does it, this degrades to "hit nothing" instead of taking the
-	// process down: UDreamWorldSpaceRaycasterForWorldTrigger is a placeable component and reaching
-	// here needed nothing more than adding it to an actor.
-	ensureMsgf(false, TEXT("UDreamBaseRaycaster::RaycastWorld is not implemented; world-trigger raycasting will find nothing."));
-	// if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
-	// {
-	// 	CurrentRayOrigin = OutRayOrigin;
-	// 	CurrentRayDirection = OutRayDirection;
+	// What a world hit MEANS here, which is the question that kept this unimplemented.
 	//
-	// 	FCollisionQueryParams queryParams = FCollisionQueryParams::DefaultQueryParam;
-	// 	queryParams.bReturnFaceIndex = InRequireFaceIndex;
-	// 	this->GetWorld()->LineTraceMultiByChannel(OutHitResultArray, OutRayOrigin, OutRayEnd, UEngineTypes::ConvertToCollisionChannel(InTraceChannel), queryParams);
-	// }
+	// The engine's trace answers with primitives, and this pipeline dispatches to UDreamWidgets: a wall
+	// has no widget and never will, so a world hit cannot be turned into a pointer event for the wall.
+	// What it can be -- and what the component is for -- is an OCCLUDER. A hit with no widget still
+	// carries a distance, and the input module sorts every raycaster's hits by distance: a world hit in
+	// front of a world-space panel therefore wins, the panel gets its Exit, and the click that would
+	// have gone through the wall does not land. That is the whole of it, and it is a complete answer
+	// rather than a partial one -- "the pointer is blocked" is exactly what a trigger volume in front
+	// of a UI is for.
+	//
+	// The one thing the rest of the pipeline had to learn is that Widget can be null; see
+	// UDreamPointerInputModule::LineTrace, which now treats a widgetless hit as a blocker instead of
+	// dereferencing it.
+	OutHitResultArray.Reset();
+	UWorld* World = GetWorld();
+	if (World == nullptr)return;
+	if (!GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
+	{
+		return;//no ray source configured; GenerateRay has already said so
+	}
+	CurrentRayOrigin = OutRayOrigin;
+	CurrentRayDirection = OutRayDirection;
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(DreamUIRaycastWorld), true);
+	QueryParams.bReturnFaceIndex = InRequireFaceIndex;
+	// The actor the raycaster rides on is the one holding the ray source -- a motion controller, a
+	// camera rig -- and tracing into itself would block every pointer at zero distance.
+	if (const AActor* IgnoredOwner = GetOwner())
+	{
+		QueryParams.AddIgnoredActor(IgnoredOwner);
+	}
+
+	// SINGLE, not multi, and the difference is the definition of an occluder.
+	//
+	// LineTraceMultiByChannel hands back every TOUCH along the ray plus the first thing that blocks --
+	// so a multi trace would report an overlap-only trigger volume as something the pointer cannot pass
+	// through, which is the opposite of what overlap means. What occludes a pointer is the nearest
+	// BLOCKING hit, and that is exactly what a single trace answers with. Anything behind it is behind a
+	// wall; the input module only ever reads the nearest hit anyway.
+	FHitResult WorldHit;
+	if (!World->LineTraceSingleByChannel(WorldHit, OutRayOrigin, OutRayEnd,
+		UEngineTypes::ConvertToCollisionChannel(InTraceChannel), QueryParams))
+	{
+		return;//nothing solid in the way, so the UI behind is reachable
+	}
+
+	FDreamUIHitResult& Result = OutHitResultArray.AddDefaulted_GetRef();
+	Result.Distance = WorldHit.Distance;
+	Result.Time = WorldHit.Time;
+	Result.Location = WorldHit.Location;
+	Result.ImpactPoint = WorldHit.ImpactPoint;
+	Result.Normal = WorldHit.ImpactNormal;
+	Result.TraceStart = WorldHit.TraceStart;
+	Result.TraceEnd = WorldHit.TraceEnd;
+	Result.FaceIndex = InRequireFaceIndex ? WorldHit.FaceIndex : -1;
+	Result.Widget = nullptr;//there is no widget behind a world primitive, and that is the point
 }
 
 void UDreamBaseRaycaster::SetPointerID(int32 Value)

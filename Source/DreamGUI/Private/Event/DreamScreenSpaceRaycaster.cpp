@@ -62,17 +62,13 @@ void UDreamScreenSpaceRaycaster::SetRootCanvas(UDreamCanvas* InRootCanvas)
 
 bool UDreamScreenSpaceRaycaster::GetAffectByGamePause()const
 {
-#if WITH_EDITOR
-	if (GetWorld() && GetWorld()->IsEditorWorld())
-	{
-		return GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
-	}
-	else
-#endif
-	{
-		static bool Value = GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
-		return Value;
-	}
+	// Read every time, like the world-space raycaster next door already does. It used to be cached in a
+	// function-local static, which is one value for the whole process: shared across every raycaster and
+	// every world, fixed at whatever the first caller saw, and unchanged by editing the project setting
+	// until the editor was restarted. PIE took that path -- IsEditorWorld() is false there -- so the
+	// setting appeared to do nothing in exactly the place it would be tried. GetDefault is a pointer
+	// read; there was nothing here worth caching.
+	return GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
 }
 bool UDreamScreenSpaceRaycaster::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
@@ -91,7 +87,21 @@ bool UDreamScreenSpaceRaycaster::ShouldStartDrag(UDreamPointerEventData* InPoint
 	}
 	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
 	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
-	return FVector2D::DistSquared(pressMousePos, mousePos) > DragThresholdSquare;
+	return FVector2D::DistSquared(pressMousePos, mousePos) > GetScaledDragThresholdSquare();
+}
+float UDreamScreenSpaceRaycaster::GetScaledDragThresholdSquare()const
+{
+	// DragThreshold is authored in canvas units -- the units the UI is laid out in -- but the pointer
+	// arrives in raw viewport pixels. Comparing the two directly made the threshold mean whatever the
+	// screen happened to be: on a phone whose canvas is scaled 3x, 5 canvas units is 15 pixels, and
+	// measuring against 5 raw pixels turned the tremor in a steady thumb into a drag -- which also ate
+	// the click, because a press that becomes a drag never fires one.
+	const UDreamCanvas* Canvas = RootCanvas.Get();
+	const float CanvasScale = Canvas != nullptr ? Canvas->GetCanvasScale() : 1.0f;
+	// A zero or negative scale is not a canvas anyone can point at; fall back to 1 rather than letting
+	// the threshold collapse to zero and make every press a drag.
+	const float SafeScale = CanvasScale > SMALL_NUMBER ? CanvasScale : 1.0f;
+	return DragThresholdSquare * SafeScale * SafeScale;
 }
 bool UDreamScreenSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)
 {
