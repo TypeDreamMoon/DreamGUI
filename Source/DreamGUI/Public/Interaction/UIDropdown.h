@@ -107,6 +107,17 @@ protected:
 	/** ListRoot's max height */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown", AdvancedDisplay)
 		float MaxHeight = 150;
+	/**
+	 * Set by SetMaxHeight, and read by Awake so it stops overwriting what it was told.
+	 *
+	 * Awake derives MaxHeight from ListRoot's current height, which is the right guess for a hand-wired
+	 * behaviour whose list somebody drew. But a CONTROL pushes the number it wants (UDreamDropdown
+	 * turns MaxVisibleItems into it, in ApplyStyle, which runs at NativeOnInitialized -- before this
+	 * component's Awake at begin play), and the guess won that race: on the template road, where the
+	 * list root's authored height is whatever the template's author drew, MaxVisibleItems was
+	 * silently discarded. The built-in tree only escaped because the two numbers happened to agree.
+	 */
+	bool bMaxHeightAuthored = false;
 	/** When show the list, create a overlay block to block input on other objects. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown")
 		bool bUseInteractionBlock = true;
@@ -191,7 +202,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void AddOptions(const TArray<FUIDropdownOptionData>& InOptions);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
-	void SetMaxHeight(float InValue) { MaxHeight = InValue; }
+	void SetMaxHeight(float InValue) { MaxHeight = InValue; bMaxHeightAuthored = true; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetUseInteractionBlock(bool InValue);
 

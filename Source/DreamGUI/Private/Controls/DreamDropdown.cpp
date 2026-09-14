@@ -126,6 +126,17 @@ void UDreamDropdown::RealizeBuiltIn()
 												InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 												InSlot.SetPadding(FMargin(10.0f, 0.0f, 24.0f, 0.0f));
 											}),
+										// The per-option picture. Asleep unless OptionIcons names one for
+										// this row, which is why it can sit in every row's template
+										// and cost a dropdown that has no icons nothing but a node.
+										Node<UDreamRectBlock>("ItemIcon")
+											.Self([](UDreamWidget& InIcon) { InIcon.SetWidgetActive(false); })
+											.Slot([](UDreamPanelSlot& InSlot)
+											{
+												InSlot.SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Left);
+												InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
+												InSlot.SetPadding(FMargin(8.0f, 0.0f, 0.0f, 0.0f));
+											}),
 										DreamUI::Text("ItemCheck")
 											.Visual([](UDreamText& InText)
 											{
@@ -201,8 +212,10 @@ void UDreamDropdown::WireParts()
 			}
 			if (ItemTemplateClass != nullptr && GetWorld() != nullptr)
 			{
+				bool bHasAuthoredContent = false;
 				if (UDreamUserWidget* Content = CreateDreamWidget(GetWorld(), ItemTemplateClass, InItem))
 				{
+					bHasAuthoredContent = true;
 					Content->SetDisplayName(TEXT("ItemContent"));
 					if (UDreamPanelSlot* ContentSlot = Content->GetPanelSlot())
 					{
@@ -212,9 +225,34 @@ void UDreamDropdown::WireParts()
 				}
 				// The stock label and the supplied content are two answers to what is on this row --
 				// the same rule the content slots follow, and the same one the list's rows follow.
-				if (UDreamWidget* ItemLabel = InItem->FindChildByDisplayName(TEXT("ItemLabel"), true))
+				// Gated on the content EXISTING rather than on having meant to make it: instancing
+				// can fail (an abstract class, a class that would be its own template), and a row that
+				// answered "a template drew this one" while holding nothing is a blank line in the
+				// list. UDreamListViewBase::BindRow decides the same question the same way.
+				if (bHasAuthoredContent)
 				{
-					ItemLabel->SetWidgetActive(false);
+					if (UDreamWidget* ItemLabel = InItem->FindChildByDisplayName(TEXT("ItemLabel"), true))
+					{
+						ItemLabel->SetWidgetActive(false);
+					}
+				}
+			}
+			// The per-option picture, before the consumer's hook: a handler that wants to overrule it
+			// should see it already placed rather than have it written over the top afterwards.
+			if (UDreamWidget* IconNode = InItem->FindChildByDisplayName(TEXT("ItemIcon"), true))
+			{
+				UObject* Icon = OptionIcons.IsValidIndex(InIndex) ? OptionIcons[InIndex].Get() : nullptr;
+				IconNode->SetWidgetActive(Icon != nullptr);
+				if (Icon != nullptr)
+				{
+					// Through the family's own brush road, so an icon is a sprite or a texture by
+					// exactly the rule every other face in this library follows -- and so an icon
+					// inherits the item's corner radius rather than needing one of its own.
+					FDreamUIFaceBrush IconBrush;
+					IconBrush.Image = Icon;
+					SkinFace(IconNode, IconBrush);
+					const FDreamDropdownStyle& IconStyle = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
+					SizeFace(IconNode, FVector2D(IconStyle.ItemHeight * 0.6, IconStyle.ItemHeight * 0.6));
 				}
 			}
 			OnItemGenerated.Broadcast(InIndex, InItem);
@@ -242,8 +280,6 @@ void UDreamDropdown::ApplyStyle()
 	ShapeFace(ListNode, Active.CornerRadius);
 	SkinFace(FaceNode, Active.FaceBrush);
 	SkinFace(ListNode, Active.ListBrush);
-	// The template only; duplicated rows copy it, and every options push rebuilds them from it.
-	SkinFace(ItemTemplateNode, Active.ItemBrush);
 
 	auto TintText = [&Active](UDreamWidget* InNode, const FColor& InColor)
 	{
@@ -255,6 +291,13 @@ void UDreamDropdown::ApplyStyle()
 	};
 	TintText(CaptionNode, Active.TextColor);
 	TintText(ArrowNode, Active.ArrowColor);
+	if (ArrowNode != nullptr)
+	{
+		// UMG's HasDownArrow: a combo box drawn without its glyph, for a face that says "open me"
+		// some other way. The node stays in the tree either way, so turning it back on costs nothing
+		// and a template that drew its own arrow is unaffected (it has no node of this name).
+		ArrowNode->SetWidgetActive(bHasDownArrow);
+	}
 
 	if (UDreamVisual* ListVisual = ListNode != nullptr ? ListNode->GetVisual() : nullptr)
 	{
@@ -265,38 +308,15 @@ void UDreamDropdown::ApplyStyle()
 		ApplyListRestingGeometry(Active);
 	}
 
-	if (ItemTemplateNode != nullptr)
+	// The template AND every row already built from it. Re-styling only the template was correct
+	// exactly once -- at initialize, before any row existed -- because rows are rebuilt from it on
+	// every options push; but a RUNTIME restyle does not push options, so an open list (or a closed
+	// one holding last open's rows) kept the old colours until the next SetOptions. The rows are
+	// duplicates, so the same push has to reach each of them.
+	PushItemStyle(ItemTemplateNode, Active);
+	for (UDreamWidget* Row : GetItemRows())
 	{
-		// A rect block states no size of its own; the authored height feeds the column's desired-size
-		// fallback, and the duplicated rows inherit the slot snapshot.
-		ItemTemplateNode->SetHeight(Active.ItemHeight);
-		for (UDreamWidget* Child : ItemTemplateNode->GetChildren())
-		{
-			if (Child == nullptr)
-			{
-				continue;
-			}
-			if (Child->GetDisplayName() == TEXT("ItemLabel"))
-			{
-				TintText(Child, Active.TextColor);
-			}
-			else if (Child->GetDisplayName() == TEXT("ItemCheck"))
-			{
-				if (UDreamText* CheckText = Cast<UDreamText>(Child->GetVisual()))
-				{
-					// Colour comes from the toggle's checked transition; only the glyph size is style.
-					CheckText->SetFontSize(Active.FontSize);
-				}
-			}
-		}
-		if (UUIToggle* ItemToggle = ItemTemplateNode->GetComponent<UUIToggle>())
-		{
-			ItemToggle->SetNormalColor(Active.ListBackground);
-			ItemToggle->SetHoveredColor(Active.ItemHovered);
-			ItemToggle->SetPressedColor(Active.FacePressed);
-			ItemToggle->SetOnColor(Active.CheckColor);
-			ItemToggle->SetOffColor(FColor(Active.CheckColor.R, Active.CheckColor.G, Active.CheckColor.B, 0));
-		}
+		PushItemStyle(Row, Active);
 	}
 
 	if (DropdownBehaviour != nullptr)
@@ -306,6 +326,79 @@ void UDreamDropdown::ApplyStyle()
 		DropdownBehaviour->SetMaxHeight(MaxVisibleItems * Active.ItemHeight);
 	}
 	SizeControlHeight(Active.Height);
+}
+
+TArray<UDreamWidget*> UDreamDropdown::GetItemRows() const
+{
+	TArray<UDreamWidget*> Rows;
+	if (ListNode == nullptr)
+	{
+		return Rows;
+	}
+	// The rows the behaviour duplicated, which live beside the template in the scrolled column. Found
+	// by walking rather than asked of UUIDropdown: the behaviour keeps its copies as item COMPONENTS
+	// and the control's business here is with the widgets.
+	for (UDreamWidget* Child : ListNode->GetChildren())
+	{
+		if (Child == nullptr || Child->GetDisplayName() != TEXT("Column"))
+		{
+			continue;
+		}
+		for (UDreamWidget* Row : Child->GetChildren())
+		{
+			if (IsValid(Row) && Row != ItemTemplateNode)
+			{
+				Rows.Add(Row);
+			}
+		}
+	}
+	return Rows;
+}
+
+void UDreamDropdown::PushItemStyle(UDreamWidget* InItem, const FDreamDropdownStyle& InActive)
+{
+	if (!IsValid(InItem))
+	{
+		return;
+	}
+	SkinFace(InItem, InActive.ItemBrush);
+	// A rect block states no size of its own; the authored height feeds the column's desired-size
+	// fallback, and the duplicated rows inherit the slot snapshot.
+	InItem->SetHeight(InActive.ItemHeight);
+	for (UDreamWidget* Child : InItem->GetChildren())
+	{
+		if (Child == nullptr)
+		{
+			continue;
+		}
+		if (Child->GetDisplayName() == TEXT("ItemLabel"))
+		{
+			if (UDreamText* LabelText = Cast<UDreamText>(Child->GetVisual()))
+			{
+				LabelText->SetColor(InActive.TextColor);
+				LabelText->SetFontSize(InActive.FontSize);
+			}
+		}
+		else if (Child->GetDisplayName() == TEXT("ItemCheck"))
+		{
+			if (UDreamText* CheckText = Cast<UDreamText>(Child->GetVisual()))
+			{
+				// Colour comes from the toggle's checked transition; only the glyph size is style.
+				CheckText->SetFontSize(InActive.FontSize);
+			}
+		}
+	}
+	if (UUIToggle* ItemToggle = InItem->GetComponent<UUIToggle>())
+	{
+		// All five states and the speed, rather than the three pointer colours the rows used to get:
+		// the two left out were a flat grey belonging to no theme and focus visuals that ship OFF, so
+		// navigating an open list with a pad or the arrow keys lit nothing up at all. The check mark's
+		// own pair (On/Off) is a different transition and stays beside it.
+		PushSelectableState(ItemToggle, InActive.ListBackground, InActive.ItemHovered, InActive.FacePressed,
+			InActive.ItemDisabled, InActive.ItemFocused, InActive.TransitionDuration);
+		ItemToggle->SetOnColor(InActive.CheckColor);
+		ItemToggle->SetOffColor(FColor(InActive.CheckColor.R, InActive.CheckColor.G, InActive.CheckColor.B, 0));
+	}
 }
 
 int32 UDreamDropdown::GetSelectedIndex() const
@@ -326,6 +419,45 @@ void UDreamDropdown::SetOptions(const TArray<FText>& InOptions)
 {
 	Options = InOptions;
 	PushOptions();
+}
+
+void UDreamDropdown::SetHasDownArrow(bool bInHasDownArrow)
+{
+	if (bHasDownArrow == bInHasDownArrow)
+	{
+		return;
+	}
+	bHasDownArrow = bInHasDownArrow;
+	if (ArrowNode != nullptr)
+	{
+		// The one thing it decides, and nothing else: whether that node is awake.
+		ArrowNode->SetWidgetActive(bHasDownArrow);
+	}
+}
+
+void UDreamDropdown::SetOptionIcons(const TArray<UObject*>& InIcons)
+{
+	OptionIcons.Reset(InIcons.Num());
+	for (UObject* Icon : InIcons)
+	{
+		OptionIcons.Add(Icon);
+	}
+	// The rows are built from the options and decorated from these together, so a new picture list is
+	// a re-push of the list rather than a restyle.
+	PushOptions();
+}
+
+void UDreamDropdown::SetMaxVisibleItems(int32 InMaxVisibleItems)
+{
+	const int32 Clamped = FMath::Max(1, InMaxVisibleItems);
+	if (MaxVisibleItems == Clamped)
+	{
+		return;
+	}
+	MaxVisibleItems = Clamped;
+	// The cap is spent in the style push, where a row COUNT becomes the open list's pixel height --
+	// so writing the number without re-pushing left a list that still opened at the old height.
+	ApplyStyle();
 }
 
 void UDreamDropdown::PushOptions()
@@ -358,6 +490,20 @@ void UDreamDropdown::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 
 void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 {
+	// Broadcast FIRST and unconditionally -- before the popup-layer work below, and whether or not
+	// there is a popup layer to do it in. This seam fires from the behaviour's Show and Hide, which
+	// is the moment the list opens and closes; a consumer refreshing its options from OnOpening (the
+	// reason UMG's combo box has the event) must be heard before the rows are placed, and a headless
+	// test has no popup layer at all.
+	if (bInVisible)
+	{
+		OnOpening.Broadcast();
+	}
+	else
+	{
+		OnClosed.Broadcast();
+	}
+
 	UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this);
 	if (Popup == nullptr || ListNode == nullptr)
 	{

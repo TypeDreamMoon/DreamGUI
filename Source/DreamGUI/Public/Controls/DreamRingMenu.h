@@ -7,6 +7,7 @@
 #include "DreamRingMenu.generated.h"
 
 class UDreamRingSectorRaycast;
+class UDreamTweener;
 class UDreamWidget;
 class UUIButton;
 
@@ -173,8 +174,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
 	int32 SelectedIndex = INDEX_NONE;
 
-	/** See EDreamRingHitArea. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	/**
+	 * See EDreamRingHitArea.
+	 *
+	 * BlueprintSetter, like the four knobs below it: each is read only by the style push or the hit
+	 * test it configures, so a runtime write straight onto the variable moved the number and left
+	 * the wheel behaving exactly as it did -- the SynchronizeProperties tax UDreamUIControl
+	 * documents, paid here by the setter instead of by whoever forgets.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetHitArea", BlueprintSetter = "SetHitArea", Category = "Ring Menu")
 	EDreamRingHitArea HitArea = EDreamRingHitArea::Ring;
 
 	/**
@@ -190,7 +198,7 @@ public:
 	 * the way a modal does) and wrong for anything sharing a panel -- an unbounded wedge wins the
 	 * raycast against every widget earlier in the hierarchy, which is most of them.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu", meta = (ClampMin = "0.0",
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSliceHitRadiusScale", BlueprintSetter = "SetSliceHitRadiusScale", Category = "Ring Menu", meta = (ClampMin = "0.0",
 		EditCondition = "HitArea == EDreamRingHitArea::Slice"))
 	float SliceHitRadiusScale = 2.0f;
 
@@ -202,7 +210,7 @@ public:
 	 * A stick has its own knob below, and deliberately so: the two are different quantities, and one
 	 * number serving both would have compared a magnitude of 1 against a radius of 80.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetDeadZoneRadius", BlueprintSetter = "SetDeadZoneRadius", Category = "Ring Menu", meta = (ClampMin = "0.0"))
 	float DeadZoneRadius = 0.0f;
 
 	/**
@@ -214,7 +222,7 @@ public:
 	float StickDeadZone = 0.25f;
 
 	/** See EDreamRingLabelFacing. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetLabelFacing", BlueprintSetter = "SetLabelFacing", Category = "Ring Menu")
 	EDreamRingLabelFacing LabelFacing = EDreamRingLabelFacing::Upright;
 
 	/**
@@ -229,7 +237,7 @@ public:
 	bool bAllowDeselect = false;
 
 	/** Off leaves the wedges to their icons. A wheel of glyphs is an ordinary thing to want. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShowLabels", BlueprintSetter = "SetShowLabels", Category = "Ring Menu")
 	bool bShowLabels = true;
 
 	/**
@@ -336,6 +344,45 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ring Menu")
 	int32 GetItemCount() const { return Items.Num(); }
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	EDreamRingHitArea GetHitArea() const { return HitArea; }
+
+	/**
+	 * The five setters below each write the field and then make the push that field is read by --
+	 * the whole of what a BlueprintSetter buys on this family. The hit-shape trio (HitArea, the
+	 * slice's reach, the dead zone) is consulted by the raycast override at the moment a pointer
+	 * arrives rather than baked into anything drawn, so those three need no restyle at all; the two
+	 * that decide what a wedge SHOWS do.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetHitArea(EDreamRingHitArea InHitArea) { HitArea = InHitArea; }
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	float GetSliceHitRadiusScale() const { return SliceHitRadiusScale; }
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetSliceHitRadiusScale(float InScale) { SliceHitRadiusScale = FMath::Max(0.0f, InScale); }
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	float GetDeadZoneRadius() const { return DeadZoneRadius; }
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetDeadZoneRadius(float InRadius) { DeadZoneRadius = FMath::Max(0.0f, InRadius); }
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	EDreamRingLabelFacing GetLabelFacing() const { return LabelFacing; }
+
+	/** Re-orients every wedge's label, which is geometry the style push writes. */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetLabelFacing(EDreamRingLabelFacing InFacing);
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	bool GetShowLabels() const { return bShowLabels; }
+
+	/** Wakes or sleeps every wedge's label, which the style push decides. */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetShowLabels(bool bInShowLabels);
 
 	UFUNCTION(BlueprintPure, Category = "Ring Menu")
 	int32 GetSelectedIndex() const { return SelectedIndex; }
@@ -460,10 +507,27 @@ private:
 	/** The commit: moves the selection (or clears it) and fires OnItemActivated. */
 	void ActivateItem(int32 InIndex);
 
+	/** Kill whatever the last Open or Close started. Both call it; neither leaves the other running. */
+	void KillOpenTweens();
+
 	/** Where the pointer is. Not a UPROPERTY the way SelectedIndex is: it is nobody's to author. */
 	UPROPERTY(Transient)
 	int32 HighlightedIndex = INDEX_NONE;
 
 	UPROPERTY(Transient)
 	bool bOpen = true;
+
+	/**
+	 * The two tweens Open and Close each start, kept so the other one can stop them.
+	 *
+	 * Open and Close write the SAME two properties in opposite directions, so a fast toggle used to
+	 * leave two tweeners fighting over the ring's opacity and scale -- last writer per frame wins, and
+	 * the loser's completion callback still fires (the close's is what puts the ring to sleep, which
+	 * it would then do to a ring that had just been re-opened). UUIDropdown::Show/Hide keeps one
+	 * tweener for exactly this reason; a ring needs two because it moves two properties.
+	 *
+	 * Weak: the tween manager owns them, and a tween that has finished is gone.
+	 */
+	TWeakObjectPtr<UDreamTweener> OpenFadeTweener;
+	TWeakObjectPtr<UDreamTweener> OpenScaleTweener;
 };

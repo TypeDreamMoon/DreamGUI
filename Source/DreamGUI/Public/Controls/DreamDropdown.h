@@ -11,6 +11,7 @@ class UUIDropdown;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamDropdownChangedEvent, int32, SelectedIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDreamDropdownItemEvent, int32, ItemIndex, UDreamWidget*, Item);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDreamDropdownSimpleEvent);
 
 /**
  * A dropdown whose hierarchy is code, not an asset.
@@ -42,11 +43,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
 	FDreamDropdownStyle Style;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
+	/**
+	 * BlueprintReadOnly rather than a BlueprintSetter pair, and for the reason UDreamDialog::Buttons
+	 * is: the options are what the open list is BUILT from, so a Blueprint writing this array in
+	 * place changed the data and left the list showing the old copy. SetOptions is the way in. The
+	 * designer and .dui still author it directly, where PostEditChangeProperty re-pushes.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dropdown")
 	TArray<FText> Options;
 
 	/** Authored selection in; mirror of the behaviour's out. -1 is none. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectedIndex", BlueprintSetter = "SetSelectedIndex", Category = "Dropdown")
 	int32 SelectedIndex = 0;
 
 	/**
@@ -54,12 +61,43 @@ public:
 	 * rows -- rows-times-row-height, no more -- and past this many the rest scroll: the cap is a
 	 * count because that is how a designer thinks about a dropdown, not in pixels.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown", meta = (ClampMin = "1"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMaxVisibleItems", BlueprintSetter = "SetMaxVisibleItems", Category = "Dropdown", meta = (ClampMin = "1"))
 	int32 MaxVisibleItems = 6;
+
+	/**
+	 * A picture per option, index-matched to Options -- the same parallel-array idiom TabLabels and
+	 * TabEnabled use, and for the same reason: a struct per option would make the common case (no
+	 * icons at all) cost an array literal the language cannot write.
+	 *
+	 * A sprite or a texture, by the rule every face in this library follows. A missing or null entry
+	 * is no icon, so a short list is an ordinary state.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
+	TArray<TObjectPtr<UObject>> OptionIcons;
+
+	/**
+	 * Whether the face draws its own arrow glyph -- UMG's HasDownArrow. Off is for a face that says
+	 * "open me" some other way (an icon of its own, a border).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetHasDownArrow", BlueprintSetter = "SetHasDownArrow", Category = "Dropdown")
+	bool bHasDownArrow = true;
 
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownChangedEvent OnSelectionChanged;
+
+	/**
+	 * The list is opening -- UMG's OnOpening, and the moment to refresh the options from.
+	 *
+	 * Fired from the behaviour's Show, which is the moment the list appears. The rows are placed
+	 * immediately afterwards, so options written from a handler here are the ones the player sees.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
+	FDreamDropdownSimpleEvent OnOpening;
+
+	/** The list closed, whether by a choice or by a click elsewhere. */
+	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
+	FDreamDropdownSimpleEvent OnClosed;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
@@ -78,6 +116,32 @@ public:
 	/** Replace the options and rebuild the list next time it opens. */
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")
 	void SetOptions(const TArray<FText>& InOptions);
+
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	TArray<FText> GetOptions() const { return Options; }
+
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	int32 GetMaxVisibleItems() const { return MaxVisibleItems; }
+
+	/**
+	 * How many rows the open list shows at most, re-pushed at once.
+	 *
+	 * A setter because the cap is read only by the style push, which is what turns a row COUNT into
+	 * the list's pixel height -- so a runtime write onto the variable moved a number nothing read
+	 * until something else happened to restyle.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void SetMaxVisibleItems(int32 InMaxVisibleItems);
+
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	bool GetHasDownArrow() const { return bHasDownArrow; }
+
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void SetHasDownArrow(bool bInHasDownArrow);
+
+	/** Replace the per-option pictures and re-push the list, so an open one changes under the pointer. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void SetOptionIcons(const TArray<UObject*>& InIcons);
 
 	/**
 	 * An option row's CONTENT, authored elsewhere: one instance of this class is created inside
@@ -137,6 +201,15 @@ private:
 	void HandleValueChanged(int32 InIndex);
 	void PushOptions();
 	void ApplyListRestingGeometry(const FDreamDropdownStyle& InActive);
+
+	/** The rows the behaviour duplicated out of the template, which is everything in the column but it. */
+	TArray<UDreamWidget*> GetItemRows() const;
+
+	/**
+	 * One option row's whole look. The template and every live row go through it, so a restyle
+	 * reaches the rows that already exist rather than only the thing the next rebuild copies.
+	 */
+	void PushItemStyle(UDreamWidget* InItem, const FDreamDropdownStyle& InActive);
 
 	/** True between Elevate and Restore; resting geometry must not be written while it is. */
 	bool bListElevated = false;

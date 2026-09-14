@@ -24,7 +24,13 @@ void UUIDropdown::Awake()
 	{
 		ListRoot->SetWidgetActive(false);
 		ListRoot->SetRenderOpacity(0);
-		MaxHeight = ListRoot->GetHeight();
+		// Only while nobody has said otherwise. Deriving it from the list root is the right guess for
+		// a hand-wired behaviour, and the wrong answer for a control that already pushed the height
+		// its own MaxVisibleItems asks for -- see bMaxHeightAuthored.
+		if (!bMaxHeightAuthored)
+		{
+			MaxHeight = ListRoot->GetHeight();
+		}
 	}
 	//set default display
 	if (Options.Num() > 0)
@@ -66,6 +72,15 @@ void UUIDropdown::Show()
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d ListRoot is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
+	// Every reason not to open, BEFORE anything is opened. This check used to sit below, after
+	// bIsShow was already true and the full-screen blocker was already built -- so a misconfigured
+	// template left an invisible sheet over the whole UI that swallowed every click, and the only way
+	// out was to click it (which routes to Hide) without being able to see it.
+	if (!ItemTemplate.IsValid())
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d ItemTemplate is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
 	if (!IsValid(this->GetWidget()))return;
 	if (!IsValid(this->GetWidget()->GetRootCanvas()))return;
 	if (bIsShow)return;
@@ -104,12 +119,7 @@ void UUIDropdown::Show()
 	}
 	CanvasOnListRoot->SetOverrideSorting(true);
 
-	//create list item as options
-	if (!ItemTemplate.IsValid())
-	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d ItemTemplate is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		return;
-	}
+	//create list item as options -- the template was validated at the top, before anything opened
 	if (bNeedRecreate)
 	{
 		bNeedRecreate = false;
@@ -513,7 +523,35 @@ void UUIDropdown::OnSelectItem(int Index)
 }
 void UUIDropdown::ApplyValueToVisual()
 {
-	if (!Options.IsValidIndex(Value))return;
+	/*
+	 * An invalid index is a REAL state, not a call to ignore: Value is -1 for "nothing chosen" (the
+	 * control says so in its header) and SetOptions with an empty array is how a filter that matched
+	 * nothing reports itself. Returning early here left the caption showing the last option that had
+	 * been chosen -- a word naming a choice the dropdown could no longer make -- and left every
+	 * created row still drawn as the selected one.
+	 *
+	 * The image is cleared alongside the text because they are one caption: an icon outliving its
+	 * label is the same lie with a picture.
+	 */
+	if (!Options.IsValidIndex(Value))
+	{
+		if (CaptionText.IsValid())
+		{
+			CaptionText->SetText(FText::GetEmpty());
+		}
+		if (CaptionImage.IsValid())
+		{
+			CaptionImage->SetBrush(FDreamUIImageBrush());
+		}
+		for (auto& Script : CreatedItemArray)
+		{
+			if (Script.IsValid())
+			{
+				Script->SetSelectionState(false);
+			}
+		}
+		return;
+	}
 
 	if (CaptionText.IsValid())
 	{

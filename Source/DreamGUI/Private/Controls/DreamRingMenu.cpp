@@ -543,12 +543,10 @@ void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle
 		? EDreamWidgetInteractableType::Enabled
 		: EDreamWidgetInteractableType::Disabled);
 
-	if (UUIButton* Button = Wedge->GetComponent<UUIButton>())
-	{
-		Button->SetHoveredColor(InStyle.WedgeHovered);
-		Button->SetPressedColor(InStyle.WedgePressed);
-		Button->SetDisabledColor(InStyle.WedgeDisabled);
-	}
+	// The wedge's colours are NOT pushed here: RefreshWedgeColors runs right after the bind loop and
+	// pushes all five states plus the speed in one call, because the resting colour it computes (the
+	// item's override, the disabled tint, the selection) is half of that same set. Two writers of one
+	// selectable is how the two learn to disagree.
 
 	// The icon and the label ride together, in a box the wedge places and turns. Both are anchored
 	// rather than stacked by a container: a container would need the box's height to be the sum of
@@ -625,11 +623,11 @@ void UDreamRingMenu::BindWedge(int32 InIndex, const FDreamRingMenuStyle& InStyle
 		}
 	}
 
-	// Declared since this control shipped and never fired -- the hook a consumer needs for a wedge
-	// richer than an icon and a word, and the counterpart of the list's OnRowGenerated. On every
-	// BIND, so a template's instance (made once per pool wedge) is told each time the item under it
-	// changes.
-	OnWedgeGenerated.Broadcast(InIndex, Wedge);
+	// OnWedgeGenerated is NOT broadcast here. It used to be, and RebuildItems broadcasts it again
+	// after the whole pool is bound and coloured -- so every consumer was told twice per rebuild, and
+	// the "hang a decorator on each wedge" use this hook exists for hung two. The surviving one is
+	// RebuildItems', because a decorator has to see a FINISHED wedge: geometry, content AND colour,
+	// and the colour pass runs after this function.
 }
 
 void UDreamRingMenu::RefreshWedgeColors()
@@ -658,7 +656,12 @@ void UDreamRingMenu::RefreshWedgeColors()
 
 		if (UUIButton* Button = Wedge->GetComponent<UUIButton>())
 		{
-			Button->SetNormalColor(Resting);
+			// All five states and the speed, in one call. The wedges used to get three pointer
+			// colours and leave the rest to the library's defaults -- which meant no focus colour at
+			// all, and focus visuals that ship OFF: a pad stepping round the wheel moved a highlight
+			// that nothing drew. The ring is the one control in the library a pad reaches first.
+			PushSelectableState(Button, Resting, Active.WedgeHovered, Active.WedgePressed,
+				Active.WedgeDisabled, Active.WedgeFocused, Active.TransitionDuration);
 		}
 		// And onto the visual directly. SetNormalColor repaints only while the wedge is in its
 		// Normal state AND a transition can actually run -- the tween manager needs a world -- so a
@@ -869,6 +872,28 @@ void UDreamRingMenu::SetSelectedIndexWithoutNotify(int32 InIndex)
 	RefreshHubText();
 }
 
+void UDreamRingMenu::SetLabelFacing(EDreamRingLabelFacing InFacing)
+{
+	if (LabelFacing == InFacing)
+	{
+		return;
+	}
+	LabelFacing = InFacing;
+	// Which way a label reads is geometry, written per wedge by the style push -- so the push is what
+	// a runtime write has to make, and making it here is the whole reason this is a setter.
+	ApplyStyle();
+}
+
+void UDreamRingMenu::SetShowLabels(bool bInShowLabels)
+{
+	if (bShowLabels == bInShowLabels)
+	{
+		return;
+	}
+	bShowLabels = bInShowLabels;
+	ApplyStyle();
+}
+
 void UDreamRingMenu::HandleWedgeClicked(int32 InIndex)
 {
 	if (!Items.IsValidIndex(InIndex) || !Items[InIndex].bEnabled)
@@ -912,6 +937,10 @@ void UDreamRingMenu::Open()
 		return;
 	}
 	bOpen = true;
+	// Whatever a Close left running, before anything else: the two write the same two properties in
+	// opposite directions, and a close still fading would otherwise keep pulling the ring back down
+	// -- and then put it to sleep when its completion callback arrived.
+	KillOpenTweens();
 	RingNode->SetWidgetActive(true);
 
 	const FDreamRingMenuStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::RingMenuStyle);
@@ -924,6 +953,8 @@ void UDreamRingMenu::Open()
 		RingNode->SetRelativeScale(FVector(1.0, Scale, Scale));
 		UDreamTweener* Fade = RingNode->RenderOpacityTo(1.0f, Active.OpenDuration, 0.0f, EDreamTweenEase::OutCubic);
 		UDreamTweener* Grow = RingNode->LocalScaleTo(FVector::OneVector, Active.OpenDuration, 0.0f, EDreamTweenEase::OutCubic);
+		OpenFadeTweener = Fade;
+		OpenScaleTweener = Grow;
 		bTweened = (Fade != nullptr) && (Grow != nullptr);
 	}
 	if (!bTweened)
@@ -947,6 +978,8 @@ void UDreamRingMenu::Close()
 	// Before the fade, not after: a menu on its way out must stop answering the pointer at once, or
 	// the last frames of the animation are still clickable.
 	SetHighlightedIndex(INDEX_NONE);
+	// And whatever an Open left running, for the reason Open kills a Close's.
+	KillOpenTweens();
 
 	const FDreamRingMenuStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::RingMenuStyle);
 	const float Scale = FMath::Max(Active.OpenScaleFrom, 0.01f);
@@ -955,6 +988,8 @@ void UDreamRingMenu::Close()
 	{
 		UDreamTweener* Fade = RingNode->RenderOpacityTo(0.0f, Active.OpenDuration, 0.0f, EDreamTweenEase::OutCubic);
 		UDreamTweener* Shrink = RingNode->LocalScaleTo(FVector(1.0, Scale, Scale), Active.OpenDuration, 0.0f, EDreamTweenEase::OutCubic);
+		OpenFadeTweener = Fade;
+		OpenScaleTweener = Shrink;
 		if (Fade != nullptr && Shrink != nullptr)
 		{
 			bTweened = true;
@@ -977,6 +1012,22 @@ void UDreamRingMenu::Close()
 		RingNode->SetWidgetActive(false);
 	}
 	OnClosed.Broadcast(SelectedIndex);
+}
+
+void UDreamRingMenu::KillOpenTweens()
+{
+	// Without calling their completion handlers: the close's handler is what puts the ring to sleep,
+	// and running it from inside Open would switch off the ring that is opening.
+	if (UDreamTweener* Fade = OpenFadeTweener.Get())
+	{
+		Fade->Kill(false);
+	}
+	if (UDreamTweener* Scale = OpenScaleTweener.Get())
+	{
+		Scale->Kill(false);
+	}
+	OpenFadeTweener = nullptr;
+	OpenScaleTweener = nullptr;
 }
 
 void UDreamRingMenu::ToggleOpen()

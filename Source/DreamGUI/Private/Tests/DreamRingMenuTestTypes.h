@@ -6,6 +6,8 @@
 #include "UObject/Object.h"
 #include "DreamRingMenuTestTypes.generated.h"
 
+class UDreamWidget;
+
 /**
  * Somewhere a ring menu's events can land.
  *
@@ -36,8 +38,33 @@ public:
 		++ActivationCalls;
 	}
 
+	/**
+	 * One wedge was generated. Counted PER INDEX rather than in total, because the claim worth
+	 * pinning is "each wedge is announced exactly once per rebuild" -- a total would pass just as
+	 * happily for a menu that announced the first wedge twice and the second never.
+	 */
+	UFUNCTION()
+	void RecordWedge(int32 Index, UDreamWidget* Wedge)
+	{
+		++WedgeCallsByIndex.FindOrAdd(Index);
+		++WedgeCalls;
+		LastWedge = Wedge;
+	}
+
+	int32 WedgeCallsFor(int32 Index) const
+	{
+		const int32* Found = WedgeCallsByIndex.Find(Index);
+		return Found != nullptr ? *Found : 0;
+	}
+
 	int32 LastIndex = INDEX_NONE;
 	FName LastTag = NAME_None;
 	int32 IndexCalls = 0;
 	int32 ActivationCalls = 0;
+	int32 WedgeCalls = 0;
+	TMap<int32, int32> WedgeCallsByIndex;
+
+	/** Reflected, because a probe that keeps a widget alive only by luck is a probe that crashes. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> LastWedge = nullptr;
 };

@@ -571,4 +571,89 @@ bool FDreamRingMenuHubTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRingMenuWedgeGeneratedOnceTest,
+	"DreamGUI.Controls.RingMenu.EachWedgeIsAnnouncedExactlyOncePerRebuild",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRingMenuWedgeGeneratedOnceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRingMenuTestLocal;
+
+	// The hook fired from TWO places -- once at the end of the bind pass and once more after the
+	// whole pool was coloured -- so every consumer heard about every wedge twice per rebuild, and the
+	// "hang a decorator on each wedge" use this event exists for hung two of everything. Nothing in
+	// the suite could see it: eight ring menu tests read state and none of them counted.
+	TDreamTestControl<UDreamRingMenu> Menu(MakeWheel({
+		MakeItem(TEXT("Attack")), MakeItem(TEXT("Heal")), MakeItem(TEXT("Flee")) }));
+
+	TStrongObjectPtr<UDreamRingMenuProbe> Probe(NewObject<UDreamRingMenuProbe>(GetTransientPackage()));
+	Menu->OnWedgeGenerated.AddDynamic(Probe.Get(), &UDreamRingMenuProbe::RecordWedge);
+
+	Menu->ApplyStyle();
+	if (!TestEqual(TEXT("three wedges, three announcements"), Probe->WedgeCalls, 3))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the first wedge exactly once"), Probe->WedgeCallsFor(0), 1);
+	TestEqual(TEXT("the second exactly once"), Probe->WedgeCallsFor(1), 1);
+	TestEqual(TEXT("the third exactly once"), Probe->WedgeCallsFor(2), 1);
+	// The surviving broadcast is the LATER one, so what a decorator is handed is a finished wedge:
+	// geometry, content and colour. The colour pass runs between the bind loop and the announcement.
+	if (UUIButton* Button = Menu->GetWedgeWidget(2) != nullptr
+		? Menu->GetWedgeWidget(2)->GetComponent<UUIButton>()
+		: nullptr)
+	{
+		TestEqual(TEXT("and it is already wearing its resting colour when the event arrives"),
+			Button->GetNormalColor(), Menu->Style.WedgeNormal);
+	}
+
+	// A new source is a new rebuild, and the count starts again rather than accumulating.
+	Menu->SetItems({ MakeItem(TEXT("Attack")), MakeItem(TEXT("Heal")) });
+	TestEqual(TEXT("a two-item source announces twice more"), Probe->WedgeCalls, 5);
+	TestEqual(TEXT("and still once per wedge"), Probe->WedgeCallsFor(0), 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRingMenuWedgeStateColoursTest,
+	"DreamGUI.Controls.RingMenu.AWedgeCarriesEveryStateColourAndNotJustThePointerThree",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRingMenuWedgeStateColoursTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRingMenuTestLocal;
+
+	// A ring is the one control in this library a gamepad reaches FIRST, and its wedges were the one
+	// generated thing that never pushed a focus colour -- so the selectable's focus visuals stayed at
+	// their shipped default of OFF and stepping round the wheel with a stick moved a highlight that
+	// nothing drew. Values no default could be confused with.
+	UDreamRingMenu* Authored = NewObject<UDreamRingMenu>(GetTransientPackage());
+	Authored->StyleSource = EDreamUIStyleSource::Inline;
+	Authored->Style.WedgeFocused = FColor(31, 32, 33, 255);
+	Authored->Style.TransitionDuration = 0.44f;
+	Authored->Items = { MakeItem(TEXT("Attack")), MakeItem(TEXT("Heal")) };
+	Authored->Initialize();
+	TDreamTestControl<UDreamRingMenu> Menu(Authored);
+
+	UUIButton* Button = Menu->GetWedgeWidget(0) != nullptr
+		? Menu->GetWedgeWidget(0)->GetComponent<UUIButton>()
+		: nullptr;
+	if (!TestNotNull(TEXT("the wedge has a selectable"), Button))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the style's focus colour reached the wedge"),
+		Button->GetFocusedColor(), FColor(31, 32, 33, 255));
+	TestTrue(TEXT("stating a focus colour turns the focus visuals on"), Button->GetUseFocusedVisuals());
+	TestEqual(TEXT("and the transition speed is the style's, not the library's"),
+		Button->GetAnimDuration(), 0.44f);
+	// The three that were already right stay right, and they now come from the same single push.
+	TestEqual(TEXT("the hover colour is still the style's"),
+		Button->GetHoveredColor(), Menu->Style.WedgeHovered);
+	TestEqual(TEXT("and so is the disabled one"),
+		Button->GetDisabledColor(), Menu->Style.WedgeDisabled);
+	return true;
+}
+
 #endif
