@@ -52,30 +52,42 @@ void UDreamUISequenceSection::ImportEntityImpl(UMovieSceneEntitySystemLinker* En
 {
 	using namespace UE::MovieScene;
 
-	UDreamUISequence* Asset = Cast<UDreamUISequence>(GetSequence());
-	if (Asset == nullptr || !Asset->GetRootBindingGuid().IsValid())
-	{
-		return;
-	}
 	if (!EntityLinker->GetInstanceRegistry()->IsHandleValid(Params.Sequence.InstanceHandle))
 	{
 		return;
 	}
 
-	const FSubSequencePath PathToRoot = EntityLinker->GetInstanceRegistry()->GetInstance(Params.Sequence.InstanceHandle).GetSubSequencePath();
-	const FMovieSceneSequenceID ResolvedSequenceID = PathToRoot.ResolveChildSequenceID(GetSequenceID());
+	// The root-binding override is for the ASSET form only, and it is conditional rather than an
+	// early exit -- the default sub-section components at the bottom are what make ANY sub-sequence
+	// evaluate at all, and returning before them is why an embedded animation in one of these
+	// sections used to sit there doing nothing.
+	//
+	// A .DreamUISequence asset addresses its widgets as paths from a root binding, so playing one
+	// under a different widget means overriding that one binding: the whole re-rooting scheme. An
+	// EMBEDDED UDreamWidgetAnimation has no root binding and needs none -- its references resolve
+	// against whatever context the engine hands them, which for a nested animation is the widget its
+	// own component lives on, exactly as when it is played on its own. Nesting one is composition in
+	// time (a long animation assembled out of short ones), not retargeting.
+	if (UDreamUISequence* Asset = Cast<UDreamUISequence>(GetSequence()))
+	{
+		if (Asset->GetRootBindingGuid().IsValid())
+		{
+			const FSubSequencePath PathToRoot = EntityLinker->GetInstanceRegistry()->GetInstance(Params.Sequence.InstanceHandle).GetSubSequencePath();
+			const FMovieSceneSequenceID ResolvedSequenceID = PathToRoot.ResolveChildSequenceID(GetSequenceID());
 
-	// The component stores the asset's root binding as a resolved-from-root operand; the system
-	// overrides it to this section's own object binding when the section links.
-	FDreamUISequenceComponentData ComponentData;
-	ComponentData.InnerOperand = FMovieSceneEvaluationOperand(ResolvedSequenceID, Asset->GetRootBindingGuid());
+			// The component stores the asset's root binding as a resolved-from-root operand; the system
+			// overrides it to this section's own object binding when the section links.
+			FDreamUISequenceComponentData ComponentData;
+			ComponentData.InnerOperand = FMovieSceneEvaluationOperand(ResolvedSequenceID, Asset->GetRootBindingGuid());
 
-	const FGuid ObjectBindingID = Params.GetObjectBindingID();
+			const FGuid ObjectBindingID = Params.GetObjectBindingID();
 
-	OutImportedEntity->AddBuilder(
-		FEntityBuilder()
-			.AddConditional(FBuiltInComponentTypes::Get()->GenericObjectBinding, ObjectBindingID, ObjectBindingID.IsValid())
-			.Add(FDreamUISequenceComponentTypes::Get()->DreamUISequence, ComponentData));
+			OutImportedEntity->AddBuilder(
+				FEntityBuilder()
+					.AddConditional(FBuiltInComponentTypes::Get()->GenericObjectBinding, ObjectBindingID, ObjectBindingID.IsValid())
+					.Add(FDreamUISequenceComponentTypes::Get()->DreamUISequence, ComponentData));
+		}
+	}
 
 	BuildDefaultSubSectionComponents(EntityLinker, Params, OutImportedEntity);
 }

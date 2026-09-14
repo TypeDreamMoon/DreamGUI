@@ -7,6 +7,7 @@
 #include "Engine/Blueprint.h"
 #include "UObject/Package.h"
 #include "DreamGUI.h"
+#include "Animation/DreamUIWidgetBinding.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetTree.h"
 
@@ -63,13 +64,28 @@ UDreamWidget* FDreamWidgetAnimationObjectReference::GetWidgetFromContextWidgetBy
 			auto& PathItem = SplitedArray[i];
 			auto Children = Parent->GetChildren();
 			UDreamWidget* FoundChild = nullptr;
+			int32 MatchCount = 0;
 			for (auto& Child : Children)
 			{
-				if (PathItem == Child->GetDisplayName())
+				if (IsValid(Child) && PathItem == Child->GetDisplayName())
 				{
-					FoundChild = Child;
-					break;
+					++MatchCount;
+					if (FoundChild == nullptr)
+					{
+						FoundChild = Child;
+					}
 				}
+			}
+			// A path is display names all the way down, so two siblings sharing one name make the path
+			// ambiguous and the first match silently wins -- which is why an `each` row, or a
+			// copy-pasted widget that kept its name, animates the row above it instead of itself. The
+			// resolution still has to pick one (old data depends on it), but it no longer does so in
+			// silence: this is the only place that can see the collision at all.
+			if (MatchCount > 1)
+			{
+				UE_LOG(DreamGUI, Warning,
+					TEXT("Animation binding path '%s' is ambiguous: '%s' has %d children named '%s', and the first is bound. Give siblings distinct display names."),
+					*InPath, *Parent->GetDisplayName(), MatchCount, *PathItem);
 			}
 			if (FoundChild != nullptr)
 			{
@@ -81,6 +97,27 @@ UDreamWidget* FDreamWidgetAnimationObjectReference::GetWidgetFromContextWidgetBy
 			}
 			else
 			{
+				// The path stopped walking. A move is why: the path is display names all the way down,
+				// so dragging a widget under a different parent invalidates every segment above it
+				// while the widget itself -- which is what the track was about -- is still there under
+				// its own name. Look for that name anywhere under the context; take it only when
+				// exactly one widget carries it, because several is a question a name cannot answer.
+				TArray<UDreamWidget*> ByName;
+				UDreamUIWidgetBinding::CollectWidgetsByDisplayName(InContextWidget, SplitedArray.Last(), ByName);
+				if (ByName.Num() == 1 && ByName[0] != InContextWidget)
+				{
+					UE_LOG(DreamGUI, Warning,
+						TEXT("Animation binding path '%s' no longer walks from '%s', but a widget named '%s' is at '%s'; binding to it. Save the widget blueprint to record the new path."),
+						*InPath, *InContextWidget->GetDisplayName(), *SplitedArray.Last(),
+						*GetWidgetPathRelativeToContextWidget(InContextWidget, ByName[0]));
+					return ByName[0];
+				}
+				if (ByName.Num() > 1)
+				{
+					UE_LOG(DreamGUI, Warning,
+						TEXT("Animation binding path '%s' no longer walks from '%s', and %d widgets are named '%s', so none of them can be assumed to be the one. Repoint the track."),
+						*InPath, *InContextWidget->GetDisplayName(), ByName.Num(), *SplitedArray.Last());
+				}
 				return nullptr;
 			}
 		}

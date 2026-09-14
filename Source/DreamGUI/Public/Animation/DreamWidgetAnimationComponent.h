@@ -122,7 +122,7 @@ public:
 	 * instead of naming it with a string that goes stale on rename. Accepts this component's
 	 * embedded animations and its standalone sequence assets alike.
 	 * @param StartAtTime Seconds into the animation to start from; for a reverse play, seconds before its end.
-	 * @param NumLoopsToPlay Total number of times to play the animation. Zero loops indefinitely, matching UMG.
+	 * @param NumLoopsToPlay Total number of times to play the animation. Zero loops indefinitely, matching UMG; so does any negative number, for callers who spell "forever" as -1.
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
 	FDreamUIAnimationHandle PlayAnimation(
@@ -237,12 +237,51 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
 	void SetAnimationCurrentTime(FDreamUIAnimationHandle Handle, float InTime);
 
-	/** Changes how many times a live instance plays in total. Zero loops indefinitely. */
+	/** Changes how many times a live instance plays in total. Zero or less loops indefinitely. */
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
 	void SetNumLoopsToPlay(FDreamUIAnimationHandle Handle, int32 NumLoopsToPlay);
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
 	void SetPlaybackSpeed(FDreamUIAnimationHandle Handle, float PlaybackSpeed = 1.0f);
+
+	/**
+	 * Scales everything this instance writes, so two instances can blend instead of fighting.
+	 *
+	 * The engine multiplies every blendable value the instance produces by this weight; two instances
+	 * of the same animation at 0.5 each land halfway between their two results rather than the later
+	 * one simply overwriting the earlier. Needs Dynamic Weighting on (this component's own flag, or
+	 * the animation asset's), which is why the flag exists -- without it the engine has no blend
+	 * channel to apply a weight through and the value is whatever the last writer said.
+	 * @param Weight Usually 0..1. Not clamped: the engine does not clamp it either.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
+	void SetAnimationWeight(FDreamUIAnimationHandle Handle, float Weight = 1.0f);
+
+	/** Drops a weight set by SetAnimationWeight, returning the instance to writing its values whole. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
+	void ClearAnimationWeight(FDreamUIAnimationHandle Handle);
+
+	/**
+	 * Whether this component's animations stop while the game is paused. The runtime form of the
+	 * authored flag; it applies to instances started AFTER it, because which clock a player follows
+	 * is settled when the player is initialized.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
+	void SetAffectedByGamePause(bool bValue) { bAffectedByGamePause = bValue; }
+	UFUNCTION(BlueprintPure, Category = "DreamUI|Animation")
+	bool IsAffectedByGamePause() const { return bAffectedByGamePause; }
+
+	/** Whether this component's animations follow Global Time Dilation; see SetAffectedByGamePause. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
+	void SetAffectedByTimeDilation(bool bValue) { bAffectedByTimeDilation = bValue; }
+	UFUNCTION(BlueprintPure, Category = "DreamUI|Animation")
+	bool IsAffectedByTimeDilation() const { return bAffectedByTimeDilation; }
+
+	/** Whether instances of this component's animations can be weighted; see SetAnimationWeight. */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamUI|Animation")
+	void SetDynamicWeighting(bool bValue) { bDynamicWeighting = bValue; }
+	UFUNCTION(BlueprintPure, Category = "DreamUI|Animation")
+	bool IsDynamicWeighting() const { return bDynamicWeighting; }
 
 	// ---------------------------------------------------------------- by animation object
 
@@ -321,31 +360,121 @@ public:
 	UDreamWidgetAnimation* AddNewAnimation();
 	bool DeleteAnimationByIndex(int32 InIndex);
 	UDreamWidgetAnimation* DuplicateAnimationByIndex(int32 InIndex);
+	/**
+	 * Take a copy of another component's animation into this one, keeping its display name.
+	 *
+	 * What the .dui compile needs and DuplicateAnimationByIndex is not: the source lives on the tree
+	 * the rebuild is about to drop, and the destination is the tree it just built. Before timelines
+	 * existed the whole component could be re-homed wholesale (AddComponentByTemplate), which stops
+	 * working the moment the FILE also produces animations -- the new tree already has a component,
+	 * and replacing it would throw away exactly the ones the text just wrote.
+	 *
+	 * Refuses a language-owned source: the file rebuilds those, and carrying one would put the
+	 * previous compile's copy back on top of the one the file just produced. Null on refusal.
+	 */
+	UDreamWidgetAnimation* AdoptAnimation(UDreamWidgetAnimation* InSource);
 
 	virtual void Awake()override;
 	virtual void OnDestroy() override;
+	/** Reads the old whole-struct PlaybackSettings across into the properties above, once. NOT
+	 *  editor-only: a cooked build loads the same asset and must end up with the same settings. */
+	virtual void PostLoad()override;
 #if WITH_EDITOR
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PreDuplicate(FObjectDuplicationParameters& DupParams)override;
 	virtual void PreSave(class FObjectPreSaveContext SaveContext)override;
-	virtual void PostDuplicate(bool bDuplicateForPIE)override;
-	virtual void PostInitProperties()override;
-	virtual void PostLoad()override;
 
 	void FixEditorHelpers();
 #endif
 protected:
 
-	UPROPERTY(EditAnywhere, Category="Playback", meta=(ShowOnlyInnerProperties))
+	// ------------------------------------------------------------------------- authored settings
+	//
+	// Spelled out one property at a time, rather than by splatting FMovieSceneSequencePlaybackSettings
+	// across the panel. That struct offered the author a Loop, a Play Rate, a Start Offset, a Random
+	// Start Time and a Finish Completion State that PlayAnimation overwrote from its own arguments on
+	// every play, next to five Cinematic entries (Disable Movement Input, Hide Player, Hide HUD...)
+	// that only ALevelSequenceActor has ever read. Six controls that did nothing and five that mean
+	// nothing to a widget. What is left below is what this component actually honours; the old struct
+	// is still serialized under it and migrated once, in PostLoad, so no authored value is lost.
+
+	/** Play one of this component's animations as soon as the widget comes alive. */
+	UPROPERTY(EditAnywhere, Category = "Playback")
+	bool bAutoPlay = false;
+
+	/** Which of this component's animations Auto Play starts. */
+	UPROPERTY(EditAnywhere, Category = "Playback", meta = (EditCondition = "bAutoPlay"))
+	int32 CurrentSequenceIndex = 0;
+
+	/** Seconds into the animation that the auto-played instance starts from. */
+	UPROPERTY(EditAnywhere, Category = "Playback", meta = (EditCondition = "bAutoPlay", Units = s))
+	float AutoPlayStartTime = 0.0f;
+
+	/** Total plays for the auto-played instance. Zero or less loops indefinitely. */
+	UPROPERTY(EditAnywhere, Category = "Playback", meta = (EditCondition = "bAutoPlay"))
+	int32 AutoPlayNumLoopsToPlay = 1;
+
+	/** Play rate for the auto-played instance. */
+	UPROPERTY(EditAnywhere, Category = "Playback", meta = (EditCondition = "bAutoPlay", Units = Multiplier))
+	float AutoPlayPlaybackSpeed = 1.0f;
+
+	/** Put every property the auto-played instance touched back as it was when the instance ends. */
+	UPROPERTY(EditAnywhere, Category = "Playback", meta = (EditCondition = "bAutoPlay"))
+	bool bAutoPlayRestoreState = false;
+
+	/** Every animation this component plays: hold the last frame instead of ending. */
+	UPROPERTY(EditAnywhere, Category = "Playback")
+	bool bPauseAtEnd = false;
+
+	/**
+	 * Every animation this component plays: keep going while the game is paused.
+	 *
+	 * The tween side has had this per tween all along (UDreamTweener::affectByGamePause) and a pause
+	 * menu that animates itself away is the ordinary case for it; the Sequencer side simply had no
+	 * switch. Off means the engine's own "tick this client while paused" path, which also hands the
+	 * player the clock that keeps running while paused.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Playback")
+	bool bAffectedByGamePause = true;
+
+	/**
+	 * Every animation this component plays: follow Global Time Dilation.
+	 *
+	 * The delta the sequence tick manager hands out is already dilated, so this is on by default and a
+	 * bullet-time effect slows the HUD with everything else. Off divides the dilation back out, which
+	 * is the tween side's affectByTimeDilation -- and what a menu that must stay responsive wants.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Playback")
+	bool bAffectedByTimeDilation = true;
+
+	/**
+	 * Every animation this component plays: allow per-instance weights (SetAnimationWeight).
+	 *
+	 * Off by default because the blend channel it turns on is not free, and an animation that is
+	 * never weighted does not need one.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Playback")
+	bool bDynamicWeighting = false;
+
+	/** Every animation this component plays: seconds between evaluations. Zero evaluates every frame. */
+	UPROPERTY(EditAnywhere, Category = "Playback", AdvancedDisplay, meta = (Units = s, ClampMin = "0.0"))
+	float TickIntervalSeconds = 0.0f;
+
+	/**
+	 * The settings struct this component used to expose whole. Kept so assets authored against it
+	 * still load, read once by PostLoad into the properties above, and never written again.
+	 */
+	UPROPERTY()
 	FMovieSceneSequencePlaybackSettings PlaybackSettings;
+
+	/** True once PostLoad has read PlaybackSettings across, so a second load does not re-read it. */
+	UPROPERTY()
+	bool bPlaybackSettingsMigrated = false;
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category= Playback)
 		TArray<TObjectPtr<UDreamWidgetAnimation>> SequenceArray;
 	/** Standalone animation assets this component can also play, addressed by asset name. */
 	UPROPERTY(EditAnywhere, Category = Playback)
 		TArray<TObjectPtr<UDreamUISequence>> SequenceAssets;
-	UPROPERTY(EditAnywhere, Category = Playback)
-		int32 CurrentSequenceIndex = 0;
 
 	UPROPERTY(transient)
 		TObjectPtr<UDreamWidgetAnimationPlayer> SequencePlayer;
@@ -366,6 +495,14 @@ protected:
 		EDreamUIAnimationPlayMode PlayMode,
 		float PlaybackSpeed,
 		bool bRestoreState);
+	/**
+	 * The playback settings every play of this component starts from: the component's own authored
+	 * flags translated into the struct the engine takes. One place, so the legacy player and every
+	 * PlayAnimation agree about pause, dilation, weighting and tick interval.
+	 */
+	FMovieSceneSequencePlaybackSettings MakePlaybackSettings() const;
+	/** Gives Player the clock this component's flags call for; see bAffectedByTimeDilation. */
+	void ApplyTimeControl(UDreamWidgetAnimationPlayer* Player) const;
 	/** A live instance turned to run InDirection, or a fresh one started that way; PlayAnimationForward / Reverse. */
 	FDreamUIAnimationHandle PlayAnimationRelative(UMovieSceneSequence* Animation, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, bool bRestoreState);
 	/** Queues Action on the world's sequence tick manager; runs it now if there is no manager to queue on. */

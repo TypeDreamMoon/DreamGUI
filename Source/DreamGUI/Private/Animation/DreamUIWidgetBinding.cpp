@@ -3,6 +3,7 @@
 
 #include "Animation/DreamUIWidgetBinding.h"
 #include "Animation/DreamUISequence.h"
+#include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "MovieScene.h"
@@ -27,6 +28,22 @@ FString UDreamUIWidgetBinding::BuildWidgetPathFromRoot(const UDreamWidget* Root,
 	return Walker == Root ? FString::Join(Segments, TEXT("/")) : FString();
 }
 
+void UDreamUIWidgetBinding::CollectWidgetsByDisplayName(UDreamWidget* Root, const FString& InDisplayName, TArray<UDreamWidget*>& OutWidgets)
+{
+	if (!IsValid(Root) || InDisplayName.IsEmpty())
+	{
+		return;
+	}
+	if (Root->GetDisplayName() == InDisplayName)
+	{
+		OutWidgets.Add(Root);
+	}
+	for (UDreamWidget* Child : Root->GetChildren())
+	{
+		CollectWidgetsByDisplayName(Child, InDisplayName, OutWidgets);
+	}
+}
+
 UDreamWidget* UDreamUIWidgetBinding::ResolveWidgetPath(UDreamWidget* Root, const FString& InPath)
 {
 	if (Root == nullptr || InPath.IsEmpty())
@@ -39,17 +56,49 @@ UDreamWidget* UDreamUIWidgetBinding::ResolveWidgetPath(UDreamWidget* Root, const
 	for (const FString& Segment : Segments)
 	{
 		UDreamWidget* Next = nullptr;
+		int32 MatchCount = 0;
 		for (UDreamWidget* Child : Walker->GetChildren())
 		{
 			// First display-name match wins; keep sibling names unique for stable bindings.
 			if (IsValid(Child) && Child->GetDisplayName() == Segment)
 			{
-				Next = Child;
-				break;
+				++MatchCount;
+				if (Next == nullptr)
+				{
+					Next = Child;
+				}
 			}
+		}
+		// Two siblings with one name make the path ambiguous, and "first match wins" then binds a
+		// track to whichever of them the hierarchy happens to list first -- silently, and differently
+		// after a reorder. Still resolved (old data depends on it), no longer unsaid.
+		if (MatchCount > 1)
+		{
+			UE_LOG(DreamGUI, Warning,
+				TEXT("Widget binding path '%s' is ambiguous: '%s' has %d children named '%s', and the first is bound. Give siblings distinct display names."),
+				*InPath, *Walker->GetDisplayName(), MatchCount, *Segment);
 		}
 		if (Next == nullptr)
 		{
+			// The path does not walk. Before giving up, look for the widget the LAST segment names
+			// anywhere under the root: that is a widget that has been dragged to another parent, and
+			// its own name is the half of the path a move does not invalidate. Exactly one match is
+			// the widget; several is a question a name cannot answer, so that stays unresolved.
+			TArray<UDreamWidget*> ByName;
+			CollectWidgetsByDisplayName(Root, Segments.Last(), ByName);
+			if (ByName.Num() == 1)
+			{
+				UE_LOG(DreamGUI, Warning,
+					TEXT("Widget binding path '%s' no longer walks from '%s', but a widget named '%s' is at '%s'; binding to it. Re-save the animation to record the new path."),
+					*InPath, *Root->GetDisplayName(), *Segments.Last(), *BuildWidgetPathFromRoot(Root, ByName[0]));
+				return ByName[0];
+			}
+			if (ByName.Num() > 1)
+			{
+				UE_LOG(DreamGUI, Warning,
+					TEXT("Widget binding path '%s' no longer walks from '%s', and %d widgets are named '%s', so none of them can be assumed to be the one. Repoint the track."),
+					*InPath, *Root->GetDisplayName(), ByName.Num(), *Segments.Last());
+			}
 			return nullptr;
 		}
 		Walker = Next;

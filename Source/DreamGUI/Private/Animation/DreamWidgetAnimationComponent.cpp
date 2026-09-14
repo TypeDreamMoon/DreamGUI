@@ -13,6 +13,8 @@
 
 #include "MovieSceneSequencePlaybackSettings.h"
 #include "MovieSceneSequenceTickManager.h"
+#include "MovieSceneTimeController.h"
+#include "GameFramework/WorldSettings.h"
 
 UDreamWidgetAnimationComponent::UDreamWidgetAnimationComponent()
 {
@@ -45,15 +47,130 @@ void UDreamWidgetAnimationComponent::Awake()
 	Super::Awake();
 	InitSequencePlayer();
 
-	if (PlaybackSettings.bAutoPlay && SequencePlayer && SequencePlayer->IsValid())
+	// Auto-play goes through PlayAnimation, not through the legacy player's own Play. Both animate,
+	// but the legacy player sits outside the handle system: nothing binds its OnNativeFinished, so an
+	// auto-played animation raised no Started or Finished event, reached no BindToAnimation listener,
+	// told the owning user widget nothing, and handed back no handle to pause or stop it with.
+	if (bAutoPlay && SequenceArray.IsValidIndex(CurrentSequenceIndex))
 	{
-		SequencePlayer->Play();
+		if (UDreamWidgetAnimation* AutoPlayAnimation = SequenceArray[CurrentSequenceIndex])
+		{
+			PlayAnimation(AutoPlayAnimation, AutoPlayStartTime, AutoPlayNumLoopsToPlay,
+				EDreamUIAnimationPlayMode::Forward, AutoPlayPlaybackSpeed, bAutoPlayRestoreState);
+		}
 	}
+}
+
+void UDreamWidgetAnimationComponent::PostLoad()
+{
+	Super::PostLoad();
+
+	// One reading of the old whole-struct settings into the properties that replaced it. Guarded by a
+	// serialized flag rather than by "does the struct look non-default", because an author who
+	// deliberately set Auto Play off and everything else to defaults must not have that reading
+	// repeated over whatever they have set since.
+	if (!bPlaybackSettingsMigrated)
+	{
+		bPlaybackSettingsMigrated = true;
+		bAutoPlay = PlaybackSettings.bAutoPlay != 0;
+		AutoPlayStartTime = PlaybackSettings.StartTime;
+		// LoopCount counts ADDITIONAL loops and spells "forever" as a negative; NumLoopsToPlay counts
+		// plays in total and spells "forever" as zero.
+		AutoPlayNumLoopsToPlay = PlaybackSettings.LoopCount.Value < 0 ? 0 : PlaybackSettings.LoopCount.Value + 1;
+		AutoPlayPlaybackSpeed = PlaybackSettings.PlayRate;
+		bAutoPlayRestoreState = PlaybackSettings.FinishCompletionStateOverride == EMovieSceneCompletionModeOverride::ForceRestoreState;
+		bPauseAtEnd = PlaybackSettings.bPauseAtEnd != 0;
+		bDynamicWeighting = PlaybackSettings.bDynamicWeighting != 0;
+		if (PlaybackSettings.bInheritTickIntervalFromOwner == 0)
+		{
+			TickIntervalSeconds = PlaybackSettings.TickInterval.TickIntervalSeconds;
+			// The one setting that used to be reachable only through the struct and that this
+			// component now owns outright.
+			bAffectedByGamePause = !PlaybackSettings.TickInterval.bTickWhenPaused;
+		}
+	}
+}
+
+FMovieSceneSequencePlaybackSettings UDreamWidgetAnimationComponent::MakePlaybackSettings() const
+{
+	FMovieSceneSequencePlaybackSettings Settings;
+	Settings.bAutoPlay = false;
+	Settings.bRandomStartTime = false;
+	Settings.bPauseAtEnd = bPauseAtEnd;
+	Settings.bDynamicWeighting = bDynamicWeighting;
+	// The tick interval is this component's, not the owning actor's: a widget's animation has nothing
+	// to do with how often the actor that happens to host the viewport ticks. Saying so is also what
+	// lets bTickWhenPaused below be heard at all -- the engine reads the inherited interval otherwise.
+	Settings.bInheritTickIntervalFromOwner = false;
+	Settings.TickInterval.TickIntervalSeconds = FMath::Max(0.0f, TickIntervalSeconds);
+	// The engine's own switch for "tick this client while the world is paused", which also decides
+	// which of the two clocks the tick manager hands over: the paused one, or the one that keeps
+	// running (UMovieSceneSequenceTickManager::TickSequenceActors).
+	Settings.TickInterval.bTickWhenPaused = !bAffectedByGamePause;
+	return Settings;
+}
+
+namespace DreamUI
+{
+	/**
+	 * The clock for an animation that must not slow down with the world.
+	 *
+	 * The delta the sequence tick manager hands out has already been multiplied by the world's
+	 * effective time dilation (UWorld::Tick does it before broadcasting), so the ordinary tick
+	 * controller cannot help but follow it. This one divides that factor back out, which leaves the
+	 * animation running at exactly the rate its author authored -- the Sequencer-side equivalent of
+	 * UDreamTweener::affectByTimeDilation, which the tween side has always had.
+	 */
+	struct FDreamUIUnscaledTimeController : FMovieSceneTimeController_Tick
+	{
+		explicit FDreamUIUnscaledTimeController(UWorld* InWorld)
+			: WeakWorld(InWorld)
+		{}
+
+	protected:
+		virtual void OnTick(float DeltaSeconds, float InPlayRate) override
+		{
+			float Dilation = 1.0f;
+			if (const UWorld* World = WeakWorld.Get())
+			{
+				if (const AWorldSettings* Settings = World->GetWorldSettings())
+				{
+					Dilation = Settings->GetEffectiveTimeDilation();
+				}
+			}
+			// A dilation of zero is a world that has stopped, not one to divide by. Nothing to undo
+			// there either: the delta it produced is already zero.
+			if (Dilation > UE_SMALL_NUMBER)
+			{
+				DeltaSeconds /= Dilation;
+			}
+			FMovieSceneTimeController_Tick::OnTick(DeltaSeconds, InPlayRate);
+		}
+
+	private:
+		TWeakObjectPtr<UWorld> WeakWorld;
+	};
+}
+
+void UDreamWidgetAnimationComponent::ApplyTimeControl(UDreamWidgetAnimationPlayer* Player) const
+{
+	if (bAffectedByTimeDilation || !IsValid(Player))
+	{
+		// The engine's default tick controller already follows the world, which is what "affected by
+		// time dilation" means; a player that is handed nothing keeps it.
+		return;
+	}
+	UDreamWidget* HostWidget = GetWidget();
+	UWorld* World = IsValid(HostWidget) ? HostWidget->GetWorld() : nullptr;
+	Player->SetTimeController(MakeShared<DreamUI::FDreamUIUnscaledTimeController>(World));
 }
 
 void UDreamWidgetAnimationComponent::OnDestroy()
 {
-	Super::OnDestroy();
+	// The animations stop BEFORE the base class raises the blueprint's OnDestroy. Stopping runs every
+	// instance's Finished path, which reaches the user widget's NotifyAnimationFinished and from there
+	// blueprint code -- and with Super first, that code ran while the widget was already being torn
+	// down. It also meant the blueprint's own OnDestroy, asking IsAnyAnimationPlaying, was told yes.
 	StopAllAnimations();
 
 	if (SequencePlayer)
@@ -61,6 +178,8 @@ void UDreamWidgetAnimationComponent::OnDestroy()
 		SequencePlayer->Stop();
 		SequencePlayer->TearDown();
 	}
+
+	Super::OnDestroy();
 }
 
 // ---------------------------------------------------------------------------------------- play
@@ -186,12 +305,14 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 	// too; this covers a process that never ran that hook, and costs a bool test otherwise.
 	DreamUI::EnsureMovieScenePropertyAccessorsRegistered();
 
-	FMovieSceneSequencePlaybackSettings Settings = PlaybackSettings;
-	Settings.bAutoPlay = false;
-	Settings.bRandomStartTime = false;
+	FMovieSceneSequencePlaybackSettings Settings = MakePlaybackSettings();
 	Settings.StartTime = PlayMode == EDreamUIAnimationPlayMode::Forward ? FMath::Max(0.0f, StartAtTime) : 0.0f;
 	Settings.PlayRate = FMath::Max(FMath::Abs(PlaybackSpeed), UE_SMALL_NUMBER);
-	Settings.LoopCount.Value = NumLoopsToPlay == 0 ? -1 : FMath::Max(0, NumLoopsToPlay - 1);
+	// Zero OR LESS means forever. Zero is UMG's spelling of "indefinitely" and the one this API
+	// documents, but -1 is what every other tweening library in the world takes for it, and the old
+	// arithmetic turned -1 into Max(0, -2) == 0 additional loops -- a single play, the exact opposite
+	// of what was asked, with nothing to say so.
+	Settings.LoopCount.Value = NumLoopsToPlay <= 0 ? -1 : NumLoopsToPlay - 1;
 	Settings.FinishCompletionStateOverride = bRestoreState
 		? EMovieSceneCompletionModeOverride::ForceRestoreState
 		: EMovieSceneCompletionModeOverride::ForceKeepState;
@@ -199,6 +320,9 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 	UDreamWidgetAnimationPlayer* Player = NewObject<UDreamWidgetAnimationPlayer>(this);
 	Player->InitializeForTick(this);
 	Player->Initialize(Animation, Settings);
+	// After Initialize, which is where the player builds the controller this may replace, and before
+	// Play, which is where the controller is first asked what time it is.
+	ApplyTimeControl(Player);
 
 	if (EndAtTime.IsSet())
 	{
@@ -387,7 +511,8 @@ void UDreamWidgetAnimationComponent::SetNumLoopsToPlay(FDreamUIAnimationHandle H
 {
 	if (IsActiveSequencePlayer(Handle.Player))
 	{
-		Handle.Player->SetLoopCount(NumLoopsToPlay == 0 ? -1 : FMath::Max(0, NumLoopsToPlay - 1));
+		// Zero or less means forever, as in PlayAnimationInternal.
+		Handle.Player->SetLoopCount(NumLoopsToPlay <= 0 ? -1 : NumLoopsToPlay - 1);
 	}
 }
 
@@ -396,6 +521,30 @@ void UDreamWidgetAnimationComponent::SetPlaybackSpeed(FDreamUIAnimationHandle Ha
 	if (IsActiveSequencePlayer(Handle.Player))
 	{
 		Handle.Player->SetPlayRate(FMath::Max(FMath::Abs(PlaybackSpeed), UE_SMALL_NUMBER));
+	}
+}
+
+void UDreamWidgetAnimationComponent::SetAnimationWeight(FDreamUIAnimationHandle Handle, float Weight)
+{
+	if (!IsActiveSequencePlayer(Handle.Player))
+	{
+		return;
+	}
+	// The weight is applied whether or not dynamic weighting is on, because the engine's own API does
+	// the same; saying so once is worth more than refusing. Without the blend channel the last writer
+	// simply wins, which is the very behaviour a caller reaching for a weight is trying to leave.
+	if (!bDynamicWeighting)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("SetAnimationWeight on '%s': Dynamic Weighting is off for this component, so instances overwrite each other instead of blending. Tick it on the component (or on the animation asset) for weights to mean anything."), *GetPathName());
+	}
+	Handle.Player->SetWeight(static_cast<double>(Weight));
+}
+
+void UDreamWidgetAnimationComponent::ClearAnimationWeight(FDreamUIAnimationHandle Handle)
+{
+	if (IsActiveSequencePlayer(Handle.Player))
+	{
+		Handle.Player->RemoveWeight();
 	}
 }
 
@@ -503,6 +652,13 @@ void UDreamWidgetAnimationComponent::StopAllAnimations()
 
 void UDreamWidgetAnimationComponent::FlushAnimations()
 {
+	// The legacy player counts as an animation here too. IsAnyAnimationPlaying counts it and
+	// StopAllAnimations stops it, so leaving it out of the flush was the one place the two playback
+	// paths disagreed -- and "the value is on the widget by the time this returns" was untrue for it.
+	if (SequencePlayer)
+	{
+		SequencePlayer->FlushQueuedEvaluation();
+	}
 	for (UDreamWidgetAnimationPlayer* Player : ActiveSequencePlayers)
 	{
 		if (IsValid(Player))
@@ -668,11 +824,6 @@ UDreamUserWidget* UDreamWidgetAnimationComponent::GetOwningUserWidget() const
 }
 
 #if WITH_EDITOR
-void UDreamWidgetAnimationComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-
-}
 void UDreamWidgetAnimationComponent::PreDuplicate(FObjectDuplicationParameters& DupParams)
 {
 	Super::PreDuplicate(DupParams);
@@ -683,18 +834,6 @@ void UDreamWidgetAnimationComponent::PreSave(FObjectPreSaveContext SaveContext)
 {
 	Super::PreSave(SaveContext);
 	FixEditorHelpers();
-}
-void UDreamWidgetAnimationComponent::PostDuplicate(bool bDuplicateForPIE)
-{
-	Super::PostDuplicate(bDuplicateForPIE);
-}
-void UDreamWidgetAnimationComponent::PostInitProperties()
-{
-	Super::PostInitProperties();
-}
-void UDreamWidgetAnimationComponent::PostLoad()
-{
-	Super::PostLoad();
 }
 /**
  * Re-derive every binding's editor-only widget path from the object it currently resolves to.
@@ -757,7 +896,10 @@ void UDreamWidgetAnimationComponent::InitSequencePlayer()
 	if (SequenceArray.IsValidIndex(CurrentSequenceIndex))
 	{
 		DreamUI::EnsureMovieScenePropertyAccessorsRegistered();
-		SequencePlayer->Initialize(SequenceArray[CurrentSequenceIndex], PlaybackSettings);
+		SequencePlayer->Initialize(SequenceArray[CurrentSequenceIndex], MakePlaybackSettings());
+		// The legacy player obeys the same component flags as every other instance; it used to be the
+		// only thing the old settings struct reached, and now it is the one thing that would miss them.
+		ApplyTimeControl(SequencePlayer);
 	}
 }
 void UDreamWidgetAnimationComponent::SetSequenceByIndex(int32 InIndex)
@@ -770,7 +912,10 @@ void UDreamWidgetAnimationComponent::SetSequenceByDisplayName(const FString& InN
 {
 	int FoundIndex = -1;
 	FoundIndex = SequenceArray.IndexOfByPredicate([InName](const UDreamWidgetAnimation* Item) {
-		return Item->GetDisplayNameString() == InName;
+		// IsValid first, as GetSequenceByDisplayName does over the same array: SequenceArray holds
+		// instanced sub-objects, and a row whose class has been deleted or whose asset failed to load
+		// is a null element that this predicate used to dereference.
+		return IsValid(Item) && Item->GetDisplayNameString() == InName;
 		});
 	if (FoundIndex != INDEX_NONE)
 	{
@@ -782,9 +927,37 @@ void UDreamWidgetAnimationComponent::SetSequenceByDisplayName(const FString& InN
 UDreamWidgetAnimation* UDreamWidgetAnimationComponent::AddNewAnimation()
 {
 	auto NewSequence = NewObject<UDreamWidgetAnimation>(this, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
-	auto MovieScene = NewSequence->GetMovieScene();
+	// The display name comes from the object's own name, set by UDreamWidgetAnimation's constructor;
+	// DuplicateAnimationByIndex has to set it explicitly because a duplicate carries the source's.
 	SequenceArray.Add(NewSequence);
 	return NewSequence;
+}
+
+UDreamWidgetAnimation* UDreamWidgetAnimationComponent::AdoptAnimation(UDreamWidgetAnimation* InSource)
+{
+	if (!IsValid(InSource) || InSource->IsLanguageOwned())
+	{
+		return nullptr;
+	}
+	// DuplicateObject rather than pointer-sharing, for the reason the compiler's carry already gives
+	// about AddComponentByTemplate: the source is outered to a component on a tree headed for the
+	// reaper, and keeping a pointer into it keeps that whole tree alive.
+	UDreamWidgetAnimation* Copy = DuplicateObject(InSource, this);
+	if (!IsValid(Copy))
+	{
+		return nullptr;
+	}
+	// The NAME is the identity here -- animation bindings, the class member variable and
+	// PlayAnimation all address it -- so unlike DuplicateAnimationByIndex this keeps it.
+	Copy->SetDisplayNameString(InSource->GetDisplayNameString());
+	if (InSource->GetMovieScene() != nullptr && Copy->GetMovieScene() != nullptr)
+	{
+		Copy->GetMovieScene()->SetTickResolutionDirectly(InSource->GetMovieScene()->GetTickResolution());
+		Copy->GetMovieScene()->SetPlaybackRange(InSource->GetMovieScene()->GetPlaybackRange());
+		Copy->GetMovieScene()->SetDisplayRate(InSource->GetMovieScene()->GetDisplayRate());
+	}
+	SequenceArray.Add(Copy);
+	return Copy;
 }
 
 bool UDreamWidgetAnimationComponent::DeleteAnimationByIndex(int32 InIndex)

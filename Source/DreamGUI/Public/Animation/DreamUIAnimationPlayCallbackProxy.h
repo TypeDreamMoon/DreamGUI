@@ -7,6 +7,7 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "DreamUIAnimationPlayCallbackProxy.generated.h"
 
+class UDreamWidget;
 class UDreamUserWidget;
 class UDreamWidgetAnimationPlayer;
 class UMovieSceneSequence;
@@ -14,9 +15,14 @@ class UMovieSceneSequence;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDreamUIAnimationResult);
 
 /**
- * The object behind the "Play Animation with Finished event" node: plays through the user widget
- * and fires Finished one frame after the instance ends, naturally or by Stop. Mirrors UMG's
+ * The object behind the "Play Animation with Finished event" node: plays through the widget and
+ * fires Finished one frame after the instance ends, naturally or by Stop. Mirrors UMG's
  * UWidgetAnimationPlayCallbackProxy; the K2 node that spawns it lives in DreamGUIK2Nodes.
+ *
+ * Takes any UDreamWidget, not only a user widget. An animation component is an ordinary behaviour
+ * and sits on plain widgets all the time; requiring a UDreamUserWidget here meant those animations
+ * had no async node at all, while a graph holding one had nothing to connect. A user widget still
+ * plays through its own forwarding layer, which is what routes a handle to the right component.
  */
 UCLASS()
 class DREAMGUI_API UDreamUIAnimationPlayCallbackProxy : public UObject
@@ -35,7 +41,7 @@ public:
 		ToolTip = "Play an animation on the widget and trigger the Finished event when the instance is done."))
 	static UDreamUIAnimationPlayCallbackProxy* NewPlayAnimationProxyObject(
 		FDreamUIAnimationHandle& Result,
-		UDreamUserWidget* Widget,
+		UDreamWidget* Widget,
 		UMovieSceneSequence* Animation,
 		float StartAtTime = 0.0f,
 		int32 NumLoopsToPlay = 1,
@@ -49,7 +55,7 @@ public:
 		ToolTip = "Play a time range of an animation on the widget and trigger the Finished event when the instance is done."))
 	static UDreamUIAnimationPlayCallbackProxy* NewPlayAnimationTimeRangeProxyObject(
 		FDreamUIAnimationHandle& Result,
-		UDreamUserWidget* Widget,
+		UDreamWidget* Widget,
 		UMovieSceneSequence* Animation,
 		float StartAtTime = 0.0f,
 		float EndAtTime = 0.0f,
@@ -58,7 +64,7 @@ public:
 		float PlaybackSpeed = 1.0f);
 
 private:
-	void Execute(UDreamUserWidget* Widget, UMovieSceneSequence* Animation, float StartAtTime, TOptional<float> EndAtTime, int32 NumLoopsToPlay, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, FDreamUIAnimationHandle& OutHandle);
+	void Execute(UDreamWidget* Widget, UMovieSceneSequence* Animation, float StartAtTime, TOptional<float> EndAtTime, int32 NumLoopsToPlay, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, FDreamUIAnimationHandle& OutHandle);
 	void OnInstanceFinished(const FDreamUIAnimationHandle& InHandle);
 	void ScheduleFinished();
 	bool BroadcastFinished(float DeltaTime);

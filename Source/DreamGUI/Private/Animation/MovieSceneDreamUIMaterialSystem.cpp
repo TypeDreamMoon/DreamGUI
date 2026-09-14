@@ -13,6 +13,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 
 #include "Core/Components/DreamVisualBatchMesh.h"
+#include "DreamGUI.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MovieSceneDreamUIMaterialSystem)
 
@@ -32,7 +33,18 @@ FDreamUIMaterialAccessor::FDreamUIMaterialAccessor(UObject* InObject, FDreamUIMa
 	: Visual(Cast<UDreamVisualBatchMesh>(InObject))
 	, MaterialHandle(MoveTemp(InDreamGUIMaterialHandle))
 {
-	check(!InObject || Visual);
+	// A complaint, not an assertion. The engine builds one of these for EVERY entity carrying a bound
+	// object and a material handle and only then asks operator bool whether it is usable
+	// (TApplyMaterialSwitchers::ForEachEntity, TInitializeBoundMaterials::InitializeBoundMaterial), so
+	// a material track whose binding has come to rest on something that is not a visual -- replaced
+	// with another widget, or a sub-object path that now resolves elsewhere -- reached this
+	// constructor before anything could filter it out, and check() took the editor down with it.
+	// UMG's own FWidgetMaterialAccessor logs exactly here for exactly this reason.
+	if (InObject && !Visual)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("A DreamUI material track is bound to '%s' (%s), which is not a visual, so it animates no material."),
+			*InObject->GetName(), *InObject->GetClass()->GetName());
+	}
 }
 
 FDreamUIMaterialAccessor::operator bool() const

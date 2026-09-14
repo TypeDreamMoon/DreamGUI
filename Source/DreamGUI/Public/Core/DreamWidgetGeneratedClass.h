@@ -45,6 +45,18 @@ public:
 	 */
 	static const FName BindWidgetMetaName;
 
+	/**
+	 * The same claim for animations: meta = (BindDreamWidgetAnim) on an animation-typed property says
+	 * the class's own code plays an animation of that name, so a hierarchy without one is a compile
+	 * error. UMG spells it BindWidgetAnim; this framework spells its own, for the reason above.
+	 *
+	 * Optional is the same claim without the error, for a class that tests the pointer first. Neither
+	 * decides whether the property is FILLED -- every animation-named property below UDreamUserWidget
+	 * is bound by name, marked or not -- only whether a missing animation stops the compile.
+	 */
+	static const FName BindWidgetAnimMetaName;
+	static const FName BindWidgetAnimOptionalMetaName;
+
 	/** The authored hierarchy this class instantiates. Null on a class that inherits its parent's. */
 	UDreamWidgetTree* GetWidgetTreeArchetype() const { return WidgetTree; }
 

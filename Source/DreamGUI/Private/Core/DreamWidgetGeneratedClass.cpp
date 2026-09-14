@@ -11,6 +11,7 @@
 #include "UObject/Package.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamUISequence.h"
 
 namespace
 {
@@ -161,6 +162,8 @@ UDreamWidgetTree* UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(const UCla
 }
 
 const FName UDreamWidgetGeneratedClass::BindWidgetMetaName(TEXT("BindDreamWidget"));
+const FName UDreamWidgetGeneratedClass::BindWidgetAnimMetaName(TEXT("BindDreamWidgetAnim"));
+const FName UDreamWidgetGeneratedClass::BindWidgetAnimOptionalMetaName(TEXT("BindDreamWidgetAnimOptional"));
 
 void UDreamWidgetGeneratedClass::InitializeWidget(UDreamUserWidget* InUserWidget) const
 {
@@ -236,6 +239,49 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		}
 		ObjectPropertiesByName.Add(It->GetFName(), *It);
 	}
+	// Both halves of the animation contract the compiler declares: the embedded animations of every
+	// component on a widget, and the standalone sequence ASSETS the same components reference (those
+	// are shared assets, so the pointer is the asset itself rather than an instanced copy). A lambda
+	// because the user widget ITSELF may carry an animation component, and the tree walk below never
+	// visits it -- UDreamUserWidget::CollectAnimationComponents makes the same exception at runtime.
+	auto BindAnimationVariables = [&](const UDreamWidget* Widget)
+	{
+		if (!IsValid(Widget))
+		{
+			return;
+		}
+		auto BindOne = [&](UMovieSceneSequence* Animation, const FName AnimationVariableName)
+		{
+			FObjectPropertyBase* const* PropertyPtr = AnimationVariableName.IsNone() ? nullptr : ObjectPropertiesByName.Find(AnimationVariableName);
+			if (PropertyPtr != nullptr && Animation->IsA((*PropertyPtr)->PropertyClass))
+			{
+				(*PropertyPtr)->SetObjectPropertyValue_InContainer(InUserWidget, Animation);
+			}
+		};
+		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
+			if (Animator == nullptr)
+			{
+				continue;
+			}
+			for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
+			{
+				if (IsValid(Animation))
+				{
+					BindOne(Animation, UDreamWidgetTree::MakeAnimationVariableName(Animation));
+				}
+			}
+			for (const TObjectPtr<UDreamUISequence>& Asset : Animator->GetSequenceAssets())
+			{
+				if (IsValid(Asset))
+				{
+					BindOne(Asset, FName(*UDreamWidgetTree::SanitizeIdentifier(Asset->GetName())));
+				}
+			}
+		}
+	};
+	BindAnimationVariables(InUserWidget);
 	InstancedTree->ForEachWidget([&](UDreamWidget* Widget)
 	{
 		const FName VariableName = UDreamWidgetTree::MakeWidgetVariableName(Widget);
@@ -260,23 +306,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		// The same by-name contract for this widget's animations. The compiler declared one
 		// property per authored animation; the INSTANCED copy is what must land in it, because a
 		// graph that plays the archetype's copy animates a tree nobody is looking at.
-		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
-		{
-			UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
-			if (Animator == nullptr)
-			{
-				continue;
-			}
-			for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
-			{
-				const FName AnimationVariableName = IsValid(Animation) ? UDreamWidgetTree::MakeAnimationVariableName(Animation) : NAME_None;
-				FObjectPropertyBase* const* PropertyPtr = AnimationVariableName.IsNone() ? nullptr : ObjectPropertiesByName.Find(AnimationVariableName);
-				if (PropertyPtr != nullptr && Animation->IsA((*PropertyPtr)->PropertyClass))
-				{
-					(*PropertyPtr)->SetObjectPropertyValue_InContainer(InUserWidget, Animation);
-				}
-			}
-		}
+		BindAnimationVariables(Widget);
 
 				// A nested user widget builds its own contents from its own class, the way UMG initializes
 		// instanced sub-widgets during DuplicateAndInitializeFromWidgetTree.

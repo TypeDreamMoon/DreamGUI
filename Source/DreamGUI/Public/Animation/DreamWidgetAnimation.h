@@ -41,6 +41,24 @@ public:
 	
 	void SetDisplayNameString(const FString& Value) { DisplayNameString = Value; }
 	const FString& GetDisplayNameString()const { return DisplayNameString; }
+
+	/**
+	 * True when a `timeline` block in the class's .dui built this, so the FILE owns it.
+	 *
+	 * Three consequences, all of them the same rule the hierarchy already lives under:
+	 *   - the compiler REBUILDS it from the text every compile, so it is not carried across the
+	 *     rebuild the way an editor-made animation is (carrying it would put the old one back on top
+	 *     of the one the file just produced);
+	 *   - the animation editor refuses to edit it, with the same sentence the designer's structure
+	 *     gate uses -- "go and edit the .dui, or make the timeline external";
+	 *   - everything else about it is an ordinary animation: it is in SequenceArray, it gets its
+	 *     class member variable, it plays through the same entry points.
+	 *
+	 * Serialized, because the flag has to survive into the cooked class for the editor gate to read
+	 * it off an asset that was not compiled this session.
+	 */
+	bool IsLanguageOwned() const { return bLanguageOwned; }
+	void SetLanguageOwned(bool bInValue) { bLanguageOwned = bInValue; }
 private:
 
 	//~ UObject interface
@@ -73,6 +91,10 @@ private:
 
 	UPROPERTY()
 	FString DisplayNameString;
+
+	/** See IsLanguageOwned. False for everything the animation editor made, which is the default. */
+	UPROPERTY()
+	bool bLanguageOwned = false;
 
 #if WITH_EDITOR
 public:

@@ -3,10 +3,11 @@
 #include "Animation/DreamUIAnimationPlayCallbackProxy.h"
 #include "Animation/DreamWidgetAnimationPlayer.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/Components/DreamWidget.h"
 
 UDreamUIAnimationPlayCallbackProxy* UDreamUIAnimationPlayCallbackProxy::NewPlayAnimationProxyObject(
 	FDreamUIAnimationHandle& Result,
-	UDreamUserWidget* Widget,
+	UDreamWidget* Widget,
 	UMovieSceneSequence* Animation,
 	float StartAtTime,
 	int32 NumLoopsToPlay,
@@ -22,7 +23,7 @@ UDreamUIAnimationPlayCallbackProxy* UDreamUIAnimationPlayCallbackProxy::NewPlayA
 
 UDreamUIAnimationPlayCallbackProxy* UDreamUIAnimationPlayCallbackProxy::NewPlayAnimationTimeRangeProxyObject(
 	FDreamUIAnimationHandle& Result,
-	UDreamUserWidget* Widget,
+	UDreamWidget* Widget,
 	UMovieSceneSequence* Animation,
 	float StartAtTime,
 	float EndAtTime,
@@ -37,14 +38,26 @@ UDreamUIAnimationPlayCallbackProxy* UDreamUIAnimationPlayCallbackProxy::NewPlayA
 	return Proxy;
 }
 
-void UDreamUIAnimationPlayCallbackProxy::Execute(UDreamUserWidget* Widget, UMovieSceneSequence* Animation, float StartAtTime, TOptional<float> EndAtTime, int32 NumLoopsToPlay, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, FDreamUIAnimationHandle& OutHandle)
+void UDreamUIAnimationPlayCallbackProxy::Execute(UDreamWidget* Widget, UMovieSceneSequence* Animation, float StartAtTime, TOptional<float> EndAtTime, int32 NumLoopsToPlay, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, FDreamUIAnimationHandle& OutHandle)
 {
 	OutHandle = FDreamUIAnimationHandle();
-	if (IsValid(Widget))
+	if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(Widget))
 	{
+		// Through the user widget's own forwarding layer, which finds the component that owns this
+		// animation -- it need not be a component on the user widget itself.
 		OutHandle = EndAtTime.IsSet()
-			? Widget->PlayAnimationTimeRange(Animation, StartAtTime, EndAtTime.GetValue(), NumLoopsToPlay, PlayMode, PlaybackSpeed)
-			: Widget->PlayAnimation(Animation, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed);
+			? UserWidget->PlayAnimationTimeRange(Animation, StartAtTime, EndAtTime.GetValue(), NumLoopsToPlay, PlayMode, PlaybackSpeed)
+			: UserWidget->PlayAnimation(Animation, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed);
+	}
+	else if (IsValid(Widget))
+	{
+		// A plain widget has no forwarding layer, so its own animation component is asked directly.
+		if (UDreamWidgetAnimationComponent* WidgetAnimator = Widget->GetComponent<UDreamWidgetAnimationComponent>())
+		{
+			OutHandle = EndAtTime.IsSet()
+				? WidgetAnimator->PlayAnimationTimeRange(Animation, StartAtTime, EndAtTime.GetValue(), NumLoopsToPlay, PlayMode, PlaybackSpeed)
+				: WidgetAnimator->PlayAnimation(Animation, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed);
+		}
 	}
 
 	UDreamWidgetAnimationComponent* Animator = OutHandle.IsValid() ? OutHandle.Player->GetTypedOuter<UDreamWidgetAnimationComponent>() : nullptr;

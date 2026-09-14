@@ -15,6 +15,7 @@
 #include "Tracks/MovieSceneMaterialParameterCollectionTrack.h"
 #include "Tracks/MovieSceneTimeWarpTrack.h"
 #include "Animation/DreamUIAnimEventTrack.h"
+#include "Animation/DreamUISequenceTrack.h"
 
 #if WITH_EDITOR
 UDreamWidgetAnimation::FOnInitialize UDreamWidgetAnimation::OnInitializeSequenceEvent;
@@ -111,7 +112,15 @@ UDreamWidgetAnimation::UDreamWidgetAnimation(const FObjectInitializer& ObjectIni
 
 bool UDreamWidgetAnimation::IsEditable() const
 {
-	return true;
+	// A language-owned sequence is the .dui's, and the animation editor consults this to decide
+	// whether to open Sequencer read-only (SDreamWidgetAnimationEditorWidget). Editing one would be
+	// the animation half of the failure the designer's structure gate exists to prevent: the edit
+	// appears, works, survives every check the author would think to make, and is gone at the next
+	// compile -- because the next compile rebuilds the sequence from the `timeline` block.
+	//
+	// The way out is written on the refusal: edit the .dui, or change the block to
+	// `timeline <Name> external`, which hands the animation to Sequencer for good.
+	return !bLanguageOwned;
 }
 
 void UDreamWidgetAnimation::PostInitProperties()
@@ -355,6 +364,9 @@ ETrackSupport UDreamWidgetAnimation::IsTrackSupportedImpl(TSubclassOf<class UMov
 		// InTrackClass == UMovieSceneEventTrack::StaticClass() ||
 		InTrackClass == UMovieSceneMaterialParameterCollectionTrack::StaticClass() ||
 		InTrackClass == UMovieSceneTimeWarpTrack::StaticClass() ||
+		// Nesting: another animation of this component, or a standalone sequence asset, played as a
+		// sub-section of this one. A long animation is usually a handful of short ones in a row.
+		InTrackClass == UDreamUISequenceTrack::StaticClass() ||
 		InTrackClass == UDreamUIAnimEventTrack::StaticClass())
 	{
 		return ETrackSupport::Supported;

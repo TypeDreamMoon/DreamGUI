@@ -17,6 +17,7 @@
 #include "Compilation/MovieSceneCompiledDataManager.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "GameFramework/WorldSettings.h"
 #include "Evaluation/MovieSceneEvaluationField.h"
 #include "MovieScene.h"
 #include "MovieSceneSection.h"
@@ -528,6 +529,198 @@ bool FDreamWidgetAnimationTemplateInstancingTest::RunTest(const FString& Paramet
 	TickFrames(Scope.World, AnimationFrames + 5);
 	TestEqual(TEXT("At the end Y holds the last key"), Tree.Button->GetRenderTranslation().Y, 0.0, 0.01);
 	TestFalse(TEXT("A finished handle reads as invalid"), Handle.IsValid());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationNegativeLoopCountTest,
+	"DreamGUI.Animation.Playback.ANegativeLoopCountLoopsForeverRatherThanPlayingOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationNegativeLoopCountTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+
+	// Zero is UMG's spelling of "for ever" and the one this API documents; -1 is what every tweening
+	// library in the world takes for it, and the arithmetic used to turn -1 into "no additional
+	// loops" -- a single play, the exact opposite of what was asked, and nothing said so.
+	const FDreamUIAnimationHandle Endless = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, -1);
+	if (!TestTrue(TEXT("PlayAnimation hands back a live handle"), Endless.IsValid()))
+	{
+		return false;
+	}
+	TickFrames(Scope.World, AnimationFrames * 3);
+	TestTrue(TEXT("three times its own length later, an animation asked to loop for ever still plays"),
+		Tree.Animator->IsAnimationPlaying(Endless));
+	Tree.Animator->StopAnimation(Endless);
+
+	// Zero still means the same thing, and one still means one.
+	const FDreamUIAnimationHandle Zero = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 0);
+	TickFrames(Scope.World, AnimationFrames * 3);
+	TestTrue(TEXT("zero loops for ever too"), Tree.Animator->IsAnimationPlaying(Zero));
+	Tree.Animator->StopAnimation(Zero);
+
+	const FDreamUIAnimationHandle Once = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 1);
+	TickFrames(Scope.World, AnimationFrames + 5);
+	TestFalse(TEXT("and one play is still one play"), Tree.Animator->IsAnimationPlaying(Once));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationMovedWidgetTest,
+	"DreamGUI.Animation.Playback.AWidgetDraggedToAnotherParentIsStillDrivenByItsAnimation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationMovedWidgetTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	Tree.Button->SetWidth(20.0f);
+
+	// The binding was recorded as the path "ButtonA" from the root. Dragging the button under a new
+	// panel makes that path unwalkable -- and a binding path is display names all the way down, so
+	// every segment above a moved widget goes wrong at once while the widget itself is untouched.
+	UDreamWidget* Panel = MakeWidget(Scope.World, TEXT("Panel"), Tree.Root);
+	Tree.Button->TrySetParent(Panel, false);
+
+	const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+	if (!TestTrue(TEXT("PlayAnimation hands back a live handle"), Handle.IsValid()))
+	{
+		return false;
+	}
+	TickFrames(Scope.World, 8);
+	TestTrue(FString::Printf(TEXT("the moved widget is still animated (width %.2f)"), Tree.Button->GetWidth()),
+		Tree.Button->GetWidth() > 25.0f);
+	Tree.Animator->StopAnimation(Handle);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationUnscaledTimeTest,
+	"DreamGUI.Animation.Playback.AnAnimationToldToIgnoreTimeDilationKeepsItsOwnSpeed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationUnscaledTimeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+
+	AWorldSettings* Settings = Scope.World->GetWorldSettings();
+	if (!TestNotNull(TEXT("the test world has settings to dilate"), Settings))
+	{
+		return false;
+	}
+	// A quarter-speed world: the delta the sequence tick manager hands out is already multiplied by
+	// this, which is why an animation cannot help but follow it without being told otherwise.
+	Settings->TimeDilation = 0.25f;
+
+	Tree.Animator->SetAffectedByTimeDilation(true);
+	const FDreamUIAnimationHandle Slowed = Tree.Animator->PlayAnimation(Tree.Animation);
+	TickFrames(Scope.World, 8);
+	const float SlowedWidth = Tree.Button->GetWidth();
+	Tree.Animator->StopAnimation(Slowed);
+
+	Tree.Button->SetWidth(20.0f);
+	Tree.Animator->SetAffectedByTimeDilation(false);
+	const FDreamUIAnimationHandle Unscaled = Tree.Animator->PlayAnimation(Tree.Animation);
+	TickFrames(Scope.World, 8);
+	const float UnscaledWidth = Tree.Button->GetWidth();
+	Tree.Animator->StopAnimation(Unscaled);
+
+	TestTrue(FString::Printf(TEXT("the same eight frames carry the unscaled animation further than the dilated one (%.2f vs %.2f)"), UnscaledWidth, SlowedWidth),
+		UnscaledWidth > SlowedWidth + 1.0f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationWeightTest,
+	"DreamGUI.Animation.Playback.AnInstanceAtZeroWeightLeavesTheWidgetNearerWhereItWas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationWeightTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	// The blend channel a weight is applied through; without it the instance simply overwrites and a
+	// weight has nothing to scale.
+	Tree.Animator->SetDynamicWeighting(true);
+	Tree.Button->SetWidth(20.0f);
+
+	const FDreamUIAnimationHandle Full = Tree.Animator->PlayAnimation(Tree.Animation);
+	TickFrames(Scope.World, 8);
+	const float FullWidth = Tree.Button->GetWidth();
+	Tree.Animator->StopAnimation(Full);
+
+	Tree.Button->SetWidth(20.0f);
+	const FDreamUIAnimationHandle Weighted = Tree.Animator->PlayAnimation(Tree.Animation);
+	Tree.Animator->SetAnimationWeight(Weighted, 0.0f);
+	TickFrames(Scope.World, 8);
+	const float WeightedWidth = Tree.Button->GetWidth();
+
+	// Asserted as a comparison rather than an exact value: how far a zero weight pulls the result
+	// back towards the widget's own value is the engine's blending arithmetic, and what this is here
+	// to catch is a weight that is not applied AT ALL -- which reads as the two runs agreeing.
+	TestTrue(FString::Printf(TEXT("a weighted instance writes something other than the unweighted one (%.2f vs %.2f)"), WeightedWidth, FullWidth),
+		FMath::Abs(WeightedWidth - 20.0f) < FMath::Abs(FullWidth - 20.0f));
+
+	// And clearing it is safe on a live instance, which is the other half of the pair.
+	Tree.Animator->ClearAnimationWeight(Weighted);
+	TickFrames(Scope.World, 2);
+	TestTrue(TEXT("the instance survives having its weight cleared"), Tree.Animator->IsAnimationPlaying(Weighted));
+	Tree.Animator->StopAnimation(Weighted);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationComponentOnUserWidgetItselfTest,
+	"DreamGUI.Animation.AnAnimationComponentOnTheUserWidgetItselfIsOneOfItsAnimationComponents",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationComponentOnUserWidgetItselfTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	FScopedGameWorld Scope;
+
+	UDreamUserWidget* Instance = CreateDreamWidget(Scope.World, UDreamUserWidget::StaticClass());
+	if (!TestNotNull(TEXT("a user widget instantiates"), Instance))
+	{
+		return false;
+	}
+	ON_SCOPE_EXIT
+	{
+		Instance->StopAllAnimations();
+		Instance->DestroyWidget();
+	};
+
+	// The component sits on the user widget ITSELF, which the component supports on purpose
+	// (UDreamWidgetAnimationComponent::GetOwningUserWidget goes out of its way to recognise it) --
+	// but the collection walked from the content root, which is the root of the tree the widget
+	// BUILDS and never the widget. So PlayAnimation reached this component through the outer chain
+	// while StopAllAnimations, IsAnyAnimationPlaying, FlushAnimations and PlayAnimationByName all
+	// walked straight past it.
+	UDreamWidgetAnimationComponent* SelfAnimator = Instance->AddComponent<UDreamWidgetAnimationComponent>();
+	if (!TestNotNull(TEXT("the component is added to the user widget"), SelfAnimator))
+	{
+		return false;
+	}
+	UDreamWidgetAnimation* Animation = SelfAnimator->AddNewAnimation();
+	Animation->SetDisplayNameString(TEXT("FadeIn"));
+
+	TArray<UDreamWidgetAnimationComponent*> Collected;
+	Instance->CollectAnimationComponents(Collected);
+	TestTrue(TEXT("the widget's own component is one of its animation components"), Collected.Contains(SelfAnimator));
+	TestTrue(TEXT("and its animations answer to their names"),
+		Instance->GetAnimationByName(TEXT("FadeIn")) == static_cast<UMovieSceneSequence*>(Animation));
+	TestNull(TEXT("a name nothing carries is still nothing"), Instance->GetAnimationByName(TEXT("NoSuchAnimation")));
 	return true;
 }
 
