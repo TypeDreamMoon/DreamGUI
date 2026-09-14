@@ -8,7 +8,9 @@
 #include "Controls/DreamDialog.h"
 #include "Controls/DreamExpandableArea.h"
 #include "Controls/DreamScrollBox.h"
+#include "Controls/DreamUIControl.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamUserWidget.h"
 #include "Interaction/DreamContentWidget.h"
 #include "DreamControlTestScope.h"
@@ -72,6 +74,60 @@ namespace DreamNativeControlSlotTestLocal
 		TArray<FName> Declared;
 		UDreamUserWidget::CollectDeclaredSlotNames(InClass, Declared);
 		return Declared.Contains(InSlotName);
+	}
+
+	/**
+	 * Every class DECLARE_DREAM_GUI_WIDGET put in the registry.
+	 *
+	 * That list rather than a TObjectIterator over UDreamUIControl, because it is the list a `.dui`
+	 * can actually spell: a control nothing registered is unreachable from the language, and a
+	 * Blueprint subclass brings its own tree -- the TEMPLATE road -- whose node names are somebody's
+	 * asset rather than a claim this codebase gets to make.
+	 */
+	void CollectRegisteredControlClasses(TArray<UClass*>& OutClasses)
+	{
+		TArray<FDreamUIWidgetRegistry::FEntry> Entries;
+		FDreamUIWidgetRegistry::GetAllEntries(Entries);
+		for (const FDreamUIWidgetRegistry::FEntry& Entry : Entries)
+		{
+			if (Entry.Kind != FDreamUIWidgetRegistry::EKind::ScopedWidget || Entry.ClassGetter == nullptr)
+			{
+				continue;
+			}
+			UClass* Class = Entry.ClassGetter();
+			if (Class == nullptr
+				|| !Class->IsChildOf(UDreamUserWidget::StaticClass())
+				|| Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+			{
+				continue;
+			}
+			OutClasses.AddUnique(Class);
+		}
+	}
+
+	/**
+	 * A control's own contents, walked the way FindPart and FindSlotWidget walk them: everything
+	 * under the control, stopping AT a nested instance rather than descending into it.
+	 *
+	 * The boundary is the whole point. A "Label" inside a Button that a dialog placed belongs to
+	 * that button, and counting it here would report every control that hosts another as broken.
+	 */
+	void CollectOwnNodes(const UDreamUserWidget& InControl, TArray<UDreamWidget*>& OutNodes)
+	{
+		TArray<UDreamWidget*> Pending(InControl.GetChildren());
+		while (Pending.Num() > 0)
+		{
+			UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
+			if (!IsValid(Widget))
+			{
+				continue;
+			}
+			OutNodes.Add(Widget);
+			if (!Widget->IsA<UDreamUserWidget>())
+			{
+				Pending.Append(Widget->GetChildren());
+			}
+		}
 	}
 }
 
@@ -243,6 +299,135 @@ bool FDreamNativeControlSlotBindingTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("the built-in message stood down"), Dialog->MessageNode->GetWidgetActive());
 	TestTrue(TEXT("and the hole woke up"), Dialog->BodyNode->GetWidgetActive());
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNativeControlSlotSweepTest,
+	"DreamGUI.Controls.Slots.EveryDeclaredHoleIsTheNamedSlotNodeOfThatNameAndNothingElse",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNativeControlSlotSweepTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNativeControlSlotTestLocal;
+
+	// GetNativeSlotNames is a PROMISE about the built tree, and nothing in the language keeps it:
+	// the declaration is one list and RealizeBuiltIn is another, so a hole that was renamed, dropped
+	// or shadowed reads as "no such slot" -- content bound to it is discarded with one log line, on
+	// a screen nobody is watching. The button case was spelled out by hand below; this is the same
+	// claim asked of every control the registry knows.
+	TArray<UClass*> Classes;
+	CollectRegisteredControlClasses(Classes);
+
+	int32 HolesChecked = 0;
+	for (UClass* Class : Classes)
+	{
+		TDreamTestControl<UDreamUserWidget> Control(NewObject<UDreamUserWidget>(GetTransientPackage(), Class));
+		Control->Initialize();
+
+		for (const FName& SlotName : Control->GetNativeSlotNames())
+		{
+			++HolesChecked;
+			const FString Where = FString::Printf(TEXT("%s's declared hole '%s'"),
+				*Class->GetName(), *SlotName.ToString());
+
+			UDreamWidget* Hole = Control->FindSlotWidget(SlotName);
+			if (Hole == nullptr)
+			{
+				AddError(FString::Printf(TEXT("%s: no node in the built tree answers to it."), *Where));
+				continue;
+			}
+			if (Hole->GetDisplayName() != SlotName.ToString())
+			{
+				// A slot's name is its host's display name run through the variable-name sanitizer,
+				// so "Header Content" declares a hole called "HeaderContent" -- reachable, and not
+				// by the string the class wrote down.
+				AddError(FString::Printf(TEXT("%s: answered by a node displayed as '%s'."),
+					*Where, *Hole->GetDisplayName()));
+			}
+			if (Hole->GetComponent<UDreamNamedSlot>() == nullptr)
+			{
+				AddError(FString::Printf(TEXT("%s: the node carries no slot behaviour."), *Where));
+			}
+
+			// THE one this sweep exists for. Parts are bound by FindPart, holes are found by
+			// FindSlotWidget, and the two walks are separate: FindPart stops at the FIRST node of
+			// that display name and meets ancestors before descendants, so a control whose furniture
+			// wears its hole's name binds the part field to the furniture and the slot field to the
+			// same furniture. UDreamExpandableArea shipped exactly that -- its header FACE and its
+			// header HOLE were both called "Header", so the empty-hole swap slept the whole header
+			// of every expander that did not want a custom title, and nothing was null to notice.
+			if (const UDreamUIControl* AsControl = Cast<UDreamUIControl>(Control.Get()))
+			{
+				UDreamWidget* Part = AsControl->FindPart(SlotName);
+				if ((UObject*)Part != (UObject*)Hole)
+				{
+					AddError(FString::Printf(
+						TEXT("%s: the part walk stops at '%s' instead, so both fields bind to the same node."),
+						*Where, Part != nullptr ? *Part->GetDisplayName() : TEXT("nothing")));
+				}
+			}
+		}
+	}
+
+	// A sweep that swept nothing passes for the wrong reason.
+	TestTrue(TEXT("the sweep found the registered controls"), Classes.Num() >= 15);
+	TestTrue(TEXT("and at least the holes this library ships"), HolesChecked >= 5);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNativeControlTreeNameSweepTest,
+	"DreamGUI.Controls.Parts.NoNativeControlBuildsTwoNodesUnderOneDisplayName",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNativeControlTreeNameSweepTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNativeControlSlotTestLocal;
+
+	// A display name is an ADDRESS in a control: CollectParts binds by it, FindSlotWidget matches by
+	// it, a template author reproduces it, the animation editor lists it. Two nodes wearing one name
+	// makes that address ambiguous, and every consumer resolves the ambiguity the same silent way --
+	// first hit wins, ancestors before descendants -- so the second node becomes unaddressable while
+	// every field that names it points somewhere plausible. Nothing goes null; nothing is logged.
+	//
+	// The check is on a DEFAULT control: the pools (list rows, ring wedges, tab strips, dropdown
+	// items) are copies of one template and grow from data, so a control asked for nothing builds
+	// exactly the tree its class wrote down.
+	TArray<UClass*> Classes;
+	CollectRegisteredControlClasses(Classes);
+
+	int32 NodesChecked = 0;
+	for (UClass* Class : Classes)
+	{
+		TDreamTestControl<UDreamUserWidget> Control(NewObject<UDreamUserWidget>(GetTransientPackage(), Class));
+		Control->Initialize();
+
+		TArray<UDreamWidget*> Nodes;
+		CollectOwnNodes(*Control.Get(), Nodes);
+		NodesChecked += Nodes.Num();
+
+		TSet<FString> Seen;
+		for (const UDreamWidget* Node : Nodes)
+		{
+			const FString Name = Node->GetDisplayName();
+			if (Name.IsEmpty())
+			{
+				continue;
+			}
+			bool bAlreadySeen = false;
+			Seen.Add(Name, &bAlreadySeen);
+			if (bAlreadySeen)
+			{
+				AddError(FString::Printf(
+					TEXT("%s builds two nodes called '%s'; the second one cannot be addressed by name."),
+					*Class->GetName(), *Name));
+			}
+		}
+	}
+
+	TestTrue(TEXT("the sweep found the registered controls"), Classes.Num() >= 15);
+	TestTrue(TEXT("and walked the trees they built"), NodesChecked >= 15);
 	return true;
 }
 
