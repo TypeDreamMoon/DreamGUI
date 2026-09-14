@@ -43,10 +43,15 @@ void UK2Node_DreamGUICompRef_GetComponent::PostReconstructNode()
 }
 FText UK2Node_DreamGUICompRef_GetComponent::GetNodeTitle(ENodeTitleType::Type TitleType)const
 {
-	//if (TitleType == ENodeTitleType::FullTitle)
-	//{
-	//	return autoOutputTypeSuccess ? LOCTEXT("UK2Node_DreamGUI_GetComponentTitle", ".") : LOCTEXT("UK2Node_DreamGUI_GetComponentTitle", "!Get");
-	//}
+	if (TitleType == ENodeTitleType::FullTitle && !autoOutputTypeSuccess)
+	{
+		// The full title is what the node's tooltip and the search results show, and it is the only
+		// place there is room to say WHY the compact face reads "!Get". The menu and list titles stay
+		// fixed: those are how the node is found, and a title that changed with a node's wiring would
+		// change what the palette is called.
+		return LOCTEXT("GetComponentTitle_FullNoCast",
+			"Get Component for DreamGUIComponentReference (type unknown -- cast the result yourself)");
+	}
 	return LOCTEXT("GetComponentTitle_Full", "Get Component for DreamGUIComponentReference");
 }
 FText UK2Node_DreamGUICompRef_GetComponent::GetCompactNodeTitle()const
@@ -183,12 +188,18 @@ void UK2Node_DreamGUICompRef_GetComponent::SetOutputPinTypeFromInputPin(const UE
 void UK2Node_DreamGUICompRef_GetComponent::ValidateNodeDuringCompilation(class FCompilerResultsLog& MessageLog)const
 {
 	Super::ValidateNodeDuringCompilation(MessageLog);
-	//@todo: give some hint when class change.
-	//if (!autoOutputTypeSuccess)
-	//{
-	//	auto msg = FString(TEXT("Auto cast fail! You need to cast the result ActorComponent to your desired type."));
-	//	MessageLog.Note(*msg);
-	//}
+	if (!autoOutputTypeSuccess)
+	{
+		// A Note, not a Warning: an unresolved output type is a legitimate state -- the reference may
+		// be fed by something other than a variable, or the variable's component class may genuinely
+		// be unset -- and the node keeps working, it just hands back a plain ActorComponent. What was
+		// missing was any word of it at compile time: the only hint was the compact title reading
+		// "!Get", which says nothing about what to do, and the tooltip, which nobody reads while
+		// chasing a failed cast at runtime.
+		MessageLog.Note(*LOCTEXT("GetComponentNoAutoCast",
+			"@@ could not work out the component type, so its output is a plain ActorComponent. Cast the result to the type you expect.").ToString(),
+			this);
+	}
 }
 void UK2Node_DreamGUICompRef_GetComponent::PinConnectionListChanged(UEdGraphPin* Pin)
 {
