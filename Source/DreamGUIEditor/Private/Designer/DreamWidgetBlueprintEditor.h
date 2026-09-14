@@ -21,6 +21,7 @@ class AActor;
 class FDreamWidgetDesignerScene;
 class FDreamWidgetPreviewHost;
 class UToolMenu;
+class FObjectPreSaveContext;
 struct FDreamUIControlDescriptor;
 
 /** UMG-toolbar-style alignment target for a multi-widget selection (DreamGUI UI plane is YZ: horizontal=Y, vertical=Z). */
@@ -72,6 +73,26 @@ public:
 	/** Overlay common device resolutions on the design canvas, like UMG's designer surface. */
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowResolutionGuides = false;
+	/**
+	 * Draw the platform's title-safe area on the design canvas.
+	 *
+	 * Its own switch, not a rider on the resolution guides. The two answer different questions -- "how
+	 * does this look on a phone" and "will the TV crop my HUD" -- and tying the safe area to the
+	 * resolution overlay meant the only way to see it was to also draw six device rectangles over the
+	 * screen being designed.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bShowSafeZone = false;
+	/**
+	 * Shrink the design canvas by the project's DPI curve, the way UMG's designer does.
+	 *
+	 * UUserInterfaceSettings::GetDPIScaleBasedOnSize turns a device resolution into the application
+	 * scale Slate will apply, and a widget authored without it is authored at a size no device shows.
+	 * Off by default because DreamCanvas has a scaler of its own: with both on, the canvas previews
+	 * the device scale AND the canvas rule, which is what actually happens at runtime.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Visualization")
+	bool bPreviewDPIScale = false;
 	/** Show the selected widget's measurement, arrangement, slot, ownership and clipping diagnostics. */
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowLayoutDebug = false;
@@ -121,6 +142,21 @@ public:
 	virtual ~FDreamWidgetBlueprintEditor()override;
 
 	//Begin EditorUndo
+	/**
+	 * Whether this designer has anything to do with the transaction being undone.
+	 *
+	 * Every open designer is an undo client, and PostUndo here rebuilds an entire preview tree and
+	 * broadcasts a selection change. Without this gate, dragging an actor in the level and pressing
+	 * Ctrl+Z paid that bill once per open Widget Blueprint window. The engine's own answer to that
+	 * is this hook: return false and neither PostUndo nor PostRedo is called at all.
+	 *
+	 * The test is the asset's package, not the object's class: everything that is undoable about a
+	 * DreamUI asset -- the widget tree, a behaviour's properties, the designer data, the graph -- is
+	 * outered into it, and the one transaction that also records preview-world objects (the design
+	 * screen size) records the Blueprint alongside them.
+	 */
+	virtual bool MatchesContext(const FTransactionContext& InContext,
+		const TArray<TPair<UObject*, FTransactionObjectEvent>>& TransactionObjectContexts) const override;
 	virtual void PostUndo(bool bSuccess)override;
 	virtual void PostRedo(bool bSuccess)override;
 	//End EditorUndo
@@ -146,6 +182,15 @@ public:
 
 	/** The designer panels, for the tab factories that host them. */
 	TSharedPtr<SDreamWidgetDesignerViewport> GetViewportWidget() const { return ViewportPtr; }
+	/**
+	 * Kismet's compiler-results log widget, or null before the toolkit has built one.
+	 *
+	 * FBlueprintEditor::GetCompilerResults() dereferences it unguarded, and the designer mode builds
+	 * its tabs while the toolkit is still being constructed. The widget itself is the base class's:
+	 * the Designer and Graph modes show the SAME listing, which is what makes a compile error found
+	 * in one readable in the other, and only one mode is active at a time.
+	 */
+	TSharedPtr<SWidget> GetCompilerResultsWidget() const { return CompilerResults; }
 	TSharedPtr<SDreamWidgetEditorHierarchyView> GetHierarchyWidget() const { return OutlinerPtr; }
 	TSharedPtr<class SDreamWidgetPalette> GetPaletteWidget() const { return PalettePtr; }
 	TSharedPtr<SDreamWidgetDesignerDetails> GetDesignerDetailsWidget() const { return DetailsPtr; }
@@ -190,6 +235,25 @@ public:
 private:
 	void SyncSelection();
 	void HandlePostTransaction(bool bSuccess);
+	/** SelectWidgets with the re-entrancy handling stripped out; never call it directly. */
+	void ApplyWidgetSelection(const TSet<UDreamWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor);
+	/** A selection asked for from inside OnSelectionChanged, applied once the broadcast has finished. */
+	struct FPendingWidgetSelection
+	{
+		TArray<TWeakObjectPtr<UDreamWidget>> Widgets;
+		bool bAppendOrToggle = false;
+		bool bNotifyGEditor = true;
+	};
+	TOptional<FPendingWidgetSelection> PendingSelection;
+	/**
+	 * The culture the preview is resolving its text in, or empty for the editor's own.
+	 *
+	 * Per designer rather than global: the preview is a per-asset question, and the localization
+	 * preview it drives is process-wide, so whoever turned it on has to be the one that turns it off.
+	 * OnClose does, which is why this is not a config setting -- an editor restarted into a language
+	 * nobody chose is a bug report about the editor, not about the designer.
+	 */
+	FString PreviewCultureName;
 	bool bIsSelecting = false;
 	bool bRegisteredForUndo = false;
 public:
@@ -223,6 +287,29 @@ public:
 	bool GetShowDesignerGuides() const;
 	bool GetShowResolutionGuides() const;
 	void ToggleResolutionGuides();
+	/** The title-safe overlay, on its own switch rather than riding the resolution guides. */
+	bool GetShowSafeZone() const;
+	void ToggleShowSafeZone();
+	/** Preview the project's DPI curve on the design canvas, the way UMG's designer surface does. */
+	bool GetPreviewDPIScale() const;
+	void TogglePreviewDPIScale();
+	/**
+	 * The application scale UUserInterfaceSettings would apply at this device resolution, or 1 when
+	 * the preview is switched off. Static and taking the answer as an argument so the arithmetic it
+	 * feeds can be tested without a project's settings.
+	 */
+	float GetDesignerDPIScale() const;
+	/** The canvas a device resolution leaves once the DPI scale has taken its share. Never zero. */
+	static FIntPoint ApplyDPIScaleToViewportSize(FIntPoint InViewportSize, float InDPIScale);
+	/**
+	 * Preview the UI in another culture, the way UMG's designer Localization Preview does.
+	 *
+	 * FTextLocalizationManager's game-localization preview, not FInternationalization::SetCurrentCulture:
+	 * the former re-resolves game text only, the latter would re-language the whole editor around the
+	 * author. An empty culture name turns the preview off, which is also what closing the designer does.
+	 */
+	FString GetPreviewCulture() const;
+	void SetPreviewCulture(const FString& InCultureName);
 	/** Current design canvas size (the root agent widget's rect; falls back to the stored value). */
 	FIntPoint GetDesignerCanvasSize();
 	/** Device resolution being previewed; assets predating the scale rule fall back to the canvas size. */
@@ -247,6 +334,13 @@ public:
 	void ZoomDesignerToFit();
 	/** One design unit per screen pixel: the size the UI is really going to be. */
 	void ZoomDesignerToActualSize();
+	/**
+	 * Put exactly this many screen pixels on a design unit. 1.0 is ZoomDesignerToActualSize.
+	 *
+	 * What the toolbar's zoom box writes. A designer with only "fit" and "1:1" can be framed and it
+	 * can be true-size, and there is no way to ask for 200% to look at a 12-pixel icon.
+	 */
+	void SetDesignerPixelsPerUnit(float InPixelsPerUnit);
 	/** Screen pixels one design unit covers, or 0 when the view has no single scale (the 3D camera). */
 	float GetDesignerPixelsPerUnit() const;
 	/** Ortho zoom that puts InDesiredPixelsPerUnit pixels on a design unit, given where the view is now. */
@@ -376,6 +470,17 @@ private:
 	TSharedPtr<FDreamUITextWriteBack> TextWriteBack;
 	/** Class Defaults edits (the resources block) reach the file through this; see InitDesigner. */
 	FDelegateHandle DefaultsChangedHandle;
+	/**
+	 * Package-save hook, so the designer's view state is captured by EVERY save of this asset.
+	 *
+	 * SaveAsset_Execute is only the toolkit's own Save button. Save All, Ctrl+Shift+S, the
+	 * save-on-close prompt and a save started from the Content Browser never reach it, so the
+	 * camera, the design canvas size, the canvas render mode and the collapsed rows were all
+	 * silently dropped -- the state was recorded onto the asset AFTER the bytes had been written.
+	 */
+	FDelegateHandle PreSaveHandle;
+	/** SaveEditorState, when the object about to be written is the asset this designer edits. */
+	void OnObjectPreSave(UObject* InObject, FObjectPreSaveContext InContext);
 	static TArray<FDreamWidgetBlueprintEditor*> DesignerInstances;
 
 	TSharedPtr<SDreamWidgetDesignerViewport> ViewportPtr;
@@ -414,6 +519,21 @@ public:
 	 */
 	void DistributeSelectedWidgets(bool bHorizontal);
 	/**
+	 * The Align and Distribute submenus, built once and offered from everywhere they belong.
+	 *
+	 * They used to be written inline in the hierarchy panel's context menu, which is why they could
+	 * only be reached by right-clicking a ROW -- the design surface, where the widgets being aligned
+	 * actually are, had no entry point at all, and neither did the mode toolbar. Same entries, same
+	 * enablement, one definition: a second copy is how the viewport comes to offer a Distribute the
+	 * hierarchy does not.
+	 *
+	 * Align needs two selected widgets and Distribute three; below that the submenu is simply absent,
+	 * because "Align" with one widget selected is not an operation that could succeed.
+	 */
+	static void FillAlignDistributeMenu(class FMenuBuilder& InMenuBuilder, TWeakPtr<FDreamWidgetBlueprintEditor> InEditor);
+	/** Whether FillAlignDistributeMenu would put anything in a menu: two or more widgets selected. */
+	static bool HasAlignDistributeEntries(TWeakPtr<FDreamWidgetBlueprintEditor> InEditor);
+	/**
 	 * UMG "Wrap With": group the selected sibling widgets under a newly created container widget
 	 * inserted at their position, sized to enclose them. Children keep their world position (the
 	 * chosen panel then arranges them). Needs 1+ selected widgets that share a parent.
@@ -421,6 +541,30 @@ public:
 	 * panel at all -- which is the one choice the registry has no descriptor for.
 	 */
 	void WrapSelectedWidgets(UClass* InLayoutContainerClass);
+	/**
+	 * UMG's Unwrap: take the selected widget out from between its parent and its children.
+	 *
+	 * The exact inverse of Wrap With, and the reason Wrap With needed one -- a wrapper chosen by
+	 * mistake could only be undone at the time, and a hierarchy imported from a .dui or inherited
+	 * from a parent class had no "at the time" to go back to. The children keep their order and land
+	 * where the wrapper stood; the wrapper is then deleted.
+	 *
+	 * One widget, which must have a parent (the root has nowhere to unwrap INTO) and at least one
+	 * child (unwrapping a leaf is just deleting it, and Delete says so plainly).
+	 */
+	bool CanUnwrapSelectedWidget() const;
+	void UnwrapSelectedWidget();
+	/**
+	 * Find everything that names the selected widget: the Blueprint's own graphs, and the project.
+	 *
+	 * Two searches because there are two ways to name one. Inside this asset a widget is a member
+	 * VARIABLE, so Kismet's Find-in-Blueprint over its own graphs is the answer, and it is the same
+	 * search UMG's hierarchy offers. Outside it, a widget that is an instance of another DreamUI
+	 * class is named by that CLASS, so the asset registry's referencers of that class's package are
+	 * the other half -- a plain widget has no class asset and gets only the first search.
+	 */
+	bool CanFindReferencesToSelectedWidget() const;
+	void FindReferencesToSelectedWidget();
 	/**
 	 * UMG "Replace With", adapted to this fork's shape. UMG swaps one panel *widget* for another
 	 * and has to carry the children across; here the panel is an instanced UDreamLayoutContainer
@@ -529,6 +673,15 @@ public:
 	void DesignerCopyWidgets(TConstArrayView<UDreamWidget*> InPreviewWidgets);
 	TArray<UDreamWidget*> DesignerPasteWidgets(UDreamWidget* InPreviewParent);
 	static bool DesignerHasClipboardContent();
+	/**
+	 * Empty the designer clipboard.
+	 *
+	 * Called by every copy that could not be performed. The clipboard is one process-wide object that
+	 * outlives the designer that filled it, so a failed copy which merely returned left the PREVIOUS
+	 * copy sitting there -- and the next paste handed it over as though the user had asked for it,
+	 * possibly in a different asset. Emptying it makes a failed copy fail visibly: Paste greys out.
+	 */
+	static void DesignerClearClipboard();
 	/** Returns the name actually applied, which differs when it had to be disambiguated. */
 	FString DesignerRenameWidget(UDreamWidget* InPreviewWidget, const FString& InNewDisplayName);
 	/**

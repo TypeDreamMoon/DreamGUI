@@ -46,14 +46,23 @@ FDreamWidgetDesignerScene::FDreamWidgetDesignerScene(ConstructionValues CVS) :FD
 
 		// Set up sky sphere showing the same cube map as used by the sky light
 		UStaticMesh* SkySphere = LoadObject<UStaticMesh>(NULL, TEXT("/Engine/EditorMeshes/AssetViewer/Sphere_inversenormals.Sphere_inversenormals"), NULL, LOAD_None, NULL);
-		check(SkySphere);
+		UMaterial* SkyMaterial = LoadObject<UMaterial>(NULL, TEXT("/Engine/EditorMaterials/AssetViewer/M_SkyBox.M_SkyBox"), NULL, LOAD_None, NULL);
+		if (SkySphere == nullptr || SkyMaterial == nullptr)
+		{
+			// A decorative backdrop made of content that a trimmed engine install is allowed not to
+			// ship. This was two check()s, so opening a designer on such an install took the editor
+			// down over a sky sphere. Said out loud and skipped instead; SetSkyCubeVisibility copes
+			// with the component being absent.
+			UE_LOG(DreamGUI, Warning,
+				TEXT("[%s].%d Designer preview has no sky backdrop: %s could not be loaded from /Engine."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+				SkySphere == nullptr ? TEXT("Sphere_inversenormals") : TEXT("M_SkyBox"));
+			return;
+		}
 		SkyComponent->SetStaticMesh(SkySphere);
 		SkyComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		SkyComponent->CastShadow = false;
 		SkyComponent->bCastDynamicShadow = false;
-
-		UMaterial* SkyMaterial = LoadObject<UMaterial>(NULL, TEXT("/Engine/EditorMaterials/AssetViewer/M_SkyBox.M_SkyBox"), NULL, LOAD_None, NULL);
-		check(SkyMaterial);
 
 		auto InstancedSkyMaterial = NewObject<UMaterialInstanceConstant>(GetTransientPackage());
 		InstancedSkyMaterial->Parent = SkyMaterial;		
@@ -127,7 +136,14 @@ UDreamWidget* FDreamWidgetDesignerScene::EnsureRootAgent(FIntPoint InCanvasSize,
 
 void FDreamWidgetDesignerScene::SetSkyCubeVisibility(bool bVisible)
 {
-	SkySphereComponent->SetVisibility(bVisible);
+	// Genuinely optional: the constructor returns before building the sky when running as a cook
+	// commandlet, and the editor-only meshes it loads are absent from a stripped install. The
+	// backdrop is decoration, so its absence must not take the toolbar's Show > Sky toggle down
+	// with it.
+	if (SkySphereComponent != nullptr)
+	{
+		SkySphereComponent->SetVisibility(bVisible);
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -85,6 +85,15 @@ public:
 	/** Destroy the current preview and build a fresh one from the class. */
 	void RebuildPreview();
 
+	/**
+	 * Replay DesignerData.HiddenWidgets onto the current preview.
+	 *
+	 * Part of every rebuild, and public only so a caller that has changed the set without rebuilding
+	 * can ask for it again. Hidden-in-designer is per-asset state applied to per-session objects, so
+	 * it has to be re-applied every time those objects are replaced -- which is what this host does.
+	 */
+	void ApplyHiddenInDesigner();
+
 	/** Compile the Blueprint, which is what makes an authoring edit reach the class the preview is built from. */
 	void CompileBlueprint();
 

@@ -14,6 +14,9 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Designer/DreamWidgetPropertyBindingExtension.h"
+// For NoteDirtyProperty: every write to the template is reported so the flush writes what was
+// touched rather than everything that differs. See FDreamUITextWriteBack::NoteDirtyProperty.
+#include "Text/DreamUITextWriteBack.h"
 #include "DreamGUI.h"
 #include "DreamGUIEditorModule.h"
 #include "Preview/DreamWidgetDesignerScene.h"
@@ -446,7 +449,44 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	// freshly loaded asset and of pressing Compile, and false of every open after that.
 	UDreamUIManagerWorldSubsystem::RefreshAllUI(Scene->GetWorld());
 
+	ApplyHiddenInDesigner();
+
 	OnPreviewRebuilt.Broadcast();
+}
+
+void FDreamWidgetPreviewHost::ApplyHiddenInDesigner()
+{
+	if (!IsValid(Blueprint))
+	{
+		return;
+	}
+	UDreamWidget* Root = GetPreviewRoot();
+	if (!IsValid(Root))
+	{
+		return;
+	}
+	// Hidden-in-designer is recorded on the ASSET, by widget name, and applied to the PREVIEW, which
+	// the rebuild above has just replaced -- so it has to be replayed here, where the rebuilding
+	// actually happens.
+	//
+	// It used to be replayed by the toolkit instead, from two of its own call sites, which missed
+	// every rebuild that reaches this host directly: Initialize, and the invalidate-then-Tick path
+	// that a Blueprint compile, a nested asset's recompile and a .dui reload all take. The result was
+	// a widget the author had put away coming back drawn and clickable while the asset still called
+	// it hidden -- and an undo, which went the long way round, "fixing" it.
+	//
+	// To the nested boundary, like every other reader of these name-keyed sets: object names repeat
+	// across assets, and a nested hierarchy's insides belong to the asset that authored them.
+	const TSet<FName>& HiddenSet = Blueprint->DesignerData.HiddenWidgets;
+	TArray<UDreamWidget*> AllWidgets;
+	CollectDreamWidgetsToNestedBoundary(Root, AllWidgets);
+	for (UDreamWidget* Widget : AllWidgets)
+	{
+		if (IsValid(Widget))
+		{
+			Widget->SetHiddenInDesigner(HiddenSet.Contains(Widget->GetFName()));
+		}
+	}
 }
 
 UDreamWidgetTree* FDreamWidgetPreviewHost::FindArchetypeForPreview() const
@@ -662,6 +702,21 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 	const bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewObject, TemplateObject, Head, Head->GetValue(), bIsModify);
 	if (bMigrated && !bIsModify)
 	{
+		// The details panel's half of the same report the viewport gesture makes. The path is the
+		// chain's HEAD only -- the write-back addresses `AnchorData.SizeDelta` by its head property
+		// too when it sweeps, and a dotted leaf would match nothing it ever asks about.
+		if (UDreamWidget* TemplateWidget = TemplateObject->IsA<UDreamWidget>()
+			? Cast<UDreamWidget>(TemplateObject) : TemplateObject->GetTypedOuter<UDreamWidget>())
+		{
+			const DreamWidgetPropertyBindingExtension::FBindingSite TemplateSite =
+				DreamWidgetPropertyBindingExtension::ResolveBindingSite(TemplateObject);
+			const EDreamUIPatchTarget Target = TemplateSite.Target == EDreamWidgetBindingTarget::Behaviour
+				? EDreamUIPatchTarget::Component : EDreamUIPatchTarget::Node;
+			const int32 ComponentIndex = Target == EDreamUIPatchTarget::Component ? TemplateSite.BehaviourIndex : INDEX_NONE;
+			FDreamUITextWriteBack::NoteDirtyProperty(TemplateWidget->GetTypedOuter<UDreamWidgetTree>(),
+				TemplateWidget->GetDisplayName(), Target, ComponentIndex, HeadProperty->GetName());
+		}
+
 		// Modified, not structurally modified: no member changed, so there is nothing for the skeleton
 		// to regenerate -- but the class archetype is a duplicate of this tree, and until the next full
 		// compile every instance still carries the old value. This is what marks that gap.
@@ -708,6 +763,12 @@ int32 FDreamWidgetPreviewHost::CopyPreviewValuesToTemplate(UDreamWidget* InPrevi
 		if (FObjectEditorUtils::MigratePropertyValue(InPreviewWidget, Property, Template, Property))
 		{
 			Copied++;
+			// Reported, not just written. The write-back otherwise compares everything reflection can
+			// reach and writes whatever differs, which is right for a value nobody claimed and wrong
+			// for one that differs because a LAYOUT computed it. Saying what was touched is what lets
+			// the flush write that and nothing else; see FDreamUITextWriteBack::NoteDirtyProperty.
+			FDreamUITextWriteBack::NoteDirtyProperty(Template->GetTypedOuter<UDreamWidgetTree>(),
+				Template->GetDisplayName(), EDreamUIPatchTarget::Node, INDEX_NONE, PropertyName.ToString());
 		}
 	}
 	// A drag calls this on every mouse move, so this marks far more often than anything should act
