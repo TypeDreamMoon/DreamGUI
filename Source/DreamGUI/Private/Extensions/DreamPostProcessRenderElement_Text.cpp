@@ -27,6 +27,12 @@ void UDreamPostProcessRenderElement_Text::EndPlay()
 void UDreamPostProcessRenderElement_Text::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	Super::PreEditChange(PropertyAboutToChange);
+	// Null means "an undo is about to restore everything", which no per-property branch below can
+	// answer. See the note on UDreamWidget::PreEditChange.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
 	auto PropName = PropertyAboutToChange->GetFName();
 	if (PropName == GET_MEMBER_NAME_CHECKED(UDreamPostProcessRenderElement_Text, PostProcess))
 	{
@@ -56,14 +62,17 @@ void UDreamPostProcessRenderElement_Text::PostEditChangeProperty(struct FPropert
 void UDreamPostProcessRenderElement_Text::RegisterPostProcessChangedEvent()
 {
 	if (bHasRegisterPostProcessChangedEvent)return;
-	if (PostProcess.IsValid())
+	// Asked for once and checked, the way Unregister below has checked it since someone crashed on
+	// it: a post-process that is valid as a component can still have no owning widget.
+	UDreamWidget* PostProcessWidget = PostProcess.IsValid() ? PostProcess->GetWidget() : nullptr;
+	if (PostProcessWidget != nullptr)
 	{
 		bHasRegisterPostProcessChangedEvent = true;
-		PostProcess->GetWidget()->GetDimensionChangedEvent().AddWeakLambda(this, [=, this](bool, bool, bool)
+		PostProcessWidget->GetDimensionChangedEvent().AddWeakLambda(this, [=, this](bool, bool, bool)
 		{
 			MarkCanvasUpdate();
 		});
-		PostProcess->GetWidget()->GetTransformChangedEvent().AddWeakLambda(this, [=, this]()
+		PostProcessWidget->GetTransformChangedEvent().AddWeakLambda(this, [=, this]()
 		{
 			MarkCanvasUpdate();
 		});
@@ -118,21 +127,6 @@ void UDreamPostProcessRenderElement_Text::CheckMaterialInstanceDynamic()
 	}
 }
 
-void UDreamPostProcessRenderElement_Text::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
-{
-	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
-}
-
-void UDreamPostProcessRenderElement_Text::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
-{
-	Super::OnTransformChanged(InPositionChanged, InScaleChanged);
-}
-
-UTexture* UDreamPostProcessRenderElement_Text::GetTextureToCreateGeometry()
-{
-	return Super::GetTextureToCreateGeometry();
-}
-
 FName UDreamPostProcessRenderElement_Text::DreamUI_PostProcessTexture = FName(TEXT("DreamUI_PostProcessTexture"));
 UMaterialInterface* UDreamPostProcessRenderElement_Text::GetMaterialToCreateGeometry()
 {
@@ -145,12 +139,6 @@ void UDreamPostProcessRenderElement_Text::OnBeforeCreateOrUpdateGeometry()
 	Super::OnBeforeCreateOrUpdateGeometry();
 	RegisterPostProcessChangedEvent();
 	SetMaterialParameter();//this will set parameter no mater geometry changes
-}
-
-void UDreamPostProcessRenderElement_Text::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged,
-                                                    bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
-{
-	Super::OnUpdateGeometry(InGeo, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 }
 
 DECLARE_DREAM_GUI_VISUAL("PostProcessRenderElementText", UDreamPostProcessRenderElement_Text)

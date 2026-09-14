@@ -16,8 +16,6 @@ public:
 	UDreamRing(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	virtual void BeginPlay()override;
-
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 		float StartAngle = 0.0f;
 	UPROPERTY(EditAnywhere, Category = DreamGUI)

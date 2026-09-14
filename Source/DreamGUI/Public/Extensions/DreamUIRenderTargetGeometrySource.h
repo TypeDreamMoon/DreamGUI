@@ -56,8 +56,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 		bool bEnableInteractOnBackside = false;
 	/**
-	 * Android GLES is flipped, so we flip it back. This just set the material property "FlipY".
-	 * No need for UE5.1 and upward
+	 * INERT. Android GLES rendered the target flipped, and this set the material's "FlipY" scalar to
+	 * flip it back; the engine stopped needing that at UE 5.1, and the code that read this flag has
+	 * been compiled out since (it was `#if PLATFORM_ANDROID && 0`). The property is kept so assets
+	 * that stored it still load, and setting it does nothing on any platform.
 	 */
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 		bool bFlipVerticalOnGLES = true;

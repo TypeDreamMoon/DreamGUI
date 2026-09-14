@@ -148,7 +148,10 @@ void UDreamUMGWidgetInteraction::Awake()
 			Interactions.AllInteractions.Add(this);
 		}
 	}
-	WidgetComponent = Cast<UDreamUMGWidget>(GetWidget()->GetVisual());
+	// A behaviour whose outer chain no longer yields a widget has no visual to interact with either;
+	// CanSendInput() already treats a null WidgetComponent as "not usable", so leaving it null is the
+	// state the rest of the class is written for.
+	WidgetComponent = GetWidget() != nullptr ? Cast<UDreamUMGWidget>(GetWidget()->GetVisual()) : nullptr;
 	this->SetCanExecuteTick(false);//disable update by default
 }
 
@@ -222,7 +225,11 @@ bool UDreamUMGWidgetInteraction::CanSendInput()
 
 void UDreamUMGWidgetInteraction::SetFocus(UWidget* FocusWidget)
 {
-	if (VirtualUser.IsValid())
+	// FocusWidget is a BlueprintCallable parameter, so "somebody passed None" is a script-authoring
+	// mistake rather than an engine invariant, and it must not be a crash. Slate itself also needs to
+	// exist before a user focus can be set -- SetFocus is reachable from Blueprint on a dedicated
+	// server, where FSlateApplication::Get() would assert on the null instance.
+	if (VirtualUser.IsValid() && IsValid(FocusWidget) && FSlateApplication::IsInitialized())
 	{
 		FSlateApplication::Get().SetUserFocus(VirtualUser->GetUserIndex(), FocusWidget->GetCachedWidget(), EFocusCause::SetDirectly);
 	}

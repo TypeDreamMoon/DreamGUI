@@ -56,11 +56,6 @@ void UDreamUIRenderTargetInteraction::BeginPlay()
 	EnsurePointerEventData();
 }
 
-void UDreamUIRenderTargetInteraction::OnRegister()
-{
-	Super::OnRegister();
-}
-
 void UDreamUIRenderTargetInteraction::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);

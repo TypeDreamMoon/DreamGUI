@@ -441,7 +441,11 @@ void UDream2DLineRendererBase::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool In
 		}
 
 		//normal & tangent
-		if (GetWidget()->GetRenderCanvas()->GetActualRequireNormalAndTangent())
+		// GetRenderCanvas() has no non-null contract -- a widget that is not under a canvas (parked,
+		// an authoring tree, a subtree lifted off its canvas) still rebuilds its geometry, and this
+		// is that path. UISelectable.cpp asks the same API the same way and checks; this did not.
+		const UDreamCanvas* RenderCanvas = GetWidget() != nullptr ? GetWidget()->GetRenderCanvas() : nullptr;
+		if (RenderCanvas != nullptr && RenderCanvas->GetActualRequireNormalAndTangent())
 		{
 			for (int i = 0; i < originVertices.Num(); i++)
 			{

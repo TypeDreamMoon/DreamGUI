@@ -12,10 +12,6 @@ UDreamRing::UDreamRing(const FObjectInitializer& ObjectInitializer):Super(Object
 {
 }
 
-void UDreamRing::BeginPlay()
-{
-	Super::BeginPlay();
-}
 
 
 void UDreamRing::CalculatePoints()

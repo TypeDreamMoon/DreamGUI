@@ -50,7 +50,6 @@ class DREAMGUI_API UDreamUIRenderTargetInteraction : public UDreamScreenSpaceRay
 public:	
 	UDreamUIRenderTargetInteraction();
 	virtual void BeginPlay()override;
-	virtual void OnRegister()override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)override;
 	
 	virtual void ActivateRaycaster()override;

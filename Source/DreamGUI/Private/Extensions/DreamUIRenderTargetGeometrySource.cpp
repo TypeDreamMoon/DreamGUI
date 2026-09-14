@@ -429,7 +429,6 @@ private:
 
 
 #define PARAMETER_NAME_MAINTEXTURE "MainTexture"
-#define PARAMETER_NAME_FLIPY "FlipY"
 
 
 UDreamUIRenderTargetGeometrySource::UDreamUIRenderTargetGeometrySource()
@@ -1117,17 +1116,11 @@ void UDreamUIRenderTargetGeometrySource::SetFlipVerticalOnGLES(bool Value)
 {
 	if (bFlipVerticalOnGLES != Value)
 	{
+		// Stores the flag and nothing else. The GLES branch that used to push a FlipY scalar into the
+		// material was already `#if PLATFORM_ANDROID && 0` ("UE5.1 don't need this"), so it has not
+		// compiled on any platform for several engine versions; kept as dead text it read as a
+		// platform path that exists. See the property's own comment.
 		bFlipVerticalOnGLES = Value;
-#if PLATFORM_ANDROID && 0//UE5.1 don't need this
-		if (MaterialInstance != nullptr)
-		{
-			auto ShaderPlatform = GShaderPlatformForFeatureLevel[GetWorld()->FeatureLevel];
-			if (ShaderPlatform == EShaderPlatform::SP_OPENGL_ES3_1_ANDROID)
-			{
-				MaterialInstance->SetScalarParameterValue(PARAMETER_NAME_FLIPY, bFlipVerticalOnGLES ? 1.0f : 0.0f);
-			}
-		}
-#endif
 	}
 }
 
@@ -1222,14 +1215,9 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
 {
 	if (MaterialInstance)
 	{
+		// The FlipY scalar that used to follow was `#if PLATFORM_ANDROID && 0` dead text -- see
+		// SetFlipVerticalOnGLES.
 		MaterialInstance->SetTextureParameterValue(PARAMETER_NAME_MAINTEXTURE, GetRenderTarget());
-#if PLATFORM_ANDROID && 0//UE5.1 don't need this
-		auto ShaderPlatform = GShaderPlatformForFeatureLevel[GetWorld()->FeatureLevel];
-		if (ShaderPlatform == EShaderPlatform::SP_OPENGL_ES3_1_ANDROID)
-		{
-			MaterialInstance->SetScalarParameterValue(PARAMETER_NAME_FLIPY, bFlipVerticalOnGLES ? 1.0f : 0.0f);
-		}
-#endif
 	}
 }
 UMaterialInterface* UDreamUIRenderTargetGeometrySource::GetPresetMaterial()const

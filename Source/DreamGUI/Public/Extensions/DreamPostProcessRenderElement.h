@@ -25,7 +25,6 @@ protected:
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnRegister() override;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	TWeakObjectPtr<UDreamVisualPostProcess> PostProcess;

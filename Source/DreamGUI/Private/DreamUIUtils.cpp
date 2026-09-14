@@ -46,6 +46,43 @@ UTexture2D* FDreamUIUtils::CreateTexture(int32 InSize, FColor InDefaultColor, UO
 	return ResultTexture;
 }
 
+bool FDreamUIUtils::ReadTexture2DPixel(UTexture2D* InTexture, const FVector2D& InUV, FColor& OutPixel)
+{
+	if (!IsValid(InTexture))return false;
+	auto PlatformData = InTexture->GetPlatformData();
+	if (PlatformData == nullptr || PlatformData->Mips.Num() <= 0)return false;
+	if (PlatformData->PixelFormat != PF_B8G8R8A8)
+	{
+		//once per texture, not once per trace: a raycast against a compressed texture happens every frame the pointer moves
+		static TSet<FName> WarnedTextures;
+		bool bAlreadyWarned = false;
+		WarnedTextures.Add(InTexture->GetFName(), &bAlreadyWarned);
+		if (!bAlreadyWarned)
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Texture:%s has pixel format %s, only PF_B8G8R8A8 can be read on the CPU. Pixel-accurate hit test falls back to the rect. Enable 'Compress Without Alpha'/'UserInterface2D (RGBA)' or set the texture's compression to VectorDisplacementmap to make it readable.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InTexture->GetPathName(), GetPixelFormatString(PlatformData->PixelFormat));
+		}
+		return false;
+	}
+	auto& Mip = PlatformData->Mips[0];
+	const int32 SizeX = Mip.SizeX;
+	const int32 SizeY = Mip.SizeY;
+	if (SizeX <= 0 || SizeY <= 0)return false;
+	auto& BulkData = Mip.BulkData;
+	//a streamed-out or discarded top mip has no CPU copy to read, and its bulk data is shorter than the mip it describes
+	if (BulkData.GetBulkDataSize() < (int64)SizeX * (int64)SizeY * (int64)sizeof(FColor))return false;
+	bool bResult = false;
+	if (auto Pixels = static_cast<const FColor*>(BulkData.Lock(LOCK_READ_ONLY)))
+	{
+		const int32 PixelX = FMath::Clamp((int32)(InUV.X * SizeX), 0, SizeX - 1);
+		const int32 PixelY = FMath::Clamp((int32)(InUV.Y * SizeY), 0, SizeY - 1);
+		OutPixel = Pixels[PixelY * SizeX + PixelX];
+		bResult = true;
+	}
+	BulkData.Unlock();
+	return bResult;
+}
+
 TArray<uint8> FDreamUIUtils::GetMD5(const FString& InString)
 {
 	return GetMD5((unsigned char*)TCHAR_TO_ANSI(*InString), FCString::Strlen(*InString));
@@ -209,12 +246,21 @@ void FDreamUIUtils::EditorNotification(const FText& NotifyText, bool bSuccessOrF
 	Info.bUseSuccessFailIcons = false;
 	Info.bUseLargeFont = false;
 	Info.bFireAndForget = true;
+	// AddNotification legitimately answers with nothing when there is no Slate to put a toast in -- a
+	// -nullrhi automation run or a commandlet, both of which still have a valid GEditor. Every caller
+	// here is an error report, so the toast failing must not turn a logged message into a crash.
 	auto NotificationItem = FSlateNotificationManager::Get().AddNotification(Info);
-	NotificationItem->SetCompletionState(SNotificationItem::CS_Success);
-	NotificationItem->ExpireAndFadeout();
+	if (NotificationItem.IsValid())
+	{
+		NotificationItem->SetCompletionState(SNotificationItem::CS_Success);
+		NotificationItem->ExpireAndFadeout();
+	}
 
-	auto CompileFailSound = LoadObject<USoundBase>(NULL, bSuccessOrFailureSound ? TEXT("/Engine/EditorSounds/Notifications/CompileFailed_Cue.CompileSuccess_Cue" : TEXT("/Engine/EditorSounds/Notifications/CompileFailed_Cue.CompileFailed_Cue")));
-	GEditor->PlayEditorSound(CompileFailSound);
+	// PackageName.ObjectName: the success cue lives in its OWN package, so the success branch named a
+	// CompileSuccess_Cue object inside CompileFailed_Cue and resolved to nothing -- the success sound
+	// has never once played. Both halves verified against Engine/Content/EditorSounds/Notifications/.
+	auto NotificationSound = LoadObject<USoundBase>(NULL, bSuccessOrFailureSound ? TEXT("/Engine/EditorSounds/Notifications/CompileSuccess_Cue.CompileSuccess_Cue") : TEXT("/Engine/EditorSounds/Notifications/CompileFailed_Cue.CompileFailed_Cue"));
+	GEditor->PlayEditorSound(NotificationSound);
 }
 #endif
 

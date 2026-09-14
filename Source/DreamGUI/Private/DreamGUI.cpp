@@ -21,8 +21,27 @@ namespace
 void FDreamGUIModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-	FString PluginShaderDir = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("DreamGUI"))->GetBaseDir(), TEXT("Shaders"));
-	AddShaderSourceDirectoryMapping(TEXT("/Plugin/DreamGUI"), PluginShaderDir);
+	//
+	// Two things the one-liner this replaces assumed. FindPlugin returns a TSharedPtr, and while this
+	// module belongs to the plugin it looks up, a dereference is not the way to say so. And the
+	// mapping is process-wide and permanent -- the engine has no per-directory unregister, so
+	// ShutdownModule cannot undo it -- while AddShaderSourceDirectoryMapping check()s that the
+	// virtual directory is not mapped yet. A second StartupModule (legacy hot reload, or the plugin
+	// being disabled and re-enabled in a running editor; Live Coding does not re-run this) therefore
+	// crashed on a mapping that was already correct. AllShaderSourceDirectoryMappings is the engine's
+	// own read side of that map.
+	static const TCHAR* const DreamGUIVirtualShaderDirectory = TEXT("/Plugin/DreamGUI");
+	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI")))
+	{
+		if (!AllShaderSourceDirectoryMappings().Contains(DreamGUIVirtualShaderDirectory))
+		{
+			AddShaderSourceDirectoryMapping(DreamGUIVirtualShaderDirectory, FPaths::Combine(Plugin->GetBaseDir(), TEXT("Shaders")));
+		}
+	}
+	else
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d The DreamGUI plugin is not registered with the plugin manager, so its shaders cannot be mapped to %s."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, DreamGUIVirtualShaderDirectory);
+	}
 
 	// This module loads at PostConfigInit, before the sequencer's component registry is a safe
 	// thing to touch; the accessors wait for the engine. A late load (a plugin enabled at runtime)

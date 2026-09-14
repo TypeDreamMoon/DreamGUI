@@ -92,6 +92,18 @@ void UDreamUMGWidget::OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld)
 	}
 }
 
+/*
+ * The only class in the plugin with UE_SERVER guards, and the rule those guards follow -- worth
+ * stating here because no server target exists in this project to catch a mistake in them.
+ *
+ * The guards wrap CODE, never DECLARATIONS. Every member the blocks below touch (SlateWindow,
+ * SlateWidget, WidgetRenderer, CurrentSlateWidget) is declared unconditionally in the header, and
+ * every function they call is defined unconditionally with its own body guarded -- which is also how
+ * the text path handles WITH_FREETYPE=0 / WITH_HARFBUZZ=0. That is what keeps a server build from
+ * failing at link on a symbol that was compiled away on one side and referenced on the other, and it
+ * is the thing to preserve when editing these blocks: guarding a member's declaration is the change
+ * that breaks the configuration nobody here can compile.
+ */
 void UDreamUMGWidget::OnRegister()
 {
 	Super::OnRegister();
@@ -116,13 +128,6 @@ void UDreamUMGWidget::OnRegister()
 #endif
 	}
 #endif // !UE_SERVER
-
-#if WITH_EDITOR
-	if (!DreamUI::IsGameWorld(this))
-	{
-		
-	}
-#endif
 }
 
 void UDreamUMGWidget::SetWindowFocusable(bool bInWindowFocusable)
@@ -143,7 +148,10 @@ EVisibility UDreamUMGWidget::ConvertWindowVisibilityToVisibility(EWindowVisibili
 	case EWindowVisibility::SelfHitTestInvisible:
 		return EVisibility::SelfHitTestInvisible;
 	default:
-		checkNoEntry();
+		// The value comes off a serialised uint8 property, so "no other case exists" is a statement
+		// about the enum as it is declared today, not about what an already-saved asset holds. The
+		// fallback below is the property's own default, which is the answer a stale value wants;
+		// checkNoEntry() made it a crash in Development and Test packages instead.
 		return EVisibility::SelfHitTestInvisible;
 	}
 }
@@ -204,7 +212,8 @@ void UDreamUMGWidget::SetTickMode(ETickMode InTickMode)
 bool UDreamUMGWidget::IsWidgetVisible() const
 {
 	//  If we are in World Space, if the component or the SlateWindow is not visible the Widget is not visible.
-	if ((!GetWidget()->GetRenderVisibleInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
+	const UDreamWidget* OwningWidget = GetWidget();
+	if (OwningWidget == nullptr || !OwningWidget->GetRenderVisibleInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible())
 	{
 		return false;
 	}
@@ -222,8 +231,10 @@ bool UDreamUMGWidget::IsWidgetVisible() const
 void UDreamUMGWidget::OnUnregister()
 {
 #if !UE_SERVER
+	// Paired with the subscription in OnRegister, and guarded on the same condition so the pair
+	// cannot come apart in the configuration that compiles only one half.
 	FWorldDelegates::LevelRemovedFromWorld.RemoveAll(this);
-#endif
+#endif // !UE_SERVER
 
 #if WITH_EDITOR
 	if (!DreamUI::IsGameWorld(this))
@@ -418,10 +429,20 @@ bool UDreamUMGWidget::ShouldReenableComponentTickWhenWidgetBecomesVisible() cons
 bool UDreamUMGWidget::ShouldDrawWidget() const
 {
 	const float RenderTimeThreshold = .5f;
-	if (auto RenderCanvas = GetWidget()->GetRenderCanvas())
+	const UDreamWidget* OwningWidget = GetWidget();
+	if (OwningWidget == nullptr)
 	{
-		// If we don't tick when off-screen, don't bother ticking if it hasn't been rendered recently
-		if (TickWhenOffscreen || GetWorld()->TimeSince(GetWorld()->LastRenderTime) <= RenderTimeThreshold)
+		return false;
+	}
+	if (auto RenderCanvas = OwningWidget->GetRenderCanvas())
+	{
+		// If we don't tick when off-screen, don't bother ticking if it hasn't been rendered recently.
+		// "Rendered recently" is a question about the world, and a worldless component -- one being
+		// torn down, or one in a Blueprint's authoring tree -- cannot answer it, so it answers "no"
+		// and leaves the decision to TickWhenOffscreen. The canvas test above guards the canvas, not
+		// the world; the two are independently absent.
+		const UWorld* World = DreamUI::GetWorldSafe(this);
+		if (TickWhenOffscreen || (World != nullptr && World->TimeSince(World->LastRenderTime) <= RenderTimeThreshold))
 		{
 			if ((GetCurrentTime() - LastWidgetRenderTime) >= RedrawTime)
 			{
@@ -495,7 +516,16 @@ void UDreamUMGWidget::DrawWidgetToRenderTarget(float DeltaTime)
 
 double UDreamUMGWidget::GetCurrentTime() const
 {
-	return (TimingPolicy == EWidgetTimingPolicy::RealTime) ? FApp::GetCurrentTime() : static_cast<double>(GetWorld()->GetTimeSeconds());
+	if (TimingPolicy == EWidgetTimingPolicy::RealTime)
+	{
+		return FApp::GetCurrentTime();
+	}
+
+	// No world is not a third case to invent an answer for: per DreamUIWorldContext.h, it takes the
+	// branch that can work without one, which here is the real-time clock. The value only ever feeds
+	// a difference against LastWidgetRenderTime, and both ends move to the same clock together.
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	return World != nullptr ? static_cast<double>(World->GetTimeSeconds()) : FApp::GetCurrentTime();
 }
 
 #if WITH_EDITOR

@@ -304,6 +304,12 @@ void UDreamStaticMesh::CreateGeometry()
 void UDreamStaticMesh::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	Super::PreEditChange(PropertyAboutToChange);
+	// Null means "an undo is about to restore everything", which no per-property branch below can
+	// answer. See the note on UDreamWidget::PreEditChange.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
 	auto PropName = PropertyAboutToChange->GetFName();
 	if (PropName == GET_MEMBER_NAME_CHECKED(UDreamStaticMesh, MeshCache))
 	{
