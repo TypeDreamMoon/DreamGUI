@@ -9,6 +9,7 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Tests/DreamCrosscuttingTestTypes.h"
 #include "Text/DreamUITextBuilder.h"
 #include "UObject/UObjectIterator.h"
 
@@ -34,7 +35,7 @@ bool FDreamVisualTagCoverageTest::RunTest(const FString& Parameters)
 {
 	// The exceptions, each of which is a decision rather than an oversight.
 	//
-	// One entry, and the shortness is the finding: every other visual that has no tag turned out to
+	// Two entries, and the shortness is the finding: every other visual that has no tag turned out to
 	// be Abstract already -- UDreamSpriteBase, UDreamTextureBase, UDream2DLineRendererBase all carry
 	// it as a later specifier (`UCLASS(ClassGroup = (DreamGUI), Abstract, ...)`), which is easy to
 	// miss when grepping for `UCLASS(Abstract`. They never reach this sweep, so listing them here
@@ -45,6 +46,13 @@ bool FDreamVisualTagCoverageTest::RunTest(const FString& Parameters)
 		// the tag would only ever produce a widget that draws nothing and no message saying why.
 		// UDreamUMGWidget derives from this and IS tagged: what it hosts is a property.
 		UDreamCustomMesh::StaticClass(),
+
+		// A test fixture, not a visual anyone authors: it exists only so
+		// DreamPackagingAndUndoAutomationTests can reach UDreamUMGWidget's protected ShouldDrawWidget
+		// and GetCurrentTime, which used to dereference a null world. It is concrete because the test
+		// instantiates it, so it reaches this sweep -- but a .dui that could spell it would be
+		// spelling a probe into a user's UI.
+		UDreamUMGWidgetTimingProbe::StaticClass(),
 	};
 
 	int32 Tagged = 0;
