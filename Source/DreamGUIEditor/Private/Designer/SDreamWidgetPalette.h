@@ -75,6 +75,19 @@ namespace DreamUIPalette
 	 */
 	void BuildRootItems(const TArray<FItemPtr>& InAllGroups, const TSet<FString>& InFavorites,
 		bool bFilterActive, TFunctionRef<bool(const FPaletteItem&)> InMatchesFilter, TArray<FItemPtr>& OutRootItems);
+
+	/**
+	 * Whether a DreamUI Widget Blueprint the asset registry reported belongs in "User Created".
+	 *
+	 * Two exclusions, and they are the whole rule. The hierarchy being edited is left out because a
+	 * hierarchy cannot contain itself -- the Content Browser drop refuses that with a dialog, and
+	 * omitting the entry says the same thing more quietly. An asset a registered control already
+	 * loads is left out because it is in the palette once already, under the name the registry gives
+	 * it rather than the asset's.
+	 *
+	 * InEditedPackage may be NAME_None, which excludes nothing.
+	 */
+	bool ShouldListUserWidget(FName InPackageName, FName InEditedPackage, const TSet<FString>& InAlreadyOffered);
 }
 
 /**
@@ -140,6 +153,16 @@ private:
 	void RefreshRootItems();
 	void CollectBasics(TArray<FItemPtr>& Out);
 	void CollectControls(TArray<FItemPtr>& Out);
+	/**
+	 * The project's own DreamUI Widget Blueprints -- UMG's "User Created" group.
+	 *
+	 * Everything the registry knows about is either a plugin preset or a code-built control, so a
+	 * hierarchy the author compiled themselves appeared in no palette at all and could only be
+	 * placed by dragging the asset out of the Content Browser. They are listed as WidgetClass
+	 * entries, which is exactly what they are: a compiled DreamUI Blueprint is a UDreamUserWidget
+	 * subclass, placed by instancing, and that road already exists.
+	 */
+	void CollectUserWidgets(TArray<FItemPtr>& Out);
 
 	TSharedRef<class ITableRow> OnGenerateRow(FItemPtr InItem, const TSharedRef<class STableViewBase>& OwnerTable);
 	void OnGetChildren(FItemPtr InItem, TArray<FItemPtr>& OutChildren);

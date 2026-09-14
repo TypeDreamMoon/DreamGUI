@@ -3,6 +3,7 @@
 #include "SDreamWidgetPalette.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamWidgetBlueprintEditor.h"
+#include "DreamWidgetBlueprint.h"//the "User Created" group is an asset-registry query for these
 #include "DreamUIEditorTools.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
@@ -39,14 +40,34 @@ namespace DreamUIPalette
 		default:
 			// Registry entries are keyed by the registry's Name, not by the label they show: relabeling
 			// a control, or moving it to another category, must not drop the star off it.
-			return FString::Printf(TEXT("Control:%s"), Item.NativeDescriptor.IsValid()
-				? *Item.NativeDescriptor->Name.ToString() : *Item.DisplayName);
+			if (Item.NativeDescriptor.IsValid())
+			{
+				return FString::Printf(TEXT("Control:%s"), *Item.NativeDescriptor->Name.ToString());
+			}
+			// A project's own Widget Blueprint has no registry entry, so its package path is its
+			// identity -- two folders are allowed to hold assets with the same short name, and a
+			// display-name key would have them sharing one star.
+			return FString::Printf(TEXT("Control:%s"),
+				Item.WidgetClassPath.IsEmpty() ? *Item.DisplayName : *Item.WidgetClassPath);
 		}
 	}
 
 	bool ShouldExpandGroup(bool bFilterActive, bool bWasCollapsed)
 	{
 		return bFilterActive || !bWasCollapsed;
+	}
+
+	bool ShouldListUserWidget(FName InPackageName, FName InEditedPackage, const TSet<FString>& InAlreadyOffered)
+	{
+		if (InPackageName.IsNone())
+		{
+			return false;
+		}
+		if (!InEditedPackage.IsNone() && InPackageName == InEditedPackage)
+		{
+			return false;
+		}
+		return !InAlreadyOffered.Contains(InPackageName.ToString());
 	}
 
 	void BuildRootItems(const TArray<FItemPtr>& InAllGroups, const TSet<FString>& InFavorites,
@@ -238,11 +259,77 @@ void SDreamWidgetPalette::CollectControls(TArray<FItemPtr>& Out)
 	}
 }
 
+void SDreamWidgetPalette::CollectUserWidgets(TArray<FItemPtr>& Out)
+{
+	IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+	if (AssetRegistry == nullptr)
+	{
+		return;
+	}
+	// Everything the registry already offers, so a plugin preset is not listed a second time under
+	// its asset name. Registered controls carry the package path they are loaded from.
+	TSet<FString> AlreadyOffered;
+	for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
+	{
+		if (!Descriptor.WidgetClassPath.IsEmpty())
+		{
+			AlreadyOffered.Add(Descriptor.WidgetClassPath);
+		}
+	}
+
+	const UDreamWidgetBlueprint* EditedBlueprint = nullptr;
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin())
+	{
+		EditedBlueprint = Editor->GetWidgetBlueprint();
+	}
+	const FName EditedPackage = IsValid(EditedBlueprint) ? EditedBlueprint->GetOutermost()->GetFName() : NAME_None;
+
+	FARFilter Filter;
+	Filter.ClassPaths.Add(UDreamWidgetBlueprint::StaticClass()->GetClassPathName());
+	Filter.bRecursiveClasses = true;
+	TArray<FAssetData> Assets;
+	AssetRegistry->GetAssets(Filter, Assets);
+	// By name, because the panel is a list to read rather than a directory to browse; the tooltip
+	// carries the path for the two assets that share a name.
+	Assets.Sort([](const FAssetData& A, const FAssetData& B)
+	{
+		return A.AssetName.LexicalLess(B.AssetName);
+	});
+
+	FItemPtr Header;
+	for (const FAssetData& Asset : Assets)
+	{
+		if (!DreamUIPalette::ShouldListUserWidget(Asset.PackageName, EditedPackage, AlreadyOffered))
+		{
+			continue;
+		}
+		const FString PackagePath = Asset.PackageName.ToString();
+		if (!Header.IsValid())
+		{
+			Header = MakeShared<FPaletteItem>();
+			Header->Kind = EItemKind::Category;
+			// UMG's name for the same group, so the two palettes read alike.
+			Header->DisplayName = TEXT("User Created");
+		}
+		FItemPtr Item = MakeShared<FPaletteItem>();
+		Item->Kind = EItemKind::WidgetClass;
+		Item->DisplayName = Asset.AssetName.ToString();
+		Item->WidgetClassPath = PackagePath;
+		Item->FavoriteKey = DreamUIPalette::MakeFavoriteKey(*Item);
+		Header->Children.Add(Item);
+	}
+	if (Header.IsValid())
+	{
+		Out.Add(Header);
+	}
+}
+
 void SDreamWidgetPalette::RebuildList()
 {
 	AllGroups.Reset();
 	CollectBasics(AllGroups);
 	CollectControls(AllGroups);
+	CollectUserWidgets(AllGroups);
 	RefreshRootItems();
 }
 

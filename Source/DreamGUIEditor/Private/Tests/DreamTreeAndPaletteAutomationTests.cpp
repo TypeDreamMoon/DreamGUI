@@ -259,4 +259,52 @@ bool FDreamControlRegistryRefusalTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPaletteUserWidgetsTest,
+	"DreamGUI.Editor.Palette.UserCreatedListsTheProjectsOwnHierarchiesButNotThisOne",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The palette used to know about nothing an author had made themselves.
+ *
+ * RefreshDynamicClasses discovers UDreamVisualPostProcess subclasses and nothing else, and the
+ * WidgetClass kind was only ever used for the plugin's own preset controls -- so a DreamUI Widget
+ * Blueprint compiled in the project appeared in no palette at all, and the only way to place one
+ * inside another was to drag the asset out of the Content Browser.
+ *
+ * What is asserted here is the rule the collector applies; the asset-registry query it applies the
+ * rule to needs a live panel and is not exercised.
+ */
+bool FDreamPaletteUserWidgetsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIPalette;
+
+	const FName Edited(TEXT("/Game/UI/WBP_Editing"));
+	const FName Other(TEXT("/Game/UI/WBP_Other"));
+	const FName Preset(TEXT("/DreamGUI/Controls/BP_Button"));
+	TSet<FString> AlreadyOffered;
+	AlreadyOffered.Add(Preset.ToString());
+
+	TestTrue(TEXT("another hierarchy in the project is listed"), ShouldListUserWidget(Other, Edited, AlreadyOffered));
+	TestFalse(TEXT("the hierarchy being edited is not, because it cannot contain itself"),
+		ShouldListUserWidget(Edited, Edited, AlreadyOffered));
+	TestFalse(TEXT("an asset a registered control already offers is not listed twice"),
+		ShouldListUserWidget(Preset, Edited, AlreadyOffered));
+	TestFalse(TEXT("a nameless package is not listed"), ShouldListUserWidget(NAME_None, Edited, AlreadyOffered));
+	TestTrue(TEXT("with no asset being edited, nothing is excluded for being it"),
+		ShouldListUserWidget(Other, NAME_None, AlreadyOffered));
+
+	// The favourite key has to be the path, not the label: two folders may hold a WBP_Menu each, and
+	// starring one of them must not light the other.
+	FPaletteItem First;
+	First.Kind = EItemKind::WidgetClass;
+	First.DisplayName = TEXT("WBP_Menu");
+	First.WidgetClassPath = TEXT("/Game/UI/A/WBP_Menu");
+	FPaletteItem Second = First;
+	Second.WidgetClassPath = TEXT("/Game/UI/B/WBP_Menu");
+	TestNotEqual(TEXT("two same-named assets in different folders get different keys"),
+		MakeFavoriteKey(First), MakeFavoriteKey(Second));
+	return true;
+}
+
 #endif

@@ -140,9 +140,13 @@ void SDreamWidgetHierarchyPickerView::RefreshTree()
 	{
 		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(DesignerWorld.Get()))
 		{
-			for (auto& Widget : DreamUIManager->GetAllWidgetArray())
+			for (const TObjectPtr<UDreamWidget>& Widget : DreamUIManager->GetAllWidgetArray())
 			{
-				if (Widget->IsRootWidgetInHierarchy())
+				// The manager's array can hold an entry a structural edit has already destroyed --
+				// unregistration happens on the next tick, not in DestroyWidget -- which is why the
+				// main outliner checks here (DreamWidgetHierarchyRows::CollectRoots) and this picker,
+				// reading the same array a frame later, did not.
+				if (IsValid(Widget) && Widget->IsRootWidgetInHierarchy())
 				{
 					Roots.Add(Widget);
 				}

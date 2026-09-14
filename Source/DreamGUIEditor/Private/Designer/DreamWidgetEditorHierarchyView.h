@@ -149,7 +149,17 @@ protected:
 	TSharedPtr<class SSearchBox> SearchBoxPtr;
 	/** The filter used by the search box */
 	TSharedPtr<WidgetTextFilter> SearchBoxWidgetFilter;
-	TMap<UDreamWidget*, bool> ExpansionMap;
+	/**
+	 * Remembered expansion, keyed by the widget's object name rather than by its address.
+	 *
+	 * A row shows a PREVIEW widget, and every structural edit throws the whole preview away and
+	 * instances a fresh one -- so a map keyed on the pointer missed on every single lookup after a
+	 * rebuild, silently fell through to "expand", and re-expanded the entire tree each time. It also
+	 * never shrank, and a recycled address let a brand new widget inherit a dead one's state. Names
+	 * survive the rebuild (that is what pairs a preview with its template), which is why the
+	 * persisted DesignerData.UnexpandedWidgets already uses them.
+	 */
+	TMap<FName, bool> ExpansionMap;
 
 	/** Has a full refresh of the tree been requested?  This happens when the user is filtering the tree */
 	bool bRefreshRequested = true;
