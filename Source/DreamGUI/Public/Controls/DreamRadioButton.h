@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Controls/DreamToggle.h"
 #include "Controls/DreamUIControl.h"
 #include "DreamRadioButton.generated.h"
 
@@ -11,6 +12,7 @@ class UUIToggle;
 class UUIToggleGroup;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamRadioButtonChangedEvent, bool, bIsOn);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamRadioCheckStateChangedEvent, EDreamCheckState, CheckedState);
 
 /**
  * A radio button whose hierarchy is code, not an asset.
@@ -59,12 +61,35 @@ public:
 	 * property. Authored value in, mirror of the behaviour's out -- HandleValueChanged keeps it
 	 * honest when the user (or the group switching this one off) is the writer.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetIsOn", BlueprintSetter = "SetIsOn", Category = "Radio Button")
 	bool bIsOn = false;
+
+	/**
+	 * The full state, in UMG's check-box vocabulary -- the same EDreamCheckState UDreamToggle carries,
+	 * and the same three answers.
+	 *
+	 * A radio WITH a third state is not a contradiction: a mixed multi-select ("these four objects
+	 * disagree about which option they are on") is exactly the case Undetermined exists for, and it
+	 * is as ordinary for a radio group as for a check box. The asymmetry with the toggle was the
+	 * defect -- one of the pair could say "I do not know" and the other could not.
+	 *
+	 * Authorable, never clickable-into: the click lands as Checked, as it does on the toggle. The
+	 * behaviour underneath stays two-state and is parked at unchecked while this stands, so the GROUP
+	 * reads an undetermined radio as not-selected -- which is the honest answer to "is this the one".
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetCheckedState", BlueprintSetter = "SetCheckedState", Category = "Radio Button")
+	EDreamCheckState CheckedState = EDreamCheckState::Unchecked;
 
 	/** Fired by the toggle underneath, re-broadcast here so a consumer never reaches into the parts. */
 	UPROPERTY(BlueprintAssignable, Category = "Radio Button")
 	FDreamRadioButtonChangedEvent OnToggleChanged;
+
+	/**
+	 * UMG's spelling of the same moment, carrying the full state. Fires whenever CheckedState changes
+	 * -- alongside OnToggleChanged when the bool projection moved too.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Radio Button")
+	FDreamRadioCheckStateChangedEvent OnCheckStateChanged;
 
 	/**
 	 * The `<->` convention: two-way bindings synthesize their reverse route against this exact
@@ -77,8 +102,31 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Radio Button")
 	bool GetIsOn() const;
 
+	/** The compatibility spelling of SetCheckedState(Checked/Unchecked), exactly as on the toggle. */
 	UFUNCTION(BlueprintCallable, Category = "Radio Button")
 	void SetIsOn(bool bInIsOn);
+
+	/**
+	 * The full state. The behaviour is the truth for the two states it can hold; Undetermined is the
+	 * control's own and reads from here.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Radio Button")
+	EDreamCheckState GetCheckedState() const;
+
+	/**
+	 * Set any of the three. Checked/Unchecked go through the behaviour WITH notify -- the path a
+	 * click takes, and the path the group hears -- while Undetermined parks the behaviour at
+	 * unchecked without notify and lives on the control.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Radio Button")
+	void SetCheckedState(EDreamCheckState InCheckedState);
+
+	/** UMG's convenience: exactly GetCheckedState() == Checked. */
+	UFUNCTION(BlueprintPure, Category = "Radio Button")
+	bool IsChecked() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Radio Button")
+	void SetIsChecked(bool bInIsChecked);
 
 	/**
 	 * Membership, passed straight through to the behaviour.
@@ -110,6 +158,29 @@ protected:
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
 
+#if WITH_EDITOR
+	/** Mirror in the direction of the EDIT before the base re-applies; see ReconcileCheckSpellings. */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 private:
 	void HandleValueChanged(bool bInIsOn);
+
+	/**
+	 * Raw property writes (an authored .dui value, a direct C++ member write) can leave the two
+	 * spellings disagreeing; every setter keeps them coherent, so a disagreement is always a raw
+	 * write. CheckedState wins wherever it can be told apart; the one blind spot is bIsOn=true
+	 * against a still-default Unchecked, which is indistinguishable from "only bIsOn was authored"
+	 * -- the path existing .dui takes -- and there the bool wins. Word for word the toggle's rule,
+	 * because it is the same pair of spellings.
+	 */
+	void ReconcileCheckSpellings();
+
+	/**
+	 * The state's face. A radio has no glyph to swap, so the third state shows in the DOT's colour:
+	 * while Undetermined stands, the checked transition's OFF colour is aimed at DotChecked, so the
+	 * dot wears the chosen colour even though the behaviour beneath reads unchecked -- the toggle's
+	 * em-dash rule, in the one vocabulary a dot has.
+	 */
+	void PushCheckStateVisuals(bool bForceOffColour = false);
 };

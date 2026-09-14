@@ -12,6 +12,7 @@ class UDreamWidget;
 class UUIToggle;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamToggleChangedEvent, bool, bIsOn);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDreamToggleSimpleEvent);
 
 /**
  * The three states a check box can show -- UMG's ECheckBoxState vocabulary in our own type, because
@@ -80,6 +81,27 @@ public:
 	FDreamToggleStyle Style;
 
 	/**
+	 * WHEN the tick flips, per input kind -- UMG's three enums, surfaced at the control exactly as
+	 * UDreamButton surfaces them and for the same reason: they live on the selectable underneath,
+	 * and a control that never stated them left every check box on the desktop's DownAndUp.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetClickMethod", BlueprintSetter = "SetClickMethod", Category = "Toggle")
+	EDreamUIClickMethod ClickMethod = EDreamUIClickMethod::DownAndUp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTouchMethod", BlueprintSetter = "SetTouchMethod", Category = "Toggle")
+	EDreamUITouchMethod TouchMethod = EDreamUITouchMethod::DownAndUp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetPressMethod", BlueprintSetter = "SetPressMethod", Category = "Toggle")
+	EDreamUIPressMethod PressMethod = EDreamUIPressMethod::DownAndUp;
+
+	/*
+	 * UMG's IsFocusable is UDreamWidget's own bIsFocusable / GetIsFocusable / SetIsFocusable, which
+	 * EVERY widget in this framework carries -- so this control declares none of its own. A second
+	 * member of that name would shadow the base one (which UHT refuses outright) and would be a
+	 * second answer to one question besides.
+	 */
+
+	/**
 	 * The authored state, in UMG's spelling and with UMG's third value. A property rather than the
 	 * getter/setter pair alone, because the pair alone is invisible: .dui writes properties, the
 	 * designer lists properties, and a binding resolves a property -- so a knob that exists only as
@@ -123,6 +145,27 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Toggle")
 	FDreamToggleChangedEvent OnValueChangedBP;
 
+	/**
+	 * The four pointer moments, re-broadcast from the behaviour exactly as the value change is.
+	 *
+	 * A check box is a button that keeps a value, and every argument for a button speaking about
+	 * press and hover applies to it unchanged -- a sound on press, a tooltip on hover, a row that
+	 * highlights while the pointer is over its box. Press and release are the POINTER's rather than
+	 * the click's: a press that slides off releases without ever toggling. A disabled toggle
+	 * broadcasts neither of the press pair.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Toggle")
+	FDreamToggleSimpleEvent OnPressed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Toggle")
+	FDreamToggleSimpleEvent OnReleased;
+
+	UPROPERTY(BlueprintAssignable, Category = "Toggle")
+	FDreamToggleSimpleEvent OnHovered;
+
+	UPROPERTY(BlueprintAssignable, Category = "Toggle")
+	FDreamToggleSimpleEvent OnUnhovered;
+
 
 	/** The compatibility spelling of IsChecked(): the behaviour's bool once it exists, bIsOn before. */
 	UFUNCTION(BlueprintCallable, Category = "Toggle")
@@ -154,6 +197,25 @@ public:
 	/** UMG's convenience spelling of SetIsOn. */
 	UFUNCTION(BlueprintCallable, Category = "Toggle")
 	void SetIsChecked(bool bInIsChecked);
+
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	EDreamUIClickMethod GetClickMethod() const { return ClickMethod; }
+
+	/** Each of the four setters below writes the field and re-pushes it onto the behaviour. */
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	void SetClickMethod(EDreamUIClickMethod InMethod);
+
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	EDreamUITouchMethod GetTouchMethod() const { return TouchMethod; }
+
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	void SetTouchMethod(EDreamUITouchMethod InMethod);
+
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	EDreamUIPressMethod GetPressMethod() const { return PressMethod; }
+
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	void SetPressMethod(EDreamUIPressMethod InMethod);
 
 	virtual void ApplyStyle() override;
 
@@ -188,6 +250,10 @@ protected:
 
 private:
 	void HandleValueChanged(bool bInIsOn);
+	void HandlePressed();
+	void HandleReleased();
+	void HandleHovered();
+	void HandleUnhovered();
 
 	/**
 	 * Raw property writes (an authored .dui value, a direct C++ member write) can leave the two

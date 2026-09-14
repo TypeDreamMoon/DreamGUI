@@ -64,9 +64,74 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
 	FDreamButtonStyle Style;
 
+	/**
+	 * WHEN this button's click fires, per input kind -- UMG's three enums, surfaced at the control.
+	 *
+	 * The behaviour has carried them since they were added to UUISelectable; a control that did not
+	 * state them left every button in the project on the desktop's DownAndUp, which is right for a
+	 * desktop and wrong for a key on a virtual keyboard (which wants MouseDown) and for a button
+	 * inside a scroll box (which wants PreciseClick, so a drag that was really a scroll cancels).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetClickMethod", BlueprintSetter = "SetClickMethod", Category = "Button")
+	EDreamUIClickMethod ClickMethod = EDreamUIClickMethod::DownAndUp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTouchMethod", BlueprintSetter = "SetTouchMethod", Category = "Button")
+	EDreamUITouchMethod TouchMethod = EDreamUITouchMethod::DownAndUp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetPressMethod", BlueprintSetter = "SetPressMethod", Category = "Button")
+	EDreamUIPressMethod PressMethod = EDreamUIPressMethod::DownAndUp;
+
+	/*
+	 * UMG's IsFocusable is UDreamWidget's own bIsFocusable / GetIsFocusable / SetIsFocusable, which
+	 * EVERY widget in this framework carries -- so this control declares none of its own. A second
+	 * member of that name would shadow the base one (which UHT refuses outright) and would be a
+	 * second answer to one question besides.
+	 */
+
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Button")
 	FDreamButtonClickedEvent OnClicked;
+
+	/**
+	 * The other four moments UMG's button speaks, re-broadcast from the same behaviour and for the
+	 * same reason OnClicked is: the signals existed on UUIButton the whole time and stopped at the
+	 * face, so anything wanting them -- a sound on press, a tooltip on hover -- had to reach past the
+	 * control into a part the control owns.
+	 *
+	 * Press and release are the POINTER's, not the click's: a press that slides off the button
+	 * releases without clicking, which is exactly the distinction a hold-to-charge control needs.
+	 * A disabled button broadcasts none of the press pair (the behaviour gates them).
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Button")
+	FDreamButtonClickedEvent OnPressed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Button")
+	FDreamButtonClickedEvent OnReleased;
+
+	UPROPERTY(BlueprintAssignable, Category = "Button")
+	FDreamButtonClickedEvent OnHovered;
+
+	UPROPERTY(BlueprintAssignable, Category = "Button")
+	FDreamButtonClickedEvent OnUnhovered;
+
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	EDreamUIClickMethod GetClickMethod() const { return ClickMethod; }
+
+	/** Each of the four setters below writes the field and re-pushes it onto the behaviour. */
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetClickMethod(EDreamUIClickMethod InMethod);
+
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	EDreamUITouchMethod GetTouchMethod() const { return TouchMethod; }
+
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetTouchMethod(EDreamUITouchMethod InMethod);
+
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	EDreamUIPressMethod GetPressMethod() const { return PressMethod; }
+
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetPressMethod(EDreamUIPressMethod InMethod);
 
 	virtual void ApplyStyle() override;
 
@@ -93,4 +158,8 @@ protected:
 
 private:
 	void HandleClicked();
+	void HandlePressed();
+	void HandleReleased();
+	void HandleHovered();
+	void HandleUnhovered();
 };

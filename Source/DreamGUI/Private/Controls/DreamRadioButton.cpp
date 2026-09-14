@@ -74,20 +74,29 @@ void UDreamRadioButton::ApplyStyle()
 
 	// The control's own authored size: the box fills it; in an Auto slot the desired-size fallback
 	// reads exactly this. Either brush may state its own drawn size.
-	SizeFace(this, BrushSizeOr(Active.BoxBrush, Active.BoxSize));
+	//
+	// SizeControl for the CONTROL and SizeFace for the part, which is the whole distinction: SizeFace
+	// re-captures the authored rect from live anchors, and a control a panel has already arranged is
+	// holding layout output in those. The dot is a part and has no such history.
+	SizeControl(BrushSizeOr(Active.BoxBrush, Active.BoxSize));
 	SizeFace(DotNode, BrushSizeOr(Active.DotBrush, Active.DotSize));
 
 	if (ToggleBehaviour != nullptr)
 	{
+		// The two spellings, made coherent before either is read: an authored .dui line writes one of
+		// them raw, and everything below is pushed from the pair.
+		ReconcileCheckSpellings();
 		// Without notify: pushing the authored value in is not the user selecting. Value before
 		// colours, so SetOnColor/SetOffColor's immediate application lands on the right state.
-		ToggleBehaviour->SetIsOnWithoutNotify(bIsOn);
+		ToggleBehaviour->SetIsOnWithoutNotify(CheckedState == EDreamCheckState::Checked);
 		// The pointer transition tints the box; the checked one tints the dot. A selectable left
 		// without explicit colours ships white -- these are never optional.
 		PushSelectableState(ToggleBehaviour, Active.BoxNormal, Active.BoxHovered, Active.BoxPressed,
 			Active.BoxDisabled, Active.BoxFocused, Active.TransitionDuration);
 		ToggleBehaviour->SetOnColor(Active.DotChecked);
-		ToggleBehaviour->SetOffColor(Active.DotUnchecked);
+		// Forced: re-pushing the style is exactly when an equal-looking colour must land anyway, and
+		// the guarded path would decline it. Same argument, same word, as the toggle's.
+		PushCheckStateVisuals(true);
 	}
 }
 
@@ -99,10 +108,132 @@ bool UDreamRadioButton::GetIsOn() const
 
 void UDreamRadioButton::SetIsOn(bool bInIsOn)
 {
-	bIsOn = bInIsOn;
-	if (ToggleBehaviour != nullptr)
+	// Through the one true setter, so the two spellings cannot drift no matter which a caller speaks.
+	SetCheckedState(bInIsOn ? EDreamCheckState::Checked : EDreamCheckState::Unchecked);
+}
+
+EDreamCheckState UDreamRadioButton::GetCheckedState() const
+{
+	// The behaviour is the truth for the two states it can hold; Undetermined is the control's own,
+	// and while it stands the behaviour deliberately reads unchecked.
+	if (ToggleBehaviour != nullptr && CheckedState != EDreamCheckState::Undetermined)
 	{
-		ToggleBehaviour->SetValue(bInIsOn);
+		return ToggleBehaviour->GetValue() ? EDreamCheckState::Checked : EDreamCheckState::Unchecked;
+	}
+	return CheckedState;
+}
+
+bool UDreamRadioButton::IsChecked() const
+{
+	return GetCheckedState() == EDreamCheckState::Checked;
+}
+
+void UDreamRadioButton::SetIsChecked(bool bInIsChecked)
+{
+	SetCheckedState(bInIsChecked ? EDreamCheckState::Checked : EDreamCheckState::Unchecked);
+}
+
+void UDreamRadioButton::SetCheckedState(EDreamCheckState InCheckedState)
+{
+	if (ToggleBehaviour == nullptr)
+	{
+		// Not built yet, so this is authoring rather than interaction: store both spellings coherently
+		// and silently. ApplyStyle pushes them once the parts exist, and no event may fire before the
+		// screen they belong to has finished building.
+		CheckedState = InCheckedState;
+		bIsOn = (InCheckedState == EDreamCheckState::Checked);
+		return;
+	}
+
+	if (InCheckedState == EDreamCheckState::Undetermined)
+	{
+		if (CheckedState == EDreamCheckState::Undetermined)
+		{
+			return;
+		}
+		// The behaviour underneath is two-state on purpose and stays that way -- which is also what
+		// keeps the GROUP honest: an undetermined radio reads as not-selected, so it neither holds
+		// the group's selection nor stops a sibling from taking it. Parked WITHOUT notify, because
+		// pushing state is not the user choosing.
+		const bool bWasOn = bIsOn;
+		CheckedState = EDreamCheckState::Undetermined;
+		bIsOn = false;
+		// Visuals BEFORE the value push: the dot's colour rides the OFF colour, so any transition the
+		// push starts must already aim at it.
+		PushCheckStateVisuals();
+		ToggleBehaviour->SetIsOnWithoutNotify(false);
+		OnCheckStateChanged.Broadcast(EDreamCheckState::Undetermined);
+		if (bWasOn)
+		{
+			// The bool projection moved too (true -> false); Unchecked -> Undetermined stays silent on
+			// this spelling because false -> false is not a change.
+			OnToggleChanged.Broadcast(false);
+			OnValueChangedBP.Broadcast(false);
+		}
+		return;
+	}
+
+	const bool bTargetOn = (InCheckedState == EDreamCheckState::Checked);
+	if (ToggleBehaviour->GetValue() != bTargetOn)
+	{
+		// Through the behaviour WITH notify -- the path a click takes, and the only path the toggle
+		// GROUP hears, which is what makes a programmatic selection exclude its siblings. The change
+		// comes back through HandleValueChanged, which owns the translation and both broadcasts.
+		ToggleBehaviour->SetValue(bTargetOn);
+		return;
+	}
+	if (CheckedState != InCheckedState)
+	{
+		// The behaviour already holds the target (Undetermined -> Unchecked: both read false), so no
+		// callback is coming; translate here. The bool spelling did not move, so only the tri-state
+		// event fires.
+		CheckedState = InCheckedState;
+		bIsOn = bTargetOn;
+		PushCheckStateVisuals();
+		OnCheckStateChanged.Broadcast(CheckedState);
+	}
+}
+
+void UDreamRadioButton::ReconcileCheckSpellings()
+{
+	if (bIsOn == (CheckedState == EDreamCheckState::Checked))
+	{
+		// Coherent -- Undetermined counts as false, which is its bool projection.
+		return;
+	}
+	if (CheckedState != EDreamCheckState::Unchecked)
+	{
+		// CheckedState says Checked or Undetermined against a disagreeing bIsOn: the tri-state
+		// spelling wins.
+		bIsOn = (CheckedState == EDreamCheckState::Checked);
+	}
+	else
+	{
+		// bIsOn = true against a still-default Unchecked. Indistinguishable from "only bIsOn was
+		// authored" -- the compatibility path existing .dui takes -- so the bool wins.
+		CheckedState = EDreamCheckState::Checked;
+	}
+}
+
+void UDreamRadioButton::PushCheckStateVisuals(bool bForceOffColour)
+{
+	if (ToggleBehaviour == nullptr)
+	{
+		return;
+	}
+	const FDreamRadioButtonStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::RadioButtonStyle);
+	// While Undetermined stands the behaviour deliberately reads unchecked, so left alone the dot
+	// would wear DotUnchecked -- the "I do not know" state would be indistinguishable from "no".
+	// Aiming the OFF colour at DotChecked is the whole of the third state's appearance here, and it
+	// is the toggle's rule with a dot where the em-dash is. Guarded by default so ordinary two-state
+	// clicks never touch it: SetOffColor applies immediately while the value is off, and an unguarded
+	// push would snap a running uncheck tween dead.
+	const FColor DesiredOff = (CheckedState == EDreamCheckState::Undetermined)
+		? Active.DotChecked
+		: Active.DotUnchecked;
+	if (bForceOffColour || ToggleBehaviour->GetOffColor() != DesiredOff)
+	{
+		ToggleBehaviour->SetOffColor(DesiredOff);
 	}
 }
 
@@ -121,12 +252,41 @@ UUIToggleGroup* UDreamRadioButton::GetToggleGroup() const
 
 void UDreamRadioButton::HandleValueChanged(bool bInIsOn)
 {
-	// The user clicked it, or the group switched it off because a sibling went on. Mirror it back
+	// The user clicked it, or the group switched it off because a sibling went on. The behaviour is
+	// two-state, so the translation is total -- a click while Undetermined arrives here as true and
+	// becomes Checked, which is how the third state is left but never entered. Mirror both spellings
 	// so the property and the behaviour never disagree, then re-broadcast: a consumer binds to this
 	// control, not to a part of it.
+	const EDreamCheckState OldState = CheckedState;
+	CheckedState = bInIsOn ? EDreamCheckState::Checked : EDreamCheckState::Unchecked;
 	bIsOn = bInIsOn;
+	PushCheckStateVisuals();
+	if (CheckedState != OldState)
+	{
+		OnCheckStateChanged.Broadcast(CheckedState);
+	}
 	OnValueChangedBP.Broadcast(bInIsOn), OnToggleChanged.Broadcast(bInIsOn);
 }
+
+#if WITH_EDITOR
+void UDreamRadioButton::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	// Mirror in the direction of the EDIT before the base class re-applies everything: a details panel
+	// writes the property raw, and without this, unticking bIsOn on a Checked radio would lose to the
+	// non-default CheckedState in ReconcileCheckSpellings and snap straight back.
+	const FName PropertyName = PropertyChangedEvent.GetPropertyName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamRadioButton, bIsOn))
+	{
+		CheckedState = bIsOn ? EDreamCheckState::Checked : EDreamCheckState::Unchecked;
+	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamRadioButton, CheckedState))
+	{
+		bIsOn = (CheckedState == EDreamCheckState::Checked);
+	}
+	// The base runs ApplyStyle, which pushes the now-coherent pair to the parts.
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+#endif
 
 // The tag this class answers to in .dui.
 DECLARE_DREAM_GUI_WIDGET("Native", "RadioButton", UDreamRadioButton)

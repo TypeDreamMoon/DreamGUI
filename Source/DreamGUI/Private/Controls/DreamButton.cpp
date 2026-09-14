@@ -79,6 +79,12 @@ void UDreamButton::WireParts()
 		// Its own visual: a button's pointer transition tints the face it is standing on.
 		ButtonBehaviour->SetTransitionTarget(FaceNode->GetVisual());
 		ButtonBehaviour->GetOnClickEvent().AddUObject(this, &UDreamButton::HandleClicked);
+		// The C++ side of all four, never the Blueprint one: a dynamic delegate can only carry a
+		// UFUNCTION with no arguments, and these are the same re-broadcast OnClicked already makes.
+		ButtonBehaviour->GetOnPressedEvent().AddUObject(this, &UDreamButton::HandlePressed);
+		ButtonBehaviour->GetOnReleasedEvent().AddUObject(this, &UDreamButton::HandleReleased);
+		ButtonBehaviour->GetOnHoveredEvent().AddUObject(this, &UDreamButton::HandleHovered);
+		ButtonBehaviour->GetOnUnhoveredEvent().AddUObject(this, &UDreamButton::HandleUnhovered);
 	}
 }
 
@@ -112,6 +118,17 @@ void UDreamButton::ApplyStyle()
 	{
 		PushSelectableState(ButtonBehaviour, Active.Normal, Active.Hovered, Active.Pressed,
 			Active.Disabled, Active.Focused, Active.TransitionDuration);
+		// The three input rules, re-stated on every push like every other knob in this family: they
+		// live on the selectable, and on the TEMPLATE road that selectable is one this control just
+		// added, carrying the library's defaults rather than what this control was authored with.
+		//
+		// FOCUS is deliberately not among them. Whether a widget can take focus is UDreamWidget's own
+		// bIsFocusable, which every widget in this framework carries and UUISelectable::OnRegister
+		// already states for the face it sits on; a control-level copy would be a second answer to
+		// one question, and a member of that name would shadow the base one outright.
+		ButtonBehaviour->SetClickMethod(ClickMethod);
+		ButtonBehaviour->SetTouchMethod(TouchMethod);
+		ButtonBehaviour->SetPressMethod(PressMethod);
 	}
 	// The last-resort height, for a button no panel measures: hung on anchors under a container-less
 	// parent there is nobody to ask the face what it wants, and the widget's own rect is all there
@@ -119,9 +136,58 @@ void UDreamButton::ApplyStyle()
 	SizeControlHeight(Active.Height);
 }
 
+void UDreamButton::SetClickMethod(EDreamUIClickMethod InMethod)
+{
+	ClickMethod = InMethod;
+	if (ButtonBehaviour != nullptr)
+	{
+		// Straight onto the behaviour: nothing about the button's geometry or colours depends on it,
+		// so a whole style push would be work with one line of effect.
+		ButtonBehaviour->SetClickMethod(InMethod);
+	}
+}
+
+void UDreamButton::SetTouchMethod(EDreamUITouchMethod InMethod)
+{
+	TouchMethod = InMethod;
+	if (ButtonBehaviour != nullptr)
+	{
+		ButtonBehaviour->SetTouchMethod(InMethod);
+	}
+}
+
+void UDreamButton::SetPressMethod(EDreamUIPressMethod InMethod)
+{
+	PressMethod = InMethod;
+	if (ButtonBehaviour != nullptr)
+	{
+		ButtonBehaviour->SetPressMethod(InMethod);
+	}
+}
+
 void UDreamButton::HandleClicked()
 {
 	OnClicked.Broadcast();
+}
+
+void UDreamButton::HandlePressed()
+{
+	OnPressed.Broadcast();
+}
+
+void UDreamButton::HandleReleased()
+{
+	OnReleased.Broadcast();
+}
+
+void UDreamButton::HandleHovered()
+{
+	OnHovered.Broadcast();
+}
+
+void UDreamButton::HandleUnhovered()
+{
+	OnUnhovered.Broadcast();
 }
 
 // The tag this class answers to in .dui.

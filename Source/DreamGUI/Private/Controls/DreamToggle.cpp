@@ -78,6 +78,12 @@ void UDreamToggle::WireParts()
 	ToggleBehaviour->SetTransitionTarget(BoxNode != nullptr ? BoxNode->GetVisual() : nullptr);
 	ToggleBehaviour->SetToggleTransitionTarget(TickNode != nullptr ? TickNode->GetVisual() : nullptr);
 	ToggleBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamToggle::HandleValueChanged);
+	// The pointer moments, re-broadcast at the control the way the value change is: a consumer binds
+	// to this control, never to the behaviour sitting on one of its parts.
+	ToggleBehaviour->GetOnPressedEvent().AddUObject(this, &UDreamToggle::HandlePressed);
+	ToggleBehaviour->GetOnReleasedEvent().AddUObject(this, &UDreamToggle::HandleReleased);
+	ToggleBehaviour->GetOnHoveredEvent().AddUObject(this, &UDreamToggle::HandleHovered);
+	ToggleBehaviour->GetOnUnhoveredEvent().AddUObject(this, &UDreamToggle::HandleUnhovered);
 }
 
 void UDreamToggle::ApplyStyle()
@@ -90,7 +96,12 @@ void UDreamToggle::ApplyStyle()
 	SkinFace(BoxNode, Active.BoxBrush);
 	// The control's own authored size: the box fills it, and in an Auto slot this is what the
 	// desired-size fallback reads. The background brush may state its own drawn size.
-	SizeFace(this, BrushSizeOr(Active.BoxBrush, Active.BoxSize));
+	//
+	// SizeControl, never SizeFace: SizeFace re-captures the whole authored rect from the widget's
+	// LIVE anchors, which for a control a panel has already arranged is layout output -- enshrining
+	// it as the restore target, on every restyle. That helper is for PARTS; SizeControl syncs the
+	// slot's desired-size snapshot and leaves the authored rect alone (see its own note).
+	SizeControl(BrushSizeOr(Active.BoxBrush, Active.BoxSize));
 	if (UDreamText* TickText = TickNode != nullptr ? Cast<UDreamText>(TickNode->GetVisual()) : nullptr)
 	{
 		// A glyph, sized by the style's tick height; its colour is the checked transition's to give.
@@ -106,6 +117,17 @@ void UDreamToggle::ApplyStyle()
 		// where is the whole of what this control decides.
 		PushSelectableState(ToggleBehaviour, Active.BoxNormal, Active.BoxHovered, Active.BoxPressed,
 			Active.BoxDisabled, Active.BoxFocused, Active.TransitionDuration);
+		// The three input rules, re-stated on every push: they live on the selectable, and on the
+		// TEMPLATE road that selectable is one this control just added, carrying the library's
+		// defaults rather than what this control was authored with.
+		//
+		// FOCUS is deliberately not among them. Whether a widget can take focus is UDreamWidget's own
+		// bIsFocusable, which every widget in this framework carries and UUISelectable::OnRegister
+		// already states for the box it sits on; a control-level copy would be a second answer to one
+		// question, and a member of that name would shadow the base one outright.
+		ToggleBehaviour->SetClickMethod(ClickMethod);
+		ToggleBehaviour->SetTouchMethod(TouchMethod);
+		ToggleBehaviour->SetPressMethod(PressMethod);
 		ToggleBehaviour->SetOnColor(Active.TickChecked);
 		PushCheckStateVisuals(true);
 	}
@@ -224,6 +246,54 @@ void UDreamToggle::HandleValueChanged(bool bInIsOn)
 	}
 	OnToggleChanged.Broadcast(bInIsOn);
 	OnValueChangedBP.Broadcast(bInIsOn);
+}
+
+void UDreamToggle::SetClickMethod(EDreamUIClickMethod InMethod)
+{
+	ClickMethod = InMethod;
+	if (ToggleBehaviour != nullptr)
+	{
+		// Straight onto the behaviour: nothing about the box's geometry or colours depends on it.
+		ToggleBehaviour->SetClickMethod(InMethod);
+	}
+}
+
+void UDreamToggle::SetTouchMethod(EDreamUITouchMethod InMethod)
+{
+	TouchMethod = InMethod;
+	if (ToggleBehaviour != nullptr)
+	{
+		ToggleBehaviour->SetTouchMethod(InMethod);
+	}
+}
+
+void UDreamToggle::SetPressMethod(EDreamUIPressMethod InMethod)
+{
+	PressMethod = InMethod;
+	if (ToggleBehaviour != nullptr)
+	{
+		ToggleBehaviour->SetPressMethod(InMethod);
+	}
+}
+
+void UDreamToggle::HandlePressed()
+{
+	OnPressed.Broadcast();
+}
+
+void UDreamToggle::HandleReleased()
+{
+	OnReleased.Broadcast();
+}
+
+void UDreamToggle::HandleHovered()
+{
+	OnHovered.Broadcast();
+}
+
+void UDreamToggle::HandleUnhovered()
+{
+	OnUnhovered.Broadcast();
 }
 
 void UDreamToggle::ReconcileCheckSpellings()

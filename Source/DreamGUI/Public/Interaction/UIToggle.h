@@ -108,11 +108,33 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle")
 	FDreamUIEventDelegate OnValueChanged = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::Bool);
 
+	/**
+	 * The four pointer moments, in C++ only.
+	 *
+	 * UUIButton has carried these since it was written and this class never did, which is why
+	 * UDreamToggle could speak about a value changing and about nothing else -- no hover, no press.
+	 * C++ rather than Blueprint delegates for the reason UUIButton's hover pair states: a native
+	 * control wires its parts from C++ and a dynamic delegate can only carry an argument-less
+	 * UFUNCTION, so the Blueprint surface belongs to the CONTROL, which re-broadcasts these.
+	 */
+	FSimpleMulticastDelegate OnHoveredCPP;
+	FSimpleMulticastDelegate OnUnhoveredCPP;
+	FSimpleMulticastDelegate OnPressedCPP;
+	FSimpleMulticastDelegate OnReleasedCPP;
+
 	void SetValue(bool Value, bool SendCallback);
 	void ApplyValueToVisual(bool ImmediateSet);
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerEnter_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
 public:
 	FDreamUIMulticastDelegateBool& GetOnValueChangedEvent(){ return OnValueChangedCPP;}
+	FSimpleMulticastDelegate& GetOnHoveredEvent(){ return OnHoveredCPP; }
+	FSimpleMulticastDelegate& GetOnUnhoveredEvent(){ return OnUnhoveredCPP; }
+	FSimpleMulticastDelegate& GetOnPressedEvent(){ return OnPressedCPP; }
+	FSimpleMulticastDelegate& GetOnReleasedEvent(){ return OnReleasedCPP; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	UDreamVisual* GetToggleTransitionTarget()const { return ToggleTransitionTarget.Get(); }
