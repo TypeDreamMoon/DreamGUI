@@ -828,7 +828,14 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			//use a copied view. 
 			//NOTE!!! world-space and screen-space must use different 'RenderView' (actually different ViewUniformBuffer), because RDG is async. 
 			//if use same one, after world-space when modify 'RenderView' for screen-space, the screen-space ViewUniformBuffer will be applyed to world-space
-			FSceneView* RenderView = new FSceneView(InView);
+			//
+			// Owned by the GRAPH, not by a pass. The draw passes below take FRHICommandList&, so the graph is
+			// free to record them on task threads -- and it does, asynchronously, after the passes that need
+			// the immediate list have already run on the render thread. A closing pass that deleted this view
+			// therefore ran BEFORE the draws that read it: they bound a View uniform buffer that had just been
+			// released to null, and the RHI thread dereferenced it a moment later. An object the graph
+			// allocated is destroyed by the graph's own deleter, whose prerequisites are those very tasks.
+			FSceneView* RenderView = GraphBuilder.AllocObject<FSceneView>(InView);
 			auto GlobalShaderMap = GetGlobalShaderMap(RenderView->GetFeatureLevel());
 
 			const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)InView.Family)->GetSceneTextures();
@@ -1052,14 +1059,6 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 #if WITH_EDITOR
 			RenderGizmoMesh_RenderThread(WorldSpaceGizmoMeshArray, GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif
-			GraphBuilder.AddPass(
-				RDG_EVENT_NAME("DreamUI_RenderWorld_Clean"),
-				ERDGPassFlags::None,
-				[RenderView](FRHICommandListImmediate& RHICmdList)
-				{
-					RenderView->ViewUniformBuffer.SafeRelease();
-					delete RenderView;
-				});
 		}
 	}
 
@@ -1135,7 +1134,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		//use a copied view. 
 		//NOTE!!! world-space and screen-space must use different 'RenderView' (actually different ViewUniformBuffer), because RDG is not immediately execute. 
 		//if use same one, after world-space when modify 'RenderView' for screen-space, the screen-space ViewUniformBuffer will be applyed to world-space
-		FSceneView* RenderView = new FSceneView(InView);
+		//owned by the graph for the same reason as the world-space copy above: a pass must not free what a parallel pass still reads
+		FSceneView* RenderView = GraphBuilder.AllocObject<FSceneView>(InView);
 		auto GlobalShaderMap = GetGlobalShaderMap(RenderView->GetFeatureLevel());
 
 		RenderView->SceneViewInitOptions.ViewOrigin = RenderThreadViewParameter.ViewOrigin;
@@ -1418,15 +1418,6 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			//restore for anything after this block (the MSAA resolve reads it, and it must be the full rect)
 			ViewRect = UnscaledScreenSpaceViewRect;
 		}
-
-		GraphBuilder.AddPass(
-			RDG_EVENT_NAME("DreamUI_RenderScreen_Clean"),
-			ERDGPassFlags::None,
-			[RenderView](FRHICommandListImmediate& RHICmdList)
-			{
-				RenderView->ViewUniformBuffer.SafeRelease();
-				delete RenderView;
-			});
 
 		//no SafeRelease here any more: the graph holds its own reference (see where it is registered),
 		//and dropping ours mid-recording is what let another view claim the same pool element
