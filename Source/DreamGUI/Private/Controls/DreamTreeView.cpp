@@ -470,6 +470,31 @@ void UDreamTreeView::SetItemDepths(const TArray<int32>& InDepths)
 	RebuildRows();
 }
 
+void UDreamTreeView::SetCollapsedItems(const TSet<int32>& InCollapsed)
+{
+	CollapsedItems = InCollapsed;
+	// A tree whose folds moved without its rows moving is a tree lying about where its items are, and
+	// a raw write onto the set was picked up only on the next rebuild -- which is exactly the
+	// difference between a property and a setter.
+	RebuildRows();
+}
+
+void UDreamTreeView::SetOrientation(EDreamPanelOrientation InOrientation)
+{
+	// Clamped rather than silently ignored: the property and the layout must never disagree about
+	// which way this control runs, and a write that "took" but did nothing is exactly that
+	// disagreement. See the header for why a tree has no horizontal form.
+	Super::SetOrientation(EDreamPanelOrientation::Vertical);
+}
+
+void UDreamTreeView::SetStyle(const FDreamTreeViewStyle& InStyle)
+{
+	Style = InStyle;
+	// The indent per level and the twisty's size are both style and both decide where a row's content
+	// starts, so this is a rebuild rather than a repaint.
+	ApplyStyle();
+}
+
 FDreamListStyle UDreamTreeView::ResolveListStyle() const
 {
 	// The list half of the tree's own style -- the reason FDreamTreeViewStyle embeds a whole
