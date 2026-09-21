@@ -13,6 +13,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
 #include "UObject/Package.h"
+#include "UObject/UnrealType.h"//FArrayProperty / FScriptArrayHelper: the only way to put a hole in Children
 
 /*
  * A hierarchy instantiated from a CLASS rather than read back from a blob.
@@ -62,6 +63,31 @@ namespace DreamUserWidgetTestLocal
 		Mismatched->TrySetParent(Root, false);
 
 		return Tree;
+	}
+
+	/**
+	 * A null entry in a widget's Children, put there the way the engine puts one there.
+	 *
+	 * Children is an Instanced UPROPERTY, so this is a state the collector and the Blueprint
+	 * reinstancer both produce -- an entry whose widget was destroyed while something else still held
+	 * the array -- and one no public API can, which is why this goes through reflection.
+	 */
+	void PunchAHoleInChildren(UDreamWidget* InWidget)
+	{
+		FArrayProperty* ChildrenProperty = FindFProperty<FArrayProperty>(UDreamWidget::StaticClass(), TEXT("Children"));
+		check(ChildrenProperty != nullptr);
+		FScriptArrayHelper Helper(ChildrenProperty, ChildrenProperty->ContainerPtrToValuePtr<void>(InWidget));
+		Helper.AddValue();
+	}
+
+	int32 CountHolesInChildren(const UDreamWidget* InWidget)
+	{
+		int32 Holes = 0;
+		for (const UDreamWidget* Child : InWidget->GetChildren())
+		{
+			Holes += Child == nullptr ? 1 : 0;
+		}
+		return Holes;
 	}
 }
 
@@ -328,6 +354,66 @@ bool FDreamUserWidgetRebuildsFromRecompiledClassTest::RunTest(const FString& Par
 		UserWidget->Header != nullptr && UserWidget->Header->IsIn(UserWidget->GetWidgetTree()));
 
 	UserWidget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUserWidgetRebuildSurvivesHolesTest,
+	"DreamGUI.UserWidget.ARebuildStepsOverTheHolesAReinstancedCopyArrivesWith",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUserWidgetRebuildSurvivesHolesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUserWidgetTestLocal;
+	FScopedGameWorld TestWorld;
+
+	// The editor died here, one tick after Compile with a designer open:
+	//
+	//   UDreamWidget::CollectChildrenWidgets  <-  RegisterDreamWidgetHierarchy
+	//   <-  UDreamUserWidget::ReinitializeFromArchetype  <-  UDreamUIManagerObject::OnBlueprintCompiled
+	//
+	// The reinstancer's copy of the preview widget shares the original's children. The designer tears
+	// the ORIGINAL down rather than adopting the copy, which destroys those children, and the
+	// collection that ends the compile nulls the copy's entries. What the post-compile scan then finds
+	// is a never-initialized widget, no tree, and an array whose only entry is a hole.
+	TStrongObjectPtr<UDreamWidgetTree> Template(BuildTemplate(GetTransientPackage()));
+	TStrongObjectPtr<UDreamUserWidgetBindFixture> Copy(
+		NewObject<UDreamUserWidgetBindFixture>(TestWorld.World, UDreamUserWidgetBindFixture::StaticClass()));
+	PunchAHoleInChildren(Copy.Get());
+	if (!TestEqual(TEXT("the fixture really holds a hole"), CountHolesInChildren(Copy.Get()), 1))
+	{
+		return false;
+	}
+	TestEqual(TEXT("which the array counts as an entry"), Copy->GetChildrenCount(), 1);
+
+	// A hole is not contents: there is nothing on screen to repair, and nobody owns this copy.
+	TestFalse(TEXT("so the copy is not something the post-compile scan should rebuild"), Copy->NeedsReinitializeFromClass());
+
+	// The walk registration, the compiler, the write-back and the editor tools all share.
+	{
+		TArray<UDreamWidget*> Collected;
+		UDreamWidget::CollectChildrenWidgets(Copy.Get(), Collected, /*IncludeTarget*/true);
+		TestEqual(TEXT("the shared walk steps over the hole and still reports the widget itself"), Collected.Num(), 1);
+
+		TArray<UDreamWidget*> FromNothing;
+		UDreamWidget::CollectChildrenWidgets(nullptr, FromNothing, /*IncludeTarget*/true);
+		TestEqual(TEXT("and asked to start from nothing, collects nothing"), FromNothing.Num(), 0);
+	}
+
+	// And the rebuild itself, which a direct caller can still ask for. This is the call that took the
+	// editor down: it skipped the hole, left it in the array, and registered straight through it.
+	AddExpectedError(TEXT("matches property 'Mismatched'"), EAutomationExpectedErrorFlags::Contains, 0);
+	Copy->ReinitializeFromArchetype(Template.Get());
+
+	if (!TestNotNull(TEXT("the rebuild went through and gave it a tree"), Copy->GetWidgetTree()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("no hole is left behind"), CountHolesInChildren(Copy.Get()), 0);
+	TestEqual(TEXT("and the rebuilt root is the only thing under it"), Copy->GetChildrenCount(), 1);
+	TestNotNull(TEXT("which is the content root"), Copy->GetContentRoot());
+
+	Copy->DestroyWidget();
 	return true;
 }
 

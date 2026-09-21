@@ -488,10 +488,26 @@ bool UDreamUserWidget::NeedsReinitializeFromClass() const
 	// The signature of a reinstanced survivor: contents underneath, no tree to call them, and no
 	// record of ever having been initialized. A widget that simply has not been initialized yet has
 	// no children either, which is what keeps this from firing on one.
-	return !bInitialized
-		&& !IsValid(WidgetTree)
-		&& !IsTemplate()
-		&& GetChildrenCount() > 0
+	if (bInitialized || IsValid(WidgetTree) || IsTemplate())
+	{
+		return false;
+	}
+	// LIVE contents, which is not the same as a non-empty array. The reinstancer's copy shares the
+	// original's children; when the original's owner tears it down instead of adopting the copy --
+	// the designer's preview host does exactly that -- those children are destroyed, and the next
+	// collection leaves the copy holding nulls. Such a copy has nothing on screen to repair and nobody
+	// who owns it: counting its holes as contents sent it through a rebuild that then registered a
+	// hierarchy for an orphan, and the first walk over the array fell into the hole.
+	bool bHasLiveContents = false;
+	for (const UDreamWidget* Child : GetChildren())
+	{
+		if (IsValid(Child))
+		{
+			bHasLiveContents = true;
+			break;
+		}
+	}
+	return bHasLiveContents
 		&& UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(GetClass()) != nullptr;
 }
 
@@ -536,6 +552,12 @@ void UDreamUserWidget::ReinitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// Through whichever door matches the widget's state, the same pair AttachNamedSlotContent uses on
 	// the way back in: SetParentBeforeRegister asserts !bIsRegistered, and the host content of a LIVE
 	// instance -- which is every instance this function exists for -- is registered.
+	//
+	// Holes first. A reinstanced copy can arrive with null entries where destroyed children were (see
+	// NeedsReinitializeFromClass), the two loops below skip what is not valid and so would leave them
+	// in place, and everything after this -- instancing, slot adoption, registration -- walks the
+	// array assuming each entry is a widget.
+	EnsureUIChildrenValid();
 	const TArray<UDreamWidget*> PreviousChildren = GetChildren();
 	for (UDreamWidget* Child : PreviousChildren)
 	{
@@ -558,6 +580,11 @@ void UDreamUserWidget::ReinitializeFromArchetype(UDreamWidgetTree* InArchetype)
 			Child->DestroyWidget();
 		}
 	}
+	// And again, for what the loop above just produced. A reinstanced copy's children arrive without
+	// their Parent link (it is DuplicateTransient), so a child destroyed here cannot take itself out of
+	// this array the way a properly attached one does -- it stays behind as a garbage entry, ahead of
+	// the root the rebuild is about to append.
+	EnsureUIChildrenValid();
 
 	// Back to the pre-Initialize state, then through the ordinary road: the archetype is instanced,
 	// the by-name bindings resolve against it, and the host's slot content is re-attached.

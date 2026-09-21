@@ -13,6 +13,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/DreamUIManager.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
@@ -26,6 +27,7 @@
 #include "EdGraph/EdGraph.h"
 #include "K2Node_FunctionEntry.h"
 #include "UObject/UObjectIterator.h"
+#include "UObject/UnrealType.h"//FArrayProperty / FScriptArrayHelper, to put a hole in Children
 
 #include "Editor.h"
 #include "Framework/Application/SlateApplication.h"
@@ -64,7 +66,12 @@ namespace DreamDesignerEditingTestLocal
 		UDreamWidgetBlueprint* Blueprint = nullptr;
 		FDreamWidgetBlueprintEditor* Designer = nullptr;
 
-		explicit FScopedDesigner(const TCHAR* InName)
+		/**
+		 * @param bGiveRootAPanel  false builds what the New Widget Blueprint dialog builds when its
+		 *                         root-panel picker is answered with None: a root widget, and no layout
+		 *                         container on it.
+		 */
+		explicit FScopedDesigner(const TCHAR* InName, bool bGiveRootAPanel = true)
 		{
 			Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InName));
 			Package->AddToRoot();
@@ -77,8 +84,11 @@ namespace DreamDesignerEditingTestLocal
 			}
 			UDreamWidgetTree* Tree = Blueprint->GetOrCreateWidgetTree();
 			Tree->RootWidget->SetDisplayName(TEXT("Root"));
-			// A panel on the root, so it can accept children at all.
-			Tree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerCanvasPanel::StaticClass());
+			if (bGiveRootAPanel)
+			{
+				// A panel on the root, so it can accept children at all.
+				Tree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerCanvasPanel::StaticClass());
+			}
 			FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
 
 			GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
@@ -1817,6 +1827,105 @@ bool FDreamDesignerSelectionHandoverTest::RunTest(const FString&)
 		return false;
 	}
 	TestEqual(TEXT("and it is the one asked for from inside the broadcast"), Selected[0].Get(), SecondPreview);
+	return true;
+}
+
+/*
+ * The New Widget Blueprint dialog, answered with None for the root panel, then Compile with the
+ * designer open. The editor died on the next tick:
+ *
+ *   UDreamWidget::CollectChildrenWidgets  <-  RegisterDreamWidgetHierarchy
+ *   <-  UDreamUserWidget::ReinitializeFromArchetype  <-  UDreamUIManagerObject::OnBlueprintCompiled
+ *
+ * The compile here collects garbage, as the toolbar button's does -- every other compile in this file
+ * skips it, which is exactly why none of them ever reached this. And the manager is ticked by hand,
+ * because the repair it queues runs from its tick and an automation test has no editor loop.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRecompileWithAPanellessRootTest,
+	"DreamGUI.Designer.RecompilingWithTheDesignerOpenSurvivesARootThatHasNoPanel",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerRecompileWithAPanellessRootTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerPanellessRootRecompile"), /*bGiveRootAPanel*/false);
+	if (!TestNotNull(TEXT("A designer opened on the blueprint"), Scoped.Designer))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("The asset has a root"), Scoped.TemplateRoot());
+	TestNull(TEXT("and the root carries no panel"), Scoped.TemplateRoot() != nullptr ? Scoped.TemplateRoot()->GetLayoutContainer() : nullptr);
+
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::None);
+
+	// What the post-compile scan met in the editor, built by hand so it does not depend on which of the
+	// reinstancer's leftovers happens to survive the collection in a headless run: an instance of the
+	// GENERATED class -- so the class does have a hierarchy to rebuild from -- that was never
+	// initialized, has no tree, and holds a hole where a destroyed child was.
+	UDreamUserWidget* Husk = NewObject<UDreamUserWidget>(GetTransientPackage(), Scoped.Blueprint->GeneratedClass, NAME_None, RF_Transient);
+	{
+		FArrayProperty* ChildrenProperty = FindFProperty<FArrayProperty>(UDreamWidget::StaticClass(), TEXT("Children"));
+		if (!TestNotNull(TEXT("UDreamWidget::Children is still reflected"), ChildrenProperty))
+		{
+			return false;
+		}
+		FScriptArrayHelper Helper(ChildrenProperty, ChildrenProperty->ContainerPtrToValuePtr<void>(Husk));
+		Helper.AddValue();
+	}
+	TestEqual(TEXT("The copy's array has an entry"), Husk->GetChildrenCount(), 1);
+	TestFalse(TEXT("but an entry that is a hole is not contents, so the scan leaves the copy alone"), Husk->NeedsReinitializeFromClass());
+
+	UDreamUIManagerObject* Manager = UDreamUIManagerObject::GetInstance(true);
+	if (!TestNotNull(TEXT("The editor-side manager exists"), Manager))
+	{
+		return false;
+	}
+	// Twice: the repair is queued for the tick after the compile, and the refresh it ends with queues
+	// work of its own for the one after that.
+	Manager->Tick(0.016f);
+	Manager->Tick(0.016f);
+	FSlateApplication::Get().Tick();
+
+	// Still here. What is left to say is that the designer came through with something to show. The
+	// compile only INVALIDATES the preview; the toolkit's own tick is what rebuilds it, and a headless
+	// run has no such tick, so ask for the rebuild the way that tick would.
+	Scoped.Rebuild();
+	TestNotNull(TEXT("The preview has a root again after the recompile"), Scoped.PreviewRoot());
+
+	// A direct caller may still ask the copy to rebuild, and that is the call the editor died in: it
+	// skipped the hole, left it in the array, and registered the hierarchy straight through it.
+	Husk->ReinitializeFromClass();
+	{
+		int32 HuskHoles = 0;
+		for (const UDreamWidget* Child : Husk->GetChildren())
+		{
+			HuskHoles += Child == nullptr ? 1 : 0;
+		}
+		TestEqual(TEXT("The rebuilt copy holds no hole"), HuskHoles, 0);
+		TestNotNull(TEXT("and it has the class's hierarchy under it"), Husk->GetWidgetTree());
+	}
+	Husk->DestroyWidget();
+
+	// No live user widget may be left holding a hole where a child was: that hole is what the walk
+	// fell into, and any other walk over the same array would fall into it the same way.
+	int32 HolesFound = 0;
+	for (TObjectIterator<UDreamUserWidget> It; It; ++It)
+	{
+		if (!IsValid(*It) || It->IsTemplate())
+		{
+			continue;
+		}
+		for (const UDreamWidget* Child : It->GetChildren())
+		{
+			if (Child == nullptr)
+			{
+				++HolesFound;
+			}
+		}
+	}
+	TestEqual(TEXT("No live user widget holds a null child"), HolesFound, 0);
 	return true;
 }
 

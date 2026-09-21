@@ -229,11 +229,25 @@ void UDreamWidget::Call_SiblingIndexChanged()
 
 void UDreamWidget::CollectChildrenWidgets(UDreamWidget* Target, TArray<UDreamWidget*>& OutAllChildrenWidgets, bool IncludeTarget)
 {
+	// A hole in Children is an ordinary state, not a corrupt one. Children is an Instanced UPROPERTY,
+	// so the collector nulls an entry whose widget was destroyed (DestroyWidget marks the subtree as
+	// garbage) while something else still held the array -- which is exactly what a Blueprint recompile
+	// produces: the reinstancer's copy of a live widget shares the original's children, the original is
+	// torn down, and the copy is left holding nulls. This walk used to follow them, and because it is
+	// the walk RegisterDreamWidgetHierarchy, the compiler, the write-back and the editor tools all
+	// share, one hole anywhere took the editor down from whichever of them ran first.
+	//
+	// IsValid rather than a null test: a widget already marked as garbage is on its way out, and no
+	// caller of this wants to register, compile or write back something that is being destroyed.
+	if (!IsValid(Target))
+	{
+		return;
+	}
 	if (IncludeTarget)
 	{
 		OutAllChildrenWidgets.Add(Target);
 	}
-	for (auto& Child : Target->GetChildren())
+	for (UDreamWidget* Child : Target->GetChildren())
 	{
 		CollectChildrenWidgets(Child, OutAllChildrenWidgets, true);
 	}
