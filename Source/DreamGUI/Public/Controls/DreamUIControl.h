@@ -97,12 +97,30 @@ public:
 	void OnControlReady();
 
 	/** See EDreamUIStyleSource: the sheet is the default because one-place-changes-all is the point. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Style")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyleSource", BlueprintSetter = "SetStyleSource", Category = "Style")
 	EDreamUIStyleSource StyleSource = EDreamUIStyleSource::ProjectStyleSheet;
 
 	/** Named entry in the sheet ("Danger", "Compact"); none means the family default. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Style", meta = (EditCondition = "StyleSource == EDreamUIStyleSource::ProjectStyleSheet"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyleVariant", BlueprintSetter = "SetStyleVariant", Category = "Style", meta = (EditCondition = "StyleSource == EDreamUIStyleSource::ProjectStyleSheet"))
 	FName StyleVariant;
+
+	UFUNCTION(BlueprintPure, Category = "Style")
+	EDreamUIStyleSource GetStyleSource() const { return StyleSource; }
+
+	/**
+	 * Where the look comes from, at runtime. Re-pushes, because a style that changed source without
+	 * re-resolving would be a property whose whole effect is invisible until something else happens
+	 * to push -- which is the failure this family's setters exist to prevent.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Style")
+	void SetStyleSource(EDreamUIStyleSource InStyleSource);
+
+	UFUNCTION(BlueprintPure, Category = "Style")
+	FName GetStyleVariant() const { return StyleVariant; }
+
+	/** Which named entry of the sheet. Re-pushes, for the reason above. */
+	UFUNCTION(BlueprintCallable, Category = "Style")
+	void SetStyleVariant(FName InStyleVariant);
 
 	/**
 	 * A hierarchy to use INSTEAD of the one this control builds for itself -- WPF's ControlTemplate.
@@ -256,6 +274,48 @@ protected:
 		InSelectable->SetAnimDuration(InDuration);
 	}
 
+	/**
+	 * Let InSelectable's state decide what InFaceNode is SKINNED with, not only what it is tinted.
+	 *
+	 * Call once, from WireParts, and then push a group from ApplyStyle. What arrives afterwards is
+	 * the selectable's own state report (see UUISelectable::GetOnSelectionStateChangedEvent) -- there
+	 * is still exactly one state machine, and this is a listener on it rather than a second one
+	 * watching the pointer. Re-binding is safe: the previous binding is dropped first, so a control
+	 * initialized twice does not paint twice.
+	 *
+	 * InForegroundNode is the control's OWN label or glyph, and null is the honest answer for a
+	 * control whose text belongs to whoever filled its hole.
+	 */
+	void UseStateFaces(UUISelectable* InSelectable, UDreamWidget* InFaceNode, UDreamWidget* InForegroundNode = nullptr);
+
+	/**
+	 * The group in effect, and what an unstated state falls back to -- which is the control's own
+	 * single brush, so a style that states nothing here keeps drawing exactly what it drew.
+	 *
+	 * Paints the CURRENT state at once rather than waiting for the next transition: a style push
+	 * happens while a control is already hovered often enough (an editor property edit, a re-push
+	 * after content arrives) that deferring would show the wrong face until the pointer moved.
+	 */
+	void PushStateFaces(const FDreamUIStateFaces& InFaces, const FDreamUIFaceBrush& InFallbackBrush);
+
+	/**
+	 * The padding the face rests at, so the group's PressedPadding has something to alternate WITH.
+	 * Only for a control whose face measures with one; the rest simply never call it.
+	 */
+	void UseStateFacePadding(const FMargin& InNormalPadding);
+
+	/**
+	 * Multiplied over whichever face brush a state chooses -- the runtime background tint, where the
+	 * brush's own Tint is the authored one. White is no opinion, which is where it starts.
+	 */
+	void SetStateFaceTint(FColor InTint);
+
+	/** The face brush a state shows: its own when it holds an image, else Normal's, else the fallback. */
+	const FDreamUIFaceBrush& ResolveStateBrush(EUISelectableSelectionState InState) const;
+
+	/** What the state faces are currently painting, for a subclass that has to re-push after a swap. */
+	void RefreshStateFace();
+
 	/** InNode's T, added if whoever drew this tree did not put one there. */
 	template<class T>
 	static T* EnsureComponent(UDreamWidget* InNode)
@@ -391,6 +451,23 @@ protected:
 		}
 	}
 
+	/**
+	 * Two colours multiplied -- an authored look and a runtime tint over it. White on either side is
+	 * the identity, exactly, which is what lets a tint default to "no opinion".
+	 *
+	 * Shared because the pattern is: the STYLE says what a part looks like and game code says what
+	 * is happening to it right now ("this button goes red while the timer runs out"), and the two
+	 * have to compose rather than overwrite each other.
+	 */
+	static FColor TintOver(const FColor& InBase, const FColor& InTint)
+	{
+		return FColor(
+			static_cast<uint8>(static_cast<int32>(InBase.R) * static_cast<int32>(InTint.R) / 255),
+			static_cast<uint8>(static_cast<int32>(InBase.G) * static_cast<int32>(InTint.G) / 255),
+			static_cast<uint8>(static_cast<int32>(InBase.B) * static_cast<int32>(InTint.B) / 255),
+			static_cast<uint8>(static_cast<int32>(InBase.A) * static_cast<int32>(InTint.A) / 255));
+	}
+
 	/** The brush's drawn size when it states one, the style's size otherwise -- Slate's ImageSize rule. */
 	static FVector2D BrushSizeOr(const FDreamUIFaceBrush& InBrush, const FVector2D& InStyleSize)
 	{
@@ -451,4 +528,39 @@ protected:
 		ApplyStyle();
 	}
 #endif
+
+private:
+	/** What the state faces paint, what they tint, and what reports the state. All null until used. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> StateFaceNode = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> StateForegroundNode = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UUISelectable> StateFaceSelectable = nullptr;
+
+	UPROPERTY(Transient)
+	FDreamUIStateFaces StateFaces;
+
+	/** The control's own single brush: what a state with nothing of its own falls back to. */
+	UPROPERTY(Transient)
+	FDreamUIFaceBrush StateFaceFallback;
+
+	UPROPERTY(Transient)
+	FColor StateFaceTint = FColor::White;
+
+	UPROPERTY(Transient)
+	FMargin StateFaceNormalPadding = FMargin(0.0f);
+
+	/** Whether a resting padding was ever stated. Without one PressedPadding has nothing to return to. */
+	UPROPERTY(Transient)
+	bool bStateFacePaddingStated = false;
+
+	/** The last state reported, so a style push can repaint the face the control is actually in. */
+	UPROPERTY(Transient)
+	EUISelectableSelectionState StateFaceState = EUISelectableSelectionState::Normal;
+
+	/** The listener. Paints the brush, the foreground and the padding for InState. */
+	void HandleSelectionStateChanged(EUISelectableSelectionState InState, bool bInImmediate);
 };
