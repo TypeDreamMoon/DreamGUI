@@ -10,7 +10,8 @@
 
 bool UDreamUINavigationStack::ShouldCreateSubsystem(UObject* Outer) const
 {
-	return !IsRunningCommandlet() && Super::ShouldCreateSubsystem(Outer);
+	//same gate as the other UI subsystems: nothing navigates on a dedicated server
+	return !IsRunningCommandlet() && !IsRunningDedicatedServer() && Super::ShouldCreateSubsystem(Outer);
 }
 
 void UDreamUINavigationStack::Deinitialize()
@@ -44,6 +45,10 @@ void UDreamUINavigationStack::PushScope(UDreamUINavigationScope* InScope)
 		if (Outgoing != InScope)
 		{
 			Outgoing->RememberFocus(GetFocusedSelectable(this, UserIndex));
+			// Being covered is being deactivated. A page that dims itself, stops an animation or drops a
+			// poll while a dialog is in front of it had no way to hear about that: the notification only
+			// covered "I was popped", so the other three of CommonUI's four cases went unreported.
+			Outgoing->NotifyScopeDeactivated();
 		}
 	}
 
@@ -79,6 +84,13 @@ void UDreamUINavigationStack::PopScope(UDreamUINavigationScope* InScope)
 	InScope->NotifyScopeDeactivated();
 	if (bWasOnTop)
 	{
+		// Uncovered is activated: whatever was underneath is the screen in front now. Told before focus
+		// is restored, so a handler that re-targets focus in response is honoured rather than overwritten
+		// by the restore a line later.
+		if (UDreamUINavigationScope* Incoming = GetActiveScope(UserIndex))
+		{
+			Incoming->NotifyScopeActivated();
+		}
 		RestoreFocusForTopScope(UserIndex);
 	}
 }

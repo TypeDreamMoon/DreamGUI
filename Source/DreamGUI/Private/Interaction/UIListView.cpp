@@ -29,7 +29,14 @@ void UUIListEntry::Assign(UUIListView* InOwner, UObject* InItem, int32 InIndex, 
 
 void UUIListView::Awake()
 {
-	DataSource = this;
+	// The list view is its own default data source (the Items array), but only when nothing
+	// external claimed the seat first: an `each` block's adapter is wired at widget
+	// initialization, BEFORE Awake, and an unconditional self-assign here silently threw that
+	// adapter away -- lists fed by `each` stayed empty while every gate upstream was green.
+	if (!IsValid(DataSource))
+	{
+		DataSource = this;
+	}
 	bInfiniteLoop = false;
 	if (GetWidget())
 	{
@@ -154,6 +161,14 @@ void UUIListView::SetItemSelection(UObject* Item, bool bSelected, bool bClearOth
 		return;
 	}
 	const bool bMustClearOthers = bSelected && (bClearOthers || SelectionMode == EUIListSelectionMode::Single || SelectionMode == EUIListSelectionMode::SingleToggle);
+	// Whether the SET moved, which is not the same question as whether THIS item's state moved --
+	// and the distinction is the whole of this function's history. Clicking the already-selected row
+	// in Single mode drops every other selection while leaving this one exactly as it was, so a
+	// repaint gated on "this item changed" left those rows still drawn as selected. It is reachable
+	// from ordinary use: HandleEntryClicked re-selects a selected row on every click, and any
+	// second selection (a mode change from Multi, a caller passing bClearOthers=false, code seeding
+	// the set directly) is the one that stays lit.
+	bool bSelectionMoved = false;
 	if (bMustClearOthers)
 	{
 		TArray<TObjectPtr<UObject>> PreviousSelection = SelectedItems.Array();
@@ -162,6 +177,7 @@ void UUIListView::SetItemSelection(UObject* Item, bool bSelected, bool bClearOth
 			if (Previous != Item)
 			{
 				SelectedItems.Remove(Previous);
+				bSelectionMoved = true;
 				OnSelectionChanged.Broadcast(Previous, false);
 			}
 		}
@@ -177,7 +193,11 @@ void UUIListView::SetItemSelection(UObject* Item, bool bSelected, bool bClearOth
 	}
 	if (bWasSelected != bSelected)
 	{
+		bSelectionMoved = true;
 		OnSelectionChanged.Broadcast(Item, bSelected);
+	}
+	if (bSelectionMoved)
+	{
 		RefreshVisibleSelection();
 	}
 }

@@ -7,6 +7,7 @@
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamGUIEditorModule.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamWidgetPropertyBinding.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetTree.h"
@@ -213,11 +214,28 @@ namespace DreamWidgetPropertyBindingExtension
 			{
 				return Result;
 			}
+			// IncludeSuper on purpose: a getter inherited from a base user widget drives a property
+			// exactly as well as one declared here, and hiding it would be a rule the compiler does
+			// not have. What DOES have to be filtered is the kind of function -- the iterator also
+			// yields native internals, delegate signatures and editor-only helpers, none of which an
+			// author declared as callable, and offering them makes a binding the next compile rejects.
 			for (TFieldIterator<UFunction> It(Class, EFieldIteratorFlags::IncludeSuper); It; ++It)
 			{
 				UFunction* Function = *It;
+				if (Function == nullptr
+					|| !Function->HasAnyFunctionFlags(FUNC_BlueprintCallable)
+					|| Function->HasAnyFunctionFlags(FUNC_Delegate | FUNC_EditorOnly))
+				{
+					continue;
+				}
 				const FProperty* ReturnProperty = Function->GetReturnProperty();
-				if (Function->NumParms != 1 || ReturnProperty == nullptr || !ReturnProperty->SameType(InProperty))
+				// The compiler's own rule, not a copy of it: it stopped being plain SameType when two
+				// plain numeric types became bindable whatever their width (see
+				// CanDreamWidgetBoundValueConvert), and a panel that offers less than the compiler
+				// accepts is the same drift as one that offers more -- the author's double-returning
+				// getter would simply not be in the list, with nothing to say why.
+				if (Function->NumParms != 1 || ReturnProperty == nullptr
+					|| !CanDreamWidgetBoundValueConvert(ReturnProperty, InProperty))
 				{
 					continue;
 				}

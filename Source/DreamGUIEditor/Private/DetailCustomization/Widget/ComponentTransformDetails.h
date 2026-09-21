@@ -130,8 +130,15 @@ private:
 	bool OnCanCopy( ETransformField::Type TransformField ) const;
 
 	bool IsLocationXEnable()const { return true; };
+	/**
+	 * Depth belongs to the author only while nobody else owns it: a parented widget's Y and Z come out
+	 * of the hierarchy's own layout pass. Asked of the WHOLE selection, because one row drives all of
+	 * it and a row enabled on the root's behalf would write depth onto every parented widget with it.
+	 */
 	bool IsLocationYEnable()const;
 	bool IsLocationZEnable()const;
+	/** X, plus whichever of Y/Z the selection currently owns. */
+	EAxisList::Type GetEditableLocationAxes()const;
 
 	/**
 	 * Copies the specified transform field to the clipboard
@@ -189,9 +196,6 @@ private:
 	/** @return The visibility of the "Reset to Default" button for the scale component */
 	bool GetScaleResetVisibility() const;
 
-	/** Cache a single unit to display all location comonents in */
-	void CacheCommonLocationUnits();
-
 	/** Generate a property handle from a property name. */
 	TSharedPtr<IPropertyHandle> GeneratePropertyHandle(FName PropertyName, IDetailChildrenBuilder& ChildrenBuilder);
 private:
@@ -244,8 +248,14 @@ private:
 	FNotifyHook* NotifyHook;
 	/** Whether or not to preserve scale ratios */
 	bool bPreserveScaleRatio;
-	/** Mapping from object to relative rotation values which are not affected by Quat->Rotator conversions during transform calculations */
-	TMap< UObject*, FRotator > ObjectToRelativeRotationMap;
+	/**
+	 * Mapping from object to relative rotation values which are not affected by Quat->Rotator conversions during transform calculations.
+	 *
+	 * Weak keys, not raw pointers: a preview rebuild destroys every widget this was keyed on, and a raw
+	 * key would go on matching whatever the allocator hands out at the same address next -- restoring
+	 * one widget's remembered rotation onto an unrelated one. CacheTransform drops the dead entries.
+	 */
+	TMap< TWeakObjectPtr<UDreamWidget>, FRotator > ObjectToRelativeRotationMap;
 	/** Flag to indicate we are currently editing the rotation in the UI, so we should rely on the cached value in objectToRelativeRotationMap, not the value from the object */
 	bool bEditingRotationInUI;
 	/** Flag to indicate we are currently performing a slider transaction */

@@ -17,6 +17,16 @@ enum class EDreamUIScrollViewScrollbarVisibility :uint8
 	AutoHide,
 };
 
+/**
+ * SUPERSEDED by UDreamScrollBox (`Native.ScrollBox`), and unreferenced by the plugin as of the
+ * control library: nothing in Source/ constructs one, and the palette has never offered it.
+ *
+ * It pairs a scroll view with scrollbars, which is what UDreamScrollBox does -- except the
+ * control owns a real UDreamScrollBar rather than driving a bar somebody else placed, so the
+ * handle geometry and the drag scale are computed from the same numbers. This class is the
+ * reason UDreamScrollBar's minimum handle size lives on the behaviour: two owners of one
+ * measurement is the bug that move was made to prevent.
+ */
 //ScrollView with scrollbars
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UUIScrollViewWithScrollbar : public UUIScrollView

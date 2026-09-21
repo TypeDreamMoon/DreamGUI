@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "SDreamWidgetAnimationEditorWidget.h"
+// For the log category the read-only notice below uses; a unity blob always had it from a neighbour.
+#include "DreamGUIEditorModule.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamUserWidget.h"
 
@@ -18,12 +20,17 @@
 #include "Utils/DreamUIUtils.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "DreamWidgetBlueprint.h"
+#include "UObject/StrongObjectPtr.h"
+#include "UObject/Package.h"
 #include "LevelEditor.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamText.h"
+#include "Controls/DreamUIControl.h"
 #include "Designer/DreamWidgetHierarchyPickerView.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "Animation/MovieSceneDreamUIMaterialTrack.h"
@@ -102,6 +109,12 @@ public:
 
 	~SDreamWidgetAnimationEditorWidgetImpl()
 	{
+		if (GEditor != nullptr)
+		{
+			GEditor->OnBlueprintPreCompile().Remove(BlueprintPreCompileHandle);
+			GEditor->OnBlueprintCompiled().Remove(BlueprintCompiledHandle);
+		}
+
 		Close();
 
 		// Un-Register sequencer menu extenders.
@@ -122,6 +135,16 @@ public:
 
 	void Construct(const FArguments&)
 	{
+		if (GEditor != nullptr)
+		{
+			// See EvacuateSequencerEntities: a recompile of the edited asset replaces the preview
+			// objects this sequencer binds, and that is only survivable from in front of it.
+			BlueprintPreCompileHandle = GEditor->OnBlueprintPreCompile().AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::HandleBlueprintPreCompile);
+			BlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::HandleBlueprintCompiled);
+		}
+
 		NoAnimationTextBlock =
 			SNew(STextBlock)
 			.TextStyle(FAppStyle::Get(), "UMGEditor.NoAnimationFont")
@@ -182,8 +205,66 @@ public:
 		return WeakSequence.Get();
 	}
 
+	/**
+	 * The object the sequencer may actually possess, given one the author picked.
+	 *
+	 * The two trees are the whole of it. An animation is authored data, so it lives on the ASSET's
+	 * tree, and everything that offers a widget to bind -- the hierarchy picker, the designer
+	 * selection -- offers one from there. Playback is against the PREVIEW, because that is the copy
+	 * that is alive and can be scrubbed. UDreamWidgetAnimation::CanPossessObject requires the object
+	 * and the context to share a world, and an authoring widget lives in no world at all, so handing
+	 * it straight to GetHandleToObject was refused -- silently, with no log, which is what "adding a
+	 * track does nothing" looked like from the outside.
+	 *
+	 * Translating here rather than relaxing CanPossessObject: the world check is what keeps one
+	 * designer's sequencer from possessing another's widgets, and a binding stored against an object
+	 * that is not in the playback context resolves to nothing at play time anyway. The binding is
+	 * name-based, so the preview and the authored widget produce the same path -- which is exactly
+	 * why the sequence can answer for either tree once the handle is taken against the live one.
+	 */
+	UObject* ResolveBindableObject(UObject* InPicked) const
+	{
+		UDreamWidget* Widget = Cast<UDreamWidget>(InPicked);
+		if (Widget == nullptr && InPicked != nullptr)
+		{
+			Widget = InPicked->GetTypedOuter<UDreamWidget>();
+		}
+		if (Widget == nullptr)
+		{
+			return InPicked;
+		}
+		// Already the live copy -- the selection can hand us either, depending on which panel it
+		// came from -- so nothing to translate.
+		if (Widget->GetWorld() != nullptr)
+		{
+			return InPicked;
+		}
+		UDreamWidget* Preview = FDreamWidgetBlueprintEditor::FindPreviewForAnimationContext(Widget);
+		if (Preview == nullptr)
+		{
+			return nullptr;
+		}
+		// A sub-object of the widget (a visual, a component) has to follow its widget across, and
+		// the only honest way back is by the same name the picker showed.
+		if (Widget == InPicked)
+		{
+			return Preview;
+		}
+		return Preview->GetVisual() != nullptr && Preview->GetVisual()->GetClass() == InPicked->GetClass()
+			? static_cast<UObject*>(Preview->GetVisual())
+			: static_cast<UObject*>(Preview);
+	}
+
 	UObject* GetPlaybackContext() const
 	{
+		// While evacuating (see EvacuateSequencerEntities) the sequencer is parked on a childless
+		// widget, under which every binding resolves to nothing. NOT null: with no context at all,
+		// binding resolution falls back to its stored object pointer and quietly re-binds the very
+		// objects the evacuation exists to let go of.
+		if (bPlaybackContextSuppressed)
+		{
+			return SuppressionContext.Get();
+		}
 		if (auto LocalAnimation = GetAnimation())
 		{
 			auto Component = LocalAnimation->GetTypedOuter<UDreamWidgetAnimationComponent>();
@@ -267,6 +348,7 @@ public:
 			if (Sequencer.IsValid())
 			{
 				StopObservingWidgetSelection();
+				StopObservingPreviewRebuild();
 				Sequencer->SetShowCurveEditor(false);
 				FLevelEditorSequencerIntegration::Get().RemoveSequencer(Sequencer.ToSharedRef());
 				Sequencer->Close();
@@ -292,7 +374,17 @@ public:
 				FMenuExtensionDelegate::CreateRaw(this, &SDreamWidgetAnimationEditorWidgetImpl::AddPossessMenuExtensions)
 			);
 
+			// False for a `timeline` block's sequence, which the .dui owns and every compile rebuilds
+			// -- see UDreamWidgetAnimation::IsEditable. Said out loud as well as enforced: a
+			// read-only Sequencer with no explanation reads as a broken editor.
 			SequencerInitParams.ViewParams.bReadOnly = !NewSequence->IsEditable();
+			if (SequencerInitParams.ViewParams.bReadOnly && NewSequence->IsLanguageOwned())
+			{
+				UE_LOG(DreamGUIEditor, Display,
+					TEXT("[%s].%d Animation \"%s\" is built from a 'timeline' block in this class's .dui, so the animation editor opens it read-only. Edit the .dui, or change the block to 'timeline %s external' to hand the animation to Sequencer for good."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					*NewSequence->GetDisplayNameString(), *NewSequence->GetDisplayNameString());
+			}
 			SequencerInitParams.ViewParams.AddMenuExtender = AddMenuExtender;
 			SequencerInitParams.ViewParams.UniqueName = "EmbeddedDreamWidgetAnimationEditor";
 			SequencerInitParams.ViewParams.ScrubberStyle = ESequencerScrubberStyle::FrameBlock;
@@ -307,6 +399,7 @@ public:
 		Content->SetContent(Sequencer->GetSequencerWidget());
 		Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &SDreamWidgetAnimationEditorWidgetImpl::SyncSelectedWidgetsWithSequencerSelection);
 		ObserveWidgetSelection();
+		ObservePreviewRebuild();
 		Sequencer->OnMovieSceneBindingsChanged().AddLambda([=, this]() {
 			if (!WeakSequence.IsValid())return;
 			auto MovieScene = WeakSequence->GetMovieScene();
@@ -344,13 +437,26 @@ public:
 		TGuardValue<bool> Guard(bUpdatingSequencerSelection, true);
 
 		UMovieSceneSequence* AnimationSequence = Sequencer->GetFocusedMovieSceneSequence();
-		UObject* BindingContext = WeakSequence.Get();
+		// The context a binding resolves against is a WIDGET -- UDreamWidgetAnimation::LocateBoundObjects
+		// casts it to one and walks the name path from there -- and the world context is an object that
+		// has a world. This passed the SEQUENCE for both: the cast to UDreamWidget silently failed, so
+		// resolution fell back to the stored pointer, and CreateTransientSharedPlaybackState's
+		// verify(WorldContext && Sequence) took a null, because an animation asset lives in no world.
+		//
+		// It had never run. Selecting a track row is what calls this, and until bindings could be
+		// created there were no rows to select -- so making the picker work is what woke it up.
+		UObject* PlaybackContext = GetPlaybackContext();
+		if (AnimationSequence == nullptr || PlaybackContext == nullptr)
+		{
+			return;
+		}
 		UDreamWidget* SequencerSelectedWidget = nullptr;
 		UDreamUIBehaviour* SequencerSelectedComponent = nullptr;
 		for (FGuid Guid : ObjectGuids)
 		{
 			TArray<UObject*, TInlineAllocator<1>> BoundObjects;
-			AnimationSequence->LocateBoundObjects(Guid, BindingContext, MovieSceneHelpers::CreateTransientSharedPlaybackState(BindingContext->GetWorld(), Cast<UMovieSceneSequence>(BindingContext)), BoundObjects);
+			AnimationSequence->LocateBoundObjects(Guid, PlaybackContext,
+				MovieSceneHelpers::CreateTransientSharedPlaybackState(PlaybackContext, AnimationSequence), BoundObjects);
 			if (BoundObjects.Num() == 0)
 				continue;
 
@@ -368,7 +474,10 @@ public:
 			SequencerSelectedWidget = SequencerSelectedComponent->GetWidget();
 		}
 
-		if (auto Widget = WeakSequence->GetTypedOuter<UDreamWidget>())
+		// The live copy again: the selection subsystem is reached through a world, and the sequence's
+		// outer is the authored widget, which has none. Even with the resolution above fixed, this
+		// half would have gone on selecting nothing.
+		if (UDreamWidget* Widget = Cast<UDreamWidget>(PlaybackContext))
 		{
 			// Sync Selection
 			if (auto Selection = UDreamUISelection::GetInstance(Widget->GetWorld()))
@@ -391,7 +500,9 @@ public:
 	void ObserveWidgetSelection()
 	{
 		StopObservingWidgetSelection();
-		UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		// And the other direction, which never subscribed at all for the same reason -- selecting a
+		// widget in the designer has never highlighted its track.
+		UDreamWidget* ContextWidget = Cast<UDreamWidget>(GetPlaybackContext());
 		UDreamUISelection* Selection = ContextWidget ? UDreamUISelection::GetInstance(ContextWidget->GetWorld()) : nullptr;
 		if (Selection)
 		{
@@ -408,6 +519,116 @@ public:
 		}
 		ObservedSelection.Reset();
 		WidgetSelectionChangedHandle.Reset();
+	}
+
+	// ------------------------------------------------------------------ the preview being replaced
+
+	void ObservePreviewRebuild()
+	{
+		StopObservingPreviewRebuild();
+		UDreamWidget* AuthoredWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		ObservedPreviewHost = FDreamWidgetBlueprintEditor::FindPreviewHostForAnimationContext(AuthoredWidget);
+		if (TSharedPtr<FDreamWidgetPreviewHost> Host = ObservedPreviewHost.Pin())
+		{
+			PreviewAboutToRebuildHandle = Host->OnPreviewAboutToRebuild.AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::EvacuateSequencerEntities);
+			PreviewRebuiltHandle = Host->OnPreviewRebuilt.AddSP(
+				this, &SDreamWidgetAnimationEditorWidgetImpl::ResumeSequencerEvaluation);
+		}
+	}
+
+	void StopObservingPreviewRebuild()
+	{
+		if (TSharedPtr<FDreamWidgetPreviewHost> Host = ObservedPreviewHost.Pin())
+		{
+			Host->OnPreviewAboutToRebuild.Remove(PreviewAboutToRebuildHandle);
+			Host->OnPreviewRebuilt.Remove(PreviewRebuiltHandle);
+		}
+		ObservedPreviewHost.Reset();
+		PreviewAboutToRebuildHandle.Reset();
+		PreviewRebuiltHandle.Reset();
+	}
+
+	/**
+	 * Step the sequencer's entity runtime out of every window in which its bound objects die.
+	 *
+	 * Sequencer groups animation entities under raw bound-object pointers and keeps two maps of
+	 * those keys in lockstep. Nothing repairs them when a preview widget goes away: a preview
+	 * rebuild broadcasts no replacement at all, and the map a recompile broadcasts can be worse
+	 * than nothing -- re-instancing maps every instance to null when it cannot make a replacement
+	 * (a failed compile leaves the class abstract), distinct widgets' keys collapse into one, and
+	 * the remap's Add silently overwrites. From then on the maps disagree, and the next
+	 * empty-group free fails an ensure deep in engine code with nothing of ours on the stack.
+	 *
+	 * The maps only desync when keys are rewritten under LIVE entities, so the cure is to hold
+	 * ZERO object-keyed entities across either window. Parking the playback context on a
+	 * childless sentinel widget and forcing one evaluation makes the engine itself unlink every
+	 * entity and free every group through the same context-switch path it uses every day, while
+	 * everything is still coherent -- and under the sentinel every binding resolves to nothing,
+	 * so nothing new is keyed for the rest of the window. Resuming re-resolves against whatever
+	 * tree exists by then. Two windows, one pair each:
+	 *
+	 *   recompile -- HandleBlueprintPreCompile / UEditorEngine::OnBlueprintCompiled
+	 *   rebuild   -- OnPreviewAboutToRebuild   / OnPreviewRebuilt
+	 *
+	 * The sentinel is the load-bearing half, learned the hard way: suppressing to NULL was tried
+	 * first, and with no context at all binding resolution falls back to its stored object
+	 * pointer -- the evacuation evaluation re-bound the very preview widgets it was letting go
+	 * of, their keys sat in the maps through re-instancing and the compile's garbage collection,
+	 * and the resume's evaluation then freed a group whose key the reverse map no longer agreed
+	 * about. Whatever rewrite poisons the maps, an empty map is not rewritable.
+	 *
+	 * RestorePreAnimatedState runs before each evacuation because writing saved values back
+	 * needs the objects they were saved onto; a tick later is an object too late.
+	 */
+	void EvacuateSequencerEntities()
+	{
+		if (!Sequencer.IsValid() || bPlaybackContextSuppressed)
+		{
+			return;
+		}
+		if (!SuppressionContext.IsValid())
+		{
+			// Strongly held: the recompile window this parks across runs a garbage collection.
+			SuppressionContext = TStrongObjectPtr<UDreamWidget>(
+				NewObject<UDreamWidget>(GetTransientPackage(), NAME_None, RF_Transient));
+		}
+		Sequencer->RestorePreAnimatedState();
+		bPlaybackContextSuppressed = true;
+		Sequencer->ForceEvaluate();
+	}
+
+	void ResumeSequencerEvaluation()
+	{
+		if (!bPlaybackContextSuppressed)
+		{
+			return;
+		}
+		bPlaybackContextSuppressed = false;
+		if (Sequencer.IsValid())
+		{
+			// Resolved bindings still name the dead tree; UMG drops them at the same moment, at
+			// the end of FWidgetBlueprintEditor::UpdatePreview.
+			Sequencer->GetEvaluationState()->ClearObjectCaches(*Sequencer);
+			Sequencer->ForceEvaluate();
+		}
+	}
+
+	void HandleBlueprintPreCompile(UBlueprint* InBlueprint)
+	{
+		// Only this asset's recompile replaces objects this sequencer binds: bound objects are
+		// preview widgets, and the preview's only reinstanced parts are instances of this class.
+		if (InBlueprint == nullptr || !WeakSequence.IsValid()
+			|| InBlueprint != WeakSequence->GetTypedOuter<UDreamWidgetBlueprint>())
+		{
+			return;
+		}
+		EvacuateSequencerEntities();
+	}
+
+	void HandleBlueprintCompiled()
+	{
+		ResumeSequencerEvaluation();
 	}
 
 	/** The other half of SyncSelectedWidgetsWithSequencerSelection: picking a widget highlights its tracks. */
@@ -442,7 +663,10 @@ public:
 	/** The designer-selected widget, if it may be bound into this sequence at all. */
 	UDreamWidget* GetBindableSelectedWidget() const
 	{
-		UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+		// The PLAYBACK context, not the sequence's outer. The selection subsystem is found through a
+		// world, and the sequence's outer is the authored widget, which has none -- so asking it for
+		// the selection always answered null and every entry that reads the selection was dead.
+		UDreamWidget* ContextWidget = Cast<UDreamWidget>(GetPlaybackContext());
 		if (ContextWidget == nullptr)
 		{
 			return nullptr;
@@ -498,7 +722,30 @@ public:
 		{
 			return;
 		}
+		// The children come across too. MoveBindingContents moves TRACKS; a possessable's sub-object
+		// bindings -- which is how every visual, layout and behaviour of a DreamUI widget is bound,
+		// parented to their widget by UDreamWidgetAnimation::GetParentObject -- are separate
+		// possessables that name their parent by GUID. Left alone, they went on naming the GUID this
+		// function is about to delete, and the whole sub-tree of tracks stopped resolving.
+		TArray<FGuid> ChildBindings;
+		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)
+		{
+			const FMovieScenePossessable& Possessable = MovieScene->GetPossessable(Index);
+			if (Possessable.GetParent() == ObjectBinding)
+			{
+				ChildBindings.Add(Possessable.GetGuid());
+			}
+		}
 		MovieScene->MoveBindingContents(ObjectBinding, NewGuid);
+		for (const FGuid& ChildGuid : ChildBindings)
+		{
+			// Looked up again by GUID rather than held by pointer: the array of possessables is what
+			// MoveBindingContents above may have reallocated.
+			if (FMovieScenePossessable* Child = MovieScene->FindPossessable(ChildGuid))
+			{
+				Child->SetParent(NewGuid, MovieScene);
+			}
+		}
 		MovieScene->RemovePossessable(ObjectBinding);
 		Sequence->UnbindPossessableObjects(ObjectBinding);
 		Sequencer->NotifyMovieSceneDataChanged(EMovieSceneDataChangeType::MovieSceneStructureItemsChanged);
@@ -533,6 +780,38 @@ public:
 			}
 		}
 
+		// The selection is where the author already is. Walking a tree picker to find the widget they
+		// just clicked on is the kind of step that gets done a hundred times an afternoon, and the
+		// binding context menu already reads the selection for "Replace with" -- this is the same
+		// question asked before there is a binding to replace.
+		if (UDreamWidget* SelectedWidget = GetBindableSelectedWidget())
+		{
+			const bool bAlreadyBound = AllBoundObjects.Contains(SelectedWidget);
+			MenuBuilder.AddMenuEntry(
+				FText::Format(LOCTEXT("AddSelectedWidget_Label", "Add Track for {0}"), FText::FromString(SelectedWidget->GetDisplayName())),
+				bAlreadyBound
+					? LOCTEXT("AddSelectedWidgetBound_Tooltip", "The widget selected in the designer already has a binding in this animation.")
+					: LOCTEXT("AddSelectedWidget_Tooltip", "Bind the widget selected in the designer, without hunting for it in the tree below."),
+				FSlateIcon(),
+				FUIAction(
+					FExecuteAction::CreateSPLambda(this, [this, WeakSelected = MakeWeakObjectPtr(SelectedWidget)]()
+					{
+						UDreamWidget* Widget = WeakSelected.Get();
+						if (Widget == nullptr || !Sequencer.IsValid())
+						{
+							return;
+						}
+						UObject* Bindable = ResolveBindableObject(Widget);
+						if (Bindable == nullptr)
+						{
+							return;
+						}
+						const FScopedTransaction Transaction(LOCTEXT("AddSelectedWidgetToSequencer", "Add Selected Widget to Sequencer"));
+						Sequencer->GetHandleToObject(Bindable, true);
+					}),
+					FCanExecuteAction::CreateLambda([bAlreadyBound]() { return !bAlreadyBound; })));
+		}
+
 		//widget menu
 		{
 			MenuBuilder.AddSubMenu(
@@ -541,7 +820,17 @@ public:
 				FNewMenuDelegate::CreateSPLambda(this, [this](FMenuBuilder& SubMenuBuilder)
 				{
 					SubMenuBuilder.BeginSection("ChooseWidgetSection", LOCTEXT("ChooseWidget", "Choose Widget:"));
-					auto Widget = WeakSequence->GetTypedOuter<UDreamWidget>();
+					// Re-checked here, not only at the top of AddPossessMenuExtensions: this delegate runs
+					// when the author opens the sub-menu, which can be long after the menu was built and
+					// after an undo or a delete has taken the animation away. The outer widget is checked
+					// for the same reason plus one of its own -- an animation need not live on a widget.
+					UDreamWidgetAnimation* PinnedSequence = WeakSequence.Get();
+					UDreamWidget* Widget = PinnedSequence != nullptr ? PinnedSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+					if (Widget == nullptr)
+					{
+						SubMenuBuilder.EndSection();
+						return;
+					}
 					SubMenuBuilder.AddWidget(
 						SNew(SBox)
 						.Padding(4, 0)
@@ -560,8 +849,15 @@ public:
 										, "This widget belongs to a nested widget blueprint, so a track bound to it would follow a name path through another asset and break the moment that asset renames it. Animate it inside its own blueprint instead."), false, 8);
 									return;
 								}
+								UObject* Bindable = ResolveBindableObject(InItem);
+								if (Bindable == nullptr)
+								{
+									FDreamUIUtils::EditorNotification(LOCTEXT("NoPreviewForWidget"
+										, "This widget has no preview to animate against yet. Compile the Blueprint, or reopen the designer, and try again."), false, 8);
+									return;
+								}
 								const FScopedTransaction Transaction(LOCTEXT("AddWidgetToSequencer", "Add Widget to Sequencer"));
-								Sequencer->GetHandleToObject(InItem, true);
+								Sequencer->GetHandleToObject(Bindable, true);
 							})
 						]
 						, FText::GetEmpty()
@@ -602,7 +898,12 @@ private:
 		// see them; anything else got duplicate menu items whose click landed in the wrong sequence
 		// (or dereferenced a null sequencer).
 		{
-			UDreamWidget* ContextWidget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
+			// The PLAYBACK context, for the same reason the selection helper uses it: a binding's
+			// object is the live PREVIEW widget, and asking whether that is a child of the ASSET's
+			// authored root is asking about two different trees -- the answer is always no, so this
+			// returned before adding anything and every binding's track menu came up with the
+			// Components and SubObjects sections missing. They were not empty; they were never built.
+			UDreamWidget* ContextWidget = Cast<UDreamWidget>(GetPlaybackContext());
 			UDreamWidget* TargetWidget = Cast<UDreamWidget>(ContextObjects[0]);
 			if (TargetWidget == nullptr && ContextObjects[0] != nullptr)
 			{
@@ -673,6 +974,44 @@ private:
 				}
 			}
 			AddTrackMenuBuilder.EndSection();
+
+			// A control's own root is bare by construction -- UDreamButton IS its face, and the rect
+			// block, the size box and the UUIButton all sit on the child named "Face" -- so the two
+			// sections above come out EMPTY for one, and Sequencer has no track editor for the Style
+			// struct that is nearly all a control declares. Binding a control therefore produced a
+			// row with nothing that could be animated on it, which reads as "controls cannot be
+			// animated" rather than as "you are one level too high".
+			//
+			// Offering the parts is safe where offering the whole subtree is not: a part is named by
+			// CollectParts in C++, so a binding path through one is a compile-time contract, while
+			// the rest of a nested instance's tree is another asset's names. The path resolves at
+			// play time through the real Children -- ResolveWidgetPath never consulted the editor's
+			// nested-instance boundary -- so a part binding works exactly like any other.
+			if (UDreamUIControl* Control = Cast<UDreamUIControl>(Widget))
+			{
+				TArray<TPair<FName, UDreamWidget*>> Parts;
+				Control->GetBoundParts(Parts);
+				if (Parts.Num() > 0)
+				{
+					AddTrackMenuBuilder.BeginSection("ControlParts", LOCTEXT("ControlPartsSection", "Control Parts"));
+					for (const TPair<FName, UDreamWidget*>& Part : Parts)
+					{
+						UDreamWidget* PartWidget = Part.Value;
+						AddTrackMenuBuilder.AddMenuEntry(
+							FText::Format(LOCTEXT("ControlPartLabelFormat", "{0} ({1})"),
+								FText::FromName(Part.Key), FText::FromString(PartWidget->GetClass()->GetName())),
+							FText::Format(LOCTEXT("ControlPartTooltip", "Bind {0}, the part this control builds under that name. Its own visual and components can then be tracked from its row."),
+								FText::FromName(Part.Key)),
+							FSlateIcon(),
+							FUIAction(FExecuteAction::CreateLambda([=, this]()
+							{
+								const FScopedTransaction Transaction(LOCTEXT("AddControlPartToSequencer", "Add Control Part to Sequencer"));
+								Sequencer->GetHandleToObject(PartWidget, true);
+							})));
+					}
+					AddTrackMenuBuilder.EndSection();
+				}
+			}
 		}
 		
 		if (auto Image = Cast<UDreamImage>(ContextObjects[0]))
@@ -750,6 +1089,16 @@ private:
 	TWeakObjectPtr<UDreamWidgetAnimation> WeakSequence;
 	TWeakObjectPtr<UDreamUISelection> ObservedSelection;
 	FDelegateHandle WidgetSelectionChangedHandle;
+	/** Weak, because the host outlives nothing here and this panel must not keep a designer alive. */
+	TWeakPtr<FDreamWidgetPreviewHost> ObservedPreviewHost;
+	FDelegateHandle PreviewAboutToRebuildHandle;
+	FDelegateHandle PreviewRebuiltHandle;
+	FDelegateHandle BlueprintPreCompileHandle;
+	FDelegateHandle BlueprintCompiledHandle;
+	/** True from an evacuation to its resume; GetPlaybackContext answers the sentinel throughout. */
+	bool bPlaybackContextSuppressed = false;
+	/** A childless widget nothing can resolve under. See EvacuateSequencerEntities. */
+	TStrongObjectPtr<UDreamWidget> SuppressionContext;
 
 	TSharedPtr<SBox> Content;
 	TSharedPtr<ISequencer> Sequencer;

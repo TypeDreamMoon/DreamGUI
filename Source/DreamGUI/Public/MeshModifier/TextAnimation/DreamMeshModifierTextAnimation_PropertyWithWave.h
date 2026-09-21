@@ -25,10 +25,29 @@ protected:
 public:
 	virtual void Init()override;
 	virtual void Deinit()override;
+	/**
+	 * Frequency and Speed are two different numbers -- one sets the wavelength along the string of
+	 * characters, the other how fast the wave travels along it -- and this pair used to read and
+	 * write Speed under the Frequency name, leaving Frequency with no accessor at all. Corrected
+	 * here rather than left alone, because a getter that returns the wrong property cannot be worked
+	 * around by a caller who knows about it.
+	 *
+	 * The counter-intuitive part is that this is a silent change for anyone who was calling
+	 * SetFrequency: the node still exists and still compiles, and now moves a different property.
+	 * Authored content is unaffected either way -- both properties are EditAnywhere and serialise
+	 * independently, so nothing on disk changes meaning -- and the alternative, renaming the pair to
+	 * match what it did, breaks those call sites instead while leaving the real Frequency
+	 * unreachable. Only Blueprint call sites are in question, and the pair is reachable from
+	 * Blueprint only by pulling an instanced property out of a text animation's array and casting it.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-		float GetFrequency()const { return Speed; }
+		float GetFrequency()const { return Frequency; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetFrequency(float Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		float GetSpeed()const { return Speed; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetSpeed(float Value);
 };
 
 UCLASS(ClassGroup = (DreamGUI), BlueprintType, meta = (DisplayName = "PositionWave Property (UI Effect TextAnimation)"))

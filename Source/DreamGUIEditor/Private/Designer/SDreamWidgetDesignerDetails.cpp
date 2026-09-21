@@ -211,6 +211,22 @@ void SDreamWidgetDesignerDetails::NotifyPreChange(FEditPropertyChain* PropertyAb
 	}
 }
 
+void SDreamWidgetDesignerDetails::NotifyPreChange(FProperty* PropertyAboutToChange)
+{
+	// Same shape as the chainless post-change overload below, and for the same caller: a section with
+	// no property node has only a property to name, and a one-link chain is exactly what the mirror
+	// wants from it. Without this the pre-change half of every transform edit fell into FNotifyHook's
+	// empty default -- the template was written by the post-change pass without having been put into
+	// the transaction first.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
+	FEditPropertyChain Chain;
+	Chain.AddHead(PropertyAboutToChange);
+	NotifyPreChange(&Chain);
+}
+
 void SDreamWidgetDesignerDetails::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FEditPropertyChain* PropertyThatChanged)
 {
 	// Not while a slider is being dragged. Every interactive tick would otherwise copy the value
@@ -358,8 +374,11 @@ UDreamWidget* SDreamWidgetDesignerDetails::GetSelectedWidgetContext() const
 void SDreamWidgetDesignerDetails::OnEditorSelectionChanged()
 {
 	if (bIsSelectFromComponentList)return;
-	bIsSelectFromDreamUIEditor = true;
+	// Null once the world this panel was built on is gone -- the designer drops the preview host
+	// before its panels are taken down, and the selection object lives in that world.
 	auto Selection = UDreamUISelection::GetInstance(World.Get());
+	if (Selection == nullptr)return;
+	bIsSelectFromDreamUIEditor = true;
 	auto SelectedWidgets = Selection->GetSelectedWidgets();
 	auto SelectedComponents = Selection->GetSelectedComponents();
 	if (SelectedWidgets.Num() > 0)
@@ -391,10 +410,12 @@ void SDreamWidgetDesignerDetails::OnEditorSelectionChanged()
 					continue;
 				}
 
-				Widget->SetFlags(RF_Transactional);
-				ForEachObjectWithOuter(Widget.Get(), [=](UObject* Object) {
-					Object->SetFlags(RF_Transactional);
-				});
+				// No SetFlags(RF_Transactional) here, on the widget or on anything under it. The
+				// objects this panel shows are the PREVIEW's, and marking them transactional is what
+				// let the property grid's own Modify file them in the undo buffer -- so an undo
+				// restored values onto objects the next rebuild had already destroyed. What is
+				// recorded instead is the template, in MigrateDetailsChangeToTemplate, and the
+				// preview is rebuilt from it after the transaction.
 				SelectedObjectList.Add(Widget.Get());
 			}
 		}
@@ -450,10 +471,8 @@ void SDreamWidgetDesignerDetails::OnComponentSelectionChanged(const TArray<TWeak
 	{
 		if (UDreamUIBehaviour* Component = SelectedComponent.Get())
 		{
-			Component->SetFlags(RF_Transactional);
-			ForEachObjectWithOuter(Component, [=](UObject* Object) {
-				Object->SetFlags(RF_Transactional);
-			});
+			// The same rule as OnEditorSelectionChanged: a behaviour shown here belongs to the
+			// preview, and the half of it that undo has to be able to restore is the template's.
 			SelectedObjects.Add(Component);
 			ValidSelectedComponents.Add(Component);
 		}
@@ -482,11 +501,14 @@ void SDreamWidgetDesignerDetails::OnComponentSelectionChanged(const TArray<TWeak
 
 	if (!bIsSelectFromDreamUIEditor)
 	{
-		auto Selection = UDreamUISelection::GetInstance(World.Get());
-		Selection->ClearComponentSelection();
-		for (UDreamUIBehaviour* Component : ValidSelectedComponents)
+		// See OnEditorSelectionChanged: the selection object goes with the preview world.
+		if (auto Selection = UDreamUISelection::GetInstance(World.Get()))
 		{
-			Selection->SelectComponent(Component);
+			Selection->ClearComponentSelection();
+			for (UDreamUIBehaviour* Component : ValidSelectedComponents)
+			{
+				Selection->SelectComponent(Component);
+			}
 		}
 	}
 	bIsSelectFromComponentList = false;

@@ -31,6 +31,7 @@ public:
 
 	// UK2Node interface
 	virtual void ReconstructNode()override;
+	virtual void ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& OldPins) override;
 	virtual void PostReconstructNode() override;
 	virtual bool IsNodePure() const override { return true; }
 	virtual bool ShouldDrawCompact() const override { return true; }
@@ -48,6 +49,22 @@ public:
 	// End of UK2Node interface
 
 private:
+	/**
+	 * The variable node feeding InInputPin, followed through any reroute nodes in between.
+	 * @return the variable node, or nullptr when the pin is unconnected or fed by something else
+	 */
+	static class UK2Node_Variable* FindSourceVariableNode(const UEdGraphPin* InInputPin);
+	/**
+	 * The component class declared by the component reference that InInputPin is fed from.
+	 * @return the class, or nullptr when it can not be resolved (which is what makes this node "!Get")
+	 */
+	static UClass* ResolveComponentClass(const UEdGraphPin* InInputPin);
+	/** Retype the output pin from this node's own input pin. */
 	void SetOutputPinType();
+	/**
+	 * Retype the output pin from an input pin that is not necessarily this node's current one:
+	 * during reconstruction the fresh pins carry no links yet, only the old ones do.
+	 */
+	void SetOutputPinTypeFromInputPin(const UEdGraphPin* InInputPin);
 	bool autoOutputTypeSuccess = false;
 };

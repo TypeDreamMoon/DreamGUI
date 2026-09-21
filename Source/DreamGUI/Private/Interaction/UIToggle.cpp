@@ -130,6 +130,14 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 {
 	if (ToggleTransitionType != EUISelectableTransitionType::Custom)
 	{
+		// Deliberately NOT defaulted to the widget's own visual the way UUISelectable's hover target
+		// is: a toggle owns two transitions -- the selectable one (normal/hovered/pressed) and this
+		// one (checked/unchecked) -- and pointing both at one visual makes them overwrite each
+		// other, so the checked colour would survive only until the next hover event. The preset
+		// Blueprints give them separate visuals (a backing plate and a tick), which is the design.
+		// A text-authored toggle names its own tick now -- `ToggleTransitionTarget = Check` -- and a
+		// code-authored one calls SetToggleTransitionTarget. Left unset it still returns rather than
+		// falling back to the widget's own visual, because that fallback is the one that fights.
 		if (!ToggleTransitionTarget.IsValid())return;
 	}
 
@@ -210,6 +218,35 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 	}
 }
 
+void UUIToggle::SetToggleTransitionTarget(UDreamVisual* Value)
+{
+	if (ToggleTransitionTarget != Value)
+	{
+		ToggleTransitionTarget = Value;
+		// Immediately, and without the tween: a target handed over after the toggle already has a
+		// value would otherwise show the unchecked colour until the next click.
+		ApplyValueToVisual(false);
+	}
+}
+
+void UUIToggle::SetOnColor(FColor Value)
+{
+	OnColor = Value;
+	if (bIsOn)
+	{
+		ApplyValueToVisual(true);
+	}
+}
+
+void UUIToggle::SetOffColor(FColor Value)
+{
+	OffColor = Value;
+	if (!bIsOn)
+	{
+		ApplyValueToVisual(true);
+	}
+}
+
 void UUIToggle::SetToggleGroup(UUIToggleGroup* InGroupComp)
 {
 	if (ToggleGroup != InGroupComp)
@@ -238,8 +275,57 @@ void UUIToggle::SetValueWithoutNotify(bool Value)
 
 bool UUIToggle::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 {
-	SetValue(!bIsOn);
+	if (ShouldClickOnClick(EventData))
+	{
+		SetValue(!bIsOn);
+	}
 	return AllowEventBubbleUp;
+}
+
+bool UUIToggle::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
+{
+	// Super FIRST, always: the base runs the pointer transition, so a handler on this signal sees a
+	// selectable that has already moved into the state it is being told about.
+	const bool bBubble = Super::OnPointerEnter_Implementation(EventData);
+	OnHoveredCPP.Broadcast();
+	return bBubble;
+}
+
+bool UUIToggle::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::OnPointerExit_Implementation(EventData);
+	OnUnhoveredCPP.Broadcast();
+	return bBubble;
+}
+
+bool UUIToggle::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
+{
+	// The interactable test is asked here rather than read off the Super's return value, because that
+	// value is the BUBBLING policy and says nothing about whether the press was honoured -- the same
+	// reading UUIButton's press pair makes. A toggle drawn disabled must not speak.
+	const bool bBubble = Super::OnPointerDown_Implementation(EventData);
+	if (IsInteractable())
+	{
+		OnPressedCPP.Broadcast();
+		if (ShouldClickOnDown(EventData))
+		{
+			// MouseDown / Touch Down / ButtonPress: the press IS the toggle. Same body the click
+			// takes, so the value cannot move differently depending on which method was chosen.
+			SetValue(!bIsOn);
+		}
+	}
+	return bBubble;
+}
+
+bool UUIToggle::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
+{
+	const bool bBubble = Super::OnPointerUp_Implementation(EventData);
+	OnReleasedCPP.Broadcast();
+	if (IsInteractable() && ShouldClickOnUp(EventData))
+	{
+		SetValue(!bIsOn);
+	}
+	return bBubble;
 }
 
 int32 UUIToggle::GetIndexInGroup()const

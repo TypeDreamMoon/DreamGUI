@@ -12,9 +12,12 @@ class DREAMGUI_API UUISpriteSequencePlayer : public UDreamImageSequencePlayer
 {
 	GENERATED_BODY()
 protected:
-#if WITH_EDITOR
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
-#endif
+	/*
+	 * No PostEditChangeProperty override. There was one, and its body was an empty `if (Property)` --
+	 * so it did nothing except look like the sheet player's, which has real work to do (that one
+	 * re-resolves its texture and puts the UV rect back when the preview is off). An override that
+	 * only calls Super is one more place a reader has to go and check.
+	 */
 	UPROPERTY(Transient)
 		TWeakObjectPtr<class UDreamSpriteBase> Sprite;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")

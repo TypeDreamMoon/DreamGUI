@@ -83,8 +83,8 @@ bool FDreamTextShaperKerningTest::RunTest(const FString& Parameters)
 
 	TArray<FDreamShapedRun> Kerned, Unkerned;
 	bool bRTL = false;
-	FDreamTextShaper::ShapeParagraph(Elements(TEXT("AVAVAV")), Font, true, Kerned, bRTL);
-	FDreamTextShaper::ShapeParagraph(Elements(TEXT("AVAVAV")), Font, false, Unkerned, bRTL);
+	FDreamTextShaper::ShapeParagraph(Elements(TEXT("AVAVAV")), Font, true, EDreamTextFlowDirection::Auto, Kerned, bRTL);
+	FDreamTextShaper::ShapeParagraph(Elements(TEXT("AVAVAV")), Font, false, EDreamTextFlowDirection::Auto, Unkerned, bRTL);
 	TestEqual(TEXT("one run"), Kerned.Num(), 1);
 	TestEqual(TEXT("one glyph per letter"), Kerned[0].Glyphs.Num(), 6);
 	TestFalse(TEXT("Latin is left to right"), bRTL);
@@ -114,7 +114,7 @@ bool FDreamTextShaperArabicTest::RunTest(const FString& Parameters)
 	const FString Word = TEXT("مرحبا");
 	TArray<FDreamShapedRun> Runs;
 	bool bRTL = false;
-	FDreamTextShaper::ShapeParagraph(Elements(Word), Font, true, Runs, bRTL);
+	FDreamTextShaper::ShapeParagraph(Elements(Word), Font, true, EDreamTextFlowDirection::Auto, Runs, bRTL);
 	if (!TestEqual(TEXT("one run"), Runs.Num(), 1))return false;
 	TestTrue(TEXT("the paragraph is right to left"), bRTL);
 	TestTrue(TEXT("the run is right to left"), Runs[0].bRightToLeft);
@@ -126,7 +126,7 @@ bool FDreamTextShaperArabicTest::RunTest(const FString& Parameters)
 	}
 	// The isolated meem and the initial meem are different glyphs: contextual forms applied.
 	TArray<FDreamShapedRun> Alone;
-	FDreamTextShaper::ShapeParagraph(Elements(TEXT("م")), Font, true, Alone, bRTL);
+	FDreamTextShaper::ShapeParagraph(Elements(TEXT("م")), Font, true, EDreamTextFlowDirection::Auto, Alone, bRTL);
 	if (TestEqual(TEXT("isolated meem is one glyph"), Alone.Num(), 1) && Alone[0].Glyphs.Num() == 1)
 	{
 		uint32 MeemInWord = 0;
@@ -155,7 +155,7 @@ bool FDreamTextShaperFallbackTest::RunTest(const FString& Parameters)
 
 	TArray<FDreamShapedRun> Runs;
 	bool bRTL = false;
-	FDreamTextShaper::ShapeParagraph(Elements(TEXT("Hi 世界 ok")), Roboto, true, Runs, bRTL);
+	FDreamTextShaper::ShapeParagraph(Elements(TEXT("Hi 世界 ok")), Roboto, true, EDreamTextFlowDirection::Auto, Runs, bRTL);
 	// "Hi " on Roboto, "世界 " on Droid (the space stays with the run before it), "ok" back on Roboto.
 	if (!TestEqual(TEXT("three runs"), Runs.Num(), 3))return false;
 	TestEqual(TEXT("first run on the primary face"), Runs[0].FaceIndex, 0);
@@ -413,6 +413,174 @@ bool FDreamTextAsyncGlyphsTest::RunTest(const FString& Parameters)
 	const FDreamUICharData Sync = Font->GetCharData('M', 32.0f, false);
 	TestFalse(TEXT("budgeted glyph is synchronous"), Sync.bPending);
 	TestTrue(TEXT("and complete"), Sync.Width > 15.0f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperForcedDirectionTest,
+	"DreamGUI.Text.Shaper.AForcedFlowDirectionOverridesWhatTheStringLooksLike",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextShaperForcedDirectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Font)))return false;
+
+	// "123" has no strong character at all, so the bidi algorithm has nothing to read and answers
+	// left-to-right. A UI whose direction is the game's setting rather than the string's content has
+	// to be able to say otherwise, which is what UMG's TextFlowDirection is for.
+	TArray<FDreamShapedRun> Runs;
+	bool bRTL = true;
+	FDreamTextShaper::ShapeParagraph(Elements(TEXT("123")), Font, true, EDreamTextFlowDirection::Auto, Runs, bRTL);
+	TestFalse(TEXT("a neutral string reads left to right by itself"), bRTL);
+
+	FDreamTextShaper::ShapeParagraph(Elements(TEXT("123")), Font, true, EDreamTextFlowDirection::RightToLeft, Runs, bRTL);
+	TestTrue(TEXT("forcing right-to-left says so"), bRTL);
+
+	// And forcing the other way survives a string that WOULD have read right to left.
+	UDreamUIFontData_DistanceField* Arabic = MakeFileFont(TestWorld.World, TEXT("NotoNaskhArabicUI-Regular.ttf"));
+	if (TestTrue(TEXT("Noto Naskh shapes"), FDreamTextShaper::CanShape(Arabic)))
+	{
+		const FString Word = TEXT("مرحبا");
+		FDreamTextShaper::ShapeParagraph(Elements(Word), Arabic, true, EDreamTextFlowDirection::Auto, Runs, bRTL);
+		TestTrue(TEXT("Arabic reads right to left by itself"), bRTL);
+		FDreamTextShaper::ShapeParagraph(Elements(Word), Arabic, true, EDreamTextFlowDirection::LeftToRight, Runs, bRTL);
+		TestFalse(TEXT("forcing left-to-right says so"), bRTL);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextFallbackFaceLineBoxTest,
+	"DreamGUI.Text.Shaper.ALineIsAsTallAsTheFallbackFaceOnIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextFallbackFaceLineBoxTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Roboto = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	UDreamUIFontData_DistanceField* Droid = MakeFileFont(TestWorld.World, TEXT("DroidSansFallback.ttf"));
+	Roboto->SetFallbackFonts({ Droid });
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Roboto)))return false;
+
+	// A distance-field font scales every metric from its sample size, and the scale is set up when a
+	// layout starts -- so ask for it the way a layout does before reading any metric back.
+	Roboto->PrepareForLayout(0.0f);
+
+	// Face 0 is Roboto, face 1 is the CJK fallback. A CJK em is fuller than a Latin one, so the two
+	// faces do not agree on where the line's edges are -- which is the whole point: a line with CJK on
+	// it used to be measured from Roboto alone and the glyphs hung out of it.
+	float PrimaryAscent = 0.0f, PrimaryDescent = 0.0f, PrimaryLineHeight = 0.0f;
+	float FallbackAscent = 0.0f, FallbackDescent = 0.0f, FallbackLineHeight = 0.0f;
+	const bool bPrimary = Roboto->GetFaceMetrics(0, 32.0f, PrimaryAscent, PrimaryDescent, PrimaryLineHeight);
+	const bool bFallback = Roboto->GetFaceMetrics(1, 32.0f, FallbackAscent, FallbackDescent, FallbackLineHeight);
+	if (!TestTrue(TEXT("the primary face answers"), bPrimary))return false;
+	if (!TestTrue(TEXT("the fallback face answers too"), bFallback))return false;
+	TestFalse(TEXT("a face that does not exist answers nothing"),
+		Roboto->GetFaceMetrics(7, 32.0f, FallbackAscent, FallbackDescent, FallbackLineHeight));
+	Roboto->GetFaceMetrics(1, 32.0f, FallbackAscent, FallbackDescent, FallbackLineHeight);
+	// Asking twice must give the same answer: the second one comes out of the per-face cache.
+	float CachedAscent = 0.0f, CachedDescent = 0.0f, CachedLineHeight = 0.0f;
+	Roboto->GetFaceMetrics(1, 32.0f, CachedAscent, CachedDescent, CachedLineHeight);
+	TestEqual(TEXT("the cached answer is the same answer"), CachedAscent, FallbackAscent, 0.0001f);
+	TestEqual(TEXT("descent too"), CachedDescent, FallbackDescent, 0.0001f);
+	TestEqual(TEXT("line height too"), CachedLineHeight, FallbackLineHeight, 0.0001f);
+
+	// Now the thing that matters: a line with a fallback glyph on it is at least as tall as that face.
+	auto ParagraphHeight = [&](const FString& Content)
+	{
+		FDreamTextLayoutInput In;
+		In.Content = Content;
+		In.Width = 1000.0f;
+		In.Height = 400.0f;
+		In.Pivot = FVector2f(0.5f, 0.5f);
+		In.FontSize = 32.0f;
+		In.ParagraphHAlign = EDreamUITextParagraphHorizontalAlign::Left;
+		In.ParagraphVAlign = EDreamUITextParagraphVerticalAlign::Top;
+		In.Font = Roboto;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		return DL.PreferredSize.Y;
+	};
+	const float LatinOnly = ParagraphHeight(TEXT("Latin"));
+	const float WithCJK = ParagraphHeight(TEXT("Latin 世界"));
+	TestTrue(TEXT("the latin line measures something"), LatinOnly > 0.0f);
+	// The two faces may agree on the box, in which case nothing grows -- but it may never SHRINK, and
+	// the line must never be shorter than the fallback face's own box.
+	TestTrue(TEXT("a line with a fallback glyph is not shorter than one without"), WithCJK >= LatinOnly - 0.01f);
+	TestTrue(TEXT("and it fits the fallback face's box"), WithCJK >= FallbackAscent + FallbackDescent - 0.01f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextRightToLeftEllipsisTest,
+	"DreamGUI.Text.Breaker.ARightToLeftLineIsCutAndElidedAtItsLeftEdge",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextRightToLeftEllipsisTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Arabic = MakeFileFont(TestWorld.World, TEXT("NotoNaskhArabicUI-Regular.ttf"));
+	if (!TestTrue(TEXT("Noto Naskh shapes"), FDreamTextShaper::CanShape(Arabic)))return false;
+
+	auto Layout = [&](EDreamUITextOverflowType Overflow, float Width, FDreamTextDisplayList& Out)
+	{
+		FDreamTextLayoutInput In;
+		In.Content = TEXT("مرحبا بالعالم مرحبا بالعالم");
+		In.Width = Width;
+		In.Height = 200.0f;
+		In.Pivot = FVector2f(0.5f, 0.5f);
+		In.FontSize = 32.0f;
+		In.OverflowType = Overflow;
+		In.ParagraphHAlign = EDreamUITextParagraphHorizontalAlign::Left;
+		In.ParagraphVAlign = EDreamUITextParagraphVerticalAlign::Top;
+		In.Font = Arabic;
+		FDreamTextLayoutEngine::Layout(In, Out);
+	};
+
+	FDreamTextDisplayList Wide;
+	Layout(EDreamUITextOverflowType::HorizontalOverflow, 2000.0f, Wide);
+	int32 WideEmitted = 0;
+	for (const auto& Item : Wide.Items)if (Item.bEmit)WideEmitted++;
+	if (!TestTrue(TEXT("the wide box draws the whole string"), WideEmitted > 0))return false;
+	TestFalse(TEXT("and does not truncate"), Wide.bTruncated);
+
+	// A right-to-left line reads from its right edge, so what does not fit is at the LEFT. It used to
+	// be cut nowhere at all: the clamp only ever ran in the left-to-right branch.
+	FDreamTextDisplayList Cut;
+	Layout(EDreamUITextOverflowType::Truncate, 150.0f, Cut);
+	TestTrue(TEXT("a narrow box truncates right-to-left text"), Cut.bTruncated);
+	int32 CutEmitted = 0;
+	float CutRight = -MAX_FLT;
+	for (const auto& Item : Cut.Items)
+	{
+		if (!Item.bEmit)continue;
+		CutEmitted++;
+		CutRight = FMath::Max(CutRight, Item.Pen.X + Item.Glyph.XOffset + Item.Glyph.Width);
+	}
+	TestTrue(TEXT("it drops glyphs"), CutEmitted < WideEmitted);
+	TestTrue(TEXT("and what is left fits the box"), CutRight <= 150.0f * 0.5f + 1.0f);
+
+	FDreamTextDisplayList Elided;
+	Layout(EDreamUITextOverflowType::Ellipsis, 150.0f, Elided);
+	TestTrue(TEXT("and so does the ellipsis policy"), Elided.bTruncated);
+	const FDreamTextGlyphItem* Dots = nullptr;
+	float LeftMost = MAX_FLT;
+	for (const auto& Item : Elided.Items)
+	{
+		if (!Item.bEmit)continue;
+		if (Item.Codepoint == 0x2026)Dots = &Item;
+		LeftMost = FMath::Min(LeftMost, Item.Pen.X);
+	}
+	if (TestNotNull(TEXT("an ellipsis is drawn"), Dots))
+	{
+		// On the LEFT, because that is the end of a right-to-left line, not the start of it.
+		TestEqual(TEXT("the ellipsis is the left-most thing on the line"), Dots->Pen.X, LeftMost, 0.01f);
+	}
 	return true;
 }
 

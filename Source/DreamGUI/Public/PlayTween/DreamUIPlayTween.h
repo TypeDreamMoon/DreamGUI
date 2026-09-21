@@ -18,9 +18,18 @@ class DREAMGUI_API UDreamUIPlayTween : public UObject
 protected:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		EDreamTweenLoop LoopType = EDreamTweenLoop::Once;
-	/** number of cycles to play (-1 for infinite) */
+	/**
+	 * Number of cycles to play; -1 for infinite.
+	 *
+	 * One, not infinite. The default used to be -1, which is invisible until the author picks a loop
+	 * type -- and then the tween never ends: it is never taken out of the manager, it holds this play
+	 * tween and the widget behind it for the rest of the run, a sequence component waiting on its
+	 * OnComplete never advances past it, and a sequence refuses it outright
+	 * (UDreamTweenerSequence::Insert). "Loop forever" is a thing to ask for, not a thing to get by
+	 * not asking. Assets saved before this change that left the field alone come back as 1.
+	 */
 	UPROPERTY(EditAnywhere, Category = "Property", meta = (EditCondition = "LoopType != EDreamTweenLoop::Once"))
-		int32 LoopCount = -1;
+		int32 LoopCount = 1;
 	UPROPERTY(EditAnywhere, Category = "Property")
 		EDreamTweenEase EaseType = EDreamTweenEase::Linear;
 	/** only valid if easeType=CurveFloat */

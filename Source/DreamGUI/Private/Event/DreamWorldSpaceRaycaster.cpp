@@ -19,6 +19,7 @@ void UDreamWorldSpaceRaycaster::BeginPlay()
 		if (!WidgetPresenter)
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d DreamWidgetPresenterComponent is not valid! DreamUIScreenSpaceRaycaster can only attach to a Actor which contains a DreamWidgetPresenterComponent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			return;//the very next line dereferences it -- the screen-space raycaster returns here too
 		}
 		auto Canvas = WidgetPresenter->GetLoadedCanvas();
 		if (!IsValid(Canvas) || !Canvas->IsRootCanvas())

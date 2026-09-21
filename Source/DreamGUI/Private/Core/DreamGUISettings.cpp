@@ -17,7 +17,17 @@ UDreamGUISettings::UDreamGUISettings()
 {
 	// Defaults are the assets the plugin ships, so a fresh project behaves exactly as before. They are
 	// soft paths, which is what makes this different from the LoadObject literals they replace: the
-	// cooker follows these, and a rename fixes them up.
+	// editor fixes them up on a rename, and they are a declared reference rather than a string.
+	//
+	// What they are NOT is a cook dependency. These are assigned to a NATIVE CDO, which lives in the
+	// /Script/DreamGUI package and never enters the asset registry, so no package dependency exists
+	// for the cooker to follow -- the same is true of the config values that override them. Every one
+	// of these assets would be pulled in only because UE cooks all mounted content by default
+	// (CookOnTheFlyServer's bCookAllByDefault). Under a cook driven by an explicit package list
+	// (-map=, DLC/chunk, MapsToCook, -SkipSoftReferences) that default does not apply, and without
+	// help they are absent, LoadSetting logs "failed to load" for each, and the whole UI renders
+	// blank. The help is the plugin's own Config/Game.ini, which puts /DreamGUI into
+	// DirectoriesToAlwaysCook; it ships with the plugin, so this holds without the project knowing.
 	DefaultUIMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont.DreamUI_ImageAndFont")));
 	DefaultRectBlockMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/DreamGUI/Materials/DreamUI_RectBlock.DreamUI_RectBlock")));
 	RenderTargetMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/DreamGUI/Materials/DreamUI_RenderTargetMaterial.DreamUI_RenderTargetMaterial")));
@@ -34,11 +44,19 @@ UDreamGUISettings::UDreamGUISettings()
 	DefaultRectBlockData = TSoftObjectPtr<UDreamRectBlockData>(FSoftObjectPath(TEXT("/DreamGUI/DefaultRectBlockData.DefaultRectBlockData")));
 	NavigationSelectionClass = TSoftClassPtr<UDreamUserWidget>(FSoftClassPath(TEXT("/DreamGUI/Controls/BP_NavigationSelectionInputHandler.BP_NavigationSelectionInputHandler_C")));
 
-	// The event system defaults to the native preset rather than to the Blueprint one it used to
-	// spawn: same behaviour, and nothing to break if the Blueprint is renamed or deleted.
 	PresetControlFolder = TEXT("/DreamGUI/Controls/");
 
-	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamEnhancedInputEventSystemActor")));
+	// The STANDALONE native preset, and the choice is load-bearing: this class is the auto-spawn
+	// path's actor, and of the two native presets it is the only one that works unconfigured --
+	// AutoReceiveInput plus direct key bindings, "useful as a drop-in" by its own doc.
+	// ADreamEnhancedInputEventSystemActor looks like the newer pick but leaves its mapping context
+	// and mouse actions deliberately empty for a Blueprint to fill, so pointing here at the C++ class
+	// spawned an event system that never heard a click -- every auto-spawned screen UI lost
+	// interaction until this pointed back. The Blueprint that fills them DOES ship:
+	// /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput, which carries IMC_DreamUIInputContext
+	// and the four IA_* actions. A project on Enhanced Input should point this setting at THAT, not at
+	// the native class.
+	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamStandaloneInputEventSystemActor")));
 
 	WorldSpaceRaycasterSourceClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/DreamWorldSpaceRaycasterSource_Mouse.DreamWorldSpaceRaycasterSource_Mouse_C")));
 	ScreenSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/ScreenSpaceRoot.ScreenSpaceRoot_C")));

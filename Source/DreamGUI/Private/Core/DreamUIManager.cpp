@@ -2,11 +2,14 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 
 #include "DreamGUI.h"
 #include "Utils/DreamUIUtils.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
+#include "Engine/GameInstance.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "Engine/World.h"
@@ -95,16 +98,20 @@ void UDreamUIManagerObject::Tick(float DeltaTime)
 	{
 		for (int i = 0; i < OneShotFunctionsToExecuteInTick.Num(); i++)
 		{
-			auto& Item = OneShotFunctionsToExecuteInTick[i];
-			if (Item.Key <= 0)
+			if (OneShotFunctionsToExecuteInTick[i].Key <= 0)
 			{
-				Item.Value();
+				// Move the function out and drop its entry BEFORE calling it. A one-shot is free to
+				// queue another one -- OnBlueprintCompiled -> RefreshAllUI -> EnsureDataForRebuild does
+				// exactly that -- and the resulting reallocation used to happen underneath both the
+				// reference held here and the TFunction object being executed.
+				TFunction<void()> Function = MoveTemp(OneShotFunctionsToExecuteInTick[i].Value);
 				OneShotFunctionsToExecuteInTick.RemoveAt(i);
 				i--;
+				Function();
 			}
 			else
 			{
-				Item.Key--;
+				OneShotFunctionsToExecuteInTick[i].Key--;
 			}
 		}
 	}
@@ -170,6 +177,27 @@ void UDreamUIManagerObject::OnBlueprintCompiled()
 {
 	UDreamUIManagerObject::AddOneShotTickFunction([] {
 		bIsBlueprintCompiling = false;
+		// Before the refresh, because a half-dead instance has nothing for a refresh to walk.
+		//
+		// Recompiling replaces every live instance with a fresh copy of the new class, and the copy
+		// arrives with its contents still attached, its WidgetTree null (DuplicateTransient) and its
+		// bInitialized false -- so the widget on screen had a null content root, no resolved bindings
+		// and silently inert animation verbs, and nothing anywhere would have put it right. Deferred a
+		// tick, like the refresh, so the reinstancer has finished swapping references first.
+		int32 RepairedCount = 0;
+		for (TObjectIterator<UDreamUserWidget> It; It; ++It)
+		{
+			UDreamUserWidget* UserWidget = *It;
+			if (IsValid(UserWidget) && UserWidget->NeedsReinitializeFromClass())
+			{
+				UserWidget->ReinitializeFromClass();
+				++RepairedCount;
+			}
+		}
+		if (RepairedCount > 0)
+		{
+			UE_LOG(DreamGUI, Log, TEXT("Rebuilt %d live DreamUI widget(s) from their recompiled class."), RepairedCount);
+		}
 		UDreamUIManagerWorldSubsystem::RefreshAllUI();
 		});
 }
@@ -871,6 +899,13 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 		FTSTicker::GetCoreTicker().RemoveTicker(EditorTickDelegateHandle);
 		EditorTickDelegateHandle.Reset();
 	}
+	// Both of these are subscribed in Initialize, so they have to come off here: a subsystem is
+	// created and destroyed on every PIE start/stop, and AddUObject being a weak binding only means
+	// the stale entries do not crash -- they still accumulate in two global multicast arrays for the
+	// length of an editor session, and this object still receives one more OnEndOfFrame between
+	// Deinitialize and its own collection.
+	FCoreDelegates::OnEndFrame.RemoveAll(this);
+	FCoreDelegates::OnEnginePreExit.RemoveAll(this);
 	OnDeinitialize.Broadcast();
 #endif
 	DestroyRegisteredWidgetTrees();
@@ -934,10 +969,18 @@ void UDreamUIManagerWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 	//normally BeginPlay is already called when LoadPrefab, but if World has not BeginPlay then this will work
-	for (int i = 0; i < AllWidgetArray.Num(); i++)
+	//
+	// Snapshot first, and re-check each entry, the way UDreamWidget::BeginPlay/EndPlay/OnRegister do:
+	// an Awake is free to create or destroy widgets, and RemoveWidget uses RemoveSingle, which shifts
+	// everything after it down -- walking the live array by index skipped the widget that moved into
+	// the slot just visited. A pending-kill widget can also still be in the array, so IsValid is not
+	// optional here either. HasRegistered answers the other half: a widget in the snapshot that has
+	// since been unregistered was torn down while this loop was running, and BeginPlay on it would
+	// restart a widget that is on its way out.
+	const TArray<TObjectPtr<UDreamWidget>> WidgetsToBeginPlay = AllWidgetArray;
+	for (UDreamWidget* Widget : WidgetsToBeginPlay)
 	{
-		auto& Widget = AllWidgetArray[i];
-		if (!Widget->HasBegunPlay())
+		if (IsValid(Widget) && Widget->HasRegistered() && !Widget->HasBegunPlay())
 		{
 			Widget->BeginPlay();
 		}
@@ -963,6 +1006,11 @@ TArray<UDreamUIManagerWorldSubsystem*> UDreamUIManagerWorldSubsystem::InstanceAr
 DECLARE_CYCLE_STAT(TEXT("DreamUIBehaviour Tick"), STAT_DreamUIBehaviourTick, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("DreamUIBehaviour Start"), STAT_DreamUIBehaviourStart, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("UpdateLayout"), STAT_UpdateLayout, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("PropertyBindings Poll"), STAT_DreamUIPropertyBindingsPoll, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("RefreshAllClipData"), STAT_DreamUIRefreshClipData, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("UpdateRootCanvas"), STAT_DreamUIUpdateRootCanvas, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("RenderPrioritySort"), STAT_DreamUIRenderPrioritySort, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("SubmitCanvasDrawCall"), STAT_DreamUISubmitCanvasDrawCall, STATGROUP_DreamGUI);
 
 void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
@@ -996,9 +1044,17 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		if (bShouldUpdateOnCultureChanged)
 		{
 			bShouldUpdateOnCultureChanged = false;
-			for (auto& Culture : AllCultureChangedArray)
+			// Sweep first, then walk a snapshot. The entries are weak and a registrant can have been
+			// destroyed since it registered -- the generated Execute_OnCultureChanged thunk checks its
+			// target against null -- and a handler is free to register or unregister listeners as it runs.
+			AllCultureChangedArray.RemoveAll([](const TWeakObjectPtr<UObject>& Item) { return !Item.IsValid(); });
+			const TArray<TWeakObjectPtr<UObject>> CultureChangedListeners = AllCultureChangedArray;
+			for (auto& Culture : CultureChangedListeners)
 			{
-				IDreamUICultureChangedInterface::Execute_OnCultureChanged(Culture.Get());
+				if (UObject* CultureObject = Culture.Get(); IsValid(CultureObject))
+				{
+					IDreamUICultureChangedInterface::Execute_OnCultureChanged(CultureObject);
+				}
 			}
 		}
 	}
@@ -1006,6 +1062,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// Property bindings, BEFORE the behaviours: a behaviour that reads a bound property this frame
 	// should see this frame's value, not the one from before the function was called.
 	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIPropertyBindingsPoll);
 		for (int32 Index = PropertyBindingUsers.Num() - 1; Index >= 0; --Index)
 		{
 			UDreamUserWidget* UserWidget = PropertyBindingUsers[Index].Get();
@@ -1014,7 +1071,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 				PropertyBindingUsers.RemoveAtSwap(Index);
 				continue;
 			}
-			UserWidget->EvaluatePropertyBindings();
+			// Only the polled remainder: subscribed bindings re-evaluate from their field's
+			// broadcast, and visiting them here would just do the work twice.
+			UserWidget->EvaluatePolledPropertyBindings();
 		}
 	}
 
@@ -1030,7 +1089,13 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 				if (item.IsValid())
 				{
 					item->Call_Start();
-					if (item->bCanExecuteTick)
+					// Re-checked after Start, because Start is allowed to switch its own widget off or
+					// destroy it. bIsStartCalled is set BEFORE Start() runs, so the Call_OnDisable that
+					// follows takes the "already started" branch and calls RemoveDreamUIBehavioursFromTick
+					// on a list this behaviour is not in yet (it logs "Not exist" and does nothing).
+					// Adding it unconditionally here then ticked a disabled behaviour every frame, and
+					// the next enable reported "Already exist".
+					if (item.IsValid() && item->bIsEnableCalled && item->bCanExecuteTick)
 					{
 						DreamUIBehavioursForTick.AddUnique(item);
 					}
@@ -1050,7 +1115,15 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		for (int i = 0; i < DreamUIBehavioursForTick.Num(); i++)
 		{
 			CurrentExecutingTickIndex = i;
-			auto Behaviour = DreamUIBehavioursForTick[i];
+			UDreamUIBehaviour* Behaviour = DreamUIBehavioursForTick[i].Get();
+			if (!IsValid(Behaviour))
+			{
+				// Destroyed since the list was built. Not removed here: the index is what
+				// RemoveDreamUIBehavioursFromTick compares against CurrentExecutingTickIndex to decide
+				// whether a removal is safe, so renumbering mid-walk would make it drop the wrong entry.
+				// The sweep below the loop drops it instead.
+				continue;
+			}
 			if (auto Widget = Behaviour->GetWidget())
 			{
 				bool bAffectByGamePause;
@@ -1086,6 +1159,8 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 			}
 			DreamUIBehavioursNeedToRemoveFromTick.Reset();
 		}
+		//and the entries whose behaviour was destroyed while the list was being walked
+		DreamUIBehavioursForTick.RemoveAll([](const TWeakObjectPtr<UDreamUIBehaviour>& Item) { return !Item.IsValid(); });
 	}
 
 	//update layout
@@ -1165,9 +1240,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		}
 		for (auto& SnapshotLayout : LayoutContainerArrayWhichHasSnapshot)
 		{
-			if (IsValid(SnapshotLayout))
+			if (UDreamLayoutContainer* Layout = SnapshotLayout.Get(); IsValid(Layout))
 			{
-				SnapshotLayout->ApplyLayoutResult();
+				Layout->ApplyLayoutResult();
 			}
 		}
 #if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
@@ -1183,26 +1258,47 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		UE_LOG(DreamGUI, Log, TEXT("---end layout frame:%d, count:%d, time:%f"), GFrameNumber, LayoutPassCount, TimeSpan);
 #endif
 		bIsExecutingLayout = false;
+		// Anything that restructured the tree while the pass was running asked for a rebuild and was told
+		// to wait; this is the wait ending. See MarkRebuildLayoutTree.
+		FlushPendingLayoutTreeRebuild();
 	}
 
-#if WITH_EDITOR
+	// One ScreenSpaceOverlay root canvas PER LOCAL PLAYER, not one per world.
+	//
+	// It used to be one per world, full stop, and that is what made split screen impossible: the
+	// second player's screen is a second overlay canvas by definition. What is still wrong -- and
+	// still shows up in a packaged build as one of the two UIs randomly not being there -- is having
+	// MORE overlay canvases than there are local players to own them, because past that point two of
+	// them are competing for the same screen with an undefined order between them.
+	//
+	// Not editor-only, for the same reason it was made not-editor-only before: the rule is a runtime
+	// one. Shipping is the only build that stays silent.
+#if !UE_BUILD_SHIPPING
 	const int32 ScreenSpaceOverlayCanvasCount = CountCompetingScreenSpaceOverlayCanvases();
-	if (ScreenSpaceOverlayCanvasCount > 1)
+	const UGameInstance* GameInstanceForScreens = GetWorld() != nullptr ? GetWorld()->GetGameInstance() : nullptr;
+	const int32 AllowedOverlayCanvasCount = FMath::Max(1,
+		GameInstanceForScreens != nullptr ? GameInstanceForScreens->GetNumLocalPlayers() : 1);
+	if (ScreenSpaceOverlayCanvasCount > AllowedOverlayCanvasCount)
 	{
 		if (PrevScreenSpaceOverlayCanvasCount != ScreenSpaceOverlayCanvasCount)//only show message when change
 		{
 			PrevScreenSpaceOverlayCanvasCount = ScreenSpaceOverlayCanvasCount;
-			auto errMsg = FText::Format(LOCTEXT("MultipleDreamUICanvasRenderScreenSpaceOverlay", "[{0}].{1} Detect multiple DreamCanvas rendered with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!\
-\n	World: {2}, type: {3}")
-			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, FText::FromString(this->GetWorld()->GetPathName()), (int)(this->GetWorld()->WorldType));
+			auto errMsg = FText::Format(LOCTEXT("MultipleDreamUICanvasRenderScreenSpaceOverlay", "[{0}].{1} Detect {2} DreamCanvas rendered with ScreenSpaceOverlay mode for {3} local player(s). There may be at most one ScreenSpace UI per local player; the extra ones compete for the same screen.\
+\n	World: {4}, type: {5}")
+			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, ScreenSpaceOverlayCanvasCount, AllowedOverlayCanvasCount
+			, FText::FromString(this->GetWorld()->GetPathName()), (int)(this->GetWorld()->WorldType));
 			UE_LOG(DreamGUI, Error, TEXT("%s"), *errMsg.ToString());
+#if WITH_EDITOR
 			FDreamUIUtils::EditorNotification(errMsg, false, 10.0f);
+#endif
 		}
 	}
 	else
 	{
 		PrevScreenSpaceOverlayCanvasCount = 0;
 	}
+#endif
+#if WITH_EDITOR
 	if (bDreamUIWidgetOutlinerChanged)
 	{
 		bDreamUIWidgetOutlinerChanged = false;
@@ -1219,16 +1315,20 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// missed mark left the shader clipping against a stale rectangle and silently culled a whole subtree.
 	// FDreamUIClipData::UpdateData diffs against the last uploaded block, so an unchanged clip costs one matrix
 	// build and a memcmp, with no GPU write.
-	for (auto& Canvas : AllCanvasArray)
 	{
-		if (Canvas.IsValid())
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIRefreshClipData);
+		for (auto& Canvas : AllCanvasArray)
 		{
-			Canvas->RefreshAllClipData();
+			if (Canvas.IsValid())
+			{
+				Canvas->RefreshAllClipData();
+			}
 		}
 	}
 
 	//update draw-call
 	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
 		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
 			for (auto& Canvas : AllCanvasArray)
 			{
@@ -1248,11 +1348,14 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// Consume render-priority sort requests at their owner. A request raised outside the owner's own
 	// draw-call rebuild (runtime SetSortOrder, a child canvas rebuilding alone) used to sit in the flag
 	// until the owner happened to rebuild for some other reason; this sweep executes it the same frame.
-	for (auto& Canvas : AllCanvasArray)
 	{
-		if (Canvas.IsValid())
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIRenderPrioritySort);
+		for (auto& Canvas : AllCanvasArray)
 		{
-			Canvas->ConsumePendingRenderPrioritySort();
+			if (Canvas.IsValid())
+			{
+				Canvas->ConsumePendingRenderPrioritySort();
+			}
 		}
 	}
 }
@@ -1324,7 +1427,7 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 			if (!Selectable->GetWidget()->GetInteractableInHierarchy())continue;
 
 			bool bIsScreenSpace = false;
-			if (Selectable->GetWorld()->IsGameWorld())
+			if (DreamUI::IsGameWorld(Selectable.Get()))
 			{
 				auto RenderCanvas = Selectable->GetWidget()->GetRenderCanvas();
 				bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
@@ -1338,6 +1441,7 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 
 void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 {
+	SCOPE_CYCLE_COUNTER(STAT_DreamUISubmitCanvasDrawCall);
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 	//update draw-call
 	{
@@ -1484,16 +1588,31 @@ void UDreamUIManagerWorldSubsystem::RemoveDreamUIBehavioursFromStart(UDreamUIBeh
 
 void UDreamUIManagerWorldSubsystem::RegisterDreamUICultureChangedEvent(TScriptInterface<IDreamUICultureChangedInterface> InItem)
 {
-	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
+	// Blueprint-callable, and an interface pin left empty arrives here as a null object. This is the
+	// only way to subscribe to a culture change, so it is a pin every localised widget touches.
+	UObject* Item = InItem.GetObject();
+	if (!IsValid(Item))
 	{
-		Instance->AllCultureChangedArray.AddUnique(InItem.GetObject());
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Register culture changed event was given no object; nothing to register."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
+	if (auto Instance = GetInstance(Item->GetWorld()))
+	{
+		Instance->AllCultureChangedArray.AddUnique(Item);
 	}
 }
 void UDreamUIManagerWorldSubsystem::UnregisterDreamUICultureChangedEvent(TScriptInterface<IDreamUICultureChangedInterface> InItem)
 {
-	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
+	UObject* Item = InItem.GetObject();
+	if (!IsValid(Item))
 	{
-		Instance->AllCultureChangedArray.RemoveSingle(InItem.GetObject());
+		// Nothing to take off the list, and the list drops dead weak entries on its own.
+		return;
+	}
+	if (auto Instance = GetInstance(Item->GetWorld()))
+	{
+		Instance->AllCultureChangedArray.RemoveSingle(Item);
 	}
 }
 
@@ -1563,7 +1682,6 @@ void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
 	this->AllCanvasArray.RemoveSingle(InCanvas);
 }
 
-#if WITH_EDITOR
 int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()const
 {
 	int32 Count = 0;
@@ -1581,7 +1699,6 @@ int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()c
 	}
 	return Count;
 }
-#endif
 
 void UDreamUIManagerWorldSubsystem::ParkWidget(UDreamWidget* InWidget)
 {
@@ -1716,6 +1833,15 @@ void UDreamUIManagerWorldSubsystem::RemoveWidget(UDreamWidget* InWidget)
 	}
 #endif
 	AllWidgetArray.RemoveSingle(InWidget);
+	if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(InWidget))
+	{
+		// A widget only reaches here from OnUnregister, which is teardown -- and a torn-down user
+		// widget must stop being polled for its property bindings. IsValid() is no answer to that
+		// question: DestroyWidget unregisters, ends play and detaches without ever marking the
+		// object garbage, so the poll loop's own sweep went on calling binding source functions on
+		// a widget that had already run EndPlay, until the next full GC.
+		RemovePropertyBindingUser(UserWidget);
+	}
 }
 
 void UDreamUIManagerWorldSubsystem::DestroyRegisteredWidgetTrees()
@@ -1764,18 +1890,47 @@ void UDreamUIManagerWorldSubsystem::AddLayoutDirtyWidget(UDreamWidget* InWidget)
 	}
 }
 
+/**
+ * Both entry points defer rather than drop while a pass is running.
+ *
+ * The cached tree cannot be rebuilt mid-pass -- CalculateLayoutTree is iterating a copy of it, and
+ * emptying the map underneath would strand the walk. But a structural change made from inside a pass is
+ * real: a behaviour that adds a child from OnDimensionChanged, the sibling renumbering panels do while
+ * arranging, a subtree revealed by SetLayoutVisibilitySuppressed. The old shape simply did nothing, and
+ * because CalculateLayoutTree only re-collects when the cached array is EMPTY, the stale tree then
+ * survived indefinitely -- until some later attach or detach outside a pass happened to wipe it. The
+ * new widget still laid itself out (it enqueues itself as its own dirty root), but its ancestors' cached
+ * pre-order no longer contained it, so the ancestor walk skipped it.
+ *
+ * Remembering a single "rebuild everything" bit rather than the specific widgets is deliberate: the
+ * targeted form only ever removes one entry, so upgrading it to the full wipe is conservative, and it
+ * only costs anything on the frames where something really did restructure mid-pass.
+ */
 void UDreamUIManagerWorldSubsystem::MarkRebuildLayoutTree(UDreamWidget* InWidget)
 {
-	if (!bIsExecutingLayout)
+	if (bIsExecutingLayout)
 	{
-		MapWidgetToLayoutTree.Remove(InWidget);
+		bPendingLayoutTreeRebuild = true;
+		return;
 	}
+	MapWidgetToLayoutTree.Remove(InWidget);
 }
 
 void UDreamUIManagerWorldSubsystem::MarkRebuildAllLayoutTree()
 {
-	if (!bIsExecutingLayout)
+	if (bIsExecutingLayout)
 	{
+		bPendingLayoutTreeRebuild = true;
+		return;
+	}
+	MapWidgetToLayoutTree.Empty();
+}
+
+void UDreamUIManagerWorldSubsystem::FlushPendingLayoutTreeRebuild()
+{
+	if (bPendingLayoutTreeRebuild)
+	{
+		bPendingLayoutTreeRebuild = false;
 		MapWidgetToLayoutTree.Empty();
 	}
 }
@@ -1789,7 +1944,7 @@ void UDreamUIManagerWorldSubsystem::CalculateLayoutTree(UDreamWidget* RootLayout
 
 	struct LOCAL
 	{
-		static void CollectLayoutTree(UDreamWidget* Widget, TArray<TObjectPtr<UDreamWidget>>& LayoutTreeArray,
+		static void CollectLayoutTree(UDreamWidget* Widget, TArray<TWeakObjectPtr<UDreamWidget>>& LayoutTreeArray,
 			TSet<const UDreamWidget*>& VisitedWidgets)
 		{
 			if (!IsValid(Widget))return;
@@ -1816,10 +1971,10 @@ void UDreamUIManagerWorldSubsystem::CalculateLayoutTree(UDreamWidget* RootLayout
 	}
 	//Iterate a copy: UpdateLayout can re-enter CalculateLayoutTree through RebuildLayoutImmediately, and the
 	//FindOrAdd there may rehash the map out from under a reference into it.
-	const TArray<TObjectPtr<UDreamWidget>> LayoutTreeArray = LayoutTree.WidgetArray;
+	const TArray<TWeakObjectPtr<UDreamWidget>> LayoutTreeArray = LayoutTree.WidgetArray;
 	for (int i = 0; i < LayoutTreeArray.Num(); i++)
 	{
-		auto Widget = LayoutTreeArray[i];
+		UDreamWidget* Widget = LayoutTreeArray[i].Get();
 		if (!IsValid(Widget))
 		{
 			continue;
@@ -1974,14 +2129,23 @@ UDreamEventSystem* UDreamUIManagerWorldSubsystem::GetEventSystemByUserIndex(int 
 
 void UDreamUIManagerWorldSubsystem::AddEventSystem(UDreamEventSystem* InEventSystem)
 {
-	if (auto InstancePtr = MapUserIndexToEventSystem.Find(InEventSystem->GetUserIndex()))
+	if (!IsValid(InEventSystem))return;
+
+	// The entry is a weak pointer, so "a key exists" and "an event system is registered" are different
+	// questions. A level reload destroys the old component and leaves its stale entry behind: asking
+	// that entry for an owner to name was a null dereference, and reporting it was a duplicate error
+	// about a component that no longer exists -- after which the new level's UI was never registered
+	// and stopped responding entirely.
+	auto InstancePtr = MapUserIndexToEventSystem.Find(InEventSystem->GetUserIndex());
+	UDreamEventSystem* Instance = InstancePtr != nullptr ? InstancePtr->Get() : nullptr;
+	if (IsValid(Instance) && Instance != InEventSystem)
 	{
-		auto Instance = *InstancePtr;
-		FString ActorName =
+		const AActor* InstanceOwner = Instance->GetOwner();
+		FString ActorName = InstanceOwner == nullptr ? TEXT("(no owner)") :
 #if WITH_EDITOR
-			Instance->GetOwner()->GetActorLabel();
+			InstanceOwner->GetActorLabel();
 #else
-			Instance->GetOwner()->GetName();
+			InstanceOwner->GetName();
 #endif
 		FString ErrorMsg = FString::Printf(TEXT("[%s].%d DreamEventSystem component is already exist in actor:%s, pathName:%s, world:%s, multiple DreamEventSystem with same UserIndex in same world is not allowed!")
 			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ActorName, *Instance->GetPathName(), *GetWorld()->GetPathName());
@@ -1999,7 +2163,19 @@ void UDreamUIManagerWorldSubsystem::AddEventSystem(UDreamEventSystem* InEventSys
 
 void UDreamUIManagerWorldSubsystem::RemoveEventSystem(UDreamEventSystem* InEventSystem)
 {
-	MapUserIndexToEventSystem.Remove(InEventSystem->GetUserIndex());
+	if (InEventSystem == nullptr)return;
+
+	const int UserIndex = InEventSystem->GetUserIndex();
+	auto InstancePtr = MapUserIndexToEventSystem.Find(UserIndex);
+	if (InstancePtr == nullptr)return;
+	// Removed by identity, not by user index. An unregister arriving late -- the previous level's event
+	// system being destroyed after the new one has already claimed the same index -- used to evict the
+	// live registration and leave that player's UI deaf with nothing in the log.
+	UDreamEventSystem* Instance = InstancePtr->Get();
+	if (Instance == InEventSystem || Instance == nullptr)
+	{
+		MapUserIndexToEventSystem.Remove(UserIndex);
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

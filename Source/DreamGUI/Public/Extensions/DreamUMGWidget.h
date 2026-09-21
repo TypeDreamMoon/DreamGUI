@@ -192,6 +192,16 @@ public:
 	/** Hook to allow this component modify the local position of the widget after it has been projected from world space to screen space. */
 	virtual FVector2D ModifyProjectedLocalPosition(const FGeometry& ViewportGeometry, const FVector2D& LocalPosition) { return LocalPosition; }
 
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
+
+protected:
+	/**
+	 * The hosted Slate content's desired size converted into UI units, or a negative pair when
+	 * there is nothing hosted or nothing measured yet. Both measure functions read it.
+	 */
+	FVector2f MeasureHostedWidget()const;
+
 protected:
 	void OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld);
 

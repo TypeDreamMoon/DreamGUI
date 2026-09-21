@@ -41,6 +41,8 @@ public:
 
 	/** Register the bytes behind a face index; the worker opens its own FT_Face over them on first use. */
 	void SetFaceSource(int32 FaceIndex, const TSharedRef<const TArray<uint8>, ESPMode::ThreadSafe>& Bytes, int32 FaceIndexInFile);
+	/** Whether a face has bytes registered. A face with none fails every job it is handed. */
+	bool HasFaceSource(int32 FaceIndex) const;
 
 	/** Queue a job and make sure a task is draining the queue. */
 	void Enqueue(const FJob& Job);

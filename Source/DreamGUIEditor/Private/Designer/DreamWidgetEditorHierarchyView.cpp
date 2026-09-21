@@ -7,6 +7,8 @@
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprintEditor.h"
 #include "DreamWidgetEditorHierarchyViewItem.h"
+#include "SDreamWidgetDesignerViewport.h"
+#include "DreamWidgetDesignerViewportClient.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamUISettings.h"
@@ -22,8 +24,6 @@
 #include "Framework/Commands/GenericCommands.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetEditorHierarchyView"
-
-UE_DISABLE_OPTIMIZATION
 
 void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld* InWorld)
 {
@@ -81,10 +81,15 @@ void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld
 
 		// Collapsed rows are recorded by name: the preview widget a row shows is a different object
 		// after every rebuild, but the name it shares with its template is not.
-		const TSet<FName>& UnexpandedNames = Manager.Pin()->GetWidgetBlueprint()->DesignerData.UnexpandedWidgets;
+		//
+		// The Blueprint is checked rather than dereferenced through: this panel is also constructed
+		// for a manager whose asset is being replaced, and GetWidgetBlueprint answers null there.
 		TSet<TWeakObjectPtr<UDreamWidget>> UnexpendWidgetSet;
-		if (UDreamWidget* PreviewRoot = Manager.Pin()->GetPreviewRootWidget())
+		const UDreamWidgetBlueprint* Blueprint = Manager.Pin()->GetWidgetBlueprint();
+		UDreamWidget* PreviewRoot = Manager.Pin()->GetPreviewRootWidget();
+		if (IsValid(Blueprint) && IsValid(PreviewRoot))
 		{
+			const TSet<FName>& UnexpandedNames = Blueprint->DesignerData.UnexpandedWidgets;
 			TArray<UDreamWidget*> AllWidgets;
 			CollectDreamWidgetsToNestedBoundary(PreviewRoot, AllWidgets);
 			for (UDreamWidget* Widget : AllWidgets)
@@ -103,7 +108,7 @@ void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld
 		UDreamUIManagerObject::AddOneShotTickFunction([WeakSelf = TWeakPtr<SDreamWidgetEditorHierarchyView>(SharedThis(this)), UnexpendWidgetSet]()
 		{
 			auto Self = WeakSelf.Pin();
-			if (!Self.IsValid())return;
+			if (!Self.IsValid() || !Self->WidgetTreeView.IsValid())return;
 			TSet<TWeakObjectPtr<UDreamWidget>> VisitingItems;
 			Self->WidgetTreeView->GetExpandedItems(VisitingItems);
 			for (auto& Item : VisitingItems)
@@ -491,20 +496,62 @@ void SDreamWidgetEditorHierarchyView::OnWidgetHierarchyChanged()
 
 void SDreamWidgetEditorHierarchyView::OnObjectsReplaced(const TMap<UObject*, UObject*>& ReplacementMap)
 {
-	if ( !bRebuildTreeRequested )
+	// OnObjectsReplaced fires for EVERY Blueprint recompile in the editor, and the answer here used
+	// to be to throw the STreeView away and build a new one. That is two defects in one line: it ran
+	// for a recompile of an Actor Blueprint that has nothing to do with this panel, and even when the
+	// recompile WAS relevant it destroyed the widget the user might be typing a new name into.
+	//
+	// Rows hold UDreamWidget pointers, so only a replacement touching one of those can have
+	// invalidated anything shown here.
+	bool bTouchesHierarchy = false;
+	for (const TPair<UObject*, UObject*>& Replacement : ReplacementMap)
 	{
-		bRefreshRequested = true;
-		bRebuildTreeRequested = true;
+		const UObject* Replaced = Replacement.Key;
+		if (Replaced != nullptr
+			&& (Replaced->IsA<UDreamWidget>() || Replaced->IsA<UDreamUIBehaviour>()))
+		{
+			bTouchesHierarchy = true;
+			break;
+		}
 	}
+	if (!bTouchesHierarchy)
+	{
+		return;
+	}
+	// A REFRESH, never a rebuild. RefreshTree re-derives RootWidgets from the manager from scratch and
+	// the filter handler re-flattens the tree into the source array the STreeView reads, so nothing
+	// stale survives it -- the tree VIEW is the one thing that does, and it is the thing holding the
+	// inline rename editor, the scroll position and the row widgets. Rebuilding it was only ever
+	// standing in for the expansion state that a pointer-keyed map lost on every rebuild; that map is
+	// keyed by name now (see ExpansionMap) and comes back through UpdateItemsExpansionFromModel.
+	bRefreshRequested = true;
 }
 
 TSharedRef< ITableRow > SDreamWidgetEditorHierarchyView::OnGenerateRow(TWeakObjectPtr<UDreamWidget> InItem, const TSharedRef<STableViewBase>& OwnerTable)
 {
+	// Hovering a row outlines the widget on the design surface -- the reverse of the viewport's own
+	// hover, through the same overlay. Exit clears only its own announcement: rows fire enter-B
+	// before exit-A when the cursor slides down the list, and an unconditional clear would wipe B's.
+	auto ViewportClientOf = [](const TWeakPtr<FDreamWidgetBlueprintEditor>& InManager)
+		-> TSharedPtr<FDreamWidgetDesignerViewportClient>
+	{
+		const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = InManager.Pin();
+		const TSharedPtr<SDreamWidgetDesignerViewport> Viewport = Editor.IsValid() ? Editor->GetViewportWidget() : nullptr;
+		return Viewport.IsValid() ? Viewport->GetViewportClient() : nullptr;
+	};
 	return SNew(SDreamWidgetEditorHierarchyViewItem, OwnerTable, InItem, SharedThis(this), Manager.Pin())
 	.HighlightText(this, &SDreamWidgetEditorHierarchyView::GetSearchText)
-	.MouseEnter_Lambda([=, this] {
+	.MouseEnter_Lambda([WeakManager = Manager, InItem, ViewportClientOf] {
+			if (const TSharedPtr<FDreamWidgetDesignerViewportClient> Client = ViewportClientOf(WeakManager))
+			{
+				Client->SetExternalHoverWidget(InItem.Get());
+			}
 		})
-	.MouseExit_Lambda([=, this] {
+	.MouseExit_Lambda([WeakManager = Manager, InItem, ViewportClientOf] {
+			if (const TSharedPtr<FDreamWidgetDesignerViewportClient> Client = ViewportClientOf(WeakManager))
+			{
+				Client->ClearExternalHoverWidget(InItem.Get());
+			}
 		})
 	;
 }
@@ -619,7 +666,11 @@ FText SDreamWidgetEditorHierarchyView::GetSearchText()const
 
 void SDreamWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<UDreamWidget> Item, bool bExpanded)
 {
-	ExpansionMap.FindOrAdd(Item.Get()) = bExpanded;
+	if (!Item.IsValid())
+	{
+		return;
+	}
+	ExpansionMap.FindOrAdd(Item->GetFName()) = bExpanded;
 }
 TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 {
@@ -713,6 +764,22 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 										})));
 								}
 							}));
+						// The inverse, in the same section: a wrapper chosen by mistake, or inherited
+						// from a hierarchy somebody else authored, had no way out before this.
+						MenuBuilder.AddMenuEntry(
+							LOCTEXT("UnwrapWidget", "Unwrap"),
+							LOCTEXT("UnwrapWidgetTooltip", "Take this widget out from between its parent and its children. The children keep their order and land where it stood; it is then deleted."),
+							FSlateIcon(),
+							FUIAction(
+								FExecuteAction::CreateLambda([WeakEditor = Manager]()
+								{
+									if (auto E = WeakEditor.Pin())E->UnwrapSelectedWidget();
+								}),
+								FCanExecuteAction::CreateLambda([WeakEditor = Manager]()
+								{
+									const TSharedPtr<FDreamWidgetBlueprintEditor> E = WeakEditor.Pin();
+									return E.IsValid() && E->CanUnwrapSelectedWidget();
+								})));
 					}
 					MenuBuilder.EndSection();
 				}
@@ -764,48 +831,115 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 				}
 			}
 
-			// UMG-toolbar-style Align / Distribute for a multi-widget selection
+			// Hide / Lock / Focus. The row already carries the first two as little buttons, but the
+			// VIEWPORT reuses this menu and has no rows -- so from the design surface there was no
+			// way to put a widget away, and no Focus at all outside the F key. Every one of these is
+			// an existing designer operation; none of them is new behaviour.
 			if (auto Editor = Manager.Pin())
 			{
-				if (Editor->GetSelectedWidgets().Num() >= 2)
+				TArray<TWeakObjectPtr<UDreamWidget>> Targets = Editor->GetSelectedWidgets();
+				Targets.RemoveAll([](const TWeakObjectPtr<UDreamWidget>& Widget) { return !Widget.IsValid(); });
+				if (Targets.Num() > 0)
 				{
-					MenuBuilder.BeginSection("AlignDistribute", LOCTEXT("AlignDistribute", "Align"));
+					// What the toggles DO is decided from the first selected widget and applied to
+					// all of them: a mixed selection must end up in one state, not flip each widget
+					// to its own opposite and leave the set exactly as mixed as it was.
+					const bool bFirstHidden = Editor->IsWidgetHiddenInDesigner(Targets[0].Get());
+					const bool bFirstLocked = Editor->IsWidgetLockedInDesigner(Targets[0].Get());
+					MenuBuilder.BeginSection("Designer", LOCTEXT("DesignerSection", "Designer"));
 					{
-						MenuBuilder.AddSubMenu(
-							LOCTEXT("AlignSubMenu", "Align"),
-							LOCTEXT("AlignSubMenuTooltip", "Line the selected sibling widgets up along an edge or center (they must share a parent)."),
-							FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
+						MenuBuilder.AddMenuEntry(
+							bFirstHidden ? LOCTEXT("ShowInDesigner", "Show in Designer") : LOCTEXT("HideInDesigner", "Hide in Designer"),
+							LOCTEXT("HideInDesignerTooltip", "Take the selected widgets out of the design surface. They still exist and still run; they are simply not drawn and cannot be clicked while hidden."),
+							FSlateIcon(FAppStyle::GetAppStyleSetName(), bFirstHidden ? TEXT("Level.VisibleIcon16x") : TEXT("Level.NotVisibleIcon16x")),
+							FUIAction(FExecuteAction::CreateLambda([WeakEditor = Manager, Targets, bFirstHidden]()
 							{
-								auto AddAlign = [&SubMenu, WeakEditor](const FText& Label, EDreamUIWidgetAlignType Type)
+								if (auto E = WeakEditor.Pin())
 								{
-									SubMenu.AddMenuEntry(Label, FText::GetEmpty(), FSlateIcon(),
-										FUIAction(FExecuteAction::CreateLambda([WeakEditor, Type]()
-										{
-											if (auto E = WeakEditor.Pin())E->AlignSelectedWidgets(Type);
-										})));
-								};
-								AddAlign(LOCTEXT("AlignLeft", "Left Edges"), EDreamUIWidgetAlignType::LeftEdge);
-								AddAlign(LOCTEXT("AlignCenterH", "Horizontal Centers"), EDreamUIWidgetAlignType::HorizontalCenter);
-								AddAlign(LOCTEXT("AlignRight", "Right Edges"), EDreamUIWidgetAlignType::RightEdge);
-								SubMenu.AddSeparator();
-								AddAlign(LOCTEXT("AlignTop", "Top Edges"), EDreamUIWidgetAlignType::TopEdge);
-								AddAlign(LOCTEXT("AlignCenterV", "Vertical Centers"), EDreamUIWidgetAlignType::VerticalCenter);
-								AddAlign(LOCTEXT("AlignBottom", "Bottom Edges"), EDreamUIWidgetAlignType::BottomEdge);
-							}));
+									for (const TWeakObjectPtr<UDreamWidget>& Widget : Targets)
+									{
+										if (Widget.IsValid())E->SetWidgetHiddenInDesigner(Widget.Get(), !bFirstHidden);
+									}
+								}
+							})));
+						MenuBuilder.AddMenuEntry(
+							bFirstLocked ? LOCTEXT("UnlockInDesigner", "Unlock") : LOCTEXT("LockInDesigner", "Lock"),
+							LOCTEXT("LockInDesignerTooltip", "Stop the selected widgets being picked or dragged on the design surface. Their children go with them."),
+							FSlateIcon(FAppStyle::GetAppStyleSetName(), bFirstLocked ? TEXT("Icons.Unlock") : TEXT("Icons.Lock")),
+							FUIAction(FExecuteAction::CreateLambda([WeakEditor = Manager, Targets, bFirstLocked]()
+							{
+								if (auto E = WeakEditor.Pin())
+								{
+									for (const TWeakObjectPtr<UDreamWidget>& Widget : Targets)
+									{
+										if (Widget.IsValid())E->SetWidgetLockedInDesigner(Widget.Get(), !bFirstLocked, /*bRecursive*/true);
+									}
+								}
+							})));
+						// Find References, where UMG's hierarchy puts it. Two searches behind one
+						// entry: Kismet's Find-in-Blueprint over this asset's graphs, and the asset
+						// registry over the project when the widget is an instance of another class.
+						MenuBuilder.AddMenuEntry(
+							LOCTEXT("FindWidgetReferences", "Find References"),
+							LOCTEXT("FindWidgetReferencesTooltip", "Search this Blueprint's graphs for nodes that name this widget, and report which other assets use its class."),
+							FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Kismet.Tabs.FindResults")),
+							FUIAction(
+								FExecuteAction::CreateLambda([WeakEditor = Manager]()
+								{
+									if (auto E = WeakEditor.Pin())E->FindReferencesToSelectedWidget();
+								}),
+								FCanExecuteAction::CreateLambda([WeakEditor = Manager]()
+								{
+									const TSharedPtr<FDreamWidgetBlueprintEditor> E = WeakEditor.Pin();
+									return E.IsValid() && E->CanFindReferencesToSelectedWidget();
+								})));
+						MenuBuilder.AddMenuEntry(
+							LOCTEXT("FocusSelection", "Focus Selection"),
+							LOCTEXT("FocusSelectionTooltip", "Frame the selected widgets in the design viewport. The same thing the F key does."),
+							FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Search")),
+							FUIAction(FExecuteAction::CreateLambda([WeakEditor = Manager]()
+							{
+								const TSharedPtr<FDreamWidgetBlueprintEditor> E = WeakEditor.Pin();
+								const TSharedPtr<SDreamWidgetDesignerViewport> Viewport = E.IsValid() ? E->GetViewportWidget() : nullptr;
+								if (Viewport.IsValid() && Viewport->GetViewportClient().IsValid())
+								{
+									Viewport->GetViewportClient()->FocusViewportToTargets();
+								}
+							})));
+					}
+					MenuBuilder.EndSection();
+				}
+			}
 
-						if (Editor->GetSelectedWidgets().Num() >= 3)
-						{
-							MenuBuilder.AddSubMenu(
-								LOCTEXT("DistributeSubMenu", "Distribute"),
-								LOCTEXT("DistributeSubMenuTooltip", "Even out the gaps between the selected sibling widgets (keeps the two outermost fixed)."),
-								FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
+			// UMG-toolbar-style Align / Distribute for a multi-widget selection. The entries themselves
+			// live on the toolkit so the viewport menu and the mode toolbar offer the same ones.
+			FDreamWidgetBlueprintEditor::FillAlignDistributeMenu(MenuBuilder, Manager);
+
+			// The text half of the designer, and only for a hierarchy the text owns: on a
+			// hand-authored one there is no file behind the row that was right-clicked, so the
+			// entry is absent rather than greyed -- nothing done here would make it work.
+			//
+			// One selected widget only. The gesture is "show me this line", and a multi-selection
+			// has no single line; offering it for two would have to pick one, which is a cursor
+			// jump nobody asked for.
+			if (const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = Manager.Pin())
+			{
+				if (Editor->GetSelectedWidgets().Num() == 1 && Editor->CanRevealInVSCode())
+				{
+					MenuBuilder.BeginSection("DreamUISource", LOCTEXT("DreamUISource", "DreamUI Source"));
+					{
+						MenuBuilder.AddMenuEntry(LOCTEXT("RevealInVSCode", "Reveal in VS Code"),
+							LOCTEXT("RevealInVSCodeTooltip",
+								"Put the VS Code cursor on the line of the .dui that declares this widget, opening the DreamUI workspace first if VS Code is not running."),
+							FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.OpenInExternalEditor")),
+							FUIAction(FExecuteAction::CreateLambda([WeakEditor = Manager]()
+							{
+								if (const TSharedPtr<FDreamWidgetBlueprintEditor> E = WeakEditor.Pin())
 								{
-									SubMenu.AddMenuEntry(LOCTEXT("DistributeH", "Horizontally"), FText::GetEmpty(), FSlateIcon(),
-										FUIAction(FExecuteAction::CreateLambda([WeakEditor]() { if (auto E = WeakEditor.Pin())E->DistributeSelectedWidgets(true); })));
-									SubMenu.AddMenuEntry(LOCTEXT("DistributeV", "Vertically"), FText::GetEmpty(), FSlateIcon(),
-										FUIAction(FExecuteAction::CreateLambda([WeakEditor]() { if (auto E = WeakEditor.Pin())E->DistributeSelectedWidgets(false); })));
-								}));
-						}
+									const TArray<TWeakObjectPtr<UDreamWidget>>& Sel = E->GetSelectedWidgets();
+									E->RevealInVSCode(Sel.Num() == 1 ? Sel[0].Get() : nullptr);
+								}
+							})));
 					}
 					MenuBuilder.EndSection();
 				}
@@ -874,6 +1008,14 @@ void SDreamWidgetEditorHierarchyView::SaveItemsExpansion()
 }
 void SDreamWidgetEditorHierarchyView::RecursiveExpand(UDreamWidget* Widget, EExpandBehavior ExpandBehavior)
 {
+	// Reached with a dead widget for real: RestoreItemsExpansion and UpdateItemsExpansionFromModel
+	// walk RootWidgets, which is a list of weak pointers that a structural edit can empty out
+	// between the edit and the next Tick -- clearing the search box right after one used to come
+	// straight here with null.
+	if (!IsValid(Widget) || !WidgetTreeView.IsValid())
+	{
+		return;
+	}
 	bool bShouldExpandItem = true;
 
 	switch (ExpandBehavior)
@@ -899,7 +1041,7 @@ void SDreamWidgetEditorHierarchyView::RecursiveExpand(UDreamWidget* Widget, EExp
 	case EExpandBehavior::FromModel:
 	default:
 		{
-			if (auto ValuePtr = ExpansionMap.Find(Widget))
+			if (const bool* ValuePtr = ExpansionMap.Find(Widget->GetFName()))
 			{
 				bShouldExpandItem = *ValuePtr;
 			}
@@ -941,7 +1083,5 @@ void SDreamWidgetEditorHierarchyView::SetAllExpansion(bool bExpand)
 		}
 	}
 }
-
-UE_ENABLE_OPTIMIZATION
 
 #undef LOCTEXT_NAMESPACE

@@ -172,6 +172,19 @@ public:
 	virtual void PostLoad()override;
 	virtual void BeginDestroy() override;
 
+	/**
+	 * Tear this widget and its whole subtree down: unregister, detach from the parent, end play, and
+	 * mark every widget in it as garbage.
+	 *
+	 * IsValid() therefore answers false from here, which is what the plugin's several hundred IsValid
+	 * checks were all written to mean. The memory itself still goes at the next collection; what
+	 * changes is that nothing can mistake a torn-down widget for a live one in the meantime.
+	 *
+	 * Two things are deliberately NOT marked, both in DestroyWidget's own tail: anything reached while
+	 * a collection is running (BeginDestroy calls this from inside one), and anything rooted. Undo
+	 * survives because each widget is Modify()'d before it is marked, so the transaction records the
+	 * transition and reverses it -- see the note on the loop.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Widget")
 	void DestroyWidget();
 
@@ -206,6 +219,29 @@ public:
 	static FName GetPropertyName_Visibility()
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Visibility);
+	}
+	/*
+	 * The three below exist for UDreamDataBinding, which used to spell them as string literals.
+	 *
+	 * They have to live HERE and not at the call site, and the reason is the whole point of the
+	 * change: the properties are protected, and GET_MEMBER_NAME_CHECKED expands to an expression
+	 * that names the member, so only this class can write it. A literal compiles from anywhere,
+	 * which is exactly why it was a literal -- and why renaming any of these three used to make the
+	 * binding's special case silently stop matching and fall through to a memcpy, losing every side
+	 * effect the setter has (the recursive *InHierarchy caches on the children, most of all) while
+	 * still reporting success.
+	 */
+	static FName GetPropertyName_RenderOpacity()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderOpacity);
+	}
+	static FName GetPropertyName_Interactable()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Interactable);
+	}
+	static FName GetPropertyName_Raycastable()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Raycastable);
 	}
 	static FName GetPropertyName_DisplayName()
 	{
@@ -507,6 +543,36 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FTransform& GetWorldTransform()const;
 
+	/**
+	 * A world-space sphere containing this widget's own rect -- the shape a Rect hit test is decided
+	 * inside -- so a caller sweeping many widgets can throw most of them out before paying for the
+	 * exact test. UDreamBaseRaycaster does exactly that on every pointer update.
+	 *
+	 * FALSE MEANS "NO USABLE BOUND", and a caller must then run the exact test rather than skip the
+	 * widget. Two reasons it says so, both erring the safe way:
+	 *   - a perspective applies. The drawn transform is then GetWorldMatrix(), which folds in a remap
+	 *     built from the render canvas's eye; that eye moves with the canvas and tells this widget
+	 *     nothing, so there is no moment at which a cached sphere could be invalidated.
+	 *   - the rect is degenerate -- zero-sized, or not laid out yet. A zero radius would reject the
+	 *     widget outright, and "not measured" is not the same claim as "nothing there".
+	 *
+	 * The sphere is a pure function of ObjectToWorldTransform, GetWidth(), GetHeight() and the pivot,
+	 * and is cached against exactly those; see MarkWorldRectBoundsDirty.
+	 */
+	bool GetWorldRectBoundingSphere(FVector& OutCenter, double& OutRadius)const;
+	/**
+	 * Drop the cached bounding sphere.
+	 *
+	 * Called from the three places its inputs can change: MarkTransformChanged (the single funnel for
+	 * every ObjectToWorldTransform write, including the cascade a parent's move sends down),
+	 * MarkDimensionChanged (size and pivot, unconditionally -- the flags it is handed say WHAT
+	 * changed, and trusting them would make this cache depend on every caller passing them right),
+	 * and the resolve branch inside GetWidth/GetHeight, which catches the paths that dirty the size
+	 * cache without announcing anything (MarkAllDirty, and a stretched child resolving lazily against
+	 * a parent that has since moved).
+	 */
+	void MarkWorldRectBoundsDirty()const { bWorldRectBoundsDirty = true; }
+
 	void SetWorldTransform(const FTransform& InWorldTransform);
 	/**
 	 * Attach without the register-time side effects, for a hierarchy that is still being assembled:
@@ -557,6 +623,13 @@ public:
 	const FGuid& GetWidgetGuid() const { return WidgetGuid; }
 	/** Give this widget a new identity. For a copy, which is not the widget it was copied from. */
 	void AssignNewWidgetGuid() { WidgetGuid = FGuid::NewGuid(); }
+	/**
+	 * Give this widget a SPECIFIC identity. For the one caller that derives identity from an
+	 * external name -- the .dui builder, whose hash of the node id makes every compile of the same
+	 * file produce the same guid, so designer state and preview pairing survive the rebuild. A
+	 * random guid here would be AssignNewWidgetGuid; a colliding one is the caller's bug.
+	 */
+	void SetWidgetGuid(const FGuid& InGuid) { WidgetGuid = InGuid; }
 	/** Give this widget an identity only if it has none: an asset authored before ids existed. */
 	void EnsureWidgetGuid() { if (!WidgetGuid.IsValid()) { WidgetGuid = FGuid::NewGuid(); } }
 
@@ -601,6 +674,21 @@ public:
 	/** Set the sibling index of this widget in its parent's children list. */
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetSiblingIndex(int Value);
+	/**
+	 * Rewrite this widget's children into InDesiredOrder, for a caller that is reordering PAINT order
+	 * and nothing else. InDesiredOrder must be a permutation of the current array, or nothing happens.
+	 *
+	 * Paint order is not geometry: no panel's arrangement reads sibling order, so a reorder must not
+	 * raise a layout invalidation. Doing it through SetSiblingIndex did, once per moved child, and each
+	 * of those re-entered ApplySiblingIndex (remove, insert, then renumber and notify every sibling --
+	 * O(n) apiece, O(n^2) for the reorder) and then MarkLayoutForRebuild on the parent. That parent is
+	 * the panel currently arranging, whose bIsLayoutDirty it had just consumed, so every ZOrder change
+	 * that actually changed something cost one extra whole-tree layout pass. This is the same end state
+	 * in one linear rewrite: the sibling-index notifications are kept, the invalidation is not.
+	 *
+	 * Returns true when the array actually moved.
+	 */
+	bool ReorderChildrenToPaintOrder(const TArray<UDreamWidget*>& InDesiredOrder);
 	/** Recurses up the list of parents and returns true if this widget is a descendant of the InTarget. */
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	bool IsChildOf(const UDreamWidget* InTarget)const;
@@ -646,7 +734,10 @@ public:
 	bool RemoveChild(UDreamWidget* InChild);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	bool RemoveChildAt(int32 InIndex);
-	/** Detach and destroy a child, and everything below it. Use this when you are finished with it. */
+	/**
+	 * Detach and destroy a child, and everything below it. Use this when you are finished with it.
+	 * "Destroy" is DestroyWidget's sense of the word: IsValid(InChild) answers false afterwards.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	bool DestroyChild(UDreamWidget* InChild);
 	/**
@@ -656,6 +747,23 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void DestroyAllChildren();
+
+	/**
+	 * Take THIS widget off whatever it is attached to, and stay alive -- UMG's RemoveFromParent, from
+	 * the child's side. Returns false when it was not attached to anything.
+	 *
+	 * There was no way to write "remove myself" before: a widget could only be removed by its parent
+	 * (RemoveChild) or by the screen subsystem, by name. A widget that is a tracked screen page goes
+	 * out through the subsystem as well, so its name is freed rather than left pointing at a page
+	 * that is registered, alive and nowhere.
+	 *
+	 * It leaves the widget in the not-yet-added state, exactly as RemoveChild does: nothing draws and
+	 * its behaviours are disabled until it is added somewhere. Ownership passes to the caller -- add
+	 * it somewhere or destroy it. To take a page off the screen AND destroy it, call
+	 * UDreamScreenUISubsystem::RemoveFromViewport instead.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	bool RemoveFromParent();
 
 	/** Position of InChild among this widget's children, or INDEX_NONE if it is not one. */
 	UFUNCTION(BlueprintPure, Category = "Transform")
@@ -767,6 +875,28 @@ public:
 	void UpdateVisual()const;
 	
 	void ForceUpdateLayout();
+
+	/**
+	 * Re-derive this subtree's render canvas from the parent chain and push it down, registering
+	 * the visuals it reaches. For subtrees assembled through SetParentBeforeRegister, which fires
+	 * no attach events: nothing propagated a canvas into them, so their OnRegister ran with none
+	 * and every visual stayed off the render lists -- built, laid out, and invisible.
+	 */
+	void RefreshRenderCanvasFromParentChain();
+
+	/**
+	 * Recompute every piece of state this subtree INHERITS from its ancestors -- active, visibility,
+	 * raycastable, interactable -- plus the render canvas.
+	 *
+	 * OnRegister only runs those four walks for a widget that is the root of its hierarchy
+	 * (see its IsRootWidgetInHierarchy() gate), because a normal attach event does the propagation
+	 * instead. A subtree parented with SetParentBeforeRegister raises no attach event, so it
+	 * registers holding the defaults it was born with: a raycast-disabled holder does not disable
+	 * its children, a hidden parent does not hide them, a deactivated one does not deactivate them.
+	 * The drag visual walked straight into that -- its holder is Disabled, its instanced content
+	 * was not, so the visual became the pointer's EnterWidget and swallowed every drop.
+	 */
+	void RefreshInheritedStateFromParentChain();
 protected:
 	void RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas);
 
@@ -870,6 +1000,12 @@ protected:
 	bCacheAnchorOffsetLeftDirty : 1 = true, bCacheAnchorOffsetRightDirty : 1 = true,
 	bCacheAnchorOffsetTopDirty : 1 = true, bCacheAnchorOffsetBottomDirty : 1 = true;
 	uint8 bCanSetAnchorFromTransform : 1 = false;
+
+	/** World-space rect bounds, for the raycaster's coarse reject. See GetWorldRectBoundingSphere. */
+	mutable FVector CacheWorldRectCenter = FVector::ZeroVector;
+	/** Zero means "no usable bound" -- a degenerate rect, never a legitimate answer of nothing. */
+	mutable double CacheWorldRectRadius = 0.0;
+	mutable uint8 bWorldRectBoundsDirty : 1 = true;
 	
 #pragma region AnchorData
 public:
@@ -985,7 +1121,8 @@ public:
 	/** mark all dirty for UI element to update, include all children */
 	void MarkAllDirtyRecursive();
 	virtual void MarkAllDirty();
-	virtual void MarkRenderModeChangeRecursive(UDreamCanvas* Canvas, EDreamRenderMode OldRenderMode, EDreamRenderMode NewRenderMode);
+	/** Dirty every widget in this subtree that draws into Canvas, because its render mode just changed. */
+	virtual void MarkRenderModeChangeRecursive(UDreamCanvas* Canvas);
 
 	void CalculateAnchorFromTransform();
 	void CalculateTransformFromAnchor();
@@ -1202,8 +1339,15 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
 	bool GetIsFocusable()const { return bIsFocusable; }
+	/**
+	 * Turning this off also gives up any focus the widget currently holds.
+	 *
+	 * It was a bare assignment, which left a widget that can no longer ACCEPT focus still holding it:
+	 * SetFocus refuses to hand it out, nothing else moves the selection, and the navigation cursor
+	 * stays parked on a widget the user can no longer reach.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
-	void SetIsFocusable(bool Value) { bIsFocusable = Value; }
+	void SetIsFocusable(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
 	bool SetFocus(int32 UserIndex = 0, int32 PointerId = 0);
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
@@ -1274,6 +1418,20 @@ public:
 	EDreamUINavigationBoundaryRule GetNavigationBoundaryRule()const{return NavigationBoundaryRule;}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetNavigationBoundaryRule(EDreamUINavigationBoundaryRule Value);
+
+	/**
+	 * This widget's per-direction navigation rules, or null when it has none.
+	 *
+	 * The rules live on a UDreamWidgetNavigation behaviour rather than inline here, for the same
+	 * reason UMG hangs them off a UWidgetNavigation object: most widgets never author one, and the
+	 * navigation pipeline resolves a move by asking components. These two accessors are the widget's
+	 * face on it, so code and the details panel can treat navigation as a property of the widget.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	class UDreamWidgetNavigation* GetNavigation()const;
+	/** The rules, creating an untouched set if this widget had none. Never null on a live widget. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	class UDreamWidgetNavigation* GetOrCreateNavigation();
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	UDreamVisual* GetVisual()const { return Visual; }

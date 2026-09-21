@@ -87,6 +87,25 @@ namespace DreamWidgetTreeEditing
 	DREAMGUIEDITOR_API UDreamWidget* DuplicateWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InSource,
 		UDreamWidget* InNewParent, int32 InSiblingIndex = -1);
 
+	/**
+	 * Keep InWidget's authored bindings pointing at the same behaviour after its component list moves.
+	 *
+	 * A binding names a behaviour by its POSITION in the widget's component array
+	 * (FDreamWidgetPropertyBinding::BehaviourIndex), because an instanced sub-object shares no name
+	 * with its authored copy. So removing or reordering a behaviour renumbers everything after it, and
+	 * a binding that is not renumbered with it silently starts driving whichever behaviour moved into
+	 * its slot -- another one of the same class, which nothing reports at all, or one of a different
+	 * class, which is a compile error naming a binding the author did not touch.
+	 *
+	 * InOldIndex is where the behaviour was, InNewIndex where it is now. INDEX_NONE for InNewIndex
+	 * means it was removed, and the bindings that named it are dropped with it. Adding needs no call:
+	 * UDreamWidget::AddComponent appends, so no existing position changes.
+	 *
+	 * Does nothing, and dirties nothing, when no binding names this widget's behaviours.
+	 */
+	DREAMGUIEDITOR_API void RemapBehaviourBindings(UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget,
+		int32 InOldIndex, int32 InNewIndex);
+
 	/** Visit InRoot and every descendant, parents first. */
 	DREAMGUIEDITOR_API void ForEachWidgetInSubtree(UDreamWidget* InRoot, TFunctionRef<void(UDreamWidget*)> InPredicate);
 

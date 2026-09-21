@@ -14,6 +14,12 @@ class UDreamVisualPostProcess;
 
 /**
  * DreamVisualPostProcessRenderProxy is a render-agent for DreamVisualPostProcess in render thread, just like a SceneProxy for PrimitiveComponent.
+ *
+ * Owned through FDreamVisualPostProcessRenderProxyPtr by three parties at once -- the visual, the mesh
+ * section, and any render command in flight -- and never deleted directly. Every one of those releases
+ * its reference on the render thread (the visual hands its own to a render command in BeginDestroy), so
+ * whichever is last, the destructor runs there. Everything below is therefore free to be render-thread
+ * state; subclasses may keep RHI references without arranging a deferred release of their own.
  */
 class DREAMGUI_API FDreamVisualPostProcessRenderProxy
 {
@@ -63,7 +69,17 @@ public:
 	TArray<FDreamUIPostProcessCopyMeshRegionVertex> RenderScreenToMeshRegionVertexArray;
 	TArray<FDreamUIPostProcessVertex> RenderMeshRegionToScreenVertexArray;
 	FVector2f RectSize;
-	FTexture2DResource* MaskTexture = nullptr;
+	/**
+	 * The mask, held as RHI handles rather than as the FTexture2DResource* it came from.
+	 *
+	 * That resource belongs to the UTexture2D and is deleted on the render thread whenever the
+	 * texture's resource is rebuilt -- a re-import, a compression or size change, any UpdateResource,
+	 * a streaming rebuild -- and nothing informs this proxy, which then draws through a freed
+	 * pointer. These two are ref-counted, so the worst case is drawing with the mask as it was when
+	 * it was last sent instead of a use-after-free; the visual re-sends on every change it knows about.
+	 */
+	FTextureRHIRef MaskTextureRHI;
+	FSamplerStateRHIRef MaskTextureSamplerState;
 	bool bUseFullSize = false;
 	FBox BoundingBox;
 	//output target

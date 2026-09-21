@@ -54,6 +54,32 @@ enum class EDreamTextPhraseWrap : uint8
 	CJKDictionary,
 };
 
+/**
+ * Case applied to the text on its way into the layout, UMG's ETextTransformPolicy. The Text property
+ * itself is untouched -- this is presentation, so a caret index and a copy still see what was authored.
+ */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamUITextTransformPolicy : uint8
+{
+	None,
+	ToLower,
+	ToUpper,
+};
+
+/**
+ * Which way the paragraph reads, UMG's ETextFlowDirection. Auto asks the bidi algorithm, which is what
+ * every paragraph did before this existed; the other two override it, for a UI whose direction is the
+ * game's setting rather than the string's content (an empty or all-neutral string has no direction of
+ * its own, and a mixed one takes the first strong character's).
+ */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamTextFlowDirection : uint8
+{
+	Auto,
+	LeftToRight,
+	RightToLeft,
+};
+
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUITextOverflowType :uint8
 {
@@ -224,6 +250,12 @@ struct FDreamUIText_RichTextCustomTag
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) int32 CharIndexStart = 0;
 	/** end char index in cacheCharPropertyArray */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) int32 CharIndexEnd = 0;
+	/**
+	 * This range came from `<a=Id>` rather than `<Id>`: it is a hyperlink, and TagName is its id.
+	 * UDreamText::FindHyperlinkByWorldPosition hit-tests these, and nothing else about them differs --
+	 * a link is still a named character range, so a custom style and TextAnimation reach it as usual.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) bool bHyperlink = false;
 };
 
 USTRUCT(BlueprintType, Category = DreamGUI)
@@ -252,7 +284,9 @@ struct FDreamUIText_Emoji
 UENUM(BlueprintType, meta = (Bitflags), Category = DreamGUI)
 enum class EDreamUIText_RichTextTagFilterFlags : uint8
 {
-	Bold, Italic, Underline, Strikethrough, Size, Color, Superscript, Subscript, CustomTag, Image
+	Bold, Italic, Underline, Strikethrough, Size, Color, Superscript, Subscript, CustomTag, Image,
+	/** `<a=Id>...</a>`: a custom tag that can also be clicked. Appended, so saved flags keep their meaning. */
+	Hyperlink
 };
 ENUM_CLASS_FLAGS(EDreamUIText_RichTextTagFilterFlags);
 
@@ -267,6 +301,12 @@ struct FDreamUIText_TextProcessingElement
 	int StringIndex;
 	int Length;
 	EDreamUIText_CodeType Type;
+	/**
+	 * The source spells this element as a rich-text character reference (`&lt;`), so its Length covers
+	 * the reference while Unicode is the character it stands for. Anything that reads the source text
+	 * back -- the line breaker's plain text, above all -- has to take the character, not the spelling.
+	 */
+	bool bEscaped = false;
 };
 
 /// <summary>
@@ -297,6 +337,20 @@ namespace FDreamUIText_CodePoint
 	constexpr uint32 UNICODE_PLANE01_START = 0x10000;
 	constexpr uint32 UNICODE_VS_BLACK = 0xFE0E;
 	constexpr uint32 UNICODE_VS_COLOR = 0xFE0F;
+	/** Zero width joiner: glues the parts of a family, a profession, a couple into one emoji. */
+	constexpr uint32 UNICODE_ZWJ = 0x200D;
+	/** Fitzpatrick skin tone modifiers, which follow the emoji they tint. */
+	constexpr uint32 UNICODE_SKIN_TONE_START = 0x1F3FB;
+	constexpr uint32 UNICODE_SKIN_TONE_END = 0x1F3FF;
+	/** Regional indicators: exactly two of them make a flag. */
+	constexpr uint32 UNICODE_REGIONAL_INDICATOR_START = 0x1F1E6;
+	constexpr uint32 UNICODE_REGIONAL_INDICATOR_END = 0x1F1FF;
+	/** Keycap: a digit, # or *, then U+FE0F, then this. */
+	constexpr uint32 UNICODE_COMBINING_ENCLOSING_KEYCAP = 0x20E3;
+	/** Tag characters, used by the subdivision flags (England, Scotland, Wales). */
+	constexpr uint32 UNICODE_TAG_START = 0xE0020;
+	constexpr uint32 UNICODE_TAG_END = 0xE007E;
+	constexpr uint32 UNICODE_CANCEL_TAG = 0xE007F;
 
 	inline uint32 ConvertToUTF32(uint32 highSurrogate, uint32 lowSurrogate)
 	{
@@ -324,34 +378,154 @@ namespace FDreamUIText_CodePoint
 
 		return false;
 	}
+	/**
+	 * Code points that are emoji but whose DEFAULT presentation is text -- Unicode's Emoji=Yes,
+	 * Emoji_Presentation=No. They stay font glyphs (which is what a text font draws for them, and what
+	 * this pipeline has always drawn) unless U+FE0F asks for the emoji form. Approximated by block:
+	 * carrying the real property table is not worth it here, and every case this rounds the wrong way
+	 * rounds towards "render it with the font", which is the behaviour that was already there.
+	 */
+	inline bool IsTextPresentationEmoji(uint32 Codepoint)
+	{
+		if (Codepoint == 0x00A9 || Codepoint == 0x00AE || Codepoint == 0x2122) return true;//(c) (r) (tm)
+		if (Codepoint == 0x203C || Codepoint == 0x2049) return true;//!! !?
+		if (Codepoint == 0x2139) return true;//information
+		if (Codepoint >= 0x2190 && Codepoint <= 0x21FF) return true;//arrows
+		if (Codepoint >= 0x2300 && Codepoint <= 0x23FF) return true;//misc technical
+		if (Codepoint >= 0x24C2 && Codepoint <= 0x24C2) return true;//circled M
+		if (Codepoint >= 0x25A0 && Codepoint <= 0x25FF) return true;//geometric shapes
+		if (Codepoint >= 0x2600 && Codepoint <= 0x27BF) return true;//misc symbols and dingbats
+		if (Codepoint >= 0x2934 && Codepoint <= 0x2935) return true;
+		if (Codepoint >= 0x2B00 && Codepoint <= 0x2BFF) return true;//misc symbols and arrows
+		if (Codepoint == 0x3030 || Codepoint == 0x303D) return true;
+		if (Codepoint == 0x3297 || Codepoint == 0x3299) return true;
+		if (Codepoint >= 0x1F000 && Codepoint <= 0x1F2FF) return true;//mahjong, cards, enclosed
+		return false;
+	}
+	inline bool IsVariationSelector(uint32 Codepoint)
+	{
+		return Codepoint == UNICODE_VS_BLACK || Codepoint == UNICODE_VS_COLOR;
+	}
+	inline bool IsSkinToneModifier(uint32 Codepoint)
+	{
+		return Codepoint >= UNICODE_SKIN_TONE_START && Codepoint <= UNICODE_SKIN_TONE_END;
+	}
+	inline bool IsRegionalIndicator(uint32 Codepoint)
+	{
+		return Codepoint >= UNICODE_REGIONAL_INDICATOR_START && Codepoint <= UNICODE_REGIONAL_INDICATOR_END;
+	}
+	inline bool IsTagCharacter(uint32 Codepoint)
+	{
+		return (Codepoint >= UNICODE_TAG_START && Codepoint <= UNICODE_TAG_END) || Codepoint == UNICODE_CANCEL_TAG;
+	}
+	inline bool IsKeycapBase(uint32 Codepoint)
+	{
+		return (Codepoint >= '0' && Codepoint <= '9') || Codepoint == '#' || Codepoint == '*';
+	}
+	/** Decodes one code point at InCharIndex, pairing surrogates. OutCodeUnits is 1 or 2. */
+	inline uint32 DecodeCodePointAt(const FString& InString, int InStringLen, int InCharIndex, int& OutCodeUnits)
+	{
+		const uint32 First = (uint32)InString[InCharIndex];
+		if (First >= HIGH_SURROGATE_START && First <= HIGH_SURROGATE_END && InCharIndex + 1 < InStringLen)
+		{
+			const uint32 Second = (uint32)InString[InCharIndex + 1];
+			if (Second >= LOW_SURROGATE_START && Second <= LOW_SURROGATE_END)
+			{
+				OutCodeUnits = 2;
+				return ConvertToUTF32(First, Second);
+			}
+		}
+		OutCodeUnits = 1;
+		return First;
+	}
+	/**
+	 * Reads one element -- an emoji grapheme cluster, or a single code point -- starting at
+	 * InOutCharIndex, and leaves the index on the cluster's LAST code unit, because every caller is a
+	 * for-loop whose increment steps past it.
+	 *
+	 * A cluster is a base code point plus, in this order: a variation selector (which decides emoji or
+	 * text presentation), a keycap mark, a partner regional indicator, and then any run of skin tone
+	 * modifiers, tag characters and ZWJ-joined emoji. That is the subset of UAX #29 emoji needs. The
+	 * element's Unicode is the cluster's BASE code point -- the emoji atlas is keyed by one code point
+	 * (FDreamUIFontEmojiKey), so a sequence registers and looks up under its base, which is also why
+	 * ApplyEmoji accepts the whole sequence but keys it the same way.
+	 *
+	 * Pure function of the string: no font, no asset, so it is directly unit testable.
+	 */
 	inline FDreamUIText_TextProcessingElement ReadCodePoint(const FString& InString, int InStringLen, int& InOutCharIndex)
 	{
-		auto charCode = InString[InOutCharIndex];
-		if (charCode >= FDreamUIText_CodePoint::HIGH_SURROGATE_START && charCode <= FDreamUIText_CodePoint::HIGH_SURROGATE_END
-				&& InOutCharIndex + 1 < InStringLen
-				&& InString[InOutCharIndex + 1] >= FDreamUIText_CodePoint::LOW_SURROGATE_START && InString[InOutCharIndex + 1] <= FDreamUIText_CodePoint::LOW_SURROGATE_END)
+		const int32 Start = InOutCharIndex;
+		int BaseUnits = 0;
+		const uint32 Base = DecodeCodePointAt(InString, InStringLen, Start, BaseUnits);
+		int32 Cursor = Start + BaseUnits;
+
+		bool bEmoji = IsEmoji(Base);
+		const bool bEmojiCapable = bEmoji || IsTextPresentationEmoji(Base) || IsKeycapBase(Base);
+
+		auto PeekAt = [&InString, InStringLen](int32 At, uint32& OutCode, int32& OutEnd) -> bool
 		{
-			FDreamUIText_TextProcessingElement Element;
-			Element.Unicode = FDreamUIText_CodePoint::ConvertToUTF32(charCode, InString[InOutCharIndex + 1]);
-			Element.StringIndex = InOutCharIndex;
-			Element.Type = IsEmoji(Element.Unicode) ? EDreamUIText_CodeType::Emoji : EDreamUIText_CodeType::Text;
-			if (InOutCharIndex + 2 < InStringLen
-				&& (InString[InOutCharIndex + 2] == FDreamUIText_CodePoint::UNICODE_VS_BLACK || InString[InOutCharIndex + 2] == FDreamUIText_CodePoint::UNICODE_VS_COLOR))
-			{
-				Element.Length = 3;
-				InOutCharIndex+=2;
-			}
-			else
-			{
-				Element.Length = 2;
-				InOutCharIndex+=1;
-			}
-			return Element;
-		}
-		else
+			if (At >= InStringLen)return false;
+			int Units = 0;
+			OutCode = DecodeCodePointAt(InString, InStringLen, At, Units);
+			OutEnd = At + Units;
+			return true;
+		};
+
+		uint32 Next = 0;
+		int32 NextEnd = 0;
+		// A variation selector always belongs to the character before it; swallowing it even on a plain
+		// glyph is what stops it from becoming an element of its own, i.e. a tofu box.
+		if (PeekAt(Cursor, Next, NextEnd) && IsVariationSelector(Next))
 		{
-			return FDreamUIText_TextProcessingElement{charCode, InOutCharIndex, 1, EDreamUIText_CodeType::Text};
+			if (bEmojiCapable)
+			{
+				bEmoji = Next == UNICODE_VS_COLOR;
+			}
+			Cursor = NextEnd;
 		}
+		if (IsKeycapBase(Base) && PeekAt(Cursor, Next, NextEnd) && Next == UNICODE_COMBINING_ENCLOSING_KEYCAP)
+		{
+			bEmoji = true;
+			Cursor = NextEnd;
+		}
+		else if (IsRegionalIndicator(Base) && PeekAt(Cursor, Next, NextEnd) && IsRegionalIndicator(Next))
+		{
+			bEmoji = true;//a flag is exactly two regional indicators
+			Cursor = NextEnd;
+		}
+		if (bEmoji)
+		{
+			while (PeekAt(Cursor, Next, NextEnd))
+			{
+				if (IsSkinToneModifier(Next) || IsVariationSelector(Next) || IsTagCharacter(Next)
+					|| Next == UNICODE_COMBINING_ENCLOSING_KEYCAP)
+				{
+					Cursor = NextEnd;
+					continue;
+				}
+				if (Next == UNICODE_ZWJ)
+				{
+					uint32 Joined = 0;
+					int32 JoinedEnd = 0;
+					// A joiner with nothing joinable after it is not part of the cluster: leaving it
+					// out keeps a trailing ZWJ from eating the next character.
+					if (PeekAt(NextEnd, Joined, JoinedEnd) && (IsEmoji(Joined) || IsTextPresentationEmoji(Joined)))
+					{
+						Cursor = JoinedEnd;
+						continue;
+					}
+				}
+				break;
+			}
+		}
+
+		FDreamUIText_TextProcessingElement Element;
+		Element.Unicode = Base;
+		Element.StringIndex = Start;
+		Element.Length = Cursor - Start;
+		Element.Type = bEmoji ? EDreamUIText_CodeType::Emoji : EDreamUIText_CodeType::Text;
+		InOutCharIndex = Cursor - 1;
+		return Element;
 	}
 };
 

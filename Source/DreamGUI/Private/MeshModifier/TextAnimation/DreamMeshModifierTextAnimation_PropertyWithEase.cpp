@@ -5,6 +5,7 @@
 #include "Core/Components/DreamText.h"
 #include "Curves/CurveFloat.h"
 #include "Utils/DreamUIUtils.h"
+#include "Math/RandomStream.h"
 
 const FDreamTweenFunction& UDreamMeshModifierTextAnimation_PropertyWithEase::GetEaseFunction()
 {
@@ -177,7 +178,13 @@ void UDreamMeshModifierTextAnimation_PositionProperty::ApplyProperty(UDreamText*
 
 void UDreamMeshModifierTextAnimation_PositionRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
-	FMath::RandInit(Seed);
+	// A stream of this property's own rather than FMath::RandInit plus FMath::FRandRange. Seeding is
+	// meant to make THIS scatter repeatable, and reseeding the engine's global generator to do it
+	// reaches every other caller of FMath::FRand in the process -- once per geometry rebuild, which
+	// for an animated text is once per frame, so anything else drawing on that generator is handed
+	// the same short sequence forever. The two generators differ, so an authored seed now picks a
+	// different arrangement than it used to. The other three random properties below do the same.
+	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
@@ -188,7 +195,7 @@ void UDreamMeshModifierTextAnimation_PositionRandomProperty::ApplyProperty(UDrea
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto position = FVector3f(FMath::FRandRange(Min.X, Max.X), FMath::FRandRange(Min.Y, Max.Y), FMath::FRandRange(Min.Z, Max.Z));
+		auto position = FVector3f(RandomStream.FRandRange(Min.X, Max.X), RandomStream.FRandRange(Min.Y, Max.Y), RandomStream.FRandRange(Min.Z, Max.Z));
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& pos = originVertices[vertIndex].Position;
@@ -227,7 +234,7 @@ void UDreamMeshModifierTextAnimation_RotationProperty::ApplyProperty(UDreamText*
 
 void UDreamMeshModifierTextAnimation_RotationRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
-	FMath::RandInit(Seed);
+	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
@@ -244,7 +251,7 @@ void UDreamMeshModifierTextAnimation_RotationRandomProperty::ApplyProperty(UDrea
 		charCenterPos /= charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto rotator = FRotator3f(FMath::FRandRange(Min.Pitch, Max.Pitch), FMath::FRandRange(Min.Yaw, Max.Yaw), FMath::FRandRange(Min.Roll, Max.Roll));
+		auto rotator = FRotator3f(RandomStream.FRandRange(Min.Pitch, Max.Pitch), RandomStream.FRandRange(Min.Yaw, Max.Yaw), RandomStream.FRandRange(Min.Roll, Max.Roll));
 		auto calcRotationMatrix = FRotationMatrix44f(rotator * lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -285,7 +292,7 @@ void UDreamMeshModifierTextAnimation_ScaleProperty::ApplyProperty(UDreamText* In
 
 void UDreamMeshModifierTextAnimation_ScaleRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
-	FMath::RandInit(Seed);
+	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
@@ -302,7 +309,7 @@ void UDreamMeshModifierTextAnimation_ScaleRandomProperty::ApplyProperty(UDreamTe
 		charCenterPos /= charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto scale = FVector3f(FMath::FRandRange(Min.X, Max.X), FMath::FRandRange(Min.Y, Max.Y), FMath::FRandRange(Min.Z, Max.Z));
+		auto scale = FVector3f(RandomStream.FRandRange(Min.X, Max.X), RandomStream.FRandRange(Min.Y, Max.Y), RandomStream.FRandRange(Min.Z, Max.Z));
 		auto calcScale = FMath::Lerp(FVector3f::OneVector, scale, lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -386,7 +393,7 @@ void UDreamMeshModifierTextAnimation_ColorProperty::SetUseHSV(bool Value)
 
 void UDreamMeshModifierTextAnimation_ColorRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
-	FMath::RandInit(Seed);
+	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
@@ -395,7 +402,7 @@ void UDreamMeshModifierTextAnimation_ColorRandomProperty::ApplyProperty(UDreamTe
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
-		auto color = FColor((uint8)FMath::RandRange(Min.R, Max.R), (uint8)FMath::RandRange(Min.G, Max.G), (uint8)FMath::RandRange(Min.B, Max.B), (uint8)FMath::RandRange(Min.A, Max.A));
+		auto color = FColor((uint8)RandomStream.RandRange(Min.R, Max.R), (uint8)RandomStream.RandRange(Min.G, Max.G), (uint8)RandomStream.RandRange(Min.B, Max.B), (uint8)RandomStream.RandRange(Min.A, Max.A));
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		FVector colorHsv;

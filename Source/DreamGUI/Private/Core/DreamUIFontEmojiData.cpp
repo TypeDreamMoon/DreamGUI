@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIFontEmojiData.h"
+#include "Core/DreamUIWorldContext.h"
 
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Core/DreamUISpriteData_BaseObject.h"
@@ -12,35 +13,38 @@
 
 void FDreamUIFontEmojiKey::ApplyEmoji()
 {
-	int ValidLength = 0;
-	if (EmojiChar.Len() >= 2)
+	// One grapheme cluster, segmented by exactly the function the text pipeline segments with, so what
+	// an author can paste in here is what a text will look up: a plain emoji, a BMP symbol wearing
+	// U+FE0F, a ZWJ family, a skin tone, a flag. Registering used to require a bare surrogate pair and
+	// truncate everything longer to its first pair, which registered a different character than the one
+	// on screen. The key is still the cluster's BASE code point -- FDreamUIFontEmojiKey hashes and
+	// compares EmojiCode alone, and VariantSelector has always been carried but not keyed -- so the
+	// variants of one base share an entry.
+	const FString Source = EmojiChar;
+	const int32 SourceLength = Source.Len();
+	if (SourceLength > 0)
 	{
-		auto highSurrogate = EmojiChar[0];
-		auto lowSurrogate = EmojiChar[1];
-		if (highSurrogate >= FDreamUIText_CodePoint::HIGH_SURROGATE_START && highSurrogate <= FDreamUIText_CodePoint::HIGH_SURROGATE_END
-		&& lowSurrogate >= FDreamUIText_CodePoint::LOW_SURROGATE_START && lowSurrogate <= FDreamUIText_CodePoint::LOW_SURROGATE_END)
+		int CharIndex = 0;
+		const auto Element = FDreamUIText_CodePoint::ReadCodePoint(Source, SourceLength, CharIndex);
+		if (Element.Type == EDreamUIText_CodeType::Emoji)
 		{
-			if (EmojiChar.Len() == 3
-				&& (EmojiChar[2] == FDreamUIText_CodePoint::UNICODE_VS_BLACK || EmojiChar[2] == FDreamUIText_CodePoint::UNICODE_VS_COLOR))
+			EmojiCode = Element.Unicode;
+			EmojiChar = Source.Mid(Element.StringIndex, Element.Length);
+			VariantSelector = 0;
+			for (int32 i = Element.StringIndex; i < Element.StringIndex + Element.Length; i++)
 			{
-				ValidLength = 3;
-				VariantSelector = EmojiChar[2];
+				if (FDreamUIText_CodePoint::IsVariationSelector((uint32)Source[i]))
+				{
+					VariantSelector = (uint16)Source[i];
+					break;
+				}
 			}
-			else
-			{
-				ValidLength = 2;
-				VariantSelector = 0;
-			}
+			return;
 		}
-		EmojiCode = FDreamUIText_CodePoint::ConvertToUTF32(highSurrogate, lowSurrogate);
-		EmojiChar = EmojiChar.Left(ValidLength);
 	}
-	if (ValidLength == 0)
-	{
-		EmojiChar = "";
-		EmojiCode = 0;
-		VariantSelector = 0;
-	}
+	EmojiChar = "";
+	EmojiCode = 0;
+	VariantSelector = 0;
 }
 
 void UDreamUIFontEmojiData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -118,12 +122,16 @@ void UDreamUIFontEmojiData::CreateOrUpdateObject(UDreamWidget* parent, const TAr
 			{
 				if (!IsValid(sequencePlayerComp))
 				{
-					ImageWidget->AddComponent<UUISpriteSequencePlayer>();
+					// The assignment, which was missing: the branch condition establishes that the
+					// pointer is null, so the next line dereferenced null every time an animated
+					// emoji of two frames or more landed on a widget that had no player yet.
+					// UDreamUIRichTextImageData is the same code with the assignment in place.
+					sequencePlayerComp = ImageWidget->AddComponent<UUISpriteSequencePlayer>();
 					sequencePlayerComp->SetSnapSpriteSize(false);
 				}
 				sequencePlayerComp->SetSpriteSequence(spriteFrames);
 				sequencePlayerComp->SetFps(imageItemPtr->OverrideAnimationFps < 0 ? AnimationFps : imageItemPtr->OverrideAnimationFps);
-				if (parent->GetWorld()->IsGameWorld())
+				if (DreamUI::IsGameWorld(parent))
 				{
 					sequencePlayerComp->Play();
 				}

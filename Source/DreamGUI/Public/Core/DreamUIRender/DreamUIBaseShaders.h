@@ -6,6 +6,7 @@
 #include "GlobalShader.h"
 #include "ShaderParameterStruct.h"
 #include "RHIStaticStates.h"
+#include "Core/DreamUIBlendMode.h"
 
 /**
  * What a built-in draw needs beyond its vertices: the textures the material used to carry as
@@ -25,6 +26,8 @@ struct FDreamUIBuiltInDrawParams
 	float FontFieldRangeTexels = 0.0f;
 	/** Texels per em at the atlas's sample size. */
 	float FontEmTexels = 0.0f;
+	/** How this draw composites. One per draw-call, because the blend state is set once per draw. */
+	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 };
 
 /** Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection. */

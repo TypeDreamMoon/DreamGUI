@@ -55,10 +55,21 @@ void UDreamMeshModifierShadow::ModifyUIGeometry(
 			vertices[channelIndex1].Color = ShadowColor;
 		}
 
-		for (int i = 0; i < MAX_STATIC_TEXCOORDS; i++)
+		// The bound is the vertex's own channel count, not the engine's MAX_STATIC_TEXCOORDS. A
+		// DreamGUI vertex carries four texture coordinates where a static mesh vertex carries eight,
+		// so counting to the engine's number writes four FVector2f past the end of the array member
+		// and straight through the vertex's tangents into the vertex behind it.
+		for (int i = 0; i < LEXUI_VERTEX_TEXCOORDINATE_COUNT; i++)
 		{
 			vertices[channelIndex1].TextureCoordinate[i] = vertices[channelIndexOrigin].TextureCoordinate[i];
 		}
+		// Copied by name now that the loop above stops where it should. While it ran to the engine's
+		// channel count these two fields were the first thing it wrote past the end of the array, so
+		// the copy inherited the source's tangents by accident -- and the vertices behind the copies
+		// arrive from AddDefaulted with nothing written into them at all, so a canvas that asks for
+		// normals and tangents would light the shadow off whatever was in that memory.
+		vertices[channelIndex1].TangentX = vertices[channelIndexOrigin].TangentX;
+		vertices[channelIndex1].TangentZ = vertices[channelIndexOrigin].TangentZ;
 	}
 }
 
@@ -76,5 +87,13 @@ void UDreamMeshModifierShadow::SetShadowOffset(FVector3f Value)
 	{
 		ShadowOffset = Value;
 		if (auto Visual = GetVisualBatchMesh())Visual->MarkVertexPositionDirty();
+	}
+}
+void UDreamMeshModifierShadow::SetMultiplySourceAlpha(bool Value)
+{
+	if (bMultiplySourceAlpha != Value)
+	{
+		bMultiplySourceAlpha = Value;
+		if (auto Visual = GetVisualBatchMesh())Visual->MarkColorDirty();
 	}
 }

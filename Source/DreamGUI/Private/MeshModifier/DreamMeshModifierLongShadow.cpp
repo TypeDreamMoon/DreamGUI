@@ -37,7 +37,37 @@ void UDreamMeshModifierLongShadow::ModifyUIGeometry(
 
 	const int32 singleChannelTriangleIndicesCount = triangleCount;
 	const int32 singleChannelVerticesCount = vertexCount;
-	int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (ShadowSegment + 1);
+
+	// Every segment is one more whole copy of the mesh -- the copies plus the original come to
+	// (ShadowSegment + 2) times the vertex count -- and a triangle index cannot address past
+	// LEXUI_MAX_VERTEX_COUNT. Going past it does not fail: the indices wrap inside the index type and
+	// the shadow draws itself out of whatever vertices those wrapped numbers happen to name. So the
+	// segment count is clamped to what the index buffer can reach.
+	const int32 maxShadowSegment = (LEXUI_MAX_VERTEX_COUNT / singleChannelVerticesCount) - 2;
+	if (maxShadowSegment < 0)
+	{
+		//Not even one copy fits, so there is no shadow that can be drawn without wrapping.
+		if (!bLoggedVertexLimitWarning)
+		{
+			bLoggedVertexLimitWarning = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d mesh is too large for a long shadow (%d vertices, limit %d); no shadow drawn.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, singleChannelVerticesCount, LEXUI_MAX_VERTEX_COUNT);
+		}
+		return;
+	}
+	int32 shadowSegment = ShadowSegment;
+	if (shadowSegment > maxShadowSegment)
+	{
+		shadowSegment = maxShadowSegment;
+		if (!bLoggedVertexLimitWarning)
+		{
+			bLoggedVertexLimitWarning = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d ShadowSegment %d needs more vertices than an index can address (%d per copy, limit %d); clamped to %d.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, (int32)ShadowSegment, singleChannelVerticesCount, LEXUI_MAX_VERTEX_COUNT, shadowSegment);
+		}
+	}
+
+	int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (shadowSegment + 1);
 
 	triangles.AddUninitialized(additionalTriangleIndicesCount);
 	//put orgin triangles on last pass, this will make the origin triangle render at top
@@ -48,7 +78,7 @@ void UDreamMeshModifierLongShadow::ModifyUIGeometry(
 	}
 	//calculate other pass
 	int32 prevChannelVerticesCount = singleChannelVerticesCount;
-	int32 shadowChannelCount = ShadowSegment + 1;
+	int32 shadowChannelCount = shadowSegment + 1;
 	for (int channelIndex = 0, originTriangleIndex = 0, triangleIndex = 0; channelIndex < shadowChannelCount; triangleIndex++, originTriangleIndex++)
 	{
 		auto index = triangles[originTriangleIndex + additionalTriangleIndicesCount] + prevChannelVerticesCount;
@@ -61,14 +91,14 @@ void UDreamMeshModifierLongShadow::ModifyUIGeometry(
 		}
 	}
 
-	int additionalVertCount = singleChannelVerticesCount * (ShadowSegment + 1);
+	int additionalVertCount = singleChannelVerticesCount * (shadowSegment + 1);
 	vertexCount = singleChannelVerticesCount + additionalVertCount;
 	originVertices.AddDefaulted(additionalVertCount);
 	vertices.AddDefaulted(additionalVertCount);
 
 	//verticies
 	{
-		auto shadowSizeInterval = ShadowSize / (ShadowSegment + 1);
+		auto shadowSizeInterval = ShadowSize / (shadowSegment + 1);
 		for (int channelOriginVertIndex = 0; channelOriginVertIndex < singleChannelVerticesCount; channelOriginVertIndex++)
 		{
 			auto originVert = originVertices[channelOriginVertIndex].Position;
@@ -92,7 +122,19 @@ void UDreamMeshModifierLongShadow::ModifyUIGeometry(
 				
 				if (bUseGradientColor)
 				{
-					float colorRatio = ((float)(channelIndex) / (shadowChannelCount));
+					// The ramp runs across the GAPS between layers, so it is divided by one less than
+					// the layer count. With index/count the nearest layer stops at (n-1)/n and the
+					// authored ShadowColor -- the colour somebody picked by eye for the edge that
+					// touches the glyph -- is a colour the effect can never actually show.
+					//
+					// A single layer has no gap to run across, and the end of the ramp it stands for
+					// is the near one, so it takes ShadowColor outright. That makes a one-layer
+					// gradient agree with the gradient switched off, which is the less surprising of
+					// the two degenerate answers even though it means GradientColor is unreachable
+					// until there is a second layer to fade towards.
+					float colorRatio = shadowChannelCount > 1
+						? ((float)(channelIndex) / (float)(shadowChannelCount - 1))
+						: 1.0f;
 					float colorRatio_INV = 1.0f - colorRatio;
 					FColor color;
 					color.R = ShadowColor.R * colorRatio + GradientColor.R * colorRatio_INV;
@@ -144,9 +186,17 @@ void UDreamMeshModifierLongShadow::SetUseGradientColor(bool Value)
 }
 void UDreamMeshModifierLongShadow::SetGradientColor(FColor Value)
 {
-	if (ShadowColor != Value)
+	if (GradientColor != Value)
 	{
-		ShadowColor = Value;
+		GradientColor = Value;
+		if (auto Visual = GetVisualBatchMesh())Visual->MarkColorDirty();
+	}
+}
+void UDreamMeshModifierLongShadow::SetMultiplySourceAlpha(bool Value)
+{
+	if (bMultiplySourceAlpha != Value)
+	{
+		bMultiplySourceAlpha = Value;
 		if (auto Visual = GetVisualBatchMesh())Visual->MarkColorDirty();
 	}
 }

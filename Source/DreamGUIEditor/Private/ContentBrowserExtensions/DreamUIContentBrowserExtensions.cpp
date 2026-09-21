@@ -11,6 +11,7 @@
 #include "DataFactory/DreamUIFontDataDistanceFieldFactory.h"
 #include "DataFactory/DreamUISpriteDataFactory.h"
 #include "Engine/FontFace.h"
+#include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIContentBrowserExtensions"
 
@@ -113,10 +114,37 @@ public:
 			}
 			static void ConfigureTextureSettingsForSprites(TArray<FAssetData> InTextures)
 			{
-				// Change the compression settings and trigger a recompress
+				// Change the compression settings and trigger a recompress.
+				//
+				// A menu command that rewrites somebody's texture settings has to be undoable, and a
+				// texture in particular has to be told: UTexture's own contract is that every property
+				// write sits inside PreEditChange/PostEditChange, which is what blocks the async build
+				// and rebuilds the resource afterwards. Without them the settings landed on the object
+				// with nothing recorded in the transaction buffer and nothing revalidating them.
+				//
+				// Ask first, and only then open the transaction: Modify() plus PreEditChange/PostEditChange
+				// on a texture that already carries the sprite settings would dirty its package and rebuild
+				// its resource for no change at all, so a selection with nothing to do stays a no-op.
+				TArray<UTexture2D*> TexturesToConfigure;
 				for (UTexture2D* Texture : DreamUIResolveSelectedAssets<UTexture2D>(InTextures))
 				{
+					if (UDreamUISpriteData::NeedsSpriteTextureSetting(Texture))
+					{
+						TexturesToConfigure.Add(Texture);
+					}
+				}
+				if (TexturesToConfigure.Num() == 0)
+				{
+					return;
+				}
+
+				const FScopedTransaction Transaction(LOCTEXT("ApplySpriteTextureSettings", "Apply Sprite Texture Settings"));
+				for (UTexture2D* Texture : TexturesToConfigure)
+				{
+					Texture->Modify();
+					Texture->PreEditChange(nullptr);
 					UDreamUISpriteData::CheckAndApplySpriteTextureSetting(Texture);
+					Texture->PostEditChange();
 				}
 			}
 		};

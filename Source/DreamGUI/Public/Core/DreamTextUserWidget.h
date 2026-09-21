@@ -43,9 +43,20 @@ public:
 	 * to remove.
 	 *
 	 * Relative paths are rooted at a `DUI/` source directory; see DreamUIPaths.h for the rule.
+	 *
+	 * EDITOR ONLY DATA, because a cooked game has no use for it and one real cost from carrying it:
+	 * the file is read at COMPILE time and by nothing else -- no runtime code in this module reads
+	 * this property at all -- while the string itself is whatever spelling the author's machine
+	 * produced. MakePortablePath makes that relative whenever the file sits under a DUI root, but a
+	 * file outside every root is stored absolute by design (refusing it would be a picker that
+	 * silently discards the user's choice), so a shipped CDO could carry a developer's drive letter
+	 * and directory layout into every copy of the game. Stripping it at cook is free: the hierarchy
+	 * was baked into the generated class long before.
 	 */
+#if WITH_EDITORONLY_DATA
 	UPROPERTY(EditDefaultsOnly, Category = "DreamGUI", meta = (FilePathFilter = "dui"))
 	FFilePath SourceFile;
+#endif
 
 	/**
 	 * An authored path as an absolute filename. Empty in, empty out.

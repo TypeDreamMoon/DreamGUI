@@ -15,6 +15,7 @@
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/PlayerController.h"
 #include "DreamGUI.h"
 
 UDreamScreenUISubsystem* UDreamScreenUISubsystem::Get(UWorld* InWorld)
@@ -55,17 +56,23 @@ void UDreamScreenUISubsystem::Deinitialize()
 	PageDefinitions.Reset();
 	RemoveAllUI();
 
-	if (IsValid(InteractionHost))
+	for (TPair<int32, TObjectPtr<AActor>>& HostPair : InteractionHosts)
 	{
-		InteractionHost->Destroy();
-		InteractionHost = nullptr;
+		if (IsValid(HostPair.Value))
+		{
+			HostPair.Value->Destroy();
+		}
 	}
-	if (bOwnsScreenRoot && IsUsablePage(ScreenRoot))
+	InteractionHosts.Reset();
+	for (TPair<int32, TObjectPtr<UDreamWidget>>& RootPair : ScreenRoots)
 	{
-		ScreenRoot->DestroyWidget();
+		if (OwnedScreenRoots.Contains(RootPair.Key) && IsUsablePage(RootPair.Value))
+		{
+			RootPair.Value->DestroyWidget();
+		}
 	}
-	ScreenRoot = nullptr;
-	bOwnsScreenRoot = false;
+	ScreenRoots.Reset();
+	OwnedScreenRoots.Reset();
 
 	if (IsValid(CreatedEventSystemActor))
 	{
@@ -81,34 +88,132 @@ bool UDreamScreenUISubsystem::IsUsablePage(const UDreamWidget* InRoot) const
 	return IsValid(InRoot) && InRoot->HasRegistered() && InRoot->GetWorld() == GetWorld();
 }
 
-UDreamCanvas* UDreamScreenUISubsystem::GetScreenCanvas() const
+int32 UDreamScreenUISubsystem::ResolvePlayerIndex(const APlayerController* InOwningPlayer) const
 {
-	return IsUsablePage(ScreenRoot) ? ScreenRoot->GetComponent<UDreamCanvas>() : nullptr;
+	if (IsValid(InOwningPlayer))
+	{
+		return UDreamUserWidget::GetLocalPlayerIndexOf(InOwningPlayer);
+	}
+	// No owner named: the first local player, which is the whole answer in a single-player game and
+	// the reason none of the existing call sites had to grow a parameter.
+	const UWorld* World = GetWorld();
+	return World != nullptr ? UDreamUserWidget::GetLocalPlayerIndexOf(World->GetFirstPlayerController()) : 0;
 }
 
-UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRoot()
+int32 UDreamScreenUISubsystem::PlayerIndexForWidget(const UDreamWidget* InRoot) const
 {
-	if (UDreamCanvas* ExistingCanvas = GetScreenCanvas())
+	// Two ways for a widget to know its player, tried in the order that makes an overlay land where
+	// the thing it is about already is.
+	for (const UDreamWidget* Walker = InRoot; Walker != nullptr; Walker = Walker->GetParent())
 	{
-		if (ExistingCanvas->IsRootCanvas() && ExistingCanvas->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
+		// 1. Which screen it is already sitting on. Structural, so it is right even for a plain widget
+		//    with no owner of its own.
+		if (const int32* RootIndex = ScreenRoots.FindKey(TObjectPtr<UDreamWidget>(const_cast<UDreamWidget*>(Walker))))
 		{
-			EnsureInteractionObjects(ExistingCanvas);
-			return ScreenRoot;
+			return *RootIndex;
+		}
+		// 2. The nearest user widget that has an owner.
+		if (const UDreamUserWidget* UserWidget = Cast<const UDreamUserWidget>(Walker))
+		{
+			if (IsValid(UserWidget->GetOwningPlayer()))
+			{
+				return UserWidget->GetOwningPlayerIndex();
+			}
+		}
+	}
+	// Neither: the first local player, which is the whole answer in a single-player game.
+	return ResolvePlayerIndex(nullptr);
+}
+
+int32 UDreamScreenUISubsystem::PlayerIndexForPage(FName InName) const
+{
+	const FEntry* Entry = Entries.Find(InName);
+	return Entry != nullptr ? Entry->PlayerIndex : ResolvePlayerIndex(nullptr);
+}
+
+TArray<FName> UDreamScreenUISubsystem::StackFor(int32 InPlayerIndex) const
+{
+	TArray<FName> PlayerStack;
+	PlayerStack.Reserve(Stack.Num());
+	for (FName PageName : Stack)
+	{
+		if (const FEntry* Entry = Entries.Find(PageName); Entry != nullptr && Entry->PlayerIndex == InPlayerIndex)
+		{
+			PlayerStack.Add(PageName);
+		}
+	}
+	return PlayerStack;
+}
+
+TArray<int32> UDreamScreenUISubsystem::GetScreenPlayerIndices() const
+{
+	TArray<int32> Indices;
+	ScreenRoots.GetKeys(Indices);
+	Indices.Sort();
+	return Indices;
+}
+
+UDreamCanvas* UDreamScreenUISubsystem::GetScreenCanvas(APlayerController* InOwningPlayer) const
+{
+	UDreamWidget* Root = GetScreenRoot(InOwningPlayer);
+	return IsUsablePage(Root) ? Root->GetComponent<UDreamCanvas>() : nullptr;
+}
+
+UDreamWidget* UDreamScreenUISubsystem::GetScreenRoot(APlayerController* InOwningPlayer) const
+{
+	const TObjectPtr<UDreamWidget>* Found = ScreenRoots.Find(ResolvePlayerIndex(InOwningPlayer));
+	return Found != nullptr ? Found->Get() : nullptr;
+}
+
+UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRoot(APlayerController* InOwningPlayer)
+{
+	return GetOrCreateScreenRootForIndex(ResolvePlayerIndex(InOwningPlayer));
+}
+
+UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRootForWidget(UDreamWidget* InContextWidget)
+{
+	return GetOrCreateScreenRootForIndex(PlayerIndexForWidget(InContextWidget));
+}
+
+UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRootForUserIndex(int32 InUserIndex)
+{
+	return GetOrCreateScreenRootForIndex(FMath::Max(0, InUserIndex));
+}
+
+UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRootForIndex(int32 InPlayerIndex)
+{
+	TObjectPtr<UDreamWidget>& RootSlot = ScreenRoots.FindOrAdd(InPlayerIndex);
+	if (IsUsablePage(RootSlot))
+	{
+		if (UDreamCanvas* ExistingCanvas = RootSlot->GetComponent<UDreamCanvas>())
+		{
+			if (ExistingCanvas->IsRootCanvas() && ExistingCanvas->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
+			{
+				EnsureInteractionObjects(ExistingCanvas, InPlayerIndex);
+				return RootSlot;
+			}
 		}
 	}
 
-	ScreenRoot = nullptr;
-	bOwnsScreenRoot = false;
-	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	RootSlot = nullptr;
+	OwnedScreenRoots.Remove(InPlayerIndex);
+	// An overlay canvas somebody else placed is adopted, but only by the FIRST player -- an authored
+	// canvas says nothing about which local player it belongs to, and handing the same one to two
+	// players would put both their pages in one place.
+	if (InPlayerIndex == ResolvePlayerIndex(nullptr))
 	{
-		for (const TWeakObjectPtr<UDreamCanvas>& CanvasPtr : Manager->GetAllCanvasArray())
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
-			UDreamCanvas* Canvas = CanvasPtr.Get();
-			if (IsValid(Canvas) && Canvas->IsRootCanvas() && Canvas->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
+			for (const TWeakObjectPtr<UDreamCanvas>& CanvasPtr : Manager->GetAllCanvasArray())
 			{
-				ScreenRoot = Canvas->GetWidget();
-				EnsureInteractionObjects(Canvas);
-				return ScreenRoot;
+				UDreamCanvas* Canvas = CanvasPtr.Get();
+				if (IsValid(Canvas) && Canvas->IsRootCanvas() && Canvas->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay
+					&& !ScreenRoots.FindKey(TObjectPtr<UDreamWidget>(Canvas->GetWidget())))
+				{
+					RootSlot = Canvas->GetWidget();
+					EnsureInteractionObjects(Canvas, InPlayerIndex);
+					return RootSlot;
+				}
 			}
 		}
 	}
@@ -119,32 +224,34 @@ UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRoot()
 		return nullptr;
 	}
 
-	const FName RootName = MakeUniqueObjectName(World, UDreamWidget::StaticClass(), TEXT("DreamScreenRoot"));
-	ScreenRoot = NewObject<UDreamWidget>(World, RootName, RF_Transient);
-	ScreenRoot->SetDisplayName(TEXT("[DreamScreenRoot]"));
-	ScreenRoot->SetSizeDelta(FVector2D(1920.0, 1080.0));
-	ScreenRoot->OnRegister();
+	const FName RootName = MakeUniqueObjectName(World, UDreamWidget::StaticClass(),
+		*FString::Printf(TEXT("DreamScreenRoot_P%d"), InPlayerIndex));
+	UDreamWidget* NewRoot = NewObject<UDreamWidget>(World, RootName, RF_Transient);
+	NewRoot->SetDisplayName(FString::Printf(TEXT("[DreamScreenRoot P%d]"), InPlayerIndex));
+	NewRoot->SetSizeDelta(FVector2D(1920.0, 1080.0));
+	NewRoot->OnRegister();
 
-	UDreamCanvas* Canvas = ScreenRoot->AddComponent<UDreamCanvas>();
+	UDreamCanvas* Canvas = NewRoot->AddComponent<UDreamCanvas>();
 	if (!Canvas)
 	{
-		ScreenRoot->DestroyWidget();
-		ScreenRoot = nullptr;
+		NewRoot->DestroyWidget();
+		ScreenRoots.Remove(InPlayerIndex);
 		return nullptr;
 	}
 	Canvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
-	bOwnsScreenRoot = true;
+	ScreenRoots.Add(InPlayerIndex, NewRoot);
+	OwnedScreenRoots.Add(InPlayerIndex);
 
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World); Manager && Manager->HasBegunPlay())
 	{
-		ScreenRoot->BeginPlay();
+		NewRoot->BeginPlay();
 	}
-	ScreenRoot->CalculateObjectToWorldTransform(true);
-	EnsureInteractionObjects(Canvas);
-	return ScreenRoot;
+	NewRoot->CalculateObjectToWorldTransform(true);
+	EnsureInteractionObjects(Canvas, InPlayerIndex);
+	return NewRoot;
 }
 
-void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanvas)
+void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanvas, int32 InPlayerIndex)
 {
 	if (!IsValid(InRootCanvas))
 	{
@@ -157,7 +264,11 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 	{
 		for (const TWeakObjectPtr<UDreamBaseRaycaster>& Raycaster : Manager->GetAllRaycasterArray())
 		{
-			if (UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get()))
+			UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get());
+			// Only a raycaster that speaks for THIS player. A second player's raycaster carries its own
+			// UserIndex and must keep pointing at its own canvas; retargeting every screen raycaster at
+			// whichever root was built last is what made split screen impossible.
+			if (ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
 			{
 				ScreenRaycaster->SetRootCanvas(InRootCanvas);
 				bHasScreenRaycaster = true;
@@ -165,36 +276,51 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 		}
 	}
 
-	if (!bHasScreenRaycaster && !IsValid(InteractionHost))
+	TObjectPtr<AActor>& HostSlot = InteractionHosts.FindOrAdd(InPlayerIndex);
+	if (!bHasScreenRaycaster && !IsValid(HostSlot))
 	{
 		FActorSpawnParameters SpawnParameters;
-		SpawnParameters.Name = MakeUniqueObjectName(GetWorld(), AActor::StaticClass(), TEXT("DreamScreenInteractionHost"));
+		SpawnParameters.Name = MakeUniqueObjectName(GetWorld(), AActor::StaticClass(),
+			*FString::Printf(TEXT("DreamScreenInteractionHost_P%d"), InPlayerIndex));
 		SpawnParameters.ObjectFlags |= RF_Transient;
 		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		InteractionHost = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, SpawnParameters);
-		if (InteractionHost)
+		HostSlot = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, SpawnParameters);
+		if (HostSlot)
 		{
-			InteractionHost->SetActorEnableCollision(false);
-			UDreamScreenSpaceRaycaster* Raycaster = NewObject<UDreamScreenSpaceRaycaster>(InteractionHost, NAME_None, RF_Transient);
+			HostSlot->SetActorEnableCollision(false);
+			UDreamScreenSpaceRaycaster* Raycaster = NewObject<UDreamScreenSpaceRaycaster>(HostSlot, NAME_None, RF_Transient);
+			Raycaster->SetUserIndex(InPlayerIndex);
 			Raycaster->SetRootCanvas(InRootCanvas);
-			InteractionHost->AddInstanceComponent(Raycaster);
+			HostSlot->AddInstanceComponent(Raycaster);
 			Raycaster->RegisterComponent();
 		}
 	}
 
-	bool bHasEventSystem = Manager && Manager->GetEventSystemByUserIndex(0) != nullptr;
+	// The event system for THIS player, not "the one at index 0". A second local player with no event
+	// system of their own gets nothing rather than borrowing the first player's cursor.
+	bool bHasEventSystem = Manager && Manager->GetEventSystemByUserIndex(InPlayerIndex) != nullptr;
 	if (!bHasEventSystem)
 	{
 		for (TActorIterator<AActor> ActorIt(GetWorld()); ActorIt; ++ActorIt)
 		{
-			if (ActorIt->FindComponentByClass<UDreamEventSystem>())
+			if (const UDreamEventSystem* PlacedEventSystem = ActorIt->FindComponentByClass<UDreamEventSystem>();
+				PlacedEventSystem != nullptr && PlacedEventSystem->GetUserIndex() == InPlayerIndex)
 			{
 				bHasEventSystem = true;
 				break;
 			}
 		}
 	}
-	if (!bHasEventSystem && !IsValid(CreatedEventSystemActor))
+	// Only the first player gets one spawned for them. A second local player's event system has to be
+	// placed deliberately -- with its UserIndex set -- because spawning a copy of the default actor
+	// would give both players the same index and make each read the other's input.
+	if (!bHasEventSystem && InPlayerIndex != ResolvePlayerIndex(nullptr))
+	{
+		UE_LOG(DreamGUI, Warning,
+			TEXT("Local player %d has a DreamUI screen but no event system with that UserIndex, so it takes no input. ")
+			TEXT("Place a DreamEventSystem with UserIndex %d for that player."), InPlayerIndex, InPlayerIndex);
+	}
+	else if (!bHasEventSystem && !IsValid(CreatedEventSystemActor))
 	{
 		if (UClass* EventSystemClass = UDreamGUISettings::LoadSettingClass(
 			UDreamGUISettings::Get()->EventSystemActorClass, TEXT("EventSystemActorClass")))
@@ -213,32 +339,30 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 	}
 }
 
-void UDreamScreenUISubsystem::ConfigurePage(UDreamWidget* InRoot, int32 InSortOrder)
+void UDreamScreenUISubsystem::ConfigurePage(UDreamWidget* InRoot, int32 InSortOrder, int32 InPlayerIndex, bool bInCustomPlacement)
 {
-	UDreamWidget* Root = GetOrCreateScreenRoot();
+	UDreamWidget* Root = GetOrCreateScreenRootForIndex(InPlayerIndex);
 	if (!IsUsablePage(InRoot) || !IsUsablePage(Root) || InRoot == Root)
 	{
 		return;
 	}
-	// A widget arriving here parked was created to be shown, so switching it on is right -- but ask
-	// before attaching, because attaching is what un-parks it.
-	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
-	const bool bWasParked = DreamUIManager != nullptr && DreamUIManager->IsWidgetParked(InRoot);
 	if (InRoot->GetParent() != Root)
 	{
+		// Attaching is what un-parks a widget that was created but never added.
 		InRoot->SetParent(Root, false);
 	}
 
-	InRoot->SetHorizontalAndVerticalAnchorMinMax(FVector2D::ZeroVector, FVector2D(1.0, 1.0), false, false);
-	InRoot->SetAnchoredPosition(FVector2D::ZeroVector);
-	InRoot->SetSizeDelta(FVector2D::ZeroVector);
-	if (!bWasParked || InRoot->GetWidgetActive())
+	// Full-bleed, unless the caller placed this page by hand. Forcing it unconditionally is what made
+	// SetPositionInViewport impossible to keep: the next refresh moved the window back to edge-to-edge.
+	if (!bInCustomPlacement)
 	{
-		// AddToViewport means "show this", so a page that was merely parked gets switched on. What
-		// it must not do is override a caller who explicitly switched the page off while preparing
-		// it -- parking no longer touches that flag, so the caller's intent is readable here.
-		InRoot->SetWidgetActive(true);
+		InRoot->SetHorizontalAndVerticalAnchorMinMax(FVector2D::ZeroVector, FVector2D(1.0, 1.0), false, false);
+		InRoot->SetAnchoredPosition(FVector2D::ZeroVector);
+		InRoot->SetSizeDelta(FVector2D::ZeroVector);
 	}
+	// Placement only. The page's ACTIVE state belongs to SetPageActive, which owns both axes for
+	// every page -- switching it on here as well made the stack's own "this page is covered" pass
+	// toggle a covered page off and straight back on again on every refresh.
 
 	UDreamCanvas* PageCanvas = InRoot->GetComponent<UDreamCanvas>();
 	if (!PageCanvas)
@@ -270,15 +394,22 @@ FName UDreamScreenUISubsystem::FindNameForWidget(const UDreamWidget* InRoot) con
 
 void UDreamScreenUISubsystem::AddToViewport(UDreamWidget* InRoot, int32 InSortOrder)
 {
-	if (!IsUsablePage(InRoot) || InRoot == ScreenRoot)
+	if (!IsUsablePage(InRoot) || ScreenRoots.FindKey(TObjectPtr<UDreamWidget>(InRoot)) != nullptr)
 	{
 		return;
 	}
 	const FName ExistingName = FindNameForWidget(InRoot);
 	if (!ExistingName.IsNone())
 	{
-		ConfigurePage(InRoot, InSortOrder);
-		Entries[ExistingName].SortOrder = InSortOrder;
+		WarnIfSortOrderReserved(ExistingName, InSortOrder);
+		FEntry& Existing = Entries[ExistingName];
+		// A widget whose owner changed since it was added moves to that player's screen.
+		Existing.PlayerIndex = PlayerIndexForWidget(InRoot);
+		ConfigurePage(InRoot, InSortOrder, Existing.PlayerIndex, Existing.bCustomPlacement);
+		Existing.SortOrder = InSortOrder;
+		// AddToViewport means "show this", on both axes. Re-adding a page that had been hidden used
+		// to switch only bWidgetActive back on, which left it running and still invisible.
+		SetPageActive(ExistingName, true);
 		return;
 	}
 
@@ -291,13 +422,47 @@ void UDreamScreenUISubsystem::AddToViewport(UDreamWidget* InRoot, int32 InSortOr
 	RegisterUI(AutoName, InRoot, InSortOrder);
 }
 
-UDreamWidget* UDreamScreenUISubsystem::CreateWidgetOnScreen(TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder)
+void UDreamScreenUISubsystem::AddToPlayerScreen(UDreamWidget* InRoot, APlayerController* InOwningPlayer, int32 InSortOrder)
+{
+	// Name the owner on the WIDGET rather than carrying it as a parameter from here on: everything
+	// downstream -- the screen it is parented to, the event system that can focus it, the input it
+	// hears -- asks the widget, so this one line is what makes the rest of the split-screen story work
+	// without a player argument on every call.
+	if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(InRoot))
+	{
+		UserWidget->SetOwningPlayer(InOwningPlayer);
+	}
+	else if (IsValid(InRoot) && IsValid(InOwningPlayer))
+	{
+		// A plain widget has nowhere to remember an owner, so it can only be placed, not owned. Placing
+		// it is still the useful half; say the other half is missing rather than silently using player 0.
+		UE_LOG(DreamGUI, Warning,
+			TEXT("AddToPlayerScreen on '%s', which is not a DreamUI User Widget: it will be placed on that player's screen ")
+			TEXT("but cannot remember the owner, so anything it creates later belongs to the first local player."),
+			*InRoot->GetPathDisplayName());
+	}
+	AddToViewport(InRoot, InSortOrder);
+	if (!IsValid(InRoot) || Cast<UDreamUserWidget>(InRoot) != nullptr)
+	{
+		return;
+	}
+	// The plain-widget case: place it on the named player's screen even though the widget cannot say so.
+	if (const FName Name = FindNameForWidget(InRoot); !Name.IsNone())
+	{
+		FEntry& Entry = Entries[Name];
+		Entry.PlayerIndex = ResolvePlayerIndex(InOwningPlayer);
+		ConfigurePage(InRoot, Entry.SortOrder, Entry.PlayerIndex, Entry.bCustomPlacement);
+	}
+}
+
+UDreamWidget* UDreamScreenUISubsystem::CreateWidgetOnScreen(TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder,
+	APlayerController* InOwningPlayer)
 {
 	if (!IsValid(InWidgetClass))
 	{
 		return nullptr;
 	}
-	UDreamWidget* Root = GetOrCreateScreenRoot();
+	UDreamWidget* Root = GetOrCreateScreenRoot(InOwningPlayer);
 	if (!Root)
 	{
 		return nullptr;
@@ -305,6 +470,11 @@ UDreamWidget* UDreamScreenUISubsystem::CreateWidgetOnScreen(TSubclassOf<UDreamUs
 	UDreamWidget* Page = CreateDreamWidget(GetWorld(), InWidgetClass, Root);
 	if (Page)
 	{
+		// Owner first, so the widget answers for itself from here on.
+		if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(Page); UserWidget != nullptr && IsValid(InOwningPlayer))
+		{
+			UserWidget->SetOwningPlayer(InOwningPlayer);
+		}
 		AddToViewport(Page, InSortOrder);
 	}
 	return Page;
@@ -312,9 +482,28 @@ UDreamWidget* UDreamScreenUISubsystem::CreateWidgetOnScreen(TSubclassOf<UDreamUs
 
 void UDreamScreenUISubsystem::RegisterUI(FName InName, UDreamWidget* InRoot, int32 InSortOrder)
 {
-	const FName PreviousTop = GetTopUI();
-	RegisterUIInternal(InName, InRoot, InSortOrder, EDreamUIScreenPageCachePolicy::DestroyOnPop, nullptr, true);
-	RefreshStack(PreviousTop);
+	WarnIfSortOrderReserved(InName, InSortOrder);
+	const int32 PlayerIndex = PlayerIndexForWidget(InRoot);
+	const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
+	RegisterUIInternal(InName, InRoot, InSortOrder, EDreamUIScreenPageCachePolicy::DestroyOnPop, nullptr, true, PlayerIndex);
+	RefreshStack(PlayerIndex, PreviousTop);
+}
+
+void UDreamScreenUISubsystem::WarnIfSortOrderReserved(FName InName, int32 InSortOrder) const
+{
+	// Sort orders from StackBaseSortOrder up belong to the page stack, which hands its own pages
+	// StackBaseSortOrder + depth * StackSortOrderStep and rewrites them on every refresh. A
+	// free-standing page asking for a number in that band draws in an undefined order against
+	// whatever the stack has at the same value, and loses it outright the next time the stack
+	// refreshes. Say so, rather than leaving "my HUD is sometimes behind the pause menu" to be
+	// guessed at from the outside.
+	if (InSortOrder >= StackBaseSortOrder)
+	{
+		UE_LOG(DreamGUI, Warning,
+			TEXT("Screen page '%s' asked for sort order %d, which is inside the band the page stack reserves (%d and up). ")
+			TEXT("Use a sort order below %d for a page that is not pushed on the stack."),
+			*InName.ToString(), InSortOrder, StackBaseSortOrder, StackBaseSortOrder);
+	}
 }
 
 void UDreamScreenUISubsystem::RegisterUIInternal(
@@ -323,9 +512,10 @@ void UDreamScreenUISubsystem::RegisterUIInternal(
 	int32 InSortOrder,
 	EDreamUIScreenPageCachePolicy InCachePolicy,
 	TSoftClassPtr<UDreamUserWidget> InSourceClass,
-	bool bInitiallyVisible)
+	bool bInitiallyVisible,
+	int32 InPlayerIndex)
 {
-	if (InName.IsNone() || !IsUsablePage(InRoot) || InRoot == ScreenRoot)
+	if (InName.IsNone() || !IsUsablePage(InRoot) || ScreenRoots.FindKey(TObjectPtr<UDreamWidget>(InRoot)) != nullptr)
 	{
 		return;
 	}
@@ -344,48 +534,65 @@ void UDreamScreenUISubsystem::RegisterUIInternal(
 		{
 			Existing->SortOrder = InSortOrder;
 			Existing->CachePolicy = InCachePolicy;
+			Existing->PlayerIndex = InPlayerIndex;
 			if (!InSourceClass.IsNull())
 			{
 				Existing->SourceClass = InSourceClass;
 			}
-			ConfigurePage(InRoot, InSortOrder);
+			ConfigurePage(InRoot, InSortOrder, InPlayerIndex, Existing->bCustomPlacement);
 			SetPageActive(InName, bInitiallyVisible);
 			return;
 		}
 		Stack.Remove(InName);
-		RemoveEntry(InName, true);
+		RemoveEntry(InName);
 	}
 
-	ConfigurePage(InRoot, InSortOrder);
+	// A page being registered for the first time is full-bleed until somebody places it by hand.
+	ConfigurePage(InRoot, InSortOrder, InPlayerIndex, false);
 	FEntry Entry;
 	Entry.Root = InRoot;
 	Entry.SourceClass = InSourceClass;
 	Entry.SortOrder = InSortOrder;
 	Entry.CachePolicy = InCachePolicy;
 	Entry.State = EDreamUIScreenPageState::Inactive;
+	Entry.PlayerIndex = InPlayerIndex;
 	Entries.Add(InName, MoveTemp(Entry));
 	InRoot->SetVisibility(EDreamWidgetVisibility::Collapsed);
 	OnPageCreated.Broadcast(InName, InRoot);
-	SetPageActive(InName, bInitiallyVisible);
+	if (bInitiallyVisible)
+	{
+		SetPageActive(InName, true);
+	}
+	// A page registered hidden is on its way into the stack, which decides its real state a moment
+	// later. The entry already starts Inactive and the root is already collapsed above, so there is
+	// nothing left to apply -- and going through SetPageActive(false) here would switch a page that
+	// has never been shown off and straight back on, with the OnDisable/OnEnable pair to match.
 }
 
-UDreamWidget* UDreamScreenUISubsystem::ShowWidgetOfClass(FName InName, TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder)
+UDreamWidget* UDreamScreenUISubsystem::ShowWidgetOfClass(FName InName, TSubclassOf<UDreamUserWidget> InWidgetClass, int32 InSortOrder,
+	APlayerController* InOwningPlayer)
 {
 	if (InName.IsNone() || !IsValid(InWidgetClass))
 	{
 		return nullptr;
 	}
-	UDreamWidget* Root = GetOrCreateScreenRoot();
+	const int32 PlayerIndex = ResolvePlayerIndex(InOwningPlayer);
+	UDreamWidget* Root = GetOrCreateScreenRootForIndex(PlayerIndex);
 	if (!Root)
 	{
 		return nullptr;
 	}
+	WarnIfSortOrderReserved(InName, InSortOrder);
 	UDreamWidget* Page = CreateDreamWidget(GetWorld(), InWidgetClass, Root);
 	if (Page)
 	{
-		const FName PreviousTop = GetTopUI();
-		RegisterUIInternal(InName, Page, InSortOrder, EDreamUIScreenPageCachePolicy::DestroyOnPop, TSoftClassPtr<UDreamUserWidget>(InWidgetClass), true);
-		RefreshStack(PreviousTop);
+		if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(Page); UserWidget != nullptr && IsValid(InOwningPlayer))
+		{
+			UserWidget->SetOwningPlayer(InOwningPlayer);
+		}
+		const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
+		RegisterUIInternal(InName, Page, InSortOrder, EDreamUIScreenPageCachePolicy::DestroyOnPop, TSoftClassPtr<UDreamUserWidget>(InWidgetClass), true, PlayerIndex);
+		RefreshStack(PlayerIndex, PreviousTop);
 	}
 	return Page;
 }
@@ -432,7 +639,13 @@ void UDreamScreenUISubsystem::SetPageActive(FName InName, bool bActive)
 
 	const bool bWasShowing = IsUIShowing(InName);
 	const EDreamUIScreenPageState NewState = bActive ? EDreamUIScreenPageState::Active : EDreamUIScreenPageState::Inactive;
-	Root->SetWidgetActive(true);
+	// Both axes, because they carry different halves of "this page is not on screen".
+	// bWidgetActive drives behaviour lifecycle -- OnEnable/OnDisable, the manager's tick list, and
+	// with it OnTick and the polled property bindings. Visibility drives rendering, layout and hit
+	// testing. Collapsing alone left a page the stack had covered ticking and evaluating bindings
+	// for as long as it stayed covered, which is not what anyone pushing a full-screen page over
+	// another means, and not what UMG does with the page it removed from the viewport.
+	Root->SetWidgetActive(bActive);
 	Root->SetVisibility(bActive ? EDreamWidgetVisibility::Visible : EDreamWidgetVisibility::Collapsed);
 	const bool bStateChanged = Entry->State != NewState || bWasShowing != bActive;
 	Entry->State = NewState;
@@ -451,7 +664,8 @@ void UDreamScreenUISubsystem::SetPageActive(FName InName, bool bActive)
 
 void UDreamScreenUISubsystem::DestroyPage(UDreamWidget* InRoot)
 {
-	if (IsValid(InRoot) && InRoot != ScreenRoot && (InRoot->HasRegistered() || InRoot->HasBegunPlay()))
+	const bool bIsAScreenRoot = IsValid(InRoot) && ScreenRoots.FindKey(TObjectPtr<UDreamWidget>(InRoot)) != nullptr;
+	if (IsValid(InRoot) && !bIsAScreenRoot && (InRoot->HasRegistered() || InRoot->HasBegunPlay()))
 	{
 		InRoot->DestroyWidget();
 	}
@@ -466,15 +680,95 @@ void UDreamScreenUISubsystem::RemoveFromViewport(UDreamWidget* InRoot)
 	}
 }
 
-void UDreamScreenUISubsystem::RemoveUI(FName InName)
+bool UDreamScreenUISubsystem::SetPageHasCustomPlacement(UDreamWidget* InRoot, bool bInCustomPlacement)
 {
-	const FName PreviousTop = GetTopUI();
-	Stack.Remove(InName);
-	RemoveEntry(InName, true);
-	RefreshStack(PreviousTop);
+	const FName Name = FindNameForWidget(InRoot);
+	FEntry* Entry = Name.IsNone() ? nullptr : Entries.Find(Name);
+	if (Entry == nullptr)
+	{
+		return false;
+	}
+	Entry->bCustomPlacement = bInCustomPlacement;
+	if (!bInCustomPlacement)
+	{
+		// Back under the stack's geometry immediately rather than at the next push, so "clear my
+		// placement" reads as an instruction and not a preference.
+		ConfigurePage(InRoot, Entry->SortOrder, Entry->PlayerIndex, false);
+	}
+	return true;
 }
 
-void UDreamScreenUISubsystem::RemoveEntry(FName InName, bool bDestroyPage)
+bool UDreamScreenUISubsystem::GetPageHasCustomPlacement(UDreamWidget* InRoot) const
+{
+	const FName Name = FindNameForWidget(InRoot);
+	const FEntry* Entry = Name.IsNone() ? nullptr : Entries.Find(Name);
+	return Entry != nullptr && Entry->bCustomPlacement;
+}
+
+bool UDreamScreenUISubsystem::ForgetPage(UDreamWidget* InRoot)
+{
+	const FName Name = FindNameForWidget(InRoot);
+	if (Name.IsNone())
+	{
+		return false;
+	}
+	const int32 PlayerIndex = PlayerIndexForPage(Name);
+	const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
+	FEntry Entry;
+	if (!Entries.RemoveAndCopyValue(Name, Entry))
+	{
+		return false;
+	}
+	Stack.Remove(Name);
+	if (Entry.State == EDreamUIScreenPageState::Active)
+	{
+		OnPageHidden.Broadcast(Name, InRoot);
+	}
+	OnPageRemoved.Broadcast(Name, InRoot);
+	RefreshStack(PlayerIndex, PreviousTop);
+	return true;
+}
+
+void UDreamScreenUISubsystem::RemoveUI(FName InName)
+{
+	const int32 PlayerIndex = PlayerIndexForPage(InName);
+	const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
+	Stack.Remove(InName);
+	RemoveEntry(InName);
+	RefreshStack(PlayerIndex, PreviousTop);
+}
+
+int32 UDreamScreenUISubsystem::PruneDeadEntries()
+{
+	// A page destroyed by someone other than this subsystem -- DestroyWidget on the page itself, or
+	// the whole tree going down with its owner -- used to leave its name in Entries forever: GetUI
+	// answers null for it, RefreshStack only ever prunes Stack, and nothing touched the map. The
+	// name set then grew without bound and re-registering that name took the "already exists" road
+	// to remove a page that was already gone.
+	TArray<FName> DeadNames;
+	for (const TPair<FName, FEntry>& Pair : Entries)
+	{
+		if (!IsUsablePage(Pair.Value.Root.Get()))
+		{
+			DeadNames.Add(Pair.Key);
+		}
+	}
+	for (FName DeadName : DeadNames)
+	{
+		FEntry Dead;
+		if (!Entries.RemoveAndCopyValue(DeadName, Dead))
+		{
+			continue;
+		}
+		Stack.Remove(DeadName);
+		// Nothing to hide and nothing to destroy: the page is already gone. Listeners still have to
+		// hear that the name no longer names anything.
+		OnPageRemoved.Broadcast(DeadName, Dead.Root.Get());
+	}
+	return DeadNames.Num();
+}
+
+void UDreamScreenUISubsystem::RemoveEntry(FName InName)
 {
 	FEntry Entry;
 	if (!Entries.RemoveAndCopyValue(InName, Entry))
@@ -489,7 +783,10 @@ void UDreamScreenUISubsystem::RemoveEntry(FName InName, bool bDestroyPage)
 		&& Root->GetVisibility() != EDreamWidgetVisibility::Collapsed;
 	if (IsUsablePage(Root))
 	{
-		Root->SetWidgetActive(true);
+		// Off on both axes. This page is leaving the screen; switching it ON here was a line copied
+		// from SetPageActive back when that one did the same, and it restarted a page's behaviours
+		// for the length of the broadcasts below.
+		Root->SetWidgetActive(false);
 		Root->SetVisibility(EDreamWidgetVisibility::Collapsed);
 	}
 	if (bWasShowing || Entry.State == EDreamUIScreenPageState::Active)
@@ -497,10 +794,7 @@ void UDreamScreenUISubsystem::RemoveEntry(FName InName, bool bDestroyPage)
 		OnPageHidden.Broadcast(InName, Root);
 	}
 	OnPageRemoved.Broadcast(InName, Root);
-	if (bDestroyPage)
-	{
-		DestroyPage(Root);
-	}
+	DestroyPage(Root);
 }
 
 void UDreamScreenUISubsystem::RemoveAllUI()
@@ -514,13 +808,33 @@ void UDreamScreenUISubsystem::RemoveAllUI()
 
 	TArray<FName> Names;
 	Entries.GenerateKeyArray(Names);
-	const FName PreviousTop = GetTopUI();
+	// Every player's stack empties, so every player's stack gets told. Collected before the removals,
+	// because the entries that name the players are about to go.
+	TSet<int32> AffectedPlayers;
+	TMap<int32, FName> PreviousTops;
+	for (FName Name : Names)
+	{
+		const int32 PlayerIndex = PlayerIndexForPage(Name);
+		if (!AffectedPlayers.Contains(PlayerIndex))
+		{
+			AffectedPlayers.Add(PlayerIndex);
+			PreviousTops.Add(PlayerIndex, GetTopUIForIndex(PlayerIndex));
+		}
+	}
 	Stack.Reset();
 	for (FName Name : Names)
 	{
-		RemoveEntry(Name, true);
+		RemoveEntry(Name);
 	}
-	RefreshStack(PreviousTop);
+	if (AffectedPlayers.Num() == 0)
+	{
+		AffectedPlayers.Add(ResolvePlayerIndex(nullptr));
+		PreviousTops.Add(ResolvePlayerIndex(nullptr), NAME_None);
+	}
+	for (int32 PlayerIndex : AffectedPlayers)
+	{
+		RefreshStack(PlayerIndex, PreviousTops[PlayerIndex]);
+	}
 }
 
 TArray<FName> UDreamScreenUISubsystem::GetAllUINames() const
@@ -745,7 +1059,8 @@ UDreamWidget* UDreamScreenUISubsystem::PushWidgetOfClass(
 	FName InName,
 	TSubclassOf<UDreamUserWidget> InWidgetClass,
 	EDreamUIScreenPageCachePolicy InCachePolicy,
-	bool bHidePrevious)
+	bool bHidePrevious,
+	APlayerController* InOwningPlayer)
 {
 	if (InName.IsNone() || !IsValid(InWidgetClass))
 	{
@@ -767,7 +1082,8 @@ UDreamWidget* UDreamScreenUISubsystem::PushWidgetOfClass(
 		RemoveUI(InName);
 	}
 
-	UDreamWidget* Root = GetOrCreateScreenRoot();
+	const int32 PlayerIndex = ResolvePlayerIndex(InOwningPlayer);
+	UDreamWidget* Root = GetOrCreateScreenRootForIndex(PlayerIndex);
 	if (!Root)
 	{
 		return nullptr;
@@ -777,17 +1093,23 @@ UDreamWidget* UDreamScreenUISubsystem::PushWidgetOfClass(
 	{
 		return nullptr;
 	}
+	if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(Page); UserWidget != nullptr && IsValid(InOwningPlayer))
+	{
+		UserWidget->SetOwningPlayer(InOwningPlayer);
+	}
 
-	const FName PreviousTop = GetTopUI();
-	const int32 SortOrder = StackBaseSortOrder + Stack.Num() * StackSortOrderStep;
-	RegisterUIInternal(InName, Page, SortOrder, InCachePolicy, TSoftClassPtr<UDreamUserWidget>(InWidgetClass), false);
+	const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
+	// Depth counted within THIS player's stack, so two players' pages do not climb over each other's
+	// sort orders as they push.
+	const int32 SortOrder = StackBaseSortOrder + StackFor(PlayerIndex).Num() * StackSortOrderStep;
+	RegisterUIInternal(InName, Page, SortOrder, InCachePolicy, TSoftClassPtr<UDreamUserWidget>(InWidgetClass), false, PlayerIndex);
 	Stack.Remove(InName);
 	Stack.Add(InName);
 	if (FEntry* Entry = Entries.Find(InName))
 	{
 		Entry->bHidePrevious = bHidePrevious;
 	}
-	RefreshStack(PreviousTop);
+	RefreshStack(PlayerIndex, PreviousTop);
 	return Page;
 }
 
@@ -802,11 +1124,14 @@ void UDreamScreenUISubsystem::PushUI(
 		return;
 	}
 
-	const FName PreviousTop = GetTopUI();
+	// The player the widget already belongs to. Pushing never moves a page to another player's screen;
+	// AddToPlayerScreen is the verb for that.
+	const int32 PlayerIndex = PlayerIndexForWidget(InRoot);
+	const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
 	if (GetUI(InName) != InRoot)
 	{
-		const int32 SortOrder = StackBaseSortOrder + Stack.Num() * StackSortOrderStep;
-		RegisterUIInternal(InName, InRoot, SortOrder, InCachePolicy, nullptr, false);
+		const int32 SortOrder = StackBaseSortOrder + StackFor(PlayerIndex).Num() * StackSortOrderStep;
+		RegisterUIInternal(InName, InRoot, SortOrder, InCachePolicy, nullptr, false, PlayerIndex);
 	}
 	FEntry* Entry = Entries.Find(InName);
 	if (!Entry)
@@ -817,21 +1142,24 @@ void UDreamScreenUISubsystem::PushUI(
 	Entry->bHidePrevious = bHidePrevious;
 	Stack.Remove(InName);
 	Stack.Add(InName);
-	RefreshStack(PreviousTop);
+	RefreshStack(PlayerIndex, PreviousTop);
 }
 
-void UDreamScreenUISubsystem::RefreshStack(FName InPreviousTop)
+void UDreamScreenUISubsystem::RefreshStack(int32 InPlayerIndex, FName InPreviousTop)
 {
 	if (bRefreshingStack)
 	{
-		bStackRefreshRequested = true;
+		StackRefreshRequests.Add(InPlayerIndex);
 		return;
 	}
 
 	bRefreshingStack = true;
 	do
 	{
-		bStackRefreshRequested = false;
+		StackRefreshRequests.Remove(InPlayerIndex);
+		// Names whose page died elsewhere leave the map here, not just the stack. Inside the guard,
+		// because OnPageRemoved listeners are free to push or pop.
+		PruneDeadEntries();
 		for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
 		{
 			if (!GetUI(Stack[Index]))
@@ -840,21 +1168,24 @@ void UDreamScreenUISubsystem::RefreshStack(FName InPreviousTop)
 			}
 		}
 
-		for (int32 Index = 0; Index < Stack.Num(); ++Index)
+		// This player's slice of the stack. Sort orders and covering are decided WITHIN a player:
+		// another local player's full-screen page is on another screen and covers nothing here.
+		const TArray<FName> PlayerStack = StackFor(InPlayerIndex);
+		for (int32 Index = 0; Index < PlayerStack.Num(); ++Index)
 		{
-			if (FEntry* Entry = Entries.Find(Stack[Index]))
+			if (FEntry* Entry = Entries.Find(PlayerStack[Index]))
 			{
 				Entry->SortOrder = StackBaseSortOrder + Index * StackSortOrderStep;
-				ConfigurePage(Entry->Root.Get(), Entry->SortOrder);
+				ConfigurePage(Entry->Root.Get(), Entry->SortOrder, Entry->PlayerIndex, Entry->bCustomPlacement);
 			}
 		}
 
 		TArray<TPair<FName, bool>> VisibilityUpdates;
-		VisibilityUpdates.Reserve(Stack.Num());
+		VisibilityUpdates.Reserve(PlayerStack.Num());
 		bool bPreviousPagesCovered = false;
-		for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
+		for (int32 Index = PlayerStack.Num() - 1; Index >= 0; --Index)
 		{
-			const FName PageName = Stack[Index];
+			const FName PageName = PlayerStack[Index];
 			VisibilityUpdates.Emplace(PageName, !bPreviousPagesCovered);
 			if (const FEntry* Entry = Entries.Find(PageName); Entry && Entry->bHidePrevious)
 			{
@@ -865,28 +1196,40 @@ void UDreamScreenUISubsystem::RefreshStack(FName InPreviousTop)
 		for (const TPair<FName, bool>& Update : VisibilityUpdates)
 		{
 			SetPageActive(Update.Key, Update.Value);
-			if (bStackRefreshRequested)
+			if (StackRefreshRequests.Contains(InPlayerIndex))
 			{
 				break;
 			}
 		}
 	}
-	while (bStackRefreshRequested);
+	while (StackRefreshRequests.Contains(InPlayerIndex));
 	bRefreshingStack = false;
 
-	const FName NewTop = GetTopUI();
+	const FName NewTop = GetTopUIForIndex(InPlayerIndex);
 	if (InPreviousTop != NewTop)
 	{
 		OnStackChanged.Broadcast(InPreviousTop, NewTop);
 	}
+
+	// Another player's stack asked to refresh while this one was running. Drain them now, outside the
+	// guard, rather than leaving that player's pages at whatever state they were mid-change.
+	while (StackRefreshRequests.Num() > 0)
+	{
+		const int32 OtherIndex = *StackRefreshRequests.CreateConstIterator();
+		StackRefreshRequests.Remove(OtherIndex);
+		RefreshStack(OtherIndex, GetTopUIForIndex(OtherIndex));
+	}
 }
 
-void UDreamScreenUISubsystem::PopUI()
+void UDreamScreenUISubsystem::PopUI(APlayerController* InOwningPlayer)
 {
-	const FName PreviousTop = GetTopUI();
-	while (!Stack.IsEmpty())
+	const int32 PlayerIndex = ResolvePlayerIndex(InOwningPlayer);
+	const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
+	TArray<FName> PlayerStack = StackFor(PlayerIndex);
+	while (!PlayerStack.IsEmpty())
 	{
-		const FName Top = Stack.Pop();
+		const FName Top = PlayerStack.Pop();
+		Stack.Remove(Top);
 		FEntry* Entry = Entries.Find(Top);
 		if (!Entry || !IsUsablePage(Entry->Root.Get()))
 		{
@@ -900,11 +1243,11 @@ void UDreamScreenUISubsystem::PopUI()
 		}
 		else
 		{
-			RemoveEntry(Top, true);
+			RemoveEntry(Top);
 		}
 		break;
 	}
-	RefreshStack(PreviousTop);
+	RefreshStack(PlayerIndex, PreviousTop);
 }
 
 bool UDreamScreenUISubsystem::PopToUI(FName InName)
@@ -913,40 +1256,73 @@ bool UDreamScreenUISubsystem::PopToUI(FName InName)
 	{
 		return false;
 	}
-	while (!Stack.IsEmpty() && Stack.Last() != InName)
+	// Pops only the pages above it ON ITS OWN PLAYER'S STACK.
+	const int32 PlayerIndex = PlayerIndexForPage(InName);
+	APlayerController* OwningPlayer = nullptr;
+	if (const FEntry* Entry = Entries.Find(InName))
 	{
-		PopUI();
+		if (const UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(Entry->Root.Get()))
+		{
+			OwningPlayer = UserWidget->GetOwningPlayer();
+		}
 	}
-	return !Stack.IsEmpty() && Stack.Last() == InName;
+	TArray<FName> PlayerStack = StackFor(PlayerIndex);
+	int32 SafetyCount = PlayerStack.Num();
+	while (!PlayerStack.IsEmpty() && PlayerStack.Last() != InName && SafetyCount-- > 0)
+	{
+		PopUI(OwningPlayer);
+		PlayerStack = StackFor(PlayerIndex);
+	}
+	return !PlayerStack.IsEmpty() && PlayerStack.Last() == InName;
 }
 
-void UDreamScreenUISubsystem::ClearStack(bool bRemovePages)
+void UDreamScreenUISubsystem::ClearStack(bool bRemovePages, APlayerController* InOwningPlayer)
 {
-	const FName PreviousTop = GetTopUI();
-	const TArray<FName> PreviousStack = Stack;
-	Stack.Reset();
+	const int32 PlayerIndex = ResolvePlayerIndex(InOwningPlayer);
+	const FName PreviousTop = GetTopUIForIndex(PlayerIndex);
+	const TArray<FName> PreviousStack = StackFor(PlayerIndex);
+	for (FName PageName : PreviousStack)
+	{
+		Stack.Remove(PageName);
+	}
 	for (FName PageName : PreviousStack)
 	{
 		if (bRemovePages)
 		{
-			RemoveEntry(PageName, true);
+			RemoveEntry(PageName);
 		}
 		else
 		{
 			SetPageActive(PageName, false);
 		}
 	}
-	RefreshStack(PreviousTop);
+	RefreshStack(PlayerIndex, PreviousTop);
 }
 
-FName UDreamScreenUISubsystem::GetTopUI() const
+FName UDreamScreenUISubsystem::GetTopUIForIndex(int32 InPlayerIndex) const
 {
-	for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
+	const TArray<FName> PlayerStack = StackFor(InPlayerIndex);
+	for (int32 Index = PlayerStack.Num() - 1; Index >= 0; --Index)
 	{
-		if (GetUI(Stack[Index]))
+		if (GetUI(PlayerStack[Index]))
 		{
-			return Stack[Index];
+			return PlayerStack[Index];
 		}
 	}
 	return NAME_None;
+}
+
+FName UDreamScreenUISubsystem::GetTopUI(APlayerController* InOwningPlayer) const
+{
+	return GetTopUIForIndex(ResolvePlayerIndex(InOwningPlayer));
+}
+
+int32 UDreamScreenUISubsystem::GetStackDepth(APlayerController* InOwningPlayer) const
+{
+	return StackFor(ResolvePlayerIndex(InOwningPlayer)).Num();
+}
+
+TArray<FName> UDreamScreenUISubsystem::GetUIStack(APlayerController* InOwningPlayer) const
+{
+	return StackFor(ResolvePlayerIndex(InOwningPlayer));
 }

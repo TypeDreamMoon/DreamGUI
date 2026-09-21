@@ -85,6 +85,15 @@ public:
 	/** Destroy the current preview and build a fresh one from the class. */
 	void RebuildPreview();
 
+	/**
+	 * Replay DesignerData.HiddenWidgets onto the current preview.
+	 *
+	 * Part of every rebuild, and public only so a caller that has changed the set without rebuilding
+	 * can ask for it again. Hidden-in-designer is per-asset state applied to per-session objects, so
+	 * it has to be re-applied every time those objects are replaced -- which is what this host does.
+	 */
+	void ApplyHiddenInDesigner();
+
 	/** Compile the Blueprint, which is what makes an authoring edit reach the class the preview is built from. */
 	void CompileBlueprint();
 
@@ -135,6 +144,22 @@ public:
 	 */
 	int32 CopyPreviewValuesToTemplate(UDreamWidget* InPreviewWidget, TConstArrayView<FName> InPropertyNames);
 
+	/**
+	 * Fires before a rebuild takes the CURRENT preview down, while its widgets are still alive.
+	 *
+	 * For the narrow set of things that can only be done to an object that still exists. Anything
+	 * that wants to READ the result of the rebuild wants OnPreviewRebuilt instead.
+	 *
+	 * Sequencer is the caller this exists for. It keys animation entities on raw UObject pointers,
+	 * and a rebuild destroys those objects without any of the replacement notifications the editor
+	 * broadcasts for a recompile -- a rebuild is a destruction and a fresh construction, not a
+	 * replacement, so nobody is told. It finds out a tick later through its playback-context
+	 * attribute, and the teardown that discovery triggers runs against bookkeeping that has already
+	 * drifted. Here it restores pre-animated values and evacuates its entities while their objects
+	 * are addressable; OnPreviewRebuilt is where it re-resolves against the new tree.
+	 */
+	FSimpleMulticastDelegate OnPreviewAboutToRebuild;
+
 	/** Fires after every rebuild, once the new preview and the name map are both in place. */
 	FSimpleMulticastDelegate OnPreviewRebuilt;
 
@@ -183,6 +208,17 @@ private:
 	 * authors none -- the nearest ancestor class that does.
 	 */
 	UDreamWidgetTree* FindArchetypeForPreview() const;
+	/**
+	 * Take RF_Transactional off the whole preview, sub-objects included.
+	 *
+	 * The preview is not undoable -- the authoring tree is the only half a transaction may hold, and
+	 * the preview is thrown away and projected again from it. Instancing honours that (the tree is
+	 * built with the host's own flags) and so do UDreamWidget's sub-object creators (they take the
+	 * flag from their owner). This is the backstop for the sites that still hard-code it and can
+	 * nonetheless build into a preview -- a native control's tree, a layout animation handler, a list
+	 * view's cells. Never touches the design canvas, which is deliberately transactional.
+	 */
+	void ClearTransactionalFlagsOnPreview();
 	/** Rebuild the id -> preview widget map from the current preview. */
 	void RebuildPreviewGuidMap();
 	/** Mint an id for any authored widget that has none, before the preview is instanced from it. */

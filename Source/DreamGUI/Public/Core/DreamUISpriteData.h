@@ -120,6 +120,13 @@ public:
 	virtual void BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform) override;
 	static void MarkAllSpritesNeedToReinitialize();
 #endif
+	/**
+	 * Does the texture still need the sprite settings applied to it?
+	 * Callers that wrap the apply in a transaction need this on the outside: a texture that already
+	 * has the right settings must not be Modify()d nor have its resource rebuilt.
+	 * @return true if compression settings, LOD group or sRGB do not match what a sprite texture needs
+	 */
+	static bool NeedsSpriteTextureSetting(const UTexture2D* InSpriteTexture);
 	static void CheckAndApplySpriteTextureSetting(UTexture2D* InSpriteTexture);
 	static UDreamUISpriteData* GetDefaultWhiteSolid();
 	static UDreamUISpriteData* GetDefaultFrameRect();

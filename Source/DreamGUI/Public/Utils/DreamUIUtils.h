@@ -57,6 +57,15 @@ public:
 	}
 
 	static UTexture2D* GetDefaultWhiteTexture();
+	/**
+	 * Read a single pixel out of a texture's top mip on the CPU, for hit-testing.
+	 * Only an uncompressed BGRA8 mip is laid out as an FColor array; a DXT/BC, float or grayscale
+	 * mip is a different size and a different layout, so reinterpreting it gives nonsense colours
+	 * and reads past the end of the allocation. Those formats answer false (warning once per
+	 * texture) and the caller is expected to fall back to its rect test.
+	 * InUV is clamped: UV reaches 1.0 at the far edge, which unclamped indexes one row past the end.
+	 */
+	static bool ReadTexture2DPixel(UTexture2D* InTexture, const FVector2D& InUV, FColor& OutPixel);
 	static int CeilPowerOfTwo(int v)
 	{
 		if (v <= 1)

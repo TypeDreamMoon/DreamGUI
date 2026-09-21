@@ -3,6 +3,7 @@
 
 #include "Core/DreamUISettings.h"
 #include "DreamGUI.h"
+#include "RHIGlobals.h"
 #include "Core/DreamUISpriteData.h"
 #include "Core/DreamUIDynamicSpriteAtlasData.h"
 
@@ -98,5 +99,13 @@ bool UDreamUISettings::GetAsyncGlyphRasterization()
 int32 UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame()
 {
 	return GetDefault<UDreamUISettings>()->AsyncGlyphSyncBudgetPerFrame;
+}
+
+int32 UDreamUISettings::GetMaxFontAtlasSlices()
+{
+	// Past GMaxTextureArrayLayers the create produces a texture the sampler cannot address, so the RHI
+	// has the final word whatever the project asked for.
+	const int32 RHILimit = FMath::Max((int32)GMaxTextureArrayLayers, 1);
+	return FMath::Clamp(GetDefault<UDreamUISettings>()->MaxFontAtlasSlices, 1, RHILimit);
 }
 

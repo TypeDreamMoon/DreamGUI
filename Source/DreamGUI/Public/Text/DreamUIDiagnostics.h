@@ -62,6 +62,16 @@ enum class EDreamUIDiagnosticCode : int32
 	MalformedNumber = 1004,
 	/** A `#` colour literal whose digit count is not 3, 4, 6 or 8. */
 	MalformedHexColor = 1005,
+	/**
+	 * A name longer than an FName can hold (NAME_SIZE, see UnrealNames.h).
+	 *
+	 * Its own code, and a LEXICAL one, because the refusal has nothing to do with what the word
+	 * means: every name this language writes down -- a node id, a property, a handler, a loop
+	 * variable -- ends up as an FName somewhere downstream, and FName does not return an error for an
+	 * over-long string, it calls checkf(false) and takes the editor with it. Caught at the token so
+	 * one rule covers every position a word can appear in.
+	 */
+	IdentifierTooLong = 1006,
 
 	// --- 2xxx parser ---
 	/** A token appeared where the grammar allows something else. Message names both. */
@@ -84,6 +94,29 @@ enum class EDreamUIDiagnosticCode : int32
 	MalformedKeyOverride = 2009,
 	/** A `for` / `each` header that is not `<keyword> <Var> in <Func>()`. */
 	MalformedLoopHeader = 2010,
+	/** The right side of `<-` did not parse as an expression: a stray token, an unclosed paren. */
+	MalformedBindingExpression = 2011,
+	/** A `use` that could not be honoured: no string, unresolvable path, unreadable file, a cycle. */
+	ImportFailed = 2012,
+	/**
+	 * Nodes, blocks or parenthesised sub-expressions nested deeper than the parser will descend.
+	 *
+	 * A recursive-descent parser answers a file that nests a thousand deep by exhausting the stack,
+	 * and a stack overflow is not a diagnostic -- it is the editor disappearing with the author's
+	 * unsaved work. The limit is far above anything a hand-written or generated .dui reaches, so
+	 * meeting it means a file that is malformed or hostile rather than merely deep.
+	 */
+	NestingTooDeep = 2013,
+	/**
+	 * A `timeline` block or one of its lines that is not the grammar.
+	 *
+	 * One code for the whole block rather than one per shape, because every one of them is the same
+	 * reader move -- look at the line and write it the way the docs show -- and the message names
+	 * which part was wrong. The shapes: a header without a name, `external` followed by a block,
+	 * `duration`/`loop` without a value, a track line with no `:`, a key without its `=`, an `ease`
+	 * with no name after it, an `@time` without its `->`.
+	 */
+	MalformedTimeline = 2014,
 
 	// --- 3xxx semantic ---
 	/**
@@ -158,6 +191,14 @@ enum class EDreamUIDiagnosticCode : int32
 	DuplicateResource = 3014,
 	/** `style A : B` where following the bases comes back to A. Nothing applies; the node errors. */
 	StyleCycle = 3015,
+	/**
+	 * Two `timeline` blocks share a name.
+	 *
+	 * The same cause as DuplicateStyle and refused the same way -- a timeline's name becomes the
+	 * animation's display name AND a class member variable (the compiler declares one per animation,
+	 * as UMG does for UWidgetAnimation), so two of them is a variable nobody can address.
+	 */
+	DuplicateTimeline = 3016,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */
@@ -212,6 +253,65 @@ enum class EDreamUIDiagnosticCode : int32
 	NothingToBuild = 5009,
 	/** `X -> Handler` where X is not an assignable event on the destination, or is a path into one. */
 	EventNotFound = 5010,
+	/**
+	 * A binding expression the thunk generator could not lower into a Blueprint function: a name
+	 * neither a variable nor a function on this class, an operator with no overload for its operand
+	 * types, or a type the generator does not know how to convert. The message names the specific
+	 * refusal; the code is one because the reader's next move is the same for all of them -- fix the
+	 * expression, or move the logic into a real function and bind that.
+	 */
+	BindingExpressionUnsupported = 5011,
+	/**
+	 * An `each` somewhere it cannot work: nested in another, at the root, on a widget with no list
+	 * view to fill, or with a body that is not exactly one template widget. One code because the
+	 * reader's move is the same -- restructure the block; the message names which rule.
+	 */
+	EachMisplaced = 5012,
+	/**
+	 * A property pointed at a node id this file does not declare.
+	 *
+	 * The node-reference twin of AssetNotFound, and split from the type check for the same reason
+	 * the asset case is: "no node named CheckMark" and "CheckMark is not the kind of thing this
+	 * property holds" are different mistakes and only the first one is about the NAME. A node that
+	 * exists but creates no visual, or is the wrong widget class, is a ValueTypeMismatch -- the same
+	 * code an asset path raises when it loads something the property cannot take.
+	 */
+	NodeReferenceNotFound = 5013,
+	/**
+	 * A `<-` expression or a `<->` inside a `for` / `each` body.
+	 *
+	 * The thunk pass deliberately skips loop bodies -- a generated function would ask the CLASS for a
+	 * name only the iteration has -- so the only source shape an `each` supports today is the single
+	 * hop `Item.Member`, which is recorded per cell instead. Anything richer used to be dropped where
+	 * the builder found a binding with no function name: the file compiled green and the property was
+	 * simply never driven. Its own code rather than BindingExpressionUnsupported because the
+	 * expression is fine and the PLACE is not, which is a different fix and a temporary limit.
+	 */
+	LoopBodyBindingUnsupported = 5014,
+	/**
+	 * A `timeline` track line whose node path names nothing in this file's tree.
+	 *
+	 * The path is a chain of node ids -- the same display-name path an animation binding resolves
+	 * through -- so this is the animation twin of NodeReferenceNotFound, and split from it for the
+	 * same reason: "no node called Icon" and "Icon has no such property" are different mistakes.
+	 */
+	TimelineTargetNotFound = 5015,
+	/**
+	 * A `timeline` track line whose property cannot be animated by a MovieScene track.
+	 *
+	 * Either the property does not exist on the node (nor on its visual or a behaviour), or its TYPE
+	 * has no track: layer one animates floats, doubles, two- and three-component vectors, rotators
+	 * and colours, because those are the property tracks this sequence supports. A material parameter
+	 * is deliberately NOT one -- see the proposal's ruling: those stay `external`.
+	 */
+	TimelinePropertyNotAnimatable = 5016,
+	/**
+	 * An `ease` name the curve library does not declare.
+	 *
+	 * The set is EDreamTweenEase's, minus CurveFloat (which names an asset, and a timeline key has
+	 * nowhere to put one). One word list for the whole plugin was the point of borrowing it.
+	 */
+	UnknownEaseName = 5017,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */
@@ -221,6 +321,41 @@ enum class EDreamUIDiagnosticCode : int32
 	/** The `class` line names a different asset than the Blueprint being compiled. A warning: the
 	 * line's job is a stable localization namespace, and being wrong drifts keys, not the build. */
 	ClassPathMismatch = 6003,
+	/**
+	 * `Event -> Handler` naming a function the compiled class does not declare.
+	 *
+	 * Split from EventNotFound because the two halves of a route fail for opposite reasons and only
+	 * the compiler can see this one: EventNotFound is about the EVENT, which the builder checks
+	 * against a class that already exists, while the handler lives on the class this compile is
+	 * building and cannot be looked up until it has been built.
+	 */
+	EventHandlerNotFound = 6004,
+	/** `Event -> Handler` where the handler's parameters are not the ones the event sends. */
+	EventHandlerSignatureMismatch = 6005,
+	/**
+	 * `each Item in Source` naming a source the compiled class does not declare -- neither a
+	 * no-argument function of that name nor a variable of it.
+	 *
+	 * In the 6xxx band and not the 5xxx one for exactly the reason EventHandlerNotFound is: the
+	 * source lives on the class this compile is BUILDING, so the builder could not have looked it
+	 * up. It had the `each` line and no class; this stage has the class and, until the binding
+	 * started carrying its position, no line.
+	 *
+	 * One code for the function spelling and the variable spelling because the reader's move is the
+	 * same either way -- declare the thing, or fix the name. `Source()` and `Source` differ in what
+	 * the language will accept, not in what the author has to go and do.
+	 */
+	EachSourceNotFound = 6006,
+	/**
+	 * `each Item in Source` whose source exists but does not supply an array of OBJECTS.
+	 *
+	 * Split from EachSourceNotFound, not folded into it, because the fix is a different act: the
+	 * name is right and the TYPE is wrong. The item bindings read `Item.Member` off each element by
+	 * reflection, which needs an element that has members to read -- so `TArray<FMyRow>` and
+	 * `TArray<int32>` are refused here while `TArray<UMyRow*>` is not, and an author told only
+	 * "not found" would go looking for a misspelling that is not there.
+	 */
+	EachSourceNotObjectArray = 6007,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */

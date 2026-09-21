@@ -2,6 +2,7 @@
 
 #include "Event/RaycasterSource/DreamWorldSpaceRaycasterSource_World.h"
 #include "GameFramework/Actor.h"
+#include "Core/DreamUIWorldContext.h"
 
 bool UDreamWorldSpaceRaycasterSource_World::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
@@ -32,20 +33,24 @@ bool UDreamWorldSpaceRaycasterSource_World::GenerateRay(UDreamPointerEventData* 
 }
 bool UDreamWorldSpaceRaycasterSource_World::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
-	if (bHoldToDrag)
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (bHoldToDrag && World != nullptr)
 	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		if (World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}
 	}
-	auto calculatedThreshold = this->GetDragThresholdSquare();
+	// Both sides squared, or neither. This used to hold a LINEAR distance against the SQUARED threshold,
+	// so an author asking for 5 units got 25 -- and with bDragThresholdRelateToRayDistance on, the ray
+	// distance multiplied the square rather than the threshold, which is a different curve entirely.
+	float CalculatedThreshold = this->GetDragThreshold();
 	if (bDragThresholdRelateToRayDistance)
 	{
-		calculatedThreshold *= InPointerEventData->PressDistance * RayDistanceMultiply;
+		CalculatedThreshold *= InPointerEventData->PressDistance * RayDistanceMultiply;
 	}
-	auto dragDistance = (InPointerEventData->GetWorldPointSpherical() - InPointerEventData->PressWorldPoint).Size();
-	return dragDistance > calculatedThreshold;
+	const double DragDistanceSquared = (InPointerEventData->GetWorldPointSpherical() - InPointerEventData->PressWorldPoint).SizeSquared();
+	return DragDistanceSquared > (double)CalculatedThreshold * (double)CalculatedThreshold;
 }
 
 ADreamWorldSpaceRaycasterSource_World_Actor::ADreamWorldSpaceRaycasterSource_World_Actor()

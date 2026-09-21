@@ -44,4 +44,19 @@ struct DREAMGUI_API FDreamUISourceFile
 	 */
 	static bool Parse(const FString& InText, const FString& InSourceName,
 		FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics);
+
+	/**
+	 * As above, with `use` imports served by InImportReader: (authored spelling) -> (resolved path,
+	 * text), false when it resolves to nothing readable. Resolution lives INSIDE the reader so a
+	 * test can serve spellings from a map while the real one walks the DUI roots; the resolved path
+	 * is what the cycle guard keys on and what Imports records for the watcher. The plain overload
+	 * above passes no reader, under which a `use` line reports ImportFailed -- a caller that
+	 * offered no way to read files gets no silent half-import.
+	 */
+	static bool Parse(const FString& InText, const FString& InSourceName,
+		FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics,
+		TFunction<bool(const FString&, FString&, FString&)> InImportReader);
+
+	/** The DUI-roots-and-file-system import reader the compiler and watcher use. */
+	static TFunction<bool(const FString&, FString&, FString&)> MakeFileImportReader();
 };

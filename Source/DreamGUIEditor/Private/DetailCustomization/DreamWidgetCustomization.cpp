@@ -2,7 +2,9 @@
 // Modified by TypeDreamMoon.
 
 #include "DetailCustomization/DreamWidgetCustomization.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamDetailsMultiSelect.h"
+#include "DreamDetailsTemplateMirror.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "IDetailGroup.h"
 #include "DreamGUIEditorStyle.h"
@@ -16,17 +18,27 @@
 #include "DreamGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IDetailsView.h"
 #include "IPropertyUtilities.h"
 #include "UnrealEdGlobals.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
+// The sub-object categories below convert these to UObject*, which needs the derived classes complete
+// and not merely forward-declared by DreamWidget.h -- and the widget itself is reached from the
+// sub-object context menu at the top of this file, above everything that would otherwise pull it in.
+#include "Core/Components/DreamVisual.h"
+#include "Core/Components/DreamWidget.h"
 #include "DetailCustomization/DreamPanelSlotCustomization.h"
 #include "Editor/UnrealEdEngine.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "ScopedTransaction.h"
 #include "Utils/DreamUIUtils.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
+#include "Widgets/Input/SButton.h"
+// The Navigation category at the end of CustomizeDetails reaches the rules object by its real type.
+#include "Core/DreamWidgetNavigation.h"
 
 #define LOCTEXT_NAMESPACE "UIItemComponentDetails"
 
@@ -98,12 +110,44 @@ private:
 			{
 				UObject* Object = nullptr;
 				PropertyHandle->GetValue(Object);
-				if (Object)
+				// CanExecute answered before the menu opened; the source is a WEAK pointer and a
+				// preview sub-object is destroyed wholesale on every rebuild, so it can be gone by
+				// the time the entry is clicked. Copying FROM null wipes the destination.
+				UObject* Source = CopiedObject.Get();
+				if (!IsValid(Object) || !IsValid(Source) || Source == Object)
 				{
-					UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
-					Options.bNotifyObjectReplacement = true;
-					UEditorEngine::CopyPropertiesForUnrelatedObjects(CopiedObject.Get(), Object, Options);
-					Object->PostReinitProperties();
+					return;
+				}
+				const FScopedTransaction Transaction(LOCTEXT("PasteProps_Transaction", "Paste All Properties"));
+				Object->SetFlags(RF_Transactional);
+				Object->Modify();
+				UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
+				Options.bNotifyObjectReplacement = true;
+				UEditorEngine::CopyPropertiesForUnrelatedObjects(Source, Object, Options);
+				Object->PostReinitProperties();
+				// The panel edits a PREVIEW sub-object, and a preview is rebuilt from the authoring
+				// tree -- so without this the paste was visible until the next compile and then gone
+				// with no trace. Nothing here went through a property node, so the details view's
+				// FNotifyHook was never called either; the mirror is invoked by hand, once per
+				// member that was actually copied, which is what its chain walk expects.
+				UDreamWidget* OwnerWidget = Object->GetTypedOuter<UDreamWidget>();
+				FDreamWidgetBlueprintEditor* Designer = IsValid(OwnerWidget)
+					? FDreamWidgetBlueprintEditor::FindDesignerForWidget(OwnerWidget) : nullptr;
+				if (Designer != nullptr)
+				{
+					TArray<UObject*> Edited = { Object };
+					for (TFieldIterator<FProperty> It(Object->GetClass()); It; ++It)
+					{
+						FProperty* Property = *It;
+						if (Property == nullptr || !Property->HasAnyPropertyFlags(CPF_Edit) || Property->HasAnyPropertyFlags(CPF_EditConst))
+						{
+							continue;
+						}
+						FEditPropertyChain Chain;
+						Chain.AddHead(Property);
+						Designer->MigrateDetailsChangeToTemplate(Edited, Chain, /*bIsModify*/true);
+						Designer->MigrateDetailsChangeToTemplate(Edited, Chain, /*bIsModify*/false);
+					}
 				}
 			}), FCanExecuteAction::CreateLambda([=, this]()
 			{
@@ -254,6 +298,41 @@ FText FDreamWidgetCustomization::GetCanvasSizeText() const
 	return FText::GetEmpty();
 }
 
+namespace DreamWidgetCustomizationLocal
+{
+	/**
+	 * The sub-object of one kind on every selected widget, or nothing at all.
+	 *
+	 * The Panel / Self Layout / Visual categories used to read theirs off the property handle, and
+	 * IPropertyHandle::GetValue leaves its out-param UNTOUCHED when the selection disagrees -- so two
+	 * selected widgets left the local at null and the whole category was built empty. Select two
+	 * DreamTexts and Text and Font Size were simply not in the panel. The panel-slot block below
+	 * already walks the selection; this is the same walk for the other three.
+	 *
+	 * A mixed selection is refused rather than merged: an external-object row over two classes falls
+	 * back to their common base and silently drops every row they do not share, which looks to the
+	 * author exactly like the disappearance this is fixing.
+	 */
+	template<typename TGetter>
+	TArray<UObject*> CollectSubObjectsAcrossSelection(const TArray<TWeakObjectPtr<UDreamWidget>>& InWidgets, TGetter&& InGetter)
+	{
+		TArray<UObject*> SubObjects;
+		const UClass* CommonClass = nullptr;
+		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : InWidgets)
+		{
+			UDreamWidget* Widget = WeakWidget.Get();
+			UObject* SubObject = IsValid(Widget) ? InGetter(Widget) : nullptr;
+			if (!IsValid(SubObject) || (CommonClass != nullptr && CommonClass != SubObject->GetClass()))
+			{
+				return TArray<UObject*>();
+			}
+			CommonClass = SubObject->GetClass();
+			SubObjects.Add(SubObject);
+		}
+		return SubObjects;
+	}
+}
+
 void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> TargetObjects;
@@ -268,7 +347,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			TargetScriptArray.Add(ValidItem);
 			if (ValidItem->GetWorld() != nullptr)
 			{
-				if (ValidItem->GetWorld()->WorldType == EWorldType::Editor)
+				if (DreamUI::GetWorldType(ValidItem) == EWorldType::Editor)
 				{
 					ValidItem->MarkCanvasUpdate(true);
 				}
@@ -280,6 +359,9 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
+	// Kept because the rows below write through the widget's setters rather than through a property
+	// handle, and this is how they reach the details view's FNotifyHook afterwards.
+	PropertyUtilities = DetailBuilder.GetPropertyUtilities();
 
 	DetailBuilder.HideCategory("DreamGUI");
 	DetailBuilder.HideCategory("Interaction");
@@ -312,6 +394,10 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto Raycastable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Raycastable));
 	auto Focusable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bIsFocusable));
 	auto RestrictNavigation_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bRestrictNavigationArea));
+	// The rule the flag above selects. Both live in the "DreamGUI" category, which is hidden wholesale
+	// a few lines up and then re-added row by row -- and this one was never on that list, so checking
+	// "Restrict Navigation Area" armed a boundary rule the panel gave no way to choose.
+	auto NavigationBoundaryRule_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, NavigationBoundaryRule));
 	auto Cursor_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Cursor));
 	auto ToolTip_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, ToolTipText));
 	auto RenderOpacity_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderOpacity));
@@ -321,7 +407,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto AccessibleSummaryText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AccessibleSummaryText));
 	for (const TSharedPtr<IPropertyHandle>& Property : {
 		DisplayName_PH, WidgetActive_PH, Visibility_PH, Interactable_PH, Raycastable_PH,
-		Focusable_PH, RestrictNavigation_PH, Cursor_PH, ToolTip_PH, RenderOpacity_PH,
+		Focusable_PH, RestrictNavigation_PH, NavigationBoundaryRule_PH, Cursor_PH, ToolTip_PH, RenderOpacity_PH,
 		PixelSnapping_PH, AccessibleBehavior_PH, AccessibleText_PH, AccessibleSummaryText_PH })
 	{
 		DetailBuilder.HideProperty(Property);
@@ -335,6 +421,8 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	BehaviorCategory.AddProperty(Cursor_PH);
 	BehaviorCategory.AddProperty(ToolTip_PH);
 	BehaviorCategory.AddProperty(RestrictNavigation_PH, EPropertyLocation::Advanced);
+	//next to the flag that turns it on; its own EditCondition greys it out while that flag is clear
+	BehaviorCategory.AddProperty(NavigationBoundaryRule_PH, EPropertyLocation::Advanced);
 	BehaviorCategory.AddProperty(DisplayName_PH, EPropertyLocation::Advanced);
 
 	AppearanceCategory.AddProperty(RenderOpacity_PH).DisplayName(LOCTEXT("RenderOpacity", "Opacity"));
@@ -403,10 +491,11 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.Padding(FMargin(4.0f, 0.0f, 0.0f, 0.0f))
 				[
 					SNew(SCheckBox)
+					// Undetermined when the selection disagrees. GetValue leaves the local alone on
+					// MultipleValues, so the old read drew an unchecked box over a selection half of
+					// which IS locked -- and the box is the control that writes the flag across.
 					.IsChecked_Lambda([=] {
-						bool bUniformSetCornerRadius = false;
-						UniformSetCornerRadiusHandle->GetValue(bUniformSetCornerRadius);
-						return bUniformSetCornerRadius ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+						return DreamDetailsMultiSelect::CheckedIfEqual(UniformSetCornerRadiusHandle, true);
 						})
 					.OnCheckStateChanged_Lambda([=](ECheckBoxState NewState){
 						bool bUniformSetCornerRadius = NewState == ECheckBoxState::Checked;
@@ -509,7 +598,9 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.Padding(AnchorValueMargin)
 				.VAlign(EVerticalAlignment::VAlign_Center)
 				[
-					//GetAnchorPropertyHandle(DetailBuilderPtr, AnchorMinHandle, AnchorMaxHandle, AnchorValueIndex)->CreatePropertyValueWidget()
+					// Not a property row: which property this number IS depends on whether the widget
+					// is stretched on that axis, and a selection can disagree about that. The value is
+					// read and written per widget instead (GetAnchorValue / ApplyAnchorValueToWidgets).
 					SNew(SNumericEntryBox<float>)
 					.AllowSpin(true)
 					.MinSliderValue(this, &FDreamWidgetCustomization::GetMinMaxSliderValue, AnchorHandle, AnchorValueIndex, true)
@@ -536,7 +627,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.ButtonEnable(true)
 				.OnAnchorChange(this, &FDreamWidgetCustomization::OnSelectAnchor, DetailBuilderPtr)
 			;
-		};//@todo: auto refresh SAnchorPreviewWidget when change from AnchorMinMax
+		};//SelectedHAlign/VAlign are attributes, so the preview follows an anchor edit on its own
 
 		// UMG hides the transform of a widget in a non-canvas slot entirely; here the fields stay visible
 		// (they show the arranged result) but a banner says who owns them and where to edit instead.
@@ -1026,7 +1117,15 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		}));
 
 	//location rotation scale
-	const FSelectedActorInfo& selectedActorInfo = DetailBuilder.GetDetailsViewSharedPtr()->GetSelectedActorInfo();
+	// A layout does not always have a details view behind it: FPropertyRowGenerator builds one with
+	// none at all (PropertyRowGenerator.cpp hands FDetailLayoutBuilderImpl a null), and this panel is
+	// registered globally, so anything that generates rows for a UDreamWidget headlessly comes through
+	// here. The transform section only reads the actor selection to grey itself out for locked actors.
+	FSelectedActorInfo selectedActorInfo;
+	if (const TSharedPtr<IDetailsView> OwningDetailsView = DetailBuilder.GetDetailsViewSharedPtr())
+	{
+		selectedActorInfo = OwningDetailsView->GetSelectedActorInfo();
+	}
 	TSharedRef<FComponentTransformDetails> transformDetails = MakeShareable(new FComponentTransformDetails(TargetScriptArray, selectedActorInfo, DetailBuilder));
 	TransformCategory.AddCustomBuilder(transformDetails);
 	
@@ -1047,15 +1146,16 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	{
 		auto Layout_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, LayoutContainer));
 		DetailBuilder.HideProperty(Layout_PH);
-		UObject* Layout = nullptr;
-		Layout_PH->GetValue(Layout);
+		TArray<UObject*> Layouts = DreamWidgetCustomizationLocal::CollectSubObjectsAcrossSelection(
+			TargetScriptArray, [](UDreamWidget* InWidget) -> UObject* { return InWidget->GetLayoutContainer(); });
+		const bool bHasLayout = Layouts.Num() > 0;
 		auto& LayoutCategory = DetailBuilder.EditCategory(
 			"LayoutContainer", LOCTEXT("PanelCategory", "Panel"), ECategoryPriority::Default);
 		LayoutCategory.SetSortOrder(-60);
 		LayoutCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Layout_PH, true));
-		LayoutCategory.SetIsEmpty(!IsValid(Layout));
+		LayoutCategory.SetIsEmpty(!bHasLayout);
 		LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
-			.Visibility(IsValid(Layout) ? EVisibility::Hidden : EVisibility::Visible)
+			.Visibility(bHasLayout ? EVisibility::Hidden : EVisibility::Visible)
 			.NameContent()
 			[
 				Layout_PH->CreatePropertyNameWidget()
@@ -1064,24 +1164,28 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			[
 				Layout_PH->CreatePropertyValueWidget()
 			];
-		LayoutCategory.AddExternalObjects({ Layout }, EPropertyLocation::Default
-			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		if (bHasLayout)
+		{
+			LayoutCategory.AddExternalObjects(Layouts, EPropertyLocation::Default
+				, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		}
 	}
 
 	//LayoutSelf
 	{
 		auto LayoutSelf_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, LayoutSelf));
 		DetailBuilder.HideProperty(LayoutSelf_PH);
-		UObject* LayoutSelf = nullptr;
-		LayoutSelf_PH->GetValue(LayoutSelf);
+		TArray<UObject*> LayoutSelves = DreamWidgetCustomizationLocal::CollectSubObjectsAcrossSelection(
+			TargetScriptArray, [](UDreamWidget* InWidget) -> UObject* { return InWidget->GetLayoutSelf(); });
+		const bool bHasLayoutSelf = LayoutSelves.Num() > 0;
 		auto& LayoutSelfCategory = DetailBuilder.EditCategory(
 			"LayoutSelf", LOCTEXT("SelfLayoutCategory", "Self Layout"), ECategoryPriority::Default);
 		LayoutSelfCategory.SetSortOrder(-50);
-		LayoutSelfCategory.InitiallyCollapsed(!IsValid(LayoutSelf));
+		LayoutSelfCategory.InitiallyCollapsed(!bHasLayoutSelf);
 		LayoutSelfCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, LayoutSelf_PH, true));
-		LayoutSelfCategory.SetIsEmpty(!IsValid(LayoutSelf));
+		LayoutSelfCategory.SetIsEmpty(!bHasLayoutSelf);
 		LayoutSelfCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
-			.Visibility(IsValid(LayoutSelf) ? EVisibility::Hidden : EVisibility::Visible)
+			.Visibility(bHasLayoutSelf ? EVisibility::Hidden : EVisibility::Visible)
 			.NameContent()
 			[
 				LayoutSelf_PH->CreatePropertyNameWidget()
@@ -1090,8 +1194,11 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			[
 				LayoutSelf_PH->CreatePropertyValueWidget()
 			];
-		LayoutSelfCategory.AddExternalObjects({ LayoutSelf }, EPropertyLocation::Default
-			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		if (bHasLayoutSelf)
+		{
+			LayoutSelfCategory.AddExternalObjects(LayoutSelves, EPropertyLocation::Default
+				, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		}
 	}
 
 	// Parent-owned slot, presented as a UMG-style Slot category without an object picker.
@@ -1150,14 +1257,15 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	{
 		auto Visual_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Visual));
 		DetailBuilder.HideProperty(Visual_PH);
-		UObject* Visual = nullptr;
-		Visual_PH->GetValue(Visual);
+		TArray<UObject*> Visuals = DreamWidgetCustomizationLocal::CollectSubObjectsAcrossSelection(
+			TargetScriptArray, [](UDreamWidget* InWidget) -> UObject* { return InWidget->GetVisual(); });
+		const bool bHasVisual = Visuals.Num() > 0;
 		IDetailCategoryBuilder& VisualCategory = DetailBuilder.EditCategory("Visual");
 		VisualCategory.SetSortOrder(-40);
 		VisualCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Visual_PH, true));
-		VisualCategory.SetIsEmpty(Visual == nullptr);
+		VisualCategory.SetIsEmpty(!bHasVisual);
 		VisualCategory.AddCustomRow(LOCTEXT("VisualPlaceholder", "Placeholder"))
-			.Visibility(IsValid(Visual) ? EVisibility::Hidden : EVisibility::Visible)
+			.Visibility(bHasVisual ? EVisibility::Hidden : EVisibility::Visible)
 			.NameContent()
 			[
 				Visual_PH->CreatePropertyNameWidget()
@@ -1167,8 +1275,63 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				Visual_PH->CreatePropertyValueWidget()
 			]
 			;
-		VisualCategory.AddExternalObjects({ Visual }, EPropertyLocation::Common
-			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		if (bHasVisual)
+		{
+			VisualCategory.AddExternalObjects(Visuals, EPropertyLocation::Common
+				, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		}
+	}
+
+	{
+		// Navigation. UMG gives every widget a Navigation panel; this framework kept every navigation
+		// rule on UUISelectable, so a widget that was focusable without being a button could hold focus
+		// and then not be navigated away from, to, or past. The rules now live on a
+		// UDreamWidgetNavigation behaviour that any widget can carry, and this category is the widget's
+		// face on it -- with a button to create one, so the common case (a widget with no navigation
+		// opinion at all) costs nothing but a collapsed header.
+		TArray<UObject*> Navigations = DreamWidgetCustomizationLocal::CollectSubObjectsAcrossSelection(
+			TargetScriptArray, [](UDreamWidget* InWidget) -> UObject* { return InWidget->GetNavigation(); });
+		IDetailCategoryBuilder& NavigationCategory = DetailBuilder.EditCategory(
+			"DreamNavigation", LOCTEXT("NavigationCategory", "Navigation"), ECategoryPriority::Default);
+		NavigationCategory.SetSortOrder(-35);
+		NavigationCategory.InitiallyCollapsed(true);
+		if (Navigations.Num() > 0)
+		{
+			NavigationCategory.AddExternalObjects(Navigations, EPropertyLocation::Common
+				, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		}
+		else
+		{
+			const TArray<TWeakObjectPtr<UDreamWidget>> Widgets = TargetScriptArray;
+			TSharedPtr<IPropertyUtilities> Utilities = PropertyUtilities;
+			NavigationCategory.AddCustomRow(LOCTEXT("AddNavigationRow", "Navigation"))
+				.WholeRowContent()
+				[
+					SNew(SButton)
+					.HAlign(HAlign_Center)
+					.Text(LOCTEXT("AddNavigationButton", "Add Navigation Rules"))
+					.ToolTipText(LOCTEXT("AddNavigationButtonTip", "Give this widget its own per-direction navigation rules -- Escape, Stop, Wrap, Explicit or Custom -- the way UMG's Navigation panel does. A widget with rules takes part in gamepad navigation without needing a UISelectable."))
+					.OnClicked_Lambda([Widgets, Utilities]()
+					{
+						const FScopedTransaction Transaction(LOCTEXT("AddNavigation_Transaction", "Add Navigation Rules"));
+						for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : Widgets)
+						{
+							if (UDreamWidget* Widget = WeakWidget.Get())
+							{
+								Widget->Modify();
+								Widget->GetOrCreateNavigation();
+							}
+						}
+						// This category is built from whether the component exists, so the panel has to
+						// be rebuilt for the rules to appear where the button was.
+						if (Utilities.IsValid())
+						{
+							Utilities->ForceRefresh();
+						}
+						return FReply::Handled();
+					})
+				];
+		}
 	}
 }
 
@@ -1224,9 +1387,18 @@ bool FDreamWidgetCustomization::OnCanCopyAnchor()const
 #define BEGIN_DreamGUI_AnchorData_CLIPBOARD TEXT("Begin DreamGUI AnchorData")
 bool FDreamWidgetCustomization::OnCanPasteAnchor()const
 {
+	//see the declaration: this is a per-frame poll, and reading the clipboard is not a free question
+	constexpr double ClipboardPollIntervalSeconds = 0.25;
+	const double Now = FPlatformTime::Seconds();
+	if (Now - LastAnchorClipboardPollSeconds < ClipboardPollIntervalSeconds)
+	{
+		return bAnchorClipboardHoldsAnchorData;
+	}
+	LastAnchorClipboardPollSeconds = Now;
 	FString PastedText;
 	FPlatformApplicationMisc::ClipboardPaste(PastedText);
-	return PastedText.StartsWith(BEGIN_DreamGUI_AnchorData_CLIPBOARD);
+	bAnchorClipboardHoldsAnchorData = PastedText.StartsWith(BEGIN_DreamGUI_AnchorData_CLIPBOARD);
+	return bAnchorClipboardHoldsAnchorData;
 }
 void FDreamWidgetCustomization::OnCopyAnchor()
 {
@@ -1278,6 +1450,10 @@ void FDreamWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilde
 		// transaction, so Ctrl+Z rolled back whatever came before it instead. Same shape as
 		// OnSelectAnchor below.
 		GEditor->BeginTransaction(LOCTEXT("PasteAnchor_Transaction", "Paste DreamGUI Anchor"));
+		// SetAnchorData is a setter, not a property write, so nothing tells the details view's
+		// FNotifyHook -- and that hook is what carries the paste from the PREVIEW widget onto the
+		// blueprint's template. Without the pair the pasted rect lasted until the next compile.
+		NotifyAnchorGeometryPreChange();
 		for (auto item : TargetScriptArray)
 		{
 			if (item.IsValid())
@@ -1288,6 +1464,7 @@ void FDreamWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilde
 				item->MarkPackageDirty();
 			}
 		}
+		NotifyAnchorGeometryPostChange();
 		GEditor->EndTransaction();
 		ForceUpdateUI();
 		DetailBuilder->ForceRefreshDetails();
@@ -1346,39 +1523,6 @@ FText FDreamWidgetCustomization::GetArrangedByBannerText()const
 bool FDreamWidgetCustomization::IsAnchorEditable()const
 {
 	return IsAnchorEditableForSelection(TargetScriptArray);
-}
-
-TSharedPtr<IPropertyHandle> FDreamWidgetCustomization::GetAnchorPropertyHandle(IDetailLayoutBuilder* DetailBuilder, 
-	TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int Index) const
-{
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return nullptr;
-
-	FVector2D AnchorMinValue;
-	FVector2D AnchorMaxValue;
-	if (AnchorMinHandle->GetValue(AnchorMinValue) == FPropertyAccess::Success
-		&& AnchorMaxHandle->GetValue(AnchorMaxValue) == FPropertyAccess::Success)
-	{
-		switch (Index)
-		{
-		case 0://anchored position y, stretch left
-			if (AnchorMinValue.X == AnchorMaxValue.X)
-				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData.AnchoredPosition.X));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, CacheAnchorOffsetLeft));
-		case 1://anchored position z, stretch top
-			if (AnchorMinValue.Y == AnchorMaxValue.Y)
-				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData.AnchoredPosition.Y));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, CacheAnchorOffsetTop));
-		case 2://width, stretch right
-			if (AnchorMinValue.X == AnchorMaxValue.X)
-				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData.SizeDelta.X));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, CacheAnchorOffsetRight));
-		case 3://height, stretch bottom
-			if (AnchorMinValue.Y == AnchorMaxValue.Y)
-				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData.SizeDelta.Y));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, CacheAnchorOffsetBottom));
-		}
-	}
-	return nullptr;
 }
 
 void FDreamWidgetCustomization::GetAnchorMinMaxForDisplay(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, FVector2D& OutAnchorMin, FVector2D& OutAnchorMax)const
@@ -1552,7 +1696,7 @@ FText FDreamWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyH
 		}
 		else
 		{
-			return FText::Format(LOCTEXT("AnchoredTop_Tooltip", "Calculated distance to parent's top anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, SetAnchorOffsetLeft)));
+			return FText::Format(LOCTEXT("AnchoredTop_Tooltip", "Calculated distance to parent's top anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, GetAnchorOffsetTop)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, SetAnchorOffsetTop)));
 		}
 	}
 	case 2://width, stretch right
@@ -1563,7 +1707,7 @@ FText FDreamWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyH
 		}
 		else
 		{
-			return FText::Format(LOCTEXT("AnchoredRight_Tooltip", "Calculated distance to parent's right anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, SetAnchorOffsetLeft)));
+			return FText::Format(LOCTEXT("AnchoredRight_Tooltip", "Calculated distance to parent's right anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, GetAnchorOffsetRight)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, SetAnchorOffsetRight)));
 		}
 	}
 	case 3://height, stretch bottom
@@ -1574,7 +1718,7 @@ FText FDreamWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyH
 		}
 		else
 		{
-			return FText::Format(LOCTEXT("AnchoredBottom_Tooltip", "Calculated distance to parent's bottom anchor point. Related function: {0} / {0}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, SetAnchorOffsetLeft)));
+			return FText::Format(LOCTEXT("AnchoredBottom_Tooltip", "Calculated distance to parent's bottom anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, GetAnchorOffsetBottom)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(UDreamWidget, SetAnchorOffsetBottom)));
 		}
 	}
 	}
@@ -1649,11 +1793,17 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 	GEditor->BeginTransaction(LOCTEXT("ChangeAnchor_Transaction", "Change DreamGUI Anchor"));
 	for (auto& UIItem : TargetScriptArray)
 	{
+		//only [0] was ever checked, and a multi-selection outlives its members one at a time
+		if (!UIItem.IsValid())continue;
 		UIItem->Modify();
 	}
+	// A preset moves pivot, both anchors, position and size at once, all through setters, so the
+	// details view's FNotifyHook is the only thing that can carry it onto the template.
+	NotifyAnchorGeometryPreChange();
 
 	for (auto& Widget : TargetScriptArray)
 	{
+		if (!Widget.IsValid())continue;
 		FVector2D DesiredPivot = Widget->GetPivot();
 		auto AnchorMin = Widget->GetAnchorMin();
 		auto AnchorMax = Widget->GetAnchorMax();
@@ -1789,9 +1939,69 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 		SyncPanelSlotAfterAnchorEdit(Widget.Get());
 		FDreamUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData));
 	}
+	NotifyAnchorGeometryPostChange();
 	TargetScriptArray[0]->MarkCanvasUpdate(true);
 	DetailBuilder->GetPropertyUtilities()->RequestForceRefresh();
 	GEditor->EndTransaction();
+}
+
+namespace DreamWidgetCustomizationLocal
+{
+	/**
+	 * What an anchor edit actually writes: the anchor block itself, plus the transform every one of
+	 * these rows recomputes from it. The viewport's own commit path mirrors the same pair (see
+	 * FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate), which is where this list came from.
+	 */
+	void CollectAnchorGeometryProperties(TArray<FProperty*>& OutProperties)
+	{
+		if (FProperty* AnchorProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_AnchorData()))
+		{
+			OutProperties.Add(AnchorProperty);
+		}
+		if (FProperty* LocationProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeLocation()))
+		{
+			OutProperties.Add(LocationProperty);
+		}
+	}
+}
+
+void FDreamWidgetCustomization::NotifyAnchorGeometryPreChange() const
+{
+	FNotifyHook* NotifyHook = PropertyUtilities.IsValid() ? PropertyUtilities->GetNotifyHook() : nullptr;
+	if (NotifyHook == nullptr)
+	{
+		return;
+	}
+	TArray<FProperty*> Properties;
+	DreamWidgetCustomizationLocal::CollectAnchorGeometryProperties(Properties);
+	for (FProperty* Property : Properties)
+	{
+		DreamDetailsTemplateMirror::NotifyPreChange(NotifyHook, Property);
+	}
+}
+
+void FDreamWidgetCustomization::NotifyAnchorGeometryPostChange() const
+{
+	FNotifyHook* NotifyHook = PropertyUtilities.IsValid() ? PropertyUtilities->GetNotifyHook() : nullptr;
+	if (NotifyHook == nullptr)
+	{
+		return;
+	}
+	TArray<UObject*> ChangedWidgets;
+	ChangedWidgets.Reserve(TargetScriptArray.Num());
+	for (const TWeakObjectPtr<UDreamWidget>& Item : TargetScriptArray)
+	{
+		if (Item.IsValid())
+		{
+			ChangedWidgets.Add(Item.Get());
+		}
+	}
+	TArray<FProperty*> Properties;
+	DreamWidgetCustomizationLocal::CollectAnchorGeometryProperties(Properties);
+	for (FProperty* Property : Properties)
+	{
+		DreamDetailsTemplateMirror::NotifyPostChange(NotifyHook, Property, ChangedWidgets);
+	}
 }
 
 void FDreamWidgetCustomization::SyncPanelSlotAfterAnchorEdit(UDreamWidget* Widget)
@@ -2200,19 +2410,40 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return;
 
+	// A committed edit is the one the asset should keep; the interactive ticks in between still move
+	// the preview, and the hook drops them on purpose (see SDreamWidgetDesignerDetails::NotifyPostChange).
+	if (Commited)
+	{
+		NotifyAnchorGeometryPreChange();
+	}
+
 	ApplyAnchorValueToWidgets(TargetScriptArray, Value, AnchorValueIndex);
 
-	GUnrealEd->UpdatePivotLocationForSelection();
-	GUnrealEd->SetPivotMovedIndependently(false);
-	// Redraw
-	GUnrealEd->RedrawLevelEditingViewports();
+	// Only on the finished gesture. These three are level-editor housekeeping -- recompute the gizmo
+	// pivot for the actor selection, then repaint every level viewport -- and a spin box fires
+	// OnValueChanged once per mouse move, so doing them interactively redrew the whole level editor
+	// tens of times a second for an edit that never leaves the DreamUI panel.
+	if (Commited)
+	{
+		GUnrealEd->UpdatePivotLocationForSelection();
+		GUnrealEd->SetPivotMovedIndependently(false);
+		// Redraw
+		GUnrealEd->RedrawLevelEditingViewports();
+	}
 
 	auto AnchorProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_AnchorData());
-	auto RelativeLocationProperty = FindFProperty<FProperty>(USceneComponent::StaticClass(), FName(TEXT("RelativeLocation")));
+	// UDreamWidget's own RelativeLocation, not USceneComponent's: a widget is a plain UObject, and the
+	// ported lookup named the class the original panel edited.
+	auto RelativeLocationProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeLocation());
 	for (auto& Item : TargetScriptArray)
 	{
+		if (!Item.IsValid())continue;
 		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), AnchorProperty);
 		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), RelativeLocationProperty);
+	}
+	if (Commited)
+	{
+		NotifyAnchorGeometryPostChange();
 	}
 }
 void FDreamWidgetCustomization::OnAnchorValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
@@ -2224,6 +2455,8 @@ void FDreamWidgetCustomization::OnAnchorValueCommitted(float Value, ETextCommit:
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetAnchor_Transaction", "Change Widget Anchor"));
 	for (auto& Item : TargetScriptArray)
 	{
+		//only [0] was ever checked, and a multi-selection outlives its members one at a time
+		if (!Item.IsValid())continue;
 		Item->Modify();
 	}
 	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex, true);
@@ -2235,13 +2468,19 @@ void FDreamWidgetCustomization::OnAnchorValueSliderMovementBegin()
 	GEditor->BeginTransaction(LOCTEXT("SlideChangeWidgetAnchor_Transaction", "Change Widget Anchor"));
 	for (auto& Item : TargetScriptArray)
 	{
+		if (!Item.IsValid())continue;
 		Item->Modify();
 	}
 }
 
 void FDreamWidgetCustomization::OnAnchorValueSliderMovementEnd(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
 {
-	//ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex);
+	// A spin that ends on the slider never reaches OnValueCommitted -- SNumericEntryBox only commits
+	// what was TYPED -- so this is the only place the finished gesture is announced. Without the
+	// committing pass the interactive ticks had moved the preview and nothing had told the details
+	// view's FNotifyHook, which is what carries the edit onto the blueprint's template: drag the
+	// anchor spinner, watch it move, compile, watch it snap back to where the drag started.
+	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex, /*Commited*/true);
 	GEditor->EndTransaction();
 }
 

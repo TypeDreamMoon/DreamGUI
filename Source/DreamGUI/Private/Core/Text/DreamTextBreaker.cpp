@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/Text/DreamTextBreaker.h"
+#include "DreamGUI.h"
 #include "Internationalization/BreakIterator.h"
 #include "Internationalization/IBreakIterator.h"
 #include "Internationalization/Internationalization.h"
@@ -72,6 +73,47 @@ bool FDreamTextBreaker::IsCJKCodepoint(uint32 C)
 		|| (C >= 0x20000 && C <= 0x3134F); // CJK ext B..G
 }
 
+bool FDreamTextBreaker::IsBreakingSpace(uint32 C)
+{
+	return C == ' ' || C == '\t' || C == 0x3000/*ideographic space*/ || C == 0x1680 || (C >= 0x2000 && C <= 0x200A);
+}
+
+void FDreamTextBreaker::ComputeFallbackBreakOpportunities(const TArray<uint32>& ElementCodepoints, TBitArray<>& OutCanBreakBefore)
+{
+	const int32 ElementCount = ElementCodepoints.Num();
+	OutCanBreakBefore.Init(false, ElementCount);
+	for (int32 i = 1; i < ElementCount; i++)
+	{
+		const uint32 Prev = ElementCodepoints[i - 1];
+		const uint32 Cur = ElementCodepoints[i];
+		// Breaking BEFORE a space is pointless -- ICU reports the boundary after the run of spaces, and
+		// the layout hangs trailing whitespace outside the line either way.
+		if (IsBreakingSpace(Cur))continue;
+
+		bool bAllowed = false;
+		if (IsBreakingSpace(Prev))
+		{
+			bAllowed = true;//UAX #14 LB18: break after spaces
+		}
+		else if (IsCJKCodepoint(Prev) || IsCJKCodepoint(Cur))
+		{
+			// LB8a/LB21/ID: an ideograph may start or end a line, so the boundary between one and
+			// anything else is a break -- which is the whole reason CJK wraps at all.
+			bAllowed = true;
+		}
+		else if (Prev == '-' && !(Cur >= '0' && Cur <= '9'))
+		{
+			bAllowed = true;//LB21b-ish: break after a hyphen, but not inside 3-4
+		}
+		if (!bAllowed)continue;
+		// Kinsoku, the part every implementation keeps: no closing mark starts a line, no opening
+		// bracket ends one.
+		if (IsClosingPunctuation(Cur))continue;
+		if (IsOpeningPunctuation(Prev))continue;
+		OutCanBreakBefore[i] = true;
+	}
+}
+
 void FDreamTextBreaker::ComputeBreakOpportunities(const FString& PlainText, const TArray<int32>& ElementPlainStart,
 	const TArray<uint32>& ElementCodepoints, EDreamTextPhraseWrap PhraseWrap, TBitArray<>& OutCanBreakBefore)
 {
@@ -80,6 +122,23 @@ void FDreamTextBreaker::ComputeBreakOpportunities(const FString& PlainText, cons
 	const int32 ElementCount = ElementPlainStart.Num();
 	OutCanBreakBefore.Init(false, ElementCount);
 	if (ElementCount == 0)return;
+
+#if !UE_ENABLE_ICU
+	// No ICU means no line-break rules and no word dictionary: the engine's legacy iterator breaks on
+	// whitespace and nothing else, so a script that does not write spaces never wrapped at all. The
+	// fallback below is the part of UAX #14 that matters for that -- ideographs break per character,
+	// kinsoku keeps the marks where they belong -- computed straight from the code points.
+	// PhraseWrap has no dictionary to consult here, so a CJK run breaks per character.
+	static bool bLoggedNoICU = false;
+	if (!bLoggedNoICU)
+	{
+		bLoggedNoICU = true;
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d This target was built without ICU (UE_ENABLE_ICU=0): line breaking uses DreamGUI's own per-code-point fallback (CJK breaks per character, kinsoku respected). Phrase wrap needs ICU's dictionary and is ignored. (reported once)")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+	}
+	ComputeFallbackBreakOpportunities(ElementCodepoints, OutCanBreakBefore);
+	return;
+#else
 
 	FIterators& Iterators = FIterators::Get();
 
@@ -105,6 +164,7 @@ void FDreamTextBreaker::ComputeBreakOpportunities(const FString& PlainText, cons
 		}
 		OutCanBreakBefore[i] = true;
 	}
+#endif
 }
 
 bool FDreamTextBreaker::IsClosingPunctuation(uint32 C)

@@ -18,5 +18,6 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
 	TWeakObjectPtr<class UUITextInput> TargetScriptPtr;
-	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
+	/** Takes the utilities, not the layout builder: the builder does not survive the refresh it asks for. */
+	void ForceRefresh(TSharedPtr<class IPropertyUtilities> PropertyUtilities);
 };

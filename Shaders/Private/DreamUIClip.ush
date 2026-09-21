@@ -1,7 +1,14 @@
 #ifndef DREAMUI_CLIP_USH
 #define DREAMUI_CLIP_USH
 
-void DreamUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 CanvasToClipMatrix, out float HalfWidth, out float HalfHeight, out float Softness, out float IsValid)
+// The third slot of the last column is RESERVED and not read: FDreamUIClipData::UpdateData writes a
+// zero there and nothing has ever consumed it. It used to arrive here as an out parameter named
+// Softness, which made the layout look like it carried a soft-clip width that some branch honoured --
+// no branch did, and neither Slate's clipping nor UMG's has such a control to copy. The clip edge is
+// antialiased from the signed distance field's own derivative, which is what the two branches below
+// do. The slot stays in the layout because the matrix is uploaded whole; the parameter is gone
+// because a name in a signature is a promise.
+void DreamUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 CanvasToClipMatrix, out float HalfWidth, out float HalfHeight, out float IsValid)
 {
 	float4 Column0 = DataTex.Load(Position);Position.x += 1;
 	float4 Column1 = DataTex.Load(Position);Position.x += 1;
@@ -9,7 +16,7 @@ void DreamUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 C
 	float4 Column3 = DataTex.Load(Position);Position.x += 1;
 	HalfWidth = Column3.x;
 	HalfHeight = Column3.y;
-	Softness = Column3.z;
+	//Column3.z is the reserved slot described above
 	IsValid = Column3.w;
 	Column3 = float4(0, 0, 0, 1);
 	CanvasToClipMatrix[0] = Column0;
@@ -39,14 +46,16 @@ float DreamUI_CalculateClipData(Texture2D DataTex, float CoordinateInDataTex, fl
 	{
 		float4x4 CanvasToClipMatrix;
 		float HalfWidth, HalfHeight;
-		float Softness = 0;
 		float IsValid = 1;
-		DreamUI_ReadClipData(DataTex, Position, CanvasToClipMatrix, HalfWidth, HalfHeight, Softness, IsValid);
+		DreamUI_ReadClipData(DataTex, Position, CanvasToClipMatrix, HalfWidth, HalfHeight, IsValid);
 		if (!IsValid)break;
 
 		float3 PixelPosition = mul(CanvasToClipMatrix, float4(PixelLocalPosition.xyz, 1.0)).xyz;
-#if DreamUI_Clip_Enable_Rounded
+		// The CPU writes matrix + corner radius for every clip level (FDreamUIClipData::SingleBlockSizeInBytes),
+		// so the read has to step past the corner radius whether or not this permutation uses it.
+		// Stepping only inside the rounded branch left every deeper level reading one texel early.
 		float4 CornerRadius = DataTex.Load(Position);Position.x += 1;
+#if DreamUI_Clip_Enable_Rounded
 		float Alpha = DreamUIClip_sdRoundRect(PixelPosition.yz, float2(HalfWidth, HalfHeight), CornerRadius);
 		Alpha = Alpha / fwidth(Alpha);
 		// Centred on the boundary; see the long note in DreamUIRectBlock.ush. Distance is negative

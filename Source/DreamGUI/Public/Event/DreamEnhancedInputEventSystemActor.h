@@ -8,7 +8,9 @@
 
 class UInputAction;
 class UInputMappingContext;
+class UEnhancedInputLocalPlayerSubsystem;
 struct FInputActionValue;
+struct FInputActionInstance;
 
 /**
  * The event system preset for projects on Enhanced Input.
@@ -34,6 +36,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	/** Takes the mapping context back off the local player. Without this it outlives the level. */
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/** Replaces the legacy mouse bindings with the four Input Actions. Navigation and touch are inherited. */
 	virtual void BindMouseInput() override;
@@ -60,12 +64,23 @@ protected:
 
 private:
 	void AddMappingContextToLocalPlayer();
+	void RemoveMappingContextFromLocalPlayer();
+	/** The Enhanced Input subsystem of the local player this actor's event system speaks for. */
+	UEnhancedInputLocalPlayerSubsystem* GetEnhancedInputSubsystem()const;
 
-	void OnTriggerLeft(const FInputActionValue& Value);
-	void OnTriggerRight(const FInputActionValue& Value);
-	void OnTriggerMiddle(const FInputActionValue& Value);
+	/**
+	 * The three button handlers take the action INSTANCE rather than the value: the instance carries
+	 * which trigger event fired, which is the only thing that says press or release without depending
+	 * on a console variable (FInputActionInstance::GetValue is zero outside Triggered unless
+	 * EnhancedInput.bAlwaysGetRealValueFromActionInstanceData is on, and it is only on by default).
+	 */
+	void OnTriggerLeft(const FInputActionInstance& Instance);
+	void OnTriggerRight(const FInputActionInstance& Instance);
+	void OnTriggerMiddle(const FInputActionInstance& Instance);
 	void OnMouseWheelAction(const FInputActionValue& Value);
 
 	/** Shared by the three button actions; each one only differs by which button type it reports. */
-	void ForwardTrigger(const FInputActionValue& Value, EDreamUIMouseButtonType ButtonType);
+	void ForwardTrigger(const FInputActionInstance& Instance, EDreamUIMouseButtonType ButtonType);
+	/** Report the device from the keys mapped to InAction, since an Input Action has no key of its own. */
+	void ReportDeviceForAction(const UInputAction* InAction);
 };

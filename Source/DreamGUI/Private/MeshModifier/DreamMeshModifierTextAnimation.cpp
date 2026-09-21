@@ -10,16 +10,11 @@ UDreamMeshModifierTextAnimation::UDreamMeshModifierTextAnimation()
 }
 bool UDreamMeshModifierTextAnimation::CheckDreamText()
 {
-	if (IsValid(TextObject))return true;
-	if (auto uiRenderable = GetVisualBatchMesh())
-	{
-		TextObject = Cast<UDreamText>(uiRenderable);
-		if (IsValid(TextObject))
-		{
-			return true;
-		}
-	}
-	return false;
+	// Re-derived every time instead of trusting the cache. The mesh accessor now follows a visual
+	// that was swapped under the widget, and a text left behind by such a swap is still a perfectly
+	// valid object -- so a cache-first check would go on animating the label nobody draws.
+	TextObject = Cast<UDreamText>(GetVisualBatchMesh());
+	return IsValid(TextObject);
 }
 void UDreamMeshModifierTextAnimation::OnRegister()
 {
@@ -93,7 +88,10 @@ UDreamText* UDreamMeshModifierTextAnimation::GetDreamText()
 }
 UDreamMeshModifierTextAnimation_Property* UDreamMeshModifierTextAnimation::GetProperty(int Index)const
 {
-	if (Index >= Properties.Num())
+	// Both ends of the range, because the index arrives from Blueprint: an int pin defaults to 0 but
+	// carries whatever arithmetic produced it, and a negative one indexes backwards out of the
+	// allocation instead of tripping the guard.
+	if (Index < 0 || Index >= Properties.Num())
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[UUIEffectTextAnimation::GetProperty]index:%d out of range:%d"), Index, Properties.Num());
 		return nullptr;
@@ -121,7 +119,7 @@ void UDreamMeshModifierTextAnimation::SetProperties(const TArray<UDreamMeshModif
 }
 void UDreamMeshModifierTextAnimation::SetProperty(int Index, UDreamMeshModifierTextAnimation_Property* Value)
 {
-	if (Index >= Properties.Num())
+	if (Index < 0 || Index >= Properties.Num())
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[UUIEffectTextAnimation::SetProperty]index:%d out of range:%d"), Index, Properties.Num());
 		return;

@@ -115,7 +115,17 @@ bool FDreamWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Par
 
 	Root->DestroyWidget();
 	TestEqual(TEXT("Behaviour detaches the original child"), OriginalChild->GetParent(), ExternalParent);
-	TestEqual(TEXT("Behaviour attaches the late child"), LateChild->GetParent(), Root);
+	// The child the behaviour moved OUT survives. DestroyWidget marks what it tore down as garbage, and
+	// this one is no longer its to destroy: it hangs off a live parent now, and a garbage widget inside
+	// a hierarchy still in use would be quietly emptied out of that parent's Children at the next
+	// collection. Unregistered and ended, yes -- the caller asked for that; destroyed, no.
+	TestTrue(TEXT("The child moved out of the doomed subtree is still a live widget"), IsValid(OriginalChild));
+	// The child the behaviour moved IN is the mirror image, and goes down with the tree. This used to be
+	// asserted as LateChild->GetParent() == Root, which cannot be stated that way any more for the same
+	// reason it is worth stating at all: Root is destroyed, and a TWeakObjectPtr does not hand back a
+	// destroyed object. Being destroyed WITH Root is the stronger form of "the attach was honoured" --
+	// a late child that had been dropped on the floor instead would still be valid, like the one above.
+	TestFalse(TEXT("The child moved into the doomed subtree is destroyed with it"), IsValid(LateChild));
 	TestFalse(TEXT("Detached original child is still unregistered"), OriginalChild->HasRegistered());
 	TestFalse(TEXT("Detached original child still ends play"), OriginalChild->HasBegunPlay());
 	TestFalse(TEXT("Newly attached child is unregistered"), LateChild->HasRegistered());

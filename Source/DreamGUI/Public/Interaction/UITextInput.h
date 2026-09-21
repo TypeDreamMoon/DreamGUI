@@ -7,6 +7,7 @@
 #include "Event/DreamUIEventDelegate.h"
 #include "Event/DreamDelegateDeclaration.h"
 #include "Event/Interface/DreamPointerClickInterface.h"
+#include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
 #include "GenericPlatform/ITextInputMethodSystem.h"
@@ -89,7 +90,7 @@ enum class EUITextInputDisplayType :uint8
 };
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UUITextInput : public UUISelectable, public IDreamPointerClickInterface, public IDreamPointerDragInterface
+class DREAMGUI_API UUITextInput : public UUISelectable, public IDreamPointerClickInterface, public IDreamPointerDoubleClickInterface, public IDreamPointerDragInterface
 {
 	GENERATED_BODY()
 	
@@ -133,10 +134,27 @@ protected:
 		float CaretBlinkRate = 0.5f;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		float CaretWidth = 2.0f;
+	/**
+	 * Light, because the caret is drawn ON the field and every shipped field is dark: the library's
+	 * FDreamTextInputStyle paints the box (38,42,52) and its text (230,233,240). The old (50,50,50)
+	 * was four values away from that background -- an invisible caret on the default theme, which is
+	 * the one state a text field cannot afford. It follows the default text colour instead.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
-		FColor CaretColor = FColor(50, 50, 50, 255);
+		FColor CaretColor = FColor(230, 233, 240, 255);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		FColor SelectionColor = FColor(168, 206, 255, 128);
+	/**
+	 * The line drawn under text an IME is still composing, the way every text field marks the
+	 * difference between "being typed" and "typed". Slate's editable text does the same thing with
+	 * its EditableText.CompositionBackground brush; a mesh UI has no text-run decoration to hang it
+	 * on, so it is drawn the way the selection highlight already is -- a strip per visual run.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		FColor CompositionUnderlineColor = FColor(230, 233, 240, 255);
+	/** How thick that line is, in UI units. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (ClampMin = "0.0"))
+		float CompositionUnderlineThickness = 1.5f;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		FVirtualKeyboardOptions VirtualKeyboardOptions;
 	//Ignore these keys input. eg, if use tab and arrow keys for navigation then you should put tab and arrow keys in this array
@@ -151,6 +169,49 @@ protected:
 	/** Read only text block, can copy text content, but not editable. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		bool bReadOnly = false;
+	/**
+	 * Largest number of characters the field will hold. 0 means no limit, which is what every field
+	 * was before this existed. All four write roads answer to it -- typing, pasting, SetText and the
+	 * IME's SetTextInRange -- because a limit only one road honours is not a limit.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (ClampMin = "0"))
+		int32 MaxLength = 0;
+	/**
+	 * Commit the value when the edit ends without an Enter -- clicking away, navigating away, Back /
+	 * Escape ending the edit, the mobile keyboard being dismissed. UMG's editable text has always
+	 * reported that moment through OnTextCommitted; DreamGUI only ever reported Enter, so a field
+	 * the player filled in and clicked out of never told anyone its value.
+	 * An Enter that already submitted does not submit twice.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		bool bSubmitWhenDeactivate = true;
+	/**
+	 * Ctrl+Z / Ctrl+Y over a snapshot stack of (text, caret). Snapshots are taken before each edit
+	 * that changes the text, so an undo lands where the edit started rather than at index 0.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		bool bAllowUndoRedo = true;
+	/** How many undo steps to keep. Older steps fall off the bottom. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (ClampMin = "1", EditCondition = "bAllowUndoRedo"))
+		int32 UndoHistoryLength = 64;
+	/**
+	 * The edit menu -- cut, copy, paste, select all, undo, redo -- reached by right click, by a long
+	 * press on touch, by the gamepad's Menu button, or by Shift+F10, which is Windows' own keyboard
+	 * shortcut for it. UMG's editable text calls this AllowContextMenu and defaults it on.
+	 * Only the entries that can act right now are built: no Paste with an empty clipboard, no Cut or
+	 * Copy out of a password field.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		bool bAllowContextMenu = true;
+	/** How long a touch has to be held before it counts as a right click. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (ClampMin = "0.0", EditCondition = "bAllowContextMenu"))
+		float ContextMenuLongPressTime = 0.5f;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition = "bAllowContextMenu"))
+		FColor ContextMenuBackgroundColor = FColor(52, 57, 70, 255);
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition = "bAllowContextMenu"))
+		FColor ContextMenuTextColor = FColor(230, 233, 240, 255);
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (ClampMin = "1.0", EditCondition = "bAllowContextMenu"))
+		float ContextMenuWidth = 150.0f;
 
 	FDreamUIMulticastDelegateString OnValueChangedCPP;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Input", DisplayName="OnValueChanged")
@@ -166,7 +227,9 @@ protected:
 	FDreamUIEventDelegate OnSubmit = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::String);
 	
 	FDreamUIMulticastDelegateBool OnInputActivateCPP;
-	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Input", DisplayName="OnSubmit")
+	//DisplayName was a copy of OnSubmit's, so the Blueprint event list offered two "OnSubmit" entries
+	//with different signatures -- one FString, one bool -- and no way to tell which was which.
+	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Input", DisplayName="OnInputActivate")
 	FUITextInputActivateEvent OnInputActivateBP;
 	/** Input activate or deactivate, means begin input or end input. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
@@ -174,6 +237,10 @@ protected:
 
 	void SetText(const FString& InText, bool InFireEvent);
 public:
+	/** The C++ halves of the events, the accessors every sibling behaviour already has. */
+	FDreamUIMulticastDelegateString& GetOnValueChangedEvent() { return OnValueChangedCPP; }
+	FDreamUIMulticastDelegateString& GetOnSubmitEvent() { return OnSubmitCPP; }
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		class UDreamText* GetTextComponent()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -208,6 +275,14 @@ public:
 		bool GetAutoActivateInputWhenNavigateIn()const { return bAutoActivateInputWhenNavigateIn; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		bool GetReadOnly()const { return bReadOnly; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		int32 GetMaxLength()const { return MaxLength; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetSubmitWhenDeactivate()const { return bSubmitWhenDeactivate; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetSelectAllWhenActivateInput()const { return bSelectAllWhenActivateInput; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetAllowContextMenu()const { return bAllowContextMenu; }
 
 	/** Set text value and send callback event */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -231,6 +306,12 @@ public:
 		void SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetPlaceHolder(UDreamWidget* Value);
+	/**
+	 * The text the field edits. EditAnywhere like its neighbours, so the designer and .dui always
+	 * reached it by reflection while no caller could -- the UUIToggle transition-target hole again.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetTextVisual(UDreamText* Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetCaretBlinkRate(float Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -247,6 +328,87 @@ public:
 		void SetAutoActivateInputWhenNavigateIn(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetReadOnly(bool Value);
+	/** 0 means no limit. Shortening the limit truncates what the field already holds. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetMaxLength(int32 Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetSubmitWhenDeactivate(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetSelectAllWhenActivateInput(bool Value);
+	/** Turning it off closes any menu that is open, the way UMG's AllowContextMenu behaves. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetAllowContextMenu(bool Value);
+
+	/**
+	 * A character the PLATFORM resolved, not one this component guessed from a key code.
+	 *
+	 * The key road below (AnyKeyPressed) maps FKey to TCHAR by hand, which is only ever right on a
+	 * US QWERTY layout; this is the road for a host that owns real character events -- a project's
+	 * UGameViewportClient::InputChar override, a Slate host's OnKeyChar, a test. Feeding one
+	 * character through here makes the field stop synthesising printable characters from key codes
+	 * for the rest of its life (function keys keep working), so the two roads never double-type.
+	 *
+	 * @return true if the character was accepted into the text.
+	 */
+	bool HandleCharacterInput(TCHAR InCharacter);
+	/** Blueprint/host spelling of HandleCharacterInput: every character of the string in order. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool HandleCharacterInputString(const FString& InCharacters);
+	/**
+	 * Route a platform character event to whichever field currently owns the keyboard, if any.
+	 * This is the one line a project's UGameViewportClient::InputChar override needs.
+	 * @return true if a field took the character.
+	 */
+	static bool RouteCharacterInputToActiveInput(TCHAR InCharacter);
+	/** The field currently being edited, or null. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		static UUITextInput* GetActiveTextInput();
+
+	/** Step back through the edit history. @return true if anything changed. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool Undo();
+	/** Step forward again after an Undo. @return true if anything changed. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool Redo();
+	/** Forget the edit history. Called whenever the text is replaced wholesale from code. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void ClearUndoHistory();
+	/** Select the word around the caret, the way a double click does. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SelectWordAtCaret();
+	/**
+	 * Re-run the current input rules over the text already in the field, dropping what they now
+	 * refuse. Called whenever the rules themselves change (input type, custom validator, max length).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void RevalidateText();
+
+	/**
+	 * Open the edit menu next to the last place the pointer touched this field (the field's own
+	 * centre when there was no pointer -- a gamepad or Shift+F10 opened it). Builds only the entries
+	 * that can act; with none of them applicable nothing opens.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void ShowContextMenu();
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void HideContextMenu();
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool IsContextMenuOpen()const { return ContextMenuRoot.IsValid(); }
+
+	/**
+	 * Mark a run of the text as "still being composed" -- drawn with an underline, the way every
+	 * text field distinguishes an IME's working text from text that has been committed.
+	 *
+	 * Set from the IME context's UpdateCompositionRange (which used to be an empty function body),
+	 * and public because a host driving composition itself -- a mobile keyboard bridge, a test --
+	 * needs the same road. Indices are offsets into the source string; a zero length clears the mark.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetCompositionRange(int32 InBeginCharIndex, int32 InLength);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		int32 GetCompositionBeginIndex()const { return CompositionBeginCharIndex; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		int32 GetCompositionLength()const { return CompositionCharLength; }
 
 	/**
 	 * True while this field owns the keyboard. Back has to know: with a field being edited, cancelling
@@ -278,7 +440,38 @@ private:
 	void BindKeys();
 	void UnbindKeys();
 	void AnyKeyPressed(FKey key);
-	bool IsValidChar(TCHAR c);
+	/**
+	 * Validate one character against a GIVEN text and caret, not against the member Text.
+	 *
+	 * Every type-level rule is positional -- "only one dot", "only one @", "minus only at the
+	 * front" -- so asking them against the text already in the field is only correct while the
+	 * field's text IS the text being built. It is not during SetText, which builds a brand new
+	 * string character by character: a DecimalNumber field holding "3.5" refused the dot of
+	 * SetText("1.2") because the OLD text already had one, and stored "12".
+	 */
+	bool IsValidChar(TCHAR c, const FString& InAgainstText, int32 InAgainstCaretIndex);
+	/** The common case: validate against what the field currently holds, at the live caret. */
+	bool IsValidChar(TCHAR c) { return IsValidChar(c, Text, CaretPositionIndex); }
+	/**
+	 * The open selection as a range into the SOURCE STRING, not as caret indices.
+	 *
+	 * A caret index is an element index (one per laid-out glyph) whenever the text is not rich text,
+	 * and every surrogate pair, every emoji, makes that differ from the UTF-16 offset FString wants.
+	 * Every edit road in this file maps through UDreamText for exactly that reason; DeleteSelection
+	 * was the one that did not, and cut half a character out of any field holding an emoji.
+	 * @return false when there is no selection, in which case the outputs are untouched.
+	 */
+	bool GetSelectionCharRange(int32& OutStartCharIndex, int32& OutCharCount);
+	/**
+	 * The text an insertion at the caret would land in: this field's text with the open selection
+	 * already removed, plus where in THAT string the caret sits. The string the validator must see.
+	 */
+	FString GetTextWithoutSelection(int32& OutCaretCharIndex);
+	/** True when another character still fits under MaxLength. Length counts what is already there. */
+	bool HasRoomForMoreChars(int32 InCurrentLength, int32 InAddCount = 1)const
+	{
+		return MaxLength <= 0 || InCurrentLength + InAddCount <= MaxLength;
+	}
 	/**
 	 * delete selected chars if there is any.
 	 * @return true if anything deleted.
@@ -299,10 +492,80 @@ private:
 	 * @param moveType 0-left, 1-right, 2-up, 3-down, 4-start, 5-end
 	 */
 	void MoveCaret(int32 moveType, bool withSelection);
+	/** Left/right by whole words, the Ctrl+Arrow motion. @param InDirection -1 left, +1 right. */
+	void MoveCaretByWord(int32 InDirection, bool withSelection);
+	/** Up/down by a screenful of lines. Multiline only; a single line field has nowhere to page to. */
+	void MoveCaretByPage(int32 InDirection, bool withSelection);
+	/** How many lines one PageUp/PageDown covers in the field's current geometry. At least one. */
+	int32 GetPageLineCount()const;
 	void Copy();
 	void Paste();
 	void Cut();
+public:
+	/** Selects the whole text, the way UMG SelectAllText does. Public because SpinBox scrubbing and the context menu call it. */
 	void SelectAll();
+private:
+	/** Fire the submit events once for this activation. Enter and, if asked, the end of the edit. */
+	void Submit();
+
+	//undo/redo: one snapshot is the whole text plus where the caret was when the edit started
+	struct FTextSnapshot
+	{
+		FString Text;
+		int32 CaretPositionIndex = 0;
+	};
+	TArray<FTextSnapshot> UndoStack;
+	TArray<FTextSnapshot> RedoStack;
+	/** Push the CURRENT state as an undo step. Call before changing the text, not after. */
+	void PushUndoSnapshot();
+	void ApplySnapshot(const FTextSnapshot& InSnapshot);
+	/** Cut Text down to MaxLength. @return true if anything was removed. */
+	bool EnforceMaxLength();
+
+	/** Set while an Enter already submitted this activation, so ending the edit does not re-submit. */
+	bool bSubmittedThisActivation = false;
+
+	//the edit menu: built from the same primitives the caret and the selection mask are, because a
+	//behaviour cannot reach the control layer and a text field must not need an authored template
+	enum class EContextMenuAction : uint8 { Undo, Redo, Cut, Copy, Paste, SelectAll };
+	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> ContextMenuRoot;
+	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> ContextMenuBlocker;
+	/** @return the entry's widget, or null when InbApplicable said this entry cannot act now. */
+	UDreamWidget* AddContextMenuEntry(UDreamWidget* InMenuRoot, bool InbApplicable, const FText& InLabel, EContextMenuAction InAction, int32& InOutEntryCount);
+	void ExecuteContextMenuAction(EContextMenuAction InAction);
+	/** The entry's stable name, so a test can ask which entries a field offered rather than count them. */
+	static const TCHAR* GetContextMenuActionName(EContextMenuAction InAction);
+	/** One line of the field's own text plus breathing room, so the menu scales with the font. */
+	float GetContextMenuEntryHeight()const;
+	/** Inset between the menu's edge and its entries, and between an entry's edge and its label. */
+	static constexpr float ContextMenuPadding = 4.0f;
+	/** Where the menu opens: the last pointer position on this field, in world space. */
+	FVector ContextMenuAnchorWorldPoint = FVector::ZeroVector;
+	bool bHasContextMenuAnchor = false;
+	//long press is touch's right click; the field times it itself because the pointer module reports
+	//a press and a release, not a hold
+	bool bPointerHeldForContextMenu = false;
+	double PointerHeldStartTime = 0;
+	/**
+	 * Flipped the first time a real platform character arrives through HandleCharacterInput. From
+	 * then on AnyKeyPressed stops guessing printable characters from key codes -- the host owns
+	 * them -- and handles only the function keys, which are genuinely key-shaped.
+	 *
+	 * Class-wide, and it has to be: whether characters are delivered is a fact about the HOST, not
+	 * about one field, and the very first keystroke would otherwise arrive twice. It does not, in
+	 * that order, because Slate's character event is processed while messages are pumped and the
+	 * bound InputComponent delegate fires later in the same frame, during the player tick -- so the
+	 * flag is already set by the time the key road looks at it, for the first keystroke included.
+	 */
+	static bool bHostDeliversCharacterEvents;
+	/** Whichever field currently owns the keyboard; the target of RouteCharacterInputToActiveInput. */
+	static TWeakObjectPtr<UUITextInput> ActiveTextInput;
+	/**
+	 * Say once, the first time a field is edited with a real keyboard, that this project has not
+	 * given DreamGUI a way to receive character events -- and therefore types wrongly on any layout
+	 * that is not US QWERTY. See UDreamGameViewportClient.
+	 */
+	static void WarnOnceIfNoCharacterEventSource();
 
 	FString GetReplaceText()const;
 
@@ -315,12 +578,20 @@ private:
 	void UpdateCaretPosition(FVector2f InCaretPosition, bool InHideSelection = true);
 	void UpdateSelection();
 	void HideSelectionMask();
+	void UpdateCompositionUnderline();
+	void HideCompositionUnderline();
 	//a Sprite for caret, can blink, can represent current caret location
 	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> CaretWidget;
 	//selection mask
 	UPROPERTY(Transient)TArray<TWeakObjectPtr<UDreamVisual>> SelectionMaskObjectArray;
 	//range selection
 	TArray<FDreamUITextSelectionProperty> SelectionPropertyArray;
+	//the composition underline: one strip per visual run, built exactly like the selection mask
+	UPROPERTY(Transient)TArray<TWeakObjectPtr<UDreamVisual>> CompositionUnderlineObjectArray;
+	TArray<FDreamUITextSelectionProperty> CompositionPropertyArray;
+	//source-string range the IME is composing; length 0 means nothing is
+	int32 CompositionBeginCharIndex = 0;
+	int32 CompositionCharLength = 0;
 	//Caret position of full text. caret is on left side of char
 	int CaretPositionIndex = 0;
 	//caret position line index of full text
@@ -343,6 +614,7 @@ protected:
 	virtual bool OnPointerSelect_Implementation(UDreamBaseEventData* EventData) override;
 	virtual bool OnPointerDeselect_Implementation(UDreamBaseEventData* EventData) override;
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData) override;
+	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData) override;
 	virtual bool OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData) override;
 	virtual bool OnPointerDrag_Implementation(UDreamPointerEventData* EventData) override;
 	virtual bool OnPointerEndDrag_Implementation(UDreamPointerEventData* EventData) override;
@@ -400,6 +672,16 @@ private:
 
 	private:
 		FTextInputMethodContext(UUITextInput* InInput);
+		/**
+		 * A point on the field, through the canvas that draws it, into absolute desktop pixels --
+		 * the space ITextInputMethodContext speaks. The canvas's own view-projection is the right
+		 * matrix for every render mode, because it is the matrix the UI was drawn with.
+		 */
+		bool ProjectUIPointToScreen(const FVector& InWorldPosition, FVector2D& OutScreenPosition);
+		/** The reverse: an absolute desktop point back onto the plane the text lives in. */
+		bool DeprojectScreenPointToUI(const FVector2D& InScreenPosition, FVector& OutWorldPosition);
+		/** Caret index for a source-string offset, which is what the IME counts in. */
+		int32 CaretIndexFromCharIndex(int32 InCharIndex)const;
 		UUITextInput* InputComp;
 		FString OriginString;
 		bool bIsComposing = false;

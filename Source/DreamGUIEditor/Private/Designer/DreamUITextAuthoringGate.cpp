@@ -28,6 +28,7 @@
 
 #include "Misc/Paths.h"
 #include "UObject/UnrealType.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 #define LOCTEXT_NAMESPACE "DreamUITextAuthoringGate"
 
@@ -89,9 +90,17 @@ namespace DreamUITextAuthoring
 		 * one place the panel writes a property the file does not spell, and it is correct: the
 		 * mirror syncs the euler, and the euler is what the sweep prints.
 		 */
-		bool IsWritableWidgetPropertyRoot(const FName InRootName)
+		bool IsWritableWidgetPropertyRoot(const UDreamWidget* InWidget, const FName InRootName)
 		{
-			const FProperty* Root = UDreamWidget::StaticClass()->FindPropertyByName(InRootName);
+			// The widget's ACTUAL class, not UDreamWidget: a native control (Native.Toggle,
+			// Native.Dropdown) declares its own properties -- Style, MaxVisibleItems, SelectedIndex --
+			// and the write-back sweep already enumerates by GetClass()
+			// (GetWritableLeafPaths(LiveWidget->GetClass())). A gate that looked the root up on the
+			// base class judged every one of those OutsideTheWritableSet, so the whole panel of a
+			// native control sat grey while the sweep would happily have written it -- the exact
+			// two-halves drift this pairing exists to prevent, just in the opposite direction.
+			const UClass* Scope = IsValid(InWidget) ? InWidget->GetClass() : UDreamWidget::StaticClass();
+			const FProperty* Root = Scope->FindPropertyByName(InRootName);
 			return DreamUIReflection::IsSweepRoot(Root);
 		}
 
@@ -439,6 +448,15 @@ namespace DreamUITextAuthoring
 		return nullptr;
 	}
 
+	FString DescribeClassForAuthor(const UClass* InClass)
+	{
+		// The refusal's whole point is "go and edit the file", so the thing it names should be the
+		// thing they would TYPE there. A message naming UDreamProgressBar sends an author to look up
+		// what a UDreamProgressBar is called in the language; naming `Native.ProgressBar` is the line.
+		const FString Tag = FDreamUIWidgetRegistry::FindTagForClass(InClass);
+		return Tag.IsEmpty() ? GetNameSafe(InClass) : Tag;
+	}
+
 	FText DescribeStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint, const FString& InOperation)
 	{
 		return FText::Format(
@@ -538,7 +556,7 @@ namespace DreamUITextAuthoring
 		}
 
 		const bool bInWritableSet = InOwner == Widget
-			? Local::IsWritableWidgetPropertyRoot(Local::GetChainRootName(InLeafProperty, InParentProperties))
+			? Local::IsWritableWidgetPropertyRoot(Widget, Local::GetChainRootName(InLeafProperty, InParentProperties))
 			// Every other object the panel can be showing is one the language addresses as a whole --
 			// the visual, the panel slot, the layouts, a behaviour -- so every property on it has a
 			// line it can be written into and none of them needs an allowlist of its own.

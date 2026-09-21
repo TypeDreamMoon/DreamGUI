@@ -54,4 +54,10 @@ protected:
 		startValue = originStartValue;
 		endValue = originStartValue + diffValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		originStartValue = startValue;
+	}
+	virtual float GetValueDistance()const override { return static_cast<float>((endValue - startValue).Size()); }
 };

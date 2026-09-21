@@ -53,12 +53,36 @@ private:
 	TArray<TWeakObjectPtr<class UDreamWidget>> TargetScriptArray;
 	static TArray<float> ValueRangeArray;
 
+	/**
+	 * Announcing an anchor edit that did NOT go through a property handle.
+	 *
+	 * These rows write through the widget's own setters -- one number can land on AnchoredPosition or
+	 * on an anchor offset depending on the widget, and an anchor preset moves pivot, both anchors,
+	 * position and size at once -- so no property node hears about the write, and the details view's
+	 * FNotifyHook (which is what mirrors a PREVIEW widget onto the blueprint's template) has to be
+	 * called by hand. Without it the edit was visible until the next compile and then snapped back.
+	 * See DreamDetailsTemplateMirror.
+	 */
+	void NotifyAnchorGeometryPreChange() const;
+	void NotifyAnchorGeometryPostChange() const;
+	/** Held only to reach the hook above; the layout builder does not outlive a refresh. */
+	TSharedPtr<class IPropertyUtilities> PropertyUtilities;
+
 	FText GetAnchorsTooltipText()const;
 	
 	void ForceUpdateUI();
 
 	bool OnCanCopyAnchor()const;
+	/**
+	 * Slate polls this every frame for as long as the anchor row is on screen, and the honest answer
+	 * needs the system clipboard -- which on Windows means opening it and copying whatever is in it,
+	 * however big, sixty times a second. The answer is cached for a fraction of a second instead:
+	 * short enough that a copy made in another window is picked up before anyone can reach the paste
+	 * button, long enough that idling on the panel costs nothing.
+	 */
 	bool OnCanPasteAnchor()const;
+	mutable double LastAnchorClipboardPollSeconds = 0.0;
+	mutable bool bAnchorClipboardHoldsAnchorData = false;
 	void OnCopyAnchor();
 	void OnPasteAnchor(IDetailLayoutBuilder* DetailBuilder);
 	EVisibility GetAnchorPresetButtonVisibility()const;
@@ -85,7 +109,6 @@ private:
 	bool IsSizeDeltaRowEnabled()const;
 	FText GetArrangedByBannerText()const;
 	EVisibility GetArrangedByBannerVisibility()const;
-	TSharedPtr<IPropertyHandle> GetAnchorPropertyHandle(IDetailLayoutBuilder* DetailBuilder, TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int Index)const;
 	/** A mixed selection leaves the handle's out-param untouched, so the rows read the primary selection instead of stack garbage. */
 	void GetAnchorMinMaxForDisplay(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, FVector2D& OutAnchorMin, FVector2D& OutAnchorMax)const;
 	FText GetAnchorLabelText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int LabelIndex)const;

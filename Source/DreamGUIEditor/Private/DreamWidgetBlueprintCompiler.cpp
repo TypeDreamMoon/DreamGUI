@@ -3,13 +3,19 @@
 #include "DreamWidgetBlueprintCompiler.h"
 #include "DreamWidgetBlueprint.h"
 
+#include "Animation/DreamUISequence.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
+#include "AssetRegistry/IAssetRegistry.h"
+#include "UObject/UObjectIterator.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
+// A `->` route may name an FDreamUIEventDelegate as well as a multicast delegate; see the event half
+// of ValidateWidgetBindings.
+#include "Event/DreamUIEventDelegate.h"
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
 #include "Text/DreamUIDiagnosticsMailbox.h"
@@ -17,6 +23,10 @@
 #include "Text/DreamUIValueFormat.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextBuilder.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetPreviewHost.h"
+#include "Text/DreamUIExpressionThunks.h"
+#include "Text/DreamUISourceWatcher.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
@@ -125,6 +135,43 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		return;
 	}
 
+	// Edits mirrored into the template but not yet flushed into the .dui die here otherwise: this
+	// function reads the FILE and rebuilds the tree from it, and the designer triggers a skeleton
+	// compile on every structural edit -- so an unflushed property edit would be rebuilt away
+	// moments after it was made. Flushing at the top of the read is the one chokepoint every
+	// compile type passes through (the pre-compile broadcast fires a stage too late, after this
+	// runs). Free when the template is clean; the flush's own write is invisible to the source
+	// watcher through the own-write hash. Skipped while a transaction is being applied: the flush
+	// opens a transaction of its own, and an undo application is no place to start one.
+	//
+	// And skipped a second way, which is the one that could destroy somebody's work: when this
+	// compile was caused by the FILE changing rather than by the designer. FlushTemplateChanges
+	// diffs the template tree -- built from the text as it was -- against a reference tree built
+	// from the text as it IS, so every difference the outside edit introduced reads as a designer
+	// edit and gets patched back OUT of the document and saved. The compile that was supposed to
+	// pick up an external change would instead revert it, silently, and the author's next clue
+	// would be a file that keeps undoing itself. On that path the file wins and the preview's
+	// unflushed values are what has to go; they are said out loud rather than dropped quietly.
+	if (!GIsTransacting)
+	{
+		if (FDreamWidgetBlueprintEditor* OpenEditor = FDreamWidgetBlueprintEditor::FindEditorForBlueprint(DreamBlueprint))
+		{
+			if (const TSharedPtr<FDreamWidgetPreviewHost> Host = OpenEditor->GetPreviewHost())
+			{
+				if (!FDreamUISourceWatcher::IsCompilingFromExternalChange())
+				{
+					Host->FlushTemplateChanges();
+				}
+				else if (Host->IsTemplateDirty())
+				{
+					MessageLog.Warning(*FString::Printf(
+						TEXT("The .dui behind \"%s\" changed outside the editor, so the file wins: designer edits that had not been written back to it are gone. Make them again on top of the new text."),
+						*GetNameSafe(DreamBlueprint)));
+				}
+			}
+		}
+	}
+
 	// SourceFile is a CLASS DEFAULT, so the CDO is where it is read from -- and the CDO still
 	// standing at this point in the compile is the previous one, which is exactly the object carrying
 	// what the author typed into the Class Defaults panel. CleanAndSanitizeClass has not run yet, and
@@ -157,7 +204,8 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		return;
 	}
 
-	const FString ResolvedPath = UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
+	bool bRootTokenResolved = true;
+	const FString ResolvedPath = DreamUIPaths::Resolve(AuthoredPath, &bRootTokenResolved);
 	// The path, not the leaf name. Every diagnostic below is prefixed with this, in the layout an
 	// editor turns into a jump -- "C:/Proj/DUI/Login.dui(12,5): error DUI2001: ..." -- and a bare
 	// "Login.dui" is a string a message log cannot do anything with.
@@ -174,7 +222,19 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		// most likely cause of this error is a file sitting somewhere that is not a root at all.
 		FString Message = FString::Printf(
 			TEXT("Source File is '%s', and there is no readable file at '%s'"), *AuthoredPath, *ResolvedPath);
-		if (FPaths::IsRelative(AuthoredPath))
+		if (!bRootTokenResolved)
+		{
+			// `Plugin.X:...` where no enabled plugin X has a DUI directory. The resolved path names
+			// the PROJECT's root, which is nowhere the author wrote -- so the plugin is named here
+			// instead of leaving a reader to wonder why the message quotes a folder they never
+			// mentioned. This was the last silent half of the plugin-qualified spelling.
+			FString Token;
+			AuthoredPath.Split(TEXT(":"), &Token, nullptr);
+			Message += FString::Printf(
+				TEXT(". '%s' names no enabled plugin with a %s directory, so the path above is the project's own root standing in"),
+				*Token, DreamUIPaths::SourceDirectoryName);
+		}
+		else if (FPaths::IsRelative(AuthoredPath))
 		{
 			TArray<FString> RootDirectories;
 			for (const FDreamUISourceRoot& Root : DreamUIPaths::GetSourceRoots())
@@ -191,7 +251,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	}
 
 	FDreamUIAst Ast;
-	if (!FDreamUISourceFile::Parse(SourceText, ResolvedPath, Ast, OutDiagnostics))
+	if (!FDreamUISourceFile::Parse(SourceText, ResolvedPath, Ast, OutDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
 	{
 		// The previous hierarchy is left exactly where it is. A file that will not parse says nothing
 		// about what the class should contain, and blanking the tree here would turn one typo into a
@@ -224,11 +284,21 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 
 	TArray<FDreamWidgetPropertyBinding> Bindings;
 	TArray<FDreamWidgetEventBinding> EventBindings;
+	TArray<FDreamWidgetEachBinding> EachBindings;
 	// Outered to the Blueprint, which is where UDreamWidgetBlueprint::GetOrCreateWidgetTree puts the
 	// hand-authored one. That is not a detail: FinishCompilingClass duplicates THIS object onto the
 	// generated class as the archetype, and SaveSubObjectsFromCleanAndSanitizeClass keeps it alive
 	// through the sanitize pass by name -- both were written against a tree that lives on the asset.
-	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings);
+	// The dependency edges, republished every parse: a saved style library recompiles its wearers.
+	FDreamUISourceWatcher::NoteImports(ResolvedPath, Ast.Imports);
+
+	// Expression bindings lower into generated pure functions here, BEFORE the builder reads the
+	// AST: each `<- expr` line's BindingFunction is rewritten in place to its thunk's name, so the
+	// builder, the runtime and every migration see exactly the one-name shape they always did. An
+	// expression the generator refuses reports DUI5011 into the bag and clears its binding.
+	DreamUIExpressionThunks::Generate(DreamBlueprint, Ast, OutDiagnostics);
+
+	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings, &EachBindings);
 	if (!IsValid(NewTree) || !IsValid(NewTree->RootWidget))
 	{
 		// Its own code even though the builder has already said why. The builder reports a CAUSE (this
@@ -246,22 +316,204 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// its flags is the kind of difference that surfaces three files away as "undo does nothing here".
 	NewTree->SetFlags(RF_Transactional);
 
+	// Animations ride across the rebuild. The grammar cannot author a sequence, so everything in a
+	// SequenceArray was made in the animation editor and lives nowhere but the tree this compile is
+	// about to drop -- without this carry, one compile deletes the author's animation work. Matched
+	// by display name because that is the model animation bindings themselves resolve through, and
+	// carried BEFORE MigrateRenamedWidgets so `(was: OldId)` clauses rewrite the carried paths.
+	// AddComponentByTemplate goes through FObjectInstancingGraph, and SequenceArray is Instanced, so
+	// the sequences are re-homed rather than pointer-shared with an object headed for the reaper.
+	if (IsValid(DreamBlueprint->WidgetTree) && IsValid(DreamBlueprint->WidgetTree->RootWidget))
+	{
+		TMap<FString, UDreamWidget*> NewWidgetsByDisplayName;
+		TArray<UDreamWidget*> NewWidgets;
+		UDreamWidget::CollectChildrenWidgets(NewTree->RootWidget, NewWidgets, /*IncludeTarget*/true);
+		for (UDreamWidget* NewWidget : NewWidgets)
+		{
+			NewWidgetsByDisplayName.Add(NewWidget->GetDisplayName(), NewWidget);
+		}
+
+		// `(was: OldId)` -- the clause that exists so a rename carries everything the old name owned,
+		// and which this carry was the one leg not consulting. Matched by NEW name alone, a renamed
+		// node found nothing, its animations died with the old tree, and the warning below told the
+		// author to write the very clause they had already written. Read off the AST rather than the
+		// tree because the clause is a fact about the FILE; the tree only ever keeps the name that
+		// won. Keyed by FString, so the lookup is case-insensitive exactly like MigrateRenamedWidgets'.
+		TMap<FString, FString> NewIdByOldId;
+		Ast.ForEachNode([&NewIdByOldId](const FDreamUINode& InNode)
+		{
+			if (!InNode.WasId.IsEmpty() && !InNode.Id.IsEmpty())
+			{
+				NewIdByOldId.Add(InNode.WasId, InNode.Id);
+			}
+		});
+
+		TArray<UDreamWidget*> OldWidgets;
+		UDreamWidget::CollectChildrenWidgets(DreamBlueprint->WidgetTree->RootWidget, OldWidgets, /*IncludeTarget*/true);
+		for (UDreamWidget* OldWidget : OldWidgets)
+		{
+			UDreamWidgetAnimationComponent* OldAnimator = IsValid(OldWidget) ? OldWidget->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
+			if (OldAnimator == nullptr || OldAnimator->GetSequenceArray().Num() == 0)
+			{
+				continue;
+			}
+			// The root hosts the animations in practice, and a renamed root has no name to match, so
+			// root pairs with root regardless of what either is called.
+			UDreamWidget* NewHome = nullptr;
+			if (OldWidget == DreamBlueprint->WidgetTree->RootWidget)
+			{
+				NewHome = NewTree->RootWidget.Get();
+			}
+			else
+			{
+				const FString OldName = OldWidget->GetDisplayName();
+				NewHome = NewWidgetsByDisplayName.FindRef(OldName);
+				if (NewHome == nullptr)
+				{
+					// Nothing answers to the old name, so ask the file whether it was renamed.
+					if (const FString* RenamedTo = NewIdByOldId.Find(OldName))
+					{
+						NewHome = NewWidgetsByDisplayName.FindRef(*RenamedTo);
+					}
+				}
+			}
+			if (!IsValid(NewHome))
+			{
+				// No widget by that name in the new file: the sequences stay with the old tree and
+				// die with it. Said out loud, not silently.
+				MessageLog.Warning(*FString::Printf(
+					TEXT("Animations on widget '%s' could not be carried across the .dui rebuild: no widget with that name in the new hierarchy. Rename with (was: %s) to keep them."),
+					*OldWidget->GetDisplayName(), *OldWidget->GetDisplayName()));
+				continue;
+			}
+
+			// The new home MAY already animate, now that `timeline` blocks build animations of their
+			// own -- and when it does, the whole-component re-home below would throw the file's
+			// animations away and put the previous compile's back. So the carry is per ANIMATION
+			// whenever the two have to coexist, and language-owned ones are never carried at all:
+			// the file rebuilt them a moment ago, and adopting the old copy would overwrite what the
+			// author just wrote with what they wrote last time.
+			if (UDreamWidgetAnimationComponent* NewAnimator = NewHome->GetComponent<UDreamWidgetAnimationComponent>())
+			{
+				for (UDreamWidgetAnimation* OldAnimation : OldAnimator->GetSequenceArray())
+				{
+					if (!IsValid(OldAnimation) || OldAnimation->IsLanguageOwned())
+					{
+						continue;
+					}
+					// A name the file has just claimed for a timeline wins: the text is the truth,
+					// and two animations of one name is a class variable nobody can address.
+					const FString Name = OldAnimation->GetDisplayNameString();
+					if (NewAnimator->GetSequenceByDisplayName(Name) != nullptr)
+					{
+						MessageLog.Warning(*FString::Printf(
+							TEXT("Animation \"%s\" was made in the animation editor and the .dui now declares a timeline of the same name. The file wins; rename one of them to keep both."),
+							*Name));
+						continue;
+					}
+					NewAnimator->AdoptAnimation(OldAnimation);
+				}
+				continue;
+			}
+
+			// The ordinary case, unchanged: nothing on the new home, so the whole component moves.
+			// One language-owned sequence in the old component would be carried with it, which
+			// cannot happen -- a language-owned sequence only exists on a tree the builder just made,
+			// and the builder always puts the component on the new home before this runs.
+			NewHome->AddComponentByTemplate(OldAnimator);
+		}
+	}
+
+	// The `external` manifest, checked both ways. The proposal's second layer exists so that "what
+	// animations does this class have" is answerable from the FILE -- which is only true if the file
+	// lists the ones it does not contain. Warnings rather than errors on both halves: an animation
+	// that is not listed still works, and a listed one that is missing is a file describing a plan
+	// rather than a state. Either way the author is told which name is out of step.
+	if (IsValid(NewTree) && IsValid(NewTree->RootWidget))
+	{
+		TSet<FString> DeclaredExternal;
+		for (const FDreamUITimeline& Timeline : Ast.Timelines)
+		{
+			if (Timeline.bExternal)
+			{
+				DeclaredExternal.Add(Timeline.Name);
+			}
+		}
+
+		TSet<FString> LiveAnimations;
+		TArray<UDreamWidget*> Widgets;
+		UDreamWidget::CollectChildrenWidgets(NewTree->RootWidget, Widgets, /*IncludeTarget*/true);
+		for (UDreamWidget* Widget : Widgets)
+		{
+			UDreamWidgetAnimationComponent* Animator = IsValid(Widget) ? Widget->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
+			if (Animator == nullptr)
+			{
+				continue;
+			}
+			for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
+			{
+				if (!IsValid(Animation) || Animation->IsLanguageOwned())
+				{
+					continue;
+				}
+				LiveAnimations.Add(Animation->GetDisplayNameString());
+				if (!DeclaredExternal.Contains(Animation->GetDisplayNameString()))
+				{
+					MessageLog.Warning(*FString::Printf(
+						TEXT("Animation \"%s\" was made in the animation editor and this .dui does not mention it. Add \"timeline %s external\" so the file lists every animation the class has."),
+						*Animation->GetDisplayNameString(), *Animation->GetDisplayNameString()));
+				}
+			}
+		}
+		for (const FString& Name : DeclaredExternal)
+		{
+			if (!LiveAnimations.Contains(Name))
+			{
+				MessageLog.Warning(*FString::Printf(
+					TEXT("\"timeline %s external\" names an animation this class does not have. Make it in the animation editor, or delete the line."),
+					*Name));
+			}
+		}
+	}
+
 	// The one field the text owns. Replaced rather than merged: the .dui is the whole hierarchy, so
 	// anything still in the old tree is by definition not in the file any more.
 	DreamBlueprint->WidgetTree = NewTree;
 	// And the resources ride along for PopulateBlueprintGeneratedVariables, which declares one class
 	// variable per entry a few lines after this function returns.
+	// The file's own entries, and then the ones a `use` brought in.
+	//
+	// The imported half is new, and the rule it replaces was written down as deliberate: "imported
+	// resources become nobody's class variables". The reasoning was that a variable belongs to one
+	// class and an imported entry belongs to a library -- which is true and is not an argument for
+	// declaring nothing. `@Accent` RESOLVES through the import chain on every line that writes it, so
+	// a file could already spell an imported resource everywhere except in the one place a designer
+	// or a graph could see it. Two importers each getting their own variable is not a conflict:
+	// they are two classes, the entries are constants, and each compiles the value it read.
+	//
+	// Local first and appended only when the name is free, so FindResource's shadowing rule -- a
+	// local declaration wins over an imported one -- is the rule the variables follow too.
 	TextResources = Ast.Resources;
+	for (const FDreamUIResource& Imported : Ast.ImportedResources)
+	{
+		const bool bShadowed = TextResources.ContainsByPredicate(
+			[&Imported](const FDreamUIResource& InExisting) { return InExisting.Name == Imported.Name; });
+		if (!bShadowed)
+		{
+			TextResources.Add(Imported);
+		}
+	}
 	// And the bindings alongside it, for the same reason -- `<-` lines live in the same file. These
 	// are the AUTHORED list; CompilePropertyBindings resolves them onto the class at the end of the
 	// compile and reports the ones that cannot be honoured, which is how a .dui naming a function the
 	// Blueprint does not declare becomes an error here rather than a null at run time.
 	DreamBlueprint->PropertyBindings = MoveTemp(Bindings);
 	DreamBlueprint->EventBindings = MoveTemp(EventBindings);
+	DreamBlueprint->EachBindings = MoveTemp(EachBindings);
 
 	// Last, with the new hierarchy in place: `(was: OldId)` moves what the OLD name still owns onto
 	// the new one. See MigrateRenamedWidgets for why after the install and not before.
-	MigrateRenamedWidgets(Ast, ResolvedPath);
+	MigrateRenamedWidgets(Ast, ResolvedPath, OutDiagnostics);
 }
 
 void FDreamWidgetBlueprintCompilerContext::ReportTextDiagnostics(const FDreamUIDiagnosticBag& InDiagnostics)
@@ -291,12 +543,12 @@ namespace DreamWidgetRenameMigrationLocal
 	/** "Login.dui(12,5): " -- the prefix that makes a message log line something a reader can jump from. */
 	FString SourcePrefix(const FString& InSourceName, const FDreamUISourceLocation& InLocation)
 	{
-		// Hand-built rather than routed through FDreamUIDiagnostic::ToString, and only because these
-		// messages have no DUInnnn to print yet: the code table lives in a header this change is not
-		// allowed to touch, so the two conflict errors and the two notes below are plain compiler
-		// messages for now. They want codes (see the note above MigrateRenamedWidgets); the FILE and
-		// LINE are the half that has to be right today, because that is the whole argument for a
-		// text pipeline over a binary one.
+		// Hand-built rather than routed through FDreamUIDiagnostic::ToString, and now only for the
+		// NOTES: the three conflict errors and the graph refusal have taken their DUInnnn codes
+		// (3010-3013) and go through the bag, which prints this same layout and also reaches the
+		// mailbox. A note has no severity the bag can carry and no code the table wants to spend, so
+		// it keeps the hand-built prefix -- the FILE and LINE are the half that has to be right,
+		// because that is the whole argument for a text pipeline over a binary one.
 		FString Prefix = InSourceName;
 		if (InLocation.IsValid())
 		{
@@ -314,7 +566,7 @@ namespace DreamWidgetRenameMigrationLocal
 	 * they are in the localization archive next to it. All the compiler can do is say so at the one
 	 * moment the author is looking at the rename.
 	 */
-	bool HasIdDerivedLocalizationKey(const FDreamUINode& InNode)
+	bool HasIdDerivedLocalizationKey(const FDreamUINode& InNode, const FDreamUIAst& InAst)
 	{
 		auto AnyUnkeyedString = [](const TArray<FDreamUIProperty>& InProperties)
 		{
@@ -340,6 +592,21 @@ namespace DreamWidgetRenameMigrationLocal
 			{
 				return true;
 			}
+		}
+		// A string can also reach the node THROUGH the style it wears -- the builder keys those by
+		// this node's id exactly the same way, so a rename orphans them exactly the same way. The
+		// walk mirrors the builder's chain (base upward, cycle-guarded); a broken chain just stops,
+		// because the builder already reported it and this predicate only decides whether to hint.
+		const FDreamUIStyle* Style = InNode.StyleName.IsEmpty() ? nullptr : InAst.FindStyle(InNode.StyleName);
+		TSet<const FDreamUIStyle*> Visited;
+		while (Style != nullptr && !Visited.Contains(Style))
+		{
+			Visited.Add(Style);
+			if (AnyUnkeyedString(Style->Properties))
+			{
+				return true;
+			}
+			Style = Style->BaseName.IsEmpty() ? nullptr : InAst.FindStyle(Style->BaseName);
 		}
 		return false;
 	}
@@ -555,10 +822,40 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 		}
 	}
 
+	// --- 4. Standalone sequence assets authored against this class. --------------------------
+	//
+	// The fourth identity, and the fourth silent channel: a UDreamUISequence lives in its own
+	// package, binds widgets by the same '/'-joined display names, and the class compile cannot
+	// otherwise see it. PreviewWidgetClass is what makes the reach SAFE -- the sequence itself says
+	// which class it is authored against, so this never blind-renames a segment in some other UI's
+	// sequence that happens to reuse the id. Loaded sequences only: loading packages mid-compile is
+	// its own hazard, and the unloaded ones get named in a warning by the caller instead.
+	{
+		for (TObjectIterator<UDreamUISequence> It; It; ++It)
+		{
+			UDreamUISequence* Sequence = *It;
+			if (!IsValid(Sequence) || Sequence->PreviewWidgetClass.IsNull())
+			{
+				continue;
+			}
+			const UClass* SequenceClass = Sequence->PreviewWidgetClass.Get();
+			const bool bMatches =
+				(SequenceClass != nullptr
+					&& (SequenceClass == InBlueprint->GeneratedClass || SequenceClass == InBlueprint->SkeletonGeneratedClass))
+				|| (InBlueprint->GeneratedClass != nullptr
+					&& Sequence->PreviewWidgetClass.ToSoftObjectPath() == FSoftObjectPath(InBlueprint->GeneratedClass));
+			if (bMatches)
+			{
+				Result.ExternalSequenceBindings += Sequence->RenameWidgetPathSegments(InOldId, InNewId);
+			}
+		}
+	}
+
 	return Result;
 }
 
-void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIAst& InAst, const FString& InSourceName)
+void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIAst& InAst, const FString& InSourceName,
+	FDreamUIDiagnosticBag& OutDiagnostics)
 {
 	using namespace DreamWidgetRenameMigrationLocal;
 
@@ -589,7 +886,15 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 	TMap<FString, FDreamUISourceLocation> ClaimedOldIds;
 	bool bFileContradictsItself = false;
 
-	InAst.ForEachNode([this, &InSourceName, &LiveIds, &Renames, &ClaimedOldIds, &bFileContradictsItself](const FDreamUINode& Node)
+	// Raised into the BAG rather than straight onto the message log, which is what makes them
+	// reachable to anyone but this window. DUI3010-3013 were declared with the rest of the table and
+	// had no raise site anywhere in the plugin: these three refusals and the graph one below were
+	// bare MessageLog calls, so the mailbox the VSCode extension reads carried only the parser's and
+	// the builder's verdicts and said a file was CLEAN while the compile it came from had failed.
+	// The prefix comes off with them -- FDreamUIDiagnostic::ToString builds the same
+	// "file(line,col): severity CODE: " layout, and ReportTextDiagnostics prints every one of these
+	// a few lines after this function returns.
+	InAst.ForEachNode([&LiveIds, &Renames, &ClaimedOldIds, &bFileContradictsItself, &OutDiagnostics](const FDreamUINode& Node)
 	{
 		if (Node.WasId.IsEmpty())
 		{
@@ -598,9 +903,9 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 
 		if (Node.Id.Equals(Node.WasId, ESearchCase::IgnoreCase))
 		{
-			MessageLog.Error(*FString::Printf(
-				TEXT("%s\"%s\" names itself as its own old id. A rename clause says what a node USED to be called, so a node that was already called this has nothing to migrate; delete the '(was: %s)'."),
-				*SourcePrefix(InSourceName, Node.Location), *Node.Id, *Node.WasId));
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::SelfRename, Node.Location, FString::Printf(
+				TEXT("\"%s\" names itself as its own old id. A rename clause says what a node USED to be called, so a node that was already called this has nothing to migrate; delete the '(was: %s)'."),
+				*Node.Id, *Node.WasId));
 			bFileContradictsItself = true;
 			return;
 		}
@@ -612,18 +917,18 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 			// every reference would move OFF the node that still legitimately carries that name.
 			// The author has renamed one node and created another with the old name in one edit, and
 			// only they know which of the two their graph meant.
-			MessageLog.Error(*FString::Printf(
-				TEXT("%s\"%s\" says it was called \"%s\", but a node on line %d is still called that. Rename that one first, or drop the '(was: %s)' -- with both names in the file there is no way to tell which node a reference to \"%s\" meant."),
-				*SourcePrefix(InSourceName, Node.Location), *Node.Id, *Node.WasId, Live->Line, *Node.WasId, *Node.WasId));
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::RenameOldIdStillInUse, Node.Location, FString::Printf(
+				TEXT("\"%s\" says it was called \"%s\", but a node on line %d is still called that. Rename that one first, or drop the '(was: %s)' -- with both names in the file there is no way to tell which node a reference to \"%s\" meant."),
+				*Node.Id, *Node.WasId, Live->Line, *Node.WasId, *Node.WasId));
 			bFileContradictsItself = true;
 			return;
 		}
 
 		if (const FDreamUISourceLocation* First = ClaimedOldIds.Find(Node.WasId))
 		{
-			MessageLog.Error(*FString::Printf(
-				TEXT("%s\"%s\" says it was called \"%s\", and so does the node on line %d. One old name cannot become two new ones; keep the clause on whichever node inherits the references and delete the other."),
-				*SourcePrefix(InSourceName, Node.Location), *Node.Id, *Node.WasId, First->Line));
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::DuplicateWasId, Node.Location, FString::Printf(
+				TEXT("\"%s\" says it was called \"%s\", and so does the node on line %d. One old name cannot become two new ones; keep the clause on whichever node inherits the references and delete the other."),
+				*Node.Id, *Node.WasId, First->Line));
 			bFileContradictsItself = true;
 			return;
 		}
@@ -658,15 +963,25 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 			// author gets to decide whether the collision is a mistake or a name they meant to reuse.
 			// Failing the compile here would block a build over a graph that may not reference the
 			// name at all.
-			MessageLog.Warning(*FString::Printf(
-				TEXT("%s\"%s\" could not take the graph references from \"%s\": %s. Repoint them by hand, or rename the other one."),
-				*SourcePrefix(InSourceName, Node->Location), *Node->Id, *Node->WasId, *Migration.GraphRefusal));
+			OutDiagnostics.AddWarning(EDreamUIDiagnosticCode::RenameGraphReferenceAmbiguous, Node->Location, FString::Printf(
+				TEXT("\"%s\" could not take the graph references from \"%s\": %s. Repoint them by hand, or rename the other one."),
+				*Node->Id, *Node->WasId, *Migration.GraphRefusal));
 		}
 
 		// The localization key moved with the id and cannot be brought along: the translations live
 		// in the localization archive, not in this asset. Said only when the node actually has a
 		// string the builder would key, so an ordinary rename does not carry a paragraph about it.
-		const FString LocalizationHint = HasIdDerivedLocalizationKey(*Node)
+		// A rename that re-keys localized strings deserves a WARNING of its own, not just the note's
+		// appended sentence: notes are the first thing filtered out of a compile log, and orphaned
+		// translations surface weeks later as English text in a shipped build.
+		if (HasIdDerivedLocalizationKey(*Node, InAst))
+		{
+			MessageLog.Warning(*FString::Printf(
+				TEXT("%sRenaming \"%s\" -> \"%s\" re-keys its localized strings (styles it wears included): translations recorded against \"%s.<property>\" are orphaned unless @key(\"%s.<property>\") pins them."),
+				*SourcePrefix(InSourceName, Node->Location), *Node->WasId, *Node->Id, *Node->WasId, *Node->WasId));
+		}
+
+		const FString LocalizationHint = HasIdDerivedLocalizationKey(*Node, InAst)
 			? FString::Printf(
 				TEXT(" Its localized strings are keyed by id, so translations recorded against \"%s.<property>\" are NOT carried over -- write @key(\"%s.<property>\") on those lines to keep them."),
 				*Node->WasId, *Node->WasId)
@@ -675,10 +990,16 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 		if (Migration.Total() > 0)
 		{
 			MessageLog.Note(*FString::Printf(
-				TEXT("%s\"%s\" took over from \"%s\": %d graph reference(s), %d property binding(s), %d animation path(s). That is done and recorded on the asset, so the '(was: %s)' line has served its purpose and can be deleted.%s"),
+				TEXT("%s\"%s\" took over from \"%s\": %d graph reference(s), %d property binding(s), %d animation path(s), %d sequence-asset binding(s). That is done and recorded on the asset, so the '(was: %s)' line has served its purpose and can be deleted.%s"),
 				*SourcePrefix(InSourceName, Node->Location), *Node->Id, *Node->WasId,
-				Migration.GraphReferences, Migration.PropertyBindings, Migration.AnimationBindings,
+				Migration.GraphReferences, Migration.PropertyBindings, Migration.AnimationBindings, Migration.ExternalSequenceBindings,
 				*Node->WasId, *LocalizationHint));
+			if (Migration.ExternalSequenceBindings > 0)
+			{
+				MessageLog.Warning(*FString::Printf(
+					TEXT("%sThe rename \"%s\" -> \"%s\" rewrote %d binding(s) in loaded sequence ASSETS. Those assets are dirty and unsaved -- save them, or the migration exists only in memory."),
+					*SourcePrefix(InSourceName, Node->Location), *Node->WasId, *Node->Id, Migration.ExternalSequenceBindings));
+			}
 		}
 		else
 		{
@@ -690,6 +1011,44 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 				TEXT("%s\"%s\" found nothing still named \"%s\", so this rename has already been applied. The '(was: %s)' line can be deleted.%s"),
 				*SourcePrefix(InSourceName, Node->Location), *Node->Id, *Node->WasId, *Node->WasId,
 				*LocalizationHint));
+		}
+	}
+
+	// Sequence assets that reference this Blueprint but are NOT loaded could not take the hop --
+	// leg 4 deliberately touches loaded objects only. Name them once, so "the map's sequence broke a
+	// week after the rename" becomes "the compile told me which assets to open" instead. A registry
+	// that is still scanning stays silent rather than crying wolf.
+	{
+		IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+		if (AssetRegistry != nullptr && !AssetRegistry->IsLoadingAssets())
+		{
+			TArray<FName> Referencers;
+			AssetRegistry->GetReferencers(DreamBlueprint->GetOutermost()->GetFName(), Referencers, UE::AssetRegistry::EDependencyCategory::Package);
+			TArray<FString> UnmigratedSequencePackages;
+			for (const FName Referencer : Referencers)
+			{
+				if (FindPackage(nullptr, *Referencer.ToString()) != nullptr)
+				{
+					// Loaded: leg 4 already reached it through the object iterator.
+					continue;
+				}
+				TArray<FAssetData> Assets;
+				AssetRegistry->GetAssetsByPackageName(Referencer, Assets);
+				for (const FAssetData& Asset : Assets)
+				{
+					if (Asset.AssetClassPath == UDreamUISequence::StaticClass()->GetClassPathName())
+					{
+						UnmigratedSequencePackages.Add(Referencer.ToString());
+						break;
+					}
+				}
+			}
+			if (UnmigratedSequencePackages.Num() > 0)
+			{
+				MessageLog.Warning(*FString::Printf(
+					TEXT("%d unloaded sequence asset(s) reference this class and did NOT take the rename hop: %s. Open them and recompile this Blueprint while the '(was:)' line is still in the file."),
+					UnmigratedSequencePackages.Num(), *FString::Join(UnmigratedSequencePackages, TEXT(", "))));
+			}
 		}
 	}
 }
@@ -709,7 +1068,9 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 	// first -- a .dui is usually written whole, by a model, and five round trips for five typos is
 	// what that design avoids -- and a MessageLog call at each site is how somebody eventually puts a
 	// `return` next to one and quietly restores the early exit.
-	FDreamUIDiagnosticBag TextDiagnostics;
+	// The member, not a local: FinishCompilingClass adds to this same bag half a compile later and
+	// re-deposits it. See FDreamWidgetBlueprintCompilerContext::TextDiagnostics.
+	TextDiagnostics.Reset();
 	BuildWidgetTreeFromTextSource(TextDiagnostics);
 	ReportTextDiagnostics(TextDiagnostics);
 	// The same bag, delivered to editors that are not this one. A clean compile deposits an empty
@@ -735,10 +1096,13 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 			}
 			// Two widgets sharing a display name would silently collapse into one variable, and which
 			// widget it ends up bound to would depend on tree order. Name it instead of picking.
+			// It costs more than a variable, too: an animation binding addresses a widget by its
+			// display-name path, so two SIBLINGS under one name make every track through them
+			// ambiguous and the first one found wins there as well.
 			if (DeclaredNames.Contains(VariableName))
 			{
 				MessageLog.Warning(*FText::Format(
-					LOCTEXT("DuplicateWidgetVariableName", "More than one widget is named \"{0}\"; only the first is exposed as a variable. Rename one of them."),
+					LOCTEXT("DuplicateWidgetVariableName", "More than one widget is named \"{0}\"; only the first is exposed as a variable, and an animation bound to that name under the same parent would drive the first one too. Rename one of them."),
 					FText::FromName(VariableName)).ToString());
 				continue;
 			}
@@ -767,12 +1131,162 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 			WidgetVariable.VarType = FEdGraphPinType(UEdGraphSchema_K2::PC_Object, NAME_None, WidgetClass, EPinContainerType::None, false, FEdGraphTerminalType());
 			WidgetVariable.FriendlyName = Widget->GetDisplayName();
 			WidgetVariable.PropertyFlags = (CPF_BlueprintVisible | CPF_BlueprintReadOnly | CPF_RepSkip | CPF_Transient | CPF_DuplicateTransient);
-			WidgetVariable.SetMetaData(TEXT("Category"), *DreamBlueprint->GetName());
+			// One category for the whole family, not one named after the asset. Every variable in
+			// here was generated from a widget rather than declared by the author, and that is the
+			// distinction the panel should draw -- an asset-named category puts a heading above a
+			// list whose every member belongs to that asset anyway, and pushes the author's own
+			// variables into "Default" beside it. UMG groups bound widgets the same way.
+			WidgetVariable.SetMetaData(TEXT("Category"), TEXT("Widget"));
 
 			DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(WidgetVariable));
 		}
 
-		// One class variable per `resources` entry, which is what makes the block editable from the
+		// One member variable per authored animation, the way UMG exposes UWidgetAnimations: the
+		// graph drags the animation in and hands it to Play Animation, instead of addressing it by
+		// a display-name string that silently goes stale on rename. The runtime binds the INSTANCED
+		// animation to this property by the same shared name rule (see
+		// UDreamWidgetGeneratedClass' initialization), because playing the archetype's copy would
+		// animate a tree nobody is looking at.
+		//
+		// Written as a pair of lambdas rather than one loop, because the same declaration has to
+		// happen for animations reached three different ways, and every one of them is an animation
+		// the graph should be able to drag in: the embedded animations of a component on a widget in
+		// the tree, the standalone sequence ASSETS the same component references, and the components
+		// of the class's own defaults -- an animation component may sit on the user widget itself,
+		// which is not part of the widget tree at all and which SourceWidgets therefore never lists.
+		TSet<FName> DeclaredAnimationNames;
+		auto DeclareAnimationVariable = [&](UClass* AnimationClass, const FName VariableName, const FString& FriendlyName)
+		{
+			if (VariableName.IsNone())
+			{
+				return;
+			}
+			if (DeclaredNames.Contains(VariableName))
+			{
+				MessageLog.Warning(*FText::Format(
+					LOCTEXT("DuplicateAnimationVariableName", "\"{0}\" already names a widget or another animation; only the first is exposed as a variable. Rename one of them."),
+					FText::FromName(VariableName)).ToString());
+				return;
+			}
+			DeclaredNames.Add(VariableName);
+			// Recorded before the parent-class check below skips the declaration, because a parent that
+			// already declares this name is exactly the BindWidgetAnim case: the animation IS here, and
+			// the validation further down asks this set whether the promise was kept.
+			DeclaredAnimationNames.Add(VariableName);
+
+			if (Blueprint->ParentClass != nullptr && Blueprint->ParentClass->FindPropertyByName(VariableName) != nullptr)
+			{
+				return;
+			}
+
+			FBPVariableDescription AnimationVariable;
+			AnimationVariable.VarName = VariableName;
+			AnimationVariable.VarGuid = FGuid::NewDeterministicGuid(VariableName.ToString());
+			AnimationVariable.VarType = FEdGraphPinType(UEdGraphSchema_K2::PC_Object, NAME_None, AnimationClass, EPinContainerType::None, false, FEdGraphTerminalType());
+			AnimationVariable.FriendlyName = FriendlyName;
+			AnimationVariable.PropertyFlags = (CPF_BlueprintVisible | CPF_BlueprintReadOnly | CPF_RepSkip | CPF_Transient | CPF_DuplicateTransient);
+			// Its own family, split from "Widget" the way UMG splits them: what the panel is
+			// telling the author is which generated handles animate rather than lay out.
+			AnimationVariable.SetMetaData(TEXT("Category"), TEXT("Animations"));
+
+			DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(AnimationVariable));
+		};
+		auto DeclareAnimationVariablesOn = [&](const UDreamWidget* Widget)
+		{
+			if (!IsValid(Widget))
+			{
+				return;
+			}
+			for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+			{
+				UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
+				if (Animator == nullptr)
+				{
+					continue;
+				}
+				for (UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
+				{
+					if (IsValid(Animation))
+					{
+						DeclareAnimationVariable(UDreamWidgetAnimation::StaticClass(),
+							UDreamWidgetTree::MakeAnimationVariableName(Animation), Animation->GetDisplayNameString());
+					}
+				}
+				// A standalone sequence asset is addressed by its ASSET name -- the name
+				// PlayAnimationByDisplayName falls back to, and the only name an asset has. Renaming the
+				// asset changes the variable, exactly as renaming a widget does; that is the same
+				// contract the rest of this function is built on rather than a new one.
+				for (const TObjectPtr<UDreamUISequence>& Asset : Animator->GetSequenceAssets())
+				{
+					if (IsValid(Asset))
+					{
+						DeclareAnimationVariable(UDreamUISequence::StaticClass(),
+							FName(*UDreamWidgetTree::SanitizeIdentifier(Asset->GetName())), Asset->GetName());
+					}
+				}
+			}
+		};
+		for (const UDreamWidget* Widget : SourceWidgets)
+		{
+			DeclareAnimationVariablesOn(Widget);
+		}
+		{
+			// The class's own defaults: where a component placed on the user widget itself lives at
+			// authoring time. The class being compiled if its defaults are up (they are, until the
+			// CDO is regenerated much later in the compile), otherwise the parent's, which is where a
+			// native base class's components sit.
+			const UDreamWidget* ClassDefaultsWidget = nullptr;
+			if (Blueprint->GeneratedClass != nullptr)
+			{
+				ClassDefaultsWidget = Cast<UDreamWidget>(Blueprint->GeneratedClass->GetDefaultObject(/*bCreateIfNeeded*/false));
+			}
+			if (ClassDefaultsWidget == nullptr && Blueprint->ParentClass != nullptr)
+			{
+				ClassDefaultsWidget = Cast<UDreamWidget>(Blueprint->ParentClass->GetDefaultObject(/*bCreateIfNeeded*/false));
+			}
+			DeclareAnimationVariablesOn(ClassDefaultsWidget);
+		}
+
+		// meta=(BindDreamWidgetAnim), the animation half of the widget-binding claim that
+		// ValidateWidgetBindings checks (and spelled this framework's way for the same reason: see
+		// UDreamWidgetGeneratedClass::BindWidgetMetaName). A property a parent class declares with
+		// that tag is a CONTRACT: the class's own code plays that animation and expects the subclass
+		// to author one under that name. Nothing could check it before -- the declaration loop above
+		// simply skips a name the parent already declares, whether or not an animation answers to it
+		// -- so the class ran with a null and the author found out at play time. Checked here rather
+		// than beside ValidateWidgetBindings because this is where the set of animation names exists:
+		// it includes the ones on the class's own defaults, which no widget tree contains.
+		//
+		// Not on a hierarchy that has nothing authored in it yet, which is the same exemption
+		// ValidateWidgetBindings makes for the same reason: a Blueprint is COMPILED the moment it is
+		// created, before its author has put anything in it, and reporting every claim the parent
+		// class makes as broken at that moment is noise in front of an empty asset.
+		if (Blueprint->ParentClass != nullptr && SourceWidgets.Num() > 0)
+		{
+			for (TFieldIterator<FObjectPropertyBase> PropertyIt(Blueprint->ParentClass, EFieldIterationFlags::IncludeSuper); PropertyIt; ++PropertyIt)
+			{
+				const bool bRequired = PropertyIt->HasMetaData(UDreamWidgetGeneratedClass::BindWidgetAnimMetaName);
+				if (!bRequired && !PropertyIt->HasMetaData(UDreamWidgetGeneratedClass::BindWidgetAnimOptionalMetaName))
+				{
+					continue;
+				}
+				if (PropertyIt->PropertyClass == nullptr || !PropertyIt->PropertyClass->IsChildOf(UMovieSceneSequence::StaticClass()))
+				{
+					MessageLog.Error(*FText::Format(
+						LOCTEXT("BindWidgetAnimWrongType", "\"{0}\" is declared meta=(BindDreamWidgetAnim) but cannot hold an animation; only an animation-typed property can be bound to one."),
+						FText::FromName(PropertyIt->GetFName())).ToString());
+					continue;
+				}
+				if (bRequired && !DeclaredAnimationNames.Contains(PropertyIt->GetFName()))
+				{
+					MessageLog.Error(*FText::Format(
+						LOCTEXT("BindWidgetAnimMissing", "\"{0}\" is declared meta=(BindDreamWidgetAnim), so this hierarchy must contain an animation named \"{0}\", and it has none. Rename an animation to match, drop the specifier, or mark it BindDreamWidgetAnimOptional."),
+						FText::FromName(PropertyIt->GetFName())).ToString());
+				}
+			}
+		}
+
+				// One class variable per `resources` entry, which is what makes the block editable from the
 		// Class Defaults panel and readable from the graph. DefaultValue is rebuilt from the file on
 		// EVERY compile and the compiler applies it onto the final CDO after the old CDO's values
 		// have been copied over -- so the FILE wins each compile, by construction. A panel edit is
@@ -861,10 +1375,84 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 	}
 }
 
+namespace DreamWidgetAuthoredHierarchy
+{
+	/**
+	 * Whether a tree is the placeholder the editor puts in every asset, rather than an authored one.
+	 *
+	 * UDreamWidgetBlueprint::GetOrCreateWidgetTree(bEnsureRootWidget = true) runs when an asset is
+	 * created AND every time a designer opens one, and it makes a tree holding one bare widget named
+	 * "Root". Nothing about that says the author declared a hierarchy -- it exists so a fresh asset
+	 * has something to drop onto.
+	 *
+	 * Anything at all on the root makes it authored: a child, a visual, a layout, a behaviour. The
+	 * root's own name and geometry are deliberately NOT part of the test, because opening a designer
+	 * is allowed to rename or place the placeholder without that meaning the author declared one.
+	 */
+	bool IsUnauthoredPlaceholder(const UDreamWidgetTree* InTree)
+	{
+		if (!IsValid(InTree))
+		{
+			return true;
+		}
+		const UDreamWidget* Root = InTree->RootWidget.Get();
+		if (!IsValid(Root))
+		{
+			return true;
+		}
+		return Root->GetChildrenCount() == 0
+			&& Root->GetVisual() == nullptr
+			&& Root->GetLayoutContainer() == nullptr
+			&& Root->GetLayoutSelf() == nullptr
+			&& Root->GetAllComponents().Num() == 0;
+	}
+
+	/**
+	 * The hierarchy this class actually gets -- its own when it declares one, its parent's when it
+	 * does not.
+	 *
+	 * One function, because the compiler used to answer this question in two places and disagree.
+	 * The binding stages asked only "does this Blueprint have a WidgetTree object", which after
+	 * GetOrCreateWidgetTree is always yes; ValidateWidgetBindings walked the parent chain. So a
+	 * subclass that only adds logic had its bindings validated against the parent's widgets and
+	 * compiled against an empty placeholder, which is the rule UDreamWidgetGeneratedClass::
+	 * FindWidgetTreeArchetype states at runtime.
+	 */
+	UDreamWidgetTree* ResolveAuthoringArchetype(const UDreamWidgetBlueprint* InBlueprint, const UClass* InClass)
+	{
+		if (InBlueprint != nullptr && !IsUnauthoredPlaceholder(InBlueprint->WidgetTree))
+		{
+			return InBlueprint->WidgetTree;
+		}
+		return InClass != nullptr
+			? UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(InClass->GetSuperClass())
+			: nullptr;
+	}
+}
+
 void FDreamWidgetBlueprintCompilerContext::UpdateGeneratedClassWidgetTree(UDreamWidgetBlueprint* InBlueprint, UDreamWidgetGeneratedClass* InClass)
 {
 	if (!IsValid(InBlueprint->WidgetTree))
 	{
+		return;
+	}
+
+	// A subclass that authored NOTHING must not shadow its parent's hierarchy.
+	//
+	// The runtime already decided what such a subclass means: FindWidgetTreeArchetype walks up until
+	// it finds a class that declares a tree, and DreamGUI.UserWidget.ASubclassWithNoTemplateInstancesItsParents
+	// pins it. The editor made that state unreachable -- the placeholder tree above is created on
+	// asset creation AND on every designer open -- so every subclass owned a tree holding one bare
+	// "Root", this function made it the class's archetype, and the subclass instantiated as an empty
+	// screen with every binding the PARENT declared silently failing to resolve against it.
+	//
+	// Declare nothing and inherit; put anything in the tree and it overrides, whole. That is the one
+	// rule, and it is now the same rule in the editor and at runtime.
+	if (DreamWidgetAuthoredHierarchy::IsUnauthoredPlaceholder(InBlueprint->WidgetTree)
+		&& UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(InClass->GetSuperClass()) != nullptr)
+	{
+		InClass->SetWidgetTreeArchetype(nullptr);
+		OldWidgetTree = nullptr;
 		return;
 	}
 
@@ -899,8 +1487,31 @@ void FDreamWidgetBlueprintCompilerContext::UpdateGeneratedClassWidgetTree(UDream
 	OldWidgetTree = nullptr;
 }
 
+namespace DreamWidgetBindingDiagnostics
+{
+	/**
+	 * The .dui position a binding recorded when the builder made it, or nothing when it came from
+	 * somewhere with no text behind it (the designer's Bind button, a hand-built struct).
+	 *
+	 * A template over the two binding structs rather than a shared base: they are USTRUCTs whose
+	 * layouts are serialized into assets, and inventing a base to share two ints would change both
+	 * on disk to save four lines here.
+	 */
+	template <typename BindingType>
+	FDreamUISourceLocation AuthoredLocation(const BindingType& InBinding)
+	{
+#if WITH_EDITORONLY_DATA
+		return FDreamUISourceLocation(InBinding.SourceLine, InBinding.SourceColumn);
+#else
+		return FDreamUISourceLocation();
+#endif
+	}
+}
+
 void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InClass)
 {
+	using DreamWidgetBindingDiagnostics::AuthoredLocation;
+
 	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
 	UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(InClass);
 	if (DreamBlueprint == nullptr || GeneratedClass == nullptr)
@@ -913,7 +1524,16 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		return;
 	}
 
-	UDreamWidgetTree* Archetype = IsValid(DreamBlueprint->WidgetTree) ? DreamBlueprint->WidgetTree : nullptr;
+	// Counted so the mailbox is only rewritten when this stage actually had something to say. Every
+	// diagnostic raised below is one the earlier deposit could not have carried: the class that
+	// declares these functions did not exist when the file was read.
+	const int32 TextDiagnosticsBefore = TextDiagnostics.Diagnostics.Num();
+
+	// The hierarchy this class will actually get, parent chain included -- the same answer
+	// ValidateWidgetBindings gives. Asking only about this Blueprint's own WidgetTree reported every
+	// binding a logic-only subclass inherited as "this hierarchy has none", against a placeholder
+	// tree that is not a hierarchy at all.
+	UDreamWidgetTree* Archetype = DreamWidgetAuthoredHierarchy::ResolveAuthoringArchetype(DreamBlueprint, InClass);
 	TArray<FDreamWidgetPropertyBinding> Resolved;
 	for (const FDreamWidgetPropertyBinding& Authored : DreamBlueprint->PropertyBindings)
 	{
@@ -955,19 +1575,40 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		UFunction* SourceFunction = InClass->FindFunctionByName(Authored.FunctionName);
 		if (SourceFunction == nullptr)
 		{
+			// Into the bag as well as the log, and this is the whole of DUI5004's compile-stage half:
+			// the builder writes a binding's function name down without checking it, because the
+			// class that would declare it is the one this compile is building. Reported only here
+			// meant the mailbox said the file was clean while the compile that produced it failed.
+			// The line comes off the binding: this stage has no AST, so the position the builder
+			// copied onto the record is the only one there will ever be.
 			MessageLog.Error(*FText::Format(
 				LOCTEXT("BindingFunctionNotFound", "The binding on \"{0}.{1}\" calls \"{2}\", and this Blueprint has no such function."),
 				FText::FromName(Authored.WidgetName), FText::FromName(Authored.PropertyName),
 				FText::FromName(Authored.FunctionName)).ToString());
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, AuthoredLocation(Authored),
+				FString::Printf(TEXT("the binding on '%s.%s' calls '%s', and this Blueprint has no such function"),
+					*Authored.WidgetName.ToString(), *Authored.PropertyName.ToString(), *Authored.FunctionName.ToString()));
 			continue;
 		}
 		const FProperty* ReturnProperty = SourceFunction->GetReturnProperty();
-		if (SourceFunction->NumParms != 1 || ReturnProperty == nullptr || !ReturnProperty->SameType(TargetProperty))
+		// CanDreamWidgetBoundValueConvert, not SameType: two plain numeric types bind whatever their
+		// width. The strict comparison refused a project's own `double`, `int64` or `uint8` property
+		// outright -- and since `<-` lowers into a thunk whose real return is narrowed to float (K2
+		// computes reals in double, every bindable real here is a float), that was most of them. The
+		// runtime converts through the same pair of functions, so nothing accepted here is copied by
+		// a memcpy that would read the wrong width.
+		if (SourceFunction->NumParms != 1 || ReturnProperty == nullptr
+			|| !CanDreamWidgetBoundValueConvert(ReturnProperty, TargetProperty))
 		{
 			MessageLog.Error(*FText::Format(
 				LOCTEXT("BindingFunctionWrongShape", "\"{0}\" has to take no arguments and return the type of \"{1}.{2}\" to bind to it."),
 				FText::FromName(Authored.FunctionName), FText::FromName(Authored.WidgetName),
 				FText::FromName(Authored.PropertyName)).ToString());
+			// The same code as the missing one, because 5004 covers both by design ("a function the
+			// class does not declare, OR that takes parameters") and the reader's move is identical.
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, AuthoredLocation(Authored),
+				FString::Printf(TEXT("'%s' has to take no arguments and return the type of '%s.%s' to bind to it"),
+					*Authored.FunctionName.ToString(), *Authored.WidgetName.ToString(), *Authored.PropertyName.ToString()));
 			continue;
 		}
 
@@ -978,6 +1619,19 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		Entry.PropertyName = Authored.PropertyName;
 		Entry.FunctionName = Authored.FunctionName;
 		Entry.SetterName = Setter->GetFName();
+		Entry.NotifyField = Authored.NotifyField;
+		if (!Authored.NotifyField.IsNone())
+		{
+			// The forward half of a `<->` pushes through the silent setter when there is one: the
+			// full setter fires the control's changed event, which is the reverse route, which
+			// writes the variable this push just read -- the echo dies here, not in a hope that
+			// every control early-outs on an equal value.
+			const FName SilentSetterName(*(Setter->GetFName().ToString() + TEXT("WithoutNotify")));
+			if (Target->GetClass()->FindFunctionByName(SilentSetterName) != nullptr)
+			{
+				Entry.SetterName = SilentSetterName;
+			}
+		}
 	}
 	GeneratedClass->SetPropertyBindings(MoveTemp(Resolved));
 
@@ -997,9 +1651,19 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 			continue;
 		}
 		const UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Authored.Target, Authored.BehaviourIndex);
-		const FMulticastDelegateProperty* Event = Target != nullptr
-			? CastField<FMulticastDelegateProperty>(Target->GetClass()->FindPropertyByName(Authored.EventName)) : nullptr;
-		if (Event == nullptr)
+		const FProperty* EventProperty = Target != nullptr ? Target->GetClass()->FindPropertyByName(Authored.EventName) : nullptr;
+		// The plugin has two kinds of event property and a route may name either. `Controls/*` declares
+		// BlueprintAssignable multicast delegates; the older `Interaction/*` behaviours declare
+		// FDreamUIEventDelegate structs, and a route onto one of those used to be rejected here -- so
+		// that whole family had no canonical way to be handled and the per-instance legacy list was
+		// the only option. No new syntax: `OnClick -> Confirm` always parsed, it just never compiled.
+		const FStructProperty* StructEvent = CastField<FStructProperty>(EventProperty);
+		if (StructEvent != nullptr && StructEvent->Struct != FDreamUIEventDelegate::StaticStruct())
+		{
+			StructEvent = nullptr;
+		}
+		const FMulticastDelegateProperty* Event = CastField<FMulticastDelegateProperty>(EventProperty);
+		if (Event == nullptr && StructEvent == nullptr)
 		{
 			MessageLog.Error(*FText::Format(
 				LOCTEXT("EventNotOnTarget", "\"{0}\" has no event named \"{1}\" to route."),
@@ -1013,6 +1677,30 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				LOCTEXT("EventHandlerNotFound", "\"{0}.{1}\" routes to \"{2}\", and this Blueprint has no such function."),
 				FText::FromName(Authored.WidgetName), FText::FromName(Authored.EventName),
 				FText::FromName(Authored.FunctionName)).ToString());
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EventHandlerNotFound, AuthoredLocation(Authored),
+				FString::Printf(TEXT("'%s.%s' routes to '%s', and this Blueprint has no such function"),
+					*Authored.WidgetName.ToString(), *Authored.EventName.ToString(), *Authored.FunctionName.ToString()));
+			continue;
+		}
+		if (StructEvent != nullptr)
+		{
+			// The struct's own shape test: an FDreamUIEventDelegate declares the single value it fires
+			// with, and IsStillSupported is the same question the runtime asks before it calls.
+			const FDreamUIEventDelegate* EventValue = StructEvent->ContainerPtrToValuePtr<FDreamUIEventDelegate>(Target);
+			const EDreamUIEventDelegateParameterType NativeParameterType = EventValue != nullptr
+				? EventValue->GetNativeParameterType() : EDreamUIEventDelegateParameterType::None;
+			if (!UDreamUIEventDelegateParameterHelper::IsStillSupported(const_cast<UFunction*>(Handler), NativeParameterType))
+			{
+				MessageLog.Error(*FText::Format(
+					LOCTEXT("EventHandlerWrongShape", "\"{0}\" cannot handle \"{1}.{2}\": its parameters do not match the event's."),
+					FText::FromName(Authored.FunctionName), FText::FromName(Authored.WidgetName),
+					FText::FromName(Authored.EventName)).ToString());
+				TextDiagnostics.AddError(EDreamUIDiagnosticCode::EventHandlerSignatureMismatch, AuthoredLocation(Authored),
+					FString::Printf(TEXT("'%s' cannot handle '%s.%s': its parameters do not match the event's"),
+						*Authored.FunctionName.ToString(), *Authored.WidgetName.ToString(), *Authored.EventName.ToString()));
+				continue;
+			}
+			ResolvedEvents.Add(Authored);
 			continue;
 		}
 		if (Event->SignatureFunction != nullptr && !Handler->IsSignatureCompatibleWith(Event->SignatureFunction))
@@ -1021,11 +1709,91 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				LOCTEXT("EventHandlerWrongShape", "\"{0}\" cannot handle \"{1}.{2}\": its parameters do not match the event's."),
 				FText::FromName(Authored.FunctionName), FText::FromName(Authored.WidgetName),
 				FText::FromName(Authored.EventName)).ToString());
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EventHandlerSignatureMismatch, AuthoredLocation(Authored),
+				FString::Printf(TEXT("'%s' cannot handle '%s.%s': its parameters do not match the event's"),
+					*Authored.FunctionName.ToString(), *Authored.WidgetName.ToString(), *Authored.EventName.ToString()));
 			continue;
 		}
 		ResolvedEvents.Add(Authored);
 	}
 	GeneratedClass->SetEventBindings(MoveTemp(ResolvedEvents));
+
+	// The `each` half, with the one check only this stage can make: the SOURCE lives on the class
+	// being compiled -- a nullary function returning TArray of objects, or such an array variable.
+	// The per-cell setters were vetted by the builder against the template's real classes, and the
+	// host's view is a runtime fact the resolve checks again.
+	//
+	// Into the bag as well as the log, on the same grounds as 5004 and 6004 above and after the same
+	// omission: these three were reported to the MessageLog alone, so a .dui whose `each` named a
+	// function nobody had written yet failed its compile while the mailbox -- which is the only
+	// channel VSCode reads -- went on saying the file was clean.
+	TArray<FDreamWidgetEachBinding> ResolvedEach;
+	for (const FDreamWidgetEachBinding& Authored : DreamBlueprint->EachBindings)
+	{
+		const FArrayProperty* ItemsProperty = nullptr;
+		if (Authored.bSourceIsFunction)
+		{
+			const UFunction* Source = InClass->FindFunctionByName(Authored.SourceName);
+			if (Source == nullptr || Source->NumParms != 1)
+			{
+				MessageLog.Error(*FString::Printf(
+					TEXT("The 'each %s in %s()' block needs a no-argument function of that name on this Blueprint."),
+					*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+				// NumParms == 1 is "the return value and nothing else". A function that is there but
+				// the wrong shape is as unusable as one that is missing, and the fix is the same act
+				// -- so both are 6006, and the message carries which of the two it was. Not spelled
+				// "takes arguments": NumParms == 0 is a function that returns nothing and takes
+				// nothing, which fails here too and takes no arguments at all.
+				TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotFound, AuthoredLocation(Authored),
+					FString::Printf(TEXT("the 'each %s in %s()' block needs a no-argument function of that name, %s"),
+						*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString(),
+						Source == nullptr
+							? TEXT("and this Blueprint declares none")
+							: TEXT("and this one does not take zero arguments and return a value")));
+				continue;
+			}
+			ItemsProperty = CastField<FArrayProperty>(Source->GetReturnProperty());
+		}
+		else
+		{
+			ItemsProperty = FindFProperty<FArrayProperty>(InClass, Authored.SourceName);
+			if (ItemsProperty == nullptr)
+			{
+				MessageLog.Error(*FString::Printf(
+					TEXT("The 'each %s in %s' block needs an array variable of that name on this Blueprint."),
+					*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+				// FindFProperty<FArrayProperty> answers null for "no such variable" AND for "that
+				// variable is not an array", which the reader cannot tell apart from the code alone
+				// -- so the message covers both and 6007 is kept for the case where an array WAS
+				// found and its elements are wrong.
+				TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotFound, AuthoredLocation(Authored),
+					FString::Printf(TEXT("the 'each %s in %s' block needs an array variable of that name on this Blueprint"),
+						*Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+				continue;
+			}
+		}
+		if (ItemsProperty == nullptr || CastField<FObjectPropertyBase>(ItemsProperty->Inner) == nullptr)
+		{
+			MessageLog.Error(*FString::Printf(
+				TEXT("'%s' must supply an array of OBJECTS -- the item bindings read members off each element by reflection."),
+				*Authored.SourceName.ToString()));
+			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotObjectArray, AuthoredLocation(Authored),
+				FString::Printf(TEXT("'%s' must supply an array of OBJECTS -- the item bindings read members off each element by reflection"),
+					*Authored.SourceName.ToString()));
+			continue;
+		}
+		ResolvedEach.Add(Authored);
+	}
+	GeneratedClass->SetEachBindings(MoveTemp(ResolvedEach));
+
+	if (TextDiagnostics.Diagnostics.Num() != TextDiagnosticsBefore)
+	{
+		// Re-deposited with the WHOLE bag, not just what this stage added: the mailbox keys an entry
+		// by file and replaces it outright, so a second deposit of only these would erase the parse's
+		// and the builder's. A no-op for a Blueprint that names no .dui -- that bag has no source
+		// name, and Deposit takes that as "none of the mailbox's business".
+		FDreamUIDiagnosticsMailbox::Deposit(TextDiagnostics);
+	}
 }
 
 void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClass)
@@ -1033,20 +1801,10 @@ void FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings(UClass* InClas
 	// The AUTHORING tree, not the class's copy of it. They are the same thing on a full compile -- the
 	// copy was made a few lines ago -- but a skeleton-only compile deliberately does not make one, and
 	// reading the class there would report every binding as broken on every keystroke in the designer.
-	UDreamWidgetTree* Archetype = nullptr;
-	if (UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint())
-	{
-		if (IsValid(DreamBlueprint->WidgetTree) && IsValid(DreamBlueprint->WidgetTree->RootWidget))
-		{
-			Archetype = DreamBlueprint->WidgetTree;
-		}
-	}
-	if (Archetype == nullptr && InClass != nullptr)
-	{
-		// Nothing authored here: a subclass that only adds logic inherits its parent's hierarchy, and
-		// its bindings have to be checked against that.
-		Archetype = UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(InClass->GetSuperClass());
-	}
+	// Nothing authored here: a subclass that only adds logic inherits its parent's hierarchy, and its
+	// bindings have to be checked against that. Same function CompilePropertyBindings uses, because
+	// the two answering differently is what this pair of stages got wrong.
+	UDreamWidgetTree* Archetype = DreamWidgetAuthoredHierarchy::ResolveAuthoringArchetype(DreamWidgetBlueprint(), InClass);
 	if (Archetype == nullptr)
 	{
 		// No hierarchy at all is a legitimate state (logic-only class, or nothing authored yet).
@@ -1113,9 +1871,11 @@ void FDreamWidgetBlueprintCompilerContext::ValidateNamedSlotBindings(UDreamWidge
 		{
 			return;
 		}
+		// The class overload: it asks the archetype exactly as this line used to, and then asks a
+		// native control for the slots it declares in code. Without that half, every slot bound on a
+		// placed native control compiled to an error saying the class declares no such slot.
 		TArray<FName> Declared;
-		UDreamUserWidget::CollectDeclaredSlotNames(
-			UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(Nested->GetClass()), Declared);
+		UDreamUserWidget::CollectDeclaredSlotNames(Nested->GetClass(), Declared);
 		for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : Nested->NamedSlotContent)
 		{
 			if (!Declared.Contains(Binding.Key))

@@ -174,6 +174,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamUI")
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
 
+	/**
+	 * True when every hit LineTraceUI can report is guaranteed to lie inside the WIDGET's own rect, so
+	 * a caller may reject this element by that rect alone -- see UDreamWidget::GetWorldRectBoundingSphere,
+	 * which is what a raycaster tests against before paying for the exact trace.
+	 *
+	 * The base answer is yes only for the Rect raycast type, and deliberately so. Rect is the one type
+	 * every LineTraceUI in the family resolves the same way: a crossing of the local X = 0 plane,
+	 * compared against GetLocalSpaceLeft/Right/Bottom/Top, which UDreamRectBlock's override only
+	 * narrows further with its corner radii. The other three cannot promise it:
+	 *
+	 *  - Mesh and VisiblePixel test the built geometry, whose vertices are not bound by the rect --
+	 *    UDreamVisualPostProcess with bUseFullSize builds its quad from the ROOT canvas's size, so its
+	 *    hit shape can be the whole screen while its widget is a button.
+	 *  - Custom hands the ray to a UDreamVisualCustomRaycast and does NO rect test of its own, so the
+	 *    hit shape is whatever that object says. UDreamRingSectorRaycast's unbounded sector claims
+	 *    more than the rect it is drawn in on purpose; that is the weapon-wheel feel.
+	 *
+	 * An element that knows its own geometry stays inside the rect may override this and say so. The
+	 * cost of answering false is only that the exact test runs, so a subclass in doubt should not.
+	 */
+	virtual bool GetHitGeometryFitsWidgetRect()const;
+
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;
 
@@ -199,17 +221,57 @@ public:
 	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const;
 	
 	/**
-	 * The preferred width this layout element should be allocated if there is sufficient space.
-	 * Can be -1 to ignore it.
+	 * How much room this element's CONTENT needs, for a layout that sizes to content -- an Auto slot,
+	 * a WrapBox, anything that asks before it decides. Negative means "no opinion", and the layout
+	 * falls back to whatever the widget was authored at.
+	 *
+	 * Two rules, both of which have already cost this codebase a bug:
+	 *
+	 * -1 AND 0 ARE DIFFERENT ANSWERS. Negative is an abstention; zero is this element asserting that
+	 * it wants no room whatsoever, and a caller has no way to tell an asserted zero from a
+	 * placeholder. A visual whose measurement has not happened yet -- no font, no texture loaded, no
+	 * geometry built -- must abstain. UDreamText answering 0 before it had laid out is what measured
+	 * an entire ring menu at nothing.
+	 *
+	 * IT MUST BE CHEAP AND IT MUST NOT CHANGE ANYTHING. A measure pass calls this once per element,
+	 * and a layout that does not converge calls it again; it is not a place to rebuild geometry,
+	 * initialise an asset, or mark anything dirty. Where the natural source of the number is an
+	 * accessor that initialises on first touch, copy the number where the initialisation already
+	 * happens and answer from the copy -- see UDreamSpriteBase.
+	 *
+	 * It must also answer without a world. Headless tests and Blueprint authoring trees have none;
+	 * ask DreamUI::IsGameWorld rather than dereferencing GetWorld().
+	 *
+	 * Procedural shapes generally have NO answer to give. A ring, a polygon and a polygon line
+	 * derive their vertices from the rect they are given, so asking them how big they want to be is
+	 * asking a question with no content in it: they abstain, which is a decision each of them states
+	 * rather than inherits.
 	 */
 	virtual float GetPreferredWidth()const{return -1;}
-	/**
-	 * The preferred height this layout element should be allocated if there is sufficient space.
-	 * Can be -1 to ignore it.
-	 */
+	/** The preferred height. See GetPreferredWidth for the contract -- it binds both. */
 	virtual float GetPreferredHeight()const{return -1;}
 
 	static int WidgetPropertyDataLength;
+
+	/**
+	 * The widget-property row, by pixel. Every reader of it is DreamUIWidgetProperty.ush (and
+	 * DreamUIText.ush for the style pixels, which index 4..12 by hand), so these constants and those
+	 * shaders are one layout described twice -- change either and change both.
+	 *
+	 * Pixels that carry a NUMBER carry it as a float value rather than as a bit pattern, because a
+	 * GPU that flushes denormals to zero does it on the load: see the note above
+	 * UDreamVisual::WidgetPropertyDataLength in the .cpp. Pixels that carry BIT FIELDS keep a
+	 * constant in the top byte for the same reason.
+	 */
+	static constexpr int32 WidgetMarksPixelStart = 0;
+	static constexpr int32 ClipDataCoordinatePixelStart = 1;
+	static constexpr int32 WidgetSizePixelStart = 2;//width, then height
+	/** After the text style block (4..12), so adding it did not shift the hand-indexed style pixels. */
+	static constexpr int32 WidgetCenterPixelStart = 13;//centre X, then centre Y
+	/** Top byte of the marks pixel: present only so the word is a normal float. */
+	static constexpr uint32 WidgetMarksNormalFloatMarker = 0x3f000000;
+	/** Pack the marks pixel: constant top byte, font mark, extra mark. Mirrored by DreamUI_ReadWidgetProperty. */
+	static uint32 PackWidgetMarks(uint8 InFontMark, uint8 InExtraMark);
 
 	void SetWidgetPropertyDataStartPosition(int InPosition);
 	bool IsRegisteredToCanvas()const{return WidgetPropertyDataStartPosition != INDEX_NONE;}

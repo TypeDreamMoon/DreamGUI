@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamCanvas.h"
@@ -428,7 +429,6 @@ private:
 
 
 #define PARAMETER_NAME_MAINTEXTURE "MainTexture"
-#define PARAMETER_NAME_FLIPY "FlipY"
 
 
 UDreamUIRenderTargetGeometrySource::UDreamUIRenderTargetGeometrySource()
@@ -498,18 +498,28 @@ bool UDreamUIRenderTargetGeometrySource::CheckStaticMesh()const
 					if (bOverrideStaticMeshMaterial)
 					{
 #if WITH_EDITOR
-						if (!this->GetWorld()->IsGameWorld())
+						if (!DreamUI::IsGameWorld(this))
 						{
-							UDreamUIManagerObject::AddOneShotTickFunction([this] {
-								StaticMeshComp->SetMaterial(0, MaterialInstance);
+							UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = TWeakObjectPtr<const UDreamUIRenderTargetGeometrySource>(this)] {
+								if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+								{
+									WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+								}
 								}, 1);
 						}
 						else
 #endif
-						//delay call, or the bPostTickComponentUpdate check will break
-						UDreamTweenBPLibrary::DelayFrameCall(this->GetWorld(), 1, [this] {
-							StaticMeshComp->SetMaterial(0, MaterialInstance);
-							})->SetAffectByGamePause(false);
+						//delay call, or the bPostTickComponentUpdate check will break.
+						//A frame is long enough for this component to be torn down, so the callback holds a weak
+						//reference rather than a bare this. And there is no return value to dereference: DelayFrameCall
+						//hands back null wherever there is no game instance to run a tween -- every cook, commandlet and
+						//shutdown -- so the pause flag goes in as an argument instead.
+						UDreamTweenBPLibrary::DelayFrameCall(this->GetWorld(), 1, [WeakThis = TWeakObjectPtr<const UDreamUIRenderTargetGeometrySource>(this)] {
+							if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+							{
+								WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+							}
+							}, false);
 					}
 				}
 				return true;
@@ -664,7 +674,7 @@ void UDreamUIRenderTargetGeometrySource::OnRegister()
 			}
 		}
 #if WITH_EDITOR
-		if (!this->GetWorld()->IsGameWorld())//only do it in Editor world, because Game world can do it by BeginCheckRenderTarget
+		if (!DreamUI::IsGameWorld(this))//only do it in Editor world, because Game world can do it by BeginCheckRenderTarget
 		{
 			UpdateMeshData();
 		}
@@ -688,7 +698,7 @@ void UDreamUIRenderTargetGeometrySource::SetMaterial(int32 ElementIndex, UMateri
 	Super::SetMaterial(ElementIndex, Material);
 	MaterialInstance = nullptr;
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
+	if (!DreamUI::IsGameWorld(this))
 	{
 	}
 	else
@@ -1106,17 +1116,11 @@ void UDreamUIRenderTargetGeometrySource::SetFlipVerticalOnGLES(bool Value)
 {
 	if (bFlipVerticalOnGLES != Value)
 	{
+		// Stores the flag and nothing else. The GLES branch that used to push a FlipY scalar into the
+		// material was already `#if PLATFORM_ANDROID && 0` ("UE5.1 don't need this"), so it has not
+		// compiled on any platform for several engine versions; kept as dead text it read as a
+		// platform path that exists. See the property's own comment.
 		bFlipVerticalOnGLES = Value;
-#if PLATFORM_ANDROID && 0//UE5.1 don't need this
-		if (MaterialInstance != nullptr)
-		{
-			auto ShaderPlatform = GShaderPlatformForFeatureLevel[GetWorld()->FeatureLevel];
-			if (ShaderPlatform == EShaderPlatform::SP_OPENGL_ES3_1_ANDROID)
-			{
-				MaterialInstance->SetScalarParameterValue(PARAMETER_NAME_FLIPY, bFlipVerticalOnGLES ? 1.0f : 0.0f);
-			}
-		}
-#endif
 	}
 }
 
@@ -1181,18 +1185,25 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstance()
 				if (CheckStaticMesh())
 				{
 #if WITH_EDITOR
-					if (!this->GetWorld()->IsGameWorld())
+					if (!DreamUI::IsGameWorld(this))
 					{
-						UDreamUIManagerObject::AddOneShotTickFunction([this] {
-							StaticMeshComp->SetMaterial(0, MaterialInstance);
+						UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
+							if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+							{
+								WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+							}
 							}, 1);
 					}
 					else
 #endif
-					//delay call, or the bPostTickComponentUpdate check will break
-					UDreamTweenBPLibrary::DelayFrameCall(this, 1, [this] {
-						StaticMeshComp->SetMaterial(0, MaterialInstance);
-						})->SetAffectByGamePause(false);
+					//delay call, or the bPostTickComponentUpdate check will break.
+					//Weak capture and no dereference of the return value, for the reasons given in CheckStaticMesh.
+					UDreamTweenBPLibrary::DelayFrameCall(this, 1, [WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
+						if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
+						{
+							WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
+						}
+						}, false);
 				}
 			}
 		}
@@ -1204,14 +1215,9 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
 {
 	if (MaterialInstance)
 	{
+		// The FlipY scalar that used to follow was `#if PLATFORM_ANDROID && 0` dead text -- see
+		// SetFlipVerticalOnGLES.
 		MaterialInstance->SetTextureParameterValue(PARAMETER_NAME_MAINTEXTURE, GetRenderTarget());
-#if PLATFORM_ANDROID && 0//UE5.1 don't need this
-		auto ShaderPlatform = GShaderPlatformForFeatureLevel[GetWorld()->FeatureLevel];
-		if (ShaderPlatform == EShaderPlatform::SP_OPENGL_ES3_1_ANDROID)
-		{
-			MaterialInstance->SetScalarParameterValue(PARAMETER_NAME_FLIPY, bFlipVerticalOnGLES ? 1.0f : 0.0f);
-		}
-#endif
 	}
 }
 UMaterialInterface* UDreamUIRenderTargetGeometrySource::GetPresetMaterial()const

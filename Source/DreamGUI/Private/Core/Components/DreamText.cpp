@@ -17,6 +17,7 @@
 #include "Engine/Texture2D.h"
 #include "Engine/Texture2DArray.h"
 #include "Engine/World.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 
 #define LOCTEXT_NAMESPACE "UIText"
@@ -29,6 +30,14 @@ FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float 
 
 	FDreamTextLayoutInput Input;
 	Input.Content = Text->GetText().ToString();
+	// Case is presentation: the Text property keeps what was authored, so a caret index, a copy, and
+	// anything reading the text back all still see it. UMG's TextBlock transforms at the same point.
+	switch (Text->GetTextTransform())
+	{
+	case EDreamUITextTransformPolicy::ToLower: Input.Content = Input.Content.ToLower(); break;
+	case EDreamUITextTransformPolicy::ToUpper: Input.Content = Input.Content.ToUpper(); break;
+	default: break;
+	}
 	FVector2f ContentSize, ContentPivot;
 	UDreamText::GetContentBox(FVector2f(Widget->GetWidth(), Widget->GetHeight()), FVector2f(Widget->GetPivot()), Text->GetMargin(),
 		ContentSize, ContentPivot);
@@ -36,7 +45,6 @@ FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float 
 	Input.Height = ContentSize.Y;
 	Input.Pivot = ContentPivot;
 	Input.Color = Text->GetFinalColor();
-	Input.RenderOpacityForRichText = (uint8)((Text->GetRichText() ? Widget->GetFinalRenderOpacity() : 1.0f) * 255);
 	Input.FontSpace = FVector2f(Text->GetFontSpace());
 	Input.FontSize = InFontSize;
 	Input.ParagraphHAlign = Text->GetParagraphHorizontalAlignment();
@@ -46,6 +54,11 @@ FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float 
 	Input.PhraseWrap = Text->GetPhraseWrap();
 	Input.bUseKerning = Text->GetUseKerning();
 	Input.FontStyle = Text->GetFontStyle();
+	Input.bUnderline = Text->GetUnderline();
+	Input.bStrikethrough = Text->GetStrikethrough();
+	Input.TextTransform = Text->GetTextTransform();
+	Input.FlowDirection = Text->GetFlowDirection();
+	Input.bAutoWrapText = Text->GetAutoWrapText();
 	Input.bRichText = Text->GetRichText();
 	Input.RichTextFilterFlags = Text->GetRichTextTagFilterFlags();
 	Input.LineHeightPercentage = Text->GetLineHeightPercentage();
@@ -68,10 +81,13 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 
 	FDreamTextPaintParams Params;
 	const FVector WorldScale = Widget->GetWorldScale();
-	const FDreamTextGlyphPaintStyle Style = Text->GetFont()->GetGlyphPaintStyle(FVector2f((float)WorldScale.X, (float)WorldScale.Y));
+	const FDreamTextGlyphPaintStyle Style = Text->GetFont()->GetGlyphPaintStyle(
+		FVector2f((float)WorldScale.X, (float)WorldScale.Y), Text->GetExpandMeshSize());
 	Params.ItalicSlope = Style.ItalicSlope;
 	Params.bRequireNormalAndTangent = RenderCanvas ? RenderCanvas->GetActualRequireNormalAndTangent() : false;
 	Params.BaseColor = Text->GetFinalColor();
+	// Rich-text tag colours are stored unfaded, so the fade reaches them here instead of through a layout.
+	Params.RichTextTagOpacity = Widget->GetFinalRenderOpacity();
 	Params.FillSegments = &Text->GetFillSegments();
 	Params.FillProgress = Text->GetFillProgress();
 	Params.GlowBoost = Text->GetGlowBoost();
@@ -95,6 +111,18 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 		Params.FieldSpreadTexels = Style.FieldSpreadTexels;
 		Params.QuadMarginTexels = Style.QuadMarginTexels;
 		Params.TexelToUV = Style.TexelToUV;
+	}
+	else
+	{
+		// A bitmap atlas holds the face and nothing else, so the same style knobs are drawn as offset
+		// copies of the glyphs instead of by the field shader: the underlay becomes a drop shadow, the
+		// outline becomes a ring of taps. Same authored values, so a text reads the same either way --
+		// they used to do nothing at all on a bitmap font.
+		const FDreamTextStyle& TextStyle = Text->GetTextStyle();
+		Params.BitmapShadowColor = TextStyle.UnderlayColor;
+		Params.BitmapShadowOffsetEm = TextStyle.UnderlayOffset;
+		Params.BitmapOutlineColor = TextStyle.OutlineColor;
+		Params.BitmapOutlineWidthEm = TextStyle.OutlineWidth;
 	}
 	return Params;
 }
@@ -380,6 +408,12 @@ void UDreamText::OnCultureChanged_Implementation()
 void UDreamText::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	Super::PreEditChange(PropertyAboutToChange);
+	// Null means "an undo is about to restore everything", which no per-property branch below can
+	// answer. See the note on UDreamWidget::PreEditChange.
+	if (PropertyAboutToChange == nullptr)
+	{
+		return;
+	}
 	auto PropertyName = PropertyAboutToChange->GetFName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, Font))
 	{
@@ -609,6 +643,68 @@ void UDreamText::SetWrapTextAt(float Value)
 	{
 		WrapTextAt = Value;
 		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetMinDesiredWidth(float Value)
+{
+	Value = FMath::Max(0.0f, Value);
+	if (MinDesiredWidth != Value)
+	{
+		MinDesiredWidth = Value;
+		// Layout only: the glyphs do not move, but what the parent measures does.
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetAutoWrapText(bool Value)
+{
+	if (bAutoWrapText != Value)
+	{
+		bAutoWrapText = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetTextTransform(EDreamUITextTransformPolicy Value)
+{
+	if (TextTransform != Value)
+	{
+		TextTransform = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetFlowDirection(EDreamTextFlowDirection Value)
+{
+	if (FlowDirection != Value)
+	{
+		FlowDirection = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetUnderline(bool Value)
+{
+	if (bUnderline != Value)
+	{
+		bUnderline = Value;
+		// An underline is a strip of its own quads, so this changes the triangles, not just positions.
+		MarkAllDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetStrikethrough(bool Value)
+{
+	if (bStrikethrough != Value)
+	{
+		bStrikethrough = Value;
+		MarkAllDirty();
 		UDreamWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
@@ -1077,17 +1173,41 @@ void UDreamText::GenerateEmojiObject()
 	}
 }
 
+/*
+ * UpdateCacheTextGeometry gives up on two conditions -- no font, and no render canvas, the latter
+ * being the state of every text in a headless test and in a Blueprint authoring tree -- and when it
+ * does, the display list it would have filled is still the empty one it was constructed with, whose
+ * PreferredSize is (0,0).
+ *
+ * Returning that plus the margins is a claim: zero means "this text wants no room", and a caller
+ * cannot tell it apart from a text that measured itself and found nothing. It is not a theoretical
+ * problem. A ring menu whose labels had not laid out yet measured its whole ring at nothing,
+ * because each label answered 0 where it should have abstained, and 0 wins a Max against -1.
+ *
+ * LayoutRunCount is the honest test for "has a measurement ever produced this display list", and it
+ * separates the two zeros: a laid-out empty string may legitimately answer 0 (it really does want
+ * no room), while a text that has never been laid out has nothing to say.
+ */
 float UDreamText::GetPreferredWidth() const
 {
 	UpdateCacheTextGeometry();
+	if (CacheTextGeometryData.GetLayoutRunCount() == 0)
+	{
+		return -1;
+	}
 	// textPreferredSize measures the glyphs, which were laid out inside the inset box, so the
 	// padding has to be added back or a content-sized parent would squeeze it straight out again.
-	return CacheTextGeometryData.GetPreferredSize().X + Margin.Left + Margin.Right;
+	// MinDesiredWidth is a floor under the answer, not part of the measurement.
+	return FMath::Max(CacheTextGeometryData.GetPreferredSize().X + Margin.Left + Margin.Right, MinDesiredWidth);
 }
 
 float UDreamText::GetPreferredHeight() const
 {
 	UpdateCacheTextGeometry();
+	if (CacheTextGeometryData.GetLayoutRunCount() == 0)
+	{
+		return -1;
+	}
 	return CacheTextGeometryData.GetPreferredSize().Y + Margin.Top + Margin.Bottom;
 }
 
@@ -1223,6 +1343,13 @@ int UDreamText::GetCharIndexByCaretIndex(int32 inCaretPositionIndex)
 {
 	UpdateCacheTextGeometry();
 	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
+	// A text that has never been laid out has no lines: no font, or no render canvas, which is the
+	// state of every text in a headless test and in a Blueprint authoring tree. FindCaretByIndex has
+	// always handled it; the rest of the caret family indexed into the empty array instead.
+	if (cacheLinePropertyArray.Num() == 0)
+	{
+		return 0;
+	}
 	int accumulatedCaretIndex = 0;
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
@@ -1238,6 +1365,10 @@ int UDreamText::GetCharIndexByCaretIndex(int32 inCaretPositionIndex)
 	}
 	//not found caret, use last one
 	auto& lastLineProperty = cacheLinePropertyArray[cacheLinePropertyArray.Num() - 1];
+	if (lastLineProperty.CaretPropertyList.Num() == 0)
+	{
+		return 0;
+	}
 	return lastLineProperty.CaretPropertyList[lastLineProperty.CaretPropertyList.Num() - 1].CharIndex;
 }
 int UDreamText::GetLastCaret()
@@ -1356,6 +1487,12 @@ void UDreamText::FindCaret(FVector2f& inOutCaretPosition, int32 inCaretPositionL
 	auto& cacheTextPropertyArray = CacheTextGeometryData.GetLines();
 	auto lineCount = cacheTextPropertyArray.Num();//line count
 	outCaretPositionIndex = 0;
+	// Non-empty text is not the same thing as laid-out text: without a font or a render canvas the
+	// layout is skipped and there are no lines at all. The line index is the caller's, too.
+	if (!cacheTextPropertyArray.IsValidIndex(inCaretPositionLineIndex))
+	{
+		return;
+	}
 
 	//find nearest char to caret from this line
 	auto& lineItem = cacheTextPropertyArray[inCaretPositionLineIndex];
@@ -1373,12 +1510,19 @@ void UDreamText::FindCaret(FVector2f& inOutCaretPosition, int32 inCaretPositionL
 			outCaretPositionIndex = charItem.CharIndex;
 		}
 	}
+	if (nearestIndex == INDEX_NONE)//a line with no carets leaves the caret where the caller had it
+	{
+		return;
+	}
 	inOutCaretPosition = lineItem.CaretPropertyList[nearestIndex].CaretPosition;
 }
 //find caret by position, caret is on left side of char
 void UDreamText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& outCaretPosition, int32& outCaretPositionLineIndex, int32& outCaretPositionIndex)
 {
-	if (Text.ToString().Len() == 0)//no text
+	UpdateCacheTextGeometry();
+	// Empty text and never-laid-out text land in the same place: FindCaretByIndex is the one function
+	// of the family that already knows how to answer without any lines.
+	if (Text.ToString().Len() == 0 || CacheTextGeometryData.GetLines().Num() == 0)
 	{
 		outCaretPositionIndex = 0;
 		int tempVisibleCharStartIndex = 0;
@@ -1386,7 +1530,6 @@ void UDreamText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& ou
 	}
 	else
 	{
-		UpdateCacheTextGeometry();
 		auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
 
 		auto localPosition = GetWidget()->GetWorldTransform().InverseTransformPosition(inWorldPosition);
@@ -1566,6 +1709,77 @@ bool UDreamText::GetVisibleCharRangeForMultiLine(int32& inOutCaretPositionIndex,
 	return outOfRange;
 }
 
+TArray<FDreamUIText_RichTextCustomTag> UDreamText::GetHyperlinks()const
+{
+	TArray<FDreamUIText_RichTextCustomTag> Result;
+	for (const FDreamUIText_RichTextCustomTag& Tag : GetRichTextCustomTagArray())
+	{
+		if (Tag.bHyperlink)
+		{
+			Result.Add(Tag);
+		}
+	}
+	return Result;
+}
+
+bool UDreamText::FindHyperlinkByWorldPosition(FVector InWorldPosition, FName& OutId)const
+{
+	OutId = NAME_None;
+	const TArray<FDreamUIText_RichTextCustomTag>& Tags = GetRichTextCustomTagArray();
+	if (Tags.Num() == 0)return false;
+	const TArray<FDreamUITextCharProperty>& Chars = GetCharPropertyArray();
+	if (Chars.Num() == 0 || !UIGeometry.IsValid())return false;
+	const TArray<FDreamUIOriginVertexData>& Vertices = UIGeometry->OriginVertices;
+	if (Vertices.Num() == 0)return false;
+
+	const FVector LocalPosition = GetWidget()->GetWorldTransform().InverseTransformPosition(InWorldPosition);
+	const FVector2f Point(LocalPosition.Y, LocalPosition.Z);
+	// A glyph's quad is tight to its ink, so a link made of "o"s would only be clickable across the
+	// middle third of the line. A quarter of the font size on each side is about the em box, which is
+	// what a pointer is aiming at.
+	const float Padding = FMath::Max(RenderedFontSize, 1.0f) * 0.25f;
+
+	for (const FDreamUIText_RichTextCustomTag& Tag : Tags)
+	{
+		if (!Tag.bHyperlink)continue;
+		for (int32 CharIndex = FMath::Max(0, Tag.CharIndexStart); CharIndex <= Tag.CharIndexEnd && CharIndex < Chars.Num(); CharIndex++)
+		{
+			const FDreamUITextCharProperty& Property = Chars[CharIndex];
+			if (Property.VertCount <= 0)continue;
+			const int32 LastVertex = Property.StartVertIndex + Property.VertCount - 1;
+			if (!Vertices.IsValidIndex(Property.StartVertIndex) || !Vertices.IsValidIndex(LastVertex))continue;
+			float MinX = MAX_FLT, MaxX = -MAX_FLT, MinY = MAX_FLT, MaxY = -MAX_FLT;
+			for (int32 v = Property.StartVertIndex; v <= LastVertex; v++)
+			{
+				const FVector3f& Position = Vertices[v].Position;
+				MinX = FMath::Min(MinX, Position.Y);
+				MaxX = FMath::Max(MaxX, Position.Y);
+				MinY = FMath::Min(MinY, Position.Z);
+				MaxY = FMath::Max(MaxY, Position.Z);
+			}
+			if (Point.X >= MinX - Padding && Point.X <= MaxX + Padding
+				&& Point.Y >= MinY - Padding && Point.Y <= MaxY + Padding)
+			{
+				OutId = Tag.TagName;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool UDreamText::TryClickHyperlinkAtWorldPosition(FVector InWorldPosition)
+{
+	FName Id = NAME_None;
+	if (!FindHyperlinkByWorldPosition(InWorldPosition, Id))
+	{
+		return false;
+	}
+	OnHyperlinkClickedCPP.Broadcast(Id);
+	OnHyperlinkClickedBP.Broadcast(Id);
+	return true;
+}
+
 void UDreamText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FDreamUITextSelectionProperty>& OutSelectionProeprtyArray)
 {
 	OutSelectionProeprtyArray.Reset();
@@ -1630,3 +1844,5 @@ void UDreamText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 In
 #undef LOCTEXT_NAMESPACE
 
 
+
+DECLARE_DREAM_GUI_VISUAL("Text", UDreamText)

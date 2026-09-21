@@ -63,4 +63,21 @@ protected:
 		startValue = originStartValue;
 		endValue = originEndValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		// This tweener restores BOTH ends on a restart, so both origins have to follow the swap.
+		originStartValue = startValue;
+		originEndValue = endValue;
+	}
+	virtual float GetValueDistance()const override
+	{
+		// The channel that has furthest to go, in 0-255 units: a speed for a colour is a speed per
+		// channel, and the tween takes as long as its longest channel needs.
+		return static_cast<float>(FMath::Max(FMath::Max(
+			FMath::Abs(static_cast<int32>(endValue.R) - static_cast<int32>(startValue.R)),
+			FMath::Abs(static_cast<int32>(endValue.G) - static_cast<int32>(startValue.G))), FMath::Max(
+			FMath::Abs(static_cast<int32>(endValue.B) - static_cast<int32>(startValue.B)),
+			FMath::Abs(static_cast<int32>(endValue.A) - static_cast<int32>(startValue.A)))));
+	}
 };

@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 // Portions derived from DreamGUI, Copyright 2026-Present LexLiu. All Rights Reserved.
 
 #pragma once
@@ -42,6 +42,22 @@ public:
 	 * children with no intrinsic size source.
 	 */
 	FVector2D GetDesiredSize(UDreamWidget* Child) const;
+	/**
+	 * The same question, asked inside a constraint.
+	 *
+	 * A child whose answer depends on the space it is given -- a wrap box, a scale box set to fit, a
+	 * scroll box -- cannot answer "how big do you want to be" on its own. It used to answer by reading
+	 * its OWN current width, which is the size its parent gave it on the PREVIOUS pass: measurement
+	 * reading layout output, one frame stale, and the reason a wrap box inside a vertical box needed a
+	 * second pass to agree with itself. The constraint now arrives as an argument instead.
+	 *
+	 * Specs flow DOWN from the one place real numbers exist: a panel's arrange, which knows the rect its
+	 * own parent gave it. Each panel narrows what it received by the space it is about to spend
+	 * (FDreamMeasureSpec::ForChild) and hands the rest on. An unconstrained ask stays unconstrained all
+	 * the way down and every panel answers with its natural size, which is what the no-argument overload
+	 * above means.
+	 */
+	FVector2D GetDesiredSize(UDreamWidget* Child, const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const;
 
 	/**
 	 * Memoises GetDesiredSize for the duration of one arrange or measure.
@@ -79,11 +95,34 @@ protected:
 	UDreamPanelSlot* EnsureSlot(UDreamWidget* Child) const;
 	const UDreamPanelSlot* GetSlot(const UDreamWidget* Child) const;
 	TArray<UDreamWidget*> CollectLayoutChildren(bool bEnsureSlots = true) const;
-	void ApplyChildRect(UDreamWidget* Child, const FVector2D& Position, const FVector2D& Size, bool bForceFill = false) const;
+	/**
+	 * Place a child inside an area, honouring its slot's alignment.
+	 *
+	 * The two alignment overrides exist for UMG's Border, whose HorizontalAlignment and
+	 * VerticalAlignment belong to the BORDER and describe where it puts its content -- unlike every
+	 * other panel here, where alignment is the slot's. Passing them unset is the ordinary behaviour.
+	 */
+	void ApplyChildRect(UDreamWidget* Child, const FVector2D& Position, const FVector2D& Size, bool bForceFill = false,
+		TOptional<EDreamPanelHorizontalAlignment> InHorizontalOverride = TOptional<EDreamPanelHorizontalAlignment>(),
+		TOptional<EDreamPanelVerticalAlignment> InVerticalOverride = TOptional<EDreamPanelVerticalAlignment>()) const;
 	/** Record a rect a panel computed itself, for the paths that do not go through ApplyChildRect. */
 	void RecordChildRect(const FDreamPanelChildRect& Rect) const;
 	bool BeginLayoutPass();
-	virtual FVector2f MeasureLayout() const;
+	/**
+	 * How big this panel wants to be inside the given constraint. Both specs may be Undefined, which
+	 * means "no constraint, report your natural size" -- every panel whose answer does not depend on the
+	 * space available simply ignores them.
+	 */
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const;
+	/**
+	 * The natural size, with no constraint at all. This is what a panel's own arrange publishes as its
+	 * preferred size: the fragment states what the panel WANTS, and bounding that by the rect it was
+	 * just given would be the same feedback loop the specs exist to break.
+	 */
+	FVector2f MeasureUnconstrained() const
+	{
+		return MeasureLayout(FDreamMeasureSpec::Undefined(), FDreamMeasureSpec::Undefined());
+	}
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 
 	/**
@@ -96,8 +135,35 @@ protected:
 	mutable FDreamFragment* RecordingFragment = nullptr;
 
 private:
+	/**
+	 * One measured widget under one constraint. The spec has to be part of the key: the same widget
+	 * genuinely has different answers under different constraints, and keying on the widget alone would
+	 * hand a constrained caller whatever the unconstrained one happened to ask for first.
+	 *
+	 * The hash deliberately ignores the spec VALUES and folds in only the two modes, because
+	 * FDreamMeasureSpec's equality is a tolerance comparison and a hash built from a float would put
+	 * two equal keys in different buckets. Equal keys therefore always hash equal; unequal keys with the
+	 * same modes share a bucket, which costs a comparison and nothing else.
+	 */
+	struct FDesiredSizeKey
+	{
+		const UDreamWidget* Widget = nullptr;
+		FDreamMeasureSpec WidthSpec;
+		FDreamMeasureSpec HeightSpec;
+
+		bool operator==(const FDesiredSizeKey& Other) const
+		{
+			return Widget == Other.Widget && WidthSpec == Other.WidthSpec && HeightSpec == Other.HeightSpec;
+		}
+		friend uint32 GetTypeHash(const FDesiredSizeKey& Key)
+		{
+			return HashCombine(::GetTypeHash(Key.Widget),
+				static_cast<uint32>(Key.WidthSpec.Mode) * 3u + static_cast<uint32>(Key.HeightSpec.Mode));
+		}
+	};
+
 	/** One pass is single-threaded, so the memo is shared across every panel taking part in it. */
-	static TMap<const UDreamWidget*, FVector2D> DesiredSizeMemo;
+	static TMap<FDesiredSizeKey, FVector2D> DesiredSizeMemo;
 	static int32 DesiredSizeMemoDepth;
 	static int64 DesiredSizeComputeCount;
 
@@ -122,6 +188,7 @@ public:
 	FDreamFragment Arrange();
 
 	virtual FVector2f GetLayoutPreferredSize() const override;
+	virtual FVector2f GetLayoutPreferredSize(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual bool GetLayoutDebugInfo(const UDreamWidget* TargetWidget, FDreamLayoutDebugInfo& OutInfo) const override;
 	UFUNCTION(BlueprintCallable, Category = "Panel")
 	void RequestLayoutRefresh();
@@ -132,7 +199,7 @@ class DREAMGUI_API UDreamLayoutContainerCanvasPanel : public UDreamPanelLayoutBa
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetSortChildrenByZOrder, Category = "CanvasPanel")
@@ -146,7 +213,7 @@ class DREAMGUI_API UDreamLayoutContainerOverlay : public UDreamPanelLayoutBase
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "Overlay")
 	FMargin Padding;
@@ -159,7 +226,7 @@ class DREAMGUI_API UDreamLayoutContainerStackBox : public UDreamPanelLayoutBase
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetOrientation, Category = "StackBox")
 	EDreamPanelOrientation Orientation = EDreamPanelOrientation::Vertical;
@@ -194,7 +261,7 @@ class DREAMGUI_API UDreamLayoutContainerWrapBox : public UDreamPanelLayoutBase
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "WrapBox")
 	FMargin Padding;
@@ -216,7 +283,7 @@ class DREAMGUI_API UDreamLayoutContainerGridPanel : public UDreamPanelLayoutBase
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "GridPanel")
 	FMargin Padding;
@@ -238,7 +305,7 @@ class DREAMGUI_API UDreamLayoutContainerUniformGridPanel : public UDreamPanelLay
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "UniformGridPanel")
 	FMargin Padding;
@@ -260,7 +327,7 @@ class DREAMGUI_API UDreamLayoutContainerSizeBox : public UDreamPanelLayoutBase
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 public:
 	virtual int32 GetMaxChildren() const override { return 1; }
@@ -294,7 +361,7 @@ class DREAMGUI_API UDreamLayoutContainerScaleBox : public UDreamPanelLayoutBase
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
@@ -325,7 +392,7 @@ class DREAMGUI_API UDreamLayoutContainerSafeZone : public UDreamPanelLayoutBase
 	GENERATED_BODY()
 protected:
 	FMargin GetCombinedSafePadding() const;
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
@@ -416,7 +483,7 @@ class DREAMGUI_API UDreamLayoutContainerScrollBox : public UDreamLayoutContainer
 protected:
 	bool bAppliedDefaultClipping = false;
 	virtual void ArrangeChildren() override;
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
@@ -659,7 +726,7 @@ class DREAMGUI_API UDreamLayoutContainerWidgetSwitcher : public UDreamPanelLayou
 {
 	GENERATED_BODY()
 protected:
-	virtual FVector2f MeasureLayout() const override;
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual void OnUnregister() override;
 	TWeakObjectPtr<UDreamWidget> ActiveWidget;
 public:
@@ -670,7 +737,158 @@ public:
 	virtual void ArrangeChildren() override;
 	UFUNCTION(BlueprintSetter, BlueprintCallable, Category = "WidgetSwitcher")
 	void SetActiveWidgetIndex(int32 Value);
+	/**
+	 * UMG's UWidgetSwitcher::SetActiveWidget: show a page by identity rather than by position.
+	 *
+	 * The index stays the single source of truth (GetActiveWidget resolves through it), so this is a
+	 * lookup followed by SetActiveWidgetIndex. Anything that is not a child of this panel is ignored:
+	 * silently switching to page 0 is the failure mode that made the index setter clamp in the first
+	 * place. Returns whether the widget was found.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "WidgetSwitcher")
+	bool SetActiveWidget(UDreamWidget* Value);
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
 	UFUNCTION(BlueprintPure, Category = "WidgetSwitcher")
 	UDreamWidget* GetActiveWidget()const;
+};
+
+/**
+ * UMG's UBorder: one child, padded, aligned by the BORDER rather than by the child's slot.
+ *
+ * That last part is the only thing here that is not already expressible as an Overlay with a rect-block
+ * visual, and it is the reason this is a class. Everywhere else in this plugin alignment belongs to the
+ * slot -- "where do I sit in what I was given" -- and a Border inverts it: the alignment is the
+ * container's statement about where it puts its content. Authors coming from UMG set HorizontalAlignment
+ * on the Border, and before this that property had nowhere to live.
+ *
+ * The background is the owning widget's own visual, which is how every other drawn thing works here;
+ * BrushColor writes through to it so UBorder::SetBrushColor has a counterpart. There is no Background
+ * FSlateBrush: a DreamGUI widget's art comes from its visual (sprite, rect block, image), and adding a
+ * second source of it would be a fork of the render path rather than a port of a panel.
+ */
+UCLASS(BlueprintType, DisplayName = "UMG Border")
+class DREAMGUI_API UDreamLayoutContainerBorder : public UDreamPanelLayoutBase
+{
+	GENERATED_BODY()
+protected:
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
+	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
+	virtual void OnRegister() override;
+	/** Push BrushColor onto the owning widget's visual, which is what actually draws the background. */
+	void ApplyBrushColorToVisual() const;
+public:
+	virtual int32 GetMaxChildren() const override { return 1; }
+	/** A content widget, like every other single-child panel here. */
+	virtual void GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const override;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "Border")
+	FMargin Padding;
+	/** Where the border puts its content. Overrides the content slot's own alignment, as UMG's does. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetHorizontalAlignment, Category = "Border")
+	EDreamPanelHorizontalAlignment HorizontalAlignment = EDreamPanelHorizontalAlignment::Fill;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetVerticalAlignment, Category = "Border")
+	EDreamPanelVerticalAlignment VerticalAlignment = EDreamPanelVerticalAlignment::Fill;
+	/** UMG's UBorder::DesiredSizeScale: scales what this border REPORTS, not what it arranges. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetDesiredSizeScale, Category = "Border")
+	FVector2D DesiredSizeScale = FVector2D(1.0, 1.0);
+	/** Written through to the owning widget's visual, which is what actually draws the background. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetBrushColor, Category = "Border")
+	FLinearColor BrushColor = FLinearColor::White;
+
+	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
+	UFUNCTION(BlueprintSetter) void SetHorizontalAlignment(EDreamPanelHorizontalAlignment Value);
+	UFUNCTION(BlueprintSetter) void SetVerticalAlignment(EDreamPanelVerticalAlignment Value);
+	UFUNCTION(BlueprintSetter) void SetDesiredSizeScale(FVector2D Value);
+	UFUNCTION(BlueprintSetter) void SetBrushColor(FLinearColor Value);
+	virtual void ArrangeChildren() override;
+};
+
+/** UMG's EMenuPlacement, for the placements a rect-against-rect layout can actually express. */
+UENUM(BlueprintType)
+enum class EDreamMenuPlacement : uint8
+{
+	/** Directly below the anchor, left edges aligned. UMG's MenuPlacement_BelowAnchor. */
+	BelowAnchor,
+	/** Below the anchor, horizontally centred on it. */
+	CenteredBelowAnchor,
+	/** Below the anchor, right edges aligned. */
+	BelowRightAnchor,
+	/** Below the anchor and forced to the anchor's width. UMG's MenuPlacement_ComboBox. */
+	ComboBox,
+	/** Below the anchor, right-aligned, forced to the anchor's width. */
+	ComboBoxRight,
+	/** Directly above the anchor, left edges aligned. */
+	AboveAnchor,
+	/** Above the anchor, horizontally centred on it. */
+	CenteredAboveAnchor,
+	/** Above the anchor, right edges aligned. */
+	AboveRightAnchor,
+	/** To the right of the anchor, top edges aligned. UMG's MenuPlacement_MenuRight. */
+	MenuRight,
+	/** To the left of the anchor, top edges aligned. */
+	MenuLeft,
+	/** Centred over the anchor on both axes. */
+	Center,
+};
+
+/**
+ * UMG's UMenuAnchor, layout side.
+ *
+ * The first child is the anchor -- the button, the combo box face -- and is filled like a Border's
+ * content. An optional second child is the menu: it does NOT contribute to this panel's measured size
+ * (a menu that grew its own button would be unusable) and is placed against the anchor's rect by
+ * Placement, then clamped into the root widget when bFitInWindow is set.
+ *
+ * What is deliberately NOT here is the popup's lifetime: creating menu content from a class, owning it
+ * on a popup layer, dismissing it on a click elsewhere. UIDropdown and DreamUIModal already each carry
+ * a version of that, and a third would be a fork rather than a port. This is the placement arithmetic
+ * and the open/closed state those two can be expressed in terms of.
+ */
+UCLASS(BlueprintType, DisplayName = "UMG Menu Anchor")
+class DREAMGUI_API UDreamLayoutContainerMenuAnchor : public UDreamPanelLayoutBase
+{
+	GENERATED_BODY()
+protected:
+	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
+	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
+	virtual void OnUnregister() override;
+public:
+	/** The anchor plus at most one menu. */
+	virtual int32 GetMaxChildren() const override { return 2; }
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPlacement, Category = "MenuAnchor")
+	EDreamMenuPlacement Placement = EDreamMenuPlacement::ComboBox;
+	/** Keep the placed menu inside the root widget's rect, shifting it rather than letting it overhang. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetFitInWindow, Category = "MenuAnchor")
+	bool bFitInWindow = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetIsOpen, Category = "MenuAnchor")
+	bool bIsOpen = false;
+
+	UFUNCTION(BlueprintSetter) void SetPlacement(EDreamMenuPlacement Value);
+	UFUNCTION(BlueprintSetter) void SetFitInWindow(bool Value);
+	/** Show or hide the menu child. Collapsed when closed, so it costs no layout and no hit test. */
+	UFUNCTION(BlueprintSetter, BlueprintCallable, Category = "MenuAnchor")
+	void SetIsOpen(bool Value);
+	UFUNCTION(BlueprintPure, Category = "MenuAnchor")
+	bool IsOpen() const { return bIsOpen; }
+	UFUNCTION(BlueprintCallable, Category = "MenuAnchor")
+	void ToggleOpen() { SetIsOpen(!bIsOpen); }
+	/** The first child: the thing the menu is anchored to. Null when the panel is empty. */
+	UFUNCTION(BlueprintPure, Category = "MenuAnchor")
+	UDreamWidget* GetAnchorContent() const;
+	/** The second child, if there is one. Null when this anchor has no menu authored under it. */
+	UFUNCTION(BlueprintPure, Category = "MenuAnchor")
+	UDreamWidget* GetMenuContent() const;
+
+	/**
+	 * Where a menu of MenuSize goes against an anchor of AnchorSize placed at AnchorPosition, in the
+	 * panel's top-left content space. Static and pure so the arithmetic can be tested on its own, which
+	 * is the half of UMenuAnchor that has a right answer.
+	 */
+	static FVector2D CalculateMenuPosition(EDreamMenuPlacement InPlacement, const FVector2D& AnchorPosition,
+		const FVector2D& AnchorSize, const FVector2D& MenuSize);
+	/** UMG's bFitInWindow: shift (never resize) the menu so it lies inside WindowSize. */
+	static FVector2D FitMenuInWindow(const FVector2D& MenuPosition, const FVector2D& MenuSize, const FVector2D& WindowSize);
+	/** True when Placement forces the menu to the anchor's width, as UMG's ComboBox placements do. */
+	static bool PlacementMatchesAnchorWidth(EDreamMenuPlacement InPlacement);
+
+	virtual void ArrangeChildren() override;
 };

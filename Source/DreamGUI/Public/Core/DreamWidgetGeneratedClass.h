@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "DreamWidgetGeneratedClass.generated.h"
 
@@ -44,6 +45,18 @@ public:
 	 */
 	static const FName BindWidgetMetaName;
 
+	/**
+	 * The same claim for animations: meta = (BindDreamWidgetAnim) on an animation-typed property says
+	 * the class's own code plays an animation of that name, so a hierarchy without one is a compile
+	 * error. UMG spells it BindWidgetAnim; this framework spells its own, for the reason above.
+	 *
+	 * Optional is the same claim without the error, for a class that tests the pointer first. Neither
+	 * decides whether the property is FILLED -- every animation-named property below UDreamUserWidget
+	 * is bound by name, marked or not -- only whether a missing animation stops the compile.
+	 */
+	static const FName BindWidgetAnimMetaName;
+	static const FName BindWidgetAnimOptionalMetaName;
+
 	/** The authored hierarchy this class instantiates. Null on a class that inherits its parent's. */
 	UDreamWidgetTree* GetWidgetTreeArchetype() const { return WidgetTree; }
 
@@ -60,6 +73,8 @@ public:
 	static void CollectPropertyBindings(const UClass* InClass, TArray<FDreamWidgetPropertyBinding>& OutBindings);
 	/** Base first, like the property bindings: a subclass listening to the same event binds after. */
 	static void CollectEventBindings(const UClass* InClass, TArray<FDreamWidgetEventBinding>& OutBindings);
+	/** Base first, like the others. */
+	static void CollectEachBindings(const UClass* InClass, TArray<FDreamWidgetEachBinding>& OutBindings);
 
 #if WITH_EDITOR
 	/** Compiler-only: hand the class the tree it will instance. */
@@ -67,6 +82,7 @@ public:
 	/** Compiler-only: hand the class the bindings it resolved. */
 	void SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings);
 	void SetEventBindings(TArray<FDreamWidgetEventBinding> InBindings);
+	void SetEachBindings(TArray<FDreamWidgetEachBinding> InBindings);
 #endif
 
 	/**
@@ -87,6 +103,12 @@ public:
 	 * the whole step is testable without compiling a Blueprint. Mirrors
 	 * UWidgetBlueprintGeneratedClass::InitializeWidgetStatic, whose three steps this follows:
 	 * instance the tree, bind each widget to the same-named class property, then hand over.
+	 *
+	 * The contents are instanced with InUserWidget's own RF_Transactional, because that flag
+	 * propagates to sub-objects and so decides whether the whole hierarchy is undoable. An
+	 * RF_Transient, non-transactional host -- which is what the designer builds its preview as --
+	 * therefore gets a hierarchy no transaction can record, which is the rule the designer's undo
+	 * model rests on: the authoring tree is the only undoable half.
 	 */
 	static void InitializeWidgetStatic(UDreamUserWidget* InUserWidget, const UClass* InClass, UDreamWidgetTree* InWidgetTreeArchetype);
 
@@ -107,4 +129,7 @@ private:
 
 	UPROPERTY()
 	TArray<FDreamWidgetEventBinding> EventBindings;
+
+	UPROPERTY()
+	TArray<FDreamWidgetEachBinding> EachBindings;
 };

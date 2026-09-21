@@ -54,6 +54,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	int GetUserIndex()const{return UserIndex;}
 
+	/**
+	 * Which local player this raycaster speaks for -- the same index as that player's event system.
+	 *
+	 * Authored in the Details panel for a placed raycaster; this setter exists for the ones the screen
+	 * subsystem creates, one per local player, which have no author to type it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetUserIndex(int InUserIndex){ UserIndex = InUserIndex; }
+
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	int32 GetPointerID()const { return PointerID; }
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
@@ -69,5 +78,15 @@ public:
 	void SetPointerID(int32 Value);
 protected:
 	void RaycastUI(UDreamPointerEventData* InPointerEventData, UDreamCanvas* InRootCanvas, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
+	/**
+	 * Trace the world along this raycaster's ray and report what is in the way.
+	 *
+	 * At most one result, and it has no Widget -- a world primitive is not one -- so it acts purely as
+	 * an occluder: the input module sorts all hits by distance, so a world hit in front of a world-space
+	 * panel takes the pointer away from it. One, because what blocks a pointer is the nearest blocking
+	 * hit; overlap-only volumes are not walls and a multi trace would report them as if they were. See
+	 * the definition for why occlusion is the whole of what a world hit can mean in a widget-dispatched
+	 * event model.
+	 */
 	void RaycastWorld(UDreamPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
 };

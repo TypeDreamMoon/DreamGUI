@@ -30,14 +30,19 @@ namespace DreamUICreateLocal
 			return nullptr;
 		}
 		Widget->OnRegister();
-		if (World && World->HasBegunPlay() && !Widget->HasBegunPlay())
+		UDreamUIManagerWorldSubsystem* DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World);
+		// The gate is the MANAGER having begun play, not the world -- the same rule
+		// RegisterDreamWidgetHierarchy states and for the same reason: World->HasBegunPlay() still
+		// answers false when called from inside an actor's BeginPlay, so a widget constructed there
+		// would be left un-begun, waiting for the manager's OnWorldBeginPlay to notice it.
+		if (DreamUIManager != nullptr && DreamUIManager->HasBegunPlay() && !Widget->HasBegunPlay())
 		{
 			// Awake runs, OnEnable does not -- UDreamUIBehaviour::BeginPlay gates the latter on the
 			// active flag. That is the same division UMG draws between NativeOnInitialized at
 			// CreateWidget time and Construct on add.
 			Widget->BeginPlay();
 		}
-		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World))
+		if (DreamUIManager != nullptr)
 		{
 			DreamUIManager->ParkWidget(Widget);
 		}
@@ -169,6 +174,41 @@ bool UDreamUIBPLibrary::AttachWidgetToSceneComponent(UDreamWidget* InRoot, UScen
 		DreamUIManager->UnparkWidget(InRoot);
 	}
 	return true;
+}
+
+void UDreamUIBPLibrary::ForceLayoutPrepass(UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return;
+	}
+	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(InWidget->GetWorld()))
+	{
+		DreamUIManager->RebuildLayoutImmediately(InWidget);
+	}
+}
+
+void UDreamUIBPLibrary::InvalidateLayout(UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return;
+	}
+	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(InWidget->GetWorld()))
+	{
+		DreamUIManager->AddLayoutDirtyWidget(InWidget);
+	}
+}
+
+bool UDreamUIBPLibrary::IsWidgetParked(const UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return false;
+	}
+	const UDreamUIManagerWorldSubsystem* DreamUIManager =
+		UDreamUIManagerWorldSubsystem::GetInstance(InWidget->GetWorld());
+	return DreamUIManager != nullptr && DreamUIManager->IsWidgetParked(InWidget);
 }
 
 bool UDreamUIBPLibrary::IsInViewport(UObject* WorldContextObject, UDreamWidget* InRoot)

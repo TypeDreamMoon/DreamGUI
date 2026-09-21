@@ -62,10 +62,23 @@ void UDreamLayoutAnimation_CommonTween::OnApplyLayoutResults(const TArray<FLayou
 		auto NewPos = SnapshotData.Widget->GetAnchoredPosition();
 		auto NewSize = SnapshotData.Widget->GetSizeDelta();
 		auto OldPos = SnapshotData.Position;
-		auto OldSize = SnapshotData.Size;
+		// The snapshot records a RESOLVED size (SnapshotLayout stores Child->GetSize()), but both ends of
+		// this tween are fed to SetPositionAndSizeForLayoutAnimation, which assigns straight into
+		// AnchorData.SizeDelta. On a point-anchored child the two are the same number and nothing shows;
+		// on a stretched one they differ by the parent's span across the anchors, so the animation's first
+		// frame wrote the resolved size in as a delta and the child jumped to size + span before easing
+		// back. GetSize() - GetSizeDelta() is exactly that span, measured on the widget itself, so this
+		// converts the snapshot into the unit the setter actually takes. SlideIn next door never had the
+		// bug: it derives its start from the current delta rather than from the snapshot.
+		const FVector2D AnchorSpan = SnapshotData.Widget->GetSize() - SnapshotData.Widget->GetSizeDelta();
+		auto OldSize = SnapshotData.Size - AnchorSpan;
 		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
 
-		auto Tweener = UDreamTweenManager::To(this
+		// UDreamTweenManager is a game-instance subsystem, so it is simply absent in an editor world and
+		// To() answers null there. The call used to be chained straight into ->SetEase, which made that
+		// a null dereference rather than "no easing available". The start state above has already been
+		// applied either way, so skipping leaves the layout at its new values instead of crashing.
+		UDreamTweener* Tweener = UDreamTweenManager::To(this
 		, FDreamTweenFloatGetterFunction::CreateLambda([=]()
 		{
 			return 0;
@@ -74,8 +87,12 @@ void UDreamLayoutAnimation_CommonTween::OnApplyLayoutResults(const TArray<FLayou
 			auto Pos = FMath::Lerp(OldPos, NewPos, Value);
 			auto Size = FMath::Lerp(OldSize, NewSize, Value);
 			SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(Pos, Size);
-		}), 1.0f, Duration)
-		->SetEase(Ease);
+		}), 1.0f, Duration);
+		if (!IsValid(Tweener))
+		{
+			continue;
+		}
+		Tweener->SetEase(Ease);
 		if (Ease == EDreamTweenEase::CurveFloat)
 		{
 			Tweener->SetRuntimeFloatCurve(EaseCurve);
@@ -100,7 +117,8 @@ void UDreamLayoutAnimation_SlideIn::OnApplyLayoutResults(const TArray<FLayoutAni
 		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
 		SnapshotData.Widget->SetRenderOpacity(OldOpacity);
 
-		auto Tweener = UDreamTweenManager::To(this
+		/** Same null contract as in UDreamLayoutAnimation_CommonTween above. */
+		UDreamTweener* Tweener = UDreamTweenManager::To(this
 		, FDreamTweenFloatGetterFunction::CreateLambda([=]()
 		{
 			return 0;
@@ -110,8 +128,12 @@ void UDreamLayoutAnimation_SlideIn::OnApplyLayoutResults(const TArray<FLayoutAni
 			auto Size = FMath::Lerp(OldSize, NewSize, Value);
 			SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(Pos, Size);
 			SnapshotData.Widget->SetRenderOpacity(FMath::Lerp(OldOpacity, NewOpacity, Value));
-		}), 1.0f, Duration)
-		->SetEase(Ease);
+		}), 1.0f, Duration);
+		if (!IsValid(Tweener))
+		{
+			continue;
+		}
+		Tweener->SetEase(Ease);
 		if (Ease == EDreamTweenEase::CurveFloat)
 		{
 			Tweener->SetRuntimeFloatCurve(EaseCurve);
@@ -215,7 +237,7 @@ void UDreamLayoutContainer::SetLayoutAnimation(UDreamLayoutAnimation* Value)
 
 UDreamLayoutAnimation* UDreamLayoutContainer::CreateNewLayoutAnimation(TSubclassOf<UDreamLayoutAnimation> Class)
 {
-	auto NewAnimationHandler = NewObject<UDreamLayoutAnimation>(this, Class, NAME_None, RF_Public | RF_Transactional);
+	auto NewAnimationHandler = NewObject<UDreamLayoutAnimation>(this, Class, NAME_None, RF_Public | GetMaskedFlags(RF_Transactional));
 	AnimationHandler = NewAnimationHandler;
 	return AnimationHandler;
 }
@@ -323,8 +345,13 @@ void UDreamLayoutSelf::PostReinitProperties()
 #endif
 }
 
-FVector2f UDreamLayoutSelf::GetLayoutFinalSize()
+bool UDreamLayoutSelf::BeginLayoutPass()
 {
-	auto Widget = GetWidget();
-	return FVector2f(Widget->GetWidth(), Widget->GetHeight());
+	if (!bIsLayoutDirty && bHasAppliedOnce)
+	{
+		return false;
+	}
+	bIsLayoutDirty = false;
+	bHasAppliedOnce = true;
+	return true;
 }

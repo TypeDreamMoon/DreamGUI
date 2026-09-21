@@ -41,15 +41,25 @@ bool UDreamUIFontData_Bitmap::RenderGlyph(const FDreamUIGlyphKey& Glyph, float C
 	OutResult.hAdvance = slot->metrics.horiAdvance * ONE_DIVIDE_64;
 	OutResult.pixelSize = 4;
 	//pixel color
-	int pixelCount = OutResult.width * OutResult.height;
+	const int32 GlyphWidth = (int32)slot->bitmap.width;
+	const int32 GlyphHeight = (int32)slot->bitmap.rows;
+	const int32 pixelCount = GlyphWidth * GlyphHeight;
 	TArray<unsigned char> regionColorData;
 	regionColorData.SetNumUninitialized(pixelCount * OutResult.pixelSize);
 	FColor* regionColor = reinterpret_cast<FColor*>(regionColorData.GetData());
-	for (int i = 0; i < pixelCount; i++)
+	// Row by row through ReadGlyphRow, because the rows are `pitch` bytes apart (possibly backwards)
+	// and are not necessarily 8-bit grey; a linear walk of buffer[i] read garbage for a mono strike.
+	TArray<uint8> RowCoverage;
+	RowCoverage.SetNumUninitialized(FMath::Max(GlyphWidth, 1));
+	for (int32 y = 0; y < GlyphHeight; y++)
 	{
-		auto& pixelColor = regionColor[i];
-		pixelColor.R = pixelColor.G = pixelColor.B = 255;
-		pixelColor.A = slot->bitmap.buffer[i];
+		ReadGlyphRow(slot->bitmap, y, RowCoverage.GetData(), GlyphWidth);
+		for (int32 x = 0; x < GlyphWidth; x++)
+		{
+			auto& pixelColor = regionColor[y * GlyphWidth + x];
+			pixelColor.R = pixelColor.G = pixelColor.B = 255;
+			pixelColor.A = RowCoverage[x];
+		}
 	}
 	OutResult.buffer = MoveTemp(regionColorData);
 	return true;
@@ -114,21 +124,7 @@ void UDreamUIFontData_Bitmap::InitializeFontTextureAtlasSlice(uint8* SliceData, 
 	}
 }
 
-void UDreamUIFontData_Bitmap::ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)
-{
-	Super::ApplyPackingAtlasTextureExpand(newTexture, newTextureSize);
-	//scale down uv of prev chars
-	for (auto& charDataItem : CharDataMap)
-	{
-		auto& mapValue = charDataItem.Value;
-		mapValue.MinUV.X *= 0.5f;
-		mapValue.MaxUV.Y *= 0.5f;
-		mapValue.MaxUV.X *= 0.5f;
-		mapValue.MinUV.Y *= 0.5f;
-	}
-}
-
-FDreamTextGlyphPaintStyle UDreamUIFontData_Bitmap::GetGlyphPaintStyle(const FVector2f& InWorldScale) const
+FDreamTextGlyphPaintStyle UDreamUIFontData_Bitmap::GetGlyphPaintStyle(const FVector2f& InWorldScale, float InExpandMeshSize) const
 {
 	FDreamTextGlyphPaintStyle Style;
 	Style.ItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));

@@ -9,6 +9,7 @@
 #include "Core/DreamVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 UDreamBackgroundPixelate::UDreamBackgroundPixelate(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -204,9 +205,9 @@ public:
 
 void UDreamBackgroundPixelate::SendOthersDataToRenderProxy()
 {
-	if (RenderProxy != nullptr)
+	if (RenderProxy.IsValid())
 	{
-		auto TempRenderProxy = (FUIBackgroundPixelateRenderProxy*)RenderProxy;
+		auto TempRenderProxy = StaticCastSharedPtr<FUIBackgroundPixelateRenderProxy>(RenderProxy);
 		float pixelateStrengthWidthAlpha = this->GetStrengthInternal();
 		ENQUEUE_RENDER_COMMAND(FDreamBackgroundPixelate_UpdateData)
 			([TempRenderProxy, pixelateStrengthWidthAlpha](FRHICommandListImmediate& RHICmdList)
@@ -216,11 +217,11 @@ void UDreamBackgroundPixelate::SendOthersDataToRenderProxy()
 	}
 }
 
-FDreamVisualPostProcessRenderProxy* UDreamBackgroundPixelate::GetRenderProxy()
+FDreamVisualPostProcessRenderProxyPtr UDreamBackgroundPixelate::GetRenderProxy()
 {
-	if (RenderProxy == nullptr)
+	if (!RenderProxy.IsValid())
 	{
-		RenderProxy = new FUIBackgroundPixelateRenderProxy();
+		RenderProxy = MakeShared<FUIBackgroundPixelateRenderProxy, ESPMode::ThreadSafe>();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
 	}
@@ -232,3 +233,5 @@ void UDreamBackgroundPixelate::SendRegionVertexDataToRenderProxy()
 	Super::SendRegionVertexDataToRenderProxy();
 	SendOthersDataToRenderProxy();
 }
+
+DECLARE_DREAM_GUI_VISUAL("BackgroundPixelate", UDreamBackgroundPixelate)

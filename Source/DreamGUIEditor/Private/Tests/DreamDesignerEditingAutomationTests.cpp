@@ -13,6 +13,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/DreamUIManager.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
@@ -26,6 +27,7 @@
 #include "EdGraph/EdGraph.h"
 #include "K2Node_FunctionEntry.h"
 #include "UObject/UObjectIterator.h"
+#include "UObject/UnrealType.h"//FArrayProperty / FScriptArrayHelper, to put a hole in Children
 
 #include "Editor.h"
 #include "Framework/Application/SlateApplication.h"
@@ -36,6 +38,10 @@
 #include "EdGraphSchema_K2.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "UObject/Package.h"
+#include "Framework/Commands/GenericCommands.h"//the Paste command, driven through the toolkit's real binding
+#include "Framework/Commands/UICommandList.h"
+#include "Misc/ITransaction.h"//FTransactionContext, for MatchesContext
+#include "Misc/TransactionObjectEvent.h"//FTransactionObjectEvent, for MatchesContext
 
 /*
  * Editing a hierarchy through the designer.
@@ -60,7 +66,12 @@ namespace DreamDesignerEditingTestLocal
 		UDreamWidgetBlueprint* Blueprint = nullptr;
 		FDreamWidgetBlueprintEditor* Designer = nullptr;
 
-		explicit FScopedDesigner(const TCHAR* InName)
+		/**
+		 * @param bGiveRootAPanel  false builds what the New Widget Blueprint dialog builds when its
+		 *                         root-panel picker is answered with None: a root widget, and no layout
+		 *                         container on it.
+		 */
+		explicit FScopedDesigner(const TCHAR* InName, bool bGiveRootAPanel = true)
 		{
 			Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InName));
 			Package->AddToRoot();
@@ -73,8 +84,11 @@ namespace DreamDesignerEditingTestLocal
 			}
 			UDreamWidgetTree* Tree = Blueprint->GetOrCreateWidgetTree();
 			Tree->RootWidget->SetDisplayName(TEXT("Root"));
-			// A panel on the root, so it can accept children at all.
-			Tree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerCanvasPanel::StaticClass());
+			if (bGiveRootAPanel)
+			{
+				// A panel on the root, so it can accept children at all.
+				Tree->RootWidget->CreateNewLayoutContainer(UDreamLayoutContainerCanvasPanel::StaticClass());
+			}
 			FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
 
 			GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
@@ -188,7 +202,19 @@ bool FDreamDesignerToolsEditTheAssetTest::RunTest(const FString&)
 	}
 
 	// ---- copy and paste
-	FDreamUIEditorTools::CopyWidgets([MadePreview]() { return TArray<UDreamWidget*>{ MadePreview }; });
+	//
+	// Re-resolved, not reused: MadePreview above has been through two rebuilds since it was fetched
+	// (the duplicate's, and the explicit one) and every preview pointer taken before a structural
+	// edit is dead after it. That is the contract RebuildPreviewPreservingSelection states, and this
+	// test used to break it and get away with it -- a torn-down preview widget still answered
+	// IsValid() until DestroyWidget began marking its subtree as garbage, so the copy resolved a
+	// world, found the designer, and worked by accident.
+	UDreamWidget* MadePreviewForCopy = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Made")));
+	if (!TestNotNull(TEXT("The widget to copy still has a preview"), MadePreviewForCopy))
+	{
+		return false;
+	}
+	FDreamUIEditorTools::CopyWidgets([MadePreviewForCopy]() { return TArray<UDreamWidget*>{ MadePreviewForCopy }; });
 	TestTrue(TEXT("The clipboard has something"), FDreamWidgetBlueprintEditor::DesignerHasClipboardContent());
 	UDreamWidget* PasteParent = Scoped.Designer->GetPreviewRootWidget();
 	FDreamUIEditorTools::PasteWidgets([PasteParent]() { return TArray<UDreamWidget*>{ PasteParent }; });
@@ -339,6 +365,97 @@ bool FDreamDesignerComponentsAndPropertiesReachTheAssetTest::RunTest(const FStri
 		}
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUndoRebuildsThePreviewTest,
+	"DreamGUI.Designer.UndoRebuildsThePreviewFromTheRestoredTemplate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerUndoRebuildsThePreviewTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+
+	// The other half of the undo model, and the half no preview-host test can reach: the DESIGNER's
+	// reaction to a transaction being applied.
+	//
+	// The preview is not undoable -- it is not in the buffer at all -- so an undo restores the
+	// authoring tree and leaves the surface showing the edit that was just taken back. What closes
+	// that gap is FDreamWidgetBlueprintEditor::HandlePostTransaction rebuilding from the restored
+	// template, which is what this asserts: nothing here calls Rebuild(), and the value read off
+	// the preview afterwards is the authored one.
+	//
+	// It was the opposite way round before. Details edits appeared to undo correctly because the
+	// preview objects were themselves in the transaction, which is also what let an undo restore
+	// widgets a rebuild had already destroyed.
+	FScopedDesigner Scoped(TEXT("DesignerUndoRebuild"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+
+	UDreamWidget* SubjectTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Subject"));
+	if (!TestNotNull(TEXT("The subject was authored"), SubjectTemplate))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+	UDreamWidget* PreviewSubject = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate);
+	if (!TestNotNull(TEXT("And has a preview"), PreviewSubject))
+	{
+		return false;
+	}
+	const float WidthBefore = (float)SubjectTemplate->GetSizeDelta().X;
+
+	// Exactly the two calls SDreamWidgetDesignerDetails::NotifyPostChange makes, in that order: the
+	// bIsModify pass is what records the TEMPLATE, and the second writes the value onto it.
+	FProperty* AnchorDataProperty = UDreamWidget::StaticClass()->FindPropertyByName(UDreamWidget::GetPropertyName_AnchorData());
+	if (!TestNotNull(TEXT("The anchor data property was found"), AnchorDataProperty))
+	{
+		return false;
+	}
+	FEditPropertyChain Chain;
+	Chain.AddHead(AnchorDataProperty);
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Details Width")));
+	PreviewSubject->SetSizeDelta(FVector2D(77.0, 88.0));
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewSubject }, Chain, /*bIsModify*/true);
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewSubject }, Chain, /*bIsModify*/false);
+	GEditor->EndTransaction();
+	TestEqual(TEXT("the asset took the edited width"), (float)SubjectTemplate->GetSizeDelta().X, 77.0f, 0.001f);
+
+	GEditor->UndoTransaction();
+
+	TestEqual(TEXT("undo put the authored width back"),
+		(float)SubjectTemplate->GetSizeDelta().X, WidthBefore, 0.001f);
+	// No Rebuild() call. If the designer did not rebuild, this lookup answers with the SAME preview
+	// object the edit was made on, still carrying 77 -- which is the regression this pins.
+	UDreamWidget* Rebuilt = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate);
+	if (TestNotNull(TEXT("the subject still has a preview after the undo"), Rebuilt))
+	{
+		TestNotEqual(TEXT("and it is a fresh object, projected again rather than restored"),
+			(void*)Rebuilt, (void*)PreviewSubject);
+		TestEqual(TEXT("showing the width the asset now has"),
+			(float)Rebuilt->GetSizeDelta().X, WidthBefore, 0.001f);
+	}
+
+	// Redo is the same journey the other way: the template takes the edit back and the surface has
+	// to follow it there too, through the same PostRedo path.
+	GEditor->RedoTransaction();
+	TestEqual(TEXT("redo puts the edited width back on the asset"),
+		(float)SubjectTemplate->GetSizeDelta().X, 77.0f, 0.001f);
+	if (UDreamWidget* Redone = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SubjectTemplate))
+	{
+		TestEqual(TEXT("and the preview shows it without anyone asking for a rebuild"),
+			(float)Redone->GetSizeDelta().X, 77.0f, 0.001f);
+	}
 	return true;
 }
 
@@ -888,18 +1005,25 @@ bool FDreamDesignerClipboardKeepsSameNamedWidgetsApartTest::RunTest(const FStrin
 	{
 		return false;
 	}
-	// Two widgets that share a display name. The clipboard used to be keyed by name, so a pair like
-	// this collapsed into one entry and pasted as one widget -- silently, which is the only reason it
-	// survived as long as it did.
-	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	// Two widgets asked for under the SAME name. The tree keeps display names unique, so what they
+	// end up with is "Twin" and "Twin_1" -- a pair that differs only by the uniquifying suffix, which
+	// is the shape that used to collapse: the clipboard was keyed by name, so the two became one
+	// entry and pasted as one widget, silently, which is the only reason it survived as long as it did.
+	//
+	// The parent is re-resolved between the two creates rather than captured once. Creating a widget
+	// is a structural edit, and a structural edit rebuilds the preview -- so the pointer fetched
+	// before the first create names a torn-down widget by the time the second one runs. This test used
+	// to get away with it because a destroyed preview widget still answered IsValid(); now that
+	// DestroyWidget marks its subtree as garbage, the second create correctly refuses a dead parent.
 	UDreamWidget* First = FDreamUIEditorTools::CreateWidgetAndReturn(
-		[PreviewRoot]() { return PreviewRoot; }, TEXT("Twin"), nullptr, nullptr);
+		[&Scoped]() { return Scoped.PreviewRoot(); }, TEXT("Twin"), nullptr, nullptr);
 	UDreamWidget* Second = FDreamUIEditorTools::CreateWidgetAndReturn(
-		[PreviewRoot]() { return PreviewRoot; }, TEXT("Twin"), nullptr, nullptr);
+		[&Scoped]() { return Scoped.PreviewRoot(); }, TEXT("Twin"), nullptr, nullptr);
 	if (!TestNotNull(TEXT("First twin created"), First) || !TestNotNull(TEXT("Second twin created"), Second))
 	{
 		return false;
 	}
+	TestTrue(TEXT("and the two are different widgets"), First != Second);
 	Scoped.Rebuild();
 	const int32 CountBefore = Scoped.TemplateCount();
 
@@ -1221,5 +1345,589 @@ bool FDreamDesignerRotationEditKeepsTheMirrorInStepTest::RunTest(const FString&)
 		ChildTemplate->GetRelativeRotationEuler(), FRotator(0, 0, 30));
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRootCanBeDeletedAndReplacedTest,
+	"DreamGUI.Designer.TheRootCanBeDeletedAndTheEmptyTreeRefilled",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerRootCanBeDeletedAndReplacedTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerRootDelete"));
+	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	UDreamWidgetTree* Tree = Scoped.Blueprint->GetOrCreateWidgetTree();
+	UDreamWidget* OldRoot = Tree->RootWidget.Get();
+	if (!TestNotNull(TEXT("there is a root to delete"), OldRoot))
+	{
+		return false;
+	}
+
+	// Refused for years on the grounds that nothing downstream could answer for an empty hierarchy.
+	// UMG has always allowed it (UWidgetTree::RemoveWidget nulls the root out), and there was no way
+	// to replace a root you had outgrown short of deleting the asset.
+	TestTrue(TEXT("the root can be deleted"), DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, OldRoot));
+	TestNull(TEXT("and the tree is empty afterwards"), Tree->RootWidget.Get());
+
+	// The other half, and the reason the first is not a one-way door: an empty tree takes the next
+	// widget as its root.
+	UDreamWidget* NewRoot = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), nullptr, -1, TEXT("Replacement"));
+	if (!TestNotNull(TEXT("a widget can be created into the empty tree"), NewRoot))
+	{
+		return false;
+	}
+	TestTrue(TEXT("and it became the root"), Tree->RootWidget.Get() == NewRoot);
+	TestNull(TEXT("with nothing above it"), NewRoot->GetParent());
+
+	// Stretched, like the one the factory makes: a root left at the widget default is a fixed rect
+	// nothing sizes, and the designer would show the whole hierarchy at whatever that rect happens
+	// to be.
+	const FDreamUIAnchorData& Anchors = NewRoot->GetAnchorData();
+	TestTrue(TEXT("the replacement root fills its parent"),
+		Anchors.AnchorMin.IsNearlyZero() && Anchors.AnchorMax.Equals(FVector2D(1.0, 1.0))
+			&& Anchors.SizeDelta.IsNearlyZero());
+
+	// And the designer survives the round trip: a preview built from an emptied and refilled tree is
+	// the assertion that would fail if any of the null-root guards downstream had been optimistic.
+	Scoped.Designer->GetPreviewHost()->RebuildPreview();
+	TestNotNull(TEXT("the preview rebuilt around the new root"), Scoped.PreviewRoot());
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerClipboardSurvivesGCTest,
+	"DreamGUI.Designer.TheClipboardSurvivesAGarbageCollection",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A copy has to still be there after the editor collects garbage.
+ *
+ * Every other clipboard test copies and pastes with nothing in between, which is the one sequence
+ * that could not fail: the copies were held by weak pointers and reachable from nothing at all -- a
+ * widget is outered FLAT to its tree, and an outer does not keep its inners alive. So the first idle
+ * collection after Ctrl+C emptied the clipboard and Ctrl+V went quietly grey, which is
+ * indistinguishable from "copy did not work" and was reported as exactly that.
+ */
+bool FDreamDesignerClipboardSurvivesGCTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("ClipboardGC"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Panel = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Copied"));
+	Scoped.Rebuild();
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	UDreamWidget* PanelPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Panel);
+	if (!TestNotNull(TEXT("the widget has a preview to copy"), PanelPreview))
+	{
+		return false;
+	}
+	Scoped.Designer->DesignerCopyWidgets({ PanelPreview });
+	if (!TestTrue(TEXT("the clipboard has content straight after the copy"),
+		FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()))
+	{
+		return false;
+	}
+
+	// The editor's own idle collection, spelled the way the editor spells it.
+	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/true);
+
+	TestTrue(TEXT("and still has content after a garbage collection"),
+		FDreamWidgetBlueprintEditor::DesignerHasClipboardContent());
+
+	// The claim the flag stands in for: the copy is still paste-able.
+	UDreamWidget* PasteParent = Scoped.Designer->GetPreviewRootWidget();
+	FDreamUIEditorTools::PasteWidgets([PasteParent]() { return TArray<UDreamWidget*>{ PasteParent }; });
+	Scoped.Rebuild();
+	TestEqual(TEXT("pasting after the collection still adds the widget"), Scoped.TemplateCount(), CountBefore + 1);
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerHiddenSurvivesStructuralEditTest,
+	"DreamGUI.Designer.HidingAWidgetOutlastsTheNextStructuralEdit",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Hidden-in-designer lives on the PREVIEW widget, and a structural edit throws the preview away.
+ *
+ * ApplyDesignerState is what replays it from the asset, and it used to be called from exactly two
+ * places -- opening the designer, and finishing an undo. Every other rebuild (create, delete,
+ * reparent, paste, wrap) therefore brought every hidden widget back, drawn and clickable, while the
+ * asset still recorded it as hidden. Undoing made it "work" again, which is the wrong way round.
+ */
+bool FDreamDesignerHiddenSurvivesStructuralEditTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerHiddenReplay"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* HiddenTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("PutAway"));
+	Scoped.Rebuild();
+
+	UDreamWidget* HiddenPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(HiddenTemplate);
+	if (!TestNotNull(TEXT("the widget has a preview to hide"), HiddenPreview))
+	{
+		return false;
+	}
+	Scoped.Designer->SetWidgetHiddenInDesigner(HiddenPreview, true);
+	TestTrue(TEXT("it is hidden to begin with"), Scoped.Designer->IsWidgetHiddenInDesigner(HiddenPreview));
+
+	// Any structural edit at all; this one is a create, which is the commonest.
+	UDreamWidget* Other = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Unrelated"));
+	TestNotNull(TEXT("the unrelated widget was created"), Other);
+	Scoped.Rebuild();
+
+	// The preview object is a different one now, so the question has to be asked of the new one.
+	UDreamWidget* RebuiltPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(HiddenTemplate);
+	if (!TestNotNull(TEXT("the hidden widget still has a preview"), RebuiltPreview))
+	{
+		return false;
+	}
+	TestTrue(TEXT("and it is still hidden after the rebuild"),
+		Scoped.Designer->IsWidgetHiddenInDesigner(RebuiltPreview));
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDeleteForgetsHiddenAndLockedTest,
+	"DreamGUI.Designer.DeletingAWidgetStopsTheAssetCallingItHiddenAndLocked",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * DesignerData.HiddenWidgets and LockedWidgets are keyed by object FName and used to only ever grow.
+ *
+ * The entries were saved with the asset, and MakeUniqueObjectName hands a name back out once nothing
+ * holds it -- so a widget created later could inherit a deleted one's "hidden" and "locked" and be
+ * born invisible and unclickable, with nothing in the panel to explain it.
+ */
+bool FDreamDesignerDeleteForgetsHiddenAndLockedTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerDeleteForgets"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Parent = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Doomed"));
+	UDreamWidget* Child = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Parent, -1, TEXT("DoomedChild"));
+	Scoped.Rebuild();
+
+	UDreamWidget* ParentPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Parent);
+	UDreamWidget* ChildPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Child);
+	if (!TestNotNull(TEXT("the parent has a preview"), ParentPreview)
+		|| !TestNotNull(TEXT("the child has a preview"), ChildPreview))
+	{
+		return false;
+	}
+	// Recorded against the PREVIEW's name, which is the template's name -- that is what pairs them.
+	const FName ParentKey = ParentPreview->GetFName();
+	const FName ChildKey = ChildPreview->GetFName();
+	Scoped.Designer->SetWidgetHiddenInDesigner(ParentPreview, true);
+	Scoped.Designer->SetWidgetLockedInDesigner(ParentPreview, true, /*bRecursive*/true);
+	if (!TestTrue(TEXT("the asset records the parent as hidden"),
+			Scoped.Blueprint->DesignerData.HiddenWidgets.Contains(ParentKey))
+		|| !TestTrue(TEXT("and the child as locked"),
+			Scoped.Blueprint->DesignerData.LockedWidgets.Contains(ChildKey)))
+	{
+		return false;
+	}
+
+	DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, Parent);
+	Scoped.Rebuild();
+
+	TestFalse(TEXT("deleting it drops the hidden entry"),
+		Scoped.Blueprint->DesignerData.HiddenWidgets.Contains(ParentKey));
+	TestFalse(TEXT("and the parent's locked entry"),
+		Scoped.Blueprint->DesignerData.LockedWidgets.Contains(ParentKey));
+	TestFalse(TEXT("and the whole subtree's, not just the root of it"),
+		Scoped.Blueprint->DesignerData.LockedWidgets.Contains(ChildKey));
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerPasteTakesAnySelectionSizeTest,
+	"DreamGUI.Designer.PasteIsOfferedWithNoSelectionAndWithSeveral",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Copy, Cut, Duplicate and Delete all take the whole selection; Paste alone demanded exactly one.
+ *
+ * With nothing selected it logged "NothingSelected" and went home -- so copy something, click empty
+ * space, Ctrl+V, and nothing happens -- and with two or more the command was greyed out. Driven
+ * through the toolkit's real command bindings, because the defect was in the binding:
+ * DesignerPasteWidgets itself has always accepted whatever parent it is handed.
+ */
+bool FDreamDesignerPasteTakesAnySelectionSizeTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerPasteSelection"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* SourceTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Source"));
+	UDreamWidget* SecondTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Second"));
+	Scoped.Rebuild();
+
+	UDreamWidget* SourcePreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SourceTemplate);
+	if (!TestNotNull(TEXT("the source has a preview"), SourcePreview))
+	{
+		return false;
+	}
+	Scoped.Designer->DesignerCopyWidgets({ SourcePreview });
+
+	const TSharedRef<const FUICommandInfo> PasteCommand = FGenericCommands::Get().Paste.ToSharedRef();
+	const TSharedRef<FUICommandList> Commands = Scoped.Designer->GetToolkitCommands();
+
+	// ---- nothing selected: UMG pastes at the hierarchy root
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>(), /*bAppendOrToggle*/false);
+	TestEqual(TEXT("nothing is selected"), Scoped.Designer->GetSelectedWidgets().Num(), 0);
+	if (!TestTrue(TEXT("Paste is offered with nothing selected"), Commands->CanExecuteAction(PasteCommand)))
+	{
+		return false;
+	}
+	int32 Expected = Scoped.TemplateCount() + 1;
+	Commands->ExecuteAction(PasteCommand);
+	Scoped.Rebuild();
+	TestEqual(TEXT("and it pasted at the root"), Scoped.TemplateCount(), Expected);
+
+	// ---- two selected: the first is the parent, as UMG does it
+	{
+		// Re-resolved after the rebuild above: every preview pointer from before it is dead.
+		UDreamWidget* FirstNow = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SourceTemplate);
+		UDreamWidget* SecondNow = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SecondTemplate);
+		if (!TestNotNull(TEXT("the source still has a preview"), FirstNow)
+			|| !TestNotNull(TEXT("the second still has a preview"), SecondNow))
+		{
+			return false;
+		}
+		Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ FirstNow, SecondNow }, /*bAppendOrToggle*/false);
+		TestEqual(TEXT("two widgets are selected"), Scoped.Designer->GetSelectedWidgets().Num(), 2);
+		TestTrue(TEXT("Paste is offered with two selected"), Commands->CanExecuteAction(PasteCommand));
+		Expected = Scoped.TemplateCount() + 1;
+		Commands->ExecuteAction(PasteCommand);
+		Scoped.Rebuild();
+		TestEqual(TEXT("and it pasted once, into one of them"), Scoped.TemplateCount(), Expected);
+	}
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUndoIgnoresOtherAssetsTest,
+	"DreamGUI.Designer.AnUndoNamingAnotherAssetIsNotThisDesignersBusiness",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Every open designer is an undo client, and PostUndo here rebuilds a whole preview tree.
+ *
+ * Without a MatchesContext to gate it, dragging an actor in the level and pressing Ctrl+Z paid that
+ * bill once per open Widget Blueprint window, and broadcast a selection change with it. The gate is
+ * the engine's own hook: return false and neither PostUndo nor PostRedo is called at all.
+ */
+bool FDreamDesignerUndoIgnoresOtherAssetsTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerUndoContext"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	const FTransactionContext Context;
+
+	// A transaction that names nothing says nothing about what it touched; everyone still hears it.
+	{
+		TArray<TPair<UObject*, FTransactionObjectEvent>> NoObjects;
+		TestTrue(TEXT("a context-less transaction still reaches the designer"),
+			Scoped.Designer->MatchesContext(Context, NoObjects));
+	}
+
+	// Something in this asset's package: the widget tree, which is where every structural edit lands.
+	{
+		TArray<TPair<UObject*, FTransactionObjectEvent>> Own;
+		Own.Emplace(Scoped.Blueprint->WidgetTree, FTransactionObjectEvent());
+		TestTrue(TEXT("a transaction naming this asset reaches the designer"),
+			Scoped.Designer->MatchesContext(Context, Own));
+	}
+
+	// Something that is not: a level actor's stand-in, here the transient package itself.
+	{
+		TArray<TPair<UObject*, FTransactionObjectEvent>> Foreign;
+		Foreign.Emplace(GetTransientPackage(), FTransactionObjectEvent());
+		TestFalse(TEXT("a transaction naming only other packages does not"),
+			Scoped.Designer->MatchesContext(Context, Foreign));
+	}
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUnwrapTest,
+	"DreamGUI.Designer.UnwrappingAPanelLeavesItsChildrenWhereItStood",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Wrap With had no inverse.
+ *
+ * A wrapper chosen by mistake could be undone at the time and never again, and a hierarchy that
+ * arrived with one -- inherited from a parent class, or built by somebody else -- had no "at the
+ * time" to go back to. The children have to keep their order and land where the wrapper stood, or
+ * unwrapping a row of buttons reverses them.
+ */
+bool FDreamDesignerUnwrapTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerUnwrap"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	UDreamWidget* Before = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Before"));
+	UDreamWidget* Wrapper = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Wrapper"));
+	UDreamWidget* After = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("After"));
+	DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Wrapper, -1, TEXT("First"));
+	DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Wrapper, -1, TEXT("Second"));
+	Scoped.Rebuild();
+	const int32 CountBefore = Scoped.TemplateCount();
+	const int32 WrapperIndex = Wrapper->GetSiblingIndex();
+
+	UDreamWidget* WrapperPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Wrapper);
+	if (!TestNotNull(TEXT("the wrapper has a preview to select"), WrapperPreview))
+	{
+		return false;
+	}
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ WrapperPreview }, /*bAppendOrToggle*/false);
+	if (!TestTrue(TEXT("a panel with a parent and children can be unwrapped"), Scoped.Designer->CanUnwrapSelectedWidget()))
+	{
+		return false;
+	}
+	Scoped.Designer->UnwrapSelectedWidget();
+	Scoped.Rebuild();
+
+	// One widget fewer: the two children stayed, the wrapper went.
+	TestEqual(TEXT("unwrapping removes exactly the wrapper"), Scoped.TemplateCount(), CountBefore - 1);
+	TestNull(TEXT("and the wrapper is gone from the tree"), Scoped.FindTemplate(TEXT("Wrapper")));
+
+	UDreamWidget* First = Scoped.FindTemplate(TEXT("First"));
+	UDreamWidget* Second = Scoped.FindTemplate(TEXT("Second"));
+	if (!TestNotNull(TEXT("the first child survived"), First) || !TestNotNull(TEXT("the second child survived"), Second))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the children are the grandparent's now"), First->GetParent(), Root);
+	TestEqual(TEXT("both of them"), Second->GetParent(), Root);
+	// Where it stood, in the order they were in. Reversing them is what a naive loop does.
+	TestEqual(TEXT("the first child took the wrapper's place"), First->GetSiblingIndex(), WrapperIndex);
+	TestEqual(TEXT("and the second follows it"), Second->GetSiblingIndex(), WrapperIndex + 1);
+	TestEqual(TEXT("the sibling before them did not move"), Before->GetSiblingIndex(), WrapperIndex - 1);
+	TestEqual(TEXT("and the one after them moved down by exactly one"), After->GetSiblingIndex(), WrapperIndex + 2);
+
+	// The root cannot be unwrapped -- it has nowhere to unwrap INTO -- and neither can a leaf.
+	UDreamWidget* RootPreview = Scoped.Designer->GetPreviewRootWidget();
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ RootPreview }, /*bAppendOrToggle*/false);
+	TestFalse(TEXT("the root cannot be unwrapped"), Scoped.Designer->CanUnwrapSelectedWidget());
+	if (UDreamWidget* LeafPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(First))
+	{
+		Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ LeafPreview }, /*bAppendOrToggle*/false);
+		TestFalse(TEXT("a widget with no children cannot be unwrapped"), Scoped.Designer->CanUnwrapSelectedWidget());
+	}
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerSelectionHandoverTest,
+	"DreamGUI.Designer.ASelectionMadeDuringASelectionChangeStillHappens",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * SelectWidgets re-enters constantly -- the hierarchy panel selects a row while the broadcast for the
+ * previous selection is still running -- and the inner request used to be dropped on the floor. The
+ * symptom was a selection the user asked for simply not happening, with nothing anywhere to say which
+ * listener had eaten it.
+ */
+bool FDreamDesignerSelectionHandoverTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerSelectionHandover"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* FirstTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Outer"));
+	UDreamWidget* SecondTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Inner"));
+	Scoped.Rebuild();
+
+	UDreamWidget* FirstPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(FirstTemplate);
+	UDreamWidget* SecondPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(SecondTemplate);
+	if (!TestNotNull(TEXT("the first widget has a preview"), FirstPreview)
+		|| !TestNotNull(TEXT("the second widget has a preview"), SecondPreview))
+	{
+		return false;
+	}
+
+	// A listener that selects something else the moment it hears about a selection -- exactly what
+	// the hierarchy panel does when it scrolls a row into view. Once only, or the two would trade
+	// requests for ever, which is the case the handover limit exists for.
+	bool bReentered = false;
+	FDelegateHandle Handle = Scoped.Designer->OnSelectionChanged.AddLambda([&]()
+	{
+		if (bReentered)
+		{
+			return;
+		}
+		bReentered = true;
+		Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ SecondPreview }, /*bAppendOrToggle*/false);
+	});
+
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ FirstPreview }, /*bAppendOrToggle*/false);
+	Scoped.Designer->OnSelectionChanged.Remove(Handle);
+
+	TestTrue(TEXT("the listener did re-enter"), bReentered);
+	// The inner request is the newer statement of what should be selected, so it is the one that
+	// stands. Before the handover it was discarded and the answer here was "Outer".
+	const TArray<TWeakObjectPtr<UDreamWidget>>& Selected = Scoped.Designer->GetSelectedWidgets();
+	if (!TestEqual(TEXT("exactly one widget ends up selected"), Selected.Num(), 1))
+	{
+		return false;
+	}
+	TestEqual(TEXT("and it is the one asked for from inside the broadcast"), Selected[0].Get(), SecondPreview);
+	return true;
+}
+
+/*
+ * The New Widget Blueprint dialog, answered with None for the root panel, then Compile with the
+ * designer open. The editor died on the next tick:
+ *
+ *   UDreamWidget::CollectChildrenWidgets  <-  RegisterDreamWidgetHierarchy
+ *   <-  UDreamUserWidget::ReinitializeFromArchetype  <-  UDreamUIManagerObject::OnBlueprintCompiled
+ *
+ * The compile here collects garbage, as the toolbar button's does -- every other compile in this file
+ * skips it, which is exactly why none of them ever reached this. And the manager is ticked by hand,
+ * because the repair it queues runs from its tick and an automation test has no editor loop.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRecompileWithAPanellessRootTest,
+	"DreamGUI.Designer.RecompilingWithTheDesignerOpenSurvivesARootThatHasNoPanel",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerRecompileWithAPanellessRootTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerPanellessRootRecompile"), /*bGiveRootAPanel*/false);
+	if (!TestNotNull(TEXT("A designer opened on the blueprint"), Scoped.Designer))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("The asset has a root"), Scoped.TemplateRoot());
+	TestNull(TEXT("and the root carries no panel"), Scoped.TemplateRoot() != nullptr ? Scoped.TemplateRoot()->GetLayoutContainer() : nullptr);
+
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::None);
+
+	// What the post-compile scan met in the editor, built by hand so it does not depend on which of the
+	// reinstancer's leftovers happens to survive the collection in a headless run: an instance of the
+	// GENERATED class -- so the class does have a hierarchy to rebuild from -- that was never
+	// initialized, has no tree, and holds a hole where a destroyed child was.
+	UDreamUserWidget* Husk = NewObject<UDreamUserWidget>(GetTransientPackage(), Scoped.Blueprint->GeneratedClass, NAME_None, RF_Transient);
+	{
+		FArrayProperty* ChildrenProperty = FindFProperty<FArrayProperty>(UDreamWidget::StaticClass(), TEXT("Children"));
+		if (!TestNotNull(TEXT("UDreamWidget::Children is still reflected"), ChildrenProperty))
+		{
+			return false;
+		}
+		FScriptArrayHelper Helper(ChildrenProperty, ChildrenProperty->ContainerPtrToValuePtr<void>(Husk));
+		Helper.AddValue();
+	}
+	TestEqual(TEXT("The copy's array has an entry"), Husk->GetChildrenCount(), 1);
+	TestFalse(TEXT("but an entry that is a hole is not contents, so the scan leaves the copy alone"), Husk->NeedsReinitializeFromClass());
+
+	UDreamUIManagerObject* Manager = UDreamUIManagerObject::GetInstance(true);
+	if (!TestNotNull(TEXT("The editor-side manager exists"), Manager))
+	{
+		return false;
+	}
+	// Twice: the repair is queued for the tick after the compile, and the refresh it ends with queues
+	// work of its own for the one after that.
+	Manager->Tick(0.016f);
+	Manager->Tick(0.016f);
+	FSlateApplication::Get().Tick();
+
+	// Still here. What is left to say is that the designer came through with something to show. The
+	// compile only INVALIDATES the preview; the toolkit's own tick is what rebuilds it, and a headless
+	// run has no such tick, so ask for the rebuild the way that tick would.
+	Scoped.Rebuild();
+	TestNotNull(TEXT("The preview has a root again after the recompile"), Scoped.PreviewRoot());
+
+	// A direct caller may still ask the copy to rebuild, and that is the call the editor died in: it
+	// skipped the hole, left it in the array, and registered the hierarchy straight through it.
+	Husk->ReinitializeFromClass();
+	{
+		int32 HuskHoles = 0;
+		for (const UDreamWidget* Child : Husk->GetChildren())
+		{
+			HuskHoles += Child == nullptr ? 1 : 0;
+		}
+		TestEqual(TEXT("The rebuilt copy holds no hole"), HuskHoles, 0);
+		TestNotNull(TEXT("and it has the class's hierarchy under it"), Husk->GetWidgetTree());
+	}
+	Husk->DestroyWidget();
+
+	// No live user widget may be left holding a hole where a child was: that hole is what the walk
+	// fell into, and any other walk over the same array would fall into it the same way.
+	int32 HolesFound = 0;
+	for (TObjectIterator<UDreamUserWidget> It; It; ++It)
+	{
+		if (!IsValid(*It) || It->IsTemplate())
+		{
+			continue;
+		}
+		for (const UDreamWidget* Child : It->GetChildren())
+		{
+			if (Child == nullptr)
+			{
+				++HolesFound;
+			}
+		}
+	}
+	TestEqual(TEXT("No live user widget holds a null child"), HolesFound, 0);
+	return true;
+}
+
 
 #endif

@@ -5,13 +5,13 @@
 #include "CoreMinimal.h"
 #include "KismetCompiler.h"
 #include "Text/DreamUIAst.h"
+#include "Text/DreamUIDiagnostics.h"
 
 class UDreamWidget;
 class UDreamWidgetBlueprint;
 class UDreamWidgetGeneratedClass;
 class UDreamWidgetTree;
 struct FDreamUIAst;
-struct FDreamUIDiagnosticBag;
 
 /**
  * Compiles a DreamUI hierarchy into a class.
@@ -51,6 +51,12 @@ public:
 		/** Embedded animation binding paths whose stale segment was rewritten. */
 		int32 AnimationBindings = 0;
 		/**
+		 * Widget bindings rewritten inside LOADED standalone UDreamUISequence assets whose
+		 * PreviewWidgetClass is this class -- the sequence asset says whose it is, which is what
+		 * keeps this from renaming a stranger's path. Those assets are dirtied, not saved.
+		 */
+		int32 ExternalSequenceBindings = 0;
+		/**
 		 * Why the graph leg was refused, ready to print; empty when it ran.
 		 *
 		 * The graph leg is the one that can do harm. It matches purely by NAME, so if anything other
@@ -60,7 +66,7 @@ public:
 		 */
 		FString GraphRefusal;
 
-		int32 Total() const { return GraphReferences + PropertyBindings + AnimationBindings; }
+		int32 Total() const { return GraphReferences + PropertyBindings + AnimationBindings + ExternalSequenceBindings; }
 	};
 
 	/**
@@ -125,6 +131,20 @@ protected:
 	 * compile unless the write-back has carried it home first.
 	 */
 	TArray<FDreamUIResource> TextResources;
+
+	/**
+	 * Every DUInnnn this compile raised about the .dui, from the parse through to the last check.
+	 *
+	 * A member rather than a local because the file is judged in TWO stages that are half a compile
+	 * apart: the parse, the builder and the rename migration all run under
+	 * PopulateBlueprintGeneratedVariables, while a binding's function and an event handler's
+	 * signature cannot be looked at until FinishCompilingClass has built the class that declares
+	 * them. The mailbox entry is keyed by file and REPLACED on each deposit, so the second stage has
+	 * to add to this same bag and re-deposit -- depositing a second bag of its own would erase the
+	 * first stage's diagnostics and leave the editor over in VSCode showing a clean file for a
+	 * compile that failed.
+	 */
+	FDreamUIDiagnosticBag TextDiagnostics;
 	virtual void FinishCompilingClass(UClass* Class) override;
 	// End FKismetCompilerContext
 
@@ -160,7 +180,7 @@ private:
 	 * the one outcome worse than none, because the second compile would then find a different mess
 	 * than the first one left.
 	 */
-	void MigrateRenamedWidgets(const FDreamUIAst& InAst, const FString& InSourceName);
+	void MigrateRenamedWidgets(const FDreamUIAst& InAst, const FString& InSourceName, FDreamUIDiagnosticBag& OutDiagnostics);
 
 	/** Duplicate the authored hierarchy onto the class. Editing the archetype in place would mutate live templates. */
 	void UpdateGeneratedClassWidgetTree(UDreamWidgetBlueprint* InBlueprint, UDreamWidgetGeneratedClass* InClass);

@@ -8,6 +8,7 @@
 #include "DreamWidgetAnimationObjectReference.generated.h"
 
 class UDreamWidget;
+class UDreamWidgetTree;
 
 /**
  * An external reference to a level sequence object, resolvable through an arbitrary context.
@@ -32,6 +33,27 @@ public:
 
 	/** Resolve against THIS context's tree rather than through the stored pointer. Null if it cannot. */
 	UObject* ResolveInContext(UDreamWidget* InContextWidget) const;
+
+	/**
+	 * Drop a cached pointer that names a widget in a tree other than InOwnTree. The path is untouched.
+	 *
+	 * A pointer from another tree is never right for this reference and cannot become right: the tree
+	 * it names is somebody else's, and holding it keeps that whole tree alive. A pointer from
+	 * InOwnTree is never dropped, however stale the path beside it may be -- in the authoring tree a
+	 * good pointer under a renamed path is the ordinary shape of a rename, and FixEditorHelpers
+	 * repairs the path FROM the pointer.
+	 *
+	 * @return true when a pointer was dropped.
+	 */
+	bool DetachHelperOutsideTree(const UDreamWidgetTree* InOwnTree) const;
+	/**
+	 * Re-point the cached pointer at the widget InContextWidget's own tree holds for this path.
+	 *
+	 * @param OutResolvedByPath set to true when the path named a widget in that tree; false means the
+	 *        path resolved to nothing there, which is a broken binding worth reporting.
+	 * @return true when the stored pointer changed.
+	 */
+	bool RebindHelperToContext(UDreamWidget* InContextWidget, bool& OutResolvedByPath) const;
 
 	/**
 	 * The stored path, verbatim, so a caller that found this reference unresolvable can say what it
@@ -97,9 +119,18 @@ private:
 	UPROPERTY(Transient)
 	mutable TObjectPtr<UObject> Object = nullptr;
 
-	/** for direct reference widget. */
+	/**
+	 * for direct reference widget.
+	 *
+	 * MUTABLE, like Object above and for the same reason: under the class model this pointer is a
+	 * CACHE over HelperWidgetPath, not the binding. An instanced animation is handed the class
+	 * template's copy of it verbatim -- FObjectInstancingGraph re-points only Instanced properties and
+	 * this is a plain one -- so it arrives naming a widget in the authoring tree, which resolves
+	 * perfectly and animates the wrong tree while holding it alive. Correcting that is a re-point, so
+	 * the const resolvers have to be able to do it.
+	 */
 	UPROPERTY()
-		TObjectPtr<UDreamWidget> HelperWidget = nullptr;
+		mutable TObjectPtr<UDreamWidget> HelperWidget = nullptr;
 	/** object path relative to owner widget
 	 * if path is empty then means widget self
 	 */
@@ -133,6 +164,20 @@ struct FDreamWidgetAnimationObjectReferenceMap
 
 	/** Resolve every reference for this id against InContextWidget's tree. Empty if none resolve there. */
 	void ResolveBindingInContext(const FGuid& ObjectId, UDreamWidget* InContextWidget, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const;
+
+	/**
+	 * Drop every cached pointer naming a widget outside InOwnTree, keeping every path.
+	 * @return how many were dropped.
+	 */
+	int32 DetachHelpersOutsideTree(const UDreamWidgetTree* InOwnTree) const;
+	/**
+	 * Re-point every cached pointer at InContextWidget's own tree, by path.
+	 *
+	 * @param OutUnresolvedPaths receives the recorded path of every reference this context could not
+	 *        walk -- a binding that will find nothing at playback, so worth saying out loud.
+	 * @return how many pointers changed.
+	 */
+	int32 RebindHelpersToContext(UDreamWidget* InContextWidget, TArray<FString>& OutUnresolvedPaths) const;
 
 	/**
 	 * Remove a binding for the specified ID

@@ -11,11 +11,30 @@
 #include "Event/DreamEventSystem.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamWidgetNavigation.h"
+#include "Core/DreamWidgetPresenterComponentBase.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "Interaction/DreamSelectableStyle.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
+#include "GameFramework/ForceFeedbackEffect.h"
+#include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+
+namespace
+{
+	/** 2D UI sound, gated to worlds where a player is actually listening. */
+	void PlayDreamUISound(const UDreamWidget* InWidget, USoundBase* InSound)
+	{
+		UWorld* World = IsValid(InWidget) ? InWidget->GetWorld() : nullptr;
+		if (IsValid(InSound) && IsValid(World) && World->IsGameWorld())
+		{
+			UGameplayStatics::PlaySound2D(World, InSound);
+		}
+	}
+}
 
 
 UUITransition::UUITransition()
@@ -109,6 +128,26 @@ void UUISelectable::OnRegister()
 	if (GetWidget())
 	{
 		GetWidget()->SetIsFocusable(true);
+
+		// The transition needs something to tint, and ApplyPointerSelectionState returns without a
+		// word when it has none -- so an unwired selectable is not "a button with no feedback", it
+		// is a button whose feedback silently never happens. The preset control Blueprints set this
+		// by hand in the asset; nothing else could, because a text-authored .dui can only give an
+		// object property an ASSET PATH and this target is a sibling in the same live tree.
+		//
+		// The widget's own visual is the answer every one of those Blueprints picked anyway, so
+		// default to it and leave an explicit choice untouched.
+		if (!TransitionTarget.IsValid() && TransitionType != EUISelectableTransitionType::Custom)
+		{
+			if (UDreamVisual* OwnVisual = GetWidget()->GetVisual())
+			{
+				TransitionTarget = OwnVisual;
+				// The state was computed before a target existed; apply it now so the control opens
+				// in its normal colours rather than whatever the brush was authored with.
+				CurrentSelectionState = GetSelectionState();
+				ApplyPointerSelectionState(true);
+			}
+		}
 	}
 	UDreamUIManagerWorldSubsystem::AddSelectable(this);
 }
@@ -134,7 +173,13 @@ void UUISelectable::OnInteractableChanged(bool IsEnabled)
 	Super::OnInteractableChanged(IsEnabled);
 	CurrentSelectionState = GetSelectionState();
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//is editor, just set properties immediately
+	// Null world included, and taking the immediate branch is the only thing that CAN work there:
+	// the tween manager is a world subsystem, so the animated path has nothing to animate with.
+	// A selectable reaches this with no world whenever something disables a widget outside a game --
+	// a headless test, or a Blueprint's authoring tree, whose outer is the Blueprint. (Its caller,
+	// UDreamUIBehaviour::Call_OnInteractableChanged, carries the same guard for the same reason.)
+	const UWorld* SelectableWorld = this->GetWorld();
+	if (SelectableWorld == nullptr || !SelectableWorld->IsGameWorld())//is editor, just set properties immediately
 	{
 		ApplyPointerSelectionState(true);
 	}
@@ -147,6 +192,14 @@ void UUISelectable::OnInteractableChanged(bool IsEnabled)
 
 void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 {
+	// Feedback on the TRANSITION, and only for interactive applies: ImmediateSet is the initial
+	// state and the editor's property refresh, neither of which is something the user did.
+	if (!ImmediateSet && CurrentSelectionState != LastFeedbackState)
+	{
+		PlaySelectionStateFeedback();
+	}
+	LastFeedbackState = CurrentSelectionState;
+
 	const float EffectiveAnimDuration = Style ? Style->AnimationDuration : AnimDuration;
 	if (TransitionType != EUISelectableTransitionType::Custom)
 	{
@@ -356,9 +409,15 @@ bool UUISelectable::CheckNavigationSelectionState()
 	{
 		if (auto Widget = GetWidget())
 		{
-			if (auto WidgetRootActor = Widget->GetAttachedRootSceneComponent())
+			// The presenter that hosts this tree owns the selection cursor -- it is the thing that
+			// knows which cursor class the project configured and where the cursor may live. The
+			// resolve was commented out, which left NavigationSelection with no writer anywhere in
+			// the plugin: the branch below it could never be taken, UUINavigationInputSelectionHandler
+			// was unreachable from the only code that would have driven it, and the gamepad
+			// selection cursor was a feature that shipped switched off.
+			if (auto Presenter = Cast<UDreamWidgetPresenterComponentBase>(Widget->GetAttachedRootSceneComponent()))
 			{
-				// NavigationSelection = WidgetRootActor->GetNavigationSelection();
+				NavigationSelection = Presenter->GetNavigationSelection();
 			}
 		}
 	}
@@ -368,10 +427,14 @@ bool UUISelectable::CheckNavigationSelectionState()
 bool UUISelectable::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	bIsPointerInsideThis = true;
-	bIsEnteredByNavigation = IsValid(EventData) && EventData->InputType == EDreamUIPointerInputType::Navigation;
+	// One question, asked once. The line below used to dereference EventData bare, one statement
+	// after this one had already allowed for it being null -- and a null event data is ordinary here:
+	// the enter/exit path is driven by code that can clear a pointer without one.
+	const bool bIsNavigationEnter = IsValid(EventData) && EventData->InputType == EDreamUIPointerInputType::Navigation;
+	bIsEnteredByNavigation = bIsNavigationEnter;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
-	if (EventData->InputType == EDreamUIPointerInputType::Navigation)
+	if (bIsNavigationEnter)
 	{
 		if (CheckNavigationSelectionState())
 		{
@@ -397,6 +460,15 @@ bool UUISelectable::OnPointerExit_Implementation(UDreamPointerEventData* EventDa
 }
 bool UUISelectable::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 {
+	// Disabled means disabled. bInteractable used to reach nothing but the LOOK: a control drawn in
+	// its Disabled colours still pressed, still took selection, still clicked, still played its
+	// click sound and still rumbled the pad, because the raycast gate one level up asks the widget's
+	// hierarchy flag and has never known about this one. Enter and Exit stay delivered on purpose --
+	// hovering a disabled button to read the tooltip that says why it is disabled is the point.
+	if (!IsInteractable())
+	{
+		return AllowEventBubbleUp;
+	}
 	bIsPointerDown = true;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
@@ -408,6 +480,8 @@ bool UUISelectable::OnPointerDown_Implementation(UDreamPointerEventData* EventDa
 }
 bool UUISelectable::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
+	// Not gated on IsInteractable: a control disabled BETWEEN the press and the release still has a
+	// press to let go of, and refusing the up would leave it stuck looking pressed for good.
 	bIsPointerDown = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
@@ -415,6 +489,12 @@ bool UUISelectable::OnPointerUp_Implementation(UDreamPointerEventData* EventData
 }
 bool UUISelectable::OnPointerSelect_Implementation(UDreamBaseEventData* EventData)
 {
+	// Deselect below is deliberately NOT gated, for the same reason the up is not: whatever put
+	// selection here, a disabled control must always be able to give it up again.
+	if (!IsInteractable())
+	{
+		return AllowEventBubbleUp;
+	}
 	bIsSelected = true;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
@@ -543,6 +623,12 @@ void UUISelectable::SetDisabledColor(FColor Value)
 		ApplyPointerSelectionState(false);
 	}
 }
+void UUISelectable::SetAnimDuration(float Value)
+{
+	// Nothing re-applied: a duration decides how the NEXT change plays, and re-running the current
+	// state to honour a new speed would replay a transition the pointer already finished.
+	AnimDuration = FMath::Max(Value, 0.0f);
+}
 void UUISelectable::SetNormalImageBrush(const FDreamUIImageBrush& Value)
 {
 	NormalImageBrush = Value;
@@ -591,6 +677,23 @@ bool UUISelectable::IsInteractable()const
 	}
 	return bInteractable;
 }
+void UUISelectable::SetInteractable(bool Value)
+{
+	if (bInteractable == Value)
+	{
+		return;
+	}
+	bInteractable = Value;
+	// A control that goes disabled under a finger is no longer pressed and no longer selected, and
+	// saying so here is what keeps the repaint below from drawing it as Disabled-but-still-pressed.
+	if (!bInteractable)
+	{
+		bIsPointerDown = false;
+		bIsSelected = false;
+	}
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
+}
 
 #pragma region Navigation
 bool UUISelectable::CanNavigateHere_Implementation() const
@@ -599,62 +702,125 @@ bool UUISelectable::CanNavigateHere_Implementation() const
 }
 bool UUISelectable::OnNavigate_Implementation(EDreamUINavigationDirection direction, TScriptInterface<IDreamNavigationInterface>& result)
 {
-	UUISelectable* Selectable = nullptr;
-	switch (direction)
+	if (direction == EDreamUINavigationDirection::None)
 	{
-	default:
-	case EDreamUINavigationDirection::None:
 		return false;
-		break;
-	case EDreamUINavigationDirection::Left:
-		Selectable = FindSelectableOnLeft();
-		break;
-	case EDreamUINavigationDirection::Right:
-		Selectable = FindSelectableOnRight();
-		break;
-	case EDreamUINavigationDirection::Up:
-		Selectable = FindSelectableOnUp();
-		break;
-	case EDreamUINavigationDirection::Down:
-		Selectable = FindSelectableOnDown();
-		break;
-	case EDreamUINavigationDirection::Prev:
-		Selectable = FindSelectableOnPrev();
-		break;
-	case EDreamUINavigationDirection::Next:
-		Selectable = FindSelectableOnNext();
-		break;
 	}
-	result = Selectable;
+	// The behaviour, not the selectable: a widget that carries only a UDreamWidgetNavigation is a
+	// navigation participant too, and returning nothing for it would put the pool back to
+	// selectables-only, which is the thing the per-widget rules exist to undo.
+	UDreamUIBehaviour* Found = FindNavigableOn(direction);
+	result = Found != this ? Found : nullptr;
 	return true;
+}
+UDreamUIBehaviour* UUISelectable::FindNavigableOn(EDreamUINavigationDirection InDirection)
+{
+	// A rule authored on the WIDGET outranks this component's own per-direction mode. Without that
+	// order, which of the two answers would depend on which component the pipeline's walk reached
+	// first, and that is a property of the order things were added in -- invisible to the author.
+	if (UDreamWidget* Widget = GetWidget())
+	{
+		if (UDreamWidgetNavigation* Navigation = Widget->GetNavigation())
+		{
+			if (Navigation->HasRuleFor(InDirection))
+			{
+				TScriptInterface<IDreamNavigationInterface> RuleResult = nullptr;
+				IDreamNavigationInterface::Execute_OnNavigate(Navigation, InDirection, RuleResult);
+				UDreamUIBehaviour* Target = Cast<UDreamUIBehaviour>(RuleResult.GetObject());
+				return Target != nullptr ? Target : this;
+			}
+		}
+	}
+
+	UDreamWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return nullptr;//a behaviour outliving its widget has nowhere to navigate from
+	}
+
+	switch (InDirection)
+	{
+	case EDreamUINavigationDirection::Left:
+		return NavigationLeft == EUISelectableNavigationMode::Explicit
+			? ResolveExplicitTarget(NavigationLeftSpecific.Get(), InDirection)
+			: (NavigationLeft == EUISelectableNavigationMode::Auto ? FindNavigableIn(-Widget->GetRightVector(), nullptr, /*bResolveCanvasParent*/true) : nullptr);
+	case EDreamUINavigationDirection::Right:
+		return NavigationRight == EUISelectableNavigationMode::Explicit
+			? ResolveExplicitTarget(NavigationRightSpecific.Get(), InDirection)
+			: (NavigationRight == EUISelectableNavigationMode::Auto ? FindNavigableIn(Widget->GetRightVector(), nullptr, /*bResolveCanvasParent*/true) : nullptr);
+	case EDreamUINavigationDirection::Up:
+		return NavigationUp == EUISelectableNavigationMode::Explicit
+			? ResolveExplicitTarget(NavigationUpSpecific.Get(), InDirection)
+			: (NavigationUp == EUISelectableNavigationMode::Auto ? FindNavigableIn(Widget->GetUpVector(), nullptr, /*bResolveCanvasParent*/true) : nullptr);
+	case EDreamUINavigationDirection::Down:
+		return NavigationDown == EUISelectableNavigationMode::Explicit
+			? ResolveExplicitTarget(NavigationDownSpecific.Get(), InDirection)
+			: (NavigationDown == EUISelectableNavigationMode::Auto ? FindNavigableIn(-Widget->GetUpVector(), nullptr, /*bResolveCanvasParent*/true) : nullptr);
+	case EDreamUINavigationDirection::Next:
+	{
+		if (NavigationNext == EUISelectableNavigationMode::Explicit)
+		{
+			return ResolveExplicitTarget(NavigationNextSpecific.Get(), InDirection);
+		}
+		if (NavigationNext != EUISelectableNavigationMode::Auto)
+		{
+			return nullptr;
+		}
+		UDreamUIBehaviour* RightHop = FindNavigableOn(EDreamUINavigationDirection::Right);
+		return RightHop != this && RightHop != nullptr ? RightHop : FindNavigableOn(EDreamUINavigationDirection::Down);
+	}
+	case EDreamUINavigationDirection::Prev:
+	{
+		if (NavigationPrev == EUISelectableNavigationMode::Explicit)
+		{
+			return ResolveExplicitTarget(NavigationPrevSpecific.Get(), InDirection);
+		}
+		if (NavigationPrev != EUISelectableNavigationMode::Auto)
+		{
+			return nullptr;
+		}
+		UDreamUIBehaviour* LeftHop = FindNavigableOn(EDreamUINavigationDirection::Left);
+		return LeftHop != this && LeftHop != nullptr ? LeftHop : FindNavigableOn(EDreamUINavigationDirection::Up);
+	}
+	default:
+		return nullptr;
+	}
 }
 UUISelectable* UUISelectable::FindSelectable(FVector InDirection)
 {
+	return Cast<UUISelectable>(FindNavigableIn(InDirection, nullptr, /*bResolveCanvasParent*/true));
+}
+
+UUISelectable* UUISelectable::FindSelectable(FVector InDirection, UDreamWidget* InParent)
+{
+	// Answers only about SELECTABLES, which is what every existing caller of this asks for. The scan
+	// underneath now also considers widgets whose only navigation is a UDreamWidgetNavigation, and one
+	// of those winning comes back as null here -- use FindNavigableIn when the answer has to include
+	// them, which is what the navigation pipeline itself does.
+	return Cast<UUISelectable>(FindNavigableIn(InDirection, InParent, /*bResolveCanvasParent*/false));
+}
+
+UDreamUIBehaviour* UUISelectable::FindNavigableIn(FVector InDirection, UDreamWidget* InParent, bool bResolveCanvasParent)
+{
 	InDirection.Normalize();
-	if (auto Widget = GetWidget())
+	if (bResolveCanvasParent)
 	{
+		UDreamWidget* Widget = GetWidget();
+		if (!IsValid(Widget))
+		{
+			return FindNavigableIn(InDirection, nullptr, false);
+		}
 		if (Widget->GetRenderCanvas() == nullptr || Widget->GetRenderCanvas()->GetRootCanvas() == nullptr)
 		{
 			return nullptr;//not active render
 		}
 		if (Widget->IsScreenSpaceOverlayUI() || Widget->IsRenderTargetUI())
 		{
-			auto rootCanvasUIItem = Widget->GetRootCanvas()->GetWidget();
-			return FindSelectable(InDirection, rootCanvasUIItem);
+			return FindNavigableIn(InDirection, Widget->GetRootCanvas()->GetWidget(), false);
 		}
-		else
-		{
-			return FindSelectable(InDirection, nullptr);
-		}
+		return FindNavigableIn(InDirection, nullptr, false);
 	}
-	else
-	{
-		return FindSelectable(InDirection, nullptr);
-	}
-}
 
-UUISelectable* UUISelectable::FindSelectable(FVector InDirection, UDreamWidget* InParent)
-{
 	// A screen that confines navigation is a harder boundary than whatever the caller asked for: while
 	// a dialog is on top, no directional move may land on the page behind it, wherever that page sits
 	// in the hierarchy. Applied here rather than one level up so it also holds for the Escape boundary
@@ -671,12 +837,12 @@ UUISelectable* UUISelectable::FindSelectable(FVector InDirection, UDreamWidget* 
 	{
 		RestrictNavNode = Widget->GetRestrictNavigationAreaWidget();
 	}
-	return FindSelectableWithin(InDirection, InParent, RestrictNavNode, 0);
+	return FindNavigableWithin(InDirection, InParent, RestrictNavNode, 0);
 }
 
-UUISelectable* UUISelectable::FindSelectableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth)
+UDreamUIBehaviour* UUISelectable::FindNavigableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth)
 {
-	UUISelectable* Found = ScanForSelectable(InDirection, InParent, InRestrictNode);
+	UDreamUIBehaviour* Found = DreamUINavigationScan::ScanDirectional(this, InDirection, InParent, InRestrictNode);
 	if (Found != this)
 	{
 		return Found;//the scan moved, so the edge was never reached
@@ -690,7 +856,7 @@ UUISelectable* UUISelectable::FindSelectableWithin(const FVector& InDirection, U
 	switch (InRestrictNode->GetNavigationBoundaryRule())
 	{
 	case EDreamUINavigationBoundaryRule::Wrap:
-		return FindWrapTarget(InDirection, InParent, InRestrictNode);
+		return DreamUINavigationScan::ScanWrap(this, InDirection, InParent, InRestrictNode);
 	case EDreamUINavigationBoundaryRule::Escape:
 		{
 			// One area out, and only if there is one: past the outermost area the move has genuinely
@@ -703,9 +869,9 @@ UUISelectable* UUISelectable::FindSelectableWithin(const FVector& InDirection, U
 			const UDreamWidget* Enclosing = IsValid(AreaParent) ? AreaParent->GetRestrictNavigationAreaWidget() : nullptr;
 			if (Enclosing == nullptr)
 			{
-				return ScanForSelectable(InDirection, InParent, nullptr);
+				return DreamUINavigationScan::ScanDirectional(this, InDirection, InParent, nullptr);
 			}
-			return FindSelectableWithin(InDirection, InParent, Enclosing, InEscapeDepth + 1);
+			return FindNavigableWithin(InDirection, InParent, Enclosing, InEscapeDepth + 1);
 		}
 	case EDreamUINavigationBoundaryRule::Stop:
 	default:
@@ -713,134 +879,6 @@ UUISelectable* UUISelectable::FindSelectableWithin(const FVector& InDirection, U
 	}
 }
 
-UUISelectable* UUISelectable::FindWrapTarget(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode)
-{
-	// Walk backwards with the very same scan until it stops. Wrapping then lands exactly where holding
-	// the opposite direction would have left the player, which no standalone "pick the far one" scoring
-	// can promise -- and it needs no weighting between how far back a candidate is and how well it
-	// lines up, the two quantities such a scoring would have had to trade off against each other.
-	UUISelectable* Walker = this;
-	TSet<UUISelectable*> Visited;
-	Visited.Add(this);
-	const FVector Backwards = -InDirection;
-	for (;;)
-	{
-		UUISelectable* Back = Walker->ScanForSelectable(Backwards, InParent, InRestrictNode);
-		if (Back == nullptr || Back == Walker || Visited.Contains(Back))
-		{
-			break;//at the far edge, or round a cycle a strange layout built
-		}
-		Visited.Add(Back);
-		Walker = Back;
-	}
-	return Walker;
-}
-
-UUISelectable* UUISelectable::ScanForSelectable(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* RestrictNavNode)
-{
-	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld());
-	if (DreamUIManager == nullptr)return nullptr;
-	const auto& SelectableArray = DreamUIManager->GetAllSelectableArray();
-
-	auto GetPointOnRectEdge = [](UDreamWidget* rect, FVector2D dir)
-	{
-		if (dir != FVector2D::ZeroVector)
-			dir /= FMath::Max(FMath::Abs(dir.X), FMath::Abs(dir.Y));
-		auto center = rect->GetLocalSpaceCenter();
-		dir = center + FVector2D(rect->GetWidth() * dir.X * 0.5f, rect->GetHeight() * dir.Y * 0.5f);
-		return FVector(0, dir.X, dir.Y);
-	};
-
-	auto LocalPos = FVector::ZeroVector;
-	if (auto Widget = GetWidget())
-	{
-		auto localDir = Widget->GetWorldTransform().InverseTransformVectorNoScale(InDirection);
-		LocalPos = GetPointOnRectEdge(Widget, FVector2D(localDir.Y, localDir.Z));
-	}
-	auto pos = this->GetWidget()->GetWorldTransform().TransformPosition(LocalPos);
-	auto thisWidget = this->GetWidget();
-	float maxScore = -MAX_flt;
-	UUISelectable* bestPick = this;
-	for (int i = 0; i < SelectableArray.Num(); ++i)
-	{
-		auto sel = SelectableArray[i];
-
-		if (sel == this || !sel.IsValid())
-			continue;
-
-		if (IsValid(InParent) && !sel->GetWidget()->IsChildOf(InParent))
-			continue;
-
-		if (!sel->IsInteractable())
-			continue;
-
-		if (!sel->GetCanNavigateHere())
-			continue;
-
-		//if is UI node, not allow inactive one
-		auto selWidget = sel->GetWidget();
-		if (selWidget && !sel->GetWidget()->GetInteractableInHierarchy())
-		{
-			continue;
-		}
-
-		if (selWidget && thisWidget)
-		{
-			if (selWidget->IsWorldSpaceUI() != thisWidget->IsWorldSpaceUI())
-			{
-				continue;
-			}
-		}
-
-		//if navigation is restricted, only allow child of restrict node
-		if (RestrictNavNode && !sel->GetWidget()->IsChildOf(RestrictNavNode))
-		{
-			continue;
-		}
-
-#if WITH_EDITOR
-		if (this->GetWorld() != sel->GetWorld())
-			continue;
-#endif
-
-		FVector selCenter;
-		if (selWidget)
-		{
-			auto LocalCenter2D = selWidget->GetLocalSpaceCenter();
-			selCenter = FVector(0, LocalCenter2D.X, LocalCenter2D.Y);
-		}
-		else
-		{
-			selCenter = sel->GetWidget()->GetRelativeLocation();
-		}
-		auto selCenterInWorld = sel->GetWidget()->GetWorldTransform().TransformPosition(selCenter);
-		if (selWidget)
-		{
-			// Clipped away is not the same as out of reach. A row scrolled off the end of a list is
-			// one scroll from being on screen, and refusing it here is what used to pin a gamepad to
-			// the rows that happened to be visible; anything else hidden -- behind a mask, under a
-			// closed panel -- has no way back and stays skipped.
-			if (!selWidget->IsPointVisibleOnClip(selCenterInWorld)
-				&& !FDreamUINavigationScroll::IsReachableByScrolling(selWidget))
-			{
-				continue;
-			}
-		}
-		FVector myVector = selCenterInWorld - pos;
-
-		float dot = FVector::DotProduct(InDirection, myVector);
-		if (dot <= 0.0f)
-			continue;
-
-		float score = dot / myVector.SizeSquared();
-		if (score > maxScore)
-		{
-			maxScore = score;
-			bestPick = sel.Get();
-		}
-	}
-	return bestPick;
-}
 UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject, int32 InUserIndex)
 {
 	// A scope knows where its screen wants focus. This scan only knows registration order, which is
@@ -890,22 +928,14 @@ UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObjec
 				while (true)
 				{
 					FoundSelectables.Add(Selectable);
-					//change navigation mode to auto, so we can find selectable only by position (exclude explicit)
-					auto OriginNavigationLeftMode = Selectable->NavigationLeft;
-					auto OriginNavigationUpMode = Selectable->NavigationUp;
-					auto OriginNavigationPrevMode = Selectable->NavigationPrev;
-					Selectable->NavigationLeft = EUISelectableNavigationMode::Auto;
-					Selectable->NavigationUp = EUISelectableNavigationMode::Auto;
-					Selectable->NavigationPrev = EUISelectableNavigationMode::Auto;
+					// Position only, explicit links excluded -- asked for directly instead of by
+					// writing Auto into three of this OTHER selectable's authored UPROPERTYs, running
+					// the ordinary finder, and writing them back. That round trip left the data
+					// permanently rewritten on any path that did not reach the restore, and dirtied
+					// the asset in an editor world for a query that changes nothing.
+					auto PrevSelectable = Selectable->FindAutoPrev();
 
-					auto PrevSelectable = Selectable->FindSelectableOnPrev();
-
-					//restore navigation mode
-					Selectable->NavigationLeft = OriginNavigationLeftMode;
-					Selectable->NavigationUp = OriginNavigationUpMode;
-					Selectable->NavigationPrev = OriginNavigationPrevMode;
-
-					if (!IsValid(PrevSelectable) 
+					if (!IsValid(PrevSelectable)
 						|| PrevSelectable == Selectable
 						|| FoundSelectables.Contains(PrevSelectable)//incase cycle loop, eg: A is left and B is top, A's top return B, and B's left return A
 						|| !IsInsideParent(PrevSelectable)//the walk must not stroll out of the area we were asked about
@@ -924,87 +954,100 @@ UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObjec
 	}
 	return nullptr;
 }
+UUISelectable* UUISelectable::FindAutoPrev()
+{
+	UDreamWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return nullptr;
+	}
+	// The same two hops FindSelectableOnPrev makes under Auto: left first, then up.
+	UUISelectable* LeftComp = FindSelectable(-Widget->GetRightVector());
+	if (LeftComp != this)
+	{
+		return LeftComp;
+	}
+	return FindSelectable(Widget->GetUpVector());
+}
+UUISelectable* UUISelectable::ResolveExplicitTarget(UUISelectable* InTarget, EDreamUINavigationDirection InDirection)
+{
+	TSet<UUISelectable*> Visited;
+	UUISelectable* Candidate = InTarget;
+	while (IsValid(Candidate))
+	{
+		// The same two questions the Auto scan asks of every candidate it considers, so that an
+		// explicit link and a scanned one agree on what "can be navigated to" means.
+		if (Candidate->IsInteractable() && Candidate->GetCanNavigateHere())
+		{
+			return Candidate;
+		}
+		bool bAlreadySeen = false;
+		Visited.Add(Candidate, &bAlreadySeen);
+		if (bAlreadySeen)
+		{
+			return nullptr;//a ring of disabled controls wired to each other
+		}
+		UUISelectable* Next = nullptr;
+		switch (InDirection)
+		{
+		case EDreamUINavigationDirection::Left:
+			Next = Candidate->NavigationLeft == EUISelectableNavigationMode::Explicit ? Candidate->NavigationLeftSpecific.Get() : nullptr;
+			break;
+		case EDreamUINavigationDirection::Right:
+			Next = Candidate->NavigationRight == EUISelectableNavigationMode::Explicit ? Candidate->NavigationRightSpecific.Get() : nullptr;
+			break;
+		case EDreamUINavigationDirection::Up:
+			Next = Candidate->NavigationUp == EUISelectableNavigationMode::Explicit ? Candidate->NavigationUpSpecific.Get() : nullptr;
+			break;
+		case EDreamUINavigationDirection::Down:
+			Next = Candidate->NavigationDown == EUISelectableNavigationMode::Explicit ? Candidate->NavigationDownSpecific.Get() : nullptr;
+			break;
+		case EDreamUINavigationDirection::Next:
+			Next = Candidate->NavigationNext == EUISelectableNavigationMode::Explicit ? Candidate->NavigationNextSpecific.Get() : nullptr;
+			break;
+		case EDreamUINavigationDirection::Prev:
+			Next = Candidate->NavigationPrev == EUISelectableNavigationMode::Explicit ? Candidate->NavigationPrevSpecific.Get() : nullptr;
+			break;
+		default:
+			break;
+		}
+		Candidate = Next;
+	}
+	// Nothing reachable that way. Null keeps focus where it is, which beats parking it on a control
+	// the player has been told they cannot use.
+	return nullptr;
+}
+/*
+ * The six public finders are now one-line views onto FindNavigableOn, which is where the rules --
+ * the widget's own navigation panel first, then this component's per-direction mode -- actually
+ * live. They keep answering UUISelectable because that is what they have always answered and what
+ * UDreamUIManagerWorldSubsystem's editor gizmo draws; a move that lands on a widget whose only
+ * navigation is a UDreamWidgetNavigation comes back null here and is delivered properly by
+ * OnNavigate, which reads the behaviour rather than the selectable.
+ */
 UUISelectable* UUISelectable::FindSelectableOnLeft()
 {
-	if (NavigationLeft == EUISelectableNavigationMode::Explicit)
-	{
-		return NavigationLeftSpecific.Get();
-	}
-	if (NavigationLeft == EUISelectableNavigationMode::Auto)
-	{
-		return FindSelectable(-GetWidget()->GetRightVector());
-	}
-	return nullptr;
+	return Cast<UUISelectable>(FindNavigableOn(EDreamUINavigationDirection::Left));
 }
 UUISelectable* UUISelectable::FindSelectableOnRight()
 {
-	if (NavigationRight == EUISelectableNavigationMode::Explicit)
-	{
-		return NavigationRightSpecific.Get();
-	}
-	if (NavigationRight == EUISelectableNavigationMode::Auto)
-	{
-		return FindSelectable(GetWidget()->GetRightVector());
-	}
-	return nullptr;
+	return Cast<UUISelectable>(FindNavigableOn(EDreamUINavigationDirection::Right));
 }
 UUISelectable* UUISelectable::FindSelectableOnUp()
 {
-	if (NavigationUp == EUISelectableNavigationMode::Explicit)
-	{
-		return NavigationUpSpecific.Get();
-	}
-	if (NavigationUp == EUISelectableNavigationMode::Auto)
-	{
-		return FindSelectable(GetWidget()->GetUpVector());
-	}
-	return nullptr;
+	return Cast<UUISelectable>(FindNavigableOn(EDreamUINavigationDirection::Up));
 }
 UUISelectable* UUISelectable::FindSelectableOnDown()
 {
-	if (NavigationDown == EUISelectableNavigationMode::Explicit)
-	{
-		return NavigationDownSpecific.Get();
-	}
-	if (NavigationDown == EUISelectableNavigationMode::Auto)
-	{
-		return FindSelectable(-GetWidget()->GetUpVector());
-	}
-	return nullptr;
+	return Cast<UUISelectable>(FindNavigableOn(EDreamUINavigationDirection::Down));
 }
 UUISelectable* UUISelectable::FindSelectableOnNext()
 {
-	if (NavigationNext == EUISelectableNavigationMode::Explicit)
-	{
-		return NavigationNextSpecific.Get();
-	}
-	if (NavigationNext == EUISelectableNavigationMode::Auto)
-	{
-		auto rightComp = FindSelectableOnRight();
-		if (rightComp != this)
-		{
-			return rightComp;
-		}
-		return FindSelectableOnDown();
-	}
-	return nullptr;
+	return Cast<UUISelectable>(FindNavigableOn(EDreamUINavigationDirection::Next));
 }
 UUISelectable* UUISelectable::FindSelectableOnPrev()
 {
-	if (NavigationPrev == EUISelectableNavigationMode::Explicit)
-	{
-		return NavigationPrevSpecific.Get();
-	}
-	if (NavigationPrev == EUISelectableNavigationMode::Auto)
-	{
-		auto leftComp = FindSelectableOnLeft();
-		if (leftComp != this)
-		{
-			return leftComp;
-		}
-		return FindSelectableOnUp();
-	}
-	return nullptr;
+	return Cast<UUISelectable>(FindNavigableOn(EDreamUINavigationDirection::Prev));
 }
 
 void UUISelectable::SetCanNavigateHere(bool Value)
@@ -1104,4 +1147,119 @@ void UUISelectable::SetNavigationNextExplicit(UUISelectable* Value)
 }
 #pragma endregion
 
+void UUISelectable::PlaySelectionStateFeedback()
+{
+	if (Style == nullptr)
+	{
+		// Deliberately style-only, no per-instance twins: a click should sound like the OTHER
+		// clicks in this UI, and forty inline sound slots is how it stops doing that.
+		return;
+	}
+	switch (CurrentSelectionState)
+	{
+	case EUISelectableSelectionState::Hovered:
+		PlayDreamUISound(GetWidget(), Style->HoveredSound);
+		break;
+	case EUISelectableSelectionState::Pressed:
+		PlayDreamUISound(GetWidget(), Style->PressedSound);
+		break;
+	default:
+		break;
+	}
+}
 
+void UUISelectable::PlayClickFeedback()
+{
+	if (Style == nullptr)
+	{
+		return;
+	}
+	PlayDreamUISound(GetWidget(), Style->ClickedSound);
+	UWorld* World = IsValid(GetWidget()) ? GetWidget()->GetWorld() : nullptr;
+	if (IsValid(Style->ClickedForceFeedback) && IsValid(World) && World->IsGameWorld())
+	{
+		if (APlayerController* PlayerController = World->GetFirstPlayerController())
+		{
+			PlayerController->ClientPlayForceFeedback(Style->ClickedForceFeedback);
+		}
+	}
+}
+
+
+
+namespace DreamSelectableClickMethodLocal
+{
+	/**
+	 * Which of the three method enums an event falls under.
+	 *
+	 * The event itself says whether it came from navigation; the DEVICE question is the event
+	 * system's, because a pointer event carries a pointer id and nothing about what moved the
+	 * pointer -- a touch and a mouse are the same shape by the time they reach here, which is the
+	 * whole point of the abstraction and exactly why the device has to be asked separately.
+	 */
+	enum class EKind : uint8 { Mouse, Touch, Press };
+
+	EKind ResolveKind(const UDreamUIBehaviour* InOwner, const UDreamPointerEventData* InEventData)
+	{
+		if (InEventData != nullptr && InEventData->InputType == EDreamUIPointerInputType::Navigation)
+		{
+			return EKind::Press;
+		}
+		UDreamUIBehaviour* Owner = const_cast<UDreamUIBehaviour*>(InOwner);
+		const UDreamEventSystem* Events = (Owner != nullptr && Owner->GetWorld() != nullptr)
+			? UDreamEventSystem::GetDreamEventSystemInstance(Owner, 0)
+			: nullptr;
+		if (Events != nullptr && Events->GetCurrentInputDevice() == EDreamUIInputDevice::Touch)
+		{
+			return EKind::Touch;
+		}
+		// No event system to ask (a headless test, a tree not yet registered) is the mouse: it is the
+		// device every method enum's DEFAULT was written for, so an unknown device behaves as before.
+		return EKind::Mouse;
+	}
+}
+
+bool UUISelectable::ShouldClickOnDown(const UDreamPointerEventData* InEventData)const
+{
+	using namespace DreamSelectableClickMethodLocal;
+	switch (ResolveKind(this, InEventData))
+	{
+	case EKind::Press: return PressMethod == EDreamUIPressMethod::ButtonPress;
+	case EKind::Touch: return TouchMethod == EDreamUITouchMethod::Down;
+	default:           return ClickMethod == EDreamUIClickMethod::MouseDown;
+	}
+}
+
+bool UUISelectable::ShouldClickOnUp(const UDreamPointerEventData* InEventData)const
+{
+	using namespace DreamSelectableClickMethodLocal;
+	switch (ResolveKind(this, InEventData))
+	{
+	case EKind::Press: return PressMethod == EDreamUIPressMethod::ButtonRelease;
+	// MouseUp fires on the release WHEREVER the press landed, which is the whole of what separates it
+	// from DownAndUp: the event system delivers an up to the press target, and a press that started
+	// somewhere else reaches this control only as a plain up with no click behind it.
+	case EKind::Touch: return false;
+	default:           return ClickMethod == EDreamUIClickMethod::MouseUp;
+	}
+}
+
+bool UUISelectable::ShouldClickOnClick(const UDreamPointerEventData* InEventData)const
+{
+	using namespace DreamSelectableClickMethodLocal;
+	// A click is by construction a down and an up both on this widget, so the two DownAndUp cases are
+	// simply "yes" -- and the PRECISE ones are that answer narrowed by whether the pointer ever
+	// started dragging, which is the cancel gesture a list of buttons inside a scroll view needs.
+	const bool bDragged = InEventData != nullptr && InEventData->bIsDragging;
+	switch (ResolveKind(this, InEventData))
+	{
+	case EKind::Press:
+		return PressMethod == EDreamUIPressMethod::DownAndUp;
+	case EKind::Touch:
+		return TouchMethod == EDreamUITouchMethod::DownAndUp
+			|| (TouchMethod == EDreamUITouchMethod::PreciseTap && !bDragged);
+	default:
+		return ClickMethod == EDreamUIClickMethod::DownAndUp
+			|| (ClickMethod == EDreamUIClickMethod::PreciseClick && !bDragged);
+	}
+}

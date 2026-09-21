@@ -3,6 +3,7 @@
 #include "DreamTweenerSequence.h"
 #include "DreamTween.h"
 #include "DreamTweenManager.h"
+#include "Tweener/DreamTweenerCallback.h"
 #include "Tweener/DreamTweenerFrame.h"
 #include "Tweener/DreamTweenerVirtual.h"
 
@@ -50,7 +51,13 @@ UDreamTweenerSequence* UDreamTweenerSequence::Insert(UObject* WorldContextObject
 	UDreamTweenManager::RemoveTweener(WorldContextObject, tweener);
 	int loopCount = tweener->loopType == EDreamTweenLoop::Once ? 1 : tweener->maxLoopCount;
 	float tweenerTime = tweener->delay + tweener->duration * loopCount;
-	tweener->SetDelay(tweener->delay + timePosition);
+	// Written through, not via SetDelay. SetDelay refuses -- silently, returning this -- once a tween
+	// has started, and a tween made by UDreamTweenManager::To is in the manager's list ticking from the
+	// moment it exists. Building the tweens one frame and assembling them the next is ordinary in a
+	// graph, and every child added that way used to keep delay 0 and play on top of the others at t=0.
+	// The sequence is a friend of UDreamTweener for exactly this.
+	tweener->delay = tweener->delay + timePosition;
+	AdoptTweenerClock(tweener);
 	tweenerList.Add(tweener);
 	lastTweenStartTime = timePosition;
 	float inputDuration = tweenerTime + timePosition;
@@ -90,11 +97,15 @@ UDreamTweenerSequence* UDreamTweenerSequence::Prepend(UObject* WorldContextObjec
 	UDreamTweenManager::RemoveTweener(WorldContextObject, tweener);
 	int loopCount = tweener->loopType == EDreamTweenLoop::Once ? 1 : tweener->maxLoopCount;
 	float inputDuration = tweener->delay + tweener->duration * loopCount;
-	//offset others 
+	//offset others
 	for (auto& item : tweenerList)
 	{
-		item->SetDelay(item->delay + inputDuration);
+		// Direct, for the reason spelled out in Insert: SetDelay is a no-op on a started tween, and
+		// here that would shift only SOME of the children -- leaving the ones already running where
+		// they were while everything else moved, which is worse than not prepending at all.
+		item->delay = item->delay + inputDuration;
 	}
+	AdoptTweenerClock(tweener);
 	tweenerList.Insert(tweener, 0);
 	duration += inputDuration;
 	lastTweenStartTime = 0;
@@ -107,10 +118,11 @@ UDreamTweenerSequence* UDreamTweenerSequence::PrependInterval(UObject* WorldCont
 		UE_LOG(DreamTween, Error, TEXT("[%s].%d can't do this because this tween already started"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return this;
 	}
-	//offset others 
+	//offset others
 	for (auto& item : tweenerList)
 	{
-		item->SetDelay(item->delay + interval);
+		// Direct, for the reason spelled out in Insert.
+		item->delay = item->delay + interval;
 	}
 	duration += interval;
 	lastTweenStartTime += interval;
@@ -130,6 +142,68 @@ UDreamTweenerSequence* UDreamTweenerSequence::Join(UObject* WorldContextObject, 
 	}
 	if (tweenerList.Num() == 0)return this;
 	return this->Insert(WorldContextObject, lastTweenStartTime, tweener);
+}
+
+UDreamTweenerSequence* UDreamTweenerSequence::AppendCallback(const FDreamTweenSimpleDynamicDelegate& callback)
+{
+	return InsertCallbackInternal(duration, [callback] { callback.ExecuteIfBound(); });
+}
+UDreamTweenerSequence* UDreamTweenerSequence::InsertCallback(float timePosition, const FDreamTweenSimpleDynamicDelegate& callback)
+{
+	return InsertCallbackInternal(timePosition, [callback] { callback.ExecuteIfBound(); });
+}
+UDreamTweenerSequence* UDreamTweenerSequence::AppendCallback(const TFunction<void()>& callback)
+{
+	return InsertCallbackInternal(duration, callback);
+}
+UDreamTweenerSequence* UDreamTweenerSequence::InsertCallback(float timePosition, const TFunction<void()>& callback)
+{
+	return InsertCallbackInternal(timePosition, callback);
+}
+
+UDreamTweenerSequence* UDreamTweenerSequence::InsertCallbackInternal(float timePosition, const TFunction<void()>& callback)
+{
+	if (elapseTime > 0 || startToTween)
+	{
+		UE_LOG(DreamTween, Error, TEXT("[%s].%d can't do this because this tween already started"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return this;
+	}
+	if (callback == nullptr)
+	{
+		UE_LOG(DreamTween, Error, TEXT("[%s].%d callback is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return this;
+	}
+	// A zero-length tween positioned by its delay, so the sequence's own machinery carries it: the
+	// yoyo flip, the restart rewind and the finished-list bookkeeping all treat it as a child like
+	// any other, which a separate list of "callbacks at times" would have had to reimplement.
+	const float Position = FMath::Max(0.0f, timePosition);
+	UDreamTweenerCallback* CallbackTweener = NewObject<UDreamTweenerCallback>(this);
+	CallbackTweener->SetInitialValue();
+	// A hair before the position asked for, and only because the clock is read with a STRICT
+	// comparison (elapseTime > delay). The commonest callback of all sits at the very end of the
+	// sequence, and the step that ends a sequence lands exactly on its duration -- so without this
+	// the "and then hide the panel" callback would be the one that never runs.
+	CallbackTweener->delay = FMath::Max(0.0f, Position - UE_KINDA_SMALL_NUMBER);
+	CallbackTweener->OnComplete(callback);
+	tweenerList.Add(CallbackTweener);
+	// A callback at the very end is part of the sequence's length; one past the end extends it, the
+	// same way an interval does.
+	duration = FMath::Max(duration, Position);
+	lastTweenStartTime = Position;
+	return this;
+}
+
+void UDreamTweenerSequence::AdoptTweenerClock(UDreamTweener* tweener)
+{
+	// Every child is stepped with the SEQUENCE's elapsed time (see TweenAndApplyValue), so whatever
+	// run this tween had already begun on the manager's clock ends here. Left alone, a child that had
+	// started keeps startToTween raised: neither its OnStart nor its OnStartGetValue would ever run
+	// again, and it would interpolate from whatever value it happened to be holding when it was made.
+	tweener->elapseTime = 0;
+	tweener->startToTween = false;
+	tweener->loopCycleCount = 0;
+	tweener->foldedCycleCount = 0;
+	tweener->reverseTween = false;
 }
 
 void UDreamTweenerSequence::TweenAndApplyValue(float currentTime)
@@ -165,7 +239,11 @@ void UDreamTweenerSequence::SetOriginValueForRestart()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		item->reverseTween = false;
+		// Starting again is starting: with this left raised the child's OnStart and OnCycleStart never
+		// fired a second time, and OnStartGetValue never re-read the value the line above just restored.
+		item->startToTween = false;
 	}
 }
 
@@ -177,6 +255,7 @@ void UDreamTweenerSequence::SetValueForIncremental()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		item->reverseTween = false;
 		item->TweenAndApplyValue(0);
 
@@ -198,6 +277,7 @@ void UDreamTweenerSequence::SetValueForYoyo()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		//flip tweener
 		int loopCount = item->loopType == EDreamTweenLoop::Once ? 1 : item->maxLoopCount;
 		float tweenerDelay = duration - (item->delay + item->duration * loopCount);
@@ -215,6 +295,7 @@ void UDreamTweenerSequence::SetValueForRestart()
 		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
+		item->foldedCycleCount = 0;
 		item->reverseTween = false;
 		item->TweenAndApplyValue(0);
 
@@ -230,6 +311,11 @@ void UDreamTweenerSequence::Restart()
 		return;
 	}
 	this->isMarkedPause = false;//incase it is paused.
+	// Same two omissions the inherited Restart had, and this override has to repeat their repair
+	// because it replaces that implementation rather than extending it: a killed sequence stayed
+	// killed however often it was restarted, and its own OnStart never fired a second time.
+	this->isMarkedToKill = false;
+	this->startToTween = false;
 
 	//reset parameter and value to start
 	{
@@ -253,6 +339,7 @@ void UDreamTweenerSequence::Restart()
 		}
 		finishedTweenerList.Reset();
 		this->loopCycleCount = 0;
+		this->foldedCycleCount = 0;
 
 		//sort it, so later tweener can do "SetOriginValueForRestart" ealier, so ealier tweener will get correct start state
 		tweenerList.Sort([=](const UDreamTweener& A, const UDreamTweener& B) {
@@ -269,7 +356,11 @@ void UDreamTweenerSequence::Restart()
 			//set parameter to initial
 			item->elapseTime = 0;
 			item->loopCycleCount = 0;
+			item->foldedCycleCount = 0;
 			item->reverseTween = false;
+			// See SetOriginValueForRestart: rewound to the beginning means starting again, callbacks
+			// and start value included.
+			item->startToTween = false;
 		}
 	}
 
@@ -301,6 +392,7 @@ void UDreamTweenerSequence::Goto(float timePoint)
 		}
 		finishedTweenerList.Reset();
 		this->loopCycleCount = 0;
+		this->foldedCycleCount = 0;
 
 		//sort it, so later tweener can do "SetOriginValueForRestart" ealier, so ealier tweener will get correct start state
 		tweenerList.Sort([=](const UDreamTweener& A, const UDreamTweener& B) {
@@ -317,10 +409,16 @@ void UDreamTweenerSequence::Goto(float timePoint)
 			//set parameter to initial
 			item->elapseTime = 0;
 			item->loopCycleCount = 0;
+			item->foldedCycleCount = 0;
 			item->reverseTween = false;
+			// See SetOriginValueForRestart: rewound to the beginning means starting again, callbacks
+			// and start value included.
+			item->startToTween = false;
 		}
 	}
 
-	this->ToNextWithElapsedTime(timePoint);
+	// delay + timePoint, as in UDreamTweener::Goto: timePoint is a position in the sequence, while
+	// elapseTime counts this sequence's own delay before it.
+	this->ToNextWithElapsedTime(delay + timePoint);
 }
 

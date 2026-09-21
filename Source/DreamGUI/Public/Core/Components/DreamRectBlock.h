@@ -29,6 +29,27 @@ enum class EDreamRectBlockTextureScaleMode: uint8
 	FitIn,
 	Envelop,
 };
+
+/**
+ * How a body texture's own edges survive being drawn at a size that is not its own -- Slate's
+ * ESlateBrushDrawType, and the one thing FDreamUIFaceBrush could not say.
+ *
+ * Nine-slice is done in the PIXEL SHADER, as a remap of the sampled UV, not as nine quads. A rect
+ * block is one quad whose whole silhouette -- rounded corners, border, inner and outer shadow -- is
+ * signed-distance work against that quad; cutting it into nine would mean nine SDFs that each know
+ * only their own ninth, and the corner radius alone would be unrecoverable. Remapping the sample
+ * instead leaves every one of those untouched and changes only which texel a body pixel reads.
+ */
+UENUM(BlueprintType)
+enum class EDreamRectBlockTextureDrawMode : uint8
+{
+	/** The whole texture across the whole rect, scaled by the scale mode. */
+	Image,
+	/** Nine-slice: the margins keep their authored pixel size and only the middle stretches. */
+	Box,
+	/** Nine-slice with the middle left out -- a frame drawn around whatever is behind it. */
+	Border,
+};
 UENUM(BlueprintType)
 enum class EDreamRectBlockUnitMode : uint8
 {
@@ -99,6 +120,19 @@ protected:
 		TObjectPtr<UDreamUISpriteData_BaseObject> BodySpriteTexture = nullptr;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (EditCondition = "BodyTexture"))
 		EDreamRectBlockTextureScaleMode BodyTextureScaleMode = EDreamRectBlockTextureScaleMode::Stretch;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (EditCondition = "BodyTexture"))
+		EDreamRectBlockTextureDrawMode BodyTextureDrawMode = EDreamRectBlockTextureDrawMode::Image;
+	/**
+	 * The nine-slice margins, in TEXTURE pixels: how much of each edge keeps its own size instead of
+	 * stretching. Ignored in Image mode.
+	 *
+	 * Texture pixels rather than a fraction, because that is the number an artist actually has -- a
+	 * button skin's border is eight pixels wide in the file, and it stays eight whatever the texture
+	 * is later resized to. The shader is handed both this and the fraction it works out to, because
+	 * it cannot ask a texture how big it is without a fetch it does not otherwise need.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect", meta = (EditCondition = "BodyTexture", ClampMin = "0.0"))
+		FMargin BodyTextureMargin = FMargin(0.0f);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
 		bool bEnableBodyGradient = false;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ProceduralRect")
@@ -192,7 +226,7 @@ protected:
 	FVector2f GetValueWithUnitMode(const FVector2f& SourceValue, EDreamRectBlockUnitMode UnitMode, float RectWidth, float RectHeight)const;
 	FVector2f GetInnerShadowOffset(float RectWidth, float RectHeight);
 	FVector2f GetOuterShadowOffset(float RectWidth, float RectHeight);
-	static constexpr int DataCountInBytes();
+static constexpr int DataCountInBytes();
 
 	void FillColorToData(uint8* Data, const FColor& InValue, int& InOutDataOffset);
 	uint8 PackBoolToByte(
@@ -205,7 +239,30 @@ protected:
 		, bool v6
 		, bool v7
 	);
-	void Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, uint8 InValue3, int& InOutDataOffset);
+	/**
+	 * Write three bytes into one pixel of the float data texture, under a constant top byte that
+	 * keeps the word a normal float (the shader reads it back with asuint(), and mobile GPUs flush a
+	 * denormal to zero on load). The fourth byte this used to take was never written.
+	 */
+	void Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, int& InOutDataOffset);
+public:
+	/**
+	 * The two bit-field packings this element puts in its float data texture, as pure functions so
+	 * that what the shader has to mirror can be stated once and tested.
+	 *
+	 * Both keep the float EXPONENT (bits 30..23) non-zero, because the data texture is R32_FLOAT and
+	 * every reader gets the word through a float load: a GPU with flush-to-zero -- most mobile ones,
+	 * and not optional there -- turns a denormal into 0 before asuint() ever runs. With the old
+	 * layouts an opaque black (0x000000ff as R,G,B,A) and "body enabled, nothing else, any non-default
+	 * texture mode" were both denormals, so the first drew as fully transparent and the second drew
+	 * nothing at all -- on devices only, with everything correct on the desktop the author tested on.
+	 * DreamUI_UnpackUintColor and the flag decode in DreamUIRectBlock.ush are the mirror of these.
+	 */
+	static uint32 PackColorForDataTexture(const FColor& InValue);
+	static uint32 PackFlagsForDataTexture(uint8 InBoolValues, uint8 InTextureScaleMode, uint8 InTextureDrawMode);
+	/** Top byte of the flags pixel: present only so the word is a normal float. */
+	static constexpr uint32 FlagsNormalFloatMarker = 0x3f000000;
+private:
 	void FillFloatToData(uint8* Data, const float& InValue, int& InOutDataOffset);
 	void FillVector2ToData(uint8* Data, const FVector2f& InValue, int& InOutDataOffset);
 	void FillVector4ToData(uint8* Data, const FVector4f& InValue, int& InOutDataOffset);
@@ -315,6 +372,35 @@ public:
 		EDreamRectBlockTextureMode GetBodyTextureMode()const { return BodyTextureMode; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		EDreamRectBlockTextureScaleMode GetBodyTextureScaleMode()const { return BodyTextureScaleMode; }
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+		EDreamRectBlockTextureDrawMode GetBodyTextureDrawMode()const { return BodyTextureDrawMode; }
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ProceduralRect")
+		FMargin GetBodyTextureMargin()const { return BodyTextureMargin; }
+
+	/**
+	 * The nine-slice margins a rect this size can actually honour, in quad pixels, LTRB.
+	 *
+	 * A skin drawn for a big button put on a small one asks for two caps that together are wider
+	 * than the rect: the middle span goes negative and the two caps read past each other. Both are
+	 * scaled down TOGETHER, which is what Slate does and what keeps the RATIO between them -- an
+	 * asymmetric frame stays asymmetric as it shrinks instead of going lopsided.
+	 *
+	 * Public and static because it is the only part of the packing with an opinion in it; the rest
+	 * is memcpy into a byte layout the shader reads back.
+	 */
+	static FVector4f ResolveSliceMarginPixels(const FMargin& InMargin, float InWidth, float InHeight);
+
+	/**
+	 * The texture a nine-slice margin is measured against, or null when there is not one.
+	 *
+	 * Null for an ATLAS SPRITE, deliberately, and that is what gates nine-slice off for one: a
+	 * sprite's UV span is a sub-rect of its atlas, so remapping the sample within 0..1 would walk
+	 * straight into the neighbouring sprite. Supporting it means handing the shader that sub-rect
+	 * too; until then a sprite draws as Image, which is the look it has always had rather than a
+	 * frame that is subtly reading somebody else's art.
+	 */
+	const UTexture* GetBodySampledTexture() const;
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		bool GetSoftEdge()const { return bSoftEdge; }
 
@@ -427,6 +513,10 @@ public:
 		void SetSizeFromBodyTexture();
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetBodyTextureScaleMode(EDreamRectBlockTextureScaleMode value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+		void SetBodyTextureDrawMode(EDreamRectBlockTextureDrawMode value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ProceduralRect")
+		void SetBodyTextureMargin(const FMargin& value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetSoftEdge(bool value);
 

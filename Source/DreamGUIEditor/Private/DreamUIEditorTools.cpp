@@ -7,8 +7,10 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetTreeEditing.h"
+#include "DreamWidgetBlueprint.h"//GeneratedClass, for the self-nesting refusal in PlaceControlClassAndReturn
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetTree.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamUIControlRegistry.h"
 #include "Core/DreamUIManager.h"
@@ -53,7 +55,12 @@ struct FDreamUIEditorToolsHelperFunctionHolder
 
 	static FString MakeUniqueName(const FString& DesiredName, const TSet<FName>& UsedNames)
 	{
-		FString Candidate = DesiredName.TrimStartAndEnd();
+		// Sanitised, not merely trimmed. A display name IS the variable name the compiler declares
+		// -- UDreamWidgetTree::MakeWidgetVariableName is the same string through the same filter --
+		// so a name with a space in it compiles to something that does not match what the details
+		// panel shows, and the rename box then reports the widget's own name as invalid. Callers
+		// that hand over an already-valid name pay nothing: this is the identity on those.
+		FString Candidate = UDreamWidgetTree::SanitizeIdentifier(DesiredName.TrimStartAndEnd());
 		if (Candidate.IsEmpty())
 		{
 			Candidate = TEXT("Widget");
@@ -221,6 +228,15 @@ TArray<UDreamWidget*> FDreamUIEditorTools::GetRootWidgetListFromSelection(const 
 	for (int i = 0; i < count; i++)
 	{
 		auto obj = InSelectedWidgets[i];
+		// The one gate every structural command shares, so none of them has to remember separately.
+		// A destroyed widget is not a root of anything: a preview widget is torn down by the rebuild
+		// that follows every structural edit, and a caller holding one from before that edit hands it
+		// straight back in. Letting it through made copy, duplicate and delete all operate on a
+		// corpse -- quietly, since the walk below only reads pointers.
+		if (!IsValid(obj))
+		{
+			continue;
+		}
 		auto parent = obj->GetParent();
 		bool isRootWidget = false;
 		while (true)
@@ -259,9 +275,19 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	// Every one of these refusals used to be silent, so a palette double-click with nothing selected
 	// looked like a broken panel rather than a missing parent.
-	if (SelectedWidget == nullptr)
+	//
+	// IsValid, not just non-null: a PREVIEW widget stops being valid the moment a structural edit
+	// rebuilds the preview, and a caller holding one from before that edit is holding a corpse. With
+	// nothing checking, FindDesignerForWidget below could not resolve a world for it, this function
+	// fell through to the level-editor branch at the bottom, and the widget was built into the
+	// PREVIEW WORLD -- an orphan the asset never heard about, handed back to a caller who had every
+	// reason to think the create had worked. A refusal that says so is the only honest answer.
+	if (!IsValid(SelectedWidget))
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create widget '%s': no parent widget is selected."), *Name);
+		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Cannot create widget '%s': %s."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Name,
+			SelectedWidget == nullptr ? TEXT("no parent widget is selected")
+				: TEXT("the parent widget has been destroyed -- a preview pointer cannot be kept across a structural edit"));
 		return nullptr;
 	}
 	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))
@@ -336,39 +362,53 @@ void FDreamUIEditorTools::CreateUIControls(TFunction<UDreamWidget*()> GetSelecte
 	CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), MoveTemp(InControlClassPath));
 }
 
-UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath, TFunction<void(UDreamWidget*)> Callback)
+UDreamWidget* FDreamUIEditorTools::PlaceControlClassAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction,
+	UClass* ControlClass, const FString& InDisplayName, TFunction<void(UDreamWidget*)> Callback)
 {
+	// Everything below the class-resolution step, which is the only part the two roads to a control
+	// class disagree about: a Blueprint one arrives as an asset path to load, and a code-built one
+	// arrives as the class. Placing them is identical work, because a UDreamUIControl subclass is a
+	// UDreamUserWidget subclass exactly as a compiled DreamUI Blueprint is, and both are placed by
+	// instancing. Keeping it one function is what stops the second road from growing its own
+	// almost-right copy of the designer/no-designer split below.
+	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
+	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("Cannot create control '%s': it is not a DreamUI user widget class."), *InDisplayName);
+		return nullptr;
+	}
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': no parent widget is selected."), *InControlClassPath);
+		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': no parent widget is selected."), *InDisplayName);
 		return nullptr;
 	}
 	if (!IsWidgetCompatibleWithDreamUIToolsMenu(SelectedWidget))
 	{
-		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': widget '%s' is not a valid parent."), *InControlClassPath, *SelectedWidget->GetDisplayName());
-		return nullptr;
-	}
-	// Resolved ONCE, for both paths. A control is named by its ASSET path and the class is the
-	// Blueprint's generated one; resolving it a second time is how the designer branch came to call
-	// LoadClass on an asset path and refuse every control in the palette.
-	UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, *(InControlClassPath + TEXT(".") + FPackageName::GetShortName(InControlClassPath)));
-	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
-	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
-	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
+		UE_LOG(DreamGUIEditor, Warning, TEXT("Cannot create control '%s': widget '%s' is not a valid parent."), *InDisplayName, *SelectedWidget->GetDisplayName());
 		return nullptr;
 	}
 
 	if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(SelectedWidget))
 	{
+		// A hierarchy cannot contain itself, and a class that derives from it contains it one step
+		// out. The Content Browser drop has always refused both (TryHandleAssetDragDropOperation);
+		// this is the other road to the same placement -- the palette, the Create menus, a favourite
+		// -- and it had no guard at all, so anything reachable by class could be nested into itself.
+		const UDreamWidgetBlueprint* EditedBlueprint = Designer->GetWidgetBlueprint();
+		if (IsValid(EditedBlueprint) && EditedBlueprint->GeneratedClass != nullptr
+			&& ControlClass->IsChildOf(EditedBlueprint->GeneratedClass))
+		{
+			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot place '%s' in '%s': it is that hierarchy, or derives from it."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InDisplayName, *EditedBlueprint->GetName());
+			return nullptr;
+		}
 		// A control IS a class now, so placing one is creating a widget of that class -- its contents
 		// come from its own class when the preview instances it.
 		//
 		// Named after the BLUEPRINT, not the class: a generated class is BP_TextInput_C, and the
 		// display name is what the hierarchy shows and what the compiler makes a variable of.
 		UDreamWidget* Created = Designer->DesignerCreateWidget(SelectedWidget, ControlClass,
-			ControlBlueprint->GetName(), [Callback](UDreamWidget* InTemplate)
+			InDisplayName, [Callback](UDreamWidget* InTemplate)
 			{
 				InTemplate->SetAnchoredPosition(FVector2D::ZeroVector);
 				if (Callback)
@@ -404,7 +444,7 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	UDreamWidget* CreatedWidget = CreateDreamWidget(SelectedWidget->GetWorld(), ControlClass, SelectedWidget);
 	if (!IsValid(CreatedWidget))
 	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("Control class '%s' produced no widget."), *InControlClassPath);
+		UE_LOG(DreamGUIEditor, Error, TEXT("Control class '%s' produced no widget."), *InDisplayName);
 		return nullptr;
 	}
 	if (Callback)Callback(CreatedWidget);
@@ -412,6 +452,24 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
 	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(CreatedWidget);
 	return CreatedWidget;
+}
+
+UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FString InControlClassPath, TFunction<void(UDreamWidget*)> Callback)
+{
+	// Resolved ONCE, here. A control is named by its ASSET path and the class is the Blueprint's
+	// generated one; resolving it a second time is how the designer branch came to call LoadClass on
+	// an asset path and refuse every control in the palette.
+	UBlueprint* ControlBlueprint = LoadObject<UBlueprint>(nullptr, *(InControlClassPath + TEXT(".") + FPackageName::GetShortName(InControlClassPath)));
+	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
+	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
+	{
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
+		return nullptr;
+	}
+	// The BLUEPRINT's name, not the class's: a generated class is BP_TextInput_C, and that suffix
+	// would be what the hierarchy shows and what the compiler makes a variable of.
+	return PlaceControlClassAndReturn(MoveTemp(GetSelectedWidgetFunction), ControlClass,
+		ControlBlueprint->GetName(), MoveTemp(Callback));
 }
 
 void FDreamUIEditorTools::CreateRegisteredControl(TFunction<UDreamWidget*()> GetSelectedWidgetFunction, FName ControlName)
@@ -439,6 +497,38 @@ UDreamWidget* FDreamUIEditorTools::CreateRegisteredControlAndReturn(TFunction<UD
 	if (Descriptor->CreationKind == EDreamUIControlCreationKind::WidgetClass)
 	{
 		return CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), Descriptor->WidgetClassPath, MoveTemp(Callback));
+	}
+	if (Descriptor->CreationKind == EDreamUIControlCreationKind::ControlClass)
+	{
+		// The class is already in hand -- Validate above has established it is a concrete
+		// UDreamUserWidget subclass -- so the only step the Blueprint road adds is the one this
+		// road does not need.
+		//
+		// Named after the class with the family prefix off: the name becomes the hierarchy row and
+		// the Blueprint variable, and "ProgressBar" is what an author calls the thing while
+		// "DreamProgressBar" is what C++ calls it. Not the registry name, which is a key and has to
+		// stay distinct from the legacy entry's ("ProgressBar" is taken); not the tag, which carries
+		// a dot that no variable name can.
+		FString WidgetName = Descriptor->ControlClass->GetName();
+		WidgetName.RemoveFromStart(TEXT("Dream"));
+		// NativeConfigure runs for this kind too, and it is what lets ONE control class back two
+		// palette rows. A slider is one class with a Direction, but "Horizontal Slider" and
+		// "Vertical Slider" are two things an author looks for by name; the entry carries the
+		// property write that tells them apart. Ordered before the caller's callback so a drop that
+		// positions the new widget still gets the last word.
+		TFunction<void(UDreamWidget*)> Configure = Descriptor->NativeConfigure;
+		return PlaceControlClassAndReturn(MoveTemp(GetSelectedWidgetFunction), Descriptor->ControlClass.Get(),
+			WidgetName, [Configure, Callback = MoveTemp(Callback)](UDreamWidget* InWidget) mutable
+			{
+				if (Configure)
+				{
+					Configure(InWidget);
+				}
+				if (Callback)
+				{
+					Callback(InWidget);
+				}
+			});
 	}
 
 	const FDreamUIControlDescriptor Recipe = *Descriptor;
@@ -554,10 +644,18 @@ void FDreamUIEditorTools::DuplicateWidgets(TFunction<TArray<UDreamWidget*>()> Ge
 }
 void FDreamUIEditorTools::CopyWidgets(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	// Dead preview widgets dropped first. A copy that cannot be performed MUST NOT leave the previous
+	// copy in the clipboard: the clipboard is process-wide and outlives every designer, so a silent
+	// no-op here means the next Ctrl+V hands over whatever was copied minutes ago, in another asset,
+	// and pastes it as though the user had asked for it. That is the one failure mode a clipboard is
+	// not allowed to have, and it is why every early return below empties it.
+	TArray<UDreamWidget*> SelectedWidgets = GetSelectedWidgetArrayFunction();
+	SelectedWidgets.RemoveAll([](const UDreamWidget* Widget) { return !IsValid(Widget); });
 	if (SelectedWidgets.Num() == 0)
 	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("NothingSelected"));
+		FDreamWidgetBlueprintEditor::DesignerClearClipboard();
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Nothing to copy: no live widget is selected. The clipboard was emptied rather than left holding an older copy."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	auto CopyWidgetList = FDreamUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
@@ -574,14 +672,21 @@ void FDreamUIEditorTools::CopyWidgets(TFunction<TArray<UDreamWidget*>()> GetSele
 	// Nothing below the designer route any more. The fallback here copied the selection into a
 	// transient UDreamUIPrefab and pasted it back by loading the blob; a widget that no designer owns
 	// is not something this command can be invoked on.
+	FDreamWidgetBlueprintEditor::DesignerClearClipboard();
+	UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Nothing to copy: '%s' belongs to no open designer. The clipboard was emptied rather than left holding an older copy."),
+		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(SelectedWidgets[0]));
 }
 
 void FDreamUIEditorTools::PasteWidgets(TFunction<TArray<UDreamWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	// Same reason the create path checks: a preview widget kept across a structural edit is a corpse,
+	// and pasting INTO one silently put the clipboard somewhere the author was not looking.
+	TArray<UDreamWidget*> SelectedWidgets = GetSelectedWidgetArrayFunction();
+	SelectedWidgets.RemoveAll([](const UDreamWidget* Widget) { return !IsValid(Widget); });
 	if (SelectedWidgets.Num() == 0)
 	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("NothingSelected"));
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot paste: no live widget to paste into."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	auto ParentWidget = SelectedWidgets[0];

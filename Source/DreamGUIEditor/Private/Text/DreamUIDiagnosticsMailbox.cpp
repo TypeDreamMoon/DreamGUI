@@ -2,6 +2,7 @@
 
 #include "Text/DreamUIDiagnosticsMailbox.h"
 
+#include "DreamGUIEditorModule.h"
 #include "Text/DreamUIDiagnostics.h"
 #include "Text/DreamUIPaths.h"
 
@@ -118,12 +119,24 @@ FString FDreamUIDiagnosticsMailbox::FlushNow(const FString& InOverrideDirectory)
 	// file. Same rule the DreamFX bridge learned the hard way.
 	const FString FinalPath = FPaths::Combine(Directory, TEXT(".dui-diagnostics.json"));
 	const FString TempPath = FinalPath + TEXT(".tmp");
+	// Both refusals are LOGGED, which this whole file did not do once. The mailbox is the only thing
+	// carrying compile verdicts to an editor outside Unreal, so a write that fails is a VSCode window
+	// that quietly keeps showing the last successful compile's problems -- indistinguishable from a
+	// clean build. The caller's empty string says "not written"; nothing was saying WHY, and the two
+	// causes are things a reader can act on (a read-only DUI/ directory, a file locked by the editor
+	// that is reading it).
 	if (!FFileHelper::SaveStringToFile(Serialized, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
 	{
+		UE_LOG(DreamGUIEditor, Warning,
+			TEXT("[%s].%d Could not write '%s'; the diagnostics an external editor reads are now stale."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *TempPath);
 		return FString();
 	}
 	if (!IFileManager::Get().Move(*FinalPath, *TempPath, /*Replace*/true, /*EvenIfReadOnly*/true))
 	{
+		UE_LOG(DreamGUIEditor, Warning,
+			TEXT("[%s].%d Wrote '%s' but could not move it onto '%s'; the diagnostics an external editor reads are now stale."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *TempPath, *FinalPath);
 		IFileManager::Get().Delete(*TempPath);
 		return FString();
 	}

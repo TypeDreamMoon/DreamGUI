@@ -3,6 +3,7 @@
 #include "DreamGUI/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamText.h"
+#include "Math/RandomStream.h"
 
 bool UDreamMeshModifierTextAnimation_RangeSelector::Select(UDreamText* InUIText, FDreamMeshModifierTextAnimation_SelectResult& OutSelection)
 {
@@ -77,7 +78,13 @@ void UDreamMeshModifierTextAnimation_RangeSelector::SetEnd(float Value)
 bool UDreamMeshModifierTextAnimation_RandomSelector::Select(UDreamText* InUIText, FDreamMeshModifierTextAnimation_SelectResult& OutSelection)
 {
 	if (End <= Start)return false;
-	FMath::RandInit(Seed);
+	// A stream of this selector's own rather than FMath::RandInit plus FMath::FRand. Seeding is meant
+	// to make THIS scatter repeatable, and reseeding the engine's global generator to do it reaches
+	// every other caller of FMath::FRand in the process -- once per geometry rebuild, which for an
+	// animated text is once per frame, so anything else drawing on that generator is handed the same
+	// short sequence forever. The arrangement a given seed produces is a different one from before,
+	// because the two generators are different: an authored seed now picks a different scatter.
+	FRandomStream RandomStream(Seed);
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	float calculatedOffset = Offset * 2.0f - 1.0f;
 	OutSelection.StartCharIndex = charProperties.Num() * Start;
@@ -88,7 +95,7 @@ bool UDreamMeshModifierTextAnimation_RandomSelector::Select(UDreamText* InUIText
 	lerpValueArray.AddDefaulted(count);
 	for (int startIndex = OutSelection.StartCharIndex, endIndex = OutSelection.EndCharCount; startIndex < endIndex; startIndex++)
 	{
-		float lerpValue = FMath::FRand() + calculatedOffset;
+		float lerpValue = RandomStream.FRand() + calculatedOffset;
 		//lerpValue = FMath::Clamp(lerpValue, 0.0f, 1.0f);
 		int lerpValueIndex = startIndex - OutSelection.StartCharIndex;
 		lerpValueArray[lerpValueIndex] = lerpValue;

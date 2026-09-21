@@ -75,6 +75,12 @@ void UUIToggleGroup::SetSelection(UUIToggle* Target)
 		{
 			TempSelected->SetValue(false);
 		}
+		// The group's record and the toggle's own state have to agree. Arriving here from
+		// UUIToggle::SetValue they already do and this is a no-op, but this is BlueprintCallable and
+		// a direct SetSelection used to move the group's selection without ever switching the target
+		// on -- the group reported a selection nothing on screen showed. Not recursive: SetValue
+		// calls back in only when it actually changes, and by then LastSelect is already Target.
+		Target->SetValue(true);
 		int index = GetToggleIndex(Target);
 		OnValueChangedCPP.Broadcast(index);
 		OnValueChangedBP.Broadcast(index);
@@ -88,7 +94,10 @@ void UUIToggleGroup::ClearSelection()
 		LastSelect->SetValue(false);
 		LastSelect.Reset();
 
+		//all three, the way SetSelection does it: the Blueprint delegate was the one left out, so a
+		//Blueprint bound to OnValueChanged heard every selection and never heard a deselection
 		OnValueChangedCPP.Broadcast(-1);
+		OnValueChangedBP.Broadcast(-1);
 		OnValueChanged.FireEvent(-1);
 	}
 }

@@ -56,15 +56,22 @@ bool FDreamWidgetDetailPropertyExtensionHandler::IsPropertyExtendable(const UCla
 
 void FDreamWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow& InWidgetRow, const IDetailLayoutBuilder& InDetailBuilder, const UClass* InObjectClass,	TSharedPtr<IPropertyHandle> InPropertyHandle)
 {
-	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
-	InDetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
-	if (ObjectsBeingCustomized.Num() != 1)return;
-	if (!ObjectsBeingCustomized[0].IsValid())return;
+	if (!InPropertyHandle.IsValid())return;
+	// The row's OWN object, which is not the panel's. Panel / Self Layout / Visual come in through
+	// AddExternalObjects and a panel slot through AddExternalObjectProperty, so for every one of those
+	// rows GetObjectsBeingCustomized answers "the widget" while the property lives on the layout, the
+	// visual or the slot -- and asking the widget for a setter it does not have took the Bind control
+	// off exactly the rows that most wanted one. IsPropertyExtendable already answers from the
+	// handle's outers; this is the same question asked the same way, so the two cannot disagree.
+	TArray<UObject*> Outers;
+	InPropertyHandle->GetOuterObjects(Outers);
+	if (Outers.Num() != 1)return;
+	UObject* Owner = Outers[0];
+	if (!IsValid(Owner))return;
 
 	if (!IsWidgetReferenceProperty(InPropertyHandle->GetProperty()))
 	{
 		// The binding row draws its own control; the picker below is only for reference properties.
-		UObject* Owner = ObjectsBeingCustomized[0].Get();
 		if (auto Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(World.Get()).Pin())
 		{
 			if (TSharedPtr<SWidget> BindingWidget = DreamWidgetPropertyBindingExtension::MakeBindingWidget(
@@ -82,9 +89,17 @@ void FDreamWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRo
 	UObject* Object = nullptr;
 	if (InPropertyHandle->GetValue(Object) != FPropertyAccess::Success)return;
 	auto WeakObject = MakeWeakObjectPtr(Object);
-	InPropertyHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&InDetailBuilder]()
+	// The UTILITIES, weakly -- not the layout builder by reference. This delegate is held by the
+	// property node, and a forced refresh is precisely what destroys the layout builder that installed
+	// it, so the capture would be dangling by the second time anyone changed the value. The utilities
+	// are shared and are what actually services the request.
+	TWeakPtr<IPropertyUtilities> WeakUtilities = InDetailBuilder.GetPropertyUtilities();
+	InPropertyHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([WeakUtilities]()
 	{
-		InDetailBuilder.GetPropertyUtilities()->RequestForceRefresh();
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
 	}));
 
 	auto NoneObjectText = LOCTEXT("None", "None");
@@ -151,7 +166,13 @@ void FDreamWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRo
 					SNew(SDreamWidgetHierarchyPickerView, World.Get(), ObjectClass)
 					.OnSelectItem_Lambda([=, this](UObject* InItem)
 					{
-						InPropertyHandle->SetValueFromFormattedString(InItem->GetPathName());
+						// The menu entries hold weak references and are built once, so a widget destroyed
+						// between opening the menu and clicking it answers null here. Closing the menu
+						// without writing is the whole of what that click can honestly mean.
+						if (InItem != nullptr)
+						{
+							InPropertyHandle->SetValueFromFormattedString(InItem->GetPathName());
+						}
 						(*PickerButton)->SetIsOpen(false);
 					})
 				]

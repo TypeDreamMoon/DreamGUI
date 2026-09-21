@@ -67,7 +67,7 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 
 			FBufferRHIRef IndexBuffer = nullptr;
 			int32 TriangleCount = 2;
-			if (MaskTexture != nullptr)
+			if (MaskTextureRHI.IsValid())
 			{
 				if (IsWorldSpace)
 				{
@@ -77,9 +77,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FDreamUIRenderMeshWithMaskWorldPS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTextureRHI
 							, ResultTextureSamplerState
-							, MaskTexture->SamplerStateRHI
+							, MaskTextureSamplerState
 , TintColor, TintMode
 						);
 						if (ClipDataTexture != nullptr)
@@ -94,9 +94,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FDreamUIRenderMeshWithMaskWorldDepthFadePS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTextureRHI
 							, ResultTextureSamplerState
-							, MaskTexture->SamplerStateRHI
+							, MaskTextureSamplerState
 , TintColor, TintMode
 						);
 						if (ClipDataTexture != nullptr)
@@ -113,9 +113,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 					TShaderMapRef<FDreamUIRenderMeshWithMaskPS_Clip> PixelShader(GlobalShaderMap);
 					SET_PIPELINE_STATE_FOR_CLIP();
 					VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
+					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTextureRHI
 						, ResultTextureSamplerState
-						, MaskTexture->SamplerStateRHI
+						, MaskTextureSamplerState
 , TintColor, TintMode
 					);
 					if (ClipDataTexture != nullptr)

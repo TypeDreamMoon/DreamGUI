@@ -4,7 +4,9 @@
 #include "DreamGUIEditorModule.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUISpriteData.h"
+#include "Engine/Texture2D.h"
 #include "Framework/Notifications/NotificationManager.h"
+#include "ScopedTransaction.h"
 #include "Utils/DreamUIUtils.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
@@ -54,7 +56,25 @@ UObject* UDreamUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InP
 		}
 		// Apply setting for sprite creation
 		//SpriteTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
-		UDreamUISpriteData::CheckAndApplySpriteTextureSetting(SpriteTexture.Get());
+		//
+		// Creating the sprite rewrites the SOURCE texture's compression, LOD group and sRGB, which is
+		// a second asset changing behind the author's back. UTexture's contract is that a property
+		// write sits inside PreEditChange/PostEditChange -- that is what blocks the async build and
+		// rebuilds the resource -- and the transaction is what lets the change be undone with the
+		// asset it was made for.
+		// The question of whether anything needs writing is asked on the outside: a texture that is
+		// already configured must not be dirtied, nor have its resource rebuilt, just to make a sprite.
+		{
+			UTexture2D* Texture = SpriteTexture.Get();
+			if (UDreamUISpriteData::NeedsSpriteTextureSetting(Texture))
+			{
+				const FScopedTransaction Transaction(LOCTEXT("ApplySpriteTextureSettings", "Apply Sprite Texture Settings"));
+				Texture->Modify();
+				Texture->PreEditChange(nullptr);
+				UDreamUISpriteData::CheckAndApplySpriteTextureSetting(Texture);
+				Texture->PostEditChange();
+			}
+		}
 	}
 
 	UDreamUISpriteData* NewAsset = NewObject<UDreamUISpriteData>(InParent, Class, Name, Flags | RF_Transactional);

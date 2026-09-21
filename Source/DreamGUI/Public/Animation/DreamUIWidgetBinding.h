@@ -69,6 +69,27 @@ public:
 
 	static FString BuildWidgetPathFromRoot(const UDreamWidget* Root, const UDreamWidget* Widget);
 	static UDreamWidget* ResolveWidgetPath(UDreamWidget* Root, const FString& InPath);
+	/**
+	 * Every widget under Root, at any depth, whose display name is InDisplayName. Root itself is
+	 * included when it matches.
+	 *
+	 * This is what makes a binding survive a MOVE. A path is display names all the way down, so
+	 * dragging a widget to another parent invalidates every segment above it -- while the widget
+	 * itself, which is what the track was about, is still there under its own name. Resolution falls
+	 * back to this when the path does not walk, and takes the answer only when there is exactly one:
+	 * one match is the widget that moved, several is a question nobody can answer from a name.
+	 */
+	static void CollectWidgetsByDisplayName(UDreamWidget* Root, const FString& InDisplayName, TArray<UDreamWidget*>& OutWidgets);
+
+#if WITH_EDITOR
+	/**
+	 * One `(was:)` hop for this binding's path: every segment spelling InOldSegment becomes
+	 * InNewSegment. The same one-word contract as the animation reference's rewriter -- no
+	 * normalisation, empties kept -- because a repair that reshapes paths it has no business with
+	 * is an edit nobody reviews. An empty path binds the root and carries no name to rename.
+	 */
+	bool RenameWidgetPathSegment(const FString& InOldSegment, const FString& InNewSegment);
+#endif
 
 private:
 	/** The presenter this binding resolves through, honoring PIE world remapping via the context. */

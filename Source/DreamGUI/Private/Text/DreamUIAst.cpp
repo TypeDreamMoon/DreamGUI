@@ -13,12 +13,21 @@
 
 namespace DreamUIAstLocal
 {
-	void VisitDepthFirst(const FDreamUINode& InNode, TFunctionRef<void(const FDreamUINode&)> InPredicate)
+	void VisitDepthFirst(const FDreamUINode& InNode, TFunctionRef<void(const FDreamUINode&)> InPredicate, int32 InDepth)
 	{
 		InPredicate(InNode);
+		// The crash guard, not the policy. The parser refuses a file past DreamUIAst::MaxNestingDepth
+		// with a diagnostic and a line number, so a PARSED tree can never reach this -- what can is a
+		// tree assembled in code (the designer, a test) with a cycle or a runaway loop in it, and for
+		// those there is nobody to report to and no line to report. Stopping the descent leaves the
+		// caller with a partial walk; recursing leaves them with no editor.
+		if (InDepth >= DreamUIAst::MaxNestingDepth)
+		{
+			return;
+		}
 		for (const FDreamUINode& Child : InNode.Children)
 		{
-			VisitDepthFirst(Child, InPredicate);
+			VisitDepthFirst(Child, InPredicate, InDepth + 1);
 		}
 	}
 }
@@ -39,6 +48,15 @@ const FDreamUIStyle* FDreamUIAst::FindStyle(const FString& InName) const
 			return &Style;
 		}
 	}
+	// Then the imports, so a local declaration shadows an imported one -- the same first-wins rule
+	// that already resolves two locals.
+	for (const FDreamUIStyle& Style : ImportedStyles)
+	{
+		if (Style.Name == InName)
+		{
+			return &Style;
+		}
+	}
 	return nullptr;
 }
 
@@ -51,6 +69,27 @@ const FDreamUIResource* FDreamUIAst::FindResource(const FString& InName) const
 			return &Resource;
 		}
 	}
+	for (const FDreamUIResource& Resource : ImportedResources)
+	{
+		if (Resource.Name == InName)
+		{
+			return &Resource;
+		}
+	}
+	return nullptr;
+}
+
+const FDreamUITimeline* FDreamUIAst::FindTimeline(const FString& InName) const
+{
+	// No import chain to fall through to, on purpose -- see the field's own note: a timeline is an
+	// identity (an object on this tree, a variable on this class), not a bag of values that copies.
+	for (const FDreamUITimeline& Timeline : Timelines)
+	{
+		if (Timeline.Name == InName)
+		{
+			return &Timeline;
+		}
+	}
 	return nullptr;
 }
 
@@ -61,6 +100,6 @@ void FDreamUIAst::ForEachNode(TFunctionRef<void(const FDreamUINode&)> InPredicat
 	// each pick their own definition of empty.
 	if (bHasRoot)
 	{
-		DreamUIAstLocal::VisitDepthFirst(Root, InPredicate);
+		DreamUIAstLocal::VisitDepthFirst(Root, InPredicate, /*InDepth*/0);
 	}
 }

@@ -265,4 +265,34 @@ bool FDreamCanvasShippedPlaneTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamCanvasVisualChangeRebuildsDrawCallTest,
+	"DreamGUI.Canvas.SwappingAWidgetsVisualRebuildsTheDrawCallListRatherThanRefreshingIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamCanvasVisualChangeRebuildsDrawCallTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * A visual leaving a canvas changes which draw-calls exist, not just what is in them: its geometry
+	 * has to come out of whatever draw-call it was batched into. Asking only for a tick update runs
+	 * the cheap refresh path, which copies vertices into the layout that was built around the visual
+	 * that is going away -- so at runtime (a Blueprint changing a visual, an object pool reusing a
+	 * widget) the old visual kept drawing. In the editor this never showed, because
+	 * PostReinitProperties marks everything dirty on any change.
+	 */
+	UDreamCanvas* Canvas = NewObject<UDreamCanvas>();
+	if (!TestNotNull(TEXT("Canvas created"), Canvas))
+	{
+		return false;
+	}
+
+	Canvas->bShouldRebuildDrawCall = false;
+	Canvas->bCanTickUpdate = false;
+	Canvas->MarkVisualWillChange(nullptr);
+
+	TestTrue(TEXT("Losing a visual rebuilds the draw-call list"), Canvas->bShouldRebuildDrawCall);
+	TestTrue(TEXT("Losing a visual wakes canvas updates"), Canvas->bCanTickUpdate);
+	return true;
+}
+
 #endif

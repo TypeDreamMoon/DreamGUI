@@ -107,6 +107,17 @@ protected:
 	/** ListRoot's max height */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown", AdvancedDisplay)
 		float MaxHeight = 150;
+	/**
+	 * Set by SetMaxHeight, and read by Awake so it stops overwriting what it was told.
+	 *
+	 * Awake derives MaxHeight from ListRoot's current height, which is the right guess for a hand-wired
+	 * behaviour whose list somebody drew. But a CONTROL pushes the number it wants (UDreamDropdown
+	 * turns MaxVisibleItems into it, in ApplyStyle, which runs at NativeOnInitialized -- before this
+	 * component's Awake at begin play), and the guess won that race: on the template road, where the
+	 * list root's authored height is whatever the template's author drew, MaxVisibleItems was
+	 * silently discarded. The built-in tree only escaped because the two numbers happened to agree.
+	 */
+	bool bMaxHeightAuthored = false;
 	/** When show the list, create a overlay block to block input on other objects. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown")
 		bool bUseInteractionBlock = true;
@@ -132,8 +143,11 @@ protected:
 	/** Bind this delegate and set custom data for option list item. */
 	FUIDropdownComponentDelegate_SetItemCustomData OnSetItemCustomDataFunction;
 	void SetValue(int InValue, bool FireEvent);
+	/** Fired with true from Show and false from Hide, so a control can lift the list to a popup layer. */
+	FDreamUIMulticastDelegateBool OnListVisibilityChangedCPP;
 public:
 	FDreamUIMulticastDelegateInt32& GetOnValueChangedEvent(){return OnValueChangedCPP;}
+	FDreamUIMulticastDelegateBool& GetOnListVisibilityChangedEvent(){return OnListVisibilityChangedCPP;}
 	
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 		void Show();
@@ -161,6 +175,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 		bool GetUseInteractionBlock()const { return bUseInteractionBlock; }
 
+	/**
+	 * The parts, settable from code. All four are EditAnywhere weak references the designer and .dui
+	 * always reached by reflection while no caller could -- the UUIToggle transition-target hole.
+	 * A part swap invalidates the built list; the caption re-applies at once.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetListRoot(UDreamWidget* InListRoot);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetCaptionText(UDreamText* InCaptionText);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetItemTemplate(UUIDropdownItemComponent* InItemTemplate);
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetValue(int InValue);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
@@ -176,7 +202,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void AddOptions(const TArray<FUIDropdownOptionData>& InOptions);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
-	void SetMaxHeight(float InValue) { MaxHeight = InValue; }
+	void SetMaxHeight(float InValue) { MaxHeight = InValue; bMaxHeightAuthored = true; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetUseInteractionBlock(bool InValue);
 
@@ -226,6 +252,15 @@ protected:
 private:
 	FSimpleDelegate OnSelectCPP;
 	UPROPERTY()FUIDropdownItem_OnSelect OnSelectDynamic;
+public:
+	/** The parts, settable from code -- the same reflection-only hole the dropdown itself had. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetText(UDreamText* InText);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetImage(UDreamImage* InImage);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+	void SetToggle(UUIToggle* InToggle);
+protected:
 	UFUNCTION()void DynamicDelegate_OnSelect() { OnSelectCPP.ExecuteIfBound(); }
 protected:
 	/**

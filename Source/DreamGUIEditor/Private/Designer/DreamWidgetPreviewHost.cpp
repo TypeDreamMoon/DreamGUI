@@ -9,10 +9,14 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamLayout.h"
+#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Designer/DreamWidgetPropertyBindingExtension.h"
+// For NoteDirtyProperty: every write to the template is reported so the flush writes what was
+// touched rather than everything that differs. See FDreamUITextWriteBack::NoteDirtyProperty.
+#include "Text/DreamUITextWriteBack.h"
 #include "DreamGUI.h"
 #include "DreamGUIEditorModule.h"
 #include "Preview/DreamWidgetDesignerScene.h"
@@ -24,6 +28,7 @@
 #include "PropertyCustomizationHelpers.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
+#include "UObject/UObjectHash.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetPreviewHost"
 
@@ -331,6 +336,9 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 		return;
 	}
 
+	// Last moment at which the outgoing preview is still addressable. See OnPreviewAboutToRebuild.
+	OnPreviewAboutToRebuild.Broadcast();
+
 	DestroyPreview();
 
 	UDreamWidget* RootAgent = Scene->EnsureRootAgent(
@@ -350,9 +358,18 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 		// A class whose last compile failed is marked abstract, and NewObject refuses those. Showing
 		// whatever the class last managed to build beats showing nothing while the author fixes it.
 		FMakeClassSpawnableOnScope TemporarilySpawnable(GeneratedClass);
-		// Not RF_Transactional: values written onto a preview must never enter the transaction buffer.
-		// Only the template is undoable; a preview that recorded its own edits would let undo restore
-		// an object the next rebuild is about to destroy. UMG clears the same flag for the same reason.
+		// RF_Transient and, deliberately, NOT RF_Transactional -- and this is not a statement about
+		// this object alone. UDreamWidgetGeneratedClass::InitializeWidgetStatic instances the tree
+		// with the HOST's RF_Transactional, and that flag propagates to sub-objects, so these flags
+		// are what keeps the entire preview hierarchy out of the transaction buffer.
+		//
+		// That is the whole undo model: the authoring tree is the only undoable half, and the preview
+		// is a projection of it that is thrown away and rebuilt. A preview that recorded its own
+		// edits would let an undo restore objects a rebuild had already destroyed -- which is exactly
+		// what produced a preview tree with a cycle in it -- and would pin the outgoing hierarchy in
+		// the buffer for as long as the entry lived. UMG clears the same flag for the same reason,
+		// and rebuilds from the template on PostUndo/PostRedo as this editor now does; see
+		// FDreamWidgetBlueprintEditor::HandlePostTransaction.
 		PreviewWidget = NewObject<UDreamUserWidget>(RootAgent->GetOuter(), GeneratedClass, NAME_None, RF_Transient);
 	}
 
@@ -381,7 +398,48 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 		PreviewWidget->SetAnchorData(FillParent);
 	}
 
+	// And ARRANGE what is inside it, which is the other half of that same paragraph and was missing.
+	//
+	// This is UMG's PreviewSizeConstraint (SDesignerView.cpp: an SBox with WidthOverride /
+	// HeightOverride around UserWidget->TakeWidget()). In UMG the asset's root cannot be the wrong
+	// size because it has no size of its own to author -- a Slate tree root has no slot, so what it
+	// gets is whatever that SBox hands it. Here every widget carries an anchor rect, the ROOT
+	// included, and the wrapper above had no layout container -- so it handed its child nothing and
+	// the authored root fell back on anchors nothing validates. A root authored as point anchors with
+	// a zero SizeDelta then measured 0x0 and arranged every descendant into a 0x0 rect: a hierarchy
+	// that is structurally perfect and entirely invisible, reported as "every control in here has
+	// size zero". (The 100x100 case above is the same defect one level up, found first.)
+	//
+	// An overlay rather than a size box: the box takes one child and this wrapper legitimately holds
+	// exactly one, but a refused second child during a rebuild would be a lost preview rather than a
+	// tidier one -- and Fill on both axes, which is the default slot, is all the constraint that is
+	// wanted here. The AUTHORED anchors are untouched and still what runs at runtime; the designer is
+	// simulating the host that would arrange this widget, and which host it simulates is the
+	// designer's size rule (see FDreamWidgetBlueprintEditor::SetDesignerSizeRule).
+	{
+		UDreamLayoutContainer* Previous = PreviewWidget->GetLayoutContainer();
+		UDreamLayoutContainer* Stage = PreviewWidget->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
+		PreviewWidget->SyncRequiredBehavioursForLayoutContainer(Previous, Stage);
+	}
+
 	RegisterDreamWidgetHierarchy(PreviewWidget);
+
+	// After registration, because registration is where the second kind of preview object is born.
+	//
+	// Instancing carries the flags of the tree it built (see the NewObject above), and UDreamWidget's
+	// own creators -- AddComponent, CreateNewVisual, CreateNewLayoutContainer, CreateNewLayoutSelf,
+	// CreateNewPanelSlot -- now take RF_Transactional from their owner, so the objects registration
+	// mints are non-transactional too. That covers the case this was written for: a panel slot is
+	// per-child data the PARENT's layout hands out, minted by EnsurePanelSlotForChild for any child
+	// whose authored counterpart has none, which the content root always is.
+	//
+	// A BACKSTOP, then, rather than the mechanism -- and it stays because the rule is not universal.
+	// Sites that still hard-code the flag and can put an object inside this preview: DreamUIBuilder's
+	// tree for a native control that declares its hierarchy in code, UDreamLayout's animation handler,
+	// UDreamWidgetAnimationComponent's sequences, and anything CreateDreamWidget makes (a list view's
+	// cells). One sweep per rebuild is cheap insurance against a rule that holds in five places and
+	// not in a sixth; what it cannot reach is an object created AFTER the rebuild.
+	ClearTransactionalFlagsOnPreview();
 
 	RebuildPreviewGuidMap();
 	// Tell the canvas it has something new to draw. Nothing else here does, and a canvas that is
@@ -391,7 +449,44 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	// freshly loaded asset and of pressing Compile, and false of every open after that.
 	UDreamUIManagerWorldSubsystem::RefreshAllUI(Scene->GetWorld());
 
+	ApplyHiddenInDesigner();
+
 	OnPreviewRebuilt.Broadcast();
+}
+
+void FDreamWidgetPreviewHost::ApplyHiddenInDesigner()
+{
+	if (!IsValid(Blueprint))
+	{
+		return;
+	}
+	UDreamWidget* Root = GetPreviewRoot();
+	if (!IsValid(Root))
+	{
+		return;
+	}
+	// Hidden-in-designer is recorded on the ASSET, by widget name, and applied to the PREVIEW, which
+	// the rebuild above has just replaced -- so it has to be replayed here, where the rebuilding
+	// actually happens.
+	//
+	// It used to be replayed by the toolkit instead, from two of its own call sites, which missed
+	// every rebuild that reaches this host directly: Initialize, and the invalidate-then-Tick path
+	// that a Blueprint compile, a nested asset's recompile and a .dui reload all take. The result was
+	// a widget the author had put away coming back drawn and clickable while the asset still called
+	// it hidden -- and an undo, which went the long way round, "fixing" it.
+	//
+	// To the nested boundary, like every other reader of these name-keyed sets: object names repeat
+	// across assets, and a nested hierarchy's insides belong to the asset that authored them.
+	const TSet<FName>& HiddenSet = Blueprint->DesignerData.HiddenWidgets;
+	TArray<UDreamWidget*> AllWidgets;
+	CollectDreamWidgetsToNestedBoundary(Root, AllWidgets);
+	for (UDreamWidget* Widget : AllWidgets)
+	{
+		if (IsValid(Widget))
+		{
+			Widget->SetHiddenInDesigner(HiddenSet.Contains(Widget->GetFName()));
+		}
+	}
 }
 
 UDreamWidgetTree* FDreamWidgetPreviewHost::FindArchetypeForPreview() const
@@ -413,6 +508,26 @@ UDreamWidgetTree* FDreamWidgetPreviewHost::FindArchetypeForPreview() const
 		return UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(Blueprint->GeneratedClass->GetSuperClass());
 	}
 	return nullptr;
+}
+
+void FDreamWidgetPreviewHost::ClearTransactionalFlagsOnPreview()
+{
+	if (!IsValid(PreviewWidget))
+	{
+		return;
+	}
+	PreviewWidget->ClearFlags(RF_Transactional);
+	// Nested, because the objects this exists for are two and three levels down: the tree, the
+	// widgets outered flat to it, and each widget's slot, layouts, visual and behaviours.
+	//
+	// Rooted at the preview widget and not at the world. The design canvas is a sibling, not a
+	// descendant, and it is transactional ON PURPOSE -- it survives every rebuild, so undoing a
+	// screen-size change has something real to restore. See
+	// FDreamWidgetBlueprintEditor::ApplyDesignerViewportSize.
+	ForEachObjectWithOuter(PreviewWidget.Get(), [](UObject* Object)
+	{
+		Object->ClearFlags(RF_Transactional);
+	});
 }
 
 void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()
@@ -587,6 +702,21 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 	const bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewObject, TemplateObject, Head, Head->GetValue(), bIsModify);
 	if (bMigrated && !bIsModify)
 	{
+		// The details panel's half of the same report the viewport gesture makes. The path is the
+		// chain's HEAD only -- the write-back addresses `AnchorData.SizeDelta` by its head property
+		// too when it sweeps, and a dotted leaf would match nothing it ever asks about.
+		if (UDreamWidget* TemplateWidget = TemplateObject->IsA<UDreamWidget>()
+			? Cast<UDreamWidget>(TemplateObject) : TemplateObject->GetTypedOuter<UDreamWidget>())
+		{
+			const DreamWidgetPropertyBindingExtension::FBindingSite TemplateSite =
+				DreamWidgetPropertyBindingExtension::ResolveBindingSite(TemplateObject);
+			const EDreamUIPatchTarget Target = TemplateSite.Target == EDreamWidgetBindingTarget::Behaviour
+				? EDreamUIPatchTarget::Component : EDreamUIPatchTarget::Node;
+			const int32 ComponentIndex = Target == EDreamUIPatchTarget::Component ? TemplateSite.BehaviourIndex : INDEX_NONE;
+			FDreamUITextWriteBack::NoteDirtyProperty(TemplateWidget->GetTypedOuter<UDreamWidgetTree>(),
+				TemplateWidget->GetDisplayName(), Target, ComponentIndex, HeadProperty->GetName());
+		}
+
 		// Modified, not structurally modified: no member changed, so there is nothing for the skeleton
 		// to regenerate -- but the class archetype is a duplicate of this tree, and until the next full
 		// compile every instance still carries the old value. This is what marks that gap.
@@ -633,6 +763,12 @@ int32 FDreamWidgetPreviewHost::CopyPreviewValuesToTemplate(UDreamWidget* InPrevi
 		if (FObjectEditorUtils::MigratePropertyValue(InPreviewWidget, Property, Template, Property))
 		{
 			Copied++;
+			// Reported, not just written. The write-back otherwise compares everything reflection can
+			// reach and writes whatever differs, which is right for a value nobody claimed and wrong
+			// for one that differs because a LAYOUT computed it. Saying what was touched is what lets
+			// the flush write that and nothing else; see FDreamUITextWriteBack::NoteDirtyProperty.
+			FDreamUITextWriteBack::NoteDirtyProperty(Template->GetTypedOuter<UDreamWidgetTree>(),
+				Template->GetDisplayName(), EDreamUIPatchTarget::Node, INDEX_NONE, PropertyName.ToString());
 		}
 	}
 	// A drag calls this on every mouse move, so this marks far more often than anything should act

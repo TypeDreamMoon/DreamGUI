@@ -14,8 +14,14 @@ struct FDreamTextPaintParams
 	float ItalicSlope = 0.0f;
 	/** The canvas asks for normals and tangents (SDF fonts do, for the tilt-aware smoothing). */
 	bool bRequireNormalAndTangent = false;
-	/** Colour of every glyph that did not get one from a <color> tag. */
+	/** Colour of every glyph that did not get one from a <color> tag. Carries the render opacity already. */
 	FColor BaseColor = FColor::White;
+	/**
+	 * Render opacity for glyphs that did get a colour from a <color> tag: the tag's alpha is what the
+	 * author wrote, this is the hierarchy's fade. Keeping it here rather than baking it into the parsed
+	 * colour is what lets a fade repaint without re-laying out.
+	 */
+	float RichTextTagOpacity = 1.0f;
 	/**
 	 * Lyric-style fill. Glyphs inside a segment carry that segment's progress and glow boost and
 	 * their position across it (UV2.y 0..1, UV3.x progress, UV3.y glow boost); glyphs outside any
@@ -24,6 +30,19 @@ struct FDreamTextPaintParams
 	const TArray<struct FDreamTextFillSegment>* FillSegments = nullptr;
 	float FillProgress = 1.0f;
 	float GlowBoost = 0.0f;
+
+	/**
+	 * A drop shadow and an outline for a font that is NOT a distance field. A bitmap atlas holds the
+	 * face and nothing else, so there is no field to dilate and no way to re-rasterize with an outline
+	 * -- what there is, and what UMG's own ShadowOffset does, is to draw the glyphs again, offset, in
+	 * another colour. The outline is that eight times around the glyph, which is the standard stand-in
+	 * for a real one. Offsets and widths are in em, like every other length in FDreamTextStyle, and are
+	 * ignored entirely when bDistanceField is set (the shader draws the real thing there).
+	 */
+	FColor BitmapShadowColor = FColor(0, 0, 0, 0);
+	FVector2f BitmapShadowOffsetEm = FVector2f::ZeroVector;
+	FColor BitmapOutlineColor = FColor(0, 0, 0, 0);
+	float BitmapOutlineWidthEm = 0.0f;
 
 	/**
 	 * Distance-field fonts (either kind). UV2.x carries DilateEm + 16 * Layer per glyph; quads grow into

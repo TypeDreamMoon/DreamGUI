@@ -50,6 +50,18 @@ public:
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FUIListItemEvent, UObject*, Item, UUIListEntry*, Entry);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FUIListSelectionChangedEvent, UObject*, Item, bool, bSelected);
 
+/**
+ * SUPERSEDED by UDreamListView (`Native.List`) for new work. Kept for the assets that use it,
+ * and still the only road to a TILE view -- UUITileView derives from it and the control library
+ * has no equivalent.
+ *
+ * UDreamListView does not compose this class, and the reasons are recorded in its header rather
+ * than repeated here: the unit is a UObject*, a cell needs a live world and an already-arranged
+ * viewport, the pool is sized by visible count rather than source count, and Awake hands the
+ * data-source seat to whoever claimed it first. None of those are defects; they are what a
+ * recycling stack costs, and a control that must also work in a headless test and in an
+ * authoring tree cannot pay them.
+ */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UUIListView : public UUIRecyclableScrollView, public IUIRecyclableScrollViewDataSource
 {
@@ -126,6 +138,10 @@ public:
 	void GetTreeChildren(TArray<UObject*>& OutChildren) const;
 };
 
+/**
+ * SUPERSEDED by UDreamTreeView (`Native.TreeView`). Kept for the assets that use it. Same story
+ * as UUIListView above -- the control flattens its own source and owns its rows.
+ */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UUITreeView : public UUIListView
 {

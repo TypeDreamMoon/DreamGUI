@@ -15,7 +15,6 @@ struct FDreamShapedGlyph
 	/** The element this glyph belongs to: the first element of its cluster. */
 	int32 ElementIndex = 0;
 	float XAdvance = 0.0f;
-	float YAdvance = 0.0f;
 	float XOffset = 0.0f;
 	float YOffset = 0.0f;
 };
@@ -60,11 +59,12 @@ public:
 	 * @param Elements       The paragraph's elements, in logical order.
 	 * @param Font           The font; its faces and shaping fonts are what runs are shaped with.
 	 * @param bUseKerning    Whether the 'kern' feature is applied.
+	 * @param FlowDirection  Auto asks the bidi algorithm; the other two force the paragraph's direction.
 	 * @param OutRuns        Runs in logical order.
 	 * @param OutBaseRightToLeft  The paragraph's base direction, which decides the visual order of its runs on a line.
 	 * @return false when the font cannot shape (no HarfBuzz font); the caller then measures per code point.
 	 */
-	static bool ShapeParagraph(const TArray<FDreamShapeElement>& Elements, UDreamUIFontData_BaseObject* Font, bool bUseKerning, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft);
+	static bool ShapeParagraph(const TArray<FDreamShapeElement>& Elements, UDreamUIFontData_BaseObject* Font, bool bUseKerning, EDreamTextFlowDirection FlowDirection, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft);
 
 	/** Whether the font can shape at all. */
 	static bool CanShape(UDreamUIFontData_BaseObject* Font);

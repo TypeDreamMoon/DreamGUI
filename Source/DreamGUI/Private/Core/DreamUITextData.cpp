@@ -103,6 +103,13 @@ bool FDreamUITextGeometryCache::SetLayoutInput(const FDreamTextLayoutInput& InIn
 		*Input = InInput;
 		bIsDirty = true;
 	}
+	else
+	{
+		// Colour is outside equality on purpose (it is a paint input), so it would otherwise go stale
+		// here. Nothing reads it back for painting today, but a stored input that disagrees with the
+		// widget would be a trap for whoever does.
+		Input->Color = InInput.Color;
+	}
 	return bIsDirty;
 }
 

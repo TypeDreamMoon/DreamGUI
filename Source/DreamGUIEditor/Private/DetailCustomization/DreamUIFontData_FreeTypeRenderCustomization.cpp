@@ -55,7 +55,8 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 	}
 
 	auto fontTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontType));
-	fontTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FDreamUIFontData_FreeTypeRenderCustomization::ForceRefresh, &DetailBuilder));
+	//SP, not Raw: the handle outlives this customization, and the refresh it asks for is what destroys it
+	fontTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIFontData_FreeTypeRenderCustomization::ForceRefresh, &DetailBuilder));
 	const auto fontType = (EDreamUIDynamicFontDataType)DreamDetailsMultiSelect::ValueOr<uint8>(fontTypeHandle, 0);
 
 	IDetailCategoryBuilder& dreamguiCategory = DetailBuilder.EditCategory("DreamGUI");

@@ -64,18 +64,12 @@ bool UDreamTextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& 
 	{
 		if (auto texture2D = Cast<UTexture2D>(Texture))
 		{
-			auto PlatformData = texture2D->GetPlatformData();
-			if (PlatformData && PlatformData->Mips.Num() > 0)
-			{
-				if (auto Pixels = (FColor*)(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY)))
-				{
-					auto uvInFullSize = FIntPoint(InUV.X * texture2D->GetSizeX(), InUV.Y * texture2D->GetSizeY());
-					auto PixelIndex = uvInFullSize.Y * texture2D->GetSizeX() + uvInFullSize.X;
-					OutPixel = Pixels[PixelIndex];
-				}
-				PlatformData->Mips[0].BulkData.Unlock();
-				return true;
-			}
+			// The old code cast any top mip to FColor* and indexed it with an unclamped UV, so a
+			// compressed texture answered with nonsense and UV.Y == 1 read a row past the end; it
+			// also answered true when the lock failed, handing the caller an uninitialised colour.
+			// The shared reader refuses what it cannot read, and the pixel raycast falls back to
+			// the geometry test for those.
+			return FDreamUIUtils::ReadTexture2DPixel(texture2D, InUV, OutPixel);
 		}
 	}
 	return false;
@@ -113,6 +107,37 @@ void UDreamTextureBase::SetOverrideMaterial(UMaterialInterface* Value)
 		OverrideMaterial = Value;
 		MarkMaterialDirty();
 	}
+}
+
+/*
+ * A texture's natural size is its own dimensions -- the same pair SetSizeFromTexture writes into
+ * the widget, so a texture asked to measure itself and a texture told to size itself to its content
+ * agree by construction.
+ *
+ * GetSurfaceWidth is a read of already-resident platform data, so this is as cheap as the protocol
+ * requires and touches nothing. What it is NOT is always available: a texture still compiling, or a
+ * render target not yet allocated, answers zero. Zero is a claim in this protocol -- "give me no
+ * room" -- and a UI element that vanished because its texture had not finished building is a bug
+ * that would only reproduce on a cold DDC. Anything that is not a positive number abstains instead.
+ */
+float UDreamTextureBase::GetPreferredWidth() const
+{
+	if (!IsValid(Texture))
+	{
+		return -1;
+	}
+	const float Width = Texture->GetSurfaceWidth();
+	return Width > 0.0f ? Width : -1.0f;
+}
+
+float UDreamTextureBase::GetPreferredHeight() const
+{
+	if (!IsValid(Texture))
+	{
+		return -1;
+	}
+	const float Height = Texture->GetSurfaceHeight();
+	return Height > 0.0f ? Height : -1.0f;
 }
 
 #undef LOCTEXT_NAMESPACE

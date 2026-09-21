@@ -5,9 +5,12 @@
 #include "Core/Components/DreamText.h"
 
 #include "DreamGUIEditorModule.h"
+#include "DreamDetailsMultiSelect.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
+#include "IDetailsView.h"
+#include "IPropertyUtilities.h"
 #include "MaterialDomain.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "PropertyType/DreamTextAlignmentCustomization.h"
@@ -30,41 +33,57 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UDreamText>(targetObjects[0].Get());
+	// An empty list is a real state -- the panel rebuilds while a selection is being cleared -- and
+	// indexing [0] there reads off the end of an empty array.
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<UDreamText>(targetObjects[0].Get()) : nullptr;
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-	
+	// The layout builder is owned by the details view and is thrown away by the very refresh these
+	// delegates ask for, so a delegate must not hold it -- by reference or as a payload pointer.
+	// IPropertyUtilities is the handle that outlives a refresh, and it is what ForceRefresh takes.
+	const TSharedPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
+	const TSharedPtr<IDetailsView> DetailsView = DetailBuilder.GetDetailsViewSharedPtr();
+
 	IDetailCategoryBuilder& DreamGUICategory = DetailBuilder.EditCategory("DreamGUI");
 	auto Font_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, Font));
-	Font_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, &DetailBuilder));
+	Font_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, PropertyUtilities));
 	DreamGUICategory.AddProperty(Font_PH);
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, Text));
 
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, FontSize));
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, FontSpace));
+	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, MinDesiredWidth));
 
 	//text alignment
 	{
-		DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextParagraphHorizontalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextAlignmentCustomization::MakeInstance, true));
-		DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextParagraphVerticalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextAlignmentCustomization::MakeInstance, false));
+		// Null on a host that is not an SDetailsView (a details panel embedded in another tool).
+		if (DetailsView.IsValid())
+		{
+			DetailsView->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextParagraphHorizontalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextAlignmentCustomization::MakeInstance, true));
+			DetailsView->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextParagraphVerticalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextAlignmentCustomization::MakeInstance, false));
+		}
 		DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, HAlign));
 		DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, VAlign));
 	}
 	//font style
-	DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextFontStyle"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextFontStyleCustomization::MakeInstance));
+	if (DetailsView.IsValid())
+	{
+		DetailsView->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextFontStyle"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextFontStyleCustomization::MakeInstance));
+	}
 
 	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, OverflowType));
-	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, &DetailBuilder));
+	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, PropertyUtilities));
 	DreamGUICategory.AddProperty(OverflowTypeHandle);
-	
+
 	TArray<FName> NeedToHidePropertyNames;
 	auto RichText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, bRichText));
-	RichText_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, &DetailBuilder));
-	bool bRichText = false;
-	RichText_PH->GetValue(bRichText);
+	RichText_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, PropertyUtilities));
+	// True as the fallback because it is the value that hides NOTHING: a selection that disagrees still
+	// has objects using the rich-text properties, and hiding them would hide live properties.
+	const bool bRichText = DreamDetailsMultiSelect::ValueOr<bool>(RichText_PH, true);
 	if (bRichText)
 	{
 		IDetailGroup& RichTextGroup = DreamGUICategory.AddGroup(FName("RichText"), RichText_PH->GetPropertyDisplayName());
@@ -89,9 +108,7 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	}
 
 	auto OverrideMaterial_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, OverrideMaterial));
-	OverrideMaterial_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, &DetailBuilder] {
-		DetailBuilder.ForceRefreshDetails();
-		}));
+	OverrideMaterial_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, PropertyUtilities));
 	DreamGUICategory.AddProperty(OverrideMaterial_PH);
 	{
 		UDreamUIFontData_BaseObject* Font = nullptr;
@@ -191,11 +208,11 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	;
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, ExpandMeshSize));
 }
-void FDreamTextCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FDreamTextCustomization::ForceRefresh(TSharedPtr<IPropertyUtilities> PropertyUtilities)
 {
-	if (auto Script = TargetScriptPtr.Get())
+	if (TargetScriptPtr.IsValid() && PropertyUtilities.IsValid())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		PropertyUtilities->ForceRefresh();
 	}
 }
 #undef LOCTEXT_NAMESPACE

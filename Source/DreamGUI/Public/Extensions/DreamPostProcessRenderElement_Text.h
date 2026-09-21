@@ -40,11 +40,9 @@ protected:
 
 	static FName DreamUI_PostProcessTexture;
 
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged) override;
-	
-	virtual UTexture* GetTextureToCreateGeometry()override;
+	// OnDimensionChanged, OnTransformChanged, GetTextureToCreateGeometry and OnUpdateGeometry are not
+	// overridden: they did nothing but call Super, which reads as "something happens here" and hides
+	// what this class actually specialises, which is the material below.
 	virtual UMaterialInterface* GetMaterialToCreateGeometry() override;
 	virtual void OnBeforeCreateOrUpdateGeometry() override;
-	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged) override;
 };

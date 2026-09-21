@@ -221,68 +221,9 @@ namespace DreamUIQuadTree
 				InsertWithSplit(InRect);
 			}
 		}
-#if 0//not tested code
-		bool Overlap(const DreamUIQuadTree::Node* Other)
-		{
-			//empty node
-			if (this->RectArray.Num() == 0 && this->TopLeft == nullptr)
-			{
-				return false;
-			}
-			if (Other->RectArray.Num() == 0 && Other->TopLeft == nullptr)
-			{
-				return false;
-			}
-			if (this->NodeRect.Intersects(Other->NodeRect))//intersect with NodeRect
-			{
-				//check RectArray
-				for (auto& ItemRect : RectArray)
-				{
-					for (auto& OtherItemRect : Other->RectArray)
-					{
-						if (ItemRect.Intersects(OtherItemRect))
-						{
-							return true;
-						}
-					}
-				}
-				//check sub node
-				if (TopLeft != nullptr && Other->TopLeft != nullptr)
-				{
-					if (TopLeft->Overlap(Other->TopLeft))
-					{
-						return true;
-					}
-					if (TopRight->Overlap(Other->TopRight))
-					{
-						return true;
-					}
-					if (BottomLeft->Overlap(Other->BottomLeft))
-					{
-						return true;
-					}
-					if (BottomRight->Overlap(Other->BottomRight))
-					{
-						return true;
-					}
-				}
-			}
-			else//not intersect with NodeRect, but can still intersect with RectArray
-			{
-				//check RectArray
-				for (auto& ItemRect : RectArray)
-				{
-					for (auto& OtherItemRect : Other->RectArray)
-					{
-						if (ItemRect.Intersects(OtherItemRect))
-						{
-							return true;
-						}
-					}
-				}
-			}
-			return false;
-		}
-#endif
+		// A node-against-node Overlap(const Node*) used to sit here behind `#if 0 //not tested code`.
+		// Deleted rather than left: it was never compiled, so nothing kept it honest against the rest of
+		// this class, and the only overlap test the canvas batcher performs is the rect-against-tree
+		// Overlap(const Rectangle&) above (DreamCanvas.cpp, BatchDrawCall).
 	};
 };

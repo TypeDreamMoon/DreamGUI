@@ -7,10 +7,22 @@
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamWidget.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
+#include "Core/DreamUIWorldContext.h"
 
 UDreamUIBehaviour::UDreamUIBehaviour()
 {
 	bCanExecuteBlueprintEvent = GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native);
+	// Whether the Blueprint actually IMPLEMENTED the tick event, not merely whether it could: a
+	// UFunction that lives on a Blueprint-compiled class is an override; the one on the native
+	// declaring class is the empty stub. Every BP behaviour used to pay a ProcessEvent per frame
+	// for a tick event it never wrote.
+	if (bCanExecuteBlueprintEvent)
+	{
+		static const FName ReceiveTickName(TEXT("ReceiveTick"));
+		const UFunction* TickFunction = GetClass()->FindFunctionByName(ReceiveTickName);
+		bHasBlueprintTick = TickFunction != nullptr
+			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+	}
 	CallbacksBeforeAwake.SetNumZeroed((int)ECallbackFunctionType::COUNT);
 }
 
@@ -154,7 +166,7 @@ void UDreamUIBehaviour::Start()
 }
 void UDreamUIBehaviour::Tick(float DeltaTime)
 {
-	if (bCanExecuteBlueprintEvent)
+	if (bCanExecuteBlueprintEvent && bHasBlueprintTick)
 	{
 		ReceiveTick(DeltaTime);
 	}
@@ -169,10 +181,18 @@ void UDreamUIBehaviour::Call_Awake()
 			CallbackFunc();
 		}
 	}
-	CallbacksBeforeAwake.Empty();
-	
+	// Clear the SLOTS, not the array. It is sized once in the constructor to
+	// ECallbackFunctionType::COUNT and every pre-Awake path writes it BY INDEX, so emptying it left
+	// a zero-length array that the next such write indexes out of bounds -- an assertion in
+	// Development and a plain out-of-bounds store in Shipping, where RangeCheck is compiled out.
+	// Call_OnDestroy puts bIsAwakeCalled back to false, so that next write is reachable.
+	for (TFunction<void()>& CallbackFunc : CallbacksBeforeAwake)
+	{
+		CallbackFunc = nullptr;
+	}
+
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
@@ -194,7 +214,7 @@ void UDreamUIBehaviour::Call_Awake()
 void UDreamUIBehaviour::Call_OnEnable()
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
@@ -228,7 +248,7 @@ void UDreamUIBehaviour::Call_OnEnable()
 void UDreamUIBehaviour::Call_OnDisable()
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
@@ -262,7 +282,7 @@ void UDreamUIBehaviour::Call_OnDisable()
 void UDreamUIBehaviour::Call_OnDestroy()
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
@@ -284,7 +304,7 @@ void UDreamUIBehaviour::Call_OnDestroy()
 void UDreamUIBehaviour::Call_Start()
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
@@ -412,7 +432,11 @@ void UDreamUIBehaviour::OnRaycastableChanged(bool Raycastable)
 void UDreamUIBehaviour::Call_OnInteractableChanged(bool Interactable)
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	// The worldless case is why this branch is the right one to give it, and not merely the safe
+	// one: it is the branch that actually DELIVERS the state change. Call_OnTransformChanged's
+	// older guard returns instead, and a selectable left un-notified is one that never goes grey.
+	// See DreamUIWorldContext.h for the rule and for how a widget comes to have no world.
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		OnInteractableChanged(Interactable);
 	}
@@ -439,7 +463,7 @@ void UDreamUIBehaviour::Call_OnTransformChanged()
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		OnTransformChanged();
 	}
@@ -466,7 +490,7 @@ void UDreamUIBehaviour::Call_OnDimensionsChanged(bool PivotChanged, bool WidthCh
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	}
@@ -494,7 +518,7 @@ void UDreamUIBehaviour::Call_OnChildDimensionsChanged(UDreamWidget* Child, bool 
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		OnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
 	}
@@ -521,7 +545,7 @@ void UDreamUIBehaviour::Call_OnAttachmentChanged()
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		OnAttachmentChanged();
 	}
@@ -548,7 +572,7 @@ void UDreamUIBehaviour::Call_OnSiblingIndexChanged()
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		OnSiblingIndexChanged();
 	}
@@ -575,7 +599,7 @@ void UDreamUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!this->GetWorld()->IsGameWorld())return;//edit mode
+	if (!DreamUI::IsGameWorld(this))return;//edit mode
 #endif
 	if (bIsAwakeCalled)
 	{
@@ -600,7 +624,7 @@ void UDreamUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 			if (bIsEnableCalled)
 			{
 #if WITH_EDITOR
-				if (GetWorld() && !this->GetWorld()->IsGameWorld())//edit mode
+				if (GetWorld() && !GetWorld()->IsGameWorld())//edit mode
 				{
 
 				}
@@ -632,7 +656,7 @@ void UDreamUIBehaviour::Call_OnRaycastableChanged(bool Raycastable)
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!DreamUI::IsGameWorld(this))//edit mode
 	{
 		OnRaycastableChanged(Raycastable);
 	}

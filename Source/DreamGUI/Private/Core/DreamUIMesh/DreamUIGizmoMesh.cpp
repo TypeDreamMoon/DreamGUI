@@ -2,6 +2,8 @@
 
 #include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
 
+#include "RenderingThread.h"
+#include "RenderResource.h"
 #include "Core/DreamUIRender/DreamUIRenderer.h"
 
 FDreamUIGizmoMesh::FDreamUIGizmoMesh(const TArray<FDreamUIMeshVertex>& InVertexArray, const TArray<FDreamUIMeshIndex>& InIndexArray, EDreamUIGizmoMeshPrimitiveType InPrimitiveType)
@@ -23,8 +25,22 @@ FDreamUIGizmoMesh::FDreamUIGizmoMesh(const TArray<FDreamUIMeshVertex>& InVertexA
 
 FDreamUIGizmoMesh::~FDreamUIGizmoMesh()
 {
-	IndexBuffer.ReleaseResource();
-	VertexBuffer.ReleaseResource();
+	/**
+	 * FRenderResource::ReleaseResource is render-thread only, and this destructor runs wherever the
+	 * last shared pointer to the mesh is dropped -- which for the editor gizmo lists is the game
+	 * thread. The buffers are members, so they cannot be handed to a deferred release and left to
+	 * outlive the object: the release has to be enqueued and waited for.
+	 */
+	if (IsInRenderingThread())
+	{
+		IndexBuffer.ReleaseResource();
+		VertexBuffer.ReleaseResource();
+	}
+	else
+	{
+		ReleaseResourceAndFlush(&IndexBuffer);
+		ReleaseResourceAndFlush(&VertexBuffer);
+	}
 }
 
 void FDreamUIGizmoMesh::UpdateVertices(TArray<FDreamUIMeshVertex> InVertexArray)
@@ -35,17 +51,21 @@ void FDreamUIGizmoMesh::UpdateVertices(TArray<FDreamUIMeshVertex> InVertexArray)
 		auto& Vertices = VertexBuffer.Vertices;
 		Vertices.SetNumUninitialized(InVertexArray.Num());
 		FMemory::Memcpy(Vertices.GetData(), InVertexArray.GetData(), InVertexArray.Num() * sizeof(FDreamUIMeshVertex));
-		BeginInitResource(&IndexBuffer);
+		// The buffer that was just released and refilled is the vertex one; re-initializing the index
+		// buffer instead left VertexBufferRHI null, and the next same-count update locked nothing.
+		BeginInitResource(&VertexBuffer);
 	}
 	else
 	{
+		// Keep the mesh alive until the command has run: it is owned by shared pointers, and a bare
+		// `this` outlived nothing.
 		ENQUEUE_RENDER_COMMAND(FDreamUIMeshUpdate)(
-		[this, InVertexArray = MoveTemp(InVertexArray)](FRHICommandListImmediate& RHICmdList)
+		[Self = SharedThis(this), InVertexArray = MoveTemp(InVertexArray)](FRHICommandListImmediate& RHICmdList)
 		{
 			uint32 VertexDataLength = InVertexArray.Num() * sizeof(FDreamUIMeshVertex);
-			void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexDataLength, RLM_WriteOnly);
+			void* VertexBufferData = RHICmdList.LockBuffer(Self->VertexBuffer.VertexBufferRHI, 0, VertexDataLength, RLM_WriteOnly);
 			FMemory::Memcpy(VertexBufferData, InVertexArray.GetData(), VertexDataLength);
-			RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
+			RHICmdList.UnlockBuffer(Self->VertexBuffer.VertexBufferRHI);
 		});
 	}
 }
@@ -63,12 +83,12 @@ void FDreamUIGizmoMesh::UpdateIndices(TArray<FDreamUIMeshIndex> InIndexArray)
 	else
 	{
 		ENQUEUE_RENDER_COMMAND(FDreamUIMeshUpdate)(
-		[this, InIndexArray = MoveTemp(InIndexArray)](FRHICommandListImmediate& RHICmdList)
+		[Self = SharedThis(this), InIndexArray = MoveTemp(InIndexArray)](FRHICommandListImmediate& RHICmdList)
 		{
 			uint32 IndicesDataLength = InIndexArray.Num() * sizeof(FDreamUIMeshIndex);
-			auto IndexBufferData = RHICmdList.LockBuffer(IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
+			auto IndexBufferData = RHICmdList.LockBuffer(Self->IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
 			FMemory::Memcpy(IndexBufferData, InIndexArray.GetData(), IndicesDataLength);
-			RHICmdList.UnlockBuffer(IndexBuffer.IndexBufferRHI);
+			RHICmdList.UnlockBuffer(Self->IndexBuffer.IndexBufferRHI);
 		});
 	}
 }

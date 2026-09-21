@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -26,7 +26,7 @@ class UDreamWidget;
  * never registers (registration is an explicit OnRegister call, never PostInitProperties) and is
  * never ticked.
  */
-UCLASS(ClassGroup = (DreamGUI), DisplayName = "DreamUI Widget Tree")
+UCLASS(ClassGroup = (DreamGUI), BlueprintType, DisplayName = "DreamUI Widget Tree")
 class DREAMGUI_API UDreamWidgetTree : public UObject
 {
 	GENERATED_BODY()
@@ -43,15 +43,21 @@ public:
 	UPROPERTY(Instanced)
 	TObjectPtr<UDreamWidget> RootWidget = nullptr;
 
-	/** Create a widget owned by this tree. Every widget in a tree is outered to the tree itself. */
-	UDreamWidget* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass, FName InName = NAME_None);
+	/**
+	 * Create a widget owned by this tree. Every widget in a tree is outered to the tree itself.
+	 *
+	 * A valid InWidgetGuid becomes the widget's identity instead of a fresh random one -- the .dui
+	 * builder passes a hash of the node id so identity survives the rebuild; leave it invalid
+	 * everywhere else.
+	 */
+	UDreamWidget* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass, FName InName = NAME_None, const FGuid& InWidgetGuid = FGuid());
 
 	template<typename WidgetT>
-	WidgetT* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass = WidgetT::StaticClass(), FName InName = NAME_None)
+	WidgetT* ConstructWidget(TSubclassOf<UDreamWidget> InWidgetClass = WidgetT::StaticClass(), FName InName = NAME_None, const FGuid& InWidgetGuid = FGuid())
 	{
 		static_assert(TPointerIsConvertibleFromTo<WidgetT, const UDreamWidget>::Value,
 			"'WidgetT' template parameter to ConstructWidget must be derived from UDreamWidget");
-		return Cast<WidgetT>(ConstructWidget(InWidgetClass, InName));
+		return Cast<WidgetT>(ConstructWidget(InWidgetClass, InName, InWidgetGuid));
 	}
 
 	/**
@@ -64,10 +70,27 @@ public:
 	/** Visit every widget in the tree, root first, parents before children. Skips nothing. */
 	void ForEachWidget(TFunctionRef<void(UDreamWidget*)> InPredicate) const;
 
+	/**
+	 * Every widget in the tree, root first, parents before children -- UMG's
+	 * UWidgetTree::GetAllWidgets, and the Blueprint face of ForEachWidget, which takes a C++
+	 * predicate no graph can supply.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
+	TArray<UDreamWidget*> GetAllWidgets() const;
+
+	/** The tree's root widget, or null for a tree nothing has been authored into. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
+	UDreamWidget* GetRootWidget() const { return RootWidget; }
+
 	/** Total widget count, root included. Walks the tree; not cached. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
 	int32 CountWidgets() const;
 
-	/** The first widget whose variable name matches, or null. Used to resolve a binding by name. */
+	/**
+	 * The first widget whose variable name matches, or null. Used to resolve a binding by name --
+	 * UMG's UWidgetTree::GetWidgetFromName, and the same name the compiler declares variables from.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|WidgetTree")
 	UDreamWidget* FindWidgetByVariableName(FName InVariableName) const;
 
 	/**
@@ -80,6 +103,9 @@ public:
 	 * a binding reports success and comes back null.
 	 */
 	static FName MakeWidgetVariableName(const UDreamWidget* InWidget);
+	/** The same shared rule for animations: the compiler declares the property with this name and
+	 * the runtime binds the instanced animation to it, so both must derive it the same way. */
+	static FName MakeAnimationVariableName(const class UDreamWidgetAnimation* InAnimation);
 	/** Alnum/underscore only, non-ASCII kept (CJK display names are common), never leading with a digit. */
 	static FString SanitizeIdentifier(const FString& InRaw);
 };

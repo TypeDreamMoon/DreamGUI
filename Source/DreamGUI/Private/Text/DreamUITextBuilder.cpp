@@ -7,7 +7,13 @@
 
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
+#include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetTree.h"
+// A `->` route may name an FDreamUIEventDelegate as well as a multicast delegate.
+#include "Event/DreamUIEventDelegate.h"
+#include "Interaction/UIListView.h"
+#include "Interaction/UIRecyclableScrollView.h"
 #include "Core/Components/DreamBackgroundBlur.h"
 #include "Core/Components/DreamBackgroundPixelate.h"
 #include "Core/Components/DreamImage.h"
@@ -22,6 +28,26 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamContentWidget.h"
+
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamUIAnimEventTrack.h"
+#include "DreamTweener.h"
+
+#include "Channels/MovieSceneChannelProxy.h"
+#include "Channels/MovieSceneDoubleChannel.h"
+#include "Channels/MovieSceneFloatChannel.h"
+#include "Channels/MovieSceneStringChannel.h"
+#include "MovieScene.h"
+#include "MovieScenePossessable.h"
+#include "Sections/MovieSceneColorSection.h"
+#include "Sections/MovieSceneDoubleSection.h"
+#include "Sections/MovieSceneFloatSection.h"
+#include "Sections/MovieSceneVectorSection.h"
+#include "Tracks/MovieSceneColorTrack.h"
+#include "Tracks/MovieSceneDoubleTrack.h"
+#include "Tracks/MovieSceneFloatTrack.h"
+#include "Tracks/MovieSceneVectorTrack.h"
 
 #include "Misc/PackageName.h"
 #include "Misc/StringOutputDevice.h"
@@ -136,6 +162,34 @@ namespace DreamUITextBuilderLocal
 		return BestDistance <= Ceiling ? Best : FString();
 	}
 
+	/**
+	 * The nearest node id in a built tree, for a `Prop = SomeNode` line that named nothing.
+	 *
+	 * Over DISPLAY names rather than variable names, because the display name is the id the author
+	 * typed and the one they have to correct; the sanitized form is an implementation detail they
+	 * never see. Only ever asked after a lookup has already failed, like the two above.
+	 */
+	FString SuggestNearestNodeId(const FString& InName, const UDreamWidgetTree* InTree)
+	{
+		if (InTree == nullptr)
+		{
+			return FString();
+		}
+		FString Best;
+		int32 BestDistance = MAX_int32;
+		InTree->ForEachWidget([&Best, &BestDistance, &InName](UDreamWidget* Widget)
+		{
+			const int32 Distance = EditDistance(InName, Widget->GetDisplayName());
+			if (Distance < BestDistance)
+			{
+				BestDistance = Distance;
+				Best = Widget->GetDisplayName();
+			}
+		});
+		const int32 Ceiling = FMath::Max(2, InName.Len() / 3);
+		return BestDistance <= Ceiling ? Best : FString();
+	}
+
 	/** " (did you mean 'FontSize'?)", or nothing. Kept out of the message sites so they stay readable. */
 	FString FormatSuggestion(const FString& InSuggestion)
 	{
@@ -143,41 +197,62 @@ namespace DreamUITextBuilderLocal
 	}
 
 	/**
-	 * The built-in tags, and the UDreamVisual each one creates. `Widget` is in it with a null class:
-	 * it is a known tag whose answer is "no visual", which is a different fact from an unknown tag.
+	 * True when InText can become an FName without taking the editor down with it.
 	 *
-	 * A function-local static rather than a file-scope one because the values are StaticClass()
-	 * pointers, and a file-scope array would be built during static initialisation -- before UObject
-	 * bootstrapping, which is where that reliably turns into a null entry nobody can explain.
-	 *
-	 * UDreamCustomMesh is deliberately absent: it draws whatever a UDreamUICustomMeshSource hands it,
-	 * and the language has no way to hand it one, so a `CustomMesh` tag would only ever produce a
-	 * widget that draws nothing and no message saying why.
+	 * FName does not REFUSE a string of NAME_SIZE characters or more -- it calls checkf(false)
+	 * (UnrealNames.cpp, FindOrStoreString) -- so every conversion of AUTHORED text has to be gated.
+	 * The lexer already refuses an over-long identifier (DUI1006), which covers everything that
+	 * arrives through a parse; these guards are for the builder's other callers, which assemble an
+	 * FDreamUINode by hand (the designer, the tests), and for the one authored value that is not an
+	 * identifier at all: a quoted string written onto an FName property.
 	 */
-	TConstArrayView<TPair<const TCHAR*, UClass*>> GetVisualTagTable()
+	bool IsNameLengthLegal(const FString& InText)
 	{
-		static const TArray<TPair<const TCHAR*, UClass*>> Table =
-		{
-			{ TEXT("Widget"),             nullptr },
-			{ TEXT("Image"),              UDreamImage::StaticClass() },
-			{ TEXT("Text"),               UDreamText::StaticClass() },
-			{ TEXT("Texture"),            UDreamTexture::StaticClass() },
-			{ TEXT("Sprite"),             UDreamSprite::StaticClass() },
-			// HEADLESS HAZARD. UDreamWidget::CreateNewVisual calls Call_OnRegister unconditionally, and
-			// UDreamRectBlock::OnRegister does `check(RectBlockData != nullptr)` after loading it from
-			// UDreamGUISettings, then registers a data-texture buffer. Build a RectBlock node in a
-			// commandlet whose project settings do not carry DefaultRectBlockData and it asserts --
-			// not a diagnostic, an assert, with the .dui nowhere in the callstack. Whatever runs the
-			// compile without an editor has to keep that setting valid, or teach this table to skip
-			// visuals that need one. The tag stays: it is a real visual and authors want it.
-			{ TEXT("RectBlock"),          UDreamRectBlock::StaticClass() },
-			// Draws nothing and still takes raycasts -- the invisible hit area every UI needs, and the
-			// one thing a plain `Widget` cannot be, having no visual to hit-test against at all.
-			{ TEXT("Empty"),              UDreamVisualEmpty::StaticClass() },
-			{ TEXT("BackgroundBlur"),     UDreamBackgroundBlur::StaticClass() },
-			{ TEXT("BackgroundPixelate"), UDreamBackgroundPixelate::StaticClass() },
-			{ TEXT("PixelSort"),          UDreamPixelSort::StaticClass() },
-		};
+		return InText.Len() < NAME_SIZE;
+	}
+
+	/** The first 32 characters and an ellipsis -- long enough to recognise, short enough to read. */
+	FString EllipsizeName(const FString& InText)
+	{
+		return InText.Len() <= 32 ? InText : (InText.Left(32) + TEXT("..."));
+	}
+
+	/**
+	 * An error about a DECLARATION, stamped with the file that declares it rather than the file
+	 * being compiled.
+	 *
+	 * A `use` merges another file's styles and resources into this AST wholesale, so their Locations
+	 * count lines in a file the importer has never opened. Reported through the bag's own name they
+	 * came out as "Login.dui(4,2): ..." pointing at whatever happens to be on line 4 of Login.dui --
+	 * a position that looks authoritative and is not. FDreamUIDiagnosticBag::Add falls back to the
+	 * bag's name when this one is empty, so a hand-built AST behaves exactly as it did before.
+	 */
+	void AddErrorIn(FDreamUIDiagnosticBag& InBag, const FString& InSourceName, EDreamUIDiagnosticCode InCode,
+		const FDreamUISourceLocation& InLocation, FString InMessage)
+	{
+		FDreamUIDiagnostic Diagnostic(InCode, InLocation, MoveTemp(InMessage), EDreamUISeverity::Error);
+		Diagnostic.SourceName = InSourceName;
+		InBag.Add(MoveTemp(Diagnostic));
+	}
+
+	/**
+	 * The built-in tags, and the UDreamVisual each one creates -- now asked of the registry the
+	 * DECLARE_DREAM_GUI_VISUAL macro fills, rather than kept as a list here.
+	 *
+	 * This used to BE the list, and the list is why the language knew nine visuals: the plugin ships
+	 * twenty, and the other eleven were placeable from the palette and unspellable in a `.dui` with
+	 * nothing anywhere saying so. A declaration next to each class cannot drift from the class the
+	 * way a table in a different module can.
+	 *
+	 * Rebuilt per call rather than cached in a static: registrations arrive during static
+	 * initialisation, and a cache built on the first call would be correct only if that call came
+	 * after the last registration -- which is a link-order bet. The list is twenty entries long and
+	 * every caller is a diagnostic or an export.
+	 */
+	TArray<TPair<FName, UClass*>> GetVisualTagTable()
+	{
+		TArray<TPair<FName, UClass*>> Table;
+		FDreamUIWidgetRegistry::GetVisualEntries(Table);
 		return Table;
 	}
 
@@ -211,17 +286,24 @@ namespace DreamUITextBuilderLocal
 		return nullptr;
 	}
 
-	/** The tag whose visual declares InName, when one does. Only ever asked after a name has failed. */
-	const TCHAR* FindTagWhoseVisualDeclares(const FString& InName)
+	/**
+	 * The tag whose visual declares InName, when one does. Only ever asked after a name has failed.
+	 *
+	 * FIRST match, over a list the registry sorts by tag name. Sorted rather than in registration
+	 * order because registration order is static-initialisation order across translation units --
+	 * a link-order detail -- and a hint that says `Sprite` on one build and `Texture` on the next
+	 * teaches an author something that is not true.
+	 */
+	FString FindTagWhoseVisualDeclares(const FString& InName)
 	{
-		for (const TPair<const TCHAR*, UClass*>& Entry : GetVisualTagTable())
+		for (const TPair<FName, UClass*>& Entry : GetVisualTagTable())
 		{
 			if (Entry.Value != nullptr && FindFProperty<FProperty>(Entry.Value, *InName) != nullptr)
 			{
-				return Entry.Key;
+				return Entry.Key.ToString();
 			}
 		}
-		return nullptr;
+		return FString();
 	}
 
 	UEnum* GetEnumForProperty(const FProperty* InProperty)
@@ -268,7 +350,12 @@ namespace DreamUITextBuilderLocal
 			OutReason = TEXT("it is transient -- nothing written to it would survive being saved");
 			return false;
 		}
-		if (InProperty->HasAnyPropertyFlags(CPF_InstancedReference))
+		// A weak reference is never a containment edge: it keeps nothing alive, so writing one cannot
+		// make the structure and the Children array disagree. It carries the flag anyway, because
+		// UDreamVisual is DefaultToInstanced and UHT sets CPF_InstancedReference from the class rather
+		// than from the pointer -- which is why UUIToggle::ToggleTransitionTarget, a property whose whole
+		// job is to POINT AT another node's visual, was refused as if it owned one.
+		if (InProperty->HasAnyPropertyFlags(CPF_InstancedReference) && !InProperty->IsA<FWeakObjectProperty>())
 		{
 			OutReason = TEXT("it holds part of the widget's object graph, which is authored by nesting and by '+', not assigned");
 			return false;
@@ -305,6 +392,30 @@ namespace DreamUITextBuilderLocal
 		FString LocalizationDiscriminator;
 	};
 
+	/**
+	 * One `Prop = SomeNode` line, held until the whole tree exists.
+	 *
+	 * A node is regularly referenced from ABOVE its own declaration -- a toggle at the top of a file
+	 * pointing at the check mark nested three levels below it -- and properties are written on the
+	 * way DOWN the tree, so at the moment the line is read its target usually has not been built. The
+	 * destination is fully resolved here (that part only needs the object being written to, which
+	 * does exist); only the lookup and the write wait. See ResolveNodeReferences.
+	 *
+	 * LeafValuePtr is an address inside a UObject, which never moves, and no object a property was
+	 * resolved against is destroyed later in the walk -- a node that fails gives up before any of its
+	 * properties are applied.
+	 */
+	struct FPendingNodeReference
+	{
+		const FObjectPropertyBase* Property = nullptr;
+		void* LeafValuePtr = nullptr;
+		/** The id exactly as written: sanitized for the lookup, quoted verbatim in the message. */
+		FString NodeId;
+		/** For the message only -- the destination above is already resolved. */
+		FString PropertyName;
+		FDreamUISourceLocation Location;
+	};
+
 	struct FBuildContext
 	{
 		const FDreamUIAst* Ast = nullptr;
@@ -313,6 +424,13 @@ namespace DreamUITextBuilderLocal
 		TArray<FDreamWidgetPropertyBinding>* Bindings = nullptr;
 		/** Null when the caller has no use for events -- a reference tree, most tests. */
 		TArray<FDreamWidgetEventBinding>* EventBindings = nullptr;
+		/** Null likewise; an `each` met without it degrades to the parsed-not-built warning. */
+		TArray<FDreamWidgetEachBinding>* EachBindings = nullptr;
+		/** Non-null while building an `each` body: item-scoped bindings divert into it. */
+		FDreamWidgetEachBinding* ActiveEach = nullptr;
+		FString ActiveLoopVariable;
+		/** Filled during the walk, drained by ResolveNodeReferences once the tree is whole. */
+		TArray<FPendingNodeReference> NodeReferences;
 		/** ClassPath, or the source name when the file declares no class. Fixed for the whole build. */
 		FString LocalizationNamespace;
 	};
@@ -376,11 +494,12 @@ namespace DreamUITextBuilderLocal
 			// "No property named FontSize" is true and useless when the real mistake is that the node
 			// is a Widget and FontSize belongs to a Text. Naming the tag that WOULD have it turns a
 			// hunt through headers into a one-character edit, so it is worth its own code.
-			if (const TCHAR* Tag = bInSuggestVisualTag ? FindTagWhoseVisualDeclares(Segments[0]) : nullptr)
+			const FString Tag = bInSuggestVisualTag ? FindTagWhoseVisualDeclares(Segments[0]) : FString();
+			if (!Tag.IsEmpty())
 			{
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NoVisualForProperty, InProperty.Location,
 					FString::Printf(TEXT("'%s' belongs to the visual a '%s' node creates, and %s has no such visual"),
-						*Segments[0], Tag, *InDestinationDescription));
+						*Segments[0], *Tag, *InDestinationDescription));
 				return false;
 			}
 			// Still UnknownProperty: the name really does not exist. Only the advice changes, and only
@@ -554,7 +673,9 @@ namespace DreamUITextBuilderLocal
 		}
 		if (Shape == nullptr)
 		{
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
+			// Reported against the file that DECLARES the entry: `use` can have brought it in from a
+			// style library, and Location counts lines there, not here.
+			AddErrorIn(*InContext.Diagnostics, Resource->SourceName, EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
 				FString::Printf(TEXT("'%s' is not a resource type; write Color, Number, Vector2, String or Asset"),
 					*Resource->TypeName));
 			return nullptr;
@@ -567,13 +688,37 @@ namespace DreamUITextBuilderLocal
 		if (!bShapeMatches
 			|| (Shape->TupleArity != INDEX_NONE && Resource->Value.Elements.Num() != Shape->TupleArity))
 		{
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
+			AddErrorIn(*InContext.Diagnostics, Resource->SourceName, EDreamUIDiagnosticCode::ResourceTypeMismatch, Resource->Location,
 				FString::Printf(TEXT("resource '%s' is declared %s, but its value is not one"),
 					*Resource->Name, *Resource->TypeName));
 			return nullptr;
 		}
 		(void)InProperty;
 		return &Resource->Value;
+	}
+
+	/**
+	 * Whether a bare name written on this property means a node in this file rather than an asset.
+	 *
+	 * Exactly the two class hierarchies the language can NAME: a node builds a UDreamWidget, that
+	 * widget may own a UDreamVisual, and nothing else in a tree has an identity the file wrote down.
+	 * Deliberately not widened to every object property -- on a UTexture2D* the only thing a bare
+	 * name can be is a mistyped asset path, and reporting that as a missing node would send the
+	 * reader looking for a node they never meant to write.
+	 */
+	bool IsNodeReferenceProperty(const FObjectPropertyBase* InProperty)
+	{
+		const UClass* Wanted = InProperty->PropertyClass;
+		// The three things a node can supply: itself, its visual, and a behaviour on it. Nothing else in
+		// the library is a per-node object, and each of the three is named by the property's own type --
+		// UDreamWidget, UDreamVisual and UDreamUIBehaviour share no ancestor below UObject, so no value
+		// is ambiguous about which was meant. Behaviours are here because a whole family of properties
+		// exists only to name one on a sibling: UUISelectable's six explicit-navigation members and
+		// UUIToggle::ToggleGroup.
+		return Wanted != nullptr
+			&& (Wanted->IsChildOf(UDreamWidget::StaticClass())
+				|| Wanted->IsChildOf(UDreamVisual::StaticClass())
+				|| Wanted->IsChildOf(UDreamUIBehaviour::StaticClass()));
 	}
 
 	bool WriteValue(const FResolvedDestination& InDestination, const FDreamUINode& InNode,
@@ -669,9 +814,19 @@ namespace DreamUITextBuilderLocal
 				const int64 EnumValue = Enum->GetValueByNameString(Value.Raw);
 				if (EnumValue == INDEX_NONE)
 				{
+					// A flags enum gets the extra sentence, because for one of those the reader's
+					// next thought is "then how do I write A and B" and the answer is not obvious:
+					// the grammar has no '|' (a single pipe is DUI1001) and is not getting one --
+					// adding an operator is a language decision nobody has taken. The NUMBER is the
+					// spelling, it is validated against this same enum, and the write-back prints it
+					// back, so the round trip is whole even though the spelling is not pretty.
+					const bool bIsFlags = Enum->HasAnyEnumFlags(EEnumFlags::Flags);
 					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownEnumValue, Value.Location,
-						FString::Printf(TEXT("'%s' is not a value of %s%s"), *Value.Raw, *Enum->GetName(),
-							*FormatSuggestion(SuggestNearestEnumValue(Value.Raw, Enum))));
+						FString::Printf(TEXT("'%s' is not a value of %s%s%s"), *Value.Raw, *Enum->GetName(),
+							*FormatSuggestion(SuggestNearestEnumValue(Value.Raw, Enum)),
+							bIsFlags
+								? TEXT(". This is a flags enum and the grammar has no '|', so a combination is written as the number its flags add up to")
+								: TEXT("")));
 					return false;
 				}
 				if (const FEnumProperty* AsEnum = CastField<FEnumProperty>(Leaf))
@@ -684,6 +839,56 @@ namespace DreamUITextBuilderLocal
 				}
 				return true;
 			}
+
+			// A NUMBER on an enum, which used to fall straight past this whole block into
+			// ImportText_Direct -- and that writes any integer at all, so `Visibility = 99` compiled
+			// green and produced a widget in a state the enum does not have. Checked here rather than
+			// left to the importer for the same reason the identifier spelling is: this is the one
+			// stage that knows both the literal and the UEnum it is landing on.
+			//
+			// OrBitfield, not IsValidEnumValue: a flags enum has no identifier for `A|B` -- the
+			// grammar has no '|' -- so a number is the ONLY spelling a combination has, and refusing
+			// it would make those properties unwritable rather than merely unvalidated. For an enum
+			// that is not a bitfield the two are the same call.
+			//
+			// Spelled out rather than handed to LexTryParseString, which answers true for "2.5" (it
+			// only reports a failure when the parse produced zero from no zero digit) -- and a real
+			// where an enum belongs is not a state the author meant, so truncating it would pick one
+			// for them.
+			const FString Trimmed = Value.Raw.TrimStartAndEnd();
+			bool bIsInteger = !Trimmed.IsEmpty();
+			for (int32 Index = 0; bIsInteger && Index < Trimmed.Len(); ++Index)
+			{
+				const TCHAR Char = Trimmed[Index];
+				if (Index == 0 && (Char == TEXT('-') || Char == TEXT('+')))
+				{
+					bIsInteger = Trimmed.Len() > 1;
+					continue;
+				}
+				bIsInteger = FChar::IsDigit(Char);
+			}
+			if (!bIsInteger)
+			{
+				RaiseTypeMismatch(InProperty, Leaf, InContext);
+				return false;
+			}
+			const int64 Numeric = FCString::Atoi64(*Trimmed);
+			if (!Enum->IsValidEnumValueOrBitfield(Numeric))
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownEnumValue, Value.Location,
+					FString::Printf(TEXT("%s declares no value %lld; write one of its names instead"),
+						*Enum->GetName(), Numeric));
+				return false;
+			}
+			if (const FEnumProperty* AsEnum = CastField<FEnumProperty>(Leaf))
+			{
+				AsEnum->GetUnderlyingProperty()->SetIntPropertyValue(ValuePtr, Numeric);
+			}
+			else
+			{
+				CastFieldChecked<FByteProperty>(Leaf)->SetIntPropertyValue(ValuePtr, Numeric);
+			}
+			return true;
 		}
 
 		// A quoted string is the author's exact bytes, delimiters already stripped. ImportText would
@@ -697,6 +902,15 @@ namespace DreamUITextBuilderLocal
 			}
 			if (const FNameProperty* AsName = CastField<FNameProperty>(Leaf))
 			{
+				// The one authored value that reaches an FName without having been an identifier
+				// first, so the lexer's length rule never saw it. See IsNameLengthLegal.
+				if (!IsNameLengthLegal(Value.Raw))
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Value.Location,
+						FString::Printf(TEXT("'%s' is %d characters long, and '%s' is a name, which holds at most %d"),
+							*EllipsizeName(Value.Raw), Value.Raw.Len(), *InProperty.Name, NAME_SIZE - 1));
+					return false;
+				}
 				AsName->SetPropertyValue(ValuePtr, FName(*Value.Raw));
 				return true;
 			}
@@ -720,11 +934,41 @@ namespace DreamUITextBuilderLocal
 			return true;
 		}
 
-		if (const FObjectProperty* AsObject = CastField<FObjectProperty>(Leaf))
+		// FObjectPropertyBase, not FObjectProperty. TObjectPtr, TWeakObjectPtr and TLazyObjectPtr are
+		// SIBLINGS under that base, not a chain, so the narrower cast silently excluded every weak
+		// reference in the library -- UUISelectable::TransitionTarget, UUIToggle::ToggleTransitionTarget
+		// and UUISlider::Fill/Handle are all TWeakObjectPtr. They did not fail outright, which is why
+		// it went unnoticed: they fell past here to ImportText_Direct, which does resolve an asset
+		// path, but reports a miss as ValueTypeMismatch instead of AssetNotFound and -- worse --
+		// searches every loaded package by bare name (ParseObjectPropertyValue defaults
+		// bAllowAnyPackage to true), so a typo could bind to whatever object happened to share it.
+		// The write-back has read this family through FObjectPropertyBase all along; this side was
+		// the odd one out. FSoftObjectProperty is a sibling too and is claimed by the branch above,
+		// which is why that one has to stay ahead of this one.
+		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(Leaf))
 		{
 			if (Value.Raw.IsEmpty() || Value.Raw == TEXT("None"))
 			{
 				AsObject->SetObjectPropertyValue(ValuePtr, nullptr);
+				return true;
+			}
+			// A widget- or visual-typed property is the one destination where a bare name can mean
+			// something this same file declares, so it is read as a node id. No new syntax is needed
+			// to tell the two apart: an asset path always begins with '/' and a node id never can,
+			// being required to be a C++ identifier (InvalidNodeId).
+			//
+			// Recorded rather than resolved, and that is the whole difficulty: the node named may be
+			// declared BELOW the line naming it -- a toggle pointing at its own check mark is the
+			// motivating case -- and this walk is what is still building the file. See
+			// FPendingNodeReference.
+			if (IsNodeReferenceProperty(AsObject) && !Value.Raw.StartsWith(TEXT("/")))
+			{
+				FPendingNodeReference& Pending = InContext.NodeReferences.AddDefaulted_GetRef();
+				Pending.Property = AsObject;
+				Pending.LeafValuePtr = ValuePtr;
+				Pending.NodeId = Value.Raw;
+				Pending.PropertyName = InProperty.Name;
+				Pending.Location = Value.Location;
 				return true;
 			}
 			// Loaded rather than soft-referenced: a class template holds the same hard reference an
@@ -744,6 +988,28 @@ namespace DreamUITextBuilderLocal
 					FString::Printf(TEXT("'%s' is a %s, and '%s' takes a %s"), *Value.Raw, *Loaded->GetClass()->GetName(),
 						*InProperty.Name, *AsObject->PropertyClass->GetName()));
 				return false;
+			}
+			// The check above cannot see a TSubclassOf's bound at all, and that is not a subtlety of
+			// this code -- it is how FClassProperty is shaped. PropertyClass on one is UClass, for
+			// EVERY TSubclassOf<T> there is, so `Loaded->IsA(PropertyClass)` asks "is this a class",
+			// which any class that loaded already is. The T lives in MetaClass and nowhere else, so
+			// without this `WidgetClass = /Game/FX/M_Glow_C` compiled green and put a material's
+			// class into a property that will be instanced as a widget.
+			//
+			// Only when MetaClass is set: a bare `UClass*` UPROPERTY leaves it null and means exactly
+			// what it says, any class, and inventing a bound for it would refuse what the details
+			// panel accepts.
+			if (const FClassProperty* AsClass = CastField<FClassProperty>(Leaf))
+			{
+				const UClass* Resolved = Cast<UClass>(Loaded);
+				if (AsClass->MetaClass != nullptr && (Resolved == nullptr || !Resolved->IsChildOf(AsClass->MetaClass)))
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Value.Location,
+						FString::Printf(TEXT("'%s' is not a %s, and '%s' holds a subclass of %s"),
+							*Value.Raw, *AsClass->MetaClass->GetName(), *InProperty.Name,
+							*AsClass->MetaClass->GetName()));
+					return false;
+				}
 			}
 			AsObject->SetObjectPropertyValue(ValuePtr, Loaded);
 			return true;
@@ -785,6 +1051,54 @@ namespace DreamUITextBuilderLocal
 	bool AddBinding(const FResolvedDestination& InDestination, UDreamWidget* InWidget,
 		const FDreamUIProperty& InProperty, FBuildContext& InContext)
 	{
+		// Inside an `each` body, a binding whose source is `<LoopVar>.<Member>` is not a class
+		// binding at all -- it is a per-CELL write, recorded on the each and applied at SetCell
+		// time. Detected before the empty-name guard below, because these arrive as un-lowered
+		// expressions on purpose: the thunk pass skips loop bodies.
+		FString EachItemMember;
+		if (InContext.ActiveEach != nullptr
+			&& InProperty.BindingExpression.IsSet()
+			&& InProperty.BindingExpression.GetValue().Kind == FDreamUIExpression::EKind::VariableRef)
+		{
+			const FString& Symbol = InProperty.BindingExpression.GetValue().Symbol;
+			const FString Prefix = InContext.ActiveLoopVariable + TEXT(".");
+			if (Symbol.StartsWith(Prefix, ESearchCase::CaseSensitive))
+			{
+				EachItemMember = Symbol.Mid(Prefix.Len());
+				if (EachItemMember.IsEmpty() || EachItemMember.Contains(TEXT(".")))
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+						FString::Printf(TEXT("'%s' reads more than one member deep; an item binding is '%s.Member'"),
+							*Symbol, *InContext.ActiveLoopVariable));
+					return false;
+				}
+			}
+		}
+
+		if (InProperty.BindingFunction.IsEmpty() && EachItemMember.IsEmpty())
+		{
+			if (InContext.ActiveEach != nullptr)
+			{
+				// Inside a loop body the un-lowered expression is not a stage that has not run yet --
+				// it is a stage that never will. DreamUIExpressionThunks::Generate deliberately skips
+				// loop bodies (a generated function would ask the CLASS for a name only the iteration
+				// has), so the ONLY source shape an `each` supports is the single hop `Item.Member`
+				// handled above. Everything else used to fall through this return and be dropped: the
+				// file compiled green and the property was simply never driven, which is the exact
+				// silent failure this pipeline exists to remove.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopBodyBindingUnsupported, InProperty.Location,
+					FString::Printf(TEXT("'%s' cannot be driven from inside an 'each': the body supports '%s.Member' only, so an expression or a '<->' has nowhere to be compiled to. Move the logic into the item's own class, or bind it outside the loop."),
+						*InProperty.Name, *InContext.ActiveLoopVariable));
+				return false;
+			}
+			// An expression binding the compiler has not lowered yet: the real compile rewrites
+			// BindingFunction to the generated thunk's name before Build runs, so reaching here
+			// means this is a consumer that builds a raw AST -- the write-back's reference tree,
+			// a test. Recording a nameless binding would resolve to nothing at runtime and trip
+			// the compiler's not-found check with an empty name; skipping records nothing, which
+			// is the truth about an un-lowered expression.
+			return false;
+		}
 		// Both of these are 5008 rather than 5005, and the split is the whole reason 5008 exists: what
 		// is wrong here is the KIND of destination, not the property. Told "no setter", a reader goes
 		// and writes one, and it still cannot be bound.
@@ -816,7 +1130,27 @@ namespace DreamUITextBuilderLocal
 			return false;
 		}
 
+		if (!EachItemMember.IsEmpty())
+		{
+			// The per-cell record, with the setter the ordinary resolution above already vetted.
+			FDreamWidgetEntryBinding& Entry = InContext.ActiveEach->EntryBindings.AddDefaulted_GetRef();
+			Entry.TargetWidgetDisplayName = FName(*InWidget->GetDisplayName());
+			Entry.Target = InDestination.BindingTarget;
+			Entry.BehaviourIndex = InDestination.BehaviourIndex;
+			Entry.PropertyName = InDestination.LeafProperty->GetFName();
+			Entry.SetterName = Setter->GetFName();
+			Entry.ItemMember = FName(*EachItemMember);
+			return true;
+		}
+
 		FDreamWidgetPropertyBinding Binding;
+#if WITH_EDITORONLY_DATA
+		// The one place this position exists. DUI5004 is raised by the Blueprint compile, which runs
+		// after this AST is gone and holds only the binding list -- so a line number that is not
+		// copied here is a line number that stage can never have.
+		Binding.SourceLine = InProperty.Location.Line;
+		Binding.SourceColumn = InProperty.Location.Column;
+#endif
 		// Never sanitized a second time here. UDreamWidgetTree::MakeWidgetVariableName is the one
 		// implementation the runtime resolves bindings with, and a private copy that differs by one
 		// character is precisely how a binding reports success and comes back null.
@@ -825,12 +1159,31 @@ namespace DreamUITextBuilderLocal
 		Binding.BehaviourIndex = InDestination.BehaviourIndex;
 		Binding.PropertyName = InDestination.LeafProperty->GetFName();
 		Binding.SetterName = Setter->GetFName();
+		if (!InProperty.TwoWayProperty.IsEmpty())
+		{
+			// The forward half of a `<->`: remember the variable for the runtime's subscription,
+			// and push through the silent setter when the control offers one -- see NotifyField.
+			Binding.NotifyField = FName(*InProperty.TwoWayProperty);
+			const FName SilentSetterName(*(Setter->GetFName().ToString() + TEXT("WithoutNotify")));
+			if (InDestination.Owner->GetClass()->FindFunctionByName(SilentSetterName) != nullptr)
+			{
+				Binding.SetterName = SilentSetterName;
+			}
+		}
 		// The parser already hands over a bare identifier -- `()` is grammar, not part of the name --
 		// so the trim is only for the other caller this struct has: an editor or a test building an
 		// FDreamUIProperty by hand, which naturally writes what the author would have typed.
 		FString FunctionName = InProperty.BindingFunction.TrimStartAndEnd();
 		FunctionName.RemoveFromEnd(TEXT("()"));
-		Binding.FunctionName = FName(*FunctionName.TrimStartAndEnd());
+		FunctionName.TrimStartAndEndInline();
+		if (!IsNameLengthLegal(FunctionName))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::BindingFunctionNotFound, InProperty.Location,
+				FString::Printf(TEXT("'%s' is %d characters long, and a function name holds at most %d"),
+					*EllipsizeName(FunctionName), FunctionName.Len(), NAME_SIZE - 1));
+			return false;
+		}
+		Binding.FunctionName = FName(*FunctionName);
 		InContext.Bindings->Add(Binding);
 		return true;
 	}
@@ -853,14 +1206,28 @@ namespace DreamUITextBuilderLocal
 				FString::Printf(TEXT("'%s' is a path into a struct, and an event is always a whole property"), *InProperty.Name));
 			return false;
 		}
-		// DYNAMIC multicast, specifically: it is the kind a UFUNCTION binds to by name and the kind
-		// UHT gives BlueprintAssignable events, and the two facts are why every OnSomething an author
-		// would reach for is one. A plain FMulticastDelegateProperty cannot be bound from a name.
-		if (CastField<FMulticastDelegateProperty>(InDestination.LeafProperty) == nullptr
-			|| !InDestination.LeafProperty->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+		// Either kind of event this plugin has, because a `->` route reaches both.
+		//
+		// DYNAMIC multicast, specifically, for the first: it is the kind a UFUNCTION binds to by name
+		// and the kind UHT gives BlueprintAssignable events, and the two facts are why every
+		// OnSomething in the `Controls/` family is one. A plain FMulticastDelegateProperty cannot be
+		// bound from a name.
+		//
+		// The second is an FDreamUIEventDelegate, which the older `Interaction/` behaviours declare
+		// instead (UIButton::OnClick, UISlider::OnValueChanged). Routes onto those used to be refused
+		// here, which left that whole family with no canonical way to be handled and kept its
+		// per-instance legacy event list alive as a second, competing mechanism.
+		// UDreamUserWidget::BindEventBindings attaches to either.
+		const bool bIsAssignableDelegate = CastField<FMulticastDelegateProperty>(InDestination.LeafProperty) != nullptr
+			&& InDestination.LeafProperty->HasAnyPropertyFlags(CPF_BlueprintAssignable);
+		const FStructProperty* AsDreamEvent = CastField<FStructProperty>(InDestination.LeafProperty);
+		const bool bIsDreamEvent = AsDreamEvent != nullptr
+			&& AsDreamEvent->Struct == FDreamUIEventDelegate::StaticStruct()
+			&& AsDreamEvent->HasAnyPropertyFlags(CPF_Edit);
+		if (!bIsAssignableDelegate && !bIsDreamEvent)
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
-				FString::Printf(TEXT("'%s' on %s is not an assignable event (a BlueprintAssignable dynamic multicast delegate)"),
+				FString::Printf(TEXT("'%s' on %s is not an event (a BlueprintAssignable dynamic multicast delegate, or an editable DreamUIEventDelegate)"),
 					*InProperty.Name, *InDestination.Owner->GetClass()->GetName()));
 			return false;
 		}
@@ -871,12 +1238,27 @@ namespace DreamUITextBuilderLocal
 			return true;
 		}
 
+		const FString HandlerName = InProperty.EventHandler.TrimStartAndEnd();
+		if (!IsNameLengthLegal(HandlerName))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
+				FString::Printf(TEXT("'%s' is %d characters long, and a handler name holds at most %d"),
+					*EllipsizeName(HandlerName), HandlerName.Len(), NAME_SIZE - 1));
+			return false;
+		}
+
 		FDreamWidgetEventBinding Binding;
 		Binding.WidgetName = UDreamWidgetTree::MakeWidgetVariableName(InWidget);
 		Binding.Target = InDestination.BindingTarget;
 		Binding.BehaviourIndex = InDestination.BehaviourIndex;
 		Binding.EventName = InDestination.LeafProperty->GetFName();
-		Binding.FunctionName = FName(*InProperty.EventHandler.TrimStartAndEnd());
+		Binding.FunctionName = FName(*HandlerName);
+#if WITH_EDITORONLY_DATA
+		// Same reason as the `<-` half: DUI6004 and DUI6005 are raised by the Blueprint compile,
+		// which is the only stage that can see the handler and the last one that could see this line.
+		Binding.SourceLine = InProperty.Location.Line;
+		Binding.SourceColumn = InProperty.Location.Column;
+#endif
 		InContext.EventBindings->Add(Binding);
 		return true;
 	}
@@ -915,24 +1297,15 @@ namespace DreamUITextBuilderLocal
 void FDreamUITextBuilder::GetVisualTags(TArray<TPair<FString, UClass*>>& OutTags)
 {
 	OutTags.Reset();
-	for (const TPair<const TCHAR*, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())
+	for (const TPair<FName, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())
 	{
-		OutTags.Emplace(FString(Entry.Key), Entry.Value);
+		OutTags.Emplace(Entry.Key.ToString(), Entry.Value);
 	}
 }
 
 UClass* FDreamUITextBuilder::FindVisualClassForTag(const FString& InTag, bool& bOutIsKnownTag)
 {
-	for (const TPair<const TCHAR*, UClass*>& Entry : DreamUITextBuilderLocal::GetVisualTagTable())
-	{
-		if (InTag == Entry.Key)
-		{
-			bOutIsKnownTag = true;
-			return Entry.Value;
-		}
-	}
-	bOutIsKnownTag = false;
-	return nullptr;
+	return FDreamUIWidgetRegistry::ResolveVisual(FName(*InTag), bOutIsKnownTag);
 }
 
 bool FDreamUITextBuilder::IsWritableFromText(const FProperty* InProperty, FString& OutReason)
@@ -940,6 +1313,12 @@ bool FDreamUITextBuilder::IsWritableFromText(const FProperty* InProperty, FStrin
 	// A forwarder, so the rule keeps exactly one body while the local callers above keep the
 	// unqualified name they already use.
 	return DreamUITextBuilderLocal::IsWritableFromText(InProperty, OutReason);
+}
+
+bool FDreamUITextBuilder::IsNodeReferenceProperty(const FObjectPropertyBase* InProperty)
+{
+	// Same forwarder arrangement, same reason: one body, two callers that must never disagree.
+	return InProperty != nullptr && DreamUITextBuilderLocal::IsNodeReferenceProperty(InProperty);
 }
 
 UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
@@ -950,58 +1329,59 @@ UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 		return nullptr;
 	}
 
-	UClass* Found = nullptr;
-	if (Name.StartsWith(TEXT("/")))
-	{
-		Found = UClass::TryFindTypeSlowSafe<UClass>(Name);
-		if (Found == nullptr)
-		{
-			Found = LoadObject<UClass>(nullptr, *Name, nullptr, LOAD_NoWarn | LOAD_Quiet);
-		}
-	}
-	else
-	{
-		// Prefixes rather than an alias table. `Canvas` finds UDreamCanvas, `Button` finds UUIButton
-		// and `VerticalBox` finds UDreamLayoutContainerVerticalBox without any of them being written
-		// down anywhere, so adding a behaviour to the library adds it to the language -- a table
-		// would be a second place to remember, and the one that gets forgotten. UIML's four
-		// hand-written aliases all fall out of this.
-		//
-		// Longest last only matters for reading: the names in each family are distinct, so no input
-		// resolves under two prefixes.
-		static const TCHAR* Prefixes[] =
-		{
-			TEXT(""), TEXT("Dream"), TEXT("UI"), TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf")
-		};
-		for (const TCHAR* Prefix : Prefixes)
-		{
-			Found = UClass::TryFindTypeSlowSafe<UClass>(FString::Printf(TEXT("/Script/DreamGUI.%s%s"), Prefix, *Name));
-			if (Found != nullptr)
-			{
-				break;
-			}
-		}
-		if (Found == nullptr)
-		{
-			// A behaviour from the game module or another plugin. Last, because it is the slow lookup
-			// and the ambiguous one, and native-first so a Blueprint of the same name never wins.
-			Found = FindFirstObjectSafe<UClass>(*Name, EFindFirstObjectOptions::NativeFirst);
-		}
-	}
-
-	if (Found == nullptr || Found->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
-	{
-		return nullptr;
-	}
+	// What `+` can mean, applied PER CANDIDATE rather than once at the end. The prefix families
+	// stopped being distinct the day the control library arrived: `Slider` names both UDreamSlider
+	// (a control, which `+` cannot carry) and UUISlider (the behaviour the author meant), and taking
+	// the first class that merely exists resolved `+ Slider` to the wrong one and failed every file
+	// that says it. Resolution is the first name that could BE a component.
+	//
 	// Layout containers are accepted alongside behaviours, and that is a deliberate widening of what
 	// `+` means. They are not UDreamUIBehaviour -- they are UDreamWidgetSubObjectBehaviour, a separate
 	// hierarchy -- so without this the language cannot produce a panel at all, which in turn means no
 	// child ever gets a UDreamPanelSlot and every `@slot` line in every file resolves to
 	// NoPanelSlotForProperty. A diagnostic that is always right is one nobody can act on.
-	return Found->IsChildOf(UDreamUIBehaviour::StaticClass())
-		|| Found->IsChildOf(UDreamLayoutContainer::StaticClass())
-		|| Found->IsChildOf(UDreamLayoutSelf::StaticClass())
-		? Found : nullptr;
+	auto AsComponentClass = [](UClass* InFound) -> UClass*
+	{
+		if (InFound == nullptr || InFound->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+		{
+			return nullptr;
+		}
+		return InFound->IsChildOf(UDreamUIBehaviour::StaticClass())
+			|| InFound->IsChildOf(UDreamLayoutContainer::StaticClass())
+			|| InFound->IsChildOf(UDreamLayoutSelf::StaticClass())
+			? InFound : nullptr;
+	};
+
+	if (Name.StartsWith(TEXT("/")))
+	{
+		UClass* Found = UClass::TryFindTypeSlowSafe<UClass>(Name);
+		if (Found == nullptr)
+		{
+			Found = LoadObject<UClass>(nullptr, *Name, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		}
+		return AsComponentClass(Found);
+	}
+
+	// Prefixes rather than an alias table. `Canvas` finds UDreamCanvas, `Button` finds UUIButton
+	// and `VerticalBox` finds UDreamLayoutContainerVerticalBox without any of them being written
+	// down anywhere, so adding a behaviour to the library adds it to the language -- a table
+	// would be a second place to remember, and the one that gets forgotten. UIML's four
+	// hand-written aliases all fall out of this.
+	static const TCHAR* Prefixes[] =
+	{
+		TEXT(""), TEXT("Dream"), TEXT("UI"), TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf")
+	};
+	for (const TCHAR* Prefix : Prefixes)
+	{
+		if (UClass* Found = AsComponentClass(UClass::TryFindTypeSlowSafe<UClass>(
+			FString::Printf(TEXT("/Script/DreamGUI.%s%s"), Prefix, *Name))))
+		{
+			return Found;
+		}
+	}
+	// A behaviour from the game module or another plugin. Last, because it is the slow lookup
+	// and the ambiguous one, and native-first so a Blueprint of the same name never wins.
+	return AsComponentClass(FindFirstObjectSafe<UClass>(*Name, EFindFirstObjectOptions::NativeFirst));
 }
 
 namespace DreamUITextBuilderLocal
@@ -1133,6 +1513,29 @@ namespace DreamUITextBuilderLocal
 			VisualCandidate.Target = EDreamWidgetBindingTarget::Visual;
 			Candidates.Add(VisualCandidate);
 		}
+		// The behaviours, after the widget and its visual so those keep shadowing on a name clash.
+		// EDreamWidgetBindingTarget::Behaviour and its resolver existed all along -- the runtime and
+		// the compiler both walk it -- but node-level lines never offered behaviours as candidates,
+		// so `bIsOn <- F()` on a toggle-carrying node died in DUI4001 while the machinery to serve
+		// it sat finished one layer down. The discriminator matches the component write path's, so
+		// a localized string keys the same whichever spelling put it there.
+		{
+			const TArray<UDreamUIBehaviour*>& Behaviours = InWidget->GetAllComponents();
+			for (int32 BehaviourIndex = 0; BehaviourIndex < Behaviours.Num(); ++BehaviourIndex)
+			{
+				if (!IsValid(Behaviours[BehaviourIndex]))
+				{
+					continue;
+				}
+				FDestinationCandidate BehaviourCandidate;
+				BehaviourCandidate.Object = Behaviours[BehaviourIndex];
+				BehaviourCandidate.Target = EDreamWidgetBindingTarget::Behaviour;
+				BehaviourCandidate.BehaviourIndex = BehaviourIndex;
+				BehaviourCandidate.LocalizationDiscriminator = FString::Printf(TEXT("%s_%d"),
+					*Behaviours[BehaviourIndex]->GetClass()->GetName(), BehaviourIndex);
+				Candidates.Add(BehaviourCandidate);
+			}
+		}
 		const FString Description = InWidget->GetVisual() != nullptr
 			? FString::Printf(TEXT("'%s' or its %s"), *InNode.Id, *InWidget->GetVisual()->GetClass()->GetName())
 			: FString::Printf(TEXT("'%s'"), *InNode.Id);
@@ -1166,8 +1569,10 @@ namespace DreamUITextBuilderLocal
 					const FDreamUIStyle* Base = InContext.Ast->FindStyle(Link->BaseName);
 					if (Base == nullptr)
 					{
-						InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
-							FString::Printf(TEXT("style '%s' inherits '%s', which this file does not declare"),
+						// Link->Location is a line in the file that DECLARES the style, which an
+						// import chain makes a different file from the one being compiled.
+						AddErrorIn(*InContext.Diagnostics, Link->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
+							FString::Printf(TEXT("style '%s' inherits '%s', which is declared nowhere it can see"),
 								*Link->Name, *Link->BaseName));
 						break;
 					}
@@ -1221,6 +1626,38 @@ namespace DreamUITextBuilderLocal
 		{
 			return true;
 		}
+		// `Native.Toggle` -- a scoped tag, resolved through the widget registry. What it accepts is
+		// exactly what DECLARE_DREAM_GUI_WIDGET declared, so the language never carries a list of the
+		// library's controls -- or of anyone else's: a project plugin registering under its own scope
+		// is in the language the moment it links.
+		int32 DotIndex = INDEX_NONE;
+		if (!InNode.TypeName.StartsWith(TEXT("/")) && InNode.TypeName.FindChar(TEXT('.'), DotIndex))
+		{
+			const FName Scope(*InNode.TypeName.Left(DotIndex));
+			const FName Name(*InNode.TypeName.Mid(DotIndex + 1));
+			UClass* Registered = FDreamUIWidgetRegistry::Resolve(Scope, Name);
+			if (Registered == nullptr || !Registered->IsChildOf(UDreamUserWidget::StaticClass())
+				|| Registered->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
+			{
+				TArray<FName> Known = FDreamUIWidgetRegistry::NamesInScope(Scope);
+				FString KnownList;
+				for (const FName& KnownName : Known)
+				{
+					KnownList += (KnownList.IsEmpty() ? TEXT("") : TEXT(", "));
+					KnownList += FString::Printf(TEXT("%s.%s"), *Scope.ToString(), *KnownName.ToString());
+				}
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownNodeType, InNode.Location,
+					KnownList.IsEmpty()
+						? FString::Printf(TEXT("'%s' names no registered widget -- nothing is declared under scope '%s' (DECLARE_DREAM_GUI_WIDGET registers one)"),
+							*InNode.TypeName, *Scope.ToString())
+						: FString::Printf(TEXT("'%s' names no registered widget -- scope '%s' declares: %s"),
+							*InNode.TypeName, *Scope.ToString(), *KnownList));
+				return false;
+			}
+			OutWidgetClass = Registered;
+			return true;
+		}
+
 		if (InNode.TypeName.StartsWith(TEXT("/")))
 		{
 			UClass* Loaded = ResolveWidgetClassFromPath(InNode.TypeName);
@@ -1255,15 +1692,37 @@ namespace DreamUITextBuilderLocal
 		return true;
 	}
 
+	UDreamWidget* BuildEachLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext);
+
 	UDreamWidget* BuildNode(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
 	{
-		if (InNode.Kind == EDreamUINodeKind::ForLoop || InNode.Kind == EDreamUINodeKind::EachLoop)
+		if (InNode.Kind == EDreamUINodeKind::EachLoop && InContext.EachBindings != nullptr)
 		{
-			// A warning rather than an error: the rest of the file is still a tree worth building, and
-			// an author previewing a screen wants to see the parts that do work.
+			return BuildEachLoop(InNode, InParent, InContext);
+		}
+		if (InNode.Kind == EDreamUINodeKind::ForLoop)
+		{
+			// An ERROR, and the split from `each` just below is the whole reason this branch is two
+			// branches. `for` means compile-time expansion and there is nothing to expand: the
+			// implementation plan's ruling is that its source is written as a no-argument UFUNCTION,
+			// which a compile cannot call, so the semantics -- a range? a literal list? -- were never
+			// decided. That is a decision nobody has taken, not a stage that has not run, and NOTHING
+			// a caller does makes the body appear. The grammar keeps accepting the keyword so a file
+			// written against a future version still parses; this is what stops such a file from
+			// silently producing a class missing a whole subtree, which is what a warning bought --
+			// one line in the Output Log against a preview that looks merely empty.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
+				TEXT("'for' is parsed but not implemented: compile-time expansion has no decided semantics yet, so everything under this one was skipped. Use 'each' for a run-time list, or write the copies out."));
+			return nullptr;
+		}
+		if (InNode.Kind == EDreamUINodeKind::EachLoop)
+		{
+			// Still a warning, and for a reason that has nothing to do with the one above: `each` IS
+			// implemented, and a block only reaches here when the CALLER offered nowhere to record it
+			// -- a hand-built AST, most tests. The rest of the file is a tree worth building, and an
+			// author previewing a screen wants to see the parts that do work.
 			InContext.Diagnostics->AddWarning(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
-				FString::Printf(TEXT("'%s' loops are parsed but not yet expanded, so everything under this one was skipped"),
-					InNode.Kind == EDreamUINodeKind::ForLoop ? TEXT("for") : TEXT("each")));
+				TEXT("this caller offered nowhere to record an 'each', so everything under this one was skipped"));
 			return nullptr;
 		}
 
@@ -1274,10 +1733,46 @@ namespace DreamUITextBuilderLocal
 			return nullptr;
 		}
 
+		if (!IsNameLengthLegal(InNode.Id))
+		{
+			// Refused rather than truncated: the id IS the identity -- object name, member variable,
+			// binding key and localization key at once -- and a shortened one would silently be a
+			// different node from the one the file describes. A parse raises DUI1006 for this at the
+			// token, so this is the same rule for the callers that assemble a node by hand.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::InvalidNodeId, InNode.Location,
+				FString::Printf(TEXT("'%s' is %d characters long, and a node id holds at most %d"),
+					*EllipsizeName(InNode.Id), InNode.Id.Len(), NAME_SIZE - 1));
+			return nullptr;
+		}
+
 		// THE rule. Not NewObject<UDreamWidget>(World, …), which is what UIML did and why a UIML
 		// hierarchy is flat-outered to the world, owned by nothing, and can never become a class
 		// template, enter the designer, or carry a binding. See UDreamWidgetTree's class comment.
-		UDreamWidget* Widget = InContext.Tree->ConstructWidget(WidgetClass);
+		//
+		// Name and guid both derive from the node id, so every compile of the same file births the
+		// same identities: designer state is keyed by object FName and preview pairing by guid, and
+		// with random identities both reset on every rebuild while the .uasset churns for source
+		// control. MakeUniqueObjectName keeps a duplicate id from tripping NewObject's fatal name
+		// collision -- deterministic anyway, because build order is AST order -- and the guid is
+		// hashed from the RESOLVED name so even that duplicate pair gets distinct identities. Salted
+		// with the localization namespace (the class path): a guid derived from the bare id would
+		// recreate exactly the cross-asset collision guids were introduced to fix.
+		FName WidgetName = NAME_None;
+		FGuid WidgetGuid;
+		if (!InNode.Id.IsEmpty())
+		{
+			// The bare id, verbatim, whenever it is free -- MakeUniqueObjectName is not tried first
+			// because it ALWAYS numbers ("Root" becomes "Root_0"), and the whole point is that the
+			// object is named exactly what the author typed. The occupied case is error recovery
+			// only: duplicate ids are a build error upstream (DuplicateNodeId).
+			WidgetName = FName(*InNode.Id);
+			if (StaticFindObjectFast(nullptr, InContext.Tree, WidgetName) != nullptr)
+			{
+				WidgetName = MakeUniqueObjectName(InContext.Tree, WidgetClass, WidgetName);
+			}
+			WidgetGuid = FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + WidgetName.ToString());
+		}
+		UDreamWidget* Widget = InContext.Tree->ConstructWidget(WidgetClass, WidgetName, WidgetGuid);
 		if (!IsValid(Widget))
 		{
 			// Not reachable today -- ResolveNodeClasses has already established the class is valid and
@@ -1344,11 +1839,884 @@ namespace DreamUITextBuilderLocal
 		}
 		return Widget;
 	}
+
+	UDreamWidget* BuildEachLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
+	{
+		if (InContext.ActiveEach != nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' cannot nest inside another 'each'"));
+			return nullptr;
+		}
+		if (InParent == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' lives inside the widget whose list it fills; it cannot be the root"));
+			return nullptr;
+		}
+		// The host contract: the ENCLOSING widget carries the list view, configured however the
+		// author likes -- the `each` only supplies the template and the data. Auto-adding a view
+		// here would mean auto-choosing its scroll direction, content and bars, which are layout
+		// decisions this block has no words for.
+		if (InParent->GetComponent<UUIRecyclableScrollView>() == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				FString::Printf(TEXT("'%s' has no UIListView/UIRecyclableScrollView behaviour for this 'each' to fill -- add one with '+ UIListView { }'"),
+					*InParent->GetDisplayName()));
+			return nullptr;
+		}
+
+		const FDreamUINode* TemplateNode = nullptr;
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			if (Child.Kind != EDreamUINodeKind::Widget || TemplateNode != nullptr)
+			{
+				TemplateNode = nullptr;
+				break;
+			}
+			TemplateNode = &Child;
+		}
+		if (TemplateNode == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' body holds exactly one template widget -- the thing repeated per item"));
+			return nullptr;
+		}
+
+		FDreamWidgetEachBinding& Each = InContext.EachBindings->AddDefaulted_GetRef();
+		Each.HostWidgetName = UDreamWidgetTree::MakeWidgetVariableName(InParent);
+		Each.SourceName = FName(*InNode.LoopSourceFunction);
+		Each.bSourceIsFunction = InNode.bLoopSourceIsFunction;
+		Each.LoopVariable = FName(*InNode.LoopVariable);
+#if WITH_EDITORONLY_DATA
+		// The `each` HEADER's position, not the template's: DUI6006 and DUI6007 are both complaints
+		// about the source named on this line, and pointing an author at the widget inside the block
+		// would send them to read the one part of it that is fine.
+		Each.SourceLine = InNode.Location.Line;
+		Each.SourceColumn = InNode.Location.Column;
+#endif
+
+		// Nested `each` is refused above, so no sibling can grow EachBindings under this pointer
+		// while it is live -- the reallocation that would otherwise dangle it cannot happen.
+		InContext.ActiveEach = &Each;
+		InContext.ActiveLoopVariable = InNode.LoopVariable;
+		UDreamWidget* Template = BuildNode(*TemplateNode, InParent, InContext);
+		InContext.ActiveEach = nullptr;
+		InContext.ActiveLoopVariable.Reset();
+
+		if (!IsValid(Template))
+		{
+			InContext.EachBindings->Pop();
+			return nullptr;
+		}
+		Each.TemplateWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Template);
+
+		// The recyclable view clones whatever carries the cell-marker interface; a template the
+		// author did not mark gets the plain list entry, which is the marker plus click plumbing.
+		if (Template->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
+		{
+			Template->AddComponent<UUIListEntry>();
+		}
+
+		// The runtime prerequisites the walkthrough caught the view silently returning without:
+		// InitializeOnDataSource needs a CONTENT widget under the host (the thing scrolling moves
+		// and sizes), and exactly one scroll axis -- the scroll-view default is both. The language
+		// has no words for either, so the builder supplies them: a synthesized content the template
+		// moves into, and a vertical list when the author configured no single axis. An author who
+		// set one axis on the behaviour keeps it.
+		UUIRecyclableScrollView* View = InParent->GetComponent<UUIRecyclableScrollView>();
+		if (View->GetHorizontal() == View->GetVertical())
+		{
+			View->SetHorizontal(false);
+			View->SetVertical(true);
+		}
+		const FString ContentName = InParent->GetDisplayName() + TEXT("_EachContent");
+		UDreamWidget* Content = InContext.Tree->ConstructWidget(UDreamWidget::StaticClass(), FName(*ContentName),
+			FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + ContentName));
+		if (IsValid(Content))
+		{
+			Content->SetDisplayName(ContentName);
+			FDreamUIAnchorData ContentAnchors;
+			if (View->GetVertical())
+			{
+				// Stretch across the top: the view drives the height from the item count.
+				ContentAnchors.AnchorMin = FVector2D(0.0, 1.0);
+				ContentAnchors.AnchorMax = FVector2D(1.0, 1.0);
+				ContentAnchors.Pivot = FVector2D(0.5, 1.0);
+			}
+			else
+			{
+				ContentAnchors.AnchorMin = FVector2D(0.0, 0.0);
+				ContentAnchors.AnchorMax = FVector2D(0.0, 1.0);
+				ContentAnchors.Pivot = FVector2D(0.0, 0.5);
+			}
+			ContentAnchors.AnchoredPosition = FVector2D::ZeroVector;
+			ContentAnchors.SizeDelta = FVector2D::ZeroVector;
+			Content->SetAnchorData(ContentAnchors);
+			Content->TrySetParent(InParent, /*bKeepWorldPosition*/false);
+			Template->TrySetParent(Content, /*bKeepWorldPosition*/false);
+			View->SetContent(Content);
+			// By name too: the pointer above lives in the archetype and does not survive into
+			// instances -- ResolveEachBindings re-aims it per instance through this.
+			Each.ContentWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Content);
+		}
+		return Template;
+	}
+
+	/**
+	 * Every `Prop = SomeNode` line the walk deferred, now that every node it could name exists.
+	 *
+	 * One flat pass, not a fixpoint: a node reference resolves to a WIDGET, never to another pending
+	 * reference, so nothing here can unblock anything else here. In collection order, so a node line
+	 * still overrides the style line that wrote the same property -- assignment order is override
+	 * order, and deferring these must not quietly stop being true of them.
+	 */
+	void ResolveNodeReferences(FBuildContext& InContext)
+	{
+		for (const FPendingNodeReference& Pending : InContext.NodeReferences)
+		{
+			// The tree's own lookup, sanitized with the tree's own function. The author writes a node
+			// id and what the tree matches on is that id sanitized into an identifier, and a private
+			// copy of that walk is exactly how `Ok Btn` becomes a member variable for the compiler and
+			// comes back null here -- the same trap MakeWidgetVariableName exists to close.
+			UDreamWidget* Named = InContext.Tree->FindWidgetByVariableName(
+				FName(*UDreamWidgetTree::SanitizeIdentifier(Pending.NodeId)));
+			if (!IsValid(Named))
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NodeReferenceNotFound, Pending.Location,
+					FString::Printf(TEXT("'%s' names no node in this file, so '%s' has nothing to point at%s"),
+						*Pending.NodeId, *Pending.PropertyName,
+						*FormatSuggestion(SuggestNearestNodeId(Pending.NodeId, InContext.Tree))));
+				continue;
+			}
+
+			UClass* Wanted = Pending.Property->PropertyClass;
+			// A choice, not a fallback: UDreamWidget, UDreamVisual and UDreamUIBehaviour share no
+			// ancestor below UObject, so the property's type says unambiguously which part of the named
+			// node the author meant. Coercing to the visual is what lets a transition be aimed at
+			// `CheckMark` rather than at some second name for the same node.
+			UObject* Resolved = nullptr;
+			const TCHAR* MissingPartAdvice = nullptr;
+			if (Wanted->IsChildOf(UDreamVisual::StaticClass()))
+			{
+				Resolved = Named->GetVisual();
+				MissingPartAdvice = TEXT("give that node a visual tag such as 'Image'");
+			}
+			else if (Wanted->IsChildOf(UDreamUIBehaviour::StaticClass()))
+			{
+				Resolved = Named->GetComponent(Wanted);
+				MissingPartAdvice = TEXT("add that behaviour to the node with '+'");
+			}
+			else
+			{
+				Resolved = Named;
+			}
+			if (Resolved == nullptr)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Pending.Location,
+					FString::Printf(TEXT("'%s' has no %s, and '%s' takes one -- %s"),
+						*Pending.NodeId, *Wanted->GetName(), *Pending.PropertyName, MissingPartAdvice));
+				continue;
+			}
+			if (!Resolved->IsA(Wanted))
+			{
+				// The same code and the same sentence an asset gets when it loads and turns out to be
+				// the wrong class. The reader's move is identical, so the code is.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ValueTypeMismatch, Pending.Location,
+					FString::Printf(TEXT("'%s' is a %s, and '%s' takes a %s"), *Pending.NodeId,
+						*Resolved->GetClass()->GetName(), *Pending.PropertyName, *Wanted->GetName()));
+				continue;
+			}
+			// This write lands in the class TEMPLATE, and a non-Instanced object reference is copied
+			// verbatim into every instance -- InitializeWidgetStatic instances the tree with an
+			// FObjectInstancingGraph, which re-aims only properties carrying CPF_InstancedReference.
+			// Left at that, every instance's toggle would drive the ARCHETYPE's visual: one object
+			// shared by all of them and never drawn. What makes this write correct is the pass that
+			// runs one layer up -- RetargetIntraTreeReferences, called from InitializeWidgetStatic --
+			// which re-resolves any pointer still naming the template against the instance's own tree.
+			Pending.Property->SetObjectPropertyValue(Pending.LeafValuePtr, Resolved);
+		}
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Timelines
+	//
+	// The proposal's layer one, materialised. A `timeline` block becomes one UDreamWidgetAnimation in
+	// the root's UDreamWidgetAnimationComponent, marked language-owned, rebuilt from the text on every
+	// compile exactly as the tree is -- so the file stays the single truth and nothing in the editor
+	// can write a value the file does not contain.
+	//
+	// WHY EVERY EASED SEGMENT IS SAMPLED INTO LINEAR KEYS. The proposal's first load-bearing fact is
+	// that FRichCurve tangents are STORED data, so a text form has two choices: write the four
+	// numbers (unwritable by hand, and a lie about what an author edited) or write a NAME and derive
+	// the curve. Deriving it as a pair of endpoint tangents is only right for the curves a single
+	// cubic can be -- Elastic, Back and Bounce overshoot and oscillate, and a cubic silently smooths
+	// them into something else. Sampling at the sequence's own display rate is right for ALL of them,
+	// costs a handful of keys, needs no per-family table to drift, and is regenerated identically
+	// from one word on every compile. The curve library is called for the values, so there is exactly
+	// one definition of what `ease OutBounce` means in this plugin.
+	// ---------------------------------------------------------------------------------------------
+
+	/** The tick resolution and display rate every language-owned timeline is built at. */
+	constexpr int32 TimelineTickResolution = 24000;
+	constexpr int32 TimelineDisplayRate = 60;
+
+	FFrameNumber TimelineTimeToFrame(double InSeconds)
+	{
+		return FFrameNumber(static_cast<int32>(FMath::RoundToDouble(InSeconds * static_cast<double>(TimelineTickResolution))));
+	}
+
+	/**
+	 * The node a track line's '/'-separated path names, or null.
+	 *
+	 * An empty path is the animation's own host -- the same "" a binding records for the context
+	 * widget -- and every step after that is a DISPLAY NAME, matched case insensitively because ids
+	 * are FNames downstream and the parser already refuses two that differ only in case.
+	 */
+	UDreamWidget* FindWidgetByNodePath(UDreamWidget* InHost, const FString& InPath)
+	{
+		if (!IsValid(InHost))
+		{
+			return nullptr;
+		}
+		if (InPath.IsEmpty())
+		{
+			return InHost;
+		}
+		TArray<FString> Segments;
+		InPath.ParseIntoArray(Segments, TEXT("/"), /*InCullEmpty*/true);
+
+		UDreamWidget* Current = InHost;
+		for (const FString& Segment : Segments)
+		{
+			UDreamWidget* Next = nullptr;
+			for (UDreamWidget* Child : Current->GetChildren())
+			{
+				if (IsValid(Child) && Child->GetDisplayName() == Segment)
+				{
+					Next = Child;
+					break;
+				}
+			}
+			if (Next == nullptr)
+			{
+				return nullptr;
+			}
+			Current = Next;
+		}
+		return Current;
+	}
+
+	/** What a timeline track line resolved to: the object to possess, and the property path on it. */
+	struct FResolvedTimelineTarget
+	{
+		UObject* Object = nullptr;
+		/** The HEAD property, which is the one Sequencer's Interp rule is about. */
+		FProperty* HeadProperty = nullptr;
+		FProperty* LeafProperty = nullptr;
+		/** The dotted path as MovieScene wants it, which is the author's spelling verbatim. */
+		FString PropertyPath;
+	};
+
+	/**
+	 * The property a track line's head segment names on this class: the FIELD name, or the label the
+	 * animation editor puts on the row.
+	 *
+	 * The second reading is not a convenience, it is what makes the geometry animatable at all.
+	 * UDreamWidget carries six Interp mirrors of AnchorData that exist for precisely this -- their
+	 * own comment says "Interp mirrors of AnchorData for Sequencer" -- and they are FIELDS called
+	 * `AnimatableWidth` and `AnimatableHeight` wearing DisplayNames "Width" and "Height". The row an
+	 * author sees in the animation editor says Width; so does the details panel; so, therefore, does
+	 * a timeline line.
+	 *
+	 * This does NOT contradict the ruling that `Width = 400` on an assignment line is DUI4001 with a
+	 * hint pointing at `AnchorData.SizeDelta`. An assignment writes a PROPERTY and a timeline drives a
+	 * TRACK, and those are two questions with two naming systems that both already exist in the
+	 * engine. Writing the anchor block from a track is not even possible -- a struct has no property
+	 * track -- which is why the mirrors were added in the first place.
+	 *
+	 * Restricted to Interp properties so an alias can only ever name something animatable, and so a
+	 * DisplayName on some unrelated property cannot shadow a real field name. WITH_EDITORONLY_DATA,
+	 * because metadata is: a .dui compiled in a packaged build resolves the field name and not the
+	 * label, which is the honest degradation -- the label is an editor artefact.
+	 */
+	FProperty* FindTimelinePropertyOn(const UStruct* InScope, const FString& InName)
+	{
+		if (FProperty* Direct = InScope->FindPropertyByName(FName(*InName)))
+		{
+			return Direct;
+		}
+#if WITH_EDITORONLY_DATA
+		for (TFieldIterator<FProperty> It(InScope); It; ++It)
+		{
+			if (It->HasAnyPropertyFlags(CPF_Interp) && It->GetMetaData(TEXT("DisplayName")) == InName)
+			{
+				return *It;
+			}
+		}
+#endif
+		return nullptr;
+	}
+
+	/**
+	 * Which object on this node owns the property, and which property it is.
+	 *
+	 * The same candidate order every bare property name uses -- widget, its visual, then behaviours --
+	 * so `Color` on a Text node means the visual's Color in a timeline exactly as it does in an
+	 * assignment. Nothing here reports; the caller has the line and turns a false into DUI5016.
+	 */
+	bool ResolveTimelineTarget(UDreamWidget* InWidget, const FString& InPropertyPath, FResolvedTimelineTarget& OutTarget)
+	{
+		TArray<FString> Segments;
+		InPropertyPath.ParseIntoArray(Segments, TEXT("."), /*InCullEmpty*/true);
+		if (Segments.Num() == 0)
+		{
+			return false;
+		}
+
+		TArray<UObject*> Candidates;
+		Candidates.Add(InWidget);
+		if (UDreamVisual* Visual = InWidget->GetVisual())
+		{
+			Candidates.Add(Visual);
+		}
+		for (UDreamUIBehaviour* Behaviour : InWidget->GetAllComponents())
+		{
+			if (IsValid(Behaviour))
+			{
+				Candidates.Add(Behaviour);
+			}
+		}
+
+		for (UObject* Candidate : Candidates)
+		{
+			FProperty* Head = FindTimelinePropertyOn(Candidate->GetClass(), Segments[0]);
+			if (Head == nullptr)
+			{
+				continue;
+			}
+			// The RESOLVED spelling is accumulated as the walk goes, not copied from the author's
+			// text, because the two can differ: `Width` resolves to the field `AnimatableWidth`, and
+			// the path is what FTrackInstancePropertyBindings walks at run time. Handing it the label
+			// would build a track that resolves nothing and drives nothing, silently.
+			TArray<FString> ResolvedSegments;
+			ResolvedSegments.Add(Head->GetName());
+
+			FProperty* Leaf = Head;
+			for (int32 Index = 1; Index < Segments.Num() && Leaf != nullptr; ++Index)
+			{
+				const FStructProperty* AsStruct = CastField<FStructProperty>(Leaf);
+				// Field names only inside a struct: a label is something the animation editor puts on
+				// a track ROW, and a row is the head of the path, never a field within one.
+				Leaf = AsStruct != nullptr ? AsStruct->Struct->FindPropertyByName(FName(*Segments[Index])) : nullptr;
+				if (Leaf != nullptr)
+				{
+					ResolvedSegments.Add(Leaf->GetName());
+				}
+			}
+			if (Leaf == nullptr)
+			{
+				return false;
+			}
+			OutTarget.Object = Candidate;
+			OutTarget.HeadProperty = Head;
+			OutTarget.LeafProperty = Leaf;
+			OutTarget.PropertyPath = FString::Join(ResolvedSegments, TEXT("."));
+			return true;
+		}
+		return false;
+	}
+
+	/** How many float/double channels this property's track carries, or 0 when it has no track. */
+	int32 GetTimelineChannelCount(const FProperty* InProperty, bool& bOutIsColor, bool& bOutIsFloatChannel)
+	{
+		bOutIsColor = false;
+		bOutIsFloatChannel = false;
+		if (CastField<FFloatProperty>(InProperty) != nullptr)
+		{
+			bOutIsFloatChannel = true;
+			return 1;
+		}
+		if (CastField<FDoubleProperty>(InProperty) != nullptr)
+		{
+			return 1;
+		}
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InProperty);
+		if (AsStruct == nullptr)
+		{
+			return 0;
+		}
+		// FLinearColor and FColor, and deliberately not FSlateColor: a slate colour is a value OR a
+		// style-table lookup, and a track that drove the value half would silently turn a themed
+		// colour into a literal one. Nothing in the library declares an Interp FSlateColor anyway.
+		if (AsStruct->Struct == TBaseStructure<FLinearColor>::Get()
+			|| AsStruct->Struct == TBaseStructure<FColor>::Get())
+		{
+			bOutIsColor = true;
+			bOutIsFloatChannel = true;
+			return 4;
+		}
+		if (AsStruct->Struct == TBaseStructure<FVector2D>::Get())
+		{
+			return 2;
+		}
+		if (AsStruct->Struct == TBaseStructure<FVector>::Get())
+		{
+			return 3;
+		}
+		if (AsStruct->Struct == TBaseStructure<FVector4>::Get())
+		{
+			return 4;
+		}
+		return 0;
+	}
+
+	/**
+	 * The authored literal as up to four channel values, through the SAME parser every other value
+	 * uses -- so `(1, 1)`, `#FFC800` and `0.5` mean here exactly what they mean on a property line.
+	 *
+	 * Parsed into a scratch copy of the destination property rather than interpreted by shape, which
+	 * is what keeps colour quantisation, tuple arity and the short-form table in one place.
+	 */
+	bool ReadTimelineChannels(const FProperty* InLeaf, const FDreamUIValue& InValue, int32 InChannelCount,
+		bool bInIsColor, double OutChannels[4])
+	{
+		void* Scratch = FMemory::Malloc(InLeaf->GetSize(), InLeaf->GetMinAlignment());
+		InLeaf->InitializeValue(Scratch);
+		bool bParsed = false;
+		if (DreamUIValueFormat::HasShortForm(InLeaf))
+		{
+			bParsed = DreamUIValueFormat::Parse(InLeaf, InValue, Scratch);
+		}
+		else if (const FNumericProperty* AsNumeric = CastField<FNumericProperty>(InLeaf))
+		{
+			double Number = 0.0;
+			bParsed = InValue.Kind == EDreamUIValueKind::Number && LexTryParseString(Number, *InValue.Raw);
+			if (bParsed)
+			{
+				AsNumeric->SetFloatingPointPropertyValue(Scratch, Number);
+			}
+		}
+
+		if (bParsed)
+		{
+			if (bInIsColor)
+			{
+				// Through FLinearColor whatever the destination is: the colour track's four channels
+				// are linear floats, and FColor's bytes are sRGB. ParseColorHex/PrintColorHex own
+				// that conversion for the whole pipeline; reproducing it here is how the two drift.
+				FLinearColor Linear = FLinearColor::White;
+				const FStructProperty* AsStruct = CastField<FStructProperty>(InLeaf);
+				if (AsStruct->Struct == TBaseStructure<FLinearColor>::Get())
+				{
+					Linear = *static_cast<const FLinearColor*>(Scratch);
+				}
+				else
+				{
+					// FLinearColor(FColor) is the sRGB-decoding constructor -- the same pair
+					// ParseColorHex and PrintColorHex use, because the track's channels are linear.
+					Linear = FLinearColor(*static_cast<const FColor*>(Scratch));
+				}
+				OutChannels[0] = Linear.R;
+				OutChannels[1] = Linear.G;
+				OutChannels[2] = Linear.B;
+				OutChannels[3] = Linear.A;
+			}
+			else if (const FNumericProperty* AsNumeric = CastField<FNumericProperty>(InLeaf))
+			{
+				OutChannels[0] = AsNumeric->GetFloatingPointPropertyValue(Scratch);
+			}
+			else if (InChannelCount == 2)
+			{
+				const FVector2D& Value = *static_cast<const FVector2D*>(Scratch);
+				OutChannels[0] = Value.X;
+				OutChannels[1] = Value.Y;
+			}
+			else if (InChannelCount == 3)
+			{
+				const FVector& Value = *static_cast<const FVector*>(Scratch);
+				OutChannels[0] = Value.X;
+				OutChannels[1] = Value.Y;
+				OutChannels[2] = Value.Z;
+			}
+			else if (InChannelCount == 4)
+			{
+				const FVector4& Value = *static_cast<const FVector4*>(Scratch);
+				OutChannels[0] = Value.X;
+				OutChannels[1] = Value.Y;
+				OutChannels[2] = Value.Z;
+				OutChannels[3] = Value.W;
+			}
+		}
+
+		InLeaf->DestroyValue(Scratch);
+		FMemory::Free(Scratch);
+		return bParsed;
+	}
+
+	/** The ease of that name, or false. The word list is EDreamTweenEase's, read through reflection. */
+	bool FindEaseType(const FString& InName, EDreamTweenEase& OutEase)
+	{
+		const UEnum* EaseEnum = StaticEnum<EDreamTweenEase>();
+		const int64 Value = EaseEnum != nullptr ? EaseEnum->GetValueByNameString(InName) : INDEX_NONE;
+		if (Value == INDEX_NONE || static_cast<EDreamTweenEase>(Value) == EDreamTweenEase::CurveFloat)
+		{
+			// CurveFloat is excluded on purpose rather than missing: it names a curve ASSET, and a
+			// timeline key has nowhere to put one. An author who needs a hand-drawn curve marks the
+			// timeline `external` and draws it in Sequencer, which is the layer that exists for it.
+			return false;
+		}
+		OutEase = static_cast<EDreamTweenEase>(Value);
+		return true;
+	}
+
+	/** One channel's worth of keys, in frames, for one segment of one track. */
+	struct FTimelineSample
+	{
+		FFrameNumber Frame;
+		double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
+	};
+
+	/**
+	 * Every key a track line produces, eases resolved into sampled points.
+	 *
+	 * Returns false only when an ease name is not one; a track with a single key is fine and produces
+	 * one constant key, which is how an author pins a value for the whole animation.
+	 */
+	bool SampleTimelineTrack(const FDreamUITimelineTrack& InTrack, const TArray<TArray<double>>& InKeyChannels,
+		int32 InChannelCount, TArray<FTimelineSample>& OutSamples, FString& OutBadEaseName)
+	{
+		const double SecondsPerSample = 1.0 / static_cast<double>(TimelineDisplayRate);
+		for (int32 KeyIndex = 0; KeyIndex < InTrack.Keys.Num(); ++KeyIndex)
+		{
+			const FDreamUITimelineKey& Key = InTrack.Keys[KeyIndex];
+			FTimelineSample Start;
+			Start.Frame = TimelineTimeToFrame(Key.Time);
+			for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
+			{
+				Start.Channels[Channel] = InKeyChannels[KeyIndex][Channel];
+			}
+			OutSamples.Add(Start);
+
+			if (KeyIndex + 1 >= InTrack.Keys.Num())
+			{
+				break;
+			}
+			const FDreamUITimelineKey& NextKey = InTrack.Keys[KeyIndex + 1];
+			const double Span = NextKey.Time - Key.Time;
+			if (Span <= 0.0 || Key.EaseName.IsEmpty() || Key.EaseName.Equals(TEXT("Linear")))
+			{
+				// Linear needs no samples between: two keys and a straight line is exactly the curve.
+				continue;
+			}
+
+			EDreamTweenEase Ease = EDreamTweenEase::Linear;
+			if (!FindEaseType(Key.EaseName, Ease))
+			{
+				OutBadEaseName = Key.EaseName;
+				return false;
+			}
+			const FDreamTweenFunction Curve = UDreamTweener::GetEaseFunction(Ease);
+			if (!Curve.IsBound())
+			{
+				OutBadEaseName = Key.EaseName;
+				return false;
+			}
+
+			const int32 SampleCount = FMath::Clamp(FMath::CeilToInt(Span / SecondsPerSample) - 1, 0, 600);
+			for (int32 Sample = 1; Sample <= SampleCount; ++Sample)
+			{
+				const double Alpha = static_cast<double>(Sample) / static_cast<double>(SampleCount + 1);
+				// c = 1, b = 0, d = 1: the curve library's own normalised 0..1 shape, so `ease
+				// OutBounce` here and a DreamTween OutBounce are the same motion by construction.
+				const double Eased = static_cast<double>(Curve.Execute(1.0f, 0.0f, static_cast<float>(Alpha), 1.0f));
+				FTimelineSample Between;
+				Between.Frame = TimelineTimeToFrame(Key.Time + Span * Alpha);
+				for (int32 Channel = 0; Channel < InChannelCount; ++Channel)
+				{
+					const double From = InKeyChannels[KeyIndex][Channel];
+					const double To = InKeyChannels[KeyIndex + 1][Channel];
+					Between.Channels[Channel] = From + (To - From) * Eased;
+				}
+				OutSamples.Add(Between);
+			}
+		}
+		return true;
+	}
+
+	/** Write one channel's samples into a float or double MovieScene channel. */
+	void FillTimelineFloatChannel(FMovieSceneFloatChannel& OutChannel, const TArray<FTimelineSample>& InSamples, int32 InChannel)
+	{
+		for (const FTimelineSample& Sample : InSamples)
+		{
+			OutChannel.AddLinearKey(Sample.Frame, static_cast<float>(Sample.Channels[InChannel]));
+		}
+	}
+
+	void FillTimelineDoubleChannel(FMovieSceneDoubleChannel& OutChannel, const TArray<FTimelineSample>& InSamples, int32 InChannel)
+	{
+		for (const FTimelineSample& Sample : InSamples)
+		{
+			OutChannel.AddLinearKey(Sample.Frame, Sample.Channels[InChannel]);
+		}
+	}
+
+	/** One property track line, built onto InAnimation. Reports and returns false on refusal. */
+	bool BuildTimelineTrack(const FDreamUITimeline& InTimeline, const FDreamUITimelineTrack& InTrack,
+		UDreamWidgetAnimation* InAnimation, UDreamWidget* InHost, FBuildContext& InContext)
+	{
+		UDreamWidget* Target = FindWidgetByNodePath(InHost, InTrack.NodePath);
+		if (!IsValid(Target))
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelineTargetNotFound, InTrack.Location,
+				FString::Printf(TEXT("timeline '%s' animates '%s', and this file declares no node on that path"),
+					*InTimeline.Name, *InTrack.NodePath));
+			return false;
+		}
+
+		FResolvedTimelineTarget Resolved;
+		if (!ResolveTimelineTarget(Target, InTrack.PropertyName, Resolved))
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelinePropertyNotAnimatable, InTrack.Location,
+				FString::Printf(TEXT("'%s' has no property '%s' on itself, its visual or any of its behaviours -- a track names what the animation editor shows, which is a property's own name or the label on its row"),
+					*Target->GetDisplayName(), *InTrack.PropertyName));
+			return false;
+		}
+		if (!Resolved.HeadProperty->HasAnyPropertyFlags(CPF_Interp))
+		{
+			// Sequencer's own rule, and the reason it is the rule here: a property track drives its
+			// target through the Interp machinery, so a property nobody marked Interp is one the
+			// animation editor does not offer either. Refusing with the reason beats compiling a
+			// track that exists and never writes.
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelinePropertyNotAnimatable, InTrack.Location,
+				FString::Printf(TEXT("'%s' is not marked Interp, so no animation track can drive it -- the animation editor does not offer it either"),
+					*InTrack.PropertyName));
+			return false;
+		}
+
+		bool bIsColor = false;
+		bool bIsFloatChannel = false;
+		const int32 ChannelCount = GetTimelineChannelCount(Resolved.LeafProperty, bIsColor, bIsFloatChannel);
+		if (ChannelCount == 0)
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::TimelinePropertyNotAnimatable, InTrack.Location,
+				FString::Printf(TEXT("'%s' is a %s, and a timeline drives numbers, 2-, 3- and 4-component vectors and colours -- anything else belongs in an 'external' timeline"),
+					*InTrack.PropertyName, *Resolved.LeafProperty->GetCPPType()));
+			return false;
+		}
+
+		TArray<TArray<double>> KeyChannels;
+		KeyChannels.Reserve(InTrack.Keys.Num());
+		for (const FDreamUITimelineKey& Key : InTrack.Keys)
+		{
+			double Channels[4] = { 0.0, 0.0, 0.0, 0.0 };
+			if (!ReadTimelineChannels(Resolved.LeafProperty, Key.Value, ChannelCount, bIsColor, Channels))
+			{
+				AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::ValueTypeMismatch, Key.Location,
+					FString::Printf(TEXT("'%s' cannot be read as a value for '%s'"), *Key.Value.Raw, *InTrack.PropertyName));
+				return false;
+			}
+			KeyChannels.Add(TArray<double>({ Channels[0], Channels[1], Channels[2], Channels[3] }));
+		}
+
+		TArray<FTimelineSample> Samples;
+		FString BadEase;
+		if (!SampleTimelineTrack(InTrack, KeyChannels, ChannelCount, Samples, BadEase))
+		{
+			AddErrorIn(*InContext.Diagnostics, InTimeline.SourceName, EDreamUIDiagnosticCode::UnknownEaseName, InTrack.Location,
+				FString::Printf(TEXT("'%s' is not a curve name -- the set is EDreamTweenEase's, minus CurveFloat"), *BadEase));
+			return false;
+		}
+		if (Samples.Num() == 0)
+		{
+			return true;
+		}
+
+		UMovieScene* MovieScene = InAnimation->GetMovieScene();
+		// One possessable per bound OBJECT, reused across track lines: two tracks on one widget are
+		// two rows under one binding in Sequencer, which is what an author expects to see. A property
+		// that lives on the widget's VISUAL or on a behaviour is a different object and therefore a
+		// different binding -- the name says which, because otherwise two rows read "Icon" and only
+		// their contents tell them apart.
+		const FString BindingName = Resolved.Object == Target
+			? Target->GetDisplayName()
+			: FString::Printf(TEXT("%s.%s"), *Target->GetDisplayName(), *Resolved.Object->GetClass()->GetName());
+		FGuid Binding;
+		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)
+		{
+			const FMovieScenePossessable& Possessable = MovieScene->GetPossessable(Index);
+			if (Possessable.GetName() == BindingName
+				&& Possessable.GetPossessedObjectClass() == Resolved.Object->GetClass())
+			{
+				Binding = Possessable.GetGuid();
+				break;
+			}
+		}
+		if (!Binding.IsValid())
+		{
+			Binding = MovieScene->AddPossessable(BindingName, Resolved.Object->GetClass());
+			// Against the HOST, which is what the runtime resolves from -- see BindPossessableObject.
+			InAnimation->BindPossessableObject(Binding, *Resolved.Object, InHost);
+		}
+
+		const TRange<FFrameNumber> SectionRange(FFrameNumber(0), TimelineTimeToFrame(InTimeline.Duration) + 1);
+		if (bIsColor)
+		{
+			UMovieSceneColorTrack* Track = MovieScene->AddTrack<UMovieSceneColorTrack>(Binding);
+			Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+			UMovieSceneColorSection* Section = CastChecked<UMovieSceneColorSection>(Track->CreateNewSection());
+			Section->SetRange(SectionRange);
+			FillTimelineFloatChannel(Section->GetRedChannel(), Samples, 0);
+			FillTimelineFloatChannel(Section->GetGreenChannel(), Samples, 1);
+			FillTimelineFloatChannel(Section->GetBlueChannel(), Samples, 2);
+			FillTimelineFloatChannel(Section->GetAlphaChannel(), Samples, 3);
+			Track->AddSection(*Section);
+			return true;
+		}
+		if (ChannelCount == 1 && bIsFloatChannel)
+		{
+			UMovieSceneFloatTrack* Track = MovieScene->AddTrack<UMovieSceneFloatTrack>(Binding);
+			Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+			UMovieSceneFloatSection* Section = CastChecked<UMovieSceneFloatSection>(Track->CreateNewSection());
+			Section->SetRange(SectionRange);
+			TArrayView<FMovieSceneFloatChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneFloatChannel>();
+			if (Channels.Num() > 0)
+			{
+				FillTimelineFloatChannel(*Channels[0], Samples, 0);
+			}
+			Track->AddSection(*Section);
+			return true;
+		}
+		if (ChannelCount == 1)
+		{
+			UMovieSceneDoubleTrack* Track = MovieScene->AddTrack<UMovieSceneDoubleTrack>(Binding);
+			Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+			UMovieSceneDoubleSection* Section = CastChecked<UMovieSceneDoubleSection>(Track->CreateNewSection());
+			Section->SetRange(SectionRange);
+			TArrayView<FMovieSceneDoubleChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
+			if (Channels.Num() > 0)
+			{
+				FillTimelineDoubleChannel(*Channels[0], Samples, 0);
+			}
+			Track->AddSection(*Section);
+			return true;
+		}
+
+		UMovieSceneDoubleVectorTrack* Track = MovieScene->AddTrack<UMovieSceneDoubleVectorTrack>(Binding);
+		Track->SetPropertyNameAndPath(FName(*Resolved.LeafProperty->GetName()), Resolved.PropertyPath);
+		Track->SetNumChannelsUsed(ChannelCount);
+		UMovieSceneDoubleVectorSection* Section = CastChecked<UMovieSceneDoubleVectorSection>(Track->CreateNewSection());
+		Section->SetChannelsUsed(ChannelCount);
+		Section->SetRange(SectionRange);
+		TArrayView<FMovieSceneDoubleChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
+		for (int32 Index = 0; Index < ChannelCount && Index < Channels.Num(); ++Index)
+		{
+			FillTimelineDoubleChannel(*Channels[Index], Samples, Index);
+		}
+		Track->AddSection(*Section);
+		return true;
+	}
+
+	/** The block's `@time -> Name` lines as one unbound event row. */
+	void BuildTimelineEventTrack(const FDreamUITimeline& InTimeline, const FDreamUITimelineTrack& InTrack,
+		UDreamWidgetAnimation* InAnimation)
+	{
+		UMovieScene* MovieScene = InAnimation->GetMovieScene();
+		UDreamUIAnimEventTrack* Track = MovieScene->AddTrack<UDreamUIAnimEventTrack>();
+		UDreamUIAnimEventSection* Section = CastChecked<UDreamUIAnimEventSection>(Track->CreateNewSection());
+		Section->SetRange(TRange<FFrameNumber>(FFrameNumber(0), TimelineTimeToFrame(InTimeline.Duration) + 1));
+		for (const FDreamUITimelineKey& Key : InTrack.Keys)
+		{
+			Section->EventChannel.GetData().AddKey(TimelineTimeToFrame(Key.Time), Key.EventName);
+		}
+		Track->AddSection(*Section);
+	}
+
+	/**
+	 * Every `timeline` block in the file, onto the root's animation component.
+	 *
+	 * The root, because that is where the animations already live in practice and what the compiler's
+	 * carry, the class-variable pass and the runtime's playback entry all address. `external` blocks
+	 * build nothing at all -- their whole content is the statement that they exist, which the
+	 * compiler reads off the AST when it decides what to carry.
+	 */
+	void BuildTimelines(FBuildContext& InContext)
+	{
+		if (InContext.Ast == nullptr || InContext.Ast->Timelines.Num() == 0)
+		{
+			return;
+		}
+		UDreamWidget* Host = InContext.Tree != nullptr ? InContext.Tree->RootWidget.Get() : nullptr;
+		if (!IsValid(Host))
+		{
+			return;
+		}
+
+		UDreamWidgetAnimationComponent* Animator = nullptr;
+		for (const FDreamUITimeline& Timeline : InContext.Ast->Timelines)
+		{
+			if (Timeline.bExternal)
+			{
+				continue;
+			}
+			if (Animator == nullptr)
+			{
+				Animator = Host->GetComponent<UDreamWidgetAnimationComponent>();
+				if (Animator == nullptr)
+				{
+					Animator = Host->AddComponent<UDreamWidgetAnimationComponent>();
+				}
+			}
+			if (Animator == nullptr)
+			{
+				return;
+			}
+
+			UDreamWidgetAnimation* Animation = Animator->AddNewAnimation();
+			if (!IsValid(Animation))
+			{
+				continue;
+			}
+			Animation->SetDisplayNameString(Timeline.Name);
+			Animation->SetLanguageOwned(true);
+
+			// The longest key wins when the block declares no duration, so a timeline is never
+			// shorter than the motion written into it -- an author who wrote keys past `duration`
+			// meant the keys.
+			double Duration = Timeline.Duration;
+			for (const FDreamUITimelineTrack& Track : Timeline.Tracks)
+			{
+				for (const FDreamUITimelineKey& Key : Track.Keys)
+				{
+					Duration = FMath::Max(Duration, Key.Time);
+				}
+			}
+
+			UMovieScene* MovieScene = Animation->GetMovieScene();
+			MovieScene->SetTickResolutionDirectly(FFrameRate(TimelineTickResolution, 1));
+			MovieScene->SetDisplayRate(FFrameRate(TimelineDisplayRate, 1));
+			MovieScene->SetPlaybackRange(FFrameNumber(0), TimelineTimeToFrame(Duration).Value + 1);
+
+			FDreamUITimeline Resolved = Timeline;
+			Resolved.Duration = Duration;
+			for (const FDreamUITimelineTrack& Track : Timeline.Tracks)
+			{
+				if (Track.bIsEvent)
+				{
+					BuildTimelineEventTrack(Resolved, Track, Animation);
+				}
+				else
+				{
+					BuildTimelineTrack(Resolved, Track, Animation, Host, InContext);
+				}
+			}
+		}
+	}
 }
 
 UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* InOuter,
 	FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings,
-	TArray<FDreamWidgetEventBinding>* OutEventBindings)
+	TArray<FDreamWidgetEventBinding>* OutEventBindings, TArray<FDreamWidgetEachBinding>* OutEachBindings)
 {
 	using namespace DreamUITextBuilderLocal;
 
@@ -1369,6 +2737,7 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	Context.Diagnostics = &OutDiagnostics;
 	Context.Bindings = &OutBindings;
 	Context.EventBindings = OutEventBindings;
+	Context.EachBindings = OutEachBindings;
 	// The namespace a translator sees. ClassPath makes it stable across a rename of the .dui file,
 	// which the source name would not; the source name is the fallback for a file that has not been
 	// given a class yet, which is every file in an editor preview before it is first compiled.
@@ -1384,6 +2753,16 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	// the tree's invariant is that Parent is derivable from Children, and a builder that leaves it
 	// almost-true hands the designer a tree whose GetParent() is null in one place nobody looks.
 	Context.Tree->RebuildParentLinks();
+
+	// Last, because it is the one pass that needs the finished tree: a property may name a node
+	// declared below the line that points at it, and the walk above only ever knows what it has
+	// already passed. After the parent links rather than before, so what it resolves against is a
+	// tree with no half-set invariant left in it.
+	ResolveNodeReferences(Context);
+
+	// Last of all, because a track line's path is resolved against the FINISHED tree: a timeline may
+	// animate a node declared below the block that names it, exactly as a node reference may.
+	BuildTimelines(Context);
 
 	return OutDiagnostics.NumErrors() > ErrorsBefore ? nullptr : Context.Tree;
 }

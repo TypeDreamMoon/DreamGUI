@@ -15,7 +15,14 @@ public:
 	FVector eulerAngle;
 
 	bool sweep = false;
-	FHitResult* sweepHitResult = nullptr;
+	/**
+	 * The sweep result this tween writes into, owned. The pointer that used to live here came from the
+	 * blueprint node's out-parameter -- a slot in the VM stack frame that is gone the moment the node
+	 * returns, while the tween goes on writing a hit result through it every tick for the rest of its
+	 * life. Nothing ever read that out-parameter either: the node had already returned before the first
+	 * write. So the result is kept here, where it stays valid for as long as anything can write it.
+	 */
+	FHitResult sweepHitResult;
 	ETeleportType teleportType = ETeleportType::None;
 
 	FDreamTweenRotationQuatGetterFunction getter;
@@ -34,7 +41,10 @@ public:
 		this->changeFloat = 1.0f;
 
 		this->sweep = newSweep;
-		this->sweepHitResult = newSweepHitResult;
+		if (newSweepHitResult != nullptr)
+		{
+			this->sweepHitResult = *newSweepHitResult;
+		}
 		this->teleportType = newTeleportType;
 	}
 protected:
@@ -48,7 +58,7 @@ protected:
 	{
 		float lerpValue = tweenFunc.Execute(changeFloat, startFloat, currentTime, duration);
 		auto value = startValue * FQuat::MakeFromEuler(eulerAngle * lerpValue);
-		setter.ExecuteIfBound(value, sweep, sweepHitResult, teleportType);
+		setter.ExecuteIfBound(value, sweep, sweep ? &sweepHitResult : nullptr, teleportType);
 	}
 	virtual void SetValueForIncremental() override
 	{
@@ -58,4 +68,15 @@ protected:
 	{
 		startValue = originStartValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		// This tweener has no end value: it turns BY eulerAngle from wherever it starts. Reversing it
+		// therefore means starting already turned and unwinding -- begin at start*euler, and negate
+		// the angle so the tween arrives back where the value is now.
+		startValue = startValue * FQuat::MakeFromEuler(eulerAngle);
+		eulerAngle = -eulerAngle;
+		originStartValue = startValue;
+	}
+	/** Degrees, the unit this tweener turns in. */
+	virtual float GetValueDistance()const override { return static_cast<float>(eulerAngle.Size()); }
 };

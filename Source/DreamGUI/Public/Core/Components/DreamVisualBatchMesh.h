@@ -4,6 +4,7 @@
 #pragma once
 
 #include "DreamVisual.h"
+#include "Core/DreamUIBlendMode.h"
 #include "DreamVisualBatchMesh.generated.h"
 
 class UDreamMeshModifierBase;
@@ -106,13 +107,19 @@ protected:
 	
 	/** Will any geometry modifier change these data? */
 	void GeometryModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor);
-	/** 
-	 * use GeometryModifier to modify geometry 
-	 */
-	void ApplyGeometryModifier(bool triangleChanged, bool uvChanged, bool colorChanged, bool vertexPositionChanged);
 
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
+	/**
+	 * Run the modifier list over this element's geometry, in run order.
+	 *
+	 * Run order is component index with the mesh-DUPLICATING modifiers last, because a copy freezes
+	 * whatever the modifiers before it produced -- see UDreamMeshModifierBase::GetDuplicatesMesh.
+	 * Public rather than protected so that the order can be asserted without standing up a canvas:
+	 * the only other way in is UpdateGeometry, which opens with check(Canvas) and hands the vertex
+	 * transform to the canvas's async queue.
+	 */
+	void ApplyGeometryModifier(bool triangleChanged, bool uvChanged, bool colorChanged, bool vertexPositionChanged);
 	void MarkVertexPositionDirty();
 	void MarkVertexUVDirty();
 	void MarkCanvasUpdate();
@@ -136,6 +143,15 @@ public:
 	/** is this UI element type support draw-call batching? */
 	virtual bool SupportDrawCallBatching()const { return true; }
 
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		EDreamUIBlendMode GetBlendMode()const { return BlendMode; }
+	/**
+	 * How this element composites. Elements that composite differently never share a draw-call, so
+	 * scattering blend modes through a screen costs draw-calls -- group them where you can.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetBlendMode(EDreamUIBlendMode Value);
+
 	FORCEINLINE bool GetRequirePropertiesForMaterial_Size()const{ return PropertiesForMaterial & (1 << (int)EDreamVisualPropertiesForMaterial::Size); }
 	FORCEINLINE bool GetRequirePropertiesForMaterial_CenterPosition()const{ return PropertiesForMaterial & (1 << (int)EDreamVisualPropertiesForMaterial::CenterPosition); }
 
@@ -151,6 +167,13 @@ protected:
 	/** enable properties for material */
 	UPROPERTY(EditAnywhere, Category = DreamGUI, meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamVisualPropertiesForMaterial"))
 	int8 PropertiesForMaterial = 0;
+	/**
+	 * How this element composites into what is already drawn. Honoured by DreamGUI's built-in shader;
+	 * an element with a material of its own composites the way that material says, and this then only
+	 * takes part in the batching decision.
+	 */
+	UPROPERTY(EditAnywhere, Category = DreamGUI)
+	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 	TArray<TWeakObjectPtr<UDreamMeshModifierBase>> MeshModifierArray;
 
 	/** texture for render this UI element */

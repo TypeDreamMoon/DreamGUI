@@ -110,10 +110,18 @@ protected:
 	virtual void OnDisable()override;
 	virtual void OnUnregister()override;
 
+	/**
+	 * Named like AActor's ReceiveActorBeginOverlap next to OnActorBeginOverlap, and for the same
+	 * reason: the Angelscript binder strips "Receive" off a BlueprintImplementableEvent, so a
+	 * "ReceiveOnScopeActivated" would land on the script name "OnScopeActivated" and collide with the
+	 * delegate above (asNAME_TAKEN, which then fails the property registration and turns every
+	 * commandlet run into "Failure - 8 error(s)"). The DisplayName keeps the Blueprint override list
+	 * reading the same as before.
+	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnScopeActivated"), Category = "DreamGUI-Navigation")
-	void ReceiveOnScopeActivated();
+	void ReceiveScopeActivated();
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnScopeDeactivated"), Category = "DreamGUI-Navigation")
-	void ReceiveOnScopeDeactivated();
+	void ReceiveScopeDeactivated();
 
 	/** Push as soon as the widget goes live. Off for a scope a Blueprint opens and closes itself. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")

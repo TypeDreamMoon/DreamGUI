@@ -61,20 +61,23 @@ public:
 	 *
 	 * The prefab's own logic lives on the root widget's behaviour components, so reach it with
 	 * GetComponent rather than by casting the returned pointer.
+	 *
+	 * The return pin takes the shape of InWidgetClass, so a Blueprint subclass's own variables and
+	 * functions are reachable without a Cast, as with UMG's Create Widget node.
 	 */
-	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"), Category = "DreamGUI|Create")
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true", DeterminesOutputType = "InWidgetClass"), Category = "DreamGUI|Create")
 	static UDreamWidget* CreateDreamWidgetOfClass(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> InWidgetClass);
 
 	/** Return the world's shared ScreenSpaceOverlay root, creating it on demand. */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "DreamGUI|Screen")
 	static UDreamWidget* GetOrCreateScreenSpaceUIRoot(UObject* WorldContextObject);
 
-	/** Load a prefab under the shared screen root and track it as a viewport page. */
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = "DreamGUI|Screen")
+	/** Load a prefab under the shared screen root and track it as a viewport page. Return pin follows InWidgetClass. */
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake", DeterminesOutputType = "InWidgetClass"), Category = "DreamGUI|Screen")
 	static UDreamWidget* AddWidgetOfClassToScreen(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> InWidgetClass, const FDreamUIWidgetCreatedCallback& InCallbackBeforeAlive, int32 SortOrder = 0);
 
-	/** UMG-style CreateWidget + AddToViewport convenience node for a DreamUI prefab. */
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject"), Category = "DreamGUI|Screen")
+	/** UMG-style CreateWidget + AddToViewport convenience node for a DreamUI prefab. Return pin follows InWidgetClass. */
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", DeterminesOutputType = "InWidgetClass"), Category = "DreamGUI|Screen")
 	static UDreamWidget* AddWidgetOfClassToViewport(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> InWidgetClass, int32 SortOrder = 0);
 
 	/** Destroy a tracked viewport page and remove it from the screen registry. */
@@ -92,6 +95,24 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|World")
 	static bool AttachWidgetToSceneComponent(UDreamWidget* InRoot, USceneComponent* InSceneComponent);
+
+	/**
+	 * Lay this widget's tree out NOW rather than on the next pass -- UMG's ForceLayoutPrepass.
+	 *
+	 * The manager has done this since the beginning; it simply had no Blueprint face, and the manager
+	 * itself is not a Blueprint type, so a graph that needed a size before the frame ended had no way
+	 * to ask. Use it when you have just changed content and need the resulting size in the same frame.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Layout")
+	static void ForceLayoutPrepass(UDreamWidget* InWidget);
+
+	/** Mark this widget for the next layout pass -- UMG's InvalidateLayoutAndVolatility. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Layout")
+	static void InvalidateLayout(UDreamWidget* InWidget);
+
+	/** True while a widget has been created but not yet added to anything. See ConstructWidget. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Create")
+	static bool IsWidgetParked(const UDreamWidget* InWidget);
 
 	/**
 	 * Duplicate actor and all it's children actors

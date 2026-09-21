@@ -4,7 +4,10 @@
 
 #include "Misc/AutomationTest.h"
 #include "Designer/DreamWidgetDesignerViewportClient.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Thumbnail/DreamWidgetBlueprintThumbnailRenderer.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Components/DreamWidgetPlacement.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Engine/World.h"
 
@@ -191,6 +194,145 @@ bool FDreamMarqueeSelectionModesTest::RunTest(const FString& Parameters)
 
 	FDreamWidgetDesignerViewportClient::CombineMarqueeSelection(EMarqueeMode::Remove, Current, Caught, Result);
 	TestTrue(TEXT("alt removes, and never adds what it caught"), Result.Num() == 1 && Result.Contains(A));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerEdgeSnapTest,
+	"DreamGUI.Designer.ADragSnapsToASiblingsEdgeBeforeItSnapsToTheGrid",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The alignment rule, stated without a viewport.
+ *
+ * The designer had a grid and nothing else, so lining a button up with the one above it was done by
+ * eye or by typing numbers -- and the grid actively got in the way, catching the drag a few units
+ * short of the edge the author could see they were aiming at.
+ */
+bool FDreamDesignerEdgeSnapTest::RunTest(const FString&)
+{
+	using FEdgeSnapResult = FDreamWidgetDesignerViewportClient::FEdgeSnapResult;
+	// A sibling occupying 100..300, so its edges and centre are the three lines on offer.
+	const TArray<double> Lines = { 100.0, 200.0, 300.0 };
+
+	// Low edge to low edge: a rect at 104..154 is four short of the 100 line.
+	{
+		const FEdgeSnapResult Snap = FDreamWidgetDesignerViewportClient::SolveEdgeSnap(104.0, 154.0, Lines, 6.0);
+		TestTrue(TEXT("a near low edge snaps"), Snap.bSnapped);
+		TestEqual(TEXT("and moves onto the line"), Snap.Delta, -4.0);
+		TestEqual(TEXT("and the guide belongs on that line"), Snap.Line, 100.0);
+	}
+	// High edge to high edge, which the low edge cannot reach.
+	{
+		const FEdgeSnapResult Snap = FDreamWidgetDesignerViewportClient::SolveEdgeSnap(248.0, 298.0, Lines, 6.0);
+		TestTrue(TEXT("a near high edge snaps"), Snap.bSnapped);
+		TestEqual(TEXT("by the distance to it"), Snap.Delta, 2.0);
+		TestEqual(TEXT("on the far line"), Snap.Line, 300.0);
+	}
+	// Centre to centre: 176..226 has its middle at 201, one from the sibling's 200.
+	{
+		const FEdgeSnapResult Snap = FDreamWidgetDesignerViewportClient::SolveEdgeSnap(176.0, 226.0, Lines, 6.0);
+		TestTrue(TEXT("centres snap to centres"), Snap.bSnapped);
+		TestEqual(TEXT("by one unit"), Snap.Delta, -1.0);
+	}
+	// Out of reach stays where it is; a drag must not jump to a line the author is nowhere near.
+	{
+		const FEdgeSnapResult Snap = FDreamWidgetDesignerViewportClient::SolveEdgeSnap(140.0, 190.0, Lines, 6.0);
+		TestFalse(TEXT("nothing within tolerance does not snap"), Snap.bSnapped);
+		TestEqual(TEXT("and asks for no correction"), Snap.Delta, 0.0);
+	}
+	// No lines and no tolerance are both "off", which is what every caller that gathers no siblings
+	// passes -- the case that must leave the grid exactly as it was.
+	{
+		TestFalse(TEXT("no lines means no snap"),
+			FDreamWidgetDesignerViewportClient::SolveEdgeSnap(104.0, 154.0, TArray<double>(), 6.0).bSnapped);
+		TestFalse(TEXT("zero tolerance means no snap"),
+			FDreamWidgetDesignerViewportClient::SolveEdgeSnap(104.0, 154.0, Lines, 0.0).bSnapped);
+	}
+
+	// And through the drag resolver: a sibling edge beats the gridline that would otherwise win.
+	{
+		FDreamWidgetDesignerViewportClient::FMoveDragTarget Target;
+		Target.StartPosition = FVector2D(129.0, 0.0);
+		Target.Size = FVector2D(50.0, 50.0);
+		Target.Pivot = FVector2D(0.5, 0.5);
+		// No travel: the drag is asked where it would land if the mouse had not moved, so the answer
+		// is entirely the snapping.
+		TArray<FDreamWidgetDesignerViewportClient::FMoveDragResult> Results;
+		FDreamWidgetDesignerViewportClient::FSiblingSnapLines SnapLines;
+		SnapLines.Horizontal = Lines;
+		SnapLines.Tolerance = 6.0;
+		// Pivot-centred at 129 means the rect runs 104..154, four from the sibling's 100 line; the
+		// grid of 8 would have caught the POSITION at 128, which is one unit the other way.
+		TArray<FDreamWidgetDesignerViewportClient::FMoveDragTarget> Targets;
+		Targets.Add(Target);
+		FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results, SnapLines);
+		if (!TestEqual(TEXT("one target answers once"), Results.Num(), 1))
+		{
+			return false;
+		}
+		TestEqual(TEXT("the sibling edge wins the axis, not the gridline"), Results[0].Position.X, 125.0);
+		TestTrue(TEXT("and the axis reports snapped, so a guide is drawn"), Results[0].bSnappedHorizontal);
+
+		// With no lines, the same drag is the grid's again -- the proof that this is an addition.
+		Results.Reset();
+		FDreamWidgetDesignerViewportClient::ResolveMoveDrag(Targets, 8.0f, Results);
+		TestEqual(TEXT("without siblings the gridline still decides"), Results[0].Position.X, 128.0);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDPIPreviewTest,
+	"DreamGUI.Designer.TheDPIPreviewShrinksTheCanvasAndNeverToZero",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerDPIPreviewTest::RunTest(const FString&)
+{
+	// Off, and the identity -- which is what every author who has not asked for this gets.
+	TestTrue(TEXT("a scale of one changes nothing"),
+		FDreamWidgetBlueprintEditor::ApplyDPIScaleToViewportSize(FIntPoint(1920, 1080), 1.0f) == FIntPoint(1920, 1080));
+	TestTrue(TEXT("and so does a scale of zero, which is 'no answer' rather than 'infinitely small'"),
+		FDreamWidgetBlueprintEditor::ApplyDPIScaleToViewportSize(FIntPoint(1920, 1080), 0.0f) == FIntPoint(1920, 1080));
+	TestTrue(TEXT("a 2x DPI halves the surface the widget is laid out on"),
+		FDreamWidgetBlueprintEditor::ApplyDPIScaleToViewportSize(FIntPoint(1920, 1080), 2.0f) == FIntPoint(960, 540));
+	// A canvas of zero measures every widget in it at zero, which is a hierarchy that is structurally
+	// perfect and entirely invisible. It must not be reachable from a curve.
+	TestTrue(TEXT("an absurd scale still leaves a canvas of at least one"),
+		FDreamWidgetBlueprintEditor::ApplyDPIScaleToViewportSize(FIntPoint(4, 4), 1000.0f) == FIntPoint(1, 1));
+
+	// The thumbnail's two pure decisions, which share the same "a diagram must stay a diagram" rule.
+	{
+		const FBox2D Tile(FVector2D(0.0, 0.0), FVector2D(64.0, 64.0));
+		const FBox2D Fitted = UDreamWidgetBlueprintThumbnailRenderer::FitCanvasIntoThumbnail(Tile, FIntPoint(1920, 1080));
+		TestTrue(TEXT("a 16:9 canvas is letterboxed into a square tile, not stretched"),
+			FMath::IsNearlyEqual(Fitted.Max.X - Fitted.Min.X, 64.0) && FMath::IsNearlyEqual(Fitted.Max.Y - Fitted.Min.Y, 36.0));
+		TestTrue(TEXT("and centred in it"), FMath::IsNearlyEqual(Fitted.Min.Y, 14.0));
+
+		// A stretched child: anchors 0..1 with no size delta fills its parent exactly.
+		FDreamUIAnchorData Stretched;
+		Stretched.AnchorMin = FVector2D(0.0, 0.0);
+		Stretched.AnchorMax = FVector2D(1.0, 1.0);
+		Stretched.AnchoredPosition = FVector2D::ZeroVector;
+		Stretched.SizeDelta = FVector2D::ZeroVector;
+		Stretched.Pivot = FVector2D(0.5, 0.5);
+		const FBox2D Parent(FVector2D(0.0, 0.0), FVector2D(100.0, 200.0));
+		const FBox2D Filled = UDreamWidgetBlueprintThumbnailRenderer::ResolveAnchoredRect(Parent, Stretched);
+		TestTrue(TEXT("a stretched child fills its parent"),
+			Filled.Min.Equals(Parent.Min) && Filled.Max.Equals(Parent.Max));
+
+		// A point-anchored child: the size delta IS the size, and the anchored position names the
+		// pivot rather than a corner.
+		FDreamUIAnchorData Point;
+		Point.AnchorMin = FVector2D(0.5, 0.5);
+		Point.AnchorMax = FVector2D(0.5, 0.5);
+		Point.AnchoredPosition = FVector2D::ZeroVector;
+		Point.SizeDelta = FVector2D(40.0, 20.0);
+		Point.Pivot = FVector2D(0.5, 0.5);
+		const FBox2D Centred = UDreamWidgetBlueprintThumbnailRenderer::ResolveAnchoredRect(Parent, Point);
+		TestTrue(TEXT("a centre-anchored child is its size delta, centred"),
+			Centred.Min.Equals(FVector2D(30.0, 90.0)) && Centred.Max.Equals(FVector2D(70.0, 110.0)));
+	}
 	return true;
 }
 

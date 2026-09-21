@@ -58,8 +58,11 @@ void SDreamWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, co
 	Model = InModel;
 
 	MenuBuilder = new FMenuBuilder(true, NULL, TSharedPtr<FExtender>(), false, &FCoreStyle::Get(), false);
-	auto Widget = Model->Widget;
+	// A weak pointer, and the tree it came from is rebuilt on a timer -- so a row can be generated
+	// for an item whose widget has already gone. Every dereference below has to survive that.
+	const TWeakObjectPtr<UDreamWidget> Widget = Model.IsValid() ? Model->Widget : TWeakObjectPtr<UDreamWidget>();
 	MenuBuilder->BeginSection("WidgetSection", LOCTEXT("WidgetMenu", "Widget"));
+	if (Widget.IsValid())
 	{
 		if (Widget->IsA(InObjectClass))
 		{
@@ -98,15 +101,25 @@ void SDreamWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, co
 	}
 	MenuBuilder->EndSection();
 	MenuBuilder->BeginSection("ComponentsSection", LOCTEXT("ComponentsMenu", "Components"));
-	auto Components = Widget->GetAllComponents();
-	for (auto Component : Components)
+	const TArray<UDreamUIBehaviour*> Components = Widget.IsValid() ? Widget->GetAllComponents() : TArray<UDreamUIBehaviour*>();
+	for (UDreamUIBehaviour* Component : Components)
 	{
+		if (!IsValid(Component))
+		{
+			continue;
+		}
 		if (Component->IsA(InObjectClass))
 		{
+			// A weak pointer in the action, not the raw one: the menu is built here and executed
+			// when the author picks a line, and a preview rebuild in between frees the component.
+			const TWeakObjectPtr<UDreamUIBehaviour> WeakComponent = Component;
 			MenuBuilder->AddMenuEntry(FText::FromString(FString::Printf(TEXT("%s (%s)"), *Component->GetName(), *Component->GetClass()->GetName())), FText::GetEmpty(), FSlateIconFinder::FindIconForClass(Component->GetClass())
 				, FUIAction(FExecuteAction::CreateLambda([=]()
 				{
-					InArgs._OnSelectObject.ExecuteIfBound(Component);
+					if (WeakComponent.IsValid())
+					{
+						InArgs._OnSelectObject.ExecuteIfBound(WeakComponent.Get());
+					}
 				})));
 		}
 		TArray<UObject*> SubObjects;
@@ -200,7 +213,7 @@ void SDreamWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, co
 								.Image(FDreamGUIEditorStyle::Get().GetBrush("CanvasMark"))
 								.Visibility_Lambda([=, this]()
 								{
-									if (Widget->IsCanvasWidget())
+									if (Widget.IsValid() && Widget->IsCanvasWidget())
 									{
 										return EVisibility::Visible;
 									}

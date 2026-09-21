@@ -155,9 +155,20 @@ UObject* UDreamWidgetBlueprintFactory::FactoryCreateNew(UClass* Class, UObject* 
 		// way UDreamScreenUISubsystem::ConfigurePage stretches a page at runtime. Left at the widget
 		// default the root is a small fixed rect in the corner, which every full-screen hierarchy then
 		// has to fix by hand, and which silently stays wrong for one used as a page.
-		Root->SetHorizontalAndVerticalAnchorMinMax(FVector2D::ZeroVector, FVector2D(1.0, 1.0), false, false);
-		Root->SetAnchoredPosition(FVector2D::ZeroVector);
-		Root->SetSizeDelta(FVector2D::ZeroVector);
+		//
+		// Written as anchor DATA rather than through SetHorizontalAndVerticalAnchorMinMax: that
+		// setter's whole body sits inside `if (Parent.IsValid())` and a TREE'S ROOT HAS NO PARENT,
+		// so the call was a no-op (with a warning nobody reads) while the SizeDelta line below
+		// applied regardless. The result was the opposite of what the paragraph above asks for: not
+		// a small rect in the corner but a 0x0 one, and a 0x0 root arranges every descendant into a
+		// 0x0 rect -- so a brand-new widget blueprint came up with its whole hierarchy collapsed and
+		// nothing anywhere saying why. Every control in it reads as "size is always zero".
+		FDreamUIAnchorData Anchors = Root->GetAnchorData();
+		Anchors.AnchorMin = FVector2D::ZeroVector;
+		Anchors.AnchorMax = FVector2D(1.0, 1.0);
+		Anchors.AnchoredPosition = FVector2D::ZeroVector;
+		Anchors.SizeDelta = FVector2D::ZeroVector;
+		Root->SetAnchorData(Anchors);
 		if (RootLayoutClass != nullptr)
 		{
 			// CreateNewLayoutContainer adds whatever behaviours the container declares it needs, so

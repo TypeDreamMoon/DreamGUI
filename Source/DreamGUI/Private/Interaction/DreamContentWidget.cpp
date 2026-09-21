@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamContentWidget.h"
+#include "DreamGUI.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
 
@@ -141,7 +142,16 @@ bool UDreamContentWidget::SetContent(UDreamWidget* NewContent)
 
 void UDreamContentWidget::ClearContent(bool bDetach)
 {
-	(void)bDetach;
+	// bDetach cannot be honoured, and saying so out loud beats discarding it in silence. A content
+	// widget's Content is not a stored reference but a reading of its only child -- every path here
+	// ends in SynchronizeContentFromChildren -- so "clear the content but leave it attached" would be
+	// undone by the next synchronize, which is to say immediately. The parameter survives only because
+	// Blueprint graphs already pass it.
+	if (!bDetach)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d ClearContent(bDetach=false) is not supported: a ContentWidget's content is its only child, so clearing it always detaches."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+	}
 	UDreamWidget* Host = GetWidget();
 	UDreamWidget* CurrentContent = GetContent();
 	if (IsValid(CurrentContent) && CurrentContent->GetParent() == Host)

@@ -34,7 +34,10 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UUISelectable>(targetObjects[0].Get());
+	// An empty list is a real state, not a can't-happen: a details panel rebuilds while a selection
+	// is being cleared, and indexing [0] there reads off the end of an empty array. The null branch
+	// below already handles "no target", so this only has to reach it.
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<UUISelectable>(targetObjects[0].Get()) : nullptr;
 	if (TargetScriptPtr != nullptr)
 	{
 		

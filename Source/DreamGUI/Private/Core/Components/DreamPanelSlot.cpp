@@ -31,6 +31,13 @@ namespace DreamPanelSlotLocal
 			FiniteClamped(Value.Left), FiniteClamped(Value.Top),
 			FiniteClamped(Value.Right), FiniteClamped(Value.Bottom));
 	}
+
+	FVector2D NonNegativeSize(const FVector2D& Value)
+	{
+		return FVector2D(
+			NonNegative(static_cast<float>(Value.X)),
+			NonNegative(static_cast<float>(Value.Y)));
+	}
 }
 
 // Reason is per property, decided by whether the field is read by any panel's MeasureLayout.
@@ -60,8 +67,27 @@ LEX_SLOT_SETTER(SetRowSpan, RowSpan, int32, FMath::Clamp(Value, 1, DreamPanelSlo
 LEX_SLOT_SETTER(SetColumnSpan, ColumnSpan, int32, FMath::Clamp(Value, 1, DreamPanelSlotLocal::MaxGridSpan), Measure)
 LEX_SLOT_SETTER(SetZOrder, ZOrder, int32, Value, Arrange)
 LEX_SLOT_SETTER(SetAutoSize, bAutoSize, bool, Value, Measure)
+LEX_SLOT_SETTER(SetMinDesiredSize, MinDesiredSize, FVector2D, DreamPanelSlotLocal::NonNegativeSize(Value), Measure)
+LEX_SLOT_SETTER(SetMaxDesiredSize, MaxDesiredSize, FVector2D, DreamPanelSlotLocal::NonNegativeSize(Value), Measure)
+// bFillEmptySpace only redistributes room WITHIN a line that is already decided, so it cannot move the
+// box's preferred size; FillSpanWhenLessThan decides where the lines break, so it can.
+LEX_SLOT_SETTER(SetFillEmptySpace, bFillEmptySpace, bool, Value, Arrange)
+LEX_SLOT_SETTER(SetFillSpanWhenLessThan, FillSpanWhenLessThan, float, DreamPanelSlotLocal::NonNegative(Value), Measure)
 
 #undef LEX_SLOT_SETTER
+
+FVector2D UDreamPanelSlot::ConstrainDesiredSize(const FVector2D& InDesiredSize) const
+{
+	FVector2D Result = InDesiredSize;
+	// Zero is "no opinion" on both, which is why the maximum is tested for > 0 rather than applied
+	// unconditionally: a default-constructed slot must not clamp everything to nothing. Min is applied
+	// after max so that a pair that crosses resolves to the minimum, the same order SizeBox uses.
+	if (MaxDesiredSize.X > 0.0 && FMath::IsFinite(MaxDesiredSize.X)) Result.X = FMath::Min(Result.X, MaxDesiredSize.X);
+	if (MaxDesiredSize.Y > 0.0 && FMath::IsFinite(MaxDesiredSize.Y)) Result.Y = FMath::Min(Result.Y, MaxDesiredSize.Y);
+	if (MinDesiredSize.X > 0.0 && FMath::IsFinite(MinDesiredSize.X)) Result.X = FMath::Max(Result.X, MinDesiredSize.X);
+	if (MinDesiredSize.Y > 0.0 && FMath::IsFinite(MinDesiredSize.Y)) Result.Y = FMath::Max(Result.Y, MinDesiredSize.Y);
+	return Result;
+}
 
 void UDreamPanelSlot::OnRegister()
 {

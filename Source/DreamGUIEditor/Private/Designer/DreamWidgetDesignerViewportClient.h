@@ -76,6 +76,19 @@ public:
 	void SyncViewFOVToCanvas();
 
 	/**
+	 * Announce a hover that happened in another panel -- the hierarchy row under the cursor -- so
+	 * the design surface outlines the same widget. The viewport's own cursor-driven hover wins
+	 * whenever the cursor is actually in the viewport.
+	 */
+	void SetExternalHoverWidget(UDreamWidget* InWidget);
+	/**
+	 * Withdraw an announcement, but only while it is still the standing one: a cursor sliding down
+	 * the list can fire the next row's enter before this row's exit, and an unconditional clear
+	 * would wipe the newer announcement.
+	 */
+	void ClearExternalHoverWidget(UDreamWidget* InOnlyIfThisOne);
+
+	/**
 	 * Get the elements (from the current selection set) that this viewport can manipulate (eg, via the transform gizmo).
 	 */
 	FTypedElementListConstRef GetElementsToManipulate(const bool bForceRefresh = false);
@@ -145,16 +158,53 @@ public:
 		FVector StartPlanePoint = FVector::ZeroVector;
 		FVector CurrentPlanePoint = FVector::ZeroVector;
 		FVector2D StartPosition = FVector2D::ZeroVector;
+		/** The dragged rect, for edge snapping. Zero size means "a point", which snaps by its centre. */
+		FVector2D Size = FVector2D::ZeroVector;
+		FVector2D Pivot = FVector2D(0.5, 0.5);
 		bool bHorizontalFree = true;
 		bool bVerticalFree = true;
 	};
 	struct FMoveDragResult
 	{
 		FVector2D Position = FVector2D::ZeroVector;
-		/** The grid moved this axis, which is the only thing a guide line has to say. */
+		/** The grid or a sibling moved this axis, which is the only thing a guide line has to say. */
 		bool bSnappedHorizontal = false;
 		bool bSnappedVertical = false;
 	};
+	/**
+	 * What a dragged rect may snap onto besides the grid: the edges and centres of its siblings.
+	 *
+	 * Positions along each axis in the LEADER's parent frame, which is the frame the drag is measured
+	 * in. Empty, or a tolerance of zero, means no edge snapping and the grid decides alone -- which is
+	 * what every caller that does not gather siblings gets, and what keeps this an addition rather
+	 * than a change to the arithmetic that was already there.
+	 */
+	struct FSiblingSnapLines
+	{
+		TArray<double> Horizontal;
+		TArray<double> Vertical;
+		double Tolerance = 0.0;
+	};
+	struct FEdgeSnapResult
+	{
+		bool bSnapped = false;
+		/** Added to the dragged rect's position to land it on the line. */
+		double Delta = 0.0;
+		/** Where the guide belongs, in the same frame as the lines. */
+		double Line = 0.0;
+	};
+	/**
+	 * Snap one axis of a dragged rect onto the nearest of InLines.
+	 *
+	 * Three things on the rect can meet a line -- its low edge, its centre, its high edge -- and the
+	 * nearest pairing within InTolerance wins. Ties go to the earlier candidate in that order, so a
+	 * rect the same size as its neighbour lands edge-on-edge rather than jittering between two equally
+	 * good answers on consecutive mouse moves.
+	 *
+	 * Pure, and static, because this is the whole alignment rule: it is worth being able to state what
+	 * it does without a viewport, a drag, or a hierarchy to state it against.
+	 */
+	static FEdgeSnapResult SolveEdgeSnap(double InMin, double InMax, TConstArrayView<double> InLines, double InTolerance);
 	/**
 	 * Where a Move drag puts each target. Every target is MEASURED in its own parent's space, because
 	 * the same numbers are a different distance in parents of differing scale or rotation; the grid's
@@ -162,8 +212,14 @@ public:
 	 * because a selection is dragged as one shape. A target an arranger owns on an axis never
 	 * receives that axis, so a correction read off it would bend the rest of the selection towards a
 	 * number nothing was ever going to land on. InGridSize <= 0 means no snapping.
+	 *
+	 * InSnapLines adds the siblings' edges and centres, and they OUTRANK the grid per axis: a
+	 * designer snapping to a gridline a few units away from the edge it is visibly trying to meet is
+	 * the grid getting in the way of the alignment the author can see. Defaulted to nothing, so a
+	 * caller that does not gather siblings behaves exactly as before.
 	 */
-	static void ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize, TArray<FMoveDragResult>& OutResults);
+	static void ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize, TArray<FMoveDragResult>& OutResults,
+		const FSiblingSnapLines& InSnapLines = FSiblingSnapLines());
 
 	/**
 	 * Whether dropping this selection into InNewParent is a reparent the hierarchy would accept. The
@@ -226,6 +282,14 @@ public:
 	bool GetDropWorldPosition(int32 PixelX, int32 PixelY, UDreamWidget* ParentWidget, FVector& OutWorldPosition);
 	void SetPaletteDropPreview(UDreamWidget* Widget);
 	void ClearPaletteDropPreview();
+	/**
+	 * Open this viewport's context menu, reporting whether one actually opened.
+	 *
+	 * The single way for the click handlers to summon a menu. They were copied from the level
+	 * editor, which reaches its menu through a parent ILevelEditor; a designer viewport has none, so
+	 * every menu call in that file was a commented-out body that returned nothing.
+	 */
+	bool SummonDesignerContextMenu();
 
 	// Begin override because PreviewScene is nullptr
 	virtual UWorld* GetWorld()const override;
@@ -280,6 +344,16 @@ private:
 	void TryPromoteDesignerDrag();
 	/** Pick and select whatever is at this pixel, the way ProcessClick would have. */
 	void SelectWidgetAtPixel(const FVector2D& InPixel, bool bIsControlDown);
+	/**
+	 * The edges and centres of the dragged widgets' siblings, in the leader's parent frame.
+	 *
+	 * Siblings only, and only of the FIRST moving widget: a multi-widget drag across two parents has
+	 * no single frame to measure in, and lines from a second parent would be numbers that mean
+	 * nothing where they are applied. Anything being dragged is skipped -- a widget does not align to
+	 * itself, or to the rest of the shape it is travelling with. Empty when the designer's guides are
+	 * switched off, which is what makes that toggle switch this off too.
+	 */
+	void GatherSiblingSnapLines(TConstArrayView<UDreamWidget*> InMovingWidgets, FSiblingSnapLines& OutLines) const;
 	void UpdateDesignerDrag();
 	/**
 	 * Where a Move drag is currently hovering, when dropping there would move the selection: the
@@ -358,6 +432,17 @@ private:
 	/** Where a Move drag would drop the selection, when that is somewhere other than where it is. */
 	TWeakObjectPtr<UDreamWidget> PendingReparentTarget;
 	TUniquePtr<class FScopedTransaction> DesignerTransaction;
+	/**
+	 * The asset's save state as the handle was grabbed, so a cancelled drag can put it back.
+	 *
+	 * FScopedTransaction::Cancel restores the transacted PROPERTIES; it knows nothing about the
+	 * package's dirty flag or the Blueprint's compile status, and the drag marks both before the
+	 * first mouse move (BeginDesignerDrag commits the geometry so that the undo entry carries the
+	 * pre-drag values). A drag abandoned with Esc therefore left a saved asset asking to be saved
+	 * again for an edit it no longer had.
+	 */
+	bool bBlueprintPackageWasDirtyBeforeDrag = false;
+	uint8 BlueprintStatusBeforeDrag = 0;
 	TOptional<float> DesignerGuideX;
 	TOptional<float> DesignerGuideY;
 
@@ -373,6 +458,13 @@ private:
 	FIntPoint LastClickPixel = FIntPoint(-1, -1);
 	TWeakObjectPtr<UDreamWidget> PaletteDropPreviewWidget;
 	TWeakObjectPtr<UDreamWidget> HoveredWidget;
+	/**
+	 * A hover announced from outside the viewport -- today the hierarchy panel's rows. Kept apart
+	 * from HoveredWidget because the cursor is in ANOTHER panel while this is set, so the
+	 * cursor-driven update (and MouseLeave) must not fight it. DrawHoverOutline prefers the
+	 * cursor's answer when both exist.
+	 */
+	TWeakObjectPtr<UDreamWidget> ExternalHoverWidget;
 	FIntPoint HoverPixel = FIntPoint::ZeroValue;
 	bool bHoverPixelDirty = false;
 	/** The cursor readout has to go quiet when the cursor is not over this viewport at all. */

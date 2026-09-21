@@ -13,6 +13,7 @@
 #include "Styling/CoreStyle.h"
 #include "DreamWidgetBlueprintEditor.h"
 #include "ScopedTransaction.h"
+#include "EdGraph/EdGraph.h"//FunctionGraphs, for the rename's name-collision check
 #include "EditorFontGlyphs.h"
 #include "Editor.h"
 #include "DreamGUIEditorModule.h"
@@ -46,20 +47,17 @@ TSharedRef<FHierarchyDreamWidgetDragDropOp> FHierarchyDreamWidgetDragDropOp::New
 		Operation->Transaction = new FScopedTransaction(LOCTEXT("MoveWidgets", "Change Hierarchy"));
 	}
 
-	// Add an FItem for each widget in the drag operation
+	// Add an FItem for each widget in the drag operation.
+	//
+	// Nothing is Modify()'d here. These are PREVIEW widgets, which are not in the transaction
+	// buffer at all: the drop performs the move on them for the geometry, then mirrors it onto the
+	// authoring tree through ReparentTemplatesFrom, and that is what this transaction records.
 	for (const auto& Widget : InWidgets)
 	{
 		FItem DraggedWidget;
 
 		DraggedWidget.Widget = Widget;
-
-		Widget->Modify();
-
 		DraggedWidget.WidgetParent = Widget->GetParent();
-		if (DraggedWidget.WidgetParent)
-		{
-			DraggedWidget.WidgetParent->Modify();
-		}
 
 		Operation->DraggedWidgets.Add(DraggedWidget);
 	}
@@ -110,10 +108,18 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			{
 				return DropZone;
 			}
-			else
+			if (bIsDrop)
 			{
-				DropZone = EItemDropZone::OntoItem;
+				// That call did not merely ASK -- it ran the move, and the move loop returns on the
+				// first widget the new parent refuses, so a multi-widget drag can already be half
+				// relocated by the time we get here. Falling through to "then drop it INSIDE the
+				// hovered row instead" would run the whole thing a second time and hand
+				// ReparentTemplatesFrom a selection that has moved twice. A drop that cannot do what
+				// the cursor promised refuses instead; offering an alternative zone is the query
+				// pass's job, and the query pass is where this fallback belongs.
+				return TOptional<EItemDropZone>();
 			}
+			DropZone = EItemDropZone::OntoItem;
 		}
 		else
 		{
@@ -137,9 +143,41 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
 	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyDreamWidgetDragDropOp>())
 	{
+		// The palette and asset ops are decorated the same way the hierarchy-internal drag is,
+		// so an illegal target says no while the author still holds the button. Without this the
+		// cursor carried whatever the previous row wrote -- the drag looked legal over a full
+		// container and dead over a legal one.
+		const TSharedPtr<FDecoratedDragDropOp> Decorated = DragDropOp->IsOfType<FDecoratedDragDropOp>()
+			? StaticCastSharedPtr<FDecoratedDragDropOp>(DragDropOp) : TSharedPtr<FDecoratedDragDropOp>();
+		if (Decorated.IsValid())
+		{
+			Decorated->ResetToDefaultToolTip();
+		}
 		if (!IsValid(TargetItem) || !TargetItem->CanAcceptAdditionalChildren())
 		{
+			if (Decorated.IsValid())
+			{
+				Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+				Decorated->CurrentHoverText = LOCTEXT("TargetCannotTakeChild", "This widget cannot accept another child.");
+			}
 			return TOptional<EItemDropZone>();
+		}
+		// The same gate the drop will hit in CreateWidget, said during the drag: a text-authored
+		// class refuses structural edits from the designer, and finding that out on release reads
+		// as a broken palette rather than a rule.
+		if (Manager.IsValid() && DreamUITextAuthoring::IsTextAuthored(Manager->GetWidgetBlueprint()))
+		{
+			if (Decorated.IsValid())
+			{
+				Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+				Decorated->CurrentHoverText = DreamUITextAuthoring::DescribeStructuralRefusal(
+					Manager->GetWidgetBlueprint(), TEXT("create a widget"));
+			}
+			return TOptional<EItemDropZone>();
+		}
+		if (Decorated.IsValid())
+		{
+			Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.OK"));
 		}
 		if (bIsDrop)
 		{
@@ -194,15 +232,12 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				HierarchyDragDropOp->CurrentHoverText = LOCTEXT("ParentAtCapacity", "This widget cannot accept the selected children.");
 				return TOptional<EItemDropZone>();
 			}
-			// A TENTH structural entry, and the only one that does not pass through
-			// DreamWidgetTreeEditing at all: this drop calls TrySetParent on the widgets directly,
-			// below. Refused during the drag rather than at the drop, so the cursor says no before
-			// the author lets go -- which is what "visibly disabled" means for a gesture.
-			//
-			// (Worth knowing while reading the rest of this handler: what it moves are the PREVIEW
-			// widgets the hierarchy lists, and nothing here mirrors the move onto the template the
-			// way the viewport's drag does through ReparentTemplatesFrom. That is a defect of its
-			// own and older than this gate; it is not what this refusal is about.)
+			// A structural entry that does not pass through DreamWidgetTreeEditing directly: this
+			// drop calls TrySetParent on the PREVIEW widgets below, then mirrors the whole move onto
+			// the templates through ReparentTemplatesFrom -- the same two halves, in the same order,
+			// as the viewport's drag. Refused during the drag rather than at the drop, so the cursor
+			// says no before the author lets go -- which is what "visibly disabled" means for a
+			// gesture.
 			if (Manager.IsValid() && DreamUITextAuthoring::IsTextAuthored(Manager->GetWidgetBlueprint()))
 			{
 				HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
@@ -217,14 +252,22 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				{
 					Manager->MarkDesignChanged();
 				}
-				NewParent->SetFlags(RF_Transactional);
-				NewParent->Modify();
+				// No Modify on NewParent, and none on the dragged widgets below: every one of them
+				// is a PREVIEW object, and the preview is not undoable -- it is rebuilt from the
+				// template after the transaction. ReparentTemplatesFrom at the bottom of this block
+				// records the authored half, which is the half undo has to be able to put back.
+
+				// The preview widgets that actually moved, for the template mirror below. Collected
+				// rather than mirrored per widget: ReparentWidget broadcasts a structural change that
+				// invalidates the preview, and doing that while this loop still iterates preview
+				// widgets is how a drop eats its own state.
+				TArray<UDreamWidget*> MovedPreviewWidgets;
 
 				for (const auto& DraggedWidget : HierarchyDragDropOp->DraggedWidgets)
 				{
+					// Named TemplateWidget, but it is the preview's -- see the note above. Nothing
+					// records it.
 					auto TemplateWidget = DraggedWidget.Widget;
-					TemplateWidget->SetFlags(RF_Transactional);
-					TemplateWidget->Modify();
 
 					if (Index.IsSet())
 					{
@@ -257,6 +300,15 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 					{
 						Index = Index.GetValue() + 1;
 					}
+					MovedPreviewWidgets.Add(TemplateWidget);
+				}
+
+				// The other half of the move: without it the reparent lives only in the preview and
+				// the next rebuild puts everything back. Once, after the loop, exactly as the
+				// viewport's drag does after ApplyPendingReparent.
+				if (Manager.IsValid() && MovedPreviewWidgets.Num() > 0)
+				{
+					Manager->ReparentTemplatesFrom(MovedPreviewWidgets, NewParent);
 				}
 			}
 
@@ -340,7 +392,10 @@ void SDreamWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, co
 							.Image(FDreamGUIEditorStyle::Get().GetBrush("CanvasMark"))
 							.Visibility_Lambda([=, this]()
 							{
-								if (Widget->IsCanvasWidget())
+								// Every other reader of Widget in this row checks first: the row
+								// outlives the preview widget it is showing, because a rebuild
+								// destroys the tree and the list refreshes a tick later.
+								if (Widget.IsValid() && Widget->IsCanvasWidget())
 								{
 									return EVisibility::Visible;
 								}
@@ -519,7 +574,10 @@ TOptional<EItemDropZone> SDreamWidgetEditorHierarchyViewItem::HandleCanAcceptDro
 					auto Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 					if (ValidDropZone.IsSet())
 					{
-						if (Zone.GetValue() != ValidDropZone.GetValue())
+						// IsSet first: TOptional::GetValue asserts on an unset value, and an earlier
+						// widget in the selection having found a zone while this one finds none is
+						// exactly the disagreement this comparison is here to catch.
+						if (!Zone.IsSet() || Zone.GetValue() != ValidDropZone.GetValue())
 						{
 							return TOptional<EItemDropZone>();
 						}
@@ -539,7 +597,12 @@ FReply SDreamWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent cons
 	TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 	if (Zone.IsSet())
 	{
-		HierarchyView.Pin()->RequestRefresh();
+		// Pinned and checked, like every other weak handle this row holds: a drop can be the
+		// gesture that closes the designer, and the tree view goes before the row does.
+		if (const TSharedPtr<SDreamWidgetEditorHierarchyView> View = HierarchyView.Pin())
+		{
+			View->RequestRefresh();
+		}
 		return FReply::Handled();
 	}
 	else
@@ -547,6 +610,7 @@ FReply SDreamWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent cons
 }
 FReply SDreamWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	if (!Widget.IsValid())return FReply::Handled();
 	if (Manager.IsValid() && Manager.Pin()->IsWidgetLockedForInteraction(Widget.Get()))return FReply::Handled();
 	TArray<UDreamWidget*> DraggedItems;
 
@@ -633,7 +697,7 @@ bool SDreamWidgetEditorHierarchyViewItem::IsReadOnly() const
 }
 void SDreamWidgetEditorHierarchyViewItem::OnBeginNameTextEdit()
 {
-	InitialText = FText::FromString(Widget->GetDisplayName());
+	InitialText = Widget.IsValid() ? FText::FromString(Widget->GetDisplayName()) : FText::GetEmpty();
 }
 void SDreamWidgetEditorHierarchyViewItem::OnEndNameTextEdit()
 {
@@ -651,6 +715,64 @@ bool SDreamWidgetEditorHierarchyViewItem::OnVerifyNameTextChanged(const FText& I
 	{
 		return false;
 	}
+	// A display name is not a label: UDreamWidgetTree::MakeWidgetVariableName turns it into the
+	// member variable the compiler declares and the runtime binds by. So the two ways it can already
+	// be taken are both real failures, and neither used to be said here -- a duplicate was silently
+	// renamed to "Name_1" behind the author's back on commit, and a clash with a Blueprint variable
+	// waited until the next Compile to show up as an error about a name the author never typed.
+	FDreamWidgetBlueprintEditor* Designer = Widget.IsValid()
+		? FDreamWidgetBlueprintEditor::FindDesignerForWidget(Widget.Get()) : nullptr;
+	UDreamWidgetBlueprint* Blueprint = Designer != nullptr ? Designer->GetWidgetBlueprint() : nullptr;
+	if (Blueprint == nullptr)
+	{
+		// Not a designer row (the animation/binding picker reuses this widget). Nothing to check
+		// against, and refusing here would be refusing a rename we know nothing about.
+		return true;
+	}
+	const UDreamWidget* RenamedTemplate = Designer->GetTemplateWidget(Widget.Get());
+	TArray<UDreamWidget*> AllSourceWidgets;
+	Blueprint->GetAllSourceWidgets(AllSourceWidgets);
+	for (const UDreamWidget* Other : AllSourceWidgets)
+	{
+		// The widget being renamed is not a duplicate of itself. Both spellings, because a row can
+		// be showing the template directly (the picker views reuse this widget) in which case
+		// GetTemplateWidget has nothing to resolve.
+		if (!IsValid(Other) || Other == RenamedTemplate || Other == Widget.Get())
+		{
+			continue;
+		}
+		if (Other->GetDisplayName().Equals(ProposedName, ESearchCase::IgnoreCase))
+		{
+			OutErrorMessage = FText::Format(
+				LOCTEXT("DuplicateWidgetName", "Another widget in this hierarchy is already called \"{0}\"."),
+				FText::FromString(ProposedName));
+			return false;
+		}
+	}
+	// Only the variables the author declared. The ones the compiler generates from the widgets
+	// themselves are covered by the loop above, and testing against the generated class would
+	// reject every name in the tree, this row's own included.
+	const FName ProposedVariableName(*ProposedName);
+	for (const FBPVariableDescription& Variable : Blueprint->NewVariables)
+	{
+		if (Variable.VarName == ProposedVariableName)
+		{
+			OutErrorMessage = FText::Format(
+				LOCTEXT("WidgetNameIsABlueprintVariable", "This Blueprint already declares a variable called \"{0}\"."),
+				FText::FromString(ProposedName));
+			return false;
+		}
+	}
+	for (const UEdGraph* Graph : Blueprint->FunctionGraphs)
+	{
+		if (Graph != nullptr && Graph->GetFName() == ProposedVariableName)
+		{
+			OutErrorMessage = FText::Format(
+				LOCTEXT("WidgetNameIsABlueprintFunction", "This Blueprint already declares a function called \"{0}\"."),
+				FText::FromString(ProposedName));
+			return false;
+		}
+	}
 	return true;
 }
 void SDreamWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, ETextCommit::Type CommitInfo)
@@ -662,15 +784,34 @@ void SDreamWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText
 	{
 		return;
 	}
+	// The commit can arrive after the row's widget is gone -- a rebuild while the text box has focus
+	// is enough -- and everything below dereferences it.
+	if (!Widget.IsValid())
+	{
+		return;
+	}
 
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
 	// The display name is the compiler's variable name, so renaming is an edit to the asset, not a
 	// label on a preview object that is about to be rebuilt away.
 	if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(Widget.Get()))
 	{
-		Designer->DesignerRenameWidget(Widget.Get(), InText.ToString().TrimStartAndEnd());
-		GEditor->EndTransaction();
-		HierarchyView.Pin()->RequestRefresh();
+		const FString Applied = Designer->DesignerRenameWidget(Widget.Get(), InText.ToString().TrimStartAndEnd());
+		if (Applied.IsEmpty())
+		{
+			// Refused -- a text-authored hierarchy owns its ids, so the rename has to be written in
+			// the .dui file. Cancelled, not ended: an empty transaction is still an undo step, so the
+			// author's next Ctrl+Z after a refused rename undid whatever they had done BEFORE it.
+			GEditor->CancelTransaction(0);
+		}
+		else
+		{
+			GEditor->EndTransaction();
+		}
+		if (const TSharedPtr<SDreamWidgetEditorHierarchyView> View = HierarchyView.Pin())
+		{
+			View->RequestRefresh();
+		}
 		return;
 	}
 	Widget->Modify();
@@ -682,7 +823,10 @@ void SDreamWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText
 	});
 	GEditor->EndTransaction();
 
-	HierarchyView.Pin()->RequestRefresh();
+	if (const TSharedPtr<SDreamWidgetEditorHierarchyView> View = HierarchyView.Pin())
+	{
+		View->RequestRefresh();
+	}
 }
 FReply SDreamWidgetEditorHierarchyViewItem::OnToggleVisibility()
 {
@@ -721,6 +865,15 @@ FSlateColor SDreamWidgetEditorHierarchyViewItem::GetLockIconColorAndOpacity() co
 
 bool SDreamWidgetEditorHierarchyViewItem::SupportDrop(UDreamWidget* Dragging, UDreamWidget* Current, EItemDropZone DropZone)
 {
+	// Current is the row's own preview widget, and a row outlives the widget it shows: a rebuild
+	// destroys the preview tree and the list only refreshes a tick later (see the note on the canvas
+	// icon above). Every other reader in this file checks; this one dereferenced straight into
+	// GetRootWidgetInHierarchy, on the mouse-move path, while a drag was in flight. Dragging is the
+	// drop op's raw pointer, which the same rebuild invalidates.
+	if (!IsValid(Current) || !IsValid(Dragging))
+	{
+		return false;
+	}
 	if (Current == Current->GetRootWidgetInHierarchy())
 	{
 		if (DropZone == EItemDropZone::OntoItem)

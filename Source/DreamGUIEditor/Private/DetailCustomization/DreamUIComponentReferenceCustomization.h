@@ -43,7 +43,6 @@ private:
 	TArray<const UClass*> DisallowedComponentClassFilters;
 	TSharedPtr<SBox> ContentWidgetBox;
 	bool bIsInWorld = false;
-	TArray<FDreamUIComponentReference*> ComponentReferenceInstances;
 	static TWeakObjectPtr<AActor> CopiedHelperActor;
 	static TWeakObjectPtr<UActorComponent> CopiedTargetComp;
 	static UClass* CopiedHelperClass;

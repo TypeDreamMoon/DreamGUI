@@ -45,6 +45,9 @@ protected:
 	
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 public:
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetFullCycle()const { return FullCycle; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetStartAngle()const { return StartAngle; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetEndAngle()const { return EndAngle; }

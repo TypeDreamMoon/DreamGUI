@@ -1,4 +1,4 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUISymbolExport.h"
 
@@ -7,6 +7,9 @@
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
+// DescribeEvents lists FDreamUIEventDelegate properties as well as multicast delegates.
+#include "Event/DreamUIEventDelegate.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUIReflectionPolicy.h"
 #include "Text/DreamUITextBuilder.h"
@@ -160,14 +163,26 @@ namespace DreamUISymbolExportLocal
 		return Out;
 	}
 
-	/** BlueprintAssignable delegate names on a class: what `->` can route. */
+	/**
+	 * Event names on a class: what `->` can route.
+	 *
+	 * Both kinds, matching DreamUITextBuilder's own test. `Controls/*` declares BlueprintAssignable
+	 * dynamic multicast delegates; the older `Interaction/*` behaviours declare FDreamUIEventDelegate
+	 * struct properties, and completion that offered only the first left half the plugin's events
+	 * looking unroutable in VSCode even after they became routable.
+	 */
 	TArray<TSharedPtr<FJsonValue>> DescribeEvents(const UStruct* InScope)
 	{
 		TArray<TSharedPtr<FJsonValue>> Out;
 		for (TFieldIterator<FProperty> It(InScope); It; ++It)
 		{
-			if (CastField<FMulticastDelegateProperty>(*It) != nullptr
-				&& It->HasAnyPropertyFlags(CPF_BlueprintAssignable))
+			const bool bIsAssignableDelegate = CastField<FMulticastDelegateProperty>(*It) != nullptr
+				&& It->HasAnyPropertyFlags(CPF_BlueprintAssignable);
+			const FStructProperty* AsDreamEvent = CastField<FStructProperty>(*It);
+			const bool bIsDreamEvent = AsDreamEvent != nullptr
+				&& AsDreamEvent->Struct == FDreamUIEventDelegate::StaticStruct()
+				&& AsDreamEvent->HasAnyPropertyFlags(CPF_Edit);
+			if (bIsAssignableDelegate || bIsDreamEvent)
 			{
 				Out.Add(MakeShared<FJsonValueString>(It->GetName()));
 			}
@@ -260,6 +275,35 @@ FString FDreamUISymbolExport::ExportNow()
 		}
 		Tags->SetObjectField(Tag.Key, Entry);
 	}
+	// ---- and the SCOPED tags, from the widget registry the DECLARE macro fills
+	//
+	// A second table, and it had never been exported: the extension learned the primitives from
+	// GetVisualTags and nothing at all about `Native.Button`, so completion offered none of the
+	// seventeen controls and every one of them read as an unknown tag. Keyed "Scope.Name", which is
+	// exactly how a .dui spells it and how the extension looks it up.
+	TArray<FDreamUIWidgetRegistry::FEntry> Registered;
+	FDreamUIWidgetRegistry::GetAllEntries(Registered);
+	for (const FDreamUIWidgetRegistry::FEntry& Entry : Registered)
+	{
+		UClass* Class = Entry.ClassGetter != nullptr ? Entry.ClassGetter() : nullptr;
+		if (Class == nullptr)
+		{
+			continue;
+		}
+		TSharedPtr<FJsonObject> TagEntry = MakeShared<FJsonObject>();
+		TagEntry->SetStringField(TEXT("class"), Class->GetName());
+		const FString ClassTooltip = Class->GetToolTipText().ToString();
+		if (!ClassTooltip.IsEmpty())
+		{
+			TagEntry->SetStringField(TEXT("tooltip"), ClassTooltip);
+		}
+		TagEntry->SetArrayField(TEXT("properties"),
+			DescribeProperties(Class, Enums, Class->GetDefaultObject()));
+		TagEntry->SetArrayField(TEXT("events"), DescribeEvents(Class));
+		Tags->SetObjectField(FString::Printf(TEXT("%s.%s"),
+			*Entry.Scope.ToString(), *Entry.Name.ToString()), TagEntry);
+	}
+
 	Root->SetObjectField(TEXT("tags"), Tags);
 
 	// ---- the two classes every node line can address regardless of tag

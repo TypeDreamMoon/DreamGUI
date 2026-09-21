@@ -11,6 +11,7 @@
 DECLARE_DELEGATE_RetVal_FourParams(float, FDreamTweenFunction, float, float, float, float);
 
 DECLARE_DELEGATE_OneParam(FDreamTweenUpdateDelegate, float);
+/** What a tween holds its OnUpdate listeners in; see the callback block in UDreamTweener. */
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamTweenUpdateMulticastDelegate, float);
 
 DECLARE_DELEGATE_RetVal(float, FDreamTweenFloatGetterFunction);
@@ -155,6 +156,14 @@ protected:
 	int32 maxLoopCount = 0;
 	/** current completed cycle count */
 	int32 loopCycleCount = 0;
+	/**
+	 * How many of those completed cycles have had their time folded out of elapseTime. An infinite loop
+	 * would otherwise run its clock up without bound, and a float that large can no longer hold a frame's
+	 * delta: the cycle phase drifts and the tween eventually stops advancing at all. Whole cycles are
+	 * subtracted from the clock instead, and counted here, so that the phase this counts back out of
+	 * elapseTime is exact and loopCycleCount -- which callers read -- still means what it always did.
+	 */
+	int32 foldedCycleCount = 0;
 	/** how this tween update */
 	EDreamTweenTickType tickType = EDreamTweenTickType::DuringPhysics;
 
@@ -170,20 +179,78 @@ protected:
 	bool affectByGamePause = true;
 	/** will this tween use dilation-time or real-time? */
 	bool affectByTimeDilation = true;
+	/**
+	 * Is this tween thrown away when it finishes? Off keeps it alive and paused at its end, ready for
+	 * Restart or Goto -- DOTween's SetAutoKill(false), and what a tween that plays on every hover
+	 * wants instead of being rebuilt each time.
+	 */
+	bool bAutoKill = true;
+	/**
+	 * Does this tween run from the target value back to the current one? DOTween's From(). Read once,
+	 * at the moment the start value is taken, because "the current value" only means anything then.
+	 */
+	bool bFromMode = false;
+	/** Is `duration` a duration, or a speed in units per second? DOTween's SetSpeedBased. */
+	bool bSpeedBased = false;
+	/** This tween's own multiplier on time, on top of any world dilation. DOTween's timeScale. */
+	float timeScale = 1.0f;
+
+	/**
+	 * Which ease the caller asked for. Kept ALONGSIDE the bound function rather than instead of it,
+	 * because CurveFloat is the one ease with no static function to bind: its curve arrives in a
+	 * separate call, and only by remembering the choice can SetCurveFloat tell "the author picked
+	 * CurveFloat and left the curve empty" -- which falls back to linear, loudly -- from "a caller
+	 * handed over a curve this tween was never meant to use", which must leave the chosen ease alone.
+	 * Defaults to the ease the constructor binds, so the two never start out disagreeing.
+	 */
+	EDreamTweenEase easeType = EDreamTweenEase::OutCubic;
 
 	/** tween function */
 	FDreamTweenFunction tweenFunc;
+	/**
+	 * The curve SetCurveFloat bound the tween function to, held for as long as this tween lives. The
+	 * binding is a WEAK lambda over the curve, and every subclass calls tweenFunc.Execute unconditionally:
+	 * once the curve is collected the delegate reports itself unbound, but Execute on a dead weak binding
+	 * only checkSlow's before running the lambda over the freed curve. Owning a reference is what keeps
+	 * the curve alive for exactly as long as something can still evaluate it.
+	 */
+	UPROPERTY(Transient)
+	TObjectPtr<UCurveFloat> curveFloat = nullptr;
+	/**
+	 * The ExternalCurve of the FRuntimeFloatCurve SetRuntimeFloatCurve was given, held for the same
+	 * reason and against the same failure: the tween function there closes over a COPY of that struct,
+	 * whose TObjectPtr the collector cannot see, and GetRichCurveConst reaches straight into the asset.
+	 * Null for a runtime curve that carries its keys inline, which the copy owns outright.
+	 */
+	UPROPERTY(Transient)
+	TObjectPtr<UCurveFloat> runtimeExternalCurve = nullptr;
 
+	/**
+	 * The five callbacks a tween offers, each holding EVERY listener that asked for it rather than
+	 * only the last one. They used to be single delegates, so a second OnComplete quietly threw the
+	 * first away -- and the first was often not the author's at all but a system's own bookkeeping
+	 * (UDreamUIPlayTween binds four of these to drive its events), which then simply stopped
+	 * happening the moment a caller bound one of its own to the tween it had been handed.
+	 */
 	/** call once after animation complete */
-	FSimpleDelegate onCompleteCpp;
+	FSimpleMulticastDelegate onCompleteCpp;
 	/** if use loop, this will call every time when begin tween in every cycle */
-	FSimpleDelegate onCycleStartCpp;
+	FSimpleMulticastDelegate onCycleStartCpp;
 	/** if use loop, this will call every time after tween complete in every cycle */
-	FSimpleDelegate onCycleCompleteCpp;
+	FSimpleMulticastDelegate onCycleCompleteCpp;
 	/** call every frame after animation starts */
-	FDreamTweenUpdateDelegate onUpdateCpp;
+	FDreamTweenUpdateMulticastDelegate onUpdateCpp;
 	/** call once when animation starts */
-	FSimpleDelegate onStartCpp;
+	FSimpleMulticastDelegate onStartCpp;
+	/**
+	 * call once when this tween is killed, whether or not it had finished.
+	 *
+	 * Separate from onComplete because the two answer different questions: "did the animation reach
+	 * its end" and "is this tween over". Kill(true) fires both, Kill(false) fires only this one, and a
+	 * natural completion fires only the other (an auto-killed tween is retired by the manager without
+	 * ever passing through Kill). DOTween splits them the same way.
+	 */
+	FSimpleMulticastDelegate onKillCpp;
 public:
 	/**
 	 * Set animation curve type.
@@ -221,7 +288,7 @@ public:
 	/** execute when animation complete */
 	UDreamTweener* OnComplete(const FSimpleDelegate& newComplete)
 	{
-		this->onCompleteCpp = newComplete;
+		this->onCompleteCpp.Add(newComplete);
 		return this;
 	}
 	/** execute when animation complete */
@@ -229,7 +296,7 @@ public:
 	{
 		if (newComplete != nullptr)
 		{
-			this->onCompleteCpp.BindLambda(newComplete);
+			this->onCompleteCpp.AddLambda(newComplete);
 		}
 		return this;
 	}
@@ -237,7 +304,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* OnComplete(const FDreamTweenSimpleDynamicDelegate& newComplete)
 	{
-		this->onCompleteCpp.BindLambda([newComplete] {
+		this->onCompleteCpp.AddLambda([newComplete] {
 			newComplete.ExecuteIfBound();
 		});
 		return this;
@@ -246,7 +313,7 @@ public:
 	/** if use loop, this will call every time after tween complete in every cycle */
 	UDreamTweener* OnCycleComplete(const FSimpleDelegate& newCycleComplete)
 	{
-		this->onCycleCompleteCpp = newCycleComplete;
+		this->onCycleCompleteCpp.Add(newCycleComplete);
 		return this;
 	}
 	/** if use loop, this will call every time after tween complete in every cycle */
@@ -254,7 +321,7 @@ public:
 	{
 		if (newCycleComplete != nullptr)
 		{
-			this->onCycleCompleteCpp.BindLambda(newCycleComplete);
+			this->onCycleCompleteCpp.AddLambda(newCycleComplete);
 		}
 		return this;
 	}
@@ -262,7 +329,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* OnCycleComplete(const FDreamTweenSimpleDynamicDelegate& newCycleComplete)
 	{
-		this->onCycleCompleteCpp.BindLambda([newCycleComplete] {
+		this->onCycleCompleteCpp.AddLambda([newCycleComplete] {
 			newCycleComplete.ExecuteIfBound();
 			});
 		return this;
@@ -271,7 +338,7 @@ public:
 	/** if use loop, this will call every time when begin tween in every cycle */
 	UDreamTweener* OnCycleStart(const FSimpleDelegate& newCycleStart)
 	{
-		this->onCycleStartCpp = newCycleStart;
+		this->onCycleStartCpp.Add(newCycleStart);
 		return this;
 	}
 	/** if use loop, this will call every time when begin tween in every cycle */
@@ -279,7 +346,7 @@ public:
 	{
 		if (newCycleStart != nullptr)
 		{
-			this->onCycleStartCpp.BindLambda(newCycleStart);
+			this->onCycleStartCpp.AddLambda(newCycleStart);
 		}
 		return this;
 	}
@@ -287,7 +354,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* OnCycleStart(const FDreamTweenSimpleDynamicDelegate& newCycleStart)
 	{
-		this->onCycleStartCpp.BindLambda([newCycleStart] {
+		this->onCycleStartCpp.AddLambda([newCycleStart] {
 			newCycleStart.ExecuteIfBound();
 			});
 		return this;
@@ -296,7 +363,7 @@ public:
 	/** execute every frame if animation is playing */
 	UDreamTweener* OnUpdate(const FDreamTweenUpdateDelegate& newUpdate)
 	{
-		this->onUpdateCpp = newUpdate;
+		this->onUpdateCpp.Add(newUpdate);
 		return this;
 	}
 	/** execute every frame if animation is playing */
@@ -304,7 +371,7 @@ public:
 	{
 		if (newUpdate != nullptr)
 		{
-			this->onUpdateCpp.BindLambda(newUpdate);
+			this->onUpdateCpp.AddLambda(newUpdate);
 		}
 		return this;
 	}
@@ -312,23 +379,48 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* OnUpdate(const FDreamTweenFloatDynamicDelegate& newUpdate)
 	{
-		this->onUpdateCpp.BindLambda([newUpdate](float progress) {
+		this->onUpdateCpp.AddLambda([newUpdate](float progress) {
 			newUpdate.ExecuteIfBound(progress);
 		});
 		return this;
 	}
 	
+	/** execute when this tween is killed, whether or not it finished; see onKillCpp */
+	UDreamTweener* OnKill(const FSimpleDelegate& newKill)
+	{
+		this->onKillCpp.Add(newKill);
+		return this;
+	}
+	/** execute when this tween is killed, whether or not it finished; see onKillCpp */
+	UDreamTweener* OnKill(const TFunction<void()>& newKill)
+	{
+		if (newKill != nullptr)
+		{
+			this->onKillCpp.AddLambda(newKill);
+		}
+		return this;
+	}
+	/** execute when this tween is killed, whether or not it finished; see onKillCpp */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		UDreamTweener* OnKill(const FDreamTweenSimpleDynamicDelegate& newKill)
+	{
+		this->onKillCpp.AddLambda([newKill] {
+			newKill.ExecuteIfBound();
+		});
+		return this;
+	}
+
 	/** execute when animation start*/
 	UDreamTweener* OnStart(const FSimpleDelegate& newStart)
 	{
-		this->onStartCpp = newStart;
+		this->onStartCpp.Add(newStart);
 		return this;
 	}
 	/** execute when animation start, blueprint version*/
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* OnStart(const FDreamTweenSimpleDynamicDelegate& newStart)
 	{
-		this->onStartCpp.BindLambda([newStart] {
+		this->onStartCpp.AddLambda([newStart] {
 			newStart.ExecuteIfBound();
 		});
 		return this;
@@ -338,7 +430,7 @@ public:
 	{
 		if (newStart != nullptr)
 		{
-			this->onStartCpp.BindLambda(newStart);
+			this->onStartCpp.AddLambda(newStart);
 		}
 		return this;
 	}
@@ -368,6 +460,12 @@ public:
 	/** Force stop this animation at this frame, set value to end, call OnComplete. */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		virtual void ForceComplete();
+	/**
+	 * True once Kill or ForceComplete has marked this tween. The manager drops a marked tween on the
+	 * next tick it sees it on -- which is why it has to be askable without ticking: a tween set to
+	 * Manual tick is seen only by ManualTick, and a killed one nobody ticks again would never leave.
+	 */
+	bool IsMarkedToKill()const { return isMarkedToKill; }
 	/** Pause this animation. */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		void Pause()
@@ -392,6 +490,56 @@ public:
 	/** will this tween use dilated-time or real-time? */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* SetAffectByTimeDilation(bool value);
+	/**
+	 * This tween's own speed multiplier, on top of everything else: 2 runs it twice as fast, 0.5 half
+	 * as fast, 0 holds it still. Changeable at any time, like the two switches above and unlike the
+	 * setters that describe the tween's shape -- changing how fast something is running is the point.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		UDreamTweener* SetTimeScale(float value = 1.0f);
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		float GetTimeScale()const { return timeScale; }
+	/**
+	 * Keep this tween after it finishes, paused at its end, instead of retiring it.
+	 *
+	 * A kept tween stays in the manager's list and answers IsTweening, and Restart or Goto brings it
+	 * back -- which is the point: a hover animation that plays a hundred times need not be a hundred
+	 * objects. Kill still ends it at once, whatever this says.
+	 * Has no effect if the Tween has already started.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		UDreamTweener* SetAutoKill(bool value = true);
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		bool GetAutoKill()const { return bAutoKill; }
+	/**
+	 * Run backwards from the target to wherever the value is now, instead of towards the target.
+	 *
+	 * The "fade in from transparent" idiom: authored as a tween TO the value it should end at, then
+	 * turned around, so the end state stays written in one place. The swap happens when the tween
+	 * starts, because the value it starts from is not known before then.
+	 * Has no effect if the Tween has already started.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		UDreamTweener* SetFrom(bool value = true);
+	/**
+	 * Read `duration` as a SPEED, in value units per second, and work the real duration out from how
+	 * far the value has to travel. DOTween's SetSpeedBased: what "slide in at 600 units a second"
+	 * needs, so that a panel twice as far away takes twice as long instead of moving twice as fast.
+	 * Tween types with no measurable distance (Virtual, Update, DelayFrame, Sequence) keep their
+	 * duration and say so once.
+	 * Has no effect if the Tween has already started.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		UDreamTweener* SetSpeedBased(bool value = true);
+	/** Start (or resume) a tween that was paused, including one created with SetAutoPlay(false). */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		void Play() { isMarkedPause = false; }
+	/**
+	 * Whether this tween runs as soon as it is created. Off is a paused tween waiting for Play() --
+	 * DOTween builds them that way, and it is what assembling a tween over several frames needs.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamTween")
+		UDreamTweener* SetAutoPlay(bool value);
 	/**
 	 * Restart animation.
 	 * Has no effect if the Tween is not started.
@@ -422,6 +570,33 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* SetTickType(EDreamTweenTickType value = EDreamTweenTickType::DuringPhysics);
 protected:
+	/**
+	 * "Still running" as the manager hears it, with SetAutoKill folded in: a finished tween that is
+	 * not to be killed reports itself as running and paused at its end, so it stays in the list and
+	 * can be restarted. Every ToNext override ends through this rather than returning false directly.
+	 */
+	bool FinishOrHold(bool bStillRunning)
+	{
+		if (bStillRunning || bAutoKill)
+		{
+			return bStillRunning;
+		}
+		isMarkedPause = true;
+		return true;
+	}
+	/**
+	 * Swap the start and end of this tween, for SetFrom. Called once, right after the start value has
+	 * been taken from the getter -- "from the target back to here" is only expressible then.
+	 * The default does nothing, which is the right answer for a tween with no value (Virtual, Update).
+	 */
+	virtual void SwapStartAndEndValues() {}
+	/**
+	 * How far this tween's value travels, in whatever unit that value is measured in, for
+	 * SetSpeedBased. Zero means "no measurable distance", and the duration is left alone.
+	 */
+	virtual float GetValueDistance()const { return 0.0f; }
+	/** Turns `duration` from a speed into a duration once the distance is known; see SetSpeedBased. */
+	void ApplySpeedBasedDuration();
 	/** get value when start. child class must override this, check DreamTweenerFloat for reference */
 	virtual void OnStartGetValue() PURE_VIRTUAL(UDreamTweener::OnStartGetValue, );
 	/** set value when tweening. child class must override this, check DreamTweenerFloat for reference */

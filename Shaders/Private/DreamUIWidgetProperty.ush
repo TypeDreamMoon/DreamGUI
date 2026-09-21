@@ -2,6 +2,18 @@
 #define DREAMUI_WIDGET_PROPERTY_USH
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 
+// The widget-property row, by pixel. The same layout is written by UDreamVisual (see the pixel-start
+// constants in DreamVisual.h) and, for pixels 4..12, by FDreamTextStyle::Pack / DreamUIText.ush.
+//
+// DENORMALS: this row lives in an R32_FLOAT texture and arrives here through a float load, so a word
+// that is really a bit pattern has to BE a normal float -- a GPU that flushes denormals to zero does
+// it on the load, before asuint() runs. Numbers are therefore stored as float VALUES (clip
+// coordinate, size, centre) and bit fields keep a constant in their top byte (the marks pixel).
+#define DREAMUI_WIDGET_PROPERTY_PIXEL_MARKS 0
+#define DREAMUI_WIDGET_PROPERTY_PIXEL_CLIP 1
+#define DREAMUI_WIDGET_PROPERTY_PIXEL_SIZE 2
+#define DREAMUI_WIDGET_PROPERTY_PIXEL_CENTER 13
+
 void DreamUI_ReadWidgetProperty(float CoordinateInDataTex, Texture2D DataTex
     , inout half FontMark
     , inout float ClipDataCoordinate
@@ -10,35 +22,32 @@ void DreamUI_ReadWidgetProperty(float CoordinateInDataTex, Texture2D DataTex
 {
     //read data from texture
     int Coordinate = round(CoordinateInDataTex);
-    int3 Position = int3(0, Coordinate, 0);
 
-    float PixelData = DataTex.Load(Position).x;Position.x += 1;
-    uint MarksUint = asuint(PixelData);
-    uint FontMarkUint = (MarksUint >> 24) & 0x000000ff;
-    uint ExtraMarkUint = (MarksUint >> 16) & 0x000000ff;
-    // IsRenderByDreamUIRenderer = (ExtraMarkUint >> 7) & 1;    
+    // Marks. The top byte is the constant UDreamVisual::PackWidgetMarks writes and is not read here:
+    // it exists so the word is a normal float rather than a denormal, because the font mark alone
+    // (or an extra mark with no font mark) used to leave the float exponent all zeros.
+    uint MarksUint = asuint(DataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_MARKS, Coordinate, 0)).x);
+    uint FontMarkUint = (MarksUint >> 16) & 0x000000ff;
+    uint ExtraMarkUint = (MarksUint >> 8) & 0x000000ff;
+    // IsRenderByDreamUIRenderer = (ExtraMarkUint >> 7) & 1;
     FontMark = FontMarkUint;
 
-    PixelData = DataTex.Load(Position).x;Position.x += 1;
-    ClipDataCoordinate = asuint(PixelData);
+    // The clip coordinate is a float VALUE, matching what
+    // UDreamVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate writes. It used to be the
+    // int's bit pattern put through asuint(), which is a denormal for every small coordinate -- and
+    // a GPU that flushes denormals to zero turned every element's clip coordinate into 0, which
+    // DreamUIClip.ush reads as "no clip".
+    ClipDataCoordinate = DataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_CLIP, Coordinate, 0)).x;
 
-    PixelData = DataTex.Load(Position).x;Position.x += 1;
-    {
-        uint PixelDataUint = asuint(PixelData);
-        uint WidthUint = (PixelDataUint >> 16) & 0x0000ffff;
-        uint HeightUint = PixelDataUint & 0x0000ffff;
-        WidgetSize.x = f16tof32(WidthUint);
-        WidgetSize.y = f16tof32(HeightUint);
-    }
-    
-    PixelData = DataTex.Load(Position).x;Position.x += 1;
-    {
-        uint PixelDataUint = asuint(PixelData);
-        uint CenterXUint = (PixelDataUint >> 16) & 0x0000ffff;
-        uint CenterYUint = PixelDataUint & 0x0000ffff;
-        WidgetCenterPosition.x = f16tof32(CenterXUint);
-        WidgetCenterPosition.y = f16tof32(CenterYUint);
-    }
+    // Size and centre: one float VALUE per component, one component per pixel. They used to be two
+    // half floats packed into one word, and a zero in the high half with anything in the low half is
+    // exactly the denormal case -- a widget centred on the canvas has centre X of exactly 0, so its
+    // centre read back as (0, 0) on any device with flush-to-zero.
+    WidgetSize.x = DataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_SIZE, Coordinate, 0)).x;
+    WidgetSize.y = DataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_SIZE + 1, Coordinate, 0)).x;
+
+    WidgetCenterPosition.x = DataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_CENTER, Coordinate, 0)).x;
+    WidgetCenterPosition.y = DataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_CENTER + 1, Coordinate, 0)).x;
 }
 
 #endif // DREAMUI_WIDGET_PROPERTY_USH

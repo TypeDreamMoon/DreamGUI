@@ -33,6 +33,93 @@ namespace DreamWidgetTreeEditing
 		{
 			return IsValid(InWidget) ? InWidget->GetDisplayName() : FString(TEXT("nothing"));
 		}
+
+		/**
+		 * Carry a widget's authored bindings across a rename, or drop them with the widget.
+		 *
+		 * A binding names its widget by the VARIABLE name the compiler derives from the display name
+		 * (FDreamWidgetPropertyBinding::WidgetName), so renaming or deleting a widget silently breaks
+		 * every `<-`, `->` and `each` that mentioned it -- and the only thing that ever said so was an
+		 * error at the NEXT compile of anything, naming a widget that no longer exists, from a panel
+		 * with no control that could clear the record. A rename is the same binding on a new name; a
+		 * delete leaves no binding to keep.
+		 *
+		 * Pass NAME_None as InNewName to drop. The Blueprint is Modify'd only when something changes:
+		 * every caller here has already snapshotted it, and this must not dirty an asset it did not
+		 * touch.
+		 */
+		void RetargetAuthoredBindings(UDreamWidgetBlueprint* InBlueprint, FName InOldName, FName InNewName)
+		{
+			if (!IsValid(InBlueprint) || InOldName.IsNone() || InOldName == InNewName)
+			{
+				return;
+			}
+			// Asked first, and separately from the write: this runs on every rename and every delete,
+			// and the overwhelming majority of those touch a widget nothing was ever bound to. An
+			// unconditional Modify would dirty the asset for all of them.
+			const bool bMentioned =
+				InBlueprint->PropertyBindings.ContainsByPredicate([InOldName](const FDreamWidgetPropertyBinding& Candidate)
+					{ return Candidate.WidgetName == InOldName; })
+				|| InBlueprint->EventBindings.ContainsByPredicate([InOldName](const FDreamWidgetEventBinding& Candidate)
+					{ return Candidate.WidgetName == InOldName; })
+				|| InBlueprint->EachBindings.ContainsByPredicate([InOldName](const FDreamWidgetEachBinding& Candidate)
+					{
+						return Candidate.HostWidgetName == InOldName || Candidate.TemplateWidgetName == InOldName
+							|| Candidate.ContentWidgetName == InOldName;
+					});
+			if (!bMentioned)
+			{
+				return;
+			}
+			//before the write, so undo has the list as it was
+			InBlueprint->Modify();
+
+			if (InNewName.IsNone())
+			{
+				InBlueprint->PropertyBindings.RemoveAll([InOldName](const FDreamWidgetPropertyBinding& Candidate)
+					{ return Candidate.WidgetName == InOldName; });
+				InBlueprint->EventBindings.RemoveAll([InOldName](const FDreamWidgetEventBinding& Candidate)
+					{ return Candidate.WidgetName == InOldName; });
+				// An `each` block whose host or cell template is gone has nothing left to arrange. One
+				// that merely lost its synthesized content widget keeps its authored meaning; clearing
+				// the name is what lets the builder make a new one.
+				InBlueprint->EachBindings.RemoveAll([InOldName](const FDreamWidgetEachBinding& Candidate)
+					{ return Candidate.HostWidgetName == InOldName || Candidate.TemplateWidgetName == InOldName; });
+				for (FDreamWidgetEachBinding& Binding : InBlueprint->EachBindings)
+				{
+					if (Binding.ContentWidgetName == InOldName)
+					{
+						Binding.ContentWidgetName = NAME_None;
+					}
+				}
+				return;
+			}
+
+			for (FDreamWidgetPropertyBinding& Binding : InBlueprint->PropertyBindings)
+			{
+				if (Binding.WidgetName == InOldName)
+				{
+					Binding.WidgetName = InNewName;
+				}
+			}
+			for (FDreamWidgetEventBinding& Binding : InBlueprint->EventBindings)
+			{
+				if (Binding.WidgetName == InOldName)
+				{
+					Binding.WidgetName = InNewName;
+				}
+			}
+			for (FDreamWidgetEachBinding& Binding : InBlueprint->EachBindings)
+			{
+				for (FName* NamePtr : { &Binding.HostWidgetName, &Binding.TemplateWidgetName, &Binding.ContentWidgetName })
+				{
+					if (*NamePtr == InOldName)
+					{
+						*NamePtr = InNewName;
+					}
+				}
+			}
+		}
 	}
 
 	bool IsTemplateWidgetOf(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget)
@@ -63,7 +150,9 @@ namespace DreamWidgetTreeEditing
 
 	FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore)
 	{
-		const FString Base = InDesired.IsEmpty() ? TEXT("Widget") : InDesired;
+		// Sanitised for the reason MakeUniqueName is: the display name becomes the compiler's
+		// variable name, so anything the rename box would refuse must not be mintable here either.
+		const FString Base = InDesired.IsEmpty() ? TEXT("Widget") : UDreamWidgetTree::SanitizeIdentifier(InDesired);
 		if (InTree == nullptr)
 		{
 			return Base;
@@ -90,6 +179,79 @@ namespace DreamWidgetTreeEditing
 			{
 				return Candidate;
 			}
+		}
+	}
+
+	void RemapBehaviourBindings(UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget,
+		int32 InOldIndex, int32 InNewIndex)
+	{
+		if (!IsValid(InBlueprint) || !IsValid(InWidget) || InOldIndex == INDEX_NONE || InOldIndex == InNewIndex)
+		{
+			return;
+		}
+		const FName WidgetName = UDreamWidgetTree::MakeWidgetVariableName(InWidget);
+		const bool bRemoved = InNewIndex == INDEX_NONE;
+
+		// Where a binding that used to hold InIndex points now, or INDEX_NONE when its behaviour is
+		// gone. Both cases are the ordinary array arithmetic of RemoveAt and of RemoveAt+Insert, which
+		// is exactly what UDreamWidget::RemoveComponent and MoveComponentToIndex do.
+		auto Remap = [InOldIndex, InNewIndex, bRemoved](int32 InIndex) -> int32
+		{
+			if (InIndex == INDEX_NONE)
+			{
+				return INDEX_NONE;
+			}
+			if (bRemoved)
+			{
+				if (InIndex == InOldIndex)return INDEX_NONE;
+				return InIndex > InOldIndex ? InIndex - 1 : InIndex;
+			}
+			if (InIndex == InOldIndex)return InNewIndex;
+			if (InOldIndex < InNewIndex)
+			{
+				return (InIndex > InOldIndex && InIndex <= InNewIndex) ? InIndex - 1 : InIndex;
+			}
+			return (InIndex >= InNewIndex && InIndex < InOldIndex) ? InIndex + 1 : InIndex;
+		};
+
+		auto Names = [WidgetName](FName InBindingWidget, EDreamWidgetBindingTarget InTarget)
+		{
+			return InTarget == EDreamWidgetBindingTarget::Behaviour && InBindingWidget == WidgetName;
+		};
+		// Same shape as RetargetAuthoredBindings: asked before anything is written, so a widget whose
+		// behaviours nothing binds does not dirty the asset every time one is dragged.
+		const bool bMentioned =
+			InBlueprint->PropertyBindings.ContainsByPredicate([&Names](const FDreamWidgetPropertyBinding& Candidate)
+				{ return Names(Candidate.WidgetName, Candidate.Target); })
+			|| InBlueprint->EventBindings.ContainsByPredicate([&Names](const FDreamWidgetEventBinding& Candidate)
+				{ return Names(Candidate.WidgetName, Candidate.Target); });
+		if (!bMentioned)
+		{
+			return;
+		}
+		InBlueprint->Modify();
+
+		for (FDreamWidgetPropertyBinding& Binding : InBlueprint->PropertyBindings)
+		{
+			if (Names(Binding.WidgetName, Binding.Target))
+			{
+				Binding.BehaviourIndex = Remap(Binding.BehaviourIndex);
+			}
+		}
+		for (FDreamWidgetEventBinding& Binding : InBlueprint->EventBindings)
+		{
+			if (Names(Binding.WidgetName, Binding.Target))
+			{
+				Binding.BehaviourIndex = Remap(Binding.BehaviourIndex);
+			}
+		}
+		if (bRemoved)
+		{
+			//the behaviour they named no longer exists; a record the compiler can only report forever
+			InBlueprint->PropertyBindings.RemoveAll([&Names](const FDreamWidgetPropertyBinding& Candidate)
+				{ return Names(Candidate.WidgetName, Candidate.Target) && Candidate.BehaviourIndex == INDEX_NONE; });
+			InBlueprint->EventBindings.RemoveAll([&Names](const FDreamWidgetEventBinding& Candidate)
+				{ return Names(Candidate.WidgetName, Candidate.Target) && Candidate.BehaviourIndex == INDEX_NONE; });
 		}
 	}
 
@@ -182,7 +344,7 @@ namespace DreamWidgetTreeEditing
 		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName)
 	{
 		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-			FString::Printf(TEXT("create a '%s'"), *GetNameSafe(InWidgetClass))))
+			FString::Printf(TEXT("create a '%s'"), *DreamUITextAuthoring::DescribeClassForAuthor(InWidgetClass))))
 		{
 			return nullptr;
 		}
@@ -202,15 +364,23 @@ namespace DreamWidgetTreeEditing
 			return nullptr;
 		}
 
-		UDreamWidgetTree* Tree = InBlueprint->GetOrCreateWidgetTree();
+		// Without a root, deliberately: an empty tree is the state DeleteWidget leaves behind, and
+		// asking for one to be conjured here would fill the hole this function exists to fill --
+		// with a bare UDreamWidget the author never chose, which the widget they DID choose would
+		// then land inside.
+		UDreamWidgetTree* Tree = InBlueprint->GetOrCreateWidgetTree(/*bEnsureRootWidget*/false);
 		UDreamWidget* Parent = InParent != nullptr ? InParent : Tree->RootWidget.Get();
-		if (!IsTemplateWidgetOf(InBlueprint, Parent))
+		// Nothing to hang it on, because there is nothing at all: this widget IS the hierarchy now.
+		// The counterpart of DeleteWidget letting the root go -- an empty tree has to be fillable, or
+		// deleting the root would be a one-way door.
+		const bool bBecomesRoot = Parent == nullptr && !IsValid(Tree->RootWidget);
+		if (!bBecomesRoot && !IsTemplateWidgetOf(InBlueprint, Parent))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d The parent does not belong to '%s'."),
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InBlueprint->GetName());
 			return nullptr;
 		}
-		if (!Parent->CanAcceptAdditionalChildren(1))
+		if (!bBecomesRoot && !Parent->CanAcceptAdditionalChildren(1))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot take another child, so nothing was created under it."),
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName());
@@ -221,7 +391,10 @@ namespace DreamWidgetTreeEditing
 		// creation has to be able to put the tree back the way it was.
 		InBlueprint->Modify();
 		Tree->Modify();
-		Parent->Modify();
+		if (!bBecomesRoot)
+		{
+			Parent->Modify();
+		}
 
 		UDreamWidget* Widget = Tree->ConstructWidget(InWidgetClass);
 		if (!IsValid(Widget))
@@ -232,6 +405,24 @@ namespace DreamWidgetTreeEditing
 		}
 		const FString Desired = InDesiredDisplayName.IsEmpty() ? InWidgetClass->GetName() : InDesiredDisplayName;
 		Widget->SetDisplayName(MakeUniqueDisplayName(Tree, Desired, Widget));
+
+		if (bBecomesRoot)
+		{
+			Tree->RootWidget = Widget;
+			// Stretched, for the same reason UDreamWidgetBlueprintFactory stretches the root it makes:
+			// a root left at the widget default is a fixed rect nothing sizes, and every full-screen
+			// hierarchy then has to fix it by hand. Written as anchor DATA because the setters resolve
+			// against a parent and a tree root has none -- the exact trap that made the factory's own
+			// stretch a silent no-op for as long as it existed.
+			FDreamUIAnchorData Anchors = Widget->GetAnchorData();
+			Anchors.AnchorMin = FVector2D::ZeroVector;
+			Anchors.AnchorMax = FVector2D(1.0, 1.0);
+			Anchors.AnchoredPosition = FVector2D::ZeroVector;
+			Anchors.SizeDelta = FVector2D::ZeroVector;
+			Widget->SetAnchorData(Anchors);
+			NotifyStructureChanged(InBlueprint);
+			return Widget;
+		}
 
 		if (!Widget->TrySetParent(Parent, /*bKeepWorldPosition*/false, InSiblingIndex))
 		{
@@ -265,13 +456,24 @@ namespace DreamWidgetTreeEditing
 			return false;
 		}
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
-		if (Tree->RootWidget == InWidget)
+		// The root goes like anything else, and the tree is simply left empty -- UMG's
+		// UWidgetTree::RemoveWidget does exactly this ("If the widget being removed is the root, null
+		// it out"). This used to be refused, on the grounds that nothing downstream had an answer for
+		// an empty hierarchy. That stopped being true: the compiler says so itself
+		// (FDreamWidgetBlueprintCompilerContext::ValidateWidgetBindings -- "No hierarchy at all is a
+		// legitimate state (logic-only class, or nothing authored yet)"), the preview host and the
+		// generated class both guard the root before touching it, and CreateWidget below adopts the
+		// next widget as the new root. What was left was a refusal nobody still needed, and no way to
+		// replace a root you had outgrown short of deleting the asset.
+		const bool bWasRoot = Tree->RootWidget == InWidget;
+
+		// Everything that is about to stop existing, by the name a binding would have stored. Taken
+		// before the destroy, because afterwards there is no subtree left to walk.
+		TArray<FName> DoomedVariableNames;
+		ForEachWidgetInSubtree(InWidget, [&DoomedVariableNames](UDreamWidget* Widget)
 		{
-			// A hierarchy with no root is not a state the compiler or the designer has an answer for.
-			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Refusing to delete the root of '%s'; delete its children instead."),
-				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InBlueprint->GetName());
-			return false;
-		}
+			DoomedVariableNames.AddUnique(UDreamWidgetTree::MakeWidgetVariableName(Widget));
+		});
 
 		InBlueprint->Modify();
 		Tree->Modify();
@@ -281,10 +483,48 @@ namespace DreamWidgetTreeEditing
 		}
 		InWidget->Modify();
 
-		// Not MarkAsGarbage: the transaction buffer is holding this subtree so undo can put it back,
-		// and a garbage object cannot be restored. Detached is what makes it absent from the class and
-		// from the save; collection follows once nothing references it.
+		if (bWasRoot)
+		{
+			// Before the destroy, and through Modify above, so undo puts the pointer back with the
+			// subtree the transaction buffer is holding.
+			Tree->RootWidget = nullptr;
+		}
+
+		// The designer's per-widget bookkeeping is keyed by object FName, and these sets only ever
+		// grew: a deleted widget stayed "hidden" and "locked" in DesignerData for the life of the
+		// asset and was saved with it, while MakeUniqueObjectName hands a name back out once nothing
+		// holds it -- so a widget created later could be born invisible and unclickable with nothing
+		// in the UI to explain it. Walked before the destroy, while the subtree is still whole, and
+		// after the Modify above so an undo brings the entries back with the widgets.
+		{
+			FDreamWidgetDesignerData& DesignerData = InBlueprint->DesignerData;
+			ForEachWidgetInSubtree(InWidget, [&DesignerData](UDreamWidget* Doomed)
+			{
+				if (IsValid(Doomed))
+				{
+					const FName Key = Doomed->GetFName();
+					DesignerData.HiddenWidgets.Remove(Key);
+					DesignerData.LockedWidgets.Remove(Key);
+					DesignerData.UnexpandedWidgets.Remove(Key);
+				}
+			});
+		}
+
+		// DestroyWidget marks the subtree as garbage as well as detaching it, and undo still puts it
+		// back: it Modify()s each widget before the mark, so the transaction records the transition and
+		// FTransaction::Apply calls ClearGarbage() on the way out. (The premise that a garbage object
+		// cannot be restored was wrong -- what cannot be restored is one the transaction never saw.)
+		// The Modify calls above stay: they cover the blueprint, the tree, the parent's Children array
+		// and the DesignerData walked just above, none of which DestroyWidget touches.
 		InWidget->DestroyWidget();
+
+		// The bindings that named the deleted widgets go with them. Left behind they are records the
+		// compiler can only report as errors -- "expects a widget named X, and this hierarchy has
+		// none" -- on every compile from now on, and nothing in the designer could delete them.
+		for (const FName DoomedName : DoomedVariableNames)
+		{
+			Local::RetargetAuthoredBindings(InBlueprint, DoomedName, NAME_None);
+		}
 
 		NotifyStructureChanged(InBlueprint);
 		return true;
@@ -376,9 +616,18 @@ namespace DreamWidgetTreeEditing
 			return Applied;
 		}
 
+		//the compiler's name for it, taken BEFORE the write, is the key every binding stored
+		const FName OldVariableName = UDreamWidgetTree::MakeWidgetVariableName(InWidget);
+
 		InBlueprint->Modify();
 		InWidget->Modify();
 		InWidget->SetDisplayName(Applied);
+
+		// The bindings that named it, carried across. They key on the variable name, which is derived
+		// from the display name, so without this a rename left every `<-`, `->` and `each` that
+		// mentioned this widget pointing at a name the hierarchy no longer has -- and the only notice
+		// was a compile error, at the next compile of anything, from a panel with no way to fix it.
+		Local::RetargetAuthoredBindings(InBlueprint, OldVariableName, UDreamWidgetTree::MakeWidgetVariableName(InWidget));
 
 		// Structural, not merely modified: the display name IS the variable name, so a rename removes
 		// one member from the class and adds another. Anything bound to the old one has to be told.

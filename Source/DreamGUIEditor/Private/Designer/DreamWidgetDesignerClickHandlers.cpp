@@ -37,183 +37,76 @@
 
 namespace DreamWidgetDesignerClickHandlers
 {
-	static const UTypedElementSelectionSet* PrivateGetElementSelectionSet(FDreamWidgetDesignerViewportClient* ViewportClient)
-	{
-		//if (TSharedPtr<ILevelEditor> LevelEditor = ViewportClient->ParentLevelEditor.Pin())
-		//{
-		//	return LevelEditor->GetElementSelectionSet();
-		//}
-		return nullptr;
-	}
-
-	static UTypedElementSelectionSet* PrivateGetMutableElementSelectionSet(FDreamWidgetDesignerViewportClient* ViewportClient)
-	{
-		//if (TSharedPtr<ILevelEditor> LevelEditor = ViewportClient->ParentLevelEditor.Pin())
-		//{
-		//	return LevelEditor->GetMutableElementSelectionSet();
-		//}
-		return nullptr;
-	}
-
-	static void PrivateSummonContextMenu( FDreamWidgetDesignerViewportClient* ViewportClient, const FTypedElementHandle& HitProxyElement = FTypedElementHandle())
-	{
-		//if( ViewportClient->ParentLevelEditor.IsValid() )
-		//{
-		//	ViewportClient->ParentLevelEditor.Pin()->SummonLevelViewportContextMenu(HitProxyElement);
-		//}
-	}	
-
-	static void PrivateSummonViewportMenu( FDreamWidgetDesignerViewportClient* ViewportClient )
-	{
-		//if (ViewportClient->ParentLevelEditor.IsValid())
-		//{
-		//	ViewportClient->ParentLevelEditor.Pin()->SummonLevelViewportViewOptionMenu(LVT_Perspective);
-		//}
-	}
-
-	/**
- 	 * Creates an actor of the specified type, trying first to find an actor factory,
-	 * falling back to "ACTOR ADD" exec and SpawnActor if no factory is found.
-	 * Does nothing if ActorClass is NULL.
+	/*
+	 * The three selection-set helpers this file used to carry (PrivateGetElementSelectionSet,
+	 * PrivateGetMutableElementSelectionSet and the typed-element ClickElement that read them) are
+	 * gone. Each was a function whose body was commented out and which returned nullptr, so
+	 * ClickElement could not do anything but bail on its first line -- the whole typed-element
+	 * click path in the designer was unreachable code pretending to be a feature. They read the
+	 * LEVEL EDITOR's selection set, which is not this viewport's: the designer selects
+	 * UDreamWidgets through UDreamUISelection, and FDreamWidgetDesignerViewportClient::ProcessClick
+	 * does that directly.
 	 */
-	static AActor* PrivateAddActor(UClass* ActorClass)
+
+	/** The designer's viewport menu. The level editor asks its parent ILevelEditor; there is none here. */
+	static void PrivateSummonContextMenu(FDreamWidgetDesignerViewportClient* ViewportClient, const FTypedElementHandle& HitProxyElement = FTypedElementHandle())
 	{
-		return FActorFactoryAssetProxy::AddActorForAsset(ActorClass);
-	}
-
-	/**
-	 * This function picks a color from under the mouse in the viewport and adds a light with that color.
-	 * This is to make it easy for LDs to add lights that fake radiosity.
-	 * @param Viewport	Viewport to pick color from.
-	 * @param Click		A class that has information about where and how the user clicked on the viewport.
-	 */
-	void PickColorAndAddLight(FViewport* Viewport, const FViewportClick &Click)
-	{
-		// Read pixels from viewport.
-		TArray<FColor> OutputBuffer;
-
-		// We need to redraw the viewport before reading pixels otherwise we may be reading back from an old buffer.
-		Viewport->Draw();
-		Viewport->ReadPixels(OutputBuffer);
-
-		// Sample the color we want.
-		const int32 ClickX = Click.GetClickPos().X;
-		const int32 ClickY = Click.GetClickPos().Y;
-		const int32 PixelIdx = ClickX + ClickY * (int32)Viewport->GetSizeXY().X;
-
-		if(PixelIdx < OutputBuffer.Num())
+		// The handle is ignored on purpose: the designer's menu is built around the widget selection,
+		// not around a typed element. This too used to be an empty body.
+		if (ViewportClient != nullptr)
 		{
-			const FColor PixelColor = OutputBuffer[PixelIdx];
-
-			AActor* NewActor = PrivateAddActor( APointLight::StaticClass() );
-
-			APointLight* Light = CastChecked<APointLight>(NewActor);
-			Light->SetMobility(EComponentMobility::Stationary);
-			UPointLightComponent* PointLightComponent = Cast<UPointLightComponent>( Light->GetLightComponent() );
-			PointLightComponent->LightColor = PixelColor;
+			ViewportClient->SummonDesignerContextMenu();
 		}
 	}
+
+	/*
+	 * The level editor's actor-placement shortcuts -- hold L/S/A/; and click to drop a point light,
+	 * a static mesh, the selected class or a target point -- came across with the rest of this file
+	 * and were never right here. FActorFactoryAssetProxy::AddActorForAsset spawns into the LEVEL
+	 * EDITOR's current level, not into the preview world, so the gesture put an actor in the map the
+	 * author happens to have open, from a viewport that shows a widget hierarchy. ClickBackdrop is
+	 * reached by every click that misses a widget and has no hit proxy, so a stray modifier key was
+	 * all it took. The PickColorAndAddLight variant then CastChecked the result, which asserts
+	 * outright when the factory refuses.
+	 *
+	 * There is nothing to place in a widget designer, so the whole family is gone rather than
+	 * retargeted at the preview world.
+	 */
 
 	bool ClickViewport(FDreamWidgetDesignerViewportClient* ViewportClient, const FViewportClick& Click)
 	{
 		if (Click.GetKey() == EKeys::MiddleMouseButton && Click.IsControlDown())
 		{
-			PrivateSummonViewportMenu(ViewportClient);
-			return true;
+			// Used to call a function whose body was commented out and then report "handled", so
+			// Ctrl+middle-click in the design viewport consumed the click and did nothing whatsoever.
+			// The level editor's answer here is its view-options menu, reached through a parent
+			// ILevelEditor that a designer viewport does not have; the menu this viewport does have
+			// is the designer's own, so the gesture opens that. Handled only if it really opened.
+			return ViewportClient != nullptr && ViewportClient->SummonDesignerContextMenu();
 		}
 		return false;
 	}
 
-	bool ClickElement(FDreamWidgetDesignerViewportClient* ViewportClient, const FTypedElementHandle& HitElement, const FViewportClick& Click)
-	{
-		// Pivot snapping
-		if (Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown())
-		{
-			//GEditor->SetPivot(GEditor->ClickLocation, true, false, true); // TODO: This last param is only for actor pivots
-			//return true;
-			return false; // Let actor and component clicks handle pivots for now
-		}
-
-		UTypedElementSelectionSet* LevelEditorElementSelectionSet = PrivateGetMutableElementSelectionSet(ViewportClient);
-		if (!LevelEditorElementSelectionSet)
-		{
-			return false;
-		}
-
-		bool bHandledClick = false;
-
-		const bool bIsLeftClickSelection = Click.GetKey() == EKeys::LeftMouseButton && !(ViewportClient->Viewport->KeyState(EKeys::T) || ViewportClient->Viewport->KeyState(EKeys::L) || ViewportClient->Viewport->KeyState(EKeys::S) || ViewportClient->Viewport->KeyState(EKeys::A));
-		const bool bIsRightClickSelection = Click.GetKey() == EKeys::RightMouseButton && !Click.IsControlDown() && !ViewportClient->Viewport->KeyState(EKeys::LeftMouseButton);
-
-		if (bIsLeftClickSelection || bIsRightClickSelection)
-		{
-			const ETypedElementSelectionMethod SelectionMethod = Click.GetEvent() == IE_DoubleClick ? ETypedElementSelectionMethod::Secondary : ETypedElementSelectionMethod::Primary;
-			if (const FTypedElementHandle ResolvedElement = LevelEditorElementSelectionSet->GetSelectionElement(HitElement, SelectionMethod))
-			{
-				bHandledClick = true;
-
-				const FTypedElementSelectionOptions SelectionOptions = FTypedElementSelectionOptions()
-					.SetAllowHidden(true)
-					.SetWarnIfLocked(true);
-
-				bool bNeedViewportRefresh = false;
-
-				if (LevelEditorElementSelectionSet->CanSelectElement(ResolvedElement, SelectionOptions))
-				{
-					const FScopedTransaction Transaction(NSLOCTEXT("UnrealEd", "ClickingOnElements", "Clicking on Elements"));
-
-					const bool bAllowSelectionModifiers = bIsLeftClickSelection && LevelEditorElementSelectionSet->AllowSelectionModifiers(ResolvedElement);
-					if (Click.IsControlDown() && bAllowSelectionModifiers)
-					{
-						if (LevelEditorElementSelectionSet->IsElementSelected(ResolvedElement, FTypedElementIsSelectedOptions().SetAllowIndirect(true)))
-						{
-							LevelEditorElementSelectionSet->DeselectElement(ResolvedElement, SelectionOptions);
-						}
-						else
-						{
-							LevelEditorElementSelectionSet->SelectElement(ResolvedElement, SelectionOptions);
-						}
-					}
-					else if (Click.IsShiftDown() && bAllowSelectionModifiers)
-					{
-						LevelEditorElementSelectionSet->SelectElement(ResolvedElement, SelectionOptions);
-					}
-					else
-					{
-						// Skip the clear if we're doing a RMB select and this actor is already selected, as we want to summon the menu for the current selection
-						if (bIsLeftClickSelection || !LevelEditorElementSelectionSet->IsElementSelected(ResolvedElement, FTypedElementIsSelectedOptions().SetAllowIndirect(true)))
-						{
-							bNeedViewportRefresh = bIsRightClickSelection; // Refresh the viewport so the user will see what they just clicked while the menu is open
-							GEditor->DeselectAllSurfaces();
-							LevelEditorElementSelectionSet->ClearSelection(SelectionOptions);
-						}
-						LevelEditorElementSelectionSet->SelectElement(ResolvedElement, SelectionOptions);
-					}
-
-					// Notify any pending selection change now, as this avoids the visual pivot location "lagging" behind the actual selection,
-					// and also ensures that the pivot is at the correct location prior to opening any context menus (which block the update)
-					LevelEditorElementSelectionSet->NotifyPendingChanges();
-				}
-
-				if (bNeedViewportRefresh)
-				{
-					// Redraw the viewport so the user can see which object was clicked on
-					ViewportClient->Viewport->Draw();
-					FlushRenderingCommands();
-				}
-
-				if (bIsRightClickSelection)
-				{
-					PrivateSummonContextMenu(ViewportClient, ResolvedElement);
-				}
-			}
-		}
-
-		return bHandledClick;
-	}
+	/*
+	 * ClickElement is gone with them. It began by asking PrivateGetMutableElementSelectionSet for
+	 * the level editor's selection set, got nullptr, and returned false -- every time, from the
+	 * first line. What followed was a verbatim copy of FLevelEditorViewportClient's element
+	 * selection, unreachable in a designer and describing a selection model this editor does not
+	 * use. Its one live idea, that a right-click on an already-selected thing keeps the selection
+	 * instead of collapsing it, now lives where the designer actually selects: ProcessClick in
+	 * FDreamWidgetDesignerViewportClient.
+	 */
 
 	bool ClickActor(FDreamWidgetDesignerViewportClient* ViewportClient,AActor* Actor,const FViewportClick& Click,bool bAllowSelectionChange)
 	{
+		// Anything clicked in THIS viewport lives in the designer's preview world, and GEditor's
+		// actor selection is the level editor's -- putting a transient preview actor in it shows it
+		// in the outliner, hands it to every level-editor gesture, and leaves it there after the
+		// designer's world is gone. The designer selects DreamWidgets, not actors.
+		if (Actor != nullptr && FDreamWidgetBlueprintEditor::WorldIsDesigner(Actor->GetWorld()))
+		{
+			return false;
+		}
 		// Pivot snapping
 		if( Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown() )
 		{
@@ -285,40 +178,7 @@ namespace DreamWidgetDesignerClickHandlers
 				Actor->GetComponents(Components);
 				//SetDebugLightmapSample(&Components, NULL, 0, GEditor->ClickLocation);
 			}
-			else 
-			if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::L) )
-			{
-				// If shift is down, we pick a color from under the mouse in the viewport and create a light with that color.
-				if(Click.IsControlDown())
-				{
-					PickColorAndAddLight(ViewportClient->Viewport, Click);
-				}
-				else
-				{
-					// Create a point light (they default to stationary)
-					PrivateAddActor( APointLight::StaticClass() );
-				}
-
-				return true;
-			}
-			else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::S) )
-			{
-				// Create a static mesh.
-				PrivateAddActor( AStaticMeshActor::StaticClass() );
-
-				return true;
-			}
-			else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::A) )
-			{
-				// Create an actor of the selected class.
-				UClass* SelectedClass = GEditor->GetSelectedObjects()->GetTop<UClass>();
-				if( SelectedClass )
-				{
-					PrivateAddActor( SelectedClass );
-				}
-
-				return true;
-			}
+			// The L / S / A placement shortcuts used to be here. See the note at the top of the file.
 			else if ( Actor )
 			{
 				if( bAllowSelectionChange  && GEditor->CanSelectActor(Actor, true, true, true) )
@@ -413,7 +273,13 @@ namespace DreamWidgetDesignerClickHandlers
 		if (Component == nullptr)
 		{
 			// It's possible to have a null component here if the primitive component contained in the hit proxy is not part of the actor contained in the hit proxy. In that case, component click is not possible
-			//  (but actor click can still be used as a fallback) : 
+			//  (but actor click can still be used as a fallback) :
+			return false;
+		}
+		// The same reason ClickActor refuses one: GEditor's component selection belongs to the level
+		// editor, and this component is in the preview world.
+		if (FDreamWidgetBlueprintEditor::WorldIsDesigner(Component->GetWorld()))
+		{
 			return false;
 		}
 
@@ -637,41 +503,10 @@ namespace DreamWidgetDesignerClickHandlers
 				}
 			}
 		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::A) )
-		{
-			// Create an actor of the selected class.
-			UClass* SelectedClass = GEditor->GetSelectedObjects()->GetTop<UClass>();
-			if( SelectedClass )
-			{
-				PrivateAddActor( SelectedClass );
-			}
-		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::L) )
-		{
-			// If shift is down, we pick a color from under the mouse in the viewport and create a light with that color.
-			if(Click.IsControlDown())
-			{
-				PickColorAndAddLight(ViewportClient->Viewport, Click);
-			}
-			else
-			{
-				// Create a point light (they default to stationary)
-				PrivateAddActor( APointLight::StaticClass() );
-			}
-		}
+		// The A / L / S / ; placement shortcuts used to be here. See the note at the top of the file.
 		else if( IsTexelDebuggingEnabled() && Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::T) )
 		{
 			//SetDebugLightmapSample(NULL, Model, iSurf, GEditor->ClickLocation);
-		}
-
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::S) )
-		{
-			// Create a static mesh.
-			PrivateAddActor( AStaticMeshActor::StaticClass() );
-		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::Semicolon) )
-		{
-			PrivateAddActor( ATargetPoint::StaticClass() );
 		}
 		else if( Click.IsAltDown() && Click.GetKey() == EKeys::RightMouseButton )
 		{
@@ -848,37 +683,11 @@ namespace DreamWidgetDesignerClickHandlers
 		{
 			GEditor->SetPivot( GEditor->ClickLocation, true, false, true );
 		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::A) )
-		{
-			// Create an actor of the selected class.
-			UClass* SelectedClass = GEditor->GetSelectedObjects()->GetTop<UClass>();
-			if( SelectedClass )
-			{
-				PrivateAddActor( SelectedClass );
-			}
-		}
+		// The A / L / S placement shortcuts used to be here, and this is the handler every click that
+		// misses a widget reaches. See the note at the top of the file.
 		else if( IsTexelDebuggingEnabled() && Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::T) )
 		{
 			//SetDebugLightmapSample(NULL, NULL, 0, GEditor->ClickLocation);
-		}
-
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::L) )
-		{
-			// If shift is down, we pick a color from under the mouse in the viewport and create a light with that color.
-			if(Click.IsControlDown())
-			{
-				PickColorAndAddLight(ViewportClient->Viewport, Click);
-			}
-			else
-			{
-				// Create a point light (they default to stationary)
-				PrivateAddActor( APointLight::StaticClass() );
-			}
-		}
-		else if( Click.GetKey() == EKeys::LeftMouseButton && ViewportClient->Viewport->KeyState(EKeys::S) )
-		{
-			// Create a static mesh.
-			PrivateAddActor( AStaticMeshActor::StaticClass() );
 		}
 		else if( Click.GetKey() == EKeys::RightMouseButton && !Click.IsControlDown() && !ViewportClient->Viewport->KeyState(EKeys::LeftMouseButton) )
 		{

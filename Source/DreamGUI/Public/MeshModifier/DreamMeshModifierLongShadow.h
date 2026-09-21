@@ -28,10 +28,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bMultiplySourceAlpha = true;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha);
+	/** Set once the segment count has been reported as beyond what the index buffer can address, so a
+	 * rebuild every frame does not repeat the message. */
+	bool bLoggedVertexLimitWarning = false;
 public:
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
+	//one whole copy of the mesh per segment; see UDreamMeshModifierBase::GetDuplicatesMesh
+	virtual bool GetDuplicatesMesh()const override { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetShadowColor()const { return ShadowColor; }
@@ -43,6 +48,8 @@ public:
 		bool GetUseGradientColor()const { return bUseGradientColor; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetGradientColor()const { return GradientColor; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		bool GetMultiplySourceAlpha()const { return bMultiplySourceAlpha; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetShadowColor(FColor Value);
@@ -54,4 +61,6 @@ public:
 		void SetUseGradientColor(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetGradientColor(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+		void SetMultiplySourceAlpha(bool Value);
 };

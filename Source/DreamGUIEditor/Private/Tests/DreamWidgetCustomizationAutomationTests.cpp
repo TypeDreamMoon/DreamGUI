@@ -6,6 +6,11 @@
 #include "DetailCustomization/DreamWidgetCustomization.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
+#include "IDetailTreeNode.h"
+#include "IPropertyRowGenerator.h"
+#include "Modules/ModuleManager.h"
+#include "PropertyEditorModule.h"
+#include "PropertyHandle.h"
 
 // The widget details panel edits the whole selection but used to describe only the first widget of
 // it. Pivot compensation cached one rect and replayed it onto one widget, so every other selected
@@ -41,6 +46,86 @@ namespace DreamWidgetCustomizationTestLocal
 		Child->TrySetParent(Root, false);
 		return Child;
 	}
+
+	/**
+	 * Every property the real panel ends up showing, customization and all.
+	 *
+	 * bIgnoreVisibility, because half of what this panel re-adds it re-adds to the ADVANCED half of a
+	 * category, and whether that is expanded is a per-user editor setting rather than anything the
+	 * layout decides. "Ignore visibility treats advanced as expanded" is the property editor's own
+	 * comment on the flag (FDetailCategoryImpl::GetGeneratedChildren).
+	 */
+	void CollectShownProperties(const TSharedRef<IDetailTreeNode>& InNode, TSet<FName>& OutNames)
+	{
+		if (TSharedPtr<IPropertyHandle> Handle = InNode->CreatePropertyHandle())
+		{
+			if (const FProperty* Property = Handle->GetProperty())
+			{
+				OutNames.Add(Property->GetFName());
+			}
+		}
+		TArray<TSharedRef<IDetailTreeNode>> Children;
+		InNode->GetChildren(Children, /*bInIgnoreVisibility*/true);
+		for (const TSharedRef<IDetailTreeNode>& Child : Children)
+		{
+			CollectShownProperties(Child, OutNames);
+		}
+	}
+}
+
+// Everything the widget's own category ("DreamGUI") carries is hidden wholesale and then re-added row
+// by row, so that list IS the panel: a property missing from it is a property with no UI anywhere,
+// however editable its UPROPERTY says it is. NavigationBoundaryRule was missing from it, which left
+// bRestrictNavigationArea as a switch that armed a rule the author could not choose.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetDetailsReAddsEveryHiddenCategoryRowTest,
+	"DreamGUI.Editor.WidgetDetails.TheHiddenCategoryIsReAddedRowByRowIncludingTheNavigationRule",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetDetailsReAddsEveryHiddenCategoryRowTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetCustomizationTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamWidget* Widget = MakeRoot(TestWorld.World);
+
+	FPropertyEditorModule& PropertyEditor =
+		FModuleManager::LoadModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
+	FPropertyRowGeneratorArgs Args;
+	TSharedPtr<IPropertyRowGenerator> Generator = PropertyEditor.CreatePropertyRowGenerator(Args);
+	Generator->SetObjects({ Widget });
+
+	TSet<FName> Shown;
+	bool bCustomizedLayout = false;
+	for (const TSharedRef<IDetailTreeNode>& Root : Generator->GetRootTreeNodes())
+	{
+		// A category only the customization creates. Without it the stock layout would show every
+		// property in the class and every assertion below would pass for the wrong reason.
+		bCustomizedLayout |= Root->GetNodeName() == FName(TEXT("DreamBehavior"));
+		CollectShownProperties(Root, Shown);
+	}
+	if (!TestTrue(TEXT("the widget's own details customization built this layout"), bCustomizedLayout))return true;
+
+	// By name rather than GET_MEMBER_NAME_CHECKED: these are protected members of UDreamWidget and the
+	// panel reaches them as a friend, which a test is not. The class is asked whether each one still
+	// exists, so a rename fails here too instead of quietly asserting about a property nobody has.
+	for (const TCHAR* Expected : {
+		TEXT("bRestrictNavigationArea"),
+		// The defect: the flag was re-added and the rule it selects was not, so the switch could be
+		// turned on and the rule it arms never chosen.
+		TEXT("NavigationBoundaryRule"),
+		// The rest of the same list, so a future edit that drops one fails here rather than in a bug
+		// report six months later.
+		TEXT("DisplayName"), TEXT("bWidgetActive"), TEXT("Visibility"), TEXT("Interactable"),
+		TEXT("Raycastable"), TEXT("bIsFocusable"), TEXT("Cursor"), TEXT("ToolTipText"),
+		TEXT("RenderOpacity"), TEXT("PixelSnapping"), TEXT("bIgnoreLayout"),
+		TEXT("AccessibleBehavior"), TEXT("AccessibleText"), TEXT("AccessibleSummaryText") })
+	{
+		const FName ExpectedName(Expected);
+		if (!TestNotNull(*FString::Printf(TEXT("UDreamWidget still declares '%s'"), Expected),
+			FindFProperty<FProperty>(UDreamWidget::StaticClass(), ExpectedName)))continue;
+		TestTrue(*FString::Printf(TEXT("'%s' survived the hide-and-re-add"), Expected), Shown.Contains(ExpectedName));
+	}
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

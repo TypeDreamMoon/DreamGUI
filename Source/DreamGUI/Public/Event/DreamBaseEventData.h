@@ -22,13 +22,30 @@ enum class EDreamUIPointerEventType :uint8
 	DragDrop = 11,
 	Select = 12,
 	Deselect = 13,
-	Navigate = 14,
+	/** Two clicks on the same widget inside DoubleClickTime. The second Click is still dispatched too. */
+	DoubleClick = 15,
+	/** The trigger held on one widget for LongPressTime without becoming a drag. */
+	LongPress = 16,
+	/** Two pointers moving together or apart. Carried by UDreamGestureEventData. */
+	Pinch = 17,
+	/** One pointer travelling far enough, fast enough, in one direction. Carried by UDreamGestureEventData. */
+	Swipe = 18,
+	// There was a Navigate = 14 here. Every value in this enum is written by exactly one
+	// ExecuteEvent_On* function and read by handlers that switch on it; nothing ever wrote that one, so
+	// no handler could ever see it. Navigation reports itself through the events it actually dispatches
+	// (Enter/Exit/Select on the widget it moved to), which is why nothing needed it.
 };
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUIMouseButtonType :uint8
 {
 	Left,Middle,Right,
-	/** UserDefinedX is for custom defined input button type */
+	/**
+	 * UserDefinedX is for custom defined input button type.
+	 *
+	 * Deliberately kept although no plugin code produces one: these are the extension point for a
+	 * project that has a fourth or fifth button, which reaches them by passing one to
+	 * UDreamStandaloneInputModule::InputTrigger. "Unused inside the plugin" is what they are for.
+	 */
 	UserDefined1,
 	UserDefined2,
 	UserDefined3,

@@ -3,12 +3,56 @@
 #include "Core/DreamUIRichTextCustomStyleData.h"
 #include "DreamGUI.h"
 
+namespace DreamUIRichTextCustomStyleLocal
+{
+	void ApplyBool(EDreamUIRichTextCustomStyleData_BoolType Type, bool& InOutValue)
+	{
+		switch (Type)
+		{
+		case EDreamUIRichTextCustomStyleData_BoolType::On:
+			InOutValue = true;
+			break;
+		case EDreamUIRichTextCustomStyleData_BoolType::Off:
+			InOutValue = false;
+			break;
+		default:
+			break;//KeepOrigin: a tag inside a <b> stays bold
+		}
+	}
+}
+
+bool FDreamUIRichTextCustomStyleItemData::UpgradeLegacyBools()
+{
+	// A set legacy bool can only have come from an asset saved before the enums existed, because the
+	// details panel no longer shows them. False maps to KeepOrigin, which is the whole point: the old
+	// code forced all four flags off when they were unset.
+	bool bChanged = false;
+	auto Upgrade = [&bChanged](bool& InOutLegacy, EDreamUIRichTextCustomStyleData_BoolType& InOutType)
+	{
+		if (InOutLegacy)
+		{
+			InOutLegacy = false;
+			if (InOutType == EDreamUIRichTextCustomStyleData_BoolType::KeepOrigin)
+			{
+				InOutType = EDreamUIRichTextCustomStyleData_BoolType::On;
+			}
+			bChanged = true;
+		}
+	};
+	Upgrade(this->bold, this->boldType);
+	Upgrade(this->italic, this->italicType);
+	Upgrade(this->underline, this->underlineType);
+	Upgrade(this->strikethrough, this->strikethroughType);
+	return bChanged;
+}
+
 void FDreamUIRichTextCustomStyleItemData::ApplyToRichTextParseResult(DreamUIRichTextParser::FRichTextParseResult& value)const
 {
-	value.Bold = this->bold;
-	value.Italic = this->italic;
-	value.Underline = this->underline;
-	value.Strikethrough = this->strikethrough;
+	using namespace DreamUIRichTextCustomStyleLocal;
+	ApplyBool(this->boldType, value.Bold);
+	ApplyBool(this->italicType, value.Italic);
+	ApplyBool(this->underlineType, value.Underline);
+	ApplyBool(this->strikethroughType, value.Strikethrough);
 	switch (this->sizeType)
 	{
 	default:
@@ -49,6 +93,15 @@ void FDreamUIRichTextCustomStyleItemData::ApplyToRichTextParseResult(DreamUIRich
 		value.SupOrSubMode = DreamUIRichTextParser::ESupOrSubMode::Sub;
 		value.Size *= 0.8f;
 		break;
+	}
+}
+
+void UDreamUIRichTextCustomStyleData::PostLoad()
+{
+	Super::PostLoad();
+	for (auto& Pair : DataMap)
+	{
+		Pair.Value.UpgradeLegacyBools();
 	}
 }
 

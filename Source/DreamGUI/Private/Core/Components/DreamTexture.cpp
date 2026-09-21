@@ -4,6 +4,7 @@
 #include "Core/DreamUIGeometry.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 
 UDreamTexture::UDreamTexture(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
@@ -245,3 +246,5 @@ void UDreamTexture::SetFillAmount(float Value)
 	}
 }
 
+
+DECLARE_DREAM_GUI_VISUAL("Texture", UDreamTexture)

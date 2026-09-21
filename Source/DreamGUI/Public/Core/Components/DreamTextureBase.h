@@ -44,4 +44,7 @@ public:
 		void SetSizeFromTexture();
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetOverrideMaterial(UMaterialInterface* Value);
+
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
 };

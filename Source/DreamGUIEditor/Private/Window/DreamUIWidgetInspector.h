@@ -24,6 +24,9 @@ private:
 	TWeakObjectPtr<UWorld> World;
 	TSharedPtr<SBox> ContentBox;
 	TWeakPtr<SDockTab> OwnerTab;
+	/** Subscriptions on the world currently assigned, so AssignWorld can take them off again. */
+	FDelegateHandle EndPlayHandle;
+	FDelegateHandle OutlinerChangedHandle;
 	void CloseTabCallback(TSharedRef<SDockTab> TabClosed);
 	TSharedPtr<SDreamWidgetEditorHierarchyView> HierarchyView;
 	void RefreshContent();

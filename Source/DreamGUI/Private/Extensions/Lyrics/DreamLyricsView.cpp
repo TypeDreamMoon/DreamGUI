@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Extensions/Lyrics/DreamLyricsView.h"
+#include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
 #include "Core/DreamUIFontData_BaseObject.h"
@@ -64,7 +65,7 @@ bool UDreamLyricsView::LoadTTML(const FString& Xml)
 	FString Error;
 	if (!UDreamLyricsLibrary::ParseTTML(Xml, Parsed, Error))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[UDreamLyricsView::LoadTTML] %s"), *Error);
+		UE_LOG(DreamGUI, Warning, TEXT("[UDreamLyricsView::LoadTTML] %s"), *Error);
 		return false;
 	}
 	SetLyrics(Parsed);
@@ -387,6 +388,23 @@ void UDreamLyricsView::Tick(float DeltaTime)
 	{
 		return;
 	}
+
+	// A paused view settles -- the smoothing lerp needs a few frames to land -- and then the whole
+	// per-frame body (a linear scan of every line plus two update passes) is pure tax. A seek while
+	// paused moves CurrentTime, which re-arms the window; play, dirty and snap re-arm it too.
+	if (!bPlaying && !bSnapNextLayout && CurrentTime == LastTickedCurrentTime)
+	{
+		IdleSettleSeconds += DeltaTime;
+		if (IdleSettleSeconds > AlphaSmoothing * 4.0f + 0.25f)
+		{
+			return;
+		}
+	}
+	else
+	{
+		IdleSettleSeconds = 0.0f;
+	}
+	LastTickedCurrentTime = CurrentTime;
 	if (bPlaying)
 	{
 		CurrentTime += DeltaTime * PlaybackRate;

@@ -144,7 +144,12 @@ FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const F
 		EditorViewportClient->ClearPaletteDropPreview();
 		if (Created)
 		{
-			UDreamUIManagerWorldSubsystem::GetInstance(Editor->GetWorld())->MarkDreamUIWidgetOutlinerChanged();
+			// Genuinely optional: the subsystem is null on a world that has begun tearing down, and a
+			// drop can land on a designer that is closing.
+			if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Editor->GetWorld()))
+			{
+				Manager->MarkDreamUIWidgetOutlinerChanged();
+			}
 			EditorViewportClient->Invalidate();
 			return FReply::Handled();
 		}
@@ -165,7 +170,10 @@ FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const F
 		const TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, EItemDropZone::OntoItem,
 			/*bIsDrop*/true, Editor, Parent);
 		if (!Zone.IsSet())return FReply::Unhandled();
-		UDreamUIManagerWorldSubsystem::GetInstance(Editor->GetWorld())->MarkDreamUIWidgetOutlinerChanged();
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Editor->GetWorld()))
+		{
+			Manager->MarkDreamUIWidgetOutlinerChanged();
+		}
 		EditorViewportClient->Invalidate();
 		return FReply::Handled();
 	}
@@ -184,12 +192,18 @@ TSharedRef<SEditorViewport> SDreamWidgetDesignerViewport::GetViewportWidget()
 }
 TSharedPtr<FExtender> SDreamWidgetDesignerViewport::GetExtenders() const
 {
+	// Empty on purpose, and required: ICommonEditorViewportToolbarInfoProvider declares this pure
+	// virtual, and the designer toolbar is built by hand (see SDreamWidgetDesignerViewportToolbar)
+	// rather than assembled from extensions. An empty extender is the "nothing to add" answer the
+	// interface asks for, not a stub waiting to be filled in.
 	TSharedPtr<FExtender> Result(MakeShareable(new FExtender));
 	return Result;
 }
 void SDreamWidgetDesignerViewport::OnFloatingButtonClicked()
 {
-
+	// Also required and also deliberately empty. The level viewport uses this to dismiss its
+	// floating transform toolbar when a menu button is pressed; the designer has no such overlay,
+	// so there is nothing to dismiss.
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -11,6 +11,7 @@
 #include "RenderTargetPool.h"
 #include "Core/DreamVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIBackgroundBlurPassParameters, )
 	RDG_TEXTURE_ACCESS(SourceTexture, ERHIAccess::SRVGraphics)
@@ -84,18 +85,19 @@ public:
 
 		auto& RHICmdList = GraphBuilder.RHICmdList;
 
+		/**
+		 * Every pooled render target taken below is handed to the graph with
+		 * GraphBuilder.RegisterExternalTexture, which parks a strong reference on it for the graph's
+		 * whole lifetime. That matters because nothing here executes: this function only RECORDS
+		 * passes, and GraphBuilder.Execute() runs them after it has returned. The explicit
+		 * SafeRelease calls that used to sit here (and at every early return) put the elements back in
+		 * GRenderTargetPool while those passes still referenced them, so a second view in the same
+		 * frame -- split screen, the other eye, a second blur -- could be handed the same texture, with
+		 * RDG tracking no dependency between them. The references these locals hold are now simply
+		 * dropped when they go out of scope.
+		 */
 		TRefCountPtr<IPooledRenderTarget> ScreenResolvedTexture;
 		TRefCountPtr<IPooledRenderTarget> BlurEffectRenderTarget;
-		auto ReleaseRenderTarget = [&] {
-			if (ScreenResolvedTexture.IsValid())
-			{
-				ScreenResolvedTexture.SafeRelease();
-			}
-			if (BlurEffectRenderTarget.IsValid())
-			{
-				BlurEffectRenderTarget.SafeRelease();
-			}
-		};
 
 		uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
 		auto ScreenSize = ScreenTargetTexture->GetSizeXY();
@@ -106,7 +108,7 @@ public:
 			if (!ScreenResolvedTexture.IsValid())
 				return;
 			auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamUIBlurEffectResolveSource"));
-			auto ResolveDst = RegisterExternalTexture(GraphBuilder, ScreenResolvedTexture->GetRHI(), TEXT("DreamUIBlurEffectResolveTarget"));
+			auto ResolveDst = GraphBuilder.RegisterExternalTexture(ScreenResolvedTexture, TEXT("DreamUIBlurEffectResolveTarget"));
 			Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
 		}
 		
@@ -124,9 +126,9 @@ public:
 					GRenderTargetPool.FindFreeElement(RHICmdList, desc, BlurEffectRenderTarget, TEXT("DreamUIBlurEffectRenderTarget1"));
 					if (!BlurEffectRenderTarget.IsValid())
 					{
-						ReleaseRenderTarget();
 						return;
 					}
+					GraphBuilder.RegisterExternalTexture(BlurEffectRenderTarget, TEXT("DreamUIBlurEffectRenderTarget1"));
 				}//full screen don't need it
 			}
 			else
@@ -134,9 +136,9 @@ public:
 				GRenderTargetPool.FindFreeElement(RHICmdList, desc, BlurEffectRenderTarget, TEXT("DreamUIBlurEffectRenderTarget1"));
 				if (!BlurEffectRenderTarget.IsValid())
 				{
-					ReleaseRenderTarget();
 					return;
 				}
+				GraphBuilder.RegisterExternalTexture(BlurEffectRenderTarget, TEXT("DreamUIBlurEffectRenderTarget1"));
 			}
 		}
 		FRHITexture* BlurEffectRenderTexture = nullptr;
@@ -195,13 +197,10 @@ public:
 				GRenderTargetPool.FindFreeElement(RHICmdList, RenderTargetDesc, DownSampleRT, *FString::Printf(TEXT("DreamUI_DownsampleRT_%d"), i));
 				if (!DownSampleRT.IsValid())
 				{
-					ReleaseRenderTarget();
-					for (auto& RenderTarget : DownSampleRenderTargetArray)
-					{
-						RenderTarget.SafeRelease();
-					}
 					return;
 				}
+				//the graph keeps its own reference until it has executed the copy and blur passes below
+				GraphBuilder.RegisterExternalTexture(DownSampleRT, *FString::Printf(TEXT("DreamUI_DownsampleRT_%d"), i));
 				DownSampleRenderTargetArray.Add(DownSampleRT);
 				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PrevRT, DownSampleRT->GetRHI());
 			
@@ -243,12 +242,8 @@ public:
 			Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, BlurEffectRenderTexture, RenderTargetResource->GetRenderTargetTexture());
 		}
 
-		//release render target
-		ReleaseRenderTarget();
-		for (auto& RenderTarget : DownSampleRenderTargetArray)
-		{
-			RenderTarget.SafeRelease();
-		}
+		//no explicit release: every pooled target above is referenced by the graph until it executes,
+		//and these locals drop their own references as they go out of scope
 	}
 	void DoBlur(FRHITexture* RenderTargetTexture
 		, float BlurAmount
@@ -267,7 +262,8 @@ public:
 			return;
 		}
 		auto SourceTexture = RegisterExternalTexture(GraphBuilder, RenderTargetTexture, TEXT("DreamUIBackgroundBlurSource"));
-		auto BlurTexture = RegisterExternalTexture(GraphBuilder, DownSampleRT_Blur->GetRHI(), TEXT("DreamUIBackgroundBlurIntermediate"));
+		//register the pool element itself, so the graph holds it until the two passes below have run
+		auto BlurTexture = GraphBuilder.RegisterExternalTexture(DownSampleRT_Blur, TEXT("DreamUIBackgroundBlurIntermediate"));
 		
 		TShaderMapRef<FDreamUISimplePostProcessVS> VertexShader(GlobalShaderMap);
 		TShaderMapRef<FDreamUIPostProcessGaussianBlurPS> PixelShader(GlobalShaderMap);
@@ -332,16 +328,17 @@ public:
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
 
-		DownSampleRT_Blur.SafeRelease();
+		//DownSampleRT_Blur's reference is dropped by scope exit; releasing it here returned the element
+		//to the pool while the passes recorded above still had to execute against it
 	}
 };
 
 
 void UDreamBackgroundBlur::SendOthersDataToRenderProxy()
 {
-	if (RenderProxy != nullptr)
+	if (RenderProxy.IsValid())
 	{
-		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)RenderProxy;
+		auto BackgroundBlurRenderProxy = StaticCastSharedPtr<FUIBackgroundBlurRenderProxy>(RenderProxy);
 		struct FUIBackgroundBlurUpdateOthersData
 		{
 			float BlurStrengthWithAlpha;
@@ -396,11 +393,11 @@ float UDreamBackgroundBlur::GetBlurStrengthInternal()
 	return BlurStrength;
 }
 
-FDreamVisualPostProcessRenderProxy* UDreamBackgroundBlur::GetRenderProxy()
+FDreamVisualPostProcessRenderProxyPtr UDreamBackgroundBlur::GetRenderProxy()
 {
-	if (RenderProxy == nullptr)
+	if (!RenderProxy.IsValid())
 	{
-		RenderProxy = new FUIBackgroundBlurRenderProxy();
+		RenderProxy = MakeShared<FUIBackgroundBlurRenderProxy, ESPMode::ThreadSafe>();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
 		SendRenderTargetToRenderProxy();
@@ -412,9 +409,9 @@ FDreamVisualPostProcessRenderProxy* UDreamBackgroundBlur::GetRenderProxy()
 void UDreamBackgroundBlur::SendRegionVertexDataToRenderProxy()
 {
 	Super::SendRegionVertexDataToRenderProxy();
-	if (RenderProxy != nullptr)
+	if (RenderProxy.IsValid())
 	{
-		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)RenderProxy;
+		auto BackgroundBlurRenderProxy = StaticCastSharedPtr<FUIBackgroundBlurRenderProxy>(RenderProxy);
 		auto blurStrengthWithAlpha = this->GetBlurStrengthInternal();
 		ENQUEUE_RENDER_COMMAND(FDreamBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, blurStrengthWithAlpha](FRHICommandListImmediate& RHICmdList)
@@ -423,3 +420,5 @@ void UDreamBackgroundBlur::SendRegionVertexDataToRenderProxy()
 				});
 	}
 }
+
+DECLARE_DREAM_GUI_VISUAL("BackgroundBlur", UDreamBackgroundBlur)

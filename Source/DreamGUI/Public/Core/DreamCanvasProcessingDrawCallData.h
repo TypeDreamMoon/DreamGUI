@@ -9,6 +9,8 @@ struct FDreamCanvasPreparedDrawCallData
 	FVector2D LeftBottomPoint;
 	FVector2D RightTopPoint;
 	uint64 FrameNumber = 0;
+	/** Decided on the game thread; see UDreamCanvas::BatchDrawCallAsync for when it may be true. */
+	bool bCullElementsOutsideCanvasRect = false;
 };
 struct FDreamCanvasPendingDrawCallData
 {

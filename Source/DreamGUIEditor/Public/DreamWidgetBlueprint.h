@@ -8,6 +8,7 @@
 // EViewModeIndex, for the saved viewport state below. EngineTypes.h does not carry it, and inside a
 // unity blob some neighbour always had. -SingleFile on any file that reaches this header said so.
 #include "Engine/EngineBaseTypes.h"
+#include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "DreamWidgetBlueprint.generated.h"
 
@@ -104,12 +105,26 @@ public:
 	UPROPERTY()
 	TArray<FDreamWidgetPropertyBinding> PropertyBindings;
 
+	/** `each` blocks, authored form; the compiler validates the source and hands them to the class. */
+	UPROPERTY()
+	TArray<FDreamWidgetEachBinding> EachBindings;
+
 	/** `Event -> Handler` lines, authored form; CompileEventBindings resolves them onto the class. */
 	UPROPERTY()
 	TArray<FDreamWidgetEventBinding> EventBindings;
 
-	/** Create the tree (and its root) if this asset has none yet, so a fresh asset is editable. */
-	UDreamWidgetTree* GetOrCreateWidgetTree();
+	/**
+	 * Create the tree if this asset has none yet, so a fresh asset is editable.
+	 *
+	 * bEnsureRootWidget also puts a bare root in an empty tree, which is what makes a NEW asset
+	 * openable. It has to be opt-OUT rather than unconditional: the designer can delete the root now
+	 * (DreamWidgetTreeEditing::DeleteWidget, matching UMG), and an unconditional root here put one
+	 * straight back -- so the delete appeared to work, the hierarchy panel emptied, and the very next
+	 * caller resurrected a root the author had not asked for. The editing paths pass false and let
+	 * the empty state be real; asset creation and opening a designer pass true, because a hierarchy
+	 * nobody has authored yet still needs something to drop onto.
+	 */
+	UDreamWidgetTree* GetOrCreateWidgetTree(bool bEnsureRootWidget = true);
 
 	/** Every widget in the authored hierarchy, root first. Empty when nothing has been authored. */
 	void GetAllSourceWidgets(TArray<UDreamWidget*>& OutWidgets) const;

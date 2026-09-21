@@ -46,7 +46,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetApplyAlphaToBlur(bool Value);
 
-	virtual FDreamVisualPostProcessRenderProxy* GetRenderProxy()override;
+	virtual FDreamVisualPostProcessRenderProxyPtr GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 private:
 	FORCEINLINE float GetBlurStrengthInternal();

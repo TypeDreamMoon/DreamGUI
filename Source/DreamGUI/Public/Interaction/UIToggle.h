@@ -108,16 +108,70 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Toggle")
 	FDreamUIEventDelegate OnValueChanged = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::Bool);
 
+	/**
+	 * The four pointer moments, in C++ only.
+	 *
+	 * UUIButton has carried these since it was written and this class never did, which is why
+	 * UDreamToggle could speak about a value changing and about nothing else -- no hover, no press.
+	 * C++ rather than Blueprint delegates for the reason UUIButton's hover pair states: a native
+	 * control wires its parts from C++ and a dynamic delegate can only carry an argument-less
+	 * UFUNCTION, so the Blueprint surface belongs to the CONTROL, which re-broadcasts these.
+	 */
+	FSimpleMulticastDelegate OnHoveredCPP;
+	FSimpleMulticastDelegate OnUnhoveredCPP;
+	FSimpleMulticastDelegate OnPressedCPP;
+	FSimpleMulticastDelegate OnReleasedCPP;
+
 	void SetValue(bool Value, bool SendCallback);
 	void ApplyValueToVisual(bool ImmediateSet);
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerEnter_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
 public:
 	FDreamUIMulticastDelegateBool& GetOnValueChangedEvent(){ return OnValueChangedCPP;}
+	FSimpleMulticastDelegate& GetOnHoveredEvent(){ return OnHoveredCPP; }
+	FSimpleMulticastDelegate& GetOnUnhoveredEvent(){ return OnUnhoveredCPP; }
+	FSimpleMulticastDelegate& GetOnPressedEvent(){ return OnPressedCPP; }
+	FSimpleMulticastDelegate& GetOnReleasedEvent(){ return OnReleasedCPP; }
+
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	UDreamVisual* GetToggleTransitionTarget()const { return ToggleTransitionTarget.Get(); }
+	/**
+	 * What the CHECKED transition tints -- deliberately a different visual from the hover one, see
+	 * ApplyValueToVisual.
+	 *
+	 * The property is EditAnywhere, so the designer and .dui have always been able to reach it by
+	 * reflection while no caller could. A toggle assembled in code has to name its own tick.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetToggleTransitionTarget(UDreamVisual* Value);
+
+	/**
+	 * The two colours the checked transition moves between, the counterparts of UUISelectable's
+	 * normal/hovered/pressed setters. Same reason those exist: a toggle assembled by code rather than
+	 * in a details panel has no other way to say what checked looks like.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	FColor GetOnColor()const { return OnColor; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetOnColor(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	FColor GetOffColor()const { return OffColor; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetOffColor(FColor Value);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	UUIToggleGroup* GetToggleGroup()const { return ToggleGroup.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	void SetToggleGroup(UUIToggleGroup* InGroupComp);
+	/**
+	 * Settable because Awake reads it: a control assembled in code runs before Awake and could
+	 * never reach this EditAnywhere flag -- the same reflection-only hole every part reference had.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetAutoFindToggleGroupInParent(bool InValue) { bAutoFindToggleGroupInParent = InValue; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	bool GetValue()const { return bIsOn; }
 	/** Set IsChecked value and send callback event */
@@ -126,6 +180,15 @@ public:
 	/** Set IsChecked value and NOT send callback event */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
 	void SetValueWithoutNotify(bool Value);
+	/**
+	 * Aliases in the spelling the binding system derives from the property: bIsOn's setter is
+	 * SetIsOn by the naming rule, and until these existed a toggle could not be bound at all --
+	 * FindDreamWidgetSetterFor found nothing and DUI5005 blamed the author.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetIsOn(bool Value) { SetValue(Value); }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Toggle")
+	void SetIsOnWithoutNotify(bool Value) { SetValueWithoutNotify(Value); }
 	/**
 	 * If this toggle added to a ToggleGroup, then return index in group. Return -1 if not add to ToggleGroup.
 	 * Index is sorted by flatten-hierarchy-index, from RootComponent(UIItem).

@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Components/DreamText.h"
 #include "Components/DreamSprite.h"
+#include "Core/DreamUIBlendMode.h"
 #include "Core/DreamUIMeshIndex.h"
 #include "Core/DreamUIMeshVertex.h"
 
@@ -56,6 +57,7 @@ public:
 		  Material(Other.Material),
 		  bIsFont(Other.bIsFont),
 		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
+		  BlendMode(Other.BlendMode),
 		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
 		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace)
@@ -76,6 +78,7 @@ public:
 			Material = Other.Material;
 			bIsFont = Other.bIsFont;
 			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
+			BlendMode = Other.BlendMode;
 			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
@@ -98,6 +101,11 @@ public:
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
 	bool bIsFont = false;
 	bool bSupportDrawcallBatching = true;
+	/**
+	 * How this element composites. Part of a draw-call's identity: two elements that composite
+	 * differently cannot share one draw-call, because the blend state is set once per draw-call.
+	 */
+	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 
 	FTransform TransformRelativeToCanvas;
 	FVector2D BoundsMin2DInCanvasSpace;
@@ -115,7 +123,16 @@ public:
 		Material = Other.Material;
 		bIsFont = Other.bIsFont;
 		bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
-		
+		//a batching key, so it has to survive the copy for the same reason the transform below does
+		BlendMode = Other.BlendMode;
+		/**
+		 * The batching thread asks this transform whether the item is a flat 2D element or a rotated /
+		 * depth-offset 3D one, and only 2D items are free to batch anywhere. A destination geometry starts
+		 * on an identity FTransform, so leaving this out does not merely lose data -- it answers "2D" for
+		 * every item, and the whole 3D path in BatchDrawCallAsync silently never runs.
+		 */
+		TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
+
 		BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 		BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
 	}
@@ -233,6 +250,30 @@ public:
 
 public:
 	static void UpdateUIColor(FDreamUIGeometry* uiGeo, FColor color);
+	/**
+	 * Everything TransformVertices needs to know about the canvas and the visual, read off them once
+	 * on the game thread. The transform itself runs on a worker task, where touching a UObject races
+	 * with garbage collection, so the worker gets this struct and the geometry -- and nothing else.
+	 */
+	struct FTransformVerticesParams
+	{
+		/** Inverse of the render canvas widget's world transform. */
+		FTransform InverseCanvasTransform = FTransform::Identity;
+		/** The visual's widget's world transform. */
+		FTransform ItemWorldTransform = FTransform::Identity;
+		/** The visual's widget's world matrix; only read when bHasPerspectiveApplied. */
+		FMatrix ItemWorldMatrix = FMatrix::Identity;
+		/** Local-space 2D bounds of the geometry, i.e. what CalculateLocalBounds worked out. */
+		FVector2D LocalBoundsMin = FVector2D::ZeroVector;
+		FVector2D LocalBoundsMax = FVector2D::ZeroVector;
+		bool bHasPerspectiveApplied = false;
+		bool bRequireNormalAndTangent = false;
+	};
+	/** Gathers FTransformVerticesParams from the two objects. Game thread only. */
+	static FTransformVerticesParams MakeTransformVerticesParams(class UDreamCanvas* canvas, class UDreamVisual* item);
+	/** Thread-safe: touches only the params and the geometry. */
+	static void TransformVertices(const FTransformVerticesParams& Params, FDreamUIGeometry* uiGeo);
+	/** Game-thread convenience overload: gathers the params, then transforms. */
 	static void TransformVertices(class UDreamCanvas* canvas, class UDreamVisual* item, FDreamUIGeometry* uiGeo);
 	static void CalculatePivotOffset(
 		float width, float height, const FVector2f& pivot
@@ -244,8 +285,9 @@ public:
 	);
 	/** Snaps emitted glyph quads to the canvas pixel grid; what a pixel-perfect text runs after painting. */
 	static void AdjustPixelPerfectPos_For_UIText(TArray<FDreamUIOriginVertexData>& originVertices, const TArray<FDreamUITextCharProperty>& cacheCharPropertyArray, UDreamCanvas* RenderCanvas, UDreamVisual* Visual);
+	/** Snaps originVertices[startIndex, endIndex) to the canvas pixel grid. endIndex, not a count. */
 	static void AdjustPixelPerfectPos(
-		TArray<FDreamUIOriginVertexData>& originVertices, int startIndex, int count
+		TArray<FDreamUIOriginVertexData>& originVertices, int startIndex, int endIndex
 		, UDreamCanvas* RenderCanvas, UDreamVisual* Visual
 	);
 private:

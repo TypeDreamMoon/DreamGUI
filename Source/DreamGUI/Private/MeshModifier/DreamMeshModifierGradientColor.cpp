@@ -33,11 +33,16 @@ void UDreamMeshModifierGradientColor::ModifyUIGeometry(
 	int32 triangleCount = triangles.Num();
 	if (triangleCount == 0 || vertexCount == 0)return;
 
+	// Every direction below paints a whole quad per pass and steps the cursor four times inside the
+	// loop body, so the bound has to clear all four -- testing only the first corner walks off the
+	// end of a geometry whose vertex count is not a multiple of four. That is not a hypothetical
+	// shape: a modifier earlier in the list is free to append vertices in any number, and the
+	// gradient is the one modifier here that reads a count it did not produce itself.
 	switch (DirectionType)
 	{
 	case EDreamMeshModifierGradientColorDirection::BottomToTop:
 	{
-		for (int i = 0; i < vertexCount;)
+		for (int i = 0; i + 3 < vertexCount;)
 		{
 			ApplyColorAndAlpha(vertices[i++].Color, Color1);
 			ApplyColorAndAlpha(vertices[i++].Color, Color1);
@@ -48,7 +53,7 @@ void UDreamMeshModifierGradientColor::ModifyUIGeometry(
 	break;
 	case EDreamMeshModifierGradientColorDirection::TopToBottom:
 	{
-		for (int i = 0; i < vertexCount;)
+		for (int i = 0; i + 3 < vertexCount;)
 		{
 			ApplyColorAndAlpha(vertices[i++].Color, Color2);
 			ApplyColorAndAlpha(vertices[i++].Color, Color2);
@@ -59,7 +64,7 @@ void UDreamMeshModifierGradientColor::ModifyUIGeometry(
 	break;
 	case EDreamMeshModifierGradientColorDirection::LeftToRight:
 	{
-		for (int i = 0; i < vertexCount;)
+		for (int i = 0; i + 3 < vertexCount;)
 		{
 			ApplyColorAndAlpha(vertices[i++].Color, Color1);
 			ApplyColorAndAlpha(vertices[i++].Color, Color2);
@@ -70,7 +75,7 @@ void UDreamMeshModifierGradientColor::ModifyUIGeometry(
 	break;
 	case EDreamMeshModifierGradientColorDirection::RightToLeft:
 	{
-		for (int i = 0; i < vertexCount;)
+		for (int i = 0; i + 3 < vertexCount;)
 		{
 			ApplyColorAndAlpha(vertices[i++].Color, Color2);
 			ApplyColorAndAlpha(vertices[i++].Color, Color1);
@@ -81,7 +86,7 @@ void UDreamMeshModifierGradientColor::ModifyUIGeometry(
 	break;
 	case EDreamMeshModifierGradientColorDirection::FourCorner:
 	{
-		for (int i = 0; i < vertexCount;)
+		for (int i = 0; i + 3 < vertexCount;)
 		{
 			ApplyColorAndAlpha(vertices[i++].Color, Color1);
 			ApplyColorAndAlpha(vertices[i++].Color, Color2);

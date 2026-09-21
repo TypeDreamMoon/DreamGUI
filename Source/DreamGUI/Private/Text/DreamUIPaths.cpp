@@ -1,8 +1,9 @@
-// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Text/DreamUIPaths.h"
 
 #include "HAL/FileManager.h"
+#include "HAL/PlatformTime.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 
@@ -65,6 +66,27 @@ namespace DreamUIPaths
 
 	TArray<FDreamUISourceRoot> GetSourceRoots()
 	{
+		// A HALF-SECOND MEMO, which is the smallest thing that answers the complaint without
+		// reopening the decision the header explains.
+		//
+		// The header refuses a cache because DreamFX's had to be invalidated by hand at every
+		// mutation site and answered wrongly for a DUI folder created while the editor was running.
+		// Both of those are properties of a cache that lives until somebody clears it. This one
+		// expires on its own, so the folder created a moment ago is found a moment later and nobody
+		// has to remember anything -- while a single write-back flush, which resolves one `use` per
+		// import and enumerates every enabled plugin with a DirectoryExists each time, pays for the
+		// walk once instead of once per line.
+		//
+		// Game thread only, like everything that asks IPluginManager anything.
+		static TArray<FDreamUISourceRoot> Cached;
+		static double CachedAt = 0.0;
+		constexpr double MemoSeconds = 0.5;
+		const double Now = FPlatformTime::Seconds();
+		if (!Cached.IsEmpty() && Now - CachedAt < MemoSeconds)
+		{
+			return Cached;
+		}
+
 		TArray<FDreamUISourceRoot> Roots;
 
 		const FString ProjectRoot = Local::NormalizeDirectory(
@@ -88,6 +110,15 @@ namespace DreamUIPaths
 			Root.RootToken = FString::Printf(TEXT("%s%s"), Local::PluginTokenPrefix, *Plugin->GetName());
 		}
 
+		// An EMPTY answer is not memoised, deliberately: "no DUI folder yet" is the state an author
+		// leaves by creating one, and a project in that state asks this rarely enough that walking
+		// every time costs nothing. Memoising it would put the half-second delay on exactly the
+		// moment somebody is waiting to see their first file appear.
+		if (!Roots.IsEmpty())
+		{
+			Cached = Roots;
+			CachedAt = Now;
+		}
 		return Roots;
 	}
 
@@ -107,8 +138,14 @@ namespace DreamUIPaths
 		OutFiles.Sort();
 	}
 
-	FString Resolve(const FString& InPath)
+	FString Resolve(const FString& InPath, bool* OutRootTokenResolved)
 	{
+		// True for everything that is not the one case below, including a path with no token at all:
+		// "did the spelling's own root answer" is trivially yes when it named none.
+		if (OutRootTokenResolved != nullptr)
+		{
+			*OutRootTokenResolved = true;
+		}
 		// Trimmed first because this string is typed by hand as often as it is picked, and a trailing
 		// space turns "the file is right there" into DUI6001 with a message that looks identical to a
 		// path that is genuinely wrong.
@@ -129,10 +166,22 @@ namespace DreamUIPaths
 			{
 				return Local::NormalizeFile(Root->Directory + Relative);
 			}
-			// The plugin is disabled, has no DUI directory, or is not installed. Returning the path it
-			// WOULD have had is not possible without the plugin, so the token stays in the message --
-			// which is the useful half of it: the reader needs to be told which plugin, not which
-			// folder inside a plugin that is not there.
+			// The plugin is disabled, has no DUI directory, or is not installed. Where the plugin WOULD
+			// have put the file is unknowable without the plugin, so the project's own root stands in
+			// and the caller gets an absolute path that does not exist -- which is the contract every
+			// caller here relies on (this string is opened as well as printed).
+			//
+			// Stated plainly because the comment that used to sit here claimed the token survived
+			// into the message, and it does not: a reader whose `Plugin.DreamUIX:` was a typo is told
+			// about a path under the PROJECT, with the plugin name nowhere in it. Keeping the token
+			// would mean returning a string that is not a filename, and every caller would then have
+			// to learn that a resolved path may not be openable. If this message ever needs to name
+			// the plugin, the fix is an out-parameter saying which root answered -- not a path that
+			// is sometimes a spelling -- which is what OutRootTokenResolved is, and it is now here.
+			if (OutRootTokenResolved != nullptr)
+			{
+				*OutRootTokenResolved = false;
+			}
 			return Local::NormalizeFile(FPaths::Combine(FPaths::ProjectDir(), SourceDirectoryName, Relative));
 		}
 

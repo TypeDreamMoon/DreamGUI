@@ -6,6 +6,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUISpriteData_BaseObject.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 
 UDreamSprite::UDreamSprite(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
@@ -309,3 +310,5 @@ void UDreamSprite::SetFillAmount(float Value)
 		}
 	}
 }
+
+DECLARE_DREAM_GUI_VISUAL("Sprite", UDreamSprite)

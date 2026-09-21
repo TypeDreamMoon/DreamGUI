@@ -28,7 +28,16 @@ protected:
 	{
 		return PointArray;
 	}
+
+	/**
+	 * The stroked bounding box of PointArray, or a negative pair when there is no line to bound.
+	 * Both measure functions read it; they differ only in which component they return.
+	 */
+	FVector2f MeasureStrokeBounds()const;
 public:
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
+
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		void SetPoints(const TArray<FVector2D>& InPoints);
 };

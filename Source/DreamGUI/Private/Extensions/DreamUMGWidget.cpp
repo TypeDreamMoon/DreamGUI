@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "Extensions/DreamUMGWidget.h"
+#include "Core/DreamUIWorldContext.h"
+#include "Blueprint/UserWidget.h"
 #include "DreamTweenBPLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Slate/WidgetRenderer.h"
@@ -16,6 +18,7 @@
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWidgetRegistry.h"
 
 #define LOCTEXT_NAMESPACE "UIWidget"
 
@@ -89,6 +92,18 @@ void UDreamUMGWidget::OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld)
 	}
 }
 
+/*
+ * The only class in the plugin with UE_SERVER guards, and the rule those guards follow -- worth
+ * stating here because no server target exists in this project to catch a mistake in them.
+ *
+ * The guards wrap CODE, never DECLARATIONS. Every member the blocks below touch (SlateWindow,
+ * SlateWidget, WidgetRenderer, CurrentSlateWidget) is declared unconditionally in the header, and
+ * every function they call is defined unconditionally with its own body guarded -- which is also how
+ * the text path handles WITH_FREETYPE=0 / WITH_HARFBUZZ=0. That is what keeps a server build from
+ * failing at link on a symbol that was compiled away on one side and referenced on the other, and it
+ * is the thing to preserve when editing these blocks: guarding a member's declaration is the change
+ * that breaks the configuration nobody here can compile.
+ */
 void UDreamUMGWidget::OnRegister()
 {
 	Super::OnRegister();
@@ -98,7 +113,7 @@ void UDreamUMGWidget::OnRegister()
 
 	if (!IsRunningDedicatedServer())
 	{
-		const bool bIsGameWorld = GetWorld()->IsGameWorld();
+		const bool bIsGameWorld = DreamUI::IsGameWorld(this);
 
 		if (!WidgetRenderer && !GUsingNullRHI)
 		{
@@ -113,13 +128,6 @@ void UDreamUMGWidget::OnRegister()
 #endif
 	}
 #endif // !UE_SERVER
-
-#if WITH_EDITOR
-	if (!GetWorld()->IsGameWorld())
-	{
-		
-	}
-#endif
 }
 
 void UDreamUMGWidget::SetWindowFocusable(bool bInWindowFocusable)
@@ -140,7 +148,10 @@ EVisibility UDreamUMGWidget::ConvertWindowVisibilityToVisibility(EWindowVisibili
 	case EWindowVisibility::SelfHitTestInvisible:
 		return EVisibility::SelfHitTestInvisible;
 	default:
-		checkNoEntry();
+		// The value comes off a serialised uint8 property, so "no other case exists" is a statement
+		// about the enum as it is declared today, not about what an already-saved asset holds. The
+		// fallback below is the property's own default, which is the answer a stale value wants;
+		// checkNoEntry() made it a crash in Development and Test packages instead.
 		return EVisibility::SelfHitTestInvisible;
 	}
 }
@@ -201,7 +212,8 @@ void UDreamUMGWidget::SetTickMode(ETickMode InTickMode)
 bool UDreamUMGWidget::IsWidgetVisible() const
 {
 	//  If we are in World Space, if the component or the SlateWindow is not visible the Widget is not visible.
-	if ((!GetWidget()->GetRenderVisibleInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
+	const UDreamWidget* OwningWidget = GetWidget();
+	if (OwningWidget == nullptr || !OwningWidget->GetRenderVisibleInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible())
 	{
 		return false;
 	}
@@ -219,11 +231,13 @@ bool UDreamUMGWidget::IsWidgetVisible() const
 void UDreamUMGWidget::OnUnregister()
 {
 #if !UE_SERVER
+	// Paired with the subscription in OnRegister, and guarded on the same condition so the pair
+	// cannot come apart in the configuration that compiles only one half.
 	FWorldDelegates::LevelRemovedFromWorld.RemoveAll(this);
-#endif
+#endif // !UE_SERVER
 
 #if WITH_EDITOR
-	if (!GetWorld()->IsGameWorld())
+	if (!DreamUI::IsGameWorld(this))
 	{
 		ReleaseResources();
 	}
@@ -370,7 +384,7 @@ void UDreamUMGWidget::SetComponentTickEnabled(bool bEnable)
 		if (bEnable)
 		{
 #if WITH_EDITOR
-			if (!GetWorld()->IsGameWorld())
+			if (!DreamUI::IsGameWorld(this))
 			{
 				if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
 				{
@@ -386,7 +400,7 @@ void UDreamUMGWidget::SetComponentTickEnabled(bool bEnable)
 		else
 		{
 #if WITH_EDITOR
-			if (!GetWorld()->IsGameWorld())
+			if (!DreamUI::IsGameWorld(this))
 			{
 				if (EditorTickHandle.IsValid())
 				{
@@ -415,10 +429,20 @@ bool UDreamUMGWidget::ShouldReenableComponentTickWhenWidgetBecomesVisible() cons
 bool UDreamUMGWidget::ShouldDrawWidget() const
 {
 	const float RenderTimeThreshold = .5f;
-	if (auto RenderCanvas = GetWidget()->GetRenderCanvas())
+	const UDreamWidget* OwningWidget = GetWidget();
+	if (OwningWidget == nullptr)
 	{
-		// If we don't tick when off-screen, don't bother ticking if it hasn't been rendered recently
-		if (TickWhenOffscreen || GetWorld()->TimeSince(GetWorld()->LastRenderTime) <= RenderTimeThreshold)
+		return false;
+	}
+	if (auto RenderCanvas = OwningWidget->GetRenderCanvas())
+	{
+		// If we don't tick when off-screen, don't bother ticking if it hasn't been rendered recently.
+		// "Rendered recently" is a question about the world, and a worldless component -- one being
+		// torn down, or one in a Blueprint's authoring tree -- cannot answer it, so it answers "no"
+		// and leaves the decision to TickWhenOffscreen. The canvas test above guards the canvas, not
+		// the world; the two are independently absent.
+		const UWorld* World = DreamUI::GetWorldSafe(this);
+		if (TickWhenOffscreen || (World != nullptr && World->TimeSince(World->LastRenderTime) <= RenderTimeThreshold))
 		{
 			if ((GetCurrentTime() - LastWidgetRenderTime) >= RedrawTime)
 			{
@@ -492,7 +516,16 @@ void UDreamUMGWidget::DrawWidgetToRenderTarget(float DeltaTime)
 
 double UDreamUMGWidget::GetCurrentTime() const
 {
-	return (TimingPolicy == EWidgetTimingPolicy::RealTime) ? FApp::GetCurrentTime() : static_cast<double>(GetWorld()->GetTimeSeconds());
+	if (TimingPolicy == EWidgetTimingPolicy::RealTime)
+	{
+		return FApp::GetCurrentTime();
+	}
+
+	// No world is not a third case to invent an answer for: per DreamUIWorldContext.h, it takes the
+	// branch that can work without one, which here is the real-time clock. The value only ever feeds
+	// a difference against LastWidgetRenderTime, and both ends move to the same clock together.
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	return World != nullptr ? static_cast<double>(World->GetTimeSeconds()) : FApp::GetCurrentTime();
 }
 
 #if WITH_EDITOR
@@ -831,4 +864,63 @@ void UDreamUMGWidget::SetWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
 	}
 }
 
+/*
+ * The hosted widget is the only thing here that knows how big it wants to be, and UMG already
+ * measured it: Slate caches a desired size on every widget during prepass, and this component runs
+ * one on the virtual window each time it redraws. So the answer exists and costs a weak-pointer pin
+ * plus a field read -- no TakeWidget(), which would BUILD the Slate tree, and nothing that would
+ * make a measure pass construct anything.
+ *
+ * Three states have to stay distinguishable, and only one of them is a size:
+ *
+ *   - Nothing hosted. No world means InitWidget never created the UUserWidget, which is the state of
+ *     every one of these in a headless test and in a Blueprint authoring tree. No opinion.
+ *   - Hosted but never prepassed. SWidget::GetDesiredSize returns zero when bDesiredSizeSet is
+ *     false, and zero here is indistinguishable from a widget that genuinely wants no room. Taking
+ *     it at face value is how a UMG panel would collapse on the frame before its first draw. No
+ *     opinion.
+ *   - Measured. Convert and answer.
+ *
+ * The conversion is the counter-intuitive bit. ResolutionScale does NOT scale the element on
+ * screen -- the quad is always the widget's rect. It scales the render target, so the virtual
+ * window is laid out at rect * ResolutionScale Slate units for the same UI rectangle. At scale 2 a
+ * widget wanting 100 Slate units is asking for 50 UI units, so the desired size has to be divided
+ * back out or a supersampled widget measures twice as large as it draws.
+ */
+FVector2f UDreamUMGWidget::MeasureHostedWidget() const
+{
+	// SlateWidget is set only by SetSlateWidget, and SetWidget/SetSlateWidget clear each other, so
+	// at most one of these two is ever live.
+	TSharedPtr<SWidget> Hosted = SlateWidget;
+	if (!Hosted.IsValid() && IsValid(UmgWidget))
+	{
+		// The already-built Slate tree if there is one. Not TakeWidget(), which builds it.
+		Hosted = UmgWidget->GetCachedWidget();
+	}
+	if (!Hosted.IsValid())
+	{
+		return FVector2f(-1.0f, -1.0f);
+	}
+
+	const UE::Slate::FDeprecateVector2DResult Desired = Hosted->GetDesiredSize();
+	const float Scale = ResolutionScale > 0.0f ? ResolutionScale : 1.0f;
+	return FVector2f(Desired.X > 0.0f ? Desired.X / Scale : -1.0f,
+		Desired.Y > 0.0f ? Desired.Y / Scale : -1.0f);
+}
+
+float UDreamUMGWidget::GetPreferredWidth() const
+{
+	return MeasureHostedWidget().X;
+}
+
+float UDreamUMGWidget::GetPreferredHeight() const
+{
+	return MeasureHostedWidget().Y;
+}
+
 #undef LOCTEXT_NAMESPACE
+
+// A custom mesh that supplies its OWN source, which is why this one is spellable where the bare
+// UDreamCustomMesh is not: the class it hosts is a property, and a property is something a .dui
+// can write.
+DECLARE_DREAM_GUI_VISUAL("UMGWidget", UDreamUMGWidget)

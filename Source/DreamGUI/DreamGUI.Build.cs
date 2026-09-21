@@ -46,6 +46,7 @@ public class DreamGUI : ModuleRules
                 "InputCore",//UITextInput
                 "EnhancedInput",//DreamEnhancedInputEventSystemActor
                 "DeveloperSettings",//UDreamGUISettings
+                "FieldNotification",//UDreamUserWidget implements INotifyFieldValueChanged
                 //"FreeType2",
                 "UElibPNG",
                 "zlib",
@@ -71,21 +72,30 @@ public class DreamGUI : ModuleRules
             {
                 PublicDefinitions.Add("WITH_FREETYPE=0");
             }
-            // Text shaping. The HarfBuzz module defines WITH_HARFBUZZ privately for our own TUs; our
-            // public headers key off DREAMGUI_WITH_HARFBUZZ so dependent modules see the same class layout.
+            // Text shaping. WITH_HARFBUZZ comes from the engine's HarfBuzz module and is what the
+            // shaping code actually keys off (DreamTextShaper.cpp, DreamUIFontData_FreeTypeRender.cpp),
+            // always paired with WITH_FREETYPE where a face is involved. No header of ours forks on it,
+            // so the class layout dependent modules see does not change with it -- which is why the
+            // DREAMGUI_WITH_HARFBUZZ mirror that used to be published here is gone: nothing in the
+            // plugin ever read it, and it disagreed with WITH_HARFBUZZ whenever bCompileFreeType was
+            // off while HarfBuzz still compiled.
             AddEngineThirdPartyPrivateStaticDependencies(Target, "HarfBuzz");
             // The engine's HarfBuzz takes its Unicode functions from ICU, so the static lib needs it too.
             if (Target.bCompileICU)
             {
                 AddEngineThirdPartyPrivateStaticDependencies(Target, "ICU");
             }
-            PublicDefinitions.Add("DREAMGUI_WITH_HARFBUZZ=" + (Target.bCompileFreeType ? "1" : "0"));
         }
         else
         {
+            // A dedicated server draws no text, so there is no FreeType to measure with: every glyph
+            // comes back zero-sized and a whole paragraph measures zero by zero. That is acceptable for
+            // a server but it used to be silent; UDreamUIFontData_FreeTypeRender::GetCharData now says
+            // it once. WITH_HARFBUZZ is spelled out because the HarfBuzz module -- the only other thing
+            // that defines it, to this same 0 on a platform it does not support -- is not linked here,
+            // and #if on an undefined macro is not something to leave to the compiler's mood.
             PublicDefinitions.Add("WITH_FREETYPE=0");
             PublicDefinitions.Add("WITH_HARFBUZZ=0");
-            PublicDefinitions.Add("DREAMGUI_WITH_HARFBUZZ=0");
         }
 		
 		PrivateDependencyModuleNames.AddRange(
@@ -115,7 +125,7 @@ public class DreamGUI : ModuleRules
                 "LevelEditor",
                 "ToolWidgets",//SCustomDialog
                 "Json",
-                "JsonUtilities",//prefab save round-trip verification
+                "JsonUtilities",//kept with Json; the prefab save round-trip that needed it went with the prefab asset model
             }
             );
         }

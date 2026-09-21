@@ -42,16 +42,36 @@ protected:
 		FQuat value = FQuat::Slerp(startValue, endValue, lerpValue);
 		setter.ExecuteIfBound(value);
 	}
+	/**
+	 * Rotations compose by multiplication, never by adding components. The sum of two unit
+	 * quaternions is not a unit quaternion, and Slerp handed one interpolates along the wrong arc --
+	 * at worst, subtracting two nearly opposite rotations leaves a near-zero quaternion whose
+	 * normalisation is NaN. diffValue below is the rotation that carried start to end (end applied
+	 * after start's inverse), and applying it again is what "one more increment" means.
+	 */
 	virtual void SetValueForIncremental() override
 	{
-		auto diffValue = endValue - startValue;
+		const FQuat diffValue = endValue * startValue.Inverse();
 		startValue = endValue;
-		endValue += diffValue;
+		endValue = (diffValue * endValue).GetNormalized();
 	}
 	virtual void SetOriginValueForRestart() override
 	{
-		auto diffValue = endValue - startValue;
+		// Same algebra: restoring the first start value and re-applying the same relative rotation
+		// puts the end back exactly where it was, which component arithmetic only manages for
+		// rotations that happen to share an axis.
+		const FQuat diffValue = endValue * startValue.Inverse();
 		startValue = originStartValue;
-		endValue = originStartValue + diffValue;
+		endValue = (diffValue * originStartValue).GetNormalized();
+	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		originStartValue = startValue;
+	}
+	/** Degrees of rotation between the two ends, the unit a rotation speed is quoted in. */
+	virtual float GetValueDistance()const override
+	{
+		return FMath::RadiansToDegrees(static_cast<float>(startValue.AngularDistance(endValue)));
 	}
 };

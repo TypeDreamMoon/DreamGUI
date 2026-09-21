@@ -173,7 +173,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionXTo(USceneComponent* target, d
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionXTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionXTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
@@ -194,7 +194,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionYTo(USceneComponent* target, d
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionYTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionYTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
@@ -215,7 +215,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionZTo(USceneComponent* target, d
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionZTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionZTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target] 
@@ -232,20 +232,20 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionZTo(USceneComponent* target, d
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionXTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionXTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionXTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionXTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetRelativeLocation().X;
-	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](auto value) {
+	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](auto value) {
 		auto location = target->GetRelativeLocation();
 		location.X = value;
-		target->SetRelativeLocation(location, teleport, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+		target->SetRelativeLocation(location, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 	}), endValue, duration);
 	if (Tweener)
 	{
@@ -253,20 +253,20 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionXTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionYTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionYTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionYTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionYTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetRelativeLocation().Y;
-	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](auto value) {
+	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](auto value) {
 		auto location = target->GetRelativeLocation();
 		location.Y = value;
-		target->SetRelativeLocation(location, teleport, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+		target->SetRelativeLocation(location, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 	}), endValue, duration);
 	if (Tweener)
 	{
@@ -274,20 +274,20 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionYTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionZTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionZTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionZTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionZTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetRelativeLocation().Z;
-	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](auto value) {
+	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](auto value) {
 		auto location = target->GetRelativeLocation();
 		location.Z = value;
-		target->SetRelativeLocation(location, teleport, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+		target->SetRelativeLocation(location, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 	}), endValue, duration);
 	if (Tweener)
 	{
@@ -302,7 +302,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionXTo(USceneComponent* target, d
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionXTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionXTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target] 
@@ -323,7 +323,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionYTo(USceneComponent* target, d
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionYTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionYTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
@@ -344,7 +344,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionZTo(USceneComponent* target, d
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionZTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionZTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
@@ -361,20 +361,20 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionZTo(USceneComponent* target, d
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionXTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionXTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionXTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionXTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetComponentLocation().X;
-	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](auto value) {
+	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](auto value) {
 		auto location = target->GetComponentLocation();
 		location.X = value;
-		target->SetWorldLocation(location, teleport, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+		target->SetWorldLocation(location, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 	}), endValue, duration);
 	if (Tweener)
 	{
@@ -382,20 +382,20 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionXTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionYTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionYTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionYTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionYTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetComponentLocation().Y;
-	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](auto value) {
+	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](auto value) {
 		auto location = target->GetComponentLocation();
 		location.Y = value;
-		target->SetWorldLocation(location, teleport, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+		target->SetWorldLocation(location, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 	}), endValue, duration);
 	if (Tweener)
 	{
@@ -403,20 +403,20 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionYTo_Sweep(USceneComponent* tar
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionZTo_Sweep(USceneComponent* target, double endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionZTo_Sweep(USceneComponent* target, double endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionZTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionZTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenDoubleGetterFunction::CreateWeakLambda(target, [target] 
 	{
 		return target->GetComponentLocation().Z;
-	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](auto value) {
+	}), FDreamTweenDoubleSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](auto value) {
 		auto location = target->GetComponentLocation();
 		location.Z = value;
-		target->SetWorldLocation(location, teleport, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+		target->SetWorldLocation(location, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 	}), endValue, duration);
 	if (Tweener)
 	{
@@ -434,7 +434,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalPositionTo(USceneComponent* target, FV
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target
@@ -451,7 +451,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo(USceneComponent* target, FV
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target
@@ -464,34 +464,34 @@ UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo(USceneComponent* target, FV
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalPositionTo_Sweep(USceneComponent* target, FVector endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalPositionTo_Sweep(USceneComponent* target, FVector endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalPositionTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target
 	, FDreamTweenVectorGetterFunction::CreateUObject(target, &USceneComponent::GetRelativeLocation)
 	, FDreamTweenPositionSetterFunction::CreateUObject(target, &USceneComponent::SetRelativeLocation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo_Sweep(USceneComponent* target, FVector endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldPositionTo_Sweep(USceneComponent* target, FVector endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldPositionTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target
 	, FDreamTweenPositionGetterFunction::CreateUObject(target, &USceneComponent::GetComponentLocation)
-	, FDreamTweenPositionSetterFunction::CreateUObject(target, &USceneComponent::SetRelativeLocation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, FDreamTweenPositionSetterFunction::CreateUObject(target, &USceneComponent::SetWorldLocation)
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
@@ -506,7 +506,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalScaleTo(USceneComponent* target, FVect
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalScaleTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalScaleTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target
@@ -526,7 +526,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotateEulerAngleTo(USceneComponent* ta
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotateEulerAngleTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotateEulerAngleTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
@@ -544,7 +544,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo(USceneComponent* 
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotationTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotationTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
@@ -558,36 +558,36 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo(USceneComponent* 
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotateEulerAngleTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotateEulerAngleTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
 	{ 
 		return target->GetRelativeRotationCache().GetCachedQuat();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetRelativeRotation)
-	, eulerAngle, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, eulerAngle, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotationTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotationTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetRelativeRotationCache().GetCachedQuat();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetRelativeRotation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
@@ -598,7 +598,7 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo(USceneComponent* target, FRo
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotatorTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotatorTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	if (shortestPath)
@@ -620,24 +620,24 @@ UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo(USceneComponent* target, FRo
 		return Tweener;
 	}
 }
-UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::LocalRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotatorTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::LocalRotatorTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	if (shortestPath)
 	{
-		return LocalRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweepHitResult, sweep, teleport, duration, delay, ease);
+		return LocalRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweep, teleport, duration, delay, ease);
 	}
 	else
 	{
 		auto Tweener = UDreamTweenManager::To(target
 		, FDreamTweenRotatorGetterFunction::CreateUObject(target, &USceneComponent::GetRelativeRotation)
-		, FDreamTweenRotatorSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](FRotator value)
+		, FDreamTweenRotatorSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](FRotator value)
 		{
-			target->SetRelativeRotation(value, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+			target->SetRelativeRotation(value, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 		}), endValue, duration);
 		if (Tweener)
 		{
@@ -653,7 +653,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotateEulerAngleTo(USceneComponent* ta
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotateEulerAngleTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotateEulerAngleTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
@@ -671,7 +671,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo(USceneComponent* 
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotationTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotationTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
@@ -685,36 +685,36 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo(USceneComponent* 
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldRotateEulerAngleTo_Sweep(USceneComponent* target, FVector eulerAngle, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotateEulerAngleTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotateEulerAngleTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetComponentRotation().Quaternion();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetWorldRotation)
-	, eulerAngle, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, eulerAngle, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
 	}
 	return Tweener;
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldRotationQuaternionTo_Sweep(USceneComponent* target, const FQuat& endValue, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotationTo_Sweep] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotationTo_Sweep] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(target, FDreamTweenRotationQuatGetterFunction::CreateWeakLambda(target, [target]
 	{
 		return target->GetComponentRotation().Quaternion();
 	}), FDreamTweenRotationQuatSetterFunction::CreateUObject(target, &USceneComponent::SetWorldRotation)
-	, endValue, duration, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+	, endValue, duration, sweep, nullptr, TeleportFlagToEnum(teleport));
 	if (Tweener)
 	{
 		Tweener->SetDelay(delay)->SetEase(ease);
@@ -725,7 +725,7 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo(USceneComponent* target, FRo
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotatorTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotatorTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	if (shortestPath)
@@ -747,24 +747,24 @@ UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo(USceneComponent* target, FRo
 		return Tweener;
 	}
 }
-UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, FHitResult& sweepHitResult, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
+UDreamTweener* UDreamTweenBPLibrary::WorldRotatorTo_Sweep(USceneComponent* target, FRotator endValue, bool shortestPath, bool sweep, bool teleport, float duration, float delay, EDreamTweenEase ease)
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotatorTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::WorldRotatorTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	if (shortestPath)
 	{
-		return WorldRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweepHitResult, sweep, teleport, duration, delay, ease);
+		return WorldRotationQuaternionTo_Sweep(target, endValue.Quaternion(), sweep, teleport, duration, delay, ease);
 	}
 	else
 	{
 		auto Tweener = UDreamTweenManager::To(target
 		, FDreamTweenRotatorGetterFunction::CreateUObject(target, &USceneComponent::GetComponentRotation)
-		, FDreamTweenRotatorSetterFunction::CreateWeakLambda(target, [target, &sweepHitResult, sweep, teleport](FRotator value)
+		, FDreamTweenRotatorSetterFunction::CreateWeakLambda(target, [target, sweepHitResultStorage = MakeShared<FHitResult>(), sweep, teleport](FRotator value)
 		{
-			target->SetWorldRotation(value, sweep, sweep ? &sweepHitResult : nullptr, TeleportFlagToEnum(teleport));
+			target->SetWorldRotation(value, sweep, sweep ? &sweepHitResultStorage.Get() : nullptr, TeleportFlagToEnum(teleport));
 		}), endValue, duration);
 		if (Tweener)
 		{
@@ -786,7 +786,7 @@ UDreamTweener* UDreamTweenBPLibrary::MaterialScalarParameterTo(UObject* WorldCon
 	}
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MaterialScalarParameterTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MaterialScalarParameterTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	float startValue = 0;
@@ -820,7 +820,7 @@ UDreamTweener* UDreamTweenBPLibrary::MaterialVectorParameterTo(UObject* WorldCon
 	}
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MaterialVectorParameterTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MaterialVectorParameterTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	FLinearColor startValue = FLinearColor();
@@ -850,11 +850,17 @@ UDreamTweener* UDreamTweenBPLibrary::MeshMaterialScalarParameterTo(UPrimitiveCom
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MeshMaterialScalarParameterTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MeshMaterialScalarParameterTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	float startValue = 0;
 	auto material = target->CreateAndSetMaterialInstanceDynamic(materialIndex);
+	if (!IsValid(material))
+	{
+		//A slot the mesh does not have gives back nothing at all, not an empty material.
+		UE_LOG(DreamTween, Warning, TEXT("[UDreamTweenBPLibrary::MeshMaterialScalarParameterTo]no material at index:%d on:%s"), materialIndex, *GetPathNameSafe(target));
+		return nullptr;
+	}
 	int32 parameterIndex = 0;
 	if (material->GetScalarParameterValue(parameterName, startValue))
 	{
@@ -880,11 +886,17 @@ UDreamTweener* UDreamTweenBPLibrary::MeshMaterialVectorParameterTo(UPrimitiveCom
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MeshMaterialVectorParameterTo] target is not valid:%s"), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[UDreamTweenBPLibrary::MeshMaterialVectorParameterTo] target is not valid:%s"), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	FLinearColor startValue = FLinearColor();
 	auto material = target->CreateAndSetMaterialInstanceDynamic(materialIndex);
+	if (!IsValid(material))
+	{
+		//A slot the mesh does not have gives back nothing at all, not an empty material.
+		UE_LOG(DreamTween, Warning, TEXT("[UDreamTweenBPLibrary::MeshMaterialVectorParameterTo]no material at index:%d on:%s"), materialIndex, *GetPathNameSafe(target));
+		return nullptr;
+	}
 	int32 parameterIndex = 0;
 	if (material->GetVectorParameterValue(parameterName, startValue))
 	{
@@ -914,7 +926,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_CanvasPanelSlot_PositionTo(UObject* Wor
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject
@@ -931,7 +943,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_CanvasPanelSlot_SizeTo(UObject* WorldCo
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject
@@ -949,7 +961,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_HorizontalBoxSlot_PaddingTo(UObject* Wo
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto endValueVector4 = FVector4(endValue.Left, endValue.Top, endValue.Right, endValue.Bottom);
@@ -971,7 +983,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_VerticalBoxSlot_PaddingTo(UObject* Worl
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto endValueVector4 = FVector4(endValue.Left, endValue.Top, endValue.Right, endValue.Bottom);
@@ -993,7 +1005,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_OverlaySlot_PaddingTo(UObject* WorldCon
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto endValueVector4 = FVector4(endValue.Left, endValue.Top, endValue.Right, endValue.Bottom);
@@ -1015,7 +1027,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_ButtonSlot_PaddingTo(UObject* WorldCont
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto endValueVector4 = FVector4(endValue.Left, endValue.Top, endValue.Right, endValue.Bottom);
@@ -1037,7 +1049,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_BorderSlot_PaddingTo(UObject* WorldCont
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto endValueVector4 = FVector4(endValue.Left, endValue.Top, endValue.Right, endValue.Bottom);
@@ -1060,7 +1072,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_RenderTransform_TranslationTo(UObject* 
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject, FDreamTweenVector2DGetterFunction::CreateWeakLambda(target, [=] 
@@ -1078,7 +1090,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_RenderTransform_AngleTo(UObject* WorldC
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject
@@ -1095,7 +1107,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_RenderTransform_ScaleTo(UObject* WorldC
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject, FDreamTweenVector2DGetterFunction::CreateWeakLambda(target, [=] 
@@ -1113,7 +1125,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_RenderTransform_ShearTo(UObject* WorldC
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject, FDreamTweenVector2DGetterFunction::CreateWeakLambda(target, [=] 
@@ -1131,7 +1143,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_RenderOpacityTo(UObject* WorldContextOb
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject
@@ -1149,7 +1161,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_UserWidget_ColorAndOpacityTo(UObject* W
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject, FDreamTweenLinearColorGetterFunction::CreateWeakLambda(target, [=] 
@@ -1168,7 +1180,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_Image_ColorAndOpacityTo(UObject* WorldC
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject, FDreamTweenLinearColorGetterFunction::CreateWeakLambda(target, [=] 
@@ -1187,7 +1199,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_Button_ColorAndOpacityTo(UObject* World
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject, FDreamTweenLinearColorGetterFunction::CreateWeakLambda(target, [=] 
@@ -1206,7 +1218,7 @@ UDreamTweener* UDreamTweenBPLibrary::UMG_Border_ContentColorAndOpacityTo(UObject
 {
 	if (!IsValid(target))
 	{
-		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *(target->GetPathName()));
+		UE_LOG(DreamTween, Error, TEXT("[%s] target is not valid:%s"), ANSI_TO_TCHAR(__FUNCTION__), *GetPathNameSafe(target));
 		return nullptr;
 	}
 	auto Tweener = UDreamTweenManager::To(WorldContextObject

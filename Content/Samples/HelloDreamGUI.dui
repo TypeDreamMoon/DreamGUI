@@ -1,0 +1,93 @@
+// The sample that ships with the plugin: the smallest `.dui` that is still a real screen.
+//
+// WHAT TO DO WITH IT
+//   1. Content Browser > right click > User Interface > Dream Widget Blueprint. Put it wherever the
+//      `class` line below says, or edit that line to match where you put it -- the two have to agree.
+//   2. Open it, and in the designer toolbar use Pick Text Source to point the class at this file.
+//      Copy it into your own project first if you want to edit it; the one in the plugin folder is a
+//      reference, and a plugin update overwrites it.
+//   3. Compile. The hierarchy below is what you get, and the designer edits the same class.
+//   4. Show it: UDreamUIBPLibrary::AddWidgetOfClassToViewport(this, WBP_HelloDreamGUI). Nothing else
+//      to set up -- the screen root, the raycaster and the event system are created on demand.
+//
+// WHAT IT DEMONSTRATES, in the order the file reads:
+//   `class`       which widget Blueprint this file is the source of.
+//   `style`       a named set of properties, applied to a node with `Node : StyleName`.
+//   `Widget`      a node with no visual of its own -- a rect that exists to hold others.
+//   `+ Panel {}`  a component attached to the node. Layout lives in components (Overlay, VerticalBox),
+//                 which is why a node can be laid out one way and drawn another.
+//   `Image`/`Text` a node whose visual draws something.
+//   `@slot`       what this node asks of the panel ABOVE it, rather than of itself. The distinction
+//                 is the one thing worth reading twice: AnchorData.SizeDelta is the node's own rect,
+//                 @slot SizeRule is the parent's arrangement of it.
+class /Game/UI/WBP_HelloDreamGUI
+
+style Title {
+    Font     = /DreamGUI/DefaultFont_DistanceField
+    FontSize = 28
+    Color    = #E6E9F0
+    HAlign   = Center
+}
+
+style Body {
+    Font     = /DreamGUI/DefaultFont_DistanceField
+    FontSize = 15
+    Color    = #8C93A6
+    HAlign   = Center
+}
+
+Widget Root {
+    // Anchored to all four corners with no inset: fills whatever it is added to, at any resolution.
+    AnchorData.AnchorMin = (0, 0)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.SizeDelta = (0, 0)
+
+    + Overlay {}
+
+    Widget Card {
+        AnchorData.SizeDelta = (420, 220)
+        @slot HorizontalAlignment = Center
+        @slot VerticalAlignment   = Center
+
+        + Overlay {}
+
+        // Drawn first, so it is behind: an Overlay stacks its children in declaration order.
+        Image Backdrop {
+            Brush.TintColor = #1B1E26FF
+            @slot HorizontalAlignment = Fill
+            @slot VerticalAlignment   = Fill
+        }
+
+        Widget Column {
+            @slot HorizontalAlignment = Fill
+            @slot VerticalAlignment   = Fill
+
+            + VerticalBox {
+                Spacing = 10
+                Padding = (24, 28, 24, 28)
+            }
+
+            Text Heading : Title {
+                AnchorData.SizeDelta = (0, 34)
+                Text = "Hello, DreamGUI"
+                @slot HorizontalAlignment = Fill
+                @slot SizeRule = Auto
+            }
+
+            Image Rule {
+                Brush.ImageSize = (0, 2)
+                Brush.TintColor = #3A3F4B
+                @slot HorizontalAlignment = Fill
+                @slot SizeRule = Auto
+            }
+
+            Text Subheading : Body {
+                AnchorData.SizeDelta = (0, 46)
+                Text = "This screen is a text file. Edit it, compile, and the class changes with it."
+                WrapTextAt = 360
+                @slot HorizontalAlignment = Fill
+                @slot SizeRule = Auto
+            }
+        }
+    }
+}

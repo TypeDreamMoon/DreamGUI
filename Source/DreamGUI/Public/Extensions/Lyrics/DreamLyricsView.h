@@ -166,6 +166,10 @@ private:
 	int32 ActiveLine = INDEX_NONE;
 	bool bLinesDirty = true;
 	bool bSnapNextLayout = true;
+	/** Seconds since anything moved while paused; past the settle window the tick body is skipped. */
+	float IdleSettleSeconds = 0.0f;
+	/** CurrentTime as of the last tick, so a seek while paused re-arms the settle window. */
+	float LastTickedCurrentTime = 0.0f;
 
 	void DestroyLines();
 	void ApplyTextSettings(UDreamText* Text, bool bBackground, bool bSecondary, bool bTranslation) const;

@@ -23,6 +23,8 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
 #include "DreamWidgetBlueprintEditor.h"
+#include "DreamWidgetBlueprint.h"//UDreamWidgetBlueprint::Status (cancelled-drag dirty rollback)
+#include "UObject/Package.h"//UPackage::SetDirtyFlag (cancelled-drag dirty rollback)
 #include "DreamUIWidgetPicking.h"
 #include "MouseDeltaTracker.h"
 #include "Misc/ITransaction.h"
@@ -139,6 +141,13 @@ FDreamWidgetDesignerViewportClient::~FDreamWidgetDesignerViewportClient()
 	if (DesignerPtr.IsValid() && OnSelectionChangedDelegateHandle.IsValid())
 	{
 		DesignerPtr.Pin()->OnSelectionChanged.Remove(OnSelectionChangedDelegateHandle);
+	}
+	// The focus timer's lambda captures this by reference, so a pending one outliving the client
+	// writes into freed memory the moment it fires. FLevelEditorViewportClient's destructor clears
+	// it for the same reason; this one never did.
+	if (GEditor != nullptr && FocusTimerHandle.IsValid())
+	{
+		GEditor->GetTimerManager()->ClearTimer(FocusTimerHandle);
 	}
 }
 
@@ -1191,6 +1200,12 @@ void FDreamWidgetDesignerViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 		if (DesignerPtr.IsValid() && DesignerPtr.Pin()->GetShowResolutionGuides())
 		{
 			DrawResolutionGuides(InViewport, View, Canvas);
+		}
+		// Its own switch. The safe area used to be drawn only inside the branch above, so an author
+		// who wanted to know whether a TV would crop their HUD had to put six device rectangles over
+		// the screen they were designing to find out.
+		if (DesignerPtr.IsValid() && DesignerPtr.Pin()->GetShowSafeZone())
+		{
 			DrawSafeZoneGuide(View, Canvas);
 		}
 		DrawLayoutDebugOverlay(InViewport, Canvas);
@@ -1448,9 +1463,12 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyE
 		EventArgs.Viewport->GetMousePos(MousePos);
 		if (AnimationChipCloseRect.IsInside(FVector2D(MousePos)))
 		{
-			if (const TSharedPtr<SDreamWidgetAnimationEditor> SequencerEditor = DesignerPtr.Pin()->GetSequencerEditor())
+			if (const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin())
 			{
-				SequencerEditor->ClearAnimationSelection();
+				if (const TSharedPtr<SDreamWidgetAnimationEditor> SequencerEditor = DesignerEditor->GetSequencerEditor())
+				{
+					SequencerEditor->ClearAnimationSelection();
+				}
 			}
 			return true;
 		}
@@ -1632,11 +1650,24 @@ void FDreamWidgetDesignerViewportClient::BeginDesignerDrag(EDesignerHandle InHan
 	if (HitHandle != EDesignerHandle::Move && Widgets.Num() != 1)return;
 
 	DesignerSnapshots.Reset();
+	// Before the transaction, because the commit inside it is what dirties the asset. See
+	// bBlueprintPackageWasDirtyBeforeDrag.
+	bBlueprintPackageWasDirtyBeforeDrag = false;
+	BlueprintStatusBeforeDrag = BS_Dirty;
+	if (UDreamWidgetBlueprint* DraggedBlueprint = DesignerPtr.Pin()->GetWidgetBlueprint())
+	{
+		bBlueprintPackageWasDirtyBeforeDrag = DraggedBlueprint->GetOutermost()->IsDirty();
+		BlueprintStatusBeforeDrag = (uint8)DraggedBlueprint->Status;
+	}
 	DesignerTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("DesignerTransformWidgets", "Transform Widgets"));
+	// Inside the transaction and BEFORE the first mouse move, which is what makes the drag undoable:
+	// CopyPreviewValuesToTemplate Modify()s each template before writing, so what the entry carries
+	// is the geometry as it stood when the handle was grabbed. The widgets below are the PREVIEW's
+	// and are deliberately not recorded -- they are thrown away and rebuilt from the template, and
+	// the snapshots taken here are what a cancelled drag rolls them back with.
 	DesignerPtr.Pin()->CommitSelectedWidgetGeometryToTemplate();
 	for (UDreamWidget* SelectedWidget : Widgets)
 	{
-		SelectedWidget->Modify();
 		FDesignerWidgetSnapshot& Snapshot = DesignerSnapshots.AddDefaulted_GetRef();
 		Snapshot.Widget = SelectedWidget;
 		Snapshot.AnchoredPosition = SelectedWidget->GetAnchoredPosition();
@@ -1694,14 +1725,18 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 			Target.PlaneTransform = Snapshot.PlaneTransform;
 			Target.StartPlanePoint = Snapshot.StartPlanePoint;
 			Target.StartPosition = Snapshot.AnchoredPosition;
+			Target.Size = FVector2D(SelectedWidget->GetWidth(), SelectedWidget->GetHeight());
+			Target.Pivot = Snapshot.Pivot;
 			Target.bHorizontalFree = Snapshot.bHorizontalPositionFree;
 			Target.bVerticalFree = Snapshot.bVerticalPositionFree;
 			Moving.Add(SelectedWidget);
 			Targets.Add(Target);
 		}
 		const float GridSize = DesignerPtr.Pin()->IsDesignerGridSnapEnabled() ? DesignerPtr.Pin()->GetDesignerGridSize() : 0.0f;
+		FSiblingSnapLines SnapLines;
+		GatherSiblingSnapLines(Moving, SnapLines);
 		TArray<FMoveDragResult> Results;
-		ResolveMoveDrag(Targets, GridSize, Results);
+		ResolveMoveDrag(Targets, GridSize, Results, SnapLines);
 		for (int32 Index = 0; Index < Moving.Num(); ++Index)
 		{
 			Moving[Index]->SetAnchoredPosition(Results[Index].Position);
@@ -1936,16 +1971,14 @@ bool FDreamWidgetDesignerViewportClient::ApplyPendingReparent()
 	// Asked again at the drop rather than trusted from the hover: a pointer stays down for as long
 	// as the author holds it, and anything else in the editor may have moved the hierarchy meanwhile.
 	if (!CanReparentSelectionUnder(Dragged, NewParent))return false;
-	NewParent->SetFlags(RF_Transactional);
-	NewParent->Modify();
+	// No Modify on either parent, and no RF_Transactional put on them: both are PREVIEW widgets, and
+	// recording them here is what used to let an undo restore a hierarchy of objects the next
+	// rebuild had already destroyed. ReparentTemplatesFrom below performs the same move on the
+	// authoring tree, and DreamWidgetTreeEditing::ReparentWidget records the Blueprint, the tree and
+	// both parents there -- inside this same transaction, because the caller opened it.
 	bool bReparented = false;
 	for (UDreamWidget* DraggedWidget : Dragged)
 	{
-		if (UDreamWidget* OldParent = DraggedWidget->GetParent(); IsValid(OldParent))
-		{
-			OldParent->SetFlags(RF_Transactional);
-			OldParent->Modify();
-		}
 		// Keeping the world transform is what leaves the widget where it was dropped. It does not
 		// carry the rect a stretch-anchored widget resolves from its anchors, though: those are
 		// fractions of a parent that is now a different size, so the extent is put back by hand.
@@ -2004,8 +2037,29 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerDrag(bool bCancel)
 			AutoKeyAnimatedTransform(DraggedWidgets, true, false, false);
 		}
 	}
-	if (DesignerTransaction.IsValid() && (bCancel || !bDesignerChanged))DesignerTransaction->Cancel();
+	const bool bRolledBack = DesignerTransaction.IsValid() && (bCancel || !bDesignerChanged);
+	if (bRolledBack)DesignerTransaction->Cancel();
 	DesignerTransaction.Reset();
+	if (bRolledBack && !bBlueprintPackageWasDirtyBeforeDrag && DesignerPtr.IsValid())
+	{
+		// Cancel() put the properties back; it cannot put back the dirty flag or the compile status,
+		// which BeginDesignerDrag's opening commit set through MarkBlueprintAsModified. Only when the
+		// asset was clean to begin with -- a drag must never CLEAR somebody else's unsaved work.
+		if (UDreamWidgetBlueprint* DraggedBlueprint = DesignerPtr.Pin()->GetWidgetBlueprint())
+		{
+			DraggedBlueprint->Status = (EBlueprintStatus)BlueprintStatusBeforeDrag;
+			DraggedBlueprint->GetOutermost()->SetDirtyFlag(false);
+		}
+	}
+	// The gesture is over, so this is the point at which its accumulated edits become worth
+	// writing down. After the transaction closes, exactly where TrackingStopped puts it.
+	if (DesignerPtr.IsValid())
+	{
+		if (TSharedPtr<FDreamWidgetPreviewHost> Host = DesignerPtr.Pin()->GetPreviewHost())
+		{
+			Host->FlushTemplateChanges();
+		}
+	}
 	DesignerSnapshots.Reset();
 	PendingReparentTarget.Reset();
 	ClearPaletteDropPreview();
@@ -2061,14 +2115,20 @@ bool FDreamWidgetDesignerViewportClient::InputKey(const FInputKeyEventArgs& Even
 		RightMouseDownPosition = FIntPoint::ZeroValue;
 		if (bSummonContextMenu)
 		{
-			if (TSharedPtr<SDreamWidgetDesignerViewport> EditorViewport = EditorViewportPtr.Pin())
-			{
-				bHandled |= EditorViewport->SummonContextMenu();
-			}
+			bHandled |= SummonDesignerContextMenu();
 		}
 	}
 
 	return bHandled;
+}
+
+bool FDreamWidgetDesignerViewportClient::SummonDesignerContextMenu()
+{
+	if (const TSharedPtr<SDreamWidgetDesignerViewport> EditorViewport = EditorViewportPtr.Pin())
+	{
+		return EditorViewport->SummonContextMenu();
+	}
+	return false;
 }
 
 void FDreamWidgetDesignerViewportClient::ProcessClick(FSceneView& View, HHitProxy* HitProxy, FKey Key, EInputEvent Event, uint32 HitX, uint32 HitY)
@@ -2089,8 +2149,24 @@ void FDreamWidgetDesignerViewportClient::ProcessClick(FSceneView& View, HHitProx
 	{
 		ClickHitWidget = nullptr;
 	}
-	if (ClickHitWidget != nullptr && (Click.GetKey() == EKeys::LeftMouseButton || Click.GetKey() == EKeys::RightMouseButton))
+	if (ClickHitWidget != nullptr && DesignerPtr.IsValid()
+		&& (Click.GetKey() == EKeys::LeftMouseButton || Click.GetKey() == EKeys::RightMouseButton))
 	{
+		if (Click.GetKey() == EKeys::RightMouseButton && !Click.IsControlDown())
+		{
+			// The engine's rule, which this used to have backwards: a right-click on something that is
+			// ALREADY selected summons the menu for the whole selection rather than collapsing it to
+			// the one widget under the cursor (FLevelEditorViewportClient's element click says so in
+			// as many words). Collapsing it is why right-clicking a multi-selection made Align and
+			// Distribute -- entries that need two or more -- disappear from the menu at the instant it
+			// opened, leaving the hierarchy panel as the only way to reach them.
+			const TArray<TWeakObjectPtr<UDreamWidget>>& AlreadySelected = DesignerPtr.Pin()->GetSelectedWidgets();
+			if (AlreadySelected.ContainsByPredicate([ClickHitWidget](const TWeakObjectPtr<UDreamWidget>& Selected)
+				{ return Selected.Get() == ClickHitWidget; }))
+			{
+				return;
+			}
+		}
 		DesignerPtr.Pin()->SelectWidgets({ClickHitWidget}, Click.IsControlDown());
 		return;
 	}
@@ -2112,8 +2188,6 @@ void FDreamWidgetDesignerViewportClient::ProcessClick(FSceneView& View, HHitProx
 	}
 	if (!ModeTools->HandleClick(this, HitProxy, Click))
 	{
-		const FTypedElementHandle HitElement = HitProxy ? HitProxy->GetElementHandle() : FTypedElementHandle();
-
 		if (HitProxy == NULL)
 		{
 			DreamWidgetDesignerClickHandlers::ClickBackdrop(this, Click);
@@ -2162,10 +2236,10 @@ void FDreamWidgetDesignerViewportClient::ProcessClick(FSceneView& View, HHitProx
 		{
 			// Component vis manager handled the click
 		}
-		else if (HitElement && DreamWidgetDesignerClickHandlers::ClickElement(this, HitElement, Click))
-		{
-			// Element handled the click
-		}
+		// No typed-element branch here any more. DreamWidgetDesignerClickHandlers::ClickElement read
+		// the LEVEL EDITOR's selection set, which a designer viewport has no way to reach, so the
+		// call returned false on its first line every single time -- and the widget selection this
+		// viewport does perform already happened at the top of this function.
 		else if (HitProxy->IsA(HActor::StaticGetType()))
 		{
 			HActor* ActorHitProxy = (HActor*)HitProxy;
@@ -2272,9 +2346,11 @@ void FDreamWidgetDesignerViewportClient::ApplyDeltaToSelectedWidgets(const FVect
 	// selected that centre is its own origin, so both cases fall out of the same code.
 	const FVector Pivot = GetWidgetLocation();
 	const FQuat DeltaRotation = Rot.Quaternion();
+	// The gizmo writes onto the PREVIEW and nothing here records it: TrackingStopped mirrors the
+	// result onto the template before ending the tracking transaction, and it is the template's
+	// Modify in there that the entry is built from.
 	for (UDreamWidget* TargetWidget : Widgets)
 	{
-		TargetWidget->Modify();
 		const FTransform WorldTransform = TargetWidget->GetWorldTransform();
 		FVector NewLocation = WorldTransform.GetLocation();
 		FQuat NewRotation = WorldTransform.GetRotation();
@@ -2596,9 +2672,12 @@ FSceneView* FDreamWidgetDesignerViewportClient::CalcSceneView(FSceneViewFamily* 
 void FDreamWidgetDesignerViewportClient::SetViewportType(ELevelViewportType InViewportType)
 {
 	FEditorViewportClient::SetViewportType(InViewportType);
-	if (FDreamWidgetDesignerScene* Scene = DesignerPtr.Pin()->GetPreviewScene())
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin())
 	{
-		Scene->SetSkyCubeVisibility(IsPerspective());
+		if (FDreamWidgetDesignerScene* Scene = DesignerEditor->GetPreviewScene())
+		{
+			Scene->SetSkyCubeVisibility(IsPerspective());
+		}
 	}
 	// The editor's grid branches on the PROJECTION MATRIX, not on the viewport type, so once the 2D
 	// view projects through the canvas it would swap the flat design grid for the world-space
@@ -2681,6 +2760,12 @@ void FDreamWidgetDesignerViewportClient::NudgeSelectedObjects(const struct FInpu
 			bNudgeTransactionOpen = false;
 			GEditor->EndTransaction();
 		}
+		// The end of this gesture, and the flush point for what the repeats mirrored onto the
+		// template. After the transaction closes, exactly where TrackingStopped puts it.
+		if (TSharedPtr<FDreamWidgetPreviewHost> Host = DesignerPtr.Pin()->GetPreviewHost())
+		{
+			Host->FlushTemplateChanges();
+		}
 		RedrawAllViewportsIntoThisScene();
 		return;
 	}
@@ -2706,16 +2791,11 @@ void FDreamWidgetDesignerViewportClient::NudgeSelectedObjects(const struct FInpu
 
 	if (Event == IE_Pressed)
 	{
+		// The transaction only. The widgets in Movable are the PREVIEW's and are not recorded --
+		// the CommitWidgetGeometryToTemplate below runs on this same press, before the template has
+		// been written, so its Modify is what snapshots the pre-nudge geometry into this entry.
 		GEditor->BeginTransaction(LOCTEXT("MoveWidget", "Move Widget"));
 		bNudgeTransactionOpen = true;
-		if (DesignerPtr.IsValid())
-		{
-			DesignerPtr.Pin()->CommitSelectedWidgetGeometryToTemplate();
-		}
-		for (UDreamWidget* DreamWidget : Movable)
-		{
-			DreamWidget->Modify();
-		}
 	}
 
 	if (Event == IE_Pressed || Event == IE_Repeat)
@@ -2730,6 +2810,10 @@ void FDreamWidgetDesignerViewportClient::NudgeSelectedObjects(const struct FInpu
 		{
 			DreamWidget->SetAnchoredPosition(DreamWidget->GetAnchoredPosition() + FilterMoveDelta(MouseDelta, GetEffectiveLayoutControl(DreamWidget)));
 		}
+		// AFTER the move, not before it. Run at the key press, this wrote the position the widget was
+		// LEAVING onto the template and never came back for the one it arrived at, so a nudge moved
+		// the preview and left the asset exactly as it was -- and the next rebuild put it back.
+		DesignerPtr.Pin()->CommitWidgetGeometryToTemplate(Movable);
 	}
 
 	RedrawAllViewportsIntoThisScene();
@@ -2899,7 +2983,9 @@ bool FDreamWidgetDesignerViewportClient::FocusViewportToTargets()
 	}
 	FocusViewportOnBox(Bounds.GetBox());
 
-	return false;
+	// Handled. The camera has moved, so reporting otherwise sent F on down the chain to whatever
+	// else was listening -- and the caller in InputKey feeds this straight into bHandled.
+	return true;
 }
 
 FDreamLayoutControlAnchorData FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(const UDreamWidget* InWidget)
@@ -2949,7 +3035,94 @@ FVector2D FDreamWidgetDesignerViewportClient::FilterMoveDelta(const FVector2D& I
 	return FVector2D(InControl.bCanControlHorizontalPosition ? 0.0 : InDelta.X, InControl.bCanControlVerticalPosition ? 0.0 : InDelta.Y);
 }
 
-void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize, TArray<FMoveDragResult>& OutResults)
+void FDreamWidgetDesignerViewportClient::GatherSiblingSnapLines(TConstArrayView<UDreamWidget*> InMovingWidgets,
+	FSiblingSnapLines& OutLines) const
+{
+	OutLines.Horizontal.Reset();
+	OutLines.Vertical.Reset();
+	OutLines.Tolerance = 0.0;
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
+	// The same switch that draws the guide lines decides whether there is anything to draw one for.
+	if (!Editor.IsValid() || !Editor->GetShowDesignerGuides() || InMovingWidgets.IsEmpty())
+	{
+		return;
+	}
+	UDreamWidget* Leader = InMovingWidgets[0];
+	UDreamWidget* Parent = IsValid(Leader) ? Leader->GetParent() : nullptr;
+	if (!IsValid(Parent))
+	{
+		return;
+	}
+	TSet<const UDreamWidget*> Moving;
+	Moving.Reserve(InMovingWidgets.Num());
+	for (UDreamWidget* MovingWidget : InMovingWidgets)
+	{
+		Moving.Add(MovingWidget);
+	}
+	for (UDreamWidget* Sibling : Parent->GetChildren())
+	{
+		if (!IsValid(Sibling) || Moving.Contains(Sibling))
+		{
+			continue;
+		}
+		// The sibling's rect in the parent's frame, expressed the way the drag measures: the anchored
+		// position names the pivot, and the rect runs one share of the size either side of it.
+		const FVector2D Position = Sibling->GetAnchoredPosition();
+		const FVector2D Size(Sibling->GetWidth(), Sibling->GetHeight());
+		const FVector2D Pivot = Sibling->GetPivot();
+		const FVector2D Min = Position - Pivot * Size;
+		const FVector2D Max = Min + Size;
+		OutLines.Horizontal.Add(Min.X);
+		OutLines.Horizontal.Add((Min.X + Max.X) * 0.5);
+		OutLines.Horizontal.Add(Max.X);
+		OutLines.Vertical.Add(Min.Y);
+		OutLines.Vertical.Add((Min.Y + Max.Y) * 0.5);
+		OutLines.Vertical.Add(Max.Y);
+	}
+	if (OutLines.Horizontal.IsEmpty() && OutLines.Vertical.IsEmpty())
+	{
+		return;
+	}
+	// In design units, and read off the view rather than fixed: a tolerance that is right at 100%
+	// zoom is a rect-width at 10% and unreachable at 800%. Roughly six screen pixels either way,
+	// which is the distance UMG's designer forgives.
+	constexpr double SnapPixels = 6.0;
+	const float PixelsPerUnit = Editor->GetDesignerPixelsPerUnit();
+	OutLines.Tolerance = PixelsPerUnit > UE_SMALL_NUMBER ? SnapPixels / PixelsPerUnit : SnapPixels;
+}
+
+FDreamWidgetDesignerViewportClient::FEdgeSnapResult FDreamWidgetDesignerViewportClient::SolveEdgeSnap(
+	double InMin, double InMax, TConstArrayView<double> InLines, double InTolerance)
+{
+	FEdgeSnapResult Result;
+	if (InLines.IsEmpty() || InTolerance <= 0.0)
+	{
+		return Result;
+	}
+	// Low edge, centre, high edge -- in that order, because that is the tie-break.
+	const double Candidates[3] = { InMin, (InMin + InMax) * 0.5, InMax };
+	double BestDistance = InTolerance;
+	for (const double Candidate : Candidates)
+	{
+		for (const double Line : InLines)
+		{
+			const double Distance = FMath::Abs(Line - Candidate);
+			// Strictly nearer, so an equally good later candidate never displaces an earlier one and
+			// the answer does not depend on the order the lines were gathered in.
+			if (Distance < BestDistance)
+			{
+				BestDistance = Distance;
+				Result.bSnapped = true;
+				Result.Delta = Line - Candidate;
+				Result.Line = Line;
+			}
+		}
+	}
+	return Result;
+}
+
+void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize,
+	TArray<FMoveDragResult>& OutResults, const FSiblingSnapLines& InSnapLines)
 {
 	OutResults.Reset();
 	OutResults.Reserve(InTargets.Num());
@@ -2975,27 +3148,63 @@ void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDr
 	FVector CorrectionWorld = FVector::ZeroVector;
 	bool bSnappedX = false;
 	bool bSnappedY = false;
+	// The leader for an axis: the first target anything may be written to on it. Shared by both
+	// passes below, so the sibling edge and the gridline are read off the same widget.
+	auto LeaderFor = [&InTargets](bool bHorizontal) -> const FMoveDragTarget*
+	{
+		return InTargets.FindByPredicate([bHorizontal](const FMoveDragTarget& InTarget)
+		{
+			return bHorizontal ? InTarget.bHorizontalFree : InTarget.bVerticalFree;
+		});
+	};
+	// Local Y is the horizontal axis of a widget's plane and local Z the vertical one, which is the
+	// same mapping RawPositionOf reads back out.
+	auto AddCorrection = [&CorrectionWorld](const FMoveDragTarget& InLeader, bool bHorizontal, double InDelta)
+	{
+		CorrectionWorld += InLeader.PlaneTransform.TransformVector(
+			bHorizontal ? FVector(0.0, InDelta, 0.0) : FVector(0.0, 0.0, InDelta));
+	};
+
+	// Siblings first, and they win the axis outright. An author dragging a button to line up with the
+	// one above it can SEE the edge they are aiming at; a gridline four units to the left of it is the
+	// grid getting in the way of that.
+	auto SnapToSiblings = [&](bool bHorizontal)
+	{
+		const TArray<double>& Lines = bHorizontal ? InSnapLines.Horizontal : InSnapLines.Vertical;
+		if (Lines.IsEmpty() || InSnapLines.Tolerance <= 0.0)return false;
+		const FMoveDragTarget* Leader = LeaderFor(bHorizontal);
+		if (Leader == nullptr)return false;
+		const FVector2D Raw = RawPositionOf(*Leader);
+		const double Axis = bHorizontal ? Raw.X : Raw.Y;
+		const double Size = bHorizontal ? Leader->Size.X : Leader->Size.Y;
+		const double Pivot = bHorizontal ? Leader->Pivot.X : Leader->Pivot.Y;
+		// An anchored position names the PIVOT, so the rect it stands for runs from one share of the
+		// size below it to the rest above.
+		const double Min = Axis - Pivot * Size;
+		const FEdgeSnapResult Snap = SolveEdgeSnap(Min, Min + Size, Lines, InSnapLines.Tolerance);
+		if (!Snap.bSnapped || FMath::IsNearlyZero(Snap.Delta))return Snap.bSnapped;
+		AddCorrection(*Leader, bHorizontal, Snap.Delta);
+		return true;
+	};
+	bSnappedX = SnapToSiblings(true);
+	bSnappedY = SnapToSiblings(false);
+
 	if (InGridSize > 0.0f)
 	{
 		auto AccumulateAxis = [&](bool bHorizontal)
 		{
-			const FMoveDragTarget* Leader = InTargets.FindByPredicate([bHorizontal](const FMoveDragTarget& InTarget)
-			{
-				return bHorizontal ? InTarget.bHorizontalFree : InTarget.bVerticalFree;
-			});
+			const FMoveDragTarget* Leader = LeaderFor(bHorizontal);
 			if (Leader == nullptr)return false;
 			const FVector2D Raw = RawPositionOf(*Leader);
 			const double Axis = bHorizontal ? Raw.X : Raw.Y;
 			const double Delta = FMath::GridSnap(Axis, (double)InGridSize) - Axis;
 			if (FMath::IsNearlyZero(Delta))return false;
-			// Local Y is the horizontal axis of a widget's plane and local Z the vertical one,
-			// which is the same mapping RawPositionOf reads back out.
-			CorrectionWorld += Leader->PlaneTransform.TransformVector(
-				bHorizontal ? FVector(0.0, Delta, 0.0) : FVector(0.0, 0.0, Delta));
+			AddCorrection(*Leader, bHorizontal, Delta);
 			return true;
 		};
-		bSnappedX = AccumulateAxis(true);
-		bSnappedY = AccumulateAxis(false);
+		// Only the axes a sibling did not already claim.
+		if (!bSnappedX)bSnappedX = AccumulateAxis(true);
+		if (!bSnappedY)bSnappedY = AccumulateAxis(false);
 	}
 	for (const FMoveDragTarget& Target : InTargets)
 	{
@@ -3206,7 +3415,12 @@ void FDreamWidgetDesignerViewportClient::AddReferencedObjects(FReferenceCollecto
 	const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
 	if (DesignerEditor.IsValid())
 	{
-		DesignerEditor->GetPreviewScene()->AddReferencedObjects(Collector);
+		// The scene goes with the preview host, which OnClose resets while this client is still
+		// registered for collection -- so a valid toolkit is not on its own a promise of a scene.
+		if (FDreamWidgetDesignerScene* DesignerScene = DesignerEditor->GetPreviewScene())
+		{
+			DesignerScene->AddReferencedObjects(Collector);
+		}
 	}
 }
 namespace PreviewLightConstants
@@ -3226,7 +3440,8 @@ namespace PreviewLightConstants
 void FDreamWidgetDesignerViewportClient::DrawPreviewLightVisualization(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
 	// Draw the indicator of the current light direction if it was recently moved
-	auto DesignerScene = DesignerPtr.Pin()->GetPreviewScene();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
+	auto DesignerScene = DesignerEditor.IsValid() ? DesignerEditor->GetPreviewScene() : nullptr;
 	if ((DesignerScene != nullptr) && (DesignerScene->DirectionalLight != nullptr) && (MovingPreviewLightTimer > 0.0f))
 	{
 		const float A = MovingPreviewLightTimer / PreviewLightConstants::MovingPreviewLightTimerDuration;
@@ -3271,7 +3486,8 @@ void FDreamWidgetDesignerViewportClient::DrawPreviewLightVisualization(const FSc
 }
 FLinearColor FDreamWidgetDesignerViewportClient::GetBackgroundColor() const
 {
-	auto DesignerScene = DesignerPtr.Pin()->GetPreviewScene();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
+	auto DesignerScene = DesignerEditor.IsValid() ? DesignerEditor->GetPreviewScene() : nullptr;
 	return DesignerScene ? DesignerScene->GetBackgroundColor() : FColor(55, 55, 55);
 }
 namespace EditorViewportClient
@@ -3309,7 +3525,8 @@ bool FDreamWidgetDesignerViewportClient::Internal_InputAxis(FViewport* InViewpor
 	const float DragX = (Key == EKeys::MouseX) ? Delta : 0.f;
 	const float DragY = (Key == EKeys::MouseY) ? Delta : 0.f;
 
-	auto DesignerScene = DesignerPtr.Pin()->GetPreviewScene();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
+	auto DesignerScene = DesignerEditor.IsValid() ? DesignerEditor->GetPreviewScene() : nullptr;
 	if (bLightMoveDown && bMouseButtonDown && DesignerScene)
 	{
 		// Adjust the preview light direction
@@ -3355,7 +3572,8 @@ bool FDreamWidgetDesignerViewportClient::Internal_InputAxis(FViewport* InViewpor
 
 UDreamWidgetBlueprint* FDreamWidgetDesignerViewportClient::GetWidgetBlueprint()const
 {
-	return DesignerPtr.Pin()->GetWidgetBlueprint();
+	const TSharedPtr<FDreamWidgetBlueprintEditor> DesignerEditor = DesignerPtr.Pin();
+	return DesignerEditor.IsValid() ? DesignerEditor->GetWidgetBlueprint() : nullptr;
 }
 
 namespace LevelEditorViewportClientHelper
@@ -3571,9 +3789,25 @@ void FDreamWidgetDesignerViewportClient::UpdateHoveredWidget()
 	HoveredWidget = GetWidgetUnderCursor(HoverPixel.X, HoverPixel.Y);
 }
 
+void FDreamWidgetDesignerViewportClient::SetExternalHoverWidget(UDreamWidget* InWidget)
+{
+	if (ExternalHoverWidget.Get() == InWidget)return;
+	ExternalHoverWidget = InWidget;
+	// The viewport is not the panel the mouse is moving in, so nothing else asks it to repaint.
+	Invalidate();
+}
+
+void FDreamWidgetDesignerViewportClient::ClearExternalHoverWidget(UDreamWidget* InOnlyIfThisOne)
+{
+	if (ExternalHoverWidget.Get() != InOnlyIfThisOne)return;
+	ExternalHoverWidget = nullptr;
+	Invalidate();
+}
+
 void FDreamWidgetDesignerViewportClient::DrawHoverOutline(FSceneView& View, FCanvas& Canvas) const
 {
 	UDreamWidget* HoverTarget = HoveredWidget.Get();
+	if (!IsValid(HoverTarget))HoverTarget = ExternalHoverWidget.Get();
 	if (!IsValid(HoverTarget))return;
 	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
 	if (!Editor.IsValid())return;
@@ -3778,6 +4012,24 @@ void FDreamWidgetDesignerViewportClient::TrackingStopped()
 			}
 
 			GEditor->BroadcastActorsMoved(ActorsToMove);
+		}
+	}
+
+	// The gizmo wrote onto the PREVIEW -- ApplyDeltaToSelectedWidgets sets world location, rotation
+	// and scale, and nothing else did. Without this the move is thrown away by the next rebuild,
+	// exactly like the designer handles' drag would be without FinishDesignerDrag's own commit.
+	// Before the transaction ends, because the template's Modify has to land inside it.
+	//
+	// Gated the same way the move notification above is: TransCount only rises when the gizmo itself
+	// was grabbed (TrackingStarted's bIsDraggingWidget), so a camera orbit with a widget selected
+	// does not mirror -- and therefore does not dirty the asset for having looked at it.
+	if (bDidAnythingActuallyChange && MouseDeltaTracker->HasReceivedDelta() && DesignerPtr.IsValid())
+	{
+		TArray<UDreamWidget*> MovedWidgets;
+		GetGizmoWidgets(MovedWidgets);
+		if (!MovedWidgets.IsEmpty())
+		{
+			DesignerPtr.Pin()->CommitWidgetGeometryToTemplate(MovedWidgets);
 		}
 	}
 

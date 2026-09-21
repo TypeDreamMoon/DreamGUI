@@ -10,6 +10,15 @@
 class FDreamVisualPostProcessRenderProxy;
 struct FDreamUIPostProcessVertex;
 
+/**
+ * Shared ownership of a post-process render proxy -- see IDreamUIRendererPrimitive.h for why.
+ *
+ * Repeated here rather than included: that header drags the renderer's SceneManagement/MeshBatch
+ * includes in, and this one is a UObject header every visual and the editor module see. An alias
+ * redeclared to the same type is legal, so the two agree by construction.
+ */
+using FDreamVisualPostProcessRenderProxyPtr = TSharedPtr<FDreamVisualPostProcessRenderProxy, ESPMode::ThreadSafe>;
+
 UENUM(BlueprintType)
 enum class EDreamBackgroundBlurRenderType:uint8
 {
@@ -130,17 +139,40 @@ public:
 	void MarkVertexPositionDirty();
 	void MarkUVDirty();
 public:
-	virtual FDreamVisualPostProcessRenderProxy* GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return 0;);
+	/**
+	 * The render-thread agent for this visual, created on first use.
+	 *
+	 * Hands out a reference rather than a pointer: whoever asks (the mesh section, a render command)
+	 * keeps it alive on its own schedule, and this visual dropping its own reference in BeginDestroy
+	 * is not the end of the proxy.
+	 */
+	virtual FDreamVisualPostProcessRenderProxyPtr GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return nullptr;);
 	virtual bool HaveValidData()const;
 
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+
+	/**
+	 * bUseFullSize draws the quad at the ROOT CANVAS's rect while keeping this widget's transform
+	 * (see OnUpdateGeometry), so the bounds must be built from that same rect. Inheriting the base
+	 * version -- which answers with this widget's own rect -- is what let a full-screen blur be
+	 * batched and culled as if it only covered the handful of pixels its own widget occupies.
+	 */
+	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;
+	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const override;
+
+	/**
+	 * The widget whose rect this effect is drawn at: the root canvas's widget when bUseFullSize,
+	 * this visual's own widget otherwise (and as a fallback whenever there is no root canvas to ask,
+	 * which is the case in the moments before this visual is attached to one).
+	 */
+	UDreamWidget* GetSizeSourceWidget()const;
 private:
 	/** local vertex position changed */
 	uint8 bLocalVertexPositionChanged : 1;
 	/** vertex's uv change */
 	uint8 bUVChanged : 1;
 protected:
-	FDreamVisualPostProcessRenderProxy* RenderProxy = nullptr;
+	FDreamVisualPostProcessRenderProxyPtr RenderProxy;
 	/** update ui geometry */
 	virtual void OnUpdateGeometry(bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	/** update region vertex data */

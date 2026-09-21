@@ -15,8 +15,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bPreviewInEditor = true;
 #endif
-	/** fps: Frame per second */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	/** fps: Frame per second. Must stay above zero -- see EnforceFrameRate for what a zero costs. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "0.0001"))
 		float Fps = 24;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bLoop = true;
@@ -38,6 +38,8 @@ protected:
 #endif
 	TWeakObjectPtr<class UDreamTweener> PlayTweener;
 	void UpdateAnimation(float deltaTime);
+	/** Pulls Fps back above zero. Called from every entry point that divides by it or draws with it. */
+	void EnforceFrameRate();
 	virtual bool CanPlay() { return true; }
 	virtual void PrepareForPlay() {};
 	virtual void OnUpdateAnimation(int FrameNumber)PURE_VIRTUAL(UDreamUIImageSequencePlayer::OnUpdateAnimation, );

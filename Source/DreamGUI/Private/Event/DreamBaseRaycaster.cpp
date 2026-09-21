@@ -2,11 +2,60 @@
 // Modified by TypeDreamMoon.
 
 #include "Event/DreamBaseRaycaster.h"
+#include "DreamGUI.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Engine/World.h"
+
+namespace DreamBaseRaycasterLocal
+{
+	/**
+	 * Could this ray reach this visual at all? A coarse reject, run before the exact hit test.
+	 *
+	 * Every active raycaster walks EVERY visual under the root canvas on every pointer update, and the
+	 * exact test is not cheap: UDreamVisual::LineTraceUIRect inverts the widget's FTransform -- a
+	 * quaternion conjugate and three reciprocals -- then transforms two points before it has anything
+	 * to compare. A segment-to-point distance is a dot product and a subtraction, and on a real screen
+	 * almost every widget is nowhere near the cursor, so almost every visual can be answered with it.
+	 *
+	 * IT RETURNS FALSE ONLY WHEN THE MISS IS PROVEN. Everything it cannot prove comes back true and
+	 * takes the old path unchanged -- a custom raycast shape, a mesh whose vertices are not bound by
+	 * the rect, a widget under a perspective scope, a rect with no measured size. The filter is
+	 * allowed to cost time; it is not allowed to lose a hit.
+	 */
+	FORCEINLINE bool CouldRayReachVisual(const UDreamVisual* InVisual, const UDreamWidget* InWidget, const FVector& InRayOrigin, const FVector& InRayEnd)
+	{
+		// Whether the hit shape is inside the rect is the VISUAL's question (raycast type, custom
+		// raycast object); where that rect is in the world is the WIDGET's. Neither knows the other's
+		// half, so both are asked.
+		if (!InVisual->GetHitGeometryFitsWidgetRect())
+		{
+			return true;
+		}
+		FVector Center;
+		double Radius = 0.0;
+		if (!InWidget->GetWorldRectBoundingSphere(Center, Radius))
+		{
+			return true;
+		}
+		// A SEGMENT, matching how the exact test reads the same two points: it requires the widget's
+		// plane to be crossed BETWEEN start and end, so a widget past the raycaster's reach is already
+		// a miss there and clamping the parameter here reproduces that for free.
+		const FVector Segment = InRayEnd - InRayOrigin;
+		const FVector ToCenter = Center - InRayOrigin;
+		const double SegmentLengthSquared = Segment.SizeSquared();
+		const double T = SegmentLengthSquared > 0.0
+			? FMath::Clamp(FVector::DotProduct(ToCenter, Segment) / SegmentLengthSquared, 0.0, 1.0)
+			: 0.0;
+		const double DistanceSquared = (ToCenter - Segment * T).SizeSquared();
+		// Negated so a NaN anywhere in the ray answers "could reach" and defers to the exact test,
+		// rather than quietly culling the widget.
+		return !(DistanceSquared > Radius * Radius);
+	}
+}
 
 UDreamBaseRaycaster::UDreamBaseRaycaster()
 {
@@ -25,7 +74,7 @@ void UDreamBaseRaycaster::Activate(bool bReset)
 	Super::Activate(bReset);
 	if (this->GetWorld() == nullptr)return;
 #if WITH_EDITOR
-	if (this->GetWorld()->IsGameWorld())
+	if (DreamUI::IsGameWorld(this))
 #endif
 	{
 		ActivateRaycaster();
@@ -92,6 +141,7 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 				Widget->GetRaycastableInHierarchy()
 				&& Widget->GetHitTestVisibleInHierarchy()
 				&& Visual->GetRaycastTarget()
+				&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, OutRayOrigin, OutRayEnd)
 				&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 				)
 			{
@@ -116,6 +166,10 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 					Widget->GetRaycastableInHierarchy()
 					&& Widget->GetHitTestVisibleInHierarchy()
 					&& Visual->GetRaycastTarget()
+					// Ordered last of the cheap tests and first of the expensive ones: the three above
+					// are field reads, this one is arithmetic on a cached sphere, and LineTraceUI below
+					// inverts a transform.
+					&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, OutRayOrigin, OutRayEnd)
 					&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 					)
 				{
@@ -156,16 +210,63 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 
 void UDreamBaseRaycaster::RaycastWorld(UDreamPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
 {
-	check(0);
-	// if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
-	// {
-	// 	CurrentRayOrigin = OutRayOrigin;
-	// 	CurrentRayDirection = OutRayDirection;
-	// 	
-	// 	FCollisionQueryParams queryParams = FCollisionQueryParams::DefaultQueryParam;
-	// 	queryParams.bReturnFaceIndex = InRequireFaceIndex;
-	// 	this->GetWorld()->LineTraceMultiByChannel(OutHitResultArray, OutRayOrigin, OutRayEnd, UEngineTypes::ConvertToCollisionChannel(InTraceChannel), queryParams);
-	// }
+	// What a world hit MEANS here, which is the question that kept this unimplemented.
+	//
+	// The engine's trace answers with primitives, and this pipeline dispatches to UDreamWidgets: a wall
+	// has no widget and never will, so a world hit cannot be turned into a pointer event for the wall.
+	// What it can be -- and what the component is for -- is an OCCLUDER. A hit with no widget still
+	// carries a distance, and the input module sorts every raycaster's hits by distance: a world hit in
+	// front of a world-space panel therefore wins, the panel gets its Exit, and the click that would
+	// have gone through the wall does not land. That is the whole of it, and it is a complete answer
+	// rather than a partial one -- "the pointer is blocked" is exactly what a trigger volume in front
+	// of a UI is for.
+	//
+	// The one thing the rest of the pipeline had to learn is that Widget can be null; see
+	// UDreamPointerInputModule::LineTrace, which now treats a widgetless hit as a blocker instead of
+	// dereferencing it.
+	OutHitResultArray.Reset();
+	UWorld* World = GetWorld();
+	if (World == nullptr)return;
+	if (!GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
+	{
+		return;//no ray source configured; GenerateRay has already said so
+	}
+	CurrentRayOrigin = OutRayOrigin;
+	CurrentRayDirection = OutRayDirection;
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(DreamUIRaycastWorld), true);
+	QueryParams.bReturnFaceIndex = InRequireFaceIndex;
+	// The actor the raycaster rides on is the one holding the ray source -- a motion controller, a
+	// camera rig -- and tracing into itself would block every pointer at zero distance.
+	if (const AActor* IgnoredOwner = GetOwner())
+	{
+		QueryParams.AddIgnoredActor(IgnoredOwner);
+	}
+
+	// SINGLE, not multi, and the difference is the definition of an occluder.
+	//
+	// LineTraceMultiByChannel hands back every TOUCH along the ray plus the first thing that blocks --
+	// so a multi trace would report an overlap-only trigger volume as something the pointer cannot pass
+	// through, which is the opposite of what overlap means. What occludes a pointer is the nearest
+	// BLOCKING hit, and that is exactly what a single trace answers with. Anything behind it is behind a
+	// wall; the input module only ever reads the nearest hit anyway.
+	FHitResult WorldHit;
+	if (!World->LineTraceSingleByChannel(WorldHit, OutRayOrigin, OutRayEnd,
+		UEngineTypes::ConvertToCollisionChannel(InTraceChannel), QueryParams))
+	{
+		return;//nothing solid in the way, so the UI behind is reachable
+	}
+
+	FDreamUIHitResult& Result = OutHitResultArray.AddDefaulted_GetRef();
+	Result.Distance = WorldHit.Distance;
+	Result.Time = WorldHit.Time;
+	Result.Location = WorldHit.Location;
+	Result.ImpactPoint = WorldHit.ImpactPoint;
+	Result.Normal = WorldHit.ImpactNormal;
+	Result.TraceStart = WorldHit.TraceStart;
+	Result.TraceEnd = WorldHit.TraceEnd;
+	Result.FaceIndex = InRequireFaceIndex ? WorldHit.FaceIndex : -1;
+	Result.Widget = nullptr;//there is no widget behind a world primitive, and that is the point
 }
 
 void UDreamBaseRaycaster::SetPointerID(int32 Value)

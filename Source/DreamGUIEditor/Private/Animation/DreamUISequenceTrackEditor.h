@@ -27,6 +27,11 @@ public:
 private:
 	void AddAssetSubMenu(FMenuBuilder& MenuBuilder, TArray<FGuid> ObjectBindings);
 	void HandleAssetSelected(const FAssetData& AssetData, TArray<FGuid> ObjectBindings);
+	/** The other animations of the component the animation being edited belongs to. */
+	void AddEmbeddedSubMenu(FMenuBuilder& MenuBuilder, TArray<FGuid> ObjectBindings);
+	void HandleEmbeddedSelected(TWeakObjectPtr<class UDreamWidgetAnimation> InAnimation, TArray<FGuid> ObjectBindings);
+	/** Puts InSequence on a sub-track of every binding, at the playhead. Both pickers end here. */
+	void AddSequenceToBindings(class UMovieSceneSequence* InSequence, const TArray<FGuid>& ObjectBindings);
 	void AddWidgetPickerSubMenu(FMenuBuilder& MenuBuilder, TArray<FGuid> ObjectBindings);
 	void HandleWidgetPicked(TWeakObjectPtr<class UDreamWidget> InWidget);
 };

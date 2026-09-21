@@ -11,6 +11,8 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
+#include "IPropertyUtilities.h"
+#include "ScopedTransaction.h"
 #include "Widgets/Input/SSlider.h"
 
 #define LOCTEXT_NAMESPACE "DreamCanvasCustomization"
@@ -47,7 +49,12 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	FDreamUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
 
 	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, RenderMode));
-	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, &DetailBuilder));
+	// Through the property utilities, not the layout builder. This delegate outlives the panel it was
+	// built for -- changing the render mode is exactly what tears the layout down and rebuilds it --
+	// and the captured IDetailLayoutBuilder& is destroyed by that rebuild, so the NEXT change would
+	// call ForceRefreshDetails through a dangling reference. The utilities are shared and outlive it.
+	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(
+		this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
 	
 	if (TargetScriptArray[0]->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
 	{
@@ -102,7 +109,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto OverrideSortingHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, bOverrideSorting));
 	bool bOverrideSorting = false;
 	OverrideSortingHandle->GetValue(bOverrideSorting);
-	OverrideSortingHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, &DetailBuilder));
+	OverrideSortingHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
 
 	if (bOverrideSorting)
 	{
@@ -116,7 +123,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 	
 	auto ForceRenderToTarget_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, bForceRenderToTarget));
-	ForceRenderToTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, &DetailBuilder));
+	ForceRenderToTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
 
 	if (TargetScriptArray[0]->IsRootCanvas()
 		|| TargetScriptArray[0]->GetWorld() == nullptr//maybe in blueprint editor, then world is null
@@ -175,7 +182,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, TraceChannel));
 
 		auto overrideParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, OverrideParameters));
-		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, &DetailBuilder));
+		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
 		if (!TargetScriptArray[0]->GetOverrideDefaultMaterial())
 		{
 			NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, DefaultMaterial));
@@ -394,17 +401,25 @@ FReply FDreamCanvasCustomization::OnClickFixClipTextureSetting(TSharedRef<IPrope
 {
 	UObject* ClipTextureObject = nullptr;
 	ClipTextureHandle->GetValue(ClipTextureObject);
-	if (IsValid(ClipTextureObject))
+	if (auto clipTexture = Cast<UTexture2D>(ClipTextureObject); IsValid(clipTexture))
 	{
-		auto clipTexture = Cast<UTexture2D>(ClipTextureObject);
 		if (clipTexture->CompressionSettings != TextureCompressionSettings::TC_EditorIcon
 			|| clipTexture->MipGenSettings != TextureMipGenSettings::TMGS_NoMipmaps
 			)
 		{
+			// This edits somebody else's ASSET -- the texture, not the canvas -- so it owes that asset
+			// the whole ritual. Modify used to come AFTER the write, which snapshots the NEW values as
+			// the old ones: undo then "restored" what the button had just set and the fix was
+			// unundoable. And nothing marked the package dirty, so the texture was never offered for
+			// saving and the settings were back the next time the project was opened.
+			const FScopedTransaction Transaction(LOCTEXT("FixClipTexture_Transaction", "Fix Clip Texture Settings"));
+			clipTexture->SetFlags(RF_Transactional);
+			clipTexture->Modify();
 			clipTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
 			clipTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
+			clipTexture->PostEditChange();
 			clipTexture->UpdateResource();
-			clipTexture->Modify();
+			clipTexture->MarkPackageDirty();
 		}
 	}
 
@@ -414,9 +429,8 @@ bool FDreamCanvasCustomization::IsFixClipTextureEnabled(TSharedRef<IPropertyHand
 {
 	UObject* ClipTextureObject = nullptr;
 	ClipTextureHandle->GetValue(ClipTextureObject);
-	if (IsValid(ClipTextureObject))
+	if (auto clipTexture = Cast<UTexture2D>(ClipTextureObject); IsValid(clipTexture))
 	{
-		auto clipTexture = Cast<UTexture2D>(ClipTextureObject);
 		if (clipTexture->CompressionSettings != TextureCompressionSettings::TC_EditorIcon
 			|| clipTexture->MipGenSettings != TextureMipGenSettings::TMGS_NoMipmaps
 			)
@@ -427,18 +441,28 @@ bool FDreamCanvasCustomization::IsFixClipTextureEnabled(TSharedRef<IPropertyHand
 	return false;
 }
 
-void FDreamCanvasCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FDreamCanvasCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (DetailBuilder)
+	if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		// Requested rather than forced: this runs from inside the property node's own value-changed
+		// broadcast, and the immediate variant tears the layout down while that broadcast is still on
+		// the stack. The engine's own header says as much on ForceRefresh.
+		PropertyUtilities->RequestForceRefresh();
 	}
 }
 
 FText FDreamCanvasCustomization::GetDrawcallInfo()const
 {
+	// Slate polls this every frame, including the frames after the canvas it names has gone: the
+	// selection outlives the object during a preview rebuild. The check was here, but the read that
+	// fed it happened first.
+	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())
+	{
+		return FText::FromString(FString::Printf(TEXT("0/0")));
+	}
 	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
-	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid() && DreamUIManager)
+	if (DreamUIManager)
 	{
 		auto CanvasArray = DreamUIManager->GetCanvasArrayByRenderMode(TargetScriptArray[0]->GetRenderMode());
 		int AllDrawcallCount = 0;
@@ -462,6 +486,11 @@ FText FDreamCanvasCustomization::GetDrawcallInfo()const
 }
 FText FDreamCanvasCustomization::GetDrawcallInfoTooltip()const
 {
+	// Same polling, same lifetime; this one never checked at all.
+	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())
+	{
+		return FText::GetEmpty();
+	}
 	FString spaceText;
 	switch (TargetScriptArray[0]->GetActualRenderMode())
 	{

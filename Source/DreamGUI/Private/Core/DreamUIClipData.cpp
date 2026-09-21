@@ -3,6 +3,7 @@
 
 #include "Core/DreamUIClipData.h"
 
+#include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/Components/DreamCanvas.h"
@@ -75,6 +76,12 @@ void FDreamUIClipData::UpdateData()
 	FDreamUIClipData* TargetClip = this;
 	for (int i = 0; i < InheritClipDepth; i++)
 	{
+		//the clipper widgets up the chain are held weakly and are destroyed on their own schedule,
+		//while this clip data lives until the canvas rebuilds its list
+		if (!TargetClip->Widget.IsValid())
+		{
+			break;
+		}
 		auto WidgetToWorldMatrix = GetClipperToWorldMatrix(TargetClip->Widget.Get());
 		auto WidgetLocalSpaceCenter = TargetClip->Widget->GetLocalSpaceCenter();
 		auto ClippingMargin = TargetClip->Widget->GetClippingMargin();
@@ -87,7 +94,12 @@ void FDreamUIClipData::UpdateData()
 		auto RenderSize = FVector2f(TargetClip->Widget->GetWidth(), TargetClip->Widget->GetHeight()) + ClippingMargin.GetDesiredSize2f();
 		M[0][3] = RenderSize.X * 0.5f;//half width
 		M[1][3] = RenderSize.Y * 0.5f;//half height
-		M[2][3] = 0;//softness
+		// RESERVED, always zero, and read by nothing -- DreamUI_ReadClipData no longer even names it.
+		// The clip edge is antialiased from the signed distance field's own derivative, and neither
+		// Slate's clipping nor UMG's has a soft-clip width to copy, so there is nothing this should
+		// be carrying. It is still written because the matrix is uploaded whole and a defined zero
+		// beats whatever the transform left in that element.
+		M[2][3] = 0;//reserved
 		M[3][3] = 1;//isValid
 		CanvasToWidgetMatrix = CanvasToWidgetMatrix.GetTransposed();//matrix in memory is aligned as row-primary, so transpose it then in hlsl we can read as column-primary
 		FMemory::Memcpy(BlockBuffer.GetData() + BlockDataOffset, &CanvasToWidgetMatrix, sizeof(FMatrix44f));
@@ -101,6 +113,19 @@ void FDreamUIClipData::UpdateData()
 			break;
 		}
 		TargetClip = TargetClip->Parent.Pin().Get();
+		if (i == InheritClipDepth - 1)
+		{
+			/**
+			 * There is another clipper above the deepest level this block can carry, so it will not
+			 * clip at all -- previously the loop just ended and the extra clippers were ignored in
+			 * silence. The depth is fixed by the block layout here AND by DreamUI_Clip_Depth in
+			 * DreamUIClip.ush; raising it means raising both.
+			 */
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Widget '%s' is inside more than %d nested clipping widgets. Only the innermost %d clip it; the ones above are ignored.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
+				, IsValid(this->GetWidget()) ? *this->GetWidget()->GetDisplayName() : TEXT("none")
+				, InheritClipDepth, InheritClipDepth);
+		}
 	}
 	// Nothing moved since the last upload: skip the GPU write. This is what keeps a per-tick refresh cheap.
 	if (LastUploadedBlock.Num() == BlockBuffer.Num()
@@ -118,6 +143,12 @@ bool FDreamUIClipData::IsPointVisible(const FVector& WorldPoint) const
 	for (int i = 0; i < InheritClipDepth; i++)
 	{
 		auto TargetWidget = TargetClip->Widget;
+		//weak, and the clippers above this one can already be gone -- a clipper that no longer exists
+		//clips nothing, so the point stays visible as far as the rest of the chain is concerned
+		if (!TargetWidget.IsValid())
+		{
+			break;
+		}
 		auto LocalPoint = WorldPointToClipperLocal(TargetWidget.Get(), WorldPoint);
 		auto ClippingMargin = TargetWidget->GetClippingMargin();
 		if (LocalPoint.Y < TargetWidget->GetLocalSpaceLeft() - ClippingMargin.Left)return false;

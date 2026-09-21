@@ -52,6 +52,42 @@ struct FDreamMeasureSpec
 		}
 	}
 
+	/** True when this spec names a number a layout may treat as the space available. */
+	bool IsBounded() const { return Mode != EDreamMeasureMode::Undefined; }
+
+	/**
+	 * The space available under this constraint, or Fallback when it does not constrain.
+	 *
+	 * The fallback is the ROOT boundary: at the top of a measure nobody has handed down a number, and a
+	 * panel whose own answer depends on the space it is given (a wrap box, a scale box set to fit) has to
+	 * take one from somewhere. Passing the panel's own resolved size there is the same thing a window
+	 * does for Android's root view; what it must NOT be is the answer to a question a parent DID
+	 * constrain, which is the defect this type exists to close.
+	 */
+	float ResolveAvailable(float Fallback) const
+	{
+		return Mode == EDreamMeasureMode::Undefined ? Fallback : FMath::Max(0.0f, Value);
+	}
+
+	/**
+	 * The spec to hand a child that lives inside this space with ConsumedSpace of it already spoken for
+	 * (padding, spacing, the siblings' fixed extent).
+	 *
+	 * Android's getChildMeasureSpec, minus the part that depends on LayoutParams: a DreamGUI child states
+	 * its own size through its anchors and slot rather than through a WRAP_CONTENT/MATCH_PARENT enum, so
+	 * "as big as you want, but no bigger than what is left" is the only translation there is. An
+	 * unconstrained parent hands down an unconstrained child; an EXACTLY parent hands down AT_MOST,
+	 * because the child is not obliged to fill it.
+	 */
+	FDreamMeasureSpec ForChild(float ConsumedSpace) const
+	{
+		if (Mode == EDreamMeasureMode::Undefined)
+		{
+			return Undefined();
+		}
+		return AtMost(FMath::Max(0.0f, Value - FMath::Max(0.0f, ConsumedSpace)));
+	}
+
 	bool operator==(const FDreamMeasureSpec& Other) const
 	{
 		if (Mode != Other.Mode)

@@ -64,7 +64,14 @@ struct DREAMGUI_API FDreamResponsiveRule
 	bool Matches(const FVector2D& Size) const;
 };
 
-/** Applies the first matching breakpoint using the parent size (or self size at the root). */
+/**
+ * Applies the first matching breakpoint using the parent size (or self size at the root).
+ *
+ * The rules are OVERRIDES on the appearance the widget was authored with, not a complete
+ * description of it: a size that matches no rule puts the widget back the way it was found rather
+ * than leaving it wearing the last rule's costume. See EvaluateResponsiveRules for why that is the
+ * chosen answer and what the baseline it restores actually is.
+ */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UDreamResponsiveBehaviour : public UDreamUIBehaviour
 {
@@ -77,6 +84,17 @@ protected:
 	FName ActiveRule;
 	FDelegateHandle ParentDimensionHandle;
 	TWeakObjectPtr<UDreamWidget> BoundParent;
+	/**
+	 * The widget's own appearance from the moment before a rule first overrode it, held for exactly
+	 * as long as a rule is active. Deliberately not a UPROPERTY and not authored state: it is a
+	 * record of what this component borrowed, and it is meaningless across a load because ActiveRule
+	 * is Transient too, so nothing is owed back until this component takes something again.
+	 */
+	bool bHasBaselineAppearance = false;
+	EDreamWidgetVisibility BaselineVisibility = EDreamWidgetVisibility::Visible;
+	float BaselineRenderOpacity = 1.0f;
+	void CaptureBaselineAppearance(UDreamWidget* Widget);
+	void RestoreBaselineAppearance(UDreamWidget* Widget);
 	void BindParentDimensionEvent();
 	void HandleParentDimensionChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
 	virtual void OnRegister() override;

@@ -8,6 +8,7 @@
 
 class UDreamWidget;
 class UDreamBaseRaycaster;
+class UDreamDragDropOperation;
 
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUINavigationDirection :uint8
@@ -108,15 +109,38 @@ public:
 	/** raycaster when press */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamBaseRaycaster> PressRaycaster;
+	/**
+	 * The three timestamps below all start at zero, meaning "the thing they date has not happened
+	 * yet". They were the only fields on this class without an initialiser, which was survivable
+	 * only for as long as nobody read one before writing it -- and PressTime IS read that way:
+	 * ShouldStartDrag subtracts it from the current time and compares the difference against a hold
+	 * duration. An event data that has never seen a button go down is completely ordinary (a hover,
+	 * a scroll, the object a raycaster hands around before the first press), and with indeterminate
+	 * bytes in PressTime hold-to-drag would begin a drag, or refuse to, at random on such a pointer.
+	 */
+
 	/** the last time when trigger click(time is get from GetWorld()->TimeSeconds), can be used to tell double click */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
-		double ClickTime;
+		double ClickTime = 0;
+	/**
+	 * How many clicks this pointer has landed on the same widget in an unbroken run: 1 for a single
+	 * click, 2 for the second of a double, and so on. Reset to 1 by a click on a different widget or one
+	 * that came too late (see UDreamEventSystem::DoubleClickTime).
+	 *
+	 * A double-click event is dispatched on every even count, which is how a triple click reads as
+	 * click, double, click and a quadruple as two doubles -- the same shape as the desktop.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		int32 ClickCount = 0;
+	/** What the previous click landed on. A click elsewhere starts the count over rather than continuing it. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		TObjectPtr<UDreamWidget> LastClickWidget = nullptr;
 	/** the last time when trigger release(time is get from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
-		double ReleaseTime;
+		double ReleaseTime = 0;
 	/** the last time when trigger press(time is tell from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
-		double PressTime;
+		double PressTime = 0;
 
 	/** is dragging? */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
@@ -124,6 +148,21 @@ public:
 	/** current dragging component */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamWidget> DragWidget = nullptr;
+	/**
+	 * What this drag MEANS -- payload, tag, drag visual. Set by the drag's source when it begins
+	 * (UDreamUIDragSource does), read by drop targets, cleared wherever DragWidget is: it lives
+	 * exactly as long as the drag. Null for a drag nothing gave meaning to (a scroll, a slider).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI")
+		TObjectPtr<UDreamDragDropOperation> DragOperation = nullptr;
+
+	/**
+	 * Has the long press already gone out for the press that is currently held?
+	 *
+	 * Long press fires once when the hold time is reached, not once a frame afterwards and not on
+	 * release. Cleared when the trigger goes down, which is what makes it per-press.
+	 */
+	bool bIsLongPressFiredForThisPress = false;
 
 	bool bIsUpFiredAtCurrentFrame = false;//PointerUp event is called at current frame?
 	bool bIsExitFiredAtCurrentFrame = false;//PointerExit event is called at current frame?

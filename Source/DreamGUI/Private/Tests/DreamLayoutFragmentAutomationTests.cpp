@@ -144,6 +144,13 @@ bool FDreamFragmentArrangeIsQueryableTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("...at the filled size"),
 			Fragment.Children[0].Size.Equals(FVector2f(200.0f, 100.0f), 0.01f));
 	}
+	// The fragment's own Size is the other half of the result: what the PANEL wants, next to what it
+	// decided for each child. Those are deliberately different numbers here, which is the point of
+	// asserting it at all -- the overlay HANDS the child the whole 200x100 rect because the slot fills,
+	// and WANTS its biggest child's desired size, which is the 30x40 the child was authored at. A Size
+	// that came out 200x100 would mean the panel had measured itself from its own arranged output.
+	TestTrue(TEXT("The fragment also carries the size the panel decided for itself"),
+		Fragment.Size.Equals(FVector2f(30.0f, 40.0f), 0.01f));
 	TestEqual(TEXT("Asking did not move the child"), Child->GetSize(), SizeBefore);
 
 	Root->DestroyWidget();

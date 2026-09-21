@@ -26,27 +26,31 @@ protected:
 	}
 	virtual bool ToNext(float deltaTime, float unscaledDeltaTime) override
 	{
+		// Killed comes before paused, as in UDreamTweener::ToNext: a tween killed while the game is
+		// paused is finished, and answering "still running" kept it in the manager's list for good.
+		if (isMarkedToKill)return false;
 		if (auto world = GetWorld())
 		{
 			if (world->IsPaused() && affectByGamePause)return true;
 		}
-		if (isMarkedToKill)return false;
 		if (isMarkedPause)return true;//no need to tick time if pause
 		if (!startToTween)
 		{
 			startToTween = true;
-			onStartCpp.ExecuteIfBound();
+			onStartCpp.Broadcast();
 		}
 
 		if (GFrameNumber >= endFrameNumber)
 		{
-			onUpdateCpp.ExecuteIfBound(1.0f);
-			onCompleteCpp.ExecuteIfBound();
-			return false;
+			onUpdateCpp.Broadcast(1.0f);
+			onCompleteCpp.Broadcast();
+			// Through FinishOrHold, as every ToNext does: with auto-kill off the tween stays in the
+			// manager's list, paused at its end, until something restarts or kills it.
+			return FinishOrHold(false);
 		}
 		else
 		{
-			onUpdateCpp.ExecuteIfBound((float)(GFrameNumber - startFrameNumber) / (endFrameNumber - startFrameNumber));
+			onUpdateCpp.Broadcast((float)(GFrameNumber - startFrameNumber) / (endFrameNumber - startFrameNumber));
 			return true;
 		}
 	}

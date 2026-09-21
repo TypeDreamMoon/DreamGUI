@@ -13,6 +13,20 @@ class FDreamUIRenderer;
 class FSceneViewFamily;
 class FDreamVisualPostProcessRenderProxy;
 
+/**
+ * Shared ownership of a post-process render proxy.
+ *
+ * Three parties hold one: the visual on the game thread, the mesh section on the render thread, and
+ * every render command still in flight. They are torn down independently -- the visual's BeginDestroy
+ * does not wait for the canvas to pool its sections -- so the proxy outlives whichever of them lets go
+ * first, and the last reference (always released on the render thread) destroys it. A raw pointer here
+ * is what let the visual delete a proxy the section was still reading.
+ *
+ * Declared alongside the forward declaration rather than pulled in from the proxy header, which
+ * includes this one.
+ */
+using FDreamVisualPostProcessRenderProxyPtr = TSharedPtr<FDreamVisualPostProcessRenderProxy, ESPMode::ThreadSafe>;
+
 struct FDreamUIMeshBatchContainer
 {
 	FMeshBatch Mesh;
@@ -61,5 +75,6 @@ public:
 
 	virtual void DreamUI_CollectRenderData(TArray<FDreamUIPrimitiveDataContainer>& OutRenderData) = 0;
 	virtual void DreamUI_GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector& Collector, const FDreamUIPrimitiveDataContainer& PrimitiveData, TArray<FDreamUIMeshBatchContainer>& ResultArray) = 0;
-	virtual FDreamVisualPostProcessRenderProxy* DreamUI_GetPostProcessElement(FDreamUIRenderSectionProxy* SectionPtr)const = 0;
+	/** Returns a reference, not a borrow: the caller keeps the proxy alive for as long as it renders with it. */
+	virtual FDreamVisualPostProcessRenderProxyPtr DreamUI_GetPostProcessElement(FDreamUIRenderSectionProxy* SectionPtr)const = 0;
 };

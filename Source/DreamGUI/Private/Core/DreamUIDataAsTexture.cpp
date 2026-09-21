@@ -176,23 +176,35 @@ int UDreamUIDataAsTexture::RegisterBuffer()
 	if (NotUsingPositionArray.Num() > 0)
 	{
 		auto Pos = NotUsingPositionArray[0];
-		NotUsingPositionArray.RemoveSwap(Pos);
+		NotUsingPositionArray.RemoveAtSwap(0);
 		return Pos;
 	}
-	auto PrevPos = CurrentPosition;
+	const auto PrevPos = CurrentPosition;
 	CurrentPosition += 1;
-	if (CurrentPosition >= TextureHeight)//need to expand texture size
+	if (CurrentPosition >= TextureHeight)//the next caller would run off the end, so grow now
 	{
-		if (ExpandTexture())
+		/**
+		 * The row that was just claimed is inside the texture either way -- the growth here is for the
+		 * caller after this one. Recursing instead (which is what used to happen) threw PrevPos away
+		 * and returned the row above it, so every expansion permanently lost one row: never handed
+		 * out, never on the free list.
+		 */
+		if (!ExpandTexture())
 		{
-			return RegisterBuffer();
+			//the texture is already at the platform maximum (ExpandTexture has logged that). Stay on
+			//the last row rather than walking past the end of it: rows handed out from here overlap,
+			//which draws wrong, where an out-of-range row writes outside the texture.
+			CurrentPosition = TextureHeight - 1;
 		}
 	}
 	return PrevPos;
 }
 void UDreamUIDataAsTexture::UnregisterBuffer(int InPosition)
 {
-	NotUsingPositionArray.Add(InPosition);
+	if (InPosition <= INDEX_NONE)return;
+	//a row can only be free once; letting a repeated unregister queue it twice hands the same row to
+	//two different owners
+	NotUsingPositionArray.AddUnique(InPosition);
 }
 void UDreamUIDataAsTexture::UpdateBlock(int InPositionY, TArray<uint8> InData)
 {

@@ -4,7 +4,7 @@
 
 <h1 align="center">DreamGUI</h1>
 
-<p align="center">A 3D UI system for Unreal Engine 5.8 — widgets that live in the world, a prefab workflow, and a designer built to feel like UMG's.</p>
+<p align="center">A 3D UI system for Unreal Engine 5.8 — widgets that live in the world, widget Blueprints you subclass, and a designer built to feel like UMG's.</p>
 
 <p align="center">
   <a href="#install">Install</a> ·
@@ -27,8 +27,8 @@ rather than Slate's, and it buys three things UMG cannot do as directly:
 
 - **UI in the world.** A canvas can render in screen space or sit on a surface in the level, at any
   angle, lit or unlit, with correct hit testing either way.
-- **Prefabs.** A UI tree is an asset you instance, nest and override, rather than a Blueprint class
-  you subclass.
+- **A tree that is a class.** A UI tree is authored in a widget Blueprint (`UDreamWidgetBlueprint`)
+  and reused by subclassing and by nesting one widget class inside another, the way UMG does it.
 - **Per-widget perspective.** A widget can establish a perspective its subtree is foreshortened
   into, the way CSS `perspective` works.
 
@@ -44,15 +44,61 @@ git clone https://github.com/TypeDreamMoon/DreamGUI.git Plugins/DreamGUI
 
 Regenerate project files and build. That is the whole install for a fresh project.
 
-### If you have assets authored against LGUI / LexUI
+> [!IMPORTANT]
+> **A source build of the engine is required**, not a launcher install. `DreamGUI.Build.cs` adds
+> `Engine/Source/Runtime/Renderer/Private`, `Runtime/Renderer/Internal` and `Engine/Source` itself to
+> its private include paths, for `SceneRendering.h`, `ScenePrivate.h`, `SceneTextures.h` and the
+> single-file `ThirdParty/msdfgen/msdfgen.cpp` that the glyph rasteriser compiles. A binary engine
+> ships none of those, and the failure is a missing-header compile error rather than anything that
+> names this requirement.
+
+### Keyboard layouts: give DreamGUI the game viewport client
+
+A DreamGUI text field is not a Slate widget, so it is never on the keyboard focus path, and the
+engine's only landing place for a platform **character** in a game is the virtual
+`UGameViewportClient::InputChar` — which has no delegate to subscribe to. Without an owner for that
+function, `UUITextInput` falls back to its own `FKey` → character table, and that table is only
+correct on **US QWERTY**: AZERTY, QWERTZ, Dvorak, Cyrillic, dead keys and AltGr all type the wrong
+character. (IME users are unaffected — composition text arrives through TSF, not through the table.)
+
+Pick whichever of these fits the project. The field logs one warning the first time it is edited if
+neither is in place.
+
+**1. Use the plugin's viewport client.** In `Config/DefaultEngine.ini`:
+
+```ini
+[/Script/Engine.Engine]
+GameViewportClientClassName=/Script/DreamGUI.DreamGameViewportClient
+```
+
+**2. Keep your own viewport client.** Either derive it from `UDreamGameViewportClient` instead of
+`UGameViewportClient`, or keep its base and add one line to its `InputChar` override:
+
+```cpp
+bool UMyGameViewportClient::InputChar(FViewport* InViewport, int32 ControllerId, TCHAR Character)
+{
+    if (Super::InputChar(InViewport, ControllerId, Character)) { return true; }
+    return UUITextInput::RouteCharacterInputToActiveInput(Character);
+}
+```
+
+`RouteCharacterInputToActiveInput` is the entire contract — it hands the character to whichever
+field currently owns the keyboard and returns whether one took it. From the first character that
+arrives this way, the `FKey` table stops synthesising printable characters altogether, so the two
+roads never double-type.
+
+### If you have assets authored against LGUI / LexUI, or from before an in-fork rename
 
 They reference the old class names and the old `/LGUI/` mount, so they need CoreRedirects — and
-**the engine only reads those from the project's config**. A plugin's own `Config/DefaultEngine.ini`
-is not consulted for them.
+**the engine only reads those from the project's config**. A plugin's own config is not consulted
+for them: `Config/DefaultEngine.ini` here is a template to copy, and a plugin's
+`Config/Default<PluginName>.ini` is mounted after the redirects have already been read, which is why
+none live there any more.
 
 Copy the `[CoreRedirects]` block from
 [`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini) into your project's
-`Config/DefaultEngine.ini`.
+`Config/DefaultEngine.ini`. It covers the LGUI/LexUI rename, the prefab-vocabulary rename that the
+class model replaced, and the control renames (`UIButtonComponent` → `UIButton` and its siblings).
 
 Skip this if you are starting fresh.
 
@@ -67,7 +113,7 @@ cosmetic.
 | Sizing | Content-sized: a widget's size **is** its desired size | Box-first: you author a rect, content is arranged inside it |
 | Text | The box grows to the text | The text is aligned in the box, and may overflow it |
 | Placement | Slot-relative | Anchors + pivot, resolution-independent |
-| Reuse | Widget Blueprint subclassing | Prefab assets with nested instances and overrides |
+| Reuse | Widget Blueprint subclassing | Widget Blueprint subclassing, plus named slots for content |
 | In-world | `WidgetComponent`, a rendered quad | A first-class render mode |
 
 The text difference is the one that surprises people. In UMG a `TextBlock` cannot overflow, because
@@ -99,7 +145,7 @@ re-measures the whole ancestor chain. The legacy Lex layout family
 (`ULexLayoutContainerFlexBox`, `ULexLayoutContainerGrid`, `ULexLayoutSelfFlexBox`,
 `ULexLayoutSelfGrid`, and the `ELexUILayoutMode` switch) was deleted.
 
-**The prefab editor**, reviewed against UMG's widget designer. Viewport picking is by widget *rect*
+**The designer**, reviewed against UMG's widget designer. Viewport picking is by widget *rect*
 rather than by rendered triangles — layout-only panels have no mesh, so a raycast could never hit
 them, which made panels unclickable and undroppable. Added since: hover feedback, per-axis resize
 handles, an anchor medallion, marquee selection, drag-to-reparent on the canvas, Content-Browser
@@ -114,33 +160,160 @@ perspective projection; inert otherwise.
 **Render transform**, widened to three dimensions, so a widget can be animated inside a layout
 without the layout fighting it.
 
-## Prefabs
+## Widget Blueprints
 
-The prefab editor works on a loaded preview hierarchy. Nothing reaches the asset until **Apply**,
-and nothing reaches disk until **Save** — or until Apply does it for you, if *Save on Apply* is set
-to something other than its default of *Never*.
+A UI tree is a **class**, not an asset you instance. Authoring one gives you a
+`UDreamWidgetBlueprint` whose generated class is a `UDreamUserWidget`; you subclass it, drop it
+inside another tree, and bind to its named children by name — the same shape as UMG's widget
+Blueprints, compiled by DreamGUI's own `FDreamWidgetBlueprintCompilerContext`.
 
-Saving a child prefab refreshes its instances inside any loaded parent. Overrides that were
-registered survive that refresh; changes that were never recorded as overrides can be replaced by
-it. So: edit the source prefab for a change every instance should see, and pin an override for a
-change only one parent should.
+The designer edits a preview instance of that class and writes back to the class, so there is no
+apply step and no per-instance override list to reconcile. Content a parent supplies to a child goes
+through `UDreamNamedSlotHost`.
 
-> [!WARNING]
-> `SavePrefab` performs **full serialization**, not a property-level patch, and
-> `ClearLoadedPrefab` + `Init` rebuilds the hierarchy and can discard unapplied editor changes.
-> Tooling that rewrites prefabs should work on a transient duplicate, refuse to run against an
-> editor with unapplied changes, and never call `SavePrefab` on a production asset from a test.
+> [!NOTE]
+> The prefab asset model this forked from is gone, along with `SavePrefab`, `Apply`,
+> `ClearLoadedPrefab` and *Save on Apply*. Assets saved against the old class names are covered by
+> the redirects in [`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini).
+
+### Try it
+
+[`Content/Samples/HelloDreamGUI.dui`](./Content/Samples/HelloDreamGUI.dui) is the smallest `.dui`
+that is still a real screen — an anchored root, an overlay, a card, a vertical column of text. The
+file's own header says what to do with it: make a Dream Widget Blueprint, point it at the file with
+*Pick Text Source* in the designer toolbar, compile, and add it to the viewport with
+`UDreamUIBPLibrary::AddWidgetOfClassToViewport`. That is the whole path from text to a UI on screen,
+and nothing else needs configuring — the screen root, the raycaster and the event system are created
+on demand.
+
+Copy it into your own project before editing it; a plugin update overwrites the copy in the plugin
+folder.
+
+### Animation, in the file
+
+A `timeline` block is an animation the language owns:
+
+```
+timeline Pulse {
+    duration = 0.6
+    loop     = PingPong
+
+    Icon.RenderScale        : 0.0 = (1, 1, 1), 0.3 = (1.25, 1.25, 1) ease InOutQuad, 0.6 = (1, 1, 1)
+    Row/Title.RenderTranslation : 0.0 = (-40, 0, 0), 0.2 = (0, 0, 0) ease OutCubic
+    @0.3 -> Landed
+}
+```
+
+One line per track: a path of node ids, the property it drives, and the keys. A line with no path at
+all (`RenderScale : ...`) drives the widget the animation lives on. The path is the same display-name
+path an animation binding already resolves through; the values are spelled the way they are
+everywhere else.
+
+**What a track may drive is exactly what the animation editor offers**: a property marked `Interp`,
+named either by its own name (`RenderScale`, `Color`) or by the label on its row (`Width`,
+`Height` -- those are the `Animatable*` mirrors that exist so the anchor block can be keyed, since
+a struct has no property track). One list, so a line that compiles is a track you can see. Note the
+asymmetry with assignment, which is deliberate: `Width = 400` is still DUI4001 pointing at
+`AnchorData.SizeDelta`, because an assignment writes a property and a timeline drives a track.
+
+Easing is a **name** out of `EDreamTweenEase` -- one word list for the whole plugin -- never a
+tangent quadruple: tangents are stored data, and a text form that expressed them would be
+unwritable by hand and lossy to read back. `@<time> -> Name` is a key on the block's event track,
+broadcast through the component's `OnAnimationEvent`.
+
+The block compiles into a `UDreamWidgetAnimation` in the root's animation component, gets its class
+member variable like any other animation, and plays through the same entry points. Because the FILE
+owns it, every compile rebuilds it and **the animation editor opens it read-only** -- edit the
+`.dui`, or hand the animation to Sequencer for good:
+
+```
+timeline Celebrate external
+```
+
+`external` builds nothing. It is a manifest entry: the animation lives in the asset, Sequencer edits
+it freely, and the file still lists it -- which is what makes "what animations does this class have"
+answerable by reading the file. Material-parameter tracks, hand-shaped curves and anything else layer
+one cannot express stay `external` by design; a compile warns when an animation is not listed, and
+when a listed one does not exist.
+
+### Handling events
+
+One mechanism, spelled the same way everywhere: a **route**.
+
+```
+Confirm : UIButton {
+    OnClick -> HandleConfirm
+}
+```
+
+`EventName -> Handler` names a function on the **user widget** — the class the tree compiles into —
+which is where UMG puts event handling too. The compiler resolves every route into
+`UDreamWidgetBlueprint::EventBindings` and `UDreamUserWidget::BindEventBindings` attaches them at
+Initialize. In the designer the same thing is the *Events* section of the details panel: the `+`
+creates a custom event with the right signature and the route that names it.
+
+A route reaches both kinds of event this plugin has — the `BlueprintAssignable` dynamic multicast
+delegates the `Controls/` family declares, and the `FDreamUIEventDelegate` properties the older
+`Interaction/` behaviours declare.
+
+> [!NOTE]
+> **`FDreamUIEventDelegate`'s own per-instance event list is legacy and read-only.** Bindings saved
+> in it still fire, and can still be removed from the panel, but new ones are not authored there: a
+> binding of that kind calls a function on an arbitrary object with a literal argument, which UMG has
+> no equivalent of and the `.dui` has no syntax for. Opening a panel that holds one logs a warning
+> naming it. Nothing is rewritten automatically — turning "call `Foo` on that behaviour with this
+> value" into "call a handler on the user widget" would change what the game does — so re-author
+> those as routes when you touch them.
+>
+> **Asset format**, all additive and back-compatible: `FDreamUIEventDelegateData` gained
+> `HelperComponentIndex` (a behaviour's position in the widget's component array, which is now the key
+> — `HelperComponentName` is still read for assets saved before it and the position is recorded the
+> first time that name resolves), and `StructValue` + `StructValueType` for the new `Struct`
+> parameter type, which carries any USTRUCT as exported text. Older assets load unchanged.
+
+## Platforms
+
+What is *claimed* and what has been *run* are different lists, so both are here.
+
+| | Builds | Verified |
+| --- | --- | --- |
+| **Win64** | yes | **yes** — the editor and the whole automation suite |
+| Mac, Linux | yes | no — no machine here to run them on |
+| iOS, Android | yes | no — never run on a device |
+| Dedicated server | see below | no — this project has no server target to build |
+
+The per-module `PlatformAllowList` and the descriptor's `SupportedTargetPlatforms` name the five
+platforms the code is written for, and they are kept in step with each other by a test. They are a
+statement about what compiles and what gets cooked, not a claim that anyone has shipped on them.
+
+**Mobile** is better supported than "untested" suggests, and worse than "supported" would: touch is
+routed end to end (`BindTouch` → the standalone input module), the virtual keyboard is implemented
+(`FPlatformApplicationMisc::RequiresVirtualKeyboard` → `ShowVirtualKeyboard`), and the one live
+platform branch in the renderer flips culling for Android GLES. MSAA is *not* available on GLES, and
+the renderer now falls back rather than pretending — see `AntiAliasingMethod`.
+
+**Dedicated server.** There is no server target in this project, so the honest statement is that the
+server configuration has never been compiled. What has been done is the part that can be checked by
+reading: `Config/DefaultEngine.ini`-style guesses are not involved, the `#if !UE_SERVER` blocks are
+balanced, and — the thing that actually breaks a server build — *no member or function referenced
+outside a server guard is declared inside one*. `UDreamUMGWidget` is the only class with `UE_SERVER`
+blocks, and every field they touch (`SlateWindow`, `SlateWidget`, `WidgetRenderer`) is declared
+unconditionally. `WITH_FREETYPE=0` / `WITH_HARFBUZZ=0` are handled the same way: every function the
+text path exposes is *defined* unconditionally with the body guarded, so nothing goes undefined at
+link time. Six interaction subsystems already decline to exist on a server
+(`ShouldCreateSubsystem` → `!IsRunningDedicatedServer()`).
 
 ## Status
 
-279 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
+691 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
 
 Known gaps:
 
 - `LineHeightPercentage` and `WrapTextAt` are only reachable through a real font asset, so they are
   not covered by tests.
-- 25 content assets still carry `Lex` in their names. Renaming a `.uasset` file does not rename the
-  object inside it, so only an editor-side rename can change those; the code points at what is
+- One content asset still carries `Lex` in its name
+  (`Content/Blueprints/LexEventSystemActor_EnhancedInput`). Renaming a `.uasset` file does not rename
+  the object inside it, so only an editor-side rename can change it; the code points at what is
   actually on disk.
 - The editor work is verified by tests, not by eye. Expect rough edges in the designer.
 

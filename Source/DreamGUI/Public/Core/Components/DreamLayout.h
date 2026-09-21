@@ -4,6 +4,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Curves/CurveFloat.h"
+#include "DreamLayoutFragment.h"
 #include "DreamWidget.h"
 #include "DreamWidgetSubObjectBehaviour.h"
 #include "DreamLayout.generated.h"
@@ -16,19 +17,6 @@ struct FDreamLayoutControlAnchorData
 	bool bCanControlHorizontalSize = false;
 	bool bCanControlVerticalSize = false;
 
-	bool HaveRepeatedControl(const FDreamLayoutControlAnchorData& Other)const
-	{
-		if (
-			(bCanControlHorizontalPosition && Other.bCanControlHorizontalPosition)
-			|| (bCanControlVerticalPosition && Other.bCanControlVerticalPosition)
-			|| (bCanControlHorizontalSize && Other.bCanControlHorizontalSize)
-			|| (bCanControlVerticalSize && Other.bCanControlVerticalSize)
-			)
-		{
-			return true;
-		}
-		return false;
-	}
 	void Or(const FDreamLayoutControlAnchorData& Other)
 	{
 		bCanControlHorizontalPosition |= Other.bCanControlHorizontalPosition;
@@ -40,18 +28,6 @@ struct FDreamLayoutControlAnchorData
 	{
 		return bCanControlHorizontalPosition || bCanControlVerticalPosition
 		|| bCanControlHorizontalSize || bCanControlVerticalSize;
-	}
-	bool Conflict(const FDreamLayoutControlAnchorData& Other)const
-	{
-		if (bCanControlHorizontalPosition && bCanControlHorizontalPosition == Other.bCanControlHorizontalPosition)
-			return true;
-		if (bCanControlVerticalPosition && bCanControlVerticalPosition == Other.bCanControlVerticalPosition)
-			return true;
-		if (bCanControlHorizontalSize && bCanControlHorizontalSize == Other.bCanControlHorizontalSize)
-			return true;
-		if (bCanControlVerticalSize && bCanControlVerticalSize == Other.bCanControlVerticalSize)
-			return true;
-		return false;
 	}
 };
 
@@ -108,6 +84,15 @@ public:
 
 	/** Zero means this layout does not contribute an intrinsic desired size. */
 	virtual FVector2f GetLayoutPreferredSize() const { return FVector2f::ZeroVector; }
+	/**
+	 * The same answer, asked inside a constraint. Only layouts whose size depends on the space they are
+	 * given need to override it; the default ignores the specs and answers the unconstrained question,
+	 * which is exactly right for a layout that has one fixed answer (a spacer, an authored surface).
+	 */
+	virtual FVector2f GetLayoutPreferredSize(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const
+	{
+		return GetLayoutPreferredSize();
+	}
 	virtual void MarkLayoutDirty();
 protected:
 	bool bIsLayoutDirty = false;
@@ -263,8 +248,26 @@ public:
 
 	//called by DreamWidget during layout processing
 	virtual void CalculateSize(){}
-	
-	virtual FVector2f GetLayoutFinalSize();
-	
+
+	/**
+	 * The LayoutSelf half of UDreamPanelLayoutBase::BeginLayoutPass: answer whether this layout still
+	 * owes an apply, and consume the flag saying so.
+	 *
+	 * UDreamLayout::MarkLayoutDirty has always set bIsLayoutDirty on both halves, but only the container
+	 * half ever read it, so UpdateLayout ran CalculateSize() unconditionally -- once per layout pass per
+	 * widget carrying a LayoutSelf, whether or not anything it depends on had moved. That is a product,
+	 * not a sum: a tree with a thousand aspect-ratio nodes solved a thousand times on a pass nobody
+	 * needed. The writes were idempotent, so the cost was pure, which is why it never showed as a bug.
+	 *
+	 * The first call always answers true regardless of the flag. A layout deserialized with its widget
+	 * has no register-time dirtying of its own (CreateNewLayoutSelf marks, loading does not), and a
+	 * layout that never applied once would sit on the widget doing nothing at all.
+	 */
+	bool BeginLayoutPass();
+
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* Widget) const override{return FDreamLayoutControlAnchorData();}
+
+private:
+	/** See BeginLayoutPass: the very first apply is owed unconditionally. */
+	bool bHasAppliedOnce = false;
 };

@@ -5,6 +5,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "DreamGUI.h"
 #include "Core/DreamUISettings.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIScreenSpaceRaycaster"
@@ -43,6 +44,17 @@ void UDreamScreenSpaceRaycaster::BeginPlay()
 	}
 }
 
+#if WITH_EDITOR
+void UDreamScreenSpaceRaycaster::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	// Recomputed unconditionally rather than only when DragThreshold is the property that changed:
+	// the multiply is free next to everything else an editor property change triggers, and a
+	// name-matched branch is one rename away from silently going dead again.
+	DragThresholdSquare = DragThreshold * DragThreshold;
+}
+#endif
+
 void UDreamScreenSpaceRaycaster::SetRootCanvas(UDreamCanvas* InRootCanvas)
 {
 	RootCanvas = InRootCanvas;
@@ -50,30 +62,46 @@ void UDreamScreenSpaceRaycaster::SetRootCanvas(UDreamCanvas* InRootCanvas)
 
 bool UDreamScreenSpaceRaycaster::GetAffectByGamePause()const
 {
-#if WITH_EDITOR
-	if (GetWorld() && GetWorld()->IsEditorWorld())
-	{
-		return GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
-	}
-	else
-#endif
-	{
-		static bool Value = GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
-		return Value;
-	}
+	// Read every time, like the world-space raycaster next door already does. It used to be cached in a
+	// function-local static, which is one value for the whole process: shared across every raycaster and
+	// every world, fixed at whatever the first caller saw, and unchanged by editing the project setting
+	// until the editor was restarted. PIE took that path -- IsEditorWorld() is false there -- so the
+	// setting appeared to do nothing in exactly the place it would be tried. GetDefault is a pointer
+	// read; there was nothing here worth caching.
+	return GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
 }
 bool UDreamScreenSpaceRaycaster::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
 	if (bHoldToDrag)
 	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		// No world means no clock to measure the hold against, so the hold cannot have elapsed and
+		// the question falls through to distance -- which needs nothing but the event data. This is
+		// the one branch of this function that was not pure arithmetic, and it is the reason a
+		// raycaster reached from an authoring tree or a headless fixture used to be a crash rather
+		// than an answer.
+		const UWorld* World = DreamUI::GetWorldSafe(this);
+		if (World != nullptr && World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}
 	}
 	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
 	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
-	return FVector2D::DistSquared(pressMousePos, mousePos) > DragThresholdSquare;
+	return FVector2D::DistSquared(pressMousePos, mousePos) > GetScaledDragThresholdSquare();
+}
+float UDreamScreenSpaceRaycaster::GetScaledDragThresholdSquare()const
+{
+	// DragThreshold is authored in canvas units -- the units the UI is laid out in -- but the pointer
+	// arrives in raw viewport pixels. Comparing the two directly made the threshold mean whatever the
+	// screen happened to be: on a phone whose canvas is scaled 3x, 5 canvas units is 15 pixels, and
+	// measuring against 5 raw pixels turned the tremor in a steady thumb into a drag -- which also ate
+	// the click, because a press that becomes a drag never fires one.
+	const UDreamCanvas* Canvas = RootCanvas.Get();
+	const float CanvasScale = Canvas != nullptr ? Canvas->GetCanvasScale() : 1.0f;
+	// A zero or negative scale is not a canvas anyone can point at; fall back to 1 rather than letting
+	// the threshold collapse to zero and make every press a drag.
+	const float SafeScale = CanvasScale > SMALL_NUMBER ? CanvasScale : 1.0f;
+	return DragThresholdSquare * SafeScale * SafeScale;
 }
 bool UDreamScreenSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)
 {

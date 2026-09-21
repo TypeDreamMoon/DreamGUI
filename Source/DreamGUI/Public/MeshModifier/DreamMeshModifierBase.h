@@ -87,6 +87,13 @@ protected:
 
 private:
 	mutable TWeakObjectPtr<UDreamVisualBatchMesh> CacheVisualBatchMesh;
+	/**
+	 * Whether this modifier currently occupies a slot in some visual's modifier list. The cached mesh
+	 * pointer cannot stand in for this, because it is re-resolved on every access -- including before
+	 * the component is ever registered and after the widget has let it go -- and re-adding the
+	 * modifier in either of those states would resurrect a registration that no longer exists.
+	 */
+	uint8 bRegisteredWithVisual : 1 = false;
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		UDreamVisualBatchMesh* GetVisualBatchMesh()const;
@@ -117,6 +124,16 @@ public:
 		OutUV = true;
 		OutColor = true;
 	}
+	/**
+	 * Does this modifier append whole copies of the mesh (outline, shadow, long shadow)?
+	 *
+	 * A copy is a photograph: it freezes whatever the modifiers before it produced, and the vertices
+	 * it appends are outside every char vertex range a text animation addresses. So one that answers
+	 * true is run after every one that answers false, whatever order the components sit in on the
+	 * widget -- otherwise whether an outline follows an animated character comes down to which
+	 * component happened to be added first, with nothing on screen to say so.
+	 */
+	virtual bool GetDuplicatesMesh()const { return false; }
 protected:
 	UPROPERTY(Transient) TObjectPtr<UDreamVisualBatchMeshModifierHelper> GeometryModifierHelper = nullptr;
 	/**

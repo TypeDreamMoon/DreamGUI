@@ -26,10 +26,12 @@ struct DREAMGUI_API FDreamTextLayoutInput
 	float Width = 0.0f;
 	float Height = 0.0f;
 	FVector2f Pivot = FVector2f::ZeroVector;
-	/** The text's own colour. Rich-text <color> tags are parsed against it; untagged glyphs take it at paint time. */
+	/**
+	 * The text's own colour, as the rich-text parser's base. It is not part of equality: the layout
+	 * emits nothing that depends on it (untagged glyphs are painted with FDreamTextPaintParams::
+	 * BaseColor), so a fade must not cost a layout.
+	 */
 	FColor Color = FColor::White;
-	/** Render opacity the rich-text parser applies to tag colours. Ignored without rich text. */
-	uint8 RenderOpacityForRichText = 255;
 	FVector2f FontSpace = FVector2f::ZeroVector;
 	float FontSize = 16.0f;
 	EDreamUITextParagraphHorizontalAlign ParagraphHAlign = EDreamUITextParagraphHorizontalAlign::Left;
@@ -39,6 +41,15 @@ struct DREAMGUI_API FDreamTextLayoutInput
 	EDreamTextPhraseWrap PhraseWrap = EDreamTextPhraseWrap::Off;
 	bool bUseKerning = false;
 	EDreamUITextFontStyle FontStyle = EDreamUITextFontStyle::None;
+	/** Underline / strike the whole run, before any markup: the text's own style, not a tag. */
+	bool bUnderline = false;
+	bool bStrikethrough = false;
+	/** Case the content is laid out in; the caller has already applied it to Content. */
+	EDreamUITextTransformPolicy TextTransform = EDreamUITextTransformPolicy::None;
+	/** Auto asks the bidi algorithm; the other two override the paragraph's direction. */
+	EDreamTextFlowDirection FlowDirection = EDreamTextFlowDirection::Auto;
+	/** Wrap even when the overflow policy is not VerticalOverflow (UMG's AutoWrapText). */
+	bool bAutoWrapText = false;
 	bool bRichText = false;
 	int32 RichTextFilterFlags = 0xffffffff;
 	/** Scales the gap between lines; 1 is the font's own line height. */

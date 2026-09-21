@@ -81,10 +81,12 @@ FVector2D UDreamPolygonLine::GetEndPointTangentDirection()
 	}
 }
 
+/** Re-clamps Sides for the same reason UDreamPolygon::SetFullCycle does -- see the note there. */
 void UDreamPolygonLine::SetFullCycle(bool value) {
 	if (FullCycle != value)
 	{
 		FullCycle = value;
+		Sides = FMath::Max(Sides, FullCycle ? 3 : 1);
 		MarkVerticesDirty(true, true, true, false);
 	}
 }
@@ -110,19 +112,26 @@ void UDreamPolygonLine::SetSides(int value) {
 		MarkVerticesDirty(true, true, true, true);
 	}
 }
+/*
+ * Measured against the count the shape implies rather than against the stored array, for the reason
+ * spelled out on UDreamPolygon::SetVertexOffsetArray. The expression is the same one CalculatePoints
+ * sizes the array with, which is what keeps this copy of the idea from drifting from that one.
+ */
 void UDreamPolygonLine::SetVertexOffsetArray(const TArray<float>& value)
 {
-	if (VertexOffsetArray.Num() == value.Num())
+	const int32 ExpectedCount = FullCycle ? Sides : (Sides + 1);
+	if (value.Num() == ExpectedCount)
 	{
 		VertexOffsetArray = value;
 		MarkVertexPositionDirty();
 	}
 	else
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Array count not equal! VertexOffsetArray:%d, value:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, VertexOffsetArray.Num(), value.Num());
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Array count not equal! Expected:%d for %d sides, value:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ExpectedCount, Sides, value.Num());
 	}
 }
 #include "Core/DreamUISettings.h"
+#include "Core/DreamUIWidgetRegistry.h"
 UDreamTweener* UDreamPolygonLine::StartAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, EDreamTweenEase easeType /* = EDreamTweenEase::OutCubic */)
 {
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamPolygonLine::GetStartAngle), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamPolygonLine::SetStartAngle), endValue, duration);
@@ -143,3 +152,5 @@ UDreamTweener* UDreamPolygonLine::EndAngleTo(float endValue, float duration /* =
 	}
 	return Tweener;
 }
+
+DECLARE_DREAM_GUI_VISUAL("PolygonLine", UDreamPolygonLine)

@@ -6,8 +6,11 @@
 #include "SceneView.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
+#include "Core/DreamUIWorldContext.h"
+#include "Event/DreamEventSystem.h"
 
 #if BUILD_VP_MATRIX_FROM_CAMERA_MANAGER
+#include "Camera/PlayerCameraManager.h"//only this path dereferences PlayerCameraManager
 void DreamGUIWorldSpaceRaycasterSource_Mouse_BuildProjectionMatrix(FIntPoint RenderTargetSize, ECameraProjectionMode::Type ProjectionType, float FOV, float InOrthoWidth, FMatrix& ProjectionMatrix)
 {
 	float XAxisMultiplier;
@@ -71,7 +74,12 @@ void DreamGUIWorldSpaceRaycasterSource_Mouse_BuildProjectionMatrix(FIntPoint Ren
 		}
 	}
 }
-FMatrix UDreamGUIWorldSpaceRaycasterSource_Mouse::ComputeViewProjectionMatrix(APlayerCameraManager* CameraManager, const FIntPoint& ScreenSize)
+// The two definitions below and their caller live behind BUILD_VP_MATRIX_FROM_CAMERA_MANAGER, which is
+// 0 in the header. They had drifted out of compiling while nobody was looking: the class was spelled
+// UDreamGUIWorldSpaceRaycasterSource_Mouse (there is no such class) and the event data member as
+// pointerPosition (it is PointerPosition). Fixed rather than deleted, so that turning the macro on is a
+// switch rather than a repair job.
+FMatrix UDreamWorldSpaceRaycasterSource_Mouse::ComputeViewProjectionMatrix(APlayerCameraManager* CameraManager, const FIntPoint& ScreenSize)
 {
 	FMatrix viewProjectionMatrix = FMatrix::Identity;
 	if (CameraManager == nullptr)return viewProjectionMatrix;
@@ -101,7 +109,7 @@ FMatrix UDreamGUIWorldSpaceRaycasterSource_Mouse::ComputeViewProjectionMatrix(AP
 	return viewProjectionMatrix;
 }
 
-void UDreamGUIWorldSpaceRaycasterSource_Mouse::DeprojectViewPointToWorldForMainViewport(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection)
+void UDreamWorldSpaceRaycasterSource_Mouse::DeprojectViewPointToWorldForMainViewport(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection)
 {
 	FMatrix InvViewProjMatrix = InViewProjectionMatrix.InverseFast();
 
@@ -139,13 +147,18 @@ void UDreamGUIWorldSpaceRaycasterSource_Mouse::DeprojectViewPointToWorldForMainV
 
 bool UDreamWorldSpaceRaycasterSource_Mouse::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (World == nullptr)return false;
+	// The pointer says whose it is, and deprojection has to happen through THAT player's view: on a
+	// split screen the first controller's viewport is the wrong rectangle and the wrong camera.
+	const int32 PointerUserIndex = InPointerEventData != nullptr ? InPointerEventData->UserIndex : 0;
 #if BUILD_VP_MATRIX_FROM_CAMERA_MANAGER
-	if (auto pc = GetWorld()->GetFirstPlayerController())
+	if (auto pc = UDreamEventSystem::GetPlayerControllerForUser(this, PointerUserIndex))
 	{
 		FIntPoint ScreenSize;
 		pc->GetViewportSize(ScreenSize.X, ScreenSize.Y);
 		FMatrix viewProjectionMatrix = ComputeViewProjectionMatrix(pc->PlayerCameraManager, ScreenSize);
-		FVector2D MousePosition = FVector2D(InPointerEventData->pointerPosition);
+		FVector2D MousePosition = FVector2D(InPointerEventData->PointerPosition);
 		MousePosition.X /= ScreenSize.X;
 		MousePosition.Y /= ScreenSize.Y;
 		MousePosition.Y = 1.0f - MousePosition.Y;
@@ -155,7 +168,7 @@ bool UDreamWorldSpaceRaycasterSource_Mouse::GenerateRay(UDreamPointerEventData* 
 		return true;
 	}
 #else
-	if (auto playerController = this->GetWorld()->GetFirstPlayerController())
+	if (auto playerController = UDreamEventSystem::GetPlayerControllerForUser(this, PointerUserIndex))
 	{
 		ULocalPlayer* const LocalPlayer = playerController->GetLocalPlayer();
 		if (LocalPlayer && LocalPlayer->ViewportClient)
@@ -179,9 +192,10 @@ bool UDreamWorldSpaceRaycasterSource_Mouse::GenerateRay(UDreamPointerEventData* 
 }
 bool UDreamWorldSpaceRaycasterSource_Mouse::ShouldStartDrag(UDreamPointerEventData* InPointerEventData)
 {
-	if (bHoldToDrag)
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	if (bHoldToDrag && World != nullptr)
 	{
-		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		if (World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}

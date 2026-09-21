@@ -19,9 +19,15 @@ class UTexture2D;
  *
  * These used to be path literals passed to LoadObject at the point of use. A path literal is worse
  * than a hard reference: it creates no package dependency at all, so renaming or moving the asset
- * compiles clean and turns into a silent null at runtime, and a packaged build has no reason to cook
- * the asset in the first place. Soft pointers here fix both -- the cooker sees them, and the editor
- * fixes them up on a rename.
+ * compiles clean and turns into a silent null at runtime. Soft pointers fix the rename half -- the
+ * editor fixes them up -- and they are a declared reference a tool can read.
+ *
+ * They do NOT make the assets cookable. A soft pointer assigned to a native CDO produces no asset
+ * registry dependency, because the CDO lives in /Script/DreamGUI rather than in a package the
+ * registry scans. These assets survive a normal cook only because UE cooks all mounted content by
+ * default. What covers an explicit-package-list cook is the plugin's own Config/Game.ini, which puts
+ * /DreamGUI into DirectoriesToAlwaysCook -- it ships with the plugin, so a project gets it by
+ * enabling the plugin. See that file for why it is named Game.ini, and the constructor below.
  *
  * Everything is a fallback. A UDreamCanvas with its own DefaultMaterial set never reads this; the
  * settings only answer the question "what should this be when nobody said".
@@ -88,6 +94,14 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Assets")
 	TSoftClassPtr<UDreamUserWidget> NavigationSelectionClass;
 
+	/**
+	 * The project's control style sheet -- one asset where every native control's default look
+	 * lives. Unset is a supported state, not a missing one: controls then use their styles' own
+	 * C++ defaults, which are the built-in theme.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Assets")
+	TSoftObjectPtr<class UDreamUIStyleSheet> DefaultStyleSheet;
+
 
 	/**
 	 * Content folder the shipped control classes live in.
@@ -114,7 +128,15 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> WorldSpaceRaycasterSourceClass;
 
-	/** Root actor placed for a screen-space widget. */
+	/**
+	 * Root actor placed for a screen-space widget by an actor factory.
+	 *
+	 * Reachable only through GetRootClassForRenderMode, and no factory asks it for the screen-space
+	 * mode today: UDreamScreenUISubsystem::GetOrCreateScreenRoot builds its 1920x1080 transient root
+	 * in code instead, because it has to run in a cooked game where placing an actor from a Blueprint
+	 * class is not what "add this widget to the viewport" should mean. Kept as the answer for the
+	 * screen-space branch of that switch, which is one factory away.
+	 */
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> ScreenSpaceRootClass;
 
@@ -130,10 +152,53 @@ public:
 	 * The root class for one render mode, so two actor factories cannot disagree about it.
 	 *
 	 * Took a bMarkup flag until the markup pipeline was retired; the second set of root classes it
-	 * chose between went with it. Nothing calls this today -- the prefab factory that did was removed
-	 * with the prefab asset model -- so it is kept for the next factory rather than for a caller.
+	 * chose between went with it. The prefab factory that called it went with the prefab asset model,
+	 * but it is live again: UDreamWidgetBlueprintActorFactory::GetDefaultActorClass asks it for
+	 * WorldSpace_DreamUI on every widget-Blueprint drop into a level.
 	 */
 	TSoftClassPtr<AActor> GetRootClassForRenderMode(EDreamRenderMode RenderMode) const;
+
+	// ---------------------------------------------------------------- Tooltip
+
+	/** Seconds the pointer rests on a widget before its ToolTipText shows. */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip", meta = (ClampMin = "0.0", UIMax = "3.0"))
+	float TooltipDelaySeconds = 0.5f;
+
+	/**
+	 * Bubble offset from the pointer, in canvas units, X right and Y up -- the default puts it
+	 * below-right of the cursor. The tooltip flips to the pointer's other side when this side runs
+	 * out of canvas.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip")
+	FVector2D TooltipOffset = FVector2D(18.0f, -22.0f);
+
+	/** Widest the built-in text bubble grows before the text wraps. */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip", meta = (ClampMin = "50.0"))
+	float TooltipMaxWidth = 420.0f;
+
+	/** Font size of the built-in text bubble. */
+	UPROPERTY(config, EditAnywhere, Category = "Tooltip", meta = (ClampMin = "6.0"))
+	float TooltipFontSize = 14.0f;
+
+	// ---------------------------------------------------------------- Modal
+
+	/** Tint of the input-eating scrim behind a modal dialog. */
+	UPROPERTY(config, EditAnywhere, Category = "Modal")
+	FColor ModalScrimColor = FColor(0, 0, 0, 160);
+
+	// ---------------------------------------------------------------- Virtual cursor
+
+	/** Show the virtual cursor whenever the physical device is a gamepad, hide it otherwise. */
+	UPROPERTY(config, EditAnywhere, Category = "Virtual Cursor")
+	bool bAutoVirtualCursorOnGamepad = false;
+
+	/** Cursor speed at full stick deflection, viewport pixels per second. */
+	UPROPERTY(config, EditAnywhere, Category = "Virtual Cursor", meta = (ClampMin = "100.0"))
+	float VirtualCursorSpeed = 1200.0f;
+
+	/** Widget class drawn as the cursor. Empty draws the built-in square. */
+	UPROPERTY(config, EditAnywhere, Category = "Virtual Cursor")
+	TSoftClassPtr<UDreamUserWidget> VirtualCursorClass;
 
 	// ---------------------------------------------------------------- Resolution
 

@@ -33,18 +33,34 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	const FDreamUIActionBinding& GetBinding()const{ return Binding; }
 
+	/** 0..1 through this entry's hold, kept live by the router. Always 0 for an action that fires on press. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	float GetHoldProgress()const{ return Binding.HoldProgress; }
+
 	/** Wiring, for an entry assembled in code rather than authored as a prefab. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
-	void SetLabelText(UDreamText* Value){ LabelText = Value; }
+	void SetLabelText(UDreamText* Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
-	void SetIconImage(UDreamImage* Value){ IconImage = Value; }
+	void SetIconImage(UDreamImage* Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
-	void SetKeyText(UDreamText* Value){ KeyText = Value; }
+	void SetKeyText(UDreamText* Value);
 
 protected:
+	virtual void OnEnable()override;
+	virtual void OnDisable()override;
+	virtual void OnUnregister()override;
+
 	/** Called after the defaults have been written, so it can override any of them. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnBindingChanged"), Category = "DreamGUI-Navigation")
 	void ReceiveOnBindingChanged(const FDreamUIActionBinding& InBinding);
+	/**
+	 * Called every time this entry's hold progress moves, and once with 0 when the hold ends.
+	 *
+	 * This is where a filling ring is drawn. Pushed from the router rather than ticked: an entry for an
+	 * action that fires on press never hears from it at all.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnHoldProgressChanged"), Category = "DreamGUI-Navigation")
+	void ReceiveOnHoldProgressChanged(float InHoldProgress);
 
 	/** What the action does, in words. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
@@ -61,6 +77,14 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI-Navigation", AdvancedDisplay)
 	FDreamUIActionBinding Binding;
+
+private:
+	void SubscribeToRouter();
+	void UnsubscribeFromRouter();
+	void HandleHoldProgressChanged(FDreamUIActionHandle InHandle, float InProgress);
+
+	FDelegateHandle HoldProgressHandle;
+	TWeakObjectPtr<UDreamUIActionRouter> SubscribedHoldRouter;
 };
 
 /**

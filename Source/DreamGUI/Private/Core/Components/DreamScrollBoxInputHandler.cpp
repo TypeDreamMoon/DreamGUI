@@ -16,7 +16,14 @@ void UDreamScrollBoxInputHandler::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (UDreamLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout))
 	{
-		Layout->TickScrollPhysics(DeltaTime);
+		// Only while something is actually moving: a resting scroll box was paying spring and
+		// momentum math every frame of its life. The handler keeps ticking, so the frame after ANY
+		// path sets the box in motion -- a fling here, an animated SetScrollOffset from code --
+		// IsScrolling turns true and the physics resumes; no opt-in bookkeeping to forget.
+		if (Layout->IsScrolling())
+		{
+			Layout->TickScrollPhysics(DeltaTime);
+		}
 	}
 }
 

@@ -15,6 +15,7 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamContentWidget.h"
+#include "Preview/DreamWidgetDesignerScene.h"
 #include "Designer/DreamWidgetHierarchyPickerView.h"
 #include "Kismet2/CompilerResultsLog.h"
 
@@ -159,6 +160,48 @@ bool FDreamDesignerPreviewMatchesTemplateTest::RunTest(const FString&)
 	TestEqual(TEXT("The preview root hangs under the design canvas"),
 		Host->GetPreviewWidget()->GetParent(), Host->GetRootAgent());
 
+	// The undo model, stated as a property of the objects rather than of the editor that drives
+	// them: the authoring tree is the only half a transaction can hold, and the preview is a
+	// projection that is thrown away and rebuilt. RF_Transactional is what decides that, and it is
+	// in RF_PropagateToSubObjects -- so asserting it on the tree alone would pass while every
+	// widget under it was still undoable. Walk the whole thing.
+	//
+	// This is not a style rule. For as long as the preview was transactional, an undo restored
+	// values onto -- and re-inserted -- objects a rebuild had already destroyed, which is what
+	// produced a preview tree with a cycle in it and left the transaction buffer holding the whole
+	// outgoing hierarchy. See UDreamWidgetGeneratedClass::InitializeWidgetStatic.
+	TestFalse(TEXT("The preview widget is not transactional"),
+		Host->GetPreviewWidget()->HasAnyFlags(RF_Transactional));
+	if (UDreamWidgetTree* PreviewTree = Host->GetPreviewWidget()->GetWidgetTree())
+	{
+		TestFalse(TEXT("Nor is the tree instanced into it"), PreviewTree->HasAnyFlags(RF_Transactional));
+	}
+	TArray<UDreamWidget*> PreviewWidgets;
+	CollectDreamWidgetsToNestedBoundary(Host->GetPreviewRoot(), PreviewWidgets);
+	TestTrue(TEXT("The walk reached the whole preview"), PreviewWidgets.Num() >= TemplateCount);
+	for (UDreamWidget* Preview : PreviewWidgets)
+	{
+		if (Preview->HasAnyFlags(RF_Transactional))
+		{
+			AddError(FString::Printf(TEXT("preview widget '%s' is transactional"), *Preview->GetDisplayName()));
+		}
+		// The sub-objects too: a details-panel edit lands on the panel slot, the layouts or the
+		// visual far more often than on the widget, and each of those is instanced by the same
+		// graph and would carry the same flag.
+		if (UDreamPanelSlot* Slot = Preview->GetPanelSlot(); IsValid(Slot) && Slot->HasAnyFlags(RF_Transactional))
+		{
+			AddError(FString::Printf(TEXT("the panel slot of '%s' is transactional"), *Preview->GetDisplayName()));
+		}
+		if (UDreamLayoutContainer* Container = Preview->GetLayoutContainer(); IsValid(Container) && Container->HasAnyFlags(RF_Transactional))
+		{
+			AddError(FString::Printf(TEXT("the layout container of '%s' is transactional"), *Preview->GetDisplayName()));
+		}
+	}
+	// And the other half of the same claim, because "nothing is transactional" would also pass on a
+	// build where the flag had simply been dropped everywhere: the AUTHORED widgets still are.
+	TestTrue(TEXT("The authored root is still transactional"),
+		Scoped.Blueprint->WidgetTree->RootWidget->HasAnyFlags(RF_Transactional));
+
 	Host->Shutdown();
 	return true;
 }
@@ -222,6 +265,7 @@ bool FDreamDesignerTreeEditingTest::RunTest(const FString&)
 	// counts as a failure.
 	AddExpectedError(TEXT("into itself or into something it contains"), EAutomationExpectedErrorFlags::Contains, 0);
 	AddExpectedError(TEXT("not part of .* authoring tree"), EAutomationExpectedErrorFlags::Contains, 0);
+	AddExpectedError(TEXT("Refusing to move the root"), EAutomationExpectedErrorFlags::Contains, 0);
 
 	FScopedBlueprint Scoped(TEXT("DesignerTreeEditing"));
 	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))
@@ -246,8 +290,12 @@ bool FDreamDesignerTreeEditingTest::RunTest(const FString&)
 		Scoped.Blueprint, UDreamWidget::StaticClass(), nullptr, -1, TEXT("First"));
 	TestEqual(TEXT("A clashing display name is suffixed"), Duplicate->GetDisplayName(), FString(TEXT("First_1")));
 
-	// Refusals.
-	TestFalse(TEXT("The root cannot be deleted"), DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, Root));
+	// Refusals. Deleting the root is no longer one of them -- it empties the tree, the way UMG's
+	// UWidgetTree::RemoveWidget does, and DreamGUI.Designer.TheRootCanBeDeletedAndTheEmptyTreeRefilled
+	// covers the round trip. MOVING it still is: a hierarchy has exactly one root and nothing above
+	// it to move it under, which is UMG's rule too.
+	TestFalse(TEXT("The root cannot be moved"),
+		DreamWidgetTreeEditing::ReparentWidget(Scoped.Blueprint, Root, First));
 	TestFalse(TEXT("A widget cannot be parented into its own subtree"),
 		DreamWidgetTreeEditing::ReparentWidget(Scoped.Blueprint, First, Grandchild));
 	{
@@ -848,6 +896,13 @@ bool FDreamDesignerUndoWithAPreviewTest::RunTest(const FString&)
 	// preview. The damage seen by hand showed up in the PREVIEW tree -- RestoreParentLinksRecursive
 	// reporting a cycle while instancing it -- so the preview is either the victim or the cause, and
 	// a test without one cannot tell which.
+	//
+	// Read under the current model this asserts both halves of it. The undo restores the TEMPLATE,
+	// which is the only half a transaction holds; the RebuildPreview after it is the projection
+	// step, and it stands in for what an open designer does in
+	// FDreamWidgetBlueprintEditor::HandlePostTransaction -- there is no toolkit here to call it.
+	// The preview assertions are therefore about a hierarchy rebuilt from the restored template,
+	// not about one an undo wrote into, which is exactly the distinction the model draws.
 	FScopedBlueprint Scoped(TEXT("UndoDuplicateWithPreview"));
 	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))return false;
 	BuildSampleHierarchy(Scoped.Blueprint);
@@ -912,6 +967,23 @@ bool FDreamDesignerUndoWithAPreviewTest::RunTest(const FString&)
 	TestEqual(TEXT("the preview shows the copy"), WithCopy.Slots, BeforePreview.Slots + 2);
 
 	GEditor->UndoTransaction();
+
+	// Before the rebuild, and this is the model stated as an observation rather than as a flag: the
+	// undo restored the TEMPLATE and did not reach into the preview at all, so the preview is still
+	// showing the copy and every slot in it still holds a live widget. A preview that was in the
+	// transaction would have had objects invalidated out from under it here -- which is what left
+	// dead slots that no IsValid-guarded walk could see and that the next instancing pass rebuilt
+	// into live duplicates.
+	{
+		FWalk Undone; Undone.Run(Host->GetPreviewRoot());
+		TestEqual(TEXT("the undo did not reach the preview: it still shows the copy"),
+			Undone.Slots, BeforePreview.Slots + 2);
+		TestEqual(*FString::Printf(TEXT("and left no dead slot in it, saw [%s]"),
+			*FString::Join(Undone.DeadSlots, TEXT(", "))), Undone.DeadSlots.Num(), 0);
+	}
+
+	// The projection step. An open designer runs this from PostUndo/PostRedo (see
+	// FDreamWidgetBlueprintEditor::HandlePostTransaction); there is no toolkit here to do it.
 	Host->RebuildPreview();
 
 	FWalk AfterTemplate; AfterTemplate.Run(Tree->RootWidget);
@@ -1232,6 +1304,111 @@ bool FDreamAnimationBindingStopsAtTheBoundaryTest::RunTest(const FString&)
 		Offered.Contains(TEXT("ShellOwn")));
 
 	PreviewHost->Shutdown();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerPreviewSizesTheAuthoredRootTest,
+	"DreamGUI.Designer.ThePreviewSizesTheAuthoredRootRatherThanTrustingItsAnchors",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerPreviewSizesTheAuthoredRootTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	FScopedBlueprint Scoped(TEXT("DesignerCollapsedRoot"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))
+	{
+		return false;
+	}
+	BuildSampleHierarchy(Scoped.Blueprint);
+
+	// The state a widget blueprint used to be BORN in: point anchors with a zero SizeDelta, which is
+	// a root that resolves to nothing. The factory no longer produces it, but every asset made before
+	// that fix still holds it, and an author can type it in at any time -- so the designer has to
+	// survive it rather than merely stop causing it.
+	{
+		UDreamWidget* Root = Scoped.Blueprint->GetOrCreateWidgetTree()->RootWidget.Get();
+		FDreamUIAnchorData Collapsed = Root->GetAnchorData();
+		Collapsed.AnchorMin = FVector2D(0.5, 0.5);
+		Collapsed.AnchorMax = FVector2D(0.5, 0.5);
+		Collapsed.AnchoredPosition = FVector2D::ZeroVector;
+		Collapsed.SizeDelta = FVector2D::ZeroVector;
+		Root->SetAnchorData(Collapsed);
+	}
+	Scoped.Blueprint->DesignerData.CanvasSize = FIntPoint(800, 600);
+	Scoped.Compile();
+
+	TSharedRef<FDreamWidgetPreviewHost> Host = MakeShared<FDreamWidgetPreviewHost>();
+	Host->Initialize(Scoped.Blueprint);
+
+	UDreamWidget* Agent = Host->GetRootAgent();
+	UDreamWidget* PreviewRoot = Host->GetPreviewRoot();
+	if (!TestNotNull(TEXT("the design canvas exists"), Agent)
+		|| !TestNotNull(TEXT("and the preview was built"), PreviewRoot))
+	{
+		Host->Shutdown();
+		return false;
+	}
+
+	// UMG's PreviewSizeConstraint, in this framework's terms: the wrapper the class's contents hang
+	// inside ARRANGES them, so what the authored root gets is the canvas and not whatever its own
+	// anchor rect happens to say. Without it the root kept its 0x0 and arranged every descendant
+	// into a 0x0 rect -- a hierarchy that is structurally perfect and draws nothing.
+	TestNotNull(TEXT("the preview wrapper lays its contents out"),
+		Host->GetPreviewWidget() != nullptr ? Host->GetPreviewWidget()->GetLayoutContainer() : nullptr);
+
+	// By hand, because nothing ticks here. Registration DIRTIES the layout; the manager's tick is
+	// what runs it, and a headless run has no tick -- so without this every widget in the preview
+	// still reads the rect it was constructed with, and the assertions below would be measuring that
+	// instead. In the editor the pass has already happened by the time anyone looks.
+	UDreamWidget::RebuildLayoutImmediately(Host->GetPreviewWidget());
+	TestEqual(TEXT("so a root authored at zero is still given the canvas width"),
+		PreviewRoot->GetWidth(), 800.0f);
+	TestEqual(TEXT("and its height"), PreviewRoot->GetHeight(), 600.0f);
+
+	Host->Shutdown();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerCanvasZeroGuardTest,
+	"DreamGUI.Designer.AStoredCanvasSizeOfZeroIsSubstitutedRatherThanObeyed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerCanvasZeroGuardTest::RunTest(const FString&)
+{
+	using namespace DreamWidgetDesignerHostTestLocal;
+
+	FScopedBlueprint Scoped(TEXT("DesignerZeroCanvas"));
+	if (!TestNotNull(TEXT("Blueprint was created"), Scoped.Blueprint))
+	{
+		return false;
+	}
+	BuildSampleHierarchy(Scoped.Blueprint);
+	// The agent is the ONE size a preview resolves against, so a zero stored here is every widget in
+	// the asset measuring zero, on every open, forever. UMG guards the same spot ("If the custom size
+	// is 0 in some dimension, use the desired size instead"); this is the same guard with the
+	// fallbacks this framework has available at that moment.
+	Scoped.Blueprint->DesignerData.CanvasSize = FIntPoint::ZeroValue;
+	Scoped.Blueprint->DesignerData.DesignViewportSize = FIntPoint::ZeroValue;
+	Scoped.Compile();
+
+	TSharedRef<FDreamWidgetPreviewHost> Host = MakeShared<FDreamWidgetPreviewHost>();
+	Host->Initialize(Scoped.Blueprint);
+
+	UDreamWidget* Agent = Host->GetRootAgent();
+	if (!TestNotNull(TEXT("the design canvas exists"), Agent))
+	{
+		Host->Shutdown();
+		return false;
+	}
+	TestEqual(TEXT("a zero canvas width falls back to the default"),
+		Agent->GetWidth(), static_cast<float>(FDreamWidgetDesignerScene::DefaultCanvasSize.X));
+	TestEqual(TEXT("and so does the height"),
+		Agent->GetHeight(), static_cast<float>(FDreamWidgetDesignerScene::DefaultCanvasSize.Y));
+
+	Host->Shutdown();
 	return true;
 }
 

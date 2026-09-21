@@ -5,6 +5,11 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
 
+// FEnumProperty lives in its own header, not UnrealType.h; the conversion rule has to exclude it by
+// name and a unity blob is no place to learn that from a neighbour.
+#include "UObject/EnumProperty.h"
+#include "UObject/UnrealType.h"
+
 FName MakeDreamWidgetSetterName(const FProperty* InProperty)
 {
 	if (InProperty == nullptr)
@@ -46,6 +51,91 @@ UFunction* FindDreamWidgetSetterFor(const UClass* InClass, const FProperty* InPr
 		return (!bIsOutParameter && It->SameType(InProperty)) ? Setter : nullptr;
 	}
 	return nullptr;
+}
+
+namespace DreamWidgetBindingConversionLocal
+{
+	/**
+	 * A number and nothing but a number.
+	 *
+	 * An FByteProperty with a UEnum on it and an FEnumProperty are both numeric by reflection and
+	 * neither is numeric by MEANING: their values are names, and only the ones the enum declares
+	 * exist. Letting a plain int flow into one would write a state the enum does not have, which is
+	 * exactly the hole the text builder closes on the other side (DUI4005).
+	 */
+	const FNumericProperty* AsPlainNumeric(const FProperty* InProperty)
+	{
+		if (CastField<FEnumProperty>(InProperty) != nullptr)
+		{
+			return nullptr;
+		}
+		const FNumericProperty* Numeric = CastField<FNumericProperty>(InProperty);
+		return (Numeric != nullptr && Numeric->GetIntPropertyEnum() == nullptr) ? Numeric : nullptr;
+	}
+}
+
+bool CanDreamWidgetBoundValueConvert(const FProperty* InReturn, const FProperty* InTarget)
+{
+	using namespace DreamWidgetBindingConversionLocal;
+
+	if (InReturn == nullptr || InTarget == nullptr)
+	{
+		return false;
+	}
+	if (InReturn->SameType(InTarget))
+	{
+		return true;
+	}
+	// A bool is numeric to nobody: FBoolProperty is not an FNumericProperty, so this needs no
+	// exclusion -- it is written down only because "true is 1" is the first thing a reader wonders.
+	return AsPlainNumeric(InReturn) != nullptr && AsPlainNumeric(InTarget) != nullptr;
+}
+
+bool CopyDreamWidgetBoundValue(const FProperty* InReturn, const void* InReturnValue,
+	const FProperty* InTarget, void* OutTargetValue)
+{
+	using namespace DreamWidgetBindingConversionLocal;
+
+	if (InReturn == nullptr || InTarget == nullptr || InReturnValue == nullptr || OutTargetValue == nullptr)
+	{
+		return false;
+	}
+	if (InReturn->SameType(InTarget))
+	{
+		// The whole value, constructors and all: an FText or an FString return has to be copied the
+		// way its type copies, not memcpy'd.
+		InTarget->CopyCompleteValue(OutTargetValue, InReturnValue);
+		return true;
+	}
+
+	const FNumericProperty* From = AsPlainNumeric(InReturn);
+	const FNumericProperty* To = AsPlainNumeric(InTarget);
+	if (From == nullptr || To == nullptr)
+	{
+		return false;
+	}
+	// Through double when either side is floating point and through int64 otherwise, which is the
+	// narrowest pair of channels that loses nothing either side could hold. A raw copy here is what
+	// the old code did on the strength of a SameType it had just proved; between two widths it would
+	// read past the shorter one, so the conversion is not an improvement to the copy -- it is what
+	// makes the widened check safe to have made.
+	if (From->IsFloatingPoint() || To->IsFloatingPoint())
+	{
+		const double Value = From->IsFloatingPoint()
+			? From->GetFloatingPointPropertyValue(InReturnValue)
+			: static_cast<double>(From->GetSignedIntPropertyValue(InReturnValue));
+		if (To->IsFloatingPoint())
+		{
+			To->SetFloatingPointPropertyValue(OutTargetValue, Value);
+		}
+		else
+		{
+			To->SetIntPropertyValue(OutTargetValue, static_cast<int64>(Value));
+		}
+		return true;
+	}
+	To->SetIntPropertyValue(OutTargetValue, From->GetSignedIntPropertyValue(InReturnValue));
+	return true;
 }
 
 UObject* ResolveDreamWidgetBindingTarget(const UDreamWidget* InWidget, EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex)

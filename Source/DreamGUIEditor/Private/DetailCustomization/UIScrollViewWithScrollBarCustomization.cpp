@@ -27,7 +27,10 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UUIScrollViewWithScrollbar>(targetObjects[0].Get());
+	// An empty list is a real state -- the panel rebuilds while a selection is being cleared -- and
+	// indexing [0] there reads off the end of an empty array. The null branch below already handles
+	// "no target", so this only has to reach it.
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<UUIScrollViewWithScrollbar>(targetObjects[0].Get()) : nullptr;
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

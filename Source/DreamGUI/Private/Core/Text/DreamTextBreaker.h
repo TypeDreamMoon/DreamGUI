@@ -25,8 +25,19 @@ public:
 	static void ComputeBreakOpportunities(const FString& PlainText, const TArray<int32>& ElementPlainStart,
 		const TArray<uint32>& ElementCodepoints, EDreamTextPhraseWrap PhraseWrap, TBitArray<>& OutCanBreakBefore);
 
+	/**
+	 * The subset of UAX #14 this plugin computes for itself: break after spaces, break on either side
+	 * of an ideograph, break after a hyphen, and never put a closing mark at the start of a line or an
+	 * opening bracket at the end of one. It is what a build without ICU uses -- the engine's legacy
+	 * iterator breaks on whitespace alone, so CJK never wrapped at all -- and it is a pure function of
+	 * the code points, so it is asserted on directly whether or not the build has ICU.
+	 */
+	static void ComputeFallbackBreakOpportunities(const TArray<uint32>& ElementCodepoints, TBitArray<>& OutCanBreakBefore);
+
 	/** Han, Kana, Hangul: the scripts whose "words" the line-break rules cannot see. */
 	static bool IsCJKCodepoint(uint32 Codepoint);
+	/** A space a line may break after: ASCII space and tab, the ideographic space, the en/em family. */
+	static bool IsBreakingSpace(uint32 Codepoint);
 
 	/**
 	 * Where the per-character fallback may cut an unbreakable run. The rules said "nowhere"; the

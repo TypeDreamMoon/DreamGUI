@@ -90,6 +90,34 @@ public:
 	int32 ZOrder = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetAutoSize, Category = "Slot")
 	bool bAutoSize = false;
+	/**
+	 * Floor and ceiling applied to whatever this child measures, per axis, zero meaning "no opinion".
+	 *
+	 * SizeBox has carried MinDesiredSize/MaxDesiredSize since the beginning, but SizeBox takes one
+	 * child, so constraining one item of a StackBox or one cell of a GridPanel meant wrapping it in a
+	 * whole extra panel. These say the same thing on the slot, where UMG's own per-slot minimums live.
+	 * Applied at the single point every panel measures through (UDreamPanelLayoutBase::GetDesiredSize),
+	 * so no panel needs to know about them and none can forget: min wins over max when they cross,
+	 * matching SizeBox, and neither one forces a size the way SizeBox's overrides do -- they bound the
+	 * measurement, and the panel's own alignment and fill rules then do what they always did.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetMinDesiredSize, Category = "Slot", meta = (ClampMin = "0.0"))
+	FVector2D MinDesiredSize = FVector2D::ZeroVector;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetMaxDesiredSize, Category = "Slot", meta = (ClampMin = "0.0"))
+	FVector2D MaxDesiredSize = FVector2D::ZeroVector;
+	/**
+	 * WrapBox only, matching UMG's UWrapBoxSlot: share out whatever room is left over on this child's
+	 * line among the children on it that asked for it. Read by no other panel.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetFillEmptySpace, Category = "Slot")
+	bool bFillEmptySpace = false;
+	/**
+	 * WrapBox only, matching UMG's UWrapBoxSlot: when the box's wrap width drops below this, give this
+	 * child a line to itself. Zero disables it. The classic use is a responsive list of cards that stops
+	 * sharing rows once the panel is narrow enough that sharing would make everything unreadable.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetFillSpanWhenLessThan, Category = "Slot", meta = (ClampMin = "0.0"))
+	float FillSpanWhenLessThan = 0.0f;
 
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
 	UFUNCTION(BlueprintSetter) void SetHorizontalAlignment(EDreamPanelHorizontalAlignment Value);
@@ -102,6 +130,12 @@ public:
 	UFUNCTION(BlueprintSetter) void SetColumnSpan(int32 Value);
 	UFUNCTION(BlueprintSetter) void SetZOrder(int32 Value);
 	UFUNCTION(BlueprintSetter) void SetAutoSize(bool Value);
+	UFUNCTION(BlueprintSetter) void SetMinDesiredSize(FVector2D Value);
+	UFUNCTION(BlueprintSetter) void SetMaxDesiredSize(FVector2D Value);
+	UFUNCTION(BlueprintSetter) void SetFillEmptySpace(bool Value);
+	UFUNCTION(BlueprintSetter) void SetFillSpanWhenLessThan(float Value);
+	/** Apply this slot's Min/Max to a measured size. Zero on an axis means that bound is not set. */
+	FVector2D ConstrainDesiredSize(const FVector2D& InDesiredSize) const;
 	UFUNCTION(BlueprintCallable, Category = "Slot")
 	/**
 	 * Reason defaults to Measure, the safe answer. Alignment, size rule, fill weight and z-order pass

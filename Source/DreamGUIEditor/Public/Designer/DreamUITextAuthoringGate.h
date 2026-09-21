@@ -142,6 +142,12 @@ namespace DreamUITextAuthoring
 		const TCHAR* InFunction, int32 InLine, const FString& InOperation);
 
 	/** The same sentence without the logging, for a caller that has a tooltip or a notification instead. */
+	/**
+	 * How a `.dui` would spell InClass -- "Native.ProgressBar", "Image" -- falling back to the C++
+	 * class name when nothing declares a tag for it. For refusal messages, whose reader's next act
+	 * is to type the thing into a file.
+	 */
+	DREAMGUIEDITOR_API FString DescribeClassForAuthor(const UClass* InClass);
 	DREAMGUIEDITOR_API FText DescribeStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint, const FString& InOperation);
 
 	/** Why one property row is not editable. Ordered so the FIRST reason that applies is the one shown. */

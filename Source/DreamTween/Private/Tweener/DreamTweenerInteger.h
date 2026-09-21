@@ -46,8 +46,18 @@ protected:
 	}
 	virtual void SetOriginValueForRestart() override
 	{
+		// The value this tween started from, not the frame it happens to be restarted on. The
+		// GFrameNumber that used to stand here came from UDreamTweenerFrame, whose "value" IS a frame
+		// number; here it made a restarted int tween jump to a six-digit number that differed every
+		// time. Every other tweener in the family restores originStartValue, and so does this one.
 		auto diffValue = endValue - startValue;
-		startValue = GFrameNumber;
-		endValue = GFrameNumber + diffValue;
+		startValue = originStartValue;
+		endValue = originStartValue + diffValue;
 	}
+	virtual void SwapStartAndEndValues() override
+	{
+		Swap(startValue, endValue);
+		originStartValue = startValue;
+	}
+	virtual float GetValueDistance()const override { return static_cast<float>(FMath::Abs(endValue - startValue)); }
 };

@@ -28,6 +28,12 @@
 #endif
 #include "Core/DreamUISettings.h"
 #include "ClearQuad.h"
+#include "DataDrivenShaderPlatformInfo.h"//RHISupportsMSAA, for the platform that cannot honour the setting
+
+static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
+	TEXT("dreamgui.DumpMaterialDraws"), 0,
+	TEXT("1: log one line per screen-space material draw attempt (which branch/exit it took). Stays on until set back to 0."),
+	ECVF_RenderThreadSafe);
 #include "RHIResourceUtils.h"
 #include "Core/DreamUIMeshVertex.h"
 #include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
@@ -61,34 +67,67 @@ void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InV
 	if (!World.IsValid())return;
 	if (World.Get() != InView.Family->Scene->GetWorld())return;
 	
-	if (ScreenSpaceRenderParameter.RootCanvas.IsValid())
+	if (UDreamCanvas* ViewCanvas = GetScreenSpaceViewCanvas())
 	{
-		//@todo: these parameters should use ENQUEUE_RENDER_COMMAND to pass to render thread
-		auto ViewLocation = ScreenSpaceRenderParameter.RootCanvas->GetViewLocation();
-		auto ViewRotationMatrix = FInverseRotationMatrix(ScreenSpaceRenderParameter.RootCanvas->GetViewRotator()) * FMatrix(
+		auto ViewLocation = ViewCanvas->GetViewLocation();
+		auto ViewRotationMatrix = FInverseRotationMatrix(ViewCanvas->GetViewRotator()) * FMatrix(
 			FPlane(0, 0, 1, 0),
 			FPlane(1, 0, 0, 0),
 			FPlane(0, 1, 0, 0),
 			FPlane(0, 0, 0, 1));
-		auto ProjectionMatrix = ScreenSpaceRenderParameter.RootCanvas->GetProjectionMatrix();
+		auto ProjectionMatrix = ViewCanvas->GetProjectionMatrix();
 		auto ViewProjectionMatrix = FMatrix44f(FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix);
 
-		ScreenSpaceRenderParameter.ViewOrigin = ViewLocation;
-		ScreenSpaceRenderParameter.ViewRotationMatrix = ViewRotationMatrix;
-		ScreenSpaceRenderParameter.ProjectionMatrix = ProjectionMatrix;
-		ScreenSpaceRenderParameter.ViewProjectionMatrix = FMatrix44f(ViewProjectionMatrix);
-		ScreenSpaceRenderParameter.bEnableDepthTest = ScreenSpaceRenderParameter.RootCanvas->GetEnableDepthTest();
+		GameThreadViewParameter.ViewOrigin = ViewLocation;
+		GameThreadViewParameter.ViewRotationMatrix = ViewRotationMatrix;
+		GameThreadViewParameter.ProjectionMatrix = ProjectionMatrix;
+		GameThreadViewParameter.ViewProjectionMatrix = FMatrix44f(ViewProjectionMatrix);
+		GameThreadViewParameter.bEnableDepthTest = ViewCanvas->GetEnableDepthTest();
+		//read here with the rest of the view state, from the same canvas, so the render thread never
+		//asks the canvas anything
+		GameThreadViewParameter.ScreenSpaceRenderScale = ViewCanvas->GetScreenSpaceRenderScale();
 	}
 
 	if (auto DreamUISettings = GetDefault<UDreamUISettings>())
 	{
-		NumSamples_MSAA = DreamUISettings->AntiAliasingMethod == EDreamUIRendererAntiAliasingMethod::MSAA ? (uint8)DreamUISettings->MSAASampleCount : 1;
-		bFrustumCulling = DreamUISettings->bFrustumCulling;
+		uint8 RequestedSamples = DreamUISettings->AntiAliasingMethod == EDreamUIRendererAntiAliasingMethod::MSAA ? (uint8)DreamUISettings->MSAASampleCount : 1;
+		// The setting's own documentation says MSAA is "not valid on Android (gles)", and until now
+		// nothing enforced that: it is a plain config value, so a project that turns MSAA on globally
+		// (which is the ordinary thing to do) carried it onto a platform that cannot honour it and got
+		// whatever the unsupported sample count did, with nothing said. Asking the RHI instead of
+		// naming a platform covers every platform that answers no, and the fallback is the same path
+		// the None setting takes. Said once, because this runs per frame.
+		if (RequestedSamples > 1
+			&& GMaxRHIShaderPlatform < EShaderPlatform::SP_NumPlatforms
+			&& FDataDrivenShaderPlatformInfo::IsValid(GMaxRHIShaderPlatform)
+			&& !RHISupportsMSAA(GMaxRHIShaderPlatform))
+		{
+			static bool bWarnedAboutUnsupportedMSAA = false;
+			if (!bWarnedAboutUnsupportedMSAA)
+			{
+				bWarnedAboutUnsupportedMSAA = true;
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d DreamUI MSAA x%d was requested, but this shader platform does not support MSAA; falling back to no anti-aliasing. Override AntiAliasingMethod for this platform to make the choice explicit."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, RequestedSamples);
+			}
+			RequestedSamples = 1;
+		}
+		GameThreadViewParameter.NumSamples_MSAA = RequestedSamples;
+		GameThreadViewParameter.bFrustumCulling = DreamUISettings->bFrustumCulling;
 	}
 	else
 	{
-		NumSamples_MSAA = 1;
+		GameThreadViewParameter.NumSamples_MSAA = 1;
 	}
+
+	// Hand the whole thing over by value. The render thread reads these while this function is writing
+	// them, which is what the @todo that used to sit above asked for.
+	auto ViewExtension = this;
+	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SetScreenSpaceViewParameter)(
+		[ViewExtension, Parameter = GameThreadViewParameter](FRHICommandListImmediate& RHICmdList)
+		{
+			ViewExtension->RenderThreadViewParameter = Parameter;
+		}
+	);
 }
 void FDreamUIRenderer::SetupViewPoint(APlayerController* Player, FMinimalViewInfo& InViewInfo)
 {
@@ -329,12 +368,46 @@ void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
 		});
 }
 
+/**
+ * The blend state behind each EDreamUIBlendMode, for DreamGUI's built-in shader.
+ *
+ * The shader emits PREMULTIPLIED colour (rgb already scaled by alpha), which is what makes these
+ * three one-liners rather than three shader permutations:
+ *   Alpha     src + dst*(1-srcA)   -- the ordinary composite, unchanged from before this existed
+ *   Additive  src + dst            -- premultiplied source, so a transparent pixel adds nothing
+ *   Multiply  src*dst              -- destination colour scaled by the element
+ * Alpha is written to keep the destination alpha sensible (src.a + dst.a*(1-src.a)) so a UI drawn
+ * into a transparent render target still composites correctly afterwards; Additive and Multiply
+ * leave the destination alpha alone, which is what their scene-material equivalents do.
+ */
+FRHIBlendState* FDreamUIRenderer::GetBuiltInBlendState(EDreamUIBlendMode InBlendMode)
+{
+	switch (InBlendMode)
+	{
+	case EDreamUIBlendMode::Additive:
+		return TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_One, BO_Add, BF_Zero, BF_One>::GetRHI();
+	case EDreamUIBlendMode::Multiply:
+		return TStaticBlendState<CW_RGBA, BO_Add, BF_DestColor, BF_Zero, BO_Add, BF_Zero, BF_One>::GetRHI();
+	default:
+	case EDreamUIBlendMode::Alpha:
+		return TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_InverseSourceAlpha, BO_Add, BF_One, BF_InverseSourceAlpha>::GetRHI();
+	}
+}
+
 void FDreamUIRenderer::DrawFullScreenQuad(FRHICommandListImmediate& RHICmdList)
 {
 	RHICmdList.SetStreamSource(0, GDreamUIFullScreenQuadVertexBuffer.VertexBufferRHI, 0);
 	RHICmdList.DrawIndexedPrimitive(GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI, 0, 0, 4, 0, 2, 1);
 }
-void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandListImmediate& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
+/**
+ * Takes FRHICommandList&, not FRHICommandListImmediate&, and so does every mesh pass that calls it:
+ * RDG reads the lambda's command-list type and only records a pass on a task when it is the
+ * non-immediate one (see TRDGLambdaPass: an immediate list forces ERDGPassTaskMode::Inline). Every
+ * call below -- ApplyCachedRenderTargets, SetGraphicsPipelineState, the shader parameter setters,
+ * SetStreamSource, DrawIndexedPrimitive -- is declared on FRHICommandList, so nothing here actually
+ * needed the immediate list; it only cost the UI passes their parallelism.
+ */
+void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
 	, const FSceneView& View, const FIntRect& ViewRect, const FDreamUIMeshBatchContainer& Batch
 	, uint8 NumSamples, float GammaValue, bool bIsDepthValid
 	, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
@@ -352,10 +425,19 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandListImmediate& RHICmdList, FG
 	PermutationVector.Set<FDreamUIBasePS::FDepthFade>(bDepthFade);
 	TShaderMapRef<FDreamUIBasePS> PixelShader(GlobalShaderMap, PermutationVector);
 
-	// The shader outputs premultiplied colour; two-sided like the UI materials it replaces.
+	/**
+	 * The shader outputs premultiplied colour; two-sided like the UI materials it replaces.
+	 *
+	 * Two-step on purpose. The depth/stencil/rasterizer half comes from the shared helper with
+	 * BLEND_AlphaComposite, which is what every built-in draw used to be nailed to; then the blend
+	 * state alone is replaced by the one this draw-call asked for. Per-element blend modes are safe
+	 * to set here because the batcher never puts two different ones in one draw-call -- see
+	 * FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh.
+	 */
 	SetGraphicPipelineState_BlendDepthStencilRasterize(FeatureLevel, GraphicsPSOInit, BLEND_AlphaComposite
 		, false, true, false, bIsDepthValid, Mesh.ReverseCulling
 	);
+	GraphicsPSOInit.BlendState = GetBuiltInBlendState(Params.BlendMode);
 	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
 	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
 	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
@@ -535,7 +617,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	//msaa render target
 	TRefCountPtr<IPooledRenderTarget> MSAARenderTarget = nullptr;
 
-	uint8 NumSamples = NumSamples_MSAA;
+	uint8 NumSamples = RenderThreadViewParameter.NumSamples_MSAA;
 	FIntRect ViewRect;
 	FRHICommandListImmediate& RHICmdList = GraphBuilder.RHICmdList;
 	FVector4f DepthTextureScaleOffset;
@@ -559,6 +641,18 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 				GRenderTargetPool.FindFreeElement(RHICmdList, desc, MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 				if (!MSAARenderTarget.IsValid())
 					return;
+
+				/**
+				 * Hand the POOLED target to the graph, not just its RHI texture. Registering the raw
+				 * texture wraps it in a throw-away FPooledRenderTarget that keeps the texture alive but
+				 * not the POOL ELEMENT, so the element went back to GRenderTargetPool the moment this
+				 * function returned -- which is before GraphBuilder.Execute() runs a single one of the
+				 * passes recorded below. The next FindFreeElement of the same description in the same
+				 * frame (the second eye, the second split-screen view) then got the very same texture.
+				 * This registration parks a strong reference on the graph for its whole lifetime, and
+				 * every later RegisterExternalTexture of the same RHI texture resolves to it.
+				 */
+				GraphBuilder.RegisterExternalTexture(MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 
 				OrignScreenColorRenderTargetTexture = ScreenColorRenderTargetTexture;
 				ScreenColorRenderTargetTexture = MSAARenderTarget->GetRHI();
@@ -602,6 +696,10 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			GRenderTargetPool.FindFreeElement(RHICmdList, desc, MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 			if (!MSAARenderTarget.IsValid())
 				return;
+
+			//keep the pool element itself referenced for the graph's lifetime -- see the long note on
+			//the render-target-mode branch above
+			GraphBuilder.RegisterExternalTexture(MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 
 			CopyRenderTarget(GraphBuilder, GetGlobalShaderMap(InView.GetFeatureLevel()), ScreenColorRenderTargetTexture, MSAARenderTarget->GetRHI());
 			OrignScreenColorRenderTargetTexture = ScreenColorRenderTargetTexture;
@@ -703,8 +801,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 				if (bIsPrimitiveVisible)
 				{
 					auto WorldBounds = WorldRenderParameter.Primitive->DreamUI_GetWorldBounds();
-					if (!bFrustumCulling 
-						|| (bFrustumCulling && InView.GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+					if (!RenderThreadViewParameter.bFrustumCulling 
+						|| (RenderThreadViewParameter.bFrustumCulling && InView.GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 						)
 					{
 						FWorldSpaceRenderParameterSequence Item;
@@ -751,10 +849,13 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 			RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
 
-			//if (bNeedSortWorldSpaceRenderCanvas)//@todo: mark dirty when need to
+			/**
+			 * Unconditional on purpose, and no dirty flag can change that: RenderSequenceArray is built
+			 * from scratch a few lines above, so it arrives unsorted every frame, and the distance term
+			 * is measured against this frame's camera. The commented-out `if (bNeedSortWorldSpaceRenderCanvas)`
+			 * that used to stand here would have rendered world-space canvases in registration order.
+			 */
 			{
-				bNeedSortWorldSpaceRenderCanvas = false;
-
 				auto InViewPosition = FVector3f(RenderView->ViewMatrices.GetViewOrigin());
 				for (auto& Item : RenderSequenceArray)
 				{
@@ -784,6 +885,9 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 						{
 							for (int i = 0; i < RenderPrimitiveItem.Sections.Num(); i++)
 							{
+								// A reference, held for the call: the passes added below capture the proxy raw and
+								// only run at GraphBuilder.Execute(), so it has to outlive this loop. The section's
+								// own reference covers that -- nothing can drop it until this render command ends.
 								if (auto Primitive = RenderPrimitiveItem.Primitive->DreamUI_GetPostProcessElement(RenderPrimitiveItem.Sections[i].SectionPointer))
 								{
 									SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
@@ -816,17 +920,27 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 								RDG_EVENT_NAME("DreamUIRender_WorldSpace"),
 								PassParameters,
 								ERDGPassFlags::Raster,
+								//FRHICommandList&, so RDG may record this pass on a task rather than inline on
+								//the render thread -- the more UI draw-calls there are, the longer that
+								//serial stretch used to be. Everything below is FRHICommandList API, and
+								//the batch array it fills is pass-local.
 								[this, DepthFade = RenderSequenceItem.DepthFade, BlendDepth = RenderSequenceItem.BlendDepth
 									, RenderPrimitiveItem, RenderView, ViewRect, PassParameters
 									, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, GammaValue
-									, bRenderWireframe, bRenderLit, WireframeMaterialInstance](FRHICommandListImmediate& RHICmdList)
+									, bRenderWireframe, bRenderLit, WireframeMaterialInstance](FRHICommandList& RHICmdList)
 								{
 									SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderMesh);
 									FGraphicsPipelineStateInitializer GraphicsPSOInit;
 									RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 									RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-									MeshBatchArray.Reset();
+									/**
+									 * Pass-local, not a member of the renderer. Collecting into shared
+									 * state is only safe while every pass is serialised on the render
+									 * thread, and it is the reason this pass cannot be made parallel:
+									 * two passes would Reset and fill the same array.
+									 */
+									TArray<FDreamUIMeshBatchContainer> MeshBatchArray;
 									FSceneRenderingBulkObjectAllocator Allocator;
 									FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
 									RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, MeshBatchArray);
@@ -970,20 +1084,32 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		}
 		else
 		{
-			if (!bCanRenderScreenSpace)goto END_LEXUI_RENDER;
+			// The gizmo array's only Reset is inside the pass that draws it, so every path that leaves
+			// without drawing has to drop the meshes itself. An editor world that never plays takes one
+			// of these three every frame, and the array grew for the life of the renderer.
+			if (!bCanRenderScreenSpace)
+			{
+				ScreenSpaceGizmoMeshArray.Reset();
+				goto END_LEXUI_RENDER;
+			}
 			if (bIsPlaying)
 			{
-				if (!InView.bIsGameView)goto END_LEXUI_RENDER;
+				if (!InView.bIsGameView)
+				{
+					ScreenSpaceGizmoMeshArray.Reset();
+					goto END_LEXUI_RENDER;
+				}
 			}
 			else
 			{
+				ScreenSpaceGizmoMeshArray.Reset();
 				goto END_LEXUI_RENDER;
 			}
 		}
 #endif
 		TRefCountPtr<IPooledRenderTarget> DreamUIScreenSpaceDepthTexture = nullptr;
 		FRDGTextureRef DreamUIScreenSpaceDepthRDGTexture = nullptr;
-		if (ScreenSpaceRenderParameter.bEnableDepthTest)
+		if (RenderThreadViewParameter.bEnableDepthTest)
 		{
 			// Allow UAV depth?
 			const ETextureCreateFlags textureUAVCreateFlags = GRHISupportsDepthUAV ? TexCreate_UAV : TexCreate_None;
@@ -1001,7 +1127,9 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			Desc.Flags |= TexCreate_Memoryless;
 
 			GRenderTargetPool.FindFreeElement(RHICmdList, Desc, DreamUIScreenSpaceDepthTexture, TEXT("DreamUIScreenSpaceDepthTexture"));
-			DreamUIScreenSpaceDepthRDGTexture = RegisterExternalTexture(GraphBuilder, DreamUIScreenSpaceDepthTexture->GetRHI(), TEXT("DreamUIRendererTargetTexture"));
+			//register the pool element, not its RHI texture: that is what keeps GRenderTargetPool from
+			//handing this depth buffer to another view before the passes recorded here have executed
+			DreamUIScreenSpaceDepthRDGTexture = GraphBuilder.RegisterExternalTexture(DreamUIScreenSpaceDepthTexture, TEXT("DreamUIScreenSpaceDepthTexture"));
 		}
 
 		//use a copied view. 
@@ -1010,13 +1138,92 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		FSceneView* RenderView = new FSceneView(InView);
 		auto GlobalShaderMap = GetGlobalShaderMap(RenderView->GetFeatureLevel());
 
-		RenderView->SceneViewInitOptions.ViewOrigin = ScreenSpaceRenderParameter.ViewOrigin;
-		RenderView->SceneViewInitOptions.ViewRotationMatrix = ScreenSpaceRenderParameter.ViewRotationMatrix;
-		RenderView->SceneViewInitOptions.ProjectionMatrix = ScreenSpaceRenderParameter.ProjectionMatrix;
+		RenderView->SceneViewInitOptions.ViewOrigin = RenderThreadViewParameter.ViewOrigin;
+		RenderView->SceneViewInitOptions.ViewRotationMatrix = RenderThreadViewParameter.ViewRotationMatrix;
+		RenderView->SceneViewInitOptions.ProjectionMatrix = RenderThreadViewParameter.ProjectionMatrix;
 		RenderView->ViewMatrices = FViewMatrices(RenderView->SceneViewInitOptions);
-		if (bFrustumCulling)
+		if (RenderThreadViewParameter.bFrustumCulling)
 		{
-			RenderView->UpdateProjectionMatrix(ScreenSpaceRenderParameter.ProjectionMatrix);//this is mainly for ViewFrustum
+			RenderView->UpdateProjectionMatrix(RenderThreadViewParameter.ProjectionMatrix);//this is mainly for ViewFrustum
+		}
+
+		//collect render primitive to a sequence.
+		//NOTE: this happens BEFORE the view uniform buffer is built, because the render-scale decision
+		//below depends on what is in the sequence and the uniform buffer depends on the decision.
+		//Collection itself only needs the matrices, which are already set.
+		TArray<FDreamUIPrimitiveDataContainer> RenderSequenceArray;
+		for (auto Primitive : ScreenSpaceRenderParameter.PrimitiveArray)
+		{
+			if (Primitive->DreamUI_CanRender())
+			{
+				auto WorldBounds = Primitive->DreamUI_GetWorldBounds();
+				if (!RenderThreadViewParameter.bFrustumCulling
+					|| (RenderThreadViewParameter.bFrustumCulling && RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+					)
+				{
+					Primitive->DreamUI_CollectRenderData(RenderSequenceArray);
+				}
+			}
+		}
+
+		/**
+		 * Render scale: draw the screen-space UI into a smaller, transparent target and composite that
+		 * up over the real one. The point is fill rate -- on a phone or a low-end console profile a
+		 * full-screen UI pass is expensive out of proportion to how much detail it needs.
+		 *
+		 * Three things switch it off, and all three are refusals rather than approximations:
+		 *
+		 * - MSAA. The multisampled path already redirects the whole UI through its own target and
+		 *   resolves at the end; two redirections would need the resolve and the upscale ordered
+		 *   against each other, and picking one anti-aliasing scheme is the honest answer anyway.
+		 * - Depth testing. The depth target is sized from the view family's render target and shared
+		 *   with the colour binding; RDG wants a raster pass's attachments to agree, so a scaled colour
+		 *   target would need a scaled depth target and a rescaled depth comparison with it.
+		 * - Any screen-space post process. A post process READS the scene colour behind it. Scaled, the
+		 *   UI it should be reading is in the small target while the scene is in the big one, so it
+		 *   would sample the wrong image and land in the wrong place in the z-order.
+		 *
+		 * Scale 1 (the default) skips all of this and leaves the path exactly as it was.
+		 */
+		TRefCountPtr<IPooledRenderTarget> RenderScaleTarget;
+		FRDGTextureRef ScreenSpaceRenderTargetTexture = RenderTargetTexture;
+		const FIntRect UnscaledScreenSpaceViewRect = ViewRect;
+		if (RenderThreadViewParameter.ScreenSpaceRenderScale < 1.0f
+			&& NumSamples <= 1
+			&& !RenderThreadViewParameter.bEnableDepthTest
+			&& ScreenColorRenderTargetTexture != nullptr)
+		{
+			bool bAnyPostProcess = false;
+			for (const auto& RenderSequenceItem : RenderSequenceArray)
+			{
+				if (RenderSequenceItem.Type == EDreamUIRendererPrimitiveType::PostProcess)
+				{
+					bAnyPostProcess = true;
+					break;
+				}
+			}
+			if (!bAnyPostProcess)
+			{
+				float AppliedScale = 1.0f;
+				const FIntPoint ScaledSize = UDreamCanvas::CalculateRenderScaledSize(ViewRect.Size(), RenderThreadViewParameter.ScreenSpaceRenderScale, AppliedScale);
+				if (ScaledSize != ViewRect.Size())
+				{
+					FPooledRenderTargetDesc ScaleDesc(FPooledRenderTargetDesc::Create2DDesc(
+						ScaledSize, ScreenColorRenderTargetTexture->GetFormat(), FClearValueBinding::Transparent
+						, TexCreate_None, TexCreate_RenderTargetable | TexCreate_ShaderResource, false));
+					GRenderTargetPool.FindFreeElement(RHICmdList, ScaleDesc, RenderScaleTarget, TEXT("DreamUI_ScreenSpaceRenderScale"));
+					if (RenderScaleTarget.IsValid())
+					{
+						//register the pool element so the graph holds it past this function, as everywhere else here
+						ScreenSpaceRenderTargetTexture = GraphBuilder.RegisterExternalTexture(RenderScaleTarget, TEXT("DreamUI_ScreenSpaceRenderScale"));
+						//transparent to start with: only UI goes in here, and the composite at the end
+						//is what puts it over the scene
+						AddClearRenderTargetPass(GraphBuilder, ScreenSpaceRenderTargetTexture, FLinearColor::Transparent);
+						//everything below draws into the small target, so the view is the small target
+						ViewRect = FIntRect(FIntPoint::ZeroValue, ScaledSize);
+					}
+				}
+			}
 		}
 
 		FViewUniformShaderParameters ViewUniformShaderParameters;
@@ -1030,23 +1237,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		);
 
 		RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
-		
-		//collect render primitive to a sequence
-		TArray<FDreamUIPrimitiveDataContainer> RenderSequenceArray;
-		for (auto Primitive : ScreenSpaceRenderParameter.PrimitiveArray)
-		{
-			if (Primitive->DreamUI_CanRender())
-			{
-				auto WorldBounds = Primitive->DreamUI_GetWorldBounds();
-				if (!bFrustumCulling 
-					|| (bFrustumCulling && RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
-					)
-				{
-					Primitive->DreamUI_CollectRenderData(RenderSequenceArray);
-				}
-			}
-		}
-		
+
 		const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)InView.Family)->GetSceneTextures();
 		bool bIsDepthStencilCleared = false;
 		bool bIsRenderTarget = RendererType == EDreamUIRendererType::RenderTarget;
@@ -1058,6 +1249,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			{
 				for (int i = 0; i < RenderSequenceItem.Sections.Num(); i++)
 				{
+					// See the world-space path above: the reference is what keeps the proxy alive until the
+					// passes this adds have actually executed.
 					if (auto Primitive = RenderSequenceItem.Primitive->DreamUI_GetPostProcessElement(RenderSequenceItem.Sections[i].SectionPointer))
 					{
 						SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
@@ -1067,7 +1260,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 							this,
 							ScreenColorRenderTargetTexture,
 							GlobalShaderMap,
-							ScreenSpaceRenderParameter.ViewProjectionMatrix,
+							RenderThreadViewParameter.ViewProjectionMatrix,
 							/*IsWorldSpace*/false,
 							/*IsRenderToRenderTarget*/bIsRenderTarget,
 							/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
@@ -1083,7 +1276,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			case EDreamUIRendererPrimitiveType::Mesh:
 			{
 				auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
-				PassParameters->RenderTargets[0] = FRenderTargetBinding(RenderTargetTexture, ERenderTargetLoadAction::ELoad);
+				//the scaled target when render scale is on, the real one otherwise
+				PassParameters->RenderTargets[0] = FRenderTargetBinding(ScreenSpaceRenderTargetTexture, ERenderTargetLoadAction::ELoad);
 				if (DreamUIScreenSpaceDepthRDGTexture != nullptr)
 				{
 					if (bIsDepthStencilCleared)
@@ -1100,15 +1294,17 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 					RDG_EVENT_NAME("DreamUIRender_ScreenSpace"),
 					PassParameters,
 					ERDGPassFlags::Raster,
+					//FRHICommandList&: see the note on the world-space mesh pass above
 					[this, RenderSequenceItem, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset
 						, NumSamples, ValidDepth = DreamUIScreenSpaceDepthRDGTexture != nullptr, GammaValue
-						, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandListImmediate& RHICmdList)
+						, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandList& RHICmdList)
 					{
 						SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderMesh);
 						FGraphicsPipelineStateInitializer GraphicsPSOInit;
 						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
-						MeshBatchArray.Reset();
+						//pass-local; see the note on the world-space pass above
+						TArray<FDreamUIMeshBatchContainer> MeshBatchArray;
 						FSceneRenderingBulkObjectAllocator Allocator;
 						FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
 						RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector,
@@ -1128,23 +1324,48 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 							auto DoRender = [&](bool bWireframe)
 							{
+								const bool bDump = CVarDreamGUIDumpMaterialDraws.GetValueOnRenderThread() != 0;
 								if (!bWireframe && MeshBatchContainer.BuiltIn.bEnabled)
 								{
+									if (bDump)
+									{
+										UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] built-in batch, %d verts"), MeshBatchContainer.NumVerts);
+									}
 									DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
 										, NumSamples, GammaValue, ValidDepth
 										, false, 0.0f, 0, SceneDepthTexST, nullptr);
 									return;
 								}
 								auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
-								if (!MaterialRenderProxy)return;
+								if (!MaterialRenderProxy)
+								{
+									if (bDump) { UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] EXIT no proxy")); }
+									return;
+								}
 								auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with DreamUIRenderer
-								if (!Material)return;
+								if (!Material)
+								{
+									if (bDump)
+									{
+										UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] EXIT no material (shader map not ready?) proxy=%s"),
+											*MaterialRenderProxy->GetMaterialName());
+									}
+									return;
+								}
 								
 								FMaterialShaderTypes ShaderTypes;
 								ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
 								ShaderTypes.AddShaderType<FDreamUIScreenRenderPS>();
 								FMaterialShaders Shaders;
-								if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+								const bool bGotShaders = Material->TryGetShaders(ShaderTypes, nullptr, Shaders);
+								if (bDump)
+								{
+									UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] material=%s verts=%d prims=%d shaders=%s"),
+										*Material->GetFriendlyName(), MeshBatchContainer.NumVerts,
+										Mesh.Elements.Num() > 0 ? Mesh.Elements[0].NumPrimitives : -1,
+										bGotShaders ? TEXT("OK") : TEXT("MISSING"));
+								}
+								if (bGotShaders)
 								{
 									TShaderRef<FDreamUIScreenRenderVS> VertexShader;
 									TShaderRef<FDreamUIScreenRenderPS> PixelShader;
@@ -1185,8 +1406,18 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		}
 
 #if WITH_EDITOR
-		RenderGizmoMesh_RenderThread(ScreenSpaceGizmoMeshArray, GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
+		RenderGizmoMesh_RenderThread(ScreenSpaceGizmoMeshArray, GraphBuilder, RenderView, ViewRect, NumSamples, ScreenSpaceRenderTargetTexture);
 #endif
+
+		if (RenderScaleTarget.IsValid())
+		{
+			//composite the scaled UI up over the real target. Bilinear, and premultiplied-over with a
+			//blend alpha of 1, which is the same composite the UI would have done straight onto the
+			//target -- only once, at the end, from a smaller image.
+			CopyRenderTarget_BlendAlpha(GraphBuilder, GlobalShaderMap, RenderScaleTarget->GetRHI(), ScreenColorRenderTargetTexture, 1.0f);
+			//restore for anything after this block (the MSAA resolve reads it, and it must be the full rect)
+			ViewRect = UnscaledScreenSpaceViewRect;
+		}
 
 		GraphBuilder.AddPass(
 			RDG_EVENT_NAME("DreamUI_RenderScreen_Clean"),
@@ -1197,10 +1428,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 				delete RenderView;
 			});
 
-		if (DreamUIScreenSpaceDepthTexture.IsValid())
-		{
-			DreamUIScreenSpaceDepthTexture.SafeRelease();
-		}
+		//no SafeRelease here any more: the graph holds its own reference (see where it is registered),
+		//and dropping ours mid-recording is what let another view claim the same pool element
 	}
 
 #if WITH_EDITOR
@@ -1216,10 +1445,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		AddResolvePass(GraphBuilder, FRDGTextureMSAA(Src, Dst), ViewRect, NumSamples, GetGlobalShaderMap(InView.GetFeatureLevel()));
 	}
 
-	if (MSAARenderTarget.IsValid())
-	{
-		MSAARenderTarget.SafeRelease();
-	}
+	//MSAARenderTarget goes out of scope here. It is deliberately NOT released early: the graph holds
+	//a reference of its own until it has executed the passes recorded above.
 }
 
 
@@ -1318,18 +1545,17 @@ void FDreamUIRenderer::AddResolvePass(
 	);
 }
 
-void FDreamUIRenderer::AddWorldSpacePrimitive_RenderThread(void* InCanvasPtr, float InBlendDepth, int InDepthFade, IDreamUIRendererPrimitive* InPrimitive)
+void FDreamUIRenderer::AddWorldSpacePrimitive_RenderThread(FObjectKey InCanvasKey, float InBlendDepth, int InDepthFade, IDreamUIRendererPrimitive* InPrimitive)
 {
 	if (InPrimitive != nullptr)
 	{
 		FWorldSpaceRenderParameter RenderParameter;
 		RenderParameter.BlendDepth = InBlendDepth;
 		RenderParameter.DepthFade = InDepthFade;
-		RenderParameter.RenderCanvasPtr = InCanvasPtr;
+		RenderParameter.RenderCanvasKey = InCanvasKey;
 		RenderParameter.Primitive = InPrimitive;
 
 		WorldSpaceRenderCanvasParameterArray.Add(RenderParameter);
-		bNeedSortWorldSpaceRenderCanvas = true;
 	}
 	else
 	{
@@ -1400,33 +1626,24 @@ void FDreamUIRenderer::MarkNeedToSortScreenSpacePrimitiveRenderPriority()
 		}
 	);
 }
-void FDreamUIRenderer::MarkNeedToSortWorldSpacePrimitiveRenderPriority()
-{
-	auto ViewExtension = this;
-	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SortRenderPriority)(
-		[ViewExtension](FRHICommandListImmediate& RHICmdList)
-		{
-			ViewExtension->bNeedSortWorldSpaceRenderCanvas = true;
-		}
-	);
-}
-
 void FDreamUIRenderer::SetRenderCanvasDepthParameter(UDreamCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade)
 {
 	auto viewExtension = this;
+	//take the identity here, on the game thread, so the canvas pointer never crosses to the render thread
+	const FObjectKey RenderCanvasKey(InRenderCanvas);
 	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SortRenderPriority)(
-		[viewExtension, InRenderCanvas, InBlendDepth, InDepthFade](FRHICommandListImmediate& RHICmdList)
+		[viewExtension, RenderCanvasKey, InBlendDepth, InDepthFade](FRHICommandListImmediate& RHICmdList)
 		{
-			viewExtension->SetRenderCanvasDepthFade_RenderThread(InRenderCanvas, InBlendDepth, InDepthFade);
+			viewExtension->SetRenderCanvasDepthFade_RenderThread(RenderCanvasKey, InBlendDepth, InDepthFade);
 		}
 	);
 }
 
-void FDreamUIRenderer::SetRenderCanvasDepthFade_RenderThread(UDreamCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade)
+void FDreamUIRenderer::SetRenderCanvasDepthFade_RenderThread(FObjectKey InRenderCanvasKey, float InBlendDepth, int InDepthFade)
 {
 	for (auto& RenderParameter : WorldSpaceRenderCanvasParameterArray)
 	{
-		if (RenderParameter.RenderCanvasPtr == InRenderCanvas)
+		if (RenderParameter.RenderCanvasKey == InRenderCanvasKey)
 		{
 			RenderParameter.BlendDepth = InBlendDepth;
 			RenderParameter.DepthFade = InDepthFade;
@@ -1434,13 +1651,41 @@ void FDreamUIRenderer::SetRenderCanvasDepthFade_RenderThread(UDreamCanvas* InRen
 	}
 }
 
+UDreamCanvas* FDreamUIRenderer::GetScreenSpaceViewCanvas()const
+{
+	//first still-alive registration wins, so the answer does not change when a later canvas appears
+	for (const auto& Canvas : ScreenSpaceRenderParameter.RootCanvasArray)
+	{
+		if (Canvas.IsValid())
+		{
+			return Canvas.Get();
+		}
+	}
+	return nullptr;
+}
+
 void FDreamUIRenderer::SetScreenSpaceRootCanvas(UDreamCanvas* InCanvas)
 {
-	ScreenSpaceRenderParameter.RootCanvas = InCanvas;
+	if (InCanvas == nullptr)return;
+	//drop registrations whose canvas has been collected, so a dead one cannot keep owning the view
+	ScreenSpaceRenderParameter.RootCanvasArray.RemoveAll([](const TWeakObjectPtr<UDreamCanvas>& Item) { return !Item.IsValid(); });
+	ScreenSpaceRenderParameter.RootCanvasArray.AddUnique(InCanvas);
+	if (ScreenSpaceRenderParameter.RootCanvasArray.Num() > 1)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d %d root canvases are rendering screen-space into the same view; the view location, rotation, projection and depth test are taken from '%s', the first one registered. Give the others their own render mode (RenderTarget or WorldSpace) if they need their own projection.")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
+			, ScreenSpaceRenderParameter.RootCanvasArray.Num()
+			, *GetNameSafe(GetScreenSpaceViewCanvas()));
+	}
 }
-void FDreamUIRenderer::ClearScreenSpaceRootCanvas()
+void FDreamUIRenderer::ClearScreenSpaceRootCanvas(UDreamCanvas* InCanvas)
 {
-	ScreenSpaceRenderParameter.RootCanvas = nullptr;
+	//only this canvas: clearing the whole thing is what used to blank the view parameters for every
+	//other root canvas as soon as any one of them unregistered
+	ScreenSpaceRenderParameter.RootCanvasArray.RemoveAll([InCanvas](const TWeakObjectPtr<UDreamCanvas>& Item)
+		{
+			return !Item.IsValid() || Item.Get() == InCanvas;
+		});
 }
 
 void FDreamUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRenderTarget, FColor InClearColor)
@@ -1488,7 +1733,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 				auto& LocalBounds = RenderParameter->LocalBounds;
 				auto& LocalToWorldMatrix = RenderParameter->LocalToWorldMatrix;
 				auto WorldBounds = LocalBounds.TransformBy(LocalToWorldMatrix);
-				if (bFrustumCulling)
+				if (RenderThreadViewParameter.bFrustumCulling)
 				{
 					if (!RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;
 				}
@@ -1578,6 +1823,11 @@ void FDreamUIRenderer::AddWorldSpaceGizmoMesh(TSharedPtr<FDreamUIGizmoMesh> InMe
 	);
 }
 #endif
+
+// The single definitions behind the extern declarations in the header.
+TGlobalResource<FDreamUIFullScreenQuadVertexBuffer> GDreamUIFullScreenQuadVertexBuffer;
+TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> GDreamUIFullScreenQuadIndexBuffer;
+TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
 
 void FDreamUIFullScreenQuadVertexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
 {

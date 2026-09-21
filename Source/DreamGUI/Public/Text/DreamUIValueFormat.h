@@ -59,8 +59,16 @@ namespace DreamUIValueFormat
 	 *
 	 * Returns false and leaves OutText untouched when the property has no short form; the caller
 	 * then falls back to ExportTextItem, which is always correct and merely ugly.
+	 *
+	 * OutValueIsUnrepresentable, when given, is set to true for the OTHER false: a property that does
+	 * have a short form holding a value with no spelling in it -- a non-finite component. The two are
+	 * worth telling apart because only the second is something to report: "this type has no literal"
+	 * is true forever and belongs in nobody's Problems panel, while a NaN in a UI property is a state
+	 * somebody has to chase, and DUI7003 exists for exactly it. Never set to false by this function,
+	 * so a caller may reuse one flag across several calls.
 	 */
-	DREAMGUI_API bool Print(const FProperty* InProperty, const void* InValuePtr, FString& OutText);
+	DREAMGUI_API bool Print(const FProperty* InProperty, const void* InValuePtr, FString& OutText,
+		bool* OutValueIsUnrepresentable = nullptr);
 
 	/**
 	 * Read a parsed literal into a live value.

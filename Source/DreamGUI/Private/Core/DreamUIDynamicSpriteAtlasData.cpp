@@ -33,8 +33,11 @@ void FDreamUIDynamicSpriteAtlasData::CreateAtlasTexture(int InTextureSize)
 	NewTexture->SRGB = UDreamUISettings::GetAtlasTextureSRGB(PackingTag);
 	NewTexture->Filter = UDreamUISettings::GetAtlasTextureFilter(PackingTag);
 	NewTexture->UpdateResource();
-	NewTexture->AddToRoot();
-	
+	// Owned by the atlas entry, not by the root set. AtlasTextureArray is a UPROPERTY of a struct held
+	// in the (rooted) manager's AtlasMap, so the page lives exactly as long as the entry that lists
+	// it -- and dropping the entry is enough to let it go. AddToRoot here made a second, independent
+	// claim that only a matching RemoveFromRoot could release, which is why every code path that
+	// removes an entry had to remember to un-root by hand, and why forgetting once leaked a whole page.
 	this->AtlasTextureArray.Add(NewTexture);
 
 	rbp::MaxRectsBinPack AtlasBinPack(InTextureSize, InTextureSize);
@@ -101,13 +104,188 @@ void FDreamUIDynamicSpriteAtlasData::CheckSprite()
 	}
 }
 
+void FDreamUIDynamicSpriteAtlasData::ReleaseAtlasTextures()
+{
+	// A packed sprite holds the page it landed in and a UV rect inside it, and answers
+	// GetAtlasTexture()/GetSpriteInfo() from those without asking anyone. Both have to go back to
+	// "not packed yet", or the page survives through the sprite's own reference (so nothing is
+	// actually freed) and the sprite samples a rect no bin pack owns any more.
+	for (auto& SpriteData : SpriteDataArray)
+	{
+		if (!IsValid(SpriteData))continue;
+		SpriteData->bIsInitialized = false;
+		SpriteData->AtlasTexture = nullptr;
+	}
+	SpriteDataArray.Reset();
+	AtlasTextureArray.Reset();
+	AtlasBinPackArray.Reset();
+}
+
 int32 FDreamUIDynamicSpriteAtlasData::GetAtlasTextureSize()
 {
 	return UDreamUISettings::GetAtlasTextureMaxSize(PackingTag);
 }
 
+int32 FDreamUIDynamicSpriteAtlasData::GetInsertAreaForSprite(const UDreamUISpriteData* Sprite)const
+{
+	if (!IsValid(Sprite))return 0;
+	auto SpriteTexture = Sprite->GetSpriteTexture();
+	if (!IsValid(SpriteTexture))return 0;
+	const int32 SpaceBetweenSprites = UDreamUISettings::GetAtlasTexturePadding(PackingTag);
+	const int32 InsertRectWidth = SpriteTexture->GetSizeX() + SpaceBetweenSprites + SpaceBetweenSprites;
+	const int32 InsertRectHeight = SpriteTexture->GetSizeY() + SpaceBetweenSprites + SpaceBetweenSprites;
+	return InsertRectWidth * InsertRectHeight;
+}
+
+void FDreamUIDynamicSpriteAtlasData::TouchSprite(UDreamUISpriteData* Sprite)
+{
+	if (!IsValid(Sprite))return;
+	// SpriteDataArray is kept in least-recently-used order, oldest first, and this is the only thing
+	// that decides that order. Touched on every pack and on every registration, which between them
+	// are the two moments something starts using a sprite.
+	SpriteDataArray.Remove(Sprite);
+	SpriteDataArray.Add(Sprite);
+}
+
+int32 FDreamUIDynamicSpriteAtlasData::EvictUnusedSprites(int32 InRequiredArea)
+{
+	// "Unused" is not a guess: RenderSpriteArray is every element currently drawing from this atlas,
+	// and each one can be asked which sprite it draws. A sprite nothing in that list names is packed
+	// into a rectangle no pixel is ever sampled from -- dead area that the bin pack cannot hand back,
+	// which is why an atlas that only ever grows grows forever.
+	CheckSprite();
+	TSet<const UObject*> InUseSprites;
+	InUseSprites.Reserve(RenderSpriteArray.Num());
+	for (auto& RenderSprite : RenderSpriteArray)
+	{
+		if (!RenderSprite.IsValid())continue;
+		if (auto UsedSprite = IDreamUISpriteRenderInterface::Execute_SpriteRenderGetSprite(RenderSprite.Get()))
+		{
+			InUseSprites.Add(UsedSprite);
+		}
+	}
+
+	TArray<TObjectPtr<UDreamUISpriteData>> Victims;
+	int32 FreedArea = 0;
+	//oldest first: the least recently used unused sprite is the one whose rectangle is cheapest to lose
+	for (auto& SpriteData : SpriteDataArray)
+	{
+		if (!IsValid(SpriteData))continue;
+		if (InUseSprites.Contains((const UObject*)SpriteData.Get()))continue;
+		Victims.Add(SpriteData);
+		FreedArea += GetInsertAreaForSprite(SpriteData);
+		if (InRequiredArea > 0 && FreedArea >= InRequiredArea)
+		{
+			//enough room asked for; the warmer unused sprites keep their rectangles and their pixels
+			break;
+		}
+	}
+	if (Victims.Num() == 0)
+	{
+		return 0;
+	}
+
+	for (auto& Victim : Victims)
+	{
+		SpriteDataArray.Remove(Victim);
+		//back to "not packed yet": the next time anything asks for its texture it repacks from scratch
+		Victim->bIsInitialized = false;
+		Victim->AtlasTexture = nullptr;
+	}
+	RepackPages();
+	return Victims.Num();
+}
+
+void FDreamUIDynamicSpriteAtlasData::RepackPages()
+{
+	// rbp::MaxRectsBinPack has no "free this rectangle" operation -- the MAXRECTS structure cannot
+	// take one back without rebuilding its free list -- so reclaiming space means rebuilding the
+	// pages from the sprites that survive. Order is LRU, oldest first, which keeps the pages that
+	// hold the coldest sprites at the front and leaves the tail free to be dropped.
+	const int32 AtlasTextureSize = GetAtlasTextureSize();
+	for (auto& AtlasBinPack : AtlasBinPackArray)
+	{
+		AtlasBinPack.Init(AtlasTextureSize, AtlasTextureSize);
+	}
+	//the pixels left behind by evicted sprites are not cleared: nothing samples them, and the next
+	//sprite to land there overwrites them. Clearing would cost a full-page upload per eviction.
+	TArray<TObjectPtr<UDreamUISpriteData>> ToRepack = MoveTemp(SpriteDataArray);
+	SpriteDataArray.Reset();
+	for (auto& SpriteData : ToRepack)
+	{
+		if (!IsValid(SpriteData))continue;
+		if (!TryPackSpriteIntoExistingPages(SpriteData))
+		{
+			// It fitted before the rebuild and does not fit now, which a heuristic packer is allowed
+			// to do. Losing it is recoverable -- it repacks on its next use -- but it is worth saying.
+			SpriteData->bIsInitialized = false;
+			SpriteData->AtlasTexture = nullptr;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d PackingTag:%s Sprite:%s did not fit when its atlas was rebuilt; it will repack on next use.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->PackingTag.ToString(), *SpriteData->GetPathName());
+		}
+	}
+	DropEmptyPages();
+	//last on purpose: a notified element may ask its sprite for a texture, and a sprite that lost its
+	//place above would repack from inside that call -- which is safe only once this is consistent
+	NotifyRenderSpritesAtlasChanged();
+}
+
+int32 FDreamUIDynamicSpriteAtlasData::DropEmptyPages()
+{
+	// Trailing pages only, and never the first: a page is addressed by the sprites packed into it,
+	// and after a rebuild everything still packed sits in the earliest pages that could hold it.
+	// This is where the memory actually goes back -- one page is a full atlas texture.
+	int32 DroppedCount = 0;
+	for (int32 i = AtlasBinPackArray.Num() - 1; i >= 1; i--)
+	{
+		if (!AtlasBinPackArray[i].IsEmpty())break;
+		AtlasBinPackArray.RemoveAt(i);
+		if (AtlasTextureArray.IsValidIndex(i))
+		{
+			AtlasTextureArray.RemoveAt(i);
+		}
+		DroppedCount++;
+	}
+	return DroppedCount;
+}
+
+void FDreamUIDynamicSpriteAtlasData::NotifyRenderSpritesAtlasChanged()
+{
+	//a rebuild moves every surviving sprite's rectangle, so everything drawing from this atlas has
+	//stale UVs until it is told -- the same notification the static atlas sends after a repack
+	for (int32 i = RenderSpriteArray.Num() - 1; i >= 0; i--)
+	{
+		auto& RenderSprite = RenderSpriteArray[i];
+		if (!RenderSprite.IsValid())continue;
+		IDreamUISpriteRenderInterface::Execute_ApplyAtlasTextureChange(RenderSprite.Get());
+	}
+}
+
 bool FDreamUIDynamicSpriteAtlasData::PackSprite(UDreamUISpriteData* Sprite)
 {
+	if (TryPackSpriteIntoExistingPages(Sprite))
+	{
+		return true;
+	}
+	// Every page is full. RECYCLE BEFORE GROWING: the rectangles held by sprites nothing draws any
+	// more are dead area, and adding a page instead of reclaiming them is exactly how a long session
+	// climbs in video memory and never comes back down.
+	if (EvictUnusedSprites(GetInsertAreaForSprite(Sprite)) > 0)
+	{
+		if (TryPackSpriteIntoExistingPages(Sprite))
+		{
+			return true;
+		}
+	}
+	//nothing left to reclaim, so the atlas genuinely needs more room
+	this->ExpandAtlasAreaArray();
+	return TryPackSpriteIntoExistingPages(Sprite);
+}
+
+bool FDreamUIDynamicSpriteAtlasData::TryPackSpriteIntoExistingPages(UDreamUISpriteData* Sprite)
+{
+	if (!IsValid(Sprite) || !IsValid(Sprite->GetSpriteTexture()))return false;
+	if (AtlasBinPackArray.Num() == 0 || AtlasTextureArray.Num() == 0)return false;
 	int32 SpaceBetweenSprites = UDreamUISettings::GetAtlasTexturePadding(PackingTag);
 
 	auto SpriteTexture = Sprite->GetSpriteTexture();
@@ -120,18 +298,6 @@ bool FDreamUIDynamicSpriteAtlasData::PackSprite(UDreamUISpriteData* Sprite)
 		auto PackedRect = AtlasBintPack.Insert(InsertRectWidth, InsertRectHeight, rbp::MaxRectsBinPack::RectBestAreaFit);
 		if (PackedRect.height <= 0)//means this area cannot fit the texture
 		{
-			if (i + 1 == this->AtlasBinPackArray.Num())//last one, means all area can't fit the texture
-			{
-				if (AtlasBintPack.IsEmpty())//the latest one is empty, means it is newly added area, but it still can't fit the texture
-				{
-					return false;
-				}
-				else
-				{
-					//expand array to get a new area
-					this->ExpandAtlasAreaArray();
-				}
-			}
 			continue;
 		}
 		//this area can fit the texture, then copy pixels to the area
@@ -149,7 +315,8 @@ bool FDreamUIDynamicSpriteAtlasData::PackSprite(UDreamUISpriteData* Sprite)
 			float InvAtlasTextureSize = 1.0f / AtlasTextureSize;
 			Sprite->SpriteInfo.ApplyUV(PackedRect.x, PackedRect.y, PackedRect.width, PackedRect.height, InvAtlasTextureSize, InvAtlasTextureSize);
 			Sprite->SpriteInfo.ApplyBorderUV(InvAtlasTextureSize, InvAtlasTextureSize);
-			this->SpriteDataArray.AddUnique(Sprite);
+			//most recently used, which is what decides who is evicted first when the pages fill up
+			this->TouchSprite(Sprite);
 			return true;
 		}
 	}
@@ -350,10 +517,7 @@ void UDreamUIDynamicSpriteAtlasManager::ResetAtlasMap()
 	{
 		for (auto& AtlasMapKeyValue : Instance->AtlasMap)
 		{
-			for (auto& AtlasTexture : AtlasMapKeyValue.Value.AtlasTextureArray)
-			{
-				AtlasTexture->RemoveFromRoot();
-			}
+			AtlasMapKeyValue.Value.ReleaseAtlasTextures();
 		}
 		Instance->AtlasMap.Empty();
 		if (Instance->OnAtlasMapChanged.IsBound())
@@ -367,6 +531,68 @@ void UDreamUIDynamicSpriteAtlasManager::DisposeAtlasByPackingTag(FName InPacking
 {
 	if (Instance != nullptr)
 	{
+		if (auto AtlasData = Instance->AtlasMap.Find(InPackingTag))
+		{
+			//the sprites that were packed into it have to be told, or they keep pointing at a page nothing rebuilds
+			AtlasData->ReleaseAtlasTextures();
+		}
 		Instance->AtlasMap.Remove(InPackingTag);
+		if (Instance->OnAtlasMapChanged.IsBound())
+		{
+			Instance->OnAtlasMapChanged.Broadcast();
+		}
 	}
+}
+
+bool UDreamUIDynamicSpriteAtlasManager::TrimAtlasByPackingTag(FName InPackingTag)
+{
+	if (Instance == nullptr)return false;
+	auto AtlasData = Instance->AtlasMap.Find(InPackingTag);
+	if (AtlasData == nullptr)return false;
+	//drop entries whose sprite or renderer is gone or has moved to another tag first: they are what usually keeps a page "in use"
+	AtlasData->CheckSprite();
+	if (AtlasData->RenderSpriteArray.Num() > 0)
+	{
+		//something on screen still draws from this atlas; releasing its pages now would blank those elements
+		return false;
+	}
+	if (AtlasData->AtlasTextureArray.Num() == 0)
+	{
+		return false;
+	}
+	AtlasData->ReleaseAtlasTextures();
+	if (Instance->OnAtlasMapChanged.IsBound())
+	{
+		Instance->OnAtlasMapChanged.Broadcast();
+	}
+	return true;
+}
+
+int32 UDreamUIDynamicSpriteAtlasManager::EvictUnusedSpritesByPackingTag(FName InPackingTag)
+{
+	if (Instance == nullptr)return 0;
+	auto AtlasData = Instance->AtlasMap.Find(InPackingTag);
+	if (AtlasData == nullptr)return 0;
+	const int32 EvictedCount = AtlasData->EvictUnusedSprites();
+	if (EvictedCount > 0 && Instance->OnAtlasMapChanged.IsBound())
+	{
+		Instance->OnAtlasMapChanged.Broadcast();
+	}
+	return EvictedCount;
+}
+
+int32 UDreamUIDynamicSpriteAtlasManager::TrimUnusedAtlases()
+{
+	if (Instance == nullptr)return 0;
+	TArray<FName> PackingTags;
+	Instance->AtlasMap.GetKeys(PackingTags);
+	int32 TrimmedCount = 0;
+	for (const auto& PackingTag : PackingTags)
+	{
+		if (TrimAtlasByPackingTag(PackingTag))
+		{
+			TrimmedCount++;
+		}
+	}
+	return TrimmedCount;
 }

@@ -194,15 +194,23 @@ bool FDreamSurfacePanelMenuOffersEveryRegisteredPanelTest::RunTest(const FString
 		UDreamLayoutContainerSizeBox::StaticClass(),
 		UDreamLayoutContainerScaleBox::StaticClass(),
 		UDreamLayoutContainerSafeZone::StaticClass(),
+		// MenuAnchor is the placement arithmetic for a popup and nothing else -- no visual, no
+		// behaviour -- so it is a panel by the same rule as SizeBox, and Wrap With has to offer it.
+		// Its companion UDreamMenuAnchor (registry name NativeMenuAnchor) is the CONTROL and is not a
+		// panel; the two share a family and neither one stands in for the other.
+		UDreamLayoutContainerMenuAnchor::StaticClass(),
 	};
 	for (UClass* PanelClass : Registered)
 	{
 		TestTrue(FString::Printf(TEXT("%s is offered"), *PanelClass->GetName()), Contains(PanelClass));
 	}
 	TestEqual(TEXT("and nothing else is"), Panels.Num(), Registered.Num());
-	// A control that merely uses a panel is not one: Border is an Overlay with an image and a
-	// ContentWidget in its recipe and stays out, even though the plain Overlay is offered.
-	TestFalse(TEXT("a control that happens to hang off a panel is not offered as a panel"),
+	// An entry that also brings a VISUAL is not a panel, whatever container it names. Border is the
+	// live example and the reason the rule is worth asserting: it used to be an Overlay with an image
+	// in its recipe, and it is a UDreamLayoutContainerBorder of its own now -- but it still registers
+	// UDreamImage as its visual, so wrapping a selection in one would hand it a background the author
+	// never asked for. Excluded for that reason, not for the old one.
+	TestFalse(TEXT("an entry that also brings a visual is not offered as a panel"),
 		Panels.ContainsByPredicate([](const FDreamUIControlDescriptor* Descriptor) { return Descriptor->Name == TEXT("Border"); }));
 
 	for (int32 Index = 1; Index < Panels.Num(); ++Index)

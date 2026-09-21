@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Animation/DreamWidgetAnimation.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "DreamWidgetBlueprintTestTypes.generated.h"
@@ -40,6 +41,31 @@ public:
 };
 
 /**
+ * A native base that claims one animation and mentions another without claiming it.
+ *
+ * The same pair as the widget bindings above, for the same reason: only the marked property is a
+ * claim the compiler may check, and an animation-typed member with no marker is somebody's own
+ * reference. The optional one is the third state -- claimed, but a missing animation is not an error.
+ */
+UCLASS(NotBlueprintType, HideDropdown)
+class UDreamWidgetBlueprintAnimBindingBase : public UDreamUserWidget
+{
+	GENERATED_BODY()
+public:
+	/** Says it is a binding, so a hierarchy without an animation of this name is a compile error. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindDreamWidgetAnim))
+	TObjectPtr<UDreamWidgetAnimation> RequiredIntro = nullptr;
+
+	/** Claimed, but absence is allowed: the class is expected to test the pointer. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test", meta = (BindDreamWidgetAnimOptional))
+	TObjectPtr<UDreamWidgetAnimation> OptionalOutro = nullptr;
+
+	/** Animation-typed and transient, but claims nothing. Must never be reported as missing. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Test")
+	TObjectPtr<UDreamWidgetAnimation> UnmarkedAnimation = nullptr;
+};
+
+/**
  * A text-backed base that declares one function a .dui can bind to.
  *
  * Native rather than a function added to the test's Blueprint graph, because what is being checked is
@@ -58,6 +84,17 @@ class UDreamTextUserWidgetBindingBase : public UDreamTextUserWidget
 public:
 	UFUNCTION(BlueprintPure, Category = "Test")
 	FText GetTitleText() const { return FText::FromString(TEXT("bound")); }
+
+	/** Sources for the expression-thunk tests: a bool and a number an expression can chew on. */
+	UFUNCTION(BlueprintPure, Category = "Test")
+	bool IsBusy() const { return true; }
+
+	UFUNCTION(BlueprintPure, Category = "Test")
+	float GetScale() const { return 2.0f; }
+
+	/** Source for the `each` tests: the shape the compiler demands, returning nothing. */
+	UFUNCTION(BlueprintPure, Category = "Test")
+	TArray<UObject*> GetRows() const { return {}; }
 };
 
 /**

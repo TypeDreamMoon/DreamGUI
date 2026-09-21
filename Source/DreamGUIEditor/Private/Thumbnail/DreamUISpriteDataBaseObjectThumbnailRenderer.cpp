@@ -84,6 +84,21 @@ void UDreamUISpriteDataBaseObjectThumbnailRenderer::DrawGrid(int32 X, int32 Y, u
 	if (GridTexture == nullptr)
 	{
 		GridTexture = LoadObject<UTexture2D>(nullptr, TEXT("/Engine/EngineMaterials/DefaultWhiteGrid.DefaultWhiteGrid"), nullptr, LOAD_None, nullptr);
+		if (GridTexture != nullptr)
+		{
+			// Nothing else holds this one -- the style set owns the Checkerboard brush, but the
+			// fallback is loaded here and referenced only by this static, so the next GC collects it
+			// and the thumbnail after that draws through a freed object.
+			GridTexture->AddToRoot();
+		}
+	}
+
+	// Both sources can come back null -- an editor style without the Checkerboard brush, and an
+	// engine content path that failed to load. Drawing the grid is decoration, so skip it rather
+	// than dereference: the sprite itself still draws over the top.
+	if (GridTexture == nullptr || GridTexture->GetResource() == nullptr)
+	{
+		return;
 	}
 
 	const bool bAlphaBlend = false;
