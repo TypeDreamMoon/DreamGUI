@@ -1485,6 +1485,30 @@ FVector2f UDreamLayoutContainerCanvasPanel::MeasureLayout(const FDreamMeasureSpe
 	return Result;
 }
 
+void UDreamPanelLayoutBase::GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const
+{
+	OutHorizontal = EDreamPanelHorizontalAlignment::Fill;
+	OutVertical = EDreamPanelVerticalAlignment::Fill;
+}
+
+void UDreamLayoutContainerOverlay::GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const
+{
+	OutHorizontal = EDreamPanelHorizontalAlignment::Left;
+	OutVertical = EDreamPanelVerticalAlignment::Top;
+}
+
+void UDreamLayoutContainerUniformGridPanel::GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const
+{
+	OutHorizontal = EDreamPanelHorizontalAlignment::Left;
+	OutVertical = EDreamPanelVerticalAlignment::Top;
+}
+
+void UDreamLayoutContainerScaleBox::GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const
+{
+	OutHorizontal = EDreamPanelHorizontalAlignment::Center;
+	OutVertical = EDreamPanelVerticalAlignment::Center;
+}
+
 FDreamLayoutControlAnchorData UDreamLayoutContainerCanvasPanel::GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const
 {
 	FDreamLayoutControlAnchorData Result;

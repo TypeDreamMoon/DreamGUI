@@ -49,6 +49,19 @@ class DREAMGUI_API UDreamPanelLayoutBase : public UDreamLayoutContainer
 
 public:
 	/**
+	 * Where a child lands when an author ADDS one to this panel by hand -- UMG's per-slot-class
+	 * defaults, which differ by panel for a reason: an overlay stacks things at their own size in its
+	 * corner, a box gives each child its band, a scale box centres what it scales.
+	 *
+	 * Asked by authoring gestures only (a palette drop in the designer), which then write the answer
+	 * into the slot as an authored value. It is NOT what a slot minted anywhere else starts with, and
+	 * deliberately so: the slot's own default is Fill, every `.dui` file and every control that builds
+	 * its own tree was written against that, and a child that names no alignment there has to go on
+	 * meaning Fill.
+	 */
+	virtual void GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const;
+
+	/**
 	 * Authored/intrinsic size a child wants: fitter -> container preferred -> visual intrinsic ->
 	 * content children -> authored rect. Never reads a rect a panel pass has written (layout output
 	 * must not feed back into measurement). Public so the prefab compiler and tests can diagnose
@@ -300,6 +313,8 @@ class DREAMGUI_API UDreamLayoutContainerOverlay : public UDreamPanelLayoutBase
 protected:
 	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
+	/** Top-left, at the child's own size -- UOverlaySlot's default. A button dropped on an overlay is a button, not a wall. */
+	virtual void GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "Overlay")
 	FMargin Padding;
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
@@ -430,6 +445,8 @@ class DREAMGUI_API UDreamLayoutContainerUniformGridPanel : public UDreamPanelLay
 protected:
 	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
+	/** Top-left of its cell -- UUniformGridSlot's default. */
+	virtual void GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "UniformGridPanel")
 	FMargin Padding;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetSpacing, Category = "UniformGridPanel")
@@ -561,6 +578,9 @@ UCLASS(BlueprintType, DisplayName = "UMG Scale Box")
 class DREAMGUI_API UDreamLayoutContainerScaleBox : public UDreamPanelLayoutBase
 {
 	GENERATED_BODY()
+public:
+	/** Centred -- UScaleBoxSlot's default, and what a slot minted at registration under this panel already gets. */
+	virtual void GetNewChildSlotAlignment(EDreamPanelHorizontalAlignment& OutHorizontal, EDreamPanelVerticalAlignment& OutVertical) const override;
 protected:
 	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;

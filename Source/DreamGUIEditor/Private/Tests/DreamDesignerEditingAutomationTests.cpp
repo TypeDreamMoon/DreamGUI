@@ -9,6 +9,8 @@
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Designer/DreamWidgetPreviewHost.h"
+#include "Designer/SDreamWidgetPalette.h"//FDreamUIPaletteDragDropOp, the object a palette drag carries
+#include "DreamUIControlRegistry.h"
 #include "Preview/DreamWidgetDesignerScene.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
@@ -1926,6 +1928,212 @@ bool FDreamDesignerRecompileWithAPanellessRootTest::RunTest(const FString& Param
 		}
 	}
 	TestEqual(TEXT("No live user widget holds a null child"), HolesFound, 0);
+	return true;
+}
+
+/*
+ * Where a widget lands when an author drops it, which depends on what it was dropped ON.
+ *
+ * UMG never shows the first state these are about, because there the first widget dropped IS the root
+ * and therefore the screen. Here the root already exists, and whatever was dropped on it landed as a
+ * hundred-unit square wherever the cursor was -- so the first act of every new screen was stretching
+ * something by hand. And inside a panel every new child came out Fill, the slot's class default, so a
+ * button dropped on an overlay swallowed it. The three tests below are the three rules.
+ */
+namespace DreamDesignerDropPlacementTestLocal
+{
+	/** The object a palette drag carries, for a registry row (a panel, a control) ... */
+	TSharedPtr<FDreamUIPaletteDragDropOp> MakeRegistryOp(const TCHAR* InRegistryName)
+	{
+		const FName Name(InRegistryName);
+		const FDreamUIControlDescriptor* Found = FDreamUIControlRegistry::Get().GetDescriptors().FindByPredicate(
+			[Name](const FDreamUIControlDescriptor& Item) { return Item.Name == Name; });
+		if (Found == nullptr)
+		{
+			return nullptr;
+		}
+		TSharedPtr<FDreamUIPaletteDragDropOp> Op = MakeShared<FDreamUIPaletteDragDropOp>();
+		Op->NativeDescriptor = MakeShared<FDreamUIControlDescriptor>(*Found);
+		Op->DisplayName = InRegistryName;
+		return Op;
+	}
+
+	/** ... and for the plain Widget row of the Basic group. */
+	TSharedPtr<FDreamUIPaletteDragDropOp> MakeBasicOp(const TCHAR* InDisplayName)
+	{
+		TSharedPtr<FDreamUIPaletteDragDropOp> Op = MakeShared<FDreamUIPaletteDragDropOp>();
+		Op->bIsBasicWidget = true;
+		Op->DisplayName = InDisplayName;
+		return Op;
+	}
+
+	/** What a viewport drop does to every new widget: put it where the cursor was. */
+	void DropAtTheCursor(UDreamWidget* InWidget)
+	{
+		if (InWidget != nullptr)
+		{
+			InWidget->SetAnchoredPosition(FVector2D(-110.0, -155.0));
+		}
+	}
+
+	bool FillsItsParent(const UDreamWidget* InTemplate)
+	{
+		if (!IsValid(InTemplate))
+		{
+			return false;
+		}
+		const FDreamUIAnchorData Anchors = InTemplate->GetAnchorData();
+		// A DELTA of zero, which is "exactly the parent" -- not a size, which a stretched axis would
+		// have resolved against whatever the parent happened to measure when it was written.
+		return Anchors.AnchorMin.Equals(FVector2D::ZeroVector) && Anchors.AnchorMax.Equals(FVector2D(1.0, 1.0))
+			&& Anchors.AnchoredPosition.IsNearlyZero() && Anchors.SizeDelta.IsNearlyZero();
+	}
+
+	UDreamWidget* FindPreview(UDreamWidget* InPreviewRoot, const FString& InDisplayName)
+	{
+		TArray<UDreamWidget*> All;
+		UDreamWidget::CollectChildrenWidgets(InPreviewRoot, All, true);
+		for (UDreamWidget* Widget : All)
+		{
+			if (IsValid(Widget) && Widget->GetDisplayName() == InDisplayName)
+			{
+				return Widget;
+			}
+		}
+		return nullptr;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerPanelFillsAContainerlessRootTest,
+	"DreamGUI.Designer.APanelDroppedOnARootThatArrangesNothingFillsIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerPanelFillsAContainerlessRootTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	using namespace DreamDesignerDropPlacementTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerPanelFillsRoot"), /*bGiveRootAPanel*/false);
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || !TestNotNull(TEXT("There is a preview root"), Scoped.PreviewRoot()))
+	{
+		return false;
+	}
+	TestNull(TEXT("and it arranges nothing"), Scoped.PreviewRoot()->GetLayoutContainer());
+
+	const TSharedPtr<FDreamUIPaletteDragDropOp> OverlayOp = MakeRegistryOp(TEXT("Overlay"));
+	if (!TestTrue(TEXT("The palette has an Overlay row"), OverlayOp.IsValid()))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("The panel is created"), OverlayOp->CreateUnder(Scoped.PreviewRoot(), TOptional<int32>(), &DropAtTheCursor));
+	Scoped.Rebuild();
+	TestTrue(TEXT("It fills the root, with nothing left over from the drop"), FillsItsParent(Scoped.FindTemplate(TEXT("Overlay"))));
+
+	// A free child already being there does not change what a panel is for.
+	TestNotNull(TEXT("A second panel is created beside it"),
+		MakeRegistryOp(TEXT("VerticalBox"))->CreateUnder(Scoped.PreviewRoot(), TOptional<int32>(), &DropAtTheCursor));
+	Scoped.Rebuild();
+	TestTrue(TEXT("and fills the root too"), FillsItsParent(Scoped.FindTemplate(TEXT("VerticalBox"))));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerFirstDropFillsABareRootTest,
+	"DreamGUI.Designer.TheFirstThingDroppedOnABareRootFillsItAndTheSecondStaysWhereItWasPut",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerFirstDropFillsABareRootTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	using namespace DreamDesignerDropPlacementTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerFirstDropFills"), /*bGiveRootAPanel*/false);
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || !TestNotNull(TEXT("There is a preview root"), Scoped.PreviewRoot()))
+	{
+		return false;
+	}
+
+	// Not a panel -- and still the screen, because it is the first thing there: what UMG's "the first
+	// widget is the root" comes to when the root already exists.
+	TestNotNull(TEXT("The first widget is created"),
+		MakeBasicOp(TEXT("First"))->CreateUnder(Scoped.PreviewRoot(), TOptional<int32>(), &DropAtTheCursor));
+	Scoped.Rebuild();
+	TestTrue(TEXT("and fills the root"), FillsItsParent(Scoped.FindTemplate(TEXT("First"))));
+
+	// The second is a free child on a page that arranges nothing, and the cursor is the only thing
+	// that knows where it belongs.
+	TestNotNull(TEXT("The second widget is created"),
+		MakeBasicOp(TEXT("Second"))->CreateUnder(Scoped.PreviewRoot(), TOptional<int32>(), &DropAtTheCursor));
+	Scoped.Rebuild();
+	if (const UDreamWidget* Second = Scoped.FindTemplate(TEXT("Second")))
+	{
+		TestFalse(TEXT("It is not stretched"), Second->GetAnchorData().IsHorizontalStretched() || Second->GetAnchorData().IsVerticalStretched());
+		TestTrue(TEXT("and it is where the drop put it"), Second->GetAnchorData().AnchoredPosition.Equals(FVector2D(-110.0, -155.0), 0.01));
+	}
+	else
+	{
+		AddError(TEXT("The second widget did not reach the asset"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerNewChildSlotAlignmentTest,
+	"DreamGUI.Designer.AChildDroppedIntoAPanelStartsWithThatPanelsAlignmentNotWithFill",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerNewChildSlotAlignmentTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	using namespace DreamDesignerDropPlacementTestLocal;
+
+	// The panels say it themselves, which is the half that needs no designer at all.
+	auto AlignmentOf = [](UClass* InPanelClass)
+	{
+		EDreamPanelHorizontalAlignment Horizontal = EDreamPanelHorizontalAlignment::Fill;
+		EDreamPanelVerticalAlignment Vertical = EDreamPanelVerticalAlignment::Fill;
+		GetDefault<UDreamPanelLayoutBase>(InPanelClass)->GetNewChildSlotAlignment(Horizontal, Vertical);
+		return TPair<EDreamPanelHorizontalAlignment, EDreamPanelVerticalAlignment>(Horizontal, Vertical);
+	};
+	TestTrue(TEXT("An overlay starts a child in its top-left corner, as UOverlaySlot does"),
+		AlignmentOf(UDreamLayoutContainerOverlay::StaticClass()) == MakeTuple(EDreamPanelHorizontalAlignment::Left, EDreamPanelVerticalAlignment::Top));
+	TestTrue(TEXT("so does a uniform grid, in its cell"),
+		AlignmentOf(UDreamLayoutContainerUniformGridPanel::StaticClass()) == MakeTuple(EDreamPanelHorizontalAlignment::Left, EDreamPanelVerticalAlignment::Top));
+	TestTrue(TEXT("a scale box centres what it scales"),
+		AlignmentOf(UDreamLayoutContainerScaleBox::StaticClass()) == MakeTuple(EDreamPanelHorizontalAlignment::Center, EDreamPanelVerticalAlignment::Center));
+	TestTrue(TEXT("and a box fills the band it gives, which is every other panel's answer too"),
+		AlignmentOf(UDreamLayoutContainerVerticalBox::StaticClass()) == MakeTuple(EDreamPanelHorizontalAlignment::Fill, EDreamPanelVerticalAlignment::Fill));
+	// The class default is untouched: a slot nobody authored an alignment on still means Fill, which is
+	// what every .dui file and every control that builds its own tree was written against.
+	TestTrue(TEXT("while a slot that says nothing still means Fill"),
+		GetDefault<UDreamPanelSlot>()->HorizontalAlignment == EDreamPanelHorizontalAlignment::Fill
+		&& GetDefault<UDreamPanelSlot>()->VerticalAlignment == EDreamPanelVerticalAlignment::Fill);
+
+	FScopedDesigner Scoped(TEXT("DesignerNewChildSlot"), /*bGiveRootAPanel*/false);
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || !TestNotNull(TEXT("There is a preview root"), Scoped.PreviewRoot()))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("An overlay goes on the root"),
+		MakeRegistryOp(TEXT("Overlay"))->CreateUnder(Scoped.PreviewRoot(), TOptional<int32>(), &DropAtTheCursor));
+	Scoped.Rebuild();
+	UDreamWidget* OverlayPreview = FindPreview(Scoped.PreviewRoot(), TEXT("Overlay"));
+	if (!TestNotNull(TEXT("and is in the preview"), OverlayPreview))
+	{
+		return false;
+	}
+	TestNotNull(TEXT("A widget is dropped on the overlay"),
+		MakeBasicOp(TEXT("OnTheOverlay"))->CreateUnder(OverlayPreview, TOptional<int32>(), &DropAtTheCursor));
+	Scoped.Rebuild();
+	UDreamWidget* OnTheOverlay = Scoped.FindTemplate(TEXT("OnTheOverlay"));
+	if (TestNotNull(TEXT("It reached the asset"), OnTheOverlay) && TestNotNull(TEXT("with a slot of its own"), OnTheOverlay->GetPanelSlot()))
+	{
+		TestTrue(TEXT("whose alignment is the overlay's, so the widget keeps its own size"),
+			OnTheOverlay->GetPanelSlot()->HorizontalAlignment == EDreamPanelHorizontalAlignment::Left
+			&& OnTheOverlay->GetPanelSlot()->VerticalAlignment == EDreamPanelVerticalAlignment::Top);
+		TestFalse(TEXT("and it was not stretched over the panel by the root's rule"), FillsItsParent(OnTheOverlay));
+	}
 	return true;
 }
 
