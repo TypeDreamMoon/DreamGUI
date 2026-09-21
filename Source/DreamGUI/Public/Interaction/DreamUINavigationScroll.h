@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputCoreTypes.h"
 
 class UDreamWidget;
 
@@ -56,6 +57,15 @@ public:
 	 * animated path would restart an interpolation every frame and never arrive.
 	 */
 	static bool ScrollByDelta(UDreamWidget* InWidget, const FVector2D& InDelta);
+	/**
+	 * ScrollByDelta, but only when the innermost scrolling ancestor accepts THIS analog key as its
+	 * virtual wheel -- the gate behind UMG's AnalogMouseWheelKey.
+	 *
+	 * A container that names no key takes whatever the input preset sends, which is what every one of
+	 * them did before the property existed. A container that names one takes that axis and no other,
+	 * so two lists on the same screen can be driven by different sticks.
+	 */
+	static bool ScrollByAnalogAxis(UDreamWidget* InWidget, const FKey& InAxisKey, const FVector2D& InDelta);
 	/** True when InWidget has a scrolling ancestor that could move at all. */
 	static bool HasScrollableAncestor(const UDreamWidget* InWidget);
 };

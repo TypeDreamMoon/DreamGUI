@@ -7,11 +7,18 @@
 #include "Controls/DreamUIControl.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Interaction/UIScrollView.h"
+#include "Interaction/UISelectable.h"
 #include "DreamScrollBox.generated.h"
 
 class UDreamWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamScrollBoxScrolledEvent, float, Progress);
+/** The USER moved it, and where to -- an OFFSET in local units, which is what UMG reports. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamScrollBoxUserScrolledOffsetEvent, float, CurrentOffset);
+/** The bar appeared or went away. A bool rather than a Slate visibility, which this library has none of. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamScrollBoxBarVisibilityChangedEvent, bool, bVisible);
+/** Focus moved to a widget inside the box -- which one, so a consumer need not go looking. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamScrollBoxFocusUpdatedEvent, UDreamWidget*, FocusedWidget);
 
 /**
  * A scroll box whose hierarchy is code, not an asset.
@@ -42,7 +49,7 @@ public:
 	 * exists; with no sheet in the project this IS the look in effect -- which is why it stays
 	 * editable instead of being gated on the enum.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Scroll Box")
 	FDreamScrollBoxStyle Style;
 
 	/**
@@ -87,14 +94,88 @@ public:
 	bool bAnimateWheelScrolling = false;
 
 	/** How long one animated notch takes. Ignored while bAnimateWheelScrolling is off. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Box", meta = (ClampMin = "0.0", EditCondition = "bAnimateWheelScrolling"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetWheelScrollAnimationDuration", BlueprintSetter = "SetWheelScrollAnimationDuration", Category = "Scroll Box", meta = (ClampMin = "0.0", EditCondition = "bAnimateWheelScrolling"))
 	float WheelScrollAnimationDuration = 0.15f;
+
+	/**
+	 * A plain multiplier on whatever one wheel notch already travels -- UMG's name, and the list
+	 * controls' too, so the three agree.
+	 *
+	 * ScrollSensitivity above is the DISTANCE a notch covers, in local units. This scales it, which is
+	 * why both exist: a project that wants "the same feel, twice as fast" writes 2 here rather than
+	 * re-tuning a distance that then disagrees with every other box in the game.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetWheelScrollMultiplier", BlueprintSetter = "SetWheelScrollMultiplier", Category = "Scroll Box", meta = (ClampMin = "0.0"))
+	float WheelScrollMultiplier = 1.0f;
+
+	/** Whether the wheel is swallowed here or handed to an outer scrolling ancestor at a limit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetConsumeMouseWheel", BlueprintSetter = "SetConsumeMouseWheel", Category = "Scroll Box")
+	EDreamScrollBoxConsumeMouseWheel ConsumeMouseWheel = EDreamScrollBoxConsumeMouseWheel::WhenScrollingPossible;
+
+	/**
+	 * Whether the bar's TRACK survives the bar auto-hiding -- UMG's AlwaysShowScrollbarTrack, and the
+	 * groove a desktop scroll bar leaves behind when its thumb has nothing to say.
+	 *
+	 * The gutter is spent either way while this is on, which is the point: a list that gains a row
+	 * must not reflow its whole content because a bar appeared beside it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "IsAlwaysShowScrollbarTrack", BlueprintSetter = "SetAlwaysShowScrollbarTrack", Category = "Scroll Box")
+	bool bAlwaysShowScrollbarTrack = false;
+
+	/** Let the content be pulled past an end and spring back -- UMG's AllowOverscroll. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAllowOverscroll", BlueprintSetter = "SetAllowOverscroll", Category = "Scroll Box")
+	bool bAllowOverscroll = true;
+
+	/**
+	 * A whole window of empty space BEFORE the content, so the first item can be scrolled all the way
+	 * to the trailing edge -- UMG's BackPadScrolling. A window, not half of one, which is Slate's
+	 * arithmetic.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetBackPadScrolling", BlueprintSetter = "SetBackPadScrolling", Category = "Scroll Box")
+	bool bBackPadScrolling = false;
+
+	/** A whole window of empty space AFTER the content -- UMG's FrontPadScrolling. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetFrontPadScrolling", BlueprintSetter = "SetFrontPadScrolling", Category = "Scroll Box")
+	bool bFrontPadScrolling = false;
+
+	/** Whether a TOUCH drag scrolls this box -- UMG's bEnableTouchScrolling. A mouse drag is unaffected. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetEnableTouchScrolling", BlueprintSetter = "SetEnableTouchScrolling", Category = "Scroll Box")
+	bool bEnableTouchScrolling = true;
+
+	/** Whether a drag with the RIGHT button scrolls it -- UMG's bAllowRightClickDragScrolling. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAllowRightClickDragScrolling", BlueprintSetter = "SetAllowRightClickDragScrolling", Category = "Scroll Box")
+	bool bAllowRightClickDragScrolling = true;
+
+	/**
+	 * Whether a pointer event this box acted on is swallowed -- UMG's bConsumePointerInput. Off lets
+	 * it reach whatever is drawn behind the box.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetConsumePointerInput", BlueprintSetter = "SetConsumePointerInput", Category = "Scroll Box")
+	bool bConsumePointerInput = true;
+
+	/**
+	 * The analog key that acts as this box's mouse wheel -- UMG's AnalogMouseWheelKey. Invalid (the
+	 * default) means "whatever the input preset already routes here", which is the right stick and
+	 * therefore exactly what every existing box does.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAnalogMouseWheelKey", BlueprintSetter = "SetAnalogMouseWheelKey", Category = "Scroll Box")
+	FKey AnalogMouseWheelKey;
+
+	/**
+	 * What this box does when user focus lands inside it -- UMG's ScrollWhenFocusChanges.
+	 *
+	 * AnimatedScroll rather than UMG's NoScroll, because it is what every box here already does:
+	 * directional navigation reveals its target unconditionally, and shipping NoScroll would stop
+	 * every gamepad-driven list in every existing project from following its focus.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollWhenFocusChanges", BlueprintSetter = "SetScrollWhenFocusChanges", Category = "Scroll Box")
+	EDreamUIScrollWhenFocusChanges ScrollWhenFocusChanges = EDreamUIScrollWhenFocusChanges::AnimatedScroll;
 
 	/**
 	 * Where a widget revealed by NAVIGATION ends up -- UMG's NavigationDestination. IntoView moves
 	 * the least distance that shows it; the other two always frame it the same way.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetNavigationDestination", BlueprintSetter = "SetNavigationDestination", Category = "Scroll Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetNavigationDestination", BlueprintSetter = "SetNavigationDestination", Category = "Scroll Box", meta = (InvalidEnumValues = "Configured"))
 	EDreamUIScrollDestination NavigationDestination = EDreamUIScrollDestination::IntoView;
 
 	/** How much of the window to keep clear around it -- UMG's NavigationScrollPadding. */
@@ -111,6 +192,49 @@ public:
 	/** Re-broadcast from the scroll behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
 	FDreamScrollBoxScrolledEvent OnScrolled;
+
+	/**
+	 * The USER moved it -- UMG's OnUserScrolled, and its unit, which is an OFFSET rather than a
+	 * progress.
+	 *
+	 * Separate from OnScrolled because the question is different: OnScrolled fires for every change,
+	 * including the ones this control made itself (a style push re-states the progress; a setter
+	 * writes it). A consumer saving "where the player left the list" wants the ones the player made,
+	 * and nothing else could tell them apart afterwards.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
+	FDreamScrollBoxUserScrolledOffsetEvent OnUserScrolled;
+
+	/**
+	 * The bar appeared or went away -- UMG's OnScrollBarVisibilityChanged. Fired from the style push,
+	 * which is the one place that decides, and only when the answer actually moved.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
+	FDreamScrollBoxBarVisibilityChangedEvent OnScrollBarVisibilityChanged;
+
+	/*
+	 * The box ITSELF taking and giving up user focus -- UMG's OnFocusReceived and OnFocusLost -- are
+	 * not declared here, because every widget already has them: UDreamWidget::OnFocusReceived and
+	 * OnFocusLost. What this control adds is the wiring. The event system focuses the FACE, a child
+	 * node, so left alone those two events would fire on a part nobody outside holds a pointer to;
+	 * the box relays them onto itself, which is where an author binds.
+	 *
+	 * Only for a box that is a focus target, which means the base's bIsFocusable is on. That gate is
+	 * the whole reason this could not simply be switched on: a box that became navigable would change
+	 * where every directional press in an existing screen lands, and bIsFocusable is off by default,
+	 * so nothing moves until an author asks for it.
+	 */
+
+	/**
+	 * Focus moved to something INSIDE the box -- UMG's OnFocusUpdated.
+	 *
+	 * Not gated on bIsFocusable, and that is the point: this is about the box's CONTENT, which is
+	 * focusable whether or not the box is. Raised from the navigation reveal, the one place that
+	 * knows both which widget took focus and which scrolling ancestors contain it -- a box cannot
+	 * work that out alone, and polling HasFocusedDescendants would be a tick for an edge.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Scroll Box")
+	FDreamScrollBoxFocusUpdatedEvent OnFocusUpdated;
 
 	/**
 	 * The `<->` convention: a two-way binding synthesizes its reverse route against this exact name.
@@ -142,6 +266,14 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Scroll Box")
 	TObjectPtr<UDreamLayoutContainerStackBox> ContentStack = nullptr;
+
+	/** By value, not by reference: a UFUNCTION return has to be a value, and a style is a small struct. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	FDreamScrollBoxStyle GetStyle() const { return Style; }
+
+	/** Replace the whole look and re-push it. The one road a Blueprint write has to take. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetStyle(const FDreamScrollBoxStyle& InStyle);
 
 	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
 	float GetScrollProgress() const;
@@ -212,9 +344,152 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
 	void ScrollToEnd();
 
-	/** Scroll the least distance that brings InWidget fully into view; nothing when it already is. */
+	/**
+	 * Scroll the least distance that brings InWidget fully into view; nothing when it already is.
+	 *
+	 * @param InDestination Where it ends up. Configured (the default) leaves it to NavigationDestination,
+	 *                      which is what this call meant before the parameter existed.
+	 * @param InPadding     How much of the window to keep clear around it. Negative leaves it to
+	 *                      NavigationScrollPadding, for the same reason.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
-	bool ScrollWidgetIntoView(UDreamWidget* InWidget, bool bInAnimate = true);
+	bool ScrollWidgetIntoView(UDreamWidget* InWidget, bool bInAnimate = true,
+		EDreamUIScrollDestination InDestination = EDreamUIScrollDestination::Configured, float InPadding = -1.0f);
+
+	/** Drop the fling, keeping the position -- UMG's EndInertialScrolling. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void EndInertialScrolling();
+
+	/** True while momentum or a spring-back still has the content moving. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool GetIsScrolling() const;
+
+	/** The offset at which the END of the content is in view: the whole scrollable extent. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetScrollOffsetOfEnd() const;
+
+	/** Fraction of the content currently visible, 0..1. One when everything fits. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetViewFraction() const;
+
+	/** How far through the scrollable range the window sits, 0..1. Zero when nothing can scroll. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetViewOffsetFraction() const;
+
+	/** Signed distance past an end, in local units; zero in range and zero while overscroll is off. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetOverscrollOffset() const;
+
+	/** The same distance as a percentage of the window -- UMG's GetOverscrollPercentage. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetOverscrollPercentage() const;
+
+	/**
+	 * The bar's thickness, in local units. A READER of the style rather than a second copy: the
+	 * number lives in FDreamScrollBarStyle::Thickness, because it is what the bar is drawn from, and
+	 * a control-level field beside it would be the same measurement written twice.
+	 *
+	 * UMG's is an FVector2D; a bar here has one thickness, across its own axis, because its length is
+	 * whatever it is scrolling.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetScrollbarThickness() const;
+
+	/** Writes FDreamScrollBarStyle::Thickness and re-cuts the gutter, which is what it decides. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetScrollbarThickness(float InThickness);
+
+	/** The margin around the bar. The same arrangement as the thickness: the style holds it. */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	FMargin GetScrollbarPadding() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetScrollbarPadding(FMargin InPadding);
+
+	/**
+	 * Whether the bar stays put with nothing to scroll -- UMG's AlwaysShowScrollbar.
+	 *
+	 * A reader of ScrollBarVisibility rather than a flag beside it: Permanent IS "always show", and
+	 * two properties that both answered would be two answers to keep in step.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool IsAlwaysShowScrollbar() const { return ScrollBarVisibility == EDreamScrollBoxScrollbarVisibility::Permanent; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetAlwaysShowScrollbar(bool bInAlwaysShow);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool IsAlwaysShowScrollbarTrack() const { return bAlwaysShowScrollbarTrack; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetAlwaysShowScrollbarTrack(bool bInAlwaysShow);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetWheelScrollAnimationDuration() const { return WheelScrollAnimationDuration; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetWheelScrollAnimationDuration(float InDuration);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	float GetWheelScrollMultiplier() const { return WheelScrollMultiplier; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetWheelScrollMultiplier(float InMultiplier);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	EDreamScrollBoxConsumeMouseWheel GetConsumeMouseWheel() const { return ConsumeMouseWheel; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetConsumeMouseWheel(EDreamScrollBoxConsumeMouseWheel InConsume);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool GetAllowOverscroll() const { return bAllowOverscroll; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetAllowOverscroll(bool bInAllow);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool GetBackPadScrolling() const { return bBackPadScrolling; }
+
+	/** Changes how far there is to go, so the range is re-stated and the bar re-measured. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetBackPadScrolling(bool bInPad);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool GetFrontPadScrolling() const { return bFrontPadScrolling; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetFrontPadScrolling(bool bInPad);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool GetEnableTouchScrolling() const { return bEnableTouchScrolling; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetEnableTouchScrolling(bool bInEnable);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool GetAllowRightClickDragScrolling() const { return bAllowRightClickDragScrolling; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetAllowRightClickDragScrolling(bool bInAllow);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	bool GetConsumePointerInput() const { return bConsumePointerInput; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetConsumePointerInput(bool bInConsume);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	FKey GetAnalogMouseWheelKey() const { return AnalogMouseWheelKey; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetAnalogMouseWheelKey(FKey InKey);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Box")
+	EDreamUIScrollWhenFocusChanges GetScrollWhenFocusChanges() const { return ScrollWhenFocusChanges; }
+
+	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
+	void SetScrollWhenFocusChanges(EDreamUIScrollWhenFocusChanges InRule);
 
 	/** How far the window has travelled from the content's start edge, in local units. */
 	UFUNCTION(BlueprintPure, Category = "Scroll Box")
@@ -267,8 +542,77 @@ private:
 	void HandleScrollViewChanged(FVector2D InProgress);
 	void PushScrollProgress();
 
+	/** Re-state every behaviour knob on the view. One list, called from the style push and the setters. */
+	void PushScrollBehaviourSettings();
+
+	/**
+	 * Make the box a focus target, or stop it being one, to match the base's bIsFocusable.
+	 *
+	 * A UUISelectable on the FACE, added on demand and slept rather than destroyed: the selectable is
+	 * what the event system hands focus to, and it is also what already distinguishes a resting
+	 * pointer from focus -- so subscribing to its state is the whole of received and lost.
+	 */
+	void RefreshFocusTarget();
+	void HandleFaceSelectionStateChanged(EUISelectableSelectionState InState, bool bInImmediate);
+	void HandleContentFocusMoved(UDreamWidget* InFocusedWidget);
+
+	/** The face's focus behaviour, made the first time bIsFocusable is on. Null until then. */
+	UPROPERTY(Transient)
+	TObjectPtr<UUISelectable> FocusSelectable = nullptr;
+
+	/** Whether the face was focused last time its state moved, so an edge can be told from a repaint. */
+	bool bWasFocused = false;
+
+	/** Kept so the content-focus subscription is made exactly once, however often ApplyStyle runs. */
+	FDelegateHandle ContentFocusHandle;
+
+public:
+	/**
+	 * Drive the focus edge directly, for a test.
+	 *
+	 * The selectable's state is moved by the event system, which needs a viewport, a player and a
+	 * press -- none of which exist headless. What is worth pinning is this control's own rule (an
+	 * edge, not a state, and only while focusable), and that rule lives here rather than in the
+	 * event system.
+	 */
+	void HandleFaceSelectionStateChangedForTest(EUISelectableSelectionState InState)
+	{
+		HandleFaceSelectionStateChanged(InState, false);
+	}
+
+private:
+
 	/** True while the bar has something to say: shown at all, and either permanent or overflowing. */
 	bool ShouldShowScrollBar() const;
 
 	bool IsHorizontal() const { return Orientation == EDreamPanelOrientation::Horizontal; }
+
+	/**
+	 * Set while this control is the one moving the content, so the change that comes back out of the
+	 * behaviour is not reported as the player's.
+	 *
+	 * The behaviour broadcasts one event for both roads, and by the time it arrives there is nothing
+	 * left in the value to say which it was -- so the only place the distinction exists is here, at
+	 * the moment the push is made.
+	 */
+	bool bPushingScroll = false;
+
+	/** Whether the bar was showing last time the style push decided, so a change can be announced. */
+	bool bScrollBarWasVisible = false;
+
+	/** Guard for the flag above: RAII, because the push paths have early returns in them. */
+	struct FScopedProgrammaticScroll
+	{
+		explicit FScopedProgrammaticScroll(UDreamScrollBox& InBox)
+			: Box(InBox), bPrevious(InBox.bPushingScroll)
+		{
+			Box.bPushingScroll = true;
+		}
+		~FScopedProgrammaticScroll() { Box.bPushingScroll = bPrevious; }
+		FScopedProgrammaticScroll(const FScopedProgrammaticScroll&) = delete;
+		FScopedProgrammaticScroll& operator=(const FScopedProgrammaticScroll&) = delete;
+	private:
+		UDreamScrollBox& Box;
+		bool bPrevious;
+	};
 };

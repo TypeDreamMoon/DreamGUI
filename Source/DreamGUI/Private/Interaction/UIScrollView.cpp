@@ -5,6 +5,9 @@
 #include "DreamGUI.h"
 #include "DreamTweenManager.h"
 #include "Core/Components/DreamWidget.h"
+// For the touch-scrolling gate: what the player's hands are on is the event system's answer, not
+// something the pointer event carries -- touch id zero and mouse id zero are the same number.
+#include "Event/DreamEventSystem.h"
 
 namespace DreamScrollViewLocal
 {
@@ -311,7 +314,24 @@ FVector2D UUIScrollView::GetStartAlignedPosition() const
 			Delta.Y -= ViewportSize.Y - ContentSize.Y;
 		}
 	}
+	// The leading pad moves the resting place rather than adding a term to every caller: offset zero
+	// is "the content's start edge one window further in", and the sign is the offset's own -- X runs
+	// rightward so the content sits further RIGHT, Y runs downward so it sits further DOWN, which is
+	// a SMALLER content Y because the content's own Y runs up.
+	const FVector2D Leading = GetLeadingScrollPad();
+	Delta.X += Leading.X;
+	Delta.Y -= Leading.Y;
 	return GetContentPosition() + Delta;
+}
+
+FVector2D UUIScrollView::GetLeadingScrollPad() const
+{
+	return bBackPadScrolling ? GetViewportSize() : FVector2D::ZeroVector;
+}
+
+FVector2D UUIScrollView::GetTrailingScrollPad() const
+{
+	return bFrontPadScrolling ? GetViewportSize() : FVector2D::ZeroVector;
 }
 
 FVector2D UUIScrollView::GetViewportSize() const
@@ -330,9 +350,95 @@ FVector2D UUIScrollView::GetScrollableExtent() const
 {
 	const FVector2D ViewportSize = GetViewportSize();
 	const FVector2D ContentSize = GetContentSize();
+	// Both pads are travel that exists over nothing, which is exactly what they are for: the first
+	// item can be dragged to the far edge and the last one to the near edge. Slate spends a whole
+	// window per pad, not half of one, and this is the same arithmetic in the offset's terms.
+	const FVector2D Leading = GetLeadingScrollPad();
+	const FVector2D Trailing = GetTrailingScrollPad();
 	return FVector2D(
-		FMath::Max(0.0, ContentSize.X - ViewportSize.X),
-		FMath::Max(0.0, ContentSize.Y - ViewportSize.Y));
+		FMath::Max(0.0, ContentSize.X - ViewportSize.X) + Leading.X + Trailing.X,
+		FMath::Max(0.0, ContentSize.Y - ViewportSize.Y) + Leading.Y + Trailing.Y);
+}
+
+FVector2D UUIScrollView::GetOverscrollOffset() const
+{
+	if (!bAllowOverscroll)
+	{
+		return FVector2D::ZeroVector;
+	}
+	const FVector2D Offset = GetScrollOffset();
+	const FVector2D Extent = GetScrollableExtent();
+	// Signed, and in the reading direction: below the start is negative, past the end positive. The
+	// same three cases SScrollBox::GetOverscrollOffset answers with, per axis instead of per box.
+	auto AxisOverscroll = [](double InOffset, double InExtent)
+	{
+		if (InOffset < 0.0) return InOffset;
+		if (InOffset > InExtent) return InOffset - InExtent;
+		return 0.0;
+	};
+	return FVector2D(AxisOverscroll(Offset.X, Extent.X), AxisOverscroll(Offset.Y, Extent.Y));
+}
+
+FVector2D UUIScrollView::GetOverscrollPercentage() const
+{
+	const FVector2D ViewportSize = GetViewportSize();
+	const FVector2D Overscroll = GetOverscrollOffset();
+	// A window of zero has no percentage to give rather than an infinite one.
+	return FVector2D(
+		ViewportSize.X > UE_SMALL_NUMBER ? (Overscroll.X / ViewportSize.X) * 100.0 : 0.0,
+		ViewportSize.Y > UE_SMALL_NUMBER ? (Overscroll.Y / ViewportSize.Y) * 100.0 : 0.0);
+}
+
+bool UUIScrollView::IsScrolling() const
+{
+	return bCanUpdateAfterDrag || !Velocity.IsNearlyZero();
+}
+
+void UUIScrollView::EndInertialScrolling()
+{
+	Velocity = FVector2D::ZeroVector;
+	// Whether anything is still due to happen is decided by where the content IS, not by the fact
+	// that the fling was cancelled: a band left open still has to close.
+	bCanUpdateAfterDrag = RestrictRectArea
+		&& !ClampToRange(GetContentPosition()).Equals(GetContentPosition(), DreamScrollViewLocal::SettleThreshold);
+}
+
+void UUIScrollView::SetWheelScrollMultiplier(float value)
+{
+	WheelScrollMultiplier = FMath::Max(0.0f, FMath::IsFinite(value) ? value : 1.0f);
+}
+
+void UUIScrollView::SetAllowOverscroll(bool value)
+{
+	if (bAllowOverscroll != value)
+	{
+		bAllowOverscroll = value;
+		// Switching it off leaves whatever band is currently open to be closed, which is the settle
+		// pass's job -- so arm it rather than teleporting the content back under the player's finger.
+		if (!bAllowOverscroll && RestrictRectArea)
+		{
+			bCanUpdateAfterDrag = true;
+		}
+	}
+}
+
+void UUIScrollView::SetBackPadScrolling(bool value)
+{
+	if (bBackPadScrolling != value)
+	{
+		bBackPadScrolling = value;
+		// The pad moves where offset zero is, so every range this view holds is now wrong.
+		RectRangeChanged();
+	}
+}
+
+void UUIScrollView::SetFrontPadScrolling(bool value)
+{
+	if (bFrontPadScrolling != value)
+	{
+		bFrontPadScrolling = value;
+		RectRangeChanged();
+	}
 }
 
 FVector2D UUIScrollView::GetScrollOffset() const
@@ -435,9 +541,50 @@ void UUIScrollView::ResolveGestureAxes(const FVector2D& InFirstDelta)
 	bGestureVertical = Vertical;
 }
 
+/**
+ * Whether THIS gesture is one this view accepts at all -- the right button and the finger, which are
+ * the two UMG lets a project turn off separately.
+ *
+ * Asked once, at the start of the drag, and not again: a gesture that was refused must stay refused
+ * for its whole length, or letting go of the right button mid-drag would hand the rest of the motion
+ * to the content. The two gesture bits already carry that decision, so refusing here is enough.
+ */
+bool UUIScrollView::AcceptsDragGesture(UDreamPointerEventData* InEventData) const
+{
+    if (InEventData == nullptr)
+    {
+        return false;
+    }
+    // The master switch first: it is about whether ANY pointer gesture drives this view, where the
+    // two below are about which one.
+    if (!bIsPointerScrollingEnabled)
+    {
+        return false;
+    }
+    if (!bAllowRightClickDragScrolling && InEventData->MouseButtonType == EDreamUIMouseButtonType::Right)
+    {
+        return false;
+    }
+    if (!bEnableTouchScrolling && IsTouchInput(InEventData))
+    {
+        return false;
+    }
+    return true;
+}
+
+bool UUIScrollView::IsTouchInput(UDreamPointerEventData* InEventData) const
+{
+    // The DEVICE, not the pointer id: a finger and a mouse both arrive as pointer 0, so the only
+    // honest question is what the player last touched -- which is exactly what the event system
+    // tracks for the key-prompt tables. One place, because three callers ask it now.
+    const UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(
+        const_cast<UUIScrollView*>(this), InEventData != nullptr ? InEventData->UserIndex : 0);
+    return Events != nullptr && Events->GetCurrentInputDevice() == EDreamUIInputDevice::Touch;
+}
+
 bool UUIScrollView::OnPointerBeginDrag_Implementation(UDreamPointerEventData *EventData)
 {
-	if (EventData && CheckParameters() && CheckValidHit(EventData->DragWidget))
+	if (EventData && AcceptsDragGesture(EventData) && CheckParameters() && CheckValidHit(EventData->DragWidget))
     {
         PrevPointerPosition = EventData->PressWorldPoint;
         const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
@@ -446,6 +593,9 @@ bool UUIScrollView::OnPointerBeginDrag_Implementation(UDreamPointerEventData *Ev
         ResolveGestureAxes(FVector2D(localMoveDelta.Y, localMoveDelta.Z));
         Velocity = FVector2D::ZeroVector;
         bCanUpdateAfterDrag = false;
+        // Before the first move is applied, so a consumer hears "began" ahead of the delta that
+        // began it rather than after -- the order a handler recording a gesture has to have.
+        OnDragGestureCPP.Broadcast(EDreamScrollDragPhase::Begin, IsTouchInput(EventData));
         OnPointerDrag_Implementation(EventData);
     }
     else
@@ -467,18 +617,20 @@ bool UUIScrollView::OnPointerDrag_Implementation(UDreamPointerEventData *EventDa
     {
         return AllowEventBubbleUp;
     }
+    OnDragGestureCPP.Broadcast(EDreamScrollDragPhase::Move, IsTouchInput(EventData));
     // The pointer's delta, damped on whichever axis is already past its boundary -- and past it
     // BEFORE this move rather than after, so a drag heading back into range is at full weight the
     // whole way home instead of crawling the last unit.
+    const float DragDamper = GetEffectiveOutOfRangeDamper();
     if (bGestureHorizontal)
     {
         Position.X += localMoveDelta.Y * ((RestrictRectArea
-            && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y)) ? OutOfRangeDamper : 1.0f);
+            && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y)) ? DragDamper : 1.0f);
     }
     if (bGestureVertical)
     {
         Position.Y += localMoveDelta.Z * ((RestrictRectArea
-            && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)) ? OutOfRangeDamper : 1.0f);
+            && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)) ? DragDamper : 1.0f);
     }
     if (!CanScrollInSmallSize)
     {
@@ -513,6 +665,19 @@ bool UUIScrollView::OnPointerEndDrag_Implementation(UDreamPointerEventData *Even
         bCanUpdateAfterDrag = true;
 		Velocity.Y = localMoveDelta.Z / DeltaTime;
     }
+    const bool bTouch = IsTouchInput(EventData);
+    // A finger let go can EASE to its resting place instead of coasting on the momentum it built --
+    // UMG's touch animated scrolling. The glide is the WHEEL's, aimed at where the fling was going
+    // to end up, so the two roads share one tween rather than each carrying their own; the velocity
+    // is dropped so the physics does not keep pushing the thing the tween is already moving.
+    if (bAnimateTouchScrolling && bTouch && !Velocity.IsNearlyZero())
+    {
+        const FVector2D Projected = GetContentPosition() + Velocity * WheelScrollAnimationDuration;
+        Velocity = FVector2D::ZeroVector;
+        bCanUpdateAfterDrag = false;
+        GlideContentTo(ClampToRange(Projected), true, WheelScrollAnimationDuration);
+    }
+    OnDragGestureCPP.Broadcast(EDreamScrollDragPhase::End, bTouch);
     return AllowEventBubbleUp;
 }
 
@@ -534,6 +699,13 @@ bool UUIScrollView::OnPointerScroll_Implementation(UDreamPointerEventData *Event
     {
         return AllowEventBubbleUp;
     }
+    if (ConsumeMouseWheel == EDreamScrollBoxConsumeMouseWheel::Never || !bIsPointerScrollingEnabled)
+    {
+        // Not "scroll and pass it on" -- the wheel does not drive this view at all, so the event has
+        // to reach whatever is behind it untouched. The master pointer switch answers the same way
+        // as Never, because from the wheel's side they are the same refusal.
+        return true;
+    }
     RecalculateRange();
     ResolveGestureAxes(FVector2D(EventData->ScrollAxisValue.X, EventData->ScrollAxisValue.Y));
 
@@ -543,22 +715,30 @@ bool UUIScrollView::OnPointerScroll_Implementation(UDreamPointerEventData *Event
     const FVector2D Extent = GetScrollableExtent();
     const FVector2D BeforeOffset = GetScrollOffset();
     FVector2D AfterOffset = BeforeOffset;
+    // The multiplier scales whichever of the two distances is in force, so "twice as fast" means the
+    // same thing whether a notch is measured in local units or in a fraction of the range.
+    const float WheelScale = FMath::Max(0.0f, WheelScrollMultiplier);
     if (WheelProgressStep > UE_SMALL_NUMBER)
     {
-        if (bGestureHorizontal) AfterOffset.X -= FMath::Sign(EventData->ScrollAxisValue.X) * WheelProgressStep * Extent.X;
-        if (bGestureVertical) AfterOffset.Y -= FMath::Sign(EventData->ScrollAxisValue.Y) * WheelProgressStep * Extent.Y;
+        const double Step = static_cast<double>(WheelProgressStep) * WheelScale;
+        if (bGestureHorizontal) AfterOffset.X -= FMath::Sign(EventData->ScrollAxisValue.X) * Step * Extent.X;
+        if (bGestureVertical) AfterOffset.Y -= FMath::Sign(EventData->ScrollAxisValue.Y) * Step * Extent.Y;
     }
     else
     {
-        if (bGestureHorizontal) AfterOffset.X -= EventData->ScrollAxisValue.X * ScrollSensitivity;
-        if (bGestureVertical) AfterOffset.Y -= EventData->ScrollAxisValue.Y * ScrollSensitivity;
+        const double Distance = static_cast<double>(ScrollSensitivity) * WheelScale;
+        if (bGestureHorizontal) AfterOffset.X -= EventData->ScrollAxisValue.X * Distance;
+        if (bGestureVertical) AfterOffset.Y -= EventData->ScrollAxisValue.Y * Distance;
     }
     AfterOffset.X = FMath::Clamp(AfterOffset.X, 0.0, Extent.X);
     AfterOffset.Y = FMath::Clamp(AfterOffset.Y, 0.0, Extent.Y);
     if (AfterOffset.Equals(BeforeOffset, DreamScrollViewLocal::SettleThreshold))
     {
-        // Nothing moved: already at that end, or this axis does not scroll. Hand it on.
-        return true;
+        // Nothing moved: already at that end, or this axis does not scroll. Hand it on -- unless the
+        // author said Always, which is the setting that exists precisely so an inner list at its end
+        // does not start driving the page behind it. Always answers the way a handled event does,
+        // which is AllowEventBubbleUp rather than a bare false.
+        return ConsumeMouseWheel == EDreamScrollBoxConsumeMouseWheel::Always ? AllowEventBubbleUp : true;
     }
     if (bAnimateWheelScrolling)
     {
@@ -643,7 +823,7 @@ void UUIScrollView::SetScrollDelta(FVector2D value)
     if (Horizontal)
     {
         const float Damper = (RestrictRectArea
-            && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y)) ? OutOfRangeDamper : 1.0f;
+            && (Position.X < HorizontalRange.X || Position.X > HorizontalRange.Y)) ? GetEffectiveOutOfRangeDamper() : 1.0f;
         Position.X += value.X * Damper;
         Velocity.X = value.X * Damper / DeltaTime;
         bGestureHorizontal = true;
@@ -652,7 +832,7 @@ void UUIScrollView::SetScrollDelta(FVector2D value)
     if (Vertical)
     {
         const float Damper = (RestrictRectArea
-            && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)) ? OutOfRangeDamper : 1.0f;
+            && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)) ? GetEffectiveOutOfRangeDamper() : 1.0f;
         Position.Y += value.Y * Damper;
         Velocity.Y = value.Y * Damper / DeltaTime;
         bGestureVertical = true;
@@ -771,7 +951,8 @@ void UUIScrollView::ScrollTo(UDreamWidget* InChild, bool InEaseAnimation, float 
     GlideContentTo(ClampToRange(GetContentPosition() + Displacement), InEaseAnimation, InAnimationDuration);
 }
 
-bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVector2D& OutPosition)
+bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVector2D& OutPosition,
+    EDreamUIScrollDestination InDestination, float InPadding)
 {
     OutPosition = GetContentPosition();
     if (!IsValid(InChild))return false;
@@ -818,8 +999,11 @@ bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVecto
     // stepping through equal rows wants; Center always frames it, which is what a carousel wants.
     // The padding shrinks the box the item must fit inside, so a row never lands flush against the
     // edge of the window with its neighbour cut in half beside it.
-    const float Pad = FMath::Max(0.0f, NavigationScrollPadding);
-    const EDreamUIScrollDestination Destination = NavigationDestination;
+    // A negative padding and the Configured destination both mean "whatever this view was set up
+    // with", which is what every caller meant before either could be passed in.
+    const float Pad = FMath::Max(0.0f, InPadding < 0.0f ? NavigationScrollPadding : InPadding);
+    const EDreamUIScrollDestination Destination = InDestination == EDreamUIScrollDestination::Configured
+        ? NavigationDestination : InDestination;
     auto DeltaAlongAxis = [Pad, Destination](float ItemMin, float ItemMax, float ViewMin, float ViewMax,
         bool bLeadingIsMaxEdge)
     {
@@ -832,6 +1016,12 @@ bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVecto
             // is its MAX edge. Spelled as a parameter rather than guessed from the numbers, because
             // both callers hand their axis in as (min, max) and the pair looks identical here.
             return bLeadingIsMaxEdge ? PaddedMax - ItemMax : PaddedMin - ItemMin;
+        }
+        if (Destination == EDreamUIScrollDestination::BottomOrRight)
+        {
+            // The mirror of TopOrLeft, and the flag flips the same way: the trailing edge is the MIN
+            // one on Y (a vertical view's bottom) and the MAX one on X.
+            return bLeadingIsMaxEdge ? PaddedMin - ItemMin : PaddedMax - ItemMax;
         }
         if (Destination == EDreamUIScrollDestination::Center)
         {
@@ -873,10 +1063,11 @@ bool UUIScrollView::CanScrollWidgetIntoView(UDreamWidget* InChild)
     return CalculateRevealContentPosition(InChild, Unused);
 }
 
-bool UUIScrollView::ScrollWidgetIntoView(UDreamWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
+bool UUIScrollView::ScrollWidgetIntoView(UDreamWidget* InChild, bool InEaseAnimation, float InAnimationDuration,
+    EDreamUIScrollDestination InDestination, float InPadding)
 {
     FVector2D TargetContentPos;
-    if (!CalculateRevealContentPosition(InChild, TargetContentPos))
+    if (!CalculateRevealContentPosition(InChild, TargetContentPos, InDestination, InPadding))
     {
         return false;
     }

@@ -194,15 +194,14 @@ void UDreamScrollBox::ApplyStyle()
 		ScrollView->SetHorizontal(bHorizontal);
 		ScrollView->SetVertical(!bHorizontal);
 		ScrollView->SetCoordinateMode(EDreamScrollCoordinateMode::AnchoredPosition);
-		ScrollView->SetScrollSensitivity(ScrollSensitivity);
-		ScrollView->SetDecelerateRate(DecelerateRate);
-		// The wheel's feel and where navigation parks a revealed child. Restated on every push like
-		// every other behaviour knob: on the TEMPLATE road the view is one this control just added,
-		// carrying the library's defaults rather than what the control was authored with.
-		ScrollView->SetAnimateWheelScrolling(bAnimateWheelScrolling);
-		ScrollView->SetWheelScrollAnimationDuration(WheelScrollAnimationDuration);
-		ScrollView->SetNavigationDestination(NavigationDestination);
-		ScrollView->SetNavigationScrollPadding(NavigationScrollPadding);
+		// Once, not on every push: a second Add on the same handle would fire OnFocusUpdated twice
+		// for one navigation press, which is the classic double-subscribe this library keeps hitting.
+		if (!ContentFocusHandle.IsValid())
+		{
+			ContentFocusHandle = ScrollView->GetOnContentFocusMovedEvent()
+				.AddUObject(this, &UDreamScrollBox::HandleContentFocusMoved);
+		}
+		PushScrollBehaviourSettings();
 	}
 
 	// Measured before the gutter is decided and again after it is applied. The circle is real -- the
@@ -212,7 +211,17 @@ void UDreamScrollBox::ApplyStyle()
 	RefreshContentExtent();
 
 	const bool bBarVisible = ShouldShowScrollBar();
-	const float Gutter = bBarVisible ? Active.Bar.Thickness : 0.0f;
+	// The bar's margin is part of the gutter, because the gutter is "everything the viewport gives up
+	// so the bar can sit there" -- a margin taken out of the bar's own thickness instead would make a
+	// padded bar thinner rather than better spaced.
+	const FMargin& BarPad = Active.Bar.BarPadding;
+	const float BarSpan = Active.Bar.Thickness + (bHorizontal
+		? BarPad.Top + BarPad.Bottom
+		: BarPad.Left + BarPad.Right);
+	// The groove left behind when the bar has nothing to say. It costs the same gutter, which is the
+	// point: a list that gains one row must not reflow its content because a bar appeared beside it.
+	const bool bShowTrackOnly = !bBarVisible && bAlwaysShowScrollbarTrack;
+	const float Gutter = (bBarVisible || bShowTrackOnly) ? BarSpan : 0.0f;
 
 	if (ViewportNode != nullptr)
 	{
@@ -231,26 +240,162 @@ void UDreamScrollBox::ApplyStyle()
 	{
 		// Along one edge: stretched on the bar's own axis so it always spans the box, a POINT anchor
 		// with the pivot on that edge across it so the thickness is an absolute number pinned flush.
+		// The margin is spent on the bar's rect rather than on the track's: the track has to reach both
+		// ends of whatever the bar spans, or the handle would travel past it. Y runs UP here, which is
+		// why the bottom inset is a POSITIVE shift and the top one a negative.
 		if (bHorizontal)
 		{
 			ScrollBarNode->SetPivot(FVector2D(0.5, 0.0));
 			ScrollBarNode->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0, 0.0), FVector2D(1.0, 0.0), false, false);
-			ScrollBarNode->SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D(0.0, Active.Bar.Thickness));
+			ScrollBarNode->SetAnchoredPositionAndSizeDelta(
+				FVector2D((BarPad.Left - BarPad.Right) * 0.5, BarPad.Bottom),
+				FVector2D(-(BarPad.Left + BarPad.Right), Active.Bar.Thickness));
 		}
 		else
 		{
 			ScrollBarNode->SetPivot(FVector2D(1.0, 0.5));
 			ScrollBarNode->SetHorizontalAndVerticalAnchorMinMax(FVector2D(1.0, 0.0), FVector2D(1.0, 1.0), false, false);
-			ScrollBarNode->SetAnchoredPositionAndSizeDelta(FVector2D::ZeroVector, FVector2D(Active.Bar.Thickness, 0.0));
+			ScrollBarNode->SetAnchoredPositionAndSizeDelta(
+				FVector2D(-BarPad.Right, (BarPad.Bottom - BarPad.Top) * 0.5),
+				FVector2D(Active.Bar.Thickness, -(BarPad.Top + BarPad.Bottom)));
 		}
 		// After its rect, never before: the bar reads its own track's live size to lay the handle out.
 		ScrollBarNode->ApplyStyle();
 		// Last of all, so a bar that is about to appear is already the right shape when it does.
-		ScrollBarNode->SetWidgetActive(bBarVisible);
+		ScrollBarNode->SetWidgetActive(bBarVisible || bShowTrackOnly);
+		if (ScrollBarNode->HandleNode != nullptr)
+		{
+			// Track only means exactly that: the groove stays, the thumb goes. Written here rather
+			// than left to the bar's own auto-hide, because it is the BOX that knows whether this bar
+			// has anything to say -- the bar is wearing the box's style and following the box's view.
+			ScrollBarNode->HandleNode->SetWidgetActive(!bShowTrackOnly);
+		}
 	}
 
 	RefreshContentExtent();
-	PushScrollProgress();
+	{
+		// The style push is this control moving its own content, not the player: the progress it
+		// re-states is the one that was already there.
+		FScopedProgrammaticScroll Guard(*this);
+		PushScrollProgress();
+	}
+
+	// Announced after the bar is actually in its new state, and only on a change -- a style push runs
+	// for every property edit, and a consumer that heard "still visible" on each of them would have to
+	// filter the event this control is better placed to filter.
+	if (bScrollBarWasVisible != bBarVisible)
+	{
+		bScrollBarWasVisible = bBarVisible;
+		OnScrollBarVisibilityChanged.Broadcast(bBarVisible);
+	}
+}
+
+void UDreamScrollBox::RefreshFocusTarget()
+{
+	UDreamWidget* Face = FaceNode;
+	if (Face == nullptr)
+	{
+		return;
+	}
+	if (!GetIsFocusable())
+	{
+		// Nothing is made, and nothing already made is destroyed: a behaviour here is a plain UObject
+		// with no enable switch, so the gate is in the HANDLER instead. Destroying it would mark the
+		// outliner dirty, which the designer answers with a full details rebuild -- an author
+		// toggling the checkbox would pay that twice per click.
+		return;
+	}
+	if (FocusSelectable == nullptr)
+	{
+		FocusSelectable = Face->AddComponent<UUISelectable>();
+		if (FocusSelectable == nullptr)
+		{
+			return;
+		}
+		// The selectable is what the event system hands focus to, and what already tells a resting
+		// pointer from focus -- so its state IS received and lost, with nothing else to subscribe to.
+		FocusSelectable->GetOnSelectionStateChangedEvent().AddUObject(
+			this, &UDreamScrollBox::HandleFaceSelectionStateChanged);
+	}
+}
+
+void UDreamScrollBox::HandleFaceSelectionStateChanged(EUISelectableSelectionState InState, bool /*bInImmediate*/)
+{
+	// The gate lives here because the selectable cannot be switched off: a box whose bIsFocusable was
+	// turned back off keeps the behaviour (destroying it costs the designer a details rebuild) but
+	// stops announcing, which is what "not a focus target" has to mean from outside.
+	if (!GetIsFocusable())
+	{
+		return;
+	}
+	// The EDGE, not the state: the selectable re-applies its state for a repaint as well as for a
+	// change, and a box that announced "focused" on every repaint would fire dozens of times for one
+	// press.
+	const bool bFocused = InState == EUISelectableSelectionState::Focused;
+	if (bFocused == bWasFocused)
+	{
+		return;
+	}
+	bWasFocused = bFocused;
+	// Through the base's own notify rather than a broadcast of our own: it is the same event every
+	// other widget raises, and it carries the accessibility announcement with it. The selectable's
+	// state change says nothing about WHICH pointer, so that half of the payload is honestly empty.
+	const int32 FocusUserIndex = FMath::Max(GetOwningPlayerIndex(), 0);
+	if (bFocused)
+	{
+		NotifyFocusReceived(FocusUserIndex, INDEX_NONE);
+	}
+	else
+	{
+		NotifyFocusLost(FocusUserIndex, INDEX_NONE);
+	}
+}
+
+void UDreamScrollBox::HandleContentFocusMoved(UDreamWidget* InFocusedWidget)
+{
+	// The box's own face reaching here is not "focus moved INSIDE the box" -- that is the box taking
+	// focus, which OnFocusReceived already said. Everything else under it is content.
+	if (InFocusedWidget != nullptr && InFocusedWidget != FaceNode && InFocusedWidget != this)
+	{
+		OnFocusUpdated.Broadcast(InFocusedWidget);
+	}
+}
+
+void UDreamScrollBox::PushScrollBehaviourSettings()
+{
+	RefreshFocusTarget();
+	if (ScrollView == nullptr)
+	{
+		return;
+	}
+	// One list, called from the style push and from every setter, because the TEMPLATE road gives
+	// this control a view it just added -- carrying the library's defaults rather than what the
+	// control was authored with. A knob that only the setter pushed would be a knob a template-built
+	// box silently did without.
+	ScrollView->SetScrollSensitivity(ScrollSensitivity);
+	ScrollView->SetDecelerateRate(DecelerateRate);
+	ScrollView->SetAnimateWheelScrolling(bAnimateWheelScrolling);
+	ScrollView->SetWheelScrollAnimationDuration(WheelScrollAnimationDuration);
+	ScrollView->SetWheelScrollMultiplier(WheelScrollMultiplier);
+	ScrollView->SetConsumeMouseWheel(ConsumeMouseWheel);
+	ScrollView->SetAllowOverscroll(bAllowOverscroll);
+	ScrollView->SetBackPadScrolling(bBackPadScrolling);
+	ScrollView->SetFrontPadScrolling(bFrontPadScrolling);
+	ScrollView->SetEnableTouchScrolling(bEnableTouchScrolling);
+	ScrollView->SetAllowRightClickDragScrolling(bAllowRightClickDragScrolling);
+	ScrollView->SetConsumePointerInput(bConsumePointerInput);
+	ScrollView->SetAnalogMouseWheelKey(AnalogMouseWheelKey);
+	ScrollView->SetScrollWhenFocusChanges(ScrollWhenFocusChanges);
+	ScrollView->SetNavigationDestination(NavigationDestination);
+	ScrollView->SetNavigationScrollPadding(NavigationScrollPadding);
+}
+
+void UDreamScrollBox::SetStyle(const FDreamScrollBoxStyle& InStyle)
+{
+	Style = InStyle;
+	// The whole look, and the geometry that follows from it: the bar's thickness and margin are the
+	// gutter, so a style write is a re-layout rather than a repaint.
+	ApplyStyle();
 }
 
 float UDreamScrollBox::GetScrollProgress() const
@@ -266,6 +411,8 @@ float UDreamScrollBox::GetScrollProgress() const
 void UDreamScrollBox::SetScrollProgress(float InProgress)
 {
 	ScrollProgress = InProgress;
+	// Code moving the content, so the event that comes back out is not the player's.
+	FScopedProgrammaticScroll Guard(*this);
 	PushScrollProgress();
 }
 
@@ -355,6 +502,7 @@ void UDreamScrollBox::ScrollToStart()
 {
 	if (ScrollView != nullptr)
 	{
+		FScopedProgrammaticScroll Guard(*this);
 		ScrollView->ScrollToStart();
 	}
 }
@@ -363,13 +511,240 @@ void UDreamScrollBox::ScrollToEnd()
 {
 	if (ScrollView != nullptr)
 	{
+		FScopedProgrammaticScroll Guard(*this);
 		ScrollView->ScrollToEnd();
 	}
 }
 
-bool UDreamScrollBox::ScrollWidgetIntoView(UDreamWidget* InWidget, bool bInAnimate)
+bool UDreamScrollBox::ScrollWidgetIntoView(UDreamWidget* InWidget, bool bInAnimate,
+	EDreamUIScrollDestination InDestination, float InPadding)
 {
-	return ScrollView != nullptr && ScrollView->ScrollWidgetIntoView(InWidget, bInAnimate);
+	if (ScrollView == nullptr)
+	{
+		return false;
+	}
+	FScopedProgrammaticScroll Guard(*this);
+	// The duration stays the behaviour's default: UMG's box has no per-call duration either, and a
+	// fifth parameter for it would be a number nobody at this level has an opinion about.
+	return ScrollView->ScrollWidgetIntoView(InWidget, bInAnimate, 0.25f, InDestination, InPadding);
+}
+
+void UDreamScrollBox::EndInertialScrolling()
+{
+	if (ScrollView != nullptr)
+	{
+		ScrollView->EndInertialScrolling();
+	}
+}
+
+bool UDreamScrollBox::GetIsScrolling() const
+{
+	return ScrollView != nullptr && ScrollView->IsScrolling();
+}
+
+float UDreamScrollBox::GetScrollOffsetOfEnd() const
+{
+	if (ScrollView == nullptr)
+	{
+		return 0.0f;
+	}
+	// The extent IS the offset at which the end is in view: the offset runs from zero to it.
+	const FVector2D Extent = ScrollView->GetScrollableExtent();
+	return static_cast<float>(IsHorizontal() ? Extent.X : Extent.Y);
+}
+
+float UDreamScrollBox::GetViewFraction() const
+{
+	if (ScrollView == nullptr)
+	{
+		return 1.0f;
+	}
+	const bool bHorizontal = IsHorizontal();
+	const double Viewport = bHorizontal ? ScrollView->GetViewportSize().X : ScrollView->GetViewportSize().Y;
+	const double Content = bHorizontal ? ScrollView->GetContentSize().X : ScrollView->GetContentSize().Y;
+	// Content that fits shows all of itself, which is one -- not a fraction over a smaller number.
+	if (Content <= Viewport || Content <= UE_SMALL_NUMBER)
+	{
+		return 1.0f;
+	}
+	return static_cast<float>(FMath::Clamp(Viewport / Content, 0.0, 1.0));
+}
+
+float UDreamScrollBox::GetViewOffsetFraction() const
+{
+	// The progress the behaviour already maintains: offset over extent, zero on an axis with nowhere
+	// to go. A second division here would be the same arithmetic in a second place.
+	return GetScrollProgress();
+}
+
+float UDreamScrollBox::GetOverscrollOffset() const
+{
+	if (ScrollView == nullptr)
+	{
+		return 0.0f;
+	}
+	const FVector2D Overscroll = ScrollView->GetOverscrollOffset();
+	return static_cast<float>(IsHorizontal() ? Overscroll.X : Overscroll.Y);
+}
+
+float UDreamScrollBox::GetOverscrollPercentage() const
+{
+	if (ScrollView == nullptr)
+	{
+		return 0.0f;
+	}
+	const FVector2D Percentage = ScrollView->GetOverscrollPercentage();
+	return static_cast<float>(IsHorizontal() ? Percentage.X : Percentage.Y);
+}
+
+float UDreamScrollBox::GetScrollbarThickness() const
+{
+	// The RESOLVED style, not the inline one: a box wearing the project sheet has a thickness the
+	// sheet decided, and answering with the untouched inline field would describe a bar nobody sees.
+	return ResolveStyle(Style, &UDreamUIStyleSheet::ScrollBoxStyle).Bar.Thickness;
+}
+
+void UDreamScrollBox::SetScrollbarThickness(float InThickness)
+{
+	Style.Bar.Thickness = FMath::Max(0.0f, InThickness);
+	// Written onto the inline style AND switched to it: a thickness pushed at runtime is this
+	// instance's own answer, and leaving StyleSource pointing at the sheet would mean the next style
+	// push quietly threw the number away. The same move UMG's setter makes by having no sheet at all.
+	StyleSource = EDreamUIStyleSource::Inline;
+	ApplyStyle();
+}
+
+FMargin UDreamScrollBox::GetScrollbarPadding() const
+{
+	return ResolveStyle(Style, &UDreamUIStyleSheet::ScrollBoxStyle).Bar.BarPadding;
+}
+
+void UDreamScrollBox::SetScrollbarPadding(FMargin InPadding)
+{
+	Style.Bar.BarPadding = InPadding;
+	StyleSource = EDreamUIStyleSource::Inline;
+	ApplyStyle();
+}
+
+void UDreamScrollBox::SetAlwaysShowScrollbar(bool bInAlwaysShow)
+{
+	SetScrollBarVisibility(bInAlwaysShow
+		? EDreamScrollBoxScrollbarVisibility::Permanent
+		: EDreamScrollBoxScrollbarVisibility::AutoHide);
+}
+
+void UDreamScrollBox::SetAlwaysShowScrollbarTrack(bool bInAlwaysShow)
+{
+	if (bAlwaysShowScrollbarTrack == bInAlwaysShow)
+	{
+		return;
+	}
+	bAlwaysShowScrollbarTrack = bInAlwaysShow;
+	// The gutter moves with it, so this is a re-layout and not a visibility flip.
+	ApplyStyle();
+}
+
+void UDreamScrollBox::SetWheelScrollAnimationDuration(float InDuration)
+{
+	WheelScrollAnimationDuration = FMath::Max(0.0f, InDuration);
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetWheelScrollAnimationDuration(WheelScrollAnimationDuration);
+	}
+}
+
+void UDreamScrollBox::SetWheelScrollMultiplier(float InMultiplier)
+{
+	WheelScrollMultiplier = FMath::Max(0.0f, InMultiplier);
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetWheelScrollMultiplier(WheelScrollMultiplier);
+	}
+}
+
+void UDreamScrollBox::SetConsumeMouseWheel(EDreamScrollBoxConsumeMouseWheel InConsume)
+{
+	ConsumeMouseWheel = InConsume;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetConsumeMouseWheel(InConsume);
+	}
+}
+
+void UDreamScrollBox::SetAllowOverscroll(bool bInAllow)
+{
+	bAllowOverscroll = bInAllow;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetAllowOverscroll(bInAllow);
+	}
+}
+
+void UDreamScrollBox::SetBackPadScrolling(bool bInPad)
+{
+	bBackPadScrolling = bInPad;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetBackPadScrolling(bInPad);
+		// The pad changes how far there is to go, so the bar's visible fraction moved and the
+		// auto-hide answer may have too -- both of which are decided in the style push.
+		ApplyStyle();
+	}
+}
+
+void UDreamScrollBox::SetFrontPadScrolling(bool bInPad)
+{
+	bFrontPadScrolling = bInPad;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetFrontPadScrolling(bInPad);
+		ApplyStyle();
+	}
+}
+
+void UDreamScrollBox::SetEnableTouchScrolling(bool bInEnable)
+{
+	bEnableTouchScrolling = bInEnable;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetEnableTouchScrolling(bInEnable);
+	}
+}
+
+void UDreamScrollBox::SetAllowRightClickDragScrolling(bool bInAllow)
+{
+	bAllowRightClickDragScrolling = bInAllow;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetAllowRightClickDragScrolling(bInAllow);
+	}
+}
+
+void UDreamScrollBox::SetConsumePointerInput(bool bInConsume)
+{
+	bConsumePointerInput = bInConsume;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetConsumePointerInput(bInConsume);
+	}
+}
+
+void UDreamScrollBox::SetAnalogMouseWheelKey(FKey InKey)
+{
+	AnalogMouseWheelKey = InKey;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetAnalogMouseWheelKey(InKey);
+	}
+}
+
+void UDreamScrollBox::SetScrollWhenFocusChanges(EDreamUIScrollWhenFocusChanges InRule)
+{
+	ScrollWhenFocusChanges = InRule;
+	if (ScrollView != nullptr)
+	{
+		ScrollView->SetScrollWhenFocusChanges(InRule);
+	}
 }
 
 float UDreamScrollBox::GetScrollOffset() const
@@ -388,6 +763,7 @@ void UDreamScrollBox::SetScrollOffset(float InOffset)
 	{
 		return;
 	}
+	FScopedProgrammaticScroll Guard(*this);
 	// The other axis is read back rather than zeroed: this control drives one, and the behaviour's
 	// setter takes both at once -- the same shape PushScrollProgress uses.
 	FVector2D Offset = ScrollView->GetScrollOffset();
@@ -528,6 +904,12 @@ void UDreamScrollBox::HandleScrollViewChanged(FVector2D InProgress)
 	// the control-level re-broadcast a consumer binds to.
 	OnScrolled.Broadcast(Axis);
 	OnValueChangedBP.Broadcast(Axis);
+	// UMG's OnUserScrolled, and the reason the guard exists: everything this control pushed itself
+	// arrives here too, and after the fact the value cannot say which road it came down.
+	if (!bPushingScroll)
+	{
+		OnUserScrolled.Broadcast(GetScrollOffset());
+	}
 }
 
 // The tag this class answers to in .dui.

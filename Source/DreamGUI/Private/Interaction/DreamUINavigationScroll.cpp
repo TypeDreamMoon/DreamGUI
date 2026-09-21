@@ -41,6 +41,9 @@ namespace DreamUINavigationScrollLocal
 			Ancestor = Ancestor->GetParent();
 		}
 	}
+
+	// Defined with the analog-scroll helpers further down; declared here because the reveal above them asks it too.
+	static FScrollAncestor FindInnermostScrollAncestor(const UDreamWidget* InWidget);
 }
 
 bool FDreamUINavigationScroll::IsReachableByScrolling(const UDreamWidget* InWidget)
@@ -93,16 +96,68 @@ bool FDreamUINavigationScroll::RevealWidget(UDreamWidget* InWidget, bool bAnimat
 	{
 		if (Ancestor.Box != nullptr)
 		{
-			bMovedAnything |= Ancestor.Box->ScrollWidgetIntoView(Target, bAnimate);
+			// Each container gets its own say on whether focus moves it at all. NoScroll still passes
+			// the target outwards: a list that declines to follow its own focus does not stop the page
+			// around it from bringing the LIST into view, which is a different question.
+			const EDreamUIScrollWhenFocusChanges Rule = Ancestor.Box->GetScrollWhenFocusChanges();
+			if (Rule != EDreamUIScrollWhenFocusChanges::NoScroll)
+			{
+				bMovedAnything |= Ancestor.Box->ScrollWidgetIntoView(Target,
+					bAnimate && Rule == EDreamUIScrollWhenFocusChanges::AnimatedScroll);
+			}
 			Target = Ancestor.Box->GetWidget() != nullptr ? Ancestor.Box->GetWidget() : Target;
 		}
 		if (Ancestor.View != nullptr)
 		{
-			bMovedAnything |= Ancestor.View->ScrollWidgetIntoView(Target, bAnimate);
+			const EDreamUIScrollWhenFocusChanges Rule = Ancestor.View->GetScrollWhenFocusChanges();
+			if (Rule != EDreamUIScrollWhenFocusChanges::NoScroll)
+			{
+				bMovedAnything |= Ancestor.View->ScrollWidgetIntoView(Target,
+					bAnimate && Rule == EDreamUIScrollWhenFocusChanges::AnimatedScroll);
+			}
+			// Announced whatever the rule said, and with the ORIGINAL widget rather than the walking
+			// target: "focus moved inside you" is true for every view on the way out, and a view that
+			// declines to scroll has not declined to know. Unconditional, because a control acting on
+			// it (returning focus to its selected row) must not depend on whether anything moved.
+			Ancestor.View->NotifyContentFocusMoved(InWidget);
 			Target = Ancestor.View->GetWidget() != nullptr ? Ancestor.View->GetWidget() : Target;
 		}
 	}
 	return bMovedAnything;
+}
+
+bool FDreamUINavigationScroll::ScrollByAnalogAxis(UDreamWidget* InWidget, const FKey& InAxisKey, const FVector2D& InDelta)
+{
+	if (!IsValid(InWidget))
+	{
+		return false;
+	}
+	const DreamUINavigationScrollLocal::FScrollAncestor Ancestor =
+		DreamUINavigationScrollLocal::FindInnermostScrollAncestor(InWidget);
+	// An unset key means "whatever the preset already routes here", which is how every container
+	// behaved before the key existed and is therefore what an untouched project still gets.
+	FKey Declared;
+	if (Ancestor.Box != nullptr)
+	{
+		Declared = Ancestor.Box->GetAnalogMouseWheelKey();
+	}
+	else if (Ancestor.View != nullptr)
+	{
+		// Two questions, asked in order: whether the stick drives this view at ALL, and then which
+		// axis does. Refusing here rather than further in means a view with gamepad scrolling off
+		// hands the gesture to nobody, which is what "off" has to mean -- the outer container is not
+		// a fallback for a switch the author turned off on the inner one.
+		if (!Ancestor.View->GetGamepadScrollingEnabled())
+		{
+			return false;
+		}
+		Declared = Ancestor.View->GetAnalogMouseWheelKey();
+	}
+	if (Declared.IsValid() && Declared != InAxisKey)
+	{
+		return false;
+	}
+	return ScrollByDelta(InWidget, InDelta);
 }
 
 namespace DreamUINavigationScrollLocal
