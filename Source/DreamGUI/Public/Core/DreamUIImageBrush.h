@@ -112,4 +112,30 @@ public:
 
 	UObject* GetResourceObject()const { return ResourceObject; }
 	void SetResourceObject(UObject* Value) { ResourceObject = Value; }
+
+	/**
+	 * Field for field -- UMG's FSlateBrush comparison, for this framework's brush.
+	 *
+	 * Exact on the floats rather than tolerant, because the question a caller asks with == is "did
+	 * anybody change this brush", and a near-comparison would answer no to a one-pixel nudge. The
+	 * fields a draw type does not use are compared too: they are still part of the value, and
+	 * skipping them would make two brushes equal today and unequal the moment DrawAs changed.
+	 */
+	bool operator==(const FDreamUIImageBrush& Other)const
+	{
+		return ResourceObject == Other.ResourceObject
+			&& TintColor == Other.TintColor
+			&& DrawAs == Other.DrawAs
+			&& ImageSize == Other.ImageSize
+			&& Margin == Other.Margin
+			&& UVRegion == Other.UVRegion
+			&& PixelsPerUnitMultiplier == Other.PixelsPerUnitMultiplier
+			&& FillAmount == Other.FillAmount
+			&& FillMethod == Other.FillMethod
+			&& FillOrigin == Other.FillOrigin
+			&& FillDirectionFlip == Other.FillDirectionFlip
+			&& CornerRadius == Other.CornerRadius
+			&& CornerSegments == Other.CornerSegments;
+	}
+	bool operator!=(const FDreamUIImageBrush& Other)const { return !(*this == Other); }
 };
