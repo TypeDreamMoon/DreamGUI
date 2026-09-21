@@ -261,12 +261,20 @@ public:
 		FTransform InverseCanvasTransform = FTransform::Identity;
 		/** The visual's widget's world transform. */
 		FTransform ItemWorldTransform = FTransform::Identity;
-		/** The visual's widget's world matrix; only read when bHasPerspectiveApplied. */
+		/** The visual's widget's world matrix; only read when bUseWorldMatrix. */
 		FMatrix ItemWorldMatrix = FMatrix::Identity;
 		/** Local-space 2D bounds of the geometry, i.e. what CalculateLocalBounds worked out. */
 		FVector2D LocalBoundsMin = FVector2D::ZeroVector;
 		FVector2D LocalBoundsMax = FVector2D::ZeroVector;
-		bool bHasPerspectiveApplied = false;
+		/**
+		 * The widget is drawn somewhere its FTransform cannot describe, so the vertices have to come
+		 * from ItemWorldMatrix instead.
+		 *
+		 * True for a perspective scope and for a render shear -- two features, one reason: both
+		 * contribute a shear, and FTransform has no room for one. Named for what it decides rather
+		 * than for either feature, because it now belongs to neither.
+		 */
+		bool bUseWorldMatrix = false;
 		bool bRequireNormalAndTangent = false;
 	};
 	/** Gathers FTransformVerticesParams from the two objects. Game thread only. */

@@ -34,6 +34,13 @@ UDreamWidget* DreamUITooltipPolicy::ResolveTooltipSource(UDreamWidget* InEnterWi
 		{
 			return Widget;
 		}
+		// The authored tooltip-widget class counts as an offer exactly as the text does. Without this
+		// a widget that named a tooltip class and no text was walked straight past, and the bubble of
+		// whichever ancestor happened to carry text showed instead.
+		if (Widget->GetToolTipWidgetClass() != nullptr)
+		{
+			return Widget;
+		}
 		if (Widget->GetClass()->ImplementsInterface(UDreamUITooltipSourceInterface::StaticClass()))
 		{
 			return Widget;
@@ -300,6 +307,12 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 				}
 			}
 		}
+	}
+	if (CustomClass == nullptr)
+	{
+		// The authored answer, after the two interface paths: an implementor that computes a class at
+		// runtime is being specific and should win over a class typed into the details panel.
+		CustomClass = InSource->GetToolTipWidgetClass();
 	}
 	if (CustomClass == nullptr && InSource->GetToolTipText().IsEmpty())
 	{

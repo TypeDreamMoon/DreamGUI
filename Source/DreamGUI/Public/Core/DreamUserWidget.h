@@ -104,6 +104,20 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "FieldNotify", meta = (DisplayName = "Remove Field Value Changed Delegate", ScriptName = "RemoveFieldValueChangedDelegate"))
 	void K2_RemoveFieldValueChangedDelegate(FFieldNotificationId FieldId, FFieldValueChangedDynamicDelegate Delegate);
+
+	/**
+	 * Tell everyone listening that a field changed -- UMG's K2_BroadcastFieldValueChanged.
+	 *
+	 * Until now the add and the remove were reflected and the BROADCAST was not, so a Blueprint could
+	 * subscribe to a field and then had no way to say the field had moved: a graph-side property
+	 * could be listened to and never announced. The C++ side has always had this; this is the same
+	 * call with a name resolved from a FieldNotificationId.
+	 *
+	 * BlueprintInternalUseOnly, as UMG marks it, because the useful node is the one the field-notify
+	 * property generates rather than this raw by-name call.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "FieldNotify", meta = (DisplayName = "Broadcast Field Value Changed", ScriptName = "BroadcastFieldValueChanged", BlueprintInternalUseOnly = "true"))
+	void K2_BroadcastFieldValueChanged(FFieldNotificationId FieldId);
 	/**
 	 * This instance's own hierarchy, instanced from the class template. Transient and
 	 * DuplicateTransient: it is regenerated from the class, never persisted and never copied.
@@ -277,53 +291,26 @@ public:
 	 * decides which screen it is added to, which event system's focus it takes, and whose input it
 	 * listens for.
 	 *
-	 * Resolved in UMG's order: an explicitly set controller first; then the nearest ancestor user
-	 * widget's, so a nested widget belongs to whoever hosts it without anybody having to say so; then
-	 * the world's first local player, which is the whole answer in a single-player game.
+	 * Resolved in UMG's order: an explicitly set controller first; then the base class's answer, which
+	 * is the nearest ancestor user widget's (so a nested widget belongs to whoever hosts it without
+	 * anybody having to say so) and then the world's first local player.
+	 *
+	 * The UFUNCTION lives on UDreamWidget, which is why there is none here: an override must not
+	 * repeat it.
 	 */
-	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
-	APlayerController* GetOwningPlayer() const;
+	virtual APlayerController* GetOwningPlayer() const override;
 
 	/** Point this widget (and everything it goes on to create) at a different local player. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Player")
 	void SetOwningPlayer(APlayerController* InPlayerController);
 
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
-	ULocalPlayer* GetOwningLocalPlayer() const;
-
-	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
 	APawn* GetOwningPlayerPawn() const;
 
-	/**
-	 * The local player INDEX this widget's screen, focus and input use -- the same number
-	 * UDreamEventSystem::UserIndex and UDreamBaseRaycaster::UserIndex are keyed by, so a widget owned
-	 * by the second local player is driven by the second player's event system without any caller
-	 * passing the number around.
-	 *
-	 * 0 whenever the owning player cannot be resolved, which is the single-player answer.
-	 */
-	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
-	int32 GetOwningPlayerIndex() const;
-
-	/** The local player index InPlayerController belongs to, or 0. Shared by everything that keys on it. */
-	static int32 GetLocalPlayerIndexOf(const APlayerController* InPlayerController);
-
-	// ---------------------------------------------------------------------------- focus, UMG's names
-
-	/** UMG's SetKeyboardFocus: take focus on the OWNING player's event system rather than on player 0. */
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Focus")
-	bool SetKeyboardFocus();
-
-	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Focus")
-	bool HasKeyboardFocus() const;
-
-	/** UMG's HasUserFocus: does the named player's focus sit on this widget? */
-	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget|Focus")
-	bool HasUserFocus(APlayerController* InPlayerController) const;
-
-	/** Give up focus if this widget holds the owning player's. */
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget|Focus")
-	void ClearKeyboardFocus();
+	// GetOwningLocalPlayer, GetOwningPlayerIndex, GetLocalPlayerIndexOf and the four focus verbs
+	// (SetKeyboardFocus, HasKeyboardFocus, HasUserFocus, ClearKeyboardFocus) moved to UDreamWidget:
+	// every widget can name its owning player now, and their bodies never referred to anything a user
+	// widget has. They are still reachable here by inheritance, so no graph or call site changed.
 
 	// ---------------------------------------------------------------------------- viewport placement
 
