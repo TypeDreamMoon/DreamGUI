@@ -1,0 +1,26 @@
+{
+	"umgClass": "UInputKeySelector",
+	"umgHeader": "Components/InputKeySelector.h",
+	"dreamClass": "UDreamInputKeySelector",
+	"members": [
+		{"umg": "WidgetStyle", "kind": "property", "status": "map", "dream": "Style", "note": "FDreamInputKeySelectorStyle: the button's five state colours plus the sixth this control needs -- Listening, which is the whole of the 'press a key now' feedback."},
+		{"umg": "TextStyle", "kind": "property", "status": "map", "dream": "Style", "note": "The label's colour and size are FDreamInputKeySelectorStyle::LabelColor and FontSize; this library does not split a control's look into a button style and a text style."},
+		{"umg": "SelectedKey", "kind": "property", "status": "map", "dream": "SelectedChord", "note": "UMG's SelectedKey IS an FInputChord, so the chord is the faithful mapping. This control also carries a bare-FKey SelectedKey as the compatibility spelling existing .dui authors, kept coherent through every writer."},
+		{"umg": "Margin", "kind": "property", "status": "map", "dream": "FDreamInputKeySelectorStyle::ContentPadding", "note": "Space around the key's name. Appearance, so it lives in the style struct."},
+		{"umg": "KeySelectionText", "kind": "property", "status": "map", "dream": "ListeningText", "note": "SetKeySelectionText carries the UMG name and forwards. Empty keeps the built-in words, so a project overrides the prompt without overriding the control."},
+		{"umg": "NoKeySpecifiedText", "kind": "property", "status": "map", "dream": "NoKeyText", "note": "SetNoKeySpecifiedText carries the UMG name and forwards."},
+		{"umg": "bAllowModifierKeys", "kind": "property", "status": "adopt", "dream": "bAllowModifierKeys", "note": "Only the CAPTURE path reads it: NotifyKeyPressed and NotifyChordPressed are fed by a caller that already knows what was held."},
+		{"umg": "bAllowGamepadKeys", "kind": "property", "status": "adopt", "dream": "bAllowGamepadKeys", "note": "On by default, which is what the capture agent already did. Off, a pad key is neither bound nor CONSUMED -- it was meant for something else, and swallowing it would leave a controller doing nothing while a selector is armed. The escape keys are checked first, so the pad's B is still a way out."},
+		{"umg": "EscapeKeys", "kind": "property", "status": "adopt", "dream": "EscapeKeys", "note": "Seeded with Escape and the pad's B. Emptying it is legal and means the click is the only way out, which the header documents as a trap."},
+		{"umg": "OnKeySelected", "kind": "event", "status": "map", "dream": "OnChordSelected", "note": "UMG's carries an FInputChord, which is OnChordSelected here. This control also fires OnKeySelected with the bare key from the same moment, for a consumer that only cares which key."},
+		{"umg": "OnIsSelectingKeyChanged", "kind": "event", "status": "map", "dream": "OnIsListeningChanged", "note": "Carries the new state, where UMG's carries nothing -- a handler that dims the rest of the screen needs to know which way it went."},
+		{"umg": "SetSelectedKey", "kind": "function", "status": "map", "dream": "SetSelectedChord", "note": "UMG's takes an FInputChord. SetSelectedKey exists here too and takes a bare FKey, which CLEARS any modifiers: 'bind exactly this key' is what a caller of the key-shaped setter is saying."},
+		{"umg": "SetKeySelectionText", "kind": "function", "status": "adopt", "dream": "SetKeySelectionText", "note": "Forwards to SetListeningText, which re-labels at once."},
+		{"umg": "SetNoKeySpecifiedText", "kind": "function", "status": "adopt", "dream": "SetNoKeySpecifiedText", "note": "Forwards to SetNoKeyText."},
+		{"umg": "SetAllowModifierKeys", "kind": "function", "status": "adopt", "dream": "SetAllowModifierKeys", "note": ""},
+		{"umg": "SetAllowGamepadKeys", "kind": "function", "status": "adopt", "dream": "SetAllowGamepadKeys", "note": ""},
+		{"umg": "GetIsSelectingKey", "kind": "function", "status": "adopt", "dream": "GetIsSelectingKey", "note": "The armed state under UMG's name; GetIsListening is the library's own spelling of the same flag."},
+		{"umg": "SetTextBlockVisibility", "kind": "function", "status": "adopt", "dream": "SetTextBlockVisibility", "note": "Takes EDreamWidgetVisibility, this library's own five answers for the same question. The LABEL only: the face keeps its visibility, so the selector stays clickable, which is the documented way out of the armed state."},
+		{"umg": "SetEscapeKeys", "kind": "function", "status": "adopt", "dream": "SetEscapeKeys", "note": ""}
+	]
+}

@@ -1,0 +1,8 @@
+{
+	"umgClass": "UHorizontalBox",
+	"umgHeader": "Components/HorizontalBox.h",
+	"dreamClass": "UDreamLayoutContainerHorizontalBox",
+	"members": [
+		{"umg": "AddChildToHorizontalBox", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb; AddChild returns the slot."}
+	]
+}

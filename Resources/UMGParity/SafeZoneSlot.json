@@ -1,0 +1,12 @@
+{
+	"umgClass": "USafeZoneSlot",
+	"umgHeader": "Components/SafeZoneSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "bIsTitleSafe", "kind": "property", "status": "map", "dream": "UDreamLayoutContainerSafeZone::bUsePlatformSafeZone", "note": "A safe zone takes one child, so 'this slot asks for the platform's safe area' and 'this panel applies it' are the same switch; it is kept on the panel, next to the four side toggles it works with."},
+		{"umg": "SafeAreaScale", "kind": "property", "status": "map", "dream": "UDreamLayoutContainerSafeZone::SafeAreaScale", "note": "Same per-side multiplier over the platform safe margin as Slate's; on the panel for the same reason as bIsTitleSafe."},
+		{"umg": "HAlign", "kind": "property", "status": "map", "dream": "HorizontalAlignment", "note": "The generic slot alignment; UMG abbreviates it only on this slot."},
+		{"umg": "VAlign", "kind": "property", "status": "map", "dream": "VerticalAlignment", "note": ""},
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""}
+	]
+}

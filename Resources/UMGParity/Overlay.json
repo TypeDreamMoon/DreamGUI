@@ -1,0 +1,9 @@
+{
+	"umgClass": "UOverlay",
+	"umgHeader": "Components/Overlay.h",
+	"dreamClass": "UDreamLayoutContainerOverlay",
+	"members": [
+		{"umg": "AddChildToOverlay", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb; AddChild returns the slot."},
+		{"umg": "ReplaceOverlayChildAt", "kind": "function", "status": "map", "dream": "ReplaceChildAt", "note": "On the panel base, so every panel has it rather than the two UMG happens to give it to."}
+	]
+}

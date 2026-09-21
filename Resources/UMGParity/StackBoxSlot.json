@@ -1,0 +1,11 @@
+{
+	"umgClass": "UStackBoxSlot",
+	"umgHeader": "Components/StackBoxSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "Size", "kind": "property", "status": "map", "dream": "SizeRule", "note": "FSlateChildSize is a rule plus a value; the rule is SizeRule (Auto/Fill) and the value is FillWeight."},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""}
+	]
+}

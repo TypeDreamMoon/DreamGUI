@@ -1,0 +1,13 @@
+{
+	"umgClass": "UGridPanel",
+	"umgHeader": "Components/GridPanel.h",
+	"dreamClass": "UDreamLayoutContainerGridPanel",
+	"members": [
+		{"umg": "ColumnFill", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "RowFill", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "AddChildToGrid", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb; the row and column are set on the slot it returns."},
+		{"umg": "SetColumnFill", "kind": "function", "status": "map", "dream": "SetColumnFillAt", "note": "UMG's takes an index and a coefficient. The plain name is already the whole-array BlueprintSetter for ColumnFill and two reflected functions cannot share a name, so the per-track form carries the suffix."},
+		{"umg": "SetRowFill", "kind": "function", "status": "map", "dream": "SetRowFillAt", "note": "As SetColumnFill."},
+		{"umg": "ClearFill", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

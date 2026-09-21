@@ -1,0 +1,15 @@
+{
+	"umgClass": "UCircularThrobber",
+	"umgHeader": "Components/CircularThrobber.h",
+	"dreamClass": "UDreamThrobber",
+	"members": [
+		{"umg": "NumberOfPieces", "kind": "property", "status": "map", "dream": "FDreamThrobberStyle::NumberOfPieces", "note": "One control and one style for UMG's two throbbers; Shape = Circular is this class."},
+		{"umg": "Period", "kind": "property", "status": "map", "dream": "FDreamThrobberStyle::Period", "note": "Seconds for one full cycle, and it drives the linear shape too -- UMG only offers it on the circular one."},
+		{"umg": "Radius", "kind": "property", "status": "map", "dream": "FDreamThrobberStyle::Radius", "note": "How far out the pieces ride, measured from the middle. Circular only, as in UMG."},
+		{"umg": "Image", "kind": "property", "status": "map", "dream": "FDreamThrobberStyle::PieceBrush", "note": "See the Throbber table: a piece is a procedural rect, so the brush is its body texture."},
+		{"umg": "SetNumberOfPieces", "kind": "function", "status": "adopt", "dream": "", "note": "One control for UMG's two, so this is the same call the Throbber table lists."},
+		{"umg": "SetPeriod", "kind": "function", "status": "adopt", "dream": "", "note": "Drives the linear shape too, where UMG offers it only on the ring."},
+		{"umg": "SetRadius", "kind": "function", "status": "adopt", "dream": "", "note": "Circular only, as in UMG; the linear shape ignores it."},
+		{"umg": "bEnableRadius", "kind": "property", "status": "reject", "dream": "", "note": "The inline tick beside UMG's Radius, and Transient there: it exists so an unticked radius falls back to the Slate style's. A radius here is always the style's own number, so there is nothing for a tick to choose between."}
+	]
+}

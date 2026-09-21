@@ -1,0 +1,12 @@
+{
+	"umgClass": "UTreeView",
+	"umgHeader": "Components/TreeView.h",
+	"dreamClass": "UDreamTreeView",
+	"members": [
+		{"umg": "SetItemExpansion", "kind": "function", "status": "adopt", "dream": "", "note": "A one-line forward to SetItemExpanded, which is the name this control was written with and which every existing caller uses. By source index, so it survives a collapse above it."},
+		{"umg": "ExpandAll", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "CollapseAll", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "BP_OnGetItemChildren", "kind": "property", "status": "map", "dream": "OnGetItemChildren", "note": "FDreamTreeGetItemChildren, with UMG's signature. Single-cast like UMG's: this one is a QUESTION, and two answers to a question is an ambiguity nothing can resolve. Unbound, the walk falls back to IUITreeViewItem::GetTreeChildren."},
+		{"umg": "BP_OnItemExpansionChanged", "kind": "event", "status": "map", "dream": "OnItemExpansionChanged", "note": "Carries the source index and the new state. Fired after the visible rows have been rebuilt, so a handler counting rows sees the tree the user just made."}
+	]
+}

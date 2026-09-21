@@ -1,0 +1,25 @@
+{
+	"umgClass": "UGridSlot",
+	"umgHeader": "Components/GridSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "Row", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "RowSpan", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "Column", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ColumnSpan", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "Layer", "kind": "property", "status": "map", "dream": "ZOrder", "note": "A grid's layer and a slot's z-order are the same fact -- which children draw over which -- and the grid panel already reorders by ZOrder, stably. GetLayer/SetLayer exist under UMG's name and forward to it rather than storing a second number."},
+		{"umg": "Nudge", "kind": "property", "status": "adopt", "dream": "", "note": "Applied in UDreamPanelLayoutBase::ApplyChildRect, so every panel honours it, not just the grid; invisible to measurement, as a nudge must be."},
+		{"umg": "SetPadding", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetRow", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetRowSpan", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetColumn", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetColumnSpan", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetLayer", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetNudge", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

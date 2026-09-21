@@ -1,0 +1,10 @@
+{
+	"umgClass": "UStackBox",
+	"umgHeader": "Components/StackBox.h",
+	"dreamClass": "UDreamLayoutContainerStackBox",
+	"members": [
+		{"umg": "Orientation", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamPanelOrientation rather than Slate's EOrientation, so the .dui text and the details panel spell the same two words the rest of this plugin does."},
+		{"umg": "AddChildToStackBox", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb; AddChild returns the slot."},
+		{"umg": "ReplaceStackBoxChildAt", "kind": "function", "status": "map", "dream": "ReplaceChildAt", "note": "On the panel base, so every panel has it."}
+	]
+}

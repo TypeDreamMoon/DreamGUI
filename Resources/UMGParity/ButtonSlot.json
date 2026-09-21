@@ -1,0 +1,13 @@
+{
+	"umgClass": "UButtonSlot",
+	"umgHeader": "Components/ButtonSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetPadding", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

@@ -1,0 +1,8 @@
+{
+	"umgClass": "UVerticalBox",
+	"umgHeader": "Components/VerticalBox.h",
+	"dreamClass": "UDreamLayoutContainerVerticalBox",
+	"members": [
+		{"umg": "AddChildToVerticalBox", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb; AddChild returns the slot."}
+	]
+}

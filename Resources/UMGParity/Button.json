@@ -1,0 +1,28 @@
+{
+	"umgClass": "UButton",
+	"umgHeader": "Components/Button.h",
+	"dreamClass": "UDreamButton",
+	"members": [
+		{"umg": "WidgetStyle", "kind": "property", "status": "map", "dream": "Style", "note": "FDreamButtonStyle, resolved through StyleSource: the project sheet by default, this instance when told to."},
+		{"umg": "ColorAndOpacity", "kind": "property", "status": "adopt", "dream": "", "note": "The control takes UMG's FLinearColor and spends its ALPHA on its own RenderOpacity, which cascades to the face, the label and whatever else was put inside. Applied once at setup, never from the style pass: render opacity is a channel the host may also be driving, and a restyle that wrote 1 back over a fade would be a style pass undoing an animation. The colour half is deliberately not faked -- see UDreamBorder::ContentColorAndOpacity; BackgroundColor is the face's tint, which is the part a caller usually means."},
+		{"umg": "BackgroundColor", "kind": "property", "status": "adopt", "dream": "", "note": "FColor rather than FLinearColor, as every colour in this style family is. Multiplied over the face brush's own tint."},
+		{"umg": "ClickMethod", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamUIClickMethod; pushed onto the selectable underneath."},
+		{"umg": "TouchMethod", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamUITouchMethod."},
+		{"umg": "PressMethod", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamUIPressMethod."},
+		{"umg": "IsFocusable", "kind": "property", "status": "map", "dream": "UDreamWidget::bIsFocusable", "note": "Every widget here carries it, so a control-level copy would shadow the base member and be a second answer to one question."},
+		{"umg": "OnClicked", "kind": "event", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "OnPressed", "kind": "event", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "OnReleased", "kind": "event", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "OnHovered", "kind": "event", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "OnUnhovered", "kind": "event", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetStyle", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetColorAndOpacity", "kind": "function", "status": "map", "dream": "SetColorAndOpacity", "note": "Same half-and-half as the property above."},
+		{"umg": "SetBackgroundColor", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "IsPressed", "kind": "function", "status": "adopt", "dream": "", "note": "Asked of the behaviour's selection state rather than remembered on the control."},
+		{"umg": "SetClickMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetTouchMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetPressMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetAllowDragDrop", "kind": "function", "status": "adopt", "dream": "", "note": "Adds or destroys the face's UDreamUIDragSource, which is what gives a drag meaning here."},
+		{"umg": "bAllowDragDrop", "kind": "property", "status": "adopt", "dream": "", "note": "Off, as UMG has it."}
+	]
+}

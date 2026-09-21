@@ -1,0 +1,24 @@
+{
+	"umgClass": "UCheckBox",
+	"umgHeader": "Components/CheckBox.h",
+	"dreamClass": "UDreamToggle",
+	"members": [
+		{"umg": "CheckedState", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamCheckState, the same three values. bIsOn is the two-state compatibility spelling and mirrors it."},
+		{"umg": "WidgetStyle", "kind": "property", "status": "map", "dream": "Style", "note": "FDreamToggleStyle. Its CheckedBrush / UncheckedBrush / UndeterminedBrush are UMG's three mark images; StateFaces is the box's per-pointer-state drawing."},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "reject", "dream": "", "note": "This control is a box and its mark, with no content slot at all -- the text beside a check box is the consumer's own layout here. There is nothing for an alignment to align."},
+		{"umg": "ClickMethod", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamUIClickMethod; pushed onto the selectable underneath."},
+		{"umg": "TouchMethod", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "PressMethod", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "IsFocusable", "kind": "property", "status": "map", "dream": "UDreamWidget::bIsFocusable", "note": "Every widget here carries it; a control-level copy would shadow the base member."},
+		{"umg": "OnCheckStateChanged", "kind": "event", "status": "adopt", "dream": "", "note": "Carries the full state. OnToggleChanged is the bool projection and fires alongside it."},
+		{"umg": "IsPressed", "kind": "function", "status": "adopt", "dream": "", "note": "Asked of the behaviour's selection state rather than remembered on the control."},
+		{"umg": "IsChecked", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "GetCheckedState", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetIsChecked", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetCheckedState", "kind": "function", "status": "adopt", "dream": "", "note": "Undetermined parks the two-state behaviour at unchecked and lives on the control; a click leaves it by becoming checked, as UMG's does."},
+		{"umg": "SetClickMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetTouchMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetPressMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetStyle", "kind": "function", "status": "adopt", "dream": "", "note": "Not a UFUNCTION on UCheckBox (its Setter meta names it); added here because a style nothing can replace at runtime is a look only the designer can change."}
+	]
+}

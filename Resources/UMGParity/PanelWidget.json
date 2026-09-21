@@ -1,0 +1,17 @@
+{
+	"umgClass": "UPanelWidget",
+	"umgHeader": "Components/PanelWidget.h",
+	"dreamClass": "UDreamPanelLayoutBase",
+	"members": [
+		{"umg": "GetChildrenCount", "kind": "function", "status": "adopt", "dream": "", "note": "The whole family forwards to the widget that owns the container: the hierarchy belongs to UDreamWidget, and a second child list on the panel would be the one thing guaranteed to disagree with it."},
+		{"umg": "GetChildAt", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "GetAllChildren", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "GetChildIndex", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HasChild", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "RemoveChildAt", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "AddChild", "kind": "function", "status": "adopt", "dream": "", "note": "Returns the slot. UMG needs a typed AddChildTo<Panel> per panel because each panel has its own slot class; there is one UDreamPanelSlot here, so there is one verb."},
+		{"umg": "RemoveChild", "kind": "function", "status": "adopt", "dream": "", "note": "Detaches and leaves the child alive, as UMG's does; ownership passes to the caller."},
+		{"umg": "HasAnyChildren", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearChildren", "kind": "function", "status": "map", "dream": "DestroyAllChildren", "note": "Named for what it has to do here. UMG's merely detaches and lets GC take the pieces, which in this plugin would leave live registered widgets with nobody holding them."}
+	]
+}

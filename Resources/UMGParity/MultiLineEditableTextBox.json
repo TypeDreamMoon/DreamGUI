@@ -1,0 +1,24 @@
+{
+	"umgClass": "UMultiLineEditableTextBox",
+	"umgHeader": "Components/MultiLineEditableTextBox.h",
+	"dreamClass": "UDreamTextInput",
+	"members": [
+		{"umg": "Text", "kind": "property", "status": "map", "dream": "Text", "note": "The multi-line boxed field is UDreamTextInput with bMultiLine ticked -- one axis of UMG's four classes is a property here. FString; see EditableTextBox.json."},
+		{"umg": "HintText", "kind": "property", "status": "map", "dream": "Placeholder", "note": ""},
+		{"umg": "WidgetStyle", "kind": "property", "status": "map", "dream": "Style", "note": "One FDreamTextInputStyle for both line modes; the line count changes the field's height, not its look."},
+		{"umg": "bIsReadOnly", "kind": "property", "status": "map", "dream": "bReadOnly", "note": ""},
+		{"umg": "AllowContextMenu", "kind": "property", "status": "map", "dream": "bAllowContextMenu", "note": ""},
+		{"umg": "VirtualKeyboardOptions", "kind": "property", "status": "adopt", "dream": "VirtualKeyboardOptions", "note": "No Blueprint accessor; FVirtualKeyboardOptions has no BlueprintType, exactly as in UMG."},
+		{"umg": "VirtualKeyboardDismissAction", "kind": "property", "status": "adopt", "dream": "VirtualKeyboardDismissAction", "note": ""},
+		{"umg": "OnTextChanged", "kind": "event", "status": "map", "dream": "OnTextChanged", "note": "Carries FString."},
+		{"umg": "OnTextCommitted", "kind": "event", "status": "map", "dream": "OnTextCommitted", "note": "In multi-line mode the commit moment is Enter with one of MultiLineSubmitFunctionKeys held, which is the library's answer to 'Enter makes a line, so what submits'."},
+		{"umg": "GetText", "kind": "function", "status": "map", "dream": "GetText", "note": "Returns FString."},
+		{"umg": "SetText", "kind": "function", "status": "map", "dream": "SetText", "note": "Takes FString."},
+		{"umg": "GetHintText", "kind": "function", "status": "adopt", "dream": "GetHintText", "note": ""},
+		{"umg": "SetHintText", "kind": "function", "status": "adopt", "dream": "SetHintText", "note": ""},
+		{"umg": "SetError", "kind": "function", "status": "adopt", "dream": "SetError", "note": ""},
+		{"umg": "SetIsReadOnly", "kind": "function", "status": "adopt", "dream": "SetIsReadOnly", "note": ""},
+		{"umg": "SetTextStyle", "kind": "function", "status": "map", "dream": "SetStyle", "note": "UMG's FTextBlockStyle half of the box's look. Colour and size are FDreamTextInputStyle's; the outline/shadow/glow half is UDreamText::TextStyle (FDreamTextStyle) and the control does not forward it yet -- see EditableText.json GetFont for where the typeface and the effects each live."},
+		{"umg": "SetForegroundColor", "kind": "function", "status": "map", "dream": "FDreamTextInputStyle::TextColor", "note": "Appearance lives in the style struct; it moves through SetStyle or the project sheet."}
+	]
+}

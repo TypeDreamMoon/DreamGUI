@@ -1,0 +1,15 @@
+{
+	"umgClass": "UUniformGridSlot",
+	"umgHeader": "Components/UniformGridSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "Row", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "Column", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetRow", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetColumn", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

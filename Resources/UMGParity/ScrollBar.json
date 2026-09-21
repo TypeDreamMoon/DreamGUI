@@ -1,0 +1,14 @@
+{
+	"umgClass": "UScrollBar",
+	"umgHeader": "Components/ScrollBar.h",
+	"dreamClass": "UDreamScrollBar",
+	"members": [
+		{"umg": "WidgetStyle", "kind": "property", "status": "map", "dream": "Style", "note": "FDreamScrollBarStyle, resolved against the project style sheet. Get/SetStyle."},
+		{"umg": "bAlwaysShowScrollbar", "kind": "property", "status": "adopt", "dream": "", "note": "Default true, not UMG's false: this bar has always drawn whatever it was placed into, and a screen whose bar vanished the moment its list fitted would be a layout that changed under everyone. Only a bar attached to a scroll view can hide itself -- a bare bar is a value control with no 'nothing to scroll' state."},
+		{"umg": "bAlwaysShowScrollbarTrack", "kind": "property", "status": "adopt", "dream": "", "note": "Keeps the bar on screen with its handle asleep. Only consulted while bAlwaysShowScrollbar is off and the attached view fits."},
+		{"umg": "Orientation", "kind": "property", "status": "map", "dream": "Direction", "note": "EUIScrollbarDirectionType, which says which way it runs AND which end is zero -- four answers where UMG's EOrientation has two. Get/SetDirection."},
+		{"umg": "Thickness", "kind": "property", "status": "map", "dream": "FDreamScrollBarStyle::Thickness", "note": "In the style, because it is what the bar is drawn from. A float: a bar has one thickness across its own axis, and its length is whatever it is scrolling."},
+		{"umg": "Padding", "kind": "property", "status": "map", "dream": "FDreamScrollBarStyle::BarPadding", "note": "New style field, default FMargin(0) = what every bar has drawn. Spent on the bar's rect, not the track's, so the track still reaches both ends of what the bar spans."},
+		{"umg": "SetState", "kind": "function", "status": "adopt", "dream": "", "note": "Position and visible fraction in one call, which is the shape a scroll view actually pushes: writing them one at a time lays the handle out twice for one change."}
+	]
+}
