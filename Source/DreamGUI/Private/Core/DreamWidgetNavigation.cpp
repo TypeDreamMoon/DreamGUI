@@ -129,6 +129,26 @@ void UDreamWidgetNavigation::SetRule(EDreamUINavigationDirection InDirection, ED
 	GetNavigationData(InDirection).Rule = InRule;
 }
 
+void UDreamWidgetNavigation::SetAllNavigationRules(EDreamUINavigationRule InRule, FName InWidgetToFocus)
+{
+	// None is excluded on purpose: GetNavigationData answers the Up block for it, so including it
+	// would write Up twice and make the list read as though there were seven directions.
+	static const EDreamUINavigationDirection AllDirections[] = {
+		EDreamUINavigationDirection::Left,
+		EDreamUINavigationDirection::Right,
+		EDreamUINavigationDirection::Up,
+		EDreamUINavigationDirection::Down,
+		EDreamUINavigationDirection::Next,
+		EDreamUINavigationDirection::Prev,
+	};
+	for (const EDreamUINavigationDirection Direction : AllDirections)
+	{
+		FDreamWidgetNavigationData& Data = GetNavigationData(Direction);
+		Data.Rule = InRule;
+		Data.WidgetToFocus = InWidgetToFocus;
+	}
+}
+
 void UDreamWidgetNavigation::SetExplicitTarget(EDreamUINavigationDirection InDirection, UDreamWidget* InTarget)
 {
 	if (InDirection == EDreamUINavigationDirection::None)
@@ -151,6 +171,18 @@ void UDreamWidgetNavigation::SetCustomDelegate(EDreamUINavigationDirection InDir
 	FDreamWidgetNavigationData& Data = GetNavigationData(InDirection);
 	Data.CustomDelegate = InDelegate;
 	Data.Rule = InDelegate.IsBound() ? EDreamUINavigationRule::Custom : EDreamUINavigationRule::Escape;
+}
+
+void UDreamWidgetNavigation::SetNavigationRuleCustomBoundary(EDreamUINavigationDirection InDirection,
+	const FDreamCustomWidgetNavigationDelegate& InDelegate)
+{
+	if (InDirection == EDreamUINavigationDirection::None)
+	{
+		return;
+	}
+	FDreamWidgetNavigationData& Data = GetNavigationData(InDirection);
+	Data.CustomDelegate = InDelegate;
+	Data.Rule = InDelegate.IsBound() ? EDreamUINavigationRule::CustomBoundary : EDreamUINavigationRule::Escape;
 }
 
 bool UDreamWidgetNavigation::CanNavigateHere_Implementation() const
@@ -208,11 +240,24 @@ UDreamWidget* UDreamWidgetNavigation::ResolveTarget(EDreamUINavigationDirection 
 
 	case EDreamUINavigationRule::Wrap:
 	case EDreamUINavigationRule::Escape:
+	case EDreamUINavigationRule::CustomBoundary:
 	default:
-		// Both are scan answers, and the scan is the caller's to run: it needs the boundary rule and
-		// the confining scope, neither of which is this component's business.
+		// All three are scan answers, and the scan is the caller's to run: it needs the boundary rule
+		// and the confining scope, neither of which is this component's business. CustomBoundary
+		// belongs here rather than beside Custom precisely because it must let the scan go first --
+		// its delegate is the edge case, and only the scan knows whether this move is one.
 		return nullptr;
 	}
+}
+
+UDreamWidget* UDreamWidgetNavigation::AskBoundaryDelegate(EDreamUINavigationDirection InDirection)
+{
+	const FDreamWidgetNavigationData& Data = GetNavigationData(InDirection);
+	if (Data.Rule != EDreamUINavigationRule::CustomBoundary || !Data.CustomDelegate.IsBound())
+	{
+		return nullptr;
+	}
+	return Data.CustomDelegate.Execute(InDirection);
 }
 
 bool UDreamWidgetNavigation::OnNavigate_Implementation(EDreamUINavigationDirection InDirection, TScriptInterface<IDreamNavigationInterface>& OutResult)
@@ -244,6 +289,15 @@ bool UDreamWidgetNavigation::OnNavigate_Implementation(EDreamUINavigationDirecti
 	{
 		// Next and Prev have no direction of their own: they are right-then-down and left-then-up.
 		UDreamUIBehaviour* Found = DreamUINavigationScan::ScanSequential(this, InDirection);
+		if (Found == this)
+		{
+			// The sequence ran out, which for Next and Prev IS the boundary.
+			if (UDreamWidget* FromDelegate = AskBoundaryDelegate(InDirection))
+			{
+				OutResult = DreamUINavigationScan::FindNavigationBehaviour(FromDelegate);
+				return true;
+			}
+		}
 		OutResult = Found != this ? Found : nullptr;
 		return true;
 	}
@@ -251,6 +305,17 @@ bool UDreamWidgetNavigation::OnNavigate_Implementation(EDreamUINavigationDirecti
 	if (Found == this && GetNavigationData(InDirection).Rule == EDreamUINavigationRule::Wrap)
 	{
 		Found = DreamUINavigationScan::ScanWrap(this, Direction, nullptr, nullptr);
+	}
+	if (Found == this)
+	{
+		// Nothing in that direction inside the area: this move leaves it, which is the one case
+		// CustomBoundary asks about. Asked AFTER the scan and after Wrap, so a delegate never
+		// pre-empts a neighbour that was there all along.
+		if (UDreamWidget* FromDelegate = AskBoundaryDelegate(InDirection))
+		{
+			OutResult = DreamUINavigationScan::FindNavigationBehaviour(FromDelegate);
+			return true;
+		}
 	}
 	OutResult = Found != this ? Found : nullptr;
 	return true;

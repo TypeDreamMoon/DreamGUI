@@ -248,4 +248,68 @@ bool FDreamWidgetNavigationWithoutSelectableTest::RunTest(const FString& Paramet
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetNavigationCustomBoundaryTest,
+	"DreamGUI.Navigation.Rules.CustomBoundaryIsAskedOnlyWhenTheMoveRunsOffTheEdge",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetNavigationCustomBoundaryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetNavigationTestLocal;
+	FScopedGameWorld TestWorld;
+
+	// Two neighbours side by side, and a third widget somewhere else entirely that only the delegate
+	// knows about -- "the next page", in the shape the rule exists for.
+	UDreamWidget* Root = MakeWidget(TestWorld.World, TEXT("Root"), 0.0f, 0.0f);
+	UDreamWidget* From = MakeWidget(TestWorld.World, TEXT("From"), 0.0f, 0.0f);
+	UDreamWidget* Neighbour = MakeWidget(TestWorld.World, TEXT("Neighbour"), 200.0f, 0.0f);
+	UDreamWidget* OffPage = MakeWidget(TestWorld.World, TEXT("OffPage"), 0.0f, -4000.0f);
+	From->TrySetParent(Root, false);
+	Neighbour->TrySetParent(Root, false);
+	OffPage->TrySetParent(Root, false);
+
+	UDreamWidgetNavigation* Navigation = From->GetOrCreateNavigation();
+	Neighbour->GetOrCreateNavigation();
+	OffPage->GetOrCreateNavigation();
+
+	UDreamNavigationTargetProvider* Provider = NewObject<UDreamNavigationTargetProvider>(TestWorld.World);
+	Provider->Target = OffPage;
+	FDreamCustomWidgetNavigationDelegate Delegate;
+	Delegate.BindUFunction(Provider, TEXT("Provide"));
+
+	Navigation->SetNavigationRuleCustomBoundary(EDreamUINavigationDirection::Right, Delegate);
+	Navigation->SetNavigationRuleCustomBoundary(EDreamUINavigationDirection::Left, Delegate);
+	TestTrue(TEXT("binding through the boundary setter sets the boundary rule"),
+		Navigation->GetNavigationData(EDreamUINavigationDirection::Right).Rule == EDreamUINavigationRule::CustomBoundary);
+	TestTrue(TEXT("and it counts as a rule, so the widget answers its own moves"),
+		Navigation->HasRuleFor(EDreamUINavigationDirection::Right));
+
+	// The whole distinction from Custom: there IS a neighbour to the right, so the delegate must not
+	// be consulted. A rule that answered here would hijack every step inside the page.
+	TestEqual(TEXT("with a neighbour in that direction the scan wins"),
+		Navigate(Navigation, EDreamUINavigationDirection::Right), Neighbour);
+	TestEqual(TEXT("...and the delegate was never asked"), Provider->CallCount, 0);
+
+	// Left has nothing beside it: this move leaves the area, which is the case the rule is for.
+	TestEqual(TEXT("running off the edge hands the move to the delegate"),
+		Navigate(Navigation, EDreamUINavigationDirection::Left), OffPage);
+	TestEqual(TEXT("...which was asked exactly once"), Provider->CallCount, 1);
+	TestEqual(TEXT("...and told which way the move was going"),
+		Provider->LastDirection, EDreamUINavigationDirection::Left);
+
+	// A delegate with no answer leaves the move where the scan left it -- nowhere -- rather than
+	// inventing one. Same honesty as an unbound Custom, minus the pinning.
+	Provider->Target = nullptr;
+	TestNull(TEXT("a boundary delegate that answers nothing moves nowhere"),
+		Navigate(Navigation, EDreamUINavigationDirection::Left));
+
+	// Unbinding clears back to Escape, so "remove the rule" never leaves one pointing at nothing.
+	Navigation->SetNavigationRuleCustomBoundary(EDreamUINavigationDirection::Left,
+		FDreamCustomWidgetNavigationDelegate());
+	TestFalse(TEXT("unbinding clears the rule"), Navigation->HasRuleFor(EDreamUINavigationDirection::Left));
+
+	Root->DestroyWidget();
+	return true;
+}
+
 #endif
