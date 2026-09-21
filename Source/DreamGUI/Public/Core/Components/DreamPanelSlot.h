@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Core/DreamUIAnchorData.h"
 #include "DreamWidgetSubObjectBehaviour.h"
+#include "Widgets/Layout/Anchors.h"
 #include "DreamPanelSlot.generated.h"
 
 // Defined with the widget; forward declared here so this header stays off the big one.
@@ -118,6 +119,24 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetFillSpanWhenLessThan, Category = "Slot", meta = (ClampMin = "0.0"))
 	float FillSpanWhenLessThan = 0.0f;
+	/**
+	 * WrapBox only, matching UMG's UWrapBoxSlot::bForceNewLine: begin a line at this child however much
+	 * room is left on the current one. The unconditional twin of FillSpanWhenLessThan, which only breaks
+	 * once the box is narrow; this is how a section heading stays at the head of its own row.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetNewLine, Category = "Slot")
+	bool bForceNewLine = false;
+	/**
+	 * A fixed offset added to wherever the panel decided to put this child, in the panel's content space
+	 * (x right, y down -- the same sense as Padding).
+	 *
+	 * UMG carries this on UGridSlot alone. Here it is applied at the single point every panel places a
+	 * child through (UDreamPanelLayoutBase::ApplyChildRect), so a stack, a wrap box and an overlay all
+	 * honour it without knowing it exists. It is deliberately invisible to MEASUREMENT: nudging a child
+	 * must not resize the panel around it, which is precisely why UMG calls it a nudge and not a position.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetNudge, Category = "Slot")
+	FVector2D Nudge = FVector2D::ZeroVector;
 
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
 	UFUNCTION(BlueprintSetter) void SetHorizontalAlignment(EDreamPanelHorizontalAlignment Value);
@@ -134,6 +153,76 @@ public:
 	UFUNCTION(BlueprintSetter) void SetMaxDesiredSize(FVector2D Value);
 	UFUNCTION(BlueprintSetter) void SetFillEmptySpace(bool Value);
 	UFUNCTION(BlueprintSetter) void SetFillSpanWhenLessThan(float Value);
+	UFUNCTION(BlueprintSetter) void SetNewLine(bool Value);
+	UFUNCTION(BlueprintSetter) void SetNudge(FVector2D Value);
+
+	/**
+	 * UMG's UGridSlot::Layer, which is this slot's ZOrder under its UMG name rather than a second number.
+	 *
+	 * A grid's layer and a slot's z-order state the same fact -- which children of the panel draw over
+	 * which -- and UDreamLayoutContainerGridPanel already reorders its children by ZOrder, stably. Two
+	 * stored numbers for one fact would only raise the question of which one wins.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Slot")
+	int32 GetLayer() const { return ZOrder; }
+	UFUNCTION(BlueprintCallable, Category = "Slot")
+	void SetLayer(int32 InLayer) { SetZOrder(InLayer); }
+	UFUNCTION(BlueprintPure, Category = "Slot")
+	int32 GetZOrder() const { return ZOrder; }
+	UFUNCTION(BlueprintPure, Category = "Slot")
+	bool GetAutoSize() const { return bAutoSize; }
+
+	/**
+	 * UMG's UCanvasPanelSlot rect family, reading and writing the widget's own FDreamUIAnchorData.
+	 *
+	 * A canvas child here states its rect through its anchors, exactly as one does in UMG through
+	 * FAnchorData -- so these are a second NAME for that data, never a second copy of it. Everything
+	 * below goes straight to the widget's setters, which raise the right invalidation and keep the
+	 * authored-geometry snapshot in step; a slot that stored its own position would be the one thing
+	 * guaranteed to disagree with the transform shown in the details panel.
+	 *
+	 * The axis convention is this plugin's throughout: y points UP, anchors are measured from the
+	 * bottom, and Alignment IS the pivot. UMG measures y downwards, so a literal port would have to
+	 * negate it -- and then SetPosition and SetAnchoredPosition would describe the same widget in two
+	 * opposite languages. The names and the shapes are UMG's; the axes are the ones the details panel,
+	 * the .dui files and every other setter here already use.
+	 *
+	 * Offsets are the four edge insets from the anchor rect (UDreamWidget::GetAnchorOffset), which is
+	 * UMG's meaning on a STRETCHED axis. On a point anchor UMG reuses Offsets.Right/Bottom to mean the
+	 * size instead; that reading lives on GetSize/SetSize here, and Offsets stays insets on both.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Slot|Canvas")
+	FDreamUIAnchorData GetLayout() const;
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetLayout(const FDreamUIAnchorData& InLayout);
+	/** The offset of the widget's alignment point from its anchor -- UMG's Position on a point anchor. */
+	UFUNCTION(BlueprintPure, Category = "Slot|Canvas")
+	FVector2D GetPosition() const;
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetPosition(FVector2D InPosition);
+	/** The size a point anchor resolves to, and the size BEYOND the anchor span on a stretched one. */
+	UFUNCTION(BlueprintPure, Category = "Slot|Canvas")
+	FVector2D GetSize() const;
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetSize(FVector2D InSize);
+	UFUNCTION(BlueprintPure, Category = "Slot|Canvas")
+	FMargin GetOffsets() const;
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetOffsets(FMargin InOffsets);
+	UFUNCTION(BlueprintPure, Category = "Slot|Canvas")
+	FAnchors GetAnchors() const;
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetAnchors(FAnchors InAnchors);
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetMinimum(FVector2D InMinimumAnchors);
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetMaximum(FVector2D InMaximumAnchors);
+	/** UMG's Alignment: where inside its own rect the widget's position refers to. This plugin's Pivot. */
+	UFUNCTION(BlueprintPure, Category = "Slot|Canvas")
+	FVector2D GetAlignment() const;
+	UFUNCTION(BlueprintCallable, Category = "Slot|Canvas")
+	void SetAlignment(FVector2D InAlignment);
+
 	/** Apply this slot's Min/Max to a measured size. Zero on an axis means that bound is not set. */
 	FVector2D ConstrainDesiredSize(const FVector2D& InDesiredSize) const;
 	UFUNCTION(BlueprintCallable, Category = "Slot")

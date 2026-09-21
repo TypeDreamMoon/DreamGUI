@@ -34,6 +34,12 @@ void FDreamWidgetPlacement::Capture(const UDreamWidget* InWidget)
 		SlotColumnSpan = Slot->ColumnSpan;
 		bSlotAutoSize = Slot->bAutoSize;
 		SlotZOrder = Slot->ZOrder;
+		SlotMinDesiredSize = Slot->MinDesiredSize;
+		SlotMaxDesiredSize = Slot->MaxDesiredSize;
+		bSlotFillEmptySpace = Slot->bFillEmptySpace;
+		SlotFillSpanWhenLessThan = Slot->FillSpanWhenLessThan;
+		bSlotForceNewLine = Slot->bForceNewLine;
+		SlotNudge = Slot->Nudge;
 	}
 }
 
@@ -81,6 +87,12 @@ bool FDreamWidgetPlacement::Restore(UDreamWidget* InWidget) const
 			Slot->SetColumnSpan(SlotColumnSpan);
 			Slot->SetAutoSize(bSlotAutoSize);
 			Slot->SetZOrder(SlotZOrder);
+			Slot->SetMinDesiredSize(SlotMinDesiredSize);
+			Slot->SetMaxDesiredSize(SlotMaxDesiredSize);
+			Slot->SetFillEmptySpace(bSlotFillEmptySpace);
+			Slot->SetFillSpanWhenLessThan(SlotFillSpanWhenLessThan);
+			Slot->SetNewLine(bSlotForceNewLine);
+			Slot->SetNudge(SlotNudge);
 			Slot->CaptureAuthoredGeometry(true);
 		}
 	}
