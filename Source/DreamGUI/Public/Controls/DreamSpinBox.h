@@ -4,9 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+//for EDreamUITextParagraphHorizontalAlign, which the value's Justification is spelled in
+#include "Core/DreamUITextData.h"
+//EVirtualKeyboardType and EVirtualKeyboardDismissAction, named rather than re-declared: the typed
+//entry inside a spin box is the same text field, and it answers to the same two enums
+#include "Components/SlateWrapperTypes.h"
+#include "Widgets/Text/ISlateEditableTextWidget.h"
 #include "DreamSpinBox.generated.h"
 
 class UDreamWidget;
+class UDreamUIFontData_BaseObject;
 class UUIButton;
 class UUITextInput;
 
@@ -53,21 +60,36 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Spin Box")
 	FDreamSpinBoxStyle Style;
 
 	/** Authored value in; the control's own thereafter. A property so .dui and bindings can see it. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetValue", BlueprintSetter = "SetValue", Category = "Spin Box")
 	float Value = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	/**
+	 * Whether the value HAS a bottom -- UMG's bOverride_MinValue, and the half of a range this
+	 * control could not say.
+	 *
+	 * Ticked (the default, and what every existing spin box does) the value is clamped into
+	 * MinValue..MaxValue. Unticked, that end is open: a field that may hold any negative number is a
+	 * thing a settings screen genuinely wants, and before this the only way to spell it was a very
+	 * large number that still was not "no limit".
+	 */
+	UPROPERTY(EditAnywhere, Category = "Spin Box", meta = (InlineEditConditionToggle))
+	bool bOverride_MinValue = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMinValue", BlueprintSetter = "SetMinValue", Category = "Spin Box", meta = (EditCondition = "bOverride_MinValue"))
 	float MinValue = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	UPROPERTY(EditAnywhere, Category = "Spin Box", meta = (InlineEditConditionToggle))
+	bool bOverride_MaxValue = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMaxValue", BlueprintSetter = "SetMaxValue", Category = "Spin Box", meta = (EditCondition = "bOverride_MaxValue"))
 	float MaxValue = 100.0f;
 
 	/** What one click of a step face adds or removes, before clamping. UMG calls it Delta. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStepSize", BlueprintSetter = "SetStepSize", Category = "Spin Box")
 	float StepSize = 1.0f;
 
 	/**
@@ -82,13 +104,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Spin Box", meta = (InlineEditConditionToggle))
 	bool bOverride_MinSliderValue = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box", meta = (EditCondition = "bOverride_MinSliderValue"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMinSliderValue", BlueprintSetter = "SetMinSliderValue", Category = "Spin Box", meta = (EditCondition = "bOverride_MinSliderValue"))
 	float MinSliderValue = 0.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Spin Box", meta = (InlineEditConditionToggle))
 	bool bOverride_MaxSliderValue = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box", meta = (EditCondition = "bOverride_MaxSliderValue"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMaxSliderValue", BlueprintSetter = "SetMaxSliderValue", Category = "Spin Box", meta = (EditCondition = "bOverride_MaxSliderValue"))
 	float MaxSliderValue = 100.0f;
 
 	/**
@@ -96,18 +118,18 @@ public:
 	 * numbers give the low end of the range more of the travel, which is what a range spanning
 	 * several orders of magnitude needs to be usable at its bottom.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box", meta = (ClampMin = "0.01"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSliderExponent", BlueprintSetter = "SetSliderExponent", Category = "Spin Box", meta = (ClampMin = "0.01"))
 	float SliderExponent = 1.0f;
 
 	/** Whether dragging the field scrubs the value at all -- UMG's EnableSlider. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetEnableSlider", BlueprintSetter = "SetEnableSlider", Category = "Spin Box")
 	bool bEnableSlider = true;
 
 	/**
 	 * Every value, however it arrived, snapped to a multiple of StepSize -- UMG's AlwaysUsesDeltaSnap.
 	 * Off (the default), only the step faces move in whole steps and a drag or a typed value is free.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAlwaysUsesDeltaSnap", BlueprintSetter = "SetAlwaysUsesDeltaSnap", Category = "Spin Box")
 	bool bAlwaysUsesDeltaSnap = false;
 
 	/**
@@ -117,19 +139,45 @@ public:
 	 * them the field printed the shortest spelling that reads back exactly, so a currency field
 	 * showed "2.5" where it meant "2.50" and a count field showed "3" beside "3.0000001".
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box", meta = (ClampMin = "0", ClampMax = "9"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMinFractionalDigits", BlueprintSetter = "SetMinFractionalDigits", Category = "Spin Box", meta = (ClampMin = "0", ClampMax = "9"))
 	int32 MinFractionalDigits = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box", meta = (ClampMin = "0", ClampMax = "9"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMaxFractionalDigits", BlueprintSetter = "SetMaxFractionalDigits", Category = "Spin Box", meta = (ClampMin = "0", ClampMax = "9"))
 	int32 MaxFractionalDigits = 6;
 
 	/** Stop editing the field when the value is committed -- UMG's ClearKeyboardFocusOnCommit. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetClearKeyboardFocusOnCommit", BlueprintSetter = "SetClearKeyboardFocusOnCommit", Category = "Spin Box")
 	bool bClearKeyboardFocusOnCommit = false;
 
-	/** Select the whole number when the value is committed, ready to be typed over. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box")
+	/**
+	 * Select the whole number when the value is committed, ready to be typed over.
+	 * TRUE here where UMG's is false: a spin box is filled in one entry after another and this is
+	 * what it has always done.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectAllTextOnCommit", BlueprintSetter = "SetSelectAllTextOnCommit", Category = "Spin Box")
 	bool bSelectAllTextOnCommit = true;
+
+	/**
+	 * How the number sits across the field -- UMG's Justification.
+	 * Centre by default, which is where the built-in tree has always put it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetJustification", BlueprintSetter = "SetJustification", Category = "Spin Box")
+	EDreamUITextParagraphHorizontalAlign Justification = EDreamUITextParagraphHorizontalAlign::Center;
+
+	/**
+	 * A floor under the width the control asks a content-sized parent for -- UMG's MinDesiredWidth.
+	 * Zero means no opinion, which is every spin box that exists today.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMinDesiredWidth", BlueprintSetter = "SetMinDesiredWidth", Category = "Spin Box", meta = (ClampMin = "0.0"))
+	float MinDesiredWidth = 0.0f;
+
+	/** Which virtual keyboard the typed-entry field summons. Default derives it from the field's type. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetKeyboardType", BlueprintSetter = "SetKeyboardType", Category = "Spin Box", AdvancedDisplay)
+	TEnumAsByte<EVirtualKeyboardType::Type> KeyboardType = EVirtualKeyboardType::Number;
+
+	/** What dismissing that keyboard means -- pushed straight to the field's behaviour. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetVirtualKeyboardDismissAction", BlueprintSetter = "SetVirtualKeyboardDismissAction", Category = "Spin Box", AdvancedDisplay)
+	EVirtualKeyboardDismissAction VirtualKeyboardDismissAction = EVirtualKeyboardDismissAction::TextCommitOnDismiss;
 
 	/** Fired when the clamped value actually changes, whichever road changed it. */
 	UPROPERTY(BlueprintAssignable, Category = "Spin Box")
@@ -185,6 +233,156 @@ public:
 	/** Whether a scrub is in progress right now. */
 	UFUNCTION(BlueprintPure, Category = "Spin Box")
 	bool IsSliderMoving() const { return bSliderMoving; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	FDreamSpinBoxStyle GetStyle() const { return Style; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetStyle(const FDreamSpinBoxStyle& InStyle);
+
+	/*
+	 * The RANGE, in UMG's shape: a bound is a value plus whether there is one at all.
+	 *
+	 * Get returns the numeric limit rather than the stored number when the bound is off, because
+	 * that is what "no minimum" means to every caller that then clamps with it -- including this
+	 * control's own value road, which reads these two and nothing else.
+	 */
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetMinValue() const;
+
+	/** States a bottom, and clamps the current value into it. */
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetMinValue(float InMinValue);
+
+	/** Takes the bottom away: the value may then be any number down to float's own floor. */
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void ClearMinValue();
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetMaxValue() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetMaxValue(float InMaxValue);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void ClearMaxValue();
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetMinSliderValue() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetMinSliderValue(float InMinSliderValue);
+
+	/** The scrub falls back to the VALUE range again, which is what an unset slider bound means. */
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void ClearMinSliderValue();
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetMaxSliderValue() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetMaxSliderValue(float InMaxSliderValue);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void ClearMaxSliderValue();
+
+	/** Whether the scrub has two real ends to sweep between. An open range cannot be dragged. */
+	UFUNCTION(BlueprintPure, Category = "Spin Box")
+	bool HasFiniteSliderRange() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetStepSize() const { return StepSize; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetStepSize(float InStepSize);
+
+	/** UMG's name for StepSize. One implementation, two spellings, no second truth. */
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetDelta() const { return StepSize; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetDelta(float InDelta) { SetStepSize(InDelta); }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetSliderExponent() const { return SliderExponent; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetSliderExponent(float InSliderExponent);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	bool GetEnableSlider() const { return bEnableSlider; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetEnableSlider(bool bInEnableSlider);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	bool GetAlwaysUsesDeltaSnap() const { return bAlwaysUsesDeltaSnap; }
+
+	/** Turning it on snaps the value the control is already holding, not just the next one. */
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetAlwaysUsesDeltaSnap(bool bInAlwaysUsesDeltaSnap);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	int32 GetMinFractionalDigits() const { return MinFractionalDigits; }
+
+	/** Re-spells the number that is already showing: a digit count nobody applied is not a format. */
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetMinFractionalDigits(int32 InMinFractionalDigits);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	int32 GetMaxFractionalDigits() const { return MaxFractionalDigits; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetMaxFractionalDigits(int32 InMaxFractionalDigits);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	bool GetClearKeyboardFocusOnCommit() const { return bClearKeyboardFocusOnCommit; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetClearKeyboardFocusOnCommit(bool bInClearKeyboardFocusOnCommit);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	bool GetSelectAllTextOnCommit() const { return bSelectAllTextOnCommit; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetSelectAllTextOnCommit(bool bInSelectAllTextOnCommit);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	EDreamUITextParagraphHorizontalAlign GetJustification() const { return Justification; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetJustification(EDreamUITextParagraphHorizontalAlign InJustification);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	float GetMinDesiredWidth() const { return MinDesiredWidth; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetMinDesiredWidth(float InMinDesiredWidth);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	TEnumAsByte<EVirtualKeyboardType::Type> GetKeyboardType() const { return KeyboardType; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetKeyboardType(TEnumAsByte<EVirtualKeyboardType::Type> InKeyboardType);
+
+	/**
+	 * The typeface the number is drawn with -- UMG's Font, minus what FSlateFontInfo packs in beside
+	 * it: the size is Style.FontSize and the outline belongs to the text style. Reads and writes
+	 * Style.Font, so it obeys StyleSource like the rest of the look, and null means "leave the
+	 * paragraph on the font it has", which is every spin box that exists today.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	UDreamUIFontData_BaseObject* GetFont() const { return Style.Font; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetFont(UDreamUIFontData_BaseObject* InFont);
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	EVirtualKeyboardDismissAction GetVirtualKeyboardDismissAction() const { return VirtualKeyboardDismissAction; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spin Box")
+	void SetVirtualKeyboardDismissAction(EVirtualKeyboardDismissAction InDismissAction);
 
 	virtual void ApplyStyle() override;
 
@@ -265,6 +463,9 @@ private:
 
 	/** Value into the parts, eventless -- the field shows it, nobody is notified. */
 	void PushValueToParts();
+
+	/** The floor under the control's width, and under what the value's paragraph asks a parent for. */
+	void PushMinDesiredWidth();
 
 	/** The invariant spelling ("2.5", never "2,5"), shared with what the parser reads back. */
 	FString FormatValue() const;
