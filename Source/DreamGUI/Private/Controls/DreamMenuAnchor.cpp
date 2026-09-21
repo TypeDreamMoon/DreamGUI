@@ -15,9 +15,11 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamTweener.h"
+#include "Event/DreamEventSystem.h"
 #include "Interaction/DreamContentWidget.h"
 #include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UIButton.h"
+#include "Interaction/UISelectable.h"
 
 const FName UDreamMenuAnchor::MenuSlotName(TEXT("Menu"));
 
@@ -122,6 +124,30 @@ void UDreamMenuAnchor::PlacePopup(const FDreamMenuAnchorStyle& InStyle)
 	// distance between the two rather than moving the menu sideways.
 	TopLeft += ResolveOffsetDirection(InStyle.Placement) * InStyle.Offset;
 
+	if (bFitInWindow)
+	{
+		// Against the root widget, the nearest thing here to UMG's window: it is the rect the whole
+		// hierarchy is laid out inside. The arithmetic is the panel spelling's, CALLED rather than
+		// copied -- a menu that landed somewhere else depending on which anchor opened it would be
+		// two behaviours wearing one name, which is the same argument as CalculateMenuPosition above.
+		if (const UDreamWidget* Root = GetRootWidgetInHierarchy(); IsValid(Root) && Root != this)
+		{
+			const FVector2D RootSize(
+				FMath::Max(Root->GetWidth(), 0.0f),
+				FMath::Max(Root->GetHeight(), 0.0f));
+			const FVector AnchorInRoot = Root->GetWorldTransform().InverseTransformPosition(
+				GetWorldTransform().GetLocation());
+			// Widget space is y-up about the pivot; this is the anchor's top-left corner measured from
+			// the root's top-left corner, which is the space FitMenuInWindow works in.
+			const FVector2D AnchorOffset(
+				AnchorInRoot.Y + RootSize.X * 0.5 - AnchorSize.X * GetPivot().X,
+				RootSize.Y * 0.5 - AnchorInRoot.Z - AnchorSize.Y * (1.0 - GetPivot().Y));
+			const FVector2D Fitted = UDreamLayoutContainerMenuAnchor::FitMenuInWindow(
+				TopLeft + AnchorOffset, Size, RootSize);
+			TopLeft = Fitted - AnchorOffset;
+		}
+	}
+
 	// Into the widget frame: anchored to the control's TOP-LEFT corner with the popup's own top-left
 	// as its pivot, so the number above IS the anchored position -- once y is negated, because this
 	// framework's local space is y-UP and that function's is y-down.
@@ -156,7 +182,7 @@ FVector2D UDreamMenuAnchor::ResolveOffsetDirection(EDreamMenuPlacement InPlaceme
 
 void UDreamMenuAnchor::EnsureMenuInstance()
 {
-	if (MenuInstance != nullptr || MenuClass == nullptr || MenuNode == nullptr)
+	if (MenuInstance != nullptr || ProvidedMenuContent != nullptr || MenuNode == nullptr)
 	{
 		return;
 	}
@@ -164,6 +190,32 @@ void UDreamMenuAnchor::EnsureMenuInstance()
 	{
 		// Content somebody put in the hole is content they meant to see. The class is the fallback,
 		// not a second menu drawn over the first.
+		return;
+	}
+	if (OnGetUserMenuContentEvent.IsBound())
+	{
+		// Above MenuClass and below authored content: a delegate is a more specific answer than a
+		// class, and both are answers to "there is nothing in the hole". Asked ONCE and kept, the
+		// way an instance built from the class is kept -- a menu rebuilt on every open would throw
+		// away whatever state the player left in it, and leak the previous one.
+		if (UDreamWidget* Provided = OnGetUserMenuContentEvent.Execute(); IsValid(Provided))
+		{
+			ProvidedMenuContent = Provided;
+			// Not keeping the world position: the menu is being adopted INTO the anchor's popup, and
+			// wherever the handler happened to build it is not where it goes.
+			Provided->TrySetParent(MenuNode, /*InKeepWorldPosition*/false);
+			if (UDreamPanelSlot* ProvidedSlot = Provided->GetPanelSlot())
+			{
+				ProvidedSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
+				ProvidedSlot->SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
+			}
+			return;
+		}
+		// A handler that answered with nothing is a handler that has nothing to show yet, so the
+		// class below is still allowed its turn rather than the anchor opening empty on purpose.
+	}
+	if (MenuClass == nullptr)
+	{
 		return;
 	}
 	if (GetWorld() == nullptr)
@@ -184,7 +236,7 @@ void UDreamMenuAnchor::EnsureMenuInstance()
 	}
 }
 
-void UDreamMenuAnchor::Open()
+void UDreamMenuAnchor::Open(bool bFocusMenu)
 {
 	if (bIsOpen || !IsValid(PopupNode))
 	{
@@ -224,7 +276,66 @@ void UDreamMenuAnchor::Open()
 	{
 		PopupNode->SetRenderOpacity(1.0f);
 	}
+	if (bFocusMenu)
+	{
+		FocusMenuContent();
+	}
 	OnMenuOpenChanged.Broadcast(true);
+}
+
+void UDreamMenuAnchor::FocusMenuContent()
+{
+	if (PopupNode == nullptr || GetWorld() == nullptr)
+	{
+		// No world means no event system -- an initialize-time open, or a headless test.
+		return;
+	}
+	UUISelectable* First = UUISelectable::FindDefaultSelectableIn(this, PopupNode);
+	if (First == nullptr || First->GetWidget() == nullptr)
+	{
+		// A menu with nothing navigable in it (a tooltip, a picture) keeps focus where it is rather
+		// than dropping it somewhere arbitrary. Same rule, same words, as UDreamTabView's.
+		return;
+	}
+	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, 0))
+	{
+		Events->SetSelectComponentWithDefault(First->GetWidget());
+	}
+}
+
+bool UDreamMenuAnchor::HasOpenSubMenus() const
+{
+	if (PopupNode == nullptr)
+	{
+		return false;
+	}
+	TArray<UDreamWidget*> Inside;
+	UDreamWidget::CollectChildrenWidgets(PopupNode, Inside, /*IncludeTarget*/false);
+	for (UDreamWidget* Child : Inside)
+	{
+		// A submenu is another anchor of this class inside the content, so the question is a search
+		// for one that is open -- there is no application-wide menu stack here to ask instead.
+		if (const UDreamMenuAnchor* Sub = Cast<UDreamMenuAnchor>(Child); Sub != nullptr && Sub->IsOpen())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void UDreamMenuAnchor::FitInWindow(bool bInFitInWindow)
+{
+	if (bFitInWindow == bInFitInWindow)
+	{
+		return;
+	}
+	bFitInWindow = bInFitInWindow;
+	if (bIsOpen)
+	{
+		// An open menu moves now, for SetPlacement's reason: where the popup sits is placement work,
+		// and a clamp that waited for the next open would read as a switch that does nothing.
+		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
+	}
 }
 
 void UDreamMenuAnchor::Close()
@@ -257,7 +368,87 @@ void UDreamMenuAnchor::Close()
 	OnMenuOpenChanged.Broadcast(false);
 }
 
-void UDreamMenuAnchor::ToggleOpen()
+void UDreamMenuAnchor::SetStyle(const FDreamMenuAnchorStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+EDreamMenuPlacement UDreamMenuAnchor::GetPlacement() const
+{
+	// The style in EFFECT, so an anchor driven by the project sheet answers the placement it opens
+	// with rather than whatever this instance carries underneath the sheet.
+	return ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle).Placement;
+}
+
+void UDreamMenuAnchor::SetPlacement(EDreamMenuPlacement InPlacement)
+{
+	Style.Placement = InPlacement;
+	ApplyStyle();
+	if (bIsOpen)
+	{
+		// An open menu moves now. ApplyStyle pushes the look; where the popup SITS is placement work,
+		// and a menu that stayed put until it was closed and opened again would read as a knob that
+		// does nothing.
+		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
+	}
+}
+
+FVector2D UDreamMenuAnchor::GetMenuPosition() const
+{
+	return PopupNode != nullptr ? PopupNode->GetAnchoredPosition() : FVector2D::ZeroVector;
+}
+
+void UDreamMenuAnchor::SetMenuClass(TSubclassOf<UDreamUserWidget> InMenuClass)
+{
+	if (MenuClass == InMenuClass)
+	{
+		return;
+	}
+	if (bIsOpen)
+	{
+		// Swapping what the player is reading is not something to do quietly; closing first makes the
+		// change something they can see happen.
+		Close();
+	}
+	MenuClass = InMenuClass;
+	if (MenuInstance != nullptr)
+	{
+		// The instance is built once and kept, so an old one left here would be the menu this anchor
+		// keeps opening no matter what the class now says.
+		MenuInstance->DestroyWidget();
+		MenuInstance = nullptr;
+	}
+}
+
+void UDreamMenuAnchor::SetMenuSize(FVector2D InMenuSize)
+{
+	MenuSize = InMenuSize;
+	if (bIsOpen)
+	{
+		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
+	}
+}
+
+void UDreamMenuAnchor::SetCloseOnClickOutside(bool bInCloseOnClickOutside)
+{
+	bCloseOnClickOutside = bInCloseOnClickOutside;
+	if (!bIsOpen)
+	{
+		return;
+	}
+	// While open, the switch is about a blocker that exists right now.
+	if (bInCloseOnClickOutside)
+	{
+		CreateBlocker();
+	}
+	else
+	{
+		DestroyBlocker();
+	}
+}
+
+void UDreamMenuAnchor::ToggleOpen(bool bFocusOnOpen)
 {
 	if (bIsOpen)
 	{
@@ -265,7 +456,7 @@ void UDreamMenuAnchor::ToggleOpen()
 	}
 	else
 	{
-		Open();
+		Open(bFocusOnOpen);
 	}
 }
 

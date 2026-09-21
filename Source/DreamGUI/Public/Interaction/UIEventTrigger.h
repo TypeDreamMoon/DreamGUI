@@ -31,7 +31,7 @@ class DREAMGUI_API UUIEventTrigger : public UDreamUIBehaviour
 	GENERATED_BODY()
 protected:
 	//inherited events of this component can bubble up?
-	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
+	UPROPERTY(EditAnywhere, BlueprintSetter = "SetAllowEventBubbleUp", Category = "UIEventTrigger")
 		bool AllowEventBubbleUp = false;
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
 		FDreamUIEventDelegate OnPointerEnter = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::PointerEvent);
@@ -96,6 +96,19 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "UIEventTrigger", DisplayName="OnPointerDeselect")
 	FUIEventTriggerBaseEvent OnPointerDeselectBP;
 public:
+	/**
+	 * Whether the events this trigger receives carry on to whatever is behind it.
+	 *
+	 * Readable and writable because it is the only answer this component gives to UMG's per-call
+	 * "Handled / Unhandled": every one of the twelve handlers returns exactly this. A control that
+	 * puts a trigger on itself has to be able to state it -- UDreamBorder does, as its
+	 * bConsumeMouseEvents.
+	 */
+	UFUNCTION(BlueprintPure, Category = "UIEventTrigger")
+		bool GetAllowEventBubbleUp()const { return AllowEventBubbleUp; }
+	UFUNCTION(BlueprintCallable, Category = "UIEventTrigger")
+		void SetAllowEventBubbleUp(bool Value) { AllowEventBubbleUp = Value; }
+
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerEnterEvent(){return OnPointerEnterCPP;}
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerExitEvent(){return OnPointerExitCPP;}
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerDownEvent(){return OnPointerDownCPP;}

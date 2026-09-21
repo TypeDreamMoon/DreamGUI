@@ -298,6 +298,27 @@ void UDreamExpandableArea::SetIsExpanded(bool bInIsExpanded)
 	OnValueChangedBP.Broadcast(bIsExpanded);
 }
 
+void UDreamExpandableArea::SetStyle(const FDreamExpandableAreaStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamExpandableArea::SetLabel(const FText& InLabel)
+{
+	Label = InLabel;
+	// The header's words are written by the style pass, so a bare property write left the control
+	// showing the previous ones until something unrelated happened to push.
+	ApplyStyle();
+}
+
+void UDreamExpandableArea::SetExpansionDuration(float InExpansionDuration)
+{
+	// Nothing re-run: a duration describes the NEXT move, and replaying the current one to honour a
+	// new speed would animate a section the player has already finished opening.
+	ExpansionDuration = FMath::Max(0.0f, InExpansionDuration);
+}
+
 void UDreamExpandableArea::SetMaxHeight(float InMaxHeight)
 {
 	const float Clamped = FMath::Max(0.0f, InMaxHeight);

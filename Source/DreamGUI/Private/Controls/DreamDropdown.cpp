@@ -158,6 +158,11 @@ void UDreamDropdown::WireParts()
 		return;
 	}
 	DropdownBehaviour->SetTransitionTarget(FaceNode->GetVisual());
+	// The face draws one picture per state from here on, and the CAPTION is its foreground -- the
+	// one label in this family a control actually owns, so a style that wants the text to change
+	// with the pointer has somewhere to say so. The list and its rows are not part of this: they are
+	// a separate surface with a separate style, and the face's state says nothing about them.
+	UseStateFaces(DropdownBehaviour, FaceNode, CaptionNode);
 	DropdownBehaviour->SetListRoot(ListNode);
 	if (UUIScrollView* Scroll = ListNode != nullptr ? ListNode->GetComponent<UUIScrollView>() : nullptr)
 	{
@@ -278,7 +283,6 @@ void UDreamDropdown::ApplyStyle()
 	const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
 	ShapeFace(FaceNode, Active.CornerRadius);
 	ShapeFace(ListNode, Active.CornerRadius);
-	SkinFace(FaceNode, Active.FaceBrush);
 	SkinFace(ListNode, Active.ListBrush);
 
 	auto TintText = [&Active](UDreamWidget* InNode, const FColor& InColor)
@@ -291,6 +295,21 @@ void UDreamDropdown::ApplyStyle()
 	};
 	TintText(CaptionNode, Active.TextColor);
 	TintText(ArrowNode, Active.ArrowColor);
+	if (UDreamPanelSlot* CaptionSlot = CaptionNode != nullptr ? CaptionNode->GetPanelSlot() : nullptr)
+	{
+		// UMG's ContentPadding, and the same number the realize call used to hard-code: what holds
+		// the caption off the face's edges is a style decision the moment a project has a face that
+		// is a different width, or no arrow to clear.
+		CaptionSlot->SetPadding(Active.ContentPadding);
+	}
+	// AFTER the caption's own colour, and that order is the whole rule: TextColor is what a caption
+	// wears while the style says nothing about states, and the per-state foreground -- when a style
+	// ticks it on -- is what writes over it, here and again on every state the face enters. Pushed
+	// last so the two never disagree about which of them landed most recently.
+	//
+	// One picture per state where there used to be one picture tinted five ways, falling back to
+	// FaceBrush for every state that states none -- which is every state in every style that exists.
+	PushStateFaces(Active.StateFaces, Active.FaceBrush);
 	if (ArrowNode != nullptr)
 	{
 		// UMG's HasDownArrow: a combo box drawn without its glyph, for a face that says "open me"
@@ -421,6 +440,106 @@ void UDreamDropdown::SetOptions(const TArray<FText>& InOptions)
 	PushOptions();
 }
 
+void UDreamDropdown::SetStyle(const FDreamDropdownStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamDropdown::SetItemTemplateClass(TSubclassOf<UDreamUserWidget> InItemTemplateClass)
+{
+	if (ItemTemplateClass == InItemTemplateClass)
+	{
+		return;
+	}
+	ItemTemplateClass = InItemTemplateClass;
+	// The rows are built from the template, so a new one is a rebuild rather than a restyle -- and
+	// the push is what re-decorates whatever the rebuild produced.
+	PushOptions();
+	ApplyStyle();
+}
+
+void UDreamDropdown::AddOption(const FText& InOption)
+{
+	Options.Add(InOption);
+	PushOptions();
+}
+
+bool UDreamDropdown::RemoveOption(const FText& InOption)
+{
+	const int32 Index = FindOptionIndex(InOption);
+	if (Index == INDEX_NONE)
+	{
+		return false;
+	}
+	Options.RemoveAt(Index);
+	// The icons are index-matched to the options, so removing one without removing its picture would
+	// slide every later option's icon one place up.
+	if (OptionIcons.IsValidIndex(Index))
+	{
+		OptionIcons.RemoveAt(Index);
+	}
+	PushOptions();
+	return true;
+}
+
+void UDreamDropdown::ClearOptions()
+{
+	Options.Reset();
+	OptionIcons.Reset();
+	// Not ClearSelection: an empty list has nothing to be selected IN, and the push below writes the
+	// selection through to a behaviour that now holds no options. What a caller wanting "no options
+	// and no selection" says is this followed by ClearSelection, which is what UMG's pair does too.
+	PushOptions();
+}
+
+int32 UDreamDropdown::FindOptionIndex(const FText& InOption) const
+{
+	for (int32 Index = 0; Index < Options.Num(); ++Index)
+	{
+		// EqualTo, not a string compare: two FTexts are the same option when they mean the same
+		// thing, and a localized option's string depends on the culture the game is running in.
+		if (Options[Index].EqualTo(InOption))
+		{
+			return Index;
+		}
+	}
+	return INDEX_NONE;
+}
+
+FText UDreamDropdown::GetOptionAtIndex(int32 InIndex) const
+{
+	return Options.IsValidIndex(InIndex) ? Options[InIndex] : FText::GetEmpty();
+}
+
+FText UDreamDropdown::GetSelectedOption() const
+{
+	return GetOptionAtIndex(GetSelectedIndex());
+}
+
+void UDreamDropdown::SetSelectedOption(const FText& InOption)
+{
+	const int32 Index = FindOptionIndex(InOption);
+	if (Index != INDEX_NONE)
+	{
+		// An option nobody offers is not a selection to make, and writing INDEX_NONE here would turn
+		// a typo into "clear the selection" -- which is a different call, right below.
+		SetSelectedIndex(Index);
+	}
+}
+
+void UDreamDropdown::ClearSelection()
+{
+	SetSelectedIndex(INDEX_NONE);
+}
+
+void UDreamDropdown::RefreshOptions()
+{
+	// The rows are rebuilt from Options, so this is the call for a caller who edited the array in
+	// place (the designer's road, and a .dui author's) rather than through SetOptions.
+	PushOptions();
+}
+
 void UDreamDropdown::SetHasDownArrow(bool bInHasDownArrow)
 {
 	if (bHasDownArrow == bInHasDownArrow)
@@ -490,6 +609,10 @@ void UDreamDropdown::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 
 void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 {
+	// The control's mirror of "is the list up". The behaviour keeps its own flag with no reader, and
+	// this seam is the one moment either side moves -- so mirroring here cannot go stale the way a
+	// flag written by the opener would.
+	bIsListOpen = bInVisible;
 	// Broadcast FIRST and unconditionally -- before the popup-layer work below, and whether or not
 	// there is a popup layer to do it in. This seam fires from the behaviour's Show and Hide, which
 	// is the moment the list opens and closes; a consumer refreshing its options from OnOpening (the

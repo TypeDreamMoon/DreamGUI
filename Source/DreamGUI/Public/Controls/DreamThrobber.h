@@ -46,8 +46,18 @@ public:
 	 * This instance's own look. The project sheet wins while StyleSource says so AND a sheet
 	 * actually exists; with no sheet in the project this IS the look in effect.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throbber")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Throbber")
 	FDreamThrobberStyle Style;
+
+	UFUNCTION(BlueprintPure, Category = "Throbber")
+	FDreamThrobberStyle GetStyle() const { return Style; }
+
+	/**
+	 * This instance's whole look, replaced and pushed -- which for a throbber means the piece POOL is
+	 * rebuilt if the count changed. See UDreamButton::SetStyle for the caveat about the sheet.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Throbber")
+	void SetStyle(const FDreamThrobberStyle& InStyle);
 
 	/** A row of pieces, or pieces around a circle. UMG's Throbber and CircularThrobber. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShape", BlueprintSetter = "SetShape", Category = "Throbber")
@@ -56,6 +66,23 @@ public:
 	/** Off holds the pieces at the phase they were on. The widget stops ticking with it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAnimate", BlueprintSetter = "SetAnimate", Category = "Throbber")
 	bool bAnimate = true;
+
+	/**
+	 * Whether a piece also PULSES on that axis -- UMG's bAnimateHorizontally / bAnimateVertically,
+	 * and Slate's rule for them: the piece is scaled on the ticked axis by the same wave that drives
+	 * its opacity, so it swells as it brightens and shrinks as it fades.
+	 *
+	 * Both off, which is what this throbber has always drawn (opacity only). Both on is UMG's own
+	 * default look; one on is the squash a loading strip wants.
+	 *
+	 * On the CONTROL rather than in the style because it decides what the animation DOES, the way
+	 * bAnimate and Shape beside it do, rather than what a piece looks like.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAnimateHorizontally", BlueprintSetter = "SetAnimateHorizontally", Category = "Throbber")
+	bool bAnimateHorizontally = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAnimateVertically", BlueprintSetter = "SetAnimateVertically", Category = "Throbber")
+	bool bAnimateVertically = false;
 
 	/**
 	 * What the pieces hang under, and the control's one built-in node.
@@ -85,6 +112,67 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Throbber")
 	void SetAnimate(bool bInAnimate);
+
+	UFUNCTION(BlueprintPure, Category = "Throbber")
+	bool GetAnimateHorizontally() const { return bAnimateHorizontally; }
+
+	/**
+	 * Turning it OFF re-places every piece at once, because a piece frozen mid-pulse would otherwise
+	 * keep the width the last tick gave it -- a switch that leaves the thing it switched off in a
+	 * random state is a switch that looks broken.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Throbber")
+	void SetAnimateHorizontally(bool bInAnimateHorizontally);
+
+	UFUNCTION(BlueprintPure, Category = "Throbber")
+	bool GetAnimateVertically() const { return bAnimateVertically; }
+
+	UFUNCTION(BlueprintCallable, Category = "Throbber")
+	void SetAnimateVertically(bool bInAnimateVertically);
+
+	/**
+	 * The four numbers UMG's two throbbers offer one at a time.
+	 *
+	 * Each getter answers the style in EFFECT, and each setter edits THIS INSTANCE'S style and
+	 * re-pushes -- so they show up when this instance's style is what is in effect, and under a
+	 * project sheet they are writes to a value the sheet is overruling. Same bargain, and same
+	 * wording, as UDreamBorder::SetPadding.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Throbber")
+	int32 GetNumberOfPieces() const;
+
+	/** Rebuilds the piece pool, which is what a count IS here. */
+	UFUNCTION(BlueprintCallable, Category = "Throbber")
+	void SetNumberOfPieces(int32 InNumberOfPieces);
+
+	UFUNCTION(BlueprintPure, Category = "Throbber")
+	float GetPeriod() const;
+
+	/** Seconds for one full cycle. Drives the linear shape too, where UMG offers it only on the ring. */
+	UFUNCTION(BlueprintCallable, Category = "Throbber")
+	void SetPeriod(float InPeriod);
+
+	UFUNCTION(BlueprintPure, Category = "Throbber")
+	float GetRadius() const;
+
+	/** How far out the pieces ride. Circular only, as in UMG; the linear shape ignores it. */
+	UFUNCTION(BlueprintCallable, Category = "Throbber")
+	void SetRadius(float InRadius);
+
+	/**
+	 * Whether the pieces fade at all -- UMG's bAnimateOpacity, read off how faint they are allowed
+	 * to get: a floor of 1 keeps every piece solid, which is the flag being off.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Throbber")
+	bool GetAnimateOpacity() const;
+
+	/**
+	 * Off pins the floor at 1. On restores the style's shipped floor, but only when the floor is
+	 * currently 1 -- so switching off and on again is not a way to lose a hand-tuned value, and a
+	 * throbber already fading keeps fading exactly as far as it did.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Throbber")
+	void SetAnimateOpacity(bool bInAnimateOpacity);
 
 	/** How far through one cycle the animation is, 0 to 1. Authored in; readable out. */
 	UFUNCTION(BlueprintPure, Category = "Throbber")
