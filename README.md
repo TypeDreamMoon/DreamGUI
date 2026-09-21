@@ -121,6 +121,39 @@ its box is derived from the text; you control wrapping instead. Here the rect is
 can overflow it, and you get controls UMG has no need for — `Margin`, `LineHeightPercentage`,
 `WrapTextAt` and **Best Fit** (shrink the font until it fits, which neither UMG nor Slate offers).
 
+### Coming from UMG: the names are the same
+
+The structure differs; the vocabulary deliberately does not. A control here answers to the name its
+UMG counterpart uses, with the meaning it has there: `ScrollWidgetIntoView` takes a destination and a
+padding, a scroll box has `bFrontPadScrolling` and `WheelScrollMultiplier`, a spin box has
+`MinSliderValue` and `ClearMaxValue`, a panel slot has `Nudge` and `bForceNewLine`, every widget has
+`SetIsEnabled`, `SetRenderShear` and a `FlowDirectionPreference`. Every knob the details panel can
+turn is one a Blueprint can turn at runtime, through a setter that pushes the change instead of
+writing a field nothing reads again.
+
+Where a name could not be kept, that is written down rather than left to be discovered.
+`Resources/UMGParity` holds one table per UMG class -- 58 of them, some 960 Blueprint-facing members
+-- and each row says one of three things: *adopt* (same name, same meaning), *map* (here under
+another name, or on another type, and which), or *reject* (deliberately absent, with the reason:
+there is no immediate-mode paint context to draw into, a rect block has no per-instance material,
+and so on). The automation suite holds those tables against UMG's own reflection, in both
+directions: a member the engine gains in an upgrade turns up as a row that does not exist, and a row
+naming something this plugin has since renamed turns up as a name that does not resolve.
+
+Two differences are worth knowing in advance. A new knob defaults to **what the control already
+did**, not to UMG's default, so that existing content does not move -- `ScrollWhenFocusChanges` is
+`AnimatedScroll` here and `NoScroll` there, and the tables record each such case. And appearance
+lives in a control's style struct while behaviour lives on the control, so a few UMG properties are
+one level down: `EntrySpacing` is `Style.RowSpacing`.
+
+`Docs/Reference` is the property and function reference, one page per class, each ending with that
+class's UMG comparison. It is printed from reflection rather than written, so it cannot fall behind
+the headers:
+
+```
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
+```
+
 ## How it differs from upstream
 
 Forked from upstream `LexUI/5.7` at `765efeaf1` (2026-07-13); 214 commits since.
@@ -305,7 +338,7 @@ link time. Six interaction subsystems already decline to exist on a server
 
 ## Status
 
-691 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
+1112 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
 
 Known gaps:
 
