@@ -7,6 +7,7 @@
 #include "DreamContentWidget.generated.h"
 
 class UDreamWidget;
+class UDreamPanelSlot;
 
 /** Single-child host equivalent to UContentWidget. */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
@@ -28,6 +29,13 @@ public:
 	UDreamWidget* GetContent()const;
 	UFUNCTION(BlueprintCallable, Category = "ContentWidget")
 	bool SetContent(UDreamWidget* NewContent);
+	/**
+	 * UMG's UContentWidget::GetContentSlot: the layout slot of the one child, or null while there is no
+	 * child or the host's container hands out no slots. It is a hop rather than a field because the slot
+	 * belongs to the child here, which is what makes one slot class enough for every panel.
+	 */
+	UFUNCTION(BlueprintPure, Category = "ContentWidget")
+	UDreamPanelSlot* GetContentSlot() const;
 	/** ContentWidget always removes its actual child; bDetach is retained for Blueprint compatibility. */
 	UFUNCTION(BlueprintCallable, Category = "ContentWidget")
 	void ClearContent(bool bDetach = true);

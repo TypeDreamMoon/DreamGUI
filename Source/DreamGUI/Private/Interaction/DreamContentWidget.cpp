@@ -3,6 +3,7 @@
 #include "Interaction/DreamContentWidget.h"
 #include "DreamGUI.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 
 void UDreamContentWidget::OnRegister()
@@ -56,6 +57,12 @@ UDreamWidget* UDreamContentWidget::GetContent() const
 		}
 	}
 	return nullptr;
+}
+
+UDreamPanelSlot* UDreamContentWidget::GetContentSlot() const
+{
+	UDreamWidget* ContentChild = GetContent();
+	return IsValid(ContentChild) ? ContentChild->GetPanelSlot() : nullptr;
 }
 
 bool UDreamContentWidget::CanAcceptChild(const UDreamWidget* Child) const
