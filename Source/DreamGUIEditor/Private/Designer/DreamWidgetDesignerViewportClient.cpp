@@ -1935,7 +1935,8 @@ UDreamWidget* FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(UDrea
 	// walk stops here instead of falling through to the root: dropping a widget out of its parent
 	// and onto the page because the panel under the cursor was locked is not what the lock asked for.
 	if (InHit != nullptr && InIsLocked(InHit))return nullptr;
-	UDreamWidget* Container = DreamUIWidgetPicking::ResolveDropContainer(InHit);
+	// Bounded by the authored root: see ResolveDropContainer for what an unbounded walk reaches.
+	UDreamWidget* Container = DreamUIWidgetPicking::ResolveDropContainer(InHit, InRoot);
 	// The container answers for itself, not only for the pixel: the resolve walks up to the nearest
 	// ancestor holding one, and that ancestor is what receives the children.
 	if (Container != nullptr && InIsLocked(Container))return nullptr;
@@ -1971,6 +1972,10 @@ bool FDreamWidgetDesignerViewportClient::ApplyPendingReparent()
 	// Asked again at the drop rather than trusted from the hover: a pointer stays down for as long
 	// as the author holds it, and anything else in the editor may have moved the hierarchy meanwhile.
 	if (!CanReparentSelectionUnder(Dragged, NewParent))return false;
+	// And asked of the AUTHORING tree before the preview is touched. The preview half below cannot be
+	// taken back, and a parent the asset does not contain is one ReparentTemplatesFrom will refuse --
+	// after which the preview shows a hierarchy the asset never had, until the next rebuild.
+	if (!DesignerPtr.IsValid() || DesignerPtr.Pin()->GetTemplateWidget(NewParent) == nullptr)return false;
 	// No Modify on either parent, and no RF_Transactional put on them: both are PREVIEW widgets, and
 	// recording them here is what used to let an undo restore a hierarchy of objects the next
 	// rebuild had already destroyed. ReparentTemplatesFrom below performs the same move on the
@@ -3352,13 +3357,13 @@ UDreamWidget* FDreamWidgetDesignerViewportClient::GetDropContainerUnderCursor(in
 	// mean the box holding it. Resolve up to the nearest container that will actually arrange the
 	// new child, and fall back to the prefab root, which is the container-less prefab's answer.
 	UDreamWidget* Hit = GetWidgetUnderCursor(PixelX, PixelY);
-	if (UDreamWidget* Container = DreamUIWidgetPicking::ResolveDropContainer(Hit))return Container;
-	if (DesignerPtr.IsValid())
+	UDreamWidget* Root = DesignerPtr.IsValid() ? DesignerPtr.Pin()->GetPreviewRootWidget() : nullptr;
+	// Bounded by the authored root, so a root with no container answers "the root" below rather than
+	// the designer's own wrapper above it.
+	if (UDreamWidget* Container = DreamUIWidgetPicking::ResolveDropContainer(Hit, Root))return Container;
+	if (Root != nullptr)
 	{
-		if (UDreamWidget* Root = DesignerPtr.Pin()->GetPreviewRootWidget())
-		{
-			return Root->CanAcceptAdditionalChildren() ? Root : nullptr;
-		}
+		return Root->CanAcceptAdditionalChildren() ? Root : nullptr;
 	}
 	return nullptr;
 }

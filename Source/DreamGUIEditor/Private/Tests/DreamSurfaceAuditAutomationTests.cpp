@@ -99,6 +99,27 @@ bool FDreamSurfaceAuditDropContainerTest::RunTest(const FString& Parameters)
 		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(BareChild.Get(), BareRoot.Get(), Dragged, IsLocked));
 	Locked.Reset();
 
+	// The designer does not stand the authored root at the top of its world: it puts it inside a wrapper
+	// of its own, and that wrapper carries an Overlay so the root is handed the design size. A container,
+	// with room -- exactly what the resolve is looking for -- and nothing the asset contains. Dragging a
+	// free child across its container-less root used to climb to it: the preview re-parented the child
+	// to a piece of the editor, where it filled the screen and fell out of the hierarchy.
+	TStrongObjectPtr<UDreamWidget> Wrapper(MakeWidget(TestWorld.World, TEXT("DesignerWrapper"), 800.0f, 600.0f));
+	Wrapper->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
+	TStrongObjectPtr<UDreamWidget> AuthoredRoot(MakeWidget(Wrapper.Get(), TEXT("AuthoredRoot"), 800.0f, 600.0f));
+	AuthoredRoot->TrySetParent(Wrapper.Get(), false);
+	TStrongObjectPtr<UDreamWidget> FreeChild(MakeWidget(AuthoredRoot.Get(), TEXT("FreeChild"), 100.0f, 100.0f));
+	FreeChild->TrySetParent(AuthoredRoot.Get(), false);
+	TArray<UDreamWidget*> DraggingTheFreeChild = { FreeChild.Get() };
+
+	TestNull(TEXT("dragging a free child over its container-less root stays a move: the wrapper above the root is nowhere to land"),
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(AuthoredRoot.Get(), AuthoredRoot.Get(), DraggingTheFreeChild, IsLocked));
+	TestNull(TEXT("and it is not landed on when the wrapper itself is what the cursor hit"),
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(Wrapper.Get(), AuthoredRoot.Get(), DraggingTheFreeChild, IsLocked));
+	// Something dragged in from elsewhere still has the root as its answer, as it always did.
+	TestSamePtr(TEXT("while a widget from outside that root still drops on the root"),
+		FDreamWidgetDesignerViewportClient::ResolveDragDropContainer(AuthoredRoot.Get(), AuthoredRoot.Get(), Dragged, IsLocked), AuthoredRoot.Get());
+
 	// The hierarchy's own refusals still have the last word over whatever was resolved.
 	TArray<UDreamWidget*> DraggingThePanel = { Panel.Get() };
 	TestNull(TEXT("and a widget is not dropped into itself however the container was reached"),

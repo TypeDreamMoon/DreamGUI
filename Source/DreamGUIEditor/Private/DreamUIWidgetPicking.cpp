@@ -93,13 +93,24 @@ namespace DreamUIWidgetPicking
 		return Hits[InOutCycleIndex].Widget;
 	}
 
-	UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget)
+	UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget, const UDreamWidget* InTreeRoot)
 	{
+		const bool bBounded = IsValid(InTreeRoot);
+		if (bBounded && IsValid(InHitWidget) && InHitWidget != InTreeRoot && !InHitWidget->IsChildOf(InTreeRoot))
+		{
+			// Above or beside the tree being edited: whatever holds a container out there is not the
+			// asset's to fill.
+			return nullptr;
+		}
 		for (UDreamWidget* Candidate = InHitWidget; IsValid(Candidate); Candidate = Candidate->GetParent())
 		{
 			if (Candidate->GetLayoutContainer() != nullptr && Candidate->CanAcceptAdditionalChildren())
 			{
 				return Candidate;
+			}
+			if (bBounded && Candidate == InTreeRoot)
+			{
+				break;
 			}
 		}
 		return nullptr;
