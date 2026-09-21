@@ -117,7 +117,7 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetStyle", Category = "Tab View")
 	FDreamTabViewStyle Style;
 
 	/**
@@ -126,7 +126,7 @@ public:
 	 * is allowed and grows the strip -- a screen that authors its tabs before its pages should see
 	 * the strip it is building.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetTabLabels", Category = "Tab View")
 	TArray<FText> TabLabels;
 
 	/**
@@ -154,7 +154,7 @@ public:
 	 * none this quietly stays the built-in tab rather than producing half a strip. Exactly the
 	 * bargain UDreamListViewBase::RowTemplateClass makes, in the same words.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetTabTemplateClass", Category = "Tab View")
 	TSubclassOf<UDreamUserWidget> TabTemplateClass;
 
 	/**
@@ -167,7 +167,7 @@ public:
 	 * and cannot be clicked; code may still open it through SetActiveTabIndex, which is the rule
 	 * everywhere else in this library -- an interactable flag stops the PLAYER, not the program.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetTabEnabledStates", Category = "Tab View")
 	TArray<bool> TabEnabled;
 
 	/**
@@ -178,7 +178,7 @@ public:
 	 * after OnTabClosed has been broadcast with the index -- so a consumer that wants to keep the
 	 * page takes it out of the switcher from that handler.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetTabsClosable", Category = "Tab View")
 	bool bTabsClosable = false;
 
 	/**
@@ -188,7 +188,7 @@ public:
 	 * stray drag. The reorder is LIVE -- the tab under the pointer swaps with the dragged one as it
 	 * passes, which is what every browser does and what makes the gesture readable without a ghost.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetTabsDraggable", Category = "Tab View")
 	bool bTabsDraggable = false;
 
 	/**
@@ -199,7 +199,7 @@ public:
 	 * player just opened. Only for a switch the USER made -- an authored index or a two-way binding
 	 * pushing a value in must not steal focus from wherever it is.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tab View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetFocusPageOnTabChange", Category = "Tab View")
 	bool bFocusPageOnTabChange = false;
 
 	/**
@@ -247,6 +247,28 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void SetActiveTabIndexWithoutNotify(int32 InIndex);
+
+	/** Replace the look and push it. */
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void SetStyle(const FDreamTabViewStyle& InStyle);
+
+	/** The authored tab content. Instanced into each tab at build, so a new class means a rebuild. */
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void SetTabTemplateClass(TSubclassOf<UDreamUserWidget> InTabTemplateClass);
+
+	/** Show or hide every tab's close button. A restyle: the buttons are woken in the style loop. */
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void SetTabsClosable(bool bInTabsClosable);
+
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void SetTabsDraggable(bool bInTabsDraggable);
+
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void SetFocusPageOnTabChange(bool bInFocusPageOnTabChange);
+
+	/** Every tab's enabled flag at once; a missing entry means enabled. SetTabEnabled changes one. */
+	UFUNCTION(BlueprintCallable, Category = "Tab View")
+	void SetTabEnabledStates(const TArray<bool>& InTabEnabled);
 
 	/** Replace the captions and regenerate the strip. */
 	UFUNCTION(BlueprintCallable, Category = "Tab View")

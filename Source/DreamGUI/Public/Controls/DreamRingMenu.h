@@ -163,15 +163,15 @@ public:
 	 * actually exists; with no sheet in the project this IS the look in effect -- which is why it
 	 * stays editable instead of being gated on the enum.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetStyle", Category = "Ring Menu")
 	FDreamRingMenuStyle Style;
 
 	/** The wheel. Order is clockwise from the style's StartAngle. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetItems", Category = "Ring Menu")
 	TArray<FDreamRingMenuItem> Items;
 
 	/** The committed item. -1 is none, which is the resting state of a menu nobody has chosen from. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetSelectedIndex", Category = "Ring Menu")
 	int32 SelectedIndex = INDEX_NONE;
 
 	/**
@@ -218,7 +218,7 @@ public:
 	 * MAGNITUDE -- an axis pair is already normalized, so this is 0 to 1 and has nothing to do with
 	 * the ring's radii. What stops a resting stick's jitter from choosing an item every frame.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetStickDeadZone", Category = "Ring Menu", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float StickDeadZone = 0.25f;
 
 	/** See EDreamRingLabelFacing. */
@@ -229,11 +229,11 @@ public:
 	 * Highlighting an item commits it, with no click -- the weapon wheel, where the pointer's
 	 * direction IS the choice and releasing the key is the confirm.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetSelectOnHighlight", Category = "Ring Menu")
 	bool bSelectOnHighlight = false;
 
 	/** Clicking the item that is already selected clears the selection instead of re-choosing it. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetAllowDeselect", Category = "Ring Menu")
 	bool bAllowDeselect = false;
 
 	/** Off leaves the wedges to their icons. A wheel of glyphs is an ordinary thing to want. */
@@ -244,11 +244,11 @@ public:
 	 * The hub shows the highlighted item's label (falling back to the selected one's, then to
 	 * HubText). Off leaves HubText alone, which is how the hub becomes a static title.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetHubFollowsHighlight", Category = "Ring Menu")
 	bool bHubFollowsHighlight = true;
 
 	/** What the hub says with nothing highlighted. Empty is an empty hub. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetHubText", Category = "Ring Menu")
 	FText HubText;
 
 	/** Where the pointer is. Fires with both routes -- the wedges' hover and HighlightByAngle. */
@@ -295,7 +295,7 @@ public:
 	 * this quietly stays the built-in wedge rather than producing half a ring. Exactly the bargain
 	 * UDreamListViewBase::RowTemplateClass makes, in the same words.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ring Menu")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetWedgeTemplateClass", Category = "Ring Menu")
 	TSubclassOf<UDreamUserWidget> WedgeTemplateClass;
 
 	/**
@@ -337,6 +337,32 @@ public:
 	/** The wedge widgets, parallel to Items. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Ring Menu")
 	TArray<TObjectPtr<UDreamWidget>> WedgeNodes;
+
+	/** Replace the look and push it. */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetStyle(const FDreamRingMenuStyle& InStyle);
+
+	/** How far the stick has to be pushed before it points at anything, 0..1. Read on every stick sample. */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetStickDeadZone(float InStickDeadZone);
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetSelectOnHighlight(bool bInSelectOnHighlight);
+
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetAllowDeselect(bool bInAllowDeselect);
+
+	/** Whether the hub shows the highlighted item's label. The hub is re-read at once. */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetHubFollowsHighlight(bool bInHubFollowsHighlight);
+
+	/** What the hub says when nothing else has a claim on it. The hub is re-read at once. */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetHubText(const FText& InHubText);
+
+	/** The authored wedge content. Instanced into each wedge at build, so a new class means a rebuild. */
+	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
+	void SetWedgeTemplateClass(TSubclassOf<UDreamUserWidget> InWedgeTemplateClass);
 
 	/** Replace the wheel and rebuild it. */
 	UFUNCTION(BlueprintCallable, Category = "Ring Menu")

@@ -1042,5 +1042,48 @@ void UDreamRingMenu::ToggleOpen()
 	}
 }
 
+void UDreamRingMenu::SetStyle(const FDreamRingMenuStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamRingMenu::SetStickDeadZone(float InStickDeadZone)
+{
+	StickDeadZone = FMath::Clamp(InStickDeadZone, 0.0f, 1.0f);
+}
+
+void UDreamRingMenu::SetSelectOnHighlight(bool bInSelectOnHighlight)
+{
+	bSelectOnHighlight = bInSelectOnHighlight;
+}
+
+void UDreamRingMenu::SetAllowDeselect(bool bInAllowDeselect)
+{
+	bAllowDeselect = bInAllowDeselect;
+}
+
+void UDreamRingMenu::SetHubFollowsHighlight(bool bInHubFollowsHighlight)
+{
+	bHubFollowsHighlight = bInHubFollowsHighlight;
+	RefreshHubText();
+}
+
+void UDreamRingMenu::SetHubText(const FText& InHubText)
+{
+	HubText = InHubText;
+	RefreshHubText();
+}
+
+void UDreamRingMenu::SetWedgeTemplateClass(TSubclassOf<UDreamUserWidget> InWedgeTemplateClass)
+{
+	if (WedgeTemplateClass == InWedgeTemplateClass)
+	{
+		return;
+	}
+	WedgeTemplateClass = InWedgeTemplateClass;
+	RebuildItems();
+}
+
 // The tag this class answers to in .dui.
 DECLARE_DREAM_GUI_WIDGET("Native", "RingMenu", UDreamRingMenu)

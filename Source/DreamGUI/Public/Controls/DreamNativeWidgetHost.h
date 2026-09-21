@@ -49,11 +49,11 @@ public:
 	 * Here rather than in a style because it is not a LOOK, it is a fidelity-versus-memory decision
 	 * about one particular hosted widget, and a project sheet has nothing useful to say about it.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Native Widget Host", meta = (ClampMin = "0.05"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetResolutionScale", Category = "Native Widget Host", meta = (ClampMin = "0.05"))
 	float ResolutionScale = 1.0f;
 
 	/** What shows through where the hosted widget draws nothing. Transparent by default. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Native Widget Host")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetBackgroundColor", Category = "Native Widget Host")
 	FLinearColor BackgroundColor = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 	/** The node whose visual is the bridge. Public because everything under a control is reachable. */
@@ -66,6 +66,14 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Native Widget Host")
 	TSubclassOf<UUserWidget> GetWidgetClass() const { return WidgetClass; }
+
+	/** Render-target pixels per local unit of the host. Pushed to the host visual at once. */
+	UFUNCTION(BlueprintCallable, Category = "Native Widget Host")
+	void SetResolutionScale(float InResolutionScale);
+
+	/** What the render target is cleared to behind the hosted widget. Pushed to the host visual at once. */
+	UFUNCTION(BlueprintCallable, Category = "Native Widget Host")
+	void SetBackgroundColor(FLinearColor InBackgroundColor);
 
 	/** Replace the hosted class and re-instance it. Null empties the hole. */
 	UFUNCTION(BlueprintCallable, Category = "Native Widget Host")

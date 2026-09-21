@@ -125,7 +125,7 @@ public:
 	 * actually exists; with no sheet in the project this IS the look in effect -- which is why
 	 * it stays editable instead of being gated on the enum.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetStyle", Category = "Dialog")
 	FDreamDialogStyle Style;
 
 	/**
@@ -162,7 +162,7 @@ public:
 	 * button's result, because that is what "Cancel" is in every row this control builds, falling
 	 * back to the last button's and finally to "Cancel". Naming it explicitly wins over all of that.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetCancelResult", Category = "Dialog")
 	FName CancelResult;
 
 	/**
@@ -172,7 +172,7 @@ public:
 	 * row when none is marked. Without this a dialog opened with a gamepad came up with focus
 	 * wherever the previous screen left it, so the first press went to a control behind the scrim.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetFocusDefaultButton", Category = "Dialog")
 	bool bFocusDefaultButton = true;
 
 	/**
@@ -183,7 +183,7 @@ public:
 	 * second scope on top of it would quietly change that answer. So this fills the hole the
 	 * subsystem does not cover rather than overruling the half it does.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetCloseOnBack", Category = "Dialog")
 	bool bCloseOnBack = true;
 
 	/**
@@ -195,7 +195,7 @@ public:
 	 * Only ever reachable while the dialog's own dimmer is up -- under the modal subsystem the layer
 	 * is what eats clicks, and it is not this control's to put a button on.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialog")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetCloseOnDimmerClick", Category = "Dialog")
 	bool bCloseOnDimmerClick = false;
 
 	/**
@@ -218,6 +218,25 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	FText GetTitle() const { return Title; }
+
+	/** Replace the look and push it. A write straight onto the variable changes a struct nothing reads again. */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void SetStyle(const FDreamDialogStyle& InStyle);
+
+	/** What Back and a click on the dimmer answer with. Read at the moment of the dismissal. */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void SetCancelResult(FName InCancelResult);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void SetFocusDefaultButton(bool bInFocusDefaultButton);
+
+	/** Whether Back closes the dialog. The Back scope is added or released to match, which is why this is a setter. */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void SetCloseOnBack(bool bInCloseOnBack);
+
+	/** Whether a click outside closes the dialog. The scrim's button is added or unbound to match. */
+	UFUNCTION(BlueprintCallable, Category = "Dialog")
+	void SetCloseOnDimmerClick(bool bInCloseOnDimmerClick);
 
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	void SetTitle(const FText& InTitle);

@@ -929,5 +929,45 @@ void UDreamTabView::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 }
 #endif
 
+void UDreamTabView::SetStyle(const FDreamTabViewStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamTabView::SetTabTemplateClass(TSubclassOf<UDreamUserWidget> InTabTemplateClass)
+{
+	if (TabTemplateClass == InTabTemplateClass)
+	{
+		return;
+	}
+	TabTemplateClass = InTabTemplateClass;
+	RebuildTabs();
+}
+
+void UDreamTabView::SetTabsClosable(bool bInTabsClosable)
+{
+	bTabsClosable = bInTabsClosable;
+	ApplyStyle();
+}
+
+void UDreamTabView::SetTabsDraggable(bool bInTabsDraggable)
+{
+	bTabsDraggable = bInTabsDraggable;
+}
+
+void UDreamTabView::SetFocusPageOnTabChange(bool bInFocusPageOnTabChange)
+{
+	bFocusPageOnTabChange = bInFocusPageOnTabChange;
+}
+
+void UDreamTabView::SetTabEnabledStates(const TArray<bool>& InTabEnabled)
+{
+	TabEnabled = InTabEnabled;
+	// The flags are pushed onto the toggles in the style loop, which is also where the disabled colour
+	// comes from -- a restyle, never a rebuild.
+	ApplyStyle();
+}
+
 // The tag this class answers to in .dui.
 DECLARE_DREAM_GUI_WIDGET("Native", "TabView", UDreamTabView)
