@@ -237,6 +237,28 @@ void UDreamRadioButton::PushCheckStateVisuals(bool bForceOffColour)
 	}
 }
 
+void UDreamRadioButton::SetStyle(const FDreamRadioButtonStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamRadioButton::SetAutoGroupWithSiblings(bool bInAutoGroupWithSiblings)
+{
+	bAutoGroupWithSiblings = bInAutoGroupWithSiblings;
+	if (ToggleBehaviour == nullptr)
+	{
+		return;
+	}
+	ToggleBehaviour->SetAutoFindToggleGroupInParent(bInAutoGroupWithSiblings);
+	if (bInAutoGroupWithSiblings && ToggleBehaviour->GetToggleGroup() == nullptr && BoxNode != nullptr)
+	{
+		// The search the behaviour runs at Awake, run now. Without this the switch decides nothing
+		// for any radio that already exists -- which is every radio a screen builds at runtime.
+		ToggleBehaviour->SetToggleGroup(BoxNode->GetComponentInParent<UUIToggleGroup>());
+	}
+}
+
 void UDreamRadioButton::SetToggleGroup(UUIToggleGroup* InGroup)
 {
 	if (ToggleBehaviour != nullptr)

@@ -71,8 +71,29 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Progress Bar")
 	FDreamProgressBarStyle Style;
+
+	/**
+	 * A tint over the style's fill colour -- UMG's FillColorAndOpacity, which is a tint over
+	 * SProgressBar's fill image for the same reason: the style says what a filled bar looks like,
+	 * and this says what is happening to this one right now. White is no opinion.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetFillColorAndOpacity", BlueprintSetter = "SetFillColorAndOpacity", Category = "Progress Bar")
+	FColor FillColorAndOpacity = FColor::White;
+
+	UFUNCTION(BlueprintPure, Category = "Progress Bar")
+	FDreamProgressBarStyle GetStyle() const { return Style; }
+
+	/** This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. */
+	UFUNCTION(BlueprintCallable, Category = "Progress Bar")
+	void SetStyle(const FDreamProgressBarStyle& InStyle);
+
+	UFUNCTION(BlueprintPure, Category = "Progress Bar")
+	FColor GetFillColorAndOpacity() const { return FillColorAndOpacity; }
+
+	UFUNCTION(BlueprintCallable, Category = "Progress Bar")
+	void SetFillColorAndOpacity(FColor InFillColorAndOpacity);
 
 	/**
 	 * How much of the track is filled, 0..1. A property so .dui and bindings can see it; the value
@@ -118,12 +139,30 @@ public:
 	 * How much of the track the sweeping fill covers, 0..1. A fraction rather than a pixel count for
 	 * the reason every other length on this control is one: a bar is stretched by whoever placed it.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar", meta = (ClampMin = "0.01", ClampMax = "1.0", EditCondition = "bIsMarquee"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMarqueeFraction", BlueprintSetter = "SetMarqueeFraction", Category = "Progress Bar", meta = (ClampMin = "0.01", ClampMax = "1.0", EditCondition = "bIsMarquee"))
 	float MarqueeFraction = 0.25f;
 
 	/** Seconds for one sweep, entrance to exit. Zero or less parks the sweep at the start edge. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar", meta = (ClampMin = "0.0", EditCondition = "bIsMarquee"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMarqueeDuration", BlueprintSetter = "SetMarqueeDuration", Category = "Progress Bar", meta = (ClampMin = "0.0", EditCondition = "bIsMarquee"))
 	float MarqueeDuration = 1.5f;
+
+	UFUNCTION(BlueprintPure, Category = "Progress Bar")
+	float GetMarqueeFraction() const { return MarqueeFraction; }
+
+	/**
+	 * How wide the sweeping fill is. Clamped where the property is, and re-placed at once: the
+	 * width is read by the sweep, and a sweep parked by a zero duration would otherwise keep the
+	 * old width until something else moved it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Progress Bar")
+	void SetMarqueeFraction(float InMarqueeFraction);
+
+	UFUNCTION(BlueprintPure, Category = "Progress Bar")
+	float GetMarqueeDuration() const { return MarqueeDuration; }
+
+	/** Seconds for one sweep. Zero or less parks it at the start edge, which is where it re-places to. */
+	UFUNCTION(BlueprintCallable, Category = "Progress Bar")
+	void SetMarqueeDuration(float InMarqueeDuration);
 
 	UFUNCTION(BlueprintCallable, Category = "Progress Bar")
 	float GetPercent() const;

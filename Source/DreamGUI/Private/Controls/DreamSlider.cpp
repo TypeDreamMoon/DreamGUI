@@ -95,9 +95,14 @@ void UDreamSlider::ApplyStyle()
 	PlaceOnAxis(FillAreaNode, bHorizontal
 		? FVector2D(0.0, Active.TrackThickness)
 		: FVector2D(Active.TrackThickness, 0.0));
-	PlaceOnAxis(HandleAreaNode, bHorizontal
-		? FVector2D(-HandleSize.X, HandleSize.Y)
-		: FVector2D(HandleSize.X, -HandleSize.Y));
+	// UMG's IndentHandle, and the inset above is what it means: indented (the default, and what this
+	// slider has always drawn) keeps the whole handle inside the track's ends, because the handle's
+	// travel is the track MINUS its own width. Un-indented gives the handle the track's full length,
+	// so its centre reaches the very ends and half of it hangs off each -- which is the look UMG
+	// ships for a handle drawn as a notch rather than as a knob.
+	PlaceOnAxis(HandleAreaNode, bIndentHandle
+		? (bHorizontal ? FVector2D(-HandleSize.X, HandleSize.Y) : FVector2D(HandleSize.X, -HandleSize.Y))
+		: (bHorizontal ? FVector2D(0.0, HandleSize.Y) : FVector2D(HandleSize.X, 0.0)));
 
 	if (HandleNode != nullptr)
 	{
@@ -112,9 +117,12 @@ void UDreamSlider::ApplyStyle()
 	SkinFace(TrackNode, Active.TrackBrush);
 	SkinFace(FillNode, Active.FillBrush);
 	SkinFace(HandleNode, Active.HandleBrush);
+	// The bar's runtime tint rides the track, not the fill: the fill is the accent a style names and
+	// UMG's SliderBarColor is the colour of the bar the handle travels along. White is no opinion,
+	// so an existing slider is unchanged.
 	if (UDreamVisual* TrackVisual = TrackNode != nullptr ? TrackNode->GetVisual() : nullptr)
 	{
-		TrackVisual->SetColor(Active.TrackColor);
+		TrackVisual->SetColor(TintOver(Active.TrackColor, SliderBarColor));
 	}
 	if (UDreamVisual* FillVisual = FillNode != nullptr ? FillNode->GetVisual() : nullptr)
 	{
@@ -123,8 +131,17 @@ void UDreamSlider::ApplyStyle()
 
 	if (SliderBehaviour != nullptr)
 	{
-		PushSelectableState(SliderBehaviour, Active.HandleNormal, Active.HandleHovered, Active.HandlePressed,
-			Active.HandleDisabled, Active.HandleFocused, Active.TransitionDuration);
+		// The handle's five state colours, each through the runtime tint: a handle that goes red
+		// while a value is out of range has to stay red through a hover, which a tint does and a
+		// single overwritten colour does not.
+		PushSelectableState(SliderBehaviour,
+			TintOver(Active.HandleNormal, SliderHandleColor),
+			TintOver(Active.HandleHovered, SliderHandleColor),
+			TintOver(Active.HandlePressed, SliderHandleColor),
+			TintOver(Active.HandleDisabled, SliderHandleColor),
+			TintOver(Active.HandleFocused, SliderHandleColor),
+			Active.TransitionDuration);
+		SliderBehaviour->SetLocked(bLocked);
 		SliderBehaviour->SetDirectionType(Direction);
 		// The two rules the behaviour has always carried and the control never stated. Before the
 		// value, because whole numbers snap whatever it is holding.
@@ -285,6 +302,59 @@ void UDreamSlider::SetRequiresControllerLock(bool bInRequiresControllerLock)
 bool UDreamSlider::IsControllerCaptured() const
 {
 	return SliderBehaviour != nullptr && SliderBehaviour->IsControllerCaptured();
+}
+
+void UDreamSlider::SetStyle(const FDreamSliderStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamSlider::SetLocked(bool bInLocked)
+{
+	bLocked = bInLocked;
+	if (SliderBehaviour != nullptr)
+	{
+		// Straight onto the behaviour: the lock decides nothing about how the slider is drawn, so a
+		// whole style push would be a lot of work with one line of effect.
+		SliderBehaviour->SetLocked(bInLocked);
+	}
+}
+
+void UDreamSlider::SetSliderBarColor(FColor InSliderBarColor)
+{
+	SliderBarColor = InSliderBarColor;
+	// Through the style push, because a tint multiplies the STYLE's colour and this is where that
+	// colour is resolved; writing the product onto the visual here would lose it at the next push.
+	ApplyStyle();
+}
+
+void UDreamSlider::SetSliderHandleColor(FColor InSliderHandleColor)
+{
+	SliderHandleColor = InSliderHandleColor;
+	ApplyStyle();
+}
+
+void UDreamSlider::SetIndentHandle(bool bInIndentHandle)
+{
+	if (bIndentHandle == bInIndentHandle)
+	{
+		return;
+	}
+	bIndentHandle = bInIndentHandle;
+	// Through the style push, because the inset is computed from the handle's drawn size and that
+	// size comes out of the style -- a caller should not have to know which of the two it is asking
+	// about.
+	ApplyStyle();
+}
+
+float UDreamSlider::GetNormalizedValue() const
+{
+	const float Low = GetMinValue();
+	const float High = GetMaxValue();
+	// A slider whose ends meet has no positions between them; answering zero is the only thing that
+	// is not a division by zero, and it is what UMG's own slider answers.
+	return FMath::IsNearlyEqual(Low, High) ? 0.0f : (GetValue() - Low) / (High - Low);
 }
 
 void UDreamSlider::HandleMouseCaptureBegin()

@@ -84,6 +84,11 @@ void UDreamToggle::WireParts()
 	ToggleBehaviour->GetOnReleasedEvent().AddUObject(this, &UDreamToggle::HandleReleased);
 	ToggleBehaviour->GetOnHoveredEvent().AddUObject(this, &UDreamToggle::HandleHovered);
 	ToggleBehaviour->GetOnUnhoveredEvent().AddUObject(this, &UDreamToggle::HandleUnhovered);
+	// The BOX draws one picture per pointer state from here on. The mark is not part of this: the
+	// three check brushes answer "which of the three values is this", the group answers "is the
+	// pointer on it", and a check box shows both at once -- which is why they are two mechanisms
+	// aimed at two nodes rather than one fighting itself.
+	UseStateFaces(ToggleBehaviour, BoxNode);
 }
 
 void UDreamToggle::ApplyStyle()
@@ -93,7 +98,9 @@ void UDreamToggle::ApplyStyle()
 	const FDreamToggleStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ToggleStyle);
 
 	ShapeFace(BoxNode, Active.CornerRadius);
-	SkinFace(BoxNode, Active.BoxBrush);
+	// One picture per pointer state, falling back to BoxBrush for every state that states none --
+	// which is every state in every style that exists, so nothing here changes what a box looks like.
+	PushStateFaces(Active.StateFaces, Active.BoxBrush);
 	// The control's own authored size: the box fills it, and in an Auto slot this is what the
 	// desired-size fallback reads. The background brush may state its own drawn size.
 	//
@@ -131,6 +138,18 @@ void UDreamToggle::ApplyStyle()
 		ToggleBehaviour->SetOnColor(Active.TickChecked);
 		PushCheckStateVisuals(true);
 	}
+}
+
+void UDreamToggle::SetStyle(const FDreamToggleStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+bool UDreamToggle::IsPressed() const
+{
+	return ToggleBehaviour != nullptr
+		&& ToggleBehaviour->GetCurrentSelectionState() == EUISelectableSelectionState::Pressed;
 }
 
 bool UDreamToggle::GetIsOn() const

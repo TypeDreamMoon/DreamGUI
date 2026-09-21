@@ -94,6 +94,20 @@ protected:
 		bool bControllerCaptured = false;
 
 	/**
+	 * Shows its value and refuses to be moved -- UMG's Locked.
+	 *
+	 * A different thing from not being interactable, which is why it is a flag of its own: a
+	 * disabled slider is drawn in its Disabled colours and says "not now", a locked one looks
+	 * completely ordinary and says "this is what it is". A volume bar during a cutscene is the
+	 * second thing, not the first.
+	 *
+	 * It gates INPUT only. SetValue keeps working, because a read-only slider that game code could
+	 * not write would have nothing to show.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider")
+		bool bLocked = false;
+
+	/**
 	 * The four capture moments UMG's slider speaks, in C++ only -- the control re-broadcasts them to
 	 * Blueprint. Mouse begin/end are the press and the release; controller begin/end are the lock
 	 * being taken and given back. What a consumer needs them for is the same thing UMG does: pause
@@ -125,6 +139,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
 		bool GetWholeNumber()const { return WholeNumbers; }
+
+	/** See bLocked: input refused, look unchanged, SetValue unaffected. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-Slider")
+		bool IsLocked()const { return bLocked; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Slider")
+		void SetLocked(bool InValue) { bLocked = InValue; }
 	/**
 	 * Settable, like the parts and the direction beside it and for the same reason: the property is
 	 * EditAnywhere, so the designer and .dui have always reached it by reflection while no caller

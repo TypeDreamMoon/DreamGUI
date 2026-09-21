@@ -78,7 +78,10 @@ void UDreamProgressBar::ApplyStyle()
 	}
 	if (UDreamVisual* FillVisual = FillNode != nullptr ? FillNode->GetVisual() : nullptr)
 	{
-		FillVisual->SetColor(Active.FillColor);
+		// The style says what a filled bar looks like; FillColorAndOpacity says what is happening to
+		// this one right now (a health bar going red under a quarter). White is no opinion, so every
+		// existing bar keeps the style's colour exactly.
+		FillVisual->SetColor(TintOver(Active.FillColor, FillColorAndOpacity));
 	}
 	// After the two above, and deliberately: ShapeFace states a Value-mode radius and SkinFace a body
 	// texture, and the ring overrides exactly those. Before ApplyPercent, which needs the shape
@@ -206,8 +209,30 @@ void UDreamProgressBar::ApplyPercent()
 	const FVector2D Anchor = bHorizontal
 		? FVector2D(bFromFarEdge ? 1.0 : 0.0, 0.5)
 		: FVector2D(0.5, bFromFarEdge ? 1.0 : 0.0);
-	const double TrackLength = bHorizontal ? TrackSize.X : TrackSize.Y;
-	const double TrackThickness = bHorizontal ? TrackSize.Y : TrackSize.X;
+
+	// UMG's BorderPadding, spent on the FILL so the track still reaches both ends of what the bar
+	// spans. NEAR is the side the fill grows from, which is the side the pivot is on -- so the four
+	// margin numbers sort into "the edge it starts at", "the edge it ends at" and the two sides,
+	// rather than into left/right/top/bottom that would each mean something different per FillType.
+	const FDreamProgressBarStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ProgressBarStyle);
+	const FMargin& Pad = Active.BorderPadding;
+	const double PadNear = bHorizontal
+		? (bFromFarEdge ? Pad.Right : Pad.Left)
+		: (bFromFarEdge ? Pad.Top : Pad.Bottom);
+	const double PadFar = bHorizontal
+		? (bFromFarEdge ? Pad.Left : Pad.Right)
+		: (bFromFarEdge ? Pad.Bottom : Pad.Top);
+	// Across the bar: thinner by both sides, and shifted by half their difference so an even pair
+	// leaves the fill centred and an uneven one moves it the way the bigger side pushes. Y runs UP,
+	// so a bigger BOTTOM padding pushes the fill up, which is why that subtraction is that way round.
+	const double PadCross = bHorizontal ? (Pad.Top + Pad.Bottom) : (Pad.Left + Pad.Right);
+	const double PadCrossShift = bHorizontal
+		? (Pad.Bottom - Pad.Top) * 0.5
+		: (Pad.Left - Pad.Right) * 0.5;
+	// Never negative: a padding larger than the bar is an authoring mistake, and a fill with a
+	// negative length would be drawn inside out rather than not at all.
+	const double TrackLength = FMath::Max(0.0, (bHorizontal ? TrackSize.X : TrackSize.Y) - PadNear - PadFar);
+	const double TrackThickness = FMath::Max(0.0, (bHorizontal ? TrackSize.Y : TrackSize.X) - PadCross);
 
 	// Indeterminate: the fill is a fixed SHORT length and the percent decides nothing -- what moves
 	// is where it is. One cycle carries it from entirely off the near edge to entirely off the far
@@ -224,12 +249,14 @@ void UDreamProgressBar::ApplyPercent()
 		// that turns it into an anchored position is applied below, with the axis.
 		Offset = Phase * (TrackLength + FillLength) - FillLength;
 	}
-	const double Signed = bFromFarEdge ? -Offset : Offset;
+	// The near padding rides along with the offset because both are measured the same way: positive
+	// in the direction the fill grows, and given their sign by the edge the pivot sits on.
+	const double Signed = (bFromFarEdge ? -1.0 : 1.0) * (Offset + PadNear);
 
 	FillNode->SetPivot(Anchor);
 	FillNode->SetHorizontalAndVerticalAnchorMinMax(Anchor, Anchor, false, false);
 	FillNode->SetAnchoredPositionAndSizeDelta(
-		bHorizontal ? FVector2D(Signed, 0.0) : FVector2D(0.0, Signed),
+		bHorizontal ? FVector2D(Signed, PadCrossShift) : FVector2D(PadCrossShift, Signed),
 		bHorizontal ? FVector2D(FillLength, TrackThickness) : FVector2D(TrackThickness, FillLength));
 }
 
@@ -269,6 +296,35 @@ void UDreamProgressBar::SetIsMarquee(bool bInIsMarquee)
 	// no tick list at all. SetWantsTick is safe before begin play -- the flag is read by the start
 	// pass -- which is what lets ApplyStyle state it during initialize.
 	SetWantsTick(bIsMarquee && Shape == EDreamProgressShape::Bar);
+	ApplyPercent();
+}
+
+void UDreamProgressBar::SetStyle(const FDreamProgressBarStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamProgressBar::SetFillColorAndOpacity(FColor InFillColorAndOpacity)
+{
+	FillColorAndOpacity = InFillColorAndOpacity;
+	// Through the style push, because a tint multiplies the STYLE's fill colour and this is where
+	// that colour is resolved; writing the product straight onto the visual would lose it at the
+	// next push.
+	ApplyStyle();
+}
+
+void UDreamProgressBar::SetMarqueeFraction(float InMarqueeFraction)
+{
+	MarqueeFraction = FMath::Clamp(InMarqueeFraction, 0.01f, 1.0f);
+	// The sweep reads the width every frame, but a parked one (zero duration) never gets another
+	// frame -- so the new width has to be placed here or it is a knob that decides nothing.
+	ApplyPercent();
+}
+
+void UDreamProgressBar::SetMarqueeDuration(float InMarqueeDuration)
+{
+	MarqueeDuration = FMath::Max(InMarqueeDuration, 0.0f);
 	ApplyPercent();
 }
 
