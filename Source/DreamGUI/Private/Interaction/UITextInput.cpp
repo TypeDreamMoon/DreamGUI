@@ -176,7 +176,7 @@ void UUITextInput::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 	}
 	if (TextVisual != nullptr)
 	{
-		TextVisual->SetOverflowType(bAllowMultiLine ? EDreamUITextOverflowType::VerticalOverflow : EDreamUITextOverflowType::HorizontalOverflow);
+		PushOverflowToVisual();
 		if (!TextVisual->GetText().IsCultureInvariant())
 		{
 			TextVisual->SetText(FText::AsCultureInvariant(Text));
@@ -364,7 +364,7 @@ void UUITextInput::AnyKeyPressed(FKey Key)
 					if (isSubmit)//enter submit
 					{
 						Submit();
-						DeactivateInput();
+						FinishCommitFromEnter();
 						return;
 					}
 			}
@@ -373,7 +373,7 @@ void UUITextInput::AnyKeyPressed(FKey Key)
 		else//single line mode, enter means submit
 		{
 			Submit();
-			DeactivateInput();
+			FinishCommitFromEnter();
 			return;
 		}
 	}
@@ -1391,6 +1391,23 @@ void UUITextInput::Submit()
 	OnSubmit.FireEvent(Text);
 }
 
+void UUITextInput::FinishCommitFromEnter()
+{
+	if (bClearKeyboardFocusOnCommit)
+	{
+		// Which is what Enter has always done here, and stays the default. No second submit: the
+		// Enter already fired one, and bSubmittedThisActivation is what tells the end of the edit so.
+		DeactivateInput();
+		return;
+	}
+	if (bSelectAllTextOnCommit)
+	{
+		// The edit continues, so the value is offered back ready to be typed over -- the state a row
+		// of fields a player is filling in one Enter at a time wants to be left in.
+		SelectAll();
+	}
+}
+
 FString UUITextInput::GetTextWithoutSelection(int32& OutCaretCharIndex)
 {
 	FString Result = Text;
@@ -2163,13 +2180,21 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		UpdateUITextComponent();
 		return;
 	}
+	const bool bActivatedByPointer = IsValid(EventData) && EventData->InputType == EDreamUIPointerInputType::Pointer;
 	if (FPlatformApplicationMisc::RequiresVirtualKeyboard())
 	{
-		if (!VirtualKeyboardEntry.IsValid())
+		// OnFocusByPointer means exactly that: an activation nobody touched the field for -- navigated
+		// into with a pad, or a Blueprint calling ActivateInput -- leaves the keyboard down, which is
+		// what a screen driving its own entry asked for by choosing that trigger. The edit itself
+		// still begins, so a host feeding characters (HandleCharacterInput) keeps working.
+		if (VirtualKeyboardTrigger == EVirtualKeyboardTrigger::OnAllFocusEvents || bActivatedByPointer)
 		{
-			VirtualKeyboardEntry = FVirtualKeyboardEntry::Create(this);
+			if (!VirtualKeyboardEntry.IsValid())
+			{
+				VirtualKeyboardEntry = FVirtualKeyboardEntry::Create(this);
+			}
+			FSlateApplication::Get().ShowVirtualKeyboard(true, 0, VirtualKeyboardEntry);
 		}
-		FSlateApplication::Get().ShowVirtualKeyboard(true, 0, VirtualKeyboardEntry);
 	}
 	else
 	{
@@ -2190,7 +2215,14 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		WarnOnceIfNoCharacterEventSource();
 	}
 	bInputActive = true;
+	// The edit takes the paragraph's overflow back off the display policy: an ellipsis in the middle
+	// of a value somebody is typing into would hide the very characters the caret is standing on.
+	PushOverflowToVisual();
 	bSubmittedThisActivation = false;
+	// What a cancel puts back. Taken here, before a single character of this session exists, because
+	// "the value before the edit" is a fact about the MOMENT the edit started and nothing later in
+	// the session can reconstruct it.
+	TextAtActivation = Text;
 	//the target of RouteCharacterInputToActiveInput: the one field that owns the keyboard right now
 	ActiveTextInput = this;
 	SetCanExecuteTick(true);
@@ -2229,7 +2261,12 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		// off leaves the caret on whatever index the previous session abandoned it at, and the first key
 		// typed lands in the middle of the text. End of text is the same answer the already-active path
 		// above gives.
-		CaretPositionIndex = TextVisual->GetLastCaret();
+		// Unless the field was asked NOT to move the caret on gaining focus (UMG's
+		// IsCaretMovedWhenGainFocus), in which case the abandoned index IS the answer -- clamped,
+		// because the text may have been replaced from code since the caret was last meaningful.
+		CaretPositionIndex = bIsCaretMovedWhenGainFocus
+			? TextVisual->GetLastCaret()
+			: FMath::Clamp(CaretPositionIndex, 0, TextVisual->GetLastCaret());
 		PressCaretPositionIndex = CaretPositionIndex;
 		UpdateCaretPosition();
 		UpdateUITextComponent();
@@ -2429,6 +2466,9 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 		FSlateApplication::Get().ShowVirtualKeyboard(false, 0);
 	}
 	bInputActive = false;
+	// And hands it back to the display policy, which is the state a field spends nearly all its life
+	// in -- the only state an ellipsis was ever meant to describe.
+	PushOverflowToVisual();
 	if (ActiveTextInput.Get() == this)
 	{
 		ActiveTextInput = nullptr;
@@ -2597,11 +2637,8 @@ void UUITextInput::SetAllowMultiLine(bool Value)
 		// when OverflowType == VerticalOverflow. Only SetTextVisual used to push it, so whether a
 		// multiline field wrapped came down to which of the two setters a caller happened to call
 		// last -- and UDreamTextInput calls SetTextVisual first (WireParts) and SetAllowMultiLine
-		// second (ApplyStyle), so its multiline fields never wrapped at all.
-		if (TextVisual.IsValid())
-		{
-			TextVisual->SetOverflowType(bAllowMultiLine ? EDreamUITextOverflowType::VerticalOverflow : EDreamUITextOverflowType::HorizontalOverflow);
-		}
+		// second (ApplyStyle), so its multiline fields never wrapped at all. Now there is one writer.
+		PushOverflowToVisual();
 		UpdateAfterTextChange(false);
 	}
 }
@@ -2622,11 +2659,39 @@ void UUITextInput::SetTextVisual(UDreamText* Value)
 		{
 			// The same normalization PostEditChangeProperty applies when the designer rewires it:
 			// overflow follows the line mode, and the text a field edits must not vary by culture.
-			TextVisual->SetOverflowType(GetAllowMultiLine() ? EDreamUITextOverflowType::VerticalOverflow : EDreamUITextOverflowType::HorizontalOverflow);
+			PushOverflowToVisual();
 		}
 		UpdateUITextComponent();
 		UpdatePlaceHolderComponent();
 	}
+}
+
+void UUITextInput::PushOverflowToVisual()
+{
+	if (!TextVisual.IsValid())
+	{
+		return;
+	}
+	// The line mode's own overflow, which is the only thing the wrap and the caret's visible window
+	// will accept. It wins whenever the field is being edited, and it is the whole answer for a field
+	// that states no policy -- which is every field that exists today.
+	const EDreamUITextOverflowType LineMode = bAllowMultiLine
+		? EDreamUITextOverflowType::VerticalOverflow
+		: EDreamUITextOverflowType::HorizontalOverflow;
+	const bool bPolicySpeaks = !bInputActive && OverflowPolicy != ETextOverflowPolicy::Clip;
+	TextVisual->SetOverflowType(bPolicySpeaks ? EDreamUITextOverflowType::Ellipsis : LineMode);
+}
+
+void UUITextInput::SetOverflowPolicy(ETextOverflowPolicy Value)
+{
+	if (OverflowPolicy == Value)
+	{
+		return;
+	}
+	OverflowPolicy = Value;
+	// At once, because the state it speaks in -- nobody editing -- is the state the field is almost
+	// always in, and a policy that waited for the next edit to take effect would look broken.
+	PushOverflowToVisual();
 }
 void UUITextInput::SetCaretBlinkRate(float Value)
 {
@@ -2673,7 +2738,8 @@ void UUITextInput::SetSelectionColor(FColor Value)
 }
 void UUITextInput::SetVirtualKeyboradOptions(FVirtualKeyboardOptions Value)
 {
-	VirtualKeyboardOptions = Value;
+	// The misspelling, kept because callers spell it: it forwards rather than assigning again.
+	SetVirtualKeyboardOptions(Value);
 }
 void UUITextInput::SetIgnoreKeys(const TArray<FKey>& Value)
 {
@@ -2685,7 +2751,21 @@ void UUITextInput::SetAutoActivateInputWhenNavigateIn(bool Value)
 }
 void UUITextInput::SetReadOnly(bool Value)
 {
+	if (bReadOnly == Value)
+	{
+		return;
+	}
 	bReadOnly = Value;
+	if (bReadOnly && bInputActive)
+	{
+		// A field that went read-only while it was being typed into kept its caret blinking and its
+		// keyboard bound, and the next keystroke was simply swallowed -- a field that looks live and
+		// is not. Ending the edit is what "read only" says, and it is the moment the caret, the
+		// selection and the key bindings all come down.
+		// Without firing: turning the knob is not the player finishing an entry, and a submit here
+		// would report a value nobody committed.
+		DeactivateInput(false);
+	}
 }
 void UUITextInput::SetMaxLength(int32 Value)
 {
@@ -2719,6 +2799,65 @@ void UUITextInput::SetAllowContextMenu(bool Value)
 		}
 	}
 }
+void UUITextInput::SetRevertTextOnEscape(bool Value)
+{
+	bRevertTextOnEscape = Value;
+}
+void UUITextInput::SetClearKeyboardFocusOnCommit(bool Value)
+{
+	bClearKeyboardFocusOnCommit = Value;
+}
+void UUITextInput::SetSelectAllTextOnCommit(bool Value)
+{
+	bSelectAllTextOnCommit = Value;
+}
+void UUITextInput::SetIsCaretMovedWhenGainFocus(bool Value)
+{
+	bIsCaretMovedWhenGainFocus = Value;
+}
+void UUITextInput::SetKeyboardType(TEnumAsByte<EVirtualKeyboardType::Type> Value)
+{
+	// Only read while a virtual keyboard is being summoned, so there is nothing live to re-push: the
+	// next activation asks GetVirtualKeyboardType for it.
+	KeyboardType = Value;
+}
+void UUITextInput::SetVirtualKeyboardTrigger(EVirtualKeyboardTrigger Value)
+{
+	VirtualKeyboardTrigger = Value;
+}
+void UUITextInput::SetVirtualKeyboardDismissAction(EVirtualKeyboardDismissAction Value)
+{
+	VirtualKeyboardDismissAction = Value;
+}
+void UUITextInput::SetVirtualKeyboardOptions(FVirtualKeyboardOptions Value)
+{
+	// The one implementation; the misspelled name below forwards here rather than carrying a second
+	// copy of the assignment.
+	VirtualKeyboardOptions = Value;
+}
+
+void UUITextInput::CancelInput()
+{
+	if (!bInputActive)
+	{
+		return;
+	}
+	if (!bRevertTextOnEscape)
+	{
+		// Nothing is being thrown away, so this is just the end of an edit -- and what the end of an
+		// edit means is bSubmitWhenDeactivate's answer, exactly as it was before a cancel road existed.
+		DeactivateInput();
+		return;
+	}
+	// The value goes back BEFORE the edit ends, so whatever the end of the edit reports reports the
+	// restored value and not the abandoned one. Without notify would be wrong here: the text really
+	// did change, and a consumer watching the field live has to see it change back.
+	SetText(TextAtActivation, true);
+	// And no submit: a cancelled edit committed nothing. Saying so through the flag the Enter road
+	// already uses keeps one rule for "this activation has had its say".
+	bSubmittedThisActivation = true;
+	DeactivateInput();
+}
 
 TSharedRef<UUITextInput::FVirtualKeyboardEntry> UUITextInput::FVirtualKeyboardEntry::Create(UUITextInput* Input)
 {
@@ -2734,13 +2873,32 @@ void UUITextInput::FVirtualKeyboardEntry::SetTextFromVirtualKeyboard(const FText
 	// The mobile keyboard's Done button is that platform's Enter, and it was reaching nobody: the
 	// field took the text and never reported a commit, so a mobile player filling in a field looked
 	// to the game exactly like one who had typed nothing.
+	//
+	// WHICH dismissals report a value is UMG's VirtualKeyboardDismissAction, and the three answers
+	// differ only here. TextChangeOnDismiss says the text changed and nothing else happened, so
+	// neither road submits -- including the end-of-edit submit, which is silenced by claiming this
+	// activation has already had its say.
+	const EVirtualKeyboardDismissAction DismissAction = InputComp->VirtualKeyboardDismissAction;
 	if (TextEntryType == ETextEntryType::TextEntryAccepted)
 	{
-		InputComp->Submit();
+		if (DismissAction != EVirtualKeyboardDismissAction::TextChangeOnDismiss)
+		{
+			InputComp->Submit();
+		}
+		else
+		{
+			InputComp->bSubmittedThisActivation = true;
+		}
 		InputComp->DeactivateInput();
 	}
 	else if (TextEntryType == ETextEntryType::TextEntryCanceled)
 	{
+		// Cancelling is only a commit under TextCommitOnDismiss, which is the field's own historical
+		// behaviour and therefore the default. Under the other two the edit simply ends.
+		if (DismissAction != EVirtualKeyboardDismissAction::TextCommitOnDismiss)
+		{
+			InputComp->bSubmittedThisActivation = true;
+		}
 		InputComp->DeactivateInput();
 	}
 }
@@ -2777,6 +2935,13 @@ FText UUITextInput::FVirtualKeyboardEntry::GetHintText() const
 }
 EKeyboardType UUITextInput::FVirtualKeyboardEntry::GetVirtualKeyboardType() const
 {
+	if (InputComp->KeyboardType.GetValue() != EVirtualKeyboardType::Default)
+	{
+		// Stated outright. Default is not "the default keyboard" here but "whatever this field's
+		// input type implies", which is the derivation below and the only answer the field had before
+		// the knob existed -- so naming a keyboard is the new thing, and naming none changes nothing.
+		return EVirtualKeyboardType::AsKeyboardType(InputComp->KeyboardType.GetValue());
+	}
 	if (InputComp->DisplayType == EUITextInputDisplayType::Password)
 	{
 		return EKeyboardType::Keyboard_Password;
