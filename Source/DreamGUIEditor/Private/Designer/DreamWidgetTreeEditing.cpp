@@ -5,6 +5,7 @@
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamGUI.h"
 
@@ -32,6 +33,18 @@ namespace DreamWidgetTreeEditing
 		FString DisplayNameOf(const UDreamWidget* InWidget)
 		{
 			return IsValid(InWidget) ? InWidget->GetDisplayName() : FString(TEXT("nothing"));
+		}
+
+		/** Whether InNested's class opens a hole called InSlotName -- from its archetype or from code. */
+		bool DeclaresSlot(const UDreamUserWidget* InNested, FName InSlotName)
+		{
+			if (!IsValid(InNested) || InSlotName.IsNone())
+			{
+				return false;
+			}
+			TArray<FName> Declared;
+			UDreamUserWidget::CollectDeclaredSlotNames(InNested->GetClass(), Declared);
+			return Declared.Contains(InSlotName);
 		}
 
 		/**
@@ -341,7 +354,7 @@ namespace DreamWidgetTreeEditing
 	}
 
 	UDreamWidget* CreateWidget(UDreamWidgetBlueprint* InBlueprint, TSubclassOf<UDreamWidget> InWidgetClass,
-		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName)
+		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName, FName InSlotName)
 	{
 		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
 			FString::Printf(TEXT("create a '%s'"), *DreamUITextAuthoring::DescribeClassForAuthor(InWidgetClass))))
@@ -384,6 +397,15 @@ namespace DreamWidgetTreeEditing
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot take another child, so nothing was created under it."),
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName());
+			return nullptr;
+		}
+		// A slot name is a promise about the parent: a placed control that opens a hole of that name.
+		// Checked before anything is written, so a refusal leaves no half-made widget behind.
+		UDreamUserWidget* SlotHost = InSlotName.IsNone() || bBecomesRoot ? nullptr : Cast<UDreamUserWidget>(Parent);
+		if (!InSlotName.IsNone() && (SlotHost == nullptr || !Local::DeclaresSlot(SlotHost, InSlotName)))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' opens no slot named '%s', so nothing was created in it."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Local::DisplayNameOf(Parent), *InSlotName.ToString());
 			return nullptr;
 		}
 
@@ -433,6 +455,10 @@ namespace DreamWidgetTreeEditing
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName(), *GetNameSafe(InWidgetClass));
 			Widget->DestroyWidget();
 			return nullptr;
+		}
+		if (SlotHost != nullptr)
+		{
+			BindWidgetIntoSlot(InBlueprint, SlotHost, InSlotName, Widget);
 		}
 
 		NotifyStructureChanged(InBlueprint);
@@ -516,6 +542,13 @@ namespace DreamWidgetTreeEditing
 		// cannot be restored was wrong -- what cannot be restored is one the transaction never saw.)
 		// The Modify calls above stay: they cover the blueprint, the tree, the parent's Children array
 		// and the DesignerData walked just above, none of which DestroyWidget touches.
+		// A slot binding on the parent is a second pointer at the doomed widget. Left behind it is an
+		// entry the tree walk skips and no panel shows, holding a slot for nothing. Dropped while the
+		// parent link still says which control holds it, and after that parent's Modify above.
+		if (UDreamUserWidget* SlotHost = Cast<UDreamUserWidget>(InWidget->GetParent()))
+		{
+			ForgetSlotBindings(SlotHost, InWidget);
+		}
 		InWidget->DestroyWidget();
 
 		// The bindings that named the deleted widgets go with them. Left behind they are records the
@@ -530,7 +563,7 @@ namespace DreamWidgetTreeEditing
 		return true;
 	}
 
-	bool ReparentWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, UDreamWidget* InNewParent, int32 InSiblingIndex)
+	bool ReparentWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, UDreamWidget* InNewParent, int32 InSiblingIndex, FName InSlotName)
 	{
 		// Reordering inside one parent comes through here too, and it is refused with the rest: sibling
 		// order in the file IS the order in the hierarchy, so a reorder is a text edit like any other
@@ -567,10 +600,19 @@ namespace DreamWidgetTreeEditing
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNewParent->GetDisplayName(), *InWidget->GetDisplayName());
 			return false;
 		}
+		// The same promise CreateWidget asks for: a slot name has to be one the new parent's class opens.
+		UDreamUserWidget* SlotHost = InSlotName.IsNone() ? nullptr : Cast<UDreamUserWidget>(InNewParent);
+		if (!InSlotName.IsNone() && (SlotHost == nullptr || !Local::DeclaresSlot(SlotHost, InSlotName)))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' opens no slot named '%s', so '%s' was not moved."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNewParent->GetDisplayName(), *InSlotName.ToString(), *InWidget->GetDisplayName());
+			return false;
+		}
 
 		InBlueprint->Modify();
 		Tree->Modify();
-		if (UDreamWidget* OldParent = InWidget->GetParent())
+		UDreamWidget* OldParent = InWidget->GetParent();
+		if (OldParent != nullptr)
 		{
 			OldParent->Modify();
 		}
@@ -587,8 +629,80 @@ namespace DreamWidgetTreeEditing
 			return false;
 		}
 
+		// The slot it was in, if any, lets go: a binding is a pointer the runtime follows before it
+		// looks at Children, so a widget moved out of a header slot and left bound to it would be
+		// pulled straight back into the header by the next instance built. Then the slot it is going
+		// to, which for a control's default slot is the nesting alone.
+		if (UDreamUserWidget* PreviousHost = Cast<UDreamUserWidget>(OldParent))
+		{
+			ForgetSlotBindings(PreviousHost, InWidget);
+		}
+		if (SlotHost != nullptr)
+		{
+			BindWidgetIntoSlot(InBlueprint, SlotHost, InSlotName, InWidget);
+		}
+
 		NotifyStructureChanged(InBlueprint);
 		return true;
+	}
+
+	bool BindWidgetIntoSlot(UDreamWidgetBlueprint* InBlueprint, UDreamUserWidget* InNested, FName InSlotName, UDreamWidget* InWidget)
+	{
+		if (InSlotName.IsNone() || !IsValid(InNested) || !IsValid(InWidget))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Nothing to bind: a slot name, a control and a widget are all needed."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			return false;
+		}
+		if (!IsTemplateWidgetOf(InBlueprint, InNested) || !IsTemplateWidgetOf(InBlueprint, InWidget))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot bind '%s' into a slot of '%s': not part of '%s' authoring tree."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InWidget->GetDisplayName(), *InNested->GetDisplayName(), *GetNameSafe(InBlueprint));
+			return false;
+		}
+		if (InWidget->GetParent() != InNested)
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot bind '%s' into a slot of '%s': it is not that control's child."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InWidget->GetDisplayName(), *InNested->GetDisplayName());
+			return false;
+		}
+		if (!Local::DeclaresSlot(InNested, InSlotName))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' opens no slot named '%s'."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNested->GetDisplayName(), *InSlotName.ToString());
+			return false;
+		}
+		InNested->Modify();
+		ForgetSlotBindings(InNested, InWidget);
+		// Nesting already says "the default slot": the runtime adopts an unbound child into it, the
+		// .dui language writes exactly this shape, and a binding on top would be a second record of
+		// the same fact for the next class change to make disagree with the first.
+		if (InSlotName == InNested->GetDefaultSlotName())
+		{
+			return true;
+		}
+		return InNested->SetContentForNamedSlot(InSlotName, InWidget);
+	}
+
+	bool ForgetSlotBindings(UDreamUserWidget* InNested, const UDreamWidget* InWidget)
+	{
+		if (!IsValid(InNested) || InWidget == nullptr)
+		{
+			return false;
+		}
+		TArray<FName> Bound;
+		for (const TPair<FName, TObjectPtr<UDreamWidget>>& Binding : InNested->NamedSlotContent)
+		{
+			if (Binding.Value.Get() == InWidget)
+			{
+				Bound.Add(Binding.Key);
+			}
+		}
+		for (const FName& SlotName : Bound)
+		{
+			InNested->SetContentForNamedSlot(SlotName, nullptr);
+		}
+		return Bound.Num() > 0;
 	}
 
 	FString RenameWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, const FString& InDesiredDisplayName)
