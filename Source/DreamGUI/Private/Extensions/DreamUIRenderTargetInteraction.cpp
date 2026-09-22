@@ -5,7 +5,6 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIWorldContext.h"
 #include "DreamGUI.h"
-#include "Event/DreamWorldSpaceRaycasterBase.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Engine/World.h"

@@ -3,7 +3,6 @@
 #include "Core/DreamGUISettings.h"
 
 #include "DreamGUI.h"
-#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Core/DreamUISpriteData.h"
@@ -57,27 +56,6 @@ UDreamGUISettings::UDreamGUISettings()
 	// and the four IA_* actions. A project on Enhanced Input should point this setting at THAT, not at
 	// the native class.
 	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamStandaloneInputEventSystemActor")));
-
-	WorldSpaceRaycasterSourceClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/DreamWorldSpaceRaycasterSource_Mouse.DreamWorldSpaceRaycasterSource_Mouse_C")));
-	ScreenSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/ScreenSpaceRoot.ScreenSpaceRoot_C")));
-	WorldSpaceRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/WorldSpaceRoot_DreamRenderer.WorldSpaceRoot_DreamRenderer_C")));
-	WorldSpaceUERendererRootClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/DreamGUI/Blueprints/WorldSpaceRoot_UERenderer.WorldSpaceRoot_UERenderer_C")));
-}
-
-TSoftClassPtr<AActor> UDreamGUISettings::GetRootClassForRenderMode(EDreamRenderMode RenderMode) const
-{
-	// One switch, so two factories cannot build this path by hand and drift apart -- which is what
-	// they did before it existed.
-	switch (RenderMode)
-	{
-	case EDreamRenderMode::WorldSpace:
-		return WorldSpaceUERendererRootClass;
-	case EDreamRenderMode::WorldSpace_DreamUI:
-		return WorldSpaceRootClass;
-	case EDreamRenderMode::ScreenSpaceOverlay:
-	default:
-		return ScreenSpaceRootClass;
-	}
 }
 
 const UDreamGUISettings* UDreamGUISettings::Get()

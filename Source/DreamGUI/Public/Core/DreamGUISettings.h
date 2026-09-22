@@ -6,8 +6,6 @@
 #include "Engine/DeveloperSettings.h"
 #include "DreamGUISettings.generated.h"
 
-enum class EDreamRenderMode : uint8;
-
 class UDreamUIFontData_BaseObject;
 class UDreamUserWidget;
 class UDreamUISpriteData;
@@ -116,47 +114,18 @@ public:
 	// ---------------------------------------------------------------- Spawned actors
 
 	/**
-	 * Spawned when a screen-space UI needs an event system and the level has none.
+	 * Spawned when a UI needs an event system and the level has none.
 	 *
 	 * A class rather than an asset because it is spawned: point it at the C++ preset, at one of the
 	 * preset Blueprints, or at a project's own actor.
+	 *
+	 * The only actor class DreamGUI still takes from a project. Root actors and pointer-source
+	 * actors used to be named here too, one Blueprint per render mode; a world-space widget is an
+	 * ADreamWorldWidgetActor today and its raycaster is put on a transient per-player host with no
+	 * class to choose, so neither is a setting any more.
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> EventSystemActorClass;
-
-	/** Spawned to raycast world-space UI from the mouse when nothing else provides a pointer. */
-	UPROPERTY(config, EditAnywhere, Category = "Actors")
-	TSoftClassPtr<AActor> WorldSpaceRaycasterSourceClass;
-
-	/**
-	 * Root actor placed for a screen-space widget by an actor factory.
-	 *
-	 * Reachable only through GetRootClassForRenderMode, and no factory asks it for the screen-space
-	 * mode today: UDreamScreenUISubsystem::GetOrCreateScreenRoot builds its 1920x1080 transient root
-	 * in code instead, because it has to run in a cooked game where placing an actor from a Blueprint
-	 * class is not what "add this widget to the viewport" should mean. Kept as the answer for the
-	 * screen-space branch of that switch, which is one factory away.
-	 */
-	UPROPERTY(config, EditAnywhere, Category = "Actors")
-	TSoftClassPtr<AActor> ScreenSpaceRootClass;
-
-	/** Root actor placed for a world-space widget drawn by DreamGUI's own renderer. */
-	UPROPERTY(config, EditAnywhere, Category = "Actors")
-	TSoftClassPtr<AActor> WorldSpaceRootClass;
-
-	/** Root actor for a world-space widget drawn through UMG's renderer instead. */
-	UPROPERTY(config, EditAnywhere, Category = "Actors")
-	TSoftClassPtr<AActor> WorldSpaceUERendererRootClass;
-
-	/**
-	 * The root class for one render mode, so two actor factories cannot disagree about it.
-	 *
-	 * Took a bMarkup flag until the markup pipeline was retired; the second set of root classes it
-	 * chose between went with it. The prefab factory that called it went with the prefab asset model,
-	 * but it is live again: UDreamWidgetBlueprintActorFactory::GetDefaultActorClass asks it for
-	 * WorldSpace_DreamUI on every widget-Blueprint drop into a level.
-	 */
-	TSoftClassPtr<AActor> GetRootClassForRenderMode(EDreamRenderMode RenderMode) const;
 
 	// ---------------------------------------------------------------- Tooltip
 
