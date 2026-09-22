@@ -10,6 +10,7 @@
 
 struct FDreamUIHelperGizmoRenderParameter;
 struct FDreamUIHelperGizmoVertex;
+class AActor;
 class UMaterialInterface;
 class FEditorViewportClient;
 class UDreamEventSystem;
@@ -127,6 +128,14 @@ private:
 class IDreamUICultureChangedInterface;
 enum class EDreamRenderMode : uint8;
 
+/** Which kind of pointer a player needs a raycaster for. See EnsureInteractionForPlayer. */
+UENUM()
+enum class EDreamInteractionKind : uint8
+{
+	Screen,
+	World,
+};
+
 class FDreamUILayoutTree
 {
 public:
@@ -223,6 +232,19 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TMap<int, TWeakObjectPtr<UDreamEventSystem>> MapUserIndexToEventSystem;
+
+	/**
+	 * One transient actor per local player, carrying whichever raycasters were created for them.
+	 *
+	 * Per PLAYER rather than per kind, so a player pointing at both a screen UI and a world-space
+	 * panel has one host with two raycasters on it instead of two actors that mean the same thing.
+	 */
+	UPROPERTY(Transient)
+	TMap<int32, TObjectPtr<AActor>> InteractionHosts;
+
+	/** The event system spawned from project settings, if one had to be. Never more than one. */
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> CreatedEventSystemActor;
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UDreamUIBehaviour>> DreamUIBehavioursForTick;
@@ -345,6 +367,24 @@ public:
 	UDreamEventSystem* GetEventSystemByUserIndex(int UserIndex = 0);
 	void AddEventSystem(UDreamEventSystem* InEventSystem);
 	void RemoveEventSystem(UDreamEventSystem* InEventSystem);
+
+	/**
+	 * Give local player InUserIndex what it takes to point at DreamUI: an event system, and a
+	 * raycaster of InKind.
+	 *
+	 * The event system half is per world, not per player -- only the first local player gets one
+	 * spawned from UDreamGUISettings::EventSystemActorClass, because a second copy would carry the
+	 * same UserIndex and make each player read the other's input; a second player's event system has
+	 * to be placed deliberately, and not having one is a warning rather than a guess.
+	 *
+	 * The raycaster half is skipped when that player already has one of that kind, wherever it was
+	 * placed, which is what lets an authored raycaster override the default. Otherwise one is added
+	 * to a transient "DreamInteractionHost_P%d" actor. Idempotent: calling it on every world-space
+	 * host's BeginPlay, and again from the screen subsystem, is the expected usage.
+	 */
+	void EnsureInteractionForPlayer(int32 InUserIndex, EDreamInteractionKind InKind);
+	/** The host actor carrying InUserIndex's auto-created raycasters, or null if none was needed. */
+	AActor* GetInteractionHost(int32 InUserIndex)const;
 	
 #if WITH_EDITOR
 	/**
