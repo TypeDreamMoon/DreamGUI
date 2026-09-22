@@ -5,7 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/DreamWidgetPresenterComponentBase.h"
-#include "Core/DreamWidgetPresenterComponent.h"
+#include "Core/DreamWorldWidgetComponent.h"
 #include "UObject/UObjectIterator.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamUserWidget.h"
@@ -33,8 +33,8 @@ bool FDreamPresenterBaseIsAbstractTest::RunTest(const FString& Parameters)
 		UDreamWidgetPresenterComponentBase::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
 
 	// The point of hiding the base is that the usable ones stay usable.
-	TestFalse(TEXT("the widget presenter is spawnable"),
-		UDreamWidgetPresenterComponent::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
+	TestFalse(TEXT("the world widget host is spawnable"),
+		UDreamWorldWidgetComponent::StaticClass()->HasAnyClassFlags(CLASS_Abstract));
 
 	return true;
 }
@@ -71,7 +71,7 @@ bool FDreamPresenterConcreteRosterTest::RunTest(const FString& Parameters)
 	Spawnable.Sort();
 
 	const TArray<FString> Expected = {
-		TEXT("DreamWidgetPresenterComponent"),
+		TEXT("DreamWorldWidgetComponent"),
 	};
 	TestEqual(FString::Printf(TEXT("spawnable presenters, got [%s]"), *FString::Join(Spawnable, TEXT(", "))),
 		Spawnable, Expected);
@@ -103,7 +103,7 @@ bool FDreamPresenterNavigationSelectionResolvesLateTest::RunTest(const FString& 
 {
 	// Read through reflection: the property is protected, and what is being pinned is the VALUE the
 	// constructor leaves behind, which C++ access rules have nothing to say about.
-	const UDreamWidgetPresenterComponent* CDO = GetDefault<UDreamWidgetPresenterComponent>();
+	const UDreamWorldWidgetComponent* CDO = GetDefault<UDreamWorldWidgetComponent>();
 	const FObjectPropertyBase* Property = CastField<FObjectPropertyBase>(
 		UDreamWidgetPresenterComponentBase::StaticClass()->FindPropertyByName(TEXT("NavigationSelectionClass")));
 	if (!TestNotNull(TEXT("the presenter still has a NavigationSelectionClass property"), Property))

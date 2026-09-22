@@ -6,13 +6,14 @@
 #include "DreamWidgetBlueprintActorFactory.generated.h"
 
 /**
- * Dragging a DreamUI widget Blueprint into a level: spawn the world-space root actor and hand the
- * Blueprint's generated class to its presenter component.
+ * Dragging a DreamUI widget Blueprint into a level: spawn ADreamWorldWidgetActor and hand the
+ * Blueprint's generated class to its world widget component.
  *
- * The prefab-era factory did exactly this and was deleted with the prefab machinery (P4-a), which
- * silently deleted the drop-into-level gesture with it -- the presenter component it drove was
- * kept. This is that factory re-aimed at the class model: same actor shape, same presenter, the
- * asset is now the widget Blueprint itself.
+ * The actor is C++ now. It used to be whichever Blueprint the project settings named as the
+ * world-space root, which meant the drop gesture depended on a content asset that had to ship, be
+ * found by soft path, and carry the right components in its construction script -- and the render
+ * mode was baked into the choice of asset, so switching renderers meant respawning. One actor with
+ * one component settles all of that: the renderer is a property on the component.
  */
 UCLASS()
 class UDreamWidgetBlueprintActorFactory : public UActorFactory
@@ -22,7 +23,6 @@ public:
 	UDreamWidgetBlueprintActorFactory();
 	//~ Begin UActorFactory
 	virtual bool CanCreateActorFrom(const FAssetData& AssetData, FText& OutErrorMsg) override;
-	virtual AActor* SpawnActor(UObject* InAsset, ULevel* InLevel, const FTransform& InTransform, const FActorSpawnParameters& InSpawnParams) override;
 	virtual void PostSpawnActor(UObject* Asset, AActor* NewActor) override;
 	virtual UObject* GetAssetFromActorInstance(AActor* ActorInstance) override;
 	virtual UClass* GetDefaultActorClass(const FAssetData& AssetData) override;

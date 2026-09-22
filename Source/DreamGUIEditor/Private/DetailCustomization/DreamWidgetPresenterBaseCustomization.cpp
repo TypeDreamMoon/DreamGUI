@@ -165,28 +165,5 @@ void FDreamWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuild
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 			]
 		];
-
-	//canvas template
-	{
-		auto CanvasTemplate_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidgetPresenterComponentBase, CanvasTemplate));
-		UObject* CanvasTemplate = nullptr;
-		CanvasTemplate_PH->GetValue(CanvasTemplate);
-		auto& CanvasTemplateCategory = DetailBuilder.EditCategory("CanvasTemplate");
-		if (IsValid(CanvasTemplate))
-		{
-			if (IDetailPropertyRow* CanvasTemplateRow = CanvasTemplateCategory.AddExternalObjects(
-				{ CanvasTemplate }, EPropertyLocation::Default,
-				FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(true)))
-			{
-				CanvasTemplateRow->ShouldAutoExpand(true);
-				CanvasTemplateRow->Visibility(TAttribute<EVisibility>::CreateLambda([TargetWorld]()
-				{
-					const UWorld* World = TargetWorld.Get();
-					return World && World->IsGameWorld() ? EVisibility::Collapsed : EVisibility::Visible;
-				}));
-				DetailBuilder.HideProperty(CanvasTemplate_PH);
-			}
-		}
-	}
 }
 #undef LOCTEXT_NAMESPACE

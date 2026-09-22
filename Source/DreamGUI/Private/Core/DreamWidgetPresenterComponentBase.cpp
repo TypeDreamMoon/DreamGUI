@@ -4,12 +4,13 @@
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
+#include "Core/DreamUIManager.h"
 
 #include "EngineUtils.h"
+#include "GameFramework/Actor.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
-#include "Event/DreamEventSystem.h"
-#include "Event/DreamWorldSpaceRaycasterBase.h"
+#include "Core/Components/DreamWidget.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
 
 #include "LevelSequenceActor.h"
@@ -23,9 +24,6 @@ UDreamWidgetPresenterComponentBase::UDreamWidgetPresenterComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-	
-
-	CanvasTemplate = CreateDefaultSubobject<UDreamCanvas>(TEXT("CanvasTemplate"));
 
 	// The configured class is deliberately NOT loaded here. This constructor runs for the CDO while
 	// the engine is still bringing modules up, and the setting now names a Blueprint whose class
@@ -48,12 +46,11 @@ void UDreamWidgetPresenterComponentBase::EndPlay(const EEndPlayReason::Type EndP
 	Super::EndPlay(EndPlayReason);
 
 	// The loaded tree is outered to the World and held by the manager's AllWidgetArray, so nothing
-	// released it when the owning actor went away: only the edit-mode branch of OnUnregister ever
-	// destroyed it. A world-space health bar therefore outlived every enemy that died -- still
-	// registered, still ticking, still drawing -- one live tree per corpse until the world ended.
-	// EndPlay and not OnUnregister, because a component unregisters for reasons that are not a
-	// teardown (a reregister context, for one) and throwing the tree away there would take it out
-	// from under a live actor.
+	// releases it when the owning actor goes away unless someone says so here. A world-space health
+	// bar otherwise outlived every enemy that died -- still registered, still ticking, still drawing
+	// -- one live tree per corpse until the world ended. EndPlay and not OnUnregister, because a
+	// component unregisters for reasons that are not a teardown (a reregister context, for one) and
+	// throwing the tree away there would take it out from under a live actor.
 	//
 	// Skipped while garbage collection is already destroying this component -- UActorComponent's
 	// BeginDestroy routes here too, and the widget is unreachable by then, so the weak pointer
@@ -62,12 +59,10 @@ void UDreamWidgetPresenterComponentBase::EndPlay(const EEndPlayReason::Type EndP
 	// gone, and DestroyWidget tolerates a second call regardless.
 	if (!HasAnyFlags(RF_BeginDestroyed))
 	{
-		if (UDreamWidget* Widget = LoadedWidget.Get(); IsValid(Widget))
-		{
-			Widget->DestroyWidget();
-		}
+		DestroyLoadedWidget();
 	}
 	LoadedWidget = nullptr;
+	RootCanvas = nullptr;
 }
 
 void UDreamWidgetPresenterComponentBase::OnRegister()
@@ -83,274 +78,107 @@ void UDreamWidgetPresenterComponentBase::OnRegister()
 	}
 	if (!World->IsGameWorld())
 	{
-		LoadWidget();//load when OnRegister in edit mode
+		// Edit mode loads here because there is no BeginPlay to load from; the preview has to exist as
+		// soon as the component does. But a register is not always a first one: editing any property of
+		// the owning actor unregisters and registers every component on it, and rebuilding the whole
+		// hierarchy each time is what made moving a host feel like reopening the asset. So a host that
+		// can see its tree is still the right one keeps it and merely re-seats it on this component --
+		// the canvas holds the host pointer, and a reregister is exactly when that pointer needs
+		// renewing.
+		if (LoadedWidget.IsValid() && IsLoadedWidgetCurrent())
+		{
+			if (UDreamCanvas* Canvas = RootCanvas.Get())
+			{
+				Canvas->AttachToSceneComponent(this);
+			}
+		}
+		else
+		{
+			LoadWidget();
+		}
 	}
 }
 
 void UDreamWidgetPresenterComponentBase::OnUnregister()
 {
-	bool bIsEditMode = false;
-	if (auto World = GetWorld())
-	{
-		if (!World->IsGameWorld())
-		{
-			bIsEditMode = true;
-		}
-	}
-	if (bIsEditMode)
-	{
-		if (LoadedWidget.IsValid())
-		{
-			LoadedWidget->DestroyWidget();
-			LoadedWidget = nullptr;
-		}
-	}
+	// Does not simply destroy the tree. A component unregisters for reasons that are not a teardown --
+	// a reregister context is one, and the editor opens one for any property edit on the owning actor
+	// -- so destroying here meant every edit rebuilt the hierarchy and dropped whatever it was holding.
+	// Most teardowns that ARE teardowns have their own hooks: EndPlay in a game world, and
+	// OnComponentDestroyed / BeginDestroy below.
 	Super::OnUnregister();
-}
 
-void UDreamWidgetPresenterComponentBase::PostLoad()
-{
-	Super::PostLoad();
-}
-
-void UDreamWidgetPresenterComponentBase::Serialize(FArchive& Ar)
-{
-	Super::Serialize(Ar);
-
-	if (Ar.HasAllPortFlags(PPF_DuplicateForPIE))
-	{
-		// PIE duplication should just work normally
-		Ar << CanvasTemplate;
-	}
-	else if (Ar.HasAllPortFlags(PPF_Duplicate))
-	{
-		if (GIsEditor && Ar.IsLoading() && !IsTemplate())
-		{
-			// If we're not a template then we do not want the duplicate so serialize manually and destroy the template that was created for us
-			Ar.Serialize(&CanvasTemplate, sizeof(UObject*));
-		}
-		else if (!GIsEditor && !Ar.IsLoading() && !GIsDuplicatingClassForReinstancing)
-		{
-			// Avoid the archiver in the duplicate writer case because we want to avoid the duplicate being created
-			Ar.Serialize(&CanvasTemplate, sizeof(UObject*));
-		}
-		else
-		{
-			// When we're loading outside of the editor we won't have created the duplicate, so its fine to just use the normal path
-			// When we're loading a template then we want the duplicate, so it is fine to use normal archiver
-			// When we're saving in the editor we'll create the duplicate, but on loading decide whether to take it or not
-			Ar << CanvasTemplate;
-		}
-	}
 #if WITH_EDITOR
-	// Since we sometimes serialize properties in instead of using duplication and we can end up pointing at the wrong template
-	if (!Ar.IsPersistent() && CanvasTemplate)
+	// An edit-mode tree has no EndPlay, and an unregister on its own does not say which of three things
+	// is happening:
+	//  - a reregister (a property edit, an undo that keeps the component): it registers again before
+	//    the frame is out and the tree must survive it, which is the reason for not destroying above;
+	//  - a destruction (component deleted, actor destroyed): OnComponentDestroyed follows, but the
+	//    component already knows, so the tree goes now rather than drawing on for the rest of the frame;
+	//  - a removal that never routes a destruction at all. World Partition unloading actors in the
+	//    editor, hiding a sublevel, and an undo that takes the component away all unregister and stop
+	//    there. Nothing after that releases the tree until garbage collection reaches BeginDestroy --
+	//    until then it keeps drawing for an actor that is no longer in the level -- and a teardown run
+	//    from inside GC is one this plugin has already been bitten by: DestroyWidget reaches other
+	//    objects, and any of them may be unreachable in the same purge.
+	// So a known destruction tears down at once, and anything else is looked at again a frame later and
+	// torn down only if nobody has registered the component in the meantime. Anything that comes back
+	// later (a sublevel shown again, a redo) goes through OnRegister, which builds a fresh tree.
+	const UWorld* World = GetWorld();
+	if (LoadedWidget.IsValid() && (World == nullptr || !World->IsGameWorld()))
 	{
-		if (IsTemplate())
+		const AActor* Owner = GetOwner();
+		if (IsBeingDestroyed() || (Owner != nullptr && Owner->IsActorBeingDestroyed()))
 		{
-			// If we are a template and are not pointing at a component we own we'll need to fix that
-			if (CanvasTemplate->GetOuter() != this)
-			{
-				const FString TemplateName = FString::Printf(TEXT("%s_%s_CAT"), *GetName(), *UDreamCanvas::StaticClass()->GetName());
-				if (UObject* ExistingTemplate = StaticFindObject(nullptr, this, *TemplateName))
-				{
-					CanvasTemplate = CastChecked<UDreamCanvas>(ExistingTemplate);
-				}
-				else
-				{
-					CanvasTemplate = CastChecked<UDreamCanvas>(StaticDuplicateObject(CanvasTemplate, this, *TemplateName));
-				}
-			}
+			DestroyLoadedWidget();
 		}
 		else
 		{
-			// Because the template may have fixed itself up, the tagged property delta serialized for 
-			// the instance may point at a trashed template, so always repoint us to the archetypes template
-			CanvasTemplate = CastChecked<UDreamWidgetPresenterComponentBase>(GetArchetype())->CanvasTemplate;
+			TWeakObjectPtr<UDreamWidgetPresenterComponentBase> WeakThis(this);
+			UDreamUIManagerObject::AddOneShotTickFunction([WeakThis]()
+			{
+				// Garbage still resolves: an undo that removes the component leaves it marked garbage but
+				// uncollected, and releasing the tree before collection is the whole point. Unreachable
+				// objects still answer null, so this never touches one a purge is already destroying.
+				UDreamWidgetPresenterComponentBase* Presenter = WeakThis.Get(/*bEvenIfPendingKill*/ true);
+				if (Presenter != nullptr && !Presenter->IsRegistered())
+				{
+					Presenter->DestroyLoadedWidget();
+				}
+			}, 1);
 		}
 	}
 #endif
 }
 
-void UDreamWidgetPresenterComponentBase::PostInitProperties()
+void UDreamWidgetPresenterComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	Super::PostInitProperties();
+	// The component is going away for good -- deleted from an actor, or its actor destroyed -- which
+	// OnUnregister no longer stands in for.
+	DestroyLoadedWidget();
+	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
-#if WITH_EDITOR
-void UDreamWidgetPresenterComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UDreamWidgetPresenterComponentBase::BeginDestroy()
 {
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (PropertyChangedEvent.MemberProperty != nullptr)
-	{
-		auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
-	}
+	// The backstop for a component collected without anyone destroying it first, which is how an
+	// editor-world tree usually ends. By this point garbage collection may already have taken the
+	// widget, in which case the weak pointer answers null and there is nothing to do.
+	DestroyLoadedWidget();
+	Super::BeginDestroy();
 }
 
-#include "Dialog/SCustomDialog.h"
-#include "Widgets/Layout/SBox.h"
-#include "Widgets/Text/STextBlock.h"
-bool UDreamWidgetPresenterComponentBase::bNeedCheckEventSystem = true;
-bool UDreamWidgetPresenterComponentBase::bNeverCheckEventSystem = false;
-bool UDreamWidgetPresenterComponentBase::bNeedCheckRaycasterSource = true;
-bool UDreamWidgetPresenterComponentBase::bNeverCheckRaycasterSource = false;
-void UDreamWidgetPresenterComponentBase::CheckNecessaryObjects()
+void UDreamWidgetPresenterComponentBase::DestroyLoadedWidget()
 {
-	if (bNeedCheckEventSystem)
+	if (UDreamWidget* Widget = LoadedWidget.Get(); IsValid(Widget))
 	{
-		bNeedCheckEventSystem = false;
-		//check if there is EventSystem in editor
-		bool bEventSystemExits = false;
-		for (TActorIterator<AActor> ActorItr(this->GetWorld()); ActorItr; ++ActorItr)
-		{
-			auto Actor = *ActorItr;
-			if (Actor->FindComponentByClass<UDreamEventSystem>())
-			{
-				bEventSystemExits = true;
-				break;
-			}
-		}
-		if (!bEventSystemExits)
-		{
-			auto Dialog =
-				SNew(SCustomDialog)
-				.Title(LOCTEXT("MessageDialogTitle", "Message"))
-				.Content()
-				[
-					SNew(SBox)
-					.Padding(20, 10)
-					.MaxDesiredWidth(500)
-					[
-						SNew(STextBlock)
-						.AutoWrapText(true)
-						.Text(LOCTEXT("MissingEventSystem", "There is no DreamEventSystem in the world! DreamUI will not interactable without DreamEventSystem, would you like to create a default one?"))
-					]
-				]
-				.Buttons({
-					SCustomDialog::FButton(
-						LOCTEXT("DialogBtnYes", "Yes"),
-						FSimpleDelegate::CreateLambda([=, WeakThis = MakeWeakObjectPtr(this)]()
-						{
-							if (!WeakThis.IsValid())return;
-							auto ClassName = TEXT("EventSystemActorClass");
-							if (auto ActorClass = UDreamGUISettings::LoadSettingClass(
-								UDreamGUISettings::Get()->EventSystemActorClass, ClassName))
-							{
-								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
-								Actor->SetActorLabel(ClassName);
-							}
-							else
-							{
-								UE_LOG(DreamGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."), 
-								ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
-							}
-						})),
-					SCustomDialog::FButton(
-						LOCTEXT("DialogBtnNo", "No")),
-					SCustomDialog::FButton(
-						LOCTEXT("DialogBtnNoToAll", "NoAndNeverShowAgain"),
-						FSimpleDelegate::CreateLambda([=]()
-						{
-							bNeverCheckEventSystem = true;
-						}))
-				});
-			Dialog->ShowModal();
-		}
+		Widget->DestroyWidget();
 	}
-	if (bNeedCheckRaycasterSource)
-	{
-		bNeedCheckRaycasterSource = false;
-		if (!RootCanvas.IsValid())
-		{
-			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d RootCanvas is null, skip check WorldSpaceRaycasterSource!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return;
-		}
-		//check if there is WorldSpaceRaycaster when this is WorldSpace UI
-		if (this->RootCanvas->GetRenderMode() == EDreamRenderMode::WorldSpace || this->RootCanvas->GetRenderMode() == EDreamRenderMode::WorldSpace_DreamUI)
-		{
-			UDreamWorldSpaceRaycasterSource* ExistWorldSpaceRaycasterSource = nullptr;
-			for (TActorIterator<AActor> ActorItr(this->GetWorld()); ActorItr; ++ActorItr)
-			{
-				auto Actor = *ActorItr;
-				if (auto Comp = Actor->FindComponentByClass<UDreamWorldSpaceRaycasterSource>())
-				{
-					ExistWorldSpaceRaycasterSource = Comp;
-					break;
-				}
-			}
-			if (!ExistWorldSpaceRaycasterSource)
-			{
-				auto Dialog =
-				SNew(SCustomDialog)
-				.Title(LOCTEXT("MessageDialogTitle", "Message"))
-				.Content()
-				[
-					SNew(SBox)
-					.Padding(20, 10)
-					.MaxDesiredWidth(500)
-					[
-						SNew(STextBlock)
-						.AutoWrapText(true)
-						.Text(LOCTEXT("MissingWorldSpaceRaycasterSource", "There is no WorldSpaceRaycasterSource in the world! WorldSpaceUI will not interactable without WorldSpaceRaycasterSource, would you like to create a default one which use mouse input?"))
-					]
-				]
-				.Buttons({
-					SCustomDialog::FButton(
-						LOCTEXT("DialogBtnYes", "Yes"),
-						FSimpleDelegate::CreateLambda([=, &ExistWorldSpaceRaycasterSource, WeakThis = MakeWeakObjectPtr(this)]()
-						{
-							if (!WeakThis.IsValid())return;
-							auto ClassName = TEXT("WorldSpaceRaycasterSourceClass");
-							if (auto ActorClass = UDreamGUISettings::LoadSettingClass(
-								UDreamGUISettings::Get()->WorldSpaceRaycasterSourceClass, ClassName))
-							{
-								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
-								Actor->SetActorLabel(ClassName);
-								ExistWorldSpaceRaycasterSource = Actor->FindComponentByClass<UDreamWorldSpaceRaycasterSource>();
-							}
-							else
-							{
-								UE_LOG(DreamGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of DreamUI plugin, reinstall this plugin may fix the issue."), 
-								ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
-							}
-						})),
-					SCustomDialog::FButton(
-						LOCTEXT("DialogBtnNo", "No")),
-					SCustomDialog::FButton(
-						LOCTEXT("DialogBtnNoToAll", "NoAndNeverShowAgain"),
-						FSimpleDelegate::CreateLambda([=]()
-						{
-							bNeverCheckRaycasterSource = true;
-						}))
-				});
-				Dialog->ShowModal();
-			}
-			if (ExistWorldSpaceRaycasterSource)
-			{
-				if (auto WorldSpaceRaycaster = this->GetOwner()->FindComponentByClass<UDreamWorldSpaceRaycasterBase>())
-				{
-					if (auto RaycasterSourceActor = Cast<ADreamWorldSpaceRaycasterSourceActor>(ExistWorldSpaceRaycasterSource->GetOwner()))
-					{
-						WorldSpaceRaycaster->SetRaycasterSourceActor(RaycasterSourceActor);
-					}
-				}
-			}
-		}
-	}
+	// Cleared whether or not there was anything to tear down, so the second caller of a pair -- and
+	// they do come in pairs, a destroyed component is also collected -- finds nothing left to do.
+	LoadedWidget = nullptr;
+	RootCanvas = nullptr;
 }
-
-void UDreamWidgetPresenterComponentBase::MarkNeedCheckNecessaryObjects()
-{
-	if (!bNeverCheckEventSystem)
-	{
-		bNeedCheckEventSystem = true;
-	}
-	if (!bNeverCheckRaycasterSource)
-	{
-		bNeedCheckRaycasterSource = true;
-	}
-}
-#endif
 
 UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::GetNavigationSelection()
 {

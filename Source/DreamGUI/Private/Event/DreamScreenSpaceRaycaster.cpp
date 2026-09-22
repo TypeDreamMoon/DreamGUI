@@ -31,7 +31,7 @@ void UDreamScreenSpaceRaycaster::BeginPlay()
 		auto WidgetPresenter = Owner ? Owner->FindComponentByClass<UDreamWidgetPresenterComponentBase>() : nullptr;
 		if (!WidgetPresenter)
 		{
-			UE_LOG(DreamGUI, Error, TEXT("[%s].%d DreamWidgetPresenterComponent is not valid! DreamUIScreenSpaceRaycaster can only attach to a Actor which contains a UDreamWidgetPresenterComponent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d DreamScreenSpaceRaycaster has no root canvas: nothing called SetRootCanvas, and its owner actor carries no DreamWidgetPresenterComponentBase to take one from."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return;
 		}
 		auto Canvas = WidgetPresenter->GetLoadedCanvas();

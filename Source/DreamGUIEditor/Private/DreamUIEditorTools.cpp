@@ -26,7 +26,6 @@
 #include "UObject/UnrealType.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
-#include "Core/DreamWidgetPresenterComponent.h"
 #include "Utils/DreamUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIEditorTools"

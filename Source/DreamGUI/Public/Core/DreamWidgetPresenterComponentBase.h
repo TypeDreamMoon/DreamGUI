@@ -12,7 +12,7 @@ class UDreamCanvas;
 
 // Abstract: LoadWidget is PURE_VIRTUAL, so an instance of this class asserts the moment it
 // registers. Without this the Add Component list offers it, and picking it there is a crash
-// rather than an error. Add DreamWidgetPresenterComponent.
+// rather than an error. Add DreamWorldWidgetComponent.
 UCLASS(Abstract, ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UDreamWidgetPresenterComponentBase : public USceneComponent
 {
@@ -26,27 +26,26 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
-	virtual void PostLoad() override;
-	virtual void Serialize(FArchive& Ar) override;
-	virtual void PostInitProperties() override;
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
+	virtual void BeginDestroy() override;
 	virtual void LoadWidget()PURE_VIRTUAL(UDreamWidgetPresenterComponentBase::LoadWidget, );
+	/**
+	 * Is the tree already loaded the one this host would build right now?
+	 *
+	 * Asked on an editor-mode register, because a reregister is not a teardown: editing any property
+	 * of the owning actor runs one, and rebuilding the hierarchy there throws away everything a live
+	 * tree was holding. A host that cannot compare answers false -- rebuild -- which is the only
+	 * honest answer for one that has no notion of what it would build.
+	 */
+	virtual bool IsLoadedWidgetCurrent() const { return false; }
+	/** Tear the loaded tree down and forget it. Safe to call twice, and on a tree GC already took. */
+	void DestroyLoadedWidget();
 #if WITH_EDITOR
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-	static bool bNeedCheckEventSystem;
-	static bool bNeverCheckEventSystem;
-	static bool bNeedCheckRaycasterSource;
-	static bool bNeverCheckRaycasterSource;
 public:
-	void CheckNecessaryObjects();
-	static void MarkNeedCheckNecessaryObjects();
-	
 	void ReloadWidget();
 #endif
-	
+
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=DreamWidgetPresenter)
-	TObjectPtr<UDreamCanvas> CanvasTemplate;
-	
 	UPROPERTY(Transient)
 	TWeakObjectPtr<UDreamCanvas> RootCanvas;
 	UPROPERTY(Transient)
