@@ -65,6 +65,18 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(FDreamTreeGetItemChildren, UObject*, Item, TA
  * Cycles are survivable: an item already visited is not visited again, so a graph produces a tree
  * rather than a hang.
  *
+ * LEFT AND RIGHT ARE THE TREE'S
+ * -----------------------------
+ * Up and down step through the rows that show, as a list's do. Left and right open and close, as
+ * STreeView::OnKeyDown has them: right on a folded parent unfolds it, right on an open one moves to its
+ * first child; left on an open parent folds it, left anywhere else moves to the parent. Where the key
+ * has nothing to do -- right on a leaf, left on a root that is already folded -- it still belongs to
+ * the tree and focus stays put, which is what STreeView does with the arrow keys. This library has one
+ * navigation road for the keyboard and the gamepad, so a D-pad gets the same answer; in UMG a D-pad
+ * goes round OnKeyDown and would leave the tree sideways instead. The twisty is not a navigation stop
+ * (UMG's expander arrow is not focusable either), so a press that follows a click on it starts from
+ * the row.
+ *
  * See UDreamListViewBase for the shape of the tree it builds, why it hosts the plain scroll view
  * rather than the recycling one, and how these controls sit beside the `each` language feature.
  */
@@ -234,6 +246,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tree View")
 	void CollapseAll();
 
+	/** Left and right as STreeView::OnKeyDown answers them; up and down as the list does. */
+	virtual bool HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDirection InDirection,
+		TScriptInterface<IDreamNavigationInterface>& OutResult) override;
+
 protected:
 	virtual FDreamListStyle ResolveListStyle() const override;
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
@@ -266,6 +282,12 @@ private:
 
 	/** The children provider, whichever of the two roads answered. Empty when neither does. */
 	void GetChildrenOf(UObject* InItem, TArray<UObject*>& OutChildren) const;
+
+	/**
+	 * The nearest item before InItemIndex that is shallower than it -- its parent, in a pre-order flat
+	 * source -- or INDEX_NONE for a root. The walk STreeView makes for Left.
+	 */
+	int32 FindParentItem(int32 InItemIndex) const;
 
 	/**
 	 * One node and everything under it, in pre-order, with depths beside it.

@@ -79,6 +79,18 @@ void UDreamTreeView::DecorateRowTemplate(UDreamWidget& InTemplate)
 						InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 					})),
 		&InTemplate);
+
+	// Clickable, but not a navigation stop -- UMG's expander arrow is not focusable either. Two things
+	// follow: navigation never lands on a twisty instead of its row, and a press that comes after a
+	// click on one walks up past it to the ROW's button, which is where the tree answers left and
+	// right. Set on the template, so every row copied from it carries the same answer.
+	if (UDreamWidget* TemplateTwisty = InTemplate.FindChildByDisplayName(TEXT("Twisty")))
+	{
+		if (UUIButton* TwistyButton = TemplateTwisty->GetComponent<UUIButton>())
+		{
+			TwistyButton->SetCanNavigateHere(false);
+		}
+	}
 }
 
 void UDreamTreeView::DecorateNewRow(UDreamWidget& InRow, int32 InPoolIndex)
@@ -286,6 +298,75 @@ void UDreamTreeView::SetItemExpanded(int32 InItemIndex, bool bInExpanded)
 void UDreamTreeView::ToggleItemExpansion(int32 InItemIndex)
 {
 	SetItemExpanded(InItemIndex, !IsItemExpanded(InItemIndex));
+}
+
+bool UDreamTreeView::HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDirection InDirection,
+	TScriptInterface<IDreamNavigationInterface>& OutResult)
+{
+	if (InDirection != EDreamUINavigationDirection::Left && InDirection != EDreamUINavigationDirection::Right)
+	{
+		// Up and down are the list's: one visible row at a time, collapsed subtrees skipped.
+		return Super::HandleRowNavigation(InPoolIndex, InDirection, OutResult);
+	}
+	// Asked NOW, like every handler keyed by pool slot: the row may be showing a different item than
+	// it was when focus arrived on it.
+	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
+	if (ItemIndex == INDEX_NONE)
+	{
+		return false;
+	}
+	const bool bHasChildren = ItemHasChildren(ItemIndex);
+	if (InDirection == EDreamUINavigationDirection::Right)
+	{
+		if (bHasChildren && !IsItemExpanded(ItemIndex))
+		{
+			// STreeView::OnKeyDown: Right on a folded parent unfolds it, and the selector stays put.
+			SetItemExpanded(ItemIndex, true);
+			return KeepNavigationOnItem(ItemIndex, OutResult);
+		}
+		if (bHasChildren)
+		{
+			// Already open: on to the first child, which in a pre-order flat source is simply the next
+			// item -- and it shows, because its parent is open. A child the veto refuses is not a place
+			// navigation may land, so the selector stays.
+			const int32 FirstChild = ItemIndex + 1;
+			if (IsItemSelectableOrNavigable(FirstChild) && MoveNavigationToItem(FirstChild, OutResult))
+			{
+				return true;
+			}
+			return KeepNavigationOnItem(ItemIndex, OutResult);
+		}
+		// "Right only applies to items with children" -- and the key is still the tree's.
+		return KeepNavigationOnItem(ItemIndex, OutResult);
+	}
+
+	if (bHasChildren && IsItemExpanded(ItemIndex))
+	{
+		// Left on an open parent folds it, and the selector stays put.
+		SetItemExpanded(ItemIndex, false);
+		return KeepNavigationOnItem(ItemIndex, OutResult);
+	}
+	// Anything else moves to the parent: the nearest earlier item that is shallower. A root has none,
+	// and the key still stays with the tree.
+	const int32 ParentIndex = FindParentItem(ItemIndex);
+	if (ParentIndex != INDEX_NONE && IsItemSelectableOrNavigable(ParentIndex) && MoveNavigationToItem(ParentIndex, OutResult))
+	{
+		return true;
+	}
+	return KeepNavigationOnItem(ItemIndex, OutResult);
+}
+
+int32 UDreamTreeView::FindParentItem(int32 InItemIndex) const
+{
+	const int32 Depth = GetItemDepth(InItemIndex);
+	for (int32 Index = InItemIndex - 1; Index >= 0; --Index)
+	{
+		if (GetItemDepth(Index) < Depth)
+		{
+			return Index;
+		}
+	}
+	return INDEX_NONE;
 }
 
 void UDreamTreeView::ExpandAll()

@@ -3,7 +3,7 @@
 	"umgHeader": "Components/TreeView.h",
 	"dreamClass": "UDreamTreeView",
 	"members": [
-		{"umg": "SetItemExpansion", "kind": "function", "status": "adopt", "dream": "", "note": "A one-line forward to SetItemExpanded, which is the name this control was written with and which every existing caller uses. By source index, so it survives a collapse above it."},
+		{"umg": "SetItemExpansion", "kind": "function", "status": "adopt", "dream": "", "note": "A one-line forward to SetItemExpanded, which is the name this control was written with and which every existing caller uses. By source index, so it survives a collapse above it. The player reaches it too: Left and Right on a row open, close and walk to parent or first child as STreeView::OnKeyDown does with the arrow keys -- and, this library having one navigation road, a D-pad does the same, where in UMG it would leave the tree sideways."},
 		{"umg": "ExpandAll", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "CollapseAll", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "BP_OnGetItemChildren", "kind": "property", "status": "map", "dream": "OnGetItemChildren", "note": "FDreamTreeGetItemChildren, with UMG's signature. Single-cast like UMG's: this one is a QUESTION, and two answers to a question is an ambiguity nothing can resolve. Unbound, the walk falls back to IUITreeViewItem::GetTreeChildren."},
