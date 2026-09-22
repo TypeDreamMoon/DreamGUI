@@ -8,6 +8,7 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Designer/SDreamWidgetComponentEditor.h"
 #include "Engine/World.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIDropdown.h"
@@ -23,12 +24,10 @@
 // list of item components a dropdown built for itself, and a copy that keeps either one keeps
 // operating on the widget it was copied from.
 //
-// The functions below are defined in the details panel's own .cpp -- the panel is a Slate widget no
-// headless test can construct -- so this file declares the prototypes it needs. A signature that
-// drifts apart from the definition is a link error, not a silent pass.
-UDreamUIBehaviour* DreamUIWidgetComponentClipboard_Snapshot(UDreamUIBehaviour* InSource);
-UDreamUIBehaviour* DreamUIWidgetComponentClipboard_PasteOnto(UDreamWidget* InTargetWidget, UDreamUIBehaviour* InSource);
-bool DreamUIWidgetComponentClipboard_CanPasteClass(const UClass* InComponentClass);
+// The clipboard functions are reached through SDreamWidgetComponentEditor.h rather than through
+// prototypes written out again here: the panel beside them is a Slate widget no headless test can
+// construct, but the free functions are declared in that header, and taking them from the one
+// declaration is what keeps a signature from drifting apart from its definition unnoticed.
 
 namespace DreamComponentClipboardTestLocal
 {

@@ -42,7 +42,7 @@ struct FDreamWidgetHierarchyPickerView_DataItem
  * a disabled leaf with no expander, so before this took a list, nothing living in a second hierarchy
  * could be bound at all.
  */
-void DreamWidgetHierarchyPicker_BuildRoots(const TArray<UDreamWidget*>& InRootWidgets, UClass* InObjectClass
+DREAMGUIEDITOR_API void DreamWidgetHierarchyPicker_BuildRoots(const TArray<UDreamWidget*>& InRootWidgets, UClass* InObjectClass
 	, TArray<TSharedPtr<FDreamWidgetHierarchyPickerView_DataItem>>& OutRoots);
 
 DECLARE_DELEGATE_OneParam(FOnSelectItem, UObject*);

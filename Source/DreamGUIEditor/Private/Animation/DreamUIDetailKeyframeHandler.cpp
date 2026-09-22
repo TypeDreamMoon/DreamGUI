@@ -9,7 +9,7 @@
 #include "Core/Components/DreamWidget.h"
 
 //declared in DreamWidgetAnimationEditorWidget.cpp; the comment there says why it is a bare prototype
-bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
+DREAMGUIEDITOR_API bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 
 FDreamUIDetailKeyframeHandler::FDreamUIDetailKeyframeHandler(TSharedPtr<FDreamWidgetBlueprintEditor> InSequenceEditor)

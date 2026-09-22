@@ -25,7 +25,7 @@ struct FDreamUIAnchorData;
  * diagram, costs nothing, and is computed from the authored anchor blocks alone.
  */
 UCLASS()
-class UDreamWidgetBlueprintThumbnailRenderer : public UDefaultSizedThumbnailRenderer
+class DREAMGUIEDITOR_API UDreamWidgetBlueprintThumbnailRenderer : public UDefaultSizedThumbnailRenderer
 {
 	GENERATED_BODY()
 public:

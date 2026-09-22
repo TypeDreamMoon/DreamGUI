@@ -190,7 +190,9 @@ bool FDreamUIBindingNumericWidthTest::RunTest(const FString& Parameters)
 	if (!TestTrue(TEXT("Fixture written"), File.Write({
 		TEXT("class /Temp/DreamGUITests/BP_NumericBind"),
 		TEXT("Widget Root {"),
-		TEXT("    + /Script/DreamGUIEditor.DreamUITypedValueTestBehaviour {"),
+		// Asked of the class rather than written out: the behaviour is declared by whichever module
+		// holds this test, so a hardcoded module name stops resolving the day the test moves.
+		FString::Printf(TEXT("    + %s {"), *UDreamUITypedValueTestBehaviour::StaticClass()->GetPathName()),
 		TEXT("        Precise <- GetScale()"),
 		TEXT("    }"),
 		TEXT("}")})))

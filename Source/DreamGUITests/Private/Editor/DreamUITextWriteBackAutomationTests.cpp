@@ -704,9 +704,12 @@ bool FDreamUIWriteBackReflectiveSweepTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUIWriteBackTestLocal;
 
+	// The class is asked for its own reflected path rather than having one written out here. The
+	// behaviour is declared by whichever module holds this test, so the path moved the day the test
+	// did, and a .dui naming the old module compiles to "not a behaviour this widget can carry".
 	const FString Source = Join({
 		TEXT("Widget Root {"),
-		TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour {"),
+		FString::Printf(TEXT("    + %s {"), *UDreamUISweepTestBehaviour::StaticClass()->GetPathName()),
 		TEXT("        Style.Thickness = 3"),
 		TEXT("    }"),
 		TEXT("}")
@@ -827,7 +830,7 @@ bool FDreamUIResourceReferencesTest::RunTest(const FString& Parameters)
 		TEXT("}"),
 		TEXT(""),
 		TEXT("Widget Root {"),
-		TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour {"),
+		FString::Printf(TEXT("    + %s {"), *UDreamUISweepTestBehaviour::StaticClass()->GetPathName()),
 		TEXT("        Plain        = @Gap"),
 		TEXT("        Style.Tint   = @Accent"),
 		TEXT("        Style.Offset = @Nudge"),
@@ -901,7 +904,7 @@ bool FDreamUIResourceRefusalsTest::RunTest(const FString& Parameters)
 	{
 		FBuiltTree Live = BuildTree(Join({
 			TEXT("Widget Root {"),
-			TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour { Plain = @NoSuch }"),
+			FString::Printf(TEXT("    + %s { Plain = @NoSuch }"), *UDreamUISweepTestBehaviour::StaticClass()->GetPathName()),
 			TEXT("}")
 		}));
 		TestTrue(TEXT("an unknown resource is DUI4007"),
@@ -914,7 +917,7 @@ bool FDreamUIResourceRefusalsTest::RunTest(const FString& Parameters)
 		FBuiltTree Live = BuildTree(Join({
 			TEXT("resources { Color Accent = 8 }"),
 			TEXT("Widget Root {"),
-			TEXT("    + /Script/DreamGUIEditor.DreamUISweepTestBehaviour { Style.Tint = @Accent }"),
+			FString::Printf(TEXT("    + %s { Style.Tint = @Accent }"), *UDreamUISweepTestBehaviour::StaticClass()->GetPathName()),
 			TEXT("}")
 		}));
 		TestTrue(TEXT("a mistyped entry is DUI4008"),
@@ -959,7 +962,8 @@ bool FDreamUIBuilderTypedValueTest::RunTest(const FString& Parameters)
 	{
 		return BuildTree(Join({
 			TEXT("Widget Root {"),
-			FString::Printf(TEXT("    + /Script/DreamGUIEditor.DreamUITypedValueTestBehaviour { %s }"), InLine),
+			FString::Printf(TEXT("    + %s { %s }"),
+				*UDreamUITypedValueTestBehaviour::StaticClass()->GetPathName(), InLine),
 			TEXT("}")
 		}));
 	};

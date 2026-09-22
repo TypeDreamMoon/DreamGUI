@@ -23,7 +23,7 @@ class UDreamWidget;
  */
 namespace DreamWidgetHierarchyRename
 {
-	bool CanRename(const UDreamWidget* Widget, bool bLockedInDesigner);
+	DREAMGUIEDITOR_API bool CanRename(const UDreamWidget* Widget, bool bLockedInDesigner);
 }
 
 /**
@@ -37,9 +37,9 @@ namespace DreamWidgetHierarchyRename
 namespace DreamWidgetHierarchyType
 {
 	/** Everything the search box may match this widget by: its name, and the classes it is made of. */
-	void CollectSearchTerms(const UDreamWidget* Widget, TArray<FString>& OutTerms);
+	DREAMGUIEDITOR_API void CollectSearchTerms(const UDreamWidget* Widget, TArray<FString>& OutTerms);
 	/** The subdued suffix the row prints after the name; empty for a plain widget, which needs none. */
-	FString GetTypeLabel(const UDreamWidget* Widget);
+	DREAMGUIEDITOR_API FString GetTypeLabel(const UDreamWidget* Widget);
 }
 
 /**
@@ -60,9 +60,9 @@ namespace DreamWidgetHierarchyType
 namespace DreamWidgetHierarchyRows
 {
 	/** The tops of the hierarchies, each once, in the order the manager reports them. */
-	void CollectRoots(const TArray<TObjectPtr<UDreamWidget>>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots);
+	DREAMGUIEDITOR_API void CollectRoots(const TArray<TObjectPtr<UDreamWidget>>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots);
 	/** InParent's children, minus any that do not name InParent as their parent, and minus repeats. */
-	void CollectChildren(UDreamWidget* InParent, TArray<TWeakObjectPtr<UDreamWidget>>& OutChildren);
+	DREAMGUIEDITOR_API void CollectChildren(UDreamWidget* InParent, TArray<TWeakObjectPtr<UDreamWidget>>& OutChildren);
 }
 
 class SDreamWidgetEditorHierarchyView : public SCompoundWidget

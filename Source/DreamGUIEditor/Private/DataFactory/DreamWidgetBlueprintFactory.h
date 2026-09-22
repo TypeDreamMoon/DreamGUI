@@ -14,7 +14,7 @@
  * starts with. The root widget itself is always plain -- what varies is the panel on it.
  */
 UCLASS()
-class UDreamWidgetBlueprintFactory : public UFactory
+class DREAMGUIEDITOR_API UDreamWidgetBlueprintFactory : public UFactory
 {
 	GENERATED_BODY()
 

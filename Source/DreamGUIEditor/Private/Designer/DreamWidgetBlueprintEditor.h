@@ -58,7 +58,7 @@ enum class EDreamUIDesignerSizeRule : uint8
  * size and the lock set stay on the asset, because those describe the hierarchy itself.
  */
 UCLASS(config = EditorPerProjectUserSettings, meta = (DisplayName = "DreamUI Designer"))
-class UDreamUIDesignerSettings : public UDeveloperSettings
+class DREAMGUIEDITOR_API UDreamUIDesignerSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 public:
@@ -134,7 +134,7 @@ public:
  * compiled. Sub-prefabs, because nesting is a class reference. The companion behaviour blueprint,
  * because the Widget Blueprint is the logic host now.
  */
-class FDreamWidgetBlueprintEditor : public FBlueprintEditor
+class DREAMGUIEDITOR_API FDreamWidgetBlueprintEditor : public FBlueprintEditor
 {
 public:
 

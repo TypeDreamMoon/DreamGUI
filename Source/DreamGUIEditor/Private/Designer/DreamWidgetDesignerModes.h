@@ -17,7 +17,7 @@ class UDreamWidgetBlueprint;
  * first, and the second lived in a separate asset -- the companion behaviour blueprint -- which is
  * precisely the separation the class model removes.
  */
-struct FDreamWidgetBlueprintApplicationModes
+struct DREAMGUIEDITOR_API FDreamWidgetBlueprintApplicationModes
 {
 	static const FName DesignerMode;
 	static const FName GraphMode;

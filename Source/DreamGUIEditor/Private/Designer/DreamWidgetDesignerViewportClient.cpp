@@ -62,7 +62,7 @@
 #define LOCTEXT_NAMESPACE "DreamWidgetDesignerViewportClient"
 
 //declared in DreamWidgetAnimationEditorWidget.cpp; the comment there says why it is a bare prototype
-bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
+DREAMGUIEDITOR_API bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 // UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
 // (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).

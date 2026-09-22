@@ -8,7 +8,7 @@
 class FDreamWidgetBlueprintEditor;
 
 /** Tab ids for the designer's own panels. Blueprint's own tabs come from FBlueprintEditorTabs. */
-struct FDreamWidgetDesignerTabs
+struct DREAMGUIEDITOR_API FDreamWidgetDesignerTabs
 {
 	static const FName ViewportID;
 	static const FName HierarchyID;

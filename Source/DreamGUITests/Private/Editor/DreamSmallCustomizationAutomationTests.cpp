@@ -28,9 +28,11 @@
 namespace DreamUIFontDataCustomization
 {
 	// Defined by DreamUIFontData_FreeTypeRenderCustomization.cpp; that customization has no header of
-	// its own to declare them in.
-	ECheckBoxState GetUseRelativeFilePathState(TSharedPtr<IPropertyHandle> InHandle);
-	bool SetUseRelativeFilePath(TSharedPtr<IPropertyHandle> InHandle, bool bInUseRelativeFilePath);
+	// its own to declare them in. The export macro has to be repeated here because it is: the
+	// definitions carry it, this module is a different DLL, and a prototype that disagrees about
+	// linkage is the difference between a link and an LNK2019.
+	DREAMGUIEDITOR_API ECheckBoxState GetUseRelativeFilePathState(TSharedPtr<IPropertyHandle> InHandle);
+	DREAMGUIEDITOR_API bool SetUseRelativeFilePath(TSharedPtr<IPropertyHandle> InHandle, bool bInUseRelativeFilePath);
 }
 
 namespace DreamSmallCustomizationTestLocal

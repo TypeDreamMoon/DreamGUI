@@ -27,7 +27,7 @@ struct FDreamUIDiagnosticBag;
  *   - deposits coalesce through one ticker flush: a watcher batch recompiles N classes in one
  *     go, and N rewrites of the same file for one keypress is the shape the debounce exists for.
  */
-struct FDreamUIDiagnosticsMailbox
+struct DREAMGUIEDITOR_API FDreamUIDiagnosticsMailbox
 {
 	/**
 	 * Records one file's compile outcome and schedules the debounced write. A bag with no source

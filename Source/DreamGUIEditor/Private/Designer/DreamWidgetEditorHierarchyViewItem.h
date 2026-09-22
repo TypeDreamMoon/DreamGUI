@@ -21,7 +21,7 @@ class FScopedTransaction;
  * hierarchy drag dropped onto the canvas has to mean what it means in the tree, and reusing the op
  * and the validator below is what keeps the two surfaces from drifting into two sets of rules.
  */
-class FHierarchyDreamWidgetDragDropOp : public FDecoratedDragDropOp
+class DREAMGUIEDITOR_API FHierarchyDreamWidgetDragDropOp : public FDecoratedDragDropOp
 {
 public:
 	DRAG_DROP_OPERATOR_TYPE(FHierarchyDreamWidgetDragDropOp, FDecoratedDragDropOp)
@@ -71,10 +71,10 @@ namespace DreamWidgetHierarchyDrop
 	 * The exception is a row with no parent: there is no sibling list, so the drop path rewrites the
 	 * zone into a drop inside that row, and it is the row itself that has the say.
 	 */
-	const UDreamWidget* GetLockOwnerForDropZone(const UDreamWidget* TargetItem, EItemDropZone DropZone);
+	DREAMGUIEDITOR_API const UDreamWidget* GetLockOwnerForDropZone(const UDreamWidget* TargetItem, EItemDropZone DropZone);
 }
 
-class SDreamWidgetEditorHierarchyViewItem : public STableRow<TWeakObjectPtr<UDreamWidget>>
+class DREAMGUIEDITOR_API SDreamWidgetEditorHierarchyViewItem : public STableRow<TWeakObjectPtr<UDreamWidget>>
 {
 public:
 	SLATE_BEGIN_ARGS(SDreamWidgetEditorHierarchyViewItem) {}

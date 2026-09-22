@@ -44,13 +44,13 @@
  */
 
 /** Whether a component of this class may be put on a widget at all. */
-bool DreamUIWidgetComponentClipboard_CanPasteClass(const UClass* InComponentClass);
+DREAMGUIEDITOR_API bool DreamUIWidgetComponentClipboard_CanPasteClass(const UClass* InComponentClass);
 /** Whether this component can be cut or copied. */
-bool DreamUIWidgetComponentClipboard_CanTakeComponent(const UDreamUIBehaviour* InComponent);
+DREAMGUIEDITOR_API bool DreamUIWidgetComponentClipboard_CanTakeComponent(const UDreamUIBehaviour* InComponent);
 /** A stand-alone copy of the component, outered to the transient package, for the clipboard to hold. */
-UDreamUIBehaviour* DreamUIWidgetComponentClipboard_Snapshot(UDreamUIBehaviour* InSource);
+DREAMGUIEDITOR_API UDreamUIBehaviour* DreamUIWidgetComponentClipboard_Snapshot(UDreamUIBehaviour* InSource);
 /** A new component on InTargetWidget with InSource's properties; null when the class is refused. */
-UDreamUIBehaviour* DreamUIWidgetComponentClipboard_PasteOnto(UDreamWidget* InTargetWidget, UDreamUIBehaviour* InSource);
+DREAMGUIEDITOR_API UDreamUIBehaviour* DreamUIWidgetComponentClipboard_PasteOnto(UDreamWidget* InTargetWidget, UDreamUIBehaviour* InSource);
 /** The one clipboard every panel shares. */
 TStrongObjectPtr<UDreamUIBehaviour>& DreamUIWidgetComponentClipboard();
 /** Drop the clipboard while the editor is still up. Called from module shutdown. */

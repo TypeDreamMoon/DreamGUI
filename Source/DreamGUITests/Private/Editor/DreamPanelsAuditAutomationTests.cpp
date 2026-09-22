@@ -6,6 +6,7 @@
 #include "Core/Components/DreamScrollBoxInputHandler.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Designer/SDreamWidgetComponentEditor.h"
 #include "Engine/World.h"
 #include "Interaction/UIButton.h"
 #include "UObject/StrongObjectPtr.h"
@@ -17,10 +18,8 @@
 // will accept leaves Paste greyed out for every widget in every designer.
 //
 // The predicate is asked here rather than through the panel because the panel is a Slate widget no
-// headless test can construct.
-bool DreamUIWidgetComponentClipboard_CanPasteClass(const UClass* InComponentClass);
-bool DreamUIWidgetComponentClipboard_CanTakeComponent(const UDreamUIBehaviour* InComponent);
-UDreamUIBehaviour* DreamUIWidgetComponentClipboard_PasteOnto(UDreamWidget* InTargetWidget, UDreamUIBehaviour* InSource);
+// headless test can construct; SDreamWidgetComponentEditor.h declares the free functions beside it,
+// so they come from that one declaration rather than from prototypes copied into this file.
 
 namespace DreamPanelsAuditTestLocal
 {

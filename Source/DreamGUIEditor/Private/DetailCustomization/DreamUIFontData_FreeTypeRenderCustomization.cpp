@@ -23,7 +23,7 @@
 // shared header to hang them on.
 namespace DreamUIFontDataCustomization
 {
-	ECheckBoxState GetUseRelativeFilePathState(TSharedPtr<IPropertyHandle> InHandle)
+	DREAMGUIEDITOR_API ECheckBoxState GetUseRelativeFilePathState(TSharedPtr<IPropertyHandle> InHandle)
 	{
 		bool bValue = false;
 		// A mixed selection has no single answer, and the checkbox has a state for exactly that.
@@ -31,7 +31,7 @@ namespace DreamUIFontDataCustomization
 		return bValue ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 	}
 
-	bool SetUseRelativeFilePath(TSharedPtr<IPropertyHandle> InHandle, bool bInUseRelativeFilePath)
+	DREAMGUIEDITOR_API bool SetUseRelativeFilePath(TSharedPtr<IPropertyHandle> InHandle, bool bInUseRelativeFilePath)
 	{
 		if (!InHandle.IsValid())return false;
 		return InHandle->SetValue(bInUseRelativeFilePath) == FPropertyAccess::Success;

@@ -744,12 +744,17 @@ bool FDreamUITextEventRouteTest::RunTest(const FString&)
 {
 	using namespace DreamUITextGateTestLocal;
 
+	// The class is asked for its own reflected path rather than having one written out here. The
+	// behaviour is declared by whichever module holds this test, so the path moved the day the test
+	// did, and a .dui naming the old module compiles to "not a behaviour this widget can carry".
+	const FString EventBehaviourPath = UDreamUIEventTestBehaviour::StaticClass()->GetPathName();
+
 	FScopedDuiFile File(TEXT("EventRoute.dui"));
 	if (!TestTrue(TEXT("the .dui was written"), File.Write({
 		TEXT("Widget Root {"),
 		TEXT("  + CanvasPanel { }"),
 		TEXT("  Widget Button {"),
-		TEXT("    + /Script/DreamGUIEditor.DreamUIEventTestBehaviour {"),
+		FString::Printf(TEXT("    + %s {"), *EventBehaviourPath),
 		TEXT("      OnPoked -> HandlePoked"),
 		TEXT("    }"),
 		TEXT("  }"),
@@ -814,7 +819,8 @@ bool FDreamUITextEventRouteRefusalsTest::RunTest(const FString&)
 		FScopedDuiFile File(TEXT("EventRouteNotAssignable.dui"));
 		if (!File.Write({
 			TEXT("Widget Root {"),
-			TEXT("  + /Script/DreamGUIEditor.DreamUIEventTestBehaviour { NotAssignable -> HandlePoked }"),
+			FString::Printf(TEXT("  + %s { NotAssignable -> HandlePoked }"),
+				*UDreamUIEventTestBehaviour::StaticClass()->GetPathName()),
 			TEXT("}") }))
 		{
 			return false;
@@ -832,7 +838,8 @@ bool FDreamUITextEventRouteRefusalsTest::RunTest(const FString&)
 		FScopedDuiFile File(TEXT("EventRouteNoHandler.dui"));
 		if (!File.Write({
 			TEXT("Widget Root {"),
-			TEXT("  + /Script/DreamGUIEditor.DreamUIEventTestBehaviour { OnPoked -> NoSuchHandler }"),
+			FString::Printf(TEXT("  + %s { OnPoked -> NoSuchHandler }"),
+				*UDreamUIEventTestBehaviour::StaticClass()->GetPathName()),
 			TEXT("}") }))
 		{
 			return false;

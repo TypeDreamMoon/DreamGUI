@@ -1194,7 +1194,8 @@ bool FDreamDesignerCreateIsUndoableTest::RunTest(const FString&)
 
 
 // Declared here rather than included: it lives beside a Slate class no headless test can construct.
-bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
+// The export macro matches the definition's, which is what lets a different DLL reach it at all.
+DREAMGUIEDITOR_API bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget);
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamAnimationBindingStopsAtTheBoundaryTest,
