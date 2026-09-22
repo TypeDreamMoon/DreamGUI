@@ -1707,10 +1707,44 @@ void UDreamCanvas::CheckUIMesh()const
 		auto MeshType = DefaultMeshType.Get();
 		if (MeshType == nullptr)MeshType = UDreamUIMeshComponent::StaticClass();
 		auto DreamWidget = GetWidget();
-		auto ObjectName = MakeUniqueObjectName(DreamWidget, MeshType, FName(*this->GetWidget()->GetDisplayName()));
-		UIMesh = NewObject<UDreamUIMeshComponent>(DreamWidget, MeshType, ObjectName, RF_Transient);
+		// The mesh belongs to the host ACTOR when this hierarchy has one.
+		//
+		// A component's owner is read off its outer chain when it is constructed, and a widget tree's
+		// chain ends at the World -- so a mesh outered to the widget answered null to GetOwner(), and
+		// put itself in nobody's component list. That list is what the viewport picks through and what
+		// the details panel shows, so an entire world-space panel was unclickable and invisible there,
+		// and every GetOwner() on the mesh was a null waiting to be dereferenced.
+		//
+		// Asked of the ROOT canvas, not of this one: only the root records which scene component the
+		// tree hangs from, so a nested canvas would otherwise keep its own meshes outered to a widget
+		// while the root's moved to the actor. A canvas with no host at all -- screen space, render
+		// target -- keeps the widget as its outer exactly as before.
+		UObject* MeshOuter = DreamWidget;
+		USceneComponent* HostComponent = nullptr;
+		if (const UDreamCanvas* HostingCanvas = this->GetRootCanvas())
+		{
+			HostComponent = HostingCanvas->GetAttachedRootSceneComponent();
+		}
+		if (HostComponent != nullptr)
+		{
+			if (AActor* HostActor = HostComponent->GetOwner())
+			{
+				MeshOuter = HostActor;
+			}
+		}
+		auto ObjectName = MakeUniqueObjectName(MeshOuter, MeshType, FName(*this->GetWidget()->GetDisplayName()));
+		// DuplicateTransient alongside Transient: duplicating the host actor -- PIE, or a copy-paste in
+		// the level -- must not carry a mesh built for the original's tree into the copy, which builds
+		// its own.
+		UIMesh = NewObject<UDreamUIMeshComponent>(MeshOuter, MeshType, ObjectName, RF_Transient | RF_DuplicateTransient);
 		UIMesh->RegisterComponentWithWorld(this->GetWorld());
-		UIMesh->AttachToComponent(this->GetAttachedRootSceneComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		// The same host the outer came from, so the mesh is in the actor's attachment tree as well as
+		// in its component list. A scene component that an actor owns but that hangs off nothing is a
+		// loose component: the editor's picking and the outliner both walk the attachment tree, and
+		// neither would find it. Attaching costs nothing at runtime -- SetComponentToWorld below
+		// overwrites the transform outright, every frame, so the relative transform never matters --
+		// and a canvas with no host passes null here exactly as it did before.
+		UIMesh->AttachToComponent(HostComponent, FAttachmentTransformRules::KeepRelativeTransform);
 		UIMesh->SetRelativeTransform(FTransform::Identity);
 		UIMesh->Init(const_cast<UDreamCanvas*>(this));
 		bUIMeshNeedToSetInitialParameters = true;
@@ -2943,11 +2977,24 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 
 void UDreamCanvas::RegisterCanvasScaler()
 {
+	/**
+	 * Safe to call any number of times: every bind below first drops whatever its handle still names.
+	 * A canvas can be registered twice without an unregister in between -- a world widget component
+	 * switches the canvas's render mode while the widget is being created (SetRenderMode unregisters
+	 * and registers), and the canvas's own OnRegister registers again right after. Overwriting a live
+	 * handle leaked the binding it named: OnEditorTick ran twice a frame, and the first binding could
+	 * never be removed by UnregisterCanvasScaler.
+	 */
 #if WITH_EDITOR
 	if (GetWorld() && !GetWorld()->IsGameWorld() && this->IsRootCanvas())
 	{
 		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
 		{
+			if (EditorTickDelegateHandle.IsValid())
+			{
+				DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
+				EditorTickDelegateHandle.Reset();
+			}
 			EditorTickDelegateHandle = DreamUIManagerObject->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
 				this->OnEditorTick(deltaTime);
 				});
@@ -2973,6 +3020,11 @@ void UDreamCanvas::RegisterCanvasScaler()
 					{
 						if (auto viewport = gameViewport->Viewport)
 						{
+							if (ViewportResizeDelegateHandle.IsValid())
+							{
+								viewport->ViewportResizedEvent.Remove(ViewportResizeDelegateHandle);
+								ViewportResizeDelegateHandle.Reset();
+							}
 							ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddWeakLambda(this, [this](FViewport*, uint32)
 							{
 								CheckAndApplyViewportParameter();
