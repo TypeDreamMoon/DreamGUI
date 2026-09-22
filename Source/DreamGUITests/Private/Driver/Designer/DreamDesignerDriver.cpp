@@ -5,6 +5,7 @@
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetDesignerViewportClient.h"
 #include "Designer/DreamWidgetEditorHierarchyViewItem.h"//FHierarchyDreamWidgetDragDropOp, what a hierarchy drag carries
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/SDreamWidgetDesignerViewport.h"
 #include "Designer/SDreamWidgetPalette.h"//FDreamUIPaletteDragDropOp, what a palette drag carries
 #include "DreamUIControlRegistry.h"
@@ -17,13 +18,19 @@
 #include "Engine/Blueprint.h"
 #include "GameTime.h"
 #include "Framework/Application/SlateApplication.h"
+#include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #include "Input/DragAndDrop.h"
 #include "Input/Events.h"
+#include "InputKeyEventArgs.h"
 #include "Layout/Geometry.h"
+#include "Misc/App.h"
+#include "RHIGlobals.h"
 #include "SceneView.h"
 #include "Slate/SceneViewport.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "UnrealClient.h"
+#include "UnrealEngine.h"//FScopedConditionalWorldSwitcher
+#include "Widgets/SViewport.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDesignerDriver, Log, All);
 
@@ -507,11 +514,206 @@ namespace DreamTests
 		{
 			return false;
 		}
+		// The pixel's own corner, not its middle: FSceneViewport's cursor cache comes back through
+		// FVector2D::IntPoint, which rounds, so a position aimed exactly at the pixel is the one that
+		// survives the float trip either way -- as it does for the shell's rounding ToViewportPixel.
 		const FVector2D ScreenPosition = PixelToScreenIn(Geometry, InPixel);
 		const FPointerEvent PointerEvent = MakePointerEvent(ScreenPosition, FKey());
 		const FReply Reply = Viewport->OnMouseMove(Geometry, PointerEvent);
+		// The event's own cursor delta, which is exactly what FSceneViewport accumulates under capture.
+		const FVector2D Travel = ScreenPosition - LastScreenPosition;
 		LastScreenPosition = ScreenPosition;
+		if (PressedButtons.Num() > 0)
+		{
+			DeliverHeldPointerTravel(*Viewport, Travel);
+		}
 		return Reply.IsEventHandled();
+	}
+
+	void FDreamDesignerDriver::DeliverHeldPointerTravel(FSceneViewport& InViewport, const FVector2D& InTravel)
+	{
+		const TSharedPtr<SViewport> ViewportWidget = InViewport.GetViewportWidget().Pin();
+		if (ViewportWidget.IsValid() && ViewportWidget->HasMouseCapture())
+		{
+			// Captured: FSceneViewport accumulated the travel itself in OnMouseMove, and this is the call
+			// Slate makes once a frame's pointer input has been routed -- the one that hands it on.
+			InViewport.OnFinishedPointerInput();
+			return;
+		}
+		FEditorViewportClient* Client = ViewportClient();
+		if (Client == nullptr || InTravel.IsNearlyZero())
+		{
+			return;
+		}
+		// Not captured, which a held press in a focused editor never is. The same two calls, with the
+		// same signs, FSceneViewport::ProcessAccumulatedPointerInput makes: X as it is, and Y negated,
+		// because Slate's Y grows downwards and the axis's grows upwards.
+		FScopedConditionalWorldSwitcher WorldSwitcher(Client);
+		const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetDefaultInputDevice();
+		const float DeltaTime = static_cast<float>(FApp::GetDeltaTime());
+		Client->InputAxis(FInputKeyEventArgs(&InViewport, Device, EKeys::MouseX,
+			static_cast<float>(InTravel.X), DeltaTime, /*NumSamples*/1, /*Timestamp*/0));
+		Client->InputAxis(FInputKeyEventArgs(&InViewport, Device, EKeys::MouseY,
+			static_cast<float>(-InTravel.Y), DeltaTime, /*NumSamples*/1, /*Timestamp*/0));
+	}
+
+	bool FDreamDesignerDriver::CanTakePointerInput() const
+	{
+		// FSceneViewport's own guard: with a zero size it drops the event before the client sees it.
+		const FIntPoint Size = ViewportPixelSize();
+		return ViewportClient() != nullptr && Size.X > 0 && Size.Y > 0;
+	}
+
+	void FDreamDesignerDriver::PumpFrame(float InDeltaSeconds)
+	{
+		if (FEditorViewportClient* Client = ViewportClient())
+		{
+			FScopedConditionalWorldSwitcher WorldSwitcher(Client);
+			Client->Tick(InDeltaSeconds);
+		}
+		if (ToolkitPtr != nullptr)
+		{
+			ToolkitPtr->Tick(InDeltaSeconds);
+		}
+	}
+
+	bool FDreamDesignerDriver::ClickAt(FIntPoint InPixel, const FKey& InButton)
+	{
+		if (!CanTakePointerInput())
+		{
+			return false;
+		}
+		MoveTo(InPixel);
+		PumpFrame();
+		Press(InButton);
+		PumpFrame();
+		Release(InButton);
+		PumpFrame();
+		return true;
+	}
+
+	bool FDreamDesignerDriver::DragFromTo(FIntPoint InFrom, FIntPoint InTo, int32 InSteps)
+	{
+		if (!CanTakePointerInput())
+		{
+			return false;
+		}
+		const int32 StepCount = FMath::Max(InSteps, 1);
+		MoveTo(InFrom);
+		PumpFrame();
+		Press(EKeys::LeftMouseButton);
+		PumpFrame();
+		for (int32 Step = 1; Step <= StepCount; ++Step)
+		{
+			const double Alpha = static_cast<double>(Step) / StepCount;
+			const FIntPoint Pixel(
+				InFrom.X + FMath::RoundToInt32((InTo.X - InFrom.X) * Alpha),
+				InFrom.Y + FMath::RoundToInt32((InTo.Y - InFrom.Y) * Alpha));
+			MoveTo(Pixel);
+			PumpFrame();
+		}
+		Release(EKeys::LeftMouseButton);
+		PumpFrame();
+		return true;
+	}
+
+	TOptional<FBox2D> FDreamDesignerDriver::WidgetPixelRect(const UDreamWidget* InPreviewWidget) const
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FEditorViewportClient* Client = ViewportClient();
+		if (!::IsValid(InPreviewWidget) || !Viewport.IsValid() || Client == nullptr
+			|| Viewport->GetSizeXY().X <= 0 || Viewport->GetSizeXY().Y <= 0)
+		{
+			return TOptional<FBox2D>();
+		}
+		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+			Viewport.Get(), Client->GetScene(), Client->EngineShowFlags)
+			.SetRealtimeUpdate(Client->IsRealtime())
+			.SetTime(FGameTime::GetTimeSinceAppStart()));
+		FSceneView* View = Client->CalcSceneView(&ViewFamily);
+		if (View == nullptr)
+		{
+			return TOptional<FBox2D>();
+		}
+		// The rect as the designer draws and marquees it: the widget lies in its own local X=0 plane,
+		// its 2D X along local Y and its 2D Y along local Z, measured out from the pivot.
+		const float Width = InPreviewWidget->GetWidth();
+		const float Height = InPreviewWidget->GetHeight();
+		const FVector2D Pivot = InPreviewWidget->GetPivot();
+		const float Left = -Pivot.X * Width;
+		const float Right = (1.0f - Pivot.X) * Width;
+		const float Bottom = -Pivot.Y * Height;
+		const float Top = (1.0f - Pivot.Y) * Height;
+		const FTransform& Transform = InPreviewWidget->GetWorldTransform();
+		FBox2D Box(ForceInit);
+		for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
+		{
+			const FVector4 ScreenPoint = View->WorldToScreen(Transform.TransformPosition(Local));
+			FVector2D Pixel = FVector2D::ZeroVector;
+			if (ScreenPoint.W <= 0.0f || !View->ScreenToPixel(ScreenPoint, Pixel))
+			{
+				return TOptional<FBox2D>();
+			}
+			Box += Pixel;
+		}
+		return Box;
+	}
+
+	TArray<UDreamWidget*> FDreamDesignerDriver::SelectedWidgets() const
+	{
+		TArray<UDreamWidget*> Result;
+		if (ToolkitPtr != nullptr)
+		{
+			for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : ToolkitPtr->GetSelectedWidgets())
+			{
+				if (UDreamWidget* Selected = WeakWidget.Get())
+				{
+					Result.Add(Selected);
+				}
+			}
+		}
+		return Result;
+	}
+
+	bool FDreamDesignerDriver::ResizeViewport(FIntPoint InSize)
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		if (!Viewport.IsValid() || InSize.X <= 0 || InSize.Y <= 0)
+		{
+			return false;
+		}
+		Viewport->SetFixedViewportSize(static_cast<uint32>(InSize.X), static_cast<uint32>(InSize.Y));
+		// Kept in step whether or not it is in use: it only stands in while Slate has cached no
+		// geometry of its own, and then it has to describe the size the viewport now has.
+		SyntheticGeometry = FGeometry::MakeRoot(FVector2D(InSize), FSlateLayoutTransform());
+		return Viewport->GetSizeXY() == InSize;
+	}
+
+	bool FDreamDesignerDriver::DrawFrame()
+	{
+		if (GUsingNullRHI)
+		{
+			// Nothing to draw into, and a render path that only ever runs against the null RHI would be
+			// testing the null RHI.
+			return false;
+		}
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FEditorViewportClient* Client = ViewportClient();
+		if (!Viewport.IsValid() || Client == nullptr)
+		{
+			return false;
+		}
+		const FIntPoint Size = Viewport->GetSizeXY();
+		if (Size.X <= 0 || Size.Y <= 0)
+		{
+			return false;
+		}
+		// What UEditorEngine::UpdateSingleViewportClient does for a realtime viewport, and nothing more:
+		// no flush afterwards, because a render thread still working on this frame while the game
+		// thread moves on to the next edit is the very overlap these scenarios exist to exercise.
+		FScopedConditionalWorldSwitcher WorldSwitcher(Client);
+		Viewport->Draw();
+		return true;
 	}
 
 	bool FDreamDesignerDriver::Press(const FKey& InKey)
@@ -594,5 +796,15 @@ namespace DreamTests
 			}
 		}
 		return Count;
+	}
+
+	UDreamWidget* FDreamDesignerDriver::PreviewFor(const UDreamWidget* InTemplate) const
+	{
+		if (ToolkitPtr == nullptr || !::IsValid(InTemplate))
+		{
+			return nullptr;
+		}
+		const TSharedPtr<FDreamWidgetPreviewHost> Host = ToolkitPtr->GetPreviewHost();
+		return Host.IsValid() ? Host->FindPreviewForTemplate(InTemplate) : nullptr;
 	}
 }

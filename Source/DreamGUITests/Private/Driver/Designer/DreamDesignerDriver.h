@@ -129,10 +129,60 @@ namespace DreamTests
 		/** Drag an existing preview widget out of the hierarchy and drop it on the surface at InPixel. */
 		bool DropFromHierarchy(UDreamWidget* InSource, FIntPoint InPixel);
 
-		/** Move the pointer to an inner pixel. Every press and release afterwards happens there. */
+		/**
+		 * Move the pointer to an inner pixel. Every press and release afterwards happens there.
+		 *
+		 * While a button is held this also hands the travel on as MouseX/MouseY axis input, which is
+		 * what FSceneViewport does for a viewport that holds mouse capture. A user's press always
+		 * takes capture -- the application is active -- and a headless one never does, so without
+		 * this the engine's own tracking sees a drag of any length as a motionless click and
+		 * processes a click on release behind whatever the designer's gesture just did.
+		 */
 		bool MoveTo(FIntPoint InPixel);
 		bool Press(const FKey& InKey);
 		bool Release(const FKey& InKey);
+
+		/**
+		 * One engine frame of this designer's own work, synchronously: the viewport client's tick,
+		 * which is where a held press becomes a drag and a drag follows the pointer, then the
+		 * toolkit's, which is where a stale preview is rebuilt.
+		 *
+		 * For tests that run inside RunTest. A test being driven by engine frames already has the
+		 * engine ticking both, and pumping as well would tick them twice.
+		 */
+		void PumpFrame(float InDeltaSeconds = 1.0f / 60.0f);
+		/** Move, press, release, with a frame after each: a click, as the designer sees one. */
+		bool ClickAt(FIntPoint InPixel, const FKey& InButton = EKeys::LeftMouseButton);
+		/**
+		 * Press the left button at InFrom, travel to InTo in InSteps even moves with a frame after
+		 * each, and let go there. The last frame is pumped before the release because a designer
+		 * drag applies the pointer on its tick and finishing it reads nothing new.
+		 */
+		bool DragFromTo(FIntPoint InFrom, FIntPoint InTo, int32 InSteps = 4);
+
+		/** The widget's four projected corners as an axis-aligned box of inner pixels, or unset. */
+		TOptional<FBox2D> WidgetPixelRect(const UDreamWidget* InPreviewWidget) const;
+		/** What the toolkit has selected: the live entries of its selection, preview widgets all. */
+		TArray<UDreamWidget*> SelectedWidgets() const;
+
+		/**
+		 * Give the viewport this size even when it already has one.
+		 *
+		 * EnsureHeadlessSize fills a hole and never overrules; this is the other thing a test needs,
+		 * a resize while the designer is running, which reallocates the viewport's render target.
+		 */
+		bool ResizeViewport(FIntPoint InSize);
+
+		/**
+		 * Draw the designer viewport once, now, the way the editor's own loop draws a realtime
+		 * viewport: inside the client's world switch, through FViewport::Draw.
+		 *
+		 * Synchronous on purpose. The editor loop draws this viewport as well whenever it draws at
+		 * all, but whether it does in an unattended run turns on the state of every window in the
+		 * process, and a scenario that meant to render and silently did not would pass for the
+		 * wrong reason. Returns false, and draws nothing, without a real RHI or without a size.
+		 */
+		bool DrawFrame();
 
 		/** Compile through the toolkit, which is what the designer's own Compile button does. */
 		void Compile();
@@ -154,6 +204,14 @@ namespace DreamTests
 		/** Children of InParent that are actually there; a collected null is not a child. */
 		int32 ChildCountUnder(const UDreamWidget* InParent) const;
 
+		/**
+		 * The preview widget standing for an authored one right now, or null.
+		 *
+		 * Asked again after anything that may rebuild the preview -- a drop, a compile, an undo -- because
+		 * a rebuild replaces every preview widget, while the authored one it answers for stays put.
+		 */
+		UDreamWidget* PreviewFor(const UDreamWidget* InTemplate) const;
+
 	private:
 		FDreamDesignerDriver() = default;
 
@@ -171,6 +229,10 @@ namespace DreamTests
 		FPointerEvent MakePointerEvent(const FVector2D& InScreenPosition, const FKey& InEffectingButton) const;
 		/** Over, then drop -- the order Slate delivers them in, and the order the designer expects. */
 		bool DeliverDragDrop(const TSharedPtr<FDragDropOperation>& InOperation, const FPointerEvent& InEvent);
+		/** Whether a pointer event sent now would reach the viewport client at all. */
+		bool CanTakePointerInput() const;
+		/** Hand held-button travel on as axis input, the way a viewport holding capture does. */
+		void DeliverHeldPointerTravel(FSceneViewport& InViewport, const FVector2D& InTravel);
 
 		TWeakObjectPtr<UBlueprint> WeakBlueprint;
 		/**
