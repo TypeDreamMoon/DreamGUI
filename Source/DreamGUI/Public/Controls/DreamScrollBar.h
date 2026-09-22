@@ -36,6 +36,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamScrollBarValueChangedEvent, fl
  * and HandleSize is how much of the track the handle covers. Point it at a UUIScrollView and both
  * numbers become the view's -- progress in, progress out -- which is how the standalone bar drives a
  * scroll box.
+ *
+ * Clicking the track off the handle puts the handle's CENTRE where the track was clicked, clamped to
+ * the ends, and a drag from that press carries on from there -- SScrollBar's behaviour. Until this was
+ * checked against the 5.8 source a track click paged one handle length toward the pointer (Unity's
+ * behaviour), so existing screens now jump where they used to step.
  */
 UCLASS(BlueprintType, Blueprintable, DisplayName = "Dream Scroll Bar")
 class DREAMGUI_API UDreamScrollBar : public UDreamUIControl

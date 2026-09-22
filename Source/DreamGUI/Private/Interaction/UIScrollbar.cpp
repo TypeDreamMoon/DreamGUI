@@ -250,11 +250,17 @@ float UUIScrollbar::ProjectPointerOntoAxis(const FVector& InWorldPoint) const
 }
 
 /**
- * Clicking the track pages by one handle-length toward the pointer.
+ * Clicking the track puts the handle's CENTRE where the track was clicked -- Slate's answer.
  *
- * Slate's and Unity's answer both, and it replaces an arithmetic that divided by
- * AreaLength * (1 - Size): a bar whose content exactly fits has Size 1, so that denominator is
- * zero, and one click on such a bar wrote a NaN into Value that every later clamp preserved.
+ * SScrollBar::OnMouseButtonDown, off the thumb, takes the grab point to be the middle of the thumb and
+ * moves the thumb under the pointer at once (ExecuteOnUserScrolled), clamped to the travel; a drag
+ * that follows carries on from there, which here it does by itself, because the drag measures from
+ * the press and the press is now the handle's centre. It does not page by a handle length toward the
+ * pointer -- that is Unity's answer, and it is what this component did until the 5.8 source was read
+ * against it: a click far down the track of a long list now lands there, not one window further on.
+ *
+ * Guarded on the travel, as the paging was: a handle that fills its track has nowhere to go and
+ * nothing to divide by, and dividing by it once wrote a NaN into Value that every later clamp kept.
  */
 bool UUIScrollbar::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 {
@@ -278,29 +284,19 @@ bool UUIScrollbar::OnPointerDown_Implementation(UDreamPointerEventData* EventDat
     const float Travel = GetHandleTravel();
     if (Travel <= KINDA_SMALL_NUMBER)
     {
-        // The handle fills the track: there is nowhere to page to, and nothing to divide by.
+        // The handle fills the track: there is nowhere to move it to, and nothing to divide by.
         return AllowEventBubbleUp;
     }
-    const float Page = FMath::Max(GetEffectiveSize(), KINDA_SMALL_NUMBER);
-    const float HandleStart = (IsReversed() ? 1.0f - Value : Value) * Travel;
     const float HandleLength = GetEffectiveSize() * GetHandleAreaLength();
     const float Pointer = ProjectPointerOntoAxis(EventData->WorldPoint);
-
-    float Step = 0.0f;
-    if (Pointer > HandleStart + HandleLength)
-    {
-        Step = Page;
-    }
-    else if (Pointer < HandleStart)
-    {
-        Step = -Page;
-    }
-    if (Step != 0.0f)
-    {
-        // The step is stated in TRACK direction; which way that moves the value is the direction's
-        // business, and reversing it here is what keeps all four directions paging toward the click.
-        SetValue(Value + (IsReversed() ? -Step : Step), true);
-    }
+    // Where the handle's START edge has to be for its centre to sit on the pointer, measured from the
+    // area's start edge like the handle's own offset, and clamped to the travel so a click near either
+    // end parks the handle against that end -- SScrollBar clamps ThumbOffsetInTrack the same way.
+    const float HandleStart = FMath::Clamp(Pointer - 0.5f * HandleLength, 0.0f, Travel);
+    const float Fraction = HandleStart / Travel;
+    // Fraction runs along the TRACK from its start edge; the two reversed directions measure the value
+    // from the far edge, which is the whole of the difference between the four.
+    SetValue(IsReversed() ? 1.0f - Fraction : Fraction, true);
     return AllowEventBubbleUp;
 }
 bool UUIScrollbar::OnPointerUp_Implementation(UDreamPointerEventData *EventData)
