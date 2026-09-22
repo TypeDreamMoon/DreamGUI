@@ -1555,9 +1555,9 @@ void UDreamListViewBase::SetItems(const TArray<FText>& InItems)
 	Items = InItems;
 	// A text source has no identity to move a selection by -- index 2 of the new source is a
 	// different line than index 2 of the old one -- so the selection is dropped rather than left
-	// pointing at a row nobody chose. SILENTLY: replacing the source is authoring, not the user
-	// choosing, and nothing downstream should hear a selection event for it. A source that DOES have
-	// identity keeps its selection; see SetItemObjects.
+	// pointing at a row nobody chose. A source that DOES have identity keeps its selection; see
+	// SetItemObjects.
+	const bool bDropsSelection = ItemObjects.Num() == 0 && (SelectedIndices.Num() > 0 || SelectedIndex != INDEX_NONE);
 	if (ItemObjects.Num() == 0)
 	{
 		SelectedIndices.Reset();
@@ -1567,6 +1567,27 @@ void UDreamListViewBase::SetItems(const TArray<FText>& InItems)
 	// keeps everything it keyed by them when only the LABELS are replaced.
 	OnSourceChanged(ItemObjects);
 	RebuildRows();
+	// And said, once: a consumer holding "the selected line" has to hear that it no longer has one,
+	// which is what SListView::UpdateSelectionSet does for items that left the source. This used to be
+	// silent on the grounds that a source edit is authoring; a binding left holding an index nothing
+	// is selected at any more is the cost of that, and UMG does not pay it.
+	if (bDropsSelection)
+	{
+		AnnounceSelectionLostToSource();
+	}
+}
+
+void UDreamListViewBase::AnnounceSelectionLostToSource()
+{
+	if (RebuildSuppressionDepth > 0)
+	{
+		// Mid-batch: the batch announces once, after its one rebuild.
+		bSelectionLostWhileSuppressed = true;
+		return;
+	}
+	// Both names, as every other selection change says them: the `<->` desugar listens on the second.
+	OnSelectionChanged.Broadcast(SelectedIndex);
+	OnValueChangedBP.Broadcast(SelectedIndex);
 }
 
 void UDreamListViewBase::SetItemObjects(const TArray<UObject*>& InItems)
@@ -1595,7 +1616,9 @@ void UDreamListViewBase::SetItemObjects(const TArray<UObject*>& InItems)
 	}
 
 	// Re-located rather than re-used: an object still in the source keeps its selection wherever it
-	// landed, and one that left loses it. Silently, for SetItems' reason.
+	// landed, and one that left loses it. The first of those is silent -- what is chosen has not
+	// changed, only where it sits -- and the second is not.
+	const int32 SelectedBefore = SelectedIndices.Num();
 	SelectedIndices.Reset();
 	for (UObject* Item : PreviouslySelected)
 	{
@@ -1609,8 +1632,16 @@ void UDreamListViewBase::SetItemObjects(const TArray<UObject*>& InItems)
 	SelectedIndex = SelectedIndices.Contains(Anchor)
 		? Anchor
 		: (SelectedIndices.Num() > 0 ? SelectedIndices[0] : INDEX_NONE);
+	const bool bLostSelectedItems = SelectedIndices.Num() < SelectedBefore;
 	OnSourceChanged(PreviousItemObjects);
 	RebuildRows();
+	// SListView::UpdateSelectionSet: selected items that are no longer in the source leave the
+	// selection, and that is signalled once (ESelectInfo::Direct) -- after the rebuild here, so a
+	// handler asking which rows exist is told about the list it now has.
+	if (bLostSelectedItems)
+	{
+		AnnounceSelectionLostToSource();
+	}
 }
 
 TArray<UObject*> UDreamListViewBase::GetListItems() const

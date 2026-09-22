@@ -591,7 +591,14 @@ public:
 	FName DragOperationTag;
 
 
-	/** Re-broadcast from the rows, so a consumer binds to the control, not to a part of it. */
+	/**
+	 * Re-broadcast from the rows, so a consumer binds to the control, not to a part of it.
+	 *
+	 * Also said when an edit to the SOURCE takes selected items away -- a RemoveItem, a replaced
+	 * source, ClearListItems -- once per edit (a batch is one edit), with whatever is left selected,
+	 * the way SListView::UpdateSelectionSet signals ESelectInfo::Direct. A selection that merely moved
+	 * to a new index along with its item has not changed, and is not announced.
+	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListSelectionChangedEvent OnSelectionChanged;
 
@@ -789,7 +796,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "List")
 	TArray<FText> GetItems() const { return Items; }
 
-	/** Replace the text source and rebuild. */
+	/**
+	 * Replace the text source and rebuild.
+	 *
+	 * A text-only source has no identity to carry a selection across, so a selection it held is
+	 * dropped -- and, like any source edit that takes selected items away, announced once on
+	 * OnSelectionChanged.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetItems(const TArray<FText>& InItems);
 
@@ -830,7 +843,8 @@ public:
 	 * Drop one object from the source and rebuild -- UMG's RemoveItem.
 	 *
 	 * The matching text, if there is one, goes with it: the two arrays are parallel, and a removal
-	 * that shortened only one of them would re-label every row after it.
+	 * that shortened only one of them would re-label every row after it. Removing a selected item
+	 * deselects it and says so once on OnSelectionChanged, as UMG's next refresh does.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void RemoveItem(UObject* InItem);
@@ -1146,7 +1160,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetShadowBrushThickness(float InThickness);
 
-	/** Replace the object source and rebuild. */
+	/**
+	 * Replace the object source and rebuild.
+	 *
+	 * The selection follows its OBJECTS to wherever they landed, silently -- nothing about what is
+	 * chosen has changed. Objects that left the source leave the selection too, and that IS a change:
+	 * it is announced once on OnSelectionChanged.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetItemObjects(const TArray<UObject*>& InItems);
 
@@ -1530,6 +1550,18 @@ private:
 	/** Whether a rebuild was asked for while suppressed, so exactly one happens on the way out. */
 	bool bRebuildRequestedWhileSuppressed = false;
 
+	/**
+	 * Whether a source edit inside the batch took selected items away, so the batch announces it
+	 * once on the way out -- RemoveItems of three selected items is one change, not three.
+	 */
+	bool bSelectionLostWhileSuppressed = false;
+
+	/**
+	 * Say that a source edit took selected items away: OnSelectionChanged and OnValueChangedBP with
+	 * what is left, now -- or when the batch closes, after its one rebuild, if one is open.
+	 */
+	void AnnounceSelectionLostToSource();
+
 	/** RAII for the counter above; the paths it guards have early returns in them. */
 	struct FScopedRebuildSuppression
 	{
@@ -1543,6 +1575,12 @@ private:
 			{
 				List.bRebuildRequestedWhileSuppressed = false;
 				List.RebuildRows();
+			}
+			// After the rebuild, so a handler asking about rows sees the ones the batch left.
+			if (List.RebuildSuppressionDepth == 0 && List.bSelectionLostWhileSuppressed)
+			{
+				List.bSelectionLostWhileSuppressed = false;
+				List.AnnounceSelectionLostToSource();
 			}
 		}
 		FScopedRebuildSuppression(const FScopedRebuildSuppression&) = delete;
