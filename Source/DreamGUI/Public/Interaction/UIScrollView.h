@@ -3,33 +3,23 @@
 
 #pragma once
 
+#include "InputCoreTypes.h"
 #include "Event/DreamDelegateDeclaration.h"
 #include "Event/DreamUIEventDelegate.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "Core/DreamUIBehaviour.h"
+// The questions this behaviour shares with the scroll box control and the scroll box layout: where a
+// revealed widget lands, what the wheel event does, what focus landing inside means. One spelling of
+// each, in a header none of the three implementations has to include the others to reach.
+#include "Core/Components/DreamScrollTypes.h"
 #include "UIScrollView.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollViewValueChangedEvent, FVector2D, InVector2);
 
-/**
- * Where a revealed widget ends up -- UMG's EDescendantScrollDestination.
- *
- * IntoView is this view's original answer and stays the default: it moves the LEAST distance that
- * reveals the widget, which is the only one that reads well under directional navigation (stepping
- * one row down must not heave the whole list). The other two are for the cases that genuinely want a
- * fixed frame -- a menu whose rows all sit in the same place, a carousel that centres its choice.
- */
-UENUM(BlueprintType)
-enum class EDreamUIScrollDestination : uint8
-{
-	/** The least movement that brings it fully inside the window. */
-	IntoView,
-	/** Always parked against the leading edge -- the left of a horizontal view, the top of a vertical one. */
-	TopOrLeft,
-	/** Always centred in the window. */
-	Center,
-};
+// EDreamUIScrollDestination and EDreamUIScrollWhenFocusChanges used to be declared here, and moved to
+// DreamScrollTypes.h when the layout container needed to speak them too: a behaviour and a layout
+// container cannot include each other, and the question is neither one's property.
 
 UENUM(BlueprintType)
 enum class EDreamScrollCoordinateMode : uint8
@@ -96,6 +86,28 @@ private:
  * for the rest of the component's life. They are now the CAPABILITY (resolved from Horizontal and
  * Vertical whenever the range is), and the gesture keeps its own private pair.
  */
+
+/** Which end of a drag gesture a broadcast is about. */
+enum class EDreamScrollDragPhase : uint8 { Begin, Move, End };
+/**
+ * The three ends of a drag gesture, with whether it came from a finger.
+ *
+ * The view itself has no use for the distinction -- it acts on the delta either way -- but a list
+ * wants to announce touch start, move and end, and re-deriving them from a value-changed broadcast
+ * is impossible: a change says nothing about whether a finger is still down. Native only, like
+ * OnValueChangedCPP, because a raw enum is not a reflected parameter type.
+ */
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDreamScrollDragGesture, EDreamScrollDragPhase /*InPhase*/, bool /*bInTouch*/);
+/**
+ * User focus landed on something INSIDE this view's content.
+ *
+ * Raised by the navigation reveal, which is the one place that already knows both halves: it walks
+ * from the newly focused widget out to its scrolling ancestors, so "which view" and "what got
+ * focus" arrive together. A control cannot work this out on its own -- a descendant's focus is not
+ * its own, and polling HasFocusedDescendants every frame would be a tick for an edge.
+ */
+DECLARE_MULTICAST_DELEGATE_OneParam(FDreamScrollContentFocusMoved, UDreamWidget* /*InFocusedWidget*/);
+
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUI_API UUIScrollView : public UDreamUIBehaviour, public IDreamPointerDragInterface, public IDreamPointerScrollInterface
 {
@@ -148,6 +160,99 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float WheelProgressStep = 0.0f;
 	/**
+	 * A plain multiplier on whatever one wheel notch already travels -- UMG's WheelScrollMultiplier,
+	 * and the reason it is a second number beside ScrollSensitivity rather than folded into it:
+	 * ScrollSensitivity is the DISTANCE a notch covers (local units, or a progress fraction when
+	 * WheelProgressStep is set), and this scales it. A project that wants "the same feel, twice as
+	 * fast" writes 2 here and leaves the distance alone, which is what the list controls already mean
+	 * by the same name.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView", meta = (ClampMin = "0.0"))
+		float WheelScrollMultiplier = 1.0f;
+	/**
+	 * Whether a wheel event this view acted on is swallowed here or handed to an outer scrolling
+	 * ancestor -- UMG's ConsumeMouseWheel.
+	 *
+	 * WhenScrollingPossible is what this component has always done: it scrolls and consumes while
+	 * there is somewhere left to go, and hands the event on once it is at a limit, which is what makes
+	 * a list inside a scrolling page behave. Never stops the wheel driving this view at all; Always
+	 * keeps the event even at a limit, so the page behind never moves.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		EDreamScrollBoxConsumeMouseWheel ConsumeMouseWheel = EDreamScrollBoxConsumeMouseWheel::WhenScrollingPossible;
+	/**
+	 * Whether the content may be pulled past an end and spring back -- UMG's AllowOverscroll.
+	 *
+	 * Off does NOT mean OutOfRangeDamper is zero for good: the damper stays the author's number and
+	 * this is the switch in front of it, so turning overscroll back on restores whatever feel was
+	 * tuned. Everything that reads the damper goes through GetEffectiveOutOfRangeDamper.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bAllowOverscroll = true;
+	/** Whether a TOUCH drag scrolls this view -- UMG's bEnableTouchScrolling. A mouse drag is unaffected. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bEnableTouchScrolling = true;
+	/**
+	 * Whether a drag with the RIGHT button scrolls this view -- UMG's bAllowRightClickDragScrolling.
+	 * Off leaves the right button to whatever wants it for a context menu.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bAllowRightClickDragScrolling = true;
+	/**
+	 * The master switch over POINTER scrolling -- UMG's bIsPointerScrollingEnabled.
+	 *
+	 * The wheel AND the drag together, because they are one gesture set: a view that answers the
+	 * wheel but not the drag is one whose scroll bar is the only way down. Asked in front of the
+	 * per-gesture switches, which are about WHICH pointer gesture rather than whether any of them.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bIsPointerScrollingEnabled = true;
+	/**
+	 * The same switch for the analog stick -- UMG's bIsGamepadScrollingEnabled.
+	 *
+	 * Read by FDreamUINavigationScroll beside AnalogMouseWheelKey: the key says which axis reaches
+	 * this view, and this says whether any does.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bIsGamepadScrollingEnabled = true;
+	/**
+	 * Whether a TOUCH drag eases to a stop like the wheel does -- UMG's bInEnableTouchAnimatedScrolling.
+	 *
+	 * Separate from bAnimateWheelScrolling because a finger already carries its own momentum: gliding
+	 * a gesture that was never discrete is a second ease on top of the one the player made.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bAnimateTouchScrolling = false;
+	/**
+	 * A whole window of empty space BEFORE the content, so the first item can be scrolled all the way
+	 * to the trailing edge -- UMG's BackPadScrolling, and Slate's arithmetic (a full view, not half).
+	 *
+	 * Both pads move the point the offset is measured from, which is why GetStartAlignedPosition owns
+	 * them rather than each caller adding its own term: the ranges, the progress and the reveal maths
+	 * all read that one function, so they cannot disagree about where zero is.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bBackPadScrolling = false;
+	/** A whole window of empty space AFTER the content -- UMG's FrontPadScrolling. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		bool bFrontPadScrolling = false;
+	/**
+	 * The analog key that acts as this view's mouse wheel -- UMG's AnalogMouseWheelKey.
+	 *
+	 * Invalid (the default) means "whatever the input preset already routes here", which is the right
+	 * stick on both axes and therefore exactly today's behaviour. Naming a key narrows it to that key:
+	 * the preset only binds the right stick's two axes, so a view that names one of them scrolls from
+	 * that axis alone, and a view that names anything else scrolls from a binding the project adds.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		FKey AnalogMouseWheelKey;
+	/**
+	 * What this view does when user focus lands inside it -- UMG's ScrollWhenFocusChanges. Read by
+	 * FDreamUINavigationScroll, which is the only thing that reveals a widget because focus moved.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+		EDreamUIScrollWhenFocusChanges ScrollWhenFocusChanges = EDreamUIScrollWhenFocusChanges::AnimatedScroll;
+	/**
 	 * A wheel notch GLIDES to its destination instead of teleporting -- UMG's AnimateWheelScrolling.
 	 *
 	 * Off by default, which is the behaviour every existing view already has: turning it on for
@@ -163,7 +268,7 @@ protected:
 	 * Where a revealed widget is meant to END UP -- UMG's NavigationDestination, consulted by
 	 * ScrollWidgetIntoView and therefore by every navigation move (FDreamUINavigationScroll).
 	 */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView", meta = (InvalidEnumValues = "Configured"))
 		EDreamUIScrollDestination NavigationDestination = EDreamUIScrollDestination::IntoView;
 	/**
 	 * How much of the window to keep clear around a revealed widget, in local units -- UMG's
@@ -222,6 +327,25 @@ protected:
 	virtual void CalculateVerticalRange();
 	bool CheckParameters();
 	virtual bool CheckValidHit(UDreamWidget* InHitComp);
+public:
+	/** Whether this drag gesture is one the author left switched on -- the right button, and touch. */
+	bool AcceptsDragGesture(UDreamPointerEventData* InEventData) const;
+
+	/** Subscribe to the three ends of a drag gesture. See FDreamScrollDragGesture. */
+	FDreamScrollDragGesture& GetOnDragGestureEvent() { return OnDragGestureCPP; }
+
+	/** Subscribe to focus landing inside this view's content. See FDreamScrollContentFocusMoved. */
+	FDreamScrollContentFocusMoved& GetOnContentFocusMovedEvent() { return OnContentFocusMovedCPP; }
+
+	/**
+	 * Told by the navigation reveal that focus went to InWidget inside this view.
+	 *
+	 * A notifier rather than something this component works out: the reveal already walks from the
+	 * focused widget out to its scrolling ancestors, so it has both halves of the answer and this
+	 * has neither.
+	 */
+	void NotifyContentFocusMoved(UDreamWidget* InWidget) { OnContentFocusMovedCPP.Broadcast(InWidget); }
+protected:
 	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> ContentParent = nullptr;//Content's parent
 	UPROPERTY(Transient)TWeakObjectPtr<UUIScrollViewHelper> RangeHelper = nullptr;
 	virtual void UpdateProgress(bool InFireEvent = true);
@@ -252,6 +376,9 @@ protected:
 	void ApplyContentPosition(const FVector2D& InPosition, bool bInFireEvent = true);
 
 	FDreamUIMulticastDelegateVector2 OnValueChangedCPP;
+	/** Native only, like OnValueChangedCPP: the phase enum is not a reflected type. */
+	FDreamScrollDragGesture OnDragGestureCPP;
+	FDreamScrollContentFocusMoved OnContentFocusMovedCPP;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-ScrollView", DisplayName="OnValueChanged")
 	FUIScrollViewValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
@@ -346,6 +473,87 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		void SetWheelProgressStep(float value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		float GetWheelScrollMultiplier()const { return WheelScrollMultiplier; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetWheelScrollMultiplier(float value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		EDreamScrollBoxConsumeMouseWheel GetConsumeMouseWheel()const { return ConsumeMouseWheel; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetConsumeMouseWheel(EDreamScrollBoxConsumeMouseWheel value) { ConsumeMouseWheel = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetAllowOverscroll()const { return bAllowOverscroll; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetAllowOverscroll(bool value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetEnableTouchScrolling()const { return bEnableTouchScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetEnableTouchScrolling(bool value) { bEnableTouchScrolling = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetPointerScrollingEnabled()const { return bIsPointerScrollingEnabled; }
+	/** True while the player's last input came from a finger. The gate AcceptsDragGesture uses. */
+	bool IsTouchInput(UDreamPointerEventData* InEventData) const;
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetPointerScrollingEnabled(bool value) { bIsPointerScrollingEnabled = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetGamepadScrollingEnabled()const { return bIsGamepadScrollingEnabled; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetGamepadScrollingEnabled(bool value) { bIsGamepadScrollingEnabled = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetAnimateTouchScrolling()const { return bAnimateTouchScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetAnimateTouchScrolling(bool value) { bAnimateTouchScrolling = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetAllowRightClickDragScrolling()const { return bAllowRightClickDragScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetAllowRightClickDragScrolling(bool value) { bAllowRightClickDragScrolling = value; }
+	/**
+	 * Whether a pointer event this view handled is swallowed -- UMG's bConsumePointerInput, which is
+	 * the inverse of the AllowEventBubbleUp this component was written with. One stored bit, asked
+	 * both ways round, rather than two that can disagree.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetConsumePointerInput()const { return !AllowEventBubbleUp; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetConsumePointerInput(bool value) { AllowEventBubbleUp = !value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetBackPadScrolling()const { return bBackPadScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetBackPadScrolling(bool value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		bool GetFrontPadScrolling()const { return bFrontPadScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetFrontPadScrolling(bool value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		FKey GetAnalogMouseWheelKey()const { return AnalogMouseWheelKey; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetAnalogMouseWheelKey(FKey value) { AnalogMouseWheelKey = value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		EDreamUIScrollWhenFocusChanges GetScrollWhenFocusChanges()const { return ScrollWhenFocusChanges; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void SetScrollWhenFocusChanges(EDreamUIScrollWhenFocusChanges value) { ScrollWhenFocusChanges = value; }
+	/**
+	 * Signed distance past an end, per axis, in the reading direction: negative before the start,
+	 * positive past the end, zero in range -- SScrollBox::GetOverscrollOffset's answer. Always zero
+	 * while overscroll is off, because there is then nothing that could be out there.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ScrollView")
+		FVector2D GetOverscrollOffset()const;
+	/** The same distance as a PERCENTAGE of the window on that axis, which is what UMG reports. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ScrollView")
+		FVector2D GetOverscrollPercentage()const;
+	/** True while momentum or a spring-back still has the content moving -- UMG's GetIsScrolling. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-ScrollView")
+		bool IsScrolling()const;
+	/**
+	 * Drop the fling, keeping the position -- UMG's EndInertialScrolling.
+	 *
+	 * The spring is deliberately left armed when the content is out of range: a rubber band pulled
+	 * open is not inertia, and abandoning it there would leave the content parked outside its own
+	 * range with nothing left to walk it back.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void EndInertialScrolling();
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		bool GetAnimateWheelScrolling()const { return bAnimateWheelScrolling; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		void SetAnimateWheelScrolling(bool value) { bAnimateWheelScrolling = value; }
@@ -405,10 +613,17 @@ public:
 	 * Scroll the least distance that brings InChild fully inside the viewport, and nothing at all when
 	 * it is already there. ScrollTo always centres, which reads badly under directional navigation:
 	 * stepping one row down would heave the whole list to put that row in the middle.
+	 *
+	 * @param InDestination Where the child ends up. Configured (the default) leaves it to this view's
+	 *                      own NavigationDestination, which is what every caller meant before the
+	 *                      parameter existed.
+	 * @param InPadding     How much of the window to keep clear around it. Negative leaves it to this
+	 *                      view's NavigationScrollPadding, for the same reason.
 	 * @return true when the content position actually moved.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
-		bool ScrollWidgetIntoView(UDreamWidget* InChild, bool InEaseAnimation = true, float InAnimationDuration = 0.25f);
+		bool ScrollWidgetIntoView(UDreamWidget* InChild, bool InEaseAnimation = true, float InAnimationDuration = 0.25f,
+			EDreamUIScrollDestination InDestination = EDreamUIScrollDestination::Configured, float InPadding = -1.0f);
 	/** True when InChild sits inside this view and a scroll would bring more of it into sight. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		bool CanScrollWidgetIntoView(UDreamWidget* InChild);
@@ -418,7 +633,21 @@ protected:
 	 * restricted to the axes this view scrolls on. Returns false when nothing needs to move -- either
 	 * the child is already visible, or the clamp leaves the position where it was.
 	 */
-	bool CalculateRevealContentPosition(UDreamWidget* InChild, FVector2D& OutPosition);
+	bool CalculateRevealContentPosition(UDreamWidget* InChild, FVector2D& OutPosition,
+		EDreamUIScrollDestination InDestination = EDreamUIScrollDestination::Configured, float InPadding = -1.0f);
+
+	/** The damper in force right now: the author's number, or zero while overscroll is switched off. */
+	float GetEffectiveOutOfRangeDamper() const { return bAllowOverscroll ? OutOfRangeDamper : 0.0f; }
+	/**
+	 * The empty space BEFORE the content, per axis -- a whole window while bBackPadScrolling is on.
+	 *
+	 * This is the one that moves where offset zero IS, so GetStartAlignedPosition folds it in and
+	 * every reader of that function (the ranges, the progress, the reveal maths, the wheel) follows
+	 * without a term of its own.
+	 */
+	FVector2D GetLeadingScrollPad() const;
+	/** The empty space AFTER the content -- a whole window while bFrontPadScrolling is on. */
+	FVector2D GetTrailingScrollPad() const;
 
 	/** The content position clamped into both ranges, on the axes this view scrolls. */
 	FVector2D ClampToRange(const FVector2D& InPosition) const;

@@ -29,6 +29,19 @@ enum class EDreamUINavigationRule : uint8
 	Explicit,
 	/** Ask the delegate. For lists and grids, where the answer is a computation and not a link. */
 	Custom,
+	/**
+	 * Run the ordinary scan, and ask the delegate only when the move would LEAVE the surrounding
+	 * navigation area -- UMG's CustomBoundary.
+	 *
+	 * The difference from Custom is which moves the delegate hears about. Custom is asked for every
+	 * move in that direction, so a list's own row-to-row stepping has to be written into it as well.
+	 * CustomBoundary is asked only at the edge, which is the interesting case and usually the only
+	 * one an author has an answer for: "when Down runs off the bottom of this page, go to the next
+	 * page" leaves the scan to do the rows.
+	 *
+	 * Last in the enum on purpose: the values above it are serialized in existing assets.
+	 */
+	CustomBoundary,
 };
 
 /** Returns the widget focus should move to, or null for "nowhere". */
@@ -125,8 +138,35 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-Navigation")
 	bool HasAnyRule() const;
 
+	/**
+	 * The CustomBoundary answer for a move the scan could not place, or null.
+	 *
+	 * Public because the scan that discovers the boundary is DreamUINavigationScan's, not this
+	 * component's, and the one caller that knows a move ran off the edge has to be able to ask.
+	 */
+	UDreamWidget* AskBoundaryDelegate(EDreamUINavigationDirection InDirection);
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	void SetRule(EDreamUINavigationDirection InDirection, EDreamUINavigationRule InRule);
+	/**
+	 * The same rule in all six directions at once -- UMG's SetAllNavigationRules.
+	 *
+	 * InWidgetToFocus is only meaningful for Explicit, where it names a widget inside this widget's
+	 * own tree; it is written for every direction regardless, exactly as UMG does, so that switching
+	 * the rule to Explicit afterwards finds the name already there.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	void SetAllNavigationRules(EDreamUINavigationRule InRule, FName InWidgetToFocus);
+	/**
+	 * Bind a delegate that is asked only at the edge -- UMG's SetNavigationRuleCustomBoundary.
+	 *
+	 * Same delegate slot as SetCustomDelegate; the rule is what decides whether it is asked for every
+	 * move or only for the one that leaves the area. An unbound delegate clears back to Escape, as
+	 * the plain custom setter does, so "unbind" never leaves a rule pointing at nothing.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	void SetNavigationRuleCustomBoundary(EDreamUINavigationDirection InDirection,
+		const FDreamCustomWidgetNavigationDelegate& InDelegate);
 	/** Sets the rule to Explicit and points it at InTarget. Null clears back to Escape. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	void SetExplicitTarget(EDreamUINavigationDirection InDirection, UDreamWidget* InTarget);

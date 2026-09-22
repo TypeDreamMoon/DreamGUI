@@ -11,6 +11,8 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/DreamUISpriteData.h"
 #include "Core/Components/DreamLayout.h"
+#include "Core/Components/DreamPanelLayouts.h"//what a new child's slot starts with is the panel's to say
+#include "Core/Components/DreamPanelSlot.h"
 
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Misc/ConfigCacheIni.h"
@@ -489,14 +491,105 @@ namespace SDreamWidgetPaletteLocal
 
 	// shared create path: the create primitives take a "get parent" function, so double-click
 	// (parent = selection) and drop (parent = drop-target widget) reuse the same logic
+	/**
+	 * Where a widget an author just added ends up, decided by what it was added TO.
+	 *
+	 * Written as DATA -- anchors and slot fields -- rather than through the setters: this runs on the
+	 * authoring template, and the setters resolve against a parent rect and a registered layout that a
+	 * template has neither of. It is the same trap that made a stretched axis written with SetWidth
+	 * carry minus the parent's width for ever.
+	 *
+	 * Three cases, and the order they are asked in is the rule:
+	 *
+	 *   The widget IS the root, or sits under a root that arranges nothing and it is the first thing
+	 *   there. UMG never shows this state -- there the first widget dropped is the root, so it is the
+	 *   screen -- and that is what it becomes here: stretched over the root with nothing left over from
+	 *   wherever the cursor let go. A PANEL under such a root fills it whether or not it is first,
+	 *   because holding the rest of the screen is what a panel is dropped for; anything else that
+	 *   arrives second is a free child on a canvas-less page and stays where it was put.
+	 *
+	 *   The parent is a panel. Then the slot starts with that panel's own alignment, as UMG's slot
+	 *   classes do: top-left on an overlay, centred in a scale box, filling a box's band. The slot's
+	 *   class default is Fill for everyone, which is right for a file that says nothing and wrong for a
+	 *   button somebody just dropped on an overlay and watched swallow it.
+	 *
+	 *   Anything else -- a hand-arranged group further down the tree -- is left exactly where the
+	 *   caller's callback placed it.
+	 */
+	void PlaceNewlyAuthoredWidget(UDreamWidget* InWidget, bool bIsPanel)
+	{
+		if (!IsValid(InWidget))
+		{
+			return;
+		}
+		auto FillParent = [InWidget]()
+		{
+			FDreamUIAnchorData Anchors = InWidget->GetAnchorData();
+			Anchors.AnchorMin = FVector2D::ZeroVector;
+			Anchors.AnchorMax = FVector2D(1.0, 1.0);
+			Anchors.AnchoredPosition = FVector2D::ZeroVector;
+			Anchors.SizeDelta = FVector2D::ZeroVector;
+			InWidget->SetAnchorData(Anchors);
+		};
+
+		UDreamWidget* Parent = InWidget->GetParent();
+		if (!IsValid(Parent))
+		{
+			// It became the root. DreamWidgetTreeEditing::CreateWidget already stretched it; what is
+			// being undone here is the drop position the caller wrote over that afterwards.
+			FillParent();
+			return;
+		}
+		if (const UDreamPanelLayoutBase* Panel = Cast<UDreamPanelLayoutBase>(Parent->GetLayoutContainer()))
+		{
+			if (!Parent->HasPanelSlots())
+			{
+				return;
+			}
+			UDreamPanelSlot* Slot = InWidget->GetPanelSlot();
+			if (!IsValid(Slot))
+			{
+				// Registration is what usually mints one, and a template never registers.
+				Slot = InWidget->CreateNewPanelSlot<UDreamPanelSlot>();
+			}
+			if (IsValid(Slot))
+			{
+				Panel->GetNewChildSlotAlignment(Slot->HorizontalAlignment, Slot->VerticalAlignment);
+			}
+			return;
+		}
+		if (IsValid(Parent->GetParent()) || Parent->GetLayoutContainer() != nullptr)
+		{
+			return;
+		}
+		if (!bIsPanel)
+		{
+			for (const UDreamWidget* Sibling : Parent->GetChildren())
+			{
+				if (IsValid(Sibling) && Sibling != InWidget)
+				{
+					return;
+				}
+			}
+		}
+		FillParent();
+	}
+
 	UDreamWidget* CreateElement(bool bIsBasicWidget, UClass* VisualClass, bool bSetDefaultSprite,
 		const TSharedPtr<FDreamUIControlDescriptor>& NativeDescriptor, const FString& WidgetClassPath,
 		const FString& DisplayName, TFunction<UDreamWidget*()> GetParent,
 		TFunction<void(UDreamWidget*)> AfterCreate = nullptr)
 	{
+		// After the caller's callback, so that a drop position it writes does not outlive the decision.
+		const bool bIsPanel = NativeDescriptor.IsValid() && NativeDescriptor->LayoutContainerClass.IsValid();
+		TFunction<void(UDreamWidget*)> PlaceThenSettle = [AfterCreate, bIsPanel](UDreamWidget* InWidget)
+		{
+			if (AfterCreate)AfterCreate(InWidget);
+			PlaceNewlyAuthoredWidget(InWidget, bIsPanel);
+		};
 		if (bIsBasicWidget)
 		{
-			TFunction<void(UDreamWidget*)> Callback = [bSetDefaultSprite, AfterCreate](UDreamWidget* InWidget)
+			TFunction<void(UDreamWidget*)> Callback = [bSetDefaultSprite, PlaceThenSettle](UDreamWidget* InWidget)
 			{
 				if (bSetDefaultSprite)
 				{
@@ -505,15 +598,15 @@ namespace SDreamWidgetPaletteLocal
 						Image->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultFrameRect());
 					}
 				}
-				if (AfterCreate)AfterCreate(InWidget);
+				PlaceThenSettle(InWidget);
 			};
 			return FDreamUIEditorTools::CreateWidgetAndReturn(GetParent, DisplayName, VisualClass, Callback);
 		}
 		if (NativeDescriptor.IsValid())
 		{
-			return FDreamUIEditorTools::CreateRegisteredControlAndReturn(GetParent, NativeDescriptor->Name, AfterCreate);
+			return FDreamUIEditorTools::CreateRegisteredControlAndReturn(GetParent, NativeDescriptor->Name, PlaceThenSettle);
 		}
-		return FDreamUIEditorTools::CreateUIControlsAndReturn(GetParent, WidgetClassPath, AfterCreate);
+		return FDreamUIEditorTools::CreateUIControlsAndReturn(GetParent, WidgetClassPath, PlaceThenSettle);
 	}
 }
 

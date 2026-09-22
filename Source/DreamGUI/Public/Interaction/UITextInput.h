@@ -10,6 +10,14 @@
 #include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
+//EVirtualKeyboardType: the enum UMG's editable text spells its KeyboardType with. Named rather than
+//re-declared, because a second enum meaning the same six keyboards is a second thing to keep true.
+#include "Components/SlateWrapperTypes.h"
+//EVirtualKeyboardTrigger / EVirtualKeyboardDismissAction, Slate's own spellings of the other two
+//halves of the mobile keyboard contract.
+#include "Widgets/Text/ISlateEditableTextWidget.h"
+//ETextOverflowPolicy, which UMG's editable text spells its OverflowPolicy with
+#include "Styling/SlateTypes.h"
 #include "GenericPlatform/ITextInputMethodSystem.h"
 #include "Core/Components/DreamText.h"
 #include "Widgets/Layout/SBox.h"
@@ -186,6 +194,91 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		bool bSubmitWhenDeactivate = true;
 	/**
+	 * Escape / Back throws the edit away instead of keeping it -- UMG's RevertTextOnEscape.
+	 *
+	 * The text the field held when the edit STARTED is put back, and the edit ends without a submit:
+	 * a player who opened a name field, typed half a name and changed their mind meant "undo this",
+	 * not "store what I got to". Off by default, which is both UMG's default and what this field did
+	 * before the knob existed -- Back ended the edit and the half-typed value stayed.
+	 *
+	 * Only the CANCEL road reads it (see CancelInput). Clicking away is not a cancel: nothing was
+	 * said about the value, so bSubmitWhenDeactivate still decides what that moment means.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		bool bRevertTextOnEscape = false;
+	/**
+	 * Stop editing once Enter commits the value -- UMG's ClearKeyboardFocusOnCommit.
+	 *
+	 * TRUE by default, where UMG's is false, because true is what this field has always done: Enter
+	 * submitted and immediately ended the edit, with no way to ask for anything else. Turning it off
+	 * is the new answer -- the field keeps the keyboard, ready for the next value, which is what a
+	 * row of fields a player tabs through wants.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		bool bClearKeyboardFocusOnCommit = true;
+	/**
+	 * Select the whole value after a commit that KEPT the edit going -- UMG's SelectAllTextOnCommit.
+	 * Ready to be typed over. Only meaningful while the commit does not also end the edit: selecting
+	 * the contents of a field nobody is editing shows a highlight with no caret in it.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition = "!bClearKeyboardFocusOnCommit"))
+		bool bSelectAllTextOnCommit = false;
+	/**
+	 * Whether gaining the edit moves the caret -- UMG's IsCaretMovedWhenGainFocus.
+	 *
+	 * On (the default, and what the field always did), an activation that nobody gave a position for
+	 * puts the caret at the end of the text. Off, the caret stays on the index the previous edit left
+	 * it at, which is what a field being re-entered by code rather than by a player wants.
+	 * A click still places the caret where it landed either way: the click said where.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		bool bIsCaretMovedWhenGainFocus = true;
+	/**
+	 * What a value too long for the box does WHILE NOBODY IS EDITING IT -- UMG's OverflowPolicy.
+	 *
+	 * It has to be qualified that way, because on an editable field the paragraph's own overflow type
+	 * is not a display choice at all: DreamTextLayout only looks for break opportunities under
+	 * VerticalOverflow, so the overflow type IS the line-mode switch, and the caret's visible-window
+	 * arithmetic reads the same field. Two writers would fight over it.
+	 *
+	 * So this one only speaks in the gap: while the field is not being edited, Ellipsis (or
+	 * MultilineEllipsis) shows the value cut short with an ellipsis rather than simply clipped;
+	 * activating the edit puts the line mode's own overflow back, because that is what the caret and
+	 * the wrap need, and leaving the edit restores the ellipsis. Clip is the default and is exactly
+	 * what every field does today.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		ETextOverflowPolicy OverflowPolicy = ETextOverflowPolicy::Clip;
+	/**
+	 * Which virtual keyboard a mobile platform should summon -- UMG's KeyboardType.
+	 *
+	 * Default means "whatever this field's input type implies", which is what the field has always
+	 * derived on its own (a decimal field asks for the number pad, a password field for the password
+	 * keyboard). Any other value states the keyboard outright, for the cases the input type cannot
+	 * express -- a Standard field that holds an email address, or a web address.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		TEnumAsByte<EVirtualKeyboardType::Type> KeyboardType = EVirtualKeyboardType::Default;
+	/**
+	 * Which activations summon the virtual keyboard -- UMG's VirtualKeyboardTrigger.
+	 *
+	 * OnAllFocusEvents by default, where UMG's default is OnFocusByPointer, because every activation
+	 * used to raise it: a field navigated into with a pad still needs a keyboard, since a pad has no
+	 * other way to type. OnFocusByPointer is the opt-in for a screen that drives its own.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		EVirtualKeyboardTrigger VirtualKeyboardTrigger = EVirtualKeyboardTrigger::OnAllFocusEvents;
+	/**
+	 * What dismissing the virtual keyboard means -- UMG's VirtualKeyboardDismissAction.
+	 *
+	 * TextCommitOnDismiss keeps what the field did: the keyboard's Done button submits, and so does
+	 * cancelling out of it (through the ordinary end-of-edit road). TextCommitOnAccept submits only
+	 * on Done. TextChangeOnDismiss never submits from the keyboard at all -- the text changed, and
+	 * that is the whole of what happened.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
+		EVirtualKeyboardDismissAction VirtualKeyboardDismissAction = EVirtualKeyboardDismissAction::TextCommitOnDismiss;
+	/**
 	 * Ctrl+Z / Ctrl+Y over a snapshot stack of (text, caret). Snapshots are taken before each edit
 	 * that changes the text, so an undo lands where the edit started rather than at index 0.
 	 */
@@ -283,6 +376,22 @@ public:
 		bool GetSelectAllWhenActivateInput()const { return bSelectAllWhenActivateInput; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		bool GetAllowContextMenu()const { return bAllowContextMenu; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetRevertTextOnEscape()const { return bRevertTextOnEscape; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetClearKeyboardFocusOnCommit()const { return bClearKeyboardFocusOnCommit; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetSelectAllTextOnCommit()const { return bSelectAllTextOnCommit; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetIsCaretMovedWhenGainFocus()const { return bIsCaretMovedWhenGainFocus; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		ETextOverflowPolicy GetOverflowPolicy()const { return OverflowPolicy; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		TEnumAsByte<EVirtualKeyboardType::Type> GetKeyboardType()const { return KeyboardType; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		EVirtualKeyboardTrigger GetVirtualKeyboardTrigger()const { return VirtualKeyboardTrigger; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		EVirtualKeyboardDismissAction GetVirtualKeyboardDismissAction()const { return VirtualKeyboardDismissAction; }
 
 	/** Set text value and send callback event */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -338,6 +447,41 @@ public:
 	/** Turning it off closes any menu that is open, the way UMG's AllowContextMenu behaves. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetAllowContextMenu(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetRevertTextOnEscape(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetClearKeyboardFocusOnCommit(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetSelectAllTextOnCommit(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetIsCaretMovedWhenGainFocus(bool Value);
+	/** Re-pushes at once, so a policy written while the field sits idle is visible without an edit. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetOverflowPolicy(ETextOverflowPolicy Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetKeyboardType(TEnumAsByte<EVirtualKeyboardType::Type> Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetVirtualKeyboardTrigger(EVirtualKeyboardTrigger Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetVirtualKeyboardDismissAction(EVirtualKeyboardDismissAction Value);
+	/**
+	 * The correctly spelled name for SetVirtualKeyboradOptions, which stays as it is for callers.
+	 * Not BlueprintCallable, and cannot be: FVirtualKeyboardOptions is a plain USTRUCT in Slate with
+	 * no BlueprintType on it -- which is why the misspelled one was never a Blueprint node either.
+	 */
+	UFUNCTION()
+		void SetVirtualKeyboardOptions(FVirtualKeyboardOptions Value);
+
+	/**
+	 * End the edit the way Escape means it: with bRevertTextOnEscape on, the text the field held when
+	 * the edit began goes back in and nothing is submitted; without it, this is the ordinary end of an
+	 * edit and bSubmitWhenDeactivate still decides whether that moment reports a value.
+	 *
+	 * A road of its own rather than a flag on DeactivateInput, because the two callers mean different
+	 * things: clicking away said nothing about the value, and Back said "throw this away".
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void CancelInput();
 
 	/**
 	 * A character the PLATFORM resolved, not one this component guessed from a key code.
@@ -416,6 +560,16 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 	bool IsInputActive()const{ return bInputActive; }
+
+	/**
+	 * Whether anything is selected right now -- UMG's IsAnyTextSelected.
+	 *
+	 * Asked of the two caret indices rather than of the highlight bars: the bars are a VISUAL built
+	 * from laid-out geometry and there are none at all before the field has been arranged, while the
+	 * anchor and the caret are the selection itself.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+	bool IsAnyTextSelected()const{ return CaretPositionIndex != PressCaretPositionIndex; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 	void ActivateInput(UDreamPointerEventData* EventData = nullptr);
@@ -524,6 +678,29 @@ private:
 
 	/** Set while an Enter already submitted this activation, so ending the edit does not re-submit. */
 	bool bSubmittedThisActivation = false;
+	/**
+	 * What the field held when the edit began -- the value a cancel puts back.
+	 *
+	 * Taken at activation rather than kept as an undo step, because the two answer different
+	 * questions: undo walks BACK through edits, a cancel abandons the whole session at once, and a
+	 * player who typed eleven characters expects one Escape rather than eleven undos.
+	 */
+	FString TextAtActivation;
+	/**
+	 * What Enter does after Submit(): end the edit, or keep it and (if asked) select the value ready
+	 * to be typed over. One place, because the single-line road and the multiline submit chord are
+	 * the same moment and two copies of this rule is how they come to disagree.
+	 */
+	void FinishCommitFromEnter();
+	/**
+	 * The ONE writer of the paragraph's overflow type, because two of them is how a multiline field
+	 * came to stop wrapping once already.
+	 *
+	 * The line mode owns it whenever the field is being edited -- the caret's visible window and the
+	 * wrap both read it -- and OverflowPolicy only gets a say in the gap between edits. Every place
+	 * that used to set the overflow directly calls this instead.
+	 */
+	void PushOverflowToVisual();
 
 	//the edit menu: built from the same primitives the caret and the selection mask are, because a
 	//behaviour cannot reach the control layer and a text field must not need an authored template

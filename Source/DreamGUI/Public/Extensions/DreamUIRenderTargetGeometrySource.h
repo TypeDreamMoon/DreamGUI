@@ -11,7 +11,6 @@
 #include "DreamUIRenderTargetGeometrySource.generated.h"
 
 class UDreamCanvas;
-class UDreamWorldSpaceRaycasterSource;
 
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUIRenderTargetGeometryMode : uint8

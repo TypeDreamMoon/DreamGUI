@@ -91,4 +91,21 @@ private:
 	bool bSlotAutoSize = false;
 	UPROPERTY()
 	int32 SlotZOrder = 0;
+	/**
+	 * The rest of the slot. These were missing rather than deliberately dropped: the struct's whole
+	 * reason for existing is that a detach destroys the slot, and a per-slot minimum or a wrap-box line
+	 * break is exactly as authored as the padding next to it.
+	 */
+	UPROPERTY()
+	FVector2D SlotMinDesiredSize = FVector2D::ZeroVector;
+	UPROPERTY()
+	FVector2D SlotMaxDesiredSize = FVector2D::ZeroVector;
+	UPROPERTY()
+	bool bSlotFillEmptySpace = false;
+	UPROPERTY()
+	float SlotFillSpanWhenLessThan = 0.0f;
+	UPROPERTY()
+	bool bSlotForceNewLine = false;
+	UPROPERTY()
+	FVector2D SlotNudge = FVector2D::ZeroVector;
 };

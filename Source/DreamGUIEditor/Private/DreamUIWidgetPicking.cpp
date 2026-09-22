@@ -93,13 +93,37 @@ namespace DreamUIWidgetPicking
 		return Hits[InOutCycleIndex].Widget;
 	}
 
-	UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget)
+	UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget, const UDreamWidget* InTreeRoot)
 	{
+		const bool bBounded = IsValid(InTreeRoot);
+		if (bBounded && IsValid(InHitWidget) && InHitWidget != InTreeRoot && !InHitWidget->IsChildOf(InTreeRoot))
+		{
+			// Above or beside the tree being edited: whatever holds a container out there is not the
+			// asset's to fill.
+			return nullptr;
+		}
 		for (UDreamWidget* Candidate = InHitWidget; IsValid(Candidate); Candidate = Candidate->GetParent())
 		{
+			// A placed control answers with its default hole, the way a Button in UMG takes what is
+			// dropped on it as its content. The control's own container arranges only its furniture:
+			// asked directly it either refuses (a size box already holding its face) or accepts into
+			// the furniture, which the next rebuild throws away. The hole is what the hierarchy shows
+			// under the control, and the one place under it this asset can author.
+			if (const UDreamUserWidget* Nested = Cast<UDreamUserWidget>(Candidate))
+			{
+				UDreamWidget* Hole = Nested->FindSlotWidget(Nested->GetDefaultSlotName());
+				if (IsValid(Hole) && Hole->CanAcceptAdditionalChildren())
+				{
+					return Hole;
+				}
+			}
 			if (Candidate->GetLayoutContainer() != nullptr && Candidate->CanAcceptAdditionalChildren())
 			{
 				return Candidate;
+			}
+			if (bBounded && Candidate == InTreeRoot)
+			{
+				break;
 			}
 		}
 		return nullptr;

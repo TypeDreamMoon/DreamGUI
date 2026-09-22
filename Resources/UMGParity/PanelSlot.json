@@ -1,0 +1,8 @@
+{
+	"umgClass": "UPanelSlot",
+	"umgHeader": "Components/PanelSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "GetContent", "kind": "function", "status": "map", "dream": "GetWidget", "note": "A slot here belongs to the widget it lays out, so its content is that widget; the accessor is inherited from UDreamWidgetSubObjectBehaviour."}
+	]
+}

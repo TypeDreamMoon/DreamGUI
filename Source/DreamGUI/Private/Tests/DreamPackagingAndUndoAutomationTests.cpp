@@ -72,11 +72,15 @@ namespace DreamPackagingTestLocal
 		return TrimmedLine.IsEmpty() || TrimmedLine.StartsWith(TEXT(";"));
 	}
 
-	/** One ini line's `+ClassRedirects=(OldName="A",NewName="B")` pair, or false when it is not one. */
-	bool ParseClassRedirect(const FString& Line, FString& OutOld, FString& OutNew)
+	/**
+	 * One ini line's `(OldName="A",NewName="B")` pair under the given `+Something=` prefix, or false
+	 * when the line is not one of those. Class and struct entries have the identical shape, and the
+	 * prefix is the only thing that tells them apart.
+	 */
+	bool ParseRedirect(const FString& Line, const TCHAR* EntryPrefix, FString& OutOld, FString& OutNew)
 	{
 		const FString Trimmed = Line.TrimStartAndEnd();
-		if (IsComment(Trimmed) || !Trimmed.StartsWith(TEXT("+ClassRedirects=")))
+		if (IsComment(Trimmed) || !Trimmed.StartsWith(EntryPrefix))
 		{
 			return false;
 		}
@@ -97,6 +101,19 @@ namespace DreamPackagingTestLocal
 		OutOld = Trimmed.Mid(OldValue, OldEnd - OldValue);
 		OutNew = Trimmed.Mid(NewValue, NewEnd - NewValue);
 		return !OutOld.IsEmpty() && !OutNew.IsEmpty();
+	}
+
+	/** One ini line's `+ClassRedirects=(OldName="A",NewName="B")` pair, or false when it is not one. */
+	bool ParseClassRedirect(const FString& Line, FString& OutOld, FString& OutNew)
+	{
+		return ParseRedirect(Line, TEXT("+ClassRedirects="), OutOld, OutNew);
+	}
+
+	/** Whether a redirect target names a type in one of this plugin's own script modules. */
+	bool TargetsThisPlugin(const FString& NewName)
+	{
+		return NewName.StartsWith(TEXT("/Script/DreamGUI."))
+			|| NewName.StartsWith(TEXT("/Script/DreamGUIEditor."));
 	}
 }
 
@@ -214,13 +231,15 @@ bool FDreamClassRedirectsNeverStealALiveClassTest::RunTest(const FString& Parame
 	//
 	//   A redirect whose OldName is a class that still exists does not rescue an old asset, it
 	//   hijacks a current one: the loader rewrites every reference to the live class and then fails
-	//   to find whatever it was pointed at. The entry was
-	//   DreamWidgetPresenterComponent -> DreamUIPrefabPresenterComponent, and the target has never
-	//   existed under that name.
+	//   to find whatever it was pointed at. The entry pointed the presenter component class, which
+	//   was live at the time, at a prefab-era name that had never existed. Both of those classes
+	//   have since been deleted and the entries naming them are gone with them -- the shape is what
+	//   the checks below are for, not the particular pair.
 	//
 	//   CoreRedirects are applied ONCE. A redirect whose NewName is another redirect's OldName does
 	//   not chain -- the loader takes one hop and stops -- so a pair like that is at best a no-op and
-	//   at worst, as above, a cycle: the project config carries the exact reverse of that entry.
+	//   at worst, as above, a cycle: the engine config next door carried the exact reverse of that
+	//   entry for as long as both halves existed.
 	const FString Dir = PluginDir();
 	if (!TestFalse(TEXT("the plugin manager knows where DreamGUI lives"), Dir.IsEmpty()))
 	{
@@ -258,6 +277,65 @@ bool FDreamClassRedirectsNeverStealALiveClassTest::RunTest(const FString& Parame
 		TestNull(*FString::Printf(TEXT("'%s' redirects to '%s', which must not itself be redirected"),
 			*Redirect.Key, *Redirect.Value), SecondHop);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamClassRedirectTargetsExistTest,
+	"DreamGUI.Packaging.EveryClassRedirectTargetExists",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamClassRedirectTargetsExistTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPackagingTestLocal;
+
+	// The other half of the invariant above, and the half nothing watched: that test asks whether a
+	// redirect steals a name that is still live, this one asks whether it hands out a name that is
+	// not. Both are the same failure to the person hitting it -- "because its class does not exist"
+	// on an asset that names neither type -- because the loader rewrites the reference first and
+	// only then looks it up, so a dead target turns a recoverable load into an unrecoverable one and
+	// hides which name was actually written down.
+	//
+	// Deleting a class is where this goes wrong: the class goes, its own entries stay, and nothing
+	// in a build or a cook reads this file. Nine entries naming prefab types were left pointing into
+	// nothing for exactly that reason.
+	//
+	// Only this plugin's two script modules are checked. A target in another module is a claim about
+	// that module's contents, and whether it is loaded in this process is not something this file
+	// decides -- DreamGUIK2Nodes is uncooked-only, and a false red there would say nothing true.
+	const FString Dir = PluginDir();
+	if (!TestFalse(TEXT("the plugin manager knows where DreamGUI lives"), Dir.IsEmpty()))
+	{
+		return false;
+	}
+
+	TArray<FString> Lines;
+	const FString TemplateIniPath = FPaths::Combine(Dir, TEXT("Config"), TEXT("DefaultEngine.ini"));
+	if (!TestTrue(TEXT("the redirect template is readable"), FFileHelper::LoadFileToStringArray(Lines, *TemplateIniPath)))
+	{
+		return false;
+	}
+
+	int32 NumChecked = 0;
+	for (const FString& Line : Lines)
+	{
+		FString OldName;
+		FString NewName;
+		if (ParseRedirect(Line, TEXT("+ClassRedirects="), OldName, NewName) && TargetsThisPlugin(NewName))
+		{
+			++NumChecked;
+			TestNotNull(*FString::Printf(TEXT("'%s' redirects to '%s', which has to be a class that exists"),
+				*OldName, *NewName), FindObject<UClass>(nullptr, *NewName));
+		}
+		else if (ParseRedirect(Line, TEXT("+StructRedirects="), OldName, NewName) && TargetsThisPlugin(NewName))
+		{
+			++NumChecked;
+			TestNotNull(*FString::Printf(TEXT("'%s' redirects to '%s', which has to be a struct that exists"),
+				*OldName, *NewName), FindObject<UScriptStruct>(nullptr, *NewName));
+		}
+	}
+	// A parser that quietly stopped matching would otherwise pass this test by checking nothing.
+	TestTrue(TEXT("and the file still has targets in this plugin to check"), NumChecked > 0);
 	return true;
 }
 

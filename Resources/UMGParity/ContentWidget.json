@@ -1,0 +1,10 @@
+{
+	"umgClass": "UContentWidget",
+	"umgHeader": "Components/ContentWidget.h",
+	"dreamClass": "UDreamContentWidget",
+	"members": [
+		{"umg": "GetContentSlot", "kind": "function", "status": "adopt", "dream": "", "note": "The slot belongs to the child here, so this is a hop rather than a field -- which is what makes one slot class enough for every panel."},
+		{"umg": "SetContent", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "GetContent", "kind": "function", "status": "adopt", "dream": "", "note": "Single-child hosting is a behaviour on the widget (UDreamContentWidget) rather than a panel base class; every single-child panel here declares it through GetRequiredBehaviourClasses."}
+	]
+}

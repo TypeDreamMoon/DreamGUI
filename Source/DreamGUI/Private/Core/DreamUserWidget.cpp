@@ -699,32 +699,13 @@ void UDreamUserWidget::NativeOnDestruct()
 
 void UDreamUserWidget::OnCultureChanged_Implementation()
 {
+	// A culture that reads the other way mirrors every layout that asked to follow the culture.
+	// GetResolvedFlowDirection already answers the new way -- it reads the culture each time -- so
+	// what is left is to make the containers below here ask it again.
+	RefreshCultureFlowDirection();
 }
 
 #pragma region OwningPlayer
-int32 UDreamUserWidget::GetLocalPlayerIndexOf(const APlayerController* InPlayerController)
-{
-	// The same index UDreamEventSystem::GetPlayerController reads back, so "this widget's player" and
-	// "this event system's player" cannot drift apart: the position of the local player in the game
-	// instance's list, which is what UserIndex has always meant here.
-	if (!IsValid(InPlayerController))
-	{
-		return 0;
-	}
-	const ULocalPlayer* LocalPlayer = InPlayerController->GetLocalPlayer();
-	if (LocalPlayer == nullptr)
-	{
-		return 0;
-	}
-	const UGameInstance* GameInstance = LocalPlayer->GetGameInstance();
-	if (GameInstance == nullptr)
-	{
-		return 0;
-	}
-	const int32 Index = GameInstance->GetLocalPlayers().IndexOfByKey(LocalPlayer);
-	return Index != INDEX_NONE ? Index : 0;
-}
-
 APlayerController* UDreamUserWidget::GetOwningPlayer() const
 {
 	if (APlayerController* Explicit = OwningPlayer.Get(); IsValid(Explicit))
@@ -733,20 +714,9 @@ APlayerController* UDreamUserWidget::GetOwningPlayer() const
 	}
 	// Inherit from whoever hosts this widget. A nested instance, a list cell and a dialog pushed on a
 	// player's stack all belong to the player whose hierarchy they are in, and saying so once here
-	// spares every one of them a SetOwningPlayer call.
-	for (const UDreamWidget* Ancestor = GetParent(); Ancestor != nullptr; Ancestor = Ancestor->GetParent())
-	{
-		if (const UDreamUserWidget* HostUserWidget = Cast<const UDreamUserWidget>(Ancestor))
-		{
-			if (APlayerController* Inherited = HostUserWidget->OwningPlayer.Get(); IsValid(Inherited))
-			{
-				return Inherited;
-			}
-		}
-	}
-	// The whole answer in a single-player game, and what UMG's CreateWidget defaults to.
-	const UWorld* World = GetWorld();
-	return World != nullptr ? World->GetFirstPlayerController() : nullptr;
+	// spares every one of them a SetOwningPlayer call. The base walks the ancestors and asks each
+	// host user widget the same question, so the nearest EXPLICIT owner up the chain still wins.
+	return Super::GetOwningPlayer();
 }
 
 void UDreamUserWidget::SetOwningPlayer(APlayerController* InPlayerController)
@@ -754,41 +724,10 @@ void UDreamUserWidget::SetOwningPlayer(APlayerController* InPlayerController)
 	OwningPlayer = InPlayerController;
 }
 
-ULocalPlayer* UDreamUserWidget::GetOwningLocalPlayer() const
-{
-	const APlayerController* PlayerController = GetOwningPlayer();
-	return IsValid(PlayerController) ? PlayerController->GetLocalPlayer() : nullptr;
-}
-
 APawn* UDreamUserWidget::GetOwningPlayerPawn() const
 {
 	const APlayerController* PlayerController = GetOwningPlayer();
 	return IsValid(PlayerController) ? PlayerController->GetPawn() : nullptr;
-}
-
-int32 UDreamUserWidget::GetOwningPlayerIndex() const
-{
-	return GetLocalPlayerIndexOf(GetOwningPlayer());
-}
-
-bool UDreamUserWidget::SetKeyboardFocus()
-{
-	return SetFocus(GetOwningPlayerIndex());
-}
-
-bool UDreamUserWidget::HasKeyboardFocus() const
-{
-	return HasFocus(GetOwningPlayerIndex());
-}
-
-bool UDreamUserWidget::HasUserFocus(APlayerController* InPlayerController) const
-{
-	return HasFocus(GetLocalPlayerIndexOf(InPlayerController));
-}
-
-void UDreamUserWidget::ClearKeyboardFocus()
-{
-	ClearFocus(GetOwningPlayerIndex());
 }
 
 void UDreamUserWidget::PlaySound(USoundBase* InSound, float InVolumeMultiplier, float InPitchMultiplier)
@@ -1525,6 +1464,21 @@ void UDreamUserWidget::K2_RemoveFieldValueChangedDelegate(FFieldNotificationId I
 	}
 }
 
+void UDreamUserWidget::K2_BroadcastFieldValueChanged(FFieldNotificationId InFieldId)
+{
+	// The same two guards the add and the remove use, and for the same reason: a name that this
+	// class has no field for is an authoring mistake, not a reason to broadcast to nobody under an
+	// invalid id.
+	if (InFieldId.IsValid())
+	{
+		const UE::FieldNotification::FFieldId FieldId = GetFieldNotificationDescriptor().GetField(GetClass(), InFieldId.FieldName);
+		if (FieldId.IsValid())
+		{
+			BroadcastFieldValueChanged(FieldId);
+		}
+	}
+}
+
 void UDreamUserWidget::BindEventBindings()
 {
 	TArray<FDreamWidgetEventBinding> Bindings;
@@ -2030,9 +1984,17 @@ bool UDreamUserWidget::SetContentForNamedSlot(FName InSlotName, UDreamWidget* In
 		NamedSlotContent.Remove(InSlotName);
 		return true;
 	}
-	if (InContent == this || InContent->IsChildOf(this) || this->IsChildOf(InContent))
+	// Only the direction that would be a cycle. Content already UNDER this widget is the ordinary
+	// case, not a mistake: a host nests its widget on the instance -- the .dui form, and what the
+	// designer writes for a drop into a slot row -- and AttachNamedSlotContent then moves it from
+	// there into the hole, after which it is under this widget again, one level down. Refusing
+	// "content inside this instance" refused both, so the designer could not bind what it had just
+	// parented. What that half of the check used to catch -- one of this instance's OWN widgets
+	// offered as content -- is the typed-outer test below: furniture lives in this instance's tree,
+	// never in the host's.
+	if (InContent == this || this->IsChildOf(InContent))
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot go into a slot of '%s': one contains the other."),
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot go into a slot of '%s': it contains that widget."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContent->GetPathDisplayName(), *GetPathDisplayName());
 		return false;
 	}

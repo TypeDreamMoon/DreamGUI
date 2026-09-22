@@ -40,8 +40,15 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Dropdown")
 	FDreamDropdownStyle Style;
+
+	UFUNCTION(BlueprintPure, Category = "Dropdown")
+	FDreamDropdownStyle GetStyle() const { return Style; }
+
+	/** This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void SetStyle(const FDreamDropdownStyle& InStyle);
 
 	/**
 	 * BlueprintReadOnly rather than a BlueprintSetter pair, and for the reason UDreamDialog::Buttons
@@ -49,7 +56,7 @@ public:
 	 * place changed the data and left the list showing the old copy. SetOptions is the way in. The
 	 * designer and .dui still author it directly, where PostEditChangeProperty re-pushes.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dropdown")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetOptions", BlueprintSetter = "SetOptions", Category = "Dropdown")
 	TArray<FText> Options;
 
 	/** Authored selection in; mirror of the behaviour's out. -1 is none. */
@@ -72,7 +79,7 @@ public:
 	 * A sprite or a texture, by the rule every face in this library follows. A missing or null entry
 	 * is no icon, so a short list is an ordinary state.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetOptionIcons", Category = "Dropdown")
 	TArray<TObjectPtr<UObject>> OptionIcons;
 
 	/**
@@ -120,6 +127,60 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")
 	TArray<FText> GetOptions() const { return Options; }
 
+	/**
+	 * The option list, one call at a time -- UMG's combo box API, which is what a screen building its
+	 * options from game data actually uses.
+	 *
+	 * Every one of them re-pushes, because the rows the player sees are BUILT from this array: an
+	 * option added without a push is data the open list has never heard of. FText rather than FString
+	 * throughout, because an option is something a player reads and this framework localizes text by
+	 * carrying FText all the way rather than by converting at the end.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void AddOption(const FText& InOption);
+
+	/** False when no option matched, as UMG's returns. Takes the matching icon with it. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	bool RemoveOption(const FText& InOption);
+
+	/** The options and their icons, both. The selection is ClearSelection's business, not this one's. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void ClearOptions();
+
+	/** Compared by MEANING (FText::EqualTo), so a localized option matches across cultures. -1 for none. */
+	UFUNCTION(BlueprintPure, Category = "Dropdown")
+	int32 FindOptionIndex(const FText& InOption) const;
+
+	/** Empty text for an index nobody offers, rather than a read off the end. */
+	UFUNCTION(BlueprintPure, Category = "Dropdown")
+	FText GetOptionAtIndex(int32 InIndex) const;
+
+	UFUNCTION(BlueprintPure, Category = "Dropdown")
+	int32 GetOptionCount() const { return Options.Num(); }
+
+	/** The selected option's text, or empty while nothing is selected. */
+	UFUNCTION(BlueprintPure, Category = "Dropdown")
+	FText GetSelectedOption() const;
+
+	/** Selects the option with that text. An option nobody offers changes nothing. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void SetSelectedOption(const FText& InOption);
+
+	/** Selects nothing at all -- index -1, which is what the control already spells "none". */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void ClearSelection();
+
+	/** Rebuild the rows from the current options. For a caller who edited the array in place. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void RefreshOptions();
+
+	/**
+	 * Whether the list is up. Mirrored from the behaviour's own visibility seam rather than kept by
+	 * whoever opened it, so a list closed by a click elsewhere is not still "open" here.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Dropdown")
+	bool IsOpen() const { return bIsListOpen; }
+
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")
 	int32 GetMaxVisibleItems() const { return MaxVisibleItems; }
 
@@ -155,8 +216,15 @@ public:
 	 * none this quietly stays the built-in row rather than producing half a list. Exactly the bargain
 	 * UDreamListViewBase::RowTemplateClass makes, in the same words.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetItemTemplateClass", BlueprintSetter = "SetItemTemplateClass", Category = "Dropdown")
 	TSubclassOf<UDreamUserWidget> ItemTemplateClass;
+
+	UFUNCTION(BlueprintPure, Category = "Dropdown")
+	TSubclassOf<UDreamUserWidget> GetItemTemplateClass() const { return ItemTemplateClass; }
+
+	/** Rebuilds the rows: what a row IS comes from this class, so a bare write would change nothing. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void SetItemTemplateClass(TSubclassOf<UDreamUserWidget> InItemTemplateClass);
 
 	/**
 	 * One per option row, as the list is built. The hook for a consumer whose options are richer
@@ -213,4 +281,11 @@ private:
 
 	/** True between Elevate and Restore; resting geometry must not be written while it is. */
 	bool bListElevated = false;
+
+	/**
+	 * True while the list is up. Mirrored from the behaviour's visibility seam, which is the one
+	 * moment either side moves -- a flag written by whoever CALLED open would be wrong the first time
+	 * a click elsewhere closed the list.
+	 */
+	bool bIsListOpen = false;
 };

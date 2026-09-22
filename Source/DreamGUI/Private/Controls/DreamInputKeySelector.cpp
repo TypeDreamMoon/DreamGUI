@@ -218,12 +218,23 @@ bool UDreamInputKeySelector::NotifyChordPressed(const FInputChord& InChord)
 	}
 	if (bEscapeCancels && EscapeKeys.Contains(InChord.Key))
 	{
+		// FIRST, and deliberately ahead of the gamepad filter below: the pad's B is one of these by
+		// default, so a selector that refused to look at pad keys at all would have no way out on a
+		// pad -- the exact trap this list was added to close.
 		// Taken, but not bound: the caller must still treat it as consumed, or the same Escape would
 		// also close the screen the player is rebinding on. A LIST rather than the single hard-coded
 		// Escape this used to reserve, because a player rebinding on a pad has no Escape key and
 		// therefore had no key at all that did not become the new binding.
 		SetIsListening(false);
 		return true;
+	}
+	if (!bAllowGamepadKeys && InChord.Key.IsGamepadKey())
+	{
+		// NOT consumed, unlike every other refusal here: a pad key this selector will not bind is a
+		// pad key that was meant for something else -- closing the screen, moving the focus -- and
+		// swallowing it would leave a controller doing nothing at all while a selector is armed.
+		// The selector stays armed, waiting for the keyboard key it was told to accept.
+		return false;
 	}
 	if (bAllowModifierKeys && DreamInputKeySelectorLocal::IsModifierKey(InChord.Key))
 	{
@@ -238,6 +249,84 @@ bool UDreamInputKeySelector::NotifyChordPressed(const FInputChord& InChord)
 	SetIsListening(false);
 	SetSelectedChord(InChord);
 	return true;
+}
+
+void UDreamInputKeySelector::SetStyle(const FDreamInputKeySelectorStyle& InStyle)
+{
+	Style = InStyle;
+	// The whole push, because the face colours are picked from the style AND the armed state
+	// together (PushFaceColours), and there is exactly one place that knows how.
+	ApplyStyle();
+}
+
+void UDreamInputKeySelector::SetNoKeyText(const FText& InNoKeyText)
+{
+	NoKeyText = InNoKeyText;
+	// Only the words, and only the one function that decides which words: re-labelling is not a
+	// restyle, and the label already knows to show the prompt instead while the selector is armed.
+	PushLabel();
+}
+
+void UDreamInputKeySelector::SetListeningText(const FText& InListeningText)
+{
+	ListeningText = InListeningText;
+	PushLabel();
+}
+
+void UDreamInputKeySelector::SetEscapeCancels(bool bInEscapeCancels)
+{
+	// Read by NotifyChordPressed, so the next key asks. Nothing to push.
+	bEscapeCancels = bInEscapeCancels;
+}
+
+void UDreamInputKeySelector::SetEscapeKeys(const TArray<FKey>& InKeys)
+{
+	EscapeKeys = InKeys;
+}
+
+void UDreamInputKeySelector::SetAllowModifierKeys(bool bInAllowModifierKeys)
+{
+	bAllowModifierKeys = bInAllowModifierKeys;
+}
+
+void UDreamInputKeySelector::SetAllowGamepadKeys(bool bInAllowGamepadKeys)
+{
+	bAllowGamepadKeys = bInAllowGamepadKeys;
+}
+
+void UDreamInputKeySelector::SetCaptureKeysWhileListening(bool bInCaptureKeysWhileListening)
+{
+	if (bCaptureKeysWhileListening == bInCaptureKeysWhileListening)
+	{
+		return;
+	}
+	bCaptureKeysWhileListening = bInCaptureKeysWhileListening;
+	if (!bIsListening)
+	{
+		// Nothing is running; the next arming reads the new answer.
+		return;
+	}
+	// Armed right now, so the agent's existence has to follow the flag immediately. Leaving a live
+	// capture standing after it was switched off is the state the class comment calls a trap: an
+	// InputComponent at the top of the stack that nothing left in this class will ever destroy.
+	if (bCaptureKeysWhileListening)
+	{
+		BeginKeyCapture();
+	}
+	else
+	{
+		EndKeyCapture();
+	}
+}
+
+void UDreamInputKeySelector::SetTextBlockVisibility(EDreamWidgetVisibility InVisibility)
+{
+	if (LabelNode != nullptr)
+	{
+		// The LABEL only. The face keeps its own visibility, so the selector stays clickable -- which
+		// is the documented way out of the armed state and must not be taken away by hiding words.
+		LabelNode->SetVisibility(InVisibility);
+	}
 }
 
 void UDreamInputKeySelector::HandleClicked()

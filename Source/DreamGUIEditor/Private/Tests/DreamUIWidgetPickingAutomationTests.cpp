@@ -191,6 +191,12 @@ bool FDreamDropResolvesToNearestContainerTest::RunTest(const FString& Parameters
 	TestEqual(TEXT("a container resolves to itself"), (UObject*)DreamUIWidgetPicking::ResolveDropContainer(Box), (UObject*)Box);
 	TestEqual(TEXT("the root overlay resolves to itself"), (UObject*)DreamUIWidgetPicking::ResolveDropContainer(Root), (UObject*)Root);
 	TestNull(TEXT("nothing under the cursor resolves to nothing"), (UObject*)DreamUIWidgetPicking::ResolveDropContainer(nullptr));
+	// Bounded by a tree root: the walk may use that root and nothing above it, and a hit outside it is
+	// not the tree's to answer for.
+	TestEqual(TEXT("a bounded walk still finds the container inside its tree"),
+		(UObject*)DreamUIWidgetPicking::ResolveDropContainer(Leaf, Box), (UObject*)Box);
+	TestNull(TEXT("a hit above the boundary resolves to nothing, container or not"),
+		(UObject*)DreamUIWidgetPicking::ResolveDropContainer(Root, Box));
 	return true;
 }
 

@@ -38,6 +38,14 @@ namespace DreamPanelSlotLocal
 			NonNegative(static_cast<float>(Value.X)),
 			NonNegative(static_cast<float>(Value.Y)));
 	}
+
+	/** An offset, not a size: negatives are the point of it, only infinities are not. */
+	FVector2D SanitizeOffset(const FVector2D& Value)
+	{
+		return FVector2D(
+			FiniteClamped(static_cast<float>(Value.X)),
+			FiniteClamped(static_cast<float>(Value.Y)));
+	}
 }
 
 // Reason is per property, decided by whether the field is read by any panel's MeasureLayout.
@@ -73,8 +81,127 @@ LEX_SLOT_SETTER(SetMaxDesiredSize, MaxDesiredSize, FVector2D, DreamPanelSlotLoca
 // box's preferred size; FillSpanWhenLessThan decides where the lines break, so it can.
 LEX_SLOT_SETTER(SetFillEmptySpace, bFillEmptySpace, bool, Value, Arrange)
 LEX_SLOT_SETTER(SetFillSpanWhenLessThan, FillSpanWhenLessThan, float, DreamPanelSlotLocal::NonNegative(Value), Measure)
+// bForceNewLine decides where the lines break, so it moves the box's preferred size the same way
+// FillSpanWhenLessThan does. Nudge is applied after the rect is decided and is invisible to every
+// MeasureLayout, so it can only move this child inside the parent that placed it.
+LEX_SLOT_SETTER(SetNewLine, bForceNewLine, bool, Value, Measure)
+LEX_SLOT_SETTER(SetNudge, Nudge, FVector2D, DreamPanelSlotLocal::SanitizeOffset(Value), Arrange)
 
 #undef LEX_SLOT_SETTER
+
+// The canvas rect family. Every one of these is a rename of something the widget already owns: the
+// slot stores nothing of its own here, so the details panel's transform, a .dui round trip and a
+// Blueprint SetPosition can never end up describing the same widget differently.
+FDreamUIAnchorData UDreamPanelSlot::GetLayout() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget) ? Widget->GetAnchorData() : FDreamUIAnchorData();
+}
+
+void UDreamPanelSlot::SetLayout(const FDreamUIAnchorData& InLayout)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		Widget->SetAnchorData(InLayout);
+	}
+}
+
+FVector2D UDreamPanelSlot::GetPosition() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget) ? Widget->GetAnchoredPosition() : FVector2D::ZeroVector;
+}
+
+void UDreamPanelSlot::SetPosition(FVector2D InPosition)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		Widget->SetAnchoredPosition(DreamPanelSlotLocal::SanitizeOffset(InPosition));
+	}
+}
+
+FVector2D UDreamPanelSlot::GetSize() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget) ? Widget->GetSizeDelta() : FVector2D::ZeroVector;
+}
+
+void UDreamPanelSlot::SetSize(FVector2D InSize)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		// Not floored at zero: a stretched axis legitimately carries a negative delta (the rect is the
+		// anchor span MINUS this much), and UDreamWidget::GetWidth already floors the resolved answer.
+		Widget->SetSizeDelta(DreamPanelSlotLocal::SanitizeOffset(InSize));
+	}
+}
+
+FMargin UDreamPanelSlot::GetOffsets() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget) ? Widget->GetAnchorOffset() : FMargin();
+}
+
+void UDreamPanelSlot::SetOffsets(FMargin InOffsets)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		Widget->SetAnchorOffset(DreamPanelSlotLocal::SanitizeMargin(InOffsets));
+	}
+}
+
+FAnchors UDreamPanelSlot::GetAnchors() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return FAnchors();
+	}
+	FAnchors Result;
+	Result.Minimum = Widget->GetAnchorMin();
+	Result.Maximum = Widget->GetAnchorMax();
+	return Result;
+}
+
+void UDreamPanelSlot::SetAnchors(FAnchors InAnchors)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		// Neither the size nor the relative location is kept, which is UMG's answer too: moving an anchor
+		// line moves the reference the rect is stated against, and the rect follows it.
+		Widget->SetHorizontalAndVerticalAnchorMinMax(InAnchors.Minimum, InAnchors.Maximum, false, false);
+	}
+}
+
+void UDreamPanelSlot::SetMinimum(FVector2D InMinimumAnchors)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		Widget->SetAnchorMin(InMinimumAnchors);
+	}
+}
+
+void UDreamPanelSlot::SetMaximum(FVector2D InMaximumAnchors)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		Widget->SetAnchorMax(InMaximumAnchors);
+	}
+}
+
+FVector2D UDreamPanelSlot::GetAlignment() const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget) ? Widget->GetPivot() : FVector2D(0.5, 0.5);
+}
+
+void UDreamPanelSlot::SetAlignment(FVector2D InAlignment)
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		Widget->SetPivot(DreamPanelSlotLocal::SanitizeOffset(InAlignment));
+	}
+}
 
 FVector2D UDreamPanelSlot::ConstrainDesiredSize(const FVector2D& InDesiredSize) const
 {
@@ -301,6 +428,7 @@ namespace
 		Slot.RowSpan = FMath::Clamp(Slot.RowSpan, 1, DreamPanelSlotLocal::MaxGridSpan);
 		Slot.ColumnSpan = FMath::Clamp(Slot.ColumnSpan, 1, DreamPanelSlotLocal::MaxGridSpan);
 		Slot.FillWeight = DreamPanelSlotLocal::NonNegative(Slot.FillWeight);
+		Slot.Nudge = DreamPanelSlotLocal::SanitizeOffset(Slot.Nudge);
 	}
 }
 

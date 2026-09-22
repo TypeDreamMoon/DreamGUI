@@ -1,0 +1,14 @@
+{
+	"umgClass": "UUniformGridPanel",
+	"umgHeader": "Components/UniformGridPanel.h",
+	"dreamClass": "UDreamLayoutContainerUniformGridPanel",
+	"members": [
+		{"umg": "SlotPadding", "kind": "property", "status": "adopt", "dream": "", "note": "Room inside every cell and part of how big a cell must be; the panel's own Spacing next to it is the gap between cells and no part of one."},
+		{"umg": "MinDesiredSlotWidth", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "MinDesiredSlotHeight", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetSlotPadding", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMinDesiredSlotWidth", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMinDesiredSlotHeight", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "AddChildToUniformGrid", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb; the row and column are set on the slot it returns."}
+	]
+}

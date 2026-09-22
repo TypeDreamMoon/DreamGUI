@@ -1,0 +1,14 @@
+{
+	"umgClass": "UScrollBoxSlot",
+	"umgHeader": "Components/ScrollBoxSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "Size", "kind": "property", "status": "map", "dream": "SizeRule", "note": "FSlateChildSize is a rule plus a value; the rule is SizeRule (Auto/Fill) and the value is FillWeight. A scroll box arranges along its axis at desired size, so Fill only has meaning across it."},
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetPadding", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

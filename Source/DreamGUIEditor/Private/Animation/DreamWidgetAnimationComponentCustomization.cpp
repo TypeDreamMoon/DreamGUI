@@ -18,7 +18,8 @@
 #include "Widgets/Input/SButton.h"
 #include "SDreamWidgetAnimationEditor.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
-#include "Core/DreamWidgetPresenterComponent.h"
+#include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Core/DreamWorldWidgetComponent.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Editor.h"
 #include "UObject/UObjectIterator.h"
@@ -84,14 +85,22 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 					{
 						Root = Root->GetParent();
 					}
-					// The presenter holds a hierarchy CLASS now; the asset behind it is the Blueprint
-					// that generated the class.
+					// The host holds a hierarchy CLASS now; the asset behind it is the Blueprint that
+					// generated the class. Which widget is loaded is the base's question, so the
+					// search runs over the base and finds every kind of host; which CLASS produced it
+					// is not -- only the world widget component names one, so that is where the cast
+					// goes. A host that answers the first question but not the second simply has no
+					// Blueprint to open.
 					UObject* SourceAsset = nullptr;
-					for (TObjectIterator<UDreamWidgetPresenterComponent> It; It && SourceAsset == nullptr; ++It)
+					for (TObjectIterator<UDreamWidgetPresenterComponentBase> It; It && SourceAsset == nullptr; ++It)
 					{
-						if (It->GetLoadedWidget() == Root)
+						if (It->GetLoadedWidget() != Root)
 						{
-							if (UClass* WidgetClass = It->GetWidgetClass())
+							continue;
+						}
+						if (const UDreamWorldWidgetComponent* WorldWidget = Cast<UDreamWorldWidgetComponent>(*It))
+						{
+							if (UClass* WidgetClass = WorldWidget->GetWidgetClass())
 							{
 								SourceAsset = WidgetClass->ClassGeneratedBy;
 							}

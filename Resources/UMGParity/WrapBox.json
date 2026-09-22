@@ -1,0 +1,15 @@
+{
+	"umgClass": "UWrapBox",
+	"umgHeader": "Components/WrapBox.h",
+	"dreamClass": "UDreamLayoutContainerWrapBox",
+	"members": [
+		{"umg": "InnerSlotPadding", "kind": "property", "status": "map", "dream": "Spacing", "note": "The same two gaps under the name the rest of this plugin's panels already use: x along a line, y between lines. GetInnerSlotPadding/SetInnerSlotPadding exist under UMG's name and forward."},
+		{"umg": "WrapSize", "kind": "property", "status": "adopt", "dream": "", "note": "The length of a line whichever way the lines run, so it keeps its meaning in a vertical box."},
+		{"umg": "bExplicitWrapSize", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": "Where a line that did not fill the wrap length sits inside it, for a horizontal box only -- UMG's own EditCondition. Fill starts at the edge like Left: filling a line is what the slots on it do through bFillEmptySpace."},
+		{"umg": "Orientation", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamPanelOrientation rather than Slate's EOrientation. Measure and arrange are both written along the line and across it, so the two orientations are one algorithm."},
+		{"umg": "SetInnerSlotPadding", "kind": "function", "status": "adopt", "dream": "", "note": "Forwards to SetSpacing."},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "AddChildToWrapBox", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb; AddChild returns the slot."}
+	]
+}

@@ -1,0 +1,26 @@
+{
+	"umgClass": "UMenuAnchor",
+	"umgHeader": "Components/MenuAnchor.h",
+	"dreamClass": "UDreamMenuAnchor",
+	"members": [
+		{"umg": "MenuClass", "kind": "property", "status": "adopt", "dream": "", "note": "TSubclassOf<UDreamUserWidget>. Changing it drops the kept instance, and closes an open menu first."},
+		{"umg": "OnGetMenuContentEvent", "kind": "property", "status": "reject", "dream": "", "note": "Deprecated in UMG 4.26 in favour of OnGetUserMenuContentEvent, which is the one below."},
+		{"umg": "OnGetUserMenuContentEvent", "kind": "property", "status": "adopt", "dream": "", "note": "Single-cast, returning UDreamWidget*. Asked ONCE, when there is no menu yet and nothing authored in the hole, and what it hands back is kept -- rebuilding on every open would throw away whatever state the player left in the menu and leak the previous one. Ranks below authored content and above MenuClass; a handler that answers with nothing lets the class have its turn."},
+		{"umg": "Placement", "kind": "property", "status": "map", "dream": "FDreamMenuAnchorStyle::Placement", "note": "In the style, because a project wants every menu to open the same way; the enum is EDreamMenuPlacement, shared with UDreamLayoutContainerMenuAnchor so both roads place a menu identically. GetPlacement answers the RESOLVED value."},
+		{"umg": "bFitInWindow", "kind": "property", "status": "adopt", "dream": "", "note": "Clamped against the ROOT widget, which is the rect the whole hierarchy is laid out inside and the nearest thing here to a Slate window. UDreamLayoutContainerMenuAnchor::FitMenuInWindow is CALLED rather than copied, so a menu lands in the same place whichever of the two anchors opened it. Off by default where UMG's and the panel's are on: turning a clamp on for every existing anchor would move menus somebody positioned on purpose."},
+		{"umg": "ShouldDeferPaintingAfterWindowContent", "kind": "property", "status": "reject", "dream": "", "note": "Slate paints a menu into the window's deferred layer so it draws over everything. There are no Slate windows here: a menu is lifted to the popup layer (UDreamUIPopupLayer), which IS the answer to the same question."},
+		{"umg": "UseApplicationMenuStack", "kind": "property", "status": "reject", "dream": "", "note": "The application's menu stack is Slate's own FSlateApplication machinery for native menus. This framework has no such stack; a menu here is a widget lifted to the popup layer."},
+		{"umg": "ShowMenuBackground", "kind": "property", "status": "reject", "dream": "", "note": "Whether the application menu stack draws its own background behind the menu. No stack, no background of its own -- the menu's face is FDreamMenuAnchorStyle::Background."},
+		{"umg": "OnMenuOpenChanged", "kind": "event", "status": "adopt", "dream": "", "note": "Fires after the move, never during."},
+		{"umg": "SetPlacement", "kind": "function", "status": "adopt", "dream": "", "note": "Edits this instance's style and re-places an open menu at once."},
+		{"umg": "FitInWindow", "kind": "function", "status": "adopt", "dream": "", "note": "Named as UMG names the call; re-places an open menu at once."},
+		{"umg": "ToggleOpen", "kind": "function", "status": "adopt", "dream": "", "note": "Carries UMG's bFocusOnOpen through to Open."},
+		{"umg": "Open", "kind": "function", "status": "adopt", "dream": "", "note": "bFocusMenu gives focus to the first navigable thing inside the menu (UUISelectable::FindDefaultSelectableIn, then the event system's default select) -- the same call and the same rule as UDreamTabView::FocusActivePage, including leaving focus alone when the menu holds nothing navigable. The argument is defaulted and last, so every existing Open() still means what it did."},
+		{"umg": "Close", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "IsOpen", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ShouldOpenDueToClick", "kind": "function", "status": "adopt", "dream": "", "note": "The question a button wrapping an anchor asks before calling Open, so the click that dismissed a menu does not reopen it."},
+		{"umg": "GetMenuPosition", "kind": "function", "status": "adopt", "dream": "", "note": "The popup's anchored position in this anchor's local space; the popup is placed against the anchor before being lifted, so the number holds either way."},
+		{"umg": "HasOpenSubMenus", "kind": "function", "status": "adopt", "dream": "", "note": "A walk of the popup's subtree (UDreamWidget::CollectChildrenWidgets) for another open anchor of this class, because that is what a submenu IS here -- there is no application-wide menu stack to ask instead."},
+		{"umg": "SetStyle", "kind": "function", "status": "adopt", "dream": "", "note": "UMenuAnchor has no style struct; this is the family's spelling of replacing a look at runtime."}
+	]
+}

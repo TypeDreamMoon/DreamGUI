@@ -50,8 +50,16 @@ namespace DreamUIWidgetPicking
 	 * Resolving to a container rather than to the hit widget is what makes a drop land somewhere that
 	 * will arrange it. Dropping onto a Text inside a VerticalBox means the VerticalBox; nesting into
 	 * the Text itself is a deliberate act and stays available from the hierarchy tree.
+	 *
+	 * InTreeRoot is where the walk stops, and a designer has to pass it. The widget being authored is
+	 * not the top of the preview world: the designer stands it inside a wrapper of its own, and that
+	 * wrapper carries an Overlay so the authored root is given the design size. An unbounded walk from
+	 * a root with no container climbs straight out of the asset and answers with that wrapper -- a
+	 * container, with room -- and the drop then parents the widget to a piece of the editor: it fills
+	 * the screen, belongs to nothing that is saved, and drops out of the hierarchy. A hit that is not
+	 * inside InTreeRoot at all resolves to nothing for the same reason. Null means unbounded.
 	 */
-	DREAMGUIEDITOR_API UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget);
+	DREAMGUIEDITOR_API UDreamWidget* ResolveDropContainer(UDreamWidget* InHitWidget, const UDreamWidget* InTreeRoot = nullptr);
 
 	/** Every widget under every root canvas of InWorld, the canvas roots included. */
 	DREAMGUIEDITOR_API void CollectPickableWidgets(const UWorld* InWorld, TArray<UDreamWidget*>& OutWidgets);

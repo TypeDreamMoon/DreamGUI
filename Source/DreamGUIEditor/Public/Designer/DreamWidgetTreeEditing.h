@@ -6,6 +6,7 @@
 #include "Templates/SubclassOf.h"
 
 class UDreamWidget;
+class UDreamUserWidget;
 class UDreamWidgetBlueprint;
 class UDreamWidgetTree;
 
@@ -42,9 +43,14 @@ namespace DreamWidgetTreeEditing
 	 * depends on tree order.
 	 *
 	 * Returns null when the class is unusable or the parent refuses the child (a panel at capacity).
+	 *
+	 * InSlotName names the hole of InParent the widget fills, for a parent that is a placed control
+	 * (a Button's "Content", an expandable area's "Header"); see BindWidgetIntoSlot for what is
+	 * recorded. A name the parent's class does not declare is refused before anything is written.
 	 */
 	DREAMGUIEDITOR_API UDreamWidget* CreateWidget(UDreamWidgetBlueprint* InBlueprint, TSubclassOf<UDreamWidget> InWidgetClass,
-		UDreamWidget* InParent = nullptr, int32 InSiblingIndex = -1, const FString& InDesiredDisplayName = FString());
+		UDreamWidget* InParent = nullptr, int32 InSiblingIndex = -1, const FString& InDesiredDisplayName = FString(),
+		FName InSlotName = NAME_None);
 
 	/**
 	 * Remove InWidget and everything under it from the hierarchy.
@@ -59,9 +65,30 @@ namespace DreamWidgetTreeEditing
 	 *
 	 * Refuses a cycle, a parent at capacity, and the tree's root (which has nowhere to go). Reordering
 	 * within the same parent is the same call with the same parent.
+	 *
+	 * InSlotName is CreateWidget's: the hole of a placed control the widget goes into. Whatever slot
+	 * of its previous parent the widget was bound to lets go of it either way -- a binding the
+	 * runtime follows ahead of Children would otherwise pull the widget straight back.
 	 */
 	DREAMGUIEDITOR_API bool ReparentWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget,
-		UDreamWidget* InNewParent, int32 InSiblingIndex = -1);
+		UDreamWidget* InNewParent, int32 InSiblingIndex = -1, FName InSlotName = NAME_None);
+
+	/**
+	 * Record which hole of InNested the host's InWidget fills.
+	 *
+	 * InWidget must already be InNested's child: nesting is the one form the runtime, the .dui
+	 * language and the designer all agree on for "the host put this inside that control", and the
+	 * slot name is the part nesting cannot spell. The name has to be one InNested's class declares.
+	 * For the class's DEFAULT slot nothing is written -- nesting alone means that slot, which is what
+	 * keeps a Button filled from the designer indistinguishable from one filled from a .dui -- and
+	 * any earlier binding of InWidget to another slot of the same control is dropped. The caller
+	 * has snapshotted InNested and notifies the structural change; this only writes the binding.
+	 */
+	DREAMGUIEDITOR_API bool BindWidgetIntoSlot(UDreamWidgetBlueprint* InBlueprint, UDreamUserWidget* InNested,
+		FName InSlotName, UDreamWidget* InWidget);
+
+	/** Drop every slot binding InNested holds to InWidget. True when there was one. */
+	DREAMGUIEDITOR_API bool ForgetSlotBindings(UDreamUserWidget* InNested, const UDreamWidget* InWidget);
 
 	/**
 	 * Give InWidget a new display name, made unique within the tree first.

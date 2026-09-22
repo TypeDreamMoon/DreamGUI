@@ -60,6 +60,25 @@ public:
 	/** The authored hierarchy this class instantiates. Null on a class that inherits its parent's. */
 	UDreamWidgetTree* GetWidgetTreeArchetype() const { return WidgetTree; }
 
+	/**
+	 * The canvas size the hierarchy was laid out against, as the designer saw it.
+	 *
+	 * UMG keeps its design-time size on the editor-only Blueprint, which is enough there: a screen is
+	 * stretched to whatever viewport it lands in, so the authored size is never anything but a preview.
+	 * A hierarchy hosted in the WORLD has no viewport to stretch to, and the size it was drawn at is
+	 * the only answer anyone can give for how big it should be in centimetres -- so here it rides the
+	 * class and survives into a cooked build.
+	 */
+	FIntPoint GetDesignSize() const { return DesignSize; }
+	void SetDesignSize(FIntPoint InSize);
+
+	/**
+	 * The design size that applies to InClass: the nearest generated class at or above it, as with the
+	 * tree archetype. Unlike the tree, every generated class carries one, so the walk stops at the
+	 * first; a native class never went through a designer and answers the default canvas.
+	 */
+	static FIntPoint FindDesignSize(const UClass* InClass);
+
 	/** The property bindings the compiler resolved for this class. Not inherited: see the getter below. */
 	const TArray<FDreamWidgetPropertyBinding>& GetPropertyBindings() const { return PropertyBindings; }
 	const TArray<FDreamWidgetEventBinding>& GetEventBindings() const { return EventBindings; }
@@ -132,4 +151,14 @@ private:
 
 	UPROPERTY()
 	TArray<FDreamWidgetEachBinding> EachBindings;
+
+	/**
+	 * Persistent, and deliberately NOT DuplicateTransient where the tree above is. The tree is dropped
+	 * on duplication because the copy is about to be handed a freshly generated one; this is a plain
+	 * value the compiler copies from the Blueprint's designer data, and a duplicate that never reaches
+	 * the compiler -- a class copied for reinstancing, above all -- would otherwise fall back to the
+	 * default canvas and resize every world-space host built from it.
+	 */
+	UPROPERTY()
+	FIntPoint DesignSize = FIntPoint(1920, 1080);
 };

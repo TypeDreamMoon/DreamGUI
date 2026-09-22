@@ -179,7 +179,10 @@ bool UDreamUINavigationStack::HandleBack(int32 InUserIndex)
 			{
 				if (TextInput->IsInputActive())
 				{
-					TextInput->DeactivateInput();
+					// Through the CANCEL road, not the plain end of an edit: Back is the player saying
+					// "throw this away", and a field asked to revert on escape has to hear which of the
+					// two moments this was. Without the knob the two roads are the same call.
+					TextInput->CancelInput();
 					return true;
 				}
 			}

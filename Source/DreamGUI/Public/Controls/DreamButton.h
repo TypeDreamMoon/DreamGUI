@@ -6,6 +6,7 @@
 #include "Controls/DreamUIControl.h"
 #include "DreamButton.generated.h"
 
+class UDreamUIDragSource;
 class UDreamWidget;
 class UUIButton;
 
@@ -61,8 +62,56 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Button")
 	FDreamButtonStyle Style;
+
+	/**
+	 * A tint multiplied over whatever the face is showing -- UMG's BackgroundColor, and the runtime
+	 * half of the face brush's authored Tint.
+	 *
+	 * Two channels rather than one because they answer different questions: the brush's Tint is part
+	 * of the LOOK and comes from the style sheet, this one is a thing game code says about this one
+	 * button ("the confirm button goes red while the timer runs out"). They multiply, and white --
+	 * where this starts -- is no opinion, so every existing button is unchanged.
+	 *
+	 * Distinct again from the style's five state colours: those ride the visual's own colour through
+	 * the selectable's transition, and this rides the rect's body. All three multiply on screen.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetBackgroundColor", BlueprintSetter = "SetBackgroundColor", Category = "Button")
+	FColor BackgroundColor = FColor::White;
+
+	/**
+	 * A tint over the WHOLE button, face and content alike -- UMG's ColorAndOpacity, of which the
+	 * alpha is the half this framework can honour.
+	 *
+	 * The alpha is pushed to the control's own RenderOpacity, which cascades down everything under
+	 * it: fading a button fades its face, its label and whatever else was put inside, whatever each
+	 * of those is drawn with. That is the half nearly every caller wants -- a button fading in, or
+	 * greying while a cooldown runs.
+	 *
+	 * The colour half is deliberately not faked, for the reason UDreamBorder::ContentColorAndOpacity
+	 * gives: a colour over a subtree would have to be written onto each visual inside, overwriting
+	 * what the host authored with no way back. BackgroundColor above tints the FACE, which is the
+	 * part this control owns and the part a caller usually means.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetColorAndOpacity", BlueprintSetter = "SetColorAndOpacity", Category = "Button")
+	FLinearColor ColorAndOpacity = FLinearColor::White;
+
+	/**
+	 * Whether a drag may START on this button -- UMG's bAllowDragDrop, and off as UMG has it.
+	 *
+	 * What it turns on is a UDreamUIDragSource on the face, because that is what makes a drag MEAN
+	 * something in this framework: without one the pointer pipeline still reports the geometry and
+	 * nothing carries a payload. Turning it back off destroys that component again, so a button
+	 * that never asked for one never grows one.
+	 *
+	 * The payload is the drag source's own (Tag, Payload, DragVisualClass); reach it through
+	 * GetDragSource. A button that needs a payload only runtime knows subclasses that component --
+	 * which is the same road any other widget takes, and the reason this is a switch rather than a
+	 * second set of drag properties here.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAllowDragDrop", BlueprintSetter = "SetAllowDragDrop", Category = "Button")
+	bool bAllowDragDrop = false;
 
 	/**
 	 * WHEN this button's click fires, per input kind -- UMG's three enums, surfaced at the control.
@@ -114,6 +163,55 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Button")
 	FDreamButtonClickedEvent OnUnhovered;
 
+	UFUNCTION(BlueprintPure, Category = "Button")
+	FDreamButtonStyle GetStyle() const { return Style; }
+
+	/**
+	 * This instance's whole look, replaced and pushed. Whether it is the look in EFFECT is still
+	 * StyleSource's answer -- writing an inline style while the sheet is driving changes nothing you
+	 * can see, which is why the push runs either way rather than pretending otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetStyle(const FDreamButtonStyle& InStyle);
+
+	UFUNCTION(BlueprintPure, Category = "Button")
+	FColor GetBackgroundColor() const { return BackgroundColor; }
+
+	UFUNCTION(BlueprintPure, Category = "Button")
+	FLinearColor GetColorAndOpacity() const { return ColorAndOpacity; }
+
+	/** See the property: the alpha cascades over the whole button, the colour has nowhere to go. */
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetColorAndOpacity(FLinearColor InColorAndOpacity);
+
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetBackgroundColor(FColor InBackgroundColor);
+
+	UFUNCTION(BlueprintPure, Category = "Button")
+	bool GetAllowDragDrop() const { return bAllowDragDrop; }
+
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetAllowDragDrop(bool bInAllowDragDrop);
+
+	/**
+	 * The drag source this button's switch put on the face, or null while the switch is off.
+	 *
+	 * Defined in the .cpp rather than inline, because the class is only forward declared up here and
+	 * unwrapping a TObjectPtr of an incomplete type is not something to leave to a cast's fallback.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Button")
+	UDreamUIDragSource* GetDragSource() const;
+
+	/**
+	 * Whether a pointer is holding this button down right now.
+	 *
+	 * Asked of the behaviour rather than remembered here: the selectable is what the pointer talks
+	 * to, and a second copy of "is it down" on the control would be a flag that goes stale the first
+	 * time a press ends somewhere this control does not hear about.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Button")
+	bool IsPressed() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Button")
 	EDreamUIClickMethod GetClickMethod() const { return ClickMethod; }
 
@@ -145,6 +243,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Button")
 	TObjectPtr<UUIButton> ButtonBehaviour = nullptr;
 
+	/** Only while bAllowDragDrop is on; see there for why it is added and destroyed rather than muted. */
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Button")
+	TObjectPtr<UDreamUIDragSource> DragSource = nullptr;
+
 	virtual TArray<FName> GetNativeSlotNames() const override { return { ContentSlotName }; }
 	virtual FName GetDefaultSlotName() const override { return ContentSlotName; }
 
@@ -157,6 +259,9 @@ protected:
 	virtual void WireParts() override;
 
 private:
+	/** Add the drag source, or destroy the one this switch added. Idempotent; safe before parts exist. */
+	void ApplyDragSource();
+
 	void HandleClicked();
 	void HandlePressed();
 	void HandleReleased();

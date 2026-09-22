@@ -79,19 +79,38 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Expandable Area")
 	FDreamExpandableAreaStyle Style;
 
 	/** The words on the header. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetLabel", BlueprintSetter = "SetLabel", Category = "Expandable Area")
 	FText Label;
+
+	UFUNCTION(BlueprintPure, Category = "Expandable Area")
+	FDreamExpandableAreaStyle GetStyle() const { return Style; }
+
+	/** This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. */
+	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
+	void SetStyle(const FDreamExpandableAreaStyle& InStyle);
+
+	UFUNCTION(BlueprintPure, Category = "Expandable Area")
+	FText GetLabel() const { return Label; }
+
+	/**
+	 * The words on the header, written through to the label the control owns.
+	 *
+	 * A setter rather than a bare property because the header's text is pushed by the style pass: a
+	 * write without one left the control showing the previous words until something else pushed.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
+	void SetLabel(const FText& InLabel);
 
 	/**
 	 * Whether the content shows. A property so .dui, the designer and bindings can see it and so an
 	 * author can ship a section already open; every road that CHANGES it goes through SetIsExpanded,
 	 * which is the only thing that broadcasts.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetIsExpanded", BlueprintSetter = "SetIsExpanded", Category = "Expandable Area")
 	bool bIsExpanded = true;
 
 	/**
@@ -112,8 +131,19 @@ public:
 	 * opens instantly, the suite asserts the control's height in the same breath as the flag, and a
 	 * silently animated open would make both of those wrong. Opting in is one number.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Expandable Area", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetExpansionDuration", BlueprintSetter = "SetExpansionDuration", Category = "Expandable Area", meta = (ClampMin = "0.0"))
 	float ExpansionDuration = 0.0f;
+
+	UFUNCTION(BlueprintPure, Category = "Expandable Area")
+	float GetExpansionDuration() const { return ExpansionDuration; }
+
+	/**
+	 * How long the NEXT open or close takes. Nothing is re-run: a duration describes a move that has
+	 * not happened yet, and replaying the current one to honour a new speed would animate a section
+	 * the player already finished opening.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
+	void SetExpansionDuration(float InExpansionDuration);
 
 	/** Fired whenever the expanded flag moves, from a click or from code. */
 	UPROPERTY(BlueprintAssignable, Category = "Expandable Area")

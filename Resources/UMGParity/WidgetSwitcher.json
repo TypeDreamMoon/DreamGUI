@@ -1,0 +1,14 @@
+{
+	"umgClass": "UWidgetSwitcher",
+	"umgHeader": "Components/WidgetSwitcher.h",
+	"dreamClass": "UDreamLayoutContainerWidgetSwitcher",
+	"members": [
+		{"umg": "ActiveWidgetIndex", "kind": "property", "status": "adopt", "dream": "", "note": "The single source of truth: GetActiveWidget resolves through it, and SetActiveWidget is a lookup followed by writing it."},
+		{"umg": "GetNumWidgets", "kind": "function", "status": "adopt", "dream": "", "note": "Answers what GetChildrenCount answers; a switcher's pages are its children."},
+		{"umg": "GetActiveWidgetIndex", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetActiveWidgetIndex", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetActiveWidget", "kind": "function", "status": "adopt", "dream": "", "note": "Returns whether the widget was found; anything that is not a child is ignored rather than silently switching to page 0."},
+		{"umg": "GetWidgetAtIndex", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "GetActiveWidget", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

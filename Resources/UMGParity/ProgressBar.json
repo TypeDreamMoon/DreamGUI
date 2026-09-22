@@ -1,0 +1,18 @@
+{
+	"umgClass": "UProgressBar",
+	"umgHeader": "Components/ProgressBar.h",
+	"dreamClass": "UDreamProgressBar",
+	"members": [
+		{"umg": "WidgetStyle", "kind": "property", "status": "map", "dream": "Style", "note": "FDreamProgressBarStyle: track and fill colours and brushes, thickness, and the ring's numbers."},
+		{"umg": "Percent", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "BarFillType", "kind": "property", "status": "map", "dream": "FillType", "note": "EDreamProgressFillType. UMG's TopToBottom / BottomToTop / LeftToRight / RightToLeft; its two FillFromCenter values are the ring's business here (Shape = Radial), not a bar's."},
+		{"umg": "BarFillStyle", "kind": "property", "status": "reject", "dream": "", "note": "The fill here is a RECT whose length IS the percent, and the brush on it is drawn to that rect -- which is UMG's Scale, the default and the only one of the two this geometry can express. Mask means holding the drawing at full bar width while a window reveals part of it, and there is nothing to hold it with: the face brush has no UV offset, so it would take a second node under a clip. Worth knowing before asking for it: for the plain colour fill the style ships, the two modes are pixel-identical, and the difference only appears for a fill carrying a picture."},
+		{"umg": "bIsMarquee", "kind": "property", "status": "adopt", "dream": "", "note": "Bar only, and it is what opts the control into ticking at all."},
+		{"umg": "BorderPadding", "kind": "property", "status": "map", "dream": "FDreamProgressBarStyle::BorderPadding", "note": "Spent on the FILL rather than on the track, so the bar stays the size it looks and the fill sits inside it. The four margin numbers sort by what the FillType makes them: the edge the fill starts at, the edge it ends at, and the two sides (an uneven pair shifts the fill the way the bigger side pushes). Zero by default. The Radial shape ignores it -- a ring's fill sits exactly on its track, and insetting it would make a second, smaller ring."},
+		{"umg": "FillColorAndOpacity", "kind": "property", "status": "adopt", "dream": "", "note": "FColor, and a TINT over the style's fill colour -- which is what it is in Slate too."},
+		{"umg": "SetPercent", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetIsMarquee", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetFillColorAndOpacity", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetStyle", "kind": "function", "status": "adopt", "dream": "", "note": "Not a UFUNCTION on UProgressBar (its Setter meta names it); added here so a look can be replaced at runtime."}
+	]
+}

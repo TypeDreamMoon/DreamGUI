@@ -15,6 +15,10 @@
 
 class UDreamWidgetSubObjectBehaviour;
 class UDreamUIBehaviour;
+class UDreamUserWidget;
+class APlayerController;
+class ULocalPlayer;
+class UGameInstance;
 class UDreamVisual;
 class UDreamLayoutSelf;
 class UDreamLayoutContainer;
@@ -60,6 +64,40 @@ enum class EDreamWidgetVisibility : uint8
 	Collapsed,
 	HitTestInvisible UMETA(DisplayName = "Not Hit-Testable (Self & Children)"),
 	SelfHitTestInvisible UMETA(DisplayName = "Not Hit-Testable (Self Only)"),
+};
+
+/**
+ * Which way a widget wants its layout to flow, for the cultures that read right to left.
+ *
+ * The same four answers UMG's EFlowDirectionPreference gives, spelled the same way, because a project
+ * localizing into Arabic or Hebrew has to be able to say "mirror this one" per widget and a second
+ * vocabulary for the same idea would be one more thing to learn for nothing.
+ *
+ * Inherit is the default, and it is what keeps every existing asset arranged exactly as authored: a
+ * tree in which nobody states a preference resolves left to right throughout.
+ */
+UENUM(BlueprintType)
+enum class EDreamFlowDirectionPreference : uint8
+{
+	/** Whatever the nearest ancestor with an opinion resolved to. */
+	Inherit,
+	/** Follow the running culture's writing direction, flipping when that culture reads right to left. */
+	Culture,
+	/** Left to right, whatever the culture says. */
+	LeftToRight,
+	/** Right to left, whatever the culture says. */
+	RightToLeft,
+};
+
+/**
+ * The resolved answer -- what a layout container actually arranges along. Two values, because a
+ * preference always resolves to one of them; see UDreamWidget::GetResolvedFlowDirection.
+ */
+UENUM(BlueprintType)
+enum class EDreamFlowDirection : uint8
+{
+	LeftToRight,
+	RightToLeft,
 };
 
 UENUM(BlueprintType)
@@ -362,6 +400,20 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Pivot"))
 	FVector2D RenderTransformPivot = FVector2D(0.5, 0.5);
+	/**
+	 * Render-only slant about this widget's own pivot, in DEGREES, applied to this widget and its
+	 * whole subtree. See GetRenderShear for what it does and does not affect.
+	 *
+	 * Degrees rather than the tangents the matrix actually wants, because that is the unit UMG's
+	 * shear is authored in and an author thinks in angles, not slopes. Clamped just under 90 when it
+	 * is used: the tangent goes to infinity there and the geometry with it.
+	 *
+	 * Not Interp, deliberately, although the other three render channels are: no FVector2D property
+	 * in this plugin is animated yet and RenderTransformPivot is not either, so adding the first one
+	 * belongs with someone actually wiring a shear track rather than with the property itself.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Shear"))
+	FVector2D RenderShear = FVector2D::ZeroVector;
 
 	/*
 	 * PERSPECTIVE, in the shape CSS uses.
@@ -434,6 +486,45 @@ public:
 	/** Back to drawing exactly where layout put it, in one invalidation. */
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	void ClearRenderTransform();
+
+	/**
+	 * The slant applied when this widget and everything under it are DRAWN -- UMG's
+	 * FWidgetTransform::Shear, in degrees, about this widget's own pivot.
+	 *
+	 * Separate from the other three render channels because it cannot travel with them. Those live in
+	 * ObjectToWorldTransform, an FTransform, and an FTransform cannot carry a shear: SetFromMatrix
+	 * orthonormalizes one away and hands back something plausible and wrong. Shear therefore rides the
+	 * same rails perspective already rides -- the matrix path in FDreamUIGeometry::TransformVertices,
+	 * which exists precisely because a perspective remap is itself a shear.
+	 *
+	 * Consequences worth knowing, all of them shared with perspective:
+	 *   - Layout is untouched. A sheared widget occupies exactly the rect it was given.
+	 *   - HIT TESTING DOES NOT FOLLOW. The raycaster switches to the matrix only inside a perspective
+	 *     scope, so a sheared widget is still clicked on its un-slanted rect. That is deliberate: the
+	 *     ordinary path must not start inverting matrices for a decorative effect, and UMG's own
+	 *     shear has the same split.
+	 *   - Nothing at all happens while X and Y are both zero. The flag below keeps the untouched
+	 *     FTransform path, bit for bit, for every widget that does not use this.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	const FVector2D& GetRenderShear()const { return RenderShear; }
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderShear(const FVector2D& Value);
+	/** True when this widget or any ancestor is sheared -- the bit that chooses the matrix path. */
+	UFUNCTION(BlueprintPure, Category = "Render Transform")
+	bool HasShearApplied()const { return bHasShearInHierarchy; }
+	/** This widget's own shear, ignoring the chain. */
+	UFUNCTION(BlueprintPure, Category = "Render Transform")
+	bool HasOwnRenderShear()const { return !RenderShear.IsNearlyZero(); }
+	/**
+	 * Every shear on the way up, expressed as one world-space correction -- Identity when there is none.
+	 *
+	 * Conjugated per level rather than composed from local-to-parent transforms: each ancestor's shear
+	 * is about ITS pivot in ITS local space, and O^-1*S*O is that same operation said in world terms,
+	 * which is the only space all the levels share. Composing it that way also means the chain is read
+	 * off the world transforms that already exist instead of a parallel set of relative ones.
+	 */
+	FMatrix GetInheritedShearCorrection()const;
 
 	UFUNCTION(BlueprintCallable, Category = "Perspective")
 	bool GetPerspective()const { return bPerspective; }
@@ -1198,6 +1289,22 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EDreamWidgetInteractableType Interactable = EDreamWidgetInteractableType::Inherit;
 	/**
+	 * UMG's bIsEnabled: the switch a game flips to grey a thing out and stop it responding.
+	 *
+	 * It is a SECOND question from Interactable, not a rename of it. Interactable is three-valued and
+	 * inheritable and describes how a widget joins the hierarchy's interaction policy; this is one
+	 * bool a caller sets on the widget it is disabling, and it wins over everything below: a child
+	 * that asked for Interactable=Enabled is still disabled when an ancestor is disabled, which is
+	 * what "disable this dialog" has to mean and what UMG's SetIsEnabled does.
+	 *
+	 * The two are AND-ed. GetInteractableInHierarchy -- what input, navigation and the selectables'
+	 * disabled look all read -- answers true only when this widget and every ancestor are enabled AND
+	 * the Interactable rules say so, so every control's existing disabled appearance works through
+	 * this without a line of per-control code.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Behavior", Getter = "GetIsEnabled", Setter = "SetIsEnabled", meta = (AllowPrivateAccess = true))
+	bool bIsEnabled = true;
+	/**
 	 * Restrict navigation area to only children of this UI node, to forbid it navigate out.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetRestrictNavigationArea", Setter = "SetRestrictNavigationArea", meta = (AllowPrivateAccess = true))
@@ -1230,6 +1337,26 @@ protected:
 	TEnumAsByte<EMouseCursor::Type> Cursor = EMouseCursor::Default;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true, MultiLine = true))
 	FText ToolTipText;
+	/**
+	 * Show THIS widget class as the tooltip instead of the built-in text bubble. Beats ToolTipText
+	 * when both are set, matching the order the tooltip service already resolves its two content
+	 * paths in.
+	 *
+	 * A class and not an instance, which is the one place this differs from UMG's ToolTipWidget: the
+	 * tooltip service instantiates its content when the bubble appears and destroys it when the
+	 * bubble goes, so a widget kept alive per-host for a tooltip that is shown for two seconds every
+	 * few minutes would be paying rent for nothing. IDreamUITooltipSourceInterface remains the way to
+	 * choose the class at runtime; this is the authored answer for the common case.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true))
+	TSubclassOf<UDreamUserWidget> ToolTipWidgetClass;
+	/**
+	 * Which way this widget's layout flows. Inherit -- the default, and what every asset authored
+	 * before this existed holds -- takes the answer from the nearest ancestor that states one, so a
+	 * whole screen is mirrored by setting Culture once on its root.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Localization", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamFlowDirectionPreference FlowDirectionPreference = EDreamFlowDirectionPreference::Inherit;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Accessibility", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EDreamAccessibleBehavior AccessibleBehavior = EDreamAccessibleBehavior::Auto;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Accessibility", Getter, Setter, meta = (AllowPrivateAccess = true, MultiLine = true))
@@ -1239,12 +1366,15 @@ protected:
 
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI|Visibility")
 	FDreamWidgetVisibilityChangedEvent OnVisibilityChanged;
+
+public:
+	// Public, the way UMG's are: a delegate a Blueprint can bind is one C++ should be able to bind too,
+	// and a control that relays focus from one of its parts raises these on itself.
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI|Focus")
 	FDreamWidgetFocusEvent OnFocusReceived;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI|Focus")
 	FDreamWidgetFocusEvent OnFocusLost;
 
-public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	EDreamWidgetClipping GetClipping()const
 	{
@@ -1356,14 +1486,181 @@ public:
 	void ClearFocus(int32 UserIndex = 0, int32 PointerId = 0);
 	void NotifyFocusReceived(int32 UserIndex, int32 PointerId);
 	void NotifyFocusLost(int32 UserIndex, int32 PointerId);
+
+	/*
+	 * UMG's focus vocabulary, on every widget rather than only on user widgets.
+	 *
+	 * These four used to live on UDreamUserWidget, where they were thin wrappers over SetFocus /
+	 * HasFocus / ClearFocus with the OWNING PLAYER's index rather than player zero. They belong down
+	 * here: the owning player is now a question any widget can answer, the wrappers' bodies are
+	 * unchanged, and a Blueprint reaching them on a user widget still finds them by inheritance.
+	 */
+	/** Take focus on the owning player's event system. Returns false when it could not be given. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
+	bool SetKeyboardFocus();
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	bool HasKeyboardFocus()const;
+	/** Take focus on a named player's event system. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
+	bool SetUserFocus(APlayerController* InPlayerController);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	bool HasUserFocus(APlayerController* InPlayerController)const;
+	/** Does ANY local player's focus sit on this widget? */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	bool HasAnyUserFocus()const;
+	/** Does any local player's focus sit on something BELOW this widget? UMG spells it the same way. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	bool HasFocusedDescendants()const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	bool HasUserFocusedDescendants(APlayerController* InPlayerController)const;
+	/** Give up focus if this widget holds the owning player's. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
+	void ClearKeyboardFocus();
+	/** UMG's SupportsKeyboardFocus: the same answer as GetIsFocusable, under the name UMG uses. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	bool SupportsKeyboardFocus()const { return bIsFocusable; }
+
+	/**
+	 * Is a pointer over this widget -- or over anything inside it? UMG's IsHovered, and hover reaching
+	 * ancestors is what makes a button's own hover survive the pointer being over its label.
+	 *
+	 * Asked of the OWNING player's event system: that is the one driving this widget, and a second
+	 * player's cursor wandering across a split-screen boundary does not make the first player's button
+	 * hovered.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Interaction")
+	bool IsHovered()const;
+	/**
+	 * Is a pointer holding its button down on this widget? The nearest thing this framework has to
+	 * Slate's mouse capture: there is no capture object here, but a pressed pointer's PressWidget is
+	 * exactly who keeps receiving its drag and its release, which is what capture means to a caller.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Interaction")
+	bool HasMouseCapture()const;
+	/** Same question for one player, and optionally one pointer. -1 means any of that player's pointers. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Interaction")
+	bool HasMouseCaptureByUser(int32 InUserIndex, int32 InPointerIndex = -1)const;
+
+	/**
+	 * The local player this widget belongs to: the nearest user widget above it owns it, and a tree
+	 * with no user widget in it belongs to the first local player, which is the whole answer in a
+	 * single-player game.
+	 *
+	 * Virtual because UDreamUserWidget answers it for itself -- an explicitly set controller first --
+	 * and an override must NOT repeat the UFUNCTION.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	virtual APlayerController* GetOwningPlayer()const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	ULocalPlayer* GetOwningLocalPlayer()const;
+	/**
+	 * The local player INDEX this widget's screen, focus and input use -- the same number a
+	 * UDreamEventSystem, a raycaster and a pointer event all carry. 0 when it cannot be resolved.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	int32 GetOwningPlayerIndex()const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Player")
+	UGameInstance* GetGameInstance()const;
+	/** The local player index InPlayerController belongs to, or 0. Shared by everything that keys on it. */
+	static int32 GetLocalPlayerIndexOf(const APlayerController* InPlayerController);
+
+	/**
+	 * UMG's IsVisible. The hierarchy is folded in, unlike UMG's, which asks only this widget: the
+	 * cascaded answer is the one already cached here and the one every caller means by "on screen".
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Visibility")
+	bool IsVisible()const { return bCacheRenderVisibleInHierarchy; }
+	/** Visible AND actually contributing colour. A subtree faded to nothing is visible but not rendered. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Visibility")
+	bool IsRendered()const;
+	/** Is this widget, or something it hangs under, currently on a player's screen? */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Screen")
+	bool IsInViewport()const;
+
+	/** Lay this widget's tree out NOW rather than on the next pass -- UMG's ForceLayoutPrepass. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Layout")
+	void ForceLayoutPrepass();
+	/**
+	 * Ask for a layout pass on this widget next frame. UMG's name; the volatility half of it has no
+	 * counterpart here and is not implied -- see the parity table.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Layout")
+	void InvalidateLayoutAndVolatility();
+	/**
+	 * How big this widget WANTS to be, as its parent panel would measure it.
+	 *
+	 * Measuring is a conversation between a container and its child -- a stretched child's answer
+	 * depends on the space it is offered -- so the parent is the only thing that can answer. A widget
+	 * with no measuring parent has only the size layout already gave it, which is what it returns.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Layout")
+	FVector2D GetDesiredSize()const;
+
+	/**
+	 * The in-plane rotation, in degrees -- UMG's render transform angle.
+	 *
+	 * That is the ROLL channel of RenderRotation and not a fifth stored value: depth runs along local
+	 * X here, so turning about X is the rotation that keeps a widget flat against the canvas, and it
+	 * is the one UMG's single angle means. Pitch and yaw are left alone, so a card that is mid-flip
+	 * does not snap back when a graph sets its angle.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderTransformAngle(float InAngle);
+	UFUNCTION(BlueprintPure, Category = "Render Transform")
+	float GetRenderTransformAngle()const { return static_cast<float>(RenderRotation.Roll); }
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Interaction")
 	EMouseCursor::Type GetCursor()const { return Cursor.GetValue(); }
+	/**
+	 * The cursor to show while the pointer is over this widget. Default means "no opinion" and lets
+	 * whatever is underneath claim it, which is why there is no separate override flag here as there
+	 * is in UMG -- DreamPointerPolicy::ResolveCursor walks the hover stack innermost first and takes
+	 * the first widget with an opinion.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Interaction")
 	void SetCursor(EMouseCursor::Type Value) { Cursor = Value; }
+	/** Back to having no opinion, so an ancestor's cursor shows through again. UMG's ResetCursor. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Interaction")
+	void ResetCursor() { Cursor = EMouseCursor::Default; }
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Interaction")
 	const FText& GetToolTipText()const { return ToolTipText; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Interaction")
 	void SetToolTipText(const FText& Value) { ToolTipText = Value; }
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Interaction")
+	TSubclassOf<UDreamUserWidget> GetToolTipWidgetClass()const { return ToolTipWidgetClass; }
+	/** UMG's SetToolTip, by class. Null goes back to the text bubble. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Interaction")
+	void SetToolTipWidgetClass(TSubclassOf<UDreamUserWidget> Value) { ToolTipWidgetClass = Value; }
+
+	UFUNCTION(BlueprintPure, Category = "Localization")
+	EDreamFlowDirectionPreference GetFlowDirectionPreference()const { return FlowDirectionPreference; }
+	/** Changing this re-arranges this widget and every descendant that inherits the answer from it. */
+	UFUNCTION(BlueprintCallable, Category = "Localization")
+	void SetFlowDirectionPreference(EDreamFlowDirectionPreference Value);
+	/**
+	 * Which way this widget's layout actually flows, after following Inherit up the parent chain.
+	 *
+	 * Computed on demand rather than cached, unlike the interactable/visible/raycastable bits beside
+	 * it: those are read on every pointer update and every paint, this one is read once per arrange by
+	 * the container that mirrors, and a cache would need invalidating from attach, detach AND a
+	 * culture change -- three chances to be subtly wrong in exchange for a walk of a handful of links.
+	 *
+	 * A tree in which nobody states a preference answers LeftToRight. Slate's own GSlateFlowDirection
+	 * is deliberately not consulted for that fallback: it is a global Slate sets and restores while
+	 * painting ITS widgets, DreamGUI draws its own geometry and never joins that pass, so reading it
+	 * here would hand back whatever the last unrelated Slate paint happened to leave behind.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Localization")
+	EDreamFlowDirection GetResolvedFlowDirection()const;
+	/**
+	 * Re-arrange whatever in this subtree takes its flow direction from the culture, because the
+	 * culture just changed. GetResolvedFlowDirection already answers the new way on its own -- it
+	 * reads the culture each time it is asked -- so all this does is make the containers ask again.
+	 *
+	 * Driven from UDreamUserWidget's culture-changed handler, which every user widget is already
+	 * registered for. Not per-widget registration: a screen has hundreds of widgets and at most a
+	 * handful of them state a preference at all.
+	 */
+	void RefreshCultureFlowDirection();
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Accessibility")
 	EDreamAccessibleBehavior GetAccessibleBehavior()const { return AccessibleBehavior; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Accessibility")
@@ -1397,7 +1694,25 @@ public:
 	bool GetInteractableInHierarchy()const{return bCacheInteractableInHierarchy;}
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetInteractable(EDreamWidgetInteractableType Value);
-	
+
+	/** This widget's own enabled switch. Ask GetIsEnabledInHierarchy for the answer that counts. */
+	UFUNCTION(BlueprintPure, Category = "Behavior")
+	bool GetIsEnabled()const { return bIsEnabled; }
+	/**
+	 * Disable (or re-enable) this widget and everything under it: the subtree stops taking input and
+	 * every control in it takes on its disabled look, because both read GetInteractableInHierarchy
+	 * and this is AND-ed into it.
+	 *
+	 * Virtual because UMG's is, so a control that has to do something extra when it is switched off
+	 * has the hook. An override must NOT repeat the UFUNCTION.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Behavior")
+	virtual void SetIsEnabled(bool bInIsEnabled);
+	/** True when this widget and every ancestor are enabled. The cascaded answer. */
+	UFUNCTION(BlueprintPure, Category = "Behavior")
+	bool GetIsEnabledInHierarchy()const { return bCacheEnabledInHierarchy; }
+
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	bool GetRestrictNavigationArea()const{return bRestrictNavigationArea;}
 
@@ -1655,6 +1970,8 @@ private:
 	uint32 bCacheSelfHitTestVisibleInHierarchy : 1 = true;
 	uint32 bCacheChildrenHitTestVisibleInHierarchy : 1 = true;
 	uint32 bCacheInteractableInHierarchy : 1 = true;
+	/** "This widget and every ancestor are enabled", kept up to date by the interactable walk. */
+	uint32 bCacheEnabledInHierarchy : 1 = true;
 	uint32 bCacheRaycastableInHierarchy : 1 = true;
 	uint32 bLayoutVisibilitySuppressed : 1 = false;
 	uint32 bHasLayoutClippingOverride : 1 = false;
@@ -1668,6 +1985,11 @@ private:
 	uint32 bParked : 1 = false;
 	/** Cached "this widget or an ancestor declares a perspective", so the usual case is one bit test. */
 	uint32 bHasPerspectiveInHierarchy : 1 = false;
+	/**
+	 * This widget or an ancestor is sheared. The whole point of the bit: while it is false the vertex
+	 * transform stays on the FTransform fast path it has always used, unchanged to the byte.
+	 */
+	uint32 bHasShearInHierarchy : 1 = false;
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
@@ -1682,6 +2004,19 @@ private:
 	void CalculateVisibility_Recursive();
 	void CalculateInteractable_Recursive();
 	void CalculateRaycastable_Recursive();
+	/**
+	 * Re-arrange this widget and the descendants that inherit its flow direction. The walk stops at a
+	 * widget that states its own preference, because nothing below it can have changed answer.
+	 */
+	void MarkFlowDirectionChangedRecursive();
+	/** Re-derives bHasShearInHierarchy for this widget and, when it moved, for everything below. */
+	void RefreshShearInHierarchy();
+	/** What a shear change costs: the hierarchy bit, the transform and a canvas update. */
+	void ApplyRenderShearChange();
+	/** How many local players the any-user focus queries have to ask about. Never less than one. */
+	int32 GetLocalPlayerCountForQueries()const;
+	/** Does one player's focus sit on something strictly below this widget? */
+	bool HasFocusedDescendantForUser(int32 InUserIndex)const;
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position X To"), Category = "DreamTween")

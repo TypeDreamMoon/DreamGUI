@@ -2254,10 +2254,12 @@ FDreamUIGeometry::FTransformVerticesParams FDreamUIGeometry::MakeTransformVertic
 	FTransformVerticesParams Params;
 	Params.InverseCanvasTransform = canvas->GetWidget()->GetWorldTransform().Inverse();
 	Params.ItemWorldTransform = item->GetWidget()->GetWorldTransform();
-	Params.bHasPerspectiveApplied = item->GetWidget()->HasPerspectiveApplied();
-	if (Params.bHasPerspectiveApplied)
+	const UDreamWidget* ItemWidget = item->GetWidget();
+	Params.bUseWorldMatrix = ItemWidget->HasPerspectiveApplied() || ItemWidget->HasShearApplied();
+	if (Params.bUseWorldMatrix)
 	{
-		Params.ItemWorldMatrix = item->GetWidget()->GetWorldMatrix();
+		// GetWorldMatrix folds in whichever of the two applies, and both when both do.
+		Params.ItemWorldMatrix = ItemWidget->GetWorldMatrix();
 	}
 	//read after CalculateLocalBounds has run, which is why that call has to stay on the game thread too
 	item->GetGeometryBoundsInLocalSpace(Params.LocalBoundsMin, Params.LocalBoundsMax);
@@ -2296,12 +2298,13 @@ void FDreamUIGeometry::TransformVertices(const FTransformVerticesParams& Params,
 	uiGeo->BoundsMin2DInCanvasSpace = itemMin;
 	uiGeo->BoundsMax2DInCanvasSpace = itemMax;
 
-	if (Params.bHasPerspectiveApplied)
+	if (Params.bUseWorldMatrix)
 	{
-		// Inside a perspective scope the widget is drawn somewhere its FTransform does not describe,
-		// so the positions and the bounds both have to come from the remapped geometry. The bounds
-		// matter as much as the vertices: they drive batching overlap and culling, and bounds that
-		// still described the un-foreshortened rect would cull widgets that are plainly on screen.
+		// Inside a perspective scope, or under a render shear, the widget is drawn somewhere its
+		// FTransform does not describe, so the positions and the bounds both have to come from the
+		// remapped geometry. The bounds matter as much as the vertices: they drive batching overlap
+		// and culling, and bounds that still described the un-slanted rect would cull widgets that
+		// are plainly on screen.
 		const FMatrix ItemToCanvasMatrix = Params.ItemWorldMatrix * inverseCanvasTf.ToMatrixWithScale();
 		FVector2D RemappedMin(TNumericLimits<double>::Max(), TNumericLimits<double>::Max());
 		FVector2D RemappedMax(TNumericLimits<double>::Lowest(), TNumericLimits<double>::Lowest());

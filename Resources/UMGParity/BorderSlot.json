@@ -1,0 +1,13 @@
+{
+	"umgClass": "UBorderSlot",
+	"umgHeader": "Components/BorderSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "SetPadding", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""}
+	]
+}

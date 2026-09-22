@@ -307,15 +307,9 @@ private:
 		bool bHidePrevious = true;
 	};
 
-	/** One screen-space root canvas, one raycaster host, per local player. Keyed by local player index. */
+	/** One screen-space root canvas per local player. Keyed by local player index. */
 	UPROPERTY(Transient)
 	TMap<int32, TObjectPtr<UDreamWidget>> ScreenRoots;
-
-	UPROPERTY(Transient)
-	TMap<int32, TObjectPtr<AActor>> InteractionHosts;
-
-	UPROPERTY(Transient)
-	TObjectPtr<AActor> CreatedEventSystemActor;
 
 	/** Indices whose root this subsystem made, and therefore has to destroy. */
 	TSet<int32> OwnedScreenRoots;
@@ -355,6 +349,10 @@ private:
 	void CompletePageLoad(FName InName);
 	void ExecuteLoadCallbacks(FName InName, FPendingPageLoad& InPendingLoad, UDreamWidget* InPage, bool bSuccess);
 	void DestroyPage(UDreamWidget* InRoot);
+	/**
+	 * Make sure this player can point at their screen: the manager supplies the event system and the
+	 * screen raycaster, and this binds that raycaster to InRootCanvas.
+	 */
 	void EnsureInteractionObjects(UDreamCanvas* InRootCanvas, int32 InPlayerIndex);
 
 	/** The local player index of InOwningPlayer, or of the first local player when it is null. */

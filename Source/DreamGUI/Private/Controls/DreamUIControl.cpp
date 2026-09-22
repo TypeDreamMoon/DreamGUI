@@ -5,7 +5,10 @@
 #include "DreamGUI.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamPanelLayouts.h"
+#include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/UISelectable.h"
 #include "UObject/UnrealType.h"
 
 void UDreamUIControl::NativeOnInitialized()
@@ -198,5 +201,127 @@ void DreamUI_ApplyStyleOverrides(const UScriptStruct* InStruct, void* OutBase, c
 		Field->CopySingleValue(
 			Field->ContainerPtrToValuePtr<void>(OutBase),
 			Field->ContainerPtrToValuePtr<const void>(InOverrides));
+	}
+}
+
+void UDreamUIControl::SetStyleSource(EDreamUIStyleSource InStyleSource)
+{
+	StyleSource = InStyleSource;
+	// The whole of what this property does is decide what ResolveStyle answers, so the push IS the
+	// effect: without it the control keeps wearing the look the previous source resolved to.
+	ApplyStyle();
+}
+
+void UDreamUIControl::SetStyleVariant(FName InStyleVariant)
+{
+	StyleVariant = InStyleVariant;
+	ApplyStyle();
+}
+
+namespace DreamUIControlStateFacesLocal
+{
+	/** What the control's own label wears in InState. Only ever asked while the tint bit is ticked. */
+	FColor Foreground(const FDreamUIStateFaces& InFaces, EUISelectableSelectionState InState)
+	{
+		switch (InState)
+		{
+		case EUISelectableSelectionState::Hovered: return InFaces.HoveredForeground;
+		case EUISelectableSelectionState::Pressed: return InFaces.PressedForeground;
+		case EUISelectableSelectionState::Disabled: return InFaces.DisabledForeground;
+		case EUISelectableSelectionState::Focused: return InFaces.FocusedForeground;
+		default: return InFaces.NormalForeground;
+		}
+	}
+}
+
+void UDreamUIControl::UseStateFaces(UUISelectable* InSelectable, UDreamWidget* InFaceNode, UDreamWidget* InForegroundNode)
+{
+	StateFaceNode = InFaceNode;
+	StateForegroundNode = InForegroundNode;
+	if (StateFaceSelectable != nullptr && StateFaceSelectable != InSelectable)
+	{
+		StateFaceSelectable->GetOnSelectionStateChangedEvent().RemoveAll(this);
+	}
+	StateFaceSelectable = InSelectable;
+	if (InSelectable != nullptr)
+	{
+		// Dropped before it is added: WireParts is the one caller, but a control re-initialized (a
+		// designer recompile, a test building the same control twice) would otherwise hold two
+		// bindings and repaint the same face twice for every state it enters.
+		InSelectable->GetOnSelectionStateChangedEvent().RemoveAll(this);
+		InSelectable->GetOnSelectionStateChangedEvent().AddUObject(this, &UDreamUIControl::HandleSelectionStateChanged);
+		StateFaceState = InSelectable->GetSelectionState();
+	}
+}
+
+void UDreamUIControl::PushStateFaces(const FDreamUIStateFaces& InFaces, const FDreamUIFaceBrush& InFallbackBrush)
+{
+	StateFaces = InFaces;
+	StateFaceFallback = InFallbackBrush;
+	if (StateFaceSelectable != nullptr)
+	{
+		StateFaceState = StateFaceSelectable->GetSelectionState();
+		// The sounds are not something to LOOK at, so they do not travel through the listener: they
+		// describe a transition, and the selectable is what notices one. Pushed on every style push
+		// like every other knob in this family, because on the template road the selectable is one
+		// this control just added and carries the library's defaults rather than the sheet's.
+		StateFaceSelectable->SetHoveredSound(InFaces.HoveredSound);
+		StateFaceSelectable->SetPressedSound(InFaces.PressedSound);
+		StateFaceSelectable->SetClickedSound(InFaces.ClickedSound);
+	}
+	RefreshStateFace();
+}
+
+void UDreamUIControl::UseStateFacePadding(const FMargin& InNormalPadding)
+{
+	StateFaceNormalPadding = InNormalPadding;
+	bStateFacePaddingStated = true;
+}
+
+void UDreamUIControl::SetStateFaceTint(FColor InTint)
+{
+	StateFaceTint = InTint;
+	RefreshStateFace();
+}
+
+void UDreamUIControl::RefreshStateFace()
+{
+	// Immediate: this is a re-push of a state the control is ALREADY in, not a transition into one.
+	HandleSelectionStateChanged(StateFaceState, true);
+}
+
+const FDreamUIFaceBrush& UDreamUIControl::ResolveStateBrush(EUISelectableSelectionState InState) const
+{
+	// The chain itself lives on the struct, because a list paints one face PER ROW and would
+	// otherwise need its own copy of it -- see FDreamUIStateFaces::BrushFor.
+	return StateFaces.BrushFor(InState, StateFaceFallback);
+}
+
+void UDreamUIControl::HandleSelectionStateChanged(EUISelectableSelectionState InState, bool /*bInImmediate*/)
+{
+	StateFaceState = InState;
+	if (StateFaceNode != nullptr)
+	{
+		FDreamUIFaceBrush Brush = ResolveStateBrush(InState);
+		Brush.Tint = TintOver(Brush.Tint, StateFaceTint);
+		SkinFace(StateFaceNode, Brush);
+	}
+	if (StateFaces.bTintForeground && StateForegroundNode != nullptr)
+	{
+		if (UDreamVisual* Foreground = StateForegroundNode->GetVisual())
+		{
+			Foreground->SetColor(DreamUIControlStateFacesLocal::Foreground(StateFaces, InState));
+		}
+	}
+	if (StateFaces.bUsePressedPadding && bStateFacePaddingStated && StateFaceNode != nullptr)
+	{
+		// Cast rather than assumed: on the template road the face carries whatever container its
+		// author drew, and a pressed padding is a thing only a measuring container can honour.
+		if (UDreamLayoutContainerSizeBox* Box = Cast<UDreamLayoutContainerSizeBox>(StateFaceNode->GetLayoutContainer()))
+		{
+			Box->SetPadding(InState == EUISelectableSelectionState::Pressed
+				? StateFaces.PressedPadding
+				: StateFaceNormalPadding);
+		}
 	}
 }

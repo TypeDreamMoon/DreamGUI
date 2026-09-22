@@ -287,6 +287,111 @@ void UDreamScrollBar::SetShowArrows(bool bInShowArrows)
 	ApplyStyle();
 }
 
+void UDreamScrollBar::SetStyle(const FDreamScrollBarStyle& InStyle)
+{
+	Style = InStyle;
+	// Thickness, the handle's inset and the corner radius are all geometry this control writes, so a
+	// style write is a re-layout rather than a repaint.
+	ApplyStyle();
+}
+
+void UDreamScrollBar::SetDirection(EUIScrollbarDirectionType InDirection)
+{
+	if (Direction == InDirection)
+	{
+		return;
+	}
+	Direction = InDirection;
+	// Which way it runs decides the track's axis, the handle's rect, which end zero is, and where the
+	// two arrows go -- all of it written in ApplyStyle.
+	ApplyStyle();
+}
+
+void UDreamScrollBar::SetMinHandleLength(float InLength)
+{
+	MinHandleLength = FMath::Max(0.0f, InLength);
+	// The floor is applied to the drawn length and to the drag scale together, and both are settled
+	// in the style push. Writing the field alone would leave a handle drawn at the old floor.
+	ApplyStyle();
+}
+
+void UDreamScrollBar::SetNavigationChangeInterval(float InInterval)
+{
+	NavigationChangeInterval = FMath::Clamp(InInterval, 0.0f, 1.0f);
+	ApplyStyle();
+}
+
+void UDreamScrollBar::SetArrowStepSize(float InStep)
+{
+	// No style push: the step is spent when an arrow is clicked, and nothing about the bar's shape
+	// depends on it.
+	ArrowStepSize = FMath::Clamp(InStep, 0.0f, 1.0f);
+}
+
+void UDreamScrollBar::SetAlwaysShowScrollbar(bool bInAlwaysShow)
+{
+	if (bAlwaysShowScrollbar == bInAlwaysShow)
+	{
+		return;
+	}
+	bAlwaysShowScrollbar = bInAlwaysShow;
+	// Re-asked immediately against whatever the bar is currently showing, so turning it off hides a
+	// bar that already had nothing to say rather than waiting for the next scroll.
+	ApplyAutoHide(HandleSize);
+}
+
+void UDreamScrollBar::SetAlwaysShowScrollbarTrack(bool bInAlwaysShow)
+{
+	if (bAlwaysShowScrollbarTrack == bInAlwaysShow)
+	{
+		return;
+	}
+	bAlwaysShowScrollbarTrack = bInAlwaysShow;
+	ApplyAutoHide(HandleSize);
+}
+
+void UDreamScrollBar::SetState(float InOffsetFraction, float InThumbSizeFraction, bool bInCollapseIfNecessary)
+{
+	// Both numbers at once, which is what a scroll view actually has: writing them one at a time
+	// lays the handle out twice for one change, and the intermediate shape is a lie.
+	PushValueAndSize(InOffsetFraction, InThumbSizeFraction, false);
+	if (bInCollapseIfNecessary)
+	{
+		ApplyAutoHide(InThumbSizeFraction);
+	}
+}
+
+void UDreamScrollBar::ApplyAutoHide(float InFraction)
+{
+	if (bAlwaysShowScrollbar)
+	{
+		// Deliberately not SetWidgetActive(true): a scroll box decides whether ITS bar is on screen,
+		// through the same flag, and this runs on every range refresh -- so asserting visibility here
+		// would undo the box's auto-hide one line after it was made. "Always show" means this bar
+		// never hides ITSELF, not that it overrules whoever placed it.
+		return;
+	}
+	// A fraction of one is "the window already shows everything", which is the only state there is
+	// nothing to scroll in. Anything less and the bar has something to say.
+	const bool bEverythingFits = InFraction >= 1.0f - KINDA_SMALL_NUMBER;
+	if (!bEverythingFits)
+	{
+		SetWidgetActive(true);
+		if (HandleNode != nullptr)
+		{
+			HandleNode->SetWidgetActive(true);
+		}
+		return;
+	}
+	// Nothing to scroll and the author did not ask for the bar to stay: either the groove stays
+	// behind with its handle asleep, or the whole bar goes and the layout gets the space back.
+	SetWidgetActive(bAlwaysShowScrollbarTrack);
+	if (HandleNode != nullptr)
+	{
+		HandleNode->SetWidgetActive(false);
+	}
+}
+
 float UDreamScrollBar::GetValue() const
 {
 	return BarBehaviour != nullptr ? BarBehaviour->GetValue() : Value;
@@ -360,6 +465,10 @@ void UDreamScrollBar::RefreshFromScrollView()
 	// Direction has already decided it. Inverting here as well would cancel out on two of the four.
 	const FVector2D Progress = View->GetScrollProgress();
 	PushValueAndSize(static_cast<float>(bHorizontal ? Progress.X : Progress.Y), Fraction, false);
+	// Only a bar ATTACHED to a view can know it has nothing to say, which is why the auto-hide
+	// question is asked here and not in the style push: a bare bar is a value control in its own
+	// right, and a value control with nothing to scroll is not a thing.
+	ApplyAutoHide(Fraction);
 }
 
 void UDreamScrollBar::PushValueAndSize(float InValue, float InFraction, bool bInBroadcast)

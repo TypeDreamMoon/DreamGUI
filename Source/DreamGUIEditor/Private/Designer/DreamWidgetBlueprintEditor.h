@@ -441,6 +441,17 @@ public:
 	static TSharedPtr<FDreamWidgetPreviewHost> FindPreviewHostForAnimationContext(UDreamWidget* InAuthoredWidget);
 	/** The template counterpart of a preview widget, for anything about to write authored data. */
 	UDreamWidget* GetTemplateWidget(const UDreamWidget* InPreviewWidget) const;
+	/**
+	 * Where a drop onto InPreviewParent lands in the AUTHORING tree.
+	 *
+	 * For a preview widget with a template counterpart: that template, and no slot. For the hole of
+	 * a placed control -- the "Content" row under a Button, a widget the control built and this asset
+	 * never authored, so has no template for -- the template of the instance that opened it, and the
+	 * hole's name: the content goes under that instance in this asset's tree, bound to that slot.
+	 * Anything else (the design canvas, the designer's own wrapper above the authored root) is
+	 * nowhere to put a widget, and answers false.
+	 */
+	bool ResolveTemplateParentFor(const UDreamWidget* InPreviewParent, UDreamWidget*& OutParentTemplate, FName& OutSlotName) const;
 
 	TSharedPtr<SDreamWidgetAnimationEditor> GetSequencerEditor()const{return SequencerPtr;}
 	static FName GetSequencerTabID();

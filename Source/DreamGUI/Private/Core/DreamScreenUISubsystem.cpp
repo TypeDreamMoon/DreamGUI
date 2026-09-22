@@ -2,7 +2,6 @@
 
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUserWidget.h"
-#include "Core/DreamGUISettings.h"
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
@@ -11,8 +10,6 @@
 #include "Engine/Engine.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/World.h"
-#include "EngineUtils.h"
-#include "Event/DreamEventSystem.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
@@ -56,14 +53,6 @@ void UDreamScreenUISubsystem::Deinitialize()
 	PageDefinitions.Reset();
 	RemoveAllUI();
 
-	for (TPair<int32, TObjectPtr<AActor>>& HostPair : InteractionHosts)
-	{
-		if (IsValid(HostPair.Value))
-		{
-			HostPair.Value->Destroy();
-		}
-	}
-	InteractionHosts.Reset();
 	for (TPair<int32, TObjectPtr<UDreamWidget>>& RootPair : ScreenRoots)
 	{
 		if (OwnedScreenRoots.Contains(RootPair.Key) && IsUsablePage(RootPair.Value))
@@ -73,12 +62,6 @@ void UDreamScreenUISubsystem::Deinitialize()
 	}
 	ScreenRoots.Reset();
 	OwnedScreenRoots.Reset();
-
-	if (IsValid(CreatedEventSystemActor))
-	{
-		CreatedEventSystemActor->Destroy();
-		CreatedEventSystemActor = nullptr;
-	}
 
 	Super::Deinitialize();
 }
@@ -257,84 +240,40 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 	{
 		return;
 	}
-
 	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
-	bool bHasScreenRaycaster = false;
-	if (Manager)
+	if (Manager == nullptr)
 	{
-		for (const TWeakObjectPtr<UDreamBaseRaycaster>& Raycaster : Manager->GetAllRaycasterArray())
+		return;
+	}
+	// Creating the event system and the raycaster is the manager's job, because a world-space host
+	// needs exactly the same pair and neither of them is anything to do with a screen. What is left
+	// here is the part that IS: telling this player's screen raycaster which canvas it projects
+	// through, which the manager has no way to know.
+	Manager->EnsureInteractionForPlayer(InPlayerIndex, EDreamInteractionKind::Screen);
+
+	for (const TWeakObjectPtr<UDreamBaseRaycaster>& Raycaster : Manager->GetAllRaycasterArray())
+	{
+		UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get());
+		// Only a raycaster that speaks for THIS player. A second player's raycaster carries its own
+		// UserIndex and must keep pointing at its own canvas; retargeting every screen raycaster at
+		// whichever root was built last is what made split screen impossible.
+		if (ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
 		{
-			UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get());
-			// Only a raycaster that speaks for THIS player. A second player's raycaster carries its own
-			// UserIndex and must keep pointing at its own canvas; retargeting every screen raycaster at
-			// whichever root was built last is what made split screen impossible.
-			if (ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
+			ScreenRaycaster->SetRootCanvas(InRootCanvas);
+		}
+	}
+	// The one the manager has just created is on its host actor and has not necessarily enrolled --
+	// enrolment happens on activation, which a world that has not begun play never performs -- so it
+	// would otherwise be left without a canvas until the first frame of play.
+	if (const AActor* Host = Manager->GetInteractionHost(InPlayerIndex))
+	{
+		for (UActorComponent* Component : Host->GetComponents())
+		{
+			if (UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Component);
+				ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
 			{
 				ScreenRaycaster->SetRootCanvas(InRootCanvas);
-				bHasScreenRaycaster = true;
 			}
-		}
-	}
-
-	TObjectPtr<AActor>& HostSlot = InteractionHosts.FindOrAdd(InPlayerIndex);
-	if (!bHasScreenRaycaster && !IsValid(HostSlot))
-	{
-		FActorSpawnParameters SpawnParameters;
-		SpawnParameters.Name = MakeUniqueObjectName(GetWorld(), AActor::StaticClass(),
-			*FString::Printf(TEXT("DreamScreenInteractionHost_P%d"), InPlayerIndex));
-		SpawnParameters.ObjectFlags |= RF_Transient;
-		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		HostSlot = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, SpawnParameters);
-		if (HostSlot)
-		{
-			HostSlot->SetActorEnableCollision(false);
-			UDreamScreenSpaceRaycaster* Raycaster = NewObject<UDreamScreenSpaceRaycaster>(HostSlot, NAME_None, RF_Transient);
-			Raycaster->SetUserIndex(InPlayerIndex);
-			Raycaster->SetRootCanvas(InRootCanvas);
-			HostSlot->AddInstanceComponent(Raycaster);
-			Raycaster->RegisterComponent();
-		}
-	}
-
-	// The event system for THIS player, not "the one at index 0". A second local player with no event
-	// system of their own gets nothing rather than borrowing the first player's cursor.
-	bool bHasEventSystem = Manager && Manager->GetEventSystemByUserIndex(InPlayerIndex) != nullptr;
-	if (!bHasEventSystem)
-	{
-		for (TActorIterator<AActor> ActorIt(GetWorld()); ActorIt; ++ActorIt)
-		{
-			if (const UDreamEventSystem* PlacedEventSystem = ActorIt->FindComponentByClass<UDreamEventSystem>();
-				PlacedEventSystem != nullptr && PlacedEventSystem->GetUserIndex() == InPlayerIndex)
-			{
-				bHasEventSystem = true;
-				break;
-			}
-		}
-	}
-	// Only the first player gets one spawned for them. A second local player's event system has to be
-	// placed deliberately -- with its UserIndex set -- because spawning a copy of the default actor
-	// would give both players the same index and make each read the other's input.
-	if (!bHasEventSystem && InPlayerIndex != ResolvePlayerIndex(nullptr))
-	{
-		UE_LOG(DreamGUI, Warning,
-			TEXT("Local player %d has a DreamUI screen but no event system with that UserIndex, so it takes no input. ")
-			TEXT("Place a DreamEventSystem with UserIndex %d for that player."), InPlayerIndex, InPlayerIndex);
-	}
-	else if (!bHasEventSystem && !IsValid(CreatedEventSystemActor))
-	{
-		if (UClass* EventSystemClass = UDreamGUISettings::LoadSettingClass(
-			UDreamGUISettings::Get()->EventSystemActorClass, TEXT("EventSystemActorClass")))
-		{
-			FActorSpawnParameters SpawnParameters;
-			SpawnParameters.Name = MakeUniqueObjectName(GetWorld(), EventSystemClass, TEXT("DreamEventSystem"));
-			SpawnParameters.ObjectFlags |= RF_Transient;
-			SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			CreatedEventSystemActor = GetWorld()->SpawnActor<AActor>(EventSystemClass, FTransform::Identity, SpawnParameters);
-		}
-		else
-		{
-			UE_LOG(DreamGUI, Error, TEXT("Cannot create screen UI input: Project Settings > Plugins > Dream GUI > ")
-				TEXT("EventSystemActorClass is not set or failed to load."));
 		}
 	}
 }

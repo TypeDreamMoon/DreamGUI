@@ -208,6 +208,21 @@ void UDreamThrobber::ApplyPhase(const FDreamThrobberStyle& InStyle)
 		const float PieceTurns = Phase - (static_cast<float>(Index) / static_cast<float>(Count));
 		const float Wave = 0.5f * (1.0f + FMath::Cos(2.0f * PI * PieceTurns));
 		Piece->SetRenderOpacity(FMath::Lerp(Floor, 1.0f, Wave));
+		if (bAnimateHorizontally || bAnimateVertically)
+		{
+			// Slate's rule for the same two flags: the piece is SCALED on the ticked axis by the very
+			// wave that is driving its opacity, so it swells as it brightens. One wave for both rather
+			// than a second clock, because two clocks on one piece is how a pulse starts to shimmer.
+			//
+			// Touched only while a flag is on, which is what keeps every existing throbber's pieces
+			// exactly the size the placement gave them.
+			Piece->SetWidth(bAnimateHorizontally
+				? static_cast<float>(InStyle.PieceSize.X) * Wave
+				: static_cast<float>(InStyle.PieceSize.X));
+			Piece->SetHeight(bAnimateVertically
+				? static_cast<float>(InStyle.PieceSize.Y) * Wave
+				: static_cast<float>(InStyle.PieceSize.Y));
+		}
 	}
 }
 
@@ -226,6 +241,15 @@ void UDreamThrobber::NativeOnTick(float DeltaTime)
 	ApplyPhase(Active);
 }
 
+void UDreamThrobber::SetStyle(const FDreamThrobberStyle& InStyle)
+{
+	Style = InStyle;
+	// The push is what resizes the piece pool, re-places every piece and re-writes the opacities, so
+	// a replacement style with a different NumberOfPieces lands whole rather than as a colour change
+	// over the previous count.
+	ApplyStyle();
+}
+
 void UDreamThrobber::SetShape(EDreamThrobberShape InShape)
 {
 	if (Shape == InShape)
@@ -235,6 +259,83 @@ void UDreamThrobber::SetShape(EDreamThrobberShape InShape)
 	Shape = InShape;
 	// Through the style push, because the shape decides the control's own size as well as where the
 	// pieces go, and a caller should not have to know that.
+	ApplyStyle();
+}
+
+void UDreamThrobber::SetAnimateHorizontally(bool bInAnimateHorizontally)
+{
+	if (bAnimateHorizontally == bInAnimateHorizontally)
+	{
+		return;
+	}
+	bAnimateHorizontally = bInAnimateHorizontally;
+	// Through the style push, which re-places every piece at its authored size: a piece frozen
+	// mid-pulse would otherwise keep whatever width the last tick gave it.
+	ApplyStyle();
+}
+
+void UDreamThrobber::SetAnimateVertically(bool bInAnimateVertically)
+{
+	if (bAnimateVertically == bInAnimateVertically)
+	{
+		return;
+	}
+	bAnimateVertically = bInAnimateVertically;
+	ApplyStyle();
+}
+
+int32 UDreamThrobber::GetNumberOfPieces() const
+{
+	return ResolveStyle(Style, &UDreamUIStyleSheet::ThrobberStyle).NumberOfPieces;
+}
+
+void UDreamThrobber::SetNumberOfPieces(int32 InNumberOfPieces)
+{
+	// Clamped where the style clamps it. The push is what actually makes or destroys pieces.
+	Style.NumberOfPieces = FMath::Clamp(InNumberOfPieces, 1, 32);
+	ApplyStyle();
+}
+
+float UDreamThrobber::GetPeriod() const
+{
+	return ResolveStyle(Style, &UDreamUIStyleSheet::ThrobberStyle).Period;
+}
+
+void UDreamThrobber::SetPeriod(float InPeriod)
+{
+	Style.Period = FMath::Max(InPeriod, 0.01f);
+	ApplyStyle();
+}
+
+float UDreamThrobber::GetRadius() const
+{
+	return ResolveStyle(Style, &UDreamUIStyleSheet::ThrobberStyle).Radius;
+}
+
+void UDreamThrobber::SetRadius(float InRadius)
+{
+	Style.Radius = FMath::Max(InRadius, 1.0f);
+	ApplyStyle();
+}
+
+bool UDreamThrobber::GetAnimateOpacity() const
+{
+	// A floor of 1 is every piece staying solid, which is UMG's flag being off.
+	return ResolveStyle(Style, &UDreamUIStyleSheet::ThrobberStyle).MinOpacity < 1.0f;
+}
+
+void UDreamThrobber::SetAnimateOpacity(bool bInAnimateOpacity)
+{
+	if (!bInAnimateOpacity)
+	{
+		Style.MinOpacity = 1.0f;
+	}
+	else if (Style.MinOpacity >= 1.0f)
+	{
+		// Only from a pinned floor, so switching off and on again is not a way to lose a hand-tuned
+		// value -- and a throbber that is already fading keeps fading exactly as far as it did.
+		Style.MinOpacity = FDreamThrobberStyle().MinOpacity;
+	}
 	ApplyStyle();
 }
 

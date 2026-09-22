@@ -540,7 +540,12 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollX(float AxisValue)
 	}
 	const UWorld* World = GetWorld();
 	const float DeltaSeconds = World != nullptr ? World->GetDeltaSeconds() : 0.0f;
-	if (FDreamUINavigationScroll::ScrollByDelta(Focused, FVector2D(AxisValue * GamepadScrollSpeed * DeltaSeconds, 0.0f)))
+	// Through the key-aware road: a scrolling container may have named the analog key that acts as
+	// its wheel, and one that named the other axis (or a key this preset does not bind) must not be
+	// driven by this one. Naming nothing keeps the stick, which is what every container does by
+	// default.
+	if (FDreamUINavigationScroll::ScrollByAnalogAxis(Focused, EKeys::Gamepad_RightX,
+		FVector2D(AxisValue * GamepadScrollSpeed * DeltaSeconds, 0.0f)))
 	{
 		ReportDeviceForKey(EKeys::Gamepad_RightX);
 	}
@@ -562,7 +567,8 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollY(float AxisValue)
 	const float DeltaSeconds = World != nullptr ? World->GetDeltaSeconds() : 0.0f;
 	// Pushing the stick UP shows earlier content, which is a SMALLER scroll offset -- the offset is
 	// the distance scrolled from the start, not the position of the viewport's top edge.
-	if (FDreamUINavigationScroll::ScrollByDelta(Focused, FVector2D(0.0f, -AxisValue * GamepadScrollSpeed * DeltaSeconds)))
+	if (FDreamUINavigationScroll::ScrollByAnalogAxis(Focused, EKeys::Gamepad_RightY,
+		FVector2D(0.0f, -AxisValue * GamepadScrollSpeed * DeltaSeconds)))
 	{
 		ReportDeviceForKey(EKeys::Gamepad_RightY);
 	}

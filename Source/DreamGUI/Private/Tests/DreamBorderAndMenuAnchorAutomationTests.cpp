@@ -222,6 +222,25 @@ bool FDreamMenuAnchorPlacementArithmeticTest::RunTest(const FString& Parameters)
 		Anchor::FitMenuInWindow(FVector2D(10.0, 100.0), FVector2D(120.0, 900.0), FVector2D(1000.0, 600.0))
 			.Equals(FVector2D(10.0, 0.0), 0.01));
 
+	// The same fit, asked from the panel's own space, which is where the arrange pass stands. An 80-wide
+	// anchor sitting 900 into a 1000-wide window, with a 200-wide menu hung below its left edge.
+	const FVector2D Window(1000.0, 600.0);
+	const FVector2D WideMenu(200.0, 60.0);
+	TestTrue(TEXT("Left-to-right, the overhang is taken back out of the panel-space position"),
+		Anchor::FitMenuInWindowFromPanelSpace(FVector2D(0.0, 30.0), WideMenu, FVector2D(900.0, 0.0), 80.0f, Window, false)
+			.Equals(FVector2D(-100.0, 30.0), 0.01));
+	// Mirrored, that same menu is committed reflected: it hangs off the anchor's RIGHT edge leftwards,
+	// 780..980 in the window, which already fits -- so the answer is the position it came in with. A fit
+	// that ignored the reflection would have shifted it by the hundred it does not need.
+	TestTrue(TEXT("Right-to-left, a menu whose mirrored rect already fits is left alone"),
+		Anchor::FitMenuInWindowFromPanelSpace(FVector2D(0.0, 30.0), WideMenu, FVector2D(900.0, 0.0), 80.0f, Window, true)
+			.Equals(FVector2D(0.0, 30.0), 0.01));
+	// And near the LEFT edge it is the mirrored rect that overhangs (-70..130), so that is what gets
+	// pulled in: committing -70 reflects to -50 in the panel, which is the window's own left edge.
+	TestTrue(TEXT("Right-to-left, it is the mirrored rect that is kept inside the window"),
+		Anchor::FitMenuInWindowFromPanelSpace(FVector2D(0.0, 30.0), WideMenu, FVector2D(50.0, 0.0), 80.0f, Window, true)
+			.Equals(FVector2D(-70.0, 30.0), 0.01));
+
 	return true;
 }
 

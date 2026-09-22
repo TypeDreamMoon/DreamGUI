@@ -25,6 +25,7 @@ namespace DreamPanelSlotCustomizationLocal
 		bool bLinear = false;
 		bool bGrid = false;
 		bool bUniformGrid = false;
+		bool bWrap = false;
 	};
 
 	FPanelContext GetPanelContext(const UDreamLayoutContainer* ParentLayout)
@@ -36,6 +37,7 @@ namespace DreamPanelSlotCustomizationLocal
 		Result.bLinear = ParentLayout && ParentLayout->IsA<UDreamLayoutContainerStackBox>();
 		Result.bGrid = ParentLayout && ParentLayout->IsA<UDreamLayoutContainerGridPanel>();
 		Result.bUniformGrid = ParentLayout && ParentLayout->IsA<UDreamLayoutContainerUniformGridPanel>();
+		Result.bWrap = ParentLayout && ParentLayout->IsA<UDreamLayoutContainerWrapBox>();
 		return Result;
 	}
 
@@ -198,6 +200,20 @@ void FDreamPanelSlotCustomization::AddSlotProperties(
 		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, Column));
 		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, RowSpan));
 		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, ColumnSpan));
+	}
+	if (Context.bWrap)
+	{
+		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, bFillEmptySpace));
+		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, FillSpanWhenLessThan));
+		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, bForceNewLine));
+	}
+	if (!Context.bCanvas)
+	{
+		// Every arranging panel honours these three, so every one of them shows them: a value that
+		// takes effect and has no row is one an author can only find by reading the file.
+		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, MinDesiredSize));
+		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, MaxDesiredSize));
+		Category.AddExternalObjectProperty(SlotObjects, GET_MEMBER_NAME_CHECKED(UDreamPanelSlot, Nudge));
 	}
 	if (ShouldShowZOrder(ParentLayout))
 	{

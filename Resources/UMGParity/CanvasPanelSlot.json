@@ -1,0 +1,28 @@
+{
+	"umgClass": "UCanvasPanelSlot",
+	"umgHeader": "Components/CanvasPanelSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "LayoutData", "kind": "property", "status": "map", "dream": "UDreamWidget::AnchorData", "note": "A canvas child states its rect on the widget itself (pivot, anchor min/max, anchored position, size delta). The slot reads and writes that data instead of keeping a second copy of it."},
+		{"umg": "bAutoSize", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ZOrder", "kind": "property", "status": "adopt", "dream": "", "note": "Honoured by Overlay and GridPanel always, and by CanvasPanel when SortChildrenByZOrder is on."},
+		{"umg": "SetLayout", "kind": "function", "status": "adopt", "dream": "", "note": "Takes FDreamUIAnchorData, which is this plugin's FAnchorData."},
+		{"umg": "GetLayout", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetPosition", "kind": "function", "status": "adopt", "dream": "", "note": "The alignment point's offset from the anchor. y points UP here, as it does in every other transform setter in the plugin, rather than down as in UMG."},
+		{"umg": "GetPosition", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetSize", "kind": "function", "status": "adopt", "dream": "", "note": "Writes SizeDelta: the resolved size on a point anchor, and the size beyond the anchor span on a stretched one. The box-slot SetSize(FSlateChildSize) could not also have this name, since there is one slot class here; it is SetSizeRule/SetFillWeight."},
+		{"umg": "GetSize", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetOffsets", "kind": "function", "status": "adopt", "dream": "", "note": "The four edge insets from the anchor rect, which is UMG's meaning on a stretched axis; on a point anchor UMG reuses Right/Bottom to mean the size and this does not -- that reading is GetSize/SetSize."},
+		{"umg": "GetOffsets", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetAnchors", "kind": "function", "status": "adopt", "dream": "", "note": "Takes FAnchors. Minimum is the bottom-left corner of the anchor rect, because y points up here."},
+		{"umg": "GetAnchors", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMinimum", "kind": "function", "status": "adopt", "dream": "", "note": "Added to the skeleton: reflected on UCanvasPanelSlot as a bare UFUNCTION, so the scan missed it."},
+		{"umg": "SetMaximum", "kind": "function", "status": "adopt", "dream": "", "note": "Added to the skeleton, as SetMinimum."},
+		{"umg": "SetAlignment", "kind": "function", "status": "adopt", "dream": "", "note": "This plugin's Pivot: same quantity, same 0..1 range, y up."},
+		{"umg": "GetAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetAutoSize", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "GetAutoSize", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetZOrder", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "GetZOrder", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

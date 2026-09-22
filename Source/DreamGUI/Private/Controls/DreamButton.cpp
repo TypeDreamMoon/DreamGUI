@@ -11,6 +11,7 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamContentWidget.h"
+#include "Interaction/DreamUIDragDrop.h"
 #include "Interaction/UIButton.h"
 
 const FName UDreamButton::ContentSlotName(TEXT("Content"));
@@ -69,6 +70,13 @@ void UDreamButton::RealizeBuiltIn()
 
 void UDreamButton::WireParts()
 {
+	// The authored whole-button tint, applied ONCE at setup rather than on every style push. Render
+	// opacity is a channel the host may also be driving (a tween fading a screen in), and a restyle
+	// that wrote 1 back over a fade in progress would be a style pass undoing an animation.
+	if (ColorAndOpacity.A < 1.0f)
+	{
+		SetRenderOpacity(ColorAndOpacity.A);
+	}
 	// Ensure, not Get: on the built-in road the face is ours and this adds the behaviour; on the
 	// template road the face is somebody's drawing and this is the only thing that makes it a
 	// button. A control that always carries its own UIButton has no state in which clicking it does
@@ -85,14 +93,22 @@ void UDreamButton::WireParts()
 		ButtonBehaviour->GetOnReleasedEvent().AddUObject(this, &UDreamButton::HandleReleased);
 		ButtonBehaviour->GetOnHoveredEvent().AddUObject(this, &UDreamButton::HandleHovered);
 		ButtonBehaviour->GetOnUnhoveredEvent().AddUObject(this, &UDreamButton::HandleUnhovered);
+		// The face draws one picture per state from here on, rather than one picture tinted five
+		// ways. No foreground part: what is on a button is whatever the host put in the hole, and
+		// recolouring a host's widgets would be this control overruling the author who supplied them.
+		UseStateFaces(ButtonBehaviour, FaceNode);
 	}
+	ApplyDragSource();
 }
 
 void UDreamButton::ApplyStyle()
 {
 	const FDreamButtonStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ButtonStyle);
 	ShapeFace(FaceNode, Active.CornerRadius);
-	SkinFace(FaceNode, Active.FaceBrush);
+	// The resting padding, stated before the faces are pushed so the group's PressedPadding has
+	// something to alternate with -- and stated even when the group says nothing, because the state
+	// the control is in gets painted the moment the group arrives.
+	UseStateFacePadding(Active.ContentPadding);
 
 	// "How big is this button" is these two numbers. Cast rather than assumed, because on the
 	// template road the face carries whatever container its author drew and replacing it would be
@@ -130,10 +146,73 @@ void UDreamButton::ApplyStyle()
 		ButtonBehaviour->SetTouchMethod(TouchMethod);
 		ButtonBehaviour->SetPressMethod(PressMethod);
 	}
+	// The skin, last of the look: this paints the state the button is actually in, which needs the
+	// size box and the state colours above it to have landed first. With an empty group it is one
+	// SkinFace call with the style's own brush -- exactly the line it replaced.
+	SetStateFaceTint(BackgroundColor);
+	PushStateFaces(Active.StateFaces, Active.FaceBrush);
 	// The last-resort height, for a button no panel measures: hung on anchors under a container-less
 	// parent there is nobody to ask the face what it wants, and the widget's own rect is all there
 	// is. Under a panel this is overwritten by the arrange pass, and the floor above is what decides.
 	SizeControlHeight(Active.Height);
+}
+
+void UDreamButton::SetStyle(const FDreamButtonStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamButton::SetBackgroundColor(FColor InBackgroundColor)
+{
+	BackgroundColor = InBackgroundColor;
+	// Straight to the face: a tint changes nothing about the button's size or its state colours, so
+	// a whole style push would be a lot of work with one line of effect.
+	SetStateFaceTint(InBackgroundColor);
+}
+
+void UDreamButton::SetAllowDragDrop(bool bInAllowDragDrop)
+{
+	bAllowDragDrop = bInAllowDragDrop;
+	ApplyDragSource();
+}
+
+void UDreamButton::ApplyDragSource()
+{
+	if (!bAllowDragDrop)
+	{
+		// Destroyed rather than muted, and nothing added when it was never on: a behaviour that
+		// exists is one the pointer pipeline walks and the designer lists, so leaving a dormant one
+		// on every button in the project would be a cost paid by everyone for a switch nobody set.
+		if (DragSource != nullptr)
+		{
+			DragSource->DestroyComponent();
+			DragSource = nullptr;
+		}
+		return;
+	}
+	// Ensure, not add: on the template road the face may be somebody's drawing that already carries
+	// one, and a second drag source would write a second operation over the first one's.
+	DragSource = EnsureComponent<UDreamUIDragSource>(FaceNode);
+}
+
+UDreamUIDragSource* UDreamButton::GetDragSource() const
+{
+	return DragSource;
+}
+
+void UDreamButton::SetColorAndOpacity(FLinearColor InColorAndOpacity)
+{
+	ColorAndOpacity = InColorAndOpacity;
+	// On the CONTROL, not on the face: this is the tint over the whole button, and the control's own
+	// render opacity is the one channel that reaches the face and the content together.
+	SetRenderOpacity(InColorAndOpacity.A);
+}
+
+bool UDreamButton::IsPressed() const
+{
+	return ButtonBehaviour != nullptr
+		&& ButtonBehaviour->GetCurrentSelectionState() == EUISelectableSelectionState::Pressed;
 }
 
 void UDreamButton::SetClickMethod(EDreamUIClickMethod InMethod)

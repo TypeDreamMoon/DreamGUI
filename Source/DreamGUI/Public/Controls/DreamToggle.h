@@ -77,7 +77,7 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Toggle")
 	FDreamToggleStyle Style;
 
 	/**
@@ -197,6 +197,21 @@ public:
 	/** UMG's convenience spelling of SetIsOn. */
 	UFUNCTION(BlueprintCallable, Category = "Toggle")
 	void SetIsChecked(bool bInIsChecked);
+
+	UFUNCTION(BlueprintPure, Category = "Toggle")
+	FDreamToggleStyle GetStyle() const { return Style; }
+
+	/** This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. */
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	void SetStyle(const FDreamToggleStyle& InStyle);
+
+	/**
+	 * Whether a pointer is holding the box down -- UMG's IsPressed, which a check box has for the
+	 * same reason a button does. Asked of the behaviour rather than remembered here: a second copy
+	 * of "is it down" goes stale the first time a press ends somewhere this control does not hear.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Toggle")
+	bool IsPressed() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Toggle")
 	EDreamUIClickMethod GetClickMethod() const { return ClickMethod; }

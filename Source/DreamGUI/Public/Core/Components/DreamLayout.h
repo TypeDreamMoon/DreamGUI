@@ -181,7 +181,7 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, Category = "LayoutContainer")
 	bool bUseAnimation = false;
-	UPROPERTY(EditAnywhere, Instanced, Category = "LayoutContainer", meta = (EditCondition = "bUseAnimation"))
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, BlueprintSetter = SetAnimationHandler, Category = "LayoutContainer", meta = (EditCondition = "bUseAnimation"))
 	TObjectPtr<UDreamLayoutAnimation> AnimationHandler;
 
 	//position and size snapshot before layout calculation
@@ -221,6 +221,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer", meta=(DeterminesOutputType="LayoutClass"))
 	void SetLayoutAnimation(UDreamLayoutAnimation* Value);
+	/**
+	 * The property setter behind AnimationHandler, so writing it from Blueprint goes through the same
+	 * path an author gets from the details panel instead of dropping a handler in with nothing told
+	 * that it changed. SetLayoutAnimation is the older name and stays; this forwards to it.
+	 */
+	UFUNCTION(BlueprintSetter)
+	void SetAnimationHandler(UDreamLayoutAnimation* InAnimationHandler) { SetLayoutAnimation(InAnimationHandler); }
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer", meta=(DeterminesOutputType="LayoutClass"))
 	UDreamLayoutAnimation* CreateNewLayoutAnimation(TSubclassOf<UDreamLayoutAnimation> Class);
 	template<class T>

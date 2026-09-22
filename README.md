@@ -102,6 +102,21 @@ class model replaced, and the control renames (`UIButtonComponent` → `UIButton
 
 Skip this if you are starting fresh.
 
+**Removed in this version.** These have no redirect, because there is nothing left to point at:
+
+- the root Blueprints `WorldSpaceRoot_DreamRenderer`, `WorldSpaceRoot_UERenderer`, `ScreenSpaceRoot`
+  and `DreamWorldSpaceRaycasterSource_Mouse`;
+- `UDreamWidgetPresenterComponent` — the abstract base `UDreamWidgetPresenterComponentBase` stays, and
+  `UDreamWorldWidgetComponent` is what you place now;
+- the `UDreamWorldSpaceRaycasterBase`, `UDreamWorldSpaceRaycasterForWorldTrigger` and
+  `UDreamWorldSpaceRaycasterSource` family — `UDreamWorldSpaceRaycaster` absorbed all of it;
+- the plugin settings' `ScreenSpaceRootClass`, `WorldSpaceRootClass`, `WorldSpaceUERendererRootClass`
+  and `WorldSpaceRaycasterSourceClass`.
+
+A level that still holds one of those Blueprints drops that actor on load — its class no longer
+resolves, so the whole export is discarded and a warning is logged naming it. Nothing is left behind
+to fix up: drag the widget Blueprint into the level again.
+
 ## How it differs from UMG
 
 Worth knowing before you commit to either, because the difference is structural rather than
@@ -120,6 +135,39 @@ The text difference is the one that surprises people. In UMG a `TextBlock` canno
 its box is derived from the text; you control wrapping instead. Here the rect is authored, so text
 can overflow it, and you get controls UMG has no need for — `Margin`, `LineHeightPercentage`,
 `WrapTextAt` and **Best Fit** (shrink the font until it fits, which neither UMG nor Slate offers).
+
+### Coming from UMG: the names are the same
+
+The structure differs; the vocabulary deliberately does not. A control here answers to the name its
+UMG counterpart uses, with the meaning it has there: `ScrollWidgetIntoView` takes a destination and a
+padding, a scroll box has `bFrontPadScrolling` and `WheelScrollMultiplier`, a spin box has
+`MinSliderValue` and `ClearMaxValue`, a panel slot has `Nudge` and `bForceNewLine`, every widget has
+`SetIsEnabled`, `SetRenderShear` and a `FlowDirectionPreference`. Every knob the details panel can
+turn is one a Blueprint can turn at runtime, through a setter that pushes the change instead of
+writing a field nothing reads again.
+
+Where a name could not be kept, that is written down rather than left to be discovered.
+`Resources/UMGParity` holds one table per UMG class -- 58 of them, some 960 Blueprint-facing members
+-- and each row says one of three things: *adopt* (same name, same meaning), *map* (here under
+another name, or on another type, and which), or *reject* (deliberately absent, with the reason:
+there is no immediate-mode paint context to draw into, a rect block has no per-instance material,
+and so on). The automation suite holds those tables against UMG's own reflection, in both
+directions: a member the engine gains in an upgrade turns up as a row that does not exist, and a row
+naming something this plugin has since renamed turns up as a name that does not resolve.
+
+Two differences are worth knowing in advance. A new knob defaults to **what the control already
+did**, not to UMG's default, so that existing content does not move -- `ScrollWhenFocusChanges` is
+`AnimatedScroll` here and `NoScroll` there, and the tables record each such case. And appearance
+lives in a control's style struct while behaviour lives on the control, so a few UMG properties are
+one level down: `EntrySpacing` is `Style.RowSpacing`.
+
+`Docs/Reference` is the property and function reference, one page per class, each ending with that
+class's UMG comparison. It is printed from reflection rather than written, so it cannot fall behind
+the headers:
+
+```
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
+```
 
 ## How it differs from upstream
 
@@ -188,6 +236,41 @@ on demand.
 
 Copy it into your own project before editing it; a plugin update overwrites the copy in the plugin
 folder.
+
+### In the world
+
+The same class can be a surface in the level instead of a layer on the screen. Drag a widget
+Blueprint from the Content Browser into a level, or place a **DreamUI World Widget Actor** from the
+Place Actors panel: either way you get an `ADreamWorldWidgetActor`, whose entire content is a single
+`UDreamWorldWidgetComponent`. Move it, rotate it and attach it like any other scene component.
+
+The component hosts the tree; it does not redefine it. The Blueprint's own root Canvas remains the
+truth about how the UI is built; the component writes render mode, sort order and trace channel down
+onto it and leaves the rest alone.
+
+- **`WidgetClass`** — the widget Blueprint class to load.
+- **`Backend`** — `DreamUIRenderer` draws the tree with DreamGUI's own renderer: flat, unlit and
+  untouched by post process. `UERenderer` sends it through the engine's pipeline instead, so it takes
+  post process and depth like any other mesh in the level.
+- **`bUseDesignSize`** / **`DrawSize`** — the size the tree lands at. On by default, following the
+  size the Blueprint was designed at; turn it off to give this actor a size of its own.
+- **`Pivot`** — where the actor's origin sits within that rectangle.
+- **`SortOrder`** — order among world-space canvases.
+- **`TraceChannel`** — the channel this canvas answers on. A raycaster only sees canvases whose
+  channel matches its own.
+
+Interaction needs no setup. On `BeginPlay` the component asks for an event system and a
+`UDreamWorldSpaceRaycaster` for each local player and supplies whichever is missing, so pressing Play
+is enough to click a button hanging in the world. The raycaster points either from the cursor or from
+the middle of the screen (`PointerSource`), and `bOccludeByWorld` makes solid geometry block a click
+the way it blocks a line trace. Put a raycaster of your own on any actor with the same user index and
+nothing is added on top of it — the test is for one that exists, not for one this plugin made.
+
+From code it is the two calls that were already there: `ConstructWidget`, then
+`AttachWidgetToSceneComponent` on whatever component should carry the tree.
+
+`ADreamWorldWidgetActor` can be possessed by a Level Sequence directly, and `WidgetOpacity`,
+`WidgetOffset` and `bWidgetVisible` on the component are keyable from it.
 
 ### Animation, in the file
 
@@ -305,7 +388,7 @@ link time. Six interaction subsystems already decline to exist on a server
 
 ## Status
 
-691 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
+1112 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
 
 Known gaps:
 

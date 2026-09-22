@@ -1,0 +1,15 @@
+{
+	"umgClass": "UHorizontalBoxSlot",
+	"umgHeader": "Components/HorizontalBoxSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "Size", "kind": "property", "status": "map", "dream": "SizeRule", "note": "FSlateChildSize is a rule plus a value; the rule is SizeRule (Auto/Fill) and the value is FillWeight."},
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetPadding", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetSize", "kind": "function", "status": "map", "dream": "SetSizeRule", "note": "Two setters, SetSizeRule and SetFillWeight. The bare name SetSize belongs to the canvas rect family, because there is one slot class here rather than UMG's one per panel."},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

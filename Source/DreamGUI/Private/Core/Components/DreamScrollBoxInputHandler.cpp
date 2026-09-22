@@ -60,9 +60,15 @@ bool UDreamScrollBoxInputHandler::OnPointerDrag_Implementation(UDreamPointerEven
 	// dragging down moves the content down and reveals what is above -- which means the offset moves
 	// WITH the drag, not against it. The signs used to be inverted and the comment above them
 	// described the intended behaviour rather than the actual one, so dragging down scrolled up.
+	//
+	// The mirror flips the horizontal half of that and nothing else. A right-to-left layout reflects
+	// the finished rect about the panel's width AFTER the offset has been spent, so the offset keeps
+	// meaning "how far from the content's start" -- the start edge is simply the right one. The
+	// POINTER is never reflected, so without this sign the content would run away from the finger.
 	const bool bHorizontal = Layout->Orientation == EDreamPanelOrientation::Horizontal;
+	const float MirrorSign = Layout->IsScrollGestureMirrored() ? -1.0f : 1.0f;
 	const float PrimaryDelta = bHorizontal
-		? static_cast<float>(-LocalMoveDelta.Y)
+		? static_cast<float>(-LocalMoveDelta.Y) * MirrorSign
 		: static_cast<float>(LocalMoveDelta.Z);
 
 	const UWorld* World = GetWorld();
@@ -110,7 +116,12 @@ bool UDreamScrollBoxInputHandler::OnPointerScroll_Implementation(UDreamPointerEv
 	const float Axis = static_cast<float>(bHorizontal
 		? EventData->ScrollAxisValue.X
 		: EventData->ScrollAxisValue.Y);
-	const float WheelDelta = -Axis * Layout->ScrollSensitivity;
+	// Sensitivity is the distance one notch covers; the multiplier scales it, so "twice as fast" is
+	// one number rather than a re-tuned sensitivity that then disagrees with every other box. The
+	// mirror sign is the drag's, for the drag's reason: the wheel axis is not reflected either.
+	const float MirrorSign = Layout->IsScrollGestureMirrored() ? -1.0f : 1.0f;
+	const float WheelDelta = -Axis * Layout->ScrollSensitivity
+		* FMath::Max(0.0f, Layout->WheelScrollMultiplier) * MirrorSign;
 	bool bMoved = false;
 	if (Layout->bAnimateWheelScrolling)
 	{

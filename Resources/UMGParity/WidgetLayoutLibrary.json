@@ -1,0 +1,32 @@
+{
+	"umgClass": "UWidgetLayoutLibrary",
+	"umgHeader": "Blueprint/WidgetLayoutLibrary.h",
+	"dreamClass": "UDreamUILayoutLibrary",
+	"members": [
+		{"umg": "ProjectWorldLocationToWidgetPosition", "kind": "function", "status": "adopt", "dream": "ProjectWorldLocationToWidgetPosition", "note": "Returns bool and writes the position out, so a location behind the camera is reported rather than answered with a plausible number."},
+		{"umg": "ProjectWorldLocationToWidgetPositionWithDistance", "kind": "function", "status": "adopt", "dream": "ProjectWorldLocationToWidgetPositionWithDistance", "note": "Distance is a separate float rather than UMG's Z component of an FVector, and it is SIGNED along the view direction so a location behind the camera does not report the same depth as its mirror image in front."},
+		{"umg": "GetViewportScale", "kind": "function", "status": "adopt", "dream": "GetViewportScale", "note": "Reads the project's own UUserInterfaceSettings DPI curve, the same one UMG reads, so a project that tuned it once is obeyed by both."},
+		{"umg": "GetViewportSize", "kind": "function", "status": "adopt", "dream": "GetViewportSize", "note": ""},
+		{"umg": "GetViewportWidgetGeometry", "kind": "function", "status": "map", "dream": "GetPlayerScreenWidgetGeometry", "note": "One function, because there is one screen root PER LOCAL PLAYER and no shared layer behind them -- the distinction UMG draws between AddToViewport and AddToPlayerScreen does not exist here."},
+		{"umg": "GetPlayerScreenWidgetGeometry", "kind": "function", "status": "adopt", "dream": "GetPlayerScreenWidgetGeometry", "note": "Reads the screen root without creating one: asking about a geometry must not bring a screen into existence."},
+		{"umg": "GetMousePositionOnPlatform", "kind": "function", "status": "adopt", "dream": "GetMousePositionOnPlatform", "note": "False when Slate is not running, so a headless caller can tell 'no cursor' from 'cursor at the origin'."},
+		{"umg": "GetMousePositionOnViewport", "kind": "function", "status": "adopt", "dream": "GetMousePositionOnViewport", "note": ""},
+		{"umg": "GetMousePositionScaledByDPI", "kind": "function", "status": "adopt", "dream": "GetMousePositionScaledByDPI", "note": "Returns an FVector2D rather than UMG's two floats."},
+		{"umg": "SlotAsBorderSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": "One UDreamPanelSlot class whatever the parent is, so the whole SlotAs* family collapses to one node and there is nothing to pick wrong."},
+		{"umg": "SlotAsCanvasSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsGridSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsHorizontalBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsOverlaySlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsUniformGridSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsVerticalBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsScrollBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsSafeBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsScaleBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsSizeBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsStackBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsWrapBoxSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "SlotAsWidgetSwitcherSlot", "kind": "function", "status": "map", "dream": "SlotAsPanelSlot", "note": ""},
+		{"umg": "RemoveAllWidgets", "kind": "function", "status": "adopt", "dream": "RemoveAllWidgets", "note": "Takes every tracked page off the screen through UDreamScreenUISubsystem."},
+		{"umg": "GetDesignTimeInfo", "kind": "function", "status": "map", "dream": "UDreamUserWidget::IsDesignTime", "note": "UMG's struct carries the designer's preview size and flags. The only part of it that means anything at runtime here is 'am I in the designer', which is what a graph uses it for."}
+	]
+}

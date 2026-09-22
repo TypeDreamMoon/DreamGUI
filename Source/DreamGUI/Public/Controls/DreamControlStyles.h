@@ -8,7 +8,22 @@
 //(UDreamLayoutContainerMenuAnchor owns it and the placement arithmetic that reads it), and the
 //control's style names that same enum rather than a second one meaning nearly the same thing.
 #include "Core/Components/DreamPanelLayouts.h"
+//for FDreamTextStyle, which FDreamRichTextStyle carries: outline, drop shadow and glow are one
+//struct for the whole library, and a style that named its own would be a second copy of it.
+#include "Core/DreamUITextData.h"
+// FDreamUIStateFaces::BrushFor takes EUISelectableSelectionState by value, and an enum in a
+// signature has to be a complete type -- a forward declaration compiles neither the switch nor the
+// call. This header already sits under the controls, which all carry a selectable.
+#include "Interaction/UISelectable.h"
 #include "DreamControlStyles.generated.h"
+
+//A style may name a sound to play; it never needs to know what one IS, and this header is included
+//by every control in the family, so the sound module's header is not dragged along with it.
+class USoundBase;
+//Same bargain for a material: a style names one, it never asks one anything.
+class UMaterialInterface;
+//And for a typeface: a style names the font data asset, the text node is what loads it.
+class UDreamUIFontData_BaseObject;
 
 /**
  * Where a native control's look comes from.
@@ -132,6 +147,147 @@ struct DREAMGUI_API FDreamUIFaceBrush
 };
 
 /**
+ * One face drawn five ways -- Slate's FButtonStyle shape, which is the thing a control style here
+ * could not say.
+ *
+ * A control face is a procedural rect with ONE skin on it, and the five states were told apart by
+ * colour alone: a project whose normal and pressed buttons are different DRAWINGS had to fork the
+ * control. That is the gap this closes, and it closes it without a second state machine -- the
+ * selectable already decides which of the five a control is in, and this is only what that decision
+ * paints (see UDreamUIControl::UseStateFaces).
+ *
+ * EVERY FIELD IS OPTIONAL, and that is what makes it change nothing that already exists. A state
+ * whose brush holds no image falls back to Normal's, and a Normal holding none falls back to the
+ * control's own single brush -- so a style that says nothing here draws exactly what it drew before,
+ * down to the pixel. The same is true of the other three groups: the foreground tint is gated on a
+ * bit that ships off, the pressed padding on another, and the three sounds are null.
+ *
+ * Shared rather than per-control because a project's buttons, check boxes, dropdown faces and list
+ * rows are the same decision made once. It is a FIELD of each of those styles rather than a base
+ * struct: a USTRUCT hierarchy would not survive the override-bit merge, which reads one struct's
+ * properties and writes the ticked ones onto another of the same type.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamUIStateFaces
+{
+	GENERATED_BODY()
+
+	/** The resting skin. Empty means the control's own brush, which is what every style ships with. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	FDreamUIFaceBrush Normal;
+
+	/** Pointer resting on it. Empty falls back to Normal. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	FDreamUIFaceBrush Hovered;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	FDreamUIFaceBrush Pressed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	FDreamUIFaceBrush Disabled;
+
+	/**
+	 * Holding keyboard or gamepad focus, which is a different question from hovered -- focus survives
+	 * the pointer leaving, and on a pad there is no pointer at all.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	FDreamUIFaceBrush Focused;
+
+	/**
+	 * Whether the five colours below are pushed at all.
+	 *
+	 * Off, and nothing is written to the foreground part -- which is the only default that leaves an
+	 * existing control looking as it does, because "no opinion" has no spelling in an FColor: white
+	 * is a real instruction to tint white, and a label authored amber would lose its colour to it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (InlineEditConditionToggle))
+	bool bTintForeground = false;
+
+	/**
+	 * What the control's FOREGROUND part -- its own label or glyph, never a host's content -- is
+	 * tinted in each state. Slate's ForegroundColor, per state as FButtonStyle has it.
+	 *
+	 * Only controls that own a label nominate one (the dropdown's caption is the family's example);
+	 * on a control whose text belongs to whoever filled its hole there is nothing here to write to,
+	 * and reaching into a host's widgets to recolour them would be this control overruling the author.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (EditCondition = "bTintForeground"))
+	FColor NormalForeground = FColor::White;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (EditCondition = "bTintForeground"))
+	FColor HoveredForeground = FColor::White;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (EditCondition = "bTintForeground"))
+	FColor PressedForeground = FColor::White;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (EditCondition = "bTintForeground"))
+	FColor DisabledForeground = FColor(255, 255, 255, 128);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (EditCondition = "bTintForeground"))
+	FColor FocusedForeground = FColor::White;
+
+	/** Whether PressedPadding is used at all. Off, a pressed control keeps its resting padding. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (InlineEditConditionToggle))
+	bool bUsePressedPadding = false;
+
+	/**
+	 * What surrounds the content WHILE PRESSED -- Slate's PressedPadding, and the classic way a
+	 * button looks pushed in: a top-heavy margin nudges the label down a pixel. The resting number is
+	 * the control's own ContentPadding rather than a second copy here; see UDreamButton.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces", meta = (EditCondition = "bUsePressedPadding"))
+	FMargin PressedPadding = FMargin(12.0f, 5.0f, 12.0f, 3.0f);
+
+	/**
+	 * Which brush a state actually draws with, with the fallback chain spelled once.
+	 *
+	 * An IMAGE is what makes a state's brush a statement. The other fields (tint, scale, nine-slice)
+	 * describe how to draw an image, so a brush holding none says nothing and the question passes up
+	 * the chain: this state, then the group's resting one, then InFallback -- the single brush every
+	 * existing style already has, which is why an empty group changes nothing anywhere.
+	 *
+	 * On the STRUCT rather than on UDreamUIControl because a control paints one face and a list
+	 * paints one per row: the rule has two callers with different shapes, and two copies of a
+	 * fallback chain is how the row and the button learn to disagree about what an empty group means.
+	 */
+	const FDreamUIFaceBrush& BrushFor(EUISelectableSelectionState InState, const FDreamUIFaceBrush& InFallback) const
+	{
+		const FDreamUIFaceBrush* Chosen = nullptr;
+		switch (InState)
+		{
+		case EUISelectableSelectionState::Hovered: Chosen = &Hovered; break;
+		case EUISelectableSelectionState::Pressed: Chosen = &Pressed; break;
+		case EUISelectableSelectionState::Disabled: Chosen = &Disabled; break;
+		case EUISelectableSelectionState::Focused: Chosen = &Focused; break;
+		default: Chosen = &Normal; break;
+		}
+		if (Chosen->Image == nullptr)
+		{
+			Chosen = &Normal;
+		}
+		return Chosen->Image != nullptr ? *Chosen : InFallback;
+	}
+
+	/**
+	 * The three moments a control makes a noise, as a STYLE decision: a click should sound like the
+	 * other clicks in this UI, which is the same argument the colours make.
+	 *
+	 * Pushed onto the selectable, which is what owns the playing (it knows the state it just entered
+	 * and the widget to play from). A UDreamSelectableStyle asset on that selectable still wins,
+	 * exactly as it does for the colours. Navigation gets no slot of its own -- a move fires Enter on
+	 * the target, so HoveredSound already plays once per move.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	TObjectPtr<USoundBase> HoveredSound = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	TObjectPtr<USoundBase> PressedSound = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Faces")
+	TObjectPtr<USoundBase> ClickedSound = nullptr;
+};
+
+/**
  * What a toggle looks like, separated from what it is.
  *
  * This is the FButtonStyle shape, and it exists for the reason Slate's does: the control assembles
@@ -238,6 +394,16 @@ struct DREAMGUI_API FDreamToggleStyle
 	bool bOverride_UndeterminedBrush = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (EditCondition = "bOverride_UndeterminedBrush"))
 	FDreamUIFaceBrush UndeterminedBrush;
+
+	/**
+	 * The BOX's drawing per pointer state, where BoxBrush is one drawing tinted five ways. Nothing to
+	 * do with the mark: the three brushes above answer "which of the three values is this", this one
+	 * answers "is the pointer on it", and a check box shows both at once.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (InlineEditConditionToggle))
+	bool bOverride_StateFaces = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Toggle Style", meta = (EditCondition = "bOverride_StateFaces"))
+	FDreamUIStateFaces StateFaces;
 };
 
 /**
@@ -329,6 +495,17 @@ struct DREAMGUI_API FDreamButtonStyle
 	bool bOverride_FaceBrush = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_FaceBrush"))
 	FDreamUIFaceBrush FaceBrush;
+
+	/**
+	 * A different drawing per state, where FaceBrush is one drawing tinted five ways. Empty
+	 * throughout, which is what keeps every existing button pixel-identical; FaceBrush is what an
+	 * unstated state falls back to. ContentPadding is the resting padding its PressedPadding
+	 * alternates with.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (InlineEditConditionToggle))
+	bool bOverride_StateFaces = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button Style", meta = (EditCondition = "bOverride_StateFaces"))
+	FDreamUIStateFaces StateFaces;
 };
 
 /** A slider: a track, the filled part of it, and the handle riding it. */
@@ -491,6 +668,19 @@ struct DREAMGUI_API FDreamTextInputStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_FontSize"))
 	float FontSize = 15.0f;
 
+	/**
+	 * The typeface, as the font data asset this library renders from -- the other half of what UMG
+	 * packs into one FSlateFontInfo (the size is FontSize above, the outline is in the text style).
+	 *
+	 * NULL means "leave the paragraph on whatever font it already has", which is what every field
+	 * that exists today is doing: the built-in tree never states one, so the text node keeps the
+	 * project default. A style only ever ADDS a font here; it cannot take one away.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Font = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_Font"))
+	TObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
 	bool bOverride_CornerRadius = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_CornerRadius"))
@@ -528,6 +718,19 @@ struct DREAMGUI_API FDreamTextInputStyle
 	bool bOverride_CaretBlinkRate = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_CaretBlinkRate", ClampMin = "0.0"))
 	float CaretBlinkRate = 0.5f;
+
+	/**
+	 * The words a rejected value is reported in -- what Slate's editable text box draws through its
+	 * error-reporting widget, and the one piece of a text field's look that was missing entirely.
+	 *
+	 * Red by default because that is what an error means everywhere, and a project that disagrees has
+	 * the same tick beside it as every other field here. The message itself is the CONTROL's
+	 * (SetError): which value is wrong is content, not theme.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ErrorColor = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Text Input Style", meta = (EditCondition = "bOverride_ErrorColor"))
+	FColor ErrorColor = FColor(232, 96, 96, 255);
 };
 
 /** A dropdown: a button-shaped face, and the list it opens. */
@@ -656,6 +859,29 @@ struct DREAMGUI_API FDreamDropdownStyle
 	bool bOverride_ItemBrush = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_ItemBrush"))
 	FDreamUIFaceBrush ItemBrush;
+
+	/**
+	 * The FACE's drawing per state, where FaceBrush is one drawing tinted five ways, and the caption's
+	 * colour per state when its foreground tint is ticked. Empty throughout, so an existing dropdown
+	 * is unchanged: FaceBrush is the fallback, and TextColor stays the caption's colour while the
+	 * tint bit is off.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
+	bool bOverride_StateFaces = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_StateFaces"))
+	FDreamUIStateFaces StateFaces;
+
+	/**
+	 * Between the face's edge and the caption -- UMG's ContentPadding.
+	 *
+	 * The default IS what the control has always arranged, down to the number: ten on the left, and
+	 * twenty-four on the right to clear the arrow glyph. Stating it here rather than leaving it in
+	 * the realize call is what makes a wider face or a hidden arrow something a style can answer.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (InlineEditConditionToggle))
+	bool bOverride_ContentPadding = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dropdown Style", meta = (EditCondition = "bOverride_ContentPadding"))
+	FMargin ContentPadding = FMargin(10.0f, 0.0f, 24.0f, 0.0f);
 };
 
 /**
@@ -734,6 +960,23 @@ struct DREAMGUI_API FDreamProgressBarStyle
 	bool bOverride_RadialStartAngle = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style|Radial", meta = (EditCondition = "bOverride_RadialStartAngle"))
 	float RadialStartAngle = 0.0f;
+
+	/**
+	 * Between the track's edge and the fill -- UMG's BorderPadding.
+	 *
+	 * Spent on the FILL, not on the track: the track still reaches both ends of what the bar spans,
+	 * so the bar looks the same size and the fill sits inside it. Along the bar's axis the padding
+	 * shortens the travel and moves the starting edge in; across it, the fill is thinner and stays
+	 * centred between the two sides (an uneven pair shifts it, as it should).
+	 *
+	 * Zero is what this bar has always drawn, and stays the default for that reason. The Radial
+	 * shape ignores it: a ring's fill sits exactly ON its track, and insetting it would make a
+	 * second, smaller ring rather than a padded one.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BorderPadding = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progress Bar Style", meta = (EditCondition = "bOverride_BorderPadding"))
+	FMargin BorderPadding = FMargin(0.0f);
 };
 
 /**
@@ -763,6 +1006,20 @@ struct DREAMGUI_API FDreamScrollBarStyle
 	bool bOverride_HandlePadding = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_HandlePadding", ClampMin = "0.0"))
 	float HandlePadding = 0.0f;
+
+	/**
+	 * The margin around the WHOLE bar -- UMG's ScrollbarPadding, and a different measurement from
+	 * HandlePadding above, which insets the handle inside its track.
+	 *
+	 * Spent on the bar's rect rather than on the track's, so the track still reaches both ends of
+	 * what the bar spans and the handle never travels past it. A scroll box counts this into its
+	 * gutter, because the gutter is everything the viewport gives up for the bar to sit there.
+	 * Zero is what every bar in this library has drawn, and stays the default for that reason.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
+	bool bOverride_BarPadding = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (EditCondition = "bOverride_BarPadding"))
+	FMargin BarPadding = FMargin(0.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scroll Bar Style", meta = (InlineEditConditionToggle))
 	bool bOverride_TrackColor = true;
@@ -967,6 +1224,23 @@ struct DREAMGUI_API FDreamListStyle
 	bool bOverride_RowBrush = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_RowBrush"))
 	FDreamUIFaceBrush RowBrush;
+
+	/**
+	 * A different drawing per row STATE, where RowBrush is one drawing the row colours tint five
+	 * ways. Empty throughout, which is what keeps every existing list pixel-identical; RowBrush is
+	 * what an unstated state falls back to.
+	 *
+	 * The rows share one group rather than carrying one each, for the reason every other number in
+	 * this struct is shared: a list's rows are the same row drawn many times, and a row that could
+	 * be skinned individually would be a template, not a style.
+	 *
+	 * The foreground tint and the pressed padding in the group are not read here -- a row's label
+	 * colour is TextColor above, and a row has no content padding of its own to alternate.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (InlineEditConditionToggle))
+	bool bOverride_StateFaces = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_StateFaces"))
+	FDreamUIStateFaces StateFaces;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (InlineEditConditionToggle))
 	bool bOverride_Bar = true;
@@ -1618,6 +1892,12 @@ struct DREAMGUI_API FDreamSpinBoxStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (EditCondition = "bOverride_FontSize"))
 	float FontSize = 15.0f;
 
+	/** The typeface, as a font data asset. Null leaves the value's paragraph on the font it has. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Font = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (EditCondition = "bOverride_Font"))
+	TObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (InlineEditConditionToggle))
 	bool bOverride_ButtonWidth = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spin Box Style", meta = (EditCondition = "bOverride_ButtonWidth"))
@@ -2035,6 +2315,35 @@ struct DREAMGUI_API FDreamRichTextStyle
 	bool bOverride_FontSize = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (EditCondition = "bOverride_FontSize"))
 	float FontSize = 15.0f;
+
+	/** The DEFAULT typeface, as a font data asset -- markup may still switch it per run. Null leaves
+	 *  the paragraph on the font it has, which is what every existing block uses. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (InlineEditConditionToggle))
+	bool bOverride_Font = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (EditCondition = "bOverride_Font"))
+	TObjectPtr<UDreamUIFontData_BaseObject> Font = nullptr;
+
+	/**
+	 * Outline, drop shadow and glow -- what UMG spells as the shadow half of an FTextBlockStyle, and
+	 * what this library has always drawn from FDreamTextStyle's underlay.
+	 *
+	 * Here rather than on the control because it is theme: a project decides that its prose carries a
+	 * shadow, not each paragraph. Default-constructed means every effect switched off (each one's
+	 * colour ships with alpha zero), which is what a rich text block looked like before this existed.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (InlineEditConditionToggle))
+	bool bOverride_TextStyle = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (EditCondition = "bOverride_TextStyle"))
+	FDreamTextStyle TextStyle;
+
+	/**
+	 * A material to draw the glyphs with instead of the built-in one -- UMG's default font material.
+	 * Null keeps the library's own text material, which is what every existing block uses.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (InlineEditConditionToggle))
+	bool bOverride_OverrideMaterial = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rich Text Style", meta = (EditCondition = "bOverride_OverrideMaterial"))
+	TObjectPtr<UMaterialInterface> OverrideMaterial = nullptr;
 };
 
 /**

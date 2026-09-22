@@ -63,7 +63,7 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Input Key Selector")
 	FDreamInputKeySelectorStyle Style;
 
 	/**
@@ -86,11 +86,11 @@ public:
 	FKey SelectedKey;
 
 	/** Shown while nothing is bound. Empty keeps the built-in words, as an empty brush keeps a glyph. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetNoKeyText", BlueprintSetter = "SetNoKeyText", Category = "Input Key Selector")
 	FText NoKeyText;
 
 	/** Shown while armed. Empty keeps the built-in words. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetListeningText", BlueprintSetter = "SetListeningText", Category = "Input Key Selector")
 	FText ListeningText;
 
 	/**
@@ -98,7 +98,7 @@ public:
 	 * keys: a player who opened this by accident needs one key that is guaranteed to be a way out,
 	 * and a control that will bind ANY key does not have one.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetEscapeCancels", BlueprintSetter = "SetEscapeCancels", Category = "Input Key Selector")
 	bool bEscapeCancels = true;
 
 	/**
@@ -113,7 +113,7 @@ public:
 	 * Emptying it is legal and means "no reserved key" -- and then the click is the only way out,
 	 * which is the state this control documents as a trap. Left non-empty by default for that reason.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector", meta = (EditCondition = "bEscapeCancels"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetEscapeKeys", BlueprintSetter = "SetEscapeKeys", Category = "Input Key Selector", meta = (EditCondition = "bEscapeCancels"))
 	TArray<FKey> EscapeKeys = { EKeys::Escape, EKeys::Gamepad_FaceButton_Right };
 
 	/**
@@ -126,8 +126,23 @@ public:
 	 * Only the CAPTURE path reads this. NotifyKeyPressed and NotifyChordPressed are fed by a project
 	 * that already knows what was held, so they say so themselves rather than being second-guessed.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "AllowModifierKeys", BlueprintSetter = "SetAllowModifierKeys", Category = "Input Key Selector")
 	bool bAllowModifierKeys = true;
+
+	/**
+	 * Whether a PAD key can become the binding -- UMG's bAllowGamepadKeys.
+	 *
+	 * On by default, because that is what this selector has always done: the capture agent binds
+	 * every non-axis, non-mouse key, and a pad's face buttons are exactly that. Off, a pad key is
+	 * neither bound nor consumed -- the selector stays armed, waiting for a keyboard key, and the
+	 * pad press goes on to whatever else wanted it. That is UMG's behaviour and the only one that
+	 * leaves a keyboard-only binding screen usable with a controller in hand.
+	 *
+	 * The escape keys are checked FIRST and are not subject to this: the pad's B is one of them by
+	 * default, and a selector that refused to look at pad keys at all would have no way out on a pad.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "AllowGamepadKeys", BlueprintSetter = "SetAllowGamepadKeys", Category = "Input Key Selector")
+	bool bAllowGamepadKeys = true;
 
 	/** Fired when a key is bound, from a listen or from SetSelectedKey. Carries the chord's KEY. */
 	UPROPERTY(BlueprintAssignable, Category = "Input Key Selector")
@@ -198,6 +213,80 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
 	bool NotifyChordPressed(const FInputChord& InChord);
 
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	FDreamInputKeySelectorStyle GetStyle() const { return Style; }
+
+	/** The whole look at once, re-pushed -- including the face colours, which follow the armed state. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetStyle(const FDreamInputKeySelectorStyle& InStyle);
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	FText GetNoKeyText() const { return NoKeyText; }
+
+	/** Re-labels at once when nothing is bound, which is the only state that shows these words. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetNoKeyText(const FText& InNoKeyText);
+
+	/** UMG's name for the same words. One field, two spellings. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetNoKeySpecifiedText(const FText& InNoKeySpecifiedText) { SetNoKeyText(InNoKeySpecifiedText); }
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	FText GetListeningText() const { return ListeningText; }
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetListeningText(const FText& InListeningText);
+
+	/** UMG's name for the prompt shown while armed. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetKeySelectionText(const FText& InKeySelectionText) { SetListeningText(InKeySelectionText); }
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	bool GetEscapeCancels() const { return bEscapeCancels; }
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetEscapeCancels(bool bInEscapeCancels);
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	TArray<FKey> GetEscapeKeys() const { return EscapeKeys; }
+
+	/** Which keys are the way out. An empty list means there is none -- see the property. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetEscapeKeys(const TArray<FKey>& InKeys);
+
+	/** UMG's spelling of GetAllowModifierKeys, which is the name its own getter carries. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	bool AllowModifierKeys() const { return bAllowModifierKeys; }
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetAllowModifierKeys(bool bInAllowModifierKeys);
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	bool AllowGamepadKeys() const { return bAllowGamepadKeys; }
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetAllowGamepadKeys(bool bInAllowGamepadKeys);
+
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	bool GetCaptureKeysWhileListening() const { return bCaptureKeysWhileListening; }
+
+	/** Turning it off while armed releases the agent at once; a capture nobody can stop is a trap. */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetCaptureKeysWhileListening(bool bInCaptureKeysWhileListening);
+
+	/** UMG's GetIsSelectingKey: the armed state under the name UMG gives it. */
+	UFUNCTION(BlueprintPure, Category = "Input Key Selector")
+	bool GetIsSelectingKey() const { return bIsListening; }
+
+	/**
+	 * Show or hide the words on the face -- UMG's SetTextBlockVisibility.
+	 *
+	 * For the selector that is drawn as a glyph, or as a row where the key's name lives somewhere
+	 * else: the face, the click and the armed state all keep working with the label put away.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Input Key Selector")
+	void SetTextBlockVisibility(EDreamWidgetVisibility InVisibility);
+
 	virtual void ApplyStyle() override;
 
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Input Key Selector")
@@ -234,7 +323,7 @@ public:
 	 * Off, the control is state and visuals only and the project calls NotifyKeyPressed from
 	 * wherever it already sees keys. Both were true before this flag; only the default changed.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input Key Selector")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetCaptureKeysWhileListening", BlueprintSetter = "SetCaptureKeysWhileListening", Category = "Input Key Selector")
 	bool bCaptureKeysWhileListening = true;
 
 protected:

@@ -1,0 +1,23 @@
+{
+	"umgClass": "USlateBlueprintLibrary",
+	"umgHeader": "Blueprint/SlateBlueprintLibrary.h",
+	"dreamClass": "UDreamUIWidgetGeometryLibrary",
+	"members": [
+		{"umg": "IsUnderLocation", "kind": "function", "status": "adopt", "dream": "IsUnderLocation", "note": "Against the widget's measured pixel rect. False for a geometry with no viewport position at all -- a render-target canvas, a world-space one with no camera."},
+		{"umg": "AbsoluteToLocal", "kind": "function", "status": "adopt", "dream": "AbsoluteToLocal", "note": "Assumes the point lies in the widget's own plane, which is true of every 2D interface. Returns false for a canvas whose scaler cannot be inverted -- world space above all, where the raycaster is the right tool."},
+		{"umg": "LocalToAbsolute", "kind": "function", "status": "adopt", "dream": "LocalToAbsolute", "note": "Local has its origin at the widget's BOTTOM-left, not Slate's top-left: every other normalized coordinate in this framework already puts zero at the bottom left."},
+		{"umg": "GetLocalTopLeft", "kind": "function", "status": "adopt", "dream": "GetLocalTopLeft", "note": "Always zero, because local coordinates are defined from that corner -- the same answer UMG gives for an ordinary widget. Kept so a graph written against UMG reads the same."},
+		{"umg": "GetLocalSize", "kind": "function", "status": "adopt", "dream": "GetLocalSize", "note": ""},
+		{"umg": "GetAbsoluteSize", "kind": "function", "status": "adopt", "dream": "GetAbsoluteSize", "note": "Measured from the rect's two projected corners, so a canvas scaler, a render scale and an ancestor's scale are all already in it."},
+		{"umg": "Scalar_AbsoluteToLocal", "kind": "function", "status": "map", "dream": "TransformScalarAbsoluteToLocal", "note": "Named for what it transforms rather than with a type prefix. The wider axis decides for a non-uniformly scaled widget, as in UMG."},
+		{"umg": "Scalar_LocalToAbsolute", "kind": "function", "status": "map", "dream": "TransformScalarLocalToAbsolute", "note": ""},
+		{"umg": "Vector_AbsoluteToLocal", "kind": "function", "status": "map", "dream": "TransformVectorAbsoluteToLocal", "note": "Per axis, so a non-uniform scale is honoured here where the scalar version has to pick one."},
+		{"umg": "Vector_LocalToAbsolute", "kind": "function", "status": "map", "dream": "TransformVectorLocalToAbsolute", "note": ""},
+		{"umg": "EqualEqual_SlateBrush", "kind": "function", "status": "map", "dream": "UDreamUIWidgetLibrary::EqualEqual_DreamUIImageBrush", "note": "This framework's brush is FDreamUIImageBrush, so the node is named for it. Exact on the floats rather than tolerant: the question a caller asks with == is 'did anybody change this brush', and a near-comparison would answer no to a one-pixel nudge. The node lives on the widget library because the other brush verbs do."},
+		{"umg": "LocalToViewport", "kind": "function", "status": "adopt", "dream": "LocalToViewport", "note": "Hands back both the pixel position and the DPI-scaled one, as UMG does."},
+		{"umg": "AbsoluteToViewport", "kind": "function", "status": "adopt", "dream": "AbsoluteToViewport", "note": ""},
+		{"umg": "ScreenToWidgetLocal", "kind": "function", "status": "adopt", "dream": "ScreenToWidgetLocal", "note": "No bIncludeWindowPosition parameter: a screen position and a viewport pixel position are the same space here, because the framework draws inside the viewport and never against the desktop."},
+		{"umg": "ScreenToWidgetAbsolute", "kind": "function", "status": "adopt", "dream": "ScreenToWidgetAbsolute", "note": "Identity, for the reason on the row above. It exists so a ported graph keeps its shape and so the equivalence is stated somewhere."},
+		{"umg": "ScreenToViewport", "kind": "function", "status": "adopt", "dream": "ScreenToViewport", "note": ""}
+	]
+}

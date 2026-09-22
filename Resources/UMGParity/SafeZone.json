@@ -1,0 +1,12 @@
+{
+	"umgClass": "USafeZone",
+	"umgHeader": "Components/SafeZone.h",
+	"dreamClass": "UDreamLayoutContainerSafeZone",
+	"members": [
+		{"umg": "SetSidesToPad", "kind": "function", "status": "adopt", "dream": "", "note": "UMG's argument order, left/right/top/bottom, not the order an FMargin lists them in."},
+		{"umg": "PadLeft", "kind": "property", "status": "map", "dream": "bPadLeft", "note": "Same name with this plugin's boolean prefix."},
+		{"umg": "PadRight", "kind": "property", "status": "map", "dream": "bPadRight", "note": ""},
+		{"umg": "PadTop", "kind": "property", "status": "map", "dream": "bPadTop", "note": ""},
+		{"umg": "PadBottom", "kind": "property", "status": "map", "dream": "bPadBottom", "note": ""}
+	]
+}

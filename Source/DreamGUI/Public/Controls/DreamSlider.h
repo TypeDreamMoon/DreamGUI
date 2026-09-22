@@ -38,8 +38,44 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slider")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Slider")
 	FDreamSliderStyle Style;
+
+	/**
+	 * Shows its value and refuses to be moved -- UMG's Locked, pushed onto the behaviour.
+	 *
+	 * Not the same as switching the control off: a disabled slider wears its Disabled colours and
+	 * says "not now", a locked one looks completely ordinary and says "this is what it is". A volume
+	 * bar during a cutscene is the second. SetValue keeps working either way.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "IsLocked", BlueprintSetter = "SetLocked", Category = "Slider")
+	bool bLocked = false;
+
+	/**
+	 * A tint over the bar the handle travels along -- UMG's SliderBarColor, which is a tint over
+	 * SSlider's bar image for exactly the same reason this is one: the STYLE says what the slider
+	 * looks like, and this says what is happening to it right now. White is no opinion.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSliderBarColor", BlueprintSetter = "SetSliderBarColor", Category = "Slider")
+	FColor SliderBarColor = FColor::White;
+
+	/** The same, over the handle's five state colours -- UMG's SliderHandleColor. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSliderHandleColor", BlueprintSetter = "SetSliderHandleColor", Category = "Slider")
+	FColor SliderHandleColor = FColor::White;
+
+	/**
+	 * Whether the handle stays inside the track's ends -- UMG's IndentHandle.
+	 *
+	 * On (the default, and what this slider has always drawn) the handle's travel is the track minus
+	 * the handle's own width, so at 0 and at 1 the handle sits fully on the track. Off gives it the
+	 * track's whole length, so its centre reaches the very ends and half of it hangs off each --
+	 * which is what a handle drawn as a thin notch wants, and what UMG ships.
+	 *
+	 * It is the HANDLE AREA's inset either way, so the value the slider reports is unaffected: the
+	 * same drag still spans the same numbers.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetIndentHandle", BlueprintSetter = "SetIndentHandle", Category = "Slider")
+	bool bIndentHandle = true;
 
 	/**
 	 * Which way it runs. One property instead of two Blueprint assets.
@@ -190,6 +226,48 @@ public:
 	/** Whether a gamepad currently holds this slider -- read straight off the behaviour. */
 	UFUNCTION(BlueprintPure, Category = "Slider")
 	bool IsControllerCaptured() const;
+
+	UFUNCTION(BlueprintPure, Category = "Slider")
+	FDreamSliderStyle GetStyle() const { return Style; }
+
+	/** This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. */
+	UFUNCTION(BlueprintCallable, Category = "Slider")
+	void SetStyle(const FDreamSliderStyle& InStyle);
+
+	UFUNCTION(BlueprintPure, Category = "Slider")
+	bool IsLocked() const { return bLocked; }
+
+	UFUNCTION(BlueprintCallable, Category = "Slider")
+	void SetLocked(bool bInLocked);
+
+	UFUNCTION(BlueprintPure, Category = "Slider")
+	FColor GetSliderBarColor() const { return SliderBarColor; }
+
+	UFUNCTION(BlueprintCallable, Category = "Slider")
+	void SetSliderBarColor(FColor InSliderBarColor);
+
+	UFUNCTION(BlueprintPure, Category = "Slider")
+	FColor GetSliderHandleColor() const { return SliderHandleColor; }
+
+	UFUNCTION(BlueprintCallable, Category = "Slider")
+	void SetSliderHandleColor(FColor InSliderHandleColor);
+
+	UFUNCTION(BlueprintPure, Category = "Slider")
+	bool GetIndentHandle() const { return bIndentHandle; }
+
+	/** Re-places the handle area, which is the one thing this decides. */
+	UFUNCTION(BlueprintCallable, Category = "Slider")
+	void SetIndentHandle(bool bInIndentHandle);
+
+	/**
+	 * Where the value sits between the two ends, 0 to 1 -- UMG's GetNormalizedValue.
+	 *
+	 * The number every consumer of a slider actually wants (a bar's width, a volume multiplier),
+	 * and the one everybody was computing by hand out of three getters. A range of zero answers
+	 * zero rather than dividing by it.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Slider")
+	float GetNormalizedValue() const;
 
 	virtual void ApplyStyle() override;
 

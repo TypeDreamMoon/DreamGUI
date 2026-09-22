@@ -93,6 +93,19 @@ private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnDreamUIInspectorTab(const FSpawnTabArgs& SpawnTabArgs);
 	
+	/**
+	 * Subscribes to GEditor's reinstancing event, once there is a GEditor to subscribe to -- this
+	 * module starts before the editor engine is constructed. Idempotent, so both callers are safe.
+	 */
+	void BindBlueprintReinstancedHook();
+	/**
+	 * Reloads every world widget component in an editor world after a Blueprint recompile, because
+	 * the reinstancer replaces the widget tree out from under a host that never gets reregistered.
+	 */
+	void HandleBlueprintReinstanced();
+	FDelegateHandle PostEngineInitHandle;
+	FDelegateHandle BlueprintReinstancedHandle;
+
 	FDelegateHandle SequenceEditorHandle;
 	FDelegateHandle OnInitializeSequenceHandle;
 	static void OnInitializeSequence(class UDreamWidgetAnimation* Sequence);

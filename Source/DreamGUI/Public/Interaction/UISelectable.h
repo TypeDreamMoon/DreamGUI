@@ -16,6 +16,7 @@ class UUISelectable;
 class UDreamVisual;
 class UDreamTweener;
 class UDreamSelectableStyle;
+class USoundBase;
 
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EUISelectableTransitionType:uint8
@@ -91,6 +92,17 @@ enum class EUISelectableSelectionState :uint8
 	 */
 	Focused,
 };
+
+/**
+ * The state this control just entered, and whether it got there without animating.
+ *
+ * Native rather than dynamic for the reason every other CPP event on this side is: the listener is
+ * a native control wiring its own parts from C++, and a dynamic delegate carries no arguments a
+ * UFUNCTION-free handler could read. It fires for the IMMEDIATE applies too -- the first paint is
+ * exactly when a listener that draws one picture per state needs to hear about one.
+ */
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDreamSelectableStateChanged, EUISelectableSelectionState /*InState*/, bool /*bInImmediate*/);
+
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EUISelectableNavigationMode:uint8
 {
@@ -287,6 +299,26 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (ClampMin = "0.0"))
 	float AnimDuration = 0.2f;
 
+	/**
+	 * The three moments this control makes a noise. A UDreamSelectableStyle asset wins over them,
+	 * exactly as it does over the inline colours beside them.
+	 *
+	 * They exist because a NATIVE CONTROL has to be able to push a sound: feedback used to be
+	 * reachable only through a hand-assigned style asset, so a project whose look comes from the
+	 * project style sheet -- which is every control in the Controls family -- could state its colours
+	 * and its transition speed and not its click. Null is silence, which is what every control that
+	 * never states one keeps.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	TObjectPtr<USoundBase> HoveredSound = nullptr;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	TObjectPtr<USoundBase> PressedSound = nullptr;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
+	TObjectPtr<USoundBase> ClickedSound = nullptr;
+
+	/** Fired by ApplyPointerSelectionState, after the feedback and before the transition. */
+	FDreamSelectableStateChanged OnSelectionStateChangedCPP;
+
 	EUISelectableSelectionState CurrentSelectionState = EUISelectableSelectionState::Normal;
 	void ApplyPointerSelectionState(bool ImmediateSet);
 	/** What feedback last played for, so re-applying the same state stays silent. */
@@ -395,6 +427,16 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable") 
 		EUISelectableSelectionState GetSelectionState()const;
+	/**
+	 * The state IN EFFECT -- the one the transition was last run for and the one on screen.
+	 *
+	 * GetSelectionState above DERIVES a state from the pointer flags; this is the one that was applied.
+	 * Every pointer event assigns the first to the second, so under real input they agree. They part
+	 * when something drives SetSelectionState directly, and then this is the honest answer to "does it
+	 * look pressed": it is what a control asked whether it IS pressed should read.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
+		EUISelectableSelectionState GetCurrentSelectionState()const { return CurrentSelectionState; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		void SetTransitionTarget(UDreamVisual* Value);
@@ -433,6 +475,34 @@ public:
 	void SetAnimDuration(float Value);
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
 	float GetAnimDuration() const { return AnimDuration; }
+
+	/** The sound in effect: the style asset's when one is set, this instance's otherwise. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
+	USoundBase* GetHoveredSound() const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
+	USoundBase* GetPressedSound() const;
+	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
+	USoundBase* GetClickedSound() const;
+
+	/**
+	 * Nothing is played here and nothing re-applied: a sound describes the NEXT transition, and
+	 * replaying the current state's to honour a new one would be a noise nobody asked for.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	void SetHoveredSound(USoundBase* Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	void SetPressedSound(USoundBase* Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+	void SetClickedSound(USoundBase* Value);
+
+	/**
+	 * Every state this control enters, in order, for a listener that draws more than a tint.
+	 *
+	 * The state machine stays exactly one -- this is a report of its decisions, not a second copy of
+	 * them -- which is why a control that wants a different PICTURE per state (see
+	 * UDreamUIControl::UseStateFaces) listens here rather than watching the pointer itself.
+	 */
+	FDreamSelectableStateChanged& GetOnSelectionStateChangedEvent() { return OnSelectionStateChangedCPP; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		void SetSelectionState(EUISelectableSelectionState NewState);
 

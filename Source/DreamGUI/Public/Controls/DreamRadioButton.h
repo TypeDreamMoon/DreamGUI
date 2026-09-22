@@ -44,16 +44,40 @@ public:
 	 * it stays editable instead of being gated on the enum: the old edit condition greyed the
 	 * exact values that were driving the control.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Radio Button")
 	FDreamRadioButtonStyle Style;
+
+	UFUNCTION(BlueprintPure, Category = "Radio Button")
+	FDreamRadioButtonStyle GetStyle() const { return Style; }
+
+	/** This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. */
+	UFUNCTION(BlueprintCallable, Category = "Radio Button")
+	void SetStyle(const FDreamRadioButtonStyle& InStyle);
 
 	/**
 	 * Find a UUIToggleGroup on an ancestor at Awake and join it -- with a group behaviour on the
 	 * shared parent, sibling radios exclude each other with nothing wired. Default on, because a
 	 * radio that does not exclude is a round toggle; off, grouping goes through SetToggleGroup.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Radio Button")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAutoGroupWithSiblings", BlueprintSetter = "SetAutoGroupWithSiblings", Category = "Radio Button")
 	bool bAutoGroupWithSiblings = true;
+
+	UFUNCTION(BlueprintPure, Category = "Radio Button")
+	bool GetAutoGroupWithSiblings() const { return bAutoGroupWithSiblings; }
+
+	/**
+	 * Turn the automatic grouping on or off, and act on it now.
+	 *
+	 * The behaviour reads its own copy of this at Awake, so a radio created after begin play -- a
+	 * list of options built from save data, which is the ordinary case -- would otherwise never
+	 * search at all. Turning it ON therefore does the search the behaviour would have done, and only
+	 * when this radio is in no group yet.
+	 *
+	 * Turning it OFF leaves any group already joined alone: leaving is SetToggleGroup(null), which
+	 * is a separate thing to want and already has a spelling.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Radio Button")
+	void SetAutoGroupWithSiblings(bool bInAutoGroupWithSiblings);
 
 	/**
 	 * Selected or not. A property rather than the getter/setter pair alone, because the pair alone

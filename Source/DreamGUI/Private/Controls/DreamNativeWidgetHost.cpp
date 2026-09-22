@@ -71,5 +71,17 @@ UUserWidget* UDreamNativeWidgetHost::GetHostedWidget() const
 	return HostVisual != nullptr ? HostVisual->GetUserWidgetObject() : nullptr;
 }
 
+void UDreamNativeWidgetHost::SetResolutionScale(float InResolutionScale)
+{
+	ResolutionScale = FMath::Max(InResolutionScale, 0.05f);
+	ApplyStyle();
+}
+
+void UDreamNativeWidgetHost::SetBackgroundColor(FLinearColor InBackgroundColor)
+{
+	BackgroundColor = InBackgroundColor;
+	ApplyStyle();
+}
+
 // The tag this class answers to in .dui.
 DECLARE_DREAM_GUI_WIDGET("Native", "NativeWidgetHost", UDreamNativeWidgetHost)

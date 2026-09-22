@@ -3,11 +3,9 @@
 #include "DataFactory/DreamWidgetBlueprintActorFactory.h"
 
 #include "AssetRegistry/AssetData.h"
-#include "Core/Components/DreamCanvas.h"
-#include "Core/DreamGUISettings.h"
-#include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
-#include "Core/DreamWidgetPresenterComponent.h"
+#include "Core/DreamWorldWidgetActor.h"
+#include "Core/DreamWorldWidgetComponent.h"
 #include "DreamWidgetBlueprint.h"
 
 #define LOCTEXT_NAMESPACE "DreamWidgetBlueprintActorFactory"
@@ -15,8 +13,12 @@
 UDreamWidgetBlueprintActorFactory::UDreamWidgetBlueprintActorFactory()
 {
 	DisplayName = LOCTEXT("DisplayName", "DreamUI Widget");
-	bShowInEditorQuickMenu = false;
+	// In the Place Actors panel as well as on the drop gesture: the actor is a plain C++ class with
+	// an empty WidgetClass, which is a usable starting point -- pick the widget in the Details panel.
+	// While the root was a settings-named Blueprint there was nothing sensible to offer here.
+	bShowInEditorQuickMenu = true;
 	bUseSurfaceOrientation = false;
+	NewActorClass = ADreamWorldWidgetActor::StaticClass();
 }
 
 bool UDreamWidgetBlueprintActorFactory::CanCreateActorFrom(const FAssetData& AssetData, FText& OutErrorMsg)
@@ -29,78 +31,35 @@ bool UDreamWidgetBlueprintActorFactory::CanCreateActorFrom(const FAssetData& Ass
 	return false;
 }
 
-AActor* UDreamWidgetBlueprintActorFactory::SpawnActor(UObject* InAsset, ULevel* InLevel, const FTransform& InTransform,
-	const FActorSpawnParameters& InSpawnParams)
-{
-	UDreamWidgetPresenterComponentBase::MarkNeedCheckNecessaryObjects();
-	AActor* Actor = Super::SpawnActor(InAsset, InLevel, InTransform, InSpawnParams);
-	if (Actor == nullptr)
-	{
-		return nullptr;
-	}
-	// The settings' root actor usually carries a presenter already; a bare AActor fallback gets one
-	// grafted so the drop still produces a working host.
-	UDreamWidgetPresenterComponent* Presenter = Actor->FindComponentByClass<UDreamWidgetPresenterComponent>();
-	if (Presenter == nullptr)
-	{
-		Presenter = NewObject<UDreamWidgetPresenterComponent>(Actor, UDreamWidgetPresenterComponent::StaticClass());
-		Actor->SetRootComponent(Presenter);
-		Presenter->RegisterComponent();
-		Actor->AddInstanceComponent(Presenter);
-	}
-	Presenter->bIsSpawnFromFactory = true;
-	return Actor;
-}
-
 void UDreamWidgetBlueprintActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor)
 {
 	Super::PostSpawnActor(Asset, InNewActor);
 
 	UDreamWidgetBlueprint* Blueprint = CastChecked<UDreamWidgetBlueprint>(Asset);
-	UDreamWidgetPresenterComponent* Presenter = InNewActor->FindComponentByClass<UDreamWidgetPresenterComponent>();
-	if (Presenter == nullptr)
+	ADreamWorldWidgetActor* WidgetActor = Cast<ADreamWorldWidgetActor>(InNewActor);
+	if (WidgetActor == nullptr || WidgetActor->GetWidgetComponent() == nullptr)
 	{
 		return;
 	}
-	Presenter->SetWidgetClass(Blueprint->GeneratedClass.Get());
-
-	UWorld* World = InNewActor->GetWorld();
-	if (World != nullptr && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())
-	{
-		// Deferred a frame, exactly as the prefab factory did: the drop runs mid-placement, and the
-		// event-system / raycaster check wants a settled world to look at.
-		UDreamUIManagerObject::AddOneShotTickFunction([WeakPresenter = MakeWeakObjectPtr(Presenter)]()
-		{
-			if (WeakPresenter.IsValid())
-			{
-				WeakPresenter->CheckNecessaryObjects();
-			}
-		}, 1);
-	}
+	WidgetActor->GetWidgetComponent()->SetWidgetClass(Blueprint->GeneratedClass.Get());
 }
 
 UObject* UDreamWidgetBlueprintActorFactory::GetAssetFromActorInstance(AActor* ActorInstance)
 {
-	UDreamWidgetPresenterComponent* Presenter = ActorInstance->FindComponentByClass<UDreamWidgetPresenterComponent>();
-	if (Presenter == nullptr)
+	const UDreamWorldWidgetComponent* WidgetComponent = ActorInstance->FindComponentByClass<UDreamWorldWidgetComponent>();
+	if (WidgetComponent == nullptr)
 	{
 		return nullptr;
 	}
-	UClass* WidgetClass = Presenter->GetWidgetClass();
+	UClass* WidgetClass = WidgetComponent->GetWidgetClass();
 	return WidgetClass != nullptr ? WidgetClass->ClassGeneratedBy : nullptr;
 }
 
 UClass* UDreamWidgetBlueprintActorFactory::GetDefaultActorClass(const FAssetData& AssetData)
 {
 	// A drop into a 3D level means world space; the screen-space path is AddWidgetOfClassToViewport.
-	NewActorClass = UDreamGUISettings::LoadSettingClass(
-		UDreamGUISettings::Get()->GetRootClassForRenderMode(EDreamRenderMode::WorldSpace_DreamUI),
-		TEXT("world-space root actor class"));
-	if (NewActorClass == nullptr)
-	{
-		NewActorClass = AActor::StaticClass();
-	}
-	return NewActorClass;
+	// One class for both renderers -- the component's Backend property is what picks between them.
+	return ADreamWorldWidgetActor::StaticClass();
 }
 
 #undef LOCTEXT_NAMESPACE

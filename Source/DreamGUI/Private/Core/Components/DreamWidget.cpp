@@ -22,7 +22,15 @@
 #endif
 #include "Components/SceneComponent.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetNavigation.h"
+#include "Engine/GameInstance.h"
+#include "Engine/LocalPlayer.h"
+#include "Event/DreamPointerEventData.h"
+#include "GameFramework/PlayerController.h"
+// FLayoutLocalization, for the Culture flow-direction preference. SlateCore is already a public
+// dependency; this is the one header of it that answers "which way does the running culture read".
+#include "Layout/FlowDirection.h"
 #if WITH_EDITOR
 #include "UObject/GarbageCollection.h"
 #include "UObject/UnrealType.h"
@@ -1179,9 +1187,10 @@ void UDreamWidget::PostEditUndo()
 	// Undo restores RelativeRotation straight into the property, bypassing the setter that keeps
 	// the transient euler mirror in step.
 	this->RelativeRotationEuler = this->RelativeRotation.Rotator();
-	// Same silence for the bits derived from the render transform and perspective properties.
+	// Same silence for the bits derived from the render transform, shear and perspective properties.
 	RefreshRenderTransformFlag();
 	RefreshPerspectiveInHierarchy();
+	RefreshShearInHierarchy();
 	// Parent is Transient, so the transaction did NOT restore it: after an undo it still names
 	// whoever this widget was attached to when the undo began. Children IS restored, and it is the
 	// structural truth -- so the parent's restored array is the thing to ask, not the back-pointer.
@@ -1593,6 +1602,13 @@ void UDreamWidget::ClearRenderTransform()
 		RenderScale = FVector::OneVector;
 		ApplyRenderTransformChange();
 	}
+	// Its own branch: shear is not part of bHasRenderTransform (see RefreshRenderTransformFlag), so a
+	// widget that is only sheared would otherwise walk out of "clear the render transform" still slanted.
+	if (HasOwnRenderShear())
+	{
+		RenderShear = FVector2D::ZeroVector;
+		ApplyRenderShearChange();
+	}
 }
 
 bool UDreamWidget::GetPerspectiveScope(DreamPerspective::FScope& OutScope)const
@@ -1659,10 +1675,59 @@ FMatrix UDreamWidget::GetInheritedPerspectiveRemap()const
 	return DreamPerspective::ComposeRemap(Scopes, Root->GetViewLocation());
 }
 
+namespace DreamRenderShear
+{
+	/**
+	 * One widget's shear as a matrix in its own local space, origin at its pivot -- which is where the
+	 * local origin already is, so there is no recentring to do.
+	 *
+	 * Local X is DEPTH here and the widget's rect lies in the YZ plane, so the two channels slant Y
+	 * against Z and Z against Y. Row-vector convention, matching everything else in this file: a
+	 * point p becomes p*M, so M's Y row is what Y contributes to the result.
+	 *
+	 * Clamped just under a right angle for the same reason Slate clamps: tan(90) is infinite and one
+	 * authored 90 would send every vertex of the subtree to infinity.
+	 */
+	FMatrix MakeLocalShearMatrix(const FVector2D& InShearDegrees)
+	{
+		const double ClampedX = FMath::Clamp(InShearDegrees.X, -89.0, 89.0);
+		const double ClampedY = FMath::Clamp(InShearDegrees.Y, -89.0, 89.0);
+		const double TanX = FMath::Tan(FMath::DegreesToRadians(ClampedX));
+		const double TanY = FMath::Tan(FMath::DegreesToRadians(ClampedY));
+		FMatrix Result = FMatrix::Identity;
+		// Y' = Y + Z*TanX : the horizontal slant, the one that turns a rectangle into a parallelogram
+		// leaning left or right. Z' = Y*TanY + Z is the vertical one.
+		Result.M[2][1] = TanX;
+		Result.M[1][2] = TanY;
+		return Result;
+	}
+}
+
+FMatrix UDreamWidget::GetInheritedShearCorrection()const
+{
+	// C(X) = O(X)^-1 * S(X) * O(X) * C(parent), read as "apply this level's shear in world terms,
+	// then whatever the levels above already contribute". Walking up rather than caching: the chain
+	// is only ever consulted while something in it is sheared, and a cache would need invalidating
+	// from every transform change in the subtree to stay honest.
+	FMatrix Result = Parent.IsValid() ? Parent->GetInheritedShearCorrection() : FMatrix::Identity;
+	if (HasOwnRenderShear())
+	{
+		const FMatrix ObjectToWorld = ObjectToWorldTransform.ToMatrixWithScale();
+		Result = ObjectToWorld.Inverse() * DreamRenderShear::MakeLocalShearMatrix(RenderShear) * ObjectToWorld * Result;
+	}
+	return Result;
+}
+
 FMatrix UDreamWidget::GetWorldMatrix()const
 {
-	const FMatrix Base = ObjectToWorldTransform.ToMatrixWithScale();
-	return HasPerspectiveApplied() ? Base * GetInheritedPerspectiveRemap() : Base;
+	FMatrix Result = ObjectToWorldTransform.ToMatrixWithScale();
+	// Both multiplications are skipped when they would be by Identity, so a widget using neither
+	// feature gets exactly the matrix this function has always returned.
+	if (HasShearApplied())
+	{
+		Result = Result * GetInheritedShearCorrection();
+	}
+	return HasPerspectiveApplied() ? Result * GetInheritedPerspectiveRemap() : Result;
 }
 
 FMatrix UDreamWidget::GetInverseWorldMatrix()const
@@ -1768,8 +1833,47 @@ void UDreamWidget::RefreshPerspectiveInHierarchy()
 	}
 }
 
+void UDreamWidget::RefreshShearInHierarchy()
+{
+	const bool bNew = HasOwnRenderShear() || (Parent.IsValid() && Parent->bHasShearInHierarchy);
+	if (bHasShearInHierarchy != bNew)
+	{
+		bHasShearInHierarchy = bNew;
+		for (UDreamWidget* Child : Children)
+		{
+			if (IsValid(Child))
+			{
+				Child->RefreshShearInHierarchy();
+			}
+		}
+	}
+}
+
+void UDreamWidget::ApplyRenderShearChange()
+{
+	// Same shape as ApplyPerspectiveChange and for the same reason: a shear moves where things are
+	// drawn, never where the layout believes they are. CalculateObjectToWorldTransform(true) is what
+	// walks the subtree and re-runs the geometry; the shear itself contributes nothing to the
+	// FTransform it recomputes, which is precisely why it has to ride the matrix path instead.
+	RefreshShearInHierarchy();
+	CalculateObjectToWorldTransform(true);
+	MarkCanvasUpdate(true);
+}
+
+void UDreamWidget::SetRenderShear(const FVector2D& Value)
+{
+	if (!RenderShear.Equals(Value))
+	{
+		RenderShear = Value;
+		ApplyRenderShearChange();
+	}
+}
+
 void UDreamWidget::RefreshRenderTransformFlag()
 {
+	// RenderShear is deliberately absent. This flag decides whether GetLocalTransform is composed
+	// with a render FTransform, and a shear cannot survive that trip -- it is applied on the matrix
+	// path instead, and folding it in here would only make the FTransform silently orthonormalize it.
 	bHasRenderTransform = !RenderTranslation.IsNearlyZero()
 		|| !RenderRotation.IsNearlyZero()
 		|| !RenderScale.Equals(FVector::OneVector);
@@ -2679,6 +2783,7 @@ void UDreamWidget::OnAttachedToParent()
 		DreamUIManager->UnparkWidget(this);
 	}
 	RefreshPerspectiveInHierarchy();//a new parent can put this subtree inside a perspective scope
+	RefreshShearInHierarchy();//...and, the same way, inside a sheared one
 	if (this->bIsRegistered)//registered means the hierarchy is live, not still being assembled
 	{
 		Call_TransformChanged();
@@ -2771,6 +2876,7 @@ void UDreamWidget::OnRegister()
 	// silently does nothing after a load -- which reads as "only works in the designer".
 	RefreshRenderTransformFlag();
 	RefreshPerspectiveInHierarchy();
+	RefreshShearInHierarchy();
 	const bool bPanelSlotRegisteredByEnsure = Parent.IsValid()
 		&& EnsurePanelSlotForChild(Parent.Get(), this);
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
@@ -4353,6 +4459,13 @@ void UDreamWidget::CalculateInteractable_Recursive()
 	{
 		static void CalculateInteractable(UDreamWidget* Widget)
 		{
+			// The enabled switch cascades on its own terms and is folded in below. It is computed in
+			// this same walk rather than in one of its own because the two answers are always read
+			// together, and a second recursion over the subtree would only make it possible for them
+			// to disagree for a frame.
+			const bool bParentEnabled = !Widget->Parent.IsValid() || Widget->Parent->bCacheEnabledInHierarchy;
+			Widget->bCacheEnabledInHierarchy = Widget->bIsEnabled && bParentEnabled;
+
 			bool bResultInteractable = true;
 			switch (Widget->Interactable)
 			{
@@ -4369,6 +4482,11 @@ void UDreamWidget::CalculateInteractable_Recursive()
 					bResultInteractable = true;
 				break;
 			}
+
+			// A disabled ancestor beats a descendant that explicitly asked to be interactable. That
+			// asymmetry is the point of having both: "disable this dialog" has to reach the one button
+			// inside it that was pinned Enabled, or it does not mean anything.
+			bResultInteractable = bResultInteractable && Widget->bCacheEnabledInHierarchy;
 
 			if (Widget->bCacheInteractableInHierarchy != bResultInteractable)
 			{
@@ -5314,6 +5432,347 @@ void UDreamWidget::AnnounceAccessibleText(const FText& Announcement)
 #endif
 }
 
+int32 UDreamWidget::GetLocalPlayerIndexOf(const APlayerController* InPlayerController)
+{
+	// The same index UDreamEventSystem::GetPlayerController reads back, so "this widget's player" and
+	// "this event system's player" cannot drift apart: the position of the local player in the game
+	// instance's list, which is what UserIndex has always meant here.
+	if (!IsValid(InPlayerController))
+	{
+		return 0;
+	}
+	const ULocalPlayer* LocalPlayer = InPlayerController->GetLocalPlayer();
+	if (LocalPlayer == nullptr)
+	{
+		return 0;
+	}
+	const UGameInstance* GameInstance = LocalPlayer->GetGameInstance();
+	if (GameInstance == nullptr)
+	{
+		return 0;
+	}
+	const int32 Index = GameInstance->GetLocalPlayers().IndexOfByKey(LocalPlayer);
+	return Index != INDEX_NONE ? Index : 0;
+}
+
+APlayerController* UDreamWidget::GetOwningPlayer() const
+{
+	// Whoever hosts this widget owns it. The walk starts at the PARENT because a user widget answers
+	// this for itself (its override checks an explicitly set controller first and then calls this),
+	// and an ancestor user widget with no explicit owner does the same thing again from its own
+	// position -- so the nearest EXPLICIT owner anywhere up the chain is the one that wins.
+	for (const UDreamWidget* Ancestor = GetParent(); Ancestor != nullptr; Ancestor = Ancestor->GetParent())
+	{
+		if (const UDreamUserWidget* HostUserWidget = Cast<const UDreamUserWidget>(Ancestor))
+		{
+			return HostUserWidget->GetOwningPlayer();
+		}
+	}
+	// The whole answer in a single-player game, and what UMG's CreateWidget defaults to.
+	const UWorld* World = GetWorld();
+	return World != nullptr ? World->GetFirstPlayerController() : nullptr;
+}
+
+ULocalPlayer* UDreamWidget::GetOwningLocalPlayer() const
+{
+	const APlayerController* PlayerController = GetOwningPlayer();
+	return IsValid(PlayerController) ? PlayerController->GetLocalPlayer() : nullptr;
+}
+
+int32 UDreamWidget::GetOwningPlayerIndex() const
+{
+	return GetLocalPlayerIndexOf(GetOwningPlayer());
+}
+
+UGameInstance* UDreamWidget::GetGameInstance() const
+{
+	const UWorld* World = GetWorld();
+	return World != nullptr ? World->GetGameInstance() : nullptr;
+}
+
+bool UDreamWidget::SetKeyboardFocus()
+{
+	return SetFocus(GetOwningPlayerIndex());
+}
+
+bool UDreamWidget::HasKeyboardFocus() const
+{
+	return HasFocus(GetOwningPlayerIndex());
+}
+
+bool UDreamWidget::SetUserFocus(APlayerController* InPlayerController)
+{
+	return SetFocus(GetLocalPlayerIndexOf(InPlayerController));
+}
+
+bool UDreamWidget::HasUserFocus(APlayerController* InPlayerController) const
+{
+	return HasFocus(GetLocalPlayerIndexOf(InPlayerController));
+}
+
+void UDreamWidget::ClearKeyboardFocus()
+{
+	ClearFocus(GetOwningPlayerIndex());
+}
+
+int32 UDreamWidget::GetLocalPlayerCountForQueries() const
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	// At least one: outside a game instance -- a test world, the designer preview -- user index 0 is
+	// still a meaningful thing to ask about, and answering "no players" would make every one of the
+	// any-user queries below silently false.
+	return GameInstance != nullptr ? FMath::Max(GameInstance->GetNumLocalPlayers(), 1) : 1;
+}
+
+bool UDreamWidget::HasAnyUserFocus() const
+{
+	const int32 PlayerCount = GetLocalPlayerCountForQueries();
+	for (int32 UserIndex = 0; UserIndex < PlayerCount; ++UserIndex)
+	{
+		if (HasFocus(UserIndex))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UDreamWidget::HasFocusedDescendantForUser(int32 InUserIndex) const
+{
+	UDreamEventSystem* EventSystem =
+		UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamWidget*>(this), InUserIndex);
+	if (EventSystem == nullptr)
+	{
+		return false;
+	}
+	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
+	{
+		UDreamWidget* Focused = EventSystem->GetCurrentSelectedComponent(Entry.Key);
+		// Descendants, not "this or its descendants" -- UMG draws the same line, and a widget asking
+		// whether something INSIDE it has focus already knows whether it has focus itself.
+		if (IsValid(Focused) && Focused != this && Focused->IsChildOf(this))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UDreamWidget::HasFocusedDescendants() const
+{
+	const int32 PlayerCount = GetLocalPlayerCountForQueries();
+	for (int32 UserIndex = 0; UserIndex < PlayerCount; ++UserIndex)
+	{
+		if (HasFocusedDescendantForUser(UserIndex))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UDreamWidget::HasUserFocusedDescendants(APlayerController* InPlayerController) const
+{
+	return HasFocusedDescendantForUser(GetLocalPlayerIndexOf(InPlayerController));
+}
+
+bool UDreamWidget::IsHovered() const
+{
+	UDreamEventSystem* EventSystem =
+		UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamWidget*>(this), GetOwningPlayerIndex());
+	if (EventSystem == nullptr)
+	{
+		return false;
+	}
+	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
+	{
+		const UDreamPointerEventData* PointerEvent = Entry.Value;
+		if (!IsValid(PointerEvent))
+		{
+			continue;
+		}
+		if (PointerEvent->EnterWidget.Get() == this)
+		{
+			return true;
+		}
+		// The enter STACK as well, so a button still reads as hovered while the pointer is over its
+		// own label. Slate gets that for free because hover propagates to parents; here the stack is
+		// where that fact lives.
+		for (const TObjectPtr<UDreamWidget>& Entered : PointerEvent->EnterWidgetStack)
+		{
+			if (Entered.Get() == this)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool UDreamWidget::HasMouseCapture() const
+{
+	return HasMouseCaptureByUser(GetOwningPlayerIndex(), INDEX_NONE);
+}
+
+bool UDreamWidget::HasMouseCaptureByUser(int32 InUserIndex, int32 InPointerIndex) const
+{
+	UDreamEventSystem* EventSystem =
+		UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamWidget*>(this), InUserIndex);
+	if (EventSystem == nullptr)
+	{
+		return false;
+	}
+	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
+	{
+		if (InPointerIndex >= 0 && Entry.Key != InPointerIndex)
+		{
+			continue;
+		}
+		const UDreamPointerEventData* PointerEvent = Entry.Value;
+		if (!IsValid(PointerEvent))
+		{
+			continue;
+		}
+		// Held down AND pressed on this widget: that pointer's drag and its release go here whatever
+		// it travels over in between, which is the whole of what capture buys a caller.
+		if (PointerEvent->bNowIsTriggerPressed && PointerEvent->PressWidget.Get() == this)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UDreamWidget::IsRendered() const
+{
+	return bCacheRenderVisibleInHierarchy && GetFinalRenderOpacity() > UE_KINDA_SMALL_NUMBER;
+}
+
+bool UDreamWidget::IsInViewport() const
+{
+	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
+	if (ScreenUI == nullptr)
+	{
+		return false;
+	}
+	// Walk up: the subsystem tracks PAGES, and the thing a caller means by "am I on screen" is
+	// usually a widget several levels inside one.
+	for (const UDreamWidget* Ancestor = this; Ancestor != nullptr; Ancestor = Ancestor->GetParent())
+	{
+		if (ScreenUI->IsInViewport(const_cast<UDreamWidget*>(Ancestor)))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void UDreamWidget::ForceLayoutPrepass()
+{
+	if (UDreamUIManagerWorldSubsystem* DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		DreamUIManager->RebuildLayoutImmediately(this);
+	}
+}
+
+void UDreamWidget::InvalidateLayoutAndVolatility()
+{
+	MarkLayoutForRebuild(this);
+}
+
+FVector2D UDreamWidget::GetDesiredSize() const
+{
+	if (UDreamWidget* ParentWidget = Parent.Get(); IsValid(ParentWidget))
+	{
+		if (const UDreamPanelLayoutBase* ParentPanel = Cast<UDreamPanelLayoutBase>(ParentWidget->GetLayoutContainer()))
+		{
+			return ParentPanel->GetDesiredSize(const_cast<UDreamWidget*>(this));
+		}
+	}
+	// Nothing is measuring this widget, so the size it has IS the size it wants.
+	return GetSize();
+}
+
+void UDreamWidget::SetRenderTransformAngle(float InAngle)
+{
+	FRotator NewRotation = RenderRotation;
+	NewRotation.Roll = InAngle;
+	SetRenderRotation(NewRotation);
+}
+
+void UDreamWidget::SetFlowDirectionPreference(EDreamFlowDirectionPreference Value)
+{
+	if (FlowDirectionPreference == Value)
+	{
+		return;
+	}
+	FlowDirectionPreference = Value;
+	MarkFlowDirectionChangedRecursive();
+}
+
+void UDreamWidget::MarkFlowDirectionChangedRecursive()
+{
+	// Arrange and not Measure: mirroring changes where a container PUTS its children, never how big
+	// any of them wants to be, so no preferred size on the ancestor chain can come out differently.
+	// The container to dirty is this widget's OWN -- it is the one that arranges along the flow --
+	// which is why this does not go through MarkLayoutForRebuild, whose Arrange branch dirties the
+	// parent's container instead.
+	if (UDreamLayoutContainer* Container = GetLayoutContainer(); IsValid(Container))
+	{
+		Container->MarkLayoutDirty();
+		MarkWidgetLayoutDirty();
+	}
+	for (UDreamWidget* Child : GetChildren())
+	{
+		// A child that states its own preference already resolved to that answer and still does, and
+		// so does everything below it. Stopping there keeps a per-screen mirror from re-arranging the
+		// one panel that was deliberately pinned left-to-right.
+		if (IsValid(Child) && Child->FlowDirectionPreference == EDreamFlowDirectionPreference::Inherit)
+		{
+			Child->MarkFlowDirectionChangedRecursive();
+		}
+	}
+}
+
+EDreamFlowDirection UDreamWidget::GetResolvedFlowDirection() const
+{
+	for (const UDreamWidget* Widget = this; Widget != nullptr; Widget = Widget->Parent.Get())
+	{
+		switch (Widget->FlowDirectionPreference)
+		{
+		case EDreamFlowDirectionPreference::LeftToRight:
+			return EDreamFlowDirection::LeftToRight;
+		case EDreamFlowDirectionPreference::RightToLeft:
+			return EDreamFlowDirection::RightToLeft;
+		case EDreamFlowDirectionPreference::Culture:
+			return FLayoutLocalization::GetLocalizedLayoutDirection() == EFlowDirection::RightToLeft
+				? EDreamFlowDirection::RightToLeft
+				: EDreamFlowDirection::LeftToRight;
+		case EDreamFlowDirectionPreference::Inherit:
+			break;
+		}
+	}
+	return EDreamFlowDirection::LeftToRight;
+}
+
+void UDreamWidget::RefreshCultureFlowDirection()
+{
+	if (FlowDirectionPreference == EDreamFlowDirectionPreference::Culture)
+	{
+		// This widget and everything below it that inherits just changed answer; nothing below a
+		// descendant that states its own preference did, and the recursion already stops there.
+		MarkFlowDirectionChangedRecursive();
+		return;
+	}
+	for (UDreamWidget* Child : GetChildren())
+	{
+		if (IsValid(Child))
+		{
+			Child->RefreshCultureFlowDirection();
+		}
+	}
+}
+
 void UDreamWidget::SetRaycastable(EDreamWidgetRaycastableType Value)
 {
 	if (Raycastable != Value)
@@ -5330,6 +5789,18 @@ void UDreamWidget::SetInteractable(EDreamWidgetInteractableType Value)
 		Interactable = Value;
 		CalculateInteractable_Recursive();
 	}
+}
+
+void UDreamWidget::SetIsEnabled(bool bInIsEnabled)
+{
+	if (bIsEnabled == bInIsEnabled)
+	{
+		return;
+	}
+	bIsEnabled = bInIsEnabled;
+	// One walk does both halves: it recomputes the enabled cascade and the interactable answer that
+	// input, navigation and every control's disabled look are already reading.
+	CalculateInteractable_Recursive();
 }
 
 void UDreamWidget::SetIgnoreLayout(bool Value)

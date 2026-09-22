@@ -1,0 +1,19 @@
+{
+	"umgClass": "UWrapBoxSlot",
+	"umgHeader": "Components/WrapBoxSlot.h",
+	"dreamClass": "UDreamPanelSlot",
+	"members": [
+		{"umg": "Padding", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "FillSpanWhenLessThan", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "bFillEmptySpace", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "bForceNewLine", "kind": "property", "status": "adopt", "dream": "", "note": "Read by the wrap box's measure and arrange alike, so the line count it produces is the one it measured room for."},
+		{"umg": "SetPadding", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetFillEmptySpace", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetFillSpanWhenLessThan", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetNewLine", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

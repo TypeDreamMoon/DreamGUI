@@ -3,10 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Controls/DreamListView.h"
 #include "UObject/Object.h"
 #include "DreamListControlsTestTypes.generated.h"
 
 class UDreamWidget;
+class UDreamDragDropOperation;
 
 /**
  * Somewhere a list's or a tree's events can land.
@@ -69,6 +71,111 @@ public:
 	}
 
 	/**
+	 * FDreamScrollBoxUserScrolledOffsetEvent, and FDreamScrollBoxScrolledEvent, which have the same
+	 * shape. Every value in order, because "fired at all" is the claim a user-scroll event fails on:
+	 * a control that reported its own pushes as the player's would fire here with the right number.
+	 */
+	UFUNCTION()
+	void RecordScrollValue(float Value)
+	{
+		ScrollValues.Add(Value);
+	}
+
+	/** FDreamScrollBoxBarVisibilityChangedEvent: every change, so a repeat is visible. */
+	UFUNCTION()
+	void RecordBarVisibility(bool bVisible)
+	{
+		BarVisibilities.Add(bVisible);
+	}
+
+	/**
+	 * FDreamListScrolledEvent, for OnListViewScrolled: both numbers, because the claim worth making
+	 * is that the visible fraction came along with the offset.
+	 */
+	UFUNCTION()
+	void RecordScrollPair(float CurrentOffset, float ViewFraction)
+	{
+		ScrollValues.Add(CurrentOffset);
+		ScrollFractions.Add(ViewFraction);
+	}
+
+	/**
+	 * FDreamListScrolledEvent again, for OnListViewFinishedScrolling, so one probe can watch both
+	 * halves at once -- "moved twice and finished once" is the claim, and it needs two counters.
+	 */
+	UFUNCTION()
+	void RecordFinishedPair(float CurrentOffset, float ViewFraction)
+	{
+		FinishedValues.Add(CurrentOffset);
+	}
+
+	/** FDreamListItemHoverEvent. */
+	UFUNCTION()
+	void RecordItemHover(int32 ItemIndex, UObject* Item, bool bIsHovered)
+	{
+		HoverIndices.Add(ItemIndex);
+		HoverStates.Add(bIsHovered);
+	}
+
+	/** FDreamListEntriesGeneratedEvent: one entry per rebuild, so "rebuilt once" is a countable claim. */
+	UFUNCTION()
+	void RecordRowsGenerated(int32 RealizedRowCount)
+	{
+		RowCounts.Add(RealizedRowCount);
+	}
+
+	/**
+	 * FDreamListItemSelectableQuery: everything is allowed except one index.
+	 *
+	 * A single vetoed index rather than a predicate, because the claim being tested is that BOTH the
+	 * click road and the navigation road ask -- which needs one row that differs, not a policy.
+	 */
+	UFUNCTION()
+	bool AnswerSelectable(int32 ItemIndex, UObject* Item)
+	{
+		QueriedIndices.Add(ItemIndex);
+		return ItemIndex != VetoedIndex;
+	}
+
+	/** FDreamListItemDragEvent: OnItemDragDetected. */
+	UFUNCTION()
+	void RecordItemDrag(int32 ItemIndex, UObject* Item, UDreamDragDropOperation* Operation)
+	{
+		ItemIndices.Add(ItemIndex);
+		LastItem = Item;
+	}
+
+	/** FDreamListItemDragEvent again, so one probe can watch a drag's start and its end at once. */
+	UFUNCTION()
+	void RecordSecondItemDrag(int32 ItemIndex, UObject* Item, UDreamDragDropOperation* Operation)
+	{
+		SecondItemIndices.Add(ItemIndex);
+	}
+
+	/** FDreamWidgetFocusEvent: two counters, because "once" is the claim an edge event fails on. */
+	UFUNCTION()
+	void RecordFocusReceived(int32 InUserIndex, int32 InPointerId) { ++FocusReceivedCount; }
+
+	UFUNCTION()
+	void RecordFocusLost(int32 InUserIndex, int32 InPointerId) { ++FocusLostCount; }
+
+	/** FDreamScrollBoxFocusUpdatedEvent. */
+	UFUNCTION()
+	void RecordFocusUpdated(UDreamWidget* FocusedWidget)
+	{
+		++FocusUpdatedCount;
+		LastFocusedWidget = FocusedWidget;
+	}
+
+	/** FDreamListItemDropEvent: the zone matters as much as the index, so both are kept. */
+	UFUNCTION()
+	void RecordItemDrop(int32 ItemIndex, UObject* Item, UDreamDragDropOperation* Operation, EDreamItemDropZone DropZone)
+	{
+		DropIndices.Add(ItemIndex);
+		DropZones.Add(DropZone);
+	}
+
+	/**
 	 * FDreamTreeGetItemChildren: a hierarchy a test declares inline, one Add per parent.
 	 *
 	 * The map is a plain member rather than a UPROPERTY because a TMap of arrays is not a reflectable
@@ -91,6 +198,26 @@ public:
 	TArray<bool> ExpansionStates;
 	TArray<int32> SelectionIndices;
 	TArray<bool> OpenStates;
+	TArray<float> ScrollValues;
+	TArray<float> ScrollFractions;
+	TArray<float> FinishedValues;
+	TArray<bool> BarVisibilities;
+	TArray<int32> HoverIndices;
+	TArray<bool> HoverStates;
+	TArray<int32> RowCounts;
+	TArray<int32> QueriedIndices;
+	TArray<int32> DropIndices;
+	TArray<EDreamItemDropZone> DropZones;
+
+	int32 FocusReceivedCount = 0;
+	int32 FocusLostCount = 0;
+	int32 FocusUpdatedCount = 0;
+
+	/** Which index AnswerSelectable refuses. INDEX_NONE lets everything through. */
+	int32 VetoedIndex = INDEX_NONE;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> LastFocusedWidget = nullptr;
 	TMap<UObject*, TArray<UObject*>> Children;
 
 	/** Reflected, because a probe that keeps a widget alive only by luck is a probe that crashes. */

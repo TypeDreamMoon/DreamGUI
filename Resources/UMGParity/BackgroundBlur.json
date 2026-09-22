@@ -1,0 +1,23 @@
+{
+	"umgClass": "UBackgroundBlur",
+	"umgHeader": "Components/BackgroundBlur.h",
+	"dreamClass": "UDreamBackgroundBlur",
+	"members": [
+		{"umg": "Padding", "kind": "property", "status": "map", "dream": "UDreamPanelSlot::Padding", "note": "UMG's blur is a single-child panel; this one is a VISUAL you put on a widget, so it holds nothing of its own. What is inside the blurred widget is arranged by that widget's own slot, which carries the padding."},
+		{"umg": "HorizontalAlignment", "kind": "property", "status": "map", "dream": "UDreamPanelSlot::HorizontalAlignment", "note": "Same reason as Padding: the arrangement is the slot's, because the blur is a look rather than a container."},
+		{"umg": "VerticalAlignment", "kind": "property", "status": "map", "dream": "UDreamPanelSlot::VerticalAlignment", "note": ""},
+		{"umg": "bApplyAlphaToBlur", "kind": "property", "status": "map", "dream": "ApplyAlphaToBlur", "note": "Named without this codebase's bool prefix here because the property predates it and is already saved in assets."},
+		{"umg": "BlurStrength", "kind": "property", "status": "adopt", "dream": "", "note": "0..1 here rather than UMG's 0..100."},
+		{"umg": "BlurRadius", "kind": "property", "status": "map", "dream": "BlurStrength", "note": "How far the blur REACHES, parameterized differently. UMG takes a kernel radius in pixels and, unless bOverrideAutoRadiusCalculation is ticked, computes it from the strength anyway. This blur is a down-sample chain: the reach is the strength (0..1) spread over up to MaxDownSampleLevel halvings, so it is always UMG's non-overridden mode, and the override has nothing to override."},
+		{"umg": "CornerRadius", "kind": "property", "status": "map", "dream": "UDreamVisualPostProcess::MaskTexture", "note": "The blurred region's SHAPE is a mask here rather than a radius: the mask texture's red channel decides which pixels of the rect are blurred, so a rounded-corner mask gives exactly UMG's rounded blur, and any other silhouette besides. MaskTextureUVRect places it."},
+		{"umg": "LowQualityFallbackBrush", "kind": "property", "status": "reject", "dream": "", "note": "There is no quality gate to fall back FROM. UMG's brush is drawn when Slate's renderer reports that blur is unavailable or the scalability setting turned it off; nothing in this pipeline asks that question -- the proxy renders whenever BlurStrength is above zero and is skipped when it is not. A project that wants a cheap version sets BlurStrength to 0 and skins the widget the blur sits on, which is what the fallback brush is."},
+		{"umg": "SetPadding", "kind": "function", "status": "map", "dream": "UDreamPanelSlot::SetPadding", "note": ""},
+		{"umg": "SetHorizontalAlignment", "kind": "function", "status": "map", "dream": "UDreamPanelSlot::SetHorizontalAlignment", "note": ""},
+		{"umg": "SetVerticalAlignment", "kind": "function", "status": "map", "dream": "UDreamPanelSlot::SetVerticalAlignment", "note": ""},
+		{"umg": "SetApplyAlphaToBlur", "kind": "function", "status": "adopt", "dream": "", "note": "Marks the render proxy dirty, which a bare property write does not -- hence the BlueprintSetter on the property."},
+		{"umg": "SetBlurRadius", "kind": "function", "status": "map", "dream": "SetBlurStrength", "note": "See BlurRadius above; both mark the render proxy dirty."},
+		{"umg": "SetBlurStrength", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetCornerRadius", "kind": "function", "status": "map", "dream": "UDreamVisualPostProcess::SetMaskTexture", "note": "See CornerRadius above."},
+		{"umg": "SetLowQualityFallbackBrush", "kind": "function", "status": "reject", "dream": "", "note": "See LowQualityFallbackBrush above."}
+	]
+}

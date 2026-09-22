@@ -200,6 +200,11 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 	}
 	LastFeedbackState = CurrentSelectionState;
 
+	// Before the early return below, deliberately: a listener that swaps a PICTURE per state has
+	// nothing to do with whether this selectable has a transition target, and a control whose
+	// transition type is None would otherwise hear about the states it is in exactly never.
+	OnSelectionStateChangedCPP.Broadcast(CurrentSelectionState, ImmediateSet);
+
 	const float EffectiveAnimDuration = Style ? Style->AnimationDuration : AnimDuration;
 	if (TransitionType != EUISelectableTransitionType::Custom)
 	{
@@ -1147,21 +1152,26 @@ void UUISelectable::SetNavigationNextExplicit(UUISelectable* Value)
 }
 #pragma endregion
 
+// The style asset wins, the instance's own slot is the fallback -- the same rule the colours above
+// follow, and the reason there is an instance slot at all: a control built from code pushes its
+// project sheet's feedback here, because it has no asset to hang a UDreamSelectableStyle on.
+USoundBase* UUISelectable::GetHoveredSound() const { return Style ? Style->HoveredSound : HoveredSound; }
+USoundBase* UUISelectable::GetPressedSound() const { return Style ? Style->PressedSound : PressedSound; }
+USoundBase* UUISelectable::GetClickedSound() const { return Style ? Style->ClickedSound : ClickedSound; }
+
+void UUISelectable::SetHoveredSound(USoundBase* Value) { HoveredSound = Value; }
+void UUISelectable::SetPressedSound(USoundBase* Value) { PressedSound = Value; }
+void UUISelectable::SetClickedSound(USoundBase* Value) { ClickedSound = Value; }
+
 void UUISelectable::PlaySelectionStateFeedback()
 {
-	if (Style == nullptr)
-	{
-		// Deliberately style-only, no per-instance twins: a click should sound like the OTHER
-		// clicks in this UI, and forty inline sound slots is how it stops doing that.
-		return;
-	}
 	switch (CurrentSelectionState)
 	{
 	case EUISelectableSelectionState::Hovered:
-		PlayDreamUISound(GetWidget(), Style->HoveredSound);
+		PlayDreamUISound(GetWidget(), GetHoveredSound());
 		break;
 	case EUISelectableSelectionState::Pressed:
-		PlayDreamUISound(GetWidget(), Style->PressedSound);
+		PlayDreamUISound(GetWidget(), GetPressedSound());
 		break;
 	default:
 		break;
@@ -1170,11 +1180,13 @@ void UUISelectable::PlaySelectionStateFeedback()
 
 void UUISelectable::PlayClickFeedback()
 {
+	PlayDreamUISound(GetWidget(), GetClickedSound());
 	if (Style == nullptr)
 	{
+		// Rumble stays style-only: it is a property of the PAD rather than of the control, and a
+		// control style struct that named one would be describing hardware it cannot see.
 		return;
 	}
-	PlayDreamUISound(GetWidget(), Style->ClickedSound);
 	UWorld* World = IsValid(GetWidget()) ? GetWidget()->GetWorld() : nullptr;
 	if (IsValid(Style->ClickedForceFeedback) && IsValid(World) && World->IsGameWorld())
 	{

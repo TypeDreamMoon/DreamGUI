@@ -19,6 +19,7 @@
 #include "Core/Components/DreamVisualDirectMesh.h"
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWorldContext.h"
 #include "RHIResourceUtils.h"
 
 
@@ -253,6 +254,20 @@ public:
 			bIsSupportDreamUIRenderer = true;
 		}
 		bIsSupportUERenderer = InComponent->bIsSupportUERenderer;
+#if WITH_EDITOR
+		//Only the level editor's world. A game world has hit proxies compiled out of it, and an editor
+		//PREVIEW world (the widget designer, thumbnail capture) does its own picking against the widget
+		//tree rather than against the viewport's hit proxy map.
+		bDrawForEditorHitProxies = !bIsSupportUERenderer && DreamUI::GetWorldType(InComponent) == EWorldType::Editor;
+		if (bDrawForEditorHitProxies)
+		{
+			//Resolved here rather than where it is used: a proxy is built on the game thread, while
+			//GetDynamicMeshElements runs on the rendering thread or on one of its gather tasks, which is
+			//no place to reach through a UObject. The default material outlives every scene proxy -- the
+			//engine holds it for its own lifetime -- so a bare pointer to its render proxy is enough.
+			EditorHitProxyFallbackMaterial = UMaterial::GetDefaultMaterial(MD_Surface)->GetRenderProxy();
+		}
+#endif
 
 		auto& SrcSections = InComponent->RenderSectionArray;
 		SectionArray.SetNumZeroed(SrcSections.Num());
@@ -378,7 +393,7 @@ public:
 					BeginInitResource(&NewSectionProxy->IndexBuffer);
 					BeginInitResource(&NewSectionProxy->DreamUIVertexBuffers);
 				}
-				if (bIsSupportUERenderer)
+				if (NeedsUERendererSectionData())
 				{
 					NewSectionProxy->InitFromDreamUIVertexData(SrcVertices);
 
@@ -630,7 +645,7 @@ public:
 			FMemory::Memcpy(VertexBufferData, MeshVertexData.GetData(), VertexDataLength);
 			RHICmdList.UnlockBuffer(Section->DreamUIVertexBuffers.VertexBufferRHI);
 		}
-		if(bIsSupportUERenderer)
+		if(NeedsUERendererSectionData())
 		{
 			for (int i = 0; i < NumVerts; i++)
 			{
@@ -685,20 +700,48 @@ public:
 
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const override
 	{
-		if (!bIsSupportUERenderer) return;
+		if (!bIsSupportUERenderer)
+		{
+#if WITH_EDITOR
+			/**
+			 * The DreamUI renderer draws this canvas from a view extension, which never touches the
+			 * primitive pipeline, so a hit proxy render of the level viewport finds nothing where the UI
+			 * is and the cursor falls through to whatever is behind it. Emitting the same geometry into
+			 * the hit proxy view family -- and into no other -- gives the viewport a surface to test the
+			 * cursor against. It is not a second rendering of the UI: that family draws depth and hit
+			 * proxy ids into an offscreen target the editor only ever reads pixels back from.
+			 */
+			//Built-in sections carry no material because DreamGUI's own renderer shades them, so without
+			//the stand-in there is nothing to draw them with and nothing worth emitting.
+			if (bDrawForEditorHitProxies && EditorHitProxyFallbackMaterial != nullptr
+				&& ViewFamily.EngineShowFlags.HitProxies && DreamUI_CanRender())
+			{
+				GetMeshElements_UERenderer(Views, ViewFamily, VisibilityMap, Collector, EditorHitProxyFallbackMaterial);
+			}
+#endif
+			return;
+		}
 		if (!DreamUI_CanRender())return;
 		GetMeshElements_UERenderer(Views, ViewFamily, VisibilityMap, Collector);
 	}
-	void GetMeshElements_UERenderer(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const
+	/**
+	 * InFallbackMaterial is set only by the editor-only hit proxy path above: it stands in for the
+	 * sections DreamGUI's own renderer would have shaded, and it doubles as that path's marker, because
+	 * picking wants neither of the two things a real draw does. It must not consume
+	 * bNeedToSortRenderSections -- the DreamUI renderer reads the same flag when it collects its render
+	 * data, and draw order means nothing to a depth-tested pass that writes ids -- and it must not draw
+	 * wireframe, which would leave only the edges of the UI pickable in a wireframe viewport.
+	 */
+	void GetMeshElements_UERenderer(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector, FMaterialRenderProxy* InFallbackMaterial = nullptr) const
 	{
-		if (bNeedToSortRenderSections)
+		if (InFallbackMaterial == nullptr && bNeedToSortRenderSections)
 		{
 			auto DreamUIMeshSceneProxy = const_cast<FDreamUIRenderSceneProxy*>(this);
 			DreamUIMeshSceneProxy->bNeedToSortRenderSections = false;
 			DreamUIMeshSceneProxy->SortMeshSectionRenderPriority_RenderThread();
 		}
 		// Set up wireframe material (if needed)
-		const bool bWireframe = AllowDebugViewmodes() && ViewFamily.EngineShowFlags.Wireframe;
+		const bool bWireframe = AllowDebugViewmodes() && ViewFamily.EngineShowFlags.Wireframe && InFallbackMaterial == nullptr;
 
 		FColoredMaterialRenderProxy* WireframeMaterialInstance = nullptr;
 		if (bWireframe)
@@ -722,11 +765,13 @@ public:
 			case EDreamUIRenderSectionProxyType::Mesh:
 			{
 				auto Section = static_cast<FDreamUISectionProxy_Mesh*>(RenderSection);
-				if (!bWireframe && Section->Material == nullptr)
+				if (!bWireframe && Section->Material == nullptr && InFallbackMaterial == nullptr)
 				{
 					break;//built-in sections are drawn by the DreamUI renderer only
 				}
-				FMaterialRenderProxy* MaterialProxy = bWireframe ? WireframeMaterialInstance : Section->Material->GetRenderProxy();
+				FMaterialRenderProxy* MaterialProxy = bWireframe
+					? static_cast<FMaterialRenderProxy*>(WireframeMaterialInstance)
+					: (Section->Material != nullptr ? Section->Material->GetRenderProxy() : InFallbackMaterial);
 
 				// For each view..
 				for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
@@ -772,7 +817,10 @@ public:
 				auto ChildSceneProxy = Section->ChildCanvasSceneProxy;
 				if (ChildSceneProxy != nullptr)
 				{
-					ChildSceneProxy->GetMeshElements_UERenderer(Views, ViewFamily, VisibilityMap, Collector);
+					//A nested canvas has a scene proxy of its own but is gathered through this one, so its
+					//geometry ends up under this primitive's hit proxy -- which is the actor, the depth the
+					//viewport selects at.
+					ChildSceneProxy->GetMeshElements_UERenderer(Views, ViewFamily, VisibilityMap, Collector, InFallbackMaterial);
 				}
 			}
 			break;
@@ -959,6 +1007,20 @@ public:
 			Result.bRenderInMainPass = false;
 			Result.bUsesLightingChannels = false;
 			Result.bRenderCustomDepth = false;
+#if WITH_EDITOR
+			/**
+			 * See GetDynamicMeshElements: in a hit proxy view family this primitive exists so the level
+			 * viewport has something to pick. bRenderInMainPass has to be claimed as well, even though
+			 * nothing of this is displayed, because the renderer reaches every pass mask -- hit proxies
+			 * included -- only through the main pass bit.
+			 */
+			if (bDrawForEditorHitProxies && View->Family->EngineShowFlags.HitProxies)
+			{
+				Result.bDrawRelevance = IsShown(View);
+				Result.bDynamicRelevance = true;
+				Result.bRenderInMainPass = ShouldRenderInMainPass();
+			}
+#endif
 		}
 		MaterialRelevance.SetPrimitiveViewRelevance(Result);
 		return Result;
@@ -978,6 +1040,21 @@ public:
 	uint32 GetMaxVertexBufferSize()const{return MaxVertexBufferSize;}
 #endif
 private:
+	/**
+	 * Whether a section has to carry the UE renderer's vertex buffers and vertex factory. Without them a
+	 * section can only be drawn by DreamGUI's own renderer, which reads its own buffer and never asks the
+	 * vertex factory for a stream, so the pair is left uninitialized to save the memory and the per-update
+	 * copy. The editor's hit proxy geometry does go through the primitive pipeline and so needs them.
+	 */
+	bool NeedsUERendererSectionData() const
+	{
+#if WITH_EDITOR
+		return bIsSupportUERenderer || bDrawForEditorHitProxies;
+#else
+		return bIsSupportUERenderer;
+#endif
+	}
+
 	TArray<FDreamUIRenderSectionProxy*> SectionArray;
 #if DEBUG_PRINT_MESH_MEMORY
 	uint32 MeshMemorySize = 0;
@@ -991,6 +1068,16 @@ private:
 	bool bIsDreamUIRenderToWorld = false;
 	bool bNeedToSortRenderSections = true;
 	bool bIsRenderCanvas = false;
+#if WITH_EDITOR
+	/** Set for a canvas that only DreamGUI's renderer draws, in the level editor's world. */
+	bool bDrawForEditorHitProxies = false;
+	/**
+	 * Stands in for the sections DreamGUI's own renderer shades, so they can be picked: the hit proxy
+	 * pass only needs a material that compiles a hit proxy shader, and the default surface material is
+	 * the one exempt from the proxy's used-material verification.
+	 */
+	FMaterialRenderProxy* EditorHitProxyFallbackMaterial = nullptr;
+#endif
 	TWeakObjectPtr<UDreamCanvas> RenderCanvasPtr = nullptr;
 	FDreamUIRenderSceneProxyReleaseDelegate OnRelease;
 };

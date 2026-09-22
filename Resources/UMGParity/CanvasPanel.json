@@ -1,0 +1,8 @@
+{
+	"umgClass": "UCanvasPanel",
+	"umgHeader": "Components/CanvasPanel.h",
+	"dreamClass": "UDreamLayoutContainerCanvasPanel",
+	"members": [
+		{"umg": "AddChildToCanvas", "kind": "function", "status": "map", "dream": "AddChild", "note": "One slot class here means one verb: AddChild returns the UDreamPanelSlot and the canvas rect is set straight off it."}
+	]
+}

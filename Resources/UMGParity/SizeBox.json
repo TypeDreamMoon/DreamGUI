@@ -1,0 +1,31 @@
+{
+	"umgClass": "USizeBox",
+	"umgHeader": "Components/SizeBox.h",
+	"dreamClass": "UDreamLayoutContainerSizeBox",
+	"members": [
+		{"umg": "WidthOverride", "kind": "property", "status": "adopt", "dream": "", "note": "Its override bit is bOverrideWidth here; UMG spells it bOverride_WidthOverride."},
+		{"umg": "HeightOverride", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "MinDesiredWidth", "kind": "property", "status": "map", "dream": "MinDesiredSize", "note": "One FVector2D holds both axes; zero on an axis is that axis's 'no opinion', where UMG spends a separate bOverride_ bit. GetMinDesiredWidth/SetMinDesiredWidth/ClearMinDesiredWidth exist under UMG's names."},
+		{"umg": "MinDesiredHeight", "kind": "property", "status": "map", "dream": "MinDesiredSize", "note": "The y of the same pair."},
+		{"umg": "MaxDesiredWidth", "kind": "property", "status": "map", "dream": "MaxDesiredSize", "note": "As MinDesiredWidth."},
+		{"umg": "MaxDesiredHeight", "kind": "property", "status": "map", "dream": "MaxDesiredSize", "note": "The y of the same pair."},
+		{"umg": "MinAspectRatio", "kind": "property", "status": "adopt", "dream": "", "note": "Zero means not set, the convention the two size bounds on this class already use. Applied to the CONTENT's rect in arrange, as SBox does, not to the box's own measured size."},
+		{"umg": "MaxAspectRatio", "kind": "property", "status": "adopt", "dream": "", "note": "Tested before the minimum, so a pair that crosses resolves to the maximum."},
+		{"umg": "SetWidthOverride", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearWidthOverride", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetHeightOverride", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearHeightOverride", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMinDesiredWidth", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearMinDesiredWidth", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMinDesiredHeight", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearMinDesiredHeight", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMaxDesiredWidth", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearMaxDesiredWidth", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMaxDesiredHeight", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearMaxDesiredHeight", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMinAspectRatio", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearMinAspectRatio", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetMaxAspectRatio", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "ClearMaxAspectRatio", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

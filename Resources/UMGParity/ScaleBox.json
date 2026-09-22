@@ -1,0 +1,15 @@
+{
+	"umgClass": "UScaleBox",
+	"umgHeader": "Components/ScaleBox.h",
+	"dreamClass": "UDreamLayoutContainerScaleBox",
+	"members": [
+		{"umg": "Stretch", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamScaleBoxStretch, with the same seven cases as Slate's EStretch."},
+		{"umg": "StretchDirection", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamScaleBoxStretchDirection. Bounds the scale the mode arrived at, and only that: UserSpecified and Fill state a scale rather than derive one, so they are left alone as in Slate."},
+		{"umg": "UserSpecifiedScale", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "IgnoreInheritedScale", "kind": "property", "status": "map", "dream": "bIgnoreInheritedScale", "note": "Same name with this plugin's boolean prefix."},
+		{"umg": "SetStretch", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetStretchDirection", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetUserSpecifiedScale", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetIgnoreInheritedScale", "kind": "function", "status": "adopt", "dream": "", "note": ""}
+	]
+}

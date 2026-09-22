@@ -1,0 +1,19 @@
+{
+	"umgClass": "UExpandableArea",
+	"umgHeader": "Components/ExpandableArea.h",
+	"dreamClass": "UDreamExpandableArea",
+	"members": [
+		{"umg": "Style", "kind": "property", "status": "adopt", "dream": "", "note": "FDreamExpandableAreaStyle: the header's height, its five state colours, the label, and the content area's background and padding."},
+		{"umg": "BorderBrush", "kind": "property", "status": "map", "dream": "FDreamExpandableAreaStyle::ContentBackground", "note": "A colour rather than an FSlateBrush: the content area is a procedural rect, and what an expander's frame is in this family is that rect's fill. A picture behind the content is a Native.Border around it."},
+		{"umg": "BorderColor", "kind": "property", "status": "map", "dream": "FDreamExpandableAreaStyle::ContentBackground", "note": "One colour where UMG has a brush and a tint over it, for the reason above: there is no brush here for a second colour to multiply."},
+		{"umg": "bIsExpanded", "kind": "property", "status": "adopt", "dream": "", "note": "Authored open or closed; every road that CHANGES it goes through SetIsExpanded, which is what broadcasts."},
+		{"umg": "MaxHeight", "kind": "property", "status": "adopt", "dream": "", "note": "Zero is no ceiling, which is what this control has always done."},
+		{"umg": "HeaderPadding", "kind": "property", "status": "map", "dream": "FDreamExpandableAreaStyle::HeaderPadding", "note": "In the style, because how a project's section headers are inset is a theme decision."},
+		{"umg": "AreaPadding", "kind": "property", "status": "map", "dream": "FDreamExpandableAreaStyle::ContentPadding", "note": "Named for what it pads rather than for the widget it sits on."},
+		{"umg": "OnExpansionChanged", "kind": "event", "status": "adopt", "dream": "", "note": "Fires from a click and from code alike."},
+		{"umg": "GetIsExpanded", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetIsExpanded", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetIsExpanded_Animated", "kind": "function", "status": "map", "dream": "ExpansionDuration", "note": "A duration rather than a second function: whether an expander animates is a property of the expander, not of the caller, so every road (a click, a binding, code) gets the same open. Zero is instant, which is what every expander already authored does."},
+		{"umg": "SetStyle", "kind": "function", "status": "adopt", "dream": "", "note": "UExpandableArea has no style setter at all (its Style is EditAnywhere only); this is the family's spelling of replacing a look at runtime."}
+	]
+}

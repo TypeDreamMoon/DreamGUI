@@ -1,0 +1,17 @@
+{
+	"umgClass": "UThrobber",
+	"umgHeader": "Components/Throbber.h",
+	"dreamClass": "UDreamThrobber",
+	"members": [
+		{"umg": "NumberOfPieces", "kind": "property", "status": "map", "dream": "FDreamThrobberStyle::NumberOfPieces", "note": "In the style: how many dots a project's spinners have is a theme decision, and the control rebuilds its piece pool on every push."},
+		{"umg": "bAnimateHorizontally", "kind": "property", "status": "adopt", "dream": "", "note": "Slate's rule, kept: the piece is SCALED on the ticked axis by the same wave that drives its opacity, so it swells as it brightens. One wave for both rather than a second clock. Off by default, which is what this throbber has always drawn."},
+		{"umg": "bAnimateVertically", "kind": "property", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "bAnimateOpacity", "kind": "property", "status": "map", "dream": "FDreamThrobberStyle::MinOpacity", "note": "A float where UMG has a bool, and it says more: MinOpacity 1 is UMG's bAnimateOpacity off (every piece stays solid), and anything less is how faint a piece gets at the bottom of its cycle. GetAnimateOpacity / SetAnimateOpacity spell UMG's bool over it."},
+		{"umg": "Image", "kind": "property", "status": "map", "dream": "FDreamThrobberStyle::PieceBrush", "note": "FDreamUIFaceBrush rather than FSlateBrush -- a piece is a procedural rect and the brush is its body texture. Empty is the plain rounded dot."},
+		{"umg": "SetNumberOfPieces", "kind": "function", "status": "adopt", "dream": "", "note": "Rebuilds the piece pool, which is what a count IS here. Edits this instance's style; see UDreamBorder::SetPadding for the caveat about a project sheet."},
+		{"umg": "SetAnimateHorizontally", "kind": "function", "status": "adopt", "dream": "", "note": "Turning it off re-places every piece, so a piece frozen mid-pulse does not keep the width the last tick gave it."},
+		{"umg": "SetAnimateVertically", "kind": "function", "status": "adopt", "dream": "", "note": ""},
+		{"umg": "SetAnimateOpacity", "kind": "function", "status": "adopt", "dream": "", "note": "Off pins the floor at 1; on restores the shipped floor only when the floor is currently 1, so switching off and on is not a way to lose a hand-tuned value."},
+		{"umg": "SetStyle", "kind": "function", "status": "adopt", "dream": "", "note": "UThrobber has no style struct; this is the family's spelling, and the one call that rebuilds the piece pool."}
+	]
+}

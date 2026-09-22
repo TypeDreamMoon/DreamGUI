@@ -15,7 +15,11 @@ struct DREAMGUI_API FDreamGUIObjectVersion
 		SdfSourceOnFont,
 		/** Bold is a field dilation; fonts still on the embolden-era BoldRatio default (0.08) move to 0.04. */
 		BoldAsDilation,
-		/** Prefabs carry CanvasSize at runtime; older assets copy it from the editor-only designer data. */
+		/**
+		 * The authored canvas size became runtime data rather than editor-only designer data. It was a
+		 * field on the prefab asset when this entry was added; the hierarchy is a class now, so the
+		 * compiler writes it to UDreamWidgetGeneratedClass::DesignSize and nothing reads a prefab.
+		 */
 		PrefabCanvasSizeOnAsset,
 
 		VersionPlusOne,

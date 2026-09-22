@@ -79,15 +79,33 @@ public:
 	 * actually exists; with no sheet in the project this IS the look in effect -- which is why it
 	 * stays editable instead of being gated on the enum.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStyle", BlueprintSetter = "SetStyle", Category = "Tree View")
 	FDreamTreeViewStyle Style;
+
+	/**
+	 * Refused, and clamped back to Vertical.
+	 *
+	 * A tree IS a column: the indent that makes the hierarchy readable is measured across the rows,
+	 * and a horizontal tree would have to indent DOWNWARD, which is not a thing anyone draws. UMG
+	 * has no horizontal tree either. The clamp rather than a silent ignore, so the property and the
+	 * layout never disagree about which way this control runs.
+	 */
+	virtual void SetOrientation(EDreamPanelOrientation InOrientation) override;
+
+	/** By value, not by reference: a UFUNCTION return has to be a value, and a style is a small struct. */
+	UFUNCTION(BlueprintPure, Category = "Tree View")
+	FDreamTreeViewStyle GetStyle() const { return Style; }
+
+	/** Replace the whole look and re-push it. The indent and the twisty are style, so rows rebuild. */
+	UFUNCTION(BlueprintCallable, Category = "Tree View")
+	void SetStyle(const FDreamTreeViewStyle& InStyle);
 
 	/**
 	 * One depth per item, parallel to Items / ItemObjects: 0 is a root, 1 is a child of the nearest
 	 * preceding 0, and so on. Missing entries read as 0, so a tree given no depths at all is simply
 	 * a flat list -- which is the right thing for it to be.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetItemDepths", BlueprintSetter = "SetItemDepths", Category = "Tree View")
 	TArray<int32> ItemDepths;
 
 	/**
@@ -98,7 +116,7 @@ public:
 	 * own -- see CollapsedItemObjects for the half that can, and OnSourceChanged for what happens to
 	 * each of them when the source moves.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetCollapsedItems", BlueprintSetter = "SetCollapsedItems", Category = "Tree View")
 	TSet<int32> CollapsedItems;
 
 	/**
@@ -132,6 +150,10 @@ public:
 	 * Set it (or call SetRootItems) and the control walks it with OnGetItemChildren, writing the flat
 	 * Items + ItemDepths pair the rest of this class is written in. Empty is the flat road, where
 	 * ItemObjects / Items and ItemDepths are authored directly and nothing walks anything.
+	 *
+	 * No BlueprintSetter, and the reason is the TYPE: a BlueprintSetter has to take the property's
+	 * own type, and TArray<TObjectPtr<>> is not something a UFUNCTION parameter can be. SetRootItems
+	 * takes the raw pointers a caller actually has, and is the Blueprint road.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tree View")
 	TArray<TObjectPtr<UObject>> RootItems;
@@ -164,9 +186,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tree View")
 	void SetItemsWithDepths(const TArray<FText>& InItems, const TArray<int32>& InDepths);
 
+	UFUNCTION(BlueprintPure, Category = "Tree View")
+	TArray<int32> GetItemDepths() const { return ItemDepths; }
+
 	/** Replace the depths alone, for a source that did not move. */
 	UFUNCTION(BlueprintCallable, Category = "Tree View")
 	void SetItemDepths(const TArray<int32>& InDepths);
+
+	UFUNCTION(BlueprintPure, Category = "Tree View")
+	TSet<int32> GetCollapsedItems() const { return CollapsedItems; }
+
+	/**
+	 * Replace the whole fold state at once and re-derive the visible rows.
+	 *
+	 * A raw write onto the set used to be picked up only on the next rebuild, which is the difference
+	 * between a property and a setter -- and a tree whose folds moved without its rows moving is a
+	 * tree that is lying about where its items are.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Tree View")
+	void SetCollapsedItems(const TSet<int32>& InCollapsed);
+
+	/** UMG's name for SetItemExpanded, which is the one this control was written with. */
+	UFUNCTION(BlueprintCallable, Category = "Tree View")
+	void SetItemExpansion(int32 InItemIndex, bool bInExpanded) { SetItemExpanded(InItemIndex, bInExpanded); }
 
 	/** How far in this item's row starts, in pixels: its depth times the style's IndentPerLevel. */
 	UFUNCTION(BlueprintPure, Category = "Tree View")

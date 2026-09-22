@@ -720,5 +720,41 @@ void UDreamDialog::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 
 #undef LOCTEXT_NAMESPACE
 
+void UDreamDialog::SetStyle(const FDreamDialogStyle& InStyle)
+{
+	Style = InStyle;
+	ApplyStyle();
+}
+
+void UDreamDialog::SetCancelResult(FName InCancelResult)
+{
+	CancelResult = InCancelResult;
+}
+
+void UDreamDialog::SetFocusDefaultButton(bool bInFocusDefaultButton)
+{
+	bFocusDefaultButton = bInFocusDefaultButton;
+}
+
+void UDreamDialog::SetCloseOnBack(bool bInCloseOnBack)
+{
+	bCloseOnBack = bInCloseOnBack;
+	// The scope and the scrim's button are both decided in RefreshDimmer. Before the parts exist there
+	// is nothing to refresh, and the build will read the flag itself.
+	if (DimmerNode != nullptr)
+	{
+		RefreshDimmer();
+	}
+}
+
+void UDreamDialog::SetCloseOnDimmerClick(bool bInCloseOnDimmerClick)
+{
+	bCloseOnDimmerClick = bInCloseOnDimmerClick;
+	if (DimmerNode != nullptr)
+	{
+		RefreshDimmer();
+	}
+}
+
 // The tag this class answers to in .dui.
 DECLARE_DREAM_GUI_WIDGET("Native", "Dialog", UDreamDialog)

@@ -322,6 +322,14 @@ bool UUISlider::OnNavigate_Implementation(EDreamUINavigationDirection direction,
     {
         valueIntervalMultiply = NavigationChangeInterval;
     }
+    if (bLocked)
+    {
+        // A locked slider shows its value and refuses to move: the directions are not its to spend,
+        // so they fall through to the navigation search exactly as an uncaptured one's do. Falling
+        // through rather than swallowing them is what keeps a locked slider from being a dead end a
+        // gamepad cannot leave.
+        return Super::OnNavigate_Implementation(direction, result);
+    }
     if (RequiresControllerLock && !bControllerCaptured)
     {
         // Not captured, so the directions are not this slider's to spend: they fall through to the
@@ -345,6 +353,14 @@ bool UUISlider::OnNavigate_Implementation(EDreamUINavigationDirection direction,
 
 void UUISlider::CalculateInputValue(UDreamPointerEventData *EventData)
 {
+    if (bLocked)
+    {
+        // The one funnel every pointer road into a value takes -- down, begin drag, drag, end drag --
+        // so the lock is stated once here rather than four times at the doors. Deliberately NOT in
+        // SetValue: game code setting a locked slider's value is the ordinary way a read-only slider
+        // shows anything at all.
+        return;
+    }
     UDreamWidget *MainWidget = nullptr;
     UDreamWidget *AreaWidget = nullptr;
     if (CheckHandle())
