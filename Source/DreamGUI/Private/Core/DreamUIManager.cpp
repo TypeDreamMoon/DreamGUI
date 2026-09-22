@@ -71,6 +71,10 @@ void UDreamUIManagerObject::BeginDestroy()
 	{
 		FCoreUObjectDelegates::OnPackageReloaded.Remove(OnPackageReloadedDelegateHandle);
 	}
+	if (OnObjectsReplacedDelegateHandle.IsValid())
+	{
+		FCoreUObjectDelegates::OnObjectsReplaced.Remove(OnObjectsReplacedDelegateHandle);
+	}
 	if (OnBlueprintPreCompileDelegateHandle.IsValid())
 	{
 		if (GEditor)
@@ -160,6 +164,8 @@ bool UDreamUIManagerObject::InitCheck()
 		//open map
 		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &UDreamUIManagerObject::OnMapOpened);
 		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &UDreamUIManagerObject::OnPackageReloaded);
+		//a recompiled class's instances replaced by copies
+		Instance->OnObjectsReplacedDelegateHandle = FCoreUObjectDelegates::OnObjectsReplaced.AddUObject(Instance, &UDreamUIManagerObject::OnObjectsReplaced);
 		if (GEditor)
 		{
 			//reimport asset
@@ -175,6 +181,71 @@ bool UDreamUIManagerObject::InitCheck()
 void UDreamUIManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
 {
 	bIsBlueprintCompiling = true;
+}
+
+void UDreamUIManagerObject::OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap)
+{
+	/**
+	 * Recompiling a widget Blueprint replaces every live instance of it with a copy, and the reinstancer
+	 * marks each original -- and every object outered to it -- as garbage while the original is still
+	 * REGISTERED. Nobody unregistered it: the copy takes its place in whatever held it, the next
+	 * collection frees it, and everything its registration had set up was simply abandoned.
+	 *
+	 * Most of that dies with it. A world-space canvas's mesh does not: it belongs to the host actor, so
+	 * it outlived the collection, still registered with the renderer, drawing sections whose materials
+	 * the canvas had made and the collection had just freed. The level viewport's next frame called
+	 * into one of them. Until then it drew the old tree beside the copy's new one.
+	 *
+	 * So the original is unregistered here, while its memory is live and before any collection: its
+	 * canvases leave the manager and destroy the meshes they made, its visuals leave their canvas. It is
+	 * not detached or destroyed -- the reinstancer is about to swap the copy into the parent that holds
+	 * it, and the compile's own repair (OnBlueprintCompiled) brings the copy up in its place.
+	 *
+	 * Only the replaced instance's OWN widgets, the ones outered inside it. A slot's content belongs to
+	 * the host that placed the instance, is not being replaced, and is re-registered under the copy.
+	 */
+	const auto IsLiveForTeardown = [](const UObject* InObject)
+	{
+		return InObject != nullptr
+			&& !InObject->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed)
+			&& !InObject->IsUnreachable();
+	};
+	TSet<const UDreamWidget*> Visited;
+	TArray<UDreamWidget*> Pending;
+	for (const TPair<UObject*, UObject*>& Replacement : InReplacementMap)
+	{
+		UDreamWidget* Replaced = Cast<UDreamWidget>(Replacement.Key);
+		if (Replaced == nullptr || Replacement.Value == Replacement.Key
+			|| !IsLiveForTeardown(Replaced) || !Replaced->HasRegistered())
+		{
+			continue;
+		}
+		// Parents before children, the order DestroyWidget unregisters in.
+		Pending.Reset();
+		Pending.Add(Replaced);
+		while (Pending.Num() > 0)
+		{
+			UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
+			if (!IsLiveForTeardown(Widget) || Visited.Contains(Widget))
+			{
+				continue;
+			}
+			Visited.Add(Widget);
+			const TArray<UDreamWidget*> Children = Widget->GetChildren();
+			if (Widget->HasRegistered())
+			{
+				Widget->OnUnregister();
+			}
+			for (int32 Index = Children.Num() - 1; Index >= 0; --Index)
+			{
+				UDreamWidget* Child = Children[Index];
+				if (Child != nullptr && Child->IsIn(Replaced))
+				{
+					Pending.Add(Child);
+				}
+			}
+		}
+	}
 }
 void UDreamUIManagerObject::OnBlueprintCompiled()
 {

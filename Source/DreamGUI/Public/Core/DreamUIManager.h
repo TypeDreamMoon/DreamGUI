@@ -92,6 +92,9 @@ private:
 	void OnMapOpened(const FString& FileName, bool AsTemplate);
 	FDelegateHandle OnPackageReloadedDelegateHandle;
 	void OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event);
+	FDelegateHandle OnObjectsReplacedDelegateHandle;
+	/** Unregisters every registered widget tree a reinstancing replaced; see the definition. */
+	void OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap);
 #endif
 };
 
