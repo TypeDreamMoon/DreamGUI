@@ -98,6 +98,14 @@ void UUIDropdown::Show()
 	//show list
 	ListRoot->SetWidgetActive(true);
 	ShowOrHideTweener = ListRoot->RenderOpacityTo(1, 0.3f, 0, EDreamTweenEase::OutCubic);
+	if (!ShowOrHideTweener.IsValid())
+	{
+		// No tween manager to fade it in -- a world with no game instance: the designer's preview, a
+		// headless test. The end state is the only correct fallback: left alone, the list would open at
+		// whatever opacity it was last given, which after Awake (or after a Hide that could not fade
+		// either) is zero -- a list that is open, answering the pointer, and invisible.
+		ListRoot->SetRenderOpacity(1.0f);
+	}
 	auto CanvasOnListRoot = ListRoot->GetComponent<UDreamCanvas>();
 	if (!CanvasOnListRoot)
 	{
@@ -307,10 +315,28 @@ void UUIDropdown::Hide()
 		ShowOrHideTweener->Kill();
 	}
 	
-	ShowOrHideTweener = ListRoot->RenderOpacityTo(0, 0.3f, 0, EDreamTweenEase::InCubic)->OnComplete(
-		FSimpleDelegate::CreateWeakLambda(ListRoot.Get(), [=, this] {
-		ListRoot->SetWidgetActive(false);
+	// Asked before anything is chained onto it. RenderOpacityTo answers null wherever there is no tween
+	// manager -- any world without a game instance, the designer's preview and a headless test among
+	// them -- and chaining OnComplete straight onto that null was an access violation the moment a
+	// list closed there. With no fade to wait for, the end state is written at once, the fallback
+	// UDreamMenuAnchor::Open and UDreamRingMenu::Close already take.
+	UDreamTweener* HideTweener = ListRoot->RenderOpacityTo(0, 0.3f, 0, EDreamTweenEase::InCubic);
+	if (HideTweener != nullptr)
+	{
+		HideTweener->OnComplete(FSimpleDelegate::CreateWeakLambda(ListRoot.Get(), [this]
+		{
+			if (ListRoot.IsValid())
+			{
+				ListRoot->SetWidgetActive(false);
+			}
 		}));
+	}
+	else
+	{
+		ListRoot->SetRenderOpacity(0.0f);
+		ListRoot->SetWidgetActive(false);
+	}
+	ShowOrHideTweener = HideTweener;
 
 	if (BlockerWidget.IsValid())
 	{
@@ -574,6 +600,12 @@ void UUIDropdown::ApplyValueToVisual()
 }
 bool UUIDropdown::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 {
+	if (!AcceptsPointerButton(EventData))
+	{
+		// A mouse button this dropdown was told not to answer opens nothing, and is passed on. Every
+		// button counts by default here, as it always has; see UUISelectable::AcceptedMouseButtons.
+		return true;
+	}
 	Show();
 	return AllowEventBubbleUp;
 }
