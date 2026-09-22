@@ -24,7 +24,7 @@ instead of overhanging them.
 | Name | Type | Category | In the details panel | From Blueprint | Description |
 |---|---|---|---|---|---|
 | `Style` | `FDreamSliderStyle` | Slider | yes | `GetStyle` / `SetStyle` | This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually exists; with no sheet in the project this IS the look in effect -- which is why it stays editable instead of being gated on the enum: the old edit condition greyed the exact values that were driving the control. |
-| `bLocked` | `bool` | Slider | yes | `IsLocked` / `SetLocked` | Shows its value and refuses to be moved -- UMG's Locked, pushed onto the behaviour. |
+| `bLocked` | `bool` | Slider | yes | `IsLocked` / `SetLocked` | Shows its value and refuses to be moved -- UMG's Locked, pushed onto the behaviour. A press on a locked slider begins no mouse capture, so OnMouseCaptureBegin and OnMouseCaptureEnd stay silent, as SSlider's do. |
 | `SliderBarColor` | `FColor` | Slider | yes | `GetSliderBarColor` / `SetSliderBarColor` | A tint over the bar the handle travels along -- UMG's SliderBarColor, which is a tint over SSlider's bar image for exactly the same reason this is one: the STYLE says what the slider looks like, and this says what is happening to it right now. White is no opinion. |
 | `SliderHandleColor` | `FColor` | Slider | yes | `GetSliderHandleColor` / `SetSliderHandleColor` | The same, over the handle's five state colours -- UMG's SliderHandleColor. |
 | `bIndentHandle` | `bool` | Slider | yes | `GetIndentHandle` / `SetIndentHandle` | Whether the handle stays inside the track's ends -- UMG's IndentHandle. |
@@ -104,7 +104,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `USlider` | `SliderBarColor` | adopt | `SliderBarColor` | FColor, and a TINT over the style's track colour -- which is what it is in Slate too (SSlider multiplies it over the bar image). Rides the track, not the fill. |
 | `USlider` | `SliderHandleColor` | adopt | `SliderHandleColor` | A tint over all five of the handle's state colours, so a tinted handle stays tinted through a hover. |
 | `USlider` | `IndentHandle` | map | `bIndentHandle` | Named with this codebase's bool prefix. On (the default, and what this slider has always drawn) the handle's travel is the track minus the handle's own width; off gives it the track's whole length, so the handle's centre reaches the ends and half of it hangs off. It is the handle AREA's inset either way, so the reported value is unaffected -- the same drag spans the same numbers. |
-| `USlider` | `Locked` | map | `bLocked` | Pushed to UUISlider::bLocked, which gates CalculateInputValue and the navigation directions. Input only: SetValue keeps working, and the look does not change. |
+| `USlider` | `Locked` | map | `bLocked` | Pushed to UUISlider::bLocked, which gates CalculateInputValue, the mouse capture and the navigation directions: a press on a locked slider begins no capture, so OnMouseCaptureBegin/End stay silent, as SSlider's do. Input only: SetValue keeps working, and the look does not change. |
 | `USlider` | `MouseUsesStep` | map | `bMouseUsesStep` | Named with this codebase's bool prefix. |
 | `USlider` | `RequiresControllerLock` | map | `bRequiresControllerLock` | Named with this codebase's bool prefix. |
 | `USlider` | `StepSize` | adopt | `StepSize` |  |

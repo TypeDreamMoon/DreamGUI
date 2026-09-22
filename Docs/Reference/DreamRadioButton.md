@@ -30,6 +30,7 @@ turns it off; a group with bAllowNoneSelected=false is what forbids that.
 | `bAutoGroupWithSiblings` | `bool` | Radio Button | yes | `GetAutoGroupWithSiblings` / `SetAutoGroupWithSiblings` | Find a UUIToggleGroup on an ancestor at Awake and join it -- with a group behaviour on the shared parent, sibling radios exclude each other with nothing wired. Default on, because a radio that does not exclude is a round toggle; off, grouping goes through SetToggleGroup. |
 | `bIsOn` | `bool` | Radio Button | yes | `GetIsOn` / `SetIsOn` | Selected or not. A property rather than the getter/setter pair alone, because the pair alone is invisible: .dui writes properties, the designer lists properties, and a binding resolves a property. Authored value in, mirror of the behaviour's out -- HandleValueChanged keeps it honest when the user (or the group switching this one off) is the writer. |
 | `CheckedState` | `EDreamCheckState` | Radio Button | yes | `GetCheckedState` / `SetCheckedState` | The full state, in UMG's check-box vocabulary -- the same EDreamCheckState UDreamToggle carries, and the same three answers. |
+| `AcceptedMouseButtons` | `int32` | Radio Button | yes | `GetAcceptedMouseButtons` / `SetAcceptedMouseButtons` | WHICH mouse buttons press and choose this radio -- a bitmask over EDreamUIMouseButtonType, the left button alone by default: a radio is a check box to UMG, and SCheckBox answers the left button and nothing else, so a right click neither presses nor chooses it. |
 | `BoxNode` | `TObjectPtr<UDreamWidget>` | Radio Button | - | read only |  |
 | `DotNode` | `TObjectPtr<UDreamWidget>` | Radio Button | - | read only |  |
 | `ToggleBehaviour` | `TObjectPtr<UUIToggle>` | Radio Button | - | read only |  |
@@ -38,12 +39,14 @@ turns it off; a group with bAllowNoneSelected=false is what forbids that.
 
 | Function | Kind | Description |
 |---|---|---|
+| `int32 GetAcceptedMouseButtons()` | pure | Get Accepted Mouse Buttons |
 | `bool GetAutoGroupWithSiblings()` | pure | Get Auto Group with Siblings |
 | `EDreamCheckState GetCheckedState()` | pure | The full state. The behaviour is the truth for the two states it can hold; Undetermined is the control's own and reads from here. |
 | `bool GetIsOn()` | pure | Get Is On |
 | `FDreamRadioButtonStyle GetStyle()` | pure | Get Style |
 | `UUIToggleGroup* GetToggleGroup()` | pure | Get Toggle Group |
 | `bool IsChecked()` | pure | UMG's convenience: exactly GetCheckedState() == Checked. |
+| `void SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)` | callable | Writes the bitmask and pushes it onto the behaviour at once. |
 | `void SetAutoGroupWithSiblings(bool bInAutoGroupWithSiblings)` | callable | Turn the automatic grouping on or off, and act on it now. |
 | `void SetCheckedState(EDreamCheckState InCheckedState)` | callable | Set any of the three. Checked/Unchecked go through the behaviour WITH notify -- the path a click takes, and the path the group hears -- while Undetermined parks the behaviour at unchecked without notify and lives on the control. |
 | `void SetIsChecked(bool bInIsChecked)` | callable | Set Is Checked |

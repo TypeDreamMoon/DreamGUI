@@ -73,7 +73,7 @@ is UMG's plain border, which is what the style ships.
 | `OnMouseButtonDownEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` | The four moments UMG's border speaks, re-broadcast from the pointer system. |
 | `OnMouseButtonUpEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` |  |
 | `OnMouseMoveEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` | Pointer MOTION over the border, which this system reports as the drag it is part of. |
-| `OnMouseDoubleClickEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` | The second click of a double, and the fourth, and the sixth. |
+| `OnMouseDoubleClickEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` | The second press of a double click, and the fourth, and the sixth -- said at that PRESS, and in place of OnMouseButtonDownEvent for it, which is how UBorder reports one: Slate routes the second press to OnMouseButtonDoubleClick and never to OnMouseButtonDown, so a double click here is one button down, one double click and two button ups. |
 
 ## Compared with UMG
 
@@ -93,7 +93,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `UBorder` | `OnMouseButtonDownEvent` | adopt | `OnMouseButtonDownEvent` | A multicast carrying UDreamPointerEventData, not UMG's FEventReply-returning single binding: nothing in this event system asks a handler per call whether the event carries on. That answer is one property for all four -- bConsumeMouseEvents, which is UUIEventTrigger::AllowEventBubbleUp inverted. Gated on bReportMouseEvents, off by default, because a listening border is a consuming border. |
 | `UBorder` | `OnMouseButtonUpEvent` | adopt | `OnMouseButtonUpEvent` |  |
 | `UBorder` | `OnMouseMoveEvent` | adopt | `OnMouseMoveEvent` | Fed by the DRAG seam: this event system reports a moving pointer to the element it pressed on, which is the only motion a border can honestly claim. A hover that never pressed is OnPointerEnter/Exit, which UMG spells elsewhere. |
-| `UBorder` | `OnMouseDoubleClickEvent` | adopt | `OnMouseDoubleClickEvent` | Read off the click's own ClickCount being even, which is the event system's own rule (its DoubleClickTime, and a click on another widget starting the count over) rather than a second rule that could disagree with it. |
+| `UBorder` | `OnMouseDoubleClickEvent` | adopt | `OnMouseDoubleClickEvent` | Said at the SECOND PRESS and in place of OnMouseButtonDownEvent for it, as UBorder's is: the event system routes the second press of a double click to the double click and not to the down, which is Slate's FSlateApplication::ProcessMouseButtonDoubleClickEvent. So a double click is one down, one double click and two ups. What counts as a double is the event system's own rule (its DoubleClickTime, the same widget and button, and a second press within the pointer's drag threshold of the first -- the desktop's double-click rectangle and drag threshold are the same few pixels), not a second rule here that could disagree with it. |
 | `UBorder` | `SetContentColorAndOpacity` | map | `SetContentColorAndOpacity` | Same half-and-half as the property above. |
 | `UBorder` | `SetPadding` | adopt | `SetPadding` |  |
 | `UBorder` | `SetHorizontalAlignment` | adopt | `SetHorizontalAlignment` | Pushed straight onto the content slot. |

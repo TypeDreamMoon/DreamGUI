@@ -26,7 +26,10 @@ selection's. That is exactly the rule SSpinBox follows -- click to type, drag to
 at by asking who already owns the gesture rather than by inventing a mode.
 
 The scrub sweeps MinSliderValue..MaxSliderValue (which default to the hard range) across the
-control's own width, bent by SliderExponent so a large range can still be fine near one end.
+control's own width, bent by SliderExponent so a large range can still be fine near one end. It
+counts from where the drag was recognised, not from the press: the travel that turned the press
+into a drag moves nothing, as in SSpinBox, so the value does not leap by the drag threshold the
+moment a scrub starts.
 
     /Script/DreamGUI.DreamSpinBox Count {
         Value = 5
@@ -155,7 +158,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `USpinBox` | `ForegroundColor` | map | `FDreamSpinBoxStyle::TextColor` | Appearance lives in the style struct; the value text and the two step glyphs share it. |
 | `USpinBox` | `OnValueChanged` | adopt | `OnValueChanged` | Fires on every value a scrub passes through. |
 | `USpinBox` | `OnValueCommitted` | map | `OnValueCommitted` | Same moment; carries the value alone, without UMG's ETextCommit -- see EditableTextBox.json for why that enum is not spoken here. |
-| `USpinBox` | `OnBeginSliderMovement` | adopt | `OnBeginSliderMovement` | Carries the value the scrub started from, where UMG's carries nothing. |
+| `USpinBox` | `OnBeginSliderMovement` | adopt | `OnBeginSliderMovement` | Carries the value the scrub started from, where UMG's carries nothing. Fires when the drag is recognised, and the travel before that moves no value, as in SSpinBox. |
 | `USpinBox` | `OnEndSliderMovement` | adopt | `OnEndSliderMovement` |  |
 | `USpinBox` | `GetValue` | adopt | `GetValue` |  |
 | `USpinBox` | `SetValue` | adopt | `SetValue` |  |

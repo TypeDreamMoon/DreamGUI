@@ -20,6 +20,10 @@ Options are plain texts here rather than the behaviour's text+brush pairs: the c
 the control's job is to be the common case. A consumer needing per-option icons talks to
 DropdownBehaviour directly.
 
+Where there is no tween manager to fade the list -- a world with no game instance, which is the
+designer's preview and a headless test -- it opens and closes at once, at its end opacity, rather
+than waiting on a fade that will never run.
+
 ## Properties
 
 | Name | Type | Category | In the details panel | From Blueprint | Description |
