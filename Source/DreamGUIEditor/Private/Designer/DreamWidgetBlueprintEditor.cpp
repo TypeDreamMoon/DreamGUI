@@ -3232,9 +3232,18 @@ void FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate(TConstArrayView
 		{
 			continue;
 		}
-		// A panel slot is exactly the marker: TrySetParent mints one only when the parent lays its
-		// children out, so "has a panel slot" IS "somebody else decides where this goes".
-		const bool bLaidOutByParent = IsValid(PreviewWidget->GetPanelSlot());
+		// A panel slot marks a parent that lays its children out, but laying out is not always
+		// deciding where a child goes. A Canvas Panel mints slots like every panel and decides
+		// nothing about a child's place -- only its size, and only under Auto Size -- which is why
+		// the viewport offers a Move handle inside one; with the slot alone as the test, every move,
+		// resize, nudge and align of a canvas child changed the preview and never reached the asset,
+		// and the next rebuild put it back. So ask what the handles ask: the anchor block is the
+		// arranger's output only when the arranger claims every axis of it, and otherwise it carries
+		// the author's edit.
+		const FDreamLayoutControlAnchorData Control = FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(PreviewWidget);
+		const bool bLaidOutByParent = IsValid(PreviewWidget->GetPanelSlot())
+			&& Control.bCanControlHorizontalPosition && Control.bCanControlVerticalPosition
+			&& Control.bCanControlHorizontalSize && Control.bCanControlVerticalSize;
 		if (!bLaidOutByParent)
 		{
 			PreviewHost->CopyPreviewValuesToTemplate(PreviewWidget, AnchorProperties);
