@@ -2931,36 +2931,54 @@ void UDreamWidget::OnUnregister()
 {
 	bIsRegistered = false;
 
+	/**
+	 * Live memory, not IsValid. Unregistering undoes what registering did -- a canvas leaves the
+	 * manager and destroys the mesh it created, a visual leaves its canvas -- and that is owed by every
+	 * part that registered, whether or not somebody has since marked it garbage. Somebody does: a
+	 * Blueprint recompile marks the instance it replaces, and everything outered to it, as garbage
+	 * while all of it is still registered. IsValid skipped those parts, so a world-space canvas never
+	 * destroyed its mesh -- which belongs to the host actor and so outlived the collection -- and the
+	 * mesh went on drawing with materials the collection had freed. The same rule DestroyWidget walks
+	 * by; only an object whose destruction has begun, or that the collector is purging, is left alone.
+	 */
+	const auto IsLiveForTeardown = [](const UObject* InObject)
+	{
+		return InObject != nullptr
+			&& !InObject->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed)
+			&& !InObject->IsUnreachable();
+	};
+
 	// Component teardown may remove helper behaviours from this same widget.
 	// Iterate a snapshot so those callbacks cannot invalidate the active iterator.
 	const TArray<TObjectPtr<UDreamUIBehaviour>> ComponentsToUnregister = Components;
 	for (UDreamUIBehaviour* Component : ComponentsToUnregister)
 	{
-		if (IsValid(Component) && Components.Contains(Component))
+		if (IsLiveForTeardown(Component) && Components.Contains(Component))
 		{
 			Component->OnUnregister();
 		}
 	}
 
-	if (IsValid(LayoutContainer))
+	if (IsLiveForTeardown(LayoutContainer))
 	{
 		LayoutContainer->Call_OnUnregister();
 	}
-	if (IsValid(LayoutSelf))
+	if (IsLiveForTeardown(LayoutSelf))
 	{
 		LayoutSelf->Call_OnUnregister();
 	}
-	if (IsValid(PanelSlot))
+	if (IsLiveForTeardown(PanelSlot))
 	{
 		PanelSlot->Call_OnUnregister();
 	}
-	if (IsValid(Visual))
+	if (IsLiveForTeardown(Visual))
 	{
 		Visual->Call_OnUnregister();
-		if (RenderCanvas.IsValid())
+		UDreamCanvas* VisualCanvas = RenderCanvas.Get(/*bEvenIfPendingKill*/ true);
+		if (IsLiveForTeardown(VisualCanvas))
 		{
-			RenderCanvas->MarkVisualWillChange(Visual);
-			RenderCanvas->UnregisterVisual(Visual);
+			VisualCanvas->MarkVisualWillChange(Visual);
+			VisualCanvas->UnregisterVisual(Visual);
 		}
 	}
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
