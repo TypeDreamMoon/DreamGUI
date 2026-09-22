@@ -102,10 +102,18 @@ class DREAMGUI_API UUITextInput : public UUISelectable, public IDreamPointerClic
 {
 	GENERATED_BODY()
 	
-protected:	
+protected:
 	virtual void Awake() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnDestroy() override;
+	/**
+	 * Ends an edit still open when the field leaves the hierarchy. OnDestroy cannot be relied on for
+	 * it: a behaviour only reaches OnDestroy through EndPlay, and only if it began play -- a field in a
+	 * tree that was torn down without ever beginning play never gets there, and its edit (the static
+	 * ActiveTextInput, the key agent) outlived the field. Unregistering is what every teardown passes
+	 * through, and DestroyWidget unregisters the whole subtree before any of it ends play.
+	 */
+	virtual void OnUnregister() override;
 #if WITH_EDITOR
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

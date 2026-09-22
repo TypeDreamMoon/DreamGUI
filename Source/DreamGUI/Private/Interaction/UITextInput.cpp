@@ -102,6 +102,16 @@ void UUITextInput::Tick(float DeltaTime)
 	}
 }
 
+void UUITextInput::OnUnregister()
+{
+	// Before Super, while the field's parts are still registered (DestroyWidget unregisters a subtree
+	// top-down, so the caret, the text and the placeholder under this node go after it) and before the
+	// selectable leaves the manager. Without events, for OnDestroy's reason: a field being torn down is
+	// not a player committing a value. Nothing to do for a field that is not being edited.
+	DeactivateInput(false);
+	Super::OnUnregister();
+}
+
 void UUITextInput::OnDestroy()
 {
 	Super::OnDestroy();
