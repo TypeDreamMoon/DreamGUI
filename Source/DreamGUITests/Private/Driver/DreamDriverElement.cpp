@@ -2,8 +2,10 @@
 
 #include "Driver/DreamDriverElement.h"
 
+#include "Controls/DreamInputKeySelector.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
+#include "Interaction/UITextInput.h"
 #include "Misc/AutomationTest.h"
 
 #include "Driver/DreamDriver.h"
@@ -194,8 +196,9 @@ bool FDreamDriverElement::DoubleClick(EDreamUIMouseButtonType InButton)
 		ReportMissingElement(*this, TEXT("double click"));
 		return false;
 	}
-	// Two clicks in one sequence, which is six pumped frames apart at the pump's fixed frame length --
-	// a tenth of the default double-click time. Whether the pipeline calls it a double click is the
+	// Two clicks in one sequence: six pumped frames at the pump's fixed frame length, a tenth of a
+	// second for the pair, the second press two frames after the first release -- well inside the
+	// default double-click time (0.3 s). Whether the pipeline calls it a double click is the
 	// pipeline's decision, made from the world clock the pump advances; nothing here asserts it.
 	const FDreamLocatorRef PinnedLocator = FDreamBy::Widget(Widget);
 	return PinnedDriver->Sequence()
@@ -310,4 +313,99 @@ bool FDreamDriverElement::Select()
 	// to touch it and dispatches the deselect/select pair the same way a press would.
 	EventSystem->SetSelectComponentWithDefault(Widget);
 	return true;
+}
+
+bool FDreamDriverElement::HasKeyboard() const
+{
+	UDreamWidget* Widget = GetWidget();
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	if (Widget == nullptr || !PinnedDriver.IsValid())
+	{
+		return false;
+	}
+	const FDreamDriverContext& DriverContext = PinnedDriver->GetContext();
+
+	UDreamWidget* KeyboardOwner = nullptr;
+	if (UDreamInputKeySelector* Selector = DriverContext.FindListeningKeySelector())
+	{
+		KeyboardOwner = Selector;
+	}
+	else
+	{
+		FString Unused;
+		if (UUITextInput* TextInput = DriverContext.FindEditingTextInput(Unused))
+		{
+			KeyboardOwner = TextInput->GetWidget();
+		}
+	}
+	// The element may be the control while the keyboard sits on one of its parts -- a text input's
+	// behaviour lives on its field node, not on the control -- so "this element" includes what is
+	// inside it.
+	for (UDreamWidget* Walk = KeyboardOwner; Walk != nullptr; Walk = Walk->GetParent())
+	{
+		if (Walk == Widget)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool FDreamDriverElement::Type(const FString& InText)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("type into"));
+		return false;
+	}
+	FDreamDriverSequence Typing = PinnedDriver->Sequence();
+	if (!HasKeyboard())
+	{
+		Typing.Click(FDreamBy::Widget(Widget));
+	}
+	return Typing.Type(InText).Perform();
+}
+
+bool FDreamDriverElement::Type(const TCHAR* InText)
+{
+	return Type(FString(InText));
+}
+
+bool FDreamDriverElement::Type(const FKey& InKey)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("press a key on"));
+		return false;
+	}
+	FDreamDriverSequence Typing = PinnedDriver->Sequence();
+	if (!HasKeyboard())
+	{
+		Typing.Click(FDreamBy::Widget(Widget));
+	}
+	return Typing.Type(InKey).Perform();
+}
+
+bool FDreamDriverElement::TypeChord(const FKey& InModifier, const FKey& InKey)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("press a chord on"));
+		return false;
+	}
+	FDreamDriverSequence Typing = PinnedDriver->Sequence();
+	if (!HasKeyboard())
+	{
+		Typing.Click(FDreamBy::Widget(Widget));
+	}
+	return Typing.TypeChord(InModifier, InKey).Perform();
 }

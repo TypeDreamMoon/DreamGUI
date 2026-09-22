@@ -2,6 +2,7 @@
 
 #include "Driver/DreamDriverSequence.h"
 
+#include "Controls/DreamInputKeySelector.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
@@ -10,13 +11,65 @@
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Framework/Commands/InputChord.h"
+#include "GenericPlatform/GenericApplication.h"
+#include "Interaction/DreamUIActionRouter.h"
+#include "Interaction/DreamUIDragDrop.h"
+#include "Interaction/DreamUINavigationStack.h"
+#include "Interaction/DreamUITooltip.h"
+#include "Interaction/DreamUIVirtualCursor.h"
+#include "Interaction/UITextInput.h"
 #include "Misc/App.h"
 #include "Misc/AutomationTest.h"
+#include "Subsystems/WorldSubsystem.h"
+#include "Tickable.h"
 
 #include "Driver/DreamDriverInputModule.h"
 #include "Driver/DreamDriverProjection.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDriver, Log, All);
+
+namespace DreamDriverPumpLocal
+{
+	/**
+	 * Tick one tickable world subsystem if, and only if, FTickableGameObject::TickObjects would tick
+	 * it this frame -- the same four questions in the same order: is it initialized (what
+	 * UTickableWorldSubsystem::IsAllowedToTick answers), is it registered to tick at all (Never is
+	 * not on the list), is it tickable now (asked unless it ticks Always), and is this a frame it
+	 * ticks in (a game world that is not paused, or one it ticks through while paused, or an editor
+	 * that ticks it regardless). Anything the engine would skip, this skips.
+	 *
+	 * Through the UTickableWorldSubsystem pointer, where the engine interface is public, so a
+	 * subclass that re-declares an override in a narrower section changes nothing here.
+	 */
+	void TickAsTheEngineWould(UWorld& InWorld, UTickableWorldSubsystem* InSubsystem, float InDeltaSeconds)
+	{
+		if (InSubsystem == nullptr || !InSubsystem->IsInitialized())
+		{
+			return;
+		}
+		const ETickableTickType TickType = InSubsystem->GetTickableTickType();
+		if (TickType == ETickableTickType::Never)
+		{
+			return;
+		}
+		if (TickType != ETickableTickType::Always && !InSubsystem->IsTickable())
+		{
+			return;
+		}
+		if (InSubsystem->GetTickableGameObjectWorld() != &InWorld)
+		{
+			return;
+		}
+		const bool bTicksInEditor = GIsEditor && InSubsystem->IsTickableInEditor();
+		const bool bTicksInGame = InWorld.IsGameWorld() && (!InWorld.IsPaused() || InSubsystem->IsTickableWhenPaused());
+		if (!bTicksInEditor && !bTicksInGame)
+		{
+			return;
+		}
+		InSubsystem->Tick(InDeltaSeconds);
+	}
+}
 
 bool FDreamDriverContext::IsUsable() const
 {
@@ -74,9 +127,42 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		static_cast<UActorComponent*>(EventSystem)->TickComponent(InDeltaSeconds, LEVELTICK_All, nullptr);
 	}
 
+	if (World != nullptr)
+	{
+		/*
+		 * The other tickable UI subsystems, which in a game the engine ticks and a world nobody ticks
+		 * never does. Each of them does something a test can see: the action router advances holds,
+		 * the drag-drop subsystem subscribes to the event system and follows drags (without this it
+		 * never subscribes, and row drags and drop-target enter/leave are unobservable), the tooltip
+		 * subsystem subscribes and times hovers, the virtual cursor integrates a stick.
+		 *
+		 * AFTER the event system, as in UWorld::Tick: the event system is a component and ticks in its
+		 * tick group (TG_DuringPhysics, the default it keeps), and every tickable world subsystem ticks
+		 * later in the same frame from FTickableGameObject::TickObjects. Each is gated exactly as
+		 * TickObjects gates it; see TickAsTheEngineWould.
+		 *
+		 * The virtual cursor is ticked like the rest, although it can own the pointer, because it only
+		 * does so while ACTIVE -- ActivateVirtualCursor, or bAutoVirtualCursorOnGamepad (off by default)
+		 * plus a gamepad being reported, which nothing in a rig reports. Inactive, its tick is a no-op;
+		 * a test that activates it is asking it to drive the pointer, which is what it would do.
+		 */
+		using namespace DreamDriverPumpLocal;
+		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUIActionRouter>(), InDeltaSeconds);
+		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUIDragDropSubsystem>(), InDeltaSeconds);
+		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUITooltipSubsystem>(), InDeltaSeconds);
+		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUIVirtualCursorSubsystem>(), InDeltaSeconds);
+	}
+
 	if (IsValid(Manager))
 	{
 		/*
+		 * LAST: the UI manager is one more tickable world subsystem in the same TickObjects pass, and
+		 * the engine fixes no order within that pass -- it is the order the subsystems happened to
+		 * initialize in, which nothing in the source pins. Last is the one position under which
+		 * everything this frame produced -- a drag visual moved, a tooltip opened, a widget a router
+		 * callback created -- is laid out before the frame ends, so the next frame and any assertion
+		 * between frames read settled geometry rather than last frame's.
+		 *
 		 * Layout, widget transforms and clip rectangles -- everything the NEXT frame's hit test reads.
 		 *
 		 * Called explicitly rather than left to the world, because nothing ticks a world built with
@@ -120,6 +206,55 @@ UDreamWidget* FDreamDriverContext::FindOne(const FDreamLocatorRef& InLocator) co
 	// three would act on whichever the tree happened to sort first, and the test would pass or fail
 	// on child order rather than on the thing it is about.
 	return Found.Num() == 1 ? Found[0] : nullptr;
+}
+
+UUITextInput* FDreamDriverContext::FindEditingTextInput(FString& OutWhyNot) const
+{
+	if (!IsValid(EventSystem))
+	{
+		OutWhyNot = TEXT("the driver has no event system");
+		return nullptr;
+	}
+	UDreamWidget* Selected = EventSystem->GetCurrentSelectedComponent(0);
+	if (!IsValid(Selected))
+	{
+		OutWhyNot = TEXT("nothing is selected, so no text field has the keyboard");
+		return nullptr;
+	}
+	UUITextInput* TextInput = Selected->GetComponent<UUITextInput>();
+	if (TextInput == nullptr)
+	{
+		OutWhyNot = FString::Printf(TEXT("the selected widget '%s' is not a text field"), *Selected->GetDisplayName());
+		return nullptr;
+	}
+	if (!TextInput->IsInputActive())
+	{
+		// Selected is not the same as being typed into: a field stays selected after Enter ended its
+		// edit, and a keyboard press then goes nowhere -- which is what a test asserting "the edit is
+		// over" needs this to say.
+		OutWhyNot = FString::Printf(TEXT("the text field '%s' is selected but not being edited"), *Selected->GetDisplayName());
+		return nullptr;
+	}
+	return TextInput;
+}
+
+UDreamInputKeySelector* FDreamDriverContext::FindListeningKeySelector() const
+{
+	if (!IsValid(Root))
+	{
+		return nullptr;
+	}
+	TArray<UDreamWidget*> AllWidgets;
+	UDreamWidget::CollectChildrenWidgets(Root, AllWidgets, false);
+	for (UDreamWidget* Candidate : AllWidgets)
+	{
+		UDreamInputKeySelector* Selector = Cast<UDreamInputKeySelector>(Candidate);
+		if (IsValid(Selector) && Selector->GetIsListening())
+		{
+			return Selector;
+		}
+	}
+	return nullptr;
 }
 
 namespace DreamDriverSequenceLocal
@@ -326,6 +461,124 @@ namespace DreamDriverSequenceLocal
 
 	private:
 		bool bTriggerPress;
+	};
+
+	/** The modifier state a real key event would carry with InModifier held. A null key holds nothing. */
+	FModifierKeysState MakeModifierState(const FKey& InModifier)
+	{
+		return FModifierKeysState(
+			InModifier == EKeys::LeftShift, InModifier == EKeys::RightShift,
+			InModifier == EKeys::LeftControl, InModifier == EKeys::RightControl,
+			InModifier == EKeys::LeftAlt, InModifier == EKeys::RightAlt,
+			InModifier == EKeys::LeftCommand, InModifier == EKeys::RightCommand,
+			false);
+	}
+
+	/** One character into the field that owns the keyboard. */
+	class FDreamTypeCharacterStep : public FDreamInputStep
+	{
+	public:
+		explicit FDreamTypeCharacterStep(TCHAR InCharacter)
+			: Character(InCharacter)
+		{
+		}
+
+		virtual FString Describe() const override
+		{
+			return FString::Printf(TEXT("Type(character %d)"), static_cast<int32>(Character));
+		}
+
+	protected:
+		virtual bool Apply(FDreamDriverContext& InContext) override
+		{
+			FString WhyNot;
+			UUITextInput* TextInput = InContext.FindEditingTextInput(WhyNot);
+			if (TextInput == nullptr)
+			{
+				FailureReason = FString::Printf(TEXT("there is no text field to type into: %s"), *WhyNot);
+				return false;
+			}
+			// The answer is deliberately dropped. A refused character -- a read-only field, a full
+			// one, a letter in a number field -- is the field deciding, not the driver failing.
+			TextInput->HandleCharacterInput(Character);
+			return true;
+		}
+
+	private:
+		TCHAR Character;
+	};
+
+	/** One key, optionally with a modifier held, routed where a game would route it. See FDreamDriverSequence::Type. */
+	class FDreamTypeKeyStep : public FDreamInputStep
+	{
+	public:
+		FDreamTypeKeyStep(const FKey& InKey, const FKey& InModifier)
+			: Key(InKey)
+			, Modifier(InModifier)
+		{
+		}
+
+		virtual FString Describe() const override
+		{
+			return Modifier.IsValid()
+				? FString::Printf(TEXT("TypeChord(%s+%s)"), *Modifier.ToString(), *Key.ToString())
+				: FString::Printf(TEXT("Type(%s)"), *Key.ToString());
+		}
+
+	protected:
+		virtual bool Apply(FDreamDriverContext& InContext) override
+		{
+			if (Modifier.IsValid() && !Modifier.IsModifierKey())
+			{
+				FailureReason = FString::Printf(TEXT("%s is not a modifier key, so it cannot be held with %s"),
+					*Modifier.ToString(), *Key.ToString());
+				return false;
+			}
+			const FModifierKeysState HeldModifiers = MakeModifierState(Modifier);
+
+			// An armed selector first: its capture agent is at the top of the input stack, at the
+			// highest priority, so in a game it hears the key before anything under it -- Escape
+			// included, which is its own way out.
+			if (UDreamInputKeySelector* Selector = InContext.FindListeningKeySelector())
+			{
+				Selector->NotifyChordPressed(FInputChord(Key,
+					HeldModifiers.IsShiftDown(), HeldModifiers.IsControlDown(),
+					HeldModifiers.IsAltDown(), HeldModifiers.IsCommandDown()));
+				return true;
+			}
+
+			// Escape is Back. A text field does not bind it on purpose -- it would swallow every
+			// project's own Escape action -- and the standalone input actor sends a Back key nobody
+			// bound to exactly this call, which is where an edit in progress gets cancelled.
+			if (Key == EKeys::Escape)
+			{
+				UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(InContext.World);
+				if (Stack == nullptr)
+				{
+					FailureReason = TEXT("Escape is Back, and this world has no navigation stack to send it down");
+					return false;
+				}
+				Stack->HandleBack(InContext.EventSystem->GetUserIndex());
+				return true;
+			}
+
+			FString WhyNot;
+			UUITextInput* TextInput = InContext.FindEditingTextInput(WhyNot);
+			if (TextInput == nullptr)
+			{
+				FailureReason = FString::Printf(TEXT("no key selector is listening and %s"), *WhyNot);
+				return false;
+			}
+			// As with characters, what the field makes of the key is the field's business: an ignored
+			// key, or Home with the caret already at the start, is still a key delivered.
+			TextInput->HandleKeyInput(Key, true, HeldModifiers);
+			return true;
+		}
+
+	private:
+		FKey Key;
+		/** Unset for a bare key. */
+		FKey Modifier;
 	};
 
 	/**
@@ -754,6 +1007,35 @@ FDreamDriverSequence& FDreamDriverSequence::NavigationTrigger(bool bInTriggerPre
 {
 	using namespace DreamDriverSequenceLocal;
 	return Add(MakeShared<FDreamNavigationTriggerStep>(bInTriggerPress));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::Type(const FString& InText)
+{
+	using namespace DreamDriverSequenceLocal;
+	for (int32 CharacterIndex = 0; CharacterIndex < InText.Len(); ++CharacterIndex)
+	{
+		// One step, so one frame, per character: a field that reacts to each character -- a counter,
+		// a live validation -- sees them arrive one at a time, as they do from a keyboard.
+		Add(MakeShared<FDreamTypeCharacterStep>(InText[CharacterIndex]));
+	}
+	return *this;
+}
+
+FDreamDriverSequence& FDreamDriverSequence::Type(const TCHAR* InText)
+{
+	return Type(FString(InText));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::Type(const FKey& InKey)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamTypeKeyStep>(InKey, FKey()));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TypeChord(const FKey& InModifier, const FKey& InKey)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamTypeKeyStep>(InKey, InModifier));
 }
 
 FDreamDriverSequence& FDreamDriverSequence::WaitFrames(int32 InFrameCount)

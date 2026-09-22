@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/DreamUserWidget.h"
 #include "Templates/SharedPointer.h"
+#include "Templates/SubclassOf.h"
 #include "Templates/UniquePtr.h"
 
 #include "Driver/DreamDriver.h"
@@ -90,11 +92,78 @@ public:
 	UDreamWidget* MakeWidget(const FString& InDisplayName, UDreamWidget* InParent,
 		const FVector2D& InSize, const FVector2D& InAnchoredPosition = FVector2D::ZeroVector);
 
+	/**
+	 * A control -- a user widget such as UDreamButton or UDreamSlider -- built the way the runtime
+	 * builds one, under InParent (the root when null), sized and placed like MakeWidget.
+	 *
+	 * It goes through CreateDreamWidget, the class model's own factory: instance the class, Initialize
+	 * (which realizes the control's parts and wires its behaviours), parent it without firing attach
+	 * events, then RegisterDreamWidgetHierarchy, which registers the WHOLE subtree -- the control and
+	 * every part inside it -- and hands the subtree the parent's render canvas, visibility and
+	 * interactability. That last step is what a hand-rolled NewObject + OnRegister would miss: a
+	 * control's parts are its children, and OnRegister registers only the widget it is called on.
+	 *
+	 * The name and size are written before the hierarchy registers, so the first layout pass that
+	 * sees the control already sees it at its size; the anchored position is written after, the same
+	 * as MakeWidget, because anchoring is resolved against a parent the widget is registered under.
+	 *
+	 * Nothing is pumped here. A test calls PumpFrames when it wants the control laid out.
+	 *
+	 * The control's parts -- a button's face, a slider's handle, a list's rows -- are reached through
+	 * the control's own API and aimed at with FDreamBy::Widget(part).
+	 */
+	template<class T>
+	T* MakeControl(const FString& InDisplayName, UDreamWidget* InParent,
+		const FVector2D& InSize, const FVector2D& InAnchoredPosition = FVector2D::ZeroVector)
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const UDreamUserWidget>::Value,
+			"MakeControl builds user widgets; a plain UDreamWidget is MakeWidget's job");
+		return Cast<T>(MakeControl(T::StaticClass(), InDisplayName, InParent, InSize, InAnchoredPosition));
+	}
+
+	/** MakeControl for a class only known at run time -- a Blueprint subclass, a class picked by a parameter. */
+	UDreamWidget* MakeControl(TSubclassOf<UDreamUserWidget> InClass, const FString& InDisplayName, UDreamWidget* InParent,
+		const FVector2D& InSize, const FVector2D& InAnchoredPosition = FVector2D::ZeroVector);
+
+	/**
+	 * Give the rig the two things a game world has, a bare fixture lacks, and a CONTROL's input path
+	 * assumes. MakeControl calls it; a test building a control by hand calls it before the first click.
+	 *
+	 * 1. The event system registered with the UI manager, which is what UDreamEventSystem::BeginPlay
+	 *    does and what a world that never began play never gets. Everything that asks "which event
+	 *    system is this player's" goes through that registration -- UUISelectable taking the selection
+	 *    on a press, UUITextInput selecting itself when an edit begins, UDreamUINavigationStack::HandleBack
+	 *    finding the field Escape should cancel -- so without it a click focuses nothing.
+	 * 2. A player controller, on the world's controller list and with its input system up.
+	 *    UUITextInput::ActivateInput binds the field's keys on an actor whose InputComponent only
+	 *    exists once the world's player 0 has enabled its input, and binds them through that
+	 *    component without asking whether it exists. With no findable player controller, clicking a
+	 *    text field dereferences null -- in every control that carries one, a spin box included.
+	 *    Spawning is not enough in a world nobody initialized for play; see the definition.
+	 *
+	 * Both are idempotent. Neither is done by the rig's constructor, so a test that never asks keeps
+	 * exactly the rig it had before this existed.
+	 */
+	void EnsureGameInputHost();
+
 	/** Let frames pass with no input, for a test that wants the tree to settle. */
 	void PumpFrames(int32 InFrameCount);
 
 private:
 	explicit FDreamDriverRig(const FIntPoint& InViewportSize);
+
+	/**
+	 * The world beginning play, as far as DreamUI can tell -- once, after the world, the event system
+	 * and the root canvas exist and before any control is made, which is the ordinary order in a game:
+	 * the level starts, then screens are built at runtime.
+	 *
+	 * Without it nothing in the rig ever begins play: the UI manager reports HasBegunPlay false, so
+	 * RegisterDreamWidgetHierarchy registers controls without beginning them and no behaviour ever
+	 * reaches Awake, OnEnable, Start or Tick. Pointer events still arrive, which is what made the
+	 * difference silent -- a scroll bar that places its handle in Start and a scroll view whose
+	 * inertia runs in Tick were being tested in a state no game is ever in.
+	 */
+	void OpenBeginPlayGate();
 
 	/** Torn down last, because everything below lives inside it. */
 	TUniquePtr<DreamTests::FScopedGameWorld> ScopedWorld;

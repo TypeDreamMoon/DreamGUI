@@ -7,6 +7,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
 #include "Event/DreamPointerEventData.h"
+#include "Interaction/DreamUIDragDrop.h"
 #include "Interaction/UIEventTrigger.h"
 
 #include "Driver/DreamDriver.h"
@@ -240,6 +241,61 @@ bool FDreamDriverMissingLocatorFailsTest::RunTest(const FString& Parameters)
 
 	TestFalse(TEXT("A move to nothing does not report success"), bPerformed);
 	TestFalse(TEXT("And the rest of the sequence did not run"), bAfterRan);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDriverPumpTicksTheDragDropSubsystemTest,
+	"DreamGUI.Driver.Sequence.APumpedFrameTicksTheDragDropSubsystemSoItFollowsADrag",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDriverPumpTicksTheDragDropSubsystemTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDriverSequenceTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	// The drag-drop subsystem finds its event system through the UI manager's registration -- what a
+	// game world gives it at BeginPlay, and what this asks the rig for.
+	Rig.EnsureGameInputHost();
+	UDreamWidget* Card = Rig.MakeWidget(TEXT("Card"), nullptr, FVector2D(160.0, 120.0), FVector2D(-200.0, 0.0));
+	UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("The card was built"), Card) || !TestNotNull(TEXT("A game world has a drag-drop subsystem"), DragDrop))
+	{
+		return false;
+	}
+	// A source that puts an operation on the pointer when a drag begins -- the only kind of drag the
+	// subsystem follows; a drag with no operation is pure geometry to it, a scroll.
+	Card->AddComponent<UDreamUIDragSource>();
+
+	// Three frames with nothing happening in them. All a frame does for this subsystem is TICK it,
+	// and a tick is the only thing that subscribes it to the event system's input: without the pump
+	// ticking it, it would sit unsubscribed however many frames passed and never see the drag below.
+	Rig.PumpFrames(3);
+
+	int32 DragsFollowedMidDrag = -1;
+	bool bOperationSeenOnThePointer = false;
+	const bool bPerformed = Rig.Driver()->Sequence()
+		.MoveTo(FDreamBy::Name(TEXT("Card")))
+		.Press()
+		// Forty pixels is well past the drag threshold, so the drag begins on this move.
+		.MoveBy(FVector2D(40.0, 0.0))
+		.MoveBy(FVector2D(40.0, 0.0))
+		.Then([&DragsFollowedMidDrag, &bOperationSeenOnThePointer, DragDrop](FDreamDriverContext&)
+		{
+			DragsFollowedMidDrag = DragDrop->GetDragCount();
+			bOperationSeenOnThePointer = DragDrop->GetDragOperationForPointer(0) != nullptr;
+		})
+		.Release()
+		.Perform();
+
+	TestTrue(TEXT("The drag completes"), bPerformed);
+	TestEqual(TEXT("The subsystem was following the drag while it was in the air"), DragsFollowedMidDrag, 1);
+	TestTrue(TEXT("And held the operation the source put on the pointer"), bOperationSeenOnThePointer);
 
 	return true;
 }

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputCoreTypes.h"
 #include "Templates/Function.h"
 #include "Templates/SharedPointer.h"
 #include "WaitUntil.h"
@@ -10,6 +11,8 @@
 #include "Driver/DreamDriverLocators.h"
 
 class FAutomationTestBase;
+class UDreamInputKeySelector;
+class UUITextInput;
 class UDreamCanvas;
 class UDreamEventSystem;
 class UDreamPointerEventData;
@@ -71,6 +74,26 @@ struct FDreamDriverContext
 
 	/** The one widget this locator finds under the root, or null when it finds none or several. */
 	UDreamWidget* FindOne(const FDreamLocatorRef& InLocator) const;
+
+	/**
+	 * The text field that owns the keyboard: the event system's selection for pointer 0, carrying a
+	 * UUITextInput that is being edited. Null otherwise, with OutWhyNot saying which link was missing.
+	 *
+	 * The same lookup UDreamUINavigationStack::HandleBack makes to decide whether Back cancels an
+	 * edit, so what the driver types into is what the runtime would consider focused. Not the
+	 * process-wide UUITextInput::GetActiveTextInput: that belongs to whichever world edited last, and
+	 * a driver acts on its own.
+	 */
+	UUITextInput* FindEditingTextInput(FString& OutWhyNot) const;
+
+	/**
+	 * A key selector under the root that is armed and listening, or null.
+	 *
+	 * Found by walking the tree rather than through the selection, because that is how an armed
+	 * selector gets its keys in a game: its capture agent's InputComponent sits at the top of the
+	 * player's input stack at the highest priority, so it hears the next key whatever is selected.
+	 */
+	UDreamInputKeySelector* FindListeningKeySelector() const;
 };
 
 /** What a step says about itself after being given a frame. */
@@ -155,6 +178,40 @@ public:
 	/** Gamepad or keyboard navigation: a direction pressed and released, or the accept button. */
 	FDreamDriverSequence& Navigate(EDreamUINavigationDirection InDirection);
 	FDreamDriverSequence& NavigationTrigger(bool bInTriggerPress);
+
+	/**
+	 * Characters, one step and one frame each, into the text field that owns the keyboard -- through
+	 * UUITextInput::HandleCharacterInput, the road a host that owns real character events uses.
+	 *
+	 * Nothing is clicked first: a sequence does what it is told, and "type into whatever has focus"
+	 * is exactly what a keyboard does. A step with no field being edited fails and says why. A
+	 * character the field REFUSES -- read-only, full, not a digit in a number field -- is not a
+	 * failure: refusing it is the field's decision, and the one a test is usually there to watch.
+	 *
+	 * The TCHAR* overload exists because FKey converts from a string literal too, and without it
+	 * Type(TEXT("abc")) would not know which of the other two it meant.
+	 */
+	FDreamDriverSequence& Type(const FString& InText);
+	FDreamDriverSequence& Type(const TCHAR* InText);
+
+	/**
+	 * One key, one step, one frame -- routed where a game would route it:
+	 *  - an armed key selector takes it first (NotifyKeyPressed), as its capture agent sits at the top
+	 *    of the input stack;
+	 *  - Escape is Back, and goes through UDreamUINavigationStack::HandleBack, which is where the
+	 *    standalone input actor sends a Back key nobody bound -- and is what cancels an edit;
+	 *  - anything else goes to the text field being edited, through UUITextInput::HandleKeyInput.
+	 * With none of them there to take it, the step fails.
+	 */
+	FDreamDriverSequence& Type(const FKey& InKey);
+
+	/**
+	 * A key with a modifier held: Ctrl+A, Shift+Left, Ctrl+Enter. InModifier is one of the eight
+	 * modifier keys (Left/Right Shift, Control, Alt, Command); anything else fails the step. The
+	 * modifier travels as state with the key -- FModifierKeysState to a text field, FInputChord to a
+	 * key selector -- which is how a real key event carries it.
+	 */
+	FDreamDriverSequence& TypeChord(const FKey& InModifier, const FKey& InKey);
 
 	/** Let InFrameCount frames pass. */
 	FDreamDriverSequence& WaitFrames(int32 InFrameCount);

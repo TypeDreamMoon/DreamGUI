@@ -10,6 +10,8 @@
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerInput.h"
 
 #include "Driver/DreamDriverInputModule.h"
 #include "DreamScopedWorld.h"
@@ -86,7 +88,41 @@ FDreamDriverRig::FDreamDriverRig(const FIntPoint& InViewportSize)
 	// second gives anything the first dirtied its own pass -- which is the one-pass convergence the
 	// manager's own counter calls healthy. Without them the first action would hit-test a tree whose
 	// widgets are all still at the origin.
+	// Everything the world starts with exists; now it begins play, before any control is made on it.
+	OpenBeginPlayGate();
+
 	DriverContext->PumpFrames(2);
+}
+
+void FDreamDriverRig::OpenBeginPlayGate()
+{
+	UWorld* HostWorld = DriverContext.IsValid() ? DriverContext->World : nullptr;
+	UDreamUIManagerWorldSubsystem* HostManager = DriverContext.IsValid() ? DriverContext->Manager : nullptr;
+	if (HostWorld == nullptr || !IsValid(HostManager))
+	{
+		return;
+	}
+
+	// The event system's half: what UDreamEventSystem::BeginPlay does when a world begins play is
+	// enrol with the UI manager, and that enrolment is all it does. It is done here directly rather
+	// than by calling the component's BeginPlay, which would also mark it begun in a world that is not
+	// -- and it is guarded, so EnsureGameInputHost, which makes the same call, stays a no-op after it.
+	UDreamEventSystem* HostEventSystem = DriverContext->EventSystem;
+	if (IsValid(HostEventSystem)
+		&& HostManager->GetEventSystemByUserIndex(HostEventSystem->GetUserIndex()) != HostEventSystem)
+	{
+		HostManager->AddEventSystem(HostEventSystem);
+	}
+
+	// The UI manager's half: OnWorldBeginPlay begins every registered widget that has not begun,
+	// which at this point is the root and its canvas and nothing else. Once, because the engine base
+	// ensures on a second call and a widget's BeginPlay checks it has not begun -- HasBegunPlay is the
+	// guard for both. From here RegisterDreamWidgetHierarchy (MakeControl's road) begins every control
+	// it registers, and the pump's TickDreamUI runs their Start and Tick; nothing else drives either.
+	if (!HostManager->HasBegunPlay())
+	{
+		HostManager->OnWorldBeginPlay(*HostWorld);
+	}
 }
 
 FDreamDriverRig::~FDreamDriverRig()
@@ -191,7 +227,101 @@ UDreamWidget* FDreamDriverRig::MakeWidget(const FString& InDisplayName, UDreamWi
 	NewWidget->SetAnchoredPosition(InAnchoredPosition);
 	// Last, once the widget has a parent and therefore a render canvas to be enrolled with.
 	NewWidget->CreateNewVisual<UDreamVisualEmpty>();
+	// The rule the runtime's own creation roads apply -- UDreamUIBPLibrary's RegisterAndPark and
+	// RegisterDreamWidgetHierarchy both begin a widget made after the MANAGER has begun play. Without it
+	// a widget made here would sit registered in a begun world without ever having begun, a state no
+	// game can reach, and a behaviour added to it later would never Awake.
+	if (IsValid(DriverContext->Manager) && DriverContext->Manager->HasBegunPlay() && !NewWidget->HasBegunPlay())
+	{
+		NewWidget->BeginPlay();
+	}
 	return NewWidget;
+}
+
+UDreamWidget* FDreamDriverRig::MakeControl(TSubclassOf<UDreamUserWidget> InClass, const FString& InDisplayName,
+	UDreamWidget* InParent, const FVector2D& InSize, const FVector2D& InAnchoredPosition)
+{
+	if (!DriverContext.IsValid() || DriverContext->World == nullptr || !IsValid(InClass))
+	{
+		return nullptr;
+	}
+	UDreamWidget* Parent = InParent != nullptr ? InParent : DriverContext->Root;
+	if (!IsValid(Parent))
+	{
+		return nullptr;
+	}
+	// Before the control exists, so nothing it does on the way in -- a part taking the selection, a
+	// field beginning an edit -- meets a world without the host a game would have given it.
+	EnsureGameInputHost();
+
+	// The runtime's own factory, not a copy of it. What it does in order -- instance, Initialize,
+	// parent before register, register the whole hierarchy -- is exactly the part a fixture would get
+	// subtly wrong by hand, and the callback is the seam it offers for writing properties before
+	// anything registered can observe them.
+	UDreamUserWidget* Control = CreateDreamWidget(DriverContext->World, InClass, Parent,
+		[&InDisplayName, &InSize](UDreamUserWidget* InBuilt)
+		{
+			InBuilt->SetDisplayName(InDisplayName);
+			InBuilt->SetWidth(InSize.X);
+			InBuilt->SetHeight(InSize.Y);
+		});
+	if (Control == nullptr)
+	{
+		return nullptr;
+	}
+	// After registration, as in MakeWidget: the anchor is resolved against the parent the control is
+	// now registered under.
+	Control->SetAnchoredPosition(InAnchoredPosition);
+	return Control;
+}
+
+void FDreamDriverRig::EnsureGameInputHost()
+{
+	if (!DriverContext.IsValid() || DriverContext->World == nullptr)
+	{
+		return;
+	}
+	UWorld* HostWorld = DriverContext->World;
+
+	UDreamUIManagerWorldSubsystem* HostManager = DriverContext->Manager;
+	UDreamEventSystem* HostEventSystem = DriverContext->EventSystem;
+	if (IsValid(HostManager) && IsValid(HostEventSystem)
+		&& HostManager->GetEventSystemByUserIndex(HostEventSystem->GetUserIndex()) != HostEventSystem)
+	{
+		// The same call UDreamEventSystem::BeginPlay makes. Not BeginPlay itself: that would also mark
+		// the component as having begun play in a world that never did, and nothing here needs the
+		// rest of what that means.
+		HostManager->AddEventSystem(HostEventSystem);
+	}
+
+	APlayerController* HostController = HostWorld->GetFirstPlayerController();
+	if (HostController == nullptr)
+	{
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.ObjectFlags |= RF_Transient;
+		HostController = HostWorld->SpawnActor<APlayerController>(SpawnParameters);
+		if (HostController != nullptr)
+		{
+			// Spawning alone does NOT put it on the world's controller list here. That happens in
+			// AController::PostInitializeComponents, and AActor::PostActorConstruction runs
+			// Pre/PostInitializeComponents only when World->AreActorsInitialized() -- which a world made
+			// with UWorld::CreateWorld never is, because nothing ran InitializeActorsForPlay on it. Off the
+			// list, the controller is invisible to GetFirstPlayerController and to
+			// UGameplayStatics::GetPlayerController, so the text field's key agent found no player to
+			// enable its input on, kept a null InputComponent, and BindKeys dereferenced it. This is the
+			// one call the skipped PostInitializeComponents would have made that anything here needs.
+			HostWorld->AddController(HostController);
+		}
+	}
+	if (HostController != nullptr && HostController->PlayerInput == nullptr)
+	{
+		// What a game gives the controller when a local player is assigned to it (SetPlayer): its
+		// PlayerInput and its own InputComponent. It also pushes input onto every AutoReceiveInput actor
+		// that registered while there was no controller to enable it on (ULevel::PushPendingAutoReceiveInput),
+		// which is the other half of how a field's key agent gets its InputComponent. AFTER AddController:
+		// that push finds the controller's player index by walking the world's controller list.
+		HostController->InitInputSystem();
+	}
 }
 
 void FDreamDriverRig::PumpFrames(int32 InFrameCount)

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Event/DreamBaseEventData.h"
 #include "Event/DreamPointerEventData.h"
+#include "InputCoreTypes.h"
 #include "Templates/SharedPointer.h"
 #include "UObject/WeakObjectPtr.h"
 
@@ -87,6 +88,25 @@ public:
 
 	/** Make this the event system's selection, the way a press would. */
 	bool Select();
+
+	/**
+	 * Type into this element, the way a player would: click it to give it the keyboard, then press
+	 * the characters one frame apart. The click is skipped when this element already has the
+	 * keyboard -- it is the field being edited, or the key selector that is listening -- because a
+	 * player typing into a field does not click it again before every key, and a second click would
+	 * move the caret (in a field) or disarm it (on a selector). See FDreamDriverSequence::Type for
+	 * where the characters and keys go.
+	 */
+	bool Type(const FString& InText);
+	/** See FDreamDriverSequence::Type(const TCHAR*) for why this overload exists. */
+	bool Type(const TCHAR* InText);
+	/** One key -- Backspace, Enter, an arrow, Escape -- with the same click-unless-focused rule. */
+	bool Type(const FKey& InKey);
+	/** One key with a modifier held -- Ctrl+A, Shift+Left -- with the same click-unless-focused rule. */
+	bool TypeChord(const FKey& InModifier, const FKey& InKey);
+
+	/** Whether this element is what the keyboard reaches right now: the field being edited or the armed selector, or inside one. */
+	bool HasKeyboard() const;
 
 private:
 	/** The driver, and through it the context and the pump. Weak, because the rig owns both. */
