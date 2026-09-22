@@ -3,6 +3,7 @@
 
 #include "Interaction/UIButton.h"
 #include "DreamGUI.h"
+#include "Core/Components/DreamWidget.h"
 
 bool UUIButton::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
@@ -107,15 +108,36 @@ void UUIButton::FireClick()
 
 bool UUIButton::OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)
 {
-	// The interactable test again, for OnPointerClick's reason: a button drawn disabled that still
-	// announced a double click is the same bug as one that still clicks. No click feedback here --
-	// the single click that came with it already played it, and playing it twice for one gesture is
-	// what a second PlayClickFeedback would do.
-	if (!IsInteractable())
+	// This is the second press of a double click, which the event system delivers IN PLACE of that
+	// press's down, as Slate does. SButton's answer to it is taken whole: its own double-click handler
+	// is asked first, and a double click that handler does not take is treated as a single click --
+	// SButton::OnMouseButtonDoubleClick hands it to OnMouseButtonDown -- which is why a double click on
+	// a button is still two full clicks. OnDoubleClick's listeners are that handler here; a multicast
+	// delegate has no way to say it took the event, so they are told and the press goes on.
+	if (!AcceptsPointerButton(EventData))
 	{
-		return AllowEventBubbleUp;
+		// Two clicks of a button this control does not answer are neither a double click of it nor a
+		// press of it: passed on, like the down it stands in for.
+		return true;
 	}
-	OnDoubleClickCPP.Broadcast();
-	OnDoubleClickBP.Broadcast();
-	return AllowEventBubbleUp;
+	// The interactable test for OnPointerClick's reason: a button drawn disabled that still announced a
+	// double click is the same bug as one that still clicks. No click feedback here -- the click this
+	// press ends in plays it, once, as the first one did.
+	if (IsInteractable())
+	{
+		OnDoubleClickCPP.Broadcast();
+		OnDoubleClickBP.Broadcast();
+		// The listeners are game code, and a row that opens a screen on a double click may have torn
+		// this button down on the way. A press on a component that is going away would hand the event
+		// system a dying widget to select, so there is no press for one.
+		if (!IsValid(this) || !IsValid(GetWidget()))
+		{
+			return AllowEventBubbleUp;
+		}
+	}
+	// The press, through the interface rather than straight to the C++ body, so it is exactly what a
+	// down dispatched to this component would have run, a Blueprint override included. It carries the
+	// disabled test, the button filter, OnPressed and the MouseDown click method; the release that ends
+	// it gives OnReleased and the click.
+	return IDreamPointerDownUpInterface::Execute_OnPointerDown(this, EventData);
 }

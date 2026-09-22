@@ -252,7 +252,9 @@ void UDreamBorder::ApplyMouseEventReporting()
 	// MOTION over a border arrives as the drag it belongs to: this event system reports a moving
 	// pointer to the element it pressed on, which is the only motion a border can honestly claim.
 	EventTrigger->GetOnPointerDragEvent().AddUObject(this, &UDreamBorder::HandlePointerDrag);
-	EventTrigger->GetOnPointerClickEvent().AddUObject(this, &UDreamBorder::HandlePointerClick);
+	// The double click from its own route, which is the second press itself: it arrives in place of that
+	// press's down, so the border reports it at the moment UBorder does and never as a second down.
+	EventTrigger->GetOnPointerDoubleClickEvent().AddUObject(this, &UDreamBorder::HandlePointerDoubleClick);
 }
 
 void UDreamBorder::HandlePointerDown(UDreamPointerEventData* InEventData)
@@ -270,14 +272,9 @@ void UDreamBorder::HandlePointerDrag(UDreamPointerEventData* InEventData)
 	OnMouseMoveEvent.Broadcast(InEventData);
 }
 
-void UDreamBorder::HandlePointerClick(UDreamPointerEventData* InEventData)
+void UDreamBorder::HandlePointerDoubleClick(UDreamPointerEventData* InEventData)
 {
-	// An even count is the second click of a double, the fourth, the sixth -- the event system's own
-	// rule, read off the event it already filled in rather than decided a second time here.
-	if (InEventData != nullptr && InEventData->ClickCount > 0 && InEventData->ClickCount % 2 == 0)
-	{
-		OnMouseDoubleClickEvent.Broadcast(InEventData);
-	}
+	OnMouseDoubleClickEvent.Broadcast(InEventData);
 }
 
 // The tag this class answers to in .dui.

@@ -124,17 +124,38 @@ public:
 		double ClickTime = 0;
 	/**
 	 * How many clicks this pointer has landed on the same widget in an unbroken run: 1 for a single
-	 * click, 2 for the second of a double, and so on. Reset to 1 by a click on a different widget or one
-	 * that came too late (see UDreamEventSystem::DoubleClickTime).
+	 * click, 2 for the second of a double, and so on. Reset to 1 by a press on a different widget from
+	 * the last click, with a different button, too late (see UDreamEventSystem::DoubleClickTime), or
+	 * farther from where the last click was pressed than the press raycaster's drag threshold.
 	 *
-	 * A double-click event is dispatched on every even count, which is how a triple click reads as
-	 * click, double, click and a quadruple as two doubles -- the same shape as the desktop.
+	 * Counted at the PRESS, and the click that press ends in carries the same number, so a down, a
+	 * double click and a click all read one answer. Every even press is dispatched as a double click
+	 * instead of a down, which is how a triple click reads as down, double, down and a quadruple as two
+	 * doubles -- the same shape as the desktop.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		int32 ClickCount = 0;
 	/** What the previous click landed on. A click elsewhere starts the count over rather than continuing it. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamWidget> LastClickWidget = nullptr;
+	/**
+	 * Which button the previous click was made with. A run is one button's, as a desktop double click
+	 * is: a left click and a quick right press are two single presses, not a double click -- which
+	 * matters now that the second press of a double click is delivered as the double click and not as
+	 * a down, since a right press read as a left double click would never reach anything as a press.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		EDreamUIMouseButtonType LastClickMouseButtonType = EDreamUIMouseButtonType::Left;
+	/**
+	 * Where the previous click was PRESSED, in the pointer's screen position (its PressPointerPosition).
+	 * A second press only continues the run if it lands within the press raycaster's drag threshold of
+	 * this -- see UDreamBaseRaycaster::IsWithinDoubleClickDistance.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		FVector LastClickPressPointerPosition = FVector::ZeroVector;
+	/** The same press in the world (its PressWorldPoint), for a pointer whose screen position never moves. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		FVector LastClickPressWorldPoint = FVector::ZeroVector;
 	/** the last time when trigger release(time is get from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double ReleaseTime = 0;

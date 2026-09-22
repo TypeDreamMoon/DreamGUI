@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Event/Interface/DreamPointerClickInterface.h"
+#include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "UISelectable.h"
 #include "Event/DreamUIEventDelegate.h"
 #include "Event/DreamDelegateDeclaration.h"
@@ -53,7 +54,7 @@ public:
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleValueChangedEvent, bool, Value);
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UUIToggle : public UUISelectable, public IDreamPointerClickInterface
+class DREAMGUI_API UUIToggle : public UUISelectable, public IDreamPointerClickInterface, public IDreamPointerDoubleClickInterface
 {
 	GENERATED_BODY()
 
@@ -135,6 +136,13 @@ protected:
 	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
+	/**
+	 * The second press of a double click, which the event system delivers in place of that press's
+	 * down. A check box has no double click of its own -- SCheckBox::OnMouseButtonDoubleClick is its
+	 * OnMouseButtonDown and nothing else -- so this is the toggle's press, and the release after it
+	 * flips the box exactly as the first one did.
+	 */
+	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 public:
 	FDreamUIMulticastDelegateBool& GetOnValueChangedEvent(){ return OnValueChangedCPP;}
 	FSimpleMulticastDelegate& GetOnHoveredEvent(){ return OnHoveredCPP; }

@@ -8,6 +8,7 @@
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
+#include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "DreamUIRenderTargetInteraction.generated.h"
 
@@ -43,6 +44,7 @@ UCLASS(ClassGroup = DreamGUI, meta = (BlueprintSpawnableComponent), Blueprintabl
 class DREAMGUI_API UDreamUIRenderTargetInteraction : public UDreamScreenSpaceRaycaster
 	, public IDreamPointerEnterExitInterface
 	, public IDreamPointerDownUpInterface
+	, public IDreamPointerDoubleClickInterface
 	, public IDreamPointerScrollInterface
 {
 	GENERATED_BODY()
@@ -96,6 +98,14 @@ protected:
 	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
+	/**
+	 * The second press of a double click, which the event system delivers in place of that press's
+	 * down. For the UI drawn into the target it is a press like any other, so it presses the
+	 * synthesised pointer exactly as OnPointerDown does -- without this the second click of a quick
+	 * pair would reach the inner UI as a release of a button it never saw go down. The inner pipeline
+	 * runs without an event system, so it keeps no click run of its own and never double-clicks.
+	 */
+	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerScroll_Implementation(UDreamPointerEventData* EventData)override;
 
 	bool LineTrace(FDreamUIHitResultContainer& OutHitResult);

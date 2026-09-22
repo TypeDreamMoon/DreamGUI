@@ -89,6 +89,11 @@ bool UDreamUMGWidgetInteraction::OnPointerDown_Implementation(UDreamPointerEvent
 	}
 	return bAllowEventBubbleUp;
 }
+bool UDreamUMGWidgetInteraction::OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)
+{
+	// Forwarded as the press it is -- see the declaration.
+	return IDreamPointerDownUpInterface::Execute_OnPointerDown(this, EventData);
+}
 bool UDreamUMGWidgetInteraction::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
 	FKey ReleaseKey;

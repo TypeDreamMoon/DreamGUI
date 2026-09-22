@@ -943,7 +943,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Mouse Wheel"))
 	void OnMouseWheel(UDreamPointerEventData* EventData);
 
-	/** UMG's OnMouseButtonDoubleClick. The single click still arrives first; tell them apart with ClickCount. */
+	/** UMG's OnMouseButtonDoubleClick, and like UMG's it arrives in place of the down (On Pointer Down) for the second press of the pair. The first click, and the up and click after the second press, still arrive; ClickCount says which click of a run an event belongs to. */
 	virtual bool NativeOnPointerDoubleClick(UDreamPointerEventData* EventData);
 	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Double Click"))
 	void OnDoubleClick(UDreamPointerEventData* EventData);

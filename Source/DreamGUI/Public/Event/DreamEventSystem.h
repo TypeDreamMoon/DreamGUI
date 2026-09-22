@@ -285,9 +285,12 @@ private:
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float NavigateInputInterval = 0.2f;
 	/**
-	 * How long after a click a second one on the same widget still counts as a double click. The
+	 * How long after a click a second press on the same widget still counts as a double click -- and a
+	 * double click is delivered at that press, in place of its down, as Slate delivers one. The press
+	 * also has to land within the pointer's drag threshold of the first (see
+	 * UDreamBaseRaycaster::IsWithinDoubleClickDistance); there is no separate distance to set. The
 	 * platform default is around a third of a second and this matches it; zero disables double clicks
-	 * entirely, which is a legitimate thing for a project to want.
+	 * entirely, which is a legitimate thing for a project to want, and makes every press a down.
 	 */
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = DreamGUI, meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float DoubleClickTime = 0.3f;

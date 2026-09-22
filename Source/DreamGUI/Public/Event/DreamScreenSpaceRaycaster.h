@@ -65,6 +65,11 @@ protected:
 public:
 	virtual bool GetAffectByGamePause()const override;
 	virtual bool ShouldStartDrag(UDreamPointerEventData* InPointerEventData)override;
+	/**
+	 * The two presses' viewport positions against GetScaledDragThresholdSquare -- ShouldStartDrag's own
+	 * measure, so "moved far enough to drag" and "too far apart to double-click" are one distance.
+	 */
+	virtual bool IsWithinDoubleClickDistance(const UDreamPointerEventData* InPointerEventData) const override;
 	virtual bool GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)override;
 	virtual void Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResult)override;
 

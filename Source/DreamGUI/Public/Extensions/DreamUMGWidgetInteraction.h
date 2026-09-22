@@ -6,6 +6,7 @@
 #include "Components/WidgetInteractionComponent.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
+#include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "DreamUMGWidgetInteraction.generated.h"
@@ -57,6 +58,7 @@ UCLASS(ClassGroup = DreamGUI, meta = (BlueprintSpawnableComponent), Blueprintabl
 class DREAMGUI_API UDreamUMGWidgetInteraction : public UDreamUIBehaviour
 	, public IDreamPointerEnterExitInterface
 	, public IDreamPointerDownUpInterface
+	, public IDreamPointerDoubleClickInterface
 	, public IDreamPointerScrollInterface
 {
 	GENERATED_BODY()
@@ -75,6 +77,14 @@ protected:
 	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
+	/**
+	 * The second press of a double click, which the event system delivers in place of that press's
+	 * down. It is still a press for the UMG widget underneath, and it is forwarded as one, exactly as
+	 * OnPointerDown forwards the first: UE's own UWidgetInteractionComponent routes every press as a
+	 * pointer down and never as a double click, and so has this -- without this, the second click of
+	 * any quick pair on a world-space UMG panel would lose its press and never click.
+	 */
+	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerScroll_Implementation(UDreamPointerEventData* EventData)override;
 
 	UDreamPointerEventData* CurrentPointerEventData = nullptr;

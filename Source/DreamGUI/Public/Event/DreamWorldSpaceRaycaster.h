@@ -94,6 +94,12 @@ public:
 	virtual bool GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)override;
 	virtual void Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)override;
 	virtual bool ShouldStartDrag(UDreamPointerEventData* InPointerEventData)override;
+	/**
+	 * The two presses measured as ShouldStartDrag measures a drag: where the ray landed, in world
+	 * units, for a centre-screen pointer (whose screen position never moves), and the pointer's screen
+	 * position otherwise, against the same DragThresholdSquare.
+	 */
+	virtual bool IsWithinDoubleClickDistance(const UDreamPointerEventData* InPointerEventData) const override;
 
 	virtual float GetRayLength()const override { return RayLength; }
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)

@@ -156,6 +156,23 @@ bool UDreamWorldSpaceRaycaster::ShouldStartDrag(UDreamPointerEventData* InPointe
 	return FVector2D::DistSquared(PressPointerPos, PointerPos) > DragThresholdSquare;
 }
 
+bool UDreamWorldSpaceRaycaster::IsWithinDoubleClickDistance(const UDreamPointerEventData* InPointerEventData) const
+{
+	if (InPointerEventData == nullptr)
+	{
+		return true;
+	}
+	// ShouldStartDrag's two measures, applied to the last click's press and this one.
+	if (PointerSource == EDreamWorldPointerSource::ScreenCenter)
+	{
+		const double PressDistanceSquared = (InPointerEventData->PressWorldPoint - InPointerEventData->LastClickPressWorldPoint).SizeSquared();
+		return PressDistanceSquared <= (double)DragThresholdSquare;
+	}
+	const FVector2D LastClickPress = FVector2D(InPointerEventData->LastClickPressPointerPosition);
+	const FVector2D ThisPress = FVector2D(InPointerEventData->PressPointerPosition);
+	return FVector2D::DistSquared(LastClickPress, ThisPress) <= DragThresholdSquare;
+}
+
 void UDreamWorldSpaceRaycaster::SetPointerSource(EDreamWorldPointerSource Value)
 {
 	PointerSource = Value;

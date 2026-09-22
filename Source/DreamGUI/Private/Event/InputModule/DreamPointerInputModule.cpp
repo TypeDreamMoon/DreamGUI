@@ -492,14 +492,70 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 					EventData->PressWidget = EventData->EnterWidget;
 					//a new press is a new chance at a long press, whatever the previous one did
 					EventData->bIsLongPressFiredForThisPress = false;
-					DeselectIfSelectionChanged(eventSystem, EventData->PressWidget, EventData);
-					if (eventSystem == nullptr)
+					// Which click of a run this press is, decided HERE and not at the release, because the
+					// press is where a double click happens: the second press of a pair is delivered as
+					// the double click, IN PLACE of its down. That is Slate's routing --
+					// FSlateApplication::ProcessMouseButtonDoubleClickEvent sends the second press to
+					// OnMouseButtonDoubleClick and not to OnMouseButtonDown; its one exception, a widget
+					// holding mouse capture, never arises here, because nothing holds the pointer between
+					// two presses (the press widget is let go at every release). The run itself is the
+					// rule it always was -- the same widget as the last click, no more than DoubleClickTime
+					// after it -- plus the two a desktop adds: the same button (a left click and a quick
+					// right press are two presses) and the same spot. The spot is the press raycaster's
+					// drag threshold around where the last click was pressed, measured the way that
+					// raycaster measures a drag (UDreamBaseRaycaster::IsWithinDoubleClickDistance): the
+					// desktop's double-click rectangle and its drag threshold are the same few pixels, so
+					// a second press that has moved as far as a drag would is a new press. No raycaster,
+					// no distance condition. The click this press ends in carries the count given
+					// here, so the down, the double click and the click all read one ClickCount; every
+					// even press of a run is a double click, so a triple reads down, double click, down,
+					// as on the desktop.
+					//
+					// Nothing turns an unanswered double click back into a down. Slate does not either:
+					// the double click bubbles like any event and is dropped if nobody takes it. The
+					// widgets that treat it as a press do so themselves -- SButton hands it to its own
+					// OnMouseButtonDown, SCheckBox is nothing but that -- and so do their counterparts here,
+					// UUIButton and UUIToggle.
+					const UWorld* PressWorld = EventData->GetWorld();
+					const double PressWorldTime = PressWorld != nullptr ? PressWorld->GetTimeSeconds() : 0.0;
+					const float DoubleClickTime = eventSystem != nullptr ? eventSystem->GetDoubleClickTime() : 0.0f;
+					const bool bContinuesClickRun = EventData->ClickCount > 0
+						&& EventData->LastClickWidget == EventData->PressWidget
+						&& EventData->LastClickMouseButtonType == EventData->MouseButtonType
+						&& DoubleClickTime > 0.0f
+						&& (PressWorldTime - EventData->ClickTime) <= (double)DoubleClickTime
+						&& (!IsValid(EventData->PressRaycaster) || EventData->PressRaycaster->IsWithinDoubleClickDistance(EventData));
+					EventData->ClickCount = bContinuesClickRun ? EventData->ClickCount + 1 : 1;
+					// A pointer's only. A key or a pad's confirm is never a double click in Slate -- SButton
+					// takes Accept as a press every time -- so a navigation press stays a down however fast
+					// it follows the last one.
+					const bool bIsDoubleClickPress = (EventData->ClickCount % 2) == 0
+						&& EventData->InputType == EDreamUIPointerInputType::Pointer;
+					if (bIsDoubleClickPress)
 					{
-						UDreamEventSystem::ExecuteEvent_OnPointerDown(EventData->PressWidget, EventData, true);
+						// And no selection change: Slate's double-click route moves no focus, its down
+						// route does. A selectable that takes the double click as a press selects itself
+						// on the way, exactly as its down would have.
+						if (eventSystem == nullptr)
+						{
+							UDreamEventSystem::ExecuteEvent_OnPointerDoubleClick(EventData->PressWidget, EventData, true);
+						}
+						else
+						{
+							eventSystem->CallOnPointerDoubleClick(EventData->PressWidget, EventData);
+						}
 					}
 					else
 					{
-						eventSystem->CallOnPointerDown(EventData->PressWidget, EventData);
+						DeselectIfSelectionChanged(eventSystem, EventData->PressWidget, EventData);
+						if (eventSystem == nullptr)
+						{
+							UDreamEventSystem::ExecuteEvent_OnPointerDown(EventData->PressWidget, EventData, true);
+						}
+						else
+						{
+							eventSystem->CallOnPointerDown(EventData->PressWidget, EventData);
+						}
 					}
 				}
 			}
@@ -591,21 +647,16 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 							eventSystem->CallOnPointerUp(EventData->PressWidget, EventData);
 						}
 					}
-					// Double click, decided from the two things that define one: the same widget, and
-					// little enough time since the last click. ClickTime has been written here since the
-					// beginning and its comment has said "can be used to tell double click" for just as
-					// long -- nothing ever read it, and there was no event to raise if anything had.
-					const double ClickWorldTime = EventData->GetWorld()->GetTimeSeconds();
-					const float DoubleClickTime = eventSystem != nullptr ? eventSystem->GetDoubleClickTime() : 0.0f;
-					const bool bContinuesClickRun = EventData->ClickCount > 0
-						&& EventData->LastClickWidget == EventData->PressWidget
-						&& DoubleClickTime > 0.0f
-						&& (ClickWorldTime - EventData->ClickTime) <= (double)DoubleClickTime;
-					EventData->ClickCount = bContinuesClickRun ? EventData->ClickCount + 1 : 1;
+					// The click this press ends in. Its place in the click run was settled at the press
+					// (see there) and ClickCount already says it; what the release records is which widget
+					// the run's last click landed on and when, which is what the next press is measured
+					// against.
+					const UWorld* ClickWorld = EventData->GetWorld();
 					EventData->LastClickWidget = EventData->PressWidget;
-					EventData->ClickTime = ClickWorldTime;
-					// Every even click in the run, so a triple reads click/double/click like the desktop.
-					const bool bIsDoubleClick = (EventData->ClickCount % 2) == 0;
+					EventData->LastClickMouseButtonType = EventData->MouseButtonType;
+					EventData->LastClickPressPointerPosition = EventData->PressPointerPosition;
+					EventData->LastClickPressWorldPoint = EventData->PressWorldPoint;
+					EventData->ClickTime = ClickWorld != nullptr ? ClickWorld->GetTimeSeconds() : 0.0;
 					UDreamWidget* ClickedWidget = EventData->PressWidget;
 					if (eventSystem == nullptr)
 					{
@@ -615,21 +666,9 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 					{
 						eventSystem->CallOnPointerClick(ClickedWidget, EventData);
 					}
-					// After the single click, never instead of it: a row that opens on double click
-					// usually also selects on single, and a handler that wants only the second one has
-					// ClickCount to read. Re-checked for validity because the click handler that just ran
-					// is game code and may have destroyed the widget it was dispatched to.
-					if (bIsDoubleClick && IsValid(ClickedWidget))
-					{
-						if (eventSystem == nullptr)
-						{
-							UDreamEventSystem::ExecuteEvent_OnPointerDoubleClick(ClickedWidget, EventData, true);
-						}
-						else
-						{
-							eventSystem->CallOnPointerDoubleClick(ClickedWidget, EventData);
-						}
-					}
+					// No double click after it any more: that went out at the press, in place of the
+					// press's down. The click still follows, on the same widget, so a row that selects on
+					// a click and opens on a double click still does both.
 					EventData->PressWidget = nullptr;
 				}
 			}

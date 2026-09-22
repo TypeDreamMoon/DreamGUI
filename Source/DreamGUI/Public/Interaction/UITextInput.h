@@ -552,7 +552,12 @@ public:
 	/** Forget the edit history. Called whenever the text is replaced wholesale from code. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void ClearUndoHistory();
-	/** Select the word around the caret, the way a double click does. */
+	/**
+	 * Select the word around the caret: the run of letters, digits and underscores that the character
+	 * after the caret belongs to (the one before it, at the end of the text), or the run of everything
+	 * else -- spaces, punctuation -- when that character is one of those. A double click does this at
+	 * the spot its second press lands on.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SelectWordAtCaret();
 	/**
@@ -833,6 +838,15 @@ protected:
 	virtual bool OnPointerSelect_Implementation(UDreamBaseEventData* EventData) override;
 	virtual bool OnPointerDeselect_Implementation(UDreamBaseEventData* EventData) override;
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData) override;
+	/**
+	 * Selects the word under the double click -- under its SECOND press, which is the press the double
+	 * click is: the event system delivers that press as the double click, in place of its down, as
+	 * Slate does. The two presses only have to be within the drag threshold of each other, so they can
+	 * fall on different words, and the word selected is the one the second press is on, as it is in
+	 * SEditableText. The caret is put under that press first, the way a down puts it, and
+	 * SelectWordAtCaret takes the word from there. Only while the field is being edited -- which a
+	 * field that was not has been since the first click of the pair.
+	 */
 	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData) override;
 	virtual bool OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData) override;
 	virtual bool OnPointerDrag_Implementation(UDreamPointerEventData* EventData) override;

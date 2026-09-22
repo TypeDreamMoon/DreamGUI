@@ -103,6 +103,18 @@ float UDreamScreenSpaceRaycaster::GetScaledDragThresholdSquare()const
 	const float SafeScale = CanvasScale > SMALL_NUMBER ? CanvasScale : 1.0f;
 	return DragThresholdSquare * SafeScale * SafeScale;
 }
+bool UDreamScreenSpaceRaycaster::IsWithinDoubleClickDistance(const UDreamPointerEventData* InPointerEventData) const
+{
+	if (InPointerEventData == nullptr)
+	{
+		return true;
+	}
+	// ShouldStartDrag's comparison with the two ends swapped for the two presses: at or inside the
+	// threshold is where a drag would not yet have begun, which is where a second press still counts.
+	const FVector2D LastClickPress = FVector2D(InPointerEventData->LastClickPressPointerPosition);
+	const FVector2D ThisPress = FVector2D(InPointerEventData->PressPointerPosition);
+	return FVector2D::DistSquared(LastClickPress, ThisPress) <= GetScaledDragThresholdSquare();
+}
 bool UDreamScreenSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)
 {
 	if (!RootCanvas.IsValid())

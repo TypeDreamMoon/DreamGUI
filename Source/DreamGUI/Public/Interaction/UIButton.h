@@ -48,7 +48,8 @@ protected:
 	FSimpleMulticastDelegate OnPressedCPP;
 	FSimpleMulticastDelegate OnReleasedCPP;
 	/**
-	 * Two clicks inside the event system's DoubleClickTime, on this button.
+	 * Two clicks inside the event system's DoubleClickTime, on this button: said at the SECOND PRESS,
+	 * which the event system delivers as the double click in place of that press's down, as Slate does.
 	 *
 	 * The clock is the event system's and nobody else's: UUITextInput already takes its
 	 * select-the-word gesture from that one, and a control that measured its own would disagree with
@@ -56,8 +57,11 @@ protected:
 	 * than pointer presses, which is not the same thing once anything else can raise a click.
 	 * UDreamListViewBase's OnItemDoubleClicked rides this.
 	 *
-	 * The single click still fires first, which is the interface's stated contract: a list row that
-	 * opens on a double click almost always selects on the first one too.
+	 * The press is not lost to it. SButton treats a double click its own handler does not take as a
+	 * single click, and these listeners cannot take it, so after they are told the second press goes on
+	 * as a press: OnPressed, then OnReleased and OnClick at the release. A double click on this button
+	 * is two full clicks with this in between -- and a list row that opens on a double click has
+	 * already selected on the first.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Button", DisplayName="OnDoubleClick")
 	FUIButtonSimpleEvent OnDoubleClickBP;

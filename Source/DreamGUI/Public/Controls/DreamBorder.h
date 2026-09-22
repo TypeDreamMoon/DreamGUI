@@ -137,12 +137,14 @@ public:
 	FDreamBorderPointerEvent OnMouseMoveEvent;
 
 	/**
-	 * The second click of a double, and the fourth, and the sixth.
+	 * The second press of a double click, and the fourth, and the sixth -- said at that PRESS, and in
+	 * place of OnMouseButtonDownEvent for it, which is how UBorder reports one: Slate routes the second
+	 * press to OnMouseButtonDoubleClick and never to OnMouseButtonDown, so a double click here is one
+	 * button down, one double click and two button ups.
 	 *
-	 * Read off the click's own ClickCount rather than from a separate double-click route, because the
-	 * event system already decides what counts as a double (its DoubleClickTime, and a click on a
-	 * different widget starting the count over) and this is that same decision rather than a second
-	 * one that could disagree with it.
+	 * The event system decides what counts as a double (its DoubleClickTime, the same widget and button,
+	 * and a second press within the pointer's drag threshold of the first); this re-broadcasts that
+	 * decision rather than making a second one that could disagree with it.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Border")
 	FDreamBorderPointerEvent OnMouseDoubleClickEvent;
@@ -269,11 +271,11 @@ protected:
 	virtual void WireParts() override;
 
 private:
-	/** Re-broadcast, one per moment. The double click is read off the click's own ClickCount. */
+	/** Re-broadcast, one per moment, each from the event system's own route for it. */
 	void HandlePointerDown(UDreamPointerEventData* InEventData);
 	void HandlePointerUp(UDreamPointerEventData* InEventData);
 	void HandlePointerDrag(UDreamPointerEventData* InEventData);
-	void HandlePointerClick(UDreamPointerEventData* InEventData);
+	void HandlePointerDoubleClick(UDreamPointerEventData* InEventData);
 
 	/** Makes the trigger and binds it, or destroys it. The one place either of those happens. */
 	void ApplyMouseEventReporting();

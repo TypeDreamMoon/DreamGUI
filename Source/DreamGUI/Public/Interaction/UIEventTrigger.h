@@ -5,6 +5,7 @@
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
 #include "Event/Interface/DreamPointerClickInterface.h"
+#include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
 #include "Event/Interface/DreamPointerDragDropInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
@@ -23,6 +24,7 @@ class DREAMGUI_API UUIEventTrigger : public UDreamUIBehaviour
 	, public IDreamPointerEnterExitInterface
 	, public IDreamPointerDownUpInterface
 	, public IDreamPointerClickInterface
+	, public IDreamPointerDoubleClickInterface
 	, public IDreamPointerDragInterface
 	, public IDreamPointerDragDropInterface
 	, public IDreamPointerScrollInterface
@@ -43,6 +45,13 @@ protected:
 		FDreamUIEventDelegate OnPointerUp = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
 		FDreamUIEventDelegate OnPointerClick = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::PointerEvent);
+	/**
+	 * The second press of a double click. The event system delivers it IN PLACE of that press's down,
+	 * as Slate does, so a trigger that only listened for downs would never hear the second press at
+	 * all -- this is where it arrives. The click at its release still comes through OnPointerClick.
+	 */
+	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
+		FDreamUIEventDelegate OnPointerDoubleClick = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
 		FDreamUIEventDelegate OnPointerBeginDrag = FDreamUIEventDelegate(EDreamUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
@@ -63,6 +72,7 @@ protected:
 	FDreamUIMulticastDelegatePointerEventData OnPointerDownCPP;
 	FDreamUIMulticastDelegatePointerEventData OnPointerUpCPP;
 	FDreamUIMulticastDelegatePointerEventData OnPointerClickCPP;
+	FDreamUIMulticastDelegatePointerEventData OnPointerDoubleClickCPP;
 	FDreamUIMulticastDelegatePointerEventData OnPointerBeginDragCPP;
 	FDreamUIMulticastDelegatePointerEventData OnPointerDragCPP;
 	FDreamUIMulticastDelegatePointerEventData OnPointerEndDragCPP;
@@ -81,6 +91,8 @@ protected:
 	FUIEventTriggerPointerEvent OnPointerUpBP;
 	UPROPERTY(BlueprintAssignable, Category = "UIEventTrigger", DisplayName="OnPointerClick")
 	FUIEventTriggerPointerEvent OnPointerClickBP;
+	UPROPERTY(BlueprintAssignable, Category = "UIEventTrigger", DisplayName="OnPointerDoubleClick")
+	FUIEventTriggerPointerEvent OnPointerDoubleClickBP;
 	UPROPERTY(BlueprintAssignable, Category = "UIEventTrigger", DisplayName="OnPointerBeginDrag")
 	FUIEventTriggerPointerEvent OnPointerBeginDragBP;
 	UPROPERTY(BlueprintAssignable, Category = "UIEventTrigger", DisplayName="OnPointerDrag")
@@ -100,7 +112,7 @@ public:
 	 * Whether the events this trigger receives carry on to whatever is behind it.
 	 *
 	 * Readable and writable because it is the only answer this component gives to UMG's per-call
-	 * "Handled / Unhandled": every one of the twelve handlers returns exactly this. A control that
+	 * "Handled / Unhandled": every one of the thirteen handlers returns exactly this. A control that
 	 * puts a trigger on itself has to be able to state it -- UDreamBorder does, as its
 	 * bConsumeMouseEvents.
 	 */
@@ -114,6 +126,7 @@ public:
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerDownEvent(){return OnPointerDownCPP;}
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerUpEvent(){return OnPointerUpCPP;}
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerClickEvent(){return OnPointerClickCPP;}
+	FDreamUIMulticastDelegatePointerEventData& GetOnPointerDoubleClickEvent(){return OnPointerDoubleClickCPP;}
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerBeginDragEvent(){return OnPointerBeginDragCPP;}
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerDragEvent(){return OnPointerDragCPP;}
 	FDreamUIMulticastDelegatePointerEventData& GetOnPointerEndDragEvent(){return OnPointerEndDragCPP;}
@@ -127,6 +140,7 @@ public:
 	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;
+	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerDrag_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerEndDrag_Implementation(UDreamPointerEventData* EventData)override;

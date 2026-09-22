@@ -2092,13 +2092,31 @@ bool UUITextInput::OnPointerClick_Implementation(UDreamPointerEventData* EventDa
 }
 bool UUITextInput::OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)
 {
-	// Double click selects the word under the caret, the one text-field gesture every other editor
-	// has. The event system already decides what counts as a double click (its own DoubleClickTime,
-	// same widget), so this asks for that answer rather than keeping a second clock -- and by the
-	// time it arrives OnPointerDown has already put the caret at the press position, which is the
-	// position the word is looked up around.
+	// Double click selects the word it lands on, the one text-field gesture every other editor has.
+	// The event system already decides what counts as a double click (its own DoubleClickTime, same
+	// widget, same button, the second press within the drag threshold of the first), so this asks for
+	// that answer rather than keeping a second clock. It arrives at the SECOND press and in place of
+	// that press's down (Slate's routing), so nothing has put the caret under this press: it is still
+	// where the FIRST press left it. The two presses of a double click are near each other, not on one
+	// spot, and a drag threshold's worth apart can already be the next word over. Slate looks the word
+	// up at the double click's own position (SEditableText::OnMouseButtonDoubleClick ->
+	// FSlateEditableTextLayout::HandleMouseButtonDoubleClick -> SelectWordAt(the event's screen
+	// position)), so the caret is put under this press first, exactly as a down would put it, and the
+	// word is taken from there.
 	if (bInputActive)
 	{
+		if (TextVisual != nullptr && IsValid(EventData))
+		{
+			//caret position at this press, UIText space
+			auto PressCaretPosition = FVector2f(0, 0);
+			TextVisual->FindCaretByWorldPosition(EventData->GetWorldPointInPlane(), PressCaretPosition, PressCaretPositionLineIndex, PressCaretPositionIndex);
+			PressCaretPositionIndex = PressCaretPositionIndex + VisibleCaretStartIndex;
+			CaretPositionIndex = PressCaretPositionIndex;
+			PressCaretPositionLineIndex = PressCaretPositionLineIndex + VisibleCaretStartLineIndex;
+			CaretPositionLineIndex = PressCaretPositionLineIndex;
+			UpdateCaretPosition(PressCaretPosition);
+			UpdateUITextComponent();
+		}
 		SelectWordAtCaret();
 	}
 	return AllowEventBubbleUp;

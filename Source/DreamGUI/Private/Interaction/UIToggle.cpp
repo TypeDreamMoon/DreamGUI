@@ -288,6 +288,14 @@ bool UUIToggle::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 	return AllowEventBubbleUp;
 }
 
+bool UUIToggle::OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)
+{
+	// SCheckBox's whole answer to a double click is its down, so this is the down: through the
+	// interface, so it is exactly what a down dispatched to this component would have run -- the
+	// button filter, the disabled test, OnPressed and a MouseDown click method's flip included.
+	return IDreamPointerDownUpInterface::Execute_OnPointerDown(this, EventData);
+}
+
 bool UUIToggle::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	// Super FIRST, always: the base runs the pointer transition, so a handler on this signal sees a

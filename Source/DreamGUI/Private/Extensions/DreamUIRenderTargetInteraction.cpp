@@ -168,6 +168,11 @@ bool UDreamUIRenderTargetInteraction::OnPointerDown_Implementation(UDreamPointer
 	Synthesised->MouseButtonType = EventData->MouseButtonType;
 	return bAllowEventBubbleUp;
 }
+bool UDreamUIRenderTargetInteraction::OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)
+{
+	// Pressed as the press it is -- see the declaration.
+	return IDreamPointerDownUpInterface::Execute_OnPointerDown(this, EventData);
+}
 bool UDreamUIRenderTargetInteraction::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
 	using namespace DreamUIRenderTargetInteractionLocal;

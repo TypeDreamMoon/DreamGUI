@@ -22,7 +22,7 @@ enum class EDreamUIPointerEventType :uint8
 	DragDrop = 11,
 	Select = 12,
 	Deselect = 13,
-	/** Two clicks on the same widget inside DoubleClickTime. The second Click is still dispatched too. */
+	/** The second press on the same widget inside DoubleClickTime, sent instead of its Down. Its Up and Click still follow. */
 	DoubleClick = 15,
 	/** The trigger held on one widget for LongPressTime without becoming a drag. */
 	LongPress = 16,

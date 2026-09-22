@@ -37,6 +37,13 @@ bool UUIEventTrigger::OnPointerClick_Implementation(UDreamPointerEventData* Even
 	OnPointerClick.FireEvent(EventData);
 	return AllowEventBubbleUp;
 }
+bool UUIEventTrigger::OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)
+{
+	OnPointerDoubleClickCPP.Broadcast(EventData);
+	OnPointerDoubleClickBP.Broadcast(EventData);
+	OnPointerDoubleClick.FireEvent(EventData);
+	return AllowEventBubbleUp;
+}
 bool UUIEventTrigger::OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData)
 {
 	OnPointerBeginDragCPP.Broadcast(EventData);

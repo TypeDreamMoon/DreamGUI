@@ -47,6 +47,19 @@ public:
 	virtual void Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray) PURE_VIRTUAL(UDreamGUIBaseRaycaster::Raycast, );
 	/** Called by InputModule to decide if current trigger press need to convert to drag */
 	virtual bool ShouldStartDrag(UDreamPointerEventData* InPointerEventData) PURE_VIRTUAL(UDreamBaseRaycaster::ShouldStartDrag, return false;);
+	/**
+	 * Whether this press landed close enough to where the pointer's last click was PRESSED to be the
+	 * second press of a double click. Called by the input module at a press that would otherwise
+	 * continue a click run (same widget, same button, inside DoubleClickTime).
+	 *
+	 * Measured the way ShouldStartDrag measures a drag, against the same threshold, and no new knob:
+	 * on the desktop the double-click rectangle and the drag threshold are the same few pixels
+	 * (Windows' SM_CXDOUBLECLK and SM_CXDRAG both default to 4), and Slate's double click is the
+	 * platform's, so a second press that has moved as far as a drag would have is a new press, not a
+	 * double click. The default answers yes: a raycaster with no distance of its own to measure adds
+	 * no condition, and the double click is decided by the widget, the button and the time alone.
+	 */
+	virtual bool IsWithinDoubleClickDistance(const UDreamPointerEventData* InPointerEventData) const { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)virtual void ActivateRaycaster();
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)virtual void DeactivateRaycaster();
