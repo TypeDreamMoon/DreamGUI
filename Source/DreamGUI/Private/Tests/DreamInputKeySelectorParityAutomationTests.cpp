@@ -11,6 +11,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "InputCoreTypes.h"
+#include "Interaction/UIButton.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
 
