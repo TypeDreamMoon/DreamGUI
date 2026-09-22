@@ -566,6 +566,12 @@ bool UDreamSpinBox::NativeOnBeginDrag(UDreamPointerEventData* EventData)
 	// this rather than an absolute read of the pointer, which is what keeps the number from jumping
 	// to wherever in the field the drag happened to start.
 	SliderPressFraction = ValueToSliderFraction(Value);
+	// And the travel that turned the press into a drag, which moves nothing: SSpinBox::OnMouseMove adds
+	// the pointer's moves up only to decide that this IS a drag, and the move that decides it changes
+	// no value -- only the ones after it do. Measured here, at the moment the drag is recognised, so
+	// the scrub counts from this point and the number does not leap by the drag threshold as it starts.
+	ScrubStartTravel = static_cast<float>(EventData->PressWorldToLocalTransform.TransformVector(
+		EventData->GetWorldPointInPlane() - EventData->PressWorldPoint).Y);
 	OnBeginSliderMovement.Broadcast(Value);
 	return bBubble;
 }
@@ -586,10 +592,10 @@ bool UDreamSpinBox::NativeOnDrag(UDreamPointerEventData* EventData)
 	}
 	// The cumulative travel since the press, in the PRESSED widget's local frame -- the same reading
 	// UUIScrollbar takes for its handle, including the detail that a widget's local X is the engine's
-	// Y (the UI plane is YZ).
+	// Y (the UI plane is YZ) -- less the stretch that only decided this was a drag (ScrubStartTravel).
 	const FVector LocalDelta = EventData->PressWorldToLocalTransform.TransformVector(
 		EventData->GetWorldPointInPlane() - EventData->PressWorldPoint);
-	const float Fraction = SliderPressFraction + static_cast<float>(LocalDelta.Y) / ScrubWidth;
+	const float Fraction = SliderPressFraction + (static_cast<float>(LocalDelta.Y) - ScrubStartTravel) / ScrubWidth;
 	// Through the ordinary road, which clamps to the HARD range: the scrub range decides how far the
 	// travel reaches, never what the value is allowed to be.
 	ApplyValueChange(SnapToStep(SliderFractionToValue(Fraction)));

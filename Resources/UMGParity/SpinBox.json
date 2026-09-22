@@ -21,7 +21,7 @@
 		{"umg": "ForegroundColor", "kind": "property", "status": "map", "dream": "FDreamSpinBoxStyle::TextColor", "note": "Appearance lives in the style struct; the value text and the two step glyphs share it."},
 		{"umg": "OnValueChanged", "kind": "event", "status": "adopt", "dream": "OnValueChanged", "note": "Fires on every value a scrub passes through."},
 		{"umg": "OnValueCommitted", "kind": "event", "status": "map", "dream": "OnValueCommitted", "note": "Same moment; carries the value alone, without UMG's ETextCommit -- see EditableTextBox.json for why that enum is not spoken here."},
-		{"umg": "OnBeginSliderMovement", "kind": "event", "status": "adopt", "dream": "OnBeginSliderMovement", "note": "Carries the value the scrub started from, where UMG's carries nothing."},
+		{"umg": "OnBeginSliderMovement", "kind": "event", "status": "adopt", "dream": "OnBeginSliderMovement", "note": "Carries the value the scrub started from, where UMG's carries nothing. Fires when the drag is recognised, and the travel before that moves no value, as in SSpinBox."},
 		{"umg": "OnEndSliderMovement", "kind": "event", "status": "adopt", "dream": "OnEndSliderMovement", "note": ""},
 		{"umg": "GetValue", "kind": "function", "status": "adopt", "dream": "GetValue", "note": ""},
 		{"umg": "SetValue", "kind": "function", "status": "adopt", "dream": "SetValue", "note": ""},

@@ -40,7 +40,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamSpinBoxValueChangedEvent, floa
  * at by asking who already owns the gesture rather than by inventing a mode.
  *
  * The scrub sweeps MinSliderValue..MaxSliderValue (which default to the hard range) across the
- * control's own width, bent by SliderExponent so a large range can still be fine near one end.
+ * control's own width, bent by SliderExponent so a large range can still be fine near one end. It
+ * counts from where the drag was recognised, not from the press: the travel that turned the press
+ * into a drag moves nothing, as in SSpinBox, so the value does not leap by the drag threshold the
+ * moment a scrub starts.
  *
  *     /Script/DreamGUI.DreamSpinBox Count {
  *         Value = 5
@@ -460,6 +463,15 @@ private:
 	/** The slider fraction the scrub started from; every drag frame is an offset from it. */
 	UPROPERTY(Transient)
 	float SliderPressFraction = 0.0f;
+
+	/**
+	 * How far along the scrub axis the pointer had already come from the press when the drag was
+	 * recognised, in the pressed widget's local units. Every drag frame measures from here rather than
+	 * from the press: SSpinBox spends the travel that decides a press is a drag on deciding it, and
+	 * moves the value only with what comes after.
+	 */
+	UPROPERTY(Transient)
+	float ScrubStartTravel = 0.0f;
 
 	/** Value into the parts, eventless -- the field shows it, nobody is notified. */
 	void PushValueToParts();
