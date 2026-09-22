@@ -1974,8 +1974,12 @@ bool FDreamWidgetDesignerViewportClient::ApplyPendingReparent()
 	if (!CanReparentSelectionUnder(Dragged, NewParent))return false;
 	// And asked of the AUTHORING tree before the preview is touched. The preview half below cannot be
 	// taken back, and a parent the asset does not contain is one ReparentTemplatesFrom will refuse --
-	// after which the preview shows a hierarchy the asset never had, until the next rebuild.
-	if (!DesignerPtr.IsValid() || DesignerPtr.Pin()->GetTemplateWidget(NewParent) == nullptr)return false;
+	// after which the preview shows a hierarchy the asset never had, until the next rebuild. The
+	// same question ReparentTemplatesFrom asks, so a placed control's hole -- no template of its own,
+	// standing for the control's -- is accepted here exactly when it will be accepted there.
+	UDreamWidget* ParentTemplate = nullptr;
+	FName SlotName = NAME_None;
+	if (!DesignerPtr.IsValid() || !DesignerPtr.Pin()->ResolveTemplateParentFor(NewParent, ParentTemplate, SlotName))return false;
 	// No Modify on either parent, and no RF_Transactional put on them: both are PREVIEW widgets, and
 	// recording them here is what used to let an undo restore a hierarchy of objects the next
 	// rebuild had already destroyed. ReparentTemplatesFrom below performs the same move on the

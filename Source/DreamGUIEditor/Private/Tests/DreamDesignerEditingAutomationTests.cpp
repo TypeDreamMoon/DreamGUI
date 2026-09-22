@@ -25,6 +25,8 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Core/Components/DreamText.h"
+#include "Controls/DreamButton.h"//a placed control with one hole, its default
+#include "Controls/DreamExpandableArea.h"//a placed control with a hole that is NOT its default
 #include "Designer/DreamWidgetPropertyBindingExtension.h"
 #include "EdGraph/EdGraph.h"
 #include "K2Node_FunctionEntry.h"
@@ -2133,6 +2135,228 @@ bool FDreamDesignerNewChildSlotAlignmentTest::RunTest(const FString&)
 			OnTheOverlay->GetPanelSlot()->HorizontalAlignment == EDreamPanelHorizontalAlignment::Left
 			&& OnTheOverlay->GetPanelSlot()->VerticalAlignment == EDreamPanelVerticalAlignment::Top);
 		TestFalse(TEXT("and it was not stretched over the panel by the root's rule"), FillsItsParent(OnTheOverlay));
+	}
+	return true;
+}
+
+
+/*
+ * Dropping into a placed control's hole.
+ *
+ * A nested Button shows its slots in the hierarchy, and the "Content" row under it is a widget this
+ * asset never authored -- the Button built it when the preview was instanced. So a drop onto that
+ * row had no template to write to: the preview took the widget and the asset did not, which looked
+ * right until the next compile rebuilt the preview from the asset and put the widget back at the
+ * root. The hole stands for the instance that opened it, and the asset records the content the way
+ * the runtime already reads it: nested under that instance, bound by name when the slot is not the
+ * instance's default one.
+ */
+namespace DreamDesignerEditingTestLocal
+{
+	/** The hole InSlotName names on the preview of InInstanceTemplate, re-found after every rebuild. */
+	UDreamWidget* PreviewHoleOf(const FScopedDesigner& InScoped, const UDreamWidget* InInstanceTemplate, FName InSlotName)
+	{
+		if (InScoped.Designer == nullptr || !InScoped.Designer->GetPreviewHost().IsValid())
+		{
+			return nullptr;
+		}
+		const UDreamUserWidget* Instance = Cast<UDreamUserWidget>(InScoped.Designer->GetPreviewHost()->FindPreviewForTemplate(InInstanceTemplate));
+		return Instance != nullptr ? Instance->FindSlotWidget(InSlotName) : nullptr;
+	}
+
+	/** Whether InTemplate's preview sits, right now, in the hole InSlotName of InInstanceTemplate's preview. */
+	bool PreviewSitsInHole(const FScopedDesigner& InScoped, const UDreamWidget* InTemplate, const UDreamWidget* InInstanceTemplate, FName InSlotName)
+	{
+		UDreamWidget* Hole = PreviewHoleOf(InScoped, InInstanceTemplate, InSlotName);
+		UDreamWidget* Preview = InScoped.Designer != nullptr && InScoped.Designer->GetPreviewHost().IsValid()
+			? InScoped.Designer->GetPreviewHost()->FindPreviewForTemplate(InTemplate) : nullptr;
+		return IsValid(Hole) && IsValid(Preview) && Preview->GetParent() == Hole;
+	}
+
+	/** The authored parent of the widget called InDisplayName, or null when there is no such widget. */
+	UDreamWidget* TemplateParentOf(const FScopedDesigner& InScoped, const TCHAR* InDisplayName)
+	{
+		const UDreamWidget* Template = InScoped.FindTemplate(InDisplayName);
+		return Template != nullptr ? Template->GetParent() : nullptr;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDropIntoAControlsHoleTest,
+	"DreamGUI.Designer.ADropIntoAPlacedControlsHoleReachesTheAssetAsThatControlsChild",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerDropIntoAControlsHoleTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerDropIntoHole"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* ButtonTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamButton::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Button"));
+	if (!TestNotNull(TEXT("A button is placed in the asset"), ButtonTemplate))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+	UDreamWidget* Hole = PreviewHoleOf(Scoped, ButtonTemplate, UDreamButton::ContentSlotName);
+	if (!TestNotNull(TEXT("The preview button shows its Content hole"), Hole))
+	{
+		return false;
+	}
+	TestNull(TEXT("and the hole itself has no template: the button built it"), Scoped.Designer->GetTemplateWidget(Hole));
+
+	// The palette drop onto the hole's row, which the hierarchy and the viewport both make.
+	UDreamWidget* PreviewText = Scoped.Designer->DesignerCreateWidget(Hole, UDreamWidget::StaticClass(), TEXT("Text"), nullptr);
+	if (!TestNotNull(TEXT("The drop produced a preview"), PreviewText))
+	{
+		return false;
+	}
+	UDreamWidget* TextTemplate = Scoped.FindTemplate(TEXT("Text"));
+	if (!TestNotNull(TEXT("and reached the asset"), TextTemplate))
+	{
+		return false;
+	}
+	TestEqual(TEXT("as the button's child, which is what nesting means for its default slot"), TextTemplate->GetParent(), ButtonTemplate);
+	TestNull(TEXT("with no named binding, the hole being the button's default slot"),
+		Cast<UDreamUserWidget>(ButtonTemplate)->GetContentForNamedSlot(UDreamButton::ContentSlotName));
+	TestTrue(TEXT("The preview shows it in the hole"), PreviewSitsInHole(Scoped, TextTemplate, ButtonTemplate, UDreamButton::ContentSlotName));
+
+	// The moment the old behaviour surfaced: a compile rebuilds the preview from the ASSET.
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	Scoped.Rebuild();
+	TestEqual(TEXT("After a compile the asset still holds it under the button"), TemplateParentOf(Scoped, TEXT("Text")), ButtonTemplate);
+	TestTrue(TEXT("and the rebuilt preview still shows it in the hole"), PreviewSitsInHole(Scoped, TextTemplate, ButtonTemplate, UDreamButton::ContentSlotName));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerMoveIntoAControlsHoleTest,
+	"DreamGUI.Designer.AWidgetMovedIntoAPlacedControlsHoleMovesInTheAssetToo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerMoveIntoAControlsHoleTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerMoveIntoHole"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* ButtonTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamButton::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Button"));
+	UDreamWidget* TextTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Text"));
+	if (!TestNotNull(TEXT("A button is placed in the asset"), ButtonTemplate) || !TestNotNull(TEXT("and a text beside it"), TextTemplate))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+
+	// The hierarchy drop: the preview moves first, then the asset is asked for the same move. That
+	// second half used to answer "that parent is not in the asset" and drop the move on the floor --
+	// the shape of the report this test comes from: a Text dragged into a Button, gone from it at
+	// the next compile.
+	UDreamWidget* Hole = PreviewHoleOf(Scoped, ButtonTemplate, UDreamButton::ContentSlotName);
+	UDreamWidget* PreviewText = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(TextTemplate);
+	if (!TestNotNull(TEXT("The preview button shows its hole"), Hole) || !TestNotNull(TEXT("and the text has a preview"), PreviewText))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The preview takes the move"), PreviewText->TrySetParent(Hole, false));
+	TArray<UDreamWidget*> Moved{ PreviewText };
+	TestTrue(TEXT("and the asset mirrors it"), Scoped.Designer->ReparentTemplatesFrom(Moved, Hole));
+	TestEqual(TEXT("under the button"), TextTemplate->GetParent(), ButtonTemplate);
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	Scoped.Rebuild();
+	TestTrue(TEXT("so the preview rebuilt after a compile shows it in the hole"),
+		PreviewSitsInHole(Scoped, TextTemplate, ButtonTemplate, UDreamButton::ContentSlotName));
+
+	// And out again, onto the root.
+	PreviewText = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(TextTemplate);
+	if (!TestNotNull(TEXT("The text still has a preview"), PreviewText))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The preview takes the move back"), PreviewText->TrySetParent(Scoped.PreviewRoot(), false));
+	Moved = { PreviewText };
+	TestTrue(TEXT("and the asset mirrors that too"), Scoped.Designer->ReparentTemplatesFrom(Moved, Scoped.PreviewRoot()));
+	TestEqual(TEXT("back under the root"), TextTemplate->GetParent(), Scoped.TemplateRoot());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDropIntoANamedHoleTest,
+	"DreamGUI.Designer.ADropIntoAControlsNamedHoleBindsTheWidgetToThatSlot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerDropIntoANamedHoleTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerDropIntoNamedHole"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	// Two holes, and the header is not the default: nesting alone would put the widget in the body.
+	UDreamWidget* AreaTemplate = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamExpandableArea::StaticClass(), Scoped.TemplateRoot(), -1, TEXT("Area"));
+	UDreamUserWidget* Area = Cast<UDreamUserWidget>(AreaTemplate);
+	if (!TestNotNull(TEXT("An expandable area is placed in the asset"), Area))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+	UDreamWidget* HeaderHole = PreviewHoleOf(Scoped, AreaTemplate, UDreamExpandableArea::HeaderSlotName);
+	if (!TestNotNull(TEXT("The preview area shows its Header hole"), HeaderHole))
+	{
+		return false;
+	}
+	UDreamWidget* PreviewTitle = Scoped.Designer->DesignerCreateWidget(HeaderHole, UDreamWidget::StaticClass(), TEXT("Title"), nullptr);
+	UDreamWidget* TitleTemplate = Scoped.FindTemplate(TEXT("Title"));
+	if (!TestNotNull(TEXT("The drop produced a preview"), PreviewTitle) || !TestNotNull(TEXT("and reached the asset"), TitleTemplate))
+	{
+		return false;
+	}
+	TestEqual(TEXT("as the area's child"), TitleTemplate->GetParent(), AreaTemplate);
+	TestEqual(TEXT("bound to the header by name"), Area->GetContentForNamedSlot(UDreamExpandableArea::HeaderSlotName), TitleTemplate);
+	TestTrue(TEXT("The preview shows it in the header"), PreviewSitsInHole(Scoped, TitleTemplate, AreaTemplate, UDreamExpandableArea::HeaderSlotName));
+	TestFalse(TEXT("and not in the body"), PreviewSitsInHole(Scoped, TitleTemplate, AreaTemplate, UDreamExpandableArea::ContentSlotName));
+
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	Scoped.Rebuild();
+	TestTrue(TEXT("After a compile it is still in the header"), PreviewSitsInHole(Scoped, TitleTemplate, AreaTemplate, UDreamExpandableArea::HeaderSlotName));
+
+	// Moved out, the binding goes with it. Left behind, the next instance built would follow the
+	// binding before it looked at Children and pull the widget straight back into the header.
+	PreviewTitle = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(TitleTemplate);
+	if (!TestNotNull(TEXT("The title still has a preview"), PreviewTitle))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The preview takes the move out"), PreviewTitle->TrySetParent(Scoped.PreviewRoot(), false));
+	TArray<UDreamWidget*> Moved{ PreviewTitle };
+	TestTrue(TEXT("and the asset mirrors it"), Scoped.Designer->ReparentTemplatesFrom(Moved, Scoped.PreviewRoot()));
+	TestEqual(TEXT("under the root"), TitleTemplate->GetParent(), Scoped.TemplateRoot());
+	TestNull(TEXT("with the header binding dropped"), Area->GetContentForNamedSlot(UDreamExpandableArea::HeaderSlotName));
+	Scoped.Rebuild();
+	UDreamWidget* Rebuilt = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(TitleTemplate);
+	TestTrue(TEXT("and the rebuilt preview shows it under the root"), IsValid(Rebuilt) && Rebuilt->GetParent() == Scoped.PreviewRoot());
+
+	// Back in, then deleted: a binding to a widget that no longer exists is not left behind either.
+	HeaderHole = PreviewHoleOf(Scoped, AreaTemplate, UDreamExpandableArea::HeaderSlotName);
+	if (TestNotNull(TEXT("The header hole is back"), HeaderHole) && IsValid(Rebuilt) && Rebuilt->TrySetParent(HeaderHole, false))
+	{
+		Moved = { Rebuilt };
+		TestTrue(TEXT("The asset takes it back into the header"), Scoped.Designer->ReparentTemplatesFrom(Moved, HeaderHole));
+		TestEqual(TEXT("and binds it again"), Area->GetContentForNamedSlot(UDreamExpandableArea::HeaderSlotName), TitleTemplate);
+		TestTrue(TEXT("Deleting it"), DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, TitleTemplate));
+		TestNull(TEXT("drops the binding with it"), Area->GetContentForNamedSlot(UDreamExpandableArea::HeaderSlotName));
 	}
 	return true;
 }

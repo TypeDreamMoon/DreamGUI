@@ -15,6 +15,8 @@
 #include "Text/DreamUITextWriteBack.h"
 #include "Text/DreamUIWorkspaceService.h"
 #include "Core/DreamTextUserWidget.h"
+#include "Core/DreamUserWidget.h"
+#include "Interaction/DreamContentWidget.h"//UDreamNamedSlot, the hole a placed control shows as a row
 #include "Text/DreamUIPaths.h"
 
 #include "DesktopPlatformModule.h"
@@ -748,6 +750,57 @@ UDreamWidget* FDreamWidgetBlueprintEditor::FindPreviewForAnimationContext(UDream
 UDreamWidget* FDreamWidgetBlueprintEditor::GetTemplateWidget(const UDreamWidget* InPreviewWidget) const
 {
 	return PreviewHost.IsValid() ? PreviewHost->FindTemplateForPreview(InPreviewWidget) : nullptr;
+}
+
+bool FDreamWidgetBlueprintEditor::ResolveTemplateParentFor(const UDreamWidget* InPreviewParent, UDreamWidget*& OutParentTemplate, FName& OutSlotName) const
+{
+	OutParentTemplate = nullptr;
+	OutSlotName = NAME_None;
+	if (!IsValid(InPreviewParent))
+	{
+		return false;
+	}
+	if (UDreamWidget* Template = GetTemplateWidget(InPreviewParent))
+	{
+		OutParentTemplate = Template;
+		return true;
+	}
+	// No template of its own. The one such widget an author can legitimately drop onto is a slot
+	// hole: built by the control that declares it, shown in the hierarchy as a row of that control,
+	// and living in the control's own tree rather than this asset's. It stands for the instance
+	// above it -- which is why the palette used to send a drop on it to the ROOT: the hole answered
+	// "no template", and no template read as "the canvas".
+	const UDreamNamedSlot* Slot = InPreviewParent->GetComponent<UDreamNamedSlot>();
+	if (Slot == nullptr)
+	{
+		return false;
+	}
+	const UDreamWidget* Instance = nullptr;
+	for (const UDreamWidget* Ancestor = InPreviewParent->GetParent(); Ancestor != nullptr; Ancestor = Ancestor->GetParent())
+	{
+		if (Ancestor->IsA<UDreamUserWidget>())
+		{
+			Instance = Ancestor;
+			break;
+		}
+	}
+	// The nearest instance is the one that opened the hole (FindSlotWidget stops at nested instances
+	// for the same reason). It has a template when THIS asset placed it; the designer's own wrapper
+	// above the authored root has none, and a hole of that is not this asset's to fill.
+	UDreamUserWidget* InstanceTemplate = Cast<UDreamUserWidget>(GetTemplateWidget(Instance));
+	if (InstanceTemplate == nullptr)
+	{
+		return false;
+	}
+	TArray<FName> Declared;
+	UDreamUserWidget::CollectDeclaredSlotNames(InstanceTemplate->GetClass(), Declared);
+	if (!Declared.Contains(Slot->GetSlotName()))
+	{
+		return false;
+	}
+	OutParentTemplate = InstanceTemplate;
+	OutSlotName = Slot->GetSlotName();
+	return true;
 }
 
 FName FDreamWidgetBlueprintEditor::GetSequencerTabID()
@@ -3418,13 +3471,24 @@ UDreamWidget* FDreamWidgetBlueprintEditor::DesignerCreateWidget(UDreamWidget* In
 	// Here rather than at the call sites: the palette, the hierarchy drop and the tools menu all
 	// arrive through this function, and three of them remembering separately is how one forgets.
 	const FScopedTransaction Transaction(LOCTEXT("CreateWidget_Transaction", "DreamUI Create Widget"));
-	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewParent);
-	if (ParentTemplate == nullptr)
+	UDreamWidget* ParentTemplate = nullptr;
+	FName SlotName = NAME_None;
+	if (!ResolveTemplateParentFor(InPreviewParent, ParentTemplate, SlotName))
 	{
+		if (IsValid(InPreviewParent) && InPreviewParent->GetComponent<UDreamNamedSlot>() != nullptr)
+		{
+			// A hole, but not one this asset can fill: the designer's own wrapper, or an instance
+			// with no template here. Falling through to the root is exactly the bug that put a
+			// widget dropped "into" a control at the top of the asset, and showed it inside the
+			// control until the next compile rebuilt the preview from what the asset held.
+			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot create '%s' in the slot '%s': the control opening it is not part of this asset."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InDesiredName, *InPreviewParent->GetDisplayName());
+			return nullptr;
+		}
 		// The design canvas, or the user widget itself: the authored root is the only sensible home.
 		ParentTemplate = IsValid(BlueprintBeingEdited->WidgetTree) ? BlueprintBeingEdited->WidgetTree->RootWidget.Get() : nullptr;
 	}
-	UDreamWidget* Template = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, InWidgetClass, ParentTemplate, -1, InDesiredName);
+	UDreamWidget* Template = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, InWidgetClass, ParentTemplate, -1, InDesiredName, SlotName);
 	if (Template == nullptr)
 	{
 		// CreateWidget said why. Nothing was written, so the transaction records nothing either.
@@ -3702,8 +3766,9 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return Result;
 	}
-	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewParent);
-	if (ParentTemplate == nullptr)
+	UDreamWidget* ParentTemplate = nullptr;
+	FName SlotName = NAME_None;
+	if (!ResolveTemplateParentFor(InPreviewParent, ParentTemplate, SlotName))
 	{
 		ParentTemplate = BlueprintBeingEdited->WidgetTree->RootWidget.Get();
 	}
@@ -3762,6 +3827,11 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 		}
 		else if (Copy->TrySetParent(ParentTemplate, /*bKeepWorldPosition*/false, -1))
 		{
+			if (!SlotName.IsNone())
+			{
+				// Pasted onto a slot row: the same record a drop there makes.
+				DreamWidgetTreeEditing::BindWidgetIntoSlot(BlueprintBeingEdited, Cast<UDreamUserWidget>(ParentTemplate), SlotName, Copy);
+			}
 			NewTemplates.Add(Copy);
 		}
 		else
@@ -3864,13 +3934,37 @@ TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParen
 	{
 		return false;
 	}
-	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewNewParent);
-	if (ParentTemplate == nullptr)
+	UDreamWidget* ParentTemplate = nullptr;
+	FName SlotName = NAME_None;
+	if (!ResolveTemplateParentFor(InPreviewNewParent, ParentTemplate, SlotName))
 	{
 		// The design canvas, or anything else in the preview world that is not authored. A widget
 		// cannot be parented to it, and pretending otherwise would drop the move on the floor.
 		return false;
 	}
+
+	// Where a widget dropped into a slot goes among its new siblings in the ASSET. The hole's
+	// children are this asset's widgets, but not every authored child of the instance is in this
+	// hole -- another slot's content sits beside them -- so the preview index cannot be used as it
+	// is for a plain parent: ahead of the first later sibling that has a template, or last.
+	auto SlotSiblingIndex = [this, ParentTemplate](const UDreamWidget* InPreviewWidget) -> int32
+	{
+		const UDreamWidget* Hole = InPreviewWidget->GetParent();
+		if (!IsValid(Hole))
+		{
+			return -1;
+		}
+		const TArray<UDreamWidget*>& Siblings = Hole->GetChildren();
+		for (int32 Index = Siblings.IndexOfByKey(InPreviewWidget) + 1; Index > 0 && Index < Siblings.Num(); ++Index)
+		{
+			const int32 TemplateIndex = ParentTemplate->GetChildIndex(GetTemplateWidget(Siblings[Index]));
+			if (TemplateIndex != INDEX_NONE)
+			{
+				return TemplateIndex;
+			}
+		}
+		return -1;
+	};
 
 	bool bMoved = false;
 	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
@@ -3882,9 +3976,9 @@ TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParen
 		}
 		// The sibling index the preview ended up at, so the two halves agree on order as well as on
 		// parentage -- the drop position is part of what the author expressed.
-		const int32 SiblingIndex = IsValid(PreviewWidget->GetParent())
-			? PreviewWidget->GetParent()->GetChildIndex(PreviewWidget) : -1;
-		bMoved |= DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, ParentTemplate, SiblingIndex);
+		const int32 SiblingIndex = !SlotName.IsNone() ? SlotSiblingIndex(PreviewWidget)
+			: IsValid(PreviewWidget->GetParent()) ? PreviewWidget->GetParent()->GetChildIndex(PreviewWidget) : -1;
+		bMoved |= DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, ParentTemplate, SiblingIndex, SlotName);
 	}
 	if (bMoved)
 	{
