@@ -102,6 +102,21 @@ class model replaced, and the control renames (`UIButtonComponent` → `UIButton
 
 Skip this if you are starting fresh.
 
+**Removed in this version.** These have no redirect, because there is nothing left to point at:
+
+- the root Blueprints `WorldSpaceRoot_DreamRenderer`, `WorldSpaceRoot_UERenderer`, `ScreenSpaceRoot`
+  and `DreamWorldSpaceRaycasterSource_Mouse`;
+- `UDreamWidgetPresenterComponent` — the abstract base `UDreamWidgetPresenterComponentBase` stays, and
+  `UDreamWorldWidgetComponent` is what you place now;
+- the `UDreamWorldSpaceRaycasterBase`, `UDreamWorldSpaceRaycasterForWorldTrigger` and
+  `UDreamWorldSpaceRaycasterSource` family — `UDreamWorldSpaceRaycaster` absorbed all of it;
+- the plugin settings' `ScreenSpaceRootClass`, `WorldSpaceRootClass`, `WorldSpaceUERendererRootClass`
+  and `WorldSpaceRaycasterSourceClass`.
+
+A level that still holds one of those Blueprints drops that actor on load — its class no longer
+resolves, so the whole export is discarded and a warning is logged naming it. Nothing is left behind
+to fix up: drag the widget Blueprint into the level again.
+
 ## How it differs from UMG
 
 Worth knowing before you commit to either, because the difference is structural rather than
@@ -221,6 +236,41 @@ on demand.
 
 Copy it into your own project before editing it; a plugin update overwrites the copy in the plugin
 folder.
+
+### In the world
+
+The same class can be a surface in the level instead of a layer on the screen. Drag a widget
+Blueprint from the Content Browser into a level, or place a **DreamUI World Widget Actor** from the
+Place Actors panel: either way you get an `ADreamWorldWidgetActor`, whose entire content is a single
+`UDreamWorldWidgetComponent`. Move it, rotate it and attach it like any other scene component.
+
+The component hosts the tree; it does not redefine it. The Blueprint's own root Canvas remains the
+truth about how the UI is built; the component writes render mode, sort order and trace channel down
+onto it and leaves the rest alone.
+
+- **`WidgetClass`** — the widget Blueprint class to load.
+- **`Backend`** — `DreamUIRenderer` draws the tree with DreamGUI's own renderer: flat, unlit and
+  untouched by post process. `UERenderer` sends it through the engine's pipeline instead, so it takes
+  post process and depth like any other mesh in the level.
+- **`bUseDesignSize`** / **`DrawSize`** — the size the tree lands at. On by default, following the
+  size the Blueprint was designed at; turn it off to give this actor a size of its own.
+- **`Pivot`** — where the actor's origin sits within that rectangle.
+- **`SortOrder`** — order among world-space canvases.
+- **`TraceChannel`** — the channel this canvas answers on. A raycaster only sees canvases whose
+  channel matches its own.
+
+Interaction needs no setup. On `BeginPlay` the component asks for an event system and a
+`UDreamWorldSpaceRaycaster` for each local player and supplies whichever is missing, so pressing Play
+is enough to click a button hanging in the world. The raycaster points either from the cursor or from
+the middle of the screen (`PointerSource`), and `bOccludeByWorld` makes solid geometry block a click
+the way it blocks a line trace. Put a raycaster of your own on any actor with the same user index and
+nothing is added on top of it — the test is for one that exists, not for one this plugin made.
+
+From code it is the two calls that were already there: `ConstructWidget`, then
+`AttachWidgetToSceneComponent` on whatever component should carry the tree.
+
+`ADreamWorldWidgetActor` can be possessed by a Level Sequence directly, and `WidgetOpacity`,
+`WidgetOffset` and `bWidgetVisible` on the component are keyable from it.
 
 ### Animation, in the file
 
