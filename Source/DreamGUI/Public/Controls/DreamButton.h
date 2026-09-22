@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Event/DreamBaseEventData.h"
 #include "DreamButton.generated.h"
 
 class UDreamUIDragSource;
@@ -130,6 +131,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetPressMethod", BlueprintSetter = "SetPressMethod", Category = "Button")
 	EDreamUIPressMethod PressMethod = EDreamUIPressMethod::DownAndUp;
 
+	/**
+	 * WHICH mouse buttons press and click this button -- a bitmask over EDreamUIMouseButtonType, the
+	 * left button alone by default, which is UMG's rule: SButton answers the left button and nothing
+	 * else, so a right click on a button is not a use of it (no OnPressed, OnReleased or OnClicked)
+	 * and goes on to whatever is behind it.
+	 *
+	 * UMG has no knob for this, so this is the one place that can say otherwise: widen it for a button
+	 * that should also answer the right or the middle button. A touch and a gamepad or keyboard press
+	 * are not mouse buttons and always count. Pushed onto the behaviour with the three methods above --
+	 * UUISelectable::AcceptedMouseButtons is what the clicks actually consult. In .dui it is a number,
+	 * one bit per EDreamUIMouseButtonType value: 1 is Left, 4 is Right, 5 is both.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAcceptedMouseButtons", BlueprintSetter = "SetAcceptedMouseButtons", Category = "Button",
+		meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType"))
+	int32 AcceptedMouseButtons = 1 << static_cast<int32>(EDreamUIMouseButtonType::Left);
+
 	/*
 	 * UMG's IsFocusable is UDreamWidget's own bIsFocusable / GetIsFocusable / SetIsFocusable, which
 	 * EVERY widget in this framework carries -- so this control declares none of its own. A second
@@ -230,6 +247,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Button")
 	void SetPressMethod(EDreamUIPressMethod InMethod);
+
+	UFUNCTION(BlueprintPure, Category = "Button")
+	int32 GetAcceptedMouseButtons() const { return AcceptedMouseButtons; }
+
+	/** Writes the bitmask and pushes it onto the behaviour at once, as the three method setters do. */
+	UFUNCTION(BlueprintCallable, Category = "Button")
+	void SetAcceptedMouseButtons(UPARAM(meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType")) int32 InAcceptedMouseButtons);
 
 	virtual void ApplyStyle() override;
 

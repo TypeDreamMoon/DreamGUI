@@ -158,6 +158,11 @@ void UDreamScrollBar::ApplyStyle()
 		BarBehaviour->SetHandlePadding(Active.HandlePadding);
 	}
 
+	// Which mouse buttons move the bar. The behaviours answer every button unless told otherwise, and
+	// a bar is told the left one alone -- SScrollBar's rule; pushed on every style push for the reason
+	// every other knob is, a template's freshly added behaviours carry the library default.
+	PushAcceptedMouseButtons();
+
 	// Before the handle's rect, because the arrows decide how long the TRACK is and the handle's
 	// rect is read off exactly that.
 	ApplyArrows(Active);
@@ -326,6 +331,32 @@ void UDreamScrollBar::SetArrowStepSize(float InStep)
 	// No style push: the step is spent when an arrow is clicked, and nothing about the bar's shape
 	// depends on it.
 	ArrowStepSize = FMath::Clamp(InStep, 0.0f, 1.0f);
+}
+
+void UDreamScrollBar::SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)
+{
+	AcceptedMouseButtons = InAcceptedMouseButtons;
+	// Straight onto the behaviours, like the step: it is what the next press consults, and nothing
+	// about the bar's shape depends on it.
+	PushAcceptedMouseButtons();
+}
+
+void UDreamScrollBar::PushAcceptedMouseButtons()
+{
+	// All three: a bar whose handle ignored the right button while its arrows stepped on it would be
+	// one control answering two different rules.
+	if (BarBehaviour != nullptr)
+	{
+		BarBehaviour->SetAcceptedMouseButtons(AcceptedMouseButtons);
+	}
+	if (ArrowStartBehaviour != nullptr)
+	{
+		ArrowStartBehaviour->SetAcceptedMouseButtons(AcceptedMouseButtons);
+	}
+	if (ArrowEndBehaviour != nullptr)
+	{
+		ArrowEndBehaviour->SetAcceptedMouseButtons(AcceptedMouseButtons);
+	}
 }
 
 void UDreamScrollBar::SetAlwaysShowScrollbar(bool bInAlwaysShow)

@@ -258,6 +258,14 @@ float UUIScrollbar::ProjectPointerOntoAxis(const FVector& InWorldPoint) const
  */
 bool UUIScrollbar::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 {
+    if (!AcceptsPointerButton(EventData))
+    {
+        // A mouse button this bar does not answer is not a press on it at all -- no pressed look, no
+        // selection, no jump -- which is how SScrollBar meets every button but the left one (its
+        // OnMouseButtonDown tests EKeys::LeftMouseButton). Passed on rather than eaten, as SScrollBar
+        // leaves it unhandled: whatever is behind the bar still hears it.
+        return true;
+    }
     Super::OnPointerDown_Implementation(EventData);
     if (EventData == nullptr || EventData->InputType != EDreamUIPointerInputType::Pointer)
     {
@@ -297,22 +305,38 @@ bool UUIScrollbar::OnPointerDown_Implementation(UDreamPointerEventData* EventDat
 }
 bool UUIScrollbar::OnPointerUp_Implementation(UDreamPointerEventData *EventData)
 {
+    // Not gated: the selectable lets go of its pressed look whatever came up, as UUIButton's does.
     Super::OnPointerUp_Implementation(EventData);
-    return AllowEventBubbleUp;
+    // An up this bar does not answer goes on to whatever heard the press it passed on.
+    return AcceptsPointerButton(EventData) ? AllowEventBubbleUp : true;
 }
 bool UUIScrollbar::OnPointerBeginDrag_Implementation(UDreamPointerEventData *EventData)
 {
+    // A drag is the button that pressed moving, so a drag of a button this bar does not answer moves
+    // nothing -- and all three phases ask, because PressValue is only taken for a drag that began here.
+    if (!AcceptsPointerButton(EventData))
+    {
+        return true;
+    }
     PressValue = Value;
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
 bool UUIScrollbar::OnPointerDrag_Implementation(UDreamPointerEventData *EventData)
 {
+    if (!AcceptsPointerButton(EventData))
+    {
+        return true;
+    }
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
 bool UUIScrollbar::OnPointerEndDrag_Implementation(UDreamPointerEventData *EventData)
 {
+    if (!AcceptsPointerButton(EventData))
+    {
+        return true;
+    }
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }

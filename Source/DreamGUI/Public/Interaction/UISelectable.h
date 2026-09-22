@@ -355,6 +355,20 @@ protected:
 		EDreamUITouchMethod TouchMethod = EDreamUITouchMethod::DownAndUp;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable")
 		EDreamUIPressMethod PressMethod = EDreamUIPressMethod::DownAndUp;
+	/**
+	 * WHICH mouse buttons may press and click this control -- a bitmask over EDreamUIMouseButtonType,
+	 * and the sibling of ClickMethod above: that one says WHEN a mouse click counts, this one says whose.
+	 *
+	 * Every button by default at this level, which is what every behaviour placed by hand has always
+	 * answered. The controls that stand for UMG's SButton and SCheckBox (UDreamButton, UDreamToggle,
+	 * UDreamRadioButton) narrow it to the left button, because that is the only one those two answer.
+	 * Only a MOUSE press is filtered: a touch and a gamepad or keyboard press are not mouse buttons and
+	 * always count, as SButton lets a touch through whatever it says about buttons. Consulted by the
+	 * clickers (UUIButton, UUIToggle, UUIDropdown) through AcceptsPointerButton; a selectable that does
+	 * not click never asks.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable", meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType"))
+		int32 AcceptedMouseButtons = ~0;
 
 	/**
 	 * Can we navigate from other selectable object to this one?
@@ -541,6 +555,17 @@ public:
 		EDreamUIPressMethod GetPressMethod()const { return PressMethod; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		void SetPressMethod(EDreamUIPressMethod Value) { PressMethod = Value; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		int32 GetAcceptedMouseButtons()const { return AcceptedMouseButtons; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
+		void SetAcceptedMouseButtons(UPARAM(meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType")) int32 Value) { AcceptedMouseButtons = Value; }
+
+	/**
+	 * Whether the button behind InEventData is one this control answers -- see AcceptedMouseButtons.
+	 * Anything that is not a mouse press (a touch, a navigation press) always is. Resolved the way
+	 * ShouldClickOn* below resolve which input kind an event is, so the two can never disagree.
+	 */
+	bool AcceptsPointerButton(const UDreamPointerEventData* InEventData)const;
 
 	/**
 	 * Whether InEventData's DOWN should fire this control's click, whether its UP should, and whether

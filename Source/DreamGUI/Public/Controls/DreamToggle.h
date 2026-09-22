@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Event/DreamBaseEventData.h"
 #include "DreamToggle.generated.h"
 
 class UDreamImage;
@@ -93,6 +94,19 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetPressMethod", BlueprintSetter = "SetPressMethod", Category = "Toggle")
 	EDreamUIPressMethod PressMethod = EDreamUIPressMethod::DownAndUp;
+
+	/**
+	 * WHICH mouse buttons press and flip this check box -- a bitmask over EDreamUIMouseButtonType, the
+	 * left button alone by default, which is UMG's rule: SCheckBox toggles on the left button and
+	 * nothing else, so a right click neither presses nor flips it and goes on to whatever is behind.
+	 *
+	 * UDreamButton's knob, for the same reason and with the same spelling (in .dui a number, one bit
+	 * per EDreamUIMouseButtonType value: 1 is Left, 4 is Right). A touch and a gamepad or keyboard
+	 * press always count. Pushed onto the behaviour with the three methods above.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAcceptedMouseButtons", BlueprintSetter = "SetAcceptedMouseButtons", Category = "Toggle",
+		meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType"))
+	int32 AcceptedMouseButtons = 1 << static_cast<int32>(EDreamUIMouseButtonType::Left);
 
 	/*
 	 * UMG's IsFocusable is UDreamWidget's own bIsFocusable / GetIsFocusable / SetIsFocusable, which
@@ -231,6 +245,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Toggle")
 	void SetPressMethod(EDreamUIPressMethod InMethod);
+
+	UFUNCTION(BlueprintPure, Category = "Toggle")
+	int32 GetAcceptedMouseButtons() const { return AcceptedMouseButtons; }
+
+	/** Writes the bitmask and pushes it onto the behaviour at once, as the three method setters do. */
+	UFUNCTION(BlueprintCallable, Category = "Toggle")
+	void SetAcceptedMouseButtons(UPARAM(meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType")) int32 InAcceptedMouseButtons);
 
 	virtual void ApplyStyle() override;
 

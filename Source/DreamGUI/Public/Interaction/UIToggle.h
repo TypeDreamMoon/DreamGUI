@@ -122,6 +122,12 @@ protected:
 	FSimpleMulticastDelegate OnPressedCPP;
 	FSimpleMulticastDelegate OnReleasedCPP;
 
+	/**
+	 * Whether the press now under way was one this toggle took -- it said OnPressed for it. What the
+	 * release is gated on, so the press pair always comes as a pair: UUIButton's rule, for its reason.
+	 */
+	bool bPressAccepted = false;
+
 	void SetValue(bool Value, bool SendCallback);
 	void ApplyValueToVisual(bool ImmediateSet);
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;

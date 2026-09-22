@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Event/DreamBaseEventData.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIScrollbar.h"
 #include "Interaction/UIScrollView.h"
@@ -113,6 +114,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetArrowStepSize", BlueprintSetter = "SetArrowStepSize", Category = "Scroll Bar", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "bShowArrows"))
 	float ArrowStepSize = 0.1f;
 
+	/**
+	 * WHICH mouse buttons move this bar -- a bitmask over EDreamUIMouseButtonType, the left button alone
+	 * by default, which is SScrollBar's rule: its OnMouseButtonDown answers EKeys::LeftMouseButton and
+	 * nothing else, so a right drag on the handle or a right click on the track leaves the bar where it
+	 * is and goes on to whatever is behind it. The two arrows answer the same buttons.
+	 *
+	 * UMG has no knob for this; widen it for a bar that should also answer another button. A touch is
+	 * not a mouse button and always counts. Pushed onto the bar's UUIScrollbar and the two arrow
+	 * buttons -- UUISelectable::AcceptedMouseButtons is what they consult, the same field UDreamButton
+	 * narrows. In .dui it is a number, one bit per EDreamUIMouseButtonType value: 1 is Left, 4 is Right,
+	 * 5 is both.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAcceptedMouseButtons", BlueprintSetter = "SetAcceptedMouseButtons", Category = "Scroll Bar",
+		meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType"))
+	int32 AcceptedMouseButtons = 1 << static_cast<int32>(EDreamUIMouseButtonType::Left);
+
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Scroll Bar")
 	FDreamScrollBarValueChangedEvent OnValueChanged;
@@ -184,6 +201,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
 	void SetArrowStepSize(float InStep);
+
+	UFUNCTION(BlueprintPure, Category = "Scroll Bar")
+	int32 GetAcceptedMouseButtons() const { return AcceptedMouseButtons; }
+
+	/** Writes the bitmask and pushes it onto the bar's behaviours at once -- the next press consults it. */
+	UFUNCTION(BlueprintCallable, Category = "Scroll Bar")
+	void SetAcceptedMouseButtons(UPARAM(meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType")) int32 InAcceptedMouseButtons);
 
 	UFUNCTION(BlueprintPure, Category = "Scroll Bar")
 	bool GetAlwaysShowScrollbar() const { return bAlwaysShowScrollbar; }
@@ -269,6 +293,9 @@ private:
 	void HandleArrowStartClicked();
 	void HandleArrowEndClicked();
 	void HandleScrollViewProgress(FVector2D InProgress);
+
+	/** AcceptedMouseButtons onto the three behaviours that take a press: the bar and its two arrows. */
+	void PushAcceptedMouseButtons();
 
 	/** The one writer of Value/HandleSize and the behaviour's copy of them. */
 	void PushValueAndSize(float InValue, float InFraction, bool bInBroadcast);

@@ -1275,3 +1275,17 @@ bool UUISelectable::ShouldClickOnClick(const UDreamPointerEventData* InEventData
 			|| (ClickMethod == EDreamUIClickMethod::PreciseClick && !bDragged);
 	}
 }
+
+bool UUISelectable::AcceptsPointerButton(const UDreamPointerEventData* InEventData)const
+{
+	using namespace DreamSelectableClickMethodLocal;
+	if (InEventData == nullptr || ResolveKind(this, InEventData) != EKind::Mouse)
+	{
+		// A touch and a navigation press carry a button field too -- Left, by construction -- but they
+		// are not mouse buttons and the filter is not theirs to pass: SButton lets a touch through
+		// whatever it says about mouse buttons, and a pad's accept is not a mouse at all.
+		return true;
+	}
+	const int32 ButtonIndex = static_cast<int32>(InEventData->MouseButtonType);
+	return ButtonIndex >= 0 && ButtonIndex < 32 && (AcceptedMouseButtons & (1 << ButtonIndex)) != 0;
+}

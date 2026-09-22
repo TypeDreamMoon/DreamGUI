@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Controls/DreamToggle.h"
 #include "Controls/DreamUIControl.h"
+#include "Event/DreamBaseEventData.h"
 #include "DreamRadioButton.generated.h"
 
 class UDreamWidget;
@@ -104,6 +105,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetCheckedState", BlueprintSetter = "SetCheckedState", Category = "Radio Button")
 	EDreamCheckState CheckedState = EDreamCheckState::Unchecked;
 
+	/**
+	 * WHICH mouse buttons press and choose this radio -- a bitmask over EDreamUIMouseButtonType, the
+	 * left button alone by default: a radio is a check box to UMG, and SCheckBox answers the left
+	 * button and nothing else, so a right click neither presses nor chooses it.
+	 *
+	 * UDreamButton's knob, with the same spelling (in .dui a number, one bit per
+	 * EDreamUIMouseButtonType value: 1 is Left, 4 is Right). A touch and a gamepad or keyboard press
+	 * always count. Pushed onto the behaviour with the rest of the look.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAcceptedMouseButtons", BlueprintSetter = "SetAcceptedMouseButtons", Category = "Radio Button",
+		meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType"))
+	int32 AcceptedMouseButtons = 1 << static_cast<int32>(EDreamUIMouseButtonType::Left);
+
 	/** Fired by the toggle underneath, re-broadcast here so a consumer never reaches into the parts. */
 	UPROPERTY(BlueprintAssignable, Category = "Radio Button")
 	FDreamRadioButtonChangedEvent OnToggleChanged;
@@ -165,6 +179,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Radio Button")
 	UUIToggleGroup* GetToggleGroup() const;
+
+	UFUNCTION(BlueprintPure, Category = "Radio Button")
+	int32 GetAcceptedMouseButtons() const { return AcceptedMouseButtons; }
+
+	/** Writes the bitmask and pushes it onto the behaviour at once. */
+	UFUNCTION(BlueprintCallable, Category = "Radio Button")
+	void SetAcceptedMouseButtons(UPARAM(meta = (Bitmask, BitmaskEnum = "/Script/DreamGUI.EDreamUIMouseButtonType")) int32 InAcceptedMouseButtons);
 
 	virtual void ApplyStyle() override;
 

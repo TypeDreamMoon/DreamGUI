@@ -10,7 +10,7 @@
 		{"umg": "TouchMethod", "kind": "property", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "PressMethod", "kind": "property", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "IsFocusable", "kind": "property", "status": "map", "dream": "UDreamWidget::bIsFocusable", "note": "Every widget here carries it; a control-level copy would shadow the base member."},
-		{"umg": "OnCheckStateChanged", "kind": "event", "status": "adopt", "dream": "", "note": "Carries the full state. OnToggleChanged is the bool projection and fires alongside it."},
+		{"umg": "OnCheckStateChanged", "kind": "event", "status": "adopt", "dream": "", "note": "Carries the full state. OnToggleChanged is the bool projection and fires alongside it. Only the mouse buttons in AcceptedMouseButtons press and flip the box -- the left one alone by default, which is SCheckBox's rule; AcceptedMouseButtons is this control's own knob, as on UDreamButton. A double click flips the box twice, as SCheckBox's does: the second press arrives as a double click and the toggle takes it as its press (SCheckBox::OnMouseButtonDoubleClick is OnMouseButtonDown)."},
 		{"umg": "IsPressed", "kind": "function", "status": "adopt", "dream": "", "note": "Asked of the behaviour's selection state rather than remembered on the control."},
 		{"umg": "IsChecked", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "GetCheckedState", "kind": "function", "status": "adopt", "dream": "", "note": ""},

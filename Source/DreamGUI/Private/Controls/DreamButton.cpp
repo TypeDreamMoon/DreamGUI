@@ -145,6 +145,9 @@ void UDreamButton::ApplyStyle()
 		ButtonBehaviour->SetClickMethod(ClickMethod);
 		ButtonBehaviour->SetTouchMethod(TouchMethod);
 		ButtonBehaviour->SetPressMethod(PressMethod);
+		// And which mouse buttons count at all, for the same reason: the behaviour answers every
+		// button unless told otherwise, and a button is told the left one alone -- SButton's rule.
+		ButtonBehaviour->SetAcceptedMouseButtons(AcceptedMouseButtons);
 	}
 	// The skin, last of the look: this paints the state the button is actually in, which needs the
 	// size box and the state colours above it to have landed first. With an empty group it is one
@@ -241,6 +244,16 @@ void UDreamButton::SetPressMethod(EDreamUIPressMethod InMethod)
 	if (ButtonBehaviour != nullptr)
 	{
 		ButtonBehaviour->SetPressMethod(InMethod);
+	}
+}
+
+void UDreamButton::SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)
+{
+	AcceptedMouseButtons = InAcceptedMouseButtons;
+	if (ButtonBehaviour != nullptr)
+	{
+		// Straight onto the behaviour, like the three methods: it is what the next press consults.
+		ButtonBehaviour->SetAcceptedMouseButtons(InAcceptedMouseButtons);
 	}
 }
 

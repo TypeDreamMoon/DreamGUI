@@ -135,6 +135,9 @@ void UDreamToggle::ApplyStyle()
 		ToggleBehaviour->SetClickMethod(ClickMethod);
 		ToggleBehaviour->SetTouchMethod(TouchMethod);
 		ToggleBehaviour->SetPressMethod(PressMethod);
+		// Which mouse buttons count at all: the behaviour answers every one unless told, and a check
+		// box is told the left one alone, SCheckBox's rule.
+		ToggleBehaviour->SetAcceptedMouseButtons(AcceptedMouseButtons);
 		ToggleBehaviour->SetOnColor(Active.TickChecked);
 		PushCheckStateVisuals(true);
 	}
@@ -292,6 +295,15 @@ void UDreamToggle::SetPressMethod(EDreamUIPressMethod InMethod)
 	if (ToggleBehaviour != nullptr)
 	{
 		ToggleBehaviour->SetPressMethod(InMethod);
+	}
+}
+
+void UDreamToggle::SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)
+{
+	AcceptedMouseButtons = InAcceptedMouseButtons;
+	if (ToggleBehaviour != nullptr)
+	{
+		ToggleBehaviour->SetAcceptedMouseButtons(InAcceptedMouseButtons);
 	}
 }
 

@@ -93,6 +93,9 @@ void UDreamRadioButton::ApplyStyle()
 		// without explicit colours ships white -- these are never optional.
 		PushSelectableState(ToggleBehaviour, Active.BoxNormal, Active.BoxHovered, Active.BoxPressed,
 			Active.BoxDisabled, Active.BoxFocused, Active.TransitionDuration);
+		// Which mouse buttons count at all: the behaviour answers every one unless told, and a radio
+		// is told the left one alone -- SCheckBox's rule, a radio being a check box to UMG.
+		ToggleBehaviour->SetAcceptedMouseButtons(AcceptedMouseButtons);
 		ToggleBehaviour->SetOnColor(Active.DotChecked);
 		// Forced: re-pushing the style is exactly when an equal-looking colour must land anyway, and
 		// the guarded path would decline it. Same argument, same word, as the toggle's.
@@ -270,6 +273,17 @@ void UDreamRadioButton::SetToggleGroup(UUIToggleGroup* InGroup)
 UUIToggleGroup* UDreamRadioButton::GetToggleGroup() const
 {
 	return ToggleBehaviour != nullptr ? ToggleBehaviour->GetToggleGroup() : nullptr;
+}
+
+void UDreamRadioButton::SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)
+{
+	AcceptedMouseButtons = InAcceptedMouseButtons;
+	if (ToggleBehaviour != nullptr)
+	{
+		// Straight onto the behaviour: it is what the next press consults, and nothing about the look
+		// depends on it.
+		ToggleBehaviour->SetAcceptedMouseButtons(InAcceptedMouseButtons);
+	}
 }
 
 void UDreamRadioButton::HandleValueChanged(bool bInIsOn)

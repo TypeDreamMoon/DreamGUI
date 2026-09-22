@@ -275,6 +275,12 @@ void UUIToggle::SetValueWithoutNotify(bool Value)
 
 bool UUIToggle::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 {
+	if (!AcceptsPointerButton(EventData))
+	{
+		// SCheckBox toggles on the left button alone; any other one is passed on, as it leaves those
+		// unhandled. See AcceptedMouseButtons.
+		return true;
+	}
 	if (ShouldClickOnClick(EventData))
 	{
 		SetValue(!bIsOn);
@@ -300,11 +306,18 @@ bool UUIToggle::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 
 bool UUIToggle::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 {
+	if (!AcceptsPointerButton(EventData))
+	{
+		// Not a press at all -- no pressed look, no selection, no OnPressed -- and passed on, exactly
+		// as UUIButton treats a mouse button it does not answer.
+		return true;
+	}
 	// The interactable test is asked here rather than read off the Super's return value, because that
 	// value is the BUBBLING policy and says nothing about whether the press was honoured -- the same
 	// reading UUIButton's press pair makes. A toggle drawn disabled must not speak.
 	const bool bBubble = Super::OnPointerDown_Implementation(EventData);
-	if (IsInteractable())
+	bPressAccepted = IsInteractable();
+	if (bPressAccepted)
 	{
 		OnPressedCPP.Broadcast();
 		if (ShouldClickOnDown(EventData))
@@ -319,13 +332,20 @@ bool UUIToggle::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 
 bool UUIToggle::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
+	// Released only what was pressed, whichever button came up -- UUIButton::OnPointerUp states why.
+	const bool bReleasesAPress = bPressAccepted;
+	bPressAccepted = false;
+	const bool bAnswered = AcceptsPointerButton(EventData);
 	const bool bBubble = Super::OnPointerUp_Implementation(EventData);
-	OnReleasedCPP.Broadcast();
-	if (IsInteractable() && ShouldClickOnUp(EventData))
+	if (bReleasesAPress)
+	{
+		OnReleasedCPP.Broadcast();
+	}
+	if (bAnswered && IsInteractable() && ShouldClickOnUp(EventData))
 	{
 		SetValue(!bIsOn);
 	}
-	return bBubble;
+	return bAnswered ? bBubble : true;
 }
 
 int32 UUIToggle::GetIndexInGroup()const

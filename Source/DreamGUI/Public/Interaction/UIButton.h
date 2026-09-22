@@ -73,6 +73,13 @@ protected:
 	 * definition for why it is a function rather than four lines repeated in three handlers.
 	 */
 	void FireClick();
+
+	/**
+	 * Whether the press now under way was one this button took -- it said OnPressed for it. What
+	 * OnReleased is gated on, which is SButton's Release: a press that was never taken (a button this
+	 * control does not answer, or a press while disabled) has nothing to let go of.
+	 */
+	bool bPressAccepted = false;
 	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 public:
 	FSimpleMulticastDelegate& GetOnClickEvent(){return OnClickCPP;}
