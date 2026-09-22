@@ -194,7 +194,9 @@ protected:
 		bool bEnableTouchScrolling = true;
 	/**
 	 * Whether a drag with the RIGHT button scrolls this view -- UMG's bAllowRightClickDragScrolling.
-	 * Off leaves the right button to whatever wants it for a context menu.
+	 * Off leaves the right button to whatever wants it for a context menu. On, the drag scrolls from
+	 * the press, the move that crossed the drag threshold included, as SScrollBox's does; the left
+	 * button and a finger start scrolling from where the drag was recognised.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
 		bool bAllowRightClickDragScrolling = true;

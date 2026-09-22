@@ -142,7 +142,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetEnableTouchScrolling", BlueprintSetter = "SetEnableTouchScrolling", Category = "Scroll Box")
 	bool bEnableTouchScrolling = true;
 
-	/** Whether a drag with the RIGHT button scrolls it -- UMG's bAllowRightClickDragScrolling. */
+	/**
+	 * Whether a drag with the RIGHT button scrolls it -- UMG's bAllowRightClickDragScrolling. The drag
+	 * scrolls from the press, the move that crossed the drag threshold included, as SScrollBox's does,
+	 * so the content stays under the pointer that grabbed it. Over the content only: a right drag that
+	 * starts on the box's own bar is the bar's, and the bar answers the left button alone (see
+	 * UDreamScrollBar::AcceptedMouseButtons), so it scrolls nothing.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAllowRightClickDragScrolling", BlueprintSetter = "SetAllowRightClickDragScrolling", Category = "Scroll Box")
 	bool bAllowRightClickDragScrolling = true;
 

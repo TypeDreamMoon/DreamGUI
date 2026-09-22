@@ -589,7 +589,17 @@ bool UUIScrollView::OnPointerBeginDrag_Implementation(UDreamPointerEventData *Ev
         PrevPointerPosition = EventData->PressWorldPoint;
         const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
         const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
-        PrevPointerPosition = CurrentPointerPosition;
+        // The RIGHT-button drag is UMG's drag-to-scroll, and there the travel that crossed the drag
+        // threshold scrolls too: SScrollBox::OnMouseMove adds every move to AmountScrolledWhileRightMouseDown
+        // and, once that passes the trigger distance, scrolls by the move that got it there as well as
+        // every one after -- so the content stays under the pointer that grabbed it. Leaving the previous
+        // point at the PRESS is what hands that first stretch to the move applied below. The left button
+        // and the finger keep dropping it, as they always have: a left drag is this library's own
+        // gesture, and SScrollBox's touch path spends the crossing move on capturing, not scrolling.
+        if (EventData->MouseButtonType != EDreamUIMouseButtonType::Right)
+        {
+            PrevPointerPosition = CurrentPointerPosition;
+        }
         ResolveGestureAxes(FVector2D(localMoveDelta.Y, localMoveDelta.Z));
         Velocity = FVector2D::ZeroVector;
         bCanUpdateAfterDrag = false;
