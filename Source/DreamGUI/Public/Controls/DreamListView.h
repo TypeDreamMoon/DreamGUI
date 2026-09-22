@@ -121,6 +121,14 @@ public:
 	UFUNCTION()
 	void HandleDragLeave(UDreamDragDropOperation* InOperation);
 
+	/**
+	 * Every frame a drag hovers this row -- the subsystem's Over, forwarded for the same reason the
+	 * two edges are. It is what edge scrolling rides: the drag-drop subsystem already ticks the hover
+	 * once a frame, so the list steps its scroll there instead of keeping a clock of its own.
+	 */
+	UFUNCTION()
+	void HandleDragOver(UDreamDragDropOperation* InOperation);
+
 	virtual bool CanAcceptDrop_Implementation(UDreamDragDropOperation* Operation) override;
 	virtual bool OnPointerDragDrop_Implementation(UDreamPointerEventData* EventData) override;
 };
@@ -589,6 +597,35 @@ public:
 	/** The tag copied onto every operation this list creates, for drop targets to filter on. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetDragOperationTag", Category = "List|Drag", meta = (EditCondition = "bAllowDragging"))
 	FName DragOperationTag;
+
+	/**
+	 * Whether a drag held near the viewport's edge scrolls the list towards that edge -- which UMG's
+	 * list does not do, and which is what makes a drop onto a row that is off screen possible at all.
+	 *
+	 * While a drag this list would accept (bAllowDragDrop, and whatever CanAcceptDrop says) hovers a
+	 * row within DragEdgeScrollBandSize of the viewport's near or far edge, the list scrolls that way
+	 * at DragEdgeScrollSpeed. It stops the moment the pointer leaves the band, leaves the list, or lets
+	 * go. The step is taken where the drag-drop subsystem already ticks the hover -- once a frame --
+	 * so nothing extra polls, and a list with no drag over it does no work at all. While it moves the
+	 * list counts as scrolling, so OnListViewFinishedScrolling is said once, when it stops.
+	 *
+	 * Off by default, because it changes what an existing drop target does: with it on, holding a drag
+	 * over the first or last row that shows moves the rows under the pointer instead of waiting for the
+	 * drop.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetEnableDragEdgeScrolling", BlueprintSetter = "SetEnableDragEdgeScrolling", Category = "List|Drag")
+	bool bEnableDragEdgeScrolling = false;
+
+	/**
+	 * How deep the band along each end of the viewport is, in local units along the scroll axis.
+	 * The whole band scrolls at the same speed; zero turns the band, and with it edge scrolling, off.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetDragEdgeScrollBandSize", BlueprintSetter = "SetDragEdgeScrollBandSize", Category = "List|Drag", meta = (ClampMin = "0.0", EditCondition = "bEnableDragEdgeScrolling"))
+	float DragEdgeScrollBandSize = 24.0f;
+
+	/** How fast a drag in the band scrolls the list, in local units per second. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetDragEdgeScrollSpeed", BlueprintSetter = "SetDragEdgeScrollSpeed", Category = "List|Drag", meta = (ClampMin = "0.0", EditCondition = "bEnableDragEdgeScrolling"))
+	float DragEdgeScrollSpeed = 600.0f;
 
 
 	/**
@@ -1089,6 +1126,27 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "List|Drag")
 	void SetAllowDragDrop(bool bInAllow);
 
+	UFUNCTION(BlueprintPure, Category = "List|Drag")
+	bool GetEnableDragEdgeScrolling() const { return bEnableDragEdgeScrolling; }
+
+	/** Turning it off mid-drag stops a scroll already under way, and says it finished. */
+	UFUNCTION(BlueprintCallable, Category = "List|Drag")
+	void SetEnableDragEdgeScrolling(bool bInEnable);
+
+	UFUNCTION(BlueprintPure, Category = "List|Drag")
+	float GetDragEdgeScrollBandSize() const { return DragEdgeScrollBandSize; }
+
+	/** Clamped at zero. Read on every step, so a change reaches a drag already in flight. */
+	UFUNCTION(BlueprintCallable, Category = "List|Drag")
+	void SetDragEdgeScrollBandSize(float InBandSize);
+
+	UFUNCTION(BlueprintPure, Category = "List|Drag")
+	float GetDragEdgeScrollSpeed() const { return DragEdgeScrollSpeed; }
+
+	/** Clamped at zero. Read on every step, like the band. */
+	UFUNCTION(BlueprintCallable, Category = "List|Drag")
+	void SetDragEdgeScrollSpeed(float InSpeed);
+
 	/** True while a row of THIS list is being dragged -- UMG's bIsDragging / GetIsDraggingListItem. */
 	UFUNCTION(BlueprintPure, Category = "List|Drag")
 	bool GetIsDraggingListItem() const { return bIsDragging; }
@@ -1131,6 +1189,8 @@ public:
 	void HandleRowDragEnter(int32 InPoolIndex, UDreamDragDropOperation* InOperation);
 	void HandleRowDragLeave(int32 InPoolIndex, UDreamDragDropOperation* InOperation);
 	bool HandleRowDrop(int32 InPoolIndex, UDreamDragDropOperation* InOperation, EDreamItemDropZone InZone);
+	/** Told by a row's target, every frame a drag hovers it. Where edge scrolling takes its step. */
+	void HandleRowDragOver(int32 InPoolIndex, UDreamDragDropOperation* InOperation);
 	/** Told by a row's source that a drag began on it, or ended. */
 	void HandleRowDragDetected(int32 InPoolIndex, UDreamDragDropOperation* InOperation);
 	void HandleRowDragEnded(UDreamDragDropOperation* InOperation);
@@ -1526,6 +1586,37 @@ private:
 	 * however still the finger is held in the middle of it, so nothing inside one is "finished".
 	 */
 	bool bScrollDragInProgress = false;
+
+	/**
+	 * Edge scrolling's state, all of it transient.
+	 *
+	 * bDragEdgeScrollStepping is true only for the duration of one step's own scroll, so the move it
+	 * makes is not announced as finished; bDragEdgeScrollActive is true from the first step until the
+	 * scroll stops, which is when "finished" IS announced. LastDragEdgeScrollTime keeps it to one step
+	 * a frame: the hover's Over arrives twice a frame, once from the pointer's drag event and once
+	 * from the subsystem's own tick.
+	 */
+	bool bDragEdgeScrollStepping = false;
+	bool bDragEdgeScrollActive = false;
+	double LastDragEdgeScrollTime = -1.0;
+
+	/** Take this frame's step, or stop, for a drag hovering one of the rows. */
+	void StepDragEdgeScroll(UDreamDragDropOperation* InOperation);
+
+	/** End a scroll in progress and announce it finished. Nothing when none is. */
+	void StopDragEdgeScroll();
+
+	/**
+	 * Where the pointer carrying InOperation is, on the canvas plane -- asked of the event system,
+	 * because the hover delegates carry the operation and nothing about the pointer.
+	 */
+	bool FindDragPointerWorldPoint(UDreamDragDropOperation* InOperation, FVector& OutWorldPoint);
+
+	/** +1 inside the far band, -1 inside the near band, 0 anywhere else, for a world point. */
+	float ResolveDragEdgeScrollDirection(const FVector& InWorldPoint) const;
+
+	/** Whether a world point lies over the viewport at all. */
+	bool IsWorldPointOverViewport(const FVector& InWorldPoint) const;
 
 	/** Which items were realized last time the window moved, so an ARRIVAL can be told from a stay. */
 	TSet<int32> RealizedItemIndices;

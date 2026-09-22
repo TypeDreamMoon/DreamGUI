@@ -549,8 +549,10 @@ void UDreamListViewBase::HandleScrollViewMoved(FVector2D InProgress)
 	// "Finished" is a move that lands with nothing left to carry it -- one call per gesture rather
 	// than one per frame of a flick, which is what a consumer loading thumbnails for what is now on
 	// screen actually wants. A programmatic jump and a plain wheel notch are each such a move on their
-	// own; a flick is one only on the frame its momentum runs out; a drag is never one until it ends.
-	const bool bStillMoving = bScrollDragInProgress || (ScrollBehaviour != nullptr && ScrollBehaviour->IsScrolling());
+	// own; a flick is one only on the frame its momentum runs out; a drag is never one until it ends;
+	// and neither is a step of edge scrolling, which says it finished when the scroll stops.
+	const bool bStillMoving = bScrollDragInProgress || bDragEdgeScrollStepping
+		|| (ScrollBehaviour != nullptr && ScrollBehaviour->IsScrolling());
 	if (!bStillMoving)
 	{
 		OnListViewFinishedScrolling.Broadcast(Offset, GetViewFraction());
@@ -720,6 +722,8 @@ void UDreamListViewBase::RefreshRowDragBehaviour(UDreamWidget& InRow, int32 InPo
 				// down by the time anyone is told.
 				Target->OnDragEnter.AddDynamic(Target, &UDreamListRowDropTarget::HandleDragEnter);
 				Target->OnDragLeave.AddDynamic(Target, &UDreamListRowDropTarget::HandleDragLeave);
+				// And the frames in between, which is where edge scrolling steps.
+				Target->OnDragOver.AddDynamic(Target, &UDreamListRowDropTarget::HandleDragOver);
 			}
 		}
 		if (Target != nullptr)
@@ -803,6 +807,37 @@ void UDreamListViewBase::SetAllowDragDrop(bool bInAllow)
 	}
 	bAllowDragDrop = bInAllow;
 	RefreshRowDragBehaviours();
+	if (!bInAllow)
+	{
+		// No row accepts a drop any more, so none will be hovered -- and a scroll that was riding the
+		// hover would otherwise never hear that it had stopped.
+		StopDragEdgeScroll();
+	}
+}
+
+void UDreamListViewBase::SetEnableDragEdgeScrolling(bool bInEnable)
+{
+	if (bEnableDragEdgeScrolling == bInEnable)
+	{
+		return;
+	}
+	bEnableDragEdgeScrolling = bInEnable;
+	if (!bInEnable)
+	{
+		StopDragEdgeScroll();
+	}
+}
+
+void UDreamListViewBase::SetDragEdgeScrollBandSize(float InBandSize)
+{
+	// Nothing to push: the band is read on every step, which is also what makes a change reach a drag
+	// already under way.
+	DragEdgeScrollBandSize = FMath::Max(0.0f, InBandSize);
+}
+
+void UDreamListViewBase::SetDragEdgeScrollSpeed(float InSpeed)
+{
+	DragEdgeScrollSpeed = FMath::Max(0.0f, InSpeed);
 }
 
 void UDreamListViewBase::HandleRowDragDetected(int32 InPoolIndex, UDreamDragDropOperation* InOperation)
@@ -837,6 +872,9 @@ void UDreamListViewBase::HandleRowDragDetected(int32 InPoolIndex, UDreamDragDrop
 
 void UDreamListViewBase::HandleRowDragEnded(UDreamDragDropOperation* InOperation)
 {
+	// Letting go ends an edge scroll whatever became of the drop. Before the early return: a scroll
+	// can be carrying a drag that started somewhere else, which this list has no flag for.
+	StopDragEdgeScroll();
 	if (!bIsDragging)
 	{
 		return;
@@ -871,10 +909,150 @@ void UDreamListViewBase::HandleRowDragLeave(int32 InPoolIndex, UDreamDragDropOpe
 	{
 		OnItemDragLeave.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
 	}
+	if (bDragEdgeScrollActive)
+	{
+		// A scroll moves rows under a pointer that is holding still, so leaving ONE row is routine and
+		// the next row's Over follows in the same frame. Leaving the viewport is the end of it -- and
+		// so is a pointer that is no longer dragging at all, which is what a release looks like here.
+		FVector PointerWorldPoint;
+		if (!FindDragPointerWorldPoint(InOperation, PointerWorldPoint) || !IsWorldPointOverViewport(PointerWorldPoint))
+		{
+			StopDragEdgeScroll();
+		}
+	}
+}
+
+void UDreamListViewBase::HandleRowDragOver(int32 InPoolIndex, UDreamDragDropOperation* InOperation)
+{
+	StepDragEdgeScroll(InOperation);
+}
+
+void UDreamListViewBase::StepDragEdgeScroll(UDreamDragDropOperation* InOperation)
+{
+	UWorld* World = GetWorld();
+	if (!bEnableDragEdgeScrolling || DragEdgeScrollBandSize <= 0.0f || DragEdgeScrollSpeed <= 0.0f
+		|| ScrollBehaviour == nullptr || !IsValid(ViewportNode) || World == nullptr)
+	{
+		StopDragEdgeScroll();
+		return;
+	}
+	// One step a frame. Over arrives twice in one: from the pointer's Drag event, which the subsystem
+	// follows, and again from the subsystem's own tick. The REAL clock, because the subsystem ticks
+	// through a pause and so does a drag under the player's finger.
+	const double Now = World->GetRealTimeSeconds();
+	if (Now == LastDragEdgeScrollTime)
+	{
+		return;
+	}
+	LastDragEdgeScrollTime = Now;
+
+	FVector PointerWorldPoint;
+	const float Direction = FindDragPointerWorldPoint(InOperation, PointerWorldPoint)
+		? ResolveDragEdgeScrollDirection(PointerWorldPoint)
+		: 0.0f;
+	if (Direction == 0.0f)
+	{
+		StopDragEdgeScroll();
+		return;
+	}
+	const float Step = Direction * DragEdgeScrollSpeed * World->GetDeltaSeconds();
+	{
+		// Scoped, so the move this step makes is not announced as finished while the scroll is still
+		// going -- and so nothing can leave the flag up.
+		TGuardValue<bool> Stepping(bDragEdgeScrollStepping, true);
+		SetScrollOffset(GetScrollOffset() + Step);
+	}
+	// Active even when the step was clamped at an end: the drag is still asking to scroll, and the
+	// scroll ends when the drag stops asking, not when the list runs out.
+	bDragEdgeScrollActive = true;
+}
+
+void UDreamListViewBase::StopDragEdgeScroll()
+{
+	if (!bDragEdgeScrollActive)
+	{
+		return;
+	}
+	bDragEdgeScrollActive = false;
+	// The one "finished" the scroll owes, now that it has one: every step was a move, none an end.
+	OnListViewFinishedScrolling.Broadcast(GetScrollOffset(), GetViewFraction());
+}
+
+bool UDreamListViewBase::FindDragPointerWorldPoint(UDreamDragDropOperation* InOperation, FVector& OutWorldPoint)
+{
+	if (!IsValid(InOperation))
+	{
+		return false;
+	}
+	// The first player's event system: a pointer is keyed by id inside one, and the operation does not
+	// say which player's drag it is. A second player's drag over this list simply does not edge-scroll.
+	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, 0);
+	if (!IsValid(EventSystem))
+	{
+		return false;
+	}
+	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Pair : EventSystem->GetPointerEventDataMap())
+	{
+		const UDreamPointerEventData* EventData = Pair.Value.Get();
+		if (IsValid(EventData) && EventData->bIsDragging && EventData->DragOperation == InOperation)
+		{
+			// On the plane the press was made on, which is the canvas this list is drawn on -- the same
+			// point a drop's zone is worked out from.
+			OutWorldPoint = EventData->GetWorldPointInPlane();
+			return true;
+		}
+	}
+	return false;
+}
+
+float UDreamListViewBase::ResolveDragEdgeScrollDirection(const FVector& InWorldPoint) const
+{
+	if (!IsWorldPointOverViewport(InWorldPoint))
+	{
+		return 0.0f;
+	}
+	// Local space runs Y right and Z up. The scroll offset runs the other way on the vertical axis --
+	// forward is DOWN the list -- so the far band of a vertical list is its bottom edge.
+	const FVector Local = ViewportNode->GetWorldTransform().InverseTransformPosition(InWorldPoint);
+	float FromNearEdge = 0.0f;
+	float FromFarEdge = 0.0f;
+	if (IsHorizontalList())
+	{
+		FromNearEdge = static_cast<float>(Local.Y) - ViewportNode->GetLocalSpaceLeft();
+		FromFarEdge = ViewportNode->GetLocalSpaceRight() - static_cast<float>(Local.Y);
+	}
+	else
+	{
+		FromNearEdge = ViewportNode->GetLocalSpaceTop() - static_cast<float>(Local.Z);
+		FromFarEdge = static_cast<float>(Local.Z) - ViewportNode->GetLocalSpaceBottom();
+	}
+	// Nearer edge first, for a viewport so short the two bands overlap.
+	if (FromFarEdge < DragEdgeScrollBandSize && FromFarEdge <= FromNearEdge)
+	{
+		return 1.0f;
+	}
+	if (FromNearEdge < DragEdgeScrollBandSize)
+	{
+		return -1.0f;
+	}
+	return 0.0f;
+}
+
+bool UDreamListViewBase::IsWorldPointOverViewport(const FVector& InWorldPoint) const
+{
+	if (!IsValid(ViewportNode))
+	{
+		return false;
+	}
+	const FVector Local = ViewportNode->GetWorldTransform().InverseTransformPosition(InWorldPoint);
+	return Local.Y >= ViewportNode->GetLocalSpaceLeft() && Local.Y <= ViewportNode->GetLocalSpaceRight()
+		&& Local.Z >= ViewportNode->GetLocalSpaceBottom() && Local.Z <= ViewportNode->GetLocalSpaceTop();
 }
 
 bool UDreamListViewBase::HandleRowDrop(int32 InPoolIndex, UDreamDragDropOperation* InOperation, EDreamItemDropZone InZone)
 {
+	// A drop is the end of any edge scroll that brought the pointer here.
+	StopDragEdgeScroll();
 	if (!bAllowDragDrop)
 	{
 		return false;
@@ -906,6 +1084,14 @@ void UDreamListRowDropTarget::HandleDragLeave(UDreamDragDropOperation* InOperati
 	if (OwningList != nullptr)
 	{
 		OwningList->HandleRowDragLeave(PoolIndex, InOperation);
+	}
+}
+
+void UDreamListRowDropTarget::HandleDragOver(UDreamDragDropOperation* InOperation)
+{
+	if (OwningList != nullptr)
+	{
+		OwningList->HandleRowDragOver(PoolIndex, InOperation);
 	}
 }
 
