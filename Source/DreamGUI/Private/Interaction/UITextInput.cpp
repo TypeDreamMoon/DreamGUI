@@ -218,10 +218,55 @@ void UUITextInput::AnyKeyPressed(FKey Key)
 	if (!CheckPlayerController())return;
 	if (TextVisual == nullptr)return;
 
+	// The bound road's held keys come from the player's input state; what a key then does to the edit
+	// is ProcessKeyPressed, shared with HandleKeyInput so the two roads cannot drift apart.
+	UPlayerInput* const HeldKeys = PlayerController->PlayerInput;
+	ProcessKeyPressed(Key, HeldKeys->IsCtrlPressed(), HeldKeys->IsShiftPressed(), HeldKeys->IsAltPressed(),
+		[HeldKeys](const FKey& InHeldKey) { return HeldKeys->IsPressed(InHeldKey); });
+}
+
+bool UUITextInput::HandleKeyInput(const FKey& InKey, bool bInPressed)
+{
+	return HandleKeyInput(InKey, bInPressed, FModifierKeysState());
+}
+
+bool UUITextInput::HandleKeyInput(const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifierKeys)
+{
+	// The bound road listens for press and repeat only, and never binds a key in IgnoreKeys.
+	if (!bInPressed)return false;
+	if (IgnoreKeys.Contains(InKey))return false;
+	// AnyKeyPressed's own gates, minus the player controller: standing in for what the controller
+	// would have supplied is the whole of what this entry is for.
+	if (bInputActive == false)return false;
+	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())return false;
+	if (TextVisual == nullptr)return false;
+
+	ProcessKeyPressed(InKey, InModifierKeys.IsControlDown(), InModifierKeys.IsShiftDown(), InModifierKeys.IsAltDown(),
+		[&InModifierKeys](const FKey& InHeldKey)
+		{
+			// A host's key event carries the modifier state and nothing more, so a modifier is the only
+			// kind of key that can be reported as held alongside the one being delivered.
+			if (InHeldKey == EKeys::LeftShift) return InModifierKeys.IsLeftShiftDown();
+			if (InHeldKey == EKeys::RightShift) return InModifierKeys.IsRightShiftDown();
+			if (InHeldKey == EKeys::LeftControl) return InModifierKeys.IsLeftControlDown();
+			if (InHeldKey == EKeys::RightControl) return InModifierKeys.IsRightControlDown();
+			if (InHeldKey == EKeys::LeftAlt) return InModifierKeys.IsLeftAltDown();
+			if (InHeldKey == EKeys::RightAlt) return InModifierKeys.IsRightAltDown();
+			if (InHeldKey == EKeys::LeftCommand) return InModifierKeys.IsLeftCommandDown();
+			if (InHeldKey == EKeys::RightCommand) return InModifierKeys.IsRightCommandDown();
+			return false;
+		});
+	return true;
+}
+
+void UUITextInput::ProcessKeyPressed(const FKey& InKey, bool bInCtrl, bool bInShift, bool bInAlt, TFunctionRef<bool(const FKey&)> InIsKeyHeld)
+{
+	// The names the key table below has always used.
+	const FKey& Key = InKey;
 	TCHAR inputChar = 127;
-	bool ctrl = PlayerController->PlayerInput->IsCtrlPressed();
-	bool shift = PlayerController->PlayerInput->IsShiftPressed();
-	bool alt = PlayerController->PlayerInput->IsAltPressed();
+	bool ctrl = bInCtrl;
+	bool shift = bInShift;
+	bool alt = bInAlt;
 	bool ctrlOnly = ctrl && !alt && !shift;
 	bool shiftOnly = !ctrl && !alt && shift;
 
@@ -366,7 +411,7 @@ void UUITextInput::AnyKeyPressed(FKey Key)
 					bool isSubmit = false;
 					for (auto& SubmitFunctionKey : MultiLineSubmitFunctionKeys)
 					{
-						if (PlayerController->PlayerInput->IsPressed(SubmitFunctionKey))
+						if (InIsKeyHeld(SubmitFunctionKey))
 						{
 							isSubmit = true;
 						}

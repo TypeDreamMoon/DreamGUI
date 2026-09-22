@@ -25,6 +25,7 @@
 
 
 class UDreamSprite;
+class FModifierKeysState;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUITextInputValueChangedEvent, FString, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUITextInputActivateEvent, bool, Value);
 
@@ -507,6 +508,27 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		bool HandleCharacterInputString(const FString& InCharacters);
 	/**
+	 * A KEY the host delivers -- the key-shaped twin of HandleCharacterInput, for a host that has no
+	 * player controller to bind keys through: a Slate host's OnKeyDown, an embedding tool, a test.
+	 *
+	 * Backspace, Delete, the arrows, Home/End, PageUp/PageDown, Enter and the Ctrl shortcuts all live
+	 * on the key road, and that road is bound on a player controller's InputComponent and reads the
+	 * held modifiers from its PlayerInput. A world with no player has neither, so a field could be
+	 * typed into through HandleCharacterInput and then never deleted from, moved in or submitted.
+	 * This hands the key to exactly the handling the bound road runs; nothing about that road changes.
+	 *
+	 * Only presses act, as on the bound road, which listens for press and repeat and never for a
+	 * release; a key listed in IgnoreKeys is ignored here too, because the bound road never binds it.
+	 * Escape is not a key this field handles on either road -- Back reaches an edit through
+	 * UDreamUINavigationStack::HandleBack, which calls CancelInput.
+	 *
+	 * @return true if the field was being edited and took the key -- not a promise the key changed
+	 *         anything: Home with the caret already at the start is taken and does nothing.
+	 */
+	bool HandleKeyInput(const FKey& InKey, bool bInPressed);
+	/** HandleKeyInput with the modifiers the host says are held, which is how a chord -- Ctrl+A, Shift+Left, Ctrl+Enter -- arrives. */
+	bool HandleKeyInput(const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifierKeys);
+	/**
 	 * Route a platform character event to whichever field currently owns the keyboard, if any.
 	 * This is the one line a project's UGameViewportClient::InputChar override needs.
 	 * @return true if a field took the character.
@@ -602,6 +624,13 @@ private:
 	void BindKeys();
 	void UnbindKeys();
 	void AnyKeyPressed(FKey key);
+	/**
+	 * What a pressed key does to the edit, with the held keys supplied by whoever delivered it: the
+	 * bound road reads them from the player's input state, HandleKeyInput from the host's modifiers.
+	 * InIsKeyHeld answers for a key other than the one being pressed -- multiline submit asks whether
+	 * one of MultiLineSubmitFunctionKeys is down alongside Enter.
+	 */
+	void ProcessKeyPressed(const FKey& InKey, bool bInCtrl, bool bInShift, bool bInAlt, TFunctionRef<bool(const FKey&)> InIsKeyHeld);
 	/**
 	 * Validate one character against a GIVEN text and caret, not against the member Text.
 	 *
