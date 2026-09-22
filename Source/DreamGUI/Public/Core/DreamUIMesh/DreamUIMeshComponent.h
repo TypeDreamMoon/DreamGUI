@@ -32,7 +32,7 @@ struct FDreamUIRenderSection
 
 	virtual void ClearBeforePool() = 0;
 };
-struct FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
+struct DREAMGUI_API FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
 {
 	FDreamUIRenderSection_Mesh() 
 	{

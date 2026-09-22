@@ -12,7 +12,7 @@
  * kinsoku forbids it -- optionally narrowed, for CJK runs, to the word boundaries ICU's dictionary
  * finds, which is what turns "break anywhere" into "break between words".
  */
-class FDreamTextBreaker
+class DREAMGUI_API FDreamTextBreaker
 {
 public:
 	/**

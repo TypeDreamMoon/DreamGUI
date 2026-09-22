@@ -52,7 +52,7 @@ struct FDreamShapeElement
  * punctuation following their neighbours), size and weight -- the same cuts a browser's text
  * itemizer makes before handing runs to the shaper.
  */
-class FDreamTextShaper
+class DREAMGUI_API FDreamTextShaper
 {
 public:
 	/**

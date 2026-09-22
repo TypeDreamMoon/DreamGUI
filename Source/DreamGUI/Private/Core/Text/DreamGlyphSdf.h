@@ -27,7 +27,7 @@ struct FDreamGlyphSdfResult
  * and the alpha channel carries the plain distance that effects -- blur, glow, shadows, outlines --
  * can widen into.
  */
-class FDreamGlyphSdf
+class DREAMGUI_API FDreamGlyphSdf
 {
 public:
 	/**
