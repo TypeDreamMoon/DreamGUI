@@ -8,6 +8,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUIDragDrop.h"
+#include "Interaction/UIButton.h"
 #include "Interaction/UIListView.h"
 #include "Interaction/UIScrollView.h"
 #include "DreamListView.generated.h"
@@ -124,6 +125,43 @@ public:
 	virtual bool OnPointerDragDrop_Implementation(UDreamPointerEventData* EventData) override;
 };
 
+/**
+ * The button a list puts on its rows: an ordinary UUIButton that lets its list answer a navigation
+ * press first.
+ *
+ * SListView answers a direction by ITEM, not by geometry: the selector steps one line (a tile view one
+ * tile along a line), NavigationSelect selects what it lands on, the list scrolls it into view, and
+ * only a press that would take the selector off the list is handed to the widgets around it. A row is
+ * what navigation is resting on, so the row's selectable is where that question has to be put -- and
+ * OnNavigate is the one call the pointer module makes on it when a press is actually taken. The
+ * navigation visualizer and every other query go through FindNavigableOn, which never reaches here,
+ * so whatever the list does in answer (selecting, scrolling, a tree opening a node) happens for real
+ * presses only. UUISlider spends its left and right the same way.
+ *
+ * Stepping by item rather than letting the scan pick a widget is also what keeps a recycling list
+ * honest: the list scrolls the item into view first and only then names the row that now shows it,
+ * so a window that re-binds on the way can never leave focus on a row showing the wrong item.
+ *
+ * The stock row template carries this. A row drawn by an authored template keeps whatever selectable
+ * its author gave it, and with it the plain geometric navigation every other widget gets.
+ */
+UCLASS(ClassGroup = (DreamGUI), NotBlueprintable, DisplayName = "Dream List Row Button")
+class DREAMGUI_API UDreamListRowButton : public UUIButton
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamListViewBase> OwningList = nullptr;
+
+	/** The POOL slot, not the item: which item the row stands for is asked when the press arrives. */
+	UPROPERTY(Transient)
+	int32 PoolIndex = INDEX_NONE;
+
+protected:
+	virtual bool OnNavigate_Implementation(EDreamUINavigationDirection InDirection, TScriptInterface<IDreamNavigationInterface>& OutResult) override;
+};
+
 /** A drag that started on a row: which item, and the operation carrying it. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDreamListItemDragEvent, int32, ItemIndex, UObject*, Item, UDreamDragDropOperation*, Operation);
 /** A drop that landed on a row, with the zone it landed in. */
@@ -179,6 +217,16 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamListDraggingStateEvent, bool, 
  * window plus an overscan and rows are re-bound as the view moves, which is what UMG's ListView
  * does and the only way a hundred thousand rows is anything but a hang. GetRowWidget then answers
  * for realized rows and null for the rest, which is UMG's contract too.
+ *
+ * NAVIGATION STEPS BY ITEM, AS SListView's DOES
+ * --------------------------------------------
+ * A navigation press on a row is answered by the list (see UDreamListRowButton): along the scroll axis
+ * the next or previous item -- ResolveNavigationTarget, which a tile view answers per line and per
+ * column -- is scrolled into view and, while bSelectItemOnNavigation is on, selected, the way
+ * SListView::OnNavigation and NavigationSelect do it. A press with nowhere to go inside the list (past
+ * either end, or across a one-column list) is left to the ordinary geometric scan, which takes focus
+ * to whatever is beside the list -- STableViewBase::OnNavigation's answer. Arriving at a list from
+ * outside is that same scan, which lands on the nearest row and does not select it.
  *
  * WHY THE PLAIN SCROLL VIEW, NOT UUIListView
  * ------------------------------------------
@@ -383,9 +431,12 @@ public:
 	/**
 	 * Whether landing on a row by navigation also SELECTS it -- UMG's bSelectItemOnNavigation.
 	 *
-	 * True, which is what NavigateToIndex has always done. Off, navigation only reveals, and the
-	 * selection stays wherever the player last put it -- a shopping list you scroll through without
-	 * losing the line you were on.
+	 * True by default, on both roads: a navigation press that steps to another row selects it, as
+	 * SListView's NavigationSelect does, and NavigateToIndex selects the index it reveals. Off, both
+	 * only move focus and reveal, and the selection stays wherever the player last put it -- a
+	 * shopping list you scroll through without losing the line you were on. SelectionMode None never
+	 * selects either way, and a press in Multi mode replaces the selection with the row it lands on,
+	 * which is what SListView does for a press without modifier keys.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectItemOnNavigation", BlueprintSetter = "SetSelectItemOnNavigation", Category = "List")
 	bool bSelectItemOnNavigation = true;
@@ -838,11 +889,13 @@ public:
 	void RemoveItems(const TArray<UObject*>& InItems);
 
 	/**
-	 * Select an item's row AND bring it into view -- UMG's NavigateToIndex, which is what directional
-	 * navigation does when it lands on a list.
+	 * Select an item's row AND bring it into view -- UMG's NavigateToIndex.
 	 *
 	 * The two halves in one call because doing them separately is always wrong in the same way: a
-	 * selection that is off screen is a selection nobody can see they made.
+	 * selection that is off screen is a selection nobody can see they made. With
+	 * bSelectItemOnNavigation off it only reveals. A navigation press moving between rows makes the
+	 * same two moves (see UDreamListRowButton), but through SetItemSelection, so it respects
+	 * SelectionMode None.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void NavigateToIndex(int32 InItemIndex);
@@ -1067,6 +1120,19 @@ public:
 	/** Told by a row's source that a drag began on it, or ended. */
 	void HandleRowDragDetected(int32 InPoolIndex, UDreamDragDropOperation* InOperation);
 	void HandleRowDragEnded(UDreamDragDropOperation* InOperation);
+
+	/**
+	 * A navigation press arrived at the row in pool slot InPoolIndex. Answer it and return true, with
+	 * OutResult naming the behaviour focus moves to (the same row's, to stay); return false to leave
+	 * the press to the ordinary geometric scan.
+	 *
+	 * The base answers along the scroll axis by item (ResolveNavigationTarget), selecting the item it
+	 * lands on while bSelectItemOnNavigation is on and scrolling it into view before naming its row.
+	 * The tree adds its left and right. Called only by UDreamListRowButton, and only for a press that
+	 * is really being taken -- never for a query -- so it is free to change things.
+	 */
+	virtual bool HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDirection InDirection,
+		TScriptInterface<IDreamNavigationInterface>& OutResult);
 
 	UFUNCTION(BlueprintPure, Category = "List")
 	bool GetEnableShadowBrush() const { return bEnableShadowBrush; }
@@ -1317,6 +1383,26 @@ protected:
 
 	/** A pool row was just bound to an item. Runs after the base has skinned, sized and placed it. */
 	virtual void DecorateRow(UDreamWidget& InRow, int32 InPoolIndex, int32 InItemIndex) {}
+
+	/**
+	 * The DISPLAY index one navigation step from InDisplayIndex, or INDEX_NONE for "off the list".
+	 *
+	 * SListView's arithmetic: along the scroll axis the next or previous line, which for a list is the
+	 * next or previous row; the cross axis and Next/Prev have nothing to say here, which hands the
+	 * press to the geometric scan. The tile view answers with its grid (GetNavigationTarget).
+	 */
+	virtual int32 ResolveNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const;
+
+	/**
+	 * Move a navigation press onto an item: select it (SetItemSelection, while
+	 * bSelectItemOnNavigation is on), scroll it into view, and name the behaviour on the row that NOW
+	 * shows it. In that order, because a recycling list re-binds its window while it scrolls.
+	 * False when the item ends up with no row to focus.
+	 */
+	bool MoveNavigationToItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult);
+
+	/** Answer a press by keeping focus on the item's own row -- a tree opening or closing a node. */
+	bool KeepNavigationOnItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult) const;
 
 	/** The label a row shows: the matching text, else the item object's name, else nothing. */
 	FText GetItemLabel(int32 InItemIndex) const;

@@ -91,7 +91,9 @@ public:
 	 *
 	 * Answered by INDEX rather than by geometry: "the tile after this one" is a fact about the
 	 * source, and the geometric navigator would have to infer it from rects that say nothing about
-	 * which line they are on. Off by default, which is what the geometric answer already gives.
+	 * which line they are on. A navigation press on a tile is answered by GetNavigationTarget, so this
+	 * reaches the player as well as the API. Off by default, as UMG's is: a press off the end of a line
+	 * then leaves the tile view for whatever is beside it.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetWrapHorizontalNavigation", BlueprintSetter = "SetWrapHorizontalNavigation", Category = "Tile View")
 	bool bWrapHorizontalNavigation = false;
@@ -116,6 +118,10 @@ public:
 	 * one WITHIN a line, down is plus or minus the column count. Wrapping is what happens at a line's
 	 * ends when bWrapHorizontalNavigation is on -- and it is exactly the step the geometric navigator
 	 * cannot make, because the tile it should land on is at the opposite edge of the control.
+	 *
+	 * What a navigation press on a tile steps by, for the four directions STileView and SListView
+	 * answer (Next and Prev are left to the ordinary scan): the tile it names is selected while
+	 * bSelectItemOnNavigation is on and scrolled into view, and INDEX_NONE hands the press on.
 	 */
 	UFUNCTION(BlueprintPure, Category = "Tile View")
 	int32 GetNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const;
@@ -175,6 +181,8 @@ protected:
 	virtual FDreamListStyle ResolveListStyle() const override;
 	virtual int32 ResolveColumnCount() const override;
 	virtual void PlaceRow(UDreamWidget& InRow, int32 InDisplayIndex, const FDreamListStyle& InStyle) override;
+	/** The grid's answer -- GetNavigationTarget -- for Left, Right, Up and Down; nothing for the rest. */
+	virtual int32 ResolveNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const override;
 
 private:
 	/** The whole style. ResolveListStyle hands the base the List half of this same answer. */

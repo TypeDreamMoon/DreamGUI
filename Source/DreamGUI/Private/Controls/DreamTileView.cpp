@@ -247,6 +247,23 @@ int32 UDreamTileView::GetNavigationTarget(int32 InDisplayIndex, EDreamUINavigati
 	return LastOnTargetLine >= TargetLine * Columns ? LastOnTargetLine : INDEX_NONE;
 }
 
+int32 UDreamTileView::ResolveNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const
+{
+	// The four directions a grid has an answer for: STileView steps across a line itself and hands up
+	// and down to SListView, which steps a whole line. Next and Prev are neither's, so they go on to the
+	// ordinary scan, as they would leave a UMG tile view.
+	switch (InDirection)
+	{
+	case EDreamUINavigationDirection::Left:
+	case EDreamUINavigationDirection::Right:
+	case EDreamUINavigationDirection::Up:
+	case EDreamUINavigationDirection::Down:
+		return GetNavigationTarget(InDisplayIndex, InDirection);
+	default:
+		return INDEX_NONE;
+	}
+}
+
 void UDreamTileView::SetStyle(const FDreamTileViewStyle& InStyle)
 {
 	Style = InStyle;

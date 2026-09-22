@@ -15,6 +15,9 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamUIWidgetLibrary.h"
+#include "Engine/World.h"
+#include "Event/DreamEventSystem.h"
+#include "Event/DreamPointerEventData.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIScrollView.h"
 
@@ -102,9 +105,10 @@ void UDreamListViewBase::RealizeBuiltIn()
 										InTemplate.SetWidgetActive(false);
 									})
 									// An overlay so the label (and the tree's twisty) have slots to be
-									// aligned and padded in; a button so a row has a hover and a click.
+									// aligned and padded in; a button so a row has a hover and a click --
+									// the list's own, so a navigation press on a row is the list's to answer.
 									.With<UDreamLayoutContainerOverlay>()
-									.With<UUIButton>()
+									.With<UDreamListRowButton>()
 									.Children(
 										DreamUI::Text("RowLabel")
 											.Visual([](UDreamText& InText)
@@ -1274,6 +1278,14 @@ UDreamWidget* UDreamListViewBase::CreatePoolRow(int32 InPoolIndex)
 		// list would repaint the one widget nobody can see. Registration only fills the target in
 		// when it is EMPTY, and a copied one is not empty, it is wrong.
 		RowButton->SetTransitionTarget(Row->GetVisual());
+		// Whose row it is, for the navigation press it hands to the list. Written here rather than
+		// inherited from the template for the drag source's reason: the pool slot IS the identity, and
+		// a copy carries the template's slot, which is none.
+		if (UDreamListRowButton* RowNavigation = Cast<UDreamListRowButton>(RowButton))
+		{
+			RowNavigation->OwningList = this;
+			RowNavigation->PoolIndex = InPoolIndex;
+		}
 		RowButton->GetOnClickEvent().AddWeakLambda(this, [this, InPoolIndex]()
 		{
 			HandleRowClicked(InPoolIndex);
@@ -1795,6 +1807,111 @@ void UDreamListViewBase::NavigateToIndex(int32 InItemIndex)
 		EndInertialScrolling();
 	}
 	ScrollIndexIntoView(InItemIndex);
+}
+
+bool UDreamListRowButton::OnNavigate_Implementation(EDreamUINavigationDirection InDirection, TScriptInterface<IDreamNavigationInterface>& OutResult)
+{
+	// The list first: it steps by item, the way SListView does. Only a press it has no answer for --
+	// past either end, across a one-column list -- falls through to the geometric scan, which is how
+	// focus leaves a list for whatever is beside it (STableViewBase::OnNavigation's answer).
+	if (InDirection != EDreamUINavigationDirection::None && OwningList != nullptr
+		&& OwningList->HandleRowNavigation(PoolIndex, InDirection, OutResult))
+	{
+		return true;
+	}
+	return Super::OnNavigate_Implementation(InDirection, OutResult);
+}
+
+bool UDreamListViewBase::HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDirection InDirection,
+	TScriptInterface<IDreamNavigationInterface>& OutResult)
+{
+	// Which item the row shows, asked NOW: a recycled row stands for a different item every few scrolls.
+	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
+	const int32 DisplayIndex = ItemIndex != INDEX_NONE ? VisibleItemIndices.IndexOfByKey(ItemIndex) : INDEX_NONE;
+	if (DisplayIndex == INDEX_NONE)
+	{
+		return false;
+	}
+	// The veto governs this road as it does the click: an item that may not be navigated to is stepped
+	// OVER, in the same direction, the way SListView's Private_FindNextSelectableOrNavigable walk does.
+	// Bounded by the row count, so a list that vetoes everything ends the walk rather than looping.
+	int32 TargetDisplay = ResolveNavigationTarget(DisplayIndex, InDirection);
+	for (int32 Remaining = VisibleItemIndices.Num(); Remaining > 0 && VisibleItemIndices.IsValidIndex(TargetDisplay); --Remaining)
+	{
+		if (IsItemSelectableOrNavigable(VisibleItemIndices[TargetDisplay]))
+		{
+			break;
+		}
+		TargetDisplay = ResolveNavigationTarget(TargetDisplay, InDirection);
+	}
+	if (!VisibleItemIndices.IsValidIndex(TargetDisplay) || !IsItemSelectableOrNavigable(VisibleItemIndices[TargetDisplay]))
+	{
+		// Nowhere to go inside the list: the press is the scan's, and the scan leaves.
+		return false;
+	}
+	return MoveNavigationToItem(VisibleItemIndices[TargetDisplay], OutResult);
+}
+
+int32 UDreamListViewBase::ResolveNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const
+{
+	// Along the scroll axis only, one LINE per press -- which for a list is one row, and is why the
+	// column count is in the arithmetic at all. Everything else is not the list's to answer.
+	const bool bHorizontal = IsHorizontalList();
+	const EDreamUINavigationDirection Backward = bHorizontal ? EDreamUINavigationDirection::Left : EDreamUINavigationDirection::Up;
+	const EDreamUINavigationDirection Forward = bHorizontal ? EDreamUINavigationDirection::Right : EDreamUINavigationDirection::Down;
+	int32 Step = 0;
+	if (InDirection == Backward)
+	{
+		Step = -1;
+	}
+	else if (InDirection == Forward)
+	{
+		Step = 1;
+	}
+	if (Step == 0)
+	{
+		return INDEX_NONE;
+	}
+	const int32 Target = InDisplayIndex + Step * FMath::Max(1, ResolveColumnCount());
+	return VisibleItemIndices.IsValidIndex(Target) ? Target : INDEX_NONE;
+}
+
+bool UDreamListViewBase::MoveNavigationToItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult)
+{
+	if (InItemIndex < 0 || InItemIndex >= GetItemCount())
+	{
+		return false;
+	}
+	// SListView::NavigationSelect: select what the press lands on -- through SetItemSelection, the road
+	// a click takes, because it is the one that knows SelectionMode None selects nothing and that a
+	// press in Multi without modifier keys REPLACES the selection.
+	if (bSelectItemOnNavigation)
+	{
+		SetItemSelection(InItemIndex, true, /*bInClearOthers*/true);
+	}
+	else if (bClearScrollVelocityOnSelection)
+	{
+		// NavigateToIndex's reason: with selection off, landing somewhere still counts as the player
+		// choosing where to be, and a fling carrying on would slide it away.
+		EndInertialScrolling();
+	}
+	// Revealed BEFORE the row is named: a recycling list re-binds its window while it scrolls, and the
+	// row that shows the item afterwards is the one focus has to land on.
+	ScrollItemIntoView(InItemIndex);
+	return KeepNavigationOnItem(InItemIndex, OutResult);
+}
+
+bool UDreamListViewBase::KeepNavigationOnItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult) const
+{
+	UDreamWidget* Row = GetRowWidget(InItemIndex);
+	UUIButton* RowButton = IsValid(Row) ? Row->GetComponent<UUIButton>() : nullptr;
+	if (!IsValid(RowButton))
+	{
+		return false;
+	}
+	OutResult.SetObject(RowButton);
+	OutResult.SetInterface(Cast<IDreamNavigationInterface>(RowButton));
+	return true;
 }
 
 bool UDreamListViewBase::IsItemSelectableOrNavigable(int32 InItemIndex) const
