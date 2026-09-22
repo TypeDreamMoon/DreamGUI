@@ -98,9 +98,12 @@ public:
 	 * is as ordinary for a radio group as for a check box. The asymmetry with the toggle was the
 	 * defect -- one of the pair could say "I do not know" and the other could not.
 	 *
-	 * Authorable, never clickable-into: the click lands as Checked, as it does on the toggle. The
-	 * behaviour underneath stays two-state and is parked at unchecked while this stands, so the GROUP
-	 * reads an undetermined radio as not-selected -- which is the honest answer to "is this the one".
+	 * Authorable, never clickable-into: the click lands as Checked -- a radio clicked is a radio chosen,
+	 * which is what a group of them is for. The check box differs on purpose: it clears instead, because
+	 * that is UMG's SCheckBox rule, and UMG has no radio whose rule this could follow; a radio a click
+	 * merely cleared would take a second click to be chosen. The behaviour underneath stays two-state
+	 * and is parked at unchecked while this stands, so the GROUP reads an undetermined radio as
+	 * not-selected -- which is the honest answer to "is this the one".
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetCheckedState", BlueprintSetter = "SetCheckedState", Category = "Radio Button")
 	EDreamCheckState CheckedState = EDreamCheckState::Unchecked;

@@ -210,7 +210,8 @@ void UDreamToggle::SetCheckedState(EDreamCheckState InCheckedState)
 		// The behaviour underneath is two-state on purpose and stays that way: Undetermined lives
 		// on the control. The behaviour is parked at unchecked WITHOUT notify -- pushing state is
 		// not the user acting -- which is also what makes the state authorable but not
-		// clickable-into: the click that leaves it arrives at the behaviour as unchecked -> checked.
+		// clickable-into: the click that leaves it arrives at the behaviour as unchecked -> checked,
+		// and HandleValueChanged turns that flip into Unchecked, which is UMG's answer to the click.
 		const bool bWasOn = bIsOn;
 		CheckedState = EDreamCheckState::Undetermined;
 		bIsOn = false;
@@ -235,7 +236,9 @@ void UDreamToggle::SetCheckedState(EDreamCheckState InCheckedState)
 	{
 		// Through the behaviour WITH notify -- the path a click takes and the path SetIsOn has
 		// always taken. The change comes back through HandleValueChanged, which owns the
-		// translation, the glyph and both broadcasts.
+		// translation, the glyph and both broadcasts. Marked as a SET, so that a flip from
+		// Undetermined is read as the state asked for here rather than as a click (see there).
+		TGuardValue<bool> SettingGuard(bSettingCheckedState, true);
 		ToggleBehaviour->SetValue(bTargetOn);
 		return;
 	}
@@ -253,9 +256,31 @@ void UDreamToggle::SetCheckedState(EDreamCheckState InCheckedState)
 
 void UDreamToggle::HandleValueChanged(bool bInIsOn)
 {
-	// The behaviour spoke: the user clicked, or code drove it directly. The behaviour is two-state,
-	// so the translation is total -- a click while Undetermined lands here as true and becomes
-	// Checked, glyph restored with it (Undetermined is authorable, never clicked into). Mirror both
+	// The behaviour spoke: the user clicked, or code drove it directly. The behaviour is two-state
+	// and parked at unchecked while Undetermined stands, so a CLICK that leaves Undetermined arrives
+	// here as a flip to on -- and UMG's answer to that click is Unchecked, not Checked:
+	// SCheckBox::ToggleCheckedState takes Checked OR Undetermined to Unchecked, and only Unchecked to
+	// Checked. So the flip is put straight back, without notify, and the state becomes Unchecked. The
+	// bool projection did not move (Undetermined reads false, and so does Unchecked), so the two bool
+	// spellings stay silent -- this class's own rule for an Unchecked <-> Undetermined move.
+	//
+	// SetCheckedState(Checked) takes the same road through the behaviour and must still land as
+	// Checked, which is what bSettingCheckedState tells apart.
+	if (CheckedState == EDreamCheckState::Undetermined && bInIsOn && !bSettingCheckedState)
+	{
+		CheckedState = EDreamCheckState::Unchecked;
+		bIsOn = false;
+		// Visuals BEFORE the value goes back, for SetCheckedState's reason: the glyph and the off
+		// colour must already be Unchecked's when the behaviour lands on off.
+		PushCheckStateVisuals();
+		if (ToggleBehaviour != nullptr)
+		{
+			ToggleBehaviour->SetIsOnWithoutNotify(false);
+		}
+		OnCheckStateChanged.Broadcast(CheckedState);
+		return;
+	}
+	// Anything else is total: the new value is the new state, glyph restored with it. Mirror both
 	// spellings so property and behaviour never disagree, then re-broadcast: a consumer binds to
 	// this control, not to a part of it.
 	const EDreamCheckState OldState = CheckedState;

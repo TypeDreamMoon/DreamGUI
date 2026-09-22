@@ -21,8 +21,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDreamToggleSimpleEvent);
  * same way regardless.
  *
  * Undetermined is authorable, not clickable-into: authored (a mixed multi-select, a folder of
- * part-checked children), it stands until the user clicks, and the click lands as Checked -- the
- * same rule UMG's check box follows.
+ * part-checked children), it stands until the user clicks, and the click lands as UNCHECKED -- the
+ * rule UMG's check box follows (SCheckBox::ToggleCheckedState takes Checked or Undetermined to
+ * Unchecked, and only Unchecked to Checked), so a mixed state is cleared by a click, never ticked.
  */
 UENUM(BlueprintType)
 enum class EDreamCheckState : uint8
@@ -64,7 +65,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamCheckStateChangedEvent, EDream
  *
  * The third state is the control's own. The behaviour underneath stays two-state and is parked at
  * unchecked while Undetermined stands; the tick swaps its check mark for a bar in the TickChecked
- * colour. A click leaves Undetermined by becoming checked.
+ * colour. A click leaves Undetermined by becoming unchecked, as UMG's SCheckBox does.
  */
 UCLASS(BlueprintType, Blueprintable, DisplayName = "Dream Toggle")
 class DREAMGUI_API UDreamToggle : public UDreamUIControl
@@ -116,10 +117,12 @@ public:
 	 */
 
 	/**
-	 * The authored state, in UMG's spelling and with UMG's third value. A property rather than the
-	 * getter/setter pair alone, because the pair alone is invisible: .dui writes properties, the
-	 * designer lists properties, and a binding resolves a property -- so a knob that exists only as
-	 * two UFUNCTIONs is a knob nothing outside C++ can turn.
+	 * The authored state, in UMG's spelling and with UMG's third value. A click moves it the way UMG's
+	 * check box does: Unchecked to Checked, and Checked or Undetermined to Unchecked -- a mixed state
+	 * is cleared by a click, never ticked. A property rather than the getter/setter pair alone,
+	 * because the pair alone is invisible: .dui writes properties, the designer lists properties, and
+	 * a binding resolves a property -- so a knob that exists only as two UFUNCTIONs is a knob nothing
+	 * outside C++ can turn.
 	 *
 	 * It is the authored value going in and a mirror of the behaviour's coming out;
 	 * HandleValueChanged keeps it honest when the user is the one who changed it. Where it and
@@ -286,6 +289,14 @@ protected:
 
 private:
 	void HandleValueChanged(bool bInIsOn);
+
+	/**
+	 * True while SetCheckedState is driving the behaviour, so HandleValueChanged can tell a state that
+	 * was ASKED for from a click. Both reach it as the same flip, and they must land differently when
+	 * the flip leaves Undetermined: asked for Checked is Checked, clicked is Unchecked (UMG's rule).
+	 */
+	bool bSettingCheckedState = false;
+
 	void HandlePressed();
 	void HandleReleased();
 	void HandleHovered();

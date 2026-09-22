@@ -15,7 +15,7 @@
 		{"umg": "IsChecked", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "GetCheckedState", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "SetIsChecked", "kind": "function", "status": "adopt", "dream": "", "note": ""},
-		{"umg": "SetCheckedState", "kind": "function", "status": "adopt", "dream": "", "note": "Undetermined parks the two-state behaviour at unchecked and lives on the control; a click leaves it by becoming checked, as UMG's does."},
+		{"umg": "SetCheckedState", "kind": "function", "status": "adopt", "dream": "", "note": "Undetermined parks the two-state behaviour at unchecked and lives on the control; a click leaves it by becoming UNCHECKED, as UMG's does (SCheckBox::ToggleCheckedState: Checked or Undetermined becomes Unchecked, Unchecked becomes Checked)."},
 		{"umg": "SetClickMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "SetTouchMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "SetPressMethod", "kind": "function", "status": "adopt", "dream": "", "note": ""},
