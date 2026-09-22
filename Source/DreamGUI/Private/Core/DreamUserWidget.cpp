@@ -1984,9 +1984,17 @@ bool UDreamUserWidget::SetContentForNamedSlot(FName InSlotName, UDreamWidget* In
 		NamedSlotContent.Remove(InSlotName);
 		return true;
 	}
-	if (InContent == this || InContent->IsChildOf(this) || this->IsChildOf(InContent))
+	// Only the direction that would be a cycle. Content already UNDER this widget is the ordinary
+	// case, not a mistake: a host nests its widget on the instance -- the .dui form, and what the
+	// designer writes for a drop into a slot row -- and AttachNamedSlotContent then moves it from
+	// there into the hole, after which it is under this widget again, one level down. Refusing
+	// "content inside this instance" refused both, so the designer could not bind what it had just
+	// parented. What that half of the check used to catch -- one of this instance's OWN widgets
+	// offered as content -- is the typed-outer test below: furniture lives in this instance's tree,
+	// never in the host's.
+	if (InContent == this || this->IsChildOf(InContent))
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot go into a slot of '%s': one contains the other."),
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' cannot go into a slot of '%s': it contains that widget."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContent->GetPathDisplayName(), *GetPathDisplayName());
 		return false;
 	}
