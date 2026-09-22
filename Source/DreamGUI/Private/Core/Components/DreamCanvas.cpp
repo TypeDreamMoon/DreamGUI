@@ -2624,6 +2624,12 @@ FRotator UDreamCanvas::GetViewRotator()const
 }
 FIntPoint UDreamCanvas::GetViewportSize()const
 {
+	// Answered before the world, the render mode or the player controller are consulted, because
+	// standing in for sources that are not there is the whole of what a substituted viewport is for.
+	if (ViewportSizeOverride.IsSet())
+	{
+		return ViewportSizeOverride.GetValue();
+	}
 	auto TempViewportSize = FIntPoint(2, 2);
 	if (auto world = this->GetWorld())
 	{
@@ -2952,8 +2958,41 @@ bool UDreamCanvasCustomScale::ConvertPositionFromCanvasToViewport(const FVector2
 	return false;
 }
 
+void UDreamCanvas::SetViewportSizeOverride(const FIntPoint& InSize)
+{
+	if (ViewportSizeOverride.IsSet() && ViewportSizeOverride.GetValue() == InSize)
+	{
+		return;
+	}
+	ViewportSizeOverride = InSize;
+	// The size the canvas last applied is cached in ViewportSize and the root widget was sized from
+	// it, so a substitution that only changed what GetViewportSize answers would leave the widget and
+	// the projection matrix disagreeing with it until something else happened to re-apply.
+	CheckAndApplyViewportParameter();
+}
+
+void UDreamCanvas::ClearViewportSizeOverride()
+{
+	if (!ViewportSizeOverride.IsSet())
+	{
+		return;
+	}
+	ViewportSizeOverride.Reset();
+	//re-applied for the same reason setting it is: the cached size is still the substituted one
+	CheckAndApplyViewportParameter();
+}
+
 void UDreamCanvas::CheckAndApplyViewportParameter()
 {
+	// A substituted viewport outranks both real sources. The overlay branch would honour it anyway --
+	// it reads GetViewportSize -- but the render-target branch reads the texture's dimensions
+	// directly, and would walk straight past the substitution.
+	if (ViewportSizeOverride.IsSet())
+	{
+		ViewportSize = ViewportSizeOverride.GetValue();
+		OnViewportParameterChanged();
+		return;
+	}
 	switch (this->GetRenderMode())
 	{
 	case EDreamRenderMode::ScreenSpaceOverlay:
@@ -3249,7 +3288,20 @@ void UDreamCanvas::OnEditorTick(float DeltaTime)
 
 			if (!DreamUI::IsGameWorld(this))
 			{
-				if (this->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
+				// A substituted viewport outranks everything this branch would otherwise read -- the
+				// fixed edit-mode size, the editor viewport, the render target's own dimensions -- and
+				// has to say so here, because neither of the two branches below goes through
+				// GetViewportSize. Unset, which is every canvas nobody handed one to, leaves them
+				// exactly as they were. See SetViewportSizeOverride.
+				if (ViewportSizeOverride.IsSet())
+				{
+					if (ViewportSize != ViewportSizeOverride.GetValue())
+					{
+						ViewportSize = ViewportSizeOverride.GetValue();
+						OnViewportParameterChanged();
+					}
+				}
+				else if (this->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
 				{
 					TOptional<FIntPoint> NewViewportSize;
 #if WITH_EDITOR
@@ -3283,7 +3335,8 @@ void UDreamCanvas::OnEditorTick(float DeltaTime)
 						}
 					}
 				}
-				if (this->GetRenderMode() == EDreamRenderMode::RenderTarget && IsValid(this->RenderTarget))
+				if (!ViewportSizeOverride.IsSet()
+					&& this->GetRenderMode() == EDreamRenderMode::RenderTarget && IsValid(this->RenderTarget))
 				{
 					auto prevSize = ViewportSize;
 					ViewportSize.X = this->RenderTarget->SizeX;

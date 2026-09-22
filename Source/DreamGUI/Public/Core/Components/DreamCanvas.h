@@ -249,6 +249,24 @@ public:
 	FVector GetViewLocation()const;
 	FRotator GetViewRotator()const;
 	FIntPoint GetViewportSize()const;
+	/**
+	 * Substitute a viewport size for this canvas, for a caller that has no viewport to read one from.
+	 *
+	 * A ScreenSpaceOverlay canvas takes its size from the local player's viewport, so a world with no
+	 * player controller -- a headless fixture, a tool that builds a tree nobody is looking at -- leaves
+	 * GetViewportSize answering with the 2x2 fallback, and everything derived from it degenerates with
+	 * it: the root widget is sized 2x2, the projection matrix describes a 2x2 screen, and a screen-space
+	 * ray cast through that matrix lands nowhere near the pixel the caller aimed at.
+	 *
+	 * Applied immediately, because the size the canvas last applied is cached and the derived widget
+	 * size is what a caller asks for this for. Unset by default, so a canvas nobody has called this on
+	 * behaves exactly as before. Deliberately not a UPROPERTY: a substituted viewport is a property of
+	 * the run, not of the asset, and serializing it would let one escape into content.
+	 */
+	void SetViewportSizeOverride(const FIntPoint& InSize);
+	/** Drop the substituted size and go back to whatever the real viewport says. */
+	void ClearViewportSizeOverride();
+	bool HasViewportSizeOverride()const { return ViewportSizeOverride.IsSet(); }
 	/** get scale value of canvas. only valid for root canvas. */
 	FORCEINLINE float GetCanvasScale()const { return CanvasScale; }
 private:
@@ -469,6 +487,11 @@ private:
 	TObjectPtr<UDreamCanvasCustomScale> CustomScale;
 	/** Current viewport size*/
 	FIntPoint ViewportSize = FIntPoint(2, 2);
+	/**
+	 * A viewport size standing in for the real one. Unset means "read the real viewport", which is
+	 * every canvas that has not been handed one. See SetViewportSizeOverride.
+	 */
+	TOptional<FIntPoint> ViewportSizeOverride;
 #pragma endregion
 	FRenderModeChangedEvent OnRenderModeChanged;
 	FRenderTargetChangedEvent OnRenderTargetChanged;
