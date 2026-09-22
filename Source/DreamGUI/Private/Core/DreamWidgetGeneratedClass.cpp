@@ -146,6 +146,27 @@ void UDreamWidgetGeneratedClass::SetWidgetTreeArchetype(UDreamWidgetTree* InWidg
 }
 #endif
 
+void UDreamWidgetGeneratedClass::SetDesignSize(FIntPoint InSize)
+{
+	DesignSize = InSize;
+}
+
+FIntPoint UDreamWidgetGeneratedClass::FindDesignSize(const UClass* InClass)
+{
+	for (const UClass* Walker = InClass; Walker != nullptr; Walker = Walker->GetSuperClass())
+	{
+		if (const UDreamWidgetGeneratedClass* GeneratedClass = Cast<UDreamWidgetGeneratedClass>(Walker))
+		{
+			// The first one wins, with no emptiness test to make: a subclass compiled against its own
+			// designer canvas answers for itself even when it inherited the parent's hierarchy, because
+			// that canvas is what its author was looking at.
+			return GeneratedClass->DesignSize;
+		}
+	}
+	// A native class, or one that was never compiled. The same canvas the designer opens at.
+	return FIntPoint(1920, 1080);
+}
+
 UDreamWidgetTree* UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(const UClass* InClass)
 {
 	for (const UClass* Walker = InClass; Walker != nullptr; Walker = Walker->GetSuperClass())

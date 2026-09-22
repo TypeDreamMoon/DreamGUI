@@ -1432,6 +1432,15 @@ namespace DreamWidgetAuthoredHierarchy
 
 void FDreamWidgetBlueprintCompilerContext::UpdateGeneratedClassWidgetTree(UDreamWidgetBlueprint* InBlueprint, UDreamWidgetGeneratedClass* InClass)
 {
+	// The canvas the author laid this hierarchy out on. Editor-only data that a world-space host needs
+	// at runtime -- it has no viewport to stretch to, so the authored size is how big the hierarchy
+	// lands in the world -- which is why the class carries a copy of it.
+	//
+	// Written first, before either return below: a subclass that authored no hierarchy still opened a
+	// designer at some canvas, and both the empty-tree case and the inherit-the-parent's-tree case are
+	// hierarchies someone sized on purpose.
+	InClass->SetDesignSize(InBlueprint->DesignerData.CanvasSize);
+
 	if (!IsValid(InBlueprint->WidgetTree))
 	{
 		return;
