@@ -151,6 +151,9 @@ void UDreamScrollBox::HandleDimensionsChanged(bool bPivotChanged, bool bWidthCha
 
 void UDreamScrollBox::ApplyStyle()
 {
+	// RefreshContentExtent re-decides the bar by calling back into this push; the push decides it
+	// itself, so for its length the re-measures it makes stay re-measures.
+	TGuardValue<bool> StyleGuard(bApplyingStyle, true);
 	const FDreamScrollBoxStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ScrollBoxStyle);
 	const bool bHorizontal = IsHorizontal();
 
@@ -852,6 +855,19 @@ void UDreamScrollBox::RefreshContentExtent()
 	{
 		// A range change moves the visible fraction, and nothing broadcasts that.
 		ScrollBarNode->RefreshFromScrollView();
+	}
+
+	// Whether the bar should be out is a question about exactly the measurement just taken, so it is
+	// asked again HERE and not only in the style push: this is the call that hears the content change
+	// -- AddContent, a caller re-measuring after adding or removing rows, the box being resized -- and
+	// that is exactly when a box starts or stops overflowing. SScrollBar shows and hides itself on the
+	// same change (its visibility follows the track's IsNeeded()); an auto-hiding bar decided once, at
+	// Initialize, when a box built empty had nothing to scroll, stayed hidden for good. The whole push,
+	// because the answer decides the viewport's gutter as well as the bar, and only when the answer
+	// MOVED, so an ordinary re-measure costs nothing extra.
+	if (!bApplyingStyle && ShouldShowScrollBar() != bScrollBarWasVisible)
+	{
+		ApplyStyle();
 	}
 }
 

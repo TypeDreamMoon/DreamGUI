@@ -69,7 +69,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShowScrollBar", BlueprintSetter = "SetShowScrollBar", Category = "Scroll Box")
 	bool bShowScrollBar = true;
 
-	/** Whether the bar stays put or disappears while the content already fits. */
+	/**
+	 * Whether the bar stays put or disappears while the content already fits. AutoHide follows the
+	 * content at run time: every re-measure (AddContent, RefreshContentExtent, a resize) asks again, so
+	 * a box that starts or stops overflowing brings its bar out or puts it away, as UMG's does.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollBarVisibility", BlueprintSetter = "SetScrollBarVisibility", Category = "Scroll Box", meta = (EditCondition = "bShowScrollBar"))
 	EDreamScrollBoxScrollbarVisibility ScrollBarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
 
@@ -518,7 +522,8 @@ public:
 	bool AddContent(UDreamWidget* InWidget);
 
 	/**
-	 * Re-take the content's extent from the stack and tell the behaviour its range moved.
+	 * Re-take the content's extent from the stack and tell the behaviour its range moved -- and, when
+	 * that changed whether anything overflows, bring an auto-hiding bar out or put it away.
 	 *
 	 * The counterpart of UUIScrollView::RectRangeChanged, and it exists for the same reason: nothing
 	 * re-measures a scrolled column on its own, because the column's size is not layout output -- it
@@ -621,4 +626,11 @@ private:
 		UDreamScrollBox& Box;
 		bool bPrevious;
 	};
+
+	/**
+	 * Set for the length of a style push. RefreshContentExtent runs inside the push twice, and a style
+	 * push is what RefreshContentExtent calls when the bar's answer has moved -- so while one push is
+	 * under way the re-measure must not start another.
+	 */
+	bool bApplyingStyle = false;
 };
