@@ -265,10 +265,19 @@ bool UUISlider::OnPointerDown_Implementation(UDreamPointerEventData *EventData)
     Super::OnPointerDown_Implementation(EventData);
     if (EventData->InputType == EDreamUIPointerInputType::Pointer)
     {
-        // The press IS the mouse capture -- UMG fires OnMouseCaptureBegin from SSlider's mouse-down
-        // for the same reason, so a consumer can stop reacting to a value the player is still moving.
-        OnMouseCaptureBeginCPP.Broadcast();
-        CalculateInputValue(EventData);
+        // A locked slider refuses the press outright: SSlider::OnMouseButtonDown asks IsLocked() before
+        // anything else and returns Unhandled, so no capture begins -- and, having begun none, none
+        // ends at the release. The value was never the problem (CalculateInputValue has its own lock
+        // check); the capture events were, because a consumer holds off acting on the value between
+        // them and a locked slider announced a drag that could not move anything.
+        if (!bLocked)
+        {
+            // The press IS the mouse capture -- UMG fires OnMouseCaptureBegin from SSlider's mouse-down
+            // for the same reason, so a consumer can stop reacting to a value the player is still moving.
+            bMouseCaptured = true;
+            OnMouseCaptureBeginCPP.Broadcast();
+            CalculateInputValue(EventData);
+        }
     }
     else if (RequiresControllerLock)
     {
@@ -282,8 +291,12 @@ bool UUISlider::OnPointerDown_Implementation(UDreamPointerEventData *EventData)
 bool UUISlider::OnPointerUp_Implementation(UDreamPointerEventData *EventData)
 {
     Super::OnPointerUp_Implementation(EventData);
-    if (EventData->InputType == EDreamUIPointerInputType::Pointer)
+    // Ends the capture the press began, and only that: keyed on the capture rather than on the lock,
+    // so a slider locked in the middle of a drag still ends the capture it already announced --
+    // SSlider's end comes from losing the capture, which the release does whatever the lock says.
+    if (EventData->InputType == EDreamUIPointerInputType::Pointer && bMouseCaptured)
     {
+        bMouseCaptured = false;
         OnMouseCaptureEndCPP.Broadcast();
     }
     return AllowEventBubbleUp;

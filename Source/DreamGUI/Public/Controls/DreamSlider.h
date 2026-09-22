@@ -42,7 +42,9 @@ public:
 	FDreamSliderStyle Style;
 
 	/**
-	 * Shows its value and refuses to be moved -- UMG's Locked, pushed onto the behaviour.
+	 * Shows its value and refuses to be moved -- UMG's Locked, pushed onto the behaviour. A press on a
+	 * locked slider begins no mouse capture, so OnMouseCaptureBegin and OnMouseCaptureEnd stay silent,
+	 * as SSlider's do.
 	 *
 	 * Not the same as switching the control off: a disabled slider wears its Disabled colours and
 	 * says "not now", a locked one looks completely ordinary and says "this is what it is". A volume

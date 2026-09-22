@@ -94,6 +94,15 @@ protected:
 		bool bControllerCaptured = false;
 
 	/**
+	 * Whether the pointer press being handled began a mouse capture -- SSlider's HasMouseCapture. Set
+	 * by a press on an unlocked slider and cleared by the release that ends it, which is what keeps
+	 * OnMouseCaptureBegin and OnMouseCaptureEnd in pairs: a press on a locked slider begins nothing,
+	 * so its release ends nothing, and a lock that lands mid-drag still ends the capture already begun.
+	 */
+	UPROPERTY(Transient)
+		bool bMouseCaptured = false;
+
+	/**
 	 * Shows its value and refuses to be moved -- UMG's Locked.
 	 *
 	 * A different thing from not being interactable, which is why it is a flag of its own: a
