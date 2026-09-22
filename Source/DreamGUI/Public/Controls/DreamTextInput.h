@@ -123,6 +123,9 @@ public:
 
 	/**
 	 * Escape / Back throws the edit away instead of keeping it -- UMG's RevertTextOnEscape.
+	 * The text the edit began with is put back (OnTextChanged fires for it) and then committed once --
+	 * OnTextCommitted and OnSubmitted carry the restored text, as UMG commits a revert -- and the edit
+	 * ends. An edit that changed nothing reverts and commits nothing.
 	 * Off, as UMG's is and as this field behaved before the knob existed.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetRevertTextOnEscape", BlueprintSetter = "SetRevertTextOnEscape", Category = "Text Input")

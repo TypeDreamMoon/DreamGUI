@@ -2904,13 +2904,30 @@ void UUITextInput::CancelInput()
 		DeactivateInput();
 		return;
 	}
-	// The value goes back BEFORE the edit ends, so whatever the end of the edit reports reports the
-	// restored value and not the abandoned one. Without notify would be wrong here: the text really
-	// did change, and a consumer watching the field live has to see it change back.
-	SetText(TextAtActivation, true);
-	// And no submit: a cancelled edit committed nothing. Saying so through the flag the Enter road
-	// already uses keeps one rule for "this activation has had its say".
-	bSubmittedThisActivation = true;
+	// Whether there is anything to put back, asked before anything is put back. The same comparison
+	// SetText makes, so "changed" here means exactly "SetText will restore something". SEditableText
+	// likewise reverts, and so reports, only when the edit changed the text (HasTextChangedFromOriginal).
+	const bool bEditChangedTheText = !Text.Equals(TextAtActivation, ESearchCase::IgnoreCase);
+	if (bEditChangedTheText)
+	{
+		// The value goes back FIRST, so what is reported below is the restored value and not the
+		// abandoned one. With notify, unlike SEditableText's silent SetEditableText: the text really did
+		// change back, and this library's two-way bindings (`<->`) take their reverse route from
+		// OnValueChanged -- a silent restore would leave every bound model holding the thrown-away edit.
+		SetText(TextAtActivation, true);
+		// Then the revert is reported as a commit, once, carrying the RESTORED text: UMG's
+		// RestoreOriginalText calls OnTextCommitted(OriginalText, ETextCommit::OnCleared) right after
+		// putting the text back, so anyone who stores the value on commit stores what the field now
+		// holds. Submit also marks this activation as having had its say, which is what keeps the end
+		// of the edit below from committing a second time.
+		Submit();
+	}
+	else
+	{
+		// Nothing to revert, so nothing to report -- UMG's Escape does nothing either when the text is
+		// unchanged -- and the end of the edit must not report on the revert's behalf.
+		bSubmittedThisActivation = true;
+	}
 	DeactivateInput();
 }
 

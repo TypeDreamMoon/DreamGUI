@@ -205,10 +205,14 @@ protected:
 	/**
 	 * Escape / Back throws the edit away instead of keeping it -- UMG's RevertTextOnEscape.
 	 *
-	 * The text the field held when the edit STARTED is put back, and the edit ends without a submit:
-	 * a player who opened a name field, typed half a name and changed their mind meant "undo this",
-	 * not "store what I got to". Off by default, which is both UMG's default and what this field did
-	 * before the knob existed -- Back ended the edit and the half-typed value stayed.
+	 * The text the field held when the edit STARTED is put back -- a player who opened a name field,
+	 * typed half a name and changed their mind meant "undo this", not "store what I got to" -- and the
+	 * revert is then reported ONCE through the submit/commit events, carrying the restored text, as
+	 * UMG's RestoreOriginalText reports it through OnTextCommitted: whoever stores the value on commit
+	 * stores what the field now holds. An edit that changed nothing reverts nothing and reports
+	 * nothing. The edit ends either way (Escape is Back here). Off by default, which is both UMG's
+	 * default and what this field did before the knob existed -- Back ended the edit and the
+	 * half-typed value stayed.
 	 *
 	 * Only the CANCEL road reads it (see CancelInput). Clicking away is not a cancel: nothing was
 	 * said about the value, so bSubmitWhenDeactivate still decides what that moment means.
@@ -483,8 +487,9 @@ public:
 
 	/**
 	 * End the edit the way Escape means it: with bRevertTextOnEscape on, the text the field held when
-	 * the edit began goes back in and nothing is submitted; without it, this is the ordinary end of an
-	 * edit and bSubmitWhenDeactivate still decides whether that moment reports a value.
+	 * the edit began goes back in and that restored text is submitted once (UMG commits a revert); an
+	 * edit that changed nothing submits nothing. Without it, this is the ordinary end of an edit and
+	 * bSubmitWhenDeactivate still decides whether that moment reports a value.
 	 *
 	 * A road of its own rather than a flag on DeactivateInput, because the two callers mean different
 	 * things: clicking away said nothing about the value, and Back said "throw this away".
