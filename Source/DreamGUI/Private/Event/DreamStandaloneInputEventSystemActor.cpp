@@ -9,6 +9,7 @@
 
 #include "Components/InputComponent.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUISettings.h"
 #include "DreamGUI.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "GameFramework/PlayerController.h"
@@ -109,6 +110,23 @@ namespace DreamStandaloneInputEventSystemActorLocal
 	static constexpr int32 NavigationPointerID = 0;
 	/** Below this the right stick is at rest; a bound axis reports every frame either way. */
 	static constexpr float GamepadScrollDeadzone = 0.2f;
+
+	/**
+	 * The two rules every binding this preset makes is held to: it consumes its key only if the project
+	 * asked for that, and it executes while the game is paused -- always.
+	 *
+	 * Always, because the engine's pause gate is the wrong place for the decision. UPlayerInput reads
+	 * bExecuteWhenPaused off the binding, the binding is made once, and whether a paused game's UI
+	 * answers is a project setting that can change at any moment and is read at the moment it matters
+	 * everywhere else. Left at the engine's default of false, the flag made the preset deaf from the
+	 * frame the game paused: a pause menu could not be clicked, whatever the setting said. The handlers
+	 * ask the setting instead, as each key arrives (IsInputSuspendedByGamePause).
+	 */
+	static void ConfigurePresetBinding(FInputBinding& Binding, bool bInConsumeInput)
+	{
+		Binding.bConsumeInput = bInConsumeInput;
+		Binding.bExecuteWhenPaused = true;
+	}
 }
 
 ADreamStandaloneInputEventSystemActor::ADreamStandaloneInputEventSystemActor()
@@ -181,6 +199,9 @@ void ADreamStandaloneInputEventSystemActor::BindDreamInput()
 	// key in the key state map, and AutoReceiveInput has already put this actor above the pawn -- so the
 	// pawn would simply stop receiving input, Enhanced Input actions on those keys included. What the UI
 	// actually swallows is decided per event, by whether the pointer is over it.
+	//
+	// Everything below also executes while the game is paused; whether it should is asked per key, by
+	// the handlers (ConfigurePresetBinding says why the binding is the wrong place to ask).
 	BindMouseInput();
 	BindNavigationAndTouchInput();
 	BindActionRouting();
@@ -192,73 +213,92 @@ void ADreamStandaloneInputEventSystemActor::BindMouseInput()
 
 	for (const TPair<FKey, EDreamUIMouseButtonType>& Button : MouseButtons)
 	{
-		InputComponent->BindKey(Button.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnMouseButtonPressed)
-			.bConsumeInput = bConsumeBoundInput;
-		InputComponent->BindKey(Button.Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnMouseButtonReleased)
-			.bConsumeInput = bConsumeBoundInput;
+		ConfigurePresetBinding(InputComponent->BindKey(Button.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnMouseButtonPressed),
+			bConsumeBoundInput);
+		ConfigurePresetBinding(InputComponent->BindKey(Button.Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnMouseButtonReleased),
+			bConsumeBoundInput);
 	}
 
-	InputComponent->BindVectorAxis(EKeys::Mouse2D, this, &ADreamStandaloneInputEventSystemActor::OnMouseMoved)
-		.bConsumeInput = bConsumeBoundInput;
-	InputComponent->BindAxisKey(EKeys::MouseWheelAxis, this, &ADreamStandaloneInputEventSystemActor::OnMouseWheel)
-		.bConsumeInput = bConsumeBoundInput;
+	ConfigurePresetBinding(InputComponent->BindVectorAxis(EKeys::Mouse2D, this, &ADreamStandaloneInputEventSystemActor::OnMouseMoved),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::MouseWheelAxis, this, &ADreamStandaloneInputEventSystemActor::OnMouseWheel),
+		bConsumeBoundInput);
 }
 
 void ADreamStandaloneInputEventSystemActor::BindNavigationAndTouchInput()
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
 
-	InputComponent->BindTouch(IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnTouchPressed)
-		.bConsumeInput = bConsumeBoundInput;
-	InputComponent->BindTouch(IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnTouchReleased)
-		.bConsumeInput = bConsumeBoundInput;
-	InputComponent->BindTouch(IE_Repeat, this, &ADreamStandaloneInputEventSystemActor::OnTouchMoved)
-		.bConsumeInput = bConsumeBoundInput;
+	ConfigurePresetBinding(InputComponent->BindTouch(IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnTouchPressed),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindTouch(IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnTouchReleased),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindTouch(IE_Repeat, this, &ADreamStandaloneInputEventSystemActor::OnTouchMoved),
+		bConsumeBoundInput);
 
 	for (const FKey& Key : NavigationTriggerKeys)
 	{
-		InputComponent->BindKey(Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed)
-			.bConsumeInput = bConsumeBoundInput;
-		InputComponent->BindKey(Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased)
-			.bConsumeInput = bConsumeBoundInput;
+		ConfigurePresetBinding(InputComponent->BindKey(Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed),
+			bConsumeBoundInput);
+		ConfigurePresetBinding(InputComponent->BindKey(Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased),
+			bConsumeBoundInput);
 	}
 
 	for (const TPair<FKey, EDreamUINavigationDirection>& Direction : NavigationDirectionKeys)
 	{
-		InputComponent->BindKey(Direction.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed)
-			.bConsumeInput = bConsumeBoundInput;
-		InputComponent->BindKey(Direction.Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased)
-			.bConsumeInput = bConsumeBoundInput;
+		ConfigurePresetBinding(InputComponent->BindKey(Direction.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed),
+			bConsumeBoundInput);
+		ConfigurePresetBinding(InputComponent->BindKey(Direction.Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased),
+			bConsumeBoundInput);
 	}
 
 	// Paging. Bound by name like the directions, and for the same reason: a key this preset gives its
 	// own meaning must not also reach the AnyKey handler, or the router would be offered it twice.
 	for (const TPair<FKey, float>& Page : ScrollPageKeys)
 	{
-		InputComponent->BindKey(Page.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed)
-			.bConsumeInput = bConsumeBoundInput;
+		ConfigurePresetBinding(InputComponent->BindKey(Page.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed),
+			bConsumeBoundInput);
 	}
 	for (const TPair<FKey, bool>& Extent : ScrollExtentKeys)
 	{
-		InputComponent->BindKey(Extent.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed)
-			.bConsumeInput = bConsumeBoundInput;
+		ConfigurePresetBinding(InputComponent->BindKey(Extent.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed),
+			bConsumeBoundInput);
 	}
 	// The right stick is the gamepad's wheel. Two axes rather than one vector key because there is no
 	// Gamepad_Right2D, and an axis binding that reads zero every frame costs nothing.
-	InputComponent->BindAxisKey(EKeys::Gamepad_RightX, this, &ADreamStandaloneInputEventSystemActor::OnGamepadScrollX)
-		.bConsumeInput = bConsumeBoundInput;
-	InputComponent->BindAxisKey(EKeys::Gamepad_RightY, this, &ADreamStandaloneInputEventSystemActor::OnGamepadScrollY)
-		.bConsumeInput = bConsumeBoundInput;
+	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::Gamepad_RightX, this, &ADreamStandaloneInputEventSystemActor::OnGamepadScrollX),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::Gamepad_RightY, this, &ADreamStandaloneInputEventSystemActor::OnGamepadScrollY),
+		bConsumeBoundInput);
 }
 
 void ADreamStandaloneInputEventSystemActor::BindActionRouting()
 {
+	using namespace DreamStandaloneInputEventSystemActorLocal;
+
 	// The one binding that makes consumption catastrophic rather than merely wrong: UPlayerInput
 	// expands AnyKey to every non-simulated key in the key state map, so consuming it takes the lot.
-	InputComponent->BindKey(EKeys::AnyKey, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed)
-		.bConsumeInput = bConsumeBoundInput;
-	InputComponent->BindKey(EKeys::AnyKey, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased)
-		.bConsumeInput = bConsumeBoundInput;
+	// Executing while paused matters most here too: this is the road to the action router, where a
+	// pause menu's own actions and hold-to-quit live, and to Back.
+	ConfigurePresetBinding(InputComponent->BindKey(EKeys::AnyKey, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindKey(EKeys::AnyKey, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased),
+		bConsumeBoundInput);
+}
+
+bool ADreamStandaloneInputEventSystemActor::ShouldReceiveInputWhilePaused()
+{
+	// A pointer read, every time -- see the header for why nothing here is cached.
+	return !GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
+}
+
+bool ADreamStandaloneInputEventSystemActor::IsInputSuspendedByGamePause() const
+{
+	// UWorld::IsPaused is the question the pointer module's raycaster filter and the UI manager's tick
+	// both ask, and the one UWorld::Tick asks before running a pause frame -- the frame whose
+	// controller input comes through as paused -- so all of them agree on what "paused" is.
+	const UWorld* World = GetWorld();
+	return World != nullptr && World->IsPaused() && !ShouldReceiveInputWhilePaused();
 }
 
 bool ADreamStandaloneInputEventSystemActor::IsNavigationKey(const FKey& Key)
@@ -370,6 +410,10 @@ void ADreamStandaloneInputEventSystemActor::ReportDeviceForKey(const FKey& Key)
 void ADreamStandaloneInputEventSystemActor::OnMouseButtonPressed(FKey Key)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
+	// Every handler starts here: the bindings execute while paused (ConfigurePresetBinding), so the
+	// setting that decides whether a paused game's UI answers is asked now, before anything -- the
+	// device report included -- as the engine would have dropped the whole call.
+	if (IsInputSuspendedByGamePause())return;
 	ReportDeviceForKey(Key);
 
 	for (const TPair<FKey, EDreamUIMouseButtonType>& Button : MouseButtons)
@@ -385,6 +429,7 @@ void ADreamStandaloneInputEventSystemActor::OnMouseButtonPressed(FKey Key)
 void ADreamStandaloneInputEventSystemActor::OnMouseButtonReleased(FKey Key)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
+	if (IsInputSuspendedByGamePause())return;
 	ReportDeviceForKey(Key);
 
 	for (const TPair<FKey, EDreamUIMouseButtonType>& Button : MouseButtons)
@@ -402,7 +447,11 @@ void ADreamStandaloneInputEventSystemActor::OnMouseMoved(FVector AxisValue)
 	// A bound vector axis fires every frame whether or not the mouse moved, so only an actual delta
 	// counts as the player using it -- reporting unconditionally would pin the device to the mouse and
 	// no gamepad prompt would ever appear.
-	if (!AxisValue.IsNearlyZero())
+	//
+	// While input is suspended by a pause the delta counts as none, which is what the engine hands an
+	// axis binding that does not execute while paused: the device goes unreported, and the position
+	// below is still passed on, as it always was -- a paused UI's raycasters are skipped anyway.
+	if (!AxisValue.IsNearlyZero() && !IsInputSuspendedByGamePause())
 	{
 		ReportDeviceForKey(EKeys::Mouse2D);
 	}
@@ -417,6 +466,7 @@ void ADreamStandaloneInputEventSystemActor::OnMouseWheel(float AxisValue)
 	{
 		return;//a resting wheel fires every frame; reporting it would pin the device to the mouse
 	}
+	if (IsInputSuspendedByGamePause())return;//an axis held by a pause reads zero, which is the case above
 	ReportDeviceForKey(EKeys::MouseWheelAxis);
 	// Both components carry the wheel value: InputScroll documents X as horizontal and Y as vertical,
 	// and a mouse wheel has no horizontal axis to distinguish.
@@ -425,17 +475,20 @@ void ADreamStandaloneInputEventSystemActor::OnMouseWheel(float AxisValue)
 
 void ADreamStandaloneInputEventSystemActor::OnTouchPressed(ETouchIndex::Type FingerIndex, FVector Location)
 {
+	if (IsInputSuspendedByGamePause())return;
 	ReportDeviceForKey(EKeys::TouchKeys[FMath::Clamp((int32)FingerIndex, 0, (int32)EKeys::NUM_TOUCH_KEYS - 1)]);
 	InputModule->InputTouchTrigger(true, static_cast<int32>(FingerIndex), Location);
 }
 
 void ADreamStandaloneInputEventSystemActor::OnTouchReleased(ETouchIndex::Type FingerIndex, FVector Location)
 {
+	if (IsInputSuspendedByGamePause())return;
 	InputModule->InputTouchTrigger(false, static_cast<int32>(FingerIndex), Location);
 }
 
 void ADreamStandaloneInputEventSystemActor::OnTouchMoved(ETouchIndex::Type FingerIndex, FVector Location)
 {
+	if (IsInputSuspendedByGamePause())return;
 	InputModule->InputTouchMoved(static_cast<int32>(FingerIndex), Location);
 }
 
@@ -443,6 +496,7 @@ void ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed(FKey Key)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
 
+	if (IsInputSuspendedByGamePause())return;
 	ReportDeviceForKey(Key);
 	if (IsNavigationKey(Key))
 	{
@@ -488,6 +542,7 @@ void ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed(FKey Key)
 
 void ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased(FKey Key)
 {
+	if (IsInputSuspendedByGamePause())return;
 	if (IsNavigationKey(Key))
 	{
 		return;
@@ -519,6 +574,7 @@ UDreamWidget* ADreamStandaloneInputEventSystemActor::GetFocusedWidget() const
 void ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed(FKey Key)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
+	if (IsInputSuspendedByGamePause())return;
 	ReportDeviceForKey(Key);
 	// Offered to the router first, like every other key this preset names: a screen that binds End to
 	// "jump to newest" must win over the built-in meaning.
@@ -551,7 +607,8 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollX(float AxisValue)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
 	// A resting stick fires this every frame; anything below the deadzone is the stick sitting still.
-	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone)
+	// A stick held by a pause reads as sitting still too, as the engine would have zeroed it.
+	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || IsInputSuspendedByGamePause())
 	{
 		return;
 	}
@@ -576,7 +633,7 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollX(float AxisValue)
 void ADreamStandaloneInputEventSystemActor::OnGamepadScrollY(float AxisValue)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
-	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone)
+	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || IsInputSuspendedByGamePause())
 	{
 		return;
 	}
@@ -598,6 +655,7 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollY(float AxisValue)
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed(FKey Key)
 {
+	if (IsInputSuspendedByGamePause())return;
 	ReportDeviceForKey(Key);
 	// An action explicitly bound to this key outranks the preset's built-in meaning for it. Confirm is
 	// the likeliest thing a screen binds to Enter, and it must not also press whatever navigation is
@@ -610,6 +668,7 @@ void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed(FKey Key)
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased(FKey Key)
 {
+	if (IsInputSuspendedByGamePause())return;
 	if (RouteActionKey(Key, false))return;
 	if (TryHandleWithVirtualCursor(Key, false))return;
 	InputModule->InputTriggerForNavigation(false, DreamStandaloneInputEventSystemActorLocal::NavigationPointerID);
@@ -621,6 +680,7 @@ void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed(FKey Ke
 	// the keyboard, which is what takes an auto-mode virtual cursor down, so the very same press
 	// then falls through to directional navigation instead of being eaten by a cursor that is on
 	// its way out.
+	if (IsInputSuspendedByGamePause())return;
 	ReportDeviceForKey(Key);
 	if (RouteActionKey(Key, true))return;
 	if (TryHandleWithVirtualCursor(Key, true))return;
@@ -630,6 +690,7 @@ void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed(FKey Ke
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased(FKey Key)
 {
+	if (IsInputSuspendedByGamePause())return;
 	if (RouteActionKey(Key, false))return;
 	if (TryHandleWithVirtualCursor(Key, false))return;
 	// The direction is still passed on release even though the module ignores it there, so the two

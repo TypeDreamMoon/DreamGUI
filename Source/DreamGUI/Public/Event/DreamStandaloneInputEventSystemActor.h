@@ -25,6 +25,13 @@ class UDreamStandaloneInputModule;
  * question the pointer's hit test answers at the moment the click happens, not one a flag set at bind
  * time can answer. A project that really does want the UI to hold every bound key exclusively sets
  * bConsumeBoundInput.
+ *
+ * It keeps listening while the game is paused, because a pause menu is UI: every binding executes
+ * when paused, and whether a paused game's UI still answers is UDreamUISettings::
+ * bScreenSpaceUIAffectByGamePause, which each handler reads when its key arrives (see
+ * IsInputSuspendedByGamePause). The bindings used to keep the engine's default -- no execution while
+ * paused -- so a paused game's menu could not be clicked, navigated or backed out of, whatever the
+ * setting said.
  */
 UCLASS(ClassGroup = DreamGUI)
 class DREAMGUI_API ADreamStandaloneInputEventSystemActor : public ADreamEventSystemActor
@@ -95,6 +102,35 @@ protected:
 
 	/** True for a key this preset already binds by name, and which therefore routes itself. */
 	static bool IsNavigationKey(const FKey& Key);
+
+	/**
+	 * Whether the UI this preset feeds is meant to go on taking input while the game is paused: the
+	 * inverse of UDreamUISettings::bScreenSpaceUIAffectByGamePause, read at the moment it is asked.
+	 *
+	 * Read every time rather than cached at BeginPlay, as the screen-space raycaster reads the same
+	 * setting on every query (UDreamScreenSpaceRaycaster::GetAffectByGamePause): the setting can change
+	 * while the game runs, and the next key should follow it. The screen-space setting is the one asked
+	 * because a pause menu -- the reason any of this matters -- is screen-space UI. While this preset
+	 * listens, world-space UI is held back separately by its own raycasters, which the pointer module
+	 * skips while paused when bWorldSpaceUIAffectByGamePause says so. The one combination that cannot be
+	 * expressed is screen-space UI paused with world-space UI live: the preset then holds everything.
+	 */
+	static bool ShouldReceiveInputWhilePaused();
+
+	/**
+	 * True while the game is paused and the settings say the UI pauses with it -- the one state in
+	 * which a bound handler drops what arrives, as the engine would drop a binding that does not
+	 * execute while paused.
+	 *
+	 * The engine's own gate cannot be used for this. It is a flag on each binding
+	 * (FInputBinding::bExecuteWhenPaused), UPlayerInput reads it from the binding, and this actor can
+	 * set it only when it binds: a setting changed later would never reach it, and the bindings cannot
+	 * be told apart afterwards from the ones a Blueprint subclass's input events put on the same
+	 * component, bound to the same actor. So every binding executes while paused and the question is
+	 * put here, per key, at the moment the setting is read everywhere else. "Paused" is
+	 * UWorld::IsPaused, which is what makes the controller run its input frame as a paused one.
+	 */
+	bool IsInputSuspendedByGamePause() const;
 
 	/**
 	 * How fast the right stick scrolls the list under focus, in canvas units per second at full tilt.
