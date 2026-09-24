@@ -31,9 +31,12 @@
  * Two facts shape the fixture:
  *
  * The tween manager is a GAME-INSTANCE subsystem. Reached through UGameplayStatics, it is simply
- * absent in an editor test, and UDreamTweenManager::To then returns null so Start() is a silent
- * no-op. That state is real -- a widget built in an authoring tree behaves exactly this way -- and
- * gets a test of its own. Everything else needs a game instance, which the fixture below builds.
+ * absent in an editor test, and UDreamTweenManager::To then returns null. Start() makes no tweener
+ * then; with no clock to animate on, it plays the run out on the spot instead -- the end value handed
+ * to OnUpdate and the tween's events raised in the tween's order -- so the target lands where the tween
+ * would have left it. That state is real -- a widget built in an authoring tree, or in any world no game
+ * instance owns, behaves exactly this way -- and gets a test of its own. Everything else needs a game
+ * instance, which the fixture below builds.
  *
  * The tweener is driven here by ToNext rather than by the manager's tick. UDreamUIPlayTween never
  * sets a tick type, so its tweener sits in the DuringPhysics group, which only a real world tick
@@ -258,7 +261,7 @@ namespace DreamPlayTweenTestLocal
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPlayTweenNoManagerTest,
-	"DreamGUI.PlayTween.APlayTweenWithNoTweenManagerReachableStartsNothingAndStopsCleanly",
+	"DreamGUI.PlayTween.APlayTweenWithNoTweenManagerReachablePlaysItsRunOutAtOnceAndStopsCleanly",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamPlayTweenNoManagerTest::RunTest(const FString& Parameters)
@@ -266,20 +269,47 @@ bool FDreamPlayTweenNoManagerTest::RunTest(const FString& Parameters)
 	using namespace DreamPlayTweenTestLocal;
 
 	// A play tween authored into a prefab exists long before anything is playing: in the class
-	// defaults, in a designer preview, in an authoring tree with no world at all. Start() has to
-	// come back empty-handed in that state rather than half-building a tween nobody will ever tick,
-	// and Stop() has to survive being called on the result -- which the sequence component does
-	// unconditionally on teardown.
+	// defaults, in a designer preview, in an authoring tree with no world at all. Start() must not
+	// half-build a tween nobody will ever tick in that state: it makes no tweener, and plays the run out
+	// at once instead -- the end value handed to OnUpdate and the events raised in the tween's order --
+	// so whatever the tween drives lands where the tween would have left it. And Stop() has to survive
+	// being called on the result -- which the sequence component does unconditionally on teardown.
 	UDreamUIPlayTween_Float* PlayTween = NewObject<UDreamUIPlayTween_Float>(GetTransientPackage());
 	TestNull(TEXT("a fresh play tween holds no tweener"), PlayTween->GetTweener());
+
+	// The run is watched the way a designer's bindings see it: the value through the authored
+	// OnUpdateValue, bound by reflection to a float setter on an object that reads it back, and the
+	// timeline through the C++ events.
+	UDreamUIPlayTween_Float* ValueRecorder = NewObject<UDreamUIPlayTween_Float>(GetTransientPackage());
+	ValueRecorder->SetDuration(static_cast<float>(FEventRecorder::Nothing));
+	if (!TestTrue(TEXT("the value event takes a binding"),
+		BindAuthoredEvent(PlayTween, TEXT("OnUpdateValue"), ValueRecorder, TEXT("SetDuration"),
+			EDreamUIEventDelegateParameterType::Float)))
+	{
+		return false;
+	}
+	FTweenLog Log;
+	Log.Watch(PlayTween);
 
 	PlayTween->Stop();
 	PlayTween->Start();
 	TestNull(TEXT("and cannot make one without a tween manager"), PlayTween->GetTweener());
+	// The defaults are one linear cycle from From 0 to To 1, so the value the run ends on is To.
+	TestEqual(TEXT("the end value reaches the value event at once"), ValueRecorder->GetDuration(), 1.0f);
+	TestEqual(TEXT("the run starts once"), Log.Starts, 1);
+	TestEqual(TEXT("its one cycle completes"), Log.CycleCounts.Num(), 1);
+	TestEqual(TEXT("with the progress at the end"), Log.LastProgress(), 1.0f);
+	TestEqual(TEXT("and the run completes exactly once"), Log.Completes, 1);
 	PlayTween->Stop();
+	TestEqual(TEXT("stopping it afterwards completes nothing more"), Log.Completes, 1);
+	// Nothing may fire into the log once this test has returned.
+	PlayTween->OnStartCPP.Clear();
+	PlayTween->OnCompleteCPP.Clear();
+	PlayTween->OnUpdateProgressCPP.Clear();
+	PlayTween->OnCycleCompleteCPP.Clear();
 
-	// The authored settings are still settings: they survive a failed start, so the same object
-	// works the moment it is instanced into a real world.
+	// The authored settings are still settings: they survive a start that had no tween manager to run
+	// on, so the same object animates the moment it is instanced into a world that has one.
 	PlayTween->SetDuration(2.5f);
 	PlayTween->SetStartDelay(0.75f);
 	PlayTween->SetLoopType(EDreamTweenLoop::Yoyo);
