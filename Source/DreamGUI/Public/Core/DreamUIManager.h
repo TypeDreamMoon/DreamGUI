@@ -75,6 +75,11 @@ public:
 
 #endif
 #if WITH_EDITOR
+	/**
+	 * True from the editor's announcement that a Blueprint began compiling (OnBlueprintPreCompile) to
+	 * its announcement that the compile is over (OnBlueprintCompiled, broadcast whether or not the
+	 * compile had errors). Nothing between the two: the flag is cleared on the announcement itself.
+	 */
 	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}
 private:
 	static bool InitCheck();

@@ -249,8 +249,15 @@ void UDreamUIManagerObject::OnObjectsReplaced(const TMap<UObject*, UObject*>& In
 }
 void UDreamUIManagerObject::OnBlueprintCompiled()
 {
+	// Cleared on the announcement itself, not a tick later: the compile is over when the editor says
+	// so. The editor broadcasts OnBlueprintPreCompile only from a compilation queue's flush, and every
+	// flush ends in OnBlueprintCompiled -- its own, or its caller's once reinstancing is done -- whether
+	// or not the compile had errors (BlueprintCompilationManager.cpp, and the RigVM copy of it), so the
+	// set and this clear are a pair. It used to be cleared in the one-shot below, and this object ticks only in an engine frame
+	// in which some world ticked (UEditorEngine::Tick), which can be many frames later: for all of them
+	// the editor looked as though a Blueprint were still compiling.
+	bIsBlueprintCompiling = false;
 	UDreamUIManagerObject::AddOneShotTickFunction([] {
-		bIsBlueprintCompiling = false;
 		// Before the refresh, because a half-dead instance has nothing for a refresh to walk.
 		//
 		// Recompiling replaces every live instance with a fresh copy of the new class, and the copy
