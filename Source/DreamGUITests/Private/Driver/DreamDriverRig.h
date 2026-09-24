@@ -20,6 +20,7 @@ class UDreamDriverInputModule;
 class UDreamScreenSpaceRaycaster;
 class UDreamWidget;
 class UGameInstance;
+class UUITextInput;
 class UWorld;
 
 namespace DreamTests
@@ -43,6 +44,10 @@ namespace DreamTests
  * control either snaps or never moves. The bare world is still one option away, and is what the
  * designer previews in. Tearing the rig down shuts the game instance down and takes its world context
  * off the engine's list, so the next test does not find it.
+ *
+ * PROCESS-WIDE STATE the rig disturbs is put back when it goes -- UUITextInput's "a host delivers
+ * characters" switch -- and the counters that outlive worlds (the layout pass depth, the desired-size
+ * memo depth, the editor's compiling flag) are checked settled; see DescribeUnsettledProcessState.
  *
  * THE VIEWPORT. A game world with no player controller answers GetViewportSize with a 2x2 fallback,
  * which makes the canvas 2 units across and the projection matrix describe a 2x2 screen, and a ray
@@ -172,6 +177,18 @@ public:
 	/** Let frames pass with no input, for a test that wants the tree to settle. */
 	void PumpFrames(int32 InFrameCount);
 
+	/**
+	 * What the rig's tear-down says about the process-wide counters, as sentences -- empty when all
+	 * of them are settled. The destructor calls it with the live values (UDreamWidget's layout pass
+	 * depth, UDreamPanelLayoutBase's desired-size memo depth, UDreamUIManagerObject's compiling flag)
+	 * and reports every sentence against the bound test.
+	 *
+	 * Taken apart and public because the state it exists to catch -- a layout pass entered and never
+	 * left -- is not one a test can safely produce for real: the only way to be inside a layout pass
+	 * at tear-down is to tear down from inside one. A test hands it the values instead.
+	 */
+	static TArray<FString> DescribeUnsettledProcessState(int32 InLayoutPassDepth, int32 InDesiredSizeMemoDepth, bool bInBlueprintCompiling);
+
 private:
 	explicit FDreamDriverRig(const FDreamRigOptions& InOptions);
 
@@ -188,6 +205,34 @@ private:
 	 */
 	void OpenBeginPlayGate();
 
+	/**
+	 * Process-wide state that outlives worlds, and so outlives rigs: remembered when the rig is
+	 * built, put back or checked when it goes. See the definitions for which is which and why.
+	 */
+	void CaptureProcessState();
+	UUITextInput* FindEditInRigTree() const;
+	void EndLeakedTextEdit(UUITextInput* InEditInRigTree, FAutomationTestBase* InTest);
+	static void ReportTextEditOutlivingWorld(const UWorld* InRigWorld, FAutomationTestBase* InTest);
+	void RestoreAndVerifyProcessState(FAutomationTestBase* InTest);
+	static void ReportRigProblem(FAutomationTestBase* InTest, const FString& InMessage);
+
+	/**
+	 * The editor's Blueprint compile announcements, heard for the session from the first rig on (the
+	 * listener lives in the .cpp), and the compiling flag as this rig found it.
+	 *
+	 * UDreamUIManagerObject's compiling flag, checked at tear-down, is set on every pre-compile and
+	 * cleared on the announcement that the compile is over, which the editor makes for every compile,
+	 * failed ones included -- so a flag still set at tear-down is always a compile the editor never
+	 * announced as finished. It is process state, and what left it set has as often as not happened
+	 * before the rig was built, in whatever test ran first; what was heard, and when, is how the rig
+	 * says which Blueprint it was.
+	 */
+	void WatchBlueprintCompiles();
+	/** Whether UDreamUIManagerObject believed a Blueprint was compiling when the rig was built. */
+	bool bBlueprintCompilingWhenBuilt = false;
+	/** GFrameCounter when the rig was built, for the report. */
+	uint64 BuiltAtFrame = 0;
+
 	/** Torn down last, because everything below lives inside it. Exactly one of the two exists, chosen by bWithGameInstance. */
 	TUniquePtr<DreamTests::FScopedGameWorld> ScopedWorld;
 	TUniquePtr<DreamTests::FScopedGameInstanceWorld> ScopedGameInstanceWorld;
@@ -198,4 +243,6 @@ private:
 
 	FDreamRigOptions Options;
 	FString BuildFailure;
+	/** UUITextInput's "a host delivers characters" switch as the rig found it. */
+	bool bHostDeliveredCharacterEventsAtStart = false;
 };

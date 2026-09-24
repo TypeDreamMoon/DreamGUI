@@ -3,9 +3,12 @@
 #include "Driver/DreamDriverRig.h"
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "Editor.h"
+#include "Engine/Blueprint.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
@@ -13,10 +16,15 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
+#include "Interaction/UITextInput.h"
+#include "Misc/AutomationTest.h"
+#include "Misc/CoreDelegates.h"
 
 #include "Driver/DreamDriverInputModule.h"
 #include "DreamScopedGameInstanceWorld.h"
 #include "DreamScopedWorld.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogDreamDriverRig, Log, All);
 
 FDreamDriverRig FDreamDriverRig::Headless(FIntPoint InViewportSize)
 {
@@ -38,6 +46,11 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	// Created unconditionally, even if the build below goes wrong, so Driver() is always answerable
 	// and a test that forgot to check IsUsable fails on an assertion rather than on a null driver.
 	DriverInstance = MakeShared<FDreamDriver>(*DriverContext);
+
+	// Before anything is built, because building is what disturbs them: the process-wide switches a
+	// text field flips the first time it is typed into outlive every world, and a rig that left them
+	// flipped would decide which road the NEXT test's characters take.
+	CaptureProcessState();
 
 	// 1. The world. With a game instance by default, because the tween manager is a game instance
 	// subsystem: without one every UDreamTweenManager::To answers null, every Selectable transition
@@ -134,6 +147,267 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	}
 }
 
+void FDreamDriverRig::CaptureProcessState()
+{
+	// Only the switch. The field being edited is not captured, because it is not restored: see
+	// EndLeakedTextEdit for why, and for what is guaranteed about it instead.
+	bHostDeliveredCharacterEventsAtStart = UUITextInput::IsHostDeliveringCharacterEvents();
+	WatchBlueprintCompiles();
+}
+
+#if WITH_EDITOR
+namespace DreamDriverRigCompileLog
+{
+	/**
+	 * The editor's Blueprint compile announcements, for the rest of the session from the first rig on.
+	 *
+	 * The compiling flag checked at tear-down is process state, and so is whatever set it: the compile
+	 * that leaves it set has as often as not happened before the rig was built -- in a designer test
+	 * just ahead of it, say -- and a rig that heard only what happened while it was up could say
+	 * neither which Blueprint that was nor whether its end was ever announced. So the announcements
+	 * are heard once for the session, and the last few kept with the frame and the test they came in.
+	 */
+	struct FAnnouncement
+	{
+		/** OnBlueprintCompiled names no Blueprint; OnBlueprintPreCompile does. */
+		bool bFinished = false;
+		FString Blueprint;
+		uint64 Frame = 0;
+		FString DuringTest;
+	};
+
+	/** Enough to show what came just before a rig, without keeping the session's worth. */
+	constexpr int32 KeptAnnouncements = 8;
+
+	TArray<FAnnouncement> Recent;
+	FDelegateHandle PreCompileHandle;
+	FDelegateHandle CompiledHandle;
+	FDelegateHandle EnginePreExitHandle;
+	uint64 ListeningSinceFrame = 0;
+
+	void Record(bool bInFinished, const UBlueprint* InBlueprint)
+	{
+		if (Recent.Num() >= KeptAnnouncements)
+		{
+			Recent.RemoveAt(0);
+		}
+		FAnnouncement& Announcement = Recent.AddDefaulted_GetRef();
+		Announcement.bFinished = bInFinished;
+		Announcement.Blueprint = InBlueprint != nullptr ? InBlueprint->GetPathName() : FString();
+		Announcement.Frame = GFrameCounter;
+		const FAutomationTestBase* Running = FAutomationTestFramework::Get().GetCurrentTest();
+		Announcement.DuringTest = Running != nullptr ? Running->GetTestFullName() : FString(TEXT("no test"));
+	}
+
+	void EnsureListening()
+	{
+		if (GEditor == nullptr || PreCompileHandle.IsValid())
+		{
+			return;
+		}
+		ListeningSinceFrame = GFrameCounter;
+		PreCompileHandle = GEditor->OnBlueprintPreCompile().AddLambda([](UBlueprint* InBlueprint)
+		{
+			Record(false, InBlueprint);
+		});
+		CompiledHandle = GEditor->OnBlueprintCompiled().AddLambda([]()
+		{
+			Record(true, nullptr);
+		});
+		// Taken off again before the editor goes away: the two lambdas are code in this module.
+		EnginePreExitHandle = FCoreDelegates::OnEnginePreExit.AddLambda([]()
+		{
+			if (GEditor != nullptr)
+			{
+				GEditor->OnBlueprintPreCompile().Remove(PreCompileHandle);
+				GEditor->OnBlueprintCompiled().Remove(CompiledHandle);
+			}
+			PreCompileHandle.Reset();
+			CompiledHandle.Reset();
+		});
+	}
+
+	FString Describe(const FAnnouncement& InAnnouncement)
+	{
+		return InAnnouncement.bFinished
+			? FString::Printf(TEXT("frame %llu, a compile announced finished (during %s)"), InAnnouncement.Frame, *InAnnouncement.DuringTest)
+			: FString::Printf(TEXT("frame %llu, %s began compiling (during %s)"), InAnnouncement.Frame, *InAnnouncement.Blueprint, *InAnnouncement.DuringTest);
+	}
+
+	/**
+	 * What was heard, said for a compiling flag found set at tear-down -- which is always a leak.
+	 *
+	 * UDreamUIManagerObject sets the flag on OnBlueprintPreCompile and clears it on OnBlueprintCompiled
+	 * itself, and the editor pairs the two for every compile, failed ones included. So a flag still set
+	 * once the rig is down is a compile the editor never announced as finished, and the sentence names
+	 * the Blueprint that began it, the frame and the test it came in, whether the flag was already set
+	 * when the rig was built -- a compile left open by an earlier test -- and the announcements before.
+	 */
+	FString DescribeSetFlag(bool bInSetWhenBuilt, uint64 InBuiltAtFrame)
+	{
+		const FAnnouncement* Last = Recent.Num() > 0 ? &Recent.Last() : nullptr;
+		FString Why;
+		if (Last == nullptr)
+		{
+			Why = FString::Printf(TEXT("The editor's Blueprint compiling flag is set and no compile has been announced since the rigs began listening at frame %llu."),
+				ListeningSinceFrame);
+		}
+		else if (Last->bFinished)
+		{
+			// Not expected: the clear runs inside the very broadcast recorded here. Said as it is, so a
+			// change to that ordering shows up as itself rather than as a mystery.
+			Why = FString::Printf(TEXT("The editor's Blueprint compiling flag is set although the last announcement heard, at frame %llu during %s, was a compile finishing."),
+				Last->Frame, *Last->DuringTest);
+		}
+		else
+		{
+			Why = FString::Printf(TEXT("The editor's Blueprint compiling flag is set: %s began compiling at frame %llu, during %s, and no compile has been announced finished since."),
+				*Last->Blueprint, Last->Frame, *Last->DuringTest);
+		}
+		TArray<FString> Heard;
+		for (const FAnnouncement& Announcement : Recent)
+		{
+			Heard.Add(Describe(Announcement));
+		}
+		Why += FString::Printf(TEXT(" The flag was %s when this rig was built, at frame %llu. Heard, oldest first: %s."),
+			bInSetWhenBuilt ? TEXT("already set") : TEXT("clear"), InBuiltAtFrame,
+			Heard.Num() > 0 ? *FString::Join(Heard, TEXT("; ")) : TEXT("nothing"));
+		return Why;
+	}
+}
+#endif
+
+void FDreamDriverRig::WatchBlueprintCompiles()
+{
+#if WITH_EDITOR
+	DreamDriverRigCompileLog::EnsureListening();
+	bBlueprintCompilingWhenBuilt = UDreamUIManagerObject::GetIsBlueprintCompiling();
+	BuiltAtFrame = GFrameCounter;
+#endif
+}
+
+TArray<FString> FDreamDriverRig::DescribeUnsettledProcessState(int32 InLayoutPassDepth, int32 InDesiredSizeMemoDepth, bool bInBlueprintCompiling)
+{
+	TArray<FString> Complaints;
+	if (InLayoutPassDepth != 0)
+	{
+		Complaints.Add(FString::Printf(TEXT("UDreamWidget's layout pass depth is %d after the rig was torn down; a layout pass was entered and never left, so every later size edit is being taken for layout output"), InLayoutPassDepth));
+	}
+	if (InDesiredSizeMemoDepth != 0)
+	{
+		Complaints.Add(FString::Printf(TEXT("UDreamPanelLayoutBase's desired-size memo depth is %d after the rig was torn down; the memo is still live, so later measurements can be answered from a pass that is over"), InDesiredSizeMemoDepth));
+	}
+	if (bInBlueprintCompiling)
+	{
+		Complaints.Add(TEXT("UDreamUIManagerObject still believes a Blueprint is compiling after the rig was torn down; everything that defers itself during a compile will keep deferring"));
+	}
+	return Complaints;
+}
+
+UUITextInput* FDreamDriverRig::FindEditInRigTree() const
+{
+	UUITextInput* Active = UUITextInput::GetActiveTextInput();
+	UDreamWidget* RigRoot = DriverContext.IsValid() ? DriverContext->Root : nullptr;
+	if (Active == nullptr || !IsValid(RigRoot))
+	{
+		return nullptr;
+	}
+	// Only a field under the rig's own root. A tree built elsewhere in the world -- a world-space
+	// panel is its own root -- goes down with the world, not with this root, so its edit is still
+	// legitimately open at this point and is checked after the world instead.
+	for (UDreamWidget* Walk = Active->GetWidget(); Walk != nullptr; Walk = Walk->GetParent())
+	{
+		if (Walk == RigRoot)
+		{
+			return Active;
+		}
+	}
+	return nullptr;
+}
+
+void FDreamDriverRig::EndLeakedTextEdit(UUITextInput* InEditInRigTree, FAutomationTestBase* InTest)
+{
+	// The field being edited is not put back to what it was before the rig: its only writer is
+	// ActivateInput, and reviving a field from before this rig -- from another test's world, most
+	// likely already gone -- is not something a tear-down should do. What is guaranteed is weaker and
+	// is the part that matters: the process-wide pointer does not name anything of THIS rig's once
+	// it is gone. The rig's tree has been destroyed by the time this runs, which ends an edit on
+	// unregister (UUITextInput::OnUnregister); the field that was being edited in it and is still
+	// named here is one that tear-down missed, which is a runtime fault to report, and the edit is
+	// ended through the field's own DeactivateInput -- while its world still stands -- so it cannot
+	// route the next test's characters into a dead world.
+	if (InEditInRigTree != nullptr && UUITextInput::GetActiveTextInput() == InEditInRigTree)
+	{
+		ReportRigProblem(InTest, TEXT("A text field of this rig was still the active text input after its tree was destroyed; its edit has been ended here so it does not leak into the next test"));
+		InEditInRigTree->DeactivateInput(false);
+	}
+}
+
+void FDreamDriverRig::ReportTextEditOutlivingWorld(const UWorld* InRigWorld, FAutomationTestBase* InTest)
+{
+	// After the world: every tree in it has gone down with the UI manager (its Deinitialize destroys
+	// the registered trees), a world-space panel's included, and every edit with them. The weak
+	// pointer answers null for a field the world took with it, so anything still named here survived
+	// its own world -- reported, and left alone, because there is no longer a world to end it in.
+	UUITextInput* StillActive = UUITextInput::GetActiveTextInput();
+	if (StillActive != nullptr && InRigWorld != nullptr && StillActive->GetWorld() == InRigWorld)
+	{
+		ReportRigProblem(InTest, TEXT("A text field of this rig's world is still the active text input after the world was destroyed"));
+	}
+}
+
+void FDreamDriverRig::RestoreAndVerifyProcessState(FAutomationTestBase* InTest)
+{
+	// Put back what the rig found. The character switch is class-wide and flipped for good by the
+	// first HandleCharacterInput, so without this a test that types would silently move every test
+	// after it off the key-to-character road -- the road a project without a character-delivering
+	// viewport client is actually on.
+	UUITextInput::SetHostDeliversCharacterEventsForTesting(bHostDeliveredCharacterEventsAtStart);
+
+	// Last, once the tree and the world are both gone, because these are counters the rig's whole
+	// life could have moved: a layout pass or a desired-size memo scope that was entered and never
+	// left, or a compile the editor object never heard finish. Each of them outlives worlds and would
+	// quietly change how the next test's layout behaves.
+	const int32 MemoDepth = UDreamPanelLayoutBase::GetDesiredSizeMemoDepthForTesting();
+	bool bCompiling = false;
+#if WITH_EDITOR
+	// Set at all is the leak: the editor object clears it on the announcement that a compile is over,
+	// so nothing is still queued by now. Reported, with what was heard and in which test, whether the
+	// compile began while the rig was up or before it was built (DreamDriverRigCompileLog).
+	if (UDreamUIManagerObject::GetIsBlueprintCompiling())
+	{
+		bCompiling = true;
+		const FString Why = DreamDriverRigCompileLog::DescribeSetFlag(bBlueprintCompilingWhenBuilt, BuiltAtFrame);
+		if (InTest != nullptr)
+		{
+			InTest->AddInfo(Why);
+		}
+		else
+		{
+			UE_LOG(LogDreamDriverRig, Display, TEXT("%s"), *Why);
+		}
+	}
+#endif
+	for (const FString& Complaint : DescribeUnsettledProcessState(UDreamWidget::GetLayoutPassDepthForTesting(), MemoDepth, bCompiling))
+	{
+		ReportRigProblem(InTest, Complaint);
+	}
+}
+
+void FDreamDriverRig::ReportRigProblem(FAutomationTestBase* InTest, const FString& InMessage)
+{
+	// The bound test when there is one, which is where the failure belongs; otherwise the log at
+	// Error, which the automation framework still turns into a failure of whatever test is running.
+	if (InTest != nullptr)
+	{
+		InTest->AddError(InMessage);
+	}
+	else
+	{
+		UE_LOG(LogDreamDriverRig, Error, TEXT("%s"), *InMessage);
+	}
+}
+
 void FDreamDriverRig::OpenBeginPlayGate()
 {
 	UWorld* HostWorld = DriverContext.IsValid() ? DriverContext->World : nullptr;
@@ -167,10 +441,17 @@ void FDreamDriverRig::OpenBeginPlayGate()
 
 FDreamDriverRig::~FDreamDriverRig()
 {
+	// Taken before the context goes: the checks at the very end report against the test that was
+	// running, and by then the context that knew it has been released.
+	FAutomationTestBase* TeardownTest = DriverContext.IsValid() ? DriverContext->CurrentTest : nullptr;
+	UWorld* RigWorld = DriverContext.IsValid() ? DriverContext->World : nullptr;
+
 	// Reverse order, and the widget tree before the world: DestroyWidget unregisters the tree from
 	// the UI manager while the world is still whole, which is where the manager expects to be told.
 	if (DriverContext.IsValid())
 	{
+		// Asked before the tree goes, while "is it under the rig's root" still has an answer.
+		UUITextInput* EditInRigTree = FindEditInRigTree();
 		if (UDreamWidget* RootWidget = DriverContext->Root; IsValid(RootWidget))
 		{
 			RootWidget->DestroyWidget();
@@ -183,6 +464,9 @@ FDreamDriverRig::~FDreamDriverRig()
 		{
 			RigInputModule->UnregisterInputModuleFromEventSystem();
 		}
+		// After the tree, before the world: the tree's destruction is what should have ended an edit
+		// in it, and the world still being whole is what lets a missed one be ended properly.
+		EndLeakedTextEdit(EditInRigTree, TeardownTest);
 	}
 	DriverInstance.Reset();
 	DriverContext.Reset();
@@ -190,6 +474,9 @@ FDreamDriverRig::~FDreamDriverRig()
 	// and takes its world context off the engine's list.
 	ScopedWorld.Reset();
 	ScopedGameInstanceWorld.Reset();
+
+	ReportTextEditOutlivingWorld(RigWorld, TeardownTest);
+	RestoreAndVerifyProcessState(TeardownTest);
 }
 
 bool FDreamDriverRig::IsUsable() const
