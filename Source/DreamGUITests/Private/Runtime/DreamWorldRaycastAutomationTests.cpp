@@ -283,9 +283,11 @@ bool FDreamWorldRaycastWorldBlockerOccludesTest::RunTest(const FString& Paramete
 
 	FVector RayOrigin = FVector::ZeroVector, RayDirection = FVector::ZeroVector, RayEnd = FVector::ZeroVector;
 	TArray<FDreamUIHitResult> HitArray;
+	// Turned off explicitly, because occlusion is on by default (a world pointer that clicked through
+	// walls reached panels nobody could see, and it is the only road to a render-target surface; the
+	// default is proven in DreamDriverWorldOcclusionAutomationTests). Off, the wall is not consulted.
+	Raycaster->SetOccludeByWorld(false);
 	Raycaster->Raycast(EventData, RayOrigin, RayDirection, RayEnd, HitArray);
-	// Off by default: a panel floating in front of a wall is the ordinary case, and paying for a line
-	// trace per pointer per frame to discover that is not.
 	if (TestEqual(TEXT("With occlusion off the wall is not consulted"), HitArray.Num(), 1))
 	{
 		TestEqual(TEXT("...and the panel answers"), HitArray[0].Widget.Get(), Panel);

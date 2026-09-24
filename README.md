@@ -263,8 +263,12 @@ Interaction needs no setup. On `BeginPlay` the component asks for an event syste
 `UDreamWorldSpaceRaycaster` for each local player and supplies whichever is missing, so pressing Play
 is enough to click a button hanging in the world. The raycaster points either from the cursor or from
 the middle of the screen (`PointerSource`), and `bOccludeByWorld` makes solid geometry block a click
-the way it blocks a line trace. Put a raycaster of your own on any actor with the same user index and
-nothing is added on top of it — the test is for one that exists, not for one this plugin made.
+the way it blocks a line trace. It is on by default: whatever blocks the raycaster's `TraceChannel`
+(Visibility) stops the pointer, and the actor it hits is handed the pointer's events through the
+pointer interfaces, which is also how a render-target surface on a mesh is clicked. To click through
+walls instead, untick it on a raycaster of your own, or call `SetOccludeByWorld(false)` on the
+player's. Put a raycaster of your own on any actor with the same user index and nothing is added on
+top of it — the test is for one that exists, not for one this plugin made.
 
 From code it is the two calls that were already there: `ConstructWidget`, then
 `AttachWidgetToSceneComponent` on whatever component should carry the tree.
