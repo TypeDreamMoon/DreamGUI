@@ -31,9 +31,21 @@ namespace DreamStandaloneInputEventSystemActorLocal
 	 *
 	 * Gamepad and keyboard are bound together on purpose: navigation is pointer 0 either way, so a
 	 * player can move with the stick and confirm with Enter in the same session.
+	 *
+	 * The list is Slate's Accept (FNavigationConfig's KeyActionRules): Enter, SpaceBar and the pad's
+	 * Virtual_Gamepad_Accept. SpaceBar was missing, so the space bar that clicks a focused UMG button
+	 * did nothing to a highlighted one here. The pad key is written out instead of read through the
+	 * virtual key because a static table can be built before EKeys has registered its keys (a
+	 * monolithic build runs every static initialiser first), and an unregistered virtual key resolves
+	 * to nothing; what it resolves to -- FGenericPlatformInput::GetGamepadAcceptKey, which no platform
+	 * this engine carries overrides -- is Gamepad_FaceButton_Bottom.
+	 *
+	 * Typing a space into a field never also clicks: the field being edited binds SpaceBar on an input
+	 * component above this actor's and consumes it (UUITextInput::BindKeys), exactly as it does Enter.
 	 */
 	static const FKey NavigationTriggerKeys[] = {
 		EKeys::Enter,
+		EKeys::SpaceBar,
 		EKeys::Gamepad_FaceButton_Bottom,
 	};
 
