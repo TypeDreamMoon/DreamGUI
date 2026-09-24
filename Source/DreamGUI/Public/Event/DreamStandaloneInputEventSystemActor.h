@@ -12,9 +12,11 @@ class UDreamStandaloneInputModule;
 /**
  * A ready-to-place event system driven by the engine's legacy key bindings.
  *
- * This is the C++ form of the DreamEventSystemActor preset Blueprint, which wired the same keys by
- * hand in its event graph. Everything it did lives here: the input module component, the BeginPlay
- * registration, and one binding per key.
+ * The preset Blueprint /DreamGUI/Blueprints/DreamEventSystemActor is a data-only subclass of this
+ * class that adds nothing of its own. It used to wire the same keys by hand in an event graph on the
+ * bare ADreamEventSystemActor; everything that graph did lives here -- the input module component,
+ * the BeginPlay registration, and one binding per key -- so the Blueprint now gets exactly what this
+ * class binds (DreamGUI.Input.StandalonePreset.* holds it to that).
  *
  * Placing this needs no input setup in the project -- AutoReceiveInput claims player 0 and the keys
  * are bound directly rather than through action mappings, which is what makes the preset useful as a
@@ -153,10 +155,10 @@ protected:
 	/**
 	 * Which navigation direction a key stands for, or None if it is not a navigation key.
 	 *
-	 * The preset Blueprint left every InputNavigation call on None, which made press and release
-	 * indistinguishable -- UDreamStandaloneInputModule::InputNavigation writes the argument straight
-	 * into NavigateDirection on press and None on release, so directional navigation never moved.
-	 * Keeping the mapping in one place is what stops that from being expressible again.
+	 * The preset Blueprints' old event graphs left every InputNavigation call on None, which made press
+	 * and release indistinguishable -- UDreamStandaloneInputModule::InputNavigation writes the argument
+	 * straight into NavigateDirection on press and None on release, so directional navigation never
+	 * moved. Keeping the mapping in one place is what stops that from being expressible again.
 	 */
 	static EDreamUINavigationDirection GetNavigationDirectionForKey(const FKey& Key);
 

@@ -133,8 +133,10 @@ ADreamStandaloneInputEventSystemActor::ADreamStandaloneInputEventSystemActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	// The preset Blueprint carried a DefaultSceneRoot, and a placed actor still wants something to
-	// hold a transform, so the root is kept rather than hanging the module off the event system.
+	// The preset Blueprints used to carry a DefaultSceneRoot of their own, and a placed actor still
+	// wants something to hold a transform, so the root is kept rather than hanging the module off the
+	// event system. Both presets are data-only subclasses now and use this one; a subclass must not add
+	// a component under either of these two names, or constructing it destroys the native one.
 	USceneComponent* Root = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultSceneRoot"));
 	SetRootComponent(Root);
 

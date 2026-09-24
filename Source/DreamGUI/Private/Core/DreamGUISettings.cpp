@@ -47,7 +47,9 @@ UDreamGUISettings::UDreamGUISettings()
 
 	// The STANDALONE native preset, and the choice is load-bearing: this class is the auto-spawn
 	// path's actor, and of the two native presets it is the only one that works unconfigured --
-	// AutoReceiveInput plus direct key bindings, "useful as a drop-in" by its own doc.
+	// AutoReceiveInput plus direct key bindings, "useful as a drop-in" by its own doc. The plugin's
+	// /DreamGUI/Blueprints/DreamEventSystemActor is a data-only subclass of it that adds nothing
+	// (DreamGUI.Input.StandalonePreset.*), so pointing this setting at that Blueprint behaves the same.
 	// ADreamEnhancedInputEventSystemActor looks like the newer pick but leaves its mapping context
 	// and mouse actions deliberately empty for a Blueprint to fill, so pointing here at the C++ class
 	// spawned an event system that never heard a click -- every auto-spawned screen UI lost

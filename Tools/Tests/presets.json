@@ -17,7 +17,7 @@
       "include": ["DreamGUI.", "DreamTween."],
       "exclude": ["DreamGUI.Pie."],
       "args": ["-nullrhi"],
-      "minTests": 1382,
+      "minTests": 1386,
       "timeoutMinutes": 20
     },
     "Interaction": {
