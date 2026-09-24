@@ -33,8 +33,9 @@
  *
  * A widget's id is its class member variable (and therefore every graph node that reads it), the
  * WidgetName key of a property binding, and the '/'-joined display-name path an embedded animation
- * resolves through. Renaming a node in a .dui breaks all three at once, and before P0 only one of
- * them said so. These tests are about the repair.
+ * resolves through. Renaming a node in a .dui breaks all three at once, and before the compiler
+ * checked animation binding paths (ValidateAnimationBindings) only one of them said so. These tests
+ * are about the repair.
  *
  * They come in two shapes, deliberately, because the three legs are not equally reachable through a
  * compile TODAY:
@@ -491,9 +492,9 @@ bool FDreamUIWasClauseThroughACompileTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("and now reads the new variable"), Moved->GetVarName(), FName(TEXT("OkBtn")));
 	}
 
-	// And the author is told the clause has done its job. This is the whole user-facing half of P7:
-	// without it the line stays in the file forever, and a stale (was:) is what makes the next
-	// rename ambiguous.
+	// And the author is told the clause has done its job. This is the whole user-facing half of the
+	// (was:) migration: without it the line stays in the file forever, and a stale (was:) is what
+	// makes the next rename ambiguous.
 	TestMessagesContain(*this, TEXT("the compile says the clause can be deleted"), Results, TEXT("can be deleted"));
 	TestMessagesContain(*this, TEXT("naming the file it is in"), Results, FPaths::GetCleanFilename(Source.FilePath));
 

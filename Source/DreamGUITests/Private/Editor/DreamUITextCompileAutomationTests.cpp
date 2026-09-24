@@ -78,9 +78,10 @@ namespace DreamUITextCompileTestLocal
 	 * A widget blueprint in a real package, with the machinery a compile needs.
 	 *
 	 * FKismetEditorUtilities::CreateBlueprint rather than a hand-built object, and a full
-	 * CompileBlueprint rather than calling the compiler's pieces: what P3 claims is that the hook is
-	 * wired into Kismet at the right override, and every way of testing that from the inside passes
-	 * whether it is or not.
+	 * CompileBlueprint rather than calling the compiler's pieces: what these tests claim is that reading
+	 * the .dui is wired into Kismet at the right override -- PopulateBlueprintGeneratedVariables, before
+	 * the class counts the widgets it declares variables for -- and every way of testing that from the
+	 * inside passes whether it is or not.
 	 */
 	struct FScopedBlueprint
 	{

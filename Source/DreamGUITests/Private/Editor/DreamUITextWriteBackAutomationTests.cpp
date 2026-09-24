@@ -464,9 +464,10 @@ bool FDreamUIWriteBackBoundPropertyDoesNotSpoilTheBatchTest::RunTest(const FStri
 {
 	using namespace DreamUIWriteBackTestLocal;
 
-	// Until P6 greys them out, the details panel will happily let someone drag a bound property's
-	// value. The patcher refuses to overwrite the `<-` with a literal, and the point of this test is
-	// that the refusal is LOCAL: the other property in the same flush still lands.
+	// The designer's details panel greys a bound property out (DreamUITextAuthoring::IsPropertyReadOnly),
+	// but the panel is not the only thing that can write one -- this test pokes it directly -- so the
+	// patcher is the last word. It refuses to overwrite the `<-` with a literal, and the point of this
+	// test is that the refusal is LOCAL: the other property in the same flush still lands.
 	const FString Source = BoundFixture();
 	FBuiltTree Live = BuildTree(Source);
 	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid())) return false;
