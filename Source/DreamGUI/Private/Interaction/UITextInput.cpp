@@ -19,6 +19,7 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/World.h"
 #include "Extensions/DreamGameViewportClient.h"
 #include "Interaction/UIButton.h"
 #include "Misc/Char.h"
@@ -44,6 +45,26 @@ namespace DreamTextInputLocal
 		if (!InTextVisual.IsValid())return false;
 		const UDreamWidget* Widget = InTextVisual->GetWidget();
 		return Widget != nullptr && Widget->GetRenderCanvas() != nullptr;
+	}
+
+	/**
+	 * The clock a held press is timed against: the field's world's REAL time.
+	 *
+	 * The world's, because everything else about a pointer is timed on the world's clock -- the
+	 * pointer module times its own long press, a click run and navigation repeat there -- and a field
+	 * reading the wall clock instead was the one gesture no frame-by-frame driver (a test, a replay, a
+	 * fixed-step capture) could advance. REAL time rather than GetTimeSeconds, because a text field
+	 * has to go on working in a paused game's menus: Slate times its UI in real time for the same
+	 * reason, and GetTimeSeconds stands still while the game is paused.
+	 *
+	 * The wall clock only when the field has no world at all -- a Blueprint authoring tree, a field
+	 * being built -- where there is no other clock to read and the old behaviour is the right one.
+	 * The same field reads the same clock for a whole hold: its world does not change under a press.
+	 */
+	static double ContextMenuHoldClockSeconds(const UObject* InField)
+	{
+		const UWorld* World = InField != nullptr ? InField->GetWorld() : nullptr;
+		return World != nullptr ? World->GetRealTimeSeconds() : FPlatformTime::Seconds();
 	}
 }
 
@@ -94,7 +115,7 @@ void UUITextInput::Tick(float DeltaTime)
 		// The long press maturing. Timed here rather than with a timer because the tick already runs
 		// for exactly as long as the edit does, and a timer would outlive a field torn down mid-hold.
 		if (bPointerHeldForContextMenu
-			&& (FPlatformTime::Seconds() - PointerHeldStartTime) >= (double)ContextMenuLongPressTime)
+			&& (DreamTextInputLocal::ContextMenuHoldClockSeconds(this) - PointerHeldStartTime) >= (double)ContextMenuLongPressTime)
 		{
 			bPointerHeldForContextMenu = false;
 			ShowContextMenu();
@@ -2207,7 +2228,7 @@ bool UUITextInput::OnPointerDown_Implementation(UDreamPointerEventData* EventDat
 		// A held press is touch's right click: there is no second button to press, so the gesture is
 		// time. The pointer module reports a press and a release, not a hold, so the field times it.
 		bPointerHeldForContextMenu = bAllowContextMenu && EventData->MouseButtonType == EDreamUIMouseButtonType::Left;
-		PointerHeldStartTime = FPlatformTime::Seconds();
+		PointerHeldStartTime = DreamTextInputLocal::ContextMenuHoldClockSeconds(this);
 	}
 	if (bInputActive)//if already active, then put caret position at mouse position
 	{
