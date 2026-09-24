@@ -53,6 +53,12 @@ namespace DreamStandaloneInputEventSystemActorLocal
 	 * Next and Prev were implemented on UUISelectable from the start and reachable from nothing: no
 	 * key in this table produced either, so the sequential-focus half of navigation was dead code in
 	 * every project using the preset.
+	 *
+	 * The arrow keys and the D-pad are the rows of Slate's own table (FNavigationConfig's
+	 * KeyEventRules pairs Left with Gamepad_DPad_Left, and so on round), so a D-pad moves the highlight
+	 * exactly as an arrow key does -- the one navigation road this library promises the keyboard and
+	 * the gamepad. The D-pad was missing, and on a pad the stick was then the only way to navigate.
+	 * The left stick's direction keys stand in for Slate's analog navigation on Gamepad_LeftX/LeftY.
 	 */
 	static const TPair<FKey, EDreamUINavigationDirection> NavigationDirectionKeys[] = {
 		{ EKeys::Left,                     EDreamUINavigationDirection::Left },
@@ -60,6 +66,10 @@ namespace DreamStandaloneInputEventSystemActorLocal
 		{ EKeys::Up,                       EDreamUINavigationDirection::Up },
 		{ EKeys::Down,                     EDreamUINavigationDirection::Down },
 		{ EKeys::Tab,                      EDreamUINavigationDirection::Next },
+		{ EKeys::Gamepad_DPad_Left,        EDreamUINavigationDirection::Left },
+		{ EKeys::Gamepad_DPad_Right,       EDreamUINavigationDirection::Right },
+		{ EKeys::Gamepad_DPad_Up,          EDreamUINavigationDirection::Up },
+		{ EKeys::Gamepad_DPad_Down,        EDreamUINavigationDirection::Down },
 		{ EKeys::Gamepad_LeftStick_Left,   EDreamUINavigationDirection::Left },
 		{ EKeys::Gamepad_LeftStick_Right,  EDreamUINavigationDirection::Right },
 		{ EKeys::Gamepad_LeftStick_Up,     EDreamUINavigationDirection::Up },
