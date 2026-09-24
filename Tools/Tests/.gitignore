@@ -1,0 +1,3 @@
+# The scripts turn bytecode caching off (sys.dont_write_bytecode, python -B); this is for a run that did not.
+__pycache__/
+*.pyc
