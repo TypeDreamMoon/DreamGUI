@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/Components/DreamCanvas.h"   // EDreamCanvasScaleMode
 
 /**
  * The small vocabulary every part of the driver shares: how a rig is built, and the words input
@@ -16,4 +17,8 @@ struct FDreamRigOptions
 	FIntPoint ViewportSize = FIntPoint(1280, 720);
 	/** The world belongs to a UGameInstance, so GameInstance subsystems (the tween manager) exist and the pump ticks them. false = a bare UWorld::CreateWorld world, exactly as before. */
 	bool bWithGameInstance = true;
+	/** Root canvas scaling. Unset = leave the canvas's own default. */
+	TOptional<EDreamCanvasScaleMode> CanvasScaleMode;
+	FVector2D ReferenceResolution = FVector2D(1280.0, 720.0);
+	float MatchFromWidthToHeight = 1.0f;
 };

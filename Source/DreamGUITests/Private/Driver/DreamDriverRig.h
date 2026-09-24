@@ -73,6 +73,11 @@ public:
 	/**
 	 * A headless rig built to InOptions. Headless(FIntPoint) is this with only the viewport size set,
 	 * which means it, too, builds a world that belongs to a GameInstance -- see FDreamRigOptions.
+	 *
+	 *     FDreamRigOptions Options;
+	 *     Options.CanvasScaleMode = EDreamCanvasScaleMode::ScaleWithScreenSize;
+	 *     Options.ReferenceResolution = FVector2D(1920.0, 1080.0);
+	 *     FDreamDriverRig Rig = FDreamDriverRig::Headless(Options);
 	 */
 	static FDreamDriverRig Headless(const FDreamRigOptions& InOptions);
 

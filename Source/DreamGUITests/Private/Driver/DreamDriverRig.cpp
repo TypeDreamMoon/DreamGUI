@@ -117,6 +117,18 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	// only viewport there is is the 2x2 fallback; handing the canvas a real size is what un-does that,
 	// and doing it in the other order would leave the fallback applied on top.
 	BuiltCanvas->SetViewportSizeOverride(InViewportSize);
+	// The scaler AFTER the viewport, through the canvas's own setters: each of them re-runs
+	// OnViewportParameterChanged, which recomputes the root's size and CanvasScale from the viewport
+	// size the canvas has cached -- so that has to be the substituted one already. The mode goes
+	// last, once the reference and the match it will read are in place; nothing is written when the
+	// options leave the mode unset, which keeps the canvas's own default (ConstantPixelSize) and
+	// today's rig exactly.
+	if (Options.CanvasScaleMode.IsSet())
+	{
+		BuiltCanvas->SetReferenceResolution(Options.ReferenceResolution);
+		BuiltCanvas->SetMatchFromWidthToHeight(Options.MatchFromWidthToHeight);
+		BuiltCanvas->SetScaleMode(Options.CanvasScaleMode.GetValue());
+	}
 	DriverContext->RootCanvas = BuiltCanvas;
 
 	UDreamScreenSpaceRaycaster* BuiltRaycaster = NewObject<UDreamScreenSpaceRaycaster>(Host);
