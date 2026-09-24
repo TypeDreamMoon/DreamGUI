@@ -13,6 +13,7 @@
 #include "Driver/DreamDriverTypes.h"
 
 class AActor;
+class APlayerController;
 class FAutomationTestBase;
 class UDreamCanvas;
 class UDreamEventSystem;
@@ -44,6 +45,10 @@ namespace DreamTests
  * control either snaps or never moves. The bare world is still one option away, and is what the
  * designer previews in. Tearing the rig down shuts the game instance down and takes its world context
  * off the engine's list, so the next test does not find it.
+ *
+ * WHERE INPUT ENTERS is an option too (FDreamRigOptions::InputHost): straight into the driver's
+ * module, as it always did, or through a real input actor behind a real player controller, built by
+ * DreamDriverGameHost. Either way the steps are the same; see FDreamDriverSequence.
  *
  * PROCESS-WIDE STATE the rig disturbs is put back when it goes -- UUITextInput's "a host delivers
  * characters" switch -- and the counters that outlive worlds (the layout pass depth, the desired-size
@@ -105,6 +110,10 @@ public:
 	const FDreamRigOptions& GetOptions() const;
 	/** The GameInstance the world belongs to; null when bWithGameInstance was false. */
 	UGameInstance* GetGameInstance() const;
+	/** Player 0's controller; null until EnsureGameInputHost or an actor input host has made one. */
+	APlayerController* GetPlayerController() const;
+	/** The actor the rig hangs its raycaster on -- and, under ModuleOnly, its event system and input module. */
+	AActor* GetHostActor() const;
 	/** Why IsUsable() is false, in words; empty while it is true. */
 	const FString& GetBuildFailure() const;
 
@@ -175,7 +184,9 @@ public:
 	 *    Spawning is not enough in a world nobody initialized for play; see the definition.
 	 *
 	 * Both are idempotent. Neither is done by the rig's constructor, so a test that never asks keeps
-	 * exactly the rig it had before this existed.
+	 * exactly the rig it had before this existed. A controller the context already has -- an input
+	 * host's, a PIE player's -- is the one used; one spawned here is written back to the context, so
+	 * GetPlayerController answers from then on.
 	 */
 	void EnsureGameInputHost();
 

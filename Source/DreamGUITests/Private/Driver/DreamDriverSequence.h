@@ -9,6 +9,7 @@
 #include "WaitUntil.h"
 
 #include "Driver/DreamDriverLocators.h"
+#include "Driver/DreamDriverTypes.h"
 
 class FAutomationTestBase;
 class UDreamInputKeySelector;
@@ -23,6 +24,9 @@ class UDreamWidget;
 class UClass;
 class UWorld;
 class UGameInstance;
+class APlayerController;
+class ULocalPlayer;
+class AActor;
 enum class EDreamUIMouseButtonType : uint8;
 enum class EDreamUINavigationDirection : uint8;
 
@@ -45,8 +49,21 @@ struct FDreamDriverContext
 	UDreamWidget* Root = nullptr;
 	UDreamCanvas* RootCanvas = nullptr;
 
+	/*
+	 * The game side of the world, for a rig that has one. All of these are optional: a bare-world
+	 * rig has none of them, and a ModuleOnly rig has a player controller only once EnsureGameInputHost
+	 * made one. Kept on the context rather than on the rig because the pump and the steps need them,
+	 * and the steps only ever see the context.
+	 */
 	/** The GameInstance that owns World. Null for a bare UWorld::CreateWorld world. */
 	UGameInstance* GameInstance = nullptr;
+	/** The world's player 0, once something has made or found one. EnsureGameInputHost reuses it rather than spawning a second. */
+	APlayerController* PlayerController = nullptr;
+	ULocalPlayer* LocalPlayer = nullptr;
+	/** The ADream*InputEventSystemActor the input goes through, when the input host is an actor. */
+	AActor* InputActor = nullptr;
+	/** Where input enters. Anything but ModuleOnly routes buttons, wheel, navigation, keys and touch through the game host. */
+	EDreamRigInputHost InputHost = EDreamRigInputHost::ModuleOnly;
 
 	/** The test currently running, so a step that fails can say so where a report will show it. Optional. */
 	FAutomationTestBase* CurrentTest = nullptr;

@@ -11,6 +11,25 @@
  * that only needs a word -- a game-host adapter, a PIE rig -- does not pull in either of them.
  */
 
+/** Where the rig's input enters the pipeline. */
+enum class EDreamRigInputHost : uint8
+{
+	/** Pointer, buttons, wheel, navigation and keys go straight into UDreamDriverInputModule and the edited text field (today's rig). */
+	ModuleOnly,
+	/** A real ADreamStandaloneInputEventSystemActor whose module is a UDreamDriverInputModule; buttons, wheel, navigation, touch and keys go through the PlayerController's input stack. */
+	StandaloneActor,
+	/** The same with ADreamEnhancedInputEventSystemActor and Enhanced Input mapping contexts. */
+	EnhancedActor,
+};
+
+/** One phase of a finger's contact. */
+enum class EDreamDriverTouchPhase : uint8
+{
+	Began,
+	Moved,
+	Ended,
+};
+
 /** How a rig is built. Every default reproduces today's rig except bWithGameInstance. */
 struct FDreamRigOptions
 {
@@ -21,4 +40,5 @@ struct FDreamRigOptions
 	TOptional<EDreamCanvasScaleMode> CanvasScaleMode;
 	FVector2D ReferenceResolution = FVector2D(1280.0, 720.0);
 	float MatchFromWidthToHeight = 1.0f;
+	EDreamRigInputHost InputHost = EDreamRigInputHost::ModuleOnly;
 };

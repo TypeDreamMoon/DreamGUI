@@ -20,6 +20,7 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/CoreDelegates.h"
 
+#include "Driver/DreamDriverGameHost.h"
 #include "Driver/DreamDriverInputModule.h"
 #include "DreamScopedGameInstanceWorld.h"
 #include "DreamScopedWorld.h"
@@ -46,6 +47,7 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	// Created unconditionally, even if the build below goes wrong, so Driver() is always answerable
 	// and a test that forgot to check IsUsable fails on an assertion rather than on a null driver.
 	DriverInstance = MakeShared<FDreamDriver>(*DriverContext);
+	DriverContext->InputHost = Options.InputHost;
 
 	// Before anything is built, because building is what disturbs them: the process-wide switches a
 	// text field flips the first time it is typed into outlive every world, and a rig that left them
@@ -81,6 +83,8 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	DriverContext->World = BuildWorld;
 	DriverContext->Manager = UDreamUIManagerWorldSubsystem::GetInstance(BuildWorld);
 
+	// 2. The actor the raycaster hangs on -- and, when the rig injects straight into the module, the
+	// event system and the module too.
 	Host = BuildWorld->SpawnActor<AActor>();
 	if (Host == nullptr)
 	{
@@ -88,19 +92,43 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		return;
 	}
 
-	UDreamEventSystem* BuiltEventSystem = NewObject<UDreamEventSystem>(Host);
-	// AddInstanceComponent before RegisterComponent, the way the world-space raycast fixture does it:
-	// it is what makes the component belong to the actor rather than merely be outered to it.
-	Host->AddInstanceComponent(BuiltEventSystem);
-	BuiltEventSystem->RegisterComponent();
-	DriverContext->EventSystem = BuiltEventSystem;
+	// 3. Where input enters.
+	if (Options.InputHost != EDreamRigInputHost::ModuleOnly)
+	{
+		// A real input actor behind a real player controller: the game host builds the local player,
+		// the controller and the actor, and hands back the actor's own event system and module. The
+		// rig does not second-guess what it built -- a host that cannot be built is a rig that is not
+		// usable, said in the host's own words.
+		FString WhyNot;
+		if (!DreamDriverGameHost::Build(*DriverContext, Options.InputHost, WhyNot))
+		{
+			BuildFailure = FString::Printf(TEXT("the input host could not be built: %s"),
+				WhyNot.IsEmpty() ? TEXT("the game host gave no reason") : *WhyNot);
+			return;
+		}
+		if (!IsValid(DriverContext->EventSystem) || !IsValid(DriverContext->InputModule))
+		{
+			BuildFailure = TEXT("the input host was built but did not provide an event system and an input module");
+			return;
+		}
+	}
+	else
+	{
+		UDreamEventSystem* BuiltEventSystem = NewObject<UDreamEventSystem>(Host);
+		// AddInstanceComponent before RegisterComponent, the way the world-space raycast fixture does it:
+		// it is what makes the component belong to the actor rather than merely be outered to it.
+		Host->AddInstanceComponent(BuiltEventSystem);
+		BuiltEventSystem->RegisterComponent();
+		DriverContext->EventSystem = BuiltEventSystem;
 
-	UDreamDriverInputModule* BuiltInputModule = NewObject<UDreamDriverInputModule>(Host);
-	Host->AddInstanceComponent(BuiltInputModule);
-	BuiltInputModule->RegisterComponent();
-	BuiltInputModule->RegisterInputModuleToEventSystem(BuiltEventSystem);
-	DriverContext->InputModule = BuiltInputModule;
+		UDreamDriverInputModule* BuiltInputModule = NewObject<UDreamDriverInputModule>(Host);
+		Host->AddInstanceComponent(BuiltInputModule);
+		BuiltInputModule->RegisterComponent();
+		BuiltInputModule->RegisterInputModuleToEventSystem(BuiltEventSystem);
+		DriverContext->InputModule = BuiltInputModule;
+	}
 
+	// 4. The root, its canvas and the screen-space raycaster.
 	UDreamWidget* BuiltRoot = NewObject<UDreamWidget>(BuildWorld, NAME_None, RF_Public | RF_Transactional);
 	BuiltRoot->SetDisplayName(TEXT("Root"));
 	BuiltRoot->OnRegister();
@@ -142,13 +170,13 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	BuiltRaycaster->ActivateRaycaster();
 	DriverContext->Raycaster = BuiltRaycaster;
 
+	// 5. Everything the world starts with exists; now it begins play, before any control is made on it.
+	OpenBeginPlayGate();
+
 	// Two settling frames before anyone touches it. The first runs the layout the attach queued, the
 	// second gives anything the first dirtied its own pass -- which is the one-pass convergence the
 	// manager's own counter calls healthy. Without them the first action would hit-test a tree whose
 	// widgets are all still at the origin.
-	// Everything the world starts with exists; now it begins play, before any control is made on it.
-	OpenBeginPlayGate();
-
 	DriverContext->PumpFrames(2);
 
 	if (!IsUsable() && BuildFailure.IsEmpty())
@@ -462,6 +490,13 @@ FDreamDriverRig::~FDreamDriverRig()
 	// the UI manager while the world is still whole, which is where the manager expects to be told.
 	if (DriverContext.IsValid())
 	{
+		// The input host first, as it was built last of the input pieces: its local player would
+		// otherwise outlive the world (local players belong to the game instance, not the world), and
+		// its actor would still be delivering input into a tree that is being taken apart.
+		if (DriverContext->InputHost != EDreamRigInputHost::ModuleOnly)
+		{
+			DreamDriverGameHost::Teardown(*DriverContext);
+		}
 		// Asked before the tree goes, while "is it under the rig's root" still has an answer.
 		UUITextInput* EditInRigTree = FindEditInRigTree();
 		if (UDreamWidget* RootWidget = DriverContext->Root; IsValid(RootWidget))
@@ -472,9 +507,14 @@ FDreamDriverRig::~FDreamDriverRig()
 		{
 			RigRaycaster->DeactivateRaycaster();
 		}
-		if (UDreamDriverInputModule* RigInputModule = DriverContext->InputModule; IsValid(RigInputModule))
+		// Only the module the rig made itself. An input actor's module is the actor's, and the game
+		// host's tear-down is what releases it.
+		if (DriverContext->InputHost == EDreamRigInputHost::ModuleOnly)
 		{
-			RigInputModule->UnregisterInputModuleFromEventSystem();
+			if (UDreamDriverInputModule* RigInputModule = DriverContext->InputModule; IsValid(RigInputModule))
+			{
+				RigInputModule->UnregisterInputModuleFromEventSystem();
+			}
 		}
 		// After the tree, before the world: the tree's destruction is what should have ended an edit
 		// in it, and the world still being whole is what lets a missed one be ended properly.
@@ -550,6 +590,16 @@ const FDreamRigOptions& FDreamDriverRig::GetOptions() const
 UGameInstance* FDreamDriverRig::GetGameInstance() const
 {
 	return DriverContext.IsValid() ? DriverContext->GameInstance : nullptr;
+}
+
+APlayerController* FDreamDriverRig::GetPlayerController() const
+{
+	return DriverContext.IsValid() ? DriverContext->PlayerController : nullptr;
+}
+
+AActor* FDreamDriverRig::GetHostActor() const
+{
+	return Host;
 }
 
 const FString& FDreamDriverRig::GetBuildFailure() const
@@ -654,7 +704,14 @@ void FDreamDriverRig::EnsureGameInputHost()
 		HostManager->AddEventSystem(HostEventSystem);
 	}
 
-	APlayerController* HostController = HostWorld->GetFirstPlayerController();
+	// The context's controller first: an input host (or a PIE rig) has already given the world its
+	// player 0, with a local player behind it, and a second controller spawned here would be a second
+	// player 0 that half of the lookups find and half do not.
+	APlayerController* HostController = DriverContext->PlayerController;
+	if (!IsValid(HostController))
+	{
+		HostController = HostWorld->GetFirstPlayerController();
+	}
 	if (HostController == nullptr)
 	{
 		FActorSpawnParameters SpawnParameters;
@@ -681,6 +738,11 @@ void FDreamDriverRig::EnsureGameInputHost()
 		// which is the other half of how a field's key agent gets its InputComponent. AFTER AddController:
 		// that push finds the controller's player index by walking the world's controller list.
 		HostController->InitInputSystem();
+	}
+	// Remembered, so GetPlayerController answers and the next call reuses it rather than looking again.
+	if (HostController != nullptr)
+	{
+		DriverContext->PlayerController = HostController;
 	}
 }
 

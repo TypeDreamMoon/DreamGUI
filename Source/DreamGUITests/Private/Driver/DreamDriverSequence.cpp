@@ -28,6 +28,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 
+#include "Driver/DreamDriverGameHost.h"
 #include "Driver/DreamDriverInputModule.h"
 #include "Driver/DreamDriverProjection.h"
 
@@ -183,6 +184,7 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	 * engine runs it:
 	 *
 	 *   clock                     "Update time", before any tick group
+	 *   player input              the player controller ticks in TG_PrePhysics (PlayerTick -> TickPlayerInput)
 	 *   PrePhysics tweens         ADreamTweenTickHelperActor's TG_PrePhysics component
 	 *   event system              a component in TG_DuringPhysics, the group it is left in
 	 *   DuringPhysics tweens      the helper actor's own tick, TG_DuringPhysics
@@ -198,6 +200,18 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	if (World != nullptr)
 	{
 		AdvanceWorldClock(*World, InDeltaSeconds);
+	}
+
+	if (InputHost != EDreamRigInputHost::ModuleOnly && PlayerController != nullptr)
+	{
+		/*
+		 * The player controller's own input frame, when input comes through one: the keys and
+		 * buttons queued on it since the last frame go through its input stack now, the input
+		 * actor's bindings hand them to its module, and the module queues them for the event system
+		 * below -- the same frame, in the same order, as TG_PrePhysics then TG_DuringPhysics in a game.
+		 * Under ModuleOnly nothing is queued on a controller, so there is nothing to tick.
+		 */
+		DreamDriverGameHost::TickPlayerInput(*this, InDeltaSeconds);
 	}
 
 	UDreamTweenManager* TweenManager = GameInstance != nullptr ? GameInstance->GetSubsystem<UDreamTweenManager>() : nullptr;
@@ -394,6 +408,26 @@ namespace DreamDriverSequenceLocal
 	/** A pixel worked out when the step runs, rather than when the sequence was written. */
 	using FDreamPixelResolver = TFunction<TOptional<FVector2D>(FDreamDriverContext&)>;
 
+	/**
+	 * Whether this context's buttons, wheel, navigation, keys and touches go through a player
+	 * controller and an input actor rather than straight into the driver's module.
+	 *
+	 * The pointer's POSITION is the one thing that never does: under every host it is written through
+	 * the module's override seam, because there is no system mouse to move and the one on the desk is
+	 * the user's. Everything a real device would send as an event, an actor host sends as one.
+	 */
+	bool IsActorHost(const FDreamDriverContext& InContext)
+	{
+		return InContext.InputHost != EDreamRigInputHost::ModuleOnly;
+	}
+
+	/** The game host's explanation as a step failure, never an empty one. */
+	FString DescribeHostFailure(const TCHAR* InWhat, const FString& InWhyNot)
+	{
+		return FString::Printf(TEXT("the input host could not deliver %s: %s"), InWhat,
+			InWhyNot.IsEmpty() ? TEXT("the game host gave no reason") : *InWhyNot);
+	}
+
 	void ReportStepFailure(const FDreamDriverContext& InContext, const FDreamDriverStepRef& InStep)
 	{
 		const FString Reason = InStep->GetFailureReason();
@@ -504,6 +538,19 @@ namespace DreamDriverSequenceLocal
 	protected:
 		virtual bool Apply(FDreamDriverContext& InContext) override
 		{
+			if (IsActorHost(InContext))
+			{
+				// As the mouse button key, through the controller's input stack, where the input actor's
+				// own binding turns it into the module's trigger -- at the position the module already
+				// holds, which the move steps wrote through the override seam.
+				FString WhyNot;
+				if (!DreamDriverGameHost::PressMouseButton(InContext, Button, bPress, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(bPress ? TEXT("a button press") : TEXT("a button release"), WhyNot);
+					return false;
+				}
+				return true;
+			}
 			if (bPress)
 			{
 				InContext.InputModule->Press(Button);
@@ -536,6 +583,16 @@ namespace DreamDriverSequenceLocal
 	protected:
 		virtual bool Apply(FDreamDriverContext& InContext) override
 		{
+			if (IsActorHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverGameHost::Scroll(InContext, AxisValue, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a wheel turn"), WhyNot);
+					return false;
+				}
+				return true;
+			}
 			InContext.InputModule->Scroll(AxisValue);
 			return true;
 		}
@@ -562,6 +619,16 @@ namespace DreamDriverSequenceLocal
 	protected:
 		virtual bool Apply(FDreamDriverContext& InContext) override
 		{
+			if (IsActorHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverGameHost::Navigate(InContext, Direction, bPressOrRelease, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a navigation direction"), WhyNot);
+					return false;
+				}
+				return true;
+			}
 			InContext.InputModule->Navigate(Direction, bPressOrRelease, 0);
 			return true;
 		}
@@ -587,6 +654,16 @@ namespace DreamDriverSequenceLocal
 	protected:
 		virtual bool Apply(FDreamDriverContext& InContext) override
 		{
+			if (IsActorHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverGameHost::NavigationTrigger(InContext, bTriggerPress, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("the accept button"), WhyNot);
+					return false;
+				}
+				return true;
+			}
 			InContext.InputModule->NavigationTrigger(bTriggerPress, 0);
 			return true;
 		}
@@ -623,6 +700,18 @@ namespace DreamDriverSequenceLocal
 	protected:
 		virtual bool Apply(FDreamDriverContext& InContext) override
 		{
+			if (IsActorHost(InContext))
+			{
+				// The game's own road for a character: what UDreamGameViewportClient::InputChar calls,
+				// which hands it to whichever field owns the keyboard process-wide.
+				FString HostWhyNot;
+				if (!DreamDriverGameHost::TypeCharacter(InContext, Character, HostWhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a character"), HostWhyNot);
+					return false;
+				}
+				return true;
+			}
 			FString WhyNot;
 			UUITextInput* TextInput = InContext.FindEditingTextInput(WhyNot);
 			if (TextInput == nullptr)
@@ -639,6 +728,54 @@ namespace DreamDriverSequenceLocal
 	private:
 		TCHAR Character;
 	};
+
+	/**
+	 * One key, optionally with a modifier held, routed the way a game routes it when nothing but the
+	 * driver's module stands between the key and the UI. See FDreamDriverSequence::Type(const FKey&).
+	 * Returns false having set OutFailureReason.
+	 */
+	bool RouteKeyInModule(FDreamDriverContext& InContext, const FKey& InKey, const FKey& InModifier, FString& OutFailureReason)
+	{
+		const FModifierKeysState HeldModifiers = MakeModifierState(InModifier);
+
+		// An armed selector first: its capture agent is at the top of the input stack, at the
+		// highest priority, so in a game it hears the key before anything under it -- Escape
+		// included, which is its own way out.
+		if (UDreamInputKeySelector* Selector = InContext.FindListeningKeySelector())
+		{
+			Selector->NotifyChordPressed(FInputChord(InKey,
+				HeldModifiers.IsShiftDown(), HeldModifiers.IsControlDown(),
+				HeldModifiers.IsAltDown(), HeldModifiers.IsCommandDown()));
+			return true;
+		}
+
+		// Escape is Back. A text field does not bind it on purpose -- it would swallow every
+		// project's own Escape action -- and the standalone input actor sends a Back key nobody
+		// bound to exactly this call, which is where an edit in progress gets cancelled.
+		if (InKey == EKeys::Escape)
+		{
+			UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(InContext.World);
+			if (Stack == nullptr)
+			{
+				OutFailureReason = TEXT("Escape is Back, and this world has no navigation stack to send it down");
+				return false;
+			}
+			Stack->HandleBack(InContext.EventSystem->GetUserIndex());
+			return true;
+		}
+
+		FString WhyNot;
+		UUITextInput* TextInput = InContext.FindEditingTextInput(WhyNot);
+		if (TextInput == nullptr)
+		{
+			OutFailureReason = FString::Printf(TEXT("no key selector is listening and %s"), *WhyNot);
+			return false;
+		}
+		// As with characters, what the field makes of the key is the field's business: an ignored
+		// key, or Home with the caret already at the start, is still a key delivered.
+		TextInput->HandleKeyInput(InKey, true, HeldModifiers);
+		return true;
+	}
 
 	/** One key, optionally with a modifier held, routed where a game would route it. See FDreamDriverSequence::Type. */
 	class FDreamTypeKeyStep : public FDreamInputStep
@@ -666,45 +803,20 @@ namespace DreamDriverSequenceLocal
 					*Modifier.ToString(), *Key.ToString());
 				return false;
 			}
-			const FModifierKeysState HeldModifiers = MakeModifierState(Modifier);
-
-			// An armed selector first: its capture agent is at the top of the input stack, at the
-			// highest priority, so in a game it hears the key before anything under it -- Escape
-			// included, which is its own way out.
-			if (UDreamInputKeySelector* Selector = InContext.FindListeningKeySelector())
+			if (IsActorHost(InContext))
 			{
-				Selector->NotifyChordPressed(FInputChord(Key,
-					HeldModifiers.IsShiftDown(), HeldModifiers.IsControlDown(),
-					HeldModifiers.IsAltDown(), HeldModifiers.IsCommandDown()));
-				return true;
-			}
-
-			// Escape is Back. A text field does not bind it on purpose -- it would swallow every
-			// project's own Escape action -- and the standalone input actor sends a Back key nobody
-			// bound to exactly this call, which is where an edit in progress gets cancelled.
-			if (Key == EKeys::Escape)
-			{
-				UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(InContext.World);
-				if (Stack == nullptr)
+				// Through the controller's input stack, where the input actor, a text field's key agent
+				// and an armed selector's capture agent are all bound: which of them hears the key is
+				// the game's decision there, not the driver's.
+				FString WhyNot;
+				if (!DreamDriverGameHost::TypeKey(InContext, Key, Modifier, WhyNot))
 				{
-					FailureReason = TEXT("Escape is Back, and this world has no navigation stack to send it down");
+					FailureReason = DescribeHostFailure(TEXT("a key"), WhyNot);
 					return false;
 				}
-				Stack->HandleBack(InContext.EventSystem->GetUserIndex());
 				return true;
 			}
-
-			FString WhyNot;
-			UUITextInput* TextInput = InContext.FindEditingTextInput(WhyNot);
-			if (TextInput == nullptr)
-			{
-				FailureReason = FString::Printf(TEXT("no key selector is listening and %s"), *WhyNot);
-				return false;
-			}
-			// As with characters, what the field makes of the key is the field's business: an ignored
-			// key, or Home with the caret already at the start, is still a key delivered.
-			TextInput->HandleKeyInput(Key, true, HeldModifiers);
-			return true;
+			return RouteKeyInModule(InContext, Key, Modifier, FailureReason);
 		}
 
 	private:
