@@ -93,8 +93,25 @@ void UDreamImageSequencePlayer::Play()
 		if (PlayTweener.IsValid())
 		{
 			PlayTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+			UpdateAnimation(0);
 		}
-		UpdateAnimation(0);
+		else if (bLoop)
+		{
+			// No tween manager to be ticked by: the per-frame update is a tween, and a world no game
+			// instance owns has none. A loop has no end to land on, so it shows its first frame and
+			// stays there -- the still a designer would look at anyway.
+			UpdateAnimation(0);
+		}
+		else
+		{
+			// The same missing clock, for a sequence that ends: its end is its last frame, so that is
+			// what is shown, and then the player stops as it does when the clock runs out. The last
+			// INDEX rather than the frame count: the sheet player reads a frame number one past the end
+			// as the first cell of the last row.
+			ElapsedTime = Duration;
+			OnUpdateAnimation(FMath::Max(FMath::RoundToInt(Duration * Fps) - 1, 0));
+			Stop();
+		}
 	}
 	if (bIsPaused)
 	{
