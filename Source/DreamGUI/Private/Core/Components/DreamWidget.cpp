@@ -6589,7 +6589,16 @@ void UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (Widget->IsScreenSpaceOverlayUI())
+		// A missing widget is an ordinary argument here, not a caller's mistake: the visuals' and the
+		// behaviours' tween verbs (UDreamVisual::ColorTo and its siblings, UDreamRectBlock's, the
+		// selectables' transitions) all pass their own GetWidget(), which answers null for a sub-object no
+		// widget outers -- one made on its own, or one whose outer chain is being taken apart -- and
+		// Blueprint can pass anything. The tween is still a real one, since it animates the caller's own
+		// property; only the choice of clock has to be made without a widget. It is made the way it
+		// already is for a widget with no render canvas, where IsScreenSpaceOverlayUI answers false:
+		// the world-space pair. Something not known to be on the screen does not get the screen's
+		// exemption from pause and time dilation.
+		if (IsValid(Widget) && Widget->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<UDreamUISettings>()->bScreenSpaceUIAffectByTimeDilation;
