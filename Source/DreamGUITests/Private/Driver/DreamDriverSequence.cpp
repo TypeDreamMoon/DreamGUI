@@ -6,7 +6,10 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "DreamTweenManager.h"
+#include "DreamTweener.h"
 #include "Engine/EngineBaseTypes.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
@@ -69,6 +72,33 @@ namespace DreamDriverPumpLocal
 		}
 		InSubsystem->Tick(InDeltaSeconds);
 	}
+
+	/**
+	 * One tick group's worth of tweens: the call ADreamTweenTickHelperActor (DuringPhysics, from its
+	 * own Tick) and its three UDreamTweenTickHelperComponent (PrePhysics, PostPhysics, PostUpdateWork)
+	 * make, made directly.
+	 *
+	 * Directly, because the helper cannot be the one to make it here: it only learns which manager to
+	 * drive in its BeginPlay (SetupTick), and a rig's world never begins play as a whole -- the rig
+	 * opens the UI manager's gate, not UWorld::BeginPlay -- so the helper that
+	 * UDreamTweenTickHelperWorldSubsystem spawns into every Game world sits there with no target, and
+	 * the world is never ticked anyway. The call is the same one; only the caller differs.
+	 *
+	 * Regardless of pause, because the helper's tick functions all set bTickEvenWhenPaused: the
+	 * engine runs them in a paused frame too, and it is each tween that decides whether a pause
+	 * reaches it (UDreamTweener::ToNext, with the pause and dilation flags that
+	 * UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation gives every widget tween).
+	 * The manager reads the world's own DeltaTimeSeconds and DeltaRealTimeSeconds for every tick type
+	 * but Manual, so what is passed is the dilated delta, for the look of the thing.
+	 */
+	void TickTweens(UDreamTweenManager* InTweenManager, const UWorld* InWorld, EDreamTweenTickType InTickType)
+	{
+		if (InTweenManager == nullptr || InWorld == nullptr)
+		{
+			return;
+		}
+		InTweenManager->Tick(InTickType, InWorld->DeltaTimeSeconds);
+	}
 }
 
 bool FDreamDriverContext::IsUsable() const
@@ -82,6 +112,25 @@ bool FDreamDriverContext::IsUsable() const
 
 void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 {
+	using namespace DreamDriverPumpLocal;
+
+	/*
+	 * The order below is UWorld::Tick's (LevelTick.cpp), with each piece at the point where the
+	 * engine runs it:
+	 *
+	 *   clock                     "Update time", before any tick group
+	 *   PrePhysics tweens         ADreamTweenTickHelperActor's TG_PrePhysics component
+	 *   event system              a component in TG_DuringPhysics, the group it is left in
+	 *   DuringPhysics tweens      the helper actor's own tick, TG_DuringPhysics
+	 *   PostPhysics tweens        the helper's TG_PostPhysics component
+	 *   tickable world subsystems FTickableGameObject::TickObjects, after the physics groups
+	 *   PostUpdateWork tweens     the helper's TG_PostUpdateWork component -- see below
+	 *   UI manager                TickObjects too, and deliberately last -- see below
+	 *
+	 * Within one tick group the engine fixes no order between unrelated tick functions, so where two
+	 * share a group (the event system and the DuringPhysics tweens) the order here is a choice: input
+	 * first, so a tween that input started this frame takes its first step in the same frame.
+	 */
 	if (World != nullptr)
 	{
 		/*
@@ -108,6 +157,9 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		World->DeltaRealTimeSeconds = InDeltaSeconds;
 	}
 
+	UDreamTweenManager* TweenManager = GameInstance != nullptr ? GameInstance->GetSubsystem<UDreamTweenManager>() : nullptr;
+	TickTweens(TweenManager, World, EDreamTweenTickType::PrePhysics);
+
 	if (IsValid(EventSystem))
 	{
 		/*
@@ -126,6 +178,9 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		// what runs; only the name lookup moves.
 		static_cast<UActorComponent*>(EventSystem)->TickComponent(InDeltaSeconds, LEVELTICK_All, nullptr);
 	}
+
+	TickTweens(TweenManager, World, EDreamTweenTickType::DuringPhysics);
+	TickTweens(TweenManager, World, EDreamTweenTickType::PostPhysics);
 
 	if (World != nullptr)
 	{
@@ -153,6 +208,16 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUIVirtualCursorSubsystem>(), InDeltaSeconds);
 	}
 
+	/*
+	 * The PostUpdateWork tweens are the one piece NOT at the engine's position. In UWorld::Tick the
+	 * helper's TG_PostUpdateWork component runs after TickObjects, which is to say after the UI manager;
+	 * here they run just before it, so that the rule below -- the frame ends laid out -- holds for
+	 * every tween. What that changes is one frame of layout latency for a tween somebody explicitly
+	 * put on PostUpdateWork, which nothing in the plugin does (no DreamGUI code calls SetTickType);
+	 * everything the controls start is a DuringPhysics tween, at its engine position above.
+	 */
+	TickTweens(TweenManager, World, EDreamTweenTickType::PostUpdateWork);
+
 	if (IsValid(Manager))
 	{
 		/*
@@ -173,6 +238,21 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		 */
 		Manager->TickDreamUI(InDeltaSeconds);
 	}
+
+	/*
+	 * What this pump deliberately does NOT drive, so nobody goes looking for it here:
+	 *
+	 *  - UDreamUIManagerObject, the plugin's other FTickableGameObject. It is editor-only
+	 *    (IsEditorOnly, IsTickable only for the singleton instance) and owns editor concerns -- the
+	 *    Blueprint-compiling flag, one-shot editor callbacks, the editor tick delegate the designer
+	 *    listens to -- none of which exists in a game, so a rig that ticked it would be driving the
+	 *    editor, not a game. The editor's own loop ticks it between tests anyway.
+	 *  - UWorld::MovieSceneSequenceTick, which drives UMovieSceneSequenceTickManager and therefore
+	 *    Sequencer-based widget animations (UDreamWidgetAnimationComponent). The delegate is private to
+	 *    UWorld and only UWorld::Tick broadcasts it, so under this pump those animations stand still;
+	 *    tweens -- which is what every control transition uses -- are driven above.
+	 *  - The core ticker (FTSTicker), which only an engine frame advances.
+	 */
 }
 
 void FDreamDriverContext::PumpFrames(int32 InFrameCount)

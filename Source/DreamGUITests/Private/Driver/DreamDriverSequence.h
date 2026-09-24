@@ -21,6 +21,7 @@ class UDreamScreenSpaceRaycaster;
 class UDreamUIManagerWorldSubsystem;
 class UDreamWidget;
 class UWorld;
+class UGameInstance;
 enum class EDreamUIMouseButtonType : uint8;
 enum class EDreamUINavigationDirection : uint8;
 
@@ -42,6 +43,9 @@ struct FDreamDriverContext
 	UDreamScreenSpaceRaycaster* Raycaster = nullptr;
 	UDreamWidget* Root = nullptr;
 	UDreamCanvas* RootCanvas = nullptr;
+
+	/** The GameInstance that owns World. Null for a bare UWorld::CreateWorld world. */
+	UGameInstance* GameInstance = nullptr;
 
 	/** The test currently running, so a step that fails can say so where a report will show it. Optional. */
 	FAutomationTestBase* CurrentTest = nullptr;

@@ -6,6 +6,7 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
@@ -14,25 +15,53 @@
 #include "GameFramework/PlayerInput.h"
 
 #include "Driver/DreamDriverInputModule.h"
+#include "DreamScopedGameInstanceWorld.h"
 #include "DreamScopedWorld.h"
 
 FDreamDriverRig FDreamDriverRig::Headless(FIntPoint InViewportSize)
 {
-	return FDreamDriverRig(InViewportSize);
+	FDreamRigOptions ViewportOnly;
+	ViewportOnly.ViewportSize = InViewportSize;
+	return FDreamDriverRig(ViewportOnly);
 }
 
-FDreamDriverRig::FDreamDriverRig(const FIntPoint& InViewportSize)
+FDreamDriverRig FDreamDriverRig::Headless(const FDreamRigOptions& InOptions)
 {
-	ScopedWorld = MakeUnique<DreamTests::FScopedGameWorld>(EWorldType::Game);
+	return FDreamDriverRig(InOptions);
+}
+
+FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
+	: Options(InOptions)
+{
+	const FIntPoint InViewportSize = Options.ViewportSize;
 	DriverContext = MakeUnique<FDreamDriverContext>();
 	// Created unconditionally, even if the build below goes wrong, so Driver() is always answerable
 	// and a test that forgot to check IsUsable fails on an assertion rather than on a null driver.
 	DriverInstance = MakeShared<FDreamDriver>(*DriverContext);
 
-	UWorld* BuildWorld = ScopedWorld->World;
-	if (BuildWorld == nullptr)
+	// 1. The world. With a game instance by default, because the tween manager is a game instance
+	// subsystem: without one every UDreamTweenManager::To answers null, every Selectable transition
+	// silently snaps or never happens, and the controls are being tested in the designer's preview
+	// world rather than in a game's. The bare world stays available for exactly that comparison.
+	UWorld* BuildWorld = nullptr;
+	if (Options.bWithGameInstance)
 	{
-		return;
+		ScopedGameInstanceWorld = MakeUnique<DreamTests::FScopedGameInstanceWorld>();
+		BuildWorld = ScopedGameInstanceWorld->World;
+		DriverContext->GameInstance = ScopedGameInstanceWorld->GameInstance;
+		if (BuildWorld == nullptr)
+		{
+			return;
+		}
+	}
+	else
+	{
+		ScopedWorld = MakeUnique<DreamTests::FScopedGameWorld>(EWorldType::Game);
+		BuildWorld = ScopedWorld->World;
+		if (BuildWorld == nullptr)
+		{
+			return;
+		}
 	}
 	DriverContext->World = BuildWorld;
 	DriverContext->Manager = UDreamUIManagerWorldSubsystem::GetInstance(BuildWorld);
@@ -146,7 +175,10 @@ FDreamDriverRig::~FDreamDriverRig()
 	}
 	DriverInstance.Reset();
 	DriverContext.Reset();
+	// Exactly one of these holds the world; the game instance one also shuts its game instance down
+	// and takes its world context off the engine's list.
 	ScopedWorld.Reset();
+	ScopedGameInstanceWorld.Reset();
 }
 
 bool FDreamDriverRig::IsUsable() const
@@ -195,6 +227,16 @@ FDreamDriverContext& FDreamDriverRig::Context() const
 FDreamDriverRef FDreamDriverRig::Driver() const
 {
 	return DriverInstance.ToSharedRef();
+}
+
+const FDreamRigOptions& FDreamDriverRig::GetOptions() const
+{
+	return Options;
+}
+
+UGameInstance* FDreamDriverRig::GetGameInstance() const
+{
+	return DriverContext.IsValid() ? DriverContext->GameInstance : nullptr;
 }
 
 void FDreamDriverRig::BindTest(FAutomationTestBase* InTest)

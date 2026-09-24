@@ -1,0 +1,19 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+
+/**
+ * The small vocabulary every part of the driver shares: how a rig is built, and the words input
+ * steps use that the runtime has no type for. Kept apart from the rig and the sequence so a piece
+ * that only needs a word -- a game-host adapter, a PIE rig -- does not pull in either of them.
+ */
+
+/** How a rig is built. Every default reproduces today's rig except bWithGameInstance. */
+struct FDreamRigOptions
+{
+	FIntPoint ViewportSize = FIntPoint(1280, 720);
+	/** The world belongs to a UGameInstance, so GameInstance subsystems (the tween manager) exist and the pump ticks them. false = a bare UWorld::CreateWorld world, exactly as before. */
+	bool bWithGameInstance = true;
+};

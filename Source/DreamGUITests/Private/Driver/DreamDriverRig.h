@@ -10,6 +10,7 @@
 
 #include "Driver/DreamDriver.h"
 #include "Driver/DreamDriverSequence.h"
+#include "Driver/DreamDriverTypes.h"
 
 class AActor;
 class FAutomationTestBase;
@@ -18,11 +19,13 @@ class UDreamEventSystem;
 class UDreamDriverInputModule;
 class UDreamScreenSpaceRaycaster;
 class UDreamWidget;
+class UGameInstance;
 class UWorld;
 
 namespace DreamTests
 {
 	struct FScopedGameWorld;
+	struct FScopedGameInstanceWorld;
 }
 
 /**
@@ -33,6 +36,13 @@ namespace DreamTests
  * viewport size. Every one of those is built the way the runtime builds it -- the raycaster enrols
  * itself with the UI manager's raycaster list, the canvas enrols itself with its canvas list -- so a
  * trace here walks the same list a trace in a game would. Nothing is handed a result.
+ *
+ * THE WORLD belongs to a UGameInstance by default (FDreamRigOptions::bWithGameInstance), built the way
+ * a standalone game builds one, because GameInstance subsystems -- the tween manager above all -- only
+ * exist in such a world: in a bare UWorld::CreateWorld world every tween is refused and every animated
+ * control either snaps or never moves. The bare world is still one option away, and is what the
+ * designer previews in. Tearing the rig down shuts the game instance down and takes its world context
+ * off the engine's list, so the next test does not find it.
  *
  * THE VIEWPORT. A game world with no player controller answers GetViewportSize with a 2x2 fallback,
  * which makes the canvas 2 units across and the projection matrix describe a 2x2 screen, and a ray
@@ -55,6 +65,12 @@ public:
 	 */
 	static FDreamDriverRig Headless(FIntPoint InViewportSize);
 
+	/**
+	 * A headless rig built to InOptions. Headless(FIntPoint) is this with only the viewport size set,
+	 * which means it, too, builds a world that belongs to a GameInstance -- see FDreamRigOptions.
+	 */
+	static FDreamDriverRig Headless(const FDreamRigOptions& InOptions);
+
 	~FDreamDriverRig();
 
 	FDreamDriverRig(const FDreamDriverRig&) = delete;
@@ -74,6 +90,11 @@ public:
 
 	FDreamDriverContext& Context() const;
 	FDreamDriverRef Driver() const;
+
+	/** What this rig was built from. */
+	const FDreamRigOptions& GetOptions() const;
+	/** The GameInstance the world belongs to; null when bWithGameInstance was false. */
+	UGameInstance* GetGameInstance() const;
 
 	/** Tell the rig which test is running, so a failing step reports against it. */
 	void BindTest(FAutomationTestBase* InTest);
@@ -150,7 +171,7 @@ public:
 	void PumpFrames(int32 InFrameCount);
 
 private:
-	explicit FDreamDriverRig(const FIntPoint& InViewportSize);
+	explicit FDreamDriverRig(const FDreamRigOptions& InOptions);
 
 	/**
 	 * The world beginning play, as far as DreamUI can tell -- once, after the world, the event system
@@ -165,10 +186,13 @@ private:
 	 */
 	void OpenBeginPlayGate();
 
-	/** Torn down last, because everything below lives inside it. */
+	/** Torn down last, because everything below lives inside it. Exactly one of the two exists, chosen by bWithGameInstance. */
 	TUniquePtr<DreamTests::FScopedGameWorld> ScopedWorld;
+	TUniquePtr<DreamTests::FScopedGameInstanceWorld> ScopedGameInstanceWorld;
 	/** By pointer so its address survives anything that happens to this object. */
 	TUniquePtr<FDreamDriverContext> DriverContext;
 	TSharedPtr<FDreamDriver> DriverInstance;
 	AActor* Host = nullptr;
+
+	FDreamRigOptions Options;
 };
