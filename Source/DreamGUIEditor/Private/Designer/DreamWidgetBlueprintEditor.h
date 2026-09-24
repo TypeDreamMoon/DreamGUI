@@ -204,8 +204,37 @@ public:
 	void OnAnyObjectPropertyChanged(UObject* InObject, FPropertyChangedEvent& InEvent);
 	/** Writes a starter .dui, points the class at it, and compiles. Offered only when there is none. */
 	void CreateTextSourceFile();
-	/** The first DUI root, or where the project's would be. Never a directory outside every root. */
-	FString GetDefaultTextSourceDirectory() const;
+	/**
+	 * Where a new file goes: asked once with the directory the save dialog opens in and the file name
+	 * it suggests. False means the author cancelled; otherwise OutChosenPath is the file they named.
+	 */
+	using FChooseTextSourceFile = TFunctionRef<bool(const FString& /*InDefaultDirectory*/,
+		const FString& /*InSuggestedName*/, FString& /*OutChosenPath*/)>;
+	/**
+	 * Everything Create Source File does, with the save dialog handed in as InChooseFile.
+	 *
+	 * The menu entry passes the platform's dialog and a test passes an answer, so both run the same
+	 * directory choice, the same starter and the same compile -- the dialog is the one step of this
+	 * nothing can drive without a person in front of it.
+	 *
+	 * The project's own DUI directory is made first when it does not exist, so the dialog has somewhere
+	 * to open; if the author cancels, or saves somewhere else, and it is still empty afterwards, it is
+	 * taken away again, which leaves the project as it was found. The root the new file lands in is
+	 * handed to FDreamUISourceWatcher::EnsureWatching, so that saving the file rebuilds the class even
+	 * when the root is younger than the editor session.
+	 *
+	 * Returns whether a file was written and the class now names it. OutFilePath is the file written
+	 * (absolute), empty when none was. OutError is empty after a success, after a cancel and for a class
+	 * that cannot name a .dui at all (the menu never offers the command there); otherwise it says why, in
+	 * words fit for the author.
+	 */
+	static bool CreateTextSourceFileFor(UDreamWidgetBlueprint* InBlueprint, FChooseTextSourceFile InChooseFile,
+		FString& OutFilePath, FText& OutError);
+	/**
+	 * Where Create Source File opens: the project's own DUI directory, absolute, whether or not it exists
+	 * yet. Never the first root in general -- with no project folder that is some plugin's.
+	 */
+	static FString GetDefaultTextSourceDirectory();
 
 	/**
 	 * Whether "Reveal in VS Code" has anywhere to point: a text-authored class whose .dui is on
