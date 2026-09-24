@@ -17,8 +17,9 @@
  * base class reaches for a viewport is GetMousePosition, and it already has a documented seam for
  * that: turn SetOverrideMousePosition on and the substituted position is what every caller reads.
  *
- * So this subclass holds the cursor, the button states and a scroll that has not been delivered yet,
- * and pushes them through the base class's own path. It reproduces none of the base class's logic.
+ * So this subclass holds the button states and a scroll that has not been delivered yet, keeps the
+ * cursor in the base class's own override position, and pushes everything through the base class's
+ * own path. It reproduces none of the base class's logic.
  */
 UCLASS()
 class UDreamDriverInputModule : public UDreamStandaloneInputModule
@@ -75,8 +76,14 @@ public:
 	void Navigate(EDreamUINavigationDirection InDirection, bool bInPressOrRelease, int32 InPointerID = 0);
 	void NavigationTrigger(bool bInTriggerPress, int32 InPointerID = 0);
 
-	/** Where the virtual cursor is, in viewport pixels. */
-	FVector2D GetVirtualCursor() const { return VirtualCursor; }
+	/**
+	 * Where the virtual cursor is, in viewport pixels: the base class's substituted pointer position
+	 * itself, not a copy of it. Anything else that moves the pointer through the same seam -- the
+	 * gamepad virtual cursor (UDreamUIVirtualCursorSubsystem) calls SetOverridePointerPosition on
+	 * this module -- is therefore where the next MoveBy starts from, rather than a remembered pixel
+	 * the pointer has since left.
+	 */
+	FVector2D GetVirtualCursor() const { return OverridePointerPosition; }
 	/** Whether this module believes InButton is currently held. Mirrors the presses it was given. */
 	bool IsButtonPressed(EDreamUIMouseButtonType InButton) const;
 	/** True between a Scroll and the frame that delivers it. */
@@ -86,7 +93,6 @@ private:
 	/** One bit per EDreamUIMouseButtonType. A TSet of an enum class needs a hash this enum has not got. */
 	static uint32 ButtonBit(EDreamUIMouseButtonType InButton) { return 1u << static_cast<uint32>(InButton); }
 
-	FVector2D VirtualCursor = FVector2D::ZeroVector;
 	uint32 PressedButtonMask = 0;
 	TOptional<FVector2D> PendingScroll;
 };

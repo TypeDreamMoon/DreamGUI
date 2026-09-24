@@ -5,6 +5,7 @@
 #include "Controls/DreamInputKeySelector.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamScreenSpaceRaycaster.h"
 #include "Interaction/UITextInput.h"
 #include "Misc/AutomationTest.h"
 
@@ -263,6 +264,76 @@ bool FDreamDriverElement::Hold(float InSeconds, EDreamUIMouseButtonType InButton
 		.Press(InButton)
 		.WaitSeconds(InSeconds)
 		.Perform();
+}
+
+bool FDreamDriverElement::Tap(int32 InFingerId)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	const TOptional<FVector2D> Centre = GetCentrePixel();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("tap"));
+		return false;
+	}
+	if (!Centre.IsSet())
+	{
+		ReportMissingElement(*this, TEXT("tap (it has no pixel to land on)"));
+		return false;
+	}
+	// Down, frame, up, frame. The lift goes where the finger is, which is where it landed.
+	return PinnedDriver->Sequence()
+		.TouchDown(InFingerId, Centre.GetValue())
+		.TouchUp(InFingerId)
+		.Perform();
+}
+
+bool FDreamDriverElement::TouchDragBy(const FVector2D& InPixelDelta, int32 InFingerId)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	const TOptional<FVector2D> Centre = GetCentrePixel();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("touch-drag"));
+		return false;
+	}
+	if (!Centre.IsSet())
+	{
+		ReportMissingElement(*this, TEXT("touch-drag (it has no pixel to land on)"));
+		return false;
+	}
+
+	// The same shape as the mouse drag, for the same reasons: the first move clears the threshold
+	// the raycaster measures with (authored in canvas units, compared in pixels, so read rather than
+	// assumed), then a midpoint and the destination arrive on frames of their own, so the drag is a
+	// motion rather than one jump.
+	const FVector2D Start = Centre.GetValue();
+	const FVector2D End = Start + InPixelDelta;
+	double ThresholdPixels = 0.0;
+	if (const UDreamScreenSpaceRaycaster* Raycaster = PinnedDriver->GetContext().Raycaster; IsValid(Raycaster))
+	{
+		ThresholdPixels = FMath::Sqrt((double)Raycaster->GetScaledDragThresholdSquare());
+	}
+	const FVector2D Direction = InPixelDelta.IsNearlyZero() ? FVector2D(1.0, 0.0) : InPixelDelta.GetSafeNormal();
+	const double CrossingDistance = ThresholdPixels + 2.0;
+
+	FDreamDriverSequence Dragging = PinnedDriver->Sequence();
+	Dragging.TouchDown(InFingerId, Start);
+	if (InPixelDelta.Size() > CrossingDistance)
+	{
+		const FVector2D Crossing = Start + Direction * CrossingDistance;
+		Dragging.TouchMoveTo(InFingerId, Crossing);
+		Dragging.TouchMoveTo(InFingerId, (Crossing + End) * 0.5);
+	}
+	// A delta inside the threshold is still delivered, as the single move it is: that is the case a
+	// test of "not quite a drag" is asking about.
+	Dragging.TouchMoveTo(InFingerId, End);
+	Dragging.WaitFrames(1);
+	Dragging.TouchUp(InFingerId);
+	return Dragging.Perform();
 }
 
 bool FDreamDriverElement::Press(EDreamUIMouseButtonType InButton)

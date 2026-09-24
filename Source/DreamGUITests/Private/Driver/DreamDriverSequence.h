@@ -211,11 +211,44 @@ public:
 	FDreamDriverSequence& NavigationTrigger(bool bInTriggerPress);
 
 	/**
+	 * Back, the way a gamepad or keyboard sends it: under an actor host the gamepad's Back button
+	 * through the player controller (so a bound action, then a drag in flight, then the navigation
+	 * stack get it, in the standalone actor's order); under ModuleOnly exactly Type(EKeys::Escape).
+	 * One step, one frame. Cancelling an edit in progress is the thing it is most often for.
+	 */
+	FDreamDriverSequence& Back();
+
+	/**
+	 * A finger, one step and one frame per phase, like every other input. Each finger index is its
+	 * own pointer -- the module keys touches by index -- so two fingers are two pointers with their
+	 * own press, hover and drag; finger 0 is pointer 0, which it shares with the mouse, as in a game.
+	 * TouchUp lifts the finger where it is. Moving or lifting a finger that is not down fails.
+	 */
+	FDreamDriverSequence& TouchDown(int32 InFingerId, const FVector2D& InPixel);
+	FDreamDriverSequence& TouchMoveTo(int32 InFingerId, const FVector2D& InPixel);
+	FDreamDriverSequence& TouchUp(int32 InFingerId);
+
+	/**
 	 * Let a span of time pass. Under the headless pump that is ceil(InSeconds / FrameSeconds) frames
 	 * -- a long press is "hold for N seconds", and the pipeline times it on the world clock the pump
 	 * advances -- and under the engine pump it is however many real frames the span took.
 	 */
 	FDreamDriverSequence& WaitSeconds(float InSeconds);
+
+	/**
+	 * The virtual cursor, driven the way a gamepad drives it.
+	 *
+	 * ActivateVirtualCursor turns it on from wherever the pointer is (what a screen that needs one
+	 * does). VirtualCursorStick holds the left stick at InStick -- X right, Y up, each in [-1, 1] --
+	 * for InSeconds, then lets it go: the stick reaches player 0's controller as analog samples,
+	 * which is where the cursor reads it, and the cursor moves the module's pointer. The press and
+	 * release are its confirm button (SetConfirmPressed), which it delivers as the left mouse button
+	 * at the cursor. Each fails, saying why, while the cursor is not active.
+	 */
+	FDreamDriverSequence& ActivateVirtualCursor();
+	FDreamDriverSequence& VirtualCursorStick(const FVector2D& InStick, float InSeconds);
+	FDreamDriverSequence& VirtualCursorPress();
+	FDreamDriverSequence& VirtualCursorRelease();
 
 	/**
 	 * Characters, one step and one frame each, into the text field that owns the keyboard -- through

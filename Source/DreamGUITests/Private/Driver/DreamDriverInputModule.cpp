@@ -30,28 +30,30 @@ void UDreamDriverInputModule::ProcessInput()
 
 void UDreamDriverInputModule::MoveTo(const FVector2D& InPixel)
 {
-	VirtualCursor = InPixel;
 	// SetOverridePointerPosition is the seam, and it does the push itself: with the override on it
 	// calls the module's own InputMouseMove, which is the same entry point a real mouse uses. It is
 	// silent until the module has an event system, so the rig binds one before it drives anything.
+	// The position it stores is the cursor; nothing here keeps a second copy that could drift from it.
 	SetOverridePointerPosition(InPixel);
 }
 
 void UDreamDriverInputModule::MoveBy(const FVector2D& InPixelDelta)
 {
-	MoveTo(VirtualCursor + InPixelDelta);
+	MoveTo(GetVirtualCursor() + InPixelDelta);
 }
 
 void UDreamDriverInputModule::Press(EDreamUIMouseButtonType InButton)
 {
 	PressedButtonMask |= ButtonBit(InButton);
-	InputTrigger(FVector(VirtualCursor.X, VirtualCursor.Y, 0.0), true, InButton);
+	const FVector2D Cursor = GetVirtualCursor();
+	InputTrigger(FVector(Cursor.X, Cursor.Y, 0.0), true, InButton);
 }
 
 void UDreamDriverInputModule::Release(EDreamUIMouseButtonType InButton)
 {
 	PressedButtonMask &= ~ButtonBit(InButton);
-	InputTrigger(FVector(VirtualCursor.X, VirtualCursor.Y, 0.0), false, InButton);
+	const FVector2D Cursor = GetVirtualCursor();
+	InputTrigger(FVector(Cursor.X, Cursor.Y, 0.0), false, InButton);
 }
 
 void UDreamDriverInputModule::Scroll(const FVector2D& InAxisValue)

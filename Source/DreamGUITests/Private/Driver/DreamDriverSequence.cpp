@@ -15,8 +15,11 @@
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Framework/Commands/InputChord.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerInput.h"
 #include "GameFramework/WorldSettings.h"
 #include "GenericPlatform/GenericApplication.h"
+#include "InputKeyEventArgs.h"
 #include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIDragDrop.h"
 #include "Interaction/DreamUINavigationStack.h"
@@ -1023,6 +1026,112 @@ namespace DreamDriverSequenceLocal
 	};
 
 	/**
+	 * A finger landing, moving or lifting -- one step, one frame, like every other input.
+	 *
+	 * A finger is its own pointer: the standalone module keys touches by the finger's index, so
+	 * finger 1 and finger 2 are pointers 1 and 2, each with its own press, hover and drag. Finger 0
+	 * shares pointer 0 with the mouse, as it does in a game (ETouchIndex::Touch1 is 0).
+	 *
+	 * A lift is aimed where the finger IS -- the pointer's last position, read back from the event
+	 * system -- because a finger comes off the glass where it was, and a lift at some other pixel is a
+	 * gesture no screen can report. Moving or lifting a finger that is not down fails the step.
+	 */
+	class FDreamTouchStep : public FDreamInputStep
+	{
+	public:
+		FDreamTouchStep(EDreamDriverTouchPhase InPhase, int32 InFingerId, FDreamPixelResolver InResolver, const FString& InDescription)
+			: Phase(InPhase)
+			, FingerId(InFingerId)
+			, Resolver(MoveTemp(InResolver))
+			, Description(InDescription)
+		{
+		}
+
+		virtual FString Describe() const override
+		{
+			const TCHAR* PhaseName = Phase == EDreamDriverTouchPhase::Began ? TEXT("TouchDown")
+				: Phase == EDreamDriverTouchPhase::Moved ? TEXT("TouchMoveTo")
+				: TEXT("TouchUp");
+			return Description.IsEmpty()
+				? FString::Printf(TEXT("%s(finger %d)"), PhaseName, FingerId)
+				: FString::Printf(TEXT("%s(finger %d, %s)"), PhaseName, FingerId, *Description);
+		}
+
+	protected:
+		virtual bool Apply(FDreamDriverContext& InContext) override
+		{
+			FVector2D Pixel = FVector2D::ZeroVector;
+			if (Phase == EDreamDriverTouchPhase::Began)
+			{
+				const TOptional<FVector2D> Resolved = Resolver ? Resolver(InContext) : TOptional<FVector2D>();
+				if (!Resolved.IsSet())
+				{
+					FailureReason = FString::Printf(TEXT("could not work out a viewport pixel for %s"), *Description);
+					return false;
+				}
+				Pixel = Resolved.GetValue();
+			}
+			else
+			{
+				// Down means a pointer of that index exists and its trigger is held. The press a
+				// TouchDown queued has been processed by now -- its step spent the frame after it.
+				const UDreamPointerEventData* EventData = InContext.GetPointerEventData(FingerId);
+				if (EventData == nullptr || !EventData->bNowIsTriggerPressed)
+				{
+					FailureReason = FString::Printf(TEXT("finger %d is not down, so it cannot %s"), FingerId,
+						Phase == EDreamDriverTouchPhase::Moved ? TEXT("move") : TEXT("lift"));
+					return false;
+				}
+				if (Phase == EDreamDriverTouchPhase::Moved)
+				{
+					const TOptional<FVector2D> Resolved = Resolver ? Resolver(InContext) : TOptional<FVector2D>();
+					if (!Resolved.IsSet())
+					{
+						FailureReason = FString::Printf(TEXT("could not work out a viewport pixel for %s"), *Description);
+						return false;
+					}
+					Pixel = Resolved.GetValue();
+				}
+				else
+				{
+					Pixel = FVector2D(EventData->PointerPosition.X, EventData->PointerPosition.Y);
+				}
+			}
+
+			if (IsActorHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverGameHost::Touch(InContext, Phase, FingerId, Pixel, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a touch"), WhyNot);
+					return false;
+				}
+				return true;
+			}
+			switch (Phase)
+			{
+			case EDreamDriverTouchPhase::Began:
+				InContext.InputModule->TouchPress(FingerId, Pixel);
+				break;
+			case EDreamDriverTouchPhase::Moved:
+				InContext.InputModule->TouchMoveTo(FingerId, Pixel);
+				break;
+			case EDreamDriverTouchPhase::Ended:
+				InContext.InputModule->TouchRelease(FingerId, Pixel);
+				break;
+			}
+			return true;
+		}
+
+	private:
+		EDreamDriverTouchPhase Phase;
+		int32 FingerId;
+		/** Unused for a lift, which goes where the finger is. */
+		FDreamPixelResolver Resolver;
+		FString Description;
+	};
+
+	/**
 	 * Let a span of time pass: as many frames as it takes, the last one included.
 	 *
 	 * Measured in the frames' own lengths rather than converted once, so under the headless pump --
@@ -1055,6 +1164,210 @@ namespace DreamDriverSequenceLocal
 	private:
 		float Seconds;
 		double Elapsed = 0.0;
+	};
+
+	/**
+	 * Back, as a gamepad or keyboard sends it.
+	 *
+	 * Under an actor host it is the gamepad's Back button (Gamepad_FaceButton_Right) through the
+	 * player controller, which reaches ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed: an
+	 * action bound to it first, then a drag in flight, then UDreamUINavigationStack::HandleBack.
+	 * Under ModuleOnly it is exactly Type(EKeys::Escape) -- the same entry, an armed key selector
+	 * first, then HandleBack -- because there is no actor to offer it to first.
+	 */
+	class FDreamBackStep : public FDreamInputStep
+	{
+	public:
+		virtual FString Describe() const override { return TEXT("Back()"); }
+
+	protected:
+		virtual bool Apply(FDreamDriverContext& InContext) override
+		{
+			if (IsActorHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverGameHost::TypeKey(InContext, EKeys::Gamepad_FaceButton_Right, FKey(), WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("Back"), WhyNot);
+					return false;
+				}
+				return true;
+			}
+			return RouteKeyInModule(InContext, EKeys::Escape, FKey(), FailureReason);
+		}
+	};
+
+	/** The world's virtual cursor, or null with the reason why there is none to drive. */
+	UDreamUIVirtualCursorSubsystem* FindVirtualCursor(const FDreamDriverContext& InContext, FString& OutWhyNot)
+	{
+		UDreamUIVirtualCursorSubsystem* Cursor = UDreamUIVirtualCursorSubsystem::Get(InContext.World);
+		if (Cursor == nullptr)
+		{
+			OutWhyNot = TEXT("this world has no virtual cursor subsystem (it is only made for Game and PIE worlds)");
+		}
+		return Cursor;
+	}
+
+	/** Player 0's controller as the virtual cursor finds it: the context's, else the world's first. */
+	APlayerController* FindStickController(const FDreamDriverContext& InContext)
+	{
+		if (IsValid(InContext.PlayerController))
+		{
+			return InContext.PlayerController;
+		}
+		return InContext.World != nullptr ? InContext.World->GetFirstPlayerController() : nullptr;
+	}
+
+	/**
+	 * The left stick at InStick, as a pad reports it: one analog sample per axis to the controller,
+	 * which is where UDreamUIVirtualCursorSubsystem reads the stick from (GetInputAnalogStickState).
+	 *
+	 * The controller only turns samples into the value that read returns during its input frame
+	 * (UPlayerInput::ProcessInputStack -> EvaluateKeyMapState). Under an actor host the pump runs that
+	 * frame; under ModuleOnly nothing does, so the key map is evaluated here the way that frame would,
+	 * with an empty input stack so that no binding anywhere hears the stick -- only its value changes.
+	 */
+	void FeedLeftStick(const FDreamDriverContext& InContext, APlayerController& InController, const FVector2D& InStick, float InDeltaSeconds)
+	{
+		InController.InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftX, IE_Axis, (float)InStick.X, 1));
+		InController.InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftY, IE_Axis, (float)InStick.Y, 1));
+		if (!IsActorHost(InContext) && InController.PlayerInput != nullptr)
+		{
+			const bool bPaused = InContext.World != nullptr && InContext.World->IsPaused();
+			InController.PlayerInput->ProcessInputStack(TArray<UInputComponent*>(), InDeltaSeconds, bPaused);
+		}
+	}
+
+	/** Turn the virtual cursor on, from wherever the pointer is. */
+	class FDreamVirtualCursorActivateStep : public FDreamInputStep
+	{
+	public:
+		virtual FString Describe() const override { return TEXT("ActivateVirtualCursor()"); }
+
+	protected:
+		virtual bool Apply(FDreamDriverContext& InContext) override
+		{
+			FString WhyNot;
+			UDreamUIVirtualCursorSubsystem* Cursor = FindVirtualCursor(InContext, WhyNot);
+			if (Cursor == nullptr)
+			{
+				FailureReason = WhyNot;
+				return false;
+			}
+			Cursor->ActivateVirtualCursor();
+			if (!Cursor->IsVirtualCursorActive())
+			{
+				// ActivateVirtualCursor refuses quietly (a Warning) when it cannot find a standalone
+				// input module through player 0's registered event system.
+				FailureReason = TEXT("the virtual cursor would not activate: it needs player 0's event system registered with the UI manager and a standalone input module on it");
+				return false;
+			}
+			return true;
+		}
+	};
+
+	/**
+	 * Hold the left stick at a value for a span of time, then let it spring back to the centre and
+	 * give the cursor one frame to see it there. Every frame of the span carries one sample, as a pad
+	 * does; the cursor integrates them in its tick (speed times stick times delta).
+	 */
+	class FDreamVirtualCursorStickStep : public IDreamDriverStep
+	{
+	public:
+		FDreamVirtualCursorStickStep(const FVector2D& InStick, float InSeconds)
+			: Stick(InStick)
+			, Seconds(FMath::Max(InSeconds, 0.0f))
+		{
+		}
+
+		virtual EDreamDriverStepResult Execute(FDreamDriverContext& InContext, float InDeltaSeconds) override
+		{
+			if (bReleased)
+			{
+				return EDreamDriverStepResult::Done;
+			}
+			FString WhyNot;
+			UDreamUIVirtualCursorSubsystem* Cursor = FindVirtualCursor(InContext, WhyNot);
+			if (Cursor == nullptr || !Cursor->IsVirtualCursorActive())
+			{
+				FailureReason = Cursor == nullptr
+					? WhyNot
+					: FString(TEXT("the virtual cursor is not active; activate it first, as a screen that needs it would"));
+				return EDreamDriverStepResult::Failed;
+			}
+			APlayerController* Controller = FindStickController(InContext);
+			if (Controller == nullptr || Controller->PlayerInput == nullptr)
+			{
+				FailureReason = TEXT("there is no player controller with its input up to carry the stick; the virtual cursor reads the stick from player 0");
+				return EDreamDriverStepResult::Failed;
+			}
+			const float FrameDelta = InDeltaSeconds > 0.0f ? InDeltaSeconds : InContext.FrameSeconds;
+			constexpr double Tolerance = 1.0e-6;
+			if (Elapsed + Tolerance >= (double)Seconds)
+			{
+				FeedLeftStick(InContext, *Controller, FVector2D::ZeroVector, FrameDelta);
+				bReleased = true;
+				return EDreamDriverStepResult::Again;
+			}
+			FeedLeftStick(InContext, *Controller, Stick, FrameDelta);
+			Elapsed += (double)FrameDelta;
+			return EDreamDriverStepResult::Again;
+		}
+
+		virtual FString Describe() const override
+		{
+			return FString::Printf(TEXT("VirtualCursorStick(%s, %.3f seconds)"), *Stick.ToString(), Seconds);
+		}
+
+		virtual FString GetFailureReason() const override { return FailureReason; }
+
+	private:
+		FVector2D Stick;
+		float Seconds;
+		double Elapsed = 0.0;
+		bool bReleased = false;
+		FString FailureReason;
+	};
+
+	/**
+	 * The confirm button, as the virtual cursor hears it: SetConfirmPressed, which it delivers to the
+	 * module as the left mouse button at the cursor. That is the call the preset input actor makes
+	 * after offering the key to the action router, under every host, so it is made directly here.
+	 */
+	class FDreamVirtualCursorConfirmStep : public FDreamInputStep
+	{
+	public:
+		explicit FDreamVirtualCursorConfirmStep(bool bInPressed)
+			: bPressed(bInPressed)
+		{
+		}
+
+		virtual FString Describe() const override
+		{
+			return bPressed ? TEXT("VirtualCursorPress()") : TEXT("VirtualCursorRelease()");
+		}
+
+	protected:
+		virtual bool Apply(FDreamDriverContext& InContext) override
+		{
+			FString WhyNot;
+			UDreamUIVirtualCursorSubsystem* Cursor = FindVirtualCursor(InContext, WhyNot);
+			if (Cursor == nullptr)
+			{
+				FailureReason = WhyNot;
+				return false;
+			}
+			if (!Cursor->IsVirtualCursorActive())
+			{
+				FailureReason = TEXT("the virtual cursor is not active, so it has no confirm button to press");
+				return false;
+			}
+			Cursor->SetConfirmPressed(bPressed);
+			return true;
+		}
+
+	private:
+		bool bPressed;
 	};
 
 	FDreamPixelResolver MakeLocatorCentreResolver(const FDreamLocatorRef& InLocator)
@@ -1288,10 +1601,64 @@ FDreamDriverSequence& FDreamDriverSequence::NavigationTrigger(bool bInTriggerPre
 	return Add(MakeShared<FDreamNavigationTriggerStep>(bInTriggerPress));
 }
 
+FDreamDriverSequence& FDreamDriverSequence::Back()
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamBackStep>());
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TouchDown(int32 InFingerId, const FVector2D& InPixel)
+{
+	using namespace DreamDriverSequenceLocal;
+	const FVector2D TargetPixel = InPixel;
+	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Began, InFingerId,
+		[TargetPixel](FDreamDriverContext&) -> TOptional<FVector2D> { return TargetPixel; },
+		TargetPixel.ToString()));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TouchMoveTo(int32 InFingerId, const FVector2D& InPixel)
+{
+	using namespace DreamDriverSequenceLocal;
+	const FVector2D TargetPixel = InPixel;
+	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Moved, InFingerId,
+		[TargetPixel](FDreamDriverContext&) -> TOptional<FVector2D> { return TargetPixel; },
+		TargetPixel.ToString()));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TouchUp(int32 InFingerId)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Ended, InFingerId, FDreamPixelResolver(), FString()));
+}
+
 FDreamDriverSequence& FDreamDriverSequence::WaitSeconds(float InSeconds)
 {
 	using namespace DreamDriverSequenceLocal;
 	return Add(MakeShared<FDreamWaitSecondsStep>(InSeconds));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::ActivateVirtualCursor()
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamVirtualCursorActivateStep>());
+}
+
+FDreamDriverSequence& FDreamDriverSequence::VirtualCursorStick(const FVector2D& InStick, float InSeconds)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamVirtualCursorStickStep>(InStick, InSeconds));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::VirtualCursorPress()
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamVirtualCursorConfirmStep>(true));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::VirtualCursorRelease()
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamVirtualCursorConfirmStep>(false));
 }
 
 FDreamDriverSequence& FDreamDriverSequence::Type(const FString& InText)

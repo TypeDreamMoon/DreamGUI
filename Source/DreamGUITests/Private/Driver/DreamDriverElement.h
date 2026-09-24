@@ -87,6 +87,17 @@ public:
 	/** Press on the centre and hold for InSeconds without letting go; the release is a separate act. */
 	bool Hold(float InSeconds, EDreamUIMouseButtonType InButton = EDreamUIMouseButtonType::Left);
 
+	/**
+	 * A finger lands on the centre and lifts where it landed: a tap, which a button takes as a click.
+	 * InFingerId is the touch index, and so the pointer id; see FDreamDriverSequence::TouchDown.
+	 */
+	bool Tap(int32 InFingerId = 0);
+	/**
+	 * A finger lands on the centre, crosses the raycaster's drag threshold on its first move, travels
+	 * to InPixelDelta from where it landed over separate frames, rests a frame, and lifts -- DragBy's
+	 * shape, with a finger.
+	 */
+	bool TouchDragBy(const FVector2D& InPixelDelta, int32 InFingerId = 0);
 	/** Move to the centre and hold the trigger down; the release is a separate act. */
 	bool Press(EDreamUIMouseButtonType InButton = EDreamUIMouseButtonType::Left);
 	/** Let the trigger up where the pointer currently is. */
