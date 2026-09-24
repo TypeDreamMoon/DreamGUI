@@ -535,7 +535,9 @@ public:
 	bool HandleKeyInput(const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifierKeys);
 	/**
 	 * Route a platform character event to whichever field currently owns the keyboard, if any.
-	 * This is the one line a project's UGameViewportClient::InputChar override needs.
+	 * This is the one line a project's UGameViewportClient::InputChar override needs -- called after
+	 * the console has had the character and before the base class's InputChar, which in a
+	 * play-in-editor viewport answers true for every character (see UDreamGameViewportClient).
 	 * @return true if a field took the character.
 	 */
 	static bool RouteCharacterInputToActiveInput(TCHAR InCharacter);

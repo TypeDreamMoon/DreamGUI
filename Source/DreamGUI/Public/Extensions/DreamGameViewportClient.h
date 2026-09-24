@@ -27,8 +27,12 @@
  *          GameViewportClientClassName=/Script/DreamGUI.DreamGameViewportClient
  *   2. A project that already has its own viewport client: derive from this instead of
  *      UGameViewportClient, or keep its own base and call
- *      UUITextInput::RouteCharacterInputToActiveInput(Character) from its InputChar override.
- *      The routing function is the whole contract -- nothing else about this class is required.
+ *      UUITextInput::RouteCharacterInputToActiveInput(Character) from its InputChar override --
+ *      after its console has had the character and BEFORE calling the base class's InputChar. In a
+ *      play-in-editor viewport the engine's base answers true for every character (it absorbs them
+ *      so they do not reach the editor's frame), so an override that asks the base first and returns
+ *      on its answer never reaches the field there. The routing function is the whole contract --
+ *      nothing else about this class is required.
  */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamGameViewportClient : public UGameViewportClient
@@ -39,9 +43,11 @@ public:
 	/**
 	 * A character the platform resolved, on the player's own keyboard layout.
 	 *
-	 * The base class is asked first, so the console keeps its priority: a character typed into an
-	 * open console is the console's, not a background field's. Only what nothing else wanted is
-	 * offered to the active DreamGUI field.
+	 * The console is asked first, so it keeps its priority: a character typed into an open console
+	 * is the console's, not a background field's. Then, unless the client is ignoring input, the
+	 * DreamGUI field being edited; then the base class, with whatever neither took. The base is not
+	 * asked first because in a play-in-editor viewport it answers true for every character, and the
+	 * field would never see one there (the .cpp walks through it).
 	 */
 	virtual bool InputChar(FViewport* InViewport, int32 ControllerId, TCHAR Character) override;
 };
