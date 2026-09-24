@@ -1942,6 +1942,13 @@ public:
 	 * governs how far a dirty mark propagates. This covers a LayoutSelf sizing its own widget too.
 	 */
 	static bool IsLayoutWriting() { return LayoutPassDepth > 0; }
+	/**
+	 * For tests: the raw nesting depth behind IsLayoutWriting, so a test rig can assert it is back at
+	 * zero once the rig is gone -- a pass entered and never left would make every later size edit read
+	 * as layout output. The number rather than the bool, because a stray decrement (a negative depth)
+	 * is the same fault in the other direction and the bool cannot show it. A read; it changes nothing.
+	 */
+	static int32 GetLayoutPassDepthForTesting() { return LayoutPassDepth; }
 
 private:
 	/** Stack of widgets whose layout containers are applying results; see FLayoutWriteScope. Game thread only. */

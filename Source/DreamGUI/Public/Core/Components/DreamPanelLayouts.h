@@ -220,6 +220,14 @@ private:
 	static int32 DesiredSizeMemoDepth;
 	static int64 DesiredSizeComputeCount;
 
+public:
+	/**
+	 * For tests: how many desired-size memo scopes are open right now. Zero between passes; a test
+	 * rig asserts it is zero once the rig is gone, because a scope left open keeps the shared memo
+	 * answering measurements from a pass that is over. A read; it changes nothing.
+	 */
+	static int32 GetDesiredSizeMemoDepthForTesting() { return DesiredSizeMemoDepth; }
+
 protected:
 
 	/** Write a recorded fragment onto the widgets. The one place a panel's result reaches the tree. */

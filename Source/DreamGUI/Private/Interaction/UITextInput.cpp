@@ -781,6 +781,15 @@ UUITextInput* UUITextInput::GetActiveTextInput()
 {
 	return ActiveTextInput.Get();
 }
+bool UUITextInput::IsHostDeliveringCharacterEvents()
+{
+	return bHostDeliversCharacterEvents;
+}
+void UUITextInput::SetHostDeliversCharacterEventsForTesting(bool bInDelivers)
+{
+	// A test hook and nothing else; see the declaration. No runtime road calls it.
+	bHostDeliversCharacterEvents = bInDelivers;
+}
 void UUITextInput::WarnOnceIfNoCharacterEventSource()
 {
 	// Said once per process, the first time a field is edited on a platform that types with a real

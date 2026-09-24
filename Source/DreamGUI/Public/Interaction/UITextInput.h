@@ -545,6 +545,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		static UUITextInput* GetActiveTextInput();
 
+	/**
+	 * For tests: whether the process has seen a host deliver a character event, which is what
+	 * decides whether the key road still guesses printable characters (see bHostDeliversCharacterEvents).
+	 * A read; it changes nothing.
+	 */
+	static bool IsHostDeliveringCharacterEvents();
+	/**
+	 * For tests only: set the process-wide "a host delivers characters" switch.
+	 *
+	 * The switch flips for good on the first HandleCharacterInput, so a test that types would
+	 * otherwise decide for every test after it which road characters take -- and the key-to-character
+	 * fallback, the road a project without a character-delivering viewport client is on, could never
+	 * be tested again in the same process. A test rig uses this to put the switch back the way it
+	 * found it, and a test of either road uses it to say which road it means. Nothing in the runtime
+	 * calls it.
+	 */
+	static void SetHostDeliversCharacterEventsForTesting(bool bInDelivers);
+
 	/** Step back through the edit history. @return true if anything changed. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		bool Undo();
