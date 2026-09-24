@@ -228,8 +228,9 @@ namespace DreamDesignerDriverProbeLocal
  * The size BEFORE the offer is recorded rather than asserted, because it is a property of the
  * environment and not of this plugin: zero under a headless run, something else under a real window,
  * and a test that demanded either would be red in the other. What is asserted is the part that
- * belongs to us -- that the offer is taken, exactly, and that the conversions still invert over the
- * size that was taken.
+ * belongs to us -- that the offer is taken, exactly, where there is a hole to fill, that a size a real
+ * window already gave the viewport is left as it was, and that the conversions still invert over the
+ * size the viewport ends up with.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerDriverViewportSizeTest,
@@ -258,10 +259,22 @@ bool FDreamDesignerDriverViewportSizeTest::RunTest(const FString&)
 			Found.X, Found.Y));
 
 		// Exact, not merely non-zero: a size that arrives as something other than what was asked for
-		// would put every pixel these tests name somewhere else, quietly.
+		// would put every pixel these tests name somewhere else, quietly. The offer fills a hole and
+		// never overrules (EnsureHeadlessSize), so what it must leave behind depends on what it found:
+		// the size asked for where nothing had sized the viewport, and the size a real window gave it
+		// -- a real RHI lays the designer tab out off screen -- left exactly as it was.
 		const FIntPoint Asked(1280, 720);
-		TestTrue(TEXT("The viewport takes the size it is given"), State->Driver->EnsureHeadlessSize(Asked));
-		TestEqual(TEXT("and measures exactly that afterwards"), State->Driver->ViewportPixelSize(), Asked);
+		const bool bNothingHadSizedIt = Found.X <= 0 || Found.Y <= 0;
+		TestTrue(TEXT("The offer of a size is answered as handled"), State->Driver->EnsureHeadlessSize(Asked));
+		if (bNothingHadSizedIt)
+		{
+			TestEqual(TEXT("and measures exactly that afterwards"), State->Driver->ViewportPixelSize(), Asked);
+		}
+		else
+		{
+			TestEqual(TEXT("A viewport a real window had already sized keeps exactly that size"),
+				State->Driver->ViewportPixelSize(), Found);
+		}
 
 		// Said here because this is where the size comes from: the arranged extent is what every
 		// pixel below is divided by, so a round trip that survives it survives the synthetic
