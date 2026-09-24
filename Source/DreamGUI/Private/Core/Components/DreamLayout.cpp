@@ -72,12 +72,18 @@ void UDreamLayoutAnimation_CommonTween::OnApplyLayoutResults(const TArray<FLayou
 		// bug: it derives its start from the current delta rather than from the snapshot.
 		const FVector2D AnchorSpan = SnapshotData.Widget->GetSize() - SnapshotData.Widget->GetSizeDelta();
 		auto OldSize = SnapshotData.Size - AnchorSpan;
-		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
 
-		// UDreamTweenManager is a game-instance subsystem, so it is simply absent in an editor world and
-		// To() answers null there. The call used to be chained straight into ->SetEase, which made that
-		// a null dereference rather than "no easing available". The start state above has already been
-		// applied either way, so skipping leaves the layout at its new values instead of crashing.
+		// UDreamTweenManager is a game-instance subsystem, so a world no game instance owns has none and
+		// To() answers null there (an editor world never gets this far: ApplyLayoutResult plays no layout
+		// animation outside a game world). The call used to be chained straight into ->SetEase, which
+		// made that a null dereference rather than "no easing available".
+		//
+		// So the tween is asked for FIRST, and the child is put back at its start only once there is a
+		// tween to carry it away again. With none, the layout's own result -- exactly where the animation
+		// would have ended -- is left standing. Writing the start state first, as this used to, left
+		// every child where the OLD layout had put it, for good. The tween reads nothing from the widget
+		// and only ticks from the next frame, so writing the start after asking changes nothing when
+		// there is one.
 		UDreamTweener* Tweener = UDreamTweenManager::To(this
 		, FDreamTweenFloatGetterFunction::CreateLambda([=]()
 		{
@@ -92,6 +98,7 @@ void UDreamLayoutAnimation_CommonTween::OnApplyLayoutResults(const TArray<FLayou
 		{
 			continue;
 		}
+		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
 		Tweener->SetEase(Ease);
 		if (Ease == EDreamTweenEase::CurveFloat)
 		{
@@ -114,10 +121,11 @@ void UDreamLayoutAnimation_SlideIn::OnApplyLayoutResults(const TArray<FLayoutAni
 		auto OldPos = NewPos + PositionOffset;
 		auto OldSize = NewSize + SizeOffset;
 		auto OldOpacity = NewOpacity + OpacityOffset;
-		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
-		SnapshotData.Widget->SetRenderOpacity(OldOpacity);
 
-		/** Same null contract as in UDreamLayoutAnimation_CommonTween above. */
+		// Same null contract and same order as UDreamLayoutAnimation_CommonTween above: the offset and
+		// faded start is written only once a tween exists to slide the child in from it. With none, the
+		// child keeps its laid-out place and opacity -- where the slide would have ended -- rather than
+		// sitting at the offset, possibly fully transparent, for good.
 		UDreamTweener* Tweener = UDreamTweenManager::To(this
 		, FDreamTweenFloatGetterFunction::CreateLambda([=]()
 		{
@@ -133,6 +141,8 @@ void UDreamLayoutAnimation_SlideIn::OnApplyLayoutResults(const TArray<FLayoutAni
 		{
 			continue;
 		}
+		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
+		SnapshotData.Widget->SetRenderOpacity(OldOpacity);
 		Tweener->SetEase(Ease);
 		if (Ease == EDreamTweenEase::CurveFloat)
 		{

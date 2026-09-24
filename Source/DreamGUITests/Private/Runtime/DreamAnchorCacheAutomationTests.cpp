@@ -6,8 +6,10 @@
 
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamWidget.h"
+#include "DreamTweenManager.h"
 #include "DreamTweener.h"
 #include "Engine/World.h"
+#include "DreamScopedGameInstanceWorld.h"
 #include "DreamScopedWorld.h"
 
 /*
@@ -258,7 +260,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLayoutAnimationStartsAtTheSizeItSnapshottedTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamAnchorCacheTestLocal;
-	FScopedGameWorld TestWorld;
+	// A world a game instance owns, so the tween manager exists: the animation writes its start state
+	// only once it has a tween to carry the child away from it again. In a world with no tween manager
+	// it plays nothing and leaves the layout's own result -- the animation's end -- standing, and there
+	// would be no start state to look at.
+	DreamTests::FScopedGameInstanceWorld TestWorld;
+	if (!TestNotNull(TEXT("The world has a tween manager to run the layout animation on"),
+		UDreamTweenManager::GetDreamTweenInstance(TestWorld.World)))
+	{
+		return false;
+	}
 	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 400.0f, 300.0f);
 	UDreamWidget* Child = MakeWidget(TestWorld.World, Root, TEXT("Child"), 100.0f, 50.0f);
 	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0, 0.0), FVector2D(1.0, 1.0), false, false);
@@ -283,16 +294,25 @@ bool FDreamLayoutAnimationStartsAtTheSizeItSnapshottedTest::RunTest(const FStrin
 	Snapshots.Add(Snapshot);
 
 	TArray<TWeakObjectPtr<UDreamTweener>> Tweeners;
-	// The start state is applied synchronously, before any tweener exists -- which is the frame the
-	// jump was visible on. (No game instance here, so the tween manager is absent and no easing is
-	// scheduled; the applied start state is the whole observable and is exactly what is under test.)
+	// The start state is applied synchronously, as soon as the tween exists and before it has ticked
+	// once -- which is the frame the jump was visible on. Nothing ticks this world, so the tween never
+	// moves the child: the applied start state is the whole observable and is exactly what is under test.
 	Animation->OnApplyLayoutResults(Snapshots, Tweeners);
+	TestEqual(TEXT("One tween carries the child from its start"), Tweeners.Num(), 1);
 
 	TestTrue(TEXT("The animation starts at the width the snapshot recorded"),
 		FMath::IsNearlyEqual(Child->GetWidth(), 180.0f, 0.01f));
 	TestTrue(TEXT("...and at the height it recorded"),
 		FMath::IsNearlyEqual(Child->GetHeight(), 40.0f, 0.01f));
 
+	// Killed before the child goes: the tween's setter writes into it.
+	for (const TWeakObjectPtr<UDreamTweener>& Tweener : Tweeners)
+	{
+		if (Tweener.IsValid())
+		{
+			Tweener->Kill();
+		}
+	}
 	Root->DestroyWidget();
 	return true;
 }
