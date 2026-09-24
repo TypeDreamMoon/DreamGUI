@@ -283,11 +283,13 @@ bool FDreamImagePreferredSizeTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("and its authored height"), Image->GetPreferredHeight(), 48.0f);
 
 	// A sprite that has not been packed yet reports nothing, and nothing is an abstention rather than
-	// a zero: the layout falls back to the authored rect instead of collapsing the element.
+	// a zero: the layout falls back to the authored rect instead of collapsing the element. Not the
+	// brush size either -- for a sprite that is the same made-up 32x32 this test exists to keep out.
 	UDreamSpriteRegistrationProbe* Unpacked = MakeProbe(nullptr, 0, 0);
 	Image->SetBrush_DreamUISprite(Unpacked);
-	TestEqual(TEXT("an unpacked sprite abstains and the brush size answers again"),
-		Image->GetPreferredWidth(), Image->GetBrush().ImageSize.X);
+	TestTrue(TEXT("an unpacked sprite abstains across, so the layout falls back to the authored rect"),
+		Image->GetPreferredWidth() < 0.0f);
+	TestTrue(TEXT("and down"), Image->GetPreferredHeight() < 0.0f);
 	return true;
 }
 

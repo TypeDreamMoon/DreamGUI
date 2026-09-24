@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Core/DreamUISpriteData.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -167,16 +168,35 @@ bool FDreamProceduralShapeBrushSizeTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamPreferredSizeTestLocal;
 
-	// The control, and the reason the bug below was invisible: on an IMAGE, the brush size IS the
-	// content size, and answering with it is right.
+	// The control, and the reason the bug below was invisible: an IMAGE has a natural size of its
+	// own. Over a resource that cannot measure itself (a texture here) the brush is drawn at its
+	// ImageSize, so the brush size IS the content size and answering with it is right; over a sprite
+	// the content is the sprite, and the answer is the sprite's own size -- not the brush's, which a
+	// sprite leaves at whatever it was (UDreamImage::GetPreferredWidth).
+	//
+	// Both resources are made here, so the answers do not depend on the plugin's shared white sprite,
+	// whose size is only known once a real RHI has packed it into an atlas.
 	{
 		FVisualScope Scope(UDreamImage::StaticClass(), TEXT("Image"));
 		UDreamImage* Image = Scope.As<UDreamImage>();
 		if (!TestNotNull(TEXT("the image builds"), Image))return false;
-		TestEqual(TEXT("an image measures as its brush, which is its content"),
-			Image->GetPreferredWidth(), Image->GetBrush().ImageSize.X);
 		TestTrue(TEXT("and the default brush is a real number, so the answer below is a choice"),
 			Image->GetBrush().ImageSize.X > 0.0f);
+
+		UTexture2D* Texture = UTexture2D::CreateTransient(64, 32);
+		if (!TestNotNull(TEXT("a transient texture for the image to draw"), Texture))return false;
+		Image->SetBrush_Texture(Texture);
+		TestEqual(TEXT("an image measures as its brush, which is its content"),
+			Image->GetPreferredWidth(), Image->GetBrush().ImageSize.X);
+
+		// No packing tag: the texture is the sprite's own atlas, so its size is known without an RHI.
+		UDreamUISpriteData* Sprite = UDreamUISpriteData::CreateDreamUISpriteData(GetTransientPackage(), Texture, FMargin(), NAME_None);
+		if (!TestNotNull(TEXT("a transient sprite over the same texture"), Sprite))return false;
+		Image->SetBrush_DreamUISprite(Sprite);
+		TestEqual(TEXT("an image over a sprite measures as the sprite across"), Image->GetPreferredWidth(), 64.0f, 0.01f);
+		TestEqual(TEXT("and down"), Image->GetPreferredHeight(), 32.0f, 0.01f);
+		TestTrue(TEXT("which is not the brush's own size, so the sprite really is the answer"),
+			!FMath::IsNearlyEqual(Image->GetPreferredWidth(), Image->GetBrush().ImageSize.X));
 	}
 
 	// The shapes. Each derives from UDreamImage purely to borrow the brush as a source of pixels to

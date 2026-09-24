@@ -44,7 +44,9 @@ protected:
 	void UnregisterFromSprite();
 	/**
 	 * The pixel size the sprite in this brush was authored at, or negative when the brush holds
-	 * anything else (a texture, a material, nothing yet) and the brush's own ImageSize is the answer.
+	 * anything else (a texture, a material, nothing yet) or its sprite reports no size (not packed
+	 * yet). The measure tells the two apart by the brush's resource: a brush over anything else
+	 * answers with its own ImageSize, and a sprite that reports no size answers "no opinion".
 	 *
 	 * Copied at the moments this component is holding the sprite data anyway, and never read out of
 	 * the sprite during a measure pass: UDreamUISpriteData::GetSpriteInfo reads like a getter and is

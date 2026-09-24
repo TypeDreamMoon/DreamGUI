@@ -659,16 +659,25 @@ void UDreamImage::OnBeforeCreateOrUpdateGeometry()
  * at whatever it was left at when a sprite is assigned. Returning it for every brush measured every
  * sprite in an Auto slot at the default 32x32, silently and confidently.
  * Negative means "no opinion": the sprite has not been packed yet, and the caller falls back to the
- * authored rect rather than to a number this component made up.
+ * authored rect rather than to a number this component made up. That holds for a sprite brush only;
+ * a brush over anything else answers with ImageSize, which is the size such a brush is drawn at.
  */
 float UDreamImage::GetPreferredWidth() const
 {
-	return CachedSpriteSourceSize.X > 0.0f ? CachedSpriteSourceSize.X : Brush.ImageSize.X;
+	if (Cast<UDreamUISpriteData_BaseObject>(Brush.GetResourceObject()) != nullptr)
+	{
+		return CachedSpriteSourceSize.X;
+	}
+	return Brush.ImageSize.X;
 }
 
 float UDreamImage::GetPreferredHeight() const
 {
-	return CachedSpriteSourceSize.Y > 0.0f ? CachedSpriteSourceSize.Y : Brush.ImageSize.Y;
+	if (Cast<UDreamUISpriteData_BaseObject>(Brush.GetResourceObject()) != nullptr)
+	{
+		return CachedSpriteSourceSize.Y;
+	}
+	return Brush.ImageSize.Y;
 }
 
 DECLARE_DREAM_GUI_VISUAL("Image", UDreamImage)
