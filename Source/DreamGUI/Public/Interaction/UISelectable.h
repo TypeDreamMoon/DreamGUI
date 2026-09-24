@@ -321,6 +321,22 @@ protected:
 
 	EUISelectableSelectionState CurrentSelectionState = EUISelectableSelectionState::Normal;
 	void ApplyPointerSelectionState(bool ImmediateSet);
+	/**
+	 * Whether a change of look is PLAYED -- faded over the transition's duration -- or simply written.
+	 *
+	 * Played only once the player can see this control: it is enabled (its world is playing and its
+	 * widget is active in the hierarchy) and it has started (Start runs in the UI manager's frame
+	 * pass, ahead of that pass's layout and drawing). Before that the control is still being built,
+	 * styled and registered, and every one of those steps sets the look of a state it is already in.
+	 * Played, each of them was a fade from the visual's authored colour, which is how every new
+	 * button on a screen that had just opened faded in from white. UMG draws a new SButton in its
+	 * normal style on its first frame: being created is not a transition. A hidden control is the
+	 * same case from the other side -- a fade nobody sees only makes the look arrive late.
+	 *
+	 * An editor or worldless tree is never enabled, so it always writes at once, which is also the
+	 * only thing that can work there. UUIToggle asks the same question for its checked transition.
+	 */
+	bool ShouldAnimateStateChanges() const { return bIsEnableCalled && bIsStartCalled; }
 	/** What feedback last played for, so re-applying the same state stays silent. */
 	EUISelectableSelectionState LastFeedbackState = EUISelectableSelectionState::Normal;
 	/** Style-driven sound for entering CurrentSelectionState. Called by ApplyPointerSelectionState. */

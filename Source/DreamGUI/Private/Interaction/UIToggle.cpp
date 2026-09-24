@@ -141,6 +141,10 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 		if (!ToggleTransitionTarget.IsValid())return;
 	}
 
+	// The pointer transition's rule, for the same reason: a toggle nobody can see yet (or any more)
+	// has no checked look anyone saw to fade from. See UUISelectable::ShouldAnimateStateChanges.
+	const bool bImmediate = immediateSet || !ShouldAnimateStateChanges();
+
 	TOptional<FColor> Color;
 	TOptional<FDreamUIImageBrush> Brush;
 	if (ToggleTransitionType == EUISelectableTransitionType::Color)
@@ -157,24 +161,35 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 		{
 			if (bIsOn)
 			{
-				CustomToggleTransition->ToggleOn(immediateSet);
+				CustomToggleTransition->ToggleOn(bImmediate);
 			}
 			else
 			{
-				CustomToggleTransition->ToggleOff(immediateSet);
+				CustomToggleTransition->ToggleOff(bImmediate);
 			}
 		}
 	}
 
+	// Whatever is still fading stops before the value is written, on every road -- the reason and the
+	// null-first test are UUISelectable::ApplyPointerSelectionState's. Start's immediate apply is the
+	// one this matters most to: the tween a construction-time change started would otherwise go on
+	// overwriting the colour Start just wrote.
+	auto StopRunningTransition = [this]()
+	{
+		if (ToggleTransitionTweener != nullptr && UDreamTweenManager::IsTweening(this, ToggleTransitionTweener))
+		{
+			ToggleTransitionTweener->Kill();
+		}
+	};
 	if (Color.IsSet())
 	{
-		if (ToggleDuration <= 0.0f || immediateSet)
+		StopRunningTransition();
+		if (ToggleDuration <= 0.0f || bImmediate)
 		{
 			ToggleTransitionTarget->SetColor(Color.GetValue());
 		}
 		else
 		{
-			if (UDreamTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
 			ToggleTransitionTweener = UDreamTweenManager::To(ToggleTransitionTarget.Get()
 				, FDreamTweenColorGetterFunction::CreateWeakLambda(ToggleTransitionTarget.Get(), [=, this]()
 			{
@@ -197,19 +212,19 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 	{
 		if (auto ToggleTransitionTargetAsDreamImage = Cast<UDreamImage>(ToggleTransitionTarget.Get()))
 		{
+			StopRunningTransition();
 			if (IsValid(Brush.GetValue().GetResourceObject()))
 			{
 				ToggleTransitionTargetAsDreamImage->SetBrush(Brush.GetValue());
 			}
 			else
 			{
-				if (ToggleDuration <= 0.0f || immediateSet)
+				if (ToggleDuration <= 0.0f || bImmediate)
 				{
 					ToggleTransitionTargetAsDreamImage->SetBrushTintColor(Brush.GetValue().TintColor);
 				}
 				else
 				{
-					if (UDreamTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
 					ToggleTransitionTweener = UDreamTweenManager::To(ToggleTransitionTargetAsDreamImage
 						, FDreamTweenColorGetterFunction::CreateWeakLambda(ToggleTransitionTargetAsDreamImage, [=, this]()
 					{
@@ -236,8 +251,10 @@ void UUIToggle::SetToggleTransitionTarget(UDreamVisual* Value)
 	{
 		ToggleTransitionTarget = Value;
 		// Immediately, and without the tween: a target handed over after the toggle already has a
-		// value would otherwise show the unchecked colour until the next click.
-		ApplyValueToVisual(false);
+		// value would otherwise show the unchecked colour until the next click. The value did not
+		// change, so this is no transition -- which is also why the argument says so rather than
+		// leaving it to ShouldAnimateStateChanges, which only covers a hand-over before the first frame.
+		ApplyValueToVisual(true);
 	}
 }
 

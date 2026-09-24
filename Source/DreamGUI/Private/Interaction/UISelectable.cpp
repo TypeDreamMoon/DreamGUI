@@ -148,6 +148,10 @@ void UUISelectable::OnRegister()
 				ApplyPointerSelectionState(true);
 			}
 		}
+		// A target handed over BEFORE registration -- which is what every native control's WireParts
+		// does, followed by its style push -- is why the branch above so rarely runs, and it needs
+		// nothing here: nothing is played before the control's first frame (ShouldAnimateStateChanges),
+		// so that hand-over and the colours pushed after it were already written at once.
 	}
 	UDreamUIManagerWorldSubsystem::AddSelectable(this);
 }
@@ -200,10 +204,16 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 	}
 	LastFeedbackState = CurrentSelectionState;
 
+	// Whether the LOOK gets there at once. The caller's word is only half of it: a control nobody can
+	// see yet -- being built and styled, or registered but not through its first frame -- or any more
+	// has no look anyone saw to fade from, so its state is simply written. The sound above still
+	// follows the caller alone, because a transition that happened is heard whether or not it faded.
+	const bool bImmediate = ImmediateSet || !ShouldAnimateStateChanges();
+
 	// Before the early return below, deliberately: a listener that swaps a PICTURE per state has
 	// nothing to do with whether this selectable has a transition target, and a control whose
 	// transition type is None would otherwise hear about the states it is in exactly never.
-	OnSelectionStateChangedCPP.Broadcast(CurrentSelectionState, ImmediateSet);
+	OnSelectionStateChangedCPP.Broadcast(CurrentSelectionState, bImmediate);
 
 	const float EffectiveAnimDuration = Style ? Style->AnimationDuration : AnimDuration;
 	if (TransitionType != EUISelectableTransitionType::Custom)
@@ -234,7 +244,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				{
 					if (CustomTransition.IsValid())
 					{
-						CustomTransition->OnNormal(ImmediateSet);
+						CustomTransition->OnNormal(bImmediate);
 					}
 				}
 				break;
@@ -260,7 +270,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				{
 					if (CustomTransition.IsValid())
 					{
-						CustomTransition->OnHovered(ImmediateSet);
+						CustomTransition->OnHovered(bImmediate);
 					}
 				}
 				break;
@@ -286,7 +296,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				{
 					if (CustomTransition.IsValid())
 					{
-						CustomTransition->OnPressed(ImmediateSet);
+						CustomTransition->OnPressed(bImmediate);
 					}
 				}
 				break;
@@ -312,7 +322,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				{
 					if (CustomTransition.IsValid())
 					{
-						CustomTransition->OnDisabled(ImmediateSet);
+						CustomTransition->OnDisabled(bImmediate);
 					}
 				}
 				break;
@@ -342,11 +352,11 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 						// and that is where a control with no focus look of its own belongs anyway.
 						if (GetUseFocusedVisuals())
 						{
-							CustomTransition->OnFocused(ImmediateSet);
+							CustomTransition->OnFocused(bImmediate);
 						}
 						else
 						{
-							CustomTransition->OnHovered(ImmediateSet);
+							CustomTransition->OnHovered(bImmediate);
 						}
 					}
 				}
@@ -356,15 +366,26 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 		break;
 	}
 
+	// Whatever is still fading stops before this state is written, on every road: a colour written at
+	// once while a tween still heads for the previous state's colour is a colour that tween overwrites
+	// on its next step -- and a control hidden mid-fade now takes the immediate road. Asked only when
+	// there IS a tween, because the manager lookup logs for an object with no world.
+	auto StopRunningTransition = [this]()
+	{
+		if (TransitionTweener != nullptr && UDreamTweenManager::IsTweening(this, TransitionTweener))
+		{
+			TransitionTweener->Kill();
+		}
+	};
 	if (Color.IsSet())
 	{
-		if (EffectiveAnimDuration <= 0.0f || ImmediateSet)
+		StopRunningTransition();
+		if (EffectiveAnimDuration <= 0.0f || bImmediate)
 		{
 			TransitionTarget->SetColor(Color.GetValue());
 		}
 		else
 		{
-			if (UDreamTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
 			TransitionTweener = UDreamTweenManager::To(TransitionTarget.Get()
 				, FDreamTweenColorGetterFunction::CreateWeakLambda(TransitionTarget.Get(), [=, this]()
 			{
@@ -388,19 +409,19 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 	{
 		if (auto TransitionTargetAsDreamImage = Cast<UDreamImage>(TransitionTarget.Get()))
 		{
+			StopRunningTransition();
 			if (IsValid(Brush.GetValue().GetResourceObject()))
 			{
 				TransitionTargetAsDreamImage->SetBrush(Brush.GetValue());
 			}
 			else
 			{
-				if (EffectiveAnimDuration <= 0.0f || ImmediateSet)
+				if (EffectiveAnimDuration <= 0.0f || bImmediate)
 				{
 					TransitionTargetAsDreamImage->SetBrushTintColor(Brush.GetValue().TintColor);
 				}
 				else
 				{
-					if (UDreamTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
 					TransitionTweener = UDreamTweenManager::To(TransitionTargetAsDreamImage
 						, FDreamTweenColorGetterFunction::CreateWeakLambda(TransitionTargetAsDreamImage, [=, this]()
 					{
