@@ -1,0 +1,21 @@
+{
+  "about": [
+    "Findings static_checks.py is told to accept. Each entry: rule (a rule id, or * for any), path (a glob relative to the plugin root, forward slashes, case-sensitive), match (optional regular expression searched in the finding's token -- the offending word, name or text), reason (required: why this one is fine).",
+    "Prefer an inline comment on the line itself, '// static-checks: allow(<rule>) <why>', when the file is yours to edit; keep this list for what cannot carry one.",
+    "Entries that match nothing are reported at the end of every run: take them out."
+  ],
+  "allow": [
+    {
+      "rule": "plan-label",
+      "path": "Source/DreamGUITests/Private/Editor/DreamHierarchyViewAutomationTests.cpp",
+      "match": "^F2$",
+      "reason": "F2 is the rename key the comment talks about, not a work item."
+    },
+    {
+      "rule": "plan-label",
+      "path": "Source/DreamGUITests/Private/Runtime/DreamRetainedRenderingAutomationTests.cpp",
+      "match": "(?i)^phase \\d+$",
+      "reason": "Retained rendering redraws on a frame phase; these are its phases, not a plan's."
+    }
+  ]
+}
