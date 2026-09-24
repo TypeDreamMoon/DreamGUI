@@ -28,7 +28,9 @@ class UDreamWidget;
  * ACTIONS ARE HEADLESS ONLY. Each of them pumps frames of its own and returns when the whole gesture
  * has been delivered, which is only meaningful when this driver owns the frames. Under the engine
  * pump the frames belong to the engine, so build a FDreamDriverSequence and PerformLatent it instead;
- * the queries below are safe under either pump.
+ * on a context marked bEnginePumped (a PIE rig) an action says so and returns false. The queries
+ * below are safe under either pump, and answer through the context's camera once a world-space
+ * pointer has given it one.
  */
 class FDreamDriverElement : public TSharedFromThis<FDreamDriverElement>
 {

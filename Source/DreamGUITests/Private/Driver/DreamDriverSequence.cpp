@@ -154,6 +154,22 @@ namespace DreamDriverPumpLocal
 		}
 		InTweenManager->Tick(InTickType, InWorld->DeltaTimeSeconds);
 	}
+
+	/** Say something went wrong with the context itself, where a report will show it. */
+	void ReportContextError(const FDreamDriverContext& InContext, const FString& InMessage)
+	{
+		FAutomationTestBase* ReportingTest = InContext.CurrentTest != nullptr
+			? InContext.CurrentTest
+			: FAutomationTestFramework::Get().GetCurrentTest();
+		if (ReportingTest != nullptr)
+		{
+			ReportingTest->AddError(InMessage);
+		}
+		else
+		{
+			UE_LOG(LogDreamDriver, Error, TEXT("%s"), *InMessage);
+		}
+	}
 }
 
 TArray<UClass*> FDreamDriverContext::GetPumpedTickableWorldSubsystems()
@@ -183,6 +199,15 @@ bool FDreamDriverContext::IsUsable() const
 void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 {
 	using namespace DreamDriverPumpLocal;
+
+	if (bEnginePumped)
+	{
+		// Refused, not tolerated: under the engine pump every frame already runs all of the below,
+		// and a second run inside the same frame would tick the event system, the subsystems and the
+		// layout twice -- two clicks for one, two layout passes where the runtime makes one.
+		ReportContextError(*this, TEXT("PumpOneFrame was called on a context whose frames belong to the engine (a PIE rig). Build a sequence and PerformLatent it; the engine's own frame is the pump there."));
+		return;
+	}
 
 	/*
 	 * The order below is UWorld::Tick's (LevelTick.cpp), with each piece at the point where the
@@ -328,6 +353,12 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 
 void FDreamDriverContext::PumpFrames(int32 InFrameCount)
 {
+	if (bEnginePumped && InFrameCount > 0)
+	{
+		// Once, rather than once per frame through PumpOneFrame: one mistake, one error.
+		DreamDriverPumpLocal::ReportContextError(*this, TEXT("PumpFrames was called on a context whose frames belong to the engine (a PIE rig). Wait with a sequence and PerformLatent instead; the engine's own frame is the pump there."));
+		return;
+	}
 	for (int32 FrameIndex = 0; FrameIndex < InFrameCount; ++FrameIndex)
 	{
 		PumpOneFrame(FrameSeconds);
@@ -1753,6 +1784,13 @@ bool FDreamDriverSequence::Perform()
 		{
 			ReportingTest->AddError(TEXT("A driver sequence was performed without a context."));
 		}
+		return false;
+	}
+	if (Context->bEnginePumped)
+	{
+		// This pump would be a second pump: every frame it asked for would run the event system,
+		// the subsystems and the layout again inside an engine frame that already ran them.
+		DreamDriverPumpLocal::ReportContextError(*Context, TEXT("Perform was called on a context whose frames belong to the engine (a PIE rig). Under PIE, build a Sequence and PerformLatent it; element actions (Click, Type, DragTo, ...) go through Perform and are refused for the same reason."));
 		return false;
 	}
 

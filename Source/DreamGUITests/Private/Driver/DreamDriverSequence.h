@@ -67,6 +67,8 @@ struct FDreamDriverContext
 	EDreamRigInputHost InputHost = EDreamRigInputHost::ModuleOnly;
 	/** The eye a world-space pointer looks through, once one has been attached. Null keeps every pixel computation exactly as it was. */
 	TSharedPtr<FDreamDriverVirtualCamera> Camera;
+	/** Set by a rig whose frames are the ENGINE's (PIE). Perform and PumpOneFrame refuse to run then: the engine is already the pump. */
+	bool bEnginePumped = false;
 
 	/** The test currently running, so a step that fails can say so where a report will show it. Optional. */
 	FAutomationTestBase* CurrentTest = nullptr;
@@ -84,10 +86,13 @@ struct FDreamDriverContext
 	/**
 	 * One frame of the headless pump.
 	 *
-	 * See the implementation for what it calls and why; in short: advance the world clock, tick the
-	 * event system (which is what reaches the input module), then tick the UI manager (which is
-	 * layout, transforms and clip rectangles). Not called under the engine pump -- there the engine's
-	 * own frame is the pump, and calling this as well would run everything twice.
+	 * See the implementation for what it calls and why; in short, in UWorld::Tick's order: advance
+	 * the world clock (pause and time dilation included), let the player controller process its
+	 * input when input comes through one, tick the event system (which is what reaches the input
+	 * module), step the tweens at the tick groups the tween helper actor uses, tick the tickable
+	 * world subsystems, then tick the UI manager (layout, transforms and clip rectangles) last. Not
+	 * called under the engine pump -- there the engine's own frame is the pump, and calling this as
+	 * well would run everything twice; with bEnginePumped set it reports an error and does nothing.
 	 */
 	void PumpOneFrame(float InDeltaSeconds);
 
@@ -310,6 +315,10 @@ public:
 	/**
 	 * Run the whole list now, pumping frames as steps ask for them. Returns false on the first
 	 * failure, having reported it through the context's test if it has one.
+	 *
+	 * Refused -- an error, and false -- on a context whose frames belong to the engine (bEnginePumped,
+	 * a PIE rig): there the list has to be handed to PerformLatent. Every element action goes through
+	 * here, so they are refused the same way.
 	 */
 	bool Perform();
 
