@@ -107,10 +107,18 @@ void UDreamUIRenderTargetInteraction::DeactivateRaycaster()
 
 bool UDreamUIRenderTargetInteraction::LineTrace(FDreamUIHitResultContainer& OutHitResult)
 {
+	// The pointer feeding this component describes the surface only while it is ON the surface -- or
+	// holding a press it began here, which the UI on the texture is owed the release of. Past its Exit
+	// its ray and hit point are about whatever it is over now, a panel or a wall or a screen widget,
+	// and reading a UV off those put the inner pointer at a meaningless spot on the texture: it went on
+	// hovering the UI drawn there after the pointer had left. Reporting no hit instead is what gives the
+	// inner pointer its own Exit, through ProcessPointerEvent's no-hit branch.
+	if (!bInputPointerOverSurface && !(IsValid(PointerEventData) && PointerEventData->bNowIsTriggerPressed))return false;
 	if (InputPointerEventData->Raycaster == nullptr)return false;
 	auto RayOrigin = InputPointerEventData->Raycaster->GetRayOrigin();
 	auto RayDirection = InputPointerEventData->Raycaster->GetRayDirection();
 
+	// The WORLD ray's end, for the trace against the surface.
 	auto RayEnd = RayOrigin + RayDirection * RayLength;
 
 	FVector2D HitUV;
@@ -123,8 +131,14 @@ bool UDreamUIRenderTargetInteraction::LineTrace(FDreamUIHitResultContainer& OutH
 		FVector OutRayOrigin, OutRayDirection;
 		UDreamScreenSpaceRaycaster::DeprojectViewPointToWorld(ViewProjectionMatrix, mousePos01, OutRayOrigin, OutRayDirection);
 
+		// The CANVAS ray's own end. This used to be the world ray's end point, which made the canvas
+		// segment run from the canvas's eye toward wherever the world ray was going: the canvas ray
+		// bent toward the world ray's direction, invisible for a point straight ahead of both cameras
+		// and off by more the further from the middle of the surface the pointer was.
+		FVector CanvasRayEnd = OutRayOrigin + OutRayDirection * RayLength;
+
 		TArray<FDreamUIHitResult> HitResultArray;
-		this->Raycast(PointerEventData, OutRayOrigin, OutRayDirection, RayEnd, HitResultArray);
+		this->Raycast(PointerEventData, OutRayOrigin, OutRayDirection, CanvasRayEnd, HitResultArray);
 		if (HitResultArray.Num() > 0)
 		{
 			FDreamUIHitResultContainer DreamHitResult;
@@ -132,7 +146,7 @@ bool UDreamUIRenderTargetInteraction::LineTrace(FDreamUIHitResultContainer& OutH
 			DreamHitResult.Raycaster = this;
 			DreamHitResult.RayOrigin = OutRayOrigin;
 			DreamHitResult.RayDirection = OutRayDirection;
-			DreamHitResult.RayEnd = RayEnd;
+			DreamHitResult.RayEnd = CanvasRayEnd;
 			for (auto& HitItem : HitResultArray)
 			{
 				DreamHitResult.HoverArray.Add(HitItem.Widget.Get());
@@ -154,10 +168,18 @@ void UDreamUIRenderTargetInteraction::Raycast(UDreamPointerEventData* InPointerE
 bool UDreamUIRenderTargetInteraction::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	InputPointerEventData = EventData;
+	bInputPointerOverSurface = true;
 	return bAllowEventBubbleUp;
 }
 bool UDreamUIRenderTargetInteraction::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
+	// Only the pointer this component follows can take it off the surface; another pointer leaving
+	// says nothing about the one it is reading. The pointer itself is kept: a press it began here is
+	// still owed its release (see LineTrace).
+	if (EventData == InputPointerEventData.Get())
+	{
+		bInputPointerOverSurface = false;
+	}
 	return bAllowEventBubbleUp;
 }
 bool UDreamUIRenderTargetInteraction::OnPointerDown_Implementation(UDreamPointerEventData* EventData)

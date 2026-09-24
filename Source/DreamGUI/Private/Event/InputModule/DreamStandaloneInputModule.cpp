@@ -123,6 +123,16 @@ void UDreamStandaloneInputModule::InputScroll(const FVector2D& InAxisValue, int 
 			EventSystem->CallOnPointerScroll(EventData->EnterWidget, EventData);
 		}
 	}
+	// Over no widget but over an actor -- a render-target surface passes the wheel on to its own
+	// canvas -- the wheel goes to what the pointer is over, by the same rule.
+	else if (AActor* WorldTarget = EventSystem->GetHoveredWorldTarget(InPointerID))
+	{
+		if (InAxisValue != FVector2D::ZeroVector || EventData->ScrollAxisValue != InAxisValue)
+		{
+			EventData->ScrollAxisValue = InAxisValue;
+			EventSystem->CallOnWorldTargetScroll(WorldTarget, EventData);
+		}
+	}
 }
 
 void UDreamStandaloneInputModule::InputTrigger(const FVector& InMousePosition, bool InTriggerPress, EDreamUIMouseButtonType InMouseButtonType)

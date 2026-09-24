@@ -8,6 +8,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
 
 namespace DreamBaseRaycasterLocal
@@ -212,19 +213,27 @@ void UDreamBaseRaycaster::RaycastWorld(UDreamPointerEventData* InPointerEventDat
 {
 	// What a world hit MEANS here, which is the question that kept this unimplemented.
 	//
-	// The engine's trace answers with primitives, and this pipeline dispatches to UDreamWidgets: a wall
-	// has no widget and never will, so a world hit cannot be turned into a pointer event for the wall.
-	// What it can be -- and what the component is for -- is an OCCLUDER. A hit with no widget still
+	// The engine's trace answers with primitives, and a widget's events go to its behaviours: a wall has
+	// no widget and never will. What a world hit is, first, is an OCCLUDER. A hit with no widget still
 	// carries a distance, and the input module sorts every raycaster's hits by distance: a world hit in
 	// front of a world-space panel therefore wins, the panel gets its Exit, and the click that would
-	// have gone through the wall does not land. That is the whole of it, and it is a complete answer
-	// rather than a partial one -- "the pointer is blocked" is exactly what a trigger volume in front
-	// of a UI is for.
+	// have gone through the wall does not land -- "the pointer is blocked" is exactly what a trigger
+	// volume in front of a UI is for.
 	//
-	// The one thing the rest of the pipeline had to learn is that Widget can be null; see
-	// UDreamPointerInputModule::LineTrace, which now treats a widgetless hit as a blocker instead of
-	// dereferencing it.
+	// And the hit is on something, which is the other half: the actor behind it is told about the
+	// pointer through the same pointer interfaces widgets' behaviours implement -- on the actor itself
+	// and on its components, as LGUI dispatched to a hit component's actor -- which is the road a
+	// render-target surface's UDreamUIRenderTargetInteraction is reached by. The hit struct has no field
+	// for the primitive, so it is remembered here and handed out by GetWorldHitComponent. A wall
+	// implements none of the interfaces, and for a wall nothing changes.
+	//
+	// The rest of the pipeline had to learn that Widget can be null; see UDreamPointerInputModule::
+	// LineTrace, which treats a widgetless hit as a blocker instead of dereferencing it, and
+	// ProcessPointerEvent, which dispatches it to the actor.
 	OutHitResultArray.Reset();
+	// Forgotten before anything else, so a trace that finds nothing -- or never gets to run -- cannot
+	// leave an earlier trace's primitive answering for a hit it did not make.
+	LastWorldHitComponent.Reset();
 	UWorld* World = GetWorld();
 	if (World == nullptr)return;
 	if (!GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
@@ -267,6 +276,27 @@ void UDreamBaseRaycaster::RaycastWorld(UDreamPointerEventData* InPointerEventDat
 	Result.TraceEnd = WorldHit.TraceEnd;
 	Result.FaceIndex = InRequireFaceIndex ? WorldHit.FaceIndex : -1;
 	Result.Widget = nullptr;//there is no widget behind a world primitive, and that is the point
+
+	LastWorldHitComponent = WorldHit.GetComponent();
+	LastWorldHitDistance = Result.Distance;
+	LastWorldHitLocation = Result.Location;
+}
+
+UPrimitiveComponent* UDreamBaseRaycaster::GetWorldHitComponent(const FDreamUIHitResult& InHit) const
+{
+	// Explicitly null, not merely null now: a hit on a widget that has been destroyed since is still a
+	// widget's hit, never a world one. RaycastWorld writes nullptr into the ones it makes.
+	if (!InHit.Widget.IsExplicitlyNull())
+	{
+		return nullptr;
+	}
+	// Exact on purpose. Between RaycastWorld and here the hit is only ever copied -- sorted, put in a
+	// container -- never recomputed, so its distance and location are the bits RaycastWorld wrote.
+	if (InHit.Distance != LastWorldHitDistance || InHit.Location != LastWorldHitLocation)
+	{
+		return nullptr;
+	}
+	return LastWorldHitComponent.Get();
 }
 
 void UDreamBaseRaycaster::SetPointerID(int32 Value)

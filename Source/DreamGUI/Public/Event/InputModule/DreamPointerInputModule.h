@@ -9,6 +9,7 @@
 
 class UDreamBaseRaycaster;
 class UDreamEventSystem;
+class AActor;
 
 UCLASS(Abstract)
 class DREAMGUI_API UDreamPointerInputModule : public UDreamBaseInputModule
@@ -59,6 +60,25 @@ protected:
 	static void ProcessPointerEnterExit(UDreamEventSystem* eventSystem, UDreamPointerEventData* pointerEventData, UDreamWidget* oldObj, UDreamWidget* newObj);
 	/** find a common root actor of two actors. return nullptr if no common root */
 	static UDreamWidget* FindCommonRoot(UDreamWidget* A, UDreamWidget* B);
+
+	// The steps of ProcessPointerEvent for a hit that is not a widget's -- the actor behind a world hit
+	// (UDreamBaseRaycaster::GetWorldHitComponent), told through UDreamEventSystem's CallOnWorldTarget*.
+	// See UDreamEventSystem::FDreamPointerWorldTarget for what is dispatched and why the rules are the
+	// widget's. All of them need an event system to keep the state in; the static dispatch path (a
+	// render-target surface driving its own pointer) never reaches them.
+
+	/** The actor behind InHit, when InHit is a world hit its raycaster recognises as its own; null otherwise. */
+	static AActor* ResolveWorldTarget(const FDreamUIHitResultContainer& InHit, bool bInHitSomething);
+	/** Exit the actor the pointer was over, unless it is InStillOver. Before any widget is entered. */
+	static void ExitWorldTargetUnless(UDreamEventSystem* InEventSystem, UDreamPointerEventData* InEventData, const AActor* InStillOver);
+	/** Enter InNowOver, unless the pointer is over it already. After any widget has been exited. */
+	static void EnterWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* InEventData, AActor* InNowOver);
+	/** A press edge with no widget under the pointer: press the actor it is over, if any. */
+	static void PressWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* InEventData, const FDreamUIHitResultContainer& InHit);
+	/** A held press: the long press, for a press that landed on an actor. @return true if the press is an actor's. */
+	static bool HoldWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* InEventData);
+	/** Release the actor the press landed on: its up, then its click when bInClick. Marks this frame's Up as sent. */
+	static void ReleaseWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* InEventData, bool bInClick);
 
 	bool Navigate(EDreamUINavigationDirection InDirection, UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& hitResult);
 	void ProcessInputForNavigation(UDreamPointerEventData* InPointerEventData);

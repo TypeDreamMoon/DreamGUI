@@ -14,6 +14,7 @@
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "GameFramework/PlayerController.h"
+#include "Components/PrimitiveComponent.h"
 #include "Event/DreamGestureEventData.h"
 
 bool UDreamPointerInputModule::LineTrace(UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& OutDreamHitResult)
@@ -60,8 +61,9 @@ bool UDreamPointerInputModule::LineTrace(UDreamPointerEventData* InPointerEventD
 				// motion controller aimed at a different UI entirely. Skip this raycaster instead; its
 				// own results stay hidden, which is all the occlusion ever meant.
 				// A hit with no widget is a world occluder from UDreamBaseRaycaster::RaycastWorld -- a
-				// wall, a trigger volume -- and it is not "uninteractable UI": it is meant to win by
-				// distance and take the pointer off whatever is behind it, so it passes through here.
+				// wall, a trigger volume, a render-target surface -- and it is not "uninteractable UI":
+				// it is meant to win by distance and take the pointer off whatever is behind it, and the
+				// actor behind it is dispatched to in ProcessPointerEvent, so it passes through here.
 				UDreamWidget* TopHitWidget = HitResultArray[0].Widget.Get();
 				if (TopHitWidget != nullptr && !TopHitWidget->GetInteractableInHierarchy())
 				{
@@ -369,6 +371,181 @@ UDreamWidget* UDreamPointerInputModule::FindCommonRoot(UDreamWidget* A, UDreamWi
 	}
 	return nullptr;
 }
+
+AActor* UDreamPointerInputModule::ResolveWorldTarget(const FDreamUIHitResultContainer& InHit, bool bInHitSomething)
+{
+	if (!bInHitSomething || !IsValid(InHit.Raycaster))
+	{
+		return nullptr;
+	}
+	// The actor, not the primitive, is what is hovered and pressed: it is the actor's components that
+	// are dispatched to, so moving between two primitives of one actor is not leaving it.
+	const UPrimitiveComponent* HitComponent = InHit.Raycaster->GetWorldHitComponent(InHit.HitResult);
+	return HitComponent != nullptr ? HitComponent->GetOwner() : nullptr;
+}
+
+void UDreamPointerInputModule::ExitWorldTargetUnless(UDreamEventSystem* InEventSystem, UDreamPointerEventData* InEventData, const AActor* InStillOver)
+{
+	UDreamEventSystem::FDreamPointerWorldTarget* State = InEventSystem->GetPointerWorldTarget(InEventData->PointerID, false);
+	if (State == nullptr || State->Hovered.IsExplicitlyNull())
+	{
+		return;//over nothing outside the widgets
+	}
+	AActor* WasOver = State->Hovered.Get();
+	if (WasOver != nullptr && WasOver == InStillOver)
+	{
+		return;
+	}
+	// Forgotten before the Exit goes out, as the widget exits claim their flag first: a handler is game
+	// code, can come back in through UDreamEventSystem::ClearEvent, and has to find nothing left to exit.
+	// An actor destroyed while hovered is simply forgotten; there is nobody left to tell.
+	State->Hovered.Reset();
+	if (IsValid(WasOver))
+	{
+		InEventSystem->CallOnWorldTargetExit(WasOver, InEventData);
+	}
+}
+
+void UDreamPointerInputModule::EnterWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* InEventData, AActor* InNowOver)
+{
+	if (!IsValid(InNowOver))
+	{
+		return;
+	}
+	UDreamEventSystem::FDreamPointerWorldTarget* State = InEventSystem->GetPointerWorldTarget(InEventData->PointerID, true);
+	if (State->Hovered.Get() == InNowOver)
+	{
+		return;//an Enter is for arriving, not for staying
+	}
+	// Recorded before the Enter goes out, so a handler that clears the event system finds it to exit.
+	State->Hovered = InNowOver;
+	InEventSystem->CallOnWorldTargetEnter(InNowOver, InEventData);
+}
+
+void UDreamPointerInputModule::PressWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* EventData, const FDreamUIHitResultContainer& InHit)
+{
+	UDreamEventSystem::FDreamPointerWorldTarget* State = InEventSystem->GetPointerWorldTarget(EventData->PointerID, false);
+	AActor* Target = State != nullptr ? State->Hovered.Get() : nullptr;
+	if (!IsValid(Target))
+	{
+		return;//nothing outside the widgets is under the pointer either: a press on nothing
+	}
+	const FDreamUIHitResult& Hit = InHit.HitResult;
+	// What a widget's press records, for the readers a press has: hold-to-drag and the double-click
+	// distance on the press raycaster, and a handler asking where it was pressed. PressWidget stays
+	// empty -- nothing widget-shaped was pressed, and every widget-only step (drag, swipe, pinch) keys
+	// on it.
+	EventData->WorldPoint = Hit.Location;
+	EventData->WorldNormal = Hit.Normal;
+	EventData->PressDistance = Hit.Distance;
+	EventData->PressRayOrigin = InHit.RayOrigin;
+	EventData->PressRayDirection = InHit.RayDirection;
+	EventData->PressWorldPoint = Hit.Location;
+	EventData->PressWorldNormal = Hit.Normal;
+	EventData->PressRaycaster = InHit.Raycaster;
+	// The primitive's own frame stands in for the widget's: it is the surface the press landed on.
+	const UPrimitiveComponent* HitComponent = IsValid(InHit.Raycaster) ? InHit.Raycaster->GetWorldHitComponent(Hit) : nullptr;
+	EventData->PressWorldToLocalTransform = HitComponent != nullptr
+		? HitComponent->GetComponentTransform().Inverse()
+		: Target->GetActorTransform().Inverse();
+	//a new press is a new chance at a long press, whatever the previous one did
+	EventData->bIsLongPressFiredForThisPress = false;
+
+	// The click run, by the widget's rule (see the widget press in ProcessPointerEvent) with the actor
+	// in the widget's place. The pointer's latest click has to be THIS actor's click: LastClickWidget
+	// empty says it was not a widget's, LastClickedTime says it was not an older one of this actor's
+	// with a widget click in between whose widget has since gone.
+	const double PressClockSeconds = UDreamEventSystem::GetPointerClockSeconds(EventData);
+	const float DoubleClickTime = InEventSystem->GetDoubleClickTime();
+	const bool bContinuesClickRun = EventData->ClickCount > 0
+		&& EventData->LastClickWidget == nullptr
+		&& State->LastClicked.Get() == Target
+		&& State->LastClickedTime == EventData->ClickTime
+		&& EventData->LastClickMouseButtonType == EventData->MouseButtonType
+		&& DoubleClickTime > 0.0f
+		&& (PressClockSeconds - EventData->ClickTime) <= (double)DoubleClickTime
+		&& (!IsValid(EventData->PressRaycaster) || EventData->PressRaycaster->IsWithinDoubleClickDistance(EventData));
+	EventData->ClickCount = bContinuesClickRun ? EventData->ClickCount + 1 : 1;
+	const bool bIsDoubleClickPress = (EventData->ClickCount % 2) == 0
+		&& EventData->InputType == EDreamUIPointerInputType::Pointer;
+
+	// Recorded before anything is dispatched: the release goes to this actor whatever the handlers do,
+	// and State is map storage that a handler can move.
+	State->Pressed = Target;
+	// The selection is left alone. A widget's down deselects whatever it is not the handler of, but a
+	// press outside every widget has never touched the selection here -- a press on empty space does
+	// not -- and a press on a wall must not start to now that walls are told about presses. What the
+	// press lands in beyond this actor (a render-target surface's own canvas) selects on its own.
+	if (bIsDoubleClickPress)
+	{
+		InEventSystem->CallOnWorldTargetDoubleClick(Target, EventData);
+	}
+	else
+	{
+		InEventSystem->CallOnWorldTargetDown(Target, EventData);
+	}
+}
+
+bool UDreamPointerInputModule::HoldWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* EventData)
+{
+	AActor* Target = InEventSystem->GetPressedWorldTarget(EventData->PointerID);
+	if (!IsValid(Target))
+	{
+		return false;
+	}
+	// The widget's long press, once per press when the hold reaches the time. There is no drag
+	// question to ask first: an actor's press never becomes a drag.
+	if (!EventData->bIsLongPressFiredForThisPress)
+	{
+		const float LongPressTime = InEventSystem->GetLongPressTime();
+		const UWorld* PressWorld = EventData->GetWorld();
+		if (LongPressTime > 0.0f && PressWorld != nullptr
+			&& (UDreamEventSystem::GetPointerClockSeconds(PressWorld) - EventData->PressTime) >= (double)LongPressTime)
+		{
+			EventData->bIsLongPressFiredForThisPress = true;
+			InEventSystem->CallOnWorldTargetLongPress(Target, EventData);
+		}
+	}
+	return true;
+}
+
+void UDreamPointerInputModule::ReleaseWorldTarget(UDreamEventSystem* InEventSystem, UDreamPointerEventData* EventData, bool bInClick)
+{
+	UDreamEventSystem::FDreamPointerWorldTarget* State = InEventSystem->GetPointerWorldTarget(EventData->PointerID, false);
+	if (State == nullptr || State->Pressed.IsExplicitlyNull())
+	{
+		return;//the press, if there was one, was a widget's
+	}
+	AActor* Target = State->Pressed.Get();
+	// Let go of before anything is dispatched: a second release -- ClearEvent from inside a handler --
+	// has to find nothing left to release.
+	State->Pressed.Reset();
+	if (!IsValid(Target))
+	{
+		return;//pressed, then destroyed: nobody left to tell
+	}
+	if (bInClick)
+	{
+		// What the next press measures its click run against, written now because State is map
+		// storage that a handler below may move. LastClickWidget is emptied so that no widget's run
+		// survives a click on an actor.
+		EventData->LastClickWidget = nullptr;
+		EventData->LastClickMouseButtonType = EventData->MouseButtonType;
+		EventData->LastClickPressPointerPosition = EventData->PressPointerPosition;
+		EventData->LastClickPressWorldPoint = EventData->PressWorldPoint;
+		EventData->ClickTime = UDreamEventSystem::GetPointerClockSeconds(EventData);
+		State->LastClicked = Target;
+		State->LastClickedTime = EventData->ClickTime;
+	}
+	// The flag a widget's release claims, claimed the same way: an Up has gone out this frame.
+	EventData->bIsUpFiredAtCurrentFrame = true;
+	InEventSystem->CallOnWorldTargetUp(Target, EventData);
+	if (bInClick)
+	{
+		InEventSystem->CallOnWorldTargetClick(Target, EventData);
+	}
+}
+
 void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSystem, UDreamPointerEventData* EventData, bool bLineTraceHitSomething, const FDreamUIHitResultContainer& DreamHitResult, bool& OutIsHitSomething, FDreamUIHitResult& OutHitResult)
 {
 	EventData->bIsUpFiredAtCurrentFrame = false;
@@ -379,6 +556,19 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 	EventData->Raycaster = DreamHitResult.Raycaster;
 	OutHitResult = DreamHitResult.HitResult;
 	OutIsHitSomething = bLineTraceHitSomething;
+
+	// The actor behind a hit that is not a widget's -- a render-target surface, anything in the world
+	// that implements a pointer interface -- is hovered, pressed and released alongside the widgets, by
+	// their rules (see UDreamEventSystem::FDreamPointerWorldTarget). Exits go out before enters across
+	// both kinds of target, as they do among widgets: leaving a surface for a button exits the surface
+	// here, before the button is entered below; leaving a button for a surface exits the button below,
+	// before the surface is entered after it. With only widgets hit none of this has state and all of
+	// it does nothing.
+	AActor* const NowWorldTarget = eventSystem != nullptr ? ResolveWorldTarget(DreamHitResult, bLineTraceHitSomething) : nullptr;
+	if (eventSystem != nullptr)
+	{
+		ExitWorldTargetUnless(eventSystem, EventData, NowWorldTarget);
+	}
 
 	if (bLineTraceHitSomething)
 	{
@@ -397,6 +587,11 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 		{
 			ProcessPointerEnterExit(eventSystem, EventData, EventData->EnterWidget, nullptr);
 		}
+	}
+
+	if (eventSystem != nullptr)
+	{
+		EnterWorldTarget(eventSystem, EventData, NowWorldTarget);
 	}
 
 	if (EventData->bNowIsTriggerPressed && EventData->bPrevIsTriggerPressed)//if trigger keep pressing
@@ -469,6 +664,14 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 						}
 					}
 				}
+				OutHitResult.Distance = EventData->PressDistance;
+				OutIsHitSomething = true;
+			}
+			// A press on an actor is held the way a press on a widget is -- its long press, and the
+			// pointer still counts as on what it pressed -- but it never becomes a drag: see
+			// UDreamEventSystem::FDreamPointerWorldTarget.
+			else if (eventSystem != nullptr && HoldWorldTarget(eventSystem, EventData))
+			{
 				OutHitResult.Distance = EventData->PressDistance;
 				OutIsHitSomething = true;
 			}
@@ -564,6 +767,11 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 							eventSystem->CallOnPointerDown(EventData->PressWidget, EventData);
 						}
 					}
+				}
+				// No widget under the pointer, but perhaps an actor: the same press, by the same rules.
+				else if (eventSystem != nullptr)
+				{
+					PressWorldTarget(eventSystem, EventData, DreamHitResult);
 				}
 			}
 		}
@@ -677,6 +885,13 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 					// a click and opens on a double click still does both.
 					EventData->PressWidget = nullptr;
 				}
+			}
+			// A press that landed on an actor is let go as a widget's is, wherever the pointer is now:
+			// the up to what was pressed, then the click. (It never became a drag, so there is no drag
+			// to end first.)
+			if (eventSystem != nullptr)
+			{
+				ReleaseWorldTarget(eventSystem, EventData, /*bInClick*/ true);
 			}
 		}
 	}
@@ -977,6 +1192,9 @@ void UDreamPointerInputModule::ClearEventByID(int pointerID)
 				EventData->PressWidget = nullptr;
 				EventSystem->CallOnPointerUp(oldPressComponent, EventData);
 			}
+			// A press on an actor is let go the same way: its up, and no click -- a pointer taken away
+			// is not a pointer released over what it pressed.
+			ReleaseWorldTarget(EventSystem.Get(), EventData, /*bInClick*/ false);
 		}
 		if (!EventData->bIsExitFiredAtCurrentFrame)
 		{
@@ -984,6 +1202,8 @@ void UDreamPointerInputModule::ClearEventByID(int pointerID)
 			{
 				ProcessPointerEnterExit(EventSystem.Get(), EventData, EventData->EnterWidget, nullptr);
 			}
+			// ...and so is the actor it was over, so every Enter an actor was sent still gets its Exit.
+			ExitWorldTargetUnless(EventSystem.Get(), EventData, nullptr);
 			EventData->bIsExitFiredAtCurrentFrame = true;
 		}
 
@@ -997,6 +1217,7 @@ void UDreamPointerInputModule::ClearEventByID(int pointerID)
 			{
 				ProcessPointerEnterExit(EventSystem.Get(), EventData, EventData->EnterWidget, nullptr);
 			}
+			ExitWorldTargetUnless(EventSystem.Get(), EventData, nullptr);
 			EventData->bIsExitFiredAtCurrentFrame = true;
 		}
 	}

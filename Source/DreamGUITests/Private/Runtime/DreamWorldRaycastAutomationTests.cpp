@@ -29,11 +29,13 @@
  * be told. That makes ordering the whole of its answer -- the input module reads element 0 as the
  * hit -- and ordering across separate canvases can only be distance.
  *
- * The other half is what a hit on a wall MEANS when every event in this pipeline is dispatched to a
- * UDreamWidget and a wall has none. The answer is occlusion, and nothing else. A world hit carries a
- * distance and no widget, so a wall in front of a world-space panel takes the pointer off the panel
- * and the click never lands. That is a complete behaviour rather than a stub, and it is what a
- * trigger volume in front of a UI is actually for.
+ * The other half is what a hit on a wall MEANS, when a wall has no UDreamWidget to dispatch to. For
+ * the panels behind it the answer is occlusion: a world hit carries a distance and no widget, so a wall
+ * in front of a world-space panel takes the pointer off the panel and the click never lands. That is a
+ * complete behaviour rather than a stub, and it is what a trigger volume in front of a UI is actually
+ * for. The wall itself is not left out: the actor that owns the hit primitive, and its components
+ * that implement the pointer interfaces, are handed the pointer's events (UDreamEventSystem::
+ * CallOnWorldTarget*) -- which is how a render-target surface on a mesh is reached at all.
  */
 
 namespace DreamWorldRaycastTestLocal

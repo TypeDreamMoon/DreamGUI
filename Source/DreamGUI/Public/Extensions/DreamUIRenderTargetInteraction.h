@@ -69,7 +69,15 @@ protected:
 	 * InputPointerEventData and is only a source of rays.
 	 */
 	UPROPERTY(VisibleAnywhere, Transient, Category = DreamGUI, AdvancedDisplay) TObjectPtr<UDreamPointerEventData> PointerEventData = nullptr;
+	/**
+	 * The pointer that hit the surface in the world. It reaches this component as the actor's pointer
+	 * events -- the event system dispatches a world hit to the actor behind it and to its components
+	 * that implement the pointer interfaces (UDreamEventSystem::FDreamPointerWorldTarget) -- and is
+	 * remembered at its Enter.
+	 */
 	TWeakObjectPtr<UDreamPointerEventData> InputPointerEventData = nullptr;
+	/** Between that pointer's Enter and its Exit. Outside it, only a press it began here is still traced. */
+	bool bInputPointerOverSurface = false;
 
 	/**
 	 * PointerEventData, creating it if this is the first caller to need it.

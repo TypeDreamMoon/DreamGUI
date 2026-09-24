@@ -564,8 +564,70 @@ public:
 	void CallOnPointerDragDrop(UDreamWidget* RootComponent, UDreamPointerEventData* EventData);
 	void CallOnPointerSelect(UDreamWidget* RootComponent, UDreamBaseEventData* EventData);
 	void CallOnPointerDeselect(UDreamWidget* RootComponent, UDreamBaseEventData* EventData);
-	
+
+#pragma region WorldTarget
+	/**
+	 * What one pointer is doing to the world beyond the widgets.
+	 *
+	 * A world raycaster's hit on a primitive carries no widget (UDreamBaseRaycaster::RaycastWorld), so
+	 * none of UDreamPointerEventData's widget fields can hold it. The actor behind that hit is still
+	 * something the pointer is over, presses and clicks, and it is told so through the same pointer
+	 * interfaces a widget's behaviours implement: on the actor itself and on each of its components
+	 * that implements them -- a render-target surface's UDreamUIRenderTargetInteraction is one -- and
+	 * bubbling to the actor it is attached to when every handler allows it, as a widget's event
+	 * bubbles to its parent. It is what LGUI did with a hit component's actor.
+	 *
+	 * Hover, press, release, click, double click, long press and scroll follow the widget's rules and
+	 * the widget's moments in UDreamPointerInputModule::ProcessPointerEvent: every Enter is matched by
+	 * one Exit, exits go out before enters whichever kind of target is being left, a press is released
+	 * to the actor it landed on wherever the pointer is by then, and the second press of a quick pair is
+	 * the double click in place of its down. Drags, drops, swipes and pinches stay widgets' only: each
+	 * is about what lies under the pointer on a canvas, and a render-target surface -- the reason this
+	 * exists -- hands the pointer on to its own canvas, where they happen.
+	 *
+	 * Kept per pointer id beside PointerEventDataMap, and dropped with it.
+	 */
+	struct FDreamPointerWorldTarget
+	{
+		/** The actor behind the world hit the pointer is over. */
+		TWeakObjectPtr<AActor> Hovered;
+		/** The actor the pointer's current press landed on. */
+		TWeakObjectPtr<AActor> Pressed;
+		/**
+		 * The actor the pointer's last click landed on, and that click's ClickTime. A second press
+		 * continues the click run only when the pointer's latest click is still this one -- a widget
+		 * clicked in between took the run over, even if that widget has since been destroyed.
+		 */
+		TWeakObjectPtr<AActor> LastClicked;
+		double LastClickedTime = 0.0;
+	};
+	/**
+	 * This pointer's world-target state: null when it has none and bCreateIfNotExist is false. The
+	 * result points into map storage, so it is not to be held across anything that dispatches -- a
+	 * handler is game code and can make another pointer's state, which may move this one.
+	 */
+	FDreamPointerWorldTarget* GetPointerWorldTarget(int InPointerID, bool bCreateIfNotExist);
+	/** The actor behind the world hit this pointer is over, or null. */
+	AActor* GetHoveredWorldTarget(int InPointerID)const;
+	/** The actor this pointer's current press landed on, when it landed outside the widgets; null otherwise. */
+	AActor* GetPressedWorldTarget(int InPointerID)const;
+
+	/** The world-target counterparts of CallOnPointer*: the same event types, the same bubbling, the same broadcasts. */
+	void CallOnWorldTargetEnter(AActor* InTarget, UDreamPointerEventData* EventData);
+	void CallOnWorldTargetExit(AActor* InTarget, UDreamPointerEventData* EventData);
+	void CallOnWorldTargetDown(AActor* InTarget, UDreamPointerEventData* EventData);
+	void CallOnWorldTargetUp(AActor* InTarget, UDreamPointerEventData* EventData);
+	void CallOnWorldTargetClick(AActor* InTarget, UDreamPointerEventData* EventData);
+	void CallOnWorldTargetDoubleClick(AActor* InTarget, UDreamPointerEventData* EventData);
+	void CallOnWorldTargetLongPress(AActor* InTarget, UDreamPointerEventData* EventData);
+	void CallOnWorldTargetScroll(AActor* InTarget, UDreamPointerEventData* EventData);
+#pragma endregion
+
 	void LogEventData(UDreamBaseEventData* EventData);
+
+private:
+	/** See FDreamPointerWorldTarget. Not reflected: it holds nothing but weak pointers and a time. */
+	TMap<int, FDreamPointerWorldTarget> PointerWorldTargetMap;
 };
 
 /*

@@ -138,6 +138,7 @@ void UDreamEventSystem::SetUserIndex(int Value)
 	// Pointers born under the old index carry it; they belong to the player who was using them, and
 	// nothing about that pointer is true for the new player.
 	PointerEventDataMap.Reset();
+	PointerWorldTargetMap.Reset();
 	if (bWasRegistered)
 	{
 		Manager->AddEventSystem(this);
@@ -265,6 +266,10 @@ UDreamPointerEventData* UDreamEventSystem::GetPointerEventData(int PointerID, bo
 void UDreamEventSystem::RemovePointerEventData(int PointerID)
 {
 	PointerEventDataMap.Remove(PointerID);
+	// What that pointer was doing to the world goes with it. The caller retiring a pointer has already
+	// let go of whatever it pressed and exited whatever it was over (ClearEventByID), so this is the
+	// bookkeeping, not an event.
+	PointerWorldTargetMap.Remove(PointerID);
 }
 
 void UDreamEventSystem::RaiseHitEvent(bool bHitOrNot, const FDreamUIHitResult& HitResult, UDreamWidget* HitComponent)
@@ -740,6 +745,153 @@ void UDreamEventSystem::CallOnPointerDeselect(UDreamWidget* TargetWidget, UDream
 {
 	LogEventData(EventData);
 	ExecuteEvent_OnPointerDeselect(TargetWidget, EventData, false);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+#pragma endregion
+
+#pragma region WorldTarget
+namespace DreamEventSystemLocal
+{
+	/**
+	 * ExecuteDreamUIInterface for an actor: what a world ray hit that is not a widget.
+	 *
+	 * The actor first, then each of its components, every one that implements the interface -- the set
+	 * LGUI's default fire type reached from a hit component. Bubbling follows the widget rule exactly:
+	 * only when the caller allows it and no handler said stop, and up the attachment chain, which is the
+	 * nearest thing an actor has to a parent widget. A copy of the component list is walked, because a
+	 * handler is game code and may add or remove components on the actor it was handed.
+	 */
+	template<class UEventData, class UInterfaceFunction>
+	void ExecuteDreamUIInterfaceOnActor(AActor* InActor, UEventData* InEventData, UClass* InInterfaceClass,
+		UInterfaceFunction InInterfaceFunction, bool bInAllowEventBubbleUp)
+	{
+		if (!IsValid(InActor))
+		{
+			return;
+		}
+		bool bBubbleUp = bInAllowEventBubbleUp;
+		if (InActor->GetClass()->ImplementsInterface(InInterfaceClass))
+		{
+			if (InInterfaceFunction(InActor, InEventData) == false)
+			{
+				bBubbleUp = false;
+			}
+		}
+		TInlineComponentArray<UActorComponent*> Components(InActor);
+		for (UActorComponent* Component : Components)
+		{
+			if (!IsValid(Component))continue;
+			if (Component->GetClass()->ImplementsInterface(InInterfaceClass))
+			{
+				if (InInterfaceFunction(Component, InEventData) == false)
+				{
+					bBubbleUp = false;
+				}
+			}
+		}
+		// Asked again: a handler may have destroyed the actor it was dispatched to.
+		if (bBubbleUp && IsValid(InActor))
+		{
+			if (AActor* ParentActor = InActor->GetAttachParentActor())
+			{
+				ExecuteDreamUIInterfaceOnActor(ParentActor, InEventData, InInterfaceClass, InInterfaceFunction, true);
+			}
+		}
+	}
+}
+
+UDreamEventSystem::FDreamPointerWorldTarget* UDreamEventSystem::GetPointerWorldTarget(int InPointerID, bool bCreateIfNotExist)
+{
+	if (bCreateIfNotExist)
+	{
+		return &PointerWorldTargetMap.FindOrAdd(InPointerID);
+	}
+	return PointerWorldTargetMap.Find(InPointerID);
+}
+AActor* UDreamEventSystem::GetHoveredWorldTarget(int InPointerID)const
+{
+	const FDreamPointerWorldTarget* State = PointerWorldTargetMap.Find(InPointerID);
+	return State != nullptr ? State->Hovered.Get() : nullptr;
+}
+AActor* UDreamEventSystem::GetPressedWorldTarget(int InPointerID)const
+{
+	const FDreamPointerWorldTarget* State = PointerWorldTargetMap.Find(InPointerID);
+	return State != nullptr ? State->Pressed.Get() : nullptr;
+}
+
+// Each one what its CallOnPointer* counterpart is -- event type, bubbling, both broadcasts -- with the
+// actor in place of the widget. The broadcast matters to more than the Blueprint: the tooltip listens
+// for Enter, Exit and Down, and a press on a surface dismisses a tooltip as a press anywhere does.
+void UDreamEventSystem::CallOnWorldTargetEnter(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::Enter;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerEnterExitInterface::StaticClass(), IDreamPointerEnterExitInterface::Execute_OnPointerEnter, false);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void UDreamEventSystem::CallOnWorldTargetExit(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::Exit;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerEnterExitInterface::StaticClass(), IDreamPointerEnterExitInterface::Execute_OnPointerExit, false);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void UDreamEventSystem::CallOnWorldTargetDown(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::Down;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerDownUpInterface::StaticClass(), IDreamPointerDownUpInterface::Execute_OnPointerDown, true);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void UDreamEventSystem::CallOnWorldTargetUp(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::Up;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerDownUpInterface::StaticClass(), IDreamPointerDownUpInterface::Execute_OnPointerUp, true);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void UDreamEventSystem::CallOnWorldTargetClick(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::Click;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerClickInterface::StaticClass(), IDreamPointerClickInterface::Execute_OnPointerClick, true);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void UDreamEventSystem::CallOnWorldTargetDoubleClick(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::DoubleClick;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerDoubleClickInterface::StaticClass(), IDreamPointerDoubleClickInterface::Execute_OnPointerDoubleClick, true);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void UDreamEventSystem::CallOnWorldTargetLongPress(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::LongPress;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerLongPressInterface::StaticClass(), IDreamPointerLongPressInterface::Execute_OnPointerLongPress, true);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void UDreamEventSystem::CallOnWorldTargetScroll(AActor* InTarget, UDreamPointerEventData* EventData)
+{
+	EventData->EventType = EDreamUIPointerEventType::Scroll;
+	LogEventData(EventData);
+	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
+		UDreamPointerScrollInterface::StaticClass(), IDreamPointerScrollInterface::Execute_OnPointerScroll, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }

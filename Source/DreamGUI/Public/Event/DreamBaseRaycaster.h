@@ -10,6 +10,8 @@
 #include "Engine/HitResult.h"
 #include "DreamBaseRaycaster.generated.h"
 
+class UPrimitiveComponent;
+
 /** 
  * Base interaction component that perform a raycast hit test
  */
@@ -89,17 +91,37 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetPointerID(int32 Value);
+
+	/**
+	 * The primitive behind InHit, when InHit is the world hit this raycaster's latest RaycastWorld call
+	 * reported; null for any other hit -- a widget's, another raycaster's, or one from an earlier trace.
+	 *
+	 * A world hit carries no widget, and FDreamUIHitResult has nowhere to say what it struck instead,
+	 * so the raycaster that traced it is the one to ask. The input module asks on the frame it traced,
+	 * to hand the pointer to the actor behind the hit (see UDreamEventSystem's world-target events).
+	 * Recognised by value -- the hit's distance and location, which every copy of it carries unchanged
+	 * -- rather than taken on trust, so a hit that merely has no widget (a custom raycaster's, or one
+	 * this raycaster has traced over since) is never mistaken for it.
+	 */
+	UPrimitiveComponent* GetWorldHitComponent(const FDreamUIHitResult& InHit) const;
 protected:
 	void RaycastUI(UDreamPointerEventData* InPointerEventData, UDreamCanvas* InRootCanvas, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
 	/**
 	 * Trace the world along this raycaster's ray and report what is in the way.
 	 *
-	 * At most one result, and it has no Widget -- a world primitive is not one -- so it acts purely as
-	 * an occluder: the input module sorts all hits by distance, so a world hit in front of a world-space
-	 * panel takes the pointer away from it. One, because what blocks a pointer is the nearest blocking
-	 * hit; overlap-only volumes are not walls and a multi trace would report them as if they were. See
-	 * the definition for why occlusion is the whole of what a world hit can mean in a widget-dispatched
-	 * event model.
+	 * At most one result, and it has no Widget -- a world primitive is not one. It is an occluder: the
+	 * input module sorts all hits by distance, so a world hit in front of a world-space panel takes the
+	 * pointer away from it. And it is a target: the actor behind it is told about the pointer through the
+	 * same pointer interfaces a widget's behaviours implement (GetWorldHitComponent says which primitive
+	 * it was), which is how a render-target surface receives its pointer. A wall implements none of
+	 * them, and for a wall nothing changes. One result, because what blocks a pointer is the nearest
+	 * blocking hit; overlap-only volumes are not walls and a multi trace would report them as if they
+	 * were.
 	 */
 	void RaycastWorld(UDreamPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
+
+	/** The latest RaycastWorld call's hit, kept for GetWorldHitComponent: what it struck, and how to recognise it. */
+	TWeakObjectPtr<UPrimitiveComponent> LastWorldHitComponent;
+	float LastWorldHitDistance = 0.0f;
+	FVector LastWorldHitLocation = FVector::ZeroVector;
 };
