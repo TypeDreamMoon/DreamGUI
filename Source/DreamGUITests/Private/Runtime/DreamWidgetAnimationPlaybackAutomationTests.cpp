@@ -10,7 +10,12 @@
 #include "Animation/DreamWidgetAnimationPlayer.h"
 #include "Controls/DreamButton.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamWidgetTree.h"
+#include "Demo/DreamUIShowcase.h"
+#include "DreamWidgetBlueprint.h"
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
@@ -27,6 +32,14 @@
 #include "Sections/MovieSceneVectorSection.h"
 #include "Tracks/MovieSceneFloatTrack.h"
 #include "Tracks/MovieSceneVectorTrack.h"
+
+#include "HAL/FileManager.h"
+#include "Kismet2/CompilerResultsLog.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
+#include "Misc/Paths.h"
+#include "UObject/Package.h"
 
 /*
  * Playback, end to end: a widget tree in a world that ticks, an animation bound to one of its
@@ -249,6 +262,250 @@ namespace DreamWidgetAnimationPlaybackTestLocal
 	float RampAt(float From, float To, int32 Frame)
 	{
 		return From + (To - From) * FMath::Clamp(static_cast<float>(Frame) / LastKeyFrame, 0.0f, 1.0f);
+	}
+
+	/** Where the gallery's ButtonA sits, spelled as the binding path an animation on the root records. */
+	const TCHAR* const GalleryButtonPath = TEXT("Gallery/GalleryBody/Content/Body/ClickColumn/ButtonA");
+
+	/** The name the slide-in is given in the animation editor, and the one the gallery's .dui lists. */
+	const TCHAR* const GallerySlideInName = TEXT("SlideIn");
+
+	/**
+	 * The controls gallery's .dui, cut down to the column ButtonA stands in.
+	 *
+	 * Every node, container and slot line on the way down to ButtonA is the project gallery's own, and
+	 * nothing beside them is. The siblings change where ButtonA is laid out, never what its render
+	 * translation is, and each line kept is one more way for the fixture to fail for a reason that has
+	 * nothing to do with the slide-in. The containers stay because they are the part that COULD matter:
+	 * a layout pass that wrote the render transform of what it arranges would kill the gallery's
+	 * slide-in, and a fixture without them would never see it.
+	 *
+	 * bInListsSlideIn adds the `external` manifest line, which an author writes once the animation
+	 * exists. Listing an animation the class does not have, and having one the file does not list, are
+	 * both compile warnings -- so each compile gets the file in the state an author would have it in.
+	 */
+	TArray<FString> GallerySourceLines(const FString& InClassPath, bool bInListsSlideIn)
+	{
+		TArray<FString> Lines;
+		// Naming the package the class is compiled into, so the compiler has no mismatch to warn about.
+		Lines.Add(FString::Printf(TEXT("class %s"), *InClassPath));
+		if (bInListsSlideIn)
+		{
+			Lines.Add(FString::Printf(TEXT("timeline %s external"), GallerySlideInName));
+		}
+		Lines.Append({
+			TEXT("Widget Root {"),
+			TEXT("    AnchorData.AnchorMin = (0, 0)"),
+			TEXT("    AnchorData.AnchorMax = (1, 1)"),
+			TEXT("    AnchorData.SizeDelta = (0, 0)"),
+			TEXT("    + Overlay {}"),
+			TEXT("    Widget Gallery {"),
+			TEXT("        @slot HorizontalAlignment = Fill"),
+			TEXT("        @slot VerticalAlignment   = Fill"),
+			TEXT("        + SizeBox {"),
+			TEXT("            bOverrideWidth  = true"),
+			TEXT("            WidthOverride   = 960"),
+			TEXT("            bOverrideHeight = true"),
+			TEXT("            HeightOverride  = 1100"),
+			TEXT("        }"),
+			TEXT("        Widget GalleryBody {"),
+			TEXT("            + Overlay {}"),
+			TEXT("            Widget Content {"),
+			TEXT("                @slot HorizontalAlignment = Fill"),
+			TEXT("                @slot VerticalAlignment   = Fill"),
+			TEXT("                @slot Padding = (24, 20, 24, 16)"),
+			TEXT("                + VerticalBox {"),
+			TEXT("                    Spacing = 10"),
+			TEXT("                }"),
+			TEXT("                Widget Body {"),
+			TEXT("                    @slot HorizontalAlignment = Fill"),
+			TEXT("                    @slot SizeRule = Fill"),
+			TEXT("                    + HorizontalBox {"),
+			TEXT("                        Spacing = 18"),
+			TEXT("                    }"),
+			TEXT("                    Widget ClickColumn {"),
+			TEXT("                        @slot SizeRule = Fill"),
+			TEXT("                        @slot VerticalAlignment = Fill"),
+			TEXT("                        + VerticalBox {"),
+			TEXT("                            Spacing = 8"),
+			TEXT("                        }"),
+			TEXT("                        Native.Button ButtonA {"),
+			TEXT("                            @slot HorizontalAlignment = Fill"),
+			TEXT("                            @slot SizeRule = Auto"),
+			TEXT("                        }"),
+			TEXT("                    }"),
+			TEXT("                }"),
+			TEXT("            }"),
+			TEXT("        }"),
+			TEXT("    }"),
+			TEXT("}")
+		});
+		return Lines;
+	}
+
+	/**
+	 * A Blueprint over the gallery's native base, its hierarchy read from a .dui written to Saved/,
+	 * the file gone and the package released when the test leaves.
+	 *
+	 * UDreamUIControlsGalleryPanel because that is the class the project's gallery derives from, so
+	 * its NativeOnInitialized runs as the instance comes alive, exactly as the gallery's does.
+	 *
+	 * The name carries a GUID. CreateBlueprint asserts that the package holds no Blueprint of that name
+	 * yet, and a Blueprint is Standalone, so it outlives the test -- with a fixed name, running this a
+	 * second time in one editor session would take the editor down on that assertion.
+	 *
+	 * Saved/ rather than a DUI root, as for every other .dui fixture in this module: nothing watches
+	 * it, so rewriting the file between the two compiles queues no rebuild of its own.
+	 */
+	struct FScopedGalleryClass
+	{
+		FScopedGalleryClass()
+		{
+			const FString UniqueName = FString::Printf(TEXT("BP_GallerySlideIn_%s"),
+				*FGuid::NewGuid().ToString(EGuidFormats::Digits));
+			PackageName = FString::Printf(TEXT("/Temp/DreamGUITests/%s"), *UniqueName);
+			SourcePath = FPaths::ConvertRelativePathToFull(FPaths::Combine(
+				FPaths::ProjectSavedDir(), TEXT("DreamGUITests"), UniqueName + TEXT(".dui")));
+			FPaths::NormalizeFilename(SourcePath);
+
+			Package = CreatePackage(*PackageName);
+			if (Package == nullptr)
+			{
+				return;
+			}
+			Package->AddToRoot();
+			Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
+				UDreamUIControlsGalleryPanel::StaticClass(), Package, FName(*UniqueName), BPTYPE_Normal,
+				UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
+		}
+
+		~FScopedGalleryClass()
+		{
+			// Quiet and EvenReadOnly: a leftover file is read by nobody, but it is litter in Saved/.
+			IFileManager::Get().Delete(*SourcePath, /*RequireExists*/false, /*EvenReadOnly*/true, /*Quiet*/true);
+			if (Package != nullptr)
+			{
+				Package->RemoveFromRoot();
+			}
+		}
+
+		FScopedGalleryClass(const FScopedGalleryClass&) = delete;
+		FScopedGalleryClass& operator=(const FScopedGalleryClass&) = delete;
+
+		bool WriteSource(bool bInListsSlideIn) const
+		{
+			return FFileHelper::SaveStringToFile(
+				FString::Join(GallerySourceLines(PackageName, bInListsSlideIn), TEXT("\n")), *SourcePath);
+		}
+
+		/**
+		 * Point the class at its .dui, the way the Class Defaults panel does: on the CDO, because
+		 * SourceFile is a class default. CreateBlueprint has compiled once already, so there is a CDO to
+		 * write to, and every compile after copies the value onto the CDO it makes.
+		 */
+		bool PointAtSource() const
+		{
+			UDreamTextUserWidget* Defaults = Blueprint != nullptr && Blueprint->GeneratedClass != nullptr
+				? Cast<UDreamTextUserWidget>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+			if (Defaults == nullptr)
+			{
+				return false;
+			}
+			Defaults->SourceFile.FilePath = SourcePath;
+			return true;
+		}
+
+		void Compile(FCompilerResultsLog& OutResults) const
+		{
+			FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &OutResults);
+		}
+
+		FString PackageName;
+		FString SourcePath;
+		UPackage* Package = nullptr;
+		UDreamWidgetBlueprint* Blueprint = nullptr;
+	};
+
+	/**
+	 * The slide-in, made on the gallery's AUTHORED hierarchy the way the animation editor makes it.
+	 *
+	 * The editor's own steps in its order -- SDreamWidgetAnimationEditor::EnsureAnimationHost and
+	 * OnNewAnimationClicked, then Sequencer adding ButtonA's track: the component goes on the authored
+	 * root, the animation is a new one on it, ButtonA is possessed under its display name and bound
+	 * against the root, which records the path from the root -- the only part of the binding that
+	 * still means anything once the text rebuild has replaced every widget. The section is the shape
+	 * Sequencer leaves and the grammar cannot write: open-ended, auto-tangent keys, two keys on the
+	 * channel that moves and one on each that does not. FScopedControlTree above carries the same keys
+	 * against a hand-built tree.
+	 *
+	 * Null when the hierarchy is not the one the source describes; OutWhyNot says which part is not.
+	 */
+	UDreamWidgetAnimation* AuthorGallerySlideIn(UDreamWidgetBlueprint* InBlueprint, FString& OutWhyNot)
+	{
+		UDreamWidget* AuthoredRoot = IsValid(InBlueprint) && IsValid(InBlueprint->WidgetTree)
+			? InBlueprint->WidgetTree->RootWidget.Get() : nullptr;
+		if (!IsValid(AuthoredRoot))
+		{
+			OutWhyNot = TEXT("the Blueprint has no authored root after its first compile");
+			return nullptr;
+		}
+		UDreamWidget* AuthoredButton = FDreamWidgetAnimationObjectReference::GetWidgetFromContextWidgetByRelativePath(
+			AuthoredRoot, GalleryButtonPath);
+		if (!IsValid(AuthoredButton))
+		{
+			OutWhyNot = FString::Printf(TEXT("the authored hierarchy has nothing at '%s'"), GalleryButtonPath);
+			return nullptr;
+		}
+
+		UDreamWidgetAnimationComponent* Animator = AuthoredRoot->GetComponent<UDreamWidgetAnimationComponent>();
+		if (Animator == nullptr)
+		{
+			Animator = AuthoredRoot->AddComponent<UDreamWidgetAnimationComponent>();
+		}
+		UDreamWidgetAnimation* Animation = Animator != nullptr ? Animator->AddNewAnimation() : nullptr;
+		if (!IsValid(Animation) || Animation->GetMovieScene() == nullptr)
+		{
+			OutWhyNot = TEXT("the authored root would not take an animation");
+			return nullptr;
+		}
+		Animation->SetDisplayNameString(GallerySlideInName);
+
+		UMovieScene* MovieScene = Animation->GetMovieScene();
+		MovieScene->SetTickResolutionDirectly(FFrameRate(24000, 1));
+		MovieScene->SetDisplayRate(FFrameRate(FramesPerSecond, 1));
+		MovieScene->SetPlaybackRange(FFrameNumber(0), AnimationFrames * TicksPerFrame);
+
+		const FGuid ButtonGuid = MovieScene->AddPossessable(AuthoredButton->GetDisplayName(), AuthoredButton->GetClass());
+		Animation->BindPossessableObject(ButtonGuid, *AuthoredButton, AuthoredRoot);
+
+		UMovieSceneDoubleVectorTrack* Track = MovieScene->AddTrack<UMovieSceneDoubleVectorTrack>(ButtonGuid);
+		Track->SetPropertyNameAndPath(TEXT("RenderTranslation"), TEXT("RenderTranslation"));
+		Track->SetNumChannelsUsed(3);
+		UMovieSceneDoubleVectorSection* Section = CastChecked<UMovieSceneDoubleVectorSection>(Track->CreateNewSection());
+		Section->SetRange(TRange<FFrameNumber>::All());
+		TArrayView<FMovieSceneDoubleChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
+		if (Channels.Num() < 3)
+		{
+			OutWhyNot = FString::Printf(TEXT("the vector section offers %d channels rather than three"), Channels.Num());
+			return nullptr;
+		}
+		Channels[0]->AddCubicKey(FFrameNumber(0), 0.0);
+		Channels[1]->AddCubicKey(FFrameNumber(0), -100.0);
+		Channels[1]->AddCubicKey(FFrameNumber(LastKeyFrame * TicksPerFrame), 0.0);
+		Channels[2]->AddCubicKey(FFrameNumber(0), 0.0);
+		Track->AddSection(*Section);
+		return Animation;
+	}
+
+	/** Everything a compile said, for the one line a failure prints. */
+	FString JoinCompilerMessages(const FCompilerResultsLog& InResults)
+	{
+		FString All;
+		for (const TSharedRef<FTokenizedMessage>& Message : InResults.Messages)
+		{
+			All += Message->ToText().ToString() + TEXT(" | ");
+		}
+		return All;
 	}
 }
 
@@ -725,10 +982,28 @@ bool FDreamWidgetAnimationComponentOnUserWidgetItselfTest::RunTest(const FString
 }
 
 /*
- * Against the project's own gallery: the class the designer built, instanced the way the game
- * instances it, its authored animation played through the widget API -- the report that started
- * the 2026-09-03 review, verbatim. Skips itself when the asset is not there, so the plugin's
- * suite stays self-contained elsewhere.
+ * The controls gallery's ButtonA sliding in: the report that started the 2026-09-03 review, end to
+ * end, with the gallery rebuilt from the plugin's own parts so that every project runs it.
+ *
+ * It used to load the project's /Game/UI/WBP_ControlsGallery, and to pass without checking anything
+ * wherever that asset was missing -- every project but one, including the isolated host the suite is
+ * meant to run in. What it stands for was never that asset but the road a real gallery's animation
+ * travels, so that road is what the fixture keeps:
+ *
+ *   - a Blueprint over UDreamUIControlsGalleryPanel, the gallery's native base, whose hierarchy is
+ *     compiled from a .dui: the gallery's own nodes, containers and slot lines down to ButtonA, a
+ *     native button -- a control, so a hierarchy of its own -- six levels below the root;
+ *   - the slide-in made in the animation editor's shape on the AUTHORED hierarchy after the first
+ *     compile, so the second compile carries it across the text rebuild, which re-homes it through
+ *     FObjectInstancingGraph;
+ *   - the class instanced with CreateDreamWidget, the way the game instances it, and the animation
+ *     played through the user widget's own API.
+ *
+ * So the vector section goes through every copy the gallery's goes through -- carried across the
+ * rebuild, duplicated onto the class as its archetype, instanced per widget -- and a copy, not the
+ * track, is where the 2026-09-03 defect lived. The trip to disk is the one thing left out: the gallery
+ * came off disk, but a widget Blueprint recompiles on load (UDreamWidgetBlueprint::AlwaysCompileOnLoad),
+ * and that compile is the one run here.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamWidgetAnimationGalleryAssetTest,
@@ -738,13 +1013,60 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamWidgetAnimationGalleryAssetTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamWidgetAnimationPlaybackTestLocal;
-	UClass* GalleryClass = LoadClass<UDreamUserWidget>(nullptr, TEXT("/Game/UI/WBP_ControlsGallery.WBP_ControlsGallery_C"));
-	if (GalleryClass == nullptr)
+
+	FScopedGalleryClass Gallery;
+	if (!TestNotNull(TEXT("The gallery Blueprint is created"), Gallery.Blueprint))
 	{
-		AddInfo(TEXT("No /Game/UI/WBP_ControlsGallery in this project; nothing to check."));
-		return true;
+		return false;
+	}
+	if (!TestTrue(TEXT("The gallery's .dui is written"), Gallery.WriteSource(/*bInListsSlideIn*/false))
+		|| !TestTrue(TEXT("and the class points at it"), Gallery.PointAtSource()))
+	{
+		return false;
+	}
+	{
+		FCompilerResultsLog Results;
+		Gallery.Compile(Results);
+		if (!TestEqual(TEXT("The gallery's hierarchy compiles from its .dui"), Results.NumErrors, 0))
+		{
+			AddInfo(FString::Printf(TEXT("the compile said: %s"), *JoinCompilerMessages(Results)));
+			return false;
+		}
 	}
 
+	FString WhyNot;
+	if (AuthorGallerySlideIn(Gallery.Blueprint, WhyNot) == nullptr)
+	{
+		AddError(FString::Printf(TEXT("The slide-in could not be made on the gallery's hierarchy: %s"), *WhyNot));
+		return false;
+	}
+	if (!TestTrue(TEXT("The .dui now lists the animation it does not contain"), Gallery.WriteSource(/*bInListsSlideIn*/true)))
+	{
+		return false;
+	}
+	{
+		FCompilerResultsLog Results;
+		Gallery.Compile(Results);
+		if (!TestEqual(TEXT("The gallery recompiles with its animation"), Results.NumErrors, 0))
+		{
+			AddInfo(FString::Printf(TEXT("the compile said: %s"), *JoinCompilerMessages(Results)));
+			return false;
+		}
+	}
+	// The fixture's own claim, checked before anything leans on it. A carry that dropped the animation
+	// would otherwise surface three steps later as "no animation component", pointing at the instance.
+	{
+		UDreamWidget* AuthoredRoot = IsValid(Gallery.Blueprint->WidgetTree) ? Gallery.Blueprint->WidgetTree->RootWidget.Get() : nullptr;
+		UDreamWidgetAnimationComponent* CarriedAnimator = IsValid(AuthoredRoot) ? AuthoredRoot->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
+		UDreamWidgetAnimation* Carried = CarriedAnimator != nullptr ? CarriedAnimator->GetSequenceByDisplayName(GallerySlideInName) : nullptr;
+		if (!TestNotNull(TEXT("The slide-in rode the text rebuild onto the recompiled hierarchy"), Carried))
+		{
+			return false;
+		}
+		TestFalse(TEXT("still an animation the editor made, which is the kind a rebuild carries"), Carried->IsLanguageOwned());
+	}
+
+	UClass* GalleryClass = Gallery.Blueprint->GeneratedClass;
 	FScopedGameWorld Scope;
 	UDreamUserWidget* Instance = CreateDreamWidget(Scope.World, GalleryClass);
 	if (!TestNotNull(TEXT("The gallery instantiates"), Instance))
@@ -759,16 +1081,18 @@ bool FDreamWidgetAnimationGalleryAssetTest::RunTest(const FString& Parameters)
 
 	UDreamWidget* Root = Instance->GetContentRoot();
 	UDreamWidgetAnimationComponent* Animator = IsValid(Root) ? Root->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
-	if (!TestNotNull(TEXT("The content root carries the animation component"), Animator) || Animator->GetSequenceArray().Num() == 0)
+	if (!TestNotNull(TEXT("The content root carries the animation component"), Animator)
+		|| !TestTrue(TEXT("with the slide-in on it"), Animator->GetSequenceArray().Num() > 0))
 	{
 		return false;
 	}
 	UDreamWidgetAnimation* Animation = Animator->GetSequenceArray()[0];
-	UDreamWidget* ButtonA = FDreamWidgetAnimationObjectReference::GetWidgetFromContextWidgetByRelativePath(Root, TEXT("Gallery/GalleryBody/Content/Body/ClickColumn/ButtonA"));
+	UDreamWidget* ButtonA = FDreamWidgetAnimationObjectReference::GetWidgetFromContextWidgetByRelativePath(Root, GalleryButtonPath);
 	if (!TestNotNull(TEXT("ButtonA is where the binding path says"), ButtonA))
 	{
 		return false;
 	}
+	TestTrue(TEXT("and it is the gallery's native button, a control with a hierarchy of its own"), ButtonA->IsA<UDreamButton>());
 
 	const FDreamUIAnimationHandle Handle = Instance->PlayAnimation(Animation);
 	if (!TestTrue(TEXT("PlayAnimation through the user widget hands back a live handle"), Handle.IsValid()))
@@ -779,6 +1103,7 @@ bool FDreamWidgetAnimationGalleryAssetTest::RunTest(const FString& Parameters)
 	const FVector Mid = ButtonA->GetRenderTranslation();
 	TestTrue(FString::Printf(TEXT("Eight frames in, ButtonA has left its rest pose (Y = %.2f)"), Mid.Y), Mid.Y < -1.0);
 	TickFrames(Scope.World, AnimationFrames + 5);
+	TestEqual(TEXT("and it has slid home: Y holds the last key"), ButtonA->GetRenderTranslation().Y, 0.0, 0.01);
 	TestFalse(TEXT("The instance finished"), Instance->IsAnimationPlaying(Handle));
 	return true;
 }
