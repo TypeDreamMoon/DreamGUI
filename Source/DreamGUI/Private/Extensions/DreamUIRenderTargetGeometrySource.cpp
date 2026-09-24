@@ -463,6 +463,15 @@ void UDreamUIRenderTargetGeometrySource::BeginCheckRenderTarget()
 	{
 		CheckRenderTargetTickTweener->SetAffectByGamePause(false)->SetAffectByTimeDilation(false);
 	}
+	else
+	{
+		// No tween manager to poll with: UpdateCall answers null in a world without a game instance.
+		// Checked once, now, rather than never -- a target that is already set, which is the ordinary
+		// case (the canvas has its texture before anything is shown on it), gets its mesh, bounds,
+		// collision and scene proxy here, where it used to get none of them. A target that only turns up
+		// later still has no poller in such a world; SetCanvas rebuilds all of it when it is given one.
+		CheckRenderTargetTick();
+	}
 }
 void UDreamUIRenderTargetGeometrySource::EndCheckRenderTarget()
 {
