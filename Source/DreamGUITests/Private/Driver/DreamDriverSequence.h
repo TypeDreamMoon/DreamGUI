@@ -20,6 +20,7 @@ class UDreamDriverInputModule;
 class UDreamScreenSpaceRaycaster;
 class UDreamUIManagerWorldSubsystem;
 class UDreamWidget;
+class UClass;
 class UWorld;
 class UGameInstance;
 enum class EDreamUIMouseButtonType : uint8;
@@ -72,6 +73,15 @@ struct FDreamDriverContext
 
 	/** PumpOneFrame InFrameCount times at FrameSeconds each. */
 	void PumpFrames(int32 InFrameCount);
+
+	/**
+	 * The tickable world subsystem classes the pump drives, in the order it drives them. The UI
+	 * manager is the last entry; it is driven through TickDreamUI rather than Tick.
+	 *
+	 * The single list: PumpOneFrame walks it, and the coverage guard compares it with every tickable
+	 * world subsystem the plugin declares, so a new one cannot be missed silently.
+	 */
+	static TArray<UClass*> GetPumpedTickableWorldSubsystems();
 
 	/** The pointer's own state, which is where hover, press and drag are readable from. */
 	UDreamPointerEventData* GetPointerEventData(int32 InPointerID = 0) const;

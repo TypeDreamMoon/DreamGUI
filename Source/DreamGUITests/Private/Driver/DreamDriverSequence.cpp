@@ -150,6 +150,21 @@ namespace DreamDriverPumpLocal
 	}
 }
 
+TArray<UClass*> FDreamDriverContext::GetPumpedTickableWorldSubsystems()
+{
+	// In the order the pump ticks them. The four have no order between them in the engine either --
+	// TickObjects walks them in registration order, which is the order the subsystem collection
+	// happened to create them -- and none reads another's output from the same frame, so this is
+	// simply the order they were added in. The UI manager is last, and is driven through TickDreamUI.
+	return TArray<UClass*>{
+		UDreamUIActionRouter::StaticClass(),
+		UDreamUIDragDropSubsystem::StaticClass(),
+		UDreamUITooltipSubsystem::StaticClass(),
+		UDreamUIVirtualCursorSubsystem::StaticClass(),
+		UDreamUIManagerWorldSubsystem::StaticClass(),
+	};
+}
+
 bool FDreamDriverContext::IsUsable() const
 {
 	return World != nullptr
@@ -224,16 +239,25 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		 * later in the same frame from FTickableGameObject::TickObjects. Each is gated exactly as
 		 * TickObjects gates it; see TickAsTheEngineWould.
 		 *
+		 * The list is GetPumpedTickableWorldSubsystems, and it is walked rather than written out, so
+		 * the coverage guard (Driver.Pump.*) reads the same list this ticks: a new tickable world
+		 * subsystem in the plugin that is not on it makes that test fail instead of making every
+		 * interaction with it silently wrong. The UI manager is on the list too, as its last entry,
+		 * and is skipped here -- it is driven through TickDreamUI below.
+		 *
 		 * The virtual cursor is ticked like the rest, although it can own the pointer, because it only
 		 * does so while ACTIVE -- ActivateVirtualCursor, or bAutoVirtualCursorOnGamepad (off by default)
 		 * plus a gamepad being reported, which nothing in a rig reports. Inactive, its tick is a no-op;
 		 * a test that activates it is asking it to drive the pointer, which is what it would do.
 		 */
-		using namespace DreamDriverPumpLocal;
-		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUIActionRouter>(), InDeltaSeconds);
-		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUIDragDropSubsystem>(), InDeltaSeconds);
-		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUITooltipSubsystem>(), InDeltaSeconds);
-		TickAsTheEngineWould(*World, World->GetSubsystem<UDreamUIVirtualCursorSubsystem>(), InDeltaSeconds);
+		for (UClass* SubsystemClass : GetPumpedTickableWorldSubsystems())
+		{
+			if (SubsystemClass == nullptr || SubsystemClass == UDreamUIManagerWorldSubsystem::StaticClass())
+			{
+				continue;
+			}
+			TickAsTheEngineWould(*World, Cast<UTickableWorldSubsystem>(World->GetSubsystemBase(SubsystemClass)), InDeltaSeconds);
+		}
 	}
 
 	/*
