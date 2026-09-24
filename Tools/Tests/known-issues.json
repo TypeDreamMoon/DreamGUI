@@ -1,0 +1,13 @@
+{
+  "about": [
+    "Tests that are known to be red and must not turn a run red. A matching failure is listed in the summary under 'Known issues' and does not count; a crash, an ensure or a timeout still does.",
+    "One object per issue in \"issues\":",
+    "  test      the full test path; * and ? wildcards are allowed (fnmatch, case-sensitive), e.g. \"DreamGUI.UMGParity.EveryUMGMemberHasSomewhereToGo.*\"",
+    "  reason    why it is red, in a sentence: the behaviour that is wrong, not the assertion text",
+    "  decision  where it was decided to live with it: a decision record, an issue, a commit",
+    "  added     the date it was entered, yyyy-mm-dd",
+    "  presets   optional: only in these presets (e.g. [\"Rhi\"]); absent means every preset",
+    "When a listed test passes, the summary says so: take the entry out, so that the next regression is red again."
+  ],
+  "issues": []
+}

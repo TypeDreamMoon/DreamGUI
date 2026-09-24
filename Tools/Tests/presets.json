@@ -1,0 +1,69 @@
+{
+  "about": [
+    "What each preset of Invoke-DreamGUITests.ps1 runs. The runner owns this list; nothing here depends on the engine's ini groups.",
+    "A preset selects declared tests with any of: include (name prefixes), sources (directories under Source/DreamGUITests/ the test is declared in), flags (EAutomationTestFlags it must all carry); each criterion given narrows the selection, and exclude (name prefixes) then removes. sourcescan.py turns the selection into the shortest 'Automation RunTests' filter that matches exactly those tests. A preset may instead give a literal engine filter in \"filter\".",
+    "args are appended to the editor's command line. Under -nullrhi the engine itself drops every test flagged NonNullRHI (AutomationTest.cpp, GetValidTestNames), so a headless preset never needs to exclude the pixel tests.",
+    "minTests is the floor on the number of tests that must actually run; below it the run is an infrastructure failure (exit 2), which is how a plugin that loaded without its test module stops passing for green. Floors only go up. timeoutMinutes bounds one editor run; the build is not timed.",
+    "budgets: tests of the interactionPreset slower than interactionSlowMs, and any test slower than slowMs, are listed in the summary. They are reported, never failed."
+  ],
+  "budgets": {
+    "interactionPreset": "Interaction",
+    "interactionSlowMs": 100,
+    "slowMs": 1000
+  },
+  "presets": {
+    "Quick": {
+      "about": "The whole headless suite: every DreamGUI and DreamTween test that runs without a GPU, except the PIE layer. What the pre-push hook runs.",
+      "include": ["DreamGUI.", "DreamTween."],
+      "exclude": ["DreamGUI.Pie."],
+      "args": ["-nullrhi"],
+      "minTests": 1382,
+      "timeoutMinutes": 20
+    },
+    "Interaction": {
+      "about": "The driver-level tests: everything declared under Private/Interaction and Private/Driver/Tests (the driver's own tests and the controls driven through it), headless.",
+      "sources": ["Private/Interaction/", "Private/Driver/Tests/"],
+      "exclude": ["DreamGUI.Pie."],
+      "args": ["-nullrhi"],
+      "minTests": 233,
+      "timeoutMinutes": 15
+    },
+    "Designer": {
+      "about": "The widget blueprint designer, headless. Its pixel scenarios (DreamGUI.Designer.RHI) are NonNullRHI and run in Rhi instead.",
+      "include": ["DreamGUI.Designer."],
+      "args": ["-nullrhi"],
+      "minTests": 88,
+      "timeoutMinutes": 20
+    },
+    "Rhi": {
+      "about": "Every test flagged NonNullRHI except the PIE layer's (each PIE test first replaces the editor's level with a blank map, which the pixel tests draw through), on a real RHI that renders off screen (no window).",
+      "flags": ["NonNullRHI"],
+      "exclude": ["DreamGUI.Pie."],
+      "args": ["-RenderOffScreen"],
+      "minTests": 12,
+      "timeoutMinutes": 30
+    },
+    "Validate": {
+      "about": "The Rhi preset under the RHI validation layer, which turns missing transitions and stale bindings into deterministic asserts with a callstack instead of a timing-dependent crash.",
+      "flags": ["NonNullRHI"],
+      "exclude": ["DreamGUI.Pie."],
+      "args": ["-RenderOffScreen", "-rhivalidation"],
+      "minTests": 12,
+      "timeoutMinutes": 40
+    },
+    "Pie": {
+      "about": "The play-in-editor layer (DreamGUI.Pie.*): a real game mode, local player, viewport and viewport client, one PIE session per test. In its own editor, out of Quick. Its NonNullRHI probes are dropped under -nullrhi and run in All.",
+      "include": ["DreamGUI.Pie."],
+      "args": ["-nullrhi"],
+      "minTests": 9,
+      "timeoutMinutes": 30
+    },
+    "All": {
+      "about": "Everything in one editor: the headless suite, the PIE layer and the NonNullRHI tests, on a real RHI that renders off screen. GPU Scene's reserved buffers are off here (-dpcvars): every test world's scene reserves 8 GiB of GPU address space for them (GPUScene.cpp, four 2 GiB buffers), a destroyed world keeps its scene until the next garbage collection (a minute apart in the editor), and a hundred test worlds in five seconds ran the process out of address space -- D3D12 removed the device (DXGI_ERROR_DRIVER_INTERNAL_ERROR) on the next 2 GiB reservation. Without reserved resources the same buffers are ordinary ones sized to what each scene holds.",
+      "include": ["DreamGUI.", "DreamTween."],
+      "args": ["-RenderOffScreen", "-dpcvars=r.GPUScene.UseReservedResources=0,r.GPUScene.InstanceDataTileSizeLog2=-1"],
+      "minTests": 1404,
+      "timeoutMinutes": 60
+    }
+  }
+}
