@@ -317,6 +317,13 @@ void UUIRecyclableScrollView::ScrollToByDataIndex(int InDataIndex, bool InEaseAn
             {
                 UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
             }
+            else
+            {
+                // No tween manager to ease with -- a world no game instance owns, the designer's preview
+                // among them. The ease's end is the index's position, so the list lands there, exactly
+                // as the un-eased branch below puts it; left alone it would stay where it was.
+                SetScrollValue(FVector2D(TargetContentPos, 0));
+            }
         }
         else
         {
@@ -361,6 +368,11 @@ void UUIRecyclableScrollView::ScrollToByDataIndex(int InDataIndex, bool InEaseAn
             if (Tweener)
             {
                 UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
+            }
+            else
+            {
+                // The horizontal branch's fallback, for the same missing tween manager.
+                SetScrollValue(FVector2D(0, TargetContentPos));
             }
         }
         else

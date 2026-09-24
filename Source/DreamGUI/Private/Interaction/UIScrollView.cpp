@@ -937,6 +937,15 @@ void UUIScrollView::GlideContentTo(const FVector2D& InTargetPosition, bool InEas
     {
         UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
     }
+    else
+    {
+        // No tween manager to glide on: it is a game instance subsystem, and a world no game instance
+        // owns -- the designer's preview is one -- has none, so To answers null. The glide's end is
+        // where the content was going, so that is where it lands. Returning here instead accepted the
+        // scroll and moved nothing: an animated ScrollTo, an animated reveal and every gliding wheel
+        // notch silently did nothing at all in such a world.
+        ApplyContentPosition(InTargetPosition);
+    }
 }
 
 void UUIScrollView::ScrollTo(UDreamWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
