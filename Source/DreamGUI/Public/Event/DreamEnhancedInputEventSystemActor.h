@@ -84,7 +84,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "DreamGUI|Enhanced Input")
 	TObjectPtr<UInputMappingContext> MappingContext;
 
-	/** Priority for the pushed context. Above the default 0 so UI input is not eaten by gameplay. */
+	/**
+	 * Priority the context is pushed at. 0 is Enhanced Input's own default, the priority a gameplay
+	 * context usually has too. A context of higher priority is applied first, and a key one of its
+	 * actions consumes is taken from the contexts below it -- raise this when the UI's buttons have to
+	 * win a key that a gameplay context also maps.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "DreamGUI|Enhanced Input")
 	int32 MappingContextPriority = 0;
 
