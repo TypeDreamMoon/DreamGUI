@@ -1106,11 +1106,15 @@ UDreamTweener* UDreamRectBlock::Property##To(EndValueType endValue, float durati
 	return Tweener;\
 }
 
+// The getter reads the alpha of the colour the tween WRITES. It used to read BodyColor's for all five,
+// a copy of BodyAlphaTo's line, so every one of these faded its own colour starting from the body's
+// alpha: a transparent border told to fade in over an opaque body jumped to opaque on the first step
+// and stayed there. The tween takes its start from this getter on that first step.
 #define FunctionAlphaAnimation(Property, Function)\
 UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration, float delay, EDreamTweenEase ease)\
 {\
 	auto Tweener =  UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateWeakLambda(this, [this] {\
-		return FDreamUIUtils::ByteToFloat01(this->BodyColor.A);\
+		return FDreamUIUtils::ByteToFloat01(this->Property.A);\
 		}), FDreamTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {\
 			auto PropertyValue = this->Property;\
 			PropertyValue.A = (uint8)(value * 255.0f);\
