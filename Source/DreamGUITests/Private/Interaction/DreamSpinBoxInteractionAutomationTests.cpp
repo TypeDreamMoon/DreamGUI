@@ -6,6 +6,7 @@
 
 #include "Controls/DreamSpinBox.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamScreenSpaceRaycaster.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Driver/DreamDriver.h"
@@ -109,14 +110,15 @@ bool FDreamSpinBoxInteractionScrubTest::RunTest(const FString& Parameters)
 	const double ValuePerPixel = (SpinBox->GetSliderMaxValue() - SpinBox->GetSliderMinValue()) / FMath::Max(WidthPixels, 100.0);
 
 	FSpinBoxLog Log(SpinBox);
-	// A hundred pixels to the right in three moves: 10, then 45, then 45. The first is past both drag
-	// thresholds at once -- the raycaster's 5 canvas units and Slate's 5 pixel drag trigger distance --
-	// so it is the move SSpinBox spends deciding this IS a drag, and the ninety after it move the value.
+	// Three moves to the right: the first just past the raycaster's drag threshold -- read rather than
+	// assumed, with a margin because the comparison is strictly greater-than -- then 45, then 45. The
+	// first is the move SSpinBox spends deciding this IS a drag, and the ninety after it move the value.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
 	TestTrue(TEXT("The scrub completes"),
 		Driver->Sequence()
 			.MoveTo(FDreamBy::Widget(SpinBox->FieldNode.Get()))
 			.Press()
-			.MoveBy(FVector2D(10.0, 0.0))
+			.MoveBy(FVector2D(FirstMove, 0.0))
 			.MoveBy(FVector2D(45.0, 0.0))
 			.MoveBy(FVector2D(45.0, 0.0))
 			.WaitFrames(1)

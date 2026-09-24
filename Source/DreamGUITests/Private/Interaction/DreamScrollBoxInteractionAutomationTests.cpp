@@ -10,6 +10,7 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamScrollTypes.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamScreenSpaceRaycaster.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Driver/DreamDriver.h"
@@ -262,16 +263,20 @@ bool FDreamScrollBoxInteractionRightDragTest::RunTest(const FString& Parameters)
 	TStrongObjectPtr<UDreamDragInteractionProbe> UserScrolled(NewObject<UDreamDragInteractionProbe>());
 	Box->OnUserScrolled.AddDynamic(UserScrolled.Get(), &UDreamDragInteractionProbe::RecordFloat);
 
-	// Grab the content and pull it UP 150 pixels: 10, then 70, then 70. The first move is past both
-	// drag thresholds at once -- the raycaster's 5 canvas units and Slate's 5 pixel drag trigger
-	// distance -- so under SScrollBox::OnMouseMove it already scrolls, and so does every move after.
+	// Grab the content and pull it UP 150 pixels in three moves: the first just past the raycaster's
+	// drag threshold -- read rather than assumed, with a margin because the comparison is strictly
+	// greater-than -- and the rest in two equal halves. The first move is the one that turns the press
+	// into a drag, as crossing the drag trigger distance does under SScrollBox::OnMouseMove, so it
+	// already scrolls, and so does every move after.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	const double LaterMove = (150.0 - FirstMove) * 0.5;
 	TestTrue(TEXT("The right-button drag completes"),
 		Driver->Sequence()
 			.MoveTo(FDreamBy::Widget(Box->ViewportNode.Get()))
 			.Press(EDreamUIMouseButtonType::Right)
-			.MoveBy(FVector2D(0.0, -10.0))
-			.MoveBy(FVector2D(0.0, -70.0))
-			.MoveBy(FVector2D(0.0, -70.0))
+			.MoveBy(FVector2D(0.0, -FirstMove))
+			.MoveBy(FVector2D(0.0, -LaterMove))
+			.MoveBy(FVector2D(0.0, -LaterMove))
 			.WaitFrames(1)
 			.Release(EDreamUIMouseButtonType::Right)
 			.Perform());
@@ -319,13 +324,15 @@ bool FDreamScrollBoxInteractionRightDragOffTest::RunTest(const FString& Paramete
 	Box->OnUserScrolled.AddDynamic(UserScrolled.Get(), &UDreamDragInteractionProbe::RecordFloat);
 
 	// The same gesture as the test beside this one, with the switch off.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	const double LaterMove = (150.0 - FirstMove) * 0.5;
 	TestTrue(TEXT("The right-button drag completes"),
 		Rig.Driver()->Sequence()
 			.MoveTo(FDreamBy::Widget(Box->ViewportNode.Get()))
 			.Press(EDreamUIMouseButtonType::Right)
-			.MoveBy(FVector2D(0.0, -10.0))
-			.MoveBy(FVector2D(0.0, -70.0))
-			.MoveBy(FVector2D(0.0, -70.0))
+			.MoveBy(FVector2D(0.0, -FirstMove))
+			.MoveBy(FVector2D(0.0, -LaterMove))
+			.MoveBy(FVector2D(0.0, -LaterMove))
 			.WaitFrames(1)
 			.Release(EDreamUIMouseButtonType::Right)
 			.Perform());
@@ -365,11 +372,14 @@ bool FDreamScrollBoxInteractionFlingTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
+	// The first move just past the raycaster's drag threshold, read rather than assumed, so the drag is
+	// under way before the moves that give it its speed.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
 	TestTrue(TEXT("The drag gets going"),
 		Rig.Driver()->Sequence()
 			.MoveTo(FDreamBy::Widget(Box->ViewportNode.Get()))
 			.Press(EDreamUIMouseButtonType::Right)
-			.MoveBy(FVector2D(0.0, -10.0))
+			.MoveBy(FVector2D(0.0, -FirstMove))
 			.MoveBy(FVector2D(0.0, -40.0))
 			.Perform());
 

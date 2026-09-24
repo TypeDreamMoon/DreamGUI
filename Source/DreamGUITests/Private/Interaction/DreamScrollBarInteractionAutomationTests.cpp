@@ -6,6 +6,7 @@
 
 #include "Controls/DreamScrollBar.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamScreenSpaceRaycaster.h"
 #include "Interaction/UIScrollbar.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -235,16 +236,20 @@ bool FDreamScrollBarInteractionRightButtonTest::RunTest(const FString& Parameter
 	TStrongObjectPtr<UDreamDragInteractionProbe> Values(NewObject<UDreamDragInteractionProbe>());
 	Bar->OnValueChanged.AddDynamic(Values.Get(), &UDreamDragInteractionProbe::RecordFloat);
 
-	// Grab the handle with the RIGHT button and pull it down 90 pixels: 10, then 40, then 40, the first
-	// move past the drag threshold. The same gesture twice, before and after the bar is widened.
-	auto RightDragTheHandle = [&Driver, Bar]() -> bool
+	// Grab the handle with the RIGHT button and pull it down 90 pixels in three moves: the first just
+	// past the raycaster's drag threshold -- read rather than assumed, with a margin because the
+	// comparison is strictly greater-than -- and the rest of the 90 in two equal halves. The same
+	// gesture twice, before and after the bar is widened.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	const double LaterMove = (90.0 - FirstMove) * 0.5;
+	auto RightDragTheHandle = [&Driver, Bar, FirstMove, LaterMove]() -> bool
 	{
 		return Driver->Sequence()
 			.MoveTo(FDreamBy::Widget(Bar->HandleNode.Get()))
 			.Press(EDreamUIMouseButtonType::Right)
-			.MoveBy(FVector2D(0.0, 10.0))
-			.MoveBy(FVector2D(0.0, 40.0))
-			.MoveBy(FVector2D(0.0, 40.0))
+			.MoveBy(FVector2D(0.0, FirstMove))
+			.MoveBy(FVector2D(0.0, LaterMove))
+			.MoveBy(FVector2D(0.0, LaterMove))
 			.WaitFrames(1)
 			.Release(EDreamUIMouseButtonType::Right)
 			.Perform();

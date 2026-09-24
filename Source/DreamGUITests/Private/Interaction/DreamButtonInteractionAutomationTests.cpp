@@ -8,6 +8,7 @@
 #include "Controls/DreamButton.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamBaseEventData.h"
+#include "Event/DreamEventSystem.h"
 
 #include "Driver/DreamDriver.h"
 #include "Driver/DreamDriverElement.h"
@@ -346,8 +347,8 @@ bool FDreamPressButtonRightClickAcceptedTest::RunTest(const FString& Parameters)
  * SButton's bIsPressed and stays true until Release, and under DownAndUp the release over the button
  * is what clicks -- however long the hold was.
  *
- * Thirty frames at the pump's sixtieth of a second is half a second, which is also the event system's
- * long-press time: a hold that long must still end in an ordinary click.
+ * The hold lasts the event system's long-press time, read rather than assumed: a hold that long must
+ * still end in an ordinary click.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonHoldTest,
@@ -366,7 +367,8 @@ bool FDreamPressButtonHoldTest::RunTest(const FString& Parameters)
 	}
 
 	TestTrue(TEXT("Pressing on the button completes"), Placed.Element->Press());
-	Rig.PumpFrames(30);
+	TestTrue(TEXT("Holding for the long-press time completes"),
+		Rig.Driver()->Sequence().WaitSeconds(Rig.EventSystem()->GetLongPressTime()).Perform());
 
 	TestEqual(TEXT("Holding is one press"), Listener->PressedCount, 1);
 	TestEqual(TEXT("Holding is not a click"), Listener->ClickedCount, 0);

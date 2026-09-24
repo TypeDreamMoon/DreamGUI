@@ -6,6 +6,7 @@
 
 #include "Controls/DreamListView.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamScreenSpaceRaycaster.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Driver/DreamDriver.h"
@@ -129,12 +130,13 @@ namespace DreamListRowDragDropInteractionTestLocal
 		{
 			return false;
 		}
+		// Past the raycaster's drag threshold first, so the press is a drag before it travels anywhere.
+		// Read rather than assumed, and a margin past it: the comparison is strictly greater-than.
+		const double PastThreshold = FMath::Sqrt(static_cast<double>(InRig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
 		return InRig.Driver()->Sequence()
 			.MoveTo(FDreamBy::Widget(SecondRow))
 			.Press()
-			// Past the raycaster's drag threshold first (five units), so the press is a drag before it
-			// travels anywhere.
-			.MoveBy(FVector2D(0.0, 12.0))
+			.MoveBy(FVector2D(0.0, PastThreshold))
 			.MoveToPixel(InBottomBand)
 			.WaitFrames(InHoldFrames)
 			.Perform();

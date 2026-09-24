@@ -238,8 +238,10 @@ bool FDreamPressBorderDoubleClickDistanceTest::RunTest(const FString& Parameters
 	TestEqual(TEXT("Apart, the second press is an ordinary button down"), Listener->BorderButtonDownCount, 2);
 	TestEqual(TEXT("And neither press is a double click"), Listener->BorderDoubleClickCount, 0);
 
-	// Past the double-click time, so the next pair starts a run of its own.
-	Rig.PumpFrames(30);
+	// Past the double-click time -- the event system's own, read rather than assumed -- so the next pair
+	// starts a run of its own.
+	TestTrue(TEXT("Letting the double-click time pass completes"),
+		Rig.Driver()->Sequence().WaitSeconds(Rig.EventSystem()->GetDoubleClickTime() + 0.1f).Perform());
 	const int32 DownsBeforeNearPair = Listener->BorderButtonDownCount;
 	TestTrue(TEXT("Two quick clicks within the threshold complete"),
 		Rig.Driver()->Sequence().MoveToPixel(First).Press().Release().MoveToPixel(Near).Press().Release().Perform());

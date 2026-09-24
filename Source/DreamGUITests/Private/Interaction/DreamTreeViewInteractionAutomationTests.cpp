@@ -6,6 +6,7 @@
 
 #include "Controls/DreamTreeView.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamEventSystem.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Driver/DreamDriver.h"
@@ -139,9 +140,10 @@ bool FDreamListsTreeViewTwistyTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("The twisty is not the row: nothing was selected"), Tree->GetSelectedIndex(), INDEX_NONE);
 
-	// Longer than the event system's double-click time, so the second click is a click of its own and
-	// not the second half of a pair.
-	Rig.PumpFrames(30);
+	// Longer than the event system's double-click time -- read rather than assumed -- so the second click
+	// is a click of its own and not the second half of a pair.
+	TestTrue(TEXT("Letting the double-click time pass completes"),
+		Rig.Driver()->Sequence().WaitSeconds(Rig.EventSystem()->GetDoubleClickTime() + 0.1f).Perform());
 	UDreamWidget* TwistyAgain = TwistyOf(*Tree, 0);
 	if (!TestNotNull(TEXT("Fruit's row still has a twisty"), TwistyAgain))
 	{
