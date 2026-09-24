@@ -80,10 +80,12 @@ ADreamEnhancedInputEventSystemActor::ADreamEnhancedInputEventSystemActor()
 	// is exactly the pattern the rest of the plugin just moved away from.
 	//
 	// The Blueprint that fills them ships with the plugin:
-	// /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput (IMC_DreamUIInputContext plus
-	// IA_Trigger / IA_TriggerRight / IA_TriggerMiddle / IA_MouseWheel, all under /DreamGUI/EnhancedInput).
-	// Set Project Settings > Plugins > Dream GUI > EventSystemActorClass to THAT, not to this class --
-	// this class on its own has no mapping context and therefore no mouse.
+	// /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput, a data-only subclass of this class that
+	// sets IMC_DreamUIInputContext plus IA_Trigger / IA_TriggerRight / IA_TriggerMiddle / IA_MouseWheel
+	// (all under /DreamGUI/EnhancedInput) and adds no component, graph or binding of its own -- so what
+	// this class binds is what it does. Set Project Settings > Plugins > Dream GUI >
+	// EventSystemActorClass to THAT, not to this class -- this class on its own has no mapping context
+	// and therefore no mouse.
 }
 
 void ADreamEnhancedInputEventSystemActor::BeginPlay()

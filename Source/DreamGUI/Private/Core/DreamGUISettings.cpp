@@ -51,10 +51,11 @@ UDreamGUISettings::UDreamGUISettings()
 	// ADreamEnhancedInputEventSystemActor looks like the newer pick but leaves its mapping context
 	// and mouse actions deliberately empty for a Blueprint to fill, so pointing here at the C++ class
 	// spawned an event system that never heard a click -- every auto-spawned screen UI lost
-	// interaction until this pointed back. The Blueprint that fills them DOES ship:
-	// /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput, which carries IMC_DreamUIInputContext
-	// and the four IA_* actions. A project on Enhanced Input should point this setting at THAT, not at
-	// the native class.
+	// interaction until this pointed back. The Blueprint that fills them ships with the plugin:
+	// /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput, a data-only subclass of that class which
+	// sets IMC_DreamUIInputContext and the four IA_* actions and nothing else, so everything the class
+	// binds is what it gets (DreamGUI.Input.EnhancedPreset.* holds it to that). A project on Enhanced
+	// Input should point this setting at THAT, not at the native class.
 	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamStandaloneInputEventSystemActor")));
 }
 

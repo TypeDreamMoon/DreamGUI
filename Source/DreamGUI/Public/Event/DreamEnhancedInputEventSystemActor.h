@@ -15,14 +15,16 @@ struct FInputActionInstance;
 /**
  * The event system preset for projects on Enhanced Input.
  *
- * This is the C++ form of the DreamEventSystemActor_EnhancedInput preset Blueprint. Only the mouse
- * half differs from the legacy preset: the three buttons and the wheel arrive as Input Actions from
- * a mapping context this actor pushes, while navigation keys and touch stay on the legacy bindings
- * it inherits. Enhanced Input has no equivalent of the Mouse2D vector axis that the legacy preset
- * listens to, so mouse movement is polled on tick instead -- which is what the Blueprint did too.
+ * Only the mouse half differs from the legacy preset: the three buttons and the wheel arrive as Input
+ * Actions from a mapping context this actor pushes, while navigation keys and touch stay on the
+ * legacy bindings it inherits. Enhanced Input has no equivalent of the Mouse2D vector axis that the
+ * legacy preset listens to, so mouse movement is polled on tick instead.
  *
- * The four actions and the context default to the ones shipped in the plugin, and every one is
- * EditDefaultsOnly so a project can point them at its own.
+ * The four actions and the context are empty on this class, and every one is EditDefaultsOnly. The
+ * plugin fills them in the preset Blueprint /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput
+ * -- a data-only subclass of this class, with IMC_DreamUIInputContext and the four IA_* actions under
+ * /DreamGUI/EnhancedInput -- which is the class to spawn; a project with actions of its own points
+ * them there in a subclass of its own.
  *
  * It keeps listening while the game is paused, like the legacy preset, but Enhanced Input keeps its
  * pause gate on the action, not the binding: UEnhancedPlayerInput drops a paused frame's triggers for
