@@ -4087,6 +4087,40 @@ void UDreamWidget::RefreshInheritedStateFromParentChain()
 	// every click was awarded to the page. Re-attaching the layer by hand in a live session moved
 	// them to 216..228 and the dialog answered the pointer again.
 	MarkFlattenHierarchyIndexDirty();
+
+	// And where the subtree IS: the seventh thing it inherits, and the one every other attach road
+	// already re-derives. TrySetParentInternal recomputes the world transform on each attach and
+	// detach, and the editor's full refresh (EnsureDataForRebuild, which the designer runs after every
+	// preview rebuild) ends with this same call -- which is why no designer preview ever showed this.
+	//
+	// ObjectToWorldTransform is a cache of GetRenderLocalTransform() composed with the parent's, and
+	// SetParentBeforeRegister, being the cheap attach, does not touch it. A subtree hung that way keeps
+	// whatever it was last composed against: for anything CreateDreamWidget builds, its own user
+	// widget before that had a parent -- the world origin. Nothing afterwards is bound to correct it,
+	// because the setters and the layout write-back only recompute when the value they write differs
+	// from the one held. A control left at its default position never moves, so it is never
+	// recomputed: SetAnchoredPosition((0, 0)) on a new control returns early, and so does the
+	// CalculateTransformFromAnchor a layout pass runs, which derives the relative location the widget
+	// already has. The early returns are right; the state they protect was never established.
+	//
+	// A screen-space root sits at the origin, so there the stale value and the right one are the same
+	// transform and nothing showed. Under a world-space panel or a render-target canvas they are not:
+	// a button added at its default place on a panel standing in the level stayed at the world origin
+	// -- drawn there, traced there, projected there -- while the same button moved sideways appeared
+	// on the panel, because the move is what finally recomputed it.
+	//
+	// Last, for two reasons. The render canvas was re-derived above, so the canvas update the
+	// recompute asks for lands on the canvas this subtree now draws into. And RegisterDreamWidgetHierarchy
+	// calls this after every OnRegister in the subtree, which is where the render-transform, perspective
+	// and shear bits the composition reads were refreshed from serialized data; composed any earlier, a
+	// saved render transform would be left out of it.
+	//
+	// Unlike the four walks above, this announces itself whether or not the value moved -- the transform
+	// cascade always ends in MarkTransformChanged, so every behaviour bound in the subtree hears one
+	// transform change (queued until its Awake in a game world). An attach through TrySetParent opens
+	// with this same recompute and says the same thing, so a behaviour now hears it whichever of the two
+	// doors its widget came in by.
+	CalculateObjectToWorldTransform(true);
 }
 
 void UDreamWidget::RenewRenderCanvasRecursive(UDreamCanvas* InParentRenderCanvas)

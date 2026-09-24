@@ -132,12 +132,27 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 	// Everything this subtree inherits from the parent it was just attached to. OnRegister does
 	// this itself only for a hierarchy ROOT; a subtree parented through SetParentBeforeRegister
 	// raises no attach event, so without this it registers holding its birth defaults -- visible
-	// under a hidden parent, raycastable under a disabled one, and off the parent's render canvas.
+	// under a hidden parent, raycastable under a disabled one, off the parent's render canvas, and
+	// placed wherever it was last composed instead of on its parent (a control made at its default
+	// position on a world-space panel sat at the world origin).
 	// One call here rather than at each of the four call sites, because this function IS the seam
-	// every one of them goes through.
+	// every one of them goes through. After the OnRegister loop rather than before it: registration
+	// is what refreshes the render-transform bits the world transform is composed from.
 	if (InRoot->GetParent() != nullptr)
 	{
 		InRoot->RefreshInheritedStateFromParentChain();
+	}
+	else
+	{
+		// A hierarchy root inherits no state -- OnRegister ran the state walks for it -- but it still has a
+		// place: its own transform, over the scene component its canvas follows or over nothing, and
+		// nothing had composed that either. A root's contents are hung under it before this point
+		// (instancing, duplication, the rebuild after a recompile), each part composed against whatever the
+		// root was at that moment, and a copy's world transforms are not copied at all -- only what a widget
+		// serializes is -- so a copy of a root standing off the origin sat AT the origin, its whole subtree
+		// with it, until something moved it. The same recompute the parented branch ends with, after the
+		// same OnRegister loop and for the same reason.
+		InRoot->CalculateObjectToWorldTransform(true);
 	}
 
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
