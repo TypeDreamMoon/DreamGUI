@@ -23,6 +23,7 @@ class UDreamUIManagerWorldSubsystem;
 class UDreamWidget;
 class UClass;
 class UWorld;
+struct FDreamDriverVirtualCamera;   // Driver/DreamDriverVirtualCamera.h
 class UGameInstance;
 class APlayerController;
 class ULocalPlayer;
@@ -64,6 +65,8 @@ struct FDreamDriverContext
 	AActor* InputActor = nullptr;
 	/** Where input enters. Anything but ModuleOnly routes buttons, wheel, navigation, keys and touch through the game host. */
 	EDreamRigInputHost InputHost = EDreamRigInputHost::ModuleOnly;
+	/** The eye a world-space pointer looks through, once one has been attached. Null keeps every pixel computation exactly as it was. */
+	TSharedPtr<FDreamDriverVirtualCamera> Camera;
 
 	/** The test currently running, so a step that fails can say so where a report will show it. Optional. */
 	FAutomationTestBase* CurrentTest = nullptr;

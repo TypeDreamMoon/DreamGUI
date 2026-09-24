@@ -12,8 +12,10 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamBaseRaycaster.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Event/DreamWorldSpaceRaycaster.h"
 #include "Framework/Commands/InputChord.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
@@ -868,8 +870,21 @@ namespace DreamDriverSequenceLocal
 			}
 			const FVector2D PressPixel(EventData->PressPointerPosition.X, EventData->PressPointerPosition.Y);
 
+			// The threshold of the raycaster that took the press, because that is the one whose
+			// ShouldStartDrag decides: a screen raycaster scales its authored threshold by the canvas,
+			// a world raycaster following the mouse compares its own unscaled one in pixels. The rig's
+			// screen raycaster is the answer only when the press came through nothing else.
 			double ThresholdPixels = 0.0;
-			if (IsValid(InContext.Raycaster))
+			const UDreamBaseRaycaster* PressRaycaster = EventData->PressRaycaster;
+			if (const UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(PressRaycaster))
+			{
+				ThresholdPixels = FMath::Sqrt((double)ScreenRaycaster->GetScaledDragThresholdSquare());
+			}
+			else if (const UDreamWorldSpaceRaycaster* WorldRaycaster = Cast<UDreamWorldSpaceRaycaster>(PressRaycaster))
+			{
+				ThresholdPixels = FMath::Sqrt((double)WorldRaycaster->GetDragThresholdSquare());
+			}
+			else if (IsValid(InContext.Raycaster))
 			{
 				ThresholdPixels = FMath::Sqrt((double)InContext.Raycaster->GetScaledDragThresholdSquare());
 			}
@@ -1379,7 +1394,9 @@ namespace DreamDriverSequenceLocal
 			{
 				return TOptional<FVector2D>();
 			}
-			return FDreamDriverProjection::WidgetCentrePixel(Widget);
+			// Through the context's camera when a world-space pointer has one; with none, exactly the
+			// screen-space projection this always was.
+			return FDreamDriverProjection::WidgetCentrePixel(Widget, InContext.Camera.Get());
 		};
 	}
 
@@ -1530,7 +1547,7 @@ FDreamDriverSequence& FDreamDriverSequence::DragTo(const FDreamLocatorRef& InFro
 			{
 				return TOptional<FVector2D>();
 			}
-			const TOptional<FVector2D> TargetPixel = FDreamDriverProjection::WidgetCentrePixel(Widget);
+			const TOptional<FVector2D> TargetPixel = FDreamDriverProjection::WidgetCentrePixel(Widget, InStepContext.Camera.Get());
 			if (!TargetPixel.IsSet())
 			{
 				return TOptional<FVector2D>();

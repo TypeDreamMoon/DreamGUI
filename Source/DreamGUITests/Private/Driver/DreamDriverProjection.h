@@ -5,7 +5,9 @@
 #include "CoreMinimal.h"
 
 class UDreamCanvas;
+class UDreamUIRenderTargetGeometrySource;
 class UDreamWidget;
+struct FDreamDriverVirtualCamera;
 
 /**
  * Where a widget is, in the pixels the pointer is measured in.
@@ -16,6 +18,21 @@ class UDreamWidget;
  * construction a pixel whose ray comes back to the point it came from. Anything that recomputed the
  * projection from the canvas's parts instead would be a second implementation of the same arithmetic,
  * and the two would drift.
+ *
+ * WITH A CAMERA. The overloads that take an FDreamDriverVirtualCamera answer for the two kinds of
+ * canvas that are seen through a player's eye rather than through their own:
+ *  - a WORLD-SPACE canvas (WorldSpace or WorldSpace_DreamUI): the widget's point is already a world
+ *    point, and the camera projects it. The camera is the one UDreamDriverWorldSpaceRaycaster makes its
+ *    rays from, so this is the same "inverse of the raycaster" as above, one raycaster over.
+ *  - a RENDER-TARGET canvas that a UDreamUIRenderTargetGeometrySource in the same world is showing: the
+ *    widget's point goes through the canvas's own view-projection to the UV that
+ *    UDreamUIRenderTargetInteraction would deproject it back from, the UV to the point of the surface's
+ *    mesh that carries it, and that world point through the camera. Plane and cylinder surfaces are
+ *    mapped (both are the geometry source's own triangle list, searched by texture coordinate); a
+ *    StaticMesh surface has no pixel here, because its UVs live in render data this module cannot read.
+ * Everything else is answered exactly as the camera-less versions answer it: a screen-space canvas by
+ * its own matrix, a render-target canvas that no surface shows by its own matrix in the target's
+ * pixels, and a world-space canvas with a null camera not at all. Passing null is the camera-less call.
  *
  * THE Y AXIS. The raycaster turns a pointer position into a view point by dividing by the viewport
  * size and then flipping Y -- `mousePos01.Y = 1.0f - mousePos01.Y` -- before deprojecting. So the
@@ -28,9 +45,10 @@ class UDreamWidget;
  * "where on the canvas", this one answers "which pixel does the pointer have to be at"; they are
  * different questions and mixing them up puts the cursor at 720 minus where it should be.
  *
- * v1 handles ScreenSpaceOverlay and RenderTarget canvases. A world-space canvas is projected through
- * the player's camera rather than through the canvas's own virtual one, so its pixel is a fact about a
- * viewpoint that a headless fixture has not got; those come back unset rather than wrong.
+ * Without a camera only ScreenSpaceOverlay and RenderTarget canvases have pixels. A world-space canvas
+ * is projected through the player's camera rather than through the canvas's own virtual one, so its
+ * pixel is a fact about a viewpoint; with no camera to say what that viewpoint is, those come back
+ * unset rather than wrong.
  */
 class FDreamDriverProjection
 {
@@ -62,4 +80,41 @@ public:
 	 * is this one that a ray comes back to the widget from, which is the whole point of aiming here.
 	 */
 	static TOptional<FVector2D> WidgetCentrePixel(const UDreamWidget* InWidget);
+
+	/** WidgetLocalPointToPixel through a player's eye when there is one; see the class comment. InCamera null is the overload above. */
+	static TOptional<FVector2D> WidgetLocalPointToPixel(const UDreamWidget* InWidget, const FVector2D& InLocalPoint, const FDreamDriverVirtualCamera* InCamera);
+	/** WidgetToPixelRect through a player's eye when there is one. A corner at or behind the eye leaves the whole rect unset, as it does without one. */
+	static TOptional<FBox2D> WidgetToPixelRect(const UDreamWidget* InWidget, const FDreamDriverVirtualCamera* InCamera);
+	/** WidgetCentrePixel through a player's eye when there is one. */
+	static TOptional<FVector2D> WidgetCentrePixel(const UDreamWidget* InWidget, const FDreamDriverVirtualCamera* InCamera);
+
+	/**
+	 * A world point through a canvas's view-projection, as the canvas's VIEW POINT: NDC scaled to 0..1,
+	 * with Y UP. Unset behind the canvas's eye.
+	 *
+	 * Not a pixel, and deliberately not flipped: this is the space UDreamScreenSpaceRaycaster::
+	 * DeprojectViewPointToWorld deprojects from, and so the space UDreamUIRenderTargetInteraction hands
+	 * it a surface's hit UV in -- (0,0) the bottom left of the canvas, (1,1) its top right.
+	 */
+	static TOptional<FVector2D> WorldPointToViewPoint01(const UDreamCanvas* InRootCanvas, const FVector& InWorldPoint);
+
+	/**
+	 * The render-target geometry source in the canvas's world that is showing this canvas, or null.
+	 *
+	 * Asked of every registered source in that world, through its own GetCanvas -- which is the answer
+	 * UDreamUIRenderTargetInteraction gets too. A source with neither a canvas nor a presenter logs its
+	 * usual warning when asked; the rig's own never do, because they are given their canvas first.
+	 */
+	static const UDreamUIRenderTargetGeometrySource* FindSurfaceShowing(const UDreamCanvas* InRenderTargetCanvas);
+
+	/**
+	 * The world point on a render-target surface that shows the target's UV InUV, in the convention
+	 * UDreamUIRenderTargetGeometrySource::LineTraceHitUV answers in (V up from the bottom edge), or
+	 * unset for a UV the surface does not carry or a surface kind that cannot be mapped (StaticMesh).
+	 *
+	 * Found on the surface's own triangles: the one whose texture coordinates contain (U, 1 - V) --
+	 * the mesh stores V down the texture -- and the position interpolated there. For a plane that is
+	 * exactly LineTraceHitUV run backwards; for a cylinder it is the chord LineTraceHitUV measures along.
+	 */
+	static TOptional<FVector> RenderTargetUVToSurfacePoint(const UDreamUIRenderTargetGeometrySource* InSurface, const FVector2D& InUV);
 };

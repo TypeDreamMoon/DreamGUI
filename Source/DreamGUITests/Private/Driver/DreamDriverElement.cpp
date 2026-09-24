@@ -142,12 +142,18 @@ bool FDreamDriverElement::IsSelected() const
 
 TOptional<FBox2D> FDreamDriverElement::GetPixelRect() const
 {
-	return FDreamDriverProjection::WidgetToPixelRect(GetWidget());
+	// Through the camera the context carries once a world-space pointer is attached, so an element
+	// on a world panel answers in the same pixels the actions aim at; null keeps it screen-space.
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	const FDreamDriverVirtualCamera* Camera = PinnedDriver.IsValid() ? PinnedDriver->GetContext().Camera.Get() : nullptr;
+	return FDreamDriverProjection::WidgetToPixelRect(GetWidget(), Camera);
 }
 
 TOptional<FVector2D> FDreamDriverElement::GetCentrePixel() const
 {
-	return FDreamDriverProjection::WidgetCentrePixel(GetWidget());
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	const FDreamDriverVirtualCamera* Camera = PinnedDriver.IsValid() ? PinnedDriver->GetContext().Camera.Get() : nullptr;
+	return FDreamDriverProjection::WidgetCentrePixel(GetWidget(), Camera);
 }
 
 bool FDreamDriverElement::Hover()
