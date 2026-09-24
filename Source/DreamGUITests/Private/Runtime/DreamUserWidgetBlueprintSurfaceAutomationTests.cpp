@@ -10,18 +10,19 @@
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
-#include "Event/InputModule/DreamPointerInputModule.h"
-#include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "Event/Interface/DreamKeyInterface.h"
 #include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerGestureInterface.h"
 #include "Event/Interface/DreamPointerLongPressInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
-#include "GameFramework/Actor.h"
 #include "Interaction/UIEventTrigger.h"
 #include "DreamScopedWorld.h"
+
+#include "Driver/DreamDriver.h"
+#include "Driver/DreamDriverLocators.h"
+#include "Driver/DreamDriverRig.h"
+#include "Driver/DreamDriverSequence.h"
 
 /*
  * THE USER WIDGET'S BLUEPRINT SURFACE, and the one promise it must keep.
@@ -31,9 +32,9 @@
  * ExecuteDreamUIInterface iterates GetAllComponents(), the navigation search does the same, and the
  * manager's tick lists hold behaviours. Adding a component to EVERY user widget is therefore also the
  * one thing that could silently change what existing screens receive -- so half of this file is the
- * routing-neutrality proof, run through the same hand-driven ProcessPointerEvent rig the drag
- * threshold tests use: same raycast answer, same frames, once with a plain widget in the chain and
- * once with a user widget, asserting the observable delivery is identical.
+ * routing-neutrality proof, run through the headless rig with a real pointer and a real raycast: the
+ * same click on the same widget, once with a plain widget in the chain and once with a user widget,
+ * asserting the observable delivery is identical.
  *
  * What is asserted behaviourally versus structurally: the bridge's ForwardCount fields increment
  * AFTER the widget-side Native* call returns, so a count is proof the seam fired end to end;
@@ -53,20 +54,6 @@ namespace DreamUserWidgetBlueprintSurfaceTestLocal
 		FScopedEditorWorld() { World = UWorld::CreateWorld(EWorldType::Editor, false); }
 		~FScopedEditorWorld() { if (World) { World->DestroyWorld(false); } }
 	};
-
-	UDreamWidget* MakeWidget(UWorld* World, UDreamWidget* Parent, const TCHAR* Name, float W = 100.0f, float H = 100.0f)
-	{
-		UDreamWidget* Widget = NewObject<UDreamWidget>(World, NAME_None, RF_Public | RF_Transactional);
-		Widget->SetDisplayName(Name);
-		Widget->SetWidth(W);
-		Widget->SetHeight(H);
-		Widget->OnRegister();
-		if (Parent)
-		{
-			Widget->TrySetParent(Parent, false);
-		}
-		return Widget;
-	}
 
 	/** Production order: Initialize (which attaches the bridge in a game world), then register. */
 	UDreamUserWidget* MakeUserWidget(UWorld* World, UDreamWidget* Parent, const TCHAR* Name, float W = 200.0f, float H = 200.0f)
@@ -108,64 +95,29 @@ namespace DreamUserWidgetBlueprintSurfaceTestLocal
 		}
 	};
 
-	/** The drag-threshold tests' rig: the pipeline driven frame by frame with the raycast answered by hand. */
-	struct FPointerRig
+	const FIntPoint ViewportSize(1280, 720);
+
+	/**
+	 * Move onto InTarget's centre, press, and let go -- a frame each -- noting which widget the pipeline
+	 * pressed. Read between the press and the release, because the release lets go of it again: after
+	 * a click the pointer names no pressed widget at all.
+	 */
+	bool ClickNotingThePress(FDreamDriverRig& InRig, UDreamWidget* InTarget, UDreamWidget*& OutPressed)
 	{
-		AActor* Host = nullptr;
-		UDreamEventSystem* EventSystem = nullptr;
-		UDreamStandaloneInputModule* Module = nullptr;
-		UDreamScreenSpaceRaycaster* Raycaster = nullptr;
-		UDreamPointerEventData* EventData = nullptr;
-
-		explicit FPointerRig(UWorld* InWorld)
-		{
-			Host = InWorld->SpawnActor<AActor>();
-			EventSystem = NewObject<UDreamEventSystem>(Host);
-			EventSystem->RegisterComponent();
-			Module = NewObject<UDreamStandaloneInputModule>(Host);
-			Module->RegisterComponent();
-			Module->RegisterInputModuleToEventSystem(EventSystem);
-			Raycaster = NewObject<UDreamScreenSpaceRaycaster>(Host);
-			EventData = EventSystem->GetPointerEventData(0, true);
-		}
-
-		bool IsUsable() const
-		{
-			return Host != nullptr && EventSystem != nullptr && Module != nullptr
-				&& Raycaster != nullptr && EventData != nullptr;
-		}
-
-		void Press(const FVector2D& Position)
-		{
-			Module->InputMouseMove(FVector(Position.X, Position.Y, 0.0));
-			EventData->bNowIsTriggerPressed = true;
-			EventData->PressTime = Host->GetWorld()->TimeSeconds;
-			EventData->PressPointerPosition = FVector(Position.X, Position.Y, 0.0);
-		}
-
-		void Release(const FVector2D& Position)
-		{
-			Module->InputMouseMove(FVector(Position.X, Position.Y, 0.0));
-			EventData->bNowIsTriggerPressed = false;
-			EventData->ReleaseTime = Host->GetWorld()->TimeSeconds;
-		}
-
-		void Frame(UDreamWidget* WidgetUnderPointer)
-		{
-			FDreamUIHitResultContainer HitContainer;
-			HitContainer.Raycaster = Raycaster;
-			if (WidgetUnderPointer != nullptr)
+		OutPressed = nullptr;
+		return InRig.Driver()->Sequence()
+			.MoveTo(FDreamBy::Widget(InTarget))
+			.Press()
+			.Then([&OutPressed](FDreamDriverContext& InContext)
 			{
-				HitContainer.HitResult.Widget = WidgetUnderPointer;
-				HitContainer.HoverArray.Add(WidgetUnderPointer);
-			}
-			bool bOutIsHitSomething = false;
-			FDreamUIHitResult OutHitResult;
-			UDreamPointerInputModule::ProcessPointerEvent(
-				EventSystem, EventData, WidgetUnderPointer != nullptr,
-				HitContainer, bOutIsHitSomething, OutHitResult);
-		}
-	};
+				if (const UDreamPointerEventData* Pointer = InContext.GetPointerEventData(0))
+				{
+					OutPressed = Pointer->PressWidget.Get();
+				}
+			})
+			.Release()
+			.Perform();
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -443,29 +395,32 @@ bool FDreamUserWidgetRoutingNeutralityTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUserWidgetBlueprintSurfaceTestLocal;
 
-	const FVector2D ClickPos(150.0, 150.0);
-
 	// ---- Arrangement A: Root <- Holder(plain widget) <- Inner. The baseline every screen already has.
 	int32 BaselineEnter = 0, BaselineDown = 0, BaselineUp = 0, BaselineClick = 0;
 	{
-		FScopedGameWorld Scope;
-		FPointerRig Rig(Scope.World);
-		if (!TestTrue(TEXT("the baseline rig came up"), Rig.IsUsable()))
+		FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+		Rig.BindTest(this);
+		if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
 		{
 			return false;
 		}
-		UDreamWidget* Root = MakeWidget(Scope.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
-		UDreamWidget* Holder = MakeWidget(Scope.World, Root, TEXT("Holder"), 200.0f, 200.0f);
-		UDreamWidget* Inner = MakeWidget(Scope.World, Holder, TEXT("Inner"));
+		// The host MakeControl gives the user-widget arrangement below, given to this one as well, so
+		// that the two differ in the holder and in nothing else.
+		Rig.EnsureGameInputHost();
+		UDreamWidget* Holder = Rig.MakeWidget(TEXT("Holder"), nullptr, FVector2D(200.0, 200.0));
+		UDreamWidget* Inner = Holder != nullptr ? Rig.MakeWidget(TEXT("Inner"), Holder, FVector2D(100.0, 100.0)) : nullptr;
+		if (!TestNotNull(TEXT("baseline: the holder and the widget inside it were made"), Inner))
+		{
+			return false;
+		}
 
 		FWidgetEventLog RootLog;
-		RootLog.Observe(Root);
+		RootLog.Observe(Rig.Root());
+		Rig.PumpFrames(1);
 
-		Rig.Press(ClickPos);
-		Rig.Frame(Inner);
-		TestTrue(TEXT("baseline: the press lands on the inner widget"), Rig.EventData->PressWidget == Inner);
-		Rig.Release(ClickPos);
-		Rig.Frame(Inner);
+		UDreamWidget* PressedWidget = nullptr;
+		TestTrue(TEXT("baseline: clicking the inner widget completes"), ClickNotingThePress(Rig, Inner, PressedWidget));
+		TestTrue(TEXT("baseline: the press lands on the inner widget"), PressedWidget == Inner);
 
 		BaselineEnter = RootLog.Enter;
 		BaselineDown = RootLog.Down;
@@ -479,29 +434,30 @@ bool FDreamUserWidgetRoutingNeutralityTest::RunTest(const FString& Parameters)
 	// the root observes must match the baseline exactly -- that is what "adding the surface breaks no
 	// existing screen" means, measured.
 	{
-		FScopedGameWorld Scope;
-		FPointerRig Rig(Scope.World);
-		if (!TestTrue(TEXT("the user-widget rig came up"), Rig.IsUsable()))
+		FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+		Rig.BindTest(this);
+		if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
 		{
 			return false;
 		}
-		UDreamWidget* Root = MakeWidget(Scope.World, nullptr, TEXT("Root"), 800.0f, 600.0f);
-		UDreamUserWidget* Holder = MakeUserWidget(Scope.World, Root, TEXT("UserHolder"));
-		UDreamWidget* Inner = MakeWidget(Scope.World, Holder, TEXT("Inner"));
+		// The runtime's own factory: instance, Initialize (which attaches the bridge in a game world),
+		// parent, register the hierarchy.
+		UDreamUserWidget* Holder = Rig.MakeControl<UDreamUserWidget>(TEXT("UserHolder"), nullptr, FVector2D(200.0, 200.0));
+		UDreamWidget* Inner = Holder != nullptr ? Rig.MakeWidget(TEXT("Inner"), Holder, FVector2D(100.0, 100.0)) : nullptr;
 		if (!TestNotNull(TEXT("the user widget carries its bridge"),
-			Holder->GetComponent(UDreamUserWidgetEventBridge::StaticClass())))
+				Holder != nullptr ? Holder->GetComponent(UDreamUserWidgetEventBridge::StaticClass()) : nullptr)
+			|| !TestNotNull(TEXT("and has a widget inside it to click"), Inner))
 		{
 			return false;
 		}
 
 		FWidgetEventLog RootLog;
-		RootLog.Observe(Root);
+		RootLog.Observe(Rig.Root());
+		Rig.PumpFrames(1);
 
-		Rig.Press(ClickPos);
-		Rig.Frame(Inner);
-		TestTrue(TEXT("the press still lands on the inner widget, not the user widget"), Rig.EventData->PressWidget == Inner);
-		Rig.Release(ClickPos);
-		Rig.Frame(Inner);
+		UDreamWidget* PressedWidget = nullptr;
+		TestTrue(TEXT("clicking the inner widget completes"), ClickNotingThePress(Rig, Inner, PressedWidget));
+		TestTrue(TEXT("the press still lands on the inner widget, not the user widget"), PressedWidget == Inner);
 
 		TestEqual(TEXT("enter reaches the root exactly as before"), RootLog.Enter, BaselineEnter);
 		TestEqual(TEXT("down reaches the root exactly as before"), RootLog.Down, BaselineDown);
@@ -513,11 +469,13 @@ bool FDreamUserWidgetRoutingNeutralityTest::RunTest(const FString& Parameters)
 		// stopped bubble is also the proof that delivery runs through NativeOnPointer* and reads the
 		// widget's policy.
 		Holder->SetAllowEventBubbleUp(false);
-		Rig.Press(ClickPos);
-		Rig.Frame(Inner);
-		TestTrue(TEXT("the press target is policy-independent"), Rig.EventData->PressWidget == Inner);
-		Rig.Release(ClickPos);
-		Rig.Frame(Inner);
+		// Past the double-click window first. A second press inside it is delivered as the second half
+		// of a double click, in place of its down, and a down that was never sent reaches the root as
+		// nothing whatever the bubbling policy -- which would leave the first claim below saying nothing.
+		TestTrue(TEXT("letting the double-click window pass completes"),
+			Rig.Driver()->Sequence().WaitSeconds(Rig.EventSystem()->GetDoubleClickTime() + 0.1f).Perform());
+		TestTrue(TEXT("clicking the inner widget again completes"), ClickNotingThePress(Rig, Inner, PressedWidget));
+		TestTrue(TEXT("the press target is policy-independent"), PressedWidget == Inner);
 
 		TestEqual(TEXT("with bubbling off, no second down reaches the root"), RootLog.Down, BaselineDown);
 		TestEqual(TEXT("...no second up"), RootLog.Up, BaselineUp);
