@@ -374,6 +374,14 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 			{
 				UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), TransitionTweener);
 			}
+			else
+			{
+				// No tween manager to play it on. The manager is a game instance subsystem, and a world
+				// no game instance owns -- the designer's preview is one -- has none, so To answers null.
+				// The fade's end is this state's colour, so that is what lands: stopping here instead left
+				// the face in its previous colour for good, the style push's normal colour included.
+				TransitionTarget->SetColor(Color.GetValue());
+			}
 		}
 	}
 	if (Brush.IsSet())
@@ -401,6 +409,11 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 					if (TransitionTweener)
 					{
 						UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), TransitionTweener);
+					}
+					else
+					{
+						// No tween manager, as for the colour above: the tint the fade was heading for lands.
+						TransitionTargetAsDreamImage->SetBrushTintColor(Brush.GetValue().TintColor);
 					}
 				}
 			}

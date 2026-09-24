@@ -184,6 +184,13 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 			{
 				UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), ToggleTransitionTweener);
 			}
+			else
+			{
+				// No tween manager to play it on (a world no game instance owns, the designer's preview
+				// among them): the colour the fade was heading for lands. Stopping here instead left a
+				// clicked box checked and still wearing the unchecked tick.
+				ToggleTransitionTarget->SetColor(Color.GetValue());
+			}
 		}
 	}
 	if (Brush.IsSet())
@@ -211,6 +218,11 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 					if (ToggleTransitionTweener)
 					{
 						UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), ToggleTransitionTweener);
+					}
+					else
+					{
+						// No tween manager, as for the colour above: the tint the fade was heading for lands.
+						ToggleTransitionTargetAsDreamImage->SetBrushTintColor(Brush.GetValue().TintColor);
 					}
 				}
 			}
