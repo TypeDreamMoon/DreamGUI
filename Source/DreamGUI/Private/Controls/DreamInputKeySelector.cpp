@@ -7,6 +7,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/Actor.h"
 
+#include "Core/DreamUISettings.h"
 #include "Core/DreamUIWidgetRegistry.h"
 
 #include "Core/DreamUIBuilder.h"
@@ -428,8 +429,14 @@ void UDreamInputKeySelector::BeginKeyCapture()
 			}
 			// No payload: an FInputActionHandlerSignature taking an FKey is handed the key that
 			// fired, which is the shape UUITextInput's AnyKeyPressed already relies on.
+			//
+			// Executed while the game is paused too, which is not the engine's default: a settings
+			// screen in a pause menu is where a binder is used. Left at the default, every one of these
+			// bindings still CONSUMED its key in a paused game -- UPlayerInput counts a consuming binding
+			// whether or not its delegate runs -- so an armed selector swallowed every key and heard
+			// none. Whether it answers while paused is asked per key, in HandleCapturedKey.
 			Input->BindKey(Key, EInputEvent::IE_Pressed,
-				this, &UDreamInputKeySelector::HandleCapturedKey);
+				this, &UDreamInputKeySelector::HandleCapturedKey).bExecuteWhenPaused = true;
 		}
 	}
 }
@@ -445,6 +452,19 @@ void UDreamInputKeySelector::EndKeyCapture()
 
 void UDreamInputKeySelector::HandleCapturedKey(FKey InKey)
 {
+	// The capture bindings execute while the game is paused (BeginKeyCapture), so the pause is weighed
+	// here, as the key arrives, by the rule UDreamUIManagerWorldSubsystem ticks widgets by: the
+	// screen-space setting for a selector drawn on the screen, the world-space one otherwise. One whose
+	// UI the settings pause with the game ignores the key, as the engine's own gate would have.
+	if (const UWorld* World = GetWorld(); World != nullptr && World->IsPaused())
+	{
+		const UDreamUISettings* const Settings = GetDefault<UDreamUISettings>();
+		if (IsScreenSpaceOverlayUI() ? Settings->bScreenSpaceUIAffectByGamePause : Settings->bWorldSpaceUIAffectByGamePause)
+		{
+			return;
+		}
+	}
+
 	// Through the public entry, so a captured key and a project-fed one take the same path and
 	// cannot come to mean different things. The modifiers are read HERE and nowhere else: an
 	// FInputKeyBinding hands over the key that fired and nothing about what was held with it.

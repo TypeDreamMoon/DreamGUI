@@ -17,6 +17,7 @@
 #include "Core/DreamUIWorldContext.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamVisualEmpty.h"
+#include "Core/DreamUISettings.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
@@ -230,6 +231,19 @@ bool UUITextInput::CheckPlayerController()
 void UUITextInput::AnyKeyPressed(FKey Key)
 {
 	if (bInputActive == false)return;
+	// The key agent's bindings execute while the game is paused (BindKeys), so the pause is weighed
+	// here, as the key arrives, by the rule UDreamUIManagerWorldSubsystem already ticks this field by:
+	// the screen-space setting for a field drawn on the screen, the world-space one otherwise. A field
+	// whose UI the settings pause with the game drops the key, as the engine's own gate would have.
+	if (const UWorld* World = DreamUI::GetWorldSafe(this); World != nullptr && World->IsPaused())
+	{
+		const UDreamWidget* const Widget = GetWidget();
+		const UDreamUISettings* const Settings = GetDefault<UDreamUISettings>();
+		const bool bPausesWithTheGame = (Widget != nullptr && Widget->IsScreenSpaceOverlayUI())
+			? Settings->bScreenSpaceUIAffectByGamePause
+			: Settings->bWorldSpaceUIAffectByGamePause;
+		if (bPausesWithTheGame)return;
+	}
 	// While a composition is open the IME owns the text: it edits through SetTextInRange, and the same raw
 	// key presses that drive it are also delivered here, because the bound InputComponent reads key state
 	// straight from the message pump and TSF never consumed them. Acting on both is what types every
@@ -2526,8 +2540,13 @@ void UUITextInput::BindKeys()
 	{
 		if (!IgnoreKeys.Contains(Key))
 		{
-			InputComp->BindKey(Key, EInputEvent::IE_Pressed, this, &UUITextInput::AnyKeyPressed);
-			InputComp->BindKey(Key, EInputEvent::IE_Repeat, this, &UUITextInput::AnyKeyPressed);
+			// Executed while the game is paused too, which is not the engine's default: a pause menu's
+			// field has to take Backspace, Enter and the arrows. Left at the default, these bindings still
+			// CONSUMED their keys in a paused game -- UPlayerInput counts a consuming binding whether or not
+			// its delegate runs -- so the keys reached nothing at all. Whether this field answers while
+			// paused is asked per key in AnyKeyPressed, where the pause setting is read as the key arrives.
+			InputComp->BindKey(Key, EInputEvent::IE_Pressed, this, &UUITextInput::AnyKeyPressed).bExecuteWhenPaused = true;
+			InputComp->BindKey(Key, EInputEvent::IE_Repeat, this, &UUITextInput::AnyKeyPressed).bExecuteWhenPaused = true;
 		}
 	}
 }
