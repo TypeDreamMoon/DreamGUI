@@ -114,7 +114,7 @@ enum class EDreamDriverStepResult : uint8
 /**
  * One thing a sequence does, executed at most once per frame.
  *
- * Five kinds exist and no more: input, wait N frames, wait for a condition, run a lambda (which is
+ * The kinds are few: input, wait (N frames, N seconds, or for a condition), run a lambda (which is
  * where assertions live), and fail outright. The two pumps differ only in what gives a step its
  * frame, which is why there is one step list rather than two.
  */
@@ -182,6 +182,13 @@ public:
 	/** Gamepad or keyboard navigation: a direction pressed and released, or the accept button. */
 	FDreamDriverSequence& Navigate(EDreamUINavigationDirection InDirection);
 	FDreamDriverSequence& NavigationTrigger(bool bInTriggerPress);
+
+	/**
+	 * Let a span of time pass. Under the headless pump that is ceil(InSeconds / FrameSeconds) frames
+	 * -- a long press is "hold for N seconds", and the pipeline times it on the world clock the pump
+	 * advances -- and under the engine pump it is however many real frames the span took.
+	 */
+	FDreamDriverSequence& WaitSeconds(float InSeconds);
 
 	/**
 	 * Characters, one step and one frame each, into the text field that owns the keyboard -- through

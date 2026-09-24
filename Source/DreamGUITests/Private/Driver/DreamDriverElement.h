@@ -70,6 +70,23 @@ public:
 	bool Click(EDreamUIMouseButtonType InButton = EDreamUIMouseButtonType::Left);
 	/** Two clicks close enough together, in the pumped clock, to be one run. */
 	bool DoubleClick(EDreamUIMouseButtonType InButton = EDreamUIMouseButtonType::Left);
+	/**
+	 * Two clicks with InFramesBetween extra frames between the first release and the second click.
+	 * Zero is exactly the overload above; enough frames to outlast the event system's double-click
+	 * time turns the pair into two single clicks, which is the other half of what a test of the
+	 * interval needs.
+	 */
+	bool DoubleClick(EDreamUIMouseButtonType InButton, int32 InFramesBetween);
+
+	/**
+	 * Press on the centre, hold for InSeconds, release where the pointer is. Long enough and the
+	 * pointer module reports a long press before the release (the event system's LongPressTime); not
+	 * long enough and it is an ordinary press and release.
+	 */
+	bool LongPress(float InSeconds, EDreamUIMouseButtonType InButton = EDreamUIMouseButtonType::Left);
+	/** Press on the centre and hold for InSeconds without letting go; the release is a separate act. */
+	bool Hold(float InSeconds, EDreamUIMouseButtonType InButton = EDreamUIMouseButtonType::Left);
+
 	/** Move to the centre and hold the trigger down; the release is a separate act. */
 	bool Press(EDreamUIMouseButtonType InButton = EDreamUIMouseButtonType::Left);
 	/** Let the trigger up where the pointer currently is. */

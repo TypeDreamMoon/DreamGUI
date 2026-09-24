@@ -207,6 +207,64 @@ bool FDreamDriverElement::DoubleClick(EDreamUIMouseButtonType InButton)
 		.Perform();
 }
 
+bool FDreamDriverElement::DoubleClick(EDreamUIMouseButtonType InButton, int32 InFramesBetween)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("double click"));
+		return false;
+	}
+	// The same two clicks as the overload above, with the gap between them stretched: the second
+	// click's own move frame is already one frame after the first release, so zero here is that
+	// overload exactly.
+	const FDreamLocatorRef PinnedLocator = FDreamBy::Widget(Widget);
+	return PinnedDriver->Sequence()
+		.Click(PinnedLocator, InButton)
+		.WaitFrames(FMath::Max(InFramesBetween, 0))
+		.Click(PinnedLocator, InButton)
+		.Perform();
+}
+
+bool FDreamDriverElement::LongPress(float InSeconds, EDreamUIMouseButtonType InButton)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("long press"));
+		return false;
+	}
+	// The press is one frame, the hold is the span, the release is one more frame: a long press is
+	// timed by the pipeline from the press, on the world clock, and a release is not part of it.
+	return PinnedDriver->Sequence()
+		.MoveTo(FDreamBy::Widget(Widget))
+		.Press(InButton)
+		.WaitSeconds(InSeconds)
+		.Release(InButton)
+		.Perform();
+}
+
+bool FDreamDriverElement::Hold(float InSeconds, EDreamUIMouseButtonType InButton)
+{
+	using namespace DreamDriverElementLocal;
+	const TSharedPtr<FDreamDriver> PinnedDriver = Driver.Pin();
+	UDreamWidget* Widget = GetWidget();
+	if (!PinnedDriver.IsValid() || Widget == nullptr)
+	{
+		ReportMissingElement(*this, TEXT("hold"));
+		return false;
+	}
+	return PinnedDriver->Sequence()
+		.MoveTo(FDreamBy::Widget(Widget))
+		.Press(InButton)
+		.WaitSeconds(InSeconds)
+		.Perform();
+}
+
 bool FDreamDriverElement::Press(EDreamUIMouseButtonType InButton)
 {
 	using namespace DreamDriverElementLocal;

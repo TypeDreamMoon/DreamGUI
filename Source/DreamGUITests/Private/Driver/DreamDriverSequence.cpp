@@ -15,6 +15,7 @@
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Framework/Commands/InputChord.h"
+#include "GameFramework/WorldSettings.h"
 #include "GenericPlatform/GenericApplication.h"
 #include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIDragDrop.h"
@@ -71,6 +72,54 @@ namespace DreamDriverPumpLocal
 			return;
 		}
 		InSubsystem->Tick(InDeltaSeconds);
+	}
+
+	/**
+	 * The world's clocks, advanced exactly as UWorld::Tick's "Update time" block advances them.
+	 *
+	 * The pointer pipeline asks the WORLD what time it is, not the pump what the delta was:
+	 * UDreamPointerInputModule fires a long press when the pointer clock
+	 * (UDreamEventSystem::GetPointerClockSeconds, the world's GetRealTimeSeconds) minus the press time
+	 * has reached the threshold, decides a click continues a run when the gap since the last click is
+	 * short enough, and schedules navigation repeat against the same clock, as do both raycasters'
+	 * hold-to-drag; a text field times its held press on GetRealTimeSeconds too; the tween manager
+	 * reads DeltaTimeSeconds and DeltaRealTimeSeconds. A world made with UWorld::CreateWorld and never
+	 * ticked has every one of them frozen at zero, which makes every second click a double click and
+	 * every press exactly as old as the one before it. Advancing them is what makes a pumped frame a
+	 * frame rather than a repetition of the same instant.
+	 *
+	 * The engine's rules, not a simplification of them, because the differences are exactly what a
+	 * pause or a slow-motion test is about: real time always advances by the real delta; the game
+	 * delta is the real one times the world's effective time dilation, clamped by FixupDeltaSeconds;
+	 * the unpaused clock advances by the game delta always; the game clock (TimeSeconds) and the
+	 * audio clock only while the world is not paused. For a world that is neither paused nor
+	 * dilated -- every rig that does not ask -- all four clocks move by the frame length, as before.
+	 */
+	void AdvanceWorldClock(UWorld& InWorld, float InDeltaSeconds)
+	{
+		const bool bIsPaused = InWorld.IsPaused();
+
+		InWorld.RealTimeSeconds += InDeltaSeconds;
+		if (!bIsPaused)
+		{
+			InWorld.AudioTimeSeconds += InDeltaSeconds;
+		}
+
+		float GameDeltaSeconds = InDeltaSeconds;
+		// Unchecked: a world that has no settings actor is one to leave undilated, not one to assert on.
+		if (AWorldSettings* Settings = InWorld.GetWorldSettings(/*bCheckStreamingPersistent*/false, /*bChecked*/false))
+		{
+			GameDeltaSeconds *= Settings->GetEffectiveTimeDilation();
+			GameDeltaSeconds = Settings->FixupDeltaSeconds(GameDeltaSeconds, InDeltaSeconds);
+		}
+		InWorld.DeltaTimeSeconds = GameDeltaSeconds;
+		InWorld.DeltaRealTimeSeconds = InDeltaSeconds;
+
+		InWorld.UnpausedTimeSeconds += GameDeltaSeconds;
+		if (!bIsPaused)
+		{
+			InWorld.TimeSeconds += GameDeltaSeconds;
+		}
 	}
 
 	/**
@@ -133,28 +182,7 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	 */
 	if (World != nullptr)
 	{
-		/*
-		 * THE CLOCK FIRST, and it is not decoration.
-		 *
-		 * The pointer pipeline asks the WORLD what time it is, not the pump what the delta was:
-		 * UDreamPointerInputModule fires a long press when GetTimeSeconds() minus the press time has
-		 * reached the threshold, decides a click continues a run when the gap since the last click is
-		 * short enough, and schedules navigation repeat against the same clock. A world made with
-		 * UWorld::CreateWorld and never ticked has that clock frozen at zero, which makes every second
-		 * click a double click and every press exactly as old as the one before it. Advancing it is
-		 * what makes a pumped frame a frame rather than a repetition of the same instant.
-		 *
-		 * All four clocks, because which one a caller reads is not this pump's business: the paused
-		 * and unpaused ones diverge only under a pause a headless fixture has not got, and leaving
-		 * three of them at zero would be a difference waiting to be discovered by whatever reads them
-		 * next.
-		 */
-		World->TimeSeconds += InDeltaSeconds;
-		World->UnpausedTimeSeconds += InDeltaSeconds;
-		World->RealTimeSeconds += InDeltaSeconds;
-		World->AudioTimeSeconds += InDeltaSeconds;
-		World->DeltaTimeSeconds = InDeltaSeconds;
-		World->DeltaRealTimeSeconds = InDeltaSeconds;
+		AdvanceWorldClock(*World, InDeltaSeconds);
 	}
 
 	UDreamTweenManager* TweenManager = GameInstance != nullptr ? GameInstance->GetSubsystem<UDreamTweenManager>() : nullptr;
@@ -858,6 +886,41 @@ namespace DreamDriverSequenceLocal
 		FString Reason;
 	};
 
+	/**
+	 * Let a span of time pass: as many frames as it takes, the last one included.
+	 *
+	 * Measured in the frames' own lengths rather than converted once, so under the headless pump --
+	 * constant frames -- it is exactly ceil(seconds / frame) frames, and under the engine pump it is
+	 * however many real frames the span actually took. The small tolerance is for the float frame
+	 * length: 1/60 is not exact, and thirty of them must still be half a second.
+	 */
+	class FDreamWaitSecondsStep : public IDreamDriverStep
+	{
+	public:
+		explicit FDreamWaitSecondsStep(float InSeconds)
+			: Seconds(FMath::Max(InSeconds, 0.0f))
+		{
+		}
+
+		virtual EDreamDriverStepResult Execute(FDreamDriverContext& InContext, float InDeltaSeconds) override
+		{
+			constexpr double Tolerance = 1.0e-6;
+			if (Elapsed + Tolerance >= (double)Seconds)
+			{
+				return EDreamDriverStepResult::Done;
+			}
+			// A zero-length frame would never finish the wait; count it as the pump's own frame.
+			Elapsed += (double)(InDeltaSeconds > 0.0f ? InDeltaSeconds : InContext.FrameSeconds);
+			return EDreamDriverStepResult::Again;
+		}
+
+		virtual FString Describe() const override { return FString::Printf(TEXT("WaitSeconds(%.3f)"), Seconds); }
+
+	private:
+		float Seconds;
+		double Elapsed = 0.0;
+	};
+
 	FDreamPixelResolver MakeLocatorCentreResolver(const FDreamLocatorRef& InLocator)
 	{
 		return [InLocator](FDreamDriverContext& InContext) -> TOptional<FVector2D>
@@ -1087,6 +1150,12 @@ FDreamDriverSequence& FDreamDriverSequence::NavigationTrigger(bool bInTriggerPre
 {
 	using namespace DreamDriverSequenceLocal;
 	return Add(MakeShared<FDreamNavigationTriggerStep>(bInTriggerPress));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::WaitSeconds(float InSeconds)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamWaitSecondsStep>(InSeconds));
 }
 
 FDreamDriverSequence& FDreamDriverSequence::Type(const FString& InText)
