@@ -19,14 +19,16 @@
  * that stubbed that out would assert the string manipulation and none of the behaviour, and the
  * string manipulation is not the part that breaks.
  *
- * Each fixture removes the directory it made, INCLUDING the root itself when it had to create it:
- * an empty DUI/ folder left behind changes the answer GetSourceRoots gives every later test in the
- * process, and a suite whose result depends on the order it ran in is worse than a red one.
+ * Each fixture removes every directory it made -- the root itself when it had to create it, and the
+ * folders on the way to its file when the root was already there: an empty DUI/ folder left behind
+ * changes the answer GetSourceRoots gives every later test in the process, a suite whose result
+ * depends on the order it ran in is worse than a red one, and an empty PathsTest/ left in a project's
+ * real DUI/ is litter in the author's own source tree.
  */
 
 namespace DreamUIPathsTestLocal
 {
-	/** A .dui inside a source root, with the root created if it was not there. */
+	/** A .dui inside a source root, with the root and the folders leading to the file created if they were not there. */
 	struct FScopedRootFile
 	{
 		explicit FScopedRootFile(const FString& InRootDirectory, const TCHAR* InRelativePath)
@@ -36,6 +38,21 @@ namespace DreamUIPathsTestLocal
 			IFileManager::Get().MakeDirectory(*RootDirectory, /*Tree=*/true);
 			FilePath = FPaths::ConvertRelativePathToFull(RootDirectory / InRelativePath);
 			FPaths::NormalizeFilename(FilePath);
+			// The highest folder between the root and the file that is not there yet, so the destructor
+			// takes away exactly what the write below adds: SaveStringToFile makes the folders on the way
+			// by itself, and deleting only the file used to leave an empty PathsTest/ in a DUI/ that
+			// already existed. A root this fixture made goes as a whole, so there is nothing to note.
+			if (!bCreatedRoot)
+			{
+				FString RootForComparison = FPaths::ConvertRelativePathToFull(RootDirectory);
+				FPaths::NormalizeDirectoryName(RootForComparison);
+				for (FString Folder = FPaths::GetPath(FilePath);
+					Folder.Len() > RootForComparison.Len() && !IFileManager::Get().DirectoryExists(*Folder);
+					Folder = FPaths::GetPath(Folder))
+				{
+					CreatedFolder = Folder;
+				}
+			}
 			bWritten = FFileHelper::SaveStringToFile(TEXT("Widget Root { }\n"), *FilePath);
 		}
 
@@ -46,6 +63,10 @@ namespace DreamUIPathsTestLocal
 			{
 				IFileManager::Get().DeleteDirectory(*RootDirectory, /*RequireExists=*/false, /*Tree=*/true);
 			}
+			else if (!CreatedFolder.IsEmpty())
+			{
+				IFileManager::Get().DeleteDirectory(*CreatedFolder, /*RequireExists=*/false, /*Tree=*/true);
+			}
 		}
 
 		FScopedRootFile(const FScopedRootFile&) = delete;
@@ -53,6 +74,8 @@ namespace DreamUIPathsTestLocal
 
 		FString RootDirectory;
 		FString FilePath;
+		/** Empty unless the root was already there and the write had folders to make under it. */
+		FString CreatedFolder;
 		bool bWritten = false;
 		bool bCreatedRoot = false;
 	};
@@ -61,6 +84,18 @@ namespace DreamUIPathsTestLocal
 	{
 		return FPaths::ConvertRelativePathToFull(
 			FPaths::Combine(FPaths::ProjectDir(), DreamUIPaths::SourceDirectoryName));
+	}
+
+	/** This plugin's own DUI/ directory, whether or not it exists yet; empty when the plugin cannot find itself. */
+	FString PluginRootDirectory()
+	{
+		const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI"));
+		if (!Plugin.IsValid() || !Plugin->IsEnabled())
+		{
+			return FString();
+		}
+		return FPaths::ConvertRelativePathToFull(
+			FPaths::Combine(Plugin->GetBaseDir(), DreamUIPaths::SourceDirectoryName));
 	}
 }
 
@@ -75,6 +110,24 @@ bool FDreamUIPathsProjectRootTest::RunTest(const FString&)
 
 	TestEqual(TEXT("empty in, empty out"), DreamUIPaths::Resolve(FString()), FString());
 	TestEqual(TEXT("and whitespace counts as empty"), DreamUIPaths::Resolve(TEXT("   ")), FString());
+
+	// The roots are read once BEFORE the project's own folder is made, with a plugin root in place so
+	// the answer is not empty (an empty one is never memoised). In a project that has no DUI/ yet that
+	// is the moment this test is really about: GetSourceRoots keeps a short memo, and a folder made
+	// right after the memo was taken still has to be found at once -- the editor's own Open Workspace
+	// makes the folder and asks about it in the same call. Without this step the case arose only when
+	// the test before happened to leave a fresh memo behind, which is how it was found.
+	const FString PluginRoot = PluginRootDirectory();
+	if (!TestFalse(TEXT("this plugin can find its own directory"), PluginRoot.IsEmpty()))
+	{
+		return false;
+	}
+	FScopedRootFile Primer(PluginRoot, TEXT("PathsTest/Primer.dui"));
+	if (!TestTrue(TEXT("the primer wrote its file"), Primer.bWritten))
+	{
+		return false;
+	}
+	DreamUIPaths::GetSourceRoots();
 
 	FScopedRootFile File(ProjectRootDirectory(), TEXT("PathsTest/Panel.dui"));
 	if (!TestTrue(TEXT("the fixture wrote its file"), File.bWritten))
