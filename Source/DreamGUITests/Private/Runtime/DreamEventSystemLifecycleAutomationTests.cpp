@@ -212,9 +212,14 @@ bool FDreamEventSystemNavigationIdleTest::RunTest(const FString& Parameters)
 	// cannot tell "no key is down" from "the key has been down long enough to repeat": this ran a whole
 	// navigation step every NavigateInputInterval forever, reveal-scrolling the highlighted widget back
 	// into view and re-dispatching hit and select. That is the list that snaps back while you scroll it.
+	//
+	// Time is passed by hand, since this world is never ticked, and on both clocks: navigation repeat is
+	// timed on the pointer clock, which is the world's REAL time (UDreamEventSystem::
+	// GetPointerClockSeconds) -- holding a direction in a paused game's menu has to keep stepping.
 	for (int32 Frame = 0; Frame < 5; ++Frame)
 	{
 		Scope.World->TimeSeconds += 1.0;
+		Scope.World->RealTimeSeconds += 1.0;
 		Rig.Module->ProcessInput();
 	}
 	TestEqual(TEXT("An idle navigation pointer takes no steps"), NavigationSteps, 0);
@@ -223,26 +228,31 @@ bool FDreamEventSystemNavigationIdleTest::RunTest(const FString& Parameters)
 	// otherwise navigation-mode clicks would have been the price of the fix.
 	Rig.Module->InputTriggerForNavigation(true, 0);
 	Scope.World->TimeSeconds += 1.0;
+	Scope.World->RealTimeSeconds += 1.0;
 	Rig.Module->ProcessInput();
 	TestEqual(TEXT("A trigger press in navigation mode is dispatched"), NavigationSteps, 1);
 
 	// ...and holding it is not pressing it again.
 	Scope.World->TimeSeconds += 1.0;
+	Scope.World->RealTimeSeconds += 1.0;
 	Rig.Module->ProcessInput();
 	TestEqual(TEXT("...once, not once per frame while it is held"), NavigationSteps, 1);
 
 	// A direction actually held is what the repeat timer is for, and it still repeats.
 	Rig.Module->InputNavigation(EDreamUINavigationDirection::Down, true, 0);
 	Scope.World->TimeSeconds += 1.0;
+	Scope.World->RealTimeSeconds += 1.0;
 	Rig.Module->ProcessInput();
 	TestEqual(TEXT("A held direction does take a step"), NavigationSteps, 2);
 	Scope.World->TimeSeconds += 1.0;
+	Scope.World->RealTimeSeconds += 1.0;
 	Rig.Module->ProcessInput();
 	TestEqual(TEXT("...and another once the interval is up"), NavigationSteps, 3);
 
 	// Letting go stops it again rather than leaving it free-running.
 	Rig.Module->InputNavigation(EDreamUINavigationDirection::Down, false, 0);
 	Scope.World->TimeSeconds += 1.0;
+	Scope.World->RealTimeSeconds += 1.0;
 	Rig.Module->ProcessInput();
 	TestEqual(TEXT("Releasing the direction stops the repeat"), NavigationSteps, 3);
 	return true;

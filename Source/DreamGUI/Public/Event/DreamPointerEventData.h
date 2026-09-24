@@ -113,13 +113,19 @@ public:
 	 * The three timestamps below all start at zero, meaning "the thing they date has not happened
 	 * yet". They were the only fields on this class without an initialiser, which was survivable
 	 * only for as long as nobody read one before writing it -- and PressTime IS read that way:
-	 * ShouldStartDrag subtracts it from the current time and compares the difference against a hold
-	 * duration. An event data that has never seen a button go down is completely ordinary (a hover,
-	 * a scroll, the object a raycaster hands around before the first press), and with indeterminate
-	 * bytes in PressTime hold-to-drag would begin a drag, or refuse to, at random on such a pointer.
+	 * ShouldStartDrag subtracts it from the pointer clock's current time and compares the difference
+	 * against a hold duration. An event data that has never seen a button go down is completely
+	 * ordinary (a hover, a scroll, the object a raycaster hands around before the first press), and
+	 * with indeterminate bytes in PressTime hold-to-drag would begin a drag, or refuse to, at random on
+	 * such a pointer.
 	 */
 
-	/** the last time when trigger click(time is get from GetWorld()->TimeSeconds), can be used to tell double click */
+	/**
+	 * When this pointer's last click landed -- the release that completed it -- in seconds on the
+	 * pointer clock (UDreamEventSystem::GetPointerClockSeconds: the world's real time, which a pause
+	 * does not stop and time dilation does not stretch). The next press measures the double-click
+	 * window from it.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double ClickTime = 0;
 	/**
@@ -156,10 +162,17 @@ public:
 	/** The same press in the world (its PressWorldPoint), for a pointer whose screen position never moves. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		FVector LastClickPressWorldPoint = FVector::ZeroVector;
-	/** the last time when trigger release(time is get from GetWorld()->TimeSeconds). */
+	/**
+	 * When the trigger last came up, on the pointer clock (see ClickTime). ReleaseTime - PressTime is
+	 * how long the press was held, which is what a swipe's duration limit is measured on.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double ReleaseTime = 0;
-	/** the last time when trigger press(time is tell from GetWorld()->TimeSeconds). */
+	/**
+	 * When the trigger last went down, on the pointer clock (see ClickTime). Long press and hold-to-drag
+	 * measure the hold as the pointer clock's current time minus this, so compare it against that clock
+	 * -- never against the game clock (GetTimeSeconds), which a pause stops while the UI keeps running.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double PressTime = 0;
 

@@ -7,6 +7,7 @@
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Event/DreamEventSystem.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIScreenSpaceRaycaster"
 
@@ -78,9 +79,12 @@ bool UDreamScreenSpaceRaycaster::ShouldStartDrag(UDreamPointerEventData* InPoint
 		// the question falls through to distance -- which needs nothing but the event data. This is
 		// the one branch of this function that was not pure arithmetic, and it is the reason a
 		// raycaster reached from an authoring tree or a headless fixture used to be a crash rather
-		// than an answer.
+		// than an answer. Measured on the pointer clock PressTime was stamped with
+		// (UDreamEventSystem::GetPointerClockSeconds): real time, so a press held in a paused game's
+		// menu still becomes a drag -- the game clock stands still while the game is paused, and after
+		// a pause it lags real time for good.
 		const UWorld* World = DreamUI::GetWorldSafe(this);
-		if (World != nullptr && World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		if (World != nullptr && UDreamEventSystem::GetPointerClockSeconds(World) - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}

@@ -350,6 +350,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	bool GetAnimateNavigationScroll()const{return bAnimateNavigationScroll;}
 
+	/**
+	 * The clock every timed pointer gesture is measured on: the PressTime, ReleaseTime and ClickTime
+	 * stamps on UDreamPointerEventData, and everything measured against them -- long press, the
+	 * double-click window, swipe duration, hold-to-drag -- plus navigation repeat.
+	 *
+	 * The world's REAL time: not stopped by a pause, not stretched by time dilation. The UI keeps
+	 * working while the game is paused -- this component ticks when paused, and a screen-space
+	 * raycaster ignores the pause by default -- so a pause menu is exactly where a held press still has
+	 * to become a long press and two clicks a second apart still have to be two clicks. Slate times its
+	 * own double clicks and key repeat in real time for the same reason. These were timed on
+	 * GetTimeSeconds, which stands still while the game is paused: every held press in a pause menu
+	 * waited forever, and every pair of clicks on one widget was a gap of zero, a double click however
+	 * slowly it was made.
+	 *
+	 * One function so that the code writing a stamp and the code measuring it cannot disagree about
+	 * which clock it is: compare a stamp on the event data against this, never against the game clock.
+	 * @return	Seconds on that clock, or 0 when the object is in no world. Zero is a defined value, not a
+	 *			measurement; a caller measuring a duration should not measure without a world at all.
+	 */
+	UFUNCTION(BlueprintPure, Category = DreamGUI, meta = (WorldContext = "WorldContextObject"))
+	static double GetPointerClockSeconds(const UObject* WorldContextObject);
+
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetDefaultInputType(EDreamUIPointerInputType Value){ DefaultInputType = Value;}
 	/**

@@ -449,8 +449,10 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 				{
 					const float LongPressTime = eventSystem != nullptr ? eventSystem->GetLongPressTime() : 0.0f;
 					const UWorld* PressWorld = EventData->GetWorld();
+					// On the clock the press was stamped with -- real time, so a press held in a paused
+					// game's menu still matures (see UDreamEventSystem::GetPointerClockSeconds).
 					if (LongPressTime > 0.0f && PressWorld != nullptr
-						&& (PressWorld->GetTimeSeconds() - EventData->PressTime) >= (double)LongPressTime)
+						&& (UDreamEventSystem::GetPointerClockSeconds(PressWorld) - EventData->PressTime) >= (double)LongPressTime)
 					{
 						EventData->bIsLongPressFiredForThisPress = true;
 						if (eventSystem == nullptr)
@@ -516,14 +518,15 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 					// widgets that treat it as a press do so themselves -- SButton hands it to its own
 					// OnMouseButtonDown, SCheckBox is nothing but that -- and so do their counterparts here,
 					// UUIButton and UUIToggle.
-					const UWorld* PressWorld = EventData->GetWorld();
-					const double PressWorldTime = PressWorld != nullptr ? PressWorld->GetTimeSeconds() : 0.0;
+					// The same clock ClickTime was stamped on at the last release: real time, so a pause --
+					// which stops the game clock -- cannot shrink the gap between two clicks to nothing.
+					const double PressClockSeconds = UDreamEventSystem::GetPointerClockSeconds(EventData);
 					const float DoubleClickTime = eventSystem != nullptr ? eventSystem->GetDoubleClickTime() : 0.0f;
 					const bool bContinuesClickRun = EventData->ClickCount > 0
 						&& EventData->LastClickWidget == EventData->PressWidget
 						&& EventData->LastClickMouseButtonType == EventData->MouseButtonType
 						&& DoubleClickTime > 0.0f
-						&& (PressWorldTime - EventData->ClickTime) <= (double)DoubleClickTime
+						&& (PressClockSeconds - EventData->ClickTime) <= (double)DoubleClickTime
 						&& (!IsValid(EventData->PressRaycaster) || EventData->PressRaycaster->IsWithinDoubleClickDistance(EventData));
 					EventData->ClickCount = bContinuesClickRun ? EventData->ClickCount + 1 : 1;
 					// A pointer's only. A key or a pad's confirm is never a double click in Slate -- SButton
@@ -651,12 +654,11 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamEventSystem* eventSyste
 					// (see there) and ClickCount already says it; what the release records is which widget
 					// the run's last click landed on and when, which is what the next press is measured
 					// against.
-					const UWorld* ClickWorld = EventData->GetWorld();
 					EventData->LastClickWidget = EventData->PressWidget;
 					EventData->LastClickMouseButtonType = EventData->MouseButtonType;
 					EventData->LastClickPressPointerPosition = EventData->PressPointerPosition;
 					EventData->LastClickPressWorldPoint = EventData->PressWorldPoint;
-					EventData->ClickTime = ClickWorld != nullptr ? ClickWorld->GetTimeSeconds() : 0.0;
+					EventData->ClickTime = UDreamEventSystem::GetPointerClockSeconds(EventData);
 					UDreamWidget* ClickedWidget = EventData->PressWidget;
 					if (eventSystem == nullptr)
 					{
@@ -769,7 +771,9 @@ void UDreamPointerInputModule::ProcessInputForNavigation(UDreamPointerEventData*
 		return;
 	}
 
-	const auto TimeSeconds = World->GetTimeSeconds();
+	// Real time, as Slate's key repeat is: holding a direction in a paused game's menu has to go on
+	// stepping, and the game clock does not move while the game is paused.
+	const double TimeSeconds = UDreamEventSystem::GetPointerClockSeconds(World);
 	const bool bRepeatIsDue = TimeSeconds > EventData->NavigateTickTime;
 	const bool bTakeNavigateStep = bHasNavigateDirection && bRepeatIsDue;
 	if (!bTakeNavigateStep && !bTriggerStateChanged)

@@ -14,6 +14,7 @@
 #include "Event/Interface/DreamPointerDragDropInterface.h"
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/InputModule/DreamBaseInputModule.h"
 #include "DreamGUI.h"
@@ -170,6 +171,13 @@ APlayerController* UDreamEventSystem::GetPlayerControllerForUser(const UObject* 
 APlayerController* UDreamEventSystem::GetPlayerController()const
 {
 	return GetPlayerControllerForUser(this, UserIndex);
+}
+
+double UDreamEventSystem::GetPointerClockSeconds(const UObject* WorldContextObject)
+{
+	// UWorld::GetWorld answers itself, so a world passed in directly works as well as anything in it.
+	const UWorld* World = DreamUI::GetWorldSafe(WorldContextObject);
+	return World != nullptr ? World->GetRealTimeSeconds() : 0.0;
 }
 
 void UDreamEventSystem::ApplyHoverCursorToPlayer(bool bWidgetClaimedCursor, EMouseCursor::Type InCursor)

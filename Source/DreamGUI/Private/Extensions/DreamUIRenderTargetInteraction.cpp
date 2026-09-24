@@ -22,18 +22,20 @@ UDreamUIRenderTargetInteraction::UDreamUIRenderTargetInteraction()
 namespace DreamUIRenderTargetInteractionLocal
 {
 	/**
-	 * The owning world's clock, or zero when there is no world to ask.
+	 * The pointer clock (UDreamEventSystem::GetPointerClockSeconds), or zero when there is no world to
+	 * ask.
 	 *
-	 * Zero is not a plausible timestamp so much as a harmless one: the only reader of these stamps
-	 * is the base class's hold-to-drag test, which declines to measure a hold at all when the world
-	 * it would measure against is missing, so a stamp taken without a world is never subtracted from
-	 * anything. What matters here is that a press arriving outside a world writes a defined value
-	 * instead of dereferencing null.
+	 * The same clock the outer pointer's own stamps are on, so the pointer this component synthesises
+	 * for the UI on the texture is timed exactly like the one that hit the surface -- a press held on
+	 * the surface in a paused game is as old as it really is. Zero is not a plausible timestamp so
+	 * much as a harmless one: the readers of these stamps (the base class's hold-to-drag test) decline
+	 * to measure at all when the world they would measure against is missing, so a stamp taken without
+	 * a world is never subtracted from anything. What matters here is that a press arriving outside a
+	 * world writes a defined value instead of dereferencing null.
 	 */
-	double WorldTimeSeconds(const UObject* InObject)
+	double PointerClockSeconds(const UObject* InObject)
 	{
-		const UWorld* World = DreamUI::GetWorldSafe(InObject);
-		return World != nullptr ? World->TimeSeconds : 0.0;
+		return UDreamEventSystem::GetPointerClockSeconds(InObject);
 	}
 }
 
@@ -163,7 +165,7 @@ bool UDreamUIRenderTargetInteraction::OnPointerDown_Implementation(UDreamPointer
 	using namespace DreamUIRenderTargetInteractionLocal;
 	UDreamPointerEventData* Synthesised = EnsurePointerEventData();
 	Synthesised->PressPointerPosition = Synthesised->PointerPosition;
-	Synthesised->PressTime = WorldTimeSeconds(this);
+	Synthesised->PressTime = PointerClockSeconds(this);
 	Synthesised->bNowIsTriggerPressed = true;
 	Synthesised->MouseButtonType = EventData->MouseButtonType;
 	return bAllowEventBubbleUp;
@@ -177,7 +179,7 @@ bool UDreamUIRenderTargetInteraction::OnPointerUp_Implementation(UDreamPointerEv
 {
 	using namespace DreamUIRenderTargetInteractionLocal;
 	UDreamPointerEventData* Synthesised = EnsurePointerEventData();
-	Synthesised->ReleaseTime = WorldTimeSeconds(this);
+	Synthesised->ReleaseTime = PointerClockSeconds(this);
 	Synthesised->bNowIsTriggerPressed = false;
 	return bAllowEventBubbleUp;
 }

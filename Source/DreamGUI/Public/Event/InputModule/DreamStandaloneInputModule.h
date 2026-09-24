@@ -69,8 +69,13 @@ protected:
 	struct StandaloneInputData
 	{
 		bool bTriggerPress = false;
-		float PressTime = 0;
-		float ReleaseTime = 0;
+		/**
+		 * Pointer-clock stamps (UDreamEventSystem::GetPointerClockSeconds), as double as the event data
+		 * fields they are copied into: real time only ever grows during a session, and a float of it
+		 * loses milliseconds within the first few hours.
+		 */
+		double PressTime = 0;
+		double ReleaseTime = 0;
 		int PointerID = 0;
 		EDreamUIMouseButtonType MouseButtonType = EDreamUIMouseButtonType::Left;
 		FVector PointerPosition = FVector::ZeroVector;

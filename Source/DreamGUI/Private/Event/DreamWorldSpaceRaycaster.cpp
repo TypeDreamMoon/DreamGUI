@@ -135,9 +135,10 @@ bool UDreamWorldSpaceRaycaster::ShouldStartDrag(UDreamPointerEventData* InPointe
 	if (bHoldToDrag)
 	{
 		// No world means no clock to measure the hold against, so the hold cannot have elapsed and
-		// the question falls through to distance -- which needs nothing but the event data.
+		// the question falls through to distance -- which needs nothing but the event data. Measured on
+		// the pointer clock PressTime was stamped with, not the game clock a pause would stop.
 		const UWorld* World = DreamUI::GetWorldSafe(this);
-		if (World != nullptr && World->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		if (World != nullptr && UDreamEventSystem::GetPointerClockSeconds(World) - InPointerEventData->PressTime > HoldToDragTime)
 		{
 			return true;
 		}

@@ -193,13 +193,18 @@ void UDreamStandaloneInputModule::CommonInputTrigger(const FVector& InPointerPos
 	InputData.PointerPosition = InPointerPosition;
 	InputData.bIsTouch = bInIsTouch;
 
+	// Stamped on the pointer clock, the one long press, hold-to-drag, swipe duration and the
+	// double-click window measure against (UDreamEventSystem::GetPointerClockSeconds). It was the game
+	// clock, which a pause stops: a press made in a paused game's menu stayed exactly as old as the
+	// pause for as long as the pause lasted.
+	const double ClockSeconds = UDreamEventSystem::GetPointerClockSeconds(this);
 	if (InTriggerPress)
 	{
-		InputData.PressTime = GetWorld()->TimeSeconds;
+		InputData.PressTime = ClockSeconds;
 	}
 	else
 	{
-		InputData.ReleaseTime = GetWorld()->TimeSeconds;
+		InputData.ReleaseTime = ClockSeconds;
 	}
 	StandaloneInputDataArray.Add(InputData);
 }
