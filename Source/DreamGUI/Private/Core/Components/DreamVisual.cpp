@@ -580,10 +580,15 @@ UDreamTweener* UDreamVisual::ColorTo(FColor endValue, float duration, float dela
 UDreamTweener* UDreamVisual::ColorFrom(FColor startValue, float duration, float delay, EDreamTweenEase ease)
 {
 	auto endValue = this->GetColor();
-	this->SetColor(startValue);
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenColorGetterFunction::CreateUObject(this, &UDreamVisual::GetColor), FDreamTweenColorSetterFunction::CreateUObject(this, &UDreamVisual::SetColor), endValue, duration);
 	if (Tweener)
 	{
+		// The start value is written only once there is a tween to bring the colour back from it. It
+		// used to go in first, so with no tween manager (a world no game instance owns) the visual was
+		// left at the START for good -- a "from" that ended where it began -- where now it keeps the
+		// colour it had, which is where the tween was going. Writing it after asking changes nothing
+		// when there is a tween: its start is read from the getter on its first step, not here.
+		this->SetColor(startValue);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
@@ -603,10 +608,12 @@ UDreamTweener* UDreamVisual::AlphaTo(float endValue, float duration, float delay
 UDreamTweener* UDreamVisual::AlphaFrom(float startValue, float duration, float delay, EDreamTweenEase ease)
 {
 	auto endValue = this->GetAlpha();
-	this->SetAlpha(startValue);
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamVisual::GetAlpha), FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamVisual::SetAlpha), endValue, duration);
 	if (Tweener)
 	{
+		// As in ColorFrom: the start only goes in once a tween exists to fade back from it, so with no
+		// tween manager the visual keeps the alpha it had instead of being left at the start value.
+		this->SetAlpha(startValue);
 		Tweener->SetEase(ease)->SetDelay(delay);
 		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
