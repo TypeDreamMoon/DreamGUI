@@ -95,6 +95,8 @@ public:
 	const FDreamRigOptions& GetOptions() const;
 	/** The GameInstance the world belongs to; null when bWithGameInstance was false. */
 	UGameInstance* GetGameInstance() const;
+	/** Why IsUsable() is false, in words; empty while it is true. */
+	const FString& GetBuildFailure() const;
 
 	/** Tell the rig which test is running, so a failing step reports against it. */
 	void BindTest(FAutomationTestBase* InTest);
@@ -195,4 +197,5 @@ private:
 	AActor* Host = nullptr;
 
 	FDreamRigOptions Options;
+	FString BuildFailure;
 };

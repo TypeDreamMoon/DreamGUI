@@ -51,6 +51,7 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		DriverContext->GameInstance = ScopedGameInstanceWorld->GameInstance;
 		if (BuildWorld == nullptr)
 		{
+			BuildFailure = TEXT("UGameInstance::InitializeStandalone did not give the game instance a world");
 			return;
 		}
 	}
@@ -60,6 +61,7 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		BuildWorld = ScopedWorld->World;
 		if (BuildWorld == nullptr)
 		{
+			BuildFailure = TEXT("UWorld::CreateWorld did not make a world");
 			return;
 		}
 	}
@@ -69,6 +71,7 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	Host = BuildWorld->SpawnActor<AActor>();
 	if (Host == nullptr)
 	{
+		BuildFailure = TEXT("the world would not spawn the rig's host actor");
 		return;
 	}
 
@@ -93,6 +96,7 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	UDreamCanvas* BuiltCanvas = BuiltRoot->AddComponent<UDreamCanvas>();
 	if (BuiltCanvas == nullptr)
 	{
+		BuildFailure = TEXT("the root widget would not take a canvas");
 		return;
 	}
 	BuiltCanvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
@@ -121,6 +125,13 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	OpenBeginPlayGate();
 
 	DriverContext->PumpFrames(2);
+
+	if (!IsUsable() && BuildFailure.IsEmpty())
+	{
+		// Every early return above says why; this is the net under a piece that came back null or
+		// invalid without anything having refused outright.
+		BuildFailure = TEXT("the rig was built but a piece it needs is missing or invalid (world, event system, input module, UI manager, root, canvas or raycaster)");
+	}
 }
 
 void FDreamDriverRig::OpenBeginPlayGate()
@@ -183,7 +194,10 @@ FDreamDriverRig::~FDreamDriverRig()
 
 bool FDreamDriverRig::IsUsable() const
 {
-	return DriverContext.IsValid()
+	// A recorded failure wins even if every pointer happens to be set: a half-built input host can
+	// leave an event system behind it and still not be a host anything should be driven through.
+	return BuildFailure.IsEmpty()
+		&& DriverContext.IsValid()
 		&& DriverContext->IsUsable()
 		&& IsValid(DriverContext->RootCanvas)
 		&& IsValid(DriverContext->Raycaster);
@@ -237,6 +251,11 @@ const FDreamRigOptions& FDreamDriverRig::GetOptions() const
 UGameInstance* FDreamDriverRig::GetGameInstance() const
 {
 	return DriverContext.IsValid() ? DriverContext->GameInstance : nullptr;
+}
+
+const FString& FDreamDriverRig::GetBuildFailure() const
+{
+	return BuildFailure;
 }
 
 void FDreamDriverRig::BindTest(FAutomationTestBase* InTest)
