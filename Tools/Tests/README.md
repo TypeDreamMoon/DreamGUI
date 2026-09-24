@@ -12,6 +12,7 @@ judge the result lives here, next to the tests it runs.
 | `static_checks.py`, `static-checks-allow.json` | Cheap checks of the C++ and of the tests' own rules, and the findings they accept |
 | `coverage_matrix.py`, `coverage.json`, `COVERAGE.md` | The control-by-input-by-configuration coverage table and its tag convention |
 | `sourcescan.py` | What the source declares as tests, shared by all of the above |
+| `hooks/pre-push`, `Install-DreamGUIHooks.ps1` | The optional pre-push hook and its installer |
 
 Requirements: PowerShell 7.2 or later (`pwsh`), Python 3.8 or later on `PATH` as `python`, git.
 
@@ -203,6 +204,26 @@ out CRLF). The `eol` rule only reports new files whose endings differ.
 See [COVERAGE.md](COVERAGE.md): the table of controls by inputs by configurations, the tags a test
 registers to claim its cells, and `coverage_matrix.py` to draw it (`--heuristic` for a first picture
 from untagged tests, `--fail-on-holes` for a gate).
+
+## The pre-push hook
+
+```
+pwsh -NoProfile -File Tools\Tests\Install-DreamGUIHooks.ps1 -WhatIf     # see what it would do
+pwsh -NoProfile -File Tools\Tests\Install-DreamGUIHooks.ps1             # install
+pwsh -NoProfile -File Tools\Tests\Install-DreamGUIHooks.ps1 -Uninstall  # remove
+```
+
+Installing writes a small stub as `pre-push` in the repository's hooks directory (`core.hooksPath`
+when set, else the common git directory's `hooks`, shared by all worktrees); an existing hook that is
+not the stub is left alone unless `-Force`. The stub runs `Tools/Tests/hooks/pre-push` from the
+checkout that pushes. For each branch pushed (deletions and tags are skipped) whose commit is the
+checked-out `HEAD`, and when the tree has no uncommitted changes to `Source`, `Shaders`, `Config` or
+`DreamGUI.uplugin`, it runs the `Quick` preset against the project that holds the checkout and
+refuses the push when the result is not 0. Otherwise it says why and lets the push through untested.
+An editor open on that project does not block a push either (the runner's `-SkipIfEditorOpen`):
+close it, or push from the test host worktree, to have the push tested.
+
+`DREAMGUI_SKIP_PREPUSH=1 git push ...` skips the hook.
 
 ## When something goes wrong
 
