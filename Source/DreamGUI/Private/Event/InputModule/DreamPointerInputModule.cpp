@@ -91,7 +91,11 @@ bool UDreamPointerInputModule::LineTrace(UDreamPointerEventData* InPointerEventD
 		else if (MultiHitResult.Num() > 1)
 		{
 			//sort only on distance (not depth), because multiHitResult only store hit result of same depth
-			MultiHitResult.Sort([](const FDreamUIHitResultContainer& A, const FDreamUIHitResultContainer& B)
+			// Stable for the reason UDreamWorldSpaceRaycaster::Raycast is: two raycasters' answers at the
+			// same distance -- two screen raycasters whose canvases share a projection, say -- keep the
+			// order the raycasters are listed in, instead of whichever order TArray::Sort's small-range
+			// selection sort happens to leave two equal elements in.
+			MultiHitResult.StableSort([](const FDreamUIHitResultContainer& A, const FDreamUIHitResultContainer& B)
 			{
 				auto AIsScreenSpace = A.Raycaster->IsA(UDreamScreenSpaceRaycaster::StaticClass());
 				auto BIsScreenSpace = B.Raycaster->IsA(UDreamScreenSpaceRaycaster::StaticClass());

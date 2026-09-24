@@ -120,9 +120,20 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 	// Nearest first: the input module reads element 0 as the hit and treats the rest as hover, so
 	// this ordering is what decides which of two overlapping panels answers a click, and what lets a
 	// world occluder in front of a panel take the pointer away from it.
+	//
+	// STABLE, and that is not a nicety. Everything on one flat panel is at one distance -- a button
+	// face and the panel background it sits on are coplanar, so their distances are the same float --
+	// and for those the only right answer is the one RaycastUI already gave: canvas sort order, then
+	// hierarchy, i.e. what is drawn on top. TArray::Sort is not stable; on the handful of elements a
+	// pointer hits it is a selection sort that moves the first of two equal elements behind the
+	// second, so the background came out ahead of the button and took its clicks. A stable sort only
+	// moves hits whose distances differ, which is exactly the question it is here for: one panel in
+	// front of another, a wall in front of a panel. Equal distances keep the order they were
+	// collected in, which also puts a panel's own hits ahead of a world occluder at the same depth --
+	// the world trace is appended last.
 	if (OutHitResultArray.Num() > 1)
 	{
-		OutHitResultArray.Sort([](const FDreamUIHitResult& A, const FDreamUIHitResult& B)
+		OutHitResultArray.StableSort([](const FDreamUIHitResult& A, const FDreamUIHitResult& B)
 		{
 			return A.Distance < B.Distance;
 		});
