@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{486FC676-41CB-DA5E-D95C-8AA1D8EB76B0}",
+	"Category": "",
+	"Description": "Minimal host project that builds DreamGUI on its own and runs its automation suite, isolated from any working project. Generated from Plugins/DreamGUI/Tools/TestHost/Template by New-DreamGUITestHost.ps1; see Tools/TestHost/README.md.",
+	"Modules": [
+		{
+			"Name": "DreamGUITestHost",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "DreamGUI",
+			"Enabled": true
+		},
+		{
+			"Name": "EnhancedInput",
+			"Enabled": true
+		}
+	]
+}
