@@ -33,6 +33,11 @@ const FName FDreamUISequenceEditorToolkit::ViewportTabId(TEXT("DreamUISequenceEd
 const FName FDreamUISequenceEditorToolkit::SequencerMainTabId(TEXT("DreamUISequenceEditor_Sequencer"));
 const FName FDreamUISequenceEditorToolkit::DetailsTabId(TEXT("DreamUISequenceEditor_Details"));
 
+// Defaulted here rather than left implicit: the implicit one would instantiate the TUniquePtr deleter
+// for the forward-declared FDreamWidgetDesignerScene in every translation unit that creates a toolkit,
+// which a unity build hid by having this .cpp in the same blob.
+FDreamUISequenceEditorToolkit::FDreamUISequenceEditorToolkit() = default;
+
 FDreamUISequenceEditorToolkit::~FDreamUISequenceEditorToolkit()
 {
 	if (PropertyChangedHandle.IsValid())

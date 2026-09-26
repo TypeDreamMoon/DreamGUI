@@ -24,6 +24,8 @@ class FDreamUISequenceEditorToolkit
 	: public FAssetEditorToolkit
 {
 public:
+	/** Out of line with the destructor: PreviewScene is a TUniquePtr over a forward-declared type. */
+	FDreamUISequenceEditorToolkit();
 	~FDreamUISequenceEditorToolkit();
 
 	void Initialize(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost>& InitToolkitHost, UDreamUISequence* InSequence);

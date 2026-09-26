@@ -20,6 +20,9 @@
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "Core/DreamWorldWidgetComponent.h"
+// GetWidgetClass returns a TSubclassOf<UDreamUserWidget>, and converting that to a UClass* asks the
+// class for its StaticClass: the header's forward declaration is not enough.
+#include "Core/DreamUserWidget.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Editor.h"
 #include "UObject/UObjectIterator.h"

@@ -63,7 +63,8 @@ public:
 
 	/** The standalone editor's live preview tree, if one is up. Not serialized, not owned here. */
 	UDreamWidget* GetPreviewRoot() const { return PreviewRootWidget.Get(); }
-	void SetPreviewRoot(UDreamWidget* InRoot) { PreviewRootWidget = InRoot; }
+	/** Defined in the .cpp: assigning to the weak pointer needs more than the forward declaration. */
+	void SetPreviewRoot(UDreamWidget* InRoot);
 
 	/** The root binding (empty widget path), created on demand; the subsequence override retargets it. */
 	FGuid EnsureRootBinding();

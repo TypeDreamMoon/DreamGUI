@@ -93,6 +93,14 @@ UObject* UDreamUISequence::GetParentObject(UObject* Object) const
 	return nullptr;
 }
 
+// Out of line, unlike the getter above it: TWeakObjectPtr's assignment from a raw pointer needs the
+// complete UDreamWidget, and this class's header only forward-declares it. Defining it here keeps
+// DreamWidget.h out of a public header that the sequencer, the factories and the editor all include.
+void UDreamUISequence::SetPreviewRoot(UDreamWidget* InRoot)
+{
+	PreviewRootWidget = InRoot;
+}
+
 FGuid UDreamUISequence::EnsureRootBinding()
 {
 	if (RootBindingGuid.IsValid() && MovieScene->FindPossessable(RootBindingGuid) != nullptr)

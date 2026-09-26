@@ -9,6 +9,10 @@
 #include "Framework/Commands/UIAction.h"
 #include "IDetailCustomNodeBuilder.h"
 #include "Widgets/Input/NumericTypeInterface.h"
+// The definitions, not just the interface: FComponentTransformDetails derives from
+// TNumericUnitTypeInterface, so every translation unit including this header instantiates that base's
+// constructors and needs them visible. Leaving it to the .cpp compiled only in a unity build.
+#include "Widgets/Input/NumericUnitTypeInterface.inl"
 #include "AssetSelection.h"
 
 class FDetailWidgetRow;
