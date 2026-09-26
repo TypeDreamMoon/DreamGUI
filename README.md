@@ -45,12 +45,18 @@ git clone https://github.com/TypeDreamMoon/DreamGUI.git Plugins/DreamGUI
 Regenerate project files and build. That is the whole install for a fresh project.
 
 > [!IMPORTANT]
-> **A source build of the engine is required**, not a launcher install. `DreamGUI.Build.cs` adds
-> `Engine/Source/Runtime/Renderer/Private`, `Runtime/Renderer/Internal` and `Engine/Source` itself to
-> its private include paths, for `SceneRendering.h`, `ScenePrivate.h`, `SceneTextures.h` and the
-> single-file `ThirdParty/msdfgen/msdfgen.cpp` that the glyph rasteriser compiles. A binary engine
-> ships none of those, and the failure is a missing-header compile error rather than anything that
-> names this requirement.
+> **Engine 5.8, a launcher install included.** `DreamGUI.Build.cs` adds
+> `Engine/Source/Runtime/Renderer/Private` and `Runtime/Renderer/Internal` to its private include paths,
+> for `SceneRendering.h`, `ScenePrivate.h` and `SceneTextures.h`. A launcher install ships those headers;
+> should an install ever stop shipping engine private headers, the failure is a missing-header compile
+> error rather than anything that names the requirement.
+>
+> msdfgen, which the glyph rasteriser compiles into its own translation unit, used to be the other reason
+> a source build was needed: upstream generates its single-file copy rather than committing it, so a
+> launcher install has only `Engine/Source/ThirdParty/msdfgen/msdfgen.tps`. The plugin now carries its
+> own generated copy under `ThirdParty/` — see `ThirdParty/README.md`. A plain clone or a zip download
+> builds it as-is; the `ThirdParty/msdfgen` submodule is only what `Tools/UpdateMsdfgen.ps1` regenerates
+> that copy from.
 
 ### Keyboard layouts: give DreamGUI the game viewport client
 

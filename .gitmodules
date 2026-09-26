@@ -1,0 +1,4 @@
+[submodule "ThirdParty/msdfgen"]
+	path = ThirdParty/msdfgen
+	url = https://github.com/Chlumsky/msdfgen
+	branch = all-in-one

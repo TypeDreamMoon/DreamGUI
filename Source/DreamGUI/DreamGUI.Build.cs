@@ -30,8 +30,15 @@ public class DreamGUI : ModuleRules
                 new string[] {
                     EnginSourceFolder + "/Runtime/Renderer/Private",//#include "SceneRendering.h", #include "ScenePrivate.h"
 					EnginSourceFolder + "/Runtime/Renderer/Internal",//#include "SceneTextures.h"
-                    EnginSourceFolder,//#include "ThirdParty/msdfgen/msdfgen.cpp" (single-file msdfgen, as SlateCore includes it)
                 });
+
+        // msdfgen, for the glyph distance fields (DreamGlyphSdf.cpp). The engine's own copy is not there
+        // to include: upstream generates its single-file pair at build time rather than committing it, so
+        // Engine/Source/ThirdParty/msdfgen holds only msdfgen.tps in a launcher (installed) engine and the
+        // pair itself only ever appears in a source build. The plugin therefore carries its own generated
+        // copy -- see ThirdParty/README.md -- and only that folder goes on the include path, so the
+        // rasteriser's #include "msdfgen.cpp" cannot resolve to some other copy of the library.
+        PrivateIncludePaths.Add(System.IO.Path.Combine(PluginDirectory, "ThirdParty", "msdfgen-single-file"));
 
         PublicDependencyModuleNames.AddRange(
 			new string[]

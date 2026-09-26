@@ -7,11 +7,16 @@
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 
-// The engine ships msdfgen as one source file meant to be included into a single translation unit,
-// wrapped in a parent namespace so two modules can each carry a copy (SlateCore has its own).
+// The plugin's own copy of msdfgen, as the single source file that is meant to be included into one
+// translation unit -- the same shape SlateCore and the engine's SVGDistanceField module compile. A
+// launcher engine has only msdfgen.tps in Engine/Source/ThirdParty/msdfgen, so the pair is generated
+// and committed under ThirdParty/ (see ThirdParty/README.md), and DreamGUI.Build.cs puts that folder
+// on the include path. MSDFGEN_PARENT_NAMESPACE wraps the library, which is why every call below reads
+// msdfgen:: -- SlateCore compiles its own copy of msdfgen for its SDF fonts, and in a monolithic build
+// two sets of identically named symbols that are subtly not the same code is worse than a link error.
 THIRD_PARTY_INCLUDES_START
 #define MSDFGEN_PARENT_NAMESPACE DreamMsdfgen
-#include "ThirdParty/msdfgen/msdfgen.cpp"
+#include "msdfgen.cpp"
 THIRD_PARTY_INCLUDES_END
 
 namespace DreamGlyphSdfLocal

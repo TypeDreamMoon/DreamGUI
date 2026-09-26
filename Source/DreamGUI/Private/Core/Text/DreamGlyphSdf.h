@@ -22,10 +22,10 @@ struct FDreamGlyphSdfResult
 };
 
 /**
- * Distance fields from outlines, through msdfgen (the engine's copy, the one Slate's own SDF text
- * uses). MTSDF rather than MSDF: the three colour channels give crisp corners through their median,
- * and the alpha channel carries the plain distance that effects -- blur, glow, shadows, outlines --
- * can widen into.
+ * Distance fields from outlines, through msdfgen -- the plugin's own generated copy of it, since a
+ * launcher engine ships none (ThirdParty/README.md). MTSDF rather than MSDF: the three colour channels
+ * give crisp corners through their median, and the alpha channel carries the plain distance that
+ * effects -- blur, glow, shadows, outlines -- can widen into.
  */
 class DREAMGUI_API FDreamGlyphSdf
 {
