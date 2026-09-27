@@ -1992,12 +1992,37 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 	}
 
 	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
-	auto SetParameterForNewlyCreatedMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
+	auto SetCommonParameterForMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
 	{
 		InMaterialInstanceDynamic->SetScalarParameterValue(DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName, this->IsRenderByDreamUIRendererOrUERenderer());
 		InMaterialInstanceDynamic->SetTextureParameterValue(DreamUI_WidgetPropertyDataTexture_MaterialParameterName, this->WidgetPropertyDataAsTexture->GetDataTexture());
 		InMaterialInstanceDynamic->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
 	};
+
+	// Every pooled instance, not only those this frame's draw calls take. An instance waiting in a pool
+	// keeps the data textures it was last given, and a frame that took it back after they were replaced
+	// -- the widget property data grown past its texture, the clip data likewise, a new root canvas --
+	// drew through textures the canvas no longer uses, which may be serving something else by then.
+	if (RootCanvas.IsValid() && (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged || bNeedToSetClipDataTextureMaterialParameter))
+	{
+		for (UMaterialInstanceDynamic* Material : PooledDefaultMaterialList)
+		{
+			if (IsValid(Material))
+			{
+				SetCommonParameterForMaterial(Material);
+			}
+		}
+		for (auto& SourceAndInstances : MapSrcMatToDynamicMat)
+		{
+			for (UMaterialInstanceDynamic* Material : SourceAndInstances.Value.MaterialArray)
+			{
+				if (IsValid(Material))
+				{
+					SetCommonParameterForMaterial(Material);
+				}
+			}
+		}
+	}
 
 	// UpdateDrawCallMesh does not create a section for every draw-call (the WorldSpace path skips
 	// PostProcess ones), so the section index must be counted from the draw-calls that own one --
@@ -2024,7 +2049,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 						auto RenderMatDynamic = static_cast<UMaterialInstanceDynamic*>(DrawCallItem.Material.Get());
 						RenderMat = RenderMatDynamic;
 						bShouldSetMaterialParameter = true;
-						SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
+						SetCommonParameterForMaterial(RenderMatDynamic);
 					}
 					else
 					{
@@ -2035,7 +2060,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 							{
 								bShouldSetMaterialParameter = true;
 								auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(DrawCallItem.Material.Get(), this);
-								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
+								SetCommonParameterForMaterial(RenderMatDynamic);
 								auto MaterialContainer = FDreamCanvasDynamicMaterialArrayContainer();
 								MaterialContainer.MaterialArray.Add(RenderMatDynamic);
 								MaterialContainer.CurrentIndex = 1;
@@ -2062,7 +2087,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 							{
 								auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(DrawCallItem.Material.Get(), this);
 								MaterialArray.Add(RenderMatDynamic);
-								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
+								SetCommonParameterForMaterial(RenderMatDynamic);
 								RenderMat = RenderMatDynamic;
 								DynamicMaterialContainerPtr->CurrentIndex++;
 								bNeedToVerifyMaterials = true;//verify material when new material will be used
@@ -2076,10 +2101,6 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 							{
 								auto RenderMatDynamic = MaterialArray[DynamicMaterialContainerPtr->CurrentIndex];
 								RenderMat = RenderMatDynamic;
-								if (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged)
-								{
-									SetParameterForNewlyCreatedMaterial(RenderMatDynamic);//update texture to material
-								}
 								DynamicMaterialContainerPtr->CurrentIndex++;
 								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
 								{
@@ -2119,15 +2140,11 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 							auto SrcMaterial = GetDefaultMaterial();
 							auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(SrcMaterial, this);
 							PooledDefaultMaterialList.Add(RenderMatDynamic);
-							SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
+							SetCommonParameterForMaterial(RenderMatDynamic);
 							bNeedToVerifyMaterials = true;//verify material when new material will be used
 							return RenderMatDynamic;
 						}
 						auto RenderMatDynamic = PooledDefaultMaterialList[UsingMaterialStartIndex];
-						if (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged)
-						{
-							SetParameterForNewlyCreatedMaterial(RenderMatDynamic);//update texture to material
-						}
 						UsingMaterialStartIndex--;
 						return RenderMatDynamic.Get();
 					};
