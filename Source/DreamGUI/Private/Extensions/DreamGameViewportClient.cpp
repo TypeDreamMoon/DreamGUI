@@ -3,7 +3,75 @@
 #include "Extensions/DreamGameViewportClient.h"
 
 #include "Engine/Console.h"
+#include "GameFramework/PlayerController.h"
 #include "Interaction/UITextInput.h"
+
+namespace DreamGameViewportClientLocal
+{
+	/**
+	 * One of the base class's input handlers, run as if the client were not ignoring input: the base
+	 * class's whole routing -- the console first, the play-in-editor absorption, the player the device
+	 * belongs to -- rather than a copy of it that would drift.
+	 */
+	template <typename RouteType>
+	bool RouteAsIfListening(UGameViewportClient& InClient, RouteType&& InRoute)
+	{
+		InClient.SetIgnoreInput(false);
+		const bool bResult = InRoute();
+		InClient.SetIgnoreInput(true);
+		return bResult;
+	}
+}
+
+bool UDreamGameViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
+{
+	if (IgnoreInput() && bDreamUIOnlyInput)
+	{
+		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputKey(EventArgs); });
+	}
+	return Super::InputKey(EventArgs);
+}
+
+bool UDreamGameViewportClient::InputAxis(const FInputKeyEventArgs& EventArgs)
+{
+	if (IgnoreInput() && bDreamUIOnlyInput)
+	{
+		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputAxis(EventArgs); });
+	}
+	return Super::InputAxis(EventArgs);
+}
+
+bool UDreamGameViewportClient::InputTouch(FViewport* const InViewport, const FTouchId TouchId, const ETouchType::Type Type, const FVector2D& TouchLocation, const float Force, const uint64 Timestamp)
+{
+	if (IgnoreInput() && bDreamUIOnlyInput)
+	{
+		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputTouch(InViewport, TouchId, Type, TouchLocation, Force, Timestamp); });
+	}
+	return Super::InputTouch(InViewport, TouchId, Type, TouchLocation, Force, Timestamp);
+}
+
+void UDreamGameViewportClient::SetDreamUIOnlyInput(APlayerController* InPlayerController, bool bInDreamUIOnly)
+{
+	bDreamUIOnlyInput = bInDreamUIOnly;
+	if (bInDreamUIOnly)
+	{
+		// The player controller hears what DreamGUI hears now, and the pawn on its input stack with it.
+		// Movement and look are what a menu must not drive; the controller's ignore counters stack, so
+		// this takes one of each and leaving the mode gives back exactly that.
+		if (!PlayerHeldStill.IsValid() && IsValid(InPlayerController))
+		{
+			InPlayerController->SetIgnoreMoveInput(true);
+			InPlayerController->SetIgnoreLookInput(true);
+			PlayerHeldStill = InPlayerController;
+		}
+	}
+	else if (APlayerController* Held = PlayerHeldStill.Get())
+	{
+		Held->SetIgnoreMoveInput(false);
+		Held->SetIgnoreLookInput(false);
+		PlayerHeldStill.Reset();
+	}
+}
 
 bool UDreamGameViewportClient::InputChar(FViewport* InViewport, int32 ControllerId, TCHAR Character)
 {
@@ -25,7 +93,8 @@ bool UDreamGameViewportClient::InputChar(FViewport* InViewport, int32 Controller
 	 *     closed one takes the character its own toggle key produces (UConsole::InputChar answers
 	 *     bCaptureKeyInput then); only its InputChar knows which, so it is asked, not inspected.
 	 *  2. Nothing more while the client ignores input: the base stops after the console then, and so does
-	 *     UGameViewportClient::InputKey, so a field whose keys are shut off does not type either.
+	 *     UGameViewportClient::InputKey, so a field whose keys are shut off does not type either -- unless
+	 *     DreamGUI's own UI-only mode is what shut them off, in which case its keys reach the field too.
 	 *  3. The DreamGUI field that owns the keyboard. A character it takes has been consumed, and a consumed
 	 *     character goes no further -- the editor's frame included -- which is all the base's absorption
 	 *     is for. It is a REAL character, resolved by the platform on the player's own layout, which is
@@ -40,7 +109,7 @@ bool UDreamGameViewportClient::InputChar(FViewport* InViewport, int32 Controller
 	{
 		return true;
 	}
-	if (!IgnoreInput() && UUITextInput::RouteCharacterInputToActiveInput(Character))
+	if ((!IgnoreInput() || bDreamUIOnlyInput) && UUITextInput::RouteCharacterInputToActiveInput(Character))
 	{
 		return true;
 	}

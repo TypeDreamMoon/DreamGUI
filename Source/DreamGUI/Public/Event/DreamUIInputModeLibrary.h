@@ -46,6 +46,11 @@ class DREAMGUI_API UDreamUIInputModeLibrary : public UBlueprintFunctionLibrary
 public:
 	/**
 	 * Only the UI sees input, and the cursor is shown.
+	 *
+	 * The engine's UI-only mode ignores input at the game viewport client, and DreamGUI's input arrives
+	 * behind it, so DreamGUI hears nothing in it unless the client is UDreamGameViewportClient (or
+	 * derives from it): that client routes the input on while this mode holds, and holds the player's
+	 * movement and look input still. With any other client a warning says so once.
 	 * @param InWidgetToFocus	Optional. Focused through UDreamWidget::SetFocus, which is DreamGUI's
 	 *							equivalent of the Slate widget UMG's version takes.
 	 */

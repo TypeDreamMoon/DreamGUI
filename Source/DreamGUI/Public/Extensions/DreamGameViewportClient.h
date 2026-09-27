@@ -6,6 +6,8 @@
 #include "Engine/GameViewportClient.h"
 #include "DreamGameViewportClient.generated.h"
 
+class APlayerController;
+
 /**
  * The one hook a mesh UI cannot reach any other way: the platform's CHARACTER events.
  *
@@ -33,6 +35,14 @@
  *      so they do not reach the editor's frame), so an override that asks the base first and returns
  *      on its answer never reaches the field there. The routing function is the whole contract --
  *      nothing else about this class is required.
+ *
+ * It is also what lets DreamGUI hear anything in its own UI-only input mode. The engine's UI-only mode
+ * makes the viewport client ignore every key, click, axis and touch -- UMG's widgets hear them through
+ * Slate instead -- while every piece of DreamGUI's input arrives through the player controller behind
+ * the client. So while UDreamUIInputModeLibrary::SetInputModeUIOnly holds the mode, this client routes
+ * that input on exactly as it would with the mode off, and holds the player's movement and look input
+ * still, since the player controller now hears what DreamGUI hears. A UI-only mode set any other way --
+ * UMG's library, APlayerController::SetInputMode -- keeps the engine's meaning.
  */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamGameViewportClient : public UGameViewportClient
@@ -40,6 +50,18 @@ class DREAMGUI_API UDreamGameViewportClient : public UGameViewportClient
 	GENERATED_BODY()
 
 public:
+	virtual bool InputKey(const FInputKeyEventArgs& EventArgs) override;
+	virtual bool InputAxis(const FInputKeyEventArgs& EventArgs) override;
+	virtual bool InputTouch(FViewport* const InViewport, const FTouchId TouchId, const ETouchType::Type Type, const FVector2D& TouchLocation, const float Force, const uint64 Timestamp) override;
+
+	/**
+	 * Called by UDreamUIInputModeLibrary as it enters or leaves UI-only mode for InPlayerController.
+	 * Entering routes the input the engine ignores in that mode and holds the player's movement and look
+	 * input; leaving undoes both.
+	 */
+	void SetDreamUIOnlyInput(APlayerController* InPlayerController, bool bInDreamUIOnly);
+	bool IsDreamUIOnlyInput() const { return bDreamUIOnlyInput; }
+
 	/**
 	 * A character the platform resolved, on the player's own keyboard layout.
 	 *
@@ -50,4 +72,9 @@ public:
 	 * field would never see one there (the .cpp walks through it).
 	 */
 	virtual bool InputChar(FViewport* InViewport, int32 ControllerId, TCHAR Character) override;
+
+private:
+	bool bDreamUIOnlyInput = false;
+	/** The player whose movement and look input SetDreamUIOnlyInput holds, so leaving the mode releases exactly that. */
+	TWeakObjectPtr<APlayerController> PlayerHeldStill;
 };

@@ -15,6 +15,7 @@
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputModeLibrary.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Extensions/DreamGameViewportClient.h"
 #include "GameFramework/Actor.h"
@@ -230,6 +231,63 @@ bool FDreamDriverPieClickTest::RunTest(const FString& Parameters)
 			const TArray<FName> Expected = { FName(TEXT("Pressed")), FName(TEXT("Released")), FName(TEXT("Clicked")) };
 			TestTrue(FString::Printf(TEXT("Press, then release, then click -- SButton's order (got %s)"), *DescribeLog(Listener->Log)),
 				Listener->LogOnly(Expected) == Expected);
+		})
+		.PerformLatent();
+	Rig->Finish();
+	return true;
+}
+
+/*
+ * The same click, in DreamGUI's UI-only input mode.
+ *
+ * The engine's UI-only mode makes the game viewport client ignore every key, click and touch -- a UMG
+ * widget hears them through Slate instead -- and all of DreamGUI's input arrives through the player
+ * controller behind the client. A menu that asked for UI-only input therefore could not be clicked:
+ * only hovering, which one preset polls, still worked. UDreamGameViewportClient routes the input on
+ * while DreamGUI's own UI-only mode holds, and holds the player's movement and look input still.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDriverPieUIOnlyClickTest,
+	"DreamGUI.Pie.InDreamGUIsUIOnlyInputModeAButtonIsStillClicked",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDriverPieUIOnlyClickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDriverPieTestLocal;
+	const TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+
+	TSharedRef<FDreamDriverPieRig> Rig = FDreamDriverPieRig::Create(*this);
+	Rig->Start();
+	Rig->WhenReady([Listener](FDreamDriverPieRig& InRig)
+	{
+		BindButton(InRig.MakeControl<UDreamButton>(TEXT("Play"), nullptr, FVector2D(200.0, 60.0)), Listener.Get());
+	});
+	Rig->Sequence()
+		.Then([this](FDreamDriverContext& InContext)
+		{
+			UDreamUIInputModeLibrary::SetInputModeUIOnly(InContext.PlayerController, nullptr, 0);
+			ULocalPlayer* LocalPlayer = InContext.PlayerController != nullptr ? InContext.PlayerController->GetLocalPlayer() : nullptr;
+			UGameViewportClient* Client = LocalPlayer != nullptr ? LocalPlayer->ViewportClient.Get() : nullptr;
+			UDreamGameViewportClient* DreamClient = Cast<UDreamGameViewportClient>(Client);
+			TestTrue(TEXT("The viewport client ignores input, as the engine's UI-only mode has it do"), Client != nullptr && Client->IgnoreInput());
+			TestTrue(TEXT("It is DreamGUI's client, holding DreamGUI's UI-only mode"), DreamClient != nullptr && DreamClient->IsDreamUIOnlyInput());
+			TestTrue(TEXT("and holding the player's look input"), InContext.PlayerController != nullptr && InContext.PlayerController->IsLookInputIgnored());
+		})
+		.MoveTo(FDreamBy::Name(TEXT("Play")))
+		.Press()
+		.Wait(FDreamUntil::Condition([Listener]() { return Listener->PressedCount > 0; }, ConditionLimit()),
+			StepLimit(), TEXT("the press to reach the button through the ignoring client"))
+		.Release()
+		.Wait(FDreamUntil::Condition([Listener]() { return Listener->ClickedCount > 0; }, ConditionLimit()),
+			StepLimit(), TEXT("the release to click the button"))
+		.Then([this, Listener](FDreamDriverContext& InContext)
+		{
+			TestEqual(TEXT("One click"), Listener->ClickedCount, 1);
+			UDreamUIInputModeLibrary::SetInputModeGameAndUI(InContext.PlayerController, nullptr, 0);
+			ULocalPlayer* LocalPlayer = InContext.PlayerController != nullptr ? InContext.PlayerController->GetLocalPlayer() : nullptr;
+			const UDreamGameViewportClient* DreamClient = LocalPlayer != nullptr ? Cast<UDreamGameViewportClient>(LocalPlayer->ViewportClient.Get()) : nullptr;
+			TestTrue(TEXT("Leaving the mode ends the client's routing"), DreamClient != nullptr && !DreamClient->IsDreamUIOnlyInput());
+			TestTrue(TEXT("and gives the player its look input back"), InContext.PlayerController != nullptr && !InContext.PlayerController->IsLookInputIgnored());
 		})
 		.PerformLatent();
 	Rig->Finish();

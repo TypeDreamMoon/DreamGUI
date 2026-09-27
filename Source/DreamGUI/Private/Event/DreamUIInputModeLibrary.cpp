@@ -4,7 +4,9 @@
 
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
+#include "Engine/LocalPlayer.h"
 #include "Event/DreamEventSystem.h"
+#include "Extensions/DreamGameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 
 namespace DreamUIInputModeLibraryLocal
@@ -20,6 +22,34 @@ namespace DreamUIInputModeLibraryLocal
 	{
 		if (!IsValid(InWidgetToFocus))return;
 		InWidgetToFocus->SetFocus(UserIndex, 0);
+	}
+
+	/**
+	 * Tell the player's viewport client whether DreamGUI's UI-only mode holds. The engine's UI-only mode
+	 * makes the client ignore every key, click and touch, and all of DreamGUI's input comes through the
+	 * player controller behind it: UDreamGameViewportClient lets that input through while DreamGUI holds
+	 * the mode. Any other client leaves DreamGUI deaf in it, which is said once.
+	 */
+	void SetDreamUIOnly(APlayerController* InPlayerController, bool bInUIOnly)
+	{
+		const ULocalPlayer* LocalPlayer = InPlayerController != nullptr ? InPlayerController->GetLocalPlayer() : nullptr;
+		UGameViewportClient* ViewportClient = LocalPlayer != nullptr ? LocalPlayer->ViewportClient.Get() : nullptr;
+		if (ViewportClient == nullptr)
+		{
+			return;
+		}
+		if (UDreamGameViewportClient* DreamClient = Cast<UDreamGameViewportClient>(ViewportClient))
+		{
+			DreamClient->SetDreamUIOnlyInput(InPlayerController, bInUIOnly);
+			return;
+		}
+		static bool bWarnedAboutViewportClient = false;
+		if (bInUIOnly && !bWarnedAboutViewportClient)
+		{
+			bWarnedAboutViewportClient = true;
+			UE_LOG(DreamGUI, Warning, TEXT("UI-only input mode: the game viewport client is %s, not UDreamGameViewportClient, so DreamGUI hears no clicks, keys or touches while the mode holds -- the engine's UI-only mode ignores them at the viewport client, and DreamGUI's input arrives behind it. Set [/Script/Engine.Engine] GameViewportClientClassName=/Script/DreamGUI.DreamGameViewportClient, or derive the project's client from it."),
+				*ViewportClient->GetClass()->GetName());
+		}
 	}
 }
 
@@ -40,6 +70,7 @@ void UDreamUIInputModeLibrary::SetInputModeUIOnly(UObject* WorldContextObject, U
 	FInputModeUIOnly InputMode;
 	InputMode.SetLockMouseToViewportBehavior(MouseLockMode);
 	PlayerController->SetInputMode(InputMode);
+	DreamUIInputModeLibraryLocal::SetDreamUIOnly(PlayerController, true);
 	PlayerController->bShowMouseCursor = true;
 	if (bFlushInput)
 	{
@@ -61,6 +92,7 @@ void UDreamUIInputModeLibrary::SetInputModeGameAndUI(UObject* WorldContextObject
 	InputMode.SetLockMouseToViewportBehavior(MouseLockMode);
 	InputMode.SetHideCursorDuringCapture(bHideCursorDuringCapture);
 	PlayerController->SetInputMode(InputMode);
+	DreamUIInputModeLibraryLocal::SetDreamUIOnly(PlayerController, false);
 	PlayerController->bShowMouseCursor = true;
 	if (bFlushInput)
 	{
@@ -79,6 +111,7 @@ void UDreamUIInputModeLibrary::SetInputModeGameOnly(UObject* WorldContextObject,
 		return;
 	}
 	PlayerController->SetInputMode(FInputModeGameOnly());
+	DreamUIInputModeLibraryLocal::SetDreamUIOnly(PlayerController, false);
 	PlayerController->bShowMouseCursor = false;
 	if (bFlushInput)
 	{
@@ -111,4 +144,5 @@ void UDreamUIInputModeLibrary::SetMouseLockMode(UObject* WorldContextObject, EMo
 	FInputModeGameAndUI InputMode;
 	InputMode.SetLockMouseToViewportBehavior(MouseLockMode);
 	PlayerController->SetInputMode(InputMode);
+	DreamUIInputModeLibraryLocal::SetDreamUIOnly(PlayerController, false);
 }
