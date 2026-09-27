@@ -9,10 +9,10 @@
 #include "Engine/Engine.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
+#include "HAL/PlatformTime.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "PixelFormat.h"
 #include "RenderingThread.h"
-#include "ShaderCompiler.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
@@ -273,6 +273,30 @@ namespace DreamRenderStabilityTestLocal
 	}
 
 	/**
+	 * Frames, a redraw asked for on each, until InPixel no longer shows InColour or InTimeoutSeconds have
+	 * passed since the first of them: for a draw that waits on shaders the engine compiles only once
+	 * something asks to draw with them. The check after it says which of the two it was.
+	 */
+	void EnqueueFramesUntilPixelChanges(const FStageRef& InStage, FIntPoint InPixel, FColor InColour, double InTimeoutSeconds)
+	{
+		TSharedRef<double> Deadline = MakeShared<double>(0.0);
+		EnqueueStep([InStage, InPixel, InColour, InTimeoutSeconds, Deadline]()
+		{
+			if (*Deadline == 0.0)
+			{
+				*Deadline = FPlatformTime::Seconds() + InTimeoutSeconds;
+			}
+			const TOptional<FColor> Now = ColourAt(InStage, InPixel);
+			if ((Now.IsSet() && !FDreamPixelProbe::IsNear(Now.GetValue(), InColour, ColorTolerance)) || FPlatformTime::Seconds() > *Deadline)
+			{
+				return true;
+			}
+			InStage->RequestRedraw();
+			return false;
+		});
+	}
+
+	/**
 	 * A static-mesh cache holding a 100x100 square in the widget plane, drawn from both sides, filled in
 	 * directly: the mesh a cache is normally built from is an editor-only asset reference, and what the
 	 * visual draws is only ever these arrays.
@@ -324,8 +348,9 @@ bool FDreamRhiHiddenStaticMeshStopsDrawingTest::RunTest(const FString& Parameter
 	// own draw calls, so the UI materials draw nothing useful there. The material here is the engine's
 	// unlit vertex-colour one, made into an instance the visual owns: it is collected with the visual,
 	// which is what a destroyed mesh's section used to go on drawing through. It is drawn by its own
-	// shaders, not the built-in ones every other visual here uses, and the renderer skips a section whose
-	// shaders are still compiling -- which, in an editor that has just started, they can be.
+	// shaders, not the built-in ones every other visual here uses. The renderer skips a section whose
+	// shaders are not ready, and the engine compiles these only once something asks to draw with them, so
+	// the test waits -- a bounded while -- for the mesh to show before looking.
 	//
 	// Cleared to green, which nothing here draws, so that "drawn" is simply "covers the clear colour".
 	FStageRef Stage = BeginStage(*this);
@@ -355,13 +380,8 @@ bool FDreamRhiHiddenStaticMeshStopsDrawingTest::RunTest(const FString& Parameter
 	}
 	const FIntPoint Centre = Stage->PixelOf(MeshWidget, FVector2D::ZeroVector);
 
-	EnqueueDo([]()
-	{
-		if (GShaderCompilingManager != nullptr)
-		{
-			GShaderCompilingManager->FinishAllCompilation();
-		}
-	});
+	EnqueueSettledFrames(Stage);
+	EnqueueFramesUntilPixelChanges(Stage, Centre, Green, 120.0);
 	EnqueueSettledFrames(Stage);
 	EnqueueDo([this, Stage, Centre]()
 	{
