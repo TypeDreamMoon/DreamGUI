@@ -119,6 +119,11 @@ void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InV
 		GameThreadViewParameter.NumSamples_MSAA = 1;
 	}
 
+#if WITH_EDITOR
+	GameThreadViewParameter.bCanRenderScreenSpace = bCanRenderScreenSpace;
+	GameThreadViewParameter.bIsPlaying = bIsPlaying;
+#endif
+
 	// Hand the whole thing over by value. The render thread reads these while this function is writing
 	// them, which is what the @todo that used to sit above asked for.
 	auto ViewExtension = this;
@@ -1086,12 +1091,12 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			// The gizmo array's only Reset is inside the pass that draws it, so every path that leaves
 			// without drawing has to drop the meshes itself. An editor world that never plays takes one
 			// of these three every frame, and the array grew for the life of the renderer.
-			if (!bCanRenderScreenSpace)
+			if (!RenderThreadViewParameter.bCanRenderScreenSpace)
 			{
 				ScreenSpaceGizmoMeshArray.Reset();
 				goto END_LEXUI_RENDER;
 			}
-			if (bIsPlaying)
+			if (RenderThreadViewParameter.bIsPlaying)
 			{
 				if (!InView.bIsGameView)
 				{

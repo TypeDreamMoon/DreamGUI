@@ -172,6 +172,11 @@ private:
 		uint8 NumSamples_MSAA = 1;
 		/** Fraction of the viewport the screen-space UI is drawn at; 1 is full resolution. */
 		float ScreenSpaceRenderScale = 1.0f;
+#if WITH_EDITORONLY_DATA
+		/** Whether screen-space UI draws in this frame's views at all, and whether the world is playing: see IsActiveThisFrame_Internal. */
+		bool bCanRenderScreenSpace = true;
+		bool bIsPlaying = false;
+#endif
 	};
 	struct FScreenSpaceRenderParameter
 	{
@@ -214,6 +219,11 @@ private:
 #if WITH_EDITORONLY_DATA
 private:
 	bool bIsEditorPreview = false;
+	/**
+	 * Decided on the game thread each frame by IsActiveThisFrame_Internal and read there only: SetupView
+	 * copies them into the view parameters, and the render thread reads the copies. It read these
+	 * members directly while the game thread was writing the next frame's values.
+	 */
 	mutable bool bCanRenderScreenSpace = true;
 	mutable bool bIsPlaying = false;
 #endif
