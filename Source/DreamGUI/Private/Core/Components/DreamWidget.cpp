@@ -4126,7 +4126,9 @@ void UDreamWidget::RegisterRenderCanvas(UDreamCanvas* InRenderCanvas)
 	UDreamCanvas* ParentCanvas = nullptr;
 	if (auto ParentWidget = GetParent())
 	{
-		ParentCanvas = ParentWidget->GetComponentInParent<UDreamCanvas>();//@todo: replace with Canvas's ParentCanvas?
+		// Including the parent itself: GetComponentInParent starts ABOVE the widget it is asked on unless
+		// told otherwise, and a canvas on the parent is the nearest one there is.
+		ParentCanvas = ParentWidget->GetComponentInParent<UDreamCanvas>(/*bIncludeSelf*/ true);//@todo: replace with Canvas's ParentCanvas?
 	}
 	if (RenderCanvas != InRenderCanvas)
 	{
@@ -4248,7 +4250,9 @@ void UDreamWidget::UnregisterRenderCanvas()
 	UDreamCanvas* ParentCanvas = nullptr;
 	if (auto ParentWidget = GetParent())
 	{
-		ParentCanvas = ParentWidget->GetComponentInParent<UDreamCanvas>();//@todo: replace with Canvas's ParentCanvas?
+		// Including the parent itself: GetComponentInParent starts ABOVE the widget it is asked on unless
+		// told otherwise, and a canvas on the parent is the nearest one there is.
+		ParentCanvas = ParentWidget->GetComponentInParent<UDreamCanvas>(/*bIncludeSelf*/ true);//@todo: replace with Canvas's ParentCanvas?
 	}
 	if (RenderCanvas.IsValid())
 	{
