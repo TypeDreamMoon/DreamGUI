@@ -112,6 +112,14 @@ public:
 	virtual void PostEditImport() override;
 #endif
 	virtual void OnRegister() override;
+	/**
+	 * On the game thread. The engine runs end-of-frame updates on worker threads unless a component says
+	 * otherwise, and this one's read and write its canvas -- the proxy's construction can even set the
+	 * root canvas -- and hand a child canvas's sections to the parent component's SceneProxy through a
+	 * render command. Off the game thread that is a data race, and when parent and child rebuild in the
+	 * same frame the command can reach a parent proxy that has already been deleted.
+	 */
+	virtual bool RequiresGameThreadEndOfFrameUpdates() const override { return true; }
 	/** A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession. */
 	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 private:
