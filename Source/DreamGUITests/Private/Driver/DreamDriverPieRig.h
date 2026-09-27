@@ -63,6 +63,19 @@ struct FDreamPieRigOptions
 	float StopTimeoutSeconds = 15.0f;
 	/** Engine frames let pass after the rig comes up and after every WhenReady, so what was built is laid out before anything aims at it. */
 	int32 SettleFrames = 2;
+	/**
+	 * A level for the session to play instead of the blank map, by object path: "/Game/Maps/Level.Level".
+	 * The editor still gets its blank map; the session duplicates this level in its place
+	 * (FRequestPlaySessionParams::GlobalMapOverride), so the level open in the editor is never touched.
+	 */
+	FString MapOverride;
+	/**
+	 * The level places an event system actor of its own for the first player, as a real level may. A world
+	 * takes one event system per player, so the rig then attaches no input actor of its own -- and input
+	 * cannot be driven through the session, because the driver's input module is not the level's. For
+	 * sessions that only look.
+	 */
+	bool bLevelBringsItsOwnEventSystem = false;
 };
 
 /** What a play session turned out to be. Filled while the rig comes up; the probes print it. */

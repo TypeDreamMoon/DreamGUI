@@ -16,8 +16,8 @@ The suite used to be built and run inside the working project (DevTest). That ha
 
 The host fixes all three. Its `Plugins/DreamGUI` is a separate **git worktree** of the DreamGUI
 repository, with its own `Binaries/` and `Intermediate/`, so it builds and runs while the working
-project's editor stays open; it enables nothing but DreamGUI and Enhanced Input; and it has no content
-or code of its own.
+project's editor stays open; it enables nothing but DreamGUI and Enhanced Input; and it has no code of its
+own, and no content but the old-asset fixtures (below).
 
 ## Layout
 
@@ -29,6 +29,7 @@ DreamGUITestHost/                       (default I:\UnrealProject_Moon\DEV_58\Dr
   Config/DefaultGame.ini                from Template/
   Source/DreamGUITestHost*.Target.cs    from Template/
   Source/DreamGUITestHost/              from Template/ -- an empty primary game module
+  Content/DreamGUIFixtures/             from Template/ -- the old-asset fixtures (below)
   Plugins/DreamGUI/                     a git worktree of the DreamGUI repository
   .dreamgui-testhost.json               what the host was made from (template version, repo, branch)
   Binaries/ Intermediate/ Saved/        created by the first build and run
@@ -38,6 +39,26 @@ The template lives here, in `Tools/TestHost/Template/`. It is not under the plug
 `Tests/` folder, which are the only places UnrealBuildTool looks for module and target rules inside a
 plugin, so no project that has DreamGUI in its `Plugins/` ever picks the template's `.Build.cs` or
 `.Target.cs` files up.
+
+## The old-asset fixtures
+
+`Template/Content/DreamGUIFixtures` holds widget Blueprints and a level saved by the plugin as it was
+before any of its classes moved between modules, and `Snapshot.txt`: what they held when the code that
+saved them read them back. Every run loads them. The `DreamGUI.Compatibility` tests compare them with the
+snapshot, `DreamGUI.Assets` loads them with the plugin's own content, and a `DreamGUI.Pie` test plays the
+level. A class that moved without a redirect, or a property a move lost, shows up in those tests.
+
+They were made once, in the host, by two console commands of the test module, each in an editor of its
+own, and copied here from the host's `Content/DreamGUIFixtures`:
+
+```powershell
+UnrealEditor-Cmd.exe <host>\DreamGUITestHost.uproject -ExecCmds="DreamGUI.OldAssetFixtures.Write Exit" -unattended -nullrhi
+UnrealEditor-Cmd.exe <host>\DreamGUITestHost.uproject -ExecCmds="DreamGUI.OldAssetFixtures.Snapshot Exit" -unattended -nullrhi
+```
+
+They are inputs, never outputs. Remade after a class has moved, they would be new assets posing as old
+ones, and the tests would prove nothing; the Write command refuses to replace a fixture that exists. See
+`Source/DreamGUITests/Private/Compatibility/DreamOldAssetFixtures.h` for what each one holds.
 
 ## Creating it
 

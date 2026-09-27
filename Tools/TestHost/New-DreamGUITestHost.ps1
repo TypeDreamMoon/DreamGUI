@@ -94,7 +94,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 # Bump whenever anything under Template\ changes, so a host records which template it was made from.
-$TemplateVersion = 2
+$TemplateVersion = 3
 $ProjectFileName = 'DreamGUITestHost.uproject'
 $MetadataFileName = '.dreamgui-testhost.json'
 $TemplateEngineIniRelative = 'Config\DefaultEngine.ini'
@@ -241,6 +241,12 @@ function Get-WorktreeEntries([string] $Repository) {
         }
     }
     return $Entries.ToArray()
+}
+
+function Test-IsBinaryTemplateFile([string] $Path) {
+    # Content the engine saves. Compared byte for byte: decoded as text, two different packages can read
+    # the same once their invalid sequences have all become the same replacement character.
+    return @('.uasset', '.umap', '.uexp', '.ubulk') -contains [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
 }
 
 function ConvertTo-ComparableText([byte[]] $Bytes) {
@@ -579,14 +585,23 @@ foreach ($TemplateFile in $TemplateFiles) {
         continue
     }
 
-    $ExistingText = ConvertTo-ComparableText ([System.IO.File]::ReadAllBytes($Destination))
-    $WantedText = ConvertTo-ComparableText $Wanted
-    if ($ExistingText -ceq $WantedText) {
-        $Unchanged.Add($Relative)
-        continue
+    $ExistingBytes = [System.IO.File]::ReadAllBytes($Destination)
+    if (Test-IsBinaryTemplateFile $Relative) {
+        if ([System.Linq.Enumerable]::SequenceEqual($ExistingBytes, $Wanted)) {
+            $Unchanged.Add($Relative)
+            continue
+        }
+        $Difference = "the bytes differ ($($ExistingBytes.Length) on disk, $($Wanted.Length) in the template)"
     }
-
-    $Difference = Get-FirstDifference $ExistingText $WantedText
+    else {
+        $ExistingText = ConvertTo-ComparableText $ExistingBytes
+        $WantedText = ConvertTo-ComparableText $Wanted
+        if ($ExistingText -ceq $WantedText) {
+            $Unchanged.Add($Relative)
+            continue
+        }
+        $Difference = Get-FirstDifference $ExistingText $WantedText
+    }
     if ($Force) {
         $PendingChanges++
         if ($PSCmdlet.ShouldProcess($Destination, "Replace (first difference at $Difference); the old file is kept as $([System.IO.Path]::GetFileName($Destination)).bak-$Stamp")) {

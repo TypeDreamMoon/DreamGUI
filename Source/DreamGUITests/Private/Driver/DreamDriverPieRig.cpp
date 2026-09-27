@@ -717,6 +717,10 @@ bool FDreamDriverPieRig::UpdateStart()
 		// at the same thing.
 		Params.StartLocation = Options.PlayerStartLocation;
 		Params.StartRotation = Options.PlayerStartRotation;
+		if (!Options.MapOverride.IsEmpty())
+		{
+			Params.GlobalMapOverride = Options.MapOverride;
+		}
 
 		Report.DestinationUsed = EDreamPieViewportDestination::NewWindow;
 		if (Options.Destination == EDreamPieViewportDestination::LevelEditorViewport)
@@ -966,14 +970,17 @@ FString FDreamDriverPieRig::BuildOnPlayWorld()
 	// The input actor, the game's own class with the driver's module in it, on the player the engine
 	// logged in. Its BeginPlay runs as it spawns -- the play world has begun -- which is where it
 	// registers its module and binds its keys on the player's input stack, exactly as a placed one does.
-	FString WhyNot;
-	if (!DreamDriverGameHost::AttachInputActor(BuildContext, Controller, Options.InputHost, WhyNot))
+	if (!Options.bLevelBringsItsOwnEventSystem)
 	{
-		return FString::Printf(TEXT("the input actor could not be attached: %s"), *WhyNot);
-	}
-	if (!IsValid(BuildContext.EventSystem) || !IsValid(BuildContext.InputModule))
-	{
-		return TEXT("the input actor was attached but the context has no event system or no input module");
+		FString WhyNot;
+		if (!DreamDriverGameHost::AttachInputActor(BuildContext, Controller, Options.InputHost, WhyNot))
+		{
+			return FString::Printf(TEXT("the input actor could not be attached: %s"), *WhyNot);
+		}
+		if (!IsValid(BuildContext.EventSystem) || !IsValid(BuildContext.InputModule))
+		{
+			return TEXT("the input actor was attached but the context has no event system or no input module");
+		}
 	}
 
 	FActorSpawnParameters SpawnParameters;
@@ -1011,8 +1018,8 @@ FString FDreamDriverPieRig::BuildOnPlayWorld()
 
 	UDreamScreenSpaceRaycaster* BuiltRaycaster = NewObject<UDreamScreenSpaceRaycaster>(HostActor, NAME_None, RF_Transient);
 	// The player the input actor speaks for, stated rather than assumed: LineTrace only asks raycasters
-	// whose user index is the event system's.
-	BuiltRaycaster->SetUserIndex(BuildContext.EventSystem->GetUserIndex());
+	// whose user index is the event system's. The first player's when the level brought the event system.
+	BuiltRaycaster->SetUserIndex(IsValid(BuildContext.EventSystem) ? BuildContext.EventSystem->GetUserIndex() : 0);
 	BuiltRaycaster->SetRootCanvas(BuiltCanvas);
 	HostActor->AddInstanceComponent(BuiltRaycaster);
 	BuiltRaycaster->RegisterComponent();
