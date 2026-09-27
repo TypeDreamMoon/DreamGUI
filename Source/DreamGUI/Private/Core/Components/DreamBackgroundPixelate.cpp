@@ -108,29 +108,27 @@ public:
 
 		auto& RHICmdList = GraphBuilder.RHICmdList;
 
+		/**
+		 * Each pooled render target is handed to the graph with GraphBuilder.RegisterExternalTexture as
+		 * soon as it is taken, as blur does: that parks a strong reference on it until the graph has
+		 * executed. This function only RECORDS passes. Releasing the targets at its end, as it used to,
+		 * put them back in GRenderTargetPool before any pass had run, so a later effect in the same
+		 * frame -- another pixelate, a blur with the same descriptor, the other eye -- could be handed
+		 * the same memory, with RDG seeing no dependency between the two.
+		 */
 		TRefCountPtr<IPooledRenderTarget> ScreenResolvedTexture;
 		TRefCountPtr<IPooledRenderTarget> PixelateEffectRenderTarget;
-		auto ReleaseRenderTarget = [&] {
-			if (ScreenResolvedTexture.IsValid())
-			{
-				ScreenResolvedTexture.SafeRelease();
-			}
-			if (PixelateEffectRenderTarget.IsValid())
-			{
-				PixelateEffectRenderTarget.SafeRelease();
-			}
-		};
 
 		uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
 		auto ScreenSize = ScreenTargetTexture->GetSizeXY();
 		if (NumSamples > 1)
 		{
 			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(ScreenSize, ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-			GRenderTargetPool.FindFreeElement(RHICmdList, desc, ScreenResolvedTexture, TEXT("DreamGUIBlurEffectResolveTarget"));
+			GRenderTargetPool.FindFreeElement(RHICmdList, desc, ScreenResolvedTexture, TEXT("DreamUIPixelateEffectResolveTarget"));
 			if (!ScreenResolvedTexture.IsValid())
 				return;
-			auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamGUIBlurEffectResolveSource"));
-			auto ResolveDst = RegisterExternalTexture(GraphBuilder, ScreenResolvedTexture->GetRHI(), TEXT("DreamGUIBlurEffectResolveTarget"));
+			auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamUIPixelateEffectResolveSource"));
+			auto ResolveDst = GraphBuilder.RegisterExternalTexture(ScreenResolvedTexture, TEXT("DreamUIPixelateEffectResolveTarget"));
 			Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
 		}
 
@@ -151,9 +149,9 @@ public:
 			GRenderTargetPool.FindFreeElement(RHICmdList, desc, PixelateEffectRenderTarget, TEXT("DreamUIPixelateEffectRenderTarget"));
 			if (!PixelateEffectRenderTarget.IsValid())
 			{
-				ReleaseRenderTarget();
 				return;
 			}
+			GraphBuilder.RegisterExternalTexture(PixelateEffectRenderTarget, TEXT("DreamUIPixelateEffectRenderTarget"));
 		}
 		auto PixelateEffectRenderTargetTexture = PixelateEffectRenderTarget->GetRHI();
 
@@ -197,9 +195,6 @@ public:
 			Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, RenderTargetResource->GetRenderTargetTexture()
 					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 		}
-
-		//release render target
-		ReleaseRenderTarget();
 	}
 };
 

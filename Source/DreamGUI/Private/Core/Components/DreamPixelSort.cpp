@@ -242,19 +242,15 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 
 	auto& RHICmdList = GraphBuilder.RHICmdList;
 
+	// Each pooled target is handed to the graph with GraphBuilder.RegisterExternalTexture as soon as it
+	// is taken, as blur does, which parks a strong reference on it until the graph has executed. This
+	// function only RECORDS passes: releasing the targets at its end, as it used to, put them back in
+	// GRenderTargetPool before any pass had run, and a later effect in the same frame could be handed
+	// the same memory with RDG seeing no dependency between the two.
 	TRefCountPtr<IPooledRenderTarget> ScreenResolvedTexture;
 	TRefCountPtr<IPooledRenderTarget> SortTargetA;
 	TRefCountPtr<IPooledRenderTarget> SortTargetB;
 	TRefCountPtr<IPooledRenderTarget> IndexTarget;
-	// Held for the whole function and released only at the end, as blur does. The pool keeps the RHI
-	// texture alive past a SafeRelease, but with two targets and many passes in flight there is no
-	// reason to lean on that.
-	auto ReleaseRenderTargets = [&] {
-		if (ScreenResolvedTexture.IsValid())ScreenResolvedTexture.SafeRelease();
-		if (SortTargetA.IsValid())SortTargetA.SafeRelease();
-		if (SortTargetB.IsValid())SortTargetB.SafeRelease();
-		if (IndexTarget.IsValid())IndexTarget.SafeRelease();
-	};
 
 	const uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
 	const auto ScreenSize = ScreenTargetTexture->GetSizeXY();
@@ -272,11 +268,10 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		GRenderTargetPool.FindFreeElement(RHICmdList, ResolveDesc, ScreenResolvedTexture, TEXT("DreamUIPixelSortResolveTarget"));
 		if (!ScreenResolvedTexture.IsValid())
 		{
-			ReleaseRenderTargets();
 			return;
 		}
 		auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamUIPixelSortResolveSource"));
-		auto ResolveDst = RegisterExternalTexture(GraphBuilder, ScreenResolvedTexture->GetRHI(), TEXT("DreamUIPixelSortResolveTarget"));
+		auto ResolveDst = GraphBuilder.RegisterExternalTexture(ScreenResolvedTexture, TEXT("DreamUIPixelSortResolveTarget"));
 		Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
 	}
 
@@ -304,9 +299,11 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		GRenderTargetPool.FindFreeElement(RHICmdList, IndexDesc, IndexTarget, TEXT("DreamUIPixelSortIndexTarget"));
 		if (!SortTargetA.IsValid() || !SortTargetB.IsValid() || !IndexTarget.IsValid())
 		{
-			ReleaseRenderTargets();
 			return;
 		}
+		GraphBuilder.RegisterExternalTexture(SortTargetA, TEXT("DreamUIPixelSortTargetA"));
+		GraphBuilder.RegisterExternalTexture(SortTargetB, TEXT("DreamUIPixelSortTargetB"));
+		GraphBuilder.RegisterExternalTexture(IndexTarget, TEXT("DreamUIPixelSortIndexTarget"));
 	}
 	auto SortTextureA = SortTargetA->GetRHI();
 	auto SortTextureB = SortTargetB->GetRHI();
@@ -436,8 +433,6 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, ResultTexture,
 			RenderTargetResource->GetRenderTargetTexture(), PointSampler);
 	}
-
-	ReleaseRenderTargets();
 }
 
 //------------------------------------------------------------------------------------------------
