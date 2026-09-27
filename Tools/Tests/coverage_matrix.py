@@ -26,6 +26,7 @@ count; without it, it does not.
 
 import argparse
 import collections
+import glob
 import json
 import os
 import re
@@ -41,7 +42,10 @@ DEFAULT_COVERAGE = os.path.join(HERE, 'coverage.json')
 DOC = os.path.join(HERE, 'COVERAGE.md')
 BEGIN_MARK = '<!-- coverage-matrix:begin -->'
 END_MARK = '<!-- coverage-matrix:end -->'
-CLASS_DIRS = ('Source/DreamGUI/Public/Controls', 'Source/DreamGUI/Public/Interaction')
+# Every module of the plugin -- Source/DreamGUI*/Public/{Controls,Interaction} -- so a control that moves
+# into a module of its own is still found; see class_dirs().
+CLASS_DIR_MODULE_GLOB = 'DreamGUI*'
+CLASS_DIR_LEAVES = ('Public/Controls', 'Public/Interaction')
 
 UCLASS = re.compile(r'\bUCLASS\s*\(((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)\s*class\s+(?:[A-Z0-9_]+_API\s+)?([A-Za-z_0-9]+)')
 
@@ -72,9 +76,20 @@ def load_config(path):
     return data, inputs, configs
 
 
+def class_dirs(root):
+    """The Controls and Interaction folders of every module of the plugin that has them."""
+    source = os.path.join(root, 'Source')
+    dirs = []
+    for module in sorted(glob.glob(os.path.join(source, CLASS_DIR_MODULE_GLOB))):
+        for leaf in CLASS_DIR_LEAVES:
+            if os.path.isdir(os.path.join(module, leaf.replace('/', os.sep))):
+                dirs.append('Source/%s/%s' % (os.path.basename(module), leaf))
+    return dirs
+
+
 def find_classes(root):
     found = collections.OrderedDict()
-    for d in CLASS_DIRS:
+    for d in class_dirs(root):
         for path in sourcescan.source_files(root, d, ('.h',)):
             sf = sourcescan.load(root, path)
             for m in UCLASS.finditer(sf.code):
