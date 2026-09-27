@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamWidget.h"
+#include "DreamWidgetPrivate.h"
 #include "Core/DreamPerspective.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
@@ -37,84 +38,6 @@
 #include "UObject/GarbageCollection.h"
 #include "UObject/UnrealType.h"
 #endif
-
-namespace
-{
-	/**
-	 * Recursion / ancestor-walk guard for the geometry hot path. MarkLayoutForRebuild runs from every
-	 * SetWidth, SetHeight, SetSizeDelta and SetAnchoredPosition -- once per tweened frame per widget --
-	 * and a default TSet heap-allocates on its first insertion. Inline storage covers a normal
-	 * hierarchy depth without touching the allocator; deeper trees spill to the heap as before.
-	 */
-	using FDreamVisitedWidgetSet = TSet<const UDreamWidget*, DefaultKeyFuncs<const UDreamWidget*>, TInlineSetAllocator<16>>;
-
-	void RemovePanelSlotFromChild(UDreamWidget* ChildWidget)
-	{
-		if (!IsValid(ChildWidget) || !IsValid(ChildWidget->GetPanelSlot()))
-		{
-			return;
-		}
-#if WITH_EDITOR
-		if (const UWorld* World = ChildWidget->GetWorld(); !World || !World->IsGameWorld())
-		{
-			DreamUI::ModifyIfKeptByUndo(*ChildWidget);
-		}
-#endif
-		ChildWidget->RemovePanelSlot();
-	}
-
-	bool EnsurePanelSlotForChild(UDreamWidget* ParentWidget, UDreamWidget* ChildWidget, bool bRecaptureDesiredSize = false)
-	{
-		if (!IsValid(ParentWidget) || !IsValid(ChildWidget)
-			|| !IsValid(Cast<UDreamPanelLayoutBase>(ParentWidget->GetLayoutContainer())))
-		{
-			return false;
-		}
-		if (UDreamPanelSlot* ExistingSlot = ChildWidget->GetPanelSlot(); IsValid(ExistingSlot))
-		{
-			if (bRecaptureDesiredSize)
-			{
-				ExistingSlot->CaptureAuthoredGeometry(true);
-			}
-			else
-			{
-				ExistingSlot->CaptureAuthoredGeometry();
-			}
-			return false;
-		}
-#if WITH_EDITOR
-		if (const UWorld* World = ChildWidget->GetWorld(); !World || !World->IsGameWorld())
-		{
-			DreamUI::ModifyIfKeptByUndo(*ChildWidget);
-		}
-#endif
-		UDreamPanelSlot* NewSlot = ChildWidget->CreateNewPanelSlot<UDreamPanelSlot>();
-		if (IsValid(NewSlot))
-		{
-			if (ParentWidget->GetLayoutContainer()->IsA<UDreamLayoutContainerScaleBox>())
-			{
-				NewSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Center);
-				NewSlot->SetVerticalAlignment(EDreamPanelVerticalAlignment::Center);
-			}
-			NewSlot->CaptureAuthoredGeometry(bRecaptureDesiredSize);
-		}
-		return IsValid(NewSlot);
-	}
-
-	void SynchronizePanelSlotForParent(UDreamWidget* ParentWidget, UDreamWidget* ChildWidget,
-		bool bRecaptureDesiredSize = false)
-	{
-		if (IsValid(ParentWidget)
-			&& IsValid(Cast<UDreamPanelLayoutBase>(ParentWidget->GetLayoutContainer())))
-		{
-			EnsurePanelSlotForChild(ParentWidget, ChildWidget, bRecaptureDesiredSize);
-		}
-		else
-		{
-			RemovePanelSlotFromChild(ChildWidget);
-		}
-	}
-}
 
 UDreamWidget::UDreamWidget()
 {
@@ -206,7 +129,6 @@ void UDreamWidget::EndPlay()
 	}
 }
 
-#pragma region CallbackEvents
 void UDreamWidget::Call_InteractableChanged()
 {
 	OnInteractableChangedEvent.Broadcast(this->GetInteractableInHierarchy());
@@ -275,7 +197,6 @@ void UDreamWidget::Call_RaycastableChanged()
 {
 	OnRaycastableChangedEvent.Broadcast(this->GetRaycastableInHierarchy());
 }
-#pragma endregion
 
 
 void UDreamWidget::CalculateFlattenHierarchyIndex_Recursive(int& index)const
@@ -1454,10 +1375,9 @@ void UDreamWidget::EnsureDataForRebuild()
 	CalculateObjectToWorldTransform();
 }
 
+
+
 #endif
-
-
-#pragma region Transform
 FVector UDreamWidget::GetWorldLocation()const
 {
 	return GetWorldTransform().GetLocation();
@@ -2541,7 +2461,6 @@ bool UDreamWidget::IsChildOf(const UDreamWidget* InTarget)const
 	}
 	return false;
 }
-#pragma endregion Transform
 
 TArray<UDreamUIBehaviour*> UDreamWidget::GetComponents(TSubclassOf<UDreamUIBehaviour> ComponentClass)const
 {
@@ -6290,9 +6209,9 @@ void UDreamWidget::RemovePanelSlot()
 	MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
 }
 
+
+
 #pragma region TweenAnimation
-
-
 #pragma region PositionXYZ
 UDreamTweener* UDreamWidget::LocalPositionXTo(double endValue, float duration, float delay, EDreamTweenEase ease)
 {
@@ -6399,11 +6318,11 @@ UDreamTweener* UDreamWidget::WorldPositionZTo(double endValue, float duration, f
 	}
 	return Tweener;
 }
+
+
+
+
 #pragma endregion PositionXYZ
-
-
-
-
 #pragma region Position
 UDreamTweener* UDreamWidget::LocalPositionTo(FVector endValue, float duration, float delay, EDreamTweenEase ease)
 {
@@ -6699,4 +6618,3 @@ void UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget
 	}
 }
 #pragma endregion
-
