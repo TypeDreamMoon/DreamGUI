@@ -3,6 +3,7 @@
 #include "Modules/ModuleInterface.h"
 #include "Modules/ModuleManager.h"
 
+#include "Core/DreamUIWidgetRegistry.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
 
 /*
@@ -26,6 +27,8 @@ public:
 #if WITH_EDITOR
 		InvariantWatch.Stop();
 #endif
+		// The fixtures declare .dui tags of their own, and their class getters are code in this module.
+		FDreamUIWidgetRegistry::UnregisterModule(TEXT("DreamGUITests"));
 	}
 
 #if WITH_EDITOR

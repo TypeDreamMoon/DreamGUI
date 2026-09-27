@@ -48,6 +48,8 @@ public:
 		FName Name;
 		UClass* (*ClassGetter)() = nullptr;
 		EKind Kind = EKind::ScopedWidget;
+		/** The module whose static initialization registered the entry, and whose code ClassGetter is. */
+		FName Module;
 	};
 
 	/**
@@ -88,6 +90,13 @@ public:
 	/** Called by the DECLARE macro's static object; not for direct use. */
 	static void Register(const FEntry& InEntry);
 
+	/**
+	 * Drops every entry InModule registered. A module that declares tags calls it from ShutdownModule:
+	 * an entry's class getter is code in that module, and a module that is unloaded -- disabled in a
+	 * running editor, or reloaded -- would otherwise leave the table calling into memory that is gone.
+	 */
+	static void UnregisterModule(FName InModule);
+
 private:
 	static TArray<FEntry>& Entries();
 };
@@ -96,9 +105,9 @@ private:
 struct FDreamUIWidgetRegistration
 {
 	FDreamUIWidgetRegistration(const TCHAR* InScope, const TCHAR* InName, UClass* (*InClassGetter)(),
-		FDreamUIWidgetRegistry::EKind InKind = FDreamUIWidgetRegistry::EKind::ScopedWidget)
+		FDreamUIWidgetRegistry::EKind InKind, const TCHAR* InModule)
 	{
-		FDreamUIWidgetRegistry::Register({ FName(InScope), FName(InName), InClassGetter, InKind });
+		FDreamUIWidgetRegistry::Register({ FName(InScope), FName(InName), InClassGetter, InKind, FName(InModule) });
 	}
 };
 
@@ -112,7 +121,8 @@ struct FDreamUIWidgetRegistration
  * guaranteed distinct per declaration. */
 #define DECLARE_DREAM_GUI_WIDGET(Scope, Name, Class) \
 	static const FDreamUIWidgetRegistration UE_JOIN(DreamUIWidgetRegistration_, Class)( \
-		TEXT(Scope), TEXT(Name), []() -> UClass* { return Class::StaticClass(); });
+		TEXT(Scope), TEXT(Name), []() -> UClass* { return Class::StaticClass(); }, \
+		FDreamUIWidgetRegistry::EKind::ScopedWidget, TEXT(UE_MODULE_NAME));
 
 /**
  * Declare a visual class under a BARE `.dui` tag. File scope, after the class:
@@ -133,4 +143,4 @@ struct FDreamUIWidgetRegistration
 #define DECLARE_DREAM_GUI_VISUAL(Tag, Class) \
 	static const FDreamUIWidgetRegistration UE_JOIN(DreamUIVisualRegistration_, Class)( \
 		TEXT(""), TEXT(Tag), []() -> UClass* { return Class::StaticClass(); }, \
-		FDreamUIWidgetRegistry::EKind::VisualTag);
+		FDreamUIWidgetRegistry::EKind::VisualTag, TEXT(UE_MODULE_NAME));

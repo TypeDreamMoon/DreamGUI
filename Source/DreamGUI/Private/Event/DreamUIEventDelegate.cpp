@@ -1053,7 +1053,8 @@ void FDreamUIEventDelegate::FireEvent()const
 }
 void FDreamUIEventDelegate::LogParameterError(EDreamUIEventDelegateParameterType WrongParamType)const
 {
-	auto enumObject = FindObject<UEnum>(nullptr, TEXT("/Script/DreamGUI.EDreamUIEventDelegateParameterType"), EFindObjectFlags::ExactClass);
+	// The enum's own StaticEnum rather than a path: a path names the module the enum lives in today.
+	const UEnum* enumObject = StaticEnum<EDreamUIEventDelegateParameterType>();
 	auto errMsg = FText::Format(LOCTEXT("ParameterTypeMismatch", "DreamUIEventDelegate parameter type must be the same as your declaration. support parameter type: {0}, execute parameter type: {1}")
 		, enumObject->GetDisplayNameTextByValue((int64)SupportParameterType)
 		, enumObject->GetDisplayNameTextByValue((int64)WrongParamType)

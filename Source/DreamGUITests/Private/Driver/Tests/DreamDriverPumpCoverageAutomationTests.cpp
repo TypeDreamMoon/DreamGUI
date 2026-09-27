@@ -17,6 +17,7 @@
 
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
+#include "Core/DreamUIScriptPackages.h"
 
 /*
  * THE PUMP TICKS WHAT A GAME WOULD TICK.
@@ -35,11 +36,14 @@ namespace DreamDriverPumpCoverageTestLocal
 {
 	const FIntPoint ViewportSize(1280, 720);
 
-	/** Whether a class is declared by one of the two runtime modules whose ticking the pump owns. */
+	/**
+	 * Whether a class is declared by one of the runtime modules whose ticking the pump owns: DreamGUI's
+	 * runtime modules, whichever registered their script package, and DreamTween.
+	 */
 	bool IsDeclaredByThePlugin(const UClass* InClass)
 	{
-		const FString PackageName = InClass->GetOutermost()->GetName();
-		return PackageName == TEXT("/Script/DreamGUI") || PackageName == TEXT("/Script/DreamTween");
+		const UPackage* Package = InClass->GetOutermost();
+		return DreamUI::IsRuntimeScriptPackage(Package->GetFName()) || Package->GetName() == TEXT("/Script/DreamTween");
 	}
 }
 

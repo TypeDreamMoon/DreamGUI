@@ -2,6 +2,8 @@
 
 #include "DreamGUI.h"
 #include "Animation/DreamUIMovieScenePropertyAccessors.h"
+#include "Core/DreamUIScriptPackages.h"
+#include "Core/DreamUIWidgetRegistry.h"
 #include "Modules/ModuleManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/CoreDelegates.h"
@@ -21,6 +23,11 @@ namespace
 void FDreamGUIModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
+	//
+	// First, because the .dui lookups read it and this module loads before anything compiles a .dui:
+	// the core's own types are the first place a short type name is looked for.
+	DreamUI::RegisterRuntimeScriptPackage(TEXT("/Script/DreamGUI"));
+
 	//
 	// Two things the one-liner this replaces assumed. FindPlugin returns a TSharedPtr, and while this
 	// module belongs to the plugin it looks up, a dereference is not the way to say so. And the
@@ -68,6 +75,8 @@ void FDreamGUIModule::ShutdownModule()
 		FCoreDelegates::GetOnPostEngineInit().Remove(GPostEngineInitHandle);
 		GPostEngineInitHandle.Reset();
 	}
+	FDreamUIWidgetRegistry::UnregisterModule(TEXT("DreamGUI"));
+	DreamUI::UnregisterRuntimeScriptPackage(TEXT("/Script/DreamGUI"));
 }
 
 #undef LOCTEXT_NAMESPACE

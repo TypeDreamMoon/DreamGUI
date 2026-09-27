@@ -30,6 +30,11 @@ void FDreamUIWidgetRegistry::Register(const FEntry& InEntry)
 	Entries().Add(InEntry);
 }
 
+void FDreamUIWidgetRegistry::UnregisterModule(FName InModule)
+{
+	Entries().RemoveAll([InModule](const FEntry& Entry) { return Entry.Module == InModule; });
+}
+
 void FDreamUIWidgetRegistry::GetAllEntries(TArray<FEntry>& OutEntries)
 {
 	// Scoped tags only, which is what this has always meant and what its one caller -- the symbol

@@ -19,6 +19,7 @@
 #include "UObject/Class.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/UnrealType.h"
+#include "Core/DreamUIScriptPackages.h"
 
 /*
  * Two guards against the control library drifting away from the one it is measured against.
@@ -94,9 +95,16 @@ namespace DreamUMGParityGuardLocal
 	UStruct* FindReflectedType(const FString& InCppName)
 	{
 		const FString Name = StripTypePrefix(InCppName);
-		for (const TCHAR* Package : { TEXT("/Script/DreamGUI"), TEXT("/Script/UMG"), TEXT("/Script/DreamTween"), TEXT("/Script/DreamGUIEditor") })
+		// DreamGUI's runtime packages first, whichever of its modules declares the type, then UMG's.
+		TArray<FString> Packages;
+		for (const FName Package : DreamUI::GetRuntimeScriptPackages())
 		{
-			const FString Path = FString::Printf(TEXT("%s.%s"), Package, *Name);
+			Packages.Add(Package.ToString());
+		}
+		Packages.Append({ TEXT("/Script/UMG"), TEXT("/Script/DreamTween"), TEXT("/Script/DreamGUIEditor") });
+		for (const FString& Package : Packages)
+		{
+			const FString Path = FString::Printf(TEXT("%s.%s"), *Package, *Name);
 			if (UClass* Class = FindObject<UClass>(nullptr, *Path))
 			{
 				return Class;

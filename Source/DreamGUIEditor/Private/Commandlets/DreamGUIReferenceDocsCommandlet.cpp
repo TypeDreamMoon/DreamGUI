@@ -6,6 +6,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamUserWidget.h"
 
@@ -298,11 +299,17 @@ namespace DreamGUIReferenceDocsLocal
 				OutTypes.AddUnique(Class);
 			}
 		}
-		const UPackage* RuntimePackage = UDreamWidget::StaticClass()->GetOutermost();
+		// Every runtime module of the plugin, not just the core: a page for a type exists because the type
+		// is DreamGUI's, whichever of its modules declares it -- and pages this run does not produce are
+		// deleted below, so a list that missed a module would delete that module's documentation.
+		const auto IsRuntimePackage = [](const UPackage* InPackage)
+		{
+			return InPackage != nullptr && DreamUI::IsRuntimeScriptPackage(InPackage->GetFName());
+		};
 		for (TObjectIterator<UClass> It; It; ++It)
 		{
 			const UClass* Class = *It;
-			if (Class->GetOutermost() != RuntimePackage || !Class->HasAnyClassFlags(CLASS_Native)
+			if (!IsRuntimePackage(Class->GetOutermost()) || !Class->HasAnyClassFlags(CLASS_Native)
 				|| Class->HasAnyClassFlags(CLASS_Deprecated | CLASS_NewerVersionExists))
 			{
 				continue;
@@ -318,7 +325,7 @@ namespace DreamGUIReferenceDocsLocal
 		{
 			const UScriptStruct* Struct = *It;
 			const FString StructName = Struct->GetName();
-			if (Struct->GetOutermost() == RuntimePackage
+			if (IsRuntimePackage(Struct->GetOutermost())
 				&& (StructName.EndsWith(TEXT("Style")) || StructName.Contains(TEXT("Brush"))
 					|| StructName == TEXT("DreamUIStateFaces") || StructName == TEXT("DreamUIWidgetGeometry")))
 			{
