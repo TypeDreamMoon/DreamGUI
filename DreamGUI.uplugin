@@ -10,7 +10,7 @@
 	"DocsURL": "https://github.com/TypeDreamMoon/DreamGUI",
 	"MarketplaceURL": "",
 	"SupportURL": "https://github.com/TypeDreamMoon/DreamGUI/issues",
-	"EngineVersion": "5.8",
+	"EngineVersion": "5.8.0",
 	"CanContainContent": true,
 	"SupportedTargetPlatforms": [ "Win64", "Mac", "Linux", "IOS", "Android" ],
 	"Installed": false,

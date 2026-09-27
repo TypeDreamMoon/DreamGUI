@@ -912,7 +912,7 @@ public:
 		}
 		return nullptr;
 	}
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Sript/DreamGUI.DreamUIBehaviour", DeterminesOutputType = "ComponentClass"))
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Script/DreamGUI.DreamUIBehaviour", DeterminesOutputType = "ComponentClass"))
 	UDreamUIBehaviour* AddComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass);
 	UDreamUIBehaviour* AddComponentByTemplate(UDreamUIBehaviour* ComponentTemplate);
 	template<class T>
@@ -927,9 +927,9 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const UDreamUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from UDreamUIBehaviour");
 		return Cast<T>(AddComponent(T::StaticClass(), ComponentTemplate));
 	}
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Sript/DreamGUI.DreamUIBehaviour"))
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Script/DreamGUI.DreamUIBehaviour"))
 	void RemoveComponent(UDreamUIBehaviour* Component);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Sript/DreamGUI.DreamUIBehaviour"))
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Script/DreamGUI.DreamUIBehaviour"))
 	void MoveComponentToIndex(UDreamUIBehaviour* Component, int32 NewIndex);
 	void UpdateObjectToWorldTransform();
 	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
