@@ -22,6 +22,8 @@ public:
 	UDreamUIBehaviour();
 	friend class UDreamWidget;
 	virtual UWorld* GetWorld() const override final;
+	/** A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession. */
+	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 	/** INDEX_NONE means this behaviour does not impose a child-count limit on its widget. */
 	virtual int32 GetMaxWidgetChildren() const { return INDEX_NONE; }
 

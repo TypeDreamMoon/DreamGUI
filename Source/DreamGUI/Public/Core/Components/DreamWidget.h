@@ -209,6 +209,8 @@ public:
 
 	virtual void PostLoad()override;
 	virtual void BeginDestroy() override;
+	/** A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession. */
+	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 
 	/**
 	 * Tear this widget and its whole subtree down: unregister, detach from the parent, end play, and

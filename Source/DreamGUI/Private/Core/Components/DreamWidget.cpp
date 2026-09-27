@@ -602,6 +602,15 @@ void UDreamWidget::PostLoad()
 	EnsureWidgetGuid();
 }
 
+void UDreamWidget::PostDuplicate(EDuplicateMode::Type DuplicateMode)
+{
+	Super::PostDuplicate(DuplicateMode);
+	if (DuplicateMode == EDuplicateMode::PIE)
+	{
+		DreamUI::ReportCopiedIntoPlaySession(*this);
+	}
+}
+
 void UDreamWidget::BeginDestroy()
 {
 	if (bHasBegunPlay || bIsRegistered)

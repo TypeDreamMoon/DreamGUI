@@ -9,6 +9,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -27,6 +28,7 @@
 #include "Extensions/DreamUMGWidget.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
+#include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "UObject/Package.h"
@@ -188,6 +190,12 @@ bool FDreamLifecyclePasteLeavesNoPersistentMeshTest::RunTest(const FString& Para
 
 	const TArray<FString> Persistent = DreamTests::Lifecycle::FindPersistentCanvasMeshes(Level.World);
 	TestEqual(FString::Printf(TEXT("no canvas mesh in the level is one it would save, copy or duplicate for play (found: %s)"), *JoinLines(Persistent)), Persistent.Num(), 0);
+	TArray<FString> Bridges;
+	for (const DreamUI::FTreeBridge& Bridge : DreamUI::FindTreeBridges(*Level.World))
+	{
+		Bridges.Add(FString::Printf(TEXT("%s -> %s"), *Bridge.From, *Bridge.To));
+	}
+	TestEqual(FString::Printf(TEXT("and nothing the level keeps refers into a panel's tree (found: %s)"), *JoinLines(Bridges)), Bridges.Num(), 0);
 	for (AActor* PastedActor : Pasted)
 	{
 		const ADreamWorldWidgetActor* PastedPanel = Cast<ADreamWorldWidgetActor>(PastedActor);
@@ -220,8 +228,10 @@ bool FDreamLifecyclePlayAfterPasteTest::RunTest(const FString& Parameters)
 	TestEqual(FString::Printf(TEXT("before play, no texture in the process is zero-sized (found: %s)"), *JoinLines(DreamTests::Lifecycle::FindZeroSizeDynamicTextures())),
 		DreamTests::Lifecycle::FindZeroSizeDynamicTextures().Num(), 0);
 
+	const int32 CopiesBefore = DreamUI::GetCopiedIntoPlaySessionCount();
 	UWorld* PlayWorld = DreamTests::Lifecycle::DuplicateWorldForPlayInEditor(Level.World);
 	if (!TestNotNull(TEXT("the level was duplicated for play"), PlayWorld))return false;
+	const int32 TreeObjectsCopied = DreamUI::GetCopiedIntoPlaySessionCount() - CopiesBefore;
 	const TArray<FString> ZeroSize = DreamTests::Lifecycle::FindZeroSizeDynamicTextures();
 	const TArray<FString> ClonedTextures = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UTexture2DDynamic::StaticClass());
 	const TArray<FString> ClonedCanvases = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UDreamCanvas::StaticClass());
@@ -230,6 +240,7 @@ bool FDreamLifecyclePlayAfterPasteTest::RunTest(const FString& Parameters)
 	TestEqual(FString::Printf(TEXT("the duplication made no texture the RHI would refuse (found: %s)"), *JoinLines(ZeroSize)), ZeroSize.Num(), 0);
 	TestEqual(FString::Printf(TEXT("it cloned none of the editor panels' data textures (found: %s)"), *JoinLines(ClonedTextures)), ClonedTextures.Num(), 0);
 	TestEqual(FString::Printf(TEXT("nor any of their canvases: a panel in play builds its own tree (found: %s)"), *JoinLines(ClonedCanvases)), ClonedCanvases.Num(), 0);
+	TestEqual(TEXT("nor any other object of a widget tree"), TreeObjectsCopied, 0);
 	return true;
 }
 
@@ -337,14 +348,17 @@ bool FDreamLifecycleForeignMaterialBridgeTest::RunTest(const FString& Parameters
 	Shown->RegisterComponent();
 	Shown->OverrideMaterials.Add(CanvasMaterial);
 
+	const int32 CopiesBefore = DreamUI::GetCopiedIntoPlaySessionCount();
 	UWorld* PlayWorld = DreamTests::Lifecycle::DuplicateWorldForPlayInEditor(Level.World);
 	if (!TestNotNull(TEXT("the level was duplicated for play"), PlayWorld))return false;
+	const int32 TreeObjectsCopied = DreamUI::GetCopiedIntoPlaySessionCount() - CopiesBefore;
 	const TArray<FString> ZeroSize = DreamTests::Lifecycle::FindZeroSizeDynamicTextures();
 	const TArray<FString> ClonedTextures = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UTexture2DDynamic::StaticClass());
 	DreamTests::Lifecycle::DestroyDuplicatedWorld(PlayWorld);
 
 	TestEqual(FString::Printf(TEXT("the duplication made no texture the RHI would refuse (found: %s)"), *JoinLines(ZeroSize)), ZeroSize.Num(), 0);
 	TestEqual(FString::Printf(TEXT("and cloned no data texture: they are not in the world it duplicates (found: %s)"), *JoinLines(ClonedTextures)), ClonedTextures.Num(), 0);
+	TestEqual(TEXT("nor any object of the panel's tree"), TreeObjectsCopied, 0);
 	return true;
 }
 
@@ -501,6 +515,62 @@ bool FDreamLifecycleRenderTargetSurfaceTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("and the canvas leaves its flags alone"), Given->HasAnyFlags(RF_DuplicateTransient | RF_TextExportTransient));
 
 	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLifecycleTreeBridgeReportedTest,
+	"DreamGUI.Lifecycle.AReferenceIntoAPanelsTreeIsListedAndWhatAPlaySessionCopiesThroughItIsCounted",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamLifecycleTreeBridgeReportedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamLifecycleDuplicationTestLocal;
+
+	// A reference no flag of DreamGUI's can cut: a material instance someone else made inside the
+	// panel's tree, without the flags, kept by a static mesh component of another actor.
+	FScopedPanelClass Panel(TEXT("LifecycleTreeBridge"));
+	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
+	FScopedWorld Level(EWorldType::Editor);
+	ADreamWorldWidgetActor* Actor = PlacePanel(Level.World, Panel.GetClass());
+	if (!TestNotNull(TEXT("the panel was placed"), Actor))return false;
+	UDreamCanvas* Canvas = Actor->GetWidgetComponent()->GetLoadedCanvas();
+	if (!TestNotNull(TEXT("with a canvas"), Canvas))return false;
+	UMaterialInstanceDynamic* Foreign = UMaterialInstanceDynamic::Create(UMaterial::GetDefaultMaterial(MD_Surface), Canvas, TEXT("MadeInsideTheTree"));
+	if (!TestNotNull(TEXT("a material instance made inside the tree"), Foreign))return false;
+
+	AActor* Holder = Level.World->SpawnActor<AActor>();
+	if (!TestNotNull(TEXT("an actor for the static mesh"), Holder))return false;
+	UStaticMeshComponent* Shown = NewObject<UStaticMeshComponent>(Holder, TEXT("HoldsATreeMaterial"), RF_Transactional);
+	Holder->AddInstanceComponent(Shown);
+	Shown->RegisterComponent();
+	Shown->SetMaterial(0, Foreign);
+
+	const TArray<DreamUI::FTreeBridge> Bridges = DreamUI::FindTreeBridges(*Level.World);
+	if (TestEqual(TEXT("the one reference into a tree is listed"), Bridges.Num(), 1))
+	{
+		TestEqual(TEXT("from the component that holds it"), Bridges[0].From, Shown->GetPathName());
+		TestEqual(TEXT("to the material instance"), Bridges[0].To, Foreign->GetPathName());
+		TestEqual(TEXT("in the tree of the panel's actor"), Bridges[0].Host, Actor->GetPathName());
+		TestFalse(TEXT("which is not the holder's own"), Bridges[0].bIntoOwnHost);
+	}
+
+	// Following it, a play session's copy of the level clones the canvas and its outers: each is
+	// reported and counted where it is copied. The report ensures outside a test; this one expects it.
+	AddExpectedMessagePlain(TEXT("was copied into a play session's world"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 0);
+	const int32 CopiesBefore = DreamUI::GetCopiedIntoPlaySessionCount();
+	int32 TreeObjectsCopied = 0;
+	TArray<FString> ClonedCanvases;
+	{
+		DreamUI::FScopedExpectedCopiesIntoPlaySession Expected;
+		UWorld* PlayWorld = DreamTests::Lifecycle::DuplicateWorldForPlayInEditor(Level.World);
+		if (!TestNotNull(TEXT("the level was duplicated for play"), PlayWorld))return false;
+		TreeObjectsCopied = DreamUI::GetCopiedIntoPlaySessionCount() - CopiesBefore;
+		ClonedCanvases = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UDreamCanvas::StaticClass());
+		DreamTests::Lifecycle::DestroyDuplicatedWorld(PlayWorld);
+	}
+	TestEqual(TEXT("the copy followed the reference to the canvas"), ClonedCanvases.Num(), 1);
+	TestTrue(FString::Printf(TEXT("and every tree object it copied was counted (%d)"), TreeObjectsCopied), TreeObjectsCopied >= 2);
 	return true;
 }
 

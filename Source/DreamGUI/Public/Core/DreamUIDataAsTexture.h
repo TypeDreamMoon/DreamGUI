@@ -26,6 +26,8 @@ public:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	virtual void BeginDestroy() override;
+	/** A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession. */
+	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 private:
 	/**
 	 * Texture to fill buffer data, and decode to buffer in shader. Made at run time in the transient

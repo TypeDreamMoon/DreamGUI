@@ -112,6 +112,8 @@ public:
 	virtual void PostEditImport() override;
 #endif
 	virtual void OnRegister() override;
+	/** A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession. */
+	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 private:
 	/**
 	 * A canvas mesh is only ever made by UDreamCanvas::CheckUIMesh, and always transient. One that is not

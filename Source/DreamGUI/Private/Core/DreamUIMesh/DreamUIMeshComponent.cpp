@@ -1141,6 +1141,15 @@ void UDreamUIMeshComponent::PostEditImport()
 }
 #endif
 
+void UDreamUIMeshComponent::PostDuplicate(EDuplicateMode::Type DuplicateMode)
+{
+	Super::PostDuplicate(DuplicateMode);
+	if (DuplicateMode == EDuplicateMode::PIE)
+	{
+		DreamUI::ReportCopiedIntoPlaySession(*this);
+	}
+}
+
 void UDreamUIMeshComponent::OnRegister()
 {
 	// Before the base registers it: a pasted component registers straight after the paste, and nothing

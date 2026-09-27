@@ -2,7 +2,10 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
+
+class UWorld;
 
 namespace DreamUI
 {
@@ -21,4 +24,47 @@ namespace DreamUI
 	 * RF_Transient alone stops only the first of the three.
 	 */
 	inline constexpr EObjectFlags RuntimeObjectFlags = RF_Transient | RF_DuplicateTransient | RF_TextExportTransient;
+
+	/**
+	 * For PostDuplicate of the classes a play session's copy of a world must never hold: widgets, their
+	 * behaviours, canvas meshes, data textures. Reaching one means something the level keeps still refers
+	 * into a widget tree, directly or through an outer. The copy is logged with its path and counted, and
+	 * the first one of each play session ensures, so the reference shows up where it is crossed rather
+	 * than as a crash further on. FindTreeBridges (DreamGUI.Diag.FindTreeBridges) lists such references.
+	 */
+	DREAMGUI_API void ReportCopiedIntoPlaySession(const UObject& InCopy);
+
+	/** How many copies ReportCopiedIntoPlaySession has been told about since the process started. */
+	DREAMGUI_API int32 GetCopiedIntoPlaySessionCount();
+
+	/**
+	 * While one is alive, a copy is still logged and counted but does not ensure: for a test that makes
+	 * one on purpose.
+	 */
+	struct DREAMGUI_API FScopedExpectedCopiesIntoPlaySession
+	{
+		FScopedExpectedCopiesIntoPlaySession();
+		~FScopedExpectedCopiesIntoPlaySession();
+		UE_NONCOPYABLE(FScopedExpectedCopiesIntoPlaySession);
+	};
+
+	/** A reference from an object a level keeps into a widget tree. */
+	struct FTreeBridge
+	{
+		/** The object the level keeps: an actor, or one of its components or other sub-objects. */
+		FString From;
+		/** The object in the tree it refers to. */
+		FString To;
+		/** The actor whose presenter loaded that tree; empty when no presenter in the world did. */
+		FString Host;
+		/** Whether From belongs to that same actor. */
+		bool bIntoOwnHost = false;
+	};
+
+	/**
+	 * Every persistent reference -- one a save or a play session's duplication follows -- from an object
+	 * the levels of InWorld keep into a widget tree of InWorld. Each is a way for a copy of the level to
+	 * clone part of a tree. One into another actor's tree is the kind a paste leaves behind.
+	 */
+	DREAMGUI_API TArray<FTreeBridge> FindTreeBridges(const UWorld& InWorld);
 }

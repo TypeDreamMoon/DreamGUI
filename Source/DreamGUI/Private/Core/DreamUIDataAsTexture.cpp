@@ -27,6 +27,15 @@ void UDreamUIDataAsTexture::BeginDestroy()
 {
 	Super::BeginDestroy();
 }
+void UDreamUIDataAsTexture::PostDuplicate(EDuplicateMode::Type DuplicateMode)
+{
+	Super::PostDuplicate(DuplicateMode);
+	if (DuplicateMode == EDuplicateMode::PIE)
+	{
+		DreamUI::ReportCopiedIntoPlaySession(*this);
+	}
+}
+
 void UDreamUIDataAsTexture::CreateTexture()
 {
 	// A UTexture2DDynamic keeps its size and mip count outside its properties, so any copy of one -- a

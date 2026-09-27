@@ -5,6 +5,7 @@
 
 #include "DreamGUI.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/DreamUIWorldContext.h"
@@ -24,6 +25,15 @@ UDreamUIBehaviour::UDreamUIBehaviour()
 			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
 	}
 	CallbacksBeforeAwake.SetNumZeroed((int)ECallbackFunctionType::COUNT);
+}
+
+void UDreamUIBehaviour::PostDuplicate(EDuplicateMode::Type DuplicateMode)
+{
+	Super::PostDuplicate(DuplicateMode);
+	if (DuplicateMode == EDuplicateMode::PIE)
+	{
+		DreamUI::ReportCopiedIntoPlaySession(*this);
+	}
 }
 
 void UDreamUIBehaviour::BeginPlay()
