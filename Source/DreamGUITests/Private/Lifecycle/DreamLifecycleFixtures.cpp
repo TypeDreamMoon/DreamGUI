@@ -7,6 +7,7 @@
 #include "Components/MeshComponent.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -29,10 +30,31 @@ namespace DreamTests::Lifecycle
 
 	FScopedWorld::~FScopedWorld()
 	{
-		if (World != nullptr)
+		if (World == nullptr)
 		{
-			World->DestroyWorld(false);
+			return;
 		}
+		// The trees first. DestroyWorld leaves a registered tree to the collector, whose last-resort
+		// teardown reports it as leaked -- inside whichever test happens to collect next.
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World))
+		{
+			TArray<UDreamWidget*> Roots;
+			for (UDreamWidget* Widget : Manager->GetAllWidgetArray())
+			{
+				if (IsValid(Widget) && Widget->GetParent() == nullptr)
+				{
+					Roots.Add(Widget);
+				}
+			}
+			for (UDreamWidget* Root : Roots)
+			{
+				if (IsValid(Root))
+				{
+					Root->DestroyWidget();
+				}
+			}
+		}
+		World->DestroyWorld(false);
 	}
 
 	FScopedPanelClass::FScopedPanelClass(const TCHAR* InName)

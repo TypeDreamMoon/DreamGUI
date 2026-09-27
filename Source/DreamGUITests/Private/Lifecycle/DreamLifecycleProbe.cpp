@@ -141,7 +141,9 @@ namespace DreamTests::Lifecycle
 			return;
 		}
 		// Never initialised: no scene, physics or subsystems to shut down. What is left is letting every
-		// duplicated object go, the package with them.
+		// duplicated object go, the package with them -- to the next collection, whenever it runs. A
+		// collection started here would also collect whatever earlier tests left behind, and report it
+		// inside this one.
 		UPackage* Package = InDuplicate->GetOutermost();
 		ForEachObjectWithPackage(Package, [](UObject* Object)
 		{
@@ -151,7 +153,6 @@ namespace DreamTests::Lifecycle
 		}, EGetObjectsFlags::IncludeNestedObjects);
 		Package->ClearFlags(RF_Standalone | RF_Public);
 		Package->MarkAsGarbage();
-		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/ true);
 	}
 }
 

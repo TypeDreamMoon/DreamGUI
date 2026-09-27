@@ -19,7 +19,7 @@ class UWorld;
  */
 namespace DreamTests::Lifecycle
 {
-	/** A world of the given type for the length of a scope. */
+	/** A world of the given type for the length of a scope. Its widget trees are destroyed with it. */
 	struct FScopedWorld
 	{
 		UWorld* World = nullptr;
