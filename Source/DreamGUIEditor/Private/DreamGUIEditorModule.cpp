@@ -461,6 +461,16 @@ void FDreamGUIEditorModule::HandleBlueprintReinstanced()
 		{
 			continue;
 		}
+		// Registered ones only. A torn-down world stays in memory until the next collection and still
+		// passes IsValid -- UWorld::DestroyWorld unregisters its components but does not mark it garbage
+		// -- so the iterator hands back components of levels that are already gone. Reloading one built a
+		// tree into a world with no manager left in it, which nothing would ever tear down: the collector
+		// found it still registered and reported it inside whatever happened to collect next. A component
+		// that registers again loads its tree in OnRegister, from the class as it is by then.
+		if (!Component->IsRegistered())
+		{
+			continue;
+		}
 		// Editor worlds only. A PIE or game world tears its widgets down on EndPlay and builds them
 		// again on the next BeginPlay, and reloading underneath a running game would restart
 		// animations and lose whatever state the widget holds. Naming the two editor types rather

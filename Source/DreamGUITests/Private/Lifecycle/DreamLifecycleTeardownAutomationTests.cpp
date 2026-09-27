@@ -12,8 +12,10 @@
 #include "Core/DreamWorldWidgetActor.h"
 #include "Core/DreamWorldWidgetComponent.h"
 #include "Engine/World.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "UObject/UObjectIterator.h"
 
 /*
  * What goes down with a destroyed widget.
@@ -73,6 +75,57 @@ bool FDreamLifecycleDestroyTakesPartsDownTest::RunTest(const FString& Parameters
 	TestFalse(TEXT("and the visual of a widget under it"), WeakVisual.IsValid());
 	TestFalse(TEXT("and a material the canvas made"), WeakMaterial.IsValid());
 	TestFalse(TEXT("and the canvas's widget property data"), WeakPropertyData.IsValid());
+	return true;
+}
+
+/*
+ * A level that is gone stays gone.
+ *
+ * A torn-down world waits in memory for the collector with its components unregistered, and it still
+ * passes IsValid: UWorld::DestroyWorld does not mark it garbage. Every Blueprint compile ends with the
+ * editor reloading the trees of the panels placed in editor levels, so that they show the recompiled
+ * class -- and that used to take in the panels of levels already torn down. Each got a new tree,
+ * registered in a world with no manager left in it, which nothing would ever tear down; the collector
+ * reported it inside whatever test or edit collected next.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLifecycleCompileAfterTeardownTest,
+	"DreamGUI.Lifecycle.ABlueprintCompiledAfterALevelIsTornDownBuildsNoTreeInThatLevel",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamLifecycleCompileAfterTeardownTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTests::Lifecycle;
+
+	FScopedPanelClass Panel(TEXT("LifecycleCompileAfterTeardown"));
+	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
+	TWeakObjectPtr<UWorld> TornDown;
+	{
+		FScopedWorld Level(EWorldType::Editor);
+		if (!TestNotNull(TEXT("the panel was placed"), PlacePanel(Level.World, Panel.GetClass())))return false;
+		TornDown = Level.World;
+	}
+	if (!TestTrue(TEXT("the torn-down level is still in memory, waiting for the collector"), TornDown.IsValid()))return false;
+
+	FKismetEditorUtilities::CompileBlueprint(Panel.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+
+	TArray<UDreamWidget*> Built;
+	for (TObjectIterator<UDreamWidget> It; It; ++It)
+	{
+		if (IsValid(*It) && It->HasRegistered() && It->GetTypedOuter<UWorld>() == TornDown.Get())
+		{
+			Built.Add(*It);
+		}
+	}
+	TestEqual(TEXT("no widget is registered in the torn-down level after the compile"), Built.Num(), 0);
+	// Whatever a failure built is taken down here, not left for a later test's collection to report.
+	for (UDreamWidget* Widget : Built)
+	{
+		if (IsValid(Widget) && Widget->GetParent() == nullptr)
+		{
+			Widget->DestroyWidget();
+		}
+	}
 	return true;
 }
 
