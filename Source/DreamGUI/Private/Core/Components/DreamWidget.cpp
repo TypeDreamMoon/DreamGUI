@@ -25,6 +25,7 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetNavigation.h"
+#include "Core/DreamWidgetTree.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Event/DreamPointerEventData.h"
@@ -719,6 +720,36 @@ void UDreamWidget::DestroyWidget()
 				AppendSubtree(Child, TeardownWidgets, ScheduledWidgets);
 			}
 		}
+
+		/**
+		 * What InOuter owns and goes down with it: behaviours, the visual, the layout container, the
+		 * panel slot, and what those made in turn -- a canvas's material instances, render target, data.
+		 * Never a widget, though a widget may be outered to another (a child made with its parent as
+		 * outer is), because an outer does not change when a widget is moved: whether a child goes down
+		 * is the teardown list's call, which knows what was moved out while the subtree came down. Nor a
+		 * widget tree, which holds widgets. Nor a component still registered with its world, which is its
+		 * owner's to unregister first.
+		 */
+		static void AppendOwnedParts(UObject* InOuter, TArray<UObject*>& OutParts)
+		{
+			TArray<UObject*> Inner;
+			GetObjectsWithOuter(InOuter, Inner, /*bIncludeNestedObjects*/ false);
+			for (UObject* Object : Inner)
+			{
+				if (Object->IsA<UDreamWidget>() || Object->IsA<UDreamWidgetTree>()
+					|| !IsValid(Object) || Object->IsRooted()
+					|| Object->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed | RF_ClassDefaultObject | RF_ArchetypeObject))
+				{
+					continue;
+				}
+				if (const UActorComponent* Component = Cast<UActorComponent>(Object); Component != nullptr && Component->IsRegistered())
+				{
+					continue;
+				}
+				OutParts.Add(Object);
+				AppendOwnedParts(Object, OutParts);
+			}
+		}
 	};
 
 	TArray<TObjectPtr<UDreamWidget>> TeardownWidgets;
@@ -827,10 +858,26 @@ void UDreamWidget::DestroyWidget()
 			}
 			WidgetsToMark.Add(Widget);
 		}
+		// And each widget's parts with it, or a TWeakObjectPtr to a destroyed widget's canvas, visual or
+		// behaviour -- a delegate's target, a pending tween, the draw thread's view of a canvas -- would go
+		// on answering valid for as long as the collector left it. Collected before any mark, for the same
+		// reason as the widgets.
+		TArray<UObject*> PartsToMark;
+		for (UDreamWidget* Widget : WidgetsToMark)
+		{
+			LOCAL::AppendOwnedParts(Widget, PartsToMark);
+		}
 		for (UDreamWidget* Widget : WidgetsToMark)
 		{
 			Widget->Modify();
 			Widget->MarkAsGarbage();
+		}
+		// Modify() for the same reason as the widget's own: an undo of the delete has to bring the parts
+		// back to life too, and the transaction only restores what it was told about.
+		for (UObject* Part : PartsToMark)
+		{
+			Part->Modify();
+			Part->MarkAsGarbage();
 		}
 	}
 }

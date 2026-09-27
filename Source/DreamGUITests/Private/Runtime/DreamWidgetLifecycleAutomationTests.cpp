@@ -106,6 +106,14 @@ bool FDreamWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Par
 		return false;
 	}
 	MutationBehaviour->Configure(OriginalChild, LateChild, ExternalParent);
+	// A part of each widget the behaviour moves, to see which of them the teardown takes down.
+	UDreamWidgetHierarchyMutationBehaviour* OriginalChildPart = OriginalChild->AddComponent<UDreamWidgetHierarchyMutationBehaviour>();
+	UDreamWidgetHierarchyMutationBehaviour* LateChildPart = LateChild->AddComponent<UDreamWidgetHierarchyMutationBehaviour>();
+	if (!TestNotNull(TEXT("The original child has a part"), OriginalChildPart) || !TestNotNull(TEXT("The late child has a part"), LateChildPart))
+	{
+		World->DestroyWorld(false);
+		return false;
+	}
 
 	Root->OnRegister();
 	OriginalChild->OnRegister();
@@ -126,6 +134,11 @@ bool FDreamWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Par
 	// destroyed object. Being destroyed WITH Root is the stronger form of "the attach was honoured" --
 	// a late child that had been dropped on the floor instead would still be valid, like the one above.
 	TestFalse(TEXT("The child moved into the doomed subtree is destroyed with it"), IsValid(LateChild));
+	// Parts follow their widget. The original child is outered to Root, and still keeps its own: an outer
+	// does not change when a widget moves, so what goes down is decided by widget, never by outer.
+	TestFalse(TEXT("The doomed root's own behaviour goes down with it"), IsValid(MutationBehaviour));
+	TestTrue(TEXT("The child moved out keeps its parts"), IsValid(OriginalChildPart));
+	TestFalse(TEXT("The child moved in loses its parts with it"), IsValid(LateChildPart));
 	TestFalse(TEXT("Detached original child is still unregistered"), OriginalChild->HasRegistered());
 	TestFalse(TEXT("Detached original child still ends play"), OriginalChild->HasBegunPlay());
 	TestFalse(TEXT("Newly attached child is unregistered"), LateChild->HasRegistered());
