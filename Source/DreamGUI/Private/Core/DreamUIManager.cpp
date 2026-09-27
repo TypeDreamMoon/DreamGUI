@@ -1414,9 +1414,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// build and a memcmp, with no GPU write.
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIRefreshClipData);
-		for (auto& Canvas : AllCanvasArray)
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
 		{
-			if (Canvas.IsValid())
+			if (IsCanvasStillRegistered(Canvas))
 			{
 				Canvas->RefreshAllClipData();
 			}
@@ -1427,9 +1427,11 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
 		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
-			for (auto& Canvas : AllCanvasArray)
+			// A snapshot per pass: UpdateRootCanvas may make a render target and broadcast it, and a
+			// listener may register or unregister a canvas.
+			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
 			{
-				if (!Canvas.IsValid())continue;
+				if (!IsCanvasStillRegistered(Canvas))continue;
 				if (!Canvas->IsRootCanvas())continue;
 				if (Canvas->GetActualRenderMode() != RenderMode)continue;
 				Canvas->UpdateRootCanvas();
@@ -1447,9 +1449,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// until the owner happened to rebuild for some other reason; this sweep executes it the same frame.
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIRenderPrioritySort);
-		for (auto& Canvas : AllCanvasArray)
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
 		{
-			if (Canvas.IsValid())
+			if (IsCanvasStillRegistered(Canvas))
 			{
 				Canvas->ConsumePendingRenderPrioritySort();
 			}
@@ -1504,9 +1506,9 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 				}
 			};
 			auto bIsGameWorld = this->GetWorld()->IsGameWorld();
-			for (auto& Canvas : AllCanvasArray)
+			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
 			{
-				if (!Canvas.IsValid())continue;
+				if (!IsCanvasStillRegistered(Canvas))continue;
 				if (!Canvas->IsRootCanvas())continue;
 				LOCAL::ForEachWidget(this, Canvas->GetWidget(), bIsGameWorld);
 			}
@@ -1543,9 +1545,9 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 	//update draw-call
 	{
 		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
-			for (auto& Canvas : AllCanvasArray)
+			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
 			{
-				if (!Canvas.IsValid())continue;
+				if (!IsCanvasStillRegistered(Canvas))continue;
 				if (!Canvas->IsRootCanvas())continue;
 				if (Canvas->GetRenderMode() != RenderMode)continue;
 				Canvas->UpdateDrawCallBatchData();
@@ -1740,9 +1742,9 @@ void UDreamUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 			}
 		}
 		auto Instance = InstanceItem;
-		for (auto& Canvas : Instance->AllCanvasArray)
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Instance->SnapshotCanvases())
 		{
-			if (!Canvas.IsValid())continue;
+			if (!Instance->IsCanvasStillRegistered(Canvas))continue;
 			if (!Canvas->IsRootCanvas())continue;
 			if (auto Widget = Canvas->GetWidget())
 			{

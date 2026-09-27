@@ -4,8 +4,10 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Components/SceneComponent.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIManager.h"
 #include "Core/DreamWorldWidgetActor.h"
 #include "Core/DreamWorldWidgetComponent.h"
 #include "DreamUIBPLibrary.h"
@@ -68,6 +70,81 @@ bool FDreamLifecycleVisualFollowsItsCanvasTest::RunTest(const FString& Parameter
 	TestTrue(TEXT("and was marked to be written whole into the panel's canvas again"), Visual->MarkAllDirtyCount > 0);
 
 	Probe->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLifecycleCanvasRegisteredMidUpdateTest,
+	"DreamGUI.Lifecycle.ACanvasAddedOrRemovedWhileTheManagerUpdatesCanvasesWaitsItsTurn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamLifecycleCanvasRegisteredMidUpdateTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTests::Lifecycle;
+
+	// Two render-target canvases. The first makes its render target in the middle of the manager's pass
+	// over the canvases and says so; whoever listens gives a third widget a canvas and takes the second's
+	// away -- one canvas registered and one unregistered while the manager is walking them.
+	FScopedWorld Level(EWorldType::Editor);
+	AActor* Actor = Level.World->SpawnActor<AActor>();
+	if (!TestNotNull(TEXT("an actor to hang the canvases from"), Actor))return false;
+	USceneComponent* Anchor = NewObject<USceneComponent>(Actor, TEXT("Anchor"), RF_Transactional);
+	Actor->SetRootComponent(Anchor);
+	Actor->AddInstanceComponent(Anchor);
+	Anchor->RegisterComponent();
+
+	TArray<UDreamWidget*> Roots;
+	auto MakeRoot = [&Roots, &Level, Anchor](const TCHAR* InName) -> UDreamWidget*
+	{
+		UDreamWidget* Root = UDreamUIBPLibrary::ConstructWidget(Level.World, InName, nullptr);
+		if (Root != nullptr)
+		{
+			UDreamUIBPLibrary::AttachWidgetToSceneComponent(Root, Anchor);
+			Roots.Add(Root);
+		}
+		return Root;
+	};
+	UDreamWidget* First = MakeRoot(TEXT("First"));
+	UDreamWidget* Second = MakeRoot(TEXT("Second"));
+	UDreamWidget* Third = MakeRoot(TEXT("Third"));
+	UDreamCanvas* FirstCanvas = First != nullptr ? First->AddComponent<UDreamCanvas>() : nullptr;
+	UDreamCanvas* SecondCanvas = Second != nullptr ? Second->AddComponent<UDreamCanvas>() : nullptr;
+	if (!TestNotNull(TEXT("the first canvas"), FirstCanvas) || !TestNotNull(TEXT("the second canvas"), SecondCanvas) || !TestNotNull(TEXT("a third widget"), Third))
+	{
+		for (UDreamWidget* Root : Roots)
+		{
+			Root->DestroyWidget();
+		}
+		return false;
+	}
+	FirstCanvas->SetRenderMode(EDreamRenderMode::RenderTarget);
+	SecondCanvas->SetRenderMode(EDreamRenderMode::RenderTarget);
+
+	UDreamCanvas* ThirdCanvas = nullptr;
+	int32 Broadcasts = 0;
+	FirstCanvas->GetRenderTargetChangedEvent().AddLambda([&](UTextureRenderTarget2D*)
+	{
+		if (Broadcasts++ == 0)
+		{
+			ThirdCanvas = Third->AddComponent<UDreamCanvas>();
+			Second->RemoveComponent(SecondCanvas);
+		}
+	});
+	const TWeakObjectPtr<UDreamCanvas> WeakSecondCanvas(SecondCanvas);
+	DrawFrames(Level.World, 2);
+
+	const UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Level.World);
+	if (TestNotNull(TEXT("the world has a manager"), Manager))
+	{
+		TestTrue(TEXT("the listener ran, in the middle of the manager's pass"), Broadcasts > 0);
+		TestTrue(TEXT("the canvas it added is registered"), ThirdCanvas != nullptr && Manager->GetAllCanvasArray().Contains(ThirdCanvas));
+		TestFalse(TEXT("the canvas it removed is not"), Manager->GetAllCanvasArray().Contains(WeakSecondCanvas));
+		TestTrue(TEXT("and the first canvas still is"), Manager->GetAllCanvasArray().Contains(FirstCanvas));
+	}
+	for (UDreamWidget* Root : Roots)
+	{
+		Root->DestroyWidget();
+	}
 	return true;
 }
 

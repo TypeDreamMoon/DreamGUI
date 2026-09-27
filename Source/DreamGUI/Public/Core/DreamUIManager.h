@@ -303,6 +303,15 @@ public:
 	const TArray<TWeakObjectPtr<UDreamCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
 	void AddCanvas(UDreamCanvas* InCanvas);
 	void RemoveCanvas(UDreamCanvas* InCanvas);
+	/**
+	 * The registered canvases as they are now, for a loop whose calls may register or unregister a
+	 * canvas -- updating a root canvas can make a render target and tell whoever listens, and a listener
+	 * may add or remove a canvas. A ranged-for over the registry itself asserts the moment that happens.
+	 * Check each entry with IsCanvasStillRegistered before calling into it.
+	 */
+	TArray<TWeakObjectPtr<UDreamCanvas>> SnapshotCanvases()const{return AllCanvasArray;}
+	/** Whether a canvas from a snapshot is alive and still registered here. */
+	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const{return InCanvas.IsValid() && AllCanvasArray.Contains(InCanvas);}
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;
 	/**
 	 * Root canvases in ScreenSpaceOverlay mode that are actually competing for the screen. Inactive
