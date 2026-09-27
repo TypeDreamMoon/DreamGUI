@@ -107,7 +107,21 @@ class DREAMGUI_API UDreamUIMeshComponent : public UMeshComponent
 public:
 	UDreamUIMeshComponent();
 	virtual void PostInitProperties() override;
+	virtual void PostLoad() override;
+#if WITH_EDITOR
+	virtual void PostEditImport() override;
+#endif
+	virtual void OnRegister() override;
 private:
+	/**
+	 * A canvas mesh is only ever made by UDreamCanvas::CheckUIMesh, and always transient. One that is not
+	 * came from a paste -- an import gives what it creates the pasted actor's flags -- or from a map saved
+	 * before the canvas marked its mesh text-export transient. It has no canvas and draws nothing, but its
+	 * materials name another panel's tree, and a play-in-editor duplication carries every non-transient
+	 * component of an actor, so it would clone that tree. This makes such a mesh inert and keeps it from
+	 * being saved, copied or duplicated again.
+	 */
+	void NeutralizeIfOrphan();
 	void UpdateMeshSectionRenderData(FDreamUIRenderSection_Mesh* InMeshSection, bool InRequireNormalAndTangent);
 	void ExpandMeshSectionRenderData(FDreamUIRenderSection_Mesh* InMeshSection);
 	/**

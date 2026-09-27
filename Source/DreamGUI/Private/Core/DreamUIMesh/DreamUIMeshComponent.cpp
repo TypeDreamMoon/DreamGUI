@@ -20,6 +20,7 @@
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIWorldContext.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "RHIResourceUtils.h"
 
 
@@ -1111,6 +1112,41 @@ UDreamUIMeshComponent::UDreamUIMeshComponent()
 void UDreamUIMeshComponent::PostInitProperties()
 {
 	Super::PostInitProperties();
+}
+
+void UDreamUIMeshComponent::NeutralizeIfOrphan()
+{
+	if (IsTemplate() || HasAnyFlags(RF_Transient))
+	{
+		return;
+	}
+	// Not destroyed here: PostLoad, PostEditImport and OnRegister are no place to destroy a component.
+	// Without materials and sections it draws nothing, and transient it is gone at the next save.
+	OverrideMaterials.Reset();
+	SetFlags(DreamUI::RuntimeObjectFlags);
+	UE_LOG(DreamGUI, Warning, TEXT("%s: neutralized an orphaned canvas mesh (a copy of another panel's mesh, pasted or saved by an older build); it draws nothing and will not be saved, copied or duplicated again."), *GetPathName());
+}
+
+void UDreamUIMeshComponent::PostLoad()
+{
+	Super::PostLoad();
+	NeutralizeIfOrphan();
+}
+
+#if WITH_EDITOR
+void UDreamUIMeshComponent::PostEditImport()
+{
+	Super::PostEditImport();
+	NeutralizeIfOrphan();
+}
+#endif
+
+void UDreamUIMeshComponent::OnRegister()
+{
+	// Before the base registers it: a pasted component registers straight after the paste, and nothing
+	// should reach the scene still holding another panel's materials.
+	NeutralizeIfOrphan();
+	Super::OnRegister();
 }
 
 TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDreamUIRenderSectionType InType, FDreamUIDrawCall* InDrawCallData)

@@ -35,6 +35,7 @@
 #include "Core/DreamCanvasDrawCallProcessingRunnable.h"
 #include "Core/DreamUIClipData.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamLayout.h"
 
 
@@ -1733,10 +1734,13 @@ void UDreamCanvas::CheckUIMesh()const
 			}
 		}
 		auto ObjectName = MakeUniqueObjectName(MeshOuter, MeshType, FName(*this->GetWidget()->GetDisplayName()));
-		// DuplicateTransient alongside Transient: duplicating the host actor -- PIE, or a copy-paste in
-		// the level -- must not carry a mesh built for the original's tree into the copy, which builds
-		// its own.
-		UIMesh = NewObject<UDreamUIMeshComponent>(MeshOuter, MeshType, ObjectName, RF_Transient | RF_DuplicateTransient);
+		// Never saved, duplicated or copied: a copy of the host actor builds its own tree and its own mesh.
+		// TextExportTransient matters most here. The level editor's Copy writes out every object inside a
+		// copied actor that lacks it -- Transient does not keep an object out of the text -- and Paste made
+		// that text an ordinary, non-transient component of the new actor, still naming this canvas's
+		// materials. A play-in-editor duplication carries every non-transient component of an actor, so it
+		// followed those materials into this tree and cloned its data textures without their size.
+		UIMesh = NewObject<UDreamUIMeshComponent>(MeshOuter, MeshType, ObjectName, DreamUI::RuntimeObjectFlags);
 		UIMesh->RegisterComponentWithWorld(this->GetWorld());
 		// The same host the outer came from, so the mesh is in the actor's attachment tree as well as
 		// in its component list. A scene component that an actor owns but that hangs off nothing is a

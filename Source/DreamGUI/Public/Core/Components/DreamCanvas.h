@@ -863,7 +863,7 @@ private:
 	float OverrideFovAngle = 0;
 	FMatrix OverrideProjectionMatrix = FMatrix::Identity;
 
-	UPROPERTY(Transient)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	mutable TObjectPtr<UDreamUIMeshComponent> UIMesh;//current using UIMesh.
 	//DefaultMaterial created MaterialInstanceDynamic pool 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
