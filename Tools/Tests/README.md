@@ -10,6 +10,7 @@ judge the result lives here, next to the tests it runs.
 | `digest.py` | Judges one editor run from the engine's JSON report and the log; also reduces a build log |
 | `known-issues.json` | Tests known to be red that must not turn a run red |
 | `static_checks.py`, `static-checks-allow.json` | Cheap checks of the C++ and of the tests' own rules, and the findings they accept |
+| `module-owners.csv`, `layering-allow.json` | The module each runtime file is headed for, and the includes across those layers still to be cut |
 | `coverage_matrix.py`, `coverage.json`, `COVERAGE.md` | The control-by-input-by-configuration coverage table and its tag convention |
 | `sourcescan.py` | What the source declares as tests, shared by all of the above |
 | `hooks/pre-push`, `Install-DreamGUIHooks.ps1` | The optional pre-push hook and its installer |
@@ -194,6 +195,15 @@ HitContainer.HitResult.Widget = Target;   // static-checks: allow(hand-fed-hit) 
 (on the line or the line above), or in `static-checks-allow.json` with a path glob, an optional
 regular expression and a reason. Allow entries that no longer match anything are listed at the end
 of each run.
+
+The layering rules hold the runtime files to the modules the plugin is being split into.
+`module-owners.csv` says which module each file is headed for -- `DreamGUIRenderer` at the bottom, then
+`DreamGUI`, `DreamGUIInput`, `DreamGUIControls` and `DreamGUIExtensions` side by side, `DreamGUISamples` on
+top; a file not listed is headed for the module it sits in. A file may include its own module's
+headers and lower layers' headers, never a higher layer's or a sibling's (`layering`). The includes
+that still do are listed in `layering-allow.json`, and that list only gets shorter: an entry whose
+include is gone is itself an error (`layering-stale`) and comes off. A file that moves or is added
+gets its row in `module-owners.csv` in the same change.
 
 `--fix-eol` rewrites the line endings of the files the branch touched to what `.gitattributes` asks
 for, or else to the repository's majority (CRLF: `core.autocrlf=true` keeps the index LF and checks

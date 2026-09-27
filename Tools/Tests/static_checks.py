@@ -28,6 +28,11 @@ Rules (--list-rules prints them with their reasons):
                          module; the other modules' files this branch touched). Identifiers are
                          never read: BuildSettingsVersion.V7 is the engine's, not a label.
     eol                  (warning) a new file whose line endings differ from the rest of the repository
+  Layers (module-owners.csv says which module each runtime file is headed for):
+    layering             a runtime file including a header of a higher layer or of a sibling, which is
+                         not on the list of includes still to be cut (layering-allow.json)
+    layering-stale       an entry on that list that no longer happens: the list only shrinks, so a cut
+                         edge comes off it
 
 A finding can be allowed where it stands, with a comment on its line or the line above:
 
@@ -63,6 +68,18 @@ TEST_DIR = 'Source/DreamGUITests/'
 DRIVER_DIR = 'Source/DreamGUITests/Private/Driver/'
 DEFAULT_ALLOW = os.path.join(HERE, 'static-checks-allow.json')
 DEFAULT_COVERAGE = os.path.join(HERE, 'coverage.json')
+MODULE_OWNERS = os.path.join(HERE, 'module-owners.csv')
+LAYERING_ALLOW = os.path.join(HERE, 'layering-allow.json')
+# The runtime modules the plugin is being split into, bottom up. A file may include its own module's
+# headers and those of lower layers; never a higher layer's, and never a sibling's (same number).
+LAYERS = collections.OrderedDict([
+    ('DreamGUIRenderer', 0),
+    ('DreamGUI', 1),
+    ('DreamGUIInput', 2),
+    ('DreamGUIControls', 3),
+    ('DreamGUIExtensions', 3),
+    ('DreamGUISamples', 4),
+])
 TEXT_EXTS = ('.h', '.hpp', '.inl', '.cpp', '.cs', '.json', '.md', '.ini', '.uplugin', '.uproject', '.usf', '.ush',
              '.py', '.ps1', '.psm1', '.sh', '.txt', '.dui', '.dss', '.xml', '.html', '.css', '.js',
              '.gitattributes', '.gitignore')
@@ -84,6 +101,8 @@ RULES = collections.OrderedDict([
     ('rig-needs-bindtest', 'An unbound rig reports nothing to the test; its steps can fail without the test failing.'),
     ('plan-label', 'Planning labels do not belong in the code, the test names or the comments.'),
     ('eol', 'Mixed line endings make every later diff of the file noisy.'),
+    ('layering', 'A lower layer that includes a higher one cannot be split from it; every new edge is one more to cut.'),
+    ('layering-stale', 'The list of edges still to cut only shrinks: an edge that is gone comes off it.'),
 ])
 WARNING_RULES = frozenset(['eol'])
 
@@ -682,6 +701,101 @@ def filter_allowed(root, findings, allow):
 
 # ------------------------------------------------------------------------------------------------
 
+
+# ------------------------------------------------------------------------------------------------
+# layering
+# ------------------------------------------------------------------------------------------------
+
+INCLUDE_LINE = re.compile(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', re.M)
+
+
+def load_module_owners(path=MODULE_OWNERS):
+    """path -> module, for every runtime file the table assigns."""
+    import csv
+    with open(path, encoding='utf-8-sig', newline='') as f:
+        return dict((r['path'], r['module']) for r in csv.DictReader(f))
+
+
+def owner_of(rel, owners):
+    """The module a runtime file is headed for: the table's answer, else the module it sits in today."""
+    if rel in owners:
+        return owners[rel]
+    parts = rel.split('/')
+    if len(parts) > 2 and parts[0] == 'Source' and parts[1] in LAYERS:
+        return parts[1]
+    return None
+
+
+def resolve_include(root, includer_rel, include, module_dirs):
+    """The repository path of a quoted include, or None when it is not one of the plugin's own files."""
+    include = include.replace('\\', '/')
+    here = os.path.dirname(includer_rel)
+    candidates = [os.path.normpath(os.path.join(here, include)).replace(os.sep, '/')]
+    for module in module_dirs:
+        for sub in ('Public', 'Private', 'Classes'):
+            candidates.append('Source/%s/%s/%s' % (module, sub, include))
+    for rel in candidates:
+        if os.path.isfile(os.path.join(root, rel)):
+            return rel
+    return None
+
+
+def layering_edges(root, owners):
+    """Every include from a runtime file into a header of a higher layer or of a sibling: (file, header, from, to)."""
+    source = os.path.join(root, 'Source')
+    module_dirs = sorted(d for d in os.listdir(source) if os.path.isdir(os.path.join(source, d)))
+    edges = []
+    for module in LAYERS:
+        base = os.path.join(source, module)
+        if not os.path.isdir(base):
+            continue
+        for path in sourcescan.source_files(root, 'Source/' + module, ('.h', '.cpp', '.inl')):
+            rel = os.path.relpath(path, root).replace(os.sep, '/')
+            src_owner = owner_of(rel, owners)
+            if src_owner not in LAYERS:
+                continue
+            with open(path, encoding='utf-8-sig', errors='replace') as f:
+                text = f.read()
+            for m in INCLUDE_LINE.finditer(text):
+                target = resolve_include(root, rel, m.group(1), module_dirs)
+                if target is None:
+                    continue
+                dst_owner = owner_of(target, owners)
+                if dst_owner not in LAYERS or dst_owner == src_owner:
+                    continue
+                if LAYERS[dst_owner] < LAYERS[src_owner]:
+                    continue
+                line = text.count('\n', 0, m.start()) + 1
+                edges.append((rel, target, src_owner, dst_owner, line))
+    return edges
+
+
+def check_layering(root, findings, want):
+    if 'layering' not in want and 'layering-stale' not in want:
+        return
+    import json
+    owners = load_module_owners()
+    with open(LAYERING_ALLOW, encoding='utf-8-sig') as f:
+        allowed = json.load(f)
+    allowed_pairs = set((e['file'], e['include']) for e in allowed.get('edges', []))
+    seen = set()
+    for rel, target, src_owner, dst_owner, line in layering_edges(root, owners):
+        seen.add((rel, target))
+        if (rel, target) in allowed_pairs:
+            continue
+        if 'layering' in want:
+            findings.append(Finding('layering', rel, line,
+                                    '%s (headed for %s) includes %s (headed for %s), a %s layer; cut the edge or, while it '
+                                    'is still waiting to be cut, list it in layering-allow.json'
+                                    % (os.path.basename(rel), src_owner, target, dst_owner,
+                                       'sibling' if LAYERS[dst_owner] == LAYERS[src_owner] else 'higher')))
+    if 'layering-stale' in want:
+        for e in allowed.get('edges', []):
+            if (e['file'], e['include']) not in seen:
+                findings.append(Finding('layering-stale', e['file'], 0,
+                                        'no longer includes %s: take the entry off layering-allow.json' % e['include']))
+
+
 def main(argv=None):
     sourcescan.console_safe()
     ap = argparse.ArgumentParser(description='Static checks over the plugin source (see the module docstring).')
@@ -721,6 +835,7 @@ def main(argv=None):
         check_tests(root, findings, want, ns.coverage)
         check_words(root, git, findings, want)
         check_eol(root, git, findings, want)
+        check_layering(root, findings, want)
         allow = load_allow(ns.allow)
     except Exception:  # noqa: BLE001 -- a crash here must read as "could not run", not as findings
         import traceback
