@@ -177,7 +177,7 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
 
 ## How it differs from upstream
 
-Forked from upstream `LexUI/5.7` at `765efeaf1` (2026-07-13); 214 commits since.
+Forked from upstream `LexUI/5.7` at `765efeaf1` (2026-07-13), and the upstream commits up to `97d281376` (2026-07-21) were rebased in afterwards: `97d281376` is the upstream this code starts from, and its content is this repository's `5b48c42a`. Diff against that, not against `765efeaf1` or a merge base, or the rebased commits count as this fork's changes. Upstream fixes after it are ported by hand.
 
 Upstream is actively developed, but the two branches can no longer be merged cheaply:
 
