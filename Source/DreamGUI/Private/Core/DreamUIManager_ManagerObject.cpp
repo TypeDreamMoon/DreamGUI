@@ -372,6 +372,26 @@ bool UDreamUISelection::IsSelected(UDreamWidget* Widget)const
 {
 	return SelectedWidgetArray.Contains(Widget);
 }
+#else
+// The selection is the designer's, and a game has no designer. The reflected functions are declared in
+// every build all the same -- UHT generates their thunks either way -- so outside the editor they exist,
+// answer "no selection" and do nothing.
+UDreamUISelection* UDreamUISelection::GetInstance(UWorld* InWorld)
+{
+	return nullptr;
+}
+
+void UDreamUISelection::SelectWidget(UDreamWidget* Widget)
+{
+}
+
+void UDreamUISelection::DeselectWidget(UDreamWidget* Widget)
+{
+}
+
+void UDreamUISelection::SelectNone()
+{
+}
 #endif
 
 #undef LOCTEXT_NAMESPACE

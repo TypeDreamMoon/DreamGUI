@@ -448,9 +448,10 @@ FT_FaceRec_* UDreamUIFontData_FreeTypeRender::GetFreeTypeFace(int32 FaceIndex)
 }
 #endif
 
-#if WITH_HARFBUZZ
+#if WITH_HARFBUZZ && !IS_MONOLITHIC
 // The engine's HarfBuzz is built to allocate through these hooks. SlateCore defines its own copy
-// inside its DLL; a module that links the static library needs one of its own.
+// inside its DLL; a module that links the static library needs one of its own. Not in a monolithic
+// build, where SlateCore and this module are one image and SlateCore's copy is the one.
 extern "C"
 {
 	void* HarfBuzzMalloc(size_t InSizeBytes)

@@ -2558,8 +2558,13 @@ namespace DreamUITextBuilderLocal
 		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)
 		{
 			const FMovieScenePossessable& Possessable = MovieScene->GetPossessable(Index);
+			// A possessable's class is editor-only data, so a game build goes by the name alone -- which
+			// already says which object it is, since a visual's or a behaviour's binding carries its class.
 			if (Possessable.GetName() == BindingName
-				&& Possessable.GetPossessedObjectClass() == Resolved.Object->GetClass())
+#if WITH_EDITORONLY_DATA
+				&& Possessable.GetPossessedObjectClass() == Resolved.Object->GetClass()
+#endif
+				)
 			{
 				Binding = Possessable.GetGuid();
 				break;
