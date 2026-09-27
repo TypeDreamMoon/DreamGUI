@@ -387,6 +387,13 @@ void UDreamCanvas::PostInitProperties()
 
 void UDreamCanvas::ClearDrawCall()
 {
+	// Out of the parent canvas's mesh first. A canvas clears its draw calls when it is about to draw
+	// some other way -- sorting itself, rendering to its own target -- and a mesh still hooked into the
+	// parent's as a child section goes on being drawn by the parent as well.
+	if (IsValid(UIMesh) && ParentCanvas.IsValid())
+	{
+		UIMesh->ClearParentCanvasMeshComp(ParentCanvas->GetUIMesh());
+	}
 	if (IsValid(UIMesh))
 	{
 		UIMesh->ClearRenderData();
@@ -730,6 +737,10 @@ void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 	auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamCanvas, bForceRenderToTarget))
 	{
+		// What the setter does, for the same reason: the canvas stops, or starts, being drawn as part
+		// of its root.
+		ClearDrawCall();
+		CheckRootCanvas(true);
 		if (bForceRenderToTarget)
 		{
 			RenderMode = EDreamRenderMode::RenderTarget;
@@ -739,6 +750,10 @@ void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		{
 			OnRenderTargetChanged.Broadcast(nullptr);
 		}
+	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamCanvas, bOverrideSorting))
+	{
+		ClearDrawCall();
 	}
 
 	//The Details panel writes ProjectionType/FieldOfView/the clip planes/the overrides straight into the
@@ -2481,6 +2496,12 @@ void UDreamCanvas::SetOverrideSorting(bool Value)
 	if (bOverrideSorting != Value)
 	{
 		bOverrideSorting = Value;
+		// Sorted on its own now, or with its parent again: either way its mesh must not stay hooked
+		// into the parent's as a child section, or the parent draws it too, in the parent's order.
+		if (IsValid(UIMesh) && ParentCanvas.IsValid())
+		{
+			UIMesh->ClearParentCanvasMeshComp(ParentCanvas->GetUIMesh());
+		}
 		if (CheckRootCanvas())
 		{
 			RootCanvas->bNeedToSortRenderPriority = true;
@@ -2705,6 +2726,11 @@ void UDreamCanvas::SetForceRenderToTarget(bool Value)
 	if (bForceRenderToTarget != Value)
 	{
 		bForceRenderToTarget = Value;
+		// A canvas that renders to its own target is a root of its own, and one that stops is part of
+		// its parent's root again: the draw calls built for the other arrangement are dropped, and the
+		// root is looked up afresh rather than taken from the cache.
+		ClearDrawCall();
+		CheckRootCanvas(true);
 		if (bForceRenderToTarget)
 		{
 			MarkCanvasUpdate(true);
@@ -3022,6 +3048,36 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 		OnViewportParameterChanged();
 		return;
 	}
+	// The viewport is the render target's only when the canvas follows the target. With
+	// RenderTargetFitToCanvas the target follows the canvas, and sizing the canvas from it would chase
+	// its own tail.
+	const auto ApplyRenderTargetSize = [this]()
+	{
+		switch (RenderTargetSizeMode)
+		{
+		case EDreamCanvasRenderTargetSizeMode::None:
+		case EDreamCanvasRenderTargetSizeMode::CanvasFitToRenderTarget:
+			if (IsValid(RenderTarget))
+			{
+				ViewportSize.X = RenderTarget->SizeX / RenderTargetResolutionScale;
+				ViewportSize.Y = RenderTarget->SizeY / RenderTargetResolutionScale;
+				OnViewportParameterChanged();
+			}
+			break;
+		case EDreamCanvasRenderTargetSizeMode::RenderTargetFitToCanvas:
+			break;
+		}
+	};
+	if (bForceRenderToTarget)
+	{
+		// A child canvas forced into its own target has a viewport of its own, whatever its root's is.
+		ApplyRenderTargetSize();
+		return;
+	}
+	if (!this->IsRootCanvas())
+	{
+		return;
+	}
 	switch (this->GetRenderMode())
 	{
 	case EDreamRenderMode::ScreenSpaceOverlay:
@@ -3032,12 +3088,7 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 	break;
 	case EDreamRenderMode::RenderTarget:
 	{
-		if (IsValid(RenderTarget))
-		{
-			ViewportSize.X = RenderTarget->SizeX / RenderTargetResolutionScale;
-			ViewportSize.Y = RenderTarget->SizeY / RenderTargetResolutionScale;
-			OnViewportParameterChanged();
-		}
+		ApplyRenderTargetSize();
 	}
 	break;
 	}
