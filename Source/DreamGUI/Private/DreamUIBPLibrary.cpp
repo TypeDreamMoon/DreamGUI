@@ -10,6 +10,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
@@ -69,7 +70,8 @@ UDreamWidget* UDreamUIBPLibrary::ConstructWidget(UObject* WorldContextObject, co
 	}
 	// Outer is the world, not the caller: GetTypedOuter<UWorld>() has to resolve or the widget never
 	// finds a manager. Outering to a GameInstance -- the habit UMG teaches -- would fail that test.
-	UDreamWidget* Widget = NewObject<UDreamWidget>(World, NAME_None, RF_Public | RF_Transactional);
+	// Not transactional: a widget made in a world is not undo's to restore (DreamUI::TransactionalFlagFor).
+	UDreamWidget* Widget = NewObject<UDreamWidget>(World, NAME_None, RF_Public | DreamUI::TransactionalFlagFor(World));
 	Widget->SetDisplayName(DisplayName.IsEmpty() ? TEXT("Widget") : DisplayName);
 	if (UClass* ResolvedVisualClass = VisualClass.Get();
 		ResolvedVisualClass != nullptr && !ResolvedVisualClass->HasAnyClassFlags(CLASS_Abstract))

@@ -67,6 +67,28 @@ DreamUI::FScopedExpectedCopiesIntoPlaySession::~FScopedExpectedCopiesIntoPlaySes
 	--DreamUIRuntimeObjectLocal::ExpectedCopiesDepth;
 }
 
+bool DreamUI::IsKeptByUndo(const UObject& InObject)
+{
+	return InObject.HasAnyFlags(RF_Transactional) && !InObject.HasAnyFlags(RF_Transient);
+}
+
+void DreamUI::ModifyIfKeptByUndo(UObject& InObject)
+{
+	if (IsKeptByUndo(InObject))
+	{
+		InObject.Modify();
+	}
+}
+
+EObjectFlags DreamUI::TransactionalFlagFor(const UObject* InOuter)
+{
+	if (InOuter == nullptr || !IsKeptByUndo(*InOuter) || InOuter->IsA<UWorld>())
+	{
+		return RF_NoFlags;
+	}
+	return RF_Transactional;
+}
+
 TArray<DreamUI::FTreeBridge> DreamUI::FindTreeBridges(const UWorld& InWorld)
 {
 	using namespace DreamUIRuntimeObjectLocal;

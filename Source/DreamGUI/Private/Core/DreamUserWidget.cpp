@@ -2056,7 +2056,8 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 		Owner = OwnedTree;
 	}
 
-	UDreamUserWidget* UserWidget = NewObject<UDreamUserWidget>(Owner, InClass, NAME_None, RF_Transactional);
+	// Transactional only inside an authored tree; a widget made in a world is not undo's to restore.
+	UDreamUserWidget* UserWidget = NewObject<UDreamUserWidget>(Owner, InClass, NAME_None, DreamUI::TransactionalFlagFor(Owner));
 	if (OwnedTree != nullptr)
 	{
 		OwnedTree->RootWidget = UserWidget;

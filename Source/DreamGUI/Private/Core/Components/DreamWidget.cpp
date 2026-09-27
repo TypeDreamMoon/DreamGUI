@@ -57,7 +57,7 @@ namespace
 #if WITH_EDITOR
 		if (const UWorld* World = ChildWidget->GetWorld(); !World || !World->IsGameWorld())
 		{
-			ChildWidget->Modify();
+			DreamUI::ModifyIfKeptByUndo(*ChildWidget);
 		}
 #endif
 		ChildWidget->RemovePanelSlot();
@@ -85,7 +85,7 @@ namespace
 #if WITH_EDITOR
 		if (const UWorld* World = ChildWidget->GetWorld(); !World || !World->IsGameWorld())
 		{
-			ChildWidget->Modify();
+			DreamUI::ModifyIfKeptByUndo(*ChildWidget);
 		}
 #endif
 		UDreamPanelSlot* NewSlot = ChildWidget->CreateNewPanelSlot<UDreamPanelSlot>();
@@ -871,16 +871,19 @@ void UDreamWidget::DestroyWidget()
 		{
 			LOCAL::AppendOwnedParts(Widget, PartsToMark);
 		}
+		// Recorded only where undo keeps the widget -- an authored one in the designer. A tree the level
+		// editor or a preview built is transient: recording it is how undoing an unrelated edit brought
+		// back a tree its host had destroyed, and marked the map dirty on the way.
 		for (UDreamWidget* Widget : WidgetsToMark)
 		{
-			Widget->Modify();
+			DreamUI::ModifyIfKeptByUndo(*Widget);
 			Widget->MarkAsGarbage();
 		}
-		// Modify() for the same reason as the widget's own: an undo of the delete has to bring the parts
-		// back to life too, and the transaction only restores what it was told about.
+		// The same for the parts: an undo of the delete has to bring them back to life too, and the
+		// transaction only restores what it was told about.
 		for (UObject* Part : PartsToMark)
 		{
-			Part->Modify();
+			DreamUI::ModifyIfKeptByUndo(*Part);
 			Part->MarkAsGarbage();
 		}
 	}
@@ -1287,8 +1290,12 @@ void UDreamWidget::PostEditUndo()
 	// Re-register if unregistered (e.g., undo of a delete operation via DeleteForUndo).
 	// bIsRegistered is not a UPROPERTY so it is not saved/restored by the undo system;
 	// after soft-delete it remains false, so we need to call OnRegister() explicitly.
+	// Only for a widget undo keeps -- an authored one, in an asset or in a level. A tree made while a
+	// world runs -- a presenter's, the designer preview's, a screen's -- belongs to the host that built
+	// it, and whether it comes back is that host's call: registering it from here brought back trees
+	// their hosts had destroyed.
 	const bool bWasRegistered = bIsRegistered;
-	if (!bIsRegistered)
+	if (!bIsRegistered && DreamUI::IsKeptByUndo(*this))
 	{
 		struct LOCAL
 		{
@@ -3158,10 +3165,14 @@ UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InS
 			// Flags from the source, not fixed here: a copy of a transient preview widget must not
 			// become a saveable one, a copy of a widget the level editor keeps out of every copy of
 			// the level must stay out too, and a copy of an authored widget has to stay
-			// transactional or undo cannot reach it.
+			// transactional or undo cannot reach it -- but only where undo keeps what it is copied
+			// into, or an authored template copied into a tree made at run time would bring undo
+			// into that tree with it.
+			const EObjectFlags Transactional = InSource->HasAnyFlags(RF_Transactional) && DreamUI::IsKeptByUndo(*InOuter)
+				? RF_Transactional : RF_NoFlags;
 			FObjectInstancingGraph InstancingGraph;
 			UDreamWidget* Copy = NewObject<UDreamWidget>(InOuter, InSource->GetClass(), NAME_None,
-				InSource->GetMaskedFlags(RF_Transactional | RF_Public | DreamUI::RuntimeObjectFlags),
+				InSource->GetMaskedFlags(RF_Public | DreamUI::RuntimeObjectFlags) | Transactional,
 				InSource, /*bCopyTransientsFromClassDefaults*/false, &InstancingGraph);
 			if (!IsValid(Copy))
 			{

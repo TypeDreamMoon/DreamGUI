@@ -48,6 +48,27 @@ namespace DreamUI
 		UE_NONCOPYABLE(FScopedExpectedCopiesIntoPlaySession);
 	};
 
+	/**
+	 * Whether the transaction buffer keeps InObject: it is transactional and not transient. The engine
+	 * records a transient object like any other once it is transactional -- SaveToTransactionBuffer does
+	 * not look at RF_Transient -- so an undo would bring back a tree its host had destroyed.
+	 */
+	DREAMGUI_API bool IsKeptByUndo(const UObject& InObject);
+
+	/**
+	 * Modify() when IsKeptByUndo, and nothing otherwise. Modify() on an object the buffer does not keep
+	 * marks its package dirty instead, which for a widget in the level editor's world is the map.
+	 */
+	DREAMGUI_API void ModifyIfKeptByUndo(UObject& InObject);
+
+	/**
+	 * RF_Transactional for a widget a DreamGUI API makes inside InOuter when undo keeps InOuter -- an
+	 * authored tree, in an asset or in a level -- and no flags otherwise: not in a tree made while a world
+	 * runs, which is transient, and not straight in a world, which is where the runtime API puts the
+	 * widgets it makes. Those live as long as whoever built them; undo has no business restoring them.
+	 */
+	DREAMGUI_API EObjectFlags TransactionalFlagFor(const UObject* InOuter);
+
 	/** A reference from an object a level keeps into a widget tree. */
 	struct FTreeBridge
 	{
