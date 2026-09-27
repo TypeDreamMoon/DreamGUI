@@ -11,6 +11,7 @@
 #include "Systems/MovieScenePiecewiseDoubleBlenderSystem.h"
 
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Core/DreamUIRuntimeObject.h"
 
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "DreamGUI.h"
@@ -93,6 +94,9 @@ UMaterialInstanceDynamic* FDreamUIMaterialAccessor::CreateDynamicMaterial(UMater
 	FName UniqueDynamicName = MakeUniqueObjectName(Visual, UMaterialInstanceDynamic::StaticClass() , DynamicName.ToString());
 
 	UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(InMaterial, Visual, UniqueDynamicName);
+	// The visual keeps it in a property it saves: without the flags, animating an authored widget in
+	// the designer would write the instance into the asset.
+	MID->SetFlags(DreamUI::RuntimeObjectFlags);
 	SetMaterial(MID);
 	return MID;
 }

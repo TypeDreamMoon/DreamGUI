@@ -4,6 +4,7 @@
 #include "Extensions/DreamPostProcessRenderElement_Text.h"
 
 #include "Core/DreamUIGeometry.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
@@ -122,7 +123,7 @@ void UDreamPostProcessRenderElement_Text::CheckMaterialInstanceDynamic()
 		if (IsValid(OverrideMaterial))
 		{
 			MaterialInstanceDynamic = UMaterialInstanceDynamic::Create(OverrideMaterial, this);
-			MaterialInstanceDynamic->SetFlags(RF_Transient);
+			MaterialInstanceDynamic->SetFlags(DreamUI::RuntimeObjectFlags);
 		}
 	}
 }

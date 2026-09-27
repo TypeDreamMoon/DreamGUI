@@ -10,6 +10,7 @@
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Utils/DreamUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "UIStaticMesh"
@@ -432,6 +433,9 @@ UMaterialInstanceDynamic* UDreamStaticMesh::GetOrCreateDynamicMaterialInstance()
 	{
 		// Create and set the dynamic material instance.
 		MID = UMaterialInstanceDynamic::Create(MaterialInstance, this);
+		// Kept in ReplaceMaterial, which is saved: the instance is made at run time and must not be
+		// saved, duplicated or copied with it.
+		MID->SetFlags(DreamUI::RuntimeObjectFlags);
 		SetReplaceMaterial(MID);
 	}
 	else if (!MaterialInstance)

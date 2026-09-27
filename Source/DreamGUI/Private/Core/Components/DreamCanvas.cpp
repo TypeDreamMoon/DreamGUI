@@ -41,6 +41,24 @@
 
 #define LOCTEXT_NAMESPACE "DreamCanvas"
 
+namespace DreamCanvasLocal
+{
+	/**
+	 * What a canvas makes while it runs -- its mesh, its material instances, its data textures, its render
+	 * target -- carries DreamUI::RuntimeObjectFlags: never saved, never cloned by a duplication (play in
+	 * editor, Duplicate), never written out by the level editor's Copy.
+	 */
+	UMaterialInstanceDynamic* CreateRuntimeMaterial(UMaterialInterface* InParent, UObject* InOuter)
+	{
+		UMaterialInstanceDynamic* Material = UMaterialInstanceDynamic::Create(InParent, InOuter);
+		if (Material != nullptr)
+		{
+			Material->SetFlags(DreamUI::RuntimeObjectFlags);
+		}
+		return Material;
+	}
+}
+
 UDreamCanvas::UDreamCanvas()
 {
 	DefaultMeshType = UDreamUIMeshComponent::StaticClass();
@@ -169,7 +187,9 @@ void UDreamCanvas::UpdateRenderTarget(bool CallEvent)
 
 	if (RenderTarget == nullptr)
 	{
-		RenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, EObjectFlags::RF_Transient);
+		// Made here, so never saved, duplicated or copied: a copy of this canvas makes its own. A render
+		// target assigned from outside keeps whatever flags its owner gave it.
+		RenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
 		RenderTarget->AddressX = TextureAddress::TA_Clamp;
 		RenderTarget->AddressY = TextureAddress::TA_Clamp;
 		RenderTarget->ClearColor = FLinearColor::Transparent;
@@ -1997,7 +2017,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 							if (IsMaterialContainsDreamUIParameter(DrawCallItem.Material.Get()))
 							{
 								bShouldSetMaterialParameter = true;
-								auto RenderMatDynamic = UMaterialInstanceDynamic::Create(DrawCallItem.Material.Get(), this);
+								auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(DrawCallItem.Material.Get(), this);
 								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
 								auto MaterialContainer = FDreamCanvasDynamicMaterialArrayContainer();
 								MaterialContainer.MaterialArray.Add(RenderMatDynamic);
@@ -2023,7 +2043,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 							auto& MaterialArray = DynamicMaterialContainerPtr->MaterialArray;
 							if (!MaterialArray.IsValidIndex(DynamicMaterialContainerPtr->CurrentIndex))//material use up, need more
 							{
-								auto RenderMatDynamic = UMaterialInstanceDynamic::Create(DrawCallItem.Material.Get(), this);
+								auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(DrawCallItem.Material.Get(), this);
 								MaterialArray.Add(RenderMatDynamic);
 								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
 								RenderMat = RenderMatDynamic;
@@ -2080,8 +2100,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 						if (UsingMaterialStartIndex < 0)
 						{
 							auto SrcMaterial = GetDefaultMaterial();
-							auto RenderMatDynamic = UMaterialInstanceDynamic::Create(SrcMaterial, this);
-							RenderMatDynamic->SetFlags(RF_Transient);
+							auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(SrcMaterial, this);
 							PooledDefaultMaterialList.Add(RenderMatDynamic);
 							SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
 							bNeedToVerifyMaterials = true;//verify material when new material will be used

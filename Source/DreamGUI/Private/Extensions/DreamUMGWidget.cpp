@@ -16,6 +16,7 @@
 #include "Engine/GameViewportClient.h"
 #include "Core/DreamUICustomMeshSource.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIWidgetRegistry.h"
@@ -722,7 +723,7 @@ void UDreamUMGWidget::UpdateRenderTarget(FIntPoint DesiredRenderTargetSize)
 
 		if (RenderTarget == nullptr)
 		{
-			RenderTarget = NewObject<UTextureRenderTarget2D>(this);
+			RenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
 			RenderTarget->ClearColor = ActualBackgroundColor;
 			RenderTarget->AddressX = TextureAddress::TA_Clamp;
 			RenderTarget->AddressY = TextureAddress::TA_Clamp;

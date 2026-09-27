@@ -11,6 +11,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIFontData_BaseObject.h"
+#include "Core/DreamUIRuntimeObject.h"
 //GetDefaultDynamicMaterial instances one over whatever the style named
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -226,6 +227,9 @@ UMaterialInstanceDynamic* UDreamRichTextBlock::GetDefaultDynamicMaterial()
 	UMaterialInstanceDynamic* Dynamic = UMaterialInstanceDynamic::Create(Current, this);
 	if (Dynamic != nullptr)
 	{
+		// The text visual saves its override material; the instance is made at run time and must not
+		// be saved, duplicated or copied with it.
+		Dynamic->SetFlags(DreamUI::RuntimeObjectFlags);
 		TextVisual->SetOverrideMaterial(Dynamic);
 	}
 	return Dynamic;

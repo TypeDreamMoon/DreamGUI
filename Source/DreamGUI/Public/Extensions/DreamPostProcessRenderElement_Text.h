@@ -29,7 +29,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	TWeakObjectPtr<UDreamVisualPostProcess> PostProcess;
-	UPROPERTY(VisibleAnywhere, Category = "DreamGUI", Transient)
+	UPROPERTY(VisibleAnywhere, Category = "DreamGUI", Transient, DuplicateTransient, TextExportTransient)
 	TObjectPtr<UMaterialInstanceDynamic> MaterialInstanceDynamic;
 
 	bool bHasRegisterPostProcessChangedEvent = false;

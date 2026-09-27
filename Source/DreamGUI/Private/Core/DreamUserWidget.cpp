@@ -5,6 +5,7 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Event/DreamEventSystem.h"
@@ -2049,7 +2050,9 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 	}
 	else
 	{
-		OwnedTree = NewObject<UDreamWidgetTree>(InWorld);
+		// A tree made here lives only as long as the world runs it: whatever the world is saved,
+		// duplicated or copied into never gets it.
+		OwnedTree = NewObject<UDreamWidgetTree>(InWorld, NAME_None, DreamUI::RuntimeObjectFlags);
 		Owner = OwnedTree;
 	}
 

@@ -278,7 +278,7 @@ protected:
 	bool TickWhenOffscreen;
 
 	/** The target to which the user widget is rendered */
-	UPROPERTY(Transient, DuplicateTransient)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TObjectPtr<UTextureRenderTarget2D> RenderTarget;
 
 protected:

@@ -7,6 +7,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamVisualPostProcessRenderProxy.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "TextureResource.h"
@@ -515,7 +516,9 @@ void UDreamVisualPostProcess::UpdateRenderTarget()
 
 	if (OutputRenderTarget == nullptr)
 	{
-		OutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, EObjectFlags::RF_Transient);
+		// Made here, so never saved, duplicated or copied: a copy of this visual makes its own. A render
+		// target assigned from outside keeps whatever flags its owner gave it.
+		OutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
 		OutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
 		OutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
 		OutputRenderTarget->ClearColor = FLinearColor::Transparent;

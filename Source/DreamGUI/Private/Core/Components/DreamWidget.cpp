@@ -7,6 +7,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Engine/World.h"
 #include "DreamTweenManager.h"
@@ -3082,11 +3083,12 @@ UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InS
 			}
 
 			// Flags from the source, not fixed here: a copy of a transient preview widget must not
-			// become a saveable one, and a copy of an authored widget has to stay transactional or
-			// undo cannot reach it.
+			// become a saveable one, a copy of a widget the level editor keeps out of every copy of
+			// the level must stay out too, and a copy of an authored widget has to stay
+			// transactional or undo cannot reach it.
 			FObjectInstancingGraph InstancingGraph;
 			UDreamWidget* Copy = NewObject<UDreamWidget>(InOuter, InSource->GetClass(), NAME_None,
-				InSource->GetMaskedFlags(RF_Transactional | RF_Transient | RF_Public),
+				InSource->GetMaskedFlags(RF_Transactional | RF_Public | DreamUI::RuntimeObjectFlags),
 				InSource, /*bCopyTransientsFromClassDefaults*/false, &InstancingGraph);
 			if (!IsValid(Copy))
 			{

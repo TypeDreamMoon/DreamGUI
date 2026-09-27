@@ -5,6 +5,7 @@
 #include "DreamGUI.h"
 #include "DreamUIBPLibrary.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/Components/DreamCanvas.h"
@@ -125,14 +126,17 @@ void UDreamWorldWidgetComponent::LoadWidget()
 #if WITH_EDITOR
 	if (World->WorldType == EWorldType::Editor)
 	{
-		// Transient in the editor world so the level does not save a hierarchy that is rebuilt from
-		// the class on load anyway. Not in EditorPreview, where the designer needs the tree fully
-		// transactional, and not in a game world, where nothing is saved.
+		// The level's copy of a hierarchy that is rebuilt from the class on load anyway, so nothing that
+		// copies the level may take it along: not the save, not the world a play session duplicates,
+		// not Copy. A play session's duplicate of anything still pointing at one of these widgets -- a
+		// blueprint variable, say -- gets null rather than a clone of the widget and its tree. Not in
+		// EditorPreview, where the designer needs the tree fully transactional, and not in a game
+		// world, where nothing is saved or copied.
 		TArray<UDreamWidget*> AllLoadedWidgets;
 		UDreamWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
 		for (UDreamWidget* Widget : AllLoadedWidgets)
 		{
-			Widget->SetFlags(RF_Transient);
+			Widget->SetFlags(DreamUI::RuntimeObjectFlags);
 		}
 	}
 #endif

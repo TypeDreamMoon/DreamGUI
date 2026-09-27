@@ -23,6 +23,7 @@
 #include "RayTracingInstance.h"
 #include "RayTracingGeometry.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIRenderTargetGeometrySource"
@@ -1154,7 +1155,7 @@ void UDreamUIRenderTargetGeometrySource::UpdateBodySetup(bool bIsDirty)
 	if (!GetRenderTarget())return;
 	if (!BodySetup || bIsDirty)
 	{
-		BodySetup = NewObject<UBodySetup>(this);
+		BodySetup = NewObject<UBodySetup>(this, NAME_None, DreamUI::RuntimeObjectFlags);
 		BodySetup->CollisionTraceFlag = CTF_UseDefault;
 		BodySetup->AggGeom.BoxElems.Add(FKBoxElem());
 		BodySetup->bHasCookedCollisionData = false;
@@ -1189,6 +1190,11 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstance()
 		if (SourceMat)
 		{
 			MaterialInstance = UMaterialInstanceDynamic::Create(SourceMat, this);
+			// In StaticMesh mode this instance goes into the static mesh component's OverrideMaterials,
+			// which that component saves, copies and duplicates with everything else. The flags make
+			// each of those drop the instance instead of carrying a reference to this component's --
+			// and, through the texture it samples, this canvas's -- runtime objects along.
+			MaterialInstance->SetFlags(DreamUI::RuntimeObjectFlags);
 			if (GeometryMode == EDreamUIRenderTargetGeometryMode::StaticMesh && bOverrideStaticMeshMaterial)
 			{
 				if (CheckStaticMesh())
