@@ -61,15 +61,13 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 	/** Vertex factory for this section */
 	FLocalVertexFactory VertexFactory;
 
-	bool bShouldKeepDataWhenDisable = false;
 	uint32 ValidVerticesCount = 0;
 	uint32 NumPrimitives = 0;
 
-	FDreamUISectionProxy_Mesh(ERHIFeatureLevel::Type InFeatureLevel, bool InShouldKeepDataWhenDisable)
+	FDreamUISectionProxy_Mesh(ERHIFeatureLevel::Type InFeatureLevel)
 		: VertexFactory(InFeatureLevel, "FDreamUISectionProxy_Mesh")
 	{
 		Type = EDreamUIRenderSectionProxyType::Mesh;
-		bShouldKeepDataWhenDisable = InShouldKeepDataWhenDisable;
 	}
 	virtual ~FDreamUISectionProxy_Mesh()override
 	{
@@ -150,14 +148,18 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 			});
 	}
 
+	/**
+	 * Pooled: not drawn until a draw call takes the section back. The vertex and index buffers stay, which
+	 * a direct mesh's section relies on -- its visual resends only geometry that changed -- but the
+	 * material goes: it belongs to the visual, and a visual hidden or destroyed while its section waits in
+	 * the pool can be collected, material and all. A direct mesh's section used to keep both, and went on
+	 * drawing the old mesh through a material that might no longer exist.
+	 */
 	virtual void Disable() override
 	{
-		if (!bShouldKeepDataWhenDisable)
-		{
-			Material = nullptr;
-			BuiltIn = FDreamUIBuiltInDrawParams();
-			bCanRender = false;
-		}
+		Material = nullptr;
+		BuiltIn = FDreamUIBuiltInDrawParams();
+		bCanRender = false;
 	}
 };
 struct FDreamUIRenderSectionProxy_PostProcess : public FDreamUIRenderSectionProxy
@@ -372,9 +374,7 @@ public:
 					SrcSection->RenderProxy = nullptr;
 					return nullptr;
 				}
-				auto NewSectionProxy = new FDreamUISectionProxy_Mesh(GetScene().GetFeatureLevel()
-					, InSrcSection->Type == EDreamUIRenderSectionType::DirectMesh//direct mesh should not clear data when pooling
-					);
+				auto NewSectionProxy = new FDreamUISectionProxy_Mesh(GetScene().GetFeatureLevel());
 				// vertex and index buffer
 				auto& Indices = NewSectionProxy->IndexBuffer.Indices;
 				Indices.SetNumUninitialized(SrcSection->TriangleIndices.Num());
@@ -530,6 +530,13 @@ public:
 	void SetMeshSectionMaterial_RenderThread(FDreamUIRenderSectionProxy* Section, UMaterialInterface* Material)
 	{
 		(static_cast<FDreamUISectionProxy_Mesh*>(Section))->Material = Material;
+	}
+	/** A pooled mesh section taken back by a draw call without new geometry: drawn again, with InMaterial. */
+	void EnableMeshSection_RenderThread(FDreamUIRenderSectionProxy* Section, UMaterialInterface* Material)
+	{
+		auto MeshSection = static_cast<FDreamUISectionProxy_Mesh*>(Section);
+		MeshSection->Material = Material;
+		MeshSection->bCanRender = true;
 	}
 	void SetMeshSectionBuiltIn_RenderThread(FDreamUIRenderSectionProxy* Section, const FDreamUIBuiltInDrawParams& Params)
 	{
@@ -1295,6 +1302,17 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 			BoundingBox += Max;
 			DirectMeshSectionPtr->BoundingBox = BoundingBox;
 			DirectMeshVisualObject->OnSupplyMeshSection(this, DirectMeshSectionPtr);
+			// Taken back from the pool: pooling disabled the section on the render thread and dropped its
+			// material, and the visual resends only what changed. What it did not resend is switched back
+			// on here, with the material the section has now.
+			if (SceneProxy != nullptr && DirectMeshSectionPtr->RenderProxy != nullptr)
+			{
+				auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
+				ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_EnableDirectMeshSection)(
+					[DreamUIMeshSceneProxy, SectionProxy = DirectMeshSectionPtr->RenderProxy, Material = DirectMeshSectionPtr->Material](FRHICommandListImmediate& RHICmdList) {
+						DreamUIMeshSceneProxy->EnableMeshSection_RenderThread(SectionProxy, Material);
+					});
+			}
 		}
 		break;
 	case EDreamUIRenderSectionType::PostProcess:
@@ -1717,6 +1735,9 @@ void UDreamUIMeshComponent::VerifyMaterials()
 		switch (RenderSectionItem->Type)
 		{
 		case EDreamUIRenderSectionType::Mesh:
+		// A direct mesh's material too: this array is what keeps a section's material from being
+		// collected while the section draws with it, and GetNumMaterials already counts it.
+		case EDreamUIRenderSectionType::DirectMesh:
 			{
 				auto MeshSection = static_cast<FDreamUIRenderSection_Mesh*>(RenderSectionItem.Get());
 				SetMaterialForUI(MatIndex++, MeshSection->Material);
