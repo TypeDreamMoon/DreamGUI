@@ -327,10 +327,15 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 			Vert3.TextureCoordinate[0] = uniformSpriteInfo.GetUV3() + uv3_Offset;
 			
 			//uv2 store the info for sampling texture and Sprite
-			Vert0.TextureCoordinate[2] = spriteInfo.GetUV0() + uv0_Offset;
-			Vert1.TextureCoordinate[2] = spriteInfo.GetUV1() + uv1_Offset;
-			Vert2.TextureCoordinate[2] = spriteInfo.GetUV2() + uv2_Offset;
-			Vert3.TextureCoordinate[2] = spriteInfo.GetUV3() + uv3_Offset;
+			// The same offsets, measured in the sprite. The ones above are fractions of the rect, which are
+			// UVs only for a sprite that covers its whole texture; a sprite packed into an atlas -- the
+			// default white one is -- covers a fraction of it, and an offset not scaled to that fraction
+			// reached past the sprite into its neighbours, at the rect's own edges as well as beyond them.
+			const FVector2f spriteUVSize = spriteInfo.MaxUV - spriteInfo.MinUV;
+			Vert0.TextureCoordinate[2] = spriteInfo.GetUV0() + uv0_Offset * spriteUVSize;
+			Vert1.TextureCoordinate[2] = spriteInfo.GetUV1() + uv1_Offset * spriteUVSize;
+			Vert2.TextureCoordinate[2] = spriteInfo.GetUV2() + uv2_Offset * spriteUVSize;
+			Vert3.TextureCoordinate[2] = spriteInfo.GetUV3() + uv3_Offset * spriteUVSize;
 		}
 
 		if (InVertexColorChanged)
