@@ -7,6 +7,7 @@
 
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetTree.h"
@@ -40,6 +41,7 @@
 #include "Channels/MovieSceneStringChannel.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
+#include "UObject/CoreRedirects.h"
 #include "Sections/MovieSceneColorSection.h"
 #include "Sections/MovieSceneDoubleSection.h"
 #include "Sections/MovieSceneFloatSection.h"
@@ -554,7 +556,9 @@ namespace DreamUITextBuilderLocal
 	{
 		if (InPath.StartsWith(TEXT("/Script/")))
 		{
-			return UClass::TryFindTypeSlowSafe<UClass>(InPath);
+			// Redirected first: the lookup takes the path as written, and a class that has moved to
+			// another module or been renamed answers only to where it is now.
+			return UClass::TryFindTypeSlowSafe<UClass>(DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Class, InPath));
 		}
 		FString ObjectPath = InPath;
 		if (!ObjectPath.Contains(TEXT(".")))
@@ -1354,10 +1358,11 @@ UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 
 	if (Name.StartsWith(TEXT("/")))
 	{
-		UClass* Found = UClass::TryFindTypeSlowSafe<UClass>(Name);
+		const FString Redirected = DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Class, Name);
+		UClass* Found = UClass::TryFindTypeSlowSafe<UClass>(Redirected);
 		if (Found == nullptr)
 		{
-			Found = LoadObject<UClass>(nullptr, *Name, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			Found = LoadObject<UClass>(nullptr, *Redirected, nullptr, LOAD_NoWarn | LOAD_Quiet);
 		}
 		return AsComponentClass(Found);
 	}
@@ -1371,12 +1376,20 @@ UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 	{
 		TEXT(""), TEXT("Dream"), TEXT("UI"), TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf")
 	};
+	//
+	// In every runtime module of the plugin, prefix by prefix: all of them are searched for the plain
+	// name before any is searched for `Dream` + name, so which module a class lives in never decides
+	// which of two spellings wins.
+	const TArray<FName> Packages = DreamUI::GetRuntimeScriptPackages();
 	for (const TCHAR* Prefix : Prefixes)
 	{
-		if (UClass* Found = AsComponentClass(UClass::TryFindTypeSlowSafe<UClass>(
-			FString::Printf(TEXT("/Script/DreamGUI.%s%s"), Prefix, *Name))))
+		for (const FName Package : Packages)
 		{
-			return Found;
+			if (UClass* Found = AsComponentClass(UClass::TryFindTypeSlowSafe<UClass>(
+				FString::Printf(TEXT("%s.%s%s"), *Package.ToString(), Prefix, *Name))))
+			{
+				return Found;
+			}
 		}
 	}
 	// A behaviour from the game module or another plugin. Last, because it is the slow lookup

@@ -8,6 +8,7 @@
 #include "DreamWidgetBehaviourTestTypes.h"
 #include "Text/DreamUIValueFormat.h"
 
+#include "Controls/DreamButton.h"
 #include "Core/DreamUIAnchorData.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
@@ -1245,6 +1246,56 @@ bool FDreamUIWriteBackStructureTest::RunTest(const FString& Parameters)
 			FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
 		TestFalse(TEXT("the node is gone from the file"), Updated.Contains(TEXT("Text Title")));
 		TestTrue(TEXT("and the rest of the file is not"), Updated.Contains(TEXT("AnchorData.SizeDelta = (400,240)")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackNativeControlTagTest,
+	"DreamGUI.Text.WriteBack.ANativeControlIsWrittenByItsTagNotByTheModuleItLivesIn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A control added in the designer reaches the file as `Native.Button`, the tag it is declared under, and
+ * not as `/Script/DreamGUI.DreamButton`. The class path names the module the class happens to live in
+ * today; a file written with it stops reading back the day the class moves to another module, and only
+ * the tag says nothing about where the class lives.
+ */
+bool FDreamUIWriteBackNativeControlTagTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const FString Source = Fixture();
+	FBuiltTree Live = BuildTree(Source);
+	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid()))
+	{
+		return false;
+	}
+	UDreamWidget* Root = Live.Find(TEXT("Root"));
+	if (!TestNotNull(TEXT("Root is there to hang a control off"), Root))
+	{
+		return false;
+	}
+	UDreamWidget* Added = Live.Tree->ConstructWidget(UDreamButton::StaticClass(), TEXT("Confirm"), FGuid::NewGuid());
+	if (!TestNotNull(TEXT("a button was made"), Added))
+	{
+		return false;
+	}
+	Added->SetDisplayName(TEXT("Confirm"));
+	Added->TrySetParent(Root, false);
+
+	FString Updated;
+	FDreamUIDiagnosticBag Diagnostics;
+	TestTrue(TEXT("the write-back ran"), FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
+	TestTrue(TEXT("the control is written by its tag"), Updated.Contains(TEXT("Native.Button Confirm")));
+	TestFalse(TEXT("and no script path is written at all"), Updated.Contains(TEXT("/Script/")));
+
+	// And the file reads back into the same class.
+	FBuiltTree RoundTrip = BuildTree(Updated);
+	UDreamWidget* ReadBack = RoundTrip.Find(TEXT("Confirm"));
+	if (TestNotNull(TEXT("the written file builds the control back"), ReadBack))
+	{
+		TestEqual(TEXT("as a button"), ReadBack->GetClass(), UDreamButton::StaticClass());
 	}
 	return true;
 }
