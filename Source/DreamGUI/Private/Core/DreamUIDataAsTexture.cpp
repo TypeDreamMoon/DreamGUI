@@ -3,6 +3,7 @@
 
 #include "Core/DreamUIDataAsTexture.h"
 #include "DreamGUI.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Utils/DreamUIUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "TextureResource.h"
@@ -28,10 +29,22 @@ void UDreamUIDataAsTexture::BeginDestroy()
 }
 void UDreamUIDataAsTexture::CreateTexture()
 {
+	// A UTexture2DDynamic keeps its size and mip count outside its properties, so any copy of one -- a
+	// play-in-editor duplication of the world, a Duplicate, a copy that reached it -- comes out zero by
+	// zero with no mips, and creating that copy's resource asserts on the render thread. So the texture
+	// lives in the transient package, outside every world a duplication starts from, and carries the
+	// flags that keep it out of a duplication, a copy and a save even when something reaches it by
+	// reference.
+	if (!ensureMsgf(TextureWidth > 0 && TextureHeight > 0, TEXT("%s: refusing to create a %dx%d data texture."), *GetPathName(), TextureWidth, TextureHeight))
+	{
+		return;
+	}
 	static int TextureNameSuffix = 0;
+	UPackage* TransientPackage = GetTransientPackage();
 	auto TextureDynamic = NewObject<UTexture2DDynamic>(
-		this,
-		FName(*FString::Printf(TEXT("DreamUIDataAsTexture_%d"), TextureNameSuffix++))
+		TransientPackage,
+		MakeUniqueObjectName(TransientPackage, UTexture2DDynamic::StaticClass(), FName(*FString::Printf(TEXT("DreamUIDataAsTexture_%d"), TextureNameSuffix++))),
+		DreamUI::RuntimeObjectFlags
 	);
 	TextureDynamic->LODGroup = TEXTUREGROUP_UI;
 	EPixelFormat GraphicPixelFormat;

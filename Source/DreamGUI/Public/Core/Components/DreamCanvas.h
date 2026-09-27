@@ -893,11 +893,11 @@ private:
 	
 	//clip data is stored in root canvas
 	TArray<TSharedPtr<FDreamUIClipData>> ClipDataList;
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TObjectPtr<UDreamUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
 	void OnClipDataTextureChanged(UTexture* NewTexture);
 	//widget property data is stored in each canvas (not only root canvas)
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TObjectPtr<UDreamUIDataAsTexture> WidgetPropertyDataAsTexture;//widget properties coordinate stored in UV1.y
 	void OnWidgetPropertyDataTextureChanged(UTexture* NewTexture);
 	void CheckWidgetPropertyData();

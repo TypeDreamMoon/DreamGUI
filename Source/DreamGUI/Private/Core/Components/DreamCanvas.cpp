@@ -309,7 +309,7 @@ void UDreamCanvas::OnRegister()
 
 	if (!IsValid(ClipDataAsTexture))
 	{
-		ClipDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		ClipDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, DreamUI::RuntimeObjectFlags);
 		ClipDataAsTexture->Init(FDreamUIClipData::BlockSizeInBytes, EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 128);
 		ClipDataAsTexture->OnDataTextureChange.AddUObject(this, &UDreamCanvas::OnClipDataTextureChanged);
 		ClipDataAsTexture->RegisterBuffer();//register a zero position as a placeholder for not clipping type.
@@ -2857,7 +2857,7 @@ void UDreamCanvas::CheckWidgetPropertyData()
 {
 	if (!IsValid(WidgetPropertyDataAsTexture))
 	{
-		WidgetPropertyDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		WidgetPropertyDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, DreamUI::RuntimeObjectFlags);
 		WidgetPropertyDataAsTexture->Init(UDreamVisual::WidgetPropertyDataLength, EDreamUIDataAsTexturePixelFormat::R32, 128);
 		WidgetPropertyDataAsTexture->OnDataTextureChange.AddUObject(this, &UDreamCanvas::OnWidgetPropertyDataTextureChanged);
 	}

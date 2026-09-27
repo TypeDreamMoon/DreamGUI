@@ -27,8 +27,11 @@ public:
 #endif
 	virtual void BeginDestroy() override;
 private:
-	/** Texture to fill buffer data, and decode to buffer in shader. */
-	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamUI")
+	/**
+	 * Texture to fill buffer data, and decode to buffer in shader. Made at run time in the transient
+	 * package, and never saved, duplicated or copied: a copy would carry none of its size (see CreateTexture).
+	 */
+	UPROPERTY(VisibleAnywhere, Transient, DuplicateTransient, TextExportTransient, Category = "DreamUI")
 	TObjectPtr<UTexture> Texture = nullptr;
 
 	EDreamUIDataAsTexturePixelFormat PixelFormat = EDreamUIDataAsTexturePixelFormat::R8;
