@@ -5,20 +5,17 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/DreamCanvas.h"
-#include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUserWidget.h"
-#include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWorldWidgetActor.h"
 #include "Core/DreamWorldWidgetComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "DreamUIBPLibrary.h"
-#include "DreamWidgetBlueprint.h"
 #include "Engine/Texture2DDynamic.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
@@ -26,7 +23,7 @@
 #include "Extensions/DreamPostProcessRenderElement_Text.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
 #include "Extensions/DreamUMGWidget.h"
-#include "Kismet2/KismetEditorUtilities.h"
+#include "Lifecycle/DreamLifecycleFixtures.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -56,88 +53,6 @@
  * editor, the render target a canvas makes for itself, the material instance and body setup of a
  * surface that shows that target -- each of which is one stored reference away from the same trip.
  */
-namespace DreamLifecycleDuplicationTestLocal
-{
-	struct FScopedWorld
-	{
-		UWorld* World = nullptr;
-		explicit FScopedWorld(EWorldType::Type InWorldType) { World = UWorld::CreateWorld(InWorldType, false); }
-		~FScopedWorld() { if (World) { World->DestroyWorld(false); } }
-	};
-
-	/** A widget class whose root draws a rect block: the rect block draws with a material, so the canvas makes material instances that read its data textures. */
-	struct FScopedPanelClass
-	{
-		UPackage* Package = nullptr;
-		UDreamWidgetBlueprint* Blueprint = nullptr;
-
-		explicit FScopedPanelClass(const TCHAR* InName)
-		{
-			Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InName));
-			Package->AddToRoot();
-			Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
-				UDreamUserWidget::StaticClass(), Package, FName(InName), BPTYPE_Normal,
-				UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
-			if (Blueprint != nullptr)
-			{
-				UDreamWidget* Root = Blueprint->GetOrCreateWidgetTree()->RootWidget;
-				Root->SetDisplayName(TEXT("Panel"));
-				Root->CreateNewVisual<UDreamRectBlock>();
-				FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
-			}
-		}
-
-		~FScopedPanelClass()
-		{
-			if (Package != nullptr)
-			{
-				Package->RemoveFromRoot();
-			}
-		}
-
-		UClass* GetClass() const { return Blueprint != nullptr ? Blueprint->GeneratedClass.Get() : nullptr; }
-	};
-
-	/** A panel placed in InWorld as a level designer places one, drawn twice so its canvas has made its materials. */
-	ADreamWorldWidgetActor* PlacePanel(UWorld* InWorld, UClass* InClass)
-	{
-		ADreamWorldWidgetActor* Actor = InWorld->SpawnActor<ADreamWorldWidgetActor>();
-		if (Actor != nullptr)
-		{
-			Actor->GetWidgetComponent()->SetWidgetClass(InClass);
-			DreamTests::Lifecycle::DrawFrames(InWorld, 2);
-		}
-		return Actor;
-	}
-
-	/** The first material instance on InMesh that reads a dynamic texture -- one of the canvas's data textures. */
-	UMaterialInstanceDynamic* FindMaterialReadingADynamicTexture(const UMeshComponent* InMesh)
-	{
-		if (InMesh == nullptr)
-		{
-			return nullptr;
-		}
-		for (UMaterialInterface* Material : InMesh->OverrideMaterials)
-		{
-			if (UMaterialInstanceDynamic* Instance = Cast<UMaterialInstanceDynamic>(Material))
-			{
-				for (const FTextureParameterValue& Value : Instance->TextureParameterValues)
-				{
-					if (Cast<UTexture2DDynamic>(Value.ParameterValue) != nullptr)
-					{
-						return Instance;
-					}
-				}
-			}
-		}
-		return nullptr;
-	}
-
-	FString JoinLines(const TArray<FString>& InLines)
-	{
-		return InLines.Num() > 0 ? FString::Join(InLines, TEXT("; ")) : FString(TEXT("none"));
-	}
-}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamLifecycleCopyLeavesTheCanvasMeshOutTest,
@@ -146,7 +61,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecycleCopyLeavesTheCanvasMeshOutTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	FScopedPanelClass Panel(TEXT("LifecycleCopyText"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
@@ -174,7 +89,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecyclePasteLeavesNoPersistentMeshTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	FScopedPanelClass Panel(TEXT("LifecyclePaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
@@ -212,7 +127,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecyclePlayAfterPasteTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	FScopedPanelClass Panel(TEXT("LifecyclePlayAfterPaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
@@ -251,7 +166,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecycleOrphanMeshNeutralizedTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	// The state a paste by an older build left behind, or a map saved by one: a canvas mesh that is an
 	// ordinary component of its actor, still naming another panel's material.
@@ -295,7 +210,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecycleDataTexturesStayOutsideTheWorldTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	FScopedPanelClass Panel(TEXT("LifecycleDataTextures"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
@@ -329,7 +244,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecycleForeignMaterialBridgeTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	// Another way into a panel's tree: a component the level keeps holding one of the canvas's material
 	// instances -- a render target shown on a static mesh, or a Blueprint that stored the material.
@@ -369,7 +284,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecycleEditorTreeLeftOutTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	FScopedPanelClass Panel(TEXT("LifecycleEditorTree"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
@@ -417,7 +332,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecycleRenderTargetSurfaceTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	// A render-target canvas in the level, shown on a surface: the canvas makes its own target, the
 	// surface a material instance that samples it. StaticMesh mode hands that instance to a static mesh
@@ -525,7 +440,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamLifecycleTreeBridgeReportedTest::RunTest(const FString& Parameters)
 {
-	using namespace DreamLifecycleDuplicationTestLocal;
+	using namespace DreamTests::Lifecycle;
 
 	// A reference no flag of DreamGUI's can cut: a material instance someone else made inside the
 	// panel's tree, without the flags, kept by a static mesh component of another actor.
