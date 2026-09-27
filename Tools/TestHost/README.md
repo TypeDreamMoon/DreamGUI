@@ -24,7 +24,7 @@ or code of its own.
 ```
 DreamGUITestHost/                       (default I:\UnrealProject_Moon\DEV_58\DreamGUITestHost)
   DreamGUITestHost.uproject             from Template/
-  Config/DefaultEngine.ini              from Template/, with [CoreRedirects] filled in (see below)
+  Config/DefaultEngine.ini              from Template/
   Config/DefaultInput.ini               from Template/
   Config/DefaultGame.ini                from Template/
   Source/DreamGUITestHost*.Target.cs    from Template/
@@ -128,9 +128,9 @@ git -C I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\Plugins\DreamGUI switch --d
   -- the working copy in `DevTest/Plugins/DreamGUI` included. To test a branch that is checked out
   there, detach at it (`switch --detach main`) or make a branch of your own from it.
 - Then run `New-DreamGUITestHost.ps1` again with `-Branch <branch>` (or `-KeepCurrentHead` for a
-  detached commit). `[CoreRedirects]` in `Config/DefaultEngine.ini` is taken from the worktree's own
-  `Config/DefaultEngine.ini`; if that changed between the two branches, the script lists the file as
-  different and `-Force` brings it up to date.
+  detached commit). The CoreRedirects come with the worktree -- they live in the plugin's own
+  `Config/DefaultDreamGUI.ini` -- so a branch brings its own. A template file that differs from what
+  the host has is listed, and `-Force` brings it up to date.
 - Undoing a fix to see its test go red, then putting it back -- on a detached HEAD, so the branch never
   carries the revert and nothing has to be reset afterwards:
 
@@ -174,7 +174,7 @@ put them elsewhere, which matters on a cold cache. And the trace server keeps it
 | Plugins | DreamGUI plus about thirty others | DreamGUI and Enhanced Input |
 | Content | the project's own, including `/Game/UI/WBP_ControlsGallery` | none |
 | Startup map | a full showcase level | `/Engine/Maps/Entry` (one PlayerStart) |
-| `[CoreRedirects]` | the project's own copy, older than the plugin's | the plugin's `Config/DefaultEngine.ini`, entry for entry |
+| `[CoreRedirects]` | the project's own copy, older than the plugin's | none of its own: the plugin's `Config/DefaultDreamGUI.ini` applies |
 | MoonToon ramp atlases | loaded from the MoonToon project plugin | `None` (the plugin is not there) |
 | Editor layouts, per-user settings | whatever you last left them as | engine and plugin defaults |
 

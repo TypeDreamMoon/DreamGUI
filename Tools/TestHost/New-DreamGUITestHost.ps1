@@ -21,8 +21,8 @@
       3. Copies Template\ into the root. A file that is missing is written; a file whose content already
          matches is left alone; a file that differs is listed and kept, unless -Force is given, in which
          case it is backed up next to itself (<name>.bak-<timestamp>) and replaced.
-         Config\DefaultEngine.ini is rendered on the way: its marker line is replaced with the
-         [CoreRedirects] entries of the worktree's own Config\DefaultEngine.ini.
+         Every file is copied as it is. No [CoreRedirects] are copied into the host: the plugin's own
+         Config\DefaultDreamGUI.ini carries them, and the engine applies them from there.
       4. Writes <Root>\.dreamgui-testhost.json (template version, repository, branch, creation time),
          only when something in it changed.
       5. Prints the command that builds the host and runs the suite in it.
@@ -94,11 +94,10 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 # Bump whenever anything under Template\ changes, so a host records which template it was made from.
-$TemplateVersion = 1
+$TemplateVersion = 2
 $ProjectFileName = 'DreamGUITestHost.uproject'
 $MetadataFileName = '.dreamgui-testhost.json'
-$RedirectMarker = ';@@DREAMGUI_CORE_REDIRECTS@@'
-$RenderedEngineIni = 'Config\DefaultEngine.ini'
+$TemplateEngineIniRelative = 'Config\DefaultEngine.ini'
 $FallbackEngineRoot = 'F:\UnrealEngine\UE_Moon'
 # Below this the first build (plugin and project intermediates, logs) is at risk of running out of room.
 $MinimumFreeGigabytes = 15
@@ -244,69 +243,6 @@ function Get-WorktreeEntries([string] $Repository) {
     return $Entries.ToArray()
 }
 
-function Get-CoreRedirectEntries([string] $IniText) {
-    # Entries only, in file order. The comments around them explain the plugin's history, which this
-    # host has no use for, and a section header or comment copied by accident would be worse than none.
-    $Entries = [System.Collections.Generic.List[string]]::new()
-    $InSection = $false
-    foreach ($RawLine in ($IniText -split "`r?`n")) {
-        $Line = $RawLine.TrimStart([char]0xFEFF).Trim()
-        if ($Line.StartsWith('[')) {
-            $InSection = [string]::Equals($Line, '[CoreRedirects]', [System.StringComparison]::OrdinalIgnoreCase)
-            continue
-        }
-        if (-not $InSection -or $Line.Length -eq 0 -or $Line.StartsWith(';')) {
-            continue
-        }
-        $Entries.Add($Line)
-    }
-    return , $Entries.ToArray()
-}
-
-function Get-RedirectSourceText([string] $WorktreePath, [string] $Repository, [string] $BranchName) {
-    # The worktree's own file when it exists, because that is what the host will build against.
-    # Before the worktree exists (only under -WhatIf) the branch's committed copy is exactly what
-    # "git worktree add" is about to check out.
-    $WorktreeIni = Join-Path $WorktreePath 'Config\DefaultEngine.ini'
-    if (Test-Path -LiteralPath $WorktreeIni -PathType Leaf) {
-        return [pscustomobject]@{ Text = [System.IO.File]::ReadAllText($WorktreeIni); Source = $WorktreeIni }
-    }
-    $Shown = Invoke-Git -WorkingDirectory $Repository -Arguments @('show', "$($BranchName):Config/DefaultEngine.ini") -AllowFailure
-    if ($Shown.ExitCode -ne 0) {
-        return [pscustomobject]@{ Text = ''; Source = "$($BranchName):Config/DefaultEngine.ini (not readable: $($Shown.Output))" }
-    }
-    return [pscustomobject]@{ Text = $Shown.Output; Source = "$($BranchName):Config/DefaultEngine.ini" }
-}
-
-function Get-RenderedEngineIni([string] $TemplatePath, [string[]] $RedirectEntries, [string] $RedirectSource) {
-    $Text = [System.IO.File]::ReadAllText($TemplatePath)
-    $NewLine = if ($Text.Contains("`r`n")) { "`r`n" } else { "`n" }
-    $Lines = [System.Collections.Generic.List[string]]::new()
-    $Replaced = $false
-    foreach ($Line in ($Text -split "`r?`n")) {
-        if ($Line.Trim() -ceq $RedirectMarker) {
-            if ($RedirectEntries.Count -gt 0) {
-                $Lines.Add('[CoreRedirects]')
-                $Lines.Add("; $($RedirectEntries.Count) entries, copied by New-DreamGUITestHost.ps1 from the plugin's Config/DefaultEngine.ini.")
-                foreach ($Entry in $RedirectEntries) {
-                    $Lines.Add($Entry)
-                }
-            }
-            else {
-                $Lines.Add("; No [CoreRedirects] entries were found in $RedirectSource when this file was written.")
-            }
-            $Replaced = $true
-            continue
-        }
-        $Lines.Add($Line)
-    }
-    if (-not $Replaced) {
-        throw "The template $TemplatePath has lost its marker line '$RedirectMarker'."
-    }
-    # The comma keeps the byte array one object; without it PowerShell would unroll it byte by byte.
-    return , [System.Text.UTF8Encoding]::new($false).GetBytes(($Lines -join $NewLine))
-}
-
 function ConvertTo-ComparableText([byte[]] $Bytes) {
     # Line endings and a byte-order mark are not differences: git may check the template out with
     # either ending, and an editor may add or drop the mark.
@@ -366,7 +302,7 @@ $PendingChanges = 0
 
 $TemplateDirectory = Join-Path $PSScriptRoot 'Template'
 $TemplateProject = Join-Path $TemplateDirectory $ProjectFileName
-$TemplateEngineIni = Join-Path $TemplateDirectory $RenderedEngineIni
+$TemplateEngineIni = Join-Path $TemplateDirectory $TemplateEngineIniRelative
 
 $Root = ConvertTo-NormalPath (Resolve-UserPath $Root)
 $RepoPath = ConvertTo-NormalPath (Resolve-UserPath $RepoPath)
@@ -620,15 +556,6 @@ else {
 
 Write-Step 'Project files from the template'
 
-$Redirects = Get-RedirectSourceText -WorktreePath $WorktreePath -Repository $RepoPath -BranchName $Branch
-$RedirectEntries = Get-CoreRedirectEntries $Redirects.Text
-if ($RedirectEntries.Count -gt 0) {
-    Write-Info "[CoreRedirects]: $($RedirectEntries.Count) entries from $($Redirects.Source)."
-}
-else {
-    Write-Warning "No [CoreRedirects] entries found in $($Redirects.Source). The plugin's assets saved under LGUI class names will not load in the host."
-}
-
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $Created = [System.Collections.Generic.List[string]]::new()
 $Unchanged = [System.Collections.Generic.List[string]]::new()
@@ -639,14 +566,7 @@ $TemplateFiles = @(Get-ChildItem -LiteralPath $TemplateDirectory -Recurse -File 
 foreach ($TemplateFile in $TemplateFiles) {
     $Relative = [System.IO.Path]::GetRelativePath($TemplateDirectory, $TemplateFile.FullName)
     $Destination = Join-Path $Root $Relative
-    # Assigned inside each branch rather than from the if-statement's output, which would unroll the
-    # byte array into a list of boxed bytes.
-    if ([string]::Equals($Relative, $RenderedEngineIni, [System.StringComparison]::OrdinalIgnoreCase)) {
-        $Wanted = Get-RenderedEngineIni -TemplatePath $TemplateFile.FullName -RedirectEntries $RedirectEntries -RedirectSource $Redirects.Source
-    }
-    else {
-        $Wanted = [System.IO.File]::ReadAllBytes($TemplateFile.FullName)
-    }
+    $Wanted = [System.IO.File]::ReadAllBytes($TemplateFile.FullName)
 
     if (-not (Test-Path -LiteralPath $Destination -PathType Leaf)) {
         $PendingChanges++

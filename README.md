@@ -96,17 +96,16 @@ roads never double-type.
 ### If you have assets authored against LGUI / LexUI, or from before an in-fork rename
 
 They reference the old class names and the old `/LGUI/` mount, so they need CoreRedirects — and
-**the engine only reads those from the project's config**. A plugin's own config is not consulted
-for them: `Config/DefaultEngine.ini` here is a template to copy, and a plugin's
-`Config/Default<PluginName>.ini` is mounted after the redirects have already been read, which is why
-none live there any more.
+**the plugin ships them**: the `[CoreRedirects]` block in
+[`Config/DefaultDreamGUI.ini`](./Config/DefaultDreamGUI.ini) is mounted as the plugin's own config
+branch, and the engine applies every branch's redirects before the first asset loads. Nothing to copy.
+It covers the LGUI/LexUI rename, the prefab-vocabulary rename that the class model replaced, and the
+control renames (`UIButtonComponent` → `UIButton` and its siblings).
 
-Copy the `[CoreRedirects]` block from
-[`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini) into your project's
-`Config/DefaultEngine.ini`. It covers the LGUI/LexUI rename, the prefab-vocabulary rename that the
-class model replaced, and the control renames (`UIButtonComponent` → `UIButton` and its siblings).
-
-Skip this if you are starting fresh.
+**If you copied the block into your project's `Config/DefaultEngine.ini` for an earlier version,
+delete that copy.** Earlier versions shipped it as a template, `Config/DefaultEngine.ini`, on the
+belief that a plugin's config is read too late for redirects; it is not. Two redirects for one old
+name with different new names are an error, and the copy is older than the file that ships.
 
 **Removed in this version.** These have no redirect, because there is nothing left to point at:
 
@@ -228,7 +227,7 @@ through `UDreamNamedSlotHost`.
 > [!NOTE]
 > The prefab asset model this forked from is gone, along with `SavePrefab`, `Apply`,
 > `ClearLoadedPrefab` and *Save on Apply*. Assets saved against the old class names are covered by
-> the redirects in [`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini).
+> the redirects in [`Config/DefaultDreamGUI.ini`](./Config/DefaultDreamGUI.ini).
 
 ### Try it
 
