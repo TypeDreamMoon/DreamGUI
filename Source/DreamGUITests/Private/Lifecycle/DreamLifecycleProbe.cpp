@@ -67,7 +67,7 @@ namespace DreamTests::Lifecycle
 				Found.Add(Object->GetPathName());
 			}
 			return true;
-		}, /*bIncludeNestedObjects*/ true);
+		}, EGetObjectsFlags::IncludeNestedObjects);
 		return Found;
 	}
 
@@ -148,7 +148,7 @@ namespace DreamTests::Lifecycle
 			Object->ClearFlags(RF_Standalone | RF_Public);
 			Object->MarkAsGarbage();
 			return true;
-		}, /*bIncludeNestedObjects*/ true);
+		}, EGetObjectsFlags::IncludeNestedObjects);
 		Package->ClearFlags(RF_Standalone | RF_Public);
 		Package->MarkAsGarbage();
 		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/ true);
