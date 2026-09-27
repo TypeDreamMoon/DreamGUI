@@ -591,9 +591,6 @@ void FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFe
 	}
 }
 
-#ifndef DreamGUI_ENABLE_SCENETEXTURES
-#define DreamGUI_ENABLE_SCENETEXTURES 0//not render in clean project, so disable it
-#endif
 
 DECLARE_CYCLE_STAT(TEXT("DreamUI RHIRenderMesh"), STAT_DreamGUI_RHIRenderMesh, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("DreamUI RHIRenderPostProcess"), STAT_DreamGUI_RHIRenderPostProcess, STATGROUP_DreamGUI);
@@ -960,12 +957,6 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 									{
 										auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
 										const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
-		#if DreamGUI_ENABLE_SCENETEXTURES
-										FRHIUniformBuffer* SceneTextureUniformBuffer = GetSceneTextureExtracts().GetUniformBuffer();
-										if (!SceneTextureUniformBuffer)return;
-										const FUniformBufferStaticBindings StaticUniformBuffers(SceneTextureUniformBuffer);
-										SCOPED_UNIFORM_BUFFER_STATIC_BINDINGS(RHICmdList, StaticUniformBuffers);
-		#endif
 
 										auto DoRender = [&](bool bWireframe)
 										{
@@ -1319,13 +1310,6 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 						{
 							auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
 							const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
-							
-#if DreamGUI_ENABLE_SCENETEXTURES
-							FRHIUniformBuffer* SceneTextureUniformBuffer = GetSceneTextureExtracts().GetUniformBuffer();
-							if (!SceneTextureUniformBuffer)return;
-							const FUniformBufferStaticBindings StaticUniformBuffers(SceneTextureUniformBuffer);
-							SCOPED_UNIFORM_BUFFER_STATIC_BINDINGS(RHICmdList, StaticUniformBuffers);
-#endif
 
 							auto DoRender = [&](bool bWireframe)
 							{

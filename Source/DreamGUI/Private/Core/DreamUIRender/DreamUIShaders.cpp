@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIRender/DreamUIShaders.h"
-#include "DreamGUI.h"
 #include "PipelineStateCache.h"
 #include "Materials/Material.h"
 #include "ShaderParameterUtils.h"

@@ -51,7 +51,6 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "KeyPropertyParams.h"
 #include "PropertyPath.h"
-#include "Core/DreamUIRender/DreamUIRenderer.h"
 #include "Preview/DreamWidgetDesignerScene.h"
 #include "Utils/DreamUIUtils.h"
 #include "Engine/Canvas.h"

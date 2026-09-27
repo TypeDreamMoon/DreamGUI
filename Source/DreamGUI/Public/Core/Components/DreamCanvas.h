@@ -840,7 +840,6 @@ private:
 	mutable uint32 bUIMeshNeedToSetInitialParameters : 1 = true;//after clear UIMesh, it will need to set initial parameters to use again
 	mutable uint32 bIsViewProjectionMatrixDirty : 1 = true;
 	mutable FMatrix CacheViewProjectionMatrix = FMatrix::Identity;//cache to prevent multiple calculation in same frame
-	mutable float LastRenderTime = 0;
 	friend class FDreamUIRenderSceneProxy;
 	friend class FDreamCanvasHierarchyOrderTest;
 	friend class FDreamCanvasVisualChangeRebuildsDrawCallTest;

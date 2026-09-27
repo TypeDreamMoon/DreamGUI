@@ -6,14 +6,8 @@
 #include "Core/DreamVisualPostProcessRenderProxy.h"
 
 /**
- * The render-thread half of UDreamPixelSort.
- *
- * Blur and pixelate declare their proxies inside their .cpp files. This one lives in a private
- * header instead, for one reason: it lets the tests include it and assert that a details-panel edit
- * actually lands on the proxy. That failure -- the panel shows the new value, the GPU keeps the old
- * one -- has already happened once in this plugin, is invisible to every setter-based test, and
- * cannot be caught at compile time. The header stays PRIVATE, so nothing about the module's
- * engine-internal include situation changes.
+ * The render-thread half of UDreamPixelSort. Private: only DreamPixelSort.cpp includes it, the way
+ * blur and pixelate keep their proxies inside their own .cpp files.
  */
 class FDreamPixelSortRenderProxy : public FDreamVisualPostProcessRenderProxy
 {
