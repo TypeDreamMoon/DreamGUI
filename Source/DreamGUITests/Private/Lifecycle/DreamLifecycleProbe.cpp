@@ -11,6 +11,7 @@
 #include "Engine/Texture2DDynamic.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "Misc/AutomationTest.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
@@ -153,6 +154,58 @@ namespace DreamTests::Lifecycle
 		}, EGetObjectsFlags::IncludeNestedObjects);
 		Package->ClearFlags(RF_Standalone | RF_Public);
 		Package->MarkAsGarbage();
+	}
+
+	void FSuiteInvariantWatch::Start()
+	{
+		if (!TestEndHandle.IsValid())
+		{
+			TestEndHandle = FAutomationTestFramework::Get().OnTestEndEvent.AddRaw(this, &FSuiteInvariantWatch::CheckAfter);
+		}
+	}
+
+	void FSuiteInvariantWatch::Stop()
+	{
+		if (TestEndHandle.IsValid())
+		{
+			FAutomationTestFramework::Get().OnTestEndEvent.Remove(TestEndHandle);
+			TestEndHandle.Reset();
+		}
+		Reported.Reset();
+	}
+
+	void FSuiteInvariantWatch::CheckAfter(FAutomationTestBase* InTest)
+	{
+		if (InTest == nullptr || !InTest->GetBeautifiedTestName().StartsWith(TEXT("DreamGUI.")))
+		{
+			return;
+		}
+		TArray<FString> Broken;
+		for (TObjectIterator<UTexture2DDynamic> It; It; ++It)
+		{
+			const UTexture2DDynamic* Texture = *It;
+			if (IsValid(Texture) && !Texture->IsTemplate()
+				&& (Texture->SizeX <= 0 || Texture->SizeY <= 0 || Texture->NumMips <= 0)
+				&& !Reported.Contains(FObjectKey(Texture)))
+			{
+				Reported.Add(FObjectKey(Texture));
+				Broken.Add(FString::Printf(TEXT("a dynamic texture the RHI would refuse, %s (%dx%d, %d mips)"),
+					*Texture->GetPathName(), Texture->SizeX, Texture->SizeY, Texture->NumMips));
+			}
+		}
+		for (TObjectIterator<UDreamUIMeshComponent> It; It; ++It)
+		{
+			const UDreamUIMeshComponent* Mesh = *It;
+			// Registered ones: registering neutralizes an orphaned mesh before it draws anything, so a
+			// registered mesh without the flag is one its level really would save, copy and duplicate.
+			if (IsValid(Mesh) && !Mesh->IsTemplate() && Mesh->IsRegistered() && !Mesh->HasAnyFlags(RF_Transient)
+				&& !Reported.Contains(FObjectKey(Mesh)))
+			{
+				Reported.Add(FObjectKey(Mesh));
+				Broken.Add(FString::Printf(TEXT("a registered canvas mesh its level would save, %s"), *Mesh->GetPathName()));
+			}
+		}
+		ensureAlwaysMsgf(Broken.Num() == 0, TEXT("After %s: %s."), *InTest->GetBeautifiedTestName(), *FString::Join(Broken, TEXT("; ")));
 	}
 }
 

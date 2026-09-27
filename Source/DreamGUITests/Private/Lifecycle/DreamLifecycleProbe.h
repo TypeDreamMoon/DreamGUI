@@ -3,8 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UObject/ObjectKey.h"
 
 class AActor;
+class FAutomationTestBase;
 class UClass;
 class UPackage;
 class UWorld;
@@ -45,4 +47,24 @@ namespace DreamTests::Lifecycle
 	 */
 	UWorld* DuplicateWorldForPlayInEditor(UWorld* InWorld);
 	void DestroyDuplicatedWorld(UWorld* InDuplicate);
+
+	/**
+	 * The two probes that must hold between any two tests, checked after every DreamGUI test for as long
+	 * as the watch is started: no dynamic texture anywhere without a size, and no registered canvas mesh
+	 * that a level would save. Whatever breaks one fires an ensure, which fails the run and names the test
+	 * after which it was first seen -- once per object, because what a test leaves behind outlives it and
+	 * every later test would be named for it too.
+	 */
+	class FSuiteInvariantWatch
+	{
+	public:
+		void Start();
+		void Stop();
+
+	private:
+		void CheckAfter(FAutomationTestBase* InTest);
+
+		FDelegateHandle TestEndHandle;
+		TSet<FObjectKey> Reported;
+	};
 }
