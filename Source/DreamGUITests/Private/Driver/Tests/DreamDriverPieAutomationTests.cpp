@@ -262,9 +262,11 @@ bool FDreamDriverPieUIOnlyClickTest::RunTest(const FString& Parameters)
 	{
 		BindButton(InRig.MakeControl<UDreamButton>(TEXT("Play"), nullptr, FVector2D(200.0, 60.0)), Listener.Get());
 	});
+	const TSharedRef<bool> bLookIgnoredBefore = MakeShared<bool>(false);
 	Rig->Sequence()
-		.Then([this](FDreamDriverContext& InContext)
+		.Then([this, bLookIgnoredBefore](FDreamDriverContext& InContext)
 		{
+			*bLookIgnoredBefore = InContext.PlayerController != nullptr && InContext.PlayerController->IsLookInputIgnored();
 			UDreamUIInputModeLibrary::SetInputModeUIOnly(InContext.PlayerController, nullptr, 0);
 			ULocalPlayer* LocalPlayer = InContext.PlayerController != nullptr ? InContext.PlayerController->GetLocalPlayer() : nullptr;
 			UGameViewportClient* Client = LocalPlayer != nullptr ? LocalPlayer->ViewportClient.Get() : nullptr;
@@ -280,14 +282,15 @@ bool FDreamDriverPieUIOnlyClickTest::RunTest(const FString& Parameters)
 		.Release()
 		.Wait(FDreamUntil::Condition([Listener]() { return Listener->ClickedCount > 0; }, ConditionLimit()),
 			StepLimit(), TEXT("the release to click the button"))
-		.Then([this, Listener](FDreamDriverContext& InContext)
+		.Then([this, Listener, bLookIgnoredBefore](FDreamDriverContext& InContext)
 		{
 			TestEqual(TEXT("One click"), Listener->ClickedCount, 1);
 			UDreamUIInputModeLibrary::SetInputModeGameAndUI(InContext.PlayerController, nullptr, 0);
 			ULocalPlayer* LocalPlayer = InContext.PlayerController != nullptr ? InContext.PlayerController->GetLocalPlayer() : nullptr;
 			const UDreamGameViewportClient* DreamClient = LocalPlayer != nullptr ? Cast<UDreamGameViewportClient>(LocalPlayer->ViewportClient.Get()) : nullptr;
 			TestTrue(TEXT("Leaving the mode ends the client's routing"), DreamClient != nullptr && !DreamClient->IsDreamUIOnlyInput());
-			TestTrue(TEXT("and gives the player its look input back"), InContext.PlayerController != nullptr && !InContext.PlayerController->IsLookInputIgnored());
+			TestTrue(TEXT("and leaves the player's look input as it found it"),
+				InContext.PlayerController != nullptr && InContext.PlayerController->IsLookInputIgnored() == *bLookIgnoredBefore);
 		})
 		.PerformLatent();
 	Rig->Finish();

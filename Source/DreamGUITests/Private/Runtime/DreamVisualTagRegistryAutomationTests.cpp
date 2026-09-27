@@ -12,6 +12,7 @@
 #include "DreamCrosscuttingTestTypes.h"
 #include "Text/DreamUITextBuilder.h"
 #include "UObject/UObjectIterator.h"
+#include "DreamWidgetLifecycleTestTypes.h"
 
 /*
  * Which visuals the language can spell, asked of the classes rather than of a list.
@@ -53,6 +54,10 @@ bool FDreamVisualTagCoverageTest::RunTest(const FString& Parameters)
 		// instantiates it, so it reaches this sweep -- but a .dui that could spell it would be
 		// spelling a probe into a user's UI.
 		UDreamUMGWidgetTimingProbe::StaticClass(),
+
+		// Another fixture: a visual that records the canvas changes it is told about, for the lifecycle
+		// tests. Concrete because they create it; no .dui should be able to.
+		UDreamWidgetCanvasProbeVisual::StaticClass(),
 	};
 
 	int32 Tagged = 0;

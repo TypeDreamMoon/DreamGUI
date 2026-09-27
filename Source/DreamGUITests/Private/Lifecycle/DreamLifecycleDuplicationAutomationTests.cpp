@@ -328,14 +328,15 @@ bool FDreamLifecycleEditorTreeLeftOutTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamLifecycleRenderTargetSurfaceTest,
 	"DreamGUI.Lifecycle.ARenderTargetSurfaceKeepsWhatItMadeOutOfTheCopyAPlaySessionMakes",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
 
 bool FDreamLifecycleRenderTargetSurfaceTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
 
 	// A render-target canvas in the level, shown on a surface: the canvas makes its own target, the
-	// surface a material instance that samples it. StaticMesh mode hands that instance to a static mesh
+	// surface a material instance that samples it -- when its scene proxy is built, which needs a real
+	// RHI, hence NonNullRHI. StaticMesh mode hands that instance to a static mesh
 	// component the level keeps, which is what the end of this test does by hand.
 	FScopedWorld Level(EWorldType::Editor);
 	AActor* Actor = Level.World->SpawnActor<AActor>();

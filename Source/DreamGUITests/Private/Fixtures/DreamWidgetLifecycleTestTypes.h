@@ -51,6 +51,13 @@ public:
 	int32 MarkAllDirtyCount = 0;
 };
 
+/** Something a widget made and keeps as one of its parts. It takes no part in registration or play. */
+UCLASS()
+class UDreamWidgetLifecyclePart : public UObject
+{
+	GENERATED_BODY()
+};
+
 /** A behaviour that counts how often its widget registers and unregisters it. */
 UCLASS()
 class UDreamWidgetLifecycleCountingBehaviour : public UDreamUIBehaviour

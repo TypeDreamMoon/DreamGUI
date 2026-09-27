@@ -130,14 +130,11 @@ bool FDreamWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Par
 		return false;
 	}
 	MutationBehaviour->Configure(OriginalChild, LateChild, ExternalParent);
-	// A part of each widget the behaviour moves, to see which of them the teardown takes down.
-	UDreamWidgetHierarchyMutationBehaviour* OriginalChildPart = OriginalChild->AddComponent<UDreamWidgetHierarchyMutationBehaviour>();
-	UDreamWidgetHierarchyMutationBehaviour* LateChildPart = LateChild->AddComponent<UDreamWidgetHierarchyMutationBehaviour>();
-	if (!TestNotNull(TEXT("The original child has a part"), OriginalChildPart) || !TestNotNull(TEXT("The late child has a part"), LateChildPart))
-	{
-		World->DestroyWorld(false);
-		return false;
-	}
+	// A part of each widget the behaviour moves, to see which of them the teardown takes down: anything
+	// outered to a widget is one of its parts. Plain objects, because a behaviour would begin play with
+	// its widget, and play does not begin in a world of no type.
+	UObject* OriginalChildPart = NewObject<UDreamWidgetLifecyclePart>(OriginalChild, TEXT("Part"));
+	UObject* LateChildPart = NewObject<UDreamWidgetLifecyclePart>(LateChild, TEXT("Part"));
 
 	Root->OnRegister();
 	OriginalChild->OnRegister();
