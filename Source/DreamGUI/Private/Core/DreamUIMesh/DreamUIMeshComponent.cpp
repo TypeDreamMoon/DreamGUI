@@ -518,6 +518,10 @@ public:
 			// go of its half of the render proxy, so it is not a loop to crash in.
 			if (auto Section = SectionArray[i])
 			{
+				// Unhook from the child canvas's proxy first. Disable forgets the child's proxy, and with it
+				// the only way to take this proxy's callback back off the child's OnRelease -- which would
+				// then call into this proxy when the child is released, after this one may be gone.
+				DetachChildCanvasSection_RenderThread(Section);
 				Section->Disable();
 			}
 		}
