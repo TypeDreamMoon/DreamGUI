@@ -48,12 +48,14 @@ pwsh -NoProfile -File Tools\TestHost\New-DreamGUITestHost.ps1
 
 | Parameter | Default | |
 | --- | --- | --- |
-| `-Root` | `I:\UnrealProject_Moon\DEV_58\DreamGUITestHost` | The host directory. Refused on drive C. |
+| `-Root` | `I:\UnrealProject_Moon\DEV_58\DreamGUITestHost` | The host directory. Refused on drive C unless `-AllowSystemDrive`. |
 | `-RepoPath` | `I:\UnrealProject_Moon\DEV_58\DevTest\Plugins\DreamGUI` | Any working tree of the repository. |
 | `-Branch` | `feat/tests-completion` | What the worktree must have (or is created with). |
 | `-EngineRoot` | looked up from the `.uproject`'s engine association | |
 | `-Force` | off | Replace files that differ from the template; each old one is kept as `<name>.bak-<timestamp>`. |
 | `-KeepCurrentHead` | off | Accept an existing worktree on another branch or a detached commit. |
+| `-Detach` | off | Follow `-Branch` with a detached HEAD. Needed when the branch is checked out in the repository's own working tree, since a branch can be checked out in one worktree at a time. A clean detached worktree is moved to the branch's tip on every run, so the host tests what has been committed. |
+| `-AllowSystemDrive` | off | Accept `-Root` on drive C, for a machine whose only drive is C and has room on it (or set `DREAMGUI_ALLOW_DRIVE_C=1`). |
 | `-WhatIf` | off | Report only. |
 
 What it does, in order:

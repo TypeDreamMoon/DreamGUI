@@ -48,7 +48,8 @@
 .PARAMETER Repeat
     Run the tests this many times, each in a fresh editor, after one build.
 .PARAMETER ReportDir
-    The report root (default <project>\Saved\DreamGUITestReports). Refused on drive C.
+    The report root (default <project>\Saved\DreamGUITestReports). Refused on drive C unless
+    -AllowSystemDrive.
 .PARAMETER ShaderWorkingDir
     Where the editor and its shader compile workers keep their job files (-ShaderWorkingDir).
     Default <project>\Intermediate\ShaderWorkingDir: the engine's own default is under %TEMP%,
@@ -64,6 +65,10 @@
     an open editor is not a reason to refuse a push.
 .PARAMETER Python
     The Python 3 interpreter (default: python).
+.PARAMETER AllowSystemDrive
+    Accept a report directory and a shader working directory on drive C. The refusal exists for a
+    machine whose drive C is nearly full; a machine that has only drive C, with room on it, passes
+    this (or sets DREAMGUI_ALLOW_DRIVE_C=1 in the environment) instead. Without it nothing changes.
 
 .EXAMPLE
     pwsh -NoProfile -File Tools\Tests\Invoke-DreamGUITests.ps1
@@ -93,7 +98,8 @@ param(
     [int]$TimeoutMinutes = 0,
     [switch]$AllowEditorOpen,
     [switch]$SkipIfEditorOpen,
-    [string]$Python = 'python'
+    [string]$Python = 'python',
+    [switch]$AllowSystemDrive
 )
 
 Set-StrictMode -Version 3.0
@@ -487,13 +493,14 @@ if ($descriptors.Count -eq 0) { Stop-Run 2 "The project $Project has no DreamGUI
 if ($descriptors.Count -gt 1) { Stop-Run 2 'The project holds more than one DreamGUI.uplugin; the plugin under test is ambiguous.' @($descriptors | ForEach-Object { $_.FullName }) }
 $PluginDir = $descriptors[0].DirectoryName
 
+if (-not $AllowSystemDrive -and $env:DREAMGUI_ALLOW_DRIVE_C -eq '1') { $AllowSystemDrive = $true }
 $script:ReportRoot = if ($ReportDir) { Resolve-UserPath $ReportDir } else { Join-Path $ProjectDir 'Saved\DreamGUITestReports' }
-if (Test-OnDriveC $script:ReportRoot) {
-    Stop-Run 2 "The report directory $script:ReportRoot is on drive C, which is nearly full. Pass -ReportDir on another drive."
+if ((Test-OnDriveC $script:ReportRoot) -and -not $AllowSystemDrive) {
+    Stop-Run 2 "The report directory $script:ReportRoot is on drive C, which is nearly full. Pass -ReportDir on another drive, or -AllowSystemDrive (DREAMGUI_ALLOW_DRIVE_C=1) where drive C has room."
 }
 # The engine appends the separator itself (FPaths::CustomShaderDirArgument); one here would escape the quote.
 $ShaderDir = $(if ($ShaderWorkingDir) { Resolve-UserPath $ShaderWorkingDir } else { Join-Path $ProjectDir 'Intermediate\ShaderWorkingDir' }).TrimEnd('\', '/')
-if (Test-OnDriveC $ShaderDir) {
+if ((Test-OnDriveC $ShaderDir) -and -not $AllowSystemDrive) {
     Write-Problem "The shader working directory $ShaderDir is on drive C, which is nearly full."
 }
 

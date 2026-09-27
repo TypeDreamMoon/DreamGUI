@@ -50,6 +50,19 @@
     Accept whatever an existing worktree has checked out -- another branch, or a detached commit, as a
     revert experiment would leave it -- instead of requiring -Branch.
 
+.PARAMETER Detach
+    Follow -Branch with a detached HEAD instead of checking the branch out. A branch can be checked out
+    in one worktree at a time, so when the branch is the one being developed in the repository's own
+    working tree, the host cannot have it too; with -Detach the worktree is created with
+    "git worktree add --detach" at the branch's tip, and on every later run a clean detached worktree is
+    moved to the branch's current tip (a dirty one is left where it is, with a warning). The host then
+    tests what has been committed to the branch, nothing more. This is the one case in which the script
+    moves a worktree's HEAD, and only a detached, clean one.
+
+.PARAMETER AllowSystemDrive
+    Accept a host root on drive C. The refusal exists for a machine whose drive C is nearly full; a
+    machine that has only drive C, with room on it, passes this (or sets DREAMGUI_ALLOW_DRIVE_C=1).
+
 .EXAMPLE
     pwsh -NoProfile -File .\New-DreamGUITestHost.ps1 -WhatIf
 
@@ -70,7 +83,9 @@ param(
     [string] $Branch = 'feat/tests-completion',
     [string] $EngineRoot = '',
     [switch] $Force,
-    [switch] $KeepCurrentHead
+    [switch] $KeepCurrentHead,
+    [switch] $Detach,
+    [switch] $AllowSystemDrive
 )
 
 Set-StrictMode -Version 3.0
@@ -373,8 +388,9 @@ if (-not (Test-Path -LiteralPath $TemplateProject -PathType Leaf) -or -not (Test
 $RootDrive = Get-DriveName $Root
 $RootPhysical = Resolve-PhysicalPath $Root
 $RootPhysicalDrive = Get-DriveName $RootPhysical
-if ($RootDrive -eq 'C:' -or $RootPhysicalDrive -eq 'C:') {
-    $Failures.Add("The host root must not be on drive C ($Root$(if ($RootPhysical -ne $Root) { " -> $RootPhysical" })). Pass -Root on another drive.")
+if (-not $AllowSystemDrive -and $env:DREAMGUI_ALLOW_DRIVE_C -eq '1') { $AllowSystemDrive = [switch]$true }
+if (($RootDrive -eq 'C:' -or $RootPhysicalDrive -eq 'C:') -and -not $AllowSystemDrive) {
+    $Failures.Add("The host root must not be on drive C ($Root$(if ($RootPhysical -ne $Root) { " -> $RootPhysical" })). Pass -Root on another drive, or -AllowSystemDrive where drive C has room.")
 }
 if ((Test-SamePath $Root $RepoPath) -or (Test-PathUnder $Root $RepoPath)) {
     $Failures.Add("The host root ($Root) must not be the repository or inside it ($RepoPath).")
@@ -506,8 +522,35 @@ if (Test-Path -LiteralPath $WorktreePath) {
     $CurrentBranch = if ($SymbolicHead.ExitCode -eq 0) { $SymbolicHead.Output } else { '' }
     $ShortHead = (Invoke-Git -WorkingDirectory $WorktreePath -Arguments @('rev-parse', '--short', 'HEAD')).Output
     $Described = if ($CurrentBranch) { "branch $CurrentBranch at $ShortHead" } else { "a detached HEAD at $ShortHead" }
-    # Branch names are case-sensitive to git even where the file system is not.
-    if ($CurrentBranch -cne $Branch) {
+    # -Detach: the worktree follows the branch with a detached HEAD. A clean one is moved to the
+    # branch's current tip; a dirty one is left alone, because moving it could lose work.
+    if ($Detach -and -not $CurrentBranch) {
+        $Tip = Invoke-Git -WorkingDirectory $RepoPath -Arguments @('rev-parse', '--verify', '--quiet', "refs/heads/$Branch") -AllowFailure
+        $HeadCommit = (Invoke-Git -WorkingDirectory $WorktreePath -Arguments @('rev-parse', 'HEAD')).Output
+        $DirtyNow = (Invoke-Git -WorkingDirectory $WorktreePath -Arguments @('status', '--porcelain')).Output
+        if ($Tip.ExitCode -ne 0) {
+            Stop-WithFailure @("-Detach: branch $Branch does not exist in the repository.")
+        }
+        elseif ($Tip.Output -ne $HeadCommit) {
+            if ($DirtyNow) {
+                Write-Warning "$WorktreePath is detached at $ShortHead with uncommitted changes; not moved to the tip of $Branch."
+            }
+            elseif ($PSCmdlet.ShouldProcess($WorktreePath, "git checkout --detach $Branch")) {
+                $Moved = Invoke-Git -WorkingDirectory $WorktreePath -Arguments @('checkout', '--detach', $Branch) -AllowFailure
+                if ($Moved.ExitCode -ne 0) {
+                    Stop-WithFailure @("git checkout --detach $Branch failed in ${WorktreePath}:", $Moved.Output)
+                }
+                $ShortHead = (Invoke-Git -WorkingDirectory $WorktreePath -Arguments @('rev-parse', '--short', 'HEAD')).Output
+                $Described = "a detached HEAD at $ShortHead"
+                Write-Info "Moved the detached worktree to the tip of $Branch ($ShortHead)."
+            }
+        }
+        else {
+            Write-Info "The detached worktree is at the tip of $Branch ($ShortHead)."
+        }
+    }
+    elseif ($CurrentBranch -cne $Branch) {
+        # Branch names are case-sensitive to git even where the file system is not.
         if (-not $KeepCurrentHead) {
             Stop-WithFailure @(
                 "$WorktreePath has $Described, not branch $Branch.",
@@ -516,7 +559,7 @@ if (Test-Path -LiteralPath $WorktreePath) {
         }
         Write-Warning "$WorktreePath has $Described, not branch $Branch; kept as it is (-KeepCurrentHead)."
     }
-    $ResolvedBranch = if ($CurrentBranch) { $CurrentBranch } else { "(detached at $ShortHead)" }
+    $ResolvedBranch = if ($CurrentBranch) { $CurrentBranch } elseif ($Detach) { "$Branch (detached)" } else { "(detached at $ShortHead)" }
     Write-Info "Existing worktree, $Described."
 
     $Dirty = (Invoke-Git -WorkingDirectory $WorktreePath -Arguments @('status', '--porcelain')).Output
@@ -534,7 +577,7 @@ else {
         )
     }
     $Holder = @($WorktreeEntries | Where-Object { $_.Branch -ceq "refs/heads/$Branch" })
-    if ($Holder.Count -gt 0) {
+    if ($Holder.Count -gt 0 -and -not $Detach) {
         Stop-WithFailure @(
             "Branch $Branch is already checked out in $($Holder[0].Path)$(if ($Holder[0].Prunable) { ' (a worktree whose folder is gone)' }).",
             'A branch can be checked out in one worktree at a time. Pass another -Branch, or free that one first.'
@@ -551,18 +594,25 @@ else {
     }
 
     $PendingChanges++
-    if ($PSCmdlet.ShouldProcess($WorktreePath, "git worktree add (branch $Branch)")) {
+    $AddArguments = if ($Detach) { @('worktree', 'add', '--detach', $WorktreePath, $Branch) } else { @('worktree', 'add', $WorktreePath, $Branch) }
+    if ($PSCmdlet.ShouldProcess($WorktreePath, "git $($AddArguments -join ' ')")) {
         $PluginsDirectory = Split-Path -Parent $WorktreePath
         if (-not (Test-Path -LiteralPath $PluginsDirectory)) {
             New-Item -ItemType Directory -Path $PluginsDirectory -Force | Out-Null
         }
-        $Added = Invoke-Git -WorkingDirectory $RepoPath -Arguments @('worktree', 'add', $WorktreePath, $Branch) -AllowFailure
+        $Added = Invoke-Git -WorkingDirectory $RepoPath -Arguments $AddArguments -AllowFailure
         if ($Added.ExitCode -ne 0) {
             Stop-WithFailure @("git worktree add failed:", $Added.Output)
         }
         $PendingChanges--
         $ShortHead = (Invoke-Git -WorkingDirectory $WorktreePath -Arguments @('rev-parse', '--short', 'HEAD')).Output
-        Write-Info "Created the worktree, branch $Branch at $ShortHead."
+        if ($Detach) {
+            $ResolvedBranch = "$Branch (detached)"
+            Write-Info "Created the worktree, detached at the tip of $Branch ($ShortHead)."
+        }
+        else {
+            Write-Info "Created the worktree, branch $Branch at $ShortHead."
+        }
     }
 }
 

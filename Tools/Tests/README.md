@@ -236,4 +236,4 @@ close it, or push from the test host worktree, to have the push tested.
 | exit 2, "fewer tests than the floor" | tests were removed or did not load; raise or lower the floor only knowingly |
 | exit 2, "the log never reached Automation Test Queue Empty" | the editor stopped mid-run: see the crash lines in `summary.md` and `run.log` |
 | exit 2 on a real RHI, `run.log` ends in "GPU crash detected ... Device 0 Removed" after a failed `CreateReservedResource` | GPU address space used up by test worlds awaiting garbage collection: the preset needs the `-dpcvars` that `All` carries (see Presets) |
-| exit 2, "the report directory is on drive C" | pass `-ReportDir` on another drive |
+| exit 2, "the report directory is on drive C" | pass `-ReportDir` on another drive; on a machine whose only drive is C and has room on it, pass `-AllowSystemDrive` or set `DREAMGUI_ALLOW_DRIVE_C=1` |
