@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamWidgetTreeHost.h"
 #include "Core/Components/DreamImage.h"
 #include "DreamWidgetLifecycleTestTypes.generated.h"
 
@@ -71,4 +72,28 @@ public:
 protected:
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
+};
+
+/** A tree host that owns no tree and records what it is asked, for the tests of the contract itself. */
+UCLASS()
+class UDreamTreeHostProbe : public UObject, public IDreamWidgetTreeHost
+{
+	GENERATED_BODY()
+
+public:
+	virtual UObject* GetTreeOuter() const override
+	{
+		return const_cast<UDreamTreeHostProbe*>(this);
+	}
+	virtual void ReleaseTree(EDreamTreeReleaseReason InReason) override
+	{
+		Releases.Add(InReason);
+	}
+	virtual void RebuildTree() override
+	{
+		++Rebuilds;
+	}
+
+	TArray<EDreamTreeReleaseReason> Releases;
+	int32 Rebuilds = 0;
 };
