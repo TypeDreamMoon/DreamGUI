@@ -120,8 +120,11 @@ public:
 	 * same frame the command can reach a parent proxy that has already been deleted.
 	 */
 	virtual bool RequiresGameThreadEndOfFrameUpdates() const override { return true; }
-	/** A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession. */
-	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
+	/**
+	 * A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession.
+	 * The bool overload, the one UPrimitiveComponent overrides and so the one that hides the other.
+	 */
+	virtual void PostDuplicate(bool bDuplicateForPIE) override;
 private:
 	/**
 	 * A canvas mesh is only ever made by UDreamCanvas::CheckUIMesh, and always transient. One that is not

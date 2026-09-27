@@ -1153,10 +1153,10 @@ void UDreamUIMeshComponent::PostEditImport()
 }
 #endif
 
-void UDreamUIMeshComponent::PostDuplicate(EDuplicateMode::Type DuplicateMode)
+void UDreamUIMeshComponent::PostDuplicate(bool bDuplicateForPIE)
 {
-	Super::PostDuplicate(DuplicateMode);
-	if (DuplicateMode == EDuplicateMode::PIE)
+	Super::PostDuplicate(bDuplicateForPIE);
+	if (bDuplicateForPIE)
 	{
 		DreamUI::ReportCopiedIntoPlaySession(*this);
 	}
