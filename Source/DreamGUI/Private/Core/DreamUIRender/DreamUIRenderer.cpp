@@ -404,6 +404,20 @@ void FDreamUIRenderer::DrawFullScreenQuad(FRHICommandListImmediate& RHICmdList)
 	RHICmdList.SetStreamSource(0, GDreamUIFullScreenQuadVertexBuffer.VertexBufferRHI, 0);
 	RHICmdList.DrawIndexedPrimitive(GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI, 0, 0, 4, 0, 2, 1);
 }
+namespace DreamUIRendererLocal
+{
+	/**
+	 * The mesh batches of one primitive, collected on the render thread when its pass is recorded, and
+	 * the allocator their uniform buffers live in. Allocated by the graph, which destroys it after every
+	 * pass that reads it has run.
+	 */
+	struct FCollectedMeshBatches
+	{
+		FSceneRenderingBulkObjectAllocator Allocator;
+		TArray<FDreamUIMeshBatchContainer> Batches;
+	};
+}
+
 /**
  * Takes FRHICommandList&, not FRHICommandListImmediate&, and so does every mesh pass that calls it:
  * RDG reads the lambda's command-list type and only records a pass on a task when it is the
@@ -485,7 +499,7 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), PSParameters);
 
 	RHICmdList.SetStreamSource(0, Batch.VertexBufferRHI, 0);
-	RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, Batch.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+	RHICmdList.DrawIndexedPrimitive(Batch.IndexBufferRHI, 0, 0, Batch.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
 }
 
 void FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
@@ -925,16 +939,26 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 							PassParameters->SceneDepthTex = SceneTextures.Depth.Resolve;
 							PassParameters->RenderTargets[0] = FRenderTargetBinding(RenderTargetTexture, ERenderTargetLoadAction::ELoad);
 
+							// Collected now, on the render thread while the pass is recorded, and not when it
+							// runs: the pass may run on a task after this function has returned, and the
+							// primitive -- a scene proxy -- may be gone by then, and every virtual call into
+							// it with it. The graph owns what is collected, uniform buffers and all, until
+							// its passes have run.
+							auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
+							{
+								FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
+								RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, Collected->Batches);
+							}
 							GraphBuilder.AddPass(
 								RDG_EVENT_NAME("DreamUIRender_WorldSpace"),
 								PassParameters,
 								ERDGPassFlags::Raster,
 								//FRHICommandList&, so RDG may record this pass on a task rather than inline on
 								//the render thread -- the more UI draw-calls there are, the longer that
-								//serial stretch used to be. Everything below is FRHICommandList API, and
-								//the batch array it fills is pass-local.
+								//serial stretch used to be. Everything below is FRHICommandList API, and it
+								//reads only what was collected above.
 								[this, DepthFade = RenderSequenceItem.DepthFade, BlendDepth = RenderSequenceItem.BlendDepth
-									, RenderPrimitiveItem, RenderView, ViewRect, PassParameters
+									, Collected, RenderView, ViewRect, PassParameters
 									, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, GammaValue
 									, bRenderWireframe, bRenderLit, WireframeMaterialInstance](FRHICommandList& RHICmdList)
 								{
@@ -943,16 +967,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 									RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 									RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-									/**
-									 * Pass-local, not a member of the renderer. Collecting into shared
-									 * state is only safe while every pass is serialised on the render
-									 * thread, and it is the reason this pass cannot be made parallel:
-									 * two passes would Reset and fill the same array.
-									 */
-									TArray<FDreamUIMeshBatchContainer> MeshBatchArray;
-									FSceneRenderingBulkObjectAllocator Allocator;
-									FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-									RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, MeshBatchArray);
+									const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Collected->Batches;
 									for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
 									{
 										auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
@@ -1001,7 +1016,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 													PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
 													RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-													RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
+													RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
 												}
 											}
 											else
@@ -1034,7 +1049,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 													PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
 													RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-													RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
+													RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
 												}
 											}
 										};
@@ -1286,12 +1301,18 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 						PassParameters->RenderTargets.DepthStencil = FDepthStencilBinding(DreamUIScreenSpaceDepthRDGTexture, ERenderTargetLoadAction::EClear, ERenderTargetLoadAction::EClear, FExclusiveDepthStencil::DepthWrite_StencilWrite);
 					}
 				}
+				// Collected while the pass is recorded, not when it runs: see the world-space mesh pass above.
+				auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
+				{
+					FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
+					RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderSequenceItem, Collected->Batches);
+				}
 				GraphBuilder.AddPass(
 					RDG_EVENT_NAME("DreamUIRender_ScreenSpace"),
 					PassParameters,
 					ERDGPassFlags::Raster,
 					//FRHICommandList&: see the note on the world-space mesh pass above
-					[this, RenderSequenceItem, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset
+					[this, Collected, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset
 						, NumSamples, ValidDepth = DreamUIScreenSpaceDepthRDGTexture != nullptr, GammaValue
 						, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandList& RHICmdList)
 					{
@@ -1299,12 +1320,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 						FGraphicsPipelineStateInitializer GraphicsPSOInit;
 						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
-						//pass-local; see the note on the world-space pass above
-						TArray<FDreamUIMeshBatchContainer> MeshBatchArray;
-						FSceneRenderingBulkObjectAllocator Allocator;
-						FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-						RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector,
-						RenderSequenceItem, MeshBatchArray);
+						const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Collected->Batches;
 
 						for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
 						{
@@ -1377,7 +1393,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 									PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
 									RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-									RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+									RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
 								}
 							};
 							if (bRenderLit)

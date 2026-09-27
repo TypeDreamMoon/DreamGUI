@@ -897,6 +897,7 @@ public:
 			FDreamUIMeshBatchContainer MeshBatchContainer;
 			MeshBatchContainer.Mesh = Mesh;
 			MeshBatchContainer.VertexBufferRHI = Section->DreamUIVertexBuffers.VertexBufferRHI;
+			MeshBatchContainer.IndexBufferRHI = Section->IndexBuffer.IndexBufferRHI;
 			MeshBatchContainer.NumVerts = Section->ValidVerticesCount;
 			MeshBatchContainer.BuiltIn = bWireframe ? FDreamUIBuiltInDrawParams() : Section->BuiltIn;
 			MeshBatchContainer.LocalToWorld = GetLocalToWorld();

@@ -31,6 +31,12 @@ struct FDreamUIMeshBatchContainer
 {
 	FMeshBatch Mesh;
 	FBufferRHIRef VertexBufferRHI;
+	/**
+	 * The index buffer to draw with, held by reference. Mesh.Elements[0].IndexBuffer points into the
+	 * section proxy that owns it, which a pass must not reach through: the batch is collected when the
+	 * pass is recorded, and the pass may run after the proxy is gone.
+	 */
+	FBufferRHIRef IndexBufferRHI;
 	int32 NumVerts = 0;
 	/** When enabled, the renderer draws this batch with the built-in UI shader instead of Mesh.MaterialRenderProxy. */
 	FDreamUIBuiltInDrawParams BuiltIn;
