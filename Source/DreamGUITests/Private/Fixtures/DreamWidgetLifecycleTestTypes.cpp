@@ -28,3 +28,15 @@ void UDreamWidgetCanvasProbeVisual::MarkAllDirty()
 	++MarkAllDirtyCount;
 	Super::MarkAllDirty();
 }
+
+void UDreamWidgetLifecycleCountingBehaviour::OnRegister()
+{
+	Super::OnRegister();
+	++RegisterCount;
+}
+
+void UDreamWidgetLifecycleCountingBehaviour::OnUnregister()
+{
+	Super::OnUnregister();
+	++UnregisterCount;
+}

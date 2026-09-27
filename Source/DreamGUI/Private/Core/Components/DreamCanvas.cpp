@@ -1406,7 +1406,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 					DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace));
 					DrawCallItem.VerticesCount += ItemGeo.Vertices.Num();
 					DrawCallItem.IndicesCount += ItemGeo.Triangles.Num();
-					check(DrawCallItem.VerticesCount < LEXUI_MAX_VERTEX_COUNT);
+					// CanFitInDrawCall keeps this true; past the limit the indices would wrap, which is a wrong
+					// picture rather than a reason to stop the process, on a thread that is only batching.
+					ensureMsgf(DrawCallItem.VerticesCount < LEXUI_MAX_VERTEX_COUNT, TEXT("A draw call reached %d vertices; the limit is %d."), DrawCallItem.VerticesCount, LEXUI_MAX_VERTEX_COUNT);
 				}
 				else//cannot fit in any other draw-call
 				{
@@ -2861,7 +2863,11 @@ int32 UDreamCanvas::GetDrawCallCount()const
 
 void UDreamCanvas::OnClipDataTextureChanged(UTexture* NewTexture)
 {
-	check(this == RootCanvas);//only root canvas use ClipDataTexture
+	//only root canvas use ClipDataTexture
+	if (!ensureMsgf(this == RootCanvas, TEXT("%s: the clip data texture changed on a canvas that is not a root."), *GetPathName()))
+	{
+		return;
+	}
 	MarkCanvasUpdate(true);
 	bClipDataAsTextureChanged = true;
 }

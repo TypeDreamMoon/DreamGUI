@@ -55,7 +55,10 @@ void UDreamEventSystem::BeginPlay()
 {
 	Super::BeginPlay();
 	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld());
-	check(DreamUIManager != nullptr);
+	if (!ensureMsgf(DreamUIManager != nullptr, TEXT("%s: began play in a world without a DreamUI manager; it will route nothing."), *GetPathName()))
+	{
+		return;
+	}
 	RegisteredManager = DreamUIManager;
 	DreamUIManager->AddEventSystem(this);
 }

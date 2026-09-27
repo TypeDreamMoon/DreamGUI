@@ -46,6 +46,30 @@ bool FDreamWidgetTreeLifecycleTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetUnregisterTwiceTest,
+	"DreamGUI.Lifecycle.UnregisteringAWidgetTwiceUnregistersItsPartsOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetUnregisterTwiceTest::RunTest(const FString& Parameters)
+{
+	UDreamWidget* Widget = NewObject<UDreamWidget>(GetTransientPackage());
+	UDreamWidgetLifecycleCountingBehaviour* Counter = Widget->AddComponent<UDreamWidgetLifecycleCountingBehaviour>();
+	if (!TestNotNull(TEXT("A counting behaviour is added"), Counter))
+	{
+		return false;
+	}
+	Widget->OnRegister();
+	Widget->OnRegister();
+	TestEqual(TEXT("Registering twice registers the widget's parts once"), Counter->RegisterCount, 1);
+	Widget->OnUnregister();
+	Widget->OnUnregister();
+	TestEqual(TEXT("Unregistering twice unregisters them once"), Counter->UnregisterCount, 1);
+	TestFalse(TEXT("The widget ends unregistered"), Widget->HasRegistered());
+	Widget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamWidgetComponentMutationDuringUnregisterTest,
 	"DreamGUI.Lifecycle.ComponentMutationDuringUnregister",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

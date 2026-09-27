@@ -299,7 +299,11 @@ void UDreamUISpriteData::ReloadTexture()
 	AtlasTexture = SpriteTexture;
 	auto SizeX = AtlasTexture->GetSizeX();
 	auto SizeY = AtlasTexture->GetSizeY();
-	check(SizeX != 0 && SizeY != 0);
+	// A texture still compiling, or one that failed to, reports no size; its UVs are not worth a crash.
+	if (!ensureMsgf(SizeX != 0 && SizeY != 0, TEXT("%s: sprite texture %s has no size."), *GetPathName(), *GetPathNameSafe(AtlasTexture)))
+	{
+		return;
+	}
 	float atlasTextureWidthInv = 1.0f / SizeX;
 	float atlasTextureHeightInv = 1.0f / SizeY;
 	SpriteInfo.ApplyUV(0, 0, SizeX, SizeY, atlasTextureWidthInv, atlasTextureHeightInv);
@@ -372,7 +376,12 @@ void UDreamUISpriteData::InitSpriteData()
 				AtlasTexture = SpriteTexture;
 				auto SizeX = AtlasTexture->GetSizeX();
 				auto SizeY = AtlasTexture->GetSizeY();
-				check(SizeX != 0 && SizeY != 0);
+				// See ReloadTexture: no size, no UVs, and not initialized, so the next use tries again.
+				if (!ensureMsgf(SizeX != 0 && SizeY != 0, TEXT("%s: sprite texture %s has no size."), *GetPathName(), *GetPathNameSafe(AtlasTexture)))
+				{
+					bIsInitialized = false;
+					return;
+				}
 				float atlasTextureWidthInv = 1.0f / SizeX;
 				float atlasTextureHeightInv = 1.0f / SizeY;
 				//spriteInfo.ApplyUV(0, 0, AtlasTexture->GetSizeX(), AtlasTexture->GetSizeY(), atlasTextureWidthInv, atlasTextureHeightInv);

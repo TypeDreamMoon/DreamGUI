@@ -199,9 +199,11 @@ void UDreamVisualBatchMesh::OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDr
 void UDreamVisualBatchMesh::UpdateGeometry()
 {
 	auto Widget = this->GetWidget();
-	check(Widget);
-	auto Canvas = Widget->GetRenderCanvas();
-	check(Canvas);
+	auto Canvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	if (!ensureMsgf(Canvas != nullptr, TEXT("%s: asked for geometry with no widget or no canvas to draw in."), *GetPathName()))
+	{
+		return;
+	}
 
 	{
 		SCOPE_CYCLE_COUNTER(STAT_BeforeUpdateGeometry)

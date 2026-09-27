@@ -50,3 +50,18 @@ public:
 	TArray<TPair<const UDreamCanvas*, const UDreamCanvas*>> CanvasChanges;
 	int32 MarkAllDirtyCount = 0;
 };
+
+/** A behaviour that counts how often its widget registers and unregisters it. */
+UCLASS()
+class UDreamWidgetLifecycleCountingBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	int32 RegisterCount = 0;
+	int32 UnregisterCount = 0;
+
+protected:
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+};

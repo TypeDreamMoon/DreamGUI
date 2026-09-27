@@ -126,8 +126,11 @@ void UDreamVisualPostProcess::UpdateGeometry()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UIPostProcessRenderableUpdate);
 	auto Widget = GetWidget();
-	auto RenderCanvas = Widget->GetRenderCanvas();
-	check(RenderCanvas);
+	auto RenderCanvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	if (!ensureMsgf(RenderCanvas != nullptr, TEXT("%s: asked for geometry with no widget or no canvas to draw in."), *GetPathName()))
+	{
+		return;
+	}
 
 	Super::UpdateGeometry();
 	

@@ -39,13 +39,16 @@ void UDreamUIBehaviour::PostDuplicate(EDuplicateMode::Type DuplicateMode)
 void UDreamUIBehaviour::BeginPlay()
 {
 	auto Widget = this->GetWidget();
-	check(Widget);
-	check (!this->bIsAwakeCalled);
+	if (!ensureMsgf(Widget != nullptr, TEXT("%s: BeginPlay on a behaviour that belongs to no widget."), *GetPathName())
+		|| !ensureMsgf(!this->bIsAwakeCalled, TEXT("%s: BeginPlay on a behaviour that is already awake."), *GetPathName()))
+	{
+		return;
+	}
 	GetAnimationPlayer();
 	this->Call_Awake();
-	if (Widget->GetWidgetActiveInHierarchy())
+	if (Widget->GetWidgetActiveInHierarchy()
+		&& ensureMsgf(!this->bIsEnableCalled, TEXT("%s: a behaviour was enabled before it began play."), *GetPathName()))
 	{
-		check (!this->bIsEnableCalled);
 		bCanExecuteTick = bStartWithTickEnabled;
 		this->Call_OnEnable();
 	}

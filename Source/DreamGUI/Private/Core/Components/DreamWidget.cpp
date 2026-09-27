@@ -134,7 +134,11 @@ UDreamWidget::UDreamWidget()
 
 void UDreamWidget::BeginPlay()
 {
-	check(!bHasBegunPlay);
+	// Every caller checks first. One that did not is a bug to report, not one to take the process down for.
+	if (!ensureMsgf(!bHasBegunPlay, TEXT("%s: BeginPlay on a widget that has already begun play."), *GetPathName()))
+	{
+		return;
+	}
 	bHasBegunPlay = true;
 
 	// Iterate a snapshot: a component's BeginPlay can add or remove components on this same widget (a layout
@@ -1388,7 +1392,10 @@ void UDreamWidget::EnsureChildrenAfterTransaction()
 
 void UDreamWidget::EnsureDataForRebuild()
 {
-	check(this == RootWidget);
+	if (!ensureMsgf(this == RootWidget, TEXT("%s: EnsureDataForRebuild is for the root of a hierarchy, and this widget is not one."), *GetPathName()))
+	{
+		return;
+	}
 	struct LOCAL
 	{
 		static void RenewRenderCanvas(UDreamWidget* Widget)
@@ -2030,7 +2037,10 @@ void UDreamWidget::SetWorldTransform(const FTransform& InWorldTransform)
 
 void UDreamWidget::SetParentBeforeRegister(UDreamWidget* InParent)
 {
-	check(!bIsRegistered);
+	if (!ensureMsgf(!bIsRegistered, TEXT("%s: SetParentBeforeRegister on a registered widget; SetParent is the call for that."), *GetPathName()))
+	{
+		return;
+	}
 	if (InParent == this || (IsValid(InParent) && InParent->IsChildOf(this)))
 	{
 		ensureMsgf(false, TEXT("Cannot restore cyclic DreamWidget parent relationship for %s."), *GetPathName());
@@ -2986,6 +2996,13 @@ void UDreamWidget::OnRegister()
 }
 void UDreamWidget::OnUnregister()
 {
+	// Idempotent, like OnRegister: what follows undoes what registering did -- a canvas leaves the
+	// manager, a visual leaves its canvas -- and undoing it for a widget that was never registered, or
+	// twice, reaches into registries it is not in.
+	if (!bIsRegistered)
+	{
+		return;
+	}
 	bIsRegistered = false;
 
 	/**
