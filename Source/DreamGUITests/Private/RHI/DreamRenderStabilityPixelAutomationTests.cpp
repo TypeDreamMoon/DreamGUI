@@ -6,10 +6,13 @@
 #include "Misc/AutomationTest.h"
 
 #include "Editor.h"
+#include "Engine/Engine.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "PixelFormat.h"
 #include "RenderingThread.h"
+#include "ShaderCompiler.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
@@ -20,7 +23,6 @@
 #include "Core/Components/DreamPixelSort.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
-#include "Core/DreamGUISettings.h"
 #include "Extensions/DreamStaticMesh.h"
 #include "Utils/DreamUIUtils.h"
 
@@ -46,6 +48,7 @@ namespace DreamRenderStabilityTestLocal
 	static const FColor ClearColour = FColor(0, 0, 0, 255);
 	static const FColor Red = FColor(255, 0, 0, 255);
 	static const FColor Blue = FColor(0, 0, 255, 255);
+	static const FColor Green = FColor(0, 255, 0, 255);
 
 	/** A root canvas rendering to a TargetExtent-square target in the editor's world, and whatever a test puts under it. */
 	class FStage
@@ -316,12 +319,22 @@ bool FDreamRhiHiddenStaticMeshStopsDrawingTest::RunTest(const FString& Parameter
 	// stops being drawn. The pooled section's proxy used to stay enabled on the render thread -- with the
 	// visual's material -- so a hidden mesh went on drawing, and a destroyed one drew through a material
 	// that had been collected.
+	//
+	// A mesh section takes its material as it is, without the textures and parameters a canvas gives its
+	// own draw calls, so the UI materials draw nothing useful there. The material here is the engine's
+	// unlit vertex-colour one, made into an instance the visual owns: it is collected with the visual,
+	// which is what a destroyed mesh's section used to go on drawing through. It is drawn by its own
+	// shaders, not the built-in ones every other visual here uses, and the renderer skips a section whose
+	// shaders are still compiling -- which, in an editor that has just started, they can be.
+	//
+	// Cleared to green, which nothing here draws, so that "drawn" is simply "covers the clear colour".
 	FStageRef Stage = BeginStage(*this);
 	if (!Stage->IsUsable())
 	{
 		Stage->TearDown();
 		return false;
 	}
+	Stage->GetCanvas()->SetRenderTargetClearColor(Green);
 	UDreamWidget* MeshWidget = Stage->AddWidget(TEXT("Mesh"), FVector2D(100.0, 100.0), FVector2D::ZeroVector);
 	UDreamStaticMesh* Mesh = MeshWidget->CreateNewVisual<UDreamStaticMesh>();
 	UDreamUIStaticMeshCacheData* Cache = MakeSquareMesh();
@@ -334,19 +347,36 @@ bool FDreamRhiHiddenStaticMeshStopsDrawingTest::RunTest(const FString& Parameter
 	Mesh->SetMesh(Cache);
 	Mesh->SetVertexColorType(EDreamStaticMeshVertexColorType::ReplaceByUIColor);
 	Mesh->SetColor(Red);
-	Mesh->SetReplaceMaterial(UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial")));
+	Mesh->SetReplaceMaterial(GEngine != nullptr ? GEngine->VertexColorViewModeMaterial_ColorOnly : nullptr);
+	if (!TestNotNull(TEXT("an instance of the engine's unlit vertex-colour material"), Mesh->GetOrCreateDynamicMaterialInstance()))
+	{
+		Stage->TearDown();
+		return false;
+	}
 	const FIntPoint Centre = Stage->PixelOf(MeshWidget, FVector2D::ZeroVector);
 
-	EnqueueSettledFrames(Stage);
-	EnqueueDo([Stage, Centre]()
+	EnqueueDo([]()
 	{
-		CheckPixel(Stage, Centre, Red, TEXT("the static mesh, while it is shown"));
+		if (GShaderCompilingManager != nullptr)
+		{
+			GShaderCompilingManager->FinishAllCompilation();
+		}
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage, Centre]()
+	{
+		const TOptional<FColor> Shown = ColourAt(Stage, Centre);
+		if (TestTrue(TEXT("the target reads back where the static mesh is"), Shown.IsSet()))
+		{
+			TestFalse(FString::Printf(TEXT("the static mesh, while it is shown, covers the clear colour (it drew %s)"), *FDreamPixelProbe::Describe(Shown.GetValue())),
+				FDreamPixelProbe::IsNear(Shown.GetValue(), Green, ColorTolerance));
+		}
 	});
 	EnqueueDo([MeshWidget]() { MeshWidget->SetWidgetActive(false); });
 	EnqueueSettledFrames(Stage);
 	EnqueueDo([Stage, Centre]()
 	{
-		CheckPixel(Stage, Centre, ClearColour, TEXT("where the static mesh was, once it is hidden"));
+		CheckPixel(Stage, Centre, Green, TEXT("where the static mesh was, once it is hidden"));
 	});
 	const TWeakObjectPtr<UDreamWidget> WeakMeshWidget(MeshWidget);
 	EnqueueDo([WeakMeshWidget]()
@@ -362,7 +392,7 @@ bool FDreamRhiHiddenStaticMeshStopsDrawingTest::RunTest(const FString& Parameter
 	EnqueueSettledFrames(Stage);
 	EnqueueDo([Stage, Centre]()
 	{
-		CheckPixel(Stage, Centre, ClearColour, TEXT("where the static mesh was, once it is destroyed and collected"));
+		CheckPixel(Stage, Centre, Green, TEXT("where the static mesh was, once it is destroyed and collected"));
 	});
 	EnqueueTearDown(Stage);
 	return true;
@@ -447,7 +477,8 @@ bool FDreamRhiPixelateSampleTest::RunTest(const FString& Parameters)
 	using namespace DreamRenderStabilityTestLocal;
 
 	// At full strength a pixelate cell is as wide as its rect, so the rect straddling the split becomes one
-	// colour, whichever it is, and nothing outside the rect changes.
+	// colour -- the cell's average, half red and half blue, taken in linear space (so each channel reads
+	// about 187, not 128) -- and nothing outside the rect changes.
 	FStageRef Stage = BeginStage(*this);
 	if (!Stage->IsUsable())
 	{
@@ -478,8 +509,8 @@ bool FDreamRhiPixelateSampleTest::RunTest(const FString& Parameters)
 			TestTrue(FString::Printf(TEXT("the rect is one cell of one colour across the split (left %s, right %s)"),
 				*FDreamPixelProbe::Describe(Left.GetValue()), *FDreamPixelProbe::Describe(Right.GetValue())),
 				FDreamPixelProbe::IsNear(Left.GetValue(), Right.GetValue(), ColorTolerance));
-			TestTrue(FString::Printf(TEXT("and that colour is one of the two it covers (%s)"), *FDreamPixelProbe::Describe(Left.GetValue())),
-				FDreamPixelProbe::IsNear(Left.GetValue(), Red, ColorTolerance) || FDreamPixelProbe::IsNear(Left.GetValue(), Blue, ColorTolerance));
+			TestTrue(FString::Printf(TEXT("and that colour is the two it covers in equal parts (%s)"), *FDreamPixelProbe::Describe(Left.GetValue())),
+				IsAMixOfBoth(Left.GetValue()) && FMath::Abs(static_cast<int32>(Left.GetValue().R) - static_cast<int32>(Left.GetValue().B)) <= ColorTolerance);
 		}
 		CheckPixel(Stage, OutsideLeft, Red, TEXT("the red half, outside the pixelated rect"));
 		CheckPixel(Stage, OutsideRight, Blue, TEXT("the blue half, outside the pixelated rect"));
