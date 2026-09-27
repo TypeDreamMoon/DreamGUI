@@ -16,3 +16,15 @@ void UDreamWidgetHierarchyMutationBehaviour::OnUnregister()
 		WidgetToAttach->SetParent(GetWidget(), false);
 	}
 }
+
+void UDreamWidgetCanvasProbeVisual::OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas)
+{
+	CanvasChanges.Emplace(InOldCanvas, InNewCanvas);
+	Super::OnRenderCanvasChanged(InOldCanvas, InNewCanvas);
+}
+
+void UDreamWidgetCanvasProbeVisual::MarkAllDirty()
+{
+	++MarkAllDirtyCount;
+	Super::MarkAllDirty();
+}

@@ -948,7 +948,7 @@ private:
 
 	/** UIItem's hierarchy changed */
 	void OnHierarchyAttachmentChanged(UDreamCanvas* ParentRenderCanvas, UDreamWidget* ParentRoot);
-	/** called when RenderCanvas changed. */
+	/** Called by SetRenderCanvas, after it has moved the widget and its visual to the new canvas (which may be the old one, re-registered). */
 	virtual void OnRenderCanvasChanged(UDreamCanvas* OldCanvas, UDreamCanvas* NewCanvas);
 	void SetRenderCanvas(UDreamCanvas* InNewCanvas);
 

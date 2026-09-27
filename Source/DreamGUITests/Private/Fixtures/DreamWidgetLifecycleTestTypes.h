@@ -3,8 +3,10 @@
 #pragma once
 
 #include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "DreamWidgetLifecycleTestTypes.generated.h"
 
+class UDreamCanvas;
 class UDreamWidget;
 
 UCLASS()
@@ -32,4 +34,19 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDreamWidget> ExternalParent;
+};
+
+/** A rect block that records each change of the canvas it draws in, and each time it is marked to be written whole. */
+UCLASS()
+class UDreamWidgetCanvasProbeVisual : public UDreamRectBlock
+{
+	GENERATED_BODY()
+
+public:
+	virtual void OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas) override;
+	virtual void MarkAllDirty() override;
+
+	/** Old and new canvas of each change, compared by address only: either may be gone by the time a test looks. */
+	TArray<TPair<const UDreamCanvas*, const UDreamCanvas*>> CanvasChanges;
+	int32 MarkAllDirtyCount = 0;
 };

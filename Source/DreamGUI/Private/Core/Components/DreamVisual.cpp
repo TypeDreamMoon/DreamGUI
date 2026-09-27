@@ -196,7 +196,9 @@ void UDreamVisual::OnTransformChanged(bool InPositionChanged, bool InScaleChange
 
 void UDreamVisual::OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas)
 {
-	bWidgetPropertyDataFontMarkDirty = true;
+	// Everything this visual put into its canvas -- geometry, clip and property data at the positions
+	// that canvas gave it -- has to be written into the new one.
+	MarkAllDirty();
 }
 
 void UDreamVisual::MarkColorDirty()

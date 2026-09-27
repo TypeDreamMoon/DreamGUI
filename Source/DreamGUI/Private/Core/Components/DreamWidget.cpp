@@ -4359,6 +4359,10 @@ void UDreamWidget::SetRenderCanvas(UDreamCanvas* InNewCanvas)
 			RenderCanvas->RegisterVisual(Visual);
 		}
 	}
+	// Last, with the widget already in the new canvas: the visual's clip and property data live at
+	// positions in its canvas's data textures, and a visual registered with another canvas has none
+	// there until it writes them again.
+	OnRenderCanvasChanged(OldRenderCanvas.Get(), RenderCanvas.Get());
 }
 
 void UDreamWidget::OnHierarchyAttachmentChanged(UDreamCanvas* ParentRenderCanvas, UDreamWidget* ParentRoot)
@@ -4403,14 +4407,7 @@ void UDreamWidget::OnHierarchyAttachmentChanged(UDreamCanvas* ParentRenderCanvas
 
 void UDreamWidget::OnRenderCanvasChanged(UDreamCanvas* OldCanvas, UDreamCanvas* NewCanvas)
 {
-	if (IsValid(OldCanvas))
-	{
-		OldCanvas->RemoveDreamWidget(this);
-	}
-	if (IsValid(NewCanvas))
-	{
-		NewCanvas->AddDreamWidget(this);
-	}
+	// SetRenderCanvas has already moved the widget and its visual between the canvases' lists.
 	if (IsValid(Visual))
 	{
 		Visual->OnRenderCanvasChanged(OldCanvas, NewCanvas);
