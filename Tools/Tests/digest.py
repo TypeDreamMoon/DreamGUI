@@ -81,10 +81,16 @@ def event_type(event):
 def short_path(path):
     """A source path from the report, cut to where the plugin (or the engine) starts."""
     p = (path or '').replace('\\', '/')
-    for marker in ('/Plugins/DreamGUI/', '/Engine/Source/', '/Engine/Plugins/'):
+    # The plugin sits at Plugins/DreamGUI in a host project and at Plugins/Dream/DreamGUI in the
+    # project it is developed in; either way the path is cut to start inside the plugin.
+    for marker in ('/Plugins/Dream/DreamGUI/', '/Plugins/DreamGUI/'):
         k = p.find(marker)
         if k >= 0:
-            return p[k + 1:] if marker != '/Plugins/DreamGUI/' else p[k + len(marker):]
+            return p[k + len(marker):]
+    for marker in ('/Engine/Source/', '/Engine/Plugins/'):
+        k = p.find(marker)
+        if k >= 0:
+            return p[k + 1:]
     return p
 
 
