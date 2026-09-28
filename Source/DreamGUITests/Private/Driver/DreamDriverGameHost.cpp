@@ -23,6 +23,7 @@
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #include "HAL/PlatformTime.h"
 #include "InputKeyEventArgs.h"
+#include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UITextInput.h"
 
 #include "Driver/DreamDriverInputActors.h"
@@ -827,7 +828,7 @@ bool DreamDriverGameHost::TypeCharacter(FDreamDriverContext& InContext, TCHAR In
 	UUITextInput* ActiveInput = UUITextInput::GetActiveTextInput();
 	if (ActiveInput == nullptr)
 	{
-		OutWhyNot = TEXT("no text field is being edited, so a character has nowhere to go: the game's road hands it to whichever field owns the keyboard (UUITextInput::RouteCharacterInputToActiveInput) and none does");
+		OutWhyNot = TEXT("no text field is being edited, so a character has nowhere to go: the game's road hands it to whichever field owns the keyboard (DreamUITextInputRouter::RouteCharacter) and none does");
 		return false;
 	}
 	if (InContext.World != nullptr && ActiveInput->GetWorld() != InContext.World)
@@ -839,7 +840,7 @@ bool DreamDriverGameHost::TypeCharacter(FDreamDriverContext& InContext, TCHAR In
 	}
 	// The answer is dropped, as the module's road drops it: a refused character -- read-only, full, a
 	// letter in a number field -- is the field deciding.
-	UUITextInput::RouteCharacterInputToActiveInput(InCharacter);
+	DreamUITextInputRouter::RouteCharacter(InCharacter);
 	return true;
 }
 

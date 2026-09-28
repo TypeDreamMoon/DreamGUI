@@ -6,6 +6,7 @@
 
 #include "Core/Components/DreamCanvas.h"
 #include "DreamUIRender/DreamUIMeshIndex.h"
+#include "DreamUIRender/DreamUIRenderer.h"
 #include "Extensions/DreamRetainerBox.h"
 
 /*
@@ -137,29 +138,29 @@ bool FDreamCanvasRenderScaleTest::RunTest(const FString& Parameters)
 
 	// Full scale has to be exactly the viewport. Anything else would put every project that never
 	// touches this setting through a rescale for a rounding error's sake.
-	FIntPoint Size = UDreamCanvas::CalculateRenderScaledSize(FIntPoint(1920, 1080), 1.0f, Applied);
+	FIntPoint Size = FDreamUIRenderer::CalculateRenderScaledSize(FIntPoint(1920, 1080), 1.0f, Applied);
 	TestEqual(TEXT("Scale 1 gives back the viewport width"), Size.X, 1920);
 	TestEqual(TEXT("Scale 1 gives back the viewport height"), Size.Y, 1080);
 	TestEqual(TEXT("...and reports itself as full scale"), Applied, 1.0f);
 
-	Size = UDreamCanvas::CalculateRenderScaledSize(FIntPoint(1920, 1080), 0.5f, Applied);
+	Size = FDreamUIRenderer::CalculateRenderScaledSize(FIntPoint(1920, 1080), 0.5f, Applied);
 	TestEqual(TEXT("Half scale halves the width"), Size.X, 960);
 	TestEqual(TEXT("Half scale halves the height"), Size.Y, 540);
 	TestEqual(TEXT("...and reports half"), Applied, 0.5f);
 
 	// Clamped, not honoured: a scale above 1 would mean supersampling, which this path does not do,
 	// and a scale near zero would mean a target with no pixels in it.
-	Size = UDreamCanvas::CalculateRenderScaledSize(FIntPoint(800, 600), 4.0f, Applied);
+	Size = FDreamUIRenderer::CalculateRenderScaledSize(FIntPoint(800, 600), 4.0f, Applied);
 	TestEqual(TEXT("A scale above one is clamped back to the viewport"), Size.X, 800);
-	Size = UDreamCanvas::CalculateRenderScaledSize(FIntPoint(800, 600), 0.0f, Applied);
+	Size = FDreamUIRenderer::CalculateRenderScaledSize(FIntPoint(800, 600), 0.0f, Applied);
 	TestTrue(TEXT("A scale of zero still produces a target with pixels in it"), Size.X > 0 && Size.Y > 0);
 
 	// A tiny viewport must not round away to a zero-sized target.
-	Size = UDreamCanvas::CalculateRenderScaledSize(FIntPoint(3, 1), 0.1f, Applied);
+	Size = FDreamUIRenderer::CalculateRenderScaledSize(FIntPoint(3, 1), 0.1f, Applied);
 	TestEqual(TEXT("A one-pixel-tall viewport keeps its pixel"), Size.Y, 1);
 	TestTrue(TEXT("...and its width"), Size.X >= 1);
 	// And a viewport of nothing at all is answered, not divided by.
-	Size = UDreamCanvas::CalculateRenderScaledSize(FIntPoint(0, 0), 0.5f, Applied);
+	Size = FDreamUIRenderer::CalculateRenderScaledSize(FIntPoint(0, 0), 0.5f, Applied);
 	TestTrue(TEXT("An empty viewport produces a one-pixel target rather than a division by zero"),
 		Size.X >= 1 && Size.Y >= 1);
 	return true;

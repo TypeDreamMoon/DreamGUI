@@ -145,7 +145,7 @@ namespace DreamDriverPieRigLocal
 		bool bPlayInEditorViewport = false;
 		FString ClientClass;
 		bool bClientRoutesToDreamGUI = false;
-		/** UUITextInput::RouteCharacterInputToActiveInput's target, and whether it is in the live edit UUITextInput::HandleCharacterInput insists on. */
+		/** DreamUITextInputRouter::RouteCharacter's target, and whether it is in the live edit UUITextInput::HandleCharacterInput insists on. */
 		bool bFieldBeingEdited = false;
 		bool bFieldInALiveEdit = false;
 	};
@@ -242,13 +242,13 @@ namespace DreamDriverPieRigLocal
 		else if (!InGates.bClientRoutesToDreamGUI)
 		{
 			Why = FString::Printf(
-				TEXT("the play session's viewport client is a %s, which does not route characters to DreamGUI; UDreamGameViewportClient does, as does any client that calls UUITextInput::RouteCharacterInputToActiveInput from its InputChar"),
+				TEXT("the play session's viewport client is a %s, which does not route characters to DreamGUI; UDreamGameViewportClient does, as does any client that calls DreamUITextInputRouter::RouteCharacter from its InputChar"),
 				*InGates.ClientClass);
 		}
 		else if (bInHandled && InGates.bPlayInEditorViewport)
 		{
 			Why = FString::Printf(
-				TEXT("every gate up to the field was open, and the viewport client (%s) answered for the character without offering it to the field. In a play-in-editor viewport the engine's base viewport client claims every character, so that none reaches the editor's own frame (FGameplayViewportClient::InputChar), and a client that asks its base first and returns on its yes -- taking that yes for the console's -- never gets as far as UUITextInput::RouteCharacterInputToActiveInput"),
+				TEXT("every gate up to the field was open, and the viewport client (%s) answered for the character without offering it to the field. In a play-in-editor viewport the engine's base viewport client claims every character, so that none reaches the editor's own frame (FGameplayViewportClient::InputChar), and a client that asks its base first and returns on its yes -- taking that yes for the console's -- never gets as far as DreamUITextInputRouter::RouteCharacter"),
 				*InGates.ClientClass);
 		}
 		else
@@ -267,7 +267,7 @@ namespace DreamDriverPieRigLocal
 	 * along that user's FOCUS path, from the focused widget up. With the focus on the play session's
 	 * viewport widget that is SViewport::OnKeyChar, then FSceneViewport::OnKeyChar, then the viewport
 	 * client's InputChar inside the play world -- the console first -- and, in UDreamGameViewportClient,
-	 * UUITextInput::RouteCharacterInputToActiveInput to the field being edited. The step plays the
+	 * DreamUITextInputRouter::RouteCharacter to the field being edited. The step plays the
 	 * operating system's part and nothing else: it calls ProcessKeyCharEvent rather than OnKeyChar only so
 	 * that the event carries no modifier -- the desk's own Shift key is not the test's business -- and
 	 * every gate after that is the engine's or the runtime's.

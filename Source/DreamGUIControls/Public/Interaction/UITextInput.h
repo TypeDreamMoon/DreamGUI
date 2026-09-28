@@ -541,14 +541,6 @@ public:
 	bool HandleKeyInput(const FKey& InKey, bool bInPressed);
 	/** HandleKeyInput with the modifiers the host says are held, which is how a chord -- Ctrl+A, Shift+Left, Ctrl+Enter -- arrives. */
 	bool HandleKeyInput(const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifierKeys);
-	/**
-	 * Route a platform character event to whichever field currently owns the keyboard, if any.
-	 * This is the one line a project's UGameViewportClient::InputChar override needs -- called after
-	 * the console has had the character and before the base class's InputChar, which in a
-	 * play-in-editor viewport answers true for every character (see UDreamGameViewportClient).
-	 * @return true if a field took the character.
-	 */
-	static bool RouteCharacterInputToActiveInput(TCHAR InCharacter);
 	/** The field currently being edited, or null. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		static UUITextInput* GetActiveTextInput();
@@ -810,7 +802,7 @@ private:
 	 * flag is already set by the time the key road looks at it, for the first keystroke included.
 	 */
 	static bool bHostDeliversCharacterEvents;
-	/** Whichever field currently owns the keyboard; the target of RouteCharacterInputToActiveInput. */
+	/** Whichever field currently owns the keyboard: the one it also names to DreamUITextInputRouter. */
 	static TWeakObjectPtr<UUITextInput> ActiveTextInput;
 	/**
 	 * Say once, the first time a field is edited with a real keyboard, that this project has not

@@ -305,7 +305,7 @@ bool FDreamDriverPieUIOnlyClickTest::RunTest(const FString& Parameters)
  * and from there the engine takes it -- along Slate's keyboard focus to the play session's viewport
  * widget, FSceneViewport::OnKeyChar, the viewport client's InputChar, which in UDreamGameViewportClient
  * offers it to the console and then routes it to the field being edited
- * (UUITextInput::RouteCharacterInputToActiveInput). A project that has not set this viewport client
+ * (DreamUITextInputRouter::RouteCharacter). A project that has not set this viewport client
  * stops at the console, and a character goes nowhere; that is what the rig swapping the class in, and
  * this test typing through it, is about. The character step itself fails, naming the gate, if the
  * field does not receive a character -- including when the viewport client claims one without passing

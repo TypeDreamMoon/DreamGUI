@@ -101,17 +101,31 @@ GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient
 ```
 
 **2. Keep your own viewport client.** Either derive it from `UDreamGameViewportClient` instead of
-`UGameViewportClient`, or keep its base and add one line to its `InputChar` override:
+`UGameViewportClient`, or keep its base and hand the character to DreamGUI from its `InputChar`
+override (module `DreamGUIInput`, header `Interaction/DreamUITextInputTarget.h`) — after the console,
+and before the base class:
 
 ```cpp
 bool UMyGameViewportClient::InputChar(FViewport* InViewport, int32 ControllerId, TCHAR Character)
 {
-    if (Super::InputChar(InViewport, ControllerId, Character)) { return true; }
-    return UUITextInput::RouteCharacterInputToActiveInput(Character);
+    FString CharacterString;
+    CharacterString += Character;
+    // An open console takes every character.
+    if (ViewportConsole && ViewportConsole->InputChar(FInputDeviceId::CreateFromInternalId(ControllerId), CharacterString))
+    {
+        return true;
+    }
+    // Before the base class: in a play-in-editor viewport it answers true for every character, so a
+    // field asked after it never sees one there.
+    if (!IgnoreInput() && DreamUITextInputRouter::RouteCharacter(Character))
+    {
+        return true;
+    }
+    return Super::InputChar(InViewport, ControllerId, Character);
 }
 ```
 
-`RouteCharacterInputToActiveInput` is the entire contract — it hands the character to whichever
+`DreamUITextInputRouter::RouteCharacter` is the entire contract — it hands the character to whichever
 field currently owns the keyboard and returns whether one took it. From the first character that
 arrives this way, the `FKey` table stops synthesising printable characters altogether, so the two
 roads never double-type.

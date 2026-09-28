@@ -29,7 +29,7 @@ class APlayerController;
  *          GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient
  *   2. A project that already has its own viewport client: derive from this instead of
  *      UGameViewportClient, or keep its own base and call
- *      UUITextInput::RouteCharacterInputToActiveInput(Character) from its InputChar override --
+ *      DreamUITextInputRouter::RouteCharacter(Character) from its InputChar override --
  *      after its console has had the character and BEFORE calling the base class's InputChar. In a
  *      play-in-editor viewport the engine's base answers true for every character (it absorbs them
  *      so they do not reach the editor's frame), so an override that asks the base first and returns

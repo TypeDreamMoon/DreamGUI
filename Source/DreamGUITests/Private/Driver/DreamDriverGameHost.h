@@ -19,7 +19,7 @@ enum class EDreamUINavigationDirection : uint8;
  * the controller's UPlayerInput until the controller's input tick, and is then dispatched down the
  * controller's input stack -- where the preset input actor's bindings turn it into a module call. A
  * character takes a different road again: UDreamGameViewportClient::InputChar hands it to
- * UUITextInput::RouteCharacterInputToActiveInput. This namespace builds that path headlessly and feeds
+ * DreamUITextInputRouter::RouteCharacter. This namespace builds that path headlessly and feeds
  * it: a local player, a controller on the world's list with the local player behind it, and one of
  * the test input actors (Driver/DreamDriverInputActors.h) begun and bound; then every input step
  * enters as the key the preset binds, through APlayerController::InputKey / InputTouch.
@@ -94,7 +94,7 @@ namespace DreamDriverGameHost
 	bool NavigationTrigger(FDreamDriverContext& InContext, bool bInPressed, FString& OutWhyNot);
 	/**
 	 * A character by the game's own road: the call UDreamGameViewportClient::InputChar makes,
-	 * UUITextInput::RouteCharacterInputToActiveInput, which hands it to whichever field owns the
+	 * DreamUITextInputRouter::RouteCharacter, which hands it to whichever field owns the
 	 * keyboard. Fails when no field does, or when the one that does belongs to another world. A
 	 * character the field refuses is not a failure -- refusing it is the field's decision.
 	 */

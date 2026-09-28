@@ -2264,13 +2264,6 @@ void UDreamCanvas::SetScreenSpaceRenderScale(float Value)
 	}
 }
 
-FIntPoint UDreamCanvas::CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale)
-{
-	// The renderer is what draws at that size, so the arithmetic is its own; kept here for the callers that
-	// ask the canvas.
-	return FDreamUIRenderer::CalculateRenderScaledSize(InViewportSize, InRequestedScale, OutAppliedScale);
-}
-
 void UDreamCanvas::SetRenderTargetSizeMode(EDreamCanvasRenderTargetSizeMode Value)
 {
 	if (RenderTargetSizeMode != Value)

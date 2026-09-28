@@ -769,12 +769,6 @@ bool UUITextInput::HandleCharacterInputString(const FString& InCharacters)
 }
 TWeakObjectPtr<UUITextInput> UUITextInput::ActiveTextInput = nullptr;
 bool UUITextInput::bHostDeliversCharacterEvents = false;
-bool UUITextInput::RouteCharacterInputToActiveInput(TCHAR InCharacter)
-{
-	// Kept for the projects whose own viewport client calls it, as the README tells them to. The router
-	// is what knows which field owns the keyboard; this field claims it and lets go of it below.
-	return DreamUITextInputRouter::RouteCharacter(InCharacter);
-}
 UUITextInput* UUITextInput::GetActiveTextInput()
 {
 	return ActiveTextInput.Get();
@@ -817,7 +811,7 @@ void UUITextInput::WarnOnceIfNoCharacterEventSource()
 	}
 	UE_LOG(DreamGUI, Warning, TEXT("[%s].%d This project's game viewport client is '%s', which does not route character input to DreamGUI. ")
 		TEXT("Text fields will fall back to their own FKey-to-character table, which is only correct on a US QWERTY layout -- AZERTY, QWERTZ, Dvorak, Cyrillic, dead keys and AltGr will type the wrong character. ")
-		TEXT("Fix by setting GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient in [/Script/Engine.Engine] of DefaultEngine.ini, by deriving the project's own viewport client from UDreamGameViewportClient, or by calling UUITextInput::RouteCharacterInputToActiveInput(Character) from its InputChar override.")
+		TEXT("Fix by setting GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient in [/Script/Engine.Engine] of DefaultEngine.ini, by deriving the project's own viewport client from UDreamGameViewportClient, or by calling DreamUITextInputRouter::RouteCharacter(Character) from its InputChar override, before the base class's.")
 		, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
 		, ViewportClientClass != nullptr ? *ViewportClientClass->GetName() : TEXT("(none yet)"));
 }
@@ -2338,7 +2332,7 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 	// "the value before the edit" is a fact about the MOMENT the edit started and nothing later in
 	// the session can reconstruct it.
 	TextAtActivation = Text;
-	//the target of RouteCharacterInputToActiveInput: the one field that owns the keyboard right now
+	//the one field that owns the keyboard right now, and so the one the router hands a character to
 	ActiveTextInput = this;
 	DreamUITextInputRouter::SetActiveTarget(this);
 	SetCanExecuteTick(true);

@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Extensions/Effects/DreamPixelSort.h"
+#include "DreamUIRender/DreamUIPostProcessEffects.h"
 
 namespace DreamPixelSortTestLocal
 {
@@ -411,18 +412,18 @@ bool FDreamPixelSortRegionTest::RunTest(const FString& Parameters)
 	const FIntPoint OddScreen(1274, 719);
 
 	TestEqual(TEXT("Full size uses the screen even when the authored rect differs"),
-		ResolveRegionSize(true, AuthoredRect, OddScreen), OddScreen);
+		DreamUIPostProcessEffects::ResolvePixelSortRegionSize(true, AuthoredRect, OddScreen), OddScreen);
 	// The coincidence that made the old test appear to work.
 	TestEqual(TEXT("Full size still uses the screen when the two happen to match"),
-		ResolveRegionSize(true, AuthoredRect, FIntPoint(1920, 1080)), FIntPoint(1920, 1080));
+		DreamUIPostProcessEffects::ResolvePixelSortRegionSize(true, AuthoredRect, FIntPoint(1920, 1080)), FIntPoint(1920, 1080));
 	// And without the flag, the widget's own rect is the subject regardless of the screen.
 	TestEqual(TEXT("Without the flag the widget rect is the subject"),
-		ResolveRegionSize(false, FVector2f(400.0f, 260.0f), OddScreen), FIntPoint(400, 260));
+		DreamUIPostProcessEffects::ResolvePixelSortRegionSize(false, FVector2f(400.0f, 260.0f), OddScreen), FIntPoint(400, 260));
 	TestEqual(TEXT("A widget rect equal to the screen is still the widget rect"),
-		ResolveRegionSize(false, FVector2f(1274.0f, 719.0f), OddScreen), OddScreen);
+		DreamUIPostProcessEffects::ResolvePixelSortRegionSize(false, FVector2f(1274.0f, 719.0f), OddScreen), OddScreen);
 	// A collapsed widget must not produce a zero-sized buffer.
 	TestEqual(TEXT("A degenerate rect still yields at least one texel"),
-		ResolveRegionSize(false, FVector2f(0.0f, 0.0f), OddScreen), FIntPoint(1, 1));
+		DreamUIPostProcessEffects::ResolvePixelSortRegionSize(false, FVector2f(0.0f, 0.0f), OddScreen), FIntPoint(1, 1));
 	return true;
 }
 

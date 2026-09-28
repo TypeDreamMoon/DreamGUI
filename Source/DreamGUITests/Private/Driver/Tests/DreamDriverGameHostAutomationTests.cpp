@@ -555,7 +555,7 @@ bool FDreamGameHostTabNavigationTest::RunTest(const FString& Parameters)
 
 /**
  * The game's road for a character: UDreamGameViewportClient::InputChar hands it, after the console,
- * to UUITextInput::RouteCharacterInputToActiveInput, which gives it to whichever field owns the
+ * to DreamUITextInputRouter::RouteCharacter, which gives it to whichever field owns the
  * keyboard. So what is asserted is that the click through the controller made THIS field the one
  * that owns it, and that every character then landed in it, one change each (SEditableText raises
  * OnTextChanged once per edit).

@@ -151,8 +151,6 @@ namespace DreamPixelSort
 	 */
 	DREAMGUIEXTENSIONS_API int32 ComputeDestination(const TArray<float>& InKeys, int32 InIndex,
 		const FDreamPixelSortRunRules& InRules, bool bInDescending, int32 InSearchRadius);
-
-	DREAMGUIEXTENSIONS_API FIntPoint ResolveRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize);
 }
 
 /**

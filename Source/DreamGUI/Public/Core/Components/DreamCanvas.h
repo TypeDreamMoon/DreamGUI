@@ -594,16 +594,6 @@ public:
 		float GetScreenSpaceRenderScale()const { return ScreenSpaceRenderScale; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetScreenSpaceRenderScale(float Value);
-	/**
-	 * The size a screen-space pass renders at for a given viewport size and render scale, and the
-	 * scale that was actually used (the request, clamped).
-	 *
-	 * Separate from the RDG work on purpose: this is the whole decision, it is pure arithmetic, and it
-	 * is where the rules live -- never larger than the viewport, never smaller than one pixel on
-	 * either axis, and a scale of exactly 1 must give back the viewport size unchanged so that the
-	 * ordinary case cannot drift by a rounding error.
-	 */
-	static FIntPoint CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale);
 	/** Get actual render target of this canvas if actual render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		UTextureRenderTarget2D* GetActualRenderTarget()const;

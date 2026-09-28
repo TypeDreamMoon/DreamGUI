@@ -12,6 +12,7 @@
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "InputCoreTypes.h"
+#include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UITextInput.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -482,7 +483,7 @@ bool FDreamTextInputTeardownEndsTheEditTest::RunTest(const FString& Parameters)
 	// keep taking every platform character a host routes through it, into a widget that no longer
 	// exists in any hierarchy -- and every later test would find a field "being edited" that is not.
 	TestNull(TEXT("Once the field is gone, no field is being edited"), UUITextInput::GetActiveTextInput());
-	TestFalse(TEXT("So a platform character goes nowhere"), UUITextInput::RouteCharacterInputToActiveInput(TEXT('x')));
+	TestFalse(TEXT("So a platform character goes nowhere"), DreamUITextInputRouter::RouteCharacter(TEXT('x')));
 
 	return true;
 }

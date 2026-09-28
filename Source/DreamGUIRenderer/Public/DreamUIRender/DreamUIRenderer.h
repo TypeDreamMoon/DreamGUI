@@ -83,7 +83,12 @@ public:
 
 	/**
 	 * The size a screen-space pass renders at for InRequestedScale of InViewportSize, and the scale that size
-	 * really is once rounded to pixels (OutAppliedScale). 1 leaves the size exactly as it is.
+	 * really is once rounded to pixels (OutAppliedScale).
+	 *
+	 * Separate from the RDG work on purpose: this is the whole decision, it is pure arithmetic, and it is
+	 * where the rules live -- never larger than the viewport, never smaller than one pixel on either axis,
+	 * and a scale of exactly 1 must give back the viewport size unchanged so that the ordinary case cannot
+	 * drift by a rounding error.
 	 */
 	static FIntPoint CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale);
 #if WITH_EDITOR

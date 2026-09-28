@@ -82,11 +82,6 @@ namespace DreamPixelSort
 		return Clamped >= InBand.X && Clamped <= InBand.Y;
 	}
 
-	FIntPoint ResolveRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize)
-	{
-		return DreamUIPostProcessEffects::ResolvePixelSortRegionSize(bInUseFullSize, InRectSize, InScreenSize);
-	}
-
 	uint32 Hash(uint32 InValue)
 	{
 		// A stable 32-bit mixer, chosen because it is trivially reproducible in HLSL. The runs must
