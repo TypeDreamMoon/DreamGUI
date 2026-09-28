@@ -13,8 +13,7 @@
 #include "Core/DreamWidgetTree.h"
 // A `->` route may name an FDreamUIEventDelegate as well as a multicast delegate.
 #include "Event/DreamUIEventDelegate.h"
-#include "Interaction/UIListView.h"
-#include "Interaction/UIRecyclableScrollView.h"
+#include "Core/DreamUIEachBindingHandler.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelSlot.h"
@@ -1864,11 +1863,19 @@ namespace DreamUITextBuilderLocal
 				TEXT("an 'each' lives inside the widget whose list it fills; it cannot be the root"));
 			return nullptr;
 		}
+		// The list views are the control library's, reached through the handler it registers.
+		const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+		if (Handler == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' fills a list view, and no module that has list views is loaded"));
+			return nullptr;
+		}
 		// The host contract: the ENCLOSING widget carries the list view, configured however the
 		// author likes -- the `each` only supplies the template and the data. Auto-adding a view
 		// here would mean auto-choosing its scroll direction, content and bars, which are layout
 		// decisions this block has no words for.
-		if (InParent->GetComponent<UUIRecyclableScrollView>() == nullptr)
+		if (!Handler->HasListView(InParent))
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
 				FString::Printf(TEXT("'%s' has no UIListView/UIRecyclableScrollView behaviour for this 'each' to fill -- add one with '+ UIListView { }'"),
@@ -1921,25 +1928,13 @@ namespace DreamUITextBuilderLocal
 		}
 		Each.TemplateWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Template);
 
-		// The recyclable view clones whatever carries the cell-marker interface; a template the
-		// author did not mark gets the plain list entry, which is the marker plus click plumbing.
-		if (Template->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
-		{
-			Template->AddComponent<UUIListEntry>();
-		}
-
 		// The runtime prerequisites the walkthrough caught the view silently returning without:
-		// InitializeOnDataSource needs a CONTENT widget under the host (the thing scrolling moves
-		// and sizes), and exactly one scroll axis -- the scroll-view default is both. The language
-		// has no words for either, so the builder supplies them: a synthesized content the template
-		// moves into, and a vertical list when the author configured no single axis. An author who
-		// set one axis on the behaviour keeps it.
-		UUIRecyclableScrollView* View = InParent->GetComponent<UUIRecyclableScrollView>();
-		if (View->GetHorizontal() == View->GetVertical())
-		{
-			View->SetHorizontal(false);
-			View->SetVertical(true);
-		}
+		// a cell marker on the template, InitializeOnDataSource's CONTENT widget under the host (the
+		// thing scrolling moves and sizes), and exactly one scroll axis -- the scroll-view default is
+		// both. The language has no words for any of them, so they are supplied here: the handler
+		// marks the template and settles the axis (vertical when the author configured no single
+		// axis; one who set an axis keeps it), and the builder synthesizes the content.
+		const bool bVertical = Handler->PrepareHost(InParent, Template);
 		const FString ContentName = InParent->GetDisplayName() + TEXT("_EachContent");
 		UDreamWidget* Content = InContext.Tree->ConstructWidget(UDreamWidget::StaticClass(), FName(*ContentName),
 			FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + ContentName));
@@ -1947,7 +1942,7 @@ namespace DreamUITextBuilderLocal
 		{
 			Content->SetDisplayName(ContentName);
 			FDreamUIAnchorData ContentAnchors;
-			if (View->GetVertical())
+			if (bVertical)
 			{
 				// Stretch across the top: the view drives the height from the item count.
 				ContentAnchors.AnchorMin = FVector2D(0.0, 1.0);
@@ -1965,7 +1960,7 @@ namespace DreamUITextBuilderLocal
 			Content->SetAnchorData(ContentAnchors);
 			Content->TrySetParent(InParent, /*bKeepWorldPosition*/false);
 			Template->TrySetParent(Content, /*bKeepWorldPosition*/false);
-			View->SetContent(Content);
+			Handler->SetContent(InParent, Content);
 			// By name too: the pointer above lives in the archetype and does not survive into
 			// instances -- ResolveEachBindings re-aims it per instance through this.
 			Each.ContentWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Content);

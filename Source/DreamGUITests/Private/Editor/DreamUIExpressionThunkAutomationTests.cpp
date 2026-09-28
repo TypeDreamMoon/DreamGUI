@@ -8,6 +8,7 @@
 #include "DreamWidgetBehaviourTestTypes.h"
 #include "DreamWidgetBlueprintTestTypes.h"
 #include "Core/DreamTextUserWidget.h"
+#include "Core/DreamUIEachBindingHandler.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Text/DreamUIExpressionThunks.h"
@@ -19,6 +20,7 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Misc/ScopeExit.h"
 #include "UObject/Package.h"
 
 /*
@@ -611,6 +613,64 @@ bool FDreamUIEachMisplacedTest::RunTest(const FString& Parameters)
 	FCompilerResultsLog Results;
 	Compile(Fixture.Blueprint, Results);
 	TestTrue(TEXT("The compile reports the misplaced each"), Results.NumErrors > 0);
+
+	TArray<FDreamWidgetEachBinding> EachBindings;
+	UDreamWidgetGeneratedClass::CollectEachBindings(Fixture.Blueprint->GeneratedClass, EachBindings);
+	TestEqual(TEXT("Nothing half-made reaches the class"), EachBindings.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIEachWithoutAHandlerTest,
+	"DreamGUI.Text.Expression.AnEachIsRefusedWhenNoModuleWithListViewsIsLoaded",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIEachWithoutAHandlerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIExpressionThunkTestLocal;
+
+	// The list views are the control library's, and the .dui builder reaches them only through the
+	// handler that library registers. A project without it -- or a process where it has gone -- gets
+	// the misplaced-each refusal, not a list half-made or a crash, even where the host has a list view.
+	IDreamUIEachBindingHandler* Registered = DreamUI::GetEachBindingHandler();
+	if (!TestNotNull(TEXT("the control library registered its handler"), Registered))
+	{
+		return false;
+	}
+	DreamUI::SetEachBindingHandler(nullptr);
+	ON_SCOPE_EXIT
+	{
+		DreamUI::SetEachBindingHandler(Registered);
+	};
+
+	AddExpectedError(TEXT("DUI5012"), EAutomationExpectedErrorFlags::Contains, 0);
+	// A build with an error in it produces no hierarchy at all, so the empty-tree error follows the refusal.
+	AddExpectedError(TEXT("DUI6002"), EAutomationExpectedErrorFlags::Contains, 0);
+	FScopedDuiFile File(TEXT("EachWithoutAHandlerFixture.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("class /Temp/DreamGUITests/BP_EachWithoutAHandler"),
+		TEXT("Widget Root {"),
+		TEXT("    Widget List {"),
+		TEXT("        + UIListView {"),
+		TEXT("        }"),
+		TEXT("        each Item in GetRows() {"),
+		TEXT("            Widget Row {"),
+		TEXT("            }"),
+		TEXT("        }"),
+		TEXT("    }"),
+		TEXT("}")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_EachWithoutAHandler"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestTrue(TEXT("The compile reports the each it cannot fill"), Results.NumErrors > 0);
 
 	TArray<FDreamWidgetEachBinding> EachBindings;
 	UDreamWidgetGeneratedClass::CollectEachBindings(Fixture.Blueprint->GeneratedClass, EachBindings);

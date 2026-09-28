@@ -2,10 +2,12 @@
 
 #include "Core/DreamUIEachAdapter.h"
 
+#include "Core/DreamUIEachBindingHandler.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamGUI.h"
+#include "Interaction/UIListView.h"
 #include "UObject/UnrealType.h"
 
 void UDreamUIEachAdapter::Initialize(UDreamUserWidget* InOwner, const FDreamWidgetEachBinding& InBinding, UUIRecyclableScrollView* InView)
@@ -172,4 +174,105 @@ void UDreamUIEachAdapter::SetCell_Implementation(UDreamUIBehaviour* Component, i
 			ItemProperty->ContainerPtrToValuePtr<void>(Item));
 		Target->ProcessEvent(Setter, SetterFrame.GetStructMemory());
 	}
+}
+
+namespace DreamUIEachAdapterLocal
+{
+	/** The list views' side of an `each`, which the core reaches through IDreamUIEachBindingHandler. */
+	class FEachBindingHandler final : public IDreamUIEachBindingHandler
+	{
+	public:
+		virtual bool HasListView(const UDreamWidget* InHost) const override
+		{
+			return IsValid(InHost) && InHost->GetComponent<UUIRecyclableScrollView>() != nullptr;
+		}
+
+		virtual bool PrepareHost(UDreamWidget* InHost, UDreamWidget* InTemplate) const override
+		{
+			// The recyclable view clones whatever carries the cell-marker interface; a template the
+			// author did not mark gets the plain list entry, which is the marker plus click plumbing.
+			if (InTemplate->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
+			{
+				InTemplate->AddComponent<UUIListEntry>();
+			}
+			// InitializeOnDataSource needs exactly one scroll axis, and the scroll-view default is both.
+			// An author who set one axis on the behaviour keeps it.
+			UUIRecyclableScrollView* View = InHost->GetComponent<UUIRecyclableScrollView>();
+			if (View->GetHorizontal() == View->GetVertical())
+			{
+				View->SetHorizontal(false);
+				View->SetVertical(true);
+			}
+			return View->GetVertical();
+		}
+
+		virtual void SetContent(UDreamWidget* InHost, UDreamWidget* InContent) const override
+		{
+			if (UUIRecyclableScrollView* View = InHost->GetComponent<UUIRecyclableScrollView>())
+			{
+				View->SetContent(InContent);
+			}
+		}
+
+		virtual UObject* Bind(UDreamUserWidget* InOwner, const FDreamWidgetEachBinding& InBinding,
+			UDreamWidget* InHost, UDreamWidget* InTemplate, UDreamWidget* InContent) const override
+		{
+			UUIRecyclableScrollView* ListView = IsValid(InHost) ? InHost->GetComponent<UUIRecyclableScrollView>() : nullptr;
+			if (!IsValid(ListView) || !IsValid(InTemplate))
+			{
+				return nullptr;
+			}
+			// The view's Content pointer was authored against the archetype; this instance's content is
+			// what the cells have to land under.
+			if (IsValid(InContent))
+			{
+				ListView->SetContent(InContent);
+			}
+			UDreamUIEachAdapter* Adapter = NewObject<UDreamUIEachAdapter>(InOwner);
+			Adapter->Initialize(InOwner, InBinding, ListView);
+
+			ListView->SetCellTemplate(InTemplate);
+			TScriptInterface<IUIRecyclableScrollViewDataSource> DataSource;
+			DataSource.SetObject(Adapter);
+			DataSource.SetInterface(Cast<IUIRecyclableScrollViewDataSource>(Adapter));
+			ListView->SetDataSource(DataSource);
+			return Adapter;
+		}
+
+		virtual void Refresh(UObject* InAdapter) const override
+		{
+			if (UDreamUIEachAdapter* Adapter = Cast<UDreamUIEachAdapter>(InAdapter); IsValid(Adapter))
+			{
+				Adapter->Refresh();
+			}
+		}
+
+		virtual const FDreamWidgetEachBinding* GetBinding(const UObject* InAdapter) const override
+		{
+			const UDreamUIEachAdapter* Adapter = Cast<UDreamUIEachAdapter>(InAdapter);
+			return IsValid(Adapter) ? &Adapter->GetBinding() : nullptr;
+		}
+	};
+
+	FEachBindingHandler Handler;
+
+	/**
+	 * Registered from a static initializer, the way the .dui tags are, so the handler is in place before
+	 * the first .dui compiles -- whichever module these list views live in.
+	 */
+	struct FRegistration
+	{
+		FRegistration()
+		{
+			DreamUI::SetEachBindingHandler(&Handler);
+		}
+		~FRegistration()
+		{
+			if (DreamUI::GetEachBindingHandler() == &Handler)
+			{
+				DreamUI::SetEachBindingHandler(nullptr);
+			}
+		}
+	};
+	FRegistration Registration;
 }

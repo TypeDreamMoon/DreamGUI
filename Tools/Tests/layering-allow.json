@@ -68,12 +68,6 @@
     },
     {
       "file": "Source/DreamGUI/Private/Core/DreamUserWidget.cpp",
-      "include": "Source/DreamGUI/Public/Core/DreamUIEachAdapter.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIControls"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUserWidget.cpp",
       "include": "Source/DreamGUI/Public/Event/DreamEventSystem.h",
       "owner": "DreamGUI",
       "includedOwner": "DreamGUIInput"
@@ -107,18 +101,6 @@
       "include": "Source/DreamGUI/Public/Event/DreamScreenSpaceRaycaster.h",
       "owner": "DreamGUI",
       "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Text/DreamUITextBuilder.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UIListView.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIControls"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Text/DreamUITextBuilder.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UIRecyclableScrollView.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIControls"
     },
     {
       "file": "Source/DreamGUI/Public/Core/DreamUserWidget.h",

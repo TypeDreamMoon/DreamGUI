@@ -90,6 +90,7 @@ Source/DreamGUI/Private/Core/DreamUIDataAsTexture.cpp,DreamGUI,UDataAsset encode
 Source/DreamGUI/Private/Core/DreamUIDrawCall.cpp,DreamGUI,game-thread batch description built by the canvas; handed to the renderer through the seam
 Source/DreamGUI/Private/Core/DreamUIDynamicSpriteAtlasData.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIEachAdapter.cpp,DreamGUIControls,'each' list adapter over UUIRecyclableScrollView; Core reaches it through a registered each-binding handler
+Source/DreamGUI/Private/Core/DreamUIEachBindingHandler.cpp,DreamGUI,"each seam: the core asks the list views through it, Controls registers the handler"
 Source/DreamGUI/Private/Core/DreamUIFontData_BaseObject.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIFontData_Bitmap.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIFontData_DistanceField.cpp,DreamGUI,core
@@ -333,6 +334,7 @@ Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h,DreamGUI,UDataAsset encoded i
 Source/DreamGUI/Public/Core/DreamUIDrawCall.h,DreamGUI,game-thread batch description built by the canvas; handed to the renderer through the seam
 Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIEachAdapter.h,DreamGUIControls,'each' list adapter over UUIRecyclableScrollView; Core reaches it through a registered each-binding handler
+Source/DreamGUI/Public/Core/DreamUIEachBindingHandler.h,DreamGUI,"each seam: the core asks the list views through it, Controls registers the handler"
 Source/DreamGUI/Public/Core/DreamUIFontData_BaseObject.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIFontData_DistanceField.h,DreamGUI,core

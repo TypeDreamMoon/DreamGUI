@@ -1,7 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamUserWidget.h"
-#include "Core/DreamUIEachAdapter.h"
+#include "Core/DreamUIEachBindingHandler.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUIManager.h"
@@ -1699,7 +1699,9 @@ void UDreamUserWidget::ResolveEachBindings()
 
 	TArray<FDreamWidgetEachBinding> Bindings;
 	UDreamWidgetGeneratedClass::CollectEachBindings(GetClass(), Bindings);
-	if (Bindings.Num() == 0)
+	// No handler: the module with the list views is not loaded, and there is nothing to bind them to.
+	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+	if (Bindings.Num() == 0 || Handler == nullptr)
 	{
 		return;
 	}
@@ -1714,40 +1716,33 @@ void UDreamUserWidget::ResolveEachBindings()
 		};
 		UDreamWidget* Host = FindWidgetByVariable(Binding.HostWidgetName);
 		UDreamWidget* Template = FindWidgetByVariable(Binding.TemplateWidgetName);
-		UUIRecyclableScrollView* ListView = IsValid(Host) ? Host->GetComponent<UUIRecyclableScrollView>() : nullptr;
-		if (!IsValid(ListView) || !IsValid(Template))
+		if (!Handler->HasListView(Host) || !IsValid(Template))
 		{
 			// The compiler and builder vetted all of this; the class moved underneath us. Skip.
 			continue;
 		}
 
-		// The view's Content pointer was authored against the archetype; re-aim it at THIS
-		// instance's content, the same per-instance re-wiring the template gets below. Without it
-		// every cell the view clones lands in the invisible archetype tree. The synthesized
-		// content may not have earned a class variable, so the template's own parent -- which IS
-		// that content whenever the builder synthesized one -- is the fallback.
+		// The view's Content pointer was authored against the archetype; the handler re-aims it at
+		// THIS instance's content, the same per-instance re-wiring the template gets. Without it every
+		// cell the view clones lands in the invisible archetype tree. The synthesized content may not
+		// have earned a class variable, so the template's own parent -- which IS that content whenever
+		// the builder synthesized one -- is the fallback.
+		UDreamWidget* Content = nullptr;
 		if (!Binding.ContentWidgetName.IsNone())
 		{
-			UDreamWidget* Content = FindWidgetByVariable(Binding.ContentWidgetName);
+			Content = FindWidgetByVariable(Binding.ContentWidgetName);
 			if (!IsValid(Content) && Template->GetParent() != Host)
 			{
 				Content = Template->GetParent();
 			}
-			if (IsValid(Content))
-			{
-				ListView->SetContent(Content);
-			}
 		}
 
-		UDreamUIEachAdapter* Adapter = NewObject<UDreamUIEachAdapter>(this);
-		Adapter->Initialize(this, Binding, ListView);
+		UObject* Adapter = Handler->Bind(this, Binding, Host, Template, Content);
+		if (Adapter == nullptr)
+		{
+			continue;
+		}
 		EachAdapters.Add(Adapter);
-
-		ListView->SetCellTemplate(Template);
-		TScriptInterface<IUIRecyclableScrollViewDataSource> DataSource;
-		DataSource.SetObject(Adapter);
-		DataSource.SetInterface(Cast<IUIRecyclableScrollViewDataSource>(Adapter));
-		ListView->SetDataSource(DataSource);
 
 		// A variable source that broadcasts refreshes its list the way a FieldNotify binding
 		// re-evaluates: from the change, not from a poll.
@@ -1770,24 +1765,31 @@ void UDreamUserWidget::ResolveEachBindings()
 
 void UDreamUserWidget::HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId)
 {
-	for (UDreamUIEachAdapter* Adapter : EachAdapters)
+	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+	if (Handler == nullptr)
 	{
-		if (IsValid(Adapter) && !Adapter->GetBinding().bSourceIsFunction
-			&& Adapter->GetBinding().SourceName == InFieldId.GetName())
+		return;
+	}
+	for (UObject* Adapter : EachAdapters)
+	{
+		const FDreamWidgetEachBinding* Binding = Handler->GetBinding(Adapter);
+		if (Binding != nullptr && !Binding->bSourceIsFunction && Binding->SourceName == InFieldId.GetName())
 		{
-			Adapter->Refresh();
+			Handler->Refresh(Adapter);
 		}
 	}
 }
 
 void UDreamUserWidget::RefreshEachBindings()
 {
-	for (UDreamUIEachAdapter* Adapter : EachAdapters)
+	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+	if (Handler == nullptr)
 	{
-		if (IsValid(Adapter))
-		{
-			Adapter->Refresh();
-		}
+		return;
+	}
+	for (UObject* Adapter : EachAdapters)
+	{
+		Handler->Refresh(Adapter);
 	}
 }
 

@@ -1138,9 +1138,13 @@ private:
 	/** A FieldNotify array source broadcast: refresh the adapters reading that field. */
 	void HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId);
 
-	/** One per `each` block, kept alive here; the view holds them only as its data source interface. */
+	/**
+	 * One per `each` block, kept alive here; the view holds them only as its data source interface. Typed
+	 * as UObject because the adapter is the list views', which the core does not name: the registered
+	 * IDreamUIEachBindingHandler makes them and refreshes them.
+	 */
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<class UDreamUIEachAdapter>> EachAdapters;
+	TArray<TObjectPtr<UObject>> EachAdapters;
 	/** One binding, source through setter. Shared by the poll, the initial push and the broadcasts. */
 	void EvaluateBinding(const FResolvedBinding& InBinding);
 	/** Re-evaluates every binding whose source field just broadcast. */
