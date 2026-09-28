@@ -16,6 +16,8 @@ class DREAMGUIEDITOR_API FDreamUIEditorTools
 {
 private:
 public:
+	/** What the editor gives a visual it has just created beyond its class's defaults; see the definition. */
+	static void ApplyEditorDefaults(class UDreamVisual* InVisual);
 	static FEditingWidgetChangedDelegate OnEditingWidgetChanged;
 	static TArray<UDreamWidget*> GetRootWidgetListFromSelection(const TArray<UDreamWidget*>& InSelectedWidgets);
 	/** UMG-style unique name in the containing prefab: Name, Name_1, Name_2, ... */

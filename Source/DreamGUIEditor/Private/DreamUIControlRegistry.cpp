@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIControlRegistry.h"
+#include "DreamUIEditorTools.h"
 // Explicit: this used to arrive through whichever designer header the unity blob happened to pull
 // in first, which is not a dependency, it is a coincidence.
 #include "DreamWidgetBlueprint.h"
@@ -106,7 +107,7 @@ namespace DreamUIControlRegistryLocal
 		Child->SetAnchorOffset(FMargin(0));
 		if (VisualClass)
 		{
-			Child->CreateNewVisual(VisualClass);
+			FDreamUIEditorTools::ApplyEditorDefaults(Child->CreateNewVisual(VisualClass));
 		}
 		return Child;
 	}
