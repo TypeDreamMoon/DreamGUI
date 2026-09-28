@@ -119,6 +119,10 @@ _CRASH = re.compile(r'=== Critical error: ===|Fatal error!|Unhandled Exception:|
 _ENSURE = re.compile(r'Ensure condition failed:\s*(.*)$')
 _PLUGIN_ERROR = re.compile(r'LogPluginManager: Error: (.*)$')
 _EXIT_REASON = re.compile(r'Engine exit requested \(reason: (.*?)\)')
+# What a teardown must never leave (the lifecycle probe I7), looked for once the tests are over: the editor's own
+# exit, in a run that ends it normally (a preset with softQuit). An ensure there is caught with the rest.
+_TEARDOWN_FAULT = re.compile(r'was not destroyed by its owner|reached the collector still registered|Array has changed during ranged-for iteration')
+_EXITED = re.compile(r'LogExit: Exiting\.')
 _TIMESTAMP = re.compile(r'^\[[^\]]*\]\[[^\]]*\]')
 
 
@@ -128,7 +132,7 @@ def read_log(path):
         'found': None, 'performed': None, 'queue_empty': False, 'no_match': False,
         'ensures': [], 'crash': None, 'plugin_errors': [], 'exit_reasons': [],
         'results': collections.OrderedDict(), 'messages': collections.defaultdict(list),
-        'last_started': None,
+        'last_started': None, 'exit_faults': [], 'exited': False,
     }
     if not facts['exists']:
         return facts
@@ -144,6 +148,11 @@ def read_log(path):
                     if text:
                         crash_lines.append(text)
                 continue
+            if facts['queue_empty']:
+                if _TEARDOWN_FAULT.search(line):
+                    facts['exit_faults'].append(_TIMESTAMP.sub('', line).strip()[:300])
+                if _EXITED.search(line):
+                    facts['exited'] = True
             m = _STARTED.search(line)
             if m:
                 current = m.group(2) or m.group(1)
@@ -187,8 +196,10 @@ def read_log(path):
             if m:
                 facts['plugin_errors'].append(m.group(1).strip()[:400])
                 continue
+            # Early is before the last test: once the queue is empty, asking to exit is how every run ends -- the
+            # platform's request under -TestExit, EngineExit() behind it under a preset's SoftQuit.
             m = _EXIT_REASON.search(line)
-            if m and m.group(1) != 'Win RequestExit':
+            if m and m.group(1) != 'Win RequestExit' and not facts['queue_empty']:
                 facts['exit_reasons'].append(m.group(1))
                 continue
             # Only the crash handler's category: a test may well log the words "Assertion failed:".
@@ -322,6 +333,7 @@ def digest_run(run_dir, write_history=True):
     dirty = bool(info.get('dirty'))
     exit_code = info.get('editorExitCode')
     timed_out = bool(info.get('timedOut'))
+    soft_quit = bool(info.get('softQuit'))
 
     log = read_log(os.path.join(run_dir, 'run.log'))
     data, index_problem = read_index(run_dir)
@@ -369,6 +381,13 @@ def digest_run(run_dir, write_history=True):
             infra.append('the log never reached "Automation Test Queue Empty": the run did not finish')
     if data is None:
         infra.append('%s: the engine writes it only after the last test, so the run did not finish' % index_problem)
+    # A run that ends the editor normally is judged on its exit too: it has to get all the way out, and leave
+    # nothing behind that a teardown must not.
+    exit_faults = []
+    if soft_quit and log['exists'] and not log['crash'] and not timed_out:
+        exit_faults = list(log['exit_faults'])
+        if log['queue_empty'] and not log['exited']:
+            exit_faults.append('the editor never finished its own exit ("LogExit: Exiting." is missing)')
 
     counts = collections.Counter(t['state'] for t in tests)
     ran = counts['Success'] + counts['Fail']
@@ -441,7 +460,7 @@ def digest_run(run_dir, write_history=True):
 
     if infra:
         code, verdict = 2, 'INFRASTRUCTURE'
-    elif failures:
+    elif failures or exit_faults:
         code, verdict = 1, 'RED'
     else:
         code, verdict = 0, 'GREEN'
@@ -455,7 +474,7 @@ def digest_run(run_dir, write_history=True):
                    'withWarnings': len([t for t in tests if t['warnings']])},
         'totalDuration': g(data, 'totalDuration') if data is not None else None,
         'elapsedSeconds': info.get('elapsedSeconds'),
-        'infrastructure': infra, 'notes': notes,
+        'infrastructure': infra, 'notes': notes, 'exitFaults': exit_faults,
         'failures': [{'test': t['path'], 'message': (t['first_error'] or ('', ''))[0], 'where': (t['first_error'] or ('', ''))[1]}
                      for t, _ in failures],
         'knownRed': [{'test': t['path'], 'reason': k.get('reason', ''), 'decision': k.get('decision', '')} for t, k in known_red],
@@ -510,6 +529,12 @@ def write_summary(run_dir, r):
         L.append('```')
         L.extend(r['crash']['lines'])
         L.append('```')
+        L.append('')
+    if r.get('exitFaults'):
+        L.append('## The exit')
+        L.append('')
+        for x in r['exitFaults'][:SHOW]:
+            L.append('- ' + _md_escape(x))
         L.append('')
     if r['ensures']:
         L.append('## Ensures')

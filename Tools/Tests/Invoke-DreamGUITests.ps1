@@ -365,11 +365,15 @@ function Invoke-EditorRun([string]$RunDir, [int]$Index) {
     $stdout = Join-Path $RunDir 'stdout.txt'
     $stderr = Join-Path $RunDir 'stderr.txt'
     # No value below may end in a backslash: the C runtime reads \" as a quote inside the argument.
+    # A preset with softQuit ends the editor the way a person does -- the automation controller's SoftQuit once the
+    # queue is empty -- rather than -TestExit's forced exit, so that the exit itself is part of what is tested.
+    $execCmds = if ($SoftQuit) { "Automation RunTests $ResolvedFilter;SoftQuit" } else { "Automation RunTests $ResolvedFilter" }
+    $exitArgs = @(if (-not $SoftQuit) { '-TestExit="Automation Test Queue Empty"' })
     $argLine = (@(
             "`"$Project`"",
-            "-ExecCmds=`"Automation RunTests $ResolvedFilter`"",
-            '-unattended', '-nopause', '-NoSplash', '-NoSound',
-            '-TestExit="Automation Test Queue Empty"',
+            "-ExecCmds=`"$execCmds`"",
+            '-unattended', '-nopause', '-NoSplash', '-NoSound'
+        ) + $exitArgs + @(
             "-ReportExportPath=`"$RunDir`"",
             "-abslog=`"$runLog`"",
             "-ShaderWorkingDir=`"$ShaderDir`""
@@ -380,6 +384,7 @@ function Invoke-EditorRun([string]$RunDir, [int]$Index) {
         filter          = $ResolvedFilter
         filterSource    = $FilterSource
         args            = @($PresetArgs)
+        softQuit        = $SoftQuit
         minTests        = $Floor
         timeoutMinutes  = $Timeout
         project         = $Project
@@ -467,6 +472,7 @@ if (-not $presetKey) { Stop-Run 2 "No preset named '$Preset'. Presets: $((@($pre
 $script:PresetName = $presetKey
 $spec = $presets[$presetKey]
 $PresetArgs = @(Get-Prop $spec 'args' | Where-Object { $_ })
+$SoftQuit = [bool](Get-Prop $spec 'softQuit')
 
 if (-not $Engine) { $Engine = if ($env:DREAMGUI_ENGINE) { $env:DREAMGUI_ENGINE } else { $EngineDefault } }
 $Engine = Resolve-UserPath $Engine

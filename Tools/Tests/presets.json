@@ -15,7 +15,7 @@
     "Quick": {
       "about": "The whole headless suite: every DreamGUI and DreamTween test that runs without a GPU, except the PIE layer. What the pre-push hook runs.",
       "include": ["DreamGUI.", "DreamTween."],
-      "exclude": ["DreamGUI.Pie."],
+      "exclude": ["DreamGUI.Pie.", "DreamGUI.Lifecycle.Smoke."],
       "args": ["-nullrhi"],
       "minTests": 1386,
       "timeoutMinutes": 20
@@ -27,6 +27,22 @@
       "args": ["-nullrhi"],
       "minTests": 233,
       "timeoutMinutes": 15
+    },
+    "Exit": {
+      "about": "The exit path (S9): a designer opened and closed, a preview shut down twice and a play session started and stopped, then an editor exit the way a person makes one -- the automation SoftQuit, not -TestExit's forced exit -- with the log searched afterwards for what a teardown must never leave (the lifecycle probe I7). In its own editor, out of Quick.",
+      "include": ["DreamGUI.Lifecycle.Smoke."],
+      "args": ["-nullrhi"],
+      "softQuit": true,
+      "minTests": 1,
+      "timeoutMinutes": 20
+    },
+    "PieRhi": {
+      "about": "The play-in-editor layer's NonNullRHI tests, which -nullrhi drops from Pie: a play session drawn on a real RHI that renders off screen, for what needs Slate to lay its viewport out or the renderer to fill it.",
+      "include": ["DreamGUI.Pie."],
+      "flags": ["NonNullRHI"],
+      "args": ["-RenderOffScreen"],
+      "minTests": 2,
+      "timeoutMinutes": 20
     },
     "Designer": {
       "about": "The widget blueprint designer, headless. Its pixel scenarios (DreamGUI.Designer.RHI) are NonNullRHI and run in Rhi instead.",
@@ -52,7 +68,7 @@
       "timeoutMinutes": 40
     },
     "Pie": {
-      "about": "The play-in-editor layer (DreamGUI.Pie.*): a real game mode, local player, viewport and viewport client, one PIE session per test. In its own editor, out of Quick. Its NonNullRHI probes are dropped under -nullrhi and run in All.",
+      "about": "The play-in-editor layer (DreamGUI.Pie.*): a real game mode, local player, viewport and viewport client, one PIE session per test. In its own editor, out of Quick. Its NonNullRHI tests are dropped under -nullrhi and run in PieRhi.",
       "include": ["DreamGUI.Pie."],
       "args": ["-nullrhi"],
       "minTests": 9,
