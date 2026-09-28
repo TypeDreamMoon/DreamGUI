@@ -550,6 +550,12 @@ bool UDreamUIRenderTargetGeometrySource::CheckStaticMesh()const
 
 FPrimitiveSceneProxy* UDreamUIRenderTargetGeometrySource::CreateSceneProxy()
 {
+	// Nothing to show -- the canvas went, and no presenter names another -- is nothing to draw, and nothing to
+	// warn about either, which GetCanvas would.
+	if (!TargetCanvasObject.IsValid() && !TargetWidgetPresenter.IsValidComponentReference())
+	{
+		return nullptr;
+	}
 	if (GetCanvas())
 	{
 		UpdateMaterialInstance();
@@ -1039,7 +1045,9 @@ UDreamCanvas* UDreamUIRenderTargetGeometrySource::GetCanvas()const
 	}
 	if (!TargetWidgetPresenter.IsValidComponentReference())
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		// No presenter named, and no canvas handed over (SetCanvas) or none any more: a surface shown a canvas
+		// at run time names no presenter, and one whose canvas went has nothing to show. Neither is a mistake
+		// to warn about; a presenter that is named but will not do, below, is.
 		return nullptr;
 	}
 	auto WidgetPresenter = TargetWidgetPresenter.GetComponent<UDreamWidgetPresenterComponentBase>();
@@ -1083,20 +1091,40 @@ void UDreamUIRenderTargetGeometrySource::ListenToCanvas(UDreamCanvas* InCanvas)c
 
 void UDreamUIRenderTargetGeometrySource::HandleCanvasRenderTargetChanged(UTextureRenderTarget2D* InTarget)
 {
-	// Straight into the material rather than through GetRenderTarget, which a canvas that is going still
-	// answers with the target it is letting go of. Cleared here, the parameter reaches the render thread
-	// before the collector can take the texture.
-	if (MaterialInstance != nullptr)
-	{
-		MaterialInstance->SetTextureParameterValue(PARAMETER_NAME_MAINTEXTURE, InTarget);
-	}
+	// Taken from the event rather than from GetRenderTarget, which a canvas that is going still answers with
+	// the target it is letting go of.
 	if (InTarget != nullptr)
 	{
+		if (MaterialInstance != nullptr)
+		{
+			MaterialInstance->SetTextureParameterValue(PARAMETER_NAME_MAINTEXTURE, InTarget);
+		}
 		// A new target may be a new size: the quad, its bounds and its collision follow it.
 		UpdateMeshData();
 		UpdateLocalBounds();
 		UpdateCollision();
 		MarkRenderStateDirty();
+		return;
+	}
+	// None: let go of the old one now, before the collector can take it. Setting a texture parameter to null
+	// does nothing -- UMaterialInstance keeps the texture it had -- so the instance's parameters are cleared
+	// instead (the target is the only one it sets), and the render state is rebuilt at once, so the proxy,
+	// which holds the target for its draw, lets go of it too. Not inside a collection, which is no time to
+	// build render state; a canvas reaped there takes this surface's view of it along.
+	if (IsGarbageCollecting())
+	{
+		return;
+	}
+	// The canvas is forgotten too: it is still valid while it goes, and anything rebuilt from it -- the render
+	// state below, first of all -- would take its target straight back.
+	TargetCanvasObject = nullptr;
+	if (MaterialInstance != nullptr)
+	{
+		MaterialInstance->ClearParameterValues();
+	}
+	if (IsRenderStateCreated())
+	{
+		RecreateRenderState_Concurrent();
 	}
 }
 
@@ -1270,7 +1298,15 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
 	{
 		// The FlipY scalar that used to follow was `#if PLATFORM_ANDROID && 0` dead text -- see
 		// SetFlipVerticalOnGLES.
-		MaterialInstance->SetTextureParameterValue(PARAMETER_NAME_MAINTEXTURE, GetRenderTarget());
+		if (UTextureRenderTarget2D* Target = GetRenderTarget())
+		{
+			MaterialInstance->SetTextureParameterValue(PARAMETER_NAME_MAINTEXTURE, Target);
+		}
+		else
+		{
+			// A null texture parameter is ignored; cleared, the instance samples its material's own again.
+			MaterialInstance->ClearParameterValues();
+		}
 	}
 }
 UMaterialInterface* UDreamUIRenderTargetGeometrySource::GetPresetMaterial()const
