@@ -101,16 +101,7 @@ void UDreamStandaloneInputModule::InputMouseMove(const FVector& InMousePosition)
 	UDreamUIInputUser* User = GetInputUser();
 	if (User == nullptr)return;
 
-	UDreamPointerEventData* EventData = User->GetPointerEventData(DreamUIPointerIds::Mouse, true);
-	if (EventData == nullptr)return;
-	// MOVING the mouse IS pointer input -- InputType is a sticky mode bit, and a pointer in Navigation mode is not
-	// traced -- but it has to be an ACTUAL move: both preset actors call this every frame regardless, and claiming
-	// Pointer unconditionally would let nothing hold Navigation for longer than one frame.
-	if (!InMousePosition.Equals(EventData->PointerPosition))
-	{
-		User->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
-	}
-	EventData->PointerPosition = InMousePosition;
+	User->MovePointer(DreamUIPointerIds::Mouse, InMousePosition);
 }
 
 void UDreamStandaloneInputModule::InputTouchTrigger(bool InTouchPress, int InTouchID, const FVector& InTouchPointPosition)
@@ -132,34 +123,16 @@ void UDreamStandaloneInputModule::InputTouchMoved(int InTouchID, const FVector& 
 
 void UDreamStandaloneInputModule::InputNavigation(EDreamUINavigationDirection InDirection, bool InPressOrRelease, int InPointerID)
 {
-	UDreamUIInputUser* User = GetInputUser();
-	if (User == nullptr)return;
-
-	UDreamPointerEventData* EventData = User->GetPointerEventData(InPointerID, true);
-	if (EventData == nullptr)return;
-	if (InPressOrRelease)
+	if (UDreamUIInputUser* User = GetInputUser())
 	{
-		User->SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
-		EventData->NavigateDirection = InDirection;
+		User->InputNavigation(InDirection, InPressOrRelease, InPointerID);
 	}
-	else
-	{
-		EventData->NavigateDirection = EDreamUINavigationDirection::None;
-	}
-	EventData->NavigateTickTime = 0;
 }
 
 void UDreamStandaloneInputModule::InputTriggerForNavigation(bool InTriggerPress, int InPointerID)
 {
-	UDreamUIInputUser* User = GetInputUser();
-	if (User == nullptr)return;
-
-	UDreamPointerEventData* EventData = User->GetPointerEventData(InPointerID, true);
-	if (EventData == nullptr)return;
-	if (InTriggerPress)
+	if (UDreamUIInputUser* User = GetInputUser())
 	{
-		User->SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
+		User->InputTriggerForNavigation(InTriggerPress, InPointerID);
 	}
-	EventData->NavigateTickTime = 0;
-	EventData->bNowIsTriggerPressed = InTriggerPress;
 }

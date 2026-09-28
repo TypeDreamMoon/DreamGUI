@@ -10,6 +10,7 @@
 #include "DreamUIInputSubsystem.generated.h"
 
 class AActor;
+class FDreamUISlateInputSource;
 class ULocalPlayer;
 class UDreamEventSystem;
 class UDreamUIInputSubsystem;
@@ -111,6 +112,12 @@ public:
 	void NoteHostDeliversCharacters() { bHostDeliversCharacters = true; }
 	/** For tests: say which road characters take in this world. */
 	void SetHostDeliversCharactersForTesting(bool bInDelivers) { bHostDeliversCharacters = bInDelivers; }
+
+	/** Whether this world's input is heard from Slate (UDreamGUISettings::bUseSlateInputSource); the preset actors stand down while it is. */
+	bool IsSlateInputSourceActive() const { return SlateInputSource.IsValid(); }
+	/** Hear this world's input from Slate, or stop: what the setting does when play begins, at any time. */
+	void SetSlateInputSourceEnabled(bool bInEnabled);
+	TSharedPtr<FDreamUISlateInputSource> GetSlateInputSource() const { return SlateInputSource; }
 
 	/**
 	 * One frame of every player's input, in player order. What the tick function runs -- and what a rig that pumps
@@ -229,4 +236,6 @@ private:
 	bool bInFrame = false;
 	/** See DoesHostDeliverCharacters. */
 	bool bHostDeliversCharacters = false;
+	/** Registered with Slate while this world's input is heard from it. */
+	TSharedPtr<FDreamUISlateInputSource> SlateInputSource;
 };

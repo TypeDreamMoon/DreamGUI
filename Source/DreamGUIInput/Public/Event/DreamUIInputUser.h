@@ -229,6 +229,16 @@ public:
 	void RunPipeline();
 	bool IsInPipeline() const { return bInPipeline; }
 
+	/**
+	 * Move pointer InPointerID to InPosition: state the next frame reads. A pointer that actually moves is in pointer
+	 * mode, not navigation -- but only an actual move, so a source reporting the position every frame does not keep
+	 * taking navigation away.
+	 */
+	void MovePointer(int32 InPointerID, const FVector& InPosition);
+	/** A navigation direction pressed -- the pointer goes into navigation mode, stepping that way -- or released. */
+	void InputNavigation(EDreamUINavigationDirection InDirection, bool bInPressed, int32 InPointerID);
+	/** The navigation confirm pressed or released, for the navigation cursor on InPointerID. */
+	void InputTriggerForNavigation(bool bInPressed, int32 InPointerID);
 	/** A press or release to be dispatched on this player's next frame, at InPosition. */
 	void QueuePointerButton(int32 InPointerID, const FVector& InPosition, bool bInPressed, EDreamUIMouseButtonType InButton, bool bInIsTouch);
 	/** A wheel turn for InPointerID, dispatched on the next frame to what the pointer is over by then. */

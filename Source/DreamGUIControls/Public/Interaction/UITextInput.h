@@ -518,6 +518,7 @@ public:
 	virtual bool InsertTextCharacter(TCHAR InCharacter) override { return HandleCharacterInput(InCharacter); }
 	virtual void GetTextInputKeys(TArray<FKey>& OutKeys) const override;
 	virtual bool HandleTextInputKey(const FKey& InKey, const APlayerController* InPlayer) override;
+	virtual bool HandleTextInputKeyWithModifiers(const FKey& InKey, const FModifierKeysState& InModifiers) override { return HandleKeyInput(InKey, true, InModifiers); }
 
 	/** Blueprint/host spelling of HandleCharacterInput: every character of the string in order. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")

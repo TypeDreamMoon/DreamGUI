@@ -743,6 +743,56 @@ void UDreamUIInputUser::QueuePointerButton(int32 InPointerID, const FVector& InP
 	Queued.ClockSeconds = UDreamEventSystem::GetPointerClockSeconds(GetWorld());
 }
 
+void UDreamUIInputUser::MovePointer(int32 InPointerID, const FVector& InPosition)
+{
+	UDreamPointerEventData* EventData = GetPointerEventData(InPointerID, true);
+	if (EventData == nullptr)
+	{
+		return;
+	}
+	// MOVING IS pointer input -- InputType is a sticky mode bit, and a pointer in navigation mode is not traced -- but
+	// it has to be an ACTUAL move: the preset actors report the position every frame regardless.
+	if (!InPosition.Equals(EventData->PointerPosition))
+	{
+		SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
+	}
+	EventData->PointerPosition = InPosition;
+}
+
+void UDreamUIInputUser::InputNavigation(EDreamUINavigationDirection InDirection, bool bInPressed, int32 InPointerID)
+{
+	UDreamPointerEventData* EventData = GetPointerEventData(InPointerID, true);
+	if (EventData == nullptr)
+	{
+		return;
+	}
+	if (bInPressed)
+	{
+		SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
+		EventData->NavigateDirection = InDirection;
+	}
+	else
+	{
+		EventData->NavigateDirection = EDreamUINavigationDirection::None;
+	}
+	EventData->NavigateTickTime = 0;
+}
+
+void UDreamUIInputUser::InputTriggerForNavigation(bool bInPressed, int32 InPointerID)
+{
+	UDreamPointerEventData* EventData = GetPointerEventData(InPointerID, true);
+	if (EventData == nullptr)
+	{
+		return;
+	}
+	if (bInPressed)
+	{
+		SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
+	}
+	EventData->NavigateTickTime = 0;
+	EventData->bNowIsTriggerPressed = bInPressed;
+}
+
 void UDreamUIInputUser::QueuePointerScroll(int32 InPointerID, const FVector2D& InAxisValue)
 {
 	if (bShutDown || !Config.bRayEventEnable)

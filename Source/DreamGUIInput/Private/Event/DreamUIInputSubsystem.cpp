@@ -20,6 +20,8 @@
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/DreamUIInputUser.h"
+#include "Event/DreamUISlateInputSource.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/Actor.h"
@@ -122,6 +124,32 @@ void UDreamUIInputSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 			LocalPlayerRemovedHandle = GameInstance->OnLocalPlayerRemovedEvent.AddUObject(this, &UDreamUIInputSubsystem::HandleLocalPlayerRemoved);
 		}
 	}
+	if (GetDefault<UDreamGUISettings>()->bUseSlateInputSource)
+	{
+		SetSlateInputSourceEnabled(true);
+	}
+}
+
+void UDreamUIInputSubsystem::SetSlateInputSourceEnabled(bool bInEnabled)
+{
+	if (bInEnabled == SlateInputSource.IsValid() || (bInEnabled && bTornDownForWorld))
+	{
+		return;
+	}
+	if (bInEnabled)
+	{
+		SlateInputSource = MakeShared<FDreamUISlateInputSource>(this);
+		if (FSlateApplication::IsInitialized())
+		{
+			FSlateApplication::Get().RegisterInputPreProcessor(SlateInputSource);
+		}
+		return;
+	}
+	if (FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().UnregisterInputPreProcessor(SlateInputSource);
+	}
+	SlateInputSource.Reset();
 }
 
 void UDreamUIInputSubsystem::Deinitialize()
@@ -161,6 +189,8 @@ void UDreamUIInputSubsystem::TeardownForWorld(UWorld& InWorld)
 		OnUserRemoved.Broadcast(User);
 		User->Shutdown();
 	}
+	// Slate stops being heard first: nothing it delivers now has a player to go to.
+	SetSlateInputSourceEnabled(false);
 	bTornDownForWorld = true;
 	if (TickFunction.IsTickFunctionRegistered())
 	{

@@ -12,6 +12,18 @@ class UDreamUISpriteData;
 class UMaterialInterface;
 class UTexture2D;
 
+/** What DreamGUI's input keeps from the game, with the Slate input source. */
+UENUM(BlueprintType)
+enum class EDreamUIInputConsumePolicy : uint8
+{
+	/** Nothing: the game hears everything the UI hears, as it does through the preset actors. */
+	Never,
+	/** A press, a release or a wheel turn over DreamGUI UI, and any key the UI took. */
+	WhenOverUI,
+	/** Only what a widget answers: a press on a widget that handles presses, and a key the UI took. */
+	WhenHandled,
+};
+
 /**
  * Every asset and class DreamGUI reaches for by itself, in one place a project can edit.
  *
@@ -144,6 +156,20 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Input")
 	bool bLegacyTouchPointerIds = false;
+
+	/**
+	 * Hear input from Slate itself -- an input pre-processor, ahead of the game viewport -- instead of through the
+	 * preset actor's bindings on the player controller. DreamGUI then answers in every input mode, the engine's own
+	 * UI-only mode included, where the viewport ignores input and the controller hears nothing; and it can keep what
+	 * it handled from the game (SlateInputConsumePolicy). The preset actors stand down while it is on. Off for now;
+	 * it becomes the default in a later version.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Input")
+	bool bUseSlateInputSource = false;
+
+	/** With the Slate input source: what the UI keeps from the game. A key typed into a field being edited is always kept. */
+	UPROPERTY(config, EditAnywhere, Category = "Input", meta = (EditCondition = "bUseSlateInputSource"))
+	EDreamUIInputConsumePolicy SlateInputConsumePolicy = EDreamUIInputConsumePolicy::Never;
 
 	// ---------------------------------------------------------------- Tooltip
 

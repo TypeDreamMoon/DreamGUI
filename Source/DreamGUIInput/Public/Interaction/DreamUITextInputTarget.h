@@ -8,6 +8,7 @@
 #include "DreamUITextInputTarget.generated.h"
 
 class APlayerController;
+class FModifierKeysState;
 class UGameViewportClient;
 
 UINTERFACE(MinimalAPI, meta = (CannotImplementInterfaceInBlueprint))
@@ -47,6 +48,9 @@ public:
 	 * are read from that player's own input. True when it was taken.
 	 */
 	virtual bool HandleTextInputKey(const FKey& InKey, const APlayerController* InPlayer) = 0;
+
+	/** InKey, pressed or repeating, with the chord stated -- what a source that has the chord in hand delivers. True when it was taken. */
+	virtual bool HandleTextInputKeyWithModifiers(const FKey& InKey, const FModifierKeysState& InModifiers) = 0;
 };
 
 /**
