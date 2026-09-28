@@ -50,6 +50,7 @@ public class DreamGUITests : ModuleRules
 				Path.Combine(ModuleDirectory, "..", "DreamGUIExtensions", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUIInput", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUIK2Nodes", "Private"),
+				Path.Combine(ModuleDirectory, "..", "DreamGUIRenderer", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUISamples", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamTween", "Private"),
 			});
@@ -80,6 +81,7 @@ public class DreamGUITests : ModuleRules
 				"DreamGUIExtensions",
 				"DreamGUIInput",
 				"DreamGUIK2Nodes",
+				"DreamGUIRenderer",
 				"DreamGUISamples",
 				"DreamTween",
 				"EditorFramework",

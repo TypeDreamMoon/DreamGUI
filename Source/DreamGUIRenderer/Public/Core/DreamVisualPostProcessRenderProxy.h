@@ -41,7 +41,7 @@ struct FDreamUIPostProcessCommonParams
  * whichever is last, the destructor runs there. Everything below is therefore free to be render-thread
  * state; subclasses may keep RHI references without arranging a deferred release of their own.
  */
-class DREAMGUI_API FDreamVisualPostProcessRenderProxy
+class DREAMGUIRENDERER_API FDreamVisualPostProcessRenderProxy
 {
 public:
 	FDreamVisualPostProcessRenderProxy();

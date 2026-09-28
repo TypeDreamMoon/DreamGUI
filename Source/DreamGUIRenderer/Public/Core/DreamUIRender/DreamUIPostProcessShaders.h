@@ -14,7 +14,7 @@
 // Using BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT to properly bind textures/samplers
 // PostProcess shaders uniform buffers. Exported with the four shaders below that are exported: their inline
 // parameter setters name it, and the post-process effects that call them live in another module.
-BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FDreamUIPostProcessMainTexUB, DREAMGUI_API)
+BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT(FDreamUIPostProcessMainTexUB, DREAMGUIRENDERER_API)
 	SHADER_PARAMETER_TEXTURE(Texture2D, _MainTex)
 	SHADER_PARAMETER_SAMPLER(SamplerState, _MainTexSampler)
 END_GLOBAL_SHADER_PARAMETER_STRUCT()
@@ -67,7 +67,7 @@ public:
 };
 class FDreamUISimplePostProcessVS :public FDreamUIPostProcessShader
 {
-	DECLARE_EXPORTED_SHADER_TYPE(FDreamUISimplePostProcessVS, Global, DREAMGUI_API);
+	DECLARE_EXPORTED_SHADER_TYPE(FDreamUISimplePostProcessVS, Global, DREAMGUIRENDERER_API);
 public:
 	FDreamUISimplePostProcessVS() {}
 	FDreamUISimplePostProcessVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
@@ -146,7 +146,7 @@ private:
 };
 class FDreamUIPostProcessGaussianBlurPS :public FDreamUIPostProcessShader
 {
-	DECLARE_EXPORTED_SHADER_TYPE(FDreamUIPostProcessGaussianBlurPS, Global, DREAMGUI_API);
+	DECLARE_EXPORTED_SHADER_TYPE(FDreamUIPostProcessGaussianBlurPS, Global, DREAMGUIRENDERER_API);
 public:
 	FDreamUIPostProcessGaussianBlurPS() {}
 	FDreamUIPostProcessGaussianBlurPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
@@ -196,7 +196,7 @@ private:
  */
 class FDreamUIPostProcessPixelSortRankPS :public FDreamUIPostProcessShader
 {
-	DECLARE_EXPORTED_SHADER_TYPE(FDreamUIPostProcessPixelSortRankPS, Global, DREAMGUI_API);
+	DECLARE_EXPORTED_SHADER_TYPE(FDreamUIPostProcessPixelSortRankPS, Global, DREAMGUIRENDERER_API);
 public:
 	FDreamUIPostProcessPixelSortRankPS() {}
 	FDreamUIPostProcessPixelSortRankPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
@@ -249,7 +249,7 @@ private:
 /** Pass 2: inverts pass 1's "where I am going" into "who comes here", which is all a PS can do. */
 class FDreamUIPostProcessPixelSortGatherPS :public FDreamUIPostProcessShader
 {
-	DECLARE_EXPORTED_SHADER_TYPE(FDreamUIPostProcessPixelSortGatherPS, Global, DREAMGUI_API);
+	DECLARE_EXPORTED_SHADER_TYPE(FDreamUIPostProcessPixelSortGatherPS, Global, DREAMGUIRENDERER_API);
 public:
 	FDreamUIPostProcessPixelSortGatherPS() {}
 	FDreamUIPostProcessPixelSortGatherPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)

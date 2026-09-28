@@ -10,7 +10,7 @@
 
 #define LEXUI_VERTEX_TEXCOORDINATE_COUNT 4
 
-struct DREAMGUI_API FDreamUIMeshVertex
+struct DREAMGUIRENDERER_API FDreamUIMeshVertex
 {
 	FDreamUIMeshVertex(){}
 	FDreamUIMeshVertex(const FVector3f& InPosition):
@@ -74,16 +74,16 @@ struct DREAMGUI_API FDreamUIMeshVertex
 	};
 };
 
-class DREAMGUI_API FDreamUIMeshVertexDeclaration : public FRenderResource
+class DREAMGUIRENDERER_API FDreamUIMeshVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList)override;
 	virtual void ReleaseRHI()override;
 };
-DREAMGUI_API FVertexDeclarationRHIRef& GetDreamUIMeshVertexDeclaration();
+DREAMGUIRENDERER_API FVertexDeclarationRHIRef& GetDreamUIMeshVertexDeclaration();
 
-class FDreamUIMeshVertexBuffer : public FVertexBuffer
+class DREAMGUIRENDERER_API FDreamUIMeshVertexBuffer : public FVertexBuffer
 {
 public:
 	bool bAutoClearVerticesAfterInitRHI = true;//clear Vertices after InitRHI

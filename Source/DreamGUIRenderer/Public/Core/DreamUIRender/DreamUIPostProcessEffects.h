@@ -15,16 +15,16 @@ namespace DreamUIPostProcessEffects
 {
 	// ---- background blur
 
-	DREAMGUI_API FDreamVisualPostProcessRenderProxyPtr CreateBackgroundBlurProxy();
+	DREAMGUIRENDERER_API FDreamVisualPostProcessRenderProxyPtr CreateBackgroundBlurProxy();
 	/** InBlurStrength already carries the visual's alpha, when the visual applies it. */
-	DREAMGUI_API void SetBackgroundBlur_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, float InBlurStrength, int32 InMaxDownSampleLevel);
-	DREAMGUI_API void SetBackgroundBlurStrength_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, float InBlurStrength);
+	DREAMGUIRENDERER_API void SetBackgroundBlur_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, float InBlurStrength, int32 InMaxDownSampleLevel);
+	DREAMGUIRENDERER_API void SetBackgroundBlurStrength_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, float InBlurStrength);
 
 	// ---- background pixelate
 
-	DREAMGUI_API FDreamVisualPostProcessRenderProxyPtr CreateBackgroundPixelateProxy();
+	DREAMGUIRENDERER_API FDreamVisualPostProcessRenderProxyPtr CreateBackgroundPixelateProxy();
 	/** InPixelateStrength already carries the visual's alpha, when the visual applies it. */
-	DREAMGUI_API void SetBackgroundPixelateStrength_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, float InPixelateStrength);
+	DREAMGUIRENDERER_API void SetBackgroundPixelateStrength_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, float InPixelateStrength);
 
 	// ---- pixel sort. The enums mirror the visual's, value for value; the visual converts.
 
@@ -66,8 +66,8 @@ namespace DreamUIPostProcessEffects
 		bool bDescending = false;
 	};
 
-	DREAMGUI_API FDreamVisualPostProcessRenderProxyPtr CreatePixelSortProxy();
-	DREAMGUI_API void SetPixelSort_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, const FPixelSortParams& InParams);
+	DREAMGUIRENDERER_API FDreamVisualPostProcessRenderProxyPtr CreatePixelSortProxy();
+	DREAMGUIRENDERER_API void SetPixelSort_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, const FPixelSortParams& InParams);
 	/** The size of the region the pixel sort works in: the whole screen when bInUseFullSize, otherwise the rectangle, never under one pixel. */
-	DREAMGUI_API FIntPoint ResolvePixelSortRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize);
+	DREAMGUIRENDERER_API FIntPoint ResolvePixelSortRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize);
 }

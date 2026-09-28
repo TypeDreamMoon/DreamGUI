@@ -10,7 +10,7 @@ enum class EDreamUIGizmoMeshPrimitiveType
 	Line, Triangle,
 };
 
-class DREAMGUI_API FDreamUIGizmoMesh : public TSharedFromThis<FDreamUIGizmoMesh>
+class DREAMGUIRENDERER_API FDreamUIGizmoMesh : public TSharedFromThis<FDreamUIGizmoMesh>
 {
 public:
 	FDreamUIGizmoMesh(){}

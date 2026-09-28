@@ -22,6 +22,12 @@
 	],
 	"Modules": [
 		{
+			"Name": "DreamGUIRenderer",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
 			"Name": "DreamGUI",
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",

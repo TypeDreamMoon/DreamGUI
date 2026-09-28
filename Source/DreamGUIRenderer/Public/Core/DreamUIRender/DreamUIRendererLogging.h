@@ -6,7 +6,7 @@
 #include "Stats/Stats.h"
 
 /** What the renderer logs to. Its own category: the core's is declared in a module above the renderer. */
-DREAMGUI_API DECLARE_LOG_CATEGORY_EXTERN(LogDreamGUIRenderer, Log, All);
+DREAMGUIRENDERER_API DECLARE_LOG_CATEGORY_EXTERN(LogDreamGUIRenderer, Log, All);
 
 /**
  * The plugin's stat group, `stat DreamGUI`. Declared here, in the lowest module that counts into it, so the

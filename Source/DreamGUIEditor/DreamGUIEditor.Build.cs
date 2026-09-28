@@ -44,6 +44,7 @@ public class DreamGUIEditor : ModuleRules
                 "RenderCore",
                 "RHI",
                 "DreamGUI",
+                "DreamGUIRenderer",
                 "DreamGUIControls",
                 "DreamGUIInput",
                 "DreamGUIExtensions",

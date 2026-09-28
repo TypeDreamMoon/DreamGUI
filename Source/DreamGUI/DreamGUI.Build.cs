@@ -25,13 +25,6 @@ public class DreamGUI : ModuleRules
 	        OptimizeCode = CodeOptimization.Default;
         }
         
-        string EnginSourceFolder = EngineDirectory + "/Source/";
-        PrivateIncludePaths.AddRange(
-                new string[] {
-                    EnginSourceFolder + "/Runtime/Renderer/Private",//#include "SceneRendering.h", #include "ScenePrivate.h"
-					EnginSourceFolder + "/Runtime/Renderer/Internal",//#include "SceneTextures.h"
-                });
-
         // msdfgen, for the glyph distance fields (DreamGlyphSdf.cpp). The engine's own copy is not there
         // to include: upstream generates its single-file pair at build time rather than committing it, so
         // Engine/Source/ThirdParty/msdfgen holds only msdfgen.tps in a launcher (installed) engine and the
@@ -50,6 +43,7 @@ public class DreamGUI : ModuleRules
                 "SlateCore",
                 "RHI","RenderCore","Renderer",
                 "DreamTween",
+                "DreamGUIRenderer",//the view extension, shaders and proxies the canvases and visuals draw through
                 "InputCore",//UITextInput
                 "DeveloperSettings",//UDreamGUISettings
                 "FieldNotification",//UDreamUserWidget implements INotifyFieldValueChanged

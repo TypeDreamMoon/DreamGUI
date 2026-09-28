@@ -31,7 +31,7 @@ struct FDreamUIBuiltInDrawParams
 };
 
 /** Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection. */
-class DREAMGUI_API FDreamUIBaseVS : public FGlobalShader
+class DREAMGUIRENDERER_API FDreamUIBaseVS : public FGlobalShader
 {
 public:
 	DECLARE_GLOBAL_SHADER(FDreamUIBaseVS);
@@ -49,7 +49,7 @@ public:
  * Pixel shader of the built-in UI pass. Permutations: depth blend against the scene (world-space
  * canvases) and its multi-sample depth fade, the same two the material-based path has.
  */
-class DREAMGUI_API FDreamUIBasePS : public FGlobalShader
+class DREAMGUIRENDERER_API FDreamUIBasePS : public FGlobalShader
 {
 public:
 	DECLARE_GLOBAL_SHADER(FDreamUIBasePS);

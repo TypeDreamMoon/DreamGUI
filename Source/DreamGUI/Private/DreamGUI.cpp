@@ -8,11 +8,8 @@
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Modules/ModuleManager.h"
-#include "Interfaces/IPluginManager.h"
 #include "Misc/CoreDelegates.h"
-#include "Misc/Paths.h"
 #include "Engine/Engine.h"
-#include "ShaderCore.h"
 #if WITH_EDITOR
 #include "Editor/EditorEngine.h"
 #endif
@@ -33,28 +30,9 @@ void FDreamGUIModule::StartupModule()
 	// First, because the .dui lookups read it and this module loads before anything compiles a .dui:
 	// the core's own types are the first place a short type name is looked for.
 	DreamUI::RegisterRuntimeScriptPackage(TEXT("/Script/DreamGUI"));
-
-	//
-	// Two things the one-liner this replaces assumed. FindPlugin returns a TSharedPtr, and while this
-	// module belongs to the plugin it looks up, a dereference is not the way to say so. And the
-	// mapping is process-wide and permanent -- the engine has no per-directory unregister, so
-	// ShutdownModule cannot undo it -- while AddShaderSourceDirectoryMapping check()s that the
-	// virtual directory is not mapped yet. A second StartupModule (legacy hot reload, or the plugin
-	// being disabled and re-enabled in a running editor; Live Coding does not re-run this) therefore
-	// crashed on a mapping that was already correct. AllShaderSourceDirectoryMappings is the engine's
-	// own read side of that map.
-	static const TCHAR* const DreamGUIVirtualShaderDirectory = TEXT("/Plugin/DreamGUI");
-	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI")))
-	{
-		if (!AllShaderSourceDirectoryMappings().Contains(DreamGUIVirtualShaderDirectory))
-		{
-			AddShaderSourceDirectoryMapping(DreamGUIVirtualShaderDirectory, FPaths::Combine(Plugin->GetBaseDir(), TEXT("Shaders")));
-		}
-	}
-	else
-	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d The DreamGUI plugin is not registered with the plugin manager, so its shaders cannot be mapped to %s."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, DreamGUIVirtualShaderDirectory);
-	}
+	// The renderer sits below the core and cannot call into it; its one reflected type, the blend mode, is
+	// found by a short name through this list like any other.
+	DreamUI::RegisterRuntimeScriptPackage(TEXT("/Script/DreamGUIRenderer"));
 
 	// The renderer takes the project's settings from here rather than reading UDreamUISettings itself: the
 	// settings object is the core's. Asked per view, so it reads the settings object as it is at that moment.
@@ -110,6 +88,7 @@ void FDreamGUIModule::ShutdownModule()
 	FDreamUIRenderer::SetSimulatingInEditorQuery(nullptr);
 #endif
 	FDreamUIWidgetRegistry::UnregisterModule(TEXT("DreamGUI"));
+	DreamUI::UnregisterRuntimeScriptPackage(TEXT("/Script/DreamGUIRenderer"));
 	DreamUI::UnregisterRuntimeScriptPackage(TEXT("/Script/DreamGUI"));
 }
 

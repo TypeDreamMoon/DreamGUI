@@ -33,6 +33,7 @@ public class DreamGUIExtensions : ModuleRules
 				"Slate",
 				"SlateCore",
 				"DreamGUI",
+				"DreamGUIRenderer",//the post-process effect proxies and the shaders the render-target helpers use
 				"DreamGUIInput",//DreamUIRenderTargetInteraction is a screen raycaster
 				"DreamTween",
 			});

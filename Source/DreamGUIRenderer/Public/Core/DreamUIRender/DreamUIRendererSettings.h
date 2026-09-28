@@ -23,9 +23,9 @@ struct FDreamUIRendererSettings
 namespace DreamUIRendererSettings
 {
 	/** Where the renderer reads its settings from. The core sets it on startup and clears it on shutdown. */
-	DREAMGUI_API void SetProvider(TFunction<FDreamUIRendererSettings()> InProvider);
+	DREAMGUIRENDERER_API void SetProvider(TFunction<FDreamUIRendererSettings()> InProvider);
 	/** Whether a provider is set; without one, Get answers the defaults above. */
-	DREAMGUI_API bool HasProvider();
+	DREAMGUIRENDERER_API bool HasProvider();
 	/** The settings as the provider answers them now. */
-	DREAMGUI_API FDreamUIRendererSettings Get();
+	DREAMGUIRENDERER_API FDreamUIRendererSettings Get();
 }

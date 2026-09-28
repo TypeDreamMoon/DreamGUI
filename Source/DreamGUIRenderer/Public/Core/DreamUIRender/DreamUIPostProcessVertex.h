@@ -9,7 +9,7 @@
 // unity blob some neighbour always had it.
 #include "RHIResources.h"
 
-struct DREAMGUI_API FDreamUIPostProcessVertex
+struct DREAMGUIRENDERER_API FDreamUIPostProcessVertex
 {
 	FVector3f Position;
 	FVector2f TextureCoordinate0;
@@ -28,19 +28,19 @@ struct DREAMGUI_API FDreamUIPostProcessVertex
 	}
 };
 
-class DREAMGUI_API FDreamUIPostProcessVertexDeclaration : public FRenderResource
+class DREAMGUIRENDERER_API FDreamUIPostProcessVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
 	virtual void ReleaseRHI() override;
 };
-DREAMGUI_API FVertexDeclarationRHIRef& GetDreamUIPostProcessVertexDeclaration();
+DREAMGUIRENDERER_API FVertexDeclarationRHIRef& GetDreamUIPostProcessVertexDeclaration();
 
 
 
 
-struct DREAMGUI_API FDreamUIPostProcessCopyMeshRegionVertex
+struct DREAMGUIRENDERER_API FDreamUIPostProcessCopyMeshRegionVertex
 {
 	FVector3f ScreenPosition;
 	FVector3f LocalPosition;
@@ -52,12 +52,12 @@ struct DREAMGUI_API FDreamUIPostProcessCopyMeshRegionVertex
 	}
 };
 
-class DREAMGUI_API FDreamUIPostProcessCopyMeshRegionVertexDeclaration : public FRenderResource
+class DREAMGUIRENDERER_API FDreamUIPostProcessCopyMeshRegionVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
 	virtual void ReleaseRHI() override;
 };
-DREAMGUI_API FVertexDeclarationRHIRef& GetDreamUIPostProcessCopyMeshRegionVertexDeclaration();
+DREAMGUIRENDERER_API FVertexDeclarationRHIRef& GetDreamUIPostProcessCopyMeshRegionVertexDeclaration();
 

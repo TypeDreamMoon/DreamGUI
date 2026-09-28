@@ -33,7 +33,7 @@ enum class EDreamUIRendererType :uint8
 	RenderTarget,
 };
 
-class DREAMGUI_API FDreamUIRenderer : public FSceneViewExtensionBase
+class DREAMGUIRENDERER_API FDreamUIRenderer : public FSceneViewExtensionBase
 {
 public:
 	FDreamUIRenderer(const FAutoRegister&, UWorld* InWorld, EDreamUIRendererType InRendererType);
@@ -268,26 +268,26 @@ public:
 #endif
 };
 
-class DREAMGUI_API FDreamUIFullScreenQuadVertexBuffer :public FVertexBuffer
+class DREAMGUIRENDERER_API FDreamUIFullScreenQuadVertexBuffer :public FVertexBuffer
 {
 public:
 	void InitRHI(FRHICommandListBase& RHICmdList)override;
 };
-class DREAMGUI_API FDreamUIFullScreenQuadIndexBuffer :public FIndexBuffer
+class DREAMGUIRENDERER_API FDreamUIFullScreenQuadIndexBuffer :public FIndexBuffer
 {
 public:
 	void InitRHI(FRHICommandListBase& RHICmdList)override;
 };
-class DREAMGUI_API FDreamUIFullScreenSlicedQuadIndexBuffer :public FIndexBuffer
+class DREAMGUIRENDERER_API FDreamUIFullScreenSlicedQuadIndexBuffer :public FIndexBuffer
 {
 public:
 	void InitRHI(FRHICommandListBase& RHICmdList)override;
 };
 // One quad, not one per translation unit: `static` in a header gave every .cpp that included it its
 // own copy, each registering and holding its own GPU buffers. Defined in DreamUIRenderer.cpp.
-extern DREAMGUI_API TGlobalResource<FDreamUIFullScreenQuadVertexBuffer> GDreamUIFullScreenQuadVertexBuffer;
-extern DREAMGUI_API TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> GDreamUIFullScreenQuadIndexBuffer;
-extern DREAMGUI_API TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
+extern DREAMGUIRENDERER_API TGlobalResource<FDreamUIFullScreenQuadVertexBuffer> GDreamUIFullScreenQuadVertexBuffer;
+extern DREAMGUIRENDERER_API TGlobalResource<FDreamUIFullScreenQuadIndexBuffer> GDreamUIFullScreenQuadIndexBuffer;
+extern DREAMGUIRENDERER_API TGlobalResource<FDreamUIFullScreenSlicedQuadIndexBuffer> GDreamUIFullScreenSlicedQuadIndexBuffer;
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIWorldRenderPSParameter, )
 	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SceneDepthTex)
 	RENDER_TARGET_BINDING_SLOTS()

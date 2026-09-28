@@ -43,7 +43,8 @@ anything compiles.
 
 | Module | Layer | Holds |
 | --- | --- | --- |
-| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts. For now also the renderer, which is still to be split off |
+| `DreamGUIRenderer` | below the core | The view extension that draws DreamUI, its shaders, the vertex and index formats and the post-process proxies. It knows nothing of widgets: the core registers what it asks for |
+| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts |
 | `DreamGUIInput` | above the core | The input system: the event systems and their preset actors, the raycasters and input modules, the action router, navigation, drag and drop, tooltips and modals, the selectable base the controls are built on, and the game viewport client |
 | `DreamGUIControls` | above the input system | The control library: the `Dream*` controls (button, toggle, slider, lists, dialog, tab view, ...), the `UI*` behaviours they are built from, the action bar, style sheets and the UMG interop |
 | `DreamGUIExtensions` | above the input system | 2D lines, polygons and rings, the static-mesh visual, the retainer box and the render-target helpers, lyrics, the concrete mesh modifiers, and the background blur, pixelate and pixel sort effects |
