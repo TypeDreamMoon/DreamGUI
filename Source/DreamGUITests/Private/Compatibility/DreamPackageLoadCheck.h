@@ -30,8 +30,8 @@ namespace DreamPackageLoadCheck
 		TArray<FString> CompilerWarnings;
 		/**
 		 * Compiler warnings logged for other Blueprints the load compiled on the way. Worth reading and never
-		 * a failure: a Blueprint the plugin ships can carry a warning of its own, and whether a dependency is
-		 * compiled at all depends on what the process has already loaded.
+		 * a failure: whether a dependency is compiled at all depends on what the process has already loaded,
+		 * and a Blueprint is judged when its own package is the one being checked.
 		 */
 		TArray<FString> OtherNotes;
 	};

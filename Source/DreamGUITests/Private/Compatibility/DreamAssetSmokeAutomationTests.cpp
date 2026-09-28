@@ -18,9 +18,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * Every package under /DreamGUI -- the plugin's own content -- and under /Game -- the project's, which in
  * the test host is the old-asset fixtures -- loaded, and every Blueprint in them compiled. A class that is
- * missing, a struct that no longer loads, a Blueprint that stopped compiling: each is logged as a warning or
- * an error while the package loads, or reported by the compiler as an error, and fails the test here, where
- * it would otherwise surface as a broken asset in somebody's project.
+ * missing, a struct that no longer loads, a Blueprint that stopped compiling cleanly: each is logged as a
+ * warning or an error while the package loads, or reported by the compiler, and fails the test here, where it
+ * would otherwise surface as a broken asset in somebody's project.
  */
 bool FDreamAssetSmokeTest::RunTest(const FString& Parameters)
 {
@@ -55,11 +55,12 @@ bool FDreamAssetSmokeTest::RunTest(const FString& Parameters)
 		{
 			AddError(FString::Printf(TEXT("%s: %s"), *Package.ToString(), *Problem));
 		}
-		// A compiler warning is reported, not failed: some of the plugin's own Blueprints carry one today, and
-		// the question here is whether anything stopped loading, not whether the content is tidy.
+		// A compiler warning fails too. The plugin's own Blueprints compile without one -- the last four legacy
+		// presets that named two widgets alike were renamed -- so a warning here is new, and the kind a class
+		// move produces (a pin whose type went missing, a node that no longer resolves) often starts as one.
 		for (const FString& Warning : Loaded.CompilerWarnings)
 		{
-			AddInfo(FString::Printf(TEXT("%s: %s"), *Package.ToString(), *Warning));
+			AddError(FString::Printf(TEXT("%s: %s"), *Package.ToString(), *Warning));
 		}
 	}
 	return true;
