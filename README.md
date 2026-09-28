@@ -164,6 +164,21 @@ what that player has focused as a key character, and returns whether either took
 character that arrives this way, the `FKey` table stops synthesising printable characters in that
 world, so the two roads never double-type.
 
+### Input in every input mode: the Slate input source
+
+By default DreamGUI hears input through its preset event system actor's bindings on the player
+controller, so it hears nothing in the engine's own UI-only input mode: `SetInputMode(FInputModeUIOnly())`
+makes the game viewport ignore input, and the controller never sees it. Turn on **Project Settings →
+Plugins → Dream GUI → Input → Use Slate Input Source** and DreamGUI hears the mouse, touch, keys and
+sticks from Slate itself instead — an input pre-processor, ahead of the game viewport — in every input
+mode. The preset actors stand down while it is on, so nothing arrives twice.
+
+**Slate Input Consume Policy** decides what the UI keeps from the game: `Never` (the default; the game
+hears everything, as it always has), `WhenOverUI` (a press, release or wheel turn over DreamGUI UI,
+and any key the UI took) or `WhenHandled` (only a press on a widget that handles presses, and a key the
+UI took). A key typed into a field being edited is always kept. The source is off by default for now,
+and becomes the default in a later version.
+
 ### If you have assets authored against LGUI / LexUI, or from before an in-fork rename
 
 They reference the old class names and the old `/LGUI/` mount, so they need CoreRedirects — and
@@ -470,7 +485,7 @@ link time. Six interaction subsystems already decline to exist on a server
 
 ## Status
 
-1395 automation tests are declared — run them with `Automation RunTests DreamGUI`, or a preset of
+1448 automation tests are declared — run them with `Automation RunTests DreamGUI`, or a preset of
 `Tools/Tests/Invoke-DreamGUITests.ps1`. There were none before this fork.
 
 Known gaps:
