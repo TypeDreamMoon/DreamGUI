@@ -163,7 +163,7 @@ bool FDreamUISlateInputSource::FollowsTheMouse(const UDreamUIInputUser* InUser)
 {
 	// A virtual cursor in place of the mouse writes the mouse's pointer itself, through its module's override; the
 	// real mouse moving must not fight it.
-	FVector2D VirtualCursor;
+	FVector2D VirtualCursor = FVector2D::ZeroVector;
 	return !DreamUISlateInputSourceLocal::FindVirtualCursor(InUser, VirtualCursor);
 }
 
@@ -247,7 +247,7 @@ bool FDreamUISlateInputSource::HandlePress(const FPointerEvent& InEvent, bool bI
 	}
 	// A virtual cursor standing in for the mouse is where the mouse's buttons press, as a preset presses them (at its
 	// module's pointer position): the platform's cursor says only that the click was on this viewport.
-	FVector2D VirtualCursor;
+	FVector2D VirtualCursor = FVector2D::ZeroVector;
 	const bool bAtVirtualCursor = PointerID == DreamUIPointerIds::Mouse && FindVirtualCursor(User, VirtualCursor);
 	if (bInPressed)
 	{
