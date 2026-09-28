@@ -14,8 +14,11 @@ What it does:
   anything else;
 - rewrites module-owners.csv's paths in place.
 
-It refuses (unless --force) when a moved file includes a core Private header, or a file that stays in the core
-includes a moved one: an edge that has to be cut before the move. Line endings and BOMs are kept.
+It refuses (unless --force) on an edge that has to be cut before the move. For a module above the core: a moved
+file that includes a core Private header, or a file that stays in the core and includes a moved one. For a module
+below it (the renderer): a moved file that includes the core at all -- while the core including a moved file is
+the direction the split wants, and is rewritten like any other include that crossed the old module's inside.
+Line endings and BOMs are kept.
 """
 import argparse
 import csv
@@ -28,6 +31,8 @@ import sys
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OWNERS = os.path.join(REPO, 'Tools', 'Tests', 'module-owners.csv')
 INCLUDE = re.compile(rb'^([ \t]*#[ \t]*include[ \t]*")([^"]+)(")', re.M)
+# The runtime modules by layer. A module may include only its own layer and the ones below.
+LAYER = {'DreamGUIRenderer': 0, 'DreamGUI': 1, 'DreamGUIInput': 2, 'DreamGUIControls': 3, 'DreamGUIExtensions': 3, 'DreamGUISamples': 4}
 
 
 def git(*args):
@@ -59,6 +64,7 @@ def main():
     ap.add_argument('--force', action='store_true', help='apply although edges to cut were found')
     ns = ap.parse_args()
     api = ns.module.upper() + '_API'
+    below_core = LAYER.get(ns.module, len(LAYER)) < LAYER['DreamGUI']
 
     raw = open(OWNERS, 'rb').read()
     rows = list(csv.DictReader(io.StringIO(raw.decode('utf-8-sig'))))
@@ -116,6 +122,9 @@ def main():
                 return m.group(1) + sub_path.encode('utf-8') + m.group(3)
             if f_moves and not t_moves and module_of(target) == 'DreamGUI':
                 sub_path, sub = module_relative(target)
+                if below_core:
+                    problems.append('%s moves below the core and includes %s' % (f, target))
+                    return m.group(0)
                 if sub != 'Public':
                     problems.append('%s includes the core private %s' % (f, target))
                     return m.group(0)
@@ -123,7 +132,7 @@ def main():
                     changed[0] = True
                     return m.group(1) + sub_path.encode('utf-8') + m.group(3)
             if not f_moves and t_moves:
-                if module_of(f) == 'DreamGUI':
+                if module_of(f) == 'DreamGUI' and not below_core:
                     problems.append('%s, which stays in the core, includes %s' % (f, target))
                 elif kind == 'relative':
                     sub_path, sub = module_relative(target)
