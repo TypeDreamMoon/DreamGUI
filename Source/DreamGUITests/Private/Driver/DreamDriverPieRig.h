@@ -76,6 +76,21 @@ struct FDreamPieRigOptions
 	 * sessions that only look.
 	 */
 	bool bLevelBringsItsOwnEventSystem = false;
+	/**
+	 * Called on the level editor's own world once the rig's blank map is open, before the session is asked
+	 * for: where a scenario puts what the level holds, lets the editor build it, copies, pastes and saves --
+	 * everything the session then duplicates, as a person's play session duplicates their level. It runs
+	 * inside one frame; EditorSettleFrames engine frames follow it before the session is asked for.
+	 */
+	TFunction<void(UWorld&)> PopulateEditorWorld;
+	int32 EditorSettleFrames = 0;
+	/**
+	 * Called on the play world as soon as the session exists: after the editor duplicated the level for it
+	 * and began play, and after the render thread has run everything that queued. A probe here fails in the
+	 * step that broke it -- a texture cloned without its size asserts on the render thread during that
+	 * flush, not in whichever test happens to draw next.
+	 */
+	TFunction<void(UWorld&)> OnPlayWorldCreated;
 };
 
 /** What a play session turned out to be. Filled while the rig comes up; the probes print it. */
@@ -373,6 +388,7 @@ private:
 		NotStarted,
 		WaitForLeftoverSession,
 		MakeMap,
+		PopulateEditor,
 		Launch,
 		WaitForPlayer,
 		Settle,
@@ -409,6 +425,8 @@ private:
 	/** Consecutive frames the player has been ready; see WaitForPlayer. */
 	int32 ReadyFramesSeen = 0;
 	int32 SettleFramesLeft = 0;
+	bool bEditorPopulated = false;
+	int32 EditorFramesLeft = 0;
 
 	/** What the process had before this rig changed it. */
 	bool bRememberedProcessState = false;

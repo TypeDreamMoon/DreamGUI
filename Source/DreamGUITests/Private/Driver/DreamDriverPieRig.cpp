@@ -39,6 +39,7 @@
 #include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
 #include "PlayInEditorDataTypes.h"
+#include "RenderingThread.h"
 #include "RHIGlobals.h"
 #include "Settings/LevelEditorPlaySettings.h"
 #include "Slate/SceneViewport.h"
@@ -673,7 +674,31 @@ bool FDreamDriverPieRig::UpdateStart()
 			return FailStart(TEXT("the editor would not open a blank map"));
 		}
 		// One frame on the new map before a session duplicates it, so the level viewports that follow
-		// the editor world have moved over to it.
+		// the editor world have moved over to it -- and before a scenario populates it, for the same reason.
+		StartPhase = Options.PopulateEditorWorld ? EStartPhase::PopulateEditor : EStartPhase::Launch;
+		PhaseStartSeconds = Now;
+		FramesInPhase = 0;
+		return false;
+	}
+
+	case EStartPhase::PopulateEditor:
+	{
+		if (!bEditorPopulated)
+		{
+			bEditorPopulated = true;
+			UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
+			if (EditorWorld == nullptr)
+			{
+				return FailStart(TEXT("there is no level editor world to put the scenario's level in"));
+			}
+			Options.PopulateEditorWorld(*EditorWorld);
+			EditorFramesLeft = FMath::Max(Options.EditorSettleFrames, 0);
+		}
+		if (EditorFramesLeft > 0)
+		{
+			--EditorFramesLeft;
+			return false;
+		}
 		StartPhase = EStartPhase::Launch;
 		PhaseStartSeconds = Now;
 		FramesInPhase = 0;
@@ -789,6 +814,13 @@ bool FDreamDriverPieRig::UpdateStart()
 			return FailStart(TEXT("the editor did not start a play session; see what PIE logged for why"));
 		}
 		bSessionStarted = true;
+		// The duplication the session began with queued what it copied for the render thread: all of it runs
+		// now, so what a copy got wrong fails here, in the step that made it.
+		FlushRenderingCommands();
+		if (Options.OnPlayWorldCreated)
+		{
+			Options.OnPlayWorldCreated(*GEditor->PlayWorld);
+		}
 		StartPhase = EStartPhase::WaitForPlayer;
 		PhaseStartSeconds = Now;
 		FramesInPhase = 0;
