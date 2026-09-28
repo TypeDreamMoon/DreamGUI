@@ -5,12 +5,32 @@
 
 #include "DreamUIRender/IDreamUIRendererPrimitive.h"
 #include "DreamUIRender/DreamUIPostProcessVertex.h"
+#include "RenderGraphFwd.h"
 #include "RHIStaticStates.h"
-#include "SceneTextures.h"
 #include "TextureResource.h"
 
-class UDreamCanvas;
-class UDreamVisualPostProcess;
+// Declared, not included: SceneTextures.h is the engine renderer's internal header, and only the files that
+// draw -- the renderer's own -- are given its include path.
+struct FMinimalSceneTextures;
+class FTexture2DResource;
+
+/**
+ * What a post-process visual sends its proxy whenever its region, transform or tint changes: worked out on the
+ * game thread and handed over whole, so the render thread never reads the visual.
+ */
+struct FDreamUIPostProcessCommonParams
+{
+	TArray<FDreamUIPostProcessCopyMeshRegionVertex> ScreenToMeshRegionVertices;
+	TArray<FDreamUIPostProcessVertex> MeshRegionToScreenVertices;
+	FVector2f RectSize = FVector2f::ZeroVector;
+	FMatrix44f ObjectToWorldMatrix = FMatrix44f::Identity;
+	FTexture2DDynamicResource* ClipDataTexture = nullptr;
+	bool bUseFullSize = false;
+	FBox BoundingBox = FBox(EForceInit::ForceInit);
+	/** See FDreamVisualPostProcessRenderProxy::TintColor. */
+	FVector4f TintColor = FVector4f(1, 1, 1, 1);
+	int32 TintMode = 0;
+};
 
 /**
  * DreamVisualPostProcessRenderProxy is a render-agent for DreamVisualPostProcess in render thread, just like a SceneProxy for PrimitiveComponent.
@@ -29,6 +49,18 @@ public:
 	{
 		
 	}
+
+	/*
+	 * The game thread's side. Each call enqueues one render command, in the order the calls are made, and the
+	 * command keeps its own reference to the proxy, so the caller may let go of it straight after.
+	 */
+	/** Give up InProxy on the render thread, where the last reference must go because the destructor runs there. */
+	static void ReleaseOnRenderThread(FDreamVisualPostProcessRenderProxyPtr&& InProxy);
+	static void SetCommonParams_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FDreamUIPostProcessCommonParams&& InParams);
+	/** InMaskTextureResource is the mask texture's resource as the game thread sees it now, or null for no mask. */
+	static void SetMaskTexture_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FTexture2DResource* InMaskTextureResource);
+	/** Null draws the effect to the screen; otherwise it is drawn into this render target. */
+	static void SetRenderTarget_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FTextureRenderTargetResource* InRenderTargetResource);
 private:
 	TWeakPtr<FDreamUIRenderer, ESPMode::ThreadSafe> DreamRenderer;
 	bool bIsWorld = false;//is world space or screen space

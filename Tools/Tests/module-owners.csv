@@ -51,7 +51,6 @@ Source/DreamGUI/Private/Core/Components/DreamLayoutSelfSpacer.cpp,DreamGUI,"layo
 Source/DreamGUI/Private/Core/Components/DreamPanelLayouts.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamPanelSlot.cpp,DreamGUI,core
 Source/DreamGUIExtensions/Private/Core/Components/DreamPixelSort.cpp,DreamGUIExtensions,post-process effect visual
-Source/DreamGUIExtensions/Private/Core/Components/DreamPixelSortRenderProxy.h,DreamGUIExtensions,private render proxy of UDreamPixelSort (needs its enums)
 Source/DreamGUI/Private/Core/Components/DreamRectBlock.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamRingSectorRaycast.cpp,DreamGUI,custom raycast shape; used by DreamRingMenu (Controls) so it must sit below Controls
 Source/DreamGUI/Private/Core/Components/DreamScrollBoxInputHandler.cpp,DreamGUI,drives the core scroll-box layout; only implements Core contract interfaces
@@ -108,6 +107,9 @@ Source/DreamGUI/Private/Core/DreamUIManager_Tick.cpp,DreamGUI,core: manager tick
 Source/DreamGUI/Private/Core/DreamUIMesh/DreamUIGizmoMesh.cpp,DreamGUIRenderer,gizmo mesh drawn by the renderer
 Source/DreamGUI/Private/Core/DreamUIMesh/DreamUIMeshComponent.cpp,DreamGUI,OVERRIDE(03): stays in core for R-1; implements the renderer's IDreamUIRendererPrimitive (core->renderer is allowed); DefaultMeshType is a serialized TSubclassOf; shrinks to the UE-renderer primitive in R-2.4
 Source/DreamGUI/Private/Core/DreamUIMeshVertex.cpp,DreamGUIRenderer,vertex format + LEXUI_VERTEX_TEXCOORDINATE_COUNT
+Source/DreamGUI/Private/Core/DreamUIRender/Effects/DreamUIBackgroundBlurRenderProxy.cpp,DreamGUIRenderer,background blur render proxy (render-thread passes)
+Source/DreamGUI/Private/Core/DreamUIRender/Effects/DreamUIBackgroundPixelateRenderProxy.cpp,DreamGUIRenderer,background pixelate render proxy (render-thread passes)
+Source/DreamGUI/Private/Core/DreamUIRender/Effects/DreamUIPixelSortRenderProxy.cpp,DreamGUIRenderer,pixel sort render proxy (render-thread passes)
 Source/DreamGUI/Private/Core/DreamUIRender/DreamUIBaseShaders.cpp,DreamGUIRenderer,global shader declarations (IMPLEMENT_GLOBAL_SHADER) -> needs PostConfigInit
 Source/DreamGUI/Private/Core/DreamUIRender/DreamUIPostProcessShaders.cpp,DreamGUIRenderer,post-process global shaders (blur/pixelate/pixel-sort/copy) -> needs PostConfigInit
 Source/DreamGUI/Private/Core/DreamUIRender/DreamUIPostProcessVertex.cpp,DreamGUIRenderer,post-process vertex layouts shared by proxies and renderer
@@ -354,6 +356,7 @@ Source/DreamGUI/Public/Core/DreamUIMeshIndex.h,DreamGUIRenderer,index type
 Source/DreamGUI/Public/Core/DreamUIMeshVertex.h,DreamGUIRenderer,vertex format + LEXUI_VERTEX_TEXCOORDINATE_COUNT
 Source/DreamGUI/Public/Core/DreamUIQuadTree.h,DreamGUI,canvas batching overlap tree
 Source/DreamGUI/Public/Core/DreamUIRender/DreamUIBaseShaders.h,DreamGUIRenderer,global shader declarations (IMPLEMENT_GLOBAL_SHADER) -> needs PostConfigInit
+Source/DreamGUI/Public/Core/DreamUIRender/DreamUIPostProcessEffects.h,DreamGUIRenderer,factories and game-thread setters of the effect proxies the extension visuals use
 Source/DreamGUI/Public/Core/DreamUIRender/DreamUIPostProcessShaders.h,DreamGUIRenderer,post-process global shaders (blur/pixelate/pixel-sort/copy) -> needs PostConfigInit
 Source/DreamGUI/Public/Core/DreamUIRender/DreamUIPostProcessVertex.h,DreamGUIRenderer,post-process vertex layouts shared by proxies and renderer
 Source/DreamGUI/Public/Core/DreamUIRender/DreamUIRenderer.h,DreamGUIRenderer,FDreamUIRenderer scene view extension / render passes

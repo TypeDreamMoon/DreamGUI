@@ -14,6 +14,7 @@
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
 #include "PrimitiveSceneProxy.h"
+#include "SceneView.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamVisualPostProcessRenderProxy.h"
 #include "Core/Components/DreamVisualDirectMesh.h"

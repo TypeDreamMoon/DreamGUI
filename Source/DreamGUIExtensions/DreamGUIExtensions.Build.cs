@@ -1,6 +1,5 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
-using System.IO;
 using UnrealBuildTool;
 
 /*
@@ -21,11 +20,6 @@ public class DreamGUIExtensions : ModuleRules
 			OptimizeCode = CodeOptimization.Never;
 			bUseUnity = false;
 		}
-
-		// The effects' render proxies include the core's post-process proxy header, which includes the
-		// engine's SceneTextures.h from Renderer/Internal. Only this module's own sources need it: nothing
-		// public here includes that header.
-		PrivateIncludePaths.Add(Path.Combine(EngineDirectory, "Source", "Runtime", "Renderer", "Internal"));
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]

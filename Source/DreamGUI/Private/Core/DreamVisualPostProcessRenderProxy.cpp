@@ -19,6 +19,82 @@ FDreamVisualPostProcessRenderProxy::FDreamVisualPostProcessRenderProxy()
 	
 }
 
+void FDreamVisualPostProcessRenderProxy::ReleaseOnRenderThread(FDreamVisualPostProcessRenderProxyPtr&& InProxy)
+{
+	if (!InProxy.IsValid())
+	{
+		return;
+	}
+	// The mesh section and any update command still in flight hold their own references, so the proxy dies
+	// when the last of them lets go -- and because every one of those is released on the render thread, the
+	// destructor (which touches render resources) always runs there.
+	ENQUEUE_RENDER_COMMAND(FDreamPostProcess_ReleaseRenderProxy)
+		([ReleasedProxy = MoveTemp(InProxy)](FRHICommandListImmediate& RHICmdList) mutable
+			{
+				ReleasedProxy.Reset();
+			});
+}
+
+void FDreamVisualPostProcessRenderProxy::SetCommonParams_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FDreamUIPostProcessCommonParams&& InParams)
+{
+	if (!InProxy.IsValid())
+	{
+		return;
+	}
+	ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateData)
+		([TempRenderProxy = InProxy, Params = MoveTemp(InParams)](FRHICommandListImmediate& RHICmdList) mutable
+			{
+				TempRenderProxy->RenderScreenToMeshRegionVertexArray = MoveTemp(Params.ScreenToMeshRegionVertices);
+				TempRenderProxy->RenderMeshRegionToScreenVertexArray = MoveTemp(Params.MeshRegionToScreenVertices);
+				TempRenderProxy->RectSize = Params.RectSize;
+				TempRenderProxy->ObjectToWorldMatrix = Params.ObjectToWorldMatrix;
+				TempRenderProxy->ClipDataTexture = Params.ClipDataTexture;
+				TempRenderProxy->bUseFullSize = Params.bUseFullSize;
+				TempRenderProxy->BoundingBox = Params.BoundingBox;
+				TempRenderProxy->TintColor = Params.TintColor;
+				TempRenderProxy->TintMode = Params.TintMode;
+			});
+}
+
+void FDreamVisualPostProcessRenderProxy::SetMaskTexture_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FTexture2DResource* InMaskTextureResource)
+{
+	if (!InProxy.IsValid())
+	{
+		return;
+	}
+	ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateMaskTexture)
+		([TempRenderProxy = InProxy, MaskTextureResource = InMaskTextureResource](FRHICommandListImmediate& RHICmdList)
+			{
+				// Read the resource here, on the render thread, and keep only ref-counted handles: the resource
+				// itself is deleted whenever the texture's resource is rebuilt, with no notification to this
+				// proxy. Dereferencing it now is safe because the pointer was taken from the texture on the game
+				// thread just before this command was enqueued, and the delete for it can only be enqueued after.
+				if (MaskTextureResource != nullptr)
+				{
+					TempRenderProxy->MaskTextureRHI = MaskTextureResource->TextureRHI;
+					TempRenderProxy->MaskTextureSamplerState = MaskTextureResource->SamplerStateRHI;
+				}
+				else
+				{
+					TempRenderProxy->MaskTextureRHI = nullptr;
+					TempRenderProxy->MaskTextureSamplerState = nullptr;
+				}
+			});
+}
+
+void FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FTextureRenderTargetResource* InRenderTargetResource)
+{
+	if (!InProxy.IsValid())
+	{
+		return;
+	}
+	ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateMaskTexture)
+		([TempRenderProxy = InProxy, RenderTargetResource = InRenderTargetResource](FRHICommandListImmediate& RHICmdList)
+			{
+				TempRenderProxy->RenderTargetResource = RenderTargetResource;
+			});
+}
+
 #define SET_PIPELINE_STATE_FOR_CLIP()\
 FGraphicsPipelineStateInitializer GraphicsPSOInit;\
 RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);\
