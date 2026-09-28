@@ -4,8 +4,8 @@
 player reaches it and every configuration it ships in, is a cell of one table, and a cell is either
 covered by a driver test, declared not applicable with a reason, or a hole.
 
-- **Rows** are the controls and behaviours: the `UCLASS`es of `Source/DreamGUI/Public/Controls/*.h`
-  and `Source/DreamGUI/Public/Interaction/*.h`, grouped into rows and filtered in
+- **Rows** are the controls and behaviours: the `UCLASS`es of `Source/DreamGUI*/Public/Controls/*.h`
+  and `Source/DreamGUI*/Public/Interaction/*.h` (every module), grouped into rows and filtered in
   [`coverage.json`](coverage.json). A class that is in neither its `rows` nor its `excluded` list
   appears as an *unclassified* row full of holes, so a new control cannot slip past the table.
 - **Columns** are the inputs crossed with the configurations:

@@ -4,7 +4,7 @@ configurations some driver test exercises -- and where the holes are.
     python coverage_matrix.py [--root <plugin>] [--heuristic] [--out <file.md>] [--write-doc]
                               [--json <file>] [--fail-on-holes]
 
-Rows come from the UCLASSes of Source/DreamGUI/Public/Controls/*.h and Public/Interaction/*.h,
+Rows come from the UCLASSes of Source/DreamGUI*/Public/Controls/*.h and Public/Interaction/*.h,
 grouped and filtered by coverage.json (a class in neither its rows nor its exclusions becomes an
 "unclassified" row of holes). Columns are the inputs (mouse, touch, navigation, keyboard text)
 crossed with the configurations (default and animated, disabled, scaled canvas, world space).

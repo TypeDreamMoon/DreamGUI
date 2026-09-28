@@ -45,9 +45,11 @@ public class DreamGUITests : ModuleRules
 				// headers stay private -- nothing here asks for them to be promoted to Public --
 				// and only this module is told where they live.
 				Path.Combine(ModuleDirectory, "..", "DreamGUI", "Private"),
+				Path.Combine(ModuleDirectory, "..", "DreamGUIControls", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUIEditor", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUIExtensions", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUIK2Nodes", "Private"),
+				Path.Combine(ModuleDirectory, "..", "DreamGUISamples", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamTween", "Private"),
 			});
 
@@ -72,9 +74,11 @@ public class DreamGUITests : ModuleRules
 				"DeveloperSettings",
 				"DirectoryWatcher",
 				"DreamGUI",
+				"DreamGUIControls",
 				"DreamGUIEditor",
 				"DreamGUIExtensions",
 				"DreamGUIK2Nodes",
+				"DreamGUISamples",
 				"DreamTween",
 				"EditorFramework",
 				"EditorStyle",

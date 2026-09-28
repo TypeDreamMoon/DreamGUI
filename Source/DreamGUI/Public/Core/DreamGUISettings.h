@@ -102,7 +102,7 @@ public:
 	 * UDreamUIStyleSheet::GetProjectSheet does the cast. The config value is the asset's path either
 	 * way, so a project's setting reads the same as before.
 	 */
-	UPROPERTY(config, EditAnywhere, Category = "Assets", meta = (AllowedClasses = "/Script/DreamGUI.DreamUIStyleSheet"))
+	UPROPERTY(config, EditAnywhere, Category = "Assets", meta = (AllowedClasses = "/Script/DreamGUIControls.DreamUIStyleSheet"))
 	TSoftObjectPtr<class UDataAsset> DefaultStyleSheet;
 
 

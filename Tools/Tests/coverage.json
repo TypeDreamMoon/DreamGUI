@@ -1,7 +1,7 @@
 {
   "about": [
     "The coverage matrix: which interactive control or behaviour has a driver test for which input under which configuration. COVERAGE.md explains the tags; coverage_matrix.py draws the table.",
-    "rows: one per control or behaviour. classes are the UCLASSes of Source/DreamGUI/Public/Controls/*.h and Public/Interaction/*.h that the row stands for; areas are test-name prefixes after 'DreamGUI.' whose tests count for the row (\"Button\" means DreamGUI.Button.*, \"Controls.Button\" means DreamGUI.Controls.Button.*); text marks a control that takes keyboard text, the only rows with a Text column; na maps a cell to the reason it is not applicable -- the key is an input id, a configuration id, or \"Input.Config\".",
+    "rows: one per control or behaviour. classes are the UCLASSes of Source/DreamGUI*/Public/Controls/*.h and Public/Interaction/*.h that the row stands for; areas are test-name prefixes after 'DreamGUI.' whose tests count for the row (\"Button\" means DreamGUI.Button.*, \"Controls.Button\" means DreamGUI.Controls.Button.*); text marks a control that takes keyboard text, the only rows with a Text column; na maps a cell to the reason it is not applicable -- the key is an input id, a configuration id, or \"Input.Config\".",
     "excluded: classes of those headers that are not rows, each with the reason. A class that is in neither list shows up as an unclassified row, all holes, until someone decides.",
     "inputs and configs are the columns; their tag is what a test registers with REGISTER_SIMPLE_AUTOMATION_TEST_TAGS. extraTags are further tags a test may carry (the static checks refuse any other)."
   ],

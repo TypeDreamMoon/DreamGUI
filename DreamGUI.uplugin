@@ -28,7 +28,19 @@
 			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
 		},
 		{
+			"Name": "DreamGUIControls",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
 			"Name": "DreamGUIExtensions",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUISamples",
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]

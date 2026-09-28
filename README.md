@@ -43,8 +43,10 @@ anything compiles.
 
 | Module | Layer | Holds |
 | --- | --- | --- |
-| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts. For now also the renderer, the input system and the controls, which are still to be split off |
+| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts. For now also the renderer and the input system, which are still to be split off |
+| `DreamGUIControls` | above the core | The control library: the `Dream*` controls (button, toggle, slider, lists, dialog, tab view, ...), the `UI*` behaviours they are built from, the action bar, style sheets and the UMG interop |
 | `DreamGUIExtensions` | above the core | 2D lines, polygons and rings, the static-mesh visual, the retainer box and the render-target helpers, lyrics, the concrete mesh modifiers, and the background blur, pixelate and pixel sort effects |
+| `DreamGUISamples` | above the controls | The showcase and the controls gallery |
 | `DreamTween` | independent | Tweens |
 | `DreamGUIEditor`, `DreamGUIK2Nodes` | editor | The designer and the asset tools; the Blueprint nodes |
 | `DreamGUITests` | editor | The automation suite |

@@ -13,32 +13,32 @@ Source/DreamGUI/Private/Animation/DreamWidgetAnimationPlayer.cpp,DreamGUI,widget
 Source/DreamGUI/Private/Animation/MovieSceneDreamUIComponentTypes.cpp,DreamGUI,widget animation (sequencer)
 Source/DreamGUI/Private/Animation/MovieSceneDreamUIMaterialSystem.cpp,DreamGUI,widget animation (sequencer)
 Source/DreamGUI/Private/Animation/MovieSceneDreamUIMaterialTrack.cpp,DreamGUI,widget animation (sequencer)
-Source/DreamGUI/Private/Controls/DreamBorder.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamButton.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamDialog.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamDropdown.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamEditableText.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamExpandableArea.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamInputKeySelector.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamListView.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamMenuAnchor.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamNativeWidgetHost.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamProgressBar.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamRadioButton.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamRichTextBlock.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamRingMenu.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamScrollBar.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamScrollBox.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamSlider.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamSpinBox.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamTabView.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamTextInput.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamThrobber.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamTileView.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamToggle.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamTreeView.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamUIControl.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Controls/DreamUIStyleSheet.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamBorder.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamButton.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamDialog.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamDropdown.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamEditableText.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamExpandableArea.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamInputKeySelector.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamListView.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamMenuAnchor.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamNativeWidgetHost.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamProgressBar.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamRadioButton.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamRichTextBlock.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamRingMenu.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamScrollBar.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamScrollBox.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamSlider.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamSpinBox.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamTabView.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamTextInput.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamThrobber.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamTileView.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamToggle.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamTreeView.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamUIControl.cpp,DreamGUIControls,control library
+Source/DreamGUIControls/Private/Controls/DreamUIStyleSheet.cpp,DreamGUIControls,control library
 Source/DreamGUIExtensions/Private/Core/Components/DreamBackgroundBlur.cpp,DreamGUIExtensions,post-process effect visual (+ its proxy)
 Source/DreamGUIExtensions/Private/Core/Components/DreamBackgroundPixelate.cpp,DreamGUIExtensions,post-process effect visual (+ its proxy)
 Source/DreamGUI/Private/Core/Components/DreamCanvas.cpp,DreamGUI,core
@@ -89,7 +89,7 @@ Source/DreamGUI/Private/Core/DreamUICustomMeshSource.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIDataAsTexture.cpp,DreamGUI,UDataAsset encoded into a texture (rect block data)
 Source/DreamGUI/Private/Core/DreamUIDrawCall.cpp,DreamGUI,game-thread batch description built by the canvas; handed to the renderer through the seam
 Source/DreamGUI/Private/Core/DreamUIDynamicSpriteAtlasData.cpp,DreamGUI,core
-Source/DreamGUI/Private/Core/DreamUIEachAdapter.cpp,DreamGUIControls,'each' list adapter over UUIRecyclableScrollView; Core reaches it through a registered each-binding handler
+Source/DreamGUIControls/Private/Core/DreamUIEachAdapter.cpp,DreamGUIControls,'each' list adapter over UUIRecyclableScrollView; Core reaches it through a registered each-binding handler
 Source/DreamGUI/Private/Core/DreamUIEachBindingHandler.cpp,DreamGUI,"each seam: the core asks the list views through it, Controls registers the handler"
 Source/DreamGUI/Private/Core/DreamUIFontData_BaseObject.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIFontData_Bitmap.cpp,DreamGUI,core
@@ -141,7 +141,7 @@ Source/DreamGUI/Private/Core/Text/DreamTextLayout.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Text/DreamTextPainter.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Text/DreamTextShaper.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Text/DreamTextShaper.h,DreamGUI,core
-Source/DreamGUI/Private/Demo/DreamUIShowcase.cpp,DreamGUISamples,showcase/gallery sample; uses Controls + Input; used by tests
+Source/DreamGUISamples/Private/Demo/DreamUIShowcase.cpp,DreamGUISamples,showcase/gallery sample; uses Controls + Input; used by tests
 Source/DreamGUI/Private/DreamGUI.cpp,DreamGUI,core
 Source/DreamGUI/Private/DreamUIBPLibrary.cpp,DreamGUI,core
 Source/DreamGUI/Private/DreamUIComponentReference.cpp,DreamGUI,core
@@ -179,8 +179,8 @@ Source/DreamGUIExtensions/Private/Extensions/DreamRing.cpp,DreamGUIExtensions,ex
 Source/DreamGUIExtensions/Private/Extensions/DreamStaticMesh.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/DreamUIRenderTargetGeometrySource.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/DreamUIRenderTargetInteraction.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamUMGWidget.cpp,DreamGUIControls,UMG interop visual; used by DreamNativeWidgetHost
-Source/DreamGUI/Private/Extensions/DreamUMGWidgetInteraction.cpp,DreamGUIControls,UMG interop input forwarding; used by DreamNativeWidgetHost
+Source/DreamGUIControls/Private/Extensions/DreamUMGWidget.cpp,DreamGUIControls,UMG interop visual; used by DreamNativeWidgetHost
+Source/DreamGUIControls/Private/Extensions/DreamUMGWidgetInteraction.cpp,DreamGUIControls,UMG interop input forwarding; used by DreamNativeWidgetHost
 Source/DreamGUIExtensions/Private/Extensions/DreamVisualCustomRaycastExtensions.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/Lyrics/DreamLyricsData.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/Lyrics/DreamLyricsView.cpp,DreamGUIExtensions,extension
@@ -188,7 +188,7 @@ Source/DreamGUI/Private/Extensions/UISpriteSequencePlayer.cpp,DreamGUI,"animated
 Source/DreamGUIExtensions/Private/Extensions/UISpriteSheetTexturePlayer.cpp,DreamGUIExtensions,extension
 Source/DreamGUI/Private/Interaction/DreamContentWidget.cpp,DreamGUI,"named-slot hosting used by UDreamUserWidget, panel layouts and the .dui builder"
 Source/DreamGUI/Private/Interaction/DreamResponsiveBinding.cpp,DreamGUI,data binding / responsive rules; no input
-Source/DreamGUI/Private/Interaction/DreamUIActionBar.cpp,DreamGUIControls,action-hint bar control
+Source/DreamGUIControls/Private/Interaction/DreamUIActionBar.cpp,DreamGUIControls,action-hint bar control
 Source/DreamGUI/Private/Interaction/DreamUIActionRouter.cpp,DreamGUIInput,action router subsystem (split: FDreamUIActionHandle + FDreamUIActionExecutedDelegate move to a Core header)
 Source/DreamGUI/Private/Interaction/DreamUIActionTrigger.cpp,DreamGUIInput,binds an input action to a widget
 Source/DreamGUI/Private/Interaction/DreamUIDragDrop.cpp,DreamGUIInput,drag source / drop target + drag-drop subsystem
@@ -201,23 +201,23 @@ Source/DreamGUI/Private/Interaction/DreamUIPopupLayer.cpp,DreamGUI,screen layeri
 Source/DreamGUI/Private/Interaction/DreamUITextInputTarget.cpp,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
 Source/DreamGUI/Private/Interaction/DreamUITooltip.cpp,DreamGUIInput,hover-driven tooltip subsystem + source interface
 Source/DreamGUI/Private/Interaction/DreamUIVirtualCursor.cpp,DreamGUIInput,gamepad virtual cursor
-Source/DreamGUI/Private/Interaction/UIButton.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIDropdown.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIButton.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIDropdown.cpp,DreamGUIControls,control behaviour
 Source/DreamGUI/Private/Interaction/UIEventBlocker.cpp,DreamGUIInput,swallows pointer events; used by DreamUIModal
 Source/DreamGUI/Private/Interaction/UIEventTrigger.cpp,DreamGUIInput,pointer events -> delegates (UGUI EventTrigger equivalent)
-Source/DreamGUI/Private/Interaction/UIListView.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIListView.cpp,DreamGUIControls,control behaviour
 Source/DreamGUI/Private/Interaction/UINavigationInputSelectionHandler.cpp,DreamGUI,selection-cursor visual; used by UDreamWidgetPresenterComponentBase (Core) and UUISelectable
-Source/DreamGUI/Private/Interaction/UIRecyclableScrollView.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIScrollView.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIScrollViewWithScrollbar.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIScrollbar.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIRecyclableScrollView.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIScrollView.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIScrollViewWithScrollbar.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIScrollbar.cpp,DreamGUIControls,control behaviour
 Source/DreamGUI/Private/Interaction/UISelectable.cpp,DreamGUIInput,"selectable/navigable base: selection state machine, navigation mode, transitions; used by navigation scope/stack/input module"
-Source/DreamGUI/Private/Interaction/UISlider.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIStandardControls.cpp,DreamGUIControls,UUIProgressBar (split: UDreamLayoutSelfSpacer -> Core layout header)
-Source/DreamGUI/Private/Interaction/UITextHyperlink.cpp,DreamGUIControls,clickable text link behaviour
-Source/DreamGUI/Private/Interaction/UITextInput.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIToggle.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIToggleGroup.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UISlider.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIStandardControls.cpp,DreamGUIControls,UUIProgressBar (split: UDreamLayoutSelfSpacer -> Core layout header)
+Source/DreamGUIControls/Private/Interaction/UITextHyperlink.cpp,DreamGUIControls,clickable text link behaviour
+Source/DreamGUIControls/Private/Interaction/UITextInput.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIToggle.cpp,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Private/Interaction/UIToggleGroup.cpp,DreamGUIControls,control behaviour
 Source/DreamGUI/Private/MeshModifier/DreamMeshModifierBase.cpp,DreamGUI,base modifier + UDreamVisualBatchMeshModifierHelper; invoked by UDreamVisualBatchMesh
 Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierGradientColor.cpp,DreamGUIExtensions,mesh modifier
 Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierLongShadow.cpp,DreamGUIExtensions,mesh modifier
@@ -255,33 +255,33 @@ Source/DreamGUI/Public/Animation/DreamWidgetAnimationPlayer.h,DreamGUI,widget an
 Source/DreamGUI/Public/Animation/MovieSceneDreamUIComponentTypes.h,DreamGUI,widget animation (sequencer)
 Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialSystem.h,DreamGUI,widget animation (sequencer)
 Source/DreamGUI/Public/Animation/MovieSceneDreamUIMaterialTrack.h,DreamGUI,widget animation (sequencer)
-Source/DreamGUI/Public/Controls/DreamBorder.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamButton.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamControlStyles.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamDialog.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamDropdown.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamEditableText.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamExpandableArea.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamInputKeySelector.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamListView.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamMenuAnchor.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamNativeWidgetHost.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamProgressBar.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamRadioButton.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamRichTextBlock.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamRingMenu.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamScrollBar.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamScrollBox.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamSlider.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamSpinBox.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamTabView.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamTextInput.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamThrobber.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamTileView.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamToggle.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamTreeView.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamUIControl.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Controls/DreamUIStyleSheet.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamBorder.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamButton.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamControlStyles.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamDialog.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamDropdown.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamEditableText.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamExpandableArea.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamInputKeySelector.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamListView.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamMenuAnchor.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamNativeWidgetHost.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamProgressBar.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamRadioButton.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamRichTextBlock.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamRingMenu.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamScrollBar.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamScrollBox.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamSlider.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamSpinBox.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamTabView.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamTextInput.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamThrobber.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamTileView.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamToggle.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamTreeView.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamUIControl.h,DreamGUIControls,control library
+Source/DreamGUIControls/Public/Controls/DreamUIStyleSheet.h,DreamGUIControls,control library
 Source/DreamGUIExtensions/Public/Core/Components/DreamBackgroundBlur.h,DreamGUIExtensions,post-process effect visual (+ its proxy)
 Source/DreamGUIExtensions/Public/Core/Components/DreamBackgroundPixelate.h,DreamGUIExtensions,post-process effect visual (+ its proxy)
 Source/DreamGUI/Public/Core/Components/DreamCanvas.h,DreamGUI,core
@@ -304,8 +304,8 @@ Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamText.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamTexture.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamTextureBase.h,DreamGUI,core
-Source/DreamGUI/Public/Core/Components/DreamUIScrollable.h,DreamGUI,"scroll seam: what navigation asks of a scrolling behaviour"
-Source/DreamGUI/Public/Core/Components/DreamUIScrollbarInterface.h,DreamGUI,"scrollbar seam: what the scroll box layout drives"
+Source/DreamGUI/Public/Core/Components/DreamUIScrollable.h,DreamGUI,scroll seam: what navigation asks of a scrolling behaviour
+Source/DreamGUI/Public/Core/Components/DreamUIScrollbarInterface.h,DreamGUI,scrollbar seam: what the scroll box layout drives
 Source/DreamGUI/Public/Core/Components/DreamVisual.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamVisualDirectMesh.h,DreamGUI,core
@@ -333,7 +333,7 @@ Source/DreamGUI/Public/Core/DreamUICustomMeshSource.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIDataAsTexture.h,DreamGUI,UDataAsset encoded into a texture (rect block data)
 Source/DreamGUI/Public/Core/DreamUIDrawCall.h,DreamGUI,game-thread batch description built by the canvas; handed to the renderer through the seam
 Source/DreamGUI/Public/Core/DreamUIDynamicSpriteAtlasData.h,DreamGUI,core
-Source/DreamGUI/Public/Core/DreamUIEachAdapter.h,DreamGUIControls,'each' list adapter over UUIRecyclableScrollView; Core reaches it through a registered each-binding handler
+Source/DreamGUIControls/Public/Core/DreamUIEachAdapter.h,DreamGUIControls,'each' list adapter over UUIRecyclableScrollView; Core reaches it through a registered each-binding handler
 Source/DreamGUI/Public/Core/DreamUIEachBindingHandler.h,DreamGUI,"each seam: the core asks the list views through it, Controls registers the handler"
 Source/DreamGUI/Public/Core/DreamUIFontData_BaseObject.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIFontData_Bitmap.h,DreamGUI,core
@@ -387,7 +387,7 @@ Source/DreamGUI/Public/Core/IDreamUISpriteRenderInterface.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Text/DreamTextDisplayList.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Text/DreamTextLayout.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Text/DreamTextPainter.h,DreamGUI,core
-Source/DreamGUI/Public/Demo/DreamUIShowcase.h,DreamGUISamples,showcase/gallery sample; uses Controls + Input; used by tests
+Source/DreamGUISamples/Public/Demo/DreamUIShowcase.h,DreamGUISamples,showcase/gallery sample; uses Controls + Input; used by tests
 Source/DreamGUI/Public/DreamGUI.h,DreamGUI,core
 Source/DreamGUI/Public/DreamUIBPLibrary.h,DreamGUI,core
 Source/DreamGUI/Public/DreamUIComponentReference.h,DreamGUI,core
@@ -440,8 +440,8 @@ Source/DreamGUIExtensions/Public/Extensions/DreamRing.h,DreamGUIExtensions,exten
 Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamUMGWidget.h,DreamGUIControls,UMG interop visual; used by DreamNativeWidgetHost
-Source/DreamGUI/Public/Extensions/DreamUMGWidgetInteraction.h,DreamGUIControls,UMG interop input forwarding; used by DreamNativeWidgetHost
+Source/DreamGUIControls/Public/Extensions/DreamUMGWidget.h,DreamGUIControls,UMG interop visual; used by DreamNativeWidgetHost
+Source/DreamGUIControls/Public/Extensions/DreamUMGWidgetInteraction.h,DreamGUIControls,UMG interop input forwarding; used by DreamNativeWidgetHost
 Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h,DreamGUIExtensions,extension
@@ -451,7 +451,7 @@ Source/DreamGUI/Public/Interaction/DreamContentWidget.h,DreamGUI,"named-slot hos
 Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h,DreamGUI,contract: drag payload in UDreamUserWidget drag events and UDreamPointerEventData::DragOperation
 Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h,DreamGUI,data binding / responsive rules; no input
 Source/DreamGUI/Public/Interaction/DreamSelectableStyle.h,DreamGUIInput,style asset referenced by UUISelectable::Style
-Source/DreamGUI/Public/Interaction/DreamUIActionBar.h,DreamGUIControls,action-hint bar control
+Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h,DreamGUIControls,action-hint bar control
 Source/DreamGUI/Public/Interaction/DreamUIActionRouter.h,DreamGUIInput,action router subsystem (split: FDreamUIActionHandle + FDreamUIActionExecutedDelegate move to a Core header)
 Source/DreamGUI/Public/Interaction/DreamUIActionTrigger.h,DreamGUIInput,binds an input action to a widget
 Source/DreamGUI/Public/Interaction/DreamUIDragDrop.h,DreamGUIInput,drag source / drop target + drag-drop subsystem
@@ -464,23 +464,23 @@ Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h,DreamGUI,screen layering 
 Source/DreamGUI/Public/Interaction/DreamUITextInputTarget.h,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
 Source/DreamGUI/Public/Interaction/DreamUITooltip.h,DreamGUIInput,hover-driven tooltip subsystem + source interface
 Source/DreamGUI/Public/Interaction/DreamUIVirtualCursor.h,DreamGUIInput,gamepad virtual cursor
-Source/DreamGUI/Public/Interaction/UIButton.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIDropdown.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIButton.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIDropdown.h,DreamGUIControls,control behaviour
 Source/DreamGUI/Public/Interaction/UIEventBlocker.h,DreamGUIInput,swallows pointer events; used by DreamUIModal
 Source/DreamGUI/Public/Interaction/UIEventTrigger.h,DreamGUIInput,pointer events -> delegates (UGUI EventTrigger equivalent)
-Source/DreamGUI/Public/Interaction/UIListView.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIListView.h,DreamGUIControls,control behaviour
 Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h,DreamGUI,selection-cursor visual; used by UDreamWidgetPresenterComponentBase (Core) and UUISelectable
-Source/DreamGUI/Public/Interaction/UIRecyclableScrollView.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIScrollView.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIScrollViewWithScrollbar.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIScrollbar.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIScrollView.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIScrollbar.h,DreamGUIControls,control behaviour
 Source/DreamGUI/Public/Interaction/UISelectable.h,DreamGUIInput,"selectable/navigable base: selection state machine, navigation mode, transitions; used by navigation scope/stack/input module"
-Source/DreamGUI/Public/Interaction/UISlider.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIStandardControls.h,DreamGUIControls,UUIProgressBar (split: UDreamLayoutSelfSpacer -> Core layout header)
-Source/DreamGUI/Public/Interaction/UITextHyperlink.h,DreamGUIControls,clickable text link behaviour
-Source/DreamGUI/Public/Interaction/UITextInput.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIToggle.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIToggleGroup.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UISlider.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIStandardControls.h,DreamGUIControls,UUIProgressBar (split: UDreamLayoutSelfSpacer -> Core layout header)
+Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h,DreamGUIControls,clickable text link behaviour
+Source/DreamGUIControls/Public/Interaction/UITextInput.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIToggle.h,DreamGUIControls,control behaviour
+Source/DreamGUIControls/Public/Interaction/UIToggleGroup.h,DreamGUIControls,control behaviour
 Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h,DreamGUI,base modifier + UDreamVisualBatchMeshModifierHelper; invoked by UDreamVisualBatchMesh
 Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h,DreamGUIExtensions,mesh modifier
 Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h,DreamGUIExtensions,mesh modifier

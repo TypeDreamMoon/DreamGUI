@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "Misc/PackageName.h"
 
 #include "Controls/DreamButton.h"
 #include "Core/DreamUIScriptPackages.h"
@@ -152,22 +153,33 @@ bool FDreamWidgetRegistryModuleTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("and the other modules' tags are untouched"),
 		FDreamUIWidgetRegistry::Resolve(TEXT("Native"), TEXT("Button")), UDreamButton::StaticClass());
 
-	// Every tag a class of the core declares is recorded as the core's, so the core's ShutdownModule takes
-	// exactly those -- and a class that moves to another module takes its tag's module with it.
+	// Every scoped tag is recorded as the module its class lives in, so that module's ShutdownModule takes
+	// exactly its own -- and a class that moves to another module takes its tag's module with it: the
+	// Native.* controls' tags are DreamGUIControls' now. (GetAllEntries lists the scoped tags; the bare visual
+	// tags have no scope to key by and are enumerated elsewhere.)
 	TArray<FDreamUIWidgetRegistry::FEntry> Entries;
 	FDreamUIWidgetRegistry::GetAllEntries(Entries);
-	int32 NumCore = 0;
+	TMap<FName, int32> NumByModule;
 	for (const FDreamUIWidgetRegistry::FEntry& Entry : Entries)
 	{
 		const UClass* Class = Entry.ClassGetter != nullptr ? Entry.ClassGetter() : nullptr;
-		if (Class != nullptr && Class->GetOutermost()->GetFName() == FName(TEXT("/Script/DreamGUI")))
+		const FName Package = Class != nullptr ? Class->GetOutermost()->GetFName() : NAME_None;
+		if (!DreamUI::IsRuntimeScriptPackage(Package))
 		{
-			++NumCore;
-			TestEqual(*FString::Printf(TEXT("'%s.%s' is recorded as the core module's"), *Entry.Scope.ToString(), *Entry.Name.ToString()),
-				Entry.Module, FName(TEXT("DreamGUI")));
+			continue;
 		}
+		const FName OwningModule(*FPackageName::GetShortName(Package));
+		++NumByModule.FindOrAdd(OwningModule);
+		TestEqual(*FString::Printf(TEXT("'%s.%s' is recorded as %s's"), *Entry.Scope.ToString(), *Entry.Name.ToString(), *OwningModule.ToString()),
+			Entry.Module, OwningModule);
 	}
-	TestTrue(TEXT("and the core declares tags to check"), NumCore > 20);
+	int32 NumChecked = 0;
+	for (const TPair<FName, int32>& Pair : NumByModule)
+	{
+		AddInfo(FString::Printf(TEXT("%s declares %d tags"), *Pair.Key.ToString(), Pair.Value));
+		NumChecked += Pair.Value;
+	}
+	TestTrue(TEXT("and the plugin's modules declare tags to check"), NumChecked > 20);
 	return true;
 }
 
@@ -186,10 +198,11 @@ bool FDreamDuiTypePathRedirectTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("and the short name resolves through the package list"),
 		FDreamUITextBuilder::ResolveComponentClass(TEXT("UIButton")), UUIButton::StaticClass());
 
-	// And a class that has moved to another module, by the path it had before the move.
+	// And a class that has moved to another module, by the path it had before the move. The redirects lead
+	// to wherever the two classes live today, read off the classes, so the next move does not strand them.
 	const FScopedRedirects Moved({
-		FCoreRedirect(ECoreRedirectFlags::Type_Class, TEXT("/Script/DreamGUITestsOnlyModule.MovedButtonBehaviour"), TEXT("/Script/DreamGUI.UIButton")),
-		FCoreRedirect(ECoreRedirectFlags::Type_Class, TEXT("/Script/DreamGUITestsOnlyModule.MovedButton"), TEXT("/Script/DreamGUI.DreamButton")),
+		FCoreRedirect(ECoreRedirectFlags::Type_Class, TEXT("/Script/DreamGUITestsOnlyModule.MovedButtonBehaviour"), UUIButton::StaticClass()->GetPathName()),
+		FCoreRedirect(ECoreRedirectFlags::Type_Class, TEXT("/Script/DreamGUITestsOnlyModule.MovedButton"), UDreamButton::StaticClass()->GetPathName()),
 	});
 	TestEqual(TEXT("a behaviour named by the path it had before it moved resolves"),
 		FDreamUITextBuilder::ResolveComponentClass(TEXT("/Script/DreamGUITestsOnlyModule.MovedButtonBehaviour")), UUIButton::StaticClass());
