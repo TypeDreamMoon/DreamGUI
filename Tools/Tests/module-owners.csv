@@ -302,6 +302,7 @@ Source/DreamGUI/Public/Core/Components/DreamSpriteBase.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamText.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamTexture.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamTextureBase.h,DreamGUI,core
+Source/DreamGUI/Public/Core/Components/DreamUIScrollable.h,DreamGUI,"scroll seam: what navigation asks of a scrolling behaviour"
 Source/DreamGUI/Public/Core/Components/DreamVisual.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamVisualBatchMesh.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamVisualDirectMesh.h,DreamGUI,core

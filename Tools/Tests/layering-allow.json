@@ -115,12 +115,6 @@
       "includedOwner": "DreamGUIControls"
     },
     {
-      "file": "Source/DreamGUI/Private/Interaction/DreamUINavigationScroll.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UIScrollView.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIControls"
-    },
-    {
       "file": "Source/DreamGUI/Private/Interaction/DreamUINavigationStack.cpp",
       "include": "Source/DreamGUI/Public/Interaction/UITextInput.h",
       "owner": "DreamGUIInput",

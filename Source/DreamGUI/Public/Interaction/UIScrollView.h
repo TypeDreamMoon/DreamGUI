@@ -13,6 +13,7 @@
 // revealed widget lands, what the wheel event does, what focus landing inside means. One spelling of
 // each, in a header none of the three implementations has to include the others to reach.
 #include "Core/Components/DreamScrollTypes.h"
+#include "Core/Components/DreamUIScrollable.h"
 #include "UIScrollView.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollViewValueChangedEvent, FVector2D, InVector2);
@@ -109,7 +110,8 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FDreamScrollDragGesture, EDreamScrollDragPh
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamScrollContentFocusMoved, UDreamWidget* /*InFocusedWidget*/);
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UUIScrollView : public UDreamUIBehaviour, public IDreamPointerDragInterface, public IDreamPointerScrollInterface
+class DREAMGUI_API UUIScrollView : public UDreamUIBehaviour, public IDreamPointerDragInterface, public IDreamPointerScrollInterface,
+	public IDreamUIScrollable
 {
 	GENERATED_BODY()
 
@@ -347,6 +349,19 @@ public:
 	 * has neither.
 	 */
 	void NotifyContentFocusMoved(UDreamWidget* InWidget) { OnContentFocusMovedCPP.Broadcast(InWidget); }
+
+	//~ IDreamUIScrollable: keyboard and gamepad navigation, through the members above
+	virtual UDreamWidget* GetScrollableWidget() const override { return GetWidget(); }
+	virtual bool CanScrollToReveal(UDreamWidget* InWidget) override { return CanScrollWidgetIntoView(InWidget); }
+	virtual bool ScrollToReveal(UDreamWidget* InWidget, bool bInAnimate) override { return ScrollWidgetIntoView(InWidget, bInAnimate); }
+	virtual EDreamUIScrollWhenFocusChanges GetFocusScrollRule() const override { return GetScrollWhenFocusChanges(); }
+	virtual void NotifyFocusMovedInside(UDreamWidget* InWidget) override { NotifyContentFocusMoved(InWidget); }
+	virtual bool AcceptsGamepadScrolling() const override { return GetGamepadScrollingEnabled(); }
+	virtual FKey GetAnalogScrollKey() const override { return GetAnalogMouseWheelKey(); }
+	virtual bool CanScrollAlong(bool bInHorizontalAxis) const override { return CanScrollOnAxis(bInHorizontalAxis); }
+	virtual FVector2D GetScrollPosition() const override { return GetScrollOffset(); }
+	virtual void ScrollContentBy(const FVector2D& InDelta) override { ScrollBy(InDelta); }
+	virtual void ScrollContentToExtent(bool bInToStart) override { if (bInToStart) { ScrollToStart(); } else { ScrollToEnd(); } }
 protected:
 	UPROPERTY(Transient)TWeakObjectPtr<UDreamWidget> ContentParent = nullptr;//Content's parent
 	UPROPERTY(Transient)TWeakObjectPtr<UUIScrollViewHelper> RangeHelper = nullptr;
