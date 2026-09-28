@@ -39,6 +39,12 @@ namespace DreamOnDiskFixture
 			ResetLoaders(Package);
 			Package->RemoveFromRoot();
 		}
+		else if (UPackage* LoadedByName = FindObject<UPackage>(nullptr, *PackageName))
+		{
+			// Loaded under the name by something else after Vacate -- level streaming -- and holding the
+			// file open the same way.
+			ResetLoaders(LoadedByName);
+		}
 		if (IFileManager::Get().FileExists(*FileName)
 			&& !IFileManager::Get().Delete(*FileName, /*RequireExists*/false, /*EvenReadOnly*/true, /*Quiet*/true))
 		{
@@ -89,15 +95,14 @@ namespace DreamOnDiskFixture
 		return true;
 	}
 
-	UObject* FScopedOnDiskPackage::Reload(FString& OutError)
+	void FScopedOnDiskPackage::Vacate()
 	{
 		if (Package == nullptr)
 		{
-			OutError = TEXT("there is no package");
-			return nullptr;
+			return;
 		}
-		// Vacate the name. LoadPackage answers from memory when a package of that name is loaded, so
-		// leaving this in place makes the whole fixture a no-op that still passes every assertion.
+		// LoadPackage answers from memory when a package of that name is loaded, so leaving this in place
+		// makes every load of the name a no-op that still passes every assertion.
 		UPackage* Vacated = Package;
 		Package = nullptr;
 		Vacated->RemoveFromRoot();
@@ -107,6 +112,16 @@ namespace DreamOnDiskFixture
 		// Not a tidiness pass: whatever survives here stays reachable by name lookups, and a test
 		// comparing "the loaded one" against "the built one" wants them to be different objects.
 		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+	}
+
+	UObject* FScopedOnDiskPackage::Reload(FString& OutError)
+	{
+		if (Package == nullptr)
+		{
+			OutError = TEXT("there is no package");
+			return nullptr;
+		}
+		Vacate();
 
 		UPackage* Loaded = LoadPackage(nullptr, *PackageName, LOAD_None);
 		if (Loaded == nullptr)

@@ -193,23 +193,25 @@ namespace DreamLifecycleStreamingTestLocal
 		{
 			return false;
 		}
-		// Read back, as every level the editor opens is: through the serializer.
-		const TWeakObjectPtr<UWorld> Loaded = Cast<UWorld>(Map.Reload(Error));
-		if (!InTest.TestTrue(FString::Printf(TEXT("and read back (%s)"), *Error), Loaded.IsValid()))
-		{
-			return false;
-		}
+		// Out of memory, so the world below loads the level from the file, as the level editor loads a map's
+		// sublevels: through the serializer, and by level streaming -- which loads it as a level of that
+		// world. Loaded by itself first, it would be an inactive world the editor initializes on its own,
+		// its panels registered there, where they build nothing, and never again in the world it joined.
+		Map.Vacate();
 		Settle(bInFlush);
+		TWeakObjectPtr<UWorld> Loaded;
 		FLeakLogWatch Watch;
 		{
 			FScopedWorld Persistent(EWorldType::Editor);
 			UWorld* World = Persistent.World;
 			const ULevelStreaming* Streaming = AddSublevel(World, Map.PackageName);
 			ULevel* SubLevel = Streaming != nullptr ? Streaming->GetLoadedLevel() : nullptr;
-			if (!InTest.TestTrue(TEXT("The level is the world's sublevel, shown"), SubLevel != nullptr && SubLevel->bIsVisible && SubLevel == Loaded->PersistentLevel))
+			if (!InTest.TestTrue(TEXT("The level was read from its file as the world's sublevel, and shown"),
+				SubLevel != nullptr && SubLevel->bIsVisible && SubLevel->GetOutermost()->GetName() == Map.PackageName))
 			{
 				return false;
 			}
+			Loaded = SubLevel->GetTypedOuter<UWorld>();
 			DrawFrames(World, 2);
 			const TArray<UDreamWorldWidgetComponent*> Hosts = FindHosts(SubLevel);
 			InTest.TestEqual(TEXT("It holds its two panels"), Hosts.Num(), 2);

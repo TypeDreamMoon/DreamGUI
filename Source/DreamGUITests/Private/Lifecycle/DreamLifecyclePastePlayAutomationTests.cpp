@@ -126,6 +126,9 @@ namespace DreamLifecyclePastePlayTestLocal
 		FAutomationTestBase* Test = &InTest;
 
 		FDreamPieRigOptions Options;
+		// A panel that begins play asks for an event system for each player, as a level with world-space UI
+		// and none of its own gets one; so the level brings the session its own. The session is only looked at.
+		Options.bLevelBringsItsOwnEventSystem = true;
 		Options.PopulateEditorWorld = [Test, State, Panel](UWorld& InWorld)
 		{
 			const FWorldSpaceKinds Kinds = PlaceEveryWorldSpaceKind(&InWorld, Panel->GetClass(), /*bInWithSurface*/ false);

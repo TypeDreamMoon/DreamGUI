@@ -63,8 +63,6 @@ bool FDreamLifecycleLevelCopyRhiTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamLifecycleLevelCopyTestLocal;
 
-	// A test world has no world context of the engine's, so every actor its teardown destroys says so.
-	AddExpectedMessagePlain(TEXT("World has no context"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 0);
 	FScopedPanelClass Panel(TEXT("LevelCopyRhi"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))
 	{

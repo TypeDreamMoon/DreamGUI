@@ -56,6 +56,13 @@ namespace DreamOnDiskFixture
 		 */
 		UObject* Reload(FString& OutError);
 
+		/**
+		 * Take the in-memory package out of the name and load nothing: whatever asks for the name next reads
+		 * the file -- level streaming, for a map, as the level editor loads a sublevel. Reload is this, then
+		 * a load of its own.
+		 */
+		void Vacate();
+
 		FString PackageName;
 		FString AssetName;
 		FString FileName;
