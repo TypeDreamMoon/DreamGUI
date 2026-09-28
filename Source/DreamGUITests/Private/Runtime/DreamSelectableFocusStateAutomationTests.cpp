@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
+#include "Misc/ScopeExit.h"
 
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamPointerEventData.h"
@@ -47,6 +48,14 @@ bool FDreamSelectableFocusVersusHoverTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamSelectableFocusTestLocal;
 	UUISelectable* Selectable = MakeSelectable();
+	// Registered and in no world, the widget has nothing to take it down but the test that made it.
+	ON_SCOPE_EXIT
+	{
+		if (IsValid(Selectable) && IsValid(Selectable->GetWidget()))
+		{
+			Selectable->GetWidget()->DestroyWidget();
+		}
+	};
 	if (!TestNotNull(TEXT("Selectable created"), Selectable))
 	{
 		return false;
@@ -80,6 +89,14 @@ bool FDreamSelectableFocusOutlivesThePointerTest::RunTest(const FString& Paramet
 {
 	using namespace DreamSelectableFocusTestLocal;
 	UUISelectable* Selectable = MakeSelectable();
+	// Registered and in no world, the widget has nothing to take it down but the test that made it.
+	ON_SCOPE_EXIT
+	{
+		if (IsValid(Selectable) && IsValid(Selectable->GetWidget()))
+		{
+			Selectable->GetWidget()->DestroyWidget();
+		}
+	};
 	if (!TestNotNull(TEXT("Selectable created"), Selectable))
 	{
 		return false;
@@ -107,6 +124,14 @@ bool FDreamSelectableFocusVisualFallbackTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamSelectableFocusTestLocal;
 	UUISelectable* Selectable = MakeSelectable();
+	// Registered and in no world, the widget has nothing to take it down but the test that made it.
+	ON_SCOPE_EXIT
+	{
+		if (IsValid(Selectable) && IsValid(Selectable->GetWidget()))
+		{
+			Selectable->GetWidget()->DestroyWidget();
+		}
+	};
 	if (!TestNotNull(TEXT("Selectable created"), Selectable))
 	{
 		return false;
