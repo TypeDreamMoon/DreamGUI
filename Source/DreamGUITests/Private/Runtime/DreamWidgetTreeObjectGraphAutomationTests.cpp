@@ -362,5 +362,39 @@ bool FDreamWidgetIdentityTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetBackfilledIdTest,
+	"DreamGUI.WidgetTree.ObjectGraph.AWidgetSavedWithoutAnIdGetsTheSameOneOnEveryLoad",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetBackfilledIdTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetTreeObjectGraphTestLocal;
+	FScopedGameWorld TestWorld;
+	const FSampleTree Sample = BuildSampleTree(TestWorld.World);
+
+	// A widget saved before ids existed, or by something that built it without one, comes off disk with
+	// none, and PostLoad backfills it through EnsureWidgetGuid. A random backfill meant a different id on
+	// every load of an asset nobody resaved, so whatever keyed on the id met a stranger each time the
+	// asset was opened. Each clear-and-ensure below is what one more load of the unsaved asset does.
+	Sample.A->SetWidgetGuid(FGuid());
+	Sample.A->EnsureWidgetGuid();
+	const FGuid FirstLoad = Sample.A->GetWidgetGuid();
+	TestTrue(TEXT("a widget without an id is given one"), FirstLoad.IsValid());
+	Sample.A->SetWidgetGuid(FGuid());
+	Sample.A->EnsureWidgetGuid();
+	TestEqual(TEXT("and the same one on the next load"), Sample.A->GetWidgetGuid(), FirstLoad);
+
+	Sample.B->SetWidgetGuid(FGuid());
+	Sample.B->EnsureWidgetGuid();
+	TestTrue(TEXT("another widget is given one too"), Sample.B->GetWidgetGuid().IsValid());
+	TestNotEqual(TEXT("which is its own"), Sample.B->GetWidgetGuid(), FirstLoad);
+
+	const FGuid Authored = Sample.C->GetWidgetGuid();
+	Sample.C->EnsureWidgetGuid();
+	TestEqual(TEXT("an id the widget already has is left alone"), Sample.C->GetWidgetGuid(), Authored);
+	return true;
+}
+
 
 #endif

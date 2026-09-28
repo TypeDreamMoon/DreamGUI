@@ -180,8 +180,8 @@ void UDreamWidget::PostLoad()
 	// zero and make Sequencer restore an animated widget to no rotation at all.
 	this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 	// Every asset authored before ids existed has none. Backfilling here rather than in a migration
-	// commandlet keeps a widget that never gets resaved working for the session it is open in: the
-	// preview is instanced from this object, so it copies whatever id this object is holding.
+	// commandlet keeps a widget that never gets resaved working: the preview is instanced from this
+	// object, so it copies whatever id this object is holding, and the backfill is the same on every load.
 	EnsureWidgetGuid();
 }
 

@@ -723,8 +723,12 @@ public:
 	 * random guid here would be AssignNewWidgetGuid; a colliding one is the caller's bug.
 	 */
 	void SetWidgetGuid(const FGuid& InGuid) { WidgetGuid = InGuid; }
-	/** Give this widget an identity only if it has none: an asset authored before ids existed. */
-	void EnsureWidgetGuid() { if (!WidgetGuid.IsValid()) { WidgetGuid = FGuid::NewGuid(); } }
+	/**
+	 * Give this widget an identity only if it has none: one saved before ids existed, or built by something
+	 * that did not give it one. Derived from where the widget lives rather than drawn at random, so every
+	 * load of an asset that was never resaved backfills the same id.
+	 */
+	void EnsureWidgetGuid() { if (!WidgetGuid.IsValid()) { WidgetGuid = FGuid::NewDeterministicGuid(GetPathName()); } }
 
 	/**
 	 * Deep-copy this subtree into InOuter, flat, and hand back the copy of this widget.

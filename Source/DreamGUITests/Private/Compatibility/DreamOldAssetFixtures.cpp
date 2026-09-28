@@ -649,9 +649,11 @@ namespace DreamOldAssetFixturesLocal
 	/**
 	 * Properties whose loaded value is not a property of the file, and so cannot be compared with a snapshot.
 	 *
-	 * WidgetGuid: a widget a palette recipe builds (DreamUIControlRegistry's CreateChild) is created without
-	 * an id and saved without one, and UDreamWidget::PostLoad backfills a new random one on every load, for
-	 * that session only. Two loads of the same file disagree about it.
+	 * WidgetGuid: when the fixtures were saved, a widget a palette recipe builds (DreamUIControlRegistry's
+	 * CreateChild) was created without an id and saved without one, and UDreamWidget::PostLoad backfilled a
+	 * new random one on every load, so two loads of the same file disagreed about it and the snapshot left it
+	 * out. Recipe parts are born with an id now, and the backfill is derived from the widget's path, but the
+	 * snapshot stays as it was taken when the fixtures were saved.
 	 */
 	bool IsNotAPropertyOfTheFile(const FProperty* InProperty)
 	{
