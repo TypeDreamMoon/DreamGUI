@@ -58,6 +58,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void BeginDestroy() override;
 	virtual void OnUnregister() override;
+	virtual void PostLoad() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -93,6 +94,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta=(EditCondition="RenderType==EDreamBackgroundBlurRenderType::RenderTarget&&!bUseFullSize"))
 	TObjectPtr<UTextureRenderTarget2D> OutputRenderTarget = nullptr;
 	/**
+	 * The output render target this visual made because none was assigned. Held apart from
+	 * OutputRenderTarget, which is the author's: never saved, duplicated or copied.
+	 */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TObjectPtr<UTextureRenderTarget2D> AutoOutputRenderTarget = nullptr;
+	/**
 	 * How this visual's Color tints the captured background.
 	 * Only the RGB of Color is used — its alpha keeps whatever meaning the effect gives it (background blur
 	 * reads alpha as blur strength), so TintStrength controls how strongly the tint applies.
@@ -124,7 +131,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	EDreamBackgroundBlurRenderType GetRenderType()const { return RenderType; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
-	UTextureRenderTarget2D* GetOutputRenderTarget()const { return OutputRenderTarget; }
+	UTextureRenderTarget2D* GetOutputRenderTarget()const { return OutputRenderTarget != nullptr ? OutputRenderTarget.Get() : AutoOutputRenderTarget.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	bool GetUseFullSize()const{return bUseFullSize;}
 

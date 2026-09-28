@@ -185,46 +185,45 @@ void UDreamCanvas::UpdateRenderTarget(bool CallEvent)
 	DesiredRenderTargetSize.X = FMath::Min(DesiredRenderTargetSize.X, MaxAllowedDrawSize);
 	DesiredRenderTargetSize.Y = FMath::Min(DesiredRenderTargetSize.Y, MaxAllowedDrawSize);
 
-	if (RenderTarget == nullptr)
+	if (RenderTarget == nullptr && AutoRenderTarget == nullptr)
 	{
-		// Made here, so never saved, duplicated or copied: a copy of this canvas makes its own. A render
-		// target assigned from outside keeps whatever flags its owner gave it.
-		RenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
-		RenderTarget->AddressX = TextureAddress::TA_Clamp;
-		RenderTarget->AddressY = TextureAddress::TA_Clamp;
-		RenderTarget->ClearColor = FLinearColor::Transparent;
-		RenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+		// Made here and held apart from the assigned one, so never saved, duplicated or copied: a copy of
+		// this canvas makes its own. A render target assigned from outside keeps whatever flags its owner
+		// gave it.
+		AutoRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+		AutoRenderTarget->AddressX = TextureAddress::TA_Clamp;
+		AutoRenderTarget->AddressY = TextureAddress::TA_Clamp;
+		AutoRenderTarget->ClearColor = FLinearColor::Transparent;
+		AutoRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
 		if (CallEvent)
 		{
-			OnRenderTargetChanged.Broadcast(RenderTarget);
+			OnRenderTargetChanged.Broadcast(AutoRenderTarget);
 		}
 	}
 	else
 	{
+		UTextureRenderTarget2D* Target = GetRenderTarget();
 		switch (RenderTargetSizeMode)
 		{
 		case EDreamCanvasRenderTargetSizeMode::None:
 		case EDreamCanvasRenderTargetSizeMode::CanvasFitToRenderTarget:
-			if (RenderTarget != nullptr)
-			{
-				DesiredRenderTargetSize.X = RenderTarget->SizeX;
-				DesiredRenderTargetSize.Y = RenderTarget->SizeY;
-			}
+			DesiredRenderTargetSize.X = Target->SizeX;
+			DesiredRenderTargetSize.Y = Target->SizeY;
 			break;
 		case EDreamCanvasRenderTargetSizeMode::RenderTargetFitToCanvas:
 			break;
 		}
-		if (RenderTarget->SizeX != DesiredRenderTargetSize.X || RenderTarget->SizeY != DesiredRenderTargetSize.Y)
+		if (Target->SizeX != DesiredRenderTargetSize.X || Target->SizeY != DesiredRenderTargetSize.Y)
 		{
-			RenderTarget->ClearColor = FLinearColor::Transparent;
-			RenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
-			RenderTarget->UpdateResourceImmediate();
+			Target->ClearColor = FLinearColor::Transparent;
+			Target->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+			Target->UpdateResourceImmediate();
 #if WITH_EDITOR
-			RenderTarget->Modify();
+			DreamUI::ModifyIfKeptByUndo(*Target);
 #endif
 			if (CallEvent)
 			{
-				OnRenderTargetChanged.Broadcast(RenderTarget);
+				OnRenderTargetChanged.Broadcast(Target);
 			}
 		}
 	}
@@ -281,20 +280,20 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 		if (bCanUpdateRenderTarget)
 		{
 			UpdateRenderTarget(true);
-			if (IsValid(RenderTarget))
+			if (UTextureRenderTarget2D* Target = GetRenderTarget(); IsValid(Target))
 			{
 #if WITH_EDITOR
 				if (!DreamUI::IsGameWorld(this))
 				{
-					if (!RenderTarget->GameThread_GetRenderTargetResource())
+					if (!Target->GameThread_GetRenderTargetResource())
 					{
-						RenderTarget->InitCustomFormat(RenderTarget->SizeX, RenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
+						Target->InitCustomFormat(Target->SizeX, Target->SizeY, EPixelFormat::PF_B8G8R8A8, false);
 					}
 				}
 #endif
 				if (RenderTargetViewExtension.IsValid())
 				{
-					RenderTargetViewExtension->UpdateRenderTargetRenderer(RenderTarget, RenderTargetClearColor);
+					RenderTargetViewExtension->UpdateRenderTargetRenderer(Target, RenderTargetClearColor);
 				}
 			}
 		}
@@ -744,7 +743,7 @@ void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		if (bForceRenderToTarget)
 		{
 			RenderMode = EDreamRenderMode::RenderTarget;
-			OnRenderTargetChanged.Broadcast(RenderTarget);
+			OnRenderTargetChanged.Broadcast(GetRenderTarget());
 		}
 		else
 		{
@@ -766,6 +765,13 @@ void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 void UDreamCanvas::PostLoad()
 {
 	Super::PostLoad();
+	// An older build kept the render target it made for itself in RenderTarget, the author's property, and
+	// saved it there. One outered to this canvas is that, never an author's asset: it goes, and the canvas
+	// makes its own again, in AutoRenderTarget.
+	if (RenderTarget != nullptr && RenderTarget->GetOuter() == this)
+	{
+		RenderTarget = nullptr;
+	}
 }
 void UDreamCanvas::PostEditUndo()
 {
@@ -2695,10 +2701,10 @@ FIntPoint UDreamCanvas::GetViewportSize()const
 					pc->GetViewportSize(TempViewportSize.X, TempViewportSize.Y);
 				}
 			}
-			else if (RenderMode == EDreamRenderMode::RenderTarget && IsValid(RenderTarget))
+			else if (RenderMode == EDreamRenderMode::RenderTarget && IsValid(GetRenderTarget()))
 			{
-				TempViewportSize.X = RenderTarget->SizeX / RenderTargetResolutionScale;
-				TempViewportSize.Y = RenderTarget->SizeY / RenderTargetResolutionScale;
+				TempViewportSize.X = GetRenderTarget()->SizeX / RenderTargetResolutionScale;
+				TempViewportSize.Y = GetRenderTarget()->SizeY / RenderTargetResolutionScale;
 			}
 		}
 	}
@@ -2763,7 +2769,7 @@ void UDreamCanvas::SetRenderTarget(UTextureRenderTarget2D* Value)
 			 */
 			CheckAndApplyViewportParameter();
 		}
-		OnRenderTargetChanged.Broadcast(RenderTarget);
+		OnRenderTargetChanged.Broadcast(GetRenderTarget());
 	}
 }
 
@@ -2861,13 +2867,13 @@ UTextureRenderTarget2D* UDreamCanvas::GetActualRenderTarget()const
 {
 	if (IsRootCanvas())
 	{
-		return this->RenderTarget;
+		return this->GetRenderTarget();
 	}
 	else
 	{
 		if (CheckRootCanvas())
 		{
-			return RootCanvas->RenderTarget;
+			return RootCanvas->GetRenderTarget();
 		}
 	}
 	return nullptr;
@@ -3056,10 +3062,10 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 		{
 		case EDreamCanvasRenderTargetSizeMode::None:
 		case EDreamCanvasRenderTargetSizeMode::CanvasFitToRenderTarget:
-			if (IsValid(RenderTarget))
+			if (UTextureRenderTarget2D* Target = GetRenderTarget(); IsValid(Target))
 			{
-				ViewportSize.X = RenderTarget->SizeX / RenderTargetResolutionScale;
-				ViewportSize.Y = RenderTarget->SizeY / RenderTargetResolutionScale;
+				ViewportSize.X = Target->SizeX / RenderTargetResolutionScale;
+				ViewportSize.Y = Target->SizeY / RenderTargetResolutionScale;
 				OnViewportParameterChanged();
 			}
 			break;
@@ -3415,11 +3421,11 @@ void UDreamCanvas::OnEditorTick(float DeltaTime)
 					}
 				}
 				if (!ViewportSizeOverride.IsSet()
-					&& this->GetRenderMode() == EDreamRenderMode::RenderTarget && IsValid(this->RenderTarget))
+					&& this->GetRenderMode() == EDreamRenderMode::RenderTarget && IsValid(this->GetRenderTarget()))
 				{
 					auto prevSize = ViewportSize;
-					ViewportSize.X = this->RenderTarget->SizeX;
-					ViewportSize.Y = this->RenderTarget->SizeY;
+					ViewportSize.X = this->GetRenderTarget()->SizeX;
+					ViewportSize.Y = this->GetRenderTarget()->SizeY;
 					if (prevSize != ViewportSize)
 					{
 						OnViewportParameterChanged();

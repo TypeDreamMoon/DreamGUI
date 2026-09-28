@@ -49,6 +49,18 @@ void UDreamVisualPostProcess::OnUnregister()
 	OnRenderTargetChanged.Broadcast(nullptr);
 }
 
+void UDreamVisualPostProcess::PostLoad()
+{
+	Super::PostLoad();
+	// An older build kept the output render target it made for itself in OutputRenderTarget, the author's
+	// property, and saved it there. One outered to this visual is that, never an author's asset: it goes,
+	// and the visual makes its own again, in AutoOutputRenderTarget.
+	if (OutputRenderTarget != nullptr && OutputRenderTarget->GetOuter() == this)
+	{
+		OutputRenderTarget = nullptr;
+	}
+}
+
 #if WITH_EDITOR
 void UDreamVisualPostProcess::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -367,9 +379,9 @@ void UDreamVisualPostProcess::SendRenderTargetToRenderProxy()
 	if (RenderProxy.IsValid())
 	{
 		FTextureRenderTargetResource* RenderTargetResource = nullptr;
-		if (!bUseFullSize && RenderType == EDreamBackgroundBlurRenderType::RenderTarget && IsValid(OutputRenderTarget))
+		if (!bUseFullSize && RenderType == EDreamBackgroundBlurRenderType::RenderTarget && IsValid(GetOutputRenderTarget()))
 		{
-			RenderTargetResource = OutputRenderTarget->GameThread_GetRenderTargetResource();
+			RenderTargetResource = GetOutputRenderTarget()->GameThread_GetRenderTargetResource();
 		}
 		else
 		{
@@ -459,27 +471,29 @@ void UDreamVisualPostProcess::UpdateRenderTarget()
 	DesiredRenderTargetSize.X = FMath::Min(DesiredRenderTargetSize.X, MaxAllowedDrawSize);
 	DesiredRenderTargetSize.Y = FMath::Min(DesiredRenderTargetSize.Y, MaxAllowedDrawSize);
 
-	if (OutputRenderTarget == nullptr)
+	if (OutputRenderTarget == nullptr && AutoOutputRenderTarget == nullptr)
 	{
-		// Made here, so never saved, duplicated or copied: a copy of this visual makes its own. A render
-		// target assigned from outside keeps whatever flags its owner gave it.
-		OutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
-		OutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
-		OutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
-		OutputRenderTarget->ClearColor = FLinearColor::Transparent;
-		OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+		// Made here and held apart from the assigned one, so never saved, duplicated or copied: a copy of
+		// this visual makes its own. A render target assigned from outside keeps whatever flags its owner
+		// gave it.
+		AutoOutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+		AutoOutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
+		AutoOutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
+		AutoOutputRenderTarget->ClearColor = FLinearColor::Transparent;
+		AutoOutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
 		SendRenderTargetToRenderProxy();
-		OnRenderTargetChanged.Broadcast(OutputRenderTarget);
+		OnRenderTargetChanged.Broadcast(AutoOutputRenderTarget);
 	}
 	else
 	{
-		if (OutputRenderTarget->SizeX != DesiredRenderTargetSize.X || OutputRenderTarget->SizeY != DesiredRenderTargetSize.Y)
+		UTextureRenderTarget2D* Target = GetOutputRenderTarget();
+		if (Target->SizeX != DesiredRenderTargetSize.X || Target->SizeY != DesiredRenderTargetSize.Y)
 		{
-			OutputRenderTarget->ClearColor = FLinearColor::Transparent;
-			OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
-			OutputRenderTarget->UpdateResourceImmediate();
+			Target->ClearColor = FLinearColor::Transparent;
+			Target->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+			Target->UpdateResourceImmediate();
 #if WITH_EDITOR
-			OutputRenderTarget->Modify();
+			DreamUI::ModifyIfKeptByUndo(*Target);
 #endif
 			SendRenderTargetToRenderProxy();
 		}
@@ -488,9 +502,10 @@ void UDreamVisualPostProcess::UpdateRenderTarget()
 #if WITH_EDITOR
 	if (!DreamUI::IsGameWorld(this))
 	{
-		if (!OutputRenderTarget->GameThread_GetRenderTargetResource())
+		UTextureRenderTarget2D* Target = GetOutputRenderTarget();
+		if (!Target->GameThread_GetRenderTargetResource())
 		{
-			OutputRenderTarget->InitCustomFormat(OutputRenderTarget->SizeX, OutputRenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
+			Target->InitCustomFormat(Target->SizeX, Target->SizeY, EPixelFormat::PF_B8G8R8A8, false);
 			SendRenderTargetToRenderProxy();
 		}
 	}

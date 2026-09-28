@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
+#include "UObject/UObjectIterator.h"
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
@@ -526,6 +527,153 @@ bool FDreamLifecycleRuntimePropertiesLeftOutTest::RunTest(const FString& Paramet
 		if (!TestNotNull(FString::Printf(TEXT("%s exists"), *Name), Property))continue;
 		TestTrue(FString::Printf(TEXT("%s is left out of saves, duplicates and copies"), *Name), Property->HasAllPropertyFlags(LeftOut));
 	}
+	return true;
+}
+
+namespace DreamLifecycleDuplicationAuditLocal
+{
+	/** What an owner makes for itself at run time, and a copy of the owner must not share or clone. */
+	bool IsMadeByItsOwner(const UClass* InClass)
+	{
+		const UClass* const Made[] = {
+			UTexture2DDynamic::StaticClass(), UTextureRenderTarget2D::StaticClass(), UMaterialInstanceDynamic::StaticClass(),
+			UDreamUIMeshComponent::StaticClass(), UDreamUIDataAsTexture::StaticClass(), UDreamWidgetTree::StaticClass(),
+		};
+		for (const UClass* Class : Made)
+		{
+			if (InClass != nullptr && InClass->IsChildOf(Class))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * The properties that name something an author or the project chose rather than something the owner made:
+	 * a render target to draw into, an asset's own authoring tree, and the project's rect block data, an
+	 * asset every rect block shares.
+	 */
+	bool IsAssignedByAnAuthor(const FString& InPath)
+	{
+		static const TCHAR* const Assigned[] = {
+			TEXT("DreamCanvas.RenderTarget"),
+			TEXT("DreamVisualPostProcess.OutputRenderTarget"),
+			TEXT("DreamWidgetBlueprint.WidgetTree"),
+			TEXT("DreamRectBlock.RectBlockData"),
+		};
+		for (const TCHAR* Path : Assigned)
+		{
+			if (InPath == Path)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool IsDreamGUIClass(const UClass* InClass)
+	{
+		if (InClass->HasAnyClassFlags(CLASS_NewerVersionExists))
+		{
+			return false;
+		}
+		const FString Package = InClass->GetOutermost()->GetName();
+		return (Package.StartsWith(TEXT("/Script/DreamGUI")) && Package != TEXT("/Script/DreamGUITests"))
+			|| Package == TEXT("/Script/DreamTween");
+	}
+
+	/** Every place under InProperty that can hold an object its owner made and is not left out of a copy. */
+	void Sweep(const FProperty* InProperty, const FString& InPath, TArray<FString>& OutFound, TArray<const UStruct*>& InStructs)
+	{
+		if (InProperty->HasAnyPropertyFlags(CPF_DuplicateTransient))
+		{
+			return;// and everything it holds with it
+		}
+		if (InProperty->IsA<FClassProperty>() || InProperty->IsA<FSoftObjectProperty>() || InProperty->IsA<FLazyObjectProperty>())
+		{
+			return;// a class, or a path to an asset: never an object the owner made
+		}
+		if (const FObjectPropertyBase* Object = CastField<FObjectPropertyBase>(InProperty))
+		{
+			if (IsMadeByItsOwner(Object->PropertyClass))
+			{
+				OutFound.Add(InPath);
+			}
+			return;
+		}
+		if (const FArrayProperty* Array = CastField<FArrayProperty>(InProperty))
+		{
+			Sweep(Array->Inner, InPath + TEXT("[]"), OutFound, InStructs);
+			return;
+		}
+		if (const FSetProperty* Set = CastField<FSetProperty>(InProperty))
+		{
+			Sweep(Set->ElementProp, InPath + TEXT("{}"), OutFound, InStructs);
+			return;
+		}
+		if (const FMapProperty* Map = CastField<FMapProperty>(InProperty))
+		{
+			Sweep(Map->KeyProp, InPath + TEXT("{key}"), OutFound, InStructs);
+			Sweep(Map->ValueProp, InPath + TEXT("{value}"), OutFound, InStructs);
+			return;
+		}
+		if (const FStructProperty* Struct = CastField<FStructProperty>(InProperty))
+		{
+			if (InStructs.Contains(Struct->Struct))
+			{
+				return;
+			}
+			InStructs.Push(Struct->Struct);
+			for (TFieldIterator<FProperty> It(Struct->Struct); It; ++It)
+			{
+				Sweep(*It, InPath + TEXT(".") + It->GetName(), OutFound, InStructs);
+			}
+			InStructs.Pop();
+		}
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLifecycleDuplicationAuditTest,
+	"DreamGUI.Lifecycle.NoPropertyOfADreamGUIClassCarriesWhatItsOwnerMadeIntoACopy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The list above names the properties known today; this sweeps every property of every DreamGUI class by
+ * reflection, into structs and containers, so one added tomorrow is held to the same rule. A texture an owner
+ * draws with, a render target it renders into, a material instance it made, its canvas mesh, its data
+ * textures, a widget tree it hosts: a copy of the owner -- a save, a play session's duplicate, Copy and Paste --
+ * that kept the reference drew with the original's, or with a clone that had no size. Any property that can
+ * hold one is DuplicateTransient, unless it is one an author assigns.
+ */
+bool FDreamLifecycleDuplicationAuditTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamLifecycleDuplicationAuditLocal;
+	TArray<FString> Found;
+	int32 Swept = 0;
+	for (TObjectIterator<UClass> It; It; ++It)
+	{
+		const UClass* Class = *It;
+		if (!IsDreamGUIClass(Class))
+		{
+			continue;
+		}
+		++Swept;
+		for (TFieldIterator<FProperty> PropertyIt(Class, EFieldIteratorFlags::ExcludeSuper); PropertyIt; ++PropertyIt)
+		{
+			const FString Path = FString::Printf(TEXT("%s.%s"), *Class->GetName(), *PropertyIt->GetName());
+			if (IsAssignedByAnAuthor(Path))
+			{
+				continue;
+			}
+			TArray<const UStruct*> Structs;
+			Sweep(*PropertyIt, Path, Found, Structs);
+		}
+	}
+	TestTrue(FString::Printf(TEXT("the sweep reached DreamGUI's classes (%d)"), Swept), Swept > 100);
+	TestEqual(FString::Printf(TEXT("no property carries what its owner made into a copy (found: %s)"),
+		*DreamTests::Lifecycle::JoinLines(Found)), Found.Num(), 0);
 	return true;
 }
 

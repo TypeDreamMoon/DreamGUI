@@ -361,10 +361,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		EDreamRenderMode RenderMode = EDreamRenderMode::WorldSpace;
 	/**
-	 * Render to RenderTarget, if not specified then DreamGUI will create a new one.
+	 * Render to RenderTarget, if not specified then DreamGUI will create a new one (AutoRenderTarget).
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		TObjectPtr<UTextureRenderTarget2D> RenderTarget;
+	/**
+	 * The render target this canvas made for itself because none was assigned. Held apart from RenderTarget,
+	 * which is the author's: never saved, duplicated or copied, so a copy of the canvas makes its own rather
+	 * than drawing into this one.
+	 */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+		TObjectPtr<UTextureRenderTarget2D> AutoRenderTarget;
 	/** Clear color for TextureRenderTarget */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	FColor RenderTargetClearColor = FColor::Transparent;
@@ -597,9 +604,9 @@ public:
 	/** Get actual render target of this canvas if actual render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		UTextureRenderTarget2D* GetActualRenderTarget()const;
-	/** Get render target of this canvas. */
+	/** Get render target of this canvas: the one assigned, or the one it made when none was. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		UTextureRenderTarget2D* GetRenderTarget()const { return RenderTarget; }
+		UTextureRenderTarget2D* GetRenderTarget()const { return RenderTarget != nullptr ? RenderTarget.Get() : AutoRenderTarget.Get(); }
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	FColor GetRenderTargetClearColor()const{return RenderTargetClearColor;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
@@ -864,12 +871,12 @@ private:
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	mutable TObjectPtr<UDreamUIMeshComponent> UIMesh;//current using UIMesh.
 	//DefaultMaterial created MaterialInstanceDynamic pool 
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledDefaultMaterialList;
 	//Currently using material inside PooledDefaultMaterialList from this start index to end
 	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	int UsingMaterialStartIndex = 0;
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//trimmed by the decay pass in UpdateDrawCallMaterial once a tail sits idle a whole window
 	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasMaterialParameterCache> MapMatToParamCache;
