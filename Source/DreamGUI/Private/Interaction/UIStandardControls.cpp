@@ -109,23 +109,3 @@ void UUIProgressBar::ApplyProgress()
 		break;
 	}
 }
-
-void UDreamLayoutSelfSpacer::CalculateSize()
-{
-	if (UDreamWidget* Widget = GetWidget())
-	{
-		Widget->SetWidth(static_cast<float>(Size.X));
-		Widget->SetHeight(static_cast<float>(Size.Y));
-	}
-}
-
-FDreamLayoutControlAnchorData UDreamLayoutSelfSpacer::GetLayoutControlAnchor(const UDreamWidget* Widget) const
-{
-	FDreamLayoutControlAnchorData Result;
-	if (Widget == GetWidget())
-	{
-		Result.bCanControlHorizontalSize = true;
-		Result.bCanControlVerticalSize = true;
-	}
-	return Result;
-}

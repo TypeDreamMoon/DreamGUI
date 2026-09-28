@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Core/DreamUIBehaviour.h"
-#include "Core/Components/DreamLayout.h"
+// The spacer used to be declared here; code that included this header for it keeps compiling.
+#include "Core/Components/DreamLayoutSelfSpacer.h"
 #include "UIStandardControls.generated.h"
 
 class UDreamWidget;
@@ -72,18 +73,4 @@ public:
 	EUIProgressBarFillType GetFillType()const { return FillType; }
 	UFUNCTION(BlueprintCallable, Category = "ProgressBar")
 	void SetIsMarquee(bool Value);
-};
-
-/** Desired-space widget equivalent to UMG Spacer. */
-UCLASS(BlueprintType, DisplayName = "LayoutSelf-Spacer")
-class DREAMGUI_API UDreamLayoutSelfSpacer : public UDreamLayoutSelf
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spacer", meta = (ClampMin = "0.0"))
-	FVector2D Size = FVector2D(32.0, 32.0);
-	virtual void CalculateSize() override;
-	virtual FVector2f GetLayoutPreferredSize() const override { return FVector2f(Size); }
-	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* Widget) const override;
 };

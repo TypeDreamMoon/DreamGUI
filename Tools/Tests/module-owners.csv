@@ -47,6 +47,7 @@ Source/DreamGUI/Private/Core/Components/DreamImage.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamLayout.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamLayoutSelfAspectRatio.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamLayoutSelfAuthoredSurface.cpp,DreamGUI,core
+Source/DreamGUI/Private/Core/Components/DreamLayoutSelfSpacer.cpp,DreamGUI,"layout primitive (spacer), registered by the palette as one"
 Source/DreamGUI/Private/Core/Components/DreamPanelLayouts.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamPanelSlot.cpp,DreamGUI,core
 Source/DreamGUIExtensions/Private/Core/Components/DreamPixelSort.cpp,DreamGUIExtensions,post-process effect visual
@@ -288,6 +289,7 @@ Source/DreamGUI/Public/Core/Components/DreamLayout.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamLayoutFragment.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAuthoredSurface.h,DreamGUI,core
+Source/DreamGUI/Public/Core/Components/DreamLayoutSelfSpacer.h,DreamGUI,"layout primitive (spacer), registered by the palette as one"
 Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h,DreamGUI,core
 Source/DreamGUIExtensions/Public/Core/Components/DreamPixelSort.h,DreamGUIExtensions,post-process effect visual

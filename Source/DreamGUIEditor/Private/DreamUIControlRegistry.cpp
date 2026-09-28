@@ -71,6 +71,7 @@
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "Interaction/UIScrollView.h"
 #include "Interaction/UIStandardControls.h"
+#include "Core/Components/DreamLayoutSelfSpacer.h"
 #include "MeshModifier/DreamMeshModifierGradientColor.h"
 #include "MeshModifier/DreamMeshModifierLongShadow.h"
 #include "MeshModifier/DreamMeshModifierOutline.h"
