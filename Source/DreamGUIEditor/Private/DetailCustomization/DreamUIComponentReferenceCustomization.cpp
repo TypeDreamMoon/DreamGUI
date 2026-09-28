@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamUIComponentReferenceCustomization.h"
+#include "DreamGUIEditorSubsystem.h"
 #include "EdGraphNode_Comment.h"
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
@@ -42,9 +43,6 @@ namespace DreamUIComponentReferenceCustomizationLocal
 	}
 }
 
-TWeakObjectPtr<AActor> FDreamUIComponentReferenceCustomization::CopiedHelperActor;
-TWeakObjectPtr<UActorComponent> FDreamUIComponentReferenceCustomization::CopiedTargetComp;
-UClass* FDreamUIComponentReferenceCustomization::CopiedHelperClass;
 
 static const FName NAME_AllowedClasses = "AllowedClasses";
 static const FName NAME_DisallowedClasses = "DisallowedClasses";
@@ -376,18 +374,27 @@ void FDreamUIComponentReferenceCustomization::OnCopy()
 	UClass* HelperClass = nullptr;
 	HelperClassHandle->GetValue(*(UObject**)&HelperClass);
 
-	CopiedHelperActor = HelperActor;
-	CopiedTargetComp = TargetComp;
-	CopiedHelperClass = HelperClass;
+	// The editor subsystem's, for the session: a static here held the class by a pointer the collector
+	// could not see.
+	if (UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get())
+	{
+		EditorSubsystem->CopiedComponentReference = { HelperActor, TargetComp, HelperClass };
+	}
 }
 void FDreamUIComponentReferenceCustomization::OnPaste()
 {
 	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIComponentReference, HelperActor));
 	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIComponentReference, TargetComp));
 	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FDreamUIComponentReference, HelperClass));
-	HelperActorHandle->SetValue((UObject*)CopiedHelperActor.Get());
-	TargetCompHandle->SetValue((UObject*)CopiedTargetComp.Get());
-	HelperClassHandle->SetValue((UObject*)CopiedHelperClass);
+	const UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+	if (EditorSubsystem == nullptr)
+	{
+		return;
+	}
+	const UDreamGUIEditorSubsystem::FCopiedComponentReference& Copied = EditorSubsystem->CopiedComponentReference;
+	HelperActorHandle->SetValue((UObject*)Copied.HelperActor.Get());
+	TargetCompHandle->SetValue((UObject*)Copied.TargetComp.Get());
+	HelperClassHandle->SetValue((UObject*)Copied.HelperClass.Get());
 }
 TSharedRef<SWidget> FDreamUIComponentReferenceCustomization::OnGetMenu(TSharedPtr<IPropertyHandle> TargetCompHandle, TSharedPtr<IPropertyHandle> CompNameProperty, TArray<UActorComponent*> Components)
 {

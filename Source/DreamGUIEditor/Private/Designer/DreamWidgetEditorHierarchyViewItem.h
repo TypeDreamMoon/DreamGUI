@@ -30,19 +30,24 @@ public:
 
 	virtual void OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent) override;
 
+	/**
+	 * What is being dragged, weakly. A drag lasts as long as the mouse is held, and the preview it drags
+	 * from can be rebuilt under it in the meantime -- a compile, a save of the .dui -- which destroys every
+	 * widget named here; a raw pointer then led the drop into freed memory.
+	 */
 	struct FItem
 	{
 		/** The widget being dragged and dropped */
-		UDreamWidget* Widget = nullptr;
+		TWeakObjectPtr<UDreamWidget> Widget;
 
 		/** The original parent of the widget. */
-		UDreamWidget* WidgetParent = nullptr;
+		TWeakObjectPtr<UDreamWidget> WidgetParent;
 	};
 
 	TArray<FItem> DraggedWidgets;
 
-	/** The widget being dragged and dropped */
-	FScopedTransaction* Transaction;
+	/** The transaction the drop records into, cancelled if nothing is dropped. */
+	TUniquePtr<FScopedTransaction> Transaction;
 
 	/** Constructs a new drag/drop operation */
 	static TSharedRef<FHierarchyDreamWidgetDragDropOp> New(const TArray<UDreamWidget*>& InWidgets);

@@ -113,8 +113,7 @@ public:
 		return PropertyHandle->IsEditable();
 	}
 	static void DrawThumbnailIcon(const FString& TextureFullPath, int32 X, int32 Y, uint32 Width, uint32 Height, FCanvas* Canvas);
+	/** The icon at TextureFullPath, loaded once per editor session and held by UDreamGUIEditorSubsystem. */
 	static UTexture2D* LoadTexture(const FString& TextureFullPath);
-private:
-	static TMap<FString, UTexture2D*> TexturePathToTextureMap;
 };
 #undef LOCTEXT_NAMESPACE
