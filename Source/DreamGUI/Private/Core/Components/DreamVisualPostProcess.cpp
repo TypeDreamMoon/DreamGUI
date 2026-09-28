@@ -10,6 +10,7 @@
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Texture2D.h"
 #include "TextureResource.h"
 #include "Rendering/Texture2DResource.h"
 

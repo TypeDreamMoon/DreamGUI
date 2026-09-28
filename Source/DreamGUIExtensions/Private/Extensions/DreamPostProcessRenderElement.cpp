@@ -10,6 +10,7 @@
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Core/DreamUIWidgetRegistry.h"
 
 FName UDreamPostProcessRenderElement::DreamUI_World2PostProcess_Row1 = FName(TEXT("DreamUI_World2PostProcess_Row1"));

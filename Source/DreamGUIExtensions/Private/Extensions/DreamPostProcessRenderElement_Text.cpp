@@ -9,6 +9,7 @@
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Extensions/DreamPostProcessRenderElement.h"
 #include "Core/DreamUIWidgetRegistry.h"
 
