@@ -9,6 +9,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "Interaction/DreamDragDropOperation.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
@@ -180,6 +182,12 @@ void UDreamUIDragDropSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	DreamUI::EnrolWorldService(Collection, *this, *this);
+	// Every player's events, from the moment the world has input.
+	if (UDreamUIInputSubsystem* Input = Collection.InitializeDependency<UDreamUIInputSubsystem>())
+	{
+		Input->GetOnInputEvent().AddUObject(this, &UDreamUIDragDropSubsystem::HandleInputEvent);
+		InputSubsystem = Input;
+	}
 }
 
 void UDreamUIDragDropSubsystem::Deinitialize()
@@ -200,16 +208,16 @@ void UDreamUIDragDropSubsystem::TeardownForWorld(UWorld& InWorld)
 		return;
 	}
 	bTornDownForWorld = true;
-	if (UDreamEventSystem* EventSystem = SubscribedEventSystem.Get())
+	if (UDreamUIInputSubsystem* Input = InputSubsystem.Get())
 	{
-		EventSystem->GetInputEvent().RemoveAll(this);
+		Input->GetOnInputEvent().RemoveAll(this);
 	}
-	SubscribedEventSystem.Reset();
-	TArray<int32> PointerIDs;
-	FollowedDrags.GetKeys(PointerIDs);
-	for (int32 PointerID : PointerIDs)
+	InputSubsystem.Reset();
+	TArray<FIntPoint> Keys;
+	FollowedDrags.GetKeys(Keys);
+	for (const FIntPoint& Key : Keys)
 	{
-		StopFollowingDrag(PointerID);
+		StopFollowingDrag(Key);
 	}
 	FollowedDrags.Reset();
 }
@@ -217,21 +225,6 @@ void UDreamUIDragDropSubsystem::TeardownForWorld(UWorld& InWorld)
 TStatId UDreamUIDragDropSubsystem::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UDreamUIDragDropSubsystem, STATGROUP_Tickables);
-}
-
-void UDreamUIDragDropSubsystem::EnsureSubscribed()
-{
-	if (SubscribedEventSystem.IsValid())
-	{
-		return;
-	}
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(GetWorld(), 0);
-	if (!IsValid(EventSystem))
-	{
-		return;
-	}
-	EventSystem->GetInputEvent().AddUObject(this, &UDreamUIDragDropSubsystem::HandleInputEvent);
-	SubscribedEventSystem = EventSystem;
 }
 
 bool UDreamUIDragDropSubsystem::IsStillLive(const FFollowedDrag& InDrag)
@@ -242,7 +235,7 @@ bool UDreamUIDragDropSubsystem::IsStillLive(const FFollowedDrag& InDrag)
 
 bool UDreamUIDragDropSubsystem::IsDragInProgress() const
 {
-	for (const TPair<int32, FFollowedDrag>& Pair : FollowedDrags)
+	for (const TPair<FIntPoint, FFollowedDrag>& Pair : FollowedDrags)
 	{
 		if (IsStillLive(Pair.Value))
 		{
@@ -252,51 +245,92 @@ bool UDreamUIDragDropSubsystem::IsDragInProgress() const
 	return false;
 }
 
+bool UDreamUIDragDropSubsystem::IsDragInProgressForUser(int32 InUserIndex) const
+{
+	for (const TPair<FIntPoint, FFollowedDrag>& Pair : FollowedDrags)
+	{
+		if (Pair.Key.X == InUserIndex && IsStillLive(Pair.Value))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 UDreamDragDropOperation* UDreamUIDragDropSubsystem::GetDragOperationForPointer(int32 InPointerID) const
 {
-	const FFollowedDrag* Drag = FollowedDrags.Find(InPointerID);
+	return GetDragOperationForUserPointer(0, InPointerID);
+}
+
+UDreamDragDropOperation* UDreamUIDragDropSubsystem::GetDragOperationForUserPointer(int32 InUserIndex, int32 InPointerID) const
+{
+	const FFollowedDrag* Drag = FollowedDrags.Find(MakeKey(InUserIndex, InPointerID));
 	return Drag != nullptr ? Drag->Operation.Get() : nullptr;
 }
 
 UDreamUIDropTarget* UDreamUIDragDropSubsystem::GetHoveredTargetForPointer(int32 InPointerID) const
 {
-	const FFollowedDrag* Drag = FollowedDrags.Find(InPointerID);
+	return GetHoveredTargetForUserPointer(0, InPointerID);
+}
+
+UDreamUIDropTarget* UDreamUIDragDropSubsystem::GetHoveredTargetForUserPointer(int32 InUserIndex, int32 InPointerID) const
+{
+	const FFollowedDrag* Drag = FollowedDrags.Find(MakeKey(InUserIndex, InPointerID));
 	return Drag != nullptr ? Drag->HoveredTarget.Get() : nullptr;
 }
 
 bool UDreamUIDragDropSubsystem::CancelActiveDrag()
 {
-	EnsureSubscribed();
-	UDreamEventSystem* EventSystem = SubscribedEventSystem.Get();
-	if (!IsValid(EventSystem) || !IsDragInProgress())
+	TSet<int32> UsersDragging;
+	for (const TPair<FIntPoint, FFollowedDrag>& Pair : FollowedDrags)
+	{
+		if (IsStillLive(Pair.Value))
+		{
+			UsersDragging.Add(Pair.Key.X);
+		}
+	}
+	bool bCancelled = false;
+	for (const int32 UserIndex : UsersDragging)
+	{
+		bCancelled |= CancelActiveDragForUser(UserIndex);
+	}
+	return bCancelled;
+}
+
+bool UDreamUIDragDropSubsystem::CancelActiveDragForUser(int32 InUserIndex)
+{
+	UDreamUIInputSubsystem* Input = InputSubsystem.Get();
+	UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
+	if (User == nullptr || !IsDragInProgressForUser(InUserIndex))
 	{
 		return false;
 	}
-	// The pipeline's own cancel verb. It fires EndDrag, then Up, then Exit -- and crucially NOT
-	// DragDrop, which is the whole difference between letting go and giving up. Re-implementing that
-	// order here would be a second copy of the teardown that has to agree with the first forever.
+	// The pipeline's own cancel verb. It fires EndDrag, then Up, then Exit -- and crucially NOT DragDrop, which is
+	// the whole difference between letting go and giving up. Re-implementing that order here would be a second copy
+	// of the teardown that has to agree with the first forever.
 	//
-	// It clears every pointer, which is why this cancels every drag rather than a chosen one: Escape
-	// on a keyboard belongs to no finger in particular, and a partial cancel would leave a visual
-	// riding a pointer whose press the pipeline had just thrown away.
-	EventSystem->ClearEvent();
-	TArray<int32> PointerIDs;
-	FollowedDrags.GetKeys(PointerIDs);
-	for (int32 PointerID : PointerIDs)
+	// It lets go of every pointer of that player, which is why this cancels all their drags rather than a chosen
+	// one: Escape belongs to no finger in particular -- but it does belong to a player.
+	User->ReleaseAllPointers();
+	TArray<FIntPoint> Keys;
+	FollowedDrags.GetKeys(Keys);
+	for (const FIntPoint& Key : Keys)
 	{
-		StopFollowingDrag(PointerID);
+		if (Key.X == InUserIndex)
+		{
+			StopFollowingDrag(Key);
+		}
 	}
 	return true;
 }
 
 void UDreamUIDragDropSubsystem::Tick(float DeltaTime)
 {
-	EnsureSubscribed();
-	// A drag can die without its EndDrag reaching us (ClearEvent, raycast disabled, the screen torn
-	// down). Checked whether or not a visual exists, because the hover bookkeeping outlives a drag
-	// with no visual class just as easily, and a target left lit is as wrong as a visual left parked.
-	TArray<int32> Dead;
-	for (TPair<int32, FFollowedDrag>& Pair : FollowedDrags)
+	// A drag can die without its EndDrag reaching us (ClearEvent, raycast disabled, the screen torn down). Checked
+	// whether or not a visual exists, because the hover bookkeeping outlives a drag with no visual class just as
+	// easily, and a target left lit is as wrong as a visual left parked.
+	TArray<FIntPoint> Dead;
+	for (TPair<FIntPoint, FFollowedDrag>& Pair : FollowedDrags)
 	{
 		if (!IsStillLive(Pair.Value))
 		{
@@ -306,9 +340,9 @@ void UDreamUIDragDropSubsystem::Tick(float DeltaTime)
 		UpdateDragVisualPosition(Pair.Value);
 		UpdateDropHover(Pair.Value);
 	}
-	for (int32 PointerID : Dead)
+	for (const FIntPoint& Key : Dead)
 	{
-		StopFollowingDrag(PointerID);
+		StopFollowingDrag(Key);
 	}
 }
 
@@ -319,9 +353,9 @@ void UDreamUIDragDropSubsystem::HandleInputEvent(UDreamBaseEventData* InEventDat
 	{
 		return;
 	}
-	// Everything is keyed by the pointer the event came from, so one finger's move can never move
-	// another finger's visual or light up another finger's drop target.
-	const int32 PointerID = PointerEvent->PointerID;
+	// Everything is keyed by the player and the pointer the event came from, so one finger's move can never move
+	// another finger's visual or light up another finger's drop target -- nor another player's.
+	const FIntPoint Key = MakeKey(PointerEvent->UserIndex, PointerEvent->PointerID);
 
 	switch (PointerEvent->EventType)
 	{
@@ -329,7 +363,7 @@ void UDreamUIDragDropSubsystem::HandleInputEvent(UDreamBaseEventData* InEventDat
 		BeginFollowingDrag(PointerEvent);
 		break;
 	case EDreamUIPointerEventType::Drag:
-		if (FFollowedDrag* Drag = FollowedDrags.Find(PointerID))
+		if (FFollowedDrag* Drag = FollowedDrags.Find(Key))
 		{
 			if (Drag->PointerEvent.Get() == PointerEvent)
 			{
@@ -339,7 +373,7 @@ void UDreamUIDragDropSubsystem::HandleInputEvent(UDreamBaseEventData* InEventDat
 		}
 		break;
 	case EDreamUIPointerEventType::EndDrag:
-		StopFollowingDrag(PointerID);
+		StopFollowingDrag(Key);
 		break;
 	default:
 		break;
@@ -348,17 +382,17 @@ void UDreamUIDragDropSubsystem::HandleInputEvent(UDreamBaseEventData* InEventDat
 
 void UDreamUIDragDropSubsystem::BeginFollowingDrag(UDreamPointerEventData* InPointerEvent)
 {
-	const int32 PointerID = InPointerEvent->PointerID;
+	const FIntPoint Key = MakeKey(InPointerEvent->UserIndex, InPointerEvent->PointerID);
 	// A pointer that begins a second drag without ending the first has had something go wrong
 	// upstream; tearing the old one down here keeps this map from being the place it shows up.
-	StopFollowingDrag(PointerID);
+	StopFollowingDrag(Key);
 
 	UDreamDragDropOperation* Operation = InPointerEvent->DragOperation.Get();
 	if (!IsValid(Operation))
 	{
 		return;//a drag with no meaning is pure geometry: a scroll, not a drop
 	}
-	FFollowedDrag& Drag = FollowedDrags.Add(PointerID);
+	FFollowedDrag& Drag = FollowedDrags.Add(Key);
 	Drag.PointerEvent = InPointerEvent;
 	Drag.Operation = Operation;
 	ShowDragVisual(Drag, InPointerEvent);
@@ -403,9 +437,9 @@ void UDreamUIDragDropSubsystem::ClearDropHover(FFollowedDrag& InDrag)
 	InDrag.HoveredTarget.Reset();
 }
 
-void UDreamUIDragDropSubsystem::StopFollowingDrag(int32 InPointerID)
+void UDreamUIDragDropSubsystem::StopFollowingDrag(const FIntPoint& InKey)
 {
-	FFollowedDrag* Drag = FollowedDrags.Find(InPointerID);
+	FFollowedDrag* Drag = FollowedDrags.Find(InKey);
 	if (Drag == nullptr)
 	{
 		return;
@@ -414,7 +448,7 @@ void UDreamUIDragDropSubsystem::StopFollowingDrag(int32 InPointerID)
 	// code, and game code that starts a new drag on the same pointer would otherwise be editing an
 	// entry this call is still holding a reference into.
 	FFollowedDrag Closing = MoveTemp(*Drag);
-	FollowedDrags.Remove(InPointerID);
+	FollowedDrags.Remove(InKey);
 	ClearDropHover(Closing);
 	DestroyDragVisual(Closing);
 }
@@ -430,8 +464,10 @@ void UDreamUIDragDropSubsystem::ShowDragVisual(FFollowedDrag& InDrag, UDreamPoin
 	}
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
 	// The screen of the player who is dragging, which the pointer already knows.
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(GetWorld());
+	const int32 ScreenIndex = Input != nullptr ? Input->GetScreenIndexForUser(InPointerEvent->UserIndex) : InPointerEvent->UserIndex;
 	UDreamWidget* ScreenRoot = IsValid(ScreenUI)
-		? ScreenUI->GetOrCreateScreenRootForUserIndex(InPointerEvent->UserIndex) : nullptr;
+		? ScreenUI->GetOrCreateScreenRootForUserIndex(ScreenIndex) : nullptr;
 	if (!IsValid(ScreenRoot))
 	{
 		return;
@@ -479,8 +515,11 @@ void UDreamUIDragDropSubsystem::UpdateDragVisualPosition(FFollowedDrag& InDrag)
 	UDreamWidget* VisualHolder = InDrag.VisualHolder.Get();
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
 	// Same screen ShowDragVisual put the visual on: the dragging player's.
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(GetWorld());
+	const int32 DraggingUser = PointerEvent != nullptr ? PointerEvent->UserIndex : 0;
+	const int32 ScreenIndex = Input != nullptr ? Input->GetScreenIndexForUser(DraggingUser) : DraggingUser;
 	UDreamWidget* ScreenRoot = IsValid(ScreenUI)
-		? ScreenUI->GetOrCreateScreenRootForUserIndex(PointerEvent != nullptr ? PointerEvent->UserIndex : 0) : nullptr;
+		? ScreenUI->GetOrCreateScreenRootForUserIndex(ScreenIndex) : nullptr;
 	if (!IsValid(VisualHolder) || !IsValid(ScreenRoot) || PointerEvent == nullptr || Operation == nullptr)
 	{
 		return;

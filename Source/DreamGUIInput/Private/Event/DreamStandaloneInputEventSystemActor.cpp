@@ -12,6 +12,7 @@
 #include "Core/DreamUISettings.h"
 #include "DreamGUI.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
+#include "Event/DreamUIInputTypes.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
 #include "Engine/World.h"
@@ -367,7 +368,10 @@ EDreamUINavigationDirection ADreamStandaloneInputEventSystemActor::ResolveNaviga
 bool ADreamStandaloneInputEventSystemActor::TryHandleWithVirtualCursor(const FKey& Key, bool bPressed)
 {
 	UDreamUIVirtualCursorSubsystem* Cursor = UDreamUIVirtualCursorSubsystem::Get(this);
-	if (Cursor == nullptr || !Cursor->IsVirtualCursorActive())
+	const UDreamEventSystem* Events = GetEventSystem();
+	const int32 UserIndex = Events != nullptr ? Events->GetUserIndex() : 0;
+	// This actor's player's cursor: a second player's confirm must not click with the first player's cursor.
+	if (Cursor == nullptr || !Cursor->IsVirtualCursorActiveForUser(UserIndex))
 	{
 		return false;
 	}
@@ -382,7 +386,7 @@ bool ADreamStandaloneInputEventSystemActor::TryHandleWithVirtualCursor(const FKe
 	{
 		if (Trigger == Key)
 		{
-			Cursor->SetConfirmPressed(bPressed);
+			Cursor->SetConfirmPressedForUser(UserIndex, bPressed);
 			return true;
 		}
 	}
@@ -525,10 +529,12 @@ void ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed(FKey Key)
 		// A drag in flight outranks Back. Escape is the universal "put it back" while something is
 		// held, and closing the screen out from under a half-finished drag instead is the one thing
 		// a player pressing it cannot have meant. Only drags carrying an operation count -- a scroll
-		// is a drag too, and Escape has never cancelled a scroll anywhere.
+		// is a drag too, and Escape has never cancelled a scroll anywhere. This player's drags only:
+		// any player's Escape used to cancel player 0's.
 		if (UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(this))
 		{
-			if (DragDrop->CancelActiveDrag())
+			const UDreamEventSystem* DragEvents = GetEventSystem();
+			if (DragDrop->CancelActiveDragForUser(DragEvents != nullptr ? DragEvents->GetUserIndex() : 0))
 			{
 				return;
 			}
@@ -620,7 +626,8 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollX(float AxisValue)
 		return;
 	}
 	const UWorld* World = GetWorld();
-	const float DeltaSeconds = World != nullptr ? World->GetDeltaSeconds() : 0.0f;
+	// The UI clock: a stick scrolls a list as fast in a slowed-down game as at full speed.
+	const float DeltaSeconds = DreamUIInputClock::GetUIDeltaSeconds(this, World != nullptr ? World->GetDeltaSeconds() : 0.0f);
 	// Through the key-aware road: a scrolling container may have named the analog key that acts as
 	// its wheel, and one that named the other axis (or a key this preset does not bind) must not be
 	// driven by this one. Naming nothing keeps the stick, which is what every container does by
@@ -645,7 +652,7 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollY(float AxisValue)
 		return;
 	}
 	const UWorld* World = GetWorld();
-	const float DeltaSeconds = World != nullptr ? World->GetDeltaSeconds() : 0.0f;
+	const float DeltaSeconds = DreamUIInputClock::GetUIDeltaSeconds(this, World != nullptr ? World->GetDeltaSeconds() : 0.0f);
 	// Pushing the stick UP shows earlier content, which is a SMALLER scroll offset -- the offset is
 	// the distance scrolled from the start, not the position of the viewport's top edge.
 	if (FDreamUINavigationScroll::ScrollByAnalogAxis(Focused, EKeys::Gamepad_RightY,

@@ -130,7 +130,7 @@ bool FDreamDriverTouchDragTest::RunTest(const FString& Parameters)
 		CardElement->TouchDragBy(FVector2D(ThresholdPixels * 0.5, 0.0), 1));
 	TestEqual(TEXT("A finger that stayed inside the threshold did not drag"), Log.BeginDrag, 0);
 	TestEqual(TEXT("It is a tap, and a tap is a click"), Log.Click, 1);
-	TestEqual(TEXT("The press came from the finger's own pointer"), Log.LastPointerID, 1);
+	TestEqual(TEXT("The press came from the finger's own pointer"), Log.LastPointerID, UDreamStandaloneInputModule::GetTouchPointerID(1));
 
 	// Well past it: the same finger now drags, begins once and ends once, and clicks nothing.
 	TestTrue(TEXT("A touch drag well past the threshold completes"),
@@ -175,8 +175,9 @@ bool FDreamDriverTouchTwoFingersTest::RunTest(const FString& Parameters)
 		.TouchDown(2, RightCentre.GetValue())
 		.Then([this, Left, Right](FDreamDriverContext& InContext)
 		{
-			const UDreamPointerEventData* First = InContext.GetPointerEventData(1);
-			const UDreamPointerEventData* Second = InContext.GetPointerEventData(2);
+			// A finger's pointer is 100 plus the finger, so that no finger is the mouse.
+			const UDreamPointerEventData* First = InContext.GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(1));
+			const UDreamPointerEventData* Second = InContext.GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(2));
 			if (!TestTrue(TEXT("Each finger has a pointer of its own"), First != nullptr && Second != nullptr && First != Second))
 			{
 				return;
@@ -188,8 +189,8 @@ bool FDreamDriverTouchTwoFingersTest::RunTest(const FString& Parameters)
 		.Then([this](FDreamDriverContext& InContext)
 		{
 			// The first finger lifted and is gone; the second is exactly where it was.
-			TestNull(TEXT("A lifted finger's pointer is retired"), InContext.GetPointerEventData(1));
-			const UDreamPointerEventData* Second = InContext.GetPointerEventData(2);
+			TestNull(TEXT("A lifted finger's pointer is retired"), InContext.GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(1)));
+			const UDreamPointerEventData* Second = InContext.GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(2));
 			TestTrue(TEXT("Lifting one finger leaves the other pressing"), Second != nullptr && Second->bNowIsTriggerPressed);
 		})
 		.TouchUp(2)
@@ -197,9 +198,9 @@ bool FDreamDriverTouchTwoFingersTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The two-finger gesture completes"), bPerformed);
 
 	TestEqual(TEXT("The left target was pressed once"), LeftLog.Down, 1);
-	TestEqual(TEXT("By the first finger"), LeftLog.LastPointerID, 1);
+	TestEqual(TEXT("By the first finger"), LeftLog.LastPointerID, UDreamStandaloneInputModule::GetTouchPointerID(1));
 	TestEqual(TEXT("The right target was pressed once"), RightLog.Down, 1);
-	TestEqual(TEXT("By the second finger"), RightLog.LastPointerID, 2);
+	TestEqual(TEXT("By the second finger"), RightLog.LastPointerID, UDreamStandaloneInputModule::GetTouchPointerID(2));
 	TestEqual(TEXT("Each target was clicked once, by its own finger"), LeftLog.Click + RightLog.Click, 2);
 	return true;
 }
@@ -240,7 +241,7 @@ bool FDreamDriverTouchLongPressTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("A finger held past the long press time completes"),
 		Rig.Driver()->Sequence().TouchDown(1, Centre.GetValue()).WaitSeconds(LongPressTime + 0.1f).TouchUp(1).Perform());
 	TestEqual(TEXT("A hold that reached the long press time is one long press"), Counter->LongPressCount, 1);
-	TestEqual(TEXT("Carried by the finger that held"), Counter->LastPointerID, 1);
+	TestEqual(TEXT("Carried by the finger that held"), Counter->LastPointerID, UDreamStandaloneInputModule::GetTouchPointerID(1));
 	return true;
 }
 

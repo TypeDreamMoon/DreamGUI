@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Event/DreamEventSystem.h"
@@ -15,6 +15,7 @@
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "Core/DreamUIManager.h"
 #include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/InputModule/DreamBaseInputModule.h"
@@ -23,8 +24,6 @@
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
-#include "GenericPlatform/InputDeviceRegistry.h"
-#include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIEventSystemActor"
 
@@ -34,24 +33,30 @@ ADreamEventSystemActor::ADreamEventSystemActor()
 	EventSystem = CreateDefaultSubobject<UDreamEventSystem>(TEXT("EventSystem"));
 }
 
-DECLARE_CYCLE_STAT(TEXT("EventSystem"), STAT_EventSystem, STATGROUP_DreamGUI);
-
 UDreamEventSystem::UDreamEventSystem()
 {
-	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bTickEvenWhenPaused = true;
+	// The input subsystem's tick function runs every player's frame; this component has nothing of its own to tick.
+	PrimaryComponentTick.bCanEverTick = false;
 }
+
 UDreamEventSystem* UDreamEventSystem::GetDreamEventSystemInstance(UObject* WorldContextObject, int UserIndex)
 {
 	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
 	{
 		if (UDreamUIInputSubsystem* InputSubsystem = World->GetSubsystem<UDreamUIInputSubsystem>())
 		{
-			return InputSubsystem->GetEventSystemByUserIndex(UserIndex);
+			if (UDreamEventSystem* Placed = InputSubsystem->GetEventSystemByUserIndex(UserIndex))
+			{
+				return Placed;
+			}
+			// No event system placed for that player: one no actor carries speaks for the player all the same, so a
+			// Blueprint does not have to spawn an actor to read the player's pointers or hear their events.
+			return InputSubsystem->GetOrCreateImplicitEventSystem(UserIndex);
 		}
 	}
 	return nullptr;
 }
+
 void UDreamEventSystem::BeginPlay()
 {
 	Super::BeginPlay();
@@ -66,69 +71,169 @@ void UDreamEventSystem::BeginPlay()
 
 void UDreamEventSystem::UnregisterFromInputSubsystem()
 {
-	// Remembered at registration rather than looked up again. By BeginDestroy GetWorld() is routinely
-	// null -- the component has already been detached from its actor -- so the lookup that used to
-	// stand in for unregistering simply did nothing, and a level reload left a dead event system in the
-	// registry. The next level's system was then refused as a duplicate and its UI never responded,
-	// which is the "reload the level and the UI is deaf" report.
+	// Remembered at registration rather than looked up again. By BeginDestroy GetWorld() is routinely null, and a
+	// level reload used to leave a dead event system in the registry and the next level's UI deaf.
 	if (UDreamUIInputSubsystem* InputSubsystem = RegisteredInputSubsystem.Get())
 	{
 		InputSubsystem->RemoveEventSystem(this);
 	}
 	RegisteredInputSubsystem.Reset();
-}
-
-void UDreamEventSystem::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if (bRayEventEnable)
-	{
-		ProcessInputEvent();
-	}
-}
-
-void UDreamEventSystem::ProcessInputEvent()
-{
-	if (CurrentInputModule.IsValid())
-	{
-		SCOPE_CYCLE_COUNTER(STAT_EventSystem);
-		CurrentInputModule->ProcessInput();
-	}
-}
-
-void UDreamEventSystem::SetRaycastEnable(bool bEnable, bool bClearEvent)
-{
-	bRayEventEnable = bEnable;
-	if (bRayEventEnable == false && bClearEvent)
-	{
-		ClearEvent();
-	}
+	UnbindFromUser();
 }
 
 void UDreamEventSystem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	//the symmetric half of BeginPlay, and the only one that runs while the world is still whole
+	// The symmetric half of BeginPlay, and the only one that runs while the world is still whole: the player lets
+	// go of every pointer here, with a world for the Exits and Ups to be dispatched into.
 	UnregisterFromInputSubsystem();
 	Super::EndPlay(EndPlayReason);
 }
+
 void UDreamEventSystem::BeginDestroy()
 {
-	//a backstop for a component destroyed without an EndPlay; a second call is a no-op
-	UnregisterFromInputSubsystem();
+	// A backstop for a component destroyed without an EndPlay. Nothing is dispatched from the collector: the
+	// registration is dropped and that is all.
+	if (UDreamUIInputSubsystem* InputSubsystem = RegisteredInputSubsystem.Get())
+	{
+		InputSubsystem->ForgetEventSystem(this);
+	}
+	RegisteredInputSubsystem.Reset();
+	if (UDreamUIInputUser* User = BoundUser.Get())
+	{
+		User->RemoveEventSystemFacade(this);
+		User->ClearInputModule(CurrentInputModule.Get());
+	}
+	BoundUser.Reset();
 	Super::BeginDestroy();
+}
+
+#pragma region Player
+UDreamUIInputUser* UDreamEventSystem::GetInputUser() const
+{
+	UDreamUIInputUser* User = BoundUser.Get();
+	if (User != nullptr && User->GetUserIndex() == UserIndex && !User->IsShutDown())
+	{
+		return User;
+	}
+	if (bIsImplicit)
+	{
+		return nullptr;//its player is gone, and an implicit event system is only ever its own player's
+	}
+	UDreamUIInputSubsystem* InputSubsystem = RegisteredInputSubsystem.IsValid()
+		? RegisteredInputSubsystem.Get()
+		: UDreamUIInputSubsystem::Get(this);
+	User = InputSubsystem != nullptr ? InputSubsystem->GetOrCreateUser(UserIndex) : nullptr;
+	if (User != nullptr)
+	{
+		const_cast<UDreamEventSystem*>(this)->BindToUser(User);
+	}
+	return User;
+}
+
+void UDreamEventSystem::BindToUser(UDreamUIInputUser* InUser)
+{
+	if (BoundUser.Get() == InUser)
+	{
+		return;
+	}
+	UnbindFromUser();
+	BoundUser = InUser;
+	if (InUser != nullptr)
+	{
+		InUser->AddEventSystemFacade(this);
+		// A module registered through this event system before it had a player is the player's now.
+		if (UDreamBaseInputModule* Module = CurrentInputModule.Get())
+		{
+			InUser->SetInputModule(Module);
+		}
+	}
+}
+
+void UDreamEventSystem::UnbindFromUser()
+{
+	UDreamUIInputUser* User = BoundUser.Get();
+	BoundUser.Reset();
+	if (User != nullptr)
+	{
+		User->RemoveEventSystemFacade(this);
+		User->ClearInputModule(CurrentInputModule.Get());
+	}
+}
+
+void UDreamEventSystem::WriteSettingsToUser(UDreamUIInputUser* InUser) const
+{
+	if (InUser == nullptr)
+	{
+		return;
+	}
+	FDreamUIInputUserConfig& Config = InUser->GetConfig();
+	Config.bRayEventEnable = bRayEventEnable;
+	Config.bApplyHoverCursor = bApplyHoverCursor;
+	Config.DefaultInputType = DefaultInputType;
+	Config.NavigateInputIntervalForFirstTime = FMath::Max(NavigateInputIntervalForFirstTime, MinNavigateInputInterval);
+	Config.NavigateInputInterval = FMath::Max(NavigateInputInterval, MinNavigateInputInterval);
+	Config.DoubleClickTime = FMath::Max(DoubleClickTime, 0.0f);
+	Config.LongPressTime = FMath::Max(LongPressTime, 0.0f);
+	Config.SwipeMinDistance = FMath::Max(SwipeMinDistance, 0.0f);
+	Config.SwipeMaxDuration = FMath::Max(SwipeMaxDuration, 0.0f);
+	Config.PinchMinDistanceChange = FMath::Max(PinchMinDistanceChange, 0.0f);
+	Config.bScrollNavigationTargetIntoView = bScrollNavigationTargetIntoView;
+	Config.bAnimateNavigationScroll = bAnimateNavigationScroll;
+#if WITH_EDITORONLY_DATA
+	Config.bOutputLog = bOutputLog;
+#endif
+}
+
+void UDreamEventSystem::InitializeImplicit(UDreamUIInputSubsystem* InSubsystem, UDreamUIInputUser* InUser)
+{
+	bIsImplicit = true;
+	RegisteredInputSubsystem = InSubsystem;
+	UserIndex = InUser != nullptr ? InUser->GetUserIndex() : 0;
+	BindToUser(InUser);
+	// Its settings are the player's, not the other way round: an implicit event system reads what the player has.
+	if (InUser != nullptr)
+	{
+		const FDreamUIInputUserConfig& Config = InUser->GetConfig();
+		bRayEventEnable = Config.bRayEventEnable;
+		bApplyHoverCursor = Config.bApplyHoverCursor;
+		DefaultInputType = Config.DefaultInputType;
+		NavigateInputIntervalForFirstTime = Config.NavigateInputIntervalForFirstTime;
+		NavigateInputInterval = Config.NavigateInputInterval;
+		DoubleClickTime = Config.DoubleClickTime;
+		LongPressTime = Config.LongPressTime;
+		SwipeMinDistance = Config.SwipeMinDistance;
+		SwipeMaxDuration = Config.SwipeMaxDuration;
+		PinchMinDistanceChange = Config.PinchMinDistanceChange;
+		bScrollNavigationTargetIntoView = Config.bScrollNavigationTargetIntoView;
+		bAnimateNavigationScroll = Config.bAnimateNavigationScroll;
+	}
 }
 
 void UDreamEventSystem::SetUserIndex(int Value)
 {
 	if (UserIndex == Value)return;
-	// The registry is keyed by user index, so the entry has to move with the field. Writing the field
-	// alone would leave this event system registered under the player it used to serve and unfindable
-	// under the one it now serves -- which is the whole point of the index.
-	//
-	// The input subsystem is looked up rather than only read from RegisteredInputSubsystem, because that
-	// back-pointer is set in BeginPlay and this is legitimately called before it: the preset actor points
-	// its event system at the right player as soon as it knows which one that is.
+	// Moving to another player lets the old one go of every pointer, which dispatches: from inside a handler it
+	// waits until the event being dispatched is over.
+	if (UDreamUIInputUser* OldUser = BoundUser.Get(); OldUser != nullptr && OldUser->IsDispatching())
+	{
+		OldUser->RunOrDefer([WeakThis = TWeakObjectPtr<UDreamEventSystem>(this), Value]()
+		{
+			if (UDreamEventSystem* This = WeakThis.Get())
+			{
+				This->SetUserIndexNow(Value);
+			}
+		});
+		return;
+	}
+	SetUserIndexNow(Value);
+}
+
+void UDreamEventSystem::SetUserIndexNow(int Value)
+{
+	if (UserIndex == Value)return;
+	// The registry is keyed by user index, so the entry moves with the field. The input subsystem is looked up
+	// rather than only read from RegisteredInputSubsystem: the preset actor points its event system at the right
+	// player before BeginPlay has registered it.
 	UDreamUIInputSubsystem* InputSubsystem = RegisteredInputSubsystem.IsValid()
 		? RegisteredInputSubsystem.Get()
 		: UDreamUIInputSubsystem::Get(this);
@@ -136,13 +241,15 @@ void UDreamEventSystem::SetUserIndex(int Value)
 	const bool bWasRegistered = InputSubsystem != nullptr && InputSubsystem->GetEventSystemByUserIndex(UserIndex) == this;
 	if (bWasRegistered)
 	{
+		// Lets the old player go of every pointer: they belonged to the player who was using them.
 		InputSubsystem->RemoveEventSystem(this);
 	}
+	else if (UDreamUIInputUser* OldUser = BoundUser.Get())
+	{
+		OldUser->RetireAllPointers();
+	}
+	UnbindFromUser();
 	UserIndex = Value;
-	// Pointers born under the old index carry it; they belong to the player who was using them, and
-	// nothing about that pointer is true for the new player.
-	PointerEventDataMap.Reset();
-	PointerWorldTargetMap.Reset();
 	if (bWasRegistered)
 	{
 		InputSubsystem->AddEventSystem(this);
@@ -168,13 +275,17 @@ APlayerController* UDreamEventSystem::GetPlayerControllerForUser(const UObject* 
 	{
 		return LocalPlayer->GetPlayerController(World);
 	}
-	// No local player at that index. Player 0 is the honest answer only for the default index; for any
-	// other, "nobody" beats writing a second player's cursor or reading their sticks.
+	// No local player at that index. Player 0 is the honest answer only for the default index; for any other,
+	// "nobody" beats writing a second player's cursor or reading their sticks.
 	return InUserIndex == 0 ? World->GetFirstPlayerController() : nullptr;
 }
 
 APlayerController* UDreamEventSystem::GetPlayerController()const
 {
+	if (const UDreamUIInputUser* User = GetInputUser())
+	{
+		return User->GetPlayerController();
+	}
 	return GetPlayerControllerForUser(this, UserIndex);
 }
 
@@ -184,113 +295,185 @@ double UDreamEventSystem::GetPointerClockSeconds(const UObject* WorldContextObje
 	const UWorld* World = DreamUI::GetWorldSafe(WorldContextObject);
 	return World != nullptr ? World->GetRealTimeSeconds() : 0.0;
 }
+#pragma endregion
 
+#pragma region Settings
 void UDreamEventSystem::ApplyHoverCursorToPlayer(bool bWidgetClaimedCursor, EMouseCursor::Type InCursor)
 {
-	if (!bApplyHoverCursor)return;
-	APlayerController* PlayerController = GetPlayerController();
-	if (PlayerController == nullptr)return;
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->ApplyHoverCursorToPlayer(bWidgetClaimedCursor, InCursor);
+	}
+}
 
-	if (bWidgetClaimedCursor)
-	{
-		if (!bHoverCursorOverrideActive)
-		{
-			// Taken once, at the moment the UI first takes the cursor over, so that whatever the game
-			// was showing is what comes back -- not EMouseCursor::Default, which is the plugin's idea
-			// of neutral and not the project's.
-			bHoverCursorOverrideActive = true;
-			CursorBeforeHoverOverride = PlayerController->CurrentMouseCursor;
-		}
-		PlayerController->CurrentMouseCursor = InCursor;
-	}
-	else if (bHoverCursorOverrideActive)
-	{
-		bHoverCursorOverrideActive = false;
-		PlayerController->CurrentMouseCursor = CursorBeforeHoverOverride;
-	}
+bool UDreamEventSystem::GetApplyHoverCursor()const
+{
+	const UDreamUIInputUser* User = BoundUser.Get();
+	return User != nullptr ? User->GetConfig().bApplyHoverCursor : bApplyHoverCursor;
 }
 
 void UDreamEventSystem::SetApplyHoverCursor(bool Value)
 {
-	if (bApplyHoverCursor == Value)return;
 	bApplyHoverCursor = Value;
-	if (!bApplyHoverCursor && bHoverCursorOverrideActive)
+	if (UDreamUIInputUser* User = GetInputUser())
 	{
-		// Turning it off gives the cursor back rather than leaving whatever the last hover asked for
-		// frozen on screen.
-		bHoverCursorOverrideActive = false;
-		if (APlayerController* PlayerController = GetPlayerController())
-		{
-			PlayerController->CurrentMouseCursor = CursorBeforeHoverOverride;
-		}
+		User->SetApplyHoverCursor(Value);
 	}
 }
+
+void UDreamEventSystem::SetRaycastEnable(bool bEnable, bool bClearEvent)
+{
+	bRayEventEnable = bEnable;
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->SetRaycastEnable(bEnable, bClearEvent);
+	}
+}
+
+// Each setting is the player's once this speaks for one: read from it, written through to it -- and kept here
+// too, which is what the details panel shows and what the player is given when this registers.
+#define DREAMUI_FACADE_SETTING(Type, Name, Field, Clamp) \
+Type UDreamEventSystem::Get##Name()const \
+{ \
+	const UDreamUIInputUser* User = BoundUser.Get(); \
+	return User != nullptr ? User->GetConfig().Field : Field; \
+} \
+void UDreamEventSystem::Set##Name(Type Value) \
+{ \
+	Field = Clamp; \
+	if (UDreamUIInputUser* User = GetInputUser()) \
+	{ \
+		User->GetConfig().Field = Field; \
+	} \
+}
+
+DREAMUI_FACADE_SETTING(EDreamUIPointerInputType, DefaultInputType, DefaultInputType, Value)
+DREAMUI_FACADE_SETTING(float, NavigateInputIntervalForFirstTime, NavigateInputIntervalForFirstTime, FMath::Max(Value, MinNavigateInputInterval))
+DREAMUI_FACADE_SETTING(float, NavigateInputInterval, NavigateInputInterval, FMath::Max(Value, MinNavigateInputInterval))
+DREAMUI_FACADE_SETTING(float, DoubleClickTime, DoubleClickTime, FMath::Max(Value, 0.0f))
+DREAMUI_FACADE_SETTING(float, LongPressTime, LongPressTime, FMath::Max(Value, 0.0f))
+DREAMUI_FACADE_SETTING(float, SwipeMinDistance, SwipeMinDistance, FMath::Max(Value, 0.0f))
+DREAMUI_FACADE_SETTING(float, SwipeMaxDuration, SwipeMaxDuration, FMath::Max(Value, 0.0f))
+DREAMUI_FACADE_SETTING(float, PinchMinDistanceChange, PinchMinDistanceChange, FMath::Max(Value, 0.0f))
+DREAMUI_FACADE_SETTING(bool, ScrollNavigationTargetIntoView, bScrollNavigationTargetIntoView, Value)
+DREAMUI_FACADE_SETTING(bool, AnimateNavigationScroll, bAnimateNavigationScroll, Value)
+#undef DREAMUI_FACADE_SETTING
 
 void UDreamEventSystem::SetInputModule(UDreamBaseInputModule* InputModule)
 {
 	CurrentInputModule = InputModule;
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->SetInputModule(InputModule);
+	}
 }
 
 void UDreamEventSystem::ClearInputModule()
 {
+	if (UDreamUIInputUser* User = BoundUser.Get())
+	{
+		User->ClearInputModule(CurrentInputModule.Get());
+	}
 	CurrentInputModule = nullptr;
 }
 
 void UDreamEventSystem::ClearEvent()
 {
-	if (CurrentInputModule.IsValid())
+	if (UDreamUIInputUser* User = GetInputUser())
 	{
-		CurrentInputModule->ClearEvent();
+		User->ReleaseAllPointers();
+	}
+}
+#pragma endregion
+
+#pragma region Pointers
+UDreamPointerEventData* UDreamEventSystem::GetPointerEventData(int PointerID, bool bCreateIfNotExist)const
+{
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetPointerEventData(PointerID, bCreateIfNotExist) : nullptr;
+}
+
+void UDreamEventSystem::RemovePointerEventData(int PointerID)
+{
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->RemovePointerEventData(PointerID);
 	}
 }
 
-UDreamPointerEventData* UDreamEventSystem::GetPointerEventData(int PointerID, bool bCreateIfNotExist)const
+const TMap<int32, TObjectPtr<UDreamPointerEventData>>& UDreamEventSystem::GetPointerEventDataMap()const
 {
-	if (auto foundPtr = PointerEventDataMap.Find(PointerID))
+	if (const UDreamUIInputUser* User = GetInputUser())
 	{
-		return *foundPtr;
+		return User->GetPointerEventDataMap();
 	}
-	if (!bCreateIfNotExist)
-	{
-		// Merely asking about a pointer must not mint one: every entry of this map is raycast every
-		// frame by the input module, so a query for an id that was never pressed used to cost a
-		// permanent trace at a position nobody is pointing at.
-		return nullptr;
-	}
-	auto newEventData = NewObject<UDreamPointerEventData>(const_cast<UDreamEventSystem*>(this));
-	newEventData->PointerID = PointerID;
-	// Stamped here because this is the only place a pointer is born, and it is the only place that
-	// knows whose it is. Handlers read EventData->UserIndex to find their own event system back; while
-	// nothing wrote it, every one of them resolved to player 0.
-	newEventData->UserIndex = UserIndex;
-	newEventData->InputType = DefaultInputType;
-	PointerEventDataMap.Add(PointerID, newEventData);
-	return newEventData;
+	static const TMap<int32, TObjectPtr<UDreamPointerEventData>> NoPointers;
+	return NoPointers;
 }
-void UDreamEventSystem::RemovePointerEventData(int PointerID)
+
+FDreamUIRaycastHitDelegate& UDreamEventSystem::GetRaycastHitEvent()
 {
-	PointerEventDataMap.Remove(PointerID);
-	// What that pointer was doing to the world goes with it. The caller retiring a pointer has already
-	// let go of whatever it pressed and exited whatever it was over (ClearEventByID), so this is the
-	// bookkeeping, not an event.
-	PointerWorldTargetMap.Remove(PointerID);
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetRaycastHitEvent() : UnboundRaycastHitEvent;
+}
+
+FDreamUIMulticastDelegateBaseEventData& UDreamEventSystem::GetInputEvent()
+{
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetInputEvent() : UnboundInputEvent;
+}
+
+FDreamUIPointerInputTypeChangedDelegate& UDreamEventSystem::GetInputChangedEvent()
+{
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetInputChangedEvent() : UnboundPointerInputTypeChangedEvent;
+}
+
+FDreamUIInputDeviceChangedDelegate& UDreamEventSystem::GetInputDeviceChangedEvent()
+{
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetInputDeviceChangedEvent() : UnboundInputDeviceChangedEvent;
+}
+
+FDreamUIGamepadModelChangedDelegate& UDreamEventSystem::GetGamepadModelChangedEvent()
+{
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetGamepadModelChangedEvent() : UnboundGamepadModelChangedEvent;
 }
 
 void UDreamEventSystem::RaiseHitEvent(bool bHitOrNot, const FDreamUIHitResult& HitResult, UDreamWidget* HitComponent)
 {
-	if (bRayEventEnable)
+	if (UDreamUIInputUser* User = GetInputUser())
 	{
-		RaycastHitEvent.Broadcast(bHitOrNot, HitResult, HitComponent);
-		RaycastHitEventBP.Broadcast(bHitOrNot, HitResult, HitComponent);
+		User->RaiseHitEvent(bHitOrNot, HitResult, HitComponent);
 	}
 }
+
+void UDreamEventSystem::BroadcastBlueprintInputEvent(UDreamBaseEventData* InEventData)
+{
+	InputEventBP.Broadcast(InEventData);
+}
+
+void UDreamEventSystem::BroadcastBlueprintRaycastHit(bool bHitOrNot, const FDreamUIHitResult& HitResult, UDreamWidget* HitComponent)
+{
+	RaycastHitEventBP.Broadcast(bHitOrNot, HitResult, HitComponent);
+}
+
+void UDreamEventSystem::BroadcastBlueprintInputDeviceChanged(EDreamUIInputDevice InDevice)
+{
+	InputDeviceChangedEventBP.Broadcast(InDevice);
+}
+
+void UDreamEventSystem::BroadcastBlueprintGamepadModelChanged(EDreamUIGamepadModel InModel)
+{
+	GamepadModelChangedEventBP.Broadcast(InModel);
+}
+
 bool UDreamEventSystem::IsPointerOverUIByPointerID(int PointerID)
 {
-	if (auto foundPtr = PointerEventDataMap.Find(PointerID))
-	{
-		return (*foundPtr)->IsPointerOverUI();
-	}
-	return false;
+	const UDreamUIInputUser* User = GetInputUser();
+	UDreamPointerEventData* EventData = User != nullptr ? User->FindPointerEventData(PointerID) : nullptr;
+	return EventData != nullptr && EventData->IsPointerOverUI();
 }
 
 void UDreamEventSystem::SetHighlightedComponentForNavigation(UDreamWidget* InComp, int InPointerID)
@@ -300,6 +483,7 @@ void UDreamEventSystem::SetHighlightedComponentForNavigation(UDreamWidget* InCom
 		EventData->SetHighlightedWidgetForNavigation(InComp);
 	}
 }
+
 UDreamWidget* UDreamEventSystem::GetHighlightedComponentForNavigation(int InPointerID)const
 {
 	if (auto EventData = GetPointerEventData(InPointerID, false))
@@ -309,40 +493,122 @@ UDreamWidget* UDreamEventSystem::GetHighlightedComponentForNavigation(int InPoin
 	return nullptr;
 }
 
+bool UDreamEventSystem::SetPointerInputTypeByPointerID(int InPointerID, EDreamUIPointerInputType InInputType)
+{
+	//a setter, not a query: the caller is declaring how that pointer behaves, so it is theirs to create
+	if (auto EventData = GetPointerEventData(InPointerID, true))
+	{
+		return SetPointerInputType(EventData, InInputType);
+	}
+	return false;
+}
+
+bool UDreamEventSystem::SetPointerInputType(UDreamPointerEventData* InPointerEventData, EDreamUIPointerInputType InInputType)
+{
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr && User->SetPointerInputType(InPointerEventData, InInputType);
+}
+
+void UDreamEventSystem::ActivateNavigationInput(int InPointerID, UDreamWidget* InDefaultHighlightedComponent)
+{
+	//activation is a command: gamepad navigation must work before that pointer has ever been pressed
+	if (auto EventData = GetPointerEventData(InPointerID, true))
+	{
+		SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
+		EventData->SetHighlightedWidgetForNavigation(InDefaultHighlightedComponent);
+	}
+}
+
+void UDreamEventSystem::SetSelectWidget(UDreamWidget* InSelectWidget, UDreamBaseEventData* EventData)
+{
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->SetSelectWidget(InSelectWidget, EventData);
+	}
+}
+
+void UDreamEventSystem::SetSelectWidget(UDreamEventSystem* InEventSystem, UDreamWidget* InSelectWidget, UDreamBaseEventData* EventData)
+{
+	if (EventData == nullptr)
+	{
+		return;
+	}
+	if (InEventSystem != nullptr && InEventSystem->GetInputUser() != nullptr)
+	{
+		InEventSystem->SetSelectWidget(InSelectWidget, EventData);
+		return;
+	}
+	// No player to go through: the handlers on the widgets, and nothing else.
+	if (EventData->SelectedComponent != InSelectWidget)
+	{
+		UDreamWidget* OldSelected = EventData->SelectedComponent;
+		EventData->SelectedComponent = InSelectWidget;
+		const UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(EventData);
+		const int32 PointerId = PointerEventData != nullptr ? PointerEventData->PointerID : 0;
+		if (IsValid(OldSelected))
+		{
+			ExecuteEvent_OnPointerDeselect(OldSelected, EventData, false);
+			OldSelected->NotifyFocusLost(0, PointerId);
+		}
+		if (IsValid(EventData->SelectedComponent))
+		{
+			ExecuteEvent_OnPointerSelect(EventData->SelectedComponent, EventData, false);
+			EventData->SelectedComponent->NotifyFocusReceived(0, PointerId);
+		}
+	}
+}
+
+UDreamWidget* UDreamEventSystem::GetCurrentSelectedComponent(int InPointerID)const
+{
+	if (auto EventData = GetPointerEventData(InPointerID, false))
+	{
+		return EventData->SelectedComponent;
+	}
+	return nullptr;
+}
+
+void UDreamEventSystem::SetSelectComponentWithDefault(UDreamWidget* InSelectWidget)
+{
+	SetSelectWidget(InSelectWidget, GetPointerEventData(0, true));
+}
+
+void UDreamEventSystem::LogEventData(UDreamBaseEventData* inEventData)
+{
+	if (const UDreamUIInputUser* User = GetInputUser())
+	{
+		User->LogEventData(inEventData);
+	}
+}
+#pragma endregion
+
+#pragma region InputDevice
 EDreamUIInputDevice UDreamEventSystem::GetInputDeviceForKey(const FKey& InKey)
 {
 	if (InKey.IsTouch())
 	{
 		return EDreamUIInputDevice::Touch;
 	}
-	// A mouse key is neither gamepad nor touch, so it lands with the keyboard -- which is what a prompt
-	// wants anyway: the pair is one device as far as the player's hands are concerned.
+	// A mouse key is neither gamepad nor touch, so it lands with the keyboard -- which is what a prompt wants
+	// anyway: the pair is one device as far as the player's hands are concerned.
 	return InKey.IsGamepadKey() ? EDreamUIInputDevice::Gamepad : EDreamUIInputDevice::MouseAndKeyboard;
+}
+
+EDreamUIInputDevice UDreamEventSystem::GetCurrentInputDevice()const
+{
+	const UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetCurrentInputDevice() : EDreamUIInputDevice::MouseAndKeyboard;
 }
 
 bool UDreamEventSystem::ReportInputDevice(EDreamUIInputDevice InDevice)
 {
-	if (CurrentInputDevice == InDevice)
-	{
-		return false;//every key comes through here; broadcasting each one would rebuild prompts per frame
-	}
-	CurrentInputDevice = InDevice;
-	// Picking up a pad is the only moment the model can have changed, and it is rare. Done before the
-	// device change goes out so that a prompt bar rebuilding from it already sees the right glyphs.
-	if (InDevice == EDreamUIInputDevice::Gamepad)
-	{
-		RefreshGamepadModel();
-	}
-	InputDeviceChangedEvent.Broadcast(InDevice);
-	InputDeviceChangedEventBP.Broadcast(InDevice);
-	return true;
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr && User->ReportInputDevice(InDevice);
 }
 
 EDreamUIGamepadModel UDreamEventSystem::GetGamepadModelForDeviceName(FName InInputDeviceName, FName InHardwareDeviceIdentifier)
 {
-	// Matched on substrings of both names because platforms disagree about which one carries the brand,
-	// and because the exact spellings differ by platform SDK version -- "SonyController",
-	// "DualSense", "PS5_Controller" all mean the same thing to a prompt.
+	// Matched on substrings of both names because platforms disagree about which one carries the brand, and
+	// because the exact spellings differ by platform SDK version.
 	const FString Names = InInputDeviceName.ToString() + TEXT(" ") + InHardwareDeviceIdentifier.ToString();
 	auto Contains = [&Names](const TCHAR* InToken)
 	{
@@ -361,147 +627,30 @@ EDreamUIGamepadModel UDreamEventSystem::GetGamepadModelForDeviceName(FName InInp
 	{
 		return EDreamUIGamepadModel::Xbox;
 	}
-	// Named by nobody, or named something this does not recognize. Generic is the honest answer and
-	// every icon lookup falls back to the plain gamepad glyph, which is never wrong-brand.
+	// Named by nobody, or named something this does not recognize. Generic is the honest answer.
 	return EDreamUIGamepadModel::Generic;
+}
+
+EDreamUIGamepadModel UDreamEventSystem::GetCurrentGamepadModel()const
+{
+	const UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetCurrentGamepadModel() : EDreamUIGamepadModel::Generic;
 }
 
 bool UDreamEventSystem::RefreshGamepadModel()
 {
-	if (bGamepadModelOverridden)return false;//the project has told us; the platform does not get a vote
-
-	EDreamUIGamepadModel DetectedModel = EDreamUIGamepadModel::Generic;
-	if (const ULocalPlayer* LocalPlayer = GetLocalPlayerForUser(this, UserIndex))
-	{
-		// The registry rather than FInputDeviceScope: the scope is deprecated in 5.8, is only valid
-		// inside the platform's own dispatch call, and we are asking from a UI frame.
-		const FInputDeviceId DeviceId = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(LocalPlayer->GetPlatformUserId());
-		if (const TOptional<FInputDeviceDescriptor> Descriptor = FInputDeviceRegistry::FindDescriptor(DeviceId))
-		{
-			DetectedModel = GetGamepadModelForDeviceName(Descriptor->InputDeviceName, Descriptor->HardwareDeviceIdentifier);
-		}
-	}
-	if (CurrentGamepadModel == DetectedModel)return false;
-	CurrentGamepadModel = DetectedModel;
-	GamepadModelChangedEvent.Broadcast(CurrentGamepadModel);
-	GamepadModelChangedEventBP.Broadcast(CurrentGamepadModel);
-	return true;
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr && User->RefreshGamepadModel();
 }
 
 void UDreamEventSystem::SetGamepadModelOverride(bool bInOverride, EDreamUIGamepadModel InModel)
 {
-	bGamepadModelOverridden = bInOverride;
-	if (!bInOverride)
+	if (UDreamUIInputUser* User = GetInputUser())
 	{
-		RefreshGamepadModel();//back to whatever the platform says, right now rather than at the next press
-		return;
-	}
-	if (CurrentGamepadModel == InModel)return;
-	CurrentGamepadModel = InModel;
-	GamepadModelChangedEvent.Broadcast(CurrentGamepadModel);
-	GamepadModelChangedEventBP.Broadcast(CurrentGamepadModel);
-}
-
-bool UDreamEventSystem::SetPointerInputTypeByPointerID(int InPointerID, EDreamUIPointerInputType InInputType)
-{
-	//a setter, not a query: the caller is declaring how that pointer behaves, so it is theirs to create
-	if (auto EventData = GetPointerEventData(InPointerID, true))
-	{
-		return SetPointerInputType(EventData, InInputType);
-	}
-	return false;
-}
-bool UDreamEventSystem::SetPointerInputType(UDreamPointerEventData* InPointerEventData, EDreamUIPointerInputType InInputType)
-{
-	if (InPointerEventData->InputType != InInputType)
-	{
-		InPointerEventData->InputType = InInputType;
-		PointerInputTypedChangedEvent.Broadcast(InPointerEventData->PointerID, InPointerEventData->InputType);
-		return true;
-	}
-	return false;
-}
-void UDreamEventSystem::ActivateNavigationInput(int InPointerID, UDreamWidget* InDefaultHighlightedComponent)
-{
-	//activation is a command: gamepad navigation must work before that pointer has ever been pressed
-	if (auto EventData = GetPointerEventData(InPointerID, true))
-	{
-		SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
-		EventData->SetHighlightedWidgetForNavigation(InDefaultHighlightedComponent);
+		User->SetGamepadModelOverride(bInOverride, InModel);
 	}
 }
-
-void UDreamEventSystem::SetSelectWidget(UDreamWidget* InSelectWidget, UDreamBaseEventData* EventData)
-{
-	if (EventData->SelectedComponent != InSelectWidget)//select new object
-	{
-		auto oldSelectedComp = EventData->SelectedComponent;
-		EventData->SelectedComponent = InSelectWidget;
-		if (IsValid(oldSelectedComp))
-		{
-			CallOnPointerDeselect(oldSelectedComp, EventData);
-			const int32 PointerId = Cast<UDreamPointerEventData>(EventData) ? CastChecked<UDreamPointerEventData>(EventData)->PointerID : 0;
-			oldSelectedComp->NotifyFocusLost(UserIndex, PointerId);
-		}
-		if (IsValid(EventData->SelectedComponent))
-		{
-			CallOnPointerSelect(EventData->SelectedComponent, EventData);
-			const int32 PointerId = Cast<UDreamPointerEventData>(EventData) ? CastChecked<UDreamPointerEventData>(EventData)->PointerID : 0;
-			EventData->SelectedComponent->NotifyFocusReceived(UserIndex, PointerId);
-		}
-	}
-}
-
-void UDreamEventSystem::SetSelectWidget(UDreamEventSystem* InEventSystem, UDreamWidget* InSelectWidget, UDreamBaseEventData* EventData)
-{
-	if (InEventSystem != nullptr)
-	{
-		InEventSystem->SetSelectWidget(InSelectWidget, EventData);
-	}
-	else
-	{
-		if (EventData->SelectedComponent != InSelectWidget)//select new object
-		{
-			auto oldSelectedComp = EventData->SelectedComponent;
-			EventData->SelectedComponent = InSelectWidget;
-			if (IsValid(oldSelectedComp))
-			{
-				ExecuteEvent_OnPointerDeselect(oldSelectedComp, EventData, false);
-				const int32 PointerId = Cast<UDreamPointerEventData>(EventData) ? CastChecked<UDreamPointerEventData>(EventData)->PointerID : 0;
-				oldSelectedComp->NotifyFocusLost(0, PointerId);
-			}
-			if (IsValid(EventData->SelectedComponent))
-			{
-				ExecuteEvent_OnPointerSelect(EventData->SelectedComponent, EventData, false);
-				const int32 PointerId = Cast<UDreamPointerEventData>(EventData) ? CastChecked<UDreamPointerEventData>(EventData)->PointerID : 0;
-				EventData->SelectedComponent->NotifyFocusReceived(0, PointerId);
-			}
-		}
-	}
-}
-
-UDreamWidget* UDreamEventSystem::GetCurrentSelectedComponent(int InPointerID)const
-{
-	if (auto EventData = GetPointerEventData(InPointerID, false))
-	{
-		return EventData->SelectedComponent;
-	}
-	return nullptr;
-}
-
-void UDreamEventSystem::SetSelectComponentWithDefault(UDreamWidget* InSelectWidget)
-{
-	auto EventData = GetPointerEventData(0, true);
-	SetSelectWidget(InSelectWidget, EventData);
-}
-
-void UDreamEventSystem::LogEventData(UDreamBaseEventData* inEventData)
-{
-#if WITH_EDITORONLY_DATA
-	if (bOutputLog == false)return;
-	UE_LOG(DreamGUI, Log, TEXT("%s"), *inEventData->ToString());
-#endif
-}
+#pragma endregion
 
 #pragma region CallEvent
 void UDreamEventSystem::ExecuteEvent_OnPointerEnter(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
@@ -514,7 +663,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerEnter(UDreamWidget* TargetWidget, 
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerExit(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::Exit; 
+	PointerEventData->EventType = EDreamUIPointerEventType::Exit;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerEnterExitInterface::StaticClass(),
@@ -522,7 +671,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerExit(UDreamWidget* TargetWidget, U
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerDown(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::Down; 
+	PointerEventData->EventType = EDreamUIPointerEventType::Down;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerDownUpInterface::StaticClass(),
@@ -530,7 +679,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerDown(UDreamWidget* TargetWidget, U
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerUp(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::Up; 
+	PointerEventData->EventType = EDreamUIPointerEventType::Up;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerDownUpInterface::StaticClass(),
@@ -538,7 +687,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerUp(UDreamWidget* TargetWidget, UDr
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerClick(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::Click; 
+	PointerEventData->EventType = EDreamUIPointerEventType::Click;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerClickInterface::StaticClass(),
@@ -578,7 +727,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerSwipe(UDreamWidget* TargetWidget, 
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerBeginDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::BeginDrag; 
+	PointerEventData->EventType = EDreamUIPointerEventType::BeginDrag;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerDragInterface::StaticClass(),
@@ -586,7 +735,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerBeginDrag(UDreamWidget* TargetWidg
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::Drag; 
+	PointerEventData->EventType = EDreamUIPointerEventType::Drag;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerDragInterface::StaticClass(),
@@ -594,7 +743,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerDrag(UDreamWidget* TargetWidget, U
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerEndDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::EndDrag; 
+	PointerEventData->EventType = EDreamUIPointerEventType::EndDrag;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerDragInterface::StaticClass(),
@@ -602,7 +751,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerEndDrag(UDreamWidget* TargetWidget
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerScroll(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::Scroll; 
+	PointerEventData->EventType = EDreamUIPointerEventType::Scroll;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerScrollInterface::StaticClass(),
@@ -610,7 +759,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerScroll(UDreamWidget* TargetWidget,
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerDragDrop(UDreamWidget* TargetWidget, UDreamPointerEventData* PointerEventData, bool AllowEventBubbleUp)
 {
-	PointerEventData->EventType = EDreamUIPointerEventType::DragDrop; 
+	PointerEventData->EventType = EDreamUIPointerEventType::DragDrop;
 	ExecuteDreamUIInterface(TargetWidget,
 		PointerEventData,
 		UDreamPointerDragDropInterface::StaticClass(),
@@ -618,7 +767,7 @@ void UDreamEventSystem::ExecuteEvent_OnPointerDragDrop(UDreamWidget* TargetWidge
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerSelect(UDreamWidget* TargetWidget, UDreamBaseEventData* EventData, bool AllowEventBubbleUp)
 {
-	EventData->EventType = EDreamUIPointerEventType::Select; 
+	EventData->EventType = EDreamUIPointerEventType::Select;
 	ExecuteDreamUIInterface(TargetWidget,
 		EventData,
 		UDreamPointerSelectDeselectInterface::StaticClass(),
@@ -626,278 +775,65 @@ void UDreamEventSystem::ExecuteEvent_OnPointerSelect(UDreamWidget* TargetWidget,
 }
 void UDreamEventSystem::ExecuteEvent_OnPointerDeselect(UDreamWidget* TargetWidget, UDreamBaseEventData* EventData, bool AllowEventBubbleUp)
 {
-	EventData->EventType = EDreamUIPointerEventType::Deselect; 
+	EventData->EventType = EDreamUIPointerEventType::Deselect;
 	ExecuteDreamUIInterface(TargetWidget,
 		EventData,
 		UDreamPointerSelectDeselectInterface::StaticClass(),
 		IDreamPointerSelectDeselectInterface::Execute_OnPointerDeselect, AllowEventBubbleUp);
 }
 
-
-void UDreamEventSystem::CallOnPointerEnter(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerEnter(TargetWidget, EventData, false);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerExit(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerExit(TargetWidget, EventData, false);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerDown(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerDown(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerUp(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerUp(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerClick(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerClick(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerDoubleClick(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerDoubleClick(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerLongPress(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerLongPress(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerPinch(UDreamWidget* TargetWidget, UDreamGestureEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerPinch(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerSwipe(UDreamWidget* TargetWidget, UDreamGestureEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerSwipe(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerBeginDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerBeginDrag(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerDrag(TargetWidget, EventData, true);
-	// Both, like every sibling Call*. This one alone skipped the native broadcast, so a C++
-	// observer -- a drag visual following the cursor, a drop-target highlighter -- silently never
-	// saw drag frames while the Blueprint one did.
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerEndDrag(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerEndDrag(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
+// Through the player, which dispatches and broadcasts.
+#define DREAMUI_FACADE_CALL(Name, WidgetType, EventDataType) \
+void UDreamEventSystem::Name(WidgetType* InTarget, EventDataType* EventData) \
+{ \
+	if (UDreamUIInputUser* User = GetInputUser()) \
+	{ \
+		User->Name(InTarget, EventData); \
+	} \
 }
 
-void UDreamEventSystem::CallOnPointerScroll(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerScroll(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-
-void UDreamEventSystem::CallOnPointerDragDrop(UDreamWidget* TargetWidget, UDreamPointerEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerDragDrop(TargetWidget, EventData, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-
-void UDreamEventSystem::CallOnPointerSelect(UDreamWidget* TargetWidget, UDreamBaseEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerSelect(TargetWidget, EventData, false);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnPointerDeselect(UDreamWidget* TargetWidget, UDreamBaseEventData* EventData)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerDeselect(TargetWidget, EventData, false);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
+DREAMUI_FACADE_CALL(CallOnPointerEnter, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerExit, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerDown, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerUp, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerClick, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerDoubleClick, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerLongPress, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerPinch, UDreamWidget, UDreamGestureEventData)
+DREAMUI_FACADE_CALL(CallOnPointerSwipe, UDreamWidget, UDreamGestureEventData)
+DREAMUI_FACADE_CALL(CallOnPointerBeginDrag, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerDrag, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerEndDrag, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerScroll, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerDragDrop, UDreamWidget, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnPointerSelect, UDreamWidget, UDreamBaseEventData)
+DREAMUI_FACADE_CALL(CallOnPointerDeselect, UDreamWidget, UDreamBaseEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetEnter, AActor, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetExit, AActor, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetDown, AActor, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetUp, AActor, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetClick, AActor, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetDoubleClick, AActor, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetLongPress, AActor, UDreamPointerEventData)
+DREAMUI_FACADE_CALL(CallOnWorldTargetScroll, AActor, UDreamPointerEventData)
+#undef DREAMUI_FACADE_CALL
 #pragma endregion
 
 #pragma region WorldTarget
-namespace DreamEventSystemLocal
+FDreamUIPointerWorldTarget* UDreamEventSystem::GetPointerWorldTarget(int InPointerID, bool bCreateIfNotExist)
 {
-	/**
-	 * ExecuteDreamUIInterface for an actor: what a world ray hit that is not a widget.
-	 *
-	 * The actor first, then each of its components, every one that implements the interface -- the set
-	 * LGUI's default fire type reached from a hit component. Bubbling follows the widget rule exactly:
-	 * only when the caller allows it and no handler said stop, and up the attachment chain, which is the
-	 * nearest thing an actor has to a parent widget. A copy of the component list is walked, because a
-	 * handler is game code and may add or remove components on the actor it was handed.
-	 */
-	template<class UEventData, class UInterfaceFunction>
-	void ExecuteDreamUIInterfaceOnActor(AActor* InActor, UEventData* InEventData, UClass* InInterfaceClass,
-		UInterfaceFunction InInterfaceFunction, bool bInAllowEventBubbleUp)
-	{
-		if (!IsValid(InActor))
-		{
-			return;
-		}
-		bool bBubbleUp = bInAllowEventBubbleUp;
-		if (InActor->GetClass()->ImplementsInterface(InInterfaceClass))
-		{
-			if (InInterfaceFunction(InActor, InEventData) == false)
-			{
-				bBubbleUp = false;
-			}
-		}
-		TInlineComponentArray<UActorComponent*> Components(InActor);
-		for (UActorComponent* Component : Components)
-		{
-			if (!IsValid(Component))continue;
-			if (Component->GetClass()->ImplementsInterface(InInterfaceClass))
-			{
-				if (InInterfaceFunction(Component, InEventData) == false)
-				{
-					bBubbleUp = false;
-				}
-			}
-		}
-		// Asked again: a handler may have destroyed the actor it was dispatched to.
-		if (bBubbleUp && IsValid(InActor))
-		{
-			if (AActor* ParentActor = InActor->GetAttachParentActor())
-			{
-				ExecuteDreamUIInterfaceOnActor(ParentActor, InEventData, InInterfaceClass, InInterfaceFunction, true);
-			}
-		}
-	}
-}
-
-UDreamEventSystem::FDreamPointerWorldTarget* UDreamEventSystem::GetPointerWorldTarget(int InPointerID, bool bCreateIfNotExist)
-{
-	if (bCreateIfNotExist)
-	{
-		return &PointerWorldTargetMap.FindOrAdd(InPointerID);
-	}
-	return PointerWorldTargetMap.Find(InPointerID);
+	UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetPointerWorldTarget(InPointerID, bCreateIfNotExist) : nullptr;
 }
 AActor* UDreamEventSystem::GetHoveredWorldTarget(int InPointerID)const
 {
-	const FDreamPointerWorldTarget* State = PointerWorldTargetMap.Find(InPointerID);
-	return State != nullptr ? State->Hovered.Get() : nullptr;
+	const UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetHoveredWorldTarget(InPointerID) : nullptr;
 }
 AActor* UDreamEventSystem::GetPressedWorldTarget(int InPointerID)const
 {
-	const FDreamPointerWorldTarget* State = PointerWorldTargetMap.Find(InPointerID);
-	return State != nullptr ? State->Pressed.Get() : nullptr;
-}
-
-// Each one what its CallOnPointer* counterpart is -- event type, bubbling, both broadcasts -- with the
-// actor in place of the widget. The broadcast matters to more than the Blueprint: the tooltip listens
-// for Enter, Exit and Down, and a press on a surface dismisses a tooltip as a press anywhere does.
-void UDreamEventSystem::CallOnWorldTargetEnter(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::Enter;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerEnterExitInterface::StaticClass(), IDreamPointerEnterExitInterface::Execute_OnPointerEnter, false);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnWorldTargetExit(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::Exit;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerEnterExitInterface::StaticClass(), IDreamPointerEnterExitInterface::Execute_OnPointerExit, false);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnWorldTargetDown(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::Down;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerDownUpInterface::StaticClass(), IDreamPointerDownUpInterface::Execute_OnPointerDown, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnWorldTargetUp(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::Up;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerDownUpInterface::StaticClass(), IDreamPointerDownUpInterface::Execute_OnPointerUp, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnWorldTargetClick(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::Click;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerClickInterface::StaticClass(), IDreamPointerClickInterface::Execute_OnPointerClick, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnWorldTargetDoubleClick(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::DoubleClick;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerDoubleClickInterface::StaticClass(), IDreamPointerDoubleClickInterface::Execute_OnPointerDoubleClick, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnWorldTargetLongPress(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::LongPress;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerLongPressInterface::StaticClass(), IDreamPointerLongPressInterface::Execute_OnPointerLongPress, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-void UDreamEventSystem::CallOnWorldTargetScroll(AActor* InTarget, UDreamPointerEventData* EventData)
-{
-	EventData->EventType = EDreamUIPointerEventType::Scroll;
-	LogEventData(EventData);
-	DreamEventSystemLocal::ExecuteDreamUIInterfaceOnActor(InTarget, EventData,
-		UDreamPointerScrollInterface::StaticClass(), IDreamPointerScrollInterface::Execute_OnPointerScroll, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
+	const UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetPressedWorldTarget(InPointerID) : nullptr;
 }
 #pragma endregion
 

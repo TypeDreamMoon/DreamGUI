@@ -83,9 +83,10 @@ bool FDreamPointerMoveClaimsPointerInputTypeTest::RunTest(const FString& Paramet
 	TestEqual(TEXT("...and carries the position with it"),
 		FVector2D(EventData->PointerPosition.X, EventData->PointerPosition.Y), FVector2D(120.0, 240.0));
 
-	// The touch path had the same hole.
-	Rig.Module->InputNavigation(EDreamUINavigationDirection::Up, true, 3);
-	UDreamPointerEventData* TouchData = Rig.EventSystem->GetPointerEventData(3, true);
+	// The touch path had the same hole. A finger's pointer is 100 plus the finger.
+	const int32 TouchPointer = UDreamStandaloneInputModule::GetTouchPointerID(3);
+	Rig.Module->InputNavigation(EDreamUINavigationDirection::Up, true, TouchPointer);
+	UDreamPointerEventData* TouchData = Rig.EventSystem->GetPointerEventData(TouchPointer, true);
 	TestEqual(TEXT("The touch pointer is in navigation mode"),
 		TouchData->InputType, EDreamUIPointerInputType::Navigation);
 	Rig.Module->InputTouchMoved(3, FVector(10.0, 20.0, 0.0));

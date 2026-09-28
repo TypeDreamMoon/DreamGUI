@@ -15,8 +15,11 @@
 #include "Engine/HitResult.h"
 #include "Engine/World.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
+#include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
 #include "Extensions/DreamUIRenderTargetInteraction.h"
 
@@ -28,6 +31,7 @@
 #include "Driver/DreamDriverWorldSpace.h"
 #include "Interaction/DreamDragInteractionTestTypes.h"
 #include "Interaction/DreamPressInteractionTestTypes.h"
+#include "DreamPointerEventTestTypes.h"
 
 /*
  * A CANVAS DRAWN INTO A TEXTURE AND SHOWN ON A MESH IN THE WORLD.
@@ -36,16 +40,14 @@
  *   1. the world pointer's ray hits the surface -- a UDreamUIRenderTargetGeometrySource, whose body is
  *      a thin box the size of the texture -- which a world-space raycaster only sees as an occluder
  *      (bOccludeByWorld: UDreamBaseRaycaster::RaycastWorld, a hit that carries no widget);
- *   2. the UDreamUIRenderTargetInteraction on the same actor is told the pointer entered, pressed and
- *      released through its IDreamPointer* handlers -- a hit that carries no widget is dispatched to
- *      the actor that owns the hit primitive and to its components that implement the pointer
- *      interfaces (UDreamEventSystem::CallOnWorldTarget*, from UDreamPointerInputModule) -- and keeps
- *      the world pointer's event data;
- *   3. every frame, in its own TickComponent, it asks the surface for the hit's UV
+ *   2. the input pipeline, finding that world hit on an actor that carries a nested surface -- the
+ *      UDreamUIRenderTargetInteraction -- asks it where the ray lands on its canvas
+ *      (IDreamUINestedSurface::ResolveNestedHit): the surface asks its mesh for the hit's UV
  *      (IDreamUIRenderTargetInteractionSourceInterface::PerformLineTrace), treats the UV as the canvas's
- *      view point, deprojects it through the canvas's matrix, traces the canvas, and drives a pointer
- *      of its own through UDreamPointerInputModule::ProcessPointerEvent -- which is what clicks the
- *      button drawn on the texture.
+ *      view point, deprojects it through the canvas's matrix and traces the canvas;
+ *   3. the widget found there is what the pointer is over, and the one pipeline hovers, presses, clicks
+ *      and drags it -- the world pointer's own event data, its own click run, its own broadcasts. The
+ *      interaction used to drive a pointer of its own from its TickComponent, one for every pointer.
  *
  * The driver aims by running that backwards (FDreamDriverProjection's camera overloads): the widget's
  * canvas point -> its view point, which is the UV -> the point of the surface's mesh carrying that UV
@@ -62,9 +64,7 @@
  * -- invisible for a point straight ahead, visible anywhere else, which is what the drag's halfway
  * value catches.
  *
- * The interaction does its work in TickComponent, which a game's tick manager calls and the headless
- * pump does not; these tests tick it once after every pumped frame (DreamDriverWorld::
- * TickLikeAnEngineFrame), the place in a frame a component in the event system's tick group would run.
+ * The surface needs no tick of its own: nothing but the world's input frame -- the pump -- serves it.
  */
 namespace DreamDriverRenderTargetMeshTestLocal
 {
@@ -90,14 +90,6 @@ namespace DreamDriverRenderTargetMeshTestLocal
 		return InWidget->GetWorldTransform().TransformPosition(FVector(0.0, LocalCentre.X, LocalCentre.Y));
 	}
 
-	/** A Then step that gives the render-target interaction the tick an engine frame would have given it. */
-	TFunction<void(FDreamDriverContext&)> TickTheInteraction(UDreamUIRenderTargetInteraction* InInteraction)
-	{
-		return [InInteraction](FDreamDriverContext& InContext)
-		{
-			DreamDriverWorld::TickLikeAnEngineFrame(InInteraction, InContext.FrameSeconds);
-		};
-	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -295,17 +287,12 @@ bool FDreamDriverRenderTargetMeshClickTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
-	// Move, press, release, one frame each, with the interaction's tick after every frame.
-	const TFunction<void(FDreamDriverContext&)> Tick = TickTheInteraction(Screen.Interaction);
+	// Move, press, release, one frame each.
 	TestTrue(TEXT("The click at the button's pixel completes"), Rig.Driver()->Sequence()
 		.MoveToPixel(Pixel.GetValue())
-		.Then(Tick)
 		.Press()
-		.Then(Tick)
 		.Release()
-		.Then(Tick)
 		.WaitFrames(1)
-		.Then(Tick)
 		.Perform());
 	TestEqual(TEXT("The button shown on the surface was pressed once"), Listener->PressedCount, 1);
 	TestEqual(TEXT("... and clicked once"), Listener->ClickedCount, 1);
@@ -357,31 +344,263 @@ bool FDreamDriverRenderTargetMeshSliderTest::RunTest(const FString& Parameters)
 	TStrongObjectPtr<UDreamDragInteractionProbe> Values(NewObject<UDreamDragInteractionProbe>());
 	Slider->OnValueChanged.AddDynamic(Values.Get(), &UDreamDragInteractionProbe::RecordFloat);
 
-	// Past any threshold on the first move (forty pixels is nineteen texels, against the canvas pointer's
-	// five), halfway, then there; the interaction ticked after every frame.
+	// Past any threshold on the first move -- forty pixels against the surface's five -- halfway, then there.
 	const FVector2D Halfway(Travel->Min.X + 0.5 * TravelLength, Grip->Y);
 	const FVector2D FirstMove = Grip.GetValue() + FVector2D(40.0, 0.0);
-	const TFunction<void(FDreamDriverContext&)> Tick = TickTheInteraction(Screen.Interaction);
 	TestTrue(TEXT("The drag along the slider shown on the surface completes"), Rig.Driver()->Sequence()
 		.MoveToPixel(Grip.GetValue())
-		.Then(Tick)
 		.Press()
-		.Then(Tick)
 		.MoveToPixel(FirstMove)
-		.Then(Tick)
 		.MoveToPixel((FirstMove + Halfway) * 0.5)
-		.Then(Tick)
 		.MoveToPixel(Halfway)
-		.Then(Tick)
 		.WaitFrames(1)
-		.Then(Tick)
 		.Release()
-		.Then(Tick)
 		.Perform());
 	TestTrue(TEXT("The slider reported a value change"), Values->NumFloats() > 0);
 	// Two percent: a pixel here is a fraction of a texel, so anything further off is the canvas ray
 	// landing somewhere other than where the surface was hit.
 	TestNearlyEqual(TEXT("The value is halfway"), Slider->GetValue(), 0.5f, 0.02f);
+	return true;
+}
+
+/** Two pointers on one surface: each presses the widget under itself, not a pointer the surface made for both. */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDriverRenderTargetMeshTwoPointersTest,
+	"DreamGUI.Driver.RenderTargetMesh.TwoPointersOnTheSurfaceEachPressTheButtonUnderThemselves",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDriverRenderTargetMeshTwoPointersTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDriverRenderTargetMeshTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamDriverWorldSpaceRaycaster* Pointer = DreamDriverWorld::AttachWorldPointer(Rig, EyeAtTheOrigin(), EDreamWorldPointerSource::Mouse);
+	const DreamDriverWorld::FDreamRenderTargetMesh Screen = DreamDriverWorld::MakeRenderTargetMesh(Rig, TEXT("Screen"), SurfaceAhead(), TargetSize);
+	if (!TestNotNull(TEXT("A world pointer"), Pointer) || !TestTrue(TEXT("The render-target canvas and its surface were built"), Screen.IsComplete()))
+	{
+		return false;
+	}
+	Pointer->SetOccludeByWorld(true);
+
+	TStrongObjectPtr<UDreamPressInteractionListener> LeftListener(NewObject<UDreamPressInteractionListener>());
+	TStrongObjectPtr<UDreamPressInteractionListener> RightListener(NewObject<UDreamPressInteractionListener>());
+	UDreamButton* Left = Rig.MakeControl<UDreamButton>(TEXT("Left"), Screen.CanvasRoot, FVector2D(120.0, 60.0), FVector2D(-100.0, 0.0));
+	UDreamButton* Right = Rig.MakeControl<UDreamButton>(TEXT("Right"), Screen.CanvasRoot, FVector2D(120.0, 60.0), FVector2D(100.0, 0.0));
+	if (!TestTrue(TEXT("Two buttons on the render-target canvas"), Left != nullptr && Right != nullptr))
+	{
+		return false;
+	}
+	Left->OnPressed.AddDynamic(LeftListener.Get(), &UDreamPressInteractionListener::HandlePressed);
+	Left->OnClicked.AddDynamic(LeftListener.Get(), &UDreamPressInteractionListener::HandleClicked);
+	Right->OnPressed.AddDynamic(RightListener.Get(), &UDreamPressInteractionListener::HandlePressed);
+	Right->OnClicked.AddDynamic(RightListener.Get(), &UDreamPressInteractionListener::HandleClicked);
+	Rig.PumpFrames(2);
+	const FDreamDriverVirtualCamera* Camera = Rig.Context().Camera.Get();
+	const TOptional<FVector2D> LeftPixel = FDreamDriverProjection::WidgetCentrePixel(Left, Camera);
+	const TOptional<FVector2D> RightPixel = FDreamDriverProjection::WidgetCentrePixel(Right, Camera);
+	if (!TestTrue(TEXT("Both buttons on the surface have a pixel"), LeftPixel.IsSet() && RightPixel.IsSet()))
+	{
+		return false;
+	}
+
+	// The mouse on one, a finger on the other, both held at once.
+	TestTrue(TEXT("Both presses complete"), Rig.Driver()->Sequence()
+		.MoveToPixel(LeftPixel.GetValue())
+		.Press()
+		.TouchDown(1, RightPixel.GetValue())
+		.WaitFrames(1)
+		.Then([this, Left, Right](FDreamDriverContext& InContext)
+		{
+			const UDreamPointerEventData* Mouse = InContext.GetPointerEventData(0);
+			const UDreamPointerEventData* Finger = InContext.GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(1));
+			TestTrue(TEXT("The mouse is over the left button, through the surface"), Mouse != nullptr && Mouse->EnterWidget != nullptr
+				&& (Mouse->EnterWidget == Left || Mouse->EnterWidget->IsChildOf(Left)));
+			TestTrue(TEXT("The finger is over the right one"), Finger != nullptr && Finger->EnterWidget != nullptr
+				&& (Finger->EnterWidget == Right || Finger->EnterWidget->IsChildOf(Right)));
+		})
+		.Release()
+		.TouchUp(1)
+		.WaitFrames(1)
+		.Perform());
+	TestEqual(TEXT("The left button was pressed once"), LeftListener->PressedCount, 1);
+	TestEqual(TEXT("... and clicked once"), LeftListener->ClickedCount, 1);
+	TestEqual(TEXT("The right button was pressed once"), RightListener->PressedCount, 1);
+	TestEqual(TEXT("... and clicked once"), RightListener->ClickedCount, 1);
+	return true;
+}
+
+/** A double click on the surface is a double click: the surface's pipeline used to keep no click run at all. */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDriverRenderTargetMeshDoubleClickTest,
+	"DreamGUI.Driver.RenderTargetMesh.TwoQuickClicksOnTheSurfaceAreADoubleClick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDriverRenderTargetMeshDoubleClickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDriverRenderTargetMeshTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamDriverWorldSpaceRaycaster* Pointer = DreamDriverWorld::AttachWorldPointer(Rig, EyeAtTheOrigin(), EDreamWorldPointerSource::Mouse);
+	const DreamDriverWorld::FDreamRenderTargetMesh Screen = DreamDriverWorld::MakeRenderTargetMesh(Rig, TEXT("Screen"), SurfaceAhead(), TargetSize);
+	if (!TestNotNull(TEXT("A world pointer"), Pointer) || !TestTrue(TEXT("The render-target canvas and its surface were built"), Screen.IsComplete()))
+	{
+		return false;
+	}
+	Pointer->SetOccludeByWorld(true);
+	UDreamWidget* Target = Rig.MakeWidget(TEXT("Target"), Screen.CanvasRoot, FVector2D(120.0, 60.0));
+	UDreamDoubleClickCounter* Counter = Target != nullptr ? Target->AddComponent<UDreamDoubleClickCounter>() : nullptr;
+	if (!TestNotNull(TEXT("A widget on the surface counting double clicks"), Counter))
+	{
+		return false;
+	}
+	Rig.PumpFrames(2);
+	const TOptional<FVector2D> Pixel = FDreamDriverProjection::WidgetCentrePixel(Target, Rig.Context().Camera.Get());
+	if (!TestTrue(TEXT("The widget on the surface has a pixel"), Pixel.IsSet()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Two clicks a frame apart complete"), Rig.Driver()->Sequence()
+		.MoveToPixel(Pixel.GetValue())
+		.Press()
+		.Release()
+		.Press()
+		.Release()
+		.WaitFrames(1)
+		.Perform());
+	TestEqual(TEXT("The second press reached the widget on the surface as a double click"), Counter->DoubleClickCount, 1);
+	TestEqual(TEXT("... the second of its run"), Counter->LastReportedClickCount, 2);
+	return true;
+}
+
+/** What happens on the surface is heard like any widget's events: the tooltip and the drag visuals listen there. */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDriverRenderTargetMeshBroadcastTest,
+	"DreamGUI.Driver.RenderTargetMesh.EventsOnTheSurfaceAreBroadcastLikeAnyOtherWidgets",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDriverRenderTargetMeshBroadcastTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDriverRenderTargetMeshTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamDriverWorldSpaceRaycaster* Pointer = DreamDriverWorld::AttachWorldPointer(Rig, EyeAtTheOrigin(), EDreamWorldPointerSource::Mouse);
+	const DreamDriverWorld::FDreamRenderTargetMesh Screen = DreamDriverWorld::MakeRenderTargetMesh(Rig, TEXT("Screen"), SurfaceAhead(), TargetSize);
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("A world pointer"), Pointer) || !TestTrue(TEXT("The render-target canvas and its surface were built"), Screen.IsComplete())
+		|| !TestNotNull(TEXT("An input subsystem to listen to"), Input))
+	{
+		return false;
+	}
+	Pointer->SetOccludeByWorld(true);
+	UDreamWidget* Target = Rig.MakeWidget(TEXT("Target"), Screen.CanvasRoot, FVector2D(120.0, 60.0));
+	if (!TestNotNull(TEXT("A widget on the surface"), Target))
+	{
+		return false;
+	}
+	Rig.PumpFrames(2);
+	const TOptional<FVector2D> Pixel = FDreamDriverProjection::WidgetCentrePixel(Target, Rig.Context().Camera.Get());
+	if (!TestTrue(TEXT("The widget on the surface has a pixel"), Pixel.IsSet()))
+	{
+		return false;
+	}
+
+	int32 EntersOnTarget = 0;
+	int32 DownsOnTarget = 0;
+	const FDelegateHandle Listening = Input->GetOnInputEvent().AddLambda([&EntersOnTarget, &DownsOnTarget, Target](UDreamBaseEventData* InEventData)
+	{
+		const UDreamPointerEventData* PointerEvent = Cast<UDreamPointerEventData>(InEventData);
+		if (PointerEvent == nullptr)
+		{
+			return;
+		}
+		if (PointerEvent->EventType == EDreamUIPointerEventType::Enter && PointerEvent->EnterWidget == Target)
+		{
+			++EntersOnTarget;
+		}
+		if (PointerEvent->EventType == EDreamUIPointerEventType::Down && PointerEvent->PressWidget == Target)
+		{
+			++DownsOnTarget;
+		}
+	});
+	const bool bPerformed = Rig.Driver()->Sequence()
+		.MoveToPixel(Pixel.GetValue())
+		.Press()
+		.Release()
+		.WaitFrames(1)
+		.Perform();
+	Input->GetOnInputEvent().Remove(Listening);
+	TestTrue(TEXT("The hover and the click on the surface complete"), bPerformed);
+	// Once for every widget entered on the way in -- the widget and the canvas it is on -- each naming the deepest.
+	TestTrue(TEXT("Entering the widget on the surface was broadcast"), EntersOnTarget > 0);
+	TestEqual(TEXT("... and so was pressing it"), DownsOnTarget, 1);
+	return true;
+}
+
+/** The surface's actor destroyed while one of its buttons is held: the press goes nowhere, and nothing is left held. */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDriverRenderTargetMeshDestroyedTest,
+	"DreamGUI.Driver.RenderTargetMesh.ASurfaceDestroyedWhileItsButtonIsHeldLeavesNothingHeld",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDriverRenderTargetMeshDestroyedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDriverRenderTargetMeshTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamDriverWorldSpaceRaycaster* Pointer = DreamDriverWorld::AttachWorldPointer(Rig, EyeAtTheOrigin(), EDreamWorldPointerSource::Mouse);
+	const DreamDriverWorld::FDreamRenderTargetMesh Screen = DreamDriverWorld::MakeRenderTargetMesh(Rig, TEXT("Screen"), SurfaceAhead(), TargetSize);
+	if (!TestNotNull(TEXT("A world pointer"), Pointer) || !TestTrue(TEXT("The render-target canvas and its surface were built"), Screen.IsComplete()))
+	{
+		return false;
+	}
+	Pointer->SetOccludeByWorld(true);
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	UDreamButton* Button = Rig.MakeControl<UDreamButton>(TEXT("Play"), Screen.CanvasRoot, FVector2D(160.0, 60.0));
+	if (!TestNotNull(TEXT("A button on the render-target canvas"), Button))
+	{
+		return false;
+	}
+	Button->OnClicked.AddDynamic(Listener.Get(), &UDreamPressInteractionListener::HandleClicked);
+	Rig.PumpFrames(2);
+	const TOptional<FVector2D> Pixel = FDreamDriverProjection::WidgetCentrePixel(Button, Rig.Context().Camera.Get());
+	AActor* SurfaceActor = Screen.Surface != nullptr ? Screen.Surface->GetOwner() : nullptr;
+	if (!TestTrue(TEXT("The button has a pixel and the surface an actor"), Pixel.IsSet() && SurfaceActor != nullptr))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The press, the surface going and the release complete"), Rig.Driver()->Sequence()
+		.MoveToPixel(Pixel.GetValue())
+		.Press()
+		.Then([SurfaceActor](FDreamDriverContext&)
+		{
+			SurfaceActor->Destroy();
+		})
+		.WaitFrames(1)
+		.Release()
+		.WaitFrames(1)
+		.Then([this](FDreamDriverContext& InContext)
+		{
+			const UDreamPointerEventData* Mouse = InContext.GetPointerEventData(0);
+			TestTrue(TEXT("Nothing is left held"), Mouse == nullptr || !Mouse->bNowIsTriggerPressed);
+		})
+		.Perform());
+	TestEqual(TEXT("A button whose surface went away mid-press is not clicked"), Listener->ClickedCount, 0);
 	return true;
 }
 

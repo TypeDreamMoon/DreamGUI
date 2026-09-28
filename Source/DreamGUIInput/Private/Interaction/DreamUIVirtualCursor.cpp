@@ -10,6 +10,8 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "DreamGUI.h"
 #include "Engine/GameViewportClient.h"
@@ -45,12 +47,19 @@ void UDreamUIVirtualCursorSubsystem::Initialize(FSubsystemCollectionBase& Collec
 {
 	Super::Initialize(Collection);
 	DreamUI::EnrolWorldService(Collection, *this, *this);
+	// Every player's device changes, from the moment the world has input. Whether the cursor follows the device is the
+	// setting's call, asked when the device changes.
+	if (UDreamUIInputSubsystem* Input = Collection.InitializeDependency<UDreamUIInputSubsystem>())
+	{
+		Input->GetOnInputDeviceChanged().AddUObject(this, &UDreamUIVirtualCursorSubsystem::HandleInputDeviceChanged);
+		InputSubsystem = Input;
+	}
 }
 
 void UDreamUIVirtualCursorSubsystem::Deinitialize()
 {
-	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
-	// world had no manager to take it.
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the world had
+	// no manager to take it.
 	if (!bTornDownForWorld && GetWorld() != nullptr)
 	{
 		TeardownForWorld(*GetWorld());
@@ -64,14 +73,19 @@ void UDreamUIVirtualCursorSubsystem::TeardownForWorld(UWorld& InWorld)
 	{
 		return;
 	}
-	bTornDownForWorld = true;
-	DeactivateVirtualCursor();
-	if (UDreamEventSystem* EventSystem = AutoModeEventSystem.Get())
+	TArray<int32> UserIndices;
+	UserStates.GetKeys(UserIndices);
+	for (const int32 UserIndex : UserIndices)
 	{
-		EventSystem->GetInputDeviceChangedEvent().RemoveAll(this);
+		DeactivateVirtualCursorForUser(UserIndex);
 	}
-	AutoModeEventSystem.Reset();
-	bAutoModeSubscribed = false;
+	bTornDownForWorld = true;
+	if (UDreamUIInputSubsystem* Input = InputSubsystem.Get())
+	{
+		Input->GetOnInputDeviceChanged().RemoveAll(this);
+	}
+	InputSubsystem.Reset();
+	UserStates.Reset();
 }
 
 TStatId UDreamUIVirtualCursorSubsystem::GetStatId() const
@@ -79,182 +93,223 @@ TStatId UDreamUIVirtualCursorSubsystem::GetStatId() const
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UDreamUIVirtualCursorSubsystem, STATGROUP_Tickables);
 }
 
-UDreamStandaloneInputModule* UDreamUIVirtualCursorSubsystem::GetInputModule() const
+UDreamStandaloneInputModule* UDreamUIVirtualCursorSubsystem::GetInputModule(int32 InUserIndex) const
 {
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(GetWorld(), 0);
-	return IsValid(EventSystem) ? Cast<UDreamStandaloneInputModule>(EventSystem->GetCurrentInputModule()) : nullptr;
+	const UDreamUIInputSubsystem* Input = InputSubsystem.Get();
+	const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
+	return User != nullptr ? Cast<UDreamStandaloneInputModule>(User->GetInputModule()) : nullptr;
 }
 
-void UDreamUIVirtualCursorSubsystem::EnsureAutoModeSubscribed()
+void UDreamUIVirtualCursorSubsystem::HandleInputDeviceChanged(int32 InUserIndex, EDreamUIInputDevice InDevice)
 {
-	if (bAutoModeSubscribed || !UDreamGUISettings::Get()->bAutoVirtualCursorOnGamepad)
+	if (!UDreamGUISettings::Get()->bAutoVirtualCursorOnGamepad)
 	{
 		return;
 	}
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(GetWorld(), 0);
-	if (!IsValid(EventSystem))
-	{
-		return;
-	}
-	EventSystem->GetInputDeviceChangedEvent().AddUObject(this, &UDreamUIVirtualCursorSubsystem::HandleInputDeviceChanged);
-	AutoModeEventSystem = EventSystem;
-	bAutoModeSubscribed = true;
-	// The device the player is already holding counts too, not just the next switch.
-	HandleInputDeviceChanged(EventSystem->GetCurrentInputDevice());
-}
-
-void UDreamUIVirtualCursorSubsystem::HandleInputDeviceChanged(EDreamUIInputDevice InDevice)
-{
 	if (InDevice == EDreamUIInputDevice::Gamepad)
 	{
-		ActivateVirtualCursor();
+		ActivateVirtualCursorForUser(InUserIndex);
 	}
 	else
 	{
-		DeactivateVirtualCursor();
+		DeactivateVirtualCursorForUser(InUserIndex);
 	}
 }
 
 void UDreamUIVirtualCursorSubsystem::ActivateVirtualCursor()
 {
-	if (bActive)
-	{
-		return;
-	}
-	UDreamStandaloneInputModule* Module = GetInputModule();
-	if (Module == nullptr)
-	{
-		UE_LOG(DreamGUI, Warning, TEXT("[VirtualCursor] No standalone input module to drive; is the event system alive?"));
-		return;
-	}
-	bActive = true;
-	bConfirmDown = false;
-	Module->SetOverrideMousePosition(true);
-	FVector2D Start = FVector2D::ZeroVector;
-	Module->GetMousePosition(Start);
-	CursorPosition = Start;
-
-	// The visual. A settings class when one is named, else the built-in square -- crude on purpose:
-	// visible everywhere with zero assets, replaced the moment a project cares.
-	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
-	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRoot() : nullptr;
-	if (IsValid(ScreenRoot))
-	{
-		CursorHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
-		CursorHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
-		CursorHolder->SetDisplayName(TEXT("DreamUIVirtualCursor"));
-
-		UClass* CursorClass = UDreamGUISettings::LoadSettingClass(UDreamGUISettings::Get()->VirtualCursorClass, TEXT("VirtualCursorClass"));
-		if (CursorClass == nullptr)
-		{
-			UDreamRectBlock* Block = CursorHolder->CreateNewVisual<UDreamRectBlock>();
-			Block->SetColor(BuiltInCursorColor);
-			CursorHolder->SetSizeDelta(FVector2D(BuiltInCursorSize, BuiltInCursorSize));
-		}
-		CursorHolder->SetParentBeforeRegister(ScreenRoot);
-		RegisterDreamWidgetHierarchy(CursorHolder);
-		if (CursorClass != nullptr)
-		{
-			CursorWidget = CreateDreamWidget(GetWorld(), CursorClass, CursorHolder);
-			if (IsValid(CursorWidget))
-			{
-				CursorHolder->SetSizeDelta(FVector2D(CursorWidget->GetWidth(), CursorWidget->GetHeight()));
-				CursorWidget->SetAnchoredPosition(FVector2D::ZeroVector);
-			}
-		}
-		UDreamCanvas* Canvas = CursorHolder->GetComponent<UDreamCanvas>();
-		if (!IsValid(Canvas))
-		{
-			Canvas = Cast<UDreamCanvas>(CursorHolder->AddComponent(UDreamCanvas::StaticClass()));
-		}
-		if (IsValid(Canvas))
-		{
-			Canvas->SetOverrideSorting(true);
-			Canvas->SetSortOrder(CursorSortOrder, /*PropagateToChildrenCanvas*/true);
-		}
-		UpdateCursorVisualPosition();
-	}
+	ActivateVirtualCursorForUser(0);
 }
 
 void UDreamUIVirtualCursorSubsystem::DeactivateVirtualCursor()
 {
-	if (!bActive)
-	{
-		return;
-	}
-	bActive = false;
-	if (UDreamStandaloneInputModule* Module = GetInputModule())
-	{
-		if (bConfirmDown)
-		{
-			Module->InputTrigger(FVector(CursorPosition.X, CursorPosition.Y, 0.0f), false);
-		}
-		Module->SetOverrideMousePosition(false);
-	}
-	bConfirmDown = false;
-	DestroyCursorVisual();
+	DeactivateVirtualCursorForUser(0);
 }
 
-void UDreamUIVirtualCursorSubsystem::Tick(float DeltaTime)
+bool UDreamUIVirtualCursorSubsystem::IsVirtualCursorActive() const
 {
-	EnsureAutoModeSubscribed();
-	if (!bActive)
-	{
-		return;
-	}
-	UDreamStandaloneInputModule* Module = GetInputModule();
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	if (Module == nullptr || PlayerController == nullptr)
-	{
-		return;
-	}
-
-	float StickX = 0.0f;
-	float StickY = 0.0f;
-	PlayerController->GetInputAnalogStickState(EControllerAnalogStick::CAS_LeftStick, StickX, StickY);
-	const FVector2D Stick(StickX, StickY);
-	if (!Stick.IsNearlyZero(0.08f))
-	{
-		// Viewport coordinates run top-left down, the stick runs up: Y flips.
-		CursorPosition += FVector2D(Stick.X, -Stick.Y) * UDreamGUISettings::Get()->VirtualCursorSpeed * DeltaTime;
-		FVector2D ViewportSize(1920.0f, 1080.0f);
-		if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
-		{
-			Viewport->GetViewportSize(ViewportSize);
-		}
-		CursorPosition.X = FMath::Clamp(CursorPosition.X, 0.0f, ViewportSize.X);
-		CursorPosition.Y = FMath::Clamp(CursorPosition.Y, 0.0f, ViewportSize.Y);
-		Module->SetOverridePointerPosition(CursorPosition);
-		UpdateCursorVisualPosition();
-	}
-
-	// The confirm button is NOT polled here any more. Polling IsInputKeyDown put this beside the
-	// action router instead of behind it -- a screen that bound the confirm key to an action had the
-	// router consume the press, and the cursor still clicked whatever was under it: one keypress,
-	// two outcomes. The preset actor pushes the state through SetConfirmPressed after offering the
-	// key to the router, so a claimed confirm never becomes a click.
+	return IsVirtualCursorActiveForUser(0);
 }
 
 void UDreamUIVirtualCursorSubsystem::SetConfirmPressed(bool bInPressed)
 {
-	if (!bActive || bInPressed == bConfirmDown)
+	SetConfirmPressedForUser(0, bInPressed);
+}
+
+FVector2D UDreamUIVirtualCursorSubsystem::GetVirtualCursorPosition() const
+{
+	return GetVirtualCursorPositionForUser(0);
+}
+
+bool UDreamUIVirtualCursorSubsystem::IsVirtualCursorActiveForUser(int32 InUserIndex) const
+{
+	const FDreamUIVirtualCursorUserState* State = UserStates.Find(InUserIndex);
+	return State != nullptr && State->bActive;
+}
+
+FVector2D UDreamUIVirtualCursorSubsystem::GetVirtualCursorPositionForUser(int32 InUserIndex) const
+{
+	const FDreamUIVirtualCursorUserState* State = UserStates.Find(InUserIndex);
+	return State != nullptr ? State->CursorPosition : FVector2D::ZeroVector;
+}
+
+void UDreamUIVirtualCursorSubsystem::ActivateVirtualCursorForUser(int32 InUserIndex)
+{
+	if (bTornDownForWorld || IsVirtualCursorActiveForUser(InUserIndex))
 	{
 		return;
 	}
-	UDreamStandaloneInputModule* Module = GetInputModule();
+	UDreamStandaloneInputModule* Module = GetInputModule(InUserIndex);
+	if (Module == nullptr)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[VirtualCursor] Player %d has no standalone input module to drive; is its event system alive?"), InUserIndex);
+		return;
+	}
+	FDreamUIVirtualCursorUserState& State = UserStates.FindOrAdd(InUserIndex);
+	State.bActive = true;
+	State.bConfirmDown = false;
+	Module->SetOverrideMousePosition(true);
+	FVector2D Start = FVector2D::ZeroVector;
+	Module->GetMousePosition(Start);
+	State.CursorPosition = Start;
+
+	// The visual, on this player's screen. A settings class when one is named, else the built-in square -- crude on
+	// purpose: visible everywhere with zero assets, replaced the moment a project cares.
+	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
+	const UDreamUIInputSubsystem* Input = InputSubsystem.Get();
+	const int32 ScreenIndex = Input != nullptr ? Input->GetScreenIndexForUser(InUserIndex) : InUserIndex;
+	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForUserIndex(ScreenIndex) : nullptr;
+	if (!IsValid(ScreenRoot))
+	{
+		return;
+	}
+	State.CursorHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
+	State.CursorHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
+	State.CursorHolder->SetDisplayName(TEXT("DreamUIVirtualCursor"));
+
+	UClass* CursorClass = UDreamGUISettings::LoadSettingClass(UDreamGUISettings::Get()->VirtualCursorClass, TEXT("VirtualCursorClass"));
+	if (CursorClass == nullptr)
+	{
+		UDreamRectBlock* Block = State.CursorHolder->CreateNewVisual<UDreamRectBlock>();
+		Block->SetColor(BuiltInCursorColor);
+		State.CursorHolder->SetSizeDelta(FVector2D(BuiltInCursorSize, BuiltInCursorSize));
+	}
+	State.CursorHolder->SetParentBeforeRegister(ScreenRoot);
+	RegisterDreamWidgetHierarchy(State.CursorHolder);
+	if (CursorClass != nullptr)
+	{
+		State.CursorWidget = CreateDreamWidget(GetWorld(), CursorClass, State.CursorHolder);
+		if (IsValid(State.CursorWidget))
+		{
+			State.CursorHolder->SetSizeDelta(FVector2D(State.CursorWidget->GetWidth(), State.CursorWidget->GetHeight()));
+			State.CursorWidget->SetAnchoredPosition(FVector2D::ZeroVector);
+		}
+	}
+	UDreamCanvas* Canvas = State.CursorHolder->GetComponent<UDreamCanvas>();
+	if (!IsValid(Canvas))
+	{
+		Canvas = Cast<UDreamCanvas>(State.CursorHolder->AddComponent(UDreamCanvas::StaticClass()));
+	}
+	if (IsValid(Canvas))
+	{
+		Canvas->SetOverrideSorting(true);
+		Canvas->SetSortOrder(CursorSortOrder, /*PropagateToChildrenCanvas*/true);
+	}
+	UpdateCursorVisualPosition(InUserIndex, State);
+}
+
+void UDreamUIVirtualCursorSubsystem::DeactivateVirtualCursorForUser(int32 InUserIndex)
+{
+	FDreamUIVirtualCursorUserState* State = UserStates.Find(InUserIndex);
+	if (State == nullptr || !State->bActive)
+	{
+		return;
+	}
+	State->bActive = false;
+	if (UDreamStandaloneInputModule* Module = GetInputModule(InUserIndex))
+	{
+		if (State->bConfirmDown)
+		{
+			Module->InputTrigger(FVector(State->CursorPosition.X, State->CursorPosition.Y, 0.0f), false);
+		}
+		Module->SetOverrideMousePosition(false);
+	}
+	State->bConfirmDown = false;
+	DestroyCursorVisual(*State);
+}
+
+void UDreamUIVirtualCursorSubsystem::Tick(float DeltaTime)
+{
+	UWorld* World = GetWorld();
+	UDreamUIInputSubsystem* Input = InputSubsystem.Get();
+	if (World == nullptr || Input == nullptr)
+	{
+		return;
+	}
+	// The UI clock: a cursor in a slowed-down game moves as fast as it does at full speed.
+	const float UIDeltaSeconds = DreamUIInputClock::GetUIDeltaSeconds(this, DeltaTime);
+	for (TPair<int32, FDreamUIVirtualCursorUserState>& Pair : UserStates)
+	{
+		FDreamUIVirtualCursorUserState& State = Pair.Value;
+		if (!State.bActive)
+		{
+			continue;
+		}
+		const UDreamUIInputUser* User = Input->GetUser(Pair.Key);
+		UDreamStandaloneInputModule* Module = GetInputModule(Pair.Key);
+		// This player's stick, not the first controller's: a second player's cursor used to follow the first
+		// player's thumb.
+		APlayerController* PlayerController = User != nullptr ? User->GetPlayerController() : nullptr;
+		if (Module == nullptr || PlayerController == nullptr)
+		{
+			continue;
+		}
+		float StickX = 0.0f;
+		float StickY = 0.0f;
+		PlayerController->GetInputAnalogStickState(EControllerAnalogStick::CAS_LeftStick, StickX, StickY);
+		const FVector2D Stick(StickX, StickY);
+		if (!Stick.IsNearlyZero(0.08f))
+		{
+			// Viewport coordinates run top-left down, the stick runs up: Y flips.
+			State.CursorPosition += FVector2D(Stick.X, -Stick.Y) * UDreamGUISettings::Get()->VirtualCursorSpeed * UIDeltaSeconds;
+			FVector2D ViewportSize(1920.0f, 1080.0f);
+			if (UGameViewportClient* Viewport = World->GetGameViewport())
+			{
+				Viewport->GetViewportSize(ViewportSize);
+			}
+			State.CursorPosition.X = FMath::Clamp(State.CursorPosition.X, 0.0f, ViewportSize.X);
+			State.CursorPosition.Y = FMath::Clamp(State.CursorPosition.Y, 0.0f, ViewportSize.Y);
+			Module->SetOverridePointerPosition(State.CursorPosition);
+			UpdateCursorVisualPosition(Pair.Key, State);
+		}
+		// The confirm button is NOT polled here: the preset actor pushes it through SetConfirmPressedForUser after
+		// offering the key to the action router, so a claimed confirm never becomes a click.
+	}
+}
+
+void UDreamUIVirtualCursorSubsystem::SetConfirmPressedForUser(int32 InUserIndex, bool bInPressed)
+{
+	FDreamUIVirtualCursorUserState* State = UserStates.Find(InUserIndex);
+	if (State == nullptr || !State->bActive || bInPressed == State->bConfirmDown)
+	{
+		return;
+	}
+	UDreamStandaloneInputModule* Module = GetInputModule(InUserIndex);
 	if (Module == nullptr)
 	{
 		return;
 	}
-	bConfirmDown = bInPressed;
-	Module->InputTrigger(FVector(CursorPosition.X, CursorPosition.Y, 0.0f), bInPressed);
+	State->bConfirmDown = bInPressed;
+	Module->InputTrigger(FVector(State->CursorPosition.X, State->CursorPosition.Y, 0.0f), bInPressed);
 }
 
-void UDreamUIVirtualCursorSubsystem::UpdateCursorVisualPosition()
+void UDreamUIVirtualCursorSubsystem::UpdateCursorVisualPosition(int32 InUserIndex, FDreamUIVirtualCursorUserState& State)
 {
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
-	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRoot() : nullptr;
-	if (!IsValid(CursorHolder) || !IsValid(ScreenRoot))
+	const UDreamUIInputSubsystem* Input = InputSubsystem.Get();
+	const int32 ScreenIndex = Input != nullptr ? Input->GetScreenIndexForUser(InUserIndex) : InUserIndex;
+	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForUserIndex(ScreenIndex) : nullptr;
+	if (!IsValid(State.CursorHolder) || !IsValid(ScreenRoot))
 	{
 		return;
 	}
@@ -264,21 +319,20 @@ void UDreamUIVirtualCursorSubsystem::UpdateCursorVisualPosition()
 		return;
 	}
 	FVector2D InCanvas = FVector2D::ZeroVector;
-	if (RootCanvas->ConvertPositionFromViewportToCanvas(CursorPosition, InCanvas))
+	if (RootCanvas->ConvertPositionFromViewportToCanvas(State.CursorPosition, InCanvas))
 	{
-		// Bottom-left-origin out of the conversion, center-origin into the anchored position --
-		// the tooltip's and drag visual's missing shift, third copy.
+		// Bottom-left-origin out of the conversion, center-origin into the anchored position.
 		InCanvas -= FVector2D(ScreenRoot->GetWidth() * 0.5f, ScreenRoot->GetHeight() * 0.5f);
-		CursorHolder->SetAnchoredPosition(InCanvas);
+		State.CursorHolder->SetAnchoredPosition(InCanvas);
 	}
 }
 
-void UDreamUIVirtualCursorSubsystem::DestroyCursorVisual()
+void UDreamUIVirtualCursorSubsystem::DestroyCursorVisual(FDreamUIVirtualCursorUserState& State)
 {
-	if (IsValid(CursorHolder))
+	if (IsValid(State.CursorHolder))
 	{
-		CursorHolder->DestroyWidget();
+		State.CursorHolder->DestroyWidget();
 	}
-	CursorHolder = nullptr;
-	CursorWidget = nullptr;
+	State.CursorHolder = nullptr;
+	State.CursorWidget = nullptr;
 }

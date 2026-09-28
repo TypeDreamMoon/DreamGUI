@@ -20,6 +20,7 @@
 #include "EnhancedPlayerInput.h"
 #include "Event/DreamEnhancedInputEventSystemActor.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "GameFramework/InputSettings.h"
@@ -272,9 +273,10 @@ namespace DreamEnhancedPresetAssetTestLocal
 				World->TimeSeconds += DeltaSeconds;
 			}
 			FDreamEnhancedPresetInputFrame::Run(*Controller, DeltaSeconds, bPaused);
-			if (UActorComponent* EventSystem = Preset->GetEventSystem())
+			// The world's input frame, which ticks while paused as the engine's does.
+			if (UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(World))
 			{
-				EventSystem->TickComponent(DeltaSeconds, bPaused ? LEVELTICK_PauseTick : LEVELTICK_All, nullptr);
+				InputSubsystem->ProcessFrame(DeltaSeconds);
 			}
 		}
 

@@ -282,8 +282,9 @@ bool FDreamEventSystemTouchRetirementTest::RunTest(const FString& Parameters)
 	const FVector TouchPoint(120.0, 240.0, 0.0);
 	Rig.Module->InputTouchTrigger(true, 3, TouchPoint);
 	Rig.Module->ProcessInput();
+	const int32 FingerPointer = UDreamStandaloneInputModule::GetTouchPointerID(3);
 	TestTrue(TEXT("A finger on the glass is a pointer"),
-		Rig.EventSystem->GetPointerEventDataMap().Contains(3));
+		Rig.EventSystem->GetPointerEventDataMap().Contains(FingerPointer));
 
 	Rig.Module->InputTouchTrigger(false, 3, TouchPoint);
 	Rig.Module->ProcessInput();
@@ -291,7 +292,7 @@ bool FDreamEventSystemTouchRetirementTest::RunTest(const FString& Parameters)
 	// per-frame branch went on line-tracing from where the finger left the glass. Ten fingers used once
 	// each is ten full raycasts a frame for the rest of the session.
 	TestFalse(TEXT("A lifted finger is retired once its release has been dispatched"),
-		Rig.EventSystem->GetPointerEventDataMap().Contains(3));
+		Rig.EventSystem->GetPointerEventDataMap().Contains(FingerPointer));
 
 	// The mouse is not a finger. Its button coming up leaves the mouse exactly where it is, and its
 	// pointer has to survive to keep hovering.
@@ -545,8 +546,8 @@ bool FDreamEventSystemPinchGestureTest::RunTest(const FString& Parameters)
 	Rig.Module->InputTouchTrigger(true, 0, FVector(300.0, 300.0, 0.0));
 	Rig.Module->InputTouchTrigger(true, 1, FVector(400.0, 300.0, 0.0));
 	Rig.Module->ProcessInput();
-	UDreamPointerEventData* FingerA = Rig.EventSystem->GetPointerEventData(0, false);
-	UDreamPointerEventData* FingerB = Rig.EventSystem->GetPointerEventData(1, false);
+	UDreamPointerEventData* FingerA = Rig.EventSystem->GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(0), false);
+	UDreamPointerEventData* FingerB = Rig.EventSystem->GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(1), false);
 	if (!TestTrue(TEXT("Both fingers are pointers"), FingerA != nullptr && FingerB != nullptr))
 	{
 		return false;

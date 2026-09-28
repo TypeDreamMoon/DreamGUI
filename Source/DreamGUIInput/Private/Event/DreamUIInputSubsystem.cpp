@@ -11,12 +11,15 @@
 #include "DreamGUI.h"
 #include "Engine/DataTable.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
+#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Event/DreamUIInputUser.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/Actor.h"
@@ -29,6 +32,24 @@
 #if WITH_EDITOR
 #include "EditorViewportClient.h"
 #endif
+
+void FDreamUIInputTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+	if (UDreamUIInputSubsystem* InputSubsystem = Subsystem.Get())
+	{
+		InputSubsystem->ProcessFrame(DeltaTime);
+	}
+}
+
+FString FDreamUIInputTickFunction::DiagnosticMessage()
+{
+	return TEXT("FDreamUIInputTickFunction");
+}
+
+FName FDreamUIInputTickFunction::DiagnosticContext(bool bDetailed)
+{
+	return FName(TEXT("DreamUIInput"));
+}
 
 UDreamUIInputSubsystem* UDreamUIInputSubsystem::Get(const UObject* InWorldContext)
 {
@@ -63,13 +84,56 @@ void UDreamUIInputSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	DreamUI::EnrolWorldService(Collection, *this, *this);
 }
 
+void UDreamUIInputSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+	if (bTornDownForWorld || !InWorld.IsGameWorld())
+	{
+		return;
+	}
+	// The world's input frame. Only a game world plays, so only a game world has one; a rig that drives a world by
+	// hand calls ProcessFrame in its place.
+	if (!TickFunction.IsTickFunctionRegistered() && InWorld.PersistentLevel != nullptr)
+	{
+		TickFunction.Subsystem = this;
+		TickFunction.TickGroup = TG_PostPhysics;
+		TickFunction.bCanEverTick = true;
+		TickFunction.bStartWithTickEnabled = true;
+		TickFunction.bTickEvenWhenPaused = true;
+		TickFunction.RegisterTickFunction(InWorld.PersistentLevel);
+		TickFunction.SetTickFunctionEnable(true);
+	}
+	// A player for every local player there is, and for every one who joins later -- who used to get no event
+	// system and no raycaster, and whose Escape cancelled player 0's drag.
+	if (UGameInstance* GameInstance = InWorld.GetGameInstance())
+	{
+		const TArray<ULocalPlayer*>& LocalPlayers = GameInstance->GetLocalPlayers();
+		for (int32 Index = 0; Index < LocalPlayers.Num(); ++Index)
+		{
+			if (LocalPlayers[Index] != nullptr)
+			{
+				GetOrCreateUser(Index);
+			}
+		}
+		if (!LocalPlayerAddedHandle.IsValid())
+		{
+			LocalPlayerAddedHandle = GameInstance->OnLocalPlayerAddedEvent.AddUObject(this, &UDreamUIInputSubsystem::HandleLocalPlayerAdded);
+			LocalPlayerRemovedHandle = GameInstance->OnLocalPlayerRemovedEvent.AddUObject(this, &UDreamUIInputSubsystem::HandleLocalPlayerRemoved);
+		}
+	}
+}
+
 void UDreamUIInputSubsystem::Deinitialize()
 {
-	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
-	// world had no manager to take it.
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the world had
+	// no manager to take it.
 	if (!bTornDownForWorld && GetWorld() != nullptr)
 	{
 		TeardownForWorld(*GetWorld());
+	}
+	if (TickFunction.IsTickFunctionRegistered())
+	{
+		TickFunction.UnRegisterTickFunction();
 	}
 #if WITH_EDITOR
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
@@ -86,24 +150,189 @@ void UDreamUIInputSubsystem::TeardownForWorld(UWorld& InWorld)
 	{
 		return;
 	}
-	bTornDownForWorld = true;
-	// The interaction objects this subsystem spawned are its to take away again. They are transient, so a
-	// level change would not carry them anyway; destroying them here is what keeps a PIE session that
-	// starts and stops repeatedly from leaving a host actor behind on every run.
-	for (TPair<int32, TObjectPtr<AActor>>& HostPair : InteractionHosts)
+	// Every player lets go of everything while the world is still whole: every hovered widget gets its Exit, every
+	// pressed one its Up, every drag its end or cancel. Dispatching any of it from the collector instead would reach
+	// into a world that is already gone.
+	TArray<UDreamUIInputUser*> AllUsers;
+	GetUsers(AllUsers);
+	for (UDreamUIInputUser* User : AllUsers)
 	{
-		if (IsValid(HostPair.Value))
-		{
-			HostPair.Value->Destroy();
-		}
+		OnUserRemoved.Broadcast(User);
+		User->Shutdown();
+	}
+	bTornDownForWorld = true;
+	if (TickFunction.IsTickFunctionRegistered())
+	{
+		TickFunction.UnRegisterTickFunction();
+	}
+	if (UGameInstance* GameInstance = InWorld.GetGameInstance())
+	{
+		GameInstance->OnLocalPlayerAddedEvent.Remove(LocalPlayerAddedHandle);
+		GameInstance->OnLocalPlayerRemovedEvent.Remove(LocalPlayerRemovedHandle);
+	}
+	LocalPlayerAddedHandle.Reset();
+	LocalPlayerRemovedHandle.Reset();
+	// The interaction objects this subsystem spawned are its to take away again. They are transient, so a level
+	// change would not carry them anyway; destroying them here is what keeps a PIE session that starts and stops
+	// repeatedly from leaving a host actor behind on every run.
+	TArray<int32> Indices;
+	InteractionHosts.GetKeys(Indices);
+	for (const int32 Index : Indices)
+	{
+		DestroyCreatedInteraction(Index);
+	}
+	CreatedEventSystemActors.GetKeys(Indices);
+	for (const int32 Index : Indices)
+	{
+		DestroyCreatedInteraction(Index);
 	}
 	InteractionHosts.Reset();
-	if (IsValid(CreatedEventSystemActor))
+	CreatedEventSystemActors.Reset();
+}
+
+#pragma region Users
+UDreamUIInputUser* UDreamUIInputSubsystem::GetUser(int32 InUserIndex) const
+{
+	const TObjectPtr<UDreamUIInputUser>* Found = Users.Find(InUserIndex);
+	return Found != nullptr ? Found->Get() : nullptr;
+}
+
+int32 UDreamUIInputSubsystem::GetScreenIndexForUser(int32 InUserIndex) const
+{
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr || !User->IsScriptUser())
 	{
-		CreatedEventSystemActor->Destroy();
-		CreatedEventSystemActor = nullptr;
+		return InUserIndex;
+	}
+	// The screen the screen UI gives the first player, by the same reckoning.
+	const UWorld* World = GetWorld();
+	return World != nullptr ? UDreamWidget::GetLocalPlayerIndexOf(World->GetFirstPlayerController()) : 0;
+}
+
+UDreamUIInputUser* UDreamUIInputSubsystem::GetOrCreateUser(int32 InUserIndex)
+{
+	if (UDreamUIInputUser* Existing = GetUser(InUserIndex))
+	{
+		return Existing;
+	}
+	if (bTornDownForWorld || InUserIndex < 0)
+	{
+		return nullptr;
+	}
+	const UWorld* World = GetWorld();
+	const UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+	const bool bHasLocalPlayer = GameInstance != nullptr && GameInstance->GetLocalPlayerByIndex(InUserIndex) != nullptr;
+	UDreamUIInputUser* User = NewObject<UDreamUIInputUser>(this, NAME_None, RF_Transient);
+	User->InitializeUser(InUserIndex, !bHasLocalPlayer);
+	Users.Add(InUserIndex, User);
+	OnUserAdded.Broadcast(User);
+	return User;
+}
+
+void UDreamUIInputSubsystem::GetUsers(TArray<UDreamUIInputUser*>& OutUsers) const
+{
+	OutUsers.Reset();
+	TArray<int32> Indices;
+	Users.GetKeys(Indices);
+	Indices.Sort();
+	for (const int32 Index : Indices)
+	{
+		if (UDreamUIInputUser* User = GetUser(Index))
+		{
+			OutUsers.Add(User);
+		}
 	}
 }
+
+void UDreamUIInputSubsystem::RemoveUser(int32 InUserIndex)
+{
+	UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr)
+	{
+		return;
+	}
+	OnUserRemoved.Broadcast(User);
+	User->Shutdown();
+	Users.Remove(InUserIndex);
+	ImplicitEventSystems.Remove(InUserIndex);
+}
+
+void UDreamUIInputSubsystem::ProcessFrame(float InDeltaSeconds)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	if (!ensureMsgf(!bInFrame, TEXT("%s: an input frame was started from inside one. Refused."), *GetName()))
+	{
+		return;
+	}
+	TGuardValue<bool> InFrame(bInFrame, true);
+	// In player order, and over a copy: a handler may add or remove a player.
+	TArray<UDreamUIInputUser*> AllUsers;
+	GetUsers(AllUsers);
+	for (UDreamUIInputUser* User : AllUsers)
+	{
+		if (IsValid(User))
+		{
+			User->ProcessFrame(InDeltaSeconds);
+		}
+	}
+}
+
+void UDreamUIInputSubsystem::HandleLocalPlayerAdded(ULocalPlayer* InLocalPlayer)
+{
+	const UWorld* World = GetWorld();
+	UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+	if (GameInstance == nullptr || InLocalPlayer == nullptr)
+	{
+		return;
+	}
+	const int32 Index = GameInstance->GetLocalPlayers().IndexOfByKey(InLocalPlayer);
+	if (Index != INDEX_NONE)
+	{
+		GetOrCreateUser(Index);
+	}
+}
+
+void UDreamUIInputSubsystem::HandleLocalPlayerRemoved(ULocalPlayer* InLocalPlayer)
+{
+	const UWorld* World = GetWorld();
+	UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+	if (GameInstance == nullptr || InLocalPlayer == nullptr)
+	{
+		return;
+	}
+	// Called before the local player leaves the array, so its index is still the one its player was made under.
+	const int32 Index = GameInstance->GetLocalPlayers().IndexOfByKey(InLocalPlayer);
+	if (Index == INDEX_NONE)
+	{
+		return;
+	}
+	RemoveUser(Index);
+	DestroyCreatedInteraction(Index);
+}
+
+void UDreamUIInputSubsystem::DestroyCreatedInteraction(int32 InUserIndex)
+{
+	if (TObjectPtr<AActor>* Host = InteractionHosts.Find(InUserIndex))
+	{
+		if (IsValid(*Host))
+		{
+			(*Host)->Destroy();
+		}
+		InteractionHosts.Remove(InUserIndex);
+	}
+	if (TObjectPtr<AActor>* Created = CreatedEventSystemActors.Find(InUserIndex))
+	{
+		if (IsValid(*Created))
+		{
+			(*Created)->Destroy();
+		}
+		CreatedEventSystemActors.Remove(InUserIndex);
+	}
+}
+#pragma endregion
 
 #pragma region EventSystemRegistry
 UDreamEventSystem* UDreamUIInputSubsystem::GetEventSystemByUserIndex(int32 InUserIndex) const
@@ -119,11 +348,9 @@ void UDreamUIInputSubsystem::AddEventSystem(UDreamEventSystem* InEventSystem)
 {
 	if (!IsValid(InEventSystem))return;
 
-	// The entry is a weak pointer, so "a key exists" and "an event system is registered" are different
-	// questions. A level reload destroys the old component and leaves its stale entry behind: asking
-	// that entry for an owner to name was a null dereference, and reporting it was a duplicate error
-	// about a component that no longer exists -- after which the new level's UI was never registered
-	// and stopped responding entirely.
+	// The entry is a weak pointer, so "a key exists" and "an event system is registered" are different questions.
+	// A level reload destroys the old component and leaves its stale entry behind: reporting it as a duplicate
+	// meant the new level's UI was never registered and stopped responding entirely.
 	const TWeakObjectPtr<UDreamEventSystem>* InstancePtr = MapUserIndexToEventSystem.Find(InEventSystem->GetUserIndex());
 	UDreamEventSystem* Instance = InstancePtr != nullptr ? InstancePtr->Get() : nullptr;
 	if (IsValid(Instance) && Instance != InEventSystem)
@@ -142,10 +369,15 @@ void UDreamUIInputSubsystem::AddEventSystem(UDreamEventSystem* InEventSystem)
 #if WITH_EDITOR
 		FDreamUIUtils::EditorNotification(FText::FromString(ErrorMsg), false, 10);
 #endif
+		return;
 	}
-	else
+	MapUserIndexToEventSystem.Add(InEventSystem->GetUserIndex(), InEventSystem);
+	// The player it was placed for takes its settings, and its Blueprint events relay the player's.
+	if (UDreamUIInputUser* User = GetOrCreateUser(InEventSystem->GetUserIndex()))
 	{
-		MapUserIndexToEventSystem.Add(InEventSystem->GetUserIndex(), InEventSystem);
+		User->SetEventSystem(InEventSystem);
+		InEventSystem->BindToUser(User);
+		InEventSystem->WriteSettingsToUser(User);
 	}
 }
 
@@ -156,64 +388,115 @@ void UDreamUIInputSubsystem::RemoveEventSystem(UDreamEventSystem* InEventSystem)
 	const int32 UserIndex = InEventSystem->GetUserIndex();
 	const TWeakObjectPtr<UDreamEventSystem>* InstancePtr = MapUserIndexToEventSystem.Find(UserIndex);
 	if (InstancePtr == nullptr)return;
-	// Removed by identity, not by user index. An unregister arriving late -- the previous level's event
-	// system being destroyed after the new one has already claimed the same index -- used to evict the
-	// live registration and leave that player's UI deaf with nothing in the log.
+	// Removed by identity, not by user index: an unregister arriving late -- the previous level's event system
+	// destroyed after the new one has claimed the same index -- used to evict the live registration.
 	UDreamEventSystem* Instance = InstancePtr->Get();
 	if (Instance == InEventSystem || Instance == nullptr)
 	{
 		MapUserIndexToEventSystem.Remove(UserIndex);
 	}
+	if (Instance != InEventSystem)
+	{
+		return;
+	}
+	// The input source for this player is gone. Whatever its pointers hovered and pressed is owed its Exit and Up
+	// now, not at some later frame nobody feeds -- and never from the collector. The pointers go too: nothing feeds
+	// them any more, and one left behind would be traced from where it last was, re-entering what it just exited.
+	if (UDreamUIInputUser* User = GetUser(UserIndex))
+	{
+		User->RetireAllPointers();
+		if (User->GetEventSystem() == InEventSystem)
+		{
+			User->SetEventSystem(nullptr);
+		}
+	}
+	InEventSystem->UnbindFromUser();
+}
+
+void UDreamUIInputSubsystem::ForgetEventSystem(UDreamEventSystem* InEventSystem)
+{
+	if (InEventSystem == nullptr)return;
+	const int32 UserIndex = InEventSystem->GetUserIndex();
+	if (const TWeakObjectPtr<UDreamEventSystem>* InstancePtr = MapUserIndexToEventSystem.Find(UserIndex))
+	{
+		UDreamEventSystem* Instance = InstancePtr->Get();
+		if (Instance == InEventSystem || Instance == nullptr)
+		{
+			MapUserIndexToEventSystem.Remove(UserIndex);
+		}
+	}
+}
+
+UDreamEventSystem* UDreamUIInputSubsystem::GetOrCreateImplicitEventSystem(int32 InUserIndex)
+{
+	if (TObjectPtr<UDreamEventSystem>* Found = ImplicitEventSystems.Find(InUserIndex); Found != nullptr && IsValid(*Found))
+	{
+		return Found->Get();
+	}
+	UDreamUIInputUser* User = GetOrCreateUser(InUserIndex);
+	if (User == nullptr)
+	{
+		return nullptr;
+	}
+	// Never registered as a component: a component no actor carries needs no world to live in, which is what lets a
+	// Blueprint ask for a player's event system without the level having one.
+	UDreamEventSystem* Implicit = NewObject<UDreamEventSystem>(this, NAME_None, RF_Transient);
+	Implicit->InitializeImplicit(this, User);
+	ImplicitEventSystems.Add(InUserIndex, Implicit);
+	return Implicit;
 }
 #pragma endregion
 
 #pragma region FocusHoverCapture
 bool UDreamUIInputSubsystem::SetFocus(UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId)
 {
-	UDreamEventSystem* EventSystem = GetEventSystemByUserIndex(InUserIndex);
-	if (EventSystem == nullptr)
+	UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr || User->IsShutDown())
 	{
 		return false;
 	}
-	UDreamBaseEventData* EventData = EventSystem->GetPointerEventData(InPointerId, true);
-	EventSystem->SetSelectWidget(InWidget, EventData);
-	// The navigation cursor has to move with focus, or the next directional press starts from wherever
-	// focus USED to be and appears to teleport. UDreamUINavigationStack::FocusSelectable already does
-	// both halves for the same reason.
-	EventSystem->SetHighlightedComponentForNavigation(InWidget, InPointerId);
+	UDreamPointerEventData* EventData = User->GetPointerEventData(InPointerId, true);
+	User->SetSelectWidget(InWidget, EventData);
+	// The navigation cursor has to move with focus, or the next directional press starts from wherever focus USED
+	// to be and appears to teleport.
+	if (EventData != nullptr)
+	{
+		EventData->SetHighlightedWidgetForNavigation(InWidget);
+	}
 	return true;
 }
 
 bool UDreamUIInputSubsystem::HasFocus(const UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId) const
 {
-	UDreamEventSystem* EventSystem = GetEventSystemByUserIndex(InUserIndex);
-	return EventSystem != nullptr && EventSystem->GetCurrentSelectedComponent(InPointerId) == InWidget;
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	const UDreamPointerEventData* EventData = User != nullptr ? User->FindPointerEventData(InPointerId) : nullptr;
+	return EventData != nullptr && EventData->SelectedComponent == InWidget;
 }
 
 void UDreamUIInputSubsystem::ClearFocus(UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId)
 {
-	if (UDreamEventSystem* EventSystem = GetEventSystemByUserIndex(InUserIndex))
+	if (UDreamUIInputUser* User = GetUser(InUserIndex))
 	{
-		UDreamBaseEventData* EventData = EventSystem->GetPointerEventData(InPointerId, false);
-		if (EventData && EventData->SelectedComponent == InWidget)
+		UDreamPointerEventData* EventData = User->FindPointerEventData(InPointerId);
+		if (EventData != nullptr && EventData->SelectedComponent == InWidget)
 		{
-			EventSystem->SetSelectWidget(nullptr, EventData);
+			User->SetSelectWidget(nullptr, EventData);
 		}
 	}
 }
 
 bool UDreamUIInputSubsystem::HasFocusedDescendant(const UDreamWidget* InWidget, int32 InUserIndex) const
 {
-	UDreamEventSystem* EventSystem = GetEventSystemByUserIndex(InUserIndex);
-	if (EventSystem == nullptr)
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr)
 	{
 		return false;
 	}
-	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
+	for (const TPair<int32, TObjectPtr<UDreamPointerEventData>>& Entry : User->GetPointerEventDataMap())
 	{
-		UDreamWidget* Focused = EventSystem->GetCurrentSelectedComponent(Entry.Key);
-		// Descendants, not "this or its descendants" -- UMG draws the same line, and a widget asking
-		// whether something INSIDE it has focus already knows whether it has focus itself.
+		const UDreamWidget* Focused = IsValid(Entry.Value) ? Entry.Value->SelectedComponent.Get() : nullptr;
+		// Descendants, not "this or its descendants" -- UMG draws the same line, and a widget asking whether
+		// something INSIDE it has focus already knows whether it has focus itself.
 		if (IsValid(Focused) && Focused != InWidget && Focused->IsChildOf(InWidget))
 		{
 			return true;
@@ -224,12 +507,12 @@ bool UDreamUIInputSubsystem::HasFocusedDescendant(const UDreamWidget* InWidget, 
 
 bool UDreamUIInputSubsystem::IsHovered(const UDreamWidget* InWidget, int32 InUserIndex) const
 {
-	UDreamEventSystem* EventSystem = GetEventSystemByUserIndex(InUserIndex);
-	if (EventSystem == nullptr)
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr)
 	{
 		return false;
 	}
-	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
+	for (const TPair<int32, TObjectPtr<UDreamPointerEventData>>& Entry : User->GetPointerEventDataMap())
 	{
 		const UDreamPointerEventData* PointerEvent = Entry.Value;
 		if (!IsValid(PointerEvent))
@@ -240,9 +523,7 @@ bool UDreamUIInputSubsystem::IsHovered(const UDreamWidget* InWidget, int32 InUse
 		{
 			return true;
 		}
-		// The enter STACK as well, so a button still reads as hovered while the pointer is over its own
-		// label. Slate gets that for free because hover propagates to parents; here the stack is where
-		// that fact lives.
+		// The enter STACK as well, so a button still reads as hovered while the pointer is over its own label.
 		for (const TObjectPtr<UDreamWidget>& Entered : PointerEvent->EnterWidgetStack)
 		{
 			if (Entered.Get() == InWidget)
@@ -256,25 +537,21 @@ bool UDreamUIInputSubsystem::IsHovered(const UDreamWidget* InWidget, int32 InUse
 
 bool UDreamUIInputSubsystem::HasMouseCapture(const UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerIndex) const
 {
-	UDreamEventSystem* EventSystem = GetEventSystemByUserIndex(InUserIndex);
-	if (EventSystem == nullptr)
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr)
 	{
 		return false;
 	}
-	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
+	for (const TPair<int32, TObjectPtr<UDreamPointerEventData>>& Entry : User->GetPointerEventDataMap())
 	{
 		if (InPointerIndex >= 0 && Entry.Key != InPointerIndex)
 		{
 			continue;
 		}
 		const UDreamPointerEventData* PointerEvent = Entry.Value;
-		if (!IsValid(PointerEvent))
-		{
-			continue;
-		}
-		// Held down AND pressed on this widget: that pointer's drag and its release go here whatever it
-		// travels over in between, which is the whole of what capture buys a caller.
-		if (PointerEvent->bNowIsTriggerPressed && PointerEvent->PressWidget.Get() == InWidget)
+		// Held down AND pressed on this widget: that pointer's drag and its release go here whatever it travels
+		// over in between, which is the whole of what capture buys a caller.
+		if (IsValid(PointerEvent) && PointerEvent->bNowIsTriggerPressed && PointerEvent->PressWidget.Get() == InWidget)
 		{
 			return true;
 		}
@@ -284,8 +561,8 @@ bool UDreamUIInputSubsystem::HasMouseCapture(const UDreamWidget* InWidget, int32
 
 UDreamPointerEventData* UDreamUIInputSubsystem::FindPointer(int32 InUserIndex, int32 InPointerId) const
 {
-	UDreamEventSystem* EventSystem = GetEventSystemByUserIndex(InUserIndex);
-	return IsValid(EventSystem) ? EventSystem->GetPointerEventData(InPointerId, false) : nullptr;
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	return User != nullptr ? User->FindPointerEventData(InPointerId) : nullptr;
 }
 #pragma endregion
 
@@ -303,9 +580,8 @@ FDreamUIActionHandle UDreamUIInputSubsystem::RegisterWidgetAction(UDreamWidget* 
 	{
 		return FDreamUIActionHandle();
 	}
-	// Scoped to the screen the owner is inside, so the binding is live only while that screen is in front.
-	// A widget with no scope above it binds globally, which is the honest reading of "there is no screen
-	// this belongs to".
+	// Scoped to the screen the owner is inside, so the binding is live only while that screen is in front. A widget
+	// with no scope above it binds globally, which is the honest reading of "there is no screen this belongs to".
 	UDreamUINavigationScope* Scope = nullptr;
 	for (UDreamWidget* Walker = InOwner; IsValid(Walker) && Scope == nullptr; Walker = Walker->GetParent())
 	{
@@ -347,9 +623,8 @@ bool UDreamUIInputSubsystem::CancelActiveDrag()
 namespace DreamUIInputSubsystemLocal
 {
 	/**
-	 * The index of the first local player -- the one a null owning player resolves to everywhere else in
-	 * the plugin. Usually 0, but it is read rather than assumed so that "the first player" keeps meaning
-	 * the same thing here as it does to a widget asking who owns it.
+	 * The index of the first local player -- the one a null owning player resolves to everywhere else in the
+	 * plugin. Usually 0, but it is read rather than assumed.
 	 */
 	int32 FirstLocalPlayerIndex(const UWorld* InWorld)
 	{
@@ -530,13 +805,11 @@ namespace DreamUIInputSubsystemLocal
 void UDreamUIInputSubsystem::EnsureInteractionForPlayer(int32 InUserIndex, EDreamInteractionKind InKind)
 {
 	UWorld* World = GetWorld();
-	if (World == nullptr)return;
+	if (World == nullptr || bTornDownForWorld)return;
 
-	// The event system for THIS player, not "the one at index 0". A second local player with no event
-	// system of their own gets nothing rather than borrowing the first player's cursor.
-	//
-	// The registry is only half the answer: a placed event system enrols itself when it begins play,
-	// so during level startup the component can exist while the map does not know about it yet.
+	// The event system for THIS player, not "the one at index 0". The registry is only half the answer: a placed
+	// event system enrols itself when it begins play, so during level startup the component can exist while the
+	// map does not know about it yet.
 	bool bHasEventSystem = GetEventSystemByUserIndex(InUserIndex) != nullptr;
 	if (!bHasEventSystem)
 	{
@@ -550,25 +823,48 @@ void UDreamUIInputSubsystem::EnsureInteractionForPlayer(int32 InUserIndex, EDrea
 			}
 		}
 	}
-	// Only the first player gets one spawned for them. A second local player's event system has to be
-	// placed deliberately -- with its UserIndex set -- because spawning a copy of the default actor
-	// would give both players the same index and make each read the other's input.
-	if (!bHasEventSystem && InUserIndex != DreamUIInputSubsystemLocal::FirstLocalPlayerIndex(World))
+	TObjectPtr<AActor>* CreatedSlot = CreatedEventSystemActors.Find(InUserIndex);
+	if (!bHasEventSystem && (CreatedSlot == nullptr || !IsValid(*CreatedSlot)))
 	{
-		UE_LOG(DreamGUI, Warning,
-			TEXT("Local player %d has DreamUI to point at but no event system with that UserIndex, so it takes no input. ")
-			TEXT("Place a DreamEventSystem with UserIndex %d for that player."), InUserIndex, InUserIndex);
-	}
-	else if (!bHasEventSystem && !IsValid(CreatedEventSystemActor))
-	{
-		if (UClass* EventSystemClass = UDreamGUISettings::LoadSettingClass(
+		const int32 FirstIndex = DreamUIInputSubsystemLocal::FirstLocalPlayerIndex(World);
+		const UGameInstance* GameInstance = World->GetGameInstance();
+		const bool bIsLocalPlayer = GameInstance != nullptr && GameInstance->GetLocalPlayerByIndex(InUserIndex) != nullptr;
+		// Every local player gets one -- listening to that player's own controller, which is what keeps two players
+		// from reading each other's input. Beyond the eight players the engine's automatic input covers, a project
+		// has to place its own.
+		const bool bCanListen = InUserIndex == FirstIndex
+			|| (bIsLocalPlayer && InUserIndex >= 0 && InUserIndex < (int32)EAutoReceiveInput::Player7);
+		if (!bCanListen)
+		{
+			UE_LOG(DreamGUI, Warning,
+				TEXT("Player %d has DreamUI to point at but no event system with that UserIndex, so it takes no input. ")
+				TEXT("Place a DreamEventSystem with UserIndex %d for that player."), InUserIndex, InUserIndex);
+		}
+		else if (UClass* EventSystemClass = UDreamGUISettings::LoadSettingClass(
 			UDreamGUISettings::Get()->EventSystemActorClass, TEXT("EventSystemActorClass")))
 		{
 			FActorSpawnParameters SpawnParameters;
-			SpawnParameters.Name = MakeUniqueObjectName(World, EventSystemClass, TEXT("DreamEventSystem"));
+			SpawnParameters.Name = MakeUniqueObjectName(World, EventSystemClass, *FString::Printf(TEXT("DreamEventSystem_P%d"), InUserIndex));
 			SpawnParameters.ObjectFlags |= RF_Transient;
 			SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			CreatedEventSystemActor = World->SpawnActor<AActor>(EventSystemClass, FTransform::Identity, SpawnParameters);
+			SpawnParameters.bDeferConstruction = true;
+			const FTransform SpawnTransform = FTransform::Identity;
+			AActor* Created = World->SpawnActor<AActor>(EventSystemClass, SpawnTransform, SpawnParameters);
+			if (IsValid(Created))
+			{
+				// A later player's controller, set before BeginPlay: AutoReceiveInput is what the preset listens with, and
+				// what its event system's UserIndex is made to agree with. The first player's is the class's own.
+				if (InUserIndex != FirstIndex)
+				{
+					Created->AutoReceiveInput = (EAutoReceiveInput::Type)(InUserIndex + 1);
+				}
+				if (UDreamEventSystem* CreatedEventSystem = Created->FindComponentByClass<UDreamEventSystem>())
+				{
+					CreatedEventSystem->SetUserIndex(InUserIndex);
+				}
+				Created->FinishSpawning(SpawnTransform);
+				CreatedEventSystemActors.Add(InUserIndex, Created);
+			}
 		}
 		else
 		{
@@ -577,9 +873,8 @@ void UDreamUIInputSubsystem::EnsureInteractionForPlayer(int32 InUserIndex, EDrea
 		}
 	}
 
-	// An authored raycaster wins. Somebody who placed a world-space raycaster on their pawn, or a screen
-	// raycaster with a hand-tuned drag threshold, said what they wanted; adding a default one beside it
-	// would give that player two rays into the same UI.
+	// An authored raycaster wins. Somebody who placed a world-space raycaster on their pawn, or a screen raycaster
+	// with a hand-tuned drag threshold, said what they wanted.
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World))
 	{
 		for (const TWeakObjectPtr<UDreamBaseRaycaster>& RaycasterPtr : Manager->GetAllRaycasterArray())
@@ -609,10 +904,8 @@ void UDreamUIInputSubsystem::EnsureInteractionForPlayer(int32 InUserIndex, EDrea
 	}
 	AActor* Host = HostSlot.Get();
 	if (!IsValid(Host))return;
-	// Asked again on the host itself, because a raycaster only enrols in the manager's raycaster list when
-	// it activates, and a world that has not begun play never activates one. Without this the second call
-	// would add a second raycaster to the same host and the function would not be idempotent in exactly
-	// the case -- an inactive or headless world -- where nothing else would notice.
+	// Asked again on the host itself, because a raycaster only enrols in the manager's raycaster list when it
+	// activates, and a world that has not begun play never activates one.
 	for (UActorComponent* Component : Host->GetComponents())
 	{
 		const UDreamBaseRaycaster* Existing = Cast<UDreamBaseRaycaster>(Component);
@@ -636,14 +929,20 @@ AActor* UDreamUIInputSubsystem::GetInteractionHost(int32 InUserIndex) const
 	return Found != nullptr ? Found->Get() : nullptr;
 }
 
+AActor* UDreamUIInputSubsystem::GetCreatedEventSystemActor(int32 InUserIndex) const
+{
+	const TObjectPtr<AActor>* Found = CreatedEventSystemActors.Find(InUserIndex);
+	return Found != nullptr ? Found->Get() : nullptr;
+}
+
 void UDreamUIInputSubsystem::PrepareScreenInteraction(UDreamCanvas* InRootCanvas, int32 InUserIndex)
 {
 	if (!IsValid(InRootCanvas))
 	{
 		return;
 	}
-	// A screen page needs the same event system and raycaster a world-space host does. What is particular
-	// to a screen is telling this player's screen raycaster which canvas it projects through.
+	// A screen page needs the same event system and raycaster a world-space host does. What is particular to a
+	// screen is telling this player's screen raycaster which canvas it projects through.
 	EnsureInteractionForPlayer(InUserIndex, EDreamInteractionKind::Screen);
 
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
@@ -651,18 +950,16 @@ void UDreamUIInputSubsystem::PrepareScreenInteraction(UDreamCanvas* InRootCanvas
 		for (const TWeakObjectPtr<UDreamBaseRaycaster>& Raycaster : Manager->GetAllRaycasterArray())
 		{
 			UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get());
-			// Only a raycaster that speaks for THIS player. A second player's raycaster carries its own
-			// UserIndex and must keep pointing at its own canvas; retargeting every screen raycaster at
-			// whichever root was built last is what made split screen impossible.
+			// Only a raycaster that speaks for THIS player; retargeting every screen raycaster at whichever root was
+			// built last is what made split screen impossible.
 			if (ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InUserIndex)
 			{
 				ScreenRaycaster->SetRootCanvas(InRootCanvas);
 			}
 		}
 	}
-	// The one just created is on its host actor and has not necessarily enrolled -- enrolment happens on
-	// activation, which a world that has not begun play never performs -- so it would otherwise be left
-	// without a canvas until the first frame of play.
+	// The one just created is on its host actor and has not necessarily enrolled -- enrolment happens on activation,
+	// which a world that has not begun play never performs.
 	if (const AActor* Host = GetInteractionHost(InUserIndex))
 	{
 		for (UActorComponent* Component : Host->GetComponents())

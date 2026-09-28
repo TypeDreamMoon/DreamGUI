@@ -40,13 +40,11 @@ public:
 	virtual void OnRegister() override;
 
 	/**
-	 * The base class's frame, plus the scroll that was asked for since the last one.
+	 * The scroll that was asked for since the last frame, then the base class's frame.
 	 *
-	 * Scroll is delivered AFTER Super, not before, because InputScroll dispatches immediately to
-	 * whatever EventData->EnterWidget names -- and what the pointer is over is decided by the line
-	 * trace Super just ran. Scrolling before it would send the wheel to wherever the pointer was
-	 * hovering a frame ago, which for a cursor that was moved and scrolled in the same step is
-	 * nothing at all.
+	 * Queued BEFORE Super: the pipeline delivers a frame's wheel turns after that frame's traces, so the
+	 * wheel lands on what the cursor is over now -- which, for a cursor moved and scrolled in the same
+	 * step, is the widget it was moved onto.
 	 */
 	virtual void ProcessInput() override;
 

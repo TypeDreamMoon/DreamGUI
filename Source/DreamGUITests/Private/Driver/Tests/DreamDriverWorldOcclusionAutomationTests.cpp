@@ -13,6 +13,7 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamPointerEventData.h"
 #include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Extensions/DreamUIRenderTargetInteraction.h"
@@ -355,29 +356,24 @@ bool FDreamDriverWorldOcclusionRenderTargetDefaultsTest::RunTest(const FString& 
 		return false;
 	}
 
-	// Move, press, release, one frame each, and the interaction ticked after every frame: a game's tick
-	// manager ticks it, the headless pump does not (see DreamDriverWorld::TickLikeAnEngineFrame).
-	UDreamUIRenderTargetInteraction* Interaction = Screen.Interaction;
-	const TFunction<void(FDreamDriverContext&)> Tick = [Interaction](FDreamDriverContext& InContext)
-	{
-		DreamDriverWorld::TickLikeAnEngineFrame(Interaction, InContext.FrameSeconds);
-	};
+	// Move, press, release, one frame each: the world's input frame serves the surface.
 	TestTrue(TEXT("The click at the button's pixel completes"), Rig.Driver()->Sequence()
 		.MoveToPixel(Pixel.GetValue())
-		.Then(Tick)
 		.Press()
-		.Then(Tick)
 		.Release()
-		.Then(Tick)
 		.WaitFrames(1)
-		.Then(Tick)
 		.Perform());
 	TestEqual(TEXT("The button shown on the surface was pressed once"), Listener->PressedCount, 1);
 	TestEqual(TEXT("... and clicked once"), Listener->ClickedCount, 1);
 	// The first half of the road, so a red above says which half failed: the world trace found the
-	// surface and the pointer is over the actor that shows it.
-	const AActor* Hovered = HoveredWorldTarget(Rig);
-	TestTrue(FString::Printf(TEXT("The pointer is over the surface's actor (it is over %s)"), *GetNameSafe(Hovered)), Hovered == Screen.Actor);
+	// surface, and what the pointer is over is the button shown on it -- a hit on the surface's UI is a
+	// hit on UI, not on the actor that shows it.
+	const UDreamEventSystem* Events = Rig.EventSystem();
+	const UDreamPointerEventData* Mouse = Events != nullptr ? Events->GetPointerEventData(0, false) : nullptr;
+	const UDreamWidget* Over = Mouse != nullptr ? Mouse->EnterWidget.Get() : nullptr;
+	TestTrue(FString::Printf(TEXT("The pointer is over the button shown on the surface (it is over %s)"), *GetNameSafe(Over)),
+		Over != nullptr && (Over == Button || Over->IsChildOf(Button)));
+	TestNull(TEXT("...and not over the surface's actor"), HoveredWorldTarget(Rig));
 	return true;
 }
 

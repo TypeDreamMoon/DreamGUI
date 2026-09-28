@@ -14,6 +14,7 @@
 class UDreamDragDropOperation;
 class UDreamPointerEventData;
 class UDreamEventSystem;
+class UDreamUIInputSubsystem;
 class UDreamBaseEventData;
 class UDreamWidget;
 class UDreamUserWidget;
@@ -178,28 +179,44 @@ public:
 	virtual bool IsTickableWhenPaused() const override { return true; }
 
 	/**
-	 * Cancel every drag in flight: each source is told its drag ended, unhandled operations get their
-	 * OnDragCancelled, and the visuals go away. What Escape does during a drag.
+	 * Cancel every drag in flight, every player's: each source is told its drag ended, unhandled operations get
+	 * their OnDragCancelled, and the visuals go away.
 	 * @return true when there was at least one drag to cancel.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|DragDrop")
 	bool CancelActiveDrag();
+	/**
+	 * Cancel player InUserIndex's drags, and only theirs: what Escape does during a drag. Any player's Escape used to
+	 * cancel player 0's drag.
+	 * @return true when that player had a drag to cancel.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|DragDrop")
+	bool CancelActiveDragForUser(int32 InUserIndex);
 
-	/** True while any pointer is carrying a UDreamDragDropOperation. */
+	/** True while any pointer of any player is carrying a UDreamDragDropOperation. */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|DragDrop")
 	bool IsDragInProgress() const;
+	/** True while a pointer of player InUserIndex is carrying one. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|DragDrop")
+	bool IsDragInProgressForUser(int32 InUserIndex) const;
 
-	/** How many drags are being followed at once. One per finger on a touch screen. */
+	/** How many drags are being followed at once. One per finger on a touch screen, per player. */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|DragDrop")
 	int32 GetDragCount() const { return FollowedDrags.Num(); }
 
-	/** The operation pointer InPointerID is carrying, or null when it is not dragging one. */
+	/** The operation the first player's pointer InPointerID is carrying, or null when it is not dragging one. */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|DragDrop")
 	UDreamDragDropOperation* GetDragOperationForPointer(int32 InPointerID) const;
+	/** The operation player InUserIndex's pointer InPointerID is carrying, or null. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|DragDrop")
+	UDreamDragDropOperation* GetDragOperationForUserPointer(int32 InUserIndex, int32 InPointerID) const;
 
-	/** The drop target pointer InPointerID is hovering, or null. For a slot asking "am I next?". */
+	/** The drop target the first player's pointer InPointerID is hovering, or null. For a slot asking "am I next?". */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|DragDrop")
 	UDreamUIDropTarget* GetHoveredTargetForPointer(int32 InPointerID) const;
+	/** The drop target player InUserIndex's pointer InPointerID is hovering, or null. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|DragDrop")
+	UDreamUIDropTarget* GetHoveredTargetForUserPointer(int32 InUserIndex, int32 InPointerID) const;
 
 private:
 	/**
@@ -225,7 +242,6 @@ private:
 		TWeakObjectPtr<UDreamUserWidget> Visual;
 	};
 
-	void EnsureSubscribed();
 	void HandleInputEvent(UDreamBaseEventData* InEventData);
 	void BeginFollowingDrag(UDreamPointerEventData* InPointerEvent);
 	void ShowDragVisual(FFollowedDrag& InDrag, UDreamPointerEventData* InPointerEvent);
@@ -233,14 +249,17 @@ private:
 	void UpdateDropHover(FFollowedDrag& InDrag);
 	void ClearDropHover(FFollowedDrag& InDrag);
 	/** Tear one drag's bookkeeping down and forget it. Safe for a pointer that is not being followed. */
-	void StopFollowingDrag(int32 InPointerID);
+	void StopFollowingDrag(const FIntPoint& InKey);
+	/** A drag's key: the player, and the pointer that began it. */
+	static FIntPoint MakeKey(int32 InUserIndex, int32 InPointerID) { return FIntPoint(InUserIndex, InPointerID); }
 	void DestroyDragVisual(FFollowedDrag& InDrag);
 	/** True when this drag's pointer is still dragging the operation it began with. */
 	static bool IsStillLive(const FFollowedDrag& InDrag);
 
-	TWeakObjectPtr<UDreamEventSystem> SubscribedEventSystem;
-	/** Pointer id to the drag it is carrying. Empty when nothing is being dragged. */
-	TMap<int32, FFollowedDrag> FollowedDrags;
+	/** The input subsystem listened to, so the teardown can stop listening. */
+	TWeakObjectPtr<UDreamUIInputSubsystem> InputSubsystem;
+	/** (player, pointer) to the drag it is carrying. Empty when nothing is being dragged. */
+	TMap<FIntPoint, FFollowedDrag> FollowedDrags;
 	/** Set by TeardownForWorld, which runs once. */
 	bool bTornDownForWorld = false;
 };

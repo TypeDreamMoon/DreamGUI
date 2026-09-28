@@ -1,4 +1,4 @@
-﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUITooltip.h"
 #include "Core/DreamUIManager.h"
@@ -13,6 +13,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamBaseEventData.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
@@ -113,8 +114,8 @@ bool UDreamUITooltipSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 
 bool UDreamUITooltipSubsystem::DoesSupportWorldType(const EWorldType::Type WorldType) const
 {
-	// Game and PIE only: a designer preview world hovering its own authoring surface must not grow
-	// bubbles, and an editor world has Slate tooltips.
+	// Game and PIE only: a designer preview world hovering its own authoring surface must not grow bubbles, and an
+	// editor world has Slate tooltips.
 	return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
 }
 
@@ -122,12 +123,19 @@ void UDreamUITooltipSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	DreamUI::EnrolWorldService(Collection, *this, *this);
+	// Every player's events, from the moment the world has input: no player to find first, and nothing to lose when
+	// an event system is replaced.
+	if (UDreamUIInputSubsystem* Input = Collection.InitializeDependency<UDreamUIInputSubsystem>())
+	{
+		Input->GetOnInputEvent().AddUObject(this, &UDreamUITooltipSubsystem::HandleInputEvent);
+		InputSubsystem = Input;
+	}
 }
 
 void UDreamUITooltipSubsystem::Deinitialize()
 {
-	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
-	// world had no manager to take it.
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the world had
+	// no manager to take it.
 	if (!bTornDownForWorld && GetWorld() != nullptr)
 	{
 		TeardownForWorld(*GetWorld());
@@ -142,12 +150,16 @@ void UDreamUITooltipSubsystem::TeardownForWorld(UWorld& InWorld)
 		return;
 	}
 	bTornDownForWorld = true;
-	if (UDreamEventSystem* EventSystem = SubscribedEventSystem.Get())
+	if (UDreamUIInputSubsystem* Input = InputSubsystem.Get())
 	{
-		EventSystem->GetInputEvent().RemoveAll(this);
+		Input->GetOnInputEvent().RemoveAll(this);
 	}
-	SubscribedEventSystem.Reset();
-	DestroyTooltipWidgets();
+	InputSubsystem.Reset();
+	for (TPair<int32, FDreamUITooltipUserState>& Pair : UserStates)
+	{
+		DestroyTooltipWidgets(Pair.Value);
+	}
+	UserStates.Reset();
 }
 
 TStatId UDreamUITooltipSubsystem::GetStatId() const
@@ -155,35 +167,32 @@ TStatId UDreamUITooltipSubsystem::GetStatId() const
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UDreamUITooltipSubsystem, STATGROUP_Tickables);
 }
 
-void UDreamUITooltipSubsystem::EnsureSubscribed()
+UDreamWidget* UDreamUITooltipSubsystem::GetShownForUser(int32 InUserIndex) const
 {
-	if (SubscribedEventSystem.IsValid())
-	{
-		return;
-	}
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(GetWorld(), 0);
-	if (!IsValid(EventSystem))
-	{
-		return;
-	}
-	EventSystem->GetInputEvent().AddUObject(this, &UDreamUITooltipSubsystem::HandleInputEvent);
-	SubscribedEventSystem = EventSystem;
+	const FDreamUITooltipUserState* State = UserStates.Find(InUserIndex);
+	return State != nullptr ? State->ShownFor.Get() : nullptr;
+}
+
+UDreamWidget* UDreamUITooltipSubsystem::GetBubbleForUser(int32 InUserIndex) const
+{
+	const FDreamUITooltipUserState* State = UserStates.Find(InUserIndex);
+	return State != nullptr ? State->TooltipHolder.Get() : nullptr;
 }
 
 void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData)
 {
 	UDreamPointerEventData* PointerEvent = Cast<UDreamPointerEventData>(InEventData);
-	if (!IsValid(PointerEvent))
+	if (!IsValid(PointerEvent) || bTornDownForWorld)
 	{
 		return;
 	}
-	LastPointerEvent = PointerEvent;
+	// The player whose pointer it is: one player's hover never moves or hides another's bubble.
+	FDreamUITooltipUserState& State = UserStates.FindOrAdd(PointerEvent->UserIndex);
+	State.LastPointerEvent = PointerEvent;
 
-	// Navigation arms a tooltip too, and used to do the opposite: any non-pointer event hid whatever
-	// was showing and cleared the candidate, so a gamepad player could never see one at all. The two
-	// arrive through the same enter/exit path -- that is what makes the confirm button press whatever
-	// navigation landed on -- so the only difference worth keeping is WHERE the bubble goes: a pointer
-	// position is meaningless in navigation mode, and the bubble is placed against the focused widget.
+	// Navigation arms a tooltip too. The two arrive through the same enter/exit path, so the only difference worth
+	// keeping is WHERE the bubble goes: a pointer position is meaningless in navigation mode, and the bubble is placed
+	// against the focused widget.
 	const bool bIsNavigation = PointerEvent->InputType == EDreamUIPointerInputType::Navigation;
 
 	switch (PointerEvent->EventType)
@@ -192,18 +201,18 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 	case EDreamUIPointerEventType::Exit:
 	{
 		UDreamWidget* NewCandidate = DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget);
-		if (NewCandidate != Candidate.Get() || bIsNavigation != bArmedByNavigation)
+		if (NewCandidate != State.Candidate.Get() || bIsNavigation != State.bArmedByNavigation)
 		{
-			Candidate = NewCandidate;
-			bArmedByNavigation = bIsNavigation;
-			HoverSeconds = 0.0f;
+			State.Candidate = NewCandidate;
+			State.bArmedByNavigation = bIsNavigation;
+			State.HoverSeconds = 0.0f;
 			// A press suppresses only the CURRENT target; moving to a new one re-arms.
-			bSuppressed = false;
-			if (ShownFor.IsValid() && ShownFor.Get() != NewCandidate)
+			State.bSuppressed = false;
+			if (State.ShownFor.IsValid() && State.ShownFor.Get() != NewCandidate)
 			{
-				HideTooltip();
-				Candidate = NewCandidate;
-				bArmedByNavigation = bIsNavigation;
+				HideUserTooltip(State);
+				State.Candidate = NewCandidate;
+				State.bArmedByNavigation = bIsNavigation;
 			}
 		}
 		break;
@@ -211,8 +220,8 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 	case EDreamUIPointerEventType::Down:
 	case EDreamUIPointerEventType::BeginDrag:
 		// Standard tooltip behaviour everywhere: interacting with the thing dismisses its bubble.
-		bSuppressed = true;
-		HideTooltip();
+		State.bSuppressed = true;
+		HideUserTooltip(State);
 		break;
 	default:
 		break;
@@ -221,94 +230,115 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 
 void UDreamUITooltipSubsystem::Tick(float DeltaTime)
 {
-	EnsureSubscribed();
-
-	// The bubble's lifetime is the HOLDER's, not the source's. Asking ShownFor.IsValid() here left a
-	// bubble whose source had been destroyed -- a recycled list row, a closed screen -- unreachable
-	// by both branches: this one was skipped because the weak pointer had gone stale, and the dwell
-	// branch below returned early on the equally-stale Candidate. Nothing called HideTooltip, so the
-	// bubble stayed parked on the screen root until the next tooltip's ShowFor happened to clear it.
-	if (IsValid(TooltipHolder))
+	// The UI clock: real time, so a tooltip in a slowed-down game waits as long as it does at full speed, and one in
+	// a paused game's menu still appears.
+	const float RealDeltaSeconds = DreamUIInputClock::GetUIDeltaSeconds(this, DeltaTime);
+	TArray<int32> UserIndices;
+	UserStates.GetKeys(UserIndices);
+	for (const int32 UserIndex : UserIndices)
 	{
-		UDreamWidget* Source = ShownFor.Get();
-		if (Source == nullptr || Candidate.Get() != Source)
+		if (FDreamUITooltipUserState* State = UserStates.Find(UserIndex))
 		{
-			HideTooltip();
+			TickUser(*State, RealDeltaSeconds);
+		}
+	}
+}
+
+void UDreamUITooltipSubsystem::TickUser(FDreamUITooltipUserState& State, float InDeltaSeconds)
+{
+	// The bubble's lifetime is the HOLDER's, not the source's: a bubble whose source was destroyed -- a recycled
+	// list row, a closed screen -- is hidden here rather than left parked on the screen root.
+	if (IsValid(State.TooltipHolder))
+	{
+		UDreamWidget* Source = State.ShownFor.Get();
+		if (Source == nullptr || State.Candidate.Get() != Source)
+		{
+			HideUserTooltip(State);
 			return;
 		}
-		// Fonts load and lay out asynchronously; the size the bubble opened with may have been a
-		// guess. Re-measuring every frame is one text layout read for the single visible bubble,
-		// and it settles to a no-op the moment the numbers agree.
-		SizeBubbleToText();
-		UpdateTooltipPosition();
+		// Fonts load and lay out asynchronously; the size the bubble opened with may have been a guess.
+		SizeBubbleToText(State);
+		UpdateTooltipPosition(State);
 		return;
 	}
 
-	UDreamWidget* CandidateWidget = Candidate.Get();
-	if (CandidateWidget == nullptr || bSuppressed)
+	UDreamWidget* CandidateWidget = State.Candidate.Get();
+	if (CandidateWidget == nullptr || State.bSuppressed)
 	{
-		HoverSeconds = 0.0f;
+		State.HoverSeconds = 0.0f;
 		return;
 	}
-	HoverSeconds += DeltaTime;
-	if (HoverSeconds >= UDreamGUISettings::Get()->TooltipDelaySeconds)
+	State.HoverSeconds += InDeltaSeconds;
+	if (State.HoverSeconds >= UDreamGUISettings::Get()->TooltipDelaySeconds)
 	{
-		ShowFor(CandidateWidget);
+		ShowFor(State, CandidateWidget);
 	}
 }
 
 void UDreamUITooltipSubsystem::HideTooltip()
 {
-	ShownFor.Reset();
-	TooltipHost.Reset();
-	HoverSeconds = 0.0f;
-	DestroyTooltipWidgets();
+	for (TPair<int32, FDreamUITooltipUserState>& Pair : UserStates)
+	{
+		HideUserTooltip(Pair.Value);
+	}
+}
+
+void UDreamUITooltipSubsystem::HideTooltipForUser(int32 InUserIndex)
+{
+	if (FDreamUITooltipUserState* State = UserStates.Find(InUserIndex))
+	{
+		HideUserTooltip(*State);
+	}
+}
+
+void UDreamUITooltipSubsystem::HideUserTooltip(FDreamUITooltipUserState& State)
+{
+	State.ShownFor.Reset();
+	State.TooltipHost.Reset();
+	State.HoverSeconds = 0.0f;
+	DestroyTooltipWidgets(State);
 }
 
 void UDreamUITooltipSubsystem::ShowTooltipFor(UDreamWidget* InSource)
 {
-	if (!IsValid(InSource))
+	if (!IsValid(InSource) || bTornDownForWorld)
 	{
 		return;
 	}
-	// The candidate moves with the bubble, not just the bubble: the tick keeps a visible tooltip only
-	// while the two agree, so showing one without arming the candidate would hide it again next frame.
-	Candidate = InSource;
-	// Anchored to the widget rather than to the pointer, because a caller asking for a specific
-	// widget's help is not telling us anything about where a pointer is -- and the last pointer event
-	// may be from somewhere else entirely, or from a previous screen.
-	bArmedByNavigation = true;
-	HoverSeconds = 0.0f;
-	bSuppressed = false;
-	ShowFor(InSource);
+	FDreamUITooltipUserState& State = UserStates.FindOrAdd(InSource->GetOwningPlayerIndex());
+	// The candidate moves with the bubble, not just the bubble: the tick keeps a visible tooltip only while the two
+	// agree, so showing one without arming the candidate would hide it again next frame.
+	State.Candidate = InSource;
+	// Anchored to the widget rather than to the pointer: a caller asking for a specific widget's help is not telling
+	// us anything about where a pointer is.
+	State.bArmedByNavigation = true;
+	State.HoverSeconds = 0.0f;
+	State.bSuppressed = false;
+	ShowFor(State, InSource);
 }
 
-void UDreamUITooltipSubsystem::DestroyTooltipWidgets()
+void UDreamUITooltipSubsystem::DestroyTooltipWidgets(FDreamUITooltipUserState& State)
 {
-	if (IsValid(TooltipHolder))
+	if (IsValid(State.TooltipHolder))
 	{
-		TooltipHolder->DestroyWidget();
+		State.TooltipHolder->DestroyWidget();
 	}
-	TooltipHolder = nullptr;
-	BubbleText = nullptr;
-	CustomTooltip = nullptr;
+	State.TooltipHolder = nullptr;
+	State.BubbleText = nullptr;
+	State.CustomTooltip = nullptr;
 }
 
-void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
+void UDreamUITooltipSubsystem::ShowFor(FDreamUITooltipUserState& State, UDreamWidget* InSource)
 {
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
-	// A tooltip belongs on the same screen as the widget it is about.
+	// A tooltip belongs on the same screen as the widget it is about, and -- for a world-space UI -- on the same canvas.
 	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForWidget(InSource) : nullptr;
-	// ...and, for a world-space or render-target UI, on the same CANVAS. The screen overlay was the
-	// only host this ever had, so a tooltip on a panel welded to a machine in the level landed on the
-	// player's HUD instead -- at a position derived from a pointer position that a world-space
-	// raycaster never had any reason to fill in meaningfully.
 	UDreamWidget* Host = DreamUITooltipPolicy::ResolveTooltipHost(InSource, ScreenRoot);
 	if (!IsValid(Host))
 	{
 		return;
 	}
-	TooltipHost = Host;
+	State.TooltipHost = Host;
 
 	// Which of the two content paths this source wants: a custom widget class beats the text.
 	TSubclassOf<UDreamUserWidget> CustomClass = nullptr;
@@ -332,8 +362,8 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 	}
 	if (CustomClass == nullptr)
 	{
-		// The authored answer, after the two interface paths: an implementor that computes a class at
-		// runtime is being specific and should win over a class typed into the details panel.
+		// The authored answer, after the two interface paths: an implementor that computes a class at runtime is being
+		// specific and should win over a class typed into the details panel.
 		CustomClass = InSource->GetToolTipWidgetClass();
 	}
 	if (CustomClass == nullptr && InSource->GetToolTipText().IsEmpty())
@@ -342,53 +372,52 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 	}
 
 	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
-	DestroyTooltipWidgets();
+	DestroyTooltipWidgets(State);
 
-	// The holder: its own canvas above the page band, raycast-disabled for the whole subtree so the
-	// bubble can never sit between the pointer and the thing it describes.
-	TooltipHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
-	TooltipHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
-	TooltipHolder->SetDisplayName(TEXT("DreamUITooltip"));
-	TooltipHolder->SetPivot(FVector2D(0.0f, 1.0f));
+	// The holder: its own canvas above the page band, raycast-disabled for the whole subtree so the bubble can never
+	// sit between the pointer and the thing it describes.
+	State.TooltipHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
+	State.TooltipHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
+	State.TooltipHolder->SetDisplayName(TEXT("DreamUITooltip"));
+	State.TooltipHolder->SetPivot(FVector2D(0.0f, 1.0f));
 
 	if (CustomClass != nullptr)
 	{
-		TooltipHolder->SetParentBeforeRegister(Host);
-		RegisterDreamWidgetHierarchy(TooltipHolder);
-		CustomTooltip = CreateDreamWidget(GetWorld(), CustomClass, TooltipHolder);
-		if (IsValid(CustomTooltip))
+		State.TooltipHolder->SetParentBeforeRegister(Host);
+		RegisterDreamWidgetHierarchy(State.TooltipHolder);
+		State.CustomTooltip = CreateDreamWidget(GetWorld(), CustomClass, State.TooltipHolder);
+		if (IsValid(State.CustomTooltip))
 		{
 			// The holder adopts the content's authored size, so positioning has a real rect to clamp.
-			TooltipHolder->SetSizeDelta(FVector2D(CustomTooltip->GetWidth(), CustomTooltip->GetHeight()));
-			CustomTooltip->SetAnchoredPosition(FVector2D::ZeroVector);
+			State.TooltipHolder->SetSizeDelta(FVector2D(State.CustomTooltip->GetWidth(), State.CustomTooltip->GetHeight()));
+			State.CustomTooltip->SetAnchoredPosition(FVector2D::ZeroVector);
 		}
 	}
 	else
 	{
-		// The built-in bubble: a rect block behind a text, sized to the text's own preferred size,
-		// wrapped at the settings' max width.
+		// The built-in bubble: a rect block behind a text, sized to the text's own preferred size, wrapped at the
+		// settings' max width.
 		UDreamWidget* TextWidget = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
 		TextWidget->SetDisplayName(TEXT("DreamUITooltipText"));
-		BubbleText = TextWidget->CreateNewVisual<UDreamText>();
-		BubbleText->SetText(InSource->GetToolTipText());
-		BubbleText->SetFontSize(Settings->TooltipFontSize);
-		BubbleText->SetColor(TooltipTextColor);
+		State.BubbleText = TextWidget->CreateNewVisual<UDreamText>();
+		State.BubbleText->SetText(InSource->GetToolTipText());
+		State.BubbleText->SetFontSize(Settings->TooltipFontSize);
+		State.BubbleText->SetColor(TooltipTextColor);
 
-		UDreamRectBlock* Background = TooltipHolder->CreateNewVisual<UDreamRectBlock>();
+		UDreamRectBlock* Background = State.TooltipHolder->CreateNewVisual<UDreamRectBlock>();
 		Background->SetColor(TooltipBackgroundColor);
 
-		TextWidget->SetParentBeforeRegister(TooltipHolder);
-		TooltipHolder->SetParentBeforeRegister(Host);
-		RegisterDreamWidgetHierarchy(TooltipHolder);
+		TextWidget->SetParentBeforeRegister(State.TooltipHolder);
+		State.TooltipHolder->SetParentBeforeRegister(Host);
+		RegisterDreamWidgetHierarchy(State.TooltipHolder);
 	}
 
-	// The sort canvas goes on BEFORE the text is measured: text layout early-outs without a render
-	// canvas on the widget, and the first ship of this code measured first -- preferred width came
-	// back zero and the bubble wrapped one character per line, a vertical strip of text.
-	UDreamCanvas* Canvas = TooltipHolder->GetComponent<UDreamCanvas>();
+	// The sort canvas goes on BEFORE the text is measured: text layout early-outs without a render canvas on the
+	// widget, and measured first the bubble wrapped one character per line.
+	UDreamCanvas* Canvas = State.TooltipHolder->GetComponent<UDreamCanvas>();
 	if (!IsValid(Canvas))
 	{
-		Canvas = Cast<UDreamCanvas>(TooltipHolder->AddComponent(UDreamCanvas::StaticClass()));
+		Canvas = Cast<UDreamCanvas>(State.TooltipHolder->AddComponent(UDreamCanvas::StaticClass()));
 	}
 	if (IsValid(Canvas))
 	{
@@ -396,53 +425,50 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 		Canvas->SetSortOrder(TooltipSortOrder, /*PropagateToChildrenCanvas*/true);
 	}
 
-	if (IsValid(BubbleText))
+	if (IsValid(State.BubbleText))
 	{
-		SizeBubbleToText();
+		SizeBubbleToText(State);
 	}
 
-	ShownFor = InSource;
-	UpdateTooltipPosition();
+	State.ShownFor = InSource;
+	UpdateTooltipPosition(State);
 }
 
-void UDreamUITooltipSubsystem::SizeBubbleToText()
+void UDreamUITooltipSubsystem::SizeBubbleToText(FDreamUITooltipUserState& State)
 {
-	UDreamWidget* TextWidget = IsValid(BubbleText) ? BubbleText->GetWidget() : nullptr;
-	if (!IsValid(TextWidget) || !IsValid(TooltipHolder))
+	UDreamWidget* TextWidget = IsValid(State.BubbleText) ? State.BubbleText->GetWidget() : nullptr;
+	if (!IsValid(TextWidget) || !IsValid(State.TooltipHolder))
 	{
 		return;
 	}
-	// Preferred width unwrapped, clamped to the max, and the height asked at that width. A
-	// not-ready measurement (font still loading, no canvas yet) answers near zero; the bubble
-	// takes the full width for that frame rather than a one-character column, and the tick's
-	// re-measure shrinks it the moment the text can answer.
+	// Preferred width unwrapped, clamped to the max, and the height asked at that width. A not-ready measurement
+	// answers near zero; the bubble takes the full width for that frame rather than a one-character column.
 	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
 	const float MaxTextWidth = FMath::Max(50.0f, Settings->TooltipMaxWidth - 2.0f * TooltipPadding);
-	const float Preferred = BubbleText->GetPreferredWidth();
+	const float Preferred = State.BubbleText->GetPreferredWidth();
 	const float TextWidth = Preferred > 1.0f ? FMath::Min(Preferred, MaxTextWidth) : MaxTextWidth;
 	TextWidget->SetWidth(TextWidth);
-	// Clamped because "not ready" is spelled as a negative, and SetHeight takes what it is given:
-	// a bubble sized -1 tall is no better than one sized 0 and looks like arithmetic gone wrong.
-	const float TextHeight = FMath::Max(BubbleText->GetPreferredHeight(), 0.0f);
+	// Clamped because "not ready" is spelled as a negative.
+	const float TextHeight = FMath::Max(State.BubbleText->GetPreferredHeight(), 0.0f);
 	TextWidget->SetHeight(TextHeight);
 	TextWidget->SetAnchoredPosition(FVector2D::ZeroVector);
 
-	TooltipHolder->SetSizeDelta(FVector2D(TextWidth + 2.0f * TooltipPadding, TextHeight + 2.0f * TooltipPadding));
+	State.TooltipHolder->SetSizeDelta(FVector2D(TextWidth + 2.0f * TooltipPadding, TextHeight + 2.0f * TooltipPadding));
 }
 
-void UDreamUITooltipSubsystem::UpdateTooltipPosition()
+void UDreamUITooltipSubsystem::UpdateTooltipPosition(FDreamUITooltipUserState& State)
 {
-	UDreamWidget* Host = TooltipHost.Get();
-	UDreamWidget* Source = ShownFor.Get();
-	if (!IsValid(TooltipHolder) || !IsValid(Host))
+	UDreamWidget* Host = State.TooltipHost.Get();
+	UDreamWidget* Source = State.ShownFor.Get();
+	if (!IsValid(State.TooltipHolder) || !IsValid(Host))
 	{
 		return;
 	}
 
-	// Where the bubble points, in the HOST's own local 2D space -- which is the space anchored
-	// positions and the policy's bounds are both already in.
+	// Where the bubble points, in the HOST's own local 2D space -- the space anchored positions and the policy's
+	// bounds are both already in.
 	FVector2D AnchorInHost = FVector2D::ZeroVector;
-	if (!ResolveTooltipAnchor(Host, Source, AnchorInHost))
+	if (!ResolveTooltipAnchor(State, Host, Source, AnchorInHost))
 	{
 		return;
 	}
@@ -450,20 +476,19 @@ void UDreamUITooltipSubsystem::UpdateTooltipPosition()
 	const FVector2D HalfCanvas(Host->GetWidth() * 0.5f, Host->GetHeight() * 0.5f);
 	const FVector2D TopLeft = DreamUITooltipPolicy::ComputeTooltipTopLeft(
 		-HalfCanvas, HalfCanvas,
-		FVector2D(TooltipHolder->GetWidth(), TooltipHolder->GetHeight()),
+		FVector2D(State.TooltipHolder->GetWidth(), State.TooltipHolder->GetHeight()),
 		AnchorInHost, UDreamGUISettings::Get()->TooltipOffset);
-	TooltipHolder->SetAnchoredPosition(TopLeft);
+	State.TooltipHolder->SetAnchoredPosition(TopLeft);
 }
 
-bool UDreamUITooltipSubsystem::ResolveTooltipAnchor(UDreamWidget* InHost, UDreamWidget* InSource, FVector2D& OutAnchor) const
+bool UDreamUITooltipSubsystem::ResolveTooltipAnchor(const FDreamUITooltipUserState& State, UDreamWidget* InHost, UDreamWidget* InSource, FVector2D& OutAnchor) const
 {
-	UDreamPointerEventData* PointerEvent = LastPointerEvent.Get();
-	// A pointer position is only an answer when a pointer put it there AND the host is the screen
-	// overlay that position is measured in. Navigation has no pointer, and a world-space canvas has
-	// no relationship to viewport pixels at all; both fall through to the source widget's own rect,
-	// which is the thing the bubble is about and is expressed in the host's space by construction.
+	UDreamPointerEventData* PointerEvent = State.LastPointerEvent.Get();
+	// A pointer position is only an answer when a pointer put it there AND the host is the screen overlay that
+	// position is measured in. Navigation has no pointer, and a world-space canvas has no relationship to viewport
+	// pixels at all; both fall through to the source widget's own rect.
 	const bool bPointerIsMeaningful = PointerEvent != nullptr
-		&& !bArmedByNavigation
+		&& !State.bArmedByNavigation
 		&& PointerEvent->InputType == EDreamUIPointerInputType::Pointer
 		&& !InHost->IsWorldSpaceUI();
 	if (bPointerIsMeaningful)
@@ -474,10 +499,8 @@ bool UDreamUITooltipSubsystem::ResolveTooltipAnchor(UDreamWidget* InHost, UDream
 			&& HostCanvas->ConvertPositionFromViewportToCanvas(
 				FVector2D(PointerEvent->PointerPosition.X, PointerEvent->PointerPosition.Y), PointerInCanvas))
 		{
-			// The conversion answers in the canvas's BOTTOM-LEFT origin (x right, y up from the
-			// corner); anchored positions -- and the policy's bounds -- are CENTER-origin. The
-			// walkthrough caught the bubble parked in a corner: this shift was missing, so a
-			// corner-origin number was fed to a center-origin consumer.
+			// The conversion answers in the canvas's BOTTOM-LEFT origin; anchored positions -- and the policy's
+			// bounds -- are CENTER-origin.
 			OutAnchor = PointerInCanvas - FVector2D(InHost->GetWidth() * 0.5f, InHost->GetHeight() * 0.5f);
 			return true;
 		}
@@ -487,9 +510,8 @@ bool UDreamUITooltipSubsystem::ResolveTooltipAnchor(UDreamWidget* InHost, UDream
 	{
 		return false;
 	}
-	// The source's bottom-right corner, carried into the host's space through world space, so the
-	// bubble hangs off the focused widget exactly the way it hangs off a pointer. Rotation and scale
-	// on anything in between are handled by the transforms rather than assumed away.
+	// The source's bottom-right corner, carried into the host's space through world space, so the bubble hangs off
+	// the focused widget exactly the way it hangs off a pointer.
 	const FVector2D Centre = InSource->GetLocalSpaceCenter();
 	const FVector2D Half(InSource->GetWidth() * 0.5f, InSource->GetHeight() * 0.5f);
 	const FVector2D CornerLocal = Centre + FVector2D(Half.X, -Half.Y);

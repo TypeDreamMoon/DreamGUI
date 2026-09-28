@@ -468,7 +468,13 @@ bool FDreamSplitOffTypesAnswerToTheirOldPathTest::RunTest(const FString& Paramet
 	//
 	// A type born in one of those modules, which never lived in the core, has no old path to answer to; it is
 	// listed here instead, by its full path.
-	static const TSet<FString> BornOutsideTheCore;
+	static const TSet<FString> BornOutsideTheCore = {
+		TEXT("/Script/DreamGUIInput.DreamUIInputUser"),
+		TEXT("/Script/DreamGUIInput.DreamUINestedSurface"),
+		TEXT("/Script/DreamGUIInput.DreamUIInputTickFunction"),
+		TEXT("/Script/DreamGUIInput.DreamUITooltipUserState"),
+		TEXT("/Script/DreamGUIInput.DreamUIVirtualCursorUserState"),
+	};
 	const FName Core(TEXT("/Script/DreamGUI"));
 	int32 NumModules = 0;
 	int32 NumChecked = 0;

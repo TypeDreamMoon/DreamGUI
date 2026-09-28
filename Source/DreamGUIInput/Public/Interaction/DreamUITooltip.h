@@ -11,6 +11,7 @@
 class UDreamWidget;
 class UDreamUserWidget;
 class UDreamEventSystem;
+class UDreamUIInputSubsystem;
 class UDreamBaseEventData;
 class UDreamPointerEventData;
 class UDreamText;
@@ -69,15 +70,50 @@ namespace DreamUITooltipPolicy
 		const FVector2D& InBubbleSize, const FVector2D& InPointer, const FVector2D& InOffset);
 }
 
+/** One player's tooltip: what its dwell is armed for, and the bubble showing for it. */
+USTRUCT()
+struct FDreamUITooltipUserState
+{
+	GENERATED_BODY()
+
+	/** The pointer's event data object -- mutated in place by the pipeline, so it IS the live position. */
+	TWeakObjectPtr<UDreamPointerEventData> LastPointerEvent;
+	/** What the dwell timer is armed for. */
+	TWeakObjectPtr<UDreamWidget> Candidate;
+	float HoverSeconds = 0.0f;
+	/** Set from press/drag; a new hover-enter re-arms. */
+	bool bSuppressed = false;
+	/**
+	 * Whether the current candidate was armed by navigation rather than by a pointer: the difference shows up in
+	 * where the bubble is placed -- against the focused widget for a gamepad, against the pointer for a mouse.
+	 */
+	bool bArmedByNavigation = false;
+	/** What the visible tooltip belongs to. */
+	TWeakObjectPtr<UDreamWidget> ShownFor;
+	/** The canvas widget the bubble is parented to: a screen root, or a world-space canvas. */
+	TWeakObjectPtr<UDreamWidget> TooltipHost;
+
+	/** The positioned widget: its own canvas, raycast-disabled, parented to the host. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> TooltipHolder;
+	/** The built-in bubble's text visual, when the text path is showing. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamText> BubbleText;
+	/** The instanced custom tooltip, when the interface path is showing. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamUserWidget> CustomTooltip;
+};
+
 /**
- * Renders ToolTipText. The field, its localization and its FieldNotify entry all existed; nothing
- * in the framework ever DREW one until this.
+ * Renders ToolTipText. The field, its localization and its FieldNotify entry all existed; nothing in the framework
+ * ever DREW one until this.
  *
- * One service per world, driven by the event system's own broadcasts rather than per-widget opt-in:
- * hover-enter arms a dwell timer, the timer shows a bubble (or the widget class the source's
- * interface names), the bubble follows the live pointer, and exit / press / drag / input-type
- * change hides it. The bubble lives on its own canvas above the screen stack's sort band and is
- * raycast-disabled throughout -- a tooltip that can steal the pointer hides itself forever.
+ * One service per world, one tooltip per player, driven by the players' own events rather than per-widget opt-in:
+ * hover-enter arms a dwell timer, the timer shows a bubble (or the widget class the source's interface names), the
+ * bubble follows the live pointer, and exit / press / drag / input-type change hides it. The bubble lives on its
+ * own canvas above the screen stack's sort band and is raycast-disabled throughout -- a tooltip that can steal the
+ * pointer hides itself forever. Each player's tooltip is theirs: a second player's hover neither moves nor hides
+ * the first player's bubble.
  */
 UCLASS()
 class DREAMGUIINPUT_API UDreamUITooltipSubsystem : public UTickableWorldSubsystem, public IDreamUIWorldService
@@ -97,87 +133,56 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
-	/**
-	 * Ticks while the game is paused, because a pause menu is exactly where tooltips are read.
-	 *
-	 * FTickableGameObject answers false by default, which silently opted this service out of the
-	 * contract the rest of the framework keeps: the event system component sets bTickEvenWhenPaused,
-	 * the screen-space raycaster has a setting for it, and UDreamUIManagerWorldSubsystem overrides
-	 * this very function to true. Input kept arriving while paused and only the dwell timer stopped,
-	 * so the bubble never appeared.
-	 */
+	/** Ticks while the game is paused, because a pause menu is exactly where tooltips are read. */
 	virtual bool IsTickableWhenPaused() const override { return true; }
 
-	/** Hide whatever is showing and restart the dwell. For code that just changed what is under the pointer. */
+	/** Hide whatever is showing for every player and restart their dwells. For code that just changed what is under the pointer. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tooltip")
 	void HideTooltip();
+	/** Hide player InUserIndex's tooltip and restart their dwell. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tooltip")
+	void HideTooltipForUser(int32 InUserIndex);
 
 	/**
-	 * Show InSource's tooltip right now, as though its dwell had just elapsed. Does nothing for a
-	 * source that offers neither ToolTipText nor a tooltip widget class.
-	 *
-	 * The dwell path is the ordinary one; this exists for code that already knows the player is
-	 * asking for help on something -- a help key, a focus change -- and for tests, which otherwise
-	 * have no way to put a bubble on screen.
+	 * Show InSource's tooltip right now, to the player who owns InSource, as though its dwell had just elapsed.
+	 * Does nothing for a source that offers neither ToolTipText nor a tooltip widget class.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Tooltip")
 	void ShowTooltipFor(UDreamWidget* InSource);
 
-	/** The widget the visible tooltip belongs to, or null while none shows. */
-	UDreamWidget* GetShownFor() const { return ShownFor.Get(); }
+	/** The widget the first player's visible tooltip belongs to, or null while none shows. */
+	UDreamWidget* GetShownFor() const { return GetShownForUser(0); }
+	/** The widget player InUserIndex's visible tooltip belongs to, or null while none shows. */
+	UDreamWidget* GetShownForUser(int32 InUserIndex) const;
+	/**
+	 * The bubble itself -- the positioned widget everything drawn hangs off, which is what hiding destroys -- for
+	 * player InUserIndex, or null while none is up. ShownFor can go stale while the bubble stays: this is the half a
+	 * test of the teardown has to read.
+	 */
+	UDreamWidget* GetBubbleForUser(int32 InUserIndex) const;
 
 private:
-	void EnsureSubscribed();
 	void HandleInputEvent(UDreamBaseEventData* InEventData);
-
-	void ShowFor(UDreamWidget* InSource);
+	void TickUser(FDreamUITooltipUserState& InState, float InDeltaSeconds);
+	void HideUserTooltip(FDreamUITooltipUserState& InState);
+	void ShowFor(FDreamUITooltipUserState& InState, UDreamWidget* InSource);
 	/** Size the built-in bubble to its text's preferred size; safe to call before the text can answer. */
-	void SizeBubbleToText();
-	void UpdateTooltipPosition();
+	void SizeBubbleToText(FDreamUITooltipUserState& InState);
+	void UpdateTooltipPosition(FDreamUITooltipUserState& InState);
 	/**
-	 * Where the bubble points, in InHost's own local 2D space.
-	 *
-	 * The pointer's position when a pointer armed this tooltip and the host is a screen overlay; the
-	 * SOURCE widget's own rect otherwise -- which covers both the gamepad, where there is no pointer,
-	 * and a world-space canvas, where viewport pixels mean nothing.
+	 * Where the bubble points, in InHost's own local 2D space: the pointer's position when a pointer armed this
+	 * tooltip and the host is a screen overlay, the SOURCE widget's own rect otherwise.
 	 * @return false when there is nothing to point at, in which case the bubble is left where it was.
 	 */
-	bool ResolveTooltipAnchor(UDreamWidget* InHost, UDreamWidget* InSource, FVector2D& OutAnchor) const;
-	void DestroyTooltipWidgets();
+	bool ResolveTooltipAnchor(const FDreamUITooltipUserState& InState, UDreamWidget* InHost, UDreamWidget* InSource, FVector2D& OutAnchor) const;
+	void DestroyTooltipWidgets(FDreamUITooltipUserState& InState);
 
-	/** The event system observed, so a late-spawned or replaced one is picked up. */
-	TWeakObjectPtr<UDreamEventSystem> SubscribedEventSystem;
+	/** The input subsystem listened to, so the teardown can stop listening. */
+	TWeakObjectPtr<UDreamUIInputSubsystem> InputSubsystem;
 	/** Set by TeardownForWorld, which runs once. */
 	bool bTornDownForWorld = false;
-	/** The pointer's event data object -- mutated in place by the input module, so it IS the live position. */
-	TWeakObjectPtr<UDreamPointerEventData> LastPointerEvent;
 
-	/** What the dwell timer is armed for. */
-	TWeakObjectPtr<UDreamWidget> Candidate;
-	float HoverSeconds = 0.0f;
-	/** Set from press/drag; a new hover-enter re-arms. */
-	bool bSuppressed = false;
-	/**
-	 * Whether the current candidate was armed by navigation rather than by a pointer.
-	 *
-	 * Kept because it is the only thing that separates the two afterwards: both arrive as an enter on
-	 * the same path, and the difference shows up in where the bubble is placed -- against the focused
-	 * widget for a gamepad, against the pointer for a mouse.
-	 */
-	bool bArmedByNavigation = false;
-
-	/** What the visible tooltip belongs to. */
-	TWeakObjectPtr<UDreamWidget> ShownFor;
-	/** The canvas widget the bubble is parented to: a screen root, or a world-space canvas. */
-	TWeakObjectPtr<UDreamWidget> TooltipHost;
-
-	/** The positioned widget: its own canvas, raycast-disabled, parented to the screen root. */
+	/** Each player's tooltip, by player index. */
 	UPROPERTY(Transient)
-	TObjectPtr<UDreamWidget> TooltipHolder;
-	/** The built-in bubble's text visual, when the text path is showing. */
-	UPROPERTY(Transient)
-	TObjectPtr<UDreamText> BubbleText;
-	/** The instanced custom tooltip, when the interface path is showing. */
-	UPROPERTY(Transient)
-	TObjectPtr<UDreamUserWidget> CustomTooltip;
+	TMap<int32, FDreamUITooltipUserState> UserStates;
 };

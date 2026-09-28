@@ -270,9 +270,8 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	// The subsystem follows drags by listening to the event system, so there has to be one. Ticking
-	// once is what makes it subscribe -- the subscription is deliberately lazy, because the event
-	// system is usually spawned after the subsystem.
+	// The subsystem follows drags by listening to every player's events, which it does from the moment
+	// the world has input. The event system is what the events are dispatched through here.
 	ADreamStandaloneInputEventSystemActor* EventActor =
 		TestWorld.World->SpawnActor<ADreamStandaloneInputEventSystemActor>();
 	UDreamEventSystem* EventSystem = EventActor != nullptr ? EventActor->GetEventSystem() : nullptr;

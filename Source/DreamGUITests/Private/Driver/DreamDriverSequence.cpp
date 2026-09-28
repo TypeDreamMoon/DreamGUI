@@ -12,6 +12,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
@@ -216,15 +217,15 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	 *   clock                     "Update time", before any tick group
 	 *   player input              the player controller ticks in TG_PrePhysics (PlayerTick -> TickPlayerInput)
 	 *   PrePhysics tweens         ADreamTweenTickHelperActor's TG_PrePhysics component
-	 *   event system              a component in TG_DuringPhysics, the group it is left in
 	 *   DuringPhysics tweens      the helper actor's own tick, TG_DuringPhysics
+	 *   input                     the input subsystem's tick function, TG_PostPhysics
 	 *   PostPhysics tweens        the helper's TG_PostPhysics component
 	 *   tickable world subsystems FTickableGameObject::TickObjects, after the physics groups
 	 *   PostUpdateWork tweens     the helper's TG_PostUpdateWork component -- see below
 	 *   UI manager                TickObjects too, and deliberately last -- see below
 	 *
 	 * Within one tick group the engine fixes no order between unrelated tick functions, so where two
-	 * share a group (the event system and the DuringPhysics tweens) the order here is a choice: input
+	 * share a group (the input frame and the PostPhysics tweens) the order here is a choice: input
 	 * first, so a tween that input started this frame takes its first step in the same frame.
 	 */
 	if (World != nullptr)
@@ -246,27 +247,20 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 
 	UDreamTweenManager* TweenManager = GameInstance != nullptr ? GameInstance->GetSubsystem<UDreamTweenManager>() : nullptr;
 	TickTweens(TweenManager, World, EDreamTweenTickType::PrePhysics);
+	TickTweens(TweenManager, World, EDreamTweenTickType::DuringPhysics);
 
-	if (IsValid(EventSystem))
+	if (UDreamUIInputSubsystem* InputSubsystem = World != nullptr ? UDreamUIInputSubsystem::Get(World) : nullptr)
 	{
 		/*
-		 * The event system's own tick, not the input module's ProcessInput directly.
-		 *
-		 * TickComponent is what an engine frame calls, and it is where the event system's
-		 * raycast-enabled switch is honoured -- going straight to ProcessInput would mean a test
-		 * could not turn input off the way a game can, and would be asserting against a pipeline
-		 * one step shorter than the real one. From here it is ProcessInput, the line trace through
-		 * every registered raycaster, and dispatch.
+		 * The world's input frame, as the input subsystem's tick function runs it: every player in
+		 * player order, each through its module's ProcessInput -- the queued presses, every pointer's
+		 * trace and dispatch, the wheel -- and each player's raycast-enabled switch honoured, so a test
+		 * can turn input off the way a game can. Going straight to the module's ProcessInput would be a
+		 * pipeline one step shorter than the real one.
 		 */
-		// Called through the BASE pointer because UDreamEventSystem narrows TickComponent to protected
-		// while UActorComponent declares it public, and access is checked against the static type.
-		// This is not a way around the intent -- the engine itself calls it through the base, and this
-		// pump exists precisely to be that caller. Dispatch is still virtual, so the override above is
-		// what runs; only the name lookup moves.
-		static_cast<UActorComponent*>(EventSystem)->TickComponent(InDeltaSeconds, LEVELTICK_All, nullptr);
+		InputSubsystem->ProcessFrame(InDeltaSeconds);
 	}
 
-	TickTweens(TweenManager, World, EDreamTweenTickType::DuringPhysics);
 	TickTweens(TweenManager, World, EDreamTweenTickType::PostPhysics);
 
 	if (World != nullptr)
@@ -1121,7 +1115,7 @@ namespace DreamDriverSequenceLocal
 			{
 				// Down means a pointer of that index exists and its trigger is held. The press a
 				// TouchDown queued has been processed by now -- its step spent the frame after it.
-				const UDreamPointerEventData* EventData = InContext.GetPointerEventData(FingerId);
+				const UDreamPointerEventData* EventData = InContext.GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(FingerId));
 				if (EventData == nullptr || !EventData->bNowIsTriggerPressed)
 				{
 					FailureReason = FString::Printf(TEXT("finger %d is not down, so it cannot %s"), FingerId,

@@ -1,13 +1,35 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/InputModule/DreamBaseInputModule.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "DreamGUI.h"
 
 UDreamBaseInputModule::UDreamBaseInputModule()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+}
+
+UDreamUIInputUser* UDreamBaseInputModule::GetInputUser() const
+{
+	return EventSystem.IsValid() ? EventSystem->GetInputUser() : nullptr;
+}
+
+void UDreamBaseInputModule::ProcessInput()
+{
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->RunPipeline();
+	}
+}
+
+void UDreamBaseInputModule::ClearEvent()
+{
+	if (UDreamUIInputUser* User = GetInputUser())
+	{
+		User->ReleaseAllPointers();
+	}
 }
 
 void UDreamBaseInputModule::RegisterInputModuleToEventSystem(UDreamEventSystem* TargetEventSystem)
@@ -35,4 +57,3 @@ void UDreamBaseInputModule::UnregisterInputModuleFromEventSystem()
 		}
 	}
 }
-

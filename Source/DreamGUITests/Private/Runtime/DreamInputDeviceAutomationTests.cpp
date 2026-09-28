@@ -4,7 +4,10 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Driver/DreamDriverRig.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputUser.h"
+#include "UObject/Package.h"
 
 /*
  * Which device the player has their hands on. Nothing tracked it before, so a key prompt had nothing
@@ -41,7 +44,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamInputDeviceChangeReportingTest::RunTest(const FString& Parameters)
 {
-	UDreamEventSystem* Events = NewObject<UDreamEventSystem>(GetTransientPackage());
+	// The device is the player's: an event system speaking for one reports through it.
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(640, 360));
+	Rig.BindTest(this);
+	UDreamEventSystem* Events = Rig.EventSystem();
+	if (!TestTrue(TEXT("An event system speaking for a player"), Rig.IsUsable() && Events != nullptr && Events->GetInputUser() != nullptr))
+	{
+		return false;
+	}
 	int32 BroadcastCount = 0;
 	EDreamUIInputDevice LastSeen = EDreamUIInputDevice::Touch;
 	Events->GetInputDeviceChangedEvent().AddLambda([&](EDreamUIInputDevice Device)
@@ -64,6 +74,10 @@ bool FDreamInputDeviceChangeReportingTest::RunTest(const FString& Parameters)
 
 	TestFalse(TEXT("A second gamepad key is not a change"), Events->ReportInputDevice(EDreamUIInputDevice::Gamepad));
 	TestEqual(TEXT("...and stays silent"), BroadcastCount, 1);
+
+	// One made outside any world speaks for nobody, and nobody's device changes.
+	UDreamEventSystem* Nobody = NewObject<UDreamEventSystem>(GetTransientPackage());
+	TestFalse(TEXT("An event system with no player reports no change"), Nobody->ReportInputDevice(EDreamUIInputDevice::Gamepad));
 	return true;
 }
 

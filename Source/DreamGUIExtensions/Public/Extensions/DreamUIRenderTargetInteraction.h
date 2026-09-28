@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Event/DreamUINestedSurface.h"
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
 #include "Event/Interface/DreamPointerDoubleClickInterface.h"
@@ -23,6 +24,7 @@ class UDreamUIRenderTargetInteractionSourceInterface : public UInterface
 {
 	GENERATED_BODY()
 };
+
 /**
  * Interface for DreamUIRenderTargetInteraction to provide raycast info.
  */
@@ -37,84 +39,63 @@ public:
 };
 
 /**
- * Perform a raycaster and interaction for DreamUICanvas with RenderMode of RenderTarget.
+ * Lets pointers reach the UI a DreamUICanvas with RenderMode of RenderTarget draws onto a mesh.
  * This component should be placed on a actor which have a IDreamUIRenderTargetInteractionSourceInterface component.
+ *
+ * A nested surface (IDreamUINestedSurface): when a pointer's world ray lands on this actor, the input system asks
+ * this component where on the target canvas the ray lands, and the widget there is what that pointer is over. The
+ * one pipeline serves it -- every pointer and every player with its own state inside the surface, the broadcasts
+ * tooltips and drag visuals hang off, double clicks. It used to run a pipeline of its own in its tick, with one
+ * synthesised pointer for every pointer and player there was, and none of that.
+ *
+ * The pointer interfaces are still implemented, and do nothing but answer bAllowEventBubbleUp: over a part of the
+ * surface with no widget, the actor is what the pointer is over, and its events bubble as they always have.
  */
 UCLASS(ClassGroup = DreamGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
 class DREAMGUIEXTENSIONS_API UDreamUIRenderTargetInteraction : public UDreamScreenSpaceRaycaster
+	, public IDreamUINestedSurface
 	, public IDreamPointerEnterExitInterface
 	, public IDreamPointerDownUpInterface
 	, public IDreamPointerDoubleClickInterface
 	, public IDreamPointerScrollInterface
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	UDreamUIRenderTargetInteraction();
-	virtual void BeginPlay()override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)override;
-	
 	virtual void ActivateRaycaster()override;
 	virtual void DeactivateRaycaster()override;
+
+	//~ Begin IDreamUINestedSurface
+	virtual bool ResolveNestedHit(const FDreamUIHitResultContainer& InOuterHit, UDreamPointerEventData* InPointer,
+		FDreamUIHitResultContainer& OutInnerHit) override;
+	//~ End IDreamUINestedSurface
+
+	/** The canvas this surface shows, once it has been found on the actor's source component. */
+	UDreamCanvas* GetSurfaceCanvas() const { return TargetCanvas.Get(); }
 protected:
 	/** inherited events of this component can bubble up? */
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 		bool bAllowEventBubbleUp = false;
-
 	UPROPERTY(VisibleAnywhere, Transient, Category = DreamGUI, AdvancedDisplay) TWeakObjectPtr<UDreamCanvas> TargetCanvas = nullptr;
 	UPROPERTY(VisibleAnywhere, Transient, Category = DreamGUI, AdvancedDisplay) TObjectPtr<UActorComponent> LineTraceSource = nullptr;
 	/**
-	 * The pointer this component synthesises for the UI drawn into the render target. It is a
-	 * SECOND pointer, distinct from the one that hit the surface in the world -- that one arrives as
-	 * InputPointerEventData and is only a source of rays.
+	 * Find the source component on this actor and the canvas it shows, once. False, with an error in the log, when
+	 * the actor has no source or the source no canvas.
 	 */
-	UPROPERTY(VisibleAnywhere, Transient, Category = DreamGUI, AdvancedDisplay) TObjectPtr<UDreamPointerEventData> PointerEventData = nullptr;
-	/**
-	 * The pointer that hit the surface in the world. It reaches this component as the actor's pointer
-	 * events -- the event system dispatches a world hit to the actor behind it and to its components
-	 * that implement the pointer interfaces (UDreamEventSystem::FDreamPointerWorldTarget) -- and is
-	 * remembered at its Enter.
-	 */
-	TWeakObjectPtr<UDreamPointerEventData> InputPointerEventData = nullptr;
-	/** Between that pointer's Enter and its Exit. Outside it, only a press it began here is still traced. */
-	bool bInputPointerOverSurface = false;
-
-	/**
-	 * PointerEventData, creating it if this is the first caller to need it.
-	 *
-	 * It used to be built in BeginPlay alone, which quietly made "BeginPlay has run" a precondition
-	 * of every pointer handler on this class -- and the handlers are reached from the event system,
-	 * not from the component's own tick, so nothing enforced the order. A press that arrived in the
-	 * same frame the component registered, or anything driving this component from an editor path
-	 * where BeginPlay never runs at all, dereferenced null. Creating it on demand is cheaper than
-	 * teaching four call sites to check, and it means an early press is HANDLED rather than dropped,
-	 * which matters because dropping the press while delivering the release would leave the
-	 * synthesised pointer believing a button it never saw go down had come back up.
-	 */
-	UDreamPointerEventData* EnsurePointerEventData();
+	bool ResolveSource();
+	/** The error for a missing source or canvas is logged once, not once per pointer per frame. */
+	bool bReportedMissingSource = false;
 
 	virtual bool GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)override { return true; }
-	// ShouldStartDrag is deliberately NOT overridden. There used to be an override here whose body
-	// was character-for-character the base class's, which meant a drag threshold or hold-to-drag fix
-	// made in UDreamScreenSpaceRaycaster reached every raycaster except this one. Nothing about a
-	// render-target surface changes how far a pointer has to travel before it counts as a drag: the
-	// positions this reads have already been flattened into the target's own pixel space by the time
-	// they reach the event data, so the base class's arithmetic is measuring the right thing.
+	// ShouldStartDrag is deliberately NOT overridden: nothing about a render-target surface changes how far a pointer
+	// has to travel before it counts as a drag.
 	virtual void Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)override;
 
 	virtual bool OnPointerEnter_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerDown_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerUp_Implementation(UDreamPointerEventData* EventData)override;
-	/**
-	 * The second press of a double click, which the event system delivers in place of that press's
-	 * down. For the UI drawn into the target it is a press like any other, so it presses the
-	 * synthesised pointer exactly as OnPointerDown does -- without this the second click of a quick
-	 * pair would reach the inner UI as a release of a button it never saw go down. The inner pipeline
-	 * runs without an event system, so it keeps no click run of its own and never double-clicks.
-	 */
 	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerScroll_Implementation(UDreamPointerEventData* EventData)override;
-
-	bool LineTrace(FDreamUIHitResultContainer& OutHitResult);
 };

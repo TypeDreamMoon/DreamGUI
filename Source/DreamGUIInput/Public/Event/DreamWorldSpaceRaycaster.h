@@ -61,7 +61,7 @@ protected:
 	 * carries no widget. It wins on distance, so a panel behind it stops being pointed at; and the actor
 	 * behind it is sent the pointer's events -- enter, exit, down, up, click, double click, long press,
 	 * scroll -- on itself and on any of its components that implement the pointer interfaces (see
-	 * UDreamEventSystem::FDreamPointerWorldTarget).
+	 * FDreamUIPointerWorldTarget).
 	 * That is how a render-target surface's UDreamUIRenderTargetInteraction gets its pointer: the
 	 * surface is a mesh in the world, and this trace is the only thing that ever reaches it. A wall
 	 * implements none of the interfaces and is only an occluder.

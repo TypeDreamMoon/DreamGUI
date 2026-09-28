@@ -158,7 +158,7 @@ namespace DreamDriverWorld
 		UTextureRenderTarget2D* RenderTarget = nullptr;
 		/** The plane that shows the texture, and the actor's root, and what the tree follows. */
 		UDreamUIRenderTargetGeometrySource* Surface = nullptr;
-		/** The component that carries a world pointer's hit on the surface into the canvas. See TickLikeAnEngineFrame. */
+		/** The nested surface that carries a world pointer's hit on the surface into the canvas. */
 		UDreamUIRenderTargetInteraction* Interaction = nullptr;
 		AActor* Actor = nullptr;
 
@@ -178,15 +178,4 @@ namespace DreamDriverWorld
 	 */
 	FDreamRenderTargetMesh MakeRenderTargetMesh(FDreamDriverRig& InRig, const FString& InName, const FTransform& InTransform,
 		const FIntPoint& InRenderTargetSize);
-
-	/**
-	 * One engine frame's tick of a single actor component, through the base class where the engine calls it.
-	 *
-	 * For UDreamUIRenderTargetInteraction, which does all its work -- tracing its surface, driving the
-	 * pointer it synthesises for the canvas -- in its own TickComponent. A game's tick manager calls that
-	 * every frame; the headless pump ticks only the event system, so a test that wants the interaction to
-	 * run calls this once per frame, after the frame's input has been processed, which is where a
-	 * component in the same tick group as the event system would run.
-	 */
-	void TickLikeAnEngineFrame(UActorComponent* InComponent, float InDeltaSeconds);
 }

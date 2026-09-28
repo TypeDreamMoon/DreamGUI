@@ -13,6 +13,7 @@
 #include "Engine/World.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Event/DreamUINestedSurface.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
@@ -53,9 +54,9 @@
  *
  * What is deliberately NOT asserted, and why:
  *
- *   UDreamUIRenderTargetInteraction::TickComponent, ::LineTrace and ::Raycast. All three need a
+ *   UDreamUIRenderTargetInteraction::ResolveNestedHit landing on a widget, and ::Raycast. Both need a
  *   component implementing IDreamUIRenderTargetInteractionSourceInterface, a canvas rendering to a
- *   render target, and a view-projection matrix from it. The interesting half -- projecting a hit
+ *   render target, and a view-projection matrix from it; the RHI suite drives them end to end. The interesting half -- projecting a hit
  *   UV back into a ray -- is UDreamScreenSpaceRaycaster::DeprojectViewPointToWorld, which belongs
  *   to the base class and is not this type's decision. There is nothing left here that a fixture
  *   could hold without building a render-target canvas, which needs the RHI.
@@ -323,11 +324,11 @@ bool FDreamScreenSpaceDragThresholdEditTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamRenderTargetSelfDrivenTest,
-	"DreamGUI.Interaction.RenderTarget.ThisRaycasterDrivesItselfInsteadOfEnrollingWithTheManager",
+	FDreamRenderTargetNestedSurfaceTest,
+	"DreamGUI.Interaction.RenderTarget.TheSurfaceIsReachedThroughTheRayThatLandsOnItNotByATickOfItsOwn",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FDreamRenderTargetSelfDrivenTest::RunTest(const FString& Parameters)
+bool FDreamRenderTargetNestedSurfaceTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamInteractionExtensionTestLocal;
 	FScopedGameWorld TestWorld;
@@ -343,116 +344,58 @@ bool FDreamRenderTargetSelfDrivenTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
-	// The negative control comes first and it is doing real work here: ActivateRaycaster on the base
-	// class is what puts a raycaster into the manager's list. Without this assertion, "the
-	// render-target one is absent" would be satisfied just as well by a broken fixture in which
-	// nothing enrols at all.
+	// The negative control first: ActivateRaycaster on the base class is what puts a raycaster into the manager's
+	// list, so "the surface is absent" is not satisfied by a fixture in which nothing enrols at all.
 	UDreamScreenSpaceRaycaster* Ordinary = NewObject<UDreamScreenSpaceRaycaster>(Host);
 	Ordinary->RegisterComponent();
 	Ordinary->ActivateRaycaster();
 	TestTrue(TEXT("an ordinary raycaster enrols itself with the manager"), IsEnrolled(Manager, Ordinary));
 
-	// And the claim. This component processes input inside its own TickComponent instead of being
-	// pumped by the manager's raycaster sweep, so enrolling would have it handle every pointer
-	// twice -- once through the sweep and once through its own tick.
-	UDreamUIRenderTargetInteraction* SelfDriven = NewObject<UDreamUIRenderTargetInteraction>(Host);
-	SelfDriven->RegisterComponent();
-	SelfDriven->ActivateRaycaster();
-	TestFalse(TEXT("the render-target interaction stays out of the manager's list"),
-		IsEnrolled(Manager, SelfDriven));
+	// A surface is reached through the world ray that lands on its actor -- the input pipeline asks it where on its
+	// own canvas that ray lands -- so it has no business in the list every pointer is traced through, and nothing to
+	// tick: it used to run a pipeline of its own in its tick, with one synthesised pointer for every pointer there was.
+	UDreamUIRenderTargetInteraction* Surface = NewObject<UDreamUIRenderTargetInteraction>(Host);
+	Surface->RegisterComponent();
+	Surface->ActivateRaycaster();
+	TestFalse(TEXT("the render-target interaction stays out of the manager's list"), IsEnrolled(Manager, Surface));
+	TestFalse(TEXT("...and does not tick"), Surface->PrimaryComponentTick.bCanEverTick);
+	TestNotNull(TEXT("...because it is a nested surface the pipeline asks"), Cast<IDreamUINestedSurface>(Surface));
 
-	// The other half of the same bargain, and the reason opting out is safe: it ticks. A change that
-	// made ActivateRaycaster call Super without also turning the tick off would double-drive it, and
-	// a change that turned the tick off without enrolling would make it deaf. Asserting both sides
-	// together is what catches either half moving on its own.
-	TestTrue(TEXT("...because it is ticking to drive itself"),
-		SelfDriven->PrimaryComponentTick.bCanEverTick);
-	TestFalse(TEXT("whereas a manager-pumped raycaster does not tick"),
-		Ordinary->PrimaryComponentTick.bCanEverTick);
-
-	// Deactivation is overridden to nothing for the same reason, and "nothing" has to mean nothing:
-	// a DeactivateRaycaster that fell through to Super would call RemoveRaycaster, which searches
-	// the shared list. Harmless here, but it is the same list every other raycaster lives in.
-	SelfDriven->DeactivateRaycaster();
-	TestFalse(TEXT("deactivating it changes nothing about its own absence"),
-		IsEnrolled(Manager, SelfDriven));
+	Surface->DeactivateRaycaster();
+	TestFalse(TEXT("deactivating it changes nothing about its absence"), IsEnrolled(Manager, Surface));
 	TestTrue(TEXT("...and leaves the ordinary raycaster enrolled"), IsEnrolled(Manager, Ordinary));
-
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamRenderTargetPointerBeforeBeginPlayTest,
-	"DreamGUI.Interaction.RenderTarget.APointerArrivingBeforeBeginPlayIsHandledRatherThanFatal",
+	"DreamGUI.Interaction.RenderTarget.ARayOnASurfaceWithNothingToShowIsAMissRatherThanFatal",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamRenderTargetPointerBeforeBeginPlayTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamInteractionExtensionTestLocal;
 
-	// This component synthesises a SECOND pointer, the one the UI drawn into the render target sees,
-	// and that object used to be built by BeginPlay alone. That quietly made "BeginPlay has run" a
-	// precondition of three handlers the EVENT SYSTEM calls -- nothing orders the two against each
-	// other, and an editor path that drives this component never runs BeginPlay at all. The
-	// un-BeginPlayed component below is that state, on purpose.
-	UDreamUIRenderTargetInteraction* Interaction =
-		NewObject<UDreamUIRenderTargetInteraction>(GetTransientPackage());
+	// A surface nobody gave a source component or a canvas: the state of one whose actor is still being assembled,
+	// or authored wrong. A ray that lands on it has nowhere to go, and saying so is the whole of the contract.
+	AddExpectedMessagePlain(TEXT("InteractionSource is not valid"), ELogVerbosity::Error, EAutomationExpectedMessageFlags::Contains, 1);
+	UDreamUIRenderTargetInteraction* Surface = NewObject<UDreamUIRenderTargetInteraction>(GetTransientPackage());
+	UDreamPointerEventData* Pointer = NewObject<UDreamPointerEventData>(GetTransientPackage());
+	FDreamUIHitResultContainer OuterHit;
+	OuterHit.RayDirection = FVector(1.0, 0.0, 0.0);
+	FDreamUIHitResultContainer InnerHit;
+	TestFalse(TEXT("a ray on a surface with no source reaches no canvas"),
+		Surface->ResolveNestedHit(OuterHit, Pointer, InnerHit));
+	TestFalse(TEXT("...and names no widget"), InnerHit.HitResult.Widget.IsValid());
+	// Asked again, it says nothing more: a missing source is reported once, not once per pointer per frame.
+	TestFalse(TEXT("a second ray is a miss as well"), Surface->ResolveNestedHit(OuterHit, Pointer, InnerHit));
 
-	TObjectPtr<UDreamPointerEventData>* Synthesised =
-		FieldPtr<TObjectPtr<UDreamPointerEventData>>(*this, Interaction, TEXT("PointerEventData"));
-	if (Synthesised == nullptr)
-	{
-		return false;
-	}
-	TestNull(TEXT("nothing has built the synthesised pointer yet"), Synthesised->Get());
-
-	UDreamPointerEventData* Incoming = NewObject<UDreamPointerEventData>(GetTransientPackage());
-	Incoming->MouseButtonType = EDreamUIMouseButtonType::Right;
-
-	// The press is HANDLED rather than dropped, and the difference matters: dropping the press while
-	// still delivering the release would leave the synthesised pointer believing a button it never
-	// saw go down had come back up.
-	TestFalse(TEXT("a press before BeginPlay is consumed"),
-		IDreamPointerDownUpInterface::Execute_OnPointerDown(Interaction, Incoming));
-	if (!TestNotNull(TEXT("...because the synthesised pointer is built on demand"), Synthesised->Get()))
-	{
-		return false;
-	}
-	TestTrue(TEXT("the press was recorded"), (*Synthesised)->bNowIsTriggerPressed);
-	TestEqual(TEXT("...along with which button it was"),
-		(int32)(*Synthesised)->MouseButtonType, (int32)EDreamUIMouseButtonType::Right);
-
-	// The identity BeginPlay used to be responsible for. It is not decoration: -1 is what tells this
-	// pointer apart from the ones the event system hands out, so building the object on demand has
-	// to produce the same object BeginPlay would have.
-	TestEqual(TEXT("and it is marked as this component's own, not the event system's"),
-		(*Synthesised)->PointerID, -1);
-
-	// The timestamp, taken where there is no world holding a clock. Zero is not a plausible moment
-	// so much as a defined one -- the only reader is the base class's hold-to-drag test, which
-	// declines to measure a hold at all without a world -- and defined is the entire requirement,
-	// because the line that produces it used to be GetWorld()->TimeSeconds with nothing in front.
-	TestEqual(TEXT("a press outside a world stamps a defined time rather than dereferencing null"),
-		(*Synthesised)->PressTime, 0.0);
-
-	// The release has to land on the object the press created rather than on a fresh one, or the
-	// press and the release would be describing two different pointers.
-	UDreamPointerEventData* PressedPointer = Synthesised->Get();
-	TestFalse(TEXT("a release before BeginPlay is consumed"),
-		IDreamPointerDownUpInterface::Execute_OnPointerUp(Interaction, Incoming));
-	TestTrue(TEXT("...on the same synthesised pointer the press used"), Synthesised->Get() == PressedPointer);
-	TestFalse(TEXT("and the press is over"), (*Synthesised)->bNowIsTriggerPressed);
-	TestEqual(TEXT("with a defined release time as well"), (*Synthesised)->ReleaseTime, 0.0);
-
-	// Scroll is the third of the family. With nothing hovered there is nobody to forward the wheel
-	// to, so it is swallowed -- but reaching even that decision means reading EnterWidget off the
-	// synthesised pointer, which is the dereference this test exists for.
-	Incoming->ScrollAxisValue = FVector2D(0.0, 1.0);
-	TestFalse(TEXT("a scroll before BeginPlay is consumed"),
-		IDreamPointerScrollInterface::Execute_OnPointerScroll(Interaction, Incoming));
-	TestEqual(TEXT("...and goes nowhere, because nothing is hovered to receive it"),
-		(*Synthesised)->ScrollAxisValue, FVector2D::ZeroVector);
-
+	// Over a part of the surface with no widget, the actor is what the pointer is over, and the component's handlers
+	// only let the event bubble or not; they no longer drive a pointer of their own.
+	TestFalse(TEXT("a press on the surface itself is consumed"), IDreamPointerDownUpInterface::Execute_OnPointerDown(Surface, Pointer));
+	TestFalse(TEXT("...and so is its release"), IDreamPointerDownUpInterface::Execute_OnPointerUp(Surface, Pointer));
+	Pointer->ScrollAxisValue = FVector2D(0.0, 1.0);
+	TestFalse(TEXT("...and a wheel turn"), IDreamPointerScrollInterface::Execute_OnPointerScroll(Surface, Pointer));
 	return true;
 }
 
@@ -589,15 +532,9 @@ bool FDreamUMGInteractionHoverWithoutVirtualUserTest::RunTest(const FString& Par
 {
 	using namespace DreamInteractionExtensionTestLocal;
 
-	// The test an earlier revision of this file could not write. Both handlers used to open by
-	// dereferencing UDreamUMGWidgetInteractionManager::Instance and then indexing a TMap with
-	// operator[], which checks on a missing key rather than reporting it -- so calling either one
-	// from here ended the process instead of failing an assertion. Nor was that state exotic: Awake
-	// created the Instance unconditionally but added the map entry only where Slate was initialised
-	// and the world was not a preview one, so a build with no Slate application had the static and
-	// not the entry, and went down on the first hover a player ever made.
-	UDreamUMGWidgetInteractionManager* const ManagerBefore = UDreamUMGWidgetInteractionManager::Instance;
-
+	// The test an earlier revision of this file could not write: both handlers used to open by dereferencing a
+	// process-wide manager and indexing its map with operator[], which checks on a missing key -- so a build with no
+	// Slate application went down on the first hover a player ever made.
 	UDreamWidgetTree* Tree = NewObject<UDreamWidgetTree>(GetTransientPackage());
 	UDreamWidget* Widget = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Surface"));
 	if (!TestNotNull(TEXT("a widget to host the interaction"), Widget))
@@ -631,17 +568,8 @@ bool FDreamUMGInteractionHoverWithoutVirtualUserTest::RunTest(const FString& Par
 	TestFalse(TEXT("and the same component can be hovered again afterwards"),
 		IDreamPointerEnterExitInterface::Execute_OnPointerEnter(Interaction, Pointer));
 
-	// The claim that ties both halves of the fix together: creating the manager IS enrolling in it.
-	// A component with no virtual user has no claim on a shared cursor to arbitrate, so it must not
-	// bring a manager into existence -- and while it did, the first such component to be destroyed
-	// found the map empty, concluded nobody was left and destroyed the Instance out from under every
-	// component that HAD enrolled, leaving their next hover to dereference a dangling static.
-	//
-	// Written as "unchanged" rather than "null" on purpose. In this suite nothing ever enrols, so
-	// this is null both before and after; comparing against what was there keeps the assertion
-	// honest in a process where something else did.
-	TestTrue(TEXT("hovering a component that never enrolled conjures no manager"),
-		UDreamUMGWidgetInteractionManager::Instance == ManagerBefore);
+	// The manager is the world's, and a component in no world has none to enrol in: its hovers arbitrate nothing.
+	TestNull(TEXT("a component in no world has no manager to enrol in"), UDreamUMGWidgetInteractionManager::Get(Interaction));
 
 	Widget->DestroyWidget();
 	return true;

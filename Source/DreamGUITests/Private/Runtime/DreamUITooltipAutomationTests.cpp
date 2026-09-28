@@ -129,16 +129,10 @@ bool FDreamUITooltipOutlivesItsSourceTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
-	// The holder is the bubble: everything drawn hangs off it, and it is what HideTooltip destroys.
-	// Reaching it by reflection rather than by a query is deliberate -- the subsystem deliberately
-	// exposes no handle on its own widgets, and a test that asserted only on GetShownFor would have
-	// passed all along, because ShownFor going stale IS the bug rather than a symptom of it.
-	FProperty* HolderProperty = UDreamUITooltipSubsystem::StaticClass()->FindPropertyByName(TEXT("TooltipHolder"));
-	if (!TestNotNull(TEXT("the subsystem still has a TooltipHolder property to assert against"), HolderProperty))
-	{
-		return false;
-	}
-	const TObjectPtr<UDreamWidget>* Holder = HolderProperty->ContainerPtrToValuePtr<TObjectPtr<UDreamWidget>>(Tooltip);
+	// The bubble itself: everything drawn hangs off it, and it is what hiding destroys. Asked for as the bubble, not
+	// through GetShownFor -- a test that asserted only on GetShownFor would have passed all along, because ShownFor
+	// going stale IS the bug rather than a symptom of it.
+	auto Bubble = [Tooltip]() { return Tooltip->GetBubbleForUser(0); };
 
 	UDreamWidget* Source = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
 	Source->SetDisplayName(TEXT("TooltipSource"));
@@ -149,7 +143,7 @@ bool FDreamUITooltipOutlivesItsSourceTest::RunTest(const FString& Parameters)
 
 	Tooltip->ShowTooltipFor(Source);
 	TestEqual(TEXT("the bubble belongs to the widget it was shown for"), Tooltip->GetShownFor(), Source);
-	if (!TestNotNull(TEXT("...and a bubble was actually built"), Holder->Get()))
+	if (!TestNotNull(TEXT("...and a bubble was actually built"), Bubble()))
 	{
 		Source->DestroyWidget();
 		return false;
@@ -158,7 +152,7 @@ bool FDreamUITooltipOutlivesItsSourceTest::RunTest(const FString& Parameters)
 	// A tick with the source still alive changes nothing: the bubble is re-measured and repositioned,
 	// which is the state this test has to distinguish "tore it down" from.
 	Tooltip->Tick(0.016f);
-	TestNotNull(TEXT("an ordinary tick leaves a live tooltip alone"), Holder->Get());
+	TestNotNull(TEXT("an ordinary tick leaves a live tooltip alone"), Bubble());
 
 	// The recycled row / closed screen. Both halves are needed to reproduce it: DestroyWidget tears
 	// the widget down but leaves the object addressable, and it is the COLLECTION that follows -- a
@@ -169,12 +163,12 @@ bool FDreamUITooltipOutlivesItsSourceTest::RunTest(const FString& Parameters)
 	TestNull(TEXT("the source really is gone"), Tooltip->GetShownFor());
 
 	Tooltip->Tick(0.016f);
-	TestNull(TEXT("the bubble is destroyed rather than left parked on the screen root"), Holder->Get());
+	TestNull(TEXT("the bubble is destroyed rather than left parked on the screen root"), Bubble());
 
 	// And the subsystem is left in a state a later tooltip can use, rather than one where it believes
 	// a bubble is still up.
 	Tooltip->Tick(0.016f);
-	TestNull(TEXT("a second tick has nothing left to do"), Holder->Get());
+	TestNull(TEXT("a second tick has nothing left to do"), Bubble());
 	return true;
 }
 

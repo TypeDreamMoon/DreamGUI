@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -8,7 +8,10 @@
 #include "DreamStandaloneInputModule.generated.h"
 
 /**
- * Common standalone platform input, or mouse input
+ * Common standalone platform input, or mouse input.
+ *
+ * Presses, releases and wheel turns are queued on the player and dispatched on the player's next frame, in the
+ * order they arrived; moves and navigation are state the next frame reads.
  */
 UCLASS(ClassGroup = DreamGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
 class DREAMGUIINPUT_API UDreamStandaloneInputModule : public UDreamPointerInputModule
@@ -16,7 +19,6 @@ class DREAMGUIINPUT_API UDreamStandaloneInputModule : public UDreamPointerInputM
 	GENERATED_BODY()
 
 public:
-	virtual void ProcessInput()override;
 	/** input for mouse press and release */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI, meta = (AdvancedDisplay = "inMouseButtonType"))
 		void InputTrigger(const FVector& InMousePosition, bool InTriggerPress, EDreamUIMouseButtonType InMouseButtonType = EDreamUIMouseButtonType::Left);
@@ -33,22 +35,26 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		void InputMouseMove(const FVector& InMousePosition);
-	/** input for touch press and release */
+	/** input for touch press and release. InTouchID is the finger; its pointer is GetTouchPointerID(InTouchID). */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void InputTouchTrigger(bool InTouchPress, int InTouchID, const FVector& InTouchPointPosition);
 	/** input for touch point moved */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void InputTouchMoved(int InTouchID, const FVector& InTouchPointPosition);
+	/**
+	 * The pointer id finger InTouchID is tracked under: 100 plus the finger, so that no finger is the mouse -- or the
+	 * finger itself under UDreamGUISettings::bLegacyTouchPointerIds.
+	 */
+	UFUNCTION(BlueprintPure, Category = DreamGUI)
+	static int32 GetTouchPointerID(int32 InTouchID);
 	/** get current mouse position, return (0,0) if mouse position is not valid */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void GetMousePosition(FVector2D& OutMousePos)const;
 
 	/**
-	 * While on, the pointer position comes from SetOverridePointerPosition rather than the OS mouse:
-	 * GetMousePosition answers with the override, so every caller that routes through it -- the
-	 * event system actor's clicks and moves included -- follows the substituted pointer for free.
-	 * This is the virtual-cursor seam. (The doc comments referenced this property for years; it now
-	 * exists.)
+	 * While on, the pointer position comes from SetOverridePointerPosition rather than the OS mouse: GetMousePosition
+	 * answers with the override, so every caller that routes through it -- the event system actor's clicks and moves
+	 * included -- follows the substituted pointer for free. This is the virtual-cursor seam.
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetOverrideMousePosition(bool bInOverride);
@@ -66,27 +72,6 @@ public:
 	void InputTriggerForNavigation(bool InTriggerPress, int InPointerID);
 protected:
 	void CommonInputTrigger(const FVector& InPointerPosition, bool InTriggerPress, int InPointerID, EDreamUIMouseButtonType InMouseButtonType = EDreamUIMouseButtonType::Left, bool bInIsTouch = false);
-	struct StandaloneInputData
-	{
-		bool bTriggerPress = false;
-		/**
-		 * Pointer-clock stamps (UDreamEventSystem::GetPointerClockSeconds), as double as the event data
-		 * fields they are copied into: real time only ever grows during a session, and a float of it
-		 * loses milliseconds within the first few hours.
-		 */
-		double PressTime = 0;
-		double ReleaseTime = 0;
-		int PointerID = 0;
-		EDreamUIMouseButtonType MouseButtonType = EDreamUIMouseButtonType::Left;
-		FVector PointerPosition = FVector::ZeroVector;
-		/**
-		 * A finger rather than a mouse button. The distinction only matters on release: a finger that
-		 * comes off the glass ceases to exist, while a mouse button going up leaves the mouse where it
-		 * is, so only the touch pointer is retired once its release has been dispatched.
-		 */
-		bool bIsTouch = false;
-	};
-	TArray<StandaloneInputData> StandaloneInputDataArray;//collect input data into array in input event, and process these input data in ProcessInput. This can solve the condition: multiple mouse button input in one frame
 
 	UPROPERTY(VisibleAnywhere, Category = DreamGUI, AdvancedDisplay)
 	bool bOverrideMousePosition = false;

@@ -404,14 +404,3 @@ DreamDriverWorld::FDreamRenderTargetMesh DreamDriverWorld::MakeRenderTargetMesh(
 	Made.Interaction = Interaction;
 	return Made;
 }
-
-void DreamDriverWorld::TickLikeAnEngineFrame(UActorComponent* InComponent, float InDeltaSeconds)
-{
-	if (!IsValid(InComponent) || !InComponent->IsRegistered())
-	{
-		return;
-	}
-	// Through the base class, where TickComponent is public and where the engine's tick function calls
-	// it; dispatch is still virtual.
-	InComponent->TickComponent(InDeltaSeconds, LEVELTICK_All, nullptr);
-}

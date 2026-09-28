@@ -11,7 +11,11 @@
 
 #define LOCTEXT_NAMESPACE "UIWidgetInteraction"
 
-UDreamUMGWidgetInteractionManager* UDreamUMGWidgetInteractionManager::Instance = nullptr;
+UDreamUMGWidgetInteractionManager* UDreamUMGWidgetInteractionManager::Get(const UObject* InWorldContext)
+{
+	const UWorld* World = DreamUI::GetWorldSafe(InWorldContext);
+	return World != nullptr ? World->GetSubsystem<UDreamUMGWidgetInteractionManager>() : nullptr;
+}
 
 UDreamUMGWidgetInteraction::UDreamUMGWidgetInteraction()
 {
@@ -20,16 +24,13 @@ UDreamUMGWidgetInteraction::UDreamUMGWidgetInteraction()
 
 UDreamUMGWidgetInteractionManager::FInteractionContainer* UDreamUMGWidgetInteraction::FindEnrolledInteractions()
 {
-	if (UDreamUMGWidgetInteractionManager::Instance == nullptr)
-	{
-		return nullptr;
-	}
-	return UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction.Find(VirtualUserIndex);
+	UDreamUMGWidgetInteractionManager* Manager = Helper.Get();
+	return Manager != nullptr ? Manager->MapVirtualUserIndexToInteraction.Find(VirtualUserIndex) : nullptr;
 }
 
 bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
-	if (CurrentPointerEventData == nullptr)
+	if (!CurrentPointerEventData.IsValid())
 	{
 		CurrentPointerEventData = EventData;
 
@@ -41,7 +42,7 @@ bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEven
 		// application was fatal twice over: a null Instance, and then a key the map never got.
 		if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
 		{
-			if (Interactions->CurrentInteraction == nullptr)
+			if (!Interactions->CurrentInteraction.IsValid())
 			{
 				Interactions->CurrentInteraction = this;
 				this->SetCanExecuteTick(true);//hover in, enable update
@@ -52,16 +53,16 @@ bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEven
 }
 bool UDreamUMGWidgetInteraction::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
-	if (CurrentPointerEventData == EventData)
+	if (CurrentPointerEventData.Get() == EventData)
 	{
-		CurrentPointerEventData = nullptr;
+		CurrentPointerEventData.Reset();
 
 		if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
 		{
-			if (Interactions->CurrentInteraction == this)
+			if (Interactions->CurrentInteraction.Get() == this)
 			{
 				SimulatePointerMovement();//pointer exit;
-				Interactions->CurrentInteraction = nullptr;
+				Interactions->CurrentInteraction.Reset();
 				this->SetCanExecuteTick(false);//hover out, disable update
 			}
 		}
@@ -143,14 +144,12 @@ void UDreamUMGWidgetInteraction::Awake()
 			// its class comment: a component that reaches Awake without getting this far has nothing
 			// to arbitrate, and letting it create the manager anyway is what made the manager's
 			// existence and its contents two separate facts.
-			if (UDreamUMGWidgetInteractionManager::Instance == nullptr)
+			if (UDreamUMGWidgetInteractionManager* Manager = UDreamUMGWidgetInteractionManager::Get(this))
 			{
-				UDreamUMGWidgetInteractionManager::Instance = NewObject<UDreamUMGWidgetInteractionManager>();
-				UDreamUMGWidgetInteractionManager::Instance->AddToRoot();
+				Helper = Manager;
+				auto& Interactions = Manager->MapVirtualUserIndexToInteraction.FindOrAdd(VirtualUserIndex);
+				Interactions.AllInteractions.AddUnique(this);
 			}
-			Helper = UDreamUMGWidgetInteractionManager::Instance;
-			auto& Interactions = UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction.FindOrAdd(VirtualUserIndex);
-			Interactions.AllInteractions.Add(this);
 		}
 	}
 	// A behaviour whose outer chain no longer yields a widget has no visual to interact with either;
@@ -175,45 +174,34 @@ void UDreamUMGWidgetInteraction::OnDestroy()
 		VirtualUser.Reset();
 	}
 
-	// A component that never enrolled has no manager to leave and, more to the point, no standing to
-	// destroy one. This early return is the other half of the fix in Awake: while un-enrolled
-	// components fell through to the teardown below, the first one destroyed found the map empty and
-	// took the Instance with it, leaving the enrolled components that were still hovering to
-	// dereference a null static.
-	if (UDreamUMGWidgetInteractionManager::Instance == nullptr)
+	// A component that never enrolled has no manager to leave.
+	UDreamUMGWidgetInteractionManager* Manager = Helper.Get();
+	Helper.Reset();
+	CurrentPointerEventData.Reset();
+	if (Manager == nullptr)
 	{
-		Helper = nullptr;
 		return;
 	}
 
-	auto& MapVirtualUserIndexToInteraction = UDreamUMGWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction;
+	auto& MapVirtualUserIndexToInteraction = Manager->MapVirtualUserIndexToInteraction;
 	if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = MapVirtualUserIndexToInteraction.Find(VirtualUserIndex))
 	{
 		// Giving the shared cursor back matters more than leaving the list tidy. CurrentInteraction
 		// is exactly what the next component's hover tests for null, so a destroyed component still
 		// named there does not leak an entry -- it makes the whole virtual user index permanently
 		// deaf, because no later hover can ever claim a cursor that is already spoken for.
-		if (Interactions->CurrentInteraction == this)
+		if (Interactions->CurrentInteraction.Get() == this || !Interactions->CurrentInteraction.IsValid())
 		{
-			Interactions->CurrentInteraction = nullptr;
+			Interactions->CurrentInteraction.Reset();
 		}
 		Interactions->AllInteractions.Remove(this);
+		Interactions->AllInteractions.RemoveAll([](const TWeakObjectPtr<UDreamUMGWidgetInteraction>& Entry) { return !Entry.IsValid(); });
 		if (Interactions->AllInteractions.Num() == 0)
 		{
 			MapVirtualUserIndexToInteraction.Remove(VirtualUserIndex);
 		}
 	}
 
-	if (MapVirtualUserIndexToInteraction.Num() == 0)
-	{
-		// RemoveFromRoot before ConditionalBeginDestroy, because the root set is what has kept this
-		// object alive since Awake. Marking it for destruction while it is still rooted leaves the
-		// root set holding an object garbage collection is not allowed to collect.
-		UDreamUMGWidgetInteractionManager::Instance->RemoveFromRoot();
-		UDreamUMGWidgetInteractionManager::Instance->ConditionalBeginDestroy();
-		UDreamUMGWidgetInteractionManager::Instance = nullptr;
-	}
-	Helper = nullptr;
 }
 
 void UDreamUMGWidgetInteraction::Tick(float DeltaTime)
@@ -268,13 +256,14 @@ FWidgetPath UDreamUMGWidgetInteraction::DetermineWidgetUnderPointer()
 
 	LastLocalHitLocation = LocalHitLocation;
 	FWidgetTraceResult TraceResult;
-	if (CurrentPointerEventData != nullptr && CurrentPointerEventData->Raycaster != nullptr)
+	const UDreamPointerEventData* HoveringPointer = CurrentPointerEventData.Get();
+	if (HoveringPointer != nullptr && HoveringPointer->Raycaster != nullptr)
 	{
-		auto RayOrigin = CurrentPointerEventData->Raycaster->GetRayOrigin();
-		auto RayDirection = CurrentPointerEventData->Raycaster->GetRayDirection();
-		auto RayEnd = RayOrigin + RayDirection * CurrentPointerEventData->Raycaster->GetRayLength();
+		auto RayOrigin = HoveringPointer->Raycaster->GetRayOrigin();
+		auto RayDirection = HoveringPointer->Raycaster->GetRayDirection();
+		auto RayEnd = RayOrigin + RayDirection * HoveringPointer->Raycaster->GetRayLength();
 
-		WidgetComponent->GetLocalHitLocation(CurrentPointerEventData->FaceIndex, CurrentPointerEventData->WorldPoint, RayOrigin, RayEnd, TraceResult.LocalHitLocation);
+		WidgetComponent->GetLocalHitLocation(HoveringPointer->FaceIndex, HoveringPointer->WorldPoint, RayOrigin, RayEnd, TraceResult.LocalHitLocation);
 		TraceResult.HitWidgetPath = FWidgetPath(WidgetComponent->GetHitWidgetPath(TraceResult.LocalHitLocation, /*bIgnoreEnabledStatus*/ false));
 
 		LocalHitLocation = TraceResult.LocalHitLocation;
@@ -320,9 +309,9 @@ void UDreamUMGWidgetInteraction::SimulatePointerMovement()
 	}
 
 	FWidgetPath WidgetPathUnderFinger = DetermineWidgetUnderPointer();
-	if (CurrentPointerEventData != nullptr)
+	if (const UDreamPointerEventData* HoveringPointer = CurrentPointerEventData.Get())
 	{
-		PrevPointerIndex = CurrentPointerEventData->PointerID;
+		PrevPointerIndex = HoveringPointer->PointerID;
 	}
 	if (PrevPointerIndex >= 0)
 	{

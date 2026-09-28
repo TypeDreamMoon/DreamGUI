@@ -16,16 +16,15 @@ void UDreamDriverInputModule::OnRegister()
 
 void UDreamDriverInputModule::ProcessInput()
 {
-	Super::ProcessInput();
-
 	if (PendingScroll.IsSet())
 	{
 		const FVector2D AxisValue = PendingScroll.GetValue();
-		// Cleared before dispatching, not after: InputScroll runs game code, and game code that asks
-		// for another scroll would otherwise have its request thrown away by the reset below it.
+		// Cleared before it goes out: the frame below runs game code, and game code that asks for another
+		// scroll would otherwise have its request thrown away by a reset after it.
 		PendingScroll.Reset();
 		InputScroll(AxisValue, 0);
 	}
+	Super::ProcessInput();
 }
 
 void UDreamDriverInputModule::MoveTo(const FVector2D& InPixel)

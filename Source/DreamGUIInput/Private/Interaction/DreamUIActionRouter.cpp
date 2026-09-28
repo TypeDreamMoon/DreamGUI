@@ -7,6 +7,9 @@
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamKeyEventData.h"
+#include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "Event/Interface/DreamKeyInterface.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
@@ -162,8 +165,8 @@ void UDreamUIActionRouter::Execute(FBindingEntry& InEntry)
 void UDreamUIActionRouter::GetModifierKeyState(int32 InUserIndex, bool& bOutShift, bool& bOutCtrl, bool& bOutAlt, bool& bOutCmd)const
 {
 	bOutShift = bOutCtrl = bOutAlt = bOutCmd = false;
-	UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamUIActionRouter*>(this), InUserIndex);
-	const APlayerController* PlayerController = Events != nullptr ? Events->GetPlayerController() : nullptr;
+	// That player's controller: a chord is the modifiers under the hands of the player who pressed the key.
+	const APlayerController* PlayerController = UDreamEventSystem::GetPlayerControllerForUser(this, InUserIndex);
 	if (PlayerController == nullptr)return;
 	// Both spellings of each: a chord means the modifier, not the particular one under which hand.
 	bOutShift = PlayerController->IsInputKeyDown(EKeys::LeftShift) || PlayerController->IsInputKeyDown(EKeys::RightShift);
@@ -175,13 +178,11 @@ void UDreamUIActionRouter::GetModifierKeyState(int32 InUserIndex, bool& bOutShif
 bool UDreamUIActionRouter::DispatchKeyToFocusedWidget(int32 InUserIndex, const FKey& InKey, bool bPressed,
 	bool bShiftDown, bool bCtrlDown, bool bAltDown, bool bCmdDown)
 {
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, InUserIndex);
-	if (!IsValid(EventSystem))
-	{
-		return false;
-	}
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this);
+	const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
+	const UDreamPointerEventData* FocusPointer = User != nullptr ? User->FindPointerEventData(0) : nullptr;
 	// Pointer 0's selection IS the focus: SetFocus/ClearFocus and the navigation cursor all write it.
-	UDreamWidget* Focused = EventSystem->GetCurrentSelectedComponent(0);
+	UDreamWidget* Focused = FocusPointer != nullptr ? FocusPointer->SelectedComponent.Get() : nullptr;
 	if (!IsValid(Focused))
 	{
 		return false;
@@ -382,7 +383,9 @@ void UDreamUIActionRouter::Tick(float DeltaTime)
 			ProgressUpdates.Emplace(Entry.Id, 0.0f);//whatever was drawing the ring has to empty it
 			continue;
 		}
-		Entry.HeldSeconds += DeltaTime;
+		// The UI clock: a hold-to-confirm takes as long in a slowed-down game as at full speed, and still fills in a
+		// paused game's menu.
+		Entry.HeldSeconds += DreamUIInputClock::GetUIDeltaSeconds(this, DeltaTime);
 		ProgressUpdates.Emplace(Entry.Id, Entry.Action.HoldTime > 0.0f
 			? FMath::Clamp(Entry.HeldSeconds / Entry.Action.HoldTime, 0.0f, 1.0f)
 			: 0.0f);
@@ -429,10 +432,11 @@ void UDreamUIActionRouter::GetDisplayBindings(int32 InUserIndex, TArray<FDreamUI
 
 	EDreamUIInputDevice Device = EDreamUIInputDevice::MouseAndKeyboard;
 	EDreamUIGamepadModel GamepadModel = EDreamUIGamepadModel::Generic;
-	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamUIActionRouter*>(this), InUserIndex))
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this);
+	if (const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr)
 	{
-		Device = Events->GetCurrentInputDevice();
-		GamepadModel = Events->GetCurrentGamepadModel();
+		Device = User->GetCurrentInputDevice();
+		GamepadModel = User->GetCurrentGamepadModel();
 	}
 
 	// Newest first, matching the order HandleKey resolves in: what the player sees at the front of the

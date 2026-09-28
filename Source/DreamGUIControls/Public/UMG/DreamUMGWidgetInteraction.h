@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/WidgetInteractionComponent.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Subsystems/WorldSubsystem.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
 #include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
@@ -16,37 +17,29 @@ class UDreamUMGWidgetInteraction;
 class UWidget;
 
 /**
- * The one place that answers "which of the components sharing a virtual Slate user is driving it".
+ * The one place that answers "which of the components sharing a virtual Slate user is driving it", per world.
  *
- * A virtual user is a Slate-wide resource keyed by index, and nothing stops several
- * DreamUMGWidgetInteraction components from being authored with the same VirtualUserIndex -- several
- * UMG panels in a level sharing one simulated cursor is the intended use. Only one of them may hold
- * that cursor at a time, so the hover that arrives first claims CurrentInteraction and the rest
- * stand down until it is given back.
+ * A virtual user is a Slate-wide resource keyed by index, and nothing stops several DreamUMGWidgetInteraction
+ * components from being authored with the same VirtualUserIndex -- several UMG panels in a level sharing one
+ * simulated cursor is the intended use. Only one of them may hold that cursor at a time, so the hover that arrives
+ * first claims CurrentInteraction and the rest stand down until it is given back.
  *
- * ITS LIFETIME IS THE MAP'S. Instance is created by the first component to ENROL and destroyed by
- * the last one to leave, and enrolling is not something every component does: one that never got a
- * virtual user -- a build with no Slate application, a preview world, an authoring tree -- cannot
- * send input at all, so it has no claim to arbitrate and no business in here.
- *
- * Making creation part of enrolling, rather than something Awake does first and unconditionally, is
- * what stops "Instance exists" and "this component has a map entry" from being two facts that can
- * disagree. While they could, the first un-enrolled component to be destroyed found the map empty,
- * concluded nobody was left, and destroyed the Instance out from under every enrolled component that
- * was still alive -- which then dereferenced a dangling static on its next hover.
+ * A world subsystem, holding its components weakly. It used to be a rooted object in a static, shared by every
+ * world and made and unmade by hand as components enrolled and left: two worlds' components contended for one
+ * container, and the first un-enrolled component to go could destroy it out from under the rest.
  */
 UCLASS()
-class DREAMGUICONTROLS_API UDreamUMGWidgetInteractionManager : public UObject
+class DREAMGUICONTROLS_API UDreamUMGWidgetInteractionManager : public UWorldSubsystem
 {
 	GENERATED_BODY()
 public:
+	/** InWorldContext's world's manager, or null in a world that has none (a preview, a world-less authoring tree). */
+	static UDreamUMGWidgetInteractionManager* Get(const UObject* InWorldContext);
 
-	/** Null whenever no component is enrolled, which includes the whole life of a server build. */
-	static UDreamUMGWidgetInteractionManager* Instance;
 	struct FInteractionContainer
 	{
-		TArray<UDreamUMGWidgetInteraction*> AllInteractions;
-		UDreamUMGWidgetInteraction* CurrentInteraction = nullptr;
+		TArray<TWeakObjectPtr<UDreamUMGWidgetInteraction>> AllInteractions;
+		TWeakObjectPtr<UDreamUMGWidgetInteraction> CurrentInteraction;
 	};
 	TMap<int, FInteractionContainer> MapVirtualUserIndexToInteraction;
 };
@@ -71,8 +64,8 @@ protected:
 	/** inherited events of this component can bubble up? */
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
 		bool bAllowEventBubbleUp = false;
-	UPROPERTY(VisibleAnywhere, Transient, Category = DreamGUI, AdvancedDisplay)
-		UDreamUMGWidgetInteractionManager* Helper = nullptr;
+	/** The manager of the world this component enrolled in, or null when it never enrolled. */
+	TWeakObjectPtr<UDreamUMGWidgetInteractionManager> Helper;
 
 	virtual bool OnPointerEnter_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
@@ -88,7 +81,11 @@ protected:
 	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerScroll_Implementation(UDreamPointerEventData* EventData)override;
 
-	UDreamPointerEventData* CurrentPointerEventData = nullptr;
+	/**
+	 * The pointer hovering this component, held weakly: the player that owns it retires pointers -- a lifted finger,
+	 * a player who left -- and a raw pointer to one outlived it here and was read every tick.
+	 */
+	TWeakObjectPtr<UDreamPointerEventData> CurrentPointerEventData;
 
 public:
 
