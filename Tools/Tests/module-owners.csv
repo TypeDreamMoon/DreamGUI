@@ -324,6 +324,7 @@ Source/DreamGUI/Public/Core/DreamLayoutPassContext.h,DreamGUI,core contract: per
 Source/DreamGUI/Public/Core/DreamPerspective.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamScreenUISubsystem.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamTextUserWidget.h,DreamGUI,core
+Source/DreamGUI/Public/Core/DreamUIActionTypes.h,DreamGUI,action handle + delegate: what a widget listening for an input action holds on to
 Source/DreamGUI/Public/Core/DreamUIAnchorData.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIBehaviour.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIBlendMode.h,DreamGUIRenderer,"EDreamUIBlendMode shared by shaders, renderer and visuals"

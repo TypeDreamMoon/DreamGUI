@@ -4,25 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIActionTypes.h"
 #include "Interaction/DreamUIInputAction.h"
 #include "DreamUIActionRouter.generated.h"
 
 class UDreamUINavigationScope;
-
-/** Identifies one live binding. Handed back by RegisterAction and used to take it away again. */
-USTRUCT(BlueprintType)
-struct DREAMGUI_API FDreamUIActionHandle
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly, Category = "DreamGUI-Navigation")
-	int32 Id = INDEX_NONE;
-
-	bool IsValidHandle()const{ return Id != INDEX_NONE; }
-	bool operator==(const FDreamUIActionHandle& Other)const{ return Id == Other.Id; }
-};
-
-DECLARE_DYNAMIC_DELEGATE(FDreamUIActionExecutedDelegate);
 
 /** One live binding as a prompt bar needs to see it: already resolved for the device in use. */
 USTRUCT(BlueprintType)
