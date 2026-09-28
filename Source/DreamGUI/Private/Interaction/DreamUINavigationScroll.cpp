@@ -4,6 +4,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamUIScrollable.h"
+#include "Core/DreamUIBehaviour.h"
 
 namespace DreamUINavigationScrollLocal
 {
