@@ -4,8 +4,6 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Components/SceneComponent.h"
-#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
@@ -13,12 +11,10 @@
 #include "Core/DreamWorldWidgetActor.h"
 #include "Core/DreamWorldWidgetComponent.h"
 #include "DreamOnDiskFixture.h"
-#include "DreamUIBPLibrary.h"
 #include "EditorLevelUtils.h"
 #include "Engine/Level.h"
 #include "Engine/LevelStreamingAlwaysLoaded.h"
 #include "Engine/LevelStreamingDynamic.h"
-#include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
@@ -63,34 +59,6 @@ namespace DreamLifecycleStreamingTestLocal
 		{
 			FlushRenderingCommands();
 		}
-	}
-
-	/** The registered hierarchy roots of InWorld. */
-	TArray<UDreamWidget*> RegisteredRoots(UWorld* InWorld)
-	{
-		TArray<UDreamWidget*> Roots;
-		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InWorld))
-		{
-			for (UDreamWidget* Widget : Manager->GetRegisteredWidgets())
-			{
-				if (Widget->GetParent() == nullptr)
-				{
-					Roots.Add(Widget);
-				}
-			}
-		}
-		return Roots;
-	}
-
-	/** The object a root is held by: the outer of the tree it roots, or its own outer. */
-	const UObject* HolderOf(const UDreamWidget* InRoot)
-	{
-		const UObject* Owner = InRoot != nullptr ? InRoot->GetOuter() : nullptr;
-		if (const UDreamWidgetTree* Tree = Cast<UDreamWidgetTree>(Owner); Tree != nullptr && Tree->RootWidget == InRoot)
-		{
-			Owner = Tree->GetOuter();
-		}
-		return Owner;
 	}
 
 	/** The panels placed in InLevel. */
@@ -162,59 +130,6 @@ namespace DreamLifecycleStreamingTestLocal
 		InWorld->AddStreamingLevel(Streaming);
 		InWorld->FlushLevelStreaming();
 		return Streaming;
-	}
-
-	/**
-	 * A render-target surface put in InLevel as a level's script puts one there at run time: an actor in the level
-	 * whose surface shows a canvas the world holds -- a free widget drawing to a render target, hung on the actor.
-	 */
-	UDreamUIRenderTargetGeometrySource* PlaceSurface(UWorld* InWorld, ULevel* InLevel, UDreamWidget*& OutRoot)
-	{
-		OutRoot = nullptr;
-		FActorSpawnParameters Params;
-		Params.OverrideLevel = InLevel;
-		AActor* Actor = InWorld->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
-		if (Actor == nullptr)
-		{
-			return nullptr;
-		}
-		USceneComponent* Anchor = NewObject<USceneComponent>(Actor, TEXT("Anchor"), RF_Transactional);
-		Actor->SetRootComponent(Anchor);
-		Actor->AddInstanceComponent(Anchor);
-		Anchor->RegisterComponent();
-
-		UDreamWidget* Root = UDreamUIBPLibrary::ConstructWidget(InWorld, TEXT("SurfaceCanvas"), nullptr);
-		UDreamCanvas* Canvas = Root != nullptr ? Root->AddComponent<UDreamCanvas>() : nullptr;
-		if (Canvas == nullptr)
-		{
-			if (Root != nullptr)
-			{
-				Root->DestroyWidget();
-			}
-			return nullptr;
-		}
-		Canvas->SetRenderMode(EDreamRenderMode::RenderTarget);
-		UDreamUIBPLibrary::AttachWidgetToSceneComponent(Root, Anchor);
-		if (!InWorld->IsGameWorld())
-		{
-			// An edited world has nothing to poll the canvas with until it has its target, so it draws first; a playing
-			// world's surface polls for the target itself.
-			DrawFrames(InWorld, 2);
-		}
-		UDreamUIRenderTargetGeometrySource* Surface = NewObject<UDreamUIRenderTargetGeometrySource>(Actor, TEXT("Surface"), RF_Transactional);
-		Surface->SetCanvas(Canvas);
-		Surface->SetupAttachment(Anchor);
-		Actor->AddInstanceComponent(Surface);
-		Surface->RegisterComponent();
-		OutRoot = Root;
-		return Surface;
-	}
-
-	/** Whether InSurface shows its canvas's render target through a material instance of its own. */
-	bool ShowsItsCanvas(const UDreamUIRenderTargetGeometrySource* InSurface)
-	{
-		const UDreamCanvas* Canvas = InSurface != nullptr ? InSurface->GetCanvas() : nullptr;
-		return InSurface->IsRegistered() && InSurface->GetMaterialInstance() != nullptr && Canvas != nullptr && Canvas->GetRenderTarget() != nullptr;
 	}
 
 	/** Each of InHosts holds exactly one tree, registered and its own -- and none of InPrevious. OutTrees are those trees. */

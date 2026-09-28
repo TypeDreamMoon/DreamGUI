@@ -842,6 +842,12 @@ bool FDreamDriverPieSlateSourceTest::RunTest(const FString& Parameters)
 			Input->SetSlateInputSourceEnabled(true);
 			TestTrue(TEXT("...heard from Slate now"), Input->IsSlateInputSourceActive());
 		}
+		// The rig's driver stands a virtual cursor in for the mouse, and a virtual cursor is where a mouse button
+		// presses. These clicks are the platform's own: the mouse is the mouse.
+		if (InContext.InputModule != nullptr)
+		{
+			InContext.InputModule->SetOverrideMousePosition(false);
+		}
 	});
 	const TCHAR* ModeNames[] = { TEXT("game only"), TEXT("game and UI"), TEXT("UI only") };
 	const int32 ModeCount = UE_ARRAY_COUNT(ModeNames);

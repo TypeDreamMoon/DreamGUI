@@ -41,7 +41,7 @@
       "include": ["DreamGUI.Pie."],
       "flags": ["NonNullRHI"],
       "args": ["-RenderOffScreen"],
-      "minTests": 2,
+      "minTests": 4,
       "timeoutMinutes": 20
     },
     "Designer": {
