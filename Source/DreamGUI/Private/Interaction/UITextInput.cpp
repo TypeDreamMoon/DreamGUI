@@ -771,11 +771,9 @@ TWeakObjectPtr<UUITextInput> UUITextInput::ActiveTextInput = nullptr;
 bool UUITextInput::bHostDeliversCharacterEvents = false;
 bool UUITextInput::RouteCharacterInputToActiveInput(TCHAR InCharacter)
 {
-	if (UUITextInput* Input = ActiveTextInput.Get())
-	{
-		return Input->HandleCharacterInput(InCharacter);
-	}
-	return false;
+	// Kept for the projects whose own viewport client calls it, as the README tells them to. The router
+	// is what knows which field owns the keyboard; this field claims it and lets go of it below.
+	return DreamUITextInputRouter::RouteCharacter(InCharacter);
 }
 UUITextInput* UUITextInput::GetActiveTextInput()
 {
@@ -2342,6 +2340,7 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 	TextAtActivation = Text;
 	//the target of RouteCharacterInputToActiveInput: the one field that owns the keyboard right now
 	ActiveTextInput = this;
+	DreamUITextInputRouter::SetActiveTarget(this);
 	SetCanExecuteTick(true);
 	//caret and selection
 	if (Text.Len() == 0)//if no text, use caret
@@ -2595,6 +2594,7 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 	{
 		ActiveTextInput = nullptr;
 	}
+	DreamUITextInputRouter::ClearActiveTarget(this);
 	SetCanExecuteTick(false);
 	//hide caret
 	if (CaretWidget.IsValid())

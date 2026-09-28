@@ -4,7 +4,7 @@
 
 #include "Engine/Console.h"
 #include "GameFramework/PlayerController.h"
-#include "Interaction/UITextInput.h"
+#include "Interaction/DreamUITextInputTarget.h"
 
 namespace DreamGameViewportClientLocal
 {
@@ -109,7 +109,7 @@ bool UDreamGameViewportClient::InputChar(FViewport* InViewport, int32 Controller
 	{
 		return true;
 	}
-	if ((!IgnoreInput() || bDreamUIOnlyInput) && UUITextInput::RouteCharacterInputToActiveInput(Character))
+	if ((!IgnoreInput() || bDreamUIOnlyInput) && DreamUITextInputRouter::RouteCharacter(Character))
 	{
 		return true;
 	}

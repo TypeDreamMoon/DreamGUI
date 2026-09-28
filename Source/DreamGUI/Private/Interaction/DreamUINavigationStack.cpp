@@ -3,7 +3,7 @@
 #include "Interaction/DreamUINavigationStack.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/UISelectable.h"
-#include "Interaction/UITextInput.h"
+#include "Interaction/DreamUITextInputTarget.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
 #include "Engine/World.h"
@@ -175,14 +175,15 @@ bool UDreamUINavigationStack::HandleBack(int32 InUserIndex)
 	{
 		if (UDreamWidget* Selected = EventSystem->GetCurrentSelectedComponent(0))
 		{
-			if (UUITextInput* TextInput = Selected->GetComponent<UUITextInput>())
+			if (IDreamUITextInputTarget* TextInput = Cast<IDreamUITextInputTarget>(
+				Selected->GetComponentByInterface(UDreamUITextInputTarget::StaticClass())))
 			{
-				if (TextInput->IsInputActive())
+				if (TextInput->IsTextInputActive())
 				{
 					// Through the CANCEL road, not the plain end of an edit: Back is the player saying
 					// "throw this away", and a field asked to revert on escape has to hear which of the
 					// two moments this was. Without the knob the two roads are the same call.
-					TextInput->CancelInput();
+					TextInput->CancelTextInput();
 					return true;
 				}
 			}

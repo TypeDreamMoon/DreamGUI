@@ -197,6 +197,7 @@ Source/DreamGUI/Private/Interaction/DreamUINavigationScope.cpp,DreamGUIInput,foc
 Source/DreamGUI/Private/Interaction/DreamUINavigationScroll.cpp,DreamGUI,scroll-into-view helper called by UDreamWidgetNavigation (Core) and input; needs an IDreamUIScrollable contract to drop UUIScrollView
 Source/DreamGUI/Private/Interaction/DreamUINavigationStack.cpp,DreamGUIInput,focus stack subsystem
 Source/DreamGUI/Private/Interaction/DreamUIPopupLayer.cpp,DreamGUI,screen layering service (sibling of DreamScreenUISubsystem); no input
+Source/DreamGUI/Private/Interaction/DreamUITextInputTarget.cpp,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
 Source/DreamGUI/Private/Interaction/DreamUITooltip.cpp,DreamGUIInput,hover-driven tooltip subsystem + source interface
 Source/DreamGUI/Private/Interaction/DreamUIVirtualCursor.cpp,DreamGUIInput,gamepad virtual cursor
 Source/DreamGUI/Private/Interaction/UIButton.cpp,DreamGUIControls,control behaviour
@@ -457,6 +458,7 @@ Source/DreamGUI/Public/Interaction/DreamUINavigationScope.h,DreamGUIInput,focus 
 Source/DreamGUI/Public/Interaction/DreamUINavigationScroll.h,DreamGUI,scroll-into-view helper called by UDreamWidgetNavigation (Core) and input; needs an IDreamUIScrollable contract to drop UUIScrollView
 Source/DreamGUI/Public/Interaction/DreamUINavigationStack.h,DreamGUIInput,focus stack subsystem
 Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h,DreamGUI,screen layering service (sibling of DreamScreenUISubsystem); no input
+Source/DreamGUI/Public/Interaction/DreamUITextInputTarget.h,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
 Source/DreamGUI/Public/Interaction/DreamUITooltip.h,DreamGUIInput,hover-driven tooltip subsystem + source interface
 Source/DreamGUI/Public/Interaction/DreamUIVirtualCursor.h,DreamGUIInput,gamepad virtual cursor
 Source/DreamGUI/Public/Interaction/UIButton.h,DreamGUIControls,control behaviour

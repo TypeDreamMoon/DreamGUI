@@ -9,6 +9,7 @@
 #include "Event/Interface/DreamPointerClickInterface.h"
 #include "Event/Interface/DreamPointerDoubleClickInterface.h"
 #include "Event/Interface/DreamPointerDragInterface.h"
+#include "Interaction/DreamUITextInputTarget.h"
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
 //EVirtualKeyboardType: the enum UMG's editable text spells its KeyboardType with. Named rather than
 //re-declared, because a second enum meaning the same six keyboards is a second thing to keep true.
@@ -99,7 +100,8 @@ enum class EUITextInputDisplayType :uint8
 };
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UUITextInput : public UUISelectable, public IDreamPointerClickInterface, public IDreamPointerDoubleClickInterface, public IDreamPointerDragInterface
+class DREAMGUI_API UUITextInput : public UUISelectable, public IDreamPointerClickInterface, public IDreamPointerDoubleClickInterface, public IDreamPointerDragInterface,
+	public IDreamUITextInputTarget
 {
 	GENERATED_BODY()
 	
@@ -509,6 +511,12 @@ public:
 	 * @return true if the character was accepted into the text.
 	 */
 	bool HandleCharacterInput(TCHAR InCharacter);
+
+	//~ IDreamUITextInputTarget: how the input side reaches a field
+	virtual bool IsTextInputActive() const override { return IsInputActive(); }
+	virtual void CancelTextInput() override { CancelInput(); }
+	virtual bool InsertTextCharacter(TCHAR InCharacter) override { return HandleCharacterInput(InCharacter); }
+
 	/** Blueprint/host spelling of HandleCharacterInput: every character of the string in order. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		bool HandleCharacterInputString(const FString& InCharacters);

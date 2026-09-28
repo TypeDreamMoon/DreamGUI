@@ -109,18 +109,6 @@
       "includedOwner": "DreamGUIInput"
     },
     {
-      "file": "Source/DreamGUI/Private/Extensions/DreamGameViewportClient.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UITextInput.h",
-      "owner": "DreamGUIInput",
-      "includedOwner": "DreamGUIControls"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Interaction/DreamUINavigationStack.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UITextInput.h",
-      "owner": "DreamGUIInput",
-      "includedOwner": "DreamGUIControls"
-    },
-    {
       "file": "Source/DreamGUI/Private/Preview/DreamWidgetDesignerScene.cpp",
       "include": "Source/DreamGUI/Public/Event/DreamScreenSpaceRaycaster.h",
       "owner": "DreamGUI",
