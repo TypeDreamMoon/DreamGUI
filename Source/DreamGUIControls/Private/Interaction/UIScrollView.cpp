@@ -574,9 +574,10 @@ bool UUIScrollView::AcceptsDragGesture(UDreamPointerEventData* InEventData) cons
 
 bool UUIScrollView::IsTouchInput(UDreamPointerEventData* InEventData) const
 {
-    // The DEVICE, not the pointer id: a finger and a mouse both arrive as pointer 0, so the only
-    // honest question is what the player last touched -- which is exactly what the event system
-    // tracks for the key-prompt tables. One place, because three callers ask it now.
+    // The DEVICE, not the pointer id: under the legacy touch ids a finger and a mouse both arrive as
+    // pointer 0, and a virtual cursor is the mouse's pointer too, so the honest question is what the
+    // player last touched -- which is exactly what the player's input tracks for the key-prompt tables.
+    // One place, because three callers ask it now.
     const UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(
         const_cast<UUIScrollView*>(this), InEventData != nullptr ? InEventData->UserIndex : 0);
     return Events != nullptr && Events->GetCurrentInputDevice() == EDreamUIInputDevice::Touch;

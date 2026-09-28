@@ -76,7 +76,7 @@ protected:
 	 * Feedback, then all three click delegates. The one body every ClickMethod ends in -- see the
 	 * definition for why it is a function rather than four lines repeated in three handlers.
 	 */
-	void FireClick();
+	void FireClick(const UDreamPointerEventData* InEventData);
 
 	/**
 	 * Whether the press now under way was one this button took -- it said OnPressed for it. What

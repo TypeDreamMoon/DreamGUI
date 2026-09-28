@@ -485,7 +485,8 @@ void UDreamDialog::FocusDefaultButton()
 		// without buttons has nothing to focus and says so by doing nothing.
 		return;
 	}
-	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, 0))
+	// The player this dialog belongs to: a second player's dialog must not take the first player's focus.
+	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, GetOwningPlayerIndex()))
 	{
 		Events->SetSelectComponentWithDefault(Target);
 	}

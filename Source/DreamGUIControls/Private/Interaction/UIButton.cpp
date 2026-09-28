@@ -44,7 +44,7 @@ bool UUIButton::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 			// MouseDown / Touch Down / ButtonPress: the press IS the click. Fired through the same
 			// body the ordinary click takes, so a button cannot come to mean two different things
 			// depending on which method it was set to.
-			FireClick();
+			FireClick(EventData);
 		}
 	}
 	return bBubble;
@@ -71,7 +71,7 @@ bool UUIButton::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 	if (bAnswered && IsInteractable() && ShouldClickOnUp(EventData))
 	{
 		// MouseUp / ButtonRelease: the release alone fires it, wherever the press landed.
-		FireClick();
+		FireClick(EventData);
 	}
 	// An up this button does not answer goes on to whatever heard the press it passed on.
 	return bAnswered ? bBubble : true;
@@ -91,16 +91,16 @@ bool UUIButton::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 		// the same return is what keeps a method that already fired on the down from firing twice.
 		return AllowEventBubbleUp;
 	}
-	FireClick();
+	FireClick(EventData);
 	return AllowEventBubbleUp;
 }
 
-void UUIButton::FireClick()
+void UUIButton::FireClick(const UDreamPointerEventData* InEventData)
 {
 	// The one body every click method ends in. Pulled out of OnPointerClick when the methods arrived:
 	// three entry points writing the same four lines is three places for the feedback, the native
 	// listeners, the Blueprint listeners and the authored event delegate to fall out of step.
-	PlayClickFeedback();
+	PlayClickFeedback(InEventData);
 	OnClickCPP.Broadcast();
 	OnClickBP.Broadcast();
 	OnClick.FireEvent();

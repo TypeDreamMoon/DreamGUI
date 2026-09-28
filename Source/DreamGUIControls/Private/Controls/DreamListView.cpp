@@ -18,6 +18,8 @@
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIScrollView.h"
 
@@ -984,22 +986,27 @@ bool UDreamListViewBase::FindDragPointerWorldPoint(UDreamDragDropOperation* InOp
 	{
 		return false;
 	}
-	// The first player's event system: a pointer is keyed by id inside one, and the operation does not
-	// say which player's drag it is. A second player's drag over this list simply does not edge-scroll.
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, 0);
-	if (!IsValid(EventSystem))
+	// Every player's pointers: the operation does not say whose drag it is, and a second player's drag over
+	// this list edge-scrolls it as the first player's does.
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this);
+	if (Input == nullptr)
 	{
 		return false;
 	}
-	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Pair : EventSystem->GetPointerEventDataMap())
+	TArray<UDreamUIInputUser*> Users;
+	Input->GetUsers(Users);
+	for (const UDreamUIInputUser* User : Users)
 	{
-		const UDreamPointerEventData* EventData = Pair.Value.Get();
-		if (IsValid(EventData) && EventData->bIsDragging && EventData->DragOperation == InOperation)
+		for (const TPair<int32, TObjectPtr<UDreamPointerEventData>>& Pair : User->GetPointerEventDataMap())
 		{
-			// On the plane the press was made on, which is the canvas this list is drawn on -- the same
-			// point a drop's zone is worked out from.
-			OutWorldPoint = EventData->GetWorldPointInPlane();
-			return true;
+			const UDreamPointerEventData* EventData = Pair.Value.Get();
+			if (IsValid(EventData) && EventData->bIsDragging && EventData->DragOperation == InOperation)
+			{
+				// On the plane the press was made on, which is the canvas this list is drawn on -- the same
+				// point a drop's zone is worked out from.
+				OutWorldPoint = EventData->GetWorldPointInPlane();
+				return true;
+			}
 		}
 	}
 	return false;

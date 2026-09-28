@@ -297,7 +297,8 @@ void UDreamMenuAnchor::FocusMenuContent()
 		// than dropping it somewhere arbitrary. Same rule, same words, as UDreamTabView's.
 		return;
 	}
-	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, 0))
+	// The player whose menu it is, not player 0.
+	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, GetOwningPlayerIndex()))
 	{
 		Events->SetSelectComponentWithDefault(First->GetWidget());
 	}

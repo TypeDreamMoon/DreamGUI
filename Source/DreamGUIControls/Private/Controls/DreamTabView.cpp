@@ -894,7 +894,8 @@ void UDreamTabView::FocusActivePage()
 		// dropping it somewhere arbitrary.
 		return;
 	}
-	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, 0))
+	// The player whose tab view it is, not player 0.
+	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, GetOwningPlayerIndex()))
 	{
 		Events->SetSelectComponentWithDefault(First->GetWidget());
 	}

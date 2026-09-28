@@ -1213,7 +1213,7 @@ void UUISelectable::PlaySelectionStateFeedback()
 	}
 }
 
-void UUISelectable::PlayClickFeedback()
+void UUISelectable::PlayClickFeedback(const UDreamPointerEventData* InEventData)
 {
 	PlayDreamUISound(GetWidget(), GetClickedSound());
 	if (Style == nullptr)
@@ -1225,7 +1225,10 @@ void UUISelectable::PlayClickFeedback()
 	UWorld* World = IsValid(GetWidget()) ? GetWidget()->GetWorld() : nullptr;
 	if (IsValid(Style->ClickedForceFeedback) && IsValid(World) && World->IsGameWorld())
 	{
-		if (APlayerController* PlayerController = World->GetFirstPlayerController())
+		// The pad in the hands of the player who clicked, not the first player's: in a split screen that is somebody
+		// else's.
+		const int32 PlayerIndex = InEventData != nullptr ? InEventData->UserIndex : GetWidget()->GetOwningPlayerIndex();
+		if (APlayerController* PlayerController = UDreamEventSystem::GetPlayerControllerForUser(World, PlayerIndex))
 		{
 			PlayerController->ClientPlayForceFeedback(Style->ClickedForceFeedback);
 		}
@@ -1253,8 +1256,12 @@ namespace DreamSelectableClickMethodLocal
 			return EKind::Press;
 		}
 		UDreamUIBehaviour* Owner = const_cast<UDreamUIBehaviour*>(InOwner);
+		// The player the event came from, or else the player who owns the control: not player 0.
+		const UDreamWidget* OwnerWidget = Owner != nullptr ? Owner->GetWidget() : nullptr;
+		const int32 PlayerIndex = InEventData != nullptr ? InEventData->UserIndex
+			: (OwnerWidget != nullptr ? OwnerWidget->GetOwningPlayerIndex() : 0);
 		const UDreamEventSystem* Events = (Owner != nullptr && Owner->GetWorld() != nullptr)
-			? UDreamEventSystem::GetDreamEventSystemInstance(Owner, 0)
+			? UDreamEventSystem::GetDreamEventSystemInstance(Owner, PlayerIndex)
 			: nullptr;
 		if (Events != nullptr && Events->GetCurrentInputDevice() == EDreamUIInputDevice::Touch)
 		{

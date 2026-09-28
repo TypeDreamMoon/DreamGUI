@@ -341,8 +341,11 @@ protected:
 	EUISelectableSelectionState LastFeedbackState = EUISelectableSelectionState::Normal;
 	/** Style-driven sound for entering CurrentSelectionState. Called by ApplyPointerSelectionState. */
 	void PlaySelectionStateFeedback();
-	/** Style-driven click sound and rumble. Button calls this from its click; other subclasses may too. */
-	void PlayClickFeedback();
+	/**
+	 * Style-driven click sound and rumble -- the rumble on the pad of the player whose click InEventData is, or of the
+	 * player who owns this control when no event says. Button calls this from its click; other subclasses may too.
+	 */
+	void PlayClickFeedback(const UDreamPointerEventData* InEventData = nullptr);
 	bool bIsPointerInsideThis = false;
 	bool bIsPointerDown = false;
 	/**
