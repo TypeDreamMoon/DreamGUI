@@ -35,6 +35,23 @@ namespace DreamUIRuntimeObjectLocal
 		}
 		return Tree;
 	}
+
+	/**
+	 * Whether a save, a play session's duplication and Copy all pass InObject over: it, or an outer of it
+	 * below its level, is transient. A tree its host made is outered to the host inside the level, and is
+	 * transient itself, so nothing in it is kept however its own flags read.
+	 */
+	bool IsLeftOutOfTheLevel(const UObject* InObject)
+	{
+		for (const UObject* Outer = InObject; Outer != nullptr && !Outer->IsA<ULevel>(); Outer = Outer->GetOuter())
+		{
+			if (Outer->HasAnyFlags(RF_Transient))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 }
 
 void DreamUI::ReportCopiedIntoPlaySession(const UObject& InCopy)
@@ -124,8 +141,9 @@ TArray<DreamUI::FTreeBridge> DreamUI::FindTreeBridges(const UWorld& InWorld)
 			GetObjectsWithOuter(Actor, Kept, /*bIncludeNestedObjects*/ true);
 			for (UObject* Object : Kept)
 			{
-				// Only what the level keeps: a save and a play session's duplication both pass over transient objects.
-				if (Object->HasAnyFlags(RF_Transient))
+				// Only what the level keeps: a save and a play session's duplication both pass over transient
+				// objects, and over whatever a transient object holds -- a hosted tree among them.
+				if (IsLeftOutOfTheLevel(Object))
 				{
 					continue;
 				}

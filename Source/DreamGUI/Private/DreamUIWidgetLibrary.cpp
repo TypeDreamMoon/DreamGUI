@@ -31,16 +31,16 @@ namespace DreamUIWidgetLibraryLocal
 	/**
 	 * Every registered widget in the world.
 	 *
-	 * The manager's array is the one place this can come from: widgets are UObjects outered to a
+	 * The manager's registry is the one place this can come from: widgets are UObjects outered to a
 	 * widget tree rather than actors, so an actor iterator cannot see them and a ForEachObjectOfClass
 	 * would also sweep up every archetype, every designer preview and every widget belonging to
 	 * another world.
 	 */
-	const TArray<TObjectPtr<UDreamWidget>>* GetAllWidgets(const UObject* WorldContextObject)
+	TArray<UDreamWidget*> GetAllWidgets(const UObject* WorldContextObject)
 	{
 		UWorld* World = GetWorldFrom(WorldContextObject);
 		UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World);
-		return Manager != nullptr ? &Manager->GetAllWidgetArray() : nullptr;
+		return Manager != nullptr ? Manager->GetRegisteredWidgets() : TArray<UDreamWidget*>();
 	}
 
 	FDreamUIImageBrush MakeBrush(UObject* InResource, int32 InWidth, int32 InHeight)
@@ -61,14 +61,12 @@ void UDreamUIWidgetLibrary::GetAllWidgetsOfClass(UObject* WorldContextObject, TS
 	TArray<UDreamWidget*>& OutFoundWidgets, bool bTopLevelOnly)
 {
 	OutFoundWidgets.Reset();
-	const TArray<TObjectPtr<UDreamWidget>>* AllWidgets = DreamUIWidgetLibraryLocal::GetAllWidgets(WorldContextObject);
-	if (AllWidgets == nullptr || InWidgetClass == nullptr)
+	if (InWidgetClass == nullptr)
 	{
 		return;
 	}
-	for (const TObjectPtr<UDreamWidget>& Entry : *AllWidgets)
+	for (UDreamWidget* Widget : DreamUIWidgetLibraryLocal::GetAllWidgets(WorldContextObject))
 	{
-		UDreamWidget* Widget = Entry.Get();
 		if (!IsValid(Widget) || !Widget->IsA(InWidgetClass))
 		{
 			continue;
@@ -85,14 +83,12 @@ void UDreamUIWidgetLibrary::GetAllWidgetsWithInterface(UObject* WorldContextObje
 	TArray<UDreamWidget*>& OutFoundWidgets, bool bTopLevelOnly)
 {
 	OutFoundWidgets.Reset();
-	const TArray<TObjectPtr<UDreamWidget>>* AllWidgets = DreamUIWidgetLibraryLocal::GetAllWidgets(WorldContextObject);
-	if (AllWidgets == nullptr || InInterface == nullptr)
+	if (InInterface == nullptr)
 	{
 		return;
 	}
-	for (const TObjectPtr<UDreamWidget>& Entry : *AllWidgets)
+	for (UDreamWidget* Widget : DreamUIWidgetLibraryLocal::GetAllWidgets(WorldContextObject))
 	{
-		UDreamWidget* Widget = Entry.Get();
 		if (!IsValid(Widget) || !Widget->GetClass()->ImplementsInterface(InInterface))
 		{
 			continue;

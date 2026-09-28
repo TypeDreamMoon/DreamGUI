@@ -439,7 +439,7 @@ void UDreamUIDragDropSubsystem::ShowDragVisual(FFollowedDrag& InDrag, UDreamPoin
 
 	// Raycast-disabled through the whole subtree: the visual rides UNDER the pointer, and one that
 	// could be hit would become EnterWidget and stand between the drag and every drop target.
-	UDreamWidget* VisualHolder = NewObject<UDreamWidget>(GetWorld(), NAME_None, RF_Transient);
+	UDreamWidget* VisualHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
 	VisualHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
 	VisualHolder->SetDisplayName(TEXT("DreamUIDragVisual"));
 	VisualHolder->SetParentBeforeRegister(ScreenRoot);

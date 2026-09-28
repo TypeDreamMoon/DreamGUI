@@ -2018,6 +2018,17 @@ bool UDreamUserWidget::SetContentForNamedSlot(FName InSlotName, UDreamWidget* In
 	return true;
 }
 
+namespace DreamUserWidgetCreateLocal
+{
+	/**
+	 * What both creation verbs share. InTreeOuter is where a minted tree lives -- a host, the manager's
+	 * pool, or the world when there is no manager -- and OutTree receives it; neither is used when the
+	 * widget joins InParent's tree instead.
+	 */
+	UDreamUserWidget* CreateUnder(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent, UObject* InTreeOuter,
+		UDreamWidgetTree** OutTree, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive);
+}
+
 UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
 	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
 {
@@ -2026,14 +2037,41 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d CreateDreamWidget needs a valid world."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
+	// No host: the tree is the manager's, held in its pool of free roots until something takes it; the
+	// world only where there is no manager to hold it, which is a world no widget lives in for long.
+	UObject* TreeOuter = UDreamUIManagerWorldSubsystem::GetInstance(InWorld);
+	if (TreeOuter == nullptr)
+	{
+		TreeOuter = InWorld;
+	}
+	return DreamUserWidgetCreateLocal::CreateUnder(InWorld, InClass, InParent, TreeOuter, nullptr, InCallbackBeforeAlive);
+}
+
+UDreamUserWidget* CreateDreamWidgetForHost(UObject& InHost, TSubclassOf<UDreamUserWidget> InClass, UDreamWidgetTree*& OutTree,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
+{
+	OutTree = nullptr;
+	UWorld* World = InHost.GetWorld();
+	if (!IsValid(World))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s is in no world to create a widget in."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InHost.GetPathName());
+		return nullptr;
+	}
+	return DreamUserWidgetCreateLocal::CreateUnder(World, InClass, nullptr, &InHost, &OutTree, InCallbackBeforeAlive);
+}
+
+UDreamUserWidget* DreamUserWidgetCreateLocal::CreateUnder(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
+	UObject* InTreeOuter, UDreamWidgetTree** OutTree, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
+{
 	if (!IsValid(InClass))
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d CreateDreamWidget needs a valid class."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 
-	// Same ownership rule a prefab load follows: join the parent's tree, or mint one outered to the
-	// world so GetTypedOuter<UWorld> resolves for everything inside.
+	// Same ownership rule a prefab load follows: join the parent's tree, or mint one where the caller
+	// says -- somewhere whose outer chain reaches the world, so GetTypedOuter<UWorld> resolves for
+	// everything inside.
 	UObject* Owner = nullptr;
 	UDreamWidgetTree* OwnedTree = nullptr;
 	if (IsValid(InParent) && InParent->GetOuter() != nullptr)
@@ -2042,10 +2080,14 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 	}
 	else
 	{
-		// A tree made here lives only as long as the world runs it: whatever the world is saved,
-		// duplicated or copied into never gets it.
-		OwnedTree = NewObject<UDreamWidgetTree>(InWorld, NAME_None, DreamUI::RuntimeObjectFlags);
+		// A tree made here lives only as long as the world runs it: whatever the world or the host is
+		// saved, duplicated or copied into never gets it.
+		OwnedTree = NewObject<UDreamWidgetTree>(InTreeOuter, NAME_None, DreamUI::RuntimeObjectFlags);
 		Owner = OwnedTree;
+		if (OutTree != nullptr)
+		{
+			*OutTree = OwnedTree;
+		}
 	}
 
 	// Transactional only inside an authored tree; a widget made in a world is not undo's to restore.

@@ -140,7 +140,7 @@ void UDreamUIVirtualCursorSubsystem::ActivateVirtualCursor()
 	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRoot() : nullptr;
 	if (IsValid(ScreenRoot))
 	{
-		CursorHolder = NewObject<UDreamWidget>(GetWorld(), NAME_None, RF_Transient);
+		CursorHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
 		CursorHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
 		CursorHolder->SetDisplayName(TEXT("DreamUIVirtualCursor"));
 

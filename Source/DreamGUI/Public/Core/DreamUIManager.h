@@ -8,6 +8,7 @@
 #include "Containers/Ticker.h"
 #include "Core/DreamLayoutPassContext.h"
 #include "Core/DreamUIWorldService.h"
+#include "Core/DreamWidgetTreeHost.h"
 #include "DreamUIManager.generated.h"
 
 struct FDreamUIHelperGizmoRenderParameter;
@@ -20,6 +21,7 @@ class UDreamVisual;
 class UDreamCanvas;
 class UDreamBaseRaycaster;
 class UDreamUIBehaviour;
+class ULevel;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
 class UDreamUIManagerWorldSubsystem;
@@ -150,8 +152,8 @@ public:
 	/**
 	 * Weak on purpose. This cache lives outside UPROPERTY reflection, so a TObjectPtr here is invisible
 	 * to the garbage collector: it neither keeps a widget alive nor gets cleared when one goes away,
-	 * which left IsValid() being asked about memory that may already have been recycled. Everything
-	 * listed here is kept alive by UDreamUIManagerWorldSubsystem::AllWidgetArray while it is registered.
+	 * which left IsValid() being asked about memory that may already have been recycled. What keeps a
+	 * listed widget alive is its tree's host, or the manager's pool of trees no host holds.
 	 */
 	TArray<TWeakObjectPtr<UDreamWidget>> WidgetArray;
 };
@@ -162,6 +164,8 @@ class DREAMGUI_API UDreamUIManagerWorldSubsystem : public UTickableWorldSubsyste
 	GENERATED_BODY()
 public:	
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
+	/** The engine's three, and editor previews: a preview's widgets need a manager as much as a level's. */
+	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection)override;
 	virtual void PostInitialize()override;
 	virtual void Deinitialize()override;
@@ -236,10 +240,25 @@ private:
 	
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;
+	/**
+	 * Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --
+	 * the component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the
+	 * trees no host holds.
+	 */
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
-	TArray<TObjectPtr<UDreamWidget>> AllWidgetArray;
+	TArray<TWeakObjectPtr<UDreamWidget>> RegisteredWidgets;
+	/**
+	 * The roots of registered trees nothing but this manager holds: made with no host (CreateDreamWidget
+	 * with no parent, a Blueprint's ConstructWidget, a test's widget made straight in the world), or taken
+	 * off their parent while registered. The pool is the manager's to empty -- on attach, on destroy, and
+	 * at the world's teardown -- and nothing in it is reported as a leak.
+	 */
+	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI")
+	TArray<TObjectPtr<UDreamWidget>> FreeRoots;
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<FDreamParkedWidgetEntry> ParkedWidgets;
+	/** The objects that host trees in this world (IDreamWidgetTreeHost), for the world's teardown to ask. */
+	TArray<TWeakObjectPtr<UObject>> TreeHosts;
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UDreamBaseRaycaster>> AllRaycasterArray;
@@ -305,6 +324,10 @@ private:
 	TArray<FWorldServiceEntry> WorldServices;
 	bool bWorldTornDown = false;
 	void HandleWorldCleanup(UWorld* InWorld, bool bInSessionEnded, bool bInCleanupResources);
+	/** A level leaving this world takes the trees of the hosts in it down with it. */
+	void HandleLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld);
+	/** Ask every registered host to let its trees go, for InReason; the hosts in InOnlyLevel only, when given. */
+	void ReleaseHostTrees(EDreamTreeReleaseReason InReason, const ULevel* InOnlyLevel = nullptr);
 	int32 CurrentExecutingTickIndex = -1;
 	UPROPERTY(Transient) TArray<UDreamUIBehaviour*> DreamUIBehavioursNeedToRemoveFromTick;
 #if !UE_BUILD_SHIPPING
@@ -349,7 +372,27 @@ public:
 	 */
 	int32 CountCompetingScreenSpaceOverlayCanvases()const;
 
-	const TArray<TObjectPtr<UDreamWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
+	/** Every widget registered here and still alive, in registration order. */
+	TArray<UDreamWidget*> GetRegisteredWidgets()const;
+	bool IsWidgetRegistered(const UDreamWidget* InWidget)const;
+	/**
+	 * Whether InRoot, a hierarchy root, is held by something other than this manager: the tree it is the
+	 * root of is outered to a host, or it is outered to one itself. A root outered to the world, to this
+	 * manager, or to a widget -- one taken off its parent -- has nobody else, and is pooled (FreeRoots).
+	 */
+	bool IsHeldByHost(const UDreamWidget* InRoot)const;
+	/** Pool InRoot if it is a registered hierarchy root no host holds; see FreeRoots. */
+	void AdoptIfFreeRoot(UDreamWidget* InRoot);
+	/** Let InWidget out of the pool: it has a parent now, or is being destroyed. */
+	void ForgetFreeRoot(const UDreamWidget* InWidget);
+	bool IsFreeRoot(const UDreamWidget* InWidget)const;
+	/**
+	 * Enrol InHost -- an object implementing IDreamWidgetTreeHost -- as a host of trees in this world, so
+	 * the world's teardown and a level's removal can ask it to let them go. Kept weakly; idempotent.
+	 */
+	void RegisterTreeHost(UObject* InHost);
+	void UnregisterTreeHost(const UObject* InHost);
+	bool IsTreeHostRegistered(const UObject* InHost)const;
 	/**
 	 * Hold a freshly created widget in the not-yet-added state: set its parked bit so it draws
 	 * nothing and its behaviours stay disabled, and keep a reference so the caller is not the only
@@ -374,8 +417,12 @@ public:
 	int32 SweepExpiredParkedWidgets();
 	void AddWidget(UDreamWidget* InWidget);
 	void RemoveWidget(UDreamWidget* InWidget);
-	/** Tears down registered widgets once per hierarchy root. Safe to call repeatedly during world shutdown. */
-	void DestroyRegisteredWidgetTrees();
+	/**
+	 * Tears down registered widgets once per hierarchy root, and empties the pool of free roots. With
+	 * bInReportTreesOutlivingHosts, a tree whose host still holds it is reported first: its host was asked
+	 * to let it go (ReleaseHostTrees) and did not. Safe to call repeatedly during world shutdown.
+	 */
+	void DestroyRegisteredWidgetTrees(bool bInReportTreesOutlivingHosts = false);
 
 	/** Ask for a layout pass on this widget next frame -- UMG's InvalidateLayoutAndVolatility. */
 	void AddLayoutDirtyWidget(UDreamWidget* InWidget);

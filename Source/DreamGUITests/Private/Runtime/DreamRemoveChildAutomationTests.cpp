@@ -82,7 +82,7 @@ bool FDreamRemoveChildSurvivesTest::RunTest(const FString& Parameters)
 	// to keep it alive.
 	TestTrue(TEXT("It is parked"), Manager->IsWidgetParked(Child));
 	TestFalse(TEXT("So it is not on screen"), Child->GetWidgetActiveInHierarchy());
-	TestTrue(TEXT("The manager still anchors it"), Manager->GetAllWidgetArray().Contains(Child));
+	TestTrue(TEXT("The manager still knows it"), Manager->IsWidgetRegistered(Child));
 
 	// And it goes back in.
 	UDreamWidget* OtherPanel = MakeWidget(TestWorld.World, nullptr, TEXT("OtherPanel"));

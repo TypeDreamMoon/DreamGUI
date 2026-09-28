@@ -304,11 +304,11 @@ void SDreamWidgetEditorHierarchyView::RefreshImmediately()
 }
 namespace DreamWidgetHierarchyRows
 {
-	void CollectRoots(const TArray<TObjectPtr<UDreamWidget>>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots)
+	void CollectRoots(const TArray<UDreamWidget*>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots)
 	{
 		TSet<const UDreamWidget*> Seen;
 		Seen.Reserve(InAllWidgets.Num());
-		for (const TObjectPtr<UDreamWidget>& Widget : InAllWidgets)
+		for (UDreamWidget* Widget : InAllWidgets)
 		{
 			if (!IsValid(Widget) || !Widget->IsRootWidgetInHierarchy())
 			{
@@ -399,7 +399,7 @@ void SDreamWidgetEditorHierarchyView::RefreshTree()
 	{
 		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
 		{
-			DreamWidgetHierarchyRows::CollectRoots(DreamUIManager->GetAllWidgetArray(), RootWidgets);
+			DreamWidgetHierarchyRows::CollectRoots(DreamUIManager->GetRegisteredWidgets(), RootWidgets);
 		}
 	}
 

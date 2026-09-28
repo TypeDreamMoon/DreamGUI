@@ -221,9 +221,10 @@ UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRootForIndex(int32 InPla
 		return nullptr;
 	}
 
-	const FName RootName = MakeUniqueObjectName(World, UDreamWidget::StaticClass(),
+	// Outered to this subsystem, which holds it (ScreenRoots) and takes it down with the world.
+	const FName RootName = MakeUniqueObjectName(this, UDreamWidget::StaticClass(),
 		*FString::Printf(TEXT("DreamScreenRoot_P%d"), InPlayerIndex));
-	UDreamWidget* NewRoot = NewObject<UDreamWidget>(World, RootName, RF_Transient);
+	UDreamWidget* NewRoot = NewObject<UDreamWidget>(this, RootName, RF_Transient);
 	NewRoot->SetDisplayName(FString::Printf(TEXT("[DreamScreenRoot P%d]"), InPlayerIndex));
 	NewRoot->SetSizeDelta(FVector2D(1920.0, 1080.0));
 	NewRoot->OnRegister();

@@ -39,7 +39,7 @@ namespace DreamTests::Lifecycle
 		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World))
 		{
 			TArray<UDreamWidget*> Roots;
-			for (UDreamWidget* Widget : Manager->GetAllWidgetArray())
+			for (UDreamWidget* Widget : Manager->GetRegisteredWidgets())
 			{
 				if (IsValid(Widget) && Widget->GetParent() == nullptr)
 				{

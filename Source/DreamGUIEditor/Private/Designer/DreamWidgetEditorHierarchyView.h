@@ -60,7 +60,7 @@ namespace DreamWidgetHierarchyType
 namespace DreamWidgetHierarchyRows
 {
 	/** The tops of the hierarchies, each once, in the order the manager reports them. */
-	DREAMGUIEDITOR_API void CollectRoots(const TArray<TObjectPtr<UDreamWidget>>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots);
+	DREAMGUIEDITOR_API void CollectRoots(const TArray<UDreamWidget*>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots);
 	/** InParent's children, minus any that do not name InParent as their parent, and minus repeats. */
 	DREAMGUIEDITOR_API void CollectChildren(UDreamWidget* InParent, TArray<TWeakObjectPtr<UDreamWidget>>& OutChildren);
 }

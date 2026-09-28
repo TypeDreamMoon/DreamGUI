@@ -9,6 +9,7 @@
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/GameInstance.h"
@@ -78,7 +79,8 @@ void UDreamWorldWidgetComponent::LoadWidget()
 		return;
 	}
 
-	LoadedWidget = CreateDreamWidget(World, WidgetClass, nullptr, [this](UDreamUserWidget* RootWidget)
+	UDreamWidgetTree* NewTree = nullptr;
+	LoadedWidget = CreateDreamWidgetForHost(*this, WidgetClass, NewTree, [this](UDreamUserWidget* RootWidget)
 	{
 		// Before the hierarchy comes alive, which is what this hook is for: a behaviour that wakes up
 		// first may read the render mode off the canvas and cache what it found.
@@ -99,6 +101,7 @@ void UDreamWorldWidgetComponent::LoadWidget()
 		RootCanvas = Canvas;
 		ApplyCanvasSettings();
 	});
+	OwnedTree = NewTree;
 
 	// CreateDreamWidget answers null for an invalid world or an unusable class, and everything below
 	// dereferences the result.

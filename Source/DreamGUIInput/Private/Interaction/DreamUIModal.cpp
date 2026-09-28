@@ -193,7 +193,7 @@ void UDreamUIModalSubsystem::ShowNow(FPendingModal&& InModal)
 	// The layer IS the scrim: full-rect tinted rect block that wins the raycast, with the event
 	// blocker terminating every pointer event's bubble at it. Keys are the navigation scope's job.
 	// One per modal, so a nested modal gets its own scrim over the dialog that raised it.
-	UDreamWidget* ModalLayer = NewObject<UDreamWidget>(GetWorld(), NAME_None, RF_Transient);
+	UDreamWidget* ModalLayer = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
 	ModalLayer->SetDisplayName(TEXT("DreamUIModalScrim"));
 	UDreamRectBlock* Scrim = ModalLayer->CreateNewVisual<UDreamRectBlock>();
 	Scrim->SetColor(UDreamGUISettings::Get()->ModalScrimColor);

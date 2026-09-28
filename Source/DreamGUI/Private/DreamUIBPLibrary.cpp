@@ -68,10 +68,16 @@ UDreamWidget* UDreamUIBPLibrary::ConstructWidget(UObject* WorldContextObject, co
 	{
 		return nullptr;
 	}
-	// Outer is the world, not the caller: GetTypedOuter<UWorld>() has to resolve or the widget never
-	// finds a manager. Outering to a GameInstance -- the habit UMG teaches -- would fail that test.
+	// Outer is the world's UI manager, not the caller: GetTypedOuter<UWorld>() has to resolve or the
+	// widget never finds its manager -- outering to a GameInstance, the habit UMG teaches, would fail
+	// that -- and the manager is what holds a widget nobody hosts (its pool, and the parked list).
 	// Not transactional: a widget made in a world is not undo's to restore (DreamUI::TransactionalFlagFor).
-	UDreamWidget* Widget = NewObject<UDreamWidget>(World, NAME_None, RF_Public | DreamUI::TransactionalFlagFor(World));
+	UObject* Owner = UDreamUIManagerWorldSubsystem::GetInstance(World);
+	if (Owner == nullptr)
+	{
+		Owner = World;
+	}
+	UDreamWidget* Widget = NewObject<UDreamWidget>(Owner, NAME_None, RF_Public | DreamUI::TransactionalFlagFor(Owner));
 	Widget->SetDisplayName(DisplayName.IsEmpty() ? TEXT("Widget") : DisplayName);
 	if (UClass* ResolvedVisualClass = VisualClass.Get();
 		ResolvedVisualClass != nullptr && !ResolvedVisualClass->HasAnyClassFlags(CLASS_Abstract))

@@ -8,6 +8,8 @@
 #include "DreamGUI.h"
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetTree.h"
+#include "UObject/Package.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/GameInstance.h"
 #include "Core/Components/DreamCanvas.h"
@@ -236,16 +238,138 @@ bool UDreamUIManagerWorldSubsystem::IsWidgetParked(const UDreamWidget* InWidget)
 		[InWidget](const FDreamParkedWidgetEntry& Entry) { return Entry.Widget == InWidget; });
 }
 
+TArray<UDreamWidget*> UDreamUIManagerWorldSubsystem::GetRegisteredWidgets()const
+{
+	TArray<UDreamWidget*> Widgets;
+	Widgets.Reserve(RegisteredWidgets.Num());
+	for (const TWeakObjectPtr<UDreamWidget>& Registered : RegisteredWidgets)
+	{
+		if (UDreamWidget* Widget = Registered.Get())
+		{
+			Widgets.Add(Widget);
+		}
+	}
+	return Widgets;
+}
+
+bool UDreamUIManagerWorldSubsystem::IsWidgetRegistered(const UDreamWidget* InWidget)const
+{
+	return InWidget != nullptr && RegisteredWidgets.ContainsByPredicate(
+		[InWidget](const TWeakObjectPtr<UDreamWidget>& Registered) { return Registered.Get() == InWidget; });
+}
+
+bool UDreamUIManagerWorldSubsystem::IsHeldByHost(const UDreamWidget* InRoot)const
+{
+	if (InRoot == nullptr)
+	{
+		return false;
+	}
+	const UObject* Owner = InRoot->GetOuter();
+	if (const UDreamWidgetTree* Tree = Cast<UDreamWidgetTree>(Owner))
+	{
+		// Only the root a tree names is held through it; any other widget of the tree hangs off a parent,
+		// or off nothing.
+		if (Tree->RootWidget != InRoot)
+		{
+			return false;
+		}
+		Owner = Tree->GetOuter();
+	}
+	return Owner != nullptr && Owner != this && !Owner->IsA<UWorld>() && !Owner->IsA<UDreamWidget>() && !Owner->IsA<UPackage>();
+}
+
+void UDreamUIManagerWorldSubsystem::AdoptIfFreeRoot(UDreamWidget* InRoot)
+{
+	if (IsValid(InRoot) && InRoot->GetParent() == nullptr && InRoot->HasRegistered() && !IsHeldByHost(InRoot))
+	{
+		FreeRoots.AddUnique(InRoot);
+	}
+}
+
+bool UDreamUIManagerWorldSubsystem::IsFreeRoot(const UDreamWidget* InWidget)const
+{
+	return InWidget != nullptr && FreeRoots.ContainsByPredicate([InWidget](const TObjectPtr<UDreamWidget>& Root) { return Root.Get() == InWidget; });
+}
+
+void UDreamUIManagerWorldSubsystem::ForgetFreeRoot(const UDreamWidget* InWidget)
+{
+	FreeRoots.RemoveSingle(const_cast<UDreamWidget*>(InWidget));
+}
+
+void UDreamUIManagerWorldSubsystem::RegisterTreeHost(UObject* InHost)
+{
+	if (!ensureMsgf(IsValid(InHost) && InHost->Implements<UDreamWidgetTreeHost>(), TEXT("%s: %s enrolled as a tree host without being one."),
+		*GetPathName(), *GetPathNameSafe(InHost)))
+	{
+		return;
+	}
+	TreeHosts.RemoveAll([](const TWeakObjectPtr<UObject>& Host) { return !Host.IsValid(); });
+	TreeHosts.AddUnique(InHost);
+}
+
+void UDreamUIManagerWorldSubsystem::UnregisterTreeHost(const UObject* InHost)
+{
+	TreeHosts.RemoveAll([InHost](const TWeakObjectPtr<UObject>& Host) { return !Host.IsValid() || Host.Get() == InHost; });
+}
+
+bool UDreamUIManagerWorldSubsystem::IsTreeHostRegistered(const UObject* InHost)const
+{
+	return InHost != nullptr && TreeHosts.ContainsByPredicate([InHost](const TWeakObjectPtr<UObject>& Host) { return Host.Get() == InHost; });
+}
+
+void UDreamUIManagerWorldSubsystem::ReleaseHostTrees(EDreamTreeReleaseReason InReason, const ULevel* InOnlyLevel)
+{
+	// A snapshot: letting a tree go is free to unregister the host, or to register another.
+	const TArray<TWeakObjectPtr<UObject>> Hosts = TreeHosts;
+	for (const TWeakObjectPtr<UObject>& WeakHost : Hosts)
+	{
+		UObject* HostObject = WeakHost.Get();
+		IDreamWidgetTreeHost* Host = Cast<IDreamWidgetTreeHost>(HostObject);
+		if (Host == nullptr)
+		{
+			continue;
+		}
+		if (InOnlyLevel != nullptr)
+		{
+			const AActor* HostActor = Cast<AActor>(HostObject);
+			if (HostActor == nullptr)
+			{
+				HostActor = HostObject->GetTypedOuter<AActor>();
+			}
+			if (HostActor == nullptr || HostActor->GetLevel() != InOnlyLevel)
+			{
+				continue;
+			}
+		}
+		Host->ReleaseTree(InReason);
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::HandleLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld)
+{
+	// Hiding or unloading a sublevel unregisters its actors' components and stops there: no EndPlay in
+	// an editor world, no destruction. The trees of the hosts in it go now, rather than drawing on for a
+	// level that is no longer in the world; showing it again registers the hosts, which build afresh.
+	// A null level is the whole world going, which TeardownWorld sees to.
+	if (InLevel != nullptr && InWorld != nullptr && InWorld == GetWorld())
+	{
+		ReleaseHostTrees(EDreamTreeReleaseReason::LevelRemoved, InLevel);
+	}
+}
+
 void UDreamUIManagerWorldSubsystem::AddWidget(UDreamWidget* InWidget)
 {
 #if !UE_BUILD_SHIPPING && ENABLED_DreamGUI_DEBUG_DUMP
-	if (AllWidgetArray.Contains(InWidget))
+	if (IsWidgetRegistered(InWidget))
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
 #endif
-	AllWidgetArray.AddUnique(InWidget);
+	RegisteredWidgets.RemoveAll([](const TWeakObjectPtr<UDreamWidget>& Registered) { return !Registered.IsValid(); });
+	RegisteredWidgets.AddUnique(InWidget);
+	// A root no host holds has nobody else to keep it alive now that registering is not owning.
+	AdoptIfFreeRoot(InWidget);
 }
 
 void UDreamUIManagerWorldSubsystem::RemoveWidget(UDreamWidget* InWidget)
@@ -253,13 +377,17 @@ void UDreamUIManagerWorldSubsystem::RemoveWidget(UDreamWidget* InWidget)
 	ParkedWidgets.RemoveAll(
 		[InWidget](const FDreamParkedWidgetEntry& Entry) { return Entry.Widget == nullptr || Entry.Widget == InWidget; });
 #if !UE_BUILD_SHIPPING && ENABLED_DreamGUI_DEBUG_DUMP
-	if (!AllWidgetArray.Contains(InWidget))
+	if (!IsWidgetRegistered(InWidget))
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
 #endif
-	AllWidgetArray.RemoveSingle(InWidget);
+	RegisteredWidgets.RemoveAll(
+		[InWidget](const TWeakObjectPtr<UDreamWidget>& Registered) { return !Registered.IsValid() || Registered.Get() == InWidget; });
+	// Unregistered is no longer the manager's to keep, whatever becomes of it: a widget moved out of a
+	// tree that came down is free to be registered where it went, and holds its own place there.
+	ForgetFreeRoot(InWidget);
 	if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(InWidget))
 	{
 		// A widget only reaches here from OnUnregister, which is teardown -- and a torn-down user
@@ -270,41 +398,46 @@ void UDreamUIManagerWorldSubsystem::RemoveWidget(UDreamWidget* InWidget)
 	}
 }
 
-void UDreamUIManagerWorldSubsystem::DestroyRegisteredWidgetTrees()
+void UDreamUIManagerWorldSubsystem::DestroyRegisteredWidgetTrees(bool bInReportTreesOutlivingHosts)
 {
-	if (AllWidgetArray.IsEmpty())
+	const TArray<UDreamWidget*> Registered = GetRegisteredWidgets();
+	TArray<UDreamWidget*> Roots;
+	for (UDreamWidget* Widget : Registered)
 	{
-		return;
-	}
-
-	const TArray<TObjectPtr<UDreamWidget>> RegisteredWidgets = AllWidgetArray;
-	TSet<UDreamWidget*> Roots;
-	for (UDreamWidget* Widget : RegisteredWidgets)
-	{
-		if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
-		{
-			continue;
-		}
-		UDreamWidget* Root = Widget->GetRootWidgetInHierarchyEvenIfUnreachable();
-		Roots.Add(Root ? Root : Widget);
+		UDreamWidget* Root = Widget->GetRootWidgetInHierarchy();
+		Roots.AddUnique(Root != nullptr ? Root : Widget);
 	}
 
 	for (UDreamWidget* Root : Roots)
 	{
-		if (Root != nullptr && !Root->HasAnyFlags(RF_FinishDestroyed))
+		if (!IsValid(Root))
 		{
-			Root->DestroyWidget();
+			continue;
 		}
+		// The pool's own are the manager's to take down; a tree its host still holds is a host that was
+		// asked to let go and did not.
+		if (bInReportTreesOutlivingHosts && !IsFreeRoot(Root) && IsHeldByHost(Root))
+		{
+			const UObject* Host = Root->GetOuter();
+			if (const UDreamWidgetTree* Tree = Cast<UDreamWidgetTree>(Host))
+			{
+				Host = Tree->GetOuter();
+			}
+			ensureMsgf(false, TEXT("%s: the tree %s outlived its host %s, which never let it go."),
+				*GetPathName(), *Root->GetPathDisplayName(), *GetPathNameSafe(Host));
+		}
+		Root->DestroyWidget();
 	}
 
-	// Corrupt or partially collected hierarchies may not have a usable cached root.
-	for (UDreamWidget* Widget : RegisteredWidgets)
+	// A hierarchy whose root could not be reached from its widgets -- corrupt, or half taken apart.
+	for (UDreamWidget* Widget : GetRegisteredWidgets())
 	{
-		if (Widget != nullptr && !Widget->HasAnyFlags(RF_FinishDestroyed) && Widget->HasRegistered())
+		if (IsValid(Widget) && Widget->HasRegistered())
 		{
 			Widget->DestroyWidget();
 		}
 	}
+	FreeRoots.Reset();
 }
 
 TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> UDreamUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)

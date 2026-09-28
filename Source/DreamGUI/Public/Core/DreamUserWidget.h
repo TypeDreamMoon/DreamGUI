@@ -1367,9 +1367,11 @@ DREAMGUI_API UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDrea
 /**
  * Create and initialize a user widget of InClass.
  *
- * A widget needs a tree to belong to, so a fresh UDreamWidgetTree is minted and outered to the world,
- * with the new widget as its root -- the same ownership a prefab load produces. Pass InParent to put
- * the widget into an existing hierarchy instead, in which case it joins that hierarchy's tree.
+ * A widget needs a tree to belong to, so a fresh UDreamWidgetTree is minted with the new widget as its
+ * root -- the same ownership a prefab load produces. With no host to hold it (see CreateDreamWidgetForHost)
+ * the tree is outered to the world's UI manager, whose pool of free roots holds it until it is attached
+ * somewhere or destroyed. Pass InParent to put the widget into an existing hierarchy instead, in which
+ * case it joins that hierarchy's tree.
  *
  * InCallbackBeforeAlive runs after the hierarchy exists and is parented, but before it is registered
  * and before any behaviour's Awake. It is the counterpart of the prefab loader's CallbackBeforeAwake
@@ -1379,6 +1381,15 @@ DREAMGUI_API UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDrea
  * Returns null if InClass is not a UDreamUserWidget, or if the world is invalid.
  */
 DREAMGUI_API UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent = nullptr,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive = nullptr);
+
+/**
+ * CreateDreamWidget for a host (IDreamWidgetTreeHost): the new tree is outered to InHost, which holds it
+ * -- OutTree is the tree, for the host to keep in a Transient, DuplicateTransient, TextExportTransient
+ * property -- and which lets it go. Nothing else keeps it alive, the manager's pool included, so what is
+ * saved, duplicated or copied with the host never carries the tree along.
+ */
+DREAMGUI_API UDreamUserWidget* CreateDreamWidgetForHost(UObject& InHost, TSubclassOf<UDreamUserWidget> InClass, UDreamWidgetTree*& OutTree,
 	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive = nullptr);
 
 template<typename WidgetT>

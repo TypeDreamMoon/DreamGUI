@@ -346,7 +346,7 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 
 	// The holder: its own canvas above the page band, raycast-disabled for the whole subtree so the
 	// bubble can never sit between the pointer and the thing it describes.
-	TooltipHolder = NewObject<UDreamWidget>(GetWorld(), NAME_None, RF_Transient);
+	TooltipHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
 	TooltipHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
 	TooltipHolder->SetDisplayName(TEXT("DreamUITooltip"));
 	TooltipHolder->SetPivot(FVector2D(0.0f, 1.0f));
@@ -367,7 +367,7 @@ void UDreamUITooltipSubsystem::ShowFor(UDreamWidget* InSource)
 	{
 		// The built-in bubble: a rect block behind a text, sized to the text's own preferred size,
 		// wrapped at the settings' max width.
-		UDreamWidget* TextWidget = NewObject<UDreamWidget>(GetWorld(), NAME_None, RF_Transient);
+		UDreamWidget* TextWidget = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
 		TextWidget->SetDisplayName(TEXT("DreamUITooltipText"));
 		BubbleText = TextWidget->CreateNewVisual<UDreamText>();
 		BubbleText->SetText(InSource->GetToolTipText());

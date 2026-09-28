@@ -76,7 +76,7 @@ bool FDreamLifecycleStepTableTest::RunTest(const FString& Parameters)
 	Widget->OnRegister();
 	TestEqual(TEXT("Registering moves it to registered"), StateOf(Widget), FString(TEXT("Registered")));
 	TestEqual(TEXT("...once, however often it is asked"), Join(*Log), FString(TEXT("Register W")));
-	TestTrue(TEXT("...and the manager knows it"), Manager->GetAllWidgetArray().Contains(Widget));
+	TestTrue(TEXT("...and the manager knows it"), Manager->IsWidgetRegistered(Widget));
 
 	Log->Reset();
 	Widget->BeginPlay();
@@ -87,7 +87,7 @@ bool FDreamLifecycleStepTableTest::RunTest(const FString& Parameters)
 	Log->Reset();
 	Widget->OnUnregister();
 	TestEqual(TEXT("Unregistering a widget still in play does nothing"), StateOf(Widget), FString(TEXT("BegunPlay")));
-	TestTrue(TEXT("...it stays with the manager"), Manager->GetAllWidgetArray().Contains(Widget));
+	TestTrue(TEXT("...it stays with the manager"), Manager->IsWidgetRegistered(Widget));
 	TestEqual(TEXT("...and its behaviour hears nothing"), Log->Num(), 0);
 
 	Widget->EndPlay();
@@ -100,7 +100,7 @@ bool FDreamLifecycleStepTableTest::RunTest(const FString& Parameters)
 	Widget->OnUnregister();
 	TestEqual(TEXT("Unregistering moves it back to constructed"), StateOf(Widget), FString(TEXT("Constructed")));
 	TestEqual(TEXT("...once"), Join(*Log), FString(TEXT("Unregister W")));
-	TestFalse(TEXT("...and the manager lets it go"), Manager->GetAllWidgetArray().Contains(Widget));
+	TestFalse(TEXT("...and the manager lets it go"), Manager->IsWidgetRegistered(Widget));
 
 	// A second life, and the end of it: destroying a widget in play takes the steps it still owes, in order.
 	Widget->OnRegister();
@@ -109,7 +109,7 @@ bool FDreamLifecycleStepTableTest::RunTest(const FString& Parameters)
 	Widget->DestroyWidget();
 	TestEqual(TEXT("Destroying a widget in play leaves it destroyed"), StateOf(Widget), FString(TEXT("Destroyed")));
 	TestEqual(TEXT("...ending its play before unregistering it"), Join(*Log), FString(TEXT("Disable W, Destroy W, Unregister W")));
-	TestFalse(TEXT("...and the manager lets it go"), Manager->GetAllWidgetArray().Contains(Widget));
+	TestFalse(TEXT("...and the manager lets it go"), Manager->IsWidgetRegistered(Widget));
 
 	Log->Reset();
 	Widget->BeginPlay();

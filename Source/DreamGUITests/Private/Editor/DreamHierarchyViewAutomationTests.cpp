@@ -242,7 +242,7 @@ bool FDreamHierarchyRowsNoWidgetTwiceTest::RunTest(const FString& Parameters)
 	if (!TestEqual(TEXT("the very same object"), (const UDreamWidget*)Copy->GetChildren()[0], (const UDreamWidget*)Child))return false;
 
 	// Walk it the way the tree view does: roots from the manager's list, then children per row.
-	TArray<TObjectPtr<UDreamWidget>> AllWidgets = { Root, Panel, Child, Copy };
+	TArray<UDreamWidget*> AllWidgets = { Root, Panel, Child, Copy };
 	TArray<TWeakObjectPtr<UDreamWidget>> Roots;
 	DreamWidgetHierarchyRows::CollectRoots(AllWidgets, Roots);
 	TestEqual(TEXT("one root"), Roots.Num(), 1);
@@ -293,7 +293,7 @@ bool FDreamHierarchyRootsAreDedupedTest::RunTest(const FString& Parameters)
 
 	// The manager's array is append-on-register and nothing there refuses a second append, so a
 	// double registration reaches the panel as the same pointer twice.
-	TArray<TObjectPtr<UDreamWidget>> AllWidgets = { Root, Root };
+	TArray<UDreamWidget*> AllWidgets = { Root, Root };
 	TArray<TWeakObjectPtr<UDreamWidget>> Roots;
 	DreamWidgetHierarchyRows::CollectRoots(AllWidgets, Roots);
 	TestEqual(TEXT("the root is collected once"), Roots.Num(), 1);

@@ -55,14 +55,14 @@ bool FDreamParkedWidgetIsInertTest::RunTest(const FString& Parameters)
 	FScopedGameWorld TestWorld;
 	UDreamWidget* Parked = MakeParkedWidget(TestWorld.World, TEXT("Parked"));
 
-	// Registration is what anchors the widget against GC (the manager's AllWidgetArray is the only
-	// UPROPERTY holding it) and what makes OnAttachedToParent recompute anchors later, so the parked
-	// state must keep it -- inertness has to come from somewhere else.
+	// Being registered is what makes OnAttachedToParent recompute anchors later, and what anchors a
+	// registered root nobody hosts against GC is the manager's pool of them (its registry itself is weak),
+	// so the parked state must keep both -- inertness has to come from somewhere else.
 	TestTrue(TEXT("A parked widget is registered"), Parked->HasRegistered());
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World))
 	{
 		TestTrue(TEXT("A parked widget is anchored by the manager"),
-			Manager->GetAllWidgetArray().Contains(Parked));
+			Manager->IsFreeRoot(Parked) && Manager->IsWidgetRegistered(Parked));
 	}
 	else
 	{

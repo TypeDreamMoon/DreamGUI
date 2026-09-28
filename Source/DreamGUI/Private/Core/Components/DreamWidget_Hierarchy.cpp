@@ -855,6 +855,8 @@ void UDreamWidget::OnAttachedToParent()
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
 		DreamUIManager->UnparkWidget(this);
+		// ...and what ends its time in the pool of roots nobody hosts: its parent holds it now.
+		DreamUIManager->ForgetFreeRoot(this);
 	}
 	RefreshPerspectiveInHierarchy();//a new parent can put this subtree inside a perspective scope
 	RefreshShearInHierarchy();//...and, the same way, inside a sheared one
@@ -929,6 +931,12 @@ void UDreamWidget::OnDetachedFromParent()
 		DreamUIManager->MarkDreamUIWidgetOutlinerChanged();
 #endif
 		DreamUIManager->MarkRebuildAllLayoutTree();
+		// A registered widget with no parent has nobody holding it but the manager: its old parent let it
+		// go, and whatever hosts the tree it is outered to holds only that tree's root.
+		if (HasRegistered())
+		{
+			DreamUIManager->AdoptIfFreeRoot(this);
+		}
 	}
 }
 

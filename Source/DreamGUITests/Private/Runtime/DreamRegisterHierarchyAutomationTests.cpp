@@ -61,7 +61,7 @@ namespace DreamRegisterHierarchyTestLocal
 	 * it is actually open.
 	 *
 	 * Call this before any widget exists. UDreamUIManagerWorldSubsystem::OnWorldBeginPlay walks its
-	 * AllWidgetArray and begins everything in it that has not begun; on an empty world that is a flag
+	 * registered widgets and begins every one that has not begun; on an empty world that is a flag
 	 * flip and nothing else, which is exactly what these tests want it to be. The base's ensure fires
 	 * on a SECOND call, hence the guard -- a world created here never has its own BeginPlay run, so one
 	 * call is all that ever happens.
@@ -322,7 +322,7 @@ bool FDreamRegisterHierarchySecondCallIsANoOpTest::RunTest(const FString& Parame
 	}
 
 	RegisterDreamWidgetHierarchy(Tree.Host);
-	const int32 RegisteredWidgetsAfterFirstCall = Manager->GetAllWidgetArray().Num();
+	const int32 RegisteredWidgetsAfterFirstCall = Manager->GetRegisteredWidgets().Num();
 	const int32 HostChildrenAfterFirstCall = Tree.Host->GetChildrenCount();
 	// Reported rather than bailed on: the claim below is a DELTA, and it stays meaningful even if this
 	// world ever comes to hold a widget these tests did not make.
@@ -333,7 +333,7 @@ bool FDreamRegisterHierarchySecondCallIsANoOpTest::RunTest(const FString& Parame
 	RegisterDreamWidgetHierarchy(Tree.Host);
 
 	TestEqual(TEXT("the second call enrols nothing further"),
-		Manager->GetAllWidgetArray().Num(), RegisteredWidgetsAfterFirstCall);
+		Manager->GetRegisteredWidgets().Num(), RegisteredWidgetsAfterFirstCall);
 	TestEqual(TEXT("and re-attaches nothing"), Tree.Host->GetChildrenCount(), HostChildrenAfterFirstCall);
 
 	const TArray<UDreamWidget*> Walk = WalkOrder(Tree.Host);

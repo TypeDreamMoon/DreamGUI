@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
+#include "Core/DreamWidgetTreeHost.h"
 #include "DreamWidgetPresenterComponentBase.generated.h"
 
 class UDreamWidget;
+class UDreamWidgetTree;
 class UUINavigationInputSelectionHandler;
 class UDreamCanvas;
 
@@ -14,13 +16,18 @@ class UDreamCanvas;
 // registers. Without this the Add Component list offers it, and picking it there is a crash
 // rather than an error. Add DreamWorldWidgetComponent.
 UCLASS(Abstract, ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UDreamWidgetPresenterComponentBase : public USceneComponent
+class DREAMGUI_API UDreamWidgetPresenterComponentBase : public USceneComponent, public IDreamWidgetTreeHost
 {
 	GENERATED_BODY()
 
 public:
 	UDreamWidgetPresenterComponentBase();
 	friend class FDreamWidgetPresenterBaseCustomization;
+
+	// IDreamWidgetTreeHost: the tree is outered to this component and held by OwnedTree.
+	virtual UObject* GetTreeOuter() const override { return const_cast<UDreamWidgetPresenterComponentBase*>(this); }
+	virtual void ReleaseTree(EDreamTreeReleaseReason InReason) override;
+	virtual void RebuildTree() override;
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -43,12 +50,26 @@ protected:
 #if WITH_EDITOR
 public:
 	void ReloadWidget();
+	virtual void PostEditUndo() override;
 #endif
 
 protected:
-	UPROPERTY(Transient)
+	/**
+	 * The tree this component hosts: outered to it, held here and nowhere else, and let go by
+	 * DestroyLoadedWidget. Never saved, never duplicated into a play session, never exported by Copy --
+	 * the class it is built from is what the level keeps.
+	 *
+	 * NonTransactional, with the rest of what the component knows of its tree. A transaction records
+	 * transient properties too, and an undo or redo that brought this component back, or took it away,
+	 * wrote back the tree it held when the edit was recorded: one already destroyed, or none while a live
+	 * one stood -- which the component then never let go. Which tree it holds is the component's own
+	 * business, never undo's.
+	 */
+	UPROPERTY(Transient, NonTransactional, DuplicateTransient, TextExportTransient)
+	TObjectPtr<UDreamWidgetTree> OwnedTree;
+	UPROPERTY(Transient, NonTransactional)
 	TWeakObjectPtr<UDreamCanvas> RootCanvas;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient, NonTransactional)
 	TWeakObjectPtr<UDreamWidget> LoadedWidget;
 	/**
 	 * For navigation input, show a selection widget
@@ -56,7 +77,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=DreamWidgetPresenter)
 	TSubclassOf<class UDreamUserWidget> NavigationSelectionClass;
 
-	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category=DreamWidgetPresenter, AdvancedDisplay)
+	UPROPERTY(VisibleAnywhere, Transient, NonTransactional, BlueprintReadOnly, Category=DreamWidgetPresenter, AdvancedDisplay)
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 
 	/**

@@ -52,6 +52,12 @@ bool UDreamUIManagerWorldSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 	return !IsRunningCommandlet() && Super::ShouldCreateSubsystem(Outer);
 }
 
+bool UDreamUIManagerWorldSubsystem::DoesSupportWorldType(const EWorldType::Type WorldType) const
+{
+	return WorldType == EWorldType::Game || WorldType == EWorldType::Editor || WorldType == EWorldType::PIE
+		|| WorldType == EWorldType::EditorPreview;
+}
+
 void UDreamUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -59,6 +65,7 @@ void UDreamUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collect
 	// editor or preview world announces that it is going, and the fallback for a game world that ended
 	// without EndPlay reaching this manager. See TeardownWorld.
 	FWorldDelegates::OnWorldCleanup.AddUObject(this, &UDreamUIManagerWorldSubsystem::HandleWorldCleanup);
+	FWorldDelegates::LevelRemovedFromWorld.AddUObject(this, &UDreamUIManagerWorldSubsystem::HandleLevelRemovedFromWorld);
 #if WITH_EDITOR
 	if (this->GetWorld()->WorldType == EWorldType::EditorPreview//EditorPreview world don't tick, so manually tick it
 		|| this->GetWorld()->WorldType == EWorldType::Editor)
@@ -72,7 +79,7 @@ void UDreamUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collect
 			return false;
 			});
 	}
-	if (this->GetWorld()->IsGameWorld() || this->GetWorld()->WorldType == EWorldType::Editor)//game world or editor world, skip editor preview world
+	if (this->GetWorld()->IsGameWorld() || this->GetWorld()->WorldType == EWorldType::Editor)//game world or editor world; a preview ticks when its host says so (the designer does)
 	{
 		bShouldTickInEditor = true;
 	}
@@ -135,6 +142,7 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 	}
 	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.RemoveAll(this);
 	FWorldDelegates::OnWorldCleanup.RemoveAll(this);
+	FWorldDelegates::LevelRemovedFromWorld.RemoveAll(this);
 	Super::Deinitialize();
 }
 
@@ -210,8 +218,12 @@ void UDreamUIManagerWorldSubsystem::TeardownWorld()
 		}
 	}
 
-	// Then every tree still registered: the hosts' trees, and any tree nobody owned.
-	DestroyRegisteredWidgetTrees();
+	// Then the hosts' trees: every host lets its own go, as it would if it were destroyed. What is still
+	// registered after that is the pool's -- trees nobody hosts, which are the manager's to take down --
+	// and any tree a host failed to let go of, which is reported.
+	ReleaseHostTrees(EDreamTreeReleaseReason::HostDestroyed);
+	TreeHosts.Reset();
+	DestroyRegisteredWidgetTrees(/*bInReportTreesOutlivingHosts*/ true);
 
 	// Last, what the manager kept for those trees. Unregistering took nearly all of it with it; a layout
 	// pass still open is the one thing that could have outlived them, and it is a bug to say so about.
@@ -275,7 +287,7 @@ void UDreamUIManagerWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	// optional here either. HasRegistered answers the other half: a widget in the snapshot that has
 	// since been unregistered was torn down while this loop was running, and BeginPlay on it would
 	// restart a widget that is on its way out.
-	const TArray<TObjectPtr<UDreamWidget>> WidgetsToBeginPlay = AllWidgetArray;
+	const TArray<UDreamWidget*> WidgetsToBeginPlay = GetRegisteredWidgets();
 	for (UDreamWidget* Widget : WidgetsToBeginPlay)
 	{
 		if (IsValid(Widget) && Widget->HasRegistered() && !Widget->HasBegunPlay())
