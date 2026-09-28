@@ -8,6 +8,7 @@ the CoreRedirects that keep old assets loading. Both print what they would do un
 |---|---|
 | `move_module_files.py <Module>` | `git mv`s the module's files to `Source/<Module>`, same path under `Public/` or `Private/`; rewrites the includes that only worked inside one module (same directory, `../`, `"DreamGUI/Public/..."`) into the module-relative form; renames `DREAMGUI_API` to the module's macro; updates `module-owners.csv`. Refuses while a file that stays in the core still includes a moving one |
 | `generate_split_redirects.py <Module>` | Scans the moved headers for reflected types and appends one redirect per type, from `/Script/DreamGUI` to `/Script/<Module>`, to `Config/DefaultDreamGUI.ini`; points the existing entries that led to one of those types at the new package, since redirects do not chain |
+| `retarget_script_paths.py <Module>` | Rewrites every `/Script/DreamGUI.<moved type>` in the plugin's sources and docs to the new package -- metadata strings above all, which the engine reads without redirects. Leaves the tests, the redirect file and the old-asset snapshot alone, and lists what it left |
 
 ## The steps, in order
 
@@ -24,8 +25,9 @@ the CoreRedirects that keep old assets loading. Both print what they would do un
 4. `python Tools/ModuleSplit/generate_split_redirects.py <Module> --apply`.
 5. Add the module to `DreamGUIEditor.Build.cs` and `DreamGUITests.Build.cs` (the tests also get its
    `Private` directory), and to every runtime module above it that uses it.
-6. Update the metadata strings that name a moved type by path (`AllowedClasses`, `MustImplement`, ...): the
-   engine reads those as they are, without redirects.
+6. `python Tools/ModuleSplit/retarget_script_paths.py <Module> --apply`, for the metadata strings that name a
+   moved type by path (`AllowedClasses`, `MustImplement`, ...) and for the docs: the engine reads a metadata
+   string as it is, without redirects.
 7. Build, then run the whole suite. `DreamGUI.Packaging.EveryTypeInASplitOffModuleAnswersToItsOldCorePath`
    checks that every type in the new package answers to its old path, and the old-asset fixtures, the asset
    smoke test and the redirect tests check the rest.
