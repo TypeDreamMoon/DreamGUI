@@ -22,16 +22,16 @@ struct FDreamUISweepTestStyle
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	float Thickness = 1.0f;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	FVector2D Offset = FVector2D::ZeroVector;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	FLinearColor Tint = FLinearColor::White;
 
-	UPROPERTY(EditAnywhere, meta = (DuiHidden))
+	UPROPERTY(EditAnywhere, Category = "Test", meta = (DuiHidden))
 	float DerivedCache = 0.0f;
 };
 
@@ -45,14 +45,14 @@ class UDreamUISweepTestBehaviour : public UDreamUIBehaviour
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	FDreamUISweepTestStyle Style;
 
 	/** Soft on purpose: stored as a path, never loaded by the compile. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	TSoftObjectPtr<UTexture2D> Icon;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	float Plain = 0.0f;
 };
 
@@ -80,10 +80,10 @@ class UDreamUITypedValueTestBehaviour : public UDreamUIBehaviour
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	TSubclassOf<UDreamWidget> WidgetClass;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	EDreamUITypedValueTestState State = EDreamUITypedValueTestState::Idle;
 
 	/**
@@ -95,7 +95,7 @@ public:
 	 * misspelling that was not there. The setter is what makes the property bindable in the first
 	 * place (FindDreamWidgetSetterFor), so it is part of the fixture, not decoration.
 	 */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 	double Precise = 0.0;
 
 	UFUNCTION()
@@ -148,27 +148,27 @@ class UDreamUIAutoBindTestBehaviour : public UDreamUIBehaviour
 	GENERATED_BODY()
 public:
 	/** Savable widget reference with a same-named widget in the tree: the auto-bind happy path. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 		TObjectPtr<UDreamWidget> PlayButton;
 	/** Two widgets share this display name, so the pass must report rather than pick one. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 		TObjectPtr<UDreamWidget> Ambiguous;
 	/** No widget carries this name: unbound, and silent -- an unused variable is not a problem. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 		TObjectPtr<UDreamWidget> Absent;
 	/** Only a sub-prefab widget carries this name, which the prefab writer cannot reference. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 		TObjectPtr<UDreamWidget> InsideNestedInstance;
 	/** Behaviour-typed bind: resolves to a component on the same-named widget. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 		TObjectPtr<UDreamUIAutoBindTargetBehaviour> Scoreboard;
 	/** Bindable name but an unbindable type: the pass must ignore it entirely. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Test")
 		TObjectPtr<UObject> Unrelated;
 	/** Editable but transient: a runtime cache the prefab writer drops, so never auto-bind it. */
-	UPROPERTY(EditAnywhere, Transient)
+	UPROPERTY(EditAnywhere, Transient, Category = "Test")
 		TObjectPtr<UDreamWidget> RuntimeCache;
 	/** EditDefaultsOnly carries CPF_DisableEditOnInstance, which the writer also drops. */
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Test")
 		TObjectPtr<UDreamWidget> NotInstanceEditable;
 };

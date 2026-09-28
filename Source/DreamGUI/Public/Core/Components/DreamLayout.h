@@ -103,11 +103,11 @@ struct FLayoutAnimationSnapshotData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "LayoutContainer")
 	TObjectPtr<UDreamWidget> Widget = nullptr;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "LayoutContainer")
 	FVector2D Position = FVector2D::ZeroVector;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "LayoutContainer")
 	FVector2D Size = FVector2D::ZeroVector;
 };
 

@@ -11,6 +11,9 @@ Rules (--list-rules prints them with their reasons):
     shadowed-property    a UPROPERTY named like a UPROPERTY of an ancestor class
     redeclared-function  a UFUNCTION redeclared under an ancestor's UFUNCTION of that name, or a
                          UPROPERTY named like one
+    category-required    a UPROPERTY exposed to the editor or Blueprints, or a Blueprint-callable
+                         UFUNCTION, with no Category. UHT lets a game module off; BuildPlugin builds
+                         the plugin as an engine plugin, and there it is an error
     ufunction-param      a UFUNCTION parameter named like a UPROPERTY of its class (added lines only)
     param-hides-member   a definition's parameter named like a member variable, C4458 (added lines only)
   The tests:
@@ -87,6 +90,7 @@ TEXT_EXTS = ('.h', '.hpp', '.inl', '.cpp', '.cs', '.json', '.md', '.ini', '.uplu
 RULES = collections.OrderedDict([
     ('reflected-name', 'UHT refuses a second reflected type or delegate of the same name.'),
     ('shadowed-property', 'UHT refuses a UPROPERTY that hides an ancestor UPROPERTY.'),
+    ('category-required', 'BuildPlugin compiles the plugin as an engine plugin, where UHT refuses an exposed property or a Blueprint-callable function with no Category.'),
     ('redeclared-function', 'UHT refuses UFUNCTION() on an override, and a UPROPERTY named like an ancestor UFUNCTION.'),
     ('ufunction-param', 'UHT refuses a UFUNCTION parameter named like a UPROPERTY of the class.'),
     ('param-hides-member', 'C4458 is an error in this build.'),
@@ -247,6 +251,40 @@ def param_names(plist):
     return names
 
 
+PROPERTY_EXPOSED = re.compile(r'\b(EditAnywhere|EditDefaultsOnly|EditInstanceOnly|VisibleAnywhere|VisibleDefaultsOnly|'
+                              r'VisibleInstanceOnly|BlueprintReadOnly|BlueprintReadWrite)\b')
+FUNCTION_EXPOSED = re.compile(r'\b(BlueprintCallable|BlueprintPure)\b')
+HAS_CATEGORY = re.compile(r'\bCategory\s*=')
+ACCESSOR = re.compile(r'\bBlueprint(?:Getter|Setter)\s*=\s*"?([A-Za-z_][A-Za-z_0-9]*)')
+
+
+def check_categories(headers, findings):
+    """UHT's engine-module rule (UhtProperty.ValidateMember, UhtFunction.ValidateFunction), over every header."""
+    for sf in headers:
+        code = sf.code
+        for a, b, name, base in class_ranges(code):
+            accessors = set()
+            for mm in PROP.finditer(code, a, b):
+                spec = mm.group(1)
+                accessors.update(ACCESSOR.findall(spec))
+                if PROPERTY_EXPOSED.search(spec) and not HAS_CATEGORY.search(spec):
+                    findings.append(Finding('category-required', sf.rel, sf.line_of(mm.start()),
+                                            'UPROPERTY %s::%s is exposed to the editor or Blueprints and names no Category'
+                                            % (name, mm.group(3)), mm.group(3)))
+            for mm in FUNC.finditer(code, a, b):
+                spec = mm.group(1)
+                if not FUNCTION_EXPOSED.search(spec) or HAS_CATEGORY.search(spec):
+                    continue
+                # Exempt as UHT exempts them: internal-only, deprecated, and a property's getter or setter.
+                if re.search(r'\bBlueprintInternalUseOnly\s*=\s*"?true', spec, re.I) or re.search(r'\bDeprecatedFunction\b', spec):
+                    continue
+                if mm.group(3) in accessors:
+                    continue
+                findings.append(Finding('category-required', sf.rel, sf.line_of(mm.start()),
+                                        'UFUNCTION %s::%s is Blueprint-callable and names no Category' % (name, mm.group(3)),
+                                        mm.group(3)))
+
+
 def check_reflection(root, git, findings, want):
     headers = [sourcescan.load(root, p) for p in sourcescan.source_files(root, 'Source', ('.h',))]
     declared = collections.defaultdict(list)
@@ -286,6 +324,9 @@ def check_reflection(root, git, findings, want):
                     flat.append(ch if depth == 1 or ch == '\n' else ' ')
             for mm in MEMBER.finditer(''.join(flat)):
                 members[name].add(mm.group(1))
+
+    if 'category-required' in want:
+        check_categories(headers, findings)
 
     if 'reflected-name' in want:
         for (kind, name), sites in sorted(declared.items()):

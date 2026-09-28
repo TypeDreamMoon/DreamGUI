@@ -330,7 +330,7 @@ private:
 	 * DuiHidden: the setter recomputes the anchors, and AnchorData is what a .dui spells -- a
 	 * reflective sweep that also wrote this would author one position twice.
 	 */
-	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta=(AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta=(AllowPrivateAccess = true, DuiHidden))
 	FVector RelativeLocation = FVector::ZeroVector;
 	/**
 	 * Local space rotation.
@@ -340,7 +340,7 @@ private:
 	// DuiHidden: RelativeRotationEuler is the authored face of this value, and a quaternion has no
 	// spelling -- but FQuat is an ordinary struct, so without the tag a reflective sweep would
 	// recurse it and write X/Y/Z/W component lines beside the euler it already wrote.
-	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true, DuiHidden))
 	FQuat RelativeRotation = FQuat::Identity;
 	/**
 	 * Local space rotation as euler angles, mirroring RelativeRotation so that rotation can be
@@ -350,10 +350,10 @@ private:
 	 * property memory directly while writing through the setter, so this has to be a real stored
 	 * field kept in sync rather than a value derived on demand.
 	 */
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true))
 	FRotator RelativeRotationEuler = FRotator::ZeroRotator;
 	/** Local space scale */
-	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true, AllowPreserveRatio))
 	FVector RelativeScale = FVector::OneVector;
 
 	/*
