@@ -984,27 +984,40 @@ namespace DreamWidgetDuplicateLocal
 		}
 	}
 
-	/** Rewrite InContainer's object properties that still point at the source subtree. */
+	/**
+	 * Aim every reference InContainer holds into the source subtree at its counterpart in the copy -- in its
+	 * own properties and inside every struct and container of them. An event binding's target widget lives
+	 * in a struct in an array, and walking only the top level left a copied button calling the original's
+	 * target. Map keys and set elements are left as they are: rewriting one in place would leave its
+	 * container hashed by the old value.
+	 */
 	void RemapReferencesOn(UObject* InContainer, const TMap<UObject*, UObject*>& InMap)
 	{
 		if (!IsValid(InContainer))
 		{
 			return;
 		}
-		for (TFieldIterator<FObjectPropertyBase> It(InContainer->GetClass(), EFieldIterationFlags::Default); It; ++It)
+		for (TPropertyValueIterator<FObjectPropertyBase> It(InContainer->GetClass(), InContainer); It; ++It)
 		{
-			if (It->IsA<FSoftObjectProperty>() || It->IsA<FClassProperty>())
+			const FObjectPropertyBase* Property = It.Key();
+			if (Property->IsA<FSoftObjectProperty>() || Property->IsA<FClassProperty>())
 			{
 				continue;
 			}
-			UObject* Value = It->GetObjectPropertyValue_InContainer(InContainer);
+			const FMapProperty* OwningMap = Property->GetOwner<FMapProperty>();
+			if (Property->GetOwner<FSetProperty>() != nullptr || (OwningMap != nullptr && OwningMap->KeyProp == Property))
+			{
+				continue;
+			}
+			void* ValueAddress = const_cast<void*>(It.Value());
+			UObject* Value = Property->GetObjectPropertyValue(ValueAddress);
 			if (Value == nullptr)
 			{
 				continue;
 			}
 			if (UObject* const* Counterpart = InMap.Find(Value))
 			{
-				It->SetObjectPropertyValue_InContainer(InContainer, *Counterpart);
+				Property->SetObjectPropertyValue(ValueAddress, *Counterpart);
 			}
 		}
 	}

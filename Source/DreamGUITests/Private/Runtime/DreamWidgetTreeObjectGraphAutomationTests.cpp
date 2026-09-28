@@ -3,6 +3,8 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
+#include "Event/DreamUIEventDelegate.h"
+#include "Interaction/UIToggleGroup.h"
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetTree.h"
@@ -396,5 +398,62 @@ bool FDreamWidgetBackfilledIdTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetSubtreeCopyBindingsTest,
+	"DreamGUI.WidgetTree.ObjectGraph.ACopiedSubtreesEventBindingsCallIntoTheCopy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A subtree copied -- the designer's duplicate, a list's cell made from its template -- is a new thing standing
+ * next to the old one, and every reference inside it that named a widget of the source subtree has to name
+ * the copy's counterpart instead. An event binding's target sits in a struct inside an array on a behaviour;
+ * the copy kept pointing at the original, so a copied toggle group reported its changes to the source's
+ * widget.
+ */
+bool FDreamWidgetSubtreeCopyBindingsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetTreeObjectGraphTestLocal;
+	FScopedGameWorld TestWorld;
+	const FSampleTree Sample = BuildSampleTree(TestWorld.World);
+
+	// A toggle group on A whose value-changed binding calls a behaviour of C, inside the subtree to copy.
+	UUIToggleGroup* Group = Sample.A->AddComponent<UUIToggleGroup>();
+	UUIToggleGroup* Target = Sample.C->AddComponent<UUIToggleGroup>();
+	const FStructProperty* EventProperty = FindFProperty<FStructProperty>(UUIToggleGroup::StaticClass(), TEXT("OnValueChanged"));
+	const FArrayProperty* ListProperty = FindFProperty<FArrayProperty>(FDreamUIEventDelegate::StaticStruct(), TEXT("EventList"));
+	const FObjectPropertyBase* HelperProperty = FindFProperty<FObjectPropertyBase>(FDreamUIEventDelegateData::StaticStruct(), TEXT("HelperWidget"));
+	if (!TestNotNull(TEXT("the group's binding is reflected"), EventProperty) || !TestNotNull(TEXT("with its list"), ListProperty)
+		|| !TestNotNull(TEXT("whose entries name a widget"), HelperProperty) || Group == nullptr || Target == nullptr)
+	{
+		return false;
+	}
+	EventProperty->ContainerPtrToValuePtr<FDreamUIEventDelegate>(Group)->AddFunctionBinding(
+		Sample.C, Target, TEXT("SetSelection"), EDreamUIEventDelegateParameterType::Int32, /*bInUseNativeParameter*/true);
+	const auto HelperOf = [EventProperty, ListProperty, HelperProperty](UUIToggleGroup* InGroup) -> UObject*
+	{
+		FScriptArrayHelper List(ListProperty, ListProperty->ContainerPtrToValuePtr<void>(EventProperty->ContainerPtrToValuePtr<void>(InGroup)));
+		return List.Num() == 1 ? HelperProperty->GetObjectPropertyValue_InContainer(List.GetRawPtr(0)) : nullptr;
+	};
+	if (!TestTrue(TEXT("the binding names C"), HelperOf(Group) == Sample.C))
+	{
+		return false;
+	}
+
+	UDreamWidget* Copy = UDreamWidget::DuplicateSubtree(Sample.Tree, Sample.A);
+	if (!TestNotNull(TEXT("the subtree copy exists"), (UObject*)Copy) || !TestEqual(TEXT("with C's copy under it"), Copy->GetChildren().Num(), 1))
+	{
+		return false;
+	}
+	UUIToggleGroup* CopiedGroup = Copy->GetComponent<UUIToggleGroup>();
+	if (!TestNotNull(TEXT("the copy has its own toggle group"), CopiedGroup))
+	{
+		return false;
+	}
+	TestTrue(TEXT("whose binding names the copy of C"), HelperOf(CopiedGroup) == Copy->GetChildren()[0]);
+	TestTrue(TEXT("and not the original"), HelperOf(CopiedGroup) != Sample.C);
+	TestTrue(TEXT("while the original's still names the original"), HelperOf(Group) == Sample.C);
+	return true;
+}
 
 #endif
