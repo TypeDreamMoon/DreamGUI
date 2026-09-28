@@ -252,7 +252,12 @@ void UDreamWidgetAnimation::BindPossessableObject(const FGuid& ObjectId, UObject
 	{
 		Widget = PossessedObject.GetTypedOuter<UDreamWidget>();
 	}
-	check(Widget != nullptr);
+	// Whatever Sequencer is asked to bind reaches here, and an object that is not part of a widget is a
+	// binding this animation cannot hold -- the caller's mistake to hear about, not a reason to crash.
+	if (!ensureMsgf(Widget != nullptr, TEXT("%s: cannot bind %s, which is not part of a widget."), *GetPathName(), *PossessedObject.GetPathName()))
+	{
+		return;
+	}
 	// Relative to the CONTEXT -- the widget that owns this animation -- not to the widget being bound.
 	// Passing the bound widget made every recorded path "/", meaning "the context widget itself", so
 	// the path was never an identity for anything and playback had only the stored pointer to go on.

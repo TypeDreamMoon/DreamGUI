@@ -326,7 +326,7 @@ void UDreamWidget::DestroyWidget()
 		static void AppendOwnedParts(UObject* InOuter, TArray<UObject*>& OutParts)
 		{
 			TArray<UObject*> Inner;
-			GetObjectsWithOuter(InOuter, Inner, /*bIncludeNestedObjects*/ false);
+			GetObjectsWithOuter(InOuter, Inner, EGetObjectsFlags::None);
 			for (UObject* Object : Inner)
 			{
 				if (Object->IsA<UDreamWidget>() || Object->IsA<UDreamWidgetTree>()

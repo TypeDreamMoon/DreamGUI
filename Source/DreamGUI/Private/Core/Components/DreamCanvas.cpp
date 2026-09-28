@@ -2790,7 +2790,9 @@ EDreamRenderMode UDreamCanvas::GetActualRenderMode()const
 	{
 		if (bForceRenderToTarget)
 		{
-			checkf(this->RenderMode == EDreamRenderMode::RenderTarget, TEXT("[%s].%d This error should not happen!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			// Reported rather than asserted: the two are separate properties, and nothing about loading or
+			// editing them keeps them in step.
+			ensureMsgf(this->RenderMode == EDreamRenderMode::RenderTarget, TEXT("%s: forced to render to a target while its render mode says otherwise."), *GetPathName());
 			return this->RenderMode;
 		}
 		if (CheckRootCanvas())
