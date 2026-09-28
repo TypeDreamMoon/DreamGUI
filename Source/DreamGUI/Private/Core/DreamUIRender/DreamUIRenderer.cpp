@@ -9,13 +9,12 @@
 #include "Materials/MaterialRenderProxy.h"
 #include "Core/DreamUIRender/DreamUIPostProcessShaders.h"
 #include "Core/DreamUIRender/DreamUIResolveShaders.h"
-#include "DreamGUI.h"
+#include "Core/DreamUIRender/DreamUIRendererLogging.h"
 #include "SceneView.h"
 #include "PipelineStateCache.h"
 #include "SceneRendering.h"
 #include "RenderTargetPool.h"//UE5.8: GRenderTargetPool no longer transitively included
 #include "Core/DreamUIRender/IDreamUIRendererPrimitive.h"
-#include "Core/Components/DreamCanvas.h"
 #include "MeshPassProcessor.inl"
 #include "ScenePrivate.h"
 #include "TextureResource.h"
@@ -24,9 +23,8 @@
 #include "SceneTextures.h"
 #if WITH_EDITOR
 #include "Engine/Engine.h"
-#include "Editor/EditorEngine.h"
 #endif
-#include "Core/DreamUISettings.h"
+#include "Core/DreamUIRender/DreamUIRendererSettings.h"
 #include "ClearQuad.h"
 #include "DataDrivenShaderPlatformInfo.h"//RHISupportsMSAA, for the platform that cannot honour the setting
 
@@ -38,6 +36,8 @@ static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
 #include "Core/DreamUIMeshVertex.h"
 #include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
 #include "Core/DreamUIRender/DreamUIPostProcessVertex.h"
+
+DEFINE_LOG_CATEGORY(LogDreamGUIRenderer);
 
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUITextureReadRenderTargetParameters, )
 	RDG_TEXTURE_ACCESS(SourceTexture, ERHIAccess::SRVGraphics)
@@ -62,35 +62,59 @@ FDreamUIRenderer::~FDreamUIRenderer()
 	
 }
 
+FIntPoint FDreamUIRenderer::CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale)
+{
+	const FIntPoint ClampedViewport(FMath::Max(InViewportSize.X, 1), FMath::Max(InViewportSize.Y, 1));
+	//1 means "leave it alone", and it has to mean that exactly: rounding a full-size pass through the
+	//arithmetic below could come back one pixel short and quietly make every UI a rescale
+	const float RequestedScale = FMath::Clamp(InRequestedScale, 0.1f, 1.0f);
+	if (RequestedScale >= 1.0f)
+	{
+		OutAppliedScale = 1.0f;
+		return ClampedViewport;
+	}
+	const FIntPoint ScaledSize(
+		FMath::Max(FMath::RoundToInt(ClampedViewport.X * RequestedScale), 1),
+		FMath::Max(FMath::RoundToInt(ClampedViewport.Y * RequestedScale), 1));
+	//report what was actually rendered at, not what was asked for: the pixel rounding and the
+	//one-pixel floor both move it, and the upscale has to use the size that exists
+	OutAppliedScale = (float)ScaledSize.X / (float)ClampedViewport.X;
+	return ScaledSize;
+}
+
 void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView)
 {
 	if (!World.IsValid())return;
 	if (World.Get() != InView.Family->Scene->GetWorld())return;
 	
-	if (UDreamCanvas* ViewCanvas = GetScreenSpaceViewCanvas())
+	if (const FScreenSpaceRoot* ViewRoot = GetScreenSpaceViewRoot())
 	{
-		auto ViewLocation = ViewCanvas->GetViewLocation();
-		auto ViewRotationMatrix = FInverseRotationMatrix(ViewCanvas->GetViewRotator()) * FMatrix(
+		const IDreamUIRendererViewSource* ViewSource = ViewRoot->ViewSource;
+		auto ViewLocation = ViewSource->GetRendererViewLocation();
+		auto ViewRotationMatrix = FInverseRotationMatrix(ViewSource->GetRendererViewRotator()) * FMatrix(
 			FPlane(0, 0, 1, 0),
 			FPlane(1, 0, 0, 0),
 			FPlane(0, 1, 0, 0),
 			FPlane(0, 0, 0, 1));
-		auto ProjectionMatrix = ViewCanvas->GetProjectionMatrix();
+		auto ProjectionMatrix = ViewSource->GetRendererProjectionMatrix();
 		auto ViewProjectionMatrix = FMatrix44f(FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix);
 
 		GameThreadViewParameter.ViewOrigin = ViewLocation;
 		GameThreadViewParameter.ViewRotationMatrix = ViewRotationMatrix;
 		GameThreadViewParameter.ProjectionMatrix = ProjectionMatrix;
 		GameThreadViewParameter.ViewProjectionMatrix = FMatrix44f(ViewProjectionMatrix);
-		GameThreadViewParameter.bEnableDepthTest = ViewCanvas->GetEnableDepthTest();
+		GameThreadViewParameter.bEnableDepthTest = ViewSource->GetRendererEnableDepthTest();
 		//read here with the rest of the view state, from the same canvas, so the render thread never
 		//asks the canvas anything
-		GameThreadViewParameter.ScreenSpaceRenderScale = ViewCanvas->GetScreenSpaceRenderScale();
+		GameThreadViewParameter.ScreenSpaceRenderScale = ViewSource->GetRendererScreenSpaceRenderScale();
 	}
 
-	if (auto DreamUISettings = GetDefault<UDreamUISettings>())
+	// The project's settings as the core provides them (DreamUIRendererSettings): read here, once per view,
+	// as they always were, so an edit to them takes effect on the next frame.
+	if (DreamUIRendererSettings::HasProvider())
 	{
-		uint8 RequestedSamples = DreamUISettings->AntiAliasingMethod == EDreamUIRendererAntiAliasingMethod::MSAA ? (uint8)DreamUISettings->MSAASampleCount : 1;
+		const FDreamUIRendererSettings RendererSettings = DreamUIRendererSettings::Get();
+		uint8 RequestedSamples = RendererSettings.MSAASampleCount;
 		// The setting's own documentation says MSAA is "not valid on Android (gles)", and until now
 		// nothing enforced that: it is a plain config value, so a project that turns MSAA on globally
 		// (which is the ordinary thing to do) carried it onto a platform that cannot honour it and got
@@ -106,13 +130,13 @@ void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InV
 			if (!bWarnedAboutUnsupportedMSAA)
 			{
 				bWarnedAboutUnsupportedMSAA = true;
-				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d DreamUI MSAA x%d was requested, but this shader platform does not support MSAA; falling back to no anti-aliasing. Override AntiAliasingMethod for this platform to make the choice explicit."),
+				UE_LOG(LogDreamGUIRenderer, Warning, TEXT("[%s].%d DreamUI MSAA x%d was requested, but this shader platform does not support MSAA; falling back to no anti-aliasing. Override AntiAliasingMethod for this platform to make the choice explicit."),
 					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, RequestedSamples);
 			}
 			RequestedSamples = 1;
 		}
 		GameThreadViewParameter.NumSamples_MSAA = RequestedSamples;
-		GameThreadViewParameter.bFrustumCulling = DreamUISettings->bFrustumCulling;
+		GameThreadViewParameter.bFrustumCulling = RendererSettings.bFrustumCulling;
 	}
 	else
 	{
@@ -153,12 +177,29 @@ void FDreamUIRenderer::PostRenderView_RenderThread(FRDGBuilder& GraphBuilder, FS
 int32 FDreamUIRenderer::GetPriority() const
 {
 #if WITH_EDITOR
-	auto Priority = UDreamUISettings::GetPriorityInSceneViewExtension();
+	auto Priority = DreamUIRendererSettings::Get().ViewExtensionPriority;
 #else
-	static auto Priority = UDreamUISettings::GetPriorityInSceneViewExtension();
+	static auto Priority = DreamUIRendererSettings::Get().ViewExtensionPriority;
 #endif
 	return Priority;
 }
+#if WITH_EDITOR
+namespace DreamUIRendererLocal
+{
+	TFunction<bool()>& SimulatingInEditorQuery()
+	{
+		static TFunction<bool()> Query;
+		return Query;
+	}
+}
+
+void FDreamUIRenderer::SetSimulatingInEditorQuery(TFunction<bool()> InQuery)
+{
+	check(IsInGameThread());
+	DreamUIRendererLocal::SimulatingInEditorQuery() = MoveTemp(InQuery);
+}
+#endif
+
 bool FDreamUIRenderer::IsActiveThisFrame_Internal(const FSceneViewExtensionContext& Context) const
 {
 	if (!World.IsValid())return false;
@@ -166,10 +207,10 @@ bool FDreamUIRenderer::IsActiveThisFrame_Internal(const FSceneViewExtensionConte
 	if (GEngine == nullptr) return false;
 	bCanRenderScreenSpace = true;
 	bIsPlaying = World.Get()->IsGameWorld();
-	//check if simulation
-	if (UEditorEngine* editor = Cast<UEditorEngine>(GEngine))
+	//check if simulation: the editor engine is not the renderer's to link, so whoever does answers this
+	if (DreamUIRendererLocal::SimulatingInEditorQuery() && DreamUIRendererLocal::SimulatingInEditorQuery()())
 	{
-		if (editor->bIsSimulatingInEditor)bCanRenderScreenSpace = false;
+		bCanRenderScreenSpace = false;
 	}
 
 	if (bIsPlaying == bIsEditorPreview)bCanRenderScreenSpace = false;
@@ -1216,7 +1257,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			if (!bAnyPostProcess)
 			{
 				float AppliedScale = 1.0f;
-				const FIntPoint ScaledSize = UDreamCanvas::CalculateRenderScaledSize(ViewRect.Size(), RenderThreadViewParameter.ScreenSpaceRenderScale, AppliedScale);
+				const FIntPoint ScaledSize = CalculateRenderScaledSize(ViewRect.Size(), RenderThreadViewParameter.ScreenSpaceRenderScale, AppliedScale);
 				if (ScaledSize != ViewRect.Size())
 				{
 					FPooledRenderTargetDesc ScaleDesc(FPooledRenderTargetDesc::Create2DDesc(
@@ -1334,7 +1375,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 								{
 									if (bDump)
 									{
-										UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] built-in batch, %d verts"), MeshBatchContainer.NumVerts);
+										UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] built-in batch, %d verts"), MeshBatchContainer.NumVerts);
 									}
 									DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
 										, NumSamples, GammaValue, ValidDepth
@@ -1344,7 +1385,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 								auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
 								if (!MaterialRenderProxy)
 								{
-									if (bDump) { UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] EXIT no proxy")); }
+									if (bDump) { UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] EXIT no proxy")); }
 									return;
 								}
 								auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with DreamUIRenderer
@@ -1352,7 +1393,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 								{
 									if (bDump)
 									{
-										UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] EXIT no material (shader map not ready?) proxy=%s"),
+										UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] EXIT no material (shader map not ready?) proxy=%s"),
 											*MaterialRenderProxy->GetMaterialName());
 									}
 									return;
@@ -1365,7 +1406,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 								const bool bGotShaders = Material->TryGetShaders(ShaderTypes, nullptr, Shaders);
 								if (bDump)
 								{
-									UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws] material=%s verts=%d prims=%d shaders=%s"),
+									UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] material=%s verts=%d prims=%d shaders=%s"),
 										*Material->GetFriendlyName(), MeshBatchContainer.NumVerts,
 										Mesh.Elements.Num() > 0 ? Mesh.Elements[0].NumPrimitives : -1,
 										bGotShaders ? TEXT("OK") : TEXT("MISSING"));
@@ -1555,7 +1596,7 @@ void FDreamUIRenderer::AddWorldSpacePrimitive_RenderThread(FObjectKey InCanvasKe
 	}
 	else
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Add nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LogDreamGUIRenderer, Warning, TEXT("[%s].%d Add nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
 void FDreamUIRenderer::RemoveWorldSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive)
@@ -1567,7 +1608,7 @@ void FDreamUIRenderer::RemoveWorldSpacePrimitive_RenderThread(IDreamUIRendererPr
 			});
 		if (existIndex == INDEX_NONE)
 		{
-			UE_LOG(DreamGUI, Log, TEXT("[%s].%d Canvas already removed."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			UE_LOG(LogDreamGUIRenderer, Log, TEXT("[%s].%d Canvas already removed."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		}
 		else
 		{
@@ -1576,7 +1617,7 @@ void FDreamUIRenderer::RemoveWorldSpacePrimitive_RenderThread(IDreamUIRendererPr
 	}
 	else
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Remove nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LogDreamGUIRenderer, Warning, TEXT("[%s].%d Remove nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
 void FDreamUIRenderer::AddScreenSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive)
@@ -1588,7 +1629,7 @@ void FDreamUIRenderer::AddScreenSpacePrimitive_RenderThread(IDreamUIRendererPrim
 	}
 	else
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Add nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LogDreamGUIRenderer, Warning, TEXT("[%s].%d Add nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
 void FDreamUIRenderer::RemoveScreenSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive)
@@ -1599,7 +1640,7 @@ void FDreamUIRenderer::RemoveScreenSpacePrimitive_RenderThread(IDreamUIRendererP
 	}
 	else
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Remove nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LogDreamGUIRenderer, Warning, TEXT("[%s].%d Remove nullptr as IDreamUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
 void FDreamUIRenderer::SortScreenSpacePrimitiveRenderPriority_RenderThread()
@@ -1622,7 +1663,7 @@ void FDreamUIRenderer::MarkNeedToSortScreenSpacePrimitiveRenderPriority()
 		}
 	);
 }
-void FDreamUIRenderer::SetRenderCanvasDepthParameter(UDreamCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade)
+void FDreamUIRenderer::SetRenderCanvasDepthParameter(const UObject* InRenderCanvas, float InBlendDepth, int InDepthFade)
 {
 	auto viewExtension = this;
 	//take the identity here, on the game thread, so the canvas pointer never crosses to the render thread
@@ -1647,40 +1688,43 @@ void FDreamUIRenderer::SetRenderCanvasDepthFade_RenderThread(FObjectKey InRender
 	}
 }
 
-UDreamCanvas* FDreamUIRenderer::GetScreenSpaceViewCanvas()const
+const FDreamUIRenderer::FScreenSpaceRoot* FDreamUIRenderer::GetScreenSpaceViewRoot()const
 {
 	//first still-alive registration wins, so the answer does not change when a later canvas appears
-	for (const auto& Canvas : ScreenSpaceRenderParameter.RootCanvasArray)
+	for (const FScreenSpaceRoot& Root : ScreenSpaceRenderParameter.RootCanvasArray)
 	{
-		if (Canvas.IsValid())
+		if (Root.Canvas.IsValid())
 		{
-			return Canvas.Get();
+			return &Root;
 		}
 	}
 	return nullptr;
 }
 
-void FDreamUIRenderer::SetScreenSpaceRootCanvas(UDreamCanvas* InCanvas)
+void FDreamUIRenderer::SetScreenSpaceRootCanvas(UObject* InCanvas, const IDreamUIRendererViewSource* InViewSource)
 {
-	if (InCanvas == nullptr)return;
+	if (InCanvas == nullptr || InViewSource == nullptr)return;
 	//drop registrations whose canvas has been collected, so a dead one cannot keep owning the view
-	ScreenSpaceRenderParameter.RootCanvasArray.RemoveAll([](const TWeakObjectPtr<UDreamCanvas>& Item) { return !Item.IsValid(); });
-	ScreenSpaceRenderParameter.RootCanvasArray.AddUnique(InCanvas);
+	ScreenSpaceRenderParameter.RootCanvasArray.RemoveAll([](const FScreenSpaceRoot& Item) { return !Item.Canvas.IsValid(); });
+	if (!ScreenSpaceRenderParameter.RootCanvasArray.ContainsByPredicate([InCanvas](const FScreenSpaceRoot& Item) { return Item.Canvas.Get() == InCanvas; }))
+	{
+		ScreenSpaceRenderParameter.RootCanvasArray.Add(FScreenSpaceRoot{ InCanvas, InViewSource });
+	}
 	if (ScreenSpaceRenderParameter.RootCanvasArray.Num() > 1)
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d %d root canvases are rendering screen-space into the same view; the view location, rotation, projection and depth test are taken from '%s', the first one registered. Give the others their own render mode (RenderTarget or WorldSpace) if they need their own projection.")
+		UE_LOG(LogDreamGUIRenderer, Warning, TEXT("[%s].%d %d root canvases are rendering screen-space into the same view; the view location, rotation, projection and depth test are taken from '%s', the first one registered. Give the others their own render mode (RenderTarget or WorldSpace) if they need their own projection.")
 			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
 			, ScreenSpaceRenderParameter.RootCanvasArray.Num()
-			, *GetNameSafe(GetScreenSpaceViewCanvas()));
+			, *GetNameSafe(GetScreenSpaceViewRoot() != nullptr ? GetScreenSpaceViewRoot()->Canvas.Get() : nullptr));
 	}
 }
-void FDreamUIRenderer::ClearScreenSpaceRootCanvas(UDreamCanvas* InCanvas)
+void FDreamUIRenderer::ClearScreenSpaceRootCanvas(const UObject* InCanvas)
 {
 	//only this canvas: clearing the whole thing is what used to blank the view parameters for every
 	//other root canvas as soon as any one of them unregistered
-	ScreenSpaceRenderParameter.RootCanvasArray.RemoveAll([InCanvas](const TWeakObjectPtr<UDreamCanvas>& Item)
+	ScreenSpaceRenderParameter.RootCanvasArray.RemoveAll([InCanvas](const FScreenSpaceRoot& Item)
 		{
-			return !Item.IsValid() || Item.Get() == InCanvas;
+			return !Item.Canvas.IsValid() || Item.Canvas.Get() == InCanvas;
 		});
 }
 

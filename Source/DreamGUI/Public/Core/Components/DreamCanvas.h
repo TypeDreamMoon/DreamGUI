@@ -9,6 +9,7 @@
 #include "Core/DreamCanvasProcessingDrawCallData.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUIDrawCall.h"
+#include "Core/DreamUIRender/IDreamUIRendererViewSource.h"
 #include "Math/TransformCalculus2D.h"
 #include "DreamCanvas.generated.h"
 
@@ -196,12 +197,20 @@ class UTextureRenderTarget2D;
  * Other UV channels are defined by DreamVisual, check DreamText and DreamRectBlock.
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UDreamCanvas : public UDreamUIBehaviour
+class DREAMGUI_API UDreamCanvas : public UDreamUIBehaviour, public IDreamUIRendererViewSource
 {
 	GENERATED_BODY()
 
 public:	
 	UDreamCanvas();
+private:
+	//~ Begin IDreamUIRendererViewSource: what the renderer sets a screen-space view up from, when this is the root
+	virtual FVector GetRendererViewLocation() const override { return GetViewLocation(); }
+	virtual FRotator GetRendererViewRotator() const override { return GetViewRotator(); }
+	virtual FMatrix GetRendererProjectionMatrix() const override { return GetProjectionMatrix(); }
+	virtual bool GetRendererEnableDepthTest() const override { return GetEnableDepthTest(); }
+	virtual float GetRendererScreenSpaceRenderScale() const override { return GetScreenSpaceRenderScale(); }
+	//~ End IDreamUIRendererViewSource
 protected:
 	virtual void Awake() override;
 #if WITH_EDITOR

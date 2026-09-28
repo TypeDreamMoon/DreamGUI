@@ -137,7 +137,7 @@ void UDreamCanvas::UpdateRootCanvas()
 
 					if (ViewExtension.IsValid())//only root canvas can add screen space UI to DreamGUIRenderer
 					{
-						ViewExtension->SetScreenSpaceRootCanvas(this);
+						ViewExtension->SetScreenSpaceRootCanvas(this, this);
 						bHasAddToDreamScreenSpaceRenderer = true;
 					}
 				}
@@ -147,7 +147,7 @@ void UDreamCanvas::UpdateRootCanvas()
 			{
 				if (!bHasAddToDreamScreenSpaceRenderer)
 				{
-					GetRenderTargetViewExtension()->SetScreenSpaceRootCanvas(this);
+					GetRenderTargetViewExtension()->SetScreenSpaceRootCanvas(this, this);
 					bHasAddToDreamScreenSpaceRenderer = true;
 				}
 			}
@@ -2266,22 +2266,9 @@ void UDreamCanvas::SetScreenSpaceRenderScale(float Value)
 
 FIntPoint UDreamCanvas::CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale)
 {
-	const FIntPoint ClampedViewport(FMath::Max(InViewportSize.X, 1), FMath::Max(InViewportSize.Y, 1));
-	//1 means "leave it alone", and it has to mean that exactly: rounding a full-size pass through the
-	//arithmetic below could come back one pixel short and quietly make every UI a rescale
-	const float RequestedScale = FMath::Clamp(InRequestedScale, 0.1f, 1.0f);
-	if (RequestedScale >= 1.0f)
-	{
-		OutAppliedScale = 1.0f;
-		return ClampedViewport;
-	}
-	const FIntPoint ScaledSize(
-		FMath::Max(FMath::RoundToInt(ClampedViewport.X * RequestedScale), 1),
-		FMath::Max(FMath::RoundToInt(ClampedViewport.Y * RequestedScale), 1));
-	//report what was actually rendered at, not what was asked for: the pixel rounding and the
-	//one-pixel floor both move it, and the upscale has to use the size that exists
-	OutAppliedScale = (float)ScaledSize.X / (float)ClampedViewport.X;
-	return ScaledSize;
+	// The renderer is what draws at that size, so the arithmetic is its own; kept here for the callers that
+	// ask the canvas.
+	return FDreamUIRenderer::CalculateRenderScaledSize(InViewportSize, InRequestedScale, OutAppliedScale);
 }
 
 void UDreamCanvas::SetRenderTargetSizeMode(EDreamCanvasRenderTargetSizeMode Value)

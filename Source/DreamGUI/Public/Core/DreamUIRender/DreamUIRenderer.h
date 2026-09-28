@@ -10,9 +10,9 @@
 #include "UObject/ObjectKey.h"
 #include "Core/DreamUIBlendMode.h"
 #include "Core/DreamUIRender/IDreamUIRendererPrimitive.h"
+#include "Core/DreamUIRender/IDreamUIRendererViewSource.h"
 
 class FDreamUIGizmoMesh;
-class UDreamCanvas;
 struct FDreamUIPostProcessVertex;
 struct FDreamUIPostProcessCopyMeshRegionVertex;
 class FGlobalShaderMap;
@@ -70,11 +70,29 @@ public:
 	void MarkNeedToSortScreenSpacePrimitiveRenderPriority();
 	//there is deliberately no world-space counterpart: that sequence is rebuilt and resorted every
 	//frame because its ordering depends on distance to this frame's camera. See RenderDreamUI_RenderThread.
-	void SetRenderCanvasDepthParameter(UDreamCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
+	/** InRenderCanvas is only an identity here: the render thread matches primitives by it and never dereferences it. */
+	void SetRenderCanvasDepthParameter(const UObject* InRenderCanvas, float InBlendDepth, int InDepthFade);
 
-	void SetScreenSpaceRootCanvas(UDreamCanvas* InCanvas);
+	/**
+	 * Register a root canvas that renders screen-space into this extension. InViewSource is the same object seen
+	 * as what the view is set up from; it is only asked while InCanvas is alive.
+	 */
+	void SetScreenSpaceRootCanvas(UObject* InCanvas, const IDreamUIRendererViewSource* InViewSource);
 	/** Removes only InCanvas; the other registered root canvases keep rendering. */
-	void ClearScreenSpaceRootCanvas(UDreamCanvas* InCanvas);
+	void ClearScreenSpaceRootCanvas(const UObject* InCanvas);
+
+	/**
+	 * The size a screen-space pass renders at for InRequestedScale of InViewportSize, and the scale that size
+	 * really is once rounded to pixels (OutAppliedScale). 1 leaves the size exactly as it is.
+	 */
+	static FIntPoint CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale);
+#if WITH_EDITOR
+	/**
+	 * How the renderer learns that the editor is simulating (SIE), when screen-space UI must not draw. The
+	 * editor engine is not something the renderer links; whoever does sets this.
+	 */
+	static void SetSimulatingInEditorQuery(TFunction<bool()> InQuery);
+#endif
 
 	void UpdateRenderTargetRenderer(class UTextureRenderTarget2D* InRenderTarget, FColor InClearColor);
 
@@ -178,6 +196,12 @@ private:
 		bool bIsPlaying = false;
 #endif
 	};
+	/** A registered screen-space root: the canvas, for liveness and identity, and what it answers as a view. */
+	struct FScreenSpaceRoot
+	{
+		TWeakObjectPtr<UObject> Canvas;
+		const IDreamUIRendererViewSource* ViewSource = nullptr;
+	};
 	struct FScreenSpaceRenderParameter
 	{
 		bool bNeedSortRenderPriority = true;
@@ -191,11 +215,11 @@ private:
 		 * up from one canvas (see GetScreenSpaceViewCanvas), but which one is now stable and
 		 * unregistering one no longer breaks the others.
 		 */
-		TArray<TWeakObjectPtr<UDreamCanvas>> RootCanvasArray;
+		TArray<FScreenSpaceRoot> RootCanvasArray;
 		TArray<IDreamUIRendererPrimitive*> PrimitiveArray;
 	};
-	/** The registered root canvas the screen-space view parameters are taken from, or null. */
-	UDreamCanvas* GetScreenSpaceViewCanvas()const;
+	/** The registered root the screen-space view parameters are taken from, or null. */
+	const FScreenSpaceRoot* GetScreenSpaceViewRoot()const;
 	TArray<FWorldSpaceRenderParameter> WorldSpaceRenderCanvasParameterArray;
 	FScreenSpaceRenderParameter ScreenSpaceRenderParameter;
 	/** Written by SetupView on the game thread; never read there. */

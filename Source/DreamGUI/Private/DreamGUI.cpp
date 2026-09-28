@@ -2,7 +2,10 @@
 
 #include "DreamGUI.h"
 #include "Animation/DreamUIMovieScenePropertyAccessors.h"
+#include "Core/DreamUIRender/DreamUIRenderer.h"
+#include "Core/DreamUIRender/DreamUIRendererSettings.h"
 #include "Core/DreamUIScriptPackages.h"
+#include "Core/DreamUISettings.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Modules/ModuleManager.h"
 #include "Interfaces/IPluginManager.h"
@@ -10,6 +13,9 @@
 #include "Misc/Paths.h"
 #include "Engine/Engine.h"
 #include "ShaderCore.h"
+#if WITH_EDITOR
+#include "Editor/EditorEngine.h"
+#endif
 
 #define LOCTEXT_NAMESPACE "FDreamGUIModule"
 
@@ -50,6 +56,30 @@ void FDreamGUIModule::StartupModule()
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d The DreamGUI plugin is not registered with the plugin manager, so its shaders cannot be mapped to %s."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, DreamGUIVirtualShaderDirectory);
 	}
 
+	// The renderer takes the project's settings from here rather than reading UDreamUISettings itself: the
+	// settings object is the core's. Asked per view, so it reads the settings object as it is at that moment.
+	DreamUIRendererSettings::SetProvider([]()
+	{
+		FDreamUIRendererSettings Settings;
+		if (const UDreamUISettings* DreamUISettings = GetDefault<UDreamUISettings>())
+		{
+			Settings.MSAASampleCount = DreamUISettings->AntiAliasingMethod == EDreamUIRendererAntiAliasingMethod::MSAA
+				? static_cast<uint8>(DreamUISettings->MSAASampleCount) : 1;
+			Settings.bFrustumCulling = DreamUISettings->bFrustumCulling;
+		}
+		Settings.ViewExtensionPriority = UDreamUISettings::GetPriorityInSceneViewExtension();
+		return Settings;
+	});
+#if WITH_EDITOR
+	// Screen-space UI does not draw while the editor simulates; the renderer does not link the editor engine
+	// to find that out.
+	FDreamUIRenderer::SetSimulatingInEditorQuery([]()
+	{
+		const UEditorEngine* Editor = Cast<UEditorEngine>(GEngine);
+		return Editor != nullptr && Editor->bIsSimulatingInEditor;
+	});
+#endif
+
 	// This module loads at PostConfigInit, before the sequencer's component registry is a safe
 	// thing to touch; the accessors wait for the engine. A late load (a plugin enabled at runtime)
 	// finds the engine already up and registers on the spot.
@@ -75,6 +105,10 @@ void FDreamGUIModule::ShutdownModule()
 		FCoreDelegates::GetOnPostEngineInit().Remove(GPostEngineInitHandle);
 		GPostEngineInitHandle.Reset();
 	}
+	DreamUIRendererSettings::SetProvider(nullptr);
+#if WITH_EDITOR
+	FDreamUIRenderer::SetSimulatingInEditorQuery(nullptr);
+#endif
 	FDreamUIWidgetRegistry::UnregisterModule(TEXT("DreamGUI"));
 	DreamUI::UnregisterRuntimeScriptPackage(TEXT("/Script/DreamGUI"));
 }

@@ -5,24 +5,5 @@
     "error, and an entry whose edge is gone is an error too, so the list only ever gets shorter.",
     "module-owners.csv says which module each runtime file is headed for."
   ],
-  "edges": [
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIRender/DreamUIRenderer.cpp",
-      "include": "Source/DreamGUI/Public/Core/Components/DreamCanvas.h",
-      "owner": "DreamGUIRenderer",
-      "includedOwner": "DreamGUI"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIRender/DreamUIRenderer.cpp",
-      "include": "Source/DreamGUI/Public/Core/DreamUISettings.h",
-      "owner": "DreamGUIRenderer",
-      "includedOwner": "DreamGUI"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIRender/DreamUIRenderer.cpp",
-      "include": "Source/DreamGUI/Public/DreamGUI.h",
-      "owner": "DreamGUIRenderer",
-      "includedOwner": "DreamGUI"
-    }
-  ]
+  "edges": []
 }
