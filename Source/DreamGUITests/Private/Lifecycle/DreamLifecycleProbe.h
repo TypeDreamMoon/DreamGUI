@@ -49,9 +49,9 @@ namespace DreamTests::Lifecycle
 	void DestroyDuplicatedWorld(UWorld* InDuplicate);
 
 	/**
-	 * The two probes that must hold between any two tests, checked after every DreamGUI test for as long
-	 * as the watch is started: no dynamic texture anywhere without a size, and no registered canvas mesh
-	 * that a level would save. Whatever breaks one fires an ensure, which fails the run and names the test
+	 * The probes that must hold between any two tests, checked after every DreamGUI test for as long as the
+	 * watch is started: no dynamic texture anywhere without a size, no registered canvas mesh that a level
+	 * would save, and no registered tree that nothing holds -- neither its host nor its manager's pool. Whatever breaks one fires an ensure, which fails the run and names the test
 	 * after which it was first seen -- once per object, because what a test leaves behind outlives it and
 	 * every later test would be named for it too.
 	 */

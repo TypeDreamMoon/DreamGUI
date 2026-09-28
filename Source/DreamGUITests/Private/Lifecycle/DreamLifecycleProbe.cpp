@@ -4,6 +4,7 @@
 
 #if WITH_EDITOR
 
+#include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Editor.h"
@@ -203,6 +204,34 @@ namespace DreamTests::Lifecycle
 			{
 				Reported.Add(FObjectKey(Mesh));
 				Broken.Add(FString::Printf(TEXT("a registered canvas mesh its level would save, %s"), *Mesh->GetPathName()));
+			}
+		}
+		// Every registered tree is held: by the host its tree is outered to, or by its manager's pool or
+		// parked list. The registry itself is weak, so a registered root none of them holds is one the next
+		// collection takes out from under a live registration.
+		for (TObjectIterator<UDreamUIManagerWorldSubsystem> It(RF_ClassDefaultObject, true, EInternalObjectFlags::Garbage); It; ++It)
+		{
+			const UDreamUIManagerWorldSubsystem* Manager = *It;
+			if (!Manager->IsInitialized() || Manager->HasTornDownWorld())
+			{
+				continue;
+			}
+			for (UDreamWidget* Widget : Manager->GetRegisteredWidgets())
+			{
+				if (Widget->GetParent() != nullptr || Reported.Contains(FObjectKey(Widget)))
+				{
+					continue;
+				}
+				if (Widget->GetWorld() != Manager->GetWorld())
+				{
+					Reported.Add(FObjectKey(Widget));
+					Broken.Add(FString::Printf(TEXT("a tree registered with another world's manager, %s"), *Widget->GetPathName()));
+				}
+				else if (!Manager->IsHeldByHost(Widget) && !Manager->IsFreeRoot(Widget) && !Manager->IsWidgetParked(Widget))
+				{
+					Reported.Add(FObjectKey(Widget));
+					Broken.Add(FString::Printf(TEXT("a registered tree nothing holds, %s"), *Widget->GetPathName()));
+				}
 			}
 		}
 		ensureAlwaysMsgf(Broken.Num() == 0, TEXT("After %s: %s."), *InTest->GetBeautifiedTestName(), *FString::Join(Broken, TEXT("; ")));

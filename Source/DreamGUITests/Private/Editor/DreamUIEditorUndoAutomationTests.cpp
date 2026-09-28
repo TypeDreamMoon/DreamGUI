@@ -6,6 +6,7 @@
 #include "DreamUIEditorTools.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
+#include "Core/DreamUIManager.h"
 #include "Editor.h"
 #include "Engine/World.h"
 
@@ -130,6 +131,52 @@ bool FDreamCreateControlIsUndoableTest::RunTest(const FString& Parameters)
 
 	GEditor->UndoTransaction();
 	TestEqual(TEXT("undo takes it back out"), ChildSlotCount(Root), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUndoCreateLeavesTheWorldTest,
+	"DreamGUI.Editor.Undo.UndoingACreateTakesTheWidgetOutOfTheWorldAndRedoingPutsItBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Undoing a create marks the created widget garbage -- the transaction does that to an object it saw born --
+ * and runs none of the widget's exit. It stayed registered: the world's teardown passes over garbage, and the
+ * undo buffer kept the object alive until a collection, tests later, found a registered widget nobody had
+ * destroyed. It leaves the world with the undo now, and the redo brings it back where it was.
+ */
+bool FDreamUndoCreateLeavesTheWorldTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIEditorUndoTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+	FScopedTestWorld TestWorld;
+	UDreamWidget* Root = MakeRoot(TestWorld.World);
+	Root->OnRegister();
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("the world has a UI manager"), Manager))
+	{
+		return false;
+	}
+
+	UDreamWidget* Created = FDreamUIEditorTools::CreateWidgetAndReturn([Root]() { return Root; }, TEXT("Child"), nullptr, nullptr);
+	if (!TestNotNull(TEXT("the widget was created"), (UObject*)Created))return false;
+	TestTrue(TEXT("registered under its parent"), Created->HasRegistered() && Created->GetParent() == Root && Manager->IsWidgetRegistered(Created));
+
+	GEditor->UndoTransaction();
+	TestFalse(TEXT("undo takes the widget away"), IsValid(Created));
+	TestTrue(TEXT("and it leaves the world with the undo"), Created->GetLifecycle() == EDreamWidgetLifecycle::Destroyed);
+	TestFalse(TEXT("its manager has let it go"), Manager->IsWidgetRegistered(Created));
+
+	GEditor->RedoTransaction();
+	TestTrue(TEXT("redo brings it back"), IsValid(Created));
+	TestTrue(TEXT("registered again"), Created->HasRegistered() && Manager->IsWidgetRegistered(Created));
+	TestTrue(TEXT("under the parent it was made under"), Created->GetParent() == Root && ChildSlotCount(Root) == 1);
+
+	Root->DestroyWidget();
 	return true;
 }
 
