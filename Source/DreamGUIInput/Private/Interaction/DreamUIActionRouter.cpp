@@ -175,14 +175,18 @@ void UDreamUIActionRouter::GetModifierKeyState(int32 InUserIndex, bool& bOutShif
 	bOutCmd = PlayerController->IsInputKeyDown(EKeys::LeftCommand) || PlayerController->IsInputKeyDown(EKeys::RightCommand);
 }
 
-bool UDreamUIActionRouter::DispatchKeyToFocusedWidget(int32 InUserIndex, const FKey& InKey, bool bPressed,
-	bool bShiftDown, bool bCtrlDown, bool bAltDown, bool bCmdDown)
+UDreamWidget* UDreamUIActionRouter::GetFocusedWidget(int32 InUserIndex) const
 {
 	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this);
 	const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
-	const UDreamPointerEventData* FocusPointer = User != nullptr ? User->FindPointerEventData(0) : nullptr;
-	// Pointer 0's selection IS the focus: SetFocus/ClearFocus and the navigation cursor all write it.
-	UDreamWidget* Focused = FocusPointer != nullptr ? FocusPointer->SelectedComponent.Get() : nullptr;
+	return User != nullptr ? User->GetFocusedWidget() : nullptr;
+}
+
+bool UDreamUIActionRouter::DispatchKeyToFocusedWidget(int32 InUserIndex, const FKey& InKey, bool bPressed,
+	bool bShiftDown, bool bCtrlDown, bool bAltDown, bool bCmdDown)
+{
+	// The player's focus: SetFocus and ClearFocus, a press on a selectable and the navigation cursor all move it.
+	UDreamWidget* Focused = GetFocusedWidget(InUserIndex);
 	if (!IsValid(Focused))
 	{
 		return false;
@@ -204,6 +208,55 @@ bool UDreamUIActionRouter::HandleKey(int32 InUserIndex, const FKey& InKey, bool 
 	bool bShiftDown = false, bCtrlDown = false, bAltDown = false, bCmdDown = false;
 	GetModifierKeyState(InUserIndex, bShiftDown, bCtrlDown, bAltDown, bCmdDown);
 	return HandleKeyWithModifiers(InUserIndex, InKey, bPressed, bShiftDown, bCtrlDown, bAltDown, bCmdDown);
+}
+
+bool UDreamUIActionRouter::HandleCharacter(int32 InUserIndex, TCHAR InCharacter)
+{
+	UDreamWidget* Focused = GetFocusedWidget(InUserIndex);
+	if (!IsValid(Focused))
+	{
+		return false;
+	}
+	bool bShiftDown = false, bCtrlDown = false, bAltDown = false, bCmdDown = false;
+	GetModifierKeyState(InUserIndex, bShiftDown, bCtrlDown, bAltDown, bCmdDown);
+	UDreamKeyEventData* EventData = NewObject<UDreamKeyEventData>(this);
+	EventData->KeyEventType = EDreamUIKeyEventType::KeyChar;
+	EventData->UserIndex = InUserIndex;
+	EventData->Character = FString::Chr(InCharacter);
+	EventData->bShiftDown = bShiftDown;
+	EventData->bCtrlDown = bCtrlDown;
+	EventData->bAltDown = bAltDown;
+	EventData->bCmdDown = bCmdDown;
+	return DreamUIKeyDispatch::DispatchBubbling(Focused, EventData);
+}
+
+bool UDreamUIActionRouter::HandleAnalog(int32 InUserIndex, const FKey& InKey, float InValue)
+{
+	// Below this an axis has not moved: a resting stick drifts in the last few bits, and every one of those would be a
+	// change the focused widget is told about.
+	static constexpr float AnalogChangeTolerance = 1.e-3f;
+	const TPair<int32, FKey> AxisKey(InUserIndex, InKey);
+	FAnalogState& State = AnalogStates.FindOrAdd(AxisKey);
+	if (FMath::IsNearlyEqual(State.Value, InValue, AnalogChangeTolerance))
+	{
+		return State.bHandled;
+	}
+	State.Value = InValue;
+	State.bHandled = false;
+	UDreamWidget* Focused = GetFocusedWidget(InUserIndex);
+	if (!IsValid(Focused))
+	{
+		return false;
+	}
+	UDreamKeyEventData* EventData = NewObject<UDreamKeyEventData>(this);
+	EventData->KeyEventType = EDreamUIKeyEventType::AnalogValueChanged;
+	EventData->UserIndex = InUserIndex;
+	EventData->Key = InKey;
+	EventData->AnalogValue = InValue;
+	const bool bHandled = DreamUIKeyDispatch::DispatchBubbling(Focused, EventData);
+	// Looked up again: a handler is game code, and may sample another axis -- which can move the map's storage.
+	AnalogStates.FindOrAdd(AxisKey).bHandled = bHandled;
+	return bHandled;
 }
 
 void UDreamUIActionRouter::ResolveInputActionKeys(FBindingEntry& InEntry)const

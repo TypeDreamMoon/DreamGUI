@@ -19,9 +19,15 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/DreamUISettings.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "Event/DreamGameViewportClient.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
+#include "Framework/Application/SlateUser.h"
+#include "UObject/UObjectIterator.h"
 #include "Interaction/UIButton.h"
 #include "Misc/Char.h"
 #include "SceneView.h"
@@ -219,19 +225,10 @@ void UUITextInput::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 	UpdatePlaceHolderComponent();
 }
 #endif
-bool UUITextInput::CheckPlayerController()
+bool UUITextInput::HandleTextInputKey(const FKey& InKey, const APlayerController* InPlayer)
 {
-	if (PlayerController != nullptr)return true;
-	const UWorld* World = DreamUI::GetWorldSafe(this);
-	if (World == nullptr)return false;
-	PlayerController = World->GetFirstPlayerController();
-	if (PlayerController != nullptr)return true;
-	return false;
-}
-void UUITextInput::AnyKeyPressed(FKey Key)
-{
-	if (bInputActive == false)return;
-	// The key agent's bindings execute while the game is paused (BindKeys), so the pause is weighed
+	if (bInputActive == false)return false;
+	// The player's text keys execute while the game is paused (UDreamUIInputUser::RefreshTextKeys), so the pause is weighed
 	// here, as the key arrives, by the rule UDreamUIManagerWorldSubsystem already ticks this field by:
 	// the screen-space setting for a field drawn on the screen, the world-space one otherwise. A field
 	// whose UI the settings pause with the game drops the key, as the engine's own gate would have.
@@ -242,22 +239,23 @@ void UUITextInput::AnyKeyPressed(FKey Key)
 		const bool bPausesWithTheGame = (Widget != nullptr && Widget->IsScreenSpaceOverlayUI())
 			? Settings->bScreenSpaceUIAffectByGamePause
 			: Settings->bWorldSpaceUIAffectByGamePause;
-		if (bPausesWithTheGame)return;
+		if (bPausesWithTheGame)return false;
 	}
 	// While a composition is open the IME owns the text: it edits through SetTextInRange, and the same raw
 	// key presses that drive it are also delivered here, because the bound InputComponent reads key state
 	// straight from the message pump and TSF never consumed them. Acting on both is what types every
 	// character twice; it is also what lets an arrow key drag the caret out from under the candidate window
 	// mid-composition.
-	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())return;
-	if (!CheckPlayerController())return;
-	if (TextVisual == nullptr)return;
+	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())return false;
+	if (InPlayer == nullptr || InPlayer->PlayerInput == nullptr)return false;
+	if (TextVisual == nullptr)return false;
 
-	// The bound road's held keys come from the player's input state; what a key then does to the edit
-	// is ProcessKeyPressed, shared with HandleKeyInput so the two roads cannot drift apart.
-	UPlayerInput* const HeldKeys = PlayerController->PlayerInput;
-	ProcessKeyPressed(Key, HeldKeys->IsCtrlPressed(), HeldKeys->IsShiftPressed(), HeldKeys->IsAltPressed(),
+	// The bound road's held keys come from the typing player's input state -- not the first player's; what a
+	// key then does to the edit is ProcessKeyPressed, shared with HandleKeyInput so the two roads cannot drift apart.
+	UPlayerInput* const HeldKeys = InPlayer->PlayerInput;
+	ProcessKeyPressed(InKey, HeldKeys->IsCtrlPressed(), HeldKeys->IsShiftPressed(), HeldKeys->IsAltPressed(),
 		[HeldKeys](const FKey& InHeldKey) { return HeldKeys->IsPressed(InHeldKey); });
+	return true;
 }
 
 bool UUITextInput::HandleKeyInput(const FKey& InKey, bool bInPressed)
@@ -270,7 +268,7 @@ bool UUITextInput::HandleKeyInput(const FKey& InKey, bool bInPressed, const FMod
 	// The bound road listens for press and repeat only, and never binds a key in IgnoreKeys.
 	if (!bInPressed)return false;
 	if (IgnoreKeys.Contains(InKey))return false;
-	// AnyKeyPressed's own gates, minus the player controller: standing in for what the controller
+	// HandleTextInputKey's own gates, minus the player controller: standing in for what the controller
 	// would have supplied is the whole of what this entry is for.
 	if (bInputActive == false)return false;
 	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())return false;
@@ -483,7 +481,7 @@ void UUITextInput::ProcessKeyPressed(const FKey& InKey, bool bInCtrl, bool bInSh
 	//     field drops it -- producing '1' for Ctrl+Shift+1 was the letters-use-shift /
 	//     punctuation-uses-shiftOnly inconsistency. AltGr is Ctrl+Alt on Windows and IS a character
 	//     modifier, so a chord with Alt in it is not caught here.
-	if (inputChar == 127 && (bHostDeliversCharacterEvents || (ctrl && !alt)))
+	if (inputChar == 127 && (IsHostDeliveringCharacterEvents(this) || (ctrl && !alt)))
 	{
 		return;
 	}
@@ -748,11 +746,14 @@ bool UUITextInput::HandleCharacterInput(TCHAR InCharacter)
 {
 	if (!bInputActive)return false;
 	if (TextVisual == nullptr)return false;
-	// From here on the key table stops guessing printable characters for EVERY field: the platform
-	// is telling us what the player typed, on whatever layout they have, and two sources type twice.
-	// Set only once a live edit has actually received one, so a host probing an idle field does not
-	// switch the fallback off for the whole process.
-	bHostDeliversCharacterEvents = true;
+	// From here on the key table stops guessing printable characters for every field in this world: the
+	// platform is telling us what the player typed, on whatever layout they have, and two sources type
+	// twice. Set only once a live edit has actually received one, so a host probing an idle field does
+	// not switch the fallback off for the whole world.
+	if (UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this))
+	{
+		Input->NoteHostDeliversCharacters();
+	}
 	//control characters are not text; the platform sends \b, \r, \x1b and friends through the same
 	//road and the key table above is what turns those into edits
 	if (InCharacter < 32 && !(InCharacter == '\n' && bAllowMultiLine))return false;
@@ -767,22 +768,55 @@ bool UUITextInput::HandleCharacterInputString(const FString& InCharacters)
 	}
 	return bAnyAccepted;
 }
-TWeakObjectPtr<UUITextInput> UUITextInput::ActiveTextInput = nullptr;
-bool UUITextInput::bHostDeliversCharacterEvents = false;
 UUITextInput* UUITextInput::GetActiveTextInput()
 {
-	return ActiveTextInput.Get();
+	// Every world's players, the first field found. Looked for rather than remembered: the field a player types into
+	// is kept on that player's input, in their world, and a process-wide answer can only ever be a question.
+	for (TObjectIterator<UDreamUIInputSubsystem> It; It; ++It)
+	{
+		const UDreamUIInputSubsystem* Input = *It;
+		if (!IsValid(Input) || Input->GetWorld() == nullptr)
+		{
+			continue;
+		}
+		TArray<UDreamUIInputUser*> Users;
+		Input->GetUsers(Users);
+		for (const UDreamUIInputUser* User : Users)
+		{
+			if (UUITextInput* Field = Cast<UUITextInput>(User->GetTextTarget()))
+			{
+				return Field;
+			}
+		}
+	}
+	return nullptr;
 }
-bool UUITextInput::IsHostDeliveringCharacterEvents()
+UUITextInput* UUITextInput::GetActiveTextInputForPlayer(const UObject* WorldContextObject, int32 PlayerIndex)
 {
-	return bHostDeliversCharacterEvents;
+	return Cast<UUITextInput>(DreamUITextInputRouter::GetActiveTarget(WorldContextObject, PlayerIndex));
 }
-void UUITextInput::SetHostDeliversCharacterEventsForTesting(bool bInDelivers)
+bool UUITextInput::IsHostDeliveringCharacterEvents(const UObject* WorldContextObject)
+{
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(WorldContextObject);
+	return Input != nullptr && Input->DoesHostDeliverCharacters();
+}
+void UUITextInput::SetHostDeliversCharacterEventsForTesting(const UObject* WorldContextObject, bool bInDelivers)
 {
 	// A test hook and nothing else; see the declaration. No runtime road calls it.
-	bHostDeliversCharacterEvents = bInDelivers;
+	if (UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(WorldContextObject))
+	{
+		Input->SetHostDeliversCharactersForTesting(bInDelivers);
+	}
 }
-void UUITextInput::WarnOnceIfNoCharacterEventSource()
+int32 UUITextInput::GetEditingSlateUserIndex() const
+{
+	const UWorld* World = DreamUI::GetWorldSafe(this);
+	const UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+	const ULocalPlayer* LocalPlayer = GameInstance != nullptr ? GameInstance->GetLocalPlayerByIndex(EditingUserIndex) : nullptr;
+	const TSharedPtr<const FSlateUser> SlateUser = LocalPlayer != nullptr ? LocalPlayer->GetSlateUser() : nullptr;
+	return SlateUser.IsValid() ? SlateUser->GetUserIndex() : 0;
+}
+void UUITextInput::WarnOnceIfNoCharacterEventSource() const
 {
 	// Said once per process, the first time a field is edited on a platform that types with a real
 	// keyboard. There is nothing this plugin can do from inside the field: the engine's only landing
@@ -790,7 +824,7 @@ void UUITextInput::WarnOnceIfNoCharacterEventSource()
 	// delegate, so SOMEBODY has to own that class. UDreamGameViewportClient is the one-line answer.
 	static bool bWarned = false;
 	if (bWarned)return;
-	if (bHostDeliversCharacterEvents)return;//a host is already feeding characters; nothing to say
+	if (IsHostDeliveringCharacterEvents(this))return;//a host is already feeding characters; nothing to say
 	bWarned = true;
 	if (GEngine == nullptr)return;
 
@@ -811,7 +845,7 @@ void UUITextInput::WarnOnceIfNoCharacterEventSource()
 	}
 	UE_LOG(DreamGUI, Warning, TEXT("[%s].%d This project's game viewport client is '%s', which does not route character input to DreamGUI. ")
 		TEXT("Text fields will fall back to their own FKey-to-character table, which is only correct on a US QWERTY layout -- AZERTY, QWERTZ, Dvorak, Cyrillic, dead keys and AltGr will type the wrong character. ")
-		TEXT("Fix by setting GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient in [/Script/Engine.Engine] of DefaultEngine.ini, by deriving the project's own viewport client from UDreamGameViewportClient, or by calling DreamUITextInputRouter::RouteCharacter(Character) from its InputChar override, before the base class's.")
+		TEXT("Fix by setting GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient in [/Script/Engine.Engine] of DefaultEngine.ini, by deriving the project's own viewport client from UDreamGameViewportClient, or by calling DreamUITextInputRouter::RouteViewportCharacter(this, ControllerId, Character) from its InputChar override, before the base class's.")
 		, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
 		, ViewportClientClass != nullptr ? *ViewportClientClass->GetName() : TEXT("(none yet)"));
 }
@@ -2289,6 +2323,9 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		UpdateUITextComponent();
 		return;
 	}
+	// Whose keyboard this edit takes: the player whose event began it, else the player who owns the field -- never
+	// simply the first player, whose keys are nothing to do with a second player's field.
+	EditingUserIndex = IsValid(EventData) ? EventData->UserIndex : (IsValid(GetWidget()) ? GetWidget()->GetOwningPlayerIndex() : 0);
 	const bool bActivatedByPointer = IsValid(EventData) && EventData->InputType == EDreamUIPointerInputType::Pointer;
 	if (FPlatformApplicationMisc::RequiresVirtualKeyboard())
 	{
@@ -2302,7 +2339,7 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 			{
 				VirtualKeyboardEntry = FVirtualKeyboardEntry::Create(this);
 			}
-			FSlateApplication::Get().ShowVirtualKeyboard(true, 0, VirtualKeyboardEntry);
+			FSlateApplication::Get().ShowVirtualKeyboard(true, GetEditingSlateUserIndex(), VirtualKeyboardEntry);
 		}
 	}
 	else
@@ -2332,9 +2369,9 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 	// "the value before the edit" is a fact about the MOMENT the edit started and nothing later in
 	// the session can reconstruct it.
 	TextAtActivation = Text;
-	//the one field that owns the keyboard right now, and so the one the router hands a character to
-	ActiveTextInput = this;
-	DreamUITextInputRouter::SetActiveTarget(this);
+	// The field that owns the editing player's keyboard now: the one the router hands that player's characters to,
+	// with the keys it takes bound on the player's controller for as long as the edit lasts.
+	DreamUITextInputRouter::SetActiveTarget(this, EditingUserIndex);
 	SetCanExecuteTick(true);
 	//caret and selection
 	if (Text.Len() == 0)//if no text, use caret
@@ -2382,10 +2419,9 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		UpdateUITextComponent();
 	}
 
-	BindKeys();
 	UpdatePlaceHolderComponent();
-	//set is selected
-	if (auto EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, IsValid(EventData) ? EventData->UserIndex : 0))
+	//set is selected: the editing player's focus
+	if (auto EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, EditingUserIndex))
 	{
 		if (auto Widget = GetWidget())
 		{
@@ -2405,19 +2441,9 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 	OnInputActivate.FireEvent(bInputActive);
 }
 
-void UUITextInput::BindKeys()
+void UUITextInput::GetTextInputKeys(TArray<FKey>& OutKeys) const
 {
-	if (!InputComponentAgent.IsValid())
-	{
-		InputComponentAgent = this->GetWidget()->GetOuter()->GetWorld()->SpawnActor(AActor::StaticClass());
-#if WITH_EDITOR
-		InputComponentAgent->SetActorLabel(FString::Printf(TEXT("%s_InputComponentAgent"), *GetWidget()->GetDisplayName()));
-#endif
-		InputComponentAgent->AutoReceiveInput = EAutoReceiveInput::Player0;
-		InputComponentAgent->PreInitializeComponents();
-	}
-
-	static TArray<FKey> AllKeys = {
+	static const TArray<FKey> AllKeys = {
 	EKeys::BackSpace,
 	EKeys::Tab,
 	EKeys::Enter,
@@ -2537,26 +2563,16 @@ void UUITextInput::BindKeys()
 	EKeys::Quote,
 	};
 
-	auto InputComp = InputComponentAgent->InputComponent;
-	for (auto& Key : AllKeys)
+	// Every key in the table but the ones this field was told to leave alone: those it never binds, so they still
+	// reach the game while it is being edited.
+	OutKeys.Reset(AllKeys.Num());
+	for (const FKey& Key : AllKeys)
 	{
 		if (!IgnoreKeys.Contains(Key))
 		{
-			// Executed while the game is paused too, which is not the engine's default: a pause menu's
-			// field has to take Backspace, Enter and the arrows. Left at the default, these bindings still
-			// CONSUMED their keys in a paused game -- UPlayerInput counts a consuming binding whether or not
-			// its delegate runs -- so the keys reached nothing at all. Whether this field answers while
-			// paused is asked per key in AnyKeyPressed, where the pause setting is read as the key arrives.
-			InputComp->BindKey(Key, EInputEvent::IE_Pressed, this, &UUITextInput::AnyKeyPressed).bExecuteWhenPaused = true;
-			InputComp->BindKey(Key, EInputEvent::IE_Repeat, this, &UUITextInput::AnyKeyPressed).bExecuteWhenPaused = true;
+			OutKeys.Add(Key);
 		}
 	}
-}
-void UUITextInput::UnbindKeys()
-{
-	if (!InputComponentAgent.IsValid())
-		return;
-	InputComponentAgent->Destroy();
 }
 void UUITextInput::DeactivateInput(bool InFireEvent)
 {
@@ -2578,16 +2594,12 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 	}
 	if (FSlateApplication::IsInitialized() && FPlatformApplicationMisc::RequiresVirtualKeyboard())
 	{
-		FSlateApplication::Get().ShowVirtualKeyboard(false, 0);
+		FSlateApplication::Get().ShowVirtualKeyboard(false, GetEditingSlateUserIndex());
 	}
 	bInputActive = false;
 	// And hands it back to the display policy, which is the state a field spends nearly all its life
 	// in -- the only state an ellipsis was ever meant to describe.
 	PushOverflowToVisual();
-	if (ActiveTextInput.Get() == this)
-	{
-		ActiveTextInput = nullptr;
-	}
 	DreamUITextInputRouter::ClearActiveTarget(this);
 	SetCanExecuteTick(false);
 	//hide caret
@@ -2600,7 +2612,6 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 	HideCompositionUnderline();
 	HideContextMenu();
 
-	UnbindKeys();
 	UpdatePlaceHolderComponent();
 	// The edit ended without an Enter: clicked away, navigated away, Back/Escape ended it, the
 	// virtual keyboard was dismissed. UMG reports that moment through OnTextCommitted and DreamGUI

@@ -262,5 +262,4 @@ private:
 	FDreamRigOptions Options;
 	FString BuildFailure;
 	/** UUITextInput's "a host delivers characters" switch as the rig found it. */
-	bool bHostDeliveredCharacterEventsAtStart = false;
 };

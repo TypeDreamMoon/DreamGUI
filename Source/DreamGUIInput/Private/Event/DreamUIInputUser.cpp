@@ -2,6 +2,7 @@
 
 #include "Event/DreamUIInputUser.h"
 
+#include "Components/InputComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamGUISettings.h"
@@ -29,11 +30,13 @@
 #include "Event/Interface/DreamPointerLongPressInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #include "GenericPlatform/InputDeviceRegistry.h"
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUINavigationScroll.h"
+#include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UISelectable.h"
 #include "Misc/ScopeExit.h"
 
@@ -238,12 +241,22 @@ AActor* UDreamUIInputUser::GetPressedWorldTarget(int32 InPointerID) const
 
 void UDreamUIInputUser::SetSelectWidget(UDreamWidget* InSelectWidget, UDreamBaseEventData* InEventData)
 {
-	if (InEventData == nullptr || InEventData->SelectedComponent == InSelectWidget)
+	if (InEventData == nullptr)
 	{
 		return;
 	}
-	UDreamWidget* OldSelected = InEventData->SelectedComponent;
+	// The player's focus is what changes, whichever pointer asks. A pointer used to keep a focus of its own, and a
+	// finger's went with the finger: tap a field, lift, and nothing was focused -- while the field went on editing
+	// with nothing able to end it.
+	UDreamWidget* OldSelected = FocusedWidget.Get();
 	InEventData->SelectedComponent = InSelectWidget;
+	if (OldSelected == InSelectWidget)
+	{
+		MirrorFocusOntoPointers();
+		return;
+	}
+	FocusedWidget = InSelectWidget;
+	MirrorFocusOntoPointers();
 	const UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(InEventData);
 	const int32 PointerId = PointerEventData != nullptr ? PointerEventData->PointerID : 0;
 	if (IsValid(OldSelected))
@@ -254,14 +267,106 @@ void UDreamUIInputUser::SetSelectWidget(UDreamWidget* InSelectWidget, UDreamBase
 			OldSelected->NotifyFocusLost(UserIndex, PointerId);
 		}
 	}
-	// Read again: a Deselect handler is game code, and may already have moved the selection on.
-	if (UDreamWidget* NewSelected = InEventData->SelectedComponent; IsValid(NewSelected))
+	// Only while the focus is still what this call gave it: a Deselect handler is game code, and may already have
+	// moved it on -- and that move sent its own Select.
+	if (UDreamWidget* NewSelected = FocusedWidget.Get(); IsValid(NewSelected) && NewSelected == InSelectWidget)
 	{
 		CallOnPointerSelect(NewSelected, InEventData);
 		if (IsValid(NewSelected))
 		{
 			NewSelected->NotifyFocusReceived(UserIndex, PointerId);
 		}
+	}
+}
+
+void UDreamUIInputUser::MirrorFocusOntoPointers()
+{
+	UDreamWidget* Focus = FocusedWidget.Get();
+	for (const TPair<int32, TObjectPtr<UDreamPointerEventData>>& Pair : PointerEventDataMap)
+	{
+		if (UDreamPointerEventData* EventData = Pair.Value.Get())
+		{
+			EventData->SelectedComponent = Focus;
+		}
+	}
+}
+#pragma endregion
+
+#pragma region Text
+void UDreamUIInputUser::SetTextTarget(UObject* InTarget)
+{
+	if (InTarget == nullptr || bShutDown || !ensureMsgf(InTarget->Implements<UDreamUITextInputTarget>(),
+		TEXT("%s claimed a player's keyboard but does not take text input"), *InTarget->GetPathName()))
+	{
+		return;
+	}
+	TextTarget = InTarget;
+	RefreshTextKeys();
+}
+
+void UDreamUIInputUser::ClearTextTarget(const UObject* InTarget)
+{
+	if (InTarget == nullptr || TextTarget.Get() != InTarget)
+	{
+		return;
+	}
+	TextTarget.Reset();
+	PopTextKeys();
+}
+
+void UDreamUIInputUser::PopTextKeys()
+{
+	if (APlayerController* Controller = TextKeysController.Get(); Controller != nullptr && TextKeys != nullptr)
+	{
+		Controller->PopInputComponent(TextKeys);
+	}
+	TextKeysController.Reset();
+}
+
+void UDreamUIInputUser::RefreshTextKeys()
+{
+	PopTextKeys();
+	const IDreamUITextInputTarget* Target = Cast<IDreamUITextInputTarget>(TextTarget.Get());
+	// A player with no controller -- a script player -- has no keyboard of its own to bind: its field is typed into
+	// through the field's own entries.
+	APlayerController* Controller = Target != nullptr && !bShutDown ? GetPlayerController() : nullptr;
+	if (Controller == nullptr)
+	{
+		return;
+	}
+	if (TextKeys == nullptr || TextKeys->GetOuter() != Controller)
+	{
+		TextKeys = NewObject<UInputComponent>(Controller, UInputSettings::GetDefaultInputComponentClass(), NAME_None, RF_Transient);
+		// Stated, as AActor::EnableInput states its component's: the field is typed into above everything the
+		// controller listens to -- one below a key selector's capture, which is listening for exactly the next key.
+		// Left unset, the priority was whatever the memory held, and the component could land under the preset,
+		// which then heard Enter as a confirm and clicked the field straight back into its edit.
+		TextKeys->Priority = TNumericLimits<int32>::Max() - 1;
+		TextKeys->bBlockInput = false;
+	}
+	TextKeys->KeyBindings.Reset();
+	TArray<FKey> Keys;
+	Target->GetTextInputKeys(Keys);
+	for (const FKey& Key : Keys)
+	{
+		// Executed while the game is paused too: a pause menu's field has to take Backspace, Enter and the arrows. Left
+		// at the default, the bindings would still consume their keys in a paused game -- UPlayerInput counts a
+		// consuming binding whether or not its delegate runs -- and the keys would reach nothing at all. Whether the
+		// field answers while paused is its own call, made as the key arrives.
+		TextKeys->BindKey(Key, IE_Pressed, this, &UDreamUIInputUser::HandleTextKey).bExecuteWhenPaused = true;
+		TextKeys->BindKey(Key, IE_Repeat, this, &UDreamUIInputUser::HandleTextKey).bExecuteWhenPaused = true;
+	}
+	// Pushed last, so it sits above everything the controller already listens to, the preset included: a key taken
+	// by a field being edited is typing -- not a shortcut, not a navigation step, not the pawn's to move with.
+	Controller->PushInputComponent(TextKeys);
+	TextKeysController = Controller;
+}
+
+void UDreamUIInputUser::HandleTextKey(FKey InKey)
+{
+	if (IDreamUITextInputTarget* Target = Cast<IDreamUITextInputTarget>(TextTarget.Get()))
+	{
+		Target->HandleTextInputKey(InKey, TextKeysController.Get());
 	}
 }
 #pragma endregion
@@ -1369,15 +1474,27 @@ void UDreamUIInputUser::Shutdown()
 		{
 			This->ReleasePointerNow(PointerID);
 		}
-		// Nobody is left to own a selection.
-		for (const int32 PointerID : PointerIDs)
+		// Nobody is left to own the focus. Its handlers are owed their Deselect, through one of the player's pointers
+		// when one is left, else through event data made for it.
+		if (IsValid(This->FocusedWidget.Get()))
 		{
-			if (UDreamPointerEventData* EventData = This->FindPointerEventData(PointerID);
-				EventData != nullptr && IsValid(EventData->SelectedComponent))
+			UDreamBaseEventData* EventData = This->FindPointerEventData(DreamUIPointerIds::Mouse);
+			if (EventData == nullptr && PointerIDs.Num() > 0)
 			{
-				This->SetSelectWidget(nullptr, EventData);
+				EventData = This->FindPointerEventData(PointerIDs[0]);
 			}
+			if (EventData == nullptr)
+			{
+				UDreamPointerEventData* Made = NewObject<UDreamPointerEventData>(This);
+				Made->UserIndex = This->UserIndex;
+				EventData = Made;
+			}
+			This->SetSelectWidget(nullptr, EventData);
 		}
+		This->FocusedWidget.Reset();
+		// And nobody types: the keys the player's field held go back to the controller.
+		This->TextTarget.Reset();
+		This->PopTextKeys();
 		This->RestoreHoverCursor();
 		This->bShutDown = true;
 		This->QueuedButtons.Reset();

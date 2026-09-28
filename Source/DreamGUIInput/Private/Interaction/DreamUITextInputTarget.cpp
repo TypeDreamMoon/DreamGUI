@@ -2,40 +2,83 @@
 
 #include "Interaction/DreamUITextInputTarget.h"
 
-namespace DreamUITextInputRouterLocal
-{
-	/** Weak, as the field's own record of it always was: a field destroyed mid-edit owns nothing. */
-	TWeakObjectPtr<UObject> ActiveTarget;
-}
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 
-void DreamUITextInputRouter::SetActiveTarget(UObject* InTarget)
+void DreamUITextInputRouter::SetActiveTarget(UObject* InTarget, int32 InUserIndex)
 {
-	if (InTarget != nullptr && !ensureMsgf(InTarget->Implements<UDreamUITextInputTarget>(),
+	if (InTarget == nullptr || !ensureMsgf(InTarget->Implements<UDreamUITextInputTarget>(),
 		TEXT("%s claimed the keyboard but does not take text input"), *InTarget->GetPathName()))
 	{
 		return;
 	}
-	DreamUITextInputRouterLocal::ActiveTarget = InTarget;
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(InTarget);
+	if (Input == nullptr)
+	{
+		return;
+	}
+	// A field is one player's at a time: claiming a player's keyboard lets go of any other player's it held.
+	ClearActiveTarget(InTarget);
+	if (UDreamUIInputUser* User = Input->GetOrCreateUser(FMath::Max(0, InUserIndex)))
+	{
+		User->SetTextTarget(InTarget);
+	}
 }
 
 void DreamUITextInputRouter::ClearActiveTarget(const UObject* InTarget)
 {
-	if (DreamUITextInputRouterLocal::ActiveTarget.Get() == InTarget)
+	const UDreamUIInputSubsystem* Input = InTarget != nullptr ? UDreamUIInputSubsystem::Get(InTarget) : nullptr;
+	if (Input == nullptr)
 	{
-		DreamUITextInputRouterLocal::ActiveTarget.Reset();
+		return;
+	}
+	TArray<UDreamUIInputUser*> Users;
+	Input->GetUsers(Users);
+	for (UDreamUIInputUser* User : Users)
+	{
+		User->ClearTextTarget(InTarget);
 	}
 }
 
-IDreamUITextInputTarget* DreamUITextInputRouter::GetActiveTarget()
+IDreamUITextInputTarget* DreamUITextInputRouter::GetActiveTarget(const UObject* InWorldContext, int32 InUserIndex)
 {
-	return Cast<IDreamUITextInputTarget>(DreamUITextInputRouterLocal::ActiveTarget.Get());
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(InWorldContext);
+	const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
+	return User != nullptr ? Cast<IDreamUITextInputTarget>(User->GetTextTarget()) : nullptr;
 }
 
-bool DreamUITextInputRouter::RouteCharacter(TCHAR InCharacter)
+bool DreamUITextInputRouter::RouteCharacter(const UObject* InWorldContext, int32 InUserIndex, TCHAR InCharacter)
 {
-	if (IDreamUITextInputTarget* Target = GetActiveTarget())
+	if (IDreamUITextInputTarget* Target = GetActiveTarget(InWorldContext, InUserIndex))
 	{
 		return Target->InsertTextCharacter(InCharacter);
 	}
 	return false;
+}
+
+int32 DreamUITextInputRouter::GetUserIndexForController(const UGameViewportClient* InViewportClient, int32 InControllerId)
+{
+	const ULocalPlayer* LocalPlayer = GEngine != nullptr && InViewportClient != nullptr
+		? GEngine->GetLocalPlayerFromControllerId(InViewportClient, InControllerId) : nullptr;
+	const UGameInstance* GameInstance = LocalPlayer != nullptr ? LocalPlayer->GetGameInstance() : nullptr;
+	const int32 Index = GameInstance != nullptr ? GameInstance->GetLocalPlayers().IndexOfByKey(LocalPlayer) : INDEX_NONE;
+	// A controller no local player has is the first player's: a keyboard in a one-player game is controller 0, and so
+	// is everything else there.
+	return Index != INDEX_NONE ? Index : 0;
+}
+
+bool DreamUITextInputRouter::RouteViewportCharacter(const UGameViewportClient* InViewportClient, int32 InControllerId, TCHAR InCharacter)
+{
+	UDreamUIInputSubsystem* Input = InViewportClient != nullptr ? UDreamUIInputSubsystem::Get(InViewportClient->GetWorld()) : nullptr;
+	return Input != nullptr && Input->HandleViewportCharacter(GetUserIndexForController(InViewportClient, InControllerId), InCharacter);
+}
+
+bool DreamUITextInputRouter::RouteCharacter(TCHAR InCharacter)
+{
+	const UGameViewportClient* ViewportClient = GEngine != nullptr ? GEngine->GameViewport.Get() : nullptr;
+	return ViewportClient != nullptr && RouteCharacter(ViewportClient->GetWorld(), 0, InCharacter);
 }

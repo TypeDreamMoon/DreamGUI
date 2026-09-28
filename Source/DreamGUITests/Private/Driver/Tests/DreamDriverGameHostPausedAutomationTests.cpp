@@ -197,12 +197,7 @@ bool FDreamPausedGameHostFieldTypingTest::RunTest(const FString& Parameters)
 		{
 			continue;
 		}
-		const bool bWasDelivering = UUITextInput::IsHostDeliveringCharacterEvents();
-		UUITextInput::SetHostDeliversCharacterEventsForTesting(false);
-		ON_SCOPE_EXIT
-		{
-			UUITextInput::SetHostDeliversCharacterEventsForTesting(bWasDelivering);
-		};
+		UUITextInput::SetHostDeliversCharacterEventsForTesting(Rig.GetWorld(), false);
 
 		UDreamTextInput* Field = Rig.MakeControl<UDreamTextInput>(TEXT("Username"), nullptr, FVector2D(320.0, 40.0));
 		if (!TestNotNull(*Under(Case, TEXT("A field can be made on the rig")), Field))

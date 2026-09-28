@@ -95,10 +95,11 @@ bool UDreamGameViewportClient::InputChar(FViewport* InViewport, int32 Controller
 	 *  2. Nothing more while the client ignores input: the base stops after the console then, and so does
 	 *     UGameViewportClient::InputKey, so a field whose keys are shut off does not type either -- unless
 	 *     DreamGUI's own UI-only mode is what shut them off, in which case its keys reach the field too.
-	 *  3. The DreamGUI field that owns the keyboard. A character it takes has been consumed, and a consumed
-	 *     character goes no further -- the editor's frame included -- which is all the base's absorption
-	 *     is for. It is a REAL character, resolved by the platform on the player's own layout, which is
-	 *     what makes the field stop guessing one from the key code.
+	 *  3. The DreamGUI field the typing player -- the player the controller id is -- is editing, and when no
+	 *     field takes it, what that player has focused, as a KeyChar. A character either takes has been
+	 *     consumed, and a consumed character goes no further -- the editor's frame included -- which is all
+	 *     the base's absorption is for. It is a REAL character, resolved by the platform on the player's own
+	 *     layout, which is what makes the field stop guessing one from the key code.
 	 *  4. Anything nobody took goes to the base class unchanged, absorption and all. That asks the console
 	 *     a second time, which is harmless: a console that declined is closed, and a closed console only
 	 *     reads bCaptureKeyInput.
@@ -109,7 +110,7 @@ bool UDreamGameViewportClient::InputChar(FViewport* InViewport, int32 Controller
 	{
 		return true;
 	}
-	if ((!IgnoreInput() || bDreamUIOnlyInput) && DreamUITextInputRouter::RouteCharacter(Character))
+	if ((!IgnoreInput() || bDreamUIOnlyInput) && DreamUITextInputRouter::RouteViewportCharacter(this, ControllerId, Character))
 	{
 		return true;
 	}

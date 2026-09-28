@@ -27,6 +27,7 @@
 #include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIDragDrop.h"
 #include "Interaction/DreamUINavigationScope.h"
+#include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UISelectable.h"
 #include "Utils/DreamUIUtils.h"
 #if WITH_EDITOR
@@ -468,41 +469,38 @@ bool UDreamUIInputSubsystem::SetFocus(UDreamWidget* InWidget, int32 InUserIndex,
 
 bool UDreamUIInputSubsystem::HasFocus(const UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId) const
 {
+	// The player's focus, whichever of their pointers is asked about: focus is the player's.
 	const UDreamUIInputUser* User = GetUser(InUserIndex);
-	const UDreamPointerEventData* EventData = User != nullptr ? User->FindPointerEventData(InPointerId) : nullptr;
-	return EventData != nullptr && EventData->SelectedComponent == InWidget;
+	return User != nullptr && InWidget != nullptr && User->GetFocusedWidget() == InWidget;
 }
 
 void UDreamUIInputSubsystem::ClearFocus(UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId)
 {
-	if (UDreamUIInputUser* User = GetUser(InUserIndex))
+	UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr || InWidget == nullptr || User->GetFocusedWidget() != InWidget)
 	{
-		UDreamPointerEventData* EventData = User->FindPointerEventData(InPointerId);
-		if (EventData != nullptr && EventData->SelectedComponent == InWidget)
-		{
-			User->SetSelectWidget(nullptr, EventData);
-		}
+		return;
 	}
+	User->SetSelectWidget(nullptr, User->GetPointerEventData(InPointerId, true));
 }
 
 bool UDreamUIInputSubsystem::HasFocusedDescendant(const UDreamWidget* InWidget, int32 InUserIndex) const
 {
 	const UDreamUIInputUser* User = GetUser(InUserIndex);
-	if (User == nullptr)
+	const UDreamWidget* Focused = User != nullptr ? User->GetFocusedWidget() : nullptr;
+	// Descendants, not "this or its descendants" -- UMG draws the same line, and a widget asking whether
+	// something INSIDE it has focus already knows whether it has focus itself.
+	return IsValid(Focused) && InWidget != nullptr && Focused != InWidget && Focused->IsChildOf(InWidget);
+}
+
+bool UDreamUIInputSubsystem::HandleViewportCharacter(int32 InUserIndex, TCHAR InCharacter)
+{
+	if (DreamUITextInputRouter::RouteCharacter(this, InUserIndex, InCharacter))
 	{
-		return false;
+		return true;
 	}
-	for (const TPair<int32, TObjectPtr<UDreamPointerEventData>>& Entry : User->GetPointerEventDataMap())
-	{
-		const UDreamWidget* Focused = IsValid(Entry.Value) ? Entry.Value->SelectedComponent.Get() : nullptr;
-		// Descendants, not "this or its descendants" -- UMG draws the same line, and a widget asking whether
-		// something INSIDE it has focus already knows whether it has focus itself.
-		if (IsValid(Focused) && Focused != InWidget && Focused->IsChildOf(InWidget))
-		{
-			return true;
-		}
-	}
-	return false;
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
+	return Router != nullptr && Router->HandleCharacter(InUserIndex, InCharacter);
 }
 
 bool UDreamUIInputSubsystem::IsHovered(const UDreamWidget* InWidget, int32 InUserIndex) const

@@ -190,9 +190,9 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 
 void FDreamDriverRig::CaptureProcessState()
 {
-	// Only the switch. The field being edited is not captured, because it is not restored: see
-	// EndLeakedTextEdit for why, and for what is guaranteed about it instead.
-	bHostDeliveredCharacterEventsAtStart = UUITextInput::IsHostDeliveringCharacterEvents();
+	// Nothing of the text input's: which field a player types into, and whether a host delivers
+	// characters, are both kept on the world's input and go with the rig's world. EndLeakedTextEdit is
+	// the check that is left.
 	WatchBlueprintCompiles();
 }
 
@@ -406,12 +406,6 @@ void FDreamDriverRig::ReportTextEditOutlivingWorld(const UWorld* InRigWorld, FAu
 
 void FDreamDriverRig::RestoreAndVerifyProcessState(FAutomationTestBase* InTest, int32 InLayoutPassDepth, int32 InDesiredSizeMemoDepth)
 {
-	// Put back what the rig found. The character switch is class-wide and flipped for good by the
-	// first HandleCharacterInput, so without this a test that types would silently move every test
-	// after it off the key-to-character road -- the road a project without a character-delivering
-	// viewport client is actually on.
-	UUITextInput::SetHostDeliversCharacterEventsForTesting(bHostDeliveredCharacterEventsAtStart);
-
 	// Last, once the tree and the world are both gone. The layout counters were read from the world's
 	// layout context before the world went (the destructor hands them in): a layout pass or a
 	// desired-size memo scope entered and never left. They die with the world, so they cannot reach the

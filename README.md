@@ -80,7 +80,7 @@ Besides the `Build.cs` line, a few includes and calls changed. Every other heade
 
 | Call that was | Is now |
 | --- | --- |
-| `UUITextInput::RouteCharacterInputToActiveInput` | `DreamUITextInputRouter::RouteCharacter`, called [before the base class](#keyboard-layouts-give-dreamgui-the-game-viewport-client) |
+| `UUITextInput::RouteCharacterInputToActiveInput` | `DreamUITextInputRouter::RouteViewportCharacter`, called [before the base class](#keyboard-layouts-give-dreamgui-the-game-viewport-client) |
 | `UDreamCanvas::CalculateRenderScaledSize` | `FDreamUIRenderer::CalculateRenderScaledSize` |
 | `DreamPixelSort::ResolveRegionSize` | `DreamUIPostProcessEffects::ResolvePixelSortRegionSize` (`DreamUIRender/DreamUIPostProcessEffects.h`) |
 | `UDreamUIManagerWorldSubsystem`'s event-system registry and player interaction: `GetEventSystemByUserIndex`, `GetMapUserIndexToEventSystem`, `AddEventSystem`, `RemoveEventSystem`, `EnsureInteractionForPlayer`, `GetInteractionHost` | The same names on `UDreamUIInputSubsystem` (`Event/DreamUIInputSubsystem.h`); `UDreamUIInputSubsystem::Get(WorldContext)` finds it |
@@ -150,7 +150,7 @@ bool UMyGameViewportClient::InputChar(FViewport* InViewport, int32 ControllerId,
     }
     // Before the base class: in a play-in-editor viewport it answers true for every character, so a
     // field asked after it never sees one there.
-    if (!IgnoreInput() && DreamUITextInputRouter::RouteCharacter(Character))
+    if (!IgnoreInput() && DreamUITextInputRouter::RouteViewportCharacter(this, ControllerId, Character))
     {
         return true;
     }
@@ -158,10 +158,11 @@ bool UMyGameViewportClient::InputChar(FViewport* InViewport, int32 ControllerId,
 }
 ```
 
-`DreamUITextInputRouter::RouteCharacter` is the entire contract — it hands the character to whichever
-field currently owns the keyboard and returns whether one took it. From the first character that
-arrives this way, the `FKey` table stops synthesising printable characters altogether, so the two
-roads never double-type.
+`DreamUITextInputRouter::RouteViewportCharacter` is the entire contract — it hands the character to
+the field the typing player (the one `ControllerId` is) is editing, or, when no field takes it, to
+what that player has focused as a key character, and returns whether either took it. From the first
+character that arrives this way, the `FKey` table stops synthesising printable characters in that
+world, so the two roads never double-type.
 
 ### If you have assets authored against LGUI / LexUI, or from before an in-fork rename
 

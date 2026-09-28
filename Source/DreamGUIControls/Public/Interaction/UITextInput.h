@@ -112,8 +112,8 @@ protected:
 	/**
 	 * Ends an edit still open when the field leaves the hierarchy. OnDestroy cannot be relied on for
 	 * it: a behaviour only reaches OnDestroy through EndPlay, and only if it began play -- a field in a
-	 * tree that was torn down without ever beginning play never gets there, and its edit (the static
-	 * ActiveTextInput, the key agent) outlived the field. Unregistering is what every teardown passes
+	 * tree that was torn down without ever beginning play never gets there, and its edit (its player's
+	 * keyboard, the keys bound on their controller) outlived the field. Unregistering is what every teardown passes
 	 * through, and DestroyWidget unregisters the whole subtree before any of it ends play.
 	 */
 	virtual void OnUnregister() override;
@@ -502,7 +502,7 @@ public:
 	/**
 	 * A character the PLATFORM resolved, not one this component guessed from a key code.
 	 *
-	 * The key road below (AnyKeyPressed) maps FKey to TCHAR by hand, which is only ever right on a
+	 * The key road below (HandleTextInputKey) maps FKey to TCHAR by hand, which is only ever right on a
 	 * US QWERTY layout; this is the road for a host that owns real character events -- a project's
 	 * UGameViewportClient::InputChar override, a Slate host's OnKeyChar, a test. Feeding one
 	 * character through here makes the field stop synthesising printable characters from key codes
@@ -516,6 +516,8 @@ public:
 	virtual bool IsTextInputActive() const override { return IsInputActive(); }
 	virtual void CancelTextInput() override { CancelInput(); }
 	virtual bool InsertTextCharacter(TCHAR InCharacter) override { return HandleCharacterInput(InCharacter); }
+	virtual void GetTextInputKeys(TArray<FKey>& OutKeys) const override;
+	virtual bool HandleTextInputKey(const FKey& InKey, const APlayerController* InPlayer) override;
 
 	/** Blueprint/host spelling of HandleCharacterInput: every character of the string in order. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -541,27 +543,29 @@ public:
 	bool HandleKeyInput(const FKey& InKey, bool bInPressed);
 	/** HandleKeyInput with the modifiers the host says are held, which is how a chord -- Ctrl+A, Shift+Left, Ctrl+Enter -- arrives. */
 	bool HandleKeyInput(const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifierKeys);
-	/** The field currently being edited, or null. */
+	/**
+	 * A field being edited in any world, or null: the one there is, in a one-player game. Wherever there can be more
+	 * than one -- a split screen, several play sessions -- ask GetActiveTextInputForPlayer.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		static UUITextInput* GetActiveTextInput();
+	/** The field player PlayerIndex is typing into, in WorldContextObject's world, or null. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input", meta = (WorldContext = "WorldContextObject"))
+		static UUITextInput* GetActiveTextInputForPlayer(const UObject* WorldContextObject, int32 PlayerIndex = 0);
 
 	/**
-	 * For tests: whether the process has seen a host deliver a character event, which is what
-	 * decides whether the key road still guesses printable characters (see bHostDeliversCharacterEvents).
+	 * Whether a host has delivered a character event in WorldContextObject's world, which is what decides whether
+	 * the key road there still guesses printable characters (UDreamUIInputSubsystem::DoesHostDeliverCharacters).
 	 * A read; it changes nothing.
 	 */
-	static bool IsHostDeliveringCharacterEvents();
+	static bool IsHostDeliveringCharacterEvents(const UObject* WorldContextObject);
 	/**
-	 * For tests only: set the process-wide "a host delivers characters" switch.
-	 *
-	 * The switch flips for good on the first HandleCharacterInput, so a test that types would
-	 * otherwise decide for every test after it which road characters take -- and the key-to-character
-	 * fallback, the road a project without a character-delivering viewport client is on, could never
-	 * be tested again in the same process. A test rig uses this to put the switch back the way it
-	 * found it, and a test of either road uses it to say which road it means. Nothing in the runtime
-	 * calls it.
+	 * For tests only: set WorldContextObject's world's "a host delivers characters" switch, which says which road
+	 * characters take there. It flips for good on the first character a field there receives, so a test of the
+	 * key-to-character fallback -- the road a project without a character-delivering viewport client is on -- turns
+	 * it off first. Nothing in the runtime calls it.
 	 */
-	static void SetHostDeliversCharacterEventsForTesting(bool bInDelivers);
+	static void SetHostDeliversCharacterEventsForTesting(const UObject* WorldContextObject, bool bInDelivers);
 
 	/** Step back through the edit history. @return true if anything changed. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -650,10 +654,10 @@ public:
 	 */
 	bool VerifyAndInsertCharAtCaretPosition(TCHAR Value);
 private:
-	TWeakObjectPtr<AActor> InputComponentAgent;
-	void BindKeys();
-	void UnbindKeys();
-	void AnyKeyPressed(FKey key);
+	/** The player whose keyboard this edit took: the one whose event began it, else the one who owns the field. */
+	int32 EditingUserIndex = 0;
+	/** The Slate user behind EditingUserIndex's player, who is shown the virtual keyboard. */
+	int32 GetEditingSlateUserIndex() const;
 	/**
 	 * What a pressed key does to the edit, with the held keys supplied by whoever delivered it: the
 	 * bound road reads them from the player's input state, HandleKeyInput from the host's modifiers.
@@ -700,9 +704,6 @@ private:
 	bool DeleteSelection(bool InFireEvent = true);
 	void InsertCharAtCaretPosition(TCHAR c);
 	void InsertStringAtCaretPosition(const FString& value);
-	FInputKeyBinding AnyKeyBinding;
-	UPROPERTY(Transient) TObjectPtr<APlayerController> PlayerController = nullptr;
-	bool CheckPlayerController();
 	bool bInputActive = false;
 	float NextCaretBlinkTime = 0;
 	float ElapseTime = 0;
@@ -791,25 +792,17 @@ private:
 	bool bPointerHeldForContextMenu = false;
 	double PointerHeldStartTime = 0;
 	/**
-	 * Flipped the first time a real platform character arrives through HandleCharacterInput. From
-	 * then on AnyKeyPressed stops guessing printable characters from key codes -- the host owns
-	 * them -- and handles only the function keys, which are genuinely key-shaped.
-	 *
-	 * Class-wide, and it has to be: whether characters are delivered is a fact about the HOST, not
-	 * about one field, and the very first keystroke would otherwise arrive twice. It does not, in
-	 * that order, because Slate's character event is processed while messages are pumped and the
-	 * bound InputComponent delegate fires later in the same frame, during the player tick -- so the
-	 * flag is already set by the time the key road looks at it, for the first keystroke included.
-	 */
-	static bool bHostDeliversCharacterEvents;
-	/** Whichever field currently owns the keyboard: the one it also names to DreamUITextInputRouter. */
-	static TWeakObjectPtr<UUITextInput> ActiveTextInput;
-	/**
 	 * Say once, the first time a field is edited with a real keyboard, that this project has not
 	 * given DreamGUI a way to receive character events -- and therefore types wrongly on any layout
 	 * that is not US QWERTY. See UDreamGameViewportClient.
+	 *
+	 * Whether characters are delivered is a fact about the HOST -- the world's game viewport -- not about
+	 * one field, and is kept on the world's input (UDreamUIInputSubsystem::DoesHostDeliverCharacters). The
+	 * very first keystroke does not arrive twice: Slate's character event is processed while messages are
+	 * pumped and the bound key fires later in the same frame, during the player tick -- so the switch is
+	 * already set by the time the key road looks at it.
 	 */
-	static void WarnOnceIfNoCharacterEventSource();
+	void WarnOnceIfNoCharacterEventSource() const;
 
 	FString GetReplaceText()const;
 

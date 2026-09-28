@@ -560,11 +560,9 @@ void UDreamEventSystem::SetSelectWidget(UDreamEventSystem* InEventSystem, UDream
 
 UDreamWidget* UDreamEventSystem::GetCurrentSelectedComponent(int InPointerID)const
 {
-	if (auto EventData = GetPointerEventData(InPointerID, false))
-	{
-		return EventData->SelectedComponent;
-	}
-	return nullptr;
+	// The player's focus, whichever pointer is asked about: one per player, and it outlives the pointer that gave it.
+	const UDreamUIInputUser* User = GetInputUser();
+	return User != nullptr ? User->GetFocusedWidget() : nullptr;
 }
 
 void UDreamEventSystem::SetSelectComponentWithDefault(UDreamWidget* InSelectWidget)

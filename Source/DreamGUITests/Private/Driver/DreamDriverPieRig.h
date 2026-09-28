@@ -413,7 +413,6 @@ private:
 	/** What the process had before this rig changed it. */
 	bool bRememberedProcessState = false;
 	bool bRestoredProcessState = false;
-	bool bHostDeliveredCharacterEventsAtStart = false;
 
 	/**
 	 * What the editor had before this rig changed it, for RestoreEditorState. Weak, and Slate's or the level

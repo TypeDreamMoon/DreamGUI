@@ -596,9 +596,9 @@ bool FDreamGameHostCharacterRoadTest::RunTest(const FString& Parameters)
 		TestEqual(Under(Case, TEXT("The field holds what was typed")), Field->GetText(), FString(TEXT("hello")));
 		TestEqual(Under(Case, TEXT("Each character was announced on its own")), Listener->TextChangedCount, 5);
 		TestEqual(Under(Case, TEXT("Typing is not committing")), Listener->TextCommittedCount, 0);
-		// A real character arrived, which is what switches the key road's guessing off (for good, in a
-		// game; the rig puts the switch back when it is torn down).
-		TestTrue(Under(Case, TEXT("The field now knows a host delivers characters")), UUITextInput::IsHostDeliveringCharacterEvents());
+		// A real character arrived, which is what switches the key road's guessing off -- for good, in
+		// this world.
+		TestTrue(Under(Case, TEXT("The field now knows a host delivers characters")), UUITextInput::IsHostDeliveringCharacterEvents(Rig.GetWorld()));
 	}
 	return true;
 }
@@ -609,14 +609,15 @@ bool FDreamGameHostCharacterRoadTest::RunTest(const FString& Parameters)
  * nothing else -- on AZERTY, a dead key or AltGr it types the wrong thing, which is what the field's
  * one-time Warning says -- so this pins down only what the table promises: A is 'a', Shift+A is 'A'.
  *
- * The key reaches the field through the field's own key agent, whose input component ActivateInput
- * pushes on player 0's stack above the input actor; shift is read from the player's UPlayerInput,
+ * The key reaches the field through its player's text keys, the input component the player's input
+ * pushes on that player's controller, above the input actor, for as long as the field is being edited;
+ * shift is read from the player's UPlayerInput,
  * which is why it has to be HELD through the controller's input frame rather than merely sent. Caps
  * lock is the one modifier the field reads from Slate -- the real keyboard of the machine running the
  * test -- so the expected case follows it.
  *
- * The "a host delivers characters" switch is process-wide and flips for good on the first real
- * character; it is turned off here for the test and put back after it.
+ * The "a host delivers characters" switch is the world's and flips for good on the first real
+ * character there; it is turned off here for the test.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostKeyFallbackTest,
@@ -635,12 +636,7 @@ bool FDreamGameHostKeyFallbackTest::RunTest(const FString& Parameters)
 		{
 			continue;
 		}
-		const bool bWasDelivering = UUITextInput::IsHostDeliveringCharacterEvents();
-		UUITextInput::SetHostDeliversCharacterEventsForTesting(false);
-		ON_SCOPE_EXIT
-		{
-			UUITextInput::SetHostDeliversCharacterEventsForTesting(bWasDelivering);
-		};
+		UUITextInput::SetHostDeliversCharacterEventsForTesting(Rig.GetWorld(), false);
 
 		UDreamTextInput* Field = MakeObservedField(Rig, Listener.Get());
 		if (!TestNotNull(*Under(Case, TEXT("A field can be made on the rig")), Field))
@@ -667,7 +663,7 @@ bool FDreamGameHostKeyFallbackTest::RunTest(const FString& Parameters)
 		TestEqual(Under(Case, TEXT("Each key was one edit")), Listener->TextChangedCount, 2);
 
 		TestFalse(Under(Case, TEXT("Keys are not characters: the key road never tells the field a host delivers them")),
-			UUITextInput::IsHostDeliveringCharacterEvents());
+			UUITextInput::IsHostDeliveringCharacterEvents(Rig.GetWorld()));
 		TestTrue(Under(Case, TEXT("The keys went through the player controller")),
 			ControllerSawKey(Rig, EKeys::A) && ControllerSawKey(Rig, EKeys::LeftShift));
 	}

@@ -273,6 +273,16 @@ void ADreamStandaloneInputEventSystemActor::BindNavigationAndTouchInput()
 		bConsumeBoundInput);
 	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::Gamepad_RightY, this, &ADreamStandaloneInputEventSystemActor::OnGamepadScrollY),
 		bConsumeBoundInput);
+	// The pad's other axes, for the focused widget alone (RouteAnalog): the left stick's directions are navigation,
+	// which its direction keys already drive, and the triggers mean nothing to the preset by themselves.
+	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::Gamepad_LeftX, this, &ADreamStandaloneInputEventSystemActor::OnGamepadLeftX),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::Gamepad_LeftY, this, &ADreamStandaloneInputEventSystemActor::OnGamepadLeftY),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::Gamepad_LeftTriggerAxis, this, &ADreamStandaloneInputEventSystemActor::OnGamepadLeftTrigger),
+		bConsumeBoundInput);
+	ConfigurePresetBinding(InputComponent->BindAxisKey(EKeys::Gamepad_RightTriggerAxis, this, &ADreamStandaloneInputEventSystemActor::OnGamepadRightTrigger),
+		bConsumeBoundInput);
 }
 
 void ADreamStandaloneInputEventSystemActor::BindActionRouting()
@@ -611,9 +621,43 @@ void ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed(FKey Key)
 	}
 }
 
+bool ADreamStandaloneInputEventSystemActor::RouteAnalog(const FKey& InKey, float InValue)
+{
+	if (IsInputSuspendedByGamePause())return false;
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
+	UDreamEventSystem* Events = GetEventSystem();
+	if (Router == nullptr || Events == nullptr)return false;
+	return Router->HandleAnalog(Events->GetUserIndex(), InKey, InValue);
+}
+
+void ADreamStandaloneInputEventSystemActor::OnGamepadLeftX(float AxisValue)
+{
+	RouteAnalog(EKeys::Gamepad_LeftX, AxisValue);
+}
+
+void ADreamStandaloneInputEventSystemActor::OnGamepadLeftY(float AxisValue)
+{
+	RouteAnalog(EKeys::Gamepad_LeftY, AxisValue);
+}
+
+void ADreamStandaloneInputEventSystemActor::OnGamepadLeftTrigger(float AxisValue)
+{
+	RouteAnalog(EKeys::Gamepad_LeftTriggerAxis, AxisValue);
+}
+
+void ADreamStandaloneInputEventSystemActor::OnGamepadRightTrigger(float AxisValue)
+{
+	RouteAnalog(EKeys::Gamepad_RightTriggerAxis, AxisValue);
+}
+
 void ADreamStandaloneInputEventSystemActor::OnGamepadScrollX(float AxisValue)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
+	// The focused widget hears the stick first, as an analog value, and a widget that keeps it is not also scrolled.
+	if (RouteAnalog(EKeys::Gamepad_RightX, AxisValue))
+	{
+		return;
+	}
 	// A resting stick fires this every frame; anything below the deadzone is the stick sitting still.
 	// A stick held by a pause reads as sitting still too, as the engine would have zeroed it.
 	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || IsInputSuspendedByGamePause())
@@ -642,6 +686,10 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollX(float AxisValue)
 void ADreamStandaloneInputEventSystemActor::OnGamepadScrollY(float AxisValue)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
+	if (RouteAnalog(EKeys::Gamepad_RightY, AxisValue))
+	{
+		return;
+	}
 	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || IsInputSuspendedByGamePause())
 	{
 		return;

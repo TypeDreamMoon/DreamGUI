@@ -125,7 +125,6 @@ namespace DreamDriverPieProbeLocal
 		UClass* ViewportClientClass = nullptr;
 		/** Compared, never dereferenced: an editor with no session running has none, and must have none again. */
 		const UGameViewportClient* GameViewport = nullptr;
-		bool bHostDeliversCharacterEvents = false;
 		int32 WorldContextCount = 0;
 		FIntPoint LevelViewportSize = FIntPoint(-1, -1);
 	};
@@ -135,7 +134,6 @@ namespace DreamDriverPieProbeLocal
 		FProcessBaseline Baseline;
 		Baseline.ViewportClientClass = GEngine != nullptr ? GEngine->GameViewportClientClass.Get() : nullptr;
 		Baseline.GameViewport = GEngine != nullptr ? GEngine->GameViewport.Get() : nullptr;
-		Baseline.bHostDeliversCharacterEvents = UUITextInput::IsHostDeliveringCharacterEvents();
 		Baseline.WorldContextCount = GEngine != nullptr ? GEngine->GetWorldContexts().Num() : 0;
 		Baseline.LevelViewportSize = CurrentLevelViewportSize();
 		return Baseline;
@@ -144,8 +142,8 @@ namespace DreamDriverPieProbeLocal
 	/**
 	 * Everything a finished play session could leave behind that a later test would feel: the session
 	 * itself, its world context, the game viewport, the viewport client class the rig swapped, the size
-	 * of the level editor viewport the next session will start from, and the two pieces of process-wide
-	 * text-input state a typing session moves.
+	 * of the level editor viewport the next session will start from, and a field a typing session left
+	 * being edited.
 	 */
 	void CheckNothingLeftBehind(FAutomationTestBase& InTest, const FProcessBaseline& InBaseline, const TCHAR* InWhen)
 	{
@@ -164,8 +162,6 @@ namespace DreamDriverPieProbeLocal
 			GEngine != nullptr && GEngine->GameViewport.Get() == InBaseline.GameViewport);
 		InTest.TestTrue(FString::Printf(TEXT("%s, the engine's viewport client class is the project's again"), InWhen),
 			GEngine != nullptr && GEngine->GameViewportClientClass.Get() == InBaseline.ViewportClientClass);
-		InTest.TestTrue(FString::Printf(TEXT("%s, the \"a host delivers characters\" switch is as it was found"), InWhen),
-			UUITextInput::IsHostDeliveringCharacterEvents() == InBaseline.bHostDeliversCharacterEvents);
 		InTest.TestNull(FString::Printf(TEXT("%s, no text field is being edited"), InWhen), UUITextInput::GetActiveTextInput());
 	}
 
@@ -313,13 +309,13 @@ bool FDreamDriverPieProbeTwoSessionsTest::RunTest(const FString& Parameters)
 			}, FWaitTimeout::InSeconds(2.0)),
 			FWaitTimeout::InSeconds(3.0), TEXT("the scratch field to begin an edit"));
 		FDreamDriverPieRig::TypeThroughViewport(Steps, TEXT("x"));
-		Steps.Then([this](FDreamDriverContext&)
+		Steps.Then([this](FDreamDriverContext& InContext)
 		{
-			// The disturbance itself, asserted, so the "put back" checks after the session are not
-			// vacuous: a session that never moved either piece of state would pass them for nothing.
+			// The disturbance itself, asserted, so the check after the session is not vacuous: a session
+			// that never began an edit would pass it for nothing.
 			TestNotNull(TEXT("While the first session edits a field, a field is being edited"), UUITextInput::GetActiveTextInput());
-			TestTrue(TEXT("...and the character that reached it turned the \"a host delivers characters\" switch on"),
-				UUITextInput::IsHostDeliveringCharacterEvents());
+			TestTrue(TEXT("...and the character that reached it turned the session's \"a host delivers characters\" switch on"),
+				UUITextInput::IsHostDeliveringCharacterEvents(InContext.World));
 		});
 		Steps.PerformLatent();
 	}

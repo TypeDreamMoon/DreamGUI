@@ -97,6 +97,22 @@ public:
 	int32 GetScreenIndexForUser(int32 InUserIndex) const;
 
 	/**
+	 * A character typed on player InUserIndex's keyboard, as the game viewport receives it: to the field the player is
+	 * typing into, and when no field takes it, as a KeyChar to what the player has focused. True when either took it.
+	 */
+	bool HandleViewportCharacter(int32 InUserIndex, TCHAR InCharacter);
+
+	/**
+	 * Whether this world's host delivers real characters: set the first time a field being edited here receives one,
+	 * after which the fields' key table stops guessing printable characters. A fact about the world's game viewport,
+	 * so the world's own -- one play session typing does not decide it for another.
+	 */
+	bool DoesHostDeliverCharacters() const { return bHostDeliversCharacters; }
+	void NoteHostDeliversCharacters() { bHostDeliversCharacters = true; }
+	/** For tests: say which road characters take in this world. */
+	void SetHostDeliversCharactersForTesting(bool bInDelivers) { bHostDeliversCharacters = bInDelivers; }
+
+	/**
 	 * One frame of every player's input, in player order. What the tick function runs -- and what a rig that pumps
 	 * a world's frames itself calls in its place.
 	 */
@@ -211,4 +227,6 @@ private:
 	bool bTornDownForWorld = false;
 	/** Set while ProcessFrame runs, so a handler cannot start another frame from inside one. */
 	bool bInFrame = false;
+	/** See DoesHostDeliverCharacters. */
+	bool bHostDeliversCharacters = false;
 };

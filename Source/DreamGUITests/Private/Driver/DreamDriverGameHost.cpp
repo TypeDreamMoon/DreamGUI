@@ -825,22 +825,16 @@ bool DreamDriverGameHost::NavigationTrigger(FDreamDriverContext& InContext, bool
 
 bool DreamDriverGameHost::TypeCharacter(FDreamDriverContext& InContext, TCHAR InCharacter, FString& OutWhyNot)
 {
-	UUITextInput* ActiveInput = UUITextInput::GetActiveTextInput();
-	if (ActiveInput == nullptr)
+	// The keyboard is the rig's player's: player 0 of the rig's world.
+	constexpr int32 KeyboardPlayer = 0;
+	if (DreamUITextInputRouter::GetActiveTarget(InContext.World, KeyboardPlayer) == nullptr)
 	{
-		OutWhyNot = TEXT("no text field is being edited, so a character has nowhere to go: the game's road hands it to whichever field owns the keyboard (DreamUITextInputRouter::RouteCharacter) and none does");
-		return false;
-	}
-	if (InContext.World != nullptr && ActiveInput->GetWorld() != InContext.World)
-	{
-		// The road is process-wide, so a field some other world left mid-edit would take this rig's
-		// characters. That is a leak to report, not a keyboard to type into.
-		OutWhyNot = FString::Printf(TEXT("the field that owns the keyboard (%s) belongs to another world"), *ActiveInput->GetPathName());
+		OutWhyNot = TEXT("no text field is being edited, so a character has nowhere to go: the game's road hands it to the field the typing player is editing (DreamUITextInputRouter::RouteCharacter) and there is none");
 		return false;
 	}
 	// The answer is dropped, as the module's road drops it: a refused character -- read-only, full, a
 	// letter in a number field -- is the field deciding.
-	DreamUITextInputRouter::RouteCharacter(InCharacter);
+	DreamUITextInputRouter::RouteCharacter(InContext.World, KeyboardPlayer, InCharacter);
 	return true;
 }
 

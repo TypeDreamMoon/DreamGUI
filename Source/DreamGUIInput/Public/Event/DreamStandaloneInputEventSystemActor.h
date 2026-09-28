@@ -207,6 +207,12 @@ private:
 	void OnScrollKeyPressed(FKey Key);
 	void OnGamepadScrollX(float AxisValue);
 	void OnGamepadScrollY(float AxisValue);
+	void OnGamepadLeftX(float AxisValue);
+	void OnGamepadLeftY(float AxisValue);
+	void OnGamepadLeftTrigger(float AxisValue);
+	void OnGamepadRightTrigger(float AxisValue);
+	/** InValue of analog axis InKey, to what this player has focused. True when a widget kept the axis. */
+	bool RouteAnalog(const FKey& InKey, float InValue);
 
 	void OnNavigationTriggerPressed(FKey Key);
 	void OnNavigationTriggerReleased(FKey Key);

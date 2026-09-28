@@ -479,11 +479,11 @@ bool FDreamTextInputTeardownEndsTheEditTest::RunTest(const FString& Parameters)
 		// while the player is mid-word -- and nothing ends the edit first.
 	}
 
-	// The record of which field has the keyboard is process-wide. A field that left it behind would
-	// keep taking every platform character a host routes through it, into a widget that no longer
-	// exists in any hierarchy -- and every later test would find a field "being edited" that is not.
+	// Which field has a player's keyboard is kept on that player's input, in the field's world, and goes
+	// with it. A field that left itself named anywhere would keep taking the characters a host routes,
+	// into a widget that no longer exists in any hierarchy -- and every later test would find a field
+	// "being edited" that is not.
 	TestNull(TEXT("Once the field is gone, no field is being edited"), UUITextInput::GetActiveTextInput());
-	TestFalse(TEXT("So a platform character goes nowhere"), DreamUITextInputRouter::RouteCharacter(TEXT('x')));
 
 	return true;
 }

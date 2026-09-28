@@ -335,16 +335,18 @@ namespace DreamDriverPieRigLocal
 			}
 
 			const FCharacterGates Gates = ReadCharacterGates(*Client, *SceneViewport, *ViewportWidget, Focused);
-			const bool bSwitchBefore = UUITextInput::IsHostDeliveringCharacterEvents();
-			UUITextInput::SetHostDeliversCharacterEventsForTesting(false);
+			// The session world's own switch: whether a host delivers characters is each world's.
+			const UWorld* SessionWorld = Client->GetWorld();
+			const bool bSwitchBefore = UUITextInput::IsHostDeliveringCharacterEvents(SessionWorld);
+			UUITextInput::SetHostDeliversCharacterEventsForTesting(SessionWorld, false);
 			// No modifier held, whatever the real keyboard on this machine is doing: the character is the
 			// whole of the event, and a test that read the desk's Shift key would depend on the desk.
 			const FCharacterEvent Event(Character, FModifierKeysState(), KeyboardUser, false);
 			const bool bHandled = SlateApp.ProcessKeyCharEvent(Event);
-			const bool bReceived = UUITextInput::IsHostDeliveringCharacterEvents();
+			const bool bReceived = UUITextInput::IsHostDeliveringCharacterEvents(SessionWorld);
 			if (!bReceived)
 			{
-				UUITextInput::SetHostDeliversCharacterEventsForTesting(bSwitchBefore);
+				UUITextInput::SetHostDeliversCharacterEventsForTesting(SessionWorld, bSwitchBefore);
 				FailureReason = DescribeUndeliveredCharacter(Gates, Character, bHandled);
 				return EDreamDriverStepResult::Failed;
 			}
@@ -588,7 +590,6 @@ bool FDreamDriverPieRig::UpdateStart()
 	case EStartPhase::NotStarted:
 	{
 		// What the process had before this test touched it, taken before anything could change it.
-		bHostDeliveredCharacterEventsAtStart = UUITextInput::IsHostDeliveringCharacterEvents();
 		bRememberedProcessState = true;
 
 		if (GEditor == nullptr || GEngine == nullptr)
@@ -1190,10 +1191,8 @@ void FDreamDriverPieRig::RestoreProcessState()
 		return;
 	}
 	bRestoredProcessState = true;
-	// Typing through the viewport client turns this switch on for the whole process (the first
-	// HandleCharacterInput sets it), after which the key road stops guessing characters in every test
-	// that follows. Put back as it was found, as the headless rig does.
-	UUITextInput::SetHostDeliversCharacterEventsForTesting(bHostDeliveredCharacterEventsAtStart);
+	// Nothing of the text input's to put back: whether a host delivers characters is the session world's
+	// own, and went with it.
 }
 
 void FDreamDriverPieRig::GiveViewportKeyboardFocus(UGameViewportClient* InClient)

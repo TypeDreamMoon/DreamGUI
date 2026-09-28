@@ -626,7 +626,9 @@ UDreamWidget* UDreamPointerInputModule::GetEventHandle(UDreamWidget* targetComp,
 void UDreamPointerInputModule::DeselectIfSelectionChanged(UDreamUIInputUser* InUser, UDreamWidget* currentPressed, UDreamBaseEventData* EventData)
 {
 	UDreamWidget* SelectHandle = GetEventHandle(currentPressed, UDreamPointerSelectDeselectInterface::StaticClass());
-	if (SelectHandle != EventData->SelectedComponent)
+	// Against the player's focus, not this pointer's record of it: a finger just put down has none, and the focus
+	// another pointer gave is still the one a press somewhere else takes away.
+	if (SelectHandle != InUser->GetFocusedWidget())
 	{
 		InUser->SetSelectWidget(nullptr, EventData);
 	}

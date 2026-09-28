@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "GenericPlatform/ICursor.h"
+#include "InputCoreTypes.h"
 #include "Event/DreamUIInputTypes.h"
 #include "DreamUIInputUser.generated.h"
 
@@ -19,6 +20,7 @@ class UDreamGestureEventData;
 class UDreamPointerEventData;
 class UDreamUIInputSubsystem;
 class UDreamWidget;
+class UInputComponent;
 
 /**
  * One player's input: their pointers, what each pointer is doing to the world, the device in their hands,
@@ -122,8 +124,32 @@ public:
 	AActor* GetHoveredWorldTarget(int32 InPointerID) const;
 	AActor* GetPressedWorldTarget(int32 InPointerID) const;
 
-	/** Select InWidget for InEventData's pointer: Deselect to the old, Select to the new, focus moved with them. */
+	/**
+	 * Focus InWidget, on behalf of InEventData's pointer: Deselect to what the player had focused, Select to InWidget.
+	 * The focus is the player's, not the pointer's -- whichever pointer moved it, and it stays when that pointer goes:
+	 * a finger lifted from a field leaves the field focused, as a click does. Every pointer's record of it
+	 * (SelectedComponent, which Blueprint reads) follows.
+	 */
 	void SetSelectWidget(UDreamWidget* InWidget, UDreamBaseEventData* InEventData);
+	/** What this player has focused: the widget their keys, characters and sticks go to. */
+	UFUNCTION(BlueprintPure, Category = DreamGUI)
+	UDreamWidget* GetFocusedWidget() const { return FocusedWidget.Get(); }
+
+	// ---------------------------------------------------------------- text
+
+	/**
+	 * The field this player is typing into, or null. It claims the player's keyboard when its edit starts and lets go
+	 * when the edit ends. While it holds it, the keys it takes are bound on the player's controller above everything
+	 * else the controller listens to, so they reach nothing else -- and only this player's keys: another player's
+	 * field is not touched.
+	 */
+	UObject* GetTextTarget() const { return TextTarget.Get(); }
+	/** InTarget, which implements IDreamUITextInputTarget, takes this player's keyboard. */
+	void SetTextTarget(UObject* InTarget);
+	/** InTarget lets go of this player's keyboard; nothing happens when it does not hold it. */
+	void ClearTextTarget(const UObject* InTarget);
+	/** Bind the text target's keys on the player's controller again, for a target whose keys changed. */
+	void RefreshTextKeys();
 
 	// ---------------------------------------------------------------- device and cursor
 
@@ -262,6 +288,12 @@ private:
 	void NotePressRaycaster(const UDreamPointerEventData* InEventData);
 	/** Let go of every press whose raycaster has gone since: its up, and no click. */
 	void ReleasePressesWhoseRaycasterWent();
+	/** Every pointer's record of the focus follows the player's. */
+	void MirrorFocusOntoPointers();
+	/** One of the text target's keys, pressed or repeating on this player's keyboard. */
+	void HandleTextKey(FKey InKey);
+	/** Take the text keys off the controller they are on. */
+	void PopTextKeys();
 
 	int32 UserIndex = 0;
 	bool bIsScriptUser = false;
@@ -320,6 +352,14 @@ private:
 	 * known to have nothing left to be released over.
 	 */
 	TMap<int32, TWeakObjectPtr<UDreamBaseRaycaster>> PressRaycasters;
+
+	/** The player's focus. Weak: a focused widget destroyed is simply no longer focused. */
+	TWeakObjectPtr<UDreamWidget> FocusedWidget;
+	TWeakObjectPtr<UObject> TextTarget;
+	/** The text target's keys, bound for this player and pushed on their controller while there is a target. */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputComponent> TextKeys;
+	TWeakObjectPtr<APlayerController> TextKeysController;
 
 	/** One pointer's last trace, reused while nothing that could change it has. */
 	struct FTraceCache

@@ -245,7 +245,7 @@ bool FDreamTextInputCharacterRouterTest::RunTest(const FString& Parameters)
 	// With nothing being edited there is no field to hand them to, and saying so is the whole
 	// contract -- the host must not have to track which field has the keyboard.
 	TestNull(TEXT("nothing is being edited"), UUITextInput::GetActiveTextInput());
-	TestFalse(TEXT("so a character is not taken"), DreamUITextInputRouter::RouteCharacter(TEXT('a')));
+	TestFalse(TEXT("so a character is not taken"), DreamUITextInputRouter::RouteCharacter(Input.Get(), 0, TEXT('a')));
 	TestFalse(TEXT("and an inactive field takes none either"), Input->HandleCharacterInput(TEXT('a')));
 	TestEqual(TEXT("its text is untouched"), Input->GetText(), FString());
 	return true;

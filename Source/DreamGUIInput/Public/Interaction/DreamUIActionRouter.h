@@ -94,6 +94,17 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	bool HandleKeyWithModifiers(int32 InUserIndex, const FKey& InKey, bool bPressed, bool bShiftDown, bool bCtrlDown, bool bAltDown, bool bCmdDown);
+	/**
+	 * A character player InUserIndex typed that no field took: a KeyChar, to what the player has focused and on up.
+	 * True when a widget kept it.
+	 */
+	bool HandleCharacter(int32 InUserIndex, TCHAR InCharacter);
+	/**
+	 * A sample of one of player InUserIndex's analog axes: AnalogValueChanged, to what the player has focused and on up,
+	 * when the value moved since that axis's last sample -- a stick reports every frame, and a widget is told once per
+	 * change. True when a widget kept the axis, now or at its last change: a stick a widget took does not also scroll.
+	 */
+	bool HandleAnalog(int32 InUserIndex, const FKey& InKey, float InValue);
 
 	/** Live bindings for a prompt bar, most recently registered first, resolved for the device in use. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
@@ -162,11 +173,20 @@ private:
 	int32 NextId = 0;
 	/** Keys already reported as claimed by both an action row and an Input Action. One warning each. */
 	TSet<FKey> ReportedInputActionConflictKeys;
+	/** The last sample of each player's analog axes, and whether a widget kept it. */
+	struct FAnalogState
+	{
+		float Value = 0.0f;
+		bool bHandled = false;
+	};
+	TMap<TPair<int32, FKey>, FAnalogState> AnalogStates;
 	FDreamUIActionBindingsChangedDelegate BindingsChangedEvent;
 	FDreamUIActionHoldProgressDelegate HoldProgressEvent;
 
 	/** True when this binding's screen is the one in front, or it is global. */
 	bool IsEligible(const FBindingEntry& InEntry)const;
+	/** What player InUserIndex has focused, or null. */
+	UDreamWidget* GetFocusedWidget(int32 InUserIndex) const;
 	/** Which modifier keys this player is holding right now. All false when there is no controller. */
 	void GetModifierKeyState(int32 InUserIndex, bool& bOutShift, bool& bOutCtrl, bool& bOutAlt, bool& bOutCmd)const;
 	/**

@@ -18,46 +18,33 @@
 /*
  * A RIG LEAVES THE PROCESS AS IT FOUND IT.
  *
- * Some of DreamGUI's state is not in any world: a class-wide switch saying a host delivers characters,
- * the field that owns the keyboard, the editor's "a Blueprint is compiling" flag. Each outlives every
- * world, so each outlives every test,
- * and a test that moved one decides how the tests after it behave -- in the order the runner happens
- * to pick. The character switch is the sharpest case: it flips for good on the first character a host
- * delivers, and from then on the key-to-character fallback, the road DevTest itself is on, can no
- * longer be reached in that process.
+ * State that is in no world outlives every world, so it outlives every test, and a test that moved it
+ * decides how the tests after it behave -- in the order the runner happens to pick. The editor's "a
+ * Blueprint is compiling" flag is the one left. The switch saying a host delivers characters, and the
+ * field that owns a player's keyboard, used to be among them: the switch flipped for good on the first
+ * character a host delivered, and from then on the key-to-character fallback, the road DevTest itself is
+ * on, could no longer be reached in that process. Both are kept on each world's input now and go with it.
  *
- * The layout pass and the desired-size memo are no longer among them: their depths live in each world's
- * layout context and go with the world. The rig still checks them settled before its world goes, since
- * one left open is a pass that never ended.
+ * The layout pass and the desired-size memo are no longer among them either: their depths live in each
+ * world's layout context and go with the world. The rig still checks them settled before its world goes,
+ * since one left open is a pass that never ended.
  *
- * The rig puts the switch back, makes sure the keyboard's owner is nothing of its own, and checks the
- * counters are settled when it goes. These pin both halves: the restore happens, and the check says
- * what it would say.
+ * The rig makes sure the keyboard's owner is nothing of its own, and checks the counters are settled
+ * when it goes. These pin that the switch is each world's, and that the check says what it would say.
  */
 namespace DreamDriverIsolationTestLocal
 {
 	const FIntPoint ViewportSize(1280, 720);
-
-	/** Put the switch back to what it was when the test began, whatever the test did in between. */
-	struct FScopedCharacterSwitch
-	{
-		bool bOriginal = UUITextInput::IsHostDeliveringCharacterEvents();
-		~FScopedCharacterSwitch() { UUITextInput::SetHostDeliversCharacterEventsForTesting(bOriginal); }
-	};
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverIsolationCharacterSwitchTest,
-	"DreamGUI.Driver.Isolation.ARigPutsTheCharacterDeliverySwitchBackTheWayItFoundIt",
+	"DreamGUI.Driver.Isolation.WhetherAHostDeliversCharactersIsEachWorldsOwn",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamDriverIsolationCharacterSwitchTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamDriverIsolationTestLocal;
-	FScopedCharacterSwitch RestoreAtTheEnd;
-
-	// Off going in: the state of a process no host has typed into yet.
-	UUITextInput::SetHostDeliversCharacterEventsForTesting(false);
 	{
 		FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
 		Rig.BindTest(this);
@@ -65,6 +52,7 @@ bool FDreamDriverIsolationCharacterSwitchTest::RunTest(const FString& Parameters
 		{
 			return false;
 		}
+		TestFalse(TEXT("A world starts on the key road"), UUITextInput::IsHostDeliveringCharacterEvents(Rig.GetWorld()));
 		UDreamTextInput* Field = Rig.MakeControl<UDreamTextInput>(TEXT("Name"), nullptr, FVector2D(320.0, 40.0));
 		if (!TestNotNull(TEXT("A text field can be made"), Field))
 		{
@@ -72,15 +60,11 @@ bool FDreamDriverIsolationCharacterSwitchTest::RunTest(const FString& Parameters
 		}
 		Rig.PumpFrames(1);
 		TestTrue(TEXT("Typing a character completes"), Rig.Driver()->Find(FDreamBy::Name(TEXT("Name")))->Type(TEXT("a")));
-		// The driver types through HandleCharacterInput, the host's road, and that road flips the
-		// switch for the whole process. This is the flip the rig has to undo.
-		TestTrue(TEXT("Typing through the host's road turned the switch on"), UUITextInput::IsHostDeliveringCharacterEvents());
+		// The driver types through HandleCharacterInput, the host's road, and that road flips the switch --
+		// for this world.
+		TestTrue(TEXT("Typing through the host's road turned this world's switch on"),
+			UUITextInput::IsHostDeliveringCharacterEvents(Rig.GetWorld()));
 	}
-	TestFalse(TEXT("Once the rig is gone the switch is off again, as the rig found it"),
-		UUITextInput::IsHostDeliveringCharacterEvents());
-
-	// The other direction: on going in, turned off inside -- what a test of the fallback road does.
-	UUITextInput::SetHostDeliversCharacterEventsForTesting(true);
 	{
 		FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
 		Rig.BindTest(this);
@@ -88,10 +72,11 @@ bool FDreamDriverIsolationCharacterSwitchTest::RunTest(const FString& Parameters
 		{
 			return false;
 		}
-		UUITextInput::SetHostDeliversCharacterEventsForTesting(false);
+		// Nothing was put back in between: there was nothing outside the first world to put back.
+		TestFalse(TEXT("A world that comes up after it starts on the key road all the same"),
+			UUITextInput::IsHostDeliveringCharacterEvents(Rig.GetWorld()));
+		TestNull(TEXT("...and nobody in it is typing into anything"), UUITextInput::GetActiveTextInputForPlayer(Rig.GetWorld(), 0));
 	}
-	TestTrue(TEXT("Once that rig is gone the switch is on again, as it found it"),
-		UUITextInput::IsHostDeliveringCharacterEvents());
 	return true;
 }
 
