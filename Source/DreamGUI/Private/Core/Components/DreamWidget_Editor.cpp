@@ -8,7 +8,6 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
-#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Engine/World.h"
 #include "DreamTweenManager.h"
@@ -390,6 +389,22 @@ bool UDreamWidget::CanEditChange(const FEditPropertyChain& PropertyChain) const
 void UDreamWidget::PostEditUndo()
 {
 	Super::PostEditUndo();
+	if (!IsValid(this))
+	{
+		// The transaction took this widget away -- undid its creation, or redid its deletion -- by marking
+		// it garbage, which runs none of its exit. Nothing else will: the world's teardown passes over
+		// garbage, and the undo buffer keeps the object alive until a collection finds it still
+		// registered. So it leaves here, and alone: every widget the transaction took gets its own
+		// PostEditUndo, and one it did not take -- a child that undoing a wrap put back under its old
+		// parent -- still hangs from this widget's Children and is not this widget's to end. Parent is
+		// left as it is, though the restored parent no longer lists this widget: a redo lists it again,
+		// and the back-pointer is what puts it back in its place (below).
+		EndPlay();
+		OnUnregister();
+		// A redo that brings it back revives it (ReviveLifecycleAfterUndo below).
+		Lifecycle = EDreamWidgetLifecycle::Destroyed;
+		return;
+	}
 	// Undo restores RelativeRotation straight into the property, bypassing the setter that keeps
 	// the transient euler mirror in step.
 	this->RelativeRotationEuler = this->RelativeRotation.Rotator();

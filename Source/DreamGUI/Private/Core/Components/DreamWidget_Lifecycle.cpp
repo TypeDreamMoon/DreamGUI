@@ -207,54 +207,27 @@ void UDreamWidget::PostDuplicate(EDuplicateMode::Type DuplicateMode)
 
 void UDreamWidget::BeginDestroy()
 {
-	if (HasRegistered())
+	// Diagnostics, and nothing else. This runs inside a collection, where taking a tree apart reaches
+	// objects the same purge may already be destroying; and nothing is left to take apart that matters:
+	// the manager's registry is weak, and a tree dies with the host it is outered to. A registered widget
+	// reaching here is one whose host never let its tree go.
+	//
+	// Reported once per tree, at its root, and as an Error only where there is a world. A tree with NO
+	// world never had a manager to leak into -- the state of every tree in a headless test and of every
+	// Blueprint authoring tree -- and an Error at collection time lands on whichever test happens to be
+	// running, which fails a bystander and teaches people to ignore the suite.
+	if (HasRegistered() && Parent.GetEvenIfUnreachable() == nullptr)
 	{
-		UDreamWidget* TeardownRoot = RootWidget.GetEvenIfUnreachable();
-		if (TeardownRoot == nullptr || TeardownRoot->HasAnyFlags(RF_FinishDestroyed))
+		if (const UWorld* World = GetWorld())
 		{
-			TeardownRoot = this;
-		}
-
-		auto World = TeardownRoot->GetWorld();
-		auto WorldName = World ? World->GetName() : TEXT("null");
-		auto Manager = UDreamUIManagerWorldSubsystem::GetInstance(World);
-		auto ManagerName = Manager ? Manager->GetName() : TEXT("null");
-
-		// AN ERROR ONLY WHERE IT CAN MEAN SOMETHING, which is where there is a world.
-		//
-		// This says "an owner should have destroyed this tree", and the harm it names is the manager
-		// still holding pointers into a hierarchy nobody tore down -- ticks, raycasts and a draw list
-		// pointing at widgets on their way out. A tree with NO world has no manager to have leaked
-		// into: nothing outside its own object graph refers to it, and the collector reaching it is
-		// simply the end of its life rather than a symptom of one. That is the state of every tree in
-		// a headless test and of every Blueprint authoring tree.
-		//
-		// Reporting it as an Error there was worse than useless, because BeginDestroy runs at GC
-		// TIME and the automation framework attributes whatever is logged to whichever test happens
-		// to be running: one leak inside the widget-blueprint tests reliably failed an unrelated one,
-		// and it passed when run alone. A diagnostic that fails an innocent test teaches people to
-		// ignore the suite. As a Warning it still names the tree in the log for anyone auditing test
-		// hygiene -- TDreamTestControl exists for exactly that -- without accusing a bystander.
-		if (World != nullptr)
-		{
-			UE_LOG(DreamGUI, Error, TEXT("UDreamWidget tree %s was not destroyed by its owner. World:%s, WorldType:%d, Manager:%s. Auto cleanup in BeginDestroy."),
-				*TeardownRoot->GetPathDisplayName(), *WorldName, World->WorldType, *ManagerName);
-
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
-					, FString::Printf(TEXT("UDreamWidget tree %s was not destroyed by its owner; auto cleaned up. World:%s, Manager:%s")
-						, *TeardownRoot->GetPathDisplayName(), *WorldName, *ManagerName));
-			}
+			UE_LOG(DreamGUI, Error, TEXT("UDreamWidget tree %s (%s) was not destroyed by its owner. World:%s, WorldType:%d."),
+				*GetFullName(), *GetDisplayName(), *World->GetName(), (int32)World->WorldType);
 		}
 		else
 		{
-			UE_LOG(DreamGUI, Warning, TEXT("UDreamWidget tree %s reached the collector still registered, with no world to have leaked into. Auto cleanup in BeginDestroy."),
-				*TeardownRoot->GetPathDisplayName());
+			UE_LOG(DreamGUI, Warning, TEXT("UDreamWidget tree %s (%s) reached the collector still registered, with no world to have leaked into."),
+				*GetFullName(), *GetDisplayName());
 		}
-
-		// Elevating fallback cleanup to the hierarchy root prevents one diagnostic per child.
-		TeardownRoot->DestroyWidget();
 	}
 	Super::BeginDestroy();
 }
@@ -533,6 +506,14 @@ void UDreamWidget::OnRegister()
 #if WITH_EDITOR
 		DreamUIManager->MarkDreamUIWidgetOutlinerChanged();
 #endif
+	}
+	else if (const UWorld* World = GetWorld(); World != nullptr && !IsRunningCommandlet()
+		&& (World->WorldType == EWorldType::Game || World->WorldType == EWorldType::PIE
+			|| World->WorldType == EWorldType::Editor || World->WorldType == EWorldType::EditorPreview))
+	{
+		// A world of a kind the manager is made for, with no manager in it: nothing will lay this
+		// widget out, draw it, tick it or take it down with the world.
+		ensureMsgf(false, TEXT("%s: registered in %s, which has no DreamUI manager."), *GetPathName(), *World->GetName());
 	}
 	CheckRootWidget();
 
